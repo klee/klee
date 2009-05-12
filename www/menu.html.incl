@@ -7,4 +7,11 @@
     <label>klee Info</label>
     <a href="index.html">About</a>
   </div>
+
+  <div class="submenu">
+    <label>Quick Links</label>
+    <a href="http://keeda.stanford.edu/mailman/listinfo/klee-dev">klee-dev</a>
+    <a href="http://llvm.org/svn/llvm-project/klee/trunk/">Browse SVN</a>
+    <a href="http://llvm.org/viewvc/llvm-project/klee/trunk/">Browse ViewVC</a>
+  </div>
 </div>
