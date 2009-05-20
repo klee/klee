@@ -1,0 +1,72 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" 
+          "http://www.w3.org/TR/html4/strict.dtd">
+<!-- Material used from: HTML 4.01 specs: http://www.w3.org/TR/html401/ -->
+<html>
+<head>
+  <META http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+  <title>The KLEE Symbolic Virtual Machine</title>
+  <link type="text/css" rel="stylesheet" href="menu.css">
+  <link type="text/css" rel="stylesheet" href="content.css">
+</head>
+<body>
+<include virtual="menu.html.incl">
+<div id="content">
+  <!--*********************************************************************-->
+  <h1>KLEE Installation Guide</h1>
+  <!--*********************************************************************-->
+
+  <h2> Minimal Installation </h2>
+  <ol>
+  <li> Obtain the current version
+  of <a href="http://llvm.org/releases/download.html#svn">LLVM via
+  SVN</a>.  Build the release version of LLVM and install the GCC
+  front end as well.  Follow the instructions
+  at <a href="http://llvm.org/docs/GettingStarted.html">Getting
+  Started with the LLVM System</a>.</li>
+
+  <li> Obtain the current version of KLEE via SVN (readonly access):
+       <div class="code">svn co http://llvm.org/svn/llvm-project/klee/trunk klee</div>
+  </li>
+
+  <li> Configure KLEE: 
+       <div class="code">
+	 ./configure --with-llvm=<i>path/to/llvm ENABLE_OPTIMIZED=1</i>
+       </div>
+
+    <p>This assumes that you compiled LLVM in-place.  If you used a
+      different directory for the object files then use:
+      <div class="code">
+	./configure --with-llvmsrc=<i>path/to/llvm/src</i>--with-llvmobj=<i>path/to/llvm/obj</i>
+      </div>
+  </li>
+
+  <li> Build the release version of KLEE:
+       <div class="code">
+         make
+       </div>
+  </li>
+
+  <li> Run the test suite.  You should have no unexpected failures.but
+  please <a href="bugs.html">report</a> any such failures.
+       <div class="code">
+         make test
+       </div>
+  </li>
+
+  <li> You're ready to go!  Go to the <a href="tutorials.html">Tutorials</a> page to try KLEE.</li>
+  </ol>
+
+<!--   <h2> Full Installation </h2> -->
+  
+<!--   If you need uCLibc and/or POSIX support add <i>-with-uclibc</i> -->
+<!--   and <i>-enable-posix-runtime</i> to configure.  Thus, to enable -->
+<!--   both, replace step 3 above with: -->
+  
+<!--   <div class="code"> -->
+<!--     ./configure -with-llvm=<i>path/to/llvm</i> -with-uclibc -enable-posix-runtime ENABLE_OPTIMIZED=1 -->
+<!--   </div> -->
+<!--   However, note that... -->
+
+</div>
+</body>
+</html>
