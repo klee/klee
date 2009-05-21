@@ -1,0 +1,78 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" 
+          "http://www.w3.org/TR/html4/strict.dtd">
+<!-- Material used from: HTML 4.01 specs: http://www.w3.org/TR/html401/ -->
+<html>
+<head>
+  <META http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+  <title>The KLEE Symbolic Virtual Machine</title>
+  <link type="text/css" rel="stylesheet" href="menu.css">
+  <link type="text/css" rel="stylesheet" href="content.css">
+</head>
+<body>
+<!--#include virtual="menu.html.incl"-->
+<div id="content">
+  <!--*********************************************************************-->
+  <h1>KLEE Generated Files</h1>
+  <!--*********************************************************************-->
+
+  <h2>Standard Files</h2>
+  These files are always generated on a KLEE execution:
+  <ol>
+  <li><b>info</b>: This is a text file containing various information
+  related to a KLEE run.  In particular, it records the exact
+  command-line with which KLEE was run, and the total time taken by
+  the execution.  E.g.:
+    <pre class="output">
+    $ cat info 
+    klee --write-pcs demo.o
+    PID: 12460
+    Started: 2009-05-20 22:31:41
+    BEGIN searcher description
+    DFSSearcher
+    END searcher description
+    Finished: 2009-05-20 22:31:41
+    Elapsed: 00:00:00
+    KLEE: done: explored paths = 3
+    KLEE: done: avg. constructs per query = 6
+    KLEE: done: total queries = 3
+    KLEE: done: valid queries = 0
+    KLEE: done: invalid queriers = 3
+    KLEE: done: query cex = 3
+    KLEE: done: total instructions = 67
+    KLEE: done: completed paths = 3
+    KLEE: done: generated tests = 3 </pre>
+  </li>
+
+  <li><b>warnings.txt</b>: This is a text file containing all warnings emitted by KLEE.
+  </li>
+
+  <li><b>messages.txt</b>: This is a text file containing all other messages emitted by KLEE.
+  </li>
+
+  <li><b>assembly.ll</b>: This file contains a human readable version
+  of the LLVM bitcode executed by KLEE
+
+  <li><b>run.stats</b>: This is a text file containing various
+  statistics emitted by KLEE.  While this file can be inspected
+  manually, you should use the <a href="klee-tools">klee-stats</a>
+  tool for that.</li>
+
+  <li><b>run.istats</b>: This is a binary file containing global
+  statistics emitted by KLEE for each line of code in the program.
+  </li>
+  
+  </ol>
+
+
+  <h2> Kleaver files</h2>
+
+  <ol>
+    <li><b>test&lt;NNN&gt;.pc</b> files:
+    </li>
+    <li><b>queries.pc:</b>
+    </li>
+  </ol>
+
+</div>
+</body>
+</html>

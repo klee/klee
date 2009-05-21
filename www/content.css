@@ -35,10 +35,18 @@ div.instr{
     margin: 7px;
 }
 
+/* Instructions */
+pre.output{
+    border: 1px solid LightSteelBlue ;
+    font-family: Courier New;
+    background-color: #E3E3E3;
+    padding: 7px;
+    margin: 7px;
+}
+
 /* Code */
 pre.code{
     display:table;
-    text-align: left;
     border: 1px solid LightSteelBlue ;
     font-family: Courier New;
     background-color: #E3E3E3;
