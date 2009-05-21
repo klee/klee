@@ -1,0 +1,24 @@
+// RUN: %llvmgcc %s -emit-llvm -O0 -c -o %t1.bc
+// RUN: %klee %t1.bc
+
+unsigned sym() {
+  unsigned x;
+  klee_make_symbolic(&x, sizeof x);
+  return x;
+}
+
+int main() {
+  unsigned x, y;
+
+  // sym returns a symbolic object, but because it is
+  // alloca'd it is freed on sym()s return. thats fine,
+  // but the problem is that IVC is going to try to write
+  // into the object right here.
+  //
+  // to support this we need to have a facility for making
+  // state local copies of a freed object.
+  if (sym() == 0) 
+    printf("ok\n");
+
+  return 0;
+}

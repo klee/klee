@@ -1,0 +1,59 @@
+TODO
+--
+
+Build System / Configure / Release Cleanups
+--
+ o Rename .bout to .ktest (klee test)
+
+ o Rename .pc to .kquery (kleaver query)
+
+ o Configure doesn't check for bison / flex, we don't really use these
+   for anything important (just the command line STP tool), it would
+   be nice if they weren't required.
+
+ o Need a way to hide LLVM options in "klee --help".
+
+Klee Internal
+--
+ o Make sure that namespaces and .cpp locations match with reorganized
+   include locations.
+
+ o Add replay framework for POSIX model tests.
+
+Kleaver Internal
+--
+ o We need to fix the constants-in-exprs problem, this makes
+   separating out a Kleaver expr library much more difficult. There
+   are two parts:
+   
+     1. Pull fast (pure constant) path operations out of Expr.cpp,
+        into Executor.cpp.
+
+     2. Lift constants-are-immediate optimization out of ref<Expr>
+        into Cell. Expressions in memory already have the concrete
+        cache, so we get that part for free. 
+
+        We will need a way to distinguish if a cell has an expr or a
+        constant. Incidentally, this gives us an extra sentinel value
+        (is-expr == true and Expr* == null) we can use to mark
+        uninitialized-value of a register.
+
+   It may be worth sinking Expr construction into a Builder class
+   while we are at it.
+
+   There is a also a nice cleanup/perf win where we can work with
+   registers (Cells) directly, now that we build the constant table,
+   it might be worth doing this at the same time. This exposes a win
+   for IVC where it can write back a constant value into a register,
+   which needs to be done with care but would be a big improvement for
+   IVC.
+
+ o The stpArray field of an UpdateNode needs to die. This isn't as
+   easy as dropping it from the map, because we also need a
+   notification to free it. I think probably what we should do is
+   introduce an ExprContext can be used to deal with such things.
+     o The ExprContext could also have the default builder, for
+       example, which would make it easy to swap in an optimizing
+       builder.
+
+

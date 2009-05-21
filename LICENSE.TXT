@@ -11,8 +11,7 @@ Developed by:
 
     klee Team
 
-    Stanford Checking Group: Daniel Dunbar, Cristian Cadar, Peter
-    Pawlowki, Dawson Engler.
+    Stanford Checking Group
 
     http://klee.llvm.org
 
@@ -30,10 +29,10 @@ so, subject to the following conditions:
       this list of conditions and the following disclaimers in the
       documentation and/or other materials provided with the distribution.
 
-    * Neither the names of the LLVM Team, University of Illinois at
-      Urbana-Champaign, nor the names of its contributors may be used to
-      endorse or promote products derived from this Software without specific
-      prior written permission.
+    * Neither the names of the klee Team, Stanford University, nor the
+      names of its contributors may be used to endorse or promote
+      products derived from this Software without specific prior
+      written permission.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
@@ -50,10 +49,9 @@ This file will describe the copyrights, license, and restrictions which apply
 to that code.
 
 The disclaimer of warranty in the University of Illinois Open Source License
-applies to all code in the klee Distribution, and nothing in any of the
-other licenses gives permission to use the names of the klee Team or the
-University of Illinois to endorse or promote products derived from this
-Software.
+applies to all code in the klee Distribution, and nothing in any of the other 
+licenses gives permission to use the names of the klee Team or Stanford 
+University to endorse or promote products derived from this Software.
 
 The following pieces of software have additional or alternate copyrights,
 licenses, and/or restrictions:
@@ -61,4 +59,5 @@ licenses, and/or restrictions:
 Program             Directory
 -------             ---------
 STP                 klee/stp
+klee-libc           runtime/klee-libc
 

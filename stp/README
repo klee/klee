@@ -1,0 +1,26 @@
+/********************************************************************
+ * PROGRAM NAME: STP (Simple Theorem Prover)	
+ *		
+ * AUTHORS: Vijay Ganesh, David L. Dill
+ *	
+ * BEGIN DATE: November, 2005
+ *
+ * LICENSE: Please view LICENSE file in the home dir of this Program
+ ********************************************************************/
+
+Install
+-------
+See INSTALL file in the home dir of this program
+
+Authors
+-------
+Vijay Ganesh, Stanford University, Stanford, CA, USA
+David L. Dill, Stanford University, Stanford, CA, USA
+Tim King, Stanford University, Stanford, CA, USA
+
+Makefiles and configuration scripts
+------------------------------------
+Cristian Cadar, Stanford University, Stanford, CA, USA
+Paul Twohey, Stanford University, Stanford, CA, USA
+Sergey Berezin, ATG Synopsys, Mountain View, CA, USA
+Clark Barrett, New York University, New York, NY, USA

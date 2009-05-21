@@ -1,0 +1,10 @@
+/// @mainpage KLEE
+///
+/// @section main_intro Introduction
+/// Welcome to KLEE. KLEE is a symbolic execution engine that works on LLVM
+/// bitcode.
+/// 
+/// @section Documentation
+/// The documentation of KLEE is composed of the Doxygen documentation
+/// of the code as well as the following documents:
+/// - @subpage overview

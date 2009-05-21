@@ -1,0 +1,28 @@
+// RUN: %llvmgcc -c -o %t1.bc %s
+// RUN: %klee --exit-on-error %t1.bc
+
+// This is a bug in llvm-gcc4.0 but seems to be fixed in llvm-gcc4.2,
+// its included here mostly as a reminder. 
+
+#include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+struct foo {
+  unsigned int a : 5;
+  unsigned int b : 10;
+  unsigned int c : 1;
+} __attribute__((packed));
+
+int main() {
+  struct foo *a = malloc(sizeof *a);
+
+  a->b = 12; // problem here is that llvm-gcc emits a 4 byte access
+             // which is out of bounds.
+
+  int x = a->b;
+
+  assert(x == 12);
+
+  return 0;
+}

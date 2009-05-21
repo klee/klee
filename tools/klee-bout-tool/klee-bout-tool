@@ -1,0 +1,106 @@
+#!/usr/bin/python
+
+import os
+import struct
+import sys
+
+version_no=2
+
+class BOutError(Exception):
+    pass
+
+class BOut:
+    @staticmethod
+    def fromfile(path):
+        if not os.path.exists(path):
+            print "ERROR: file %s not found" % (path)
+            sys.exit(1)
+            
+        f = open(path,'rb')
+        hdr = f.read(5)
+        if len(hdr)!=5 or hdr!='BOUT\n':
+            raise BOutError,'unrecognized file'
+        version, = struct.unpack('>i', f.read(4))
+        if version > version_no:
+            raise BOutError,'unrecognized version'
+        numArgs, = struct.unpack('>i', f.read(4))
+        args = []
+        for i in range(numArgs):
+            size, = struct.unpack('>i', f.read(4))
+            args.append(f.read(size))
+            
+        if version >= 2:
+            symArgvs, = struct.unpack('>i', f.read(4))
+            symArgvLen, = struct.unpack('>i', f.read(4))
+        else:
+            symArgvs = 0
+            symArgvLen = 0
+
+        numObjects, = struct.unpack('>i', f.read(4))
+        objects = []
+        for i in range(numObjects):
+            size, = struct.unpack('>i', f.read(4))
+            name = f.read(size)
+            size, = struct.unpack('>i', f.read(4))
+            bytes = f.read(size)
+            objects.append( (name,bytes) )
+
+        # Create an instance
+        b = BOut(version, args, symArgvs, symArgvLen, objects)
+        # Augment with extra filename field
+        b.filename = path
+        return b
+    
+    def __init__(self, version, args, symArgvs, symArgvLen, objects):
+        self.version = version
+        self.symArgvs = symArgvs
+        self.symArgvLen = symArgvLen
+        self.args = args
+        self.objects = objects
+
+        # add a field that represents the name of the program used to
+        # generate this .bout file:
+        program_full_path = self.args[0]
+        program_name = os.path.basename(program_full_path)
+        # sometimes program names end in .bc, so strip them
+        if program_name.endswith('.bc'):
+          program_name = program_name[:-3]
+        self.programName = program_name
+        
+def trimZeros(str):
+    for i in range(len(str))[::-1]:
+        if str[i] != '\x00':
+            return str[:i+1]
+    return ''
+    
+def main(args):
+    from optparse import OptionParser
+    op = OptionParser("usage: %prog [options] files")
+    op.add_option('','--trim-zeros', dest='trimZeros', action='store_true', 
+                  default=False,
+                  help='trim trailing zeros')
+    
+    opts,args = op.parse_args()
+    if not args:
+        op.error("incorrect number of arguments")
+
+    for file in args:
+        b = BOut.fromfile(file)
+        pos = 0
+        print 'bout file  : %r' % file
+        print 'args       : %r' % b.args
+        print 'num objects: %r' % len(b.objects)
+        for i,(name,data) in enumerate(b.objects):
+            if opts.trimZeros:
+                str = trimZeros(data)
+            else:
+                str = data
+
+            print 'object %4d: name: %r' % (i, name)
+            print 'object %4d: size: %r' % (i, len(data))
+            print 'object %4d: data: %r' % (i, str)
+        if file != args[-1]:
+            print
+
+if __name__=='__main__':
+    main(sys.argv)

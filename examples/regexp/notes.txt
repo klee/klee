@@ -1,0 +1,26 @@
+clang -m32 -I ~/private/klee/include -c -emit-llvm Regexp.c
+
+klee Regexp.o
+klee --only-output-states-covering-new Regexp.o
+ls -l klee-out-0
+ls -l klee-out-1
+ls -l klee-last
+
+cd klee-last
+klee-bout-tool *.bout
+klee-bout-tool --trim-zeros *.bout
+
+Stuff to show:
+Adding klee_prefer_cex
+
+PrintStats.py klee-last
+
+PrintStats.py klee-last
+Why not 100% coverage?
+
+clang -g -m32 -I ~/private/klee/include -c -emit-llvm Regexp.c
+
+KCachegrind?
+
+Disable klee_assume, show coverage again (why is klee-check-div getting pulled
+in?)

@@ -1,0 +1,32 @@
+{
+   STP:BeevMgr
+   Memcheck:Leak
+   fun:_vgrZU_libstdcZpZpZa__Znwj
+   fun:_ZN4BEEV7BeevMgr*
+}
+{
+   STP:BeevMgr:strdup
+   Memcheck:Leak
+   fun:_vgrZU_libcZdsoZa_malloc
+   fun:strdup
+   fun:_ZN4BEEV7BeevMgr*
+}
+{
+   STP:c_interface
+   Memcheck:Leak
+   fun:_vgrZU_libstdcZpZpZa__Znwj
+   fun:vc_*
+}
+{
+   STP:BeevMgr:vector
+   Memcheck:Leak
+   fun:_vgrZU_libstdcZpZpZa__Znwj
+   fun:_ZNSt6vector*
+   fun:_ZN4BEEV7BeevMgr*
+}
+{ 
+   LLVM:Tmp1
+   Memcheck:Leak
+   fun:_vgrZU_libstdcZpZpZa__Znwj
+   fun:_ZN4llvm*
+}

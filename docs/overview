@@ -1,0 +1,104 @@
+/// @page overview High level overview of KLEE.
+/// This document contains a high level overview of the inner workings of KLEE.
+///
+/// KLEE implements symbolic execution by interpreting LLVM bitcode. Symbolic
+/// memory is defined by inserting special calls to KLEE (namely
+/// klee_make_symbolic)
+/// During execution, KLEE tracks all uses of symbolic memory. Constraints
+/// on symbolic memory usage are collected. Memory
+/// that is defined using previously declared symbolic memory become
+/// symbolic as well.
+/// Whenever a branch refering to symbolic memory is encountered, KLEE forks
+/// the entire states and explores each side of the branch for which a possible
+/// solution to the symbolic constraints can be found.
+/// KLEE makes queries to STP to solve symbolic constraints.
+///
+/// The rest of this document describes some of the important components of KLEE
+/// 
+/// @section executor Interpreter
+/// klee::Interpreter is the main abstract class defining the interface of the
+/// bitcode interpreter. klee::Executor is the main concrete instance of this
+/// class.
+/// Application states (i.e. memory, registers and PC) are stored in instances of
+/// class klee::ExecutionState. There is one such instance for each path beeing
+/// executed (except when some states are merged together).
+/// On a branch, if condition is symbolic, klee::Executor::fork returns a
+/// klee::ExecutionState::StatePair which is a pair of ExecutionState to be
+/// executed.
+/// 
+/// @section memory Memory model
+/// MemoryObject's represent allocation sites in the program (calls to malloc, stack
+/// objects, global variables)
+/// and, at least conceptually, can be thought of as the unique name for the object
+/// allocated at that site.
+/// ObjectState's are used to store the actual contents of a MemoryObject in a
+/// particular ExecutionState (but
+/// can be shared). I need better names for these two things. 
+/// 
+/// Each ExecutionState stores a mapping of MemoryObjects -> ObjectState using the
+/// AddressSpace data
+/// structure (implemented as an immutable tree so that copying is cheap and the
+/// shared structure is exploited).
+/// Each AddressSpace may "own" some subset of the ObjectStates in the mapping. When
+/// an AddressSpace
+/// is duplicated it loses ownership of the ObjectState in the map. Any subsequent
+/// write to an ObjectState will
+/// create a copy of the object (AddressSpace::getWriteable). This is the COW
+/// mechanism (which gets used
+/// for all objects, not just globals).
+/// 
+/// From the point of view of the state and this mapping there is no distinction
+/// between stack, heap, and global
+/// objects. The only special handling for stack objects is that the MemoryObject is
+/// marked as isLocal and the
+/// MemoryObject is stored in the StackFrame alloca list. When the StackFrame is
+/// popped these objects are
+/// then unbound so that the state can no longer access the memory directly
+/// (references to the memory object
+/// may still remain in ReadExprs, but conceptually the actual memory is no longer
+/// addressable).
+/// 
+/// It is also important that the AddressSpace mapping is ordered. We use this when
+/// we need to resolve a symbolic
+/// address to an ObjectState by first getting a particular value for the symbolic
+/// address, and using that value to start
+/// looking for objects that the pointer can fall within.
+/// Difference betweens MemoryObjects and ObjectStates ?
+///
+/// @section expression Expressions
+/// The various Expr classes mostly model the llvm instruction set. ref<Expr> is
+/// used to maintain the reference count
+/// but also embeds any constant expressions. In fact in the current code base
+/// ConstantExprs should almost never be
+/// created. Most of the Expr's are straightforward. Some of the most important ones
+/// are Concat?Expr, which join
+/// some number of bytes into a larger type, ExtractExpr which extracts smaller
+/// types from larger ones, and ReadExpr
+/// which is a symbolic array access.
+///
+/// The way memory is implemented all accesses are broken down into byte level
+/// operations. This means that the
+/// memory system (by which I mean the ObjectState data structure) tends to use a
+/// lot of ExtractExpr and Concat?Expr,
+/// so it is very important that these expressions fold their operands when
+/// possible.
+///
+/// The ReadExpr is probably the most important one. Conceptually it is simply an
+/// index and a list of (index, value)
+/// updates (writes). The ReadExpr evaluates to all the values for which the two
+/// indices can be equal. The ObjectState
+/// structure uses a cache for concrete writes and for symbolic writes at concrete
+/// indices, but for writes at symbolic
+/// indices it must construct a list of such updates. These are stored in the
+/// UpdateList and UpdateNode structures
+/// which are again immutable data structures so that copy is cheap and the sharing
+/// is exploited.
+/// 
+/// @section searcher Searcher
+/// Base classe: klee::Searcher. The Executor uses a Searcher to select the next
+/// state (i.e. program instance following a single path) for which an
+/// instruction
+/// will be executed. There are multiple implementations of Searcher in klee,
+/// implementing different search policies. klee::RandomSearcher selects the next state randomly.
+/// klee::DFSSearcher uses a depth first approach. klee::MergingSearcher tries
+/// to merge states ?

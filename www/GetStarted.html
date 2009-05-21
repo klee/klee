@@ -1,0 +1,101 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+          "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+  <META http-equiv="Content-Type" content="text/html; charset=ISO-8859-1" />
+  <title>KLEE - Getting Started</title>
+  <link type="text/css" rel="stylesheet" href="menu.css" />
+  <link type="text/css" rel="stylesheet" href="content.css" />
+</head>
+<body>
+
+<!--#include virtual="menu.html.incl"-->
+
+<div id="content">
+
+<h1>Getting Started: Building and Running KLEE</h1>
+
+<!-- <p>FIXME: Intro and disclaimer.</p> -->
+
+<h2 id="build">Building KLEE and Working with the Code</h2>
+
+<p>If you would like to check out and build KLEE, the current procedure is as
+follows:</p>
+
+KLEE is built on LLVM; the first steps are to get a working LLVM
+installation. See <a href="http://llvm.org/docs/GettingStarted.html">Getting
+Started with the LLVM System</a> for more information.
+
+<ol>
+<li>Install llvm-gcc:</li>
+<ul>
+<li>Download and install the LLVM 2.5 release of <tt>llvm-gcc</tt>
+  from <a href="http://llvm.org/releases/download.html">here</a>. It
+  is important to do this first so that it is found in
+  subsequent <tt>configure</tt> steps. <tt>llvm-gcc</tt> will be used
+  later to compile programs that KLEE can execute.</li>
+</ul>
+
+<li><a href="http://www.llvm.org/docs/GettingStarted.html#checkout">Checkout
+    and build LLVM</a> from SVN head:
+    
+  <code class="instr"> <code>
+    svn co http://llvm.org/svn/llvm-project/llvm/trunk llvm
+    cd llvm
+    ./configure --enable-optimized
+    make
+  </code></code>
+
+(the <tt>--enable-optimized</tt> configure argument is not
+necessary, but KLEE runs very slowly in Debug mode).
+  </li>
+
+  <li>Checkout KLEE (to any path you like):
+    <div class="instr">
+      svn co http://llvm.org/svn/llvm-project/klee/trunk klee
+    </div>
+  </li>
+  
+  <li>Configure KLEE (from the KLEE source directory): 
+    <div class="instr">
+      ./configure --with-llvm=<i>path/to/llvm</i>
+    </div>
+    
+    <p>This assumes that you compiled LLVM in-place.  If you used a
+      different directory for the object files then use:
+      <div class="instr">
+	./configure --with-llvmsrc=<i>path/to/llvm/src</i>--with-llvmobj=<i>path/to/llvm/obj</i>
+      </div>
+  </li>
+
+  <li>Build KLEE (from the KLEE source directory):
+    <div class="instr">
+      make
+    </div>
+  </li>
+
+  <li>Run DejaGNU and unit tests to verify your build:
+    <div class="instr">
+      make check<br>
+      make unittests<br>
+    </div>
+  </li>
+
+  <li>You're ready to go!  Go to the <a href="tutorials.html">Tutorials</a> page
+  to try KLEE.</li>
+</ol>
+
+<!--   <h2> Full Installation </h2> -->
+  
+<!--   If you need uCLibc and/or POSIX support add <i>-with-uclibc</i> -->
+<!--   and <i>-enable-posix-runtime</i> to configure.  Thus, to enable -->
+<!--   both, replace step 3 above with: -->
+  
+<!--   <div class="instr"> -->
+<!--     ./configure -with-llvm=<i>path/to/llvm</i> -with-uclibc -enable-posix-runtime ENABLE_OPTIMIZED=1 -->
+<!--   </div> -->
+<!--   However, note that... -->
+
+</div>
+</body>
+</html>

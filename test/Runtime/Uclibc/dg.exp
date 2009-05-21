@@ -1,0 +1,5 @@
+load_lib llvm.exp
+
+if { [klee_supports_uclibc] } {
+    RunLLVMTests [lsort [glob -nocomplain $srcdir/$subdir/*.{ll,llx,c,cpp,tr}]]
+}

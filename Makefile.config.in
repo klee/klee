@@ -1,0 +1,45 @@
+# -*- Makefile -*-
+
+# Set the name of the project here
+PROJECT_NAME := klee
+PROJ_VERSION := 0.01
+
+# Set this variable to the top of the LLVM source tree.
+LLVM_SRC_ROOT = @LLVM_SRC@
+
+# Set this variable to the top level directory where LLVM was built
+# (this is *not* the same as OBJ_ROOT as defined in LLVM's Makefile.config).
+LLVM_OBJ_ROOT = @LLVM_OBJ@
+
+# Set the directory root of this project's source files
+PROJ_SRC_ROOT := $(subst //,/,@abs_top_srcdir@)
+
+# Set the root directory of this project's object files
+PROJ_OBJ_ROOT := $(subst //,/,@abs_top_objdir@)
+
+# Set the root directory of this project's install prefix
+PROJ_INSTALL_ROOT := @prefix@
+
+ENABLE_POSIX_RUNTIME := @ENABLE_POSIX_RUNTIME@
+ENABLE_STPLOG := @ENABLE_STPLOG@
+ENABLE_UCLIBC := @ENABLE_UCLIBC@
+
+HAVE_SELINUX := @HAVE_SELINUX@
+
+RUNTIME_ENABLE_OPTIMIZED := @RUNTIME_ENABLE_OPTIMIZED@
+RUNTIME_DISABLE_ASSERTIONS :=
+RUNTIME_ENABLE_COVERAGE :=
+RUNTIME_ENABLE_PROFILING :=
+
+# A list of "features" which tests can check for in XFAIL:
+TEST_FEATURE_LIST :=
+
+ifeq ($(HAVE_SELINUX_SELINUX_H),1)
+  TEST_FEATURE_LIST += have-selinux
+else
+  TEST_FEATURE_LIST += no-selinux
+endif
+
+CFLAGS := @CFLAGS@
+CXXFLAGS := @CXXFLAGS@
+LDFLAGS := @LDFLAGS@

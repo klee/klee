@@ -1,0 +1,147 @@
+// RUN: rm -f %t4.out %t4.err %t4.log
+// RUN: %llvmgcc %s -emit-llvm -O2 -c -o %t1.bc
+// RUN: llvm-as -f ../_utils._ll -o %t2.bc
+// RUN: llvm-ld -disable-opt -link-as-library %t1.bc %t2.bc -o %t3.bc
+// RUN: %klee --log-file %t4.log --debug-check-for-implied-values %t3.bc > %t4.out 2> %t4.err
+// RUN: ls klee-last | not grep .err
+// RUN: not grep "(missed)" %t4.log
+
+#include <assert.h>
+
+#include "utils.h"
+
+int main() {
+  unsigned char which;
+  volatile unsigned char a,b,c,d,e,f,g,h;
+
+  klee_make_symbolic(&which, sizeof which);
+  klee_make_symbolic(&a, sizeof a);
+  klee_make_symbolic(&b, sizeof b);
+  klee_make_symbolic(&c, sizeof c);
+  klee_make_symbolic(&d, sizeof d);
+  klee_make_symbolic(&e, sizeof e);
+  klee_make_symbolic(&f, sizeof f);
+  klee_make_symbolic(&g, sizeof g);
+  klee_make_symbolic(&h, sizeof h);
+
+  switch (which) {
+// RUN: grep "simple read(2) = value case" %t4.out
+  case 0:
+    if (a == 2) {
+      assert(!klee_is_symbolic(a));
+      printf("simple read(%d) = value case\n", a);
+    }
+    break;
+
+// RUN: grep "select(0) has distinct constant result case (false)" %t4.out
+  case 1:
+    if (util_make_select(a, 12, 14) == 14) {
+      assert(!klee_is_symbolic(a));
+      printf("select(%d) has distinct constant result case (false)\n", a);
+    }
+    break;
+
+// RUN: grep "select(0) has distinct constant result case (true)" %t4.out
+  case 2:
+    if (util_make_select(!a, 12, 14) == 12) {
+      assert(!klee_is_symbolic(a));
+      printf("select(%d) has distinct constant result case (true)\n", a);
+    }
+    break;
+
+// RUN: grep "concat2(0xBE,0xEF) = value case" %t4.out
+  case 3:
+    if (util_make_concat2(a,b) == 0xBEEF) {
+      assert(!klee_is_symbolic(a));
+      assert(!klee_is_symbolic(b));
+      printf("concat2(0x%X,0x%X) = value case\n",
+             a, b);
+    }
+    break;
+
+// RUN: grep "concat4(0xDE,0xAD,0xBE,0xEF) = value case" %t4.out
+  case 4:
+    if (util_make_concat4(a,b,c,d) == 0xDEADBEEF) {
+      assert(!klee_is_symbolic(a));
+      assert(!klee_is_symbolic(b));
+      assert(!klee_is_symbolic(c));
+      assert(!klee_is_symbolic(d));
+      printf("concat4(0x%X,0x%X,0x%X,0x%X) = value case\n",
+             a, b, c, d);
+    }
+    break;
+
+// RUN: grep "concat8(0xDE,0xAD,0xBE,0xEF,0xAB,0xCD,0xAB,0xCD) = value case" %t4.out
+  case 5:
+    if (util_make_concat8(a,b,c,d,e,f,g,h) == 0xDEADBEEFABCDABCDLL) {
+      assert(!klee_is_symbolic(a));
+      assert(!klee_is_symbolic(b));
+      assert(!klee_is_symbolic(c));
+      assert(!klee_is_symbolic(d));
+      assert(!klee_is_symbolic(e));
+      assert(!klee_is_symbolic(f));
+      assert(!klee_is_symbolic(g));
+      assert(!klee_is_symbolic(h));
+      printf("concat8(0x%X,0x%X,0x%X,0x%X,0x%X,0x%X,0x%X,0x%X) = value case\n",
+             a, b, c, d, e, f, g, h);
+    }
+    break;
+
+// RUN: grep "and(0,0) = true case" %t4.out
+  case 6:
+    if (util_make_and_i1(!a, !b)) {
+      assert(!klee_is_symbolic(a));
+      assert(!klee_is_symbolic(b));      
+      printf("and(%d,%d) = true case\n", a, b);
+    }
+    break;
+
+// RUN: grep "or(0,0) = false case" %t4.out
+  case 7:
+    if (!util_make_or_i1(a, b)) {
+      assert(!klee_is_symbolic(a));
+      assert(!klee_is_symbolic(b));      
+      printf("or(%d,%d) = false case\n", a, b);
+    }
+    break;
+
+    // we use concat to prevent folding, will need to fix if that gets
+    // partial evaluated
+// RUN: grep "add constant case: 0xDE" %t4.out
+  case 8:
+    if (util_make_concat2(a+0xCD,0xCD) == 0xABCD) { 
+      assert(!klee_is_symbolic(a));
+      printf("add constant case: 0x%X\n", a);
+    }
+    break;
+
+// RUN: grep "sub constant case: 0x60" %t4.out
+  case 9:
+    if (util_make_concat2(0x0B-a,0xCD) == 0xABCD) { 
+      assert(!klee_is_symbolic(a));
+      printf("sub constant case: 0x%X\n", a);
+    }
+    break;
+
+// RUN: grep "xor constant case: 0xA0" %t4.out
+  case 10:
+    if (util_make_concat2(0x0B ^ a,0xCD) == 0xABCD) { 
+      assert(!klee_is_symbolic(a));
+      printf("xor constant case: 0x%X\n", a);
+    }
+    break;
+
+// RUN: grep "sext constant case: 244" %t4.out
+  case 11:
+    if (! util_make_or_i1(((short) (signed char) a) + 12,b)) {
+      assert(!klee_is_symbolic(a));
+      printf("sext constant case: %d\n", a);
+    }
+    break;
+
+  default:
+    break;
+  }
+
+  return 0;
+}

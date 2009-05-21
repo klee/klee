@@ -1,0 +1,71 @@
+#Please refer LICENSE FILE in the home directory for licensing information
+# name minkids maxkids cat1 cat2 ...
+Categories:	Term	Form
+
+# Leaf nodes.
+UNDEFINED	0	0
+SYMBOL		0	0	Term	Form 
+
+# These always produce terms
+BVCONST		0	0	Term
+BVNEG		1	1	Term
+BVCONCAT	2	-	Term
+BVOR		1	-	Term
+BVAND		1	-	Term
+BVXOR		1	-	Term
+BVNAND		1	-	Term
+BVNOR		1	-	Term
+BVXNOR		1	-	Term
+BVEXTRACT	3	3	Term
+BVLEFTSHIFT	3	3	Term
+BVRIGHTSHIFT	3	3	Term
+BVSRSHIFT	3	3	Term
+BVVARSHIFT	3	3	Term
+BVPLUS		1	-	Term
+BVSUB		2	2	Term
+BVUMINUS	1	1	Term
+BVMULTINVERSE	1	1	Term
+BVMULT		1	-	Term
+BVDIV		2	2	Term
+BVMOD		2	2	Term
+SBVDIV		2	2	Term
+SBVMOD		2	2	Term
+BVSX		1	1	Term
+BOOLVEC         0       -       Term
+
+# Formula OR term, depending on context
+ITE		3	3	Term	Form
+
+# These produce formulas.
+BVGETBIT	2	2	Form
+BVLT		2	2	Form
+BVLE		2	2	Form
+BVGT		2	2	Form
+BVGE		2	2	Form
+BVSLT		2	2	Form
+BVSLE		2	2	Form
+BVSGT		2	2	Form
+BVSGE		2	2	Form
+EQ		2	2	Form
+NEQ		2	2	Form
+FALSE		0	0	Form
+TRUE		0	0	Form
+NOT		1	1	Form
+AND		1	-	Form
+OR		1	-	Form
+NAND		1	-	Form
+NOR		1	-	Form
+XOR		1	-	Form
+IFF		1	-	Form
+IMPLIES		2	2	Form
+
+# array operations
+READ		2	2	Term
+WRITE		3	3	Term
+
+#Types: These kinds are used only in the API. Once processed inside
+#the API, they are never used again in the system 
+ARRAY           0       0
+BITVECTOR       0       0
+BOOLEAN         0       0
+

@@ -1,0 +1,89 @@
+#!/usr/bin/python
+
+import os, signal, popen2
+
+def getPID(dir):
+    f = open(os.path.join(dir,'info'))
+    for ln in f.readlines():
+        if ln.startswith('PID: '):
+            return int(ln[5:])
+    return None
+
+def execCmd(pid, gdbCmd, opts):
+    cmd = ("gdb " +
+           "--batch " +
+           "--pid=%d " +
+           "--eval-command=\"%s\" " +
+           "--eval-command=detach")%(pid,gdbCmd)
+    cout,cin = popen2.popen2(cmd)
+    cin.close()
+    return cout.read()
+    
+def main():
+    from optparse import OptionParser
+    op = OptionParser("usage: %prog <PID | test directory>")
+    op.add_option('','--backtrace', dest='backtrace',
+                  action='store_true', default=False)
+    op.add_option('-s','--stop-forking', dest='stopForking',
+                  action='store_true', default=False)
+    op.add_option('-H','--halt-execution', dest='haltExecution',
+                  action='store_true', default=False)
+    op.add_option('-d','--dump-states', dest='dumpStates',
+                  action='store_true', default=False)
+    op.add_option('-t','--dump-tree', dest='dumpTree',
+                  action='store_true', default=False)
+    op.add_option('-i','--int', dest='int',
+                  action='store_true', default=False)
+    op.add_option('-k','--kill', dest='kill',
+                  action='store_true', default=False)
+    op.add_option('','--print-pid', dest='printPid',
+                  action='store_true', default=False)
+    op.add_option('','--print-ticks', dest='printTicks',
+                  action='store_true', default=False)
+    opts,args = op.parse_args()
+
+    if len(args) != 1:
+        op.error("invalid arguments")
+
+    try:
+        pid = int(args[0])
+    except:
+        pid = None
+
+    if pid is None:
+        try:
+            pid = getPID(args[0])
+        except:
+            pid = None
+            
+    if pid is None:
+        op.error("unable to determine PID (bad pid or test directory)")
+
+    if opts.printPid:
+        print pid
+        return
+    print 'pid: %d'%pid    
+    if opts.backtrace:
+        execCmd(pid, 'bt', opts)
+    if opts.dumpStates:
+        execCmd(pid, "p dumpStates = 1", opts)        
+    if opts.dumpTree:
+        execCmd(pid, "p dumpPTree = 1", opts)        
+    if opts.stopForking:
+        execCmd(pid, 'p stop_forking()', opts)    
+    if opts.haltExecution:
+        execCmd(pid, 'p halt_execution()', opts)
+    if opts.printTicks:
+        res = execCmd(pid, 'p timerTicks', opts)
+        lns = res.split('\n')
+        for ln in lns:
+            if ln.startswith('$1') and '=' in ln:
+                print ln.split('=',1)[1].strip()
+    if opts.int:    
+        os.kill(pid, signal.SIGINT)
+    if opts.kill:    
+        os.kill(pid, signal.SIGKILL)
+
+if __name__=='__main__':
+    main()
+

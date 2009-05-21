@@ -1,0 +1,10 @@
+1. To install STP perform the following steps on your Unix/GNU-Linux/MacOS X commandline:
+
+./configure --with-prefix=$HOME (or another installation directory)
+make clean
+make
+make install
+
+2. To test the system after installation:
+
+make regressall

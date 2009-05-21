@@ -1,0 +1,23 @@
+// RUN: %llvmgcc %s -emit-llvm -O0 -c -o %t1.bc
+// RUN: rm -f %t1.log
+// RUN: %klee --log-file %t1.log --debug-check-for-implied-values %t1.bc
+// RUN: grep "= 0 (ok)" %t1.log
+// RUN: grep "= 2 (missed)" %t1.log
+
+#define swap(x) (((x)>>16) | (((x)&0xFFFF)<<16))
+int main() {
+  unsigned x, y;
+  
+  klee_make_symbolic(&x, sizeof x);
+  klee_make_symbolic(&y, sizeof y);
+
+  if (!x) { // should give x = 0 hit by ivc
+    printf("ok\n");
+  } else {
+    if (swap(y) == 0x00020000) { // should give y = 2 missed by ivc
+      printf("ok\n");
+    }
+  }
+
+  return 0;
+}
