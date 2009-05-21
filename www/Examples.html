@@ -15,19 +15,119 @@
 
 <h1>KLEE Examples</h1>
 
-<p>FIXME: Intro.</p>
+<p>Here is a basic example of using KLEE to test a simple regular expression matching function. You can find the basic example in the source tree under <tt>examples/regexp</tt>.</p>
 
-<h2>Basic Sort Example</h2>
+<h2>Example: <tt>Regexp.c</tt></h2>
 
-<p>FIXME: Write.</p>
+<p><tt>Regexp.c</tt> contains a simple regular expression matching function, and
+the bare bones testing harness (in <tt>main</tt>) need to explore this code with
+klee. You can see a version of the source
+code <a href="resources/Regexp.c.html">here</a>.</p>
 
-<h2>FIXME: More complicated example</h2>
+<p>This example will show to build and run the example using KLEE, as well as
+how to interpret the output, and some additional KLEE features that can be used
+when writing a test driver by hand.</p>
+
+<p>We'll start by showing how to build and run the example, and then explain how
+the test harness works in more detail.</p>
+
+<h3>Step 1: Building the example</h3>
+
+<p>The first step is to compile the source code using a compiler which can
+generate object files in LLVM bitcode format. Here we use <tt>llvm-gcc</tt>,
+but <a href="http://clang.llvm.org">Clang</a> works just as well!</p>
+
+<p>From within the <tt>examples/regexp</tt> directory:
+<div class="instr">
+  <b>$ llvm-gcc -I ../../include -emit-llvm -c -g Regexp.c</b>
+</div>
+which should create a <tt>Regexp.o</tt> file in LLVM bitcode
+format. The <tt>-I</tt> argument is used so that the compiler can
+find <a href="http://t1.minormatter.com/~ddunbar/klee-doxygen/klee_8h-source.html">"klee/klee.h"</a>,which
+contains definitions for the intrinsic functions used to interact with the KLEE
+virtual machine. <tt>-c</tt> is used because we only want to compile the code to
+an object file (not a native executable), and finally <tt>-g</tt> causes
+additional debug information to be stored in the object file, which KLEE will
+use to determine source line number information.</p>
+
+<p>If you have the LLVM tools installed in your path, you can verify that this step
+worked by running <tt>llvm-nm</tt> on the generated file:</p>
+<div class="instr">
+<pre>
+  <b>$ llvm-nm Regexp.o</b>
+         t matchstar
+         t matchhere
+         T match
+         T main
+         U klee_make_symbolic_name
+         d LC
+         d LC1
+</pre>
+</div>
+
+<p>Normally before running this program we would need to link it to create a
+native executable. However, KLEE runs directly on LLVM bitcode files -- since
+this program only has a single file there is no need to link. For "real"
+programs with multiple inputs,
+the <a href="http://llvm.org/cmds/llvm-link.html"><tt>llvm-link</tt></a>
+and <a href="http://llvm.org/cmds/llvm-ld.html"><tt>llvm-ld</tt></a> tools can
+be used in place of the regular link step to merge multiple LLVM bitcode files
+into a single module which can be executed by KLEE.</p>
+
+<h3>Step 2: Executing the code with KLEE</h3>
+
+<!-- FIXME: Make only-output-states-covering-new default -->
+<p>The next step is to execute the code with KLEE:</p>
+<div class="instr">
+<pre>
+<b>$ klee --only-output-states-covering-new Regexp.o</b>
+KLEE: output directory = "klee-out-1"
+KLEE: ERROR: .../klee/examples/regexp/Regexp.c:23: memory error: out of bound pointer
+KLEE: NOTE: now ignoring this error at this location
+KLEE: ERROR: .../klee/examples/regexp/Regexp.c:25: memory error: out of bound pointer
+KLEE: NOTE: now ignoring this error at this location
+KLEE: done: total instructions = 6334861
+KLEE: done: completed paths = 7692
+KLEE: done: generated tests = 22
+</pre>
+</div>
+
+<p>On startup, KLEE prints the directory used to store output (in this
+case <tt>klee-out-1</tt>). By default klee will use the first
+free <tt>klee-out-<em>N</em></tt> directory and also create a <tt>klee-last</tt>
+symlink which will point to the most recent created directory. You can specify a
+directory to use for outputs using the <tt>-output-dir=<em>path</em></tt>
+command line argument.</p>
+
+<p>While KLEE is running, it will print status messages for "important" events,
+for example when it finds an error in the program. In this case, KLEE detected
+to invalid memory accesses on lines 23 and 25 of our test program. We'll look
+more at this in a moment.</p>
+
+<p>Finally, when KLEE finishes execution it prints out a few statistics about
+the run. Here we see that KLEE executed a total of ~6 million instructions,
+explored 7,692 paths, and generated 22 test cases.</p>
+
+<p>Note that many realistic programs have an infinite (or extremely large)
+number of paths through them, and it is common that KLEE will not terminate. By
+default KLEE will run until the user presses Control-C (i.e. <tt>klee</tt> gets
+a SIGINT), but there are additional options to limit KLEE's runtime and memory
+usage:<p>
+<ul>
+  <li><tt>-max-time=<em>seconds</em></tt>: Halt execution after the given number
+  of seconds.</li>
+  <li><tt>-max-forks=<em>N</em></tt>: Stop forking after <em>N</em> symbolic
+  branches, and run the remaining paths to termination.</li>
+  <li><tt>-max-memory=<em>N</em></tt>: Try to limit memory consumption
+  to <em>N</em> megabytes.</li>
+</ul>
+</p>
+
+<h3>Step ?: Changing the test harness</h3>
+
+<p>FIXME: Step through & explain the test harness, and how we can modify it.</p>
 
 <p>FIXME: Write: show the important klee.h functions.</p>
-
-<p>FIXME: Write: show the important klee tools.</p>
-
-<p>FIXME: Write: show the important klee options.</p>
 
 </div>
 </body>

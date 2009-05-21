@@ -39,12 +39,12 @@ Started with the LLVM System</a> for more information.
 <li><a href="http://www.llvm.org/docs/GettingStarted.html#checkout">Checkout
     and build LLVM</a> from SVN head:
     
-  <code class="instr"> <code>
-    svn co http://llvm.org/svn/llvm-project/llvm/trunk llvm
-    cd llvm
-    ./configure --enable-optimized
+  <div class="instr">
+    svn co http://llvm.org/svn/llvm-project/llvm/trunk llvm <br>
+    cd llvm <br>
+    ./configure --enable-optimized <br>
     make
-  </code></code>
+  </div>
 
 (the <tt>--enable-optimized</tt> configure argument is not
 necessary, but KLEE runs very slowly in Debug mode).
