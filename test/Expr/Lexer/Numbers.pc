@@ -1,0 +1,74 @@
+# RUN: %kleaver -print-tokens %s | grep -v Comment > %t1
+# RUN: grep "(Token .Number. .0b0101_0110. 11 40 0)" %t1
+# RUN: grep "(Token .Number. .0o0703. 6 41 0)" %t1
+# RUN: grep "(Token .Number. .0xABC0_0024. 11 42 0)" %t1
+# RUN: grep "(Token .Number. .-0x10. 5 43 0)" %t1
+# RUN: grep "(Token .Number. .+10. 3 44 0)" %t1
+# RUN: grep "(Token .Comma. .,. 1 47 0)" %t1
+# RUN: grep "(Token .Arrow. .->. 2 48 0)" %t1
+# RUN: grep "(Token .Colon. .:. 1 49 0)" %t1
+# RUN: grep "(Token .Semicolon. .;. 1 50 0)" %t1
+# RUN: grep "(Token .Equals. .=. 1 51 0)" %t1
+# RUN: grep "(Token .At. .@. 1 52 0)" %t1
+# RUN: grep "(Token .LParen. .(. 1 54 0)" %t1
+# RUN: grep "(Token .RParen. .). 1 54 2)" %t1
+# RUN: grep "(Token .LSquare. .\[. 1 55 0)" %t1
+# RUN: grep "(Token .RSquare. .\]. 1 55 2)" %t1
+# RUN: grep "(Token .LBrace. .{. 1 56 0)" %t1
+# RUN: grep "(Token .RBrace. .}. 1 56 2)" %t1
+# RUN: grep "(Token .Identifier. ._hello_world. 12 58 0)" %t1
+# RUN: grep "(Token .KWReserved. .array. 5 62 0)" %t1
+# RUN: grep "(Token .KWReserved. .declare. 7 63 0)" %t1
+# RUN: grep "(Token .KWReserved. .def. 3 64 0)" %t1
+# RUN: grep "(Token .KWReserved. .define. 6 65 0)" %t1
+# RUN: grep "(Token .KWFalse. .false. 5 66 0)" %t1
+# RUN: grep "(Token .KWQuery. .query. 5 67 0)" %t1
+# RUN: grep "(Token .KWTrue. .true. 4 68 0)" %t1
+# RUN: grep "(Token .KWReserved. .var. 3 69 0)" %t1
+# RUN: grep "(Token .KWReserved. .i32. 3 73 0)" %t1
+# RUN: grep "(Token .KWReserved. .fp10.3. 6 74 0)" %t1
+# RUN: grep "(Token .EndOfFile. .. 0 75 0)" %t1
+
+# This is just some random filler space which can be erased in order
+#  to add more run lines without having to adjust the token locations.
+
+
+
+
+# This comment should be on line 38.
+
+0b0101_0110
+0o0703
+0xABC0_0024
+-0x10
++10
+
+# Various punctuation
+,
+->
+:
+;
+=
+@
+
+( )
+[ ]
+{ }
+
+_hello_world
+
+# Keywords
+
+array
+declare
+def
+define
+false
+query
+true
+var
+
+# Reserved keywords
+
+i32
+fp10.3
