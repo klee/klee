@@ -18,7 +18,7 @@ override ENABLE_PROFILING := $(RUNTIME_ENABLE_PROFILING)
 override ENABLE_COVERAGE := $(RUNTIME_ENABLE_COVERAGE)
 endif
 
-include $(LLVM_OBJ_ROOT)/Makefile.rules
+include $(LLVM_SRC_ROOT)/Makefile.rules
 
 LD.Flags += -L$(PROJ_SRC_ROOT)/stp/lib
 CXX.Flags += -DLLVM_23
