@@ -12,7 +12,7 @@ parser: lexPL.o parsePL.o let-funcs.o main.o
 main.o: parsePL_defs.h
 
 lexPL.cpp:	PL.lex parsePL_defs.h ../AST/AST.h
-		$(LEX) -o lexPL.cpp PL.lex
+		$(LEX) -olexPL.cpp PL.lex
 
 parsePL_defs.h: y.tab.h
 		@cp y.tab.h parsePL_defs.h
