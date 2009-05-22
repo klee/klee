@@ -19,12 +19,16 @@
 
 <h2 id="build">Building KLEE and Working with the Code</h2>
 
-<p>If you would like to check out and build KLEE, the current procedure is as
-follows:</p>
-
+<p>If you would like to try KLEE, the current procedure for building is
+below.</p>
 KLEE is built on LLVM; the first steps are to get a working LLVM
 installation. See <a href="http://llvm.org/docs/GettingStarted.html">Getting
 Started with the LLVM System</a> for more information.
+
+<p><b>NOTE:</b> KLEE is only currently tested on Linux and Darwin x86-32 targets,
+using LLVM top-of-tree. KLEE will not work with an older LLVM (e.g., 2.5), and is
+currently untested on any x86-64 target, although we hope to add support for
+them soon.<p>
 
 <ol>
 <li>Install llvm-gcc:</li>
@@ -37,7 +41,7 @@ Started with the LLVM System</a> for more information.
 </ul>
 
 <li><a href="http://www.llvm.org/docs/GettingStarted.html#checkout">Checkout
-    and build LLVM</a> from SVN head:
+    and build LLVM</a> from SVN head (LLVM 2.5 will not work):
     
   <div class="instr">
     svn co http://llvm.org/svn/llvm-project/llvm/trunk llvm <br>
@@ -64,7 +68,7 @@ necessary, but KLEE runs very slowly in Debug mode).
     <p>This assumes that you compiled LLVM in-place.  If you used a
       different directory for the object files then use:
       <div class="instr">
-	./configure --with-llvmsrc=<i>path/to/llvm/src</i>--with-llvmobj=<i>path/to/llvm/obj</i>
+	./configure --with-llvmsrc=<i>path/to/llvm/src</i> --with-llvmobj=<i>path/to/llvm/obj</i>
       </div>
   </li>
 
