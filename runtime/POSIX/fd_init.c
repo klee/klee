@@ -56,9 +56,9 @@ static void __create_new_dfile(exe_disk_file_t *dfile, unsigned size,
 
   dfile->size = size;
   dfile->contents = malloc(dfile->size);
-  klee_make_symbolic_name(dfile->contents, dfile->size, name);
+  klee_make_symbolic(dfile->contents, dfile->size, name);
   
-  klee_make_symbolic_name(s, sizeof(*s), sname);
+  klee_make_symbolic(s, sizeof(*s), sname);
 
   /* For broken tests */
   if (!klee_is_symbolic(s->st_ino) && 
@@ -96,7 +96,7 @@ static void __create_new_dfile(exe_disk_file_t *dfile, unsigned size,
 
 static unsigned __sym_uint32(const char *name) {
   unsigned x;
-  klee_make_symbolic_name(&x, sizeof x, name);
+  klee_make_symbolic(&x, sizeof x, name);
   return x;
 }
 
@@ -139,11 +139,11 @@ void klee_init_fds(unsigned n_files, unsigned file_length,
     __exe_fs.ftruncate_fail = malloc(sizeof(*__exe_fs.ftruncate_fail));
     __exe_fs.getcwd_fail = malloc(sizeof(*__exe_fs.getcwd_fail));
 
-    klee_make_symbolic_name(__exe_fs.read_fail, sizeof(*__exe_fs.read_fail), "read_fail");
-    klee_make_symbolic_name(__exe_fs.write_fail, sizeof(*__exe_fs.write_fail), "write_fail");
-    klee_make_symbolic_name(__exe_fs.close_fail, sizeof(*__exe_fs.close_fail), "close_fail");
-    klee_make_symbolic_name(__exe_fs.ftruncate_fail, sizeof(*__exe_fs.ftruncate_fail), "ftruncate_fail");
-    klee_make_symbolic_name(__exe_fs.getcwd_fail, sizeof(*__exe_fs.getcwd_fail), "getcwd_fail");
+    klee_make_symbolic(__exe_fs.read_fail, sizeof(*__exe_fs.read_fail), "read_fail");
+    klee_make_symbolic(__exe_fs.write_fail, sizeof(*__exe_fs.write_fail), "write_fail");
+    klee_make_symbolic(__exe_fs.close_fail, sizeof(*__exe_fs.close_fail), "close_fail");
+    klee_make_symbolic(__exe_fs.ftruncate_fail, sizeof(*__exe_fs.ftruncate_fail), "ftruncate_fail");
+    klee_make_symbolic(__exe_fs.getcwd_fail, sizeof(*__exe_fs.getcwd_fail), "getcwd_fail");
   }
 
   /* setting symbolic stdout */

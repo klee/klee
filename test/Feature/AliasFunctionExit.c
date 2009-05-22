@@ -22,7 +22,7 @@ void end(int status) {
 
 int main() {
   int x;
-  klee_make_symbolic_name(&x, sizeof(x), "x");
+  klee_make_symbolic(&x, sizeof(x), "x");
 
   klee_alias_function("exit", "end");
   start(x);

@@ -72,7 +72,7 @@ HandlerInfo handlerInfo[] = {
   add("klee_get_obj_size", handleGetObjSize, true),
   add("klee_get_errno", handleGetErrno, true),
   add("klee_is_symbolic", handleIsSymbolic, true),
-  add("klee_make_symbolic_name", handleMakeSymbolic, false),
+  add("klee_make_symbolic", handleMakeSymbolic, false),
   add("klee_mark_global", handleMarkGlobal, false),
   add("klee_malloc_n", handleMallocN, true),
   add("klee_merge", handleMerge, false),
@@ -670,8 +670,18 @@ void SpecialFunctionHandler::handleDefineFixedObject(ExecutionState &state,
 void SpecialFunctionHandler::handleMakeSymbolic(ExecutionState &state,
                                                 KInstruction *target,
                                                 std::vector<ref<Expr> > &arguments) {
-  assert(arguments.size()==3 &&
-         "invalid number of arguments to klee_make_symbolic[_name]");  
+  std::string name;
+
+  // FIXME: For backwards compatibility, we should eventually enforce the
+  // correct arguments.
+  if (arguments.size() == 2) {
+    name = "unnamed";
+  } else {
+    // FIXME: Should be a user.err, not an assert.
+    assert(arguments.size()==3 &&
+           "invalid number of arguments to klee_make_symbolic");  
+    name = readStringAtAddress(state, arguments[2]);
+  }
 
   Executor::ExactResolutionList rl;
   executor.resolveExact(state, arguments[0], rl, "make_symbolic");
@@ -679,7 +689,6 @@ void SpecialFunctionHandler::handleMakeSymbolic(ExecutionState &state,
   for (Executor::ExactResolutionList::iterator it = rl.begin(), 
          ie = rl.end(); it != ie; ++it) {
     MemoryObject *mo = (MemoryObject*) it->first.first;
-    std::string name = readStringAtAddress(state, arguments[2]);
     mo->setName(name);
     
     const ObjectState *old = it->first.second;

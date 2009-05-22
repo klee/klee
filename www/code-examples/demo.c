@@ -6,6 +6,6 @@ int my_islower(int x) {
 
 int main() {
   char c;
-  klee_make_symbolic_name(&c, sizeof(c), "input");
+  klee_make_symbolic(&c, sizeof(c), "input");
   return my_islower(c);
 }

@@ -20,7 +20,7 @@ int main() {
   for (i=0; i<N; i++)
     a[i] = i % 256;
   
-  klee_make_symbolic_name(k, sizeof(k), "k");
+  klee_make_symbolic(k, sizeof(k), "k");
   
   for (i=0; i<N_IDX; i++) {
     if (k[i] >= N)

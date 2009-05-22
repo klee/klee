@@ -31,7 +31,7 @@ static unsigned char rand_byte(void) {
   return x & 0xFF;
 }
 
-void klee_make_symbolic_name(void *array, unsigned nbytes, const char *name) {
+void klee_make_symbolic(void *array, unsigned nbytes, const char *name) {
   static int rand_init = -1;
 
   if (rand_init == -1) {
@@ -94,10 +94,6 @@ void klee_make_symbolic_name(void *array, unsigned nbytes, const char *name) {
   }
 }
 
-void klee_make_symbolic(void *array, unsigned nbytes) {
-  klee_make_symbolic_name(array, nbytes, "unnamed");
-}
-
 void *klee_malloc_n(unsigned nelems, unsigned size, unsigned alignment) {
 #if 1
   return mmap((void*) 0x90000000, nelems*size, PROT_READ|PROT_WRITE, 
@@ -119,7 +115,7 @@ void klee_silent_exit(int x) {
 
 unsigned klee_choose(unsigned n) {
   unsigned x;
-  klee_make_symbolic(&x, sizeof x);
+  klee_make_symbolic(&x, sizeof x, "klee_choose");
   if(x >= n)
     fprintf(stderr, "ERROR: max = %d, got = %d\n", n, x);
   assert(x < n);
@@ -136,9 +132,9 @@ unsigned klee_get_value(unsigned x) {
   return x;
 }
 
-int klee_range_name(int begin, int end, const char* name) {
+int klee_range(int begin, int end, const char* name) {
   int x;
-  klee_make_symbolic_name(&x, sizeof x, name);
+  klee_make_symbolic(&x, sizeof x, name);
   if (x<begin || x>=end) {
     fprintf(stderr, 
             "KLEE: ERROR: invalid klee_range(%u,%u,%s) value, got: %u\n", 

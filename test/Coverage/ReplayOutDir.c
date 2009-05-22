@@ -5,7 +5,7 @@
 
 int main() {
   int i;
-  klee_make_symbolic(&i, sizeof i);
+  klee_make_symbolic(&i, sizeof i, "i");
   klee_print_range("i", i);
   return 0;
 }

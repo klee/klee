@@ -21,31 +21,45 @@ extern "C" {
      calls. */
   void klee_define_fixed_object(void *addr, unsigned nbytes);
 
-  /* make the contents of the object pointed to by addr symbolic. addr
-   * should always be the start of the object and nbytes must be its
-   * entire size. name is an optional name (can be the empty string)
-   */
-  void klee_make_symbolic_name(void *addr, unsigned nbytes, 
-			       const char *name);
+  /// klee_make_symbolic - Make the contents of the object pointer to by \arg
+  /// addr symbolic. 
+  ///
+  /// \arg addr - The start of the object.
+  /// \arg nbytes - The number of bytes to make symbolic; currently this *must*
+  /// be the entire contents of the object.
+  /// \arg name - An optional name, used for identifying the object in messages,
+  /// output files, etc.
+  void klee_make_symbolic(void *addr, unsigned nbytes, const char *name);
 
-  void klee_make_symbolic(void *addr, unsigned nbytes);  
-  
-  /* Return symbolic value in the (signed) interval [begin,end) */
+  /// klee_range - Construct a symbolic value in the signed interval
+  /// [begin,end).
+  ///
+  /// \arg name - An optional name, used for identifying the object in messages,
+  /// output files, etc.
   int klee_range(int begin, int end, const char *name);
 
-  /* Return a symbolic integer */
+  /// klee_int - Construct an unconstrained symbolic integer.
+  ///
+  /// \arg name - An optional name, used for identifying the object in messages,
+  /// output files, etc.
   int klee_int(const char *name);
 
-  void *klee_malloc_n(unsigned nelems, unsigned size, unsigned alignment);
-
-  /* terminate the state without generating a test file */
+  /// klee_silent_exit - Terminate the current KLEE process without generating a
+  /// test file.
   __attribute__((noreturn))
   void klee_silent_exit(int status);
-  
+
+  /// klee_abort - Abort the current KLEE process.
   __attribute__((noreturn))
   void klee_abort(void);  
 
-  /** Report an error and terminate the state. */
+  /// klee_report_error - Report a user defined error and terminate the current
+  /// KLEE process.
+  ///
+  /// \arg file - The filename to report in the error message.
+  /// \arg line - The line number to report in the error message.
+  /// \arg message - A string to include in the error message.
+  /// \arg suffix - The suffix to use for error files.
   __attribute__((noreturn))
   void klee_report_error(const char *file, 
 			 int line, 

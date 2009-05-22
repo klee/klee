@@ -16,20 +16,20 @@ int main(int argc, char **argv) {
   int a, b, c, x;
 
   if (argc==2 && strcmp(argv[1], "initial") == 0) {
-    klee_make_symbolic_name(&a, sizeof a, "a");
-    klee_make_symbolic_name(&b, sizeof b, "b");
-    klee_make_symbolic_name(&c, sizeof c, "c");
-    klee_make_symbolic_name(&x, sizeof x, "a");
+    klee_make_symbolic(&a, sizeof a, "a");
+    klee_make_symbolic(&b, sizeof b, "b");
+    klee_make_symbolic(&c, sizeof c, "c");
+    klee_make_symbolic(&x, sizeof x, "a");
 
     klee_assume(a == 3);
     klee_assume(b == 4);
     klee_assume(c == 5);
     klee_assume(x == 6);
   } else {
-    klee_make_symbolic_name(&a, sizeof a, "a");
-    klee_make_symbolic_name(&c, sizeof c, "c");
-    klee_make_symbolic_name(&b, sizeof b, "b");
-    klee_make_symbolic_name(&x, sizeof x, "a");
+    klee_make_symbolic(&a, sizeof a, "a");
+    klee_make_symbolic(&c, sizeof c, "c");
+    klee_make_symbolic(&b, sizeof b, "b");
+    klee_make_symbolic(&x, sizeof x, "a");
   }
 
   if (a==3) printf("a==3\n");

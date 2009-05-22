@@ -53,7 +53,7 @@ int main() {
   char re[SIZE];
   
   // Make the input symbolic. 
-  klee_make_symbolic_name(re, sizeof re, "re");
+  klee_make_symbolic(re, sizeof re, "re");
 
   // Try to match against a constant string "hello".
   match(re, "hello");

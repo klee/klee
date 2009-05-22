@@ -2,7 +2,7 @@
 // RUN: %klee --exit-on-error %t1.bc
 
 void f(int *addr) {
-  klee_make_symbolic_name(addr, sizeof *addr, "moo");
+  klee_make_symbolic(addr, sizeof *addr, "moo");
 }
 
 int main() {

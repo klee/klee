@@ -12,6 +12,6 @@
 
 int klee_int(const char *name) {
   int x;
-  klee_make_symbolic_name(&x, sizeof x, name);
+  klee_make_symbolic(&x, sizeof x, name);
   return x;
 }

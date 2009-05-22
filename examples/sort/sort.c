@@ -71,7 +71,7 @@ void test(int *array, unsigned nelem) {
 int main() {
   int input[4] = { 4, 3, 2, 1};
 
-  klee_make_symbolic(&input, sizeof(input));
+  klee_make_symbolic(&input, sizeof(input), "input");
   test(input, 4);
 
   return 0;
