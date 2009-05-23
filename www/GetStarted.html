@@ -34,8 +34,9 @@ them soon.<p>
 <li>Install llvm-gcc:</li>
 <ul>
 <li>Download and install the LLVM 2.5 release of <tt>llvm-gcc</tt>
-  from <a href="http://llvm.org/releases/download.html">here</a>. It
-  is important to do this first so that it is found in
+  from <a href="http://llvm.org/releases/download.html">here</a>.  Add
+  <tt>llvm-gcc</tt> to your  <tt>PATH</tt>. It
+  is important to do this first so that <tt>llvm-gcc</tt> is found in
   subsequent <tt>configure</tt> steps. <tt>llvm-gcc</tt> will be used
   later to compile programs that KLEE can execute.</li>
 </ul>
@@ -74,11 +75,11 @@ necessary, but KLEE runs very slowly in Debug mode).
 
   <li>Build KLEE (from the KLEE source directory):
     <div class="instr">
-      make
+      make ENABLE_OPTIMIZED=1
     </div>
   </li>
 
-  <li>Run DejaGNU and unit tests to verify your build:
+  <li>Run the regression suite to verify your build:
     <div class="instr">
       make check<br>
       make unittests<br>
