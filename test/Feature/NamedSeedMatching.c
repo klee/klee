@@ -1,9 +1,9 @@
 // RUN: %llvmgcc -c -g %s -o %t.bc
 // RUN: rm -rf %t.out
 // RUN: %klee --output-dir=%t.out %t.bc "initial"
-// RUN: test -f %t.out/test000001.bout
-// RUN: not test -f %t.out/test000002.bout
-// RUN: %klee --only-replay-seeds --named-seed-matching --seed-out %t.out/test000001.bout %t.bc > %t.log
+// RUN: test -f %t.out/test000001.ktest
+// RUN: not test -f %t.out/test000002.ktest
+// RUN: %klee --only-replay-seeds --named-seed-matching --seed-out %t.out/test000001.ktest %t.bc > %t.log
 // RUN: grep -q "a==3" %t.log
 // RUN: grep -q "b==4" %t.log
 // RUN: grep -q "c==5" %t.log

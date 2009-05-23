@@ -13,8 +13,8 @@
 #include "klee/util/Assignment.h"
 
 extern "C" {
-  struct BOut;
-  struct BOutObject;
+  struct KTest;
+  struct KTestObject;
 }
 
 namespace klee {
@@ -24,17 +24,17 @@ namespace klee {
   class SeedInfo {
   public:
     Assignment assignment;
-    BOut *input;
+    KTest *input;
     unsigned inputPosition;
-    std::set<struct BOutObject*> used;
+    std::set<struct KTestObject*> used;
     
   public:
     explicit
-    SeedInfo(BOut *_input) : assignment(true),
+    SeedInfo(KTest *_input) : assignment(true),
                              input(_input),
                              inputPosition(0) {}
     
-    BOutObject *getNextInput(const MemoryObject *mo,
+    KTestObject *getNextInput(const MemoryObject *mo,
                              bool byName);
     
     /// Patch the seed so that condition is satisfied while retaining as

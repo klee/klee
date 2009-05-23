@@ -1,6 +1,6 @@
 // RUN: %llvmgcc %s -emit-llvm -O0 -c -o %t1.bc
 // RUN: %klee --exit-on-error %t1.bc
-// RUN: klee-bout-tool klee-last/test000001.bout | grep -F 'Hi\x00\x00'
+// RUN: ktest-tool klee-last/test000001.ktest | grep -F 'Hi\x00\x00'
 
 #include <assert.h>
 #include <stdlib.h>

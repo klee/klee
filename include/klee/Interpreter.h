@@ -14,7 +14,7 @@
 #include <map>
 #include <set>
 
-struct BOut;
+struct KTest;
 
 namespace llvm {
 class Function;
@@ -102,7 +102,7 @@ public:
 
   // supply a test case to replay from. this can be used to drive the
   // interpretation down a user specified path. use null to reset.
-  virtual void setReplayOut(const struct BOut *out) = 0;
+  virtual void setReplayOut(const struct KTest *out) = 0;
 
   // supply a list of branch decisions specifying which direction to
   // take on forks. this can be used to drive the interpretation down
@@ -111,7 +111,7 @@ public:
 
   // supply a set of symbolic bindings that will be used as "seeds"
   // for the search. use null to reset.
-  virtual void useSeeds(const std::vector<struct BOut *> *seeds) = 0;
+  virtual void useSeeds(const std::vector<struct KTest *> *seeds) = 0;
 
   virtual void runFunctionAsMain(llvm::Function *f,
                                  int argc,

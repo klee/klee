@@ -1,6 +1,6 @@
 // RUN: %llvmgcc %s -emit-llvm -O0 -c -o %t1.bc
 // RUN: %klee --emit-all-errors %t1.bc
-// RUN: ls klee-last/ | grep .out | wc -l | grep 4
+// RUN: ls klee-last/ | grep .ktest | wc -l | grep 4
 // RUN: ls klee-last/ | grep .err | wc -l | grep 3
 
 #include <stdlib.h>

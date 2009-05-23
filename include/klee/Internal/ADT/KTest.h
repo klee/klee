@@ -1,4 +1,4 @@
-//===-- BOut.h --------------------------------------------------*- C++ -*-===//
+//===-- KTest.h --------------------------------------------------*- C++ -*-===//
 //
 //                     The KLEE Symbolic Virtual Machine
 //
@@ -7,23 +7,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __COMMON_BOUT_H__
-#define __COMMON_BOUT_H__
+#ifndef __COMMON_KTEST_H__
+#define __COMMON_KTEST_H__
 
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-  typedef struct BOutObject BOutObject;
-  struct BOutObject {
+  typedef struct KTestObject KTestObject;
+  struct KTestObject {
     char *name;
     unsigned numBytes;
     unsigned char *bytes;
   };
   
-  typedef struct BOut BOut;
-  struct BOut {
+  typedef struct KTest KTest;
+  struct KTest {
     /* file format version */
     unsigned version; 
     
@@ -34,26 +34,26 @@ extern "C" {
     unsigned symArgvLen;
 
     unsigned numObjects;
-    BOutObject *objects;
+    KTestObject *objects;
   };
 
   
-  /* returns the current .bout file format version */
-  unsigned bOut_getCurrentVersion();
+  /* returns the current .ktest file format version */
+  unsigned kTest_getCurrentVersion();
   
-  /* return true iff file at path matches BOut header */
-  int   bOut_isBOutFile(const char *path);
+  /* return true iff file at path matches KTest header */
+  int   kTest_isKTestFile(const char *path);
 
   /* returns NULL on (unspecified) error */
-  BOut* bOut_fromFile(const char *path);
+  KTest* kTest_fromFile(const char *path);
 
   /* returns 1 on success, 0 on (unspecified) error */
-  int   bOut_toFile(BOut *, const char *path);
+  int   kTest_toFile(KTest *, const char *path);
   
   /* returns total number of object bytes */
-  unsigned bOut_numBytes(BOut *);
+  unsigned kTest_numBytes(KTest *);
 
-  void  bOut_free(BOut *);
+  void  kTest_free(KTest *);
 
 #ifdef __cplusplus
 }

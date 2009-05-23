@@ -8,7 +8,7 @@
 #include "klee/Interpreter.h"
 #include "klee/Statistics.h"
 #include "klee/Config/config.h"
-#include "klee/Internal/ADT/BOut.h"
+#include "klee/Internal/ADT/KTest.h"
 #include "klee/Internal/ADT/TreeStream.h"
 #include "klee/Internal/Support/ModuleUtil.h"
 #include "klee/Internal/System/Time.h"
@@ -385,16 +385,16 @@ void KleeHandler::processTestCase(const ExecutionState &state,
     unsigned id = ++m_testIndex;
 
     if (success) {
-      BOut b;      
+      KTest b;      
       b.numArgs = m_argc;
       b.args = m_argv;
       b.symArgvs = 0;
       b.symArgvLen = 0;
       b.numObjects = out.size();
-      b.objects = new BOutObject[b.numObjects];
+      b.objects = new KTestObject[b.numObjects];
       assert(b.objects);
       for (unsigned i=0; i<b.numObjects; i++) {
-        BOutObject *o = &b.objects[i];
+        KTestObject *o = &b.objects[i];
         o->name = const_cast<char*>(out[i].first.c_str());
         o->numBytes = out[i].second.size();
         o->bytes = new unsigned char[o->numBytes];
@@ -402,7 +402,7 @@ void KleeHandler::processTestCase(const ExecutionState &state,
         std::copy(out[i].second.begin(), out[i].second.end(), o->bytes);
       }
       
-      if (!bOut_toFile(&b, getTestFilename("bout", id).c_str())) {
+      if (!kTest_toFile(&b, getTestFilename("ktest", id).c_str())) {
         klee_warning("unable to write output test case, losing it");
       }
       
@@ -1274,13 +1274,13 @@ int main(int argc, char **argv, char **envp) {
            it = ReplayOutDir.begin(), ie = ReplayOutDir.end();
          it != ie; ++it)
       KleeHandler::getOutFiles(*it, outFiles);    
-    std::vector<BOut*> bOuts;
+    std::vector<KTest*> kTests;
     for (std::vector<std::string>::iterator
            it = outFiles.begin(), ie = outFiles.end();
          it != ie; ++it) {
-      BOut *out = bOut_fromFile(it->c_str());
+      KTest *out = kTest_fromFile(it->c_str());
       if (out) {
-        bOuts.push_back(out);
+        kTests.push_back(out);
       } else {
         llvm::cerr << "KLEE: unable to open: " << *it << "\n";
       }
@@ -1294,28 +1294,28 @@ int main(int argc, char **argv, char **envp) {
     }
 
     unsigned i=0;
-    for (std::vector<BOut*>::iterator
-           it = bOuts.begin(), ie = bOuts.end();
+    for (std::vector<KTest*>::iterator
+           it = kTests.begin(), ie = kTests.end();
          it != ie; ++it) {
-      BOut *out = *it;
+      KTest *out = *it;
       interpreter->setReplayOut(out);
-      llvm::cerr << "KLEE: replaying: " << *it << " (" << bOut_numBytes(out) << " bytes)"
+      llvm::cerr << "KLEE: replaying: " << *it << " (" << kTest_numBytes(out) << " bytes)"
                  << " (" << ++i << "/" << outFiles.size() << ")\n";
       // XXX should put envp in .bout ?
       interpreter->runFunctionAsMain(mainFn, out->numArgs, out->args, pEnvp);
       if (interrupted) break;
     }
     interpreter->setReplayOut(0);
-    while (!bOuts.empty()) {
-      bOut_free(bOuts.back());
-      bOuts.pop_back();
+    while (!kTests.empty()) {
+      kTest_free(kTests.back());
+      kTests.pop_back();
     }
   } else {
-    std::vector<BOut *> seeds;
+    std::vector<KTest *> seeds;
     for (std::vector<std::string>::iterator
            it = SeedOutFile.begin(), ie = SeedOutFile.end();
          it != ie; ++it) {
-      BOut *out = bOut_fromFile(it->c_str());
+      KTest *out = kTest_fromFile(it->c_str());
       if (!out) {
         llvm::cerr << "KLEE: unable to open: " << *it << "\n";
         exit(1);
@@ -1330,7 +1330,7 @@ int main(int argc, char **argv, char **envp) {
       for (std::vector<std::string>::iterator
              it2 = outFiles.begin(), ie = outFiles.end();
            it2 != ie; ++it2) {
-        BOut *out = bOut_fromFile(it2->c_str());
+        KTest *out = kTest_fromFile(it2->c_str());
         if (!out) {
           llvm::cerr << "KLEE: unable to open: " << *it2 << "\n";
           exit(1);
@@ -1356,7 +1356,7 @@ int main(int argc, char **argv, char **envp) {
     interpreter->runFunctionAsMain(mainFn, pArgc, pArgv, pEnvp);
 
     while (!seeds.empty()) {
-      bOut_free(seeds.back());
+      kTest_free(seeds.back());
       seeds.pop_back();
     }
   }

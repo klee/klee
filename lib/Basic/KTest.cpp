@@ -1,4 +1,4 @@
-//===-- BOut.c ------------------------------------------------------------===//
+//===-- KTest.cpp ---------------------------------------------------------===//
 //
 //                     The KLEE Symbolic Virtual Machine
 //
@@ -7,15 +7,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "klee/Internal/ADT/BOut.h"
+#include "klee/Internal/ADT/KTest.h"
 
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 
-#define BOUT_MAGIC "BOUT\n"
-#define BOUT_MAGIC_SIZE 5
-#define BOUT_VERSION 2
+#define KTEST_MAGIC "BOUT\n"
+#define KTEST_MAGIC_SIZE 5
+#define KTEST_VERSION 2
 
 /***/
 
@@ -61,50 +61,50 @@ static int write_string(FILE *f, const char *value) {
 /***/
 
 
-unsigned bOut_getCurrentVersion() {
-  return BOUT_VERSION;
+unsigned kTest_getCurrentVersion() {
+  return KTEST_VERSION;
 }
 
 
-static int bOut_checkHeader(FILE *f) {
-  char header[BOUT_MAGIC_SIZE];
-  if (fread(header, BOUT_MAGIC_SIZE, 1, f)!=1)
+static int kTest_checkHeader(FILE *f) {
+  char header[KTEST_MAGIC_SIZE];
+  if (fread(header, KTEST_MAGIC_SIZE, 1, f)!=1)
     return 0;
-  if (memcmp(header, BOUT_MAGIC, BOUT_MAGIC_SIZE))
+  if (memcmp(header, KTEST_MAGIC, KTEST_MAGIC_SIZE))
     return 0;
   return 1;
 }
 
-int bOut_isBOutFile(const char *path) {
+int kTest_isKTestFile(const char *path) {
   FILE *f = fopen(path, "rb");
   int res;
 
   if (!f)
     return 0;
-  res = bOut_checkHeader(f);
+  res = kTest_checkHeader(f);
   fclose(f);
   
   return res;
 }
 
-BOut *bOut_fromFile(const char *path) {
+KTest *kTest_fromFile(const char *path) {
   FILE *f = fopen(path, "rb");
-  BOut *res = 0;
+  KTest *res = 0;
   unsigned i, version;
 
   if (!f) 
     goto error;
-  if (!bOut_checkHeader(f)) 
+  if (!kTest_checkHeader(f)) 
     goto error;
 
-  res = (BOut*) calloc(1, sizeof(*res));
+  res = (KTest*) calloc(1, sizeof(*res));
   if (!res) 
     goto error;
 
   if (!read_uint32(f, &version)) 
     goto error;
   
-  if (version > bOut_getCurrentVersion())
+  if (version > kTest_getCurrentVersion())
     goto error;
 
   res->version = version;
@@ -128,11 +128,11 @@ BOut *bOut_fromFile(const char *path) {
 
   if (!read_uint32(f, &res->numObjects))
     goto error;
-  res->objects = (BOutObject*) calloc(res->numObjects, sizeof(*res->objects));
+  res->objects = (KTestObject*) calloc(res->numObjects, sizeof(*res->objects));
   if (!res->objects)
     goto error;
   for (i=0; i<res->numObjects; i++) {
-    BOutObject *o = &res->objects[i];
+    KTestObject *o = &res->objects[i];
     if (!read_string(f, &o->name))
       goto error;
     if (!read_uint32(f, &o->numBytes))
@@ -155,7 +155,7 @@ BOut *bOut_fromFile(const char *path) {
     }
     if (res->objects) {
       for (i=0; i<res->numObjects; i++) {
-        BOutObject *bo = &res->objects[i];
+        KTestObject *bo = &res->objects[i];
         if (bo->name)
           free(bo->name);
         if (bo->bytes)
@@ -171,15 +171,15 @@ BOut *bOut_fromFile(const char *path) {
   return 0;
 }
 
-int bOut_toFile(BOut *bo, const char *path) {
+int kTest_toFile(KTest *bo, const char *path) {
   FILE *f = fopen(path, "wb");
   unsigned i;
 
   if (!f) 
     goto error;
-  if (fwrite(BOUT_MAGIC, strlen(BOUT_MAGIC), 1, f)!=1)
+  if (fwrite(KTEST_MAGIC, strlen(KTEST_MAGIC), 1, f)!=1)
     goto error;
-  if (!write_uint32(f, BOUT_VERSION))
+  if (!write_uint32(f, KTEST_VERSION))
     goto error;
       
   if (!write_uint32(f, bo->numArgs))
@@ -197,7 +197,7 @@ int bOut_toFile(BOut *bo, const char *path) {
   if (!write_uint32(f, bo->numObjects))
     goto error;
   for (i=0; i<bo->numObjects; i++) {
-    BOutObject *o = &bo->objects[i];
+    KTestObject *o = &bo->objects[i];
     if (!write_string(f, o->name))
       goto error;
     if (!write_uint32(f, o->numBytes))
@@ -215,14 +215,14 @@ int bOut_toFile(BOut *bo, const char *path) {
   return 0;
 }
 
-unsigned bOut_numBytes(BOut *bo) {
+unsigned kTest_numBytes(KTest *bo) {
   unsigned i, res = 0;
   for (i=0; i<bo->numObjects; i++)
     res += bo->objects[i].numBytes;
   return res;
 }
 
-void bOut_free(BOut *bo) {
+void kTest_free(KTest *bo) {
   unsigned i;
   for (i=0; i<bo->numArgs; i++)
     free(bo->args[i]);

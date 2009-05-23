@@ -19,9 +19,9 @@
 
 #include "klee/klee.h"
 
-#include "klee/Internal/ADT/BOut.h"
+#include "klee/Internal/ADT/KTest.h"
 
-static BOut *testData = 0;
+static KTest *testData = 0;
 static unsigned testPosition = 0;
 
 static unsigned char rand_byte(void) {
@@ -61,21 +61,21 @@ void klee_make_symbolic(void *array, unsigned nbytes, const char *name) {
 
   if (!testData) {
     char tmp[256];
-    char *name = getenv("KLEE_RUNTEST");
+    char *name = getenv("KTEST_FILE");
 
     if (!name) {
-      fprintf(stdout, "KLEE-RUNTIME: KLEE_RUNTEST not set, please enter .bout path: ");
+      fprintf(stdout, "KLEE-RUNTIME: KTEST_FILE not set, please enter .ktest path: ");
       fflush(stdout);
       name = tmp;
       if (!fgets(tmp, sizeof tmp, stdin) || !strlen(tmp)) {
-        fprintf(stderr, "KLEE-RUNTIME: cannot replay, no KLEE_RUNTEST or user input\n");
+        fprintf(stderr, "KLEE-RUNTIME: cannot replay, no KTEST_FILE or user input\n");
         exit(1);
       }
       tmp[strlen(tmp)-1] = '\0'; /* kill newline */
     }
-    testData = bOut_fromFile(name);
+    testData = kTest_fromFile(name);
     if (!testData) {
-      fprintf(stderr, "KLEE-RUNTIME: unable to open .bout file\n");
+      fprintf(stderr, "KLEE-RUNTIME: unable to open .ktest file\n");
       exit(1);
     }
   }
@@ -84,7 +84,7 @@ void klee_make_symbolic(void *array, unsigned nbytes, const char *name) {
     fprintf(stderr, "ERROR: out of inputs, using zero\n");
     memset(array, 0, nbytes);
   } else {
-    BOutObject *o = &testData->objects[testPosition++];
+    KTestObject *o = &testData->objects[testPosition++];
     memcpy(array, o->bytes, nbytes<o->numBytes ? nbytes : o->numBytes);
     if (nbytes != o->numBytes) {
       fprintf(stderr, "ERROR: object sizes differ\n");

@@ -16,17 +16,17 @@
 #include "klee/ExecutionState.h"
 #include "klee/Expr.h"
 #include "klee/util/ExprUtil.h"
-#include "klee/Internal/ADT/BOut.h"
+#include "klee/Internal/ADT/KTest.h"
 
 using namespace klee;
 
-BOutObject *SeedInfo::getNextInput(const MemoryObject *mo,
+KTestObject *SeedInfo::getNextInput(const MemoryObject *mo,
                                    bool byName) {
   if (byName) {
     unsigned i;
     
     for (i=0; i<input->numObjects; ++i) {
-      BOutObject *obj = &input->objects[i];
+      KTestObject *obj = &input->objects[i];
       if (std::string(obj->name) == mo->name)
         if (used.insert(obj).second)
           return obj;
@@ -38,7 +38,7 @@ BOutObject *SeedInfo::getNextInput(const MemoryObject *mo,
       if (!used.count(&input->objects[i]))
         break;
     if (i<input->numObjects) {
-      BOutObject *obj = &input->objects[i];
+      KTestObject *obj = &input->objects[i];
       if (obj->numBytes == mo->size) {
         used.insert(obj);
         klee_warning_once(mo, "using seed input %s[%d] for: %s (no name match)",

@@ -22,7 +22,7 @@
 #include <map>
 #include <set>
 
-struct BOut;
+struct KTest;
 
 namespace llvm {
   class BasicBlock;
@@ -134,7 +134,7 @@ private:
 
   /// When non-null the bindings that will be used for calls to
   /// klee_make_symbolic in order replay.
-  const struct BOut *replayOut;
+  const struct KTest *replayOut;
   /// When non-null a list of branch decisions to be used for replay.
   const std::vector<bool> *replayPath;
   /// The index into the current \ref replayOut or \ref replayPath
@@ -143,7 +143,7 @@ private:
 
   /// When non-null a list of "seed" inputs which will be used to
   /// drive execution.
-  const std::vector<struct BOut *> *usingSeeds;  
+  const std::vector<struct KTest *> *usingSeeds;  
 
   /// Disables forking, instead a random path is chosen. Enabled as
   /// needed to control memory usage. \see fork()
@@ -386,7 +386,7 @@ public:
     symPathWriter = tsw;
   }      
 
-  virtual void setReplayOut(const struct BOut *out) {
+  virtual void setReplayOut(const struct KTest *out) {
     assert(!replayPath && "cannot replay both buffer and path");
     replayOut = out;
     replayPosition = 0;
@@ -401,7 +401,7 @@ public:
   virtual const llvm::Module *
   setModule(llvm::Module *module, const ModuleOptions &opts);
 
-  virtual void useSeeds(const std::vector<struct BOut *> *seeds) { 
+  virtual void useSeeds(const std::vector<struct KTest *> *seeds) { 
     usingSeeds = seeds;
   }
 

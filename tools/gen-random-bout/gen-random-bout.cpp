@@ -7,7 +7,7 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "klee/Internal/ADT/BOut.h"
+#include "klee/Internal/ADT/KTest.h"
 
 // --sym-args 0 1 10 --sym-args 0 2 2 --sym-files 1 8 --sym-stdout
 static int getint(char *i) {
@@ -19,9 +19,9 @@ static int getint(char *i) {
 }
 
 #define MAX 64
-static void push_obj(BOut *b, const char *name, unsigned non_zero_bytes, 
+static void push_obj(KTest *b, const char *name, unsigned non_zero_bytes, 
                      unsigned total_bytes) {
-  BOutObject *o = &b->objects[b->numObjects++];
+  KTestObject *o = &b->objects[b->numObjects++];
   assert(b->numObjects < MAX);
 
   o->name = strdup(name);
@@ -37,8 +37,8 @@ static void push_obj(BOut *b, const char *name, unsigned non_zero_bytes,
 }
 
 
-static void push_range(BOut *b, const char *name, unsigned value) {
-  BOutObject *o = &b->objects[b->numObjects++];
+static void push_range(KTest *b, const char *name, unsigned value) {
+  KTestObject *o = &b->objects[b->numObjects++];
   assert(b->numObjects < MAX);
 
   o->name = strdup(name);
@@ -65,14 +65,14 @@ int main(int argc, char *argv[]) {
     srandom(seed);
   else srandom(time(NULL) * getpid());
 
-  BOut b;
+  KTest b;
   b.numArgs = argc;
   b.args = argv;
   b.symArgvs = 0;
   b.symArgvLen = 0;
 
   b.numObjects = 0;
-  b.objects = (BOutObject *)malloc(MAX * sizeof *b.objects);
+  b.objects = (KTestObject *)malloc(MAX * sizeof *b.objects);
 
   for(i = 2; i < (unsigned)argc; i++) {
     if(strcmp(argv[i], "--sym-args") == 0) {
@@ -118,7 +118,7 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  if (!bOut_toFile(&b, "file.bout"))
+  if (!kTest_toFile(&b, "file.bout"))
     assert(0);
   return 0;
 }

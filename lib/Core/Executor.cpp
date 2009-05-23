@@ -34,7 +34,7 @@
 #include "klee/util/ExprPPrinter.h"
 #include "klee/util/ExprUtil.h"
 #include "klee/Config/config.h"
-#include "klee/Internal/ADT/BOut.h"
+#include "klee/Internal/ADT/KTest.h"
 #include "klee/Internal/ADT/RNG.h"
 #include "klee/Internal/Module/Cell.h"
 #include "klee/Internal/Module/InstructionInfoTable.h"
@@ -2227,7 +2227,7 @@ void Executor::run(ExecutionState &initialState) {
   if (usingSeeds) {
     std::vector<SeedInfo> &v = seedMap[&initialState];
     
-    for (std::vector<BOut*>::const_iterator it = usingSeeds->begin(), 
+    for (std::vector<KTest*>::const_iterator it = usingSeeds->begin(), 
            ie = usingSeeds->end(); it != ie; ++it)
       v.push_back(SeedInfo(*it));
 
@@ -2973,7 +2973,7 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
       for (std::vector<SeedInfo>::iterator siit = it->second.begin(), 
              siie = it->second.end(); siit != siie; ++siit) {
         SeedInfo &si = *siit;
-        BOutObject *obj = si.getNextInput(mo,
+        KTestObject *obj = si.getNextInput(mo,
                                           NamedSeedMatching);
 
         if (!obj) {
@@ -3019,7 +3019,7 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
     if (replayPosition >= replayOut->numObjects) {
       terminateStateOnError(state, "replay count mismatch", "user.err");
     } else {
-      BOutObject *obj = &replayOut->objects[replayPosition++];
+      KTestObject *obj = &replayOut->objects[replayPosition++];
       if (obj->numBytes != mo->size) {
         terminateStateOnError(state, "replay size mismatch", "user.err");
       } else {
