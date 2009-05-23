@@ -10,6 +10,9 @@
 #include <stdio.h>
 #include <unistd.h>
 
+// Some header may #define putchar.
+#undef putchar
+
 int putchar(int c) {
   char x = c;
   write(1, &x, 1);
