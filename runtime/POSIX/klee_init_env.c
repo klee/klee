@@ -98,6 +98,20 @@ void klee_init_env(int* argcPtr, char*** argvPtr) {
 
   sym_arg_name[4] = '\0';
 
+  // Recognize --help when it is the sole argument.
+  if (argc == 2 && __streq(argv[1], "--help")) {
+  __emit_error("klee_init_env\n\n\
+usage: (klee_init_env) [options] [program arguments]\n\
+  -sym-arg <N>              - Replace by a symbolic argument with length N\n\
+  -sym-args <MIN> <MAX> <N> - Replace by at least MIN arguments and at most\n\
+                              MAX arguments, each with maximum length N\n\
+  -sym-files <NUM> <N>      - Make stdin and up to NUM symbolic files, each\n\
+                              with maximum size N.\n\
+  -sym-stdout               - Make stdout symbolic.\n\
+  -max-fail <N>             - Allow up to <N> injected failures\n\
+  -fd-fail                  - Shortcut for '-max-fail 1'\n\n");
+  }
+
   while (k < argc) {
     if (__streq(argv[k], "--sym-arg") || __streq(argv[k], "-sym-arg")) {
       const char *msg = "--sym-arg expects an integer argument <max-len>";
