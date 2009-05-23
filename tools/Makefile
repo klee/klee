@@ -15,7 +15,7 @@ LEVEL=..
 #
 # List all of the subdirectories that we will compile.
 #
-PARALLEL_DIRS=klee kleaver klee-bout-tool gen-random-bout
+PARALLEL_DIRS=klee kleaver ktest-tool gen-random-bout
 # FIXME: Move qplayer functionality into kleaver
 
 include $(LEVEL)/Makefile.common

@@ -1,4 +1,4 @@
-#===-- tools/klee-bout-tool/Makefile -----------------------*- Makefile -*--===#
+#===-- tools/ktest-tool/Makefile -----------------------*- Makefile -*--===#
 #
 #                     The KLEE Symbolic Virtual Machine
 #
@@ -9,7 +9,7 @@
 
 LEVEL = ../..
 
-TOOLSCRIPTNAME := klee-bout-tool
+TOOLSCRIPTNAME := ktest-tool
 
 include $(LEVEL)/Makefile.common
 
