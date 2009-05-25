@@ -10,6 +10,7 @@
 #ifndef KLEE_STATISTIC_H
 #define KLEE_STATISTIC_H
 
+#include "llvm/Support/DataTypes.h"
 #include <string>
 
 namespace klee {
