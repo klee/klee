@@ -18,6 +18,8 @@
 
 #include "llvm/Support/CommandLine.h"
 
+#include <cstdio>
+
 #define vc_bvBoolExtract IAMTHESPAWNOFSATAN
 // unclear return
 #define vc_bvLeftShiftExpr IAMTHESPAWNOFSATAN

@@ -24,6 +24,7 @@
 #define vc_bvBoolExtract IAMTHESPAWNOFSATAN
 
 #include <cassert>
+#include <cstdio>
 #include <map>
 #include <vector>
 
