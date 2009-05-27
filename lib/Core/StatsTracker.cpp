@@ -468,7 +468,7 @@ void StatsTracker::writeIStats() {
       for (Function::iterator bbIt = fnIt->begin(), bb_ie = fnIt->end(); 
            bbIt != bb_ie; ++bbIt) {
         for (BasicBlock::iterator it = bbIt->begin(), ie = bbIt->end(); 
-             it != it; ++it) {
+             it != ie; ++it) {
           Instruction *instr = &*it;
           const InstructionInfo &ii = executor.kmodule->infos->getInfo(instr);
           unsigned index = ii.id;
