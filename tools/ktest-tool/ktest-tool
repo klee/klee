@@ -6,10 +6,10 @@ import sys
 
 version_no=2
 
-class BOutError(Exception):
+class KTestError(Exception):
     pass
 
-class BOut:
+class KTest:
     @staticmethod
     def fromfile(path):
         if not os.path.exists(path):
@@ -19,10 +19,10 @@ class BOut:
         f = open(path,'rb')
         hdr = f.read(5)
         if len(hdr)!=5 or hdr!='BOUT\n':
-            raise BOutError,'unrecognized file'
+            raise KTestError,'unrecognized file'
         version, = struct.unpack('>i', f.read(4))
         if version > version_no:
-            raise BOutError,'unrecognized version'
+            raise KTestError,'unrecognized version'
         numArgs, = struct.unpack('>i', f.read(4))
         args = []
         for i in range(numArgs):
@@ -46,7 +46,7 @@ class BOut:
             objects.append( (name,bytes) )
 
         # Create an instance
-        b = BOut(version, args, symArgvs, symArgvLen, objects)
+        b = KTest(version, args, symArgvs, symArgvLen, objects)
         # Augment with extra filename field
         b.filename = path
         return b
@@ -59,7 +59,7 @@ class BOut:
         self.objects = objects
 
         # add a field that represents the name of the program used to
-        # generate this .bout file:
+        # generate this .ktest file:
         program_full_path = self.args[0]
         program_name = os.path.basename(program_full_path)
         # sometimes program names end in .bc, so strip them
@@ -85,9 +85,9 @@ def main(args):
         op.error("incorrect number of arguments")
 
     for file in args:
-        b = BOut.fromfile(file)
+        b = KTest.fromfile(file)
         pos = 0
-        print 'bout file  : %r' % file
+        print 'ktest file : %r' % file
         print 'args       : %r' % b.args
         print 'num objects: %r' % len(b.objects)
         for i,(name,data) in enumerate(b.objects):
