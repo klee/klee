@@ -6,15 +6,15 @@
   <div class="submenu">
     <label>KLEE Info</label>
     <a href="index.html">About</a>
-    <a href="GetStarted.html">Get Started</a>
+    <a href="GetStarted.html">Getting Started</a>
     <a href="GetInvolved.html">Get Involved</a>
     <a href="tutorials.html">Tutorials</a>
-    <a href="Examples.html">Examples</a>
   </div>
 
   <div class="submenu">
     <label>Quick Links</label>
     <a href="http://keeda.stanford.edu/mailman/listinfo/klee-dev">klee-dev</a>
+    <a href="http://llvm.org/bugs/">Bug Reports</a>
     <a href="http://llvm.org/svn/llvm-project/klee/trunk/">Browse SVN</a>
     <a href="http://llvm.org/viewvc/llvm-project/klee/trunk/">Browse ViewVC</a>
     <a href="http://t1.minormatter.com/~ddunbar/klee-doxygen/index.html">doxygen</a>
