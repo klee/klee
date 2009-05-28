@@ -1,3 +1,9 @@
+/*
+ * First KLEE tutorial: testing a small function
+ */
+
+#include <klee/klee.h>
+
 int my_islower(int x) {
   if (x >= 'a' && x <= 'z')
     return 1;
