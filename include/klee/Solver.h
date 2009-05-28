@@ -65,7 +65,7 @@ namespace klee {
 
   public:
     Solver(SolverImpl *_impl) : impl(_impl) {};
-    ~Solver();
+    virtual ~Solver();
 
     /// evaluate - Determine the full validity of an expression in particular
     /// state.
@@ -158,6 +158,8 @@ namespace klee {
     /// \param useForkedSTP - Whether STP should be run in a separate process
     /// (required for using timeouts).
     STPSolver(bool useForkedSTP);
+
+    
     
     /// getConstraintLog - Return the constraint log for the given state in CVC
     /// format.

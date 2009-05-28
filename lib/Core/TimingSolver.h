@@ -37,7 +37,7 @@ namespace klee {
     TimingSolver(Solver *_solver, STPSolver *_stpSolver, 
                  bool _simplifyExprs = true) 
       : solver(_solver), stpSolver(_stpSolver), simplifyExprs(_simplifyExprs) {}
-    ~TimingSolver() {
+    virtual ~TimingSolver() {
       delete solver;
     }
 

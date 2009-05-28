@@ -22,6 +22,7 @@
 #include <cassert>
 #include <iostream>
 #include <map>
+#include <cstring>
 
 using namespace llvm;
 using namespace klee;
