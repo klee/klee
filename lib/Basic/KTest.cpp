@@ -13,9 +13,12 @@
 #include <string.h>
 #include <stdio.h>
 
-#define KTEST_MAGIC "BOUT\n"
+#define KTEST_VERSION 3
 #define KTEST_MAGIC_SIZE 5
-#define KTEST_VERSION 2
+#define KTEST_MAGIC "KTEST"
+
+// for compatibility reasons
+#define BOUT_MAGIC "BOUT\n"
 
 /***/
 
@@ -70,7 +73,8 @@ static int kTest_checkHeader(FILE *f) {
   char header[KTEST_MAGIC_SIZE];
   if (fread(header, KTEST_MAGIC_SIZE, 1, f)!=1)
     return 0;
-  if (memcmp(header, KTEST_MAGIC, KTEST_MAGIC_SIZE))
+  if (memcmp(header, KTEST_MAGIC, KTEST_MAGIC_SIZE) &&
+      memcmp(header, BOUT_MAGIC, KTEST_MAGIC_SIZE))
     return 0;
   return 1;
 }
