@@ -33,7 +33,7 @@ doxygen:
 .PHONY: cscope.files
 cscope.files:
 	find \
-          lib include stp tools runtime examples unittests \
+          lib include stp tools runtime examples unittests test www/code-examples \
           -name Makefile -or \
           -name \*.in -or \
           -name \*.c -or \

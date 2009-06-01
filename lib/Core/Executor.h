@@ -15,7 +15,11 @@
 #ifndef KLEE_EXECUTOR_H
 #define KLEE_EXECUTOR_H
 
+#include "klee/ExecutionState.h"
 #include "klee/Interpreter.h"
+#include "klee/Internal/Module/Cell.h"
+#include "klee/Internal/Module/KInstruction.h"
+#include "klee/Internal/Module/KModule.h"
 #include "llvm/Support/CallSite.h"
 #include <vector>
 #include <string>
@@ -38,6 +42,7 @@ namespace llvm {
 }
 
 namespace klee {  
+  class Cell;
   class ExecutionState;
   class ExternalDispatcher;
   class Expr;
@@ -288,10 +293,20 @@ private:
   // Used for testing.
   ref<Expr> replaceReadWithSymbolic(ExecutionState &state, ref<Expr> e);
 
-  ref<Expr> eval(KInstruction *ki,
-                 unsigned index, 
-                 ExecutionState &state);
-  
+  const Cell& eval(KInstruction *ki, unsigned index, 
+                   ExecutionState &state) const;
+
+  Cell& getArgumentCell(ExecutionState &state,
+                        KFunction *kf,
+                        unsigned index) {
+    return state.stack.back().locals[kf->getArgRegister(index)];
+  }
+
+  Cell& getDestCell(ExecutionState &state,
+                    KInstruction *target) {
+    return state.stack.back().locals[target->dest];
+  }
+
   void bindLocal(KInstruction *target, 
                  ExecutionState &state, 
                  ref<Expr> value);
