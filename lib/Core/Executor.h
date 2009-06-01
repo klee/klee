@@ -237,15 +237,6 @@ private:
                     bool zeroMemory=false,
                     const ObjectState *reallocFrom=0);
 
-  /// XXX not for public use (this is for histar, it allocations a
-  /// contiguous set of objects, while guaranteeing page alignment)
-  void executeAllocN(ExecutionState &state,
-                     uint64_t nelems,
-                     uint64_t size,
-                     uint64_t alignment,
-                     bool isLocal,
-                     KInstruction *target);
-
   /// Free the given address with checking for errors. If target is
   /// given it will be bound to 0 in the resulting states (this is a
   /// convenience for realloc). Note that this function can cause the

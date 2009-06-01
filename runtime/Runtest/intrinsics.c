@@ -94,21 +94,6 @@ void klee_make_symbolic(void *array, unsigned nbytes, const char *name) {
   }
 }
 
-void *klee_malloc_n(unsigned nelems, unsigned size, unsigned alignment) {
-#if 1
-  return mmap((void*) 0x90000000, nelems*size, PROT_READ|PROT_WRITE, 
-              MAP_PRIVATE
-#ifdef MAP_ANONYMOUS
-              |MAP_ANONYMOUS
-#endif
-              , 0, 0);
-#else
-  char *buffer = malloc(nelems*size + alignment - 1);
-  buffer += (alignment - (long)buffer % alignment);
-  return buffer;
-#endif
-}
-
 void klee_silent_exit(int x) {
   exit(x);
 }

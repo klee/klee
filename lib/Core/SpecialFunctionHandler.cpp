@@ -74,7 +74,6 @@ HandlerInfo handlerInfo[] = {
   add("klee_is_symbolic", handleIsSymbolic, true),
   add("klee_make_symbolic", handleMakeSymbolic, false),
   add("klee_mark_global", handleMarkGlobal, false),
-  add("klee_malloc_n", handleMallocN, true),
   add("klee_merge", handleMerge, false),
   add("klee_prefer_cex", handlePreferCex, false),
   add("klee_print_expr", handlePrintExpr, false),
@@ -346,31 +345,6 @@ void SpecialFunctionHandler::handleMalloc(ExecutionState &state,
   // XXX should type check args
   assert(arguments.size()==1 && "invalid number of arguments to malloc");
   executor.executeAlloc(state, arguments[0], false, target);
-}
-
-void SpecialFunctionHandler::handleMallocN(ExecutionState &state,
-                             KInstruction *target,
-                             std::vector<ref<Expr> > &arguments) {
-
-  // XXX should type check args
-  assert(arguments.size() == 3 && "invalid number of arguments to malloc");
-
-  // mallocn(number, size, alignment)
-  ref<Expr> numElems = executor.toUnique(state, arguments[0]);
-  ref<Expr> elemSize = executor.toUnique(state, arguments[1]);
-  ref<Expr> elemAlignment = executor.toUnique(state, arguments[2]);
-
-  assert(numElems.isConstant() &&
-         elemSize.isConstant() &&
-         elemAlignment.isConstant() &&
-         "symbolic arguments passed to klee_mallocn");
-  
-  executor.executeAllocN(state,
-                         numElems.getConstantValue(),
-                         elemSize.getConstantValue(),
-                         elemAlignment.getConstantValue(),
-                         false,
-                         target);
 }
 
 void SpecialFunctionHandler::handleAssume(ExecutionState &state,

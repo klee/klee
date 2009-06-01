@@ -1617,9 +1617,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       FP_CONSTANT_BINOP(floats::sub, type, left, right, ki, state);
     }
 
-sfdrunk
-airbedandbreakfast
-
     break;
   }
  
@@ -2620,42 +2617,6 @@ ObjectState *Executor::bindObjectInState(ExecutionState &state, const MemoryObje
     state.stack.back().allocas.push_back(mo);
 
   return os;
-}
-
-void Executor::executeAllocN(ExecutionState &state,
-                             uint64_t nelems,
-                             uint64_t size,
-                             uint64_t alignment,
-                             bool isLocal,
-                             KInstruction *target) {
-#if 0  
-  // over-allocate so that we can properly align the whole buffer
-  uint64_t address = (uint64_t) (unsigned) malloc(nelems * size + alignment - 1);
-  address += (alignment - address % alignment);
-#else
-  theMMap =   
-    mmap((void*) 0x90000000, 
-         nelems*size, PROT_READ|PROT_WRITE, 
-         MAP_PRIVATE
-#ifdef MAP_ANONYMOUS
-         |MAP_ANONYMOUS
-#endif
-         , 0, 0);
-  uint64_t address = (uintptr_t) theMMap;
-  theMMapSize = nelems*size;
-#endif
-
-  for (unsigned i = 0; i < nelems; i++) {
-    MemoryObject *mo = memory->allocateFixed(address + i*size, size, state.prevPC->inst);
-    ObjectState *os = bindObjectInState(state, mo, isLocal);
-    os->initializeToRandom();
-
-    // bind the local to the first memory object in the whole array
-    if (i == 0)
-      bindLocal(target, state, mo->getBaseExpr());
-  }
-
-  llvm::cerr << "KLEE: allocN at: " << address << "\n";
 }
 
 void Executor::executeAlloc(ExecutionState &state,
