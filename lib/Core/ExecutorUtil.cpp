@@ -37,7 +37,7 @@ ref<Expr>
 Executor::evalConstantExpr(llvm::ConstantExpr *ce) {
   const llvm::Type *type = ce->getType();
 
-  ref<Expr> op1(0,Expr::Bool), op2(0,Expr::Bool), op3(0,Expr::Bool);
+  ref<Expr> op1(0), op2(0), op3(0);
   int numOperands = ce->getNumOperands();
 
   if (numOperands > 0) op1 = evalConstant(ce->getOperand(0));
@@ -80,7 +80,7 @@ Executor::evalConstantExpr(llvm::ConstantExpr *ce) {
 
       for (gep_type_iterator ii = gep_type_begin(ce), ie = gep_type_end(ce);
            ii != ie; ++ii) {
-        ref<Expr> addend(0, kMachinePointerType);
+        ref<Expr> addend = ConstantExpr::alloc(0, kMachinePointerType);
         
         if (const StructType *st = dyn_cast<StructType>(*ii)) {
           const StructLayout *sl = kmodule->targetData->getStructLayout(st);

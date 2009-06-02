@@ -100,11 +100,11 @@ ref<Expr> ConstraintManager::simplifyExpr(ref<Expr> e) const {
                                          ee->left));
       } else {
         equalities.insert(std::make_pair(*it,
-                                         ref<Expr>(1,Expr::Bool)));
+                                         ConstantExpr::alloc(1, Expr::Bool)));
       }
     } else {
       equalities.insert(std::make_pair(*it,
-                                       ref<Expr>(1,Expr::Bool)));
+                                       ConstantExpr::alloc(1, Expr::Bool)));
     }
   }
 

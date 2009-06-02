@@ -13,48 +13,11 @@
 #include <assert.h>
 
 class Expr;
-class BinaryExpr;
-class CastExpr;
-class CmpExpr;
-
 class ConstantExpr;
-class ReadExpr;
-class UpdateNode;
-class NotOptimizedExpr;
-class ReadExpr;
-class SelectExpr;
-class ConcatExpr;
-class ExtractExpr;
-class ZExtExpr;
-class SExtExpr;
-class AddExpr;
-class SubExpr;
-class MulExpr;
-class UDivExpr;
-class SDivExpr;
-class URemExpr;
-class SRemExpr;
-class AndExpr;
-class OrExpr;
-class XorExpr;
-class ShlExpr;
-class LShrExpr;
-class AShrExpr;
-class EqExpr;
-class NeExpr;
-class UltExpr;
-class UleExpr;
-class UgtExpr;
-class UgeExpr;
-class SltExpr;
-class SleExpr;
-class SgtExpr;
-class SgeExpr;
-class KModule;
 
-  class ExprVisitor;
-  class StackFrame;
-  class ObjectState;
+class ExprVisitor;
+class StackFrame;
+class ObjectState;
 
 template<class T>
 class ref {
@@ -91,9 +54,12 @@ private:
   }  
 
   friend class ExprVisitor;
-  friend class Cell;
-  friend class ObjectState;
-  friend class KModule;
+  friend class ConstantExpr;
+
+  // construct from constant
+  ref(uint64_t val, Expr::Width w) : constantWidth(w) {
+    contents.val = val;
+  }
 
 public:
   template<class U> friend class ref;
@@ -107,14 +73,9 @@ public:
     contents.ptr = p;
     inc();
   }
-
-  // construct from constant
-  ref(uint64_t val, Expr::Width w) : constantWidth(w) {
-    contents.val = val;
-  }
   
   // normal copy constructor
-  ref (const ref<T> &r)
+  ref(const ref<T> &r)
     : constantWidth(r.constantWidth), contents(r.contents) {
     inc();
   }

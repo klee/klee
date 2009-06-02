@@ -247,7 +247,8 @@ bool ExecutionState::merge(const ExecutionState &b) {
   
   // merge stack
 
-  ref<Expr> inA(1, Expr::Bool), inB(1, Expr::Bool);
+  ref<Expr> inA = ConstantExpr::alloc(1, Expr::Bool);
+  ref<Expr> inB = ConstantExpr::alloc(1, Expr::Bool);
   for (std::set< ref<Expr> >::iterator it = aSuffix.begin(), 
          ie = aSuffix.end(); it != ie; ++it)
     inA = AndExpr::create(inA, *it);

@@ -240,7 +240,8 @@ class PPrinter : public ExprPPrinter {
 
     // Get stride expr in proper index width.
     Expr::Width idxWidth = base->index.getWidth();
-    ref<Expr> strideExpr(stride, idxWidth), offset(0, idxWidth);
+    ref<Expr> strideExpr = ConstantExpr::alloc(stride, idxWidth);
+    ref<Expr> offset = ConstantExpr::alloc(0, idxWidth);
     for (unsigned i=1; i<ep->getNumKids(); ++i) {
       const ReadExpr *re = dyn_ref_cast<ReadExpr>(ep->getKid(i));
       if (!re) 
@@ -357,7 +358,7 @@ public:
         // Detect Not.
         // FIXME: This should be in common code.
         if (const EqExpr *ee = dyn_ref_cast<EqExpr>(e)) {
-          if (ee->left == ref<Expr>(false, Expr::Bool)) {
+          if (ee->left == ConstantExpr::alloc(false, Expr::Bool)) {
             PC << "(Not";
             printWidth(PC, e);
             PC << ' ';
@@ -443,7 +444,7 @@ void ExprPPrinter::printOne(std::ostream &os,
 
 void ExprPPrinter::printConstraints(std::ostream &os,
                                     const ConstraintManager &constraints) {
-  printQuery(os, constraints, ref<Expr>(false, Expr::Bool));
+  printQuery(os, constraints, ConstantExpr::alloc(false, Expr::Bool));
 }
 
 void ExprPPrinter::printQuery(std::ostream &os,

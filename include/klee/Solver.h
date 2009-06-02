@@ -35,7 +35,7 @@ namespace klee {
 
     /// withFalse - Return a copy of the query with a false expression.
     Query withFalse() const {
-      return Query(constraints, ref<Expr>(0, Expr::Bool));
+      return Query(constraints, ConstantExpr::alloc(0, Expr::Bool));
     }
 
     /// negateExpr - Return a copy of the query with the expression negated.

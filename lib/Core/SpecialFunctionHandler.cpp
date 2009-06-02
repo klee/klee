@@ -386,7 +386,7 @@ void SpecialFunctionHandler::handlePreferCex(ExecutionState &state,
 
   ref<Expr> cond = arguments[1];
   if (cond.getWidth() != Expr::Bool)
-    cond = NeExpr::create(cond, ref<Expr>(0, cond.getWidth()));
+    cond = NeExpr::create(cond, ConstantExpr::alloc(0, cond.getWidth()));
 
   Executor::ExactResolutionList rl;
   executor.resolveExact(state, arguments[0], rl, "prefex_cex");

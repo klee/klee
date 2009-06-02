@@ -26,7 +26,7 @@ ExprVisitor::Action ExprEvaluator::evalRead(const UpdateList &ul,
       
       UpdateList fwd(ul.root, un, 0);
       return Action::changeTo(ReadExpr::create(fwd, 
-                                               ref<Expr>(index,Expr::Int32)));
+                                               ConstantExpr::alloc(index, Expr::Int32)));
     }
   }
   

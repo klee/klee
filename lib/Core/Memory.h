@@ -118,7 +118,7 @@ public:
 
   ref<Expr> getBoundsCheckOffset(ref<Expr> offset) const {
     if (size==0) {
-      return EqExpr::create(offset, ref<Expr>(0, kMachinePointerType));
+      return EqExpr::create(offset, ConstantExpr::alloc(0, kMachinePointerType));
     } else {
       return UltExpr::create(offset, getSizeExpr());
     }
@@ -126,9 +126,9 @@ public:
   ref<Expr> getBoundsCheckOffset(ref<Expr> offset, unsigned bytes) const {
     if (bytes<=size) {
       return UltExpr::create(offset, 
-                             ref<Expr>(size - bytes + 1, kMachinePointerType));
+                             ConstantExpr::alloc(size - bytes + 1, kMachinePointerType));
     } else {
-      return ref<Expr>(0, Expr::Bool);
+      return ConstantExpr::alloc(0, Expr::Bool);
     }
   }
 };

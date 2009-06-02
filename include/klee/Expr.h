@@ -238,7 +238,7 @@ struct Expr::CreateArg {
   ref<Expr> expr;
   Width width;
   
-  CreateArg(Width w = Bool) : expr(0, Expr::Bool), width(w) {}
+  CreateArg(Width w = Bool) : expr(0), width(w) {}
   CreateArg(ref<Expr> e) : expr(e), width(Expr::InvalidWidth) {}
   
   bool isExpr() { return !isWidth(); }
@@ -328,12 +328,12 @@ public:
   static ref<ConstantExpr> fromMemory(void *address, Width w);
   void toMemory(void *address);
 
-  static ref<ConstantExpr> alloc(uint64_t v, Width w) {
+  static ref<Expr> alloc(uint64_t v, Width w) {
     // constructs an "optimized" ConstantExpr
     return ref<ConstantExpr>(v, w);
   }
   
-  static ref<ConstantExpr> create(uint64_t v, Width w) {
+  static ref<Expr> create(uint64_t v, Width w) {
     assert(v == bits64::truncateToNBits(v, w) &&
            "invalid constant");
     return alloc(v, w);

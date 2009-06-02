@@ -902,7 +902,7 @@ void Executor::addConstraint(ExecutionState &state, ref<Expr> condition) {
 
   state.addConstraint(condition);
   if (ivcEnabled)
-    doImpliedValueConcretization(state, condition, ref<Expr>(1, Expr::Bool));
+    doImpliedValueConcretization(state, condition, ConstantExpr::alloc(1, Expr::Bool));
 }
 
 ref<Expr> Executor::evalConstant(Constant *c) {
@@ -1268,7 +1268,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     KInstIterator kcaller = state.stack.back().caller;
     Instruction *caller = kcaller ? kcaller->inst : 0;
     bool isVoidReturn = (ri->getNumOperands() == 0);
-    ref<Expr> result(0,Expr::Bool);
+    ref<Expr> result = ConstantExpr::alloc(0, Expr::Bool);
 
     if (WriteTraces) {
       state.exeTraceMgr.addEvent(new FunctionReturnTraceEvent(state, ki));
@@ -1402,7 +1402,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       transferToBasicBlock(si->getSuccessor(index), si->getParent(), state);
     } else {
       std::map<BasicBlock*, ref<Expr> > targets;
-      ref<Expr> isDefault(1,Expr::Bool);
+      ref<Expr> isDefault = ConstantExpr::alloc(1, Expr::Bool);
       for (unsigned i=1; i<cases; ++i) {
         ref<Expr> value = evalConstant(si->getCaseValue(i));
         ref<Expr> match = EqExpr::create(cond, value);
@@ -1413,7 +1413,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         if (result) {
           std::map<BasicBlock*, ref<Expr> >::iterator it =
             targets.insert(std::make_pair(si->getSuccessor(i),
-                                          ref<Expr>(0,Expr::Bool))).first;
+                                          ConstantExpr::alloc(0, Expr::Bool))).first;
           it->second = OrExpr::create(match, it->second);
         }
       }
@@ -1587,9 +1587,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     // Arithmetic / logical
 #define FP_CONSTANT_BINOP(op, type, l, r, target, state) \
         bindLocal(target, state, \
-                  ref<Expr>(op(toConstant(state, l, "floating point").getConstantValue(), \
-                               toConstant(state, r, "floating point").getConstantValue(), \
-                               type), type))
+                  ConstantExpr::alloc(op(toConstant(state, l, "floating point").getConstantValue(), \
+                                         toConstant(state, r, "floating point").getConstantValue(), \
+                                         type), type))
   case Instruction::Add: {
     BinaryOperator *bi = cast<BinaryOperator>(i);
     ref<Expr> left = eval(ki, 0, state).value;
@@ -1915,8 +1915,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     uint64_t value = floats::trunc(arg.getConstantValue(),
                                    resultType,
                                    arg.getWidth());
-    ref<Expr> result(value, resultType);
-    bindLocal(ki, state, result);
+    bindLocal(ki, state, ConstantExpr::alloc(value, resultType));
     break;
   }
 
@@ -1928,8 +1927,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     uint64_t value = floats::ext(arg.getConstantValue(),
                                  resultType,
                                  arg.getWidth());
-    ref<Expr> result(value, resultType);
-    bindLocal(ki, state, result);
+    bindLocal(ki, state, ConstantExpr::alloc(value, resultType));
     break;
   }
 
@@ -1941,8 +1939,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     uint64_t value = floats::toUnsignedInt(arg.getConstantValue(),
                                            resultType,
                                            arg.getWidth());
-    ref<Expr> result(value, resultType);
-    bindLocal(ki, state, result);
+    bindLocal(ki, state, ConstantExpr::alloc(value, resultType));
     break;
   }
 
@@ -1954,8 +1951,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     uint64_t value = floats::toSignedInt(arg.getConstantValue(),
                                          resultType,
                                          arg.getWidth());
-    ref<Expr> result(value, resultType);
-    bindLocal(ki, state, result);
+    bindLocal(ki, state, ConstantExpr::alloc(value, resultType));
     break;
   }
 
@@ -1966,8 +1962,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
                                "floating point");
     uint64_t value = floats::UnsignedIntToFP(arg.getConstantValue(),
                                              resultType);
-    ref<Expr> result(value, resultType);
-    bindLocal(ki, state, result);
+    bindLocal(ki, state, ConstantExpr::alloc(value, resultType));
     break;
   }
 
@@ -1979,8 +1974,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     uint64_t value = floats::SignedIntToFP(arg.getConstantValue(),
                                            resultType,
                                            arg.getWidth());
-    ref<Expr> result(value, resultType);
-    bindLocal(ki, state, result);
+    bindLocal(ki, state, ConstantExpr::alloc(value, resultType));
     break;
   }
 
@@ -2088,8 +2082,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       }
     }
 
-    ref<Expr> result(ret, resultType);
-    bindLocal(ki, state, result);
+    bindLocal(ki, state, ConstantExpr::alloc(ret, resultType));
     break;
   }
 
@@ -2630,7 +2623,7 @@ void Executor::executeAlloc(ExecutionState &state,
     MemoryObject *mo = memory->allocate(size.getConstantValue(), isLocal, false,
                                         state.prevPC->inst);
     if (!mo) {
-      bindLocal(target, state, ref<Expr>(0, kMachinePointerType));
+      bindLocal(target, state, ConstantExpr::alloc(0, kMachinePointerType));
     } else {
       ObjectState *os = bindObjectInState(state, mo, isLocal);
       if (zeroMemory) {
@@ -2665,8 +2658,8 @@ void Executor::executeAlloc(ExecutionState &state,
     
     // Try and start with a small example
     while (example.getConstantValue()>128) {
-      ref<Expr> tmp = ref<Expr>(example.getConstantValue() >> 1, 
-                                example.getWidth());
+      ref<Expr> tmp = ConstantExpr::alloc(example.getConstantValue() >> 1, 
+                                          example.getWidth());
       bool res;
       bool success = solver->mayBeTrue(state, EqExpr::create(tmp, size), res);
       assert(success && "FIXME: Unhandled solver failure");      
@@ -2693,12 +2686,15 @@ void Executor::executeAlloc(ExecutionState &state,
       } else {
         // See if a *really* big value is possible. If so assume
         // malloc will fail for it, so lets fork and return 0.
-        StatePair hugeSize = fork(*fixedSize.second, 
-                                  UltExpr::create(ref<Expr>(1<<31, Expr::Int32), size), 
-                                  true);
+        StatePair hugeSize = 
+          fork(*fixedSize.second, 
+               UltExpr::create(ConstantExpr::alloc(1<<31, Expr::Int32),
+                               size), 
+               true);
         if (hugeSize.first) {
           klee_message("NOTE: found huge malloc, returing 0");
-          bindLocal(target, *hugeSize.first, ref<Expr>(0,kMachinePointerType));
+          bindLocal(target, *hugeSize.first, 
+                    ConstantExpr::alloc(0, kMachinePointerType));
         }
         
         if (hugeSize.second) {
@@ -3011,7 +3007,7 @@ void Executor::runFunctionAsMain(Function *f,
   assert(kf);
   Function::arg_iterator ai = f->arg_begin(), ae = f->arg_end();
   if (ai!=ae) {
-    arguments.push_back(ref<Expr>(argc, Expr::Int32));
+    arguments.push_back(ConstantExpr::alloc(argc, Expr::Int32));
 
     if (++ai!=ae) {
       argvMO = memory->allocate((argc+1+envc+1+1) * kMachinePointerSize, false, true,
@@ -3108,7 +3104,7 @@ void Executor::getConstraintLog(const ExecutionState &state,
                                 std::string &res,
                                 bool asCVC) {
   if (asCVC) {
-    Query query(state.constraints, ref<Expr>(0, Expr::Bool));
+    Query query(state.constraints, ConstantExpr::alloc(0, Expr::Bool));
     char *log = solver->stpSolver->getConstraintLog(query);
     res = std::string(log);
     free(log);
@@ -3155,7 +3151,7 @@ bool Executor::getSymbolicSolution(const ExecutionState &state,
     klee_warning("unable to compute initial values (invalid constraints?)!");
     ExprPPrinter::printQuery(std::cerr,
                              state.constraints, 
-                             ref<Expr>(0,Expr::Bool));
+                             ConstantExpr::alloc(0, Expr::Bool));
     return false;
   }
   

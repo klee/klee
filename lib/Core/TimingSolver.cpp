@@ -130,7 +130,7 @@ TimingSolver::getInitialValues(const ExecutionState& state,
   sys::Process::GetTimeUsage(now,user,sys);
 
   bool success = solver->getInitialValues(Query(state.constraints,
-                                                ref<Expr>(0, Expr::Bool)), 
+                                                ConstantExpr::alloc(0, Expr::Bool)), 
                                           objects, result);
   
   sys::Process::GetTimeUsage(delta,user,sys);

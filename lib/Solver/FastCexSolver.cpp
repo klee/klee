@@ -358,11 +358,11 @@ protected:
     
     if (index >= cod.size) {
       return ReadExpr::create(UpdateList(&array, true, 0), 
-                              ref<Expr>(index, Expr::Int32));
+                              ConstantExpr::alloc(index, Expr::Int32));
     } else {
       CexValueData &cvd = cod.values[index];
       assert(cvd.min() == cvd.max() && "value is not fixed");
-      return ref<Expr>(cvd.min(), Expr::Int8);
+      return ConstantExpr::alloc(cvd.min(), Expr::Int8);
     }
   }
 

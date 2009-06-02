@@ -239,8 +239,9 @@ void ImpliedValue::checkForImpliedValues(Solver *S, ref<Expr> e,
   for (std::vector< ref<ReadExpr> >::iterator i = reads.begin(), 
          ie = reads.end(); i != ie; ++i) {
     ReadExpr *re = i->get();
-    ref<Expr> size = ref<Expr>(re->updates.root->size, kMachinePointerType);
-    assumption.push_back(UltExpr::create(re->index, size));
+    assumption.push_back(UltExpr::create(re->index, 
+                                         ConstantExpr::alloc(re->updates.root->size, 
+                                                             kMachinePointerType)));
   }
 
   ConstraintManager assume(assumption);

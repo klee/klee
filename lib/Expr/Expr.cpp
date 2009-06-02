@@ -43,42 +43,42 @@ ref<Expr> Expr::createTempRead(const Array *array, Expr::Width w) {
   switch (w) {
   case Expr::Bool: 
     return ZExtExpr::create(ReadExpr::create(ul, 
-                                             ref<Expr>(0,kMachinePointerType)),
+                                             ConstantExpr::alloc(0,kMachinePointerType)),
                             Expr::Bool);
   case Expr::Int8: 
     return ReadExpr::create(ul, 
-                            ref<Expr>(0,kMachinePointerType));
+                            ConstantExpr::alloc(0,kMachinePointerType));
   case Expr::Int16: 
     return ConcatExpr::create(ReadExpr::create(ul, 
-                                               ref<Expr>(1,kMachinePointerType)),
+                                               ConstantExpr::alloc(1,kMachinePointerType)),
                               ReadExpr::create(ul, 
-                                               ref<Expr>(0,kMachinePointerType)));
+                                               ConstantExpr::alloc(0,kMachinePointerType)));
   case Expr::Int32: 
     return ConcatExpr::create4(ReadExpr::create(ul, 
-                                                ref<Expr>(3,kMachinePointerType)),
+                                                ConstantExpr::alloc(3,kMachinePointerType)),
                                ReadExpr::create(ul, 
-                                                ref<Expr>(2,kMachinePointerType)),
+                                                ConstantExpr::alloc(2,kMachinePointerType)),
                                ReadExpr::create(ul, 
-                                                ref<Expr>(1,kMachinePointerType)),
+                                                ConstantExpr::alloc(1,kMachinePointerType)),
                                ReadExpr::create(ul, 
-                                                ref<Expr>(0,kMachinePointerType)));
+                                                ConstantExpr::alloc(0,kMachinePointerType)));
   case Expr::Int64: 
     return ConcatExpr::create8(ReadExpr::create(ul, 
-                                                ref<Expr>(7,kMachinePointerType)),
+                                                ConstantExpr::alloc(7,kMachinePointerType)),
                                ReadExpr::create(ul, 
-                                                ref<Expr>(6,kMachinePointerType)),
+                                                ConstantExpr::alloc(6,kMachinePointerType)),
                                ReadExpr::create(ul, 
-                                                ref<Expr>(5,kMachinePointerType)),
+                                                ConstantExpr::alloc(5,kMachinePointerType)),
                                ReadExpr::create(ul, 
-                                                ref<Expr>(4,kMachinePointerType)),
+                                                ConstantExpr::alloc(4,kMachinePointerType)),
                                ReadExpr::create(ul, 
-                                                ref<Expr>(3,kMachinePointerType)),
+                                                ConstantExpr::alloc(3,kMachinePointerType)),
                                ReadExpr::create(ul, 
-                                                ref<Expr>(2,kMachinePointerType)),
+                                                ConstantExpr::alloc(2,kMachinePointerType)),
                                ReadExpr::create(ul, 
-                                                ref<Expr>(1,kMachinePointerType)),
+                                                ConstantExpr::alloc(1,kMachinePointerType)),
                                ReadExpr::create(ul, 
-                                                ref<Expr>(0,kMachinePointerType)));
+                                                ConstantExpr::alloc(0,kMachinePointerType)));
   default: assert(0 && "invalid width");
   }
 }
@@ -639,7 +639,7 @@ static ref<Expr> SubExpr_create(Expr *l, Expr *r) {
   if (type == Expr::Bool) {
     return XorExpr_create(l, r);
   } else if (*l==*r) {
-    return ref<Expr>(0, type);
+    return ConstantExpr::alloc(0, type);
   } else {
     Expr::Kind lk = l->getKind(), rk = r->getKind();
     if (lk==Expr::Add && l->getKid(0).isConstant()) { // (k+a)-b = k+(a-b)
@@ -891,7 +891,7 @@ ref<Expr>  _e_op ::create(const ref<Expr> &l, const ref<Expr> &r) { \
 
 static ref<Expr> EqExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
   if (l == r) {
-    return ref<Expr>(1, Expr::Bool);
+    return ConstantExpr::alloc(1, Expr::Bool);
   } else {
     return EqExpr::alloc(l, r);
   }
@@ -952,7 +952,7 @@ static ref<Expr> TryConstArrayOpt(const ref<Expr> &cl,
     //llvm::cerr << "\n\n=== Applying const array optimization ===\n\n";
 
     if (matches == 0)
-      return ref<Expr>(0, Expr::Bool);
+      return ConstantExpr::alloc(0, Expr::Bool);
 
     ref<Expr> res = EqExpr::create(first_idx_match, rd->index);
     if (matches == 1)
@@ -1079,11 +1079,11 @@ static ref<Expr> UltExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
     if (r.isConstant()) {      
       uint64_t value = r.getConstantValue();
       if (value <= 8) {
-        ref<Expr> res(0,Expr::Bool);
+        ref<Expr> res = ConstantExpr::alloc(0, Expr::Bool);
         for (unsigned i=0; i<value; i++) {
-          res = OrExpr::create(EqExpr::create(l, ref<Expr>(i,t)), res);
+          res = OrExpr::create(EqExpr::create(l, 
+                                              ConstantExpr::alloc(i, t)), res);
         }
-        //        llvm::cerr << l << "<" << r << "  <=>  " << res << "\n";
         return res;
       }
     }

@@ -327,8 +327,8 @@ ValidatingSolver::computeInitialValues(const Query& query,
         unsigned char value = values[i][j];
         bindings.push_back(EqExpr::create(ReadExpr::create(UpdateList(array,
                                                                       true, 0),
-                                                           ref<Expr>(j, Expr::Int32)),
-                                          ref<Expr>(value, Expr::Int8)));
+                                                           ConstantExpr::alloc(j, Expr::Int32)),
+                                          ConstantExpr::alloc(value, Expr::Int8)));
       }
     }
     ConstraintManager tmp(bindings);
@@ -439,7 +439,7 @@ char *STPSolverImpl::getConstraintLog(const Query &query) {
   for (std::vector< ref<Expr> >::const_iterator it = query.constraints.begin(), 
          ie = query.constraints.end(); it != ie; ++it)
     vc_assertFormula(vc, builder->construct(*it));
-  assert(query.expr == ref<Expr>(0, Expr::Bool) &&
+  assert(query.expr == ConstantExpr::alloc(0, Expr::Bool) &&
          "Unexpected expression in query!");
 
   char *buffer;

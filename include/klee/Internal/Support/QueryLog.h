@@ -35,7 +35,7 @@ namespace klee {
     std::vector<const Array*> objects;
     
   public:
-    QueryLogEntry() : query(0,Expr::Bool) {}
+    QueryLogEntry() : query(ConstantExpr::alloc(0,Expr::Bool)) {}
     QueryLogEntry(const QueryLogEntry &b);
     QueryLogEntry(const Query &_query, 
                   Type _type,
