@@ -336,7 +336,7 @@ void Expr::print(std::ostream &os) const {
 
 /***/
 
-ref<ConstantExpr> ConstantExpr::fromMemory(void *address, Width width) {
+ref<Expr> ConstantExpr::fromMemory(void *address, Width width) {
   switch (width) {
   case  Expr::Bool: return ConstantExpr::create(*(( uint8_t*) address), width);
   case  Expr::Int8: return ConstantExpr::create(*(( uint8_t*) address), width);

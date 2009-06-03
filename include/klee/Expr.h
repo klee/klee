@@ -321,7 +321,7 @@ public:
 
   virtual unsigned computeHash();
   
-  static ref<ConstantExpr> fromMemory(void *address, Width w);
+  static ref<Expr> fromMemory(void *address, Width w);
   void toMemory(void *address);
 
   static ref<Expr> alloc(uint64_t v, Width w) {
