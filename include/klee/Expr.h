@@ -326,7 +326,9 @@ public:
 
   static ref<Expr> alloc(uint64_t v, Width w) {
     // constructs an "optimized" ConstantExpr
-    return ref<ConstantExpr>(v, w);
+    ref<Expr> r(new ConstantExpr(v, w));
+    r.computeHash();
+    return r;
   }
   
   static ref<Expr> create(uint64_t v, Width w) {
@@ -536,7 +538,8 @@ public:
   ref<Expr> cond, trueExpr, falseExpr;
 
 public:
-  static ref<Expr> alloc(const ref<Expr> &c, const ref<Expr> &t, const ref<Expr> &f) {
+  static ref<Expr> alloc(const ref<Expr> &c, const ref<Expr> &t, 
+                         const ref<Expr> &f) {
     ref<Expr> r(new SelectExpr(c, t, f));
     r.computeHash();
     return r;

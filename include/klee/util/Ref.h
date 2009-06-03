@@ -21,45 +21,23 @@ class ObjectState;
 
 template<class T>
 class ref {
+  T *ptr;
+
 public:
   // default constructor: create a NULL reference
-  ref() : constantWidth(Expr::InvalidWidth) {
-    contents.ptr = 0;
-  }
+  ref() : ptr(0) { }
+  ~ref () { dec (); }
 
 private:
-  // if NotConstant, not this ref is not a constant.
-  // otherwise, it's the width of the constant.
-  Expr::Width constantWidth;
-  static const Expr::Width NotConstant = (Expr::Width) 0;
-  
-  union {
-    T *ptr;
-    uint64_t val;
-  } contents;
-  
   void inc() {
-    if (constantWidth == NotConstant &&
-        contents.ptr) {
-      contents.ptr->refCount++;
-    }
+    if (ptr)
+      ++ptr->refCount;
   }
   
   void dec() {
-    if (constantWidth == NotConstant &&
-        contents.ptr &&
-        --contents.ptr->refCount == 0) {
-      delete contents.ptr;
-    }
+    if (ptr && --ptr->refCount == 0)
+      delete ptr;
   }  
-
-  friend class ExprVisitor;
-  friend class ConstantExpr;
-
-  // construct from constant
-  ref(uint64_t val, Expr::Width w) : constantWidth(w) {
-    contents.val = val;
-  }
 
 public:
   template<class U> friend class ref;
@@ -69,117 +47,72 @@ public:
   template<class U> friend const U* static_ref_cast(const ref &src);
 
   // constructor from pointer
-  ref(T *p) : constantWidth(NotConstant) {
-    contents.ptr = p;
+  ref(T *p) : ptr(p) {
     inc();
   }
   
   // normal copy constructor
-  ref(const ref<T> &r)
-    : constantWidth(r.constantWidth), contents(r.contents) {
+  ref(const ref<T> &r) : ptr(r.ptr) {
     inc();
   }
   
   // conversion constructor
   template<class U>
   ref (const ref<U> &r) {
-    constantWidth = r.constantWidth;
-    contents.val = r.contents.val;
+    ptr = r.ptr;
     inc();
   }
   
   // pointer operations
   T *get () {
-    // demand(constantWidth == NotConstant, "deref of constant");
-
-    // allocate 
-    if (constantWidth != NotConstant) {
-      contents.ptr = dynamic_cast<T*>(Expr::createConstant(contents.val, constantWidth));
-      assert(contents.ptr && "error with lazy constant initialization");
-      constantWidth = NotConstant;
-      
-      inc();
-    }
-    return contents.ptr;
+    return ptr;
   }
 
   T *get () const {
-    assert(constantWidth == NotConstant && "deref of constant");
-    return contents.ptr;
+    return ptr;
   }
 
   // method calls for the constant optimization
   bool isConstant() const {
-    if (constantWidth != NotConstant) {
-      return true;
-    } else if (contents.ptr) {
-      return contents.ptr->getKind() == Expr::Constant;
-    } else {
-      return false; // should never happen, but nice check
-    }
+    return ptr && ptr->getKind() == Expr::Constant;
   }
 
   uint64_t getConstantValue() const {
-    if (constantWidth) {
-      return contents.val;
-    } else {
-      return contents.ptr->getConstantValue();
-    }
+    assert(isConstant() && "Invalid call to getConstantValue()");
+    return ptr->getConstantValue();
   }
 
   unsigned hash() const {
-    if (constantWidth) {
-      return contents.val ^ (constantWidth * Expr::MAGIC_HASH_CONSTANT);
-    } else {
-      return contents.ptr->hash();
-    }
+    assert(!isNull() && "Invalid call to hash()");
+    return ptr->hash();
   }
 
   unsigned computeHash() const {
-    if (isConstant()) {
-      return contents.val ^ (constantWidth * Expr::MAGIC_HASH_CONSTANT);
-    } else {
-      return contents.ptr->computeHash();
-    }
-  }
-
-  void rehash() const {
-    if (!isConstant())
-      contents.ptr->computeHash();
+    assert(!isNull() && "Invalid call to computeHash()");
+    return ptr->computeHash();
   }
   
   Expr::Width getWidth() const {
-    if (constantWidth != NotConstant)
-      return constantWidth;
-    return contents.ptr->getWidth();
+    return ptr->getWidth();
   }
 
   Expr::Kind getKind() const {
-    if (constantWidth != NotConstant)
-      return Expr::Constant;
-    return contents.ptr->getKind();
+    return ptr->getKind();
   }
 
   unsigned getNumKids() const {
-    if (constantWidth != NotConstant)
-      return 0;
-    return contents.ptr->getNumKids();
+    return ptr->getNumKids();
   }
 
   ref<Expr> getKid(unsigned k) {
-    if (constantWidth != NotConstant)
-      return 0;
-    return contents.ptr->getKid(k);
+    return ptr->getKid(k);
   }
-
-  ~ref () { dec (); }
 
   /* The copy assignment operator must also explicitly be defined,
    * despite a redundant template. */
   ref<T> &operator= (const ref<T> &r) {
     dec();
-    constantWidth = r.constantWidth;
-    contents.val = r.contents.val;
+    ptr = r.ptr;
     inc();
     
     return *this;
@@ -187,35 +120,18 @@ public:
   
   template<class U> ref<T> &operator= (const ref<U> &r) {
     dec();
-    constantWidth = r.constantWidth;
-    contents.val = r.contents.val;
+    ptr = r.ptr;
     inc();
     
     return *this;
   }
 
-  bool isNull() const { return !constantWidth && !contents.ptr; }
+  bool isNull() const { return ptr == 0; }
 
   // assumes non-null arguments
   int compare(const ref &rhs) const {
-    Expr::Kind ak = getKind(), bk = rhs.getKind();
-    if (ak!=bk) 
-      return (ak < bk) ? -1 : 1;
-    if (ak==Expr::Constant) {
-      Expr::Width at = getWidth(), bt = rhs.getWidth();
-      if (at!=bt) 
-        return (at < bt) ? -1 : 1;
-      uint64_t av = getConstantValue(), bv = rhs.getConstantValue();
-      if (av<bv) {
-        return -1;
-      } else if (av>bv) {
-        return 1;
-      } else {
-        return 0;
-      }
-    } else {
-      return get()->compare(*rhs.get());
-    }
+    assert(!isNull() && !rhs.isNull() && "Invalid call to compare()");
+    return get()->compare(*rhs.get());
   }
 
   // assumes non-null arguments
@@ -237,28 +153,22 @@ inline std::ostream &operator<<(std::ostream &os, const ref<T> &e) {
 
 template<class U>
 U* dyn_ref_cast(ref<Expr> &src) {
-  if (src.constantWidth != ref<Expr>::NotConstant)
-    return 0;
-    
-  return dynamic_cast<U*>(src.contents.ptr);
+  return dynamic_cast<U*>(src.ptr);
 }
 
 template<class U>
 const U* dyn_ref_cast(const ref<Expr> &src) {
-  if (src.constantWidth != ref<Expr>::NotConstant)
-    return 0;
-    
-  return dynamic_cast<const U*>(src.contents.ptr);
+  return dynamic_cast<const U*>(src.ptr);
 }
 
 template<class U>
 U* static_ref_cast(ref<Expr> &src) {
-  return static_cast<U*>(src.contents.ptr);
+  return static_cast<U*>(src.ptr);
 }
 
 template<class U>
 const U* static_ref_cast(const ref<Expr> &src) {
-  return static_cast<const U*>(src.contents.ptr);
+  return static_cast<const U*>(src.ptr);
 }
 
 #endif /* KLEE_REF_H */
