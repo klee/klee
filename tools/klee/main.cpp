@@ -192,7 +192,7 @@ private:
   unsigned m_testIndex;  // number of tests written so far
   unsigned m_pathsExplored; // number of paths explored so far
 
-  // used for writing .bout files
+  // used for writing .ktest files
   int m_argc;
   char **m_argv;
 
@@ -364,7 +364,7 @@ std::ostream *KleeHandler::openTestFile(const std::string &suffix, unsigned id) 
 }
 
 
-/* Outputs all files (.bout, .pc, .cov etc.) describing a test case */
+/* Outputs all files (.ktest, .pc, .cov etc.) describing a test case */
 void KleeHandler::processTestCase(const ExecutionState &state,
                                   const char *errorMessage, 
                                   const char *errorSuffix) {
@@ -509,13 +509,14 @@ void KleeHandler::getOutFiles(std::string path,
   std::set<llvm::sys::Path> contents;
   std::string error;
   if (p.getDirectoryContents(contents, &error)) {
-    llvm::cerr << "ERROR: unable to read output directory: " << path << ": " << error << "\n";
+    llvm::cerr << "ERROR: unable to read output directory: " << path 
+               << ": " << error << "\n";
     exit(1);
   }
   for (std::set<llvm::sys::Path>::iterator it = contents.begin(),
          ie = contents.end(); it != ie; ++it) {
     std::string f = it->toString();
-    if (f.substr(f.size()-5,f.size()) == ".bout") {
+    if (f.substr(f.size()-6,f.size()) == ".ktest") {
       results.push_back(f);
     }
   }
@@ -1300,7 +1301,7 @@ int main(int argc, char **argv, char **envp) {
       interpreter->setReplayOut(out);
       llvm::cerr << "KLEE: replaying: " << *it << " (" << kTest_numBytes(out) << " bytes)"
                  << " (" << ++i << "/" << outFiles.size() << ")\n";
-      // XXX should put envp in .bout ?
+      // XXX should put envp in .ktest ?
       interpreter->runFunctionAsMain(mainFn, out->numArgs, out->args, pEnvp);
       if (interrupted) break;
     }

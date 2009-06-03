@@ -2385,7 +2385,8 @@ std::string Executor::getAddressInfo(ExecutionState &state,
 
 void Executor::terminateState(ExecutionState &state) {
   if (replayOut && replayPosition!=replayOut->numObjects) {
-    klee_warning_once(replayOut, "replay did not consume all objects in .bout input.");
+    klee_warning_once(replayOut, 
+                      "replay did not consume all objects in test input.");
   }
 
   interpreterHandler->incPathsExplored();
@@ -2947,7 +2948,7 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
 	    msg << "replace size mismatch: "
 		<< mo->name << "[" << mo->size << "]"
 		<< " vs " << obj->name << "[" << obj->numBytes << "]"
-		<< " in bout\n";
+		<< " in test\n";
 
             terminateStateOnError(state,
                                   msg.str(),

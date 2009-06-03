@@ -1,10 +1,10 @@
 // RUN: %llvmgcc %s -emit-llvm -O0 -c -o %t.bc
 // RUN: %klee --libc=uclibc --posix-runtime --init-env %t.bc --sym-files 0 10 --sym-stdout 2>%t.log
 
-// RUN: test -f klee-last/test000001.bout
-// RUN: test -f klee-last/test000002.bout
-// RUN: test -f klee-last/test000003.bout
-// RUN: test -f klee-last/test000004.bout
+// RUN: test -f klee-last/test000001.ktest
+// RUN: test -f klee-last/test000002.ktest
+// RUN: test -f klee-last/test000003.ktest
+// RUN: test -f klee-last/test000004.ktest
 
 // RUN: grep -q "stdin is a tty" %t.log
 // RUN: grep -q "stdin is NOT a tty" %t.log
