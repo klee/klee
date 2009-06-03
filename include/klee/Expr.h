@@ -178,10 +178,6 @@ public:
   /// Returns the hash value. 
   virtual unsigned computeHash();
   
-  static unsigned hashConstant(uint64_t val, Width w) {
-    return val ^ (w * MAGIC_HASH_CONSTANT);
-  }
-  
   /// Returns 0 iff b is structuraly equivalent to *this
   int compare(const Expr &b) const;
   virtual int compareContents(const Expr &b) const { return 0; }

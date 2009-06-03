@@ -165,8 +165,7 @@ unsigned Expr::computeHash() {
 }
 
 unsigned ConstantExpr::computeHash() {
-  hashValue = Expr::hashConstant(asUInt64, width);
-  return hashValue;
+  return asUInt64 ^ (width * MAGIC_HASH_CONSTANT);
 }
 
 unsigned CastExpr::computeHash() {

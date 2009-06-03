@@ -129,7 +129,7 @@ public:
 
   unsigned hash() const {
     if (constantWidth) {
-      return Expr::hashConstant(contents.val, constantWidth);
+      return contents.val ^ (constantWidth * Expr::MAGIC_HASH_CONSTANT);
     } else {
       return contents.ptr->hash();
     }
@@ -137,7 +137,7 @@ public:
 
   unsigned computeHash() const {
     if (isConstant()) {
-      return Expr::hashConstant(contents.val, constantWidth);
+      return contents.val ^ (constantWidth * Expr::MAGIC_HASH_CONSTANT);
     } else {
       return contents.ptr->computeHash();
     }
