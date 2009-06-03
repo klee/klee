@@ -78,7 +78,7 @@ void SeedInfo::patchSeed(const ExecutionState &state,
          ie = reads.end(); it != ie; ++it) {
     ReadExpr *re = it->get();
     if (re->index.isConstant()) {
-      unsigned index = (unsigned) re->index.getConstantValue();
+      unsigned index = (unsigned) re->index->getConstantValue();
       directReads.insert(std::make_pair(re->updates.root, index));
     }
   }
@@ -101,7 +101,7 @@ void SeedInfo::patchSeed(const ExecutionState &state,
         ref<Expr> value;
         bool success = solver->getValue(tmp, read, value);
         assert(success && "FIXME: Unhandled solver failure");            
-        it2->second[i] = value.getConstantValue();
+        it2->second[i] = value->getConstantValue();
         tmp.addConstraint(EqExpr::create(read, ConstantExpr::alloc(it2->second[i], Expr::Int8)));
       } else {
         tmp.addConstraint(isSeed);
@@ -131,7 +131,7 @@ void SeedInfo::patchSeed(const ExecutionState &state,
         ref<Expr> value;
         bool success = solver->getValue(tmp, read, value);
         assert(success && "FIXME: Unhandled solver failure");            
-        it->second[i] = value.getConstantValue();
+        it->second[i] = value->getConstantValue();
         tmp.addConstraint(EqExpr::create(read, ConstantExpr::alloc(it->second[i], Expr::Int8)));
       } else {
         tmp.addConstraint(isSeed);

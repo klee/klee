@@ -53,11 +53,11 @@ SolverImpl::~SolverImpl() {
 }
 
 bool Solver::evaluate(const Query& query, Validity &result) {
-  assert(query.expr.getWidth() == Expr::Bool && "Invalid expression type!");
+  assert(query.expr->getWidth() == Expr::Bool && "Invalid expression type!");
 
-  // Maintain invariants implementation expect.
+  // Maintain invariants implementations expect.
   if (query.expr.isConstant()) {
-    result = query.expr.getConstantValue() ? True : False;
+    result = query.expr->getConstantValue() ? True : False;
     return true;
   }
 
@@ -79,11 +79,11 @@ bool SolverImpl::computeValidity(const Query& query, Solver::Validity &result) {
 }
 
 bool Solver::mustBeTrue(const Query& query, bool &result) {
-  assert(query.expr.getWidth() == Expr::Bool && "Invalid expression type!");
+  assert(query.expr->getWidth() == Expr::Bool && "Invalid expression type!");
 
-  // Maintain invariants implementation expect.
+  // Maintain invariants implementations expect.
   if (query.expr.isConstant()) {
-    result = query.expr.getConstantValue() ? true : false;
+    result = query.expr->getConstantValue() ? true : false;
     return true;
   }
 
@@ -136,7 +136,7 @@ Solver::getInitialValues(const Query& query,
 
 std::pair< ref<Expr>, ref<Expr> > Solver::getRange(const Query& query) {
   ref<Expr> e = query.expr;
-  Expr::Width width = e.getWidth();
+  Expr::Width width = e->getWidth();
   uint64_t min, max;
 
   if (width==1) {
@@ -152,7 +152,7 @@ std::pair< ref<Expr>, ref<Expr> > Solver::getRange(const Query& query) {
       min = 0, max = 1; break;
     }
   } else if (e.isConstant()) {
-    min = max = e.getConstantValue();
+    min = max = e->getConstantValue();
   } else {
     // binary search for # of useful bits
     uint64_t lo=0, hi=width, mid, bits=0;

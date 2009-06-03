@@ -26,7 +26,7 @@ bool TimingSolver::evaluate(const ExecutionState& state, ref<Expr> expr,
                             Solver::Validity &result) {
   // Fast path, to avoid timer and OS overhead.
   if (expr.isConstant()) {
-    result = expr.getConstantValue() ? Solver::True : Solver::False;
+    result = expr->getConstantValue() ? Solver::True : Solver::False;
     return true;
   }
 
@@ -50,7 +50,7 @@ bool TimingSolver::mustBeTrue(const ExecutionState& state, ref<Expr> expr,
                               bool &result) {
   // Fast path, to avoid timer and OS overhead.
   if (expr.isConstant()) {
-    result = expr.getConstantValue() ? true : false;
+    result = expr->getConstantValue() ? true : false;
     return true;
   }
 

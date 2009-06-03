@@ -96,7 +96,7 @@ class PPrinter : public ExprPPrinter {
   bool shouldPrintWidth(ref<Expr> e) {
     if (PCAllWidths)
       return true;
-    return e.getWidth() != Expr::Bool;
+    return e->getWidth() != Expr::Bool;
   }
 
   bool isVerySimple(const ref<Expr> &e) { 
@@ -228,7 +228,7 @@ class PPrinter : public ExprPPrinter {
         PC << 'w';
     }
 
-    PC << e.getWidth();
+    PC << e->getWidth();
   }
 
   /// hasOrderedReads - True iff all children are reads with
@@ -239,7 +239,7 @@ class PPrinter : public ExprPPrinter {
       return false;
 
     // Get stride expr in proper index width.
-    Expr::Width idxWidth = base->index.getWidth();
+    Expr::Width idxWidth = base->index->getWidth();
     ref<Expr> strideExpr = ConstantExpr::alloc(stride, idxWidth);
     ref<Expr> offset = ConstantExpr::alloc(0, idxWidth);
     for (unsigned i=1; i<ep->getNumKids(); ++i) {
@@ -326,16 +326,16 @@ public:
   void printConst(const ref<Expr> &e, PrintContext &PC, bool printWidth) {
     assert(e.isConstant());
 
-    if (e.getWidth() == Expr::Bool)
-      PC << (e.getConstantValue() ? "true" : "false");
+    if (e->getWidth() == Expr::Bool)
+      PC << (e->getConstantValue() ? "true" : "false");
     else {
       if (PCAllConstWidths)
 	printWidth = true;
     
       if (printWidth)
-	PC << "(w" << e.getWidth() << " ";
+	PC << "(w" << e->getWidth() << " ";
 
-      PC << e.getConstantValue();
+      PC << e->getConstantValue();
 
       if (printWidth)
 	PC << ")";
@@ -376,7 +376,7 @@ public:
         // because if they are offset reads then its either constant,
         // or they are (base + offset) and base will get printed with
         // a declaration.
-        if (PCMultibyteReads && e.getKind() == Expr::Concat) {
+        if (PCMultibyteReads && e->getKind() == Expr::Concat) {
           const Expr *ep = e.get();
           if (hasAllByteReads(ep)) {
             bool isMSB = hasOrderedReads(ep, 1);
@@ -393,7 +393,7 @@ public:
           }
         }
 
-	PC << '(' << e.getKind();
+	PC << '(' << e->getKind();
         printWidth(PC, e);
         PC << ' ';
 
@@ -404,7 +404,7 @@ public:
           printRead(re, PC, indent);
         } else if (const ExtractExpr *ee = dyn_ref_cast<ExtractExpr>(e)) {
           printExtract(ee, PC, indent);
-        } else if (e.getKind() == Expr::Concat || e.getKind() == Expr::SExt)
+        } else if (e->getKind() == Expr::Concat || e->getKind() == Expr::SExt)
 	  printExpr(e.get(), PC, indent, true);
 	else
           printExpr(e.get(), PC, indent);	

@@ -73,7 +73,7 @@ bool AddressSpace::resolveOne(ExecutionState &state,
                               ObjectPair &result,
                               bool &success) {
   if (address.isConstant()) {
-    success = resolveOne(address.getConstantValue(), result);
+    success = resolveOne(address->getConstantValue(), result);
     return true;
   } else {
     TimerStatIncrementer timer(stats::resolveTime);
@@ -83,7 +83,7 @@ bool AddressSpace::resolveOne(ExecutionState &state,
     ref<Expr> cex(0);
     if (!solver->getValue(state, address, cex))
       return false;
-    unsigned example = (unsigned) cex.getConstantValue();
+    unsigned example = (unsigned) cex->getConstantValue();
     MemoryObject hack(example);
     const MemoryMap::value_type *res = objects.lookup_previous(&hack);
     
@@ -165,7 +165,7 @@ bool AddressSpace::resolve(ExecutionState &state,
                            double timeout) {
   if (p.isConstant()) {
     ObjectPair res;
-    if (resolveOne(p.getConstantValue(), res))
+    if (resolveOne(p->getConstantValue(), res))
       rl.push_back(res);
     return false;
   } else {
@@ -190,7 +190,7 @@ bool AddressSpace::resolve(ExecutionState &state,
     ref<Expr> cex(0);
     if (!solver->getValue(state, p, cex))
       return true;
-    unsigned example = (unsigned) cex.getConstantValue();
+    unsigned example = (unsigned) cex->getConstantValue();
     MemoryObject hack(example);
     
     MemoryMap::iterator oi = objects.upper_bound(&hack);

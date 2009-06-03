@@ -177,7 +177,7 @@ std::string SpecialFunctionHandler::readStringAtAddress(ExecutionState &state,
   ObjectPair op;
   address = executor.toUnique(state, address);
   assert(address.isConstant() && "symbolic string arg to intrinsic");  
-  if (!state.addressSpace.resolveOne(address.getConstantValue(), op))
+  if (!state.addressSpace.resolveOne(address->getConstantValue(), op))
     assert(0 && "XXX out of bounds / multiple resolution unhandled");
   bool res;
   assert(executor.solver->mustBeTrue(state, 
@@ -197,7 +197,7 @@ std::string SpecialFunctionHandler::readStringAtAddress(ExecutionState &state,
     cur = executor.toUnique(state, cur);
     assert(cur.isConstant() && 
            "hit symbolic char while reading concrete string");
-    buf[i] = cur.getConstantValue();
+    buf[i] = cur->getConstantValue();
   }
   buf[i] = 0;
   
@@ -354,8 +354,8 @@ void SpecialFunctionHandler::handleAssume(ExecutionState &state,
   
   ref<Expr> e = arguments[0];
   
-  if(e.getWidth() != Expr::Bool)
-    e = NeExpr::create(e, ConstantExpr::create(0, e.getWidth()));
+  if (e->getWidth() != Expr::Bool)
+    e = NeExpr::create(e, ConstantExpr::create(0, e->getWidth()));
   
   bool res;
   bool success = executor.solver->mustBeFalse(state, e, res);
@@ -385,8 +385,8 @@ void SpecialFunctionHandler::handlePreferCex(ExecutionState &state,
          "invalid number of arguments to klee_prefex_cex");
 
   ref<Expr> cond = arguments[1];
-  if (cond.getWidth() != Expr::Bool)
-    cond = NeExpr::create(cond, ConstantExpr::alloc(0, cond.getWidth()));
+  if (cond->getWidth() != Expr::Bool)
+    cond = NeExpr::create(cond, ConstantExpr::alloc(0, cond->getWidth()));
 
   Executor::ExactResolutionList rl;
   executor.resolveExact(state, arguments[0], rl, "prefex_cex");
@@ -417,7 +417,7 @@ void SpecialFunctionHandler::handleUnderConstrained(ExecutionState &state,
   assert(arguments[0].isConstant() &&
    	 "symbolic argument given to klee_under_constrained!");
 
-  unsigned v = arguments[0].getConstantValue();
+  unsigned v = arguments[0]->getConstantValue();
   llvm::cerr << "argument = " << v << " under=" << state.underConstrained << "\n";
   if(v) {
     assert(state.underConstrained == false &&
@@ -443,7 +443,7 @@ void SpecialFunctionHandler::handleSetForking(ExecutionState &state,
                                    "klee_set_forking requires a constant arg",
                                    "user.err");
   } else {
-    state.forkDisabled = !value.getConstantValue();
+    state.forkDisabled = !value->getConstantValue();
   }
 }
 
@@ -596,16 +596,16 @@ void SpecialFunctionHandler::handleCheckMemoryAccess(ExecutionState &state,
   } else {
     ObjectPair op;
 
-    if (!state.addressSpace.resolveOne(address.getConstantValue(), op)) {
+    if (!state.addressSpace.resolveOne(address->getConstantValue(), op)) {
       executor.terminateStateOnError(state,
                                      "check_memory_access: memory error",
                                      "ptr.err",
                                      executor.getAddressInfo(state, address));
     } else {
       ref<Expr> chk = op.first->getBoundsCheckPointer(address, 
-                                                      size.getConstantValue());
+                                                      size->getConstantValue());
       assert(chk.isConstant());
-      if (!chk.getConstantValue()) {
+      if (!chk->getConstantValue()) {
         executor.terminateStateOnError(state,
                                        "check_memory_access: memory error",
                                        "ptr.err",
@@ -634,8 +634,8 @@ void SpecialFunctionHandler::handleDefineFixedObject(ExecutionState &state,
   assert(arguments[1].isConstant() &&
          "expect constant size argument to klee_define_fixed_object");
   
-  uint64_t address = arguments[0].getConstantValue();
-  uint64_t size = arguments[1].getConstantValue();
+  uint64_t address = arguments[0]->getConstantValue();
+  uint64_t size = arguments[1]->getConstantValue();
   MemoryObject *mo = executor.memory->allocateFixed(address, size, state.prevPC->inst);
   executor.bindObjectInState(state, mo, false);
   mo->isUserSpecified = true; // XXX hack;

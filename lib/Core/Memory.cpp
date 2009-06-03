@@ -329,7 +329,7 @@ void ObjectState::write8(unsigned offset, uint8_t value) {
 void ObjectState::write8(unsigned offset, ref<Expr> value) {
   // can happen when ExtractExpr special cases
   if (value.isConstant()) {
-    write8(offset, (uint8_t) value.getConstantValue());
+    write8(offset, (uint8_t) value->getConstantValue());
   } else {
     setKnownSymbolic(offset, value.get());
       
@@ -359,7 +359,7 @@ void ObjectState::write8(ref<Expr> offset, ref<Expr> value) {
 
 ref<Expr> ObjectState::read(ref<Expr> offset, Expr::Width width) const {
   if (offset.isConstant()) {
-    return read((unsigned) offset.getConstantValue(), width);
+    return read((unsigned) offset->getConstantValue(), width);
   } else { 
     switch (width) {
     case  Expr::Bool: return  read1(offset);
@@ -546,9 +546,9 @@ ref<Expr> ObjectState::read64(ref<Expr> offset) const {
 }
 
 void ObjectState::write(ref<Expr> offset, ref<Expr> value) {
-  Expr::Width w = value.getWidth();
+  Expr::Width w = value->getWidth();
   if (offset.isConstant()) {
-    write(offset.getConstantValue(), value);
+    write(offset->getConstantValue(), value);
   } else {
     switch(w) {
     case  Expr::Bool:  write1(offset, value); break;
@@ -562,9 +562,9 @@ void ObjectState::write(ref<Expr> offset, ref<Expr> value) {
 }
 
 void ObjectState::write(unsigned offset, ref<Expr> value) {
-  Expr::Width w = value.getWidth();
+  Expr::Width w = value->getWidth();
   if (value.isConstant()) {
-    uint64_t val = value.getConstantValue();
+    uint64_t val = value->getConstantValue();
     switch(w) {
     case  Expr::Bool:
     case  Expr::Int8:  write8(offset, val); break;

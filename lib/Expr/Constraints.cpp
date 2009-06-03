@@ -120,9 +120,9 @@ void ConstraintManager::addConstraintInternal(ref<Expr> e) {
   // ConstraintSet ADT which efficiently remembers obvious patterns
   // (byte-constant comparison).
 
-  switch (e.getKind()) {
+  switch (e->getKind()) {
   case Expr::Constant:
-    assert(e.getConstantValue() && "attempt to add invalid (false) constraint");
+    assert(e->getConstantValue() && "attempt to add invalid (false) constraint");
     break;
     
     // split to enable finer grained independence and other optimizations

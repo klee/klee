@@ -99,7 +99,7 @@ public:
         if (!wholeObjects.count(array)) {
           if (re->index.isConstant()) {
             DenseSet<unsigned> &dis = elements[array];
-            dis.add((unsigned) re->index.getConstantValue());
+            dis.add((unsigned) re->index->getConstantValue());
           } else {
             elements_ty::iterator it2 = elements.find(array);
             if (it2!=elements.end())

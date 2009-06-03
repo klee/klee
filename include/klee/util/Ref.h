@@ -15,10 +15,6 @@
 class Expr;
 class ConstantExpr;
 
-class ExprVisitor;
-class StackFrame;
-class ObjectState;
-
 template<class T>
 class ref {
   T *ptr;
@@ -77,37 +73,6 @@ public:
     return ptr && ptr->getKind() == Expr::Constant;
   }
 
-  uint64_t getConstantValue() const {
-    assert(isConstant() && "Invalid call to getConstantValue()");
-    return ptr->getConstantValue();
-  }
-
-  unsigned hash() const {
-    assert(!isNull() && "Invalid call to hash()");
-    return ptr->hash();
-  }
-
-  unsigned computeHash() const {
-    assert(!isNull() && "Invalid call to computeHash()");
-    return ptr->computeHash();
-  }
-  
-  Expr::Width getWidth() const {
-    return ptr->getWidth();
-  }
-
-  Expr::Kind getKind() const {
-    return ptr->getKind();
-  }
-
-  unsigned getNumKids() const {
-    return ptr->getNumKids();
-  }
-
-  ref<Expr> getKid(unsigned k) {
-    return ptr->getKid(k);
-  }
-
   /* The copy assignment operator must also explicitly be defined,
    * despite a redundant template. */
   ref<T> &operator= (const ref<T> &r) {
@@ -124,6 +89,14 @@ public:
     inc();
     
     return *this;
+  }
+
+  T& operator*() const {
+    return *ptr;
+  }
+
+  T* operator->() const {
+    return ptr;
   }
 
   bool isNull() const { return ptr == 0; }
@@ -143,11 +116,7 @@ public:
 
 template<class T>
 inline std::ostream &operator<<(std::ostream &os, const ref<T> &e) {
-  if (e.isConstant()) {
-    os << e.getConstantValue();
-  } else {
-    os << *e.get();
-  }
+  os << *e.get();
   return os;
 }
 

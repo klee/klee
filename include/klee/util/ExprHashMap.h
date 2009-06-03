@@ -19,7 +19,7 @@ namespace klee {
   namespace util {
     struct ExprHash  {
       unsigned operator()(const ref<Expr> e) const {
-        return e.hash();
+        return e->hash();
       }
     };
     

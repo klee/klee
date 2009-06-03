@@ -139,7 +139,7 @@ bool CexCachingSolver::lookupAssignment(const Query &query,
   KeyType key(query.constraints.begin(), query.constraints.end());
   ref<Expr> neg = Expr::createNot(query.expr);
   if (neg.isConstant()) {
-    if (!neg.getConstantValue()) {
+    if (!neg->getConstantValue()) {
       result = (Assignment*) 0;
       return true;
     }
@@ -154,7 +154,7 @@ bool CexCachingSolver::getAssignment(const Query& query, Assignment *&result) {
   KeyType key(query.constraints.begin(), query.constraints.end());
   ref<Expr> neg = Expr::createNot(query.expr);
   if (neg.isConstant()) {
-    if (!neg.getConstantValue()) {
+    if (!neg->getConstantValue()) {
       result = (Assignment*) 0;
       return true;
     }
@@ -219,7 +219,7 @@ bool CexCachingSolver::computeValidity(const Query& query,
   ref<Expr> q = a->evaluate(query.expr);
   assert(q.isConstant() && "assignment evaluation did not result in constant");
 
-  if (q.getConstantValue()) {
+  if (q->getConstantValue()) {
     if (!getAssignment(query, a))
       return false;
     result = !a ? Solver::True : Solver::Unknown;

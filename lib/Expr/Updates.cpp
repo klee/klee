@@ -23,7 +23,8 @@ UpdateNode::UpdateNode(const UpdateNode *_next,
     next(_next),
     index(_index),
     value(_value) {
-  assert(_value.getWidth() == Expr::Int8 && "Update value should be 8-bit wide.");
+  assert(_value->getWidth() == Expr::Int8 && 
+         "Update value should be 8-bit wide.");
   computeHash();
   if (next) {
     ++next->refCount;
@@ -47,7 +48,7 @@ int UpdateNode::compare(const UpdateNode &b) const {
 }
 
 unsigned UpdateNode::computeHash() {
-  hashValue = index.hash() ^ value.hash();
+  hashValue = index->hash() ^ value->hash();
   if (next)
     hashValue ^= next->hash();
   return hashValue;

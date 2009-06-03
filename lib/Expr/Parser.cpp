@@ -498,7 +498,7 @@ ExprResult ParserImpl::ParseExpr(TypeResult ExpectedType) {
     return Res;
   } else if (ExpectedType.isValid()) {
     // Type check result.    
-    if (Res.get().getWidth() != ExpectedType.get()) {
+    if (Res.get()->getWidth() != ExpectedType.get()) {
       // FIXME: Need more info, and range
       Error("expression has incorrect type.", Start);
       return ExprResult();
@@ -752,9 +752,9 @@ ExprResult ParserImpl::ParseUnaryParenExpr(const Token &Name,
   ExprHandle E = Arg.get();
   switch (Kind) {
   case eMacroKind_Not:
-    return EqExpr::alloc(ConstantExpr::alloc(0, E.getWidth()), E);
+    return EqExpr::alloc(ConstantExpr::alloc(0, E->getWidth()), E);
   case eMacroKind_Neg:
-    return SubExpr::alloc(ConstantExpr::alloc(0, E.getWidth()), E);
+    return SubExpr::alloc(ConstantExpr::alloc(0, E->getWidth()), E);
   case Expr::SExt:
     // FIXME: Type check arguments.
     return SExtExpr::alloc(E, ResTy);
@@ -809,7 +809,7 @@ void ParserImpl::ParseMatchedBinaryArgs(const Token &Name,
       } else {
         RHS = RHS_NOE.getExpr();
         if (RHS.isValid())
-          LHS = ParseNumberToken(RHS.get().getWidth(), LHS_NOE.getNumber());
+          LHS = ParseNumberToken(RHS.get()->getWidth(), LHS_NOE.getNumber());
       }
     } else {
       LHS = LHS_NOE.getExpr();
@@ -817,7 +817,7 @@ void ParserImpl::ParseMatchedBinaryArgs(const Token &Name,
         // FIXME: Should suppress ambiguity warnings here.
         RHS = ParseExpr(TypeResult());
       } else {
-        RHS = ParseExpr(LHS.get().getWidth());
+        RHS = ParseExpr(LHS.get()->getWidth());
       }
     }
   }
@@ -835,7 +835,7 @@ ExprResult ParserImpl::ParseBinaryParenExpr(const Token &Name,
     return ConstantExpr::alloc(0, ResTy);
 
   ref<Expr> LHS_E = LHS.get(), RHS_E = RHS.get();
-  assert(LHS_E.getWidth() == RHS_E.getWidth() && "Mismatched types!");
+  assert(LHS_E->getWidth() == RHS_E->getWidth() && "Mismatched types!");
 
   switch (Kind) {    
   case Expr::Add: return AddExpr::alloc(LHS_E, RHS_E);
@@ -905,7 +905,7 @@ ExprResult ParserImpl::ParseConcatParenExpr(const Token &Name,
     }
     
     Kids.push_back(E.get());
-    Width += E.get().getWidth();
+    Width += E.get()->getWidth();
   }
   
   ConsumeRParen();
@@ -930,9 +930,9 @@ ExprResult ParserImpl::ParseExtractParenExpr(const Token &Name,
     return ConstantExpr::alloc(0, ResTy);
 
   assert(OffsetExpr.get().isConstant() && "ParseNumber returned non-constant.");
-  unsigned Offset = (unsigned) OffsetExpr.get().getConstantValue();
+  unsigned Offset = (unsigned) OffsetExpr.get()->getConstantValue();
 
-  if (Offset + ResTy > Child.get().getWidth()) {
+  if (Offset + ResTy > Child.get()->getWidth()) {
     Error("extract out-of-range of child expression.", Name);
     return ConstantExpr::alloc(0, ResTy);
   }
@@ -964,7 +964,7 @@ ExprResult ParserImpl::ParseAnyReadParenExpr(const Token &Name,
   
   if (!IndexExpr.isValid())
     return ConstantExpr::alloc(0, ResTy);
-  else if (IndexExpr.get().getWidth() != ArrayDomainType) {
+  else if (IndexExpr.get()->getWidth() != ArrayDomainType) {
     Error("index width does not match array domain.");
     return ConstantExpr::alloc(0, ResTy);
   }
@@ -1115,7 +1115,7 @@ VersionResult ParserImpl::ParseVersion() {
       LHS = ParseNumberToken(ArrayDomainType, it->first.getNumber());
     } else {
       LHS = it->first.getExpr(); 
-      if (LHS.isValid() && LHS.get().getWidth() != ArrayDomainType) {
+      if (LHS.isValid() && LHS.get()->getWidth() != ArrayDomainType) {
         // FIXME: bad token location. We should maybe try and know the
         // array up-front?
         Error("invalid value in write index (doesn't match domain).", Tok);
@@ -1127,7 +1127,7 @@ VersionResult ParserImpl::ParseVersion() {
       RHS = ParseNumberToken(ArrayRangeType, it->second.getNumber());
     } else {
       RHS = it->second.getExpr();
-      if (RHS.isValid() && RHS.get().getWidth() != ArrayRangeType) {
+      if (RHS.isValid() && RHS.get()->getWidth() != ArrayRangeType) {
         // FIXME: bad token location. We should maybe try and know the
         // array up-front?
         Error("invalid value in write assignment (doesn't match range).", Tok);

@@ -28,10 +28,9 @@ using namespace klee;
 static void _getImpliedValue(ref<Expr> e,
                              uint64_t value,
                              ImpliedValueList &results) {
-  switch (e.getKind()) {
-    
+  switch (e->getKind()) {
   case Expr::Constant: {
-    assert(value == e.getConstantValue() && "error in implied value calculation");
+    assert(value == e->getConstantValue() && "error in implied value calculation");
     break;
   }
 
@@ -46,7 +45,7 @@ static void _getImpliedValue(ref<Expr> e,
     // would work often enough to be worth the effort.
     ReadExpr *re = static_ref_cast<ReadExpr>(e);
     results.push_back(std::make_pair(re, 
-                                     ConstantExpr::create(value, e.getWidth())));
+                                     ConstantExpr::create(value, e->getWidth())));
     break;
   }
     
@@ -56,11 +55,11 @@ static void _getImpliedValue(ref<Expr> e,
     
     if (se->trueExpr.isConstant()) {
       if (se->falseExpr.isConstant()) {
-        if (se->trueExpr.getConstantValue() != se->falseExpr.getConstantValue()) {
-          if (value == se->trueExpr.getConstantValue()) {
+        if (se->trueExpr->getConstantValue() != se->falseExpr->getConstantValue()) {
+          if (value == se->trueExpr->getConstantValue()) {
             _getImpliedValue(se->cond, 1, results);
           } else {
-            assert(value == se->falseExpr.getConstantValue() &&
+            assert(value == se->falseExpr->getConstantValue() &&
                    "err in implied value calculation");
             _getImpliedValue(se->cond, 0, results);
           }
@@ -72,8 +71,8 @@ static void _getImpliedValue(ref<Expr> e,
 
   case Expr::Concat: {
     ConcatExpr *ce = static_ref_cast<ConcatExpr>(e);
-    _getImpliedValue(ce->getKid(0), (value >> ce->getKid(1).getWidth()) & ((1 << ce->getKid(0).getWidth()) - 1), results);
-    _getImpliedValue(ce->getKid(1), value & ((1 << ce->getKid(1).getWidth()) - 1), results);
+    _getImpliedValue(ce->getKid(0), (value >> ce->getKid(1)->getWidth()) & ((1 << ce->getKid(0)->getWidth()) - 1), results);
+    _getImpliedValue(ce->getKid(1), value & ((1 << ce->getKid(1)->getWidth()) - 1), results);
     break;
   }
     
@@ -89,7 +88,7 @@ static void _getImpliedValue(ref<Expr> e,
     CastExpr *ce = static_ref_cast<CastExpr>(e);
     _getImpliedValue(ce->src, 
                      bits64::truncateToNBits(value, 
-					     ce->src.getWidth()),
+					     ce->src->getWidth()),
                      results);
     break;
   }
@@ -100,8 +99,8 @@ static void _getImpliedValue(ref<Expr> e,
     BinaryExpr *be = static_ref_cast<BinaryExpr>(e);
     if (be->left.isConstant()) {
       uint64_t nvalue = ints::sub(value,
-                                  be->left.getConstantValue(),
-                                  be->left.getWidth());
+                                  be->left->getConstantValue(),
+                                  be->left->getWidth());
       _getImpliedValue(be->right, nvalue, results);
     }
     break;
@@ -109,9 +108,9 @@ static void _getImpliedValue(ref<Expr> e,
   case Expr::Sub: { // constants on left
     BinaryExpr *be = static_ref_cast<BinaryExpr>(e);
     if (be->left.isConstant()) {
-      uint64_t nvalue = ints::sub(be->left.getConstantValue(),
+      uint64_t nvalue = ints::sub(be->left->getConstantValue(),
                                   value,
-                                  be->left.getWidth());
+                                  be->left->getWidth());
       _getImpliedValue(be->right, nvalue, results);
     }
     break;
@@ -158,7 +157,7 @@ static void _getImpliedValue(ref<Expr> e,
   case Expr::Xor: { // constants on left
     BinaryExpr *be = static_ref_cast<BinaryExpr>(e);
     if (be->left.isConstant()) {
-      _getImpliedValue(be->right, value ^ be->left.getConstantValue(), results);
+      _getImpliedValue(be->right, value ^ be->left->getConstantValue(), results);
     }
     break;
   }
@@ -171,7 +170,7 @@ static void _getImpliedValue(ref<Expr> e,
     EqExpr *ee = static_ref_cast<EqExpr>(e);
     if (value) {
       if (ee->left.isConstant())
-        _getImpliedValue(ee->right, ee->left.getConstantValue(), results);
+        _getImpliedValue(ee->right, ee->left->getConstantValue(), results);
     } else {
       // look for limited value range, woohoo
       //
@@ -182,8 +181,8 @@ static void _getImpliedValue(ref<Expr> e,
       // valued and distinct.
       
       if (ee->left.isConstant()) {
-        if (ee->left.getWidth() == Expr::Bool) {
-          _getImpliedValue(ee->right, !ee->left.getConstantValue(), results);
+        if (ee->left->getWidth() == Expr::Bool) {
+          _getImpliedValue(ee->right, !ee->left->getConstantValue(), results);
         }
       }
     }
@@ -199,7 +198,7 @@ void ImpliedValue::getImpliedValues(ref<Expr> e,
                                     ref<Expr> value, 
                                     ImpliedValueList &results) {
   assert(value.isConstant() && "non-constant in place of constant");
-  _getImpliedValue(e, value.getConstantValue(), results);
+  _getImpliedValue(e, value->getConstantValue(), results);
 }
 
 void ImpliedValue::checkForImpliedValues(Solver *S, ref<Expr> e, 
@@ -216,7 +215,7 @@ void ImpliedValue::checkForImpliedValues(Solver *S, ref<Expr> e,
        i != ie; ++i) {
     std::map<ref<ReadExpr>, ref<Expr> >::iterator it = found.find(i->first);
     if (it != found.end()) {
-      assert(it->second.getConstantValue() == i->second.getConstantValue() &&
+      assert(it->second->getConstantValue() == i->second->getConstantValue() &&
              "I don't think so Scott");
     } else {
       found.insert(std::make_pair(i->first, i->second));
@@ -257,7 +256,7 @@ void ImpliedValue::checkForImpliedValues(Solver *S, ref<Expr> e,
     assert(success && "FIXME: Unhandled solver failure");    
     if (res) {
       if (it != found.end()) {
-        assert(possible.getConstantValue() == it->second.getConstantValue());
+        assert(possible->getConstantValue() == it->second->getConstantValue());
         found.erase(it);
       }
     } else {

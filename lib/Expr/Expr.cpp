@@ -157,7 +157,7 @@ unsigned Expr::computeHash() {
   int n = getNumKids();
   for (int i = 0; i < n; i++) {
     res <<= 1;
-    res ^= getKid(i).hash() * Expr::MAGIC_HASH_CONSTANT;
+    res ^= getKid(i)->hash() * Expr::MAGIC_HASH_CONSTANT;
   }
   
   hashValue = res;
@@ -171,19 +171,19 @@ unsigned ConstantExpr::computeHash() {
 
 unsigned CastExpr::computeHash() {
   unsigned res = getWidth() * Expr::MAGIC_HASH_CONSTANT;
-  hashValue = res ^ src.hash() * Expr::MAGIC_HASH_CONSTANT;
+  hashValue = res ^ src->hash() * Expr::MAGIC_HASH_CONSTANT;
   return hashValue;
 }
 
 unsigned ExtractExpr::computeHash() {
   unsigned res = offset * Expr::MAGIC_HASH_CONSTANT;
   res ^= getWidth() * Expr::MAGIC_HASH_CONSTANT;
-  hashValue = res ^ expr.hash() * Expr::MAGIC_HASH_CONSTANT;
+  hashValue = res ^ expr->hash() * Expr::MAGIC_HASH_CONSTANT;
   return hashValue;
 }
 
 unsigned ReadExpr::computeHash() {
-  unsigned res = index.hash() * Expr::MAGIC_HASH_CONSTANT;
+  unsigned res = index->hash() * Expr::MAGIC_HASH_CONSTANT;
   res ^= updates.hash();
   hashValue = res;
   return hashValue;
@@ -309,7 +309,7 @@ ref<Expr> Expr::createImplies(ref<Expr> hyp, ref<Expr> conc) {
 }
 
 ref<Expr> Expr::createIsZero(ref<Expr> e) {
-  return EqExpr::create(e, ConstantExpr::create(0, e.getWidth()));
+  return EqExpr::create(e, ConstantExpr::create(0, e->getWidth()));
 }
 
 ref<Expr> Expr::createCoerceToPointerType(ref<Expr> e) {
@@ -379,7 +379,7 @@ ref<Expr> ReadExpr::create(const UpdateList &ul, ref<Expr> index) {
     ref<Expr> cond = EqExpr::create(index, un->index);
     
     if (cond.isConstant()) {
-      if (cond.getConstantValue())
+      if (cond->getConstantValue())
         return un->value;
     } else {
       break;
@@ -394,24 +394,24 @@ int ReadExpr::compareContents(const Expr &b) const {
 }
 
 ref<Expr> SelectExpr::create(ref<Expr> c, ref<Expr> t, ref<Expr> f) {
-  Expr::Width kt = t.getWidth();
+  Expr::Width kt = t->getWidth();
 
-  assert(c.getWidth()==Bool && "type mismatch");
-  assert(kt==f.getWidth() && "type mismatch");
+  assert(c->getWidth()==Bool && "type mismatch");
+  assert(kt==f->getWidth() && "type mismatch");
 
   if (c.isConstant()) {
-    return c.getConstantValue() ? t : f;
+    return c->getConstantValue() ? t : f;
   } else if (t==f) {
     return t;
   } else if (kt==Expr::Bool) { // c ? t : f  <=> (c and t) or (not c and f)
     if (t.isConstant()) {      
-      if (t.getConstantValue()) {
+      if (t->getConstantValue()) {
         return OrExpr::create(c, f);
       } else {
         return AndExpr::create(Expr::createNot(c), f);
       }
     } else if (f.isConstant()) {
-      if (f.getConstantValue()) {
+      if (f->getConstantValue()) {
         return OrExpr::create(Expr::createNot(c), t);
       } else {
         return AndExpr::create(c, t);
@@ -426,19 +426,19 @@ ref<Expr> SelectExpr::create(ref<Expr> c, ref<Expr> t, ref<Expr> f) {
 
 
 ref<Expr> ConcatExpr::create(const ref<Expr> &l, const ref<Expr> &r) {
-  Expr::Width w = l.getWidth() + r.getWidth();
+  Expr::Width w = l->getWidth() + r->getWidth();
   
   /* Constant folding */
-  if (l.getKind() == Expr::Constant && r.getKind() == Expr::Constant) {
+  if (l->getKind() == Expr::Constant && r->getKind() == Expr::Constant) {
     // XXX: should fix this constant limitation soon
     assert(w <= 64 && "ConcatExpr::create(): don't support concats describing constants greater than 64 bits yet");
     
-    uint64_t res = (l.getConstantValue() << r.getWidth()) + r.getConstantValue();
+    uint64_t res = (l->getConstantValue() << r->getWidth()) + r->getConstantValue();
     return ConstantExpr::create(res, w);
   }
 
   // Merge contiguous Extracts
-  if (l.getKind() == Expr::Extract && r.getKind() == Expr::Extract) {
+  if (l->getKind() == Expr::Extract && r->getKind() == Expr::Extract) {
     const ExtractExpr* ee_left = static_ref_cast<ExtractExpr>(l);
     const ExtractExpr* ee_right = static_ref_cast<ExtractExpr>(r);
     if (ee_left->expr == ee_right->expr &&
@@ -480,28 +480,28 @@ ref<Expr> ConcatExpr::create8(const ref<Expr> &kid1, const ref<Expr> &kid2,
 /***/
 
 ref<Expr> ExtractExpr::create(ref<Expr> expr, unsigned off, Width w) {
-  unsigned kw = expr.getWidth();
+  unsigned kw = expr->getWidth();
   assert(w > 0 && off + w <= kw && "invalid extract");
   
   if (w == kw)
     return expr;
   else if (expr.isConstant()) {
-    return ConstantExpr::create(ints::trunc(expr.getConstantValue() >> off, w, kw), w);
+    return ConstantExpr::create(ints::trunc(expr->getConstantValue() >> off, w, kw), w);
   } 
   else 
     // Extract(Concat)
     if (ConcatExpr *ce = dyn_ref_cast<ConcatExpr>(expr)) {
       // if the extract skips the right side of the concat
-      if (off >= ce->getRight().getWidth())
-	return ExtractExpr::create(ce->getLeft(), off - ce->getRight().getWidth(), w);
+      if (off >= ce->getRight()->getWidth())
+	return ExtractExpr::create(ce->getLeft(), off - ce->getRight()->getWidth(), w);
       
       // if the extract skips the left side of the concat
-      if (off + w <= ce->getRight().getWidth())
+      if (off + w <= ce->getRight()->getWidth())
 	return ExtractExpr::create(ce->getRight(), off, w);
 
       // E(C(x,y)) = C(E(x), E(y))
-      return ConcatExpr::create(ExtractExpr::create(ce->getKid(0), 0, w - ce->getKid(1).getWidth() + off),
-				ExtractExpr::create(ce->getKid(1), off, ce->getKid(1).getWidth() - off));
+      return ConcatExpr::create(ExtractExpr::create(ce->getKid(0), 0, w - ce->getKid(1)->getWidth() + off),
+				ExtractExpr::create(ce->getKid(1), off, ce->getKid(1)->getWidth() - off));
     }
   
   return ExtractExpr::alloc(expr, off, w);
@@ -515,14 +515,14 @@ ref<Expr> ExtractExpr::createByteOff(ref<Expr> expr, unsigned offset, Width bits
 /***/
 
 ref<Expr> ZExtExpr::create(const ref<Expr> &e, Width w) {
-  unsigned kBits = e.getWidth();
+  unsigned kBits = e->getWidth();
   if (w == kBits) {
     return e;
   } else if (w < kBits) { // trunc
     return ExtractExpr::createByteOff(e, 0, w);
   } else {
     if (e.isConstant()) {
-      return ConstantExpr::create(ints::zext(e.getConstantValue(), w, kBits),
+      return ConstantExpr::create(ints::zext(e->getConstantValue(), w, kBits),
                                   w);
     }
     
@@ -531,14 +531,14 @@ ref<Expr> ZExtExpr::create(const ref<Expr> &e, Width w) {
 }
 
 ref<Expr> SExtExpr::create(const ref<Expr> &e, Width w) {
-  unsigned kBits = e.getWidth();
+  unsigned kBits = e->getWidth();
   if (w == kBits) {
     return e;
   } else if (w < kBits) { // trunc
     return ExtractExpr::createByteOff(e, 0, w);
   } else {
     if (e.isConstant()) {
-      return ConstantExpr::create(ints::sext(e.getConstantValue(), w, kBits),
+      return ConstantExpr::create(ints::sext(e->getConstantValue(), w, kBits),
                                   w);
     }
     
@@ -558,8 +558,8 @@ static ref<Expr> XorExpr_createPartialR(const ref<Expr> &cl, Expr *r);
 
 static ref<Expr> AddExpr_createPartialR(const ref<Expr> &cl, Expr *r) {
   assert(cl.isConstant() && "non-constant passed in place of constant");
-  uint64_t value = cl.getConstantValue();
-  Expr::Width type = cl.getWidth();
+  uint64_t value = cl->getConstantValue();
+  Expr::Width type = cl->getWidth();
 
   if (type==Expr::Bool) {
     return XorExpr_createPartialR(cl, r);
@@ -608,7 +608,7 @@ static ref<Expr> AddExpr_create(Expr *l, Expr *r) {
 
 static ref<Expr> SubExpr_createPartialR(const ref<Expr> &cl, Expr *r) {
   assert(cl.isConstant() && "non-constant passed in place of constant");
-  Expr::Width type = cl.getWidth();
+  Expr::Width type = cl->getWidth();
 
   if (type==Expr::Bool) {
     return XorExpr_createPartialR(cl, r);
@@ -627,8 +627,8 @@ static ref<Expr> SubExpr_createPartialR(const ref<Expr> &cl, Expr *r) {
 }
 static ref<Expr> SubExpr_createPartial(Expr *l, const ref<Expr> &cr) {
   assert(cr.isConstant() && "non-constant passed in place of constant");
-  uint64_t value = cr.getConstantValue();
-  Expr::Width width = cr.getWidth();
+  uint64_t value = cr->getConstantValue();
+  Expr::Width width = cr->getWidth();
   uint64_t nvalue = ints::sub(0, value, width);
 
   return AddExpr_createPartial(l, ConstantExpr::create(nvalue, width));
@@ -662,8 +662,8 @@ static ref<Expr> SubExpr_create(Expr *l, Expr *r) {
 
 static ref<Expr> MulExpr_createPartialR(const ref<Expr> &cl, Expr *r) {
   assert(cl.isConstant() && "non-constant passed in place of constant");
-  uint64_t value = cl.getConstantValue();
-  Expr::Width type = cl.getWidth();
+  uint64_t value = cl->getConstantValue();
+  Expr::Width type = cl->getWidth();
 
   if (type == Expr::Bool) {
     return AndExpr_createPartialR(cl, r);
@@ -690,8 +690,8 @@ static ref<Expr> MulExpr_create(Expr *l, Expr *r) {
 
 static ref<Expr> AndExpr_createPartial(Expr *l, const ref<Expr> &cr) {
   assert(cr.isConstant() && "non-constant passed in place of constant");
-  uint64_t value = cr.getConstantValue();
-  Expr::Width width = cr.getWidth();;
+  uint64_t value = cr->getConstantValue();
+  Expr::Width width = cr->getWidth();
 
   if (value==ints::sext(1, width, 1)) {
     return l;
@@ -710,8 +710,8 @@ static ref<Expr> AndExpr_create(Expr *l, Expr *r) {
 
 static ref<Expr> OrExpr_createPartial(Expr *l, const ref<Expr> &cr) {
   assert(cr.isConstant() && "non-constant passed in place of constant");
-  uint64_t value = cr.getConstantValue();
-  Expr::Width width = cr.getWidth();
+  uint64_t value = cr->getConstantValue();
+  Expr::Width width = cr->getWidth();
 
   if (value == ints::sext(1, width, 1)) {
     return cr;
@@ -730,8 +730,8 @@ static ref<Expr> OrExpr_create(Expr *l, Expr *r) {
 
 static ref<Expr> XorExpr_createPartialR(const ref<Expr> &cl, Expr *r) {
   assert(cl.isConstant() && "non-constant passed in place of constant");
-  uint64_t value = cl.getConstantValue();
-  Expr::Width type = cl.getWidth();
+  uint64_t value = cl->getConstantValue();
+  Expr::Width type = cl->getWidth();
 
   if (type==Expr::Bool) {
     if (value) {
@@ -754,7 +754,7 @@ static ref<Expr> XorExpr_create(Expr *l, Expr *r) {
 }
 
 static ref<Expr> UDivExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
-  if (l.getWidth() == Expr::Bool) { // r must be 1
+  if (l->getWidth() == Expr::Bool) { // r must be 1
     return l;
   } else{
     return UDivExpr::alloc(l, r);
@@ -762,7 +762,7 @@ static ref<Expr> UDivExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
 }
 
 static ref<Expr> SDivExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
-  if (l.getWidth() == Expr::Bool) { // r must be 1
+  if (l->getWidth() == Expr::Bool) { // r must be 1
     return l;
   } else{
     return SDivExpr::alloc(l, r);
@@ -770,7 +770,7 @@ static ref<Expr> SDivExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
 }
 
 static ref<Expr> URemExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
-  if (l.getWidth() == Expr::Bool) { // r must be 1
+  if (l->getWidth() == Expr::Bool) { // r must be 1
     return ConstantExpr::create(0, Expr::Bool);
   } else{
     return URemExpr::alloc(l, r);
@@ -778,7 +778,7 @@ static ref<Expr> URemExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
 }
 
 static ref<Expr> SRemExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
-  if (l.getWidth() == Expr::Bool) { // r must be 1
+  if (l->getWidth() == Expr::Bool) { // r must be 1
     return ConstantExpr::create(0, Expr::Bool);
   } else{
     return SRemExpr::alloc(l, r);
@@ -786,7 +786,7 @@ static ref<Expr> SRemExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
 }
 
 static ref<Expr> ShlExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
-  if (l.getWidth() == Expr::Bool) { // l & !r
+  if (l->getWidth() == Expr::Bool) { // l & !r
     return AndExpr::create(l, Expr::createNot(r));
   } else{
     return ShlExpr::alloc(l, r);
@@ -794,7 +794,7 @@ static ref<Expr> ShlExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
 }
 
 static ref<Expr> LShrExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
-  if (l.getWidth() == Expr::Bool) { // l & !r
+  if (l->getWidth() == Expr::Bool) { // l & !r
     return AndExpr::create(l, Expr::createNot(r));
   } else{
     return LShrExpr::alloc(l, r);
@@ -802,7 +802,7 @@ static ref<Expr> LShrExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
 }
 
 static ref<Expr> AShrExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
-  if (l.getWidth() == Expr::Bool) { // l
+  if (l->getWidth() == Expr::Bool) { // l
     return l;
   } else{
     return AShrExpr::alloc(l, r);
@@ -811,12 +811,12 @@ static ref<Expr> AShrExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
 
 #define BCREATE_R(_e_op, _op, partialL, partialR) \
 ref<Expr>  _e_op ::create(const ref<Expr> &l, const ref<Expr> &r) { \
-  assert(l.getWidth()==r.getWidth() && "type mismatch"); \
+  assert(l->getWidth()==r->getWidth() && "type mismatch"); \
   if (l.isConstant()) {                                \
     if (r.isConstant()) {                              \
-      Expr::Width width = l.getWidth(); \
-      uint64_t val = ints::_op(l.getConstantValue(),  \
-                               r.getConstantValue(), width);  \
+      Expr::Width width = l->getWidth(); \
+      uint64_t val = ints::_op(l->getConstantValue(),  \
+                               r->getConstantValue(), width);  \
       return ConstantExpr::create(val, width); \
     } else { \
       return _e_op ## _createPartialR(l, r.get()); \
@@ -829,12 +829,12 @@ ref<Expr>  _e_op ::create(const ref<Expr> &l, const ref<Expr> &r) { \
 
 #define BCREATE(_e_op, _op) \
 ref<Expr>  _e_op ::create(const ref<Expr> &l, const ref<Expr> &r) { \
-  assert(l.getWidth()==r.getWidth() && "type mismatch"); \
+  assert(l->getWidth()==r->getWidth() && "type mismatch"); \
   if (l.isConstant()) {                                \
     if (r.isConstant()) {                              \
-      Expr::Width width = l.getWidth(); \
-      uint64_t val = ints::_op(l.getConstantValue(), \
-                               r.getConstantValue(), width);  \
+      Expr::Width width = l->getWidth(); \
+      uint64_t val = ints::_op(l->getConstantValue(), \
+                               r->getConstantValue(), width);  \
       return ConstantExpr::create(val, width); \
     } \
   } \
@@ -857,12 +857,12 @@ BCREATE(AShrExpr, ashr)
 
 #define CMPCREATE(_e_op, _op) \
 ref<Expr>  _e_op ::create(const ref<Expr> &l, const ref<Expr> &r) { \
-  assert(l.getWidth()==r.getWidth() && "type mismatch"); \
+  assert(l->getWidth()==r->getWidth() && "type mismatch"); \
   if (l.isConstant()) {                                \
     if (r.isConstant()) {                              \
-      Expr::Width width = l.getWidth(); \
-      uint64_t val = ints::_op(l.getConstantValue(), \
-                               r.getConstantValue(), width);  \
+      Expr::Width width = l->getWidth(); \
+      uint64_t val = ints::_op(l->getConstantValue(), \
+                               r->getConstantValue(), width);  \
       return ConstantExpr::create(val, Expr::Bool); \
     } \
   } \
@@ -871,12 +871,12 @@ ref<Expr>  _e_op ::create(const ref<Expr> &l, const ref<Expr> &r) { \
 
 #define CMPCREATE_T(_e_op, _op, _reflexive_e_op, partialL, partialR) \
 ref<Expr>  _e_op ::create(const ref<Expr> &l, const ref<Expr> &r) { \
-  assert(l.getWidth()==r.getWidth() && "type mismatch"); \
+  assert(l->getWidth()==r->getWidth() && "type mismatch"); \
   if (l.isConstant()) {                                \
     if (r.isConstant()) {                              \
-      Expr::Width width = l.getWidth(); \
-      uint64_t val = ints::_op(l.getConstantValue(), \
-                               r.getConstantValue(), width);  \
+      Expr::Width width = l->getWidth(); \
+      uint64_t val = ints::_op(l->getConstantValue(), \
+                               r->getConstantValue(), width);  \
       return ConstantExpr::create(val, Expr::Bool); \
     } else { \
       return partialR(l, r.get()); \
@@ -907,7 +907,7 @@ static ref<Expr> TryConstArrayOpt(const ref<Expr> &cl,
   assert(cl.isConstant() && "constant expression required");
   assert(rd->getKind() == Expr::Read && "read expression required");
   
-  uint64_t ct = cl.getConstantValue();
+  uint64_t ct = cl->getConstantValue();
   ref<Expr> first_idx_match;
 
   // number of positions in the array that contain value ct
@@ -932,12 +932,12 @@ static ref<Expr> TryConstArrayOpt(const ref<Expr> &cl,
 	break;
       }
       else {
-	if (idx.getConstantValue() != k) {
+	if (idx->getConstantValue() != k) {
 	  all_const = false;
 	  //llvm::cerr << "Wrong constant\n";
 	  break;
 	}
-	if (val.getConstantValue() == ct) {
+	if (val->getConstantValue() == ct) {
 	  matches++;
 	  if (matches == 1)
 	    first_idx_match = un->index;
@@ -959,7 +959,7 @@ static ref<Expr> TryConstArrayOpt(const ref<Expr> &cl,
       return res;
     
     for (const UpdateNode *un = rd->updates.head; un; un = un->next) {
-      if (un->index != first_idx_match && un->value.getConstantValue() == ct) {
+      if (un->index != first_idx_match && un->value->getConstantValue() == ct) {
 	ref<Expr> curr_eq = EqExpr::create(un->index, rd->index);
 	res = OrExpr::create(curr_eq, res);
       }
@@ -974,8 +974,8 @@ static ref<Expr> TryConstArrayOpt(const ref<Expr> &cl,
 
 static ref<Expr> EqExpr_createPartialR(const ref<Expr> &cl, Expr *r) {  
   assert(cl.isConstant() && "non-constant passed in place of constant");
-  uint64_t value = cl.getConstantValue();
-  Expr::Width width = cl.getWidth();
+  uint64_t value = cl->getConstantValue();
+  Expr::Width width = cl->getWidth();
 
   Expr::Kind rk = r->getKind();
   if (width == Expr::Bool) {
@@ -989,8 +989,8 @@ static ref<Expr> EqExpr_createPartialR(const ref<Expr> &cl, Expr *r) {
 
         // eliminate double negation
         if (ree->left.isConstant() &&
-            ree->left.getWidth()==Expr::Bool) {
-          assert(!ree->left.getConstantValue());
+            ree->left->getWidth()==Expr::Bool) {
+          assert(!ree->left->getConstantValue());
           return ree->right;
         }
       } else if (rk == Expr::Or) {
@@ -1004,7 +1004,7 @@ static ref<Expr> EqExpr_createPartialR(const ref<Expr> &cl, Expr *r) {
   } else if (rk == Expr::SExt) {
     // (sext(a,T)==c) == (a==c)
     const SExtExpr *see = static_ref_cast<SExtExpr>(r);
-    Expr::Width fromBits = see->src.getWidth();
+    Expr::Width fromBits = see->src->getWidth();
     uint64_t trunc = bits64::truncateToNBits(value, fromBits);
 
     // pathological check, make sure it is possible to
@@ -1017,7 +1017,7 @@ static ref<Expr> EqExpr_createPartialR(const ref<Expr> &cl, Expr *r) {
   } else if (rk == Expr::ZExt) {
     // (zext(a,T)==c) == (a==c)
     const ZExtExpr *zee = static_ref_cast<ZExtExpr>(r);
-    Expr::Width fromBits = zee->src.getWidth();
+    Expr::Width fromBits = zee->src->getWidth();
     uint64_t trunc = bits64::truncateToNBits(value, fromBits);
     
     // pathological check, make sure it is possible to
@@ -1072,12 +1072,12 @@ ref<Expr> SgeExpr::create(const ref<Expr> &l, const ref<Expr> &r) {
 }
 
 static ref<Expr> UltExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
-  Expr::Width t = l.getWidth();
+  Expr::Width t = l->getWidth();
   if (t == Expr::Bool) { // !l && r
     return AndExpr::create(Expr::createNot(l), r);
   } else {
     if (r.isConstant()) {      
-      uint64_t value = r.getConstantValue();
+      uint64_t value = r->getConstantValue();
       if (value <= 8) {
         ref<Expr> res = ConstantExpr::alloc(0, Expr::Bool);
         for (unsigned i=0; i<value; i++) {
@@ -1092,7 +1092,7 @@ static ref<Expr> UltExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
 }
 
 static ref<Expr> UleExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
-  if (l.getWidth() == Expr::Bool) { // !(l && !r)
+  if (l->getWidth() == Expr::Bool) { // !(l && !r)
     return OrExpr::create(Expr::createNot(l), r);
   } else {
     return UleExpr::alloc(l, r);
@@ -1100,7 +1100,7 @@ static ref<Expr> UleExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
 }
 
 static ref<Expr> SltExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
-  if (l.getWidth() == Expr::Bool) { // l && !r
+  if (l->getWidth() == Expr::Bool) { // l && !r
     return AndExpr::create(l, Expr::createNot(r));
   } else {
     return SltExpr::alloc(l, r);
@@ -1108,7 +1108,7 @@ static ref<Expr> SltExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
 }
 
 static ref<Expr> SleExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
-  if (l.getWidth() == Expr::Bool) { // !(!l && r)
+  if (l->getWidth() == Expr::Bool) { // !(!l && r)
     return OrExpr::create(l, Expr::createNot(r));
   } else {
     return SleExpr::alloc(l, r);

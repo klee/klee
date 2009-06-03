@@ -628,7 +628,7 @@ void Executor::branch(ExecutionState &state,
           solver->getValue(state, siit->assignment.evaluate(conditions[i]), 
                            res);
         assert(success && "FIXME: Unhandled solver failure");
-        if (res.getConstantValue())
+        if (res->getConstantValue())
           break;
       }
       
@@ -754,7 +754,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
         solver->getValue(current, siit->assignment.evaluate(condition), res);
       assert(success && "FIXME: Unhandled solver failure");
       if (res.isConstant()) {
-        if (res.getConstantValue()) {
+        if (res->getConstantValue()) {
           trueSeed = true;
         } else {
           falseSeed = true;
@@ -818,7 +818,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
         bool success = 
           solver->getValue(current, siit->assignment.evaluate(condition), res);
         assert(success && "FIXME: Unhandled solver failure");
-        if (res.getConstantValue()) {
+        if (res->getConstantValue()) {
           trueSeeds.push_back(*siit);
         } else {
           falseSeeds.push_back(*siit);
@@ -875,7 +875,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
 
 void Executor::addConstraint(ExecutionState &state, ref<Expr> condition) {
   if (condition.isConstant()) {
-    assert(condition.getConstantValue() &&
+    assert(condition->getConstantValue() &&
            "attempt to add invalid constraint");
     return;
   }
@@ -1182,7 +1182,7 @@ void Executor::executeCall(ExecutionState &state,
       StackFrame &sf = state.stack.back();
       unsigned size = 0;
       for (unsigned i = funcArgs; i < callingArgs; i++)
-        size += Expr::getMinBytesForWidth(arguments[i].getWidth());
+        size += Expr::getMinBytesForWidth(arguments[i]->getWidth());
 
       MemoryObject *mo = sf.varargs = memory->allocate(size, true, false, 
                                                        state.prevPC->inst);
@@ -1195,7 +1195,7 @@ void Executor::executeCall(ExecutionState &state,
       for (unsigned i = funcArgs; i < callingArgs; i++) {
         // XXX: DRE: i think we bind memory objects here?
         os->write(offset, arguments[i]);
-        offset += Expr::getMinBytesForWidth(arguments[i].getWidth());
+        offset += Expr::getMinBytesForWidth(arguments[i]->getWidth());
       }
     }
 
@@ -1298,7 +1298,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         const Type *t = caller->getType();
         if (t != Type::VoidTy) {
           // may need to do coercion due to bitcasts
-          Expr::Width from = result.getWidth();
+          Expr::Width from = result->getWidth();
           Expr::Width to = Expr::getWidthForLLVMType(t);
             
           if (from != to) {
@@ -1397,7 +1397,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       // Somewhat gross to create these all the time, but fine till we
       // switch to an internal rep.
       ConstantInt *ci = ConstantInt::get(si->getCondition()->getType(),
-                                         cond.getConstantValue());
+                                         cond->getConstantValue());
       unsigned index = si->findCaseValue(ci);
       transferToBasicBlock(si->getSuccessor(index), si->getParent(), state);
     } else {
@@ -1495,7 +1495,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         for (std::vector< ref<Expr> >::iterator
                ai = arguments.begin(), ie = arguments.end();
              ai != ie; ++ai) {
-          Expr::Width to, from = (*ai).getWidth();
+          Expr::Width to, from = (*ai)->getWidth();
             
           if (i<fType->getNumParams()) {
             to = Expr::getWidthForLLVMType(fType->getParamType(i));
@@ -1535,7 +1535,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         assert(success && "FIXME: Unhandled solver failure");
         StatePair res = fork(*free, EqExpr::create(v, value), true);
         if (res.first) {
-          void *addr = (void*) (unsigned long) value.getConstantValue();
+          void *addr = (void*) (unsigned long) value->getConstantValue();
           std::set<void*>::iterator it = legalFunctions.find(addr);
           if (it != legalFunctions.end()) {
             f = (Function*) addr;
@@ -1587,8 +1587,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     // Arithmetic / logical
 #define FP_CONSTANT_BINOP(op, type, l, r, target, state) \
         bindLocal(target, state, \
-                  ConstantExpr::alloc(op(toConstant(state, l, "floating point").getConstantValue(), \
-                                         toConstant(state, r, "floating point").getConstantValue(), \
+                  ConstantExpr::alloc(op(toConstant(state, l, "floating point")->getConstantValue(), \
+                                         toConstant(state, r, "floating point")->getConstantValue(), \
                                          type), type))
   case Instruction::Add: {
     BinaryOperator *bi = cast<BinaryOperator>(i);
@@ -1912,9 +1912,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     Expr::Width resultType = Expr::getWidthForLLVMType(fi->getType());
     ref<Expr> arg = toConstant(state, eval(ki, 0, state).value,
                                "floating point");
-    uint64_t value = floats::trunc(arg.getConstantValue(),
+    uint64_t value = floats::trunc(arg->getConstantValue(),
                                    resultType,
-                                   arg.getWidth());
+                                   arg->getWidth());
     bindLocal(ki, state, ConstantExpr::alloc(value, resultType));
     break;
   }
@@ -1924,9 +1924,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     Expr::Width resultType = Expr::getWidthForLLVMType(fi->getType());
     ref<Expr> arg = toConstant(state, eval(ki, 0, state).value,
                                "floating point");
-    uint64_t value = floats::ext(arg.getConstantValue(),
+    uint64_t value = floats::ext(arg->getConstantValue(),
                                  resultType,
-                                 arg.getWidth());
+                                 arg->getWidth());
     bindLocal(ki, state, ConstantExpr::alloc(value, resultType));
     break;
   }
@@ -1936,9 +1936,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     Expr::Width resultType = Expr::getWidthForLLVMType(fi->getType());
     ref<Expr> arg = toConstant(state, eval(ki, 0, state).value,
                                "floating point");
-    uint64_t value = floats::toUnsignedInt(arg.getConstantValue(),
+    uint64_t value = floats::toUnsignedInt(arg->getConstantValue(),
                                            resultType,
-                                           arg.getWidth());
+                                           arg->getWidth());
     bindLocal(ki, state, ConstantExpr::alloc(value, resultType));
     break;
   }
@@ -1948,9 +1948,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     Expr::Width resultType = Expr::getWidthForLLVMType(fi->getType());
     ref<Expr> arg = toConstant(state, eval(ki, 0, state).value,
                                "floating point");
-    uint64_t value = floats::toSignedInt(arg.getConstantValue(),
+    uint64_t value = floats::toSignedInt(arg->getConstantValue(),
                                          resultType,
-                                         arg.getWidth());
+                                         arg->getWidth());
     bindLocal(ki, state, ConstantExpr::alloc(value, resultType));
     break;
   }
@@ -1960,7 +1960,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     Expr::Width resultType = Expr::getWidthForLLVMType(fi->getType());
     ref<Expr> arg = toConstant(state, eval(ki, 0, state).value,
                                "floating point");
-    uint64_t value = floats::UnsignedIntToFP(arg.getConstantValue(),
+    uint64_t value = floats::UnsignedIntToFP(arg->getConstantValue(),
                                              resultType);
     bindLocal(ki, state, ConstantExpr::alloc(value, resultType));
     break;
@@ -1971,9 +1971,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     Expr::Width resultType = Expr::getWidthForLLVMType(fi->getType());
     ref<Expr> arg = toConstant(state, eval(ki, 0, state).value,
                                "floating point");
-    uint64_t value = floats::SignedIntToFP(arg.getConstantValue(),
+    uint64_t value = floats::SignedIntToFP(arg->getConstantValue(),
                                            resultType,
-                                           arg.getWidth());
+                                           arg->getWidth());
     bindLocal(ki, state, ConstantExpr::alloc(value, resultType));
     break;
   }
@@ -1985,11 +1985,11 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
                                  "floating point");
     ref<Expr> right = toConstant(state, eval(ki, 1, state).value,
                                  "floating point");
-    uint64_t leftVal = left.getConstantValue();
-    uint64_t rightVal = right.getConstantValue();
+    uint64_t leftVal = left->getConstantValue();
+    uint64_t rightVal = right->getConstantValue();
  
     //determine whether the operands are NANs
-    unsigned inWidth = left.getWidth();
+    unsigned inWidth = left->getWidth();
     bool leftIsNaN   = floats::isNaN( leftVal,  inWidth );
     bool rightIsNaN  = floats::isNaN( rightVal, inWidth );
 
@@ -2181,7 +2181,7 @@ void Executor::bindInstructionConstants(KInstruction *KI) {
     index++;
   }
   assert(constantOffset.isConstant());
-  kgepi->offset = constantOffset.getConstantValue();
+  kgepi->offset = constantOffset->getConstantValue();
 }
 
 void Executor::bindModuleConstants() {
@@ -2347,12 +2347,12 @@ std::string Executor::getAddressInfo(ExecutionState &state,
   info << "\taddress: " << address << "\n";
   uint64_t example;
   if (address.isConstant()) {
-    example = address.getConstantValue();
+    example = address->getConstantValue();
   } else {
     ref<Expr> value;
     bool success = solver->getValue(state, address, value);
     assert(success && "FIXME: Unhandled solver failure");
-    example = value.getConstantValue();
+    example = value->getConstantValue();
     info << "\texample: " << example << "\n";
     std::pair< ref<Expr>, ref<Expr> > res = solver->getRange(state, address);
     info << "\trange: [" << res.first << ", " << res.second <<"]\n";
@@ -2587,11 +2587,11 @@ ref<Expr> Executor::replaceReadWithSymbolic(ExecutionState &state,
   // create a new fresh location, assert it is equal to concrete value in e
   // and return it.
   
-  const MemoryObject *mo = memory->allocate(Expr::getMinBytesForWidth(e.getWidth()), 
-                                            false, false,
-                                            state.prevPC->inst);
+  const MemoryObject *mo =
+    memory->allocate(Expr::getMinBytesForWidth(e->getWidth()), false, false,
+                     state.prevPC->inst);
   assert(mo && "out of memory");
-  ref<Expr> res = Expr::createTempRead(mo->array, e.getWidth());
+  ref<Expr> res = Expr::createTempRead(mo->array, e->getWidth());
   ref<Expr> eq = NotOptimizedExpr::create(EqExpr::create(e, res));
   llvm::cerr << "Making symbolic: " << eq << "\n";
   state.addConstraint(eq);
@@ -2621,8 +2621,9 @@ void Executor::executeAlloc(ExecutionState &state,
                             const ObjectState *reallocFrom) {
   size = toUnique(state, size);
   if (size.isConstant()) {
-    MemoryObject *mo = memory->allocate(size.getConstantValue(), isLocal, false,
-                                        state.prevPC->inst);
+    MemoryObject *mo = 
+      memory->allocate(size->getConstantValue(), isLocal, false, 
+                       state.prevPC->inst);
     if (!mo) {
       bindLocal(target, state, ConstantExpr::alloc(0, kMachinePointerType));
     } else {
@@ -2658,9 +2659,9 @@ void Executor::executeAlloc(ExecutionState &state,
     assert(success && "FIXME: Unhandled solver failure");
     
     // Try and start with a small example
-    while (example.getConstantValue()>128) {
-      ref<Expr> tmp = ConstantExpr::alloc(example.getConstantValue() >> 1, 
-                                          example.getWidth());
+    while (example->getConstantValue() > 128) {
+      ref<Expr> tmp = ConstantExpr::alloc(example->getConstantValue() >> 1, 
+                                          example->getWidth());
       bool res;
       bool success = solver->mayBeTrue(state, EqExpr::create(tmp, size), res);
       assert(success && "FIXME: Unhandled solver failure");      
@@ -2787,7 +2788,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
                                       ref<Expr> address,
                                       ref<Expr> value /* undef if read */,
                                       KInstruction *target /* undef if write */) {
-  Expr::Width type = (isWrite ? value.getWidth() : 
+  Expr::Width type = (isWrite ? value->getWidth() : 
                      Expr::getWidthForLLVMType(target->inst->getType()));
   unsigned bytes = Expr::getMinBytesForWidth(type);
 
@@ -2804,7 +2805,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
   solver->setTimeout(stpTimeout);
   if (!state.addressSpace.resolveOne(state, solver, address, op, success)) {
     address = toConstant(state, address, "resolveOne failure");
-    success = state.addressSpace.resolveOne(address.getConstantValue(), op);
+    success = state.addressSpace.resolveOne(address->getConstantValue(), op);
   }
   solver->setTimeout(0);
 
@@ -3198,7 +3199,7 @@ void Executor::doImpliedValueConcretization(ExecutionState &state,
       } else {
         assert(!os->readOnly && "not possible? read only object with static read?");
         ObjectState *wos = state.addressSpace.getWriteable(mo, os);
-        wos->write(re->index.getConstantValue(), it->second);
+        wos->write(re->index->getConstantValue(), it->second);
       }
     }
   }

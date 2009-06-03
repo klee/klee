@@ -398,7 +398,7 @@ public:
 #ifdef LOG
     //    *theLog << "force: " << e << " to " << range << "\n";
 #endif
-    switch (e.getKind()) {
+    switch (e->getKind()) {
     case Expr::Constant: {
       // rather a pity if the constant isn't in the range, but how can
       // we use this?
@@ -417,8 +417,8 @@ public:
       // XXX we need to respect the version here and object state chain
 
       if (re->index.isConstant() && 
-          re->index.getConstantValue() < array->size) {
-        CexValueData &cvd = cod.values[re->index.getConstantValue()];
+          re->index->getConstantValue() < array->size) {
+        CexValueData &cvd = cod.values[re->index->getConstantValue()];
         CexValueData tmp = cvd.set_intersection(range);
         
         if (tmp.isEmpty()) {
@@ -522,7 +522,7 @@ public:
       // possible input range.
     case Expr::ZExt: {
       CastExpr *ce = static_ref_cast<CastExpr>(e);
-      unsigned inBits = ce->src.getWidth();
+      unsigned inBits = ce->src->getWidth();
       ValueRange input = range.set_intersection(ValueRange(0, bits64::maxValueOfNBits(inBits)));
       forceExprToRange(ce->src, input);
       break;
@@ -531,7 +531,7 @@ public:
       // minus the impossible values. This is nicer since it is a single interval.
     case Expr::SExt: {
       CastExpr *ce = static_ref_cast<CastExpr>(e);
-      unsigned inBits = ce->src.getWidth();
+      unsigned inBits = ce->src->getWidth();
       unsigned outBits = ce->width;
       ValueRange output = range.set_difference(ValueRange(1<<(inBits-1),
                                                           (bits64::maxValueOfNBits(outBits)-
@@ -614,7 +614,7 @@ public:
       BinaryExpr *be = static_ref_cast<BinaryExpr>(e);
       if (range.isFixed()) {
         if (be->left.isConstant()) {
-          uint64_t value = be->left.getConstantValue();
+          uint64_t value = be->left->getConstantValue();
           if (range.min()) {
             forceExprToValue(be->right, value);
           } else {
@@ -622,7 +622,7 @@ public:
               forceExprToRange(be->right, 
                                CexValueData(1,
                                             ints::sext(1, 
-                                                       be->right.getWidth(),
+                                                       be->right->getWidth(),
                                                        1)));
             } else {
               // XXX heuristic / lossy, could be better to pick larger range?
@@ -645,7 +645,7 @@ public:
         ValueRange left = evalRangeForExpr(be->left);
         ValueRange right = evalRangeForExpr(be->right);
 
-        uint64_t maxValue = bits64::maxValueOfNBits(be->right.getWidth());
+        uint64_t maxValue = bits64::maxValueOfNBits(be->right->getWidth());
 
         // XXX should deal with overflow (can lead to empty range)
 
@@ -678,7 +678,7 @@ public:
 
         // XXX should deal with overflow (can lead to empty range)
 
-        uint64_t maxValue = bits64::maxValueOfNBits(be->right.getWidth());
+        uint64_t maxValue = bits64::maxValueOfNBits(be->right->getWidth());
         if (left.isFixed()) {
           if (range.min()) {
             forceExprToRange(be->right, CexValueData(left.min(), maxValue));
@@ -732,7 +732,7 @@ public:
     if (!v.isConstant()) return false;
     // XXX reenable once all reads and vars are fixed
     //    assert(v.isConstant() && "not all values have been fixed");
-    return v.getConstantValue()==value;
+    return v->getConstantValue() == value;
   }
 };
 
@@ -940,7 +940,7 @@ FastCexSolver::computeInitialValues(const Query& query,
                                                        kMachinePointerType)));
       
       if (value.isConstant()) {
-        data.push_back(value.getConstantValue());
+        data.push_back(value->getConstantValue());
       } else {
         // FIXME: When does this happen?
         return false;

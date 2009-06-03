@@ -49,11 +49,11 @@ private:
   
   struct CacheEntryHash {
     unsigned operator()(const CacheEntry &ce) const {
-      unsigned result = ce.query.hash();
+      unsigned result = ce.query->hash();
       
       for (ConstraintManager::constraint_iterator it = ce.constraints.begin();
            it != ce.constraints.end(); ++it)
-        result ^= it->hash();
+        result ^= (*it)->hash();
       
       return result;
     }

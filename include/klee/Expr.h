@@ -327,7 +327,7 @@ public:
   static ref<Expr> alloc(uint64_t v, Width w) {
     // constructs an "optimized" ConstantExpr
     ref<Expr> r(new ConstantExpr(v, w));
-    r.computeHash();
+    r->computeHash();
     return r;
   }
   
@@ -379,13 +379,13 @@ public:
 
   static ref<Expr> alloc(const ref<Expr> &src) {
     ref<Expr> r(new NotOptimizedExpr(src));
-    r.computeHash();
+    r->computeHash();
     return r;
   }
   
   static ref<Expr> create(ref<Expr> src);
   
-  Width getWidth() const { return src.getWidth(); }
+  Width getWidth() const { return src->getWidth(); }
   Kind getKind() const { return NotOptimized; }
 
   unsigned getNumKids() const { return 1; }
@@ -502,7 +502,7 @@ public:
 public:
   static ref<Expr> alloc(const UpdateList &updates, const ref<Expr> &index) {
     ref<Expr> r(new ReadExpr(updates, index));
-    r.computeHash();
+    r->computeHash();
     return r;
   }
   
@@ -541,13 +541,13 @@ public:
   static ref<Expr> alloc(const ref<Expr> &c, const ref<Expr> &t, 
                          const ref<Expr> &f) {
     ref<Expr> r(new SelectExpr(c, t, f));
-    r.computeHash();
+    r->computeHash();
     return r;
   }
   
   static ref<Expr> create(ref<Expr> c, ref<Expr> t, ref<Expr> f);
 
-  Width getWidth() const { return trueExpr.getWidth(); }
+  Width getWidth() const { return trueExpr->getWidth(); }
   Kind getKind() const { return Select; }
 
   unsigned getNumKids() const { return numKids; }
@@ -592,7 +592,7 @@ private:
 public:
   static ref<Expr> alloc(const ref<Expr> &l, const ref<Expr> &r) {
     ref<Expr> c(new ConcatExpr(l, r));
-    c.computeHash();
+    c->computeHash();
     return c;
   }
   
@@ -629,7 +629,7 @@ public:
   
 private:
   ConcatExpr(const ref<Expr> &l, const ref<Expr> &r) : left(l), right(r) {
-    width = l.getWidth() + r.getWidth();
+    width = l->getWidth() + r->getWidth();
   }
 };
 
@@ -651,7 +651,7 @@ public:
 public:  
   static ref<Expr> alloc(const ref<Expr> &e, unsigned o, Width w) {
     ref<Expr> r(new ExtractExpr(e, o, w));
-    r.computeHash();
+    r->computeHash();
     return r;
   }
   
@@ -721,7 +721,7 @@ public:                                                     \
     _class_kind ## Expr(ref<Expr> e, Width w) : CastExpr(e,w) {} \
     static ref<Expr> alloc(const ref<Expr> &e, Width w) {                   \
       ref<Expr> r(new _class_kind ## Expr(e, w));                     \
-      r.computeHash();                                                    \
+      r->computeHash();                                                    \
       return r;                                                       \
     }                                                       \
     static ref<Expr> create(const ref<Expr> &e, Width w);                   \
@@ -745,11 +745,11 @@ public:                                                         \
     _class_kind ## Expr(const ref<Expr> &l, const ref<Expr> &r) : BinaryExpr(l,r) {}  \
     static ref<Expr> alloc(const ref<Expr> &l, const ref<Expr> &r) {          \
       ref<Expr> res(new _class_kind ## Expr (l, r));                      \
-      res.computeHash();                                                      \
+      res->computeHash();                                                      \
       return res;                                                         \
     }                                                           \
     static ref<Expr> create(const ref<Expr> &l, const ref<Expr> &r);                      \
-    Width getWidth() const { return left.getWidth(); }            \
+    Width getWidth() const { return left->getWidth(); }            \
     Kind getKind() const { return _class_kind; }                \
     virtual ref<Expr> rebuild(ref<Expr> kids[]) const { \
       return create(kids[0], kids[1]); \
@@ -781,7 +781,7 @@ public:                                                     \
     _class_kind ## Expr(const ref<Expr> &l, const ref<Expr> &r) : CmpExpr(l,r) {} \
     static ref<Expr> alloc(const ref<Expr> &l, const ref<Expr> &r) {                  \
       ref<Expr> res(new _class_kind ## Expr (l, r));                    \
-      res.computeHash();                                                    \
+      res->computeHash();                                                    \
       return res;                                                       \
     }                                                       \
     static ref<Expr> create(const ref<Expr> &l, const ref<Expr> &r);                  \
