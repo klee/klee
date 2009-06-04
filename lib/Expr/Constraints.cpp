@@ -87,7 +87,7 @@ void ConstraintManager::simplifyForValidConstraint(ref<Expr> e) {
 }
 
 ref<Expr> ConstraintManager::simplifyExpr(ref<Expr> e) const {
-  if (e->isConstant())
+  if (isa<ConstantExpr>(e))
     return e;
 
   std::map< ref<Expr>, ref<Expr> > equalities;
@@ -95,7 +95,7 @@ ref<Expr> ConstraintManager::simplifyExpr(ref<Expr> e) const {
   for (ConstraintManager::constraints_ty::const_iterator 
          it = constraints.begin(), ie = constraints.end(); it != ie; ++it) {
     if (const EqExpr *ee = dyn_cast<EqExpr>(*it)) {
-      if (ee->left->isConstant()) {
+      if (isa<ConstantExpr>(ee->left)) {
         equalities.insert(std::make_pair(ee->right,
                                          ee->left));
       } else {
@@ -135,7 +135,7 @@ void ConstraintManager::addConstraintInternal(ref<Expr> e) {
 
   case Expr::Eq: {
     BinaryExpr *be = cast<BinaryExpr>(e);
-    if (be->left->isConstant()) {
+    if (isa<ConstantExpr>(be->left)) {
       ExprReplaceVisitor visitor(be->right, be->left);
       rewriteConstraints(visitor);
     }

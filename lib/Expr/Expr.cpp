@@ -378,8 +378,8 @@ ref<Expr> ReadExpr::create(const UpdateList &ul, ref<Expr> index) {
   for (; un; un=un->next) {
     ref<Expr> cond = EqExpr::create(index, un->index);
     
-    if (cond->isConstant()) {
-      if (cond->getConstantValue())
+    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(cond)) {
+      if (CE->getConstantValue())
         return un->value;
     } else {
       break;
@@ -399,19 +399,19 @@ ref<Expr> SelectExpr::create(ref<Expr> c, ref<Expr> t, ref<Expr> f) {
   assert(c->getWidth()==Bool && "type mismatch");
   assert(kt==f->getWidth() && "type mismatch");
 
-  if (c->isConstant()) {
-    return c->getConstantValue() ? t : f;
+  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(c)) {
+    return CE->getConstantValue() ? t : f;
   } else if (t==f) {
     return t;
   } else if (kt==Expr::Bool) { // c ? t : f  <=> (c and t) or (not c and f)
-    if (t->isConstant()) {      
-      if (t->getConstantValue()) {
+    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(t)) {      
+      if (CE->getConstantValue()) {
         return OrExpr::create(c, f);
       } else {
         return AndExpr::create(Expr::createNot(c), f);
       }
-    } else if (f->isConstant()) {
-      if (f->getConstantValue()) {
+    } else if (ConstantExpr *CE = dyn_cast<ConstantExpr>(f)) {
+      if (CE->getConstantValue()) {
         return OrExpr::create(Expr::createNot(c), t);
       } else {
         return AndExpr::create(c, t);
@@ -483,12 +483,12 @@ ref<Expr> ExtractExpr::create(ref<Expr> expr, unsigned off, Width w) {
   unsigned kw = expr->getWidth();
   assert(w > 0 && off + w <= kw && "invalid extract");
   
-  if (w == kw)
+  if (w == kw) {
     return expr;
-  else if (expr->isConstant()) {
-    return ConstantExpr::create(ints::trunc(expr->getConstantValue() >> off, w, kw), w);
-  } 
-  else 
+  } else if (ConstantExpr *CE = dyn_cast<ConstantExpr>(expr)) {
+    return ConstantExpr::create(ints::trunc(CE->getConstantValue() >> off, w, 
+                                            kw), w);
+  } else {
     // Extract(Concat)
     if (ConcatExpr *ce = dyn_cast<ConcatExpr>(expr)) {
       // if the extract skips the right side of the concat
@@ -503,6 +503,7 @@ ref<Expr> ExtractExpr::create(ref<Expr> expr, unsigned off, Width w) {
       return ConcatExpr::create(ExtractExpr::create(ce->getKid(0), 0, w - ce->getKid(1)->getWidth() + off),
 				ExtractExpr::create(ce->getKid(1), off, ce->getKid(1)->getWidth() - off));
     }
+  }
   
   return ExtractExpr::alloc(expr, off, w);
 }
@@ -521,10 +522,9 @@ ref<Expr> ZExtExpr::create(const ref<Expr> &e, Width w) {
   } else if (w < kBits) { // trunc
     return ExtractExpr::createByteOff(e, 0, w);
   } else {
-    if (e->isConstant()) {
-      return ConstantExpr::create(ints::zext(e->getConstantValue(), w, kBits),
+    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(e))
+      return ConstantExpr::create(ints::zext(CE->getConstantValue(), w, kBits),
                                   w);
-    }
     
     return ZExtExpr::alloc(e, w);
   }
@@ -537,10 +537,9 @@ ref<Expr> SExtExpr::create(const ref<Expr> &e, Width w) {
   } else if (w < kBits) { // trunc
     return ExtractExpr::createByteOff(e, 0, w);
   } else {
-    if (e->isConstant()) {
-      return ConstantExpr::create(ints::sext(e->getConstantValue(), w, kBits),
+    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(e))
+      return ConstantExpr::create(ints::sext(CE->getConstantValue(), w, kBits),
                                   w);
-    }
     
     return SExtExpr::alloc(e, w);
   }
@@ -612,10 +611,10 @@ static ref<Expr> SubExpr_createPartialR(const ref<ConstantExpr> &cl, Expr *r) {
     return XorExpr_createPartialR(cl, r);
   } else {
     Expr::Kind rk = r->getKind();
-    if (rk==Expr::Add && r->getKid(0)->isConstant()) { // A - (B+c) == (A-B) - c
+    if (rk==Expr::Add && isa<ConstantExpr>(r->getKid(0))) { // A - (B+c) == (A-B) - c
       return SubExpr::create(SubExpr::create(cl, r->getKid(0)),
                              r->getKid(1));
-    } else if (rk==Expr::Sub && r->getKid(0)->isConstant()) { // A - (B-c) == (A-B) + c
+    } else if (rk==Expr::Sub && isa<ConstantExpr>(r->getKid(0))) { // A - (B-c) == (A-B) + c
       return AddExpr::create(SubExpr::create(cl, r->getKid(0)),
                              r->getKid(1));
     } else {
@@ -624,7 +623,6 @@ static ref<Expr> SubExpr_createPartialR(const ref<ConstantExpr> &cl, Expr *r) {
   }
 }
 static ref<Expr> SubExpr_createPartial(Expr *l, const ref<ConstantExpr> &cr) {
-  assert(cr->isConstant() && "non-constant passed in place of constant");
   uint64_t value = cr->getConstantValue();
   Expr::Width width = cr->getWidth();
   uint64_t nvalue = ints::sub(0, value, width);
@@ -659,7 +657,6 @@ static ref<Expr> SubExpr_create(Expr *l, Expr *r) {
 }
 
 static ref<Expr> MulExpr_createPartialR(const ref<ConstantExpr> &cl, Expr *r) {
-  assert(cl->isConstant() && "non-constant passed in place of constant");
   uint64_t value = cl->getConstantValue();
   Expr::Width type = cl->getWidth();
 
@@ -897,9 +894,8 @@ static ref<Expr> EqExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
 /// rd a ReadExpr.  If rd is a read into an all-constant array,
 /// returns a disjunction of equalities on the index.  Otherwise,
 /// returns the initial equality expression. 
-static ref<Expr> TryConstArrayOpt(const ref<Expr> &cl, 
+static ref<Expr> TryConstArrayOpt(const ref<ConstantExpr> &cl, 
 				  ReadExpr *rd) {
-  assert(cl->isConstant() && "constant expression required");
   assert(rd->getKind() == Expr::Read && "read expression required");
   
   uint64_t ct = cl->getConstantValue();
@@ -921,22 +917,21 @@ static ref<Expr> TryConstArrayOpt(const ref<Expr> &cl,
 
       ref<Expr> idx = un->index;
       ref<Expr> val = un->value;
-      if (!idx->isConstant() || !val->isConstant()) {
-	all_const = false;
-	//llvm::cerr << "Idx or val not constant\n";
-	break;
+      ConstantExpr *idxCE = dyn_cast<ConstantExpr>(idx);
+      ConstantExpr *valCE = dyn_cast<ConstantExpr>(val);
+      if (!idxCE || !valCE) {
+        all_const = false;
+        break;
       }
-      else {
-	if (idx->getConstantValue() != k) {
-	  all_const = false;
-	  //llvm::cerr << "Wrong constant\n";
-	  break;
-	}
-	if (val->getConstantValue() == ct) {
-	  matches++;
-	  if (matches == 1)
-	    first_idx_match = un->index;
-	}
+
+      if (idxCE->getConstantValue() != k) {
+        all_const = false;
+        break;
+      }
+      if (valCE->getConstantValue() == ct) {
+        matches++;
+        if (matches == 1)
+          first_idx_match = un->index;
       }
     }
   }
@@ -968,7 +963,6 @@ static ref<Expr> TryConstArrayOpt(const ref<Expr> &cl,
 
 
 static ref<Expr> EqExpr_createPartialR(const ref<ConstantExpr> &cl, Expr *r) {  
-  assert(cl->isConstant() && "non-constant passed in place of constant");
   uint64_t value = cl->getConstantValue();
   Expr::Width width = cl->getWidth();
 
@@ -983,10 +977,11 @@ static ref<Expr> EqExpr_createPartialR(const ref<ConstantExpr> &cl, Expr *r) {
         const EqExpr *ree = cast<EqExpr>(r);
 
         // eliminate double negation
-        if (ree->left->isConstant() &&
-            ree->left->getWidth()==Expr::Bool) {
-          assert(!ree->left->getConstantValue());
-          return ree->right;
+        if (ConstantExpr *CE = dyn_cast<ConstantExpr>(ree->left)) {
+          if (CE->getWidth() == Expr::Bool) {
+            assert(!CE->getConstantValue());
+            return ree->right;
+          }
         }
       } else if (rk == Expr::Or) {
         const OrExpr *roe = cast<OrExpr>(r);
@@ -1024,7 +1019,7 @@ static ref<Expr> EqExpr_createPartialR(const ref<ConstantExpr> &cl, Expr *r) {
     }
   } else if (rk==Expr::Add) {
     const AddExpr *ae = cast<AddExpr>(r);
-    if (ae->left->isConstant()) {
+    if (isa<ConstantExpr>(ae->left)) {
       // c0 = c1 + b => c0 - c1 = b
       return EqExpr_createPartialR(cast<ConstantExpr>(SubExpr::create(cl, 
                                                                       ae->left)),
@@ -1032,7 +1027,7 @@ static ref<Expr> EqExpr_createPartialR(const ref<ConstantExpr> &cl, Expr *r) {
     }
   } else if (rk==Expr::Sub) {
     const SubExpr *se = cast<SubExpr>(r);
-    if (se->left->isConstant()) {
+    if (isa<ConstantExpr>(se->left)) {
       // c0 = c1 - b => c1 - c0 = b
       return EqExpr_createPartialR(cast<ConstantExpr>(SubExpr::create(se->left, 
                                                                       cl)),
@@ -1073,8 +1068,8 @@ static ref<Expr> UltExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
   if (t == Expr::Bool) { // !l && r
     return AndExpr::create(Expr::createNot(l), r);
   } else {
-    if (r->isConstant()) {      
-      uint64_t value = r->getConstantValue();
+    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(r)) {      
+      uint64_t value = CE->getConstantValue();
       if (value <= 8) {
         ref<Expr> res = ConstantExpr::alloc(0, Expr::Bool);
         for (unsigned i=0; i<value; i++) {

@@ -555,9 +555,9 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
     ExprHandle right = construct(me->right, width_out);
     assert(*width_out!=1 && "uncanonicalized mul");
 
-    if (me->left->isConstant()) {
+    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(me->left)) {
       return constructMulByConstant(right, *width_out, 
-                                    me->left->getConstantValue());
+                                    CE->getConstantValue());
     } else {
       ExprHandle left = construct(me->left, width_out);
       return vc_bvMultExpr(vc, *width_out, left, right);
@@ -569,8 +569,8 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
     ExprHandle left = construct(de->left, width_out);
     assert(*width_out!=1 && "uncanonicalized udiv");
     
-    if (de->right->isConstant()) {
-      uint64_t divisor = de->right->getConstantValue();
+    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(de->right)) {
+      uint64_t divisor = CE->getConstantValue();
       
       if (bits64::isPowerOfTwo(divisor)) {
         return bvRightShift(left,
@@ -591,8 +591,8 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
     ExprHandle left = construct(de->left, width_out);
     assert(*width_out!=1 && "uncanonicalized sdiv");
 
-    if (de->right->isConstant()) {
-      uint64_t divisor = de->right->getConstantValue();
+    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(de->right)) {
+      uint64_t divisor = CE->getConstantValue();
  
       if (optimizeDivides) {
 	if (*width_out == 32) //only works for 32-bit division
@@ -611,8 +611,8 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
     ExprHandle left = construct(de->left, width_out);
     assert(*width_out!=1 && "uncanonicalized urem");
     
-    if (de->right->isConstant()) {
-      uint64_t divisor = de->right->getConstantValue();
+    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(de->right)) {
+      uint64_t divisor = CE->getConstantValue();
 
       if (bits64::isPowerOfTwo(divisor)) {
         unsigned bits = bits64::indexOfSingleBit(divisor);
@@ -710,8 +710,9 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
     ExprHandle left = construct(se->left, width_out);
     assert(*width_out!=1 && "uncanonicalized shl");
 
-    if (se->right->isConstant()) {
-      return bvLeftShift(left, se->right->getConstantValue(), getShiftBits(*width_out));
+    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(se->right)) {
+      return bvLeftShift(left, CE->getConstantValue(), 
+                         getShiftBits(*width_out));
     } else {
       int shiftWidth;
       ExprHandle amount = construct(se->right, &shiftWidth);
@@ -725,8 +726,9 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
     unsigned shiftBits = getShiftBits(*width_out);
     assert(*width_out!=1 && "uncanonicalized lshr");
 
-    if (lse->right->isConstant()) {
-      return bvRightShift(left, (unsigned) lse->right->getConstantValue(), shiftBits);
+    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(lse->right)) {
+      return bvRightShift(left, (unsigned) CE->getConstantValue(), 
+                          shiftBits);
     } else {
       int shiftWidth;
       ExprHandle amount = construct(lse->right, &shiftWidth);
@@ -739,10 +741,11 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
     ExprHandle left = construct(ase->left, width_out);
     assert(*width_out!=1 && "uncanonicalized ashr");
     
-    if (ase->right->isConstant()) {
-      unsigned shift = (unsigned) ase->right->getConstantValue();
+    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(ase->right)) {
+      unsigned shift = (unsigned) CE->getConstantValue();
       ExprHandle signedBool = bvBoolExtract(left, *width_out-1);
-      return constructAShrByConstant(left, shift, signedBool, getShiftBits(*width_out));
+      return constructAShrByConstant(left, shift, signedBool, 
+                                     getShiftBits(*width_out));
     } else {
       int shiftWidth;
       ExprHandle amount = construct(ase->right, &shiftWidth);
@@ -757,8 +760,8 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
     ExprHandle left = construct(ee->left, width_out);
     ExprHandle right = construct(ee->right, width_out);
     if (*width_out==1) {
-      if (ee->left->isConstant()) {
-        assert(!ee->left->getConstantValue() && "uncanonicalized eq");
+      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(ee->left)) {
+        assert(!CE->getConstantValue() && "uncanonicalized eq");
         return vc_notExpr(vc, right);
       } else {
         return vc_iffExpr(vc, left, right);

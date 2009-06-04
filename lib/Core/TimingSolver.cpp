@@ -25,8 +25,8 @@ using namespace llvm;
 bool TimingSolver::evaluate(const ExecutionState& state, ref<Expr> expr,
                             Solver::Validity &result) {
   // Fast path, to avoid timer and OS overhead.
-  if (expr->isConstant()) {
-    result = expr->getConstantValue() ? Solver::True : Solver::False;
+  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(expr)) {
+    result = CE->getConstantValue() ? Solver::True : Solver::False;
     return true;
   }
 
@@ -49,8 +49,8 @@ bool TimingSolver::evaluate(const ExecutionState& state, ref<Expr> expr,
 bool TimingSolver::mustBeTrue(const ExecutionState& state, ref<Expr> expr, 
                               bool &result) {
   // Fast path, to avoid timer and OS overhead.
-  if (expr->isConstant()) {
-    result = expr->getConstantValue() ? true : false;
+  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(expr)) {
+    result = CE->getConstantValue() ? true : false;
     return true;
   }
 
@@ -96,7 +96,7 @@ bool TimingSolver::mayBeFalse(const ExecutionState& state, ref<Expr> expr,
 bool TimingSolver::getValue(const ExecutionState& state, ref<Expr> expr, 
                             ref<Expr> &result) {
   // Fast path, to avoid timer and OS overhead.
-  if (expr->isConstant()) {
+  if (isa<ConstantExpr>(expr)) {
     result = expr;
     return true;
   }

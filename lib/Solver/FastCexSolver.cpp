@@ -416,16 +416,17 @@ public:
 
       // XXX we need to respect the version here and object state chain
 
-      if (re->index->isConstant() && 
-          re->index->getConstantValue() < array->size) {
-        CexValueData &cvd = cod.values[re->index->getConstantValue()];
-        CexValueData tmp = cvd.set_intersection(range);
+      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(re->index)) {
+        if (CE->getConstantValue() < array->size) {
+          CexValueData &cvd = cod.values[CE->getConstantValue()];
+          CexValueData tmp = cvd.set_intersection(range);
         
-        if (tmp.isEmpty()) {
-          if (range.isFixed()) // ranges conflict, if new one is fixed use that
-            cvd = range;
-        } else {
-          cvd = tmp;
+          if (tmp.isEmpty()) {
+            if (range.isFixed()) // ranges conflict, if new one is fixed use that
+              cvd = range;
+          } else {
+            cvd = tmp;
+          }
         }
       } else {
         // XXX        fatal("XXX not implemented");
@@ -613,8 +614,8 @@ public:
     case Expr::Eq: {
       BinaryExpr *be = cast<BinaryExpr>(e);
       if (range.isFixed()) {
-        if (be->left->isConstant()) {
-          uint64_t value = be->left->getConstantValue();
+        if (ConstantExpr *CE = dyn_cast<ConstantExpr>(be->left)) {
+          uint64_t value = CE->getConstantValue();
           if (range.min()) {
             forceExprToValue(be->right, value);
           } else {
@@ -939,8 +940,8 @@ FastCexSolver::computeInitialValues(const Query& query,
                                   ConstantExpr::create(i,
                                                        kMachinePointerType)));
       
-      if (value->isConstant()) {
-        data.push_back(value->getConstantValue());
+      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(value)) {
+        data.push_back(CE->getConstantValue());
       } else {
         // FIXME: When does this happen?
         return false;

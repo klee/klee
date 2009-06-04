@@ -376,7 +376,8 @@ void SpecialFunctionHandler::handleIsSymbolic(ExecutionState &state,
   assert(arguments.size()==1 && "invalid number of arguments to klee_is_symbolic");
 
   executor.bindLocal(target, state, 
-                     ConstantExpr::create(!arguments[0]->isConstant(), Expr::Int32));
+                     ConstantExpr::create(!isa<ConstantExpr>(arguments[0]),
+                                          Expr::Int32));
 }
 
 void SpecialFunctionHandler::handlePreferCex(ExecutionState &state,
@@ -415,7 +416,7 @@ void SpecialFunctionHandler::handleUnderConstrained(ExecutionState &state,
   // XXX should type check args
   assert(arguments.size()==1 &&
          "invalid number of arguments to klee_under_constrained().");
-  assert(arguments[0]->isConstant() &&
+  assert(isa<ConstantExpr>(arguments[0]) &&
    	 "symbolic argument given to klee_under_constrained!");
 
   unsigned v = arguments[0]->getConstantValue();

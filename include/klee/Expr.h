@@ -197,7 +197,6 @@ public:
 
   ///
 
-  bool isConstant() const { return getKind() == Expr::Constant; }
   uint64_t getConstantValue() const;
 
   /* Static utility methods */

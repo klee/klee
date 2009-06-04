@@ -138,8 +138,8 @@ bool CexCachingSolver::lookupAssignment(const Query &query,
                                         Assignment *&result) {
   KeyType key(query.constraints.begin(), query.constraints.end());
   ref<Expr> neg = Expr::createNot(query.expr);
-  if (neg->isConstant()) {
-    if (!neg->getConstantValue()) {
+  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(neg)) {
+    if (!CE->getConstantValue()) {
       result = (Assignment*) 0;
       return true;
     }
@@ -153,8 +153,8 @@ bool CexCachingSolver::lookupAssignment(const Query &query,
 bool CexCachingSolver::getAssignment(const Query& query, Assignment *&result) {
   KeyType key(query.constraints.begin(), query.constraints.end());
   ref<Expr> neg = Expr::createNot(query.expr);
-  if (neg->isConstant()) {
-    if (!neg->getConstantValue()) {
+  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(neg)) {
+    if (!CE->getConstantValue()) {
       result = (Assignment*) 0;
       return true;
     }

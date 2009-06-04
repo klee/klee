@@ -16,8 +16,8 @@ ExprVisitor::Action ExprEvaluator::evalRead(const UpdateList &ul,
   for (const UpdateNode *un=ul.head; un; un=un->next) {
     ref<Expr> ui = visit(un->index);
     
-    if (ui->isConstant()) {
-      if (ui->getConstantValue() == index)
+    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(ui)) {
+      if (CE->getConstantValue() == index)
         return Action::changeTo(visit(un->value));
     } else {
       // update index is unknown, so may or may not be index, we
@@ -36,8 +36,8 @@ ExprVisitor::Action ExprEvaluator::evalRead(const UpdateList &ul,
 ExprVisitor::Action ExprEvaluator::visitRead(const ReadExpr &re) {
   ref<Expr> v = visit(re.index);
   
-  if (v->isConstant()) {
-    return evalRead(re.updates, v->getConstantValue());
+  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(v)) {
+    return evalRead(re.updates, CE->getConstantValue());
   } else {
     return Action::doChildren();
   }
@@ -50,8 +50,9 @@ ExprVisitor::Action ExprEvaluator::protectedDivOperation(const BinaryExpr &e) {
   ref<Expr> kids[2] = { visit(e.left),
                         visit(e.right) };
 
-  if (kids[1]->isConstant() && !kids[1]->getConstantValue())
-    kids[1] = e.right;
+  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(kids[1]))
+    if (!CE->getConstantValue())
+      kids[1] = e.right;
 
   if (kids[0]!=e.left || kids[1]!=e.right) {
     return Action::changeTo(e.rebuild(kids));

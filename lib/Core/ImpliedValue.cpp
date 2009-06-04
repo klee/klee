@@ -53,13 +53,13 @@ static void _getImpliedValue(ref<Expr> e,
     // not much to do, could improve with range analysis
     SelectExpr *se = cast<SelectExpr>(e);
     
-    if (se->trueExpr->isConstant()) {
-      if (se->falseExpr->isConstant()) {
-        if (se->trueExpr->getConstantValue() != se->falseExpr->getConstantValue()) {
-          if (value == se->trueExpr->getConstantValue()) {
+    if (ConstantExpr *TrueCE = dyn_cast<ConstantExpr>(se->trueExpr)) {
+      if (ConstantExpr *FalseCE = dyn_cast<ConstantExpr>(se->falseExpr)) {
+        if (TrueCE->getConstantValue() != FalseCE->getConstantValue()) {
+          if (value == TrueCE->getConstantValue()) {
             _getImpliedValue(se->cond, 1, results);
           } else {
-            assert(value == se->falseExpr->getConstantValue() &&
+            assert(value == FalseCE->getConstantValue() &&
                    "err in implied value calculation");
             _getImpliedValue(se->cond, 0, results);
           }
@@ -97,20 +97,20 @@ static void _getImpliedValue(ref<Expr> e,
 
   case Expr::Add: { // constants on left
     BinaryExpr *be = cast<BinaryExpr>(e);
-    if (be->left->isConstant()) {
+    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(be->left)) {
       uint64_t nvalue = ints::sub(value,
-                                  be->left->getConstantValue(),
-                                  be->left->getWidth());
+                                  CE->getConstantValue(),
+                                  CE->getWidth());
       _getImpliedValue(be->right, nvalue, results);
     }
     break;
   }
   case Expr::Sub: { // constants on left
     BinaryExpr *be = cast<BinaryExpr>(e);
-    if (be->left->isConstant()) {
-      uint64_t nvalue = ints::sub(be->left->getConstantValue(),
+    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(be->left)) {
+      uint64_t nvalue = ints::sub(CE->getConstantValue(),
                                   value,
-                                  be->left->getWidth());
+                                  CE->getWidth());
       _getImpliedValue(be->right, nvalue, results);
     }
     break;
@@ -156,8 +156,8 @@ static void _getImpliedValue(ref<Expr> e,
   }
   case Expr::Xor: { // constants on left
     BinaryExpr *be = cast<BinaryExpr>(e);
-    if (be->left->isConstant()) {
-      _getImpliedValue(be->right, value ^ be->left->getConstantValue(), results);
+    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(be->left)) {
+      _getImpliedValue(be->right, value ^ CE->getConstantValue(), results);
     }
     break;
   }
@@ -169,8 +169,8 @@ static void _getImpliedValue(ref<Expr> e,
   case Expr::Eq: {
     EqExpr *ee = cast<EqExpr>(e);
     if (value) {
-      if (ee->left->isConstant())
-        _getImpliedValue(ee->right, ee->left->getConstantValue(), results);
+      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(ee->left))
+        _getImpliedValue(ee->right, CE->getConstantValue(), results);
     } else {
       // look for limited value range, woohoo
       //
@@ -180,9 +180,9 @@ static void _getImpliedValue(ref<Expr> e,
       // expression where the true and false branches are single
       // valued and distinct.
       
-      if (ee->left->isConstant()) {
-        if (ee->left->getWidth() == Expr::Bool) {
-          _getImpliedValue(ee->right, !ee->left->getConstantValue(), results);
+      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(ee->left)) {
+        if (CE->getWidth() == Expr::Bool) {
+          _getImpliedValue(ee->right, !CE->getConstantValue(), results);
         }
       }
     }

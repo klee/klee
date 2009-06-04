@@ -97,9 +97,9 @@ public:
       if (re->updates.isRooted) {
         const Array *array = re->updates.root;
         if (!wholeObjects.count(array)) {
-          if (re->index->isConstant()) {
+          if (ConstantExpr *CE = dyn_cast<ConstantExpr>(re->index)) {
             DenseSet<unsigned> &dis = elements[array];
-            dis.add((unsigned) re->index->getConstantValue());
+            dis.add((unsigned) CE->getConstantValue());
           } else {
             elements_ty::iterator it2 = elements.find(array);
             if (it2!=elements.end())
