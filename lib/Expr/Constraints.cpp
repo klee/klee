@@ -127,14 +127,14 @@ void ConstraintManager::addConstraintInternal(ref<Expr> e) {
     
     // split to enable finer grained independence and other optimizations
   case Expr::And: {
-    BinaryExpr *be = static_ref_cast<BinaryExpr>(e);
+    BinaryExpr *be = cast<BinaryExpr>(e);
     addConstraintInternal(be->left);
     addConstraintInternal(be->right);
     break;
   }
 
   case Expr::Eq: {
-    BinaryExpr *be = static_ref_cast<BinaryExpr>(e);
+    BinaryExpr *be = cast<BinaryExpr>(e);
     if (be->left->isConstant()) {
       ExprReplaceVisitor visitor(be->right, be->left);
       rewriteConstraints(visitor);

@@ -43,7 +43,7 @@ static void _getImpliedValue(ref<Expr> e,
     // under certain circumstances (all values known, known value
     // unique, or range known, max / min hit). Seems unlikely this
     // would work often enough to be worth the effort.
-    ReadExpr *re = static_ref_cast<ReadExpr>(e);
+    ReadExpr *re = cast<ReadExpr>(e);
     results.push_back(std::make_pair(re, 
                                      ConstantExpr::create(value, e->getWidth())));
     break;
@@ -51,7 +51,7 @@ static void _getImpliedValue(ref<Expr> e,
     
   case Expr::Select: {
     // not much to do, could improve with range analysis
-    SelectExpr *se = static_ref_cast<SelectExpr>(e);
+    SelectExpr *se = cast<SelectExpr>(e);
     
     if (se->trueExpr->isConstant()) {
       if (se->falseExpr->isConstant()) {
@@ -70,7 +70,7 @@ static void _getImpliedValue(ref<Expr> e,
   }
 
   case Expr::Concat: {
-    ConcatExpr *ce = static_ref_cast<ConcatExpr>(e);
+    ConcatExpr *ce = cast<ConcatExpr>(e);
     _getImpliedValue(ce->getKid(0), (value >> ce->getKid(1)->getWidth()) & ((1 << ce->getKid(0)->getWidth()) - 1), results);
     _getImpliedValue(ce->getKid(1), value & ((1 << ce->getKid(1)->getWidth()) - 1), results);
     break;
@@ -85,7 +85,7 @@ static void _getImpliedValue(ref<Expr> e,
 
   case Expr::ZExt: 
   case Expr::SExt: {
-    CastExpr *ce = static_ref_cast<CastExpr>(e);
+    CastExpr *ce = cast<CastExpr>(e);
     _getImpliedValue(ce->src, 
                      bits64::truncateToNBits(value, 
 					     ce->src->getWidth()),
@@ -96,7 +96,7 @@ static void _getImpliedValue(ref<Expr> e,
     // Arithmetic
 
   case Expr::Add: { // constants on left
-    BinaryExpr *be = static_ref_cast<BinaryExpr>(e);
+    BinaryExpr *be = cast<BinaryExpr>(e);
     if (be->left->isConstant()) {
       uint64_t nvalue = ints::sub(value,
                                   be->left->getConstantValue(),
@@ -106,7 +106,7 @@ static void _getImpliedValue(ref<Expr> e,
     break;
   }
   case Expr::Sub: { // constants on left
-    BinaryExpr *be = static_ref_cast<BinaryExpr>(e);
+    BinaryExpr *be = cast<BinaryExpr>(e);
     if (be->left->isConstant()) {
       uint64_t nvalue = ints::sub(be->left->getConstantValue(),
                                   value,
@@ -131,7 +131,7 @@ static void _getImpliedValue(ref<Expr> e,
     // Binary
 
   case Expr::And: {
-    BinaryExpr *be = static_ref_cast<BinaryExpr>(e);
+    BinaryExpr *be = cast<BinaryExpr>(e);
     if (be->getWidth() == Expr::Bool) {
       if (value) {
         _getImpliedValue(be->left, value, results);
@@ -145,7 +145,7 @@ static void _getImpliedValue(ref<Expr> e,
     break;
   }
   case Expr::Or: {
-    BinaryExpr *be = static_ref_cast<BinaryExpr>(e);
+    BinaryExpr *be = cast<BinaryExpr>(e);
     if (!value) {
       _getImpliedValue(be->left, 0, results);
       _getImpliedValue(be->right, 0, results);
@@ -155,7 +155,7 @@ static void _getImpliedValue(ref<Expr> e,
     break;
   }
   case Expr::Xor: { // constants on left
-    BinaryExpr *be = static_ref_cast<BinaryExpr>(e);
+    BinaryExpr *be = cast<BinaryExpr>(e);
     if (be->left->isConstant()) {
       _getImpliedValue(be->right, value ^ be->left->getConstantValue(), results);
     }
@@ -167,7 +167,7 @@ static void _getImpliedValue(ref<Expr> e,
     value = !value;
     /* fallthru */
   case Expr::Eq: {
-    EqExpr *ee = static_ref_cast<EqExpr>(e);
+    EqExpr *ee = cast<EqExpr>(e);
     if (value) {
       if (ee->left->isConstant())
         _getImpliedValue(ee->right, ee->left->getConstantValue(), results);

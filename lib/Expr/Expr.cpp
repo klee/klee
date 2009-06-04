@@ -439,8 +439,8 @@ ref<Expr> ConcatExpr::create(const ref<Expr> &l, const ref<Expr> &r) {
 
   // Merge contiguous Extracts
   if (l->getKind() == Expr::Extract && r->getKind() == Expr::Extract) {
-    const ExtractExpr* ee_left = static_ref_cast<ExtractExpr>(l);
-    const ExtractExpr* ee_right = static_ref_cast<ExtractExpr>(r);
+    const ExtractExpr* ee_left = cast<ExtractExpr>(l);
+    const ExtractExpr* ee_right = cast<ExtractExpr>(r);
     if (ee_left->expr == ee_right->expr &&
 	ee_right->offset + ee_right->width == ee_left->offset) {
       return ExtractExpr::create(ee_left->expr, ee_right->offset, w);
@@ -985,7 +985,7 @@ static ref<Expr> EqExpr_createPartialR(const ref<Expr> &cl, Expr *r) {
       // 0 != ...
       
       if (rk == Expr::Eq) {
-        const EqExpr *ree = static_ref_cast<EqExpr>(r);
+        const EqExpr *ree = cast<EqExpr>(r);
 
         // eliminate double negation
         if (ree->left->isConstant() &&
@@ -994,7 +994,7 @@ static ref<Expr> EqExpr_createPartialR(const ref<Expr> &cl, Expr *r) {
           return ree->right;
         }
       } else if (rk == Expr::Or) {
-        const OrExpr *roe = static_ref_cast<OrExpr>(r);
+        const OrExpr *roe = cast<OrExpr>(r);
 
         // transform not(or(a,b)) to and(not a, not b)
         return AndExpr::create(Expr::createNot(roe->left),
@@ -1003,7 +1003,7 @@ static ref<Expr> EqExpr_createPartialR(const ref<Expr> &cl, Expr *r) {
     }
   } else if (rk == Expr::SExt) {
     // (sext(a,T)==c) == (a==c)
-    const SExtExpr *see = static_ref_cast<SExtExpr>(r);
+    const SExtExpr *see = cast<SExtExpr>(r);
     Expr::Width fromBits = see->src->getWidth();
     uint64_t trunc = bits64::truncateToNBits(value, fromBits);
 
@@ -1016,7 +1016,7 @@ static ref<Expr> EqExpr_createPartialR(const ref<Expr> &cl, Expr *r) {
     }
   } else if (rk == Expr::ZExt) {
     // (zext(a,T)==c) == (a==c)
-    const ZExtExpr *zee = static_ref_cast<ZExtExpr>(r);
+    const ZExtExpr *zee = cast<ZExtExpr>(r);
     Expr::Width fromBits = zee->src->getWidth();
     uint64_t trunc = bits64::truncateToNBits(value, fromBits);
     
@@ -1028,14 +1028,14 @@ static ref<Expr> EqExpr_createPartialR(const ref<Expr> &cl, Expr *r) {
       return ConstantExpr::create(0, Expr::Bool);
     }
   } else if (rk==Expr::Add) {
-    const AddExpr *ae = static_ref_cast<AddExpr>(r);
+    const AddExpr *ae = cast<AddExpr>(r);
     if (ae->left->isConstant()) {
       // c0 = c1 + b => c0 - c1 = b
       return EqExpr_createPartialR(SubExpr::create(cl, ae->left),
                                    ae->right.get());
     }
   } else if (rk==Expr::Sub) {
-    const SubExpr *se = static_ref_cast<SubExpr>(r);
+    const SubExpr *se = cast<SubExpr>(r);
     if (se->left->isConstant()) {
       // c0 = c1 - b => c1 - c0 = b
       return EqExpr_createPartialR(SubExpr::create(se->left, cl),

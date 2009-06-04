@@ -410,7 +410,7 @@ public:
     case Expr::NotOptimized: break;
 
     case Expr::Read: {
-      ReadExpr *re = static_ref_cast<ReadExpr>(e);
+      ReadExpr *re = cast<ReadExpr>(e);
       const Array *array = re->updates.root;
       CexObjectData &cod = objectValues.find(array->id)->second;
 
@@ -435,7 +435,7 @@ public:
     }
 
     case Expr::Select: {
-      SelectExpr *se = static_ref_cast<SelectExpr>(e);
+      SelectExpr *se = cast<SelectExpr>(e);
       ValueRange cond = evalRangeForExpr(se->cond);
       if (cond.isFixed()) {
         if (cond.min()) {
@@ -482,7 +482,7 @@ public:
       // the extraction a byte at a time, then checking the evaluated
       // value, isolating for that range, and continuing.
     case Expr::Concat: {
-      ConcatExpr *ce = static_ref_cast<ConcatExpr>(e);
+      ConcatExpr *ce = cast<ConcatExpr>(e);
       if (ce->is2ByteConcat()) {
 	forceExprToRange(ce->getKid(0), range.extract( 8, 16));
 	forceExprToRange(ce->getKid(1), range.extract( 0,  8));
@@ -521,7 +521,7 @@ public:
       // For ZExt this simplifies to just intersection with the
       // possible input range.
     case Expr::ZExt: {
-      CastExpr *ce = static_ref_cast<CastExpr>(e);
+      CastExpr *ce = cast<CastExpr>(e);
       unsigned inBits = ce->src->getWidth();
       ValueRange input = range.set_intersection(ValueRange(0, bits64::maxValueOfNBits(inBits)));
       forceExprToRange(ce->src, input);
@@ -530,7 +530,7 @@ public:
       // For SExt instead of doing the intersection we just take the output range
       // minus the impossible values. This is nicer since it is a single interval.
     case Expr::SExt: {
-      CastExpr *ce = static_ref_cast<CastExpr>(e);
+      CastExpr *ce = cast<CastExpr>(e);
       unsigned inBits = ce->src->getWidth();
       unsigned outBits = ce->width;
       ValueRange output = range.set_difference(ValueRange(1<<(inBits-1),
@@ -544,7 +544,7 @@ public:
       // Binary
 
     case Expr::And: {
-      BinaryExpr *be = static_ref_cast<BinaryExpr>(e);
+      BinaryExpr *be = cast<BinaryExpr>(e);
       if (be->getWidth()==Expr::Bool) {
         if (range.isFixed()) {
           ValueRange left = evalRangeForExpr(be->left);
@@ -575,7 +575,7 @@ public:
     }
 
     case Expr::Or: {
-      BinaryExpr *be = static_ref_cast<BinaryExpr>(e);
+      BinaryExpr *be = cast<BinaryExpr>(e);
       if (be->getWidth()==Expr::Bool) {
         if (range.isFixed()) {
           ValueRange left = evalRangeForExpr(be->left);
@@ -611,7 +611,7 @@ public:
       // Comparison
 
     case Expr::Eq: {
-      BinaryExpr *be = static_ref_cast<BinaryExpr>(e);
+      BinaryExpr *be = cast<BinaryExpr>(e);
       if (range.isFixed()) {
         if (be->left->isConstant()) {
           uint64_t value = be->left->getConstantValue();
@@ -637,7 +637,7 @@ public:
     }
 
     case Expr::Ult: {
-      BinaryExpr *be = static_ref_cast<BinaryExpr>(e);
+      BinaryExpr *be = cast<BinaryExpr>(e);
       
       // XXX heuristic / lossy, what order if conflict
 
@@ -668,7 +668,7 @@ public:
       break;
     }
     case Expr::Ule: {
-      BinaryExpr *be = static_ref_cast<BinaryExpr>(e);
+      BinaryExpr *be = cast<BinaryExpr>(e);
       
       // XXX heuristic / lossy, what order if conflict
 

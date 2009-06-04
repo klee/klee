@@ -290,7 +290,7 @@ class PPrinter : public ExprPPrinter {
       return NULL;
     
     if (stride == -1)
-      return static_ref_cast<ReadExpr>(e.get());
+      return cast<ReadExpr>(e.get());
     else return base;
   }
 

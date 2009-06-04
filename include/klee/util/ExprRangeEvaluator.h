@@ -97,7 +97,7 @@ T ExprRangeEvaluator<T>::evaluate(const ref<Expr> &e) {
     break;
 
   case Expr::Read: {
-    const ReadExpr *re = static_ref_cast<const ReadExpr>(e);
+    const ReadExpr *re = cast<ReadExpr>(e);
     T index = evaluate(re->index);
 
     assert(re->getWidth()==Expr::Int8 && "unexpected multibyte read");
@@ -106,7 +106,7 @@ T ExprRangeEvaluator<T>::evaluate(const ref<Expr> &e) {
   }
 
   case Expr::Select: {
-    const SelectExpr *se = static_ref_cast<const SelectExpr>(e);
+    const SelectExpr *se = cast<SelectExpr>(e);
     T cond = evaluate(se->cond);
       
     if (cond.mustEqual(1)) {
@@ -130,37 +130,37 @@ T ExprRangeEvaluator<T>::evaluate(const ref<Expr> &e) {
     // Arithmetic
 
   case Expr::Add: {
-    const BinaryExpr *be = static_ref_cast<const BinaryExpr>(e);
+    const BinaryExpr *be = cast<BinaryExpr>(e);
     unsigned width = be->left->getWidth();
     return evaluate(be->left).add(evaluate(be->right), width);
   }
   case Expr::Sub: {
-    const BinaryExpr *be = static_ref_cast<const BinaryExpr>(e);
+    const BinaryExpr *be = cast<BinaryExpr>(e);
     unsigned width = be->left->getWidth();
     return evaluate(be->left).sub(evaluate(be->right), width);
   }
   case Expr::Mul: {
-    const BinaryExpr *be = static_ref_cast<const BinaryExpr>(e);
+    const BinaryExpr *be = cast<BinaryExpr>(e);
     unsigned width = be->left->getWidth();
     return evaluate(be->left).mul(evaluate(be->right), width);
   }
   case Expr::UDiv: {
-    const BinaryExpr *be = static_ref_cast<const BinaryExpr>(e);
+    const BinaryExpr *be = cast<BinaryExpr>(e);
     unsigned width = be->left->getWidth();
     return evaluate(be->left).udiv(evaluate(be->right), width);
   }
   case Expr::SDiv: {
-    const BinaryExpr *be = static_ref_cast<const BinaryExpr>(e);
+    const BinaryExpr *be = cast<BinaryExpr>(e);
     unsigned width = be->left->getWidth();
     return evaluate(be->left).sdiv(evaluate(be->right), width);
   }
   case Expr::URem: {
-    const BinaryExpr *be = static_ref_cast<const BinaryExpr>(e);
+    const BinaryExpr *be = cast<BinaryExpr>(e);
     unsigned width = be->left->getWidth();
     return evaluate(be->left).urem(evaluate(be->right), width);
   }
   case Expr::SRem: {
-    const BinaryExpr *be = static_ref_cast<const BinaryExpr>(e);
+    const BinaryExpr *be = cast<BinaryExpr>(e);
     unsigned width = be->left->getWidth();
     return evaluate(be->left).srem(evaluate(be->right), width);
   }
@@ -168,31 +168,31 @@ T ExprRangeEvaluator<T>::evaluate(const ref<Expr> &e) {
     // Binary
 
   case Expr::And: {
-    const BinaryExpr *be = static_ref_cast<const BinaryExpr>(e);
+    const BinaryExpr *be = cast<BinaryExpr>(e);
     return evaluate(be->left).binaryAnd(evaluate(be->right));
   }
   case Expr::Or: {
-    const BinaryExpr *be = static_ref_cast<const BinaryExpr>(e);
+    const BinaryExpr *be = cast<BinaryExpr>(e);
     return evaluate(be->left).binaryOr(evaluate(be->right));
   }
   case Expr::Xor: {
-    const BinaryExpr *be = static_ref_cast<const BinaryExpr>(e);
+    const BinaryExpr *be = cast<BinaryExpr>(e);
     return evaluate(be->left).binaryXor(evaluate(be->right));
   }
   case Expr::Shl: {
-    //    BinaryExpr *be = static_ref_cast<BinaryExpr>(e);
+    //    BinaryExpr *be = cast<BinaryExpr>(e);
     //    unsigned width = be->left->getWidth();
     //    return evaluate(be->left).shl(evaluate(be->right), width);
     break;
   }
   case Expr::LShr: {
-    //    BinaryExpr *be = static_ref_cast<BinaryExpr>(e);
+    //    BinaryExpr *be = cast<BinaryExpr>(e);
     //    unsigned width = be->left->getWidth();
     //    return evaluate(be->left).lshr(evaluate(be->right), width);
     break;
   }
   case Expr::AShr: {
-    //    BinaryExpr *be = static_ref_cast<BinaryExpr>(e);
+    //    BinaryExpr *be = cast<BinaryExpr>(e);
     //    unsigned width = be->left->getWidth();
     //    return evaluate(be->left).ashr(evaluate(be->right), width);
     break;
@@ -201,7 +201,7 @@ T ExprRangeEvaluator<T>::evaluate(const ref<Expr> &e) {
     // Comparison
 
   case Expr::Eq: {
-    const BinaryExpr *be = static_ref_cast<const BinaryExpr>(e);
+    const BinaryExpr *be = cast<BinaryExpr>(e);
     T left = evaluate(be->left);
     T right = evaluate(be->right);
       
@@ -214,7 +214,7 @@ T ExprRangeEvaluator<T>::evaluate(const ref<Expr> &e) {
   }
 
   case Expr::Ult: {
-    const BinaryExpr *be = static_ref_cast<const BinaryExpr>(e);
+    const BinaryExpr *be = cast<BinaryExpr>(e);
     T left = evaluate(be->left);
     T right = evaluate(be->right);
       
@@ -226,7 +226,7 @@ T ExprRangeEvaluator<T>::evaluate(const ref<Expr> &e) {
     break;
   }
   case Expr::Ule: {
-    const BinaryExpr *be = static_ref_cast<const BinaryExpr>(e);
+    const BinaryExpr *be = cast<BinaryExpr>(e);
     T left = evaluate(be->left);
     T right = evaluate(be->right);
       
@@ -238,7 +238,7 @@ T ExprRangeEvaluator<T>::evaluate(const ref<Expr> &e) {
     break;
   }
   case Expr::Slt: {
-    const BinaryExpr *be = static_ref_cast<const BinaryExpr>(e);
+    const BinaryExpr *be = cast<BinaryExpr>(e);
     T left = evaluate(be->left);
     T right = evaluate(be->right);
     unsigned bits = be->left->getWidth();
@@ -251,7 +251,7 @@ T ExprRangeEvaluator<T>::evaluate(const ref<Expr> &e) {
     break;
   }
   case Expr::Sle: {
-    const BinaryExpr *be = static_ref_cast<const BinaryExpr>(e);
+    const BinaryExpr *be = cast<BinaryExpr>(e);
     T left = evaluate(be->left);
     T right = evaluate(be->right);
     unsigned bits = be->left->getWidth();

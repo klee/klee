@@ -46,8 +46,6 @@ public:
   template<class U> friend class ref;
   template<class U> friend U* dyn_ref_cast(ref &src);
   template<class U> friend const U* dyn_ref_cast(const ref &src);
-  template<class U> friend U* static_ref_cast(ref &src);
-  template<class U> friend const U* static_ref_cast(const ref &src);
 
   // constructor from pointer
   ref(T *p) : ptr(p) {
@@ -131,16 +129,6 @@ U* dyn_ref_cast(ref<Expr> &src) {
 template<class U>
 const U* dyn_ref_cast(const ref<Expr> &src) {
   return dyn_cast<U>(src.ptr);
-}
-
-template<class U>
-U* static_ref_cast(ref<Expr> &src) {
-  return static_cast<U*>(src.ptr);
-}
-
-template<class U>
-const U* static_ref_cast(const ref<Expr> &src) {
-  return static_cast<const U*>(src.ptr);
 }
 
 } // end namespace klee
