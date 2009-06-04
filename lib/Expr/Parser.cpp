@@ -1224,7 +1224,10 @@ ExprResult ParserImpl::ParseNumberToken(Expr::Width Type, const Token &Tok) {
   if (HasMinus)
     Val = -Val;
 
-  return ExprResult(ConstantExpr::alloc(Val.trunc(Type).getZExtValue(), Type));
+  if (Type < Val.getBitWidth())
+    Val = Val.trunc(Type);
+
+  return ExprResult(ConstantExpr::alloc(Val.getZExtValue(), Type));
 }
 
 /// ParseTypeSpecifier - Parse a type specifier.

@@ -1,0 +1,11 @@
+# RUN: kleaver --print-ast %s
+
+(query [(Eq 0
+            (Concat w64 (Read w8 7 arr1)
+            (Concat w56 (Read w8 6 arr1)
+            (Concat w48 (Read w8 5 arr1)
+            (Concat w40 (Read w8 4 arr1)
+            (Concat w32 (Read w8 3 arr1)
+            (Concat w24 (Read w8 2 arr1)
+            (Concat w16 (Read w8 1 arr1) (Read w8 0 arr1)))))))))]
+       false)
