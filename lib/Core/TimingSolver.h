@@ -37,7 +37,7 @@ namespace klee {
     TimingSolver(Solver *_solver, STPSolver *_stpSolver, 
                  bool _simplifyExprs = true) 
       : solver(_solver), stpSolver(_stpSolver), simplifyExprs(_simplifyExprs) {}
-    virtual ~TimingSolver() {
+    ~TimingSolver() {
       delete solver;
     }
 
@@ -61,7 +61,7 @@ namespace klee {
                           const std::vector<const Array*> &objects,
                           std::vector< std::vector<unsigned char> > &result);
 
-    virtual std::pair< ref<Expr>, ref<Expr> >
+    std::pair< ref<Expr>, ref<Expr> >
     getRange(const ExecutionState&, ref<Expr> query);
   };
 
