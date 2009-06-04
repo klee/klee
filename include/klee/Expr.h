@@ -12,6 +12,7 @@
 
 #include "Machine.h"
 #include "klee/util/Bits.h"
+#include "klee/util/Ref.h"
 
 #include "llvm/Support/Streams.h"
 #include "llvm/ADT/SmallVector.h"
@@ -188,6 +189,7 @@ public:
 
   ///
 
+  bool isConstant() const { return getKind() == Expr::Constant; }
   uint64_t getConstantValue() const;
 
   /* Static utility methods */
@@ -224,11 +226,6 @@ public:
   static bool isValidKidWidth(unsigned kid, Width w) { return true; }
   static bool needsResultType() { return false; }
 };
-// END class Expr
-
-
-
-#include "klee/util/Ref.h"
 
 struct Expr::CreateArg {
   ref<Expr> expr;

@@ -10,10 +10,11 @@
 #ifndef KLEE_REF_H
 #define KLEE_REF_H
 
+#include "llvm/Support/Streams.h"
+
 #include <assert.h>
 
-class Expr;
-class ConstantExpr;
+namespace klee {
 
 template<class T>
 class ref {
@@ -68,11 +69,6 @@ public:
     return ptr;
   }
 
-  // method calls for the constant optimization
-  bool isConstant() const {
-    return ptr && ptr->getKind() == Expr::Constant;
-  }
-
   /* The copy assignment operator must also explicitly be defined,
    * despite a redundant template. */
   ref<T> &operator= (const ref<T> &r) {
@@ -116,9 +112,11 @@ public:
 
 template<class T>
 inline std::ostream &operator<<(std::ostream &os, const ref<T> &e) {
-  os << *e.get();
+  os << *e;
   return os;
 }
+
+class Expr;
 
 template<class U>
 U* dyn_ref_cast(ref<Expr> &src) {
@@ -138,6 +136,8 @@ U* static_ref_cast(ref<Expr> &src) {
 template<class U>
 const U* static_ref_cast(const ref<Expr> &src) {
   return static_cast<const U*>(src.ptr);
+}
+
 }
 
 #endif /* KLEE_REF_H */

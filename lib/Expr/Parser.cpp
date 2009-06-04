@@ -929,7 +929,7 @@ ExprResult ParserImpl::ParseExtractParenExpr(const Token &Name,
   if (!OffsetExpr.isValid() || !Child.isValid())
     return ConstantExpr::alloc(0, ResTy);
 
-  assert(OffsetExpr.get().isConstant() && "ParseNumber returned non-constant.");
+  assert(OffsetExpr.get()->isConstant() && "ParseNumber returned non-constant.");
   unsigned Offset = (unsigned) OffsetExpr.get()->getConstantValue();
 
   if (Offset + ResTy > Child.get()->getWidth()) {

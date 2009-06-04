@@ -56,7 +56,7 @@ bool Solver::evaluate(const Query& query, Validity &result) {
   assert(query.expr->getWidth() == Expr::Bool && "Invalid expression type!");
 
   // Maintain invariants implementations expect.
-  if (query.expr.isConstant()) {
+  if (query.expr->isConstant()) {
     result = query.expr->getConstantValue() ? True : False;
     return true;
   }
@@ -82,7 +82,7 @@ bool Solver::mustBeTrue(const Query& query, bool &result) {
   assert(query.expr->getWidth() == Expr::Bool && "Invalid expression type!");
 
   // Maintain invariants implementations expect.
-  if (query.expr.isConstant()) {
+  if (query.expr->isConstant()) {
     result = query.expr->getConstantValue() ? true : false;
     return true;
   }
@@ -112,7 +112,7 @@ bool Solver::mayBeFalse(const Query& query, bool &result) {
 
 bool Solver::getValue(const Query& query, ref<Expr> &result) {
   // Maintain invariants implementation expect.
-  if (query.expr.isConstant()) {
+  if (query.expr->isConstant()) {
     result = query.expr;
     return true;
   }
@@ -151,7 +151,7 @@ std::pair< ref<Expr>, ref<Expr> > Solver::getRange(const Query& query) {
     default:
       min = 0, max = 1; break;
     }
-  } else if (e.isConstant()) {
+  } else if (e->isConstant()) {
     min = max = e->getConstantValue();
   } else {
     // binary search for # of useful bits

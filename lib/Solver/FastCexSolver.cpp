@@ -416,7 +416,7 @@ public:
 
       // XXX we need to respect the version here and object state chain
 
-      if (re->index.isConstant() && 
+      if (re->index->isConstant() && 
           re->index->getConstantValue() < array->size) {
         CexValueData &cvd = cod.values[re->index->getConstantValue()];
         CexValueData tmp = cvd.set_intersection(range);
@@ -613,7 +613,7 @@ public:
     case Expr::Eq: {
       BinaryExpr *be = static_ref_cast<BinaryExpr>(e);
       if (range.isFixed()) {
-        if (be->left.isConstant()) {
+        if (be->left->isConstant()) {
           uint64_t value = be->left->getConstantValue();
           if (range.min()) {
             forceExprToValue(be->right, value);
@@ -729,7 +729,7 @@ public:
   bool exprMustBeValue(ref<Expr> e, uint64_t value) {
     CexConstifier cc(objectValues);
     ref<Expr> v = cc.visit(e);
-    if (!v.isConstant()) return false;
+    if (!v->isConstant()) return false;
     // XXX reenable once all reads and vars are fixed
     //    assert(v.isConstant() && "not all values have been fixed");
     return v->getConstantValue() == value;
@@ -886,7 +886,7 @@ bool FastCexSolver::computeValue(const Query& query, ref<Expr> &result) {
   CexConstifier cc(cd.objectValues);
   ref<Expr> value = cc.visit(query.expr);
 
-  if (value.isConstant()) {
+  if (value->isConstant()) {
     result = value;
     return true;
   } else {
@@ -939,7 +939,7 @@ FastCexSolver::computeInitialValues(const Query& query,
                                   ConstantExpr::create(i,
                                                        kMachinePointerType)));
       
-      if (value.isConstant()) {
+      if (value->isConstant()) {
         data.push_back(value->getConstantValue());
       } else {
         // FIXME: When does this happen?

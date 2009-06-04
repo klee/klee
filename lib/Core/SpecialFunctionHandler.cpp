@@ -176,7 +176,7 @@ std::string SpecialFunctionHandler::readStringAtAddress(ExecutionState &state,
                                                         ref<Expr> address) {
   ObjectPair op;
   address = executor.toUnique(state, address);
-  assert(address.isConstant() && "symbolic string arg to intrinsic");  
+  assert(address->isConstant() && "symbolic string arg to intrinsic");  
   if (!state.addressSpace.resolveOne(address->getConstantValue(), op))
     assert(0 && "XXX out of bounds / multiple resolution unhandled");
   bool res;
@@ -195,7 +195,7 @@ std::string SpecialFunctionHandler::readStringAtAddress(ExecutionState &state,
   for (i = 0; i < mo->size - 1; i++) {
     ref<Expr> cur = os->read8(i);
     cur = executor.toUnique(state, cur);
-    assert(cur.isConstant() && 
+    assert(cur->isConstant() && 
            "hit symbolic char while reading concrete string");
     buf[i] = cur->getConstantValue();
   }
@@ -375,7 +375,7 @@ void SpecialFunctionHandler::handleIsSymbolic(ExecutionState &state,
   assert(arguments.size()==1 && "invalid number of arguments to klee_is_symbolic");
 
   executor.bindLocal(target, state, 
-                     ConstantExpr::create(!arguments[0].isConstant(), Expr::Int32));
+                     ConstantExpr::create(!arguments[0]->isConstant(), Expr::Int32));
 }
 
 void SpecialFunctionHandler::handlePreferCex(ExecutionState &state,
@@ -414,7 +414,7 @@ void SpecialFunctionHandler::handleUnderConstrained(ExecutionState &state,
   // XXX should type check args
   assert(arguments.size()==1 &&
          "invalid number of arguments to klee_under_constrained().");
-  assert(arguments[0].isConstant() &&
+  assert(arguments[0]->isConstant() &&
    	 "symbolic argument given to klee_under_constrained!");
 
   unsigned v = arguments[0]->getConstantValue();
@@ -438,7 +438,7 @@ void SpecialFunctionHandler::handleSetForking(ExecutionState &state,
          "invalid number of arguments to klee_set_forking");
   ref<Expr> value = executor.toUnique(state, arguments[0]);
   
-  if (!value.isConstant()) {
+  if (!value->isConstant()) {
     executor.terminateStateOnError(state, 
                                    "klee_set_forking requires a constant arg",
                                    "user.err");
@@ -476,7 +476,7 @@ void SpecialFunctionHandler::handlePrintRange(ExecutionState &state,
 
   std::string msg_str = readStringAtAddress(state, arguments[0]);
   llvm::cerr << msg_str << ":" << arguments[1];
-  if (!arguments[1].isConstant()) {
+  if (!arguments[1]->isConstant()) {
     // FIXME: Pull into a unique value method?
     ref<Expr> value;
     bool success = executor.solver->getValue(state, arguments[1], value);
@@ -582,14 +582,15 @@ void SpecialFunctionHandler::handleFree(ExecutionState &state,
 }
 
 void SpecialFunctionHandler::handleCheckMemoryAccess(ExecutionState &state,
-                                            KInstruction *target,
-                                            std::vector<ref<Expr> > &arguments) {
+                                                     KInstruction *target,
+                                                     std::vector<ref<Expr> > 
+                                                       &arguments) {
   assert(arguments.size()==2 &&
          "invalid number of arguments to klee_check_memory_access");
 
   ref<Expr> address = executor.toUnique(state, arguments[0]);
   ref<Expr> size = executor.toUnique(state, arguments[1]);
-  if (!address.isConstant() || !size.isConstant()) {
+  if (!address->isConstant() || !size->isConstant()) {
     executor.terminateStateOnError(state, 
                                    "check_memory_access requires constant args",
                                    "user.err");
@@ -604,7 +605,7 @@ void SpecialFunctionHandler::handleCheckMemoryAccess(ExecutionState &state,
     } else {
       ref<Expr> chk = op.first->getBoundsCheckPointer(address, 
                                                       size->getConstantValue());
-      assert(chk.isConstant());
+      assert(chk->isConstant());
       if (!chk->getConstantValue()) {
         executor.terminateStateOnError(state,
                                        "check_memory_access: memory error",
@@ -629,9 +630,9 @@ void SpecialFunctionHandler::handleDefineFixedObject(ExecutionState &state,
                                                      std::vector<ref<Expr> > &arguments) {
   assert(arguments.size()==2 &&
          "invalid number of arguments to klee_define_fixed_object");
-  assert(arguments[0].isConstant() &&
+  assert(arguments[0]->isConstant() &&
          "expect constant address argument to klee_define_fixed_object");
-  assert(arguments[1].isConstant() &&
+  assert(arguments[1]->isConstant() &&
          "expect constant size argument to klee_define_fixed_object");
   
   uint64_t address = arguments[0]->getConstantValue();

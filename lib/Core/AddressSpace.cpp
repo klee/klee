@@ -72,7 +72,7 @@ bool AddressSpace::resolveOne(ExecutionState &state,
                               ref<Expr> address,
                               ObjectPair &result,
                               bool &success) {
-  if (address.isConstant()) {
+  if (address->isConstant()) {
     success = resolveOne(address->getConstantValue(), result);
     return true;
   } else {
@@ -163,7 +163,7 @@ bool AddressSpace::resolve(ExecutionState &state,
                            ResolutionList &rl, 
                            unsigned maxResolutions,
                            double timeout) {
-  if (p.isConstant()) {
+  if (p->isConstant()) {
     ObjectPair res;
     if (resolveOne(p->getConstantValue(), res))
       rl.push_back(res);

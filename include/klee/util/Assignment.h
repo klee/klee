@@ -90,7 +90,7 @@ namespace klee {
     AssignmentEvaluator v(*this);
     for (; begin!=end; ++begin) {
       ref<Expr> res = v.visit(*begin);
-      if (!res.isConstant() || !res->getConstantValue())
+      if (!res->isConstant() || !res->getConstantValue())
         return false;
     }
     return true;

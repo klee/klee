@@ -53,8 +53,8 @@ static void _getImpliedValue(ref<Expr> e,
     // not much to do, could improve with range analysis
     SelectExpr *se = static_ref_cast<SelectExpr>(e);
     
-    if (se->trueExpr.isConstant()) {
-      if (se->falseExpr.isConstant()) {
+    if (se->trueExpr->isConstant()) {
+      if (se->falseExpr->isConstant()) {
         if (se->trueExpr->getConstantValue() != se->falseExpr->getConstantValue()) {
           if (value == se->trueExpr->getConstantValue()) {
             _getImpliedValue(se->cond, 1, results);
@@ -97,7 +97,7 @@ static void _getImpliedValue(ref<Expr> e,
 
   case Expr::Add: { // constants on left
     BinaryExpr *be = static_ref_cast<BinaryExpr>(e);
-    if (be->left.isConstant()) {
+    if (be->left->isConstant()) {
       uint64_t nvalue = ints::sub(value,
                                   be->left->getConstantValue(),
                                   be->left->getWidth());
@@ -107,7 +107,7 @@ static void _getImpliedValue(ref<Expr> e,
   }
   case Expr::Sub: { // constants on left
     BinaryExpr *be = static_ref_cast<BinaryExpr>(e);
-    if (be->left.isConstant()) {
+    if (be->left->isConstant()) {
       uint64_t nvalue = ints::sub(be->left->getConstantValue(),
                                   value,
                                   be->left->getWidth());
@@ -156,7 +156,7 @@ static void _getImpliedValue(ref<Expr> e,
   }
   case Expr::Xor: { // constants on left
     BinaryExpr *be = static_ref_cast<BinaryExpr>(e);
-    if (be->left.isConstant()) {
+    if (be->left->isConstant()) {
       _getImpliedValue(be->right, value ^ be->left->getConstantValue(), results);
     }
     break;
@@ -169,7 +169,7 @@ static void _getImpliedValue(ref<Expr> e,
   case Expr::Eq: {
     EqExpr *ee = static_ref_cast<EqExpr>(e);
     if (value) {
-      if (ee->left.isConstant())
+      if (ee->left->isConstant())
         _getImpliedValue(ee->right, ee->left->getConstantValue(), results);
     } else {
       // look for limited value range, woohoo
@@ -180,7 +180,7 @@ static void _getImpliedValue(ref<Expr> e,
       // expression where the true and false branches are single
       // valued and distinct.
       
-      if (ee->left.isConstant()) {
+      if (ee->left->isConstant()) {
         if (ee->left->getWidth() == Expr::Bool) {
           _getImpliedValue(ee->right, !ee->left->getConstantValue(), results);
         }
@@ -197,13 +197,13 @@ static void _getImpliedValue(ref<Expr> e,
 void ImpliedValue::getImpliedValues(ref<Expr> e, 
                                     ref<Expr> value, 
                                     ImpliedValueList &results) {
-  assert(value.isConstant() && "non-constant in place of constant");
+  assert(value->isConstant() && "non-constant in place of constant");
   _getImpliedValue(e, value->getConstantValue(), results);
 }
 
 void ImpliedValue::checkForImpliedValues(Solver *S, ref<Expr> e, 
                                          ref<Expr> value) {
-  assert(value.isConstant() && "non-constant in place of constant");
+  assert(value->isConstant() && "non-constant in place of constant");
 
   std::vector<ref<ReadExpr> > reads;
   std::map<ref<ReadExpr>, ref<Expr> > found;

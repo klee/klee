@@ -301,7 +301,7 @@ ref<Expr> ObjectState::read8(unsigned offset) const {
 }
 
 ref<Expr> ObjectState::read8(ref<Expr> offset) const {
-  assert(!offset.isConstant() && "constant offset passed to symbolic read8");
+  assert(!offset->isConstant() && "constant offset passed to symbolic read8");
   unsigned base, size;
   fastRangeCheckOffset(offset, &base, &size);
   flushRangeForRead(base, size);
@@ -328,7 +328,7 @@ void ObjectState::write8(unsigned offset, uint8_t value) {
 
 void ObjectState::write8(unsigned offset, ref<Expr> value) {
   // can happen when ExtractExpr special cases
-  if (value.isConstant()) {
+  if (value->isConstant()) {
     write8(offset, (uint8_t) value->getConstantValue());
   } else {
     setKnownSymbolic(offset, value.get());
@@ -339,7 +339,7 @@ void ObjectState::write8(unsigned offset, ref<Expr> value) {
 }
 
 void ObjectState::write8(ref<Expr> offset, ref<Expr> value) {
-  assert(!offset.isConstant() && "constant offset passed to symbolic write8");
+  assert(!offset->isConstant() && "constant offset passed to symbolic write8");
   unsigned base, size;
   fastRangeCheckOffset(offset, &base, &size);
   flushRangeForWrite(base, size);
@@ -358,7 +358,7 @@ void ObjectState::write8(ref<Expr> offset, ref<Expr> value) {
 /***/
 
 ref<Expr> ObjectState::read(ref<Expr> offset, Expr::Width width) const {
-  if (offset.isConstant()) {
+  if (offset->isConstant()) {
     return read((unsigned) offset->getConstantValue(), width);
   } else { 
     switch (width) {
@@ -547,7 +547,7 @@ ref<Expr> ObjectState::read64(ref<Expr> offset) const {
 
 void ObjectState::write(ref<Expr> offset, ref<Expr> value) {
   Expr::Width w = value->getWidth();
-  if (offset.isConstant()) {
+  if (offset->isConstant()) {
     write(offset->getConstantValue(), value);
   } else {
     switch(w) {
@@ -563,7 +563,7 @@ void ObjectState::write(ref<Expr> offset, ref<Expr> value) {
 
 void ObjectState::write(unsigned offset, ref<Expr> value) {
   Expr::Width w = value->getWidth();
-  if (value.isConstant()) {
+  if (value->isConstant()) {
     uint64_t val = value->getConstantValue();
     switch(w) {
     case  Expr::Bool:

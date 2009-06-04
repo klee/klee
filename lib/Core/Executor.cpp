@@ -663,7 +663,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
   bool isSeeding = it != seedMap.end();
 
   if (!isSeeding &&
-      !condition.isConstant() && 
+      !condition->isConstant() && 
       (MaxStaticForkPct!=1. || MaxStaticSolvePct != 1. ||
        MaxStaticCPForkPct!=1. || MaxStaticCPSolvePct != 1.) &&
       statsTracker->elapsed() > 60.) {
@@ -753,7 +753,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       bool success = 
         solver->getValue(current, siit->assignment.evaluate(condition), res);
       assert(success && "FIXME: Unhandled solver failure");
-      if (res.isConstant()) {
+      if (res->isConstant()) {
         if (res->getConstantValue()) {
           trueSeed = true;
         } else {
@@ -874,7 +874,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
 }
 
 void Executor::addConstraint(ExecutionState &state, ref<Expr> condition) {
-  if (condition.isConstant()) {
+  if (condition->isConstant()) {
     assert(condition->getConstantValue() &&
            "attempt to add invalid constraint");
     return;
@@ -998,7 +998,7 @@ ref<Expr> Executor::toUnique(const ExecutionState &state,
                              ref<Expr> &e) {
   ref<Expr> result = e;
 
-  if (!e.isConstant()) {
+  if (!e->isConstant()) {
     ref<Expr> value(0);
     bool isTrue = false;
 
@@ -1020,7 +1020,7 @@ ref<Expr> Executor::toConstant(ExecutionState &state,
                                ref<Expr> e,
                                const char *reason) {
   e = state.constraints.simplifyExpr(e);
-  if (!e.isConstant()) {
+  if (!e->isConstant()) {
     ref<Expr> value;
     bool success = solver->getValue(state, e, value);
     assert(success && "FIXME: Unhandled solver failure");
@@ -1049,7 +1049,7 @@ void Executor::executeGetValue(ExecutionState &state,
   e = state.constraints.simplifyExpr(e);
   std::map< ExecutionState*, std::vector<SeedInfo> >::iterator it = 
     seedMap.find(&state);
-  if (it==seedMap.end() || e.isConstant()) {
+  if (it==seedMap.end() || e->isConstant()) {
     ref<Expr> value;
     bool success = solver->getValue(state, e, value);
     assert(success && "FIXME: Unhandled solver failure");
@@ -1393,7 +1393,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     BasicBlock *bb = si->getParent();
 
     cond = toUnique(state, cond);
-    if (cond.isConstant()) {
+    if (cond->isConstant()) {
       // Somewhat gross to create these all the time, but fine till we
       // switch to an internal rep.
       ConstantInt *ci = ConstantInt::get(si->getCondition()->getType(),
@@ -2180,7 +2180,7 @@ void Executor::bindInstructionConstants(KInstruction *KI) {
     }
     index++;
   }
-  assert(constantOffset.isConstant());
+  assert(constantOffset->isConstant());
   kgepi->offset = constantOffset->getConstantValue();
 }
 
@@ -2346,7 +2346,7 @@ std::string Executor::getAddressInfo(ExecutionState &state,
   std::ostringstream info;
   info << "\taddress: " << address << "\n";
   uint64_t example;
-  if (address.isConstant()) {
+  if (address->isConstant()) {
     example = address->getConstantValue();
   } else {
     ref<Expr> value;
@@ -2466,7 +2466,7 @@ void Executor::terminateStateOnError(ExecutionState &state,
         msg << ai->getName();
         // XXX should go through function
         ref<Expr> value = sf.locals[sf.kf->getArgRegister(index++)].value; 
-        if (value.isConstant())
+        if (value->isConstant())
           msg << "=" << value;
       }
       msg << ")";
@@ -2521,7 +2521,7 @@ void Executor::callExternalFunction(ExecutionState &state,
       static_cast<ConstantExpr*>(ce.get())->toMemory((void*) &args[i]);
     } else {
       ref<Expr> arg = toUnique(state, *ai);
-      if (arg.isConstant()) {
+      if (arg->isConstant()) {
         // XXX kick toMemory functions from here
         static_cast<ConstantExpr*>(arg.get())->toMemory((void*) &args[i]);
       } else {
@@ -2578,7 +2578,7 @@ ref<Expr> Executor::replaceReadWithSymbolic(ExecutionState &state,
     return e;
 
   // right now, we don't replace symbolics (is there any reason too?)
-  if (!e.isConstant())
+  if (!e->isConstant())
     return e;
 
   if (n != 1 && random() %  n)
@@ -2620,7 +2620,7 @@ void Executor::executeAlloc(ExecutionState &state,
                             bool zeroMemory,
                             const ObjectState *reallocFrom) {
   size = toUnique(state, size);
-  if (size.isConstant()) {
+  if (size->isConstant()) {
     MemoryObject *mo = 
       memory->allocate(size->getConstantValue(), isLocal, false, 
                        state.prevPC->inst);
@@ -2793,9 +2793,9 @@ void Executor::executeMemoryOperation(ExecutionState &state,
   unsigned bytes = Expr::getMinBytesForWidth(type);
 
   if (SimplifySymIndices) {
-    if (!address.isConstant())
+    if (!address->isConstant())
       address = state.constraints.simplifyExpr(address);
-    if (isWrite && !value.isConstant())
+    if (isWrite && !value->isConstant())
       value = state.constraints.simplifyExpr(value);
   }
 
@@ -3175,7 +3175,7 @@ void Executor::getCoveredLines(const ExecutionState &state,
 void Executor::doImpliedValueConcretization(ExecutionState &state,
                                             ref<Expr> e,
                                             ref<Expr> value) {
-  assert(value.isConstant() && "non-constant passed in place of constant");
+  assert(value->isConstant() && "non-constant passed in place of constant");
   
   if (DebugCheckForImpliedValues)
     ImpliedValue::checkForImpliedValues(solver->solver, e, value);
@@ -3186,7 +3186,7 @@ void Executor::doImpliedValueConcretization(ExecutionState &state,
        it != ie; ++it) {
     ReadExpr *re = it->first.get();
     
-    if (re->index.isConstant()) {
+    if (re->index->isConstant()) {
       // FIXME: This is the sole remaining usage of the Array object
       // variable. Kill me.
       const MemoryObject *mo = re->updates.root->object;

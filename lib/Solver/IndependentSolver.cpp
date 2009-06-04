@@ -97,7 +97,7 @@ public:
       if (re->updates.isRooted) {
         const Array *array = re->updates.root;
         if (!wholeObjects.count(array)) {
-          if (re->index.isConstant()) {
+          if (re->index->isConstant()) {
             DenseSet<unsigned> &dis = elements[array];
             dis.add((unsigned) re->index->getConstantValue());
           } else {
