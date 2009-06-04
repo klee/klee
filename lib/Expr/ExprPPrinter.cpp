@@ -112,7 +112,7 @@ class PPrinter : public ExprPPrinter {
   bool isSimple(const ref<Expr> &e) { 
     if (isVerySimple(e)) {
       return true;
-    } else if (const ReadExpr *re = dyn_ref_cast<ReadExpr>(e)) {
+    } else if (const ReadExpr *re = dyn_cast<ReadExpr>(e)) {
       return isVerySimple(re->index) && isVerySimpleUpdate(re->updates.head);
     } else {
       Expr *ep = e.get();
@@ -148,7 +148,7 @@ class PPrinter : public ExprPPrinter {
         Expr *ep = e.get();
         for (unsigned i=0; i<ep->getNumKids(); i++)
           scan1(ep->getKid(i));
-        if (const ReadExpr *re = dyn_ref_cast<ReadExpr>(e)) 
+        if (const ReadExpr *re = dyn_cast<ReadExpr>(e)) 
           scanUpdate(re->updates.head);
       } else {
         shouldPrint.insert(e);
@@ -233,8 +233,7 @@ class PPrinter : public ExprPPrinter {
 
   
   bool isReadExprAtOffset(ref<Expr> e, const ReadExpr *base, ref<Expr> offset) {
-    
-    const ReadExpr *re = dyn_ref_cast<ReadExpr>(e.get());
+    const ReadExpr *re = dyn_cast<ReadExpr>(e.get());
       
     // right now, all Reads are byte reads but some
     // transformations might change this
@@ -262,7 +261,7 @@ class PPrinter : public ExprPPrinter {
     assert(e->getKind() == Expr::Concat);
     assert(stride == 1 || stride == -1);
     
-    const ReadExpr *base = dyn_ref_cast<ReadExpr>(e->getKid(0));
+    const ReadExpr *base = dyn_cast<ReadExpr>(e->getKid(0));
     
     // right now, all Reads are byte reads but some
     // transformations might change this
@@ -402,7 +401,7 @@ public:
 
         // Detect Not.
         // FIXME: This should be in common code.
-        if (const EqExpr *ee = dyn_ref_cast<EqExpr>(e)) {
+        if (const EqExpr *ee = dyn_cast<EqExpr>(e)) {
           if (ee->left == ConstantExpr::alloc(false, Expr::Bool)) {
             PC << "(Not";
             printWidth(PC, e);
@@ -443,9 +442,9 @@ public:
         // Indent at first argument and dispatch to appropriate print
         // routine for exprs which require special handling.
         unsigned indent = PC.pos;
-        if (const ReadExpr *re = dyn_ref_cast<ReadExpr>(e)) {
+        if (const ReadExpr *re = dyn_cast<ReadExpr>(e)) {
           printRead(re, PC, indent);
-        } else if (const ExtractExpr *ee = dyn_ref_cast<ExtractExpr>(e)) {
+        } else if (const ExtractExpr *ee = dyn_cast<ExtractExpr>(e)) {
           printExtract(ee, PC, indent);
         } else if (e->getKind() == Expr::Concat || e->getKind() == Expr::SExt)
 	  printExpr(e.get(), PC, indent, true);

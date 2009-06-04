@@ -44,8 +44,6 @@ private:
 
 public:
   template<class U> friend class ref;
-  template<class U> friend U* dyn_ref_cast(ref &src);
-  template<class U> friend const U* dyn_ref_cast(const ref &src);
 
   // constructor from pointer
   ref(T *p) : ptr(p) {
@@ -65,10 +63,6 @@ public:
   }
   
   // pointer operations
-  T *get () {
-    return ptr;
-  }
-
   T *get () const {
     return ptr;
   }
@@ -117,18 +111,6 @@ template<class T>
 inline std::ostream &operator<<(std::ostream &os, const ref<T> &e) {
   os << *e;
   return os;
-}
-
-class Expr;
-
-template<class U>
-U* dyn_ref_cast(ref<Expr> &src) {
-  return dyn_cast<U>(src.ptr);
-}
-
-template<class U>
-const U* dyn_ref_cast(const ref<Expr> &src) {
-  return dyn_cast<U>(src.ptr);
 }
 
 } // end namespace klee

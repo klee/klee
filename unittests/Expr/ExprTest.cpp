@@ -58,7 +58,7 @@ TEST(ExprTest, ConcatExtract) {
 
   ref<Expr> extract4 = ExtractExpr::create(concat1, 27, 2);
   EXPECT_EQ(Expr::Extract, extract4->getKind());
-  const ExtractExpr* tmp = dyn_ref_cast<ExtractExpr>(extract4);
+  const ExtractExpr* tmp = cast<ExtractExpr>(extract4);
   EXPECT_EQ(3U, tmp->offset);
   EXPECT_EQ(2U, tmp->getWidth());
 

@@ -94,7 +94,7 @@ ref<Expr> ConstraintManager::simplifyExpr(ref<Expr> e) const {
   
   for (ConstraintManager::constraints_ty::const_iterator 
          it = constraints.begin(), ie = constraints.end(); it != ie; ++it) {
-    if (const EqExpr *ee = dyn_ref_cast<EqExpr>(*it)) {
+    if (const EqExpr *ee = dyn_cast<EqExpr>(*it)) {
       if (ee->left->isConstant()) {
         equalities.insert(std::make_pair(ee->right,
                                          ee->left));

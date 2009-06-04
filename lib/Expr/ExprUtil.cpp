@@ -35,7 +35,7 @@ void klee::findReads(ref<Expr> e,
     ref<Expr> top = stack.back();
     stack.pop_back();
 
-    if (ReadExpr *re = dyn_ref_cast<ReadExpr>(top)) {
+    if (ReadExpr *re = dyn_cast<ReadExpr>(top)) {
       // We memoized so can just add to list without worrying about
       // repeats.
       results.push_back(re);

@@ -490,7 +490,7 @@ ref<Expr> ExtractExpr::create(ref<Expr> expr, unsigned off, Width w) {
   } 
   else 
     // Extract(Concat)
-    if (ConcatExpr *ce = dyn_ref_cast<ConcatExpr>(expr)) {
+    if (ConcatExpr *ce = dyn_cast<ConcatExpr>(expr)) {
       // if the extract skips the right side of the concat
       if (off >= ce->getRight()->getWidth())
 	return ExtractExpr::create(ce->getLeft(), off - ce->getRight()->getWidth(), w);
