@@ -110,14 +110,20 @@ bool Solver::mayBeFalse(const Query& query, bool &result) {
   return true;
 }
 
-bool Solver::getValue(const Query& query, ref<Expr> &result) {
+bool Solver::getValue(const Query& query, ref<ConstantExpr> &result) {
   // Maintain invariants implementation expect.
-  if (isa<ConstantExpr>(query.expr)) {
-    result = query.expr;
+  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(query.expr)) {
+    result = CE;
     return true;
   }
 
-  return impl->computeValue(query, result);
+  // FIXME: Push ConstantExpr requirement down.
+  ref<Expr> tmp;
+  if (!impl->computeValue(query, tmp))
+    return false;
+  
+  result = cast<ConstantExpr>(tmp);
+  return true;
 }
 
 bool 

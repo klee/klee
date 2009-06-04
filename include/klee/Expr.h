@@ -308,6 +308,8 @@ public:
   unsigned getNumKids() const { return 0; }
   ref<Expr> getKid(unsigned i) const { return 0; }
 
+  uint64_t getConstantValue() const { return asUInt64; }
+
   int compareContents(const Expr &b) const { 
     const ConstantExpr &cb = static_cast<const ConstantExpr&>(b);
     if (width != cb.width) return width < cb.width ? -1 : 1;

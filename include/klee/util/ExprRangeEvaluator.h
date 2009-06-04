@@ -91,7 +91,7 @@ template<class T>
 T ExprRangeEvaluator<T>::evaluate(const ref<Expr> &e) {
   switch (e->getKind()) {
   case Expr::Constant:
-    return T(e->getConstantValue());
+    return T(cast<ConstantExpr>(e)->getConstantValue());
 
   case Expr::NotOptimized: 
     break;

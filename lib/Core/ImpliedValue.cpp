@@ -244,7 +244,7 @@ void ImpliedValue::checkForImpliedValues(Solver *S, ref<Expr> e,
   for (std::vector< ref<ReadExpr> >::iterator i = reads.begin(), 
          ie = reads.end(); i != ie; ++i) {
     ref<ReadExpr> var = *i;
-    ref<Expr> possible;
+    ref<ConstantExpr> possible;
     bool success = S->getValue(Query(assume, var), possible);
     assert(success && "FIXME: Unhandled solver failure");    
     std::map<ref<ReadExpr>, ref<Expr> >::iterator it = found.find(var);

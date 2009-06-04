@@ -80,7 +80,7 @@ bool AddressSpace::resolveOne(ExecutionState &state,
 
     // try cheap search, will succeed for any inbounds pointer
 
-    ref<Expr> cex(0);
+    ref<ConstantExpr> cex;
     if (!solver->getValue(state, address, cex))
       return false;
     unsigned example = (unsigned) cex->getConstantValue();
@@ -187,7 +187,7 @@ bool AddressSpace::resolve(ExecutionState &state,
     // to hit the fast path with exactly 2 queries). we could also
     // just get this by inspection of the expr.
     
-    ref<Expr> cex(0);
+    ref<ConstantExpr> cex;
     if (!solver->getValue(state, p, cex))
       return true;
     unsigned example = (unsigned) cex->getConstantValue();

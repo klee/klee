@@ -94,10 +94,10 @@ bool TimingSolver::mayBeFalse(const ExecutionState& state, ref<Expr> expr,
 }
 
 bool TimingSolver::getValue(const ExecutionState& state, ref<Expr> expr, 
-                            ref<Expr> &result) {
+                            ref<ConstantExpr> &result) {
   // Fast path, to avoid timer and OS overhead.
-  if (isa<ConstantExpr>(expr)) {
-    result = expr;
+  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(expr)) {
+    result = CE;
     return true;
   }
   

@@ -98,7 +98,7 @@ void SeedInfo::patchSeed(const ExecutionState &state,
       bool success = solver->mustBeFalse(tmp, isSeed, res);
       assert(success && "FIXME: Unhandled solver failure");
       if (res) {
-        ref<Expr> value;
+        ref<ConstantExpr> value;
         bool success = solver->getValue(tmp, read, value);
         assert(success && "FIXME: Unhandled solver failure");            
         it2->second[i] = value->getConstantValue();
@@ -128,7 +128,7 @@ void SeedInfo::patchSeed(const ExecutionState &state,
       bool success = solver->mustBeFalse(tmp, isSeed, res);
       assert(success && "FIXME: Unhandled solver failure");
       if (res) {
-        ref<Expr> value;
+        ref<ConstantExpr> value;
         bool success = solver->getValue(tmp, read, value);
         assert(success && "FIXME: Unhandled solver failure");            
         it->second[i] = value->getConstantValue();

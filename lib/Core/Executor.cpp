@@ -623,7 +623,7 @@ void Executor::branch(ExecutionState &state,
            siie = seeds.end(); siit != siie; ++siit) {
       unsigned i;
       for (i=0; i<N; ++i) {
-        ref<Expr> res;
+        ref<ConstantExpr> res;
         bool success = 
           solver->getValue(state, siit->assignment.evaluate(conditions[i]), 
                            res);
@@ -680,7 +680,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
         (MaxStaticCPForkPct<1. &&
          cpn && (cpn->statistics.getValue(stats::solverTime) > 
                  stats::solverTime*MaxStaticCPSolvePct))) {
-      ref<Expr> value; 
+      ref<ConstantExpr> value; 
       bool success = solver->getValue(current, condition, value);
       assert(success && "FIXME: Unhandled solver failure");
       addConstraint(current, EqExpr::create(value, condition));
@@ -748,7 +748,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     // Is seed extension still ok here?
     for (std::vector<SeedInfo>::iterator siit = it->second.begin(), 
            siie = it->second.end(); siit != siie; ++siit) {
-      ref<Expr> res;
+      ref<ConstantExpr> res;
       bool success = 
         solver->getValue(current, siit->assignment.evaluate(condition), res);
       assert(success && "FIXME: Unhandled solver failure");
@@ -813,7 +813,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       std::vector<SeedInfo> &falseSeeds = seedMap[falseState];
       for (std::vector<SeedInfo>::iterator siit = seeds.begin(), 
              siie = seeds.end(); siit != siie; ++siit) {
-        ref<Expr> res;
+        ref<ConstantExpr> res;
         bool success = 
           solver->getValue(current, siit->assignment.evaluate(condition), res);
         assert(success && "FIXME: Unhandled solver failure");
@@ -998,7 +998,7 @@ ref<Expr> Executor::toUnique(const ExecutionState &state,
   ref<Expr> result = e;
 
   if (!isa<ConstantExpr>(e)) {
-    ref<Expr> value(0);
+    ref<ConstantExpr> value;
     bool isTrue = false;
 
     solver->setTimeout(stpTimeout);      
@@ -1020,7 +1020,7 @@ ref<Expr> Executor::toConstant(ExecutionState &state,
                                const char *reason) {
   e = state.constraints.simplifyExpr(e);
   if (!isa<ConstantExpr>(e)) {
-    ref<Expr> value;
+    ref<ConstantExpr> value;
     bool success = solver->getValue(state, e, value);
     assert(success && "FIXME: Unhandled solver failure");
     
@@ -1049,7 +1049,7 @@ void Executor::executeGetValue(ExecutionState &state,
   std::map< ExecutionState*, std::vector<SeedInfo> >::iterator it = 
     seedMap.find(&state);
   if (it==seedMap.end() || isa<ConstantExpr>(e)) {
-    ref<Expr> value;
+    ref<ConstantExpr> value;
     bool success = solver->getValue(state, e, value);
     assert(success && "FIXME: Unhandled solver failure");
     bindLocal(target, state, value);
@@ -1057,7 +1057,7 @@ void Executor::executeGetValue(ExecutionState &state,
     std::set< ref<Expr> > values;
     for (std::vector<SeedInfo>::iterator siit = it->second.begin(), 
            siie = it->second.end(); siit != siie; ++siit) {
-      ref<Expr> value;
+      ref<ConstantExpr> value;
       bool success = 
         solver->getValue(state, siit->assignment.evaluate(e), value);
       assert(success && "FIXME: Unhandled solver failure");
@@ -1529,7 +1529,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
          have already got a value. But in the end the caches should
          handle it for us, albeit with some overhead. */
       do {
-        ref<Expr> value;
+        ref<ConstantExpr> value;
         bool success = solver->getValue(*free, v, value);
         assert(success && "FIXME: Unhandled solver failure");
         StatePair res = fork(*free, EqExpr::create(v, value), true);
@@ -2347,7 +2347,7 @@ std::string Executor::getAddressInfo(ExecutionState &state,
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(address)) {
     example = CE->getConstantValue();
   } else {
-    ref<Expr> value;
+    ref<ConstantExpr> value;
     bool success = solver->getValue(state, address, value);
     assert(success && "FIXME: Unhandled solver failure");
     example = value->getConstantValue();
@@ -2513,7 +2513,7 @@ void Executor::callExternalFunction(ExecutionState &state,
   for (std::vector<ref<Expr> >::iterator ai = arguments.begin(), ae = arguments.end();
        ai!=ae; ++ai, ++i) {
     if (AllowExternalSymCalls) { // don't bother checking uniqueness
-      ref<Expr> ce;
+      ref<ConstantExpr> ce;
       bool success = solver->getValue(state, *ai, ce);
       assert(success && "FIXME: Unhandled solver failure");
       static_cast<ConstantExpr*>(ce.get())->toMemory((void*) &args[i]);
@@ -2652,14 +2652,15 @@ void Executor::executeAlloc(ExecutionState &state,
     // return argument first). This shows up in pcre when llvm
     // collapses the size expression with a select.
 
-    ref<Expr> example;
+    ref<ConstantExpr> example;
     bool success = solver->getValue(state, size, example);
     assert(success && "FIXME: Unhandled solver failure");
     
     // Try and start with a small example
     while (example->getConstantValue() > 128) {
-      ref<Expr> tmp = ConstantExpr::alloc(example->getConstantValue() >> 1, 
-                                          example->getWidth());
+      ref<ConstantExpr> tmp = 
+        ConstantExpr::alloc(example->getConstantValue() >> 1, 
+                            example->getWidth());
       bool res;
       bool success = solver->mayBeTrue(state, EqExpr::create(tmp, size), res);
       assert(success && "FIXME: Unhandled solver failure");      
@@ -2672,7 +2673,7 @@ void Executor::executeAlloc(ExecutionState &state,
     
     if (fixedSize.second) { 
       // Check for exactly two values
-      ref<Expr> tmp;
+      ref<ConstantExpr> tmp;
       bool success = solver->getValue(*fixedSize.second, size, tmp);
       assert(success && "FIXME: Unhandled solver failure");      
       bool res;
