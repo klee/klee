@@ -10,7 +10,13 @@
 #ifndef KLEE_REF_H
 #define KLEE_REF_H
 
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Streams.h"
+using llvm::isa;
+using llvm::cast;
+using llvm::cast_or_null;
+using llvm::dyn_cast;
+using llvm::dyn_cast_or_null;
 
 #include <assert.h>
 
@@ -120,12 +126,12 @@ class Expr;
 
 template<class U>
 U* dyn_ref_cast(ref<Expr> &src) {
-  return dynamic_cast<U*>(src.ptr);
+  return dyn_cast<U>(src.ptr);
 }
 
 template<class U>
 const U* dyn_ref_cast(const ref<Expr> &src) {
-  return dynamic_cast<const U*>(src.ptr);
+  return dyn_cast<U>(src.ptr);
 }
 
 template<class U>
