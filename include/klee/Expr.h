@@ -330,14 +330,14 @@ public:
   static ref<Expr> fromMemory(void *address, Width w);
   void toMemory(void *address);
 
-  static ref<Expr> alloc(uint64_t v, Width w) {
+  static ref<ConstantExpr> alloc(uint64_t v, Width w) {
     // constructs an "optimized" ConstantExpr
-    ref<Expr> r(new ConstantExpr(v, w));
+    ref<ConstantExpr> r(new ConstantExpr(v, w));
     r->computeHash();
     return r;
   }
   
-  static ref<Expr> create(uint64_t v, Width w) {
+  static ref<ConstantExpr> create(uint64_t v, Width w) {
     assert(v == bits64::truncateToNBits(v, w) &&
            "invalid constant");
     return alloc(v, w);

@@ -49,8 +49,26 @@ namespace {
     }
   };
   
+  class ExprResult {
+    bool IsValid;
+    ExprHandle Value;
+
+  public:
+    ExprResult() : IsValid(false) {}
+    ExprResult(ExprHandle _Value) : IsValid(true), Value(_Value) {}
+    ExprResult(ref<ConstantExpr> _Value) : IsValid(true), Value(_Value.get()) {}
+    ExprResult(bool _IsValid, ExprHandle _Value) : IsValid(_IsValid), Value(_Value) {}
+
+    bool isValid() { 
+      return IsValid; 
+    }
+    ExprHandle get() { 
+      assert(IsValid && "get() on invalid ParseResult!");
+      return Value; 
+    }
+  };
+
   typedef ParseResult<Decl*> DeclResult;
-  typedef ParseResult<ExprHandle> ExprResult;
   typedef ParseResult<Expr::Width> TypeResult;
   typedef ParseResult<VersionHandle> VersionResult;
 

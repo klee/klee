@@ -22,7 +22,7 @@ ref<Expr> getConstant(int value, Expr::Width width) {
 }
 
 TEST(ExprTest, BasicConstruction) {
-  EXPECT_EQ(ConstantExpr::alloc(0, 32),
+  EXPECT_EQ(ref<Expr>(ConstantExpr::alloc(0, 32)),
             SubExpr::create(ConstantExpr::alloc(10, 32),
                             ConstantExpr::alloc(10, 32)));
 }
