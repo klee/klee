@@ -222,8 +222,6 @@ public:
   
   static ref<Expr> createPointer(uint64_t v);
 
-  static Expr *createConstant(uint64_t val, Width w);
-  
   struct CreateArg;
   static ref<Expr> createFromKind(Kind k, std::vector<CreateArg> args);
 
@@ -288,17 +286,17 @@ class ConstantExpr : public Expr {
 public:
   static const Kind kind = Constant;
   static const unsigned numKids = 0;
-  
+
+private:
+  uint64_t value;
+
+  ConstantExpr(uint64_t v, Width w) : value(v), width(w) {}
+
 public:
-  union {
-    uint64_t asUInt64;
-  };
   Width width;
 
 public:
   ~ConstantExpr() {};
-  // should change the code to make this private
-  ConstantExpr(uint64_t v, Width w) : asUInt64(v), width(w) {}
   
   Width getWidth() const { return width; }
   Kind getKind() const { return Constant; }
@@ -306,14 +304,14 @@ public:
   unsigned getNumKids() const { return 0; }
   ref<Expr> getKid(unsigned i) const { return 0; }
 
-  uint64_t getConstantValue() const { return asUInt64; }
+  uint64_t getConstantValue() const { return value; }
 
   int compareContents(const Expr &b) const { 
     const ConstantExpr &cb = static_cast<const ConstantExpr&>(b);
     if (width != cb.width) return width < cb.width ? -1 : 1;
-    if (asUInt64 < cb.asUInt64) {
+    if (value < cb.value) {
       return -1;
-    } else if (asUInt64 > cb.asUInt64) {
+    } else if (value > cb.value) {
       return 1;
     } else {
       return 0;

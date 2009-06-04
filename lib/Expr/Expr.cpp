@@ -165,7 +165,7 @@ unsigned Expr::computeHash() {
 }
 
 unsigned ConstantExpr::computeHash() {
-  hashValue = asUInt64 ^ (width * MAGIC_HASH_CONSTANT);
+  hashValue = value ^ (width * MAGIC_HASH_CONSTANT);
   return hashValue;
 }
 
@@ -319,12 +319,6 @@ ref<Expr> Expr::createPointer(uint64_t v) {
   return ConstantExpr::create(v, kMachinePointerType);
 }
 
-Expr* Expr::createConstant(uint64_t val, Width w) {
-  Expr *r = new ConstantExpr(val, w);
-  r->computeHash();
-  return r;
-}
-
 void Expr::print(std::ostream &os) const {
   const ref<Expr> tmp((Expr*)this);
   ExprPPrinter::printOne(os, "", tmp);
@@ -345,11 +339,11 @@ ref<Expr> ConstantExpr::fromMemory(void *address, Width width) {
 
 void ConstantExpr::toMemory(void *address) {
   switch (width) {
-  case  Expr::Bool: *(( uint8_t*) address) = asUInt64; break;
-  case  Expr::Int8: *(( uint8_t*) address) = asUInt64; break;
-  case Expr::Int16: *((uint16_t*) address) = asUInt64; break;
-  case Expr::Int32: *((uint32_t*) address) = asUInt64; break;
-  case Expr::Int64: *((uint64_t*) address) = asUInt64; break;
+  case  Expr::Bool: *(( uint8_t*) address) = value; break;
+  case  Expr::Int8: *(( uint8_t*) address) = value; break;
+  case Expr::Int16: *((uint16_t*) address) = value; break;
+  case Expr::Int32: *((uint32_t*) address) = value; break;
+  case Expr::Int64: *((uint64_t*) address) = value; break;
   default: assert(0 && "invalid type");
   }
 }
