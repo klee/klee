@@ -115,7 +115,6 @@ public:
   bool operator!=(const ref &rhs) const { return compare(rhs)!=0; }
 };
 
-
 template<class T>
 inline std::ostream &operator<<(std::ostream &os, const ref<T> &e) {
   os << *e;
@@ -144,6 +143,26 @@ const U* static_ref_cast(const ref<Expr> &src) {
   return static_cast<const U*>(src.ptr);
 }
 
+} // end namespace klee
+
+namespace llvm {
+  // simplify_type implementation for ref<>, which allows dyn_cast from on a
+  // ref<> to apply to the wrapper type. Conceptually the result of such a
+  // dyn_cast should probably be a ref of the casted type, but that breaks the
+  // idiom of initializing a variable to the result of a dyn_cast inside an if
+  // condition, or we would have to implement operator(bool) for ref<> with
+  // isNull semantics, which doesn't seem like a good idea.
+template<typename T>
+struct simplify_type<const ::klee::ref<T> > {
+  typedef T* SimpleType;
+  static SimpleType getSimplifiedValue(const ::klee::ref<T> &Ref) {
+    return Ref.get();
+  }
+};
+
+template<typename T> 
+struct simplify_type< ::klee::ref<T> >
+  : public simplify_type<const ::klee::ref<T> > {};
 }
 
 #endif /* KLEE_REF_H */
