@@ -1291,7 +1291,7 @@ Decl::Decl() {}
 void QueryCommand::dump() {
   // FIXME: This is masking the difference between an actual query and
   // a query decl.
-  ExprPPrinter::printQuery(std::cerr, 
+  ExprPPrinter::printQuery(std::cout, 
                            ConstraintManager(Constraints), 
                            Query);
 }
