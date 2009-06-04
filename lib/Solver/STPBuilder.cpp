@@ -419,7 +419,7 @@ ExprHandle STPBuilder::getInitialRead(const Array *root, unsigned index) {
 /** if *width_out!=1 then result is a bitvector,
     otherwise it is a bool */
 ExprHandle STPBuilder::construct(ref<Expr> e, int *width_out) {
-  if (!UseConstructHash || e->isConstant()) {
+  if (!UseConstructHash || isa<ConstantExpr>(e)) {
     return constructActual(e, width_out);
   } else {
     ExprHashMap< std::pair<ExprHandle, unsigned> >::iterator it = 

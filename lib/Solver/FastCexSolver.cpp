@@ -729,7 +729,7 @@ public:
   bool exprMustBeValue(ref<Expr> e, uint64_t value) {
     CexConstifier cc(objectValues);
     ref<Expr> v = cc.visit(e);
-    if (!v->isConstant()) return false;
+    if (!isa<ConstantExpr>(v)) return false;
     // XXX reenable once all reads and vars are fixed
     //    assert(v.isConstant() && "not all values have been fixed");
     return v->getConstantValue() == value;
@@ -886,7 +886,7 @@ bool FastCexSolver::computeValue(const Query& query, ref<Expr> &result) {
   CexConstifier cc(cd.objectValues);
   ref<Expr> value = cc.visit(query.expr);
 
-  if (value->isConstant()) {
+  if (isa<ConstantExpr>(value)) {
     result = value;
     return true;
   } else {

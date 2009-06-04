@@ -77,9 +77,9 @@ void SeedInfo::patchSeed(const ExecutionState &state,
   for (std::vector< ref<ReadExpr> >::iterator it = reads.begin(), 
          ie = reads.end(); it != ie; ++it) {
     ReadExpr *re = it->get();
-    if (re->index->isConstant()) {
-      unsigned index = (unsigned) re->index->getConstantValue();
-      directReads.insert(std::make_pair(re->updates.root, index));
+    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(re->index)) {
+      directReads.insert(std::make_pair(re->updates.root, 
+                                        (unsigned) CE->getConstantValue()));
     }
   }
   

@@ -195,16 +195,13 @@ static void _getImpliedValue(ref<Expr> e,
 }
     
 void ImpliedValue::getImpliedValues(ref<Expr> e, 
-                                    ref<Expr> value, 
+                                    ref<ConstantExpr> value, 
                                     ImpliedValueList &results) {
-  assert(value->isConstant() && "non-constant in place of constant");
   _getImpliedValue(e, value->getConstantValue(), results);
 }
 
 void ImpliedValue::checkForImpliedValues(Solver *S, ref<Expr> e, 
-                                         ref<Expr> value) {
-  assert(value->isConstant() && "non-constant in place of constant");
-
+                                         ref<ConstantExpr> value) {
   std::vector<ref<ReadExpr> > reads;
   std::map<ref<ReadExpr>, ref<Expr> > found;
   ImpliedValueList results;

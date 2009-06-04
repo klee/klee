@@ -90,7 +90,8 @@ namespace klee {
     AssignmentEvaluator v(*this);
     for (; begin!=end; ++begin) {
       ref<Expr> res = v.visit(*begin);
-      if (!res->isConstant() || !res->getConstantValue())
+      ConstantExpr *CE = dyn_cast<ConstantExpr>(res);
+      if (!CE || !CE->getConstantValue())
         return false;
     }
     return true;

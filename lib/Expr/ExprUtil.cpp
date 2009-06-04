@@ -26,7 +26,7 @@ void klee::findReads(ref<Expr> e,
   ExprHashSet visited;
   std::set<const UpdateNode *> updates;
   
-  if (!e->isConstant()) {
+  if (!isa<ConstantExpr>(e)) {
     visited.insert(e);
     stack.push_back(e);
   }
@@ -40,7 +40,7 @@ void klee::findReads(ref<Expr> e,
       // repeats.
       results.push_back(re);
 
-      if (!re->index->isConstant() &&
+      if (!isa<ConstantExpr>(re->index) &&
           visited.insert(re->index).second)
         stack.push_back(re->index);
       
@@ -53,20 +53,20 @@ void klee::findReads(ref<Expr> e,
         // head, which often will be shared among multiple nodes.
         if (updates.insert(re->updates.head).second) {
           for (const UpdateNode *un=re->updates.head; un; un=un->next) {
-            if (!un->index->isConstant() &&
+            if (!isa<ConstantExpr>(un->index) &&
                 visited.insert(un->index).second)
               stack.push_back(un->index);
-            if (!un->value->isConstant() &&
+            if (!isa<ConstantExpr>(un->value) &&
                 visited.insert(un->value).second)
               stack.push_back(un->value);
           }
         }
       }
-    } else if (!top->isConstant()) {
+    } else if (!isa<ConstantExpr>(top)) {
       Expr *e = top.get();
       for (unsigned i=0; i<e->getNumKids(); i++) {
         ref<Expr> k = e->getKid(i);
-        if (!k->isConstant() &&
+        if (!isa<ConstantExpr>(k) &&
             visited.insert(k).second)
           stack.push_back(k);
       }

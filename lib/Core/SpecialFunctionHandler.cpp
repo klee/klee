@@ -172,11 +172,12 @@ bool SpecialFunctionHandler::handle(ExecutionState &state,
 /****/
 
 // reads a concrete string from memory
-std::string SpecialFunctionHandler::readStringAtAddress(ExecutionState &state, 
-                                                        ref<Expr> address) {
+std::string 
+SpecialFunctionHandler::readStringAtAddress(ExecutionState &state, 
+                                            ref<Expr> addressExpr) {
   ObjectPair op;
-  address = executor.toUnique(state, address);
-  assert(address->isConstant() && "symbolic string arg to intrinsic");  
+  addressExpr = executor.toUnique(state, addressExpr);
+  ref<ConstantExpr> address = cast<ConstantExpr>(addressExpr);
   if (!state.addressSpace.resolveOne(address->getConstantValue(), op))
     assert(0 && "XXX out of bounds / multiple resolution unhandled");
   bool res;
@@ -195,9 +196,9 @@ std::string SpecialFunctionHandler::readStringAtAddress(ExecutionState &state,
   for (i = 0; i < mo->size - 1; i++) {
     ref<Expr> cur = os->read8(i);
     cur = executor.toUnique(state, cur);
-    assert(cur->isConstant() && 
+    assert(isa<ConstantExpr>(cur) && 
            "hit symbolic char while reading concrete string");
-    buf[i] = cur->getConstantValue();
+    buf[i] = cast<ConstantExpr>(cur)->getConstantValue();
   }
   buf[i] = 0;
   
@@ -438,12 +439,12 @@ void SpecialFunctionHandler::handleSetForking(ExecutionState &state,
          "invalid number of arguments to klee_set_forking");
   ref<Expr> value = executor.toUnique(state, arguments[0]);
   
-  if (!value->isConstant()) {
+  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(value)) {
+    state.forkDisabled = !CE->getConstantValue();
+  } else {
     executor.terminateStateOnError(state, 
                                    "klee_set_forking requires a constant arg",
                                    "user.err");
-  } else {
-    state.forkDisabled = !value->getConstantValue();
   }
 }
 
@@ -476,7 +477,7 @@ void SpecialFunctionHandler::handlePrintRange(ExecutionState &state,
 
   std::string msg_str = readStringAtAddress(state, arguments[0]);
   llvm::cerr << msg_str << ":" << arguments[1];
-  if (!arguments[1]->isConstant()) {
+  if (!isa<ConstantExpr>(arguments[1])) {
     // FIXME: Pull into a unique value method?
     ref<Expr> value;
     bool success = executor.solver->getValue(state, arguments[1], value);
@@ -590,7 +591,7 @@ void SpecialFunctionHandler::handleCheckMemoryAccess(ExecutionState &state,
 
   ref<Expr> address = executor.toUnique(state, arguments[0]);
   ref<Expr> size = executor.toUnique(state, arguments[1]);
-  if (!address->isConstant() || !size->isConstant()) {
+  if (!isa<ConstantExpr>(address) || !isa<ConstantExpr>(size)) {
     executor.terminateStateOnError(state, 
                                    "check_memory_access requires constant args",
                                    "user.err");
@@ -605,8 +606,7 @@ void SpecialFunctionHandler::handleCheckMemoryAccess(ExecutionState &state,
     } else {
       ref<Expr> chk = op.first->getBoundsCheckPointer(address, 
                                                       size->getConstantValue());
-      assert(chk->isConstant());
-      if (!chk->getConstantValue()) {
+      if (!cast<ConstantExpr>(chk)->getConstantValue()) {
         executor.terminateStateOnError(state,
                                        "check_memory_access: memory error",
                                        "ptr.err",
@@ -630,9 +630,9 @@ void SpecialFunctionHandler::handleDefineFixedObject(ExecutionState &state,
                                                      std::vector<ref<Expr> > &arguments) {
   assert(arguments.size()==2 &&
          "invalid number of arguments to klee_define_fixed_object");
-  assert(arguments[0]->isConstant() &&
+  assert(isa<ConstantExpr>(arguments[0]) &&
          "expect constant address argument to klee_define_fixed_object");
-  assert(arguments[1]->isConstant() &&
+  assert(isa<ConstantExpr>(arguments[1]) &&
          "expect constant size argument to klee_define_fixed_object");
   
   uint64_t address = arguments[0]->getConstantValue();

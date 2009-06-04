@@ -947,8 +947,8 @@ ExprResult ParserImpl::ParseExtractParenExpr(const Token &Name,
   if (!OffsetExpr.isValid() || !Child.isValid())
     return ConstantExpr::alloc(0, ResTy);
 
-  assert(OffsetExpr.get()->isConstant() && "ParseNumber returned non-constant.");
-  unsigned Offset = (unsigned) OffsetExpr.get()->getConstantValue();
+  unsigned Offset = 
+    (unsigned) cast<ConstantExpr>(OffsetExpr.get())->getConstantValue();
 
   if (Offset + ResTy > Child.get()->getWidth()) {
     Error("extract out-of-range of child expression.", Name);

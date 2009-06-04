@@ -100,7 +100,7 @@ class PPrinter : public ExprPPrinter {
   }
 
   bool isVerySimple(const ref<Expr> &e) { 
-    return e->isConstant() || bindings.find(e)!=bindings.end();
+    return isa<ConstantExpr>(e) || bindings.find(e)!=bindings.end();
   }
 
   bool isVerySimpleUpdate(const UpdateNode *un) {
@@ -143,7 +143,7 @@ class PPrinter : public ExprPPrinter {
   }
 
   void scan1(const ref<Expr> &e) {
-    if (!e->isConstant()) {
+    if (!isa<ConstantExpr>(e)) {
       if (couldPrint.insert(e).second) {
         Expr *ep = e.get();
         for (unsigned i=0; i<ep->getNumKids(); i++)
@@ -208,7 +208,8 @@ class PPrinter : public ExprPPrinter {
       print(un->value, PC);
       //PC << ')';
       
-      nextShouldBreak = !(un->index->isConstant() && un->value->isConstant());
+      nextShouldBreak = !(isa<ConstantExpr>(un->index) && 
+                          isa<ConstantExpr>(un->value));
     }
 
     if (openedList)
@@ -367,9 +368,8 @@ public:
     print(e, PC);
   }
 
-  void printConst(const ref<Expr> &e, PrintContext &PC, bool printWidth) {
-    assert(e->isConstant());
-
+  void printConst(const ref<ConstantExpr> &e, PrintContext &PC, 
+                  bool printWidth) {
     if (e->getWidth() == Expr::Bool)
       PC << (e->getConstantValue() ? "true" : "false");
     else {
@@ -387,8 +387,8 @@ public:
   }
 
   void print(const ref<Expr> &e, PrintContext &PC, bool printConstWidth=false) {
-    if (e->isConstant()) 
-      printConst(e, PC, printConstWidth);
+    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(e))
+      printConst(CE, PC, printConstWidth);
     else {
       std::map<ref<Expr>, unsigned>::iterator it = bindings.find(e);
       if (it!=bindings.end()) {

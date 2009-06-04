@@ -662,8 +662,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     seedMap.find(&current);
   bool isSeeding = it != seedMap.end();
 
-  if (!isSeeding &&
-      !condition->isConstant() && 
+  if (!isSeeding && !isa<ConstantExpr>(condition) && 
       (MaxStaticForkPct!=1. || MaxStaticSolvePct != 1. ||
        MaxStaticCPForkPct!=1. || MaxStaticCPSolvePct != 1.) &&
       statsTracker->elapsed() > 60.) {
@@ -753,8 +752,8 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       bool success = 
         solver->getValue(current, siit->assignment.evaluate(condition), res);
       assert(success && "FIXME: Unhandled solver failure");
-      if (res->isConstant()) {
-        if (res->getConstantValue()) {
+      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(res)) {
+        if (CE->getConstantValue()) {
           trueSeed = true;
         } else {
           falseSeed = true;
@@ -874,9 +873,8 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
 }
 
 void Executor::addConstraint(ExecutionState &state, ref<Expr> condition) {
-  if (condition->isConstant()) {
-    assert(condition->getConstantValue() &&
-           "attempt to add invalid constraint");
+  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(condition)) {
+    assert(CE->getConstantValue() && "attempt to add invalid constraint");
     return;
   }
 
@@ -902,7 +900,8 @@ void Executor::addConstraint(ExecutionState &state, ref<Expr> condition) {
 
   state.addConstraint(condition);
   if (ivcEnabled)
-    doImpliedValueConcretization(state, condition, ConstantExpr::alloc(1, Expr::Bool));
+    doImpliedValueConcretization(state, condition, 
+                                 ConstantExpr::alloc(1, Expr::Bool));
 }
 
 ref<Expr> Executor::evalConstant(Constant *c) {
@@ -998,7 +997,7 @@ ref<Expr> Executor::toUnique(const ExecutionState &state,
                              ref<Expr> &e) {
   ref<Expr> result = e;
 
-  if (!e->isConstant()) {
+  if (!isa<ConstantExpr>(e)) {
     ref<Expr> value(0);
     bool isTrue = false;
 
@@ -1020,7 +1019,7 @@ ref<Expr> Executor::toConstant(ExecutionState &state,
                                ref<Expr> e,
                                const char *reason) {
   e = state.constraints.simplifyExpr(e);
-  if (!e->isConstant()) {
+  if (!isa<ConstantExpr>(e)) {
     ref<Expr> value;
     bool success = solver->getValue(state, e, value);
     assert(success && "FIXME: Unhandled solver failure");
@@ -1049,7 +1048,7 @@ void Executor::executeGetValue(ExecutionState &state,
   e = state.constraints.simplifyExpr(e);
   std::map< ExecutionState*, std::vector<SeedInfo> >::iterator it = 
     seedMap.find(&state);
-  if (it==seedMap.end() || e->isConstant()) {
+  if (it==seedMap.end() || isa<ConstantExpr>(e)) {
     ref<Expr> value;
     bool success = solver->getValue(state, e, value);
     assert(success && "FIXME: Unhandled solver failure");
@@ -1393,11 +1392,11 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     BasicBlock *bb = si->getParent();
 
     cond = toUnique(state, cond);
-    if (cond->isConstant()) {
+    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(cond)) {
       // Somewhat gross to create these all the time, but fine till we
       // switch to an internal rep.
       ConstantInt *ci = ConstantInt::get(si->getCondition()->getType(),
-                                         cond->getConstantValue());
+                                         CE->getConstantValue());
       unsigned index = si->findCaseValue(ci);
       transferToBasicBlock(si->getSuccessor(index), si->getParent(), state);
     } else {
@@ -2180,8 +2179,7 @@ void Executor::bindInstructionConstants(KInstruction *KI) {
     }
     index++;
   }
-  assert(constantOffset->isConstant());
-  kgepi->offset = constantOffset->getConstantValue();
+  kgepi->offset = cast<ConstantExpr>(constantOffset)->getConstantValue();
 }
 
 void Executor::bindModuleConstants() {
@@ -2346,8 +2344,8 @@ std::string Executor::getAddressInfo(ExecutionState &state,
   std::ostringstream info;
   info << "\taddress: " << address << "\n";
   uint64_t example;
-  if (address->isConstant()) {
-    example = address->getConstantValue();
+  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(address)) {
+    example = CE->getConstantValue();
   } else {
     ref<Expr> value;
     bool success = solver->getValue(state, address, value);
@@ -2466,7 +2464,7 @@ void Executor::terminateStateOnError(ExecutionState &state,
         msg << ai->getName();
         // XXX should go through function
         ref<Expr> value = sf.locals[sf.kf->getArgRegister(index++)].value; 
-        if (value->isConstant())
+        if (isa<ConstantExpr>(value))
           msg << "=" << value;
       }
       msg << ")";
@@ -2521,9 +2519,9 @@ void Executor::callExternalFunction(ExecutionState &state,
       static_cast<ConstantExpr*>(ce.get())->toMemory((void*) &args[i]);
     } else {
       ref<Expr> arg = toUnique(state, *ai);
-      if (arg->isConstant()) {
+      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(arg)) {
         // XXX kick toMemory functions from here
-        static_cast<ConstantExpr*>(arg.get())->toMemory((void*) &args[i]);
+        CE->toMemory((void*) &args[i]);
       } else {
         std::string msg = "external call with symbolic argument: " + function->getName();
         terminateStateOnExecError(state, msg);
@@ -2578,7 +2576,7 @@ ref<Expr> Executor::replaceReadWithSymbolic(ExecutionState &state,
     return e;
 
   // right now, we don't replace symbolics (is there any reason too?)
-  if (!e->isConstant())
+  if (!isa<ConstantExpr>(e))
     return e;
 
   if (n != 1 && random() %  n)
@@ -2620,9 +2618,9 @@ void Executor::executeAlloc(ExecutionState &state,
                             bool zeroMemory,
                             const ObjectState *reallocFrom) {
   size = toUnique(state, size);
-  if (size->isConstant()) {
+  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(size)) {
     MemoryObject *mo = 
-      memory->allocate(size->getConstantValue(), isLocal, false, 
+      memory->allocate(CE->getConstantValue(), isLocal, false, 
                        state.prevPC->inst);
     if (!mo) {
       bindLocal(target, state, ConstantExpr::alloc(0, kMachinePointerType));
@@ -2793,9 +2791,9 @@ void Executor::executeMemoryOperation(ExecutionState &state,
   unsigned bytes = Expr::getMinBytesForWidth(type);
 
   if (SimplifySymIndices) {
-    if (!address->isConstant())
+    if (!isa<ConstantExpr>(address))
       address = state.constraints.simplifyExpr(address);
-    if (isWrite && !value->isConstant())
+    if (isWrite && !isa<ConstantExpr>(value))
       value = state.constraints.simplifyExpr(value);
   }
 
@@ -3174,9 +3172,7 @@ void Executor::getCoveredLines(const ExecutionState &state,
 
 void Executor::doImpliedValueConcretization(ExecutionState &state,
                                             ref<Expr> e,
-                                            ref<Expr> value) {
-  assert(value->isConstant() && "non-constant passed in place of constant");
-  
+                                            ref<ConstantExpr> value) {
   if (DebugCheckForImpliedValues)
     ImpliedValue::checkForImpliedValues(solver->solver, e, value);
 
@@ -3186,7 +3182,7 @@ void Executor::doImpliedValueConcretization(ExecutionState &state,
        it != ie; ++it) {
     ReadExpr *re = it->first.get();
     
-    if (re->index->isConstant()) {
+    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(re->index)) {
       // FIXME: This is the sole remaining usage of the Array object
       // variable. Kill me.
       const MemoryObject *mo = re->updates.root->object;
@@ -3197,9 +3193,10 @@ void Executor::doImpliedValueConcretization(ExecutionState &state,
         // in other cases we would like to concretize the outstanding
         // reads, but we have no facility for that yet)
       } else {
-        assert(!os->readOnly && "not possible? read only object with static read?");
+        assert(!os->readOnly && 
+               "not possible? read only object with static read?");
         ObjectState *wos = state.addressSpace.getWriteable(mo, os);
-        wos->write(re->index->getConstantValue(), it->second);
+        wos->write(CE->getConstantValue(), it->second);
       }
     }
   }

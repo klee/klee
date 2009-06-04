@@ -362,7 +362,7 @@ private:
 
   void doImpliedValueConcretization(ExecutionState &state,
                                     ref<Expr> e,
-                                    ref<Expr> value);
+                                    ref<ConstantExpr> value);
 
   /// Add a timer to be executed periodically.
   ///

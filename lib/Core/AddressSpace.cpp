@@ -72,8 +72,8 @@ bool AddressSpace::resolveOne(ExecutionState &state,
                               ref<Expr> address,
                               ObjectPair &result,
                               bool &success) {
-  if (address->isConstant()) {
-    success = resolveOne(address->getConstantValue(), result);
+  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(address)) {
+    success = resolveOne(CE->getConstantValue(), result);
     return true;
   } else {
     TimerStatIncrementer timer(stats::resolveTime);
@@ -163,9 +163,9 @@ bool AddressSpace::resolve(ExecutionState &state,
                            ResolutionList &rl, 
                            unsigned maxResolutions,
                            double timeout) {
-  if (p->isConstant()) {
+  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(p)) {
     ObjectPair res;
-    if (resolveOne(p->getConstantValue(), res))
+    if (resolveOne(CE->getConstantValue(), res))
       rl.push_back(res);
     return false;
   } else {

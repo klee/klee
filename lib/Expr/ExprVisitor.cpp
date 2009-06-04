@@ -22,7 +22,7 @@ namespace {
 using namespace klee;
 
 ref<Expr> ExprVisitor::visit(const ref<Expr> &e) {
-  if (!UseVisitorHash || e->isConstant()) {
+  if (!UseVisitorHash || isa<ConstantExpr>(e)) {
     return visitActual(e);
   } else {
     visited_ty::iterator it = visited.find(e);
@@ -38,7 +38,7 @@ ref<Expr> ExprVisitor::visit(const ref<Expr> &e) {
 }
 
 ref<Expr> ExprVisitor::visitActual(const ref<Expr> &e) {
-  if (e->isConstant()) {    
+  if (isa<ConstantExpr>(e)) {    
     return e;
   } else {
     Expr &ep = *e.get();
@@ -106,7 +106,7 @@ ref<Expr> ExprVisitor::visitActual(const ref<Expr> &e) {
         if (recursive)
           e = visit(e);
       }
-      if (!e->isConstant()) {
+      if (!isa<ConstantExpr>(e)) {
         res = visitExprPost(*e.get());
         if (res.kind==Action::ChangeTo)
           e = res.argument;

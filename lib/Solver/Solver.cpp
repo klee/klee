@@ -112,7 +112,7 @@ bool Solver::mayBeFalse(const Query& query, bool &result) {
 
 bool Solver::getValue(const Query& query, ref<Expr> &result) {
   // Maintain invariants implementation expect.
-  if (query.expr->isConstant()) {
+  if (isa<ConstantExpr>(query.expr)) {
     result = query.expr;
     return true;
   }
