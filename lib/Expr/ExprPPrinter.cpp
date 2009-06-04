@@ -231,44 +231,89 @@ class PPrinter : public ExprPPrinter {
     PC << e->getWidth();
   }
 
-  /// hasOrderedReads - True iff all children are reads with
-  /// consecutive offsets according to the given \arg stride.
-  bool hasOrderedReads(const Expr *ep, int stride) {
-    const ReadExpr *base = dyn_ref_cast<ReadExpr>(ep->getKid(0));
-    if (!base)
+  
+  bool isReadExprAtOffset(ref<Expr> e, const ReadExpr *base, ref<Expr> offset) {
+    
+    const ReadExpr *re = dyn_ref_cast<ReadExpr>(e.get());
+      
+    // right now, all Reads are byte reads but some
+    // transformations might change this
+    if (!re || (re->getWidth() != Expr::Int8))
       return false;
-
+      
+    // Check if the index follows the stride. 
+    // FIXME: How aggressive should this be simplified. The
+    // canonicalizing builder is probably the right choice, but this
+    // is yet another area where we would really prefer it to be
+    // global or else use static methods.
+    return SubExpr::create(re->index, base->index) == offset;
+  }
+  
+  
+  /// hasOrderedReads: \arg e must be a ConcatExpr, \arg stride must
+  /// be 1 or -1.  
+  ///
+  /// If all children of this Concat are reads or concats of reads
+  /// with consecutive offsets according to the given \arg stride, it
+  /// returns the base ReadExpr according to \arg stride: first Read
+  /// for 1 (MSB), last Read for -1 (LSB).  Otherwise, it returns
+  /// null.
+  const ReadExpr* hasOrderedReads(ref<Expr> e, int stride) {
+    assert(e->getKind() == Expr::Concat);
+    assert(stride == 1 || stride == -1);
+    
+    const ReadExpr *base = dyn_ref_cast<ReadExpr>(e->getKid(0));
+    
+    // right now, all Reads are byte reads but some
+    // transformations might change this
+    if (!base || base->getWidth() != Expr::Int8)
+      return false;
+    
     // Get stride expr in proper index width.
     Expr::Width idxWidth = base->index->getWidth();
     ref<Expr> strideExpr = ConstantExpr::alloc(stride, idxWidth);
-    ref<Expr> offset = ConstantExpr::alloc(0, idxWidth);
-    for (unsigned i=1; i<ep->getNumKids(); ++i) {
-      const ReadExpr *re = dyn_ref_cast<ReadExpr>(ep->getKid(i));
-      if (!re) 
-        return false;
-
-      // Check if the index follows the stride. 
-      // FIXME: How aggressive should this be simplified. The
-      // canonicalizing builder is probably the right choice, but this
-      // is yet another area where we would really prefer it to be
-      // global or else use static methods.
+    ref<Expr> offset = ConstantExpr::create(0, idxWidth);
+    
+    e = e->getKid(1);
+    
+    // concat chains are unbalanced to the right
+    while (e->getKind() == Expr::Concat) {
       offset = AddExpr::create(offset, strideExpr);
-      if (SubExpr::create(re->index, base->index) != offset)
-        return false;
+      if (!isReadExprAtOffset(e->getKid(0), base, offset))
+	return NULL;
+      
+      e = e->getKid(1);
     }
-
-    return true;
+    
+    offset = AddExpr::create(offset, strideExpr);
+    if (!isReadExprAtOffset(e, base, offset))
+      return NULL;
+    
+    if (stride == -1)
+      return static_ref_cast<ReadExpr>(e.get());
+    else return base;
   }
 
-  /// hasAllByteReads - True iff all children are byte level reads.
+#if 0
+  /// hasAllByteReads - True iff all children are byte level reads or
+  /// concats of byte level reads.
   bool hasAllByteReads(const Expr *ep) {
-    for (unsigned i=0; i<ep->getNumKids(); ++i) {
-      const ReadExpr *re = dyn_ref_cast<ReadExpr>(ep->getKid(i));
-      if (!re || re->getWidth() != Expr::Int8)
-        return false;
+    switch (ep->kind) {
+      Expr::Read: {
+	// right now, all Reads are byte reads but some
+	// transformations might change this
+	return ep->getWidth() == Expr::Int8;
+      }
+      Expr::Concat: {
+	for (unsigned i=0; i<ep->getNumKids(); ++i) {
+	  if (!hashAllByteReads(ep->getKid(i)))
+	    return false;
+	}
+      }
+    default: return false;
     }
-    return true;
   }
+#endif
 
   void printRead(const ReadExpr *re, PrintContext &PC, unsigned indent) {
     print(re->index, PC);
@@ -377,20 +422,18 @@ public:
         // or they are (base + offset) and base will get printed with
         // a declaration.
         if (PCMultibyteReads && e->getKind() == Expr::Concat) {
-          const Expr *ep = e.get();
-          if (hasAllByteReads(ep)) {
-            bool isMSB = hasOrderedReads(ep, 1);
-            if (isMSB || hasOrderedReads(ep, -1)) {
-              PC << "(Read" << (isMSB ? "MSB" : "LSB");
-              printWidth(PC, e);
-              PC << ' ';
-              unsigned firstIdx = isMSB ? 0 : ep->getNumKids()-1;
-              printRead(static_ref_cast<ReadExpr>(ep->getKid(firstIdx)), 
-                        PC, PC.pos);
-              PC << ')';
-              return;
-            }
-          }
+	  const ReadExpr *base = hasOrderedReads(e, -1);
+	  int isLSB = (base != NULL);
+	  if (!isLSB)
+	    base = hasOrderedReads(e, 1);
+	  if (base) {
+	    PC << "(Read" << (isLSB ? "LSB" : "MSB");
+	    printWidth(PC, e);
+	    PC << ' ';
+	    printRead(base, PC, PC.pos);
+	    PC << ')';
+	    return;
+	  }
         }
 
 	PC << '(' << e->getKind();
