@@ -30,7 +30,8 @@ static void _getImpliedValue(ref<Expr> e,
                              ImpliedValueList &results) {
   switch (e->getKind()) {
   case Expr::Constant: {
-    assert(value == e->getConstantValue() && "error in implied value calculation");
+    assert(value == cast<ConstantExpr>(e)->getConstantValue() && 
+           "error in implied value calculation");
     break;
   }
 
@@ -203,14 +204,15 @@ void ImpliedValue::getImpliedValues(ref<Expr> e,
 void ImpliedValue::checkForImpliedValues(Solver *S, ref<Expr> e, 
                                          ref<ConstantExpr> value) {
   std::vector<ref<ReadExpr> > reads;
-  std::map<ref<ReadExpr>, ref<Expr> > found;
+  std::map<ref<ReadExpr>, ref<ConstantExpr> > found;
   ImpliedValueList results;
 
   getImpliedValues(e, value, results);
 
   for (ImpliedValueList::iterator i = results.begin(), ie = results.end();
        i != ie; ++i) {
-    std::map<ref<ReadExpr>, ref<Expr> >::iterator it = found.find(i->first);
+    std::map<ref<ReadExpr>, ref<ConstantExpr> >::iterator it = 
+      found.find(i->first);
     if (it != found.end()) {
       assert(it->second->getConstantValue() == i->second->getConstantValue() &&
              "I don't think so Scott");
@@ -247,7 +249,7 @@ void ImpliedValue::checkForImpliedValues(Solver *S, ref<Expr> e,
     ref<ConstantExpr> possible;
     bool success = S->getValue(Query(assume, var), possible);
     assert(success && "FIXME: Unhandled solver failure");    
-    std::map<ref<ReadExpr>, ref<Expr> >::iterator it = found.find(var);
+    std::map<ref<ReadExpr>, ref<ConstantExpr> >::iterator it = found.find(var);
     bool res;
     success = S->mustBeTrue(Query(assume, EqExpr::create(var, possible)), res);
     assert(success && "FIXME: Unhandled solver failure");    

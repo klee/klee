@@ -26,7 +26,8 @@ namespace klee {
   class ReadExpr;
   class Solver;
 
-  typedef std::vector< std::pair<ref<ReadExpr>, ref<Expr> > > ImpliedValueList;
+  typedef std::vector< std::pair<ref<ReadExpr>, 
+                                 ref<ConstantExpr> > > ImpliedValueList;
   
   namespace ImpliedValue {        
     void getImpliedValues(ref<Expr> e, ref<ConstantExpr> cvalue, 

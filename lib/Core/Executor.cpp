@@ -1015,31 +1015,31 @@ ref<Expr> Executor::toUnique(const ExecutionState &state,
 
 /* Concretize the given expression, and return a possible constant value. 
    'reason' is just a documentation string stating the reason for concretization. */
-ref<Expr> Executor::toConstant(ExecutionState &state, 
-                               ref<Expr> e,
-                               const char *reason) {
+ref<klee::ConstantExpr> 
+Executor::toConstant(ExecutionState &state, 
+                     ref<Expr> e,
+                     const char *reason) {
   e = state.constraints.simplifyExpr(e);
-  if (!isa<ConstantExpr>(e)) {
-    ref<ConstantExpr> value;
-    bool success = solver->getValue(state, e, value);
-    assert(success && "FIXME: Unhandled solver failure");
-    
-    std::ostringstream os;
-    os << "silently concretizing (reason: " << reason << ") expression " << e 
-       << " to value " << value 
-       << " (" << (*(state.pc)).info->file << ":" << (*(state.pc)).info->line << ")";
-      
-    if (AllExternalWarnings)
-      klee_warning(reason, os.str().c_str());
-    else
-      klee_warning_once(reason, "%s", os.str().c_str());
+  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(e))
+    return CE;
 
-    addConstraint(state, EqExpr::create(e, value));
+  ref<ConstantExpr> value;
+  bool success = solver->getValue(state, e, value);
+  assert(success && "FIXME: Unhandled solver failure");
     
-    return value;
-  } else {
-    return e;
-  }
+  std::ostringstream os;
+  os << "silently concretizing (reason: " << reason << ") expression " << e 
+     << " to value " << value 
+     << " (" << (*(state.pc)).info->file << ":" << (*(state.pc)).info->line << ")";
+      
+  if (AllExternalWarnings)
+    klee_warning(reason, os.str().c_str());
+  else
+    klee_warning_once(reason, "%s", os.str().c_str());
+
+  addConstraint(state, EqExpr::create(e, value));
+    
+  return value;
 }
 
 void Executor::executeGetValue(ExecutionState &state,
@@ -1909,8 +1909,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   case Instruction::FPTrunc: {
     FPTruncInst *fi = cast<FPTruncInst>(i);
     Expr::Width resultType = Expr::getWidthForLLVMType(fi->getType());
-    ref<Expr> arg = toConstant(state, eval(ki, 0, state).value,
-                               "floating point");
+    ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
+                                       "floating point");
     uint64_t value = floats::trunc(arg->getConstantValue(),
                                    resultType,
                                    arg->getWidth());
@@ -1921,8 +1921,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   case Instruction::FPExt: {
     FPExtInst *fi = cast<FPExtInst>(i);
     Expr::Width resultType = Expr::getWidthForLLVMType(fi->getType());
-    ref<Expr> arg = toConstant(state, eval(ki, 0, state).value,
-                               "floating point");
+    ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
+                                       "floating point");
     uint64_t value = floats::ext(arg->getConstantValue(),
                                  resultType,
                                  arg->getWidth());
@@ -1933,8 +1933,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   case Instruction::FPToUI: {
     FPToUIInst *fi = cast<FPToUIInst>(i);
     Expr::Width resultType = Expr::getWidthForLLVMType(fi->getType());
-    ref<Expr> arg = toConstant(state, eval(ki, 0, state).value,
-                               "floating point");
+    ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
+                                       "floating point");
     uint64_t value = floats::toUnsignedInt(arg->getConstantValue(),
                                            resultType,
                                            arg->getWidth());
@@ -1945,8 +1945,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   case Instruction::FPToSI: {
     FPToSIInst *fi = cast<FPToSIInst>(i);
     Expr::Width resultType = Expr::getWidthForLLVMType(fi->getType());
-    ref<Expr> arg = toConstant(state, eval(ki, 0, state).value,
-                               "floating point");
+    ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
+                                       "floating point");
     uint64_t value = floats::toSignedInt(arg->getConstantValue(),
                                          resultType,
                                          arg->getWidth());
@@ -1957,8 +1957,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   case Instruction::UIToFP: {
     UIToFPInst *fi = cast<UIToFPInst>(i);
     Expr::Width resultType = Expr::getWidthForLLVMType(fi->getType());
-    ref<Expr> arg = toConstant(state, eval(ki, 0, state).value,
-                               "floating point");
+    ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
+                                       "floating point");
     uint64_t value = floats::UnsignedIntToFP(arg->getConstantValue(),
                                              resultType);
     bindLocal(ki, state, ConstantExpr::alloc(value, resultType));
@@ -1968,8 +1968,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   case Instruction::SIToFP: {
     SIToFPInst *fi = cast<SIToFPInst>(i);
     Expr::Width resultType = Expr::getWidthForLLVMType(fi->getType());
-    ref<Expr> arg = toConstant(state, eval(ki, 0, state).value,
-                               "floating point");
+    ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
+                                       "floating point");
     uint64_t value = floats::SignedIntToFP(arg->getConstantValue(),
                                            resultType,
                                            arg->getWidth());
@@ -1980,10 +1980,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   case Instruction::FCmp: {
     FCmpInst *fi = cast<FCmpInst>(i);
     Expr::Width resultType = Expr::getWidthForLLVMType(fi->getType());
-    ref<Expr> left  = toConstant(state, eval(ki, 0, state).value, 
-                                 "floating point");
-    ref<Expr> right = toConstant(state, eval(ki, 1, state).value,
-                                 "floating point");
+    ref<ConstantExpr> left  = toConstant(state, eval(ki, 0, state).value, 
+                                         "floating point");
+    ref<ConstantExpr> right = toConstant(state, eval(ki, 1, state).value,
+                                         "floating point");
     uint64_t leftVal = left->getConstantValue();
     uint64_t rightVal = right->getConstantValue();
  
@@ -2804,7 +2804,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
   solver->setTimeout(stpTimeout);
   if (!state.addressSpace.resolveOne(state, solver, address, op, success)) {
     address = toConstant(state, address, "resolveOne failure");
-    success = state.addressSpace.resolveOne(address->getConstantValue(), op);
+    success = state.addressSpace.resolveOne(cast<ConstantExpr>(address)->getConstantValue(), op);
   }
   solver->setTimeout(0);
 

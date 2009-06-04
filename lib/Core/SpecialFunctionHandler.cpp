@@ -419,7 +419,7 @@ void SpecialFunctionHandler::handleUnderConstrained(ExecutionState &state,
   assert(isa<ConstantExpr>(arguments[0]) &&
    	 "symbolic argument given to klee_under_constrained!");
 
-  unsigned v = arguments[0]->getConstantValue();
+  unsigned v = cast<ConstantExpr>(arguments[0])->getConstantValue();
   llvm::cerr << "argument = " << v << " under=" << state.underConstrained << "\n";
   if(v) {
     assert(state.underConstrained == false &&
@@ -599,14 +599,14 @@ void SpecialFunctionHandler::handleCheckMemoryAccess(ExecutionState &state,
   } else {
     ObjectPair op;
 
-    if (!state.addressSpace.resolveOne(address->getConstantValue(), op)) {
+    if (!state.addressSpace.resolveOne(cast<ConstantExpr>(address)->getConstantValue(), op)) {
       executor.terminateStateOnError(state,
                                      "check_memory_access: memory error",
                                      "ptr.err",
                                      executor.getAddressInfo(state, address));
     } else {
       ref<Expr> chk = op.first->getBoundsCheckPointer(address, 
-                                                      size->getConstantValue());
+                                                      cast<ConstantExpr>(size)->getConstantValue());
       if (!cast<ConstantExpr>(chk)->getConstantValue()) {
         executor.terminateStateOnError(state,
                                        "check_memory_access: memory error",
@@ -636,8 +636,8 @@ void SpecialFunctionHandler::handleDefineFixedObject(ExecutionState &state,
   assert(isa<ConstantExpr>(arguments[1]) &&
          "expect constant size argument to klee_define_fixed_object");
   
-  uint64_t address = arguments[0]->getConstantValue();
-  uint64_t size = arguments[1]->getConstantValue();
+  uint64_t address = cast<ConstantExpr>(arguments[0])->getConstantValue();
+  uint64_t size = cast<ConstantExpr>(arguments[1])->getConstantValue();
   MemoryObject *mo = executor.memory->allocateFixed(address, size, state.prevPC->inst);
   executor.bindObjectInState(state, mo, false);
   mo->isUserSpecified = true; // XXX hack;

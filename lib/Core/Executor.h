@@ -319,7 +319,8 @@ private:
   /// should generally be avoided.
   ///
   /// \param purpose An identify string to printed in case of concretization.
-  ref<Expr> toConstant(ExecutionState &state, ref<Expr> e, const char *purpose);
+  ref<klee::ConstantExpr> toConstant(ExecutionState &state, ref<Expr> e, 
+                                     const char *purpose);
 
   /// Bind a constant value for e to the given target. NOTE: This
   /// function may fork state if the state has multiple seeds.

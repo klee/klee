@@ -730,10 +730,9 @@ public:
   bool exprMustBeValue(ref<Expr> e, uint64_t value) {
     CexConstifier cc(objectValues);
     ref<Expr> v = cc.visit(e);
-    if (!isa<ConstantExpr>(v)) return false;
-    // XXX reenable once all reads and vars are fixed
-    //    assert(v.isConstant() && "not all values have been fixed");
-    return v->getConstantValue() == value;
+    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(v))
+      return CE->getConstantValue() == value;
+    return false;
   }
 };
 

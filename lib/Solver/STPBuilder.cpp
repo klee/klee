@@ -449,7 +449,7 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
 
   switch (e->getKind()) {
   case Expr::Constant: {
-    uint64_t asUInt64 = e->getConstantValue();
+    uint64_t asUInt64 = cast<ConstantExpr>(e)->getConstantValue();
     *width_out = e->getWidth();
 
     if (*width_out > 64)

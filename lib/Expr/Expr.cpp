@@ -189,11 +189,6 @@ unsigned ReadExpr::computeHash() {
   return hashValue;
 }
 
-uint64_t Expr::getConstantValue() const {
-  assert(getKind() == Constant);
-  return static_cast<const ConstantExpr*>(this)->asUInt64;
-}
-
 ref<Expr> Expr::createFromKind(Kind k, std::vector<CreateArg> args) {
   unsigned numArgs = args.size();
   
@@ -428,22 +423,26 @@ ref<Expr> SelectExpr::create(ref<Expr> c, ref<Expr> t, ref<Expr> f) {
 ref<Expr> ConcatExpr::create(const ref<Expr> &l, const ref<Expr> &r) {
   Expr::Width w = l->getWidth() + r->getWidth();
   
-  /* Constant folding */
-  if (l->getKind() == Expr::Constant && r->getKind() == Expr::Constant) {
-    // XXX: should fix this constant limitation soon
-    assert(w <= 64 && "ConcatExpr::create(): don't support concats describing constants greater than 64 bits yet");
-    
-    uint64_t res = (l->getConstantValue() << r->getWidth()) + r->getConstantValue();
-    return ConstantExpr::create(res, w);
+  // Fold concatenation of constants.
+  //
+  // FIXME: concat 0 x -> zext x ?
+  if (ConstantExpr *lCE = dyn_cast<ConstantExpr>(l)) {
+    if (ConstantExpr *rCE = dyn_cast<ConstantExpr>(r)) {
+      assert(w <= 64 && "ConcatExpr::create(): don't support concats describing constants greater than 64 bits yet");
+      
+      uint64_t res = (lCE->getConstantValue() << rCE->getWidth()) + 
+        rCE->getConstantValue();
+      return ConstantExpr::create(res, w);
+    }
   }
 
   // Merge contiguous Extracts
-  if (l->getKind() == Expr::Extract && r->getKind() == Expr::Extract) {
-    const ExtractExpr* ee_left = cast<ExtractExpr>(l);
-    const ExtractExpr* ee_right = cast<ExtractExpr>(r);
-    if (ee_left->expr == ee_right->expr &&
-	ee_right->offset + ee_right->width == ee_left->offset) {
-      return ExtractExpr::create(ee_left->expr, ee_right->offset, w);
+  if (ExtractExpr *ee_left = dyn_cast<ExtractExpr>(l)) {
+    if (ExtractExpr *ee_right = dyn_cast<ExtractExpr>(r)) {
+      if (ee_left->expr == ee_right->expr &&
+          ee_right->offset + ee_right->width == ee_left->offset) {
+        return ExtractExpr::create(ee_left->expr, ee_right->offset, w);
+      }
     }
   }
 
@@ -949,7 +948,8 @@ static ref<Expr> TryConstArrayOpt(const ref<ConstantExpr> &cl,
       return res;
     
     for (const UpdateNode *un = rd->updates.head; un; un = un->next) {
-      if (un->index != first_idx_match && un->value->getConstantValue() == ct) {
+      if (un->index != first_idx_match && 
+          cast<ConstantExpr>(un->value)->getConstantValue() == ct) {
 	ref<Expr> curr_eq = EqExpr::create(un->index, rd->index);
 	res = OrExpr::create(curr_eq, res);
       }

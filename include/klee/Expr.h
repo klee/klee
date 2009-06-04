@@ -197,8 +197,6 @@ public:
 
   ///
 
-  uint64_t getConstantValue() const;
-
   /* Static utility methods */
 
   static void printKind(std::ostream &os, Kind k);

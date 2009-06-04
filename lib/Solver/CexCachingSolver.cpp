@@ -220,7 +220,7 @@ bool CexCachingSolver::computeValidity(const Query& query,
   assert(isa<ConstantExpr>(q) && 
          "assignment evaluation did not result in constant");
 
-  if (q->getConstantValue()) {
+  if (cast<ConstantExpr>(q)->getConstantValue()) {
     if (!getAssignment(query, a))
       return false;
     result = !a ? Solver::True : Solver::Unknown;
