@@ -42,8 +42,19 @@ namespace klee {
         scan(*it);
     }
 
+    /// printOne - Pretty print a single expression prefixed by a
+    /// message and followed by a line break.
     static void printOne(std::ostream &os, const char *message, 
                          const ref<Expr> &e);
+
+    /// printSingleExpr - Pretty print a single expression.
+    ///
+    /// The expression will not be followed by a line break.
+    ///
+    /// Note that if the output stream is not positioned at the
+    /// beginning of a line then printing will not resume at the
+    /// correct position following any output line breaks.
+    static void printSingleExpr(std::ostream &os, const ref<Expr> &e);
 
     static void printConstraints(std::ostream &os,
                                  const ConstraintManager &constraints);

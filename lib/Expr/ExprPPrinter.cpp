@@ -406,7 +406,6 @@ public:
             PC << "(Not";
             printWidth(PC, e);
             PC << ' ';
-            // FIXME: This is a boom if right is a constant.
             print(ee->right, PC);
             PC << ')';
             return;
@@ -482,6 +481,16 @@ void ExprPPrinter::printOne(std::ostream &os,
   PC << message << ": ";
   p.print(e, PC);
   PC.breakLine();
+}
+
+void ExprPPrinter::printSingleExpr(std::ostream &os, const ref<Expr> &e) {
+  PPrinter p(os);
+  p.scan(e);
+
+  // FIXME: Need to figure out what to do here. Probably print as a
+  // "forward declaration" with whatever syntax we pick for that.
+  PrintContext PC(os);
+  p.print(e, PC);
 }
 
 void ExprPPrinter::printConstraints(std::ostream &os,

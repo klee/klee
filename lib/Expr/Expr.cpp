@@ -320,8 +320,7 @@ ref<Expr> Expr::createPointer(uint64_t v) {
 }
 
 void Expr::print(std::ostream &os) const {
-  const ref<Expr> tmp((Expr*)this);
-  ExprPPrinter::printOne(os, "", tmp);
+  ExprPPrinter::printSingleExpr(os, (Expr*)this);
 }
 
 /***/
