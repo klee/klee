@@ -38,11 +38,33 @@ namespace expr {
   /// Decl - Base class for top level declarations.
   class Decl {
   public:
-    Decl();
+    enum DeclKind {
+      ArrayDeclKind,
+      ExprVarDeclKind,
+      VersionVarDeclKind,
+      QueryCommandDeclKind,
+      
+      DeclKindLast = QueryCommandDeclKind,
+      VarDeclKindFirst = ExprVarDeclKind,
+      VarDeclKindLast = VersionVarDeclKind,
+      CommandDeclKindFirst = QueryCommandDeclKind,
+      CommandDeclKindLast = QueryCommandDeclKind
+    };
+
+  private:
+    DeclKind Kind;
+
+  public:
+    Decl(DeclKind _Kind);
     virtual ~Decl() {}
+
+    /// getKind - Get the decl kind.
+    DeclKind getKind() const { return Kind; }
 
     /// dump - Dump the AST node to stderr.
     virtual void dump() = 0;
+
+    static bool classof(const Decl *) { return true; }
   };
 
   /// ArrayDecl - Array declarations.
@@ -78,6 +100,11 @@ namespace expr {
               InputIterator ContentsEnd=InputIterator()) 
       : Name(_Name), Size(_Size), Domain(_Domain), Range(_Range),
         Contents(ContentsBegin, ContentsEnd) {}
+
+    static bool classof(const Decl *D) {
+      return D->getKind() == Decl::ArrayDeclKind;
+    }
+    static bool classof(const ArrayDecl *) { return true; }
   };
 
   /// VarDecl - Variable declarations, used to associate names to
@@ -88,24 +115,46 @@ namespace expr {
   class VarDecl : public Decl {
   public:
     const Identifier *Name;    
+
+    static bool classof(const Decl *D) {
+      return (Decl::VarDeclKindFirst <= D->getKind() &&
+              D->getKind() <= Decl::VarDeclKindLast);
+    }
+    static bool classof(const VarDecl *) { return true; }
   };
 
   /// ExprVarDecl - Expression variable declarations.
   class ExprVarDecl : public VarDecl {
   public:
     ExprHandle Value;
+
+    static bool classof(const Decl *D) {
+      return D->getKind() == Decl::ExprVarDeclKind;
+    }
+    static bool classof(const ExprVarDecl *) { return true; }
   };
 
   /// VersionVarDecl - Array version variable declarations.
   class VersionVarDecl : public VarDecl {
   public:
     VersionHandle Value;
+
+    static bool classof(const Decl *D) {
+      return D->getKind() == Decl::VersionVarDeclKind;
+    }
+    static bool classof(const VersionVarDecl *) { return true; }
   };
 
   /// CommandDecl - Base class for language commands.
   class CommandDecl : public Decl {
   public:
-    const Identifier *Name;
+    CommandDecl(DeclKind _Kind) : Decl(_Kind) {}
+
+    static bool classof(const Decl *D) {
+      return (Decl::CommandDeclKindFirst <= D->getKind() &&
+              D->getKind() <= Decl::CommandDeclKindLast);
+    }
+    static bool classof(const CommandDecl *) { return true; }
   };
 
   /// QueryCommand - Query commands.
@@ -140,10 +189,16 @@ namespace expr {
     QueryCommand(InputIterator ConstraintsBegin, 
                  InputIterator ConstraintsEnd,
                  ExprHandle _Query)
-      : Constraints(ConstraintsBegin, ConstraintsEnd),
+      : CommandDecl(QueryCommandDeclKind),
+        Constraints(ConstraintsBegin, ConstraintsEnd),
         Query(_Query) {}
 
     virtual void dump();
+
+    static bool classof(const Decl *D) {
+      return D->getKind() == QueryCommandDeclKind;
+    }
+    static bool classof(const QueryCommand *) { return true; }
   };
   
   /// Parser - Public interface for parsing a .pc language file.

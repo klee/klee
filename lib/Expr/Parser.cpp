@@ -1307,7 +1307,7 @@ void ParserImpl::Error(const char *Message, const Token &At) {
 // AST API
 // FIXME: Move out of parser.
 
-Decl::Decl() {}
+Decl::Decl(DeclKind _Kind) : Kind(_Kind) {}
 
 void QueryCommand::dump() {
   // FIXME: This is masking the difference between an actual query and
