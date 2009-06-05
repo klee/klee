@@ -1584,53 +1584,25 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     break;
 
     // Arithmetic / logical
-#define FP_CONSTANT_BINOP(op, type, l, r, target, state) \
-        bindLocal(target, state, \
-                  ConstantExpr::alloc(op(toConstant(state, l, "floating point")->getConstantValue(), \
-                                         toConstant(state, r, "floating point")->getConstantValue(), \
-                                         type), type))
+
   case Instruction::Add: {
-    BinaryOperator *bi = cast<BinaryOperator>(i);
     ref<Expr> left = eval(ki, 0, state).value;
     ref<Expr> right = eval(ki, 1, state).value;
-
-    if( bi->getType()->getTypeID() == llvm::Type::IntegerTyID ) {
-      bindLocal(ki, state, AddExpr::create(left, right));
-    } else {
-      Expr::Width type = Expr::getWidthForLLVMType(bi->getType());
-      FP_CONSTANT_BINOP(floats::add, type, left, right, ki, state);
-    }
-
+    bindLocal(ki, state, AddExpr::create(left, right));
     break;
   }
 
   case Instruction::Sub: {
-    BinaryOperator *bi = cast<BinaryOperator>(i);
     ref<Expr> left = eval(ki, 0, state).value;
     ref<Expr> right = eval(ki, 1, state).value;
-
-    if( bi->getType()->getTypeID() == llvm::Type::IntegerTyID ) {
-      bindLocal(ki, state, SubExpr::create(left, right));
-    } else {
-      Expr::Width type = Expr::getWidthForLLVMType(bi->getType());
-      FP_CONSTANT_BINOP(floats::sub, type, left, right, ki, state);
-    }
-
+    bindLocal(ki, state, SubExpr::create(left, right));
     break;
   }
  
   case Instruction::Mul: {
-    BinaryOperator *bi = cast<BinaryOperator>(i);
     ref<Expr> left = eval(ki, 0, state).value;
     ref<Expr> right = eval(ki, 1, state).value;
-
-    if( bi->getType()->getTypeID() == llvm::Type::IntegerTyID ) {
-      bindLocal(ki, state, MulExpr::create(left, right));
-    } else {
-      Expr::Width type = Expr::getWidthForLLVMType(bi->getType());
-      FP_CONSTANT_BINOP(floats::mul, type, left, right, ki, state);
-    }
-
+    bindLocal(ki, state, MulExpr::create(left, right));
     break;
   }
 
@@ -1905,7 +1877,43 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     break;
   }
 
-    // Floating Point specific instructions
+    // Floating point specific instructions
+
+#define FP_CONSTANT_BINOP(op, type, l, r, target, state)        \
+    bindLocal(target, state,                                            \
+              ConstantExpr::alloc(op(toConstant(state, l,               \
+                                                "floating point")->getConstantValue(), \
+                                     toConstant(state, r,               \
+                                                "floating point")->getConstantValue(), \
+                                     type), type))
+
+  case Instruction::FAdd: {
+    BinaryOperator *bi = cast<BinaryOperator>(i);
+    ref<Expr> left = eval(ki, 0, state).value;
+    ref<Expr> right = eval(ki, 1, state).value;
+    Expr::Width type = Expr::getWidthForLLVMType(bi->getType());
+    FP_CONSTANT_BINOP(floats::add, type, left, right, ki, state);
+    break;
+  }
+
+  case Instruction::FSub: {
+    BinaryOperator *bi = cast<BinaryOperator>(i);
+    ref<Expr> left = eval(ki, 0, state).value;
+    ref<Expr> right = eval(ki, 1, state).value;
+    Expr::Width type = Expr::getWidthForLLVMType(bi->getType());
+    FP_CONSTANT_BINOP(floats::sub, type, left, right, ki, state);
+    break;
+  }
+ 
+  case Instruction::FMul: {
+    BinaryOperator *bi = cast<BinaryOperator>(i);
+    ref<Expr> left = eval(ki, 0, state).value;
+    ref<Expr> right = eval(ki, 1, state).value;
+    Expr::Width type = Expr::getWidthForLLVMType(bi->getType());
+    FP_CONSTANT_BINOP(floats::mul, type, left, right, ki, state);
+    break;
+  }
+
   case Instruction::FPTrunc: {
     FPTruncInst *fi = cast<FPTruncInst>(i);
     Expr::Width resultType = Expr::getWidthForLLVMType(fi->getType());
@@ -2116,7 +2124,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     break;
  
   default:
-    terminateStateOnExecError(state, "invalid instruction");
+    terminateStateOnExecError(state, "illegal instruction");
     break;
   }
 }
