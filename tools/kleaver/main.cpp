@@ -132,14 +132,55 @@ static bool EvaluateInputAST(const char *Filename,
     if (QueryCommand *QC = dyn_cast<QueryCommand>(D)) {
       llvm::cout << "Query " << Index << ":\t";
 
-      assert(QC->Values.empty() && QC->Objects.empty() && 
-             "FIXME: Support counterexample query commands!");
-      bool result;
-      if (S->mustBeTrue(Query(ConstraintManager(QC->Constraints), QC->Query),
+      assert("FIXME: Support counterexample query commands!");
+      if (QC->Values.empty() && QC->Objects.empty()) {
+        bool result;
+        if (S->mustBeTrue(Query(ConstraintManager(QC->Constraints), QC->Query),
+                          result)) {
+          llvm::cout << (result ? "VALID" : "INVALID");
+        } else {
+          llvm::cout << "FAIL";
+        }
+      } else if (!QC->Values.empty()) {
+        assert(QC->Objects.empty() && 
+               "FIXME: Support counterexamples for values and objects!");
+        assert(QC->Values.size() == 1 &&
+               "FIXME: Support counterexamples for multiple values!");
+        assert(QC->Query->isFalse() &&
+               "FIXME: Support counterexamples with non-trivial query!");
+        ref<ConstantExpr> result;
+        if (S->getValue(Query(ConstraintManager(QC->Constraints), 
+                              QC->Values[0]),
                         result)) {
-        llvm::cout << (result ? "VALID" : "INVALID");
+          llvm::cout << "INVALID\n";
+          llvm::cout << "\tExpr 0:\t" << result;
+        } else {
+          llvm::cout << "FAIL";
+        }
       } else {
-        llvm::cout << "FAIL";
+        std::vector< std::vector<unsigned char> > result;
+        
+        if (S->getInitialValues(Query(ConstraintManager(QC->Constraints), 
+                                      QC->Query),
+                                QC->Objects, result)) {
+          llvm::cout << "INVALID\n";
+
+          for (unsigned i = 0, e = result.size(); i != e; ++i) {
+            llvm::cout << "\tArray " << i << ":\t"
+                       << "arr" << QC->Objects[i]->id
+                       << "[";
+            for (unsigned j = 0; j != QC->Objects[i]->size; ++j) {
+              llvm::cout << (unsigned) result[i][j];
+              if (j + 1 != QC->Objects[i]->size)
+                llvm::cout << ", ";
+            }
+            llvm::cout << "]";
+            if (i + 1 != e)
+              llvm::cout << "\n";
+          }
+        } else {
+          llvm::cout << "FAIL";
+        }
       }
 
       llvm::cout << "\n";
