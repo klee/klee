@@ -31,20 +31,16 @@ using namespace klee;
 
 Module *klee::linkWithLibrary(Module *module, 
                               const std::string &libraryName) {
-  try {
-    Linker linker("klee", module, false);
+  Linker linker("klee", module, false);
 
-    llvm::sys::Path libraryPath(libraryName);
-    bool native = false;
+  llvm::sys::Path libraryPath(libraryName);
+  bool native = false;
     
-    if (linker.LinkInFile(libraryPath, native)) {
-      assert(0 && "linking in library failed!");
-    }
-    
-    return linker.releaseModule();
-  } catch (...) {
-    assert(0 && "error during linking");
+  if (linker.LinkInFile(libraryPath, native)) {
+    assert(0 && "linking in library failed!");
   }
+    
+  return linker.releaseModule();
 }
 
 Function *klee::getDirectCallTarget(const Instruction *i) {

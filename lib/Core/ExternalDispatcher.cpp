@@ -80,11 +80,7 @@ ExternalDispatcher::ExternalDispatcher() {
   if (executionEngine) {
     // Make sure we can resolve symbols in the program as well. The zero arg
     // to the function tells DynamicLibrary to load the program, not a library.
-    try {
-      dl_symbols.LoadLibraryPermanently(0);
-    } catch (...) {
-      assert(0 && "Exception in LoadLibraryPermantently.\n");
-    }
+    dl_symbols.LoadLibraryPermanently(0);
   }
 
 #ifdef WINDOWS
