@@ -109,8 +109,15 @@ static bool EvaluateInputAST(const char *Filename,
     llvm::cerr << Filename << ": parse failure: "
                << N << " errors.\n";
     success = false;
-  }
+  }  
   delete P;
+
+  if (!success) {
+    for (std::vector<Decl*>::iterator it = Decls.begin(),
+           ie = Decls.end(); it != ie; ++it)
+      delete *it;
+    return success;
+  }
 
   // FIXME: Support choice of solver.
   Solver *S, *STP = new STPSolver(true);
@@ -156,7 +163,7 @@ int main(int argc, char **argv) {
   std::string ErrorStr;
   MemoryBuffer *MB = MemoryBuffer::getFileOrSTDIN(InputFile.c_str(), &ErrorStr);
   if (!MB) {
-    llvm::cerr << argv[0] << ": ERROR: " << ErrorStr << "\n";
+    llvm::cerr << argv[0] << ": error: " << ErrorStr << "\n";
     return 1;
   }
 
@@ -172,7 +179,7 @@ int main(int argc, char **argv) {
                                MB);
     break;
   default:
-    llvm::cerr << argv[0] << ": ERROR: Unknown program action!\n";
+    llvm::cerr << argv[0] << ": error: Unknown program action!\n";
   }
 
   delete MB;
