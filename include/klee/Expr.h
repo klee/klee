@@ -195,7 +195,16 @@ public:
   // but using those children. 
   virtual ref<Expr> rebuild(ref<Expr> kids[/* getNumKids() */]) const = 0;
 
-  ///
+  //
+
+  /// isZero - Is this a constant zero.
+  bool isZero() const;
+  
+  /// isTrue - Is this the true expression.
+  bool isTrue() const;
+
+  /// isFalse - Is this the false expression.
+  bool isFalse() const;
 
   /* Static utility methods */
 
@@ -882,6 +891,28 @@ COMPARISON_EXPR_CLASS(Slt)
 COMPARISON_EXPR_CLASS(Sle)
 COMPARISON_EXPR_CLASS(Sgt)
 COMPARISON_EXPR_CLASS(Sge)
+
+// Implementations
+
+inline bool Expr::isZero() const {
+  if (const ConstantExpr *CE = dyn_cast<ConstantExpr>(this))
+    return CE->getConstantValue() == 0;
+  return false;
+}
+  
+inline bool Expr::isTrue() const {
+  if (const ConstantExpr *CE = dyn_cast<ConstantExpr>(this))
+    return (CE->getWidth() == Expr::Bool &&
+            CE->getConstantValue() == 1);
+  return false;
+}
+  
+inline bool Expr::isFalse() const {
+  if (const ConstantExpr *CE = dyn_cast<ConstantExpr>(this))
+    return (CE->getWidth() == Expr::Bool &&
+            CE->getConstantValue() == 0);
+  return false;
+}
 
 } // End klee namespace
 
