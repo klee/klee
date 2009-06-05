@@ -91,6 +91,8 @@ ref<Expr> ExprVisitor::visitActual(const ref<Expr> &e) {
     }
 
     switch(res.kind) {
+    default:
+      assert(0 && "invalid kind");
     case Action::DoChildren: {  
       bool rebuild = false;
       ref<Expr> e(&ep), kids[8];
@@ -117,8 +119,6 @@ ref<Expr> ExprVisitor::visitActual(const ref<Expr> &e) {
       return e;
     case Action::ChangeTo:
       return res.argument;
-    default:
-      assert(0 && "invalid kind");
     }
   }
 }

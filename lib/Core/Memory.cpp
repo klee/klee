@@ -362,24 +362,24 @@ ref<Expr> ObjectState::read(ref<Expr> offset, Expr::Width width) const {
     return read((unsigned) CE->getConstantValue(), width);
   } else { 
     switch (width) {
+    default: assert(0 && "invalid type");
     case  Expr::Bool: return  read1(offset);
     case  Expr::Int8: return  read8(offset);
     case Expr::Int16: return read16(offset);
     case Expr::Int32: return read32(offset);
     case Expr::Int64: return read64(offset);
-    default: assert(0 && "invalid type");
     }
   }
 }
 
 ref<Expr> ObjectState::read(unsigned offset, Expr::Width width) const {
   switch (width) {
+  default: assert(0 && "invalid type");
   case  Expr::Bool: return  read1(offset);
   case  Expr::Int8: return  read8(offset);
   case Expr::Int16: return read16(offset);
   case Expr::Int32: return read32(offset);
   case Expr::Int64: return read64(offset);
-  default: assert(0 && "invalid type");
   }
 }
 

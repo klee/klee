@@ -92,12 +92,11 @@ STPBuilder::~STPBuilder() {
 
 ExprHandle STPBuilder::getTempVar(Expr::Width w) {
   switch (w) {
+  default: assert(0 && "invalid type");
   case Expr::Int8: return tempVars[0];
   case Expr::Int16: return tempVars[1];
   case Expr::Int32: return tempVars[2];
   case Expr::Int64: return tempVars[3];
-  default:
-    assert(0 && "invalid type");
   }
 }
 
@@ -760,8 +759,9 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
     ExprHandle left = construct(ee->left, width_out);
     ExprHandle right = construct(ee->right, width_out);
     if (*width_out==1) {
-      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(ee->left)) {
-        assert(!CE->getConstantValue() && "uncanonicalized eq");
+      if (isa<ConstantExpr>(ee->left)) {
+        assert(!cast<ConstantExpr>(ee->left)->getConstantValue() && 
+               "uncanonicalized eq");
         return vc_notExpr(vc, right);
       } else {
         return vc_iffExpr(vc, left, right);

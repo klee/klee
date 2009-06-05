@@ -172,7 +172,10 @@ std::pair< ref<Expr>, ref<Expr> > Solver::getRange(const Query& query) {
                                                                           width)),
                                     ConstantExpr::create(0, width))),
                    res);
+
       assert(success && "FIXME: Unhandled solver failure");
+      (void) success;
+
       if (res) {
         hi = mid;
       } else {
@@ -191,7 +194,10 @@ std::pair< ref<Expr>, ref<Expr> > Solver::getRange(const Query& query) {
       mayBeTrue(query.withExpr(EqExpr::create(e, ConstantExpr::create(0, 
                                                                       width))), 
                 res);
+
     assert(success && "FIXME: Unhandled solver failure");      
+    (void) success;
+
     if (res) {
       min = 0;
     } else {
@@ -205,7 +211,10 @@ std::pair< ref<Expr>, ref<Expr> > Solver::getRange(const Query& query) {
                                                    ConstantExpr::create(mid, 
                                                                         width))),
                     res);
+
         assert(success && "FIXME: Unhandled solver failure");      
+        (void) success;
+
         if (res) {
           hi = mid;
         } else {
@@ -226,7 +235,10 @@ std::pair< ref<Expr>, ref<Expr> > Solver::getRange(const Query& query) {
                                                   ConstantExpr::create(mid, 
                                                                        width))),
                    res);
+
       assert(success && "FIXME: Unhandled solver failure");      
+      (void) success;
+
       if (res) {
         hi = mid;
       } else {

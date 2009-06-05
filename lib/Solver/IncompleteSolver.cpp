@@ -19,12 +19,12 @@ using namespace llvm;
 IncompleteSolver::PartialValidity 
 IncompleteSolver::negatePartialValidity(PartialValidity pv) {
   switch(pv) {
-    case MustBeTrue:  return MustBeFalse;
-    case MustBeFalse: return MustBeTrue;
-    case MayBeTrue:   return MayBeFalse;
-    case MayBeFalse:  return MayBeTrue;
-    case TrueOrFalse: return TrueOrFalse;
-    default: assert(0 && "invalid partial validity");  
+  default: assert(0 && "invalid partial validity");  
+  case MustBeTrue:  return MustBeFalse;
+  case MustBeFalse: return MustBeTrue;
+  case MayBeTrue:   return MayBeFalse;
+  case MayBeFalse:  return MayBeTrue;
+  case TrueOrFalse: return TrueOrFalse;
   }
 }
 

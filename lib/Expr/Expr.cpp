@@ -41,6 +41,7 @@ ref<Expr> Expr::createTempRead(const Array *array, Expr::Width w) {
   UpdateList ul(array, true, 0);
 
   switch (w) {
+  default: assert(0 && "invalid width");
   case Expr::Bool: 
     return ZExtExpr::create(ReadExpr::create(ul, 
                                              ConstantExpr::alloc(0,kMachinePointerType)),
@@ -79,7 +80,6 @@ ref<Expr> Expr::createTempRead(const Array *array, Expr::Width w) {
                                                 ConstantExpr::alloc(1,kMachinePointerType)),
                                ReadExpr::create(ul, 
                                                 ConstantExpr::alloc(0,kMachinePointerType)));
-  default: assert(0 && "invalid width");
   }
 }
 
@@ -191,8 +191,15 @@ unsigned ReadExpr::computeHash() {
 
 ref<Expr> Expr::createFromKind(Kind k, std::vector<CreateArg> args) {
   unsigned numArgs = args.size();
-  
+  (void) numArgs;
+
   switch(k) {
+    case Constant:
+    case Extract:
+    case Read:
+    default:
+      assert(0 && "invalid kind");
+
     case NotOptimized:
       assert(numArgs == 1 && args[0].isExpr() &&
              "invalid args array for given opcode");
@@ -254,14 +261,7 @@ ref<Expr> Expr::createFromKind(Kind k, std::vector<CreateArg> args) {
       BINARY_EXPR_CASE(Sle);
       BINARY_EXPR_CASE(Sgt);
       BINARY_EXPR_CASE(Sge);
-
-    case Constant:
-    case Extract:
-    case Read:
-    default:
-      assert(0 && "invalid kind");
   }
-
 }
 
 
@@ -327,23 +327,23 @@ void Expr::print(std::ostream &os) const {
 
 ref<Expr> ConstantExpr::fromMemory(void *address, Width width) {
   switch (width) {
+  default: assert(0 && "invalid type");
   case  Expr::Bool: return ConstantExpr::create(*(( uint8_t*) address), width);
   case  Expr::Int8: return ConstantExpr::create(*(( uint8_t*) address), width);
   case Expr::Int16: return ConstantExpr::create(*((uint16_t*) address), width);
   case Expr::Int32: return ConstantExpr::create(*((uint32_t*) address), width);
   case Expr::Int64: return ConstantExpr::create(*((uint64_t*) address), width);
-  default: assert(0 && "invalid type");
   }
 }
 
 void ConstantExpr::toMemory(void *address) {
   switch (width) {
+  default: assert(0 && "invalid type");
   case  Expr::Bool: *(( uint8_t*) address) = value; break;
   case  Expr::Int8: *(( uint8_t*) address) = value; break;
   case Expr::Int16: *((uint16_t*) address) = value; break;
   case Expr::Int32: *((uint32_t*) address) = value; break;
   case Expr::Int64: *((uint64_t*) address) = value; break;
-  default: assert(0 && "invalid type");
   }
 }
 

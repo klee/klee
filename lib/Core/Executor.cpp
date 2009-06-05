@@ -628,6 +628,7 @@ void Executor::branch(ExecutionState &state,
           solver->getValue(state, siit->assignment.evaluate(conditions[i]), 
                            res);
         assert(success && "FIXME: Unhandled solver failure");
+        (void) success;
         if (res->getConstantValue())
           break;
       }
@@ -683,6 +684,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       ref<ConstantExpr> value; 
       bool success = solver->getValue(current, condition, value);
       assert(success && "FIXME: Unhandled solver failure");
+      (void) success;
       addConstraint(current, EqExpr::create(value, condition));
       condition = value;
     }      
@@ -752,6 +754,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       bool success = 
         solver->getValue(current, siit->assignment.evaluate(condition), res);
       assert(success && "FIXME: Unhandled solver failure");
+      (void) success;
       if (ConstantExpr *CE = dyn_cast<ConstantExpr>(res)) {
         if (CE->getConstantValue()) {
           trueSeed = true;
@@ -817,6 +820,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
         bool success = 
           solver->getValue(current, siit->assignment.evaluate(condition), res);
         assert(success && "FIXME: Unhandled solver failure");
+        (void) success;
         if (res->getConstantValue()) {
           trueSeeds.push_back(*siit);
         } else {
@@ -889,6 +893,7 @@ void Executor::addConstraint(ExecutionState &state, ref<Expr> condition) {
       bool success = 
         solver->mustBeFalse(state, siit->assignment.evaluate(condition), res);
       assert(success && "FIXME: Unhandled solver failure");
+      (void) success;
       if (res) {
         siit->patchSeed(state, condition, solver);
         warn = true;
@@ -1026,6 +1031,7 @@ Executor::toConstant(ExecutionState &state,
   ref<ConstantExpr> value;
   bool success = solver->getValue(state, e, value);
   assert(success && "FIXME: Unhandled solver failure");
+  (void) success;
     
   std::ostringstream os;
   os << "silently concretizing (reason: " << reason << ") expression " << e 
@@ -1052,6 +1058,7 @@ void Executor::executeGetValue(ExecutionState &state,
     ref<ConstantExpr> value;
     bool success = solver->getValue(state, e, value);
     assert(success && "FIXME: Unhandled solver failure");
+    (void) success;
     bindLocal(target, state, value);
   } else {
     std::set< ref<Expr> > values;
@@ -1061,6 +1068,7 @@ void Executor::executeGetValue(ExecutionState &state,
       bool success = 
         solver->getValue(state, siit->assignment.evaluate(e), value);
       assert(success && "FIXME: Unhandled solver failure");
+      (void) success;
       values.insert(value);
     }
     
@@ -1409,6 +1417,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         bool result;
         bool success = solver->mayBeTrue(state, match, result);
         assert(success && "FIXME: Unhandled solver failure");
+        (void) success;
         if (result) {
           std::map<BasicBlock*, ref<Expr> >::iterator it =
             targets.insert(std::make_pair(si->getSuccessor(i),
@@ -1419,6 +1428,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       bool res;
       bool success = solver->mayBeTrue(state, isDefault, res);
       assert(success && "FIXME: Unhandled solver failure");
+      (void) success;
       if (res)
         targets.insert(std::make_pair(si->getSuccessor(0), isDefault));
       
@@ -1532,6 +1542,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         ref<ConstantExpr> value;
         bool success = solver->getValue(*free, v, value);
         assert(success && "FIXME: Unhandled solver failure");
+        (void) success;
         StatePair res = fork(*free, EqExpr::create(v, value), true);
         if (res.first) {
           void *addr = (void*) (unsigned long) value->getConstantValue();
@@ -2358,6 +2369,7 @@ std::string Executor::getAddressInfo(ExecutionState &state,
     ref<ConstantExpr> value;
     bool success = solver->getValue(state, address, value);
     assert(success && "FIXME: Unhandled solver failure");
+    (void) success;
     example = value->getConstantValue();
     info << "\texample: " << example << "\n";
     std::pair< ref<Expr>, ref<Expr> > res = solver->getRange(state, address);
@@ -2524,6 +2536,7 @@ void Executor::callExternalFunction(ExecutionState &state,
       ref<ConstantExpr> ce;
       bool success = solver->getValue(state, *ai, ce);
       assert(success && "FIXME: Unhandled solver failure");
+      (void) success;
       static_cast<ConstantExpr*>(ce.get())->toMemory((void*) &args[i]);
     } else {
       ref<Expr> arg = toUnique(state, *ai);
@@ -2663,6 +2676,7 @@ void Executor::executeAlloc(ExecutionState &state,
     ref<ConstantExpr> example;
     bool success = solver->getValue(state, size, example);
     assert(success && "FIXME: Unhandled solver failure");
+    (void) success;
     
     // Try and start with a small example
     while (example->getConstantValue() > 128) {
@@ -2672,6 +2686,7 @@ void Executor::executeAlloc(ExecutionState &state,
       bool res;
       bool success = solver->mayBeTrue(state, EqExpr::create(tmp, size), res);
       assert(success && "FIXME: Unhandled solver failure");      
+      (void) success;
       if (!res)
         break;
       example = tmp;
@@ -2684,11 +2699,13 @@ void Executor::executeAlloc(ExecutionState &state,
       ref<ConstantExpr> tmp;
       bool success = solver->getValue(*fixedSize.second, size, tmp);
       assert(success && "FIXME: Unhandled solver failure");      
+      (void) success;
       bool res;
       success = solver->mustBeTrue(*fixedSize.second, 
                                    EqExpr::create(tmp, size),
                                    res);
       assert(success && "FIXME: Unhandled solver failure");      
+      (void) success;
       if (res) {
         executeAlloc(*fixedSize.second, tmp, isLocal,
                      target, zeroMemory, reallocFrom);

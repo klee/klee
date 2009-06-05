@@ -45,6 +45,9 @@ Executor::evalConstantExpr(llvm::ConstantExpr *ce) {
   if (numOperands > 2) op3 = evalConstant(ce->getOperand(2));
   
   switch (ce->getOpcode()) {
+    default :
+      assert(0 && "unknown ConstantExpr type");
+
     case Instruction::Trunc: return ExtractExpr::createByteOff(op1, 
 							       0,
 							       Expr::getWidthForLLVMType(type));
@@ -135,9 +138,6 @@ Executor::evalConstantExpr(llvm::ConstantExpr *ce) {
     case Instruction::FPToSI:
     case Instruction::FCmp:
       assert(0 && "floating point ConstantExprs unsupported");
-
-    default :
-      assert(0 && "unknown ConstantExpr type");
   }
 }
 
