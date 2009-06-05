@@ -1,6 +1,7 @@
 #include "expr/Lexer.h"
 #include "expr/Parser.h"
 
+#include "klee/Constraints.h"
 #include "klee/Expr.h"
 #include "klee/Solver.h"
 #include "klee/util/ExprPPrinter.h"
@@ -27,16 +28,19 @@ namespace {
 
   enum ToolActions {
     PrintTokens,
-    PrintAST
+    PrintAST,
+    Evaluate
   };
 
   static llvm::cl::opt<ToolActions> 
   ToolAction(llvm::cl::desc("Tool actions:"),
-             llvm::cl::init(PrintTokens),
+             llvm::cl::init(Evaluate),
              llvm::cl::values(
              clEnumValN(PrintTokens, "print-tokens",
                         "Print tokens from the input file."),
              clEnumValN(PrintAST, "print-ast",
+                        "Print parsed AST nodes from the input file."),
+             clEnumValN(Evaluate, "evaluate",
                         "Print parsed AST nodes from the input file."),
              clEnumValEnd));
 }
@@ -50,7 +54,9 @@ static std::string escapedString(const char *start, unsigned length) {
     } else if (c == '\n') {
       s << "\\n";
     } else {
-      s << "\\x" << hexdigit(((unsigned char) c >> 4) & 0xF) << hexdigit((unsigned char) c & 0xF);
+      s << "\\x" 
+        << hexdigit(((unsigned char) c >> 4) & 0xF) 
+        << hexdigit((unsigned char) c & 0xF);
     }
   }
   return s.str();
@@ -89,6 +95,58 @@ static bool PrintInputAST(const char *Filename,
   return success;
 }
 
+static bool EvaluateInputAST(const char *Filename,
+                          const MemoryBuffer *MB) {
+  std::vector<Decl*> Decls;
+  Parser *P = Parser::Create(Filename, MB);
+  P->SetMaxErrors(20);
+  while (Decl *D = P->ParseTopLevelDecl()) {
+    Decls.push_back(D);
+  }
+
+  bool success = true;
+  if (unsigned N = P->GetNumErrors()) {
+    llvm::cerr << Filename << ": parse failure: "
+               << N << " errors.\n";
+    success = false;
+  }
+  delete P;
+
+  // FIXME: Support choice of solver.
+  Solver *S, *STP = new STPSolver(true);
+  S = createCexCachingSolver(STP);
+  S = createCachingSolver(S);
+  S = createIndependentSolver(S);
+
+  unsigned Index = 0;
+  for (std::vector<Decl*>::iterator it = Decls.begin(),
+         ie = Decls.end(); it != ie; ++it) {
+    Decl *D = *it;
+    if (QueryCommand *QC = dyn_cast<QueryCommand>(D)) {
+      llvm::cout << "Query " << Index << ":\t";
+
+      assert(QC->Values.empty() && QC->Objects.empty() && 
+             "FIXME: Support counterexample query commands!");
+      bool result;
+      if (S->mustBeTrue(Query(ConstraintManager(QC->Constraints), QC->Query),
+                        result)) {
+        llvm::cout << (result ? "VALID" : "INVALID");
+      } else {
+        llvm::cout << "FAIL";
+      }
+
+      llvm::cout << "\n";
+      ++Index;
+    }
+
+    delete D;
+  }
+
+  delete S;
+
+  return success;
+}
+
 int main(int argc, char **argv) {
   bool success = true;
 
@@ -108,6 +166,10 @@ int main(int argc, char **argv) {
     break;
   case PrintAST:
     success = PrintInputAST(InputFile=="-" ? "<stdin>" : InputFile.c_str(), MB);
+    break;
+  case Evaluate:
+    success = EvaluateInputAST(InputFile=="-" ? "<stdin>" : InputFile.c_str(),
+                               MB);
     break;
   default:
     llvm::cerr << argv[0] << ": ERROR: Unknown program action!\n";

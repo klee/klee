@@ -1,0 +1,13 @@
+# RUN: %kleaver -evaluate %s > %t.log
+
+# RUN: grep "Query 0:	INVALID" %t.log
+# Query 0
+(query [] (Not (Ult (ReadLSB w32 0 arr65)
+                    16)))
+
+# RUN: grep "Query 1:	VALID" %t.log
+# Query 1
+(query [(Eq N0:(ReadLSB w32 0 arr1) 10)
+        (Eq N1:(ReadLSB w32 4 arr1) 20)]
+       (Eq (Add w32 N0 N1)
+           30))
