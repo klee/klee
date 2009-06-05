@@ -853,7 +853,10 @@ ExprResult ParserImpl::ParseBinaryParenExpr(const Token &Name,
     return ConstantExpr::alloc(0, ResTy);
 
   ref<Expr> LHS_E = LHS.get(), RHS_E = RHS.get();
-  assert(LHS_E->getWidth() == RHS_E->getWidth() && "Mismatched types!");
+  if (LHS_E->getWidth() != RHS_E->getWidth()) {
+    Error("type widths do not match in binary expression", Name);
+    return ConstantExpr::alloc(0, ResTy);
+  }
 
   switch (Kind) {    
   case Expr::Add: return AddExpr::alloc(LHS_E, RHS_E);

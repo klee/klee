@@ -1,0 +1,9 @@
+# RUN: not %kleaver %s 2> %t.log
+
+
+
+# RUN: grep "TypeChecking.pc:6:9: error: type widths do not match in binary expression" %t.log
+(query [(Eq (ReadLSB w32 0 arr1) true)] 
+       false)
+
+# RUN: grep "TypeChecking.pc: parse failure: 1 errors." %t.log
