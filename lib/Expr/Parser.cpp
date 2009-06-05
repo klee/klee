@@ -396,13 +396,17 @@ DeclResult ParserImpl::ParseCommandDecl() {
 /// ParseQueryCommand - Parse query command. The lexer should be
 /// positioned at the 'query' keyword.
 /// 
-/// 'query' expressions-list expression [expression-list [array-list]]
+/// 'query' expressions-list expression [expressions-list [array-list]]
 DeclResult ParserImpl::ParseQueryCommand() {
+  std::vector<ExprHandle> Constraints;
+  std::vector<ExprHandle> Values;
+  std::vector<const Array*> Objects;
+  ExprResult Res;
+
   // FIXME: We need a command for this. Or something.
   ExprSymTab.clear();
   VersionSymTab.clear();
 
-  std::vector<ExprHandle> Constraints;
   ConsumeExpectedToken(Token::KWQuery);
   if (Tok.kind != Token::LSquare) {
     Error("malformed query, expected constraint list.");
@@ -415,24 +419,77 @@ DeclResult ParserImpl::ParseQueryCommand() {
   while (Tok.kind != Token::RSquare) {
     if (Tok.kind == Token::EndOfFile) {
       Error("unexpected end of file.");
-      return new QueryCommand(Constraints.begin(), Constraints.end(),
-                              ConstantExpr::alloc(false, Expr::Bool));
+      Res = ExprResult(ConstantExpr::alloc(0, Expr::Bool));
+      goto exit;
     }
 
-    ExprResult Res = ParseExpr(TypeResult(Expr::Bool));
-    if (Res.isValid())
-      Constraints.push_back(Res.get());
+    ExprResult Constraint = ParseExpr(TypeResult(Expr::Bool));
+    if (Constraint.isValid())
+      Constraints.push_back(Constraint.get());
   }
-
   ConsumeRSquare();
 
-  ExprResult Res = ParseExpr(TypeResult());
+  Res = ParseExpr(TypeResult(Expr::Bool));
   if (!Res.isValid()) // Error emitted by ParseExpr.
     Res = ExprResult(ConstantExpr::alloc(0, Expr::Bool));
 
-  ExpectRParen("unexpected argument to 'query'.");  
-  return new QueryCommand(Constraints.begin(), Constraints.end(),
-                          Res.get());
+  // Return if there are no optional lists of things to evaluate.
+  if (Tok.kind == Token::RParen)
+    goto exit;
+  
+  ConsumeExpectedToken(Token::LSquare);
+  // FIXME: Should avoid reading past unbalanced parens here.
+  while (Tok.kind != Token::RSquare) {
+    if (Tok.kind == Token::EndOfFile) {
+      Error("unexpected end of file.");
+      goto exit;
+    }
+
+    ExprResult Res = ParseExpr(TypeResult());
+    if (Res.isValid())
+      Values.push_back(Res.get());
+  }
+  ConsumeRSquare();
+
+  // Return if there are no optional lists of things to evaluate.
+  if (Tok.kind == Token::RParen)
+    goto exit;
+
+  ConsumeExpectedToken(Token::LSquare);
+  // FIXME: Should avoid reading past unbalanced parens here.
+  while (Tok.kind != Token::RSquare) {
+    if (Tok.kind == Token::EndOfFile) {
+      Error("unexpected end of file.");
+      goto exit;
+    }
+
+    // FIXME: Factor out.
+    if (Tok.kind != Token::Identifier) {
+      Error("unexpected token.");
+      ConsumeToken();
+      continue;
+    }
+
+    Token LTok = Tok;
+    const Identifier *Label = GetOrCreateIdentifier(Tok);
+    ConsumeToken();
+
+    // Declare or create array.
+    const ArrayDecl *AD = ArraySymTab[Label];
+    if (!AD) {
+      // FIXME: Don't make up arrays.
+      unsigned Id = atoi(&Label->Name.c_str()[3]);
+      AD = new ArrayDecl(Label, 0, 32, 8, new Array(0, Id, 0));
+    }
+    
+    Objects.push_back(AD->Root);
+  }
+  ConsumeRSquare();
+
+ exit:
+  if (Tok.kind != Token::EndOfFile)
+    ExpectRParen("unexpected argument to 'query'.");  
+  return new QueryCommand(Constraints, Res.get(), Values, Objects);
 }
 
 /// ParseNumberOrExpr - Parse an expression whose type cannot be
@@ -1035,12 +1092,13 @@ VersionResult ParserImpl::ParseVersionSpecifier() {
       // Declare or create array.
       const ArrayDecl *&A = ArraySymTab[Label];
       if (!A) {
-        //        Array = new ArrayDecl(Label, 0, 32, 8);
         unsigned id = atoi(&Label->Name.c_str()[3]);
         Array *root = new Array(0, id, 0);
+        ArrayDecl *AD = new ArrayDecl(Label, 0, 32, 8, root);
         // Create update list mapping of name -> array.
         VersionSymTab.insert(std::make_pair(Label,
                                             UpdateList(root, true, NULL)));
+        ArraySymTab.insert(std::make_pair(Label, AD));
       }
     }
 
@@ -1312,12 +1370,39 @@ void ParserImpl::Error(const char *Message, const Token &At) {
 
 Decl::Decl(DeclKind _Kind) : Kind(_Kind) {}
 
+void ArrayDecl::dump() {
+  std::cout << "array " << Name->Name << " : "
+            << 'w' << Domain << " -> "
+            << 'w' << Range << " = ";
+
+  if (Contents.empty()) {
+    std::cout << "symbolic\n";
+  } else {
+    std::cout << '{';
+    for (std::vector<ExprHandle>::const_iterator it = Contents.begin(),
+           ie = Contents.end(); it != ie;) {
+      std::cout << *it;
+      if (++it != ie)
+        std::cout << " ";
+    }
+    std::cout << "}\n";
+  }
+}
+
 void QueryCommand::dump() {
-  // FIXME: This is masking the difference between an actual query and
-  // a query decl.
-  ExprPPrinter::printQuery(std::cout, 
-                           ConstraintManager(Constraints), 
-                           Query);
+  const ExprHandle *ValuesBegin = 0, *ValuesEnd = 0;
+  const Array * const* ObjectsBegin = 0, * const* ObjectsEnd = 0;
+  if (!Values.empty()) {
+    ValuesBegin = &Values[0];
+    ValuesEnd = ValuesBegin + Values.size();
+  }
+  if (!Objects.empty()) {
+    ObjectsBegin = &Objects[0];
+    ObjectsEnd = ObjectsBegin + Objects.size();
+  }
+  ExprPPrinter::printQuery(std::cout, ConstraintManager(Constraints), 
+                           Query, ValuesBegin, ValuesEnd,
+                           ObjectsBegin, ObjectsEnd);
 }
 
 // Public parser API

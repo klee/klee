@@ -70,8 +70,8 @@ namespace expr {
   /// ArrayDecl - Array declarations.
   ///
   /// For example:
-  ///   array obj : 32 -> 8 = symbolic
-  ///   array obj[32] : 32 -> 8 = { ... }
+  ///   array obj[] : w32 -> w8 = symbolic
+  ///   array obj[32] : w32 -> w8 = { ... }
   class ArrayDecl : public Decl {
   public:
     /// Name - The name of this array.
@@ -86,20 +86,25 @@ namespace expr {
 
     /// Range - The width of array contents.
     const unsigned Range;
-    
+
+    /// Root - The root array object defined by this decl.
+    const Array *Root;
+
     /// Contents - The initial contents of the array. The array is
     /// symbolic if no contents are specified. The contained
     /// expressions are guaranteed to be constants.
     const std::vector<ExprHandle> Contents;
 
   public:
-    template<typename InputIterator>
     ArrayDecl(const Identifier *_Name, unsigned _Size, 
               unsigned _Domain, unsigned _Range,
-              InputIterator ContentsBegin=InputIterator(), 
-              InputIterator ContentsEnd=InputIterator()) 
-      : Name(_Name), Size(_Size), Domain(_Domain), Range(_Range),
-        Contents(ContentsBegin, ContentsEnd) {}
+              const Array *_Root)
+      : Decl(ArrayDeclKind), Name(_Name), 
+        Size(_Size), Domain(_Domain), Range(_Range), 
+        Root(_Root) {
+    }
+
+    virtual void dump();
 
     static bool classof(const Decl *D) {
       return D->getKind() == Decl::ArrayDeclKind;
@@ -182,16 +187,19 @@ namespace expr {
 
     /// Objects - Symbolic arrays whose initial contents should be
     /// given if the query is invalid.
-    const std::vector<ArrayDecl> Objects;
+    const std::vector<const Array*> Objects;
 
   public:
-    template<typename InputIterator>
-    QueryCommand(InputIterator ConstraintsBegin, 
-                 InputIterator ConstraintsEnd,
-                 ExprHandle _Query)
+    QueryCommand(const std::vector<ExprHandle> &_Constraints,
+                 ExprHandle _Query,
+                 const std::vector<ExprHandle> &_Values,
+                 const std::vector<const Array*> &_Objects
+                 )
       : CommandDecl(QueryCommandDeclKind),
-        Constraints(ConstraintsBegin, ConstraintsEnd),
-        Query(_Query) {}
+        Constraints(_Constraints),
+        Query(_Query),
+        Values(_Values),
+        Objects(_Objects) {}
 
     virtual void dump();
 

@@ -498,15 +498,23 @@ void ExprPPrinter::printConstraints(std::ostream &os,
   printQuery(os, constraints, ConstantExpr::alloc(false, Expr::Bool));
 }
 
+
 void ExprPPrinter::printQuery(std::ostream &os,
                               const ConstraintManager &constraints,
-                              const ref<Expr> &q) {
+                              const ref<Expr> &q,
+                              const ref<Expr> *evalExprsBegin,
+                              const ref<Expr> *evalExprsEnd,
+                              const Array * const *evalArraysBegin,
+                              const Array * const *evalArraysEnd) {
   PPrinter p(os);
   
   for (ConstraintManager::const_iterator it = constraints.begin(),
          ie = constraints.end(); it != ie; ++it)
     p.scan(*it);
   p.scan(q);
+
+  for (const ref<Expr> *it = evalExprsBegin; it != evalExprsEnd; ++it)
+    p.scan(*it);
 
   PrintContext PC(os);
   PC << "(query [";
@@ -524,6 +532,33 @@ void ExprPPrinter::printQuery(std::ostream &os,
 
   p.printSeparator(PC, constraints.empty(), indent-1);
   p.print(q, PC);
+
+  // Print expressions to obtain values for, if any.
+  if (evalExprsBegin != evalExprsEnd) {
+    PC.breakLine(indent - 1);
+    PC << '[';
+    for (const ref<Expr> *it = evalExprsBegin; it != evalExprsEnd; ++it) {
+      p.print(*it, PC);
+      if (it + 1 != evalExprsEnd)
+        PC.breakLine(indent);
+    }
+    PC << ']';
+  }
+
+  // Print arrays to obtain values for, if any.
+  if (evalArraysBegin != evalArraysEnd) {
+    if (evalExprsBegin == evalExprsEnd)
+      PC << " []";
+
+    PC.breakLine(indent - 1);
+    PC << '[';
+    for (const Array * const* it = evalArraysBegin; it != evalArraysEnd; ++it) {
+      PC << "arr" << (*it)->id;
+      if (it + 1 != evalArraysEnd)
+        PC.breakLine(indent);
+    }
+    PC << ']';
+  }
 
   PC << ')';
   PC.breakLine();

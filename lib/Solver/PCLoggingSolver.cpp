@@ -35,13 +35,19 @@ class PCLoggingSolver : public SolverImpl {
   unsigned queryCount;
   double startTime;
 
-  void startQuery(const Query& query, const char *typeName) {
+  void startQuery(const Query& query, const char *typeName,
+                  const ref<Expr> *evalExprsBegin = 0,
+                  const ref<Expr> *evalExprsEnd = 0,
+                  const Array * const* evalArraysBegin = 0,
+                  const Array * const* evalArraysEnd = 0) {
     Statistic *S = theStatisticManager->getStatisticByName("Instructions");
     uint64_t instructions = S ? S->getValue() : 0;
     os << "# Query " << queryCount++ << " -- "
        << "Type: " << typeName << ", "
        << "Instructions: " << instructions << "\n";
-    printer->printQuery(os, query.constraints, query.expr);
+    printer->printQuery(os, query.constraints, query.expr,
+                        evalExprsBegin, evalExprsEnd,
+                        evalArraysBegin, evalArraysEnd);
     
     startTime = getWallTime();
   }
@@ -85,7 +91,8 @@ public:
   }
 
   bool computeValue(const Query& query, ref<Expr> &result) {
-    startQuery(query, "Value");
+    startQuery(query.withFalse(), "Value", 
+               &query.expr, &query.expr + 1);
     bool success = solver->impl->computeValue(query, result);
     finishQuery(success);
     if (success)
@@ -98,8 +105,19 @@ public:
                             const std::vector<const Array*> &objects,
                             std::vector< std::vector<unsigned char> > &values,
                             bool &hasSolution) {
-    // FIXME: Add objects to output.
-    startQuery(query, "InitialValues");
+    const ref<Expr> *evalExprBegin = 0, *evalExprEnd = 0;
+    if (!query.expr->isFalse()) {
+      evalExprBegin = &query.expr;
+      evalExprEnd = evalExprBegin + 1;
+    } 
+    if (objects.empty()) {
+      startQuery(query.withFalse(), "InitialValues",
+                 evalExprBegin, evalExprEnd);
+    } else {
+      startQuery(query.withFalse(), "InitialValues",
+                 evalExprBegin, evalExprEnd,
+                 &objects[0], &objects[0] + objects.size());
+    }
     bool success = solver->impl->computeInitialValues(query, objects, 
                                                       values, hasSolution);
     finishQuery(success);

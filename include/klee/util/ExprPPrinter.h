@@ -61,7 +61,11 @@ namespace klee {
 
     static void printQuery(std::ostream &os,
                            const ConstraintManager &constraints,
-                           const ref<Expr> &q);
+                           const ref<Expr> &q,
+                           const ref<Expr> *evalExprsBegin = 0,
+                           const ref<Expr> *evalExprsEnd = 0,
+                           const Array * const* evalArraysBegin = 0,
+                           const Array * const* evalArraysEnd = 0);
   };
 
 }
