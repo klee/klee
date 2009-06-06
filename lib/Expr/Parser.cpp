@@ -966,8 +966,7 @@ ExprResult ParserImpl::ParseSelectParenExpr(const Token &Name,
 }
 
 
-// need to decide if we want to allow n-ary Concat expressions in the
-// language
+// FIXME: Rewrite to only accept binary form. Make type optional.
 ExprResult ParserImpl::ParseConcatParenExpr(const Token &Name,
                                             Expr::Width ResTy) {
   std::vector<ExprHandle> Kids;

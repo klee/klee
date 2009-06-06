@@ -8,9 +8,10 @@ html, body {
 
 h1, h2, h3, tt { color: #000 }
 
-h1 { padding-top:0px; margin-top:0px;}
-h2 { color:#333333; padding-top:0.5em; }
-h3 { padding-top: 0.5em; margin-bottom: -0.25em; color:#2d58b7}
+h1 { color:#000000; padding-top: 0px; margin-top:0px;}
+h2 { color:#333333; padding-top: 0.5em; }
+h3 { color:#2d58b7; padding-top: 0.5em; margin-bottom: -0.25em; }
+h4 { color:#2d58b7; }
 li { padding-bottom: 0.5em; }
 ul { padding-left:1.5em; }
 
@@ -26,8 +27,17 @@ IMG.img_slide {
 /* Tables */
 tr { vertical-align:top }
 
-/* Instructions */
-div.instr{
+/* Syntax */
+div.syntax {
+    border: 1px solid LightSteelBlue ;
+    font-family: Courier New;
+    background-color: SeaShell;
+    padding: 7px;
+    margin: 7px;
+}
+
+/* Examples */
+div.example {
     border: 1px solid LightSteelBlue ;
     font-family: Courier New;
     background-color: #E3E3E3;
@@ -36,7 +46,16 @@ div.instr{
 }
 
 /* Instructions */
-pre.output{
+div.instr {
+    border: 1px solid LightSteelBlue ;
+    font-family: Courier New;
+    background-color: #E3E3E3;
+    padding: 7px;
+    margin: 7px;
+}
+
+/* Output */
+pre.output {
     border: 1px solid LightSteelBlue ;
     font-family: Courier New;
     background-color: #E3E3E3;
