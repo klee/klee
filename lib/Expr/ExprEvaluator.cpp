@@ -33,6 +33,27 @@ ExprVisitor::Action ExprEvaluator::evalRead(const UpdateList &ul,
   return Action::changeTo(getInitialValue(*ul.root, index));
 }
 
+ExprVisitor::Action ExprEvaluator::visitExpr(const Expr &e) {
+  // Evaluate all constant expressions here, in case they weren't folded in
+  // construction. Don't do this for reads though, because we want them to go to
+  // the normal rewrite path.
+  unsigned N = e.getNumKids();
+  if (!N || isa<ReadExpr>(e))
+    return Action::doChildren();
+
+  for (unsigned i = 0; i != N; ++i)
+    if (!isa<ConstantExpr>(e.getKid(i)))
+      return Action::doChildren();
+
+  ref<Expr> Kids[3];
+  for (unsigned i = 0; i != N; ++i) {
+    assert(i < 3);
+    Kids[i] = e.getKid(i);
+  }
+
+  return Action::changeTo(e.rebuild(Kids));
+}
+
 ExprVisitor::Action ExprEvaluator::visitRead(const ReadExpr &re) {
   ref<Expr> v = visit(re.index);
   
