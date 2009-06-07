@@ -589,6 +589,12 @@ DeclResult ParserImpl::ParseQueryCommand() {
     return DeclResult();
   }
 
+  if (Tok.kind != Token::LSquare) {
+    Error("malformed query, expected expression list.");
+    SkipUntilRParen();
+    return DeclResult();
+  }
+
   ConsumeLSquare();
   // FIXME: Should avoid reading past unbalanced parens here.
   while (Tok.kind != Token::RSquare) {
@@ -611,6 +617,12 @@ DeclResult ParserImpl::ParseQueryCommand() {
   // Return if there are no optional lists of things to evaluate.
   if (Tok.kind == Token::RParen)
     goto exit;
+
+  if (Tok.kind != Token::LSquare) {
+    Error("malformed query, expected expression list.");
+    SkipUntilRParen();
+    return DeclResult();
+  }
   
   ConsumeLSquare();
   // FIXME: Should avoid reading past unbalanced parens here.
