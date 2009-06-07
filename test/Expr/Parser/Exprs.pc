@@ -5,284 +5,284 @@
 
 # RUN: %kleaver -print-ast %s
 
-# Query 0 -- Type: Truth, Instructions: 36
-(query [] (Not (Ult (ReadLSB w32 0 arr119)
+# Query 0 -- Type: Truth, Instructions: 31
+(query [] (Not (Ult (ReadLSB w32 0 arr53)
                     16)))
-#   OK -- Elapsed: 0.000962901
+#   OK -- Elapsed: 0.00128889
 #   Is Valid: false
 
-# Query 1 -- Type: Value, Instructions: 45
-(query [(Ult N0:(ReadLSB w32 0 arr119)
+# Query 1 -- Type: Value, Instructions: 39
+(query [(Ult N0:(ReadLSB w32 0 arr53)
              16)]
        false
-       [(Add w32 168649296 (Mul w32 4 N0))])
-#   OK -- Elapsed: 4.09303e-05
-#   Result: 168649296
+       [(Add w32 31543472 (Mul w32 4 N0))])
+#   OK -- Elapsed: 0.000106812
+#   Result: 31543472
 
-# Query 2 -- Type: Truth, Instructions: 45
-(query [(Ult N0:(ReadLSB w32 0 arr119)
+# Query 2 -- Type: Truth, Instructions: 39
+(query [(Ult N0:(ReadLSB w32 0 arr53)
              16)]
        (Ult (Mul w32 4 N0) 61))
-#   OK -- Elapsed: 0.00111999
+#   OK -- Elapsed: 0.0014112
 #   Is Valid: true
 
-# Query 3 -- Type: Truth, Instructions: 66
-(query [(Ult (ReadLSB w32 0 arr119)
+# Query 3 -- Type: Truth, Instructions: 55
+(query [(Ult (ReadLSB w32 0 arr53)
              16)]
-       (Not (Ult (ReadLSB w32 0 arr126)
+       (Not (Ult (ReadLSB w32 0 arr60)
                  16)))
-#   OK -- Elapsed: 0.000853909
+#   OK -- Elapsed: 0.00128603
 #   Is Valid: false
 
-# Query 4 -- Type: Value, Instructions: 72
-(query [(Ult (ReadLSB w32 0 arr119)
+# Query 4 -- Type: Value, Instructions: 60
+(query [(Ult (ReadLSB w32 0 arr53)
              16)
-        (Ult N0:(ReadLSB w32 0 arr126)
+        (Ult N0:(ReadLSB w32 0 arr60)
              16)]
        false
-       [(Add w32 168649296 (Mul w32 4 N0))])
-#   OK -- Elapsed: 3.89818e-05
-#   Result: 168649296
+       [(Add w32 31543472 (Mul w32 4 N0))])
+#   OK -- Elapsed: 0.000141144
+#   Result: 31543472
 
-# Query 5 -- Type: Truth, Instructions: 72
-(query [(Ult (ReadLSB w32 0 arr119)
+# Query 5 -- Type: Truth, Instructions: 60
+(query [(Ult (ReadLSB w32 0 arr53)
              16)
-        (Ult N0:(ReadLSB w32 0 arr126)
+        (Ult N0:(ReadLSB w32 0 arr60)
              16)]
        (Ult (Mul w32 4 N0) 61))
-#   OK -- Elapsed: 0.00109102
+#   OK -- Elapsed: 0.00145102
 #   Is Valid: true
 
-# Query 6 -- Type: Truth, Instructions: 94
-(query [(Ult (ReadLSB w32 0 arr119)
+# Query 6 -- Type: Truth, Instructions: 77
+(query [(Ult (ReadLSB w32 0 arr53)
              16)
-        (Ult (ReadLSB w32 0 arr126)
+        (Ult (ReadLSB w32 0 arr60)
              16)]
-       (Not (Ult (ReadLSB w32 0 arr133)
+       (Not (Ult (ReadLSB w32 0 arr67)
                  16)))
-#   OK -- Elapsed: 0.000877942
+#   OK -- Elapsed: 0.00127888
 #   Is Valid: false
 
-# Query 7 -- Type: Value, Instructions: 103
-(query [(Ult (ReadLSB w32 0 arr119)
+# Query 7 -- Type: Value, Instructions: 85
+(query [(Ult (ReadLSB w32 0 arr53)
              16)
-        (Ult (ReadLSB w32 0 arr126)
+        (Ult (ReadLSB w32 0 arr60)
              16)
-        (Ult N0:(ReadLSB w32 0 arr133)
+        (Ult N0:(ReadLSB w32 0 arr67)
              16)]
        false
-       [(Add w32 168649296 (Mul w32 4 N0))])
-#   OK -- Elapsed: 4.81055e-05
-#   Result: 168649296
+       [(Add w32 31543472 (Mul w32 4 N0))])
+#   OK -- Elapsed: 0.000179052
+#   Result: 31543472
 
-# Query 8 -- Type: Truth, Instructions: 103
-(query [(Ult (ReadLSB w32 0 arr119)
+# Query 8 -- Type: Truth, Instructions: 85
+(query [(Ult (ReadLSB w32 0 arr53)
              16)
-        (Ult (ReadLSB w32 0 arr126)
+        (Ult (ReadLSB w32 0 arr60)
              16)
-        (Ult N0:(ReadLSB w32 0 arr133)
+        (Ult N0:(ReadLSB w32 0 arr67)
              16)]
        (Ult (Mul w32 4 N0) 61))
-#   OK -- Elapsed: 0.00110997
+#   OK -- Elapsed: 0.00141382
 #   Is Valid: true
 
-# Query 9 -- Type: Truth, Instructions: 124
-(query [(Ult (ReadLSB w32 0 arr119)
+# Query 9 -- Type: Truth, Instructions: 101
+(query [(Ult (ReadLSB w32 0 arr53)
              16)
-        (Ult (ReadLSB w32 0 arr126)
+        (Ult (ReadLSB w32 0 arr60)
              16)
-        (Ult (ReadLSB w32 0 arr133)
+        (Ult (ReadLSB w32 0 arr67)
              16)]
        (And (Not (Eq 3
-                     N0:(ReadLSB w32 0 arr140)))
+                     N0:(ReadLSB w32 0 arr74)))
             (And (Not (Eq 2 N0))
                  (And (Not (Eq 1 N0))
                       (Not (Eq 0 N0))))))
-#   OK -- Elapsed: 0.00117305
+#   OK -- Elapsed: 0.00163794
 #   Is Valid: false
 
-# Query 10 -- Type: Value, Instructions: 130
-(query [(Ult (ReadLSB w32 0 arr119)
+# Query 10 -- Type: Value, Instructions: 106
+(query [(Ult (ReadLSB w32 0 arr53)
              16)
-        (Ult (ReadLSB w32 0 arr126)
+        (Ult (ReadLSB w32 0 arr60)
              16)
-        (Ult (ReadLSB w32 0 arr133)
+        (Ult (ReadLSB w32 0 arr67)
              16)
         (Not (And (Not (Eq 3
-                           N0:(ReadLSB w32 0 arr140)))
+                           N0:(ReadLSB w32 0 arr74)))
                   (And (Not (Eq 2 N0))
                        (And (Not (Eq 1 N0))
                             (Not (Eq 0 N0))))))]
        false
-       [(Add w32 168742656 N0)])
-#   OK -- Elapsed: 6.11061e-05
-#   Result: 168742659
+       [(Add w32 31583216 N0)])
+#   OK -- Elapsed: 0.000283003
+#   Result: 31583219
 
-# Query 11 -- Type: Truth, Instructions: 130
-(query [(Ult (ReadLSB w32 0 arr119)
+# Query 11 -- Type: Truth, Instructions: 106
+(query [(Ult (ReadLSB w32 0 arr53)
              16)
-        (Ult (ReadLSB w32 0 arr126)
+        (Ult (ReadLSB w32 0 arr60)
              16)
-        (Ult (ReadLSB w32 0 arr133)
+        (Ult (ReadLSB w32 0 arr67)
              16)
         (Not (And (Not N0:(Eq 3
-                              N1:(ReadLSB w32 0 arr140)))
+                              N1:(ReadLSB w32 0 arr74)))
                   (And (Not N2:(Eq 2 N1))
                        (And (Not N3:(Eq 1 N1))
                             (Not N4:(Eq 0 N1))))))]
        (Or N0
            (Or N2 (Or N3 N4))))
-#   OK -- Elapsed: 0.00146289
+#   OK -- Elapsed: 0.00217485
 #   Is Valid: true
 
-# Query 12 -- Type: Truth, Instructions: 136
-(query [(Ult (ReadLSB w32 0 arr119)
+# Query 12 -- Type: Truth, Instructions: 112
+(query [(Ult (ReadLSB w32 0 arr53)
              16)
-        (Ult (ReadLSB w32 0 arr126)
+        (Ult (ReadLSB w32 0 arr60)
              16)
-        (Ult (ReadLSB w32 0 arr133)
+        (Ult (ReadLSB w32 0 arr67)
              16)
         (Not (And (Not (Eq 3
-                           N0:(ReadLSB w32 0 arr140)))
+                           N0:(ReadLSB w32 0 arr74)))
                   (And (Not (Eq 2 N0))
                        (And (Not (Eq 1 N0))
                             (Not (Eq 0 N0))))))]
        (Not (Eq 104
                 (Read w8 0 [N0=0,
-                            1=97] @ arr115))))
-#   OK -- Elapsed: 0.00246791
+                            1=97] @ arr49))))
+#   OK -- Elapsed: 0.00330305
 #   Is Valid: false
 
-# Query 13 -- Type: Truth, Instructions: 146
-(query [(Ult (ReadLSB w32 0 arr119)
+# Query 13 -- Type: Truth, Instructions: 122
+(query [(Ult (ReadLSB w32 0 arr53)
              16)
-        (Ult (ReadLSB w32 0 arr126)
+        (Ult (ReadLSB w32 0 arr60)
              16)
-        (Ult (ReadLSB w32 0 arr133)
+        (Ult (ReadLSB w32 0 arr67)
              16)
         (Not (And (Not (Eq 3
-                           N0:(ReadLSB w32 0 arr140)))
+                           N0:(ReadLSB w32 0 arr74)))
                   (And (Not (Eq 2 N0))
                        (And (Not (Eq 1 N0))
                             (Not (Eq 0 N0))))))
         (Eq 104
             (Read w8 0 U0:[N0=0,
-                           1=97] @ arr115))]
+                           1=97] @ arr49))]
        (Not (Slt 2
                  (Concat w32 (Read w8 3 U0)
                              (Concat w24 (Read w8 2 U0)
                                          (Concat w16 (Read w8 1 U0) (w8 104)))))))
-#   OK -- Elapsed: 0.000145945
+#   OK -- Elapsed: 0.00039506
 #   Is Valid: false
 
-# Query 14 -- Type: Truth, Instructions: 152
-(query [(Ult N0:(ReadLSB w32 0 arr119)
+# Query 14 -- Type: Truth, Instructions: 128
+(query [(Ult N0:(ReadLSB w32 0 arr53)
              16)
-        (Ult (ReadLSB w32 0 arr126)
+        (Ult (ReadLSB w32 0 arr60)
              16)
-        (Ult N1:(ReadLSB w32 0 arr133)
+        (Ult N1:(ReadLSB w32 0 arr67)
              16)
         (Not (And (Not (Eq 3
-                           N2:(ReadLSB w32 0 arr140)))
+                           N2:(ReadLSB w32 0 arr74)))
                   (And (Not (Eq 2 N2))
                        (And (Not (Eq 1 N2))
                             (Not (Eq 0 N2))))))
         (Eq 104
             (Read w8 0 U0:[N2=0,
-                           1=97] @ arr115))
+                           1=97] @ arr49))
         (Slt 2
              N3:(Concat w32 (Read w8 3 U0)
                             (Concat w24 (Read w8 2 U0)
                                         (Concat w16 (Read w8 1 U0) (w8 104)))))]
-       (Not (Eq (ReadLSB w32 48 U1:[N4:(Mul w32 4 N1)=(Extract w8 0 N5:(SExt w32 (Read w8 3 arr115))),
+       (Not (Eq (ReadLSB w32 48 U1:[N4:(Mul w32 4 N1)=(Extract w8 0 N5:(SExt w32 (Read w8 3 arr49))),
                                     (Add w32 1 N4)=(Extract w8 8 N5),
                                     (Add w32 2 N4)=(Extract w8 16 N5),
                                     (Add w32 3 N4)=(Extract w8 24 N5),
-                                    N6:(Mul w32 4 N0)=(Extract w8 0 N7:(SExt w32 (Read w8 0 arr115))),
+                                    N6:(Mul w32 4 N0)=(Extract w8 0 N7:(SExt w32 (Read w8 0 arr49))),
                                     (Add w32 1 N6)=(Extract w8 8 N7),
                                     (Add w32 2 N6)=(Extract w8 16 N7),
                                     (Add w32 3 N6)=(Extract w8 24 N7),
-                                    63=0, 62=0, 61=128, 60=0, 59=0, 58=0, 57=64, 56=0, 55=0, 54=0, 53=32, 52=0, 51=0, 50=0, 49=16, 48=0, 47=0, 46=0, 45=8, 44=0, 43=0, 42=0, 41=4, 40=0, 39=0, 38=0, 37=2, 36=0, 35=0, 34=0, 33=1, 32=0, 31=0, 30=0, 29=0, 28=128, 27=0, 26=0, 25=0, 24=64, 23=0, 22=0, 21=0, 20=32, 19=0, 18=0, 17=0, 16=16, 15=0, 14=0, 13=0, 12=8, 11=0, 10=0, 9=0, 8=4, 7=0, 6=0, 5=0, 4=2, 3=0, 2=0, 1=0, 0=1])
+                                    63=0, 62=0, 61=128, 60=0, 59=0, 58=0, 57=64, 56=0, 55=0, 54=0, 53=32, 52=0, 51=0, 50=0, 49=16, 48=0, 47=0, 46=0, 45=8, 44=0, 43=0, 42=0, 41=4, 40=0, 39=0, 38=0, 37=2, 36=0, 35=0, 34=0, 33=1, 32=0, 31=0, 30=0, 29=0, 28=128, 27=0, 26=0, 25=0, 24=64, 23=0, 22=0, 21=0, 20=32, 19=0, 18=0, 17=0, 16=16, 15=0, 14=0, 13=0, 12=8, 11=0, 10=0, 9=0, 8=4, 7=0, 6=0, 5=0, 4=2, 3=0, 2=0, 1=0, 0=1] @ arr5)
                 N3)))
-#   OK -- Elapsed: 0.016117
+#   OK -- Elapsed: 0.018568
 #   Is Valid: false
 
-# Query 15 -- Type: Truth, Instructions: 157
-(query [(Ult N0:(ReadLSB w32 0 arr119)
+# Query 15 -- Type: Truth, Instructions: 133
+(query [(Ult N0:(ReadLSB w32 0 arr53)
              16)
-        (Ult N1:(ReadLSB w32 0 arr126)
+        (Ult N1:(ReadLSB w32 0 arr60)
              16)
-        (Ult N2:(ReadLSB w32 0 arr133)
+        (Ult N2:(ReadLSB w32 0 arr67)
              16)
         (Not (And (Not (Eq 3
-                           N3:(ReadLSB w32 0 arr140)))
+                           N3:(ReadLSB w32 0 arr74)))
                   (And (Not (Eq 2 N3))
                        (And (Not (Eq 1 N3))
                             (Not (Eq 0 N3))))))
         (Eq 104
             (Read w8 0 U0:[N3=0,
-                           1=97] @ arr115))
+                           1=97] @ arr49))
         (Slt 2
              N4:(Concat w32 (Read w8 3 U0)
                             (Concat w24 (Read w8 2 U0)
                                         (Concat w16 (Read w8 1 U0) (w8 104)))))
-        (Eq (ReadLSB w32 48 U1:[N5:(Mul w32 4 N2)=(Extract w8 0 N6:(SExt w32 (Read w8 3 arr115))),
+        (Eq (ReadLSB w32 48 U1:[N5:(Mul w32 4 N2)=(Extract w8 0 N6:(SExt w32 (Read w8 3 arr49))),
                                 (Add w32 1 N5)=(Extract w8 8 N6),
                                 (Add w32 2 N5)=(Extract w8 16 N6),
                                 (Add w32 3 N5)=(Extract w8 24 N6)] @
-                            U2:[N7:(Mul w32 4 N0)=(Extract w8 0 N8:(SExt w32 (Read w8 0 arr115))),
+                            U2:[N7:(Mul w32 4 N0)=(Extract w8 0 N8:(SExt w32 (Read w8 0 arr49))),
                                 (Add w32 1 N7)=(Extract w8 8 N8),
                                 (Add w32 2 N7)=(Extract w8 16 N8),
                                 (Add w32 3 N7)=(Extract w8 24 N8),
-                                63=0, 62=0, 61=128, 60=0, 59=0, 58=0, 57=64, 56=0, 55=0, 54=0, 53=32, 52=0, 51=0, 50=0, 49=16, 48=0, 47=0, 46=0, 45=8, 44=0, 43=0, 42=0, 41=4, 40=0, 39=0, 38=0, 37=2, 36=0, 35=0, 34=0, 33=1, 32=0, 31=0, 30=0, 29=0, 28=128, 27=0, 26=0, 25=0, 24=64, 23=0, 22=0, 21=0, 20=32, 19=0, 18=0, 17=0, 16=16, 15=0, 14=0, 13=0, 12=8, 11=0, 10=0, 9=0, 8=4, 7=0, 6=0, 5=0, 4=2, 3=0, 2=0, 1=0, 0=1])
+                                63=0, 62=0, 61=128, 60=0, 59=0, 58=0, 57=64, 56=0, 55=0, 54=0, 53=32, 52=0, 51=0, 50=0, 49=16, 48=0, 47=0, 46=0, 45=8, 44=0, 43=0, 42=0, 41=4, 40=0, 39=0, 38=0, 37=2, 36=0, 35=0, 34=0, 33=1, 32=0, 31=0, 30=0, 29=0, 28=128, 27=0, 26=0, 25=0, 24=64, 23=0, 22=0, 21=0, 20=32, 19=0, 18=0, 17=0, 16=16, 15=0, 14=0, 13=0, 12=8, 11=0, 10=0, 9=0, 8=4, 7=0, 6=0, 5=0, 4=2, 3=0, 2=0, 1=0, 0=1] @ arr5)
             N4)]
        (Eq 32
            (ReadLSB w32 N9:(Mul w32 4 N1) U2)))
-#   OK -- Elapsed: 0.00037605
+#   OK -- Elapsed: 0.00105405
 #   Is Valid: false
 
-# Query 16 -- Type: InitialValues, Instructions: 159
-(query [(Ult N0:(ReadLSB w32 0 arr119)
+# Query 16 -- Type: InitialValues, Instructions: 135
+(query [(Ult N0:(ReadLSB w32 0 arr53)
              16)
-        (Ult N1:(ReadLSB w32 0 arr126)
+        (Ult N1:(ReadLSB w32 0 arr60)
              16)
-        (Ult N2:(ReadLSB w32 0 arr133)
+        (Ult N2:(ReadLSB w32 0 arr67)
              16)
         (Not (And (Not (Eq 3
-                           N3:(ReadLSB w32 0 arr140)))
+                           N3:(ReadLSB w32 0 arr74)))
                   (And (Not (Eq 2 N3))
                        (And (Not (Eq 1 N3))
                             (Not (Eq 0 N3))))))
         (Eq 104
             (Read w8 0 U0:[N3=0,
-                           1=97] @ arr115))
+                           1=97] @ arr49))
         (Slt 2
              N4:(Concat w32 (Read w8 3 U0)
                             (Concat w24 (Read w8 2 U0)
                                         (Concat w16 (Read w8 1 U0) (w8 104)))))
-        (Eq (ReadLSB w32 48 U1:[N5:(Mul w32 4 N2)=(Extract w8 0 N6:(SExt w32 (Read w8 3 arr115))),
+        (Eq (ReadLSB w32 48 U1:[N5:(Mul w32 4 N2)=(Extract w8 0 N6:(SExt w32 (Read w8 3 arr49))),
                                 (Add w32 1 N5)=(Extract w8 8 N6),
                                 (Add w32 2 N5)=(Extract w8 16 N6),
                                 (Add w32 3 N5)=(Extract w8 24 N6)] @
-                            U2:[N7:(Mul w32 4 N0)=(Extract w8 0 N8:(SExt w32 (Read w8 0 arr115))),
+                            U2:[N7:(Mul w32 4 N0)=(Extract w8 0 N8:(SExt w32 (Read w8 0 arr49))),
                                 (Add w32 1 N7)=(Extract w8 8 N8),
                                 (Add w32 2 N7)=(Extract w8 16 N8),
                                 (Add w32 3 N7)=(Extract w8 24 N8),
-                                63=0, 62=0, 61=128, 60=0, 59=0, 58=0, 57=64, 56=0, 55=0, 54=0, 53=32, 52=0, 51=0, 50=0, 49=16, 48=0, 47=0, 46=0, 45=8, 44=0, 43=0, 42=0, 41=4, 40=0, 39=0, 38=0, 37=2, 36=0, 35=0, 34=0, 33=1, 32=0, 31=0, 30=0, 29=0, 28=128, 27=0, 26=0, 25=0, 24=64, 23=0, 22=0, 21=0, 20=32, 19=0, 18=0, 17=0, 16=16, 15=0, 14=0, 13=0, 12=8, 11=0, 10=0, 9=0, 8=4, 7=0, 6=0, 5=0, 4=2, 3=0, 2=0, 1=0, 0=1])
+                                63=0, 62=0, 61=128, 60=0, 59=0, 58=0, 57=64, 56=0, 55=0, 54=0, 53=32, 52=0, 51=0, 50=0, 49=16, 48=0, 47=0, 46=0, 45=8, 44=0, 43=0, 42=0, 41=4, 40=0, 39=0, 38=0, 37=2, 36=0, 35=0, 34=0, 33=1, 32=0, 31=0, 30=0, 29=0, 28=128, 27=0, 26=0, 25=0, 24=64, 23=0, 22=0, 21=0, 20=32, 19=0, 18=0, 17=0, 16=16, 15=0, 14=0, 13=0, 12=8, 11=0, 10=0, 9=0, 8=4, 7=0, 6=0, 5=0, 4=2, 3=0, 2=0, 1=0, 0=1] @ arr5)
             N4)
         (Not (Eq 32
                  (ReadLSB w32 N9:(Mul w32 4 N1) U2)))]
        false []
-       [arr115
-        arr119
-        arr126
-        arr133
-        arr140])
-#   OK -- Elapsed: 0.000240058
+       [arr49
+        arr53
+        arr60
+        arr67
+        arr74])
+#   OK -- Elapsed: 0.00058198
 #   Solvable: true
-#     arr115 = [104,0,0,0]
-#     arr119 = [12,0,0,0]
-#     arr126 = [0,0,0,0]
-#     arr133 = [0,0,0,0]
-#     arr140 = [1,0,0,0]
+#     arr49 = [104,0,0,0]
+#     arr53 = [12,0,0,0]
+#     arr60 = [0,0,0,0]
+#     arr67 = [0,0,0,0]
+#     arr74 = [1,0,0,0]
 
