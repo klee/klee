@@ -76,12 +76,13 @@ static void PrintInputTokens(const MemoryBuffer *MB) {
 
 static bool PrintInputAST(const char *Filename,
                           const MemoryBuffer *MB) {
+  std::vector<Decl*> Decls;
   Parser *P = Parser::Create(Filename, MB);
   P->SetMaxErrors(20);
   while (Decl *D = P->ParseTopLevelDecl()) {
     if (!P->GetNumErrors())
       D->dump();
-    delete D;
+    Decls.push_back(D);
   }
 
   bool success = true;
@@ -90,6 +91,11 @@ static bool PrintInputAST(const char *Filename,
                << N << " errors.\n";
     success = false;
   }
+
+  for (std::vector<Decl*>::iterator it = Decls.begin(),
+         ie = Decls.end(); it != ie; ++it)
+    delete *it;
+
   delete P;
 
   return success;
@@ -110,14 +116,6 @@ static bool EvaluateInputAST(const char *Filename,
                << N << " errors.\n";
     success = false;
   }  
-  delete P;
-
-  if (!success) {
-    for (std::vector<Decl*>::iterator it = Decls.begin(),
-           ie = Decls.end(); it != ie; ++it)
-      delete *it;
-    return success;
-  }
 
   // FIXME: Support choice of solver.
   Solver *S, *STP = new STPSolver(true);
@@ -186,9 +184,12 @@ static bool EvaluateInputAST(const char *Filename,
       llvm::cout << "\n";
       ++Index;
     }
-
-    delete D;
   }
+
+  for (std::vector<Decl*>::iterator it = Decls.begin(),
+         ie = Decls.end(); it != ie; ++it)
+    delete *it;
+  delete P;
 
   delete S;
 
