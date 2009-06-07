@@ -1123,9 +1123,10 @@ VersionResult ParserImpl::ParseVersionSpecifier() {
   Token Start = Tok;
   VersionResult Res = ParseVersion();
   // Define update list to avoid use-of-undef errors.
-  if (!Res.isValid())
-    Res = VersionResult(false,
-                        UpdateList(0, true, NULL));
+  if (!Res.isValid()) {
+    Res = VersionResult(true,
+                        UpdateList(new Array(0, -1, 0), true, NULL));
+  }
   
   if (Label)
     VersionSymTab.insert(std::make_pair(Label, Res.get()));
