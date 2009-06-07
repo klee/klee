@@ -529,6 +529,8 @@ void ExprPPrinter::printQuery(std::ostream &os,
   
   // Print array declarations.
   if (printArrayDecls) {
+    for (const Array * const* it = evalArraysBegin; it != evalArraysEnd; ++it)
+      p.usedArrays.insert(*it);
     for (std::set<const Array*>::iterator it = p.usedArrays.begin(), 
            ie = p.usedArrays.end(); it != ie; ++it) {
       const Array *A = *it;
