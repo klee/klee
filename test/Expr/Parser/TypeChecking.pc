@@ -6,4 +6,9 @@
 (query [(Eq (ReadLSB w32 0 arr1) true)] 
        false)
 
-# RUN: grep "TypeChecking.pc: parse failure: 1 errors." %t.log
+# RUN: grep "TypeChecking.pc:12:25: error: invalid write index (doesn't match array domain)" %t.log
+# RUN: grep "TypeChecking.pc:12:35: error: invalid write value (doesn't match array range)" %t.log
+# FIXME: Add array declarations
+(query [(Eq (Read w8 0 [ (w17 0) = (w9 0) ] @ arr0) 0)] false)
+
+# RUN: grep "TypeChecking.pc: parse failure: 3 errors." %t.log

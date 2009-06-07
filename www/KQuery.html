@@ -317,8 +317,7 @@
 
   <p><b>Syntax:</b></p>
   <div class="syntax">
-    version = identifier<br>
-    version = "[" [ update-list ] "]" [ "@" version "]"<br>
+    version = identifier | "[" [ update-list ] "]" "@" version<br>
     update-list = lhs-expression "=" rhs-expression [ "," update-list ]<br>
   </div>
 
@@ -326,8 +325,6 @@
   array or a <a href="#expr_labels">labelled version</a>, or by an explicit list
   of writes which are to be concatenated to another version (the most recent
   writes are first).</p>
-
-  <p>FIXME: Get rid of anonymous arrays.</p>
 
   <h2><a name="exprs">Expressions</a></h2>
 

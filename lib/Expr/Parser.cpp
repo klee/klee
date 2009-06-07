@@ -1132,20 +1132,33 @@ VersionResult ParserImpl::ParseVersionSpecifier() {
   return Res;
 }
 
-/// version - '[' update-list? ']' ['@' version-specifier]
+namespace {
+  /// WriteInfo - Helper class used for storing information about a parsed
+  /// write, prior to type checking.
+  struct WriteInfo {
+    NumberOrExprResult LHS;
+    NumberOrExprResult RHS;
+    Token LHSTok;
+    Token RHSTok;
+    
+    WriteInfo(NumberOrExprResult _LHS, NumberOrExprResult _RHS,
+              Token _LHSTok, Token _RHSTok) : LHS(_LHS), RHS(_RHS),
+                                              LHSTok(_LHSTok), RHSTok(_RHSTok) {
+    }
+  };
+}
+
+/// version - '[' update-list? ']' '@' version-specifier
 /// update-list - empty
 /// update-list - lhs '=' rhs [',' update-list]
 VersionResult ParserImpl::ParseVersion() {
   if (Tok.kind != Token::LSquare)
     return VersionResult(false, UpdateList(0, false, NULL));
   
-  std::vector< std::pair<NumberOrExprResult, NumberOrExprResult> > Writes;
+  std::vector<WriteInfo> Writes;
   ConsumeLSquare();
   for (;;) {
-    // FIXME: Type check exprs.
-
-    // FIXME: We need to do this (the above) anyway just to handle
-    // implicit constants correctly.
+    Token LHSTok = Tok;
     NumberOrExprResult LHS = ParseNumberOrExpr();
     
     if (Tok.kind != Token::Equals) {
@@ -1154,9 +1167,10 @@ VersionResult ParserImpl::ParseVersion() {
     }
     
     ConsumeToken();
+    Token RHSTok = Tok;
     NumberOrExprResult RHS = ParseNumberOrExpr();
 
-    Writes.push_back(std::make_pair(LHS, RHS));
+    Writes.push_back(WriteInfo(LHS, RHS, LHSTok, RHSTok));
     
     if (Tok.kind == Token::Comma)
       ConsumeToken();
@@ -1167,48 +1181,44 @@ VersionResult ParserImpl::ParseVersion() {
 
   VersionHandle Base(0, false, NULL);
 
-  // Anonymous array case.
-  if (Tok.kind != Token::At) { 
-    Array *root = new Array(0, 0, 0);
-    Base = UpdateList(root, false, NULL);
-  } else {
-    ConsumeToken();
+  if (Tok.kind != Token::At) {
+    Error("expected '@'.", Tok);
+    return VersionResult(false, UpdateList(0, true, NULL));
+  } 
 
-    VersionResult BaseRes = ParseVersionSpecifier();
-    if (!BaseRes.isValid())
-      return BaseRes;
+  ConsumeExpectedToken(Token::At);
 
-    Base = BaseRes.get();
-  }
+  VersionResult BaseRes = ParseVersionSpecifier();
+  if (!BaseRes.isValid())
+    return BaseRes;
+
+  Base = BaseRes.get();
 
   Expr::Width ArrayDomainType = Expr::Int32;
   Expr::Width ArrayRangeType = Expr::Int8;
 
-  for (std::vector< std::pair<NumberOrExprResult, NumberOrExprResult> >::reverse_iterator
-         it = Writes.rbegin(), ie = Writes.rend(); it != ie; ++it) {
+  for (std::vector<WriteInfo>::reverse_iterator it = Writes.rbegin(), 
+         ie = Writes.rend(); it != ie; ++it) {
+    const WriteInfo &WI = *it;
     ExprResult LHS, RHS;
     // FIXME: This can be factored into common helper for coercing a
     // NumberOrExpr into an Expr.
-    if (it->first.isNumber()) {
-      LHS = ParseNumberToken(ArrayDomainType, it->first.getNumber());
+    if (WI.LHS.isNumber()) {
+      LHS = ParseNumberToken(ArrayDomainType, WI.LHS.getNumber());
     } else {
-      LHS = it->first.getExpr(); 
+      LHS = WI.LHS.getExpr();
       if (LHS.isValid() && LHS.get()->getWidth() != ArrayDomainType) {
-        // FIXME: bad token location. We should maybe try and know the
-        // array up-front?
-        Error("invalid value in write index (doesn't match domain).", Tok);
+        Error("invalid write index (doesn't match array domain).", WI.LHSTok);
         LHS = ExprResult();
       }
     }
 
-    if (it->second.isNumber()) {
-      RHS = ParseNumberToken(ArrayRangeType, it->second.getNumber());
+    if (WI.RHS.isNumber()) {
+      RHS = ParseNumberToken(ArrayRangeType, WI.RHS.getNumber());
     } else {
-      RHS = it->second.getExpr();
+      RHS = WI.RHS.getExpr();
       if (RHS.isValid() && RHS.get()->getWidth() != ArrayRangeType) {
-        // FIXME: bad token location. We should maybe try and know the
-        // array up-front?
-        Error("invalid value in write assignment (doesn't match range).", Tok);
+        Error("invalid write value (doesn't match array range).", WI.RHSTok);
         RHS = ExprResult();
       }
     }

@@ -215,8 +215,10 @@ class PPrinter : public ExprPPrinter {
     if (openedList)
       PC << ']';
 
-    if (updates.isRooted)
-      PC << " @ arr" << updates.root->id;
+    // FIXME: Figure out how isRooted should be dealt with in the language. The
+    // old solution of using "anonymous" arrays is not a good idea.
+
+    PC << " @ arr" << updates.root->id;
   }
 
   void printWidth(PrintContext &PC, ref<Expr> e) {
