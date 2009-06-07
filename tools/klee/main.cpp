@@ -1403,7 +1403,7 @@ int main(int argc, char **argv, char **envp) {
   handler->getInfoStream() 
     << "KLEE: done: total queries = " << queries << "\n"
     << "KLEE: done: valid queries = " << queriesValid << "\n"
-    << "KLEE: done: invalid queriers = " << queriesInvalid << "\n"
+    << "KLEE: done: invalid queries = " << queriesInvalid << "\n"
     << "KLEE: done: query cex = " << queryCounterexamples << "\n";
 
   std::stringstream stats;
