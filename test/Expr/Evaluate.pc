@@ -1,8 +1,11 @@
 # RUN: %kleaver -evaluate %s > %t.log
 
+array arr0[4] : w32 -> w8 = symbolic
+array arr1[8] : w32 -> w8 = symbolic
+
 # RUN: grep "Query 0:	INVALID" %t.log
 # Query 0
-(query [] (Not (Ult (ReadLSB w32 0 arr65)
+(query [] (Not (Ult (ReadLSB w32 0 arr0)
                     16)))
 
 # RUN: grep "Query 1:	VALID" %t.log

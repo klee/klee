@@ -34,9 +34,11 @@ const char *Token::getKindName() const {
   case EndOfFile:  return "EndOfFile";
   case Equals:     return "Equals";
   case Identifier: return "Identifier";
+  case KWArray:    return "KWArray";
   case KWFalse:    return "KWFalse";
   case KWQuery:    return "KWQuery";
   case KWReserved: return "KWReserved";
+  case KWSymbolic: return "KWSymbolic";
   case KWTrue:     return "KWTrue";
   case KWWidth:    return "KWWidth";
   case LBrace:     return "LBrace";
@@ -153,7 +155,7 @@ Token &Lexer::SetIdentifierTokenKind(Token &Result) {
 
   case 5:
     if (memcmp("array", Result.start, 5) == 0)
-      return SetTokenKind(Result, Token::KWReserved);
+      return SetTokenKind(Result, Token::KWArray);
     if (memcmp("false", Result.start, 5) == 0)
       return SetTokenKind(Result, Token::KWFalse);
     if (memcmp("query", Result.start, 5) == 0)
@@ -168,6 +170,11 @@ Token &Lexer::SetIdentifierTokenKind(Token &Result) {
   case 7:
     if (memcmp("declare", Result.start, 7) == 0)
       return SetTokenKind(Result, Token::KWReserved);
+    break;
+
+  case 8:
+    if (memcmp("symbolic", Result.start, 8) == 0)
+      return SetTokenKind(Result, Token::KWSymbolic);
     break;
   }
 

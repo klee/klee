@@ -36,7 +36,7 @@ namespace {
     T Value;
 
   public:
-    ParseResult() : IsValid(false) {}
+    ParseResult() : IsValid(false), Value() {}
     ParseResult(T _Value) : IsValid(true), Value(_Value) {}
     ParseResult(bool _IsValid, T _Value) : IsValid(_IsValid), Value(_Value) {}
 
@@ -71,6 +71,7 @@ namespace {
   typedef ParseResult<Decl*> DeclResult;
   typedef ParseResult<Expr::Width> TypeResult;
   typedef ParseResult<VersionHandle> VersionResult;
+  typedef ParseResult<uint64_t> IntegerResult;
 
   /// NumberOrExprResult - Represent a number or expression. This is used to
   /// wrap an expression production which may be a number, but for
@@ -137,37 +138,43 @@ namespace {
 
     /// ConsumeToken - Consume the current 'peek token' and lex the next one.
     void ConsumeToken() {
-      assert(Tok.kind != Token::LParen && Tok.kind != Token::RParen);
+      assert(Tok.kind != Token::LParen && Tok.kind != Token::RParen &&
+             Tok.kind != Token::LSquare && Tok.kind != Token::RSquare);
       GetNextNonCommentToken();
     }
 
     /// ConsumeExpectedToken - Check that the current token is of the
     /// expected kind and consume it.
     void ConsumeExpectedToken(Token::Kind k) {
+      assert(Tok.kind != Token::LParen && Tok.kind != Token::RParen &&
+             Tok.kind != Token::LSquare && Tok.kind != Token::RSquare);
+      _ConsumeExpectedToken(k);
+    }
+    void _ConsumeExpectedToken(Token::Kind k) {
       assert(Tok.kind == k && "Unexpected token!");
       GetNextNonCommentToken();
     }
 
     void ConsumeLParen() {
       ++ParenLevel;
-      ConsumeExpectedToken(Token::LParen);
+      _ConsumeExpectedToken(Token::LParen);
     }
 
     void ConsumeRParen() {
       if (ParenLevel) // Cannot go below zero.
         --ParenLevel;
-      ConsumeExpectedToken(Token::RParen);
+      _ConsumeExpectedToken(Token::RParen);
     }
 
     void ConsumeLSquare() {
       ++SquareLevel;
-      ConsumeExpectedToken(Token::LSquare);
+      _ConsumeExpectedToken(Token::LSquare);
     }
 
     void ConsumeRSquare() {
       if (SquareLevel) // Cannot go below zero.
         --SquareLevel;
-      ConsumeExpectedToken(Token::RSquare);
+      _ConsumeExpectedToken(Token::RSquare);
     }
 
     void ConsumeAnyToken() {
@@ -277,6 +284,7 @@ namespace {
     /* Etc. */
 
     NumberOrExprResult ParseNumberOrExpr();
+    IntegerResult ParseIntegerConstant(Expr::Width Type);
 
     ExprResult ParseExpr(TypeResult ExpectedType);
     ExprResult ParseParenExpr(TypeResult ExpectedType);
@@ -355,18 +363,175 @@ const Identifier *ParserImpl::GetOrCreateIdentifier(const Token &Tok) {
 Decl *ParserImpl::ParseTopLevelDecl() {
   // Repeat until success or EOF.
   while (Tok.kind != Token::EndOfFile) {
-    // Only handle commands for now.
-    if (Tok.kind == Token::LParen) {
+    switch (Tok.kind) {
+    case Token::KWArray: {
+      DeclResult Res = ParseArrayDecl();
+      if (Res.isValid())
+        return Res.get();
+      break;
+    }
+
+    case Token::LParen: {
       DeclResult Res = ParseCommandDecl();
       if (Res.isValid())
         return Res.get();
-    } else {
-      Error("expected '(' token.");
+      break;
+    }
+
+    default:
+      Error("expected 'array' or '(' token.");
       ConsumeAnyToken();
     }
   }
 
   return 0;
+}
+
+/// ParseArrayDecl - Parse an array declaration. The lexer should be positioned
+/// at the opening 'array'.
+///
+/// array-declaration = "array" name "[" [ size ] "]" ":" domain "->" range 
+///                       "=" array-initializer
+/// array-initializer = "symbolic" | "{" { numeric-literal } "}"
+DeclResult ParserImpl::ParseArrayDecl() {
+  // FIXME: Recovery here is horrible, we need to scan to next decl start or
+  // something.
+  ConsumeExpectedToken(Token::KWArray);
+  
+  if (Tok.kind != Token::Identifier) {
+    Error("expected identifier token.");
+    return DeclResult();
+  }
+
+  Token Name = Tok;
+  IntegerResult Size;
+  TypeResult DomainType;
+  TypeResult RangeType;
+  std::vector<ExprHandle> Values;
+
+  ConsumeToken();
+  
+  if (Tok.kind != Token::LSquare) {
+    Error("expected '['.");
+    goto exit;
+  }
+  ConsumeLSquare();
+
+  if (Tok.kind != Token::RSquare) {
+    Size = ParseIntegerConstant(64);
+  }
+  if (Tok.kind != Token::RSquare) {
+    Error("expected ']'.");
+    goto exit;
+  }
+  ConsumeRSquare();
+  
+  if (Tok.kind != Token::Colon) {
+    Error("expected ':'.");
+    goto exit;
+  }
+  ConsumeExpectedToken(Token::Colon);
+
+  DomainType = ParseTypeSpecifier();
+  if (Tok.kind != Token::Arrow) {
+    Error("expected '->'.");
+    goto exit;
+  }
+  ConsumeExpectedToken(Token::Arrow);
+
+  RangeType = ParseTypeSpecifier();
+  if (Tok.kind != Token::Equals) {
+    Error("expected '='.");
+    goto exit;
+  }
+  ConsumeExpectedToken(Token::Equals);
+
+  if (Tok.kind == Token::KWSymbolic) {
+    ConsumeExpectedToken(Token::KWSymbolic);    
+  } else if (Tok.kind == Token::LSquare) {
+    ConsumeLSquare();
+    while (Tok.kind != Token::RSquare) {
+      if (Tok.kind == Token::EndOfFile) {
+        Error("unexpected end of file.");
+        goto exit;
+      }
+
+      ExprResult Res = ParseNumber(RangeType.get());
+      if (Res.isValid())
+        Values.push_back(Res.get());
+    }
+    ConsumeRSquare();
+  } else {
+    Error("expected 'symbolic' or '['.");
+    goto exit;
+  }
+
+  // Type check size.
+  if (!Size.isValid()) {
+    if (Values.empty()) {
+      Error("unsized arrays are not yet supported.");
+      Size = 1;
+    } else {
+      Size = Values.size();
+    }
+  }
+
+  if (!Values.empty()) {
+    if (Size.get() != Values.size()) {
+      // FIXME: Lame message.
+      Error("constant arrays must be completely specified.");
+      Values.clear();
+    }
+
+    for (unsigned i = 0; i != Size.get(); ++i) {
+      // FIXME: Must be constant expression.
+    }
+  }
+
+  // FIXME: Validate that size makes sense for domain type.
+
+  if (DomainType.get() != Expr::Int32) {
+    Error("array domain must currently be w32.");
+    DomainType = Expr::Int32;
+    Values.clear();
+  }
+
+  if (RangeType.get() != Expr::Int8) {
+    Error("array domain must currently be w8.");
+    RangeType = Expr::Int8;
+    Values.clear();
+  }
+
+  if (!Values.empty()) {
+    Error("constant arrays are not yet supported.");
+    Values.clear();
+  }
+
+  // FIXME: Validate that this array is undeclared.
+
+ exit:
+  if (!Size.isValid())
+    Size = 1;
+  if (!DomainType.isValid())
+    DomainType = 32;
+  if (!RangeType.isValid())
+    RangeType = 8;
+
+  // FIXME: Array should take name, not id.
+  // FIXME: Array should take domain and range.
+  const Identifier *Label = GetOrCreateIdentifier(Name);
+  static int counter = 0;
+  Array *Root = new Array(0, ++counter, Size.get());
+  ArrayDecl *AD = new ArrayDecl(Label, Size.get(), 
+                                DomainType.get(), RangeType.get(), Root);
+
+  ArraySymTab.insert(std::make_pair(Label, AD));
+
+  // Create the initial version reference.
+  VersionSymTab.insert(std::make_pair(Label,
+                                      UpdateList(Root, true, NULL)));
+
+  return AD;
 }
 
 /// ParseCommandDecl - Parse a command declaration. The lexer should
@@ -407,6 +572,16 @@ DeclResult ParserImpl::ParseQueryCommand() {
   ExprSymTab.clear();
   VersionSymTab.clear();
 
+  // Reinsert initial array versions.
+  // FIXME: Remove this!
+  for (std::map<const Identifier*, const ArrayDecl*>::iterator
+         it = ArraySymTab.begin(), ie = ArraySymTab.end(); it != ie; ++it) {
+    VersionSymTab.insert(std::make_pair(it->second->Name,
+                                        UpdateList(it->second->Root, 
+                                                   true, NULL)));
+  }
+
+
   ConsumeExpectedToken(Token::KWQuery);
   if (Tok.kind != Token::LSquare) {
     Error("malformed query, expected constraint list.");
@@ -414,7 +589,7 @@ DeclResult ParserImpl::ParseQueryCommand() {
     return DeclResult();
   }
 
-  ConsumeExpectedToken(Token::LSquare);
+  ConsumeLSquare();
   // FIXME: Should avoid reading past unbalanced parens here.
   while (Tok.kind != Token::RSquare) {
     if (Tok.kind == Token::EndOfFile) {
@@ -437,7 +612,7 @@ DeclResult ParserImpl::ParseQueryCommand() {
   if (Tok.kind == Token::RParen)
     goto exit;
   
-  ConsumeExpectedToken(Token::LSquare);
+  ConsumeLSquare();
   // FIXME: Should avoid reading past unbalanced parens here.
   while (Tok.kind != Token::RSquare) {
     if (Tok.kind == Token::EndOfFile) {
@@ -455,7 +630,7 @@ DeclResult ParserImpl::ParseQueryCommand() {
   if (Tok.kind == Token::RParen)
     goto exit;
 
-  ConsumeExpectedToken(Token::LSquare);
+  ConsumeLSquare();
   // FIXME: Should avoid reading past unbalanced parens here.
   while (Tok.kind != Token::RSquare) {
     if (Tok.kind == Token::EndOfFile) {
@@ -474,15 +649,15 @@ DeclResult ParserImpl::ParseQueryCommand() {
     const Identifier *Label = GetOrCreateIdentifier(Tok);
     ConsumeToken();
 
-    // Declare or create array.
-    const ArrayDecl *AD = ArraySymTab[Label];
-    if (!AD) {
-      // FIXME: Don't make up arrays.
-      unsigned Id = atoi(&Label->Name.c_str()[3]);
-      AD = new ArrayDecl(Label, 0, 32, 8, new Array(0, Id, 0));
+    // Lookup array.
+    std::map<const Identifier*, const ArrayDecl*>::iterator
+      it = ArraySymTab.find(Label);
+
+    if (it == ArraySymTab.end()) {
+      Error("unknown array", LTok);
+    } else {
+      Objects.push_back(it->second->Root);
     }
-    
-    Objects.push_back(AD->Root);
   }
   ConsumeRSquare();
 
@@ -995,10 +1170,18 @@ ExprResult ParserImpl::ParseConcatParenExpr(const Token &Name,
   return ConcatExpr::createN(Kids.size(), &Kids[0]);
 }
 
+IntegerResult ParserImpl::ParseIntegerConstant(Expr::Width Type) {
+  ExprResult Res = ParseNumber(Type);
+
+  if (!Res.isValid())
+    return IntegerResult();
+
+  return cast<ConstantExpr>(Res.get())->getConstantValue();
+}
+
 ExprResult ParserImpl::ParseExtractParenExpr(const Token &Name,
                                              Expr::Width ResTy) {
-  // FIXME: Pull out parse constant integer expression.
-  ExprResult OffsetExpr = ParseNumber(Expr::Int32);
+  IntegerResult OffsetExpr = ParseIntegerConstant(Expr::Int32);
   ExprResult Child = ParseExpr(TypeResult());
 
   ExpectRParen("unexpected argument to expression.");
@@ -1006,9 +1189,7 @@ ExprResult ParserImpl::ParseExtractParenExpr(const Token &Name,
   if (!OffsetExpr.isValid() || !Child.isValid())
     return ConstantExpr::alloc(0, ResTy);
 
-  unsigned Offset = 
-    (unsigned) cast<ConstantExpr>(OffsetExpr.get())->getConstantValue();
-
+  unsigned Offset = (unsigned) OffsetExpr.get();
   if (Offset + ResTy > Child.get()->getWidth()) {
     Error("extract out-of-range of child expression.", Name);
     return ConstantExpr::alloc(0, ResTy);
@@ -1086,26 +1267,11 @@ VersionResult ParserImpl::ParseVersionSpecifier() {
     Label = GetOrCreateIdentifier(Tok);
     ConsumeToken();
 
-    // FIXME: hack: add array declarations and ditch this.
-    if (memcmp(Label->Name.c_str(), "arr", 3) == 0) {
-      // Declare or create array.
-      const ArrayDecl *&A = ArraySymTab[Label];
-      if (!A) {
-        unsigned id = atoi(&Label->Name.c_str()[3]);
-        Array *root = new Array(0, id, 0);
-        ArrayDecl *AD = new ArrayDecl(Label, 0, 32, 8, root);
-        // Create update list mapping of name -> array.
-        VersionSymTab.insert(std::make_pair(Label,
-                                            UpdateList(root, true, NULL)));
-        ArraySymTab.insert(std::make_pair(Label, AD));
-      }
-    }
-
     if (Tok.kind != Token::Colon) {
       VersionSymTabTy::iterator it = VersionSymTab.find(Label);
       
       if (it == VersionSymTab.end()) {
-        Error("invalid update list label reference.", LTok);
+        Error("invalid version reference.", LTok);
         return VersionResult(false,
                              UpdateList(0, true, NULL));
       }
@@ -1381,9 +1547,10 @@ void ParserImpl::Error(const char *Message, const Token &At) {
 Decl::Decl(DeclKind _Kind) : Kind(_Kind) {}
 
 void ArrayDecl::dump() {
-  std::cout << "array " << Name->Name << " : "
-            << 'w' << Domain << " -> "
-            << 'w' << Range << " = ";
+  // FIXME: For now, print using the Array* "name".
+  std::cout << "array " << "arr" << Root->id
+            << "[" << Size << "]"
+            << " : " << 'w' << Domain << " -> " << 'w' << Range << " = ";
 
   if (Contents.empty()) {
     std::cout << "symbolic\n";
@@ -1412,7 +1579,8 @@ void QueryCommand::dump() {
   }
   ExprPPrinter::printQuery(std::cout, ConstraintManager(Constraints), 
                            Query, ValuesBegin, ValuesEnd,
-                           ObjectsBegin, ObjectsEnd);
+                           ObjectsBegin, ObjectsEnd,
+                           false);
 }
 
 // Public parser API

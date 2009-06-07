@@ -28,9 +28,11 @@ namespace expr {
       EndOfFile,                /// <end of file>
       Equals,                   /// ' = '
       Identifier,               /// [a-zA-Z_][a-zA-Z0-9._]*
+      KWArray,                  /// 'array'
       KWFalse,                  /// 'false'
       KWQuery,                  /// 'query'
       KWReserved,               /// fp[0-9]+([.].*)?, i[0-9]+
+      KWSymbolic,               /// 'symbolic'
       KWTrue,                   /// 'true'
       KWWidth,                  /// w[0-9]+
       LBrace,                   /// '{'
@@ -41,7 +43,10 @@ namespace expr {
       RParen,                   /// ')'
       RSquare,                  /// ']'
       Semicolon,                /// ';'
-      Unknown                   /// <other>
+      Unknown,                   /// <other>
+      
+      KWKindFirst=KWArray,
+      KWKindLast=KWWidth
     };
 
     Kind        kind;           /// The token kind.
@@ -60,7 +65,7 @@ namespace expr {
 
     /// isKeyword - True if this token is a keyword.
     bool isKeyword() const { 
-      return kind >= KWFalse && kind <= KWTrue; 
+      return kind >= KWKindFirst && kind <= KWKindLast; 
     }
 
     // dump - Dump the token to stderr.

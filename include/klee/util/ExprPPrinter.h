@@ -65,7 +65,8 @@ namespace klee {
                            const ref<Expr> *evalExprsBegin = 0,
                            const ref<Expr> *evalExprsEnd = 0,
                            const Array * const* evalArraysBegin = 0,
-                           const Array * const* evalArraysEnd = 0);
+                           const Array * const* evalArraysEnd = 0,
+                           bool printArrayDecls = true);
   };
 
 }

@@ -46,7 +46,10 @@ Executor::evalConstantExpr(llvm::ConstantExpr *ce) {
   
   switch (ce->getOpcode()) {
     default :
-      assert(0 && "unknown ConstantExpr type");
+      ce->dump();
+      llvm::cerr << "error: unknown ConstantExpr type\n"
+                 << "opcode: " << ce->getOpcode() << "\n";
+      abort();
 
     case Instruction::Trunc: return ExtractExpr::createByteOff(op1, 
 							       0,
@@ -128,6 +131,9 @@ Executor::evalConstantExpr(llvm::ConstantExpr *ce) {
       return SelectExpr::create(op1, op2, op3);
     }
 
+    case Instruction::FAdd:
+    case Instruction::FSub:
+    case Instruction::FMul:
     case Instruction::FDiv:
     case Instruction::FRem:
     case Instruction::FPTrunc:

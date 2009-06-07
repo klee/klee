@@ -79,7 +79,7 @@ namespace expr {
 
     /// Size - The maximum array size (or 0 if unspecified). Concrete
     /// arrays always are specified with a size.
-    const unsigned Size;
+    const uint64_t Size;
 
     /// Domain - The width of indices.
     const unsigned Domain;
@@ -96,7 +96,7 @@ namespace expr {
     const std::vector<ExprHandle> Contents;
 
   public:
-    ArrayDecl(const Identifier *_Name, unsigned _Size, 
+    ArrayDecl(const Identifier *_Name, uint64_t _Size, 
               unsigned _Domain, unsigned _Range,
               const Array *_Root)
       : Decl(ArrayDeclKind), Name(_Name), 

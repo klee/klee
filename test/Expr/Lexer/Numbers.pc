@@ -17,7 +17,7 @@
 # RUN: grep "(Token .LBrace. .{. 1 56 0)" %t1
 # RUN: grep "(Token .RBrace. .}. 1 56 2)" %t1
 # RUN: grep "(Token .Identifier. ._hello_world. 12 58 0)" %t1
-# RUN: grep "(Token .KWReserved. .array. 5 62 0)" %t1
+# RUN: grep "(Token .KWArray. .array. 5 62 0)" %t1
 # RUN: grep "(Token .KWReserved. .declare. 7 63 0)" %t1
 # RUN: grep "(Token .KWReserved. .def. 3 64 0)" %t1
 # RUN: grep "(Token .KWReserved. .define. 6 65 0)" %t1

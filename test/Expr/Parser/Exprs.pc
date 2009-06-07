@@ -6,64 +6,79 @@
 # RUN: %kleaver -print-ast %s
 
 # Query 0 -- Type: Truth, Instructions: 31
+array arr53[4] : w32 -> w8 = symbolic
 (query [] (Not (Ult (ReadLSB w32 0 arr53)
                     16)))
-#   OK -- Elapsed: 0.00128889
+#   OK -- Elapsed: 0.00137401
 #   Is Valid: false
 
 # Query 1 -- Type: Value, Instructions: 39
+array arr53[4] : w32 -> w8 = symbolic
 (query [(Ult N0:(ReadLSB w32 0 arr53)
              16)]
        false
-       [(Add w32 31543472 (Mul w32 4 N0))])
-#   OK -- Elapsed: 0.000106812
-#   Result: 31543472
+       [(Add w32 31543488 (Mul w32 4 N0))])
+#   OK -- Elapsed: 0.000108004
+#   Result: 31543488
 
 # Query 2 -- Type: Truth, Instructions: 39
+array arr53[4] : w32 -> w8 = symbolic
 (query [(Ult N0:(ReadLSB w32 0 arr53)
              16)]
        (Ult (Mul w32 4 N0) 61))
-#   OK -- Elapsed: 0.0014112
+#   OK -- Elapsed: 0.00140095
 #   Is Valid: true
 
 # Query 3 -- Type: Truth, Instructions: 55
+array arr53[4] : w32 -> w8 = symbolic
+array arr60[4] : w32 -> w8 = symbolic
 (query [(Ult (ReadLSB w32 0 arr53)
              16)]
        (Not (Ult (ReadLSB w32 0 arr60)
                  16)))
-#   OK -- Elapsed: 0.00128603
+#   OK -- Elapsed: 0.00106597
 #   Is Valid: false
 
 # Query 4 -- Type: Value, Instructions: 60
+array arr53[4] : w32 -> w8 = symbolic
+array arr60[4] : w32 -> w8 = symbolic
 (query [(Ult (ReadLSB w32 0 arr53)
              16)
         (Ult N0:(ReadLSB w32 0 arr60)
              16)]
        false
-       [(Add w32 31543472 (Mul w32 4 N0))])
-#   OK -- Elapsed: 0.000141144
-#   Result: 31543472
+       [(Add w32 31543488 (Mul w32 4 N0))])
+#   OK -- Elapsed: 0.000138998
+#   Result: 31543488
 
 # Query 5 -- Type: Truth, Instructions: 60
+array arr53[4] : w32 -> w8 = symbolic
+array arr60[4] : w32 -> w8 = symbolic
 (query [(Ult (ReadLSB w32 0 arr53)
              16)
         (Ult N0:(ReadLSB w32 0 arr60)
              16)]
        (Ult (Mul w32 4 N0) 61))
-#   OK -- Elapsed: 0.00145102
+#   OK -- Elapsed: 0.00137782
 #   Is Valid: true
 
 # Query 6 -- Type: Truth, Instructions: 77
+array arr53[4] : w32 -> w8 = symbolic
+array arr60[4] : w32 -> w8 = symbolic
+array arr67[4] : w32 -> w8 = symbolic
 (query [(Ult (ReadLSB w32 0 arr53)
              16)
         (Ult (ReadLSB w32 0 arr60)
              16)]
        (Not (Ult (ReadLSB w32 0 arr67)
                  16)))
-#   OK -- Elapsed: 0.00127888
+#   OK -- Elapsed: 0.001127
 #   Is Valid: false
 
 # Query 7 -- Type: Value, Instructions: 85
+array arr53[4] : w32 -> w8 = symbolic
+array arr60[4] : w32 -> w8 = symbolic
+array arr67[4] : w32 -> w8 = symbolic
 (query [(Ult (ReadLSB w32 0 arr53)
              16)
         (Ult (ReadLSB w32 0 arr60)
@@ -71,11 +86,14 @@
         (Ult N0:(ReadLSB w32 0 arr67)
              16)]
        false
-       [(Add w32 31543472 (Mul w32 4 N0))])
-#   OK -- Elapsed: 0.000179052
-#   Result: 31543472
+       [(Add w32 31543488 (Mul w32 4 N0))])
+#   OK -- Elapsed: 0.000175953
+#   Result: 31543488
 
 # Query 8 -- Type: Truth, Instructions: 85
+array arr53[4] : w32 -> w8 = symbolic
+array arr60[4] : w32 -> w8 = symbolic
+array arr67[4] : w32 -> w8 = symbolic
 (query [(Ult (ReadLSB w32 0 arr53)
              16)
         (Ult (ReadLSB w32 0 arr60)
@@ -87,6 +105,10 @@
 #   Is Valid: true
 
 # Query 9 -- Type: Truth, Instructions: 101
+array arr53[4] : w32 -> w8 = symbolic
+array arr74[4] : w32 -> w8 = symbolic
+array arr60[4] : w32 -> w8 = symbolic
+array arr67[4] : w32 -> w8 = symbolic
 (query [(Ult (ReadLSB w32 0 arr53)
              16)
         (Ult (ReadLSB w32 0 arr60)
@@ -98,10 +120,14 @@
             (And (Not (Eq 2 N0))
                  (And (Not (Eq 1 N0))
                       (Not (Eq 0 N0))))))
-#   OK -- Elapsed: 0.00163794
+#   OK -- Elapsed: 0.00157499
 #   Is Valid: false
 
 # Query 10 -- Type: Value, Instructions: 106
+array arr53[4] : w32 -> w8 = symbolic
+array arr74[4] : w32 -> w8 = symbolic
+array arr60[4] : w32 -> w8 = symbolic
+array arr67[4] : w32 -> w8 = symbolic
 (query [(Ult (ReadLSB w32 0 arr53)
              16)
         (Ult (ReadLSB w32 0 arr60)
@@ -114,11 +140,15 @@
                        (And (Not (Eq 1 N0))
                             (Not (Eq 0 N0))))))]
        false
-       [(Add w32 31583216 N0)])
-#   OK -- Elapsed: 0.000283003
-#   Result: 31583219
+       [(Add w32 31583232 N0)])
+#   OK -- Elapsed: 0.000259876
+#   Result: 31583235
 
 # Query 11 -- Type: Truth, Instructions: 106
+array arr53[4] : w32 -> w8 = symbolic
+array arr74[4] : w32 -> w8 = symbolic
+array arr60[4] : w32 -> w8 = symbolic
+array arr67[4] : w32 -> w8 = symbolic
 (query [(Ult (ReadLSB w32 0 arr53)
              16)
         (Ult (ReadLSB w32 0 arr60)
@@ -132,10 +162,15 @@
                             (Not N4:(Eq 0 N1))))))]
        (Or N0
            (Or N2 (Or N3 N4))))
-#   OK -- Elapsed: 0.00217485
+#   OK -- Elapsed: 0.00194788
 #   Is Valid: true
 
 # Query 12 -- Type: Truth, Instructions: 112
+array arr53[4] : w32 -> w8 = symbolic
+array arr49[4] : w32 -> w8 = symbolic
+array arr74[4] : w32 -> w8 = symbolic
+array arr60[4] : w32 -> w8 = symbolic
+array arr67[4] : w32 -> w8 = symbolic
 (query [(Ult (ReadLSB w32 0 arr53)
              16)
         (Ult (ReadLSB w32 0 arr60)
@@ -150,10 +185,15 @@
        (Not (Eq 104
                 (Read w8 0 [N0=0,
                             1=97] @ arr49))))
-#   OK -- Elapsed: 0.00330305
+#   OK -- Elapsed: 0.0030148
 #   Is Valid: false
 
 # Query 13 -- Type: Truth, Instructions: 122
+array arr53[4] : w32 -> w8 = symbolic
+array arr49[4] : w32 -> w8 = symbolic
+array arr74[4] : w32 -> w8 = symbolic
+array arr60[4] : w32 -> w8 = symbolic
+array arr67[4] : w32 -> w8 = symbolic
 (query [(Ult (ReadLSB w32 0 arr53)
              16)
         (Ult (ReadLSB w32 0 arr60)
@@ -172,10 +212,16 @@
                  (Concat w32 (Read w8 3 U0)
                              (Concat w24 (Read w8 2 U0)
                                          (Concat w16 (Read w8 1 U0) (w8 104)))))))
-#   OK -- Elapsed: 0.00039506
+#   OK -- Elapsed: 0.000394106
 #   Is Valid: false
 
 # Query 14 -- Type: Truth, Instructions: 128
+array arr5[64] : w32 -> w8 = symbolic
+array arr53[4] : w32 -> w8 = symbolic
+array arr49[4] : w32 -> w8 = symbolic
+array arr74[4] : w32 -> w8 = symbolic
+array arr60[4] : w32 -> w8 = symbolic
+array arr67[4] : w32 -> w8 = symbolic
 (query [(Ult N0:(ReadLSB w32 0 arr53)
              16)
         (Ult (ReadLSB w32 0 arr60)
@@ -204,10 +250,16 @@
                                     (Add w32 3 N6)=(Extract w8 24 N7),
                                     63=0, 62=0, 61=128, 60=0, 59=0, 58=0, 57=64, 56=0, 55=0, 54=0, 53=32, 52=0, 51=0, 50=0, 49=16, 48=0, 47=0, 46=0, 45=8, 44=0, 43=0, 42=0, 41=4, 40=0, 39=0, 38=0, 37=2, 36=0, 35=0, 34=0, 33=1, 32=0, 31=0, 30=0, 29=0, 28=128, 27=0, 26=0, 25=0, 24=64, 23=0, 22=0, 21=0, 20=32, 19=0, 18=0, 17=0, 16=16, 15=0, 14=0, 13=0, 12=8, 11=0, 10=0, 9=0, 8=4, 7=0, 6=0, 5=0, 4=2, 3=0, 2=0, 1=0, 0=1] @ arr5)
                 N3)))
-#   OK -- Elapsed: 0.018568
+#   OK -- Elapsed: 0.0180621
 #   Is Valid: false
 
 # Query 15 -- Type: Truth, Instructions: 133
+array arr5[64] : w32 -> w8 = symbolic
+array arr53[4] : w32 -> w8 = symbolic
+array arr49[4] : w32 -> w8 = symbolic
+array arr74[4] : w32 -> w8 = symbolic
+array arr60[4] : w32 -> w8 = symbolic
+array arr67[4] : w32 -> w8 = symbolic
 (query [(Ult N0:(ReadLSB w32 0 arr53)
              16)
         (Ult N1:(ReadLSB w32 0 arr60)
@@ -238,10 +290,16 @@
             N4)]
        (Eq 32
            (ReadLSB w32 N9:(Mul w32 4 N1) U2)))
-#   OK -- Elapsed: 0.00105405
+#   OK -- Elapsed: 0.00104594
 #   Is Valid: false
 
 # Query 16 -- Type: InitialValues, Instructions: 135
+array arr5[64] : w32 -> w8 = symbolic
+array arr53[4] : w32 -> w8 = symbolic
+array arr49[4] : w32 -> w8 = symbolic
+array arr74[4] : w32 -> w8 = symbolic
+array arr60[4] : w32 -> w8 = symbolic
+array arr67[4] : w32 -> w8 = symbolic
 (query [(Ult N0:(ReadLSB w32 0 arr53)
              16)
         (Ult N1:(ReadLSB w32 0 arr60)
@@ -278,7 +336,7 @@
         arr60
         arr67
         arr74])
-#   OK -- Elapsed: 0.00058198
+#   OK -- Elapsed: 0.000574112
 #   Solvable: true
 #     arr49 = [104,0,0,0]
 #     arr53 = [12,0,0,0]

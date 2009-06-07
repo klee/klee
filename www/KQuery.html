@@ -265,13 +265,18 @@
   <p><b>Syntax:</b></p>
   <div class="syntax">
     array-declaration = "array" name "[" [ size ] "]" ":" domain "->" range "=" array-initializer<br>
-    array-initializer = "symbolic" | "{" { numeric-literal } "}"<br>
+    array-initializer = "symbolic" | "[" { numeric-literal } "]"<br>
   </div>
+
+  <p>Arrays can be initialized to be either symbolic, or to have a given list of
+  constant values. For constant arrays, the initializer list must exactly match
+  the size of the array (if the size was unspecified, it will be the number of
+  constant values).</p>
 
   <p><b>Examples:</b></p>
   <div class="example">
     array foo[10] : w32 -> w8 = symbolic <font color="Red"># A ten element symbolic array</font><br>
-    array foo[4] : w8 -> w1 = { true, false, false, true } <font color="Red"># A constant array of four booleans</font><br>
+    array foo[] : w8 -> w1 = [ true, false, false, true ] <font color="Red"># A constant array of four booleans</font><br>
   </div>
   
   <h3><a name="query_commands">Query Commands</a></h3>

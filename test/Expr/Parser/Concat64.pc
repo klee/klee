@@ -1,5 +1,6 @@
 # RUN: kleaver --print-ast %s
 
+array arr1[8] : w32 -> w8 = symbolic
 (query [(Eq 0
             (Concat w64 (Read w8 7 arr1)
             (Concat w56 (Read w8 6 arr1)

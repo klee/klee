@@ -2,6 +2,9 @@
 # RUN: grep -q "(ReadLSB w32 4 arr1)" log
 # RUN: grep -q "(ReadMSB w32 2 arr2)" log
 
+array arr1[8] : w32 -> w8 = symbolic
+array arr2[8] : w32 -> w8 = symbolic
+
 (query [(Not (Slt 100
                   (Concat w32 (Read w8 7 arr1)
                               (Concat w24 (Read w8 6 arr1)

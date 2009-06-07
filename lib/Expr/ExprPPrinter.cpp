@@ -81,6 +81,9 @@ public:
 };
 
 class PPrinter : public ExprPPrinter {
+public:
+  std::set<const Array*> usedArrays;
+private:
   std::map<ref<Expr>, unsigned> bindings;
   std::map<const UpdateNode*, unsigned> updateBindings;
   std::set< ref<Expr> > couldPrint, shouldPrint;
@@ -131,6 +134,7 @@ class PPrinter : public ExprPPrinter {
   }
   
   void scanUpdate(const UpdateNode *un) {
+    // FIXME: This needs to be non-recursive.
     if (un) {
       if (couldPrintUpdates.insert(un).second) {
         scanUpdate(un->next);
@@ -148,8 +152,10 @@ class PPrinter : public ExprPPrinter {
         Expr *ep = e.get();
         for (unsigned i=0; i<ep->getNumKids(); i++)
           scan1(ep->getKid(i));
-        if (const ReadExpr *re = dyn_cast<ReadExpr>(e)) 
+        if (const ReadExpr *re = dyn_cast<ReadExpr>(e)) {
+          usedArrays.insert(re->updates.root);
           scanUpdate(re->updates.head);
+        }
       } else {
         shouldPrint.insert(e);
       }
@@ -507,7 +513,8 @@ void ExprPPrinter::printQuery(std::ostream &os,
                               const ref<Expr> *evalExprsBegin,
                               const ref<Expr> *evalExprsEnd,
                               const Array * const *evalArraysBegin,
-                              const Array * const *evalArraysEnd) {
+                              const Array * const *evalArraysEnd,
+                              bool printArrayDecls) {
   PPrinter p(os);
   
   for (ConstraintManager::const_iterator it = constraints.begin(),
@@ -519,6 +526,21 @@ void ExprPPrinter::printQuery(std::ostream &os,
     p.scan(*it);
 
   PrintContext PC(os);
+  
+  // Print array declarations.
+  if (printArrayDecls) {
+    for (std::set<const Array*>::iterator it = p.usedArrays.begin(), 
+           ie = p.usedArrays.end(); it != ie; ++it) {
+      const Array *A = *it;
+      // FIXME: Print correct name, domain, and range.
+      PC << "array " << "arr" << A->id 
+         << "[" << A->size << "]"
+         << " : " << "w32" << " -> " << "w8"
+         << " = symbolic";
+      PC.breakLine();
+    }
+  }
+
   PC << "(query [";
   
   // Ident at constraint list;
