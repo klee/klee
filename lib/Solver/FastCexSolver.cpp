@@ -732,6 +732,8 @@ public:
   }
 
   void propogateExactValues(ref<Expr> e, CexValueData range) {
+    //llvm::cout << e << " \\in " << range << "\n";
+
     switch (e->getKind()) {
     case Expr::Constant: {
       // FIXME: Assert that range contains this constant.
@@ -743,6 +745,37 @@ public:
     case Expr::NotOptimized: break;
 
     case Expr::Read: {
+      ReadExpr *re = cast<ReadExpr>(e);
+      const Array *array = re->updates.root;
+      CexObjectData &cod = getObjectData(array);
+      CexValueData index = evalRangeForExpr(re->index);
+        
+      for (const UpdateNode *un = re->updates.head; un; un = un->next) {
+        CexValueData ui = evalRangeForExpr(un->index);
+
+        // If these indices can't alias, continue propogation
+        if (!ui.mayEqual(index))
+          continue;
+
+        // Otherwise if we know they alias, propogate into the write value.
+        if (ui.mustEqual(index) || re->index == un->index)
+          propogateExactValues(un->value, range);
+        return;
+      }
+
+      // We reached the initial array write, update the exact range if possible.
+      if (index.isFixed()) {
+        CexValueData cvd = cod.getExactValues(index.min());
+        if (range.min() > cvd.min()) {
+          assert(range.min() <= cvd.max());
+          cvd = CexValueData(range.min(), cvd.max());
+        }
+        if (range.max() < cvd.max()) {
+          assert(range.max() >= cvd.min());
+          cvd = CexValueData(cvd.min(), range.max());
+        }
+        cod.setExactValues(index.min(), cvd);
+      }
       break;
     }
 
@@ -785,6 +818,22 @@ public:
       // Comparison
 
     case Expr::Eq: {
+      BinaryExpr *be = cast<BinaryExpr>(e);
+      if (range.isFixed()) {
+        if (ConstantExpr *CE = dyn_cast<ConstantExpr>(be->left)) {
+          uint64_t value = CE->getConstantValue();
+          if (range.min()) {
+            // If the equality is true, then propogate the value.
+            propogateExactValue(be->right, value);
+          } else {
+            // If the equality is false and the comparison is of booleans, then
+            // we can infer the value to propogate.
+            if (be->right->getWidth() == Expr::Bool) {
+              propogateExactValue(be->right, !value);
+            }
+          }
+        }
+      }
       break;
     }
 
@@ -808,7 +857,7 @@ public:
     }
   }
 
-  ValueRange evalRangeForExpr(ref<Expr> &e) {
+  ValueRange evalRangeForExpr(const ref<Expr> &e) {
     CexRangeEvaluator ce(objects);
     return ce.evaluate(e);
   }
@@ -871,9 +920,10 @@ static bool propogateValues(const Query& query, CexData &cd,
   }
 
   // Check the result.
+  bool hasSatisfyingAssignment = true;
   if (checkExpr) {
     if (!cd.evaluatePossible(query.expr)->isFalse())
-      return false;
+      hasSatisfyingAssignment = false;
 
     // If the query is known to be true, then we have proved validity.
     if (cd.evaluateExact(query.expr)->isTrue()) {
@@ -884,8 +934,8 @@ static bool propogateValues(const Query& query, CexData &cd,
 
   for (ConstraintManager::const_iterator it = query.constraints.begin(), 
          ie = query.constraints.end(); it != ie; ++it) {
-    if (!cd.evaluatePossible(*it)->isTrue())
-      return false;
+    if (hasSatisfyingAssignment && !cd.evaluatePossible(*it)->isTrue())
+      hasSatisfyingAssignment = false;
 
     // If this constraint is known to be false, then we can prove anything, so
     // the query is valid.
@@ -895,8 +945,12 @@ static bool propogateValues(const Query& query, CexData &cd,
     }
   }
 
-  isValid = false;
-  return true;
+  if (hasSatisfyingAssignment) {
+    isValid = false;
+    return true;
+  }
+
+  return false;
 }
 
 IncompleteSolver::PartialValidity 
