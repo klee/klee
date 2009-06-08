@@ -346,15 +346,14 @@ public:
   }
 };
 
-class CexEvaluator : public ExprEvaluator {
+class CexPossibleEvaluator : public ExprEvaluator {
 protected:
   ref<Expr> getInitialValue(const Array& array, unsigned index) {
     // If the index is out of range, we cannot assign it a value, since that
     // value cannot be part of the assignment.
-    if (index >= array.size) {
+    if (index >= array.size)
       return ReadExpr::create(UpdateList(&array, true, 0), 
                               ConstantExpr::alloc(index, Expr::Int32));
-    } 
       
     std::map<unsigned, CexObjectData*>::iterator it = objects.find(array.id);
     return ConstantExpr::alloc((it == objects.end() ? 127 : 
@@ -364,7 +363,35 @@ protected:
 
 public:
   std::map<unsigned, CexObjectData*> &objects;
-  CexEvaluator(std::map<unsigned, CexObjectData*> &_objects) 
+  CexPossibleEvaluator(std::map<unsigned, CexObjectData*> &_objects) 
+    : objects(_objects) {}
+};
+
+class CexExactEvaluator : public ExprEvaluator {
+protected:
+  ref<Expr> getInitialValue(const Array& array, unsigned index) {
+    // If the index is out of range, we cannot assign it a value, since that
+    // value cannot be part of the assignment.
+    if (index >= array.size)
+      return ReadExpr::create(UpdateList(&array, true, 0), 
+                              ConstantExpr::alloc(index, Expr::Int32));
+      
+    std::map<unsigned, CexObjectData*>::iterator it = objects.find(array.id);
+    if (it == objects.end())
+      return ReadExpr::create(UpdateList(&array, true, 0), 
+                              ConstantExpr::alloc(index, Expr::Int32));
+
+    CexValueData cvd = it->second->getExactValues(index);
+    if (!cvd.isFixed())
+      return ReadExpr::create(UpdateList(&array, true, 0), 
+                              ConstantExpr::alloc(index, Expr::Int32));
+
+    return ConstantExpr::alloc(cvd.min(), Expr::Int8);
+  }
+
+public:
+  std::map<unsigned, CexObjectData*> &objects;
+  CexExactEvaluator(std::map<unsigned, CexObjectData*> &_objects) 
     : objects(_objects) {}
 };
 
@@ -394,6 +421,10 @@ public:
 
   void propogatePossibleValue(ref<Expr> e, uint64_t value) {
     propogatePossibleValues(e, CexValueData(value,value));
+  }
+
+  void propogateExactValue(ref<Expr> e, uint64_t value) {
+    propogateExactValues(e, CexValueData(value,value));
   }
 
   void propogatePossibleValues(ref<Expr> e, CexValueData range) {
@@ -700,6 +731,83 @@ public:
     }
   }
 
+  void propogateExactValues(ref<Expr> e, CexValueData range) {
+    switch (e->getKind()) {
+    case Expr::Constant: {
+      // FIXME: Assert that range contains this constant.
+      break;
+    }
+
+      // Special
+
+    case Expr::NotOptimized: break;
+
+    case Expr::Read: {
+      break;
+    }
+
+    case Expr::Select: {
+      break;
+    }
+
+    case Expr::Concat: {
+      break;
+    }
+
+    case Expr::Extract: {
+      break;
+    }
+
+      // Casting
+
+    case Expr::ZExt: {
+      break;
+    }
+
+    case Expr::SExt: {
+      break;
+    }
+
+      // Binary
+
+    case Expr::And: {
+      break;
+    }
+
+    case Expr::Or: {
+      break;
+    }
+
+    case Expr::Xor: {
+      break;
+    }
+
+      // Comparison
+
+    case Expr::Eq: {
+      break;
+    }
+
+    case Expr::Ult: {
+      break;
+    }
+
+    case Expr::Ule: {
+      break;
+    }
+
+    case Expr::Ne:
+    case Expr::Ugt:
+    case Expr::Uge:
+    case Expr::Sgt:
+    case Expr::Sge:
+      assert(0 && "invalid expressions (uncanonicalized");
+
+    default:
+      break;
+    }
+  }
+
   ValueRange evalRangeForExpr(ref<Expr> &e) {
     CexRangeEvaluator ce(objects);
     return ce.evaluate(e);
@@ -707,8 +815,12 @@ public:
 
   /// evaluate - Try to evaluate the given expression using a consistent fixed
   /// value for the current set of possible ranges.
-  ref<Expr> evaluate(ref<Expr> e) {
-    return CexEvaluator(objects).visit(e);
+  ref<Expr> evaluatePossible(ref<Expr> e) {
+    return CexPossibleEvaluator(objects).visit(e);
+  }
+
+  ref<Expr> evaluateExact(ref<Expr> e) {
+    return CexExactEvaluator(objects).visit(e);
   }
 };
 
@@ -749,22 +861,40 @@ FastCexSolver::~FastCexSolver() { }
 static bool propogateValues(const Query& query, CexData &cd, 
                             bool checkExpr, bool &isValid) {
   for (ConstraintManager::const_iterator it = query.constraints.begin(), 
-         ie = query.constraints.end(); it != ie; ++it)
+         ie = query.constraints.end(); it != ie; ++it) {
     cd.propogatePossibleValue(*it, 1);
-  if (checkExpr)
+    cd.propogateExactValue(*it, 1);
+  }
+  if (checkExpr) {
     cd.propogatePossibleValue(query.expr, 0);
+    cd.propogateExactValue(query.expr, 0);
+  }
 
   // Check the result.
-  if (checkExpr)
-    if (!cd.evaluate(query.expr)->isFalse())
+  if (checkExpr) {
+    if (!cd.evaluatePossible(query.expr)->isFalse())
       return false;
+
+    // If the query is known to be true, then we have proved validity.
+    if (cd.evaluateExact(query.expr)->isTrue()) {
+      isValid = true;
+      return true;
+    }
+  }
 
   for (ConstraintManager::const_iterator it = query.constraints.begin(), 
-         ie = query.constraints.end(); it != ie; ++it)
-    if (!cd.evaluate(*it)->isTrue())
+         ie = query.constraints.end(); it != ie; ++it) {
+    if (!cd.evaluatePossible(*it)->isTrue())
       return false;
 
-  // Currently we can only prove invalidity.
+    // If this constraint is known to be false, then we can prove anything, so
+    // the query is valid.
+    if (cd.evaluateExact(*it)->isFalse()) {
+      isValid = true;
+      return true;
+    }
+  }
+
   isValid = false;
   return true;
 }
@@ -797,7 +927,7 @@ bool FastCexSolver::computeValue(const Query& query, ref<Expr> &result) {
     return false;
   
   // Propogation found a satisfying assignment, evaluate the expression.
-  ref<Expr> value = cd.evaluate(query.expr);
+  ref<Expr> value = cd.evaluatePossible(query.expr);
   
   if (isa<ConstantExpr>(value)) {
     // FIXME: We should be able to make sure this never fails?
@@ -835,10 +965,10 @@ FastCexSolver::computeInitialValues(const Query& query,
     data.reserve(array->size);
 
     for (unsigned i=0; i < array->size; i++) {
-      ref<Expr> value =
-        cd.evaluate(ReadExpr::create(UpdateList(array, true, 0),
-                                     ConstantExpr::create(i,
-                                                          kMachinePointerType)));
+      ref<Expr> read = 
+        ReadExpr::create(UpdateList(array, true, 0),
+                         ConstantExpr::create(i, kMachinePointerType));
+      ref<Expr> value = cd.evaluatePossible(read);
       
       if (ConstantExpr *CE = dyn_cast<ConstantExpr>(value)) {
         data.push_back((unsigned char) CE->getConstantValue());
