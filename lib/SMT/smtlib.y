@@ -23,7 +23,7 @@
    commands in SMT-LIB language.
 */
 
-#include "vc.h"
+//#include "vc.h"
 #include "parser_exception.h"
 #include "parser_temp.h"
 
@@ -34,7 +34,7 @@ namespace CVC3 {
 // Define shortcuts for various things
 #define TMP CVC3::parserTemp
 #define EXPR CVC3::parserTemp->expr
-#define VC (CVC3::parserTemp->vc)
+//#define VC (CVC3::parserTemp->vc)
 #define ARRAYSENABLED (CVC3::parserTemp->arrFlag)
 #define BVENABLED (CVC3::parserTemp->bvFlag)
 #define BVSIZE (CVC3::parserTemp->bvSize)
@@ -63,6 +63,7 @@ int smtliberror(const char *s)
 
 %}
 
+/*
 %union {
   std::string *str;
   std::vector<std::string> *strvec;
@@ -70,13 +71,22 @@ int smtliberror(const char *s)
   std::vector<CVC3::Expr> *vec;
   std::pair<std::vector<CVC3::Expr>, std::vector<std::string> > *pat_ann;
 };
+*/
+
+
+%union {
+  std::string *str;
+  std::vector<std::string> *strvec;
+  Expr node;
+  std::vector<void*> *vec;
+};
 
 
 %start cmd
 
 /* strings are for better error messages.  
    "_TOK" is so macros don't conflict with kind names */
-
+/*
 %type <vec> bench_attributes sort_symbs fun_symb_decls pred_symb_decls
 %type <vec> an_formulas quant_vars an_terms fun_symb patterns
 %type <node> pattern 
@@ -88,6 +98,9 @@ int smtliberror(const char *s)
 %type <str> logic_name quant_symb connective user_value attribute annotation
 %type <strvec> annotations
 %type <pat_ann> patterns_annotations
+*/
+%type <node> benchmark bench_name  bench_attribute  bench_attributes
+%type <node> an_formula an_atom prop_atom
 
 %token <str> NUMERAL_TOK
 %token <str> SYM_TOK
@@ -146,8 +159,11 @@ int smtliberror(const char *s)
 cmd:
     benchmark
     {
+      /*
       EXPR = *$1;
       delete $1;
+      */
+      EXPR = $1;
       YYACCEPT;
     }
 ;
@@ -155,15 +171,19 @@ cmd:
 benchmark:
     LPAREN_TOK BENCHMARK_TOK bench_name bench_attributes RPAREN_TOK
     {
+      /*
       if (!QUERYPARSED)
         $4->push_back(CVC3::Expr(VC->listExpr("_CHECKSAT", CVC3::Expr(VC->idExpr("_TRUE_EXPR")))));
       $$ = new CVC3::Expr(VC->listExpr("_SEQ",*$4));
       delete $4;
+      */
+      $$ = NULL;
     }
   | EOF_TOK
     { 
       TMP->done = true;
-      $$ = new CVC3::Expr();
+      //$$ = new CVC3::Expr();
+      $$ = NULL;
     }
 ;
 
@@ -177,6 +197,10 @@ bench_name:
 
 bench_attributes:
     bench_attribute
+    {
+      $$ = $1;
+    }
+/*
     {
       $$ = new std::vector<CVC3::Expr>;
       if ($1) {
@@ -192,20 +216,28 @@ bench_attributes:
 	delete $2;
       }
     }
+*/
 ;
 
 bench_attribute:
     COLON_TOK ASSUMPTION_TOK an_formula
     {
-      $$ = new CVC3::Expr(VC->listExpr("_ASSERT", *$3));
+      /*
+      $$ = new CVC3::Expr(VC->listExpr("_ASSERT", *$3));      
       delete $3;
+      */
+      $$ = $3;
     }
   | COLON_TOK FORMULA_TOK an_formula 
     {
+      /*
       $$ = new CVC3::Expr(VC->listExpr("_CHECKSAT", *$3));
       QUERYPARSED = true;
       delete $3;
+      */
+      $$ = $3;
     }
+/*
   | COLON_TOK STATUS_TOK status 
     {
       $$ = NULL;
@@ -228,6 +260,7 @@ bench_attribute:
                                                 VC->idExpr("Index"),
                                                 VC->idExpr("Element"))));
         $$ = new CVC3::Expr(VC->listExpr("_SEQ", tmp));
+	$$ = NULL;
       }
       else if (*$3 == "QF_AUFLIA" ||
                *$3 == "AUFLIA") {
@@ -309,8 +342,10 @@ bench_attribute:
       $$ = NULL;
       delete $1;
     }
+*/
 ;
 
+/*
 logic_name:
     SYM_TOK LBRACKET_TOK NUMERAL_TOK RBRACKET_TOK
     {
@@ -449,12 +484,15 @@ an_formulas:
       delete $2;
     }
 ;
+*/
+
 
 an_formula:
     an_atom
     {
       $$ = $1;
     }
+/*
   | LPAREN_TOK connective an_formulas annotations RPAREN_TOK
     {
       $$ = new CVC3::Expr(VC->listExpr(*$2, *$3));
@@ -525,8 +563,10 @@ an_formula:
       delete $5;
       delete $7;
     }
+*/
 ;
 
+/*
 patterns_annotations:
      patterns
      {
@@ -646,12 +686,14 @@ connective:
       $$ = new std::string("_IFF");
     }
 ;
+*/
 
 an_atom:
     prop_atom 
     {
       $$ = $1;
     }
+/*
   | LPAREN_TOK prop_atom annotations RPAREN_TOK 
     {
       $$ = $2;
@@ -713,17 +755,21 @@ an_atom:
 //       $$ = new CVC3::Expr(VC->listExpr("_AND", tmp));
       delete $3;
     }
+*/
 ;
 
 prop_atom:
     TRUE_TOK
     {
-      $$ = new CVC3::Expr(VC->idExpr("_TRUE_EXPR"));
+      //$$ = new CVC3::Expr(VC->idExpr("_TRUE_EXPR"));
+      $$ = NULL;
     }
   | FALSE_TOK
     { 
-      $$ = new CVC3::Expr(VC->idExpr("_FALSE_EXPR"));
+      //$$ = new CVC3::Expr(VC->idExpr("_FALSE_EXPR"));
+      $$ = NULL;
     }
+/*
   | fvar
     {
       $$ = $1;
@@ -732,8 +778,10 @@ prop_atom:
     {
       $$ = $1;
     }
+*/
 ;  
 
+/*
 an_terms:
     an_term
     {
@@ -1218,5 +1266,6 @@ fvar:
       delete $2;
     }
 ;
+*/
 
 %%
