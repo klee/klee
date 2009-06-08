@@ -22,7 +22,12 @@
 #ifndef _cvc3__lang_h_
 #define _cvc3__lang_h_
 
-#include "debug.h"
+#include <assert.h>
+#include <stdlib.h>
+
+//#include "debug.h"
+#define FatalAssert(cond, msg) assert(#cond && msg)
+#define DebugAssert(cond, msg) assert(#cond && msg)
 
 namespace CVC3 {
 
