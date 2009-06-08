@@ -29,33 +29,6 @@ using namespace std;
 
 // The communication entry points of the actual parsers
 
-// for presentation language (PL.y and PL.lex)
-extern int PLparse(); 
-extern void *PL_createBuffer(int);
-extern void PL_deleteBuffer(void *);
-extern void PL_switchToBuffer(void *);
-extern int PL_bufSize();
-extern void *PL_bufState();
-void PL_setInteractive(bool);
-
-// for Lisp language (Lisp.y and Lisp.lex)
-extern int Lispparse(); 
-extern void *Lisp_createBuffer(int);
-extern void Lisp_deleteBuffer(void *);
-extern void Lisp_switchToBuffer(void *);
-extern int Lisp_bufSize();
-extern void *LispBufState();
-void Lisp_setInteractive(bool);
-
-// for Lisp language (Lisp.y and Lisp.lex)
-extern int Lispparse(); 
-extern void *Lisp_createBuffer(int);
-extern void Lisp_deleteBuffer(void *);
-extern void Lisp_switchToBuffer(void *);
-extern int Lisp_bufSize();
-extern void *LispBufState();
-void Lisp_setInteractive(bool);
-
 // for smtlib language (smtlib.y and smtlib.lex)
 extern int smtlibparse(); 
 extern void *smtlib_createBuffer(int);
@@ -142,14 +115,6 @@ namespace CVC3 {
   // Initialize the actual parser
   void Parser::initParser() {
     switch(d_data->lang) {
-    case PRESENTATION_LANG:
-      d_data->buffer = PL_createBuffer(PL_bufSize());
-      d_data->temp.lineNum = 1;
-      break;
-    case LISP_LANG:
-      d_data->buffer = Lisp_createBuffer(Lisp_bufSize());
-      d_data->temp.lineNum = 1;
-      break;
     case SMTLIB_LANG:
       d_data->buffer = smtlib_createBuffer(smtlib_bufSize());
       d_data->temp.lineNum = 1;
@@ -161,12 +126,6 @@ namespace CVC3 {
   // Clean up the parser's internal data structures
   void Parser::deleteParser() {
     switch(d_data->lang) {
-    case PRESENTATION_LANG:
-      PL_deleteBuffer(d_data->buffer);
-      break;
-    case LISP_LANG:
-      Lisp_deleteBuffer(d_data->buffer);
-      break;
     case SMTLIB_LANG:
       smtlib_deleteBuffer(d_data->buffer);
       break;
@@ -184,20 +143,6 @@ namespace CVC3 {
     // the parser running
     try {
       switch(d_data->lang) {
-      case PRESENTATION_LANG:
-      	PL_switchToBuffer(d_data->buffer);
-	PL_setInteractive(d_data->temp.interactive);
-	PLparse();
-	// Reset the prompt to the main one
-	d_data->temp.setPrompt1();
-	break;
-      case LISP_LANG:
-        Lisp_switchToBuffer(d_data->buffer);
-	Lisp_setInteractive(d_data->temp.interactive);
-	Lispparse();
-	// Reset the prompt to the main one
-	d_data->temp.setPrompt1();
-	break;
       case SMTLIB_LANG:
         smtlib_switchToBuffer(d_data->buffer);
 	smtlib_setInteractive(d_data->temp.interactive);
