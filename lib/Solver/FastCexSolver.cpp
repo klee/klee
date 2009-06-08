@@ -288,34 +288,50 @@ inline std::ostream &operator<<(std::ostream &os, const ValueRange &vr) {
 typedef ValueRange CexValueData;
 
 class CexObjectData {
-  std::vector<CexValueData> contents;
+  /// possibleContents - An array of "possible" values for the object.
+  ///
+  /// The possible values is an inexact approximation for the set of values for
+  /// each array location.
+  std::vector<CexValueData> possibleContents;
+
+  /// exactContents - An array of exact values for the object.
+  ///
+  /// The exact values are a conservative approximation for the set of values
+  /// for each array location.
+  std::vector<CexValueData> exactContents;
 
   CexObjectData(const CexObjectData&); // DO NOT IMPLEMENT
   void operator=(const CexObjectData&); // DO NOT IMPLEMENT
 
 public:
-  CexObjectData(uint64_t size) : contents(size) {
-    for (uint64_t i = 0; i != size; ++i)
-      contents[i] = ValueRange(0, 255);
+  CexObjectData(uint64_t size) : possibleContents(size), exactContents(size) {
+    for (uint64_t i = 0; i != size; ++i) {
+      possibleContents[i] = ValueRange(0, 255);
+      exactContents[i] = ValueRange(0, 255);
+    }
   }
 
-  CexValueData getPossibleValues(size_t index) { 
-    return contents[index];
-  }
   const CexValueData getPossibleValues(size_t index) const { 
-    return contents[index];
+    return possibleContents[index];
   }
   void setPossibleValues(size_t index, CexValueData values) {
-    contents[index] = values;
+    possibleContents[index] = values;
+  }
+  void setPossibleValue(size_t index, unsigned char value) {
+    possibleContents[index] = CexValueData(value);
+  }
+
+  const CexValueData getExactValues(size_t index) const { 
+    return exactContents[index];
+  }
+  void setExactValues(size_t index, CexValueData values) {
+    exactContents[index] = values;
   }
 
   /// getPossibleValue - Return some possible value.
   unsigned char getPossibleValue(size_t index) const {
-    const CexValueData &cvd = contents[index];
+    const CexValueData &cvd = possibleContents[index];
     return cvd.min() + (cvd.max() - cvd.min()) / 2;
-  }
-  void setPossibleValue(size_t index, unsigned char value) {
-    contents[index] = CexValueData(value);
   }
 };
 
