@@ -280,59 +280,19 @@ inline std::ostream &operator<<(std::ostream &os, const ValueRange &vr) {
   return os;
 }
 
-// used to find all memory object ids and the maximum size of any
-// object state that references them (for symbolic size).
-class ObjectFinder : public ExprVisitor {
-protected:
-  Action visitRead(const ReadExpr &re) {
-    addUpdates(re.updates);
-    return Action::doChildren();
-  }
-
-  // XXX nice if this information was cached somewhere, used by
-  // independence as well right?
-  void addUpdates(const UpdateList &ul) {
-    for (const UpdateNode *un=ul.head; un; un=un->next) {
-      visit(un->index);
-      visit(un->value);
-    }
-
-    addObject(*ul.root);
-  }
-
-public:
-  void addObject(const Array& array) {
-    unsigned id = array.id;
-    std::map<unsigned,unsigned>::iterator it = results.find(id);
-
-    // FIXME: Not 64-bit size clean.
-    if (it == results.end()) {
-      results[id] = (unsigned) array.size;      
-    } else {
-      it->second = std::max(it->second, (unsigned) array.size);
-    }
-  }
-
-public:
-  std::map<unsigned, unsigned> results;
-};
-
 // XXX waste of space, rather have ByteValueRange
 typedef ValueRange CexValueData;
 
-// FIXME: We should avoid copying these objects.
 class CexObjectData {
-  uint64_t size;
   std::vector<CexValueData> contents;
 
+  CexObjectData(const CexObjectData&); // DO NOT IMPLEMENT
+  void operator=(const CexObjectData&); // DO NOT IMPLEMENT
+
 public:
-  CexObjectData(uint64_t _size) : size(_size), contents(_size) {
+  CexObjectData(uint64_t size) : contents(size) {
     for (uint64_t i = 0; i != size; ++i)
       contents[i] = ValueRange(0, 255);
-  }
-
-  uint64_t getSize() const {
-    return size;
   }
 
   CexValueData getPossibleValues(size_t index) { 
@@ -357,9 +317,9 @@ public:
 
 class CexRangeEvaluator : public ExprRangeEvaluator<ValueRange> {
 public:
-  std::map<unsigned, CexObjectData> &objectValues;
-  CexRangeEvaluator(std::map<unsigned, CexObjectData> &_objectValues) 
-    : objectValues(_objectValues) {}
+  std::map<unsigned, CexObjectData*> &objects;
+  CexRangeEvaluator(std::map<unsigned, CexObjectData*> &_objects) 
+    : objects(_objects) {}
 
   ValueRange getInitialReadRange(const Array &os, ValueRange index) {
     return ValueRange(0, 255);
@@ -369,47 +329,48 @@ public:
 class CexEvaluator : public ExprEvaluator {
 protected:
   ref<Expr> getInitialValue(const Array& array, unsigned index) {
-    std::map<unsigned, CexObjectData>::iterator it = 
-      objectValues.find(array.id);
-    assert(it != objectValues.end() && "missing object?");
-    CexObjectData &cod = it->second;
-
     // If the index is out of range, we cannot assign it a value, since that
     // value cannot be part of the assignment.
-    if (index >= cod.getSize()) {
+    if (index >= array.size) {
       return ReadExpr::create(UpdateList(&array, true, 0), 
                               ConstantExpr::alloc(index, Expr::Int32));
     } 
       
-    return ConstantExpr::alloc(cod.getPossibleValue(index), Expr::Int8);
+    std::map<unsigned, CexObjectData*>::iterator it = objects.find(array.id);
+    return ConstantExpr::alloc((it == objects.end() ? 127 : 
+                                it->second->getPossibleValue(index)),
+                               Expr::Int8);
   }
 
 public:
-  std::map<unsigned, CexObjectData> &objectValues;
-  CexEvaluator(std::map<unsigned, CexObjectData> &_objectValues) 
-    : objectValues(_objectValues) {}
+  std::map<unsigned, CexObjectData*> &objects;
+  CexEvaluator(std::map<unsigned, CexObjectData*> &_objects) 
+    : objects(_objects) {}
 };
 
 class CexData {
 public:
-  std::map<unsigned, CexObjectData> objectValues;
+  std::map<unsigned, CexObjectData*> objects;
 
   CexData(const CexData&); // DO NOT IMPLEMENT
   void operator=(const CexData&); // DO NOT IMPLEMENT
 
 public:
   CexData() {}
-  CexData(ObjectFinder &finder) {
-    initValues(finder);
+  ~CexData() {
+    for (std::map<unsigned, CexObjectData*>::iterator it = objects.begin(),
+           ie = objects.end(); it != ie; ++it)
+      delete it->second;
   }
 
-  void initValues(ObjectFinder &finder) {
-    for (std::map<unsigned,unsigned>::iterator it = finder.results.begin(),
-           ie = finder.results.end(); it != ie; ++it) {
-      objectValues.insert(std::pair<unsigned, CexObjectData>(it->first, 
-                                                             CexObjectData(it->second)));
-    }
-  }  
+  CexObjectData &getObjectData(const Array *A) {
+    CexObjectData *&Entry = objects[A->id];
+
+    if (!Entry)
+      Entry = new CexObjectData(A->size);
+
+    return *Entry;
+  }
 
   void forceExprToValue(ref<Expr> e, uint64_t value) {
     forceExprToRange(e, CexValueData(value,value));
@@ -430,7 +391,7 @@ public:
     case Expr::Read: {
       ReadExpr *re = cast<ReadExpr>(e);
       const Array *array = re->updates.root;
-      CexObjectData &cod = objectValues.find(array->id)->second;
+      CexObjectData &cod = getObjectData(array);
 
       // FIXME: This is imprecise, we need to look through the existing writes
       // to see if this is an initial read or not.
@@ -716,14 +677,14 @@ public:
   }
 
   ValueRange evalRangeForExpr(ref<Expr> &e) {
-    CexRangeEvaluator ce(objectValues);
+    CexRangeEvaluator ce(objects);
     return ce.evaluate(e);
   }
 
   /// evaluate - Try to evaluate the given expression using a consistent fixed
   /// value for the current set of possible ranges.
   ref<Expr> evaluate(ref<Expr> e) {
-    return CexEvaluator(objectValues).visit(e);
+    return CexEvaluator(objects).visit(e);
   }
 };
 
@@ -761,15 +722,8 @@ FastCexSolver::~FastCexSolver() { }
 /// constraints were proven valid or invalid.
 ///
 /// \return - True if the propogation was able to prove validity or invalidity.
-static bool propogateValues(ObjectFinder &of, const Query& query, CexData &cd, 
+static bool propogateValues(const Query& query, CexData &cd, 
                             bool checkExpr, bool &isValid) {
-  for (ConstraintManager::const_iterator it = query.constraints.begin(), 
-         ie = query.constraints.end(); it != ie; ++it)
-    of.visit(*it);
-  of.visit(query.expr);
-
-  cd.initValues(of);
-
   for (ConstraintManager::const_iterator it = query.constraints.begin(), 
          ie = query.constraints.end(); it != ie; ++it)
     cd.forceExprToValue(*it, 1);
@@ -793,11 +747,10 @@ static bool propogateValues(ObjectFinder &of, const Query& query, CexData &cd,
 
 IncompleteSolver::PartialValidity 
 FastCexSolver::computeTruth(const Query& query) {
-  ObjectFinder of;
   CexData cd;
 
   bool isValid;
-  bool success = propogateValues(of, query, cd, true, isValid);
+  bool success = propogateValues(query, cd, true, isValid);
 
   if (!success)
     return IncompleteSolver::None;
@@ -806,11 +759,10 @@ FastCexSolver::computeTruth(const Query& query) {
 }
 
 bool FastCexSolver::computeValue(const Query& query, ref<Expr> &result) {
-  ObjectFinder of;
   CexData cd;
 
   bool isValid;
-  bool success = propogateValues(of, query, cd, false, isValid);
+  bool success = propogateValues(query, cd, false, isValid);
 
   // Check if propogation wasn't able to determine anything.
   if (!success)
@@ -821,8 +773,7 @@ bool FastCexSolver::computeValue(const Query& query, ref<Expr> &result) {
     return false;
   
   // Propogation found a satisfying assignment, evaluate the expression.
-  CexEvaluator cc(cd.objectValues);
-  ref<Expr> value = cc.visit(query.expr);
+  ref<Expr> value = cd.evaluate(query.expr);
   
   if (isa<ConstantExpr>(value)) {
     // FIXME: We should be able to make sure this never fails?
@@ -840,15 +791,10 @@ FastCexSolver::computeInitialValues(const Query& query,
                                     std::vector< std::vector<unsigned char> >
                                       &values,
                                     bool &hasSolution) {
-  ObjectFinder of;
   CexData cd;
 
-  for (std::vector<const Array*>::const_iterator it = objects.begin(), 
-         ie = objects.end(); it != ie; ++it)
-    of.addObject(**it);
-
   bool isValid;
-  bool success = propogateValues(of, query, cd, true, isValid);
+  bool success = propogateValues(query, cd, true, isValid);
 
   // Check if propogation wasn't able to determine anything.
   if (!success)
@@ -859,7 +805,6 @@ FastCexSolver::computeInitialValues(const Query& query,
     return true;
 
   // Propogation found a satisfying assignment, compute the initial values.
-  CexEvaluator cc(cd.objectValues);
   for (unsigned i = 0; i != objects.size(); ++i) {
     const Array *array = objects[i];
     std::vector<unsigned char> data;
@@ -867,9 +812,9 @@ FastCexSolver::computeInitialValues(const Query& query,
 
     for (unsigned i=0; i < array->size; i++) {
       ref<Expr> value =
-        cc.visit(ReadExpr::create(UpdateList(array, true, 0),
-                                  ConstantExpr::create(i,
-                                                       kMachinePointerType)));
+        cd.evaluate(ReadExpr::create(UpdateList(array, true, 0),
+                                     ConstantExpr::create(i,
+                                                          kMachinePointerType)));
       
       if (ConstantExpr *CE = dyn_cast<ConstantExpr>(value)) {
         data.push_back((unsigned char) CE->getConstantValue());
