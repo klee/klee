@@ -222,13 +222,17 @@ public:
   // make code clearer?)
   bool isFixed() const { return m_min==m_max; }
 
-  bool operator==(const ValueRange &b) const { return m_min==b.m_min && m_max==b.m_max; }
+  bool operator==(const ValueRange &b) const { 
+    return m_min==b.m_min && m_max==b.m_max; 
+  }
   bool operator!=(const ValueRange &b) const { return !(*this==b); }
 
   bool mustEqual(const uint64_t b) const { return m_min==m_max && m_min==b; }
   bool mayEqual(const uint64_t b) const { return m_min<=b && m_max>=b; }
   
-  bool mustEqual(const ValueRange &b) const { return isFixed() && b.isFixed() && m_min==b.m_min; }
+  bool mustEqual(const ValueRange &b) const { 
+    return isFixed() && b.isFixed() && m_min==b.m_min; 
+  }
   bool mayEqual(const ValueRange &b) const { return this->intersects(b); }
 
   uint64_t min() const { 
@@ -372,11 +376,11 @@ public:
     return *Entry;
   }
 
-  void forceExprToValue(ref<Expr> e, uint64_t value) {
-    forceExprToRange(e, CexValueData(value,value));
+  void propogatePossibleValue(ref<Expr> e, uint64_t value) {
+    propogatePossibleValues(e, CexValueData(value,value));
   }
 
-  void forceExprToRange(ref<Expr> e, CexValueData range) {
+  void propogatePossibleValues(ref<Expr> e, CexValueData range) {
     switch (e->getKind()) {
     case Expr::Constant: {
       // rather a pity if the constant isn't in the range, but how can
@@ -412,7 +416,6 @@ public:
       } else {
         // XXX        fatal("XXX not implemented");
       }
-      
       break;
     }
 
@@ -421,9 +424,9 @@ public:
       ValueRange cond = evalRangeForExpr(se->cond);
       if (cond.isFixed()) {
         if (cond.min()) {
-          forceExprToRange(se->trueExpr, range);
+          propogatePossibleValues(se->trueExpr, range);
         } else {
-          forceExprToRange(se->falseExpr, range);
+          propogatePossibleValues(se->falseExpr, range);
         }
       } else {
         // XXX imprecise... we have a choice here. One method is to
@@ -448,8 +451,8 @@ public:
         // one of the ranges happens to already be a subset of the
         // required range then it may be preferable to force the
         // condition to that side.
-        forceExprToRange(se->trueExpr, range);
-        forceExprToRange(se->falseExpr, range);
+        propogatePossibleValues(se->trueExpr, range);
+        propogatePossibleValues(se->falseExpr, range);
       }
       break;
     }
@@ -467,8 +470,8 @@ public:
       ConcatExpr *ce = cast<ConcatExpr>(e);
       Expr::Width LSBWidth = ce->getKid(1)->getWidth();
       Expr::Width MSBWidth = ce->getKid(1)->getWidth();
-      forceExprToRange(ce->getKid(0), range.extract(LSBWidth, MSBWidth));
-      forceExprToRange(ce->getKid(1), range.extract(0, LSBWidth));
+      propogatePossibleValues(ce->getKid(0), range.extract(LSBWidth, MSBWidth));
+      propogatePossibleValues(ce->getKid(1), range.extract(0, LSBWidth));
       break;
     }
 
@@ -487,8 +490,9 @@ public:
     case Expr::ZExt: {
       CastExpr *ce = cast<CastExpr>(e);
       unsigned inBits = ce->src->getWidth();
-      ValueRange input = range.set_intersection(ValueRange(0, bits64::maxValueOfNBits(inBits)));
-      forceExprToRange(ce->src, input);
+      ValueRange input = 
+        range.set_intersection(ValueRange(0, bits64::maxValueOfNBits(inBits)));
+      propogatePossibleValues(ce->src, input);
       break;
     }
       // For SExt instead of doing the intersection we just take the output
@@ -503,7 +507,7 @@ public:
                                         (bits64::maxValueOfNBits(outBits) -
                                          bits64::maxValueOfNBits(inBits-1)-1)));
       ValueRange input = output.binaryAnd(bits64::maxValueOfNBits(inBits));
-      forceExprToRange(ce->src, input);
+      propogatePossibleValues(ce->src, input);
       break;
     }
 
@@ -522,16 +526,16 @@ public:
             } else {
               // XXX heuristic, which order
 
-              forceExprToValue(be->left, 0);
+              propogatePossibleValue(be->left, 0);
               left = evalRangeForExpr(be->left);
 
               // see if that worked
               if (!left.mustEqual(1))
-                forceExprToValue(be->right, 0);
+                propogatePossibleValue(be->right, 0);
             }
           } else {
-            if (!left.mustEqual(1)) forceExprToValue(be->left, 1);
-            if (!right.mustEqual(1)) forceExprToValue(be->right, 1);
+            if (!left.mustEqual(1)) propogatePossibleValue(be->left, 1);
+            if (!right.mustEqual(1)) propogatePossibleValue(be->right, 1);
           }
         }
       } else {
@@ -554,16 +558,16 @@ public:
               // XXX heuristic, which order?
               
               // force left to value we need
-              forceExprToValue(be->left, 1);
+              propogatePossibleValue(be->left, 1);
               left = evalRangeForExpr(be->left);
 
               // see if that worked
               if (!left.mustEqual(1))
-                forceExprToValue(be->right, 1);
+                propogatePossibleValue(be->right, 1);
             }
           } else {
-            if (!left.mustEqual(0)) forceExprToValue(be->left, 0);
-            if (!right.mustEqual(0)) forceExprToValue(be->right, 0);
+            if (!left.mustEqual(0)) propogatePossibleValue(be->left, 0);
+            if (!right.mustEqual(0)) propogatePossibleValue(be->right, 0);
           }
         }
       } else {
@@ -582,17 +586,17 @@ public:
         if (ConstantExpr *CE = dyn_cast<ConstantExpr>(be->left)) {
           uint64_t value = CE->getConstantValue();
           if (range.min()) {
-            forceExprToValue(be->right, value);
+            propogatePossibleValue(be->right, value);
           } else {
             if (value==0) {
-              forceExprToRange(be->right, 
+              propogatePossibleValues(be->right, 
                                CexValueData(1,
                                             ints::sext(1, 
                                                        be->right->getWidth(),
                                                        1)));
             } else {
               // XXX heuristic / lossy, could be better to pick larger range?
-              forceExprToRange(be->right, CexValueData(0, value-1));
+              propogatePossibleValues(be->right, CexValueData(0, value-1));
             }
           }
         } else {
@@ -617,15 +621,17 @@ public:
 
         if (left.isFixed()) {
           if (range.min()) {
-            forceExprToRange(be->right, CexValueData(left.min()+1, maxValue));
+            propogatePossibleValues(be->right, CexValueData(left.min()+1, 
+                                                            maxValue));
           } else {
-            forceExprToRange(be->right, CexValueData(0, left.min()));
+            propogatePossibleValues(be->right, CexValueData(0, left.min()));
           }
         } else if (right.isFixed()) {
           if (range.min()) {
-            forceExprToRange(be->left, CexValueData(0, right.min()-1));
+            propogatePossibleValues(be->left, CexValueData(0, right.min()-1));
           } else {
-            forceExprToRange(be->left, CexValueData(right.min(), maxValue));
+            propogatePossibleValues(be->left, CexValueData(right.min(), 
+                                                           maxValue));
           }
         } else {
           // XXX ???
@@ -647,15 +653,17 @@ public:
         uint64_t maxValue = bits64::maxValueOfNBits(be->right->getWidth());
         if (left.isFixed()) {
           if (range.min()) {
-            forceExprToRange(be->right, CexValueData(left.min(), maxValue));
+            propogatePossibleValues(be->right, CexValueData(left.min(), 
+                                                            maxValue));
           } else {
-            forceExprToRange(be->right, CexValueData(0, left.min()-1));
+            propogatePossibleValues(be->right, CexValueData(0, left.min()-1));
           }
         } else if (right.isFixed()) {
           if (range.min()) {
-            forceExprToRange(be->left, CexValueData(0, right.min()));
+            propogatePossibleValues(be->left, CexValueData(0, right.min()));
           } else {
-            forceExprToRange(be->left, CexValueData(right.min()+1, maxValue));
+            propogatePossibleValues(be->left, CexValueData(right.min()+1, 
+                                                           maxValue));
           }
         } else {
           // XXX ???
@@ -726,9 +734,9 @@ static bool propogateValues(const Query& query, CexData &cd,
                             bool checkExpr, bool &isValid) {
   for (ConstraintManager::const_iterator it = query.constraints.begin(), 
          ie = query.constraints.end(); it != ie; ++it)
-    cd.forceExprToValue(*it, 1);
+    cd.propogatePossibleValue(*it, 1);
   if (checkExpr)
-    cd.forceExprToValue(query.expr, 0);
+    cd.propogatePossibleValue(query.expr, 0);
 
   // Check the result.
   if (checkExpr)
