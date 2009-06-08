@@ -4,6 +4,7 @@
 #include "klee/Constraints.h"
 #include "klee/Expr.h"
 #include "klee/Solver.h"
+#include "klee/Statistics.h"
 #include "klee/util/ExprPPrinter.h"
 #include "klee/util/ExprVisitor.h"
 
@@ -11,11 +12,8 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/Streams.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/System/Signals.h"
-
-#include <iomanip>
-#include <sstream>
 
 using namespace llvm;
 using namespace klee;
@@ -46,7 +44,8 @@ namespace {
 }
 
 static std::string escapedString(const char *start, unsigned length) {
-  std::stringstream s;
+  std::string Str;
+  llvm::raw_string_ostream s(Str);
   for (unsigned i=0; i<length; ++i) {
     char c = start[i];
     if (isprint(c)) {
@@ -102,7 +101,7 @@ static bool PrintInputAST(const char *Filename,
 }
 
 static bool EvaluateInputAST(const char *Filename,
-                          const MemoryBuffer *MB) {
+                             const MemoryBuffer *MB) {
   std::vector<Decl*> Decls;
   Parser *P = Parser::Create(Filename, MB);
   P->SetMaxErrors(20);
@@ -117,11 +116,18 @@ static bool EvaluateInputAST(const char *Filename,
     success = false;
   }  
 
+  if (!success)
+    return false;
+
   // FIXME: Support choice of solver.
-  Solver *S, *STP = new STPSolver(true);
-  S = createCexCachingSolver(STP);
+  Solver *S, *STP = S = new STPSolver(true);
+  if (0)
+    S = createFastCexSolver(S);
+  S = createCexCachingSolver(S);
   S = createCachingSolver(S);
   S = createIndependentSolver(S);
+  if (0)
+    S = createValidatingSolver(S, STP);
 
   unsigned Index = 0;
   for (std::vector<Decl*>::iterator it = Decls.begin(),
@@ -192,6 +198,20 @@ static bool EvaluateInputAST(const char *Filename,
   delete P;
 
   delete S;
+
+  if (uint64_t queries = *theStatisticManager->getStatisticByName("Queries")) {
+    llvm::cout 
+      << "--\n"
+      << "total queries = " << queries << "\n"
+      << "total queries constructs = " 
+      << *theStatisticManager->getStatisticByName("QueriesConstructs") << "\n"
+      << "valid queries = " 
+      << *theStatisticManager->getStatisticByName("QueriesValid") << "\n"
+      << "invalid queries = " 
+      << *theStatisticManager->getStatisticByName("QueriesInvalid") << "\n"
+      << "query cex = " 
+      << *theStatisticManager->getStatisticByName("QueriesCEX") << "\n";
+  }
 
   return success;
 }
