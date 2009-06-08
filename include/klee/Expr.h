@@ -669,12 +669,6 @@ public:
 			   const ref<Expr> &kid7, const ref<Expr> &kid8);
   
   virtual ref<Expr> rebuild(ref<Expr> kids[]) const { return create(kids[0], kids[1]); }
-
-
-  /* These will be eliminated */
-  bool is2ByteConcat() const { return false; }
-  bool is4ByteConcat() const { return false; }
-  bool is8ByteConcat() const { return false; }
   
 private:
   ConcatExpr(const ref<Expr> &l, const ref<Expr> &r) : left(l), right(r) {

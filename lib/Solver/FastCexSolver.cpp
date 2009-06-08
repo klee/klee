@@ -504,27 +504,10 @@ public:
       // value, isolating for that range, and continuing.
     case Expr::Concat: {
       ConcatExpr *ce = cast<ConcatExpr>(e);
-      if (ce->is2ByteConcat()) {
-	forceExprToRange(ce->getKid(0), range.extract( 8, 16));
-	forceExprToRange(ce->getKid(1), range.extract( 0,  8));
-      }
-      else if (ce->is4ByteConcat()) {
-	forceExprToRange(ce->getKid(0), range.extract(24, 32));
-	forceExprToRange(ce->getKid(1), range.extract(16, 24));
-	forceExprToRange(ce->getKid(2), range.extract( 8, 16));
-	forceExprToRange(ce->getKid(3), range.extract( 0,  8));
-      }
-      else if (ce->is8ByteConcat()) {
-	forceExprToRange(ce->getKid(0), range.extract(56, 64));
-	forceExprToRange(ce->getKid(1), range.extract(48, 56));
-	forceExprToRange(ce->getKid(2), range.extract(40, 48));
-	forceExprToRange(ce->getKid(3), range.extract(32, 40));
-	forceExprToRange(ce->getKid(4), range.extract(24, 32));
-	forceExprToRange(ce->getKid(5), range.extract(16, 24));
-	forceExprToRange(ce->getKid(6), range.extract( 8, 16));
-	forceExprToRange(ce->getKid(7), range.extract( 0,  8));
-      }
-      
+      Expr::Width LSBWidth = ce->getKid(1)->getWidth();
+      Expr::Width MSBWidth = ce->getKid(1)->getWidth();
+      forceExprToRange(ce->getKid(0), range.extract(LSBWidth, MSBWidth));
+      forceExprToRange(ce->getKid(1), range.extract(0, LSBWidth));
       break;
     }
 
