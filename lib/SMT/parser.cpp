@@ -29,6 +29,7 @@ using namespace std;
 
 // The communication entry points of the actual parsers
 
+
 // for smtlib language (smtlib.y and smtlib.lex)
 extern int smtlibparse(); 
 extern void *smtlib_createBuffer(int);
@@ -67,11 +68,9 @@ namespace CVC3 {
   };
 
   // Constructors
-  Parser::Parser(ValidityChecker* vc, InputLanguage lang,
-		 bool interactive,
+  Parser::Parser(InputLanguage lang, bool interactive, 
 		 const std::string& fileName)
     : d_data(new ParserData) {
-    d_data->temp.vc = vc;
     d_data->lang = lang;
     if(fileName == "") {
       // Use std::cin
@@ -92,10 +91,8 @@ namespace CVC3 {
     initParser();
   }
 
-  Parser::Parser(ValidityChecker* vc, InputLanguage lang, std::istream& is,
-		 bool interactive)
+  Parser::Parser(InputLanguage lang, std::istream& is, bool interactive)
     : d_data(new ParserData) {
-    d_data->temp.vc = vc;
     d_data->lang = lang;
     d_data->useName = false;
     d_data->temp.is = &is;
@@ -136,7 +133,7 @@ namespace CVC3 {
 
   Expr Parser::next() {
     // If no more commands are available, return a Null Expr
-    if(d_data->temp.done) return Expr();
+    if(d_data->temp.done) return NULL;//Expr();
     // Set the global var so the parser uses the right stream and EM
     parserTemp = &(d_data->temp);
     // Switch to our buffer, in case there are multiple instances of
@@ -159,7 +156,7 @@ namespace CVC3 {
     } catch(Exception* e) {
       cerr << d_data->temp.fileName << ":" << d_data->temp.lineNum
 	   << ": " << e << endl;
-      return Expr();
+      return NULL;//Expr();
     }
     return d_data->temp.expr;
   }
@@ -173,7 +170,7 @@ namespace CVC3 {
 
   void Parser::reset()
   {
-    d_data->temp.expr = Expr();
+    d_data->temp.expr = NULL;//Expr();
   }
   
 

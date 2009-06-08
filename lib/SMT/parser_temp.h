@@ -23,12 +23,14 @@
 #ifndef _cvc3__parser_temp_h_
 #define _cvc3__parser_temp_h_
 
-#include "expr.h"
+//#include "expr.h"
+#define Expr void*
 #include "exception.h"
 
-namespace CVC3 {
+#include <sstream>
+#include <vector>
 
-  class ValidityChecker;
+namespace CVC3 {
 
   class ParserTemp {
   private:
@@ -41,7 +43,6 @@ namespace CVC3 {
     // The currently used prompt
     std::string prompt;
   public:
-    ValidityChecker* vc;
     std::istream* is;
     // The current input line
     int lineNum;
