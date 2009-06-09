@@ -476,7 +476,6 @@ public:
   const std::string name;
   // FIXME: This does not belong here.
   const MemoryObject *object;
-  unsigned id;
   // FIXME: Not 64-bit clean.
   unsigned size;
 
@@ -484,14 +483,15 @@ public:
   mutable void *stpInitialArray;
 
 public:
-  // NOTE: id's ***MUST*** be unique to ensure sanity w.r.t. STP,
-  // which hashes different arrays with the same id to the same
-  // object! We should probably use the pointer for talking to STP, as
-  // long as we can guarantee that it won't be a "stale" reference
-  // once we have freed it.
-  Array(const std::string &_name, const MemoryObject *_object, 
-        unsigned _id, uint64_t _size) 
-    : name(_name), object(_object), id(_id), size(_size), stpInitialArray(0) {}
+  /// Array - Construct a new array object.
+  ///
+  /// \param _name - The name for this arrays. Names should generally be unique
+  /// across an application, but this is not necessary for correctness, except
+  /// when printing expressions. When expressions are printed the output will
+  /// not parse correctly since two arrays with the same name cannot be
+  /// distinguished once printed.
+  Array(const std::string &_name, const MemoryObject *_object, uint64_t _size) 
+    : name(_name), object(_object), size(_size), stpInitialArray(0) {}
   ~Array() {
     // FIXME: This relies on caller to delete the STP array.
     assert(!stpInitialArray && "Array must be deleted by caller!");

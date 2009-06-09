@@ -94,10 +94,14 @@ void UpdateList::extend(const ref<Expr> &index, const ref<Expr> &value) {
 }
 
 int UpdateList::compare(const UpdateList &b) const {
-  // use object id to increase determinism
-  if (root->id != b.root->id) 
-    return root->id < b.root->id ? -1 : 1;
-  
+  if (root->name != b.root->name)
+    return root->name < b.root->name ? -1 : 1;
+
+  // Check the root itself in case we have separate objects with the
+  // same name.
+  if (root != b.root)
+    return root < b.root ? -1 : 1;
+
   if (getSize() < b.getSize()) return -1;
   else if (getSize() > b.getSize()) return 1;    
 
@@ -111,12 +115,14 @@ int UpdateList::compare(const UpdateList &b) const {
         return res;
     }
   }
-  assert(!an && !bn);
+  assert(!an && !bn);  
   return 0;
 }
 
 unsigned UpdateList::hash() const {
-  unsigned res = root->id * Expr::MAGIC_HASH_CONSTANT;
+  unsigned res = 0;
+  for (unsigned i = 0, e = root->name.size(); i != e; ++i)
+    res = (res * Expr::MAGIC_HASH_CONSTANT) + root->name[i];
   if (head)
     res ^= head->hash();
   return res;

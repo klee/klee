@@ -517,11 +517,9 @@ DeclResult ParserImpl::ParseArrayDecl() {
   if (!RangeType.isValid())
     RangeType = 8;
 
-  // FIXME: Array should take name, not id.
   // FIXME: Array should take domain and range.
   const Identifier *Label = GetOrCreateIdentifier(Name);
-  static int counter = 0;
-  Array *Root = new Array(Label->Name, 0, ++counter, Size.get());
+  Array *Root = new Array(Label->Name, 0, Size.get());
   ArrayDecl *AD = new ArrayDecl(Label, Size.get(), 
                                 DomainType.get(), RangeType.get(), Root);
 
@@ -1300,7 +1298,7 @@ VersionResult ParserImpl::ParseVersionSpecifier() {
   VersionResult Res = ParseVersion();
   // Define update list to avoid use-of-undef errors.
   if (!Res.isValid()) {
-    Res = VersionResult(true, UpdateList(new Array("", 0, -1, 0), NULL));
+    Res = VersionResult(true, UpdateList(new Array("", 0, 0), NULL));
   }
   
   if (Label)

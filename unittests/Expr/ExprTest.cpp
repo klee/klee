@@ -28,9 +28,9 @@ TEST(ExprTest, BasicConstruction) {
 }
 
 TEST(ExprTest, ConcatExtract) {
-  Array *array = new Array("arr0", 0, 1, 256);
+  Array *array = new Array("arr0", 0, 256);
   ref<Expr> read8 = Expr::createTempRead(array, 8);
-  Array *array2 = new Array("arr1", 0, 2, 256);
+  Array *array2 = new Array("arr1", 0, 256);
   ref<Expr> read8_2 = Expr::createTempRead(array2, 8);
   ref<Expr> c100 = getConstant(100, 8);
 
@@ -80,10 +80,10 @@ TEST(ExprTest, ConcatExtract) {
 }
 
 TEST(ExprTest, ExtractConcat) {
-  Array *array = new Array("arr0", 0, 3, 256);
+  Array *array = new Array("arr2", 0, 256);
   ref<Expr> read64 = Expr::createTempRead(array, 64);
 
-  Array *array2 = new Array("arr1", 0, 4, 256);
+  Array *array2 = new Array("arr3", 0, 256);
   ref<Expr> read8_2 = Expr::createTempRead(array2, 8);
   
   ref<Expr> extract1 = ExtractExpr::create(read64, 36, 4);
