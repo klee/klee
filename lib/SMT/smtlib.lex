@@ -54,7 +54,7 @@ static int smtlibinput(std::istream& is, char* buf, int size) {
     if(partialStr)
       is.clear();
 
-    for(res = 0; res<size && buf[res] != 0; res++);
+    for(res = 0; res<size && buf[res] != 0; res++) ;
     if(res == size) smtliberror("Lexer bug: overfilled the buffer");
     if(!partialStr) { // Insert \n into the buffer
       buf[res++] = '\n';
