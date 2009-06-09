@@ -9,7 +9,7 @@
 
 LEVEL=..
 
-PARALLEL_DIRS=Basic Support Expr Solver Module Core
+PARALLEL_DIRS=Basic Support SMT Expr Solver Module Core
 
 include $(LEVEL)/Makefile.common
 

@@ -21,9 +21,7 @@
 
 #include <iostream>
 #include "parser_temp.h"
-//#include "expr_manager.h" /* for the benefit of parsesmtlib_defs.h */
-#include "parsesmtlib_defs.h"
-//#include "debug.h"
+#include "smtlib_parser.h"
 
 namespace CVC3 {
   extern ParserTemp* parserTemp;

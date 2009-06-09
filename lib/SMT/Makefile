@@ -1,51 +1,23 @@
-LIBRARY=libsmt.a
+#===-- lib/SMT/Makefile ------------------------------------*- Makefile -*--===#
 
-# Do not optimize the parser code - it compiles forever in some gcc versions
-EXTRAFLAGS = -O0
+LEVEL=../..
 
-TRANSIENT_CPP = parsesmtlib.cpp lexsmtlib.cpp
-TRANSIENT_OBJ = $(TRANSIENT_CPP:.cpp=.o)
+LIBRARYNAME=kleaverSMT
+DONT_BUILD_RELINKED=1
+BUILD_ARCHIVE=1
 
-TRANSIENT = $(TRANSIENT_CPP) parsesmtlib_defs.h parsesmtlib.output
+include $(LEVEL)/Makefile.common
 
-SRC = $(TRANSIENT_CPP) parser.cpp
+# Gross, but I don't want to build proper rules for this, and I don't want users
+# to have to have bison/flex, so for now require developers to make these
+# manually (at least initially).
 
-HEADERS = parser_temp.h
+smtlib_parser.cpp smtlib_parser.h: smtlib.y
+	bison -d -o smtlib_parser.cpp -p smtlib smtlib.y
+	mv smtlib_parser.hpp smtlib_parser.h
 
-# The actual source files for the parser that we want to include in a
-# distribution
-SRC_ORIG = smtlib.lex smtlib.y parser.cpp
+smtlib_lexer.cpp: smtlib.lex smtlib_parser.h
+	flex -I -Psmtlib -osmtlib_lexer.cpp smtlib.lex
 
-#include ../../Makefile.local
-
-#lex
-LEX = flex
-LFLAGS = # -i  use this for a case-insensitive scanner
-
-#yacc
-YACC = bison
-YFLAGS = -d -y
-
-
-##################################################
-# Rules for transient files
-##################################################
-
-all: $(TRANSIENT_OBJ)
-
-%.o: %.cpp
-	$(CXX) $(CFLAGS) -c $< -o $@
-
-lexsmtlib.cpp:  smtlib.lex parsesmtlib_defs.h
-		$(LEX) $(LFLAGS) -I -Psmtlib -olexsmtlib.cpp smtlib.lex
-
-parsesmtlib_defs.h: parsesmtlib.cpp
-
-parsesmtlib.cpp: smtlib.y
-		$(YACC) $(YFLAGS) -o parsesmtlib.cpp -p smtlib --debug -v smtlib.y
-		@if [ -f parsesmtlib.cpp.h ]; then mv parsesmtlib.cpp.h parsesmtlib.hpp; fi
-		@mv parsesmtlib.hpp parsesmtlib_defs.h
-
-clean:
-	rm -f $(TRANSIENT) *~ *.o
-
+.PHONY: regen
+regen: smtlib_lexer.cpp smtlib_parser.cpp smtlib_parser.h

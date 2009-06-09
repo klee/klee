@@ -22,6 +22,7 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <stdlib.h>
 #include "parser_temp.h"
 #include "parser.h"
 
