@@ -9,8 +9,6 @@
 
 #include "klee/Solver.h"
 
-// FIXME: This should not be here.
-#include "klee/ExecutionState.h"
 #include "klee/Expr.h"
 #include "klee/SolverImpl.h"
 #include "klee/Statistics.h"
