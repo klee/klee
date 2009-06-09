@@ -532,8 +532,18 @@ void ExprPPrinter::printQuery(std::ostream &os,
       // FIXME: Print correct name, domain, and range.
       PC << "array " << A->name
          << "[" << A->size << "]"
-         << " : " << "w32" << " -> " << "w8"
-         << " = symbolic";
+         << " : " << "w32" << " -> " << "w8" << " = ";
+      if (A->isSymbolicArray()) {
+        PC << "symbolic";
+      } else {
+        PC << "[";
+        for (unsigned i = 0, e = A->size; i != e; ++i) {
+          if (i)
+            PC << " ";
+          PC << A->constantValues[i];
+        }
+        PC << "]";
+      }
       PC.breakLine();
     }
   }

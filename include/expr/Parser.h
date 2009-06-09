@@ -71,15 +71,11 @@ namespace expr {
   ///
   /// For example:
   ///   array obj[] : w32 -> w8 = symbolic
-  ///   array obj[32] : w32 -> w8 = { ... }
+  ///   array obj[32] : w32 -> w8 = [ ... ]
   class ArrayDecl : public Decl {
   public:
     /// Name - The name of this array.
     const Identifier *Name;
-
-    /// Size - The maximum array size (or 0 if unspecified). Concrete
-    /// arrays always are specified with a size.
-    const uint64_t Size;
 
     /// Domain - The width of indices.
     const unsigned Domain;
@@ -90,17 +86,12 @@ namespace expr {
     /// Root - The root array object defined by this decl.
     const Array *Root;
 
-    /// Contents - The initial contents of the array. The array is
-    /// symbolic if no contents are specified. The contained
-    /// expressions are guaranteed to be constants.
-    const std::vector<ExprHandle> Contents;
-
   public:
     ArrayDecl(const Identifier *_Name, uint64_t _Size, 
               unsigned _Domain, unsigned _Range,
               const Array *_Root)
       : Decl(ArrayDeclKind), Name(_Name), 
-        Size(_Size), Domain(_Domain), Range(_Range), 
+        Domain(_Domain), Range(_Range), 
         Root(_Root) {
     }
 

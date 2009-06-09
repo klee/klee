@@ -385,8 +385,6 @@ ExprHandle STPBuilder::constructSDivByConstant(ExprHandle expr_n, unsigned width
 }
 
 ::VCExpr STPBuilder::getInitialArray(const Array *root) {
-  assert(root->isSymbolicArray() && "FIXME: Support constant arrays!");
-
   if (root->stpInitialArray) {
     return root->stpInitialArray;
   } else {
@@ -395,6 +393,21 @@ ExprHandle STPBuilder::constructSDivByConstant(ExprHandle expr_n, unsigned width
     char buf[32];
     sprintf(buf, "%s_%p", root->name.c_str(), (void*) root);
     root->stpInitialArray = buildArray(buf, 32, 8);
+
+    if (root->isConstantArray()) {
+      // FIXME: Flush the concrete values into STP. Ideally we would do this
+      // using assertions, which is much faster, but we need to fix the caching
+      // to work correctly in that case.
+      for (unsigned i = 0, e = root->size; i != e; ++i) {
+        ::VCExpr prev = root->stpInitialArray;
+        root->stpInitialArray = 
+          vc_writeExpr(vc, prev,
+                       construct(ConstantExpr::alloc(i, root->getDomain()), 0),
+                       construct(root->constantValues[i], 0));
+        vc_DeleteExpr(prev);
+      }
+    }
+
     return root->stpInitialArray;
   }
 }

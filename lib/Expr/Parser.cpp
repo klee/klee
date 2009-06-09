@@ -407,7 +407,7 @@ DeclResult ParserImpl::ParseArrayDecl() {
   IntegerResult Size;
   TypeResult DomainType;
   TypeResult RangeType;
-  std::vector<ExprHandle> Values;
+  std::vector< ref<ConstantExpr> > Values;
 
   ConsumeToken();
   
@@ -458,7 +458,7 @@ DeclResult ParserImpl::ParseArrayDecl() {
 
       ExprResult Res = ParseNumber(RangeType.get());
       if (Res.isValid())
-        Values.push_back(Res.get());
+        Values.push_back(cast<ConstantExpr>(Res.get()));
     }
     ConsumeRSquare();
   } else {
@@ -502,11 +502,6 @@ DeclResult ParserImpl::ParseArrayDecl() {
     Values.clear();
   }
 
-  if (!Values.empty()) {
-    Error("constant arrays are not yet supported.");
-    Values.clear();
-  }
-
   // FIXME: Validate that this array is undeclared.
 
  exit:
@@ -519,7 +514,12 @@ DeclResult ParserImpl::ParseArrayDecl() {
 
   // FIXME: Array should take domain and range.
   const Identifier *Label = GetOrCreateIdentifier(Name);
-  Array *Root = new Array(Label->Name, Size.get());
+  Array *Root;
+  if (!Values.empty())
+    Root = new Array(Label->Name, Size.get(),
+                     &Values[0], &Values[0] + Values.size());
+  else
+    Root = new Array(Label->Name, Size.get());
   ArrayDecl *AD = new ArrayDecl(Label, Size.get(), 
                                 DomainType.get(), RangeType.get(), Root);
 
@@ -1554,22 +1554,20 @@ void ParserImpl::Error(const char *Message, const Token &At) {
 Decl::Decl(DeclKind _Kind) : Kind(_Kind) {}
 
 void ArrayDecl::dump() {
-  // FIXME: For now, print using the Array* "name".
   std::cout << "array " << Root->name
-            << "[" << Size << "]"
+            << "[" << Root->size << "]"
             << " : " << 'w' << Domain << " -> " << 'w' << Range << " = ";
 
-  if (Contents.empty()) {
+  if (Root->isSymbolicArray()) {
     std::cout << "symbolic\n";
   } else {
-    std::cout << '{';
-    for (std::vector<ExprHandle>::const_iterator it = Contents.begin(),
-           ie = Contents.end(); it != ie;) {
-      std::cout << *it;
-      if (++it != ie)
+    std::cout << '[';
+    for (unsigned i = 0, e = Root->size; i != e; ++i) {
+      if (i)
         std::cout << " ";
+      std::cout << Root->constantValues[i];
     }
-    std::cout << "}\n";
+    std::cout << "]\n";
   }
 }
 

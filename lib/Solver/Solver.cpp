@@ -675,6 +675,13 @@ STPSolverImpl::computeInitialValues(const Query &query,
 
   ExprHandle stp_e = builder->construct(query.expr);
      
+  if (0) {
+    char *buf;
+    unsigned long len;
+    vc_printQueryStateToBuffer(vc, stp_e, &buf, &len, false);
+    fprintf(stderr, "note: STP query: %.*s\n", (unsigned) len, buf);
+  }
+
   bool success;
   if (useForkedSTP) {
     success = runAndGetCexForked(vc, builder, stp_e, objects, values, 
