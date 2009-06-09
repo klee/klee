@@ -29,7 +29,6 @@
 #define _cvc3__parser_h_
 
 #include "exception.h"
-#include "lang.h"
 
 namespace CVC3 {
 
