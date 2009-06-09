@@ -529,7 +529,7 @@ DeclResult ParserImpl::ParseArrayDecl() {
 
   // Create the initial version reference.
   VersionSymTab.insert(std::make_pair(Label,
-                                      UpdateList(Root, true, NULL)));
+                                      UpdateList(Root, NULL)));
 
   return AD;
 }
@@ -577,8 +577,7 @@ DeclResult ParserImpl::ParseQueryCommand() {
   for (std::map<const Identifier*, const ArrayDecl*>::iterator
          it = ArraySymTab.begin(), ie = ArraySymTab.end(); it != ie; ++it) {
     VersionSymTab.insert(std::make_pair(it->second->Name,
-                                        UpdateList(it->second->Root, 
-                                                   true, NULL)));
+                                        UpdateList(it->second->Root, NULL)));
   }
 
 
@@ -1284,8 +1283,7 @@ VersionResult ParserImpl::ParseVersionSpecifier() {
       
       if (it == VersionSymTab.end()) {
         Error("invalid version reference.", LTok);
-        return VersionResult(false,
-                             UpdateList(0, true, NULL));
+        return VersionResult(false, UpdateList(0, NULL));
       }
 
       return it->second;
@@ -1302,8 +1300,7 @@ VersionResult ParserImpl::ParseVersionSpecifier() {
   VersionResult Res = ParseVersion();
   // Define update list to avoid use-of-undef errors.
   if (!Res.isValid()) {
-    Res = VersionResult(true,
-                        UpdateList(new Array(0, -1, 0), true, NULL));
+    Res = VersionResult(true, UpdateList(new Array(0, -1, 0), NULL));
   }
   
   if (Label)
@@ -1332,7 +1329,7 @@ namespace {
 /// update-list - lhs '=' rhs [',' update-list]
 VersionResult ParserImpl::ParseVersion() {
   if (Tok.kind != Token::LSquare)
-    return VersionResult(false, UpdateList(0, false, NULL));
+    return VersionResult(false, UpdateList(0, NULL));
   
   std::vector<WriteInfo> Writes;
   ConsumeLSquare();
@@ -1358,11 +1355,11 @@ VersionResult ParserImpl::ParseVersion() {
   }
   ExpectRSquare("expected close of update list");
 
-  VersionHandle Base(0, false, NULL);
+  VersionHandle Base(0, NULL);
 
   if (Tok.kind != Token::At) {
     Error("expected '@'.", Tok);
-    return VersionResult(false, UpdateList(0, true, NULL));
+    return VersionResult(false, UpdateList(0, NULL));
   } 
 
   ConsumeExpectedToken(Token::At);

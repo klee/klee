@@ -102,7 +102,7 @@ ObjectState::ObjectState(const MemoryObject *mo, unsigned _size)
     flushMask(0),
     knownSymbolics(0),
     size(_size),
-    updates(mo->array, false, 0),
+    updates(mo->array, 0),
     readOnly(false) {
 }
 
@@ -149,7 +149,6 @@ void ObjectState::makeConcrete() {
 void ObjectState::makeSymbolic() {
   assert(!updates.head &&
          "XXX makeSymbolic of objects with symbolic values is unsupported");
-  updates.isRooted = true;
 
   // XXX simplify this, can just delete various arrays I guess
   for (unsigned i=0; i<size; i++) {
@@ -792,7 +791,6 @@ void ObjectState::print() {
   llvm::cerr << "-- ObjectState --\n";
   llvm::cerr << "\tMemoryObject ID: " << object->id << "\n";
   llvm::cerr << "\tRoot Object: " << updates.root << "\n";
-  llvm::cerr << "\tIs Rooted? " << updates.isRooted << "\n";
   llvm::cerr << "\tSize: " << size << "\n";
 
   llvm::cerr << "\tBytes:\n";

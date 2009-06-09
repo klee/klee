@@ -56,18 +56,15 @@ unsigned UpdateNode::computeHash() {
 
 ///
 
-UpdateList::UpdateList(const Array *_root, bool _isRooted,
-                       const UpdateNode *_head)
+UpdateList::UpdateList(const Array *_root, const UpdateNode *_head)
   : root(_root),
-    head(_head),
-    isRooted(_isRooted) {
+    head(_head) {
   if (head) ++head->refCount;
 }
 
 UpdateList::UpdateList(const UpdateList &b)
   : root(b.root),
-    head(b.head),
-    isRooted(b.isRooted) {
+    head(b.head) {
   if (head) ++head->refCount;
 }
 
@@ -87,7 +84,6 @@ UpdateList &UpdateList::operator=(const UpdateList &b) {
   if (head && --head->refCount==0) delete head;
   root = b.root;
   head = b.head;
-  isRooted = b.isRooted;
   return *this;
 }
 

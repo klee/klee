@@ -24,8 +24,7 @@ ExprVisitor::Action ExprEvaluator::evalRead(const UpdateList &ul,
       // cannot guarantee value. we can rewrite to read at this
       // version though (mostly for debugging).
       
-      UpdateList fwd(ul.root, un, 0);
-      return Action::changeTo(ReadExpr::create(fwd, 
+      return Action::changeTo(ReadExpr::create(UpdateList(ul.root, un), 
                                                ConstantExpr::alloc(index, Expr::Int32)));
     }
   }

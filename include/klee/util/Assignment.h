@@ -72,7 +72,7 @@ namespace klee {
       return ConstantExpr::alloc(it->second[index], Expr::Int8);
     } else {
       if (allowFreeValues) {
-        return ReadExpr::create(UpdateList(array, true, 0), 
+        return ReadExpr::create(UpdateList(array, 0), 
                                 ConstantExpr::alloc(index, Expr::Int32));
       } else {
         return ConstantExpr::alloc(0, Expr::Int8);

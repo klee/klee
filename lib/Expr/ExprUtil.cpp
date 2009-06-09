@@ -89,9 +89,8 @@ protected:
       visit(un->value);
     }
 
-    if (ul.isRooted)
-      if (results.insert(ul.root).second)
-        objects.push_back(ul.root);
+    if (results.insert(ul.root).second)
+      objects.push_back(ul.root);
 
     return Action::doChildren();
   }

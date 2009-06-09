@@ -167,11 +167,7 @@ private:
 
     // Special case empty list.
     if (!head) {
-      if (updates.isRooted) {
-        PC << "arr" << updates.root->id;
-      } else {
-        PC << "[]";
-      }
+      PC << "arr" << updates.root->id;
       return;
     }
 
@@ -220,9 +216,6 @@ private:
 
     if (openedList)
       PC << ']';
-
-    // FIXME: Figure out how isRooted should be dealt with in the language. The
-    // old solution of using "anonymous" arrays is not a good idea.
 
     PC << " @ arr" << updates.root->id;
   }

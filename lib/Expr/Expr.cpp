@@ -38,7 +38,7 @@ namespace {
 unsigned Expr::count = 0;
 
 ref<Expr> Expr::createTempRead(const Array *array, Expr::Width w) {
-  UpdateList ul(array, true, 0);
+  UpdateList ul(array, 0);
 
   switch (w) {
   default: assert(0 && "invalid width");

@@ -94,18 +94,16 @@ public:
     findReads(e, /* visitUpdates= */ true, reads);
     for (unsigned i = 0; i != reads.size(); ++i) {
       ReadExpr *re = reads[i].get();
-      if (re->updates.isRooted) {
-        const Array *array = re->updates.root;
-        if (!wholeObjects.count(array)) {
-          if (ConstantExpr *CE = dyn_cast<ConstantExpr>(re->index)) {
-            DenseSet<unsigned> &dis = elements[array];
-            dis.add((unsigned) CE->getConstantValue());
-          } else {
-            elements_ty::iterator it2 = elements.find(array);
-            if (it2!=elements.end())
-              elements.erase(it2);
-            wholeObjects.insert(array);
-          }
+      const Array *array = re->updates.root;
+      if (!wholeObjects.count(array)) {
+        if (ConstantExpr *CE = dyn_cast<ConstantExpr>(re->index)) {
+          DenseSet<unsigned> &dis = elements[array];
+          dis.add((unsigned) CE->getConstantValue());
+        } else {
+          elements_ty::iterator it2 = elements.find(array);
+          if (it2!=elements.end())
+            elements.erase(it2);
+          wholeObjects.insert(array);
         }
       }
     }

@@ -507,11 +507,8 @@ public:
   /// pointer to the most recent update node
   const UpdateNode *head;
   
-  // shouldn't this be part of the ReadExpr? 
-  bool isRooted;
-
 public:
-  UpdateList(const Array *_root, bool isRooted, const UpdateNode *_head);
+  UpdateList(const Array *_root, const UpdateNode *_head);
   UpdateList(const UpdateList &b);
   ~UpdateList();
   

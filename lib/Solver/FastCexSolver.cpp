@@ -352,7 +352,7 @@ protected:
     // If the index is out of range, we cannot assign it a value, since that
     // value cannot be part of the assignment.
     if (index >= array.size)
-      return ReadExpr::create(UpdateList(&array, true, 0), 
+      return ReadExpr::create(UpdateList(&array, 0), 
                               ConstantExpr::alloc(index, Expr::Int32));
       
     std::map<unsigned, CexObjectData*>::iterator it = objects.find(array.id);
@@ -373,17 +373,17 @@ protected:
     // If the index is out of range, we cannot assign it a value, since that
     // value cannot be part of the assignment.
     if (index >= array.size)
-      return ReadExpr::create(UpdateList(&array, true, 0), 
+      return ReadExpr::create(UpdateList(&array, 0), 
                               ConstantExpr::alloc(index, Expr::Int32));
       
     std::map<unsigned, CexObjectData*>::iterator it = objects.find(array.id);
     if (it == objects.end())
-      return ReadExpr::create(UpdateList(&array, true, 0), 
+      return ReadExpr::create(UpdateList(&array, 0), 
                               ConstantExpr::alloc(index, Expr::Int32));
 
     CexValueData cvd = it->second->getExactValues(index);
     if (!cvd.isFixed())
-      return ReadExpr::create(UpdateList(&array, true, 0), 
+      return ReadExpr::create(UpdateList(&array, 0), 
                               ConstantExpr::alloc(index, Expr::Int32));
 
     return ConstantExpr::alloc(cvd.min(), Expr::Int8);
@@ -1020,7 +1020,7 @@ FastCexSolver::computeInitialValues(const Query& query,
 
     for (unsigned i=0; i < array->size; i++) {
       ref<Expr> read = 
-        ReadExpr::create(UpdateList(array, true, 0),
+        ReadExpr::create(UpdateList(array, 0),
                          ConstantExpr::create(i, kMachinePointerType));
       ref<Expr> value = cd.evaluatePossible(read);
       

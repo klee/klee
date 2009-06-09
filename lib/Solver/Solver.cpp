@@ -343,8 +343,7 @@ ValidatingSolver::computeInitialValues(const Query& query,
       const Array *array = objects[i];
       for (unsigned j=0; j<array->size; j++) {
         unsigned char value = values[i][j];
-        bindings.push_back(EqExpr::create(ReadExpr::create(UpdateList(array,
-                                                                      true, 0),
+        bindings.push_back(EqExpr::create(ReadExpr::create(UpdateList(array, 0),
                                                            ConstantExpr::alloc(j, Expr::Int32)),
                                           ConstantExpr::alloc(value, Expr::Int8)));
       }
