@@ -28,8 +28,6 @@
 #ifndef _cvc3__parser_h_
 #define _cvc3__parser_h_
 
-#include "exception.h"
-
 namespace CVC3 {
 
   //class Expr;

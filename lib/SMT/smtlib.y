@@ -24,7 +24,6 @@
 */
 
 //#include "vc.h"
-#include "parser_exception.h"
 #include "parser_temp.h"
 
 // Exported shared data

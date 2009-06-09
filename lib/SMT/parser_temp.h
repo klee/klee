@@ -25,7 +25,6 @@
 
 //#include "expr.h"
 #define Expr void*
-#include "exception.h"
 
 #include <sstream>
 #include <vector>

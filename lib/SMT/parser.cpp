@@ -24,7 +24,6 @@
 #include <iostream>
 #include "parser_temp.h"
 #include "parser.h"
-#include "parser_exception.h"
 
 using namespace std;
 
