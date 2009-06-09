@@ -21,6 +21,7 @@
 
 #include <fstream>
 #include <iomanip>
+#include <iostream>
 #include "parser_temp.h"
 #include "parser.h"
 #include "parser_exception.h"
@@ -51,7 +52,9 @@ namespace CVC3 {
   ParserTemp* parserTemp;
 
   int ParserTemp::error(const string& s) {
-    throw ParserException(s);
+    // FIXME: Fail better?
+    std::cerr << "error: " << s << "\n";
+    exit(1);
     return 0;
   }
 
@@ -80,7 +83,9 @@ namespace CVC3 {
       d_data->temp.fileName = fileName;
       d_data->temp.is = new ifstream(fileName.c_str());
       if (!(*d_data->temp.is)) {
-        throw ParserException("File not found: "+fileName);
+        // FIXME: Fail better?
+        std::cerr << "error: File not found: " << fileName << "\n";
+        exit(1);
       }
       d_data->temp.interactive = false;
     }
@@ -123,17 +128,11 @@ namespace CVC3 {
     parserTemp = &(d_data->temp);
     // Switch to our buffer, in case there are multiple instances of
     // the parser running
-    try {
-      smtlib_switchToBuffer(d_data->buffer);
-      smtlib_setInteractive(d_data->temp.interactive);
-      smtlibparse();
-      // Reset the prompt to the main one
-      d_data->temp.setPrompt1();
-    } catch(Exception* e) {
-      cerr << d_data->temp.fileName << ":" << d_data->temp.lineNum
-	   << ": " << e << endl;
-      return NULL;//Expr();
-    }
+    smtlib_switchToBuffer(d_data->buffer);
+    smtlib_setInteractive(d_data->temp.interactive);
+    smtlibparse();
+    // Reset the prompt to the main one
+    d_data->temp.setPrompt1();
     return d_data->temp.expr;
   }
 
