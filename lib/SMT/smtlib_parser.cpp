@@ -275,7 +275,7 @@ typedef union YYSTYPE
 {
   std::string *str;
   std::vector<std::string> *strvec;
-  Expr node;
+  klee::expr::ExprHandle* node;
   std::vector<void*> *vec;
 }
 /* Line 187 of yacc.c.  */

@@ -23,8 +23,7 @@
 #ifndef _cvc3__parser_temp_h_
 #define _cvc3__parser_temp_h_
 
-//#include "expr.h"
-#define Expr void*
+#include "expr/Parser.h"
 
 #include <sstream>
 #include <vector>
@@ -48,7 +47,7 @@ namespace CVC3 {
     // File name
     std::string fileName;
     // The last parsed Expr
-    Expr expr;
+    klee::expr::ExprHandle* expr;
     // Whether we are done or not
     bool done;
     // Whether we are running interactive

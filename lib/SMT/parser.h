@@ -29,8 +29,6 @@
 #define _cvc3__parser_h_
 
 namespace CVC3 {
-
-  //class Expr;
   
   // Internal parser state and other data
   class ParserData;
@@ -50,7 +48,7 @@ namespace CVC3 {
     // Destructor
     ~Parser();
     // Read the next command.  
-    Expr next();
+    klee::expr::ExprHandle* next();
     // Check if we are done (end of input has been reached)
     bool done() const;
     // The same check can be done by using the class Parser's value as

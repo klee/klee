@@ -76,7 +76,7 @@ int smtliberror(const char *s)
 %union {
   std::string *str;
   std::vector<std::string> *strvec;
-  Expr node;
+  klee::expr::ExprHandle* node;
   std::vector<void*> *vec;
 };
 
