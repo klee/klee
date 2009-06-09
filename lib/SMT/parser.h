@@ -46,11 +46,10 @@ namespace CVC3 {
     void deleteParser();
   public:
     // Constructors
-    Parser(InputLanguage lang,
-	   // The 'interactive' flag is ignored when fileName != ""
+    Parser(// The 'interactive' flag is ignored when fileName != ""
 	   bool interactive = true,
 	   const std::string& fileName = "");
-    Parser(InputLanguage lang, std::istream& is, bool interactive = false);
+    Parser(std::istream& is, bool interactive = false);
     // Destructor
     ~Parser();
     // Read the next command.  

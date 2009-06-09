@@ -68,10 +68,8 @@ namespace CVC3 {
   };
 
   // Constructors
-  Parser::Parser(InputLanguage lang, bool interactive, 
-		 const std::string& fileName)
+  Parser::Parser(bool interactive, const std::string& fileName)
     : d_data(new ParserData) {
-    d_data->lang = lang;
     if(fileName == "") {
       // Use std::cin
       d_data->useName = false;
@@ -91,9 +89,8 @@ namespace CVC3 {
     initParser();
   }
 
-  Parser::Parser(InputLanguage lang, std::istream& is, bool interactive)
+  Parser::Parser(std::istream& is, bool interactive)
     : d_data(new ParserData) {
-    d_data->lang = lang;
     d_data->useName = false;
     d_data->temp.is = &is;
     d_data->temp.fileName = "stdin";
@@ -111,23 +108,13 @@ namespace CVC3 {
 
   // Initialize the actual parser
   void Parser::initParser() {
-    switch(d_data->lang) {
-    case SMTLIB_LANG:
-      d_data->buffer = smtlib_createBuffer(smtlib_bufSize());
-      d_data->temp.lineNum = 1;
-      break;
-    default: FatalAssert(false, "Bad input language specified"); exit(1);
-    }
+    d_data->buffer = smtlib_createBuffer(smtlib_bufSize());
+    d_data->temp.lineNum = 1;
   }
 
   // Clean up the parser's internal data structures
   void Parser::deleteParser() {
-    switch(d_data->lang) {
-    case SMTLIB_LANG:
-      smtlib_deleteBuffer(d_data->buffer);
-      break;
-    default: FatalAssert(false, "Bad input language specified");
-    }
+    smtlib_deleteBuffer(d_data->buffer);
   }
     
 
@@ -139,20 +126,11 @@ namespace CVC3 {
     // Switch to our buffer, in case there are multiple instances of
     // the parser running
     try {
-      switch(d_data->lang) {
-      case SMTLIB_LANG:
-        smtlib_switchToBuffer(d_data->buffer);
-	smtlib_setInteractive(d_data->temp.interactive);
-	smtlibparse();
-	// Reset the prompt to the main one
-	d_data->temp.setPrompt1();
-	break;
-      default: {
-	ostringstream ss;
-	ss << "Bad input language specified: " << d_data->lang;
-	DebugAssert(false, ss.str().c_str()); exit(1);
-      }
-      }
+      smtlib_switchToBuffer(d_data->buffer);
+      smtlib_setInteractive(d_data->temp.interactive);
+      smtlibparse();
+      // Reset the prompt to the main one
+      d_data->temp.setPrompt1();
     } catch(Exception* e) {
       cerr << d_data->temp.fileName << ":" << d_data->temp.lineNum
 	   << ": " << e << endl;
