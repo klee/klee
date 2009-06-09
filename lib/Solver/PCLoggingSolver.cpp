@@ -128,7 +128,7 @@ public:
                e = objects.end(); i != e; ++i, ++values_it) {
           const Array *array = *i;
           std::vector<unsigned char> &data = *values_it;
-          os << "#     arr" << array->id << " = [";
+          os << "#     " << array->name << " = [";
           for (unsigned j = 0; j < array->size; j++) {
             os << (int) data[j];
             if (j+1 < array->size)

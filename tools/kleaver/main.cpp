@@ -171,7 +171,7 @@ static bool EvaluateInputAST(const char *Filename,
 
           for (unsigned i = 0, e = result.size(); i != e; ++i) {
             llvm::cout << "\tArray " << i << ":\t"
-                       << "arr" << QC->Objects[i]->id
+                       << QC->Objects[i]->name
                        << "[";
             for (unsigned j = 0; j != QC->Objects[i]->size; ++j) {
               llvm::cout << (unsigned) result[i][j];

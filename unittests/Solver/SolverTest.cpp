@@ -12,6 +12,7 @@
 #include "klee/Constraints.h"
 #include "klee/Expr.h"
 #include "klee/Solver.h"
+#include "llvm/ADT/StringExtras.h"
 
 using namespace klee;
 
@@ -43,8 +44,8 @@ void testOperation(Solver &solver,
       return;
 
     unsigned size = Expr::getMinBytesForWidth(operandWidth);
-    static unsigned id = 0;
-    Array *array = new Array(0, ++id, size);
+    static uint64_t id = 0;
+    Array *array = new Array("arr" + llvm::utostr(id), 0, ++id, size);
     symbolicArgs.push_back(Expr::CreateArg(Expr::createTempRead(array, 
                                                                 operandWidth)));
   }

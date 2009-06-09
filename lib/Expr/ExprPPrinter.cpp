@@ -167,7 +167,9 @@ private:
 
     // Special case empty list.
     if (!head) {
-      PC << "arr" << updates.root->id;
+      // FIXME: We need to do something (assert, mangle, etc.) so that printing
+      // distinct arrays with the same name doesn't fail.
+      PC << updates.root->name;
       return;
     }
 
@@ -217,7 +219,7 @@ private:
     if (openedList)
       PC << ']';
 
-    PC << " @ arr" << updates.root->id;
+    PC << " @ " << updates.root->name;
   }
 
   void printWidth(PrintContext &PC, ref<Expr> e) {
@@ -528,7 +530,7 @@ void ExprPPrinter::printQuery(std::ostream &os,
            ie = p.usedArrays.end(); it != ie; ++it) {
       const Array *A = *it;
       // FIXME: Print correct name, domain, and range.
-      PC << "array " << "arr" << A->id 
+      PC << "array " << A->name
          << "[" << A->size << "]"
          << " : " << "w32" << " -> " << "w8"
          << " = symbolic";
@@ -572,7 +574,7 @@ void ExprPPrinter::printQuery(std::ostream &os,
     PC.breakLine(indent - 1);
     PC << '[';
     for (const Array * const* it = evalArraysBegin; it != evalArraysEnd; ++it) {
-      PC << "arr" << (*it)->id;
+      PC << (*it)->name;
       if (it + 1 != evalArraysEnd)
         PC.breakLine(indent);
     }

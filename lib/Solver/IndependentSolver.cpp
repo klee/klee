@@ -131,7 +131,7 @@ public:
         os << ", ";
       }
 
-      os << "MO" << array->id;
+      os << "MO" << array->name;
     }
     for (elements_ty::const_iterator it = elements.begin(), ie = elements.end();
          it != ie; ++it) {
@@ -144,7 +144,7 @@ public:
         os << ", ";
       }
 
-      os << "MO" << array->id << " : " << dis;
+      os << "MO" << array->name << " : " << dis;
     }
     os << "}";
   }

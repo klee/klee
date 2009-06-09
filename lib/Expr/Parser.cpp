@@ -1557,7 +1557,7 @@ Decl::Decl(DeclKind _Kind) : Kind(_Kind) {}
 
 void ArrayDecl::dump() {
   // FIXME: For now, print using the Array* "name".
-  std::cout << "array " << "arr" << Root->id
+  std::cout << "array " << Root->name
             << "[" << Size << "]"
             << " : " << 'w' << Domain << " -> " << 'w' << Range << " = ";
 
