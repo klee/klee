@@ -58,8 +58,6 @@ namespace CVC3 {
   // Internal storage class; I'll use member names without 'd_'s here
   class ParserData {
   public:
-    // Which language to use
-    InputLanguage lang;
     // Is the input given by the file name or as istream?
     bool useName;
     ParserTemp temp;
