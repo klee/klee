@@ -29,7 +29,6 @@ namespace klee {
 class Array;
 class ConstantExpr;
 class ObjectState;
-class MemoryObject;
 
 template<class T> class ref;
 
@@ -474,8 +473,6 @@ private:
 class Array {
 public:
   const std::string name;
-  // FIXME: This does not belong here.
-  const MemoryObject *object;
   // FIXME: Not 64-bit clean.
   unsigned size;
 
@@ -485,13 +482,13 @@ public:
 public:
   /// Array - Construct a new array object.
   ///
-  /// \param _name - The name for this arrays. Names should generally be unique
+  /// \param _name - The name for this array. Names should generally be unique
   /// across an application, but this is not necessary for correctness, except
   /// when printing expressions. When expressions are printed the output will
   /// not parse correctly since two arrays with the same name cannot be
   /// distinguished once printed.
-  Array(const std::string &_name, const MemoryObject *_object, uint64_t _size) 
-    : name(_name), object(_object), size(_size), stpInitialArray(0) {}
+  Array(const std::string &_name, uint64_t _size) 
+    : name(_name), size(_size), stpInitialArray(0) {}
   ~Array() {
     // FIXME: This relies on caller to delete the STP array.
     assert(!stpInitialArray && "Array must be deleted by caller!");

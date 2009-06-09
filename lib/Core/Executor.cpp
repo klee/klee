@@ -3199,6 +3199,8 @@ void Executor::getCoveredLines(const ExecutionState &state,
 void Executor::doImpliedValueConcretization(ExecutionState &state,
                                             ref<Expr> e,
                                             ref<ConstantExpr> value) {
+  abort(); // FIXME: Broken until we sort out how to do the write back.
+
   if (DebugCheckForImpliedValues)
     ImpliedValue::checkForImpliedValues(solver->solver, e, value);
 
@@ -3211,7 +3213,7 @@ void Executor::doImpliedValueConcretization(ExecutionState &state,
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(re->index)) {
       // FIXME: This is the sole remaining usage of the Array object
       // variable. Kill me.
-      const MemoryObject *mo = re->updates.root->object;
+      const MemoryObject *mo = 0; //re->updates.root->object;
       const ObjectState *os = state.addressSpace.findObject(mo);
 
       if (!os) {
