@@ -337,8 +337,8 @@ public:
 
 class CexRangeEvaluator : public ExprRangeEvaluator<ValueRange> {
 public:
-  std::map<unsigned, CexObjectData*> &objects;
-  CexRangeEvaluator(std::map<unsigned, CexObjectData*> &_objects) 
+  std::map<const Array*, CexObjectData*> &objects;
+  CexRangeEvaluator(std::map<const Array*, CexObjectData*> &_objects) 
     : objects(_objects) {}
 
   ValueRange getInitialReadRange(const Array &os, ValueRange index) {
@@ -355,15 +355,15 @@ protected:
       return ReadExpr::create(UpdateList(&array, 0), 
                               ConstantExpr::alloc(index, Expr::Int32));
       
-    std::map<unsigned, CexObjectData*>::iterator it = objects.find(array.id);
+    std::map<const Array*, CexObjectData*>::iterator it = objects.find(&array);
     return ConstantExpr::alloc((it == objects.end() ? 127 : 
                                 it->second->getPossibleValue(index)),
                                Expr::Int8);
   }
 
 public:
-  std::map<unsigned, CexObjectData*> &objects;
-  CexPossibleEvaluator(std::map<unsigned, CexObjectData*> &_objects) 
+  std::map<const Array*, CexObjectData*> &objects;
+  CexPossibleEvaluator(std::map<const Array*, CexObjectData*> &_objects) 
     : objects(_objects) {}
 };
 
@@ -376,7 +376,7 @@ protected:
       return ReadExpr::create(UpdateList(&array, 0), 
                               ConstantExpr::alloc(index, Expr::Int32));
       
-    std::map<unsigned, CexObjectData*>::iterator it = objects.find(array.id);
+    std::map<const Array*, CexObjectData*>::iterator it = objects.find(&array);
     if (it == objects.end())
       return ReadExpr::create(UpdateList(&array, 0), 
                               ConstantExpr::alloc(index, Expr::Int32));
@@ -390,14 +390,14 @@ protected:
   }
 
 public:
-  std::map<unsigned, CexObjectData*> &objects;
-  CexExactEvaluator(std::map<unsigned, CexObjectData*> &_objects) 
+  std::map<const Array*, CexObjectData*> &objects;
+  CexExactEvaluator(std::map<const Array*, CexObjectData*> &_objects) 
     : objects(_objects) {}
 };
 
 class CexData {
 public:
-  std::map<unsigned, CexObjectData*> objects;
+  std::map<const Array*, CexObjectData*> objects;
 
   CexData(const CexData&); // DO NOT IMPLEMENT
   void operator=(const CexData&); // DO NOT IMPLEMENT
@@ -405,13 +405,13 @@ public:
 public:
   CexData() {}
   ~CexData() {
-    for (std::map<unsigned, CexObjectData*>::iterator it = objects.begin(),
+    for (std::map<const Array*, CexObjectData*>::iterator it = objects.begin(),
            ie = objects.end(); it != ie; ++it)
       delete it->second;
   }
 
   CexObjectData &getObjectData(const Array *A) {
-    CexObjectData *&Entry = objects[A->id];
+    CexObjectData *&Entry = objects[A];
 
     if (!Entry)
       Entry = new CexObjectData(A->size);
