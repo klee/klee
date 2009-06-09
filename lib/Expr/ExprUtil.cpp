@@ -89,8 +89,9 @@ protected:
       visit(un->value);
     }
 
-    if (results.insert(ul.root).second)
-      objects.push_back(ul.root);
+    if (ul.root->isSymbolicArray())
+      if (results.insert(ul.root).second)
+        objects.push_back(ul.root);
 
     return Action::doChildren();
   }

@@ -95,6 +95,12 @@ public:
     for (unsigned i = 0; i != reads.size(); ++i) {
       ReadExpr *re = reads[i].get();
       const Array *array = re->updates.root;
+      
+      // Reads of a constant array don't alias.
+      if (re->updates.root->isConstantArray() &&
+          !re->updates.head)
+        continue;
+
       if (!wholeObjects.count(array)) {
         if (ConstantExpr *CE = dyn_cast<ConstantExpr>(re->index)) {
           DenseSet<unsigned> &dis = elements[array];

@@ -55,6 +55,8 @@ public:
 template<class T>
 class ExprRangeEvaluator {
 protected:
+  /// getInitialReadRange - Return a range for the initial value of the given
+  /// array (which may be constant), for the given range of indices.
   virtual T getInitialReadRange(const Array &os, T index) = 0;
 
   T evalRead(const UpdateList &ul, T index);
@@ -83,7 +85,7 @@ T ExprRangeEvaluator<T>::evalRead(const UpdateList &ul,
       } 
     }
   }
-
+  
   return res.set_union(getInitialReadRange(*ul.root, index));
 }
 

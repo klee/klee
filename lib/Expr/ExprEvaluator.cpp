@@ -25,10 +25,14 @@ ExprVisitor::Action ExprEvaluator::evalRead(const UpdateList &ul,
       // version though (mostly for debugging).
       
       return Action::changeTo(ReadExpr::create(UpdateList(ul.root, un), 
-                                               ConstantExpr::alloc(index, Expr::Int32)));
+                                               ConstantExpr::alloc(index, 
+                                                                   ul.root->getDomain())));
     }
   }
   
+  if (ul.root->isConstantArray() && index < ul.root->size)
+    return Action::changeTo(ul.root->constantValues[index]);
+
   return Action::changeTo(getInitialValue(*ul.root, index));
 }
 

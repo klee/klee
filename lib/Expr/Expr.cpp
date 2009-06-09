@@ -888,72 +888,32 @@ static ref<Expr> EqExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
 /// returns the initial equality expression. 
 static ref<Expr> TryConstArrayOpt(const ref<ConstantExpr> &cl, 
 				  ReadExpr *rd) {
-  assert(rd->getKind() == Expr::Read && "read expression required");
-  
   uint64_t ct = cl->getConstantValue();
-  ref<Expr> first_idx_match;
 
-  // number of positions in the array that contain value ct
-  unsigned matches = 0;
+  if (rd->updates.root->isSymbolicArray() || rd->updates.getSize())
+    return EqExpr_create(cl, rd);
 
-  //llvm::cerr << "Size updates/root: " << rd->updates.getSize() << " / " << (rd->updates.root)->size << "\n";
+  // Number of positions in the array that contain value ct.
+  unsigned numMatches = 0;
 
   // for now, just assume standard "flushing" of a concrete array,
   // where the concrete array has one update for each index, in order
-  bool all_const = true;
-  if (rd->updates.getSize() == rd->updates.root->size) {
-    unsigned k = rd->updates.getSize();
-    for (const UpdateNode *un = rd->updates.head; un; un = un->next) {
-      assert(k > 0);
-      k--;
-
-      ref<Expr> idx = un->index;
-      ref<Expr> val = un->value;
-      ConstantExpr *idxCE = dyn_cast<ConstantExpr>(idx);
-      ConstantExpr *valCE = dyn_cast<ConstantExpr>(val);
-      if (!idxCE || !valCE) {
-        all_const = false;
-        break;
-      }
-
-      if (idxCE->getConstantValue() != k) {
-        all_const = false;
-        break;
-      }
-      if (valCE->getConstantValue() == ct) {
-        matches++;
-        if (matches == 1)
-          first_idx_match = un->index;
-      }
+  ref<Expr> res = ConstantExpr::alloc(0, Expr::Bool);
+  for (unsigned i = 0, e = rd->updates.root->size; i != e; ++i) {
+    if (ct == rd->updates.root->constantValues[i]->getConstantValue()) {
+      // Arbitrary maximum on the size of disjunction.
+      if (++numMatches > 100)
+        return EqExpr_create(cl, rd);
+      
+      ref<Expr> mayBe = 
+        EqExpr::create(rd->index, ConstantExpr::alloc(i, 
+                                                      rd->index->getWidth()));
+      res = OrExpr::create(res, mayBe);
     }
   }
-  else all_const = false;
-  
-  if (all_const && matches <= 100) {
-    // apply optimization
-    //llvm::cerr << "\n\n=== Applying const array optimization ===\n\n";
 
-    if (matches == 0)
-      return ConstantExpr::alloc(0, Expr::Bool);
-
-    ref<Expr> res = EqExpr::create(first_idx_match, rd->index);
-    if (matches == 1)
-      return res;
-    
-    for (const UpdateNode *un = rd->updates.head; un; un = un->next) {
-      if (un->index != first_idx_match && 
-          cast<ConstantExpr>(un->value)->getConstantValue() == ct) {
-	ref<Expr> curr_eq = EqExpr::create(un->index, rd->index);
-	res = OrExpr::create(curr_eq, res);
-      }
-    }
-    
-    return res;
-  }
-
-  return EqExpr_create(cl, ref<Expr>(rd));
+  return res;
 }
-
 
 static ref<Expr> EqExpr_createPartialR(const ref<ConstantExpr> &cl, Expr *r) {  
   uint64_t value = cl->getConstantValue();

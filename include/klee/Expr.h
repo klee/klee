@@ -476,6 +476,11 @@ public:
   // FIXME: Not 64-bit clean.
   unsigned size;
 
+  /// constantValues - The constant initial values for this array, or empty for
+  /// a symbolic array. If non-empty, this size of this array is equivalent to
+  /// the array size.
+  const std::vector< ref<ConstantExpr> > constantValues;
+
   // FIXME: This does not belong here.
   mutable void *stpInitialArray;
 
@@ -487,18 +492,34 @@ public:
   /// when printing expressions. When expressions are printed the output will
   /// not parse correctly since two arrays with the same name cannot be
   /// distinguished once printed.
-  Array(const std::string &_name, uint64_t _size) 
-    : name(_name), size(_size), stpInitialArray(0) {}
+  Array(const std::string &_name, uint64_t _size, 
+        const ref<ConstantExpr> *constantValuesBegin = 0,
+        const ref<ConstantExpr> *constantValuesEnd = 0)
+    : name(_name), size(_size), 
+      constantValues(constantValuesBegin, constantValuesEnd), 
+      stpInitialArray(0) {
+    assert((isSymbolicArray() || constantValues.size() == size) &&
+           "Invalid size for constant array!");
+#ifdef NDEBUG
+    for (const ref<ConstantExpr> *it = constantValuesBegin;
+         it != constantValuesEnd; ++it)
+      assert(it->getWidth() == getRange() &&
+             "Invalid initial constant value!");
+#endif
+  }
   ~Array() {
     // FIXME: This relies on caller to delete the STP array.
     assert(!stpInitialArray && "Array must be deleted by caller!");
   }
+
+  bool isSymbolicArray() const { return constantValues.empty(); }
+  bool isConstantArray() const { return !isSymbolicArray(); }
+
+  Expr::Width getDomain() const { return Expr::Int32; }
+  Expr::Width getRange() const { return Expr::Int8; }
 };
 
-/// Class representing a complete list of updates into an array. 
-/** The main trick is the isRooted bit, which enables important optimizations. 
-    ...
- */
+/// Class representing a complete list of updates into an array.
 class UpdateList { 
   friend class ReadExpr; // for default constructor
 

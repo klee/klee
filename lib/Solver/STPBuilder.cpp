@@ -385,6 +385,8 @@ ExprHandle STPBuilder::constructSDivByConstant(ExprHandle expr_n, unsigned width
 }
 
 ::VCExpr STPBuilder::getInitialArray(const Array *root) {
+  assert(root->isSymbolicArray() && "FIXME: Support constant arrays!");
+
   if (root->stpInitialArray) {
     return root->stpInitialArray;
   } else {

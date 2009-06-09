@@ -29,10 +29,11 @@ namespace klee {
   public:
     ExprEvaluator() {}
 
-    // override to implement evaluation, this function is called to
-    // get the initial value for a symbolic byte. if the value is
-    // unknown then the user can simply return a ReadExpr at version 0
-    // of this MemoryObject.
+    /// getInitialValue - Return the initial value for a symbolic byte.
+    ///
+    /// This will only be called for constant arrays if the index is
+    /// out-of-bounds. If the value is unknown then the user should return a
+    /// ReadExpr at the initial version of this array.
     virtual ref<Expr> getInitialValue(const Array& os, unsigned index) = 0;
   };
 }

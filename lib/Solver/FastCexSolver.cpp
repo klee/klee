@@ -341,7 +341,13 @@ public:
   CexRangeEvaluator(std::map<const Array*, CexObjectData*> &_objects) 
     : objects(_objects) {}
 
-  ValueRange getInitialReadRange(const Array &os, ValueRange index) {
+  ValueRange getInitialReadRange(const Array &array, ValueRange index) {
+    // Check for a concrete read of a constant array.
+    if (array.isConstantArray() && 
+        index.isFixed() && 
+        index.min() < array.size)
+      return ValueRange(array.constantValues[index.min()]->getConstantValue());
+
     return ValueRange(0, 255);
   }
 };
@@ -765,16 +771,22 @@ public:
 
       // We reached the initial array write, update the exact range if possible.
       if (index.isFixed()) {
-        CexValueData cvd = cod.getExactValues(index.min());
-        if (range.min() > cvd.min()) {
-          assert(range.min() <= cvd.max());
-          cvd = CexValueData(range.min(), cvd.max());
+        if (array->isConstantArray()) {
+          // Verify the range.
+          propogateExactValues(array->constantValues[index.min()],
+                               range);
+        } else {
+          CexValueData cvd = cod.getExactValues(index.min());
+          if (range.min() > cvd.min()) {
+            assert(range.min() <= cvd.max());
+            cvd = CexValueData(range.min(), cvd.max());
+          }
+          if (range.max() < cvd.max()) {
+            assert(range.max() >= cvd.min());
+            cvd = CexValueData(cvd.min(), range.max());
+          }
+          cod.setExactValues(index.min(), cvd);
         }
-        if (range.max() < cvd.max()) {
-          assert(range.max() >= cvd.min());
-          cvd = CexValueData(cvd.min(), range.max());
-        }
-        cod.setExactValues(index.min(), cvd);
       }
       break;
     }
