@@ -12,6 +12,8 @@
 
 #include "klee/Expr.h"
 
+#include "llvm/ADT/StringExtras.h"
+
 #include <vector>
 #include <string>
 
@@ -69,7 +71,7 @@ public:
   MemoryObject(uint64_t _address) 
     : id(counter++),
       address(_address),
-      array(new Array(this, 0, id)),
+      array(new Array("arr" + llvm::utostr(id), this, 0, id)),
       size(0),
       isFixed(true),
       allocSite(0) {
@@ -80,7 +82,7 @@ public:
                const llvm::Value *_allocSite) 
     : id(counter++),
       address(_address),
-      array(new Array(this, id, _size)),
+      array(new Array("arr" + llvm::utostr(id), this, id, _size)),
       size(_size),
       name("unnamed"),
       isLocal(_isLocal),

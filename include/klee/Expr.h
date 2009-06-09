@@ -473,8 +473,11 @@ private:
 
 class Array {
 public:
+  const std::string name;
+  // FIXME: This does not belong here.
   const MemoryObject *object;
   unsigned id;
+  // FIXME: Not 64-bit clean.
   unsigned size;
 
   // FIXME: This does not belong here.
@@ -486,8 +489,9 @@ public:
   // object! We should probably use the pointer for talking to STP, as
   // long as we can guarantee that it won't be a "stale" reference
   // once we have freed it.
-  Array(const MemoryObject *_object, unsigned _id, uint64_t _size) 
-    : object(_object), id(_id), size(_size), stpInitialArray(0) {}
+  Array(const std::string &_name, const MemoryObject *_object, 
+        unsigned _id, uint64_t _size) 
+    : name(_name), object(_object), id(_id), size(_size), stpInitialArray(0) {}
   ~Array() {
     // FIXME: This relies on caller to delete the STP array.
     assert(!stpInitialArray && "Array must be deleted by caller!");
