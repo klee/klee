@@ -36,7 +36,6 @@ private:
 public:
   unsigned id;
   uint64_t address;
-  Array *array;
 
   /// size in bytes
   unsigned size;
@@ -71,7 +70,6 @@ public:
   MemoryObject(uint64_t _address) 
     : id(counter++),
       address(_address),
-      array(new Array("arr" + llvm::utostr(id), id)),
       size(0),
       isFixed(true),
       allocSite(0) {
@@ -82,7 +80,6 @@ public:
                const llvm::Value *_allocSite) 
     : id(counter++),
       address(_address),
-      array(new Array("arr" + llvm::utostr(id), _size)),
       size(_size),
       name("unnamed"),
       isLocal(_isLocal),

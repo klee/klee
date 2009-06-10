@@ -507,10 +507,7 @@ public:
              "Invalid initial constant value!");
 #endif
   }
-  ~Array() {
-    // FIXME: This relies on caller to delete the STP array.
-    assert(!stpInitialArray && "Array must be deleted by caller!");
-  }
+  ~Array();
 
   bool isSymbolicArray() const { return constantValues.empty(); }
   bool isConstantArray() const { return !isSymbolicArray(); }

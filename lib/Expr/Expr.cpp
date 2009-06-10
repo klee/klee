@@ -353,6 +353,18 @@ ref<Expr>  NotOptimizedExpr::create(ref<Expr> src) {
   return NotOptimizedExpr::alloc(src);
 }
 
+/***/
+
+Array::~Array() {
+  // FIXME: This shouldn't be necessary.
+  if (array->stpInitialArray) {
+    ::vc_DeleteExpr(array->stpInitialArray);
+    array->stpInitialArray = 0;
+  }
+}
+
+/***/
+
 ref<Expr> ReadExpr::create(const UpdateList &ul, ref<Expr> index) {
   // rollback index when possible... 
 

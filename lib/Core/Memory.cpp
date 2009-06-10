@@ -57,16 +57,6 @@ int MemoryObject::counter = 0;
 extern "C" void vc_DeleteExpr(void*);
 
 MemoryObject::~MemoryObject() {
-  // FIXME: This shouldn't be necessary. Array's should be ref-counted
-  // just like everything else, and the interaction with the STP array
-  // should hide at least inside the Expr/Solver layers.
-  if (array) {
-    if (array->stpInitialArray) {
-      ::vc_DeleteExpr(array->stpInitialArray);
-      array->stpInitialArray = 0;
-    }
-    delete array;
-  }
 }
 
 void MemoryObject::getAllocInfo(std::string &result) const {
@@ -102,7 +92,8 @@ ObjectState::ObjectState(const MemoryObject *mo, unsigned _size)
     flushMask(0),
     knownSymbolics(0),
     size(_size),
-    updates(mo->array, 0),
+    // FIXME: Leaked!
+    updates(new Array("arr" + llvm::utostr(mo->id), _size), 0),
     readOnly(false) {
 }
 
