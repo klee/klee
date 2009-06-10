@@ -103,17 +103,12 @@ public:
                             const std::vector<const Array*> &objects,
                             std::vector< std::vector<unsigned char> > &values,
                             bool &hasSolution) {
-    const ref<Expr> *evalExprBegin = 0, *evalExprEnd = 0;
-    if (!query.expr->isFalse()) {
-      evalExprBegin = &query.expr;
-      evalExprEnd = evalExprBegin + 1;
-    } 
     if (objects.empty()) {
-      startQuery(query.withFalse(), "InitialValues",
-                 evalExprBegin, evalExprEnd);
+      startQuery(query, "InitialValues",
+                 0, 0);
     } else {
-      startQuery(query.withFalse(), "InitialValues",
-                 evalExprBegin, evalExprEnd,
+      startQuery(query, "InitialValues",
+                 0, 0,
                  &objects[0], &objects[0] + objects.size());
     }
     bool success = solver->impl->computeInitialValues(query, objects, 
