@@ -47,7 +47,7 @@ namespace CVC3 {
     // File name
     std::string fileName;
     // The last parsed Expr
-    klee::expr::ExprHandle* expr;
+    klee::expr::ExprHandle expr;
     // Whether we are done or not
     bool done;
     // Whether we are running interactive

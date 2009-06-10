@@ -23,8 +23,11 @@
    commands in SMT-LIB language.
 */
 
-//#include "vc.h"
 #include "parser_temp.h"
+#include "klee/Expr.h"
+
+using namespace klee;
+using namespace klee::expr;
 
 // Exported shared data
 namespace CVC3 {
@@ -75,9 +78,7 @@ int smtliberror(const char *s)
 
 %union {
   std::string *str;
-  std::vector<std::string> *strvec;
-  klee::expr::ExprHandle* node;
-  std::vector<void*> *vec;
+  klee::expr::ExprHandle node;
 };
 
 
@@ -176,13 +177,14 @@ benchmark:
       $$ = new CVC3::Expr(VC->listExpr("_SEQ",*$4));
       delete $4;
       */
-      $$ = NULL;
+      $$ = $4;
     }
   | EOF_TOK
     { 
       TMP->done = true;
       //$$ = new CVC3::Expr();
-      $$ = NULL;
+      //$$ = ConstantExpr::create(1, 1);
+      $$ = ExprHandle();
     }
 ;
 
@@ -761,12 +763,12 @@ prop_atom:
     TRUE_TOK
     {
       //$$ = new CVC3::Expr(VC->idExpr("_TRUE_EXPR"));
-      $$ = NULL;
+      $$ = ConstantExpr::create(1, 1);
     }
   | FALSE_TOK
     { 
       //$$ = new CVC3::Expr(VC->idExpr("_FALSE_EXPR"));
-      $$ = NULL;
+      $$ = ConstantExpr::create(0, 1);;
     }
 /*
   | fvar

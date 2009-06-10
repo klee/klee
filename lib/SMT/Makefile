@@ -14,10 +14,14 @@ include $(LEVEL)/Makefile.common
 
 smtlib_parser.cpp smtlib_parser.h: smtlib.y
 	bison -d -o smtlib_parser.cpp -p smtlib smtlib.y
-	mv smtlib_parser.hpp smtlib_parser.h
+	mv smtlib_parser.hpp smtlib_parser.h	
+	perl -pi -e 's/union/struct/g' smtlib_parser.cpp
+	perl -pi -e 's/union/struct/g' smtlib_parser.h
+
 
 smtlib_lexer.cpp: smtlib.lex smtlib_parser.h
 	flex -I -Psmtlib -osmtlib_lexer.cpp smtlib.lex
+	perl -pi -e 's/union/struct/g' smtlib_lexer.cpp
 
 .PHONY: regen
 regen: smtlib_lexer.cpp smtlib_parser.cpp smtlib_parser.h

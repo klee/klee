@@ -120,7 +120,7 @@ namespace CVC3 {
   }
     
 
-  klee::expr::ExprHandle* Parser::next() {
+  klee::expr::ExprHandle Parser::next() {
     // If no more commands are available, return a Null Expr
     if(d_data->temp.done) return NULL;//Expr();
     // Set the global var so the parser uses the right stream and EM

@@ -48,7 +48,7 @@ namespace CVC3 {
     // Destructor
     ~Parser();
     // Read the next command.  
-    klee::expr::ExprHandle* next();
+    klee::expr::ExprHandle next();
     // Check if we are done (end of input has been reached)
     bool done() const;
     // The same check can be done by using the class Parser's value as
