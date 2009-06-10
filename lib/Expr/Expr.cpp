@@ -11,8 +11,6 @@
 
 
 #include "klee/Machine.h"
-// FIXME: This shouldn't be here.
-//#include "klee/Memory.h"
 #include "llvm/Type.h"
 #include "llvm/DerivedTypes.h"
 #include "llvm/Support/CommandLine.h"
@@ -355,9 +353,9 @@ ref<Expr>  NotOptimizedExpr::create(ref<Expr> src) {
 
 /***/
 
-Array::~Array() {
-  extern "C" void ::vc_DeleteExpr(void*);
+extern "C" void vc_DeleteExpr(void*);
 
+Array::~Array() {
   // FIXME: This shouldn't be necessary.
   if (stpInitialArray) {
     ::vc_DeleteExpr(stpInitialArray);
