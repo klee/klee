@@ -356,10 +356,12 @@ ref<Expr>  NotOptimizedExpr::create(ref<Expr> src) {
 /***/
 
 Array::~Array() {
+  extern "C" void ::vc_DeleteExpr(void*);
+
   // FIXME: This shouldn't be necessary.
-  if (array->stpInitialArray) {
-    ::vc_DeleteExpr(array->stpInitialArray);
-    array->stpInitialArray = 0;
+  if (stpInitialArray) {
+    ::vc_DeleteExpr(stpInitialArray);
+    stpInitialArray = 0;
   }
 }
 
