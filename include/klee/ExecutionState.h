@@ -23,6 +23,7 @@
 #include <vector>
 
 namespace klee {
+  class Array;
   class CallPathNode;
   class Cell;
   class KFunction;
@@ -126,7 +127,7 @@ public:
   /// ordered list of symbolics: used to generate test cases. 
   //
   // FIXME: Move to a shared list structure (not critical).
-  std::vector<const MemoryObject*> symbolics;
+  std::vector< std::pair<const MemoryObject*, const Array*> > symbolics;
 
   // Used by the checkpoint/rollback methods for fake objects.
   // FIXME: not freeing things on branch deletion.
@@ -155,8 +156,8 @@ public:
   void pushFrame(KInstIterator caller, KFunction *kf);
   void popFrame();
 
-  void addSymbolic(const MemoryObject *mo) { 
-    symbolics.push_back(mo);
+  void addSymbolic(const MemoryObject *mo, const Array *array) { 
+    symbolics.push_back(std::make_pair(mo, array));
   }
   void addConstraint(ref<Expr> e) { 
     constraints.addConstraint(e); 

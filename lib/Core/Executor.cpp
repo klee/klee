@@ -2941,7 +2941,7 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
   ObjectState *os = bindObjectInState(state, mo, false);
   if (!replayOut) {
     os->makeSymbolic();
-    state.addSymbolic(mo);
+    state.addSymbolic(mo, os->updates.root);
     
     const Array *array = os->updates.root;
     std::map< ExecutionState*, std::vector<SeedInfo> >::iterator it = 
@@ -3149,10 +3149,8 @@ bool Executor::getSymbolicSolution(const ExecutionState &state,
 
   ExecutionState tmp(state);
   if (!NoPreferCex) {
-    for (std::vector<const MemoryObject*>::const_iterator 
-           it = state.symbolics.begin(), ie = state.symbolics.end(); 
-         it != ie; ++it) {
-      const MemoryObject *mo = *it;
+    for (unsigned i = 0; i != state.symbolics.size(); ++i) {
+      const MemoryObject *mo = state.symbolics[i].first;
       std::vector< ref<Expr> >::const_iterator pi = 
         mo->cexPreferences.begin(), pie = mo->cexPreferences.end();
       for (; pi != pie; ++pi) {
@@ -3169,7 +3167,7 @@ bool Executor::getSymbolicSolution(const ExecutionState &state,
   std::vector< std::vector<unsigned char> > values;
   std::vector<const Array*> objects;
   for (unsigned i = 0; i != state.symbolics.size(); ++i)
-    objects.push_back(state.symbolics[i]->array);
+    objects.push_back(state.symbolics[i].second);
   bool success = solver->getInitialValues(tmp, objects, values);
   solver->setTimeout(0);
   if (!success) {
@@ -3180,13 +3178,8 @@ bool Executor::getSymbolicSolution(const ExecutionState &state,
     return false;
   }
   
-  unsigned i = 0;
-  for (std::vector<const MemoryObject*>::const_iterator 
-         it = state.symbolics.begin(), ie = state.symbolics.end(); 
-       it != ie; ++it) {
-    res.push_back(std::make_pair((*it)->name, values[i]));
-    ++i;
-  }
+  for (unsigned i = 0; i != state.symbolics.size(); ++i)
+    res.push_back(std::make_pair(state.symbolics[i].first->name, values[i]));
   return true;
 }
 
