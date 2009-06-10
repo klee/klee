@@ -27,6 +27,7 @@
 
 #include <sstream>
 #include <vector>
+#include <iostream>
 
 namespace CVC3 {
 
@@ -64,7 +65,12 @@ namespace CVC3 {
     ParserTemp() : d_uid(0), prompt1("CVC> "), prompt2("- "),
       prompt("CVC> "), lineNum(1), done(false), arrFlag(false), queryParsed(false) { }
     // Parser error handling (implemented in parser.cpp)
-    int error(const std::string& s);
+    int error(const std::string& s) {
+      // FIXME: Fail better?
+      std::cerr << "error: " << s << "\n";
+      exit(1);
+      return 0;
+    }
     // Get the next uniqueID as a string
     std::string uniqueID() {
       std::ostringstream ss;

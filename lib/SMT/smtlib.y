@@ -24,6 +24,7 @@
 */
 
 #include "parser_temp.h"
+#include "SMTParser.h"
 #include "klee/Expr.h"
 
 using namespace klee;
@@ -40,7 +41,6 @@ namespace CVC3 {
 #define ARRAYSENABLED (CVC3::parserTemp->arrFlag)
 #define BVENABLED (CVC3::parserTemp->bvFlag)
 #define BVSIZE (CVC3::parserTemp->bvSize)
-#define RAT(args) CVC3::newRational args
 #define QUERYPARSED CVC3::parserTemp->queryParsed
 
 // Suppress the bogus warning suppression in bison (it generates
@@ -159,10 +159,6 @@ int smtliberror(const char *s)
 cmd:
     benchmark
     {
-      /*
-      EXPR = *$1;
-      delete $1;
-      */
       EXPR = $1;
       YYACCEPT;
     }
