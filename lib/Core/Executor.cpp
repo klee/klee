@@ -50,6 +50,7 @@
 #include "llvm/Instructions.h"
 #include "llvm/IntrinsicInst.h"
 #include "llvm/Module.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/CallSite.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/GetElementPtrTypeIterator.h"
@@ -2606,11 +2607,10 @@ ref<Expr> Executor::replaceReadWithSymbolic(ExecutionState &state,
   // create a new fresh location, assert it is equal to concrete value in e
   // and return it.
   
-  const MemoryObject *mo =
-    memory->allocate(Expr::getMinBytesForWidth(e->getWidth()), false, false,
-                     state.prevPC->inst);
-  assert(mo && "out of memory");
-  ref<Expr> res = Expr::createTempRead(mo->array, e->getWidth());
+  static unsigned id;
+  const Array *array = new Array("rrws_arr" + llvm::utostr(++id), 
+                                 Expr::getMinBytesForWidth(e->getWidth()));
+  ref<Expr> res = Expr::createTempRead(array, e->getWidth());
   ref<Expr> eq = NotOptimizedExpr::create(EqExpr::create(e, res));
   llvm::cerr << "Making symbolic: " << eq << "\n";
   state.addConstraint(eq);
@@ -2943,6 +2943,7 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
     os->makeSymbolic();
     state.addSymbolic(mo);
     
+    const Array *array = os->updates.root;
     std::map< ExecutionState*, std::vector<SeedInfo> >::iterator it = 
       seedMap.find(&state);
     if (it!=seedMap.end()) { // In seed mode we need to add this as a
@@ -2955,8 +2956,7 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
 
         if (!obj) {
           if (ZeroSeedExtension) {
-            std::vector<unsigned char> &values = 
-              si.assignment.bindings[mo->array];
+            std::vector<unsigned char> &values = si.assignment.bindings[array];
             values = std::vector<unsigned char>(mo->size, '\0');
           } else if (!AllowSeedExtension) {
             terminateStateOnError(state, 
@@ -2980,10 +2980,9 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
                                   "user.err");
             break;
           } else {
-            std::vector<unsigned char> &values = 
-              si.assignment.bindings[mo->array];
+            std::vector<unsigned char> &values = si.assignment.bindings[array];
             values.insert(values.begin(), obj->bytes, 
-                          obj->bytes + std::min(obj->numBytes, mo->size));            
+                          obj->bytes + std::min(obj->numBytes, mo->size));
             if (ZeroSeedExtension) {
               for (unsigned i=obj->numBytes; i<mo->size; ++i)
                 values.push_back('\0');
