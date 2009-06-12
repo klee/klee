@@ -20,12 +20,11 @@
 /*****************************************************************************/
 
 #include <iostream>
-#include "parser_temp.h"
+#include "SMTParser.h"
 #include "smtlib_parser.h"
 
-namespace CVC3 {
-  extern ParserTemp* parserTemp;
-}
+using namespace klee;
+using namespace klee::expr;
 
 extern int smtlib_inputLine;
 extern char *smtlibtext;
@@ -35,17 +34,8 @@ extern int smtliberror (const char *msg);
 static int smtlibinput(std::istream& is, char* buf, int size) {
   int res;
   if(is) {
-    // If interactive, read line by line; otherwise read as much as we
-    // can gobble
-    if(CVC3::parserTemp->interactive) {
-      // Print the current prompt
-      std::cout << CVC3::parserTemp->getPrompt() << std::flush;
-      // Set the prompt to "middle of the command" one
-      CVC3::parserTemp->setPrompt2();
-      // Read the line
-      is.getline(buf, size-1);
-    } else // Set the terminator char to 0
-      is.getline(buf, size-1, 0);
+    // Set the terminator char to 0
+    is.getline(buf, size-1, 0);
     // If failbit is set, but eof is not, it means the line simply
     // didn't fit; so we clear the state and keep on reading.
     bool partialStr = is.fail() && !is.eof();
@@ -66,13 +56,13 @@ static int smtlibinput(std::istream& is, char* buf, int size) {
 
 // Redefine the input buffer function to read from an istream
 #define YY_INPUT(buf,result,max_size) \
-  result = smtlibinput(*CVC3::parserTemp->is, buf, max_size);
+  result = smtlibinput(*SMTParser::parserTemp->is, buf, max_size);
 
 int smtlib_bufSize() { return YY_BUF_SIZE; }
 YY_BUFFER_STATE smtlib_buf_state() { return YY_CURRENT_BUFFER; }
 
 /* some wrappers for methods that need to refer to a struct.
-   These are used by CVC3::Parser. */
+   These are used by SMTParser. */
 void *smtlib_createBuffer(int sz) {
   return (void *)smtlib_create_buffer(NULL, sz);
 }
@@ -125,7 +115,7 @@ OPCHAR	(['\.\_])
 IDCHAR  ({LETTER}|{DIGIT}|{OPCHAR})
 %%
 
-[\n]            { CVC3::parserTemp->lineNum++; }
+[\n]            { SMTParser::parserTemp->lineNum++; }
 [ \t\r\f]	{ /* skip whitespace */ }
 
 {DIGIT}+"\."{DIGIT}+ { smtliblval.str = new std::string(smtlibtext); return NUMERAL_TOK; }
@@ -134,7 +124,7 @@ IDCHAR  ({LETTER}|{DIGIT}|{OPCHAR})
 
 ";"		{ BEGIN COMMENT; }
 <COMMENT>"\n"	{ BEGIN INITIAL; /* return to normal mode */ 
-                  CVC3::parserTemp->lineNum++; }
+                  SMTParser::parserTemp->lineNum++; }
 <COMMENT>.	{ /* stay in comment mode */ }
 
 <INITIAL>"\""		{ BEGIN STRING_LITERAL; 
@@ -163,7 +153,7 @@ IDCHAR  ({LETTER}|{DIGIT}|{OPCHAR})
                           return USER_VAL_TOK; }
 
 <USER_VALUE>"\n"        { _string_lit.insert(_string_lit.end(),'\n');
-                          CVC3::parserTemp->lineNum++; }
+                          SMTParser::parserTemp->lineNum++; }
 <USER_VALUE>.	        { _string_lit.insert(_string_lit.end(),*smtlibtext); }
 
 "true"          { return TRUE_TOK; }

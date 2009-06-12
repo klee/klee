@@ -23,25 +23,21 @@
    commands in SMT-LIB language.
 */
 
-#include "parser_temp.h"
 #include "SMTParser.h"
 #include "klee/Expr.h"
+
+#include <sstream>
 
 using namespace klee;
 using namespace klee::expr;
 
-// Exported shared data
-namespace CVC3 {
-  extern ParserTemp* parserTemp;
-}
 // Define shortcuts for various things
-#define TMP CVC3::parserTemp
-#define EXPR CVC3::parserTemp->expr
-//#define VC (CVC3::parserTemp->vc)
-#define ARRAYSENABLED (CVC3::parserTemp->arrFlag)
-#define BVENABLED (CVC3::parserTemp->bvFlag)
-#define BVSIZE (CVC3::parserTemp->bvSize)
-#define QUERYPARSED CVC3::parserTemp->queryParsed
+#define TMP SMTParser::parserTemp
+#define EXPR SMTParser::parserTemp->expr
+#define ARRAYSENABLED (SMTParser::parserTemp->arrFlag)
+#define BVENABLED (SMTParser::parserTemp->bvFlag)
+#define BVSIZE (SMTParser::parserTemp->bvSize)
+#define QUERYPARSED SMTParser::parserTemp->queryParsed
 
 // Suppress the bogus warning suppression in bison (it generates
 // compile error)
@@ -53,9 +49,9 @@ extern int smtliblex(void);
 int smtliberror(const char *s)
 {
   std::ostringstream ss;
-  ss << CVC3::parserTemp->fileName << ":" << CVC3::parserTemp->lineNum
+  ss << SMTParser::parserTemp->fileName << ":" << SMTParser::parserTemp->lineNum
      << ": " << s;
-  return CVC3::parserTemp->error(ss.str());
+  return SMTParser::parserTemp->Error(ss.str());
 }
 
 

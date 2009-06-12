@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "parser_temp.h"
 #include "SMTParser.h"
 #include "expr/Parser.h"
 
@@ -26,19 +25,22 @@ extern void smtlib_switchToBuffer(void *);
 extern int smtlib_bufSize(void);
 extern void smtlib_setInteractive(bool);
 
-namespace CVC3 {
-  ParserTemp* parserTemp;
+SMTParser* SMTParser::parserTemp = NULL;
+
+SMTParser::SMTParser(const std::string filename) : fileName(filename), 
+						   lineNum(0),
+						   done(false),
+						   expr(NULL),
+						   bvSize(0),
+						   queryParsed(false) {
+  is = new ifstream(filename.c_str());
 }
 
 void SMTParser::Init() {
   cout << "Initializing parser\n";
-  void *buf = smtlib_createBuffer(smtlib_bufSize());
+  SMTParser::parserTemp = this;
 
-  CVC3::parserTemp = new CVC3::ParserTemp();
-  CVC3::parserTemp->fileName = fname;
-  CVC3::parserTemp->is = new ifstream(fname.c_str());
-  CVC3::parserTemp->interactive = false;
-  
+  void *buf = smtlib_createBuffer(smtlib_bufSize());
   smtlib_switchToBuffer(buf);
   smtlib_setInteractive(false);
   smtlibparse();
@@ -46,4 +48,11 @@ void SMTParser::Init() {
 
 Decl* SMTParser::ParseTopLevelDecl() {
   return NULL;
+}
+
+// XXX: give more info
+int SMTParser::Error(const string& s) {
+  std::cerr << "error: " << s << "\n";
+  exit(1);
+  return 0;
 }

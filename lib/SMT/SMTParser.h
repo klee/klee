@@ -11,7 +11,6 @@
 #ifndef SMT_PARSER_H
 #define SMT_PARSER_H
 
-#include "parser_temp.h"
 #include "expr/Parser.h"
 
 #include <cassert>
@@ -23,12 +22,21 @@ namespace klee {
 namespace expr {
 
 class SMTParser : public klee::expr::Parser {
- private:
-  std::string fname;
-  void *buf;
+  private:
+    void *buf;
 
  public:
-  SMTParser(const std::string filename) : fname(filename) {}
+  /* For interacting w/ the actual parser, should make this nicer */
+  static SMTParser* parserTemp;
+  std::string fileName;
+  std::istream* is;
+  int lineNum;
+  bool done;
+  klee::expr::ExprHandle expr;
+  int bvSize;
+  bool queryParsed;
+    
+  SMTParser(const std::string filename);
   
   virtual klee::expr::Decl *ParseTopLevelDecl();
   
@@ -39,6 +47,8 @@ class SMTParser : public klee::expr::Parser {
   virtual ~SMTParser() {}
   
   void Init(void);
+
+  int Error(const std::string& s);
 };
 
 }
