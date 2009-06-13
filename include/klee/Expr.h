@@ -222,6 +222,7 @@ public:
   static ref<Expr> createCoerceToPointerType(ref<Expr> e);
   static ref<Expr> createNot(ref<Expr> e);
   static ref<Expr> createImplies(ref<Expr> hyp, ref<Expr> conc);
+  static ref<Expr> createIff(ref<Expr> e1, ref<Expr> e2);
   static ref<Expr> createIsZero(ref<Expr> e);
 
   /// Create a little endian read of the given type at offset 0 of the

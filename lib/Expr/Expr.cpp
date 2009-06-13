@@ -301,6 +301,11 @@ ref<Expr> Expr::createImplies(ref<Expr> hyp, ref<Expr> conc) {
   return OrExpr::create(Expr::createNot(hyp), conc);
 }
 
+ref<Expr> Expr::createIff(ref<Expr> e1, ref<Expr> e2) {
+  return AndExpr::create(Expr::createImplies(e1, e2), 
+			 Expr::createImplies(e2, e1));
+}
+
 ref<Expr> Expr::createIsZero(ref<Expr> e) {
   return EqExpr::create(e, ConstantExpr::create(0, e->getWidth()));
 }
