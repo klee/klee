@@ -730,6 +730,16 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
           current.forkDisabled ||
           inhibitForking || 
           (MaxForks!=~0u && stats::forks >= MaxForks)) {
+
+	if (MaxMemoryInhibit && atMemoryLimit)
+	  klee_warning_once(0, "skipping fork (memory cap exceeded)");
+	else if (current.forkDisabled)
+	  klee_warning_once(0, "skipping fork (fork disabled on current path)");
+	else if (inhibitForking)
+	  klee_warning_once(0, "skipping fork (fork disabled globally)");
+	else 
+	  klee_warning_once(0, "skipping fork (max-forks reached)");
+
         TimerStatIncrementer timer(stats::forkTime);
         if (theRNG.getBool()) {
           addConstraint(current, condition);
