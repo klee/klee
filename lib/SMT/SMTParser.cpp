@@ -13,6 +13,7 @@
 #include <iostream>
 #include <fstream>
 #include <cstring>
+#include <cassert>
 
 using namespace std;
 using namespace klee;
@@ -28,26 +29,29 @@ extern void smtlib_setInteractive(bool);
 SMTParser* SMTParser::parserTemp = NULL;
 
 SMTParser::SMTParser(const std::string filename) : fileName(filename), 
-						   lineNum(0),
+						   lineNum(1),
 						   done(false),
-						   expr(NULL),
+						   query(NULL),
 						   bvSize(0),
 						   queryParsed(false) {
   is = new ifstream(filename.c_str());
 }
 
 void SMTParser::Init() {
-  cout << "Initializing parser\n";
   SMTParser::parserTemp = this;
 
   void *buf = smtlib_createBuffer(smtlib_bufSize());
   smtlib_switchToBuffer(buf);
   smtlib_setInteractive(false);
   smtlibparse();
+  cout << "Parsed successfully.\n";
 }
 
 Decl* SMTParser::ParseTopLevelDecl() {
-  return NULL;
+  assert(done);
+  return new QueryCommand(assumptions, query, 
+			  std::vector<ExprHandle>(), 
+			  std::vector<const Array*>());
 }
 
 // XXX: give more info

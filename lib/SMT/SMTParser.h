@@ -32,7 +32,11 @@ class SMTParser : public klee::expr::Parser {
   std::istream* is;
   int lineNum;
   bool done;
-  klee::expr::ExprHandle expr;
+  bool arraysEnabled;
+  
+  std::vector<ExprHandle> assumptions;
+  klee::expr::ExprHandle query;
+
   int bvSize;
   bool queryParsed;
     
