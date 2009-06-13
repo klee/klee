@@ -21,6 +21,7 @@
 #include <llvm/Function.h>
 #include <llvm/Instruction.h>
 #include <llvm/Value.h>
+#include "llvm/Support/CommandLine.h"
 
 #include <iostream>
 #include <cassert>
@@ -28,6 +29,12 @@
 
 using namespace llvm;
 using namespace klee;
+
+namespace {
+  cl::opt<bool>
+  UseConstantArrays("use-constant-arrays",
+                    cl::init(true));
+}
 
 /***/
 
@@ -91,14 +98,15 @@ ObjectState::ObjectState(const MemoryObject *mo)
     concreteMask(0),
     flushMask(0),
     knownSymbolics(0),
-    size(mo->size),
     updates(0, 0),
+    size(mo->size),
     readOnly(false) {
-  // FIXME: Leaked.
-  static unsigned id = 0;
-  const Array *array = new Array("tmp_arr" + llvm::utostr(++id), 
-                                 size);
-  updates = UpdateList(array, 0);
+  if (!UseConstantArrays) {
+    // FIXME: Leaked.
+    static unsigned id = 0;
+    const Array *array = new Array("tmp_arr" + llvm::utostr(++id), size);
+    updates = UpdateList(array, 0);
+  }
 }
 
 
@@ -110,8 +118,8 @@ ObjectState::ObjectState(const MemoryObject *mo, const Array *array)
     concreteMask(0),
     flushMask(0),
     knownSymbolics(0),
-    size(mo->size),
     updates(array, 0),
+    size(mo->size),
     readOnly(false) {
   makeSymbolic();
 }
@@ -124,8 +132,8 @@ ObjectState::ObjectState(const ObjectState &os)
     concreteMask(os.concreteMask ? new BitArray(*os.concreteMask, os.size) : 0),
     flushMask(os.flushMask ? new BitArray(*os.flushMask, os.size) : 0),
     knownSymbolics(0),
-    size(os.size),
     updates(os.updates),
+    size(os.size),
     readOnly(false) {
   assert(!os.readOnly && "no need to copy read only object?");
 
@@ -146,6 +154,62 @@ ObjectState::~ObjectState() {
 }
 
 /***/
+
+const UpdateList &ObjectState::getUpdates() const {
+  // Constant arrays are created lazily.
+  if (!updates.root) {
+    // Collect the list of writes, with the oldest writes first.
+    
+    // FIXME: We should be able to do this more efficiently, we just need to be
+    // careful to get the interaction with the cache right. In particular we
+    // should avoid creating UpdateNode instances we never use.
+    unsigned NumWrites = updates.head ? updates.head->getSize() : 0;
+    std::vector< std::pair< ref<Expr>, ref<Expr> > > Writes(NumWrites);
+    const UpdateNode *un = updates.head;
+    for (unsigned i = NumWrites; i != 0; un = un->next) {
+      --i;
+      Writes[i] = std::make_pair(un->index, un->value);
+    }
+
+    std::vector< ref<ConstantExpr> > Contents(size);
+
+    // Initialize to zeros.
+    for (unsigned i = 0, e = size; i != e; ++i)
+      Contents[i] = ConstantExpr::create(0, Expr::Int8);
+
+    // Pull off as many concrete writes as we can.
+    unsigned Begin = 0, End = Writes.size();
+    for (; Begin != End; ++Begin) {
+      // Push concrete writes into the constant array.
+      ConstantExpr *Index = dyn_cast<ConstantExpr>(Writes[Begin].first);
+      if (!Index)
+        break;
+
+      ConstantExpr *Value = dyn_cast<ConstantExpr>(Writes[Begin].second);
+      if (!Value)
+        break;
+
+      Contents[Index->getConstantValue()] = Value;
+    }
+
+    // FIXME: We should unique these, there is no good reason to create multiple
+    // ones.
+
+    // Start a new update list.
+    // FIXME: Leaked.
+    static unsigned id = 0;
+    const Array *array = new Array("const_arr" + llvm::utostr(++id), size,
+                                   &Contents[0],
+                                   &Contents[0] + Contents.size());
+    updates = UpdateList(array, 0);
+
+    // Apply the remaining (non-constant) writes.
+    for (; Begin != End; ++Begin)
+      updates.extend(Writes[Begin].first, Writes[Begin].second);
+  }
+
+  return updates;
+}
 
 void ObjectState::makeConcrete() {
   if (concreteMask) delete concreteMask;
@@ -304,7 +368,7 @@ ref<Expr> ObjectState::read8(unsigned offset) const {
   } else {
     assert(isByteFlushed(offset) && "unflushed byte without cache value");
     
-    return ReadExpr::create(updates, 
+    return ReadExpr::create(getUpdates(), 
                             ConstantExpr::create(offset, kMachinePointerType));
   }    
 }
@@ -323,7 +387,7 @@ ref<Expr> ObjectState::read8(ref<Expr> offset) const {
                       allocInfo.c_str());
   }
   
-  return ReadExpr::create(updates, offset);
+  return ReadExpr::create(getUpdates(), offset);
 }
 
 void ObjectState::write8(unsigned offset, uint8_t value) {

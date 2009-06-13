@@ -151,11 +151,11 @@ private:
 
   ref<Expr> *knownSymbolics;
 
-public:
-  unsigned size;
-
   // mutable because we may need flush during read of const
   mutable UpdateList updates;
+
+public:
+  unsigned size;
 
   bool readOnly;
 
@@ -199,6 +199,8 @@ public:
   void write64(unsigned offset, uint64_t value);
 
 private:
+  const UpdateList &getUpdates() const;
+
   void makeConcrete();
 
   void makeSymbolic();

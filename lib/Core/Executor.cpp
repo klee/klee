@@ -2952,8 +2952,8 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
     static unsigned id = 0;
     const Array *array = new Array("arr" + llvm::utostr(++id),
                                    mo->size);
-    ObjectState *os = bindObjectInState(state, mo, false, array);
-    state.addSymbolic(mo, os->updates.root);
+    bindObjectInState(state, mo, false, array);
+    state.addSymbolic(mo, array);
     
     std::map< ExecutionState*, std::vector<SeedInfo> >::iterator it = 
       seedMap.find(&state);
