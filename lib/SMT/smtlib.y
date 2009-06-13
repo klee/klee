@@ -395,29 +395,7 @@ an_formula:
       delete $2;
       delete $3;
     }
-  | LPAREN_TOK quant_symb quant_vars an_formula annotations RPAREN_TOK
-    {
-      $$ = new CVC3::Expr(VC->listExpr(*$2, VC->listExpr(*$3), *$4));
-      delete $2;
-      delete $3;
-      delete $4;
-      delete $5;
-    }
-  | LPAREN_TOK quant_symb quant_vars an_formula RPAREN_TOK
-    {
-      $$ = new CVC3::Expr(VC->listExpr(*$2, VC->listExpr(*$3), *$4));
-      delete $2;
-      delete $3;
-      delete $4;
-    }
-  | LPAREN_TOK quant_symb quant_vars an_formula patterns_annotations RPAREN_TOK
-    {
-      $$ = new CVC3::Expr(VC->listExpr(*$2, VC->listExpr(*$3), *$4, VC->listExpr((*$5).first)));
-      delete $2;
-      delete $3;
-      delete $4;
-      delete $5;
-    }
+
   | LPAREN_TOK LET_TOK LPAREN_TOK var an_term RPAREN_TOK an_formula annotations RPAREN_TOK
     {
       CVC3::Expr e(VC->listExpr(VC->listExpr(*$4, *$5)));
@@ -455,96 +433,8 @@ an_formula:
 */
 ;
 
+
 /*
-patterns_annotations:
-     patterns
-     {
-       $$ = new std::pair<std::vector<CVC3::Expr>, std::vector<std::string> >;
-       $$->first = *$1;
-       delete $1;
-     }
-     | annotation
-     {
-       $$ = new std::pair<std::vector<CVC3::Expr>, std::vector<std::string> >;
-       $$->second.push_back(*$1);
-       delete $1;
-     }
-     | patterns_annotations patterns
-     {
-       $1->first.insert($1->first.end(), $2->begin(), $2->end());
-       $$ = $1;
-       delete $2;
-     }
-     | patterns_annotations annotation
-     {
-       $1->second.push_back(*$2);
-       $$ = $1;
-       delete $2;
-     }
-
-patterns:
-     pattern
-     {
-       $$ = new std::vector<CVC3::Expr >;
-       $$->push_back(*$1);
-       delete $1;
-     }
-    | patterns pattern
-     {
-       $1->push_back(*$2);
-       $$ = $1;
-       delete $2;
-     }
-
-pattern:
-     PAT_TOK LCURBRACK_TOK an_terms RCURBRACK_TOK
-     {
-       $$ = new CVC3::Expr(VC->listExpr(*$3));
-       delete $3;
-     }
-     | PAT_TOK LCURBRACK_TOK an_formulas RCURBRACK_TOK
-     {
-       $$ = new CVC3::Expr(VC->listExpr(*$3));
-       delete $3;
-     }
-
-
-
-quant_vars:
-    quant_var
-    {
-      $$ = new std::vector<CVC3::Expr>;
-      $$->push_back(*$1);
-      delete $1;
-    }
-  | quant_vars quant_var
-    {
-      $1->push_back(*$2);
-      $$ = $1; 
-      delete $2;
-    }
-;
-
-quant_var: 
-    LPAREN_TOK var sort_symb RPAREN_TOK
-    {
-      $$ = new CVC3::Expr(VC->listExpr(*$2, *$3));
-      delete $2;
-      delete $3;
-    }
-;
-
-quant_symb:
-    EXISTS_TOK
-    {
-      $$ = new std::string("_EXISTS");
-    }
-  | FORALL_TOK
-    {
-      $$ = new std::string("_FORALL");
-    }
-;
-
 connective:
     NOT_TOK
     {
