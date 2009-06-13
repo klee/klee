@@ -160,20 +160,21 @@ public:
   bool readOnly;
 
 public:
-  // initial contents are undefined but concrete, it is the creators
-  // responsibility to initialize the object contents appropriate
-  ObjectState(const MemoryObject *mo, unsigned size);
+  /// Create a new object state for the given memory object with concrete
+  /// contents. The initial contents are undefined, it is the callers
+  /// responsibility to initialize the object contents appropriately.
+  ObjectState(const MemoryObject *mo);
+
+  /// Create a new object state for the given memory object with symbolic
+  /// contents.
+  ObjectState(const MemoryObject *mo, const Array *array);
+
   ObjectState(const ObjectState &os);
   ~ObjectState();
 
   const MemoryObject *getObject() const { return object; }
 
   void setReadOnly(bool ro) { readOnly = ro; }
-
-  // make all bytes are concrete with undefined values
-  void makeConcrete();
-
-  void makeSymbolic();
 
   // make contents all concrete and zero
   void initializeToZero();
@@ -198,6 +199,10 @@ public:
   void write64(unsigned offset, uint64_t value);
 
 private:
+  void makeConcrete();
+
+  void makeSymbolic();
+
   ref<Expr> read1(ref<Expr> offset) const;
   ref<Expr> read8(ref<Expr> offset) const;
   ref<Expr> read16(ref<Expr> offset) const;
@@ -215,8 +220,8 @@ private:
   void write64(unsigned offset, ref<Expr> value);
   void write64(ref<Expr> offset, ref<Expr> value);
 
-  
-  void fastRangeCheckOffset(ref<Expr> offset, unsigned *base_r, unsigned *size_r) const;
+  void fastRangeCheckOffset(ref<Expr> offset, unsigned *base_r, 
+                            unsigned *size_r) const;
   void flushRangeForRead(unsigned rangeBase, unsigned rangeSize) const;
   void flushRangeForWrite(unsigned rangeBase, unsigned rangeSize);
 

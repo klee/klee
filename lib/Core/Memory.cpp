@@ -83,18 +83,37 @@ void MemoryObject::getAllocInfo(std::string &result) const {
 
 /***/
 
-ObjectState::ObjectState(const MemoryObject *mo, unsigned _size)
+ObjectState::ObjectState(const MemoryObject *mo)
   : copyOnWriteOwner(0),
     refCount(0),
     object(mo),
-    concreteStore(new uint8_t[_size]),
+    concreteStore(new uint8_t[mo->size]),
     concreteMask(0),
     flushMask(0),
     knownSymbolics(0),
-    size(_size),
-    // FIXME: Leaked!
-    updates(new Array("arr" + llvm::utostr(mo->id), _size), 0),
+    size(mo->size),
+    updates(0, 0),
     readOnly(false) {
+  // FIXME: Leaked.
+  static unsigned id = 0;
+  const Array *array = new Array("tmp_arr" + llvm::utostr(++id), 
+                                 size);
+  updates = UpdateList(array, 0);
+}
+
+
+ObjectState::ObjectState(const MemoryObject *mo, const Array *array)
+  : copyOnWriteOwner(0),
+    refCount(0),
+    object(mo),
+    concreteStore(new uint8_t[mo->size]),
+    concreteMask(0),
+    flushMask(0),
+    knownSymbolics(0),
+    size(mo->size),
+    updates(array, 0),
+    readOnly(false) {
+  makeSymbolic();
 }
 
 ObjectState::ObjectState(const ObjectState &os) 

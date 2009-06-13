@@ -42,6 +42,7 @@ namespace llvm {
 }
 
 namespace klee {  
+  class Array;
   class Cell;
   class ExecutionState;
   class ExternalDispatcher;
@@ -198,7 +199,7 @@ private:
                             std::vector< ref<Expr> > &arguments);
 
   ObjectState *bindObjectInState(ExecutionState &state, const MemoryObject *mo,
-                                 bool isLocal);
+                                 bool isLocal, const Array *array = 0);
 
   /// Resolve a pointer to the memory objects it could point to the
   /// start of, forking execution when necessary and generating errors

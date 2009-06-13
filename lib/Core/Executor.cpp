@@ -2627,9 +2627,11 @@ ref<Expr> Executor::replaceReadWithSymbolic(ExecutionState &state,
   return res;
 }
 
-ObjectState *Executor::bindObjectInState(ExecutionState &state, const MemoryObject *mo,
-                                         bool isLocal) {
-  ObjectState *os = new ObjectState(mo, mo->size);
+ObjectState *Executor::bindObjectInState(ExecutionState &state, 
+                                         const MemoryObject *mo,
+                                         bool isLocal,
+                                         const Array *array) {
+  ObjectState *os = array ? new ObjectState(mo, array) : new ObjectState(mo);
   state.addressSpace.bindObject(mo, os);
 
   // Its possible that multiple bindings of the same mo in the state
@@ -2945,15 +2947,14 @@ void Executor::executeMemoryOperation(ExecutionState &state,
 
 void Executor::executeMakeSymbolic(ExecutionState &state, 
                                    const MemoryObject *mo) {
-  // make a new one and rebind, we use bind here because we want to
-  // create a flat out new state, not a copy. although I'm not really
-  // sure it matters.
-  ObjectState *os = bindObjectInState(state, mo, false);
+  // Create a new object state for the memory object (instead of a copy).
   if (!replayOut) {
-    os->makeSymbolic();
+    static unsigned id = 0;
+    const Array *array = new Array("arr" + llvm::utostr(++id),
+                                   mo->size);
+    ObjectState *os = bindObjectInState(state, mo, false, array);
     state.addSymbolic(mo, os->updates.root);
     
-    const Array *array = os->updates.root;
     std::map< ExecutionState*, std::vector<SeedInfo> >::iterator it = 
       seedMap.find(&state);
     if (it!=seedMap.end()) { // In seed mode we need to add this as a
@@ -2961,8 +2962,7 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
       for (std::vector<SeedInfo>::iterator siit = it->second.begin(), 
              siie = it->second.end(); siit != siie; ++siit) {
         SeedInfo &si = *siit;
-        KTestObject *obj = si.getNextInput(mo,
-                                          NamedSeedMatching);
+        KTestObject *obj = si.getNextInput(mo, NamedSeedMatching);
 
         if (!obj) {
           if (ZeroSeedExtension) {
@@ -3002,6 +3002,7 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
       }
     }
   } else {
+    ObjectState *os = bindObjectInState(state, mo, false);
     if (replayPosition >= replayOut->numObjects) {
       terminateStateOnError(state, "replay count mismatch", "user.err");
     } else {
