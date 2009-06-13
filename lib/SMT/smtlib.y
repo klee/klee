@@ -32,10 +32,12 @@ using namespace klee;
 using namespace klee::expr;
 
 // Define shortcuts for various things
-#define TMP SMTParser::parserTemp
-#define EXPR SMTParser::parserTemp->expr
-#define ARRAYSENABLED (SMTParser::parserTemp->arrFlag)
-#define BVENABLED (SMTParser::parserTemp->bvFlag)
+#define DONE SMTParser::parserTemp->done
+#define EXPR SMTParser::parserTemp->query
+#define ASSUMPTIONS SMTParser::parserTemp->assumptions
+#define QUERY SMTParser::parserTemp->query
+
+#define ARRAYSENABLED (SMTParser::parserTemp->arraysEnabled)
 #define BVSIZE (SMTParser::parserTemp->bvSize)
 #define QUERYPARSED SMTParser::parserTemp->queryParsed
 
@@ -55,7 +57,6 @@ int smtliberror(const char *s)
 }
 
 
-
 #define YYLTYPE_IS_TRIVIAL 1
 #define YYMAXDEPTH 10485760
 
@@ -70,7 +71,6 @@ int smtliberror(const char *s)
   std::pair<std::vector<CVC3::Expr>, std::vector<std::string> > *pat_ann;
 };
 */
-
 
 %union {
   std::string *str;
@@ -95,8 +95,10 @@ int smtliberror(const char *s)
 %type <strvec> annotations
 %type <pat_ann> patterns_annotations
 */
-%type <node> benchmark bench_name  bench_attribute  bench_attributes
+
 %type <node> an_formula an_atom prop_atom
+%type <str> logic_name status attribute annotation user_value
+
 
 %token <str> NUMERAL_TOK
 %token <str> SYM_TOK
@@ -155,191 +157,82 @@ int smtliberror(const char *s)
 cmd:
     benchmark
     {
-      EXPR = $1;
       YYACCEPT;
     }
 ;
 
 benchmark:
-    LPAREN_TOK BENCHMARK_TOK bench_name bench_attributes RPAREN_TOK
-    {
-      /*
-      if (!QUERYPARSED)
-        $4->push_back(CVC3::Expr(VC->listExpr("_CHECKSAT", CVC3::Expr(VC->idExpr("_TRUE_EXPR")))));
-      $$ = new CVC3::Expr(VC->listExpr("_SEQ",*$4));
-      delete $4;
-      */
-      $$ = $4;
-    }
+    LPAREN_TOK BENCHMARK_TOK bench_name bench_attributes RPAREN_TOK { }
+
   | EOF_TOK
     { 
-      TMP->done = true;
-      //$$ = new CVC3::Expr();
-      //$$ = ConstantExpr::create(1, 1);
-      $$ = ExprHandle();
+      DONE = true;
     }
 ;
 
 bench_name:
-    SYM_TOK
-    {
-      $$ = NULL;
-      delete $1;
-    }
+    SYM_TOK { }
 ;
 
 bench_attributes:
-    bench_attribute
-    {
-      $$ = $1;
-    }
-/*
-    {
-      $$ = new std::vector<CVC3::Expr>;
-      if ($1) {
-	$$->push_back(*$1);
-	delete $1;
-      }
-    }
-  | bench_attributes bench_attribute
-    {
-      $$ = $1;
-      if ($2) {
-	$$->push_back(*$2);
-	delete $2;
-      }
-    }
-*/
+    bench_attribute { }
+
+  | bench_attributes bench_attribute { }
 ;
 
 bench_attribute:
     COLON_TOK ASSUMPTION_TOK an_formula
     {
-      /*
-      $$ = new CVC3::Expr(VC->listExpr("_ASSERT", *$3));      
-      delete $3;
-      */
-      $$ = $3;
+      ASSUMPTIONS.push_back($3);
     }
+
   | COLON_TOK FORMULA_TOK an_formula 
     {
-      /*
-      $$ = new CVC3::Expr(VC->listExpr("_CHECKSAT", *$3));
       QUERYPARSED = true;
-      delete $3;
-      */
-      $$ = $3;
+      QUERY = $3;
     }
-/*
-  | COLON_TOK STATUS_TOK status 
-    {
-      $$ = NULL;
-    }
+
+  | COLON_TOK STATUS_TOK status { }
+
   | COLON_TOK LOGIC_TOK logic_name 
     {
-      ARRAYSENABLED = false;
-      BVENABLED = false;
-      if (*$3 == "QF_UF") {
-        $$ = new CVC3::Expr(VC->listExpr("_TYPE", VC->idExpr("U")));
+      if (*$3 != "QF_BV" && *$3 != "QF_AUFBV" && *$3 != "QF_UFBV") {
+	std::cerr << "ERROR: Logic " << *$3 << " not supported.";
+	exit(1);
       }
-      else if (*$3 == "QF_A" ||
-               *$3 == "QF_AX") {
+
+      if (*$3 == "QF_AUFBV")
         ARRAYSENABLED = true;
-        std::vector<CVC3::Expr> tmp;
-        tmp.push_back(VC->listExpr("_TYPE", VC->idExpr("Index")));
-        tmp.push_back(VC->listExpr("_TYPE", VC->idExpr("Element")));
-        tmp.push_back(VC->listExpr("_TYPEDEF", VC->idExpr("Array"),
-                                   VC->listExpr("_ARRAY",
-                                                VC->idExpr("Index"),
-                                                VC->idExpr("Element"))));
-        $$ = new CVC3::Expr(VC->listExpr("_SEQ", tmp));
-	$$ = NULL;
-      }
-      else if (*$3 == "QF_AUFLIA" ||
-               *$3 == "AUFLIA") {
-        ARRAYSENABLED = true;
-        std::vector<CVC3::Expr> tmp;
-        tmp.push_back(VC->listExpr("_TYPEDEF", VC->idExpr("Array"),
-                                   VC->listExpr("_ARRAY",
-                                                VC->idExpr("_INT"),
-                                                VC->idExpr("_INT"))));
-        $$ = new CVC3::Expr(VC->listExpr("_SEQ", tmp));
-      }
-      else if (*$3 == "QF_AUFLIRA" ||
-               *$3 == "AUFLIRA" ||
-               *$3 == "QF_AUFNIRA" ||
-               *$3 == "AUFNIRA") {
-        ARRAYSENABLED = true;
-        std::vector<CVC3::Expr> tmp;
-        tmp.push_back(VC->listExpr("_TYPEDEF", VC->idExpr("Array1"),
-                                   VC->listExpr("_ARRAY",
-                                                VC->idExpr("_INT"),
-                                                VC->idExpr("_REAL"))));
-        tmp.push_back(VC->listExpr("_TYPEDEF", VC->idExpr("Array2"),
-                                   VC->listExpr("_ARRAY",
-                                                VC->idExpr("_INT"),
-                                                VC->idExpr("Array1"))));
-        $$ = new CVC3::Expr(VC->listExpr("_SEQ", tmp));
-      }
-      else if (*$3 == "QF_AUFBV" ||
-               *$3 == "QF_ABV") {
-        ARRAYSENABLED = true;
-        BVENABLED = true;
-        $$ = NULL;
-//         $$ = new CVC3::Expr(VC->listExpr("_TYPEDEF", VC->idExpr("Array"),
-//                                          VC->listExpr("_ARRAY",
-//                                                       VC->listExpr("_BITVECTOR", VC->ratExpr(32)),
-//                                                       VC->listExpr("_BITVECTOR", VC->ratExpr(8)))));
-      }
-      else if (*$3 == "QF_BV" ||
-               *$3 == "QF_UFBV") {
-        BVENABLED = true;
-        $$ = NULL;
-      }
-    // This enables the new arith for QF_LRA, but this results in assertion failures in DEBUG mode
-      else if (*$3 == "QF_LRA") {
-         $$ = new CVC3::Expr(VC->listExpr("_OPTION", VC->stringExpr("arith-new"), VC->ratExpr(1)));
-       }
-      else {
-        $$ = NULL;
-      }
-      delete $3;
     }
+/*
   | COLON_TOK EXTRASORTS_TOK LPAREN_TOK sort_symbs RPAREN_TOK
-    {
-      $$ = new CVC3::Expr(VC->listExpr("_TYPE", *$4));
-      delete $4;
+    { 
+      // XXX?
     }
+
   | COLON_TOK EXTRAFUNS_TOK LPAREN_TOK fun_symb_decls RPAREN_TOK
     {
-      $$ = new CVC3::Expr(VC->listExpr("_SEQ", *$4));
-      delete $4;
+      //$$ = new CVC3::Expr(VC->listExpr("_SEQ", *$4));
+      //delete $4;
     }
   | COLON_TOK EXTRAPREDS_TOK LPAREN_TOK pred_symb_decls RPAREN_TOK
     {
-      $$ = new CVC3::Expr(VC->listExpr("_SEQ", *$4));
-      delete $4;
-    }
-  | COLON_TOK NOTES_TOK STRING_TOK
-    {
-      $$ = NULL;
-      delete $3;
-    }
-  | COLON_TOK CVC_COMMAND_TOK STRING_TOK
-    {
-      $$ = new CVC3::Expr(VC->listExpr(VC->idExpr("_"+*$3)));
-      delete $3;
-    }
-  | annotation
-    {
-      $$ = NULL;
-      delete $1;
+      //$$ = new CVC3::Expr(VC->listExpr("_SEQ", *$4));
+      //delete $4;
     }
 */
+  | COLON_TOK NOTES_TOK STRING_TOK
+    {  }
+
+  | COLON_TOK CVC_COMMAND_TOK STRING_TOK
+    {  }
+
+  | annotation
+    {  }
 ;
 
-/*
-logic_name:
+
+logic_name  :
     SYM_TOK LBRACKET_TOK NUMERAL_TOK RBRACKET_TOK
     {
       BVSIZE = atoi($3->c_str());
@@ -353,11 +246,12 @@ logic_name:
 ;
 
 status:
-    SAT_TOK { $$ = NULL; }
-  | UNSAT_TOK { $$ = NULL; }
-  | UNKNOWN_TOK { $$ = NULL; }
+    SAT_TOK { }
+  | UNSAT_TOK { }
+  | UNKNOWN_TOK { }
 ;
 
+/*
 sort_symbs:
     sort_symb 
     {
@@ -461,7 +355,9 @@ pred_sig:
       delete $1;
     }
 ;
+*/
 
+/*
 an_formulas:
     an_formula
     {
@@ -860,11 +756,12 @@ basic_term:
       delete $1;
     }
 ;
+*/
 
+/*
 annotations:
     annotation
     {
-      $$ = new std::vector<std::string>;
       $$->push_back(*$1);
       delete $1;
     }
@@ -875,14 +772,17 @@ annotations:
       delete $2;
     }
   ;
-  
+*/
 
 annotation:
     attribute
     { $$ = $1; }
+
   | attribute user_value
     { $$ = $1; }
+
 ;
+
 
 user_value:
     USER_VAL_TOK
@@ -892,7 +792,7 @@ user_value:
     }
 ;
 
-
+/*
 sort_symb:
     SYM_TOK LBRACKET_TOK NUMERAL_TOK RBRACKET_TOK
     {
@@ -1236,6 +1136,8 @@ fun_symb:
       delete $1;
     }
 ;
+*/
+
 
 attribute:
     COLON_TOK SYM_TOK
@@ -1244,6 +1146,7 @@ attribute:
     }
 ;
 
+/*
 var:
     QUESTION_TOK SYM_TOK
     {
