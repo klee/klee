@@ -669,11 +669,6 @@ ref<Expr> ExtractExpr::create(ref<Expr> expr, unsigned off, Width w) {
   return ExtractExpr::alloc(expr, off, w);
 }
 
-
-ref<Expr> ExtractExpr::createByteOff(ref<Expr> expr, unsigned offset, Width bits) {
-  return ExtractExpr::create(expr, 8*offset, bits);
-}
-
 /***/
 
 ref<Expr> ZExtExpr::create(const ref<Expr> &e, Width w) {
@@ -681,7 +676,7 @@ ref<Expr> ZExtExpr::create(const ref<Expr> &e, Width w) {
   if (w == kBits) {
     return e;
   } else if (w < kBits) { // trunc
-    return ExtractExpr::createByteOff(e, 0, w);
+    return ExtractExpr::create(e, 0, w);
   } else if (ConstantExpr *CE = dyn_cast<ConstantExpr>(e)) {
     return CE->ZExt(w);
   } else {
@@ -694,7 +689,7 @@ ref<Expr> SExtExpr::create(const ref<Expr> &e, Width w) {
   if (w == kBits) {
     return e;
   } else if (w < kBits) { // trunc
-    return ExtractExpr::createByteOff(e, 0, w);
+    return ExtractExpr::create(e, 0, w);
   } else if (ConstantExpr *CE = dyn_cast<ConstantExpr>(e)) {
     return CE->SExt(w);
   } else {    

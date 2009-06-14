@@ -455,11 +455,11 @@ ref<Expr> ObjectState::read(unsigned offset, Expr::Width width) const {
 }
 
 ref<Expr> ObjectState::read1(unsigned offset) const {
-  return ExtractExpr::createByteOff(read8(offset), 0, Expr::Bool);
+  return ExtractExpr::create(read8(offset), 0, Expr::Bool);
 }
 
 ref<Expr> ObjectState::read1(ref<Expr> offset) const {
-  return ExtractExpr::createByteOff(read8(offset), 0, Expr::Bool);
+  return ExtractExpr::create(read8(offset), 0, Expr::Bool);
 }
 
 ref<Expr> ObjectState::read16(unsigned offset) const {
@@ -676,11 +676,11 @@ void ObjectState::write16(unsigned offset, uint16_t value) {
 
 void ObjectState::write16(unsigned offset, ref<Expr> value) {
   if (kMachineByteOrder == machine::MSB) {
-    write8(offset+0, ExtractExpr::createByteOff(value, 1));
-    write8(offset+1, ExtractExpr::createByteOff(value, 0));
+    write8(offset+0, ExtractExpr::create(value, 8, Expr::Int8));
+    write8(offset+1, ExtractExpr::create(value, 0, Expr::Int8));
   } else {
-    write8(offset+1, ExtractExpr::createByteOff(value, 1));
-    write8(offset+0, ExtractExpr::createByteOff(value, 0));
+    write8(offset+1, ExtractExpr::create(value, 8, Expr::Int8));
+    write8(offset+0, ExtractExpr::create(value, 0, Expr::Int8));
   }
 }
 
@@ -689,17 +689,17 @@ void ObjectState::write16(ref<Expr> offset, ref<Expr> value) {
   if (kMachineByteOrder == machine::MSB) {
     write8(AddExpr::create(offset,
                            ConstantExpr::create(0, kMachinePointerType)), 
-           ExtractExpr::createByteOff(value,1));
+           ExtractExpr::create(value, 8, Expr::Int8));
     write8(AddExpr::create(offset,
                            ConstantExpr::create(0, kMachinePointerType)), 
-           ExtractExpr::createByteOff(value,0));
+           ExtractExpr::create(value, 0, Expr::Int8));
   } else {
     write8(AddExpr::create(offset,
                            ConstantExpr::create(1, kMachinePointerType)), 
-           ExtractExpr::createByteOff(value,1));
+           ExtractExpr::create(value, 8, Expr::Int8));
     write8(AddExpr::create(offset,
                            ConstantExpr::create(0, kMachinePointerType)), 
-           ExtractExpr::createByteOff(value,0));
+           ExtractExpr::create(value, 0, Expr::Int8));
   }
 }
 
@@ -719,15 +719,15 @@ void ObjectState::write32(unsigned offset, uint32_t value) {
 
 void ObjectState::write32(unsigned offset, ref<Expr> value) {
   if (kMachineByteOrder == machine::MSB) {
-    write8(offset+0, ExtractExpr::createByteOff(value, 3));
-    write8(offset+1, ExtractExpr::createByteOff(value, 2));
-    write8(offset+2, ExtractExpr::createByteOff(value, 1));
-    write8(offset+3, ExtractExpr::createByteOff(value, 0));
+    write8(offset+0, ExtractExpr::create(value, 24, Expr::Int8));
+    write8(offset+1, ExtractExpr::create(value, 16, Expr::Int8));
+    write8(offset+2, ExtractExpr::create(value, 8, Expr::Int8));
+    write8(offset+3, ExtractExpr::create(value, 0, Expr::Int8));
   } else {
-    write8(offset+3, ExtractExpr::createByteOff(value, 3));
-    write8(offset+2, ExtractExpr::createByteOff(value, 2));
-    write8(offset+1, ExtractExpr::createByteOff(value, 1));
-    write8(offset+0, ExtractExpr::createByteOff(value, 0));
+    write8(offset+3, ExtractExpr::create(value, 24, Expr::Int8));
+    write8(offset+2, ExtractExpr::create(value, 16, Expr::Int8));
+    write8(offset+1, ExtractExpr::create(value, 8, Expr::Int8));
+    write8(offset+0, ExtractExpr::create(value, 0, Expr::Int8));
   }
 }
 
@@ -735,29 +735,29 @@ void ObjectState::write32(ref<Expr> offset, ref<Expr> value) {
   if (kMachineByteOrder == machine::MSB) {
     write8(AddExpr::create(offset,
                            ConstantExpr::create(0, kMachinePointerType)), 
-           ExtractExpr::createByteOff(value,3));
+           ExtractExpr::create(value, 24, Expr::Int8));
     write8(AddExpr::create(offset,
                            ConstantExpr::create(1, kMachinePointerType)), 
-           ExtractExpr::createByteOff(value,2));
+           ExtractExpr::create(value, 16, Expr::Int8));
     write8(AddExpr::create(offset,
                            ConstantExpr::create(2, kMachinePointerType)), 
-           ExtractExpr::createByteOff(value,1));
+           ExtractExpr::create(value, 8, Expr::Int8));
     write8(AddExpr::create(offset,
                            ConstantExpr::create(3, kMachinePointerType)), 
-           ExtractExpr::createByteOff(value,0));
+           ExtractExpr::create(value, 0, Expr::Int8));
   } else {
     write8(AddExpr::create(offset,
                            ConstantExpr::create(3, kMachinePointerType)), 
-           ExtractExpr::createByteOff(value,3));
+           ExtractExpr::create(value, 24, Expr::Int8));
     write8(AddExpr::create(offset,
                            ConstantExpr::create(2, kMachinePointerType)), 
-           ExtractExpr::createByteOff(value,2));
+           ExtractExpr::create(value, 16, Expr::Int8));
     write8(AddExpr::create(offset,
                            ConstantExpr::create(1, kMachinePointerType)), 
-           ExtractExpr::createByteOff(value,1));
+           ExtractExpr::create(value, 8, Expr::Int8));
     write8(AddExpr::create(offset,
                            ConstantExpr::create(0, kMachinePointerType)), 
-           ExtractExpr::createByteOff(value,0));
+           ExtractExpr::create(value, 0, Expr::Int8));
   }
 }
 
@@ -785,23 +785,23 @@ void ObjectState::write64(unsigned offset, uint64_t value) {
 
 void ObjectState::write64(unsigned offset, ref<Expr> value) {
   if (kMachineByteOrder == machine::MSB) {
-    write8(offset+0, ExtractExpr::createByteOff(value, 7));
-    write8(offset+1, ExtractExpr::createByteOff(value, 6));
-    write8(offset+2, ExtractExpr::createByteOff(value, 5));
-    write8(offset+3, ExtractExpr::createByteOff(value, 4));
-    write8(offset+4, ExtractExpr::createByteOff(value, 3));
-    write8(offset+5, ExtractExpr::createByteOff(value, 2));
-    write8(offset+6, ExtractExpr::createByteOff(value, 1));
-    write8(offset+7, ExtractExpr::createByteOff(value, 0));
+    write8(offset+0, ExtractExpr::create(value, 56, Expr::Int8));
+    write8(offset+1, ExtractExpr::create(value, 48, Expr::Int8));
+    write8(offset+2, ExtractExpr::create(value, 40, Expr::Int8));
+    write8(offset+3, ExtractExpr::create(value, 32, Expr::Int8));
+    write8(offset+4, ExtractExpr::create(value, 24, Expr::Int8));
+    write8(offset+5, ExtractExpr::create(value, 16, Expr::Int8));
+    write8(offset+6, ExtractExpr::create(value, 8, Expr::Int8));
+    write8(offset+7, ExtractExpr::create(value, 0, Expr::Int8));
   } else {
-    write8(offset+7, ExtractExpr::createByteOff(value, 7));
-    write8(offset+6, ExtractExpr::createByteOff(value, 6));
-    write8(offset+5, ExtractExpr::createByteOff(value, 5));
-    write8(offset+4, ExtractExpr::createByteOff(value, 4));
-    write8(offset+3, ExtractExpr::createByteOff(value, 3));
-    write8(offset+2, ExtractExpr::createByteOff(value, 2));
-    write8(offset+1, ExtractExpr::createByteOff(value, 1));
-    write8(offset+0, ExtractExpr::createByteOff(value, 0));
+    write8(offset+7, ExtractExpr::create(value, 56, Expr::Int8));
+    write8(offset+6, ExtractExpr::create(value, 48, Expr::Int8));
+    write8(offset+5, ExtractExpr::create(value, 40, Expr::Int8));
+    write8(offset+4, ExtractExpr::create(value, 32, Expr::Int8));
+    write8(offset+3, ExtractExpr::create(value, 24, Expr::Int8));
+    write8(offset+2, ExtractExpr::create(value, 16, Expr::Int8));
+    write8(offset+1, ExtractExpr::create(value, 8, Expr::Int8));
+    write8(offset+0, ExtractExpr::create(value, 0, Expr::Int8));
   }
 }
 
@@ -809,53 +809,53 @@ void ObjectState::write64(ref<Expr> offset, ref<Expr> value) {
   if (kMachineByteOrder == machine::MSB) {
     write8(AddExpr::create(offset,
                            ConstantExpr::create(0, kMachinePointerType)), 
-           ExtractExpr::createByteOff(value,7));
+           ExtractExpr::create(value, 56, Expr::Int8));
     write8(AddExpr::create(offset,
                            ConstantExpr::create(1, kMachinePointerType)), 
-           ExtractExpr::createByteOff(value,6));
+           ExtractExpr::create(value, 48, Expr::Int8));
     write8(AddExpr::create(offset,
                            ConstantExpr::create(2, kMachinePointerType)), 
-           ExtractExpr::createByteOff(value,5));
+           ExtractExpr::create(value, 40, Expr::Int8));
     write8(AddExpr::create(offset,
                            ConstantExpr::create(3, kMachinePointerType)), 
-           ExtractExpr::createByteOff(value,4));
+           ExtractExpr::create(value, 32, Expr::Int8));
     write8(AddExpr::create(offset,
                            ConstantExpr::create(4, kMachinePointerType)), 
-           ExtractExpr::createByteOff(value,3));
+           ExtractExpr::create(value, 24, Expr::Int8));
     write8(AddExpr::create(offset,
                            ConstantExpr::create(5, kMachinePointerType)), 
-           ExtractExpr::createByteOff(value,2));
+           ExtractExpr::create(value, 16, Expr::Int8));
     write8(AddExpr::create(offset,
                            ConstantExpr::create(6, kMachinePointerType)), 
-           ExtractExpr::createByteOff(value,1));
+           ExtractExpr::create(value, 8, Expr::Int8));
     write8(AddExpr::create(offset,
                            ConstantExpr::create(7, kMachinePointerType)), 
-           ExtractExpr::createByteOff(value,0));
+           ExtractExpr::create(value, 0, Expr::Int8));
   } else {
     write8(AddExpr::create(offset,
                            ConstantExpr::create(7, kMachinePointerType)), 
-           ExtractExpr::createByteOff(value,7));
+           ExtractExpr::create(value, 56, Expr::Int8));
     write8(AddExpr::create(offset,
                            ConstantExpr::create(6, kMachinePointerType)), 
-           ExtractExpr::createByteOff(value,6));
+           ExtractExpr::create(value, 48, Expr::Int8));
     write8(AddExpr::create(offset,
                            ConstantExpr::create(5, kMachinePointerType)), 
-           ExtractExpr::createByteOff(value,5));
+           ExtractExpr::create(value, 40, Expr::Int8));
     write8(AddExpr::create(offset,
                            ConstantExpr::create(4, kMachinePointerType)), 
-           ExtractExpr::createByteOff(value,4));
+           ExtractExpr::create(value, 32, Expr::Int8));
     write8(AddExpr::create(offset,
                            ConstantExpr::create(3, kMachinePointerType)), 
-           ExtractExpr::createByteOff(value,3));
+           ExtractExpr::create(value, 24, Expr::Int8));
     write8(AddExpr::create(offset,
                            ConstantExpr::create(2, kMachinePointerType)), 
-           ExtractExpr::createByteOff(value,2));
+           ExtractExpr::create(value, 16, Expr::Int8));
     write8(AddExpr::create(offset,
                            ConstantExpr::create(1, kMachinePointerType)), 
-           ExtractExpr::createByteOff(value,1));
+           ExtractExpr::create(value, 8, Expr::Int8));
     write8(AddExpr::create(offset,
                            ConstantExpr::create(0, kMachinePointerType)), 
-           ExtractExpr::createByteOff(value,0));
+           ExtractExpr::create(value, 0, Expr::Int8));
   }
 }
 

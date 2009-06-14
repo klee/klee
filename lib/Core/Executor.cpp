@@ -1854,9 +1854,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     // Conversion
   case Instruction::Trunc: {
     CastInst *ci = cast<CastInst>(i);
-    ref<Expr> result = ExtractExpr::createByteOff(eval(ki, 0, state).value,
-						  0,
-						  Expr::getWidthForLLVMType(ci->getType()));
+    ref<Expr> result = ExtractExpr::create(eval(ki, 0, state).value,
+                                           0,
+                                           Expr::getWidthForLLVMType(ci->getType()));
     bindLocal(ki, state, result);
     break;
   }

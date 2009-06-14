@@ -792,9 +792,6 @@ public:
   /// Creates an ExtractExpr with the given bit offset and width
   static ref<Expr> create(ref<Expr> e, unsigned bitOff, Width w);
 
-  /// Creates an ExtractExpr with the given byte offset and width
-  static ref<Expr> createByteOff(ref<Expr> e, unsigned byteOff, Width w=Expr::Int8);
-
   Width getWidth() const { return width; }
   Kind getKind() const { return Extract; }
 
