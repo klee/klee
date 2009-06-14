@@ -397,12 +397,12 @@ namespace {
     }
   };
 
-  class FoldingExprBuilder : public ExprBuilder {
+  class SimplifyingExprBuilder : public ExprBuilder {
     ExprBuilder *Base;
 
   public:
-    FoldingExprBuilder(ExprBuilder *_Base) : Base(_Base) {}
-    ~FoldingExprBuilder() { 
+    SimplifyingExprBuilder(ExprBuilder *_Base) : Base(_Base) {}
+    ~SimplifyingExprBuilder() { 
       delete Base;
     }
 
@@ -543,6 +543,6 @@ ExprBuilder *klee::createConstantFoldingExprBuilder(ExprBuilder *Base) {
   return new ConstantFoldingExprBuilder(Base);
 }
 
-ExprBuilder *klee::createFoldingExprBuilder(ExprBuilder *Base) {
-  return new FoldingExprBuilder(Base);
+ExprBuilder *klee::createSimplifyingExprBuilder(ExprBuilder *Base) {
+  return new SimplifyingExprBuilder(Base);
 }

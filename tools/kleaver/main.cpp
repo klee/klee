@@ -47,7 +47,7 @@ namespace {
   enum BuilderKinds {
     DefaultBuilder,
     ConstantFoldingBuilder,
-    FoldingBuilder
+    SimplifyingBuilder
   };
 
   static llvm::cl::opt<BuilderKinds> 
@@ -59,7 +59,7 @@ namespace {
                          "Default expression construction."),
               clEnumValN(ConstantFoldingBuilder, "constant-folding",
                          "Fold constant expressions."),
-              clEnumValN(FoldingBuilder, "folding",
+              clEnumValN(SimplifyingBuilder, "simplify",
                          "Fold constants and simplify expressions."),
               clEnumValEnd));
 }
@@ -100,9 +100,15 @@ static bool PrintInputAST(const char *Filename,
   std::vector<Decl*> Decls;
   Parser *P = Parser::Create(Filename, MB, Builder);
   P->SetMaxErrors(20);
+
+  unsigned NumQueries = 0;
   while (Decl *D = P->ParseTopLevelDecl()) {
-    if (!P->GetNumErrors())
+    if (!P->GetNumErrors()) {
+      if (isa<QueryCommand>(D))
+        llvm::cout << "# Query " << ++NumQueries << "\n";
+
       D->dump();
+    }
     Decls.push_back(D);
   }
 
@@ -261,10 +267,10 @@ int main(int argc, char **argv) {
     Builder = createDefaultExprBuilder();
     Builder = createConstantFoldingExprBuilder(Builder);
     break;
-  case FoldingBuilder:
+  case SimplifyingBuilder:
     Builder = createDefaultExprBuilder();
     Builder = createConstantFoldingExprBuilder(Builder);
-    Builder = createFoldingExprBuilder(Builder);
+    Builder = createSimplifyingExprBuilder(Builder);
     break;
   }
 

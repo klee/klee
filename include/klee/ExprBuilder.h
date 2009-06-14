@@ -69,11 +69,12 @@ namespace klee {
   /// Base - The base builder to use when constructing expressions.
   ExprBuilder *createConstantFoldingExprBuilder(ExprBuilder *Base);
 
-  /// createFoldingExprBuilder - Create an expression builder which attemps to
-  /// fold redundant expressions and normalize expressions for improved caching.
+  /// createSimplifyingExprBuilder - Create an expression builder which attemps
+  /// to fold redundant expressions and normalize expressions for improved
+  /// caching.
   ///
   /// Base - The base builder to use when constructing expressions.
-  ExprBuilder *createFoldingExprBuilder(ExprBuilder *Base);
+  ExprBuilder *createSimplifyingExprBuilder(ExprBuilder *Base);
 }
 
 #endif
