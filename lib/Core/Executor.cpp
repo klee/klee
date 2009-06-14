@@ -428,7 +428,7 @@ void Executor::initializeGlobals(ExecutionState &state) {
   // since reading/writing via a function pointer is unsupported anyway.
   for (Module::iterator i = m->begin(), ie = m->end(); i != ie; ++i) {
     Function *f = i;
-    ref<Expr> addr(0);
+    ref<ConstantExpr> addr(0);
 
     // If the symbol has external weak linkage then it is implicitly
     // not defined in this module; if it isn't resolvable then it
@@ -918,7 +918,7 @@ void Executor::addConstraint(ExecutionState &state, ref<Expr> condition) {
                                  ConstantExpr::alloc(1, Expr::Bool));
 }
 
-ref<Expr> Executor::evalConstant(Constant *c) {
+ref<klee::ConstantExpr> Executor::evalConstant(Constant *c) {
   if (llvm::ConstantExpr *ce = dyn_cast<llvm::ConstantExpr>(c)) {
     return evalConstantExpr(ce);
   } else {
@@ -2196,17 +2196,16 @@ void Executor::bindInstructionConstants(KInstruction *KI) {
     return;
 
   KGEPInstruction *kgepi = static_cast<KGEPInstruction*>(KI);
-  ref<Expr> constantOffset = Expr::createPointer(0);
+  ref<ConstantExpr> constantOffset = ConstantExpr::alloc(0, Expr::Int32);
   unsigned index = 1;
   for (gep_type_iterator ii = gep_type_begin(gepi), ie = gep_type_end(gepi);
        ii != ie; ++ii) {
     if (const StructType *st = dyn_cast<StructType>(*ii)) {
-      const StructLayout *sl = 
-        kmodule->targetData->getStructLayout(st);
+      const StructLayout *sl = kmodule->targetData->getStructLayout(st);
       const ConstantInt *ci = cast<ConstantInt>(ii.getOperand());
-      ref<Expr> addend = Expr::createPointer(sl->getElementOffset((unsigned) 
-                                                                  ci->getZExtValue()));
-      constantOffset = AddExpr::create(constantOffset, addend);
+      uint64_t addend = sl->getElementOffset((unsigned) ci->getZExtValue());
+      constantOffset = constantOffset->Add(ConstantExpr::alloc(addend,
+                                                               Expr::Int32));
     } else {
       const SequentialType *st = cast<SequentialType>(*ii);
       unsigned elementSize = 
@@ -2216,14 +2215,14 @@ void Executor::bindInstructionConstants(KInstruction *KI) {
         ref<Expr> index = evalConstant(c);
         ref<Expr> addend = MulExpr::create(Expr::createCoerceToPointerType(index), 
                                            Expr::createPointer(elementSize));
-        constantOffset = AddExpr::create(constantOffset, addend);
+        constantOffset = constantOffset->Add(cast<ConstantExpr>(addend));
       } else {
         kgepi->indices.push_back(std::make_pair(index, elementSize));
       }
     }
     index++;
   }
-  kgepi->offset = cast<ConstantExpr>(constantOffset)->getConstantValue();
+  kgepi->offset = constantOffset->getZExtValue();
 }
 
 void Executor::bindModuleConstants() {

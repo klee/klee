@@ -228,7 +228,7 @@ public:
   /// given object.
   static ref<Expr> createTempRead(const Array *array, Expr::Width w);
   
-  static ref<Expr> createPointer(uint64_t v);
+  static ref<ConstantExpr> createPointer(uint64_t v);
 
   struct CreateArg;
   static ref<Expr> createFromKind(Kind k, std::vector<CreateArg> args);

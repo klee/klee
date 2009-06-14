@@ -580,8 +580,9 @@ void SpecialFunctionHandler::handleCheckMemoryAccess(ExecutionState &state,
                                      "ptr.err",
                                      executor.getAddressInfo(state, address));
     } else {
-      ref<Expr> chk = op.first->getBoundsCheckPointer(address, 
-                                                      cast<ConstantExpr>(size)->getConstantValue());
+      ref<Expr> chk = 
+        op.first->getBoundsCheckPointer(address, 
+                                        cast<ConstantExpr>(size)->getZExtValue());
       if (!chk->isTrue()) {
         executor.terminateStateOnError(state,
                                        "check_memory_access: memory error",

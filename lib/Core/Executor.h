@@ -132,7 +132,7 @@ private:
 
   /// Map of globals to their bound address. This also includes
   /// globals that have no representative object (i.e. functions).
-  std::map<const llvm::GlobalValue*, ref<Expr> > globalAddresses;
+  std::map<const llvm::GlobalValue*, ref<ConstantExpr> > globalAddresses;
 
   /// The set of legal function addresses, used to validate function
   /// pointers. We use the actual Function* address as the function address.
@@ -307,7 +307,7 @@ private:
                     ExecutionState &state,
                     ref<Expr> value);
 
-  ref<Expr> evalConstantExpr(llvm::ConstantExpr *ce);
+  ref<klee::ConstantExpr> evalConstantExpr(llvm::ConstantExpr *ce);
 
   /// Return a unique constant value for the given expression in the
   /// given state, if it has one (i.e. it provably only has a single
@@ -385,7 +385,7 @@ public:
   }
 
   // XXX should just be moved out to utility module
-  ref<Expr> evalConstant(llvm::Constant *c);
+  ref<klee::ConstantExpr> evalConstant(llvm::Constant *c);
 
   virtual void setPathWriter(TreeStreamWriter *tsw) {
     pathWriter = tsw;

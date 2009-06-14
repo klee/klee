@@ -313,7 +313,7 @@ ref<Expr> Expr::createNot(ref<Expr> e) {
   return createIsZero(e);
 }
 
-ref<Expr> Expr::createPointer(uint64_t v) {
+ref<ConstantExpr> Expr::createPointer(uint64_t v) {
   return ConstantExpr::create(v, kMachinePointerType);
 }
 

@@ -99,10 +99,10 @@ public:
     this->name = name;
   }
 
-  ref<Expr> getBaseExpr() const { 
+  ref<ConstantExpr> getBaseExpr() const { 
     return ConstantExpr::create(address, kMachinePointerType);
   }
-  ref<Expr> getSizeExpr() const { 
+  ref<ConstantExpr> getSizeExpr() const { 
     return ConstantExpr::create(size, kMachinePointerType);
   }
   ref<Expr> getOffsetExpr(ref<Expr> pointer) const {

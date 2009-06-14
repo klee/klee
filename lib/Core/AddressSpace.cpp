@@ -84,7 +84,7 @@ bool AddressSpace::resolveOne(ExecutionState &state,
     ref<ConstantExpr> cex;
     if (!solver->getValue(state, address, cex))
       return false;
-    unsigned example = (unsigned) cex->getConstantValue();
+    uint64_t example = cex->getZExtValue();
     MemoryObject hack(example);
     const MemoryMap::value_type *res = objects.lookup_previous(&hack);
     
@@ -191,7 +191,7 @@ bool AddressSpace::resolve(ExecutionState &state,
     ref<ConstantExpr> cex;
     if (!solver->getValue(state, p, cex))
       return true;
-    unsigned example = (unsigned) cex->getConstantValue();
+    uint64_t example = cex->getZExtValue();
     MemoryObject hack(example);
     
     MemoryMap::iterator oi = objects.upper_bound(&hack);

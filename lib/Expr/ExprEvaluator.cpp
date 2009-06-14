@@ -17,7 +17,7 @@ ExprVisitor::Action ExprEvaluator::evalRead(const UpdateList &ul,
     ref<Expr> ui = visit(un->index);
     
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(ui)) {
-      if (CE->getConstantValue() == index)
+      if (CE->getZExtValue() == index)
         return Action::changeTo(visit(un->value));
     } else {
       // update index is unknown, so may or may not be index, we
@@ -61,7 +61,7 @@ ExprVisitor::Action ExprEvaluator::visitRead(const ReadExpr &re) {
   ref<Expr> v = visit(re.index);
   
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(v)) {
-    return evalRead(re.updates, CE->getConstantValue());
+    return evalRead(re.updates, CE->getZExtValue());
   } else {
     return Action::doChildren();
   }
