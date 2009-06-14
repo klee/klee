@@ -3,11 +3,13 @@
 
 #include "klee/Constraints.h"
 #include "klee/Expr.h"
+#include "klee/ExprBuilder.h"
 #include "klee/Solver.h"
 #include "klee/Statistics.h"
 #include "klee/util/ExprPPrinter.h"
 #include "klee/util/ExprVisitor.h"
 
+#include "llvm/ADT/OwningPtr.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ManagedStatic.h"
@@ -41,6 +43,25 @@ namespace {
              clEnumValN(Evaluate, "evaluate",
                         "Print parsed AST nodes from the input file."),
              clEnumValEnd));
+
+  enum BuilderKinds {
+    DefaultBuilder,
+    ConstantFoldingBuilder,
+    FoldingBuilder
+  };
+
+  static llvm::cl::opt<BuilderKinds> 
+  BuilderKind("builder",
+              llvm::cl::desc("Expression builder:"),
+              llvm::cl::init(DefaultBuilder),
+              llvm::cl::values(
+              clEnumValN(DefaultBuilder, "default",
+                         "Default expression construction."),
+              clEnumValN(ConstantFoldingBuilder, "constant-folding",
+                         "Fold constant expressions."),
+              clEnumValN(FoldingBuilder, "folding",
+                         "Fold constants and simplify expressions."),
+              clEnumValEnd));
 }
 
 static std::string escapedString(const char *start, unsigned length) {
@@ -74,9 +95,10 @@ static void PrintInputTokens(const MemoryBuffer *MB) {
 }
 
 static bool PrintInputAST(const char *Filename,
-                          const MemoryBuffer *MB) {
+                          const MemoryBuffer *MB,
+                          ExprBuilder *Builder) {
   std::vector<Decl*> Decls;
-  Parser *P = Parser::Create(Filename, MB);
+  Parser *P = Parser::Create(Filename, MB, Builder);
   P->SetMaxErrors(20);
   while (Decl *D = P->ParseTopLevelDecl()) {
     if (!P->GetNumErrors())
@@ -101,9 +123,10 @@ static bool PrintInputAST(const char *Filename,
 }
 
 static bool EvaluateInputAST(const char *Filename,
-                             const MemoryBuffer *MB) {
+                             const MemoryBuffer *MB,
+                             ExprBuilder *Builder) {
   std::vector<Decl*> Decls;
-  Parser *P = Parser::Create(Filename, MB);
+  Parser *P = Parser::Create(Filename, MB, Builder);
   P->SetMaxErrors(20);
   while (Decl *D = P->ParseTopLevelDecl()) {
     Decls.push_back(D);
@@ -229,21 +252,39 @@ int main(int argc, char **argv) {
     return 1;
   }
 
+  ExprBuilder *Builder = 0;
+  switch (BuilderKind) {
+  case DefaultBuilder:
+    Builder = createDefaultExprBuilder();
+    break;
+  case ConstantFoldingBuilder:
+    Builder = createDefaultExprBuilder();
+    Builder = createConstantFoldingExprBuilder(Builder);
+    break;
+  case FoldingBuilder:
+    Builder = createDefaultExprBuilder();
+    Builder = createConstantFoldingExprBuilder(Builder);
+    Builder = createFoldingExprBuilder(Builder);
+    break;
+  }
+
   switch (ToolAction) {
   case PrintTokens:
     PrintInputTokens(MB);
     break;
   case PrintAST:
-    success = PrintInputAST(InputFile=="-" ? "<stdin>" : InputFile.c_str(), MB);
+    success = PrintInputAST(InputFile=="-" ? "<stdin>" : InputFile.c_str(), MB,
+                            Builder);
     break;
   case Evaluate:
     success = EvaluateInputAST(InputFile=="-" ? "<stdin>" : InputFile.c_str(),
-                               MB);
+                               MB, Builder);
     break;
   default:
     llvm::cerr << argv[0] << ": error: Unknown program action!\n";
   }
 
+  delete Builder;
   delete MB;
 
   llvm::llvm_shutdown();

@@ -20,6 +20,8 @@ namespace llvm {
 }
 
 namespace klee {
+  class ExprBuilder;
+
 namespace expr {
   // These are the language types we manipulate.
   typedef ref<Expr> ExprHandle;
@@ -223,8 +225,12 @@ namespace expr {
     /// MemoryBuffer.
     ///
     /// \arg Name - The name to use in diagnostic messages.
+    /// \arg MB - The input data.
+    /// \arg Builder - The expression builder to use for constructing
+    /// expressions.
     static Parser *Create(const std::string Name,
-                          const llvm::MemoryBuffer *MB);
+                          const llvm::MemoryBuffer *MB,
+                          ExprBuilder *Builder);
   };
 }
 }

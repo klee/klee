@@ -11,6 +11,12 @@
 
 using namespace klee;
 
+ExprBuilder::ExprBuilder() {
+}
+
+ExprBuilder::~ExprBuilder() {
+}
+
 namespace {
   class DefaultExprBuilder : public ExprBuilder {
     virtual ref<Expr> Constant(uint64_t Value, Expr::Width W) {

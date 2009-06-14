@@ -12,6 +12,7 @@
 #include "expr/Lexer.h"
 
 #include "klee/Constraints.h"
+#include "klee/ExprBuilder.h"
 #include "klee/Solver.h"
 #include "klee/util/ExprPPrinter.h"
 
@@ -107,6 +108,8 @@ namespace {
 
     const std::string Filename;
     const MemoryBuffer *TheMemoryBuffer;
+    ExprBuilder *Builder;
+
     Lexer TheLexer;
     unsigned MaxErrors;
     unsigned NumErrors;
@@ -318,11 +321,13 @@ namespace {
 
   public:
     ParserImpl(const std::string _Filename,
-               const MemoryBuffer *MB) : Filename(_Filename),
-                                         TheMemoryBuffer(MB),
-                                         TheLexer(MB),
-                                         MaxErrors(~0u),
-                                         NumErrors(0) {}
+               const MemoryBuffer *MB,
+               ExprBuilder *_Builder) : Filename(_Filename),
+                                        TheMemoryBuffer(MB),
+                                        Builder(_Builder),
+                                        TheLexer(MB),
+                                        MaxErrors(~0u),
+                                        NumErrors(0) {}
 
     /// Initialize - Initialize the parsing state. This must be called
     /// prior to the start of parsing.
@@ -591,7 +596,7 @@ DeclResult ParserImpl::ParseQueryCommand() {
   while (Tok.kind != Token::RSquare) {
     if (Tok.kind == Token::EndOfFile) {
       Error("unexpected end of file.");
-      Res = ExprResult(ConstantExpr::alloc(0, Expr::Bool));
+      Res = ExprResult(Builder->Constant(0, Expr::Bool));
       goto exit;
     }
 
@@ -603,7 +608,7 @@ DeclResult ParserImpl::ParseQueryCommand() {
 
   Res = ParseExpr(TypeResult(Expr::Bool));
   if (!Res.isValid()) // Error emitted by ParseExpr.
-    Res = ExprResult(ConstantExpr::alloc(0, Expr::Bool));
+    Res = ExprResult(Builder->Constant(0, Expr::Bool));
 
   // Return if there are no optional lists of things to evaluate.
   if (Tok.kind == Token::RParen)
@@ -706,7 +711,7 @@ ExprResult ParserImpl::ParseExpr(TypeResult ExpectedType) {
   if (Tok.kind == Token::KWFalse || Tok.kind == Token::KWTrue) {
     bool Value = Tok.kind == Token::KWTrue;
     ConsumeToken();
-    return ExprResult(ConstantExpr::alloc(Value, Expr::Bool));
+    return ExprResult(Builder->Constant(Value, Expr::Bool));
   }
   
   if (Tok.kind == Token::Number) {
@@ -751,7 +756,7 @@ ExprResult ParserImpl::ParseExpr(TypeResult ExpectedType) {
     // FIXME: Maybe we should let the symbol table map to invalid
     // entries?
     if (Label && ExpectedType.isValid()) {
-      ref<Expr> Value = ConstantExpr::alloc(0, ExpectedType.get());
+      ref<Expr> Value = Builder->Constant(0, ExpectedType.get());
       ExprSymTab.insert(std::make_pair(Label, Value));
     }
     return Res;
@@ -976,7 +981,7 @@ ExprResult ParserImpl::ParseParenExpr(TypeResult FIXME_UNUSED) {
     default:
       Error("internal error, unimplemented special form.", Name);
       SkipUntilRParen();
-      return ExprResult(ConstantExpr::alloc(0, ResTy));
+      return ExprResult(Builder->Constant(0, ResTy));
     }
   }
 
@@ -1000,29 +1005,29 @@ ExprResult ParserImpl::ParseUnaryParenExpr(const Token &Name,
   if (Tok.kind == Token::RParen) {
     Error("unexpected end of arguments.", Name);
     ConsumeRParen();
-    return ConstantExpr::alloc(0, ResTy);
+    return Builder->Constant(0, ResTy);
   }
 
   ExprResult Arg = ParseExpr(IsFixed ? ResTy : TypeResult());
   if (!Arg.isValid())
-    Arg = ConstantExpr::alloc(0, ResTy);
+    Arg = Builder->Constant(0, ResTy);
 
   ExpectRParen("unexpected argument in unary expression.");  
   ExprHandle E = Arg.get();
   switch (Kind) {
   case eMacroKind_Not:
-    return EqExpr::alloc(ConstantExpr::alloc(0, E->getWidth()), E);
+    return Builder->Eq(Builder->Constant(0, E->getWidth()), E);
   case eMacroKind_Neg:
-    return SubExpr::alloc(ConstantExpr::alloc(0, E->getWidth()), E);
+    return Builder->Sub(Builder->Constant(0, E->getWidth()), E);
   case Expr::SExt:
     // FIXME: Type check arguments.
-    return SExtExpr::alloc(E, ResTy);
+    return Builder->SExt(E, ResTy);
   case Expr::ZExt:
     // FIXME: Type check arguments.
-    return ZExtExpr::alloc(E, ResTy);
+    return Builder->ZExt(E, ResTy);
   default:
     Error("internal error, unhandled kind.", Name);
-    return ConstantExpr::alloc(0, ResTy);
+    return Builder->Constant(0, ResTy);
   }
 }
 
@@ -1091,44 +1096,44 @@ ExprResult ParserImpl::ParseBinaryParenExpr(const Token &Name,
   ParseMatchedBinaryArgs(Name, IsFixed ? TypeResult(ResTy) : TypeResult(), 
                          LHS, RHS);
   if (!LHS.isValid() || !RHS.isValid())
-    return ConstantExpr::alloc(0, ResTy);
+    return Builder->Constant(0, ResTy);
 
   ref<Expr> LHS_E = LHS.get(), RHS_E = RHS.get();
   if (LHS_E->getWidth() != RHS_E->getWidth()) {
     Error("type widths do not match in binary expression", Name);
-    return ConstantExpr::alloc(0, ResTy);
+    return Builder->Constant(0, ResTy);
   }
 
   switch (Kind) {    
-  case Expr::Add: return AddExpr::alloc(LHS_E, RHS_E);
-  case Expr::Sub: return SubExpr::alloc(LHS_E, RHS_E);
-  case Expr::Mul: return MulExpr::alloc(LHS_E, RHS_E);
-  case Expr::UDiv: return UDivExpr::alloc(LHS_E, RHS_E);
-  case Expr::SDiv: return SDivExpr::alloc(LHS_E, RHS_E);
-  case Expr::URem: return URemExpr::alloc(LHS_E, RHS_E);
-  case Expr::SRem: return SRemExpr::alloc(LHS_E, RHS_E);
+  case Expr::Add: return Builder->Add(LHS_E, RHS_E);
+  case Expr::Sub: return Builder->Sub(LHS_E, RHS_E);
+  case Expr::Mul: return Builder->Mul(LHS_E, RHS_E);
+  case Expr::UDiv: return Builder->UDiv(LHS_E, RHS_E);
+  case Expr::SDiv: return Builder->SDiv(LHS_E, RHS_E);
+  case Expr::URem: return Builder->URem(LHS_E, RHS_E);
+  case Expr::SRem: return Builder->SRem(LHS_E, RHS_E);
 
-  case Expr::AShr: return AShrExpr::alloc(LHS_E, RHS_E);
-  case Expr::LShr: return LShrExpr::alloc(LHS_E, RHS_E);
-  case Expr::Shl: return AndExpr::alloc(LHS_E, RHS_E);
+  case Expr::AShr: return Builder->AShr(LHS_E, RHS_E);
+  case Expr::LShr: return Builder->LShr(LHS_E, RHS_E);
+  case Expr::Shl: return Builder->And(LHS_E, RHS_E);
 
-  case Expr::And: return AndExpr::alloc(LHS_E, RHS_E);
-  case Expr::Or:  return OrExpr::alloc(LHS_E, RHS_E);
-  case Expr::Xor: return XorExpr::alloc(LHS_E, RHS_E);
+  case Expr::And: return Builder->And(LHS_E, RHS_E);
+  case Expr::Or:  return Builder->Or(LHS_E, RHS_E);
+  case Expr::Xor: return Builder->Xor(LHS_E, RHS_E);
 
-  case Expr::Eq:  return EqExpr::alloc(LHS_E, RHS_E);
-  case Expr::Ne:  return NeExpr::alloc(LHS_E, RHS_E);
-  case Expr::Ult: return UltExpr::alloc(LHS_E, RHS_E);
-  case Expr::Ule: return UleExpr::alloc(LHS_E, RHS_E);
-  case Expr::Ugt: return UgtExpr::alloc(LHS_E, RHS_E);
-  case Expr::Uge: return UgeExpr::alloc(LHS_E, RHS_E);
-  case Expr::Slt: return SltExpr::alloc(LHS_E, RHS_E);
-  case Expr::Sle: return SleExpr::alloc(LHS_E, RHS_E);
-  case Expr::Sgt: return SgtExpr::alloc(LHS_E, RHS_E);
-  case Expr::Sge: return SgeExpr::alloc(LHS_E, RHS_E);
+  case Expr::Eq:  return Builder->Eq(LHS_E, RHS_E);
+  case Expr::Ne:  return Builder->Ne(LHS_E, RHS_E);
+  case Expr::Ult: return Builder->Ult(LHS_E, RHS_E);
+  case Expr::Ule: return Builder->Ule(LHS_E, RHS_E);
+  case Expr::Ugt: return Builder->Ugt(LHS_E, RHS_E);
+  case Expr::Uge: return Builder->Uge(LHS_E, RHS_E);
+  case Expr::Slt: return Builder->Slt(LHS_E, RHS_E);
+  case Expr::Sle: return Builder->Sle(LHS_E, RHS_E);
+  case Expr::Sgt: return Builder->Sgt(LHS_E, RHS_E);
+  case Expr::Sge: return Builder->Sge(LHS_E, RHS_E);
   default:
     Error("FIXME: unhandled kind.", Name);
-    return ConstantExpr::alloc(0, ResTy);
+    return Builder->Constant(0, ResTy);
   }  
 }
 
@@ -1138,15 +1143,15 @@ ExprResult ParserImpl::ParseSelectParenExpr(const Token &Name,
   if (Tok.kind == Token::RParen) {
     Error("unexpected end of arguments.", Name);
     ConsumeRParen();
-    return ConstantExpr::alloc(0, ResTy);
+    return Builder->Constant(0, ResTy);
   }
 
   ExprResult Cond = ParseExpr(Expr::Bool);
   ExprResult LHS, RHS;
   ParseMatchedBinaryArgs(Name, ResTy, LHS, RHS);
   if (!Cond.isValid() || !LHS.isValid() || !RHS.isValid())
-    return ConstantExpr::alloc(0, ResTy);
-  return SelectExpr::alloc(Cond.get(), LHS.get(), RHS.get());
+    return Builder->Constant(0, ResTy);
+  return Builder->Select(Cond.get(), LHS.get(), RHS.get());
 }
 
 
@@ -1162,7 +1167,7 @@ ExprResult ParserImpl::ParseConcatParenExpr(const Token &Name,
     // Skip to end of expr on error.
     if (!E.isValid()) {
       SkipUntilRParen();
-      return ConstantExpr::alloc(0, ResTy);
+      return Builder->Constant(0, ResTy);
     }
     
     Kids.push_back(E.get());
@@ -1173,9 +1178,10 @@ ExprResult ParserImpl::ParseConcatParenExpr(const Token &Name,
 
   if (Width != ResTy) {
     Error("concat does not match expected result size.");
-    return ConstantExpr::alloc(0, ResTy);
+    return Builder->Constant(0, ResTy);
   }
 
+  // FIXME: Use builder!
   return ConcatExpr::createN(Kids.size(), &Kids[0]);
 }
 
@@ -1196,15 +1202,15 @@ ExprResult ParserImpl::ParseExtractParenExpr(const Token &Name,
   ExpectRParen("unexpected argument to expression.");
 
   if (!OffsetExpr.isValid() || !Child.isValid())
-    return ConstantExpr::alloc(0, ResTy);
+    return Builder->Constant(0, ResTy);
 
   unsigned Offset = (unsigned) OffsetExpr.get();
   if (Offset + ResTy > Child.get()->getWidth()) {
     Error("extract out-of-range of child expression.", Name);
-    return ConstantExpr::alloc(0, ResTy);
+    return Builder->Constant(0, ResTy);
   }
 
-  return ExtractExpr::alloc(Child.get(), Offset, ResTy);
+  return Builder->Extract(Child.get(), Offset, ResTy);
 }
 
 ExprResult ParserImpl::ParseAnyReadParenExpr(const Token &Name,
@@ -1215,7 +1221,7 @@ ExprResult ParserImpl::ParseAnyReadParenExpr(const Token &Name,
   ExpectRParen("unexpected argument in read expression.");
   
   if (!Array.isValid())
-    return ConstantExpr::alloc(0, ResTy);
+    return Builder->Constant(0, ResTy);
 
   // FIXME: Need generic way to get array width. Needs to work with
   // anonymous arrays.
@@ -1230,10 +1236,10 @@ ExprResult ParserImpl::ParseAnyReadParenExpr(const Token &Name,
     IndexExpr = Index.getExpr();
   
   if (!IndexExpr.isValid())
-    return ConstantExpr::alloc(0, ResTy);
+    return Builder->Constant(0, ResTy);
   else if (IndexExpr.get()->getWidth() != ArrayDomainType) {
     Error("index width does not match array domain.");
-    return ConstantExpr::alloc(0, ResTy);
+    return Builder->Constant(0, ResTy);
   }
 
   // FIXME: Check range width.
@@ -1241,29 +1247,30 @@ ExprResult ParserImpl::ParseAnyReadParenExpr(const Token &Name,
   switch (Kind) {
   default:
     assert(0 && "Invalid kind.");
-    return ConstantExpr::alloc(0, ResTy);
+    return Builder->Constant(0, ResTy);
   case eMacroKind_ReadLSB:
   case eMacroKind_ReadMSB: {
     unsigned NumReads = ResTy / ArrayRangeType;
     if (ResTy != NumReads*ArrayRangeType) {
       Error("invalid ordered read (not multiple of range type).", Name);
-      return ConstantExpr::alloc(0, ResTy);
+      return Builder->Constant(0, ResTy);
     }
     std::vector<ExprHandle> Kids;
     Kids.reserve(NumReads);
     ExprHandle Index = IndexExpr.get();
     for (unsigned i=0; i<NumReads; ++i) {
       // FIXME: using folding here
-      ExprHandle OffsetIndex = AddExpr::create(IndexExpr.get(),
-                                               ConstantExpr::alloc(i, ArrayDomainType));
-      Kids.push_back(ReadExpr::alloc(Array.get(), OffsetIndex));
+      ExprHandle OffsetIndex = Builder->Add(IndexExpr.get(),
+                                            Builder->Constant(i, ArrayDomainType));
+      Kids.push_back(Builder->Read(Array.get(), OffsetIndex));
     }
     if (Kind == eMacroKind_ReadLSB)
       std::reverse(Kids.begin(), Kids.end());
+    // FIXME: Use builder!
     return ConcatExpr::createN(NumReads, &Kids[0]);
   }
   case Expr::Read:
-    return ReadExpr::alloc(Array.get(), IndexExpr.get());
+    return Builder->Read(Array.get(), IndexExpr.get());
   }
 }
 
@@ -1448,7 +1455,7 @@ ExprResult ParserImpl::ParseNumberToken(Expr::Width Type, const Token &Tok) {
     // Diagnose 0[box] with no trailing digits.
     if (!N) {
       Error("invalid numeric token (no digits).", Tok);
-      return ConstantExpr::alloc(0, Type);
+      return Builder->Constant(0, Type);
     }
   }
 
@@ -1470,12 +1477,12 @@ ExprResult ParserImpl::ParseNumberToken(Expr::Width Type, const Token &Tok) {
       Digit = Char - 'A' + 10;
     else {
       Error("invalid character in numeric token.", Tok);
-      return ConstantExpr::alloc(0, Type);
+      return Builder->Constant(0, Type);
     }
 
     if (Digit >= Radix) {
       Error("invalid character in numeric token (out of range).", Tok);
-      return ConstantExpr::alloc(0, Type);
+      return Builder->Constant(0, Type);
     }
 
     DigitVal = Digit;
@@ -1489,7 +1496,7 @@ ExprResult ParserImpl::ParseNumberToken(Expr::Width Type, const Token &Tok) {
   if (Type < Val.getBitWidth())
     Val = Val.trunc(Type);
 
-  return ExprResult(ConstantExpr::alloc(Val.getZExtValue(), Type));
+  return ExprResult(Builder->Constant(Val.getZExtValue(), Type));
 }
 
 /// ParseTypeSpecifier - Parse a type specifier.
@@ -1597,8 +1604,9 @@ Parser::~Parser() {
 }
 
 Parser *Parser::Create(const std::string Filename,
-                       const MemoryBuffer *MB) {
-  ParserImpl *P = new ParserImpl(Filename, MB);
+                       const MemoryBuffer *MB,
+                       ExprBuilder *Builder) {
+  ParserImpl *P = new ParserImpl(Filename, MB, Builder);
   P->Initialize();
   return P;
 }
