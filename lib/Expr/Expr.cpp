@@ -445,6 +445,11 @@ ref<ConstantExpr> ConstantExpr::AShr(const ref<ConstantExpr> &RHS) {
                               getWidth());
 }
 
+ref<ConstantExpr> ConstantExpr::Not() {
+  return ConstantExpr::create(ints::eq(getConstantValue(), 0, getWidth()),
+                              Expr::Bool);
+}
+
 ref<ConstantExpr> ConstantExpr::Eq(const ref<ConstantExpr> &RHS) {
   return ConstantExpr::create(ints::eq(getConstantValue(), 
                                         RHS->getConstantValue(), getWidth()),
