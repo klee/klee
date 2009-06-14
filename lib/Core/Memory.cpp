@@ -187,7 +187,7 @@ const UpdateList &ObjectState::getUpdates() const {
       if (!Value)
         break;
 
-      Contents[Index->getConstantValue()] = Value;
+      Contents[Index->getZExtValue()] = Value;
     }
 
     // FIXME: We should unique these, there is no good reason to create multiple
@@ -400,7 +400,7 @@ void ObjectState::write8(unsigned offset, uint8_t value) {
 void ObjectState::write8(unsigned offset, ref<Expr> value) {
   // can happen when ExtractExpr special cases
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(value)) {
-    write8(offset, (uint8_t) CE->getConstantValue());
+    write8(offset, (uint8_t) CE->getZExtValue(8));
   } else {
     setKnownSymbolic(offset, value.get());
       

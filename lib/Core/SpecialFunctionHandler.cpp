@@ -198,7 +198,7 @@ SpecialFunctionHandler::readStringAtAddress(ExecutionState &state,
     cur = executor.toUnique(state, cur);
     assert(isa<ConstantExpr>(cur) && 
            "hit symbolic char while reading concrete string");
-    buf[i] = cast<ConstantExpr>(cur)->getConstantValue();
+    buf[i] = cast<ConstantExpr>(cur)->getZExtValue(8);
   }
   buf[i] = 0;
   
@@ -441,7 +441,7 @@ void SpecialFunctionHandler::handleSetForking(ExecutionState &state,
   ref<Expr> value = executor.toUnique(state, arguments[0]);
   
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(value)) {
-    state.forkDisabled = !CE->getConstantValue();
+    state.forkDisabled = CE->isZero();
   } else {
     executor.terminateStateOnError(state, 
                                    "klee_set_forking requires a constant arg",
@@ -607,7 +607,7 @@ void SpecialFunctionHandler::handleCheckMemoryAccess(ExecutionState &state,
     } else {
       ref<Expr> chk = op.first->getBoundsCheckPointer(address, 
                                                       cast<ConstantExpr>(size)->getConstantValue());
-      if (!cast<ConstantExpr>(chk)->getConstantValue()) {
+      if (!chk->isTrue()) {
         executor.terminateStateOnError(state,
                                        "check_memory_access: memory error",
                                        "ptr.err",
@@ -636,8 +636,8 @@ void SpecialFunctionHandler::handleDefineFixedObject(ExecutionState &state,
   assert(isa<ConstantExpr>(arguments[1]) &&
          "expect constant size argument to klee_define_fixed_object");
   
-  uint64_t address = cast<ConstantExpr>(arguments[0])->getConstantValue();
-  uint64_t size = cast<ConstantExpr>(arguments[1])->getConstantValue();
+  uint64_t address = cast<ConstantExpr>(arguments[0])->getZExtValue();
+  uint64_t size = cast<ConstantExpr>(arguments[1])->getZExtValue();
   MemoryObject *mo = executor.memory->allocateFixed(address, size, state.prevPC->inst);
   executor.bindObjectInState(state, mo, false);
   mo->isUserSpecified = true; // XXX hack;

@@ -815,7 +815,7 @@ static ref<Expr> MulExpr_createPartialR(const ref<ConstantExpr> &cl, Expr *r) {
 
   if (type == Expr::Bool) {
     return AndExpr_createPartialR(cl, r);
-  } else if (cl->getConstantValue() == 1) {
+  } else if (cl->isOne()) {
     return r;
   } else if (cl->isZero()) {
     return cl;

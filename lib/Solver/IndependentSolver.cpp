@@ -104,7 +104,7 @@ public:
       if (!wholeObjects.count(array)) {
         if (ConstantExpr *CE = dyn_cast<ConstantExpr>(re->index)) {
           DenseSet<unsigned> &dis = elements[array];
-          dis.add((unsigned) CE->getConstantValue());
+          dis.add((unsigned) CE->getZExtValue(32));
         } else {
           elements_ty::iterator it2 = elements.find(array);
           if (it2!=elements.end())

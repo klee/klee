@@ -1413,7 +1413,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       // Somewhat gross to create these all the time, but fine till we
       // switch to an internal rep.
       ConstantInt *ci = ConstantInt::get(si->getCondition()->getType(),
-                                         CE->getConstantValue());
+                                         CE->getZExtValue());
       unsigned index = si->findCaseValue(ci);
       transferToBasicBlock(si->getSuccessor(index), si->getParent(), state);
     } else {
@@ -2688,11 +2688,10 @@ void Executor::executeAlloc(ExecutionState &state,
     assert(success && "FIXME: Unhandled solver failure");
     (void) success;
     
-    // Try and start with a small example
-    while (example->getConstantValue() > 128) {
-      ref<ConstantExpr> tmp = 
-        ConstantExpr::alloc(example->getConstantValue() >> 1, 
-                            example->getWidth());
+    // Try and start with a small example.
+    Expr::Width W = example->getWidth();
+    while (example->Ugt(ConstantExpr::alloc(128, W))->isTrue()) {
+      ref<ConstantExpr> tmp = example->LShr(ConstantExpr::alloc(1, W));
       bool res;
       bool success = solver->mayBeTrue(state, EqExpr::create(tmp, size), res);
       assert(success && "FIXME: Unhandled solver failure");      
@@ -3225,7 +3224,7 @@ void Executor::doImpliedValueConcretization(ExecutionState &state,
         assert(!os->readOnly && 
                "not possible? read only object with static read?");
         ObjectState *wos = state.addressSpace.getWriteable(mo, os);
-        wos->write(CE->getConstantValue(), it->second);
+        wos->write(CE, it->second);
       }
     }
   }

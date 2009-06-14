@@ -571,13 +571,13 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
     ExprHandle right = construct(me->right, width_out);
     assert(*width_out!=1 && "uncanonicalized mul");
 
-    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(me->left)) {
-      return constructMulByConstant(right, *width_out, 
-                                    CE->getConstantValue());
-    } else {
-      ExprHandle left = construct(me->left, width_out);
-      return vc_bvMultExpr(vc, *width_out, left, right);
-    }
+    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(me->left))
+      if (CE->getWidth() <= 64)
+        return constructMulByConstant(right, *width_out, 
+                                      CE->getZExtValue());
+
+    ExprHandle left = construct(me->left, width_out);
+    return vc_bvMultExpr(vc, *width_out, left, right);
   }
 
   case Expr::UDiv: {
@@ -586,15 +586,18 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
     assert(*width_out!=1 && "uncanonicalized udiv");
     
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(de->right)) {
-      uint64_t divisor = CE->getConstantValue();
+      if (CE->getWidth() <= 64) {
+        uint64_t divisor = CE->getConstantValue();
       
-      if (bits64::isPowerOfTwo(divisor)) {
-        return bvRightShift(left,
-                            bits64::indexOfSingleBit(divisor),
-                            getShiftBits(*width_out));
-      } else if (optimizeDivides) {
-        if (*width_out == 32) //only works for 32-bit division
-          return constructUDivByConstant( left, *width_out, (uint32_t)divisor );
+        if (bits64::isPowerOfTwo(divisor)) {
+          return bvRightShift(left,
+                              bits64::indexOfSingleBit(divisor),
+                              getShiftBits(*width_out));
+        } else if (optimizeDivides) {
+          if (*width_out == 32) //only works for 32-bit division
+            return constructUDivByConstant( left, *width_out, 
+                                            (uint32_t) divisor);
+        }
       }
     } 
 
@@ -607,13 +610,11 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
     ExprHandle left = construct(de->left, width_out);
     assert(*width_out!=1 && "uncanonicalized sdiv");
 
-    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(de->right)) {
-      if (optimizeDivides) {
+    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(de->right))
+      if (optimizeDivides)
 	if (*width_out == 32) //only works for 32-bit division
 	  return constructSDivByConstant( left, *width_out, 
-                                          CE->getConstantValue());
-      }
-    } 
+                                          CE->getZExtValue(32));
 
     // XXX need to test for proper handling of sign, not sure I
     // trust STP
@@ -627,29 +628,33 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
     assert(*width_out!=1 && "uncanonicalized urem");
     
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(de->right)) {
-      uint64_t divisor = CE->getConstantValue();
+      if (CE->getWidth() <= 64) {
+        uint64_t divisor = CE->getConstantValue();
 
-      if (bits64::isPowerOfTwo(divisor)) {
-        unsigned bits = bits64::indexOfSingleBit(divisor);
+        if (bits64::isPowerOfTwo(divisor)) {
+          unsigned bits = bits64::indexOfSingleBit(divisor);
 
-        // special case for modding by 1 or else we bvExtract -1:0
-        if (bits == 0) {
-          return bvZero(*width_out);
-        } else {
-          return vc_bvConcatExpr(vc,
-                                 bvZero(*width_out - bits),
-                                 bvExtract(left, bits - 1, 0));
+          // special case for modding by 1 or else we bvExtract -1:0
+          if (bits == 0) {
+            return bvZero(*width_out);
+          } else {
+            return vc_bvConcatExpr(vc,
+                                   bvZero(*width_out - bits),
+                                   bvExtract(left, bits - 1, 0));
+          }
         }
-      }
 
-      //use fast division to compute modulo without explicit division for constant divisor
-      if (optimizeDivides) {
-	if (*width_out == 32) { //only works for 32-bit division
-	  ExprHandle quotient = constructUDivByConstant( left, *width_out, (uint32_t)divisor );
-	  ExprHandle quot_times_divisor = constructMulByConstant( quotient, *width_out, divisor );
-          ExprHandle rem = vc_bvMinusExpr( vc, *width_out, left, quot_times_divisor );
-	  return rem;
-	}
+      // Use fast division to compute modulo without explicit division for
+      // constant divisor.
+
+        if (optimizeDivides) {
+          if (*width_out == 32) { //only works for 32-bit division
+            ExprHandle quotient = constructUDivByConstant( left, *width_out, (uint32_t)divisor );
+            ExprHandle quot_times_divisor = constructMulByConstant( quotient, *width_out, divisor );
+            ExprHandle rem = vc_bvMinusExpr( vc, *width_out, left, quot_times_divisor );
+            return rem;
+          }
+        }
       }
     }
     
@@ -726,7 +731,7 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
     assert(*width_out!=1 && "uncanonicalized shl");
 
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(se->right)) {
-      return bvLeftShift(left, CE->getConstantValue(), 
+      return bvLeftShift(left, (unsigned) CE->getLimitedValue(), 
                          getShiftBits(*width_out));
     } else {
       int shiftWidth;
@@ -742,7 +747,7 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
     assert(*width_out!=1 && "uncanonicalized lshr");
 
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(lse->right)) {
-      return bvRightShift(left, (unsigned) CE->getConstantValue(), 
+      return bvRightShift(left, (unsigned) CE->getLimitedValue(), 
                           shiftBits);
     } else {
       int shiftWidth;
@@ -757,7 +762,7 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
     assert(*width_out!=1 && "uncanonicalized ashr");
     
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(ase->right)) {
-      unsigned shift = (unsigned) CE->getConstantValue();
+      unsigned shift = (unsigned) CE->getLimitedValue();
       ExprHandle signedBool = bvBoolExtract(left, *width_out-1);
       return constructAShrByConstant(left, shift, signedBool, 
                                      getShiftBits(*width_out));

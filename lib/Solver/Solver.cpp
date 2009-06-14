@@ -158,7 +158,7 @@ std::pair< ref<Expr>, ref<Expr> > Solver::getRange(const Query& query) {
       min = 0, max = 1; break;
     }
   } else if (ConstantExpr *CE = dyn_cast<ConstantExpr>(e)) {
-    min = max = CE->getConstantValue();
+    min = max = CE->getZExtValue();
   } else {
     // binary search for # of useful bits
     uint64_t lo=0, hi=width, mid, bits=0;

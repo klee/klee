@@ -346,7 +346,7 @@ public:
     if (array.isConstantArray() && 
         index.isFixed() && 
         index.min() < array.size)
-      return ValueRange(array.constantValues[index.min()]->getConstantValue());
+      return ValueRange(array.constantValues[index.min()]->getZExtValue(8));
 
     return ValueRange(0, 255);
   }
@@ -1037,7 +1037,7 @@ FastCexSolver::computeInitialValues(const Query& query,
       ref<Expr> value = cd.evaluatePossible(read);
       
       if (ConstantExpr *CE = dyn_cast<ConstantExpr>(value)) {
-        data.push_back((unsigned char) CE->getConstantValue());
+        data.push_back((unsigned char) CE->getZExtValue(8));
       } else {
         // FIXME: When does this happen?
         return false;

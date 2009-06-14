@@ -1185,7 +1185,7 @@ IntegerResult ParserImpl::ParseIntegerConstant(Expr::Width Type) {
   if (!Res.isValid())
     return IntegerResult();
 
-  return cast<ConstantExpr>(Res.get())->getConstantValue();
+  return cast<ConstantExpr>(Res.get())->getZExtValue(Type);
 }
 
 ExprResult ParserImpl::ParseExtractParenExpr(const Token &Name,

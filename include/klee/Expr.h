@@ -314,6 +314,21 @@ public:
 
   uint64_t getConstantValue() const { return value; }
 
+  /// getZExtValue - Return the constant value for a limited number of bits.
+  ///
+  /// This routine should be used in situations where the width of the constant
+  /// is known to be limited to a certain number of bits.
+  uint64_t getZExtValue(unsigned bits = 64) const {
+    assert(getWidth() <= bits && "Value may be out of range!");
+    return value;
+  }
+
+  /// getLimitedValue - If this value is smaller than the specified limit,
+  /// return it, otherwise return the limit value.
+  uint64_t getLimitedValue(uint64_t Limit = ~0ULL) const {
+    return (value > Limit) ? Limit :  getZExtValue();
+  }
+
   int compareContents(const Expr &b) const { 
     const ConstantExpr &cb = static_cast<const ConstantExpr&>(b);
     if (width != cb.width) return width < cb.width ? -1 : 1;
@@ -357,23 +372,24 @@ public:
   /* Utility Functions */
 
   /// isZero - Is this a constant zero.
-  bool isZero() const { return getConstantValue() == 0; }
+  bool isZero() const { return getZExtValue() == 0; }
+
+  /// isOne - Is this a constant one.
+  bool isOne() const { return getZExtValue() == 1; }
   
   /// isTrue - Is this the true expression.
   bool isTrue() const { 
-    assert(getWidth() == Expr::Bool && "Invalid isTrue() call!");
-    return getConstantValue() == 1;
+    return getZExtValue(1) == 1;
   }
 
   /// isFalse - Is this the false expression.
   bool isFalse() const {
-    assert(getWidth() == Expr::Bool && "Invalid isTrue() call!");
-    return getConstantValue() == 0;
+    return getZExtValue(1) == 0;
   }
 
   /// isAllOnes - Is this constant all ones.
   bool isAllOnes() const {
-    return getConstantValue() == bits64::maxValueOfNBits(getWidth());
+    return getZExtValue(getWidth()) == bits64::maxValueOfNBits(getWidth());
   }
 
   /* Constant Operations */
