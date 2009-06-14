@@ -1899,11 +1899,14 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     // Floating point specific instructions
 
 #define FP_CONSTANT_BINOP(op, type, l, r, target, state)        \
+    if (type > 64)                                                      \
+      return terminateStateOnExecError(state,                           \
+                                       "Unsupported FP operation");     \
     bindLocal(target, state,                                            \
               ConstantExpr::alloc(op(toConstant(state, l,               \
-                                                "floating point")->getConstantValue(), \
+                                                "floating point")->getZExtValue(), \
                                      toConstant(state, r,               \
-                                                "floating point")->getConstantValue(), \
+                                                "floating point")->getZExtValue(), \
                                      type), type))
 
   case Instruction::FAdd: {
@@ -1933,12 +1936,35 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     break;
   }
 
+  case Instruction::FDiv: {
+    BinaryOperator *bi = cast<BinaryOperator>(i);
+
+    ref<Expr> dividend = eval(ki, 0, state).value;
+    ref<Expr> divisor = eval(ki, 1, state).value;
+    Expr::Width type = Expr::getWidthForLLVMType(bi->getType());
+    FP_CONSTANT_BINOP(floats::div, type, dividend, divisor, ki, state);
+    break;
+  }
+
+  case Instruction::FRem: {
+    BinaryOperator *bi = cast<BinaryOperator>(i);
+
+    ref<Expr> dividend = eval(ki, 0, state).value;
+    ref<Expr> divisor = eval(ki, 1, state).value;
+    Expr::Width type = Expr::getWidthForLLVMType(bi->getType());
+    FP_CONSTANT_BINOP(floats::mod, type, dividend, divisor, ki, state);
+    break;
+  }
+#undef FP_CONSTANT_BINOP
+
   case Instruction::FPTrunc: {
     FPTruncInst *fi = cast<FPTruncInst>(i);
     Expr::Width resultType = Expr::getWidthForLLVMType(fi->getType());
     ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
                                        "floating point");
-    uint64_t value = floats::trunc(arg->getConstantValue(),
+    if (arg->getWidth() > 64)
+      return terminateStateOnExecError(state, "Unsupported FP operation");
+    uint64_t value = floats::trunc(arg->getZExtValue(),
                                    resultType,
                                    arg->getWidth());
     bindLocal(ki, state, ConstantExpr::alloc(value, resultType));
@@ -1950,7 +1976,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     Expr::Width resultType = Expr::getWidthForLLVMType(fi->getType());
     ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
                                        "floating point");
-    uint64_t value = floats::ext(arg->getConstantValue(),
+    if (arg->getWidth() > 64)
+      return terminateStateOnExecError(state, "Unsupported FP operation");
+    uint64_t value = floats::ext(arg->getZExtValue(),
                                  resultType,
                                  arg->getWidth());
     bindLocal(ki, state, ConstantExpr::alloc(value, resultType));
@@ -1962,7 +1990,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     Expr::Width resultType = Expr::getWidthForLLVMType(fi->getType());
     ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
                                        "floating point");
-    uint64_t value = floats::toUnsignedInt(arg->getConstantValue(),
+    if (arg->getWidth() > 64)
+      return terminateStateOnExecError(state, "Unsupported FP operation");
+    uint64_t value = floats::toUnsignedInt(arg->getZExtValue(),
                                            resultType,
                                            arg->getWidth());
     bindLocal(ki, state, ConstantExpr::alloc(value, resultType));
@@ -1974,7 +2004,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     Expr::Width resultType = Expr::getWidthForLLVMType(fi->getType());
     ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
                                        "floating point");
-    uint64_t value = floats::toSignedInt(arg->getConstantValue(),
+    if (arg->getWidth() > 64)
+      return terminateStateOnExecError(state, "Unsupported FP operation");
+    uint64_t value = floats::toSignedInt(arg->getZExtValue(),
                                          resultType,
                                          arg->getWidth());
     bindLocal(ki, state, ConstantExpr::alloc(value, resultType));
@@ -1986,7 +2018,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     Expr::Width resultType = Expr::getWidthForLLVMType(fi->getType());
     ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
                                        "floating point");
-    uint64_t value = floats::UnsignedIntToFP(arg->getConstantValue(),
+    if (arg->getWidth() > 64)
+      return terminateStateOnExecError(state, "Unsupported FP operation");
+    uint64_t value = floats::UnsignedIntToFP(arg->getZExtValue(),
                                              resultType);
     bindLocal(ki, state, ConstantExpr::alloc(value, resultType));
     break;
@@ -1997,7 +2031,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     Expr::Width resultType = Expr::getWidthForLLVMType(fi->getType());
     ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
                                        "floating point");
-    uint64_t value = floats::SignedIntToFP(arg->getConstantValue(),
+    if (arg->getWidth() > 64)
+      return terminateStateOnExecError(state, "Unsupported FP operation");
+    uint64_t value = floats::SignedIntToFP(arg->getZExtValue(),
                                            resultType,
                                            arg->getWidth());
     bindLocal(ki, state, ConstantExpr::alloc(value, resultType));
@@ -2011,8 +2047,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
                                          "floating point");
     ref<ConstantExpr> right = toConstant(state, eval(ki, 1, state).value,
                                          "floating point");
-    uint64_t leftVal = left->getConstantValue();
-    uint64_t rightVal = right->getConstantValue();
+    if (left->getWidth() > 64)
+      return terminateStateOnExecError(state, "Unsupported FP operation");
+    uint64_t leftVal = left->getZExtValue();
+    uint64_t rightVal = right->getZExtValue();
  
     //determine whether the operands are NANs
     unsigned inWidth = left->getWidth();
@@ -2111,27 +2149,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, ConstantExpr::alloc(ret, resultType));
     break;
   }
-
-  case Instruction::FDiv: {
-    BinaryOperator *bi = cast<BinaryOperator>(i);
-
-    ref<Expr> dividend = eval(ki, 0, state).value;
-    ref<Expr> divisor = eval(ki, 1, state).value;
-    Expr::Width type = Expr::getWidthForLLVMType(bi->getType());
-    FP_CONSTANT_BINOP(floats::div, type, dividend, divisor, ki, state);
-    break;
-  }
-
-  case Instruction::FRem: {
-    BinaryOperator *bi = cast<BinaryOperator>(i);
-
-    ref<Expr> dividend = eval(ki, 0, state).value;
-    ref<Expr> divisor = eval(ki, 1, state).value;
-    Expr::Width type = Expr::getWidthForLLVMType(bi->getType());
-    FP_CONSTANT_BINOP(floats::mod, type, dividend, divisor, ki, state);
-    break;
-  }
-
  
     // Other instructions...
     // Unhandled
