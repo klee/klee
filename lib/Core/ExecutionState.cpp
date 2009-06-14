@@ -303,28 +303,7 @@ bool ExecutionState::merge(const ExecutionState &b) {
   return true;
 }
 
-/**/
-
-/*
-   Used for tainting: create a clone of os that we can revirt to with
-   the behavior that all constraints are preserved, but writes are 
-   discarded.  When we revirt it will be at the same address.
- */
-ObjectState *ExecutionState::cloneObject(ObjectState *os, 
-                                         MemoryObject *mo) {
-  MemoryMap::iterator it = shadowObjects.find(mo);
-  if (it != shadowObjects.end())
-    assert(0 && "Cannot exist already!");
-
-  llvm::cerr << "DRE: Inserting a cloned object: " << mo << "\n";
-  shadowObjects = shadowObjects.replace(std::make_pair(mo, os));
-  os = new ObjectState(*os);
-  addressSpace.bindObject(mo, os);
-  return os;
-}
-
 /***/
-
 
 ExecutionTraceEvent::ExecutionTraceEvent(ExecutionState& state, 
                                          KInstruction* ki)

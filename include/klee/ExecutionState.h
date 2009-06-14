@@ -163,11 +163,6 @@ public:
     constraints.addConstraint(e); 
   }
 
-  // Used for checkpoint/rollback of fake objects created during tainting.
-  ObjectState *cloneObject(ObjectState *os, MemoryObject *mo);
-
-  //
-
   bool merge(const ExecutionState &b);
 };
 

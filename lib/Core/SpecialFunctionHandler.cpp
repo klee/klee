@@ -81,7 +81,6 @@ HandlerInfo handlerInfo[] = {
   add("klee_set_forking", handleSetForking, false),
   add("klee_warning", handleWarning, false),
   add("klee_warning_once", handleWarningOnce, false),
-  add("klee_under_constrained", handleUnderConstrained, false),
   add("klee_alias_function", handleAliasFunction, false),
   add("malloc", handleMalloc, true),
   add("realloc", handleRealloc, true),
@@ -407,30 +406,6 @@ void SpecialFunctionHandler::handlePrintExpr(ExecutionState &state,
 
   std::string msg_str = readStringAtAddress(state, arguments[0]);
   llvm::cerr << msg_str << ":" << arguments[1] << "\n";
-}
-
-
-void SpecialFunctionHandler::handleUnderConstrained(ExecutionState &state,
-                                  KInstruction *target,
-                                  std::vector<ref<Expr> > &arguments) {
-  // XXX should type check args
-  assert(arguments.size()==1 &&
-         "invalid number of arguments to klee_under_constrained().");
-  assert(isa<ConstantExpr>(arguments[0]) &&
-   	 "symbolic argument given to klee_under_constrained!");
-
-  unsigned v = cast<ConstantExpr>(arguments[0])->getConstantValue();
-  llvm::cerr << "argument = " << v << " under=" << state.underConstrained << "\n";
-  if(v) {
-    assert(state.underConstrained == false &&
-         "Bogus call to klee_under_constrained().");
-    state.underConstrained = v;
-    llvm::cerr << "turning on under!\n";
-  } else {
-    assert(state.underConstrained != 0 && "Bogus call to klee_taint_end()");
-    state.underConstrained = 0;
-    llvm::cerr << "turning off under!\n";
-  }
 }
 
 void SpecialFunctionHandler::handleSetForking(ExecutionState &state,
