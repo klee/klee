@@ -2838,7 +2838,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
   solver->setTimeout(stpTimeout);
   if (!state.addressSpace.resolveOne(state, solver, address, op, success)) {
     address = toConstant(state, address, "resolveOne failure");
-    success = state.addressSpace.resolveOne(cast<ConstantExpr>(address)->getConstantValue(), op);
+    success = state.addressSpace.resolveOne(cast<ConstantExpr>(address), op);
   }
   solver->setTimeout(0);
 

@@ -31,7 +31,8 @@ MemoryManager::~MemoryManager() {
   }
 }
 
-MemoryObject *MemoryManager::allocate(uint64_t size, bool isLocal, bool isGlobal,
+MemoryObject *MemoryManager::allocate(uint64_t size, bool isLocal, 
+                                      bool isGlobal,
                                       const llvm::Value *allocSite) {
   if (size>10*1024*1024) {
     klee_warning_once(0, "failing large alloc: %u bytes", (unsigned) size);

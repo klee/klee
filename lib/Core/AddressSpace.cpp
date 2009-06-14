@@ -51,8 +51,9 @@ ObjectState *AddressSpace::getWriteable(const MemoryObject *mo,
 
 /// 
 
-bool AddressSpace::resolveOne(uint64_t addr64, ObjectPair &result) {
-  unsigned address = (unsigned) addr64;
+bool AddressSpace::resolveOne(const ref<ConstantExpr> &addr, 
+                              ObjectPair &result) {
+  uint64_t address = addr->getZExtValue();
   MemoryObject hack(address);
 
   if (const MemoryMap::value_type *res = objects.lookup_previous(&hack)) {
@@ -73,7 +74,7 @@ bool AddressSpace::resolveOne(ExecutionState &state,
                               ObjectPair &result,
                               bool &success) {
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(address)) {
-    success = resolveOne(CE->getConstantValue(), result);
+    success = resolveOne(CE, result);
     return true;
   } else {
     TimerStatIncrementer timer(stats::resolveTime);
@@ -165,7 +166,7 @@ bool AddressSpace::resolve(ExecutionState &state,
                            double timeout) {
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(p)) {
     ObjectPair res;
-    if (resolveOne(CE->getConstantValue(), res))
+    if (resolveOne(CE, res))
       rl.push_back(res);
     return false;
   } else {
