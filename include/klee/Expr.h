@@ -427,7 +427,15 @@ public:
   
 // Utility classes
 
-class BinaryExpr : public Expr {
+class NonConstantExpr : public Expr {
+public:
+  static bool classof(const Expr *E) {
+    return E->getKind() != Expr::Constant;
+  }
+  static bool classof(const NonConstantExpr *) { return true; }
+};
+
+class BinaryExpr : public NonConstantExpr {
 public:
   ref<Expr> left, right;
 
@@ -470,7 +478,7 @@ public:
 
 // Special
 
-class NotOptimizedExpr : public Expr {
+class NotOptimizedExpr : public NonConstantExpr {
 public:
   static const Kind kind = NotOptimized;
   static const unsigned numKids = 1;
@@ -612,7 +620,7 @@ public:
 };
 
 /// Class representing a one byte read from an array. 
-class ReadExpr : public Expr {
+class ReadExpr : public NonConstantExpr {
 public:
   static const Kind kind = Read;
   static const unsigned numKids = 1;
@@ -657,7 +665,7 @@ public:
 
 
 /// Class representing an if-then-else expression.
-class SelectExpr : public Expr {
+class SelectExpr : public NonConstantExpr {
 public:
   static const Kind kind = Select;
   static const unsigned numKids = 3;
@@ -714,7 +722,7 @@ public:
 /** Children of a concat expression can have arbitrary widths.  
     Kid 0 is the left kid, kid 1 is the right kid.
 */
-class ConcatExpr : public Expr { 
+class ConcatExpr : public NonConstantExpr { 
 public: 
   static const Kind kind = Concat;
   static const unsigned numKids = 2;
@@ -772,7 +780,7 @@ public:
     bit offset {\tt offset} of width {\tt width}.  Bit 0 is the right most 
     bit of the expression.
  */
-class ExtractExpr : public Expr { 
+class ExtractExpr : public NonConstantExpr { 
 public:
   static const Kind kind = Extract;
   static const unsigned numKids = 1;
@@ -825,7 +833,7 @@ public:
 
 // Casting
 
-class CastExpr : public Expr {
+class CastExpr : public NonConstantExpr {
 public:
   ref<Expr> src;
   Width width;
