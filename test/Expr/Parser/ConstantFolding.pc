@@ -1,0 +1,5 @@
+# RUN: %kleaver --builder=constant-folding -print-ast %s > %t
+
+# RUN: grep -A 2 \"# Query 1\" %t > %t2
+# RUN: grep \"(query .. false)\" %t2
+(query [] (Not (Ult (w32 0) (w32 1))))
