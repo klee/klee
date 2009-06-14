@@ -1147,17 +1147,6 @@ static ref<Expr> UltExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
   if (t == Expr::Bool) { // !l && r
     return AndExpr::create(Expr::createNot(l), r);
   } else {
-    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(r)) {      
-      uint64_t value = CE->getConstantValue();
-      if (value <= 8) {
-        ref<Expr> res = ConstantExpr::alloc(0, Expr::Bool);
-        for (unsigned i=0; i<value; i++) {
-          res = OrExpr::create(EqExpr::create(l, 
-                                              ConstantExpr::alloc(i, t)), res);
-        }
-        return res;
-      }
-    }
     return UltExpr::alloc(l, r);
   }
 }
