@@ -1255,14 +1255,16 @@ ExprResult ParserImpl::ParseAnyReadParenExpr(const Token &Name,
       Error("invalid ordered read (not multiple of range type).", Name);
       return Builder->Constant(0, ResTy);
     }
-    std::vector<ExprHandle> Kids;
-    Kids.reserve(NumReads);
+    std::vector<ExprHandle> Kids(NumReads);
     ExprHandle Index = IndexExpr.get();
-    for (unsigned i=0; i<NumReads; ++i) {
-      // FIXME: using folding here
-      ExprHandle OffsetIndex = Builder->Add(IndexExpr.get(),
-                                            Builder->Constant(i, ArrayDomainType));
-      Kids.push_back(Builder->Read(Array.get(), OffsetIndex));
+    for (unsigned i=0; i != NumReads; ++i) {
+      // FIXME: We rely on folding here to not complicate things to where the
+      // Read macro pattern fails to match.
+      ExprHandle OffsetIndex = Index;
+      if (i)
+        OffsetIndex = AddExpr::create(OffsetIndex,
+                                      Builder->Constant(i, ArrayDomainType));
+      Kids[i] = Builder->Read(Array.get(), OffsetIndex);
     }
     if (Kind == eMacroKind_ReadLSB)
       std::reverse(Kids.begin(), Kids.end());
