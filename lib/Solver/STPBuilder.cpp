@@ -608,11 +608,10 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
     assert(*width_out!=1 && "uncanonicalized sdiv");
 
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(de->right)) {
-      uint64_t divisor = CE->getConstantValue();
- 
       if (optimizeDivides) {
 	if (*width_out == 32) //only works for 32-bit division
-	  return constructSDivByConstant( left, *width_out, divisor);
+	  return constructSDivByConstant( left, *width_out, 
+                                          CE->getConstantValue());
       }
     } 
 
@@ -776,9 +775,9 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
     ExprHandle left = construct(ee->left, width_out);
     ExprHandle right = construct(ee->right, width_out);
     if (*width_out==1) {
-      if (isa<ConstantExpr>(ee->left)) {
-        assert(!cast<ConstantExpr>(ee->left)->getConstantValue() && 
-               "uncanonicalized eq");
+      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(ee->left)) {
+        if (CE->isTrue())
+          return right;
         return vc_notExpr(vc, right);
       } else {
         return vc_iffExpr(vc, left, right);

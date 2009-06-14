@@ -26,7 +26,7 @@ bool TimingSolver::evaluate(const ExecutionState& state, ref<Expr> expr,
                             Solver::Validity &result) {
   // Fast path, to avoid timer and OS overhead.
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(expr)) {
-    result = CE->getConstantValue() ? Solver::True : Solver::False;
+    result = CE->isTrue() ? Solver::True : Solver::False;
     return true;
   }
 
@@ -50,7 +50,7 @@ bool TimingSolver::mustBeTrue(const ExecutionState& state, ref<Expr> expr,
                               bool &result) {
   // Fast path, to avoid timer and OS overhead.
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(expr)) {
-    result = CE->getConstantValue() ? true : false;
+    result = CE->isTrue() ? true : false;
     return true;
   }
 

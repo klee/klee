@@ -630,7 +630,7 @@ void Executor::branch(ExecutionState &state,
                            res);
         assert(success && "FIXME: Unhandled solver failure");
         (void) success;
-        if (res->getConstantValue())
+        if (res->isTrue())
           break;
       }
       
@@ -766,15 +766,13 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
         solver->getValue(current, siit->assignment.evaluate(condition), res);
       assert(success && "FIXME: Unhandled solver failure");
       (void) success;
-      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(res)) {
-        if (CE->getConstantValue()) {
-          trueSeed = true;
-        } else {
-          falseSeed = true;
-        }
-        if (trueSeed && falseSeed)
-          break;
+      if (res->isTrue()) {
+        trueSeed = true;
+      } else {
+        falseSeed = true;
       }
+      if (trueSeed && falseSeed)
+        break;
     }
     if (!(trueSeed && falseSeed)) {
       assert(trueSeed || falseSeed);
@@ -832,7 +830,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
           solver->getValue(current, siit->assignment.evaluate(condition), res);
         assert(success && "FIXME: Unhandled solver failure");
         (void) success;
-        if (res->getConstantValue()) {
+        if (res->isTrue()) {
           trueSeeds.push_back(*siit);
         } else {
           falseSeeds.push_back(*siit);
@@ -889,7 +887,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
 
 void Executor::addConstraint(ExecutionState &state, ref<Expr> condition) {
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(condition)) {
-    assert(CE->getConstantValue() && "attempt to add invalid constraint");
+    assert(CE->isTrue() && "attempt to add invalid constraint");
     return;
   }
 

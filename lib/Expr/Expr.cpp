@@ -539,7 +539,7 @@ ref<Expr> ReadExpr::create(const UpdateList &ul, ref<Expr> index) {
     ref<Expr> cond = EqExpr::create(index, un->index);
     
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(cond)) {
-      if (CE->getConstantValue())
+      if (CE->isTrue())
         return un->value;
     } else {
       break;
@@ -560,18 +560,18 @@ ref<Expr> SelectExpr::create(ref<Expr> c, ref<Expr> t, ref<Expr> f) {
   assert(kt==f->getWidth() && "type mismatch");
 
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(c)) {
-    return CE->getConstantValue() ? t : f;
+    return CE->isTrue() ? t : f;
   } else if (t==f) {
     return t;
   } else if (kt==Expr::Bool) { // c ? t : f  <=> (c and t) or (not c and f)
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(t)) {      
-      if (CE->getConstantValue()) {
+      if (CE->isTrue()) {
         return OrExpr::create(c, f);
       } else {
         return AndExpr::create(Expr::createNot(c), f);
       }
     } else if (ConstantExpr *CE = dyn_cast<ConstantExpr>(f)) {
-      if (CE->getConstantValue()) {
+      if (CE->isTrue()) {
         return OrExpr::create(Expr::createNot(c), t);
       } else {
         return AndExpr::create(c, t);
@@ -708,12 +708,11 @@ static ref<Expr> SubExpr_createPartialR(const ref<ConstantExpr> &cl, Expr *r);
 static ref<Expr> XorExpr_createPartialR(const ref<ConstantExpr> &cl, Expr *r);
 
 static ref<Expr> AddExpr_createPartialR(const ref<ConstantExpr> &cl, Expr *r) {
-  uint64_t value = cl->getConstantValue();
   Expr::Width type = cl->getWidth();
 
   if (type==Expr::Bool) {
     return XorExpr_createPartialR(cl, r);
-  } else if (!value) {
+  } else if (cl->isZero()) {
     return r;
   } else {
     Expr::Kind rk = r->getKind();
@@ -775,11 +774,9 @@ static ref<Expr> SubExpr_createPartialR(const ref<ConstantExpr> &cl, Expr *r) {
   }
 }
 static ref<Expr> SubExpr_createPartial(Expr *l, const ref<ConstantExpr> &cr) {
-  uint64_t value = cr->getConstantValue();
-  Expr::Width width = cr->getWidth();
-  uint64_t nvalue = ints::sub(0, value, width);
-
-  return AddExpr_createPartial(l, ConstantExpr::create(nvalue, width));
+  // l - c => l + (-c)
+  return AddExpr_createPartial(l, 
+                               ConstantExpr::alloc(0, cr->getWidth())->Sub(cr));
 }
 static ref<Expr> SubExpr_create(Expr *l, Expr *r) {
   Expr::Width type = l->getWidth();
@@ -809,14 +806,13 @@ static ref<Expr> SubExpr_create(Expr *l, Expr *r) {
 }
 
 static ref<Expr> MulExpr_createPartialR(const ref<ConstantExpr> &cl, Expr *r) {
-  uint64_t value = cl->getConstantValue();
   Expr::Width type = cl->getWidth();
 
   if (type == Expr::Bool) {
     return AndExpr_createPartialR(cl, r);
-  } else if (value == 1) {
+  } else if (cl->getConstantValue() == 1) {
     return r;
-  } else if (!value) {
+  } else if (cl->isZero()) {
     return cl;
   } else {
     return MulExpr::alloc(cl, r);
@@ -836,12 +832,9 @@ static ref<Expr> MulExpr_create(Expr *l, Expr *r) {
 }
 
 static ref<Expr> AndExpr_createPartial(Expr *l, const ref<ConstantExpr> &cr) {
-  uint64_t value = cr->getConstantValue();
-  Expr::Width width = cr->getWidth();
-
-  if (value==ints::sext(1, width, 1)) {
+  if (cr->isAllOnes()) {
     return l;
-  } else if (!value) {
+  } else if (cr->isZero()) {
     return cr;
   } else {
     return AndExpr::alloc(l, cr);
@@ -855,12 +848,9 @@ static ref<Expr> AndExpr_create(Expr *l, Expr *r) {
 }
 
 static ref<Expr> OrExpr_createPartial(Expr *l, const ref<ConstantExpr> &cr) {
-  uint64_t value = cr->getConstantValue();
-  Expr::Width width = cr->getWidth();
-
-  if (value == ints::sext(1, width, 1)) {
+  if (cr->isAllOnes()) {
     return cr;
-  } else if (!value) {
+  } else if (cr->isZero()) {
     return l;
   } else {
     return OrExpr::alloc(l, cr);
@@ -874,17 +864,10 @@ static ref<Expr> OrExpr_create(Expr *l, Expr *r) {
 }
 
 static ref<Expr> XorExpr_createPartialR(const ref<ConstantExpr> &cl, Expr *r) {
-  uint64_t value = cl->getConstantValue();
-  Expr::Width type = cl->getWidth();
-
-  if (type==Expr::Bool) {
-    if (value) {
-      return EqExpr_createPartial(r, ConstantExpr::create(0, Expr::Bool));
-    } else {
-      return r;
-    }
-  } else if (!value) {
+  if (cl->isZero()) {
     return r;
+  } else if (cl->getWidth() == Expr::Bool) {
+    return EqExpr_createPartial(r, ConstantExpr::create(0, Expr::Bool));
   } else {
     return XorExpr::alloc(cl, r);
   }
@@ -1028,8 +1011,6 @@ static ref<Expr> EqExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
 /// returns the initial equality expression. 
 static ref<Expr> TryConstArrayOpt(const ref<ConstantExpr> &cl, 
 				  ReadExpr *rd) {
-  uint64_t ct = cl->getConstantValue();
-
   if (rd->updates.root->isSymbolicArray() || rd->updates.getSize())
     return EqExpr_create(cl, rd);
 
@@ -1040,7 +1021,7 @@ static ref<Expr> TryConstArrayOpt(const ref<ConstantExpr> &cl,
   // where the concrete array has one update for each index, in order
   ref<Expr> res = ConstantExpr::alloc(0, Expr::Bool);
   for (unsigned i = 0, e = rd->updates.root->size; i != e; ++i) {
-    if (ct == rd->updates.root->constantValues[i]->getConstantValue()) {
+    if (cl == rd->updates.root->constantValues[i]) {
       // Arbitrary maximum on the size of disjunction.
       if (++numMatches > 100)
         return EqExpr_create(cl, rd);
@@ -1064,17 +1045,17 @@ static ref<Expr> EqExpr_createPartialR(const ref<ConstantExpr> &cl, Expr *r) {
     if (value) {
       return r;
     } else {
-      // 0 != ...
+      // 0 == ...
       
       if (rk == Expr::Eq) {
         const EqExpr *ree = cast<EqExpr>(r);
 
         // eliminate double negation
         if (ConstantExpr *CE = dyn_cast<ConstantExpr>(ree->left)) {
-          if (CE->getWidth() == Expr::Bool) {
-            assert(!CE->getConstantValue());
+          // 0 == (0 == A) => A
+          if (CE->getWidth() == Expr::Bool &&
+              CE->isFalse())
             return ree->right;
-          }
         }
       } else if (rk == Expr::Or) {
         const OrExpr *roe = cast<OrExpr>(r);

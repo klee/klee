@@ -75,7 +75,7 @@ ExprVisitor::Action ExprEvaluator::protectedDivOperation(const BinaryExpr &e) {
                         visit(e.right) };
 
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(kids[1]))
-    if (!CE->getConstantValue())
+    if (CE->isZero())
       kids[1] = e.right;
 
   if (kids[0]!=e.left || kids[1]!=e.right) {

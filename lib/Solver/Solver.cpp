@@ -57,7 +57,7 @@ bool Solver::evaluate(const Query& query, Validity &result) {
 
   // Maintain invariants implementations expect.
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(query.expr)) {
-    result = CE->getConstantValue() ? True : False;
+    result = CE->isTrue() ? True : False;
     return true;
   }
 
@@ -83,7 +83,7 @@ bool Solver::mustBeTrue(const Query& query, bool &result) {
 
   // Maintain invariants implementations expect.
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(query.expr)) {
-    result = CE->getConstantValue() ? true : false;
+    result = CE->isTrue() ? true : false;
     return true;
   }
 

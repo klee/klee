@@ -88,12 +88,9 @@ namespace klee {
   template<typename InputIterator>
   inline bool Assignment::satisfies(InputIterator begin, InputIterator end) {
     AssignmentEvaluator v(*this);
-    for (; begin!=end; ++begin) {
-      ref<Expr> res = v.visit(*begin);
-      ConstantExpr *CE = dyn_cast<ConstantExpr>(res);
-      if (!CE || !CE->getConstantValue())
+    for (; begin!=end; ++begin)
+      if (!v.visit(*begin)->isTrue())
         return false;
-    }
     return true;
   }
 }

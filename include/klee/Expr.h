@@ -354,6 +354,28 @@ public:
   }
   static bool classof(const ConstantExpr *) { return true; }
 
+  /* Utility Functions */
+
+  /// isZero - Is this a constant zero.
+  bool isZero() const { return getConstantValue() == 0; }
+  
+  /// isTrue - Is this the true expression.
+  bool isTrue() const { 
+    assert(getWidth() == Expr::Bool && "Invalid isTrue() call!");
+    return getConstantValue() == 1;
+  }
+
+  /// isFalse - Is this the false expression.
+  bool isFalse() const {
+    assert(getWidth() == Expr::Bool && "Invalid isTrue() call!");
+    return getConstantValue() == 0;
+  }
+
+  /// isAllOnes - Is this constant all ones.
+  bool isAllOnes() const {
+    return getConstantValue() == bits64::maxValueOfNBits(getWidth());
+  }
+
   /* Constant Operations */
 
   ref<ConstantExpr> Concat(const ref<ConstantExpr> &RHS);
@@ -936,21 +958,21 @@ COMPARISON_EXPR_CLASS(Sge)
 
 inline bool Expr::isZero() const {
   if (const ConstantExpr *CE = dyn_cast<ConstantExpr>(this))
-    return CE->getConstantValue() == 0;
+    return CE->isZero();
   return false;
 }
   
 inline bool Expr::isTrue() const {
+  assert(getWidth() == Expr::Bool && "Invalid isTrue() call!");
   if (const ConstantExpr *CE = dyn_cast<ConstantExpr>(this))
-    return (CE->getWidth() == Expr::Bool &&
-            CE->getConstantValue() == 1);
+    return CE->isTrue();
   return false;
 }
   
 inline bool Expr::isFalse() const {
+  assert(getWidth() == Expr::Bool && "Invalid isFalse() call!");
   if (const ConstantExpr *CE = dyn_cast<ConstantExpr>(this))
-    return (CE->getWidth() == Expr::Bool &&
-            CE->getConstantValue() == 0);
+    return CE->isFalse();
   return false;
 }
 

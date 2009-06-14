@@ -374,7 +374,7 @@ public:
   void printConst(const ref<ConstantExpr> &e, PrintContext &PC, 
                   bool printWidth) {
     if (e->getWidth() == Expr::Bool)
-      PC << (e->getConstantValue() ? "true" : "false");
+      PC << (e->isTrue() ? "true" : "false");
     else {
       if (PCAllConstWidths)
 	printWidth = true;
