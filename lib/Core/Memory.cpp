@@ -61,8 +61,6 @@ ObjectHolder &ObjectHolder::operator=(const ObjectHolder &b) {
 
 int MemoryObject::counter = 0;
 
-extern "C" void vc_DeleteExpr(void*);
-
 MemoryObject::~MemoryObject() {
 }
 

@@ -353,6 +353,36 @@ public:
     return E->getKind() == Expr::Constant;
   }
   static bool classof(const ConstantExpr *) { return true; }
+
+  /* Constant Operations */
+
+  ref<ConstantExpr> Concat(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> Extract(unsigned offset, Width W);
+  ref<ConstantExpr> ZExt(Width W);
+  ref<ConstantExpr> SExt(Width W);
+  ref<ConstantExpr> Add(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> Sub(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> Mul(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> UDiv(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> SDiv(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> URem(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> SRem(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> And(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> Or(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> Xor(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> Shl(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> LShr(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> AShr(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> Eq(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> Ne(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> Ult(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> Ule(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> Ugt(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> Uge(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> Slt(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> Sle(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> Sgt(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> Sge(const ref<ConstantExpr> &RHS);
 };
 
   

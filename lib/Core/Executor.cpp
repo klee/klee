@@ -242,7 +242,7 @@ namespace {
 
   cl::opt<bool>
   MaxMemoryInhibit("max-memory-inhibit",
-            cl::desc("Inhibit forking at memory cap (vs. random terminat)"),
+            cl::desc("Inhibit forking at memory cap (vs. random terminate)"),
             cl::init(true));
 
   // use 'external storage' because also needed by tools/klee/main.cpp

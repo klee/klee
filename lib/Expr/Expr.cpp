@@ -345,6 +345,166 @@ void ConstantExpr::toMemory(void *address) {
   }
 }
 
+ref<ConstantExpr> ConstantExpr::Concat(const ref<ConstantExpr> &RHS) {
+  Expr::Width W = getWidth() + RHS->getWidth();
+  assert(W <= 64 && "FIXME: Support arbitrary bit-widths!");
+  
+  uint64_t res = (getConstantValue() << RHS->getWidth()) + 
+    RHS->getConstantValue();
+  return ConstantExpr::create(res, W);
+}
+
+ref<ConstantExpr> ConstantExpr::Extract(unsigned Offset, Width W) {
+  return ConstantExpr::create(ints::trunc(getConstantValue() >> Offset, W, 
+                                          getWidth()), W);
+}
+
+ref<ConstantExpr> ConstantExpr::ZExt(Width W) {
+  return ConstantExpr::create(ints::zext(getConstantValue(), W, getWidth()), W);
+}
+
+ref<ConstantExpr> ConstantExpr::SExt(Width W) {
+  return ConstantExpr::create(ints::sext(getConstantValue(), W, getWidth()), W);
+}
+
+ref<ConstantExpr> ConstantExpr::Add(const ref<ConstantExpr> &RHS) {
+  return ConstantExpr::create(ints::add(getConstantValue(), 
+                                        RHS->getConstantValue(), getWidth()),
+                              getWidth());
+}
+
+ref<ConstantExpr> ConstantExpr::Sub(const ref<ConstantExpr> &RHS) {
+  return ConstantExpr::create(ints::sub(getConstantValue(), 
+                                        RHS->getConstantValue(), getWidth()),
+                              getWidth());
+}
+
+ref<ConstantExpr> ConstantExpr::Mul(const ref<ConstantExpr> &RHS) {
+  return ConstantExpr::create(ints::mul(getConstantValue(), 
+                                        RHS->getConstantValue(), getWidth()),
+                              getWidth());
+}
+
+ref<ConstantExpr> ConstantExpr::UDiv(const ref<ConstantExpr> &RHS) {
+  return ConstantExpr::create(ints::udiv(getConstantValue(), 
+                                        RHS->getConstantValue(), getWidth()),
+                              getWidth());
+}
+
+ref<ConstantExpr> ConstantExpr::SDiv(const ref<ConstantExpr> &RHS) {
+  return ConstantExpr::create(ints::sdiv(getConstantValue(), 
+                                        RHS->getConstantValue(), getWidth()),
+                              getWidth());
+}
+
+ref<ConstantExpr> ConstantExpr::URem(const ref<ConstantExpr> &RHS) {
+  return ConstantExpr::create(ints::urem(getConstantValue(), 
+                                        RHS->getConstantValue(), getWidth()),
+                              getWidth());
+}
+
+ref<ConstantExpr> ConstantExpr::SRem(const ref<ConstantExpr> &RHS) {
+  return ConstantExpr::create(ints::srem(getConstantValue(), 
+                                        RHS->getConstantValue(), getWidth()),
+                              getWidth());
+}
+
+ref<ConstantExpr> ConstantExpr::And(const ref<ConstantExpr> &RHS) {
+  return ConstantExpr::create(ints::land(getConstantValue(), 
+                                         RHS->getConstantValue(), getWidth()),
+                              getWidth());
+}
+
+ref<ConstantExpr> ConstantExpr::Or(const ref<ConstantExpr> &RHS) {
+  return ConstantExpr::create(ints::lor(getConstantValue(), 
+                                        RHS->getConstantValue(), getWidth()),
+                              getWidth());
+}
+
+ref<ConstantExpr> ConstantExpr::Xor(const ref<ConstantExpr> &RHS) {
+  return ConstantExpr::create(ints::lxor(getConstantValue(), 
+                                         RHS->getConstantValue(), getWidth()),
+                              getWidth());
+}
+
+ref<ConstantExpr> ConstantExpr::Shl(const ref<ConstantExpr> &RHS) {
+  return ConstantExpr::create(ints::shl(getConstantValue(), 
+                                        RHS->getConstantValue(), getWidth()),
+                              getWidth());
+}
+
+ref<ConstantExpr> ConstantExpr::LShr(const ref<ConstantExpr> &RHS) {
+  return ConstantExpr::create(ints::lshr(getConstantValue(), 
+                                        RHS->getConstantValue(), getWidth()),
+                              getWidth());
+}
+
+ref<ConstantExpr> ConstantExpr::AShr(const ref<ConstantExpr> &RHS) {
+  return ConstantExpr::create(ints::ashr(getConstantValue(), 
+                                        RHS->getConstantValue(), getWidth()),
+                              getWidth());
+}
+
+ref<ConstantExpr> ConstantExpr::Eq(const ref<ConstantExpr> &RHS) {
+  return ConstantExpr::create(ints::eq(getConstantValue(), 
+                                        RHS->getConstantValue(), getWidth()),
+                              Expr::Bool);
+}
+
+ref<ConstantExpr> ConstantExpr::Ne(const ref<ConstantExpr> &RHS) {
+  return ConstantExpr::create(ints::ne(getConstantValue(), 
+                                        RHS->getConstantValue(), getWidth()),
+                              Expr::Bool);
+}
+
+ref<ConstantExpr> ConstantExpr::Ult(const ref<ConstantExpr> &RHS) {
+  return ConstantExpr::create(ints::ult(getConstantValue(), 
+                                        RHS->getConstantValue(), getWidth()),
+                              Expr::Bool);
+}
+
+ref<ConstantExpr> ConstantExpr::Ule(const ref<ConstantExpr> &RHS) {
+  return ConstantExpr::create(ints::ule(getConstantValue(), 
+                                        RHS->getConstantValue(), getWidth()),
+                              Expr::Bool);
+}
+
+ref<ConstantExpr> ConstantExpr::Ugt(const ref<ConstantExpr> &RHS) {
+  return ConstantExpr::create(ints::ugt(getConstantValue(), 
+                                        RHS->getConstantValue(), getWidth()),
+                              Expr::Bool);
+}
+
+ref<ConstantExpr> ConstantExpr::Uge(const ref<ConstantExpr> &RHS) {
+  return ConstantExpr::create(ints::uge(getConstantValue(), 
+                                        RHS->getConstantValue(), getWidth()),
+                              Expr::Bool);
+}
+
+ref<ConstantExpr> ConstantExpr::Slt(const ref<ConstantExpr> &RHS) {
+  return ConstantExpr::create(ints::slt(getConstantValue(), 
+                                        RHS->getConstantValue(), getWidth()),
+                              Expr::Bool);
+}
+
+ref<ConstantExpr> ConstantExpr::Sle(const ref<ConstantExpr> &RHS) {
+  return ConstantExpr::create(ints::sle(getConstantValue(), 
+                                        RHS->getConstantValue(), getWidth()),
+                              Expr::Bool);
+}
+
+ref<ConstantExpr> ConstantExpr::Sgt(const ref<ConstantExpr> &RHS) {
+  return ConstantExpr::create(ints::sgt(getConstantValue(), 
+                                        RHS->getConstantValue(), getWidth()),
+                              Expr::Bool);
+}
+
+ref<ConstantExpr> ConstantExpr::Sge(const ref<ConstantExpr> &RHS) {
+  return ConstantExpr::create(ints::sge(getConstantValue(), 
+                                        RHS->getConstantValue(), getWidth()),
+                              Expr::Bool);
+}
+
 /***/
 
 ref<Expr>  NotOptimizedExpr::create(ref<Expr> src) {
@@ -424,22 +584,15 @@ ref<Expr> SelectExpr::create(ref<Expr> c, ref<Expr> t, ref<Expr> f) {
 
 /***/
 
-
 ref<Expr> ConcatExpr::create(const ref<Expr> &l, const ref<Expr> &r) {
   Expr::Width w = l->getWidth() + r->getWidth();
   
   // Fold concatenation of constants.
   //
   // FIXME: concat 0 x -> zext x ?
-  if (ConstantExpr *lCE = dyn_cast<ConstantExpr>(l)) {
-    if (ConstantExpr *rCE = dyn_cast<ConstantExpr>(r)) {
-      assert(w <= 64 && "ConcatExpr::create(): don't support concats describing constants greater than 64 bits yet");
-      
-      uint64_t res = (lCE->getConstantValue() << rCE->getWidth()) + 
-        rCE->getConstantValue();
-      return ConstantExpr::create(res, w);
-    }
-  }
+  if (ConstantExpr *lCE = dyn_cast<ConstantExpr>(l))
+    if (ConstantExpr *rCE = dyn_cast<ConstantExpr>(r))
+      return lCE->Concat(rCE);
 
   // Merge contiguous Extracts
   if (ExtractExpr *ee_left = dyn_cast<ExtractExpr>(l)) {
@@ -468,7 +621,7 @@ ref<Expr> ConcatExpr::createN(unsigned n_kids, const ref<Expr> kids[]) {
 
 /// Shortcut to concat 4 kids.  The chain returned is unbalanced to the right
 ref<Expr> ConcatExpr::create4(const ref<Expr> &kid1, const ref<Expr> &kid2,
-				     const ref<Expr> &kid3, const ref<Expr> &kid4) {
+                              const ref<Expr> &kid3, const ref<Expr> &kid4) {
   return ConcatExpr::create(kid1, ConcatExpr::create(kid2, ConcatExpr::create(kid3, kid4)));
 }
 
@@ -490,8 +643,7 @@ ref<Expr> ExtractExpr::create(ref<Expr> expr, unsigned off, Width w) {
   if (w == kw) {
     return expr;
   } else if (ConstantExpr *CE = dyn_cast<ConstantExpr>(expr)) {
-    return ConstantExpr::create(ints::trunc(CE->getConstantValue() >> off, w, 
-                                            kw), w);
+    return CE->Extract(off, w);
   } else {
     // Extract(Concat)
     if (ConcatExpr *ce = dyn_cast<ConcatExpr>(expr)) {
@@ -525,11 +677,9 @@ ref<Expr> ZExtExpr::create(const ref<Expr> &e, Width w) {
     return e;
   } else if (w < kBits) { // trunc
     return ExtractExpr::createByteOff(e, 0, w);
+  } else if (ConstantExpr *CE = dyn_cast<ConstantExpr>(e)) {
+    return CE->ZExt(w);
   } else {
-    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(e))
-      return ConstantExpr::create(ints::zext(CE->getConstantValue(), w, kBits),
-                                  w);
-    
     return ZExtExpr::alloc(e, w);
   }
 }
@@ -540,11 +690,9 @@ ref<Expr> SExtExpr::create(const ref<Expr> &e, Width w) {
     return e;
   } else if (w < kBits) { // trunc
     return ExtractExpr::createByteOff(e, 0, w);
-  } else {
-    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(e))
-      return ConstantExpr::create(ints::sext(CE->getConstantValue(), w, kBits),
-                                  w);
-    
+  } else if (ConstantExpr *CE = dyn_cast<ConstantExpr>(e)) {
+    return CE->SExt(w);
+  } else {    
     return SExtExpr::alloc(e, w);
   }
 }
@@ -809,14 +957,9 @@ static ref<Expr> AShrExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
 ref<Expr>  _e_op ::create(const ref<Expr> &l, const ref<Expr> &r) { \
   assert(l->getWidth()==r->getWidth() && "type mismatch");              \
   if (ConstantExpr *cl = dyn_cast<ConstantExpr>(l)) {                   \
-    if (ConstantExpr *cr = dyn_cast<ConstantExpr>(r)) {                 \
-      Expr::Width width = l->getWidth();                                \
-      uint64_t val = ints::_op(cl->getConstantValue(),                  \
-                               cr->getConstantValue(), width);          \
-      return ConstantExpr::create(val, width);                          \
-    } else {                                                            \
-      return _e_op ## _createPartialR(cl, r.get());                     \
-    }                                                                   \
+    if (ConstantExpr *cr = dyn_cast<ConstantExpr>(r))                   \
+      return cl->_op(cr);                                               \
+    return _e_op ## _createPartialR(cl, r.get());                       \
   } else if (ConstantExpr *cr = dyn_cast<ConstantExpr>(r)) {            \
     return _e_op ## _createPartial(l.get(), cr);                        \
   }                                                                     \
@@ -826,42 +969,32 @@ ref<Expr>  _e_op ::create(const ref<Expr> &l, const ref<Expr> &r) { \
 #define BCREATE(_e_op, _op) \
 ref<Expr>  _e_op ::create(const ref<Expr> &l, const ref<Expr> &r) { \
   assert(l->getWidth()==r->getWidth() && "type mismatch");          \
-  if (ConstantExpr *cl = dyn_cast<ConstantExpr>(l)) {               \
-    if (ConstantExpr *cr = dyn_cast<ConstantExpr>(r)) {             \
-      Expr::Width width = l->getWidth();                            \
-      uint64_t val = ints::_op(cl->getConstantValue(),              \
-                               cr->getConstantValue(), width);      \
-      return ConstantExpr::create(val, width);                      \
-    }                                                               \
-  }                                                                 \
+  if (ConstantExpr *cl = dyn_cast<ConstantExpr>(l))                 \
+    if (ConstantExpr *cr = dyn_cast<ConstantExpr>(r))               \
+      return cl->_op(cr);                                           \
   return _e_op ## _create(l, r);                                    \
 }
 
-BCREATE_R(AddExpr, add, AddExpr_createPartial, AddExpr_createPartialR)
-BCREATE_R(SubExpr, sub, SubExpr_createPartial, SubExpr_createPartialR)
-BCREATE_R(MulExpr, mul, MulExpr_createPartial, MulExpr_createPartialR)
-BCREATE_R(AndExpr, land, AndExpr_createPartial, AndExpr_createPartialR)
-BCREATE_R(OrExpr, lor, OrExpr_createPartial, OrExpr_createPartialR)
-BCREATE_R(XorExpr, lxor, XorExpr_createPartial, XorExpr_createPartialR)
-BCREATE(UDivExpr, udiv)
-BCREATE(SDivExpr, sdiv)
-BCREATE(URemExpr, urem)
-BCREATE(SRemExpr, srem)
-BCREATE(ShlExpr, shl)
-BCREATE(LShrExpr, lshr)
-BCREATE(AShrExpr, ashr)
+BCREATE_R(AddExpr, Add, AddExpr_createPartial, AddExpr_createPartialR)
+BCREATE_R(SubExpr, Sub, SubExpr_createPartial, SubExpr_createPartialR)
+BCREATE_R(MulExpr, Mul, MulExpr_createPartial, MulExpr_createPartialR)
+BCREATE_R(AndExpr, And, AndExpr_createPartial, AndExpr_createPartialR)
+BCREATE_R(OrExpr, Or, OrExpr_createPartial, OrExpr_createPartialR)
+BCREATE_R(XorExpr, Xor, XorExpr_createPartial, XorExpr_createPartialR)
+BCREATE(UDivExpr, UDiv)
+BCREATE(SDivExpr, SDiv)
+BCREATE(URemExpr, URem)
+BCREATE(SRemExpr, SRem)
+BCREATE(ShlExpr, Shl)
+BCREATE(LShrExpr, LShr)
+BCREATE(AShrExpr, AShr)
 
 #define CMPCREATE(_e_op, _op) \
 ref<Expr>  _e_op ::create(const ref<Expr> &l, const ref<Expr> &r) { \
   assert(l->getWidth()==r->getWidth() && "type mismatch");              \
-  if (ConstantExpr *cl = dyn_cast<ConstantExpr>(l)) {                   \
-    if (ConstantExpr *cr = dyn_cast<ConstantExpr>(r)) {                 \
-      Expr::Width width = cl->getWidth();                               \
-      uint64_t val = ints::_op(cl->getConstantValue(),                  \
-                               cr->getConstantValue(), width);          \
-      return ConstantExpr::create(val, Expr::Bool);                     \
-    }                                                                   \
-  }                                                                     \
+  if (ConstantExpr *cl = dyn_cast<ConstantExpr>(l))                     \
+    if (ConstantExpr *cr = dyn_cast<ConstantExpr>(r))                   \
+      return cl->_op(cr);                                               \
   return _e_op ## _create(l, r);                                        \
 }
 
@@ -869,14 +1002,9 @@ ref<Expr>  _e_op ::create(const ref<Expr> &l, const ref<Expr> &r) { \
 ref<Expr>  _e_op ::create(const ref<Expr> &l, const ref<Expr> &r) {    \
   assert(l->getWidth()==r->getWidth() && "type mismatch");             \
   if (ConstantExpr *cl = dyn_cast<ConstantExpr>(l)) {                  \
-    if (ConstantExpr *cr = dyn_cast<ConstantExpr>(r)) {                \
-      Expr::Width width = cl->getWidth();                              \
-      uint64_t val = ints::_op(cl->getConstantValue(),                 \
-                               cr->getConstantValue(), width);         \
-      return ConstantExpr::create(val, Expr::Bool);                    \
-    } else {                                                           \
-      return partialR(cl, r.get());                                    \
-    }                                                                  \
+    if (ConstantExpr *cr = dyn_cast<ConstantExpr>(r))                  \
+      return cl->_op(cr);                                              \
+    return partialR(cl, r.get());                                      \
   } else if (ConstantExpr *cr = dyn_cast<ConstantExpr>(r)) {           \
     return partialL(l.get(), cr);                                      \
   } else {                                                             \
@@ -1072,8 +1200,8 @@ static ref<Expr> SleExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
   }
 }
 
-CMPCREATE_T(EqExpr, eq, EqExpr, EqExpr_createPartial, EqExpr_createPartialR)
-CMPCREATE(UltExpr, ult)
-CMPCREATE(UleExpr, ule)
-CMPCREATE(SltExpr, slt)
-CMPCREATE(SleExpr, sle)
+CMPCREATE_T(EqExpr, Eq, EqExpr, EqExpr_createPartial, EqExpr_createPartialR)
+CMPCREATE(UltExpr, Ult)
+CMPCREATE(UleExpr, Ule)
+CMPCREATE(SltExpr, Slt)
+CMPCREATE(SleExpr, Sle)
