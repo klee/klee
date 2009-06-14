@@ -135,8 +135,8 @@ private:
   std::map<const llvm::GlobalValue*, ref<Expr> > globalAddresses;
 
   /// The set of legal function addresses, used to validate function
-  /// pointers.
-  std::set<void*> legalFunctions;
+  /// pointers. We use the actual Function* address as the function address.
+  std::set<uint64_t> legalFunctions;
 
   /// When non-null the bindings that will be used for calls to
   /// klee_make_symbolic in order replay.

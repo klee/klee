@@ -430,7 +430,7 @@ void ObjectState::write8(ref<Expr> offset, ref<Expr> value) {
 
 ref<Expr> ObjectState::read(ref<Expr> offset, Expr::Width width) const {
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(offset)) {
-    return read((unsigned) CE->getConstantValue(), width);
+    return read(CE->getZExtValue(32), width);
   } else { 
     switch (width) {
     default: assert(0 && "invalid type");
@@ -619,7 +619,7 @@ ref<Expr> ObjectState::read64(ref<Expr> offset) const {
 void ObjectState::write(ref<Expr> offset, ref<Expr> value) {
   Expr::Width w = value->getWidth();
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(offset)) {
-    write(CE->getConstantValue(), value);
+    write(CE->getZExtValue(32), value);
   } else {
     switch(w) {
     case  Expr::Bool:  write1(offset, value); break;
@@ -635,7 +635,7 @@ void ObjectState::write(ref<Expr> offset, ref<Expr> value) {
 void ObjectState::write(unsigned offset, ref<Expr> value) {
   Expr::Width w = value->getWidth();
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(value)) {
-    uint64_t val = CE->getConstantValue();
+    uint64_t val = CE->getZExtValue();
     switch(w) {
     case  Expr::Bool:
     case  Expr::Int8:  write8(offset, val); break;

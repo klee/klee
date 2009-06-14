@@ -453,17 +453,19 @@ public:
       // FIXME: This is imprecise, we need to look through the existing writes
       // to see if this is an initial read or not.
       if (ConstantExpr *CE = dyn_cast<ConstantExpr>(re->index)) {
-        if (CE->getConstantValue() < array->size) {
+        uint64_t index = CE->getZExtValue();
+
+        if (index < array->size) {
           // If the range is fixed, just set that; even if it conflicts with the
           // previous range it should be a better guess.
           if (range.isFixed()) {
-            cod.setPossibleValue(CE->getConstantValue(), range.min());
+            cod.setPossibleValue(index, range.min());
           } else {
-            CexValueData cvd = cod.getPossibleValues(CE->getConstantValue());
+            CexValueData cvd = cod.getPossibleValues(index);
             CexValueData tmp = cvd.set_intersection(range);
 
             if (!tmp.isEmpty())
-              cod.setPossibleValues(CE->getConstantValue(), tmp);
+              cod.setPossibleValues(index, tmp);
           }
         }
       } else {
@@ -637,23 +639,26 @@ public:
       BinaryExpr *be = cast<BinaryExpr>(e);
       if (range.isFixed()) {
         if (ConstantExpr *CE = dyn_cast<ConstantExpr>(be->left)) {
-          uint64_t value = CE->getConstantValue();
-          if (range.min()) {
-            propogatePossibleValue(be->right, value);
-          } else {
-            if (value==0) {
-              propogatePossibleValues(be->right, 
-                               CexValueData(1,
-                                            ints::sext(1, 
-                                                       be->right->getWidth(),
-                                                       1)));
+          // FIXME: Handle large widths?
+          if (CE->getWidth() <= 64) {
+            uint64_t value = CE->getZExtValue();
+            if (range.min()) {
+              propogatePossibleValue(be->right, value);
             } else {
-              // XXX heuristic / lossy, could be better to pick larger range?
-              propogatePossibleValues(be->right, CexValueData(0, value-1));
+              CexValueData range;
+              if (value==0) {
+                range = CexValueData(1, 
+                                     bits64::maxValueOfNBits(CE->getWidth()));
+              } else {
+                // FIXME: heuristic / lossy, could be better to pick larger
+                // range?
+                range = CexValueData(0, value - 1);
+              }
+              propogatePossibleValues(be->right, range);
             }
+          } else {
+            // XXX what now
           }
-        } else {
-          // XXX what now
         }
       }
       break;
@@ -833,15 +838,17 @@ public:
       BinaryExpr *be = cast<BinaryExpr>(e);
       if (range.isFixed()) {
         if (ConstantExpr *CE = dyn_cast<ConstantExpr>(be->left)) {
-          uint64_t value = CE->getConstantValue();
-          if (range.min()) {
-            // If the equality is true, then propogate the value.
-            propogateExactValue(be->right, value);
-          } else {
-            // If the equality is false and the comparison is of booleans, then
-            // we can infer the value to propogate.
-            if (be->right->getWidth() == Expr::Bool) {
-              propogateExactValue(be->right, !value);
+          // FIXME: Handle large widths?
+          if (CE->getWidth() <= 64) {
+            uint64_t value = CE->getZExtValue();
+            if (range.min()) {
+              // If the equality is true, then propogate the value.
+              propogateExactValue(be->right, value);
+            } else {
+              // If the equality is false and the comparison is of booleans,
+              // then we can infer the value to propogate.
+              if (be->right->getWidth() == Expr::Bool)
+                propogateExactValue(be->right, !value);
             }
           }
         }

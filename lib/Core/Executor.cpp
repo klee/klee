@@ -438,7 +438,7 @@ void Executor::initializeGlobals(ExecutionState &state) {
       addr = Expr::createPointer(0);
     } else {
       addr = Expr::createPointer((unsigned long) (void*) f);
-      legalFunctions.insert(f);
+      legalFunctions.insert((uint64_t) (unsigned long) (void*) f);
     }
     
     globalAddresses.insert(std::make_pair(f, addr));
@@ -1554,14 +1554,13 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         (void) success;
         StatePair res = fork(*free, EqExpr::create(v, value), true);
         if (res.first) {
-          void *addr = (void*) (unsigned long) value->getConstantValue();
-          std::set<void*>::iterator it = legalFunctions.find(addr);
-          if (it != legalFunctions.end()) {
+          uint64_t addr = value->getZExtValue();
+          if (legalFunctions.count(addr)) {
             f = (Function*) addr;
 
             // Don't give warning on unique resolution
             if (res.second || !first)
-              klee_warning_once(addr, 
+              klee_warning_once((void*) (unsigned long) addr, 
                                 "resolved symbolic function pointer to: %s",
                                 f->getName().c_str());
 
@@ -2373,13 +2372,13 @@ std::string Executor::getAddressInfo(ExecutionState &state,
   info << "\taddress: " << address << "\n";
   uint64_t example;
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(address)) {
-    example = CE->getConstantValue();
+    example = CE->getZExtValue();
   } else {
     ref<ConstantExpr> value;
     bool success = solver->getValue(state, address, value);
     assert(success && "FIXME: Unhandled solver failure");
     (void) success;
-    example = value->getConstantValue();
+    example = value->getZExtValue();
     info << "\texample: " << example << "\n";
     std::pair< ref<Expr>, ref<Expr> > res = solver->getRange(state, address);
     info << "\trange: [" << res.first << ", " << res.second <<"]\n";
@@ -2650,9 +2649,8 @@ void Executor::executeAlloc(ExecutionState &state,
                             const ObjectState *reallocFrom) {
   size = toUnique(state, size);
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(size)) {
-    MemoryObject *mo = 
-      memory->allocate(CE->getConstantValue(), isLocal, false, 
-                       state.prevPC->inst);
+    MemoryObject *mo = memory->allocate(CE->getZExtValue(), isLocal, false, 
+                                        state.prevPC->inst);
     if (!mo) {
       bindLocal(target, state, ConstantExpr::alloc(0, kMachinePointerType));
     } else {

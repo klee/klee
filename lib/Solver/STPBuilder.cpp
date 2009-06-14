@@ -587,7 +587,7 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
     
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(de->right)) {
       if (CE->getWidth() <= 64) {
-        uint64_t divisor = CE->getConstantValue();
+        uint64_t divisor = CE->getZExtValue();
       
         if (bits64::isPowerOfTwo(divisor)) {
           return bvRightShift(left,
@@ -629,7 +629,7 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
     
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(de->right)) {
       if (CE->getWidth() <= 64) {
-        uint64_t divisor = CE->getConstantValue();
+        uint64_t divisor = CE->getZExtValue();
 
         if (bits64::isPowerOfTwo(divisor)) {
           unsigned bits = bits64::indexOfSingleBit(divisor);
@@ -644,8 +644,8 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
           }
         }
 
-      // Use fast division to compute modulo without explicit division for
-      // constant divisor.
+        // Use fast division to compute modulo without explicit division for
+        // constant divisor.
 
         if (optimizeDivides) {
           if (*width_out == 32) { //only works for 32-bit division
