@@ -28,15 +28,19 @@
   (list
    ;; Comments
    '("#.*" . font-lock-comment-face)
+   ;; Keywords
+   '("\\bdef\\b\\|\\bvar\\b\\|\\btrue\\b\\|\\barray\\b\\|\\bfalse\\b\\|\\bquery\\b\\|\\bdefine\\b\\|\\bdeclare\\b\\|\\bsymbolic\\b" . font-lock-keyword-face)
+   ;; Functions
+   '("\\bEq\\b\\|\\bNe\\b\\|\\bOr\\b\\|\\bAdd\\b\\|\\bSub\\b\\|\\bMul\\b\\|\\bAnd\\b\\|\\bShl\\b\\|\\bXor\\b\\|\\bNot\\b\\|\\bNeg\\b\\|\\bUlt\\b\\|\\bUle\\b\\|\\bUgt\\b\\|\\bUge\\b\\|\\bSlt\\b\\|\\bSle\\b\\|\\bSgt\\b\\|\\bSge\\b\\|\\bRead\\b\\|\\bAShr\\b\\|\\bLShr\\b\\|\\bUDiv\\b\\|\\bSDiv\\b\\|\\bURem\\b\\|\\bSRem\\b\\|\\bSExt\\b\\|\\bZExt\\b\\|\\bConcat\\b\\|\\bSelect\\b\\|\\bExtract\\b\\|\\bReadLSB\\b\\|\\bReadMSB\\b" . font-lock-function-name-face)
+   ;; Types
+   '("w[0-9]+" . font-lock-type-face)
    ;; Identifiers
-   '("%[_a-zA-Z][a-zA-Z_.0-9]*" . font-lock-variable-name-face)
+   '("[_a-zA-Z][a-zA-Z_.0-9]*" . font-lock-variable-name-face)
    ;; Numbers
    '("[+-]?0b[01_]+" . font-lock-preprocessor-face)
    '("[+-]?0o[0-7_]+" . font-lock-preprocessor-face)
    '("[+-]?0x[a-zA-Z0-9_]+" . font-lock-preprocessor-face)
    '("[+-]?[0-9]+" . font-lock-preprocessor-face)
-   ;; Keywords
-   '("\\bdef\\b\\|\\bvar\\b\\|\\btrue\\b\\|\\barray\\b\\|\\bfalse\\b\\|\\bquery\\b\\|\\bdefine\\b\\|\\bdeclare\\b" . font-lock-keyword-face)
    )
   "klee-PC mode keywords")
 
