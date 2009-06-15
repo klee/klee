@@ -1,5 +1,72 @@
 # RUN: %kleaver --builder=constant-folding -print-ast %s > %t
 
+array a[64] : w32 -> w8 = symbolic
+
 # RUN: grep -A 2 \"# Query 1\" %t > %t2
 # RUN: grep \"(query .. false)\" %t2
 (query [] (Not (Ult (w32 0) (w32 1))))
+
+# Check -- 0 + X ==> X
+# RUN: grep -A 2 \"# Query 2\" %t > %t2
+# RUN: grep \"(query .. false .(Read w8 0 a).)\" %t2
+(query [] false [(Add w8 0 (Read w8 0 a))])
+# RUN: grep -A 2 \"# Query 3\" %t > %t2
+# RUN: grep \"(query .. false .(Read w8 0 a).)\" %t2
+(query [] false [(Add w8 (Read w8 0 a) 0)])
+
+# Check -- C_0 + (C_1 + X) ==> (C_0 + C_1) + X
+# RUN: grep -A 2 \"# Query 4\" %t > %t2
+# RUN: grep \"(query .. false .(Add w8 30 (Read w8 0 a)).)\" %t2
+(query [] false [(Add w8 10 (Add w8 20 (Read w8 0 a)))])
+
+# Check -- C_0 + (X + C_1) ==> (C_0 + C_1) + X
+# RUN: grep -A 2 \"# Query 5\" %t > %t2
+# RUN: grep \"(query .. false .(Add w8 30 (Read w8 0 a)).)\" %t2
+(query [] false [(Add w8 10 (Add w8 (Read w8 0 a) 20))])
+
+# Check -- C_0 + (C_1 - X) ==> (C_0 + C_1) - X
+# RUN: grep -A 2 \"# Query 6\" %t > %t2
+# RUN: grep \"(query .. false .(Sub w8 30 (Read w8 0 a)).)\" %t2
+(query [] false [(Add w8 10 (Sub w8 20 (Read w8 0 a)))])
+
+# Check -- C_0 + (X - C_1) ==> (C_0 - C_1) + X
+# RUN: grep -A 2 \"# Query 7\" %t > %t2
+# RUN: grep \"(query .. false .(Add w8 246 (Read w8 0 a)).)\" %t2
+(query [] false [(Add w8 10 (Sub w8 (Read w8 0 a) 20))])
+
+# Check -- (X + Y) + Z ==> X + (Y + Z)
+# RUN: grep -A 3 \"# Query 8\" %t > %t2
+# RUN: grep \"(query .. false .(Add w8 (Read w8 0 a)\" %t2
+# RUN: grep                          \"(Add w8 (Read w8 1 a) (Read w8 2 a)\" %t2
+(query [] false [(Add w8 (Add w8 (Read w8 0 a) (Read w8 1 a)) (Read w8 2 a))])
+
+# Check -- (X - Y) + Z ==> X + (Z - Y)
+# RUN: grep -A 3 \"# Query 9\" %t > %t2
+# RUN: grep \"(query .. false .(Add w8 (Read w8 0 a)\" %t2
+# RUN: grep                          \"(Sub w8 (Read w8 2 a) (Read w8 1 a)\" %t2
+(query [] false [(Add w8 (Sub w8 (Read w8 0 a) (Read w8 1 a)) (Read w8 2 a))])
+
+# Check -- X + (C + Y) ==> C + (X + Y)
+# RUN: grep -A 3 \"# Query 10\" %t > %t2
+# RUN: grep \"(query .. false .(Add w8 10\" %t2
+# RUN: grep                          \"(Add w8 (Read w8 0 a) (Read w8 1 a)\" %t2
+(query [] false [(Add w8 (Read w8 0 a) (Add w8 10 (Read w8 1 a)))])
+
+# Check -- X + (Y + C) ==> C + (X + Y)
+# RUN: grep -A 3 \"# Query 11\" %t > %t2
+# RUN: grep \"(query .. false .(Add w8 10\" %t2
+# RUN: grep                          \"(Add w8 (Read w8 0 a) (Read w8 1 a)\" %t2
+(query [] false [(Add w8 (Read w8 0 a) (Add w8 (Read w8 1 a) 10))])
+
+# Check -- X + (C - Y) ==> C + (X - Y)
+# RUN: grep -A 3 \"# Query 12\" %t > %t2
+# RUN: grep \"(query .. false .(Add w8 10\" %t2
+# RUN: grep                          \"(Sub w8 (Read w8 0 a) (Read w8 1 a)\" %t2
+(query [] false [(Add w8 (Read w8 0 a) (Sub w8 10 (Read w8 1 a)))])
+
+# Check -- X + (Y - C) ==> -C + (X + Y)
+# RUN: grep -A 3 \"# Query 13\" %t > %t2
+# RUN: grep \"(query .. false .(Add w8 246\" %t2
+# RUN: grep                          \"(Add w8 (Read w8 0 a) (Read w8 1 a)\" %t2
+(query [] false [(Add w8 (Read w8 0 a) (Sub w8 (Read w8 1 a) 10))])
+

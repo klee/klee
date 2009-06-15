@@ -373,6 +373,12 @@ ref<ConstantExpr> ConstantExpr::Add(const ref<ConstantExpr> &RHS) {
                               getWidth());
 }
 
+ref<ConstantExpr> ConstantExpr::Neg() {
+  return ConstantExpr::create(ints::sub(0, 
+                                        getConstantValue(), getWidth()),
+                              getWidth());
+}
+
 ref<ConstantExpr> ConstantExpr::Sub(const ref<ConstantExpr> &RHS) {
   return ConstantExpr::create(ints::sub(getConstantValue(), 
                                         RHS->getConstantValue(), getWidth()),

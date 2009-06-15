@@ -566,7 +566,7 @@ void ExprPPrinter::printQuery(std::ostream &os,
 
   // Print expressions to obtain values for, if any.
   if (evalExprsBegin != evalExprsEnd) {
-    PC.breakLine(indent - 1);
+    p.printSeparator(PC, q->isFalse(), indent-1);
     PC << '[';
     for (const ref<Expr> *it = evalExprsBegin; it != evalExprsEnd; ++it) {
       p.print(*it, PC);

@@ -411,7 +411,6 @@ public:
   ref<ConstantExpr> Shl(const ref<ConstantExpr> &RHS);
   ref<ConstantExpr> LShr(const ref<ConstantExpr> &RHS);
   ref<ConstantExpr> AShr(const ref<ConstantExpr> &RHS);
-  ref<ConstantExpr> Not();
   ref<ConstantExpr> Eq(const ref<ConstantExpr> &RHS);
   ref<ConstantExpr> Ne(const ref<ConstantExpr> &RHS);
   ref<ConstantExpr> Ult(const ref<ConstantExpr> &RHS);
@@ -422,6 +421,9 @@ public:
   ref<ConstantExpr> Sle(const ref<ConstantExpr> &RHS);
   ref<ConstantExpr> Sgt(const ref<ConstantExpr> &RHS);
   ref<ConstantExpr> Sge(const ref<ConstantExpr> &RHS);
+
+  ref<ConstantExpr> Neg();
+  ref<ConstantExpr> Not();
 };
 
   
