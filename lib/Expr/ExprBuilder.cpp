@@ -765,6 +765,90 @@ namespace {
 
       return Base->Add(LHS, RHS);
     }
+
+    ref<Expr> Sub(const ref<ConstantExpr> &LHS,
+                  const ref<NonConstantExpr> &RHS) {
+      switch (RHS->getKind()) {
+      default: break;
+
+      case Expr::Add: {
+        BinaryExpr *BE = cast<BinaryExpr>(RHS);
+        // C_0 - (C_1 + X) ==> (C_0 - C1) - X
+        if (ConstantExpr *CE = dyn_cast<ConstantExpr>(BE->left))
+          return Builder->Sub(LHS->Sub(CE), BE->right);
+        // C_0 - (X + C_1) ==> (C_0 + C1) + X
+        if (ConstantExpr *CE = dyn_cast<ConstantExpr>(BE->right))
+          return Builder->Sub(LHS->Sub(CE), BE->left);
+        break;
+      }
+
+      case Expr::Sub: {
+        BinaryExpr *BE = cast<BinaryExpr>(RHS);
+        // C_0 - (C_1 - X) ==> (C_0 - C1) + X
+        if (ConstantExpr *CE = dyn_cast<ConstantExpr>(BE->left))
+          return Builder->Add(LHS->Sub(CE), BE->right);
+        // C_0 - (X - C_1) ==> (C_0 + C1) - X
+        if (ConstantExpr *CE = dyn_cast<ConstantExpr>(BE->right))
+          return Builder->Sub(LHS->Add(CE), BE->left);
+        break;
+      }
+      }
+
+      return Base->Sub(LHS, RHS);
+    }
+
+    ref<Expr> Sub(const ref<NonConstantExpr> &LHS,
+                  const ref<ConstantExpr> &RHS) {
+        // X - C_0 ==> -C_0 + X
+      return Add(RHS->Neg(), LHS);
+    }
+
+    ref<Expr> Sub(const ref<NonConstantExpr> &LHS,
+                  const ref<NonConstantExpr> &RHS) {
+      switch (LHS->getKind()) {
+      default: break;
+
+      case Expr::Add: {
+        BinaryExpr *BE = cast<BinaryExpr>(LHS);
+        // (X + Y) - Z ==> X + (Y - Z)
+        return Builder->Add(BE->left, Builder->Sub(BE->right, RHS));
+      }
+
+      case Expr::Sub: {
+        BinaryExpr *BE = cast<BinaryExpr>(LHS);
+        // (X - Y) - Z ==> X - (Y + Z)
+        return Builder->Sub(BE->left, Builder->Add(BE->right, RHS));
+      }
+      }
+
+      switch (RHS->getKind()) {
+      default: break;
+
+      case Expr::Add: {
+        BinaryExpr *BE = cast<BinaryExpr>(RHS);
+        // X - (C + Y) ==> -C + (X - Y)
+        if (ConstantExpr *CE = dyn_cast<ConstantExpr>(BE->left))
+          return Builder->Add(CE->Neg(), Builder->Sub(LHS, BE->right));
+        // X - (Y + C) ==> -C + (X + Y);
+        if (ConstantExpr *CE = dyn_cast<ConstantExpr>(BE->right))
+          return Builder->Add(CE->Neg(), Builder->Sub(LHS, BE->left));
+        break;
+      }
+
+      case Expr::Sub: {
+        BinaryExpr *BE = cast<BinaryExpr>(RHS);
+        // X - (C - Y) ==> -C + (X + Y)
+        if (ConstantExpr *CE = dyn_cast<ConstantExpr>(BE->left))
+          return Builder->Add(CE->Neg(), Builder->Add(LHS, BE->right));
+        // X - (Y - C) ==> C + (X - Y)
+        if (ConstantExpr *CE = dyn_cast<ConstantExpr>(BE->right))
+          return Builder->Add(CE, Builder->Sub(LHS, BE->left));
+        break;
+      }
+      }
+
+      return Base->Sub(LHS, RHS);
+    }
   };
 
   typedef ConstantSpecializedExprBuilder<ConstantFoldingBuilder>
