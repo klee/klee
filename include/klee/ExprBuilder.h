@@ -57,6 +57,16 @@ namespace klee {
     virtual ref<Expr> Sle(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
     virtual ref<Expr> Sgt(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
     virtual ref<Expr> Sge(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
+
+    // Utility functions
+
+    ref<Expr> False() { return ConstantExpr::alloc(0, Expr::Bool); }
+
+    ref<Expr> True() { return ConstantExpr::alloc(0, Expr::Bool); }
+
+    ref<Expr> Not(const ref<Expr> &LHS) {
+      return Eq(False(), LHS);
+    }
   };
 
   /// createDefaultExprBuilder - Create an expression builder which does no

@@ -854,142 +854,39 @@ namespace {
   typedef ConstantSpecializedExprBuilder<ConstantFoldingBuilder>
     ConstantFoldingExprBuilder;
 
-  class SimplifyingExprBuilder : public ExprBuilder {
-    ExprBuilder *Base;
-
+  class SimplifyingBuilder : public ChainedBuilder {
   public:
-    SimplifyingExprBuilder(ExprBuilder *_Base) : Base(_Base) {}
-    ~SimplifyingExprBuilder() {
-      delete Base;
+    SimplifyingBuilder(ExprBuilder *Builder, ExprBuilder *Base)
+      : ChainedBuilder(Builder, Base) {}
+
+    ref<Expr> Ne(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      // X != Y ==> !(X == Y)
+      return Builder->Not(Builder->Eq(LHS, RHS));
     }
 
-    virtual ref<Expr> Constant(uint64_t Value, Expr::Width W) {
-      return Base->Constant(Value, W);
+    ref<Expr> Ugt(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      // X u> Y ==> Y u< X
+      return Builder->Ult(RHS, LHS);
     }
 
-    virtual ref<Expr> NotOptimized(const ref<Expr> &Index) {
-      return Base->NotOptimized(Index);
+    ref<Expr> Uge(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      // X u>= Y ==> Y u<= X
+      return Builder->Ule(RHS, LHS);
     }
 
-    virtual ref<Expr> Read(const UpdateList &Updates,
-                           const ref<Expr> &Index) {
-      return Base->Read(Updates, Index);
+    ref<Expr> Sgt(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      // X s> Y ==> Y s< X
+      return Builder->Slt(RHS, LHS);
     }
 
-    virtual ref<Expr> Select(const ref<Expr> &Cond,
-                             const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      return Base->Select(Cond, LHS, RHS);
-    }
-
-    virtual ref<Expr> Concat(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      return Base->Concat(LHS, RHS);
-    }
-
-    virtual ref<Expr> Extract(const ref<Expr> &LHS,
-                              unsigned Offset, Expr::Width W) {
-      return Base->Extract(LHS, Offset, W);
-    }
-
-    virtual ref<Expr> ZExt(const ref<Expr> &LHS, Expr::Width W) {
-      return Base->ZExt(LHS, W);
-    }
-
-    virtual ref<Expr> SExt(const ref<Expr> &LHS, Expr::Width W) {
-      return Base->SExt(LHS, W);
-    }
-
-    virtual ref<Expr> Add(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      return Base->Add(LHS, RHS);
-    }
-
-    virtual ref<Expr> Sub(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      return Base->Sub(LHS, RHS);
-    }
-
-    virtual ref<Expr> Mul(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      return Base->Mul(LHS, RHS);
-    }
-
-    virtual ref<Expr> UDiv(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      return Base->UDiv(LHS, RHS);
-    }
-
-    virtual ref<Expr> SDiv(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      return Base->SDiv(LHS, RHS);
-    }
-
-    virtual ref<Expr> URem(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      return Base->URem(LHS, RHS);
-    }
-
-    virtual ref<Expr> SRem(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      return Base->SRem(LHS, RHS);
-    }
-
-    virtual ref<Expr> And(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      return Base->And(LHS, RHS);
-    }
-
-    virtual ref<Expr> Or(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      return Base->Or(LHS, RHS);
-    }
-
-    virtual ref<Expr> Xor(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      return Base->Xor(LHS, RHS);
-    }
-
-    virtual ref<Expr> Shl(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      return Base->Shl(LHS, RHS);
-    }
-
-    virtual ref<Expr> LShr(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      return Base->LShr(LHS, RHS);
-    }
-
-    virtual ref<Expr> AShr(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      return Base->AShr(LHS, RHS);
-    }
-
-    virtual ref<Expr> Eq(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      return Base->Eq(LHS, RHS);
-    }
-
-    virtual ref<Expr> Ne(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      return Base->Ne(LHS, RHS);
-    }
-
-    virtual ref<Expr> Ult(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      return Base->Ult(LHS, RHS);
-    }
-
-    virtual ref<Expr> Ule(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      return Base->Ule(LHS, RHS);
-    }
-
-    virtual ref<Expr> Ugt(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      return Base->Ugt(LHS, RHS);
-    }
-
-    virtual ref<Expr> Uge(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      return Base->Uge(LHS, RHS);
-    }
-
-    virtual ref<Expr> Slt(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      return Base->Slt(LHS, RHS);
-    }
-
-    virtual ref<Expr> Sle(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      return Base->Sle(LHS, RHS);
-    }
-
-    virtual ref<Expr> Sgt(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      return Base->Sgt(LHS, RHS);
-    }
-
-    virtual ref<Expr> Sge(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      return Base->Sge(LHS, RHS);
+    ref<Expr> Sge(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      // X s>= Y ==> Y s<= X
+      return Builder->Sle(RHS, LHS);
     }
   };
+
+  typedef ConstantSpecializedExprBuilder<SimplifyingBuilder>
+    SimplifyingExprBuilder;
 }
 
 ExprBuilder *klee::createDefaultExprBuilder() {

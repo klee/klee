@@ -1,0 +1,28 @@
+# RUN: %kleaver --builder=simplify -print-ast %s > %t
+
+array a[64] : w32 -> w8 = symbolic
+
+# Check -- X u> Y ==> Y u< X
+# RUN: grep -A 2 \"# Query 1\" %t > %t2
+# RUN: grep \"(query .. false .(Ult (Read w8 1 a) (Read w8 0 a)).)\" %t2
+(query [] false [(Ugt (Read w8 0 a) (Read w8 1 a))])
+
+# Check -- X u>= Y ==> Y u<= X
+# RUN: grep -A 2 \"# Query 2\" %t > %t2
+# RUN: grep \"(query .. false .(Ule (Read w8 1 a) (Read w8 0 a)).)\" %t2
+(query [] false [(Uge (Read w8 0 a) (Read w8 1 a))])
+
+# Check -- X u> Y ==> Y u< X
+# RUN: grep -A 2 \"# Query 3\" %t > %t2
+# RUN: grep \"(query .. false .(Slt (Read w8 1 a) (Read w8 0 a)).)\" %t2
+(query [] false [(Sgt (Read w8 0 a) (Read w8 1 a))])
+
+# Check -- X u>= Y ==> Y u<= X
+# RUN: grep -A 2 \"# Query 4\" %t > %t2
+# RUN: grep \"(query .. false .(Sle (Read w8 1 a) (Read w8 0 a)).)\" %t2
+(query [] false [(Sge (Read w8 0 a) (Read w8 1 a))])
+
+# Check -- X != Y ==> !(X == Y)
+# RUN: grep -A 2 \"# Query 5\" %t > %t2
+# RUN: grep \"(query .. false .(Not (Eq (Read w8 0 a) (Read w8 1 a))).)\" %t2
+(query [] false [(Ne (Read w8 0 a) (Read w8 1 a))])
