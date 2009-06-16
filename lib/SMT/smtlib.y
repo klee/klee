@@ -97,7 +97,7 @@ int smtliberror(const char *s)
 */
 
 %type <node> an_formula an_logical_formula an_atom prop_atom
-%type <node> an_term basic_term an_fun
+%type <node> an_term basic_term an_fun an_arithmetic_fun an_pred
 %type <str> logic_name status attribute user_value annotation annotations
 
 
@@ -154,8 +154,9 @@ int smtliberror(const char *s)
 %token EOF_TOK
 %token PAT_TOK
 
-%token FALSE_TOK
-%token TRUE_TOK
+
+%token BIT0_TOK
+%token BIT1_TOK
 
 %token BVCONCAT_TOK
 %token BVEXTRACT_TOK
@@ -485,68 +486,6 @@ an_logical_formula:
     {
       $$ = EqExpr::create($3, $4);
     }
-  | LPAREN_TOK NOT_TOK an_formula RPAREN_TOK
-    {
-      $$ = Expr::createNot($3);
-    }
-  | LPAREN_TOK NOT_TOK an_formula annotations RPAREN_TOK
-    {
-      $$ = Expr::createNot($3);
-    }
-
-  | LPAREN_TOK IMPLIES_TOK an_formula an_formula RPAREN_TOK
-    {
-      $$ = Expr::createImplies($3, $4);
-    }
-  | LPAREN_TOK IMPLIES_TOK an_formula an_formula annotations RPAREN_TOK
-    {
-      $$ = Expr::createImplies($3, $4);
-    }
-
-  | LPAREN_TOK IF_THEN_ELSE_TOK an_formula an_formula an_formula RPAREN_TOK
-    {
-      $$ = SelectExpr::create($3, $4, $5);
-    }
-  | LPAREN_TOK IF_THEN_ELSE_TOK an_formula an_formula an_formula annotations RPAREN_TOK
-    {
-      $$ = SelectExpr::create($3, $4, $5);
-    }
-
-  | LPAREN_TOK AND_TOK an_formula an_formula RPAREN_TOK
-    {
-      $$ = AndExpr::create($3, $4);
-    }
-  | LPAREN_TOK AND_TOK an_formula an_formula annotations RPAREN_TOK
-    {
-      $$ = AndExpr::create($3, $4);
-    }
-
-  | LPAREN_TOK OR_TOK an_formula an_formula RPAREN_TOK
-    {
-      $$ = OrExpr::create($3, $4);
-    }
-  | LPAREN_TOK OR_TOK an_formula an_formula annotations RPAREN_TOK
-    {
-      $$ = OrExpr::create($3, $4);
-    }
-
-  | LPAREN_TOK XOR_TOK an_formula an_formula RPAREN_TOK
-    {
-      $$ = XorExpr::create($3, $4);
-    }
-  | LPAREN_TOK XOR_TOK an_formula an_formula annotations RPAREN_TOK
-    {
-      $$ = XorExpr::create($3, $4);
-    }
-
-  | LPAREN_TOK IFF_TOK an_formula an_formula RPAREN_TOK
-    {
-      $$ = EqExpr::create($3, $4);
-    }
-  | LPAREN_TOK IFF_TOK an_formula an_formula annotations RPAREN_TOK
-    {
-      $$ = EqExpr::create($3, $4);
-    }
 ;
 
 
@@ -604,38 +543,17 @@ an_atom:
     {
       $$ = $1;
     }
-/*
   | LPAREN_TOK prop_atom annotations RPAREN_TOK 
     {
       $$ = $2;
-      delete $3;
     }
-  | LPAREN_TOK pred_symb an_terms annotations RPAREN_TOK
+  
+  | an_pred
     {
-      if ($4->size() == 1 && (*$4)[0] == "transclose" &&
-          $3->size() == 2) {
-        $$ = new CVC3::Expr(VC->listExpr("_TRANS_CLOSURE",
-                                        *$2, (*$3)[0], (*$3)[1]));
-      }
-      else {
-        std::vector<CVC3::Expr> tmp;
-        tmp.push_back(*$2);
-        tmp.insert(tmp.end(), $3->begin(), $3->end());
-        $$ = new CVC3::Expr(VC->listExpr(tmp));
-      }
-      delete $2;
-      delete $3;
-      delete $4;
+      $$ = $1;
     }
-  | LPAREN_TOK pred_symb an_terms RPAREN_TOK
-    {
-      std::vector<CVC3::Expr> tmp;
-      tmp.push_back(*$2);
-      tmp.insert(tmp.end(), $3->begin(), $3->end());
-      $$ = new CVC3::Expr(VC->listExpr(tmp));
-      delete $2;
-      delete $3;
-    }
+
+/*
   | LPAREN_TOK DISTINCT_TOK an_terms annotations RPAREN_TOK
     {
       $$ = new CVC3::Expr(VC->listExpr("_DISTINCT", *$3));
@@ -690,19 +608,156 @@ prop_atom:
 */
 ;  
 
-/*
-an_comparison_fun:
 
-    LPAREN_TOK IMPLIES_TOK an_term an_term RPAREN_TOK
+an_pred:
+    LPAREN_TOK BVULT_TOK an_term an_term RPAREN_TOK
     {
-      $$ = UltExpr::createImplies($3, $4);
+      $$ = UltExpr::create($3, $4);
     }
-  | LPAREN_TOK IMPLIES_TOK an_term an_term annotations RPAREN_TOK
+  | LPAREN_TOK BVULT_TOK an_term an_term annotations RPAREN_TOK
     {
-      $$ = Expr::createImplies($3, $4);
+      $$ = UltExpr::create($3, $4);
+    }
+
+  | LPAREN_TOK BVULE_TOK an_term an_term RPAREN_TOK
+    {
+      $$ = UleExpr::create($3, $4);
+    }
+  | LPAREN_TOK BVULE_TOK an_term an_term annotations RPAREN_TOK
+    {
+      $$ = UleExpr::create($3, $4);
+    }
+
+  | LPAREN_TOK BVUGT_TOK an_term an_term RPAREN_TOK
+    {
+      $$ = UgtExpr::create($3, $4);
+    }
+  | LPAREN_TOK BVUGT_TOK an_term an_term annotations RPAREN_TOK
+    {
+      $$ = UgtExpr::create($3, $4);
+    }
+
+  | LPAREN_TOK BVUGE_TOK an_term an_term RPAREN_TOK
+    {
+      $$ = UgeExpr::create($3, $4);
+    }
+  | LPAREN_TOK BVUGE_TOK an_term an_term annotations RPAREN_TOK
+    {
+      $$ = UgeExpr::create($3, $4);
+    }
+
+  | LPAREN_TOK BVSLT_TOK an_term an_term RPAREN_TOK
+    {
+      $$ = SltExpr::create($3, $4);
+    }
+  | LPAREN_TOK BVSLT_TOK an_term an_term annotations RPAREN_TOK
+    {
+      $$ = SltExpr::create($3, $4);
+    }
+
+  | LPAREN_TOK BVSLE_TOK an_term an_term RPAREN_TOK
+    {
+      $$ = SleExpr::create($3, $4);
+    }
+  | LPAREN_TOK BVSLE_TOK an_term an_term annotations RPAREN_TOK
+    {
+      $$ = SleExpr::create($3, $4);
+    }
+
+  | LPAREN_TOK BVSGT_TOK an_term an_term RPAREN_TOK
+    {
+      $$ = SgtExpr::create($3, $4);
+    }
+  | LPAREN_TOK BVSGT_TOK an_term an_term annotations RPAREN_TOK
+    {
+      $$ = SgtExpr::create($3, $4);
+    }
+
+  | LPAREN_TOK BVSGE_TOK an_term an_term RPAREN_TOK
+    {
+      $$ = SgeExpr::create($3, $4);
+    }
+  | LPAREN_TOK BVSGE_TOK an_term an_term annotations RPAREN_TOK
+    {
+      $$ = SgeExpr::create($3, $4);
     }
 ;
-*/
+
+
+an_arithmetic_fun:
+    LPAREN_TOK BVADD_TOK an_term an_term RPAREN_TOK
+    {
+      $$ = AddExpr::create($3, $4);
+    }
+  | LPAREN_TOK BVADD_TOK an_term an_term annotations RPAREN_TOK
+    {
+      $$ = AddExpr::create($3, $4);
+    }
+
+  | LPAREN_TOK BVSUB_TOK an_term an_term RPAREN_TOK
+    {
+      $$ = SubExpr::create($3, $4);
+    }
+  | LPAREN_TOK BVSUB_TOK an_term an_term annotations RPAREN_TOK
+    {
+      $$ = SubExpr::create($3, $4);
+    }
+
+  | LPAREN_TOK BVMUL_TOK an_term an_term RPAREN_TOK
+    {
+      $$ = MulExpr::create($3, $4);
+    }
+  | LPAREN_TOK BVMUL_TOK an_term an_term annotations RPAREN_TOK
+    {
+      $$ = MulExpr::create($3, $4);
+    }
+
+  | LPAREN_TOK BVUDIV_TOK an_term an_term RPAREN_TOK
+    {
+      $$ = UDivExpr::create($3, $4);
+    }
+  | LPAREN_TOK BVUDIV_TOK an_term an_term annotations RPAREN_TOK
+    {
+      $$ = UDivExpr::create($3, $4);
+    }
+
+  | LPAREN_TOK BVUREM_TOK an_term an_term RPAREN_TOK
+    {
+      $$ = URemExpr::create($3, $4);
+    }
+  | LPAREN_TOK BVUREM_TOK an_term an_term annotations RPAREN_TOK
+    {
+      $$ = URemExpr::create($3, $4);
+    }
+
+  | LPAREN_TOK BVSDIV_TOK an_term an_term RPAREN_TOK
+    {
+      $$ = SDivExpr::create($3, $4);
+    }
+  | LPAREN_TOK BVSDIV_TOK an_term an_term annotations RPAREN_TOK
+    {
+      $$ = SDivExpr::create($3, $4);
+    }
+
+  | LPAREN_TOK BVSREM_TOK an_term an_term RPAREN_TOK
+    {
+      $$ = SRemExpr::create($3, $4);
+    }
+  | LPAREN_TOK BVSREM_TOK an_term an_term annotations RPAREN_TOK
+    {
+      $$ = SRemExpr::create($3, $4);
+    }
+
+  | LPAREN_TOK BVSMOD_TOK an_term an_term RPAREN_TOK
+    {
+      $$ = NULL; // XXX: unsupported
+    }
+  | LPAREN_TOK BVSREM_TOK an_term an_term annotations RPAREN_TOK
+    {
+      $$ = NULL; // XXX: unsupported
+    }
+;
+
 
 
 an_fun:
@@ -711,47 +766,32 @@ an_fun:
       $$ = $1;
     }
 
+  | an_pred
+    {
+      $$ = $1;
+    }
+
+  | LPAREN_TOK BVCOMP_TOK an_term an_term RPAREN_TOK
+    {
+      $$ = EqExpr::create($3, $4);
+    }
+  | LPAREN_TOK BVCOMP_TOK an_term an_term annotations RPAREN_TOK
+    {
+      $$ = EqExpr::create($3, $4);
+    }
+ 
+  | an_arithmetic_fun
+    {
+      $$ = $1;
+    }
+
 /*
-      $$ = new std::vector<CVC3::Expr>;
-      if (BVENABLED && (*$1 == "bvlt" || *$1 == "bvult")) {
-        $$->push_back(VC->idExpr("_BVLT"));
-      }
-      else if (BVENABLED && (*$1 == "bvleq" || *$1 == "bvule")) {
-        $$->push_back(VC->idExpr("_BVLE"));
-      }
-      else if (BVENABLED && (*$1 == "bvgeq" || *$1 == "bvuge")) {
-        $$->push_back(VC->idExpr("_BVGE"));
-      }
-      else if (BVENABLED && (*$1 == "bvgt" || *$1 == "bvugt")) {
-        $$->push_back(VC->idExpr("_BVGT"));
-      }
-      else if (BVENABLED && *$1 == "bvslt") {
-        $$->push_back(VC->idExpr("_BVSLT"));
-      }
-      else if (BVENABLED && (*$1 == "bvsleq" || *$1 == "bvsle")) {
-        $$->push_back(VC->idExpr("_BVSLE"));
-      }
-      else if (BVENABLED && (*$1 == "bvsgeq" || *$1 == "bvsge")) {
-        $$->push_back(VC->idExpr("_BVSGE"));
-      }
-      else if (BVENABLED && *$1 == "bvsgt") {
-        $$->push_back(VC->idExpr("_BVSGT"));
-      }
+
       else if (ARRAYSENABLED && *$1 == "select") {
         $$->push_back(VC->idExpr("_READ"));
       }
       else if (ARRAYSENABLED && *$1 == "store") {
         $$->push_back(VC->idExpr("_WRITE"));
-      }
-      else if (BVENABLED && *$1 == "bit0") {
-        $$->push_back(VC->idExpr("_BVCONST"));
-        $$->push_back(VC->ratExpr(0));
-        $$->push_back(VC->ratExpr(1));
-      }
-      else if (BVENABLED && *$1 == "bit1") {
-        $$->push_back(VC->idExpr("_BVCONST"));
-        $$->push_back(VC->ratExpr(1));
-        $$->push_back(VC->ratExpr(1));
       }
       else if (BVENABLED && *$1 == "concat") {
         $$->push_back(VC->idExpr("_CONCAT"));
@@ -911,11 +951,11 @@ an_term:
 
 
 basic_term:
-    TRUE_TOK
+    BIT1_TOK
     {
       $$ = ConstantExpr::create(1, 1);
     }
-  | FALSE_TOK
+  | BIT0_TOK
     { 
       $$ = ConstantExpr::create(0, 1);;
     }

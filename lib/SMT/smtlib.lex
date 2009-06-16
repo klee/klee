@@ -203,8 +203,8 @@ IDCHAR  ({LETTER}|{DIGIT}|{OPCHAR})
 "?"             { return QUESTION_TOK; }
 
 
-"bit0"          { return FALSE_TOK; }
-"bit1"          { return TRUE_TOK; }
+"bit0"          { return BIT0_TOK; }
+"bit1"          { return BIT1_TOK; }
 
 "concat"        { return BVCONCAT_TOK; }
 "extract"       { return BVEXTRACT_TOK; }
@@ -236,6 +236,7 @@ IDCHAR  ({LETTER}|{DIGIT}|{OPCHAR})
 "bvsdiv"        { return BVSDIV_TOK; }
 "bvsrem"        { return BVSREM_TOK; }
 "bvsmod"        { return BVSMOD_TOK; }
+
 "bvshl"         { return BVSHL_TOK; }
 "bvlshr"        { return BVLSHR_TOK; }
 "bvashr"        { return BVASHR_TOK; }
