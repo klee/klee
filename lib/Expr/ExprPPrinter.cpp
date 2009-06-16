@@ -569,7 +569,7 @@ void ExprPPrinter::printQuery(std::ostream &os,
     p.printSeparator(PC, q->isFalse(), indent-1);
     PC << '[';
     for (const ref<Expr> *it = evalExprsBegin; it != evalExprsEnd; ++it) {
-      p.print(*it, PC);
+      p.print(*it, PC, /*printConstWidth*/true);
       if (it + 1 != evalExprsEnd)
         PC.breakLine(indent);
     }

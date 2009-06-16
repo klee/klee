@@ -829,7 +829,7 @@ namespace {
         // X - (C + Y) ==> -C + (X - Y)
         if (ConstantExpr *CE = dyn_cast<ConstantExpr>(BE->left))
           return Builder->Add(CE->Neg(), Builder->Sub(LHS, BE->right));
-        // X - (Y + C) ==> -C + (X + Y);
+        // X - (Y + C) ==> -C + (X + Y)
         if (ConstantExpr *CE = dyn_cast<ConstantExpr>(BE->right))
           return Builder->Add(CE->Neg(), Builder->Sub(LHS, BE->left));
         break;
@@ -848,6 +848,27 @@ namespace {
       }
 
       return Base->Sub(LHS, RHS);
+    }
+
+    ref<Expr> Mul(const ref<ConstantExpr> &LHS,
+                  const ref<NonConstantExpr> &RHS) {
+      if (LHS->isZero())
+        return LHS;
+      if (LHS->isOne())
+        return RHS;
+      // FIXME: Unbalance muls, fold constants through {sub,add}-with-constant,
+      // etc.
+      return Base->Mul(LHS, RHS);
+    }
+
+    ref<Expr> Mul(const ref<NonConstantExpr> &LHS,
+                  const ref<ConstantExpr> &RHS) {
+      return Mul(RHS, LHS);
+    }
+
+    ref<Expr> Mul(const ref<NonConstantExpr> &LHS,
+                  const ref<NonConstantExpr> &RHS) {
+      return Base->Mul(LHS, RHS);
     }
   };
 
