@@ -153,6 +153,50 @@ int smtliberror(const char *s)
 %token SEMICOLON_TOK
 %token EOF_TOK
 %token PAT_TOK
+
+%token FALSE_TOK
+%token TRUE_TOK
+
+%token BVCONCAT_TOK
+%token BVEXTRACT_TOK
+
+%token BVNOT_TOK
+%token BVAND_TOK
+%token BVOR_TOK
+%token BVNEG_TOK
+%token BVNAND_TOK
+%token BVNOR_TOK
+%token BVXOR_TOK
+%token BVXNOR_TOK
+
+%token BVCOMP_TOK
+%token BVULT_TOK
+%token BVULE_TOK
+%token BVUGT_TOK
+%token BVUGE_TOK
+%token BVSLT_TOK
+%token BVSLE_TOK
+%token BVSGT_TOK
+%token BVSGE_TOK
+
+%token BVADD_TOK
+%token BVSUB_TOK
+%token BVMUL_TOK
+%token BVUDIV_TOK
+%token BVUREM_TOK
+%token BVSDIV_TOK
+%token BVSREM_TOK
+%token BVSMOD_TOK
+%token BVSHL_TOK
+%token BVLSHR_TOK
+%token BVASHR_TOK
+
+%token REPEAT_TOK
+%token ZEXT_TOK
+%token SEXT_TOK
+%token ROL_TOK
+%token ROR_TOK
+
 %%
 
 cmd:

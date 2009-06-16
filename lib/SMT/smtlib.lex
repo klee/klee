@@ -191,7 +191,7 @@ IDCHAR  ({LETTER}|{DIGIT}|{OPCHAR})
 "extrapreds"    { return EXTRAPREDS_TOK; }
 "language"      { return LANGUAGE_TOK; }
 "distinct"      { return DISTINCT_TOK; }
-":pattern"          { return PAT_TOK; } 
+":pattern"      { return PAT_TOK; } 
 ":"             { return COLON_TOK; }
 "\["            { return LBRACKET_TOK; }
 "\]"            { return RBRACKET_TOK; }
@@ -201,6 +201,51 @@ IDCHAR  ({LETTER}|{DIGIT}|{OPCHAR})
 ")"             { return RPAREN_TOK; }
 "$"             { return DOLLAR_TOK; }
 "?"             { return QUESTION_TOK; }
+
+
+"bit0"          { return FALSE_TOK; }
+"bit1"          { return TRUE_TOK; }
+
+"concat"        { return BVCONCAT_TOK; }
+"extract"       { return BVEXTRACT_TOK; }
+
+"bvnot"         { return BVNOT_TOK; }
+"bvand"         { return BVAND_TOK; }
+"bvor"          { return BVOR_TOK; }
+"bvneg"         { return BVNEG_TOK; }
+"bvnand"        { return BVNAND_TOK; }
+"bvnor"         { return BVNOR_TOK; }
+"bvxor"         { return BVXOR_TOK; }
+"bvxnor"        { return BVXNOR_TOK; }
+
+"bvcomp"        { return BVCOMP_TOK; }
+"bvult"         { return BVULT_TOK; }
+"bvule"         { return BVULE_TOK; }
+"bvugt"         { return BVUGT_TOK; }
+"bvuge"         { return BVUGE_TOK; }
+"bvslt"         { return BVSLT_TOK; }
+"bvsle"         { return BVSLE_TOK; }
+"bvsgt"         { return BVSGT_TOK; }
+"bvsge"         { return BVSGE_TOK; }
+
+"bvadd"         { return BVADD_TOK; }
+"bvsub"         { return BVSUB_TOK; }
+"bvmul"         { return BVMUL_TOK; }
+"bvudiv"        { return BVUDIV_TOK; }
+"bvurem"        { return BVUREM_TOK; }
+"bvsdiv"        { return BVSDIV_TOK; }
+"bvsrem"        { return BVSREM_TOK; }
+"bvsmod"        { return BVSMOD_TOK; }
+"bvshl"         { return BVSHL_TOK; }
+"bvlshr"        { return BVLSHR_TOK; }
+"bvashr"        { return BVASHR_TOK; }
+
+"repeat"        { return REPEAT_TOK; }
+"zero_extend"   { return ZEXT_TOK; }
+"sign_extend"   { return SEXT_TOK; }
+"rotate_left"   { return ROL_TOK; }
+"rotate_right"  { return ROR_TOK; }
+
 
 [=<>&@#+\-*/%|~]+ { smtliblval.str = new std::string(smtlibtext); return AR_SYMB; }
 ({LETTER})({IDCHAR})* {smtliblval.str = new std::string(smtlibtext); return SYM_TOK; }
