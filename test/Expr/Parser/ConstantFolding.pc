@@ -180,3 +180,13 @@ array a[64] : w32 -> w8 = symbolic
 # RUN: grep -A 2 \"# Query 34$\" %t > %t2
 # RUN: grep \"(query .. false .(Read w8 0 a).\" %t2
 (query [] false [(Xor w8 0 (Read w8 0 a))])
+
+# Check -- true == X ==> X
+# RUN: grep -A 2 \"# Query 35$\" %t > %t2
+# RUN: grep \"(query .. false .(Eq 0 (Read w8 0 a)).\" %t2
+(query [] false [(Eq true (Eq 0 (Read w8 0 a)))])
+
+# Check -- !!X ==> X
+# RUN: grep -A 2 \"# Query 36$\" %t > %t2
+# RUN: grep \"(query .. false .(Eq 0 (Read w8 0 a)).\" %t2
+(query [] false [(Not (Not (Eq 0 (Read w8 0 a))))])

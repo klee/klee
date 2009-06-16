@@ -931,6 +931,43 @@ namespace {
                   const ref<NonConstantExpr> &RHS) {
       return Base->Xor(LHS, RHS);
     }
+
+    ref<Expr> Eq(const ref<ConstantExpr> &LHS, 
+                 const ref<NonConstantExpr> &RHS) {
+      Expr::Width Width = LHS->getWidth();
+      
+      if (Width == Expr::Bool) {
+        // true == X ==> X
+        if (LHS->isTrue())
+          return RHS;
+
+        // false == ... (not)
+
+        // Eliminate double negation.
+        if (const EqExpr *EE = dyn_cast<EqExpr>(RHS)) {
+          if (EE->left->getWidth() == Expr::Bool) {
+            // false == (false == X) ==> X
+            if (EE->left->isFalse())
+              return EE->right;
+            // false == (X == false) ==> X
+            if (EE->right->isFalse())
+              return EE->left;
+          }
+        }
+      }
+
+      return Base->Eq(LHS, RHS);
+    }
+
+    ref<Expr> Eq(const ref<NonConstantExpr> &LHS, 
+                 const ref<ConstantExpr> &RHS) {
+      return Eq(RHS, LHS);
+    }
+
+    ref<Expr> Eq(const ref<NonConstantExpr> &LHS, 
+                 const ref<NonConstantExpr> &RHS) {
+      return Base->Eq(LHS, RHS);
+    }
   };
 
   typedef ConstantSpecializedExprBuilder<ConstantFoldingBuilder>
@@ -940,6 +977,40 @@ namespace {
   public:
     SimplifyingBuilder(ExprBuilder *Builder, ExprBuilder *Base)
       : ChainedBuilder(Builder, Base) {}
+
+    ref<Expr> Eq(const ref<ConstantExpr> &LHS, 
+                 const ref<NonConstantExpr> &RHS) {
+      Expr::Width Width = LHS->getWidth();
+      
+      if (Width == Expr::Bool) {
+        // true == X ==> X
+        if (LHS->isTrue())
+          return RHS;
+
+        // false == X (not)
+
+        // Transform !(a or b) ==> !a and !b.
+        if (const OrExpr *OE = dyn_cast<OrExpr>(RHS))
+          return Builder->And(Builder->Not(OE->left),
+                              Builder->Not(OE->right));
+      }
+
+      return Base->Eq(LHS, RHS);
+    }
+
+    ref<Expr> Eq(const ref<NonConstantExpr> &LHS, 
+                 const ref<ConstantExpr> &RHS) {
+      return Eq(RHS, LHS);
+    }
+
+    ref<Expr> Eq(const ref<NonConstantExpr> &LHS, 
+                 const ref<NonConstantExpr> &RHS) {
+      // X == X ==> true
+      if (LHS == RHS)
+          return Builder->True();
+
+      return Base->Eq(LHS, RHS);
+    }
 
     ref<Expr> Ne(const ref<Expr> &LHS, const ref<Expr> &RHS) {
       // X != Y ==> !(X == Y)

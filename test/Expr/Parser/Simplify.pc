@@ -26,3 +26,10 @@ array a[64] : w32 -> w8 = symbolic
 # RUN: grep -A 2 \"# Query 5\" %t > %t2
 # RUN: grep \"(query .. false .(Not (Eq (Read w8 0 a) (Read w8 1 a))).)\" %t2
 (query [] false [(Ne (Read w8 0 a) (Read w8 1 a))])
+
+# Check -- !(X or Y) ==> !X and !Y
+# RUN: grep -A 3 \"# Query 6$\" %t > %t2
+# RUN: grep \"(query .. false .(And (Not (Eq 0 (Read w8 0 a)))\" %t2
+# RUN: grep                       \"(Not (Eq 1 (Read w8 1 a))))\" %t2
+(query [] false [(Not (Or (Eq 0 (Read w8 0 a))
+                          (Eq 1 (Read w8 1 a))))])
