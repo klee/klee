@@ -856,8 +856,8 @@ namespace {
         return LHS;
       if (LHS->isOne())
         return RHS;
-      // FIXME: Unbalance muls, fold constants through {sub,add}-with-constant,
-      // etc.
+      // FIXME: Unbalance nested muls, fold constants through
+      // {sub,add}-with-constant, etc.
       return Base->Mul(LHS, RHS);
     }
 
@@ -869,6 +869,67 @@ namespace {
     ref<Expr> Mul(const ref<NonConstantExpr> &LHS,
                   const ref<NonConstantExpr> &RHS) {
       return Base->Mul(LHS, RHS);
+    }
+
+    ref<Expr> And(const ref<ConstantExpr> &LHS,
+                  const ref<NonConstantExpr> &RHS) {
+      if (LHS->isZero())
+        return LHS;
+      if (LHS->isAllOnes())
+        return RHS;
+      // FIXME: Unbalance nested ands, fold constants through
+      // {and,or}-with-constant, etc.
+      return Base->And(LHS, RHS);
+    }
+
+    ref<Expr> And(const ref<NonConstantExpr> &LHS,
+                  const ref<ConstantExpr> &RHS) {
+      return And(RHS, LHS);
+    }
+
+    ref<Expr> And(const ref<NonConstantExpr> &LHS,
+                  const ref<NonConstantExpr> &RHS) {
+      return Base->And(LHS, RHS);
+    }
+
+    ref<Expr> Or(const ref<ConstantExpr> &LHS,
+                  const ref<NonConstantExpr> &RHS) {
+      if (LHS->isZero())
+        return RHS;
+      if (LHS->isAllOnes())
+        return LHS;
+      // FIXME: Unbalance nested ors, fold constants through
+      // {and,or}-with-constant, etc.
+      return Base->Or(LHS, RHS);
+    }
+
+    ref<Expr> Or(const ref<NonConstantExpr> &LHS,
+                 const ref<ConstantExpr> &RHS) {
+      return Or(RHS, LHS);
+    }
+
+    ref<Expr> Or(const ref<NonConstantExpr> &LHS,
+                 const ref<NonConstantExpr> &RHS) {
+      return Base->Or(LHS, RHS);
+    }
+
+    ref<Expr> Xor(const ref<ConstantExpr> &LHS,
+                  const ref<NonConstantExpr> &RHS) {
+      if (LHS->isZero())
+        return RHS;
+      // FIXME: Unbalance nested ors, fold constants through
+      // {and,or}-with-constant, etc.
+      return Base->Xor(LHS, RHS);
+    }
+
+    ref<Expr> Xor(const ref<NonConstantExpr> &LHS,
+                  const ref<ConstantExpr> &RHS) {
+      return Xor(RHS, LHS);
+    }
+
+    ref<Expr> Xor(const ref<NonConstantExpr> &LHS,
+                  const ref<NonConstantExpr> &RHS) {
+      return Base->Xor(LHS, RHS);
     }
   };
 
