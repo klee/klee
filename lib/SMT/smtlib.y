@@ -96,8 +96,9 @@ int smtliberror(const char *s)
 %type <pat_ann> patterns_annotations
 */
 
-%type <node> an_formula an_atom prop_atom
-%type <str> logic_name status attribute annotation user_value
+%type <node> an_formula an_logical_formula an_atom prop_atom
+%type <node> an_term basic_term an_fun
+%type <str> logic_name status attribute user_value annotation annotations
 
 
 %token <str> NUMERAL_TOK
@@ -376,26 +377,146 @@ an_formulas:
 */
 
 
+an_logical_formula:
+
+    LPAREN_TOK NOT_TOK an_formula RPAREN_TOK
+    {
+      $$ = Expr::createNot($3);
+    }
+  | LPAREN_TOK NOT_TOK an_formula annotations RPAREN_TOK
+    {
+      $$ = Expr::createNot($3);
+    }
+
+  | LPAREN_TOK IMPLIES_TOK an_formula an_formula RPAREN_TOK
+    {
+      $$ = Expr::createImplies($3, $4);
+    }
+  | LPAREN_TOK IMPLIES_TOK an_formula an_formula annotations RPAREN_TOK
+    {
+      $$ = Expr::createImplies($3, $4);
+    }
+
+  | LPAREN_TOK IF_THEN_ELSE_TOK an_formula an_formula an_formula RPAREN_TOK
+    {
+      $$ = SelectExpr::create($3, $4, $5);
+    }
+  | LPAREN_TOK IF_THEN_ELSE_TOK an_formula an_formula an_formula annotations RPAREN_TOK
+    {
+      $$ = SelectExpr::create($3, $4, $5);
+    }
+
+  | LPAREN_TOK AND_TOK an_formula an_formula RPAREN_TOK
+    {
+      $$ = AndExpr::create($3, $4);
+    }
+  | LPAREN_TOK AND_TOK an_formula an_formula annotations RPAREN_TOK
+    {
+      $$ = AndExpr::create($3, $4);
+    }
+
+  | LPAREN_TOK OR_TOK an_formula an_formula RPAREN_TOK
+    {
+      $$ = OrExpr::create($3, $4);
+    }
+  | LPAREN_TOK OR_TOK an_formula an_formula annotations RPAREN_TOK
+    {
+      $$ = OrExpr::create($3, $4);
+    }
+
+  | LPAREN_TOK XOR_TOK an_formula an_formula RPAREN_TOK
+    {
+      $$ = XorExpr::create($3, $4);
+    }
+  | LPAREN_TOK XOR_TOK an_formula an_formula annotations RPAREN_TOK
+    {
+      $$ = XorExpr::create($3, $4);
+    }
+
+  | LPAREN_TOK IFF_TOK an_formula an_formula RPAREN_TOK
+    {
+      $$ = EqExpr::create($3, $4);
+    }
+  | LPAREN_TOK IFF_TOK an_formula an_formula annotations RPAREN_TOK
+    {
+      $$ = EqExpr::create($3, $4);
+    }
+  | LPAREN_TOK NOT_TOK an_formula RPAREN_TOK
+    {
+      $$ = Expr::createNot($3);
+    }
+  | LPAREN_TOK NOT_TOK an_formula annotations RPAREN_TOK
+    {
+      $$ = Expr::createNot($3);
+    }
+
+  | LPAREN_TOK IMPLIES_TOK an_formula an_formula RPAREN_TOK
+    {
+      $$ = Expr::createImplies($3, $4);
+    }
+  | LPAREN_TOK IMPLIES_TOK an_formula an_formula annotations RPAREN_TOK
+    {
+      $$ = Expr::createImplies($3, $4);
+    }
+
+  | LPAREN_TOK IF_THEN_ELSE_TOK an_formula an_formula an_formula RPAREN_TOK
+    {
+      $$ = SelectExpr::create($3, $4, $5);
+    }
+  | LPAREN_TOK IF_THEN_ELSE_TOK an_formula an_formula an_formula annotations RPAREN_TOK
+    {
+      $$ = SelectExpr::create($3, $4, $5);
+    }
+
+  | LPAREN_TOK AND_TOK an_formula an_formula RPAREN_TOK
+    {
+      $$ = AndExpr::create($3, $4);
+    }
+  | LPAREN_TOK AND_TOK an_formula an_formula annotations RPAREN_TOK
+    {
+      $$ = AndExpr::create($3, $4);
+    }
+
+  | LPAREN_TOK OR_TOK an_formula an_formula RPAREN_TOK
+    {
+      $$ = OrExpr::create($3, $4);
+    }
+  | LPAREN_TOK OR_TOK an_formula an_formula annotations RPAREN_TOK
+    {
+      $$ = OrExpr::create($3, $4);
+    }
+
+  | LPAREN_TOK XOR_TOK an_formula an_formula RPAREN_TOK
+    {
+      $$ = XorExpr::create($3, $4);
+    }
+  | LPAREN_TOK XOR_TOK an_formula an_formula annotations RPAREN_TOK
+    {
+      $$ = XorExpr::create($3, $4);
+    }
+
+  | LPAREN_TOK IFF_TOK an_formula an_formula RPAREN_TOK
+    {
+      $$ = EqExpr::create($3, $4);
+    }
+  | LPAREN_TOK IFF_TOK an_formula an_formula annotations RPAREN_TOK
+    {
+      $$ = EqExpr::create($3, $4);
+    }
+;
+
+
 an_formula:
     an_atom
     {
       $$ = $1;
     }
-/*
-  | LPAREN_TOK connective an_formulas annotations RPAREN_TOK
-    {
-      $$ = new CVC3::Expr(VC->listExpr(*$2, *$3));
-      delete $2;
-      delete $3;
-      delete $4;
-    }
-  | LPAREN_TOK connective an_formulas RPAREN_TOK
-    {
-      $$ = new CVC3::Expr(VC->listExpr(*$2, *$3));
-      delete $2;
-      delete $3;
-    }
 
+  | an_logical_formula
+    {
+      $$ = $1;
+    }
+/*
   | LPAREN_TOK LET_TOK LPAREN_TOK var an_term RPAREN_TOK an_formula annotations RPAREN_TOK
     {
       CVC3::Expr e(VC->listExpr(VC->listExpr(*$4, *$5)));
@@ -433,39 +554,6 @@ an_formula:
 */
 ;
 
-
-/*
-connective:
-    NOT_TOK
-    {
-      $$ = new std::string("_NOT");
-    }
-  | IMPLIES_TOK
-    {
-      $$ = new std::string("_IMPLIES");
-    }
-  | IF_THEN_ELSE_TOK
-    {
-      $$ = new std::string("_IF");
-    }
-  | AND_TOK
-    {
-      $$ = new std::string("_AND");
-    }
-  | OR_TOK
-    {
-      $$ = new std::string("_OR");
-    }
-  | XOR_TOK
-    {
-      $$ = new std::string("_XOR");
-    }
-  | IFF_TOK
-    {
-      $$ = new std::string("_IFF");
-    }
-;
-*/
 
 an_atom:
     prop_atom 
@@ -540,12 +628,10 @@ an_atom:
 prop_atom:
     TRUE_TOK
     {
-      //$$ = new CVC3::Expr(VC->idExpr("_TRUE_EXPR"));
       $$ = ConstantExpr::create(1, 1);
     }
   | FALSE_TOK
     { 
-      //$$ = new CVC3::Expr(VC->idExpr("_FALSE_EXPR"));
       $$ = ConstantExpr::create(0, 1);;
     }
 /*
@@ -561,273 +647,27 @@ prop_atom:
 ;  
 
 /*
-an_terms:
-    an_term
-    {
-      $$ = new std::vector<CVC3::Expr>;
-      $$->push_back(*$1);
-      delete $1;
-    }
-  | an_terms an_term
-    {
-      $1->push_back(*$2);
-      $$ = $1; 
-      delete $2;
-    }
-;
+an_comparison_fun:
 
-an_term:
-    basic_term 
+    LPAREN_TOK IMPLIES_TOK an_term an_term RPAREN_TOK
     {
-      $$ = $1;
+      $$ = UltExpr::createImplies($3, $4);
     }
-  | LPAREN_TOK basic_term annotations RPAREN_TOK 
+  | LPAREN_TOK IMPLIES_TOK an_term an_term annotations RPAREN_TOK
     {
-      $$ = $2;
-      delete $3;
-    }
-  | LPAREN_TOK fun_symb an_terms annotations RPAREN_TOK
-    {
-      $2->insert($2->end(), $3->begin(), $3->end());
-      $$ = new CVC3::Expr(VC->listExpr(*$2));
-      delete $2;
-      delete $3;
-      delete $4;
-    }
-  | LPAREN_TOK fun_symb an_terms RPAREN_TOK
-    {
-      $2->insert($2->end(), $3->begin(), $3->end());
-      $$ = new CVC3::Expr(VC->listExpr(*$2));
-      delete $2;
-      delete $3;
-    }
-  | LPAREN_TOK ITE_TOK an_formula an_term an_term annotations RPAREN_TOK
-    {
-      $$ = new CVC3::Expr(VC->listExpr("_IF", *$3, *$4, *$5));
-      delete $3;
-      delete $4;
-      delete $5;
-      delete $6;
-    }
-  | LPAREN_TOK ITE_TOK an_formula an_term an_term RPAREN_TOK
-    {
-      $$ = new CVC3::Expr(VC->listExpr("_IF", *$3, *$4, *$5));
-      delete $3;
-      delete $4;
-      delete $5;
-    }
-;
-
-basic_term:
-  | TRUE_TOK
-    {
-      $$ = new CVC3::Expr(VC->idExpr("_TRUE_EXPR"));
-    }
-  | FALSE_TOK
-    { 
-      $$ = new CVC3::Expr(VC->idExpr("_FALSE_EXPR"));
-    }
-  | fvar
-    {
-      $$ = $1;
-    }
-  | var
-    {
-      $$ = $1;
-    }
-  | fun_symb 
-    {
-      if ($1->size() == 1) {
-        $$ = new CVC3::Expr(((*$1)[0]));
-      }
-      else {
-        $$ = new CVC3::Expr(VC->listExpr(*$1));
-      }
-      delete $1;
+      $$ = Expr::createImplies($3, $4);
     }
 ;
 */
 
-/*
-annotations:
-    annotation
+
+an_fun:
+    an_logical_formula
     {
-      $$->push_back(*$1);
-      delete $1;
-    }
-  | annotations annotation
-    {
-      $1->push_back(*$2);
       $$ = $1;
-      delete $2;
     }
-  ;
-*/
-
-annotation:
-    attribute
-    { $$ = $1; }
-
-  | attribute user_value
-    { $$ = $1; }
-
-;
-
-
-user_value:
-    USER_VAL_TOK
-    {
-      $$ = NULL;
-      delete $1;
-    }
-;
 
 /*
-sort_symb:
-    SYM_TOK LBRACKET_TOK NUMERAL_TOK RBRACKET_TOK
-    {
-      if (BVENABLED && *$1 == "BitVec") {
-        $$ = new CVC3::Expr(VC->listExpr("_BITVECTOR", VC->ratExpr(*$3)));
-      }
-      else {
-        $$ = new CVC3::Expr(VC->listExpr(*$1, VC->ratExpr(*$3)));
-      }
-      delete $1;
-      delete $3;
-    }
-  | SYM_TOK LBRACKET_TOK NUMERAL_TOK COLON_TOK NUMERAL_TOK RBRACKET_TOK
-    {
-      if (BVENABLED && ARRAYSENABLED && *$1 == "Array") {
-        $$ = new CVC3::Expr(VC->listExpr("_ARRAY",
-                                         VC->listExpr("_BITVECTOR", VC->ratExpr(*$3)),
-                                         VC->listExpr("_BITVECTOR", VC->ratExpr(*$5))));
-      }
-      else {
-        $$ = new CVC3::Expr(VC->listExpr(*$1, VC->ratExpr(*$3), VC->ratExpr(*$5)));
-      }
-      delete $1;
-      delete $3;
-      delete $5;
-    }
-  | SYM_TOK 
-    { 
-      if (*$1 == "Real") {
-	$$ = new CVC3::Expr(VC->idExpr("_REAL"));
-      } else if (*$1 == "Int") {
-	$$ = new CVC3::Expr(VC->idExpr("_INT"));
-      } else {
-	$$ = new CVC3::Expr(VC->idExpr(*$1));
-      }
-      delete $1;
-    }
-;
-
-pred_symb:
-    SYM_TOK
-    {
-      if (BVENABLED && (*$1 == "bvlt" || *$1 == "bvult")) {
-        $$ = new CVC3::Expr(VC->idExpr("_BVLT"));
-      }
-      else if (BVENABLED && (*$1 == "bvleq" || *$1 == "bvule")) {
-        $$ = new CVC3::Expr(VC->idExpr("_BVLE"));
-      }
-      else if (BVENABLED && (*$1 == "bvgeq" || *$1 == "bvuge")) {
-        $$ = new CVC3::Expr(VC->idExpr("_BVGE"));
-      }
-      else if (BVENABLED && (*$1 == "bvgt" || *$1 == "bvugt")) {
-        $$ = new CVC3::Expr(VC->idExpr("_BVGT"));
-      }
-      else if (BVENABLED && *$1 == "bvslt") {
-        $$ = new CVC3::Expr(VC->idExpr("_BVSLT"));
-      }
-      else if (BVENABLED && (*$1 == "bvsleq" || *$1 == "bvsle")) {
-        $$ = new CVC3::Expr(VC->idExpr("_BVSLE"));
-      }
-      else if (BVENABLED && (*$1 == "bvsgeq" || *$1 == "bvsge")) {
-        $$ = new CVC3::Expr(VC->idExpr("_BVSGE"));
-      }
-      else if (BVENABLED && *$1 == "bvsgt") {
-        $$ = new CVC3::Expr(VC->idExpr("_BVSGT"));
-      }
-      else {
-        $$ = new CVC3::Expr(VC->idExpr(*$1));
-      }
-      delete $1;
-    }
-  | AR_SYMB 
-    { 
-      if ($1->length() == 1) {
-	switch ((*$1)[0]) {
-	  case '=': $$ = new CVC3::Expr(VC->idExpr("_EQ")); break;
-	  case '<': $$ = new CVC3::Expr(VC->idExpr("_LT")); break;
-	  case '>': $$ = new CVC3::Expr(VC->idExpr("_GT")); break;
-	  default: $$ = new CVC3::Expr(VC->idExpr(*$1)); break;
-	}
-      }
-      else {
-	if (*$1 == "<=") {
-	  $$ = new CVC3::Expr(VC->idExpr("_LE"));
-	} else if (*$1 == ">=") {
-	  $$ = new CVC3::Expr(VC->idExpr("_GE"));
-	}
-	else $$ = new CVC3::Expr(VC->idExpr(*$1));
-      }
-      delete $1;
-    }
-;
-
-fun_symb:
-    SYM_TOK LBRACKET_TOK NUMERAL_TOK RBRACKET_TOK
-    {
-      $$ = new std::vector<CVC3::Expr>;
-      if (BVENABLED && *$1 == "repeat") {
-        $$->push_back(VC->idExpr("_BVREPEAT"));
-      }
-      else if (BVENABLED && *$1 == "zero_extend") {
-        $$->push_back(VC->idExpr("_BVZEROEXTEND"));
-      }
-      else if (BVENABLED && *$1 == "sign_extend") {
-        $$->push_back(VC->idExpr("_SX"));
-        $$->push_back(VC->idExpr("_smtlib"));
-      }
-      else if (BVENABLED && *$1 == "rotate_left") {
-        $$->push_back(VC->idExpr("_BVROTL"));
-      }
-      else if (BVENABLED && *$1 == "rotate_right") {
-        $$->push_back(VC->idExpr("_BVROTR"));
-      }
-      else if (BVENABLED &&
-               $1->size() > 2 &&
-               (*$1)[0] == 'b' &&
-               (*$1)[1] == 'v') {
-        int i = 2;
-        while ((*$1)[i] >= '0' && (*$1)[i] <= '9') ++i;
-        if ((*$1)[i] == '\0') {
-          $$->push_back(VC->idExpr("_BVCONST"));
-          $$->push_back(VC->ratExpr($1->substr(2), 10));
-        }
-        else $$->push_back(VC->idExpr(*$1));
-      }
-      else $$->push_back(VC->idExpr(*$1));
-      $$->push_back(VC->ratExpr(*$3));
-      delete $1;
-      delete $3;
-    }
-  | SYM_TOK LBRACKET_TOK NUMERAL_TOK COLON_TOK NUMERAL_TOK RBRACKET_TOK
-    {
-      $$ = new std::vector<CVC3::Expr>;
-      if (BVENABLED && *$1 == "extract") {
-        $$->push_back(VC->idExpr("_EXTRACT"));
-      }
-      else $$->push_back(VC->idExpr(*$1));
-      $$->push_back(VC->ratExpr(*$3));
-      $$->push_back(VC->ratExpr(*$5));
-      delete $1;
-      delete $3;
-      delete $5;
-    }
-  | SYM_TOK
-    {
       $$ = new std::vector<CVC3::Expr>;
       if (BVENABLED && (*$1 == "bvlt" || *$1 == "bvult")) {
         $$->push_back(VC->idExpr("_BVLT"));
@@ -992,7 +832,242 @@ fun_symb:
         $$->push_back(VC->idExpr(*$1));
       }
       delete $1;
+*/
+
+
+
+;
+
+
+an_term:
+    basic_term 
+    {
+      $$ = $1;
     }
+  | LPAREN_TOK basic_term annotations RPAREN_TOK 
+    {
+      $$ = $2;
+      delete $3;
+    }
+
+  | an_fun
+    {
+      $$ = $1;
+    }
+
+  | LPAREN_TOK ITE_TOK an_formula an_term an_term RPAREN_TOK
+    {
+      $$ = SelectExpr::create($3, $4, $5);
+    }
+  | LPAREN_TOK ITE_TOK an_formula an_term an_term annotations RPAREN_TOK
+    {
+      $$ = SelectExpr::create($3, $4, $5);
+    }
+;
+
+
+basic_term:
+    TRUE_TOK
+    {
+      $$ = ConstantExpr::create(1, 1);
+    }
+  | FALSE_TOK
+    { 
+      $$ = ConstantExpr::create(0, 1);;
+    }
+/*
+  | fvar
+    {
+      $$ = $1;
+    }
+  | var
+    {
+      $$ = $1;
+    }
+  | fun_symb 
+    {
+      if ($1->size() == 1) {
+        $$ = new CVC3::Expr(((*$1)[0]));
+      }
+      else {
+        $$ = new CVC3::Expr(VC->listExpr(*$1));
+      }
+      delete $1;
+    }
+*/
+;
+
+
+
+annotations:
+    annotation { }
+  | annotations annotation { }
+;
+
+annotation:
+    attribute { }
+
+  | attribute user_value {  }
+;
+
+user_value:
+    USER_VAL_TOK  
+    {
+      delete $1;
+    }
+;
+
+/*
+sort_symb:
+    SYM_TOK LBRACKET_TOK NUMERAL_TOK RBRACKET_TOK
+    {
+      if (BVENABLED && *$1 == "BitVec") {
+        $$ = new CVC3::Expr(VC->listExpr("_BITVECTOR", VC->ratExpr(*$3)));
+      }
+      else {
+        $$ = new CVC3::Expr(VC->listExpr(*$1, VC->ratExpr(*$3)));
+      }
+      delete $1;
+      delete $3;
+    }
+  | SYM_TOK LBRACKET_TOK NUMERAL_TOK COLON_TOK NUMERAL_TOK RBRACKET_TOK
+    {
+      if (BVENABLED && ARRAYSENABLED && *$1 == "Array") {
+        $$ = new CVC3::Expr(VC->listExpr("_ARRAY",
+                                         VC->listExpr("_BITVECTOR", VC->ratExpr(*$3)),
+                                         VC->listExpr("_BITVECTOR", VC->ratExpr(*$5))));
+      }
+      else {
+        $$ = new CVC3::Expr(VC->listExpr(*$1, VC->ratExpr(*$3), VC->ratExpr(*$5)));
+      }
+      delete $1;
+      delete $3;
+      delete $5;
+    }
+  | SYM_TOK 
+    { 
+      if (*$1 == "Real") {
+	$$ = new CVC3::Expr(VC->idExpr("_REAL"));
+      } else if (*$1 == "Int") {
+	$$ = new CVC3::Expr(VC->idExpr("_INT"));
+      } else {
+	$$ = new CVC3::Expr(VC->idExpr(*$1));
+      }
+      delete $1;
+    }
+;
+
+pred_symb:
+    SYM_TOK
+    {
+      if (BVENABLED && (*$1 == "bvlt" || *$1 == "bvult")) {
+        $$ = new CVC3::Expr(VC->idExpr("_BVLT"));
+      }
+      else if (BVENABLED && (*$1 == "bvleq" || *$1 == "bvule")) {
+        $$ = new CVC3::Expr(VC->idExpr("_BVLE"));
+      }
+      else if (BVENABLED && (*$1 == "bvgeq" || *$1 == "bvuge")) {
+        $$ = new CVC3::Expr(VC->idExpr("_BVGE"));
+      }
+      else if (BVENABLED && (*$1 == "bvgt" || *$1 == "bvugt")) {
+        $$ = new CVC3::Expr(VC->idExpr("_BVGT"));
+      }
+      else if (BVENABLED && *$1 == "bvslt") {
+        $$ = new CVC3::Expr(VC->idExpr("_BVSLT"));
+      }
+      else if (BVENABLED && (*$1 == "bvsleq" || *$1 == "bvsle")) {
+        $$ = new CVC3::Expr(VC->idExpr("_BVSLE"));
+      }
+      else if (BVENABLED && (*$1 == "bvsgeq" || *$1 == "bvsge")) {
+        $$ = new CVC3::Expr(VC->idExpr("_BVSGE"));
+      }
+      else if (BVENABLED && *$1 == "bvsgt") {
+        $$ = new CVC3::Expr(VC->idExpr("_BVSGT"));
+      }
+      else {
+        $$ = new CVC3::Expr(VC->idExpr(*$1));
+      }
+      delete $1;
+    }
+  | AR_SYMB 
+    { 
+      if ($1->length() == 1) {
+	switch ((*$1)[0]) {
+	  case '=': $$ = new CVC3::Expr(VC->idExpr("_EQ")); break;
+	  case '<': $$ = new CVC3::Expr(VC->idExpr("_LT")); break;
+	  case '>': $$ = new CVC3::Expr(VC->idExpr("_GT")); break;
+	  default: $$ = new CVC3::Expr(VC->idExpr(*$1)); break;
+	}
+      }
+      else {
+	if (*$1 == "<=") {
+	  $$ = new CVC3::Expr(VC->idExpr("_LE"));
+	} else if (*$1 == ">=") {
+	  $$ = new CVC3::Expr(VC->idExpr("_GE"));
+	}
+	else $$ = new CVC3::Expr(VC->idExpr(*$1));
+      }
+      delete $1;
+    }
+;
+*/
+
+/*
+fun_symb:
+    SYM_TOK LBRACKET_TOK NUMERAL_TOK RBRACKET_TOK
+    {
+      $$ = new std::vector<CVC3::Expr>;
+      if (BVENABLED && *$1 == "repeat") {
+        $$->push_back(VC->idExpr("_BVREPEAT"));
+      }
+      else if (BVENABLED && *$1 == "zero_extend") {
+        $$->push_back(VC->idExpr("_BVZEROEXTEND"));
+      }
+      else if (BVENABLED && *$1 == "sign_extend") {
+        $$->push_back(VC->idExpr("_SX"));
+        $$->push_back(VC->idExpr("_smtlib"));
+      }
+      else if (BVENABLED && *$1 == "rotate_left") {
+        $$->push_back(VC->idExpr("_BVROTL"));
+      }
+      else if (BVENABLED && *$1 == "rotate_right") {
+        $$->push_back(VC->idExpr("_BVROTR"));
+      }
+      else if (BVENABLED &&
+               $1->size() > 2 &&
+               (*$1)[0] == 'b' &&
+               (*$1)[1] == 'v') {
+        int i = 2;
+        while ((*$1)[i] >= '0' && (*$1)[i] <= '9') ++i;
+        if ((*$1)[i] == '\0') {
+          $$->push_back(VC->idExpr("_BVCONST"));
+          $$->push_back(VC->ratExpr($1->substr(2), 10));
+        }
+        else $$->push_back(VC->idExpr(*$1));
+      }
+      else $$->push_back(VC->idExpr(*$1));
+      $$->push_back(VC->ratExpr(*$3));
+      delete $1;
+      delete $3;
+    }
+  | SYM_TOK LBRACKET_TOK NUMERAL_TOK COLON_TOK NUMERAL_TOK RBRACKET_TOK
+    {
+      $$ = new std::vector<CVC3::Expr>;
+      if (BVENABLED && *$1 == "extract") {
+        $$->push_back(VC->idExpr("_EXTRACT"));
+      }
+      else $$->push_back(VC->idExpr(*$1));
+      $$->push_back(VC->ratExpr(*$3));
+      $$->push_back(VC->ratExpr(*$5));
+      delete $1;
+      delete $3;
+      delete $5;
+    }
+  | SYM_TOK
+    {
+
+    }
+
   | AR_SYMB 
     { 
       $$ = new std::vector<CVC3::Expr>;
@@ -1027,7 +1102,6 @@ fun_symb:
     }
 ;
 */
-
 
 attribute:
     COLON_TOK SYM_TOK
