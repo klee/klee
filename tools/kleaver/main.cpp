@@ -62,6 +62,18 @@ namespace {
               clEnumValN(SimplifyingBuilder, "simplify",
                          "Fold constants and simplify expressions."),
               clEnumValEnd));
+
+  cl::opt<bool>
+  UseDummySolver("use-dummy-solver",
+		   cl::init(false));
+
+  cl::opt<bool>
+  UseFastCexSolver("use-fast-cex-solver",
+		   cl::init(false));
+  
+  cl::opt<bool>
+  UseSTPQueryPCLog("use-stp-query-pc-log",
+                   cl::init(false));
 }
 
 static std::string escapedString(const char *start, unsigned length) {
@@ -149,8 +161,11 @@ static bool EvaluateInputAST(const char *Filename,
     return false;
 
   // FIXME: Support choice of solver.
-  Solver *S, *STP = S = new STPSolver(true);
-  if (0)
+  Solver *S, *STP = S = 
+    UseDummySolver ? createDummySolver() : new STPSolver(true);
+  if (UseSTPQueryPCLog)
+    S = createPCLoggingSolver(S, "stp-queries.pc");
+  if (UseFastCexSolver)
     S = createFastCexSolver(S);
   S = createCexCachingSolver(S);
   S = createCachingSolver(S);
