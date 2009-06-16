@@ -401,6 +401,10 @@ public:
     : objects(_objects) {}
 };
 
+#if 0
+#define DEBUG
+#endif
+
 class CexData {
 public:
   std::map<const Array*, CexObjectData*> objects;
@@ -434,12 +438,15 @@ public:
   }
 
   void propogatePossibleValues(ref<Expr> e, CexValueData range) {
+    #ifdef DEBUG
+    llvm::cerr << "propogate: " << range << " for\n" << e << "\n";
+    #endif
+
     switch (e->getKind()) {
-    case Expr::Constant: {
+    case Expr::Constant:
       // rather a pity if the constant isn't in the range, but how can
       // we use this?
       break;
-    }
 
       // Special
 
@@ -525,7 +532,8 @@ public:
       ConcatExpr *ce = cast<ConcatExpr>(e);
       Expr::Width LSBWidth = ce->getKid(1)->getWidth();
       Expr::Width MSBWidth = ce->getKid(1)->getWidth();
-      propogatePossibleValues(ce->getKid(0), range.extract(LSBWidth, MSBWidth));
+      propogatePossibleValues(ce->getKid(0), 
+                              range.extract(LSBWidth, LSBWidth + MSBWidth));
       propogatePossibleValues(ce->getKid(1), range.extract(0, LSBWidth));
       break;
     }
@@ -567,6 +575,27 @@ public:
     }
 
       // Binary
+
+    case Expr::Add: {
+      BinaryExpr *be = cast<BinaryExpr>(e);
+      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(be->left)) {
+        // FIXME: Don't depend on width.
+        if (CE->getWidth() <= 64) {
+          // FIXME: Why do we ever propogate empty ranges? It doesn't make
+          // sense.
+          if (range.isEmpty())
+            break;
+
+          // C_0 + X \in [MIN, MAX) ==> X \in [MIN - C_0, MAX - C_0)
+          Expr::Width W = CE->getWidth();
+          CexValueData nrange(ConstantExpr::alloc(range.min(), W)->Sub(CE)->getZExtValue(),
+                              ConstantExpr::alloc(range.max(), W)->Sub(CE)->getZExtValue());
+          if (!nrange.isEmpty())
+            propogatePossibleValues(be->right, nrange);
+        }
+      }
+      break;
+    }
 
     case Expr::And: {
       BinaryExpr *be = cast<BinaryExpr>(e);
@@ -743,8 +772,6 @@ public:
   }
 
   void propogateExactValues(ref<Expr> e, CexValueData range) {
-    //llvm::cout << e << " \\in " << range << "\n";
-
     switch (e->getKind()) {
     case Expr::Constant: {
       // FIXME: Assert that range contains this constant.
@@ -890,6 +917,31 @@ public:
   ref<Expr> evaluateExact(ref<Expr> e) {
     return CexExactEvaluator(objects).visit(e);
   }
+
+  void dump() {
+    llvm::cerr << "-- propogated values --\n";
+    for (std::map<const Array*, CexObjectData*>::iterator 
+           it = objects.begin(), ie = objects.end(); it != ie; ++it) {
+      const Array *A = it->first;
+      CexObjectData *COD = it->second;
+    
+      llvm::cerr << A->name << "\n";
+      llvm::cerr << "possible: [";
+      for (unsigned i = 0; i < A->size; ++i) {
+        if (i)
+          llvm::cerr << ", ";
+        llvm::cerr << COD->getPossibleValues(i);
+      }
+      llvm::cerr << "]\n";
+      llvm::cerr << "exact   : [";
+      for (unsigned i = 0; i < A->size; ++i) {
+        if (i)
+          llvm::cerr << ", ";
+        llvm::cerr << COD->getExactValues(i);
+      }
+      llvm::cerr << "]\n";
+    }
+  }
 };
 
 /* *** */
@@ -938,6 +990,10 @@ static bool propogateValues(const Query& query, CexData &cd,
     cd.propogateExactValue(query.expr, 0);
   }
 
+#ifdef DEBUG
+  cd.dump();
+#endif
+  
   // Check the result.
   bool hasSatisfyingAssignment = true;
   if (checkExpr) {

@@ -1,0 +1,12 @@
+# RUN: %kleaver --use-fast-cex-solver --use-dummy-solver %s > %t
+# RUN: not grep FAIL %t
+
+array arr1[4] : w32 -> w8 = symbolic
+(query [] (Not (Eq 4096 (ReadLSB w32 0 arr1))))
+
+array arr2[2] : w32 -> w8 = symbolic
+(query [(Ule (Add w8 208 N0:(Read w8 0 arr2))
+             9)]
+       (Eq 52 N0))
+
+
