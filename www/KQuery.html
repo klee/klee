@@ -27,7 +27,7 @@
       <ol type="a">
         <li><a href="#ident_literal">Identifiers</a></li>
         <li><a href="#ident_number">Numbers</a></li>
-        <li><a href="#ident_types">Numbers</a></li>
+        <li><a href="#ident_types">Types</a></li>
       </ol>
     </li>
     <li><a href="#decls">Declarations</a>
@@ -51,8 +51,8 @@
             <li><a href="#Sub_expr">Sub</a></li>
             <li><a href="#Mul_expr">Mul</a></li>
             <li><a href="#UDiv_expr">UDiv</a></li>
-            <li><a href="#SDiv_expr">SDiv</a></li>
             <li><a href="#URem_expr">URem</a></li>
+            <li><a href="#SDiv_expr">SDiv</a></li>
             <li><a href="#SRem_expr">SRem</a></li>
           </ol>
         </li>
@@ -384,19 +384,30 @@
   <h4><a name="Add_expr">Add</a>, 
     <a name="Sub_expr">Sub</a>, 
     <a name="Mul_expr">Mul</a>, 
-    <a name="UDiv_expr">UDiv</a>, 
-    <a name="SDiv_expr">SDiv</a>, 
-    <a name="URem_expr">URem</a>, 
-    <a name="SRem_expr">SRem</a></h4>
+    UDiv, SDiv, URem, SRem</h4>
 
   <p><b>Syntax:</b></p>
   <div class="syntax">
-    arithmetic-expr-kind = ( "Add" | "Sub" | "Mul" | "UDiv" | "SDiv" | "URem" )<br>
+    arithmetic-expr-kind = ( "Add" | "Sub" | "Mul" | "UDiv" | "URem" | "SDiv" | "SRem" )<br>
     expression = "(" arithmetic-expr-kind type expression expression ")"<br>
   </div>
 
   <p>Arithmetic operations are always binary and the types of the left-
     and right-hand side expressions must match the expression type.</p>
+
+  <h4><a name="UDiv_expr">UDiv</a></h4>
+  <p> Truncated unsigned division.  Undefined if divisor is 0. </p>
+
+  <h4><a name="URem_expr">URem</a></h4>
+  <p> Unsigned remainder.  Undefined if divisor is 0 </p>
+  
+  <h4><a name="SDiv_expr">SDiv</a></h4>
+  <p> Signed division.  Undefined if divisor is 0. </p>
+
+  <h4><a name="SRem_expr">SRem</a></h4>
+  <p> Signed remainder.  Undefined if divisor is 0.  Sign of the
+  remainder is the same as that of the dividend.  </p>
+  
 
   <h3><a name="bit_expr">Bitwise Operations</a></h3>
   
@@ -416,7 +427,37 @@
   <p>Bitwise operations are always binary and the types of the left-
     and right-hand side expressions must match the expression type.</p>
 
-  <p>FIXME: Pin down semantics of Shl, LShr, and AShr.</p>
+  <h4><a name="Shl">Shl</a></h4>
+  
+  <div class="syntax">
+    expression = "(" "Shl" type X Y ")"
+  </div>
+
+  <p> Logical shift left.  Moves each bit of <b>X</b> to the left
+  by <b>Y</b> positions.  The <b>Y</b> right-most bits of <b>X</b> are
+  replaced with zero, and the left-most bits discarded.</p>
+
+
+  <h4><a name="LShr">LShr</a></h4>
+
+  <div class="syntax">
+    expression = "(" "LShr" type X Y ")"
+  </div>
+
+  <p> Logical shift right.  Moves each bit of <b>X</b> to the right
+  by <b>Y</b> positions.  The <b>Y</b> left-most bits of <b>X</b> are
+  replaced with zero, and the right-most bits discarded.</p>
+
+
+  <h4><a name="AShr">AShr</a></h4>
+
+  <div class="syntax">
+    expression = "(" "AShr" type X Y ")"
+  </div>
+
+  <p> Arithmetic shift right.  Behaves as <b>LShr</b> except that the
+  left-most bits of <b>X</b> copy the initial left-most bit (the sign
+  bit) of <b>X</b>.
 
   <h3><a name="comp_expr">Comparisons</a></h3>
   
