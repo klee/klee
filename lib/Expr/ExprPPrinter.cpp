@@ -382,7 +382,13 @@ public:
       if (printWidth)
 	PC << "(w" << e->getWidth() << " ";
 
-      PC << e->getConstantValue();
+      if (e->getWidth() <= 64) {
+        PC << e->getZExtValue();
+      } else {
+        std::string S;
+        e->toString(S);
+        PC << S;
+      }
 
       if (printWidth)
 	PC << ")";

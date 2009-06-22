@@ -9,7 +9,6 @@
 
 #include "klee/Expr.h"
 
-
 #include "klee/Machine.h"
 #include "llvm/Type.h"
 #include "llvm/DerivedTypes.h"
@@ -20,6 +19,8 @@
 #include "klee/Internal/Support/IntEvaluation.h"
 
 #include "klee/util/ExprPPrinter.h"
+
+#include <sstream>
 
 using namespace klee;
 using namespace llvm;
@@ -343,6 +344,12 @@ void ConstantExpr::toMemory(void *address) {
   case Expr::Int32: *((uint32_t*) address) = value; break;
   case Expr::Int64: *((uint64_t*) address) = value; break;
   }
+}
+
+void ConstantExpr::toString(std::string &Res) const {
+  std::stringstream os;
+  os << *this;
+  Res = os.str();
 }
 
 ref<ConstantExpr> ConstantExpr::Concat(const ref<ConstantExpr> &RHS) {

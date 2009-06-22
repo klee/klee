@@ -329,6 +329,9 @@ public:
     return (value > Limit) ? Limit :  getZExtValue();
   }
 
+  /// toString - Return the constant value as a decimal string.
+  void toString(std::string &Res) const;
+ 
   int compareContents(const Expr &b) const { 
     const ConstantExpr &cb = static_cast<const ConstantExpr&>(b);
     if (width != cb.width) return width < cb.width ? -1 : 1;
