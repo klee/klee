@@ -14,6 +14,7 @@
 #include "klee/util/Bits.h"
 #include "klee/util/Ref.h"
 
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Streams.h"
 
@@ -296,9 +297,9 @@ public:
   static const unsigned numKids = 0;
 
 private:
-  uint64_t value;
+  llvm::APInt value;
 
-  ConstantExpr(uint64_t v, Width w) : value(v), width(w) {}
+  ConstantExpr(uint64_t v, Width w) : value(w, v), width(w) {}
 
 public:
   Width width;
@@ -312,7 +313,7 @@ public:
   unsigned getNumKids() const { return 0; }
   ref<Expr> getKid(unsigned i) const { return 0; }
 
-  uint64_t getConstantValue() const { return value; }
+  uint64_t getConstantValue() const { return value.getZExtValue(); }
 
   /// getZExtValue - Return the constant value for a limited number of bits.
   ///
@@ -320,13 +321,13 @@ public:
   /// is known to be limited to a certain number of bits.
   uint64_t getZExtValue(unsigned bits = 64) const {
     assert(getWidth() <= bits && "Value may be out of range!");
-    return value;
+    return value.getZExtValue();
   }
 
   /// getLimitedValue - If this value is smaller than the specified limit,
   /// return it, otherwise return the limit value.
   uint64_t getLimitedValue(uint64_t Limit = ~0ULL) const {
-    return (value > Limit) ? Limit :  getZExtValue();
+    return value.getLimitedValue(Limit);
   }
 
   /// toString - Return the constant value as a decimal string.
@@ -335,13 +336,9 @@ public:
   int compareContents(const Expr &b) const { 
     const ConstantExpr &cb = static_cast<const ConstantExpr&>(b);
     if (width != cb.width) return width < cb.width ? -1 : 1;
-    if (value < cb.value) {
-      return -1;
-    } else if (value > cb.value) {
-      return 1;
-    } else {
+    if (value == cb.value)
       return 0;
-    }
+    return value.ult(cb.value) ? -1 : 1;
   }
 
   virtual ref<Expr> rebuild(ref<Expr> kids[]) const { 
