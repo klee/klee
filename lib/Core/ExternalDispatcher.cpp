@@ -20,6 +20,7 @@
 #include "llvm/System/DynamicLibrary.h"
 #include "llvm/Support/Streams.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetSelect.h"
 #include <setjmp.h>
 #include <signal.h>
 
@@ -75,6 +76,10 @@ ExternalDispatcher::ExternalDispatcher() {
     llvm::cerr << "unable to make jit: " << error << "\n";
     abort();
   }
+
+  // If we have a native target, initialize it to ensure it is linked in and
+  // usable by the JIT.
+  llvm::InitializeNativeTarget();
 
   // from ExecutionEngine::create
   if (executionEngine) {

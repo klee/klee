@@ -10,7 +10,7 @@
 LEVEL=../..
 TOOLNAME = klee
 USEDLIBS = kleeCore.a kleeModule.a kleaverSolver.a kleaverExpr.a kleeSupport.a kleeBasic.a
-LINK_COMPONENTS = bitreader bitwriter ipo linker engine
+LINK_COMPONENTS = jit bitreader bitwriter ipo linker engine
 
 include $(LEVEL)/Makefile.common
 
