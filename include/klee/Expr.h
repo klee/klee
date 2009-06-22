@@ -299,15 +299,12 @@ public:
 private:
   llvm::APInt value;
 
-  ConstantExpr(uint64_t v, Width w) : value(w, v), width(w) {}
-
-public:
-  Width width;
+  ConstantExpr(uint64_t v, Width w) : value(w, v) {}
 
 public:
   ~ConstantExpr() {};
   
-  Width getWidth() const { return width; }
+  Width getWidth() const { return value.getBitWidth(); }
   Kind getKind() const { return Constant; }
 
   unsigned getNumKids() const { return 0; }
@@ -335,7 +332,8 @@ public:
  
   int compareContents(const Expr &b) const { 
     const ConstantExpr &cb = static_cast<const ConstantExpr&>(b);
-    if (width != cb.width) return width < cb.width ? -1 : 1;
+    if (getWidth() != cb.getWidth()) 
+      return getWidth() < cb.getWidth() ? -1 : 1;
     if (value == cb.value)
       return 0;
     return value.ult(cb.value) ? -1 : 1;

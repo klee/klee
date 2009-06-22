@@ -164,7 +164,7 @@ unsigned Expr::computeHash() {
 }
 
 unsigned ConstantExpr::computeHash() {
-  hashValue = getConstantValue() ^ (width * MAGIC_HASH_CONSTANT);
+  hashValue = getConstantValue() ^ (getWidth() * MAGIC_HASH_CONSTANT);
   return hashValue;
 }
 
@@ -336,7 +336,7 @@ ref<Expr> ConstantExpr::fromMemory(void *address, Width width) {
 }
 
 void ConstantExpr::toMemory(void *address) {
-  switch (width) {
+  switch (getWidth()) {
   default: assert(0 && "invalid type");
   case  Expr::Bool: *(( uint8_t*) address) = getConstantValue(); break;
   case  Expr::Int8: *(( uint8_t*) address) = getConstantValue(); break;
