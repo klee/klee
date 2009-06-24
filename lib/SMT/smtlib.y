@@ -32,6 +32,7 @@ using namespace klee;
 using namespace klee::expr;
 
 // Define shortcuts for various things
+#define PARSER SMTParser::parserTemp
 #define DONE SMTParser::parserTemp->done
 #define EXPR SMTParser::parserTemp->query
 #define ASSUMPTIONS SMTParser::parserTemp->assumptions
@@ -98,8 +99,8 @@ int smtliberror(const char *s)
 
 %type <node> an_formula an_logical_formula an_atom prop_atom
 %type <node> an_term basic_term an_fun an_arithmetic_fun an_pred
-%type <str> logic_name status attribute user_value annotation annotations
-
+%type <str> logic_name status attribute user_value annotation annotations 
+%type <str> var
 
 %token <str> NUMERAL_TOK
 %token <str> SYM_TOK
@@ -170,6 +171,7 @@ int smtliberror(const char *s)
 %token BVXOR_TOK
 %token BVXNOR_TOK
 
+%token EQ_TOK
 %token BVCOMP_TOK
 %token BVULT_TOK
 %token BVULE_TOK
@@ -499,16 +501,21 @@ an_formula:
     {
       $$ = $1;
     }
-/*
-  | LPAREN_TOK LET_TOK LPAREN_TOK var an_term RPAREN_TOK an_formula annotations RPAREN_TOK
+
+
+  | LPAREN_TOK LET_TOK LPAREN_TOK var an_term RPAREN_TOK 
+        { 
+	  PARSER->PushVarEnv();
+	  PARSER->AddVar(*$4, $5); 
+	} 
+    an_formula RPAREN_TOK
     {
-      CVC3::Expr e(VC->listExpr(VC->listExpr(*$4, *$5)));
-      $$ = new CVC3::Expr(VC->listExpr("_LET", e, *$7));
-      delete $4;
-      delete $5;
-      delete $7;
-      delete $8;
+      $$ = $8;
+      PARSER->PopVarEnv();
     }
+
+
+/*
   | LPAREN_TOK LET_TOK LPAREN_TOK var an_term RPAREN_TOK an_formula RPAREN_TOK
     {
       CVC3::Expr e(VC->listExpr(VC->listExpr(*$4, *$5)));
@@ -517,15 +524,7 @@ an_formula:
       delete $5;
       delete $7;
     }
-  | LPAREN_TOK FLET_TOK LPAREN_TOK fvar an_formula RPAREN_TOK an_formula annotations RPAREN_TOK
-    {
-      CVC3::Expr e(VC->listExpr(VC->listExpr(*$4, *$5)));
-      $$ = new CVC3::Expr(VC->listExpr("_LET", e, *$7));
-      delete $4;
-      delete $5;
-      delete $7;
-      delete $8;
-    }
+
   | LPAREN_TOK FLET_TOK LPAREN_TOK fvar an_formula RPAREN_TOK an_formula RPAREN_TOK
     {
       CVC3::Expr e(VC->listExpr(VC->listExpr(*$4, *$5)));
@@ -610,7 +609,16 @@ prop_atom:
 
 
 an_pred:
-    LPAREN_TOK BVULT_TOK an_term an_term RPAREN_TOK
+    LPAREN_TOK EQ_TOK an_term an_term RPAREN_TOK
+    {
+      $$ = EqExpr::create($3, $4);
+    }
+  | LPAREN_TOK EQ_TOK an_term an_term annotations RPAREN_TOK
+    {
+      $$ = EqExpr::create($3, $4);
+    }
+
+  | LPAREN_TOK BVULT_TOK an_term an_term RPAREN_TOK
     {
       $$ = UltExpr::create($3, $4);
     }
@@ -752,7 +760,7 @@ an_arithmetic_fun:
     {
       $$ = NULL; // XXX: unsupported
     }
-  | LPAREN_TOK BVSREM_TOK an_term an_term annotations RPAREN_TOK
+  | LPAREN_TOK BVSMOD_TOK an_term an_term annotations RPAREN_TOK
     {
       $$ = NULL; // XXX: unsupported
     }
@@ -964,10 +972,12 @@ basic_term:
     {
       $$ = $1;
     }
+*/
   | var
     {
-      $$ = $1;
+      $$ = PARSER->GetVar(*$1);
     }
+/*
   | fun_symb 
     {
       if ($1->size() == 1) {
@@ -1194,20 +1204,19 @@ attribute:
     }
 ;
 
-/*
+
 var:
     QUESTION_TOK SYM_TOK
     {
-      $$ = new CVC3::Expr(VC->idExpr(*$2));
-      delete $2;
+      $$ = $2;
     }
 ;
 
+/*
 fvar:
     DOLLAR_TOK SYM_TOK
     {
-      $$ = new CVC3::Expr(VC->idExpr(*$2));
-      delete $2;
+      $$ = $2;
     }
 ;
 */

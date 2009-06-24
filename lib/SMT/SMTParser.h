@@ -16,7 +16,8 @@
 #include <cassert>
 #include <iostream>
 #include <map>
-#include <cstring>
+#include <stack>
+#include <string>
 
 namespace klee {
 namespace expr {
@@ -53,6 +54,24 @@ class SMTParser : public klee::expr::Parser {
   void Init(void);
 
   int Error(const std::string& s);
+
+
+  typedef std::map<const std::string, ExprHandle> VarEnv;
+  typedef std::map<const std::string, ExprHandle> FVarEnv;
+
+  std::stack<VarEnv> varEnvs;
+  std::stack<FVarEnv> fvarEnvs;
+ 
+
+  void PushVarEnv(void);
+  void PopVarEnv(void);
+  void AddVar(std::string name, ExprHandle val); // to current var env
+  ExprHandle GetVar(std::string name); // from current var env
+
+  void PushFVarEnv(void);
+  void PopFVarEnv(void);
+  void AddFVar(std::string name, ExprHandle val); // to current fvar env
+  ExprHandle GetFVar(std::string name); // from current fvar env
 };
 
 }

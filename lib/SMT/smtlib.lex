@@ -218,6 +218,7 @@ IDCHAR  ({LETTER}|{DIGIT}|{OPCHAR})
 "bvxor"         { return BVXOR_TOK; }
 "bvxnor"        { return BVXNOR_TOK; }
 
+"="             { return EQ_TOK; }
 "bvcomp"        { return BVCOMP_TOK; }
 "bvult"         { return BVULT_TOK; }
 "bvule"         { return BVULE_TOK; }

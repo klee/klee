@@ -13,4 +13,6 @@ int main(int argc, char** argv) {
   klee::expr::SMTParser smtParser(argv[1]);
 
   smtParser.Init();
+  
+  cout << "Query: " << smtParser.query << "\n"; 
 }

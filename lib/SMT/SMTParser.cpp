@@ -14,6 +14,7 @@
 #include <fstream>
 #include <cstring>
 #include <cassert>
+#include <stack>
 
 using namespace std;
 using namespace klee;
@@ -35,6 +36,10 @@ SMTParser::SMTParser(const std::string filename) : fileName(filename),
 						   bvSize(0),
 						   queryParsed(false) {
   is = new ifstream(filename.c_str());
+  
+  // Initial empty environments
+  varEnvs.push(VarEnv());
+  fvarEnvs.push(FVarEnv());
 }
 
 void SMTParser::Init() {
@@ -59,4 +64,50 @@ int SMTParser::Error(const string& s) {
   std::cerr << "error: " << s << "\n";
   exit(1);
   return 0;
+}
+
+void SMTParser::PushVarEnv() {
+  cout << "Pushing new var env\n";
+  varEnvs.push(VarEnv(varEnvs.top()));
+}
+
+void SMTParser::PopVarEnv() {
+  cout << "Popping new var env\n";
+  varEnvs.pop();
+}
+
+void SMTParser::AddVar(std::string name, ExprHandle val) {
+  cout << "Adding (" << name << ", " << val << ") to current var env.\n";
+  varEnvs.top()[name] = val;
+}
+
+ExprHandle SMTParser::GetVar(std::string name) {
+  VarEnv top = varEnvs.top();
+  if (top.find(name) == top.end()) {
+    std::cerr << "Cannot find variable ?" << name << "\n";
+    exit(1);
+  }
+  return top[name];
+}
+
+
+void SMTParser::PushFVarEnv() {
+  fvarEnvs.push(FVarEnv(fvarEnvs.top()));
+}
+
+void SMTParser::PopFVarEnv(void) {
+  fvarEnvs.pop();
+}
+
+void SMTParser::AddFVar(std::string name, ExprHandle val) {
+  fvarEnvs.top()[name] = val;
+}
+
+ExprHandle SMTParser::GetFVar(std::string name) {
+  FVarEnv top = fvarEnvs.top();
+  if (top.find(name) == top.end()) {
+    std::cerr << "Cannot find fvar $" << name << "\n";
+    exit(1);
+  }
+  return top[name];
 }
