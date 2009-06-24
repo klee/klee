@@ -1412,8 +1412,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(cond)) {
       // Somewhat gross to create these all the time, but fine till we
       // switch to an internal rep.
-      ConstantInt *ci = ConstantInt::get(si->getCondition()->getType(),
-                                         CE->getZExtValue());
+      ConstantInt *ci = 
+        ConstantInt::get(cast<IntegerType>(si->getCondition()->getType()),
+                         CE->getZExtValue());
       unsigned index = si->findCaseValue(ci);
       transferToBasicBlock(si->getSuccessor(index), si->getParent(), state);
     } else {
