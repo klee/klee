@@ -54,6 +54,8 @@ class SMTParser : public klee::expr::Parser {
   void Init(void);
 
   int Error(const std::string& s);
+  
+  int StringToInt(const std::string& s);
 
 
   typedef std::map<const std::string, ExprHandle> VarEnv;
@@ -61,7 +63,6 @@ class SMTParser : public klee::expr::Parser {
 
   std::stack<VarEnv> varEnvs;
   std::stack<FVarEnv> fvarEnvs;
- 
 
   void PushVarEnv(void);
   void PopVarEnv(void);

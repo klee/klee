@@ -118,9 +118,7 @@ IDCHAR  ({LETTER}|{DIGIT}|{OPCHAR})
 [\n]            { SMTParser::parserTemp->lineNum++; }
 [ \t\r\f]	{ /* skip whitespace */ }
 
-{DIGIT}+"\."{DIGIT}+ { smtliblval.str = new std::string(smtlibtext); return NUMERAL_TOK; }
-{DIGIT}+	{ smtliblval.str = new std::string(smtlibtext); return NUMERAL_TOK; 
-		}
+{DIGIT}+	{ smtliblval.str = new std::string(smtlibtext); return NUMERAL_TOK; }
 
 ";"		{ BEGIN COMMENT; }
 <COMMENT>"\n"	{ BEGIN INITIAL; /* return to normal mode */ 
@@ -249,7 +247,6 @@ IDCHAR  ({LETTER}|{DIGIT}|{OPCHAR})
 "rotate_right"  { return ROR_TOK; }
 
 
-[=<>&@#+\-*/%|~]+ { smtliblval.str = new std::string(smtlibtext); return AR_SYMB; }
 ({LETTER})({IDCHAR})* {smtliblval.str = new std::string(smtlibtext); return SYM_TOK; }
 
 <<EOF>>         { return EOF_TOK; }

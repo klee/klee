@@ -12,7 +12,8 @@
 
 #include <iostream>
 #include <fstream>
-#include <cstring>
+#include <string>
+#include <sstream>
 #include <cassert>
 #include <stack>
 
@@ -65,6 +66,16 @@ int SMTParser::Error(const string& s) {
   exit(1);
   return 0;
 }
+
+
+int SMTParser::StringToInt(const std::string& s) {
+  std::stringstream str(s);
+  int x;
+  str >> x;
+  assert(str);
+  return x;
+}
+
 
 void SMTParser::PushVarEnv() {
   cout << "Pushing new var env\n";
