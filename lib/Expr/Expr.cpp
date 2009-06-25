@@ -338,11 +338,11 @@ ref<Expr> ConstantExpr::fromMemory(void *address, Width width) {
 void ConstantExpr::toMemory(void *address) {
   switch (getWidth()) {
   default: assert(0 && "invalid type");
-  case  Expr::Bool: *(( uint8_t*) address) = getConstantValue(); break;
-  case  Expr::Int8: *(( uint8_t*) address) = getConstantValue(); break;
-  case Expr::Int16: *((uint16_t*) address) = getConstantValue(); break;
-  case Expr::Int32: *((uint32_t*) address) = getConstantValue(); break;
-  case Expr::Int64: *((uint64_t*) address) = getConstantValue(); break;
+  case  Expr::Bool: *(( uint8_t*) address) = getZExtValue(1); break;
+  case  Expr::Int8: *(( uint8_t*) address) = getZExtValue(8); break;
+  case Expr::Int16: *((uint16_t*) address) = getZExtValue(16); break;
+  case Expr::Int32: *((uint32_t*) address) = getZExtValue(32); break;
+  case Expr::Int64: *((uint64_t*) address) = getZExtValue(64); break;
   }
 }
 
@@ -367,160 +367,111 @@ ref<ConstantExpr> ConstantExpr::Extract(unsigned Offset, Width W) {
 }
 
 ref<ConstantExpr> ConstantExpr::ZExt(Width W) {
-  return ConstantExpr::create(ints::zext(getConstantValue(), W, getWidth()), W);
+  return ConstantExpr::alloc(APInt(value).zextOrTrunc(W));
 }
 
 ref<ConstantExpr> ConstantExpr::SExt(Width W) {
-  return ConstantExpr::create(ints::sext(getConstantValue(), W, getWidth()), W);
+  return ConstantExpr::alloc(APInt(value).sextOrTrunc(W));
 }
 
 ref<ConstantExpr> ConstantExpr::Add(const ref<ConstantExpr> &RHS) {
-  return ConstantExpr::create(ints::add(getConstantValue(), 
-                                        RHS->getConstantValue(), getWidth()),
-                              getWidth());
+  return ConstantExpr::alloc(value + RHS->value);
 }
 
 ref<ConstantExpr> ConstantExpr::Neg() {
-  return ConstantExpr::create(ints::sub(0, 
-                                        getConstantValue(), getWidth()),
-                              getWidth());
+  return ConstantExpr::alloc(-value);
 }
 
 ref<ConstantExpr> ConstantExpr::Sub(const ref<ConstantExpr> &RHS) {
-  return ConstantExpr::create(ints::sub(getConstantValue(), 
-                                        RHS->getConstantValue(), getWidth()),
-                              getWidth());
+  return ConstantExpr::alloc(value - RHS->value);
 }
 
 ref<ConstantExpr> ConstantExpr::Mul(const ref<ConstantExpr> &RHS) {
-  return ConstantExpr::create(ints::mul(getConstantValue(), 
-                                        RHS->getConstantValue(), getWidth()),
-                              getWidth());
+  return ConstantExpr::alloc(value * RHS->value);
 }
 
 ref<ConstantExpr> ConstantExpr::UDiv(const ref<ConstantExpr> &RHS) {
-  return ConstantExpr::create(ints::udiv(getConstantValue(), 
-                                        RHS->getConstantValue(), getWidth()),
-                              getWidth());
+  return ConstantExpr::alloc(value.udiv(RHS->value));
 }
 
 ref<ConstantExpr> ConstantExpr::SDiv(const ref<ConstantExpr> &RHS) {
-  return ConstantExpr::create(ints::sdiv(getConstantValue(), 
-                                        RHS->getConstantValue(), getWidth()),
-                              getWidth());
+  return ConstantExpr::alloc(value.sdiv(RHS->value));
 }
 
 ref<ConstantExpr> ConstantExpr::URem(const ref<ConstantExpr> &RHS) {
-  return ConstantExpr::create(ints::urem(getConstantValue(), 
-                                        RHS->getConstantValue(), getWidth()),
-                              getWidth());
+  return ConstantExpr::alloc(value.urem(RHS->value));
 }
 
 ref<ConstantExpr> ConstantExpr::SRem(const ref<ConstantExpr> &RHS) {
-  return ConstantExpr::create(ints::srem(getConstantValue(), 
-                                        RHS->getConstantValue(), getWidth()),
-                              getWidth());
+  return ConstantExpr::alloc(value.srem(RHS->value));
 }
 
 ref<ConstantExpr> ConstantExpr::And(const ref<ConstantExpr> &RHS) {
-  return ConstantExpr::create(ints::land(getConstantValue(), 
-                                         RHS->getConstantValue(), getWidth()),
-                              getWidth());
+  return ConstantExpr::alloc(value & RHS->value);
 }
 
 ref<ConstantExpr> ConstantExpr::Or(const ref<ConstantExpr> &RHS) {
-  return ConstantExpr::create(ints::lor(getConstantValue(), 
-                                        RHS->getConstantValue(), getWidth()),
-                              getWidth());
+  return ConstantExpr::alloc(value | RHS->value);
 }
 
 ref<ConstantExpr> ConstantExpr::Xor(const ref<ConstantExpr> &RHS) {
-  return ConstantExpr::create(ints::lxor(getConstantValue(), 
-                                         RHS->getConstantValue(), getWidth()),
-                              getWidth());
+  return ConstantExpr::alloc(value ^ RHS->value);
 }
 
 ref<ConstantExpr> ConstantExpr::Shl(const ref<ConstantExpr> &RHS) {
-  return ConstantExpr::create(ints::shl(getConstantValue(), 
-                                        RHS->getConstantValue(), getWidth()),
-                              getWidth());
+  return ConstantExpr::alloc(value.shl(RHS->value));
 }
 
 ref<ConstantExpr> ConstantExpr::LShr(const ref<ConstantExpr> &RHS) {
-  return ConstantExpr::create(ints::lshr(getConstantValue(), 
-                                        RHS->getConstantValue(), getWidth()),
-                              getWidth());
+  return ConstantExpr::alloc(value.lshr(RHS->value));
 }
 
 ref<ConstantExpr> ConstantExpr::AShr(const ref<ConstantExpr> &RHS) {
-  return ConstantExpr::create(ints::ashr(getConstantValue(), 
-                                        RHS->getConstantValue(), getWidth()),
-                              getWidth());
+  return ConstantExpr::alloc(value.ashr(RHS->value));
 }
 
 ref<ConstantExpr> ConstantExpr::Not() {
-  return ConstantExpr::create(ints::eq(getConstantValue(), 0, getWidth()),
-                              Expr::Bool);
+  return ConstantExpr::alloc(value == 0, Expr::Bool);
 }
 
 ref<ConstantExpr> ConstantExpr::Eq(const ref<ConstantExpr> &RHS) {
-  return ConstantExpr::create(ints::eq(getConstantValue(), 
-                                        RHS->getConstantValue(), getWidth()),
-                              Expr::Bool);
+  return ConstantExpr::alloc(value == RHS->value, Expr::Bool);
 }
 
 ref<ConstantExpr> ConstantExpr::Ne(const ref<ConstantExpr> &RHS) {
-  return ConstantExpr::create(ints::ne(getConstantValue(), 
-                                        RHS->getConstantValue(), getWidth()),
-                              Expr::Bool);
+  return ConstantExpr::alloc(value != RHS->value, Expr::Bool);
 }
 
 ref<ConstantExpr> ConstantExpr::Ult(const ref<ConstantExpr> &RHS) {
-  return ConstantExpr::create(ints::ult(getConstantValue(), 
-                                        RHS->getConstantValue(), getWidth()),
-                              Expr::Bool);
+  return ConstantExpr::alloc(value.ult(RHS->value), Expr::Bool);
 }
 
 ref<ConstantExpr> ConstantExpr::Ule(const ref<ConstantExpr> &RHS) {
-  return ConstantExpr::create(ints::ule(getConstantValue(), 
-                                        RHS->getConstantValue(), getWidth()),
-                              Expr::Bool);
+  return ConstantExpr::alloc(value.ule(RHS->value), Expr::Bool);
 }
 
 ref<ConstantExpr> ConstantExpr::Ugt(const ref<ConstantExpr> &RHS) {
-  return ConstantExpr::create(ints::ugt(getConstantValue(), 
-                                        RHS->getConstantValue(), getWidth()),
-                              Expr::Bool);
+  return ConstantExpr::alloc(value.ugt(RHS->value), Expr::Bool);
 }
 
 ref<ConstantExpr> ConstantExpr::Uge(const ref<ConstantExpr> &RHS) {
-  return ConstantExpr::create(ints::uge(getConstantValue(), 
-                                        RHS->getConstantValue(), getWidth()),
-                              Expr::Bool);
+  return ConstantExpr::alloc(value.uge(RHS->value), Expr::Bool);
 }
 
 ref<ConstantExpr> ConstantExpr::Slt(const ref<ConstantExpr> &RHS) {
-  return ConstantExpr::create(ints::slt(getConstantValue(), 
-                                        RHS->getConstantValue(), getWidth()),
-                              Expr::Bool);
+  return ConstantExpr::alloc(value.slt(RHS->value), Expr::Bool);
 }
 
 ref<ConstantExpr> ConstantExpr::Sle(const ref<ConstantExpr> &RHS) {
-  return ConstantExpr::create(ints::sle(getConstantValue(), 
-                                        RHS->getConstantValue(), getWidth()),
-                              Expr::Bool);
+  return ConstantExpr::alloc(value.sle(RHS->value), Expr::Bool);
 }
 
 ref<ConstantExpr> ConstantExpr::Sgt(const ref<ConstantExpr> &RHS) {
-  return ConstantExpr::create(ints::sgt(getConstantValue(), 
-                                        RHS->getConstantValue(), getWidth()),
-                              Expr::Bool);
+  return ConstantExpr::alloc(value.sgt(RHS->value), Expr::Bool);
 }
 
 ref<ConstantExpr> ConstantExpr::Sge(const ref<ConstantExpr> &RHS) {
-  return ConstantExpr::create(ints::sge(getConstantValue(), 
-                                        RHS->getConstantValue(), getWidth()),
-                              Expr::Bool);
+  return ConstantExpr::alloc(value.sge(RHS->value), Expr::Bool);
 }
 
 /***/

@@ -299,7 +299,13 @@ public:
 private:
   llvm::APInt value;
 
-  ConstantExpr(uint64_t v, Width w) : value(w, v) {}
+  ConstantExpr(const llvm::APInt &v) : value(v) {}
+
+  static ref<ConstantExpr> alloc(const llvm::APInt &v) {
+    ref<ConstantExpr> r(new ConstantExpr(v));
+    r->computeHash();
+    return r;
+  }
 
 public:
   ~ConstantExpr() {};
@@ -351,7 +357,7 @@ public:
 
   static ref<ConstantExpr> alloc(uint64_t v, Width w) {
     // constructs an "optimized" ConstantExpr
-    ref<ConstantExpr> r(new ConstantExpr(v, w));
+    ref<ConstantExpr> r(new ConstantExpr(llvm::APInt(w, v)));
     r->computeHash();
     return r;
   }
