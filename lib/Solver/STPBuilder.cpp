@@ -465,17 +465,30 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
 
   switch (e->getKind()) {
   case Expr::Constant: {
-    uint64_t asUInt64 = cast<ConstantExpr>(e)->getConstantValue();
-    *width_out = e->getWidth();
+    ConstantExpr *CE = cast<ConstantExpr>(e);
+    *width_out = CE->getWidth();
 
-    if (*width_out > 64)
-      assert(0 && "constructActual: width > 64");
-
+    // Coerce to bool if necessary.
     if (*width_out == 1)
-      return asUInt64 ? getTrue() : getFalse();
-    else if (*width_out <= 32) 
-      return bvConst32(*width_out, asUInt64);
-    else return bvConst64(*width_out, asUInt64);
+      return CE->isTrue() ? getTrue() : getFalse();
+
+    // Fast path.
+    if (*width_out <= 32)
+      return bvConst32(*width_out, CE->getZExtValue(32));
+    if (*width_out <= 64)
+      return bvConst64(*width_out, CE->getZExtValue());
+
+    // FIXME: Optimize?
+    assert(0 && "FIXME: Not tested!");
+    ref<ConstantExpr> Tmp = CE;
+    ExprHandle Res = bvConst64(64, Tmp->Extract(0, 64)->getZExtValue());
+    for (unsigned i = (*width_out / 64) - 1; i; --i) {
+      Tmp = Tmp->LShr(ConstantExpr::alloc(64, Tmp->getWidth()));
+      Res = vc_bvConcatExpr(vc, bvConst64(std::min(64U, Tmp->getWidth()),
+                                          Tmp->Extract(0, 64)->getZExtValue()),
+                            Res);
+    }
+    return Res;
   }
     
   // Special

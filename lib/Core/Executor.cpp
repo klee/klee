@@ -396,7 +396,15 @@ void Executor::initializeGlobalObject(ExecutionState &state, ObjectState *os,
       initializeGlobalObject(state, os, cs->getOperand(i), 
 			     offset + sl->getElementOffset(i));
   } else {
-    os->write(offset, evalConstant(c));
+    unsigned StoreBits = targetData->getTypeStoreSizeInBits(c->getType());
+    ref<ConstantExpr> C = evalConstant(c);
+
+    // Extend the constant if necessary;
+    assert(StoreBits >= C->getWidth() && "Invalid store size!");
+    if (StoreBits > C->getWidth())
+      C = ConstantExpr::alloc(0, StoreBits - C->getWidth())->Concat(C);
+
+    os->write(offset, C);
   }
 }
 
@@ -923,15 +931,21 @@ ref<klee::ConstantExpr> Executor::evalConstant(Constant *c) {
     return evalConstantExpr(ce);
   } else {
     if (const ConstantInt *ci = dyn_cast<ConstantInt>(c)) {
-      switch(ci->getBitWidth()) {
-      case  1: return ConstantExpr::create(ci->getZExtValue(), Expr::Bool);
-      case  8: return ConstantExpr::create(ci->getZExtValue(), Expr::Int8);
-      case 16: return ConstantExpr::create(ci->getZExtValue(), Expr::Int16);
-      case 32: return ConstantExpr::create(ci->getZExtValue(), Expr::Int32);
-      case 64: return ConstantExpr::create(ci->getZExtValue(), Expr::Int64);
-      default:
-        assert(0 && "XXX arbitrary bit width constants unhandled");
+      const APInt &Val = ci->getValue();
+      unsigned W = Val.getBitWidth();
+      
+      if (W <= 64)
+        return ConstantExpr::create(Val.getZExtValue(), W);
+
+      assert(0 && "FIXME: Untested!");
+      ref<ConstantExpr> Res = ConstantExpr::create(0, W);
+      for (unsigned i = 0; i < Val.getNumWords(); ++i) {
+        ref<ConstantExpr> Tmp = ConstantExpr::alloc(Val.getRawData()[i], W);
+        Tmp = Tmp->Shl(ConstantExpr::alloc(i * 64, W));
+        Res = Res->Or(Tmp);
       }
+
+      return Res;
     } else if (const ConstantFP *cf = dyn_cast<ConstantFP>(c)) {      
       switch(cf->getType()->getTypeID()) {
       case Type::FloatTyID: {
