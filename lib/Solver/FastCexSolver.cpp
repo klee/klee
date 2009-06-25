@@ -101,6 +101,10 @@ private:
 
 public:
   ValueRange() : m_min(1),m_max(0) {}
+  ValueRange(const ref<ConstantExpr> &ce) {
+    // FIXME: Support large widths.
+    m_min = m_max = ce->getLimitedValue();
+  }
   ValueRange(uint64_t value) : m_min(value), m_max(value) {}
   ValueRange(uint64_t _min, uint64_t _max) : m_min(_min), m_max(_max) {}
   ValueRange(const ValueRange &b) : m_min(b.m_min), m_max(b.m_max) {}

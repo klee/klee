@@ -164,7 +164,7 @@ unsigned Expr::computeHash() {
 }
 
 unsigned ConstantExpr::computeHash() {
-  hashValue = getConstantValue() ^ (getWidth() * MAGIC_HASH_CONSTANT);
+  hashValue = value.getHashValue() ^ (getWidth() * MAGIC_HASH_CONSTANT);
   return hashValue;
 }
 
@@ -1001,12 +1001,11 @@ static ref<Expr> TryConstArrayOpt(const ref<ConstantExpr> &cl,
 }
 
 static ref<Expr> EqExpr_createPartialR(const ref<ConstantExpr> &cl, Expr *r) {  
-  uint64_t value = cl->getConstantValue();
   Expr::Width width = cl->getWidth();
 
   Expr::Kind rk = r->getKind();
   if (width == Expr::Bool) {
-    if (value) {
+    if (cl->isTrue()) {
       return r;
     } else {
       // 0 == ...
@@ -1033,12 +1032,12 @@ static ref<Expr> EqExpr_createPartialR(const ref<ConstantExpr> &cl, Expr *r) {
     // (sext(a,T)==c) == (a==c)
     const SExtExpr *see = cast<SExtExpr>(r);
     Expr::Width fromBits = see->src->getWidth();
-    uint64_t trunc = bits64::truncateToNBits(value, fromBits);
+    ref<ConstantExpr> trunc = cl->ZExt(fromBits);
 
     // pathological check, make sure it is possible to
     // sext to this value *from any value*
-    if (value == ints::sext(trunc, width, fromBits)) {
-      return EqExpr::create(see->src, ConstantExpr::create(trunc, fromBits));
+    if (cl == trunc->SExt(width)) {
+      return EqExpr::create(see->src, trunc);
     } else {
       return ConstantExpr::create(0, Expr::Bool);
     }
@@ -1046,12 +1045,12 @@ static ref<Expr> EqExpr_createPartialR(const ref<ConstantExpr> &cl, Expr *r) {
     // (zext(a,T)==c) == (a==c)
     const ZExtExpr *zee = cast<ZExtExpr>(r);
     Expr::Width fromBits = zee->src->getWidth();
-    uint64_t trunc = bits64::truncateToNBits(value, fromBits);
+    ref<ConstantExpr> trunc = cl->ZExt(fromBits);
     
     // pathological check, make sure it is possible to
     // zext to this value *from any value*
-    if (value == ints::zext(trunc, width, fromBits)) {
-      return EqExpr::create(zee->src, ConstantExpr::create(trunc, fromBits));
+    if (cl == trunc->ZExt(width)) {
+      return EqExpr::create(zee->src, trunc);
     } else {
       return ConstantExpr::create(0, Expr::Bool);
     }
