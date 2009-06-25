@@ -72,7 +72,7 @@ void SMTParser::PushVarEnv() {
 }
 
 void SMTParser::PopVarEnv() {
-  cout << "Popping new var env\n";
+  cout << "Popping var env\n";
   varEnvs.pop();
 }
 
@@ -96,10 +96,12 @@ void SMTParser::PushFVarEnv() {
 }
 
 void SMTParser::PopFVarEnv(void) {
+  cout << "Popping fvar env\n";
   fvarEnvs.pop();
 }
 
 void SMTParser::AddFVar(std::string name, ExprHandle val) {
+  cout << "Adding (" << name << ", " << val << ") to current fvar env.\n";
   fvarEnvs.top()[name] = val;
 }
 

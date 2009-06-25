@@ -100,7 +100,7 @@ int smtliberror(const char *s)
 %type <node> an_formula an_logical_formula an_atom prop_atom
 %type <node> an_term basic_term an_fun an_arithmetic_fun an_pred
 %type <str> logic_name status attribute user_value annotation annotations 
-%type <str> var
+%type <str> var fvar
 
 %token <str> NUMERAL_TOK
 %token <str> SYM_TOK
@@ -474,7 +474,6 @@ an_formula:
       $$ = $1;
     }
 
-
   | LPAREN_TOK LET_TOK LPAREN_TOK var an_term RPAREN_TOK
         { 
 	  PARSER->PushVarEnv();
@@ -486,26 +485,16 @@ an_formula:
       PARSER->PopVarEnv();
     }
 
-
-/*
-  | LPAREN_TOK LET_TOK LPAREN_TOK var an_term RPAREN_TOK an_formula RPAREN_TOK
+  | LPAREN_TOK FLET_TOK LPAREN_TOK fvar an_formula RPAREN_TOK 
+        { 
+	  PARSER->PushFVarEnv();
+	  PARSER->AddFVar(*$4, $5); 
+	} 
+    an_formula annotations
     {
-      CVC3::Expr e(VC->listExpr(VC->listExpr(*$4, *$5)));
-      $$ = new CVC3::Expr(VC->listExpr("_LET", e, *$7));
-      delete $4;
-      delete $5;
-      delete $7;
+      $$ = $8;
+      PARSER->PopFVarEnv();
     }
-
-  | LPAREN_TOK FLET_TOK LPAREN_TOK fvar an_formula RPAREN_TOK an_formula RPAREN_TOK
-    {
-      CVC3::Expr e(VC->listExpr(VC->listExpr(*$4, *$5)));
-      $$ = new CVC3::Expr(VC->listExpr("_LET", e, *$7));
-      delete $4;
-      delete $5;
-      delete $7;
-    }
-*/
 ;
 
 
@@ -563,20 +552,16 @@ prop_atom:
     {
       $$ = ConstantExpr::create(1, 1);
     }
+
   | FALSE_TOK
     { 
       $$ = ConstantExpr::create(0, 1);;
     }
-/*
+
   | fvar
     {
-      $$ = $1;
+      $$ = PARSER->GetFVar(*$1);
     }
-  | pred_symb 
-    {
-      $$ = $1;
-    }
-*/
 ;  
 
 
@@ -859,16 +844,12 @@ basic_term:
     {
       $$ = ConstantExpr::create(1, 1);
     }
+
   | BIT0_TOK
     { 
       $$ = ConstantExpr::create(0, 1);;
     }
-/*
-  | fvar
-    {
-      $$ = $1;
-    }
-*/
+
   | var
     {
       $$ = PARSER->GetVar(*$1);
@@ -1108,13 +1089,13 @@ var:
     }
 ;
 
-/*
+
 fvar:
     DOLLAR_TOK SYM_TOK
     {
       $$ = $2;
     }
 ;
-*/
+
 
 %%
