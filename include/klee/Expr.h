@@ -316,8 +316,6 @@ public:
   unsigned getNumKids() const { return 0; }
   ref<Expr> getKid(unsigned i) const { return 0; }
 
-  uint64_t getConstantValue() const { return value.getZExtValue(); }
-
   /// getZExtValue - Return the constant value for a limited number of bits.
   ///
   /// This routine should be used in situations where the width of the constant

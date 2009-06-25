@@ -1,0 +1,11 @@
+# RUN: %kleaver %s > %t
+
+array a[64] : w32 -> w8 = symbolic
+
+# RUN: grep -A 1 \"Query 0\" %t > %t2
+# RUN: grep \"Expr 0:\t18446744073709551618\" %t2
+(query [] false [(Concat w128 (w64 1) (w64 2))])
+
+# RUN: grep -A 1 \"Query 1\" %t > %t2
+# RUN: grep \"Expr 0:\t16\" %t2
+(query [] false [(Extract w5 60 (Concat w128 (w64 1) (w64 2)))])

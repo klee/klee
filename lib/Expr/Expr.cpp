@@ -347,23 +347,21 @@ void ConstantExpr::toMemory(void *address) {
 }
 
 void ConstantExpr::toString(std::string &Res) const {
-  std::stringstream os;
-  os << *this;
-  Res = os.str();
+  Res = value.toString(10, false);
 }
 
 ref<ConstantExpr> ConstantExpr::Concat(const ref<ConstantExpr> &RHS) {
   Expr::Width W = getWidth() + RHS->getWidth();
-  assert(W <= 64 && "FIXME: Support arbitrary bit-widths!");
-  
-  uint64_t res = (getConstantValue() << RHS->getWidth()) + 
-    RHS->getConstantValue();
-  return ConstantExpr::create(res, W);
+  APInt Tmp(value);
+  Tmp.zext(W);
+  Tmp <<= RHS->getWidth();
+  Tmp |= APInt(RHS->value).zext(W);
+
+  return ConstantExpr::alloc(Tmp);
 }
 
 ref<ConstantExpr> ConstantExpr::Extract(unsigned Offset, Width W) {
-  return ConstantExpr::create(ints::trunc(getConstantValue() >> Offset, W, 
-                                          getWidth()), W);
+  return ConstantExpr::alloc(APInt(value.ashr(Offset)).zextOrTrunc(W));
 }
 
 ref<ConstantExpr> ConstantExpr::ZExt(Width W) {
