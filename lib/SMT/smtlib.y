@@ -332,7 +332,7 @@ fun_symb_decls:
 ;
 
 fun_symb_decl:
-    LPAREN_TOK fun_sig annotations RPAREN_TOK
+    LPAREN_TOK fun_sig annotations
     {
       $$ = $2;
       delete $3;
@@ -375,7 +375,7 @@ pred_symb_decls:
 ;
 
 pred_symb_decl:
-    LPAREN_TOK pred_sig annotations RPAREN_TOK
+    LPAREN_TOK pred_sig annotations
     {
       $$ = $2;
       delete $3;
@@ -426,65 +426,37 @@ an_formulas:
 
 an_logical_formula:
 
-    LPAREN_TOK NOT_TOK an_formula RPAREN_TOK
-    {
-      $$ = Expr::createNot($3);
-    }
-  | LPAREN_TOK NOT_TOK an_formula annotations RPAREN_TOK
+    LPAREN_TOK NOT_TOK an_formula annotations
     {
       $$ = Expr::createNot($3);
     }
 
-  | LPAREN_TOK IMPLIES_TOK an_formula an_formula RPAREN_TOK
-    {
-      $$ = Expr::createImplies($3, $4);
-    }
-  | LPAREN_TOK IMPLIES_TOK an_formula an_formula annotations RPAREN_TOK
+  | LPAREN_TOK IMPLIES_TOK an_formula an_formula annotations
     {
       $$ = Expr::createImplies($3, $4);
     }
 
-  | LPAREN_TOK IF_THEN_ELSE_TOK an_formula an_formula an_formula RPAREN_TOK
-    {
-      $$ = SelectExpr::create($3, $4, $5);
-    }
-  | LPAREN_TOK IF_THEN_ELSE_TOK an_formula an_formula an_formula annotations RPAREN_TOK
+  | LPAREN_TOK IF_THEN_ELSE_TOK an_formula an_formula an_formula annotations
     {
       $$ = SelectExpr::create($3, $4, $5);
     }
 
-  | LPAREN_TOK AND_TOK an_formula an_formula RPAREN_TOK
-    {
-      $$ = AndExpr::create($3, $4);
-    }
-  | LPAREN_TOK AND_TOK an_formula an_formula annotations RPAREN_TOK
+  | LPAREN_TOK AND_TOK an_formula an_formula annotations
     {
       $$ = AndExpr::create($3, $4);
     }
 
-  | LPAREN_TOK OR_TOK an_formula an_formula RPAREN_TOK
-    {
-      $$ = OrExpr::create($3, $4);
-    }
-  | LPAREN_TOK OR_TOK an_formula an_formula annotations RPAREN_TOK
+  | LPAREN_TOK OR_TOK an_formula an_formula annotations
     {
       $$ = OrExpr::create($3, $4);
     }
 
-  | LPAREN_TOK XOR_TOK an_formula an_formula RPAREN_TOK
-    {
-      $$ = XorExpr::create($3, $4);
-    }
-  | LPAREN_TOK XOR_TOK an_formula an_formula annotations RPAREN_TOK
+  | LPAREN_TOK XOR_TOK an_formula an_formula annotations
     {
       $$ = XorExpr::create($3, $4);
     }
 
-  | LPAREN_TOK IFF_TOK an_formula an_formula RPAREN_TOK
-    {
-      $$ = EqExpr::create($3, $4);
-    }
-  | LPAREN_TOK IFF_TOK an_formula an_formula annotations RPAREN_TOK
+  | LPAREN_TOK IFF_TOK an_formula an_formula annotations
     {
       $$ = EqExpr::create($3, $4);
     }
@@ -503,12 +475,12 @@ an_formula:
     }
 
 
-  | LPAREN_TOK LET_TOK LPAREN_TOK var an_term RPAREN_TOK 
+  | LPAREN_TOK LET_TOK LPAREN_TOK var an_term RPAREN_TOK
         { 
 	  PARSER->PushVarEnv();
 	  PARSER->AddVar(*$4, $5); 
 	} 
-    an_formula RPAREN_TOK
+    an_formula annotations
     {
       $$ = $8;
       PARSER->PopVarEnv();
@@ -542,7 +514,7 @@ an_atom:
     {
       $$ = $1;
     }
-  | LPAREN_TOK prop_atom annotations RPAREN_TOK 
+  | LPAREN_TOK prop_atom annotations 
     {
       $$ = $2;
     }
@@ -553,7 +525,7 @@ an_atom:
     }
 
 /*
-  | LPAREN_TOK DISTINCT_TOK an_terms annotations RPAREN_TOK
+  | LPAREN_TOK DISTINCT_TOK an_terms annotations
     {
       $$ = new CVC3::Expr(VC->listExpr("_DISTINCT", *$3));
 
@@ -609,83 +581,47 @@ prop_atom:
 
 
 an_pred:
-    LPAREN_TOK EQ_TOK an_term an_term RPAREN_TOK
-    {
-      $$ = EqExpr::create($3, $4);
-    }
-  | LPAREN_TOK EQ_TOK an_term an_term annotations RPAREN_TOK
+    LPAREN_TOK EQ_TOK an_term an_term annotations
     {
       $$ = EqExpr::create($3, $4);
     }
 
-  | LPAREN_TOK BVULT_TOK an_term an_term RPAREN_TOK
-    {
-      $$ = UltExpr::create($3, $4);
-    }
-  | LPAREN_TOK BVULT_TOK an_term an_term annotations RPAREN_TOK
+  | LPAREN_TOK BVULT_TOK an_term an_term annotations
     {
       $$ = UltExpr::create($3, $4);
     }
 
-  | LPAREN_TOK BVULE_TOK an_term an_term RPAREN_TOK
-    {
-      $$ = UleExpr::create($3, $4);
-    }
-  | LPAREN_TOK BVULE_TOK an_term an_term annotations RPAREN_TOK
+  | LPAREN_TOK BVULE_TOK an_term an_term annotations
     {
       $$ = UleExpr::create($3, $4);
     }
 
-  | LPAREN_TOK BVUGT_TOK an_term an_term RPAREN_TOK
-    {
-      $$ = UgtExpr::create($3, $4);
-    }
-  | LPAREN_TOK BVUGT_TOK an_term an_term annotations RPAREN_TOK
+  | LPAREN_TOK BVUGT_TOK an_term an_term annotations
     {
       $$ = UgtExpr::create($3, $4);
     }
 
-  | LPAREN_TOK BVUGE_TOK an_term an_term RPAREN_TOK
-    {
-      $$ = UgeExpr::create($3, $4);
-    }
-  | LPAREN_TOK BVUGE_TOK an_term an_term annotations RPAREN_TOK
+  | LPAREN_TOK BVUGE_TOK an_term an_term annotations
     {
       $$ = UgeExpr::create($3, $4);
     }
 
-  | LPAREN_TOK BVSLT_TOK an_term an_term RPAREN_TOK
-    {
-      $$ = SltExpr::create($3, $4);
-    }
-  | LPAREN_TOK BVSLT_TOK an_term an_term annotations RPAREN_TOK
+  | LPAREN_TOK BVSLT_TOK an_term an_term annotations
     {
       $$ = SltExpr::create($3, $4);
     }
 
-  | LPAREN_TOK BVSLE_TOK an_term an_term RPAREN_TOK
-    {
-      $$ = SleExpr::create($3, $4);
-    }
-  | LPAREN_TOK BVSLE_TOK an_term an_term annotations RPAREN_TOK
+  | LPAREN_TOK BVSLE_TOK an_term an_term annotations
     {
       $$ = SleExpr::create($3, $4);
     }
 
-  | LPAREN_TOK BVSGT_TOK an_term an_term RPAREN_TOK
-    {
-      $$ = SgtExpr::create($3, $4);
-    }
-  | LPAREN_TOK BVSGT_TOK an_term an_term annotations RPAREN_TOK
+  | LPAREN_TOK BVSGT_TOK an_term an_term annotations
     {
       $$ = SgtExpr::create($3, $4);
     }
 
-  | LPAREN_TOK BVSGE_TOK an_term an_term RPAREN_TOK
-    {
-      $$ = SgeExpr::create($3, $4);
-    }
-  | LPAREN_TOK BVSGE_TOK an_term an_term annotations RPAREN_TOK
+  | LPAREN_TOK BVSGE_TOK an_term an_term annotations
     {
       $$ = SgeExpr::create($3, $4);
     }
@@ -693,74 +629,42 @@ an_pred:
 
 
 an_arithmetic_fun:
-    LPAREN_TOK BVADD_TOK an_term an_term RPAREN_TOK
-    {
-      $$ = AddExpr::create($3, $4);
-    }
-  | LPAREN_TOK BVADD_TOK an_term an_term annotations RPAREN_TOK
+    LPAREN_TOK BVADD_TOK an_term an_term annotations
     {
       $$ = AddExpr::create($3, $4);
     }
 
-  | LPAREN_TOK BVSUB_TOK an_term an_term RPAREN_TOK
-    {
-      $$ = SubExpr::create($3, $4);
-    }
-  | LPAREN_TOK BVSUB_TOK an_term an_term annotations RPAREN_TOK
+  | LPAREN_TOK BVSUB_TOK an_term an_term annotations
     {
       $$ = SubExpr::create($3, $4);
     }
 
-  | LPAREN_TOK BVMUL_TOK an_term an_term RPAREN_TOK
-    {
-      $$ = MulExpr::create($3, $4);
-    }
-  | LPAREN_TOK BVMUL_TOK an_term an_term annotations RPAREN_TOK
+  | LPAREN_TOK BVMUL_TOK an_term an_term annotations
     {
       $$ = MulExpr::create($3, $4);
     }
 
-  | LPAREN_TOK BVUDIV_TOK an_term an_term RPAREN_TOK
-    {
-      $$ = UDivExpr::create($3, $4);
-    }
-  | LPAREN_TOK BVUDIV_TOK an_term an_term annotations RPAREN_TOK
+  | LPAREN_TOK BVUDIV_TOK an_term an_term annotations
     {
       $$ = UDivExpr::create($3, $4);
     }
 
-  | LPAREN_TOK BVUREM_TOK an_term an_term RPAREN_TOK
-    {
-      $$ = URemExpr::create($3, $4);
-    }
-  | LPAREN_TOK BVUREM_TOK an_term an_term annotations RPAREN_TOK
+  | LPAREN_TOK BVUREM_TOK an_term an_term annotations
     {
       $$ = URemExpr::create($3, $4);
     }
 
-  | LPAREN_TOK BVSDIV_TOK an_term an_term RPAREN_TOK
-    {
-      $$ = SDivExpr::create($3, $4);
-    }
-  | LPAREN_TOK BVSDIV_TOK an_term an_term annotations RPAREN_TOK
+  | LPAREN_TOK BVSDIV_TOK an_term an_term annotations
     {
       $$ = SDivExpr::create($3, $4);
     }
 
-  | LPAREN_TOK BVSREM_TOK an_term an_term RPAREN_TOK
-    {
-      $$ = SRemExpr::create($3, $4);
-    }
-  | LPAREN_TOK BVSREM_TOK an_term an_term annotations RPAREN_TOK
+  | LPAREN_TOK BVSREM_TOK an_term an_term annotations
     {
       $$ = SRemExpr::create($3, $4);
     }
 
-  | LPAREN_TOK BVSMOD_TOK an_term an_term RPAREN_TOK
-    {
-      $$ = NULL; // XXX: unsupported
-    }
-  | LPAREN_TOK BVSMOD_TOK an_term an_term annotations RPAREN_TOK
+  | LPAREN_TOK BVSMOD_TOK an_term an_term annotations
     {
       $$ = NULL; // XXX: unsupported
     }
@@ -779,11 +683,7 @@ an_fun:
       $$ = $1;
     }
 
-  | LPAREN_TOK BVCOMP_TOK an_term an_term RPAREN_TOK
-    {
-      $$ = EqExpr::create($3, $4);
-    }
-  | LPAREN_TOK BVCOMP_TOK an_term an_term annotations RPAREN_TOK
+  | LPAREN_TOK BVCOMP_TOK an_term an_term annotations
     {
       $$ = EqExpr::create($3, $4);
     }
@@ -936,7 +836,7 @@ an_term:
     {
       $$ = $1;
     }
-  | LPAREN_TOK basic_term annotations RPAREN_TOK 
+  | LPAREN_TOK basic_term annotations 
     {
       $$ = $2;
       delete $3;
@@ -947,11 +847,7 @@ an_term:
       $$ = $1;
     }
 
-  | LPAREN_TOK ITE_TOK an_formula an_term an_term RPAREN_TOK
-    {
-      $$ = SelectExpr::create($3, $4, $5);
-    }
-  | LPAREN_TOK ITE_TOK an_formula an_term an_term annotations RPAREN_TOK
+  | LPAREN_TOK ITE_TOK an_formula an_term an_term annotations
     {
       $$ = SelectExpr::create($3, $4, $5);
     }
@@ -994,8 +890,8 @@ basic_term:
 
 
 annotations:
-    annotation { }
-  | annotations annotation { }
+    RPAREN_TOK { }
+  | annotation annotations { }
 ;
 
 annotation:
