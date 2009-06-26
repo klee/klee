@@ -183,11 +183,7 @@ public:
 
   ref<Expr> read(ref<Expr> offset, Expr::Width width) const;
   ref<Expr> read(unsigned offset, Expr::Width width) const;
-  ref<Expr> read1(unsigned offset) const;
   ref<Expr> read8(unsigned offset) const;
-  ref<Expr> read16(unsigned offset) const;
-  ref<Expr> read32(unsigned offset) const;
-  ref<Expr> read64(unsigned offset) const;
 
   // return bytes written.
   void write(unsigned offset, ref<Expr> value);
@@ -205,22 +201,9 @@ private:
 
   void makeSymbolic();
 
-  ref<Expr> read1(ref<Expr> offset) const;
   ref<Expr> read8(ref<Expr> offset) const;
-  ref<Expr> read16(ref<Expr> offset) const;
-  ref<Expr> read32(ref<Expr> offset) const;
-  ref<Expr> read64(ref<Expr> offset) const;
-
-  void write1(unsigned offset, ref<Expr> value);
-  void write1(ref<Expr> offset, ref<Expr> value);
   void write8(unsigned offset, ref<Expr> value);
   void write8(ref<Expr> offset, ref<Expr> value);
-  void write16(unsigned offset, ref<Expr> value);
-  void write16(ref<Expr> offset, ref<Expr> value);
-  void write32(unsigned offset, ref<Expr> value);
-  void write32(ref<Expr> offset, ref<Expr> value);
-  void write64(unsigned offset, ref<Expr> value);
-  void write64(ref<Expr> offset, ref<Expr> value);
 
   void fastRangeCheckOffset(ref<Expr> offset, unsigned *base_r, 
                             unsigned *size_r) const;

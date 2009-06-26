@@ -429,433 +429,128 @@ void ObjectState::write8(ref<Expr> offset, ref<Expr> value) {
 /***/
 
 ref<Expr> ObjectState::read(ref<Expr> offset, Expr::Width width) const {
+  // Check for reads at constant offsets.
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(offset)) {
     return read(CE->getZExtValue(32), width);
-  } else { 
-    switch (width) {
-    default: assert(0 && "invalid type");
-    case  Expr::Bool: return  read1(offset);
-    case  Expr::Int8: return  read8(offset);
-    case Expr::Int16: return read16(offset);
-    case Expr::Int32: return read32(offset);
-    case Expr::Int64: return read64(offset);
-    }
+  } 
+
+  // Treat bool specially, it is the only non-byte sized write we allow.
+  if (width == Expr::Bool)
+    return ExtractExpr::create(read8(offset), 0, Expr::Bool);
+
+  // Otherwise, follow the slow general case.
+  Expr::Width IndexWidth = offset->getWidth();
+  unsigned NumBytes = width / 8;
+  assert(width == NumBytes * 8 && "Invalid write size!");
+  ref<Expr> Res(0);
+  for (unsigned i = 0; i != NumBytes; ++i) {
+    unsigned idx = (kMachineByteOrder == machine::MSB) ? (NumBytes - i - 1) : i;
+    ref<Expr> Byte = read8(AddExpr::create(offset, 
+                                           ConstantExpr::create(idx, 
+                                                                IndexWidth)));
+    Res = idx ? ConcatExpr::create(Byte, Res) : Byte;
   }
+
+  return Res;
 }
 
 ref<Expr> ObjectState::read(unsigned offset, Expr::Width width) const {
-  switch (width) {
-  default: assert(0 && "invalid type");
-  case  Expr::Bool: return  read1(offset);
-  case  Expr::Int8: return  read8(offset);
-  case Expr::Int16: return read16(offset);
-  case Expr::Int32: return read32(offset);
-  case Expr::Int64: return read64(offset);
+  // Treat bool specially, it is the only non-byte sized write we allow.
+  if (width == Expr::Bool)
+    return ExtractExpr::create(read8(offset), 0, Expr::Bool);
+
+  // Otherwise, follow the slow general case.
+  unsigned NumBytes = width / 8;
+  assert(width == NumBytes * 8 && "Invalid write size!");
+  ref<Expr> Res(0);
+  for (unsigned i = 0; i != NumBytes; ++i) {
+    unsigned idx = (kMachineByteOrder == machine::MSB) ? (NumBytes - i - 1) : i;
+    ref<Expr> Byte = read8(offset + idx);
+    Res = idx ? ConcatExpr::create(Byte, Res) : Byte;
   }
-}
 
-ref<Expr> ObjectState::read1(unsigned offset) const {
-  return ExtractExpr::create(read8(offset), 0, Expr::Bool);
-}
-
-ref<Expr> ObjectState::read1(ref<Expr> offset) const {
-  return ExtractExpr::create(read8(offset), 0, Expr::Bool);
-}
-
-ref<Expr> ObjectState::read16(unsigned offset) const {
-  if (kMachineByteOrder == machine::MSB) {
-    return ConcatExpr::create(read8(offset+0),
-			      read8(offset+1));
-  } else {
-    return ConcatExpr::create(read8(offset+1),
-			      read8(offset+0));
-  }
-}
-
-ref<Expr> ObjectState::read16(ref<Expr> offset) const {
-  if (kMachineByteOrder == machine::MSB) {
-    return ConcatExpr::create
-      (read8(AddExpr::create(offset,
-                             ConstantExpr::create(0,
-                                                  kMachinePointerType))),
-       read8(AddExpr::create(offset,
-                             ConstantExpr::create(1,
-                                                  kMachinePointerType))));
-  } else {
-    return ConcatExpr::create
-      (read8(AddExpr::create(offset,
-                             ConstantExpr::create(1,
-                                                  kMachinePointerType))),
-       read8(AddExpr::create(offset,
-                             ConstantExpr::create(0,
-                                                  kMachinePointerType))));
-  }
-}
-
-ref<Expr> ObjectState::read32(unsigned offset) const {
-  if (kMachineByteOrder == machine::MSB) {
-    return ConcatExpr::create4(read8(offset+0),
-                               read8(offset+1),
-                               read8(offset+2),
-                               read8(offset+3));
-  } else {
-    return ConcatExpr::create4(read8(offset+3),
-                               read8(offset+2),
-                               read8(offset+1),
-                               read8(offset+0));
-  }
-}
-
-ref<Expr> ObjectState::read32(ref<Expr> offset) const {
-  if (kMachineByteOrder == machine::MSB) {
-    return ConcatExpr::create4
-      (read8(AddExpr::create(offset,
-                             ConstantExpr::create(0,
-                                                  kMachinePointerType))),
-       read8(AddExpr::create(offset,
-                             ConstantExpr::create(1,
-                                                  kMachinePointerType))),
-       read8(AddExpr::create(offset,
-                             ConstantExpr::create(2,
-                                                  kMachinePointerType))),
-       read8(AddExpr::create(offset,
-                             ConstantExpr::create(3,
-                                                  kMachinePointerType))));
-  } else {
-    return ConcatExpr::create4
-      (read8(AddExpr::create(offset,
-                             ConstantExpr::create(3,
-                                                  kMachinePointerType))),
-       read8(AddExpr::create(offset,
-                             ConstantExpr::create(2,
-                                                  kMachinePointerType))),
-       read8(AddExpr::create(offset,
-                             ConstantExpr::create(1,
-                                                  kMachinePointerType))),
-       read8(AddExpr::create(offset,
-                             ConstantExpr::create(0,
-                                                  kMachinePointerType))));
-  }
-}
-
-ref<Expr> ObjectState::read64(unsigned offset) const {
-  if (kMachineByteOrder == machine::MSB) {
-    return ConcatExpr::create8(read8(offset+0),
-                               read8(offset+1),
-                               read8(offset+2),
-                               read8(offset+3),
-                               read8(offset+4),
-                               read8(offset+5),
-                               read8(offset+6),
-                               read8(offset+7));
-  } else {
-    return ConcatExpr::create8(read8(offset+7),
-                               read8(offset+6),
-                               read8(offset+5),
-                               read8(offset+4),
-                               read8(offset+3),
-                               read8(offset+2),
-                               read8(offset+1),
-                               read8(offset+0));
-  }
-}
-
-ref<Expr> ObjectState::read64(ref<Expr> offset) const {
-  if (kMachineByteOrder == machine::MSB) {
-    return ConcatExpr::create8
-      (read8(AddExpr::create(offset,
-                             ConstantExpr::create(0,
-                                                  kMachinePointerType))),
-       read8(AddExpr::create(offset,
-                             ConstantExpr::create(1,
-                                                  kMachinePointerType))),
-       read8(AddExpr::create(offset,
-                             ConstantExpr::create(2,
-                                                  kMachinePointerType))),
-       read8(AddExpr::create(offset,
-                             ConstantExpr::create(3,
-                                                  kMachinePointerType))),
-       read8(AddExpr::create(offset,
-                             ConstantExpr::create(4,
-                                                  kMachinePointerType))),
-       read8(AddExpr::create(offset,
-                             ConstantExpr::create(5,
-                                                  kMachinePointerType))),
-       read8(AddExpr::create(offset,
-                             ConstantExpr::create(6,
-                                                  kMachinePointerType))),
-       read8(AddExpr::create(offset,
-                             ConstantExpr::create(7,
-                                                  kMachinePointerType))));
-  } else {
-    return ConcatExpr::create8
-      (read8(AddExpr::create(offset,
-                             ConstantExpr::create(7,
-                                                  kMachinePointerType))),
-       read8(AddExpr::create(offset,
-                             ConstantExpr::create(6,
-                                                  kMachinePointerType))),
-       read8(AddExpr::create(offset,
-                             ConstantExpr::create(5,
-                                                  kMachinePointerType))),
-       read8(AddExpr::create(offset,
-                             ConstantExpr::create(4,
-                                                  kMachinePointerType))),
-       read8(AddExpr::create(offset,
-                             ConstantExpr::create(3,
-                                                  kMachinePointerType))),
-       read8(AddExpr::create(offset,
-                             ConstantExpr::create(2,
-                                                  kMachinePointerType))),
-       read8(AddExpr::create(offset,
-                             ConstantExpr::create(1,
-                                                  kMachinePointerType))),
-       read8(AddExpr::create(offset,
-                             ConstantExpr::create(0,
-                                                  kMachinePointerType))));
-  }
+  return Res;
 }
 
 void ObjectState::write(ref<Expr> offset, ref<Expr> value) {
-  Expr::Width w = value->getWidth();
+  // Check for writes at constant offsets.
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(offset)) {
     write(CE->getZExtValue(32), value);
-  } else {
-    switch(w) {
-    case  Expr::Bool:  write1(offset, value); break;
-    case  Expr::Int8:  write8(offset, value); break;
-    case Expr::Int16: write16(offset, value); break;
-    case Expr::Int32: write32(offset, value); break;
-    case Expr::Int64: write64(offset, value); break;
-    default: assert(0 && "invalid number of bytes in write");
-    }
+    return;
+  }
+
+  // Treat bool specially, it is the only non-byte sized write we allow.
+  Expr::Width w = value->getWidth();
+  if (w == Expr::Bool) {
+    write8(offset, ZExtExpr::create(value, Expr::Int8));
+    return;
+  }
+
+  // Otherwise, follow the slow general case.
+  Expr::Width IndexWidth = offset->getWidth();
+  unsigned NumBytes = w / 8;
+  assert(w == NumBytes * 8 && "Invalid write size!");
+  for (unsigned i = 0; i != NumBytes; ++i) {
+    unsigned idx = (kMachineByteOrder == machine::MSB) ? (NumBytes - i - 1) : i;
+    write8(AddExpr::create(offset, ConstantExpr::create(idx, IndexWidth)),
+           ExtractExpr::create(value, 8 * i, Expr::Int8));
   }
 }
 
 void ObjectState::write(unsigned offset, ref<Expr> value) {
-  Expr::Width w = value->getWidth();
+  // Check for writes of constant values.
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(value)) {
-    uint64_t val = CE->getZExtValue();
-    switch(w) {
-    case  Expr::Bool:
-    case  Expr::Int8:  write8(offset, val); break;
-    case Expr::Int16: write16(offset, val); break;
-    case Expr::Int32: write32(offset, val); break;
-    case Expr::Int64: write64(offset, val); break;
-    default: assert(0 && "invalid number of bytes in write");
-    }
-  } else {
-    switch(w) {
-    case  Expr::Bool:  write1(offset, value); break;
-    case  Expr::Int8:  write8(offset, value); break;
-    case Expr::Int16: write16(offset, value); break;
-    case Expr::Int32: write32(offset, value); break;
-    case Expr::Int64: write64(offset, value); break;
-    default: assert(0 && "invalid number of bytes in write");
+    Expr::Width w = CE->getWidth();
+    if (w <= 64) {
+      uint64_t val = CE->getZExtValue();
+      switch (w) {
+      default: assert(0 && "Invalid write size!");
+      case  Expr::Bool:
+      case  Expr::Int8:  write8(offset, val); return;
+      case Expr::Int16: write16(offset, val); return;
+      case Expr::Int32: write32(offset, val); return;
+      case Expr::Int64: write64(offset, val); return;
+      }
     }
   }
-}
 
-void ObjectState::write1(unsigned offset, ref<Expr> value) {
-  write8(offset, ZExtExpr::create(value, Expr::Int8));
-}
+  // Treat bool specially, it is the only non-byte sized write we allow.
+  Expr::Width w = value->getWidth();
+  if (w == Expr::Bool) {
+    write8(offset, ZExtExpr::create(value, Expr::Int8));
+    return;
+  }
 
-void ObjectState::write1(ref<Expr> offset, ref<Expr> value) {
-  write8(offset, ZExtExpr::create(value, Expr::Int8));
-}
+  // Otherwise, follow the slow general case.
+  unsigned NumBytes = w / 8;
+  assert(w == NumBytes * 8 && "Invalid write size!");
+  for (unsigned i = 0; i != NumBytes; ++i) {
+    unsigned idx = (kMachineByteOrder == machine::MSB) ? (NumBytes - i - 1) : i;
+    write8(offset + idx, ExtractExpr::create(value, 8 * i, Expr::Int8));
+  }
+} 
 
 void ObjectState::write16(unsigned offset, uint16_t value) {
-  if (kMachineByteOrder == machine::MSB) {
-    write8(offset+0, (uint8_t) (value >>  8));
-    write8(offset+1, (uint8_t) (value >>  0));
-  } else {
-    write8(offset+1, (uint8_t) (value >>  8));
-    write8(offset+0, (uint8_t) (value >>  0));
-  }
-}
-
-void ObjectState::write16(unsigned offset, ref<Expr> value) {
-  if (kMachineByteOrder == machine::MSB) {
-    write8(offset+0, ExtractExpr::create(value, 8, Expr::Int8));
-    write8(offset+1, ExtractExpr::create(value, 0, Expr::Int8));
-  } else {
-    write8(offset+1, ExtractExpr::create(value, 8, Expr::Int8));
-    write8(offset+0, ExtractExpr::create(value, 0, Expr::Int8));
-  }
-}
-
-
-void ObjectState::write16(ref<Expr> offset, ref<Expr> value) {
-  if (kMachineByteOrder == machine::MSB) {
-    write8(AddExpr::create(offset,
-                           ConstantExpr::create(0, kMachinePointerType)), 
-           ExtractExpr::create(value, 8, Expr::Int8));
-    write8(AddExpr::create(offset,
-                           ConstantExpr::create(0, kMachinePointerType)), 
-           ExtractExpr::create(value, 0, Expr::Int8));
-  } else {
-    write8(AddExpr::create(offset,
-                           ConstantExpr::create(1, kMachinePointerType)), 
-           ExtractExpr::create(value, 8, Expr::Int8));
-    write8(AddExpr::create(offset,
-                           ConstantExpr::create(0, kMachinePointerType)), 
-           ExtractExpr::create(value, 0, Expr::Int8));
+  unsigned NumBytes = 2;
+  for (unsigned i = 0; i != NumBytes; ++i) {
+    unsigned idx = (kMachineByteOrder == machine::MSB) ? (NumBytes - i - 1) : i;
+    write8(offset + idx, (uint8_t) (value >> (8 * i)));
   }
 }
 
 void ObjectState::write32(unsigned offset, uint32_t value) {
-  if (kMachineByteOrder == machine::MSB) {
-    write8(offset+0, (uint8_t) (value >>  24));
-    write8(offset+1, (uint8_t) (value >>  16));
-    write8(offset+2, (uint8_t) (value >>  8));
-    write8(offset+3, (uint8_t) (value >>  0));
-  } else {
-    write8(offset+3, (uint8_t) (value >>  24));
-    write8(offset+2, (uint8_t) (value >>  16));
-    write8(offset+1, (uint8_t) (value >>  8));
-    write8(offset+0, (uint8_t) (value >>  0));
-  }
-}
-
-void ObjectState::write32(unsigned offset, ref<Expr> value) {
-  if (kMachineByteOrder == machine::MSB) {
-    write8(offset+0, ExtractExpr::create(value, 24, Expr::Int8));
-    write8(offset+1, ExtractExpr::create(value, 16, Expr::Int8));
-    write8(offset+2, ExtractExpr::create(value, 8, Expr::Int8));
-    write8(offset+3, ExtractExpr::create(value, 0, Expr::Int8));
-  } else {
-    write8(offset+3, ExtractExpr::create(value, 24, Expr::Int8));
-    write8(offset+2, ExtractExpr::create(value, 16, Expr::Int8));
-    write8(offset+1, ExtractExpr::create(value, 8, Expr::Int8));
-    write8(offset+0, ExtractExpr::create(value, 0, Expr::Int8));
-  }
-}
-
-void ObjectState::write32(ref<Expr> offset, ref<Expr> value) {
-  if (kMachineByteOrder == machine::MSB) {
-    write8(AddExpr::create(offset,
-                           ConstantExpr::create(0, kMachinePointerType)), 
-           ExtractExpr::create(value, 24, Expr::Int8));
-    write8(AddExpr::create(offset,
-                           ConstantExpr::create(1, kMachinePointerType)), 
-           ExtractExpr::create(value, 16, Expr::Int8));
-    write8(AddExpr::create(offset,
-                           ConstantExpr::create(2, kMachinePointerType)), 
-           ExtractExpr::create(value, 8, Expr::Int8));
-    write8(AddExpr::create(offset,
-                           ConstantExpr::create(3, kMachinePointerType)), 
-           ExtractExpr::create(value, 0, Expr::Int8));
-  } else {
-    write8(AddExpr::create(offset,
-                           ConstantExpr::create(3, kMachinePointerType)), 
-           ExtractExpr::create(value, 24, Expr::Int8));
-    write8(AddExpr::create(offset,
-                           ConstantExpr::create(2, kMachinePointerType)), 
-           ExtractExpr::create(value, 16, Expr::Int8));
-    write8(AddExpr::create(offset,
-                           ConstantExpr::create(1, kMachinePointerType)), 
-           ExtractExpr::create(value, 8, Expr::Int8));
-    write8(AddExpr::create(offset,
-                           ConstantExpr::create(0, kMachinePointerType)), 
-           ExtractExpr::create(value, 0, Expr::Int8));
+  unsigned NumBytes = 4;
+  for (unsigned i = 0; i != NumBytes; ++i) {
+    unsigned idx = (kMachineByteOrder == machine::MSB) ? (NumBytes - i - 1) : i;
+    write8(offset + idx, (uint8_t) (value >> (8 * i)));
   }
 }
 
 void ObjectState::write64(unsigned offset, uint64_t value) {
-  if (kMachineByteOrder == machine::MSB) {
-    write8(offset+0, (uint8_t) (value >>  56));
-    write8(offset+1, (uint8_t) (value >>  48));
-    write8(offset+2, (uint8_t) (value >>  40));
-    write8(offset+3, (uint8_t) (value >>  32));
-    write8(offset+4, (uint8_t) (value >>  24));
-    write8(offset+5, (uint8_t) (value >>  16));
-    write8(offset+6, (uint8_t) (value >>  8));
-    write8(offset+7, (uint8_t) (value >>  0));
-  } else {
-    write8(offset+7, (uint8_t) (value >>  56));
-    write8(offset+6, (uint8_t) (value >>  48));
-    write8(offset+5, (uint8_t) (value >>  40));
-    write8(offset+4, (uint8_t) (value >>  32));
-    write8(offset+3, (uint8_t) (value >>  24));
-    write8(offset+2, (uint8_t) (value >>  16));
-    write8(offset+1, (uint8_t) (value >>  8));
-    write8(offset+0, (uint8_t) (value >>  0));
-  }
-}
-
-void ObjectState::write64(unsigned offset, ref<Expr> value) {
-  if (kMachineByteOrder == machine::MSB) {
-    write8(offset+0, ExtractExpr::create(value, 56, Expr::Int8));
-    write8(offset+1, ExtractExpr::create(value, 48, Expr::Int8));
-    write8(offset+2, ExtractExpr::create(value, 40, Expr::Int8));
-    write8(offset+3, ExtractExpr::create(value, 32, Expr::Int8));
-    write8(offset+4, ExtractExpr::create(value, 24, Expr::Int8));
-    write8(offset+5, ExtractExpr::create(value, 16, Expr::Int8));
-    write8(offset+6, ExtractExpr::create(value, 8, Expr::Int8));
-    write8(offset+7, ExtractExpr::create(value, 0, Expr::Int8));
-  } else {
-    write8(offset+7, ExtractExpr::create(value, 56, Expr::Int8));
-    write8(offset+6, ExtractExpr::create(value, 48, Expr::Int8));
-    write8(offset+5, ExtractExpr::create(value, 40, Expr::Int8));
-    write8(offset+4, ExtractExpr::create(value, 32, Expr::Int8));
-    write8(offset+3, ExtractExpr::create(value, 24, Expr::Int8));
-    write8(offset+2, ExtractExpr::create(value, 16, Expr::Int8));
-    write8(offset+1, ExtractExpr::create(value, 8, Expr::Int8));
-    write8(offset+0, ExtractExpr::create(value, 0, Expr::Int8));
-  }
-}
-
-void ObjectState::write64(ref<Expr> offset, ref<Expr> value) {
-  if (kMachineByteOrder == machine::MSB) {
-    write8(AddExpr::create(offset,
-                           ConstantExpr::create(0, kMachinePointerType)), 
-           ExtractExpr::create(value, 56, Expr::Int8));
-    write8(AddExpr::create(offset,
-                           ConstantExpr::create(1, kMachinePointerType)), 
-           ExtractExpr::create(value, 48, Expr::Int8));
-    write8(AddExpr::create(offset,
-                           ConstantExpr::create(2, kMachinePointerType)), 
-           ExtractExpr::create(value, 40, Expr::Int8));
-    write8(AddExpr::create(offset,
-                           ConstantExpr::create(3, kMachinePointerType)), 
-           ExtractExpr::create(value, 32, Expr::Int8));
-    write8(AddExpr::create(offset,
-                           ConstantExpr::create(4, kMachinePointerType)), 
-           ExtractExpr::create(value, 24, Expr::Int8));
-    write8(AddExpr::create(offset,
-                           ConstantExpr::create(5, kMachinePointerType)), 
-           ExtractExpr::create(value, 16, Expr::Int8));
-    write8(AddExpr::create(offset,
-                           ConstantExpr::create(6, kMachinePointerType)), 
-           ExtractExpr::create(value, 8, Expr::Int8));
-    write8(AddExpr::create(offset,
-                           ConstantExpr::create(7, kMachinePointerType)), 
-           ExtractExpr::create(value, 0, Expr::Int8));
-  } else {
-    write8(AddExpr::create(offset,
-                           ConstantExpr::create(7, kMachinePointerType)), 
-           ExtractExpr::create(value, 56, Expr::Int8));
-    write8(AddExpr::create(offset,
-                           ConstantExpr::create(6, kMachinePointerType)), 
-           ExtractExpr::create(value, 48, Expr::Int8));
-    write8(AddExpr::create(offset,
-                           ConstantExpr::create(5, kMachinePointerType)), 
-           ExtractExpr::create(value, 40, Expr::Int8));
-    write8(AddExpr::create(offset,
-                           ConstantExpr::create(4, kMachinePointerType)), 
-           ExtractExpr::create(value, 32, Expr::Int8));
-    write8(AddExpr::create(offset,
-                           ConstantExpr::create(3, kMachinePointerType)), 
-           ExtractExpr::create(value, 24, Expr::Int8));
-    write8(AddExpr::create(offset,
-                           ConstantExpr::create(2, kMachinePointerType)), 
-           ExtractExpr::create(value, 16, Expr::Int8));
-    write8(AddExpr::create(offset,
-                           ConstantExpr::create(1, kMachinePointerType)), 
-           ExtractExpr::create(value, 8, Expr::Int8));
-    write8(AddExpr::create(offset,
-                           ConstantExpr::create(0, kMachinePointerType)), 
-           ExtractExpr::create(value, 0, Expr::Int8));
+  unsigned NumBytes = 8;
+  for (unsigned i = 0; i != NumBytes; ++i) {
+    unsigned idx = (kMachineByteOrder == machine::MSB) ? (NumBytes - i - 1) : i;
+    write8(offset + idx, (uint8_t) (value >> (8 * i)));
   }
 }
 
