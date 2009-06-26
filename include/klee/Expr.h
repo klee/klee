@@ -301,12 +301,6 @@ private:
 
   ConstantExpr(const llvm::APInt &v) : value(v) {}
 
-  static ref<ConstantExpr> alloc(const llvm::APInt &v) {
-    ref<ConstantExpr> r(new ConstantExpr(v));
-    r->computeHash();
-    return r;
-  }
-
 public:
   ~ConstantExpr() {};
   
@@ -353,11 +347,14 @@ public:
   static ref<Expr> fromMemory(void *address, Width w);
   void toMemory(void *address);
 
-  static ref<ConstantExpr> alloc(uint64_t v, Width w) {
-    // constructs an "optimized" ConstantExpr
-    ref<ConstantExpr> r(new ConstantExpr(llvm::APInt(w, v)));
+  static ref<ConstantExpr> alloc(const llvm::APInt &v) {
+    ref<ConstantExpr> r(new ConstantExpr(v));
     r->computeHash();
     return r;
+  }
+
+  static ref<ConstantExpr> alloc(uint64_t v, Width w) {
+    return alloc(llvm::APInt(w, v));
   }
   
   static ref<ConstantExpr> create(uint64_t v, Width w) {

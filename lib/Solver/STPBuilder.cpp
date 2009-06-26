@@ -479,7 +479,6 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
       return bvConst64(*width_out, CE->getZExtValue());
 
     // FIXME: Optimize?
-    assert(0 && "FIXME: Not tested!");
     ref<ConstantExpr> Tmp = CE;
     ExprHandle Res = bvConst64(64, Tmp->Extract(0, 64)->getZExtValue());
     for (unsigned i = (*width_out / 64) - 1; i; --i) {

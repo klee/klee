@@ -1462,7 +1462,7 @@ ExprResult ParserImpl::ParseNumberToken(Expr::Width Type, const Token &Tok) {
   }
 
   // This is a simple but slow way to handle overflow.
-  APInt Val(std::max(64U, RadixBits * N), 0);
+  APInt Val(RadixBits * N, 0);
   APInt RadixVal(Val.getBitWidth(), Radix);
   APInt DigitVal(Val.getBitWidth(), 0);
   for (unsigned i=0; i<N; ++i) {
@@ -1496,9 +1496,11 @@ ExprResult ParserImpl::ParseNumberToken(Expr::Width Type, const Token &Tok) {
     Val = -Val;
 
   if (Type < Val.getBitWidth())
-    Val = Val.trunc(Type);
+    Val.trunc(Type);
+  else if (Type > Val.getBitWidth())
+    Val.zext(Type);
 
-  return ExprResult(Builder->Constant(Val.getZExtValue(), Type));
+  return ExprResult(Builder->Constant(Val));
 }
 
 /// ParseTypeSpecifier - Parse a type specifier.

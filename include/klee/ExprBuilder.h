@@ -23,7 +23,7 @@ namespace klee {
 
     // Expressions
 
-    virtual ref<Expr> Constant(uint64_t Value, Expr::Width W) = 0;
+    virtual ref<Expr> Constant(const llvm::APInt &Value) = 0;
     virtual ref<Expr> NotOptimized(const ref<Expr> &Index) = 0;
     virtual ref<Expr> Read(const UpdateList &Updates, 
                            const ref<Expr> &Index) = 0;
@@ -66,6 +66,10 @@ namespace klee {
 
     ref<Expr> Not(const ref<Expr> &LHS) {
       return Eq(False(), LHS);
+    }
+
+    ref<Expr> Constant(uint64_t Value, Expr::Width W) {
+      return Constant(llvm::APInt(W, Value));
     }
   };
 

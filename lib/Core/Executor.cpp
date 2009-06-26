@@ -931,21 +931,7 @@ ref<klee::ConstantExpr> Executor::evalConstant(Constant *c) {
     return evalConstantExpr(ce);
   } else {
     if (const ConstantInt *ci = dyn_cast<ConstantInt>(c)) {
-      const APInt &Val = ci->getValue();
-      unsigned W = Val.getBitWidth();
-      
-      if (W <= 64)
-        return ConstantExpr::create(Val.getZExtValue(), W);
-
-      assert(0 && "FIXME: Untested!");
-      ref<ConstantExpr> Res = ConstantExpr::create(0, W);
-      for (unsigned i = 0; i < Val.getNumWords(); ++i) {
-        ref<ConstantExpr> Tmp = ConstantExpr::alloc(Val.getRawData()[i], W);
-        Tmp = Tmp->Shl(ConstantExpr::alloc(i * 64, W));
-        Res = Res->Or(Tmp);
-      }
-
-      return Res;
+      return ConstantExpr::alloc(ci->getValue());
     } else if (const ConstantFP *cf = dyn_cast<ConstantFP>(c)) {      
       switch(cf->getType()->getTypeID()) {
       case Type::FloatTyID: {

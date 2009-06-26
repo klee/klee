@@ -19,8 +19,8 @@ ExprBuilder::~ExprBuilder() {
 
 namespace {
   class DefaultExprBuilder : public ExprBuilder {
-    virtual ref<Expr> Constant(uint64_t Value, Expr::Width W) {
-      return ConstantExpr::alloc(Value, W);
+    virtual ref<Expr> Constant(const llvm::APInt &Value) {
+      return ConstantExpr::alloc(Value);
     }
 
     virtual ref<Expr> NotOptimized(const ref<Expr> &Index) {
@@ -164,8 +164,8 @@ namespace {
       : Builder(_Builder), Base(_Base) {}
     ~ChainedBuilder() { delete Base; }
 
-    ref<Expr> Constant(uint64_t Value, Expr::Width W) {
-      return Base->Constant(Value, W);
+    ref<Expr> Constant(const llvm::APInt &Value) {
+      return Base->Constant(Value);
     }
 
     ref<Expr> NotOptimized(const ref<Expr> &Index) {
@@ -307,8 +307,8 @@ namespace {
     ConstantSpecializedExprBuilder(ExprBuilder *Base) : Builder(this, Base) {}
     ~ConstantSpecializedExprBuilder() {}
 
-    virtual ref<Expr> Constant(uint64_t Value, Expr::Width W) {
-      return Builder.Constant(Value, W);
+    virtual ref<Expr> Constant(const llvm::APInt &Value) {
+      return Builder.Constant(Value);
     }
 
     virtual ref<Expr> NotOptimized(const ref<Expr> &Index) {

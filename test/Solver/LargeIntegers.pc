@@ -9,3 +9,9 @@ array a[64] : w32 -> w8 = symbolic
 # RUN: grep -A 1 \"Query 1\" %t > %t2
 # RUN: grep \"Expr 0:\t16\" %t2
 (query [] false [(Extract w5 60 (Concat w128 (w64 1) (w64 2)))])
+
+# RUN: grep -A 1 \"Query 2\" %t > %t2
+# RUN: grep \"Array 0:\ta.16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0\" %t2
+(query [(Eq 0x0102030405060708090A0B0C0D0E0F10 (ReadLSB w128 0 a))] 
+       false 
+       [] [a])
