@@ -277,20 +277,10 @@ void Expr::printWidth(std::ostream &os, Width width) {
 
 Expr::Width Expr::getWidthForLLVMType(const llvm::Type *t) {
   switch (t->getTypeID()) {
-  case llvm::Type::IntegerTyID: {
-    Width w = cast<IntegerType>(t)->getBitWidth();
-
-    // should remove this limitation soon
-    if (w == 1 || w == 8 || w == 16 || w == 32 || w == 64)
-      return w;
-    else {
-      assert(0 && "XXX arbitrary bit widths unsupported");
-      abort();
-    }
-  }
+  case llvm::Type::IntegerTyID: return cast<IntegerType>(t)->getBitWidth();
   case llvm::Type::FloatTyID: return Expr::Int32;
   case llvm::Type::DoubleTyID: return Expr::Int64;
-  case llvm::Type::X86_FP80TyID: return Expr::Int64; // XXX: needs to be fixed
+  case llvm::Type::X86_FP80TyID: return 80;
   case llvm::Type::PointerTyID: return kMachinePointerType;
   default:
     cerr << "non-primitive type argument to Expr::getTypeForLLVMType()\n";
@@ -332,6 +322,7 @@ ref<Expr> ConstantExpr::fromMemory(void *address, Width width) {
   case Expr::Int16: return ConstantExpr::create(*((uint16_t*) address), width);
   case Expr::Int32: return ConstantExpr::create(*((uint32_t*) address), width);
   case Expr::Int64: return ConstantExpr::create(*((uint64_t*) address), width);
+    // FIXME: Should support long double, at least.
   }
 }
 
@@ -343,6 +334,7 @@ void ConstantExpr::toMemory(void *address) {
   case Expr::Int16: *((uint16_t*) address) = getZExtValue(16); break;
   case Expr::Int32: *((uint32_t*) address) = getZExtValue(32); break;
   case Expr::Int64: *((uint64_t*) address) = getZExtValue(64); break;
+    // FIXME: Should support long double, at least.
   }
 }
 

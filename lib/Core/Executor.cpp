@@ -933,41 +933,7 @@ ref<klee::ConstantExpr> Executor::evalConstant(Constant *c) {
     if (const ConstantInt *ci = dyn_cast<ConstantInt>(c)) {
       return ConstantExpr::alloc(ci->getValue());
     } else if (const ConstantFP *cf = dyn_cast<ConstantFP>(c)) {      
-      switch(cf->getType()->getTypeID()) {
-      case Type::FloatTyID: {
-	float f = cf->getValueAPF().convertToFloat();
-	return ConstantExpr::create(floats::FloatAsUInt64(f), Expr::Int32);
-      }
-      case Type::DoubleTyID: {
-	double d = cf->getValueAPF().convertToDouble();
-	return ConstantExpr::create(floats::DoubleAsUInt64(d), Expr::Int64);
-      }	
-      case Type::X86_FP80TyID: {
-        // FIXME: This is really broken, but for now we just convert
-	// to a double. This isn't going to work at all in general,
-	// but we need support for wide constants.
-	APFloat apf = cf->getValueAPF();
-        bool ignored;
-	APFloat::opStatus r = apf.convert(APFloat::IEEEdouble, 
-                                          APFloat::rmNearestTiesToAway,
-                                          &ignored);
-        (void) r;
-        //assert(!(r & APFloat::opOverflow) && !(r & APFloat::opUnderflow) &&
-        //       "Overflow/underflow while converting from FP80 (x87) to 64-bit double");
-	double d = apf.convertToDouble();
-	return ConstantExpr::create(floats::DoubleAsUInt64(d), Expr::Int64);
-      }
-      default:		
-	llvm::cerr << "Constant of type " << cf->getType()->getDescription() 
-                   << " not supported\n";
-	llvm::cerr << "Constant used at ";
-	KConstant *kc = kmodule->getKConstant((Constant*) cf);
-	if (kc && kc->ki && kc->ki->info)
-	  llvm::cerr << kc->ki->info->file << ":" << kc->ki->info->line << "\n";
-	else llvm::cerr << "<unknown>\n";
-	  
-	assert(0 && "Arbitrary bit width floating point constants unsupported");
-      }
+      return ConstantExpr::alloc(cf->getValueAPF().bitcastToAPInt());
     } else if (const GlobalValue *gv = dyn_cast<GlobalValue>(c)) {
       return globalAddresses.find(gv)->second;
     } else if (isa<ConstantPointerNull>(c)) {
@@ -1897,66 +1863,62 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     break;
   }
 
-    // Floating point specific instructions
-
-#define FP_CONSTANT_BINOP(op, type, l, r, target, state)        \
-    if (type > 64)                                                      \
-      return terminateStateOnExecError(state,                           \
-                                       "Unsupported FP operation");     \
-    bindLocal(target, state,                                            \
-              ConstantExpr::alloc(op(toConstant(state, l,               \
-                                                "floating point")->getZExtValue(), \
-                                     toConstant(state, r,               \
-                                                "floating point")->getZExtValue(), \
-                                     type), type))
+    // Floating point instructions
 
   case Instruction::FAdd: {
-    BinaryOperator *bi = cast<BinaryOperator>(i);
-    ref<Expr> left = eval(ki, 0, state).value;
-    ref<Expr> right = eval(ki, 1, state).value;
-    Expr::Width type = Expr::getWidthForLLVMType(bi->getType());
-    FP_CONSTANT_BINOP(floats::add, type, left, right, ki, state);
+    ref<ConstantExpr> left = toConstant(state, eval(ki, 0, state).value,
+                                        "floating point");
+    ref<ConstantExpr> right = toConstant(state, eval(ki, 1, state).value,
+                                         "floating point");
+    llvm::APFloat Res(left->getAPValue());
+    Res.add(APFloat(right->getAPValue()), APFloat::rmNearestTiesToEven);
+    bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
     break;
   }
 
   case Instruction::FSub: {
-    BinaryOperator *bi = cast<BinaryOperator>(i);
-    ref<Expr> left = eval(ki, 0, state).value;
-    ref<Expr> right = eval(ki, 1, state).value;
-    Expr::Width type = Expr::getWidthForLLVMType(bi->getType());
-    FP_CONSTANT_BINOP(floats::sub, type, left, right, ki, state);
+    ref<ConstantExpr> left = toConstant(state, eval(ki, 0, state).value,
+                                        "floating point");
+    ref<ConstantExpr> right = toConstant(state, eval(ki, 1, state).value,
+                                         "floating point");
+    llvm::APFloat Res(left->getAPValue());
+    Res.subtract(APFloat(right->getAPValue()), APFloat::rmNearestTiesToEven);
+    bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
     break;
   }
  
   case Instruction::FMul: {
-    BinaryOperator *bi = cast<BinaryOperator>(i);
-    ref<Expr> left = eval(ki, 0, state).value;
-    ref<Expr> right = eval(ki, 1, state).value;
-    Expr::Width type = Expr::getWidthForLLVMType(bi->getType());
-    FP_CONSTANT_BINOP(floats::mul, type, left, right, ki, state);
+    ref<ConstantExpr> left = toConstant(state, eval(ki, 0, state).value,
+                                        "floating point");
+    ref<ConstantExpr> right = toConstant(state, eval(ki, 1, state).value,
+                                         "floating point");
+    llvm::APFloat Res(left->getAPValue());
+    Res.multiply(APFloat(right->getAPValue()), APFloat::rmNearestTiesToEven);
+    bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
     break;
   }
 
   case Instruction::FDiv: {
-    BinaryOperator *bi = cast<BinaryOperator>(i);
-
-    ref<Expr> dividend = eval(ki, 0, state).value;
-    ref<Expr> divisor = eval(ki, 1, state).value;
-    Expr::Width type = Expr::getWidthForLLVMType(bi->getType());
-    FP_CONSTANT_BINOP(floats::div, type, dividend, divisor, ki, state);
+    ref<ConstantExpr> left = toConstant(state, eval(ki, 0, state).value,
+                                        "floating point");
+    ref<ConstantExpr> right = toConstant(state, eval(ki, 1, state).value,
+                                         "floating point");
+    llvm::APFloat Res(left->getAPValue());
+    Res.divide(APFloat(right->getAPValue()), APFloat::rmNearestTiesToEven);
+    bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
     break;
   }
 
   case Instruction::FRem: {
-    BinaryOperator *bi = cast<BinaryOperator>(i);
-
-    ref<Expr> dividend = eval(ki, 0, state).value;
-    ref<Expr> divisor = eval(ki, 1, state).value;
-    Expr::Width type = Expr::getWidthForLLVMType(bi->getType());
-    FP_CONSTANT_BINOP(floats::mod, type, dividend, divisor, ki, state);
+    ref<ConstantExpr> left = toConstant(state, eval(ki, 0, state).value,
+                                        "floating point");
+    ref<ConstantExpr> right = toConstant(state, eval(ki, 1, state).value,
+                                         "floating point");
+    llvm::APFloat Res(left->getAPValue());
+    Res.mod(APFloat(right->getAPValue()), APFloat::rmNearestTiesToEven);
+    bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
     break;
   }
-#undef FP_CONSTANT_BINOP
 
   case Instruction::FPTrunc: {
     FPTruncInst *fi = cast<FPTruncInst>(i);
@@ -1964,7 +1926,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
                                        "floating point");
     if (arg->getWidth() > 64)
-      return terminateStateOnExecError(state, "Unsupported FP operation");
+      return terminateStateOnExecError(state, "Unsupported FPTrunc operation");
     uint64_t value = floats::trunc(arg->getZExtValue(),
                                    resultType,
                                    arg->getWidth());
@@ -1978,7 +1940,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
                                        "floating point");
     if (arg->getWidth() > 64)
-      return terminateStateOnExecError(state, "Unsupported FP operation");
+      return terminateStateOnExecError(state, "Unsupported FPExt operation");
     uint64_t value = floats::ext(arg->getZExtValue(),
                                  resultType,
                                  arg->getWidth());
@@ -1992,7 +1954,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
                                        "floating point");
     if (arg->getWidth() > 64)
-      return terminateStateOnExecError(state, "Unsupported FP operation");
+      return terminateStateOnExecError(state, "Unsupported FPToUI operation");
     uint64_t value = floats::toUnsignedInt(arg->getZExtValue(),
                                            resultType,
                                            arg->getWidth());
@@ -2006,7 +1968,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
                                        "floating point");
     if (arg->getWidth() > 64)
-      return terminateStateOnExecError(state, "Unsupported FP operation");
+      return terminateStateOnExecError(state, "Unsupported FPToSI operation");
     uint64_t value = floats::toSignedInt(arg->getZExtValue(),
                                          resultType,
                                          arg->getWidth());
@@ -2020,7 +1982,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
                                        "floating point");
     if (arg->getWidth() > 64)
-      return terminateStateOnExecError(state, "Unsupported FP operation");
+      return terminateStateOnExecError(state, "Unsupported UIToFP operation");
     uint64_t value = floats::UnsignedIntToFP(arg->getZExtValue(),
                                              resultType);
     bindLocal(ki, state, ConstantExpr::alloc(value, resultType));
@@ -2033,7 +1995,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
                                        "floating point");
     if (arg->getWidth() > 64)
-      return terminateStateOnExecError(state, "Unsupported FP operation");
+      return terminateStateOnExecError(state, "Unsupported SIToFP operation");
     uint64_t value = floats::SignedIntToFP(arg->getZExtValue(),
                                            resultType,
                                            arg->getWidth());
@@ -2043,111 +2005,90 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
   case Instruction::FCmp: {
     FCmpInst *fi = cast<FCmpInst>(i);
-    Expr::Width resultType = Expr::getWidthForLLVMType(fi->getType());
-    ref<ConstantExpr> left  = toConstant(state, eval(ki, 0, state).value, 
-                                         "floating point");
+    ref<ConstantExpr> left = toConstant(state, eval(ki, 0, state).value,
+                                        "floating point");
     ref<ConstantExpr> right = toConstant(state, eval(ki, 1, state).value,
                                          "floating point");
-    if (left->getWidth() > 64)
-      return terminateStateOnExecError(state, "Unsupported FP operation");
-    uint64_t leftVal = left->getZExtValue();
-    uint64_t rightVal = right->getZExtValue();
- 
-    //determine whether the operands are NANs
-    unsigned inWidth = left->getWidth();
-    bool leftIsNaN   = floats::isNaN( leftVal,  inWidth );
-    bool rightIsNaN  = floats::isNaN( rightVal, inWidth );
+    APFloat LHS(left->getAPValue());
+    APFloat RHS(right->getAPValue());
+    APFloat::cmpResult CmpRes = LHS.compare(RHS);
 
-    //handle NAN based on whether the predicate is "ordered" or "unordered"
-    uint64_t ret = (uint64_t)-1;
-    bool done = false;
+    bool Result = false;
     switch( fi->getPredicate() ) {
-      //predicates which only care about whether or not the operands are NaNs
+      // Predicates which only care about whether or not the operands are NaNs.
     case FCmpInst::FCMP_ORD:
-      done = true;
-      ret = !leftIsNaN && !rightIsNaN;
+      Result = CmpRes != APFloat::cmpUnordered;
       break;
 
     case FCmpInst::FCMP_UNO:
-      done = true;
-      ret = leftIsNaN || rightIsNaN;
+      Result = CmpRes == APFloat::cmpUnordered;
       break;
 
-      //ordered comparisons return false if either operand is NaN
-    case FCmpInst::FCMP_OEQ:
-    case FCmpInst::FCMP_OGT:
-    case FCmpInst::FCMP_OGE:
-    case FCmpInst::FCMP_OLT:
-    case FCmpInst::FCMP_OLE:
-    case FCmpInst::FCMP_ONE:
-      if( !leftIsNaN && !rightIsNaN) //only fall through and return false if there are NaN(s)
-        break;
-
-    case FCmpInst::FCMP_FALSE: { //always return false for this predicate
-      done = true;
-      ret  = false;
-      break;
-    }
-
-      //unordered comparisons return true if either operand is NaN
+      // Ordered comparisons return false if either operand is NaN.  Unordered
+      // comparisons return true if either operand is NaN.
     case FCmpInst::FCMP_UEQ:
-    case FCmpInst::FCMP_UGT:
-    case FCmpInst::FCMP_UGE:
-    case FCmpInst::FCMP_ULT:
-    case FCmpInst::FCMP_ULE:
-    case FCmpInst::FCMP_UNE:
-      if( !leftIsNaN && !rightIsNaN) //only fall through and return true if there are NaN(s)
+      if (CmpRes == APFloat::cmpUnordered) {
+        Result = true;
         break;
+      }
+    case FCmpInst::FCMP_OEQ:
+      Result = CmpRes == APFloat::cmpEqual;
+      break;
 
-    case FCmpInst::FCMP_TRUE: //always return true for this predicate
-      done = true;
-      ret  = true;
+    case FCmpInst::FCMP_UGT:
+      if (CmpRes == APFloat::cmpUnordered) {
+        Result = true;
+        break;
+      }
+    case FCmpInst::FCMP_OGT:
+      Result = CmpRes == APFloat::cmpGreaterThan;
+      break;
+
+    case FCmpInst::FCMP_UGE:
+      if (CmpRes == APFloat::cmpUnordered) {
+        Result = true;
+        break;
+      }
+    case FCmpInst::FCMP_OGE:
+      Result = CmpRes == APFloat::cmpGreaterThan || CmpRes == APFloat::cmpEqual;
+      break;
+
+    case FCmpInst::FCMP_ULT:
+      if (CmpRes == APFloat::cmpUnordered) {
+        Result = true;
+        break;
+      }
+    case FCmpInst::FCMP_OLT:
+      Result = CmpRes == APFloat::cmpLessThan;
+      break;
+
+    case FCmpInst::FCMP_ULE:
+      if (CmpRes == APFloat::cmpUnordered) {
+        Result = true;
+        break;
+      }
+    case FCmpInst::FCMP_OLE:
+      Result = CmpRes == APFloat::cmpLessThan || CmpRes == APFloat::cmpEqual;
+      break;
+
+    case FCmpInst::FCMP_UNE:
+      Result = CmpRes == APFloat::cmpUnordered || CmpRes != APFloat::cmpEqual;
+      break;
+    case FCmpInst::FCMP_ONE:
+      Result = CmpRes != APFloat::cmpUnordered && CmpRes != APFloat::cmpEqual;
+      break;
 
     default:
-    case FCmpInst::BAD_FCMP_PREDICATE: /* will fall through and trigger fatal in the next switch */
+      assert(0 && "Invalid FCMP predicate!");
+    case FCmpInst::FCMP_FALSE:
+      Result = false;
+      break;
+    case FCmpInst::FCMP_TRUE:
+      Result = true;
       break;
     }
 
-    //if not done, then we need to actually do a comparison to get the result
-    if( !done ) {
-      switch( fi->getPredicate() ) {
-        //ordered comparisons return false if either operand is NaN
-      case FCmpInst::FCMP_OEQ:
-      case FCmpInst::FCMP_UEQ:
-        ret = floats::eq( leftVal, rightVal, inWidth );
-        break;
-
-      case FCmpInst::FCMP_OGT:
-      case FCmpInst::FCMP_UGT:
-        ret = floats::gt( leftVal, rightVal, inWidth );
-        break;
-
-      case FCmpInst::FCMP_OGE:
-      case FCmpInst::FCMP_UGE:
-        ret = floats::ge( leftVal, rightVal, inWidth );
-        break;
-
-      case FCmpInst::FCMP_OLT:
-      case FCmpInst::FCMP_ULT:
-        ret = floats::lt( leftVal, rightVal, inWidth );
-        break;
-
-      case FCmpInst::FCMP_OLE:
-      case FCmpInst::FCMP_ULE:
-        ret = floats::le( leftVal, rightVal, inWidth );
-        break;
-
-      case FCmpInst::FCMP_ONE:
-      case FCmpInst::FCMP_UNE:
-        ret = floats::ne( leftVal, rightVal, inWidth );
-        break;
-      
-      default:
-        terminateStateOnExecError(state, "invalid FCmp predicate");
-      }
-    }
-
-    bindLocal(ki, state, ConstantExpr::alloc(ret, resultType));
+    bindLocal(ki, state, ConstantExpr::alloc(Result, Expr::Bool));
     break;
   }
  

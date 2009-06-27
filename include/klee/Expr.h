@@ -310,6 +310,12 @@ public:
   unsigned getNumKids() const { return 0; }
   ref<Expr> getKid(unsigned i) const { return 0; }
 
+  /// getAPValue - Return the arbitrary precision value directly.
+  ///
+  /// Clients should generally not use the APInt value directly and instead use
+  /// native ConstantExpr APIs.
+  const llvm::APInt &getAPValue() const { return value; }
+
   /// getZExtValue - Return the constant value for a limited number of bits.
   ///
   /// This routine should be used in situations where the width of the constant
@@ -410,6 +416,9 @@ public:
   ref<ConstantExpr> Shl(const ref<ConstantExpr> &RHS);
   ref<ConstantExpr> LShr(const ref<ConstantExpr> &RHS);
   ref<ConstantExpr> AShr(const ref<ConstantExpr> &RHS);
+
+  // Comparisons return a constant expression of width 1.
+
   ref<ConstantExpr> Eq(const ref<ConstantExpr> &RHS);
   ref<ConstantExpr> Ne(const ref<ConstantExpr> &RHS);
   ref<ConstantExpr> Ult(const ref<ConstantExpr> &RHS);
