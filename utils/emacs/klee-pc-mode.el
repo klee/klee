@@ -34,13 +34,13 @@
    '("\\bEq\\b\\|\\bNe\\b\\|\\bOr\\b\\|\\bAdd\\b\\|\\bSub\\b\\|\\bMul\\b\\|\\bAnd\\b\\|\\bShl\\b\\|\\bXor\\b\\|\\bNot\\b\\|\\bNeg\\b\\|\\bUlt\\b\\|\\bUle\\b\\|\\bUgt\\b\\|\\bUge\\b\\|\\bSlt\\b\\|\\bSle\\b\\|\\bSgt\\b\\|\\bSge\\b\\|\\bRead\\b\\|\\bAShr\\b\\|\\bLShr\\b\\|\\bUDiv\\b\\|\\bSDiv\\b\\|\\bURem\\b\\|\\bSRem\\b\\|\\bSExt\\b\\|\\bZExt\\b\\|\\bConcat\\b\\|\\bSelect\\b\\|\\bExtract\\b\\|\\bReadLSB\\b\\|\\bReadMSB\\b" . font-lock-function-name-face)
    ;; Types
    '("w[0-9]+" . font-lock-type-face)
-   ;; Identifiers
-   '("[_a-zA-Z][a-zA-Z_.0-9]*" . font-lock-variable-name-face)
    ;; Numbers
    '("[+-]?0b[01_]+" . font-lock-preprocessor-face)
    '("[+-]?0o[0-7_]+" . font-lock-preprocessor-face)
    '("[+-]?0x[a-zA-Z0-9_]+" . font-lock-preprocessor-face)
    '("[+-]?[0-9]+" . font-lock-preprocessor-face)
+   ;; Identifiers
+   '("[_a-zA-Z][a-zA-Z_.0-9]*" . font-lock-variable-name-face)
    )
   "klee-PC mode keywords")
 
