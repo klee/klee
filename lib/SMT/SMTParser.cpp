@@ -77,6 +77,15 @@ int SMTParser::StringToInt(const std::string& s) {
 }
 
 
+ExprHandle SMTParser::GetConstExpr(std::string val, uint8_t base, klee::Expr::Width w) {
+  cerr << "In GetConstExpr(): val=" << val << ", base=" << (unsigned)base << ", width=" << w << "\n";
+  assert(base == 2 || base == 10 || base == 16);
+  llvm::APInt ap(w, val.c_str(), val.length(), base);
+  
+  return klee::ConstantExpr::alloc(ap);
+}
+
+
 void SMTParser::PushVarEnv() {
   cout << "Pushing new var env\n";
   varEnvs.push(VarEnv(varEnvs.top()));

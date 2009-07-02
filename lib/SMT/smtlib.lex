@@ -247,6 +247,11 @@ IDCHAR  ({LETTER}|{DIGIT}|{OPCHAR})
 "rotate_right"  { return ROR_TOK; }
 
 
+"bv"[0-9]+              { smtliblval.str = new std::string(smtlibtext); return BV_TOK; }
+"bvbin"[0-1]+	        { smtliblval.str = new std::string(smtlibtext); return BVBIN_TOK; }
+"bvhex"[0-9,A-F,a-f]+	{ smtliblval.str = new std::string(smtlibtext); return BVHEX_TOK; }
+
+
 ({LETTER})({IDCHAR})* {smtliblval.str = new std::string(smtlibtext); return SYM_TOK; }
 
 <<EOF>>         { return EOF_TOK; }

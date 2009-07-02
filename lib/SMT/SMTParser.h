@@ -56,6 +56,7 @@ class SMTParser : public klee::expr::Parser {
   int Error(const std::string& s);
   
   int StringToInt(const std::string& s);
+  ExprHandle GetConstExpr(std::string val, uint8_t base, klee::Expr::Width w);
 
 
   typedef std::map<const std::string, ExprHandle> VarEnv;

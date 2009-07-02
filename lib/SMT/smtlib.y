@@ -98,7 +98,7 @@ int smtliberror(const char *s)
 */
 
 %type <node> an_formula an_logical_formula an_atom prop_atom
-%type <node> an_term basic_term 
+%type <node> an_term basic_term constant
 %type <node> an_fun an_arithmetic_fun an_bitwise_fun
 %type <node> an_pred
 %type <str> logic_name status attribute user_value annotation annotations 
@@ -109,6 +109,11 @@ int smtliberror(const char *s)
 %token <str> STRING_TOK
 %token <str> AR_SYMB
 %token <str> USER_VAL_TOK
+
+%token <str> BV_TOK
+%token <str> BVBIN_TOK
+%token <str> BVHEX_TOK
+
 %token TRUE_TOK
 %token FALSE_TOK
 %token ITE_TOK
@@ -770,69 +775,38 @@ an_fun:
     }
 
 /*
-
       else if (ARRAYSENABLED && *$1 == "select") {
         $$->push_back(VC->idExpr("_READ"));
       }
       else if (ARRAYSENABLED && *$1 == "store") {
         $$->push_back(VC->idExpr("_WRITE"));
       }
-
-      // Bitvector constants
-      else if (BVENABLED &&
-               $1->size() > 2 &&
-               (*$1)[0] == 'b' &&
-               (*$1)[1] == 'v') {
-        bool done = false;
-        if ((*$1)[2] >= '0' && (*$1)[2] <= '9') {
-          int i = 3;
-          while ((*$1)[i] >= '0' && (*$1)[i] <= '9') ++i;
-          if ((*$1)[i] == '\0') {
-            $$->push_back(VC->idExpr("_BVCONST"));
-            $$->push_back(VC->ratExpr($1->substr(2), 10));
-            $$->push_back(VC->ratExpr(32));
-            done = true;
-          }
-        }
-        else if ($1->size() > 5) {
-          std::string s = $1->substr(0,5);
-          if (s == "bvbin") {
-            int i = 5;
-            while ((*$1)[i] >= '0' && (*$1)[i] <= '1') ++i;
-            if ((*$1)[i] == '\0') {
-              $$->push_back(VC->idExpr("_BVCONST"));
-              $$->push_back(VC->ratExpr($1->substr(5), 2));
-              $$->push_back(VC->ratExpr(i-5));
-              done = true;
-            }
-          }
-          else if (s == "bvhex") {
-            int i = 5;
-            char c = (*$1)[i];
-            while ((c >= '0' && c <= '9') ||
-                   (c >= 'a' && c <= 'f') ||
-                   (c >= 'A' && c <= 'F')) {
-              ++i;
-              c =(*$1)[i];
-            }
-            if ((*$1)[i] == '\0') {
-              $$->push_back(VC->idExpr("_BVCONST"));
-              $$->push_back(VC->ratExpr($1->substr(5), 16));
-              $$->push_back(VC->ratExpr(i-5));
-              done = true;
-            }
-          }
-        }
-        if (!done) $$->push_back(VC->idExpr(*$1));
-      }
-      else {
-        $$->push_back(VC->idExpr(*$1));
-      }
-      delete $1;
 */
+;
 
+constant:
+    BIT0_TOK
+    {
+      $$ = PARSER->GetConstExpr("0", 2, 1);
+    }
 
+  | BIT1_TOK
+    {
+      $$ = PARSER->GetConstExpr("1", 2, 1);
+    }
 
+  | BVBIN_TOK
+    {
+      $$ = PARSER->GetConstExpr($1->substr(5), 2, $1->length()-5);
+    }
+  | BVHEX_TOK
+    {
+      $$ = PARSER->GetConstExpr($1->substr(5), 16, ($1->length()-5)*4);
+    }
+  | BV_TOK LBRACKET_TOK NUMERAL_TOK RBRACKET_TOK
+    {
+      $$ = PARSER->GetConstExpr($1->substr(2), 10, PARSER->StringToInt(*$3));
+    }
 ;
 
 
@@ -860,14 +834,9 @@ an_term:
 
 
 basic_term:
-    BIT1_TOK
+    constant 
     {
-      $$ = ConstantExpr::create(1, 1);
-    }
-
-  | BIT0_TOK
-    { 
-      $$ = ConstantExpr::create(0, 1);;
+      $$ = $1;
     }
 
   | var
