@@ -102,7 +102,7 @@ int smtliberror(const char *s)
 %type <node> an_fun an_arithmetic_fun an_bitwise_fun
 %type <node> an_pred
 %type <str> logic_name status attribute user_value annotation annotations 
-%type <str> var fvar
+%type <str> var fvar symb
 
 %token <str> NUMERAL_TOK
 %token <str> SYM_TOK
@@ -113,6 +113,8 @@ int smtliberror(const char *s)
 %token <str> BV_TOK
 %token <str> BVBIN_TOK
 %token <str> BVHEX_TOK
+
+%token BITVEC_TOK
 
 %token TRUE_TOK
 %token FALSE_TOK
@@ -264,12 +266,13 @@ bench_attribute:
     { 
       // XXX?
     }
+*/
 
-  | COLON_TOK EXTRAFUNS_TOK LPAREN_TOK fun_symb_decls RPAREN_TOK
+  | COLON_TOK EXTRAFUNS_TOK LPAREN_TOK LPAREN_TOK SYM_TOK BITVEC_TOK LBRACKET_TOK NUMERAL_TOK RBRACKET_TOK RPAREN_TOK RPAREN_TOK
     {
-      //$$ = new CVC3::Expr(VC->listExpr("_SEQ", *$4));
-      //delete $4;
+      PARSER->DeclareExpr(*$5, atoi($8->c_str()));
     }
+/*
   | COLON_TOK EXTRAPREDS_TOK LPAREN_TOK pred_symb_decls RPAREN_TOK
     {
       //$$ = new CVC3::Expr(VC->listExpr("_SEQ", *$4));
@@ -435,7 +438,8 @@ an_logical_formula:
 
     LPAREN_TOK NOT_TOK an_formula annotations
     {
-      $$ = Expr::createNot($3);
+      //$$ = Expr::createNot($3);
+      $$ = NULL;
     }
 
   | LPAREN_TOK IMPLIES_TOK an_formula an_formula annotations
@@ -843,18 +847,11 @@ basic_term:
     {
       $$ = PARSER->GetVar(*$1);
     }
-/*
-  | fun_symb 
+  | symb
     {
-      if ($1->size() == 1) {
-        $$ = new CVC3::Expr(((*$1)[0]));
-      }
-      else {
-        $$ = new CVC3::Expr(VC->listExpr(*$1));
-      }
-      delete $1;
+      std::cout << "SYMBOL " << *$1 << "\n";
+      $$ = PARSER->GetVar(*$1);
     }
-*/
 ;
 
 
@@ -966,5 +963,10 @@ fvar:
     }
 ;
 
+symb:
+    SYM_TOK
+    {
+      $$ = $1;
+    }
 
 %%

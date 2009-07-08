@@ -154,6 +154,8 @@ IDCHAR  ({LETTER}|{DIGIT}|{OPCHAR})
                           SMTParser::parserTemp->lineNum++; }
 <USER_VALUE>.	        { _string_lit.insert(_string_lit.end(),*smtlibtext); }
 
+"BitVec"        { return BITVEC_TOK; }
+
 "true"          { return TRUE_TOK; }
 "false"         { return FALSE_TOK; }
 "ite"           { return ITE_TOK; }

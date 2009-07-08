@@ -77,6 +77,28 @@ int SMTParser::StringToInt(const std::string& s) {
 }
 
 
+void SMTParser::DeclareExpr(std::string name, Expr::Width w) {
+  // for now, only allow variables which are multiples of 8
+  if (w % 8 != 0) {
+    cout << "BitVec not multiple of 8 (" << w << ").  Need to update code.\n";
+    exit(1);
+  }
+  
+  std::cout << "Declaring " << name << " of width " << w << "\n";
+  
+  Array *arr = new Array(name, w / 8);
+  
+  ref<Expr> *kids = new ref<Expr>[w/8];
+  for (unsigned i=0; i < w/8; i++)
+    kids[i] = ReadExpr::create(UpdateList(arr, NULL), 
+			       ConstantExpr::create(i, 32));
+  ref<Expr> var = ConcatExpr::createN(w/8, kids);
+  delete [] kids;
+  
+  AddVar(name, var);
+}
+
+
 ExprHandle SMTParser::GetConstExpr(std::string val, uint8_t base, klee::Expr::Width w) {
   cerr << "In GetConstExpr(): val=" << val << ", base=" << (unsigned)base << ", width=" << w << "\n";
   assert(base == 2 || base == 10 || base == 16);
