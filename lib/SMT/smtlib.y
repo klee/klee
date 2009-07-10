@@ -848,7 +848,6 @@ basic_term:
     }
   | symb
     {
-      std::cout << "SYMBOL " << *$1 << "\n";
       $$ = PARSER->GetVar(*$1);
     }
 ;

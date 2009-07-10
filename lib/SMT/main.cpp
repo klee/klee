@@ -14,5 +14,5 @@ int main(int argc, char** argv) {
 
   smtParser.Init();
   
-  cout << "Query: " << smtParser.query << "\n"; 
+  cout << smtParser.query << "\n"; 
 }

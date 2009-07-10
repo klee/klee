@@ -17,6 +17,8 @@
 #include <cassert>
 #include <stack>
 
+//#define DEBUG
+
 using namespace std;
 using namespace klee;
 using namespace klee::expr;
@@ -50,7 +52,7 @@ void SMTParser::Init() {
   smtlib_switchToBuffer(buf);
   smtlib_setInteractive(false);
   smtlibparse();
-  cout << "Parsed successfully.\n";
+  //xcout << "Parsed successfully.\n";
 }
 
 Decl* SMTParser::ParseTopLevelDecl() {
@@ -121,7 +123,9 @@ void SMTParser::DeclareExpr(std::string name, Expr::Width w) {
     exit(1);
   }
   
+#ifdef DEBUG
   std::cout << "Declaring " << name << " of width " << w << "\n";
+#endif
   
   Array *arr = new Array(name, w / 8);
   
@@ -137,7 +141,6 @@ void SMTParser::DeclareExpr(std::string name, Expr::Width w) {
 
 
 ExprHandle SMTParser::GetConstExpr(std::string val, uint8_t base, klee::Expr::Width w) {
-  cerr << "In GetConstExpr(): val=" << val << ", base=" << (unsigned)base << ", width=" << w << "\n";
   assert(base == 2 || base == 10 || base == 16);
   llvm::APInt ap(w, val.c_str(), val.length(), base);
   
@@ -146,17 +149,23 @@ ExprHandle SMTParser::GetConstExpr(std::string val, uint8_t base, klee::Expr::Wi
 
 
 void SMTParser::PushVarEnv() {
+#ifdef DEBUG
   cout << "Pushing new var env\n";
+#endif
   varEnvs.push(VarEnv(varEnvs.top()));
 }
 
 void SMTParser::PopVarEnv() {
+#ifdef DEBUG
   cout << "Popping var env\n";
+#endif
   varEnvs.pop();
 }
 
 void SMTParser::AddVar(std::string name, ExprHandle val) {
+#ifdef DEBUG
   cout << "Adding (" << name << ", " << val << ") to current var env.\n";
+#endif
   varEnvs.top()[name] = val;
 }
 
@@ -175,12 +184,16 @@ void SMTParser::PushFVarEnv() {
 }
 
 void SMTParser::PopFVarEnv(void) {
+#ifdef DEBUG
   cout << "Popping fvar env\n";
+#endif
   fvarEnvs.pop();
 }
 
 void SMTParser::AddFVar(std::string name, ExprHandle val) {
+#ifdef DEBUG
   cout << "Adding (" << name << ", " << val << ") to current fvar env.\n";
+#endif
   fvarEnvs.top()[name] = val;
 }
 
