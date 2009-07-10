@@ -697,6 +697,13 @@ public:
       break;
     }
 
+    case Expr::Not: {
+      if (e->getWidth() == Expr::Bool && range.isFixed()) {
+	propogatePossibleValue(e->getKid(0), !range.min());
+      }
+      break;
+    }
+
     case Expr::Ult: {
       BinaryExpr *be = cast<BinaryExpr>(e);
       
@@ -883,6 +890,14 @@ public:
             }
           }
         }
+      }
+      break;
+    }
+
+    // If a boolean not, and the result is known, propagate it
+    case Expr::Not: {
+      if (e->getWidth() == Expr::Bool && range.isFixed()) {
+	propogateExactValue(e->getKid(0), !range.min());
       }
       break;
     }
