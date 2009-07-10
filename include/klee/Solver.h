@@ -40,7 +40,7 @@ namespace klee {
 
     /// negateExpr - Return a copy of the query with the expression negated.
     Query negateExpr() const {
-      return withExpr(Expr::createNot(expr));
+      return withExpr(Expr::createIsZero(expr));
     }
   };
 

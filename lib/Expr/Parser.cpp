@@ -776,7 +776,7 @@ ExprResult ParserImpl::ParseExpr(TypeResult ExpectedType) {
 
 // Additional kinds for macro forms.
 enum MacroKind {
-  eMacroKind_Not = Expr::LastKind + 1,     // false == x
+  eMacroKind_Nz = Expr::LastKind + 1,      // false == x
   eMacroKind_Neg,                          // 0 - x
   eMacroKind_ReadLSB,                      // Multibyte read
   eMacroKind_ReadMSB,                      // Multibyte write
@@ -806,6 +806,9 @@ static bool LookupExprInfo(const Token &Tok, unsigned &Kind,
       return SetOK(Expr::Eq, false, 2);
     if (memcmp(Tok.start, "Ne", 2) == 0)
       return SetOK(Expr::Ne, false, 2);
+    
+    if (memcmp(Tok.start, "Nz", 2) == 0)
+      return SetOK(eMacroKind_Nz, true, 1);
 
     if (memcmp(Tok.start, "Or", 2) == 0)
       return SetOK(Expr::Or, true, 2);
@@ -826,8 +829,6 @@ static bool LookupExprInfo(const Token &Tok, unsigned &Kind,
     if (memcmp(Tok.start, "Xor", 3) == 0)
       return SetOK(Expr::Xor, true, 2);
 
-    if (memcmp(Tok.start, "Not", 3) == 0)
-      return SetOK(eMacroKind_Not, true, 1);
     if (memcmp(Tok.start, "Neg", 3) == 0)
       return SetOK(eMacroKind_Neg, true, 1);
     if (memcmp(Tok.start, "Ult", 3) == 0)
@@ -1015,7 +1016,7 @@ ExprResult ParserImpl::ParseUnaryParenExpr(const Token &Name,
   ExpectRParen("unexpected argument in unary expression.");  
   ExprHandle E = Arg.get();
   switch (Kind) {
-  case eMacroKind_Not:
+  case eMacroKind_Nz:
     return Builder->Eq(Builder->Constant(0, E->getWidth()), E);
   case eMacroKind_Neg:
     return Builder->Sub(Builder->Constant(0, E->getWidth()), E);

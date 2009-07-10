@@ -72,7 +72,7 @@ bool TimingSolver::mustBeTrue(const ExecutionState& state, ref<Expr> expr,
 
 bool TimingSolver::mustBeFalse(const ExecutionState& state, ref<Expr> expr,
                                bool &result) {
-  return mustBeTrue(state, Expr::createNot(expr), result);
+  return mustBeTrue(state, Expr::createIsZero(expr), result);
 }
 
 bool TimingSolver::mayBeTrue(const ExecutionState& state, ref<Expr> expr, 

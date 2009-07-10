@@ -408,11 +408,11 @@ public:
           bindings.insert(std::make_pair(e, counter++));
         }
 
-        // Detect Not.
+        // Detect Nz
         // FIXME: This should be in common code.
         if (const EqExpr *ee = dyn_cast<EqExpr>(e)) {
           if (ee->left == ConstantExpr::alloc(false, Expr::Bool)) {
-            PC << "(Not";
+            PC << "(Nz";
             printWidth(PC, e);
             PC << ' ';
             print(ee->right, PC);

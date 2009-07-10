@@ -89,7 +89,7 @@ public:
     the canonicalization process. */
 ref<Expr> CachingSolver::canonicalizeQuery(ref<Expr> originalQuery,
                                            bool &negationUsed) {
-  ref<Expr> negatedQuery = Expr::createNot(originalQuery);
+  ref<Expr> negatedQuery = Expr::createIsZero(originalQuery);
 
   // select the "smaller" query to the be canonical representation
   if (originalQuery.compare(negatedQuery) < 0) {

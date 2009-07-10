@@ -289,7 +289,7 @@ Expr::Width Expr::getWidthForLLVMType(const llvm::Type *t) {
 }
 
 ref<Expr> Expr::createImplies(ref<Expr> hyp, ref<Expr> conc) {
-  return OrExpr::create(Expr::createNot(hyp), conc);
+  return OrExpr::create(Expr::createIsZero(hyp), conc);
 }
 
 ref<Expr> Expr::createIsZero(ref<Expr> e) {
@@ -298,10 +298,6 @@ ref<Expr> Expr::createIsZero(ref<Expr> e) {
 
 ref<Expr> Expr::createCoerceToPointerType(ref<Expr> e) {
   return ZExtExpr::create(e, kMachinePointerType);
-}
-
-ref<Expr> Expr::createNot(ref<Expr> e) {
-  return createIsZero(e);
 }
 
 ref<ConstantExpr> Expr::createPointer(uint64_t v) {
@@ -527,11 +523,11 @@ ref<Expr> SelectExpr::create(ref<Expr> c, ref<Expr> t, ref<Expr> f) {
       if (CE->isTrue()) {
         return OrExpr::create(c, f);
       } else {
-        return AndExpr::create(Expr::createNot(c), f);
+        return AndExpr::create(Expr::createIsZero(c), f);
       }
     } else if (ConstantExpr *CE = dyn_cast<ConstantExpr>(f)) {
       if (CE->isTrue()) {
-        return OrExpr::create(Expr::createNot(c), t);
+        return OrExpr::create(Expr::createIsZero(c), t);
       } else {
         return AndExpr::create(c, t);
       }
@@ -868,7 +864,7 @@ static ref<Expr> SRemExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
 
 static ref<Expr> ShlExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
   if (l->getWidth() == Expr::Bool) { // l & !r
-    return AndExpr::create(l, Expr::createNot(r));
+    return AndExpr::create(l, Expr::createIsZero(r));
   } else{
     return ShlExpr::alloc(l, r);
   }
@@ -876,7 +872,7 @@ static ref<Expr> ShlExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
 
 static ref<Expr> LShrExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
   if (l->getWidth() == Expr::Bool) { // l & !r
-    return AndExpr::create(l, Expr::createNot(r));
+    return AndExpr::create(l, Expr::createIsZero(r));
   } else{
     return LShrExpr::alloc(l, r);
   }
@@ -1014,8 +1010,8 @@ static ref<Expr> EqExpr_createPartialR(const ref<ConstantExpr> &cl, Expr *r) {
         const OrExpr *roe = cast<OrExpr>(r);
 
         // transform not(or(a,b)) to and(not a, not b)
-        return AndExpr::create(Expr::createNot(roe->left),
-                               Expr::createNot(roe->right));
+        return AndExpr::create(Expr::createIsZero(roe->left),
+                               Expr::createIsZero(roe->right));
       }
     }
   } else if (rk == Expr::SExt) {
@@ -1093,7 +1089,7 @@ ref<Expr> SgeExpr::create(const ref<Expr> &l, const ref<Expr> &r) {
 static ref<Expr> UltExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
   Expr::Width t = l->getWidth();
   if (t == Expr::Bool) { // !l && r
-    return AndExpr::create(Expr::createNot(l), r);
+    return AndExpr::create(Expr::createIsZero(l), r);
   } else {
     return UltExpr::alloc(l, r);
   }
@@ -1101,7 +1097,7 @@ static ref<Expr> UltExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
 
 static ref<Expr> UleExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
   if (l->getWidth() == Expr::Bool) { // !(l && !r)
-    return OrExpr::create(Expr::createNot(l), r);
+    return OrExpr::create(Expr::createIsZero(l), r);
   } else {
     return UleExpr::alloc(l, r);
   }
@@ -1109,7 +1105,7 @@ static ref<Expr> UleExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
 
 static ref<Expr> SltExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
   if (l->getWidth() == Expr::Bool) { // l && !r
-    return AndExpr::create(l, Expr::createNot(r));
+    return AndExpr::create(l, Expr::createIsZero(r));
   } else {
     return SltExpr::alloc(l, r);
   }
@@ -1117,7 +1113,7 @@ static ref<Expr> SltExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
 
 static ref<Expr> SleExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
   if (l->getWidth() == Expr::Bool) { // !(!l && r)
-    return OrExpr::create(l, Expr::createNot(r));
+    return OrExpr::create(l, Expr::createIsZero(r));
   } else {
     return SleExpr::alloc(l, r);
   }

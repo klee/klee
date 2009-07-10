@@ -728,7 +728,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
           addConstraint(current, condition);
         } else  {
           res = Solver::False;
-          addConstraint(current, Expr::createNot(condition));
+          addConstraint(current, Expr::createIsZero(condition));
         }
       }
     } else if (res==Solver::Unknown) {
@@ -753,7 +753,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
           addConstraint(current, condition);
           res = Solver::True;        
         } else {
-          addConstraint(current, Expr::createNot(condition));
+          addConstraint(current, Expr::createIsZero(condition));
           res = Solver::False;
         }
       }
@@ -786,7 +786,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       assert(trueSeed || falseSeed);
       
       res = trueSeed ? Solver::True : Solver::False;
-      addConstraint(current, trueSeed ? condition : Expr::createNot(condition));
+      addConstraint(current, trueSeed ? condition : Expr::createIsZero(condition));
     }
   }
 
@@ -880,7 +880,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     }
 
     addConstraint(*trueState, condition);
-    addConstraint(*falseState, Expr::createNot(condition));
+    addConstraint(*falseState, Expr::createIsZero(condition));
 
     // Kinda gross, do we even really still want this option?
     if (MaxDepth && MaxDepth<=trueState->depth) {
@@ -1389,7 +1389,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       for (unsigned i=1; i<cases; ++i) {
         ref<Expr> value = evalConstant(si->getCaseValue(i));
         ref<Expr> match = EqExpr::create(cond, value);
-        isDefault = AndExpr::create(isDefault, Expr::createNot(match));
+        isDefault = AndExpr::create(isDefault, Expr::createIsZero(match));
         bool result;
         bool success = solver->mayBeTrue(state, match, result);
         assert(success && "FIXME: Unhandled solver failure");
@@ -3119,7 +3119,7 @@ bool Executor::getSymbolicSolution(const ExecutionState &state,
         mo->cexPreferences.begin(), pie = mo->cexPreferences.end();
       for (; pi != pie; ++pi) {
         bool mustBeTrue;
-        bool success = solver->mustBeTrue(tmp, Expr::createNot(*pi), 
+        bool success = solver->mustBeTrue(tmp, Expr::createIsZero(*pi), 
                                           mustBeTrue);
         if (!success) break;
         if (!mustBeTrue) tmp.addConstraint(*pi);
