@@ -41,6 +41,7 @@ namespace klee {
     virtual ref<Expr> SDiv(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
     virtual ref<Expr> URem(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
     virtual ref<Expr> SRem(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
+    virtual ref<Expr> Not(const ref<Expr> &LHS) = 0;
     virtual ref<Expr> And(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
     virtual ref<Expr> Or(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
     virtual ref<Expr> Xor(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
@@ -63,10 +64,6 @@ namespace klee {
     ref<Expr> False() { return ConstantExpr::alloc(0, Expr::Bool); }
 
     ref<Expr> True() { return ConstantExpr::alloc(0, Expr::Bool); }
-
-    ref<Expr> Not(const ref<Expr> &LHS) {
-      return Eq(False(), LHS);
-    }
 
     ref<Expr> Constant(uint64_t Value, Expr::Width W) {
       return Constant(llvm::APInt(W, Value));

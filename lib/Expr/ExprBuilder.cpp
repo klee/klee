@@ -82,6 +82,10 @@ namespace {
       return SRemExpr::alloc(LHS, RHS);
     }
 
+    virtual ref<Expr> Not(const ref<Expr> &LHS) {
+      return NotExpr::alloc(LHS);
+    }
+
     virtual ref<Expr> And(const ref<Expr> &LHS, const ref<Expr> &RHS) {
       return AndExpr::alloc(LHS, RHS);
     }
@@ -225,6 +229,10 @@ namespace {
 
     ref<Expr> SRem(const ref<Expr> &LHS, const ref<Expr> &RHS) {
       return Base->SRem(LHS, RHS);
+    }
+
+    ref<Expr> Not(const ref<Expr> &LHS) {
+      return Base->Not(LHS);
     }
 
     ref<Expr> And(const ref<Expr> &LHS, const ref<Expr> &RHS) {
@@ -460,6 +468,17 @@ namespace {
 
       return Builder.SRem(cast<NonConstantExpr>(LHS),
                           cast<NonConstantExpr>(RHS));
+    }
+
+    virtual ref<Expr> Not(const ref<Expr> &LHS) {
+      // !!X ==> X
+      if (NotExpr *DblNot = dyn_cast<NotExpr>(LHS))
+        return DblNot->getKid(0);
+
+      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(LHS))
+        return CE->Not();
+
+      return Builder.Not(cast<NonConstantExpr>(LHS));
     }
 
     virtual ref<Expr> And(const ref<Expr> &LHS, const ref<Expr> &RHS) {
@@ -942,18 +961,7 @@ namespace {
           return RHS;
 
         // false == ... (not)
-
-        // Eliminate double negation.
-        if (const EqExpr *EE = dyn_cast<EqExpr>(RHS)) {
-          if (EE->left->getWidth() == Expr::Bool) {
-            // false == (false == X) ==> X
-            if (EE->left->isFalse())
-              return EE->right;
-            // false == (X == false) ==> X
-            if (EE->right->isFalse())
-              return EE->left;
-          }
-        }
+	return Base->Not(RHS);
       }
 
       return Base->Eq(LHS, RHS);
@@ -988,11 +996,7 @@ namespace {
           return RHS;
 
         // false == X (not)
-
-        // Transform !(a or b) ==> !a and !b.
-        if (const OrExpr *OE = dyn_cast<OrExpr>(RHS))
-          return Builder->And(Builder->Not(OE->left),
-                              Builder->Not(OE->right));
+	return Base->Not(RHS);
       }
 
       return Base->Eq(LHS, RHS);
@@ -1010,6 +1014,14 @@ namespace {
           return Builder->True();
 
       return Base->Eq(LHS, RHS);
+    }
+
+    ref<Expr> Not(const ref<NonConstantExpr> &LHS) {
+      // Transform !(a or b) ==> !a and !b.
+      if (const OrExpr *OE = dyn_cast<OrExpr>(LHS))
+	return Builder->And(Builder->Not(OE->left),
+			    Builder->Not(OE->right));
+      return Base->Not(LHS);
     }
 
     ref<Expr> Ne(const ref<Expr> &LHS, const ref<Expr> &RHS) {

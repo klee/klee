@@ -700,7 +700,17 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
     return vc_sbvModExpr(vc, *width_out, left, right);
   }
 
-    // Binary
+    // Bitwise
+
+  case Expr::Not: {
+    NotExpr *ne = cast<NotExpr>(e);
+    ExprHandle expr = construct(ne->expr, width_out);
+    if (*width_out==1) {
+      return vc_notExpr(vc, expr);
+    } else {
+      return vc_bvNotExpr(vc, expr);
+    }
+  }    
 
   case Expr::And: {
     AndExpr *ae = cast<AndExpr>(e);
@@ -712,6 +722,7 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
       return vc_bvAndExpr(vc, left, right);
     }
   }
+
   case Expr::Or: {
     OrExpr *oe = cast<OrExpr>(e);
     ExprHandle left = construct(oe->left, width_out);

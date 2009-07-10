@@ -122,6 +122,7 @@ void Expr::printKind(std::ostream &os, Kind k) {
     X(SDiv);
     X(URem);
     X(SRem);
+    X(Not);
     X(And);
     X(Or);
     X(Xor);
@@ -185,6 +186,11 @@ unsigned ReadExpr::computeHash() {
   unsigned res = index->hash() * Expr::MAGIC_HASH_CONSTANT;
   res ^= updates.hash();
   hashValue = res;
+  return hashValue;
+}
+
+unsigned NotExpr::computeHash() {
+  unsigned hashValue = expr->hash() * Expr::MAGIC_HASH_CONSTANT * Expr::Not;
   return hashValue;
 }
 
@@ -618,6 +624,16 @@ ref<Expr> ExtractExpr::create(ref<Expr> expr, unsigned off, Width w) {
   
   return ExtractExpr::alloc(expr, off, w);
 }
+
+/***/
+
+ref<Expr> NotExpr::create(const ref<Expr> &e) {
+  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(e))
+    return CE->Not();
+  
+  return NotExpr::alloc(e);
+}
+
 
 /***/
 

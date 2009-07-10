@@ -822,6 +822,8 @@ static bool LookupExprInfo(const Token &Tok, unsigned &Kind,
     if (memcmp(Tok.start, "Mul", 3) == 0)
       return SetOK(Expr::Mul, true, 2);
 
+    if (memcmp(Tok.start, "Not", 3) == 0)
+      return SetOK(Expr::Not, true, 1);
     if (memcmp(Tok.start, "And", 3) == 0)
       return SetOK(Expr::And, true, 2);
     if (memcmp(Tok.start, "Shl", 3) == 0)
@@ -829,8 +831,6 @@ static bool LookupExprInfo(const Token &Tok, unsigned &Kind,
     if (memcmp(Tok.start, "Xor", 3) == 0)
       return SetOK(Expr::Xor, true, 2);
 
-    if (memcmp(Tok.start, "Neg", 3) == 0)
-      return SetOK(eMacroKind_Neg, true, 1);
     if (memcmp(Tok.start, "Ult", 3) == 0)
       return SetOK(Expr::Ult, false, 2);
     if (memcmp(Tok.start, "Ule", 3) == 0)
@@ -848,6 +848,8 @@ static bool LookupExprInfo(const Token &Tok, unsigned &Kind,
     if (memcmp(Tok.start, "Sge", 3) == 0)
       return SetOK(Expr::Sge, false, 2);
     break;
+
+    
 
   case 4:
     if (memcmp(Tok.start, "Read", 4) == 0)
@@ -1020,6 +1022,9 @@ ExprResult ParserImpl::ParseUnaryParenExpr(const Token &Name,
     return Builder->Eq(Builder->Constant(0, E->getWidth()), E);
   case eMacroKind_Neg:
     return Builder->Sub(Builder->Constant(0, E->getWidth()), E);
+  case Expr::Not:
+    // FIXME: Type check arguments.
+    return Builder->Not(E);
   case Expr::SExt:
     // FIXME: Type check arguments.
     return Builder->SExt(E, ResTy);

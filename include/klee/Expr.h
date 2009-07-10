@@ -49,10 +49,10 @@ The general rules are:
 
 <li> Booleans:
     <ol type="a">
-    <li> Boolean not is written as <tt>(false == ?)</tt> </li>
      <li> \c Ne, \c Ugt, \c Uge, \c Sgt, \c Sge are not used </li>
-     <li> The only acceptable operations with boolean arguments are \c And, 
-          \c Or, \c Xor, \c Eq, as well as \c SExt, \c ZExt,
+     <li> The only acceptable operations with boolean arguments are 
+          \c Not \c And, \c Or, \c Xor, \c Eq, 
+	  as well as \c SExt, \c ZExt,
           \c Select and \c NotOptimized. </li>
      <li> The only boolean operation which may involve a constant is boolean not (<tt>== false</tt>). </li>
      </ol>
@@ -134,6 +134,7 @@ public:
     SRem,
 
     // Bit
+    Not,
     And,
     Or,
     Xor,
@@ -838,6 +839,55 @@ public:
   }
   static bool classof(const ExtractExpr *) { return true; }
 };
+
+
+/** 
+    Bitwise Not 
+*/
+class NotExpr : public NonConstantExpr { 
+public:
+  static const Kind kind = Not;
+  static const unsigned numKids = 1;
+  
+  ref<Expr> expr;
+
+public:  
+  static ref<Expr> alloc(const ref<Expr> &e) {
+    ref<Expr> r(new NotExpr(e));
+    r->computeHash();
+    return r;
+  }
+  
+  static ref<Expr> create(const ref<Expr> &e);
+
+  Width getWidth() const { return expr->getWidth(); }
+  Kind getKind() const { return Not; }
+
+  unsigned getNumKids() const { return numKids; }
+  ref<Expr> getKid(unsigned i) const { return expr; }
+
+  int compareContents(const Expr &b) const {
+    const NotExpr &eb = static_cast<const NotExpr&>(b);
+    if (expr != eb.expr) return expr < eb.expr ? -1 : 1;
+    return 0;
+  }
+
+  virtual ref<Expr> rebuild(ref<Expr> kids[]) const { 
+    return create(kids[0]);
+  }
+
+  virtual unsigned computeHash();
+
+public:
+  static bool classof(const Expr *E) {
+    return E->getKind() == Expr::Not;
+  }
+  static bool classof(const NotExpr *) { return true; }
+
+private:
+  NotExpr(const ref<Expr> &e) : expr(e) {}
+};
+
 
 
 // Casting

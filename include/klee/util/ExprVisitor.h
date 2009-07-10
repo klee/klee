@@ -62,6 +62,7 @@ namespace klee {
     virtual Action visitSDiv(const SDivExpr&);
     virtual Action visitURem(const URemExpr&);
     virtual Action visitSRem(const SRemExpr&);
+    virtual Action visitNot(const NotExpr&);
     virtual Action visitAnd(const AndExpr&);
     virtual Action visitOr(const OrExpr&);
     virtual Action visitXor(const XorExpr&);
