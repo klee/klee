@@ -1,0 +1,6 @@
+# RUN: %kleaver -evaluate %s > %t.log
+
+# RUN: grep "Query 0:	INVALID" %t.log
+# XFAIL: *
+(query [false] true)
+
