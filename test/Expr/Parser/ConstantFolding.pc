@@ -190,3 +190,8 @@ array a[64] : w32 -> w8 = symbolic
 # RUN: grep -A 2 \"# Query 36$\" %t > %t2
 # RUN: grep \"(query .. false .(Eq 0 (Read w8 0 a)).\" %t2
 (query [] false [(Not (Not (Eq 0 (Read w8 0 a))))])
+
+# Check -- !Const
+# RUN: grep -A 2 \"# Query 37$\" %t > %t2
+# RUN: grep \"(query .. false .true.\" %t2
+(query [] false [(Eq (Not w32 0xdeadbeef) 0x21524110)])

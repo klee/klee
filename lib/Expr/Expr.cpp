@@ -423,7 +423,7 @@ ref<ConstantExpr> ConstantExpr::AShr(const ref<ConstantExpr> &RHS) {
 }
 
 ref<ConstantExpr> ConstantExpr::Not() {
-  return ConstantExpr::alloc(value == 0, Expr::Bool);
+  return ConstantExpr::alloc(~value);
 }
 
 ref<ConstantExpr> ConstantExpr::Eq(const ref<ConstantExpr> &RHS) {
