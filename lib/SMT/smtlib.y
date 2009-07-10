@@ -745,8 +745,8 @@ an_bitwise_fun:
 
   | LPAREN_TOK BVEXTRACT_TOK LBRACKET_TOK NUMERAL_TOK COLON_TOK NUMERAL_TOK RBRACKET_TOK an_term annotations
     {
-      int off = PARSER->StringToInt(*$4);
-      $$ = ExtractExpr::create($8, off, PARSER->StringToInt(*$6) - off + 1);
+      int off = PARSER->StringToInt(*$6);
+      $$ = ExtractExpr::create($8, off, PARSER->StringToInt(*$4) - off + 1);
     }
 ;
 
