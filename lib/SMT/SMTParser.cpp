@@ -77,6 +77,43 @@ int SMTParser::StringToInt(const std::string& s) {
 }
 
 
+ExprHandle SMTParser::CreateAnd(std::vector<ExprHandle> kids) {
+  unsigned n_kids = kids.size();
+  assert(n_kids);
+  if (n_kids == 1)
+    return kids[0];
+
+  ExprHandle r = AndExpr::create(kids[n_kids-2], kids[n_kids-1]);
+  for (int i=n_kids-3; i>=0; i--)
+    r = AndExpr::create(kids[i], r);
+  return r;
+}
+
+ExprHandle SMTParser::CreateOr(std::vector<ExprHandle> kids) {
+  unsigned n_kids = kids.size();
+  assert(n_kids);
+  if (n_kids == 1)
+    return kids[0];
+
+  ExprHandle r = OrExpr::create(kids[n_kids-2], kids[n_kids-1]);
+  for (int i=n_kids-3; i>=0; i--)
+    r = OrExpr::create(kids[i], r);
+  return r;
+}
+
+ExprHandle SMTParser::CreateXor(std::vector<ExprHandle> kids) {
+  unsigned n_kids = kids.size();
+  assert(n_kids);
+  if (n_kids == 1)
+    return kids[0];
+
+  ExprHandle r = XorExpr::create(kids[n_kids-2], kids[n_kids-1]);
+  for (int i=n_kids-3; i>=0; i--)
+    r = XorExpr::create(kids[i], r);
+  return r;
+}
+
+
 void SMTParser::DeclareExpr(std::string name, Expr::Width w) {
   // for now, only allow variables which are multiples of 8
   if (w % 8 != 0) {

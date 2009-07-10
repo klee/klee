@@ -60,6 +60,10 @@ class SMTParser : public klee::expr::Parser {
 
   void DeclareExpr(std::string name, Expr::Width w);
 
+  ExprHandle CreateAnd(std::vector<ExprHandle>);
+  ExprHandle CreateOr(std::vector<ExprHandle>);
+  ExprHandle CreateXor(std::vector<ExprHandle>);
+  
 
   typedef std::map<const std::string, ExprHandle> VarEnv;
   typedef std::map<const std::string, ExprHandle> FVarEnv;

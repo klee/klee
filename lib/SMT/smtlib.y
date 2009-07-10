@@ -76,6 +76,7 @@ int smtliberror(const char *s)
 %union {
   std::string *str;
   klee::expr::ExprHandle node;
+  std::vector<klee::expr::ExprHandle> *vec;
 };
 
 
@@ -98,6 +99,7 @@ int smtliberror(const char *s)
 */
 
 %type <node> an_formula an_logical_formula an_atom prop_atom
+%type <vec> an_formulas
 %type <node> an_term basic_term constant
 %type <node> an_fun an_arithmetic_fun an_bitwise_fun
 %type <node> an_pred
@@ -415,31 +417,27 @@ pred_sig:
 ;
 */
 
-/*
+
 an_formulas:
     an_formula
     {
-      $$ = new std::vector<CVC3::Expr>;
-      $$->push_back(*$1);
-      delete $1;
+      $$ = new std::vector<klee::expr::ExprHandle>;
+      $$->push_back($1);
     }
   |
     an_formulas an_formula
     {
-      $1->push_back(*$2);
+      $1->push_back($2);
       $$ = $1;
-      delete $2;
     }
 ;
-*/
 
 
 an_logical_formula:
 
     LPAREN_TOK NOT_TOK an_formula annotations
     {
-      //$$ = Expr::createNot($3);
-      $$ = NULL;
+      $$ = NotExpr::create($3);
     }
 
   | LPAREN_TOK IMPLIES_TOK an_formula an_formula annotations
@@ -452,19 +450,19 @@ an_logical_formula:
       $$ = SelectExpr::create($3, $4, $5);
     }
 
-  | LPAREN_TOK AND_TOK an_formula an_formula annotations
+  | LPAREN_TOK AND_TOK an_formulas annotations
     {
-      $$ = AndExpr::create($3, $4);
+      $$ = PARSER->CreateAnd(*$3);
     }
 
-  | LPAREN_TOK OR_TOK an_formula an_formula annotations
+  | LPAREN_TOK OR_TOK an_formulas annotations
     {
-      $$ = OrExpr::create($3, $4);
+      $$ = PARSER->CreateOr(*$3);
     }
 
-  | LPAREN_TOK XOR_TOK an_formula an_formula annotations
+  | LPAREN_TOK XOR_TOK an_formulas annotations
     {
-      $$ = XorExpr::create($3, $4);
+      $$ = PARSER->CreateXor(*$3);
     }
 
   | LPAREN_TOK IFF_TOK an_formula an_formula annotations
@@ -507,6 +505,7 @@ an_formula:
       PARSER->PopFVarEnv();
     }
 ;
+
 
 
 an_atom:
@@ -674,9 +673,9 @@ an_arithmetic_fun:
 
 
 an_bitwise_fun:
-    LPAREN_TOK BVNOT_TOK an_term an_term annotations
+    LPAREN_TOK BVNOT_TOK an_term annotations
     {
-      $$ = NULL; // XXX: not supported yet
+      $$ = NotExpr::create($3);
     }
 
   | LPAREN_TOK BVAND_TOK an_term an_term annotations
@@ -695,7 +694,7 @@ an_bitwise_fun:
     }
 
   | LPAREN_TOK BVXNOR_TOK an_term an_term annotations
-    {
+    {      
       $$ = NULL; // TODO
     }
 
@@ -726,12 +725,12 @@ an_bitwise_fun:
  
   | LPAREN_TOK ZEXT_TOK LBRACKET_TOK NUMERAL_TOK RBRACKET_TOK an_term annotations
     {
-      $$ = NULL; // TODO
+      $$ = ZExtExpr::create($6, $6->getWidth() + PARSER->StringToInt(*$4));
     }
 
   | LPAREN_TOK SEXT_TOK LBRACKET_TOK NUMERAL_TOK RBRACKET_TOK an_term annotations
     {
-      $$ = NULL; // TODO
+      $$ = SExtExpr::create($6, $6->getWidth() + PARSER->StringToInt(*$4));
     }
 
   | LPAREN_TOK BVCONCAT_TOK an_term an_term annotations
