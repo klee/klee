@@ -20,12 +20,14 @@
 #include <string>
 
 namespace klee {
+  class ExprBuilder;
+  
 namespace expr {
 
 class SMTParser : public klee::expr::Parser {
   private:
     void *buf;
-
+    
  public:
   /* For interacting w/ the actual parser, should make this nicer */
   static SMTParser* parserTemp;
@@ -40,8 +42,10 @@ class SMTParser : public klee::expr::Parser {
 
   int bvSize;
   bool queryParsed;
+
+  klee::ExprBuilder *builder;
     
-  SMTParser(const std::string filename);
+  SMTParser(const std::string filename, ExprBuilder *builder);
   
   virtual klee::expr::Decl *ParseTopLevelDecl();
   

@@ -25,6 +25,7 @@
 
 #include "SMTParser.h"
 #include "klee/Expr.h"
+#include "klee/ExprBuilder.h"
 
 #include <sstream>
 
@@ -33,6 +34,7 @@ using namespace klee::expr;
 
 // Define shortcuts for various things
 #define PARSER SMTParser::parserTemp
+#define BUILDER SMTParser::parserTemp->builder
 #define DONE SMTParser::parserTemp->done
 #define EXPR SMTParser::parserTemp->query
 #define ASSUMPTIONS SMTParser::parserTemp->assumptions
@@ -434,17 +436,17 @@ an_logical_formula:
 
     LPAREN_TOK NOT_TOK an_formula annotations
     {
-      $$ = NotExpr::create($3);
+      $$ = BUILDER->Not($3);
     }
 
   | LPAREN_TOK IMPLIES_TOK an_formula an_formula annotations
     {
-      $$ = Expr::createImplies($3, $4);
+      $$ = Expr::createImplies($3, $4);  // XXX: move to builder?
     }
 
   | LPAREN_TOK IF_THEN_ELSE_TOK an_formula an_formula an_formula annotations
     {
-      $$ = SelectExpr::create($3, $4, $5);
+      $$ = BUILDER->Select($3, $4, $5);
     }
 
   | LPAREN_TOK AND_TOK an_formulas annotations
@@ -464,7 +466,7 @@ an_logical_formula:
 
   | LPAREN_TOK IFF_TOK an_formula an_formula annotations
     {
-      $$ = EqExpr::create($3, $4);
+      $$ = BUILDER->Eq($3, $4);
     }
 ;
 
@@ -557,12 +559,12 @@ an_atom:
 prop_atom:
     TRUE_TOK
     {
-      $$ = ConstantExpr::create(1, 1);
+      $$ = BUILDER->Constant(1, 1);
     }
 
   | FALSE_TOK
     { 
-      $$ = ConstantExpr::create(0, 1);;
+      $$ = BUILDER->Constant(0, 1);;
     }
 
   | fvar
@@ -575,47 +577,47 @@ prop_atom:
 an_pred:
     LPAREN_TOK EQ_TOK an_term an_term annotations
     {
-      $$ = EqExpr::create($3, $4);
+      $$ = BUILDER->Eq($3, $4);
     }
 
   | LPAREN_TOK BVULT_TOK an_term an_term annotations
     {
-      $$ = UltExpr::create($3, $4);
+      $$ = BUILDER->Ult($3, $4);
     }
 
   | LPAREN_TOK BVULE_TOK an_term an_term annotations
     {
-      $$ = UleExpr::create($3, $4);
+      $$ = BUILDER->Ule($3, $4);
     }
 
   | LPAREN_TOK BVUGT_TOK an_term an_term annotations
     {
-      $$ = UgtExpr::create($3, $4);
+      $$ = BUILDER->Ugt($3, $4);
     }
 
   | LPAREN_TOK BVUGE_TOK an_term an_term annotations
     {
-      $$ = UgeExpr::create($3, $4);
+      $$ = BUILDER->Uge($3, $4);
     }
 
   | LPAREN_TOK BVSLT_TOK an_term an_term annotations
     {
-      $$ = SltExpr::create($3, $4);
+      $$ = BUILDER->Slt($3, $4);
     }
 
   | LPAREN_TOK BVSLE_TOK an_term an_term annotations
     {
-      $$ = SleExpr::create($3, $4);
+      $$ = BUILDER->Sle($3, $4);
     }
 
   | LPAREN_TOK BVSGT_TOK an_term an_term annotations
     {
-      $$ = SgtExpr::create($3, $4);
+      $$ = BUILDER->Sgt($3, $4);
     }
 
   | LPAREN_TOK BVSGE_TOK an_term an_term annotations
     {
-      $$ = SgeExpr::create($3, $4);
+      $$ = BUILDER->Sge($3, $4);
     }
 ;
 
@@ -630,37 +632,37 @@ an_arithmetic_fun:
 
   | LPAREN_TOK BVADD_TOK an_term an_term annotations
     {
-      $$ = AddExpr::create($3, $4);
+      $$ = BUILDER->Add($3, $4);
     }
 
   | LPAREN_TOK BVSUB_TOK an_term an_term annotations
     {
-      $$ = SubExpr::create($3, $4);
+      $$ = BUILDER->Sub($3, $4);
     }
 
   | LPAREN_TOK BVMUL_TOK an_term an_term annotations
     {
-      $$ = MulExpr::create($3, $4);
+      $$ = BUILDER->Mul($3, $4);
     }
 
   | LPAREN_TOK BVUDIV_TOK an_term an_term annotations
     {
-      $$ = UDivExpr::create($3, $4);
+      $$ = BUILDER->UDiv($3, $4);
     }
 
   | LPAREN_TOK BVUREM_TOK an_term an_term annotations
     {
-      $$ = URemExpr::create($3, $4);
+      $$ = BUILDER->URem($3, $4);
     }
 
   | LPAREN_TOK BVSDIV_TOK an_term an_term annotations
     {
-      $$ = SDivExpr::create($3, $4);
+      $$ = BUILDER->SDiv($3, $4);
     }
 
   | LPAREN_TOK BVSREM_TOK an_term an_term annotations
     {
-      $$ = SRemExpr::create($3, $4);
+      $$ = BUILDER->SRem($3, $4);
     }
 
   | LPAREN_TOK BVSMOD_TOK an_term an_term annotations
@@ -674,22 +676,22 @@ an_arithmetic_fun:
 an_bitwise_fun:
     LPAREN_TOK BVNOT_TOK an_term annotations
     {
-      $$ = NotExpr::create($3);
+      $$ = BUILDER->Not($3);
     }
 
   | LPAREN_TOK BVAND_TOK an_term an_term annotations
     {
-      $$ = AndExpr::create($3, $4);
+      $$ = BUILDER->And($3, $4);
     }
 
   | LPAREN_TOK BVOR_TOK an_term an_term annotations
     {
-      $$ = OrExpr::create($3, $4);
+      $$ = BUILDER->Or($3, $4);
     }
 
   | LPAREN_TOK BVXOR_TOK an_term an_term annotations
     {
-      $$ = XorExpr::create($3, $4);
+      $$ = BUILDER->Xor($3, $4);
     }
 
   | LPAREN_TOK BVXNOR_TOK an_term an_term annotations
@@ -700,17 +702,17 @@ an_bitwise_fun:
 
   | LPAREN_TOK BVSHL_TOK an_term an_term annotations
     {
-      $$ = ShlExpr::create($3, $4);
+      $$ = BUILDER->Shl($3, $4);
     }
 
   | LPAREN_TOK BVLSHR_TOK an_term an_term annotations
     {
-      $$ = LShrExpr::create($3, $4);
+      $$ = BUILDER->LShr($3, $4);
     }
 
   | LPAREN_TOK BVASHR_TOK an_term an_term annotations
     {
-      $$ = AShrExpr::create($3, $4);
+      $$ = BUILDER->AShr($3, $4);
     }
 
   | LPAREN_TOK ROL_TOK LBRACKET_TOK NUMERAL_TOK RBRACKET_TOK an_term annotations
@@ -727,17 +729,17 @@ an_bitwise_fun:
  
   | LPAREN_TOK ZEXT_TOK LBRACKET_TOK NUMERAL_TOK RBRACKET_TOK an_term annotations
     {
-      $$ = ZExtExpr::create($6, $6->getWidth() + PARSER->StringToInt(*$4));
+      $$ = BUILDER->ZExt($6, $6->getWidth() + PARSER->StringToInt(*$4));
     }
 
   | LPAREN_TOK SEXT_TOK LBRACKET_TOK NUMERAL_TOK RBRACKET_TOK an_term annotations
     {
-      $$ = SExtExpr::create($6, $6->getWidth() + PARSER->StringToInt(*$4));
+      $$ = BUILDER->SExt($6, $6->getWidth() + PARSER->StringToInt(*$4));
     }
 
   | LPAREN_TOK BVCONCAT_TOK an_term an_term annotations
     {
-      $$ = ConcatExpr::create($3, $4);
+      $$ = BUILDER->Concat($3, $4);
     }
 
   | LPAREN_TOK REPEAT_TOK LBRACKET_TOK NUMERAL_TOK RBRACKET_TOK an_term annotations
@@ -749,7 +751,7 @@ an_bitwise_fun:
   | LPAREN_TOK BVEXTRACT_TOK LBRACKET_TOK NUMERAL_TOK COLON_TOK NUMERAL_TOK RBRACKET_TOK an_term annotations
     {
       int off = PARSER->StringToInt(*$6);
-      $$ = ExtractExpr::create($8, off, PARSER->StringToInt(*$4) - off + 1);
+      $$ = BUILDER->Extract($8, off, PARSER->StringToInt(*$4) - off + 1);
     }
 ;
 
@@ -767,7 +769,7 @@ an_fun:
 
   | LPAREN_TOK BVCOMP_TOK an_term an_term annotations
     {
-      $$ = EqExpr::create($3, $4);
+      $$ = BUILDER->Eq($3, $4);
     }
  
   | an_arithmetic_fun
@@ -834,7 +836,7 @@ an_term:
 
   | LPAREN_TOK ITE_TOK an_formula an_term an_term annotations
     {
-      $$ = SelectExpr::create($3, $4, $5);
+      $$ = BUILDER->Select($3, $4, $5);
     }
 ;
 

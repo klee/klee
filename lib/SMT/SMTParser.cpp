@@ -8,6 +8,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "SMTParser.h"
+
+#include "klee/ExprBuilder.h"
 #include "expr/Parser.h"
 
 #include <iostream>
@@ -32,13 +34,15 @@ extern void smtlib_setInteractive(bool);
 
 SMTParser* SMTParser::parserTemp = NULL;
 
-SMTParser::SMTParser(const std::string filename) : fileName(filename), 
-						   lineNum(1),
-						   done(false),
-						   query(NULL),
-						   bvSize(0),
-						   queryParsed(false) {
-  is = new ifstream(filename.c_str());
+SMTParser::SMTParser(const std::string _filename, 
+		     ExprBuilder* _builder) : fileName(_filename),
+					      lineNum(1),
+					      done(false),
+					      query(NULL),
+					      bvSize(0),
+					      queryParsed(false),
+					      builder(_builder) {
+  is = new ifstream(fileName.c_str());
   
   // Initial empty environments
   varEnvs.push(VarEnv());
@@ -87,9 +91,9 @@ ExprHandle SMTParser::CreateAnd(std::vector<ExprHandle> kids) {
   if (n_kids == 1)
     return kids[0];
 
-  ExprHandle r = AndExpr::create(kids[n_kids-2], kids[n_kids-1]);
+  ExprHandle r = builder->And(kids[n_kids-2], kids[n_kids-1]);
   for (int i=n_kids-3; i>=0; i--)
-    r = AndExpr::create(kids[i], r);
+    r = builder->And(kids[i], r);
   return r;
 }
 
@@ -99,9 +103,9 @@ ExprHandle SMTParser::CreateOr(std::vector<ExprHandle> kids) {
   if (n_kids == 1)
     return kids[0];
 
-  ExprHandle r = OrExpr::create(kids[n_kids-2], kids[n_kids-1]);
+  ExprHandle r = builder->Or(kids[n_kids-2], kids[n_kids-1]);
   for (int i=n_kids-3; i>=0; i--)
-    r = OrExpr::create(kids[i], r);
+    r = builder->Or(kids[i], r);
   return r;
 }
 
@@ -111,9 +115,9 @@ ExprHandle SMTParser::CreateXor(std::vector<ExprHandle> kids) {
   if (n_kids == 1)
     return kids[0];
 
-  ExprHandle r = XorExpr::create(kids[n_kids-2], kids[n_kids-1]);
+  ExprHandle r = builder->Xor(kids[n_kids-2], kids[n_kids-1]);
   for (int i=n_kids-3; i>=0; i--)
-    r = XorExpr::create(kids[i], r);
+    r = builder->Xor(kids[i], r);
   return r;
 }
 
@@ -133,9 +137,9 @@ void SMTParser::DeclareExpr(std::string name, Expr::Width w) {
   
   ref<Expr> *kids = new ref<Expr>[w/8];
   for (unsigned i=0; i < w/8; i++)
-    kids[i] = ReadExpr::create(UpdateList(arr, NULL), 
-			       ConstantExpr::create(i, 32));
-  ref<Expr> var = ConcatExpr::createN(w/8, kids);
+    kids[i] = builder->Read(UpdateList(arr, NULL), 
+			    builder->Constant(i, 32));
+  ref<Expr> var = ConcatExpr::createN(w/8, kids); // XXX: move to builder?
   delete [] kids;
   
   AddVar(name, var);
