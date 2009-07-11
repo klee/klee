@@ -408,19 +408,6 @@ public:
           bindings.insert(std::make_pair(e, counter++));
         }
 
-        // Detect Nz
-        // FIXME: This should be in common code.
-        if (const EqExpr *ee = dyn_cast<EqExpr>(e)) {
-          if (ee->left == ConstantExpr::alloc(false, Expr::Bool)) {
-            PC << "(Nz";
-            printWidth(PC, e);
-            PC << ' ';
-            print(ee->right, PC);
-            PC << ')';
-            return;
-          }
-        }
-
         // Detect multibyte reads.
         // FIXME: Hrm. One problem with doing this is that we are
         // masking the sharing of the indices which aren't

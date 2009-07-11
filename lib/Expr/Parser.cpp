@@ -776,12 +776,11 @@ ExprResult ParserImpl::ParseExpr(TypeResult ExpectedType) {
 
 // Additional kinds for macro forms.
 enum MacroKind {
-  eMacroKind_Nz = Expr::LastKind + 1,      // false == x
-  eMacroKind_Neg,                          // 0 - x
-  eMacroKind_ReadLSB,                      // Multibyte read
+  eMacroKind_ReadLSB = Expr::LastKind + 1, // Multibyte read
   eMacroKind_ReadMSB,                      // Multibyte write
+  eMacroKind_Neg,                          // 0 - x // CrC: will disappear soon
   eMacroKind_Concat,                       // Magic concatenation syntax
-  eMacroKind_LastMacroKind = eMacroKind_ReadMSB
+  eMacroKind_LastMacroKind = eMacroKind_Concat
 };
 
 /// LookupExprInfo - Return information on the named token, if it is
@@ -807,9 +806,6 @@ static bool LookupExprInfo(const Token &Tok, unsigned &Kind,
     if (memcmp(Tok.start, "Ne", 2) == 0)
       return SetOK(Expr::Ne, false, 2);
     
-    if (memcmp(Tok.start, "Nz", 2) == 0)
-      return SetOK(eMacroKind_Nz, true, 1);
-
     if (memcmp(Tok.start, "Or", 2) == 0)
       return SetOK(Expr::Or, true, 2);
     break;
@@ -1018,8 +1014,6 @@ ExprResult ParserImpl::ParseUnaryParenExpr(const Token &Name,
   ExpectRParen("unexpected argument in unary expression.");  
   ExprHandle E = Arg.get();
   switch (Kind) {
-  case eMacroKind_Nz:
-    return Builder->Eq(Builder->Constant(0, E->getWidth()), E);
   case eMacroKind_Neg:
     return Builder->Sub(Builder->Constant(0, E->getWidth()), E);
   case Expr::Not:
