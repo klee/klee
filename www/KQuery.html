@@ -58,6 +58,7 @@
         </li>
         <li><a href="#bit_expr">Bitwise Operations</a>
           <ol type="i">
+            <li><a href="#Not_expr">Not</a></li>
             <li><a href="#And_expr">And</a></li>
             <li><a href="#Or_expr">Or</a></li>
             <li><a href="#Xor_expr">Xor</a></li>
@@ -96,8 +97,7 @@
         </li>
         <li><a href="#macro_expr">Macro Expressions</a>
           <ol type="i">
-            <li><a href="#Neg_expr">Not</a></li>
-            <li><a href="#Not_expr">Not</a></li>
+            <li><a href="#Neg_expr">Neg</a></li>
             <li><a href="#ReadLSB_expr">ReadLSB</a></li>
             <li><a href="#ReadMSB_expr">ReadMSB</a></li>
           </ol>
@@ -235,7 +235,7 @@
   </div>
   
   <p>Non-decimal constants can be signed. The '_' character is ignored when
-  evaluating constants, but is available for use as a separator. </p>
+  evaluating constants, but is available for use as a separator.</p>
 
   <h3><a name="ident_type">Types</a></h3>
 
@@ -396,21 +396,32 @@
     and right-hand side expressions must match the expression type.</p>
 
   <h4><a name="UDiv_expr">UDiv</a></h4>
-  <p> Truncated unsigned division.  Undefined if divisor is 0. </p>
+  <p>Truncated unsigned division. Undefined if divisor is 0.</p>
 
   <h4><a name="URem_expr">URem</a></h4>
-  <p> Unsigned remainder.  Undefined if divisor is 0 </p>
+  <p>Unsigned remainder. Undefined if divisor is 0.</p>
   
   <h4><a name="SDiv_expr">SDiv</a></h4>
-  <p> Signed division.  Undefined if divisor is 0. </p>
+  <p>Signed division. Undefined if divisor is 0.</p>
 
   <h4><a name="SRem_expr">SRem</a></h4>
-  <p> Signed remainder.  Undefined if divisor is 0.  Sign of the
-  remainder is the same as that of the dividend.  </p>
+  <p>Signed remainder. Undefined if divisor is 0. Sign of the
+  remainder is the same as that of the dividend.</p>
   
 
   <h3><a name="bit_expr">Bitwise Operations</a></h3>
   
+  <h4><a name="Not_expr">Not</a></h4>
+
+  <p><b>Syntax:</b></p>
+  <div class="syntax">
+    expression = "(" "Not" [ type ] expression ")"
+  </div>
+
+  <p>Bitwise negation. The result is the bitwise negation (one's complement) of
+    the input expression. If the type is specified, it must match the expression
+    type.</p>
+
   <h4><a name="And_expr">And</a>,
     <a name="Or_expr">Or</a>,
     <a name="Xor_expr">Xor</a>,
@@ -424,8 +435,8 @@
     expression = "(" bitwise-expr-kind type expression expression ")"<br>
   </div>
 
-  <p>Bitwise operations are always binary and the types of the left-
-    and right-hand side expressions must match the expression type.</p>
+  <p>These bitwise operations are always binary and the types of the left- and
+    right-hand side expressions must match the expression type.</p>
 
   <h4><a name="Shl">Shl</a></h4>
   
@@ -433,10 +444,9 @@
     expression = "(" "Shl" type X Y ")"
   </div>
 
-  <p> Logical shift left.  Moves each bit of <b>X</b> to the left
-  by <b>Y</b> positions.  The <b>Y</b> right-most bits of <b>X</b> are
+  <p>Logical shift left. Moves each bit of <b>X</b> to the left
+  by <b>Y</b> positions. The <b>Y</b> right-most bits of <b>X</b> are
   replaced with zero, and the left-most bits discarded.</p>
-
 
   <h4><a name="LShr">LShr</a></h4>
 
@@ -444,8 +454,8 @@
     expression = "(" "LShr" type X Y ")"
   </div>
 
-  <p> Logical shift right.  Moves each bit of <b>X</b> to the right
-  by <b>Y</b> positions.  The <b>Y</b> left-most bits of <b>X</b> are
+  <p>Logical shift right. Moves each bit of <b>X</b> to the right
+  by <b>Y</b> positions. The <b>Y</b> left-most bits of <b>X</b> are
   replaced with zero, and the right-most bits discarded.</p>
 
 
@@ -455,7 +465,7 @@
     expression = "(" "AShr" type X Y ")"
   </div>
 
-  <p> Arithmetic shift right.  Behaves as <b>LShr</b> except that the
+  <p>Arithmetic shift right. Behaves as <b>LShr</b> except that the
   left-most bits of <b>X</b> copy the initial left-most bit (the sign
   bit) of <b>X</b>.
 
@@ -574,16 +584,6 @@
   </div>
 
   <p>This macro form can be used to generate a <b>Sub</b> from zero.</p>
-
-  <h4><a name="Not_expr">Not</a></h4>
-
-  <p><b>Syntax:</b></p>
-  <div class="syntax">
-    expression = "(" "Not" [ type ] expression ")"
-  </div>
-
-  <p>This macro form can be used to generate an <b>Eq</b> comparison to zero. If
-    the type is specified, it must be <b>w1</b>.</p>
 
   <h4><a name="ReadLSB_expr">ReadLSB</a>,
       <a name="ReadMSB_expr">ReadMSB</a></h4>
