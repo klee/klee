@@ -63,8 +63,10 @@ Decl* SMTParser::ParseTopLevelDecl() {
 }
 
 // XXX: give more info
-int SMTParser::Error(const string& s) {
-  std::cerr << "error: " << s << "\n";
+int SMTParser::Error(const string& msg) {
+  std::cerr << SMTParser::parserTemp->fileName << ":" 
+	    << SMTParser::parserTemp->lineNum
+	    << ": " << msg << "\n";
   exit(1);
   return 0;
 }

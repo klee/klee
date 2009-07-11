@@ -51,10 +51,7 @@ extern int smtliblex(void);
 
 int smtliberror(const char *s)
 {
-  std::ostringstream ss;
-  ss << SMTParser::parserTemp->fileName << ":" << SMTParser::parserTemp->lineNum
-     << ": " << s;
-  return SMTParser::parserTemp->Error(ss.str());
+  return SMTParser::parserTemp->Error(s);
 }
 
 
@@ -625,9 +622,10 @@ an_pred:
 
 an_arithmetic_fun:
 
-    LPAREN_TOK BVNEG_TOK an_term an_term annotations
+    LPAREN_TOK BVNEG_TOK an_term annotations
     {
-      $$ = NULL;  // XXX: not supported yet
+      smtliberror("bvneg not supported yet");
+      $$ = NULL; // TODO
     }
 
   | LPAREN_TOK BVADD_TOK an_term an_term annotations
@@ -667,7 +665,8 @@ an_arithmetic_fun:
 
   | LPAREN_TOK BVSMOD_TOK an_term an_term annotations
     {
-      $$ = NULL; // XXX: not supported yet
+      smtliberror("bvsmod not supported yet");
+      $$ = NULL; // TODO
     }
 ;
 
@@ -695,7 +694,8 @@ an_bitwise_fun:
 
   | LPAREN_TOK BVXNOR_TOK an_term an_term annotations
     {      
-      $$ = NULL; // TODO
+      smtliberror("bvxnor not supported yet");
+      $$ = NULL;  // TODO
     }
 
   | LPAREN_TOK BVSHL_TOK an_term an_term annotations
@@ -715,11 +715,13 @@ an_bitwise_fun:
 
   | LPAREN_TOK ROL_TOK LBRACKET_TOK NUMERAL_TOK RBRACKET_TOK an_term annotations
     {
+      smtliberror("rotate_left not supported yet");
       $$ = NULL; // TODO
     }
 
   | LPAREN_TOK ROR_TOK LBRACKET_TOK NUMERAL_TOK RBRACKET_TOK an_term annotations
     {
+      smtliberror("rotate_right not supported yet");
       $$ = NULL; // TODO
     }
  
@@ -740,6 +742,7 @@ an_bitwise_fun:
 
   | LPAREN_TOK REPEAT_TOK LBRACKET_TOK NUMERAL_TOK RBRACKET_TOK an_term annotations
     {
+      smtliberror("repeat not supported yet");
       $$ = NULL; // TODO
     }
 
