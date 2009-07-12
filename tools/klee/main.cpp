@@ -1129,7 +1129,7 @@ int main(int argc, char **argv, char **envp) {
   std::string ErrorMsg;
   ModuleProvider *MP = 0;
   if (MemoryBuffer *Buffer = MemoryBuffer::getFileOrSTDIN(InputFile, &ErrorMsg)) {
-    MP = getBitcodeModuleProvider(Buffer, &ErrorMsg);
+    MP = getBitcodeModuleProvider(Buffer, getGlobalContext(), &ErrorMsg);
     if (!MP) delete Buffer;
   }
   

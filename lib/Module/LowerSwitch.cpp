@@ -64,12 +64,8 @@ void LowerSwitchPass::switchConvert(CaseItr begin, CaseItr end,
     Function::iterator FI = origBlock;
     F->getBasicBlockList().insert(++FI, newBlock);
     
-    ICmpInst *cmpInst = new ICmpInst(ICmpInst::ICMP_EQ,
-                                     value,
-                                     it->value,
-                                     "Case Comparison");
-    
-    newBlock->getInstList().push_back(cmpInst);
+    ICmpInst *cmpInst = 
+      new ICmpInst(*newBlock, ICmpInst::ICMP_EQ, value, it->value, "case.cmp");
     BranchInst::Create(it->block, curHead, cmpInst, newBlock);
 
     // If there were any PHI nodes in this successor, rewrite one entry

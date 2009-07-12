@@ -52,7 +52,7 @@ void *ExternalDispatcher::resolveSymbol(const std::string &name) {
   if (str[0] == 1) // asm specifier, skipped
     ++str;
 
-  void *addr = dl_symbols.SearchForAddressOfSymbol(str);
+  void *addr = sys::DynamicLibrary::SearchForAddressOfSymbol(str);
   if (addr)
     return addr;
   
@@ -60,14 +60,14 @@ void *ExternalDispatcher::resolveSymbol(const std::string &name) {
   // without the underscore. I (DWD) don't know why.
   if (name[0] == 1 && str[0]=='_') { 
     ++str;
-    addr = dl_symbols.SearchForAddressOfSymbol(str);
+    addr = sys::DynamicLibrary::SearchForAddressOfSymbol(str);
   }
 
   return addr;
 }
 
 ExternalDispatcher::ExternalDispatcher() {
-  dispatchModule = new Module("ExternalDispatcher");
+  dispatchModule = new Module("ExternalDispatcher", getGlobalContext());
   ExistingModuleProvider* MP = new ExistingModuleProvider(dispatchModule);
   
   std::string error;
@@ -85,7 +85,7 @@ ExternalDispatcher::ExternalDispatcher() {
   if (executionEngine) {
     // Make sure we can resolve symbols in the program as well. The zero arg
     // to the function tells DynamicLibrary to load the program, not a library.
-    dl_symbols.LoadLibraryPermanently(0);
+    sys::DynamicLibrary::LoadLibraryPermanently(0);
   }
 
 #ifdef WINDOWS

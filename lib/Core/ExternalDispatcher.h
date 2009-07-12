@@ -11,7 +11,7 @@
 #define KLEE_EXTERNALDISPATCHER_H
 
 #include <map>
-#include "llvm/System/DynamicLibrary.h"
+#include <string>
 
 namespace llvm {
   class ExecutionEngine;
@@ -28,7 +28,6 @@ namespace klee {
     dispatchers_ty dispatchers;
     llvm::Module *dispatchModule;
     llvm::ExecutionEngine *executionEngine;
-    llvm::sys::DynamicLibrary dl_symbols;
     std::map<std::string, void*> preboundFunctions;
     
     llvm::Function *createDispatcher(llvm::Function *f, llvm::Instruction *i);
