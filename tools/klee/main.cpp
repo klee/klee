@@ -1040,10 +1040,10 @@ static llvm::Module *linkWithUclibc(llvm::Module *mainModule) {
                                                 ft->getParamType(0)));
   args.push_back(stub->arg_begin()); // argc
   args.push_back(++stub->arg_begin()); // argv    
-  args.push_back(Constant::getNullValue(ft->getParamType(3))); // app_init
-  args.push_back(Constant::getNullValue(ft->getParamType(4))); // app_fini
-  args.push_back(Constant::getNullValue(ft->getParamType(5))); // rtld_fini
-  args.push_back(Constant::getNullValue(ft->getParamType(6))); // stack_end
+  args.push_back(llvm::getGlobalContext().getNullValue(ft->getParamType(3))); // app_init
+  args.push_back(llvm::getGlobalContext().getNullValue(ft->getParamType(4))); // app_fini
+  args.push_back(llvm::getGlobalContext().getNullValue(ft->getParamType(5))); // rtld_fini
+  args.push_back(llvm::getGlobalContext().getNullValue(ft->getParamType(6))); // stack_end
   CallInst::Create(uclibcMainFn, args.begin(), args.end(), "", bb);
   
   new UnreachableInst(bb);
