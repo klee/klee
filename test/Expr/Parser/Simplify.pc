@@ -33,3 +33,8 @@ array a[64] : w32 -> w8 = symbolic
 # RUN: grep                       \"(Not (Eq 1 (Read w8 1 a))))\" %t2
 (query [] false [(Not (Or (Eq 0 (Read w8 0 a))
                           (Eq 1 (Read w8 1 a))))])
+
+# Check -- false == X ==> !X
+# RUN: grep -A 2 \"# Query 7\" %t > %t2
+# RUN: grep \"(query .. false .(Not (Extract 1 (Read w8 0 a))).)\" %t2
+(query [] false [(Eq (Extract w1 1 (Read w8 0 a)) false)])
