@@ -36,8 +36,8 @@ int main(int argc, char** argv) {
   }
   
   klee::expr::SMTParser smtParser(argv[1], Builder);
-
-  smtParser.Init();
+  smtParser.Parse();
+  int result = smtParser.Solve();
   
-  cout << smtParser.query << "\n"; 
+  cout << (result ? "UNSAT":"SAT") << "\n"; 
 }

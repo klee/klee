@@ -36,9 +36,8 @@ using namespace klee::expr;
 #define PARSER SMTParser::parserTemp
 #define BUILDER SMTParser::parserTemp->builder
 #define DONE SMTParser::parserTemp->done
-#define EXPR SMTParser::parserTemp->query
 #define ASSUMPTIONS SMTParser::parserTemp->assumptions
-#define QUERY SMTParser::parserTemp->query
+#define QUERY SMTParser::parserTemp->satQuery
 
 #define ARRAYSENABLED (SMTParser::parserTemp->arraysEnabled)
 #define BVSIZE (SMTParser::parserTemp->bvSize)

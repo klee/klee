@@ -38,16 +38,17 @@ class SMTParser : public klee::expr::Parser {
   bool arraysEnabled;
   
   std::vector<ExprHandle> assumptions;
-  klee::expr::ExprHandle query;
+  klee::expr::ExprHandle satQuery;
 
   int bvSize;
   bool queryParsed;
-
+  
   klee::ExprBuilder *builder;
     
   SMTParser(const std::string filename, ExprBuilder *builder);
   
   virtual klee::expr::Decl *ParseTopLevelDecl();
+  bool Solve();
   
   virtual void SetMaxErrors(unsigned N) { }
   
@@ -55,15 +56,15 @@ class SMTParser : public klee::expr::Parser {
   
   virtual ~SMTParser() {}
   
-  void Init(void);
-
+  void Parse(void);
+  
   int Error(const std::string& s);
   
   int StringToInt(const std::string& s);
   ExprHandle GetConstExpr(std::string val, uint8_t base, klee::Expr::Width w);
-
+  
   void DeclareExpr(std::string name, Expr::Width w);
-
+  
   ExprHandle CreateAnd(std::vector<ExprHandle>);
   ExprHandle CreateOr(std::vector<ExprHandle>);
   ExprHandle CreateXor(std::vector<ExprHandle>);

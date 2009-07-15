@@ -10,6 +10,8 @@
 #include "SMTParser.h"
 
 #include "klee/ExprBuilder.h"
+#include "klee/Solver.h"
+#include "klee/Constraints.h"
 #include "expr/Parser.h"
 
 #include <iostream>
@@ -38,7 +40,7 @@ SMTParser::SMTParser(const std::string _filename,
 		     ExprBuilder* _builder) : fileName(_filename),
 					      lineNum(1),
 					      done(false),
-					      query(NULL),
+					      satQuery(NULL),
 					      bvSize(0),
 					      queryParsed(false),
 					      builder(_builder) {
@@ -49,7 +51,7 @@ SMTParser::SMTParser(const std::string _filename,
   fvarEnvs.push(FVarEnv());
 }
 
-void SMTParser::Init() {
+void SMTParser::Parse() {
   SMTParser::parserTemp = this;
 
   void *buf = smtlib_createBuffer(smtlib_bufSize());
@@ -60,11 +62,44 @@ void SMTParser::Init() {
 }
 
 Decl* SMTParser::ParseTopLevelDecl() {
-  assert(done);
-  return new QueryCommand(assumptions, query, 
+  return new QueryCommand(assumptions, builder->Not(satQuery),
 			  std::vector<ExprHandle>(), 
 			  std::vector<const Array*>());
 }
+
+bool SMTParser::Solve() {
+  // FIXME: Support choice of solver.
+  bool UseDummySolver = false, UseFastCexSolver = true, UseSTPQueryPCLog = true;
+  Solver *S, *STP = S = 
+    UseDummySolver ? createDummySolver() : new STPSolver(true);
+  if (UseSTPQueryPCLog)
+    S = createPCLoggingSolver(S, "stp-queries.pc");
+  if (UseFastCexSolver)
+    S = createFastCexSolver(S);
+  S = createCexCachingSolver(S);
+  S = createCachingSolver(S);
+  S = createIndependentSolver(S);
+  if (0)
+    S = createValidatingSolver(S, STP);
+
+  Decl *D = this->ParseTopLevelDecl();
+  if (QueryCommand *QC = dyn_cast<QueryCommand>(D)) {
+    //llvm::cout << "Query " << ":\t";
+
+    assert("FIXME: Support counterexample query commands!");
+    if (QC->Values.empty() && QC->Objects.empty()) {
+      bool result;
+      if (S->mustBeTrue(Query(ConstraintManager(QC->Constraints), QC->Query),
+			result)) {
+	//std::cout << (result ? "VALID" : "INVALID") << "\n";
+	return result;	
+      }
+    }
+  }
+  llvm::cout << "FAIL";
+  exit(1);
+}
+
 
 // XXX: give more info
 int SMTParser::Error(const string& msg) {
