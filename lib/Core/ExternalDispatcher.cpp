@@ -198,7 +198,7 @@ Function *ExternalDispatcher::createDispatcher(Function *target, Instruction *in
 
   BasicBlock *dBB = BasicBlock::Create("entry", dispatcher);
 
-  Instruction *argI64sp = new IntToPtrInst(ConstantInt::get(Type::Int64Ty, (long) (void*) &gTheArgsP),
+  Instruction *argI64sp = new IntToPtrInst(getGlobalContext().getConstantInt(Type::Int64Ty, (long) (void*) &gTheArgsP),
 					   PointerType::getUnqual(PointerType::getUnqual(Type::Int64Ty)),
 					   "argsp",
 					   dBB);
@@ -207,7 +207,7 @@ Function *ExternalDispatcher::createDispatcher(Function *target, Instruction *in
   unsigned i = 0;
   for (CallSite::arg_iterator ai = cs.arg_begin(), ae = cs.arg_end();
        ai!=ae; ++ai, ++i) {
-    Value *index = ConstantInt::get(Type::Int32Ty, i+1);
+    Value *index = getGlobalContext().getConstantInt(Type::Int32Ty, i+1);
 
     Instruction *argI64p = GetElementPtrInst::Create(argI64s, index, "", dBB);
     Instruction *argp = new BitCastInst(argI64p, 

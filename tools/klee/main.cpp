@@ -603,8 +603,10 @@ static int initEnv(Module *mainModule) {
   Value* oldArgc = mainFn->arg_begin();
   Value* oldArgv = ++mainFn->arg_begin();
   
-  AllocaInst* argcPtr = new AllocaInst(oldArgc->getType(), "argcPtr", firstInst);
-  AllocaInst* argvPtr = new AllocaInst(oldArgv->getType(), "argvPtr", firstInst);
+  AllocaInst* argcPtr = new AllocaInst(getGlobalContext(), oldArgc->getType(), 
+                                       "argcPtr", firstInst);
+  AllocaInst* argvPtr = new AllocaInst(getGlobalContext(), oldArgv->getType(), 
+                                       "argvPtr", firstInst);
 
   /* Insert void klee_init_env(int* argc, char*** argv) */
   std::vector<const Type*> params;
