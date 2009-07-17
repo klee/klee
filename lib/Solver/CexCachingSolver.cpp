@@ -99,6 +99,13 @@ struct NullOrSatisfyingAssignment {
   }
 };
 
+/// searchForAssignment - Look for a cached solution for a query.
+///
+/// \param Key - The query to look up.
+/// \param Result - The cached result, if the lookup is succesful. This is
+/// either a satisfying assignment (for a satisfiable query), or 0 (for an
+/// unsatisfiable query).
+/// \return - True if a cached result was found.
 bool CexCachingSolver::searchForAssignment(KeyType &key, Assignment *&result) {
   Assignment * const *lookup = cache.lookup(key);
   if (lookup) {
@@ -107,12 +114,22 @@ bool CexCachingSolver::searchForAssignment(KeyType &key, Assignment *&result) {
   }
 
   if (CexCacheTryAll) {
+    // Look for a satisfying assignment for a superset, which is trivially an
+    // assignment for any subset.
     Assignment **lookup = cache.findSuperset(key, NonNullAssignment());
-    if (!lookup) lookup = cache.findSubset(key, NullAssignment());
+    
+    // Otherwise, look for a subset which is unsatisfiable, see below.
+    if (!lookup) 
+      lookup = cache.findSubset(key, NullAssignment());
+
+    // If either lookup succeeded, then we have a cached solution.
     if (lookup) {
       result = *lookup;
       return true;
     }
+
+    // Otherwise, iterate through the set of current assignments to see if one
+    // of them satisfies the query.
     for (assignmentsTable_ty::iterator it = assignmentsTable.begin(), 
            ie = assignmentsTable.end(); it != ie; ++it) {
       Assignment *a = *it;
@@ -122,9 +139,21 @@ bool CexCachingSolver::searchForAssignment(KeyType &key, Assignment *&result) {
       }
     }
   } else {
-    // XXX which order? one is sure to be better
+    // FIXME: Which order? one is sure to be better.
+
+    // Look for a satisfying assignment for a superset, which is trivially an
+    // assignment for any subset.
     Assignment **lookup = cache.findSuperset(key, NonNullAssignment());
-    if (!lookup) lookup = cache.findSubset(key, NullOrSatisfyingAssignment(key));
+
+    // Otherwise, look for a subset which is unsatisfiable -- if the subset is
+    // unsatisfiable then no additional constraints can produce a valid
+    // assignment. While searching subsets, we also explicitly the solutions for
+    // satisfiable subsets to see if they solve the current query and return
+    // them if so. This is cheap and frequently succeeds.
+    if (!lookup) 
+      lookup = cache.findSubset(key, NullOrSatisfyingAssignment(key));
+
+    // If either lookup succeeded, then we have a cached solution.
     if (lookup) {
       result = *lookup;
       return true;
@@ -163,7 +192,7 @@ bool CexCachingSolver::getAssignment(const Query& query, Assignment *&result) {
   }
 
   if (!searchForAssignment(key, result)) {
-    // need to solve
+    // Need to solve.
     
     std::vector<const Array*> objects;
     findSymbolicObjects(key.begin(), key.end(), objects);
