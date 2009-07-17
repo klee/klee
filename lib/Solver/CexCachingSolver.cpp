@@ -62,7 +62,12 @@ class CexCachingSolver : public SolverImpl {
   bool searchForAssignment(KeyType &key, 
                            Assignment *&result);
   
-  bool lookupAssignment(const Query& query, Assignment *&result);
+  bool lookupAssignment(const Query& query, KeyType &key, Assignment *&result);
+
+  bool lookupAssignment(const Query& query, Assignment *&result) {
+    KeyType key;
+    return lookupAssignment(query, key, result);
+  }
 
   bool getAssignment(const Query& query, Assignment *&result);
   
@@ -101,8 +106,8 @@ struct NullOrSatisfyingAssignment {
 
 /// searchForAssignment - Look for a cached solution for a query.
 ///
-/// \param Key - The query to look up.
-/// \param Result - The cached result, if the lookup is succesful. This is
+/// \param key - The query to look up.
+/// \param result [out] - The cached result, if the lookup is succesful. This is
 /// either a satisfying assignment (for a satisfiable query), or 0 (for an
 /// unsatisfiable query).
 /// \return - True if a cached result was found.
@@ -163,9 +168,18 @@ bool CexCachingSolver::searchForAssignment(KeyType &key, Assignment *&result) {
   return false;
 }
 
+/// lookupAssignment - Lookup a cached result for the given \arg query.
+///
+/// \param query - The query to lookup.
+/// \param key [out] - On return, the key constructed for the query.
+/// \param result [out] - The cached result, if the lookup is succesful. This is
+/// either a satisfying assignment (for a satisfiable query), or 0 (for an
+/// unsatisfiable query).
+/// \return True if a cached result was found.
 bool CexCachingSolver::lookupAssignment(const Query &query, 
+                                        KeyType &key,
                                         Assignment *&result) {
-  KeyType key(query.constraints.begin(), query.constraints.end());
+  key = KeyType(query.constraints.begin(), query.constraints.end());
   ref<Expr> neg = Expr::createIsZero(query.expr);
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(neg)) {
     if (CE->isFalse()) {
@@ -180,50 +194,39 @@ bool CexCachingSolver::lookupAssignment(const Query &query,
 }
 
 bool CexCachingSolver::getAssignment(const Query& query, Assignment *&result) {
-  KeyType key(query.constraints.begin(), query.constraints.end());
-  ref<Expr> neg = Expr::createIsZero(query.expr);
-  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(neg)) {
-    if (CE->isFalse()) {
-      result = (Assignment*) 0;
-      return true;
+  KeyType key;
+  if (lookupAssignment(query, key, result))
+    return true;
+
+  std::vector<const Array*> objects;
+  findSymbolicObjects(key.begin(), key.end(), objects);
+
+  std::vector< std::vector<unsigned char> > values;
+  bool hasSolution;
+  if (!solver->impl->computeInitialValues(query, objects, values, 
+                                          hasSolution))
+    return false;
+    
+  Assignment *binding;
+  if (hasSolution) {
+    binding = new Assignment(objects, values);
+
+    // Memoize the result.
+    std::pair<assignmentsTable_ty::iterator, bool>
+      res = assignmentsTable.insert(binding);
+    if (!res.second) {
+      delete binding;
+      binding = *res.first;
     }
+    
+    if (DebugCexCacheCheckBinding)
+      assert(binding->satisfies(key.begin(), key.end()));
   } else {
-    key.insert(neg);
+    binding = (Assignment*) 0;
   }
-
-  if (!searchForAssignment(key, result)) {
-    // Need to solve.
-    
-    std::vector<const Array*> objects;
-    findSymbolicObjects(key.begin(), key.end(), objects);
-
-    std::vector< std::vector<unsigned char> > values;
-    bool hasSolution;
-    if (!solver->impl->computeInitialValues(query, objects, values, 
-                                            hasSolution))
-      return false;
-    
-    Assignment *binding;
-    if (hasSolution) {
-      binding = new Assignment(objects, values);
-
-      // memoization
-      std::pair<assignmentsTable_ty::iterator, bool>
-        res = assignmentsTable.insert(binding);
-      if (!res.second) {
-        delete binding;
-        binding = *res.first;
-      }
-
-      if (DebugCexCacheCheckBinding)
-        assert(binding->satisfies(key.begin(), key.end()));
-    } else {
-      binding = (Assignment*) 0;
-    }
-
-    result = binding;
-    cache.insert(key, binding);
-  }
+  
+  result = binding;
+  cache.insert(key, binding);
 
   return true;
 }
