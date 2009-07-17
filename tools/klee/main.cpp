@@ -24,6 +24,14 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
+
+// FIXME: Ugh, this is gross. But otherwise our config.h conflicts with LLVMs.
+#undef PACKAGE_BUGREPORT
+#undef PACKAGE_NAME
+#undef PACKAGE_STRING
+#undef PACKAGE_TARNAME
+#undef PACKAGE_VERSION
+#include "llvm/Target/TargetSelect.h"
 #include "llvm/System/Signals.h"
 #include <iostream>
 #include <fstream>
@@ -1060,6 +1068,9 @@ int main(int argc, char **argv, char **envp) {
 #endif
 
   atexit(llvm_shutdown);  // Call llvm_shutdown() on exit.
+
+  llvm::InitializeNativeTarget();
+
   parseArguments(argc, argv);
   sys::PrintStackTraceOnErrorSignal();
 
