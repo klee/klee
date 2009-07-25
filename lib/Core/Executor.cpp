@@ -1380,8 +1380,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       // switch to an internal rep.
       const llvm::IntegerType *Ty = 
         cast<IntegerType>(si->getCondition()->getType());
-      ConstantInt *ci = 
-        getGlobalContext().getConstantInt(Ty, CE->getZExtValue());
+      ConstantInt *ci = ConstantInt::get(Ty, CE->getZExtValue());
       unsigned index = si->findCaseValue(ci);
       transferToBasicBlock(si->getSuccessor(index), si->getParent(), state);
     } else {
