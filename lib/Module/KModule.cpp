@@ -26,6 +26,7 @@
 #include "llvm/PassManager.h"
 #include "llvm/ValueSymbolTable.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/System/Path.h"
 #include "llvm/Target/TargetData.h"
 #include "llvm/Transforms/Scalar.h"
@@ -221,7 +222,7 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
       CallInst::Create(mergeFn, "", exit);
       ReturnInst::Create(result, exit);
 
-      llvm::cerr << "KLEE: adding klee_merge at exit of: " << name << "\n";
+      llvm::errs() << "KLEE: adding klee_merge at exit of: " << name << "\n";
       for (llvm::Function::iterator bbit = f->begin(), bbie = f->end(); 
            bbit != bbie; ++bbit) {
         if (&*bbit != exit) {
@@ -395,12 +396,12 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   }
 
   if (DebugPrintEscapingFunctions && !escapingFunctions.empty()) {
-    llvm::cerr << "KLEE: escaping functions: [";
+    llvm::errs() << "KLEE: escaping functions: [";
     for (std::set<Function*>::iterator it = escapingFunctions.begin(), 
          ie = escapingFunctions.end(); it != ie; ++it) {
-      llvm::cerr << (*it)->getName() << ", ";
+      llvm::errs() << (*it)->getName() << ", ";
     }
-    llvm::cerr << "]\n";
+    llvm::errs() << "]\n";
   }
 }
 

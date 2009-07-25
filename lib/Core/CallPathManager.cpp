@@ -14,7 +14,7 @@
 #include <map>
 #include <vector>
 #include "llvm/Function.h"
-#include "llvm/Support/Streams.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 using namespace klee;
@@ -31,14 +31,14 @@ CallPathNode::CallPathNode(CallPathNode *_parent,
 }
 
 void CallPathNode::print() {
-  llvm::cerr << "  (Function: " << this->function->getName() << ", "
-	     << "Callsite: " << callSite << ", "
-	     << "Count: " << this->count << ")";
+  llvm::errs() << "  (Function: " << this->function->getName() << ", "
+               << "Callsite: " << callSite << ", "
+               << "Count: " << this->count << ")";
   if (parent && parent->callSite) {
-    llvm::cerr << ";\n";
+    llvm::errs() << ";\n";
     parent->print();
   }
-  else llvm::cerr << "\n";
+  else llvm::errs() << "\n";
 }
 
 ///

@@ -72,10 +72,10 @@ void MemoryObject::getAllocInfo(std::string &result) const {
   if (allocSite) {
     info << " allocated at ";
     if (const Instruction *i = dyn_cast<Instruction>(allocSite)) {
-      info << i->getParent()->getParent()->getName() << "():";
+      info << i->getParent()->getParent()->getNameStr() << "():";
       info << *i;
     } else if (const GlobalValue *gv = dyn_cast<GlobalValue>(allocSite)) {
-      info << "global:" << gv->getName();
+      info << "global:" << gv->getNameStr();
     } else {
       info << "value:" << *allocSite;
     }

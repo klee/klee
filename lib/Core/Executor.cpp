@@ -54,6 +54,7 @@
 #include "llvm/Support/CallSite.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/GetElementPtrTypeIterator.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/System/Process.h"
 #include "llvm/Target/TargetData.h"
 
@@ -442,7 +443,7 @@ void Executor::initializeGlobals(ExecutionState &state) {
     // not defined in this module; if it isn't resolvable then it
     // should be null.
     if (f->hasExternalWeakLinkage() && 
-        !externalDispatcher->resolveSymbol(f->getName())) {
+        !externalDispatcher->resolveSymbol(f->getNameStr())) {
       addr = Expr::createPointer(0);
     } else {
       addr = Expr::createPointer((unsigned long) (void*) f);
@@ -496,23 +497,23 @@ void Executor::initializeGlobals(ExecutionState &state) {
       // hack where we check the object file information.
 
       const Type *ty = i->getType()->getElementType();
-      const std::string &name = i->getName();
       uint64_t size = kmodule->targetData->getTypeStoreSize(ty);
 
       // XXX - DWD - hardcode some things until we decide how to fix.
 #ifndef WINDOWS
-      if (name == "_ZTVN10__cxxabiv117__class_type_infoE") {
+      if (i->getName() == "_ZTVN10__cxxabiv117__class_type_infoE") {
         size = 0x2C;
-      } else if (name == "_ZTVN10__cxxabiv120__si_class_type_infoE") {
+      } else if (i->getName() == "_ZTVN10__cxxabiv120__si_class_type_infoE") {
         size = 0x2C;
-      } else if (name == "_ZTVN10__cxxabiv121__vmi_class_type_infoE") {
+      } else if (i->getName() == "_ZTVN10__cxxabiv121__vmi_class_type_infoE") {
         size = 0x2C;
       }
 #endif
 
       if (size == 0) {
-        llvm::cerr << "Unable to find size for global variable: " << i->getName() 
-                   << " (use will result in out of bounds access)\n";
+        llvm::errs() << "Unable to find size for global variable: " 
+                     << i->getName() 
+                     << " (use will result in out of bounds access)\n";
       }
 
       MemoryObject *mo = memory->allocate(size, false, true, i);
@@ -524,28 +525,27 @@ void Executor::initializeGlobals(ExecutionState &state) {
       // concrete value and write it to our copy.
       if (size) {
         void *addr;
-        if (name=="__dso_handle") {
+        if (i->getName() == "__dso_handle") {
           extern void *__dso_handle __attribute__ ((__weak__));
           addr = &__dso_handle; // wtf ?
         } else {
-          addr = externalDispatcher->resolveSymbol(name);
+          addr = externalDispatcher->resolveSymbol(i->getNameStr());
         }
         if (!addr)
           klee_error("unable to load symbol(%s) while initializing globals.", 
-                     name.c_str());
+                     i->getName().data());
 
         for (unsigned offset=0; offset<mo->size; offset++)
           os->write8(offset, ((unsigned char*)addr)[offset]);
       }
     } else {
-      const std::string &name = i->getName();
       const Type *ty = i->getType()->getElementType();
       uint64_t size = kmodule->targetData->getTypeStoreSize(ty);
       MemoryObject *mo = 0;
 
-      if (UseAsmAddresses && name[0]=='\01') {
+      if (UseAsmAddresses && i->getName()[0]=='\01') {
         char *end;
-        uint64_t address = ::strtoll(name.c_str()+1, &end, 0);
+        uint64_t address = ::strtoll(i->getNameStr().c_str()+1, &end, 0);
 
         if (end && *end == '\0') {
           klee_message("NOTE: allocated global at asm specified address: %#08llx"
@@ -1089,10 +1089,9 @@ void Executor::executeCall(ExecutionState &state,
                            std::vector< ref<Expr> > &arguments) {
   if (WriteTraces) {
     // don't print out special debug stop point 'function' calls
-    if (f->getIntrinsicID() != Intrinsic::dbg_stoppoint) {
-      const std::string& calleeFuncName = f->getName();
-      state.exeTraceMgr.addEvent(new FunctionCallTraceEvent(state, ki, calleeFuncName));
-    }
+    if (f->getIntrinsicID() != Intrinsic::dbg_stoppoint)
+      state.exeTraceMgr.addEvent(new FunctionCallTraceEvent(state, ki, 
+                                                            f->getName()));
   }
 
   Instruction *i = ki->inst;
@@ -1124,7 +1123,7 @@ void Executor::executeCall(ExecutionState &state,
           
       case Intrinsic::vacopy: // should be lowered
       default:
-        klee_error("unknown intrinsic: %s", f->getName().c_str());
+        klee_error("unknown intrinsic: %s", f->getName().data());
       }
     }
 
@@ -1148,7 +1147,7 @@ void Executor::executeCall(ExecutionState &state,
     if (!f->isVarArg()) {
       if (callingArgs > funcArgs) {
         klee_warning_once(f, "calling %s with extra arguments.", 
-                          f->getName().c_str());
+                          f->getName().data());
       } else if (callingArgs < funcArgs) {
         terminateStateOnError(state, "calling function with too few arguments", 
                               "user.err");
@@ -1226,12 +1225,12 @@ Function* Executor::getCalledFunction(CallSite &cs, ExecutionState &state) {
   if (f) {
     std::string alias = state.getFnAlias(f->getName());
     if (alias != "") {
-      //llvm::cerr << f->getName() << "() is aliased with " << alias << "()\n";
       llvm::Module* currModule = kmodule->module;
       Function* old_f = f;
       f = currModule->getFunction(alias);
       if (!f) {
-	llvm::cerr << "Function " << alias << "(), alias for " << old_f->getName() << " not found!\n";
+	llvm::errs() << "Function " << alias << "(), alias for " 
+                     << old_f->getName() << " not found!\n";
 	assert(f && "function alias not found");
       }
     }
@@ -1529,7 +1528,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
             if (res.second || !first)
               klee_warning_once((void*) (unsigned long) addr, 
                                 "resolved symbolic function pointer to: %s",
-                                f->getName().c_str());
+                                f->getName().data());
 
             executeCall(*res.first, ki, f, arguments);
           } else {
@@ -2392,10 +2391,12 @@ void Executor::terminateState(ExecutionState &state) {
   }
 }
 
-void Executor::terminateStateEarly(ExecutionState &state, std::string message) {
+void Executor::terminateStateEarly(ExecutionState &state, 
+                                   const Twine &message) {
   if (!OnlyOutputStatesCoveringNew || state.coveredNew ||
       (AlwaysOutputSeeds && seedMap.count(&state)))
-    interpreterHandler->processTestCase(state, (message + "\n").c_str(), "early");
+    interpreterHandler->processTestCase(state, (message + "\n").str().c_str(),
+                                        "early");
   terminateState(state);
 }
 
@@ -2407,14 +2408,15 @@ void Executor::terminateStateOnExit(ExecutionState &state) {
 }
 
 void Executor::terminateStateOnError(ExecutionState &state,
-                                     const std::string &message,
-                                     const std::string &suffix,
-                                     const std::string &info) {
+                                     const llvm::Twine &messaget,
+                                     const char *suffix,
+                                     const llvm::Twine &info) {
+  std::string message = messaget.str();
   static std::set< std::pair<Instruction*, std::string> > emittedErrors;
   const InstructionInfo &ii = *state.prevPC->info;
   
   if (EmitAllErrors ||
-      emittedErrors.insert(std::make_pair(state.prevPC->inst,message)).second) {
+      emittedErrors.insert(std::make_pair(state.prevPC->inst, message)).second) {
     if (ii.file != "") {
       klee_message("ERROR: %s:%d: %s", ii.file.c_str(), ii.line, message.c_str());
     } else {
@@ -2440,14 +2442,14 @@ void Executor::terminateStateOnError(ExecutionState &state,
       const InstructionInfo &ii = *target->info;
       msg << "\t#" << idx++ 
           << " " << std::setw(8) << std::setfill('0') << ii.assemblyLine
-          << " in " << f->getName() << " (";
+          << " in " << f->getNameStr() << " (";
       // Yawn, we could go up and print varargs if we wanted to.
       unsigned index = 0;
       for (Function::arg_iterator ai = f->arg_begin(), ae = f->arg_end();
            ai != ae; ++ai) {
         if (ai!=f->arg_begin()) msg << ", ";
 
-        msg << ai->getName();
+        msg << ai->getNameStr();
         // XXX should go through function
         ref<Expr> value = sf.locals[sf.kf->getArgRegister(index++)].value; 
         if (isa<ConstantExpr>(value))
@@ -2460,9 +2462,10 @@ void Executor::terminateStateOnError(ExecutionState &state,
       target = sf.caller;
     }
 
-    if (info != "")
-      msg << "Info: \n" << info;
-    interpreterHandler->processTestCase(state, msg.str().c_str(), suffix.c_str());
+    std::string info_str = info.str();
+    if (info_str != "")
+      msg << "Info: \n" << info_str;
+    interpreterHandler->processTestCase(state, msg.str().c_str(), suffix);
   }
     
   terminateState(state);
@@ -2486,7 +2489,8 @@ void Executor::callExternalFunction(ExecutionState &state,
     return;
   
   if (NoExternals && !okExternals.count(function->getName())) {
-    llvm::cerr << "KLEE:ERROR: Calling not-OK external function : " << function->getName() << "\n";
+    llvm::cerr << "KLEE:ERROR: Calling not-OK external function : " 
+               << function->getNameStr() << "\n";
     terminateStateOnError(state, "externals disallowed", "user.err");
     return;
   }
@@ -2496,8 +2500,8 @@ void Executor::callExternalFunction(ExecutionState &state,
   memset(args, 0, sizeof(*args) * (arguments.size() + 1));
 
   unsigned i = 1;
-  for (std::vector<ref<Expr> >::iterator ai = arguments.begin(), ae = arguments.end();
-       ai!=ae; ++ai, ++i) {
+  for (std::vector<ref<Expr> >::iterator ai = arguments.begin(), 
+         ae = arguments.end(); ai!=ae; ++ai, ++i) {
     if (AllowExternalSymCalls) { // don't bother checking uniqueness
       ref<ConstantExpr> ce;
       bool success = solver->getValue(state, *ai, ce);
@@ -2510,8 +2514,9 @@ void Executor::callExternalFunction(ExecutionState &state,
         // XXX kick toMemory functions from here
         CE->toMemory((void*) &args[i]);
       } else {
-        std::string msg = "external call with symbolic argument: " + function->getName();
-        terminateStateOnExecError(state, msg);
+        terminateStateOnExecError(state, 
+                                  "external call with symbolic argument: " + 
+                                  function->getName());
         return;
       }
     }
@@ -2521,7 +2526,7 @@ void Executor::callExternalFunction(ExecutionState &state,
 
   if (!SuppressExternalWarnings) {
     std::ostringstream os;
-    os << "calling external: " << function->getName().c_str() << "(";
+    os << "calling external: " << function->getNameStr() << "(";
     for (unsigned i=0; i<arguments.size(); i++) {
       os << arguments[i];
       if (i != arguments.size()-1)
@@ -2537,12 +2542,14 @@ void Executor::callExternalFunction(ExecutionState &state,
   
   bool success = externalDispatcher->executeCall(function, target->inst, args);
   if (!success) {
-    terminateStateOnError(state, "failed external call: " + function->getName(), "external.err");
+    terminateStateOnError(state, "failed external call: " + function->getName(),
+                          "external.err");
     return;
   }
 
   if (!state.addressSpace.copyInConcretes()) {
-    terminateStateOnError(state, "external modified read-only object", "external.err");
+    terminateStateOnError(state, "external modified read-only object",
+                          "external.err");
     return;
   }
 

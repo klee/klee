@@ -22,6 +22,7 @@
 #include "MemoryManager.h"
 
 #include "llvm/Module.h"
+#include "llvm/ADT/Twine.h"
 
 #include <errno.h>
 
@@ -297,7 +298,7 @@ void SpecialFunctionHandler::handleReportError(ExecutionState &state,
   } else
     executor.terminateStateOnError(state, 
                                    readStringAtAddress(state, arguments[2]),
-                                   readStringAtAddress(state, arguments[3]));
+                                   readStringAtAddress(state, arguments[3]).c_str());
 }
 
 void SpecialFunctionHandler::handleMerge(ExecutionState &state,
@@ -430,7 +431,7 @@ void SpecialFunctionHandler::handleWarning(ExecutionState &state,
   assert(arguments.size()==1 && "invalid number of arguments to klee_warning");
 
   std::string msg_str = readStringAtAddress(state, arguments[0]);
-  klee_warning("%s: %s", state.stack.back().kf->function->getName().c_str(), 
+  klee_warning("%s: %s", state.stack.back().kf->function->getName().data(), 
                msg_str.c_str());
 }
 
@@ -441,7 +442,7 @@ void SpecialFunctionHandler::handleWarningOnce(ExecutionState &state,
          "invalid number of arguments to klee_warning_once");
 
   std::string msg_str = readStringAtAddress(state, arguments[0]);
-  klee_warning_once(0, "%s: %s", state.stack.back().kf->function->getName().c_str(), 
+  klee_warning_once(0, "%s: %s", state.stack.back().kf->function->getName().data(),
                     msg_str.c_str());
 }
 

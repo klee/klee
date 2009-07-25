@@ -464,7 +464,7 @@ void StatsTracker::writeIStats() {
   for (Module::iterator fnIt = m->begin(), fn_ie = m->end(); 
        fnIt != fn_ie; ++fnIt) {
     if (!fnIt->isDeclaration()) {
-      of << "fn=" << fnIt->getName() << "\n";
+      of << "fn=" << fnIt->getNameStr() << "\n";
       for (Function::iterator bbIt = fnIt->begin(), bb_ie = fnIt->end(); 
            bbIt != bb_ie; ++bbIt) {
         for (BasicBlock::iterator it = bbIt->begin(), ie = bbIt->end(); 
@@ -497,7 +497,7 @@ void StatsTracker::writeIStats() {
   
                 if (fii.file!="" && fii.file!=sourceFile)
                   of << "cfl=" << fii.file << "\n";
-                of << "cfn=" << f->getName() << "\n";
+                of << "cfn=" << f->getNameStr() << "\n";
                 of << "calls=" << csi.count << " ";
                 of << fii.assemblyLine << " ";
                 of << fii.line << "\n";

@@ -810,7 +810,7 @@ void externalsAndGlobalsCheck(const Module *m) {
           if (isa<InlineAsm>(ci->getCalledValue())) {
             klee_warning_once(&*fnIt,
                               "function \"%s\" has inline asm", 
-                              fnIt->getName().c_str());
+                              fnIt->getName().data());
           }
         }
       }
