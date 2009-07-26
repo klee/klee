@@ -22,7 +22,7 @@ def fakeObjdumpOutput(file, start, end):
     
     lines = open(file).readlines()
     for i in range(max(0,start-1),min(end-1,len(lines))):
-        print '%x: _ %s'%(i+1,lines[i])
+        print '%x:\t00 00\t%s'%(i+1,lines[i])
         
 def main(args):
     # exact pattern match kcachegrind's calling sequence
