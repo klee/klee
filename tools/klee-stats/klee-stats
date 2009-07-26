@@ -124,21 +124,21 @@ def printTable(table):
 def main(args):
     from optparse import OptionParser
     op = OptionParser(usage="usage: %prog [options] directories",
-                      epilog=
-                      "LEGEND                                                                          " 
-                      "------                                                                          " 
-                      "Instrs:  Number of executed instructions                                        "
-                      "Time:    Total wall time (s)                                                    "
-                      "ICov:    Instruction coverage in the LLVM bitcode (%)                           "
-                      "BCov:    Branch coverage in the LLVM bitcode (%)                                "
-                      "ICount:  Total static instructions in the LLVM bitcode                          "
-                      "Solver:  Time spent in the constraint solver (%)                                "
-                      "States:  Number of currently active states                                      "
-                      "Mem:     Megabytes of memory currently used                                     "
-                      "Queries: Number of queries issued to STP                                        "
-                      "AvgQC:   Average number of query constructs per query                           "
-                      "Tcex:    Time spent in the counterexample caching code (%)                                        "
-                      "Tfork:   Time spent forking (%)                                                 ")
+                      epilog="""\
+LEGEND
+------
+Instrs:  Number of executed instructions
+Time:    Total wall time (s)
+ICov:    Instruction coverage in the LLVM bitcode (%)
+BCov:    Branch coverage in the LLVM bitcode (%)
+ICount:  Total static instructions in the LLVM bitcode
+Solver:  Time spent in the constraint solver (%)
+States:  Number of currently active states
+Mem:     Megabytes of memory currently used
+Queries: Number of queries issued to STP
+AvgQC:   Average number of query constructs per query
+Tcex:    Time spent in the counterexample caching code (%)
+Tfork:   Time spent forking (%)""")
 
     op.add_option('', '--print-more', dest='printMore',
                   action='store_true', default=False,
