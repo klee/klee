@@ -1418,6 +1418,7 @@ int main(int argc, char **argv, char **envp) {
     << "KLEE: done: query cex = " << queryCounterexamples << "\n";
 
   std::stringstream stats;
+  stats << "\n";
   stats << "KLEE: done: total instructions = " 
              << instructions << "\n";
   stats << "KLEE: done: completed paths = " 
