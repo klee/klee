@@ -38,7 +38,7 @@
 
   <p>
     Before we build with LLVM, let's build a version of <i>coreutils</i>
-    with <em>gcov</em> suppory. We will use this later to get coverage
+    with <em>gcov</em> support. We will use this later to get coverage
     information on the test cases produced by KLEE.
   </p>
 
@@ -60,11 +60,10 @@
 
   <p>
     We build with <tt>--disable-nls</tt> because this adds a lot of extra
-    initialization in the C library which we were not interested in
-    testing. Even though these aren't the executables that KLEE will be running
-    on, we want to use the same compiler flags so that the test cases KLEE
-    generates are most likely to work correctly when run on the uninstrumented
-    binaries.
+    initialization in the C library which we are not interested in testing. Even
+    though these aren't the executables that KLEE will be running on, we want to
+    use the same compiler flags so that the test cases KLEE generates are most
+    likely to work correctly when run on the uninstrumented binaries.
   </p>
 
   <p>
@@ -94,17 +93,18 @@ Written by Torbjorn Granlund and Richard M. Stallman.</pre>
   <h2>Step 2: Build <tt>coreutils</tt> with LLVM</h2>
 
   <p>
-    One of the difficult parts of testing real software using KLEE is that it must
-    be first compiled so that the final progress is an LLVM bitcode file and not a
-    linked executable. The software's build system may be set up to use tools such
-    as 'ar', 'libtool', and 'ld', which do not understand LLVM bitcode files.
+    One of the difficult parts of testing real software using KLEE is that it
+    must be first compiled so that the final program is an LLVM bitcode file and
+    not a linked executable. The software's build system may be set up to use
+    tools such as 'ar', 'libtool', and 'ld', which do not in general understand
+    LLVM bitcode files.
   </p>
   
   <p>
     It depends on the actual project what the best way to do this is. For
     coreutils, we use a helper script <tt>klee-gcc</tt>, which acts
     like <tt>llvm-gcc</tt> but adds additional arguments to cause it to emit
-    LLVM bitcode files, and to call <tt>llvm-ld</tt> to link executables. This
+    LLVM bitcode files and to call <tt>llvm-ld</tt> to link executables. This
     is <b>not</b> a general solution, and your mileage may vary.
   </p>
 
@@ -113,7 +113,7 @@ Written by Torbjorn Granlund and Richard M. Stallman.</pre>
 
   <p>
     As before, we will build in a separate directory so we can easily access
-    both the native executables, and the LLVM versions. Here are the steps:
+    both the native executables and the LLVM versions. Here are the steps:
   </p>
 
   <div class="instr">
@@ -135,7 +135,7 @@ Written by Torbjorn Granlund and Richard M. Stallman.</pre>
   </p>
 
   <p>
-    If all went well, you should now how LLVM bitcode versions of coreutils! For
+    If all went well, you should now have LLVM bitcode versions of coreutils! For
     example:
   </p>
 
@@ -161,8 +161,8 @@ LLVM ERROR: JIT does not support inline asm! </pre>
     too small! Since we are actually producing LLVM bitcode files, the operating
     system can't run them directly. What <tt>llvm-ld</tt> does to make it so we
     can still run the resulting outputs is write a little shell script which
-    just uses the LLVM interpreter to run the binaries, the actual LLVM bitcode
-    files have <tt>.bc</tt> appended. For example:
+    uses the LLVM interpreter to run the binaries; the actual LLVM bitcode
+    files have <tt>.bc</tt> appended. If we look a little closer:
   </p>
 
   <div class="instr">
@@ -181,10 +181,10 @@ exec $lli \
     The other funny thing is that the version message doesn't all print out, the
     LLVM interpreter emits a message about not supporting inline assembly. The
     problem here is that <tt>glibc</tt> occasionally implements certain
-    operations using inline assembly, which <tt>lli</tt> doesn't
-    understand. KLEE works around this problem by specifically turning certain
-    inline assembly sequences back into the appropriate LLVM instructions before
-    executing the binary.
+    operations using inline assembly, which the LLVM interpreter (<tt>lli</tt>)
+    doesn't understand. KLEE works around this problem by specially recognizing
+    certain common inline assembly sequences and turning them back into the
+    appropriate LLVM instructions before executing the binary.
   </p>
 
   <!--*********************************************************************-->
@@ -416,7 +416,7 @@ KLEE: done: generated tests = 25<pre>
     coreutils' <tt>echo</tt> takes some arguments, in this case the
     options <tt>--v</tt> (short for <tt>--version</tt>) and <tt>--h</tt> (short
     for <tt>--help</tt>) were explored. We can get a short summary of KLEE's
-    internal statistics be running <tt>klee-stats</tt> on the output directory
+    internal statistics by running <tt>klee-stats</tt> on the output directory
     (remember, KLEE always makes a symlink called <tt>klee-last</tt> to the most
     recent output directory).
   </p>
@@ -435,7 +435,7 @@ KLEE: done: generated tests = 25<pre>
     Here <em>ICov</em> is the percentage of LLVM instructions which were
     covered, and <em>BCov</em> is the percentage of branches that were
     covered. You may be wondering why the percentages are so low -- how much
-    more code can echo have! The first reason is that these numbers are computed
+    more code can echo have! The main reason is that these numbers are computed
     using all the instructions or branches in the bitcode files; that includes a
     lot of library code which may not even be executable. We can help with that
     problem (and others) by passing the <tt>--optimize</tt> option to KLEE. This
@@ -463,9 +463,11 @@ src$ klee-stats klee-last
 
   <p>
     This time the instruction coverage went up by about ten percent, and you can
-    see that KLEE also ran faster and executed less instructions. To understand
-    why we still haven't gotten more coverage of the program, let's take a look
-    at using kcachegrind to visualize the results of a KLEE run.
+    see that KLEE also ran faster and executed less instructions. Most of the
+    remaining code is still in library functions, just in places that the
+    optimizers aren't smart enough to remove. We can verify this -- and look for
+    uncovered code inside <tt>echo</tt> -- by using KCachegrind to visualize the
+    results of a KLEE run.
   </p>
 
   <!--*********************************************************************-->
@@ -476,15 +478,15 @@ src$ klee-stats klee-last
     <a href="http://kcachegrind.sourceforge.net">KCachegrind</a> is an excellent
     profiling visualization tool, originally written for use with the callgrind
     plugin for valgrind. If you don't have it already, it is usually easily
-    available on a modern Linux distribution via your platforms usual software
+    available on a modern Linux distribution via your platforms' software
     installation tool (e.g., <tt>apt-get</tt> or <tt>yum</tt>).
   </p>
 
   <p>
     KLEE by default writes out a <tt>run.istats</tt> file into the test output
-    directory which is actually a kcachegrind file. In this example,
+    directory which is actually a KCachegrind file. In this example,
     the <tt>run.istats</tt> is from a run without <tt>--optimize</tt>, so the
-    results are easier to understand. Assuming you have kcachegrind installed,
+    results are easier to understand. Assuming you have KCachegrind installed,
     just run:
   </p>
 
@@ -505,12 +507,13 @@ src$ klee-stats klee-last
 
   <p>
     KCachegrind is a complex application in itself, and interested users should
-    see the KCachegrind website. However, the basics are that the one pane shows
-    the "Flat Profile"; this is a list of which how many instructions were
-    executed in each function. The "Self" column is the number of instructions
-    which were executed in the function itself, and the "Incl" (inclusive)
-    column is the number of instructions which were executed in the function, or
-    any of the functions it called (and so on).
+    see the KCachegrind website for more information and documentation. However,
+    the basics are that the one pane shows the "Flat Profile"; this is a list of
+    which how many instructions were executed in each function. The "Self"
+    column is the number of instructions which were executed in the function
+    itself, and the "Incl" (inclusive) column is the number of instructions
+    which were executed in the function, or any of the functions it called (or
+    its callees called, and so on).
   </p>
 
   <p>
