@@ -1,0 +1,35 @@
+#!/usr/bin/env python
+
+import os, sys
+
+def isLinkCommand():
+    # Look for '-Wl,' as a signal that we are calling the linker. What a hack.
+    for arg in sys.argv:
+        if arg.startswith('-Wl,'):
+            return True
+
+def main():
+    if not isLinkCommand():
+        os.execvp("llvm-gcc", ["llvm-gcc", "-emit-llvm"] + sys.argv[1:])
+        return 1
+
+    # Otherwise, strip out arguments that llvm-ld doesn't understand. I don't
+    # want my previous explicit declaration of hackyness to imply that this bit
+    # of code here is not also a complete and total hack, it is.
+    args = sys.argv[1:]
+    linkArgs = []
+    for a in args:
+        if a in ('-g', '-W', '-O', '-D', '-f',
+                 '-fnested-functions', '-pthread'):
+            continue
+        elif a.startswith('-Wl,'):
+            continue
+
+        linkArgs.append(a)
+    
+    os.execvp("llvm-ld", ["llvm-ld", "--disable-opt"] + linkArgs)
+    return 1
+
+if __name__ == '__main__':
+    main()
+
