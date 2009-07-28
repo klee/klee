@@ -24,6 +24,9 @@ FILE* klee::klee_message_file = NULL;
 
 static void klee_vfmessage(FILE *fp, const char *pfx, const char *msg, 
                            va_list ap) {
+  if (!fp)
+    return;
+
   fprintf(fp, "KLEE: ");
   if (pfx) fprintf(fp, "%s: ", pfx);
   vfprintf(fp, msg, ap);
@@ -45,6 +48,7 @@ static void klee_vmessage(const char *pfx, bool onlyToFile, const char *msg,
     va_list ap2;
     va_copy(ap2, ap);
     klee_vfmessage(stderr, pfx, msg, ap2);
+    va_end(ap2);
   }
 
   klee_vfmessage(pfx ? klee_message_file : klee_warning_file, pfx, msg, ap);
