@@ -654,10 +654,13 @@ void SpecialFunctionHandler::handleMakeSymbolic(ExecutionState &state,
       return;
     } 
 
+    // FIXME: Type coercion should be done consistently somewhere.
     bool res;
     bool success =
-      executor.solver->mustBeTrue(*s, EqExpr::create(arguments[1],
-                                                     mo->getSizeExpr()),
+      executor.solver->mustBeTrue(*s, 
+                                  EqExpr::create(ZExtExpr::create(arguments[1],
+                                                                  Context::get().getPointerWidth()),
+                                                 mo->getSizeExpr()),
                                   res);
     assert(success && "FIXME: Unhandled solver failure");
     
