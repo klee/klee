@@ -265,11 +265,11 @@ void ObjectState::flushRangeForRead(unsigned rangeBase,
   for (unsigned offset=rangeBase; offset<rangeBase+rangeSize; offset++) {
     if (!isByteFlushed(offset)) {
       if (isByteConcrete(offset)) {
-        updates.extend(ConstantExpr::create(offset, Context::get().getPointerWidth()),
+        updates.extend(ConstantExpr::create(offset, Expr::Int32),
                        ConstantExpr::create(concreteStore[offset], Expr::Int8));
       } else {
         assert(isByteKnownSymbolic(offset) && "invalid bit set in flushMask");
-        updates.extend(ConstantExpr::create(offset, Context::get().getPointerWidth()),
+        updates.extend(ConstantExpr::create(offset, Expr::Int32),
                        knownSymbolics[offset]);
       }
 
@@ -285,12 +285,12 @@ void ObjectState::flushRangeForWrite(unsigned rangeBase,
   for (unsigned offset=rangeBase; offset<rangeBase+rangeSize; offset++) {
     if (!isByteFlushed(offset)) {
       if (isByteConcrete(offset)) {
-        updates.extend(ConstantExpr::create(offset, Context::get().getPointerWidth()),
+        updates.extend(ConstantExpr::create(offset, Expr::Int32),
                        ConstantExpr::create(concreteStore[offset], Expr::Int8));
         markByteSymbolic(offset);
       } else {
         assert(isByteKnownSymbolic(offset) && "invalid bit set in flushMask");
-        updates.extend(ConstantExpr::create(offset, Context::get().getPointerWidth()),
+        updates.extend(ConstantExpr::create(offset, Expr::Int32),
                        knownSymbolics[offset]);
         setKnownSymbolic(offset, 0);
       }
@@ -367,7 +367,7 @@ ref<Expr> ObjectState::read8(unsigned offset) const {
     assert(isByteFlushed(offset) && "unflushed byte without cache value");
     
     return ReadExpr::create(getUpdates(), 
-                            ConstantExpr::create(offset, Context::get().getPointerWidth()));
+                            ConstantExpr::create(offset, Expr::Int32));
   }    
 }
 
@@ -385,7 +385,7 @@ ref<Expr> ObjectState::read8(ref<Expr> offset) const {
                       allocInfo.c_str());
   }
   
-  return ReadExpr::create(getUpdates(), offset);
+  return ReadExpr::create(getUpdates(), ZExtExpr::create(offset, Expr::Int32));
 }
 
 void ObjectState::write8(unsigned offset, uint8_t value) {
@@ -423,23 +423,24 @@ void ObjectState::write8(ref<Expr> offset, ref<Expr> value) {
                       allocInfo.c_str());
   }
   
-  updates.extend(offset, value);
+  updates.extend(ZExtExpr::create(offset, Expr::Int32), value);
 }
 
 /***/
 
 ref<Expr> ObjectState::read(ref<Expr> offset, Expr::Width width) const {
+  // Truncate offset to 32-bits.
+  offset = ZExtExpr::create(offset, Expr::Int32);
+
   // Check for reads at constant offsets.
-  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(offset)) {
+  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(offset))
     return read(CE->getZExtValue(32), width);
-  } 
 
   // Treat bool specially, it is the only non-byte sized write we allow.
   if (width == Expr::Bool)
     return ExtractExpr::create(read8(offset), 0, Expr::Bool);
 
   // Otherwise, follow the slow general case.
-  Expr::Width IndexWidth = offset->getWidth();
   unsigned NumBytes = width / 8;
   assert(width == NumBytes * 8 && "Invalid write size!");
   ref<Expr> Res(0);
@@ -447,7 +448,7 @@ ref<Expr> ObjectState::read(ref<Expr> offset, Expr::Width width) const {
     unsigned idx = Context::get().isLittleEndian() ? i : (NumBytes - i - 1);
     ref<Expr> Byte = read8(AddExpr::create(offset, 
                                            ConstantExpr::create(idx, 
-                                                                IndexWidth)));
+                                                                Expr::Int32)));
     Res = idx ? ConcatExpr::create(Byte, Res) : Byte;
   }
 
@@ -473,6 +474,9 @@ ref<Expr> ObjectState::read(unsigned offset, Expr::Width width) const {
 }
 
 void ObjectState::write(ref<Expr> offset, ref<Expr> value) {
+  // Truncate offset to 32-bits.
+  offset = ZExtExpr::create(offset, Expr::Int32);
+
   // Check for writes at constant offsets.
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(offset)) {
     write(CE->getZExtValue(32), value);
@@ -487,12 +491,11 @@ void ObjectState::write(ref<Expr> offset, ref<Expr> value) {
   }
 
   // Otherwise, follow the slow general case.
-  Expr::Width IndexWidth = offset->getWidth();
   unsigned NumBytes = w / 8;
   assert(w == NumBytes * 8 && "Invalid write size!");
   for (unsigned i = 0; i != NumBytes; ++i) {
     unsigned idx = Context::get().isLittleEndian() ? i : (NumBytes - i - 1);
-    write8(AddExpr::create(offset, ConstantExpr::create(idx, IndexWidth)),
+    write8(AddExpr::create(offset, ConstantExpr::create(idx, Expr::Int32)),
            ExtractExpr::create(value, 8 * i, Expr::Int8));
   }
 }
