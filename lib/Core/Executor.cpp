@@ -2142,7 +2142,8 @@ void Executor::bindInstructionConstants(KInstruction *KI) {
     return;
 
   KGEPInstruction *kgepi = static_cast<KGEPInstruction*>(KI);
-  ref<ConstantExpr> constantOffset = ConstantExpr::alloc(0, Expr::Int32);
+  ref<ConstantExpr> constantOffset =
+    ConstantExpr::alloc(0, Context::get().getPointerWidth());
   unsigned index = 1;
   for (gep_type_iterator ii = gep_type_begin(gepi), ie = gep_type_end(gepi);
        ii != ie; ++ii) {
@@ -2151,17 +2152,19 @@ void Executor::bindInstructionConstants(KInstruction *KI) {
       const ConstantInt *ci = cast<ConstantInt>(ii.getOperand());
       uint64_t addend = sl->getElementOffset((unsigned) ci->getZExtValue());
       constantOffset = constantOffset->Add(ConstantExpr::alloc(addend,
-                                                               Expr::Int32));
+                                                               Context::get().getPointerWidth()));
     } else {
       const SequentialType *st = cast<SequentialType>(*ii);
       unsigned elementSize = 
         kmodule->targetData->getTypeStoreSize(st->getElementType());
       Value *operand = ii.getOperand();
       if (Constant *c = dyn_cast<Constant>(operand)) {
-        ref<Expr> index = evalConstant(c);
-        ref<Expr> addend = MulExpr::create(Expr::createCoerceToPointerType(index), 
-                                           Expr::createPointer(elementSize));
-        constantOffset = constantOffset->Add(cast<ConstantExpr>(addend));
+        ref<ConstantExpr> index = 
+          evalConstant(c)->ZExt(Context::get().getPointerWidth());
+        ref<ConstantExpr> addend = 
+          index->Mul(ConstantExpr::alloc(elementSize,
+                                         Context::get().getPointerWidth()));
+        constantOffset = constantOffset->Add(addend);
       } else {
         kgepi->indices.push_back(std::make_pair(index, elementSize));
       }
