@@ -9,6 +9,8 @@
 
 #include "Executor.h"
 
+#include "Context.h"
+
 #include "klee/Expr.h"
 #include "klee/Interpreter.h"
 #include "klee/Solver.h"
@@ -75,11 +77,12 @@ namespace klee {
       return op1->ZExt(Expr::getWidthForLLVMType(type));
 
     case Instruction::GetElementPtr: {
-      ref<ConstantExpr> base = op1;
+      ref<ConstantExpr> base = op1->ZExt(Context::get().getPointerWidth());
 
       for (gep_type_iterator ii = gep_type_begin(ce), ie = gep_type_end(ce);
            ii != ie; ++ii) {
-        ref<ConstantExpr> addend = ConstantExpr::alloc(0, Expr::Int32);
+        ref<ConstantExpr> addend = 
+          ConstantExpr::alloc(0, Context::get().getPointerWidth());
 
         if (const StructType *st = dyn_cast<StructType>(*ii)) {
           const StructLayout *sl = kmodule->targetData->getStructLayout(st);
@@ -87,7 +90,7 @@ namespace klee {
 
           addend = ConstantExpr::alloc(sl->getElementOffset((unsigned)
                                                             ci->getZExtValue()),
-                                       Expr::Int32);
+                                       Context::get().getPointerWidth());
         } else {
           const SequentialType *st = cast<SequentialType>(*ii);
           ref<ConstantExpr> index = 
@@ -95,8 +98,9 @@ namespace klee {
           unsigned elementSize = 
             kmodule->targetData->getTypeStoreSize(st->getElementType());
 
-          index = index->ZExt(Expr::Int32);
-          addend = index->Mul(ConstantExpr::alloc(elementSize, Expr::Int32));
+          index = index->ZExt(Context::get().getPointerWidth());
+          addend = index->Mul(ConstantExpr::alloc(elementSize, 
+                                                  Context::get().getPointerWidth()));
         }
 
         base = base->Add(addend);
