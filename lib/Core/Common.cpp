@@ -22,6 +22,14 @@ using namespace klee;
 FILE* klee::klee_warning_file = NULL;
 FILE* klee::klee_message_file = NULL;
 
+static void klee_vfmessage(FILE *fp, const char *pfx, const char *msg, 
+                           va_list ap) {
+  fprintf(fp, "KLEE: ");
+  if (pfx) fprintf(fp, "%s: ", pfx);
+  vfprintf(fp, msg, ap);
+  fprintf(fp, "\n");
+  fflush(fp);
+}
 
 /* Prints a message/warning.
    
@@ -31,27 +39,15 @@ FILE* klee::klee_message_file = NULL;
 
    Iff onlyToFile is false, the message is also printed on stderr.
 */
-static void klee_vmessage(const char *pfx, bool onlyToFile, const char *msg, va_list ap) {
-  FILE *f = stderr;
+static void klee_vmessage(const char *pfx, bool onlyToFile, const char *msg, 
+                          va_list ap) {
   if (!onlyToFile) {
-    fprintf(f, "KLEE: ");
-    if (pfx) fprintf(f, "%s: ", pfx);
-    vfprintf(f, msg, ap);
-    fprintf(f, "\n");
-    fflush(f);
+    va_list ap2;
+    va_copy(ap2, ap);
+    klee_vfmessage(stderr, pfx, msg, ap2);
   }
 
-  if (pfx == NULL)
-    f = klee_message_file;
-  else f = klee_warning_file;
-    
-  if (f) {
-    fprintf(f, "KLEE: ");
-    if (pfx) fprintf(f, "%s: ", pfx);
-    vfprintf(f, msg, ap);
-    fprintf(f, "\n");
-    fflush(f);
-  }
+  klee_vfmessage(pfx ? klee_message_file : klee_warning_file, pfx, msg, ap);
 }
 
 
