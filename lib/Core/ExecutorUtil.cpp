@@ -11,7 +11,6 @@
 
 #include "klee/Expr.h"
 #include "klee/Interpreter.h"
-#include "klee/Machine.h"
 #include "klee/Solver.h"
 
 #include "klee/Internal/Module/KModule.h"

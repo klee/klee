@@ -11,6 +11,7 @@
 
 #include "Executor.h"
  
+#include "Context.h"
 #include "CoreStats.h"
 #include "ExternalDispatcher.h"
 #include "ImpliedValue.h"
@@ -28,7 +29,6 @@
 #include "klee/ExecutionState.h"
 #include "klee/Expr.h"
 #include "klee/Interpreter.h"
-#include "klee/Machine.h"
 #include "klee/TimerStatIncrementer.h"
 #include "klee/util/Assignment.h"
 #include "klee/util/ExprPPrinter.h"
@@ -336,8 +336,13 @@ Executor::Executor(const InterpreterOptions &opts,
 const Module *Executor::setModule(llvm::Module *module, 
                                   const ModuleOptions &opts) {
   assert(!kmodule && module && "can only register one module"); // XXX gross
-
+  
   kmodule = new KModule(module);
+
+  // Initialize the context.
+  TargetData *TD = kmodule->targetData;
+  Context::initialize(TD->isLittleEndian(),
+                      (Expr::Width) TD->getPointerSizeInBits());
 
   specialFunctionHandler = new SpecialFunctionHandler(*this);
 
@@ -2617,7 +2622,8 @@ void Executor::executeAlloc(ExecutionState &state,
     MemoryObject *mo = memory->allocate(CE->getZExtValue(), isLocal, false, 
                                         state.prevPC->inst);
     if (!mo) {
-      bindLocal(target, state, ConstantExpr::alloc(0, kMachinePointerType));
+      bindLocal(target, state, 
+                ConstantExpr::alloc(0, Context::get().getPointerWidth()));
     } else {
       ObjectState *os = bindObjectInState(state, mo, isLocal);
       if (zeroMemory) {
@@ -2692,7 +2698,7 @@ void Executor::executeAlloc(ExecutionState &state,
         if (hugeSize.first) {
           klee_message("NOTE: found huge malloc, returing 0");
           bindLocal(target, *hugeSize.first, 
-                    ConstantExpr::alloc(0, kMachinePointerType));
+                    ConstantExpr::alloc(0, Context::get().getPointerWidth()));
         }
         
         if (hugeSize.second) {
@@ -2999,6 +3005,7 @@ void Executor::runFunctionAsMain(Function *f,
   int envc;
   for (envc=0; envp[envc]; ++envc) ;
 
+  unsigned NumPtrBytes = Context::get().getPointerWidth() / 8;
   KFunction *kf = kmodule->functionMap[f];
   assert(kf);
   Function::arg_iterator ai = f->arg_begin(), ae = f->arg_end();
@@ -3006,13 +3013,13 @@ void Executor::runFunctionAsMain(Function *f,
     arguments.push_back(ConstantExpr::alloc(argc, Expr::Int32));
 
     if (++ai!=ae) {
-      argvMO = memory->allocate((argc+1+envc+1+1) * kMachinePointerSize, false, true,
+      argvMO = memory->allocate((argc+1+envc+1+1) * NumPtrBytes, false, true,
                                 f->begin()->begin());
       
       arguments.push_back(argvMO->getBaseExpr());
 
       if (++ai!=ae) {
-        uint64_t envp_start = argvMO->address + (argc+1)*kMachinePointerSize;
+        uint64_t envp_start = argvMO->address + (argc+1)*NumPtrBytes;
         arguments.push_back(Expr::createPointer(envp_start));
 
         if (++ai!=ae)
@@ -3055,9 +3062,9 @@ void Executor::runFunctionAsMain(Function *f,
       }
 
       if (arg) {
-        argvOS->write(i * kMachinePointerSize, arg->getBaseExpr());
+        argvOS->write(i * NumPtrBytes, arg->getBaseExpr());
       } else {
-        argvOS->write(i * kMachinePointerSize, Expr::createPointer(0));
+        argvOS->write(i * NumPtrBytes, Expr::createPointer(0));
       }
     }
   }

@@ -9,6 +9,7 @@
 
 #include "ImpliedValue.h"
 
+#include "Context.h"
 #include "klee/Constraints.h"
 #include "klee/Expr.h"
 #include "klee/Solver.h"
@@ -223,7 +224,7 @@ void ImpliedValue::checkForImpliedValues(Solver *S, ref<Expr> e,
     ReadExpr *re = i->get();
     assumption.push_back(UltExpr::create(re->index, 
                                          ConstantExpr::alloc(re->updates.root->size, 
-                                                             kMachinePointerType)));
+                                                             Context::get().getPointerWidth())));
   }
 
   ConstraintManager assume(assumption);

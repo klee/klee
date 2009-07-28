@@ -10,6 +10,7 @@
 #ifndef KLEE_MEMORY_H
 #define KLEE_MEMORY_H
 
+#include "Context.h"
 #include "klee/Expr.h"
 
 #include "llvm/ADT/StringExtras.h"
@@ -100,10 +101,10 @@ public:
   }
 
   ref<ConstantExpr> getBaseExpr() const { 
-    return ConstantExpr::create(address, kMachinePointerType);
+    return ConstantExpr::create(address, Context::get().getPointerWidth());
   }
   ref<ConstantExpr> getSizeExpr() const { 
-    return ConstantExpr::create(size, kMachinePointerType);
+    return ConstantExpr::create(size, Context::get().getPointerWidth());
   }
   ref<Expr> getOffsetExpr(ref<Expr> pointer) const {
     return SubExpr::create(pointer, getBaseExpr());
@@ -117,7 +118,8 @@ public:
 
   ref<Expr> getBoundsCheckOffset(ref<Expr> offset) const {
     if (size==0) {
-      return EqExpr::create(offset, ConstantExpr::alloc(0, kMachinePointerType));
+      return EqExpr::create(offset, 
+                            ConstantExpr::alloc(0, Context::get().getPointerWidth()));
     } else {
       return UltExpr::create(offset, getSizeExpr());
     }
@@ -125,7 +127,8 @@ public:
   ref<Expr> getBoundsCheckOffset(ref<Expr> offset, unsigned bytes) const {
     if (bytes<=size) {
       return UltExpr::create(offset, 
-                             ConstantExpr::alloc(size - bytes + 1, kMachinePointerType));
+                             ConstantExpr::alloc(size - bytes + 1, 
+                                                 Context::get().getPointerWidth()));
     } else {
       return ConstantExpr::alloc(0, Expr::Bool);
     }

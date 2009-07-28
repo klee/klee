@@ -10,7 +10,6 @@
 #ifndef KLEE_EXPR_H
 #define KLEE_EXPR_H
 
-#include "Machine.h"
 #include "klee/util/Bits.h"
 #include "klee/util/Ref.h"
 

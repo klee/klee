@@ -1115,7 +1115,7 @@ FastCexSolver::computeInitialValues(const Query& query,
     for (unsigned i=0; i < array->size; i++) {
       ref<Expr> read = 
         ReadExpr::create(UpdateList(array, 0),
-                         ConstantExpr::create(i, kMachinePointerType));
+                         ConstantExpr::create(i, Expr::Int32));
       ref<Expr> value = cd.evaluatePossible(read);
       
       if (ConstantExpr *CE = dyn_cast<ConstantExpr>(value)) {

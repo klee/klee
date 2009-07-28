@@ -11,8 +11,8 @@
 
 #include "Memory.h"
 
+#include "Context.h"
 #include "klee/Expr.h"
-#include "klee/Machine.h"
 #include "klee/Solver.h"
 #include "klee/util/BitArray.h"
 
@@ -265,11 +265,11 @@ void ObjectState::flushRangeForRead(unsigned rangeBase,
   for (unsigned offset=rangeBase; offset<rangeBase+rangeSize; offset++) {
     if (!isByteFlushed(offset)) {
       if (isByteConcrete(offset)) {
-        updates.extend(ConstantExpr::create(offset, kMachinePointerType),
+        updates.extend(ConstantExpr::create(offset, Context::get().getPointerWidth()),
                        ConstantExpr::create(concreteStore[offset], Expr::Int8));
       } else {
         assert(isByteKnownSymbolic(offset) && "invalid bit set in flushMask");
-        updates.extend(ConstantExpr::create(offset, kMachinePointerType),
+        updates.extend(ConstantExpr::create(offset, Context::get().getPointerWidth()),
                        knownSymbolics[offset]);
       }
 
@@ -285,12 +285,12 @@ void ObjectState::flushRangeForWrite(unsigned rangeBase,
   for (unsigned offset=rangeBase; offset<rangeBase+rangeSize; offset++) {
     if (!isByteFlushed(offset)) {
       if (isByteConcrete(offset)) {
-        updates.extend(ConstantExpr::create(offset, kMachinePointerType),
+        updates.extend(ConstantExpr::create(offset, Context::get().getPointerWidth()),
                        ConstantExpr::create(concreteStore[offset], Expr::Int8));
         markByteSymbolic(offset);
       } else {
         assert(isByteKnownSymbolic(offset) && "invalid bit set in flushMask");
-        updates.extend(ConstantExpr::create(offset, kMachinePointerType),
+        updates.extend(ConstantExpr::create(offset, Context::get().getPointerWidth()),
                        knownSymbolics[offset]);
         setKnownSymbolic(offset, 0);
       }
@@ -367,7 +367,7 @@ ref<Expr> ObjectState::read8(unsigned offset) const {
     assert(isByteFlushed(offset) && "unflushed byte without cache value");
     
     return ReadExpr::create(getUpdates(), 
-                            ConstantExpr::create(offset, kMachinePointerType));
+                            ConstantExpr::create(offset, Context::get().getPointerWidth()));
   }    
 }
 
@@ -444,7 +444,7 @@ ref<Expr> ObjectState::read(ref<Expr> offset, Expr::Width width) const {
   assert(width == NumBytes * 8 && "Invalid write size!");
   ref<Expr> Res(0);
   for (unsigned i = 0; i != NumBytes; ++i) {
-    unsigned idx = (kMachineByteOrder == machine::MSB) ? (NumBytes - i - 1) : i;
+    unsigned idx = Context::get().isLittleEndian() ? i : (NumBytes - i - 1);
     ref<Expr> Byte = read8(AddExpr::create(offset, 
                                            ConstantExpr::create(idx, 
                                                                 IndexWidth)));
@@ -464,7 +464,7 @@ ref<Expr> ObjectState::read(unsigned offset, Expr::Width width) const {
   assert(width == NumBytes * 8 && "Invalid write size!");
   ref<Expr> Res(0);
   for (unsigned i = 0; i != NumBytes; ++i) {
-    unsigned idx = (kMachineByteOrder == machine::MSB) ? (NumBytes - i - 1) : i;
+    unsigned idx = Context::get().isLittleEndian() ? i : (NumBytes - i - 1);
     ref<Expr> Byte = read8(offset + idx);
     Res = idx ? ConcatExpr::create(Byte, Res) : Byte;
   }
@@ -491,7 +491,7 @@ void ObjectState::write(ref<Expr> offset, ref<Expr> value) {
   unsigned NumBytes = w / 8;
   assert(w == NumBytes * 8 && "Invalid write size!");
   for (unsigned i = 0; i != NumBytes; ++i) {
-    unsigned idx = (kMachineByteOrder == machine::MSB) ? (NumBytes - i - 1) : i;
+    unsigned idx = Context::get().isLittleEndian() ? i : (NumBytes - i - 1);
     write8(AddExpr::create(offset, ConstantExpr::create(idx, IndexWidth)),
            ExtractExpr::create(value, 8 * i, Expr::Int8));
   }
@@ -525,7 +525,7 @@ void ObjectState::write(unsigned offset, ref<Expr> value) {
   unsigned NumBytes = w / 8;
   assert(w == NumBytes * 8 && "Invalid write size!");
   for (unsigned i = 0; i != NumBytes; ++i) {
-    unsigned idx = (kMachineByteOrder == machine::MSB) ? (NumBytes - i - 1) : i;
+    unsigned idx = Context::get().isLittleEndian() ? i : (NumBytes - i - 1);
     write8(offset + idx, ExtractExpr::create(value, 8 * i, Expr::Int8));
   }
 } 
@@ -533,7 +533,7 @@ void ObjectState::write(unsigned offset, ref<Expr> value) {
 void ObjectState::write16(unsigned offset, uint16_t value) {
   unsigned NumBytes = 2;
   for (unsigned i = 0; i != NumBytes; ++i) {
-    unsigned idx = (kMachineByteOrder == machine::MSB) ? (NumBytes - i - 1) : i;
+    unsigned idx = Context::get().isLittleEndian() ? i : (NumBytes - i - 1);
     write8(offset + idx, (uint8_t) (value >> (8 * i)));
   }
 }
@@ -541,7 +541,7 @@ void ObjectState::write16(unsigned offset, uint16_t value) {
 void ObjectState::write32(unsigned offset, uint32_t value) {
   unsigned NumBytes = 4;
   for (unsigned i = 0; i != NumBytes; ++i) {
-    unsigned idx = (kMachineByteOrder == machine::MSB) ? (NumBytes - i - 1) : i;
+    unsigned idx = Context::get().isLittleEndian() ? i : (NumBytes - i - 1);
     write8(offset + idx, (uint8_t) (value >> (8 * i)));
   }
 }
@@ -549,7 +549,7 @@ void ObjectState::write32(unsigned offset, uint32_t value) {
 void ObjectState::write64(unsigned offset, uint64_t value) {
   unsigned NumBytes = 8;
   for (unsigned i = 0; i != NumBytes; ++i) {
-    unsigned idx = (kMachineByteOrder == machine::MSB) ? (NumBytes - i - 1) : i;
+    unsigned idx = Context::get().isLittleEndian() ? i : (NumBytes - i - 1);
     write8(offset + idx, (uint8_t) (value >> (8 * i)));
   }
 }

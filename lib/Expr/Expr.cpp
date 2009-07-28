@@ -9,9 +9,6 @@
 
 #include "klee/Expr.h"
 
-#include "klee/Machine.h"
-#include "llvm/Type.h"
-#include "llvm/DerivedTypes.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Streams.h"
 // FIXME: We shouldn't need this once fast constant support moves into
@@ -43,42 +40,42 @@ ref<Expr> Expr::createTempRead(const Array *array, Expr::Width w) {
   default: assert(0 && "invalid width");
   case Expr::Bool: 
     return ZExtExpr::create(ReadExpr::create(ul, 
-                                             ConstantExpr::alloc(0,kMachinePointerType)),
+                                             ConstantExpr::alloc(0, Expr::Int32)),
                             Expr::Bool);
   case Expr::Int8: 
     return ReadExpr::create(ul, 
-                            ConstantExpr::alloc(0,kMachinePointerType));
+                            ConstantExpr::alloc(0,Expr::Int32));
   case Expr::Int16: 
     return ConcatExpr::create(ReadExpr::create(ul, 
-                                               ConstantExpr::alloc(1,kMachinePointerType)),
+                                               ConstantExpr::alloc(1,Expr::Int32)),
                               ReadExpr::create(ul, 
-                                               ConstantExpr::alloc(0,kMachinePointerType)));
+                                               ConstantExpr::alloc(0,Expr::Int32)));
   case Expr::Int32: 
     return ConcatExpr::create4(ReadExpr::create(ul, 
-                                                ConstantExpr::alloc(3,kMachinePointerType)),
+                                                ConstantExpr::alloc(3,Expr::Int32)),
                                ReadExpr::create(ul, 
-                                                ConstantExpr::alloc(2,kMachinePointerType)),
+                                                ConstantExpr::alloc(2,Expr::Int32)),
                                ReadExpr::create(ul, 
-                                                ConstantExpr::alloc(1,kMachinePointerType)),
+                                                ConstantExpr::alloc(1,Expr::Int32)),
                                ReadExpr::create(ul, 
-                                                ConstantExpr::alloc(0,kMachinePointerType)));
+                                                ConstantExpr::alloc(0,Expr::Int32)));
   case Expr::Int64: 
     return ConcatExpr::create8(ReadExpr::create(ul, 
-                                                ConstantExpr::alloc(7,kMachinePointerType)),
+                                                ConstantExpr::alloc(7,Expr::Int32)),
                                ReadExpr::create(ul, 
-                                                ConstantExpr::alloc(6,kMachinePointerType)),
+                                                ConstantExpr::alloc(6,Expr::Int32)),
                                ReadExpr::create(ul, 
-                                                ConstantExpr::alloc(5,kMachinePointerType)),
+                                                ConstantExpr::alloc(5,Expr::Int32)),
                                ReadExpr::create(ul, 
-                                                ConstantExpr::alloc(4,kMachinePointerType)),
+                                                ConstantExpr::alloc(4,Expr::Int32)),
                                ReadExpr::create(ul, 
-                                                ConstantExpr::alloc(3,kMachinePointerType)),
+                                                ConstantExpr::alloc(3,Expr::Int32)),
                                ReadExpr::create(ul, 
-                                                ConstantExpr::alloc(2,kMachinePointerType)),
+                                                ConstantExpr::alloc(2,Expr::Int32)),
                                ReadExpr::create(ul, 
-                                                ConstantExpr::alloc(1,kMachinePointerType)),
+                                                ConstantExpr::alloc(1,Expr::Int32)),
                                ReadExpr::create(ul, 
-                                                ConstantExpr::alloc(0,kMachinePointerType)));
+                                                ConstantExpr::alloc(0,Expr::Int32)));
   }
 }
 
@@ -281,33 +278,12 @@ void Expr::printWidth(std::ostream &os, Width width) {
   }
 }
 
-Expr::Width Expr::getWidthForLLVMType(const llvm::Type *t) {
-  switch (t->getTypeID()) {
-  case llvm::Type::IntegerTyID: return cast<IntegerType>(t)->getBitWidth();
-  case llvm::Type::FloatTyID: return Expr::Int32;
-  case llvm::Type::DoubleTyID: return Expr::Int64;
-  case llvm::Type::X86_FP80TyID: return 80;
-  case llvm::Type::PointerTyID: return kMachinePointerType;
-  default:
-    cerr << "non-primitive type argument to Expr::getTypeForLLVMType()\n";
-    abort();
-  }
-}
-
 ref<Expr> Expr::createImplies(ref<Expr> hyp, ref<Expr> conc) {
   return OrExpr::create(Expr::createIsZero(hyp), conc);
 }
 
 ref<Expr> Expr::createIsZero(ref<Expr> e) {
   return EqExpr::create(e, ConstantExpr::create(0, e->getWidth()));
-}
-
-ref<Expr> Expr::createCoerceToPointerType(ref<Expr> e) {
-  return ZExtExpr::create(e, kMachinePointerType);
-}
-
-ref<ConstantExpr> Expr::createPointer(uint64_t v) {
-  return ConstantExpr::create(v, kMachinePointerType);
 }
 
 void Expr::print(std::ostream &os) const {
