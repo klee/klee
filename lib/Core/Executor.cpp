@@ -1777,9 +1777,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       kmodule->targetData->getTypeStoreSize(ai->getAllocatedType());
     ref<Expr> size = Expr::createPointer(elementSize);
     if (ai->isArrayAllocation()) {
-      // XXX coerce?
       ref<Expr> count = eval(ki, 0, state).value;
-      size = MulExpr::create(count, size);
+      count = Expr::createCoerceToPointerType(count);
+      size = MulExpr::create(size, count);
     }
     bool isLocal = i->getOpcode()==Instruction::Alloca;
     executeAlloc(state, size, isLocal, ki);
