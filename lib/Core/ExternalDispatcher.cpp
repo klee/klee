@@ -124,10 +124,10 @@ bool ExternalDispatcher::executeCall(Function *f, Instruction *i, uint64_t *args
     dispatchers.insert(std::make_pair(i, dispatcher));
 
     if (dispatcher) {
-      // force the JIT execution engine to go ahead and build the
-      // function. this ensures that any errors or assertions in the
-      // compilation process will trigger crashes instead of being
-      // caught as aborts in the external function.
+      // Force the JIT execution engine to go ahead and build the function. This
+      // ensures that any errors or assertions in the compilation process will
+      // trigger crashes instead of being caught as aborts in the external
+      // function.
       executionEngine->recompileAndRelinkFunction(dispatcher);
     }
   } else {
@@ -137,7 +137,7 @@ bool ExternalDispatcher::executeCall(Function *f, Instruction *i, uint64_t *args
   return runProtectedCall(dispatcher, args);
 }
 
-// XXX not reentrant
+// FIXME: This is not reentrant.
 static uint64_t *gTheArgsP;
 
 bool ExternalDispatcher::runProtectedCall(Function *f, uint64_t *args) {
@@ -167,13 +167,12 @@ bool ExternalDispatcher::runProtectedCall(Function *f, uint64_t *args) {
   return res;
 }
 
-// for performance purposes we construct the stub in such a way that
-// the arguments pointer is passed through the static global variable
-// gTheArgsP in this file. This is done so that the stub function
-// prototype trivially matches the special cases that the JIT knows
-// how to directly call. If this is not done, then the jit will end up
-// generating a nullary stub just to call our stub, for every single
-// function call.
+// For performance purposes we construct the stub in such a way that the
+// arguments pointer is passed through the static global variable gTheArgsP in
+// this file. This is done so that the stub function prototype trivially matches
+// the special cases that the JIT knows how to directly call. If this is not
+// done, then the jit will end up generating a nullary stub just to call our
+// stub, for every single function call.
 Function *ExternalDispatcher::createDispatcher(Function *target, Instruction *inst) {
   if (!resolveSymbol(target->getName()))
     return 0;
@@ -198,28 +197,41 @@ Function *ExternalDispatcher::createDispatcher(Function *target, Instruction *in
 
   BasicBlock *dBB = BasicBlock::Create("entry", dispatcher);
 
-  Instruction *argI64sp = new IntToPtrInst(ConstantInt::get(Type::Int64Ty, (long) (void*) &gTheArgsP),
-					   PointerType::getUnqual(PointerType::getUnqual(Type::Int64Ty)),
-					   "argsp",
-					   dBB);
+  // Get a Value* for &gTheArgsP, as an i64**.
+  Instruction *argI64sp = 
+    new IntToPtrInst(ConstantInt::get(Type::Int64Ty, 
+                                      (uintptr_t) (void*) &gTheArgsP),
+                     PointerType::getUnqual(PointerType::getUnqual(Type::Int64Ty)),
+                     "argsp", dBB);
   Instruction *argI64s = new LoadInst(argI64sp, "args", dBB); 
+  
+  // Get the target function type.
+  const FunctionType *FTy =
+    cast<FunctionType>(cast<PointerType>(target->getType())->getElementType());
 
+  // Each argument will be passed by writing it into gTheArgsP[i].
   unsigned i = 0;
   for (CallSite::arg_iterator ai = cs.arg_begin(), ae = cs.arg_end();
        ai!=ae; ++ai, ++i) {
-    Value *index = ConstantInt::get(Type::Int32Ty, i+1);
+    // Determine the type the argument will be passed as. This accomodates for
+    // the corresponding code in Executor.cpp for handling calls to bitcasted
+    // functions.
+    const Type *argTy = (i < FTy->getNumParams() ? FTy->getParamType(i) : 
+                         (*ai)->getType());
+    Instruction *argI64p = 
+      GetElementPtrInst::Create(argI64s, ConstantInt::get(Type::Int32Ty, i+1), 
+                                "", dBB);
 
-    Instruction *argI64p = GetElementPtrInst::Create(argI64s, index, "", dBB);
-    Instruction *argp = new BitCastInst(argI64p, 
-                                        PointerType::getUnqual((*ai)->getType()), "", dBB);
+    Instruction *argp = new BitCastInst(argI64p, PointerType::getUnqual(argTy),
+                                        "", dBB);
     args[i] = new LoadInst(argp, "", dBB);
   }
 
   Instruction *result = CallInst::Create(target, args, args+i, "", dBB);
-
   if (result->getType() != Type::VoidTy) {
-    Instruction *resp = new BitCastInst(argI64s, 
-                                        PointerType::getUnqual(result->getType()), "", dBB);
+    Instruction *resp = 
+      new BitCastInst(argI64s, PointerType::getUnqual(result->getType()), 
+                      "", dBB);
     new StoreInst(result, resp, dBB);
   }
 
