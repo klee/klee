@@ -290,6 +290,11 @@ void Expr::print(std::ostream &os) const {
   ExprPPrinter::printSingleExpr(os, (Expr*)this);
 }
 
+void Expr::dump() const {
+  this->print(*llvm::cerr.stream());
+  llvm::cerr << std::endl;
+}
+
 /***/
 
 ref<Expr> ConstantExpr::fromMemory(void *address, Width width) {

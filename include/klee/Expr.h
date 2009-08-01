@@ -180,6 +180,9 @@ public:
     
   virtual void print(std::ostream &os) const;
 
+  /// dump - Print the expression to stderr.
+  void dump() const;
+
   /// Returns the pre-computed hash of the current expression
   virtual unsigned hash() const { return hashValue; }
 
