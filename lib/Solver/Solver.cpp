@@ -28,6 +28,7 @@
 #include <map>
 #include <vector>
 
+#include <errno.h>
 #include <signal.h>
 #include <sys/wait.h>
 #include <sys/ipc.h>
@@ -611,9 +612,13 @@ static bool runAndGetCexForked(::VC vc,
     _exit(res);
   } else {
     int status;
-    int res = waitpid(pid, &status, 0);
+    pid_t res;
+
+    do {
+      res = waitpid(pid, &status, 0);
+    } while (res < 0 && errno == EINTR);
     
-    if (res<0) {
+    if (res < 0) {
       fprintf(stderr, "error: waitpid() for STP failed");
       return false;
     }
