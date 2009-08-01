@@ -1114,20 +1114,54 @@ void Executor::executeCall(ExecutionState &state,
         callExternalFunction(state, ki, f, arguments);
         break;
           
-        // vararg is handled by caller and intrinsic lowering,
-        // see comment for ExecutionState::varargs
+        // va_arg is handled by caller and intrinsic lowering, see comment for
+        // ExecutionState::varargs
       case Intrinsic::vastart:  {
         StackFrame &sf = state.stack.back();
         assert(sf.varargs && 
                "vastart called in function with no vararg object");
-        executeMemoryOperation(state, true, arguments[0], 
-                               sf.varargs->getBaseExpr(), 0);
+
+        // FIXME: This is really specific to the architecture, not the pointer
+        // size. This happens to work fir x86-32 and x86-64, however.
+        Expr::Width WordSize = Context::get().getPointerWidth();
+        if (WordSize == Expr::Int32) {
+          executeMemoryOperation(state, true, arguments[0], 
+                                 sf.varargs->getBaseExpr(), 0);
+        } else {
+          assert(WordSize == Expr::Int64 && "Unknown word size!");
+
+          // X86-64 has quite complicated calling convention. However,
+          // instead of implementing it, we can do a simple hack: just
+          // make a function believe that all varargs are on stack.
+          executeMemoryOperation(state, true, arguments[0],
+                                 ConstantExpr::create(48, 32), 0); // gp_offset
+          executeMemoryOperation(state, true,
+                                 AddExpr::create(arguments[0], 
+                                                 ConstantExpr::create(4, 64)),
+                                 ConstantExpr::create(304, 32), 0); // fp_offset
+          executeMemoryOperation(state, true,
+                                 AddExpr::create(arguments[0], 
+                                                 ConstantExpr::create(8, 64)),
+                                 sf.varargs->getBaseExpr(), 0); // overflow_arg_area
+          executeMemoryOperation(state, true,
+                                 AddExpr::create(arguments[0], 
+                                                 ConstantExpr::create(16, 64)),
+                                 ConstantExpr::create(0, 64), 0); // reg_save_area
+        }
         break;
       }
-      case Intrinsic::vaend:    // va_end is a noop for the interpreter
+      case Intrinsic::vaend:
+        // va_end is a noop for the interpreter.
+        //
+        // FIXME: We should validate that the target didn't do something bad
+        // with vaeend, however (like call it twice).
         break;
           
-      case Intrinsic::vacopy: // should be lowered
+      case Intrinsic::vacopy:
+        // va_copy should have been lowered.
+        //
+        // FIXME: It would be nice to check for errors in the usage of this as
+        // well.
       default:
         klee_error("unknown intrinsic: %s", f->getName().data());
       }
@@ -1137,16 +1171,19 @@ void Executor::executeCall(ExecutionState &state,
       transferToBasicBlock(ii->getNormalDest(), i->getParent(), state);
     }
   } else {
-    // XXX not really happy about this reliance on prevPC but is ok I
-    // guess. This just done to avoid having to pass KInstIterator
-    // everywhere instead of the actual instruction, since we can't
-    // make a KInstIterator from just an instruction (unlike LLVM).
+    // FIXME: I'm not really happy about this reliance on prevPC but it is ok, I
+    // guess. This just done to avoid having to pass KInstIterator everywhere
+    // instead of the actual instruction, since we can't make a KInstIterator
+    // from just an instruction (unlike LLVM).
     KFunction *kf = kmodule->functionMap[f];
     state.pushFrame(state.prevPC, kf);
     state.pc = kf->instructions;
         
     if (statsTracker)
       statsTracker->framePushed(state, &state.stack[state.stack.size()-2]);
+ 
+     // TODO: support "byval" parameter attribute
+     // TODO: support zeroext, signext, sret attributes
         
     unsigned callingArgs = arguments.size();
     unsigned funcArgs = f->arg_size();
@@ -1168,8 +1205,17 @@ void Executor::executeCall(ExecutionState &state,
             
       StackFrame &sf = state.stack.back();
       unsigned size = 0;
-      for (unsigned i = funcArgs; i < callingArgs; i++)
-        size += Expr::getMinBytesForWidth(arguments[i]->getWidth());
+      for (unsigned i = funcArgs; i < callingArgs; i++) {
+        // FIXME: This is really specific to the architecture, not the pointer
+        // size. This happens to work fir x86-32 and x86-64, however.
+        Expr::Width WordSize = Context::get().getPointerWidth();
+        if (WordSize == Expr::Int32) {
+          size += Expr::getMinBytesForWidth(arguments[i]->getWidth());
+        } else {
+          size += llvm::RoundUpToAlignment(arguments[i]->getWidth(), 
+                                           WordSize) / 8;
+        }
+      }
 
       MemoryObject *mo = sf.varargs = memory->allocate(size, true, false, 
                                                        state.prevPC->inst);
@@ -1180,9 +1226,18 @@ void Executor::executeCall(ExecutionState &state,
       ObjectState *os = bindObjectInState(state, mo, true);
       unsigned offset = 0;
       for (unsigned i = funcArgs; i < callingArgs; i++) {
-        // XXX: DRE: i think we bind memory objects here?
-        os->write(offset, arguments[i]);
-        offset += Expr::getMinBytesForWidth(arguments[i]->getWidth());
+        // FIXME: This is really specific to the architecture, not the pointer
+        // size. This happens to work fir x86-32 and x86-64, however.
+        Expr::Width WordSize = Context::get().getPointerWidth();
+        if (WordSize == Expr::Int32) {
+          os->write(offset, arguments[i]);
+          offset += Expr::getMinBytesForWidth(arguments[i]->getWidth());
+        } else {
+          assert(WordSize == Expr::Int64 && "Unknown word size!");
+          os->write(offset, arguments[i]);
+          offset += llvm::RoundUpToAlignment(arguments[i]->getWidth(), 
+                                             WordSize) / 8;
+        }
       }
     }
 

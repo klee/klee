@@ -33,13 +33,14 @@ bool IntrinsicCleanerPass::runOnModule(Module &M) {
   bool dirty = false;
   for (Module::iterator f = M.begin(), fe = M.end(); f != fe; ++f)
     for (Function::iterator b = f->begin(), be = f->end(); b != be; ++b)
-        dirty |= runOnBasicBlock(*b);
+      dirty |= runOnBasicBlock(*b);
   return dirty;
 }
 
 bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b) { 
   bool dirty = false;
-
+  
+  unsigned WordSize = TargetData.getPointerSizeInBits() / 8;
   for (BasicBlock::iterator i = b.begin(), ie = b.end(); i != ie;) {     
     IntrinsicInst *ii = dyn_cast<IntrinsicInst>(&*i);
     // increment now since LowerIntrinsic deletion makes iterator invalid.
@@ -51,15 +52,34 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b) {
         break;
         
         // Lower vacopy so that object resolution etc is handled by
-        // normal instructions.  FIXME: This is broken for non-x86_32.
+        // normal instructions.
+        //
+        // FIXME: This is much more target dependent than just the word size,
+        // however this works for x86-32 and x86-64.
       case Intrinsic::vacopy: { // (dst, src) -> *((i8**) dst) = *((i8**) src)
         Value *dst = ii->getOperand(1);
         Value *src = ii->getOperand(2);
-        Type *i8pp = PointerType::getUnqual(PointerType::getUnqual(Type::Int8Ty));
-        Value *castedDst = CastInst::CreatePointerCast(dst, i8pp, "vacopy.cast.dst", ii);
-        Value *castedSrc = CastInst::CreatePointerCast(src, i8pp, "vacopy.cast.src", ii);
-        Value *load = new LoadInst(castedSrc, "vacopy.read", ii);
-        new StoreInst(load, castedDst, false, ii);
+
+        if (WordSize == 4) {
+          Type *i8pp = PointerType::getUnqual(PointerType::getUnqual(Type::Int8Ty));
+          Value *castedDst = CastInst::CreatePointerCast(dst, i8pp, "vacopy.cast.dst", ii);
+          Value *castedSrc = CastInst::CreatePointerCast(src, i8pp, "vacopy.cast.src", ii);
+          Value *load = new LoadInst(castedSrc, "vacopy.read", ii);
+          new StoreInst(load, castedDst, false, ii);
+        } else {
+          assert(WordSize == 8 && "Invalid word size!");
+          Type *i64p = PointerType::getUnqual(Type::Int64Ty);
+          Value *pDst = CastInst::CreatePointerCast(dst, i64p, "vacopy.cast.dst", ii);
+          Value *pSrc = CastInst::CreatePointerCast(src, i64p, "vacopy.cast.src", ii);
+          Value *val = new LoadInst(pSrc, std::string(), ii); new StoreInst(val, pDst, ii);
+          Value *off = ConstantInt::get(Type::Int64Ty, 1);
+          pDst = GetElementPtrInst::Create(pDst, off, std::string(), ii);
+          pSrc = GetElementPtrInst::Create(pSrc, off, std::string(), ii);
+          val = new LoadInst(pSrc, std::string(), ii); new StoreInst(val, pDst, ii);
+          pDst = GetElementPtrInst::Create(pDst, off, std::string(), ii);
+          pSrc = GetElementPtrInst::Create(pSrc, off, std::string(), ii);
+          val = new LoadInst(pSrc, std::string(), ii); new StoreInst(val, pDst, ii);
+        }
         ii->removeFromParent();
         delete ii;
         break;

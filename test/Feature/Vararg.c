@@ -76,7 +76,7 @@ int main() {
   assert(va_array(5, 0, 5, 1, 1, 2, 1)==45); // 15 + 30
 
   // should give memory error
-  test1(-1, 52, 37, 2.0, p);
+  test1(-1, 52, 2.0, p);
 
   return 0;
 }

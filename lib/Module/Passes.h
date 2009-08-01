@@ -53,6 +53,7 @@ public:
   // variables (via intrinsic lowering).
 class IntrinsicCleanerPass : public llvm::ModulePass {
   static char ID;
+  const llvm::TargetData &TargetData;
   llvm::IntrinsicLowering *IL;
   bool LowerIntrinsics;
 
@@ -61,6 +62,7 @@ public:
   IntrinsicCleanerPass(const llvm::TargetData &TD,
                        bool LI=true)
     : llvm::ModulePass((intptr_t) &ID),
+      TargetData(TD),
       IL(new llvm::IntrinsicLowering(TD)),
       LowerIntrinsics(LI) {}
   ~IntrinsicCleanerPass() { delete IL; } 
