@@ -17,7 +17,7 @@ namespace klee {
   template<class K, class V, class KOV, class CMP>
   class ImmutableTree {
   public:
-    static unsigned allocated;
+    static size_t allocated;
     class iterator;
 
     typedef K key_type;
@@ -34,7 +34,7 @@ namespace klee {
 
     bool empty() const;
 
-    unsigned count(const key_type &key) const; // always 0 or 1
+    size_t count(const key_type &key) const; // always 0 or 1
     const value_type *lookup(const key_type &key) const;
 
     // find the last value less than or equal to key, or null if
@@ -43,7 +43,7 @@ namespace klee {
 
     const value_type &min() const;
     const value_type &max() const;
-    unsigned size() const;
+    size_t size() const;
 
     ImmutableTree insert(const value_type &value) const;
     ImmutableTree replace(const value_type &value) const;
@@ -57,7 +57,7 @@ namespace klee {
     iterator lower_bound(const key_type &key) const;
     iterator upper_bound(const key_type &key) const;
 
-    static unsigned getAllocated() { return allocated; }
+    static size_t getAllocated() { return allocated; }
 
   private:
     class Node;
@@ -90,7 +90,7 @@ namespace klee {
 
     bool isTerminator();
 
-    unsigned size();
+    size_t size();
     Node *popMin(value_type &valueOut);
     Node *popMax(value_type &valueOut);
     Node *insert(const value_type &v);
@@ -98,7 +98,8 @@ namespace klee {
     Node *remove(const key_type &k);
   };
 
-  // Should live somewhere else, this is a simple stack with maximum size.
+  // Should live somewhere else, this is a simple stack with maximum (dynamic)
+  // size.
   template<typename T>
   class FixedStack {
     unsigned pos, max;
@@ -240,7 +241,7 @@ namespace klee {
   ImmutableTree<K,V,KOV,CMP>::Node::terminator;
 
   template<class K, class V, class KOV, class CMP> 
-  unsigned ImmutableTree<K,V,KOV,CMP>::allocated = 0;
+  size_t ImmutableTree<K,V,KOV,CMP>::allocated = 0;
 
   template<class K, class V, class KOV, class CMP>
   ImmutableTree<K,V,KOV,CMP>::Node::Node() 
@@ -331,7 +332,7 @@ namespace klee {
   }
 
   template<class K, class V, class KOV, class CMP>
-  unsigned ImmutableTree<K,V,KOV,CMP>::Node::size() {
+  size_t ImmutableTree<K,V,KOV,CMP>::Node::size() {
     if (isTerminator()) {
       return 0;
     } else {
@@ -453,7 +454,7 @@ namespace klee {
   }
 
   template<class K, class V, class KOV, class CMP>
-  unsigned ImmutableTree<K,V,KOV,CMP>::count(const key_type &k) const {
+  size_t ImmutableTree<K,V,KOV,CMP>::count(const key_type &k) const {
     Node *n = node;
     while (!n->isTerminator()) {
       key_type key = key_of_value()(n->value);
@@ -523,7 +524,7 @@ namespace klee {
   }
 
   template<class K, class V, class KOV, class CMP>
-  unsigned ImmutableTree<K,V,KOV,CMP>::size() const {
+  size_t ImmutableTree<K,V,KOV,CMP>::size() const {
     return node->size();
   }
 

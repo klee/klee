@@ -45,7 +45,7 @@ namespace klee {
     bool empty() const { 
       return elts.empty(); 
     }
-    unsigned count(const key_type &key) const { 
+    size_t count(const key_type &key) const { 
       return elts.count(key); 
     }
     const value_type *lookup(const key_type &key) const { 
@@ -60,7 +60,7 @@ namespace klee {
     const value_type &max() const { 
       return elts.max(); 
     }
-    unsigned size() const { 
+    size_t size() const { 
       return elts.size(); 
     }
 
@@ -96,7 +96,7 @@ namespace klee {
       return elts.upper_bound(key); 
     }
 
-    static unsigned getAllocated() { return Tree::allocated; }
+    static size_t getAllocated() { return Tree::allocated; }
   };
 
 }
