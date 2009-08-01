@@ -282,7 +282,7 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   // this to be linked in, it makes low level debugging much more
   // annoying.
   llvm::sys::Path path(opts.LibraryDir);
-  path.appendComponent("libintrinsic.bca");
+  path.appendComponent("libkleeRuntimeIntrinsic.bca");
   module = linkWithLibrary(module, path.c_str());
 
   // Needs to happen after linking (since ctors/dtors can be modified)
