@@ -282,7 +282,7 @@ ssize_t read(int fd, void *buf, size_t count) {
   }
   else {
     assert(f->off >= 0);
-    if (f->dfile->size < f->off)
+    if (((off64_t)f->dfile->size) < f->off)
       return 0;
 
     /* symbolic file */
@@ -350,7 +350,7 @@ ssize_t write(int fd, const void *buf, size_t count) {
       if (__exe_env.save_all_writes)
 	assert(0);
       else {
-	if (f->off < f->dfile->size)
+	if (f->off < (off64_t) f->dfile->size)
 	  actual_count = f->dfile->size - f->off;	
       }
     }
@@ -435,7 +435,11 @@ int __fd_stat(const char *path, struct stat64 *buf) {
   } 
 
   {
+#if __WORDSIZE == 64
+    int r = syscall(__NR_stat, __concretize_string(path), buf);
+#else
     int r = syscall(__NR_stat64, __concretize_string(path), buf);
+#endif
     if (r == -1)
       errno = klee_get_errno();
     return r;
@@ -450,7 +454,11 @@ int __fd_lstat(const char *path, struct stat64 *buf) {
   } 
 
   {    
+#if __WORDSIZE == 64
+    int r = syscall(__NR_lstat, __concretize_string(path), buf);
+#else
     int r = syscall(__NR_lstat64, __concretize_string(path), buf);
+#endif
     if (r == -1)
       errno = klee_get_errno();
     return r;
@@ -618,7 +626,11 @@ int __fd_fstat(int fd, struct stat64 *buf) {
   }
   
   if (!f->dfile) {
+#if __WORDSIZE == 64
+    int r = syscall(__NR_fstat, f->fd, buf);
+#else
     int r = syscall(__NR_fstat64, f->fd, buf);
+#endif
     if (r == -1)
       errno = klee_get_errno();
     return r;
@@ -650,7 +662,11 @@ int __fd_ftruncate(int fd, off64_t length) {
     errno = EIO;
     return -1;
   } else {
+#if __WORDSIZE == 64
+    int r = syscall(__NR_ftruncate, f->fd, length);
+#else
     int r = syscall(__NR_ftruncate64, f->fd, length);
+#endif
     if (r == -1)
       errno = klee_get_errno();
     return r;
@@ -670,13 +686,13 @@ int __fd_getdents(unsigned int fd, struct dirent64 *dirp, unsigned int count) {
     errno = EINVAL;
     return -1;
   } else {
-    if ((unsigned) f->off < 4096u) {
+    if ((unsigned long) f->off < 4096u) {
       /* Return our dirents */
       unsigned i, pad, bytes=0;
 
       /* What happens for bad offsets? */
       i = f->off / sizeof(*dirp);
-      if ((i * sizeof(*dirp) != f->off) ||
+      if (((off64_t) (i * sizeof(*dirp)) != f->off) ||
           i > __exe_fs.n_sym_files) {
         errno = EINVAL;
         return -1;
@@ -738,7 +754,11 @@ int __fd_getdents(unsigned int fd, struct dirent64 *dirp, unsigned int count) {
   }
 }
 
+#if __WORDSIZE == 64
+int ioctl(int fd, unsigned long int request, ...) {
+#else
 int ioctl(int fd, unsigned long request, ...) {
+#endif
   exe_file_t *f = __get_file(fd);
   va_list ap;
   void *buf;
@@ -856,7 +876,7 @@ int ioctl(int fd, unsigned long request, ...) {
       int *res = buf;
       klee_warning_once("(FIONREAD) symbolic file, incomplete model");
       if (S_ISCHR(stat->st_mode)) {
-        if (f->off < f->dfile->size) {
+        if (f->off < (off64_t) f->dfile->size) {
           *res = f->dfile->size - f->off;
         } else {
           *res = 0;
