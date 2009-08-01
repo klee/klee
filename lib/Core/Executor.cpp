@@ -473,17 +473,17 @@ void Executor::initializeGlobals(ExecutionState &state) {
   const uint16_t **addr = __ctype_b_loc();
   addExternalObject(state, (void *)(*addr-128), 
                     384 * sizeof **addr, true);
-  addExternalObject(state, addr, 4, true);
+  addExternalObject(state, addr, sizeof(*addr), true);
     
   const int32_t **lower_addr = __ctype_tolower_loc();
   addExternalObject(state, (void *)(*lower_addr-128), 
                     384 * sizeof **lower_addr, true);
-  addExternalObject(state, lower_addr, 4, true);
+  addExternalObject(state, lower_addr, sizeof(*lower_addr), true);
   
   const int32_t **upper_addr = __ctype_toupper_loc();
   addExternalObject(state, (void *)(*upper_addr-128), 
                     384 * sizeof **upper_addr, true);
-  addExternalObject(state, upper_addr, 4, true);
+  addExternalObject(state, upper_addr, sizeof(*upper_addr), true);
 #endif
 #endif
 #endif
@@ -506,6 +506,7 @@ void Executor::initializeGlobals(ExecutionState &state) {
 
       // XXX - DWD - hardcode some things until we decide how to fix.
 #ifndef WINDOWS
+      // TODO: is it 64-bit clean ?
       if (i->getName() == "_ZTVN10__cxxabiv117__class_type_infoE") {
         size = 0x2C;
       } else if (i->getName() == "_ZTVN10__cxxabiv120__si_class_type_infoE") {
