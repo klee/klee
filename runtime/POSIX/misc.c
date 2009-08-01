@@ -36,7 +36,7 @@ void __klee_init_environ(unsigned nvars,
   __klee_sym_env_var_size = var_size;  
 }
 
-static unsigned __strlen(const char *s) {
+static size_t __strlen(const char *s) {
   const char *s2 = s;
   while (*s2) ++s2;
   return s2-s;
@@ -54,7 +54,7 @@ char *getenv(const char *name) {
   if (res) {
     return klee_range(0, 2, name) ? res : 0;
   } else {
-    unsigned i, len = __strlen(name);
+    size_t i, len = __strlen(name);
 
     if (len>=MAX_SYM_ENV_SIZE) {
       /* Don't deal with strings to large to fit in our name. */
