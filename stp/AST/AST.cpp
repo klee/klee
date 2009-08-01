@@ -749,31 +749,23 @@ namespace BEEV {
   //Create a ASTBVConst node
   ASTNode BeevMgr::CreateBVConst(unsigned int width, 
 				 unsigned long long int bvconst){ 
-    if(width > (sizeof(unsigned long long int)<<3) || width <= 0)
+    if(width == 0 || width > (sizeof(unsigned long long int)<<3))
       FatalError("CreateBVConst: trying to create a bvconst of width: ", ASTUndefined, width);
-    
 
     CBV bv = CONSTANTBV::BitVector_Create(width, true);
-    unsigned long c_val = (0x00000000ffffffffLL) & bvconst;
-    unsigned int copied = 0;
 
-    // sizeof(unsigned long) returns the number of bytes in unsigned
-    // long. In order to convert it to bits, we need to shift left by
-    // 3. Hence, sizeof(unsigned long) << 3
-
-    //The algo below works as follows: It starts by copying the
-    //lower-order bits of the input "bvconst" in chunks of size =
-    //number of bits in unsigned long. The variable "copied" keeps
-    //track of the number of chunks copied so far
-
-    while(copied + (sizeof(unsigned long)<<3) < width){
-      CONSTANTBV::BitVector_Chunk_Store(bv, sizeof(unsigned long)<<3,copied,c_val);
-      bvconst = bvconst >> (sizeof(unsigned long) << 3);
-      c_val = (0x00000000ffffffffLL) & bvconst;
-      copied += sizeof(unsigned long) << 3;
+    // Copy bvconst in using at most MaxChunkSize chunks, starting with the
+    // least significant bits.
+    const uint32_t MaxChunkSize = 32;
+    for (unsigned offset = 0; offset != width;) {
+      uint32_t numbits = std::min(MaxChunkSize, width - offset);
+      uint32_t mask = ~0 >> (32 - numbits);
+      CONSTANTBV::BitVector_Chunk_Store(bv, numbits, offset, 
+                                        (bvconst >> offset) & mask);
+      offset += numbits;
     }
-    CONSTANTBV::BitVector_Chunk_Store(bv,width - copied,copied,c_val);
-    return CreateBVConst(bv,width);
+
+    return CreateBVConst(bv, width);
   }
 
   //Create a ASTBVConst node from std::string
