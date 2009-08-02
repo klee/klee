@@ -506,7 +506,6 @@ void Executor::initializeGlobals(ExecutionState &state) {
 
       // XXX - DWD - hardcode some things until we decide how to fix.
 #ifndef WINDOWS
-      // TODO: is it 64-bit clean ?
       if (i->getName() == "_ZTVN10__cxxabiv117__class_type_infoE") {
         size = 0x2C;
       } else if (i->getName() == "_ZTVN10__cxxabiv120__si_class_type_infoE") {
@@ -2412,8 +2411,11 @@ std::string Executor::getAddressInfo(ExecutionState &state,
     info << "none\n";
   } else {
     const MemoryObject *mo = lower->first;
+    std::string alloc_info;
+    mo->getAllocInfo(alloc_info);
     info << "object at " << mo->address
-         << " of size " << mo->size << "\n";
+         << " of size " << mo->size << "\n"
+         << "\t\t" << alloc_info << "\n";
   }
   if (lower!=state.addressSpace.objects.begin()) {
     --lower;
@@ -2422,8 +2424,11 @@ std::string Executor::getAddressInfo(ExecutionState &state,
       info << "none\n";
     } else {
       const MemoryObject *mo = lower->first;
+      std::string alloc_info;
+      mo->getAllocInfo(alloc_info);
       info << "object at " << mo->address 
-           << " of size " << mo->size << "\n";
+           << " of size " << mo->size << "\n"
+           << "\t\t" << alloc_info << "\n";
     }
   }
 
