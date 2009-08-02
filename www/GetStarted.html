@@ -17,7 +17,7 @@
 
 <!-- <p>FIXME: Intro and disclaimer.</p> -->
 
-<h2 id="build">Building KLEE and Working with the Code</h2>
+<h2 id="build">Building KLEE</h2>
 
 <p>If you would like to try KLEE, the current procedure for building is
 below.</p>
@@ -25,64 +25,65 @@ KLEE is built on LLVM; the first steps are to get a working LLVM
 installation. See <a href="http://llvm.org/docs/GettingStarted.html">Getting
 Started with the LLVM System</a> for more information.
 
-<p><b>NOTE:</b> KLEE is only currently tested on Linux and Darwin x86-32 targets,
-using LLVM top-of-tree. KLEE will not work with an older LLVM (e.g., 2.5), and is
-currently untested on any x86-64 target, although we hope to add support for
-them soon.<p>
+<p><b>NOTE:</b> KLEE is only currently tested on Linux and Darwin x86-32
+targets, using LLVM top-of-tree. KLEE will not work with an older LLVM (e.g.,
+2.5). We are currently working on full support for Linux and Darwin x86-64
+targets.<p>
 
 <ol>
-<li>Install llvm-gcc:</li>
-<ul>
-<li>Download and install the LLVM 2.5 release of <tt>llvm-gcc</tt>
-  from <a href="http://llvm.org/releases/download.html">here</a>.  Add
-  <tt>llvm-gcc</tt> to your  <tt>PATH</tt>. It
-  is important to do this first so that <tt>llvm-gcc</tt> is found in
-  subsequent <tt>configure</tt> steps. <tt>llvm-gcc</tt> will be used
-  later to compile programs that KLEE can execute.</li>
-</ul>
-
-<li><a href="http://www.llvm.org/docs/GettingStarted.html#checkout">Checkout
-    and build LLVM</a> from SVN head (LLVM 2.5 will not work):
-    
-  <div class="instr">
-    svn co http://llvm.org/svn/llvm-project/llvm/trunk llvm <br>
-    cd llvm <br>
-    ./configure --enable-optimized <br>
-    make
-  </div>
-
-(the <tt>--enable-optimized</tt> configure argument is not
-necessary, but KLEE runs very slowly in Debug mode).
+  <li>Install llvm-gcc:
+    <ul>
+      <li>Download and install the LLVM 2.5 release of <tt>llvm-gcc</tt>
+        from <a href="http://llvm.org/releases/download.html">here</a>.  Add
+        <tt>llvm-gcc</tt> to your <tt>PATH</tt>. It is important to do this first
+        so that <tt>llvm-gcc</tt> is found in subsequent <tt>configure</tt>
+      steps. <tt>llvm-gcc</tt> will be used later to compile programs that KLEE
+        can execute.</li>
+    </ul>
   </li>
 
+  <li><a href="http://www.llvm.org/docs/GettingStarted.html#checkout">Checkout
+      and build LLVM</a> from SVN head (LLVM 2.5 will not work):
+    
+    <div class="instr">
+      $ svn co http://llvm.org/svn/llvm-project/llvm/trunk llvm <br>
+      $ cd llvm <br>
+      $ ./configure --enable-optimized <br>
+      $ make
+    </div>
+    
+    (the <tt>--enable-optimized</tt> configure argument is not necessary, but
+    KLEE runs very slowly in Debug mode).
+  </li>
+  
   <li>Checkout KLEE (to any path you like):
     <div class="instr">
-      svn co http://llvm.org/svn/llvm-project/klee/trunk klee
+      $ svn co http://llvm.org/svn/llvm-project/klee/trunk klee
     </div>
   </li>
   
   <li>Configure KLEE (from the KLEE source directory): 
     <div class="instr">
-      ./configure --with-llvm=<i>path/to/llvm</i>
+      $ ./configure --with-llvm=<i>path/to/llvm</i>
     </div>
     
     <p>This assumes that you compiled LLVM in-place.  If you used a
       different directory for the object files then use:
       <div class="instr">
-	./configure --with-llvmsrc=<i>path/to/llvm/src</i> --with-llvmobj=<i>path/to/llvm/obj</i>
+	$ ./configure --with-llvmsrc=<i>path/to/llvm/src</i> --with-llvmobj=<i>path/to/llvm/obj</i>
       </div>
   </li>
 
   <li>Build KLEE (from the KLEE source directory):
     <div class="instr">
-      make ENABLE_OPTIMIZED=1
+      $ make ENABLE_OPTIMIZED=1
     </div>
   </li>
 
   <li>Run the regression suite to verify your build:
     <div class="instr">
-      make check<br>
-      make unittests<br>
+      $ make check<br>
+      $ make unittests<br>
     </div>
   </li>
 
@@ -90,16 +91,48 @@ necessary, but KLEE runs very slowly in Debug mode).
   to try KLEE.</li>
 </ol>
 
-<!--   <h2> Full Installation </h2> -->
+<h2 id="uclib">Building KLEE with POSIX runtime support</h2>
+
+<p>The steps above are enough for building and testing KLEE on closed programs
+(programs that don't use any external code such as C library
+functions). However, if you want to use KLEE to run real programs you will want
+to enable the KLEE POSIX runtime, which is built on top of the uClibc C
+library.</p>
+
+<ol>
+  <li>Download KLEE's uClibc:
+    <ul>
+      <li>
+        KLEE uses a version of <a href="http://uclibc.org">uClibc</a> which has
+        been modified slightly for use with KLEE. It is available for download
+        here: <a href="http://t1.minormatter.com/~ddunbar/klee-uclibc-0.01.tgz">klee-uclibc-0.01.tgz</a>.
+      </li>
+    </ul>
+  </li>
   
-<!--   If you need uCLibc and/or POSIX support add <i>-with-uclibc</i> -->
-<!--   and <i>-enable-posix-runtime</i> to configure.  Thus, to enable -->
-<!--   both, replace step 3 above with: -->
-  
-<!--   <div class="instr"> -->
-<!--     ./configure -with-llvm=<i>path/to/llvm</i> -with-uclibc -enable-posix-runtime ENABLE_OPTIMIZED=1 -->
-<!--   </div> -->
-<!--   However, note that... -->
+  <li>Build uClibc with <tt>llvm-gcc</tt>:
+    <div class="instr">
+      $ tar zxvf klee-uclibc-0.01.tgz <br>
+      $ ./configure --with-llvm=<i>path/to/llvm</i> <br>
+      $ make <br>
+    </div>
+
+    <p><b>NOTE:</b> KLEE's uClibc is shipped in a pre-configured for x86-32. If
+      you are on a different target (e.g. x86-64), you will need to run 'make
+      config' and select the correct target. The defaults for the other uClibc
+      configuration variables should be fine.<p>
+  </li>
+
+  <li>Configure KLEE with uClibc/POSIX support:
+    <div class="instr">
+      $ ./configure --with-llvm=<i>path/to/llvm</i> --with-uclibc=<i>path/to/klee-uclibc</i> --enable-posix-runtime
+    </div>
+  </li>
+
+  <li>Rebuild KLEE and run <tt>make check</tt> and verify that the POSIX tests
+    run correctly.
+  </li>
+</ol>
 
 </div>
 </body>
