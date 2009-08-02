@@ -377,8 +377,8 @@ void KleeHandler::processTestCase(const ExecutionState &state,
                                   const char *errorMessage, 
                                   const char *errorSuffix) {
   if (errorMessage && ExitOnError) {
-    llvm::cerr << "EXITING ON ERROR: " << errorMessage << "\n";
-    abort();
+    llvm::cerr << "EXITING ON ERROR:\n" << errorMessage << "\n";
+    exit(1);
   }
 
   if (!NoOutput) {
