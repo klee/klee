@@ -5,14 +5,19 @@
 
 include Makefile.common
 
-BINARIES=bin/stp
-LIBS=AST/libast.a sat/libsatsolver.a simplifier/libsimplifier.a bitvec/libconsteval.a constantbv/libconstantbv.a c_interface/libcinterface.a
-DIRS=AST sat simplifier bitvec c_interface constantbv parser
+USE_PARSER := 0
+
+LIBS := AST/libast.a sat/libsatsolver.a simplifier/libsimplifier.a bitvec/libconsteval.a constantbv/libconstantbv.a c_interface/libcinterface.a
+DIRS := AST sat simplifier bitvec c_interface constantbv
+
+ifeq ($(USE_PARSER), 1)
+DIRS += parser
+endif
 
 # NB: the TAGS target is a hack to get around this recursive make nonsense
 # we want all the source and header files generated before we make tags
 .PHONY: all
-all: lib/libstp.a bin/stp include/stp/c_interface.h
+all: lib/libstp.a include/stp/c_interface.h
 
 AST/libast.a:
 	@$(MAKE) -q -C `dirname $@` || $(MAKE) -C `dirname $@`
@@ -29,7 +34,7 @@ c_interface/libcinterface.a: AST/libast.a
 parser/parser: $(LIBS)
 	@$(MAKE) -q -C `dirname $@` || $(MAKE) -C `dirname $@`
 
-lib/libstp.a: parser/parser $(LIBS)
+lib/libstp.a: $(LIBS)
 	@mkdir -p lib
 	rm -f $@
 	@for dir in $(DIRS); do \
