@@ -1861,10 +1861,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     KGEPInstruction *kgepi = static_cast<KGEPInstruction*>(ki);
     ref<Expr> base = eval(ki, 0, state).value;
 
-    for (std::vector< std::pair<unsigned, unsigned> >::iterator 
+    for (std::vector< std::pair<unsigned, uint64_t> >::iterator 
            it = kgepi->indices.begin(), ie = kgepi->indices.end(); 
          it != ie; ++it) {
-      unsigned elementSize = it->second;
+      uint64_t elementSize = it->second;
       ref<Expr> index = eval(ki, it->first, state).value;
       base = AddExpr::create(base,
                              MulExpr::create(Expr::createCoerceToPointerType(index),
@@ -2199,7 +2199,7 @@ void Executor::bindInstructionConstants(KInstruction *KI) {
   KGEPInstruction *kgepi = static_cast<KGEPInstruction*>(KI);
   ref<ConstantExpr> constantOffset =
     ConstantExpr::alloc(0, Context::get().getPointerWidth());
-  unsigned index = 1;
+  uint64_t index = 1;
   for (gep_type_iterator ii = gep_type_begin(gepi), ie = gep_type_end(gepi);
        ii != ie; ++ii) {
     if (const StructType *st = dyn_cast<StructType>(*ii)) {
@@ -2210,7 +2210,7 @@ void Executor::bindInstructionConstants(KInstruction *KI) {
                                                                Context::get().getPointerWidth()));
     } else {
       const SequentialType *st = cast<SequentialType>(*ii);
-      unsigned elementSize = 
+      uint64_t elementSize = 
         kmodule->targetData->getTypeStoreSize(st->getElementType());
       Value *operand = ii.getOperand();
       if (Constant *c = dyn_cast<Constant>(operand)) {

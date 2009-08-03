@@ -10,6 +10,7 @@
 #ifndef KLEE_KINSTRUCTION_H
 #define KLEE_KINSTRUCTION_H
 
+#include "llvm/Support/DataTypes.h"
 #include <vector>
 
 namespace llvm {
@@ -41,8 +42,15 @@ namespace klee {
   };
 
   struct KGEPInstruction : KInstruction {
-    std::vector< std::pair<unsigned, unsigned> > indices;
-    unsigned offset;
+    /// indices - The list of variable sized adjustments to add to the pointer
+    /// operand to execute the instruction. The first element is the operand
+    /// index into the GetElementPtr instruction, and the second element is the
+    /// element size to multiple that index by.
+    std::vector< std::pair<unsigned, uint64_t> > indices;
+
+    /// offset - A constant offset to add to the pointer operand to execute the
+    /// insturction.
+    uint64_t offset;
   };
 }
 

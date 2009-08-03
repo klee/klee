@@ -330,8 +330,6 @@ void SpecialFunctionHandler::handleDelete(ExecutionState &state,
 void SpecialFunctionHandler::handleNewArray(ExecutionState &state,
                               KInstruction *target,
                               std::vector<ref<Expr> > &arguments) {
-  // FIXME: This is broken, it doesn't allocate space for the count.
-
   // XXX should type check args
   assert(arguments.size()==1 && "invalid number of arguments to new[]");
   executor.executeAlloc(state, arguments[0], false, target);
@@ -340,8 +338,6 @@ void SpecialFunctionHandler::handleNewArray(ExecutionState &state,
 void SpecialFunctionHandler::handleDeleteArray(ExecutionState &state,
                                  KInstruction *target,
                                  std::vector<ref<Expr> > &arguments) {
-  // FIXME: This is broken, it doesn't allocate space for the count.
-
   // XXX should type check args
   assert(arguments.size()==1 && "invalid number of arguments to delete[]");
   executor.executeFree(state, arguments[0]);
