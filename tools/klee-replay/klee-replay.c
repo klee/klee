@@ -24,8 +24,8 @@
 
 static void __emit_error(const char *msg);
 
-static KTest* input = NULL;
-static unsigned obj_index = 0;
+static KTest* input;
+static unsigned obj_index;
 
 static const char *progname = 0;
 static unsigned monitored_pid = 0;    
@@ -91,7 +91,8 @@ static void int_handler(int signal) {
   }
 }
 static void timeout_handler(int signal) {
-  fprintf(stderr, "EXIT STATUS: TIMED OUT (%d seconds)\n", monitored_timeout);
+  fprintf(stderr, "%s: EXIT STATUS: TIMED OUT (%d seconds)\n", progname, 
+          monitored_timeout);
   if (monitored_pid) {
     stop_monitored(monitored_pid);
     /* Kill the process group of monitored_pid.  Since we called
@@ -106,7 +107,7 @@ static void timeout_handler(int signal) {
 void process_status(int status,
 		    time_t elapsed, 
 		    const char *pfx) {
-
+  fprintf(stderr, "%s: ", progname);
   if (pfx)
     fprintf(stderr, "%s: ", pfx);
   if (WIFSIGNALED(status)) {
@@ -190,6 +191,13 @@ static void run_monitored(char *executable, int argc, char **argv) {
   }
 }
 
+static void usage(void) {
+  fprintf(stderr, "Usage: %s <executable> { <ktest-files> }\n", progname);
+  fprintf(stderr, "   or: %s --create-files-only <ktest-file>\n", progname);
+  fprintf(stderr, "\n");
+  fprintf(stderr, "Set KLEE_REPLAY_TIMEOUT environment variable to set a timeout (in seconds).\n");
+  exit(1);
+}
 
 int main(int argc, char** argv) {
   int prg_argc;
@@ -197,17 +205,16 @@ int main(int argc, char** argv) {
 
   progname = argv[0];
 
-  if (argc != 3) {
-    fprintf(stderr, "Usage: %s <executable> <ktest-file>\n",argv[0]);
-    fprintf(stderr, "       %s --create-files-only <ktest-file>\n", argv[0]);
-    fprintf(stderr, "       Set KLEE_REPLAY_TIMEOUT environment variable to set a timeout (in seconds)\n");
-    exit(1);
-  }
+  if (argc < 3)
+    usage();
 
   /* Special case hack for only creating files and not actually executing the
    * program.
    */
   if (strcmp(argv[1], "--create-files-only") == 0) {
+    if (argc != 3)
+      usage();
+
     char* input_fname = argv[2];
 
     input = kTest_fromFile(input_fname);
@@ -229,9 +236,8 @@ int main(int argc, char** argv) {
   /* Normal execution path ... */
 
   char* executable = argv[1];
-  char* input_fname = argv[2];
-  unsigned i;
-
+  
+  /* Verify the executable exists. */
   FILE *f = fopen(executable, "r");
   if (!f) {
     fprintf(stderr, "Error: executable %s not found.\n", executable);
@@ -239,28 +245,61 @@ int main(int argc, char** argv) {
   }
   fclose(f);
 
-  input = kTest_fromFile(input_fname);
-  if (!input) {
-    fprintf(stderr, "%s: error: input file %s not valid.\n", progname, 
-            input_fname);
-    exit(1);
-  }
-  
-  prg_argc = input->numArgs;
-  prg_argv = input->args;
-  prg_argv[0] = argv[1];
-  klee_init_env(&prg_argc, &prg_argv);
-  fprintf(stderr, "ARGS: ");
-  for (i=0; i != (unsigned) prg_argc; ++i) {
-    char *s = prg_argv[i];
-    if (s[0]=='A' && s[1] && !s[2]) s[1] = '\0';
-    fprintf(stderr, "\"%s\" ", prg_argv[i]); 
-  }
-  fprintf(stderr, "\n");
-  
-  replay_create_files(&__exe_fs);
+  int idx = 0;
+  for (idx = 2; idx != argc; ++idx) {
+    char* input_fname = argv[idx];
+    unsigned i;
+    
+    input = kTest_fromFile(input_fname);
+    if (!input) {
+      fprintf(stderr, "%s: error: input file %s not valid.\n", progname, 
+              input_fname);
+      exit(1);
+    }
+    
+    obj_index = 0;
+    prg_argc = input->numArgs;
+    prg_argv = input->args;
+    prg_argv[0] = argv[1];
+    klee_init_env(&prg_argc, &prg_argv);
 
-  run_monitored(executable, prg_argc, prg_argv);
+    if (idx > 2)
+      fprintf(stderr, "\n");
+    fprintf(stderr, "%s: TEST CASE: %s\n", progname, input_fname);
+    fprintf(stderr, "%s: ARGS: ", progname);
+    for (i=0; i != (unsigned) prg_argc; ++i) {
+      char *s = prg_argv[i];
+      if (s[0]=='A' && s[1] && !s[2]) s[1] = '\0';
+      fprintf(stderr, "\"%s\" ", prg_argv[i]); 
+    }
+    fprintf(stderr, "\n");
+
+    /* Run the test case machinery in a subprocess, eventually this parent
+       process should be a script or something which shells out to the actual
+       execution tool. */
+    int pid = fork();
+    if (pid < 0) {
+      perror("fork");
+      _exit(66);
+    } else if (pid == 0) {
+      /* Create the input files, pipes, etc., and run the process. */
+      replay_create_files(&__exe_fs);
+      run_monitored(executable, prg_argc, prg_argv);
+      _exit(0);
+    } else {
+      /* Wait for the test case. */
+      int res, status;
+
+      do {
+        res = waitpid(pid, &status, 0);
+      } while (res < 0 && errno == EINTR);
+      
+      if (res < 0) {
+        perror("waitpid");
+        _exit(66);
+      }
+    }
+  }
 
   return 0;
 }
