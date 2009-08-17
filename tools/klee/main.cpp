@@ -618,11 +618,11 @@ static int initEnv(Module *mainModule) {
 
   /* Insert void klee_init_env(int* argc, char*** argv) */
   std::vector<const Type*> params;
-  params.push_back(Type::Int32Ty);
-  params.push_back(Type::Int32Ty);
+  params.push_back(Type::getInt32Ty(getGlobalContext()));
+  params.push_back(Type::getInt32Ty(getGlobalContext()));
   Function* initEnvFn = 
     cast<Function>(mainModule->getOrInsertFunction("klee_init_env",
-                                                   Type::VoidTy,
+                                                   Type::getVoidTy(getGlobalContext()),
                                                    argcPtr->getType(),
                                                    argvPtr->getType(),
                                                    NULL));
@@ -928,28 +928,29 @@ static llvm::Module *linkWithUclibc(llvm::Module *mainModule) {
   Function *f;
   // force import of __uClibc_main
   mainModule->getOrInsertFunction("__uClibc_main",
-                                  FunctionType::get(Type::VoidTy,
+                                  FunctionType::get(Type::getVoidTy(getGlobalContext()),
                                                     std::vector<const Type*>(),
                                                     true));
   
   // force various imports
   if (WithPOSIXRuntime) {
+    const llvm::Type *i8Ty = Type::getInt8Ty(getGlobalContext());
     mainModule->getOrInsertFunction("realpath",
-                                    PointerType::getUnqual(Type::Int8Ty),
-                                    PointerType::getUnqual(Type::Int8Ty),
-                                    PointerType::getUnqual(Type::Int8Ty),
+                                    PointerType::getUnqual(i8Ty),
+                                    PointerType::getUnqual(i8Ty),
+                                    PointerType::getUnqual(i8Ty),
                                     NULL);
     mainModule->getOrInsertFunction("getutent",
-                                    PointerType::getUnqual(Type::Int8Ty),
+                                    PointerType::getUnqual(i8Ty),
                                     NULL);
     mainModule->getOrInsertFunction("__fgetc_unlocked",
-                                    Type::Int32Ty,
-                                    PointerType::getUnqual(Type::Int8Ty),
+                                    Type::getInt32Ty(getGlobalContext()),
+                                    PointerType::getUnqual(i8Ty),
                                     NULL);
     mainModule->getOrInsertFunction("__fputc_unlocked",
-                                    Type::Int32Ty,
-                                    Type::Int32Ty,
-                                    PointerType::getUnqual(Type::Int8Ty),
+                                    Type::getInt32Ty(getGlobalContext()),
+                                    Type::getInt32Ty(getGlobalContext()),
+                                    PointerType::getUnqual(i8Ty),
                                     NULL);
   }
 
@@ -1039,11 +1040,11 @@ static llvm::Module *linkWithUclibc(llvm::Module *mainModule) {
   std::vector<const Type*> fArgs;
   fArgs.push_back(ft->getParamType(1)); // argc
   fArgs.push_back(ft->getParamType(2)); // argv
-  Function *stub = Function::Create(FunctionType::get(Type::Int32Ty, fArgs, false),
+  Function *stub = Function::Create(FunctionType::get(Type::getInt32Ty(getGlobalContext()), fArgs, false),
       			      GlobalVariable::ExternalLinkage,
       			      "main",
       			      mainModule);
-  BasicBlock *bb = BasicBlock::Create("entry", stub);
+  BasicBlock *bb = BasicBlock::Create(getGlobalContext(), "entry", stub);
 
   std::vector<llvm::Value*> args;
   args.push_back(llvm::ConstantExpr::getBitCast(userMainFn, 
@@ -1056,7 +1057,7 @@ static llvm::Module *linkWithUclibc(llvm::Module *mainModule) {
   args.push_back(Constant::getNullValue(ft->getParamType(6))); // stack_end
   CallInst::Create(uclibcMainFn, args.begin(), args.end(), "", bb);
   
-  new UnreachableInst(bb);
+  new UnreachableInst(getGlobalContext(), bb);
 
   return mainModule;
 }

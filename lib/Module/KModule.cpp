@@ -112,12 +112,12 @@ static Function *getStubFunctionForCtorList(Module *m,
   
   std::vector<const Type*> nullary;
 
-  Function *fn = Function::Create(FunctionType::get(Type::VoidTy, 
+  Function *fn = Function::Create(FunctionType::get(Type::getVoidTy(getGlobalContext()), 
 						    nullary, false),
 				  GlobalVariable::InternalLinkage, 
 				  name,
                               m);
-  BasicBlock *bb = BasicBlock::Create("entry", fn);
+  BasicBlock *bb = BasicBlock::Create(getGlobalContext(), "entry", fn);
   
   // From lli:
   // Should be an array of '{ int, void ()* }' structs.  The first value is
@@ -142,7 +142,7 @@ static Function *getStubFunctionForCtorList(Module *m,
     }
   }
   
-  ReturnInst::Create(bb);
+  ReturnInst::Create(getGlobalContext(), bb);
 
   return fn;
 }
@@ -197,7 +197,8 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
     Function *mergeFn = module->getFunction("klee_merge");
     if (!mergeFn) {
       const llvm::FunctionType *Ty = 
-        FunctionType::get(Type::VoidTy, std::vector<const Type*>(), false);
+        FunctionType::get(Type::getVoidTy(getGlobalContext()), 
+                          std::vector<const Type*>(), false);
       mergeFn = Function::Create(Ty, GlobalVariable::ExternalLinkage,
 				 "klee_merge",
 				 module);
@@ -215,12 +216,12 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
                    name.c_str());
       }
 
-      BasicBlock *exit = BasicBlock::Create("exit", f);
+      BasicBlock *exit = BasicBlock::Create(getGlobalContext(), "exit", f);
       PHINode *result = 0;
-      if (f->getReturnType() != Type::VoidTy)
+      if (f->getReturnType() != Type::getVoidTy(getGlobalContext()))
         result = PHINode::Create(f->getReturnType(), "retval", exit);
       CallInst::Create(mergeFn, "", exit);
-      ReturnInst::Create(result, exit);
+      ReturnInst::Create(getGlobalContext(), result, exit);
 
       llvm::errs() << "KLEE: adding klee_merge at exit of: " << name << "\n";
       for (llvm::Function::iterator bbit = f->begin(), bbie = f->end(); 
@@ -263,18 +264,19 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   // by name. We only add them if such a function doesn't exist to
   // avoid creating stale uses.
 
-  forceImport(module, "memcpy", PointerType::getUnqual(Type::Int8Ty),
-              PointerType::getUnqual(Type::Int8Ty),
-              PointerType::getUnqual(Type::Int8Ty),
-              targetData->getIntPtrType(), (Type*) 0);
-  forceImport(module, "memmove", PointerType::getUnqual(Type::Int8Ty),
-              PointerType::getUnqual(Type::Int8Ty),
-              PointerType::getUnqual(Type::Int8Ty),
-              targetData->getIntPtrType(), (Type*) 0);
-  forceImport(module, "memset", PointerType::getUnqual(Type::Int8Ty),
-              PointerType::getUnqual(Type::Int8Ty),
-              Type::Int32Ty,
-              targetData->getIntPtrType(), (Type*) 0);
+  const llvm::Type *i8Ty = Type::getInt8Ty(getGlobalContext());
+  forceImport(module, "memcpy", PointerType::getUnqual(i8Ty),
+              PointerType::getUnqual(i8Ty),
+              PointerType::getUnqual(i8Ty),
+              targetData->getIntPtrType(getGlobalContext()), (Type*) 0);
+  forceImport(module, "memmove", PointerType::getUnqual(i8Ty),
+              PointerType::getUnqual(i8Ty),
+              PointerType::getUnqual(i8Ty),
+              targetData->getIntPtrType(getGlobalContext()), (Type*) 0);
+  forceImport(module, "memset", PointerType::getUnqual(i8Ty),
+              PointerType::getUnqual(i8Ty),
+              Type::getInt32Ty(getGlobalContext()),
+              targetData->getIntPtrType(getGlobalContext()), (Type*) 0);
 
   // FIXME: Missing force import for various math functions.
 

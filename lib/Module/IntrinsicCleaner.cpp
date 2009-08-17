@@ -61,18 +61,18 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b) {
         Value *src = ii->getOperand(2);
 
         if (WordSize == 4) {
-          Type *i8pp = PointerType::getUnqual(PointerType::getUnqual(Type::Int8Ty));
+          Type *i8pp = PointerType::getUnqual(PointerType::getUnqual(Type::getInt8Ty(getGlobalContext())));
           Value *castedDst = CastInst::CreatePointerCast(dst, i8pp, "vacopy.cast.dst", ii);
           Value *castedSrc = CastInst::CreatePointerCast(src, i8pp, "vacopy.cast.src", ii);
           Value *load = new LoadInst(castedSrc, "vacopy.read", ii);
           new StoreInst(load, castedDst, false, ii);
         } else {
           assert(WordSize == 8 && "Invalid word size!");
-          Type *i64p = PointerType::getUnqual(Type::Int64Ty);
+          Type *i64p = PointerType::getUnqual(Type::getInt64Ty(getGlobalContext()));
           Value *pDst = CastInst::CreatePointerCast(dst, i64p, "vacopy.cast.dst", ii);
           Value *pSrc = CastInst::CreatePointerCast(src, i64p, "vacopy.cast.src", ii);
           Value *val = new LoadInst(pSrc, std::string(), ii); new StoreInst(val, pDst, ii);
-          Value *off = ConstantInt::get(Type::Int64Ty, 1);
+          Value *off = ConstantInt::get(Type::getInt64Ty(getGlobalContext()), 1);
           pDst = GetElementPtrInst::Create(pDst, off, std::string(), ii);
           pSrc = GetElementPtrInst::Create(pSrc, off, std::string(), ii);
           val = new LoadInst(pSrc, std::string(), ii); new StoreInst(val, pDst, ii);

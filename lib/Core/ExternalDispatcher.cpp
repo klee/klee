@@ -188,20 +188,20 @@ Function *ExternalDispatcher::createDispatcher(Function *target, Instruction *in
 
   std::vector<const Type*> nullary;
   
-  Function *dispatcher = Function::Create(FunctionType::get(Type::VoidTy, 
+  Function *dispatcher = Function::Create(FunctionType::get(Type::getVoidTy(getGlobalContext()), 
 							    nullary, false),
 					  GlobalVariable::ExternalLinkage, 
 					  "",
 					  dispatchModule);
 
 
-  BasicBlock *dBB = BasicBlock::Create("entry", dispatcher);
+  BasicBlock *dBB = BasicBlock::Create(getGlobalContext(), "entry", dispatcher);
 
   // Get a Value* for &gTheArgsP, as an i64**.
   Instruction *argI64sp = 
-    new IntToPtrInst(ConstantInt::get(Type::Int64Ty, 
+    new IntToPtrInst(ConstantInt::get(Type::getInt64Ty(getGlobalContext()), 
                                       (uintptr_t) (void*) &gTheArgsP),
-                     PointerType::getUnqual(PointerType::getUnqual(Type::Int64Ty)),
+                     PointerType::getUnqual(PointerType::getUnqual(Type::getInt64Ty(getGlobalContext()))),
                      "argsp", dBB);
   Instruction *argI64s = new LoadInst(argI64sp, "args", dBB); 
   
@@ -219,7 +219,9 @@ Function *ExternalDispatcher::createDispatcher(Function *target, Instruction *in
     const Type *argTy = (i < FTy->getNumParams() ? FTy->getParamType(i) : 
                          (*ai)->getType());
     Instruction *argI64p = 
-      GetElementPtrInst::Create(argI64s, ConstantInt::get(Type::Int32Ty, i+1), 
+      GetElementPtrInst::Create(argI64s, 
+                                ConstantInt::get(Type::getInt32Ty(getGlobalContext()), 
+                                                 i+1), 
                                 "", dBB);
 
     Instruction *argp = new BitCastInst(argI64p, PointerType::getUnqual(argTy),
@@ -228,14 +230,14 @@ Function *ExternalDispatcher::createDispatcher(Function *target, Instruction *in
   }
 
   Instruction *result = CallInst::Create(target, args, args+i, "", dBB);
-  if (result->getType() != Type::VoidTy) {
+  if (result->getType() != Type::getVoidTy(getGlobalContext())) {
     Instruction *resp = 
       new BitCastInst(argI64s, PointerType::getUnqual(result->getType()), 
                       "", dBB);
     new StoreInst(result, resp, dBB);
   }
 
-  ReturnInst::Create(dBB);
+  ReturnInst::Create(getGlobalContext(), dBB);
 
   delete[] args;
 

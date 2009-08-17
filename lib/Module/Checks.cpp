@@ -44,7 +44,7 @@ bool DivCheckPass::runOnModule(Module &M) {
             
             CastInst *denominator =
               CastInst::CreateIntegerCast(i->getOperand(1),
-                                          (Type*)Type::Int64Ty,
+                                          Type::getInt64Ty(getGlobalContext()),
                                           false,  /* sign doesn't matter */
                                           "int_cast_to_i64",
                                           i);
@@ -52,8 +52,9 @@ bool DivCheckPass::runOnModule(Module &M) {
             // Lazily bind the function to avoid always importing it.
             if (!divZeroCheckFunction) {
               Constant *fc = M.getOrInsertFunction("klee_div_zero_check", 
-                                                   Type::VoidTy, 
-                                                   Type::Int64Ty, NULL);
+                                                   Type::getVoidTy(getGlobalContext()), 
+                                                   Type::getInt64Ty(getGlobalContext()), 
+                                                   NULL);
               divZeroCheckFunction = cast<Function>(fc);
             }
 

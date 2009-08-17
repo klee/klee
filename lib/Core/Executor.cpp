@@ -1337,7 +1337,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
       if (!isVoidReturn) {
         const Type *t = caller->getType();
-        if (t != Type::VoidTy) {
+        if (t != Type::getVoidTy(getGlobalContext())) {
           // may need to do coercion due to bitcasts
           Expr::Width from = result->getWidth();
           Expr::Width to = Expr::getWidthForLLVMType(t);
@@ -2623,7 +2623,7 @@ void Executor::callExternalFunction(ExecutionState &state,
   }
 
   const Type *resultType = target->inst->getType();
-  if (resultType != Type::VoidTy) {
+  if (resultType != Type::getVoidTy(getGlobalContext())) {
     ref<Expr> e = ConstantExpr::fromMemory((void*) args, 
                                            Expr::getWidthForLLVMType(resultType));
     bindLocal(target, state, e);

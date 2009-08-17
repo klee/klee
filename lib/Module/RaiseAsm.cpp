@@ -35,10 +35,10 @@ bool RaiseAsmPass::runOnInstruction(Module &M, Instruction *I) {
       // bswaps
       if (ci->getNumOperands() == 2 && 
           T == ci->getOperand(1)->getType() &&
-          ((T == llvm::Type::Int16Ty && 
+          ((T == llvm::Type::getInt16Ty(getGlobalContext()) && 
             as == "rorw $$8, ${0:w}" &&
             cs == "=r,0,~{dirflag},~{fpsr},~{flags},~{cc}") ||
-           (T == llvm::Type::Int32Ty &&
+           (T == llvm::Type::getInt32Ty(getGlobalContext()) &&
             as == "rorw $$8, ${0:w};rorl $$16, $0;rorw $$8, ${0:w}" &&
             cs == "=r,0,~{dirflag},~{fpsr},~{flags},~{cc}"))) {
         llvm::Value *Arg0 = ci->getOperand(1);
