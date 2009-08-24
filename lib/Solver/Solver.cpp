@@ -164,7 +164,7 @@ std::pair< ref<Expr>, ref<Expr> > Solver::getRange(const Query& query) {
     // binary search for # of useful bits
     uint64_t lo=0, hi=width, mid, bits=0;
     while (lo<hi) {
-      mid = (lo+hi)/2;
+      mid = lo + (hi - lo)/2;
       bool res;
       bool success = 
         mustBeTrue(query.withExpr(
@@ -205,7 +205,7 @@ std::pair< ref<Expr>, ref<Expr> > Solver::getRange(const Query& query) {
       // binary search for min
       lo=0, hi=bits64::maxValueOfNBits(bits);
       while (lo<hi) {
-        mid = (lo+hi)/2;
+        mid = lo + (hi - lo)/2;
         bool res = false;
         bool success = 
           mayBeTrue(query.withExpr(UleExpr::create(e, 
@@ -229,7 +229,7 @@ std::pair< ref<Expr>, ref<Expr> > Solver::getRange(const Query& query) {
     // binary search for max
     lo=min, hi=bits64::maxValueOfNBits(bits);
     while (lo<hi) {
-      mid = (lo+hi)/2;
+      mid = lo + (hi - lo)/2;
       bool res;
       bool success = 
         mustBeTrue(query.withExpr(UleExpr::create(e, 
