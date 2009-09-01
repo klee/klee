@@ -18,12 +18,10 @@
 #include "llvm/Support/CFG.h"
 #include "llvm/Support/InstIterator.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/raw_os_ostream.h"
 #include "llvm/Analysis/ValueTracking.h"
 
 #include <map>
-#include <iostream>
-#include <fstream>
-#include <sstream>
 #include <string>
 
 using namespace llvm;
@@ -39,9 +37,10 @@ public:
 static void buildInstructionToLineMap(Module *m,
                                       std::map<const Instruction*, unsigned> &out) {  
   InstructionToLineAnnotator a;
-  std::ostringstream buffer;
-  m->print(buffer, &a);
-  std::string str = buffer.str();
+  std::string str;
+  llvm::raw_string_ostream os(str);
+  m->print(os, &a);
+  os.flush();
   const char *s;
 
   unsigned line = 1;

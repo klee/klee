@@ -10,13 +10,13 @@
 #include "klee/Expr.h"
 
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Streams.h"
 // FIXME: We shouldn't need this once fast constant support moves into
 // Core. If we need to do arithmetic, we probably want to use APInt.
 #include "klee/Internal/Support/IntEvaluation.h"
 
 #include "klee/util/ExprPPrinter.h"
 
+#include <iostream>
 #include <sstream>
 
 using namespace klee;
@@ -291,8 +291,8 @@ void Expr::print(std::ostream &os) const {
 }
 
 void Expr::dump() const {
-  this->print(*llvm::cerr.stream());
-  llvm::cerr << std::endl;
+  this->print(std::cerr);
+  std::cerr << std::endl;
 }
 
 /***/

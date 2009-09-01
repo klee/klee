@@ -147,7 +147,7 @@ std::ostream &klee::operator<<(std::ostream &os, const MemoryMap &mm) {
 
 bool ExecutionState::merge(const ExecutionState &b) {
   if (DebugLogStateMerge)
-    llvm::cerr << "-- attempting merge of A:" 
+    std::cerr << "-- attempting merge of A:" 
                << this << " with B:" << &b << "--\n";
   if (pc != b.pc)
     return false;
@@ -185,21 +185,21 @@ bool ExecutionState::merge(const ExecutionState &b) {
                       commonConstraints.begin(), commonConstraints.end(),
                       std::inserter(bSuffix, bSuffix.end()));
   if (DebugLogStateMerge) {
-    llvm::cerr << "\tconstraint prefix: [";
+    std::cerr << "\tconstraint prefix: [";
     for (std::set< ref<Expr> >::iterator it = commonConstraints.begin(), 
            ie = commonConstraints.end(); it != ie; ++it)
-      llvm::cerr << *it << ", ";
-    llvm::cerr << "]\n";
-    llvm::cerr << "\tA suffix: [";
+      std::cerr << *it << ", ";
+    std::cerr << "]\n";
+    std::cerr << "\tA suffix: [";
     for (std::set< ref<Expr> >::iterator it = aSuffix.begin(), 
            ie = aSuffix.end(); it != ie; ++it)
-      llvm::cerr << *it << ", ";
-    llvm::cerr << "]\n";
-    llvm::cerr << "\tB suffix: [";
+      std::cerr << *it << ", ";
+    std::cerr << "]\n";
+    std::cerr << "\tB suffix: [";
     for (std::set< ref<Expr> >::iterator it = bSuffix.begin(), 
            ie = bSuffix.end(); it != ie; ++it)
-      llvm::cerr << *it << ", ";
-    llvm::cerr << "]\n";
+      std::cerr << *it << ", ";
+    std::cerr << "]\n";
   }
 
   // We cannot merge if addresses would resolve differently in the
@@ -212,9 +212,9 @@ bool ExecutionState::merge(const ExecutionState &b) {
   // and not the other
 
   if (DebugLogStateMerge) {
-    llvm::cerr << "\tchecking object states\n";
-    llvm::cerr << "A: " << addressSpace.objects << "\n";
-    llvm::cerr << "B: " << b.addressSpace.objects << "\n";
+    std::cerr << "\tchecking object states\n";
+    std::cerr << "A: " << addressSpace.objects << "\n";
+    std::cerr << "B: " << b.addressSpace.objects << "\n";
   }
     
   std::set<const MemoryObject*> mutated;
@@ -226,22 +226,22 @@ bool ExecutionState::merge(const ExecutionState &b) {
     if (ai->first != bi->first) {
       if (DebugLogStateMerge) {
         if (ai->first < bi->first) {
-          llvm::cerr << "\t\tB misses binding for: " << ai->first->id << "\n";
+          std::cerr << "\t\tB misses binding for: " << ai->first->id << "\n";
         } else {
-          llvm::cerr << "\t\tA misses binding for: " << bi->first->id << "\n";
+          std::cerr << "\t\tA misses binding for: " << bi->first->id << "\n";
         }
       }
       return false;
     }
     if (ai->second != bi->second) {
       if (DebugLogStateMerge)
-        llvm::cerr << "\t\tmutated: " << ai->first->id << "\n";
+        std::cerr << "\t\tmutated: " << ai->first->id << "\n";
       mutated.insert(ai->first);
     }
   }
   if (ai!=ae || bi!=be) {
     if (DebugLogStateMerge)
-      llvm::cerr << "\t\tmappings differ\n";
+      std::cerr << "\t\tmappings differ\n";
     return false;
   }
   

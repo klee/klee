@@ -19,6 +19,7 @@
 #include "llvm/Support/InstIterator.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/System/Path.h"
 
 #include <map>
 #include <iostream>

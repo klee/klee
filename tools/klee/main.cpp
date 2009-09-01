@@ -269,7 +269,7 @@ KleeHandler::KleeHandler(int argc, char **argv)
       }
     }    
 
-    llvm::cerr << "KLEE: output directory = \"" << dirname << "\"\n";
+    std::cerr << "KLEE: output directory = \"" << dirname << "\"\n";
 
     llvm::sys::Path klee_last(directory);
     klee_last.appendComponent("klee-last");
@@ -296,7 +296,7 @@ KleeHandler::KleeHandler(int argc, char **argv)
   strcpy(m_outputDirectory, p.c_str());
 
   if (mkdir(m_outputDirectory, 0775) < 0) {
-    llvm::cerr << "KLEE: ERROR: Unable to make output directory: \"" 
+    std::cerr << "KLEE: ERROR: Unable to make output directory: \"" 
                << m_outputDirectory 
                << "\", refusing to overwrite.\n";
     exit(1);
@@ -377,7 +377,7 @@ void KleeHandler::processTestCase(const ExecutionState &state,
                                   const char *errorMessage, 
                                   const char *errorSuffix) {
   if (errorMessage && ExitOnError) {
-    llvm::cerr << "EXITING ON ERROR:\n" << errorMessage << "\n";
+    std::cerr << "EXITING ON ERROR:\n" << errorMessage << "\n";
     exit(1);
   }
 
@@ -517,13 +517,13 @@ void KleeHandler::getOutFiles(std::string path,
   std::set<llvm::sys::Path> contents;
   std::string error;
   if (p.getDirectoryContents(contents, &error)) {
-    llvm::cerr << "ERROR: unable to read output directory: " << path 
+    std::cerr << "ERROR: unable to read output directory: " << path 
                << ": " << error << "\n";
     exit(1);
   }
   for (std::set<llvm::sys::Path>::iterator it = contents.begin(),
          ie = contents.end(); it != ie; ++it) {
-    std::string f = it->toString();
+    std::string f = it->str();
     if (f.substr(f.size()-6,f.size()) == ".ktest") {
       results.push_back(f);
     }
@@ -602,7 +602,7 @@ static int initEnv(Module *mainModule) {
   Function *mainFn = mainModule->getFunction("main");
     
   if (mainFn->arg_size() < 2) {
-    llvm::cerr << "Cannot handle ""-init-env"" when main() has less than two arguments.\n";
+    std::cerr << "Cannot handle ""-init-env"" when main() has less than two arguments.\n";
     return -1;
   }
 
@@ -876,11 +876,11 @@ void stop_forking() {
 
 static void interrupt_handle() {
   if (!interrupted && theInterpreter) {
-    llvm::cerr << "KLEE: ctrl-c detected, requesting interpreter to halt.\n";
+    std::cerr << "KLEE: ctrl-c detected, requesting interpreter to halt.\n";
     halt_execution();
     sys::SetInterruptFunction(interrupt_handle);
   } else {
-    llvm::cerr << "KLEE: ctrl-c detected, exiting.\n";
+    std::cerr << "KLEE: ctrl-c detected, exiting.\n";
     exit(1);
   }
   interrupted = true;
@@ -1200,7 +1200,7 @@ int main(int argc, char **argv, char **envp) {
   // locale and other data and then calls main.
   Function *mainFn = mainModule->getFunction("main");
   if (!mainFn) {
-    llvm::cerr << "'main' function not found in module.\n";
+    std::cerr << "'main' function not found in module.\n";
     return -1;
   }
 
@@ -1294,7 +1294,7 @@ int main(int argc, char **argv, char **envp) {
       if (out) {
         kTests.push_back(out);
       } else {
-        llvm::cerr << "KLEE: unable to open: " << *it << "\n";
+        std::cerr << "KLEE: unable to open: " << *it << "\n";
       }
     }
 
@@ -1311,7 +1311,7 @@ int main(int argc, char **argv, char **envp) {
          it != ie; ++it) {
       KTest *out = *it;
       interpreter->setReplayOut(out);
-      llvm::cerr << "KLEE: replaying: " << *it << " (" << kTest_numBytes(out) << " bytes)"
+      std::cerr << "KLEE: replaying: " << *it << " (" << kTest_numBytes(out) << " bytes)"
                  << " (" << ++i << "/" << outFiles.size() << ")\n";
       // XXX should put envp in .ktest ?
       interpreter->runFunctionAsMain(mainFn, out->numArgs, out->args, pEnvp);
@@ -1329,7 +1329,7 @@ int main(int argc, char **argv, char **envp) {
          it != ie; ++it) {
       KTest *out = kTest_fromFile(it->c_str());
       if (!out) {
-        llvm::cerr << "KLEE: unable to open: " << *it << "\n";
+        std::cerr << "KLEE: unable to open: " << *it << "\n";
         exit(1);
       }
       seeds.push_back(out);
@@ -1344,19 +1344,19 @@ int main(int argc, char **argv, char **envp) {
            it2 != ie; ++it2) {
         KTest *out = kTest_fromFile(it2->c_str());
         if (!out) {
-          llvm::cerr << "KLEE: unable to open: " << *it2 << "\n";
+          std::cerr << "KLEE: unable to open: " << *it2 << "\n";
           exit(1);
         }
         seeds.push_back(out);
       }
       if (outFiles.empty()) {
-        llvm::cerr << "KLEE: seeds directory is empty: " << *it << "\n";
+        std::cerr << "KLEE: seeds directory is empty: " << *it << "\n";
         exit(1);
       }
     }
        
     if (!seeds.empty()) {
-      llvm::cerr << "KLEE: using " << seeds.size() << " seeds\n";
+      std::cerr << "KLEE: using " << seeds.size() << " seeds\n";
       interpreter->useSeeds(&seeds);
     }
     if (RunInDir != "") {
@@ -1421,12 +1421,12 @@ int main(int argc, char **argv, char **envp) {
   std::stringstream stats;
   stats << "\n";
   stats << "KLEE: done: total instructions = " 
-             << instructions << "\n";
+        << instructions << "\n";
   stats << "KLEE: done: completed paths = " 
-             << handler->getNumPathsExplored() << "\n";
+        << handler->getNumPathsExplored() << "\n";
   stats << "KLEE: done: generated tests = " 
-             << handler->getNumTestCases() << "\n";
-  llvm::cerr << stats.str();
+        << handler->getNumTestCases() << "\n";
+  std::cerr << stats.str();
   handler->getInfoStream() << stats.str();
 
   delete handler;

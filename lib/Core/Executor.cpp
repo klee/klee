@@ -1074,7 +1074,8 @@ void Executor::executeGetValue(ExecutionState &state,
 void Executor::stepInstruction(ExecutionState &state) {
   if (DebugPrintInstructions) {
     printFileLine(state, state.pc);
-    llvm::cerr << std::setw(10) << stats::instructions << " " << *state.pc->inst;
+    std::cerr << std::setw(10) << stats::instructions << " ";
+    llvm::errs() << *(state.pc->inst);
   }
 
   if (statsTracker)
@@ -1273,9 +1274,9 @@ void Executor::transferToBasicBlock(BasicBlock *dst, BasicBlock *src,
 void Executor::printFileLine(ExecutionState &state, KInstruction *ki) {
   const InstructionInfo &ii = *ki->info;
   if (ii.file != "") 
-    llvm::cerr << "     " << ii.file << ":" << ii.line << ":";
+    std::cerr << "     " << ii.file << ":" << ii.line << ":";
   else
-    llvm::cerr << "     [no debug info]:";
+    std::cerr << "     [no debug info]:";
 }
 
 
@@ -2374,7 +2375,7 @@ void Executor::run(ExecutionState &initialState) {
   
  dump:
   if (DumpStatesOnHalt && !states.empty()) {
-    llvm::cerr << "KLEE: halting execution, dumping remaining states\n";
+    std::cerr << "KLEE: halting execution, dumping remaining states\n";
     for (std::set<ExecutionState*>::iterator
            it = states.begin(), ie = states.end();
          it != ie; ++it) {
@@ -2558,7 +2559,7 @@ void Executor::callExternalFunction(ExecutionState &state,
     return;
   
   if (NoExternals && !okExternals.count(function->getName())) {
-    llvm::cerr << "KLEE:ERROR: Calling not-OK external function : " 
+    std::cerr << "KLEE:ERROR: Calling not-OK external function : " 
                << function->getNameStr() << "\n";
     terminateStateOnError(state, "externals disallowed", "user.err");
     return;
@@ -2653,7 +2654,7 @@ ref<Expr> Executor::replaceReadWithSymbolic(ExecutionState &state,
                                  Expr::getMinBytesForWidth(e->getWidth()));
   ref<Expr> res = Expr::createTempRead(array, e->getWidth());
   ref<Expr> eq = NotOptimizedExpr::create(EqExpr::create(e, res));
-  llvm::cerr << "Making symbolic: " << eq << "\n";
+  std::cerr << "Making symbolic: " << eq << "\n";
   state.addConstraint(eq);
   return res;
 }

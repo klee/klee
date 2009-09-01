@@ -2,11 +2,11 @@
 #include <iostream>
 
 void kdb_printExpr(klee::Expr *e) {
-  llvm::cerr << "expr: " << e << " -- ";
+  std::cerr << "expr: " << e << " -- ";
   if (e) {
-    llvm::cerr << *e;
+    std::cerr << *e;
   } else {
-    llvm::cerr << "(null)";
+    std::cerr << "(null)";
   }
-  llvm::cerr << "\n";
+  std::cerr << "\n";
 }

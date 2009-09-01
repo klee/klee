@@ -246,9 +246,9 @@ void ImpliedValue::checkForImpliedValues(Solver *S, ref<Expr> e,
     } else {
       if (it!=found.end()) {
         ref<Expr> binding = it->second;
-        llvm::cerr << "checkForImpliedValues: " << e  << " = " << value << "\n"
-                   << "\t\t implies " << var << " == " << binding
-                   << " (error)\n";
+        std::cerr << "checkForImpliedValues: " << e  << " = " << value << "\n"
+                  << "\t\t implies " << var << " == " << binding
+                  << " (error)\n";
         assert(0);
       }
     }

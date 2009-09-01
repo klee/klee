@@ -11,7 +11,6 @@
 #define KLEE_REF_H
 
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/Streams.h"
 using llvm::isa;
 using llvm::cast;
 using llvm::cast_or_null;
@@ -19,6 +18,7 @@ using llvm::dyn_cast;
 using llvm::dyn_cast_or_null;
 
 #include <assert.h>
+#include <iosfwd> // FIXME: Remove this!!!
 
 namespace klee {
 

@@ -18,11 +18,11 @@
 #include "llvm/ExecutionEngine/GenericValue.h"
 #include "llvm/Support/CallSite.h"
 #include "llvm/System/DynamicLibrary.h"
-#include "llvm/Support/Streams.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetSelect.h"
 #include <setjmp.h>
 #include <signal.h>
+#include <iostream>
 
 using namespace llvm;
 using namespace klee;
@@ -73,7 +73,7 @@ ExternalDispatcher::ExternalDispatcher() {
   std::string error;
   executionEngine = ExecutionEngine::createJIT(MP, &error);
   if (!executionEngine) {
-    llvm::cerr << "unable to make jit: " << error << "\n";
+    std::cerr << "unable to make jit: " << error << "\n";
     abort();
   }
 

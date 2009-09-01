@@ -24,7 +24,6 @@
 #include "llvm/ModuleProvider.h"
 #include "llvm/Support/CallSite.h"
 #include "llvm/Support/GetElementPtrTypeIterator.h"
-#include "llvm/Support/Streams.h"
 #include "llvm/Target/TargetData.h"
 #include <iostream>
 #include <cassert>
@@ -47,8 +46,8 @@ namespace klee {
     switch (ce->getOpcode()) {
     default :
       ce->dump();
-      llvm::cerr << "error: unknown ConstantExpr type\n"
-                 << "opcode: " << ce->getOpcode() << "\n";
+      std::cerr << "error: unknown ConstantExpr type\n"
+                << "opcode: " << ce->getOpcode() << "\n";
       abort();
 
     case Instruction::Trunc: 

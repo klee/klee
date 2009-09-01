@@ -15,10 +15,10 @@
 
 #include "klee/util/ExprUtil.h"
 
-#include "llvm/Support/Streams.h"
-
 #include <map>
 #include <vector>
+#include <ostream>
+#include <iostream>
 
 using namespace klee;
 using namespace llvm;
@@ -249,17 +249,17 @@ IndependentElementSet getIndependentConstraints(const Query& query,
 
   if (0) {
     std::set< ref<Expr> > reqset(result.begin(), result.end());
-    llvm::cerr << "--\n";
-    llvm::cerr << "Q: " << query.expr << "\n";
-    llvm::cerr << "\telts: " << IndependentElementSet(query.expr) << "\n";
+    std::cerr << "--\n";
+    std::cerr << "Q: " << query.expr << "\n";
+    std::cerr << "\telts: " << IndependentElementSet(query.expr) << "\n";
     int i = 0;
   for (ConstraintManager::const_iterator it = query.constraints.begin(), 
          ie = query.constraints.end(); it != ie; ++it) {
-      llvm::cerr << "C" << i++ << ": " << *it;
-      llvm::cerr << " " << (reqset.count(*it) ? "(required)" : "(independent)") << "\n";
-      llvm::cerr << "\telts: " << IndependentElementSet(*it) << "\n";
+      std::cerr << "C" << i++ << ": " << *it;
+      std::cerr << " " << (reqset.count(*it) ? "(required)" : "(independent)") << "\n";
+      std::cerr << "\telts: " << IndependentElementSet(*it) << "\n";
     }
-    llvm::cerr << "elts closure: " << eltsClosure << "\n";
+    std::cerr << "elts closure: " << eltsClosure << "\n";
   }
 
   return eltsClosure;

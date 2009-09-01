@@ -18,7 +18,7 @@
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/Streams.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include <cassert>
 #include <iostream>
@@ -1523,9 +1523,9 @@ void ParserImpl::Error(const char *Message, const Token &At) {
   if (MaxErrors && NumErrors >= MaxErrors)
     return;
 
-  llvm::cerr << Filename 
-             << ":" << At.line << ":" << At.column 
-             << ": error: " << Message << "\n";
+  std::cerr << Filename
+            << ":" << At.line << ":" << At.column 
+            << ": error: " << Message << "\n";
 
   // Skip carat diagnostics on EOF token.
   if (At.kind == Token::EndOfFile)
@@ -1545,18 +1545,18 @@ void ParserImpl::Error(const char *Message, const Token &At) {
     ++LineEnd;
 
   // Show the line.
-  llvm::cerr << std::string(LineBegin, LineEnd) << "\n";
+  std::cerr << std::string(LineBegin, LineEnd) << "\n";
 
   // Show the caret or squiggly, making sure to print back spaces the
   // same.
   for (const char *S=LineBegin; S != At.start; ++S)
-    llvm::cerr << (isspace(*S) ? *S : ' ');
+    std::cerr << (isspace(*S) ? *S : ' ');
   if (At.length > 1) {
     for (unsigned i=0; i<At.length; ++i)
-      llvm::cerr << '~';
+      std::cerr << '~';
   } else
-    llvm::cerr << '^';
-  llvm::cerr << '\n';
+    std::cerr << '^';
+  std::cerr << '\n';
 }
 
 // AST API

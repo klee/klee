@@ -10,7 +10,7 @@
 #include "expr/Lexer.h"
 
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/Streams.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include <iomanip>
 #include <iostream>
@@ -53,9 +53,9 @@ const char *Token::getKindName() const {
 }
 
 void Token::dump() {
-  llvm::cerr << "(Token \"" << getKindName() << "\" "
-             << (void*) start << " " << length << " "
-             << line << " " << column << ")";
+  llvm::errs() << "(Token \"" << getKindName() << "\" "
+               << (void*) start << " " << length << " "
+               << line << " " << column << ")";
 }
 
 ///

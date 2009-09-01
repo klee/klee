@@ -443,7 +443,7 @@ public:
 
   void propogatePossibleValues(ref<Expr> e, CexValueData range) {
     #ifdef DEBUG
-    llvm::cerr << "propogate: " << range << " for\n" << e << "\n";
+    std::cerr << "propogate: " << range << " for\n" << e << "\n";
     #endif
 
     switch (e->getKind()) {
@@ -938,27 +938,27 @@ public:
   }
 
   void dump() {
-    llvm::cerr << "-- propogated values --\n";
+    std::cerr << "-- propogated values --\n";
     for (std::map<const Array*, CexObjectData*>::iterator 
            it = objects.begin(), ie = objects.end(); it != ie; ++it) {
       const Array *A = it->first;
       CexObjectData *COD = it->second;
     
-      llvm::cerr << A->name << "\n";
-      llvm::cerr << "possible: [";
+      std::cerr << A->name << "\n";
+      std::cerr << "possible: [";
       for (unsigned i = 0; i < A->size; ++i) {
         if (i)
-          llvm::cerr << ", ";
-        llvm::cerr << COD->getPossibleValues(i);
+          std::cerr << ", ";
+        std::cerr << COD->getPossibleValues(i);
       }
-      llvm::cerr << "]\n";
-      llvm::cerr << "exact   : [";
+      std::cerr << "]\n";
+      std::cerr << "exact   : [";
       for (unsigned i = 0; i < A->size; ++i) {
         if (i)
-          llvm::cerr << ", ";
-        llvm::cerr << COD->getExactValues(i);
+          std::cerr << ", ";
+        std::cerr << COD->getExactValues(i);
       }
-      llvm::cerr << "]\n";
+      std::cerr << "]\n";
     }
   }
 };

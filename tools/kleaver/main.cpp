@@ -1,3 +1,5 @@
+#include <iostream>
+
 #include "expr/Lexer.h"
 #include "expr/Parser.h"
 
@@ -99,7 +101,7 @@ static void PrintInputTokens(const MemoryBuffer *MB) {
   Token T;
   do {
     L.Lex(T);
-    llvm::cout << "(Token \"" << T.getKindName() << "\" "
+    std::cout << "(Token \"" << T.getKindName() << "\" "
                << "\"" << escapedString(T.start, T.length) << "\" "
                << T.length << " "
                << T.line << " " << T.column << ")\n";
@@ -117,7 +119,7 @@ static bool PrintInputAST(const char *Filename,
   while (Decl *D = P->ParseTopLevelDecl()) {
     if (!P->GetNumErrors()) {
       if (isa<QueryCommand>(D))
-        llvm::cout << "# Query " << ++NumQueries << "\n";
+        std::cout << "# Query " << ++NumQueries << "\n";
 
       D->dump();
     }
@@ -126,7 +128,7 @@ static bool PrintInputAST(const char *Filename,
 
   bool success = true;
   if (unsigned N = P->GetNumErrors()) {
-    llvm::cerr << Filename << ": parse failure: "
+    std::cerr << Filename << ": parse failure: "
                << N << " errors.\n";
     success = false;
   }
@@ -152,7 +154,7 @@ static bool EvaluateInputAST(const char *Filename,
 
   bool success = true;
   if (unsigned N = P->GetNumErrors()) {
-    llvm::cerr << Filename << ": parse failure: "
+    std::cerr << Filename << ": parse failure: "
                << N << " errors.\n";
     success = false;
   }  
@@ -178,16 +180,16 @@ static bool EvaluateInputAST(const char *Filename,
          ie = Decls.end(); it != ie; ++it) {
     Decl *D = *it;
     if (QueryCommand *QC = dyn_cast<QueryCommand>(D)) {
-      llvm::cout << "Query " << Index << ":\t";
+      std::cout << "Query " << Index << ":\t";
 
       assert("FIXME: Support counterexample query commands!");
       if (QC->Values.empty() && QC->Objects.empty()) {
         bool result;
         if (S->mustBeTrue(Query(ConstraintManager(QC->Constraints), QC->Query),
                           result)) {
-          llvm::cout << (result ? "VALID" : "INVALID");
+          std::cout << (result ? "VALID" : "INVALID");
         } else {
-          llvm::cout << "FAIL";
+          std::cout << "FAIL";
         }
       } else if (!QC->Values.empty()) {
         assert(QC->Objects.empty() && 
@@ -200,10 +202,10 @@ static bool EvaluateInputAST(const char *Filename,
         if (S->getValue(Query(ConstraintManager(QC->Constraints), 
                               QC->Values[0]),
                         result)) {
-          llvm::cout << "INVALID\n";
-          llvm::cout << "\tExpr 0:\t" << result;
+          std::cout << "INVALID\n";
+          std::cout << "\tExpr 0:\t" << result;
         } else {
-          llvm::cout << "FAIL";
+          std::cout << "FAIL";
         }
       } else {
         std::vector< std::vector<unsigned char> > result;
@@ -211,27 +213,27 @@ static bool EvaluateInputAST(const char *Filename,
         if (S->getInitialValues(Query(ConstraintManager(QC->Constraints), 
                                       QC->Query),
                                 QC->Objects, result)) {
-          llvm::cout << "INVALID\n";
+          std::cout << "INVALID\n";
 
           for (unsigned i = 0, e = result.size(); i != e; ++i) {
-            llvm::cout << "\tArray " << i << ":\t"
+            std::cout << "\tArray " << i << ":\t"
                        << QC->Objects[i]->name
                        << "[";
             for (unsigned j = 0; j != QC->Objects[i]->size; ++j) {
-              llvm::cout << (unsigned) result[i][j];
+              std::cout << (unsigned) result[i][j];
               if (j + 1 != QC->Objects[i]->size)
-                llvm::cout << ", ";
+                std::cout << ", ";
             }
-            llvm::cout << "]";
+            std::cout << "]";
             if (i + 1 != e)
-              llvm::cout << "\n";
+              std::cout << "\n";
           }
         } else {
-          llvm::cout << "FAIL";
+          std::cout << "FAIL";
         }
       }
 
-      llvm::cout << "\n";
+      std::cout << "\n";
       ++Index;
     }
   }
@@ -244,7 +246,7 @@ static bool EvaluateInputAST(const char *Filename,
   delete S;
 
   if (uint64_t queries = *theStatisticManager->getStatisticByName("Queries")) {
-    llvm::cout 
+    std::cout 
       << "--\n"
       << "total queries = " << queries << "\n"
       << "total queries constructs = " 
@@ -269,7 +271,7 @@ int main(int argc, char **argv) {
   std::string ErrorStr;
   MemoryBuffer *MB = MemoryBuffer::getFileOrSTDIN(InputFile.c_str(), &ErrorStr);
   if (!MB) {
-    llvm::cerr << argv[0] << ": error: " << ErrorStr << "\n";
+    std::cerr << argv[0] << ": error: " << ErrorStr << "\n";
     return 1;
   }
 
@@ -302,7 +304,7 @@ int main(int argc, char **argv) {
                                MB, Builder);
     break;
   default:
-    llvm::cerr << argv[0] << ": error: Unknown program action!\n";
+    std::cerr << argv[0] << ": error: Unknown program action!\n";
   }
 
   delete Builder;

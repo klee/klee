@@ -374,17 +374,17 @@ ExecutionState &MergingSearcher::selectState() {
   }
   
   if (DebugLogMerge)
-    llvm::cerr << "-- all at merge --\n";
+    std::cerr << "-- all at merge --\n";
   for (std::map<Instruction*, std::vector<ExecutionState*> >::iterator
          it = merges.begin(), ie = merges.end(); it != ie; ++it) {
     if (DebugLogMerge) {
-      llvm::cerr << "\tmerge: " << it->first << " [";
+      std::cerr << "\tmerge: " << it->first << " [";
       for (std::vector<ExecutionState*>::iterator it2 = it->second.begin(),
              ie2 = it->second.end(); it2 != ie2; ++it2) {
         ExecutionState *state = *it2;
-        llvm::cerr << state << ", ";
+        std::cerr << state << ", ";
       }
-      llvm::cerr << "]\n";
+      std::cerr << "]\n";
     }
 
     // merge states
@@ -403,13 +403,13 @@ ExecutionState &MergingSearcher::selectState() {
         }
       }
       if (DebugLogMerge && !toErase.empty()) {
-        llvm::cerr << "\t\tmerged: " << base << " with [";
+        std::cerr << "\t\tmerged: " << base << " with [";
         for (std::set<ExecutionState*>::iterator it = toErase.begin(),
                ie = toErase.end(); it != ie; ++it) {
-          if (it!=toErase.begin()) llvm::cerr << ", ";
-          llvm::cerr << *it;
+          if (it!=toErase.begin()) std::cerr << ", ";
+          std::cerr << *it;
         }
-        llvm::cerr << "]\n";
+        std::cerr << "]\n";
       }
       for (std::set<ExecutionState*>::iterator it = toErase.begin(),
              ie = toErase.end(); it != ie; ++it) {
@@ -427,7 +427,7 @@ ExecutionState &MergingSearcher::selectState() {
   }
   
   if (DebugLogMerge)
-    llvm::cerr << "-- merge complete, continuing --\n";
+    std::cerr << "-- merge complete, continuing --\n";
   
   return selectState();
 }
@@ -475,7 +475,7 @@ ExecutionState &BatchingSearcher::selectState() {
     if (lastState) {
       double delta = util::getWallTime()-lastStartTime;
       if (delta>timeBudget*1.1) {
-        llvm::cerr << "KLEE: increased time budget from " << timeBudget << " to " << delta << "\n";
+        std::cerr << "KLEE: increased time budget from " << timeBudget << " to " << delta << "\n";
         timeBudget = delta;
       }
     }
@@ -541,7 +541,7 @@ void IterativeDeepeningTimeSearcher::update(ExecutionState *current,
 
   if (baseSearcher->empty()) {
     time *= 2;
-    llvm::cerr << "KLEE: increasing time budget to: " << time << "\n";
+    std::cerr << "KLEE: increasing time budget to: " << time << "\n";
     baseSearcher->update(0, pausedStates, std::set<ExecutionState*>());
     pausedStates.clear();
   }

@@ -22,6 +22,7 @@
 #include <llvm/Instruction.h>
 #include <llvm/Value.h>
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include <iostream>
 #include <cassert>
@@ -65,7 +66,7 @@ MemoryObject::~MemoryObject() {
 }
 
 void MemoryObject::getAllocInfo(std::string &result) const {
-  std::ostringstream info;
+  llvm::raw_string_ostream info(result);
 
   info << "MO" << id << "[" << size << "]";
 
@@ -83,7 +84,7 @@ void MemoryObject::getAllocInfo(std::string &result) const {
     info << " (no allocation info)";
   }
   
-  result = info.str();
+  info.flush();
 }
 
 /***/
@@ -558,23 +559,23 @@ void ObjectState::write64(unsigned offset, uint64_t value) {
 }
 
 void ObjectState::print() {
-  llvm::cerr << "-- ObjectState --\n";
-  llvm::cerr << "\tMemoryObject ID: " << object->id << "\n";
-  llvm::cerr << "\tRoot Object: " << updates.root << "\n";
-  llvm::cerr << "\tSize: " << size << "\n";
+  std::cerr << "-- ObjectState --\n";
+  std::cerr << "\tMemoryObject ID: " << object->id << "\n";
+  std::cerr << "\tRoot Object: " << updates.root << "\n";
+  std::cerr << "\tSize: " << size << "\n";
 
-  llvm::cerr << "\tBytes:\n";
+  std::cerr << "\tBytes:\n";
   for (unsigned i=0; i<size; i++) {
-    llvm::cerr << "\t\t["<<i<<"]"
+    std::cerr << "\t\t["<<i<<"]"
                << " concrete? " << isByteConcrete(i)
                << " known-sym? " << isByteKnownSymbolic(i)
                << " flushed? " << isByteFlushed(i) << " = ";
     ref<Expr> e = read8(i);
-    llvm::cerr << e << "\n";
+    std::cerr << e << "\n";
   }
 
-  llvm::cerr << "\tUpdates:\n";
+  std::cerr << "\tUpdates:\n";
   for (const UpdateNode *un=updates.head; un; un=un->next) {
-    llvm::cerr << "\t\t[" << un->index << "] = " << un->value << "\n";
+    std::cerr << "\t\t[" << un->index << "] = " << un->value << "\n";
   }
 }

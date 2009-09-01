@@ -15,10 +15,10 @@
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/Streams.h"
 
 #include <set>
 #include <vector>
+#include <iosfwd> // FIXME: Remove this!!!
 
 namespace llvm {
   class Type;

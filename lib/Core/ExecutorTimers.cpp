@@ -47,7 +47,7 @@ public:
   ~HaltTimer() {}
 
   void run() {
-    llvm::cerr << "KLEE: HaltTimer invoked\n";
+    std::cerr << "KLEE: HaltTimer invoked\n";
     executor->setHaltExecution(true);
   }
 };
