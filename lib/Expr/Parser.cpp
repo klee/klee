@@ -1115,7 +1115,7 @@ ExprResult ParserImpl::ParseBinaryParenExpr(const Token &Name,
 
   case Expr::AShr: return Builder->AShr(LHS_E, RHS_E);
   case Expr::LShr: return Builder->LShr(LHS_E, RHS_E);
-  case Expr::Shl: return Builder->And(LHS_E, RHS_E);
+  case Expr::Shl: return Builder->Shl(LHS_E, RHS_E);
 
   case Expr::And: return Builder->And(LHS_E, RHS_E);
   case Expr::Or:  return Builder->Or(LHS_E, RHS_E);
