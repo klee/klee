@@ -957,6 +957,9 @@ const Cell& Executor::eval(KInstruction *ki, unsigned index,
   assert(index < ki->inst->getNumOperands());
   int vnumber = ki->operands[index];
 
+  assert(vnumber != -1 &&
+         "Invalid operand to eval(), not a value or constant!");
+
   // Determine if this is a constant or not.
   if (vnumber < 0) {
     unsigned index = -vnumber - 2;
@@ -1093,83 +1096,72 @@ void Executor::executeCall(ExecutionState &state,
                            KInstruction *ki,
                            Function *f,
                            std::vector< ref<Expr> > &arguments) {
-  if (WriteTraces) {
-    // don't print out special debug stop point 'function' calls
-    if (f->getIntrinsicID() != Intrinsic::dbg_stoppoint)
-      state.exeTraceMgr.addEvent(new FunctionCallTraceEvent(state, ki, 
-                                                            f->getName()));
-  }
+  if (WriteTraces)
+    state.exeTraceMgr.addEvent(new FunctionCallTraceEvent(state, ki,
+                                                          f->getName()));
 
   Instruction *i = ki->inst;
   if (f && f->isDeclaration()) {
-    if (f!=kmodule->dbgStopPointFn) { // special case speed hack
-      switch(f->getIntrinsicID()) {
-      case Intrinsic::dbg_stoppoint:
-      case Intrinsic::dbg_region_start:
-      case Intrinsic::dbg_region_end:
-      case Intrinsic::dbg_func_start:
-      case Intrinsic::dbg_declare:
-      case Intrinsic::not_intrinsic:
-        // state may be destroyed by this call, cannot touch
-        callExternalFunction(state, ki, f, arguments);
-        break;
-          
-        // va_arg is handled by caller and intrinsic lowering, see comment for
-        // ExecutionState::varargs
-      case Intrinsic::vastart:  {
-        StackFrame &sf = state.stack.back();
-        assert(sf.varargs && 
-               "vastart called in function with no vararg object");
+    switch(f->getIntrinsicID()) {
+    case Intrinsic::not_intrinsic:
+      // state may be destroyed by this call, cannot touch
+      callExternalFunction(state, ki, f, arguments);
+      break;
+        
+      // va_arg is handled by caller and intrinsic lowering, see comment for
+      // ExecutionState::varargs
+    case Intrinsic::vastart:  {
+      StackFrame &sf = state.stack.back();
+      assert(sf.varargs && 
+             "vastart called in function with no vararg object");
 
-        // FIXME: This is really specific to the architecture, not the pointer
-        // size. This happens to work fir x86-32 and x86-64, however.
-        Expr::Width WordSize = Context::get().getPointerWidth();
-        if (WordSize == Expr::Int32) {
-          executeMemoryOperation(state, true, arguments[0], 
-                                 sf.varargs->getBaseExpr(), 0);
-        } else {
-          assert(WordSize == Expr::Int64 && "Unknown word size!");
+      // FIXME: This is really specific to the architecture, not the pointer
+      // size. This happens to work fir x86-32 and x86-64, however.
+      Expr::Width WordSize = Context::get().getPointerWidth();
+      if (WordSize == Expr::Int32) {
+        executeMemoryOperation(state, true, arguments[0], 
+                               sf.varargs->getBaseExpr(), 0);
+      } else {
+        assert(WordSize == Expr::Int64 && "Unknown word size!");
 
-          // X86-64 has quite complicated calling convention. However,
-          // instead of implementing it, we can do a simple hack: just
-          // make a function believe that all varargs are on stack.
-          executeMemoryOperation(state, true, arguments[0],
-                                 ConstantExpr::create(48, 32), 0); // gp_offset
-          executeMemoryOperation(state, true,
-                                 AddExpr::create(arguments[0], 
-                                                 ConstantExpr::create(4, 64)),
-                                 ConstantExpr::create(304, 32), 0); // fp_offset
-          executeMemoryOperation(state, true,
-                                 AddExpr::create(arguments[0], 
-                                                 ConstantExpr::create(8, 64)),
-                                 sf.varargs->getBaseExpr(), 0); // overflow_arg_area
-          executeMemoryOperation(state, true,
-                                 AddExpr::create(arguments[0], 
-                                                 ConstantExpr::create(16, 64)),
-                                 ConstantExpr::create(0, 64), 0); // reg_save_area
-        }
-        break;
+        // X86-64 has quite complicated calling convention. However,
+        // instead of implementing it, we can do a simple hack: just
+        // make a function believe that all varargs are on stack.
+        executeMemoryOperation(state, true, arguments[0],
+                               ConstantExpr::create(48, 32), 0); // gp_offset
+        executeMemoryOperation(state, true,
+                               AddExpr::create(arguments[0], 
+                                               ConstantExpr::create(4, 64)),
+                               ConstantExpr::create(304, 32), 0); // fp_offset
+        executeMemoryOperation(state, true,
+                               AddExpr::create(arguments[0], 
+                                               ConstantExpr::create(8, 64)),
+                               sf.varargs->getBaseExpr(), 0); // overflow_arg_area
+        executeMemoryOperation(state, true,
+                               AddExpr::create(arguments[0], 
+                                               ConstantExpr::create(16, 64)),
+                               ConstantExpr::create(0, 64), 0); // reg_save_area
       }
-      case Intrinsic::vaend:
-        // va_end is a noop for the interpreter.
-        //
-        // FIXME: We should validate that the target didn't do something bad
-        // with vaeend, however (like call it twice).
-        break;
-          
-      case Intrinsic::vacopy:
-        // va_copy should have been lowered.
-        //
-        // FIXME: It would be nice to check for errors in the usage of this as
-        // well.
-      default:
-        klee_error("unknown intrinsic: %s", f->getName().data());
-      }
+      break;
+    }
+    case Intrinsic::vaend:
+      // va_end is a noop for the interpreter.
+      //
+      // FIXME: We should validate that the target didn't do something bad
+      // with vaeend, however (like call it twice).
+      break;
+        
+    case Intrinsic::vacopy:
+      // va_copy should have been lowered.
+      //
+      // FIXME: It would be nice to check for errors in the usage of this as
+      // well.
+    default:
+      klee_error("unknown intrinsic: %s", f->getName().data());
     }
 
-    if (InvokeInst *ii = dyn_cast<InvokeInst>(i)) {
+    if (InvokeInst *ii = dyn_cast<InvokeInst>(i))
       transferToBasicBlock(ii->getNormalDest(), i->getParent(), state);
-    }
   } else {
     // FIXME: I'm not really happy about this reliance on prevPC but it is ok, I
     // guess. This just done to avoid having to pass KInstIterator everywhere
@@ -1300,6 +1292,23 @@ Function* Executor::getCalledFunction(CallSite &cs, ExecutionState &state) {
   return f;
 }
 
+static bool isDebugIntrinsic(const Function *f, KModule *KM) {
+  // Fast path, getIntrinsicID is slow.
+  if (f == KM->dbgStopPointFn)
+    return true;
+
+  switch (f->getIntrinsicID()) {
+  case Intrinsic::dbg_stoppoint:
+  case Intrinsic::dbg_region_start:
+  case Intrinsic::dbg_region_end:
+  case Intrinsic::dbg_func_start:
+  case Intrinsic::dbg_declare:
+    return true;
+
+  default:
+    return false;
+  }
+}
 
 void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   Instruction *i = ki->inst;
@@ -1511,7 +1520,11 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     unsigned numArgs = cs.arg_size();
     Function *f = getCalledFunction(cs, state);
-      
+
+    // Skip debug intrinsics, we can't evaluate their metadata arguments.
+    if (f && isDebugIntrinsic(f, kmodule))
+      break;
+
     // evaluate arguments
     std::vector< ref<Expr> > arguments;
     arguments.reserve(numArgs);
