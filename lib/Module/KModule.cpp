@@ -494,7 +494,8 @@ KFunction::KFunction(llvm::Function *_function,
           ki->operands[j] = registerMap[inst];
         } else if (Argument *a = dyn_cast<Argument>(v)) {
           ki->operands[j] = a->getArgNo();
-        } else if (isa<BasicBlock>(v) || isa<InlineAsm>(v)) {
+        } else if (isa<BasicBlock>(v) || isa<InlineAsm>(v) ||
+                   isa<MDNode>(v)) {
           ki->operands[j] = -1;
         } else {
           assert(isa<Constant>(v));
