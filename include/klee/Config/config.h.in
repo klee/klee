@@ -42,6 +42,15 @@
 /* Path to KLEE's uClibc */
 #undef KLEE_UCLIBC
 
+/* LLVM version is release (instead of development) */
+#undef LLVM_IS_RELEASE
+
+/* LLVM major version number */
+#undef LLVM_VERSION_MAJOR
+
+/* LLVM minor version number */
+#undef LLVM_VERSION_MINOR
+
 /* Define to the address where bug reports for this package should be sent. */
 #undef PACKAGE_BUGREPORT
 

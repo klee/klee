@@ -651,6 +651,9 @@ target
 target_cpu
 target_vendor
 target_os
+LLVM_VERSION_MAJOR
+LLVM_VERSION_MINOR
+LLVM_IS_RELEASE
 KLEE_UCLIBC
 ENABLE_UCLIBC
 ENABLE_POSIX_RUNTIME
@@ -2012,6 +2015,59 @@ echo "${ECHO_T}$llvm_obj" >&6; }
 LLVM_SRC=$llvm_src
 
 LLVM_OBJ=$llvm_obj
+
+
+{ echo "$as_me:$LINENO: checking llvm package version" >&5
+echo $ECHO_N "checking llvm package version... $ECHO_C" >&6; }
+llvm_package_version=`grep PACKAGE_VERSION= $with_llvmsrc/configure | cut -d\' -f 2`
+{ echo "$as_me:$LINENO: result: $llvm_package_version" >&5
+echo "${ECHO_T}$llvm_package_version" >&6; }
+
+llvm_version_split=`python -c "import re; print '\t'.join(map(str, re.match('([0-9]+).([0-9]+)(svn)?', \"$llvm_package_version\").groups()))"`
+
+{ echo "$as_me:$LINENO: checking llvm version major" >&5
+echo $ECHO_N "checking llvm version major... $ECHO_C" >&6; }
+llvm_version_major=`echo "$llvm_version_split" | cut -f 1`
+{ echo "$as_me:$LINENO: result: $llvm_version_major" >&5
+echo "${ECHO_T}$llvm_version_major" >&6; }
+
+{ echo "$as_me:$LINENO: checking llvm version minor" >&5
+echo $ECHO_N "checking llvm version minor... $ECHO_C" >&6; }
+llvm_version_minor=`echo "$llvm_version_split" | cut -f 2`
+{ echo "$as_me:$LINENO: result: $llvm_version_minor" >&5
+echo "${ECHO_T}$llvm_version_minor" >&6; }
+
+{ echo "$as_me:$LINENO: checking llvm is release version" >&5
+echo $ECHO_N "checking llvm is release version... $ECHO_C" >&6; }
+llvm_version_svn=`echo "$llvm_version_split" | cut -f 3`
+if test "$llvm_version_svn" == "svn"; then
+  llvm_is_release=0
+else
+  llvm_is_release=1
+fi
+{ echo "$as_me:$LINENO: result: $llvm_is_release" >&5
+echo "${ECHO_T}$llvm_is_release" >&6; }
+
+
+cat >>confdefs.h <<_ACEOF
+#define LLVM_VERSION_MAJOR $llvm_version_major
+_ACEOF
+
+LLVM_VERSION_MAJOR=$llvm_version_major
+
+
+cat >>confdefs.h <<_ACEOF
+#define LLVM_VERSION_MINOR $llvm_version_minor
+_ACEOF
+
+LLVM_VERSION_MINOR=$llvm_version_minor
+
+
+cat >>confdefs.h <<_ACEOF
+#define LLVM_IS_RELEASE $llvm_is_release
+_ACEOF
+
+LLVM_IS_RELEASE=$llvm_is_release
 
 
 
@@ -5586,6 +5642,9 @@ target!$target$ac_delim
 target_cpu!$target_cpu$ac_delim
 target_vendor!$target_vendor$ac_delim
 target_os!$target_os$ac_delim
+LLVM_VERSION_MAJOR!$LLVM_VERSION_MAJOR$ac_delim
+LLVM_VERSION_MINOR!$LLVM_VERSION_MINOR$ac_delim
+LLVM_IS_RELEASE!$LLVM_IS_RELEASE$ac_delim
 KLEE_UCLIBC!$KLEE_UCLIBC$ac_delim
 ENABLE_UCLIBC!$ENABLE_UCLIBC$ac_delim
 ENABLE_POSIX_RUNTIME!$ENABLE_POSIX_RUNTIME$ac_delim
@@ -5611,7 +5670,7 @@ LIBOBJS!$LIBOBJS$ac_delim
 LTLIBOBJS!$LTLIBOBJS$ac_delim
 _ACEOF
 
-  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 74; then
+  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 77; then
     break
   elif $ac_last_try; then
     { { echo "$as_me:$LINENO: error: could not make $CONFIG_STATUS" >&5
