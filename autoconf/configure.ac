@@ -88,7 +88,7 @@ else
     with_llvmobj=`llvm-config --obj-root`
 fi
 
-dnl Try to validate directories
+dnl Try to validate directories.
 if test ! -f ${with_llvmsrc}/Makefile.rules; then
    AC_MSG_ERROR([invalid llvmsrc directory: ${with_llvmsrc}])
 fi
@@ -96,7 +96,7 @@ if test ! -f ${with_llvmobj}/Makefile.config; then
    AC_MSG_ERROR([invalid llvmobj directory: ${with_llvmobj}])
 fi
 
-dnl Make the paths absolute
+dnl Make the paths absolute.
 llvm_src=`cd $with_llvmsrc 2> /dev/null; pwd`
 llvm_obj=`cd $with_llvmobj 2> /dev/null; pwd`
    
@@ -108,6 +108,37 @@ AC_MSG_RESULT([$llvm_obj])
 
 AC_SUBST(LLVM_SRC,$llvm_src)
 AC_SUBST(LLVM_OBJ,$llvm_obj)
+
+dnl Determine LLVM version.
+AC_MSG_CHECKING([llvm package version])
+llvm_package_version=`grep PACKAGE_VERSION= $with_llvmsrc/configure | cut -d\' -f 2`
+AC_MSG_RESULT([$llvm_package_version])
+
+llvm_version_split=`python -c "import re; print '\t'.join(map(str, re.match('([[0-9]]+)[.]([[0-9]]+)(svn)?', \"$llvm_package_version\").groups()))"`
+
+AC_MSG_CHECKING([llvm version major])
+llvm_version_major=`echo "$llvm_version_split" | cut -f 1`
+AC_MSG_RESULT([$llvm_version_major])
+
+AC_MSG_CHECKING([llvm version minor])
+llvm_version_minor=`echo "$llvm_version_split" | cut -f 2`
+AC_MSG_RESULT([$llvm_version_minor])
+
+AC_MSG_CHECKING([llvm is release version])
+llvm_version_svn=`echo "$llvm_version_split" | cut -f 3`
+if test "$llvm_version_svn" == "svn"; then
+  llvm_is_release=0
+else
+  llvm_is_release=1
+fi
+AC_MSG_RESULT([$llvm_is_release])
+
+AC_DEFINE_UNQUOTED(LLVM_VERSION_MAJOR, $llvm_version_major, [LLVM major version number])
+AC_SUBST(LLVM_VERSION_MAJOR,$llvm_version_major)
+AC_DEFINE_UNQUOTED(LLVM_VERSION_MINOR, $llvm_version_minor, [LLVM minor version number])
+AC_SUBST(LLVM_VERSION_MINOR,$llvm_version_minor)
+AC_DEFINE_UNQUOTED(LLVM_IS_RELEASE, $llvm_is_release, [LLVM version is release (instead of development)])
+AC_SUBST(LLVM_IS_RELEASE,$llvm_is_release)
 
 dnl **************************************************************************
 dnl User option to enable uClibc support.
