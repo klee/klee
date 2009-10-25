@@ -18,7 +18,6 @@
 #include "llvm/Support/CFG.h"
 #include "llvm/Support/InstIterator.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Support/raw_os_ostream.h"
 #include "llvm/Analysis/ValueTracking.h"
 
 #include <map>

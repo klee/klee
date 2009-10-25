@@ -523,7 +523,11 @@ void KleeHandler::getOutFiles(std::string path,
   }
   for (std::set<llvm::sys::Path>::iterator it = contents.begin(),
          ie = contents.end(); it != ie; ++it) {
+#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR == 6)
+    std::string f = it->toString();
+#else
     std::string f = it->str();
+#endif
     if (f.substr(f.size()-6,f.size()) == ".ktest") {
       results.push_back(f);
     }

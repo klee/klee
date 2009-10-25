@@ -27,7 +27,9 @@
 #include "llvm/ValueSymbolTable.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
+#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR == 6)
 #include "llvm/Support/raw_os_ostream.h"
+#endif
 #include "llvm/System/Path.h"
 #include "llvm/Target/TargetData.h"
 #include "llvm/Transforms/Scalar.h"
@@ -327,6 +329,38 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
     std::ostream *os = ih->openOutputFile("assembly.ll");
     assert(os && os->good() && "unable to open source output");
 
+#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR == 6)
+    // We have an option for this in case the user wants a .ll they
+    // can compile.
+    if (NoTruncateSourceLines) {
+      os << *module;
+    } else {
+      bool truncated = false;
+      std::string string;
+      llvm::raw_string_ostream rss(string);
+      rss << *module;
+      rss.flush();
+      const char *position = string.c_str();
+
+      for (;;) {
+        const char *end = index(position, '\n');
+        if (!end) {
+          os << position;
+          break;
+        } else {
+          unsigned count = (end - position) + 1;
+          if (count<255) {
+            os->write(position, count);
+          } else {
+            os->write(position, 254);
+            os << "\n";
+            truncated = true;
+          }
+          position = end+1;
+        }
+      }
+    }
+#else
     llvm::raw_os_ostream *ros = new llvm::raw_os_ostream(*os);
 
     // We have an option for this in case the user wants a .ll they
@@ -360,6 +394,8 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
       }
     }
     delete ros;
+#endif
+
     delete os;
   }
 
