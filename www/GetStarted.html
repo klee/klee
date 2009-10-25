@@ -42,12 +42,14 @@ targets.<p>
     </ul>
   </li>
 
-  <li><a href="http://www.llvm.org/docs/GettingStarted.html#checkout">Checkout
-      and build LLVM</a> from SVN head (LLVM 2.5 will not work):
+  <li><a href="http://llvm.org/releases/download.html#2.6">Download and build
+      LLVM 2.6</a> (you may also use SVN head, but klee may not always be
+      up-to-date with LLVM API changes).
     
     <div class="instr">
-      $ svn co http://llvm.org/svn/llvm-project/llvm/trunk llvm <br>
-      $ cd llvm <br>
+      $ curl -O http://llvm.org/releases/2.6/llvm-2.6.tar.gz <br>
+      $ tar zxvf llvm-2.6.tar.gz <br>
+      $ cd llvm-2.6 <br>
       $ ./configure --enable-optimized <br>
       $ make
     </div>
