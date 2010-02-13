@@ -143,15 +143,15 @@ public:
     
     // Compare
     Eq,
-    Ne,  /// Not used in canonical form
+    Ne,  ///< Not used in canonical form
     Ult,
     Ule,
-    Ugt, /// Not used in canonical form
-    Uge, /// Not used in canonical form
+    Ugt, ///< Not used in canonical form
+    Uge, ///< Not used in canonical form
     Slt,
     Sle,
-    Sgt, /// Not used in canonical form
-    Sge, /// Not used in canonical form
+    Sgt, ///< Not used in canonical form
+    Sge, ///< Not used in canonical form
 
     LastKind=Sge,
 

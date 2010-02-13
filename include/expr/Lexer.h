@@ -20,30 +20,30 @@ namespace klee {
 namespace expr {
   struct Token {
     enum Kind {
-      At,                       /// '@'
-      Arrow,                    /// '->'
-      Colon,                    /// ':'
-      Comma,                    /// ','
-      Comment,                  /// #[^\n]+
-      EndOfFile,                /// <end of file>
-      Equals,                   /// ' = '
-      Identifier,               /// [a-zA-Z_][a-zA-Z0-9._]*
-      KWArray,                  /// 'array'
-      KWFalse,                  /// 'false'
-      KWQuery,                  /// 'query'
-      KWReserved,               /// fp[0-9]+([.].*)?, i[0-9]+
-      KWSymbolic,               /// 'symbolic'
-      KWTrue,                   /// 'true'
-      KWWidth,                  /// w[0-9]+
-      LBrace,                   /// '{'
-      LParen,                   /// '('
-      LSquare,                  /// '['
-      Number,                   /// [+-]?[0-9][a-zA-Z0-9_]+
-      RBrace,                   /// '}'
-      RParen,                   /// ')'
-      RSquare,                  /// ']'
-      Semicolon,                /// ';'
-      Unknown,                   /// <other>
+      At,                       ///< '@'
+      Arrow,                    ///< '->'
+      Colon,                    ///< ':'
+      Comma,                    ///< ','
+      Comment,                  ///< #[^\n]+
+      EndOfFile,                ///< <end of file>
+      Equals,                   ///< ' = '
+      Identifier,               ///< [a-zA-Z_][a-zA-Z0-9._]*
+      KWArray,                  ///< 'array'
+      KWFalse,                  ///< 'false'
+      KWQuery,                  ///< 'query'
+      KWReserved,               ///< fp[0-9]+([.].*)?, i[0-9]+
+      KWSymbolic,               ///< 'symbolic'
+      KWTrue,                   ///< 'true'
+      KWWidth,                  ///< w[0-9]+
+      LBrace,                   ///< '{'
+      LParen,                   ///< '('
+      LSquare,                  ///< '['
+      Number,                   ///< [+-]?[0-9][a-zA-Z0-9_]+
+      RBrace,                   ///< '}'
+      RParen,                   ///< ')'
+      RSquare,                  ///< ']'
+      Semicolon,                ///< ';'
+      Unknown,                  ///< <other>
       
       KWKindFirst=KWArray,
       KWKindLast=KWWidth
