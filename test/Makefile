@@ -33,7 +33,7 @@ check-local:: site.exp
 	( ulimit -t 600 ; ulimit -d 512000 ; \
 	  PATH="$(ToolDir):$(LLVMToolDir):$(LLVM_SRC_ROOT)/test/Scripts:$(PATH)" \
 	  $(RUNTEST) $(RUNTESTFLAGS) ;  \
-	  ! grep FAIL testrun.log )
+	  ! grep FAIL testrun.log; ! grep -q ^FAIL testrun.log;  )
 else
 check-local:: site.exp
 	@echo "*** dejagnu not found.  Make sure runtest is in your PATH, then reconfigure llvm."
