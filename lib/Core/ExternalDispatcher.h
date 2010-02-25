@@ -12,6 +12,7 @@
 
 #include <map>
 #include <string>
+#include <stdint.h>
 
 namespace llvm {
   class ExecutionEngine;

@@ -27,6 +27,7 @@
 #include "../sat/Solver.h"
 #include "../sat/SolverTypes.h"
 #include <cstdlib>
+#include <stdint.h>
 #ifndef NATIVE_C_ARITH
 #include "../constantbv/constantbv.h"
 #endif
