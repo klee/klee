@@ -269,7 +269,12 @@ void StatsTracker::stepInstruction(ExecutionState &es) {
       if (!theStatisticManager->getIndexedValue(stats::coveredInstructions, ii.id)) {
         // Checking for actual stoppoints avoids inconsistencies due
         // to line number propogation.
+        //
+        // FIXME: This trick no longer works, we should fix this in the line
+        // number propogation.
+#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 7)
         if (isa<DbgStopPointInst>(inst))
+#endif
           es.coveredLines[&ii.file].insert(ii.line);
 	es.coveredNew = true;
         es.instsSinceCovNew = 1;

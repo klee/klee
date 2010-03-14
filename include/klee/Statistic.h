@@ -10,7 +10,12 @@
 #ifndef KLEE_STATISTIC_H
 #define KLEE_STATISTIC_H
 
+#include "klee/Config/config.h"
+#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 7)
 #include "llvm/Support/DataTypes.h"
+#else
+#include "llvm/System/DataTypes.h"
+#endif
 #include <string>
 
 namespace klee {

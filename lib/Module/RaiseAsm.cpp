@@ -10,6 +10,9 @@
 #include "Passes.h"
 
 #include "llvm/InlineAsm.h"
+#if !(LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 7)
+#include "llvm/LLVMContext.h"
+#endif
 
 using namespace llvm;
 using namespace klee;

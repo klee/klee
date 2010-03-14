@@ -49,6 +49,9 @@
 #include "llvm/Function.h"
 #include "llvm/Instructions.h"
 #include "llvm/IntrinsicInst.h"
+#if !(LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 7)
+#include "llvm/LLVMContext.h"
+#endif
 #include "llvm/Module.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/CallSite.h"
@@ -1279,6 +1282,7 @@ Function* Executor::getCalledFunction(CallSite &cs, ExecutionState &state) {
 }
 
 static bool isDebugIntrinsic(const Function *f, KModule *KM) {
+#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 7)
   // Fast path, getIntrinsicID is slow.
   if (f == KM->dbgStopPointFn)
     return true;
@@ -1294,6 +1298,9 @@ static bool isDebugIntrinsic(const Function *f, KModule *KM) {
   default:
     return false;
   }
+#else
+  return false;
+#endif
 }
 
 void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
@@ -1807,9 +1814,14 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
  
     // Memory instructions...
-  case Instruction::Alloca:
-  case Instruction::Malloc: {
+#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 7)
+  case Instruction::Malloc:
+  case Instruction::Alloca: {
     AllocationInst *ai = cast<AllocationInst>(i);
+#else
+  case Instruction::Alloca: {
+    AllocaInst *ai = cast<AllocaInst>(i);
+#endif
     unsigned elementSize = 
       kmodule->targetData->getTypeStoreSize(ai->getAllocatedType());
     ref<Expr> size = Expr::createPointer(elementSize);
@@ -1822,10 +1834,12 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     executeAlloc(state, size, isLocal, ki);
     break;
   }
+#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 7)
   case Instruction::Free: {
     executeFree(state, eval(ki, 0, state).value);
     break;
   }
+#endif
 
   case Instruction::Load: {
     ref<Expr> base = eval(ki, 0, state).value;

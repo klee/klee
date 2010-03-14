@@ -55,6 +55,8 @@ namespace klee {
 
   private:
     const std::string *internString(std::string s);
+    bool getInstructionDebugInfo(const llvm::Instruction *I,
+                                 const std::string *&File, unsigned &Line);
 
   public:
     InstructionInfoTable(llvm::Module *m);

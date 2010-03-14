@@ -16,6 +16,9 @@
 #include "llvm/Instruction.h"
 #include "llvm/Instructions.h"
 #include "llvm/IntrinsicInst.h"
+#if !(LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 7)
+#include "llvm/LLVMContext.h"
+#endif
 #include "llvm/Module.h"
 #include "llvm/Pass.h"
 #include "llvm/Type.h"
@@ -85,6 +88,7 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b) {
         break;
       }
 
+#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 7)
       case Intrinsic::dbg_stoppoint: {
         // We can remove this stoppoint if the next instruction is
         // sure to be another stoppoint. This is nice for cleanliness
@@ -117,6 +121,7 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b) {
       case Intrinsic::dbg_region_start:
       case Intrinsic::dbg_region_end:
       case Intrinsic::dbg_func_start:
+#endif
       case Intrinsic::dbg_declare:
         // Remove these regardless of lower intrinsics flag. This can
         // be removed once IntrinsicLowering is fixed to not have bad

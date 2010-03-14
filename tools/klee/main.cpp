@@ -15,11 +15,16 @@
 
 #include "llvm/Constants.h"
 #include "llvm/Module.h"
+#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 7)
 #include "llvm/ModuleProvider.h"
+#endif
 #include "llvm/Type.h"
 #include "llvm/InstrTypes.h"
 #include "llvm/Instruction.h"
 #include "llvm/Instructions.h"
+#if !(LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 7)
+#include "llvm/LLVMContext.h"
+#endif
 #include "llvm/Bitcode/ReaderWriter.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ManagedStatic.h"
@@ -516,10 +521,10 @@ void KleeHandler::getOutFiles(std::string path,
   }
   for (std::set<llvm::sys::Path>::iterator it = contents.begin(),
          ie = contents.end(); it != ie; ++it) {
-#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR == 6)
-    std::string f = it->toString();
-#else
+#if !(LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR == 6)
     std::string f = it->str();
+#else
+    std::string f = it->toString();
 #endif
     if (f.substr(f.size()-6,f.size()) == ".ktest") {
       results.push_back(f);
@@ -1137,6 +1142,7 @@ int main(int argc, char **argv, char **envp) {
   sys::SetInterruptFunction(interrupt_handle);
 
   // Load the bytecode...
+#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 7)
   std::string ErrorMsg;
   ModuleProvider *MP = 0;
   if (MemoryBuffer *Buffer = MemoryBuffer::getFileOrSTDIN(InputFile, &ErrorMsg)) {
@@ -1150,8 +1156,24 @@ int main(int argc, char **argv, char **envp) {
   Module *mainModule = MP->materializeModule();
   MP->releaseModule();
   delete MP;
-
-  assert(mainModule && "unable to materialize");
+#else
+  std::string ErrorMsg;
+  Module *mainModule = 0;
+  MemoryBuffer *Buffer = MemoryBuffer::getFileOrSTDIN(InputFile, &ErrorMsg);
+  if (Buffer) {
+    mainModule = getLazyBitcodeModule(Buffer, getGlobalContext(), &ErrorMsg);
+    if (!mainModule) delete Buffer;
+  }
+  if (mainModule) {
+    if (mainModule->MaterializeAllPermanently(&ErrorMsg)) {
+      delete mainModule;
+      mainModule = 0;
+    }
+  }
+  if (!mainModule)
+    klee_error("error loading program '%s': %s", InputFile.c_str(),
+               ErrorMsg.c_str());
+#endif
   
   if (WithPOSIXRuntime)
     InitEnv = true;

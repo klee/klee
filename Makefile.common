@@ -20,7 +20,12 @@ endif
 
 include $(LLVM_SRC_ROOT)/Makefile.rules
 
+# LLVMCC was added in 2.7.
+ifeq ($(LLVMCC),)
+LLVMCC := $(LLVMGCC)
+LLVMCXX := $(LLVMGXX)
+endif
+
 LD.Flags += -L$(PROJ_SRC_ROOT)/stp/lib
-CXX.Flags += -DLLVM_23
 CXX.Flags += -I$(PROJ_SRC_ROOT)/stp/include
 CXX.Flags += -DKLEE_DIR=\"$(PROJ_SRC_ROOT)\"
