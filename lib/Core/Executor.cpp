@@ -75,9 +75,6 @@
 using namespace llvm;
 using namespace klee;
 
-// omg really hard to share cl opts across files ...
-bool WriteTraces = false;
-
 namespace {
   cl::opt<bool>
   DumpStatesOnHalt("dump-states-on-halt",
@@ -245,13 +242,6 @@ namespace {
   MaxMemoryInhibit("max-memory-inhibit",
             cl::desc("Inhibit forking at memory cap (vs. random terminate)"),
             cl::init(true));
-
-  // use 'external storage' because also needed by tools/klee/main.cpp
-  cl::opt<bool, true>
-  WriteTracesProxy("write-traces", 
-           cl::desc("Write .trace file for each terminated state"),
-           cl::location(WriteTraces),
-           cl::init(false));
 
   cl::opt<bool>
   UseForkedSTP("use-forked-stp", 
@@ -1096,10 +1086,6 @@ void Executor::executeCall(ExecutionState &state,
                            KInstruction *ki,
                            Function *f,
                            std::vector< ref<Expr> > &arguments) {
-  if (WriteTraces)
-    state.exeTraceMgr.addEvent(new FunctionCallTraceEvent(state, ki,
-                                                          f->getName()));
-
   Instruction *i = ki->inst;
   if (f && f->isDeclaration()) {
     switch(f->getIntrinsicID()) {
@@ -1320,10 +1306,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     Instruction *caller = kcaller ? kcaller->inst : 0;
     bool isVoidReturn = (ri->getNumOperands() == 0);
     ref<Expr> result = ConstantExpr::alloc(0, Expr::Bool);
-
-    if (WriteTraces) {
-      state.exeTraceMgr.addEvent(new FunctionReturnTraceEvent(state, ki));
-    }
     
     if (!isVoidReturn) {
       result = eval(ki, 0, state).value;
@@ -1408,20 +1390,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
              "Wrong operand index!");
       ref<Expr> cond = eval(ki, 0, state).value;
       Executor::StatePair branches = fork(state, cond, false);
-
-      if (WriteTraces) {
-        bool isTwoWay = (branches.first && branches.second);
-
-        if (branches.first) {
-          branches.first->exeTraceMgr.addEvent(
-            new BranchTraceEvent(state, ki, true, isTwoWay));
-        }
-
-        if (branches.second) {
-          branches.second->exeTraceMgr.addEvent(
-            new BranchTraceEvent(state, ki, false, isTwoWay));
-        }
-      }
 
       // NOTE: There is a hidden dependency here, markBranchVisited
       // requires that we still be in the context of the branch

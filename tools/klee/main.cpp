@@ -185,7 +185,6 @@ namespace {
            cl::init(0));
 }
 
-extern bool WriteTraces;
 extern cl::opt<double> MaxTime;
 
 /***/
@@ -473,12 +472,6 @@ void KleeHandler::processTestCase(const ExecutionState &state,
              it2 != ie; ++it2)
           *f << *it->first << ":" << *it2 << "\n";
       }
-      delete f;
-    }
-
-    if (WriteTraces) {
-      std::ostream *f = openTestFile("trace", id);
-      state.exeTraceMgr.printAllEvents(*f);
       delete f;
     }
 
