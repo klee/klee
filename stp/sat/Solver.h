@@ -24,9 +24,6 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "VarOrder.h"
 
 namespace MINISAT {
-// Redfine if you want output to go somewhere else:
-#define reportf(format, args...) ( printf(format , ## args), fflush(stdout) )
-
 
 //=================================================================================================
 // Solver -- the main class:

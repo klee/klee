@@ -121,15 +121,16 @@ namespace BEEV {
       return;
     double  cpu_time = MINISAT::cpuTime();
     MINISAT::int64   mem_used = MINISAT::memUsed();
-    reportf("restarts              : %"I64_fmt"\n", s.starts);
-    reportf("conflicts             : %-12"I64_fmt"   (%.0f /sec)\n", s.conflicts   , s.conflicts   /cpu_time);
-    reportf("decisions             : %-12"I64_fmt"   (%.0f /sec)\n", s.decisions   , s.decisions   /cpu_time);
-    reportf("propagations          : %-12"I64_fmt"   (%.0f /sec)\n", s.propagations, s.propagations/cpu_time);
-    reportf("conflict literals     : %-12"I64_fmt"   (%4.2f %% deleted)\n", 
-	    s.tot_literals, 
-	    (s.max_literals - s.tot_literals)*100 / (double)s.max_literals);
-    if (mem_used != 0) reportf("Memory used           : %.2f MB\n", mem_used / 1048576.0);
-    reportf("CPU time              : %g s\n", cpu_time);
+    printf("restarts              : %"I64_fmt"\n", s.starts);
+    printf("conflicts             : %-12"I64_fmt"   (%.0f /sec)\n", s.conflicts   , s.conflicts   /cpu_time);
+    printf("decisions             : %-12"I64_fmt"   (%.0f /sec)\n", s.decisions   , s.decisions   /cpu_time);
+    printf("propagations          : %-12"I64_fmt"   (%.0f /sec)\n", s.propagations, s.propagations/cpu_time);
+    printf("conflict literals     : %-12"I64_fmt"   (%4.2f %% deleted)\n", 
+           s.tot_literals, 
+           (s.max_literals - s.tot_literals)*100 / (double)s.max_literals);
+    if (mem_used != 0) printf("Memory used           : %.2f MB\n", mem_used / 1048576.0);
+    printf("CPU time              : %g s\n", cpu_time);
+    fflush(stdout);
   }
   
   // Prints Satisfying assignment directly, for debugging.

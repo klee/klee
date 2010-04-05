@@ -768,24 +768,26 @@ bool Solver::solve(const vec<Lit>& assumps)
     assumps.copyTo(assumptions);
 
     if (verbosity >= 1){
-        reportf("==================================[MINISAT]====================================\n");
-        reportf("| Conflicts |          ORIGINAL         |          LEARNT          | Progress |\n");
-        reportf("|           |    Vars  Clauses Literals |    Limit  Clauses Lit/Cl |          |\n");
-        reportf("===============================================================================\n");
+        printf("==================================[MINISAT]====================================\n");
+        printf("| Conflicts |          ORIGINAL         |          LEARNT          | Progress |\n");
+        printf("|           |    Vars  Clauses Literals |    Limit  Clauses Lit/Cl |          |\n");
+        printf("===============================================================================\n");
     }
 
     // Search:
     while (status == l_Undef){
         if (verbosity >= 1)
-            //reportf("| %9d | %7d %8d | %7d %7d %8d %7.1f | %6.3f %% |\n", (int)stats.conflicts, nClauses(), (int)stats.clauses_literals, (int)nof_learnts, nLearnts(), (int)stats.learnts_literals, (double)stats.learnts_literals/nLearnts(), progress_estimate*100);
-            reportf("| %9d | %7d %8d %8d | %8d %8d %6.0f | %6.3f %% |\n", (int)stats.conflicts, order.size(), nClauses(), (int)stats.clauses_literals, (int)nof_learnts, nLearnts(), (double)stats.learnts_literals/nLearnts(), progress_estimate*100);
+            //printf("| %9d | %7d %8d | %7d %7d %8d %7.1f | %6.3f %% |\n", (int)stats.conflicts, nClauses(), (int)stats.clauses_literals, (int)nof_learnts, nLearnts(), (int)stats.learnts_literals, (double)stats.learnts_literals/nLearnts(), progress_estimate*100);
+            printf("| %9d | %7d %8d %8d | %8d %8d %6.0f | %6.3f %% |\n", (int)stats.conflicts, order.size(), nClauses(), (int)stats.clauses_literals, (int)nof_learnts, nLearnts(), (double)stats.learnts_literals/nLearnts(), progress_estimate*100);
         status = search((int)nof_conflicts, (int)nof_learnts);
         nof_conflicts *= params.restart_inc;
         nof_learnts   *= params.learntsize_inc;
     }
 
-    if (verbosity >= 1)
-        reportf("==============================================================================\n");
+    if (verbosity >= 1) {
+        printf("==============================================================================\n");
+        fflush(stdout);
+    }
 
     if (status == l_True){
         // Copy model:
