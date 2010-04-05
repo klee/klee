@@ -1409,7 +1409,7 @@ Expr getChild(Expr e, int i){
   nodestar a = (nodestar)e;
 
   BEEV::ASTVec c = a->GetChildren();
-  if(0 <=  (unsigned)i && (unsigned)i < c.size()) {
+  if ((unsigned)i < c.size()) {
     BEEV::ASTNode o = c[i];
     nodestar output = new node(o);
     //if(cinterface_exprdelete_on) created_exprs.push_back(output);
