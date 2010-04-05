@@ -1,4 +1,4 @@
-// RUN: %llvmgxx %s --emit-llvm -O0 -c -o %t1.bc
+// RUN: %llvmgxx %s -emit-llvm -O0 -c -o %t1.bc
 // RUN: %klee --libc=klee --no-output --exit-on-error %t1.bc
 
 #include <cassert>

@@ -1,4 +1,4 @@
-// RUN: %llvmgxx -I../../../include -g -DMAX_ELEMENTS=4 -fno-exceptions --emit-llvm -c -o %t1.bc %s
+// RUN: %llvmgxx -I../../../include -g -DMAX_ELEMENTS=4 -fno-exceptions -emit-llvm -c -o %t1.bc %s
 // RUN: %klee --libc=klee --max-forks=200 --no-output --exit-on-error --optimize --disable-inlining --use-non-uniform-random-search --use-cex-cache %t1.bc
 
 #include "klee/klee.h"

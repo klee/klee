@@ -1,4 +1,4 @@
-// RUN: %llvmgcc %s --emit-llvm -O0 -c -o %t2.bc
+// RUN: %llvmgcc %s -emit-llvm -O0 -c -o %t2.bc
 // RUN: %klee %t2.bc
 // RUN: %klee --use-random-search %t2.bc
 // RUN: %klee --use-non-uniform-random-search %t2.bc
