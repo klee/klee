@@ -1,8 +1,5 @@
 /* include/klee/Config/config.h.in.  Generated from autoconf/configure.tmp.ac by autoheader.  */
 
-/* Define if stplog enabled */
-#undef ENABLE_STPLOG
-
 /* Does the platform use __ctype_b_loc, etc. */
 #undef HAVE_CTYPE_EXTERNALS
 

@@ -21,9 +21,9 @@ all-local:: $(ToolBuildPath)
 
 $(ToolBuildPath): $(ToolDir)/.dir
 
-$(ToolBuildPath): $(TOOLSCRIPTNAME)
+$(ToolBuildPath): $(PROJ_SRC_DIR)/$(TOOLSCRIPTNAME)
 	$(Echo) Copying $(BuildMode) script $(TOOLSCRIPTNAME)
-	$(Verb) $(CP) -f $(TOOLSCRIPTNAME) "$@"
+	$(Verb) $(CP) -f $(PROJ_SRC_DIR)/$(TOOLSCRIPTNAME) "$@"
 	$(Verb) chmod 0755 "$@"
 
 ifdef NO_INSTALL

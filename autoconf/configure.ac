@@ -262,22 +262,20 @@ AC_CHECK_HEADERS([selinux/selinux.h],
         AC_SUBST(HAVE_SELINUX, 1),
         AC_SUBST(HAVE_SELINUX, 0))
 
-dnl User option to use stplog.
-
-AC_ARG_ENABLE(stplog,
-              AS_HELP_STRING([--enable-stplog],
-                             [Compile with the stplog library [[disabled]]]),
-                             ,enableval=no)
-if test ${enableval} = "yes" ; then
-  AC_SUBST(ENABLE_STPLOG,[[1]])
-else
-  AC_SUBST(ENABLE_STPLOG,[[0]])
-fi
-AC_DEFINE_UNQUOTED([ENABLE_STPLOG],$ENABLE_STPLOG,[Define if stplog enabled])
-
 dnl **************************************************************************
 dnl * Create the output files
 dnl **************************************************************************
+
+dnl Do special configuration of Makefiles
+AC_CONFIG_MAKEFILE(Makefile)
+AC_CONFIG_MAKEFILE(Makefile.common)
+AC_CONFIG_MAKEFILE(lib/Makefile)
+AC_CONFIG_MAKEFILE(runtime/Makefile)
+AC_CONFIG_MAKEFILE(stp/Makefile)
+AC_CONFIG_MAKEFILE(test/Makefile)
+AC_CONFIG_MAKEFILE(test/Makefile.tests)
+AC_CONFIG_MAKEFILE(tools/Makefile)
+AC_CONFIG_MAKEFILE(unittests/Makefile)
 
 dnl This must be last
 AC_OUTPUT

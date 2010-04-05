@@ -28,7 +28,7 @@ endif
 
 LD.Flags += -L$(PROJ_SRC_ROOT)/stp/lib
 CXX.Flags += -I$(PROJ_SRC_ROOT)/stp/include
-CXX.Flags += -DKLEE_DIR=\"$(PROJ_SRC_ROOT)\"
+CXX.Flags += -DKLEE_DIR=\"$(PROJ_OBJ_ROOT)\"
 
 # For STP.
 CXX.Flags += -DEXT_HASH_MAP
