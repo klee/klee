@@ -1,13 +1,16 @@
-include ../Makefile.common
+#===-- stp/constantbv/Makefile -----------------------------*- Makefile -*--===#
+#
+#                     The KLEE Symbolic Virtual Machine
+#
+# This file is distributed under the University of Illinois Open Source
+# License. See LICENSE.TXT for details.
+#
+#===------------------------------------------------------------------------===#
 
-SRCS = constantbv.cpp
-OBJS = $(SRCS:.cpp=.o)
+LEVEL=../..
 
-libconstantbv.a: $(OBJS)
-	$(AR) rc $@ $^
-	$(RANLIB) $@
+LIBRARYNAME=stp_constantbv
+DONT_BUILD_RELINKED=1
+BUILD_ARCHIVE=1
 
-clean:	
-	rm -rf *.o *~ *.a .#*
-
-constantbv.o: constantbv.h
+include $(LEVEL)/Makefile.common

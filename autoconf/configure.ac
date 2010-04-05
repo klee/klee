@@ -20,7 +20,6 @@ AC_CONFIG_SRCDIR(["Makefile.config.in"])
 
 dnl Configure a common Makefile
 AC_CONFIG_FILES(Makefile.config)
-AC_CONFIG_FILES(stp/Makefile.common)
 
 dnl Configure project makefiles
 dnl List every Makefile that exists within your source tree

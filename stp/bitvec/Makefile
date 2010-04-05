@@ -1,11 +1,16 @@
-include ../Makefile.common
+#===-- stp/bitvec/Makefile ---------------------------------*- Makefile -*--===#
+#
+#                     The KLEE Symbolic Virtual Machine
+#
+# This file is distributed under the University of Illinois Open Source
+# License. See LICENSE.TXT for details.
+#
+#===------------------------------------------------------------------------===#
 
-SRCS = consteval.cpp
-OBJS = $(SRCS:.cpp=.o)
+LEVEL=../..
 
-libconsteval.a: $(OBJS)
-	$(AR) rc $@ $^
-	$(RANLIB) $@
+LIBRARYNAME=stp_bitvec
+DONT_BUILD_RELINKED=1
+BUILD_ARCHIVE=1
 
-clean:	
-	rm -rf *.o *~ *.a .#*
+include $(LEVEL)/Makefile.common

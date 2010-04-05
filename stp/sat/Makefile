@@ -1,16 +1,16 @@
-include ../Makefile.common
+#===-- stp/sat/Makefile -----------------------------------*- Makefile -*--===#
+#
+#                     The KLEE Symbolic Virtual Machine
+#
+# This file is distributed under the University of Illinois Open Source
+# License. See LICENSE.TXT for details.
+#
+#===------------------------------------------------------------------------===#
 
-SRCS = Solver.C Simplifier.C
-OBJS = $(SRCS:.C=.o)
+LEVEL=../..
 
-libsatsolver.a: $(OBJS)
-	$(AR) rc $@ $^
-	$(RANLIB) $@
+LIBRARYNAME=stp_sat
+DONT_BUILD_RELINKED=1
+BUILD_ARCHIVE=1
 
-Solver.o: Solver.C Solver.h Sort.h SolverTypes.h VarOrder.h Global.h Heap.h
-Simplifier.o: Simplifier.C Solver.h Sort.h SolverTypes.h VarOrder.h Global.h Heap.h
-
-clean:
-	rm -rf *.o *~  *.a  depend.mak .#*
-depend:
-	makedepend -- $(CFLAGS) -- $(SRCS)
+include $(LEVEL)/Makefile.common
