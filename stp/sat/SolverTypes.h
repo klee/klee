@@ -68,7 +68,7 @@ const Lit lit_Error(var_Undef, true );  // }
 class Clause {
     uint    size_etc;
     union { float act; uint abst; } apa;
-    Lit     data[0];
+    Lit     data[1];
 public:
     // NOTE: This constructor cannot be used directly (doesn't allocate enough memory).
     template<class V>
@@ -82,7 +82,8 @@ public:
     friend Clause* Clause_new(const V& ps, bool learnt = false) {
         assert(sizeof(Lit)      == sizeof(uint));
         assert(sizeof(float)    == sizeof(uint));
-        void*   mem = xmalloc<char>(sizeof(Clause) + sizeof(uint)*(ps.size()));
+        void*   mem = xmalloc<char>(sizeof(Clause) +
+                                    sizeof(uint)*(ps.size() - 1));
         return new (mem) Clause(ps, learnt); }
 
     int       size        ()      const { return size_etc >> 3; }
