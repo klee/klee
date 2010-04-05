@@ -64,8 +64,13 @@ Function *klee::getDirectCallTarget(const Instruction *i) {
 }
 
 static bool valueIsOnlyCalled(const Value *v) {
+#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 8)
   for (Value::use_const_iterator it = v->use_begin(), ie = v->use_end();
        it != ie; ++it) {
+#else
+  for (Value::const_use_iterator it = v->use_begin(), ie = v->use_end();
+       it != ie; ++it) {
+#endif
     if (const Instruction *instr = dyn_cast<Instruction>(*it)) {
       if (instr->getOpcode()==0) continue; // XXX function numbering inst
       if (!isa<CallInst>(instr) && !isa<InvokeInst>(instr)) return false;
