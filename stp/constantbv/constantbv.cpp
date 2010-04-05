@@ -3568,4 +3568,4 @@ void Matrix_Transpose(unsigned int *  X, unsigned int rowsX, unsigned int colsX,
     }
   }
 }
-}; //end of namespace CONSTANTBV
+} //end of namespace CONSTANTBV

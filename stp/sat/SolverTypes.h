@@ -124,5 +124,5 @@ class TrailPos {
     bool operator <   (TrailPos other) const { return tp <  other.tp; }
 };
 
-};
+}
 #endif

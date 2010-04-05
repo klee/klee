@@ -1575,5 +1575,5 @@ namespace BEEV {
   BeevMgr::~BeevMgr() {
     ClearAllTables();
   }
-}; // end namespace
+} // end namespace
 

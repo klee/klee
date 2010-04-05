@@ -42,4 +42,4 @@ namespace BEEV {
     }
     s[functionname] += 1;
   }
-};// end of namespace
+} // end of namespace

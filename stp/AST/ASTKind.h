@@ -58,7 +58,7 @@ namespace BEEV {
     WRITE,
     ARRAY,
     BITVECTOR,
-    BOOLEAN,
+    BOOLEAN
 } Kind;
 
 extern unsigned char _kind_categories[];
@@ -73,7 +73,7 @@ extern const char *_kind_names[];
 inline ostream& operator<<(ostream &os, const Kind &kind) { os << _kind_names[kind]; return os; }
 
 
-};  // end namespace
+}  // end namespace
 
 
 #endif

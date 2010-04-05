@@ -539,4 +539,4 @@ bool Solver::eliminate()
 
     return true;
 }
-};
+}

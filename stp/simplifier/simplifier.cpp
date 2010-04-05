@@ -2492,4 +2492,4 @@ namespace BEEV {
     TermsAlreadySeenMap[term] = var;
     return false;
   }
-};//end of namespace
+} //end of namespace

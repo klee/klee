@@ -711,4 +711,4 @@ namespace BEEV {
     UpdateAlreadySolvedMap(input,output);
     return output;
   } //end of BVSolve_Even()
-};//end of namespace BEEV
+} //end of namespace BEEV

@@ -131,4 +131,4 @@ namespace BEEV {
     //equation to be solved, solves them,
     ASTNode TopLevelBVSolve(const ASTNode& a);
   }; //end of class bvsolver
-};//end of namespace BEEV
+} //end of namespace BEEV

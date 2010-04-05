@@ -1011,7 +1011,7 @@ namespace BEEV {
     if (_int_node_ptr) {
       _int_node_ptr->DecRef();
     }
-  };
+  }
 #else
   // No refcounting
   inline void ASTInternal::DecRef()
@@ -1802,5 +1802,5 @@ namespace BEEV {
     }
   };
 
-}; // end namespace BEEV
+} // end namespace BEEV
 #endif

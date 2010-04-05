@@ -83,7 +83,7 @@ sub gen_h_file {
 	"/** Prints symbolic name of kind */\n",
 	"inline ostream& operator<<(ostream &os, const Kind &kind) { os << _kind_names[kind]; return os; }\n",
 	"\n\n",
-	"};  // end namespace\n",
+	"}  // end namespace\n",
 	"\n\n#endif\n";
 
     close(HFILE);
@@ -112,7 +112,7 @@ sub gen_cpp_file {
     }
     print CPPFILE 
 	"};\n",
-	"\n};  // end namespace\n";
+	"\n}  // end namespace\n";
 
     close(CPPFILE);
 }

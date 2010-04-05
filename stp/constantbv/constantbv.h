@@ -309,8 +309,8 @@ namespace CONSTANTBV {
       0x05, 0x06, 0x06, 0x07,  0x06, 0x07, 0x07, 0x08  /* 0xF0 */
     };
 #ifdef __cplusplus
-  };
+  }
 #endif
-}; //end of namespace CONSTANTBV
+} //end of namespace CONSTANTBV
 #endif
 

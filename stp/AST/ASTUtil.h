@@ -103,5 +103,5 @@ namespace BEEV {
   //corresponding ASTNode and prints a char* of that ASTNode
   void Convert_MINISATVar_To_ASTNode_Print(int minisat_var, 
 					   int decision, int polarity=0);
-}; // end namespace.
+} // end namespace.
 #endif
