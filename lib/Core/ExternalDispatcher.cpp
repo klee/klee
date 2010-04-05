@@ -229,7 +229,7 @@ Function *ExternalDispatcher::createDispatcher(Function *target, Instruction *in
     cast<FunctionType>(cast<PointerType>(target->getType())->getElementType());
 
   // Each argument will be passed by writing it into gTheArgsP[i].
-  unsigned i = 0;
+  unsigned i = 0, idx = 2;
   for (CallSite::arg_iterator ai = cs.arg_begin(), ae = cs.arg_end();
        ai!=ae; ++ai, ++i) {
     // Determine the type the argument will be passed as. This accomodates for
@@ -240,12 +240,15 @@ Function *ExternalDispatcher::createDispatcher(Function *target, Instruction *in
     Instruction *argI64p = 
       GetElementPtrInst::Create(argI64s, 
                                 ConstantInt::get(Type::getInt32Ty(getGlobalContext()), 
-                                                 i+1), 
+                                                 idx), 
                                 "", dBB);
 
     Instruction *argp = new BitCastInst(argI64p, PointerType::getUnqual(argTy),
                                         "", dBB);
     args[i] = new LoadInst(argp, "", dBB);
+
+    unsigned argSize = argTy->getPrimitiveSizeInBits();
+    idx += ((!!argSize ? argSize : 64) + 63)/64;
   }
 
   Constant *dispatchTarget =

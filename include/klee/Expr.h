@@ -14,6 +14,7 @@
 #include "klee/util/Ref.h"
 
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/SmallVector.h"
 
 #include <set>
@@ -95,6 +96,7 @@ public:
   static const Width Int16 = 16;
   static const Width Int32 = 32;
   static const Width Int64 = 64;
+  static const Width Fl80 = 80;
   
 
   enum Kind {
@@ -359,6 +361,10 @@ public:
     ref<ConstantExpr> r(new ConstantExpr(v));
     r->computeHash();
     return r;
+  }
+
+  static ref<ConstantExpr> alloc(const llvm::APFloat &f) {
+    return alloc(f.bitcastToAPInt());
   }
 
   static ref<ConstantExpr> alloc(uint64_t v, Width w) {

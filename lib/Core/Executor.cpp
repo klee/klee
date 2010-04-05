@@ -1303,6 +1303,19 @@ static bool isDebugIntrinsic(const Function *f, KModule *KM) {
 #endif
 }
 
+static inline const llvm::fltSemantics * fpWidthToSemantics(unsigned width) {
+  switch(width) {
+  case Expr::Int32:
+    return &llvm::APFloat::IEEEsingle;
+  case Expr::Int64:
+    return &llvm::APFloat::IEEEdouble;
+  case Expr::Fl80:
+    return &llvm::APFloat::x87DoubleExtended;
+  default:
+    return 0;
+  }
+}
+
 void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   Instruction *i = ki->inst;
   switch (i->getOpcode()) {
@@ -1925,6 +1938,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
                                         "floating point");
     ref<ConstantExpr> right = toConstant(state, eval(ki, 1, state).value,
                                          "floating point");
+    if (!fpWidthToSemantics(left->getWidth()) ||
+        !fpWidthToSemantics(right->getWidth()))
+      return terminateStateOnExecError(state, "Unsupported FAdd operation");
+
     llvm::APFloat Res(left->getAPValue());
     Res.add(APFloat(right->getAPValue()), APFloat::rmNearestTiesToEven);
     bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
@@ -1936,6 +1953,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
                                         "floating point");
     ref<ConstantExpr> right = toConstant(state, eval(ki, 1, state).value,
                                          "floating point");
+    if (!fpWidthToSemantics(left->getWidth()) ||
+        !fpWidthToSemantics(right->getWidth()))
+      return terminateStateOnExecError(state, "Unsupported FSub operation");
+
     llvm::APFloat Res(left->getAPValue());
     Res.subtract(APFloat(right->getAPValue()), APFloat::rmNearestTiesToEven);
     bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
@@ -1947,6 +1968,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
                                         "floating point");
     ref<ConstantExpr> right = toConstant(state, eval(ki, 1, state).value,
                                          "floating point");
+    if (!fpWidthToSemantics(left->getWidth()) ||
+        !fpWidthToSemantics(right->getWidth()))
+      return terminateStateOnExecError(state, "Unsupported FMul operation");
+
     llvm::APFloat Res(left->getAPValue());
     Res.multiply(APFloat(right->getAPValue()), APFloat::rmNearestTiesToEven);
     bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
@@ -1958,6 +1983,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
                                         "floating point");
     ref<ConstantExpr> right = toConstant(state, eval(ki, 1, state).value,
                                          "floating point");
+    if (!fpWidthToSemantics(left->getWidth()) ||
+        !fpWidthToSemantics(right->getWidth()))
+      return terminateStateOnExecError(state, "Unsupported FDiv operation");
+
     llvm::APFloat Res(left->getAPValue());
     Res.divide(APFloat(right->getAPValue()), APFloat::rmNearestTiesToEven);
     bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
@@ -1969,6 +1998,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
                                         "floating point");
     ref<ConstantExpr> right = toConstant(state, eval(ki, 1, state).value,
                                          "floating point");
+    if (!fpWidthToSemantics(left->getWidth()) ||
+        !fpWidthToSemantics(right->getWidth()))
+      return terminateStateOnExecError(state, "Unsupported FRem operation");
+
     llvm::APFloat Res(left->getAPValue());
     Res.mod(APFloat(right->getAPValue()), APFloat::rmNearestTiesToEven);
     bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
@@ -1980,12 +2013,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     Expr::Width resultType = Expr::getWidthForLLVMType(fi->getType());
     ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
                                        "floating point");
-    if (arg->getWidth() > 64)
+    if (!fpWidthToSemantics(arg->getWidth()) || resultType > arg->getWidth())
       return terminateStateOnExecError(state, "Unsupported FPTrunc operation");
-    uint64_t value = floats::trunc(arg->getZExtValue(),
-                                   resultType,
-                                   arg->getWidth());
-    bindLocal(ki, state, ConstantExpr::alloc(value, resultType));
+
+    llvm::APFloat Res(arg->getAPValue());
+    bool losesInfo = false;
+    Res.convert(*fpWidthToSemantics(resultType),
+                llvm::APFloat::rmNearestTiesToEven,
+                &losesInfo);
+    bindLocal(ki, state, ConstantExpr::alloc(Res));
     break;
   }
 
@@ -1993,13 +2029,16 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     FPExtInst *fi = cast<FPExtInst>(i);
     Expr::Width resultType = Expr::getWidthForLLVMType(fi->getType());
     ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
-                                       "floating point");
-    if (arg->getWidth() > 64)
+                                        "floating point");
+    if (!fpWidthToSemantics(arg->getWidth()) || arg->getWidth() > resultType)
       return terminateStateOnExecError(state, "Unsupported FPExt operation");
-    uint64_t value = floats::ext(arg->getZExtValue(),
-                                 resultType,
-                                 arg->getWidth());
-    bindLocal(ki, state, ConstantExpr::alloc(value, resultType));
+
+    llvm::APFloat Res(arg->getAPValue());
+    bool losesInfo = false;
+    Res.convert(*fpWidthToSemantics(resultType),
+                llvm::APFloat::rmNearestTiesToEven,
+                &losesInfo);
+    bindLocal(ki, state, ConstantExpr::alloc(Res));
     break;
   }
 
@@ -2008,11 +2047,14 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     Expr::Width resultType = Expr::getWidthForLLVMType(fi->getType());
     ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
                                        "floating point");
-    if (arg->getWidth() > 64)
+    if (!fpWidthToSemantics(arg->getWidth()) || resultType > 64)
       return terminateStateOnExecError(state, "Unsupported FPToUI operation");
-    uint64_t value = floats::toUnsignedInt(arg->getZExtValue(),
-                                           resultType,
-                                           arg->getWidth());
+
+    llvm::APFloat Arg(arg->getAPValue());
+    uint64_t value = 0;
+    bool isExact = true;
+    Arg.convertToInteger(&value, resultType, false,
+                         llvm::APFloat::rmTowardZero, &isExact);
     bindLocal(ki, state, ConstantExpr::alloc(value, resultType));
     break;
   }
@@ -2022,11 +2064,14 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     Expr::Width resultType = Expr::getWidthForLLVMType(fi->getType());
     ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
                                        "floating point");
-    if (arg->getWidth() > 64)
+    if (!fpWidthToSemantics(arg->getWidth()) || resultType > 64)
       return terminateStateOnExecError(state, "Unsupported FPToSI operation");
-    uint64_t value = floats::toSignedInt(arg->getZExtValue(),
-                                         resultType,
-                                         arg->getWidth());
+
+    llvm::APFloat Arg(arg->getAPValue());
+    uint64_t value = 0;
+    bool isExact = true;
+    Arg.convertToInteger(&value, resultType, false,
+                         llvm::APFloat::rmTowardZero, &isExact);
     bindLocal(ki, state, ConstantExpr::alloc(value, resultType));
     break;
   }
@@ -2036,11 +2081,14 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     Expr::Width resultType = Expr::getWidthForLLVMType(fi->getType());
     ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
                                        "floating point");
-    if (arg->getWidth() > 64)
+    const llvm::fltSemantics *semantics = fpWidthToSemantics(resultType);
+    if (!semantics)
       return terminateStateOnExecError(state, "Unsupported UIToFP operation");
-    uint64_t value = floats::UnsignedIntToFP(arg->getZExtValue(),
-                                             resultType);
-    bindLocal(ki, state, ConstantExpr::alloc(value, resultType));
+    llvm::APFloat f(*semantics, 0);
+    f.convertFromAPInt(arg->getAPValue(), false,
+                       llvm::APFloat::rmNearestTiesToEven);
+
+    bindLocal(ki, state, ConstantExpr::alloc(f));
     break;
   }
 
@@ -2049,12 +2097,14 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     Expr::Width resultType = Expr::getWidthForLLVMType(fi->getType());
     ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
                                        "floating point");
-    if (arg->getWidth() > 64)
+    const llvm::fltSemantics *semantics = fpWidthToSemantics(resultType);
+    if (!semantics)
       return terminateStateOnExecError(state, "Unsupported SIToFP operation");
-    uint64_t value = floats::SignedIntToFP(arg->getZExtValue(),
-                                           resultType,
-                                           arg->getWidth());
-    bindLocal(ki, state, ConstantExpr::alloc(value, resultType));
+    llvm::APFloat f(*semantics, 0);
+    f.convertFromAPInt(arg->getAPValue(), true,
+                       llvm::APFloat::rmNearestTiesToEven);
+
+    bindLocal(ki, state, ConstantExpr::alloc(f));
     break;
   }
 
@@ -2064,6 +2114,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
                                         "floating point");
     ref<ConstantExpr> right = toConstant(state, eval(ki, 1, state).value,
                                          "floating point");
+    if (!fpWidthToSemantics(left->getWidth()) ||
+        !fpWidthToSemantics(right->getWidth()))
+      return terminateStateOnExecError(state, "Unsupported FCmp operation");
+
     APFloat LHS(left->getAPValue());
     APFloat RHS(right->getAPValue());
     APFloat::cmpResult CmpRes = LHS.compare(RHS);
@@ -2561,23 +2615,27 @@ void Executor::callExternalFunction(ExecutionState &state,
   }
 
   // normal external function handling path
-  uint64_t *args = (uint64_t*) alloca(sizeof(*args) * (arguments.size() + 1));
-  memset(args, 0, sizeof(*args) * (arguments.size() + 1));
-
-  unsigned i = 1;
+  // allocate 128 bits for each argument (+return value) to support fp80's;
+  // we could iterate through all the arguments first and determine the exact
+  // size we need, but this is faster, and the memory usage isn't significant.
+  uint64_t *args = (uint64_t*) alloca(2*sizeof(*args) * (arguments.size() + 1));
+  memset(args, 0, 2 * sizeof(*args) * (arguments.size() + 1));
+  unsigned wordIndex = 2;
   for (std::vector<ref<Expr> >::iterator ai = arguments.begin(), 
-         ae = arguments.end(); ai!=ae; ++ai, ++i) {
+       ae = arguments.end(); ai!=ae; ++ai) {
     if (AllowExternalSymCalls) { // don't bother checking uniqueness
       ref<ConstantExpr> ce;
       bool success = solver->getValue(state, *ai, ce);
       assert(success && "FIXME: Unhandled solver failure");
       (void) success;
-      static_cast<ConstantExpr*>(ce.get())->toMemory((void*) &args[i]);
+      ce->toMemory(&args[wordIndex]);
+      wordIndex += (ce->getWidth()+63)/64;
     } else {
       ref<Expr> arg = toUnique(state, *ai);
-      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(arg)) {
+      if (ConstantExpr *ce = dyn_cast<ConstantExpr>(arg)) {
         // XXX kick toMemory functions from here
-        CE->toMemory((void*) &args[i]);
+        ce->toMemory(&args[wordIndex]);
+        wordIndex += (ce->getWidth()+63)/64;
       } else {
         terminateStateOnExecError(state, 
                                   "external call with symbolic argument: " + 
