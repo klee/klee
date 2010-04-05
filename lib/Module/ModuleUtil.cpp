@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "klee/Internal/Support/ModuleUtil.h"
+#include "klee/Config/config.h"
 
 #include "llvm/Function.h"
 #include "llvm/Instructions.h"
