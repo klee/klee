@@ -79,6 +79,9 @@ def main(args):
     op.add_option('','--trim-zeros', dest='trimZeros', action='store_true', 
                   default=False,
                   help='trim trailing zeros')
+    op.add_option('','--write-ints', dest='writeInts', action='store_true',
+                  default=False,
+                  help='convert 4-byte sequences to integers')
     
     opts,args = op.parse_args()
     if not args:
@@ -98,7 +101,10 @@ def main(args):
 
             print 'object %4d: name: %r' % (i, name)
             print 'object %4d: size: %r' % (i, len(data))
-            print 'object %4d: data: %r' % (i, str)
+            if opts.writeInts and len(data) == 4: 
+                print 'object %4d: data: %r' % (i, struct.unpack('i',str)[0])
+            else:
+                print 'object %4d: data: %r' % (i, str)
         if file != args[-1]:
             print
 
