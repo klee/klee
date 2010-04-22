@@ -420,7 +420,7 @@ private:
   bool useForkedSTP;
 
 public:
-  STPSolverImpl(STPSolver *_solver, bool _useForkedSTP);
+  STPSolverImpl(STPSolver *_solver, bool _useForkedSTP, bool _optimizeDivides = true);
   ~STPSolverImpl();
 
   char *getConstraintLog(const Query&);
@@ -443,10 +443,10 @@ static void stp_error_handler(const char* err_msg) {
   abort();
 }
 
-STPSolverImpl::STPSolverImpl(STPSolver *_solver, bool _useForkedSTP) 
+STPSolverImpl::STPSolverImpl(STPSolver *_solver, bool _useForkedSTP, bool _optimizeDivides)
   : solver(_solver),
     vc(vc_createValidityChecker()),
-    builder(new STPBuilder(vc)),
+    builder(new STPBuilder(vc, _optimizeDivides)),
     timeout(0.0),
     useForkedSTP(_useForkedSTP)
 {
@@ -472,8 +472,8 @@ STPSolverImpl::~STPSolverImpl() {
 
 /***/
 
-STPSolver::STPSolver(bool useForkedSTP) 
-  : Solver(new STPSolverImpl(this, useForkedSTP))
+STPSolver::STPSolver(bool useForkedSTP, bool optimizeDivides)
+  : Solver(new STPSolverImpl(this, useForkedSTP, optimizeDivides))
 {
 }
 
