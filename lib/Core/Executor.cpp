@@ -311,7 +311,9 @@ Executor::Executor(const InterpreterOptions &opts,
     inhibitForking(false),
     haltExecution(false),
     ivcEnabled(false),
-    stpTimeout(std::min(MaxSTPTime,MaxInstructionTime)) {
+    stpTimeout(MaxSTPTime != 0 && MaxInstructionTime != 0
+      ? std::min(MaxSTPTime,MaxInstructionTime)
+      : std::max(MaxSTPTime,MaxInstructionTime)) {
   STPSolver *stpSolver = new STPSolver(UseForkedSTP);
   Solver *solver = 
     constructSolverChain(stpSolver,
