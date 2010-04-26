@@ -2266,9 +2266,9 @@ void Executor::bindInstructionConstants(KInstruction *KI) {
       constantOffset = constantOffset->Add(ConstantExpr::alloc(addend,
                                                                Context::get().getPointerWidth()));
     } else {
-      const SequentialType *st = cast<SequentialType>(*ii);
+      const SequentialType *set = cast<SequentialType>(*ii);
       uint64_t elementSize = 
-        kmodule->targetData->getTypeStoreSize(st->getElementType());
+        kmodule->targetData->getTypeStoreSize(set->getElementType());
       Value *operand = ii.getOperand();
       if (Constant *c = dyn_cast<Constant>(operand)) {
         ref<ConstantExpr> index = 

@@ -93,11 +93,11 @@ namespace klee {
                                                             ci->getZExtValue()),
                                        Context::get().getPointerWidth());
         } else {
-          const SequentialType *st = cast<SequentialType>(*ii);
+          const SequentialType *set = cast<SequentialType>(*ii);
           ref<ConstantExpr> index = 
             evalConstant(cast<Constant>(ii.getOperand()));
           unsigned elementSize = 
-            kmodule->targetData->getTypeStoreSize(st->getElementType());
+            kmodule->targetData->getTypeStoreSize(set->getElementType());
 
           index = index->ZExt(Context::get().getPointerWidth());
           addend = index->Mul(ConstantExpr::alloc(elementSize, 
