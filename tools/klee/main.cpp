@@ -807,7 +807,7 @@ void externalsAndGlobalsCheck(const Module *m) {
     for (Function::const_iterator bbIt = fnIt->begin(), bb_ie = fnIt->end(); 
          bbIt != bb_ie; ++bbIt) {
       for (BasicBlock::const_iterator it = bbIt->begin(), ie = bbIt->end(); 
-           it != it; ++it) {
+           it != ie; ++it) {
         if (const CallInst *ci = dyn_cast<CallInst>(it)) {
           if (isa<InlineAsm>(ci->getCalledValue())) {
             klee_warning_once(&*fnIt,
