@@ -17,7 +17,7 @@ namespace BEEV {
    * lookup or create new MINISAT Vars from the global MAP
    * _ASTNode_to_SATVar.
    */
-  const MINISAT::Var BeevMgr::LookupOrCreateSATVar(MINISAT::Solver& newS, const ASTNode& n) {  
+  MINISAT::Var BeevMgr::LookupOrCreateSATVar(MINISAT::Solver& newS, const ASTNode& n) {  
     ASTtoSATMap::iterator it;  
     MINISAT::Var v;
     

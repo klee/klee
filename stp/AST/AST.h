@@ -191,11 +191,11 @@ namespace BEEV {
     };  
 
     // Get the name from a symbol (char *).  It's an error if kind != SYMBOL
-    const char * const GetName() const;
+    const char *GetName() const;
 
     //Get the BVCONST value
 #ifndef NATIVE_C_ARITH
-    const CBV GetBVConst() const;
+    CBV GetBVConst() const;
 #else
     unsigned long long int GetBVConst() const;
 #endif
@@ -234,7 +234,7 @@ namespace BEEV {
     types GetType(void) const;
 
     // Hash is pointer value of _int_node_ptr.
-    const size_t Hash() const{ 
+    size_t Hash() const{ 
       return (size_t) _int_node_ptr; 
       //return GetNodeNum(); 
     }
@@ -346,7 +346,7 @@ namespace BEEV {
     // table entry so it can be deleted without looking it up again.
     void DecRef();
 
-    virtual const Kind GetKind() const { return _kind; }
+    virtual Kind GetKind() const { return _kind; }
 
     virtual ASTVec const &GetChildren() const { return _children; }
 
@@ -514,7 +514,7 @@ namespace BEEV {
       return (strcmp(sym1._name, sym2._name) == 0);
     }
 
-    const char * const GetName() const{return _name;}  
+    const char *GetName() const{return _name;}  
 
     // Print function for symbol -- return name */
     virtual void nodeprint(ostream& os) { os << _name;}
@@ -1478,7 +1478,7 @@ namespace BEEV {
 
     //looksup a MINISAT var from the minisat-var memo-table. if none
     //exists, then creates one.
-    const MINISAT::Var LookupOrCreateSATVar(MINISAT::Solver& S, const ASTNode& n);
+    MINISAT::Var LookupOrCreateSATVar(MINISAT::Solver& S, const ASTNode& n);
 
     // Memo table for CheckBBandCNF debugging function
     ASTNodeMap CheckBBandCNFMemo;

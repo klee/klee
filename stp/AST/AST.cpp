@@ -159,7 +159,7 @@ namespace BEEV {
   }
 
   // Get the name from a symbol (char *).  It's an error if kind != SYMBOL
-  const char * const ASTNode::GetName() const {
+  const char *ASTNode::GetName() const {
     if (GetKind() != SYMBOL)
       FatalError("GetName: Called GetName on a non-symbol: ", *this);
     return ((ASTSymbol *) _int_node_ptr)->GetName();    
@@ -871,7 +871,7 @@ namespace BEEV {
   }
 
   // Get the value of bvconst from a bvconst.  It's an error if kind != BVCONST
-  CBV const ASTNode::GetBVConst() const {
+  CBV ASTNode::GetBVConst() const {
     if(GetKind() != BVCONST)
       FatalError("GetBVConst: non bitvector-constant: ",*this);
     return ((ASTBVConst *) _int_node_ptr)->GetBVConst();      
