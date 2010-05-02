@@ -14,3 +14,6 @@ DONT_BUILD_RELINKED=1
 BUILD_ARCHIVE=1
 
 include $(LEVEL)/Makefile.common
+
+# HACK: Force -Wno-deprecated for ext container use.
+CXX.Flags += -Wno-deprecated
