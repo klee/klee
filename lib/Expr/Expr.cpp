@@ -288,7 +288,7 @@ ref<Expr> Expr::createIsZero(ref<Expr> e) {
 }
 
 void Expr::print(std::ostream &os) const {
-  ExprPPrinter::printSingleExpr(os, (Expr*)this);
+  ExprPPrinter::printSingleExpr(os, const_cast<Expr*>(this));
 }
 
 void Expr::dump() const {

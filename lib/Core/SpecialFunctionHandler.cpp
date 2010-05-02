@@ -644,7 +644,7 @@ void SpecialFunctionHandler::handleMakeSymbolic(ExecutionState &state,
   
   for (Executor::ExactResolutionList::iterator it = rl.begin(), 
          ie = rl.end(); it != ie; ++it) {
-    MemoryObject *mo = (MemoryObject*) it->first.first;
+    const MemoryObject *mo = it->first.first;
     mo->setName(name);
     
     const ObjectState *old = it->first.second;
@@ -688,7 +688,7 @@ void SpecialFunctionHandler::handleMarkGlobal(ExecutionState &state,
   
   for (Executor::ExactResolutionList::iterator it = rl.begin(), 
          ie = rl.end(); it != ie; ++it) {
-    MemoryObject *mo = (MemoryObject*) it->first.first;
+    const MemoryObject *mo = it->first.first;
     assert(!mo->isLocal);
     mo->isGlobal = true;
   }

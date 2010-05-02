@@ -73,7 +73,7 @@ STPBuilder::~STPBuilder() {
 ::VCExpr STPBuilder::buildVar(const char *name, unsigned width) {
   // XXX don't rebuild if this stuff cons's
   ::Type t = (width==1) ? vc_boolType(vc) : vc_bvType(vc, width);
-  ::VCExpr res = vc_varExpr(vc, (char*) name, t);
+  ::VCExpr res = vc_varExpr(vc, const_cast<char*>(name), t);
   vc_DeleteExpr(t);
   return res;
 }
@@ -83,7 +83,7 @@ STPBuilder::~STPBuilder() {
   ::Type t1 = vc_bvType(vc, indexWidth);
   ::Type t2 = vc_bvType(vc, valueWidth);
   ::Type t = vc_arrayType(vc, t1, t2);
-  ::VCExpr res = vc_varExpr(vc, (char*) name, t);
+  ::VCExpr res = vc_varExpr(vc, const_cast<char*>(name), t);
   vc_DeleteExpr(t);
   vc_DeleteExpr(t2);
   vc_DeleteExpr(t1);
