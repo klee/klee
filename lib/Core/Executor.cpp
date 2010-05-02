@@ -555,7 +555,7 @@ void Executor::initializeGlobals(ExecutionState &state) {
         if (end && *end == '\0') {
           klee_message("NOTE: allocated global at asm specified address: %#08llx"
                        " (%llu bytes)",
-                       address, size);
+                       (long long) address, (unsigned long long) size);
           mo = memory->allocateFixed(address, size, &*i);
           mo->isUserSpecified = true; // XXX hack;
         }
