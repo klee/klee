@@ -9,6 +9,7 @@
 
 #include "Passes.h"
 
+#include "klee/Config/config.h"
 #include "llvm/Constants.h"
 #include "llvm/DerivedTypes.h"
 #include "llvm/Function.h"
