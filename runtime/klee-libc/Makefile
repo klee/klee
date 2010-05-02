@@ -16,4 +16,8 @@ BYTECODE_LIBRARY=1
 DEBUG_RUNTIME=1
 NO_PEDANTIC=1
 
+# Add __NO_INLINE__ to prevent glibc from using inline definitions of some
+# builtins.
+C.Flags += -D__NO_INLINE__
+
 include $(LEVEL)/Makefile.common
