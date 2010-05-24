@@ -154,10 +154,6 @@ namespace {
 	      cl::desc("Use counterexample caching"));
 
   cl::opt<bool>
-  UseQueryLog("use-query-log",
-              cl::init(false));
-
-  cl::opt<bool>
   UseQueryPCLog("use-query-pc-log",
                 cl::init(false));
   
