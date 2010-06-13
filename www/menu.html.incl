@@ -2,7 +2,7 @@
   <div>
     <a href="http://klee.llvm.org/">KLEE Home</a>
   </div>
-  
+
   <div class="submenu">
     <label>KLEE Info</label>
     <a href="GetStarted.html">Getting Started</a>
@@ -13,12 +13,17 @@
 
   <div class="submenu">
     <label>Quick Links</label>
-    <a href="http://keeda.stanford.edu/mailman/listinfo/klee-dev">klee-dev</a>
+    <a href="http://keeda.stanford.edu/mailman/listinfo/klee-dev">klee-dev (mailing list)</a>
     <a href="http://llvm.org/bugs/">Bug Reports</a>
+    <a href="http://llvm.org/">LLVM Home</a>
+  </div>
+
+  <div class="submenu">
+    <label>Development &amp; Code</label>
+    <a href="http://klee.minormatter.com:8010/">Buildbot</a>
     <a href="http://llvm.org/svn/llvm-project/klee/trunk/">Browse SVN</a>
     <a href="http://llvm.org/viewvc/llvm-project/klee/trunk/">Browse ViewVC</a>
-    <a href="http://t1.minormatter.com/~ddunbar/klee-doxygen/index.html">doxygen</a>
-    <a href="http://t1.minormatter.com/~ddunbar/klee-cov/index.html">Testing Coverage</a>
-    <a href="http://llvm.org/">LLVM Home</a>
+    <a href="http://test.minormatter.com/~ddunbar/klee-doxygen/index.html">Browse Doxygen</a>
+    <a href="http://test.minormatter.com/~ddunbar/klee-cov/index.html">Testing Coverage</a>
   </div>
 </div>
