@@ -134,6 +134,7 @@ public:
   }
 
   bool merge(const ExecutionState &b);
+  void dumpStack(std::ostream &out) const;
 };
 
 }

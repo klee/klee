@@ -22,6 +22,7 @@
 #include "llvm/Support/CommandLine.h"
 
 #include <iostream>
+#include <iomanip>
 #include <cassert>
 #include <map>
 #include <set>
@@ -301,4 +302,36 @@ bool ExecutionState::merge(const ExecutionState &b) {
   constraints.addConstraint(OrExpr::create(inA, inB));
 
   return true;
+}
+
+void ExecutionState::dumpStack(std::ostream &out) const {
+  unsigned idx = 0;
+  const KInstruction *target = prevPC;
+  for (ExecutionState::stack_ty::const_reverse_iterator
+         it = stack.rbegin(), ie = stack.rend();
+       it != ie; ++it) {
+    const StackFrame &sf = *it;
+    Function *f = sf.kf->function;
+    const InstructionInfo &ii = *target->info;
+    out << "\t#" << idx++ 
+        << " " << std::setw(8) << std::setfill('0') << ii.assemblyLine
+        << " in " << f->getNameStr() << " (";
+    // Yawn, we could go up and print varargs if we wanted to.
+    unsigned index = 0;
+    for (Function::arg_iterator ai = f->arg_begin(), ae = f->arg_end();
+         ai != ae; ++ai) {
+      if (ai!=f->arg_begin()) out << ", ";
+
+      out << ai->getNameStr();
+      // XXX should go through function
+      ref<Expr> value = sf.locals[sf.kf->getArgRegister(index++)].value; 
+      if (isa<ConstantExpr>(value))
+        out << "=" << value;
+    }
+    out << ")";
+    if (ii.file != "")
+      out << " at " << ii.file << ":" << ii.line;
+    out << "\n";
+    target = sf.caller;
+  }
 }
