@@ -939,10 +939,10 @@ ref<klee::ConstantExpr> Executor::evalConstant(Constant *c) {
       return globalAddresses.find(gv)->second;
     } else if (isa<ConstantPointerNull>(c)) {
       return Expr::createPointer(0);
-    } else if (isa<UndefValue>(c)) {
+    } else if (isa<UndefValue>(c) || isa<ConstantAggregateZero>(c)) {
       return ConstantExpr::create(0, getWidthForLLVMType(c->getType()));
     } else {
-      // Constant{AggregateZero,Array,Struct,Vector}
+      // Constant{Array,Struct,Vector}
       assert(0 && "invalid argument to evalConstant()");
     }
   }
