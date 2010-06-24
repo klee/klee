@@ -447,6 +447,8 @@ public:
 
   virtual void getCoveredLines(const ExecutionState &state,
                                std::map<const std::string*, std::set<unsigned> > &res);
+
+  Expr::Width getWidthForLLVMType(const llvm::Type *type) const;
 };
   
 } // End klee namespace
