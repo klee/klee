@@ -95,6 +95,7 @@ namespace klee {
     HANDLER(handleRevirtObjects);
     HANDLER(handleSetForking);
     HANDLER(handleSilentExit);
+    HANDLER(handleStackTrace);
     HANDLER(handleUnderConstrained);
     HANDLER(handleWarning);
     HANDLER(handleWarningOnce);

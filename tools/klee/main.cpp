@@ -686,6 +686,7 @@ static const char *modelledExternals[] = {
   "klee_warning", 
   "klee_warning_once", 
   "klee_alias_function",
+  "klee_stack_trace",
   "llvm.dbg.stoppoint", 
   "llvm.va_start", 
   "llvm.va_end", 

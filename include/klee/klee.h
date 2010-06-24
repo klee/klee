@@ -127,6 +127,9 @@ extern "C" {
      may not always work. */
   void klee_alias_function(const char* fn_name, const char* new_fn_name);
 
+  /* Print stack trace. */
+  void klee_stack_trace(void);
+
 #ifdef __cplusplus
 }
 #endif

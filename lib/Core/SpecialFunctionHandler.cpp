@@ -80,6 +80,7 @@ HandlerInfo handlerInfo[] = {
   add("klee_print_expr", handlePrintExpr, false),
   add("klee_print_range", handlePrintRange, false),
   add("klee_set_forking", handleSetForking, false),
+  add("klee_stack_trace", handleStackTrace, false),
   add("klee_warning", handleWarning, false),
   add("klee_warning_once", handleWarningOnce, false),
   add("klee_alias_function", handleAliasFunction, false),
@@ -426,6 +427,12 @@ void SpecialFunctionHandler::handleSetForking(ExecutionState &state,
                                    "klee_set_forking requires a constant arg",
                                    "user.err");
   }
+}
+
+void SpecialFunctionHandler::handleStackTrace(ExecutionState &state,
+                                              KInstruction *target,
+                                              std::vector<ref<Expr> > &arguments) {
+  state.dumpStack(std::cout);
 }
 
 void SpecialFunctionHandler::handleWarning(ExecutionState &state,
