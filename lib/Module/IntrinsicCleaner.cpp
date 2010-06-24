@@ -122,6 +122,8 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b) {
       case Intrinsic::dbg_region_start:
       case Intrinsic::dbg_region_end:
       case Intrinsic::dbg_func_start:
+#else
+      case Intrinsic::dbg_value:
 #endif
       case Intrinsic::dbg_declare:
         // Remove these regardless of lower intrinsics flag. This can
