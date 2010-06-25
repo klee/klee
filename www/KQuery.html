@@ -170,10 +170,12 @@
   <h3><a name="expr_labels">Expression and Version Labels</a></h3>
 
   <p>Expressions are frequently shared among constraints and query
-    expressions. In order to keep the output succinct and readable,
-    expression labels can be used to introduce a lexical binding which can
-    be used in subsequent expressions.</p>
-  
+    expressions. In order to keep the output succinct and readable, expression
+    labels can be used to introduce a lexical binding which can be used in
+    subsequent expressions. Expression labels are globally scoped through the
+    entire source file, and a definition must preceed any use in the source
+    file.</p>
+
   <p><b>Syntax:</b></p>
   <div class="syntax">
     expression = identifier ":" expression<br>
