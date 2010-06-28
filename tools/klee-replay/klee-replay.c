@@ -372,16 +372,27 @@ void klee_make_symbolic(void *addr, unsigned nbytes, const char *name) {
 }
 
 /* Redefined here so that we can check the value read. */
-int klee_range(int min, int max, const char* name) {
-  int r;  
-  klee_make_symbolic(&r, sizeof r, name); 
+int klee_range(int start, int end, const char* name) {
+  int r;
 
-  if (r < min || r >= max) {
-    fprintf(stderr, "klee_range(%d, %d, %s) returned invalid result: %d\n", 
-	    min, max, name, r);
+  if (start >= end) {
+    fprintf(stderr, "klee_range: invalid range\n");
     exit(1);
-  }  
-  return r;
+  }
+
+  if (start+1 == end)
+    return start;
+  else {
+    klee_make_symbolic(&r, sizeof r, name); 
+
+    if (r < start || r >= end) {
+      fprintf(stderr, "klee_range(%d, %d, %s) returned invalid result: %d\n", 
+	      start, end, name, r);
+      exit(1);
+    }
+    
+    return r;
+  }
 }
 
 void klee_report_error(const char *file, int line, 
