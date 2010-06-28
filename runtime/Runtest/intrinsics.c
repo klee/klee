@@ -31,7 +31,7 @@ static unsigned char rand_byte(void) {
   return x & 0xFF;
 }
 
-void klee_make_symbolic(void *array, unsigned nbytes, const char *name) {
+void klee_make_symbolic(void *array, size_t nbytes, const char *name) {
   static int rand_init = -1;
 
   if (rand_init == -1) {
@@ -52,7 +52,7 @@ void klee_make_symbolic(void *array, unsigned nbytes, const char *name) {
       *v = rand() % 69;
     } else {
       char *c = array;
-      unsigned i;
+      size_t i;
       for (i=0; i<nbytes; i++)
         c[i] = rand_byte();
     }
@@ -98,24 +98,34 @@ void klee_silent_exit(int x) {
   exit(x);
 }
 
-unsigned klee_choose(unsigned n) {
-  unsigned x;
+uintptr_t klee_choose(uintptr_t n) {
+  uintptr_t x;
   klee_make_symbolic(&x, sizeof x, "klee_choose");
   if(x >= n)
-    fprintf(stderr, "ERROR: max = %d, got = %d\n", n, x);
+    fprintf(stderr, "ERROR: max = %ld, got = %ld\n", n, x);
   assert(x < n);
   return x;
 }
 
-void klee_assume(unsigned x) {
+void klee_assume(uintptr_t x) {
   if (!x) {
     fprintf(stderr, "ERROR: invalid klee_assume\n");
   }
 }
 
-unsigned klee_get_value(unsigned x) {
-  return x;
-}
+#define KLEE_GET_VALUE_STUB(suffix, type)	\
+	type klee_get_value##suffix(type x) { \
+		return x; \
+	}
+
+KLEE_GET_VALUE_STUB(f, float)
+KLEE_GET_VALUE_STUB(d, double)
+KLEE_GET_VALUE_STUB(l, long)
+KLEE_GET_VALUE_STUB(ll, long long)
+KLEE_GET_VALUE_STUB(_i32, int32_t)
+KLEE_GET_VALUE_STUB(_i64, int64_t)
+
+#undef KLEE_GET_VALUE_STUB
 
 int klee_range(int begin, int end, const char* name) {
   int x;

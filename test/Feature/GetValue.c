@@ -9,9 +9,9 @@ int main() {
   klee_assume(x > 10);
   klee_assume(x < 20);
 
-  assert(!klee_is_symbolic(klee_get_value(x)));
-  assert(klee_get_value(x) > 10);
-  assert(klee_get_value(x) < 20);
+  assert(!klee_is_symbolic(klee_get_value_i32(x)));
+  assert(klee_get_value_i32(x) > 10);
+  assert(klee_get_value_i32(x) < 20);
 
   return 0;
 }

@@ -8,7 +8,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "klee/klee.h"
+#ifndef _LARGEFILE64_SOURCE
 #define _LARGEFILE64_SOURCE
+#endif
 #include "fd.h"
 
 #include <stdlib.h>

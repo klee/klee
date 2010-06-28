@@ -1251,13 +1251,13 @@ char *getcwd(char *buf, size_t size) {
 
 static void *__concretize_ptr(const void *p) {
   /* XXX 32-bit assumption */
-  char *pc = (char*) klee_get_value((unsigned) (long) p);
+  char *pc = (char*) klee_get_valuel((long) p);
   klee_assume(pc == p);
   return pc;
 }
 
 static size_t __concretize_size(size_t s) {
-  size_t sc = klee_get_value(s);
+  size_t sc = klee_get_valuel((long)s);
   klee_assume(sc == s);
   return sc;
 }
@@ -1276,7 +1276,7 @@ static const char *__concretize_string(const char *s) {
         *sc++ = '/';
       } 
     } else {
-      char cc = (char) klee_get_value(c);
+      char cc = (char) klee_get_valuel((long)c);
       klee_assume(cc == c);
       *sc++ = cc;
       if (!cc) break;
