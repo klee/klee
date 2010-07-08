@@ -517,6 +517,8 @@ KFunction::KFunction(llvm::Function *_function,
 
       switch(it->getOpcode()) {
       case Instruction::GetElementPtr:
+      case Instruction::InsertValue:
+      case Instruction::ExtractValue:
         ki = new KGEPInstruction(); break;
       default:
         ki = new KInstruction(); break;

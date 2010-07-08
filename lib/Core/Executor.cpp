@@ -33,6 +33,7 @@
 #include "klee/util/Assignment.h"
 #include "klee/util/ExprPPrinter.h"
 #include "klee/util/ExprUtil.h"
+#include "klee/util/GetElementPtrTypeIterator.h"
 #include "klee/Config/config.h"
 #include "klee/Internal/ADT/KTest.h"
 #include "klee/Internal/ADT/RNG.h"
@@ -56,7 +57,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/CallSite.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/GetElementPtrTypeIterator.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/System/Process.h"
 #include "llvm/Target/TargetData.h"
@@ -2203,6 +2203,43 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, ConstantExpr::alloc(Result, Expr::Bool));
     break;
   }
+  case Instruction::InsertValue: {
+    KGEPInstruction *kgepi = static_cast<KGEPInstruction*>(ki);
+
+    ref<Expr> agg = eval(ki, 0, state).value;
+    ref<Expr> val = eval(ki, 1, state).value;
+
+    ref<Expr> l = NULL, r = NULL;
+    unsigned lOffset = kgepi->offset*8, rOffset = kgepi->offset*8 + val->getWidth();
+
+    if (lOffset > 0)
+      l = ExtractExpr::create(agg, 0, lOffset);
+    if (rOffset < agg->getWidth())
+      r = ExtractExpr::create(agg, rOffset, agg->getWidth() - rOffset);
+
+    ref<Expr> result;
+    if (!l.isNull() && !r.isNull())
+      result = ConcatExpr::create(r, ConcatExpr::create(val, l));
+    else if (!l.isNull())
+      result = ConcatExpr::create(val, l);
+    else if (!r.isNull())
+      result = ConcatExpr::create(r, val);
+    else
+      result = val;
+
+    bindLocal(ki, state, result);
+    break;
+  }
+  case Instruction::ExtractValue: {
+    KGEPInstruction *kgepi = static_cast<KGEPInstruction*>(ki);
+
+    ref<Expr> agg = eval(ki, 0, state).value;
+
+    ref<Expr> result = ExtractExpr::create(agg, kgepi->offset*8, getWidthForLLVMType(i->getType()));
+
+    bindLocal(ki, state, result);
+    break;
+  }
  
     // Other instructions...
     // Unhandled
@@ -2244,17 +2281,12 @@ void Executor::updateStates(ExecutionState *current) {
   removedStates.clear();
 }
 
-void Executor::bindInstructionConstants(KInstruction *KI) {
-  GetElementPtrInst *gepi = dyn_cast<GetElementPtrInst>(KI->inst);
-  if (!gepi)
-    return;
-
-  KGEPInstruction *kgepi = static_cast<KGEPInstruction*>(KI);
+template <typename TypeIt>
+void Executor::computeOffsets(KGEPInstruction *kgepi, TypeIt ib, TypeIt ie) {
   ref<ConstantExpr> constantOffset =
     ConstantExpr::alloc(0, Context::get().getPointerWidth());
   uint64_t index = 1;
-  for (gep_type_iterator ii = gep_type_begin(gepi), ie = gep_type_end(gepi);
-       ii != ie; ++ii) {
+  for (TypeIt ii = ib; ii != ie; ++ii) {
     if (const StructType *st = dyn_cast<StructType>(*ii)) {
       const StructLayout *sl = kmodule->targetData->getStructLayout(st);
       const ConstantInt *ci = cast<ConstantInt>(ii.getOperand());
@@ -2280,6 +2312,20 @@ void Executor::bindInstructionConstants(KInstruction *KI) {
     index++;
   }
   kgepi->offset = constantOffset->getZExtValue();
+}
+
+void Executor::bindInstructionConstants(KInstruction *KI) {
+  KGEPInstruction *kgepi = static_cast<KGEPInstruction*>(KI);
+
+  if (GetElementPtrInst *gepi = dyn_cast<GetElementPtrInst>(KI->inst)) {
+    computeOffsets(kgepi, gep_type_begin(gepi), gep_type_end(gepi));
+  } else if (InsertValueInst *ivi = dyn_cast<InsertValueInst>(KI->inst)) {
+    computeOffsets(kgepi, iv_type_begin(ivi), iv_type_end(ivi));
+    assert(kgepi->indices.empty() && "InsertValue constant offset expected");
+  } else if (ExtractValueInst *evi = dyn_cast<ExtractValueInst>(KI->inst)) {
+    computeOffsets(kgepi, ev_type_begin(evi), ev_type_end(evi));
+    assert(kgepi->indices.empty() && "ExtractValue constant offset expected");
+  }
 }
 
 void Executor::bindModuleConstants() {

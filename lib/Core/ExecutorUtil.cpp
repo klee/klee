@@ -17,6 +17,8 @@
 
 #include "klee/Internal/Module/KModule.h"
 
+#include "klee/util/GetElementPtrTypeIterator.h"
+
 #include "llvm/Constants.h"
 #include "llvm/Function.h"
 #include "llvm/Instructions.h"
@@ -25,7 +27,6 @@
 #include "llvm/ModuleProvider.h"
 #endif
 #include "llvm/Support/CallSite.h"
-#include "llvm/Support/GetElementPtrTypeIterator.h"
 #include "llvm/Target/TargetData.h"
 #include <iostream>
 #include <cassert>
