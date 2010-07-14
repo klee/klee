@@ -142,6 +142,40 @@ library.</p>
   </li>
 </ol>
 
+<h2 id="stp">Building KLEE with a more recent version of STP</h2>
+
+<p>If your benchmarks are running slowly or not terminating it may
+be worth trying a more recent version of KLEE's constraint solver
+<a href="http://sites.google.com/site/stpfastprover/">STP</a>,
+which offers performance improvements over the version supplied
+with KLEE.</p>
+
+<p>STP does not make frequent releases, and its Subversion repository
+is under constant development and may be unstable.  The instructions
+below are for a particular revision which is known to pass the KLEE
+test suite, but you can try a more recent revision (at your own risk)
+by changing or removing the <tt>-r</tt> argument to the <tt>svn
+co</tt> command.</p>
+
+<ol>
+  <li>Download and build STP.
+    <div class="instr">
+      $ svn co -r 940 https://stp-fast-prover.svn.sourceforge.net/svnroot/stp-fast-prover/trunk/stp stp <br>
+      $ cd stp <br>
+      $ scripts/configure --with-prefix=<i>path/to/stp/inst</i> --with-cryptominisat2 <br>
+      $ make OPTIMIZE=-O2 CFLAGS_M32= install
+    </div>
+  </li>
+
+  <li>Configure KLEE:
+    <div class="instr">
+      $ ./configure --with-llvm=<i>path/to/llvm</i> --with-stp=<i>path/to/stp/inst</i>
+    </div>
+  </li>
+
+  <li>Rebuild KLEE.</li>
+</ol>
+
 </div>
 </body>
 </html>

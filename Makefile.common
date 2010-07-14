@@ -26,8 +26,13 @@ LLVMCC := $(LLVMGCC)
 LLVMCXX := $(LLVMGXX)
 endif
 
-LD.Flags += -L$(PROJ_SRC_ROOT)/stp/lib
-CXX.Flags += -I$(PROJ_SRC_ROOT)/stp/include
+ifeq ($(ENABLE_EXT_STP),1)
+  LD.Flags += -L$(STP_ROOT)/lib
+  CXX.Flags += -I$(STP_ROOT)/include
+else
+  LD.Flags += -L$(PROJ_SRC_ROOT)/stp/lib
+  CXX.Flags += -I$(PROJ_SRC_ROOT)/stp/include
+endif
 CXX.Flags += -DKLEE_DIR=\"$(PROJ_OBJ_ROOT)\"
 
 # For STP.

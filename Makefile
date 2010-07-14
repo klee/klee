@@ -12,7 +12,13 @@
 #
 LEVEL = .
 
-DIRS = stp lib tools runtime
+include $(LEVEL)/Makefile.config
+
+DIRS = lib
+ifeq ($(ENABLE_EXT_STP),0)
+  DIRS += stp
+endif
+DIRS += tools runtime
 EXTRA_DIST = include
 
 # Only build support directories when building unittests.

@@ -3,8 +3,14 @@
 /* Does the platform use __ctype_b_loc, etc. */
 #undef HAVE_CTYPE_EXTERNALS
 
+/* Using external STP */
+#undef HAVE_EXT_STP
+
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
+
+/* Define to 1 if you have the `stp' library (-lstp). */
+#undef HAVE_LIBSTP
 
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
