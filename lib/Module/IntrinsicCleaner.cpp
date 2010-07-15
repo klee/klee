@@ -61,8 +61,13 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b) {
         // FIXME: This is much more target dependent than just the word size,
         // however this works for x86-32 and x86-64.
       case Intrinsic::vacopy: { // (dst, src) -> *((i8**) dst) = *((i8**) src)
+#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 8)
         Value *dst = ii->getOperand(1);
         Value *src = ii->getOperand(2);
+#else
+        Value *dst = ii->getArgOperand(0);
+        Value *src = ii->getArgOperand(1);
+#endif
 
         if (WordSize == 4) {
           Type *i8pp = PointerType::getUnqual(PointerType::getUnqual(Type::getInt8Ty(getGlobalContext())));

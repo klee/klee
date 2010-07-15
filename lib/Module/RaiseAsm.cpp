@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Passes.h"
+#include "klee/Config/config.h"
 
 #include "llvm/InlineAsm.h"
 #if !(LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 7)
@@ -36,17 +37,26 @@ bool RaiseAsmPass::runOnInstruction(Module &M, Instruction *I) {
       const llvm::Type *T = ci->getType();
 
       // bswaps
-      if (ci->getNumOperands() == 2 && 
-          T == ci->getOperand(1)->getType() &&
+#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 8)
+      unsigned NumOperands = ci->getNumOperands();
+      llvm::Value *Arg0 = NumOperands > 1 ? ci->getOperand(1) : 0;
+#else
+      unsigned NumOperands = ci->getNumArgOperands() + 1;
+      llvm::Value *Arg0 = NumOperands > 1 ? ci->getArgOperand(0) : 0;
+#endif
+      if (Arg0 && T == Arg0->getType() &&
           ((T == llvm::Type::getInt16Ty(getGlobalContext()) && 
             as == "rorw $$8, ${0:w}" &&
             cs == "=r,0,~{dirflag},~{fpsr},~{flags},~{cc}") ||
            (T == llvm::Type::getInt32Ty(getGlobalContext()) &&
             as == "rorw $$8, ${0:w};rorl $$16, $0;rorw $$8, ${0:w}" &&
             cs == "=r,0,~{dirflag},~{fpsr},~{flags},~{cc}"))) {
-        llvm::Value *Arg0 = ci->getOperand(1);
         Function *F = getIntrinsic(M, Intrinsic::bswap, Arg0->getType());
+#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 8)
         ci->setOperand(0, F);
+#else
+        ci->setCalledFunction(F);
+#endif
         return true;
       }
     }
