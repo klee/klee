@@ -110,7 +110,7 @@ public:
   void removeFnAlias(std::string fn);
   
 private:
-  ExecutionState() : fakeState(false), underConstrained(0), ptreeNode(0) {};
+  ExecutionState() : fakeState(false), underConstrained(0), ptreeNode(0) {}
 
 public:
   ExecutionState(KFunction *kf);

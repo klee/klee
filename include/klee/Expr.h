@@ -305,7 +305,7 @@ private:
   ConstantExpr(const llvm::APInt &v) : value(v) {}
 
 public:
-  ~ConstantExpr() {};
+  ~ConstantExpr() {}
   
   Width getWidth() const { return value.getBitWidth(); }
   Kind getKind() const { return Constant; }

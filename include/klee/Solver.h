@@ -64,7 +64,7 @@ namespace klee {
     SolverImpl *impl;
 
   public:
-    Solver(SolverImpl *_impl) : impl(_impl) {};
+    Solver(SolverImpl *_impl) : impl(_impl) {}
     virtual ~Solver();
 
     /// evaluate - Determine the full validity of an expression in particular

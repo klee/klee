@@ -29,7 +29,7 @@ class TreeStreamWriter;
 class InterpreterHandler {
 public:
   InterpreterHandler() {}
-  virtual ~InterpreterHandler() {};
+  virtual ~InterpreterHandler() {}
 
   virtual std::ostream &getInfoStream() const = 0;
 
@@ -76,10 +76,10 @@ protected:
 
   Interpreter(const InterpreterOptions &_interpreterOpts)
     : interpreterOpts(_interpreterOpts)
-  {};
+  {}
 
 public:
-  virtual ~Interpreter() {};
+  virtual ~Interpreter() {}
 
   static Interpreter *create(const InterpreterOptions &_interpreterOpts,
                              InterpreterHandler *ih);

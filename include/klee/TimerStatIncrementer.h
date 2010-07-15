@@ -23,7 +23,7 @@ namespace klee {
     TimerStatIncrementer(Statistic &_statistic) : statistic(_statistic) {}
     ~TimerStatIncrementer() {
       statistic += timer.check(); 
-    };
+    }
 
     uint64_t check() { return timer.check(); }
   };

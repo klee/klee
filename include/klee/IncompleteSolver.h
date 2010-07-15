@@ -51,8 +51,8 @@ public:
   static PartialValidity negatePartialValidity(PartialValidity pv);
 
 public:
-  IncompleteSolver() {};
-  virtual ~IncompleteSolver() {};
+  IncompleteSolver() {}
+  virtual ~IncompleteSolver() {}
 
   /// computeValidity - Compute a partial validity for the given query.
   ///
