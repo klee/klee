@@ -270,7 +270,7 @@ private:
     // right now, all Reads are byte reads but some
     // transformations might change this
     if (!base || base->getWidth() != Expr::Int8)
-      return false;
+      return NULL;
     
     // Get stride expr in proper index width.
     Expr::Width idxWidth = base->index->getWidth();
