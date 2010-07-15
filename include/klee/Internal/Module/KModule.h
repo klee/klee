@@ -26,12 +26,12 @@ namespace llvm {
 }
 
 namespace klee {
-  class Cell;
+  struct Cell;
   class Executor;
   class Expr;
   class InterpreterHandler;
   class InstructionInfoTable;
-  class KInstruction;
+  struct KInstruction;
   class KModule;
   template<class T> class ref;
 

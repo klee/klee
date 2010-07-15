@@ -11,7 +11,7 @@
 #define KLEE_KINSTITERATOR_H
 
 namespace klee {
-  class KInstruction;
+  struct KInstruction;
 
   class KInstIterator {
     KInstruction **it;

@@ -22,7 +22,7 @@ namespace klee {
   class Executor;
   class Expr;
   class ExecutionState;
-  class KInstruction;
+  struct KInstruction;
   template<typename T> class ref;
   
   class SpecialFunctionHandler {
