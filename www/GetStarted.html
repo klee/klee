@@ -33,7 +33,7 @@ targets.<p>
 <ol>
   <li>Install llvm-gcc:
     <ul>
-      <li>Download and install the LLVM 2.6 release of <tt>llvm-gcc</tt>
+      <li>Download and install the LLVM 2.7 release of <tt>llvm-gcc</tt>
         from <a href="http://llvm.org/releases/download.html">here</a>.  Add
         <tt>llvm-gcc</tt> to your <tt>PATH</tt>. It is important to do this first
         so that <tt>llvm-gcc</tt> is found in subsequent <tt>configure</tt>
@@ -42,14 +42,14 @@ targets.<p>
     </ul>
   </li>
 
-  <li><a href="http://llvm.org/releases/download.html#2.6">Download and build
-      LLVM 2.6</a> (you may also use SVN head, but klee may not always be
+  <li><a href="http://llvm.org/releases/download.html#2.7">Download and build
+      LLVM 2.7</a> (you may also use SVN head, but klee may not always be
       up-to-date with LLVM API changes).
     
     <div class="instr">
-      $ curl -O http://llvm.org/releases/2.6/llvm-2.6.tar.gz <br>
-      $ tar zxvf llvm-2.6.tar.gz <br>
-      $ cd llvm-2.6 <br>
+      $ curl -O http://llvm.org/releases/2.7/llvm-2.7.tgz <br>
+      $ tar zxvf llvm-2.7.tgz <br>
+      $ cd llvm-2.7 <br>
       $ ./configure --enable-optimized <br>
       $ make
     </div>
