@@ -1499,15 +1499,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
   case Instruction::Invoke:
   case Instruction::Call: {
-    CallSite cs;
-    unsigned argStart;
-    if (i->getOpcode()==Instruction::Call) {
-      cs = CallSite(cast<CallInst>(i));
-      argStart = 1;
-    } else {
-      cs = CallSite(cast<InvokeInst>(i));
-      argStart = 3;
-    }
+    CallSite cs(i);
 
     unsigned numArgs = cs.arg_size();
     Function *f = getCalledFunction(cs, state);
@@ -1521,7 +1513,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     arguments.reserve(numArgs);
 
     for (unsigned j=0; j<numArgs; ++j)
-      arguments.push_back(eval(ki, argStart+j, state).value);
+      arguments.push_back(eval(ki, j+1, state).value);
 
     if (!f) {
       // special case the call with a bitcast case

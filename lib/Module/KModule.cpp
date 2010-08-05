@@ -28,6 +28,7 @@
 #include "llvm/Module.h"
 #include "llvm/PassManager.h"
 #include "llvm/ValueSymbolTable.h"
+#include "llvm/Support/CallSite.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 #if !(LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 7)
@@ -481,6 +482,24 @@ KConstant::KConstant(llvm::Constant* _ct, unsigned _id, KInstruction* _ki) {
 
 /***/
 
+static int getOperandNum(Value *v,
+                         std::map<Instruction*, unsigned> &registerMap,
+                         KModule *km,
+                         KInstruction *ki) {
+  if (Instruction *inst = dyn_cast<Instruction>(v)) {
+    return registerMap[inst];
+  } else if (Argument *a = dyn_cast<Argument>(v)) {
+    return a->getArgNo();
+  } else if (isa<BasicBlock>(v) || isa<InlineAsm>(v) ||
+             isa<MDNode>(v)) {
+    return -1;
+  } else {
+    assert(isa<Constant>(v));
+    Constant *c = cast<Constant>(v);
+    return -(km->getConstantID(c, ki) + 2);
+  }
+}
+
 KFunction::KFunction(llvm::Function *_function,
                      KModule *km) 
   : function(_function),
@@ -524,24 +543,25 @@ KFunction::KFunction(llvm::Function *_function,
         ki = new KInstruction(); break;
       }
 
-      unsigned numOperands = it->getNumOperands();
       ki->inst = it;      
-      ki->operands = new int[numOperands];
       ki->dest = registerMap[it];
-      for (unsigned j=0; j<numOperands; j++) {
-        Value *v = it->getOperand(j);
-        
-        if (Instruction *inst = dyn_cast<Instruction>(v)) {
-          ki->operands[j] = registerMap[inst];
-        } else if (Argument *a = dyn_cast<Argument>(v)) {
-          ki->operands[j] = a->getArgNo();
-        } else if (isa<BasicBlock>(v) || isa<InlineAsm>(v) ||
-                   isa<MDNode>(v)) {
-          ki->operands[j] = -1;
-        } else {
-          assert(isa<Constant>(v));
-          Constant *c = cast<Constant>(v);
-          ki->operands[j] = -(km->getConstantID(c, ki) + 2);
+
+      if (isa<CallInst>(it) || isa<InvokeInst>(it)) {
+        CallSite cs(it);
+        unsigned numArgs = cs.arg_size();
+        ki->operands = new int[numArgs+1];
+        ki->operands[0] = getOperandNum(cs.getCalledValue(), registerMap, km,
+                                        ki);
+        for (unsigned j=0; j<numArgs; j++) {
+          Value *v = cs.getArgument(j);
+          ki->operands[j+1] = getOperandNum(v, registerMap, km, ki);
+        }
+      } else {
+        unsigned numOperands = it->getNumOperands();
+        ki->operands = new int[numOperands];
+        for (unsigned j=0; j<numOperands; j++) {
+          Value *v = it->getOperand(j);
+          ki->operands[j] = getOperandNum(v, registerMap, km, ki);
         }
       }
 
