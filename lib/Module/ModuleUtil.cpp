@@ -17,6 +17,7 @@
 #include "llvm/Module.h"
 #include "llvm/Assembly/AsmAnnotationWriter.h"
 #include "llvm/Support/CFG.h"
+#include "llvm/Support/CallSite.h"
 #include "llvm/Support/InstIterator.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -45,10 +46,8 @@ Module *klee::linkWithLibrary(Module *module,
   return linker.releaseModule();
 }
 
-Function *klee::getDirectCallTarget(const Instruction *i) {
-  assert(isa<CallInst>(i) || isa<InvokeInst>(i));
-
-  Value *v = i->getOperand(0);
+Function *klee::getDirectCallTarget(CallSite cs) {
+  Value *v = cs.getCalledValue();
   if (Function *f = dyn_cast<Function>(v)) {
     return f;
   } else if (llvm::ConstantExpr *ce = dyn_cast<llvm::ConstantExpr>(v)) {

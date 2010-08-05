@@ -615,7 +615,7 @@ void StatsTracker::computeReachableUncovered() {
               // (which should be correct anyhow).
               callTargets.insert(std::make_pair(it,
                                                 std::vector<Function*>()));
-            } else if (Function *target = getDirectCallTarget(it)) {
+            } else if (Function *target = getDirectCallTarget(cs)) {
               callTargets[it].push_back(target);
             } else {
               callTargets[it] = 
