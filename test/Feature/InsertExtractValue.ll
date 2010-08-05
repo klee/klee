@@ -1,4 +1,4 @@
-; RUN: llvm-as %s -o %t1.bc
+; RUN: llvm-as %s -f -o %t1.bc
 ; RUN: %klee -disable-opt %t1.bc > %t2
 ; RUN: grep PASS %t2
 
