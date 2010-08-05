@@ -82,8 +82,12 @@ public:
     friend Clause* Clause_new(const V& ps, bool learnt = false) {
         assert(sizeof(Lit)      == sizeof(uint));
         assert(sizeof(float)    == sizeof(uint));
-        void*   mem = xmalloc<char>(sizeof(Clause) +
-                                    sizeof(uint)*(ps.size() - 1));
+
+        size_t aux_size = 0;
+        if (ps.size() > 0)
+          aux_size = sizeof(uint)*(ps.size() - 1);
+
+        void*   mem = xmalloc<char>(sizeof(Clause) + aux_size);
         return new (mem) Clause(ps, learnt); }
 
     int       size        ()      const { return size_etc >> 3; }
