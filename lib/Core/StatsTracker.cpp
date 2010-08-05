@@ -609,7 +609,8 @@ void StatsTracker::computeReachableUncovered() {
         for (BasicBlock::iterator it = bbIt->begin(), ie = bbIt->end(); 
              it != it; ++it) {
           if (isa<CallInst>(it) || isa<InvokeInst>(it)) {
-            if (isa<InlineAsm>(it->getOperand(0))) {
+            CallSite cs(it);
+            if (isa<InlineAsm>(cs.getCalledValue())) {
               // We can never call through here so assume no targets
               // (which should be correct anyhow).
               callTargets.insert(std::make_pair(it,
