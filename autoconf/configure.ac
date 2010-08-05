@@ -231,6 +231,9 @@ if test X${with_runtime} = XRelease; then
 elif test X${with_runtime} = XDebug; then
    AC_MSG_RESULT([Debug])
    AC_SUBST(RUNTIME_ENABLE_OPTIMIZED,[[0]])
+elif test X${with_runtime} = XDebug+Asserts; then
+   AC_MSG_RESULT([Debug+Asserts])
+   AC_SUBST(RUNTIME_ENABLE_OPTIMIZED,[[0]])
 else
    AC_MSG_ERROR([invalid configuration: ${with_runtime}])
 fi
