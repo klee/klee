@@ -44,7 +44,11 @@ class RaiseAsmPass : public llvm::ModulePass {
   bool runOnInstruction(llvm::Module &M, llvm::Instruction *I);
 
 public:
+#if (LLVM_MAJOR_VERSION == 2 && LLVM_MINOR_VERSION < 8)
   RaiseAsmPass() : llvm::ModulePass((intptr_t) &ID) {}
+#else
+  RaiseAsmPass() : llvm::ModulePass(ID) {}
+#endif
   
   virtual bool runOnModule(llvm::Module &M);
 };
@@ -61,7 +65,11 @@ class IntrinsicCleanerPass : public llvm::ModulePass {
 public:
   IntrinsicCleanerPass(const llvm::TargetData &TD,
                        bool LI=true)
+#if (LLVM_MAJOR_VERSION == 2 && LLVM_MINOR_VERSION < 8)
     : llvm::ModulePass((intptr_t) &ID),
+#else
+    : llvm::ModulePass(ID),
+#endif
       TargetData(TD),
       IL(new llvm::IntrinsicLowering(TD)),
       LowerIntrinsics(LI) {}
@@ -86,7 +94,11 @@ class PhiCleanerPass : public llvm::FunctionPass {
   static char ID;
 
 public:
+#if (LLVM_MAJOR_VERSION == 2 && LLVM_MINOR_VERSION < 8)
   PhiCleanerPass() : llvm::FunctionPass((intptr_t) &ID) {}
+#else
+  PhiCleanerPass() : llvm::FunctionPass(ID) {}
+#endif
   
   virtual bool runOnFunction(llvm::Function &f);
 };
@@ -94,7 +106,11 @@ public:
 class DivCheckPass : public llvm::ModulePass {
   static char ID;
 public:
+#if (LLVM_MAJOR_VERSION == 2 && LLVM_MINOR_VERSION < 8)
   DivCheckPass(): ModulePass((intptr_t) &ID) {}
+#else
+  DivCheckPass(): ModulePass(ID) {}
+#endif
   virtual bool runOnModule(llvm::Module &M);
 };
 
@@ -104,7 +120,11 @@ public:
 class LowerSwitchPass : public llvm::FunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
+#if (LLVM_MAJOR_VERSION == 2 && LLVM_MINOR_VERSION < 8)
   LowerSwitchPass() : FunctionPass((intptr_t) &ID) {} 
+#else
+  LowerSwitchPass() : FunctionPass(ID) {} 
+#endif
   
   virtual bool runOnFunction(llvm::Function &F);
   
