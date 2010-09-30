@@ -15,7 +15,7 @@
 #include "llvm/IntrinsicInst.h"
 #include "llvm/Linker.h"
 #include "llvm/Module.h"
-#if (LLVM_MAJOR_VERSION == 2 && LLVM_MINOR_VERSION < 8)
+#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 8)
 #include "llvm/Assembly/AsmAnnotationWriter.h"
 #else
 #include "llvm/Assembly/AssemblyAnnotationWriter.h"
@@ -37,7 +37,7 @@ using namespace klee;
 
 class InstructionToLineAnnotator : public llvm::AssemblyAnnotationWriter {
 public:
-#if (LLVM_MAJOR_VERSION == 2 && LLVM_MINOR_VERSION < 8)
+#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 8)
   void emitInstructionAnnot(const Instruction *i, llvm::raw_ostream &os) {
 #else
   void emitInstructionAnnot(const Instruction *i,

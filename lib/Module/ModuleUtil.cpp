@@ -15,7 +15,7 @@
 #include "llvm/IntrinsicInst.h"
 #include "llvm/Linker.h"
 #include "llvm/Module.h"
-#if (LLVM_MAJOR_VERSION == 2 && LLVM_MINOR_VERSION < 8)
+#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 8)
 #include "llvm/Assembly/AsmAnnotationWriter.h"
 #else
 #include "llvm/Assembly/AssemblyAnnotationWriter.h"
