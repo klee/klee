@@ -10,6 +10,8 @@
 #ifndef KLEE_PASSES_H
 #define KLEE_PASSES_H
 
+#include "klee/Config/config.h"
+
 #include "llvm/Constants.h"
 #include "llvm/Instructions.h"
 #include "llvm/Module.h"
