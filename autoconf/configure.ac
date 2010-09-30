@@ -219,14 +219,22 @@ AC_ARG_WITH(runtime,
   AS_HELP_STRING([--with-runtime],
     [Select build configuration for runtime libraries (default [Release])]),,
     withval=default)
-
 if test X"${withval}" = Xdefault; then
    with_runtime=Release
+fi
+
+if !(test $llvm_version_major == 2 &&
+    test $llvm_version_minor -lt 8 &&
+    test "$with_runtime" == "Release"); then
+  with_runtime=Release+Asserts
 fi
 
 AC_MSG_CHECKING([runtime configuration])
 if test X${with_runtime} = XRelease; then
     AC_MSG_RESULT([Release])
+    AC_SUBST(RUNTIME_ENABLE_OPTIMIZED,[[1]])
+elif test X${with_runtime} = XRelease+Asserts; then
+    AC_MSG_RESULT([Release+Asserts])
     AC_SUBST(RUNTIME_ENABLE_OPTIMIZED,[[1]])
 elif test X${with_runtime} = XDebug; then
    AC_MSG_RESULT([Debug])
