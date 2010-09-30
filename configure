@@ -2168,9 +2168,14 @@ else
   withval=default
 fi
 
-
 if test X"${withval}" = Xdefault; then
    with_runtime=Release
+fi
+
+if !(test $llvm_version_major == 2 &&
+    test $llvm_version_minor -lt 8 &&
+    test "$with_runtime" == "Release"); then
+  with_runtime=Release+Asserts
 fi
 
 { echo "$as_me:$LINENO: checking runtime configuration" >&5
@@ -2178,6 +2183,11 @@ echo $ECHO_N "checking runtime configuration... $ECHO_C" >&6; }
 if test X${with_runtime} = XRelease; then
     { echo "$as_me:$LINENO: result: Release" >&5
 echo "${ECHO_T}Release" >&6; }
+    RUNTIME_ENABLE_OPTIMIZED=1
+
+elif test X${with_runtime} = XRelease+Asserts; then
+    { echo "$as_me:$LINENO: result: Release+Asserts" >&5
+echo "${ECHO_T}Release+Asserts" >&6; }
     RUNTIME_ENABLE_OPTIMIZED=1
 
 elif test X${with_runtime} = XDebug; then
