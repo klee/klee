@@ -362,7 +362,7 @@ void klee_make_symbolic(void *addr, size_t nbytes, const char *name) {
     } else {
       if (boo->numBytes != nbytes) {
 	fprintf(stderr, "make_symbolic mismatch, different sizes: "
-		"%d in input file, %ld in code\n", boo->numBytes, nbytes);
+		"%d in input file, %lu in code\n", boo->numBytes, (unsigned long)nbytes);
 	exit(1);
       } else {
         memcpy(addr, boo->bytes, nbytes);
