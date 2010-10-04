@@ -2173,8 +2173,8 @@ if test X"${withval}" = Xdefault; then
 fi
 
 if !(test $llvm_version_major == 2 &&
-    test $llvm_version_minor -lt 8 &&
-    test "$with_runtime" == "Release"); then
+    test $llvm_version_minor -lt 8) &&
+    test "$with_runtime" == "Release"; then
   with_runtime=Release+Asserts
 fi
 
