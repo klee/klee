@@ -223,9 +223,11 @@ if test X"${withval}" = Xdefault; then
    with_runtime=Release
 fi
 
+dnl Before LLVM 2.8, the "optimized with asserts enabled" build was just
+dnl 'Release'; now it's 'Release+Asserts'. See the LLVM 2.8 release notes.
 if !(test $llvm_version_major == 2 &&
-    test $llvm_version_minor -lt 8 &&
-    test "$with_runtime" == "Release"); then
+    test $llvm_version_minor -lt 8) &&
+    test "$with_runtime" == "Release"; then
   with_runtime=Release+Asserts
 fi
 
