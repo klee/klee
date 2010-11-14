@@ -23,6 +23,7 @@ namespace llvm {
   class Instruction;
   class Module;
   class TargetData;
+  class TargetLowering;
   class Type;
 }
 
@@ -32,6 +33,10 @@ namespace klee {
   /// asm which are used by glibc into normal LLVM IR.
 class RaiseAsmPass : public llvm::ModulePass {
   static char ID;
+
+#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR >= 9)
+  const llvm::TargetLowering *TLI;
+#endif
 
   llvm::Function *getIntrinsic(llvm::Module &M,
                                unsigned IID,
