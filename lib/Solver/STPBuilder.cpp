@@ -528,7 +528,7 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
     ExprHandle src = construct(ee->expr, width_out);    
     *width_out = ee->getWidth();
     if (*width_out==1) {
-      return bvBoolExtract(src, 0);
+      return bvBoolExtract(src, ee->offset);
     } else {
       return vc_bvExtract(vc, src, ee->offset + *width_out - 1, ee->offset);
     }
