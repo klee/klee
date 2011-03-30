@@ -209,8 +209,10 @@ StatsTracker::StatsTracker(Executor &_executor, std::string _objectFilename,
 
     executor.addTimer(new WriteStatsTimer(this), StatsWriteInterval);
 
-    if (updateMinDistToUncovered)
+    if (updateMinDistToUncovered) {
+      computeReachableUncovered();
       executor.addTimer(new UpdateReachableTimer(this), UncoveredUpdateInterval);
+    }
   }
 
   if (OutputIStats) {
@@ -607,7 +609,7 @@ void StatsTracker::computeReachableUncovered() {
       for (Function::iterator bbIt = fnIt->begin(), bb_ie = fnIt->end(); 
            bbIt != bb_ie; ++bbIt) {
         for (BasicBlock::iterator it = bbIt->begin(), ie = bbIt->end(); 
-             it != it; ++it) {
+             it != ie; ++it) {
           if (isa<CallInst>(it) || isa<InvokeInst>(it)) {
             CallSite cs(it);
             if (isa<InlineAsm>(cs.getCalledValue())) {
@@ -653,7 +655,7 @@ void StatsTracker::computeReachableUncovered() {
       for (Function::iterator bbIt = fnIt->begin(), bb_ie = fnIt->end(); 
            bbIt != bb_ie; ++bbIt) {
         for (BasicBlock::iterator it = bbIt->begin(), ie = bbIt->end(); 
-             it != it; ++it) {
+             it != ie; ++it) {
           instructions.push_back(it);
           unsigned id = infos.getInfo(it).id;
           sm.setIndexedValue(stats::minDistToReturn, 
@@ -725,7 +727,7 @@ void StatsTracker::computeReachableUncovered() {
     for (Function::iterator bbIt = fnIt->begin(), bb_ie = fnIt->end(); 
          bbIt != bb_ie; ++bbIt) {
       for (BasicBlock::iterator it = bbIt->begin(), ie = bbIt->end(); 
-           it != it; ++it) {
+           it != ie; ++it) {
         unsigned id = infos.getInfo(it).id;
         instructions.push_back(&*it);
         sm.setIndexedValue(stats::minDistToUncovered, 
