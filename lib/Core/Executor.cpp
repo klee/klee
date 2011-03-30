@@ -2826,7 +2826,7 @@ void Executor::executeAlloc(ExecutionState &state,
                UltExpr::create(ConstantExpr::alloc(1<<31, W), size), 
                true);
         if (hugeSize.first) {
-          klee_message("NOTE: found huge malloc, returing 0");
+          klee_message("NOTE: found huge malloc, returning 0");
           bindLocal(target, *hugeSize.first, 
                     ConstantExpr::alloc(0, Context::get().getPointerWidth()));
         }

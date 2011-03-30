@@ -511,7 +511,7 @@ void SpecialFunctionHandler::handleGetErrno(ExecutionState &state,
                                             std::vector<ref<Expr> > &arguments) {
   // XXX should type check args
   assert(arguments.size()==0 &&
-         "invalid number of arguments to klee_get_obj_size");
+         "invalid number of arguments to klee_get_errno");
   executor.bindLocal(target, state,
                      ConstantExpr::create(errno, Expr::Int32));
 }
