@@ -21,6 +21,9 @@
 #include "llvm/User.h"
 #include "llvm/DerivedTypes.h"
 #include "llvm/Instructions.h"
+#if (LLVM_VERSION_MAJOR > 2)
+#include "llvm/Constants.h"
+#endif
 
 namespace klee {
   template<typename ItTy = llvm::User::const_op_iterator>

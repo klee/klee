@@ -30,7 +30,11 @@
 #include "llvm/ExecutionEngine/JIT.h"
 #include "llvm/ExecutionEngine/GenericValue.h"
 #include "llvm/Support/CallSite.h"
+#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 9)
 #include "llvm/System/DynamicLibrary.h"
+#else
+#include "llvm/Support/DynamicLibrary.h"
+#endif
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetSelect.h"
 #include <setjmp.h>

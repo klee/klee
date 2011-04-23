@@ -336,7 +336,11 @@ void ConstantExpr::toString(std::string &Res) const {
 ref<ConstantExpr> ConstantExpr::Concat(const ref<ConstantExpr> &RHS) {
   Expr::Width W = getWidth() + RHS->getWidth();
   APInt Tmp(value);
+#if (LLVM_VERSION_MAJOR < 3)
   Tmp.zext(W);
+#else
+  Tmp=Tmp.zext(W);
+#endif
   Tmp <<= RHS->getWidth();
   Tmp |= APInt(RHS->value).zext(W);
 

@@ -34,7 +34,11 @@
 #if !(LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 7)
 #include "llvm/Support/raw_os_ostream.h"
 #endif
+#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 9)
 #include "llvm/System/Path.h"
+#else
+#include "llvm/Support/Path.h"
+#endif
 #include "llvm/Target/TargetData.h"
 #include "llvm/Transforms/Scalar.h"
 
@@ -226,7 +230,11 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
       BasicBlock *exit = BasicBlock::Create(getGlobalContext(), "exit", f);
       PHINode *result = 0;
       if (f->getReturnType() != Type::getVoidTy(getGlobalContext()))
-        result = PHINode::Create(f->getReturnType(), "retval", exit);
+#if (LLVM_VERSION_MAJOR > 2)
+        result = PHINode::Create(f->getReturnType(), 0, "retval", exit);
+#else
+		result = PHINode::Create(f->getReturnType(), "retval", exit);
+#endif
       CallInst::Create(mergeFn, "", exit);
       ReturnInst::Create(getGlobalContext(), result, exit);
 

@@ -37,7 +37,12 @@
 #undef PACKAGE_TARNAME
 #undef PACKAGE_VERSION
 #include "llvm/Target/TargetSelect.h"
+#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 9)
 #include "llvm/System/Signals.h"
+#else
+#include "llvm/Support/Signals.h"
+#include "llvm/Support/system_error.h"
+#endif
 #include <iostream>
 #include <fstream>
 #include <cerrno>
@@ -1157,14 +1162,25 @@ int main(int argc, char **argv, char **envp) {
   Module *mainModule = MP->materializeModule();
   MP->releaseModule();
   delete MP;
-#else
+#endif
   std::string ErrorMsg;
   Module *mainModule = 0;
+#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 9)
   MemoryBuffer *Buffer = MemoryBuffer::getFileOrSTDIN(InputFile, &ErrorMsg);
   if (Buffer) {
     mainModule = getLazyBitcodeModule(Buffer, getGlobalContext(), &ErrorMsg);
     if (!mainModule) delete Buffer;
   }
+#else
+  OwningPtr<MemoryBuffer> BufferPtr;
+  error_code ec=MemoryBuffer::getFileOrSTDIN(InputFile.c_str(), BufferPtr);
+  if (ec) {
+    klee_error("error loading program '%s': %s", InputFile.c_str(),
+               ec.message().c_str());
+  }
+  mainModule = getLazyBitcodeModule(BufferPtr.get(), getGlobalContext(), &ErrorMsg);
+
+#endif
   if (mainModule) {
     if (mainModule->MaterializeAllPermanently(&ErrorMsg)) {
       delete mainModule;
@@ -1174,8 +1190,7 @@ int main(int argc, char **argv, char **envp) {
   if (!mainModule)
     klee_error("error loading program '%s': %s", InputFile.c_str(),
                ErrorMsg.c_str());
-#endif
-  
+
   if (WithPOSIXRuntime)
     InitEnv = true;
 
@@ -1449,6 +1464,9 @@ int main(int argc, char **argv, char **envp) {
   std::cerr << stats.str();
   handler->getInfoStream() << stats.str();
 
+#if !(LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 9)
+  BufferPtr.take();
+#endif
   delete handler;
 
   return 0;

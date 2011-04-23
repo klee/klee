@@ -11,10 +11,10 @@
 #define KLEE_KINSTRUCTION_H
 
 #include "klee/Config/config.h"
-#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 7)
-#include "llvm/Support/DataTypes.h"
-#else
+#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 9)
 #include "llvm/System/DataTypes.h"
+#else
+#include "llvm/Support/DataTypes.h"
 #endif
 #include <vector>
 

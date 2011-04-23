@@ -25,7 +25,11 @@
 #include "llvm/Support/InstIterator.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Analysis/ValueTracking.h"
+#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 9)
 #include "llvm/System/Path.h"
+#else
+#include "llvm/Support/Path.h"
+#endif
 
 #include <map>
 #include <iostream>
