@@ -63,7 +63,7 @@ namespace klee {
 
     ref<Expr> False() { return ConstantExpr::alloc(0, Expr::Bool); }
 
-    ref<Expr> True() { return ConstantExpr::alloc(0, Expr::Bool); }
+    ref<Expr> True() { return ConstantExpr::alloc(1, Expr::Bool); }
 
     ref<Expr> Constant(uint64_t Value, Expr::Width W) {
       return Constant(llvm::APInt(W, Value));
