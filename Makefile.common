@@ -18,7 +18,7 @@ override ENABLE_PROFILING := $(RUNTIME_ENABLE_PROFILING)
 override ENABLE_COVERAGE := $(RUNTIME_ENABLE_COVERAGE)
 endif
 
-include $(LLVM_SRC_ROOT)/Makefile.rules
+include $(PROJ_SRC_ROOT)/Makefile.rules
 
 # LLVMCC was added in 2.7.
 ifeq ($(LLVMCC),)

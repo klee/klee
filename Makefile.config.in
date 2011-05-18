@@ -11,6 +11,10 @@ LLVM_SRC_ROOT = @LLVM_SRC@
 # (this is *not* the same as OBJ_ROOT as defined in LLVM's Makefile.config).
 LLVM_OBJ_ROOT = @LLVM_OBJ@
 
+# Set this to the build mode used to build LLVM (not necessarily the same
+# as the build mode used for KLEE)
+LLVM_BUILD_MODE = @LLVM_BUILD_MODE@
+
 # Set the directory root of this project's source files
 PROJ_SRC_ROOT := $(subst //,/,@abs_top_srcdir@)
 
@@ -30,7 +34,7 @@ ENABLE_UCLIBC := @ENABLE_UCLIBC@
 HAVE_SELINUX := @HAVE_SELINUX@
 
 RUNTIME_ENABLE_OPTIMIZED := @RUNTIME_ENABLE_OPTIMIZED@
-RUNTIME_DISABLE_ASSERTIONS :=
+RUNTIME_DISABLE_ASSERTIONS := @RUNTIME_DISABLE_ASSERTIONS@
 RUNTIME_ENABLE_COVERAGE :=
 RUNTIME_ENABLE_PROFILING :=
 
@@ -46,3 +50,5 @@ endif
 CFLAGS := @CFLAGS@
 CXXFLAGS := @CXXFLAGS@
 LDFLAGS := @LDFLAGS@
+
+REQUIRES_RTTI := @REQUIRES_RTTI@
