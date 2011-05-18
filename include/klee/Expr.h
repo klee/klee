@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
 
 #include <set>
@@ -193,7 +194,12 @@ public:
   virtual unsigned computeHash();
   
   /// Returns 0 iff b is structuraly equivalent to *this
-  int compare(const Expr &b) const;
+  typedef llvm::DenseSet<std::pair<const Expr *, const Expr *> > ExprEquivSet;
+  int compare(const Expr &b, ExprEquivSet &equivs) const;
+  int compare(const Expr &b) const {
+    ExprEquivSet equivs;
+    return compare(b, equivs);
+  }
   virtual int compareContents(const Expr &b) const { return 0; }
 
   // Given an array of new kids return a copy of the expression

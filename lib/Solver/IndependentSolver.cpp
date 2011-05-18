@@ -77,13 +77,13 @@ public:
 };
 
 template<class T>
-inline std::ostream &operator<<(std::ostream &os, const DenseSet<T> &dis) {
+inline std::ostream &operator<<(std::ostream &os, const ::DenseSet<T> &dis) {
   dis.print(os);
   return os;
 }
 
 class IndependentElementSet {
-  typedef std::map<const Array*, DenseSet<unsigned> > elements_ty;
+  typedef std::map<const Array*, ::DenseSet<unsigned> > elements_ty;
   elements_ty elements;
   std::set<const Array*> wholeObjects;
 
@@ -103,7 +103,7 @@ public:
 
       if (!wholeObjects.count(array)) {
         if (ConstantExpr *CE = dyn_cast<ConstantExpr>(re->index)) {
-          DenseSet<unsigned> &dis = elements[array];
+          ::DenseSet<unsigned> &dis = elements[array];
           dis.add((unsigned) CE->getZExtValue(32));
         } else {
           elements_ty::iterator it2 = elements.find(array);
@@ -142,7 +142,7 @@ public:
     for (elements_ty::const_iterator it = elements.begin(), ie = elements.end();
          it != ie; ++it) {
       const Array *array = it->first;
-      const DenseSet<unsigned> &dis = it->second;
+      const ::DenseSet<unsigned> &dis = it->second;
 
       if (first) {
         first = false;

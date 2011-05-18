@@ -80,8 +80,18 @@ ref<Expr> Expr::createTempRead(const Array *array, Expr::Width w) {
 }
 
 // returns 0 if b is structurally equal to *this
-int Expr::compare(const Expr &b) const {
+int Expr::compare(const Expr &b, ExprEquivSet &equivs) const {
   if (this == &b) return 0;
+
+  const Expr *ap, *bp;
+  if (this < &b) {
+    ap = this; bp = &b;
+  } else {
+    ap = &b; bp = this;
+  }
+
+  if (equivs.count(std::make_pair(ap, bp)))
+    return 0;
 
   Kind ak = getKind(), bk = b.getKind();
   if (ak!=bk)
@@ -95,9 +105,10 @@ int Expr::compare(const Expr &b) const {
 
   unsigned aN = getNumKids();
   for (unsigned i=0; i<aN; i++)
-    if (int res = getKid(i).compare(b.getKid(i)))
+    if (int res = getKid(i)->compare(*b.getKid(i), equivs))
       return res;
 
+  equivs.insert(std::make_pair(ap, bp));
   return 0;
 }
 
