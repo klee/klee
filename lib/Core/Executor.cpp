@@ -945,8 +945,28 @@ ref<klee::ConstantExpr> Executor::evalConstant(Constant *c) {
       return Expr::createPointer(0);
     } else if (isa<UndefValue>(c) || isa<ConstantAggregateZero>(c)) {
       return ConstantExpr::create(0, getWidthForLLVMType(c->getType()));
+    } else if (const ConstantStruct *cs = dyn_cast<ConstantStruct>(c)) {
+      const StructLayout *sl = kmodule->targetData->getStructLayout(cs->getType());
+      llvm::SmallVector<ref<Expr>, 4> kids;
+      for (unsigned i = cs->getNumOperands(); i != 0; --i) {
+        unsigned op = i-1;
+        ref<Expr> kid = evalConstant(cs->getOperand(op));
+
+        uint64_t thisOffset = sl->getElementOffsetInBits(op),
+                 nextOffset = (op == cs->getNumOperands() - 1)
+                              ? sl->getSizeInBits()
+                              : sl->getElementOffsetInBits(op+1);
+        if (nextOffset-thisOffset > kid->getWidth()) {
+          uint64_t paddingWidth = nextOffset-thisOffset-kid->getWidth();
+          kids.push_back(ConstantExpr::create(0, paddingWidth));
+        }
+
+        kids.push_back(kid);
+      }
+      ref<Expr> res = ConcatExpr::createN(kids.size(), kids.data());
+      return cast<ConstantExpr>(res);
     } else {
-      // Constant{Array,Struct,Vector}
+      // Constant{Array,Vector}
       assert(0 && "invalid argument to evalConstant()");
     }
   }
