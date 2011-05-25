@@ -3066,12 +3066,18 @@ void Executor::executeMemoryOperation(ExecutionState &state,
 }
 
 void Executor::executeMakeSymbolic(ExecutionState &state, 
-                                   const MemoryObject *mo) {
+                                   const MemoryObject *mo,
+                                   const std::string &name) {
   // Create a new object state for the memory object (instead of a copy).
   if (!replayOut) {
-    static unsigned id = 0;
-    const Array *array = new Array("arr" + llvm::utostr(++id),
-                                   mo->size);
+    // Find a unique name for this array.  First try the original name,
+    // or if that fails try adding a unique identifier.
+    unsigned id = 0;
+    std::string uniqueName = name;
+    while (!state.arrayNames.insert(uniqueName).second) {
+      uniqueName = name + "_" + llvm::utostr(++id);
+    }
+    const Array *array = new Array(uniqueName, mo->size);
     bindObjectInState(state, mo, false, array);
     state.addSymbolic(mo, array);
     
