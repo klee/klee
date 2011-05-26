@@ -17,6 +17,41 @@
 
 <!-- <p>FIXME: Intro and disclaimer.</p> -->
 
+<h3>
+<a href="#cde">1. Trying out KLEE without installing any dependencies</a> <br/>
+<a href="#build">2. Building KLEE</a> <br/>
+<a href="#posix">3. Building KLEE with POSIX runtime support</a> <br/>
+<a href="#stp">4. Building KLEE with a more recent version of STP</a>
+</h3>
+  
+
+<h2 id="cde">Trying out KLEE without installing any dependencies</h2>
+
+<p>
+If you would like to try out KLEE without the hassle of compiling or installing dependencies, <a href="http://keeda.stanford.edu/~pgbovine/klee-cde-package.v2.tar.bz2">download the self-contained package</a> (200MB), and follow the instructions in <tt>klee-cde-package/README</tt> to get up-and-running!
+</p>
+
+<p>
+This package contains a self-contained source+binary distribution of KLEE and all of its associated dependencies (e.g., llvm-2.7, llvm-gcc, uClibc, svn).  Using this package, you can:
+</p>
+
+<ol>
+<li/> Compile target programs using llvm-gcc
+<li/> Run KLEE on target programs compiled with llvm-gcc
+<li/> Modify KLEE's source code, re-compile it to build a new KLEE binary, and then run the test suite using the new binary
+<li/> Pull the latest KLEE source code updates from SVN
+<li/> Run the entire <a href="TestingCoreutils.html">Coreutils case study</a>
+</ol>
+
+<p>
+... all without compiling or installing anything else on your Linux machine!
+</p>
+
+<p>
+The only requirement is that you are running a reasonably-modern x86-Linux distro that can execute 32-bit ELF binaries.  This package was created using the <a href="http://www.stanford.edu/~pgbovine/cde.html">CDE auto-packaging tool</a>.
+</p>
+
+
 <h2 id="build">Building KLEE</h2>
 
 <p>If you would like to try KLEE, the current procedure for building is
@@ -99,7 +134,7 @@ targets.<p>
   to try KLEE.</li>
 </ol>
 
-<h2 id="uclib">Building KLEE with POSIX runtime support</h2>
+<h2 id="posix">Building KLEE with POSIX runtime support</h2>
 
 <p>The steps above are enough for building and testing KLEE on closed programs
 (programs that don't use any external code such as C library
