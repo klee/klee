@@ -9,6 +9,10 @@
 
 #include "klee/Internal/ADT/KTest.h"
 
+#ifdef __FreeBSD__
+#define stat64 stat
+#endif
+
 // --sym-args 0 1 10 --sym-args 0 2 2 --sym-files 1 8 --sym-stdout
 static int getint(char *i) {
   if(!i) {
