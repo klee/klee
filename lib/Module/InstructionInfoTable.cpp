@@ -81,19 +81,12 @@ static std::string getDSPIPath(const DbgStopPointInst *dspi) {
   assert(res && "GetConstantStringInfo failed");
   res = GetConstantStringInfo(dspi->getFileName(), file);
   assert(res && "GetConstantStringInfo failed");
-  if (dir.empty()) {
-    return file;
-  } else if (*dir.rbegin() == '/') {
-    return dir + file;
-  } else {
-    return dir + "/" + file;
-  }
-}
 #else
 static std::string getDSPIPath(DILocation Loc) {
   std::string dir = Loc.getDirectory();
   std::string file = Loc.getFilename();
-  if (dir.empty()) {
+#endif
+  if (dir.empty() || file[0] == '/') {
     return file;
   } else if (*dir.rbegin() == '/') {
     return dir + file;
@@ -101,7 +94,6 @@ static std::string getDSPIPath(DILocation Loc) {
     return dir + "/" + file;
   }
 }
-#endif
 
 bool InstructionInfoTable::getInstructionDebugInfo(const llvm::Instruction *I, 
                                                    const std::string *&File,
