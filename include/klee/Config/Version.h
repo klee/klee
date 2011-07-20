@@ -15,4 +15,10 @@
 #define LLVM_VERSION(major, minor) (((major) << 8) | (minor))
 #define LLVM_VERSION_CODE LLVM_VERSION(LLVM_VERSION_MAJOR, LLVM_VERSION_MINOR)
 
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 0)
+#  define LLVM_TYPE_Q
+#else
+#  define LLVM_TYPE_Q const
+#endif
+
 #endif

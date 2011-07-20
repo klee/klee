@@ -376,10 +376,10 @@ Executor::~Executor() {
 /***/
 
 void Executor::initializeGlobalObject(ExecutionState &state, ObjectState *os,
-                                      Constant *c, 
+                                      const Constant *c, 
                                       unsigned offset) {
   TargetData *targetData = kmodule->targetData;
-  if (ConstantVector *cp = dyn_cast<ConstantVector>(c)) {
+  if (const ConstantVector *cp = dyn_cast<ConstantVector>(c)) {
     unsigned elementSize =
       targetData->getTypeStoreSize(cp->getType()->getElementType());
     for (unsigned i=0, e=cp->getNumOperands(); i != e; ++i)
@@ -389,13 +389,13 @@ void Executor::initializeGlobalObject(ExecutionState &state, ObjectState *os,
     unsigned i, size = targetData->getTypeStoreSize(c->getType());
     for (i=0; i<size; i++)
       os->write8(offset+i, (uint8_t) 0);
-  } else if (ConstantArray *ca = dyn_cast<ConstantArray>(c)) {
+  } else if (const ConstantArray *ca = dyn_cast<ConstantArray>(c)) {
     unsigned elementSize =
       targetData->getTypeStoreSize(ca->getType()->getElementType());
     for (unsigned i=0, e=ca->getNumOperands(); i != e; ++i)
       initializeGlobalObject(state, os, ca->getOperand(i), 
 			     offset + i*elementSize);
-  } else if (ConstantStruct *cs = dyn_cast<ConstantStruct>(c)) {
+  } else if (const ConstantStruct *cs = dyn_cast<ConstantStruct>(c)) {
     const StructLayout *sl =
       targetData->getStructLayout(cast<StructType>(cs->getType()));
     for (unsigned i=0, e=cs->getNumOperands(); i != e; ++i)
@@ -501,7 +501,7 @@ void Executor::initializeGlobals(ExecutionState &state) {
       // better we could support user definition, or use the EXE style
       // hack where we check the object file information.
 
-      const Type *ty = i->getType()->getElementType();
+      LLVM_TYPE_Q Type *ty = i->getType()->getElementType();
       uint64_t size = kmodule->targetData->getTypeStoreSize(ty);
 
       // XXX - DWD - hardcode some things until we decide how to fix.
@@ -544,7 +544,7 @@ void Executor::initializeGlobals(ExecutionState &state) {
           os->write8(offset, ((unsigned char*)addr)[offset]);
       }
     } else {
-      const Type *ty = i->getType()->getElementType();
+      LLVM_TYPE_Q Type *ty = i->getType()->getElementType();
       uint64_t size = kmodule->targetData->getTypeStoreSize(ty);
       MemoryObject *mo = 0;
 
@@ -931,8 +931,8 @@ void Executor::addConstraint(ExecutionState &state, ref<Expr> condition) {
                                  ConstantExpr::alloc(1, Expr::Bool));
 }
 
-ref<klee::ConstantExpr> Executor::evalConstant(Constant *c) {
-  if (llvm::ConstantExpr *ce = dyn_cast<llvm::ConstantExpr>(c)) {
+ref<klee::ConstantExpr> Executor::evalConstant(const Constant *c) {
+  if (const llvm::ConstantExpr *ce = dyn_cast<llvm::ConstantExpr>(c)) {
     return evalConstantExpr(ce);
   } else {
     if (const ConstantInt *ci = dyn_cast<ConstantInt>(c)) {
@@ -1375,7 +1375,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       }
 
       if (!isVoidReturn) {
-        const Type *t = caller->getType();
+        LLVM_TYPE_Q Type *t = caller->getType();
         if (t != Type::getVoidTy(getGlobalContext())) {
           // may need to do coercion due to bitcasts
           Expr::Width from = result->getWidth();
@@ -1462,7 +1462,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(cond)) {
       // Somewhat gross to create these all the time, but fine till we
       // switch to an internal rep.
-      const llvm::IntegerType *Ty = 
+      LLVM_TYPE_Q llvm::IntegerType *Ty = 
         cast<IntegerType>(si->getCondition()->getType());
       ConstantInt *ci = ConstantInt::get(Ty, CE->getZExtValue());
       unsigned index = si->findCaseValue(ci);
@@ -1627,7 +1627,11 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     break;
   }
   case Instruction::PHI: {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 0)
+    ref<Expr> result = eval(ki, state.incomingBBIndex, state).value;
+#else
     ref<Expr> result = eval(ki, state.incomingBBIndex * 2, state).value;
+#endif
     bindLocal(ki, state, result);
     break;
   }
@@ -2303,7 +2307,7 @@ void Executor::computeOffsets(KGEPInstruction *kgepi, TypeIt ib, TypeIt ie) {
     ConstantExpr::alloc(0, Context::get().getPointerWidth());
   uint64_t index = 1;
   for (TypeIt ii = ib; ii != ie; ++ii) {
-    if (const StructType *st = dyn_cast<StructType>(*ii)) {
+    if (LLVM_TYPE_Q StructType *st = dyn_cast<StructType>(*ii)) {
       const StructLayout *sl = kmodule->targetData->getStructLayout(st);
       const ConstantInt *ci = cast<ConstantInt>(ii.getOperand());
       uint64_t addend = sl->getElementOffset((unsigned) ci->getZExtValue());
@@ -2713,7 +2717,7 @@ void Executor::callExternalFunction(ExecutionState &state,
     return;
   }
 
-  const Type *resultType = target->inst->getType();
+  LLVM_TYPE_Q Type *resultType = target->inst->getType();
   if (resultType != Type::getVoidTy(getGlobalContext())) {
     ref<Expr> e = ConstantExpr::fromMemory((void*) args, 
                                            getWidthForLLVMType(resultType));
@@ -3360,7 +3364,7 @@ void Executor::doImpliedValueConcretization(ExecutionState &state,
   }
 }
 
-Expr::Width Executor::getWidthForLLVMType(const llvm::Type *type) const {
+Expr::Width Executor::getWidthForLLVMType(LLVM_TYPE_Q llvm::Type *type) const {
   return kmodule->targetData->getTypeSizeInBits(type);
 }
 

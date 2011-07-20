@@ -28,9 +28,14 @@ char RaiseAsmPass::ID = 0;
 
 Function *RaiseAsmPass::getIntrinsic(llvm::Module &M,
                                      unsigned IID,
-                                     const Type **Tys,
+                                     LLVM_TYPE_Q Type **Tys,
                                      unsigned NumTys) {  
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 0)
+  return Intrinsic::getDeclaration(&M, (llvm::Intrinsic::ID) IID,
+                                   llvm::ArrayRef<llvm::Type*>(Tys, NumTys));
+#else
   return Intrinsic::getDeclaration(&M, (llvm::Intrinsic::ID) IID, Tys, NumTys);
+#endif
 }
 
 // FIXME: This should just be implemented as a patch to
@@ -87,7 +92,11 @@ bool RaiseAsmPass::runOnModule(Module &M) {
     llvm::errs() << "Warning: unable to select native target: " << Err << "\n";
     TLI = 0;
   } else {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 0)
+    TargetMachine *TM = NativeTarget->createTargetMachine(HostTriple, "", "");
+#else
     TargetMachine *TM = NativeTarget->createTargetMachine(HostTriple, "");
+#endif
     TLI = TM->getTargetLowering();
   }
 #endif

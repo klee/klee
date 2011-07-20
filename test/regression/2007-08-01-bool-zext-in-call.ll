@@ -9,7 +9,7 @@ define i32 @foo(i8 signext %val) {
 }
 
 define i32 @main() {
-	%res = call i32 bitcast (i32 (i8 signext)* @foo to i32 (i1)*)( i1 1 )
+	%res = call i32 bitcast (i32 (i8)* @foo to i32 (i1)*)( i1 1 )
         %check = icmp ne i32 %res, 255
         br i1 %check, label %error, label %exit
 

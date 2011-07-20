@@ -184,7 +184,7 @@ private:
                                   unsigned size, bool isReadOnly);
 
   void initializeGlobalObject(ExecutionState &state, ObjectState *os, 
-			      llvm::Constant *c,
+			      const llvm::Constant *c,
 			      unsigned offset);
   void initializeGlobals(ExecutionState &state);
 
@@ -309,7 +309,7 @@ private:
                     ExecutionState &state,
                     ref<Expr> value);
 
-  ref<klee::ConstantExpr> evalConstantExpr(llvm::ConstantExpr *ce);
+  ref<klee::ConstantExpr> evalConstantExpr(const llvm::ConstantExpr *ce);
 
   /// Return a unique constant value for the given expression in the
   /// given state, if it has one (i.e. it provably only has a single
@@ -390,7 +390,7 @@ public:
   }
 
   // XXX should just be moved out to utility module
-  ref<klee::ConstantExpr> evalConstant(llvm::Constant *c);
+  ref<klee::ConstantExpr> evalConstant(const llvm::Constant *c);
 
   virtual void setPathWriter(TreeStreamWriter *tsw) {
     pathWriter = tsw;
@@ -452,7 +452,7 @@ public:
   virtual void getCoveredLines(const ExecutionState &state,
                                std::map<const std::string*, std::set<unsigned> > &res);
 
-  Expr::Width getWidthForLLVMType(const llvm::Type *type) const;
+  Expr::Width getWidthForLLVMType(LLVM_TYPE_Q llvm::Type *type) const;
 };
   
 } // End klee namespace

@@ -158,7 +158,9 @@ static void AddStandardCompilePasses(PassManager &PM) {
   addPass(PM, createAggressiveDCEPass());        // Delete dead instructions
   addPass(PM, createCFGSimplificationPass());    // Merge & remove BBs
   addPass(PM, createStripDeadPrototypesPass());  // Get rid of dead prototypes
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 0)
   addPass(PM, createDeadTypeEliminationPass());  // Eliminate dead types
+#endif
   addPass(PM, createConstantMergePass());        // Merge dup global constants
 }
 

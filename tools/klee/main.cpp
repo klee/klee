@@ -637,8 +637,13 @@ static int initEnv(Module *mainModule) {
   std::vector<Value*> args;
   args.push_back(argcPtr);
   args.push_back(argvPtr);
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 0)
+  Instruction* initEnvCall = CallInst::Create(initEnvFn, args,
+					      "", firstInst);
+#else
   Instruction* initEnvCall = CallInst::Create(initEnvFn, args.begin(), args.end(), 
 					      "", firstInst);
+#endif
   Value *argc = new LoadInst(argcPtr, "newArgc", firstInst);
   Value *argv = new LoadInst(argvPtr, "newArgv", firstInst);
   
@@ -937,12 +942,12 @@ static llvm::Module *linkWithUclibc(llvm::Module *mainModule) {
   // force import of __uClibc_main
   mainModule->getOrInsertFunction("__uClibc_main",
                                   FunctionType::get(Type::getVoidTy(getGlobalContext()),
-                                                    std::vector<const Type*>(),
+                                               std::vector<LLVM_TYPE_Q Type*>(),
                                                     true));
   
   // force various imports
   if (WithPOSIXRuntime) {
-    const llvm::Type *i8Ty = Type::getInt8Ty(getGlobalContext());
+    LLVM_TYPE_Q llvm::Type *i8Ty = Type::getInt8Ty(getGlobalContext());
     mainModule->getOrInsertFunction("realpath",
                                     PointerType::getUnqual(i8Ty),
                                     PointerType::getUnqual(i8Ty),
@@ -1045,7 +1050,7 @@ static llvm::Module *linkWithUclibc(llvm::Module *mainModule) {
   const FunctionType *ft = uclibcMainFn->getFunctionType();
   assert(ft->getNumParams() == 7);
 
-  std::vector<const Type*> fArgs;
+  std::vector<LLVM_TYPE_Q Type*> fArgs;
   fArgs.push_back(ft->getParamType(1)); // argc
   fArgs.push_back(ft->getParamType(2)); // argv
   Function *stub = Function::Create(FunctionType::get(Type::getInt32Ty(getGlobalContext()), fArgs, false),
@@ -1063,7 +1068,11 @@ static llvm::Module *linkWithUclibc(llvm::Module *mainModule) {
   args.push_back(Constant::getNullValue(ft->getParamType(4))); // app_fini
   args.push_back(Constant::getNullValue(ft->getParamType(5))); // rtld_fini
   args.push_back(Constant::getNullValue(ft->getParamType(6))); // stack_end
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 0)
+  CallInst::Create(uclibcMainFn, args, "", bb);
+#else
   CallInst::Create(uclibcMainFn, args.begin(), args.end(), "", bb);
+#endif
   
   new UnreachableInst(getGlobalContext(), bb);
 

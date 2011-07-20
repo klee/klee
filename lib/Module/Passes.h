@@ -40,11 +40,11 @@ class RaiseAsmPass : public llvm::ModulePass {
 
   llvm::Function *getIntrinsic(llvm::Module &M,
                                unsigned IID,
-                               const llvm::Type **Tys,
+                               LLVM_TYPE_Q llvm::Type **Tys,
                                unsigned NumTys);
   llvm::Function *getIntrinsic(llvm::Module &M,
                                unsigned IID, 
-                               const llvm::Type *Ty0) {
+                               LLVM_TYPE_Q llvm::Type *Ty0) {
     return getIntrinsic(M, IID, &Ty0, 1);
   }
 

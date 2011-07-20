@@ -209,7 +209,7 @@ Function *ExternalDispatcher::createDispatcher(Function *target, Instruction *in
 
   Value **args = new Value*[cs.arg_size()];
 
-  std::vector<const Type*> nullary;
+  std::vector<LLVM_TYPE_Q Type*> nullary;
   
   Function *dispatcher = Function::Create(FunctionType::get(Type::getVoidTy(getGlobalContext()), 
 							    nullary, false),
@@ -229,7 +229,7 @@ Function *ExternalDispatcher::createDispatcher(Function *target, Instruction *in
   Instruction *argI64s = new LoadInst(argI64sp, "args", dBB); 
   
   // Get the target function type.
-  const FunctionType *FTy =
+  LLVM_TYPE_Q FunctionType *FTy =
     cast<FunctionType>(cast<PointerType>(target->getType())->getElementType());
 
   // Each argument will be passed by writing it into gTheArgsP[i].
@@ -239,8 +239,8 @@ Function *ExternalDispatcher::createDispatcher(Function *target, Instruction *in
     // Determine the type the argument will be passed as. This accomodates for
     // the corresponding code in Executor.cpp for handling calls to bitcasted
     // functions.
-    const Type *argTy = (i < FTy->getNumParams() ? FTy->getParamType(i) : 
-                         (*ai)->getType());
+    LLVM_TYPE_Q Type *argTy = (i < FTy->getNumParams() ? FTy->getParamType(i) : 
+                               (*ai)->getType());
     Instruction *argI64p = 
       GetElementPtrInst::Create(argI64s, 
                                 ConstantInt::get(Type::getInt32Ty(getGlobalContext()), 
@@ -258,7 +258,13 @@ Function *ExternalDispatcher::createDispatcher(Function *target, Instruction *in
   Constant *dispatchTarget =
     dispatchModule->getOrInsertFunction(target->getName(), FTy,
                                         target->getAttributes());
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 0)
+  Instruction *result = CallInst::Create(dispatchTarget,
+                                         llvm::ArrayRef<Value *>(args, args+i),
+                                         "", dBB);
+#else
   Instruction *result = CallInst::Create(dispatchTarget, args, args+i, "", dBB);
+#endif
   if (result->getType() != Type::getVoidTy(getGlobalContext())) {
     Instruction *resp = 
       new BitCastInst(argI64s, PointerType::getUnqual(result->getType()), 
