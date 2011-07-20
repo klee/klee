@@ -15,14 +15,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "klee/Config/config.h"
+#include "klee/Config/Version.h"
 #include "llvm/Module.h"
 #include "llvm/PassManager.h"
 #include "llvm/Analysis/Passes.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/Verifier.h"
 #include "llvm/Support/CommandLine.h"
-#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 9)
+#if LLVM_VERSION_CODE < LLVM_VERSION(2, 9)
 #include "llvm/System/DynamicLibrary.h"
 #else
 #include "llvm/Support/DynamicLibrary.h"
@@ -99,7 +99,7 @@ static void AddStandardCompilePasses(PassManager &PM) {
 
   if (DisableOptimizations) return;
 
-#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 7)
+#if LLVM_VERSION_CODE < LLVM_VERSION(2, 7)
   addPass(PM, createRaiseAllocationsPass());     // call %malloc -> malloc inst
 #endif
   addPass(PM, createCFGSimplificationPass());    // Clean up disgusting code
@@ -124,7 +124,7 @@ static void AddStandardCompilePasses(PassManager &PM) {
   addPass(PM, createCFGSimplificationPass());    // Merge & remove BBs
   addPass(PM, createScalarReplAggregatesPass()); // Break up aggregate allocas
   addPass(PM, createInstructionCombiningPass()); // Combine silly seq's
-#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 7)
+#if LLVM_VERSION_CODE < LLVM_VERSION(2, 7)
   addPass(PM, createCondPropagationPass());      // Propagate conditionals
 #endif
 
@@ -134,7 +134,7 @@ static void AddStandardCompilePasses(PassManager &PM) {
   addPass(PM, createLoopRotatePass());
   addPass(PM, createLICMPass());                 // Hoist loop invariants
   addPass(PM, createLoopUnswitchPass());         // Unswitch loops.
-#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 9)
+#if LLVM_VERSION_CODE < LLVM_VERSION(2, 9)
   addPass(PM, createLoopIndexSplitPass());       // Index split loops.
 #endif
   // FIXME : Removing instcombine causes nestedloop regression.
@@ -150,7 +150,7 @@ static void AddStandardCompilePasses(PassManager &PM) {
   // Run instcombine after redundancy elimination to exploit opportunities
   // opened up by them.
   addPass(PM, createInstructionCombiningPass());
-#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 7)
+#if LLVM_VERSION_CODE < LLVM_VERSION(2, 7)
   addPass(PM, createCondPropagationPass());      // Propagate conditionals
 #endif
 

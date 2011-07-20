@@ -14,6 +14,7 @@
 
 #include "Passes.h"
 
+#include "klee/Config/Version.h"
 #include "klee/Interpreter.h"
 #include "klee/Internal/Module/Cell.h"
 #include "klee/Internal/Module/KInstruction.h"
@@ -22,7 +23,7 @@
 
 #include "llvm/Bitcode/ReaderWriter.h"
 #include "llvm/Instructions.h"
-#if !(LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 7)
+#if LLVM_VERSION_CODE >= LLVM_VERSION(2, 7)
 #include "llvm/LLVMContext.h"
 #endif
 #include "llvm/Module.h"
@@ -31,10 +32,10 @@
 #include "llvm/Support/CallSite.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
-#if !(LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 7)
+#if LLVM_VERSION_CODE >= LLVM_VERSION(2, 7)
 #include "llvm/Support/raw_os_ostream.h"
 #endif
-#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 9)
+#if LLVM_VERSION_CODE < LLVM_VERSION(2, 9)
 #include "llvm/System/Path.h"
 #else
 #include "llvm/Support/Path.h"
@@ -230,7 +231,7 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
       BasicBlock *exit = BasicBlock::Create(getGlobalContext(), "exit", f);
       PHINode *result = 0;
       if (f->getReturnType() != Type::getVoidTy(getGlobalContext()))
-#if (LLVM_VERSION_MAJOR > 2)
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 0)
         result = PHINode::Create(f->getReturnType(), 0, "retval", exit);
 #else
 		result = PHINode::Create(f->getReturnType(), "retval", exit);
@@ -341,7 +342,7 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
     std::ostream *os = ih->openOutputFile("assembly.ll");
     assert(os && os->good() && "unable to open source output");
 
-#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 6)
+#if LLVM_VERSION_CODE < LLVM_VERSION(2, 6)
     // We have an option for this in case the user wants a .ll they
     // can compile.
     if (NoTruncateSourceLines) {

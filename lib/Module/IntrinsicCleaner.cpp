@@ -9,7 +9,7 @@
 
 #include "Passes.h"
 
-#include "klee/Config/config.h"
+#include "klee/Config/Version.h"
 #include "llvm/Constants.h"
 #include "llvm/DerivedTypes.h"
 #include "llvm/Function.h"
@@ -17,7 +17,7 @@
 #include "llvm/Instruction.h"
 #include "llvm/Instructions.h"
 #include "llvm/IntrinsicInst.h"
-#if !(LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 7)
+#if LLVM_VERSION_CODE >= LLVM_VERSION(2, 7)
 #include "llvm/LLVMContext.h"
 #endif
 #include "llvm/Module.h"
@@ -61,7 +61,7 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b) {
         // FIXME: This is much more target dependent than just the word size,
         // however this works for x86-32 and x86-64.
       case Intrinsic::vacopy: { // (dst, src) -> *((i8**) dst) = *((i8**) src)
-#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 8)
+#if LLVM_VERSION_CODE < LLVM_VERSION(2, 8)
         Value *dst = ii->getOperand(1);
         Value *src = ii->getOperand(2);
 #else
@@ -94,7 +94,7 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b) {
         break;
       }
 
-#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 7)
+#if LLVM_VERSION_CODE < LLVM_VERSION(2, 7)
       case Intrinsic::dbg_stoppoint: {
         // We can remove this stoppoint if the next instruction is
         // sure to be another stoppoint. This is nice for cleanliness

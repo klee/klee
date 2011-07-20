@@ -7,15 +7,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "klee/Config/config.h"
 #include "klee/Internal/Module/InstructionInfoTable.h"
+#include "klee/Config/Version.h"
 
 #include "llvm/Function.h"
 #include "llvm/Instructions.h"
 #include "llvm/IntrinsicInst.h"
 #include "llvm/Linker.h"
 #include "llvm/Module.h"
-#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 8)
+#if LLVM_VERSION_CODE < LLVM_VERSION(2, 8)
 #include "llvm/Assembly/AsmAnnotationWriter.h"
 #else
 #include "llvm/Assembly/AssemblyAnnotationWriter.h"
@@ -24,7 +24,7 @@
 #include "llvm/Support/CFG.h"
 #include "llvm/Support/InstIterator.h"
 #include "llvm/Support/raw_ostream.h"
-#if !(LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 7)
+#if LLVM_VERSION_CODE >= LLVM_VERSION(2, 7)
 #include "llvm/Analysis/DebugInfo.h"
 #endif
 #include "llvm/Analysis/ValueTracking.h"
@@ -37,7 +37,7 @@ using namespace klee;
 
 class InstructionToLineAnnotator : public llvm::AssemblyAnnotationWriter {
 public:
-#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 8)
+#if LLVM_VERSION_CODE < LLVM_VERSION(2, 8)
   void emitInstructionAnnot(const Instruction *i, llvm::raw_ostream &os) {
 #else
   void emitInstructionAnnot(const Instruction *i,
@@ -74,7 +74,7 @@ static void buildInstructionToLineMap(Module *m,
   }
 }
 
-#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 7)
+#if LLVM_VERSION_CODE < LLVM_VERSION(2, 7)
 static std::string getDSPIPath(const DbgStopPointInst *dspi) {
   std::string dir, file;
   bool res = GetConstantStringInfo(dspi->getDirectory(), dir);
@@ -98,7 +98,7 @@ static std::string getDSPIPath(DILocation Loc) {
 bool InstructionInfoTable::getInstructionDebugInfo(const llvm::Instruction *I, 
                                                    const std::string *&File,
                                                    unsigned &Line) {
-#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 7)
+#if LLVM_VERSION_CODE < LLVM_VERSION(2, 7)
   if (const DbgStopPointInst *dspi = dyn_cast<DbgStopPointInst>(I)) {
     File = internString(getDSPIPath(dspi));
     Line = dspi->getLine();

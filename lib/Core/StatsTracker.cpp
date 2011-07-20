@@ -13,6 +13,7 @@
 
 #include "klee/ExecutionState.h"
 #include "klee/Statistics.h"
+#include "klee/Config/Version.h"
 #include "klee/Internal/Module/InstructionInfoTable.h"
 #include "klee/Internal/Module/KModule.h"
 #include "klee/Internal/Module/KInstruction.h"
@@ -35,12 +36,12 @@
 #include "llvm/Type.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/CFG.h"
-#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 9)
+#if LLVM_VERSION_CODE < LLVM_VERSION(2, 9)
 #include "llvm/System/Process.h"
 #else
 #include "llvm/Support/Process.h"
 #endif
-#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 9)
+#if LLVM_VERSION_CODE < LLVM_VERSION(2, 9)
 #include "llvm/System/Path.h"
 #else
 #include "llvm/Support/Path.h"
@@ -282,7 +283,7 @@ void StatsTracker::stepInstruction(ExecutionState &es) {
         //
         // FIXME: This trick no longer works, we should fix this in the line
         // number propogation.
-#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 7)
+#if LLVM_VERSION_CODE < LLVM_VERSION(2, 7)
         if (isa<DbgStopPointInst>(inst))
 #endif
           es.coveredLines[&ii.file].insert(ii.line);

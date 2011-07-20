@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "klee/Expr.h"
+#include "klee/Config/Version.h"
 
 #include "llvm/Support/CommandLine.h"
 // FIXME: We shouldn't need this once fast constant support moves into
@@ -346,7 +347,7 @@ void ConstantExpr::toString(std::string &Res) const {
 ref<ConstantExpr> ConstantExpr::Concat(const ref<ConstantExpr> &RHS) {
   Expr::Width W = getWidth() + RHS->getWidth();
   APInt Tmp(value);
-#if (LLVM_VERSION_MAJOR <= 2 && LLVM_VERSION_MINOR <= 8)
+#if LLVM_VERSION_CODE <= LLVM_VERSION(2, 8)
   Tmp.zext(W);
 #else
   Tmp=Tmp.zext(W);

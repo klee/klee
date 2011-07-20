@@ -34,7 +34,7 @@
 #include "klee/util/ExprPPrinter.h"
 #include "klee/util/ExprUtil.h"
 #include "klee/util/GetElementPtrTypeIterator.h"
-#include "klee/Config/config.h"
+#include "klee/Config/Version.h"
 #include "klee/Internal/ADT/KTest.h"
 #include "klee/Internal/ADT/RNG.h"
 #include "klee/Internal/Module/Cell.h"
@@ -50,7 +50,7 @@
 #include "llvm/Function.h"
 #include "llvm/Instructions.h"
 #include "llvm/IntrinsicInst.h"
-#if !(LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 7)
+#if LLVM_VERSION_CODE >= LLVM_VERSION(2, 7)
 #include "llvm/LLVMContext.h"
 #endif
 #include "llvm/Module.h"
@@ -58,7 +58,7 @@
 #include "llvm/Support/CallSite.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
-#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 9)
+#if LLVM_VERSION_CODE < LLVM_VERSION(2, 9)
 #include "llvm/System/Process.h"
 #else
 #include "llvm/Support/Process.h"
@@ -1309,7 +1309,7 @@ Function* Executor::getCalledFunction(CallSite &cs, ExecutionState &state) {
 }
 
 static bool isDebugIntrinsic(const Function *f, KModule *KM) {
-#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 7)
+#if LLVM_VERSION_CODE < LLVM_VERSION(2, 7)
   // Fast path, getIntrinsicID is slow.
   if (f == KM->dbgStopPointFn)
     return true;
@@ -1846,7 +1846,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
  
     // Memory instructions...
-#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 7)
+#if LLVM_VERSION_CODE < LLVM_VERSION(2, 7)
   case Instruction::Malloc:
   case Instruction::Alloca: {
     AllocationInst *ai = cast<AllocationInst>(i);
@@ -1866,7 +1866,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     executeAlloc(state, size, isLocal, ki);
     break;
   }
-#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 7)
+#if LLVM_VERSION_CODE < LLVM_VERSION(2, 7)
   case Instruction::Free: {
     executeFree(state, eval(ki, 0, state).value);
     break;

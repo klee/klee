@@ -21,7 +21,8 @@
 #include "llvm/User.h"
 #include "llvm/DerivedTypes.h"
 #include "llvm/Instructions.h"
-#if (LLVM_VERSION_MAJOR > 2)
+#include "klee/Config/Version.h"
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 0)
 #include "llvm/Constants.h"
 #endif
 

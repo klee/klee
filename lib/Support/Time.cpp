@@ -7,10 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "klee/Config/config.h"
+#include "klee/Config/Version.h"
 #include "klee/Internal/System/Time.h"
 
-#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 9)
+#if LLVM_VERSION_CODE < LLVM_VERSION(2, 9)
 #include "llvm/System/Process.h"
 #else
 #include "llvm/Support/Process.h"

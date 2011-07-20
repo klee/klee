@@ -8,14 +8,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "klee/Internal/Support/ModuleUtil.h"
-#include "klee/Config/config.h"
+#include "klee/Config/Version.h"
 
 #include "llvm/Function.h"
 #include "llvm/Instructions.h"
 #include "llvm/IntrinsicInst.h"
 #include "llvm/Linker.h"
 #include "llvm/Module.h"
-#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 8)
+#if LLVM_VERSION_CODE < LLVM_VERSION(2, 8)
 #include "llvm/Assembly/AsmAnnotationWriter.h"
 #else
 #include "llvm/Assembly/AssemblyAnnotationWriter.h"
@@ -25,7 +25,7 @@
 #include "llvm/Support/InstIterator.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Analysis/ValueTracking.h"
-#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 9)
+#if LLVM_VERSION_CODE < LLVM_VERSION(2, 9)
 #include "llvm/System/Path.h"
 #else
 #include "llvm/Support/Path.h"
@@ -72,7 +72,7 @@ Function *klee::getDirectCallTarget(CallSite cs) {
 }
 
 static bool valueIsOnlyCalled(const Value *v) {
-#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 8)
+#if LLVM_VERSION_CODE < LLVM_VERSION(2, 8)
   for (Value::use_const_iterator it = v->use_begin(), ie = v->use_end();
        it != ie; ++it) {
 #else

@@ -1,5 +1,8 @@
 /* include/klee/Config/config.h.in.  Generated from autoconf/configure.tmp.ac by autoheader.  */
 
+#ifndef KLEE_CONFIG_CONFIG_H
+#define KLEE_CONFIG_CONFIG_H
+
 /* Does the platform use __ctype_b_loc, etc. */
 #undef HAVE_CTYPE_EXTERNALS
 
@@ -74,3 +77,5 @@
 
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
+
+#endif

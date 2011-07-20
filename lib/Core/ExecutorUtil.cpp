@@ -15,6 +15,7 @@
 #include "klee/Interpreter.h"
 #include "klee/Solver.h"
 
+#include "klee/Config/Version.h"
 #include "klee/Internal/Module/KModule.h"
 
 #include "klee/util/GetElementPtrTypeIterator.h"
@@ -23,7 +24,7 @@
 #include "llvm/Function.h"
 #include "llvm/Instructions.h"
 #include "llvm/Module.h"
-#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 7)
+#if LLVM_VERSION_CODE < LLVM_VERSION(2, 7)
 #include "llvm/ModuleProvider.h"
 #endif
 #include "llvm/Support/CallSite.h"

@@ -7,7 +7,7 @@
 #include "klee/Expr.h"
 #include "klee/Interpreter.h"
 #include "klee/Statistics.h"
-#include "klee/Config/config.h"
+#include "klee/Config/Version.h"
 #include "klee/Internal/ADT/KTest.h"
 #include "klee/Internal/ADT/TreeStream.h"
 #include "klee/Internal/Support/ModuleUtil.h"
@@ -15,14 +15,14 @@
 
 #include "llvm/Constants.h"
 #include "llvm/Module.h"
-#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 7)
+#if LLVM_VERSION_CODE < LLVM_VERSION(2, 7)
 #include "llvm/ModuleProvider.h"
 #endif
 #include "llvm/Type.h"
 #include "llvm/InstrTypes.h"
 #include "llvm/Instruction.h"
 #include "llvm/Instructions.h"
-#if !(LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 7)
+#if LLVM_VERSION_CODE >= LLVM_VERSION(2, 7)
 #include "llvm/LLVMContext.h"
 #endif
 #include "llvm/Bitcode/ReaderWriter.h"
@@ -37,7 +37,7 @@
 #undef PACKAGE_TARNAME
 #undef PACKAGE_VERSION
 #include "llvm/Target/TargetSelect.h"
-#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 9)
+#if LLVM_VERSION_CODE < LLVM_VERSION(2, 9)
 #include "llvm/System/Signals.h"
 #else
 #include "llvm/Support/Signals.h"
@@ -526,7 +526,7 @@ void KleeHandler::getOutFiles(std::string path,
   }
   for (std::set<llvm::sys::Path>::iterator it = contents.begin(),
          ie = contents.end(); it != ie; ++it) {
-#if !(LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR == 6)
+#if LLVM_VERSION_CODE != LLVM_VERSION(2, 6)
     std::string f = it->str();
 #else
     std::string f = it->toString();
@@ -1148,7 +1148,7 @@ int main(int argc, char **argv, char **envp) {
   sys::SetInterruptFunction(interrupt_handle);
 
   // Load the bytecode...
-#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 7)
+#if LLVM_VERSION_CODE < LLVM_VERSION(2, 7)
   std::string ErrorMsg;
   ModuleProvider *MP = 0;
   if (MemoryBuffer *Buffer = MemoryBuffer::getFileOrSTDIN(InputFile, &ErrorMsg)) {
@@ -1165,7 +1165,7 @@ int main(int argc, char **argv, char **envp) {
 #endif
   std::string ErrorMsg;
   Module *mainModule = 0;
-#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 9)
+#if LLVM_VERSION_CODE < LLVM_VERSION(2, 9)
   MemoryBuffer *Buffer = MemoryBuffer::getFileOrSTDIN(InputFile, &ErrorMsg);
   if (Buffer) {
     mainModule = getLazyBitcodeModule(Buffer, getGlobalContext(), &ErrorMsg);
@@ -1464,7 +1464,7 @@ int main(int argc, char **argv, char **envp) {
   std::cerr << stats.str();
   handler->getInfoStream() << stats.str();
 
-#if !(LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 9)
+#if LLVM_VERSION_CODE >= LLVM_VERSION(2, 9)
   BufferPtr.take();
 #endif
   delete handler;

@@ -25,6 +25,10 @@ dnl Configure project makefiles
 dnl List every Makefile that exists within your source tree
 AC_CONFIG_HEADERS([include/klee/Config/config.h])
 
+AH_TOP([#ifndef KLEE_CONFIG_CONFIG_H
+#define KLEE_CONFIG_CONFIG_H])
+AH_BOTTOM([#endif])
+
 dnl FIXME: Make out of tree builds work.
 
 AC_LANG([C++])

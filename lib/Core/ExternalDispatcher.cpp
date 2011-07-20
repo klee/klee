@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ExternalDispatcher.h"
-#include "klee/Config/config.h"
+#include "klee/Config/Version.h"
 
 // Ugh.
 #undef PACKAGE_BUGREPORT
@@ -21,16 +21,16 @@
 #include "llvm/Constants.h"
 #include "llvm/DerivedTypes.h"
 #include "llvm/Instructions.h"
-#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 7)
+#if LLVM_VERSION_CODE < LLVM_VERSION(2, 7)
 #include "llvm/ModuleProvider.h"
 #endif
-#if !(LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 7)
+#if LLVM_VERSION_CODE >= LLVM_VERSION(2, 7)
 #include "llvm/LLVMContext.h"
 #endif
 #include "llvm/ExecutionEngine/JIT.h"
 #include "llvm/ExecutionEngine/GenericValue.h"
 #include "llvm/Support/CallSite.h"
-#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 9)
+#if LLVM_VERSION_CODE < LLVM_VERSION(2, 9)
 #include "llvm/System/DynamicLibrary.h"
 #else
 #include "llvm/Support/DynamicLibrary.h"
@@ -85,12 +85,12 @@ void *ExternalDispatcher::resolveSymbol(const std::string &name) {
 
 ExternalDispatcher::ExternalDispatcher() {
   dispatchModule = new Module("ExternalDispatcher", getGlobalContext());
-#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 7)
+#if LLVM_VERSION_CODE < LLVM_VERSION(2, 7)
   ExistingModuleProvider* MP = new ExistingModuleProvider(dispatchModule);
 #endif
 
   std::string error;
-#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 7)
+#if LLVM_VERSION_CODE < LLVM_VERSION(2, 7)
   executionEngine = ExecutionEngine::createJIT(MP, &error);
 #else
   executionEngine = ExecutionEngine::createJIT(dispatchModule, &error);
