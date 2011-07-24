@@ -61,7 +61,7 @@ void Token::dump() {
 ///
 
 static inline bool isInternalIdentifierChar(int Char) {
-  return isalnum(Char) || Char == '_' || Char == '.';
+  return isalnum(Char) || Char == '_' || Char == '.' || Char == '-';
 }
 
 Lexer::Lexer(const llvm::MemoryBuffer *MB) 
