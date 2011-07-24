@@ -60,32 +60,39 @@ KLEE is built on LLVM; the first steps are to get a working LLVM
 installation. See <a href="http://llvm.org/docs/GettingStarted.html">Getting
 Started with the LLVM System</a> for more information.
 
-<p><b>NOTE:</b> KLEE is only currently tested on Linux and Darwin x86-32
-targets, using LLVM top-of-tree. KLEE will not work with an older LLVM (e.g.,
-2.5). We are currently working on full support for Linux and Darwin x86-64
-targets.<p>
+<p><b>NOTE:</b> KLEE is only currently tested on Linux and Darwin
+x86-32 and x86-64 targets, using LLVM 2.8. KLEE will not work with an
+older LLVM (e.g., 2.5), and might not work with newer versions of LLVM
+(e.g., 2.9 or 3.0) <p>
 
 <ol>
   <li>Install llvm-gcc:
     <ul>
-      <li>Download and install the LLVM 2.7 release of <tt>llvm-gcc</tt>
-        from <a href="http://llvm.org/releases/download.html">here</a>.  Add
-        <tt>llvm-gcc</tt> to your <tt>PATH</tt>. It is important to do this first
-        so that <tt>llvm-gcc</tt> is found in subsequent <tt>configure</tt>
-        steps. <tt>llvm-gcc</tt> will be used later to compile programs that KLEE
-        can execute.</li>
+      <li>Download and install the LLVM 2.8 release of <tt>llvm-gcc</tt>
+        from <a href="http://llvm.org/releases/download.html">here</a>.  
+
+	<br/><b>Add <tt>llvm-gcc</tt> to your <tt>PATH</tt></b>.  It
+        is important to do this first so that <tt>llvm-gcc</tt> is
+        found in subsequent <tt>configure</tt>
+        steps. <tt>llvm-gcc</tt> will be used later to compile
+        programs that KLEE can execute.
+      </li>
+
+      <li><b>Forgetting to add llvm-gcc to your PATH at this point is
+        by far the most common source of build errors reported by new
+        users.</b></li>
     </ul>
   </li>
 
-  <li><a href="http://llvm.org/releases/download.html#2.7">Download and build
-      LLVM 2.7</a> (you may also use SVN head, but klee may not always be
+  <li><a href="http://llvm.org/releases/download.html#2.8">Download and build
+      LLVM 2.8</a> (you may also use SVN head, but klee may not always be
       up-to-date with LLVM API changes).
     
     <div class="instr">
-      $ curl -O http://llvm.org/releases/2.7/llvm-2.7.tgz <br>
-      $ tar zxvf llvm-2.7.tgz <br>
-      $ cd llvm-2.7 <br>
-      $ ./configure --enable-optimized <br>
+      $ curl -O http://llvm.org/releases/2.8/llvm-2.8.tgz <br/>
+      $ tar zxvf llvm-2.8.tgz <br/>
+      $ cd llvm-2.8 <br/>
+      $ ./configure --enable-optimized --enable-assertions<br/>
       $ make
     </div>
     
@@ -125,8 +132,8 @@ targets.<p>
 
   <li>Run the regression suite to verify your build:
     <div class="instr">
-      $ make check<br>
-      $ make unittests<br>
+      $ make check<br/>
+      $ make unittests<br/>
     </div>
   </li>
 
@@ -161,9 +168,9 @@ library.</p>
   
   <li>Build uClibc with <tt>llvm-gcc</tt>:
     <div class="instr">
-      $ tar zxvf klee-uclibc-0.01.tgz <br>
-      $ ./configure --with-llvm=<i>path/to/llvm</i> <br>
-      $ make <br>
+      $ tar zxvf klee-uclibc-0.01.tgz <br/>
+      $ ./configure --with-llvm=<i>path/to/llvm</i> <br/>
+      $ make <br/>
     </div>
 
     <p><b>NOTE:</b> KLEE's uClibc is shipped in a pre-configured for x86-32. If
@@ -201,9 +208,9 @@ co</tt> command.</p>
 <ol>
   <li>Download and build STP.
     <div class="instr">
-      $ svn co -r 940 https://stp-fast-prover.svn.sourceforge.net/svnroot/stp-fast-prover/trunk/stp stp <br>
-      $ cd stp <br>
-      $ scripts/configure --with-prefix=<i>path/to/stp/inst</i> --with-cryptominisat2 <br>
+      $ svn co -r 940 https://stp-fast-prover.svn.sourceforge.net/svnroot/stp-fast-prover/trunk/stp stp <br/>
+      $ cd stp <br/>
+      $ scripts/configure --with-prefix=<i>path/to/stp/inst</i> --with-cryptominisat2 <br/>
       $ make OPTIMIZE=-O2 CFLAGS_M32= install
     </div>
   </li>
