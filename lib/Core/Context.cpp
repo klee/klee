@@ -35,7 +35,11 @@ const Context &Context::get() {
 // FIXME: This is a total hack, just to avoid a layering issue until this stuff
 // moves out of Expr.
 
-ref<Expr> Expr::createCoerceToPointerType(ref<Expr> e) {
+ref<Expr> Expr::createSExtToPointerWidth(ref<Expr> e) {
+  return SExtExpr::create(e, Context::get().getPointerWidth());
+}
+
+ref<Expr> Expr::createZExtToPointerWidth(ref<Expr> e) {
   return ZExtExpr::create(e, Context::get().getPointerWidth());
 }
 

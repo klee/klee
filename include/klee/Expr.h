@@ -230,7 +230,8 @@ public:
   /* Kind utilities */
 
   /* Utility creation functions */
-  static ref<Expr> createCoerceToPointerType(ref<Expr> e);
+  static ref<Expr> createSExtToPointerWidth(ref<Expr> e);
+  static ref<Expr> createZExtToPointerWidth(ref<Expr> e);
   static ref<Expr> createImplies(ref<Expr> hyp, ref<Expr> conc);
   static ref<Expr> createIsZero(ref<Expr> e);
 
