@@ -170,7 +170,8 @@ private:
   /// The maximum time to allow for a single stp query.
   double stpTimeout;  
 
-  llvm::Function* getCalledFunction(llvm::CallSite &cs, ExecutionState &state);
+  llvm::Function* getTargetFunction(llvm::Value *calledVal,
+                                    ExecutionState &state);
   
   void executeInstruction(ExecutionState &state, KInstruction *ki);
 

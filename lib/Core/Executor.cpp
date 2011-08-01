@@ -54,6 +54,7 @@
 #include "llvm/LLVMContext.h"
 #endif
 #include "llvm/Module.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/CallSite.h"
 #include "llvm/Support/CommandLine.h"
@@ -1287,25 +1288,46 @@ void Executor::printFileLine(ExecutionState &state, KInstruction *ki) {
     std::cerr << "     [no debug info]:";
 }
 
+/// Compute the true target of a function call, resolving LLVM and KLEE aliases
+/// and bitcasts.
+Function* Executor::getTargetFunction(Value *calledVal, ExecutionState &state) {
+  SmallPtrSet<const GlobalValue*, 3> Visited;
 
-Function* Executor::getCalledFunction(CallSite &cs, ExecutionState &state) {
-  Function *f = cs.getCalledFunction();
-  
-  if (f) {
-    std::string alias = state.getFnAlias(f->getName());
-    if (alias != "") {
-      llvm::Module* currModule = kmodule->module;
-      Function* old_f = f;
-      f = currModule->getFunction(alias);
-      if (!f) {
-	llvm::errs() << "Function " << alias << "(), alias for " 
-                     << old_f->getName() << " not found!\n";
-	assert(f && "function alias not found");
+  Constant *c = dyn_cast<Constant>(calledVal);
+  if (!c)
+    return 0;
+
+  while (true) {
+    if (GlobalValue *gv = dyn_cast<GlobalValue>(c)) {
+      if (!Visited.insert(gv))
+        return 0;
+
+      std::string alias = state.getFnAlias(gv->getName());
+      if (alias != "") {
+        llvm::Module* currModule = kmodule->module;
+        GlobalValue *old_gv = gv;
+        gv = currModule->getNamedValue(alias);
+        if (!gv) {
+          llvm::errs() << "Function " << alias << "(), alias for " 
+                       << old_gv->getName() << " not found!\n";
+          assert(0 && "function alias not found");
+        }
       }
-    }
+     
+      if (Function *f = dyn_cast<Function>(gv))
+        return f;
+      else if (GlobalAlias *ga = dyn_cast<GlobalAlias>(gv))
+        c = ga->getAliasee();
+      else
+        return 0;
+    } else if (llvm::ConstantExpr *ce = dyn_cast<llvm::ConstantExpr>(c)) {
+      if (ce->getOpcode()==Instruction::BitCast)
+        c = ce->getOperand(0);
+      else
+        return 0;
+    } else
+      return 0;
   }
-  
-  return f;
 }
 
 static bool isDebugIntrinsic(const Function *f, KModule *KM) {
@@ -1526,7 +1548,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     CallSite cs(i);
 
     unsigned numArgs = cs.arg_size();
-    Function *f = getCalledFunction(cs, state);
+    Value *fp = cs.getCalledValue();
+    Function *f = getTargetFunction(fp, state);
 
     // Skip debug intrinsics, we can't evaluate their metadata arguments.
     if (f && isDebugIntrinsic(f, kmodule))
@@ -1539,19 +1562,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     for (unsigned j=0; j<numArgs; ++j)
       arguments.push_back(eval(ki, j+1, state).value);
 
-    if (!f) {
+    if (f) {
+      const FunctionType *fType = 
+        dyn_cast<FunctionType>(cast<PointerType>(f->getType())->getElementType());
+      const FunctionType *fpType =
+        dyn_cast<FunctionType>(cast<PointerType>(fp->getType())->getElementType());
+
       // special case the call with a bitcast case
-      Value *fp = cs.getCalledValue();
-      llvm::ConstantExpr *ce = dyn_cast<llvm::ConstantExpr>(fp);
-        
-      if (ce && ce->getOpcode()==Instruction::BitCast) {
-        f = dyn_cast<Function>(ce->getOperand(0));
-        assert(f && "XXX unrecognized constant expression in call");
-        const FunctionType *fType = 
-          dyn_cast<FunctionType>(cast<PointerType>(f->getType())->getElementType());
-        const FunctionType *ceType =
-          dyn_cast<FunctionType>(cast<PointerType>(ce->getType())->getElementType());
-        assert(fType && ceType && "unable to get function type");
+      if (fType != fpType) {
+        assert(fType && fpType && "unable to get function type");
 
         // XXX check result coercion
 
@@ -1581,9 +1600,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         terminateStateOnExecError(state, "inline assembly is unsupported");
         break;
       }
-    }
 
-    if (f) {
       executeCall(state, ki, f, arguments);
     } else {
       ref<Expr> v = eval(ki, 0, state).value;
