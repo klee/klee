@@ -91,7 +91,9 @@ namespace llvm {
 static void AddStandardCompilePasses(PassManager &PM) {
   PM.add(createVerifierPass());                  // Verify that input is correct
 
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 0)
   addPass(PM, createLowerSetJmpPass());          // Lower llvm.setjmp/.longjmp
+#endif
 
   // If the -strip-debug command line option was specified, do it.
   if (StripDebug)
