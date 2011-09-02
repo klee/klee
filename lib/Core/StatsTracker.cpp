@@ -714,12 +714,18 @@ void StatsTracker::computeReachableUncovered() {
                 best = val;
             }
           }
-          if (best != cur) {
+          // there's a corner case here when a function only includes a single
+          // instruction (a ret). in that case, we MUST update
+          // functionShortestPath, or it will remain 0 (erroneously indicating
+          // that no return instructions are reachable)
+          Function *f = inst->getParent()->getParent();
+          if (best != cur
+              || (inst == f->begin()->begin()
+                  && functionShortestPath[f] != best)) {
             sm.setIndexedValue(stats::minDistToReturn, id, best);
             changed = true;
 
             // Update shortest path if this is the entry point.
-            Function *f = inst->getParent()->getParent();
             if (inst==f->begin()->begin())
               functionShortestPath[f] = best;
           }
