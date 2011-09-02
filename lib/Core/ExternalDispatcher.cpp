@@ -36,7 +36,11 @@
 #include "llvm/Support/DynamicLibrary.h"
 #endif
 #include "llvm/Support/raw_ostream.h"
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 0)
 #include "llvm/Target/TargetSelect.h"
+#else
+#include "llvm/Support/TargetSelect.h"
+#endif
 #include <setjmp.h>
 #include <signal.h>
 #include <iostream>

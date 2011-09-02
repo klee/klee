@@ -36,7 +36,11 @@
 #undef PACKAGE_STRING
 #undef PACKAGE_TARNAME
 #undef PACKAGE_VERSION
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 0)
 #include "llvm/Target/TargetSelect.h"
+#else
+#include "llvm/Support/TargetSelect.h"
+#endif
 #if LLVM_VERSION_CODE < LLVM_VERSION(2, 9)
 #include "llvm/System/Signals.h"
 #else

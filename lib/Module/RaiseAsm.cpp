@@ -18,7 +18,11 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Target/TargetLowering.h"
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 0)
 #include "llvm/Target/TargetRegistry.h"
+#else
+#include "llvm/Support/TargetRegistry.h"
+#endif
 #endif
 
 using namespace llvm;
