@@ -21,15 +21,19 @@
   simple function with KLEE.  Here is our simple function:
 
   <pre class="code">
-  int my_islower(int x) {
-      if (x >= 'a' && x <= 'z')  
-         return 1;
-      else return 0;
+  int get_sign(int x) {
+    if (x == 0)
+       return 0;
+
+    if (x < 0)
+       return -1;
+    else 
+       return 1;
   } </pre>
 
   You can find the entire code for this example in the source tree
   under <tt>examples/islower</tt>.  A version of the source code can
-  also be accessed <a href="resources/islower.c.html">here</a>. 
+  also be accessed <a href="resources/get_sign.c.html">here</a>. 
 
   <h2>Marking input as symbolic</h2> 
 
@@ -39,14 +43,14 @@
   arguments: the address of the variable (memory location) that we
   want to treat as symbolic, its size, and a name (which can be
   anything).  Here is a simple <tt>main()</tt> function that marks a
-  variable <tt>c</tt> as symbolic and uses it to
-  call <tt>my_islower()</tt>:
+  variable <tt>a</tt> as symbolic and uses it to
+  call <tt>get_sign()</tt>:
 
   <pre class="code">
   int main() {
-      char c;
-      klee_make_symbolic(&c, sizeof(c), "input"); 
-      return my_islower(c);
+      int a;
+      klee_make_symbolic(&a, sizeof(a), "a");
+      return get_sign(a);
   } </pre>
 		
 
@@ -59,7 +63,7 @@
   we run:
 
   <div class="instr">
-  llvm-gcc --emit-llvm -c -g demo.c
+  llvm-gcc --emit-llvm -c -g get_sign.c
   </div>
 
   to generate the LLVM bitcode file <tt>demo.o</tt>.
@@ -76,20 +80,20 @@
   To run KLEE on the bitcode file simply execute:
   
   <div class="instr">
-  klee demo.o
+  klee get_sign.o
   </div>
 
-  You should see the following output:
+  You should see the following output (assumes LLVM 2.8):
   <pre class="output">
   KLEE: output directory = "klee-out-0"
-  KLEE: done: total instructions = 69  
-  KLEE: done: completed paths = 3      
+
+  KLEE: done: total instructions = 51
+  KLEE: done: completed paths = 3
   KLEE: done: generated tests = 3 </pre>
 
   There are three paths through our simple function, one
-  where <tt>x</tt> is less than <tt>'a'</tt>, one where <tt>x</tt> is
-  between <tt>'a'</tt> and <tt>'z'</tt> (so it's a lowercase letter),
-  and one where <tt>x</tt> is greater than <tt>'z'</tt>.
+  where <tt>a</tt> is <tt>0</tt>, one where it is less than <tt>0</tt>
+  and one where it is greater than <tt>0</tt>.
 
   As expected, KLEE informs us that it explored three paths in the
   program and generated one test case for each path explored.  The
@@ -117,32 +121,31 @@
   utility.  So let's examine each file:
 
   <pre class="output">
-  $ ktest-tool klee-last/test000001.ktest 
+  $ ktest-tool --write-ints klee-last/test000001.ktest 
   ktest file : 'klee-last/test000001.ktest'
-  args       : ['demo.o']
+  args       : ['get_sign.o']
   num objects: 1
-  object    0: name: 'input'
-  object    0: size: 1
-  object    0: data: 'b'
-
-  $ ktest-tool klee-last/test000002.ktest 
+  object    0: name: 'a'
+  object    0: size: 4
+  object    0: data: 1
+  
+  $ ktest-tool --write-ints klee-last/test000002.ktest  
   ...
-  object    0: data: '~'
+  object    0: data: -2147483648
 
-  $ ktest-tool klee-last/test000003.ktest 
-  ..
-  object    0: data: '\x00' </pre>
+  $ ktest-tool --write-ints klee-last/test000003.ktest 
+  ...
+  object    0: data: 0 </pre>
 
   In each test file, KLEE reports the arguments with which the program
   was invoked (in our case no arguments other than the program name
   itself), the number of symbolic objects on that path (only one in
-  our case), the name of our symbolic object ('input') and its size
-  (1).  The actual test itself is represented by the value of our
-  input: <tt>'b'</tt> for the first test, <tt>'~'</tt> for the second
-  and <tt>0</tt> for the last one.  As expected, KLEE generated a
-  character which is a lowercase letter (<tt>'b'</tt>), one which is
-  less than <tt>'a'</tt> (<tt>0</tt>), and one which is greater
-  than <tt>'z'</tt> (<tt>'~'</tt>).  We can now run these values on a
+  our case), the name of our symbolic object ('a') and its size (4).
+  The actual test itself is represented by the value of our
+  input: <tt>1</tt> for the first test, <tt>-2147483648</tt> for the
+  second and <tt>0</tt> for the last one.  As expected, KLEE generated
+  value <tt>0</tt>, one negative value (<tt>-2147483648</tt>), and one
+  positive value (<tt>1</tt>).  We can now run these values on a
   native version of our program, to exercise all paths through the
   code!
  
@@ -161,20 +164,20 @@
   point to the name of the desired test case:
 
   <pre class="output">
-  $ gcc ~/klee/Release/lib/libkleeRuntest.dylib demo.c
+  $ gcc ~klee/Release+Asserts/lib/libkleeRuntest.so get_sign.c
   $ KTEST_FILE=klee-last/test000001.ktest ./a.out 
   $ echo $?
   1
   $ KTEST_FILE=klee-last/test000002.ktest ./a.out 
   $ echo $?
-  0
+  255
   $ KTEST_FILE=klee-last/test000003.ktest ./a.out
   $ echo $?
   0 </pre>
 
-  As expected, our program returns 1 when running the first test case
-  (which contains the lowercase letter <tt>'b'</tt>), and 0 when
-  running the other two (which don't contain lowercase letters).
+  As expected, our program returns 1 when running the first test case,
+  255 (-1 converted to a valid exit code value in the 0-255 range)
+  when running the second one, and 0 when running the last one.
 
   <br/><br/>
 
