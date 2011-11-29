@@ -315,14 +315,14 @@ void ExecutionState::dumpStack(std::ostream &out) const {
     const InstructionInfo &ii = *target->info;
     out << "\t#" << idx++ 
         << " " << std::setw(8) << std::setfill('0') << ii.assemblyLine
-        << " in " << f->getNameStr() << " (";
+        << " in " << f->getName().str() << " (";
     // Yawn, we could go up and print varargs if we wanted to.
     unsigned index = 0;
     for (Function::arg_iterator ai = f->arg_begin(), ae = f->arg_end();
          ai != ae; ++ai) {
       if (ai!=f->arg_begin()) out << ", ";
 
-      out << ai->getNameStr();
+      out << ai->getName().str();
       // XXX should go through function
       ref<Expr> value = sf.locals[sf.kf->getArgRegister(index++)].value; 
       if (isa<ConstantExpr>(value))

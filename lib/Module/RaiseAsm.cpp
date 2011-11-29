@@ -90,7 +90,11 @@ bool RaiseAsmPass::runOnModule(Module &M) {
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(2, 9)
   std::string Err;
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 1)
+  std::string HostTriple = llvm::sys::getDefaultTargetTriple();
+#else
   std::string HostTriple = llvm::sys::getHostTriple();
+#endif
   const Target *NativeTarget = TargetRegistry::lookupTarget(HostTriple, Err);
   if (NativeTarget == 0) {
     llvm::errs() << "Warning: unable to select native target: " << Err << "\n";

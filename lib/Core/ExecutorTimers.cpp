@@ -155,7 +155,7 @@ void Executor::processTimers(ExecutionState *current,
           ++next;
           for (ExecutionState::stack_ty::iterator sfIt = es->stack.begin(),
                  sf_ie = es->stack.end(); sfIt != sf_ie; ++sfIt) {
-            *os << "('" << sfIt->kf->function->getNameStr() << "',";
+            *os << "('" << sfIt->kf->function->getName().str() << "',";
             if (next == es->stack.end()) {
               *os << es->prevPC->info->line << "), ";
             } else {
