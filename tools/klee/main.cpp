@@ -51,6 +51,7 @@
 #include <fstream>
 #include <cerrno>
 #include <dirent.h>
+#include <unistd.h>
 #include <errno.h>
 #include <sys/stat.h>
 #include <sys/wait.h>

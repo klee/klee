@@ -258,9 +258,6 @@ namespace {
 }
 
 
-static void *theMMap = 0;
-static unsigned theMMapSize = 0;
-
 namespace klee {
   RNG theRNG;
 }
@@ -3269,11 +3266,6 @@ void Executor::runFunctionAsMain(Function *f,
 
   if (statsTracker)
     statsTracker->done();
-
-  if (theMMap) {
-    munmap(theMMap, theMMapSize);
-    theMMap = 0;
-  }
 }
 
 unsigned Executor::getPathStreamID(const ExecutionState &state) {
