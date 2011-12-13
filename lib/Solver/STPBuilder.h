@@ -73,7 +73,7 @@ class STPBuilder {
 
 private:
   unsigned getShiftBits(unsigned amount) {
-    return (amount == 64) ? 6 : 5;
+    return (amount > 32) ? 6 : 5;
   }
 
   ExprHandle bvOne(unsigned width);
