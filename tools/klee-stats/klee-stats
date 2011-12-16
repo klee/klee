@@ -123,8 +123,13 @@ def printTable(table):
 
 def main(args):
     from optparse import OptionParser
-    op = OptionParser(usage="usage: %prog [options] directories",
-                      epilog="""\
+
+    class ParserWithNewLines(OptionParser):
+        def format_epilog(self, formatter):
+            return self.epilog
+
+    op = ParserWithNewLines(usage="usage: %prog [options] directories",
+                            epilog="""\
 LEGEND
 ------
 Instrs:  Number of executed instructions
@@ -138,7 +143,8 @@ Mem:     Megabytes of memory currently used
 Queries: Number of queries issued to STP
 AvgQC:   Average number of query constructs per query
 Tcex:    Time spent in the counterexample caching code (%)
-Tfork:   Time spent forking (%)""")
+Tfork:   Time spent forking (%)
+""")
 
     op.add_option('', '--print-more', dest='printMore',
                   action='store_true', default=False,
