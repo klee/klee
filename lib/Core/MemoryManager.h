@@ -10,7 +10,7 @@
 #ifndef KLEE_MEMORYMANAGER_H
 #define KLEE_MEMORYMANAGER_H
 
-#include <vector>
+#include <set>
 #include <stdint.h>
 
 namespace llvm {
@@ -22,7 +22,7 @@ namespace klee {
 
   class MemoryManager {
   private:
-    typedef std::vector<MemoryObject*> objects_ty;
+    typedef std::set<MemoryObject*> objects_ty;
     objects_ty objects;
 
   public:
@@ -34,6 +34,7 @@ namespace klee {
     MemoryObject *allocateFixed(uint64_t address, uint64_t size,
                                 const llvm::Value *allocSite);
     void deallocate(const MemoryObject *mo);
+    void markFreed(MemoryObject *mo);
   };
 
 } // End klee namespace

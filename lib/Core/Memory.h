@@ -30,9 +30,12 @@ class Solver;
 
 class MemoryObject {
   friend class STPBuilder;
+  friend class ObjectState;
+  friend class ExecutionState;
 
 private:
   static int counter;
+  mutable unsigned refCount;
 
 public:
   unsigned id;
@@ -49,6 +52,8 @@ public:
   /// true if created by us.
   bool fake_object;
   bool isUserSpecified;
+
+  MemoryManager *parent;
 
   /// "Location" for which this memory object was allocated. This
   /// should be either the allocating instruction or the global object
@@ -69,17 +74,21 @@ public:
   // XXX this is just a temp hack, should be removed
   explicit
   MemoryObject(uint64_t _address) 
-    : id(counter++),
+    : refCount(0),
+      id(counter++), 
       address(_address),
       size(0),
       isFixed(true),
+      parent(NULL),
       allocSite(0) {
   }
 
   MemoryObject(uint64_t _address, unsigned _size, 
                bool _isLocal, bool _isGlobal, bool _isFixed,
-               const llvm::Value *_allocSite) 
-    : id(counter++),
+               const llvm::Value *_allocSite,
+               MemoryManager *_parent)
+    : refCount(0), 
+      id(counter++),
       address(_address),
       size(_size),
       name("unnamed"),
@@ -88,6 +97,7 @@ public:
       isFixed(_isFixed),
       fake_object(false),
       isUserSpecified(false),
+      parent(_parent), 
       allocSite(_allocSite) {
   }
 

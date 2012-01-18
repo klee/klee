@@ -86,7 +86,44 @@ ExecutionState::ExecutionState(const std::vector<ref<Expr> > &assumptions)
 }
 
 ExecutionState::~ExecutionState() {
+  for (unsigned int i=0; i<symbolics.size(); i++)
+  {
+    const MemoryObject *mo = symbolics[i].first;
+    assert(mo->refCount > 0);
+    mo->refCount--;
+    if (mo->refCount == 0)
+      delete mo;
+  }
+
   while (!stack.empty()) popFrame();
+}
+
+ExecutionState::ExecutionState(const ExecutionState& state)
+  : fnAliases(state.fnAliases),
+    fakeState(state.fakeState),
+    underConstrained(state.underConstrained),
+    depth(state.depth),
+    pc(state.pc),
+    prevPC(state.prevPC),
+    stack(state.stack),
+    constraints(state.constraints),
+    queryCost(state.queryCost),
+    weight(state.weight),
+    addressSpace(state.addressSpace),
+    pathOS(state.pathOS),
+    symPathOS(state.symPathOS),
+    instsSinceCovNew(state.instsSinceCovNew),
+    coveredNew(state.coveredNew),
+    forkDisabled(state.forkDisabled),
+    coveredLines(state.coveredLines),
+    ptreeNode(state.ptreeNode),
+    symbolics(state.symbolics),
+    arrayNames(state.arrayNames),
+    shadowObjects(state.shadowObjects),
+    incomingBBIndex(state.incomingBBIndex)
+{
+  for (unsigned int i=0; i<symbolics.size(); i++)
+    symbolics[i].first->refCount++;
 }
 
 ExecutionState *ExecutionState::branch() {
@@ -114,6 +151,10 @@ void ExecutionState::popFrame() {
   stack.pop_back();
 }
 
+void ExecutionState::addSymbolic(const MemoryObject *mo, const Array *array) { 
+  mo->refCount++;
+  symbolics.push_back(std::make_pair(mo, array));
+}
 ///
 
 std::string ExecutionState::getFnAlias(std::string fn) {

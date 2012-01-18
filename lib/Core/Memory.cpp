@@ -17,6 +17,7 @@
 #include "klee/util/BitArray.h"
 
 #include "ObjectHolder.h"
+#include "MemoryManager.h"
 
 #include <llvm/Function.h>
 #include <llvm/Instruction.h>
@@ -63,6 +64,8 @@ ObjectHolder &ObjectHolder::operator=(const ObjectHolder &b) {
 int MemoryObject::counter = 0;
 
 MemoryObject::~MemoryObject() {
+  if (parent)
+    parent->markFreed(this);
 }
 
 void MemoryObject::getAllocInfo(std::string &result) const {
@@ -100,6 +103,7 @@ ObjectState::ObjectState(const MemoryObject *mo)
     updates(0, 0),
     size(mo->size),
     readOnly(false) {
+  mo->refCount++;
   if (!UseConstantArrays) {
     // FIXME: Leaked.
     static unsigned id = 0;
@@ -120,6 +124,7 @@ ObjectState::ObjectState(const MemoryObject *mo, const Array *array)
     updates(array, 0),
     size(mo->size),
     readOnly(false) {
+  mo->refCount++;
   makeSymbolic();
 }
 
@@ -135,6 +140,8 @@ ObjectState::ObjectState(const ObjectState &os)
     size(os.size),
     readOnly(false) {
   assert(!os.readOnly && "no need to copy read only object?");
+  if (object)
+    object->refCount++;
 
   if (os.knownSymbolics) {
     knownSymbolics = new ref<Expr>[size];
@@ -150,6 +157,16 @@ ObjectState::~ObjectState() {
   if (flushMask) delete flushMask;
   if (knownSymbolics) delete[] knownSymbolics;
   delete[] concreteStore;
+
+  if (object)
+  {
+    assert(object->refCount > 0);
+    object->refCount--;
+    if (object->refCount == 0)
+    {
+      delete object;
+    }
+  }
 }
 
 /***/

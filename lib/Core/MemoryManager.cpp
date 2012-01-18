@@ -25,8 +25,10 @@ using namespace klee;
 
 MemoryManager::~MemoryManager() { 
   while (!objects.empty()) {
-    MemoryObject *mo = objects.back();
-    objects.pop_back();
+    MemoryObject *mo = *objects.begin();
+    if (!mo->isFixed)
+      free((void *)mo->address);
+    objects.erase(mo);
     delete mo;
   }
 }
@@ -44,8 +46,8 @@ MemoryObject *MemoryManager::allocate(uint64_t size, bool isLocal,
   
   ++stats::allocations;
   MemoryObject *res = new MemoryObject(address, size, isLocal, isGlobal, false,
-                                       allocSite);
-  objects.push_back(res);
+                                       allocSite, this);
+  objects.insert(res);
   return res;
 }
 
@@ -62,11 +64,20 @@ MemoryObject *MemoryManager::allocateFixed(uint64_t address, uint64_t size,
 
   ++stats::allocations;
   MemoryObject *res = new MemoryObject(address, size, false, true, true,
-                                       allocSite);
-  objects.push_back(res);
+                                       allocSite, this);
+  objects.insert(res);
   return res;
 }
 
 void MemoryManager::deallocate(const MemoryObject *mo) {
   assert(0);
+}
+
+void MemoryManager::markFreed(MemoryObject *mo) {
+  if (objects.find(mo) != objects.end())
+  {
+    if (!mo->isFixed)
+      free((void *)mo->address);
+    objects.erase(mo);
+  }
 }

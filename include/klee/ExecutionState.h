@@ -122,6 +122,8 @@ public:
   // use on structure
   ExecutionState(const std::vector<ref<Expr> > &assumptions);
 
+  ExecutionState(const ExecutionState& state);
+
   ~ExecutionState();
   
   ExecutionState *branch();
@@ -129,9 +131,7 @@ public:
   void pushFrame(KInstIterator caller, KFunction *kf);
   void popFrame();
 
-  void addSymbolic(const MemoryObject *mo, const Array *array) { 
-    symbolics.push_back(std::make_pair(mo, array));
-  }
+  void addSymbolic(const MemoryObject *mo, const Array *array);
   void addConstraint(ref<Expr> e) { 
     constraints.addConstraint(e); 
   }
