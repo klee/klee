@@ -36,7 +36,7 @@ else
   LD.Flags += -L$(PROJ_SRC_ROOT)/stp/lib
   CXX.Flags += -I$(PROJ_SRC_ROOT)/stp/include
 endif
-CXX.Flags += -DKLEE_DIR=\"$(PROJ_OBJ_ROOT)\"
+CXX.Flags += -DKLEE_DIR=\"$(PROJ_OBJ_ROOT)\" -DKLEE_LIB_DIR=\"$(PROJ_libdir)\"
 
 # For STP.
 CXX.Flags += -DEXT_HASH_MAP
