@@ -1486,12 +1486,12 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       LLVM_TYPE_Q llvm::IntegerType *Ty = 
         cast<IntegerType>(si->getCondition()->getType());
       ConstantInt *ci = ConstantInt::get(Ty, CE->getZExtValue());
-      unsigned index = si->findCaseValue(ci);
+      unsigned index = si->resolveSuccessorIndex(si->findCaseValue(ci));
       transferToBasicBlock(si->getSuccessor(index), si->getParent(), state);
     } else {
       std::map<BasicBlock*, ref<Expr> > targets;
       ref<Expr> isDefault = ConstantExpr::alloc(1, Expr::Bool);
-      for (unsigned i=1; i<cases; ++i) {
+      for (unsigned i=0; i<cases; ++i) {
         ref<Expr> value = evalConstant(si->getCaseValue(i));
         ref<Expr> match = EqExpr::create(cond, value);
         isDefault = AndExpr::create(isDefault, Expr::createIsZero(match));
@@ -1501,7 +1501,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         (void) success;
         if (result) {
           std::map<BasicBlock*, ref<Expr> >::iterator it =
-            targets.insert(std::make_pair(si->getSuccessor(i),
+            targets.insert(std::make_pair(si->getCaseSuccessor(i),
                                           ConstantExpr::alloc(0, Expr::Bool))).first;
           it->second = OrExpr::create(match, it->second);
         }
@@ -1511,7 +1511,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       assert(success && "FIXME: Unhandled solver failure");
       (void) success;
       if (res)
-        targets.insert(std::make_pair(si->getSuccessor(0), isDefault));
+        targets.insert(std::make_pair(si->getDefaultDest(), isDefault));
       
       std::vector< ref<Expr> > conditions;
       for (std::map<BasicBlock*, ref<Expr> >::iterator it = 
