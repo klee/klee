@@ -115,9 +115,16 @@ void LowerSwitchPass::processSwitchInst(SwitchInst *SI) {
   }
   
   CaseVector cases;
+  
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 1)
   for (unsigned i = 0; i < SI->getNumCases(); ++i)
     cases.push_back(SwitchCase(SI->getCaseValue(i),
                                SI->getCaseSuccessor(i)));
+#else
+  for (unsigned i = 1; i < SI->getNumSuccessors(); ++i)  
+    cases.push_back(SwitchCase(SI->getSuccessorValue(i),
+                               SI->getSuccessor(i)));
+#endif
   
   // reverse cases, as switchConvert constructs a chain of
   //   basic blocks by appending to the front. if we reverse,
