@@ -399,6 +399,15 @@ void Executor::initializeGlobalObject(ExecutionState &state, ObjectState *os,
     for (unsigned i=0, e=cs->getNumOperands(); i != e; ++i)
       initializeGlobalObject(state, os, cs->getOperand(i), 
 			     offset + sl->getElementOffset(i));
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 1)
+  } else if (const ConstantDataSequential *cds =
+               dyn_cast<ConstantDataSequential>(c)) {
+    unsigned elementSize =
+      targetData->getTypeStoreSize(cds->getElementType());
+    for (unsigned i=0, e=cds->getNumElements(); i != e; ++i)
+      initializeGlobalObject(state, os, cds->getElementAsConstant(i),
+                             offset + i*elementSize);
+#endif
   } else {
     unsigned StoreBits = targetData->getTypeStoreSizeInBits(c->getType());
     ref<ConstantExpr> C = evalConstant(c);
@@ -945,6 +954,17 @@ ref<klee::ConstantExpr> Executor::evalConstant(const Constant *c) {
       return Expr::createPointer(0);
     } else if (isa<UndefValue>(c) || isa<ConstantAggregateZero>(c)) {
       return ConstantExpr::create(0, getWidthForLLVMType(c->getType()));
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 1)
+    } else if (const ConstantDataSequential *cds =
+                 dyn_cast<ConstantDataSequential>(c)) {
+      std::vector<ref<Expr> > kids;
+      for (unsigned i = 0, e = cds->getNumElements(); i != e; ++i) {
+        ref<Expr> kid = evalConstant(cds->getElementAsConstant(i));
+        kids.push_back(kid);
+      }
+      ref<Expr> res = ConcatExpr::createN(kids.size(), kids.data());
+      return cast<ConstantExpr>(res);
+#endif
     } else if (const ConstantStruct *cs = dyn_cast<ConstantStruct>(c)) {
       const StructLayout *sl = kmodule->targetData->getStructLayout(cs->getType());
       llvm::SmallVector<ref<Expr>, 4> kids;
