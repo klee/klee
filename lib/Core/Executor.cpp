@@ -1427,6 +1427,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     }      
     break;
   }
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 1)
   case Instruction::Unwind: {
     for (;;) {
       KInstruction *kcaller = state.stack.back().caller;
@@ -1448,6 +1449,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     }
     break;
   }
+#endif
   case Instruction::Br: {
     BranchInst *bi = cast<BranchInst>(i);
     if (bi->isUnconditional()) {

@@ -669,7 +669,11 @@ void StatsTracker::computeReachableUncovered() {
           unsigned id = infos.getInfo(it).id;
           sm.setIndexedValue(stats::minDistToReturn, 
                              id, 
-                             isa<ReturnInst>(it) || isa<UnwindInst>(it));
+                             isa<ReturnInst>(it)
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 1)
+                             || isa<UnwindInst>(it)
+#endif
+                             );
         }
       }
     }
