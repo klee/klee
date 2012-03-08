@@ -1498,7 +1498,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   case Instruction::Switch: {
     SwitchInst *si = cast<SwitchInst>(i);
     ref<Expr> cond = eval(ki, 0, state).value;
-    unsigned cases = si->getNumCases();
     BasicBlock *bb = si->getParent();
 
     cond = toUnique(state, cond);
@@ -1509,7 +1508,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         cast<IntegerType>(si->getCondition()->getType());
       ConstantInt *ci = ConstantInt::get(Ty, CE->getZExtValue());
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 1)
-      unsigned index = si->resolveSuccessorIndex(si->findCaseValue(ci));
+      unsigned index = si->findCaseValue(ci).getSuccessorIndex();
 #else
       unsigned index = si->findCaseValue(ci);
 #endif
@@ -1518,11 +1517,12 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       std::map<BasicBlock*, ref<Expr> > targets;
       ref<Expr> isDefault = ConstantExpr::alloc(1, Expr::Bool);
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 1)      
-      for (unsigned i=0; i<cases; ++i) {
+      for (SwitchInst::CaseIt i = si->caseBegin(), e = si->caseEnd();
+           i != e; ++i) {
 #else
-      for (unsigned i=1; i<cases; ++i) {  
+      for (unsigned i=1, cases = si->getNumCases(); i<cases; ++i) {
 #endif
-        ref<Expr> value = evalConstant(si->getCaseValue(i));
+        ref<Expr> value = evalConstant(i.getCaseValue());
         ref<Expr> match = EqExpr::create(cond, value);
         isDefault = AndExpr::create(isDefault, Expr::createIsZero(match));
         bool result;
@@ -1531,7 +1531,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         (void) success;
         if (result) {
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 1)
-          BasicBlock *caseSuccessor = si->getCaseSuccessor(i);
+          BasicBlock *caseSuccessor = i.getCaseSuccessor();
 #else
           BasicBlock *caseSuccessor = si->getSuccessor(i);
 #endif
