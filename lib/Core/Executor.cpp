@@ -1517,7 +1517,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       std::map<BasicBlock*, ref<Expr> > targets;
       ref<Expr> isDefault = ConstantExpr::alloc(1, Expr::Bool);
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 1)      
-      for (SwitchInst::CaseIt i = si->caseBegin(), e = si->caseEnd();
+      for (SwitchInst::CaseIt i = si->case_begin(), e = si->case_end();
            i != e; ++i) {
 #else
       for (unsigned i=1, cases = si->getNumCases(); i<cases; ++i) {
