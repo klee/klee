@@ -1519,10 +1519,11 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 1)      
       for (SwitchInst::CaseIt i = si->case_begin(), e = si->case_end();
            i != e; ++i) {
+        ref<Expr> value = evalConstant(i.getCaseValue());
 #else
       for (unsigned i=1, cases = si->getNumCases(); i<cases; ++i) {
+        ref<Expr> value = evalConstant(si->getCaseValue(i));
 #endif
-        ref<Expr> value = evalConstant(i.getCaseValue());
         ref<Expr> match = EqExpr::create(cond, value);
         isDefault = AndExpr::create(isDefault, Expr::createIsZero(match));
         bool result;
