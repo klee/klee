@@ -356,17 +356,17 @@ KLEE: done: generated tests = 1
   </p>
   
   <p>
-    When using uClibc and the POSIX runtime, KLEE offers an additional
-    argument <tt>--init-env</tt> which replaces the programs <tt>main()</tt>
-    function with a special function (<tt>klee_init_env</tt>) provided inside
-    the runtime library. This function alters the normal command line processing
-    of the application, in particular to support construction of symbolic
+    When using uClibc and the POSIX runtime, KLEE replaces the
+    program's <tt>main()</tt> function with a special function
+    (<tt>klee_init_env</tt>) provided inside the runtime library. This
+    function alters the normal command line processing of the
+    application, in particular to support construction of symbolic
     arguments. For example, passing <tt>--help</tt> yields:
   </p>
 
   <div class="instr">
     <pre>
-<b>src$ klee --libc=uclibc --posix-runtime --init-env ./echo.bc --help</b>
+<b>src$ klee --libc=uclibc --posix-runtime ./echo.bc --help</b>
 <i>...</i>
 
 usage: (klee_init_env) [options] [program arguments]
@@ -388,7 +388,7 @@ usage: (klee_init_env) [options] [program arguments]
 
   <div class="instr">
     <pre>
-<b>src$ klee --libc=uclibc --posix-runtime --init-env ./echo.bc --sym-arg 3</b>
+<b>src$ klee --libc=uclibc --posix-runtime ./echo.bc --sym-arg 3</b>
 KLEE: NOTE: Using model: /home/ddunbar/public/klee/Release/lib/libkleeRuntimePOSIX.bca
 KLEE: output directory = "klee-out-16"
 KLEE: WARNING: undefined reference to function: __signbitl
@@ -495,7 +495,7 @@ KLEE: done: generated tests = 25<pre>
 
   <div class="instr">
     <pre>
-<b>src$ klee --optimize --libc=uclibc --posix-runtime --init-env ./echo.bc --sym-arg 3</b>
+<b>src$ klee --optimize --libc=uclibc --posix-runtime ./echo.bc --sym-arg 3</b>
 <i>...</i>
 KLEE: done: total instructions = 123251
 KLEE: done: completed paths = 25
@@ -802,7 +802,7 @@ Lines executed:50.50% of 101
 
   <div class="instr">
     <pre>
-<b>src$ klee --only-output-states-covering-new --optimize --libc=uclibc --posix-runtime --init-env ./echo.bc --sym-args 0 2 4</b>
+<b>src$ klee --only-output-states-covering-new --optimize --libc=uclibc --posix-runtime ./echo.bc --sym-args 0 2 4</b>
 <i> ... </i>
 KLEE: done: total instructions = 7437521
 KLEE: done: completed paths = 9963

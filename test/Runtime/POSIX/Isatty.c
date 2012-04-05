@@ -1,5 +1,5 @@
 // RUN: %llvmgcc %s -emit-llvm -O0 -c -o %t.bc
-// RUN: %klee --libc=uclibc --posix-runtime --init-env %t.bc --sym-files 0 10 --sym-stdout 2>%t.log
+// RUN: %klee --libc=uclibc --posix-runtime %t.bc --sym-files 0 10 --sym-stdout 2>%t.log
 
 // RUN: test -f klee-last/test000001.ktest
 // RUN: test -f klee-last/test000002.ktest

@@ -1,5 +1,5 @@
 // RUN: %llvmgcc %s -emit-llvm -O0 -c -o %t.bc
-// RUN: %klee --exit-on-error --posix-runtime --init-env %t.bc --sym-files 1 8 >%t.log
+// RUN: %klee --exit-on-error --posix-runtime %t.bc --sym-files 1 8 >%t.log
 
 #include <unistd.h>
 #include <sys/types.h>

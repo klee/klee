@@ -1,5 +1,5 @@
 // RUN: %llvmgcc %s -emit-llvm -O0 -c -o %t.bc
-// RUN: %klee --init-env --posix-runtime %t.bc --sym-args 1 1 1
+// RUN: %klee --posix-runtime %t.bc --sym-args 1 1 1
 // RUN: test -f klee-last/test000001.free.err
 // RUN: test -f klee-last/test000002.free.err
 // RUN: test -f klee-last/test000003.free.err

@@ -1,5 +1,5 @@
 // RUN: %llvmgcc %s -emit-llvm -O0 -c -o %t.bc
-// RUN: %klee --exit-on-error --libc=uclibc --posix-runtime --init-env %t.bc --sym-files 1 10 --sym-stdout 2>%t.log
+// RUN: %klee --exit-on-error --libc=uclibc --posix-runtime %t.bc --sym-files 1 10 --sym-stdout 2>%t.log
 
 #include <stdio.h>
 #include <assert.h>

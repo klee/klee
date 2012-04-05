@@ -1,5 +1,5 @@
 // RUN: %llvmgcc %s -emit-llvm -O0 -c -o %t.bc
-// RUN: %klee --init-env --libc=klee --posix-runtime --exit-on-error %t.bc --sym-files 0 4 > %t.log
+// RUN: %klee --libc=klee --posix-runtime --exit-on-error %t.bc --sym-files 0 4 > %t.log
 // RUN: grep "mode:file" %t.log
 // RUN: grep "mode:dir" %t.log
 // RUN: grep "mode:chr" %t.log
