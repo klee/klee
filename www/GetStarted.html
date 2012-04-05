@@ -20,8 +20,6 @@
 <h3>
 <a href="#cde">1. Trying out KLEE without installing any dependencies</a> <br/>
 <a href="#build">2. Building KLEE</a> <br/>
-<a href="#posix">3. Building KLEE with POSIX runtime support</a> <br/>
-<a href="#stp">4. Building KLEE with a more recent version of STP</a>
 </h3>
   
 
@@ -54,24 +52,34 @@ The only requirement is that you are running a reasonably-modern x86-Linux distr
 
 <h2 id="build">Building KLEE</h2>
 
-<p>If you would like to try KLEE, the current procedure for building is
-below.</p>
-KLEE is built on LLVM; the first steps are to get a working LLVM
-installation. See <a href="http://llvm.org/docs/GettingStarted.html">Getting
-Started with the LLVM System</a> for more information.
 
-<p><b>NOTE:</b> KLEE is only currently tested on Linux and Darwin
-x86-32 and x86-64 targets, using LLVM 2.8. KLEE will not work with an
-older LLVM (e.g., 2.5), and might not work with newer versions of LLVM
-(e.g., 2.9 or 3.0) <p>
+<p>The current procedure for building is outlined below.</p>
 
 <ol>
+<li><b>Build LLVM 2.9:</b>
+
+<p>
+KLEE is built on top of <a href="http://llvm.org">LLVM</a>; the first
+steps are to get a working LLVM installation.
+See <a href="http://llvm.org/docs/GettingStarted.html">Getting Started
+with the LLVM System</a> for more information.
+</p>
+
+<p>
+<b>NOTE:</b> KLEE is currently tested only on Linux x86-32 and x86-64
+targets, using <b>LLVM 2.9</b>.  KLEE will not work with older LLVM
+versions (e.g., 2.5), and might not work with newer versions (e.g.,
+3.0).
+</p>
+
+
+<ol type="a">
   <li>Install llvm-gcc:
     <ul>
-      <li>Download and install the LLVM 2.8 release of <tt>llvm-gcc</tt>
+      <li>Download and install the LLVM 2.9 release of <tt>llvm-gcc</tt>
         from <a href="http://llvm.org/releases/download.html">here</a>.  
 
-	<br/><b>Add <tt>llvm-gcc</tt> to your <tt>PATH</tt></b>.  It
+	<br/>Add <tt>llvm-gcc</tt> to your <tt>PATH</tt>.  It
         is important to do this first so that <tt>llvm-gcc</tt> is
         found in subsequent <tt>configure</tt>
         steps. <tt>llvm-gcc</tt> will be used later to compile
@@ -84,14 +92,11 @@ older LLVM (e.g., 2.5), and might not work with newer versions of LLVM
     </ul>
   </li>
 
-  <li><a href="http://llvm.org/releases/download.html#2.8">Download and build
-      LLVM 2.8</a> (you may also use SVN head, but klee may not always be
-      up-to-date with LLVM API changes).
-    
+  <li>Download and build LLVM 2.9:    
     <div class="instr">
-      $ curl -O http://llvm.org/releases/2.8/llvm-2.8.tgz <br/>
-      $ tar zxvf llvm-2.8.tgz <br/>
-      $ cd llvm-2.8 <br/>
+      $ curl -O http://llvm.org/releases/2.9/llvm-2.9.tgz <br/>
+      $ tar zxvf llvm-2.9.tgz <br/>
+      $ cd llvm-2.9 <br/>
       $ ./configure --enable-optimized --enable-assertions<br/>
       $ make
     </div>
@@ -99,8 +104,71 @@ older LLVM (e.g., 2.5), and might not work with newer versions of LLVM
     (the <tt>--enable-optimized</tt> configure argument is not necessary, but
     KLEE runs very slowly in Debug mode).
   </li>
+</li>
+</ol>
+
+
+<li> <b>Build STP:</b>
+
+<p>KLEE is based on
+the <a href="http://sites.google.com/site/stpfastprover/">STP</a>
+constraint solver.  STP does not make frequent releases, and its
+Subversion repository is under constant development and may be
+unstable.  The instructions below are for a particular revision which
+we have used successfully, but you can try a more recent revision by
+changing or removing the <tt>-r</tt> argument to the <tt>svn co</tt>
+command.  (Please let us know if you have successfully and extensively
+used KLEE with a more recent version of STP.)
+</p>
+
+<div class="instr">
+  $ svn co -r 940 https://stp-fast-prover.svn.sourceforge.net/svnroot/stp-fast-prover/trunk/stp stp <br/>
+  $ cd stp <br/>
+  $ ./scripts/configure --with-prefix=<i>path/to/stp/install</i> --with-cryptominisat2 <br/>
+  $ make OPTIMIZE=-O2 CFLAGS_M32= install
+</div>
+</li>
+
+<li>[Optional] <b>Build uclibc and the POSIX environment model:</b>
+
+<p>
+By default, KLEE works on closed programs (programs that don't use any
+external code such as C library functions). However, if you want to
+use KLEE to run real programs you will want to enable the KLEE POSIX
+runtime, which is built on top of the uClibc C library.
+</p>
+
+<ol type="a">
+  <li>Download KLEE's uClibc. KLEE uses a version
+        of <a href="http://uclibc.org">uClibc</a> which has been
+        modified slightly for our purposes. 
+	<ul>
+	  <li>A version that works on 32-bit Linux can be found
+	  <a href="http://www.doc.ic.ac.uk/~cristic/klee/klee-uclibc-i386.html">here</a>
+	  </li>
+	  <li>A version that works on 64-bit Linux can be found
+	    <a href="http://www.doc.ic.ac.uk/~cristic/klee/klee-uclibc-x64.html">here</a>
+	  </li>
+	</ul>
+  </li>
   
-  <li>Checkout KLEE (to any path you like):
+  <li>Build uClibc with <tt>llvm-gcc</tt>:
+    <div class="instr">
+      $ tar zxvf klee-uclibc-0.02.tgz <br/>
+      $ ./configure --with-llvm=<i>path/to/llvm</i> <br/>
+      $ make <br/>
+    </div>
+
+    <p><b>NOTE:</b> If you are on a different target (i.e., not i386
+      or x64), you will need to run <tt>make config</tt> and select the
+      correct target. The defaults for the other uClibc configuration
+      variables should be fine.<p>
+  </li>
+
+  </ol>
+
+
+  <li><b>Checkout KLEE (to any path you like):</b>
     <div class="instr">
       $ svn co http://llvm.org/svn/llvm-project/klee/trunk klee
     </div>
@@ -112,19 +180,16 @@ older LLVM (e.g., 2.5), and might not work with newer versions of LLVM
     </div>
   </li>
   
-  <li>Configure KLEE (from the KLEE source directory): 
+  <li><b>Configure KLEE:</b>
+    <p>From the KLEE source directory, run:</p>
     <div class="instr">
-      $ ./configure --with-llvm=<i>path/to/llvm</i>
+      $ ./configure --with-llvm=<i>path/to/llvm</i> --with-stp=<i>path/to/stp/install</i> --with-uclibc=<i>path/to/klee-uclibc</i> --enable-posix-runtime
     </div>
     
-    <p>This assumes that you compiled LLVM in-place.  If you used a
-      different directory for the object files then use:
-      <div class="instr">
-	$ ./configure --with-llvmsrc=<i>path/to/llvm/src</i> --with-llvmobj=<i>path/to/llvm/obj</i>
-      </div>
+    <p><b>NOTE:</b> If you skipped step 3, simply remove the <tt>--with-uclibc</tt> and <tt>--enable-posix-runtime options</tt>. </p>
   </li>
 
-  <li>Build KLEE (from the KLEE source directory):
+  <li><b>Build KLEE:</b>
     <div class="instr">
       $ make ENABLE_OPTIMIZED=1
     </div>
@@ -133,96 +198,12 @@ older LLVM (e.g., 2.5), and might not work with newer versions of LLVM
   <li>Run the regression suite to verify your build:
     <div class="instr">
       $ make check<br/>
-      $ make unittests<br/>
+<!--      $ make unittests<br/>-->
     </div>
   </li>
 
   <li>You're ready to go!  Go to the <a href="Tutorials.html">Tutorials</a> page
   to try KLEE.</li>
-</ol>
-
-<h2 id="posix">Building KLEE with POSIX runtime support</h2>
-
-<p>The steps above are enough for building and testing KLEE on closed programs
-(programs that don't use any external code such as C library
-functions). However, if you want to use KLEE to run real programs you will want
-to enable the KLEE POSIX runtime, which is built on top of the uClibc C
-library.</p>
-
-<ol>
-  <li>Download KLEE's uClibc:
-    <ul>
-      <li>
-        KLEE uses a version of <a href="http://uclibc.org">uClibc</a>
-        which has been modified slightly for use with KLEE.  
-	<ul>
-	  <li>A version that works on 32-bit Linux can be found
-	  <a href="http://www.doc.ic.ac.uk/~cristic/klee/klee-uclibc-i386.html">here</a>
-	  </li>
-	  <li>A version that works on 64-bit Linux can be found
-	    <a href="http://www.doc.ic.ac.uk/~cristic/klee/klee-uclibc-x64.html">here</a>
-	  </li>
-	</ul>
-      </li>
-    </ul>
-  </li>
-  
-  <li>Build uClibc with <tt>llvm-gcc</tt>:
-    <div class="instr">
-      $ tar zxvf klee-uclibc-0.01.tgz <br/>
-      $ ./configure --with-llvm=<i>path/to/llvm</i> <br/>
-      $ make <br/>
-    </div>
-
-    <p><b>NOTE:</b> KLEE's uClibc is shipped in a pre-configured for x86-32. If
-      you are on a different target (e.g. x86-64), you will need to run 'make
-      config' and select the correct target. The defaults for the other uClibc
-      configuration variables should be fine.<p>
-  </li>
-
-  <li>Configure KLEE with uClibc/POSIX support:
-    <div class="instr">
-      $ ./configure --with-llvm=<i>path/to/llvm</i> --with-uclibc=<i>path/to/klee-uclibc</i> --enable-posix-runtime
-    </div>
-  </li>
-
-  <li>Rebuild KLEE and run <tt>make check</tt> and verify that the POSIX tests
-    run correctly.
-  </li>
-</ol>
-
-<h2 id="stp">Building KLEE with a more recent version of STP</h2>
-
-<p>If your benchmarks are running slowly or not terminating it may
-be worth trying a more recent version of KLEE's constraint solver
-<a href="http://sites.google.com/site/stpfastprover/">STP</a>,
-which offers performance improvements over the version supplied
-with KLEE.</p>
-
-<p>STP does not make frequent releases, and its Subversion repository
-is under constant development and may be unstable.  The instructions
-below are for a particular revision which is known to pass the KLEE
-test suite, but you can try a more recent revision (at your own risk)
-by changing or removing the <tt>-r</tt> argument to the <tt>svn
-co</tt> command.</p>
-
-<ol>
-  <li>Download and build STP.
-    <div class="instr">
-      $ svn co -r 940 https://stp-fast-prover.svn.sourceforge.net/svnroot/stp-fast-prover/trunk/stp stp <br/>
-      $ cd stp <br/>
-      $ scripts/configure --with-prefix=<i>path/to/stp/inst</i> --with-cryptominisat2 <br/>
-      $ make OPTIMIZE=-O2 CFLAGS_M32= install
-    </div>
-  </li>
-
-  <li>Configure KLEE:
-    <div class="instr">
-      $ ./configure --with-llvm=<i>path/to/llvm</i> --with-stp=<i>path/to/stp/inst</i>
-    </div>
-  </li>
-
-  <li>Rebuild KLEE.</li>
 </ol>
 
 </div>
