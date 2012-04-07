@@ -10,6 +10,9 @@
 #include "klee/Expr.h"
 #include "klee/Config/Version.h"
 
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 1)
+#include "llvm/ADT/Hashing.h"
+#endif
 #include "llvm/Support/CommandLine.h"
 // FIXME: We shouldn't need this once fast constant support moves into
 // Core. If we need to do arithmetic, we probably want to use APInt.
@@ -174,7 +177,11 @@ unsigned Expr::computeHash() {
 }
 
 unsigned ConstantExpr::computeHash() {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 1)
+  hashValue = hash_value(value) ^ (getWidth() * MAGIC_HASH_CONSTANT);
+#else
   hashValue = value.getHashValue() ^ (getWidth() * MAGIC_HASH_CONSTANT);
+#endif
   return hashValue;
 }
 
