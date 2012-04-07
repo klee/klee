@@ -32,15 +32,15 @@ public:
   ~ref () { dec (); }
 
 private:
-  void inc() {
+  void inc() const {
     if (ptr)
       ++ptr->refCount;
   }
-  
-  void dec() {
+
+  void dec() const {
     if (ptr && --ptr->refCount == 0)
       delete ptr;
-  }  
+  }
 
 public:
   template<class U> friend class ref;
@@ -49,19 +49,18 @@ public:
   ref(T *p) : ptr(p) {
     inc();
   }
-  
+
   // normal copy constructor
   ref(const ref<T> &r) : ptr(r.ptr) {
     inc();
   }
-  
+
   // conversion constructor
   template<class U>
-  ref (const ref<U> &r) {
-    ptr = r.ptr;
+  ref (const ref<U> &r) : ptr(r.ptr) {
     inc();
   }
-  
+
   // pointer operations
   T *get () const {
     return ptr;
@@ -70,18 +69,18 @@ public:
   /* The copy assignment operator must also explicitly be defined,
    * despite a redundant template. */
   ref<T> &operator= (const ref<T> &r) {
+    r.inc();
     dec();
     ptr = r.ptr;
-    inc();
-    
+
     return *this;
   }
-  
+
   template<class U> ref<T> &operator= (const ref<U> &r) {
+    r.inc();
     dec();
     ptr = r.ptr;
-    inc();
-    
+
     return *this;
   }
 
@@ -130,7 +129,7 @@ struct simplify_type<const ::klee::ref<T> > {
   }
 };
 
-template<typename T> 
+template<typename T>
 struct simplify_type< ::klee::ref<T> >
   : public simplify_type<const ::klee::ref<T> > {};
 }
