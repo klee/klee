@@ -209,7 +209,7 @@ namespace {
 
   cl::opt<double>
   MaxInstructionTime("max-instruction-time",
-                     cl::desc("Only allow a single instruction to take this much time (default=0 (off))"),
+                     cl::desc("Only allow a single instruction to take this much time (default=0s (off)). Enables --use-forked-stp"),
                      cl::init(0));
   
   cl::opt<double>
@@ -219,8 +219,8 @@ namespace {
   
   cl::opt<double>
   MaxSTPTime("max-stp-time",
-             cl::desc("Maximum amount of time for a single query (default=120s)"),
-             cl::init(120.0));
+             cl::desc("Maximum amount of time for a single query (default=0s (off)). Enables --use-forked-stp"),
+             cl::init(0.0));
   
   cl::opt<unsigned int>
   StopAfterNInstructions("stop-after-n-instructions",
@@ -249,7 +249,7 @@ namespace {
 
   cl::opt<bool>
   UseForkedSTP("use-forked-stp", 
-                 cl::desc("Run STP in forked process"));
+                 cl::desc("Run STP in a forked process (default=off)"));
 
   cl::opt<bool>
   STPOptimizeDivides("stp-optimize-divides", 
@@ -317,6 +317,7 @@ Executor::Executor(const InterpreterOptions &opts,
     stpTimeout(MaxSTPTime != 0 && MaxInstructionTime != 0
       ? std::min(MaxSTPTime,MaxInstructionTime)
       : std::max(MaxSTPTime,MaxInstructionTime)) {
+  if (stpTimeout) UseForkedSTP = true;
   STPSolver *stpSolver = new STPSolver(UseForkedSTP, STPOptimizeDivides);
   Solver *solver = 
     constructSolverChain(stpSolver,
