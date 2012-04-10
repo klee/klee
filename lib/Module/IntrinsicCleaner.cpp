@@ -23,6 +23,7 @@
 #include "llvm/Module.h"
 #include "llvm/Pass.h"
 #include "llvm/Type.h"
+#include "llvm/Support/IRBuilder.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Target/TargetData.h"
@@ -91,6 +92,31 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b) {
         }
         ii->removeFromParent();
         delete ii;
+        break;
+      }
+
+      case Intrinsic::uadd_with_overflow: {
+        IRBuilder<> builder(ii->getParent(), ii);
+
+#if LLVM_VERSION_CODE < LLVM_VERSION(2, 8)
+        Value *op1 = ii->getOperand(1);
+        Value *op2 = ii->getOperand(2);
+#else
+        Value *op1 = ii->getArgOperand(0);
+        Value *op2 = ii->getArgOperand(1);
+#endif
+        
+        Value *result = builder.CreateAdd(op1, op2);
+        Value *overflow = builder.CreateICmpULT(result, op1);
+        
+        Value *resultStruct =
+          builder.CreateInsertValue(UndefValue::get(ii->getType()), result, 0);
+        resultStruct = builder.CreateInsertValue(resultStruct, overflow, 1);
+        
+        ii->replaceAllUsesWith(resultStruct);
+        ii->removeFromParent();
+        delete ii;
+        dirty = true;
         break;
       }
 
