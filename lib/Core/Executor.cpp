@@ -1592,6 +1592,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     if (f && isDebugIntrinsic(f, kmodule))
       break;
 
+    if (isa<InlineAsm>(fp)) {
+      terminateStateOnExecError(state, "inline assembly is unsupported");
+      break;
+    }
     // evaluate arguments
     std::vector< ref<Expr> > arguments;
     arguments.reserve(numArgs);
@@ -1633,9 +1637,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
             
           i++;
         }
-      } else if (isa<InlineAsm>(fp)) {
-        terminateStateOnExecError(state, "inline assembly is unsupported");
-        break;
       }
 
       executeCall(state, ki, f, arguments);
