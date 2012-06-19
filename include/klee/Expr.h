@@ -599,10 +599,10 @@ public:
       stpInitialArray(0) {
     assert((isSymbolicArray() || constantValues.size() == size) &&
            "Invalid size for constant array!");
-#ifdef NDEBUG
+#ifndef NDEBUG
     for (const ref<ConstantExpr> *it = constantValuesBegin;
          it != constantValuesEnd; ++it)
-      assert(it->getWidth() == getRange() &&
+      assert((*it)->getWidth() == getRange() &&
              "Invalid initial constant value!");
 #endif
   }
