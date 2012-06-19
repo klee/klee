@@ -1158,8 +1158,8 @@ int main(int argc, char **argv, char **envp) {
   sys::SetInterruptFunction(interrupt_handle);
 
   // Load the bytecode...
-#if LLVM_VERSION_CODE < LLVM_VERSION(2, 7)
   std::string ErrorMsg;
+#if LLVM_VERSION_CODE < LLVM_VERSION(2, 7)
   ModuleProvider *MP = 0;
   if (MemoryBuffer *Buffer = MemoryBuffer::getFileOrSTDIN(InputFile, &ErrorMsg)) {
     MP = getBitcodeModuleProvider(Buffer, getGlobalContext(), &ErrorMsg);
@@ -1172,8 +1172,7 @@ int main(int argc, char **argv, char **envp) {
   Module *mainModule = MP->materializeModule();
   MP->releaseModule();
   delete MP;
-#endif
-  std::string ErrorMsg;
+#else
   Module *mainModule = 0;
 #if LLVM_VERSION_CODE < LLVM_VERSION(2, 9)
   MemoryBuffer *Buffer = MemoryBuffer::getFileOrSTDIN(InputFile, &ErrorMsg);
@@ -1200,6 +1199,7 @@ int main(int argc, char **argv, char **envp) {
   if (!mainModule)
     klee_error("error loading program '%s': %s", InputFile.c_str(),
                ErrorMsg.c_str());
+#endif
 
   if (WithPOSIXRuntime) {
     int r = initEnv(mainModule);
