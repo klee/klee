@@ -32,7 +32,7 @@
   } </pre>
 
   You can find the entire code for this example in the source tree
-  under <tt>examples/islower</tt>.  A version of the source code can
+  under <tt>examples/get_sign</tt>.  A version of the source code can
   also be accessed <a href="resources/get_sign.c.html">here</a>. 
 
   <h2>Marking input as symbolic</h2> 
@@ -164,7 +164,7 @@
   point to the name of the desired test case:
 
   <pre class="output">
-  $ gcc ~klee/Release+Asserts/lib/libkleeRuntest.so get_sign.c
+  $ gcc path-to-klee-root/Release+Asserts/lib/libkleeRuntest.so get_sign.c
   $ KTEST_FILE=klee-last/test000001.ktest ./a.out 
   $ echo $?
   1
