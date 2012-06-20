@@ -610,8 +610,7 @@ static int initEnv(Module *mainModule) {
   Function *mainFn = mainModule->getFunction("main");
     
   if (mainFn->arg_size() < 2) {
-    std::cerr << "Cannot handle ""-init-env"" when main() has less than two arguments.\n";
-    return -1;
+    klee_error("Cannot handle ""--posix-runtime"" when main() has less than two arguments.\n");
   }
 
   Instruction* firstInst = mainFn->begin()->begin();
