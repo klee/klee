@@ -38,18 +38,34 @@ class LazyEvalList:
         return len(self.lines)
 
 
-def getMatchedRecord(data,reference,key):
-    refKey = key(reference)
+def getMatchedRecordIdx(data,reference,key):
+    reference = int(reference)
     lo = 1 # header
     hi = len(data)-1
     while lo<hi:
         mid = (lo+hi)//2
-        if key(data[mid])<=refKey:
+        if key(data[mid])<=reference:
             lo = mid + 1
         else:
             hi = mid
-    return data[lo]
+    return lo
 
+def getStatisticalData(data):
+    memIndex = 6;
+    stateIndex = 5;
+
+    memValues = map(lambda rec: rec[memIndex], LazyEvalList(data[1:]));
+    maxMem = max(memValues);
+    maxMem = maxMem/1024./1024.
+
+    avgMem = sum(memValues)/len(memValues);
+    avgMem = avgMem/1024./1024.
+
+    stateValues = map(lambda rec: rec[stateIndex], LazyEvalList(data[1:]));
+    maxStates = max(stateValues);
+    avgStates = sum(stateValues)/len(stateValues)
+
+    return (maxMem, avgMem, maxStates, avgStates)
 
 def stripCommonPathPrefix(table, col):
     paths = map(os.path.normpath, [row[col] for row in table])
@@ -123,13 +139,8 @@ def printTable(table):
 
 def main(args):
     from optparse import OptionParser
-
-    class ParserWithNewLines(OptionParser):
-        def format_epilog(self, formatter):
-            return self.epilog
-
-    op = ParserWithNewLines(usage="usage: %prog [options] directories",
-                            epilog="""\
+    op = OptionParser(usage="usage: %prog [options] directories",
+                      epilog="""\
 LEGEND
 ------
 Instrs:  Number of executed instructions
@@ -143,8 +154,7 @@ Mem:     Megabytes of memory currently used
 Queries: Number of queries issued to STP
 AvgQC:   Average number of query constructs per query
 Tcex:    Time spent in the counterexample caching code (%)
-Tfork:   Time spent forking (%)
-""")
+Tfork:   Time spent forking (%)""")
 
     op.add_option('', '--print-more', dest='printMore',
                   action='store_true', default=False,
@@ -159,6 +169,8 @@ Tfork:   Time spent forking (%)
                   help='sort in ascending order (default is descending)')
     op.add_option('','--compare-by', dest='compBy',
                   help="key value on which to compare runs to the reference one (which is the first one).  E.g., --compare-by=Instrs shows how each run compares to the reference run after executing the same number of instructions as the reference run.  If a run hasn't executed as many instructions as the reference one, we simply print the statistics at the end of that run.")
+    op.add_option('','--compare-at', dest='compAt',
+                  help='value to compare the runs at. Can be special value \'last\' to compare at the last point which makes sense. Use in conjunction with --compare-by')
     opts,dirs = op.parse_args()
     
     if not dirs:
@@ -177,18 +189,19 @@ Tfork:   Time spent forking (%)
     dirs = actualDirs
     
     summary = []
+    ssummary = []
     
     if (opts.printAll):
-        labels = ('Path','Instrs','Time(s)','ICov(%)','BCov(%)','ICount','Solver(%)', 'States', 'Mem(MB)', 'Queries', 'AvgQC', 'Tcex(%)', 'Tfork(%)')
+        labels = ('Path','Instrs','Time(s)','ICov(%)','BCov(%)','ICount','Solver(%)', 'States', 'maxStates', 'avgStates', 'Mem(MB)', 'maxMem(MB)', 'avgMem(MB)', 'Queries', 'AvgQC', 'Tcex(%)', 'Tfork(%)')
     elif (opts.printMore):
-        labels = ('Path','Instrs','Time(s)','ICov(%)','BCov(%)','ICount','Solver(%)', 'States', 'Mem(MB)')
+        labels = ('Path','Instrs','Time(s)','ICov(%)','BCov(%)','ICount','Solver(%)', 'States', 'maxStates', 'Mem(MB)', 'maxMem(MB)')
     else:
         labels = ('Path','Instrs','Time(s)','ICov(%)','BCov(%)','ICount','Solver(%)')
 
 
-    def addRecord(Path,rec):
+    def addRecord(Path,rec, stats):
         (I,BFull,BPart,BTot,T,St,Mem,QTot,QCon,NObjs,Treal,SCov,SUnc,QT,Ts,Tcex,Tf) = rec
-
+        (maxMem,avgMem,maxStates,avgStates) = stats
         # special case for straight-line code: report 100% branch coverage
         if BTot == 0:
             BFull = BTot = 1
@@ -197,33 +210,50 @@ Tfork:   Time spent forking (%)
         AvgQC = int(QCon/max(1,QTot))
         if (opts.printAll):
             table.append((Path, I, Treal, 100.*SCov/(SCov+SUnc), 100.*(2*BFull+BPart)/(2.*BTot),
-                          SCov+SUnc, 100.*Ts/Treal, St, Mem, QTot, AvgQC, 100.*Tcex/Treal, 100.*Tf/Treal))
+                          SCov+SUnc, 100.*Ts/Treal, St, maxStates, avgStates, Mem, maxMem, avgMem, QTot, AvgQC, 100.*Tcex/Treal, 100.*Tf/Treal))
         elif (opts.printMore):
             table.append((Path, I, Treal, 100.*SCov/(SCov+SUnc), 100.*(2*BFull+BPart)/(2.*BTot),
-                          SCov+SUnc, 100.*Ts/Treal, St, Mem))
+                          SCov+SUnc, 100.*Ts/Treal, St, maxStates, Mem, maxMem))
         else:
             table.append((Path, I, Treal, 100.*SCov/(SCov+SUnc), 100.*(2*BFull+BPart)/(2.*BTot),
                           SCov+SUnc, 100.*Ts/Treal))
         
-    def addRow(Path,data):
+    def addRow(Path,data,stats):
         data = tuple(data[:17]) + (None,)*(17-len(data))
-        addRecord(Path,data)
+        addRecord(Path,data,stats)
         if not summary:
             summary[:] = list(data)
+            ssummary[:] = list(stats);
         else:
             summary[:] = [(a+b) for a,b in zip(summary,data)]
+            ssummary[:] = [(a+b) for a,b in zip(ssummary,stats)]
 
     datas = [(dir,LazyEvalList(list(open(getFile(dir))))) for dir in dirs]
-    reference = datas[0][1][-1]
+
+    #labels in the same order as in the stats file. used by --compare-by.
+    #current impl needs monotonic values. keep only the ones which make sense
+    rawLabels=('Instrs','','','','','','','Queries','','','Time','ICov','','','','','','')
+    
+    if opts.compBy:
+        compareIndex = getKeyIndex(opts.compBy,rawLabels)
+        if opts.compAt:
+            if opts.compAt == 'last':
+                referenceValue = min(map(lambda rec: rec[1][-1][compareIndex], datas))
+            else:
+                referenceValue = opts.compAt
+        else:
+            referenceValue = datas[0][1][-1][compareIndex]
 
     table = []    
-
     for dir,data in datas:
         try:
             if opts.compBy:
-                addRow(dir,getMatchedRecord(data,reference,lambda f: f[getKeyIndex(opts.compBy,labels)-1]))
-            else: 
-                addRow(dir, data[len(data)-1])  #getLastRecord(dir))
+                matchIdx = getMatchedRecordIdx(data,referenceValue,lambda f: f[compareIndex])
+                stats = getStatisticalData(LazyEvalList(data[0:matchIdx+1]))
+                addRow(dir,data[matchIdx],stats)
+            else:
+                stats = getStatisticalData(data)
+                addRow(dir, data[len(data)-1],stats)  #getLastRecord(dir))
         except IOError:
             print 'Unable to open: ',dir
             continue
@@ -235,7 +265,7 @@ Tfork:   Time spent forking (%)
         sys.exit(1)
     elif len(table)>1:
         table.append(None)
-        addRecord('Total (%d)'%(len(table)-1,),summary)
+        addRecord('Total (%d)'%(len(table)-1,),summary, ssummary)
     table[0:0] = [None,labels,None]
     table.append(None)
     printTable(table)
