@@ -19,7 +19,7 @@ LLVM_BUILD_MODE = @LLVM_BUILD_MODE@
 PROJ_SRC_ROOT := $(subst //,/,@abs_top_srcdir@)
 
 # Set the root directory of this project's object files
-PROJ_OBJ_ROOT := $(subst //,/,@abs_top_objdir@)
+PROJ_OBJ_ROOT := $(subst //,/,@abs_top_builddir@)
 
 # Set the root directory of this project's install prefix
 PROJ_INSTALL_ROOT := @prefix@
