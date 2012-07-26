@@ -87,7 +87,7 @@ namespace {
   cl::opt<bool>
   DumpStatesOnHalt("dump-states-on-halt",
                    cl::init(true),
-		   "Dump test cases for all active states on exit (default=on)");
+		   cl::desc("Dump test cases for all active states on exit (default=on)"));
  
   cl::opt<bool>
   NoPreferCex("no-prefer-cex",
