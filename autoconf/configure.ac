@@ -21,6 +21,9 @@ AC_CONFIG_SRCDIR(["Makefile.config.in"])
 dnl Configure a common Makefile
 AC_CONFIG_FILES(Makefile.config)
 
+dnl Configure Doxygen file
+AC_CONFIG_FILES([docs/doxygen.cfg])
+
 dnl Configure project makefiles
 dnl List every Makefile that exists within your source tree
 AC_CONFIG_HEADERS([include/klee/Config/config.h])
