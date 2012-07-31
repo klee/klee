@@ -24,7 +24,6 @@ PROJ_OBJ_ROOT := $(subst //,/,@abs_top_builddir@)
 # Set the root directory of this project's install prefix
 PROJ_INSTALL_ROOT := @prefix@
 
-ENABLE_EXT_STP := @ENABLE_EXT_STP@
 STP_ROOT := @STP_ROOT@
 
 ENABLE_POSIX_RUNTIME := @ENABLE_POSIX_RUNTIME@

@@ -597,7 +597,6 @@ ac_includes_default="\
 ac_subst_vars='LTLIBOBJS
 LIBOBJS
 STP_ROOT
-ENABLE_EXT_STP
 CXXCPP
 ac_ct_CXX
 CXXFLAGS
@@ -4366,17 +4365,26 @@ done
 
 
 
+
 # Check whether --with-stp was given.
 if test "${with_stp+set}" = set; then :
   withval=$with_stp;
+else
+  as_fn_error $? "The --with-stp=<path> argument is mandatory where <path> is the path \
+to the root of your STP install" "$LINENO" 5
 fi
 
 
-if test X$with_stp = X ; then
-  ENABLE_EXT_STP=0
-
+#Check for empty argument
+if test "X$with_stp" = X ; then
+	as_fn_error $? "<path> cannot be empty in --with-stp=<path>" "$LINENO" 5
 else
-  stp_root=`cd $with_stp 2> /dev/null; pwd`
+  stp_root=`(cd $with_stp && pwd) 2> /dev/null`
+
+  #Check for bad path
+  if test "X$stp_root" = X ; then
+  	as_fn_error $? "Cannot access path $with_stp passed to --with-stp" "$LINENO" 5
+  fi
 
   old_CPPFLAGS="$CPPFLAGS"
   CPPFLAGS="$CPPFLAGS -I$stp_root/include"
@@ -4442,11 +4450,6 @@ else
 fi
 
 
-
-$as_echo "#define HAVE_EXT_STP 1" >>confdefs.h
-
-  ENABLE_EXT_STP=1
-
   STP_ROOT=$stp_root
 
 fi
@@ -4462,9 +4465,6 @@ ac_config_commands="$ac_config_commands lib/Makefile"
 
 
 ac_config_commands="$ac_config_commands runtime/Makefile"
-
-
-ac_config_commands="$ac_config_commands stp/Makefile"
 
 
 ac_config_commands="$ac_config_commands test/Makefile"
@@ -5180,7 +5180,6 @@ do
     "Makefile.common") CONFIG_COMMANDS="$CONFIG_COMMANDS Makefile.common" ;;
     "lib/Makefile") CONFIG_COMMANDS="$CONFIG_COMMANDS lib/Makefile" ;;
     "runtime/Makefile") CONFIG_COMMANDS="$CONFIG_COMMANDS runtime/Makefile" ;;
-    "stp/Makefile") CONFIG_COMMANDS="$CONFIG_COMMANDS stp/Makefile" ;;
     "test/Makefile") CONFIG_COMMANDS="$CONFIG_COMMANDS test/Makefile" ;;
     "test/Makefile.tests") CONFIG_COMMANDS="$CONFIG_COMMANDS test/Makefile.tests" ;;
     "tools/Makefile") CONFIG_COMMANDS="$CONFIG_COMMANDS tools/Makefile" ;;
@@ -5740,8 +5739,6 @@ $as_echo "$as_me: executing $ac_file commands" >&6;}
    ${SHELL} ${llvm_src}/autoconf/install-sh -m 0644 -c ${srcdir}/lib/Makefile lib/Makefile ;;
     "runtime/Makefile":C) ${llvm_src}/autoconf/mkinstalldirs `dirname runtime/Makefile`
    ${SHELL} ${llvm_src}/autoconf/install-sh -m 0644 -c ${srcdir}/runtime/Makefile runtime/Makefile ;;
-    "stp/Makefile":C) ${llvm_src}/autoconf/mkinstalldirs `dirname stp/Makefile`
-   ${SHELL} ${llvm_src}/autoconf/install-sh -m 0644 -c ${srcdir}/stp/Makefile stp/Makefile ;;
     "test/Makefile":C) ${llvm_src}/autoconf/mkinstalldirs `dirname test/Makefile`
    ${SHELL} ${llvm_src}/autoconf/install-sh -m 0644 -c ${srcdir}/test/Makefile test/Makefile ;;
     "test/Makefile.tests":C) ${llvm_src}/autoconf/mkinstalldirs `dirname test/Makefile.tests`

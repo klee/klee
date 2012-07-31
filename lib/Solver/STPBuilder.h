@@ -17,11 +17,7 @@
 #include <map>
 
 #define Expr VCExpr
-#ifdef HAVE_EXT_STP
 #include <stp/c_interface.h>
-#else
-#include "../../stp/c_interface/c_interface.h"
-#endif
 
 #if ENABLE_STPLOG == 1
 #include "stp/stplog.h"

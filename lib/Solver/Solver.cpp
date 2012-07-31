@@ -454,7 +454,6 @@ STPSolverImpl::STPSolverImpl(STPSolver *_solver, bool _useForkedSTP, bool _optim
   assert(vc && "unable to create validity checker");
   assert(builder && "unable to create STPBuilder");
 
-#ifdef HAVE_EXT_STP
   // In newer versions of STP, a memory management mechanism has been
   // introduced that automatically invalidates certain C interface
   // pointers at vc_Destroy time.  This caused double-free errors
@@ -462,7 +461,7 @@ STPSolverImpl::STPSolverImpl(STPSolver *_solver, bool _useForkedSTP, bool _optim
   // the pointers using vc_DeleteExpr.  By setting EXPRDELETE to 0
   // we restore the old behaviour.
   vc_setInterfaceFlags(vc, EXPRDELETE, 0);
-#endif
+
   vc_registerErrorHandler(::stp_error_handler);
 
   if (useForkedSTP) {

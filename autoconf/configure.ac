@@ -312,14 +312,26 @@ AC_CHECK_HEADERS([selinux/selinux.h],
         AC_SUBST(HAVE_SELINUX, 1),
         AC_SUBST(HAVE_SELINUX, 0))
 
+dnl **************************************************************************
+dnl Find an install of STP
+dnl **************************************************************************
+
 AC_ARG_WITH(stp,
   AS_HELP_STRING([--with-stp],
-    [Location of STP installation directory]),,)
+    [Location of STP installation directory]),,
+    [AC_MSG_ERROR([The --with-stp=<path> argument is mandatory where <path> is the path \
+to the root of your STP install])])
 
-if test X$with_stp = X ; then
-  AC_SUBST(ENABLE_EXT_STP,[[0]])
+#Check for empty argument
+if test "X$with_stp" = X ; then
+	AC_MSG_ERROR([<path> cannot be empty in --with-stp=<path>])
 else
-  stp_root=`cd $with_stp 2> /dev/null; pwd`
+  stp_root=`(cd $with_stp && pwd) 2> /dev/null`
+
+  #Check for bad path
+  if test "X$stp_root" = X ; then
+  	AC_MSG_ERROR([Cannot access path $with_stp passed to --with-stp])
+  fi
 
   old_CPPFLAGS="$CPPFLAGS"
   CPPFLAGS="$CPPFLAGS -I$stp_root/include"
@@ -332,8 +344,6 @@ else
          AC_MSG_ERROR([Unable to link with libstp])
   ], -L$stp_root/lib)
 
-  AC_DEFINE(HAVE_EXT_STP, 1, [Using external STP])
-  AC_SUBST(ENABLE_EXT_STP,[[1]])
   AC_SUBST(STP_ROOT,$stp_root)
 fi
 
@@ -346,7 +356,6 @@ AC_CONFIG_MAKEFILE(Makefile)
 AC_CONFIG_MAKEFILE(Makefile.common)
 AC_CONFIG_MAKEFILE(lib/Makefile)
 AC_CONFIG_MAKEFILE(runtime/Makefile)
-AC_CONFIG_MAKEFILE(stp/Makefile)
 AC_CONFIG_MAKEFILE(test/Makefile)
 AC_CONFIG_MAKEFILE(test/Makefile.tests)
 AC_CONFIG_MAKEFILE(tools/Makefile)

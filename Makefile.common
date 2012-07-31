@@ -29,13 +29,8 @@ endif
 # Needed to build runtime library using clang (gnu89 is the gcc default)
 C.Flags += -std=gnu89
 
-ifeq ($(ENABLE_EXT_STP),1)
-  LD.Flags += -L$(STP_ROOT)/lib
-  CXX.Flags += -I$(STP_ROOT)/include
-else
-  LD.Flags += -L$(PROJ_SRC_ROOT)/stp/lib
-  CXX.Flags += -I$(PROJ_SRC_ROOT)/stp/include
-endif
+LD.Flags += -L$(STP_ROOT)/lib
+CXX.Flags += -I$(STP_ROOT)/include
 CXX.Flags += -DKLEE_DIR=\"$(PROJ_OBJ_ROOT)\" -DKLEE_LIB_DIR=\"$(PROJ_libdir)\"
 
 # For STP.
