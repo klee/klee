@@ -56,6 +56,7 @@ The only requirement is that you are running a reasonably-modern x86-Linux distr
 <p>The current procedure for building is outlined below.</p>
 
 <ol>
+
 <li><b>Build LLVM 2.9:</b>
 
 <p>
@@ -128,6 +129,21 @@ used KLEE with a more recent version of STP.)
   $ make OPTIMIZE=-O2 CFLAGS_M32= install
 </div>
 </li>
+
+
+<li> <b>Install any remaining dependencies:</b> 
+
+<p>
+KLEE requires all the dependencies
+of LLVM, which are discussed <a href="http://llvm.org/docs/GettingStarted.html#requirements">here</a>.  In particular, you need to have <a href="http://www.gnu.org/software/dejagnu/">dejagnu</a> installed, which is typically available as part of standard Linux distributions:
+    <div class="instr">
+      $ sudo apt-get install dejagnu (Ubuntu) <br/>
+      $ sudo yum install dejagnu (Fedora)
+    </div>
+</p>
+</li>
+
+
 
 <li>[Optional] <b>Build uclibc and the POSIX environment model:</b>
 
