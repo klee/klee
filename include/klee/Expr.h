@@ -398,12 +398,12 @@ public:
   
   /// isTrue - Is this the true expression.
   bool isTrue() const { 
-    return getZExtValue(1) == 1;
+    return (getWidth() == Expr::Bool && value.getBoolValue()==true);
   }
 
   /// isFalse - Is this the false expression.
   bool isFalse() const {
-    return getZExtValue(1) == 0;
+    return (getWidth() == Expr::Bool && value.getBoolValue()==false);
   }
 
   /// isAllOnes - Is this constant all ones.
