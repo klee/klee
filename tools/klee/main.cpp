@@ -137,7 +137,8 @@ namespace {
     
   cl::opt<bool>
   OptimizeModule("optimize", 
-                 cl::desc("Optimize before execution"));
+                 cl::desc("Optimize before execution"),
+		 cl::init(false));
 
   cl::opt<bool>
   CheckDivZero("check-div-zero", 

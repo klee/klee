@@ -99,7 +99,8 @@ namespace {
  
   cl::opt<bool>
   RandomizeFork("randomize-fork",
-                cl::init(false));
+                cl::init(false),
+		cl::desc("Randomly swap the true and false states on a fork (default=off)"));
  
   cl::opt<bool>
   AllowExternalSymCalls("allow-external-sym-calls",
@@ -245,8 +246,8 @@ namespace {
   
   cl::opt<unsigned>
   MaxMemory("max-memory",
-            cl::desc("Refuse to fork when above this amount of memory (in MB, default=0 (off))"),
-            cl::init(0));
+            cl::desc("Refuse to fork when above this amount of memory (in MB, default=2000)"),
+            cl::init(2000));
 
   cl::opt<bool>
   MaxMemoryInhibit("max-memory-inhibit",
@@ -717,7 +718,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       (void) success;
       addConstraint(current, EqExpr::create(value, condition));
       condition = value;
-    }      
+    }
   }
 
   double timeout = stpTimeout;
