@@ -20,61 +20,27 @@ using namespace llvm;
 using namespace klee;
 
 namespace {
-  cl::opt<bool>
-  UseRandomSearch("use-random-search");
+  cl::list<Searcher::CoreSearchType>
+  CoreSearch("search", cl::desc("Specify the search heuristic (default=random-path interleaved with nurs:covnew)"),
+	     cl::values(clEnumValN(Searcher::DFS, "dfs", "use Depth First Search (DFS)"),
+			clEnumValN(Searcher::RandomState, "random-state", "randomly select a state to explore"),
+			clEnumValN(Searcher::RandomPath, "random-path", "use Random Path Selection (see OSDI'08 paper)"),
+			clEnumValN(Searcher::NURS_CovNew, "nurs:covnew", "use Non Uniform Random Search (NURS) with Coverage-New"),
+			clEnumValN(Searcher::NURS_MD2U, "nurs:md2u", "use NURS with Min-Dist-to-Uncovered"),
+			clEnumValN(Searcher::NURS_Depth, "nurs:depth", "use NURS with 2^depth"),
+			clEnumValN(Searcher::NURS_ICnt, "nurs:icnt", "use NURS with Instr-Count"),
+			clEnumValN(Searcher::NURS_CPICnt, "nurs:cpicnt", "use NURS with CallPath-Instr-Count"),
+			clEnumValN(Searcher::NURS_QC, "nurs:qc", "use NURS with Query-Cost"),
+			clEnumValEnd));
 
-  cl::opt<bool>
-  UseInterleavedRS("use-interleaved-RS");
-
-  cl::opt<bool>
-  UseInterleavedNURS("use-interleaved-NURS");
-
-  cl::opt<bool>
-  UseInterleavedMD2UNURS("use-interleaved-MD2U-NURS");
-
-  cl::opt<bool>
-  UseInterleavedInstCountNURS("use-interleaved-icnt-NURS");
-
-  cl::opt<bool>
-  UseInterleavedCPInstCountNURS("use-interleaved-cpicnt-NURS");
-
-  cl::opt<bool>
-  UseInterleavedQueryCostNURS("use-interleaved-query-cost-NURS");
-
-  cl::opt<bool>
-  UseInterleavedCovNewNURS("use-interleaved-covnew-NURS");
-
-  cl::opt<bool>
-  UseNonUniformRandomSearch("use-non-uniform-random-search");
-
-  cl::opt<bool>
-  UseRandomPathSearch("use-random-path");
-
-  cl::opt<WeightedRandomSearcher::WeightType>
-  WeightType("weight-type", cl::desc("Set the weight type for --use-non-uniform-random-search"),
-             cl::values(clEnumValN(WeightedRandomSearcher::Depth, "none", "use (2^depth)"),
-                        clEnumValN(WeightedRandomSearcher::InstCount, "icnt", "use current pc exec count"),
-                        clEnumValN(WeightedRandomSearcher::CPInstCount, "cpicnt", "use current pc exec count"),
-                        clEnumValN(WeightedRandomSearcher::QueryCost, "query-cost", "use query cost"),
-                        clEnumValN(WeightedRandomSearcher::MinDistToUncovered, "md2u", "use min dist to uncovered"),
-                        clEnumValN(WeightedRandomSearcher::CoveringNew, "covnew", "use min dist to uncovered + coveringNew flag"),
-                        clEnumValEnd));
-  
-  cl::opt<bool>
-  UseMerge("use-merge", 
-           cl::desc("Enable support for klee_merge() (experimental)"));
- 
-  cl::opt<bool>
-  UseBumpMerge("use-bump-merge", 
-           cl::desc("Enable support for klee_merge() (extra experimental)"));
- 
   cl::opt<bool>
   UseIterativeDeepeningTimeSearch("use-iterative-deepening-time-search", 
                                     cl::desc("(experimental)"));
 
   cl::opt<bool>
   UseBatchingSearch("use-batching-search", 
-           cl::desc("Use batching searcher (keep running selected state for N instructions/time, see --batch-instructions and --batch-time"));
+		    cl::desc("Use batching searcher (keep running selected state for N instructions/time, see --batch-instructions and --batch-time)"),
+		    cl::init(false));
 
   cl::opt<unsigned>
   BatchInstructions("batch-instructions",
@@ -85,68 +51,62 @@ namespace {
   BatchTime("batch-time",
             cl::desc("Amount of time to batch when using --use-batching-search"),
             cl::init(5.0));
+
+
+  cl::opt<bool>
+  UseMerge("use-merge", 
+           cl::desc("Enable support for klee_merge() (experimental)"));
+ 
+  cl::opt<bool>
+  UseBumpMerge("use-bump-merge", 
+           cl::desc("Enable support for klee_merge() (extra experimental)"));
+
 }
+
 
 bool klee::userSearcherRequiresMD2U() {
-  return (WeightType==WeightedRandomSearcher::MinDistToUncovered ||
-          WeightType==WeightedRandomSearcher::CoveringNew ||
-          UseInterleavedMD2UNURS ||
-          UseInterleavedCovNewNURS || 
-          UseInterleavedInstCountNURS || 
-          UseInterleavedCPInstCountNURS || 
-          UseInterleavedQueryCostNURS);
+  return (std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::NURS_MD2U) != CoreSearch.end() ||
+	  std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::NURS_CovNew) != CoreSearch.end() ||
+	  std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::NURS_ICnt) != CoreSearch.end() ||
+	  std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::NURS_CPICnt) != CoreSearch.end() ||
+	  std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::NURS_QC) != CoreSearch.end());
 }
 
-// FIXME: Remove.
-bool klee::userSearcherRequiresBranchSequences() {
-  return false;
+
+Searcher *getNewSearcher(Searcher::CoreSearchType type, Executor &executor) {
+  Searcher *searcher = NULL;
+  switch (type) {
+  case Searcher::DFS: searcher = new DFSSearcher(); break;
+  case Searcher::RandomState: searcher = new RandomSearcher(); break;
+  case Searcher::RandomPath: searcher = new RandomPathSearcher(executor); break;
+  case Searcher::NURS_CovNew: searcher = new WeightedRandomSearcher(executor, WeightedRandomSearcher::CoveringNew); break;
+  case Searcher::NURS_MD2U: searcher = new WeightedRandomSearcher(executor, WeightedRandomSearcher::MinDistToUncovered); break;
+  case Searcher::NURS_Depth: searcher = new WeightedRandomSearcher(executor, WeightedRandomSearcher::Depth); break;
+  case Searcher::NURS_ICnt: searcher = new WeightedRandomSearcher(executor, WeightedRandomSearcher::InstCount); break;
+  case Searcher::NURS_CPICnt: searcher = new WeightedRandomSearcher(executor, WeightedRandomSearcher::CPInstCount); break;
+  case Searcher::NURS_QC: searcher = new WeightedRandomSearcher(executor, WeightedRandomSearcher::QueryCost); break;
+  }
+
+  return searcher;
 }
 
 Searcher *klee::constructUserSearcher(Executor &executor) {
-  Searcher *searcher = 0;
 
-  if (UseRandomPathSearch) {
-    searcher = new RandomPathSearcher(executor);
-  } else if (UseNonUniformRandomSearch) {
-    searcher = new WeightedRandomSearcher(executor, WeightType);
-  } else if (UseRandomSearch) {
-    searcher = new RandomSearcher();
-  } else {
-    searcher = new DFSSearcher();
+  // default values
+  if (CoreSearch.size() == 0) {
+    CoreSearch.push_back(Searcher::RandomPath);
+    CoreSearch.push_back(Searcher::NURS_CovNew);
   }
 
-  if (UseInterleavedNURS || UseInterleavedMD2UNURS || UseInterleavedRS ||
-      UseInterleavedCovNewNURS || UseInterleavedInstCountNURS ||
-      UseInterleavedCPInstCountNURS || UseInterleavedQueryCostNURS) {
+  Searcher *searcher = getNewSearcher(CoreSearch[0], executor);
+  
+  if (CoreSearch.size() > 1) {
     std::vector<Searcher *> s;
     s.push_back(searcher);
-    
-    if (UseInterleavedNURS)
-      s.push_back(new WeightedRandomSearcher(executor, 
-                                             WeightedRandomSearcher::Depth));
-    if (UseInterleavedMD2UNURS)
-      s.push_back(new WeightedRandomSearcher(executor, 
-                                             WeightedRandomSearcher::MinDistToUncovered));
 
-    if (UseInterleavedCovNewNURS)
-      s.push_back(new WeightedRandomSearcher(executor, 
-                                             WeightedRandomSearcher::CoveringNew));
-   
-    if (UseInterleavedInstCountNURS)
-      s.push_back(new WeightedRandomSearcher(executor, 
-                                             WeightedRandomSearcher::InstCount));
+    for (unsigned i=1; i<CoreSearch.size(); i++)
+      s.push_back(getNewSearcher(CoreSearch[i], executor));
     
-    if (UseInterleavedCPInstCountNURS)
-      s.push_back(new WeightedRandomSearcher(executor, 
-                                             WeightedRandomSearcher::CPInstCount));
-    
-    if (UseInterleavedQueryCostNURS)
-      s.push_back(new WeightedRandomSearcher(executor, 
-                                             WeightedRandomSearcher::QueryCost));
-
-    if (UseInterleavedRS) 
-      s.push_back(new RandomSearcher());
-
     searcher = new InterleavedSearcher(s);
   }
 
@@ -154,10 +114,12 @@ Searcher *klee::constructUserSearcher(Executor &executor) {
     searcher = new BatchingSearcher(searcher, BatchTime, BatchInstructions);
   }
 
+  // merge support is experimental
   if (UseMerge) {
     assert(!UseBumpMerge);
+    assert(std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::RandomPath) == CoreSearch.end()); // XXX: needs further debugging: test/Features/Searchers.c fails with this searcher
     searcher = new MergingSearcher(executor, searcher);
-  } else if (UseBumpMerge) {    
+  } else if (UseBumpMerge) {
     searcher = new BumpMergingSearcher(executor, searcher);
   }
   

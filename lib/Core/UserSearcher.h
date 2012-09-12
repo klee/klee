@@ -17,8 +17,6 @@ namespace klee {
   // XXX gross, should be on demand?
   bool userSearcherRequiresMD2U();
 
-  bool userSearcherRequiresBranchSequences();
-
   Searcher *constructUserSearcher(Executor &executor);
 }
 

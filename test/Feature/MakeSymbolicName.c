@@ -1,5 +1,5 @@
 // RUN: %llvmgcc %s -emit-llvm -g -c -o %t1.bc
-// RUN: %klee --use-random-search --exit-on-error %t1.bc
+// RUN: %klee --search=random-state --exit-on-error %t1.bc
 
 #include <assert.h>
 

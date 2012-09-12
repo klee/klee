@@ -66,6 +66,18 @@ namespace klee {
       tmp.insert(es);
       update(current, std::set<ExecutionState*>(), tmp);
     }
+
+    enum CoreSearchType {
+      DFS,                
+      RandomState,
+      RandomPath,
+      NURS_CovNew,
+      NURS_MD2U,
+      NURS_Depth,
+      NURS_ICnt,
+      NURS_CPICnt,
+      NURS_QC
+    };
   };
 
   class DFSSearcher : public Searcher {

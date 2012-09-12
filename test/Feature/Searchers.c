@@ -1,26 +1,29 @@
 // RUN: %llvmgcc %s -emit-llvm -O0 -c -o %t2.bc
 // RUN: %klee %t2.bc
-// RUN: %klee --use-random-search %t2.bc
-// RUN: %klee --use-non-uniform-random-search %t2.bc
-// RUN: %klee --use-non-uniform-random-search --weight-type=query-cost %t2.bc
+// RUN: %klee --search=random-state %t2.bc
+// RUN: %klee --search=nurs:depth %t2.bc
+// RUN: %klee --search=nurs:qc %t2.bc
 // RUN: %klee --use-batching-search %t2.bc
-// RUN: %klee --use-batching-search --use-random-search %t2.bc
-// RUN: %klee --use-batching-search --use-non-uniform-random-search %t2.bc
-// RUN: %klee --use-batching-search --use-non-uniform-random-search --weight-type=query-cost %t2.bc
-// RUN: %klee --use-merge --debug-log-merge --debug-log-state-merge %t2.bc
-// RUN: %klee --use-merge --use-batching-search %t2.bc
-// RUN: %klee --use-merge --use-batching-search --use-random-search %t2.bc
-// RUN: %klee --use-merge --use-batching-search --use-non-uniform-random-search %t2.bc
-// RUN: %klee --use-merge --use-batching-search --use-non-uniform-random-search --weight-type=query-cost %t2.bc
+// RUN: %klee --use-batching-search --search=random-state %t2.bc
+// RUN: %klee --use-batching-search --search=nurs:depth %t2.bc
+// RUN: %klee --use-batching-search --search=nurs:qc %t2.bc
+// RUN: %klee --search=random-path --search=nurs:qc %t2.bc
+// RUN: %klee --use-merge --search=dfs --debug-log-merge --debug-log-state-merge %t2.bc
+// RUN: %klee --use-merge --use-batching-search --search=dfs %t2.bc
+// RUN: %klee --use-merge --use-batching-search --search=random-state %t2.bc
+// RUN: %klee --use-merge --use-batching-search --search=nurs:depth %t2.bc
+// RUN: %klee --use-merge --use-batching-search --search=nurs:qc %t2.bc
 // RUN: %klee --use-iterative-deepening-time-search --use-batching-search %t2.bc
-// RUN: %klee --use-iterative-deepening-time-search --use-batching-search --use-random-search %t2.bc
-// RUN: %klee --use-iterative-deepening-time-search --use-batching-search --use-non-uniform-random-search %t2.bc
-// RUN: %klee --use-iterative-deepening-time-search --use-batching-search --use-non-uniform-random-search --weight-type=query-cost %t2.bc
+// RUN: %klee --use-iterative-deepening-time-search --use-batching-search --search=random-state %t2.bc
+// RUN: %klee --use-iterative-deepening-time-search --use-batching-search --search=nurs:depth %t2.bc
+// RUN: %klee --use-iterative-deepening-time-search --use-batching-search --search=nurs:qc %t2.bc
 
 
 /* this test is basically just for coverage and doesn't really do any
    correctness check (aside from testing that the various combinations
    don't crash) */
+
+#include <stdlib.h>
 
 int validate(char *buf, int N) {
 
