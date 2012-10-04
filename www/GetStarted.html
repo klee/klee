@@ -64,6 +64,21 @@ case you will need to follow the full installation instructions below.
 
 <ol>
 
+<li><b>Install dependencies:</b>
+
+KLEE requires all the dependencies of LLVM, which are discussed <a href="http://llvm.org/docs/GettingStarted.html#requirements">here</a>.  In particular, you should have the following packages (the list is likely not complete): g++, curl, dejagnu, subversion, bison, flex:
+    <div class="instr">
+      $ sudo apt-get install g++ curl dejagnu subversion bison flex   (Ubuntu) <br/>
+      $ sudo yum install g++ curl dejagnu subversion bison flex   (Fedora)
+    </div>
+</p>
+
+On some architectures, you might also need to set the following environment variables (best to put them in a config file like <b>.bashrc</b>):
+    <div class="instr">
+      $ export C_INCLUDE_PATH=/usr/include/x86_64-linux-gnu <br/>
+      $ export CPLUS_INCLUDE_PATH=/usr/include/x86_64-linux-gnu
+    </div>
+
 <li><b>Build LLVM 2.9:</b>
 
 <p>
@@ -136,20 +151,6 @@ used KLEE with a more recent version of STP.)
   $ make OPTIMIZE=-O2 CFLAGS_M32= install
 </div>
 </li>
-
-
-<li> <b>Install any remaining dependencies:</b> 
-
-<p>
-KLEE requires all the dependencies
-of LLVM, which are discussed <a href="http://llvm.org/docs/GettingStarted.html#requirements">here</a>.  In particular, you need to have <a href="http://www.gnu.org/software/dejagnu/">dejagnu</a> installed, which is typically available as part of standard Linux distributions:
-    <div class="instr">
-      $ sudo apt-get install dejagnu (Ubuntu) <br/>
-      $ sudo yum install dejagnu (Fedora)
-    </div>
-</p>
-</li>
-
 
 
 <li>[Optional] <b>Build uclibc and the POSIX environment model:</b>
@@ -228,6 +229,9 @@ runtime, which is built on top of the uClibc C library.
   <li>You're ready to go!  Go to the <a href="Tutorials.html">Tutorials</a> page
   to try KLEE.</li>
 </ol>
+
+<p><b>NOTE:</b> If you are installing the system of Ubuntu 12.04 (or similar), you might want to take a look at this <a href="http://keeda.stanford.edu/pipermail/klee-dev/2012-September/000922.html">thread</a>.</p>
+<br/>
 
 </div>
 </body>
