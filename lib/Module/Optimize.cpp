@@ -27,7 +27,7 @@
 #else
 #include "llvm/Support/DynamicLibrary.h"
 #endif
-#include "llvm/Target/TargetData.h"
+#include "llvm/Target/DataLayout.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Scalar.h"
@@ -178,8 +178,8 @@ void Optimize(Module* M) {
   if (VerifyEach)
     Passes.add(createVerifierPass());
 
-  // Add an appropriate TargetData instance for this module...
-  addPass(Passes, new TargetData(M));
+  // Add an appropriate DataLayout instance for this module...
+  addPass(Passes, new DataLayout(M));
 
   // DWD - Run the opt standard pass list as well.
   AddStandardCompilePasses(Passes);

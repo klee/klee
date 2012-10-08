@@ -40,7 +40,7 @@
 #else
 #include "llvm/Support/Path.h"
 #endif
-#include "llvm/Target/TargetData.h"
+#include "llvm/Target/DataLayout.h"
 #include "llvm/Transforms/Scalar.h"
 
 #include <sstream>
@@ -90,7 +90,7 @@ namespace {
 
 KModule::KModule(Module *_module) 
   : module(_module),
-    targetData(new TargetData(module)),
+    targetData(new DataLayout(module)),
     dbgStopPointFn(0),
     kleeMergeFn(0),
     infos(0),

@@ -28,7 +28,7 @@
 #include "llvm/ModuleProvider.h"
 #endif
 #include "llvm/Support/CallSite.h"
-#include "llvm/Target/TargetData.h"
+#include "llvm/Target/DataLayout.h"
 #include <iostream>
 #include <cassert>
 

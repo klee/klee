@@ -22,7 +22,7 @@ namespace llvm {
   class Function;
   class Instruction;
   class Module;
-  class TargetData;
+  class DataLayout;
 }
 
 namespace klee {
@@ -80,7 +80,7 @@ namespace klee {
   class KModule {
   public:
     llvm::Module *module;
-    llvm::TargetData *targetData;
+    llvm::DataLayout *targetData;
     
     // Some useful functions to know the address of
     llvm::Function *dbgStopPointFn, *kleeMergeFn;

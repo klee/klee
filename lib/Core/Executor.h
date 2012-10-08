@@ -37,7 +37,7 @@ namespace llvm {
   class Function;
   class GlobalValue;
   class Instruction;
-  class TargetData;
+  class DataLayout;
   class Twine;
   class Value;
 }
