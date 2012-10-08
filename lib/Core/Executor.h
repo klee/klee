@@ -37,7 +37,11 @@ namespace llvm {
   class Function;
   class GlobalValue;
   class Instruction;
+#if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
+  class TargetData;
+#else
   class DataLayout;
+#endif
   class Twine;
   class Value;
 }

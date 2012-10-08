@@ -40,7 +40,11 @@
 #else
 #include "llvm/Support/Path.h"
 #endif
-#include "llvm/Target/DataLayout.h"
+#if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
+#include "llvm/Target/TargetData.h"
+#else
+#include "llvm/DataLayout.h"
+#endif
 #include "llvm/Transforms/Scalar.h"
 
 #include <sstream>
@@ -90,7 +94,11 @@ namespace {
 
 KModule::KModule(Module *_module) 
   : module(_module),
+#if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
+    targetData(new TargetData(module)),
+#else
     targetData(new DataLayout(module)),
+#endif
     dbgStopPointFn(0),
     kleeMergeFn(0),
     infos(0),

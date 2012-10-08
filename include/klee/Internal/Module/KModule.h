@@ -22,7 +22,11 @@ namespace llvm {
   class Function;
   class Instruction;
   class Module;
+#if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
+  class TargetData;
+#else
   class DataLayout;
+#endif
 }
 
 namespace klee {
@@ -80,7 +84,11 @@ namespace klee {
   class KModule {
   public:
     llvm::Module *module;
+#if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
+    llvm::TargetData *targetData;
+#else
     llvm::DataLayout *targetData;
+#endif
     
     // Some useful functions to know the address of
     llvm::Function *dbgStopPointFn, *kleeMergeFn;

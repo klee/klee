@@ -28,7 +28,11 @@
 #include "llvm/ModuleProvider.h"
 #endif
 #include "llvm/Support/CallSite.h"
-#include "llvm/Target/DataLayout.h"
+#if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
+#include "llvm/Target/TargetData.h"
+#else
+#include "llvm/DataLayout.h"
+#endif
 #include <iostream>
 #include <cassert>
 

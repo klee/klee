@@ -64,7 +64,11 @@
 #else
 #include "llvm/Support/Process.h"
 #endif
-#include "llvm/Target/DataLayout.h"
+#if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
+#include "llvm/Target/TargetData.h"
+#else
+#include "llvm/DataLayout.h"
+#endif
 
 #include <cassert>
 #include <algorithm>
@@ -346,7 +350,11 @@ const Module *Executor::setModule(llvm::Module *module,
   kmodule = new KModule(module);
 
   // Initialize the context.
+#if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
+  TargetData *TD = kmodule->targetData;
+#else
   DataLayout *TD = kmodule->targetData;
+#endif
   Context::initialize(TD->isLittleEndian(),
                       (Expr::Width) TD->getPointerSizeInBits());
 
@@ -384,7 +392,11 @@ Executor::~Executor() {
 void Executor::initializeGlobalObject(ExecutionState &state, ObjectState *os,
                                       const Constant *c, 
                                       unsigned offset) {
+#if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
+  TargetData *targetData = kmodule->targetData;
+#else
   DataLayout *targetData = kmodule->targetData;
+#endif
   if (const ConstantVector *cp = dyn_cast<ConstantVector>(c)) {
     unsigned elementSize =
       targetData->getTypeStoreSize(cp->getType()->getElementType());

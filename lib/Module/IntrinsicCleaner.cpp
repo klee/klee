@@ -26,7 +26,11 @@
 #include "llvm/Support/IRBuilder.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include "llvm/Target/DataLayout.h"
+#if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
+#include "llvm/Target/TargetData.h"
+#else
+#include "llvm/DataLayout.h"
+#endif
 
 using namespace llvm;
 
@@ -45,7 +49,11 @@ bool IntrinsicCleanerPass::runOnModule(Module &M) {
 bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b) { 
   bool dirty = false;
   
+#if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
+  unsigned WordSize = TargetData.getPointerSizeInBits() / 8;
+#else
   unsigned WordSize = DataLayout.getPointerSizeInBits() / 8;
+#endif
   for (BasicBlock::iterator i = b.begin(), ie = b.end(); i != ie;) {     
     IntrinsicInst *ii = dyn_cast<IntrinsicInst>(&*i);
     // increment now since LowerIntrinsic deletion makes iterator invalid.
