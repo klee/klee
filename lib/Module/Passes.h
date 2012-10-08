@@ -68,10 +68,10 @@ public:
   // variables (via intrinsic lowering).
 class IntrinsicCleanerPass : public llvm::ModulePass {
   static char ID;
-#if LLVM_VERSION_CODE < LLVM_VERSION(3, 1)
-  const llvm::TargetData &DataLayout;
+#if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
+  const llvm::TargetData &TargetData;
 #else
-  const llvm::DataLayout &DL;
+  const llvm::DataLayout &DataLayout;
 #endif
   llvm::IntrinsicLowering *IL;
   bool LowerIntrinsics;
@@ -89,10 +89,10 @@ public:
 #else
     : llvm::ModulePass(ID),
 #endif
-#if LLVM_VERSION_CODE < LLVM_VERSION(3, 1)
-      DataLayout(TD),
+#if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
+      TargetData(TD),
 #else
-      DL(TD),
+      DataLayout(TD),
 #endif
       IL(new llvm::IntrinsicLowering(TD)),
       LowerIntrinsics(LI) {}

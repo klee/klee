@@ -10,6 +10,7 @@
 #ifndef KLEE_KMODULE_H
 #define KLEE_KMODULE_H
 
+#include "klee/Config/Version.h"
 #include "klee/Interpreter.h"
 
 #include <map>
