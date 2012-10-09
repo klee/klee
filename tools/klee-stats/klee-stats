@@ -105,12 +105,17 @@ def sortTable(table, labels, keyName, ascending=False):
     table[:] = [table[n] for n in indices]
 
 
-def printTable(table):
+def printTable(table, precision):
     def strOrNone(ob):
         if ob is None:
             return ''
         elif isinstance(ob,float):
-            return '%.2f'%ob
+            # prepare format string according to settings of
+            # floating number
+            formatString = '%.'
+            formatString += '%d'%precision
+            formatString += 'f'
+            return formatString%ob
         else:
             return str(ob)
     def printRow(row):
@@ -139,22 +144,33 @@ def printTable(table):
 
 def main(args):
     from optparse import OptionParser
-    op = OptionParser(usage="usage: %prog [options] directories",
-                      epilog="""\
+    
+    # inherit from the OptionParser class and override format_epilog
+    # in order to get newlines in the 'epilog' text
+    class MyParser(OptionParser):
+        def format_epilog(self, formatter):
+            return self.epilog
+       
+    op = MyParser(usage="usage: %prog [options] directories",
+                  epilog="""\
+
 LEGEND
 ------
-Instrs:  Number of executed instructions
-Time:    Total wall time (s)
-ICov:    Instruction coverage in the LLVM bitcode (%)
-BCov:    Branch coverage in the LLVM bitcode (%)
-ICount:  Total static instructions in the LLVM bitcode
-Solver:  Time spent in the constraint solver (%)
-States:  Number of currently active states
-Mem:     Megabytes of memory currently used
-Queries: Number of queries issued to STP
-AvgQC:   Average number of query constructs per query
-Tcex:    Time spent in the counterexample caching code (%)
-Tfork:   Time spent forking (%)""")
+Instrs:      Number of executed instructions
+Time:        Total wall time (s)
+TUser:       Total user time
+ICov:        Instruction coverage in the LLVM bitcode (%)
+BCov:        Branch coverage in the LLVM bitcode (%)
+ICount:      Total static instructions in the LLVM bitcode
+TSolver:     Time spent in the constraint solver
+States:      Number of currently active states
+Mem:         Megabytes of memory currently used
+Queries:     Number of queries issued to STP
+AvgQC:       Average number of query constructs per query
+Tcex:        Time spent in the counterexample caching code
+Tfork:       Time spent forking
+TResolve:    Time spent in object resolution
+\n""")
 
     op.add_option('', '--print-more', dest='printMore',
                   action='store_true', default=False,
@@ -162,6 +178,12 @@ Tfork:   Time spent forking (%)""")
     op.add_option('', '--print-all', dest='printAll',
                   action='store_true', default=False,
                   help='Print all available information.')
+    op.add_option('', '--print-rel-times', dest='printRelTimes',
+                  action='store_true', default=False,
+                  help='Print only values of measured times. Values are relative to the measured system execution time.')
+    op.add_option('', '--print-abs-times', dest='printAbsTimes',
+                  action='store_true', default=False,
+                  help='Print only values of measured times. Absolute values (in seconds) are printed.')    
     op.add_option('','--sort-by', dest='sortBy',
                   help='key value to sort by, e.g. --sort-by=Instrs')
     op.add_option('','--ascending', dest='ascending',
@@ -171,10 +193,25 @@ Tfork:   Time spent forking (%)""")
                   help="key value on which to compare runs to the reference one (which is the first one).  E.g., --compare-by=Instrs shows how each run compares to the reference run after executing the same number of instructions as the reference run.  If a run hasn't executed as many instructions as the reference one, we simply print the statistics at the end of that run.")
     op.add_option('','--compare-at', dest='compAt',
                   help='value to compare the runs at. Can be special value \'last\' to compare at the last point which makes sense. Use in conjunction with --compare-by')
+    op.add_option('','--precision', dest='dispPrecision', default=2, metavar='INTEGER',
+                  help='Floating point numbers display precision. By default it is set to 2.')
     opts,dirs = op.parse_args()
     
     if not dirs:
         op.error("no directories given.")
+
+    # make sure that precision is a positive integer            
+    if not isinstance(opts.dispPrecision, int):
+        try:            
+            precision = int(opts.dispPrecision)              
+        except ValueError:
+            op.error("display precision should be an integer")           
+            # make sure that the precision is a positive integer as well
+        if not (0 <= precision):
+            op.error("display precision should be positive")
+    else:
+        precision = opts.dispPrecision
+            
 
     actualDirs = []
     for dir in dirs:
@@ -192,15 +229,19 @@ Tfork:   Time spent forking (%)""")
     ssummary = []
     
     if (opts.printAll):
-        labels = ('Path','Instrs','Time(s)','ICov(%)','BCov(%)','ICount','Solver(%)', 'States', 'maxStates', 'avgStates', 'Mem(MB)', 'maxMem(MB)', 'avgMem(MB)', 'Queries', 'AvgQC', 'Tcex(%)', 'Tfork(%)')
+        labels = ('Path','Instrs','Time(s)','ICov(%)','BCov(%)','ICount','TSolver(%)', 'States', 'maxStates', 'avgStates', 'Mem(MB)', 'maxMem(MB)', 'avgMem(MB)', 'Queries', 'AvgQC', 'Tcex(%)', 'Tfork(%)')
+    elif (opts.printRelTimes):
+        labels = ('Path', 'Time(s)', 'TUser(%)', 'TSolver(%)', 'Tcex(%)', 'Tfork(%)', 'TResolve(%)')
+    elif (opts.printAbsTimes):
+        labels = ('Path', 'Time(s)', 'TUser(s)', 'TSolver(s)', 'Tcex(s)', 'Tfork(s)', 'TResolve(s)')
     elif (opts.printMore):
-        labels = ('Path','Instrs','Time(s)','ICov(%)','BCov(%)','ICount','Solver(%)', 'States', 'maxStates', 'Mem(MB)', 'maxMem(MB)')
+        labels = ('Path','Instrs','Time(s)','ICov(%)','BCov(%)','ICount','TSolver(%)', 'States', 'maxStates', 'Mem(MB)', 'maxMem(MB)')
     else:
-        labels = ('Path','Instrs','Time(s)','ICov(%)','BCov(%)','ICount','Solver(%)')
+        labels = ('Path','Instrs','Time(s)','ICov(%)','BCov(%)','ICount','TSolver(%)')
 
 
     def addRecord(Path,rec, stats):
-        (I,BFull,BPart,BTot,T,St,Mem,QTot,QCon,NObjs,Treal,SCov,SUnc,QT,Ts,Tcex,Tf) = rec
+        (I,BFull,BPart,BTot,T,St,Mem,QTot,QCon,NObjs,Treal,SCov,SUnc,QT,Ts,Tcex,Tf,Tr) = rec
         (maxMem,avgMem,maxStates,avgStates) = stats
         # special case for straight-line code: report 100% branch coverage
         if BTot == 0:
@@ -211,6 +252,10 @@ Tfork:   Time spent forking (%)""")
         if (opts.printAll):
             table.append((Path, I, Treal, 100.*SCov/(SCov+SUnc), 100.*(2*BFull+BPart)/(2.*BTot),
                           SCov+SUnc, 100.*Ts/Treal, St, maxStates, avgStates, Mem, maxMem, avgMem, QTot, AvgQC, 100.*Tcex/Treal, 100.*Tf/Treal))
+        elif (opts.printRelTimes):
+            table.append((Path, Treal, 100.*T/Treal, 100.*Ts/Treal, 100.*Tcex/Treal, 100.*Tf/Treal, 100.*Tr/Treal))
+        elif (opts.printAbsTimes):
+            table.append((Path, Treal, T, Ts, Tcex, Tf, Tr))
         elif (opts.printMore):
             table.append((Path, I, Treal, 100.*SCov/(SCov+SUnc), 100.*(2*BFull+BPart)/(2.*BTot),
                           SCov+SUnc, 100.*Ts/Treal, St, maxStates, Mem, maxMem))
@@ -219,7 +264,7 @@ Tfork:   Time spent forking (%)""")
                           SCov+SUnc, 100.*Ts/Treal))
         
     def addRow(Path,data,stats):
-        data = tuple(data[:17]) + (None,)*(17-len(data))
+        data = tuple(data[:18]) + (None,)*(18-len(data))
         addRecord(Path,data,stats)
         if not summary:
             summary[:] = list(data)
@@ -268,7 +313,8 @@ Tfork:   Time spent forking (%)""")
         addRecord('Total (%d)'%(len(table)-1,),summary, ssummary)
     table[0:0] = [None,labels,None]
     table.append(None)
-    printTable(table)
+                
+    printTable(table, precision)              
         
         
 if __name__=='__main__':
