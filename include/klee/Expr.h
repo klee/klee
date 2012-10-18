@@ -535,12 +535,9 @@ public:
 
 /// Class representing a byte update of an array.
 class UpdateNode {
-  friend class UpdateList;
-  friend class STPBuilder; // for setting STPArray
+  friend class UpdateList;  
 
   mutable unsigned refCount;
-  // gross
-  mutable void *stpArray;
   // cache instead of recalc
   unsigned hashValue;
 
@@ -563,7 +560,7 @@ public:
   unsigned hash() const { return hashValue; }
 
 private:
-  UpdateNode() : refCount(0), stpArray(0) {}
+  UpdateNode() : refCount(0) {}
   ~UpdateNode();
 
   unsigned computeHash();
@@ -573,16 +570,13 @@ class Array {
 public:
   const std::string name;
   // FIXME: Not 64-bit clean.
-  unsigned size;
+  unsigned size;  
 
   /// constantValues - The constant initial values for this array, or empty for
   /// a symbolic array. If non-empty, this size of this array is equivalent to
   /// the array size.
   const std::vector< ref<ConstantExpr> > constantValues;
-
-  // FIXME: This does not belong here.
-  mutable void *stpInitialArray;
-
+  
 public:
   /// Array - Construct a new array object.
   ///
@@ -595,10 +589,10 @@ public:
         const ref<ConstantExpr> *constantValuesBegin = 0,
         const ref<ConstantExpr> *constantValuesEnd = 0)
     : name(_name), size(_size), 
-      constantValues(constantValuesBegin, constantValuesEnd), 
-      stpInitialArray(0) {
+      constantValues(constantValuesBegin, constantValuesEnd) {      
     assert((isSymbolicArray() || constantValues.size() == size) &&
            "Invalid size for constant array!");
+    computeHash();
 #ifndef NDEBUG
     for (const ref<ConstantExpr> *it = constantValuesBegin;
          it != constantValuesEnd; ++it)
@@ -613,6 +607,12 @@ public:
 
   Expr::Width getDomain() const { return Expr::Int32; }
   Expr::Width getRange() const { return Expr::Int8; }
+  
+  unsigned computeHash();
+  unsigned hash() const { return hashValue; }
+   
+private:
+  unsigned hashValue;
 };
 
 /// Class representing a complete list of updates into an array.

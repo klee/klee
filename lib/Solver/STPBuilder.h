@@ -11,10 +11,10 @@
 #define __UTIL_STPBUILDER_H__
 
 #include "klee/util/ExprHashMap.h"
+#include "klee/util/ArrayExprHash.h"
 #include "klee/Config/config.h"
 
 #include <vector>
-#include <map>
 
 #define Expr VCExpr
 #include <stp/c_interface.h>
@@ -56,6 +56,15 @@ namespace klee {
     operator bool () { return H->expr; }
     operator ::VCExpr () { return H->expr; }
   };
+  
+  class STPArrayExprHash : public ArrayExprHash< ::VCExpr > {
+    
+    friend class STPBuilder;
+    
+  public:
+    STPArrayExprHash() {};
+    virtual ~STPArrayExprHash();
+  };
 
 class STPBuilder {
   ::VC vc;
@@ -67,7 +76,9 @@ class STPBuilder {
   /// use.
   bool optimizeDivides;
 
-private:
+  STPArrayExprHash _arr_hash;
+
+private:  
   unsigned getShiftBits(unsigned amount) {
     unsigned bits = 1;
     amount--;
@@ -109,7 +120,7 @@ private:
   
   ::VCExpr buildVar(const char *name, unsigned width);
   ::VCExpr buildArray(const char *name, unsigned indexWidth, unsigned valueWidth);
-
+ 
 public:
   STPBuilder(::VC _vc, bool _optimizeDivides=true);
   ~STPBuilder();

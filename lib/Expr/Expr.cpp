@@ -488,11 +488,13 @@ ref<Expr>  NotOptimizedExpr::create(ref<Expr> src) {
 extern "C" void vc_DeleteExpr(void*);
 
 Array::~Array() {
-  // FIXME: This shouldn't be necessary.
-  if (stpInitialArray) {
-    ::vc_DeleteExpr(stpInitialArray);
-    stpInitialArray = 0;
-  }
+}
+
+unsigned Array::computeHash() {
+  unsigned res = 0;
+  for (unsigned i = 0, e = name.size(); i != e; ++i)
+    res = (res * Expr::MAGIC_HASH_CONSTANT) + name[i];
+  return res; 
 }
 
 /***/

@@ -25,6 +25,10 @@ namespace stats {
   extern Statistic queryConstructs;
   extern Statistic queryCounterexamples;
   extern Statistic queryTime;
+  
+#ifdef DEBUG
+  extern Statistic arrayHashTime;
+#endif
 
 }
 }

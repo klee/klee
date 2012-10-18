@@ -372,6 +372,9 @@ void StatsTracker::writeStatsHeader() {
              << "'CexCacheTime',"
              << "'ForkTime',"
              << "'ResolveTime',"
+#ifdef DEBUG
+	     << "'ArrayHashTime',"
+#endif
              << ")\n";
   statsFile->flush();
 }
@@ -399,6 +402,9 @@ void StatsTracker::writeStatsLine() {
              << "," << stats::cexCacheTime / 1000000.
              << "," << stats::forkTime / 1000000.
              << "," << stats::resolveTime / 1000000.
+#ifdef DEBUG
+             << "," << stats::arrayHashTime / 1000000.
+#endif
              << ")\n";
   statsFile->flush();
 }

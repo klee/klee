@@ -18,8 +18,7 @@ using namespace klee;
 UpdateNode::UpdateNode(const UpdateNode *_next, 
                        const ref<Expr> &_index, 
                        const ref<Expr> &_value) 
-  : refCount(0),
-    stpArray(0),
+  : refCount(0),    
     next(_next),
     index(_index),
     value(_value) {
@@ -36,9 +35,6 @@ UpdateNode::UpdateNode(const UpdateNode *_next,
 extern "C" void vc_DeleteExpr(void*);
 
 UpdateNode::~UpdateNode() {
-  // XXX gross
-  if (stpArray)
-    ::vc_DeleteExpr(stpArray);
 }
 
 int UpdateNode::compare(const UpdateNode &b) const {

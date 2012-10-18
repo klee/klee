@@ -50,6 +50,32 @@ namespace {
 
 ///
 
+
+STPArrayExprHash::~STPArrayExprHash() {
+  
+  // Design decision: STPArrayExprHash is destroyed from the destructor of STPBuilder at the end of the KLEE run;
+  // Therefore, freeing memory allocated for STP::VCExpr's is currently disabled.
+  
+   /*
+  for (ArrayHashIter it = _array_hash.begin(); it != _array_hash.end(); ++it) {
+    ::VCExpr array_expr = it->second;
+    if (array_expr) {
+      ::vc_DeleteExpr(array_expr);
+      array_expr = 0;
+    }
+  }
+  
+  
+  for (UpdateNodeHashConstIter it = _update_node_hash.begin(); it != _update_node_hash.end(); ++it) {
+    ::VCExpr un_expr = it->second;
+    if (un_expr) {
+      ::vc_DeleteExpr(un_expr);
+      un_expr = 0;
+    }
+  }
+  */
+}
+
 /***/
 
 STPBuilder::STPBuilder(::VC _vc, bool _optimizeDivides) 
@@ -62,6 +88,7 @@ STPBuilder::STPBuilder(::VC _vc, bool _optimizeDivides)
 }
 
 STPBuilder::~STPBuilder() {
+  
 }
 
 ///
@@ -399,9 +426,12 @@ ExprHandle STPBuilder::constructSDivByConstant(ExprHandle expr_n, unsigned width
 }
 
 ::VCExpr STPBuilder::getInitialArray(const Array *root) {
-  if (root->stpInitialArray) {
-    return root->stpInitialArray;
-  } else {
+  
+  assert(root);
+  ::VCExpr array_expr;
+  bool hashed = _arr_hash.lookupArrayExpr(root, array_expr);
+  
+  if (!hashed) {
     // STP uniques arrays by name, so we make sure the name is unique by
     // including the address.
     char buf[32];
@@ -410,24 +440,25 @@ ExprHandle STPBuilder::constructSDivByConstant(ExprHandle expr_n, unsigned width
     memmove(buf + space, buf, addrlen); // moving the address part to the end
     memcpy(buf, root->name.c_str(), space); // filling out the name part
     
-    root->stpInitialArray = buildArray(buf, 32, 8);
-
+    array_expr = buildArray(buf, 32, 8);
+    
     if (root->isConstantArray()) {
       // FIXME: Flush the concrete values into STP. Ideally we would do this
       // using assertions, which is much faster, but we need to fix the caching
       // to work correctly in that case.
       for (unsigned i = 0, e = root->size; i != e; ++i) {
-        ::VCExpr prev = root->stpInitialArray;
-        root->stpInitialArray = 
-          vc_writeExpr(vc, prev,
+	::VCExpr prev = array_expr;
+	array_expr = vc_writeExpr(vc, prev,
                        construct(ConstantExpr::alloc(i, root->getDomain()), 0),
                        construct(root->constantValues[i], 0));
-        vc_DeleteExpr(prev);
+	vc_DeleteExpr(prev);
       }
     }
-
-    return root->stpInitialArray;
+    
+    _arr_hash.hashArrayExpr(root, array_expr);
   }
+  
+  return(array_expr); 
 }
 
 ExprHandle STPBuilder::getInitialRead(const Array *root, unsigned index) {
@@ -437,16 +468,23 @@ ExprHandle STPBuilder::getInitialRead(const Array *root, unsigned index) {
 ::VCExpr STPBuilder::getArrayForUpdate(const Array *root, 
                                        const UpdateNode *un) {
   if (!un) {
-    return getInitialArray(root);
-  } else {
-    // FIXME: This really needs to be non-recursive.
-    if (!un->stpArray)
-      un->stpArray = vc_writeExpr(vc,
-                                  getArrayForUpdate(root, un->next),
-                                  construct(un->index, 0),
-                                  construct(un->value, 0));
-
-    return un->stpArray;
+      return(getInitialArray(root));
+  }
+  else {
+      // FIXME: This really needs to be non-recursive.
+      ::VCExpr un_expr;
+      bool hashed = _arr_hash.lookupUpdateNodeExpr(un, un_expr);
+      
+      if (!hashed) {
+	un_expr = vc_writeExpr(vc,
+                               getArrayForUpdate(root, un->next),
+                               construct(un->index, 0),
+                               construct(un->value, 0));
+	
+	_arr_hash.hashUpdateNodeExpr(un, un_expr);
+      }
+      
+      return(un_expr);
   }
 }
 
@@ -884,3 +922,5 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
     return vc_trueExpr(vc);
   }
 }
+
+
