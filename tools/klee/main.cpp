@@ -950,6 +950,23 @@ static llvm::Module *linkWithUclibc(llvm::Module *mainModule) {
   return 0;
 }
 #else
+static void replaceOrRenameFunction(llvm::Module *module,
+		const char *old_name, const char *new_name)
+{
+  Function *f, *f2;
+  f = module->getFunction(new_name);
+  f2 = module->getFunction(old_name);
+  if (f2) {
+    if (f) {
+      f2->replaceAllUsesWith(f);
+      f2->eraseFromParent();
+    } else {
+      f2->setName(new_name);
+      assert(f2->getName() == new_name);
+    }
+  }
+}
+
 static llvm::Module *linkWithUclibc(llvm::Module *mainModule) {
   Function *f;
   // force import of __uClibc_main
@@ -989,9 +1006,8 @@ static llvm::Module *linkWithUclibc(llvm::Module *mainModule) {
   // versions are present in the module, make sure we don't create a
   // naming conflict.
   for (Module::iterator fi = mainModule->begin(), fe = mainModule->end();
-       fi != fe;) {
+       fi != fe; ++fi) {
     Function *f = fi;
-    ++fi;
     const std::string &name = f->getName();
     if (name[0]=='\01') {
       unsigned size = name.size();
@@ -1013,36 +1029,10 @@ static llvm::Module *linkWithUclibc(llvm::Module *mainModule) {
                                      KLEE_UCLIBC "/lib/libc.a");
   assert(mainModule && "unable to link with uclibc");
 
-  // more sighs, this is horrible but just a temp hack
-  //    f = mainModule->getFunction("__fputc_unlocked");
-  //    if (f) f->setName("fputc_unlocked");
-  //    f = mainModule->getFunction("__fgetc_unlocked");
-  //    if (f) f->setName("fgetc_unlocked");
-  
-  Function *f2;
-  f = mainModule->getFunction("open");
-  f2 = mainModule->getFunction("__libc_open");
-  if (f2) {
-    if (f) {
-      f2->replaceAllUsesWith(f);
-      f2->eraseFromParent();
-    } else {
-      f2->setName("open");
-      assert(f2->getName() == "open");
-    }
-  }
 
-  f = mainModule->getFunction("fcntl");
-  f2 = mainModule->getFunction("__libc_fcntl");
-  if (f2) {
-    if (f) {
-      f2->replaceAllUsesWith(f);
-      f2->eraseFromParent();
-    } else {
-      f2->setName("fcntl");
-      assert(f2->getName() == "fcntl");
-    }
-  }
+  replaceOrRenameFunction(mainModule, "__libc_open", "open");
+  replaceOrRenameFunction(mainModule, "__libc_fcntl", "fcntl");
+
 
   // XXX we need to rearchitect so this can also be used with
   // programs externally linked with uclibc.
