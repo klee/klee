@@ -19,6 +19,7 @@
 #include <stdlib.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <sys/resource.h>
 #include <sys/times.h>
 #include <sys/types.h>
 #include <sys/wait.h>
