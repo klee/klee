@@ -164,16 +164,6 @@ namespace {
 	      cl::desc("Use counterexample caching (default=on)"));
 
   cl::opt<bool>
-  UseQueryPCLog("use-query-pc-log",
-                cl::init(false),
-		cl::desc("Log all queries into queries.pc (default=off)"));
-  
-  cl::opt<bool>
-  UseSTPQueryPCLog("use-stp-query-pc-log",
-                   cl::init(false),
-		   cl::desc("Log all queries sent to STP into queries.pc (default=off)"));
-
-  cl::opt<bool>
   NoExternals("no-externals", 
            cl::desc("Do not allow external function calls (default=off)"));
 
@@ -266,23 +256,59 @@ namespace {
   STPOptimizeDivides("stp-optimize-divides", 
                  cl::desc("Optimize constant divides into add/shift/multiplies before passing to STP (default=on)"),
                  cl::init(true));
+
+
+  /* Using cl::list<> instead of cl::bits<> results in quite a bit of ugliness when it comes to checking
+   * if an option is set. Unfortunately with gcc4.7 cl::bits<> is broken with LLVM2.9 and I doubt everyone
+   * wants to patch their copy of LLVM just for these options.
+   */
+  cl::list<klee::QueryLoggingSolver> queryLoggingOptions("use-query-log",
+		  cl::desc("Log queries to a file. Multiple options can be specified seperate by a comma. By default nothing is logged."),
+		  cl::values(
+					  clEnumValN(klee::ALL_PC,"all:pc","All queries in .pc (KQuery) format"),
+					  clEnumValN(klee::ALL_SMTLIB,"all:smt2","All queries in .smt2 (SMT-LIBv2) format"),
+					  clEnumValN(klee::SOLVER_PC,"solver:pc","All queries reaching the solver in .pc (KQuery) format"),
+					  clEnumValN(klee::SOLVER_SMTLIB,"solver:smt2","All queries reaching the solver in .pc (SMT-LIBv2) format"),
+					  clEnumValEnd
+		             ), cl::CommaSeparated
+  );
+
+
 }
 
 
 namespace klee {
   RNG theRNG;
+
+  //A bit of ugliness so we can use cl::list<> like cl::bits<>, see queryLoggingOptions
+  template <typename T>
+  static bool optionIsSet(cl::list<T> list, T option)
+  {
+	  return std::find(list.begin(), list.end(), option) != list.end();
+  }
+
+
 }
 
 Solver *constructSolverChain(STPSolver *stpSolver,
-                             std::string queryLogPath,
-                             std::string stpQueryLogPath,
+                             std::string querySMT2LogPath,
+                             std::string baseSolverQuerySMT2LogPath,
                              std::string queryPCLogPath,
-                             std::string stpQueryPCLogPath) {
+                             std::string baseSolverQueryPCLogPath) {
   Solver *solver = stpSolver;
 
-  if (UseSTPQueryPCLog)
+  if (optionIsSet(queryLoggingOptions,SOLVER_PC))
+  {
     solver = createPCLoggingSolver(solver, 
-                                   stpQueryLogPath);
+                                   baseSolverQueryPCLogPath);
+    klee_message("Logging queries that reach solver in .pc format to %s",baseSolverQueryPCLogPath.c_str());
+  }
+
+  if (optionIsSet(queryLoggingOptions,SOLVER_SMTLIB))
+  {
+    solver = createSMTLIBLoggingSolver(solver,baseSolverQuerySMT2LogPath);
+    klee_message("Logging queries that reach solver in .smt2 format to %s",baseSolverQuerySMT2LogPath.c_str());
+  }
 
   if (UseFastCexSolver)
     solver = createFastCexSolver(solver);
@@ -299,10 +325,19 @@ Solver *constructSolverChain(STPSolver *stpSolver,
   if (DebugValidateSolver)
     solver = createValidatingSolver(solver, stpSolver);
 
-  if (UseQueryPCLog)
+  if (optionIsSet(queryLoggingOptions,ALL_PC))
+  {
     solver = createPCLoggingSolver(solver, 
                                    queryPCLogPath);
+    klee_message("Logging all queries in .pc format to %s",queryPCLogPath.c_str());
+  }
   
+  if (optionIsSet(queryLoggingOptions,ALL_SMTLIB))
+  {
+    solver = createSMTLIBLoggingSolver(solver,querySMT2LogPath);
+    klee_message("Logging all queries in .smt2 format to %s",querySMT2LogPath.c_str());
+  }
+
   return solver;
 }
 
@@ -332,10 +367,10 @@ Executor::Executor(const InterpreterOptions &opts,
   STPSolver *stpSolver = new STPSolver(UseForkedSTP, STPOptimizeDivides);
   Solver *solver = 
     constructSolverChain(stpSolver,
-                         interpreterHandler->getOutputFilename("queries.qlog"),
-                         interpreterHandler->getOutputFilename("stp-queries.qlog"),
-                         interpreterHandler->getOutputFilename("queries.pc"),
-                         interpreterHandler->getOutputFilename("stp-queries.pc"));
+                         interpreterHandler->getOutputFilename("all-queries.smt2"),
+                         interpreterHandler->getOutputFilename("solver-queries.smt2"),
+                         interpreterHandler->getOutputFilename("all-queries.pc"),
+                         interpreterHandler->getOutputFilename("solver-queries.pc"));
   
   this->solver = new TimingSolver(solver, stpSolver);
 

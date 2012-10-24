@@ -70,6 +70,16 @@ namespace klee {
   class TreeStreamWriter;
   template<class T> class ref;
 
+  ///The different query logging solvers that can switched on/off
+  enum QueryLoggingSolver
+  {
+	  ALL_PC, ///< Log all queries (un-optimised) in .pc (KQuery) format
+	  ALL_SMTLIB, ///< Log all queries (un-optimised)  .smt2 (SMT-LIBv2) format
+	  SOLVER_PC, ///< Log queries passed to solver (optimised) in .pc (KQuery) format
+	  SOLVER_SMTLIB ///< Log queries passed to solver (optimised) in .smt2 (SMT-LIBv2) format
+  };
+
+
   /// \todo Add a context object to keep track of data only live
   /// during an instruction step. Should contain addedStates,
   /// removedStates, and haltExecution, among others.
