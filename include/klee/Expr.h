@@ -341,8 +341,12 @@ public:
     return value.getLimitedValue(Limit);
   }
 
-  /// toString - Return the constant value as a decimal string.
-  void toString(std::string &Res) const;
+  /// toString - Return the constant value as a string
+  /// \param Res specifies the string for the result to be placed in
+  /// \param radix specifies the base (e.g. 2,10,16). The default is base 10
+  void toString(std::string &Res, unsigned radix=10) const;
+
+
  
   int compareContents(const Expr &b) const { 
     const ConstantExpr &cb = static_cast<const ConstantExpr&>(b);
