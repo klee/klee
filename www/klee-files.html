@@ -68,7 +68,27 @@
   <h2>Other Global Files</h2>
 
   <ol>
-    <li><b>queries.pc:</b>  </li>
+    <li><b>all-queries.pc:</b> This file contains all the queries KLEE
+    made during execution in the <a href="KQuery.html">KQuery</a>
+    format. Note these are the queries before any optimisation
+    (e.g. caching, constraint independence) so it is possible that
+    some of the queries logged are never executed by KLEE's underlying
+    solver or are modified before being executed by KLEE's underlying
+    solver. The generation of this file can be enabled by specifying
+    the option <tt>--use-query-log=all:pc</tt> to KLEE.</li>
+    <li><b>all-queries.smt2:</b> This file contains all the queries KLEE made during execution in the <a href="http://www.smtlib.org">SMT-LIBv2</a> 
+    .It contains the same information as <tt>all-queries.pc</tt>. 
+    The generation of this file can be enabled by specifying the option <tt>--use-query-log=all:smt2</tt> to KLEE.</li>
+    <li><b>solver-queries.pc:</b> This file contains all the queries passed to KLEE's underlying solver during execution in the 
+    <a href="KQuery.html">KQuery</a> format. Note these are the
+    queries after all optimisations (e.g. caching, constraint
+    independence) are performed.  The generation of this file can be
+    enabled by specifying the
+    option <tt>--use-query-log=solver:pc</tt> to KLEE.</li>
+    <li><b>solver-queries.smt2:</b> This file contains all the queries passed to KLEE's underlying solver during execution in the 
+    <a href="http://www.smtlib.org">SMT-LIBv2</a> 
+    format. It contains the same information as <tt>solver-queries.pc</tt>. 
+    The generation of this file can be enabled by specifying the option <tt>--use-query-log=solver:smt2</tt> to KLEE.</li>
   </ol>
 
 
@@ -99,6 +119,14 @@
     in <a href="https://sites.google.com/site/stpfastprover/stp-documentation#TOC-The-CVC-language">CVC</a>
     format.  The generation of these files can be enabled via
     the <tt>--write-pcs</tt> flag.  (This is the same information as
+    in the corresponding <tt>.pc</tt> file.)
+    </li>
+    <li>
+      <b>test&lt;N&gt;.smt2:</b> Contains the constraints associated
+    with the given path,
+    in <a href="http://www.smtlib.org/">SMT-LIBv2</a>
+    format.  The generation of these files can be enabled via
+    the <tt>--write-smt2s</tt> flag.  (This is the same information as
     in the corresponding <tt>.pc</tt> file.)
     </li>
   </ol>
