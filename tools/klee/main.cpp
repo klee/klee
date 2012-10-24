@@ -96,6 +96,10 @@ namespace {
             cl::desc("Write .pc files for each test case"));
   
   cl::opt<bool>
+  WriteSMT2s("write-smt2s",
+            cl::desc("Write .smt2 (SMT-LIBv2) files for each test case"));
+
+  cl::opt<bool>
   WriteCov("write-cov", 
            cl::desc("Write coverage information for each test case"));
   
@@ -448,7 +452,7 @@ void KleeHandler::processTestCase(const ExecutionState &state,
    
     if (errorMessage || WritePCs) {
       std::string constraints;
-      m_interpreter->getConstraintLog(state, constraints);
+      m_interpreter->getConstraintLog(state, constraints,Interpreter::KQUERY);
       std::ostream *f = openTestFile("pc", id);
       *f << constraints;
       delete f;
@@ -456,12 +460,20 @@ void KleeHandler::processTestCase(const ExecutionState &state,
 
     if (WriteCVCs) {
       std::string constraints;
-      m_interpreter->getConstraintLog(state, constraints, true);
+      m_interpreter->getConstraintLog(state, constraints, Interpreter::STP);
       std::ostream *f = openTestFile("cvc", id);
       *f << constraints;
       delete f;
     }
     
+    if(WriteSMT2s) {
+    	std::string constraints;
+        m_interpreter->getConstraintLog(state, constraints, Interpreter::SMTLIB2);
+        std::ostream *f = openTestFile("smt2", id);
+        *f << constraints;
+        delete f;
+    }
+
     if (m_symPathWriter) {
       std::vector<unsigned char> symbolicBranches;
       m_symPathWriter->readStream(m_interpreter->getSymbolicPathStreamID(state),

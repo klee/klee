@@ -58,6 +58,13 @@ public:
         CheckDivZero(_CheckDivZero) {}
   };
 
+  enum LogType
+  {
+	  STP, //.CVC (STP's native language)
+	  KQUERY, //.PC files (kQuery native language)
+	  SMTLIB2 //.SMT2 files (SMTLIB version 2 files)
+  };
+
   /// InterpreterOptions - Options varying the runtime behavior during
   /// interpretation.
   struct InterpreterOptions {
@@ -132,7 +139,7 @@ public:
   
   virtual void getConstraintLog(const ExecutionState &state,
                                 std::string &res,
-                                bool asCVC = false) = 0;
+                                LogType logFormat = STP) = 0;
 
   virtual bool getSymbolicSolution(const ExecutionState &state, 
                                    std::vector< 
