@@ -3,8 +3,6 @@ TODO
 
 Build System / Configure / Release Cleanups
 --
- o Rename .bout to .ktest (klee test)
-
  o Rename .pc to .kquery (kleaver query)
 
  o Configure doesn't check for bison / flex, we don't really use these

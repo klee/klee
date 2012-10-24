@@ -66,6 +66,9 @@ void test(int *array, unsigned nelem) {
 
   for (unsigned i = 0; i != nelem; ++i)
     assert(temp1[i] == temp2[i]);
+
+  free(temp1);
+  free(temp2);
 }
 
 int main() {
