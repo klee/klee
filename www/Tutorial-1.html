@@ -59,14 +59,14 @@
 
   KLEE operates on LLVM bitcode.  To run a program with KLEE, you
   first compile it to LLVM bitcode using <tt>llvm-gcc
-  --emit-llvm</tt>.  Assuming our code is stored in <tt>demo.c</tt>,
+  --emit-llvm</tt>.  Assuming our code is stored in <tt>get_sign.c</tt>,
   we run:
 
   <div class="instr">
   llvm-gcc --emit-llvm -c -g get_sign.c
   </div>
 
-  to generate the LLVM bitcode file <tt>demo.o</tt>.
+  to generate the LLVM bitcode file <tt>get_sign.o</tt>.
 
   It is useful to (1) build with <tt>-g</tt> to add debug information
   to the bitcode file, which we use to generate source line level
