@@ -164,7 +164,8 @@
   point to the name of the desired test case:
 
   <pre class="output">
-  $ gcc path-to-klee-root/Release+Asserts/lib/libkleeRuntest.so get_sign.c
+  $ export LD_LIBRARY_PATH=path-to-klee-root/Release+Asserts/lib/:$LD_LIBRARY_PATH
+  $ gcc -L path-to-klee-root/Release+Asserts/lib/ get_sign.c -lkleeRuntest
   $ KTEST_FILE=klee-last/test000001.ktest ./a.out 
   $ echo $?
   1
