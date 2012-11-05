@@ -494,7 +494,8 @@ unsigned Array::computeHash() {
   unsigned res = 0;
   for (unsigned i = 0, e = name.size(); i != e; ++i)
     res = (res * Expr::MAGIC_HASH_CONSTANT) + name[i];
-  return res; 
+  hashValue = res;
+  return hashValue; 
 }
 
 /***/
