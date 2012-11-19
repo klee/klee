@@ -107,7 +107,8 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b) {
         break;
       }
 
-      case Intrinsic::uadd_with_overflow: {
+      case Intrinsic::uadd_with_overflow:
+      case Intrinsic::umul_with_overflow: {
         IRBuilder<> builder(ii->getParent(), ii);
 
 #if LLVM_VERSION_CODE < LLVM_VERSION(2, 8)
@@ -118,7 +119,12 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b) {
         Value *op2 = ii->getArgOperand(1);
 #endif
         
-        Value *result = builder.CreateAdd(op1, op2);
+        Value *result = 0;
+        if (ii->getIntrinsicID() == Intrinsic::uadd_with_overflow)
+          result = builder.CreateAdd(op1, op2);
+        else
+          result = builder.CreateMul(op1, op2);
+
         Value *overflow = builder.CreateICmpULT(result, op1);
         
         Value *resultStruct =
