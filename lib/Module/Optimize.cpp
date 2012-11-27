@@ -27,7 +27,7 @@
 #else
 #include "llvm/Support/DynamicLibrary.h"
 #endif
-#if LLVM_VERSION_CODE < LLVM_VERSION(3, 1)
+#if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
 #include "llvm/Target/TargetData.h"
 #else
 #include "llvm/DataLayout.h"
@@ -182,7 +182,7 @@ void Optimize(Module* M) {
   if (VerifyEach)
     Passes.add(createVerifierPass());
 
-#if LLVM_VERSION_CODE < LLVM_VERSION(3, 1)
+#if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
   // Add an appropriate TargetData instance for this module...
   addPass(Passes, new TargetData(M));
 #else

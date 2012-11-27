@@ -22,7 +22,7 @@ namespace llvm {
   class Function;
   class Instruction;
   class Module;
-#if LLVM_VERSION_CODE < LLVM_VERSION(3, 1)
+#if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
   class TargetData;
 #else
   class DataLayout;
@@ -78,7 +78,7 @@ class IntrinsicCleanerPass : public llvm::ModulePass {
 
   bool runOnBasicBlock(llvm::BasicBlock &b);
 public:
-#if LLVM_VERSION_CODE < LLVM_VERSION(3, 1)
+#if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
   IntrinsicCleanerPass(const llvm::TargetData &TD,
 #else
   IntrinsicCleanerPass(const llvm::DataLayout &TD,
