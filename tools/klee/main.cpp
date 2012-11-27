@@ -917,6 +917,10 @@ static void interrupt_handle() {
   interrupted = true;
 }
 
+static void interrupt_handle_watchdog() {
+  // just wait for the child to finish
+}
+
 // This is a temporary hack. If the running process has access to
 // externals then it can disable interrupts, which screws up the
 // normal "nice" watchdog termination process. We try to request the
@@ -1111,6 +1115,7 @@ int main(int argc, char **argv, char **envp) {
     } else if (pid) {
       fprintf(stderr, "KLEE: WATCHDOG: watching %d\n", pid);
       fflush(stderr);
+      sys::SetInterruptFunction(interrupt_handle_watchdog);
 
       double nextStep = util::getWallTime() + MaxTime*1.1;
       int level = 0;
