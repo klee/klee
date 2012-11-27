@@ -1,7 +1,7 @@
 // RUN: rm -f %t4.out %t4.err %t4.log
 // RUN: %llvmgcc %s -emit-llvm -O2 -c -o %t1.bc
 // RUN: llvm-as -f %p/../Feature/_utils._ll -o %t2.bc
-// RUN: llvm-ld -disable-opt %t1.bc %t2.bc -o %t3
+// RUN: llvm-link %t1.bc %t2.bc -o %t3.bc
 // RUN: %klee %t3.bc
 
 #include <assert.h>
