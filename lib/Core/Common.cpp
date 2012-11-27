@@ -51,7 +51,7 @@ static void klee_vmessage(const char *pfx, bool onlyToFile, const char *msg,
     va_end(ap2);
   }
 
-  klee_vfmessage(pfx ? klee_message_file : klee_warning_file, pfx, msg, ap);
+  klee_vfmessage(pfx ? klee_warning_file : klee_message_file, pfx, msg, ap);
 }
 
 
@@ -104,7 +104,7 @@ void klee::klee_warning_once(const void *id, const char *msg, ...) {
     
     va_list ap;
     va_start(ap, msg);
-    klee_vmessage("WARNING", false, msg, ap);
+    klee_vmessage("WARNING ONCE", false, msg, ap);
     va_end(ap);
   }
 }
