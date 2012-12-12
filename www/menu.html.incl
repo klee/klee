@@ -16,7 +16,7 @@
   <div class="submenu">
     <label>Quick Links</label>
     <a href="klee-dev.html">klee-dev (mailing list)</a>
-    <a href="http://llvm.org/bugs/">Bug Reports</a>
+    <a href="GetInvolved.html#BugReports">Bug Reports</a>
     <a href="http://llvm.org/">LLVM Home</a>
   </div>
 
