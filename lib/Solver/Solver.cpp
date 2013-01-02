@@ -273,6 +273,7 @@ public:
                             const std::vector<const Array*> &objects,
                             std::vector< std::vector<unsigned char> > &values,
                             bool &hasSolution);
+  bool hasTimeoutOccurred();
 };
 
 bool ValidatingSolver::computeTruth(const Query& query,
@@ -370,6 +371,10 @@ ValidatingSolver::computeInitialValues(const Query& query,
   return true;
 }
 
+bool ValidatingSolver::hasTimeoutOccurred() {
+    return solver->impl->hasTimeoutOccurred();
+}
+
 Solver *klee::createValidatingSolver(Solver *s, Solver *oracle) {
   return new Solver(new ValidatingSolver(s, oracle));
 }
@@ -403,6 +408,10 @@ public:
     ++stats::queryCounterexamples;
     return false; 
   }
+  bool hasTimeoutOccurred() {
+      return false;
+  }
+  
 };
 
 Solver *klee::createDummySolver() {
@@ -419,6 +428,7 @@ private:
   STPBuilder *builder;
   double timeout;
   bool useForkedSTP;
+  bool timeoutOccurred;
 
 public:
   STPSolverImpl(STPSolver *_solver, bool _useForkedSTP, bool _optimizeDivides = true);
@@ -433,6 +443,7 @@ public:
                             const std::vector<const Array*> &objects,
                             std::vector< std::vector<unsigned char> > &values,
                             bool &hasSolution);
+  bool hasTimeoutOccurred();
 };
 
 static unsigned char *shared_memory_ptr;
@@ -449,7 +460,8 @@ STPSolverImpl::STPSolverImpl(STPSolver *_solver, bool _useForkedSTP, bool _optim
     vc(vc_createValidityChecker()),
     builder(new STPBuilder(vc, _optimizeDivides)),
     timeout(0.0),
-    useForkedSTP(_useForkedSTP)
+    useForkedSTP(_useForkedSTP),
+    timeoutOccurred(false)
 {
   assert(vc && "unable to create validity checker");
   assert(builder && "unable to create STPBuilder");
@@ -577,14 +589,14 @@ static void stpTimeoutHandler(int x) {
   _exit(52);
 }
 
-static bool runAndGetCexForked(::VC vc, 
-                               STPBuilder *builder,
-                               ::VCExpr q,
-                               const std::vector<const Array*> &objects,
-                               std::vector< std::vector<unsigned char> >
-                                 &values,
-                               bool &hasSolution,
-                               double timeout) {
+static SolverRunStatus runAndGetCexForked(::VC vc, 
+                                          STPBuilder *builder,
+                                          ::VCExpr q,
+                                          const std::vector<const Array*> &objects,
+                                          std::vector< std::vector<unsigned char> >
+                                          &values,
+                                          bool &hasSolution,
+                                          double timeout) {
   unsigned char *pos = shared_memory_ptr;
   unsigned sum = 0;
   for (std::vector<const Array*>::const_iterator
@@ -597,11 +609,11 @@ static bool runAndGetCexForked(::VC vc,
   int pid = fork();
   if (pid==-1) {
     fprintf(stderr, "error: fork failed (for STP)");
-    return false;
+    return SOLVER_RUN_STATUS_FORK_FAILED;
   }
 
   if (pid == 0) {
-    if (timeout) {
+    if (timeout) {      
       ::alarm(0); /* Turn off alarm so we can safely set signal handler */
       ::signal(SIGALRM, stpTimeoutHandler);
       ::alarm(std::max(1, (int)timeout));
@@ -629,7 +641,7 @@ static bool runAndGetCexForked(::VC vc,
     
     if (res < 0) {
       fprintf(stderr, "error: waitpid() for STP failed");
-      return false;
+      return SOLVER_RUN_STATUS_WAITPID_FAILED;
     }
     
     // From timed_run.py: It appears that linux at least will on
@@ -637,7 +649,7 @@ static bool runAndGetCexForked(::VC vc,
     // signal, so test signal first.
     if (WIFSIGNALED(status) || !WIFEXITED(status)) {
       fprintf(stderr, "error: STP did not return successfully");
-      return false;
+      return SOLVER_RUN_STATUS_INTERRUPTED;
     }
 
     int exitcode = WEXITSTATUS(status);
@@ -647,10 +659,11 @@ static bool runAndGetCexForked(::VC vc,
       hasSolution = false;
     } else if (exitcode==52) {
       fprintf(stderr, "error: STP timed out");
-      return false;
+      // mark that a timeout occurred
+      return SOLVER_RUN_STATUS_TIMEOUT;
     } else {
       fprintf(stderr, "error: STP did not return a recognized code");
-      return false;
+      return SOLVER_RUN_STATUS_UNEXPECTED_EXIT_CODE;
     }
     
     if (hasSolution) {
@@ -665,7 +678,7 @@ static bool runAndGetCexForked(::VC vc,
       }
     }
 
-    return true;
+    return SOLVER_RUN_STATUS_SUCCESS;
   }
 }
 
@@ -676,6 +689,8 @@ STPSolverImpl::computeInitialValues(const Query &query,
                                     std::vector< std::vector<unsigned char> > 
                                       &values,
                                     bool &hasSolution) {
+  timeoutOccurred = false;
+    
   TimerStatIncrementer t(stats::queryTime);
 
   vc_push(vc);
@@ -698,8 +713,10 @@ STPSolverImpl::computeInitialValues(const Query &query,
 
   bool success;
   if (useForkedSTP) {
-    success = runAndGetCexForked(vc, builder, stp_e, objects, values, 
-                                 hasSolution, timeout);
+    SolverRunStatus runStatus = runAndGetCexForked(vc, builder, stp_e, objects, values, 
+                                                   hasSolution, timeout);
+    success = (SOLVER_RUN_STATUS_SUCCESS == runStatus);
+    timeoutOccurred = (SOLVER_RUN_STATUS_TIMEOUT == runStatus);
   } else {
     runAndGetCex(vc, builder, stp_e, objects, values, hasSolution);
     success = true;
@@ -715,4 +732,8 @@ STPSolverImpl::computeInitialValues(const Query &query,
   vc_pop(vc);
   
   return success;
+}
+
+bool STPSolverImpl::hasTimeoutOccurred() {
+    return timeoutOccurred;
 }

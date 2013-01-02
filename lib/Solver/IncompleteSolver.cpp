@@ -134,3 +134,7 @@ StagedSolverImpl::computeInitialValues(const Query& query,
   return secondary->impl->computeInitialValues(query, objects, values,
                                                hasSolution);
 }
+
+bool StagedSolverImpl::hasTimeoutOccurred() {
+  return secondary->impl->hasTimeoutOccurred();
+}

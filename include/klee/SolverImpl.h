@@ -55,7 +55,10 @@ namespace klee {
                                         &objects,
                                       std::vector< std::vector<unsigned char> > 
                                         &values,
-                                      bool &hasSolution) = 0;  
+                                      bool &hasSolution) = 0;
+    
+    /// haveTimeOutOccurred - retrieve timeout status for the last query.
+    virtual bool hasTimeoutOccurred() = 0;
 };
 
 }

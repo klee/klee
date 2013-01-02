@@ -93,9 +93,20 @@ namespace {
   UseFastCexSolver("use-fast-cex-solver",
 		   cl::init(false));
   
+  // FIXME: Command line argument duplicated in Executor.cpp of Klee. Different
+  // output file name used.
   cl::opt<bool>
   UseSTPQueryPCLog("use-stp-query-pc-log",
                    cl::init(false));
+   
+  // FIXME: Command line argument duplicated in Executor.cpp of Klee
+  cl::opt<unsigned int>
+  MinQueryTimeToLog("min-query-time-to-log",
+                    cl::init(0),
+                    cl::value_desc("milliseconds"),
+                    cl::desc("Set time threshold (in ms) for queries logged in files. "
+                             "Only queries longer than threshold will be logged. (default=0)"));
+  
 }
 
 static std::string escapedString(const char *start, unsigned length) {
@@ -186,7 +197,7 @@ static bool EvaluateInputAST(const char *Filename,
   Solver *S, *STP = S = 
     UseDummySolver ? createDummySolver() : new STPSolver(true);
   if (UseSTPQueryPCLog)
-    S = createPCLoggingSolver(S, "stp-queries.pc");
+    S = createPCLoggingSolver(S, "stp-queries.pc", MinQueryTimeToLog);
   if (UseFastCexSolver)
     S = createFastCexSolver(S);
   S = createCexCachingSolver(S);

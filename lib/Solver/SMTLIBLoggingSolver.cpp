@@ -158,6 +158,11 @@ class SMTLIBLoggingSolver : public SolverImpl
 			os << "\n";
 			return success;
 		}
+                
+                bool hasTimeoutOccurred() 
+                {
+                        return solver->impl->hasTimeoutOccurred();
+                }
 };
 
 

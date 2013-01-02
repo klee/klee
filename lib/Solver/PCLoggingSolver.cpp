@@ -19,7 +19,8 @@
 #include "llvm/Support/CommandLine.h"
 
 #include <fstream>
-
+#include <sstream>
+#include <iostream>
 using namespace klee;
 using namespace llvm;
 using namespace klee::util;
@@ -29,9 +30,17 @@ using namespace klee::util;
 class PCLoggingSolver : public SolverImpl {
   Solver *solver;
   std::ofstream os;
+  std::ostringstream logBuffer; // buffer to store logs before flushing to 
+                                // file
   ExprPPrinter *printer;
   unsigned queryCount;
+  int minQueryTimeToLog; // we log to file only those queries
+                         // which take longer than specified time (ms);
+                         // if this param is negative, log only those queries
+                         // on which solver's timed out
+  
   double startTime;
+  double lastQueryTime;
 
   void startQuery(const Query& query, const char *typeName,
                   const ref<Expr> *evalExprsBegin = 0,
@@ -40,30 +49,62 @@ class PCLoggingSolver : public SolverImpl {
                   const Array * const* evalArraysEnd = 0) {
     Statistic *S = theStatisticManager->getStatisticByName("Instructions");
     uint64_t instructions = S ? S->getValue() : 0;
-    os << "# Query " << queryCount++ << " -- "
-       << "Type: " << typeName << ", "
-       << "Instructions: " << instructions << "\n";
-    printer->printQuery(os, query.constraints, query.expr,
+
+    logBuffer << "# Query " << queryCount++ << " -- "
+              << "Type: " << typeName << ", "
+              << "Instructions: " << instructions << "\n";
+    printer->printQuery(logBuffer, query.constraints, query.expr,
                         evalExprsBegin, evalExprsEnd,
                         evalArraysBegin, evalArraysEnd);
-    
+
     startTime = getWallTime();
   }
 
   void finishQuery(bool success) {
-    double delta = getWallTime() - startTime;
-    os << "#   " << (success ? "OK" : "FAIL") << " -- "
-       << "Elapsed: " << delta << "\n";
+    lastQueryTime = getWallTime() - startTime;
+    logBuffer << "#   " << (success ? "OK" : "FAIL") << " -- "
+              << "Elapsed: " << lastQueryTime << "\n";
+    
+    if (true == solver->impl->hasTimeoutOccurred()) {
+        logBuffer << "\nSolver TIMEOUT detected\n";
+    }
+  }
+  
+  /// flushBuffer - flushes the temporary logs buffer. Depending on threshold
+  /// settings, contents of the buffer are either discarded or written to a file.  
+  void flushBuffer(void) {           
+      logBuffer.flush();            
+
+      if ((0 == minQueryTimeToLog) ||
+          (static_cast<int>(lastQueryTime * 1000) > minQueryTimeToLog)) {
+          // we either do not limit logging queries or the query time
+          // is larger than threshold (in ms)
+          
+          if ((minQueryTimeToLog >= 0) || 
+              (true == (solver->impl->hasTimeoutOccurred()))) {
+              // we do additional check here to log only timeouts in case
+              // user specified negative value for minQueryTimeToLog param
+              os << logBuffer.str();
+          }                    
+      }
+      
+      // prepare the buffer for reuse
+      logBuffer.clear();
+      logBuffer.str("");
   }
   
 public:
-  PCLoggingSolver(Solver *_solver, std::string path) 
+  PCLoggingSolver(Solver *_solver, std::string path, int queryTimeToLog) 
   : solver(_solver),
     os(path.c_str(), std::ios::trunc),
-    printer(ExprPPrinter::create(os)),
-    queryCount(0) {
+    logBuffer(""),
+    printer(ExprPPrinter::create(logBuffer)),
+    queryCount(0),    
+    minQueryTimeToLog(queryTimeToLog),
+    startTime(0.0f),
+    lastQueryTime(0.0f) {
   }                                                      
-  ~PCLoggingSolver() {
+  ~PCLoggingSolver() {    
     delete printer;
     delete solver;
   }
@@ -73,8 +114,11 @@ public:
     bool success = solver->impl->computeTruth(query, isValid);
     finishQuery(success);
     if (success)
-      os << "#   Is Valid: " << (isValid ? "true" : "false") << "\n";
-    os << "\n";
+      logBuffer << "#   Is Valid: " << (isValid ? "true" : "false") << "\n";
+    logBuffer << "\n";
+    
+    flushBuffer();
+    
     return success;
   }
 
@@ -83,8 +127,11 @@ public:
     bool success = solver->impl->computeValidity(query, result);
     finishQuery(success);
     if (success)
-      os << "#   Validity: " << result << "\n";
-    os << "\n";
+      logBuffer << "#   Validity: " << result << "\n";
+    logBuffer << "\n";
+    
+    flushBuffer();
+    
     return success;
   }
 
@@ -94,8 +141,11 @@ public:
     bool success = solver->impl->computeValue(query, result);
     finishQuery(success);
     if (success)
-      os << "#   Result: " << result << "\n";
-    os << "\n";
+      logBuffer << "#   Result: " << result << "\n";
+    logBuffer << "\n";
+    
+    flushBuffer();
+    
     return success;
   }
 
@@ -115,7 +165,7 @@ public:
                                                       values, hasSolution);
     finishQuery(success);
     if (success) {
-      os << "#   Solvable: " << (hasSolution ? "true" : "false") << "\n";
+      logBuffer << "#   Solvable: " << (hasSolution ? "true" : "false") << "\n";
       if (hasSolution) {
         std::vector< std::vector<unsigned char> >::iterator
           values_it = values.begin();
@@ -123,23 +173,31 @@ public:
                e = objects.end(); i != e; ++i, ++values_it) {
           const Array *array = *i;
           std::vector<unsigned char> &data = *values_it;
-          os << "#     " << array->name << " = [";
+          logBuffer << "#     " << array->name << " = [";
           for (unsigned j = 0; j < array->size; j++) {
-            os << (int) data[j];
+            logBuffer << (int) data[j];
             if (j+1 < array->size)
-              os << ",";
+              logBuffer << ",";
           }
-          os << "]\n";
+          logBuffer << "]\n";
         }
       }
     }
-    os << "\n";
+    logBuffer << "\n";
+    
+    flushBuffer();
+    
     return success;
+  }
+  
+  bool hasTimeoutOccurred() {
+    return solver->impl->hasTimeoutOccurred();
   }
 };
 
 ///
 
-Solver *klee::createPCLoggingSolver(Solver *_solver, std::string path) {
-  return new Solver(new PCLoggingSolver(_solver, path));
+Solver *klee::createPCLoggingSolver(Solver *_solver, std::string path,
+                                    int minQueryTimeToLog) {
+  return new Solver(new PCLoggingSolver(_solver, path, minQueryTimeToLog));
 }

@@ -284,6 +284,7 @@ public:
     return solver->impl->computeInitialValues(query, objects, values,
                                               hasSolution);
   }
+  bool hasTimeoutOccurred();
 };
   
 bool IndependentSolver::computeValidity(const Query& query,
@@ -311,6 +312,10 @@ bool IndependentSolver::computeValue(const Query& query, ref<Expr> &result) {
     getIndependentConstraints(query, required);
   ConstraintManager tmp(required);
   return solver->impl->computeValue(Query(tmp, query.expr), result);
+}
+
+bool IndependentSolver::hasTimeoutOccurred() {
+  return solver->impl->hasTimeoutOccurred();
 }
 
 Solver *klee::createIndependentSolver(Solver *s) {
