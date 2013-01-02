@@ -82,7 +82,7 @@ public:
     return solver->impl->computeInitialValues(query, objects, values, 
                                               hasSolution);
   }
-  bool hasTimeoutOccurred();
+  SolverRunStatus getOperationStatusCode();
 };
 
 /** @returns the canonical version of the given query.  The reference
@@ -235,8 +235,8 @@ bool CachingSolver::computeTruth(const Query& query,
   return true;
 }
 
-bool CachingSolver::hasTimeoutOccurred() {
-  return solver->impl->hasTimeoutOccurred();
+SolverImpl::SolverRunStatus CachingSolver::getOperationStatusCode() {
+  return solver->impl->getOperationStatusCode();
 }
 
 ///

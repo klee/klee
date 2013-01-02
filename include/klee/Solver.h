@@ -226,12 +226,6 @@ namespace klee {
   /// fails.
   Solver *createDummySolver();
   
-  enum SolverRunStatus { SOLVER_RUN_STATUS_SUCCESS, 
-                         SOLVER_RUN_STATUS_TIMEOUT,
-                         SOLVER_RUN_STATUS_FORK_FAILED,
-                         SOLVER_RUN_STATUS_INTERRUPTED,
-                         SOLVER_RUN_STATUS_UNEXPECTED_EXIT_CODE,
-                         SOLVER_RUN_STATUS_WAITPID_FAILED };
 }
 
 #endif

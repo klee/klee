@@ -82,7 +82,7 @@ public:
                             const std::vector<const Array*> &objects,
                             std::vector< std::vector<unsigned char> > &values,
                             bool &hasSolution);
-  bool hasTimeoutOccurred();
+  SolverRunStatus getOperationStatusCode();
 };
 
 ///
@@ -340,8 +340,8 @@ CexCachingSolver::computeInitialValues(const Query& query,
   return true;
 }
 
-bool CexCachingSolver::hasTimeoutOccurred() {
-  return solver->impl->hasTimeoutOccurred();
+SolverImpl::SolverRunStatus CexCachingSolver::getOperationStatusCode() {
+  return solver->impl->getOperationStatusCode();
 }
 
 ///

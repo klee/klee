@@ -101,7 +101,7 @@ public:
                             const std::vector<const Array*> &objects,
                             std::vector< std::vector<unsigned char> > &values,
                             bool &hasSolution);
-  bool hasTimeoutOccurred();
+  SolverRunStatus getOperationStatusCode();
 };
 
 }

@@ -39,31 +39,7 @@ using namespace klee;
 
 /***/
 
-const char *Solver::validity_to_str(Validity v) {
-  switch (v) {
-  default:    return "Unknown";
-  case True:  return "True";
-  case False: return "False";
-  }
-}
-
-Solver::~Solver() { 
-  delete impl; 
-}
-
 SolverImpl::~SolverImpl() {
-}
-
-bool Solver::evaluate(const Query& query, Validity &result) {
-  assert(query.expr->getWidth() == Expr::Bool && "Invalid expression type!");
-
-  // Maintain invariants implementations expect.
-  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(query.expr)) {
-    result = CE->isTrue() ? True : False;
-    return true;
-  }
-
-  return impl->computeValidity(query, result);
 }
 
 bool SolverImpl::computeValidity(const Query& query, Solver::Validity &result) {
@@ -78,6 +54,55 @@ bool SolverImpl::computeValidity(const Query& query, Solver::Validity &result) {
     result = isFalse ? Solver::False : Solver::Unknown;
   }
   return true;
+}
+
+const char* SolverImpl::getOperationStatusString(SolverRunStatus statusCode)
+{
+    switch (statusCode)
+    {
+        case SOLVER_RUN_STATUS_SUCCESS_SOLVABLE:
+            return "OPERATION SUCCESSFUL, QUERY IS SOLVABLE";
+        case SOLVER_RUN_STATUS_SUCCESS_UNSOLVABLE:
+            return "OPERATION SUCCESSFUL, QUERY IS UNSOLVABLE";
+        case SOLVER_RUN_STATUS_FAILURE:
+            return "OPERATION FAILED";
+        case SOLVER_RUN_STATUS_TIMEOUT:
+            return "SOLVER TIMEOUT";
+        case SOLVER_RUN_STATUS_FORK_FAILED:
+            return "FORK FAILED";
+        case SOLVER_RUN_STATUS_INTERRUPTED:
+            return "SOLVER PROCESS INTERRUPTED";
+        case SOLVER_RUN_STATUS_UNEXPECTED_EXIT_CODE:
+            return "UNEXPECTED SOLVER PROCESS EXIT CODE";
+        case SOLVER_RUN_STATUS_WAITPID_FAILED:
+            return "WAITPID FAILED FOR SOLVER PROCESS";
+        default:
+            return "UNRECOGNIZED OPERATION STATUS";        
+    }    
+}
+
+const char *Solver::validity_to_str(Validity v) {
+  switch (v) {
+  default:    return "Unknown";
+  case True:  return "True";
+  case False: return "False";
+  }
+}
+
+Solver::~Solver() { 
+  delete impl; 
+}
+
+bool Solver::evaluate(const Query& query, Validity &result) {
+  assert(query.expr->getWidth() == Expr::Bool && "Invalid expression type!");
+
+  // Maintain invariants implementations expect.
+  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(query.expr)) {
+    result = CE->isTrue() ? True : False;
+    return true;
+  }
+
+  return impl->computeValidity(query, result);
 }
 
 bool Solver::mustBeTrue(const Query& query, bool &result) {
@@ -273,7 +298,7 @@ public:
                             const std::vector<const Array*> &objects,
                             std::vector< std::vector<unsigned char> > &values,
                             bool &hasSolution);
-  bool hasTimeoutOccurred();
+  SolverRunStatus getOperationStatusCode();
 };
 
 bool ValidatingSolver::computeTruth(const Query& query,
@@ -371,8 +396,8 @@ ValidatingSolver::computeInitialValues(const Query& query,
   return true;
 }
 
-bool ValidatingSolver::hasTimeoutOccurred() {
-    return solver->impl->hasTimeoutOccurred();
+SolverImpl::SolverRunStatus ValidatingSolver::getOperationStatusCode() {
+    return solver->impl->getOperationStatusCode();
 }
 
 Solver *klee::createValidatingSolver(Solver *s, Solver *oracle) {
@@ -408,8 +433,8 @@ public:
     ++stats::queryCounterexamples;
     return false; 
   }
-  bool hasTimeoutOccurred() {
-      return false;
+  SolverRunStatus getOperationStatusCode() {
+      return SOLVER_RUN_STATUS_FAILURE;
   }
   
 };
@@ -428,7 +453,7 @@ private:
   STPBuilder *builder;
   double timeout;
   bool useForkedSTP;
-  bool timeoutOccurred;
+  SolverRunStatus runStatusCode;
 
 public:
   STPSolverImpl(STPSolver *_solver, bool _useForkedSTP, bool _optimizeDivides = true);
@@ -443,7 +468,7 @@ public:
                             const std::vector<const Array*> &objects,
                             std::vector< std::vector<unsigned char> > &values,
                             bool &hasSolution);
-  bool hasTimeoutOccurred();
+  SolverRunStatus getOperationStatusCode();
 };
 
 static unsigned char *shared_memory_ptr;
@@ -461,7 +486,7 @@ STPSolverImpl::STPSolverImpl(STPSolver *_solver, bool _useForkedSTP, bool _optim
     builder(new STPBuilder(vc, _optimizeDivides)),
     timeout(0.0),
     useForkedSTP(_useForkedSTP),
-    timeoutOccurred(false)
+    runStatusCode(SOLVER_RUN_STATUS_FAILURE)
 {
   assert(vc && "unable to create validity checker");
   assert(builder && "unable to create STPBuilder");
@@ -558,10 +583,10 @@ bool STPSolverImpl::computeValue(const Query& query,
   return true;
 }
 
-static void runAndGetCex(::VC vc, STPBuilder *builder, ::VCExpr q,
-                   const std::vector<const Array*> &objects,
-                   std::vector< std::vector<unsigned char> > &values,
-                   bool &hasSolution) {
+static SolverImpl::SolverRunStatus runAndGetCex(::VC vc, STPBuilder *builder, ::VCExpr q,
+                                                const std::vector<const Array*> &objects,
+                                                std::vector< std::vector<unsigned char> > &values,
+                                                bool &hasSolution) {
   // XXX I want to be able to timeout here, safely
   hasSolution = !vc_query(vc, q);
 
@@ -583,20 +608,27 @@ static void runAndGetCex(::VC vc, STPBuilder *builder, ::VCExpr q,
       values.push_back(data);
     }
   }
+  
+  if (true == hasSolution) {
+    return SolverImpl::SOLVER_RUN_STATUS_SUCCESS_SOLVABLE;
+  }
+  else {
+    return SolverImpl::SOLVER_RUN_STATUS_SUCCESS_UNSOLVABLE;  
+  }
 }
 
 static void stpTimeoutHandler(int x) {
   _exit(52);
 }
 
-static SolverRunStatus runAndGetCexForked(::VC vc, 
-                                          STPBuilder *builder,
-                                          ::VCExpr q,
-                                          const std::vector<const Array*> &objects,
-                                          std::vector< std::vector<unsigned char> >
-                                          &values,
-                                          bool &hasSolution,
-                                          double timeout) {
+static SolverImpl::SolverRunStatus runAndGetCexForked(::VC vc, 
+                                                      STPBuilder *builder,
+                                                      ::VCExpr q,
+                                                      const std::vector<const Array*> &objects,
+                                                      std::vector< std::vector<unsigned char> >
+                                                      &values,
+                                                      bool &hasSolution,
+                                                      double timeout) {
   unsigned char *pos = shared_memory_ptr;
   unsigned sum = 0;
   for (std::vector<const Array*>::const_iterator
@@ -609,7 +641,7 @@ static SolverRunStatus runAndGetCexForked(::VC vc,
   int pid = fork();
   if (pid==-1) {
     fprintf(stderr, "error: fork failed (for STP)");
-    return SOLVER_RUN_STATUS_FORK_FAILED;
+    return SolverImpl::SOLVER_RUN_STATUS_FORK_FAILED;
   }
 
   if (pid == 0) {
@@ -641,7 +673,7 @@ static SolverRunStatus runAndGetCexForked(::VC vc,
     
     if (res < 0) {
       fprintf(stderr, "error: waitpid() for STP failed");
-      return SOLVER_RUN_STATUS_WAITPID_FAILED;
+      return SolverImpl::SOLVER_RUN_STATUS_WAITPID_FAILED;
     }
     
     // From timed_run.py: It appears that linux at least will on
@@ -649,7 +681,7 @@ static SolverRunStatus runAndGetCexForked(::VC vc,
     // signal, so test signal first.
     if (WIFSIGNALED(status) || !WIFEXITED(status)) {
       fprintf(stderr, "error: STP did not return successfully");
-      return SOLVER_RUN_STATUS_INTERRUPTED;
+      return SolverImpl::SOLVER_RUN_STATUS_INTERRUPTED;
     }
 
     int exitcode = WEXITSTATUS(status);
@@ -660,10 +692,10 @@ static SolverRunStatus runAndGetCexForked(::VC vc,
     } else if (exitcode==52) {
       fprintf(stderr, "error: STP timed out");
       // mark that a timeout occurred
-      return SOLVER_RUN_STATUS_TIMEOUT;
+      return SolverImpl::SOLVER_RUN_STATUS_TIMEOUT;
     } else {
       fprintf(stderr, "error: STP did not return a recognized code");
-      return SOLVER_RUN_STATUS_UNEXPECTED_EXIT_CODE;
+      return SolverImpl::SOLVER_RUN_STATUS_UNEXPECTED_EXIT_CODE;
     }
     
     if (hasSolution) {
@@ -677,11 +709,16 @@ static SolverRunStatus runAndGetCexForked(::VC vc,
         pos += array->size;
       }
     }
-
-    return SOLVER_RUN_STATUS_SUCCESS;
+    
+    if (true == hasSolution) {
+      return SolverImpl::SOLVER_RUN_STATUS_SUCCESS_SOLVABLE;
+    }
+    else {        
+      return SolverImpl::SOLVER_RUN_STATUS_SUCCESS_UNSOLVABLE;
+    }
   }
 }
-
+#include <iostream>
 bool
 STPSolverImpl::computeInitialValues(const Query &query,
                                     const std::vector<const Array*> 
@@ -689,7 +726,7 @@ STPSolverImpl::computeInitialValues(const Query &query,
                                     std::vector< std::vector<unsigned char> > 
                                       &values,
                                     bool &hasSolution) {
-  timeoutOccurred = false;
+  runStatusCode =  SOLVER_RUN_STATUS_FAILURE; 
     
   TimerStatIncrementer t(stats::queryTime);
 
@@ -713,12 +750,12 @@ STPSolverImpl::computeInitialValues(const Query &query,
 
   bool success;
   if (useForkedSTP) {
-    SolverRunStatus runStatus = runAndGetCexForked(vc, builder, stp_e, objects, values, 
-                                                   hasSolution, timeout);
-    success = (SOLVER_RUN_STATUS_SUCCESS == runStatus);
-    timeoutOccurred = (SOLVER_RUN_STATUS_TIMEOUT == runStatus);
+    runStatusCode = runAndGetCexForked(vc, builder, stp_e, objects, values, 
+                                       hasSolution, timeout);
+    success = ((SOLVER_RUN_STATUS_SUCCESS_SOLVABLE == runStatusCode) ||
+               (SOLVER_RUN_STATUS_SUCCESS_UNSOLVABLE == runStatusCode));    
   } else {
-    runAndGetCex(vc, builder, stp_e, objects, values, hasSolution);
+    runStatusCode = runAndGetCex(vc, builder, stp_e, objects, values, hasSolution);    
     success = true;
   }
   
@@ -734,6 +771,6 @@ STPSolverImpl::computeInitialValues(const Query &query,
   return success;
 }
 
-bool STPSolverImpl::hasTimeoutOccurred() {
-    return timeoutOccurred;
+SolverImpl::SolverRunStatus STPSolverImpl::getOperationStatusCode() {
+   return runStatusCode;
 }

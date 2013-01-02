@@ -135,6 +135,6 @@ StagedSolverImpl::computeInitialValues(const Query& query,
                                                hasSolution);
 }
 
-bool StagedSolverImpl::hasTimeoutOccurred() {
-  return secondary->impl->hasTimeoutOccurred();
+SolverImpl::SolverRunStatus StagedSolverImpl::getOperationStatusCode() {
+  return secondary->impl->getOperationStatusCode();
 }
