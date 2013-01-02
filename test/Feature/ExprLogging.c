@@ -6,8 +6,8 @@
 // RUN: %kleaver -print-ast klee-last/solver-queries.pc > %t3.log
 // RUN: %kleaver -print-ast %t3.log > %t4.log
 // RUN: diff %t3.log %t4.log
-// RUN: grep "^;SMTLIBv2 Query" klee-last/all-queries.smt2 | wc -l | grep -q 17
-// RUN: grep "^;SMTLIBv2 Query" klee-last/solver-queries.smt2 | wc -l | grep -q 10
+// RUN: grep "^; Query" klee-last/all-queries.smt2 | wc -l | grep -q 17
+// RUN: grep "^; Query" klee-last/solver-queries.smt2 | wc -l | grep -q 10
 
 #include <assert.h>
 

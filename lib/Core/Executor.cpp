@@ -317,7 +317,8 @@ Solver *constructSolverChain(STPSolver *stpSolver,
 
   if (optionIsSet(queryLoggingOptions,SOLVER_SMTLIB))
   {
-    solver = createSMTLIBLoggingSolver(solver,baseSolverQuerySMT2LogPath);
+    solver = createSMTLIBLoggingSolver(solver,baseSolverQuerySMT2LogPath,
+                                       MinQueryTimeToLog);
     klee_message("Logging queries that reach solver in .smt2 format to %s",baseSolverQuerySMT2LogPath.c_str());
   }
 
@@ -346,7 +347,8 @@ Solver *constructSolverChain(STPSolver *stpSolver,
   
   if (optionIsSet(queryLoggingOptions,ALL_SMTLIB))
   {
-    solver = createSMTLIBLoggingSolver(solver,querySMT2LogPath);
+    solver = createSMTLIBLoggingSolver(solver,querySMT2LogPath,
+                                       MinQueryTimeToLog);
     klee_message("Logging all queries in .smt2 format to %s",querySMT2LogPath.c_str());
   }
 

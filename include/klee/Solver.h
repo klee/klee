@@ -218,7 +218,8 @@ namespace klee {
 
   /// createSMTLIBLoggingSolver - Create a solver which will forward all queries
   /// after writing them to the given path in .smt2 format.
-  Solver *createSMTLIBLoggingSolver(Solver *s, std::string path);
+  Solver *createSMTLIBLoggingSolver(Solver *s, std::string path,
+                                    int minQueryTimeToLog);
 
 
   /// createDummySolver - Create a dummy solver implementation which always
