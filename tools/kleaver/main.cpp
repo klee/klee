@@ -10,6 +10,7 @@
 #include "klee/Solver.h"
 #include "klee/SolverImpl.h"
 #include "klee/Statistics.h"
+#include "klee/CommandLine.h"
 #include "klee/util/ExprPPrinter.h"
 #include "klee/util/ExprVisitor.h"
 
@@ -90,24 +91,6 @@ namespace {
   UseDummySolver("use-dummy-solver",
 		   cl::init(false));
 
-  cl::opt<bool>
-  UseFastCexSolver("use-fast-cex-solver",
-		   cl::init(false));
-  
-  // FIXME: Command line argument modified in Executor.cpp of Klee. Different
-  // output file name used.
-  cl::opt<bool>
-  UseSTPQueryPCLog("use-stp-query-pc-log",
-                   cl::init(false));
-   
-  // FIXME: Command line argument duplicated in Executor.cpp of Klee
-  cl::opt<unsigned int>
-  MinQueryTimeToLog("min-query-time-to-log",
-                    cl::init(0),
-                    cl::value_desc("milliseconds"),
-                    cl::desc("Set time threshold (in ms) for queries logged in files. "
-                             "Only queries longer than threshold will be logged. (default=0)"));
-  
 }
 
 static std::string escapedString(const char *start, unsigned length) {
@@ -197,8 +180,8 @@ static bool EvaluateInputAST(const char *Filename,
   // FIXME: Support choice of solver.
   Solver *S, *STP = S = 
     UseDummySolver ? createDummySolver() : new STPSolver(true);
-  if (UseSTPQueryPCLog)
-    S = createPCLoggingSolver(S, "stp-queries.pc", MinQueryTimeToLog);
+  if (true == optionIsSet(queryLoggingOptions, SOLVER_PC))
+    S = createPCLoggingSolver(S, SOLVER_QUERIES_PC_FILE_NAME, MinQueryTimeToLog);
   if (UseFastCexSolver)
     S = createFastCexSolver(S);
   S = createCexCachingSolver(S);
@@ -265,9 +248,7 @@ static bool EvaluateInputAST(const char *Filename,
               std::cout << "\n";
           }
         } else {
-          std::cout << "FAIL (reason: " 
-                    << SolverImpl::getOperationStatusString(S->impl->getOperationStatusCode())
-                    << ")";
+          std::cout << "VALID (counterexample request ignored)";
         }
       }
 

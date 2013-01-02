@@ -30,6 +30,7 @@
 #include "klee/Expr.h"
 #include "klee/Interpreter.h"
 #include "klee/TimerStatIncrementer.h"
+#include "klee/CommandLine.h"
 #include "klee/util/Assignment.h"
 #include "klee/util/ExprPPrinter.h"
 #include "klee/util/ExprSMTLIBLetPrinter.h"
@@ -144,11 +145,6 @@ namespace {
 			      cl::desc("Only output test cases covering new code."));
 
   cl::opt<bool>
-  UseFastCexSolver("use-fast-cex-solver",
-		   cl::init(false),
-		   cl::desc("(default=off"));
-
-  cl::opt<bool>
   UseIndependentSolver("use-independent-solver",
                        cl::init(true),
 		       cl::desc("Use constraint independence (default=on)"));
@@ -163,15 +159,6 @@ namespace {
   UseCexCache("use-cex-cache",
               cl::init(true),
 	      cl::desc("Use counterexample caching (default=on)"));
-
-  // FIXME: Command line argument duplicated in main.cpp of Kleaver
-  cl::opt<int>
-  MinQueryTimeToLog("min-query-time-to-log",
-                    cl::init(0),
-                    cl::value_desc("milliseconds"),
-                    cl::desc("Set time threshold (in ms) for queries logged in files. "
-                             "Only queries longer than threshold will be logged. (default=0). "
-                             "Set this param to a negative value to log timeouts only."));
    
   cl::opt<bool>
   NoExternals("no-externals", 
@@ -267,37 +254,11 @@ namespace {
                  cl::desc("Optimize constant divides into add/shift/multiplies before passing to STP (default=on)"),
                  cl::init(true));
 
-
-  /* Using cl::list<> instead of cl::bits<> results in quite a bit of ugliness when it comes to checking
-   * if an option is set. Unfortunately with gcc4.7 cl::bits<> is broken with LLVM2.9 and I doubt everyone
-   * wants to patch their copy of LLVM just for these options.
-   */
-  cl::list<klee::QueryLoggingSolver> queryLoggingOptions("use-query-log",
-		  cl::desc("Log queries to a file. Multiple options can be specified seperate by a comma. By default nothing is logged."),
-		  cl::values(
-					  clEnumValN(klee::ALL_PC,"all:pc","All queries in .pc (KQuery) format"),
-					  clEnumValN(klee::ALL_SMTLIB,"all:smt2","All queries in .smt2 (SMT-LIBv2) format"),
-					  clEnumValN(klee::SOLVER_PC,"solver:pc","All queries reaching the solver in .pc (KQuery) format"),
-					  clEnumValN(klee::SOLVER_SMTLIB,"solver:smt2","All queries reaching the solver in .pc (SMT-LIBv2) format"),
-					  clEnumValEnd
-		             ), cl::CommaSeparated
-  );
-
-
 }
 
 
 namespace klee {
   RNG theRNG;
-
-  //A bit of ugliness so we can use cl::list<> like cl::bits<>, see queryLoggingOptions
-  template <typename T>
-  static bool optionIsSet(cl::list<T> list, T option)
-  {
-	  return std::find(list.begin(), list.end(), option) != list.end();
-  }
-
-
 }
 
 Solver *constructSolverChain(STPSolver *stpSolver,
@@ -381,10 +342,10 @@ Executor::Executor(const InterpreterOptions &opts,
   STPSolver *stpSolver = new STPSolver(UseForkedSTP, STPOptimizeDivides);
   Solver *solver = 
     constructSolverChain(stpSolver,
-                         interpreterHandler->getOutputFilename("all-queries.smt2"),
-                         interpreterHandler->getOutputFilename("solver-queries.smt2"),
-                         interpreterHandler->getOutputFilename("all-queries.pc"),
-                         interpreterHandler->getOutputFilename("solver-queries.pc"));
+                         interpreterHandler->getOutputFilename(ALL_QUERIES_SMT2_FILE_NAME),
+                         interpreterHandler->getOutputFilename(SOLVER_QUERIES_SMT2_FILE_NAME),
+                         interpreterHandler->getOutputFilename(ALL_QUERIES_PC_FILE_NAME),
+                         interpreterHandler->getOutputFilename(SOLVER_QUERIES_PC_FILE_NAME));
   
   this->solver = new TimingSolver(solver, stpSolver);
 
