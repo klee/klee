@@ -15,7 +15,12 @@
   <h1>KLEE Options</h1>
   <!--*********************************************************************-->
 
-  <h2>Search Heuristics</h2> 
+  <h3>
+  <a href="#search">  1. Search Heuristics</a> <br/>
+  <a href="#logging"> 2. Query Logging</a> <br/>
+  </h3>
+  
+  <h2 id="search">Search Heuristics</h2> 
 
   <h3>Main search heuristics</h3>
 
@@ -67,7 +72,28 @@
   <p>
     The default heuristics used by KLEE are <i>random-path</i> interleaved with <i>nurs:covnew</i>.
   </p>
-    
+  
+  <h2 id="logging">Query Logging</h2> 
+
+  To log the queries issued by KLEE during symbolic execution, you can use the following options:
+  <ol>
+    <li>
+    <b>--use-query-log=TYPE:FORMAT</b>, where:
+    <ul>
+      <li><b>TYPE</b> is either <b>all</b> to log all the queries KLEE made during execution before any optimisation (e.g. caching, constraint independence) is performed, or <b>solver</b> to log only the queries passed to KLEE's underlying solver.  Note that it is possible that some of the unoptimized queries are never executed  or are modified before being executed by KLEE's underlying solver.</li>
+      <li><b>FORMAT</b> is the format in which queries are logged and can be either <b>pc</b> for the <a href="KQuery.html">KQuery</a> format, or <b>smt2</b> for the <a href="http://www.smtlib.org">SMT-LIBv2</a> format. 
+    </ul>
+    <li>
+    <b>--min-query-time-to-log=TIME</b> (in ms) is used to log only queries that exceed a certain time limit.  <b>TIME</b> can be:
+    <ul>
+      <li><b>0</b> (default): to log all queries</li>
+      <li><b><0</b>: a negative value specifies that only queries that timed out should be logged.  The timeout value is specified via the <b>--max-stp-time</b> option.</li>
+      <li><b>>0</b>: only queries that took more that <b>TIME</b> milliseconds should be logged.
+    </ul>
+    </li>
+  </li>
+  </ol>
+  
 </div>
 </body>
 </html>
