@@ -17,15 +17,22 @@
   <p>
     As a more detailed explanation of using KLEE, we will look at how we did our
     testing of <a href="http://www.gnu.org/software/coreutils/">GNU
-    coreutils</a> using KLEE.
+    Coreutils</a> using KLEE.
   </p>
 
-  <p>
-    These tests were done on a 32-bit Intel Linux machine, they aren't likely to
-    work elsewhere. In addition, you will need to have configured and built KLEE
+  <p>This tutorial assumes that you have configured and built KLEE
     with <tt>uclibc</tt> and <tt>POSIX</tt> runtime support.
-  </p>
+  <p>
 
+  <p>These tests were done on a 32-bit Linux machine.  On a 64-bit
+  machine, we needed to also set the <tt>LD_LIBRARY_PATH</tt> environment
+  variable:
+    <pre>
+    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib64 (Fedora)
+    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib/x86_64-linux-gnu (Ubuntu)
+    </pre>
+  </p>
+  
   <!--*********************************************************************-->
   
   <h2>Step 1: Build coreutils with gcov</h2>
@@ -56,6 +63,7 @@
 <b>obj-gcov$ ../configure --disable-nls CFLAGS="-g -fprofile-arcs -ftest-coverage"</b>
 <i>... verify that configure worked ...</i>
 <b>obj-gcov$ make</b>
+<b>obj-gcov$ make -C src arch hostname</b>
 <i>... verify that make worked ...</i> </pre>
   </div>
 
@@ -170,6 +178,7 @@ Lines executed:18.81% of 101
 <b>obj-llvm$ ../configure --disable-nls CFLAGS="-g"</b>
 <i>... verify that configure worked ...</i>
 <b>obj-llvm$ make CC=/full/path/to/klee/scripts/klee-gcc</b>
+<b>obj-llvm$ make -C src arch hostname CC=/full/path/to/klee/scripts/klee-gcc</b>
 <i>... verify that make worked ...</i> </pre>
   </div>
   
@@ -871,16 +880,13 @@ Lines executed:97.03% of 101
   </p>
 
   <!--*********************************************************************-->
-  
-  <h2>Step 7: Running KLEE on larger applications </h2>
+    
+  <h2>Step 7: Using <tt>zcov</tt> to analyze coverage </h2>
 
-  To be written.
-
-  <!--*********************************************************************-->
-  
-  <h2>Step 8: Using <tt>zcov</tt> to analyze coverage </h2>
-
-  To be written.
+  <p>
+  For visualizing the coverage results, you might want to use the <a href="http://minormatter.com/zcov/">zcov</a> tool.
+  </p>
+  <br/>
 
 </div>
 </body>
