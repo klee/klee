@@ -303,7 +303,11 @@ KleeHandler::KleeHandler(int argc, char **argv)
   }
   
   sys::Path p(theDir);
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 1)
   if (!p.isAbsolute()) {
+#else
+  if (!sys::path::is_absolute(p.c_str())) {
+#endif
     sys::Path cwd = sys::Path::GetCurrentDirectory();
     cwd.appendComponent(theDir);
     p = cwd;
