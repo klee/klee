@@ -24,6 +24,7 @@
 #include "StatsTracker.h"
 #include "TimingSolver.h"
 #include "UserSearcher.h"
+#include "ExecutorTimerInfo.h"
 #include "../Solver/SolverStats.h"
 
 #include "klee/ExecutionState.h"
@@ -385,6 +386,10 @@ Executor::~Executor() {
     delete statsTracker;
   delete solver;
   delete kmodule;
+  while(!timers.empty()) {
+    delete timers.back();
+    timers.pop_back();
+  }
 }
 
 /***/
