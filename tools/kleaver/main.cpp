@@ -183,10 +183,13 @@ static bool EvaluateInputAST(const char *Filename,
   if (true == optionIsSet(queryLoggingOptions, SOLVER_PC))
     S = createPCLoggingSolver(S, SOLVER_QUERIES_PC_FILE_NAME, MinQueryTimeToLog);
   if (UseFastCexSolver)
-    S = createFastCexSolver(S);
-  S = createCexCachingSolver(S);
-  S = createCachingSolver(S);
-  S = createIndependentSolver(S);
+    S = createFastCexSolver(S);  
+  if (UseCexCache)
+    S = createCexCachingSolver(S);
+  if (UseCache)
+    S = createCachingSolver(S);
+  if (UseIndependentSolver)
+    S = createIndependentSolver(S);
   if (0)
     S = createValidatingSolver(S, STP);
 

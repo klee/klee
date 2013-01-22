@@ -145,29 +145,14 @@ namespace {
 			      cl::desc("Only output test cases covering new code."));
 
   cl::opt<bool>
-  UseIndependentSolver("use-independent-solver",
-                       cl::init(true),
-		       cl::desc("Use constraint independence (default=on)"));
-
-  cl::opt<bool>
   EmitAllErrors("emit-all-errors",
                 cl::init(false),
                 cl::desc("Generate tests cases for all errors "
                          "(default=off, i.e. one per (error,instruction) pair)"));
-
-  cl::opt<bool>
-  UseCexCache("use-cex-cache",
-              cl::init(true),
-	      cl::desc("Use counterexample caching (default=on)"));
-   
+  
   cl::opt<bool>
   NoExternals("no-externals", 
            cl::desc("Do not allow external function calls (default=off)"));
-
-  cl::opt<bool>
-  UseCache("use-cache",
-	   cl::init(true),
-	   cl::desc("Use validity caching (default=on)"));
 
   cl::opt<bool>
   AlwaysOutputSeeds("always-output-seeds",

@@ -20,6 +20,21 @@ llvm::cl::opt<bool>
 UseFastCexSolver("use-fast-cex-solver",
 		 llvm::cl::init(false),
 		 llvm::cl::desc("(default=off)"));
+
+llvm::cl::opt<bool>
+UseCexCache("use-cex-cache",
+            llvm::cl::init(true),
+            llvm::cl::desc("Use counterexample caching (default=on)"));
+
+llvm::cl::opt<bool>
+UseCache("use-cache",
+         llvm::cl::init(true),
+         llvm::cl::desc("Use validity caching (default=on)"));
+
+llvm::cl::opt<bool>
+UseIndependentSolver("use-independent-solver",
+                     llvm::cl::init(true),
+                     llvm::cl::desc("Use constraint independence (default=on)"));
   
 llvm::cl::opt<int>
 MinQueryTimeToLog("min-query-time-to-log",
