@@ -35,6 +35,14 @@
 #include <sys/ipc.h>
 #include <sys/shm.h>
 
+#include "llvm/Support/CommandLine.h"
+
+llvm::cl::opt<bool>
+IgnoreSolverFailures("ignore-solver-failures",
+                     llvm::cl::init(false),
+                     llvm::cl::desc("Ignore any solver failures (default=off)"));
+
+
 using namespace klee;
 
 /***/
@@ -640,7 +648,9 @@ static SolverImpl::SolverRunStatus runAndGetCexForked(::VC vc,
   fflush(stderr);
   int pid = fork();
   if (pid==-1) {
-    fprintf(stderr, "error: fork failed (for STP)");
+    fprintf(stderr, "ERROR: fork failed (for STP)");
+    if (!IgnoreSolverFailures) 
+      exit(1);
     return SolverImpl::SOLVER_RUN_STATUS_FORK_FAILED;
   }
 
@@ -672,7 +682,9 @@ static SolverImpl::SolverRunStatus runAndGetCexForked(::VC vc,
     } while (res < 0 && errno == EINTR);
     
     if (res < 0) {
-      fprintf(stderr, "error: waitpid() for STP failed");
+      fprintf(stderr, "ERROR: waitpid() for STP failed");
+      if (!IgnoreSolverFailures) 
+	exit(1);
       return SolverImpl::SOLVER_RUN_STATUS_WAITPID_FAILED;
     }
     
@@ -680,7 +692,10 @@ static SolverImpl::SolverRunStatus runAndGetCexForked(::VC vc,
     // "occasion" return a status when the process was terminated by a
     // signal, so test signal first.
     if (WIFSIGNALED(status) || !WIFEXITED(status)) {
-      fprintf(stderr, "error: STP did not return successfully");
+      fprintf(stderr, "ERROR: STP did not return successfully.  Most likely you forgot to run 'ulimit -s unlimited'\n");
+      if (!IgnoreSolverFailures)  {
+	exit(1);
+      }
       return SolverImpl::SOLVER_RUN_STATUS_INTERRUPTED;
     }
 
@@ -695,6 +710,8 @@ static SolverImpl::SolverRunStatus runAndGetCexForked(::VC vc,
       return SolverImpl::SOLVER_RUN_STATUS_TIMEOUT;
     } else {
       fprintf(stderr, "error: STP did not return a recognized code");
+      if (!IgnoreSolverFailures) 
+	exit(1);
       return SolverImpl::SOLVER_RUN_STATUS_UNEXPECTED_EXIT_CODE;
     }
     
