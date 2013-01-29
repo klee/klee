@@ -11,6 +11,7 @@
 #include "klee/SolverImpl.h"
 #include "klee/Statistics.h"
 #include "klee/CommandLine.h"
+#include "klee/Common.h"
 #include "klee/util/ExprPPrinter.h"
 #include "klee/util/ExprVisitor.h"
 
