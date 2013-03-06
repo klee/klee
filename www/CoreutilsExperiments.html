@@ -42,6 +42,19 @@
        repository, in revisions up to r161056.
     </li>
 
+    <li>On what OS did you run your experiments?<br/>       
+      We ran most experiments on a 32-bit Fedora machine with SELinux
+      support.  The most important aspect is that this was a 32-bit
+      system: the constraints generated on a 64-bit system are typically
+      more complex and memory consumption might also increase.
+    </li>
+
+    <li>What are the 89 Coreutils applications that you tested? <br/>
+      	<div class="instr">
+      [ base64 basename cat chcon chgrp chmod chown chroot cksum comm cp csplit cut date dd df dircolors dirname du echo env expand expr factor false fmt fold head hostid hostname id ginstall join kill link ln logname ls md5sum mkdir mkfifo mknod mktemp mv nice nl nohup od paste pathchk pinky pr printenv printf ptx pwd readlink rm rmdir runcon seq setuidgid shred shuf sleep sort split stat stty sum sync tac tail tee touch tr tsort tty uname unexpand uniq unlink uptime users wc whoami who yes 
+      </div>
+    </li>
+
     <li>What options did you run KLEE with? <br/>
         We used the following options (the command below is for paste):
 	<div class="instr">
