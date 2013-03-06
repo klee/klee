@@ -179,8 +179,18 @@ static bool EvaluateInputAST(const char *Filename,
     return false;
 
   // FIXME: Support choice of solver.
-  Solver *S, *STP = S = 
-    UseDummySolver ? createDummySolver() : new STPSolver(true);
+  Solver *S   = 0;
+  Solver *STP = 0;
+  if (!UseDummySolver) {
+    STPSolver* stpSolver = new STPSolver(true);
+    if (0 != MaxSTPTime) {
+      stpSolver->setTimeout(MaxSTPTime);    
+    }
+    STP = S = stpSolver;
+  }
+  else {
+    STP = S = createDummySolver(); 
+  }
   if (true == optionIsSet(queryLoggingOptions, SOLVER_PC))
     S = createPCLoggingSolver(S, SOLVER_QUERIES_PC_FILE_NAME, MinQueryTimeToLog);
   if (UseFastCexSolver)
@@ -252,7 +262,15 @@ static bool EvaluateInputAST(const char *Filename,
               std::cout << "\n";
           }
         } else {
-          std::cout << "VALID (counterexample request ignored)";
+          SolverImpl::SolverRunStatus retCode = S->impl->getOperationStatusCode();
+          if (SolverImpl::SOLVER_RUN_STATUS_TIMEOUT == retCode) {
+            std::cout << " FAIL (reason: " 
+                      << SolverImpl::getOperationStatusString(retCode)
+                      << ")";
+          }           
+          else {
+            std::cout << "VALID (counterexample request ignored)";
+          }
         }
       }
 

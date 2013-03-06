@@ -20,6 +20,8 @@ extern llvm::cl::opt<bool> UseIndependentSolver;
   
 extern llvm::cl::opt<int> MinQueryTimeToLog;
 
+extern llvm::cl::opt<double> MaxSTPTime;
+
 ///The different query logging solvers that can switched on/off
 enum QueryLoggingSolverType
 {

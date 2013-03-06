@@ -35,6 +35,11 @@ MinQueryTimeToLog("min-query-time-to-log",
                                  "Only queries longer than threshold will be logged. (default=0). "
                                  "Set this param to a negative value to log timeouts only."));
 
+llvm::cl::opt<double>
+MaxSTPTime("max-stp-time",
+           llvm::cl::desc("Maximum amount of time for a single query (default=0s (off)). Enables --use-forked-stp"),
+           llvm::cl::init(0.0));
+
 
 /* Using cl::list<> instead of cl::bits<> results in quite a bit of ugliness when it comes to checking
  * if an option is set. Unfortunately with gcc4.7 cl::bits<> is broken with LLVM2.9 and I doubt everyone
