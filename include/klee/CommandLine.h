@@ -17,6 +17,8 @@ extern llvm::cl::opt<bool> UseCexCache;
 extern llvm::cl::opt<bool> UseCache;
 
 extern llvm::cl::opt<bool> UseIndependentSolver; 
+
+extern llvm::cl::opt<bool> DebugValidateSolver;
   
 extern llvm::cl::opt<int> MinQueryTimeToLog;
 

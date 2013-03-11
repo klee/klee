@@ -131,10 +131,6 @@ namespace {
                   cl::init(0));
 
   cl::opt<bool>
-  DebugValidateSolver("debug-validate-solver",
-		      cl::init(false));
-
-  cl::opt<bool>
   SuppressExternalWarnings("suppress-external-warnings");
 
   cl::opt<bool>
@@ -242,60 +238,6 @@ namespace klee {
   RNG theRNG;
 }
 
-Solver *constructSolverChain(STPSolver *stpSolver,
-                             std::string querySMT2LogPath,
-                             std::string baseSolverQuerySMT2LogPath,
-                             std::string queryPCLogPath,
-                             std::string baseSolverQueryPCLogPath) {
-  Solver *solver = stpSolver;
-
-  if (optionIsSet(queryLoggingOptions,SOLVER_PC))
-  {
-    solver = createPCLoggingSolver(solver, 
-                                   baseSolverQueryPCLogPath,
-		                   MinQueryTimeToLog);
-    klee_message("Logging queries that reach solver in .pc format to %s",baseSolverQueryPCLogPath.c_str());
-  }
-
-  if (optionIsSet(queryLoggingOptions,SOLVER_SMTLIB))
-  {
-    solver = createSMTLIBLoggingSolver(solver,baseSolverQuerySMT2LogPath,
-                                       MinQueryTimeToLog);
-    klee_message("Logging queries that reach solver in .smt2 format to %s",baseSolverQuerySMT2LogPath.c_str());
-  }
-
-  if (UseFastCexSolver)
-    solver = createFastCexSolver(solver);
-
-  if (UseCexCache)
-    solver = createCexCachingSolver(solver);
-
-  if (UseCache)
-    solver = createCachingSolver(solver);
-
-  if (UseIndependentSolver)
-    solver = createIndependentSolver(solver);
-
-  if (DebugValidateSolver)
-    solver = createValidatingSolver(solver, stpSolver);
-
-  if (optionIsSet(queryLoggingOptions,ALL_PC))
-  {
-    solver = createPCLoggingSolver(solver, 
-                                   queryPCLogPath,
-                                   MinQueryTimeToLog);
-    klee_message("Logging all queries in .pc format to %s",queryPCLogPath.c_str());
-  }
-  
-  if (optionIsSet(queryLoggingOptions,ALL_SMTLIB))
-  {
-    solver = createSMTLIBLoggingSolver(solver,querySMT2LogPath,
-                                       MinQueryTimeToLog);
-    klee_message("Logging all queries in .smt2 format to %s",querySMT2LogPath.c_str());
-  }
-
-  return solver;
-}
 
 Executor::Executor(const InterpreterOptions &opts,
                    InterpreterHandler *ih) 

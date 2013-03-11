@@ -26,6 +26,10 @@ llvm::cl::opt<bool>
 UseIndependentSolver("use-independent-solver",
                      llvm::cl::init(true),
                      llvm::cl::desc("Use constraint independence (default=on)"));
+
+llvm::cl::opt<bool>
+DebugValidateSolver("debug-validate-solver",
+		             llvm::cl::init(false));
   
 llvm::cl::opt<int>
 MinQueryTimeToLog("min-query-time-to-log",

@@ -24,6 +24,9 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <sys/stat.h>
+#include <unistd.h>
+
 // FIXME: Ugh, this is gross. But otherwise our config.h conflicts with LLVMs.
 #undef PACKAGE_BUGREPORT
 #undef PACKAGE_NAME
@@ -92,6 +95,35 @@ namespace {
   UseDummySolver("use-dummy-solver",
 		   cl::init(false));
 
+  llvm::cl::opt<std::string> directoryToWriteQueryLogs("query-log-dir",llvm::cl::desc("The folder to write query logs to. Defaults is current working directory."),
+		                                               llvm::cl::init("."));
+
+}
+
+static std::string getQueryLogPath(const char filename[])
+{
+	//check directoryToWriteLogs exists
+	struct stat s;
+	if( !(stat(directoryToWriteQueryLogs.c_str(),&s) == 0 && S_ISDIR(s.st_mode)) )
+	{
+		std::cerr << "Directory to log queries \"" << directoryToWriteQueryLogs << "\" does not exist!" << std::endl;
+		exit(1);
+	}
+
+	//check permissions okay
+	if( !( (s.st_mode & S_IWUSR) && getuid() == s.st_uid) &&
+	    !( (s.st_mode & S_IWGRP) && getgid() == s.st_gid) &&
+	    !( s.st_mode & S_IWOTH)
+	)
+	{
+		std::cerr << "Directory to log queries \"" << directoryToWriteQueryLogs << "\" is not writable!" << std::endl;
+		exit(1);
+	}
+
+	std::string path=directoryToWriteQueryLogs;
+	path+="/";
+	path+=filename;
+	return path;
 }
 
 static std::string escapedString(const char *start, unsigned length) {
@@ -191,18 +223,13 @@ static bool EvaluateInputAST(const char *Filename,
   else {
     STP = S = createDummySolver(); 
   }
-  if (true == optionIsSet(queryLoggingOptions, SOLVER_PC))
-    S = createPCLoggingSolver(S, SOLVER_QUERIES_PC_FILE_NAME, MinQueryTimeToLog);
-  if (UseFastCexSolver)
-    S = createFastCexSolver(S);  
-  if (UseCexCache)
-    S = createCexCachingSolver(S);
-  if (UseCache)
-    S = createCachingSolver(S);
-  if (UseIndependentSolver)
-    S = createIndependentSolver(S);
-  if (0)
-    S = createValidatingSolver(S, STP);
+
+  S= constructSolverChain((STPSolver*) STP,
+		  	  	  	      getQueryLogPath(ALL_QUERIES_SMT2_FILE_NAME),
+		  	  	  	      getQueryLogPath(SOLVER_QUERIES_SMT2_FILE_NAME),
+		  	  	  	      getQueryLogPath(ALL_QUERIES_PC_FILE_NAME),
+		  	  	  	      getQueryLogPath(SOLVER_QUERIES_PC_FILE_NAME));
+
 
   unsigned Index = 0;
   for (std::vector<Decl*>::iterator it = Decls.begin(),
