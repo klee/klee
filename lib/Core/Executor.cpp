@@ -361,7 +361,7 @@ void Executor::initializeGlobalObject(ExecutionState &state, ObjectState *os,
       initializeGlobalObject(state, os, cds->getElementAsConstant(i),
                              offset + i*elementSize);
 #endif
-  } else {
+  } else if (!isa<UndefValue>(c)) {
     unsigned StoreBits = targetData->getTypeStoreSizeInBits(c->getType());
     ref<ConstantExpr> C = evalConstant(c);
 
