@@ -1071,7 +1071,7 @@ void Executor::stepInstruction(ExecutionState &state) {
   if (DebugPrintInstructions) {
     printFileLine(state, state.pc);
     std::cerr << std::setw(10) << stats::instructions << " ";
-    llvm::errs() << *(state.pc->inst);
+    llvm::errs() << *(state.pc->inst) << '\n';
   }
 
   if (statsTracker)
