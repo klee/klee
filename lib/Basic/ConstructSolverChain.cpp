@@ -24,19 +24,22 @@ namespace klee
 	{
 	  Solver *solver = stpSolver;
 
-	  if (optionIsSet(queryLoggingOptions,SOLVER_PC))
+	  if (optionIsSet(queryLoggingOptions, SOLVER_PC))
 	  {
 		solver = createPCLoggingSolver(solver,
-									   baseSolverQueryPCLogPath,
-							   MinQueryTimeToLog);
-		std::cerr << "Logging queries that reach solver in .pc format to " << baseSolverQueryPCLogPath.c_str() << std::endl;
+					       baseSolverQueryPCLogPath,
+					       MinQueryTimeToLog);
+		std::cerr << "Logging queries that reach solver in .pc format to " 
+			  << baseSolverQueryPCLogPath.c_str() << std::endl;
 	  }
 
-	  if (optionIsSet(queryLoggingOptions,SOLVER_SMTLIB))
+	  if (optionIsSet(queryLoggingOptions, SOLVER_SMTLIB))
 	  {
-		solver = createSMTLIBLoggingSolver(solver,baseSolverQuerySMT2LogPath,
-										   MinQueryTimeToLog);
-		std::cerr << "Logging queries that reach solver in .smt2 format to " << baseSolverQuerySMT2LogPath.c_str() << std::endl;
+		solver = createSMTLIBLoggingSolver(solver,
+						   baseSolverQuerySMT2LogPath,
+						   MinQueryTimeToLog);
+		std::cerr << "Logging queries that reach solver in .smt2 format to " 
+			  << baseSolverQuerySMT2LogPath.c_str() << std::endl;
 	  }
 
 	  if (UseFastCexSolver)
@@ -54,19 +57,21 @@ namespace klee
 	  if (DebugValidateSolver)
 		solver = createValidatingSolver(solver, stpSolver);
 
-	  if (optionIsSet(queryLoggingOptions,ALL_PC))
+	  if (optionIsSet(queryLoggingOptions, ALL_PC))
 	  {
 		solver = createPCLoggingSolver(solver,
-									   queryPCLogPath,
-									   MinQueryTimeToLog);
-		std::cerr << "Logging all queries in .pc format to " << queryPCLogPath.c_str() << std::endl;
+					       queryPCLogPath,
+					       MinQueryTimeToLog);
+		std::cerr << "Logging all queries in .pc format to " 
+			  << queryPCLogPath.c_str() << std::endl;
 	  }
 
-	  if (optionIsSet(queryLoggingOptions,ALL_SMTLIB))
+	  if (optionIsSet(queryLoggingOptions, ALL_SMTLIB))
 	  {
 		solver = createSMTLIBLoggingSolver(solver,querySMT2LogPath,
-										   MinQueryTimeToLog);
-		std::cerr << "Logging all queries in .smt2 format to " << querySMT2LogPath.c_str() << std::endl;
+						   MinQueryTimeToLog);
+		std::cerr << "Logging all queries in .smt2 format to " 
+			  << querySMT2LogPath.c_str() << std::endl;
 	  }
 
 	  return solver;
