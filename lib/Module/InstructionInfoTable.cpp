@@ -24,7 +24,9 @@
 #include "llvm/Support/CFG.h"
 #include "llvm/Support/InstIterator.h"
 #include "llvm/Support/raw_ostream.h"
-#if LLVM_VERSION_CODE >= LLVM_VERSION(2, 7)
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 2)
+#include "llvm/DebugInfo.h"
+#elif LLVM_VERSION_CODE >= LLVM_VERSION(2, 7)
 #include "llvm/Analysis/DebugInfo.h"
 #endif
 #include "llvm/Analysis/ValueTracking.h"

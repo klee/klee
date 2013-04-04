@@ -131,7 +131,11 @@ void SpecialFunctionHandler::prepare() {
       // Make sure NoReturn attribute is set, for optimization and
       // coverage counting.
       if (hi.doesNotReturn)
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 2)
+        f->addFnAttr(Attributes::NoReturn);
+#else
         f->addFnAttr(Attribute::NoReturn);
+#endif
 
       // Change to a declaration since we handle internally (simplifies
       // module and allows deleting dead code).

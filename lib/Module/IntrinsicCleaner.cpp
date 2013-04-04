@@ -23,7 +23,11 @@
 #include "llvm/Module.h"
 #include "llvm/Pass.h"
 #include "llvm/Type.h"
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 2)
+#include "llvm/IRBuilder.h"
+#else
 #include "llvm/Support/IRBuilder.h"
+#endif
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)

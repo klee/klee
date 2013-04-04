@@ -1380,7 +1380,12 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
                            CallSite(cast<CallInst>(caller)));
 
             // XXX need to check other param attrs ?
-            if (cs.paramHasAttr(0, llvm::Attribute::SExt)) {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 2)
+	    bool isSExt = cs.paramHasAttr(0, llvm::Attributes::SExt);
+#else
+	    bool isSExt = cs.paramHasAttr(0, llvm::Attribute::SExt);
+#endif
+            if (isSExt) {
               result = SExtExpr::create(result, to);
             } else {
               result = ZExtExpr::create(result, to);
@@ -1579,7 +1584,12 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
             if (from != to) {
               // XXX need to check other param attrs ?
-              if (cs.paramHasAttr(i+1, llvm::Attribute::SExt)) {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 2)
+	      bool isSExt = cs.paramHasAttr(i+1, llvm::Attributes::SExt);
+#else
+	      bool isSExt = cs.paramHasAttr(i+1, llvm::Attribute::SExt);
+#endif
+              if (isSExt) {
                 arguments[i] = SExtExpr::create(arguments[i], to);
               } else {
                 arguments[i] = ZExtExpr::create(arguments[i], to);

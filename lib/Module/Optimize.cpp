@@ -197,8 +197,14 @@ void Optimize(Module* M) {
     // Now that composite has been compiled, scan through the module, looking
     // for a main function.  If main is defined, mark all other functions
     // internal.
-    if (!DisableInternalize)
-      addPass(Passes, createInternalizePass(true));
+    if (!DisableInternalize) {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 2)
+      ModulePass *pass = createInternalizePass(createInternalizePass(std::vector<const char *>(1, "main"));
+#else
+      ModulePass *pass = createInternalizePass(true);
+#endif
+      addPass(Passes, pass);
+    }
 
     // Propagate constants at call sites into the functions they call.  This
     // opens opportunities for globalopt (and inlining) by substituting function
