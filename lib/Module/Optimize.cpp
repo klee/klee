@@ -199,7 +199,7 @@ void Optimize(Module* M) {
     // internal.
     if (!DisableInternalize) {
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 2)
-      ModulePass *pass = createInternalizePass(createInternalizePass(std::vector<const char *>(1, "main"));
+      ModulePass *pass = createInternalizePass(std::vector<const char *>(1, "main"));
 #else
       ModulePass *pass = createInternalizePass(true);
 #endif
