@@ -451,6 +451,13 @@ else
     LLVMCC := $(LLVMGCC)
     LLVMCXX := $(LLVMGXX)
   endif
+
+  ifeq ($(wildcard $(LLVMCC)),)
+    $(warning Provided Compiler "$(LLVMCC)" is not found. Provide full path!)
+  endif
+  ifeq ($(wildcard $(LLVMCXX)),)
+    $(warning Provided Compiler "$(LLVMCXX)" is not found. Provide full path!)
+  endif
 endif
 
 #--------------------------------------------------------------------
@@ -1174,7 +1181,6 @@ ifdef BYTECODE_LIBRARY
 ifeq ($(strip $(LLVMCC)),)
 $(warning Bytecode libraries require LLVM capable compiler but none is available ****)
 else
-
 all-local:: $(LibName.BCA)
 
 ifdef EXPORTED_SYMBOL_FILE
