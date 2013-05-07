@@ -93,7 +93,7 @@ namespace klee {
     bool mustBeFalse(const Query&, bool &result);
 
     /// mayBeTrue - Determine if there is a valid assignment for the given state
-    /// in which the expression evaluates to false.
+    /// in which the expression evaluates to true.
     ///
     /// \param [out] result - On success, true iff the expresssion is true for
     /// some satisfying assignment.
