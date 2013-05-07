@@ -267,7 +267,8 @@
   <p><b>Syntax:</b></p>
   <div class="syntax">
     array-declaration = "array" name "[" [ size ] "]" ":" domain "->" range "=" array-initializer<br>
-    array-initializer = "symbolic" | "[" { numeric-literal } "]"<br>
+    array-initializer = "symbolic" | "[" number-list "]"<br>
+    number-list = number | number "," number-list<br>
   </div>
 
   <p>Arrays can be initialized to be either symbolic, or to have a given list of
