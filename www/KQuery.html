@@ -299,7 +299,7 @@
   <p><b>Examples:</b></p>
   <div class="example">
     (query [] false)<br>
-    (query [(Eq w8 (Read w8 mem 0) 10)] false [] [ mem ])<br>
+    (query [(Eq w8 (Read w8 0 mem) 10)] false [] [ mem ])<br>
   </div>
 
   <p>A query command consists a query, consisting of a constraint list and
