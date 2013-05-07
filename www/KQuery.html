@@ -546,13 +546,13 @@
 
   <p><b>Syntax:</b></p>
   <div class="syntax">
-    expression = "(" "Read" type index-expression version-specifier ")"<br>
+    expression = "(" "Read" type index-expression version ")"<br>
   </div>
 
   <p>The <b>Read</b> expression evaluates to the first write
-  in <i>version-specifier</i> for which <i>index-expression</i> is equivalent to
+  in <i>version</i> for which <i>index-expression</i> is equivalent to
   the index in the write. The type of the expression must match the range of the
-  root array in <i>version-specifier</i>, and the type
+  root array in <i>version</i>, and the type
   of <i>index-expression</i> must match the domain.</p>
 
   <h4><a name="Select_expr">Select</a></h4>
@@ -593,8 +593,8 @@
 
   <p><b>Syntax:</b></p>
   <div class="syntax">
-    expression = "(" "ReadLSB" type index-expression version-specifier ")"<br>
-    expression = "(" "ReadMSB" type index-expression version-specifier ")"<br>
+    expression = "(" "ReadLSB" type index-expression version ")"<br>
+    expression = "(" "ReadMSB" type index-expression version ")"<br>
   </div>
 
   <p><b>ReadLSB</b> and <b>ReadMSB</b> can be used to simplify contiguous array
