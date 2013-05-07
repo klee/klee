@@ -186,7 +186,10 @@
 
   <p><b>Examples:</b></p>
   <div class="example">
-    (Add w32 N0:(Add w32 1 1) N0) <font color="Red"># Four</font>
+    (Add w32 N0:(Add w32 1 1) N0) <font color="Red"># Four</font><br><br>
+    array const_array[] : w32 -> w8 = [5,6]<br>
+    (Read w8 0 U0:[0=255] @ const_array) <font color="Red"># U0 now refers to an array [255,6]</font><br>
+    (Read w8 1 U0) <font color="Red"># Read from byte offset 1 of [255,6]</font><br>
   </div>
 
   <h2><a name="literals">Literals</a></h2>
@@ -329,6 +332,13 @@
     update-list = lhs-expression "=" rhs-expression [ "," update-list ]<br>
   </div>
 
+  <p><b>Examples:</b></p>
+  <div class="example">
+    array small_array[2] : w32 -> w8 = symbolic <font color="Red"># The array we will read from</font><br>
+    <br>
+    (Read w8 0 thing) <font color="Red"># No Updates to small_array</font><br>
+    (Read w8 1 [1=0xff] @ small_array) <font color="Red"># Read from small_array at byte offset 1 with update where byte 1 set to decimal 255</font><br>
+  </div>
   <p>A version can be specified either by an identifier, which can refer to an
   array or a <a href="#expr_labels">labelled version</a>, or by an explicit list
   of writes which are to be concatenated to another version (the most recent
