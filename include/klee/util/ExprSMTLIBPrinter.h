@@ -224,7 +224,7 @@ namespace klee {
 			//Print SMTLIBv2 for all constraints in the query
 			virtual void printConstraints();
 
-			//Print SMTLIBv2 assert statement for the "mangled" query
+			//Print SMTLIBv2 assert statement for the negated query expression
 			virtual void printQuery();
 
 			///Print the SMTLIBv2 command to check satisfiability and also optionally request for values
@@ -287,7 +287,7 @@ namespace klee {
 			PrintContext* p;
 
 			///This contains the query from the solver but negated for our purposes.
-			/// \sa mangleQuery()
+			/// \sa negateQueryExpression()
 			ref<Expr> queryAssert;
 
 			///Indicates if there were any constant arrays founds during a scan()
@@ -303,7 +303,7 @@ namespace klee {
 			std::map<SMTLIBboolOptions,bool> smtlibBoolOptions;
 
 			///This sets queryAssert to be the boolean negation of the original Query
-			void mangleQuery();
+			void negateQueryExpression();
 
 			//Print a SMTLIBv2 option as a C-string
 			const char* getSMTLIBOptionString(ExprSMTLIBPrinter::SMTLIBboolOptions option);

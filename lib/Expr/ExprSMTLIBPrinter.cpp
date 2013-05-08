@@ -69,7 +69,7 @@ namespace klee
 		query = &q;
 		reset(); // clear the data structures
 		scanAll();
-		mangleQuery();
+		negateQueryExpression();
 	}
 
 	void ExprSMTLIBPrinter::reset()
@@ -831,7 +831,7 @@ namespace klee
 		*p << ")";
 	}
 
-	void ExprSMTLIBPrinter::mangleQuery()
+	void ExprSMTLIBPrinter::negateQueryExpression()
 	{
 		//Negating the query
 		queryAssert = Expr::createIsZero(query->expr);
