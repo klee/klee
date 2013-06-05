@@ -477,7 +477,7 @@ ifndef TBLGEN
 endif
 LLVM_CONFIG := $(LLVMToolDir)/llvm-config
 ifndef LLVMLD
-LLVMLD    := $(LLVMToolDir)/llvm-ld$(EXEEXT)
+LLVMLD    := $(LLVMToolDir)/llvm-link$(EXEEXT)
 endif
 ifndef LLVMDIS
 LLVMDIS  := $(LLVMToolDir)/llvm-dis$(EXEEXT)
@@ -1046,7 +1046,7 @@ $(warning Modules require LLVM capable compiler but none is available ****)
 else
 
 Module     := $(LibDir)/$(MODULE_NAME).bc
-LinkModule := $(LLVMLD) -r
+LinkModule := $(LLVMLD)
 
 
 ifdef EXPORTED_SYMBOL_FILE
