@@ -58,7 +58,7 @@ public:
 #if LLVM_VERSION_CODE < LLVM_VERSION(2, 8)
   RaiseAsmPass() : llvm::ModulePass((intptr_t) &ID) {}
 #else
-  RaiseAsmPass() : llvm::ModulePass(ID) {}
+  RaiseAsmPass() : llvm::ModulePass(ID), TLI(0) {}
 #endif
   
   virtual bool runOnModule(llvm::Module &M);
