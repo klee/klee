@@ -58,6 +58,5 @@ licenses, and/or restrictions:
 
 Program             Directory
 -------             ---------
-STP                 klee/stp
 klee-libc           runtime/klee-libc
 
