@@ -185,13 +185,19 @@ bool CexCachingSolver::lookupAssignment(const Query &query,
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(neg)) {
     if (CE->isFalse()) {
       result = (Assignment*) 0;
+      ++stats::queryCexCacheHits;
       return true;
     }
   } else {
     key.insert(neg);
   }
 
-  return searchForAssignment(key, result);
+  bool found = searchForAssignment(key, result);
+  if (found)
+    ++stats::queryCexCacheHits;
+  else ++stats::queryCexCacheMisses;
+    
+  return found;
 }
 
 bool CexCachingSolver::getAssignment(const Query& query, Assignment *&result) {
