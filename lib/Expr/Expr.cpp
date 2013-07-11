@@ -206,7 +206,7 @@ unsigned ReadExpr::computeHash() {
 }
 
 unsigned NotExpr::computeHash() {
-  unsigned hashValue = expr->hash() * Expr::MAGIC_HASH_CONSTANT * Expr::Not;
+  hashValue = expr->hash() * Expr::MAGIC_HASH_CONSTANT * Expr::Not;
   return hashValue;
 }
 
