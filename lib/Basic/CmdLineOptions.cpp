@@ -56,7 +56,7 @@ llvm::cl::list<QueryLoggingSolverType> queryLoggingOptions(
         clEnumValN(ALL_PC,"all:pc","All queries in .pc (KQuery) format"),
         clEnumValN(ALL_SMTLIB,"all:smt2","All queries in .smt2 (SMT-LIBv2) format"),
         clEnumValN(SOLVER_PC,"solver:pc","All queries reaching the solver in .pc (KQuery) format"),
-        clEnumValN(SOLVER_SMTLIB,"solver:smt2","All queries reaching the solver in .pc (SMT-LIBv2) format"),
+        clEnumValN(SOLVER_SMTLIB,"solver:smt2","All queries reaching the solver in .smt2 (SMT-LIBv2) format"),
         clEnumValEnd
 	),
     llvm::cl::CommaSeparated
