@@ -23,6 +23,7 @@ namespace {
   cl::list<Searcher::CoreSearchType>
   CoreSearch("search", cl::desc("Specify the search heuristic (default=random-path interleaved with nurs:covnew)"),
 	     cl::values(clEnumValN(Searcher::DFS, "dfs", "use Depth First Search (DFS)"),
+			clEnumValN(Searcher::BFS, "bfs", "use Breadth First Search (BFS)"),
 			clEnumValN(Searcher::RandomState, "random-state", "randomly select a state to explore"),
 			clEnumValN(Searcher::RandomPath, "random-path", "use Random Path Selection (see OSDI'08 paper)"),
 			clEnumValN(Searcher::NURS_CovNew, "nurs:covnew", "use Non Uniform Random Search (NURS) with Coverage-New"),
@@ -77,6 +78,7 @@ Searcher *getNewSearcher(Searcher::CoreSearchType type, Executor &executor) {
   Searcher *searcher = NULL;
   switch (type) {
   case Searcher::DFS: searcher = new DFSSearcher(); break;
+  case Searcher::BFS: searcher = new BFSSearcher(); break;
   case Searcher::RandomState: searcher = new RandomSearcher(); break;
   case Searcher::RandomPath: searcher = new RandomPathSearcher(executor); break;
   case Searcher::NURS_CovNew: searcher = new WeightedRandomSearcher(executor, WeightedRandomSearcher::CoveringNew); break;
