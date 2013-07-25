@@ -1,0 +1,99 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" 
+          "http://www.w3.org/TR/html4/strict.dtd">
+<!-- Material used from: HTML 4.01 specs: http://www.w3.org/TR/html401/ -->
+<html>
+<head>
+  <META http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+  <title>The KLEE Symbolic Virtual Machine</title>
+  <link type="text/css" rel="stylesheet" href="menu.css">
+  <link type="text/css" rel="stylesheet" href="content.css">
+</head>
+<body>
+<!--#include virtual="menu.html.incl"-->
+<div id="content">
+  <!--*********************************************************************-->
+  <h1>KLEE Options</h1>
+  <!--*********************************************************************-->
+
+  <h3>
+  <a href="#search">  1. Search Heuristics</a> <br/>
+  <a href="#logging"> 2. Query Logging</a> <br/>
+  </h3>
+  
+  <h2 id="search">Search Heuristics</h2> 
+
+  <h3>Main search heuristics</h3>
+
+  <p>
+  KLEE provides four main search heuristics:
+  <ol>
+    <li><b>Depth-First Search (DFS):</b> Traverses states in depth-first order.</li>
+    <li><b>Random State Search:</b>Randomly selects a state to explore.</li>
+    <li><b>Random Path Selection:</b> Described in our <a href="http://www.doc.ic.ac.uk/~cristic/papers/klee-osdi-08.pdf">KLEE OSDI'08</a> paper.</li>
+    <li><b>Non Uniform Random Search (NURS):</b> Selects a state randomly according to a given distribution.  The distribution can be based on the minimum distance to an uncovered instruction (MD2U), the query cost, etc.  
+  </ol>
+  
+  To select a search heuristic, use the <b>--search</b> option provided by KLEE.  For example:
+    <pre class="output">
+    $ klee --search=dfs demo.o</pre>
+
+    runs <i>demo.o</i> using DFS, while
+    <pre class="output">
+    $ klee --search=random-path demo.o </pre>
+    runs it using the random path selection strategy. 
+
+    The full list of options is shown in KLEE's help message:
+    <pre class="output">
+    $ klee --help
+    -search                                 - Specify the search heuristic (default=random-path interleaved with nurs:covnew)
+      =dfs                                  -   use Depth First Search (DFS)
+      =random-state                         -   randomly select a state to explore
+      =random-path                          -   use Random Path Selection (see OSDI'08 paper)
+      =nurs:covnew                          -   use Non Uniform Random Search (NURS) with Coverage-New heuristic
+      =nurs:md2u                            -   use NURS with Min-Dist-to-Uncovered heuristic
+      =nurs:depth                           -   use NURS with 2^depth heuristic
+      =nurs:icnt                            -   use NURS with Instr-Count heuristic
+      =nurs:cpicnt                          -   use NURS with CallPath-Instr-Count heuristic
+      =nurs:qc                              -   use NURS with Query-Cost heuristic   </pre>
+    
+
+  <h3>Interleaving search heuristics</h3>
+  <p>
+    Search heuristics in KLEE can be interleaved in a round-robin
+    fashion.  To interleave several search heuristics to be interleaved, use the <b>--search</b> multiple times.  For example:
+    <pre class="output">
+    $ klee --search=random-state --search=nurs:md2u demo.o </pre>
+    interleaves the Random State and the NURS:MD2U heuristics in a round robin fashion.
+    <br/>
+    </p>
+  
+
+  <h3>Default search heuristics</h3>
+  <p>
+    The default heuristics used by KLEE are <i>random-path</i> interleaved with <i>nurs:covnew</i>.
+  </p>
+  
+  <h2 id="logging">Query Logging</h2> 
+
+  To log the queries issued by KLEE during symbolic execution, you can use the following options:
+  <ol>
+    <li>
+    <b>--use-query-log=TYPE:FORMAT</b>, where:
+    <ul>
+      <li><b>TYPE</b> is either <b>all</b> to log all the queries KLEE made during execution before any optimisation (e.g. caching, constraint independence) is performed, or <b>solver</b> to log only the queries passed to KLEE's underlying solver.  Note that it is possible that some of the unoptimized queries are never executed  or are modified before being executed by KLEE's underlying solver.</li>
+      <li><b>FORMAT</b> is the format in which queries are logged and can be either <b>pc</b> for the <a href="KQuery.html">KQuery</a> format, or <b>smt2</b> for the <a href="http://www.smtlib.org">SMT-LIBv2</a> format. 
+    </ul>
+    <li>
+    <b>--min-query-time-to-log=TIME</b> (in ms) is used to log only queries that exceed a certain time limit.  <b>TIME</b> can be:
+    <ul>
+      <li><b>0</b> (default): to log all queries</li>
+      <li><b><0</b>: a negative value specifies that only queries that timed out should be logged.  The timeout value is specified via the <b>--max-stp-time</b> option.</li>
+      <li><b>>0</b>: only queries that took more that <b>TIME</b> milliseconds should be logged.
+    </ul>
+    </li>
+  </li>
+  </ol>
+  
+</div>
+</body>
+</html>

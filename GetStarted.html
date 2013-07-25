@@ -1,0 +1,244 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+          "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+  <META http-equiv="Content-Type" content="text/html; charset=ISO-8859-1" />
+  <title>KLEE - Getting Started</title>
+  <link type="text/css" rel="stylesheet" href="menu.css" />
+  <link type="text/css" rel="stylesheet" href="content.css" />
+</head>
+<body>
+
+<!--#include virtual="menu.html.incl"-->
+
+<div id="content">
+
+<h1>Getting Started: Building and Running KLEE</h1>
+
+<!-- <p>FIXME: Intro and disclaimer.</p> -->
+
+<h3>
+<a href="#cde">1. Trying out KLEE without installing any dependencies</a> <br/>
+<a href="#build">2. Building KLEE</a> <br/>
+</h3>
+  
+
+<h2 id="cde">Trying out KLEE without installing any dependencies</h2>
+
+<p>
+If you would like to try out KLEE without the hassle of compiling or installing dependencies, <a href="http://keeda.stanford.edu/~pgbovine/klee-cde-package.v2.tar.bz2">download the self-contained package</a> (200MB), and follow the instructions in <tt>klee-cde-package/README</tt> to get up-and-running!
+</p>
+
+<p>
+This package contains a self-contained source+binary distribution of KLEE and all of its associated dependencies (e.g., llvm-2.7, llvm-gcc, uClibc, svn).  Using this package, you can:
+</p>
+
+<ol>
+<li/> Compile target programs using llvm-gcc
+<li/> Run KLEE on target programs compiled with llvm-gcc
+<li/> Modify KLEE's source code, re-compile it to build a new KLEE binary, and then run the test suite using the new binary
+<li/> Pull the latest KLEE source code updates from SVN
+<li/> Run the entire <a href="TestingCoreutils.html">Coreutils case study</a>
+</ol>
+
+<p>
+... all without compiling or installing anything else on your Linux machine!
+</p>
+
+<p>
+The only requirement is that you are running a reasonably-modern x86-Linux distro that can execute 32-bit ELF binaries.  This package was created using the <a href="http://www.pgbovine.net/cde.html">CDE auto-packaging tool</a>.
+</p>
+
+<p>
+<b>NOTE:</b> The CDE package is mainly meant for trying out KLEE on
+some simple examples and the Coreutils case study.  It is likely that
+you will run into errors when testing other applications, in which
+case you will need to follow the full installation instructions below.
+</p>
+
+
+<h2 id="build">Building KLEE</h2>
+
+
+<p>The current procedure for building is outlined below.</p>
+
+<ol>
+
+<li><b>Install dependencies:</b>
+
+KLEE requires all the dependencies of LLVM, which are discussed <a href="http://llvm.org/docs/GettingStarted.html#requirements">here</a>.  In particular, you should have the following packages (the list is likely not complete): g++, curl, dejagnu, subversion, bison, flex:
+    <div class="instr">
+      $ sudo apt-get install g++ curl dejagnu subversion bison flex   (Ubuntu) <br/>
+      $ sudo yum install g++ curl dejagnu subversion bison flex   (Fedora)
+    </div>
+</p>
+
+On some architectures, you might also need to set the following environment variables (best to put them in a config file like <b>.bashrc</b>):
+    <div class="instr">
+      $ export C_INCLUDE_PATH=/usr/include/x86_64-linux-gnu <br/>
+      $ export CPLUS_INCLUDE_PATH=/usr/include/x86_64-linux-gnu
+    </div>
+
+<li><b>Build LLVM 2.9:</b>
+
+<p>
+KLEE is built on top of <a href="http://llvm.org">LLVM</a>; the first
+steps are to get a working LLVM installation.
+See <a href="http://llvm.org/docs/GettingStarted.html">Getting Started
+with the LLVM System</a> for more information.
+</p>
+
+<p>
+<b>NOTE:</b> KLEE is currently tested only on Linux x86-32 and x86-64
+targets, using <b>LLVM 2.9</b>.  KLEE will not work with older LLVM
+versions (e.g., 2.5), and might not work with newer versions (e.g.,
+3.0).
+</p>
+
+
+<ol type="a">
+  <li>Install llvm-gcc:
+    <ul>
+      <li>Download and install the LLVM 2.9 release of <tt>llvm-gcc</tt>
+        from <a href="http://llvm.org/releases/download.html">here</a>.  
+
+	<br/>Add <tt>llvm-gcc</tt> to your <tt>PATH</tt>.  It
+        is important to do this first so that <tt>llvm-gcc</tt> is
+        found in subsequent <tt>configure</tt>
+        steps. <tt>llvm-gcc</tt> will be used later to compile
+        programs that KLEE can execute.
+      </li>
+
+      <li><b>Forgetting to add llvm-gcc to your PATH at this point is
+        by far the most common source of build errors reported by new
+        users.</b></li>
+    </ul>
+  </li>
+
+  <li>Download and build LLVM 2.9:    
+    <div class="instr">
+      $ curl -O http://llvm.org/releases/2.9/llvm-2.9.tgz <br/>
+      $ tar zxvf llvm-2.9.tgz <br/>
+      $ cd llvm-2.9 <br/>
+      $ ./configure --enable-optimized --enable-assertions<br/>
+      $ make
+    </div>
+    
+    (the <tt>--enable-optimized</tt> configure argument is not necessary, but
+    KLEE runs very slowly in Debug mode).
+  </li>
+</li>
+</ol>
+
+
+<li> <b>Build STP:</b>
+
+<p>KLEE is based on
+the <a href="http://sites.google.com/site/stpfastprover/">STP</a>
+constraint solver.  STP does not make frequent releases, and its
+Subversion repository is under constant development and may be
+unstable.  The instructions below are for a particular revision which
+we have used successfully, but you can try a more recent revision by
+changing or removing the <tt>-r</tt> argument to the <tt>svn co</tt>
+command.  (Please let us know if you have successfully and extensively
+used KLEE with a more recent version of STP.)
+</p>
+
+<div class="instr">
+  $ svn co -r 940 https://stp-fast-prover.svn.sourceforge.net/svnroot/stp-fast-prover/trunk/stp stp <br/>
+  $ cd stp <br/>
+  $ ./scripts/configure --with-prefix=<i>path/to/stp/install</i> --with-cryptominisat2 <br/>
+  $ make OPTIMIZE=-O2 CFLAGS_M32= install
+</div>
+</li>
+
+As documented on the STP website, it is essential to run the following
+command before using STP (and thus KLEE):
+<div class="instr">
+  $ ulimit -s unlimited
+</div>
+
+
+<li>[Optional] <b>Build uclibc and the POSIX environment model:</b>
+
+<p>
+By default, KLEE works on closed programs (programs that don't use any
+external code such as C library functions). However, if you want to
+use KLEE to run real programs you will want to enable the KLEE POSIX
+runtime, which is built on top of the uClibc C library.
+</p>
+
+<ol type="a">
+  <li>Download KLEE's uClibc. KLEE uses a version
+        of <a href="http://uclibc.org">uClibc</a> which has been
+        modified slightly for our purposes. 
+	<ul>
+	  <li>A version that works on 32-bit Linux can be found
+	  <a href="http://www.doc.ic.ac.uk/~cristic/klee/klee-uclibc-i386.html">here</a>
+	  </li>
+	  <li>A version that works on 64-bit Linux can be found
+	    <a href="http://www.doc.ic.ac.uk/~cristic/klee/klee-uclibc-x64.html">here</a>
+	  </li>
+	</ul>
+  </li>
+  
+  <li>Build uClibc with <tt>llvm-gcc</tt>:
+    <div class="instr">
+      $ tar zxvf klee-uclibc-0.02.tgz <br/>
+      $ ./configure --with-llvm=<i>path/to/llvm</i> <br/>
+      $ make <br/>
+    </div>
+
+    <p><b>NOTE:</b> If you are on a different target (i.e., not i386
+      or x64), you will need to run <tt>make config</tt> and select the
+      correct target. The defaults for the other uClibc configuration
+      variables should be fine.<p>
+  </li>
+
+  </ol>
+
+
+  <li><b>Checkout KLEE (to any path you like):</b>
+    <div class="instr">
+      $ svn co http://llvm.org/svn/llvm-project/klee/trunk klee
+    </div>
+      Alternatively, if you prefer to use git there is also a
+      read-only git mirror, which syncs automatically with each
+      Subversion commit. You can do a git clone of KLEE via:
+    <div class="instr">
+      $ git clone http://llvm.org/git/klee.git
+    </div>
+  </li>
+  
+  <li><b>Configure KLEE:</b>
+    <p>From the KLEE source directory, run:</p>
+    <div class="instr">
+      $ ./configure --with-llvm=<i>path/to/llvm</i> --with-stp=<i>path/to/stp/install</i> --with-uclibc=<i>path/to/klee-uclibc</i> --enable-posix-runtime
+    </div>
+    
+    <p><b>NOTE:</b> If you skipped step 4, simply remove the <tt>--with-uclibc</tt> and <tt>--enable-posix-runtime options</tt>. </p>
+  </li>
+
+  <li><b>Build KLEE:</b>
+    <div class="instr">
+      $ make ENABLE_OPTIMIZED=1
+    </div>
+  </li>
+
+  <li>Run the regression suite to verify your build:
+    <div class="instr">
+      $ make check<br/>
+      $ make unittests<br/>
+    </div>
+  </li>
+
+  <li>You're ready to go!  Go to the <a href="Tutorials.html">Tutorials</a> page
+  to try KLEE.</li>
+</ol>
+
+<p><b>NOTE:</b> If you are installing the system of Ubuntu 12.04 (or similar), you might want to take a look at this <a href="http://thread.gmane.org/gmane.comp.compilers.llvm.klee/923">message</a>.</p>
+<br/>
+
+</div>
+</body>
+</html>

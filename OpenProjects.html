@@ -1,0 +1,91 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" 
+          "http://www.w3.org/TR/html4/strict.dtd">
+<!-- Material used from: HTML 4.01 specs: http://www.w3.org/TR/html401/ -->
+<html>
+<head>
+  <META http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+  <title>KLEE - Open Projects</title>
+  <link type="text/css" rel="stylesheet" href="menu.css">
+  <link type="text/css" rel="stylesheet" href="content.css">
+</head>
+<body>
+<!--#include virtual="menu.html.incl"-->
+<div id="content">
+  <!--*********************************************************************-->
+  <h1>KLEE Open Projects</h1>
+  <!--*********************************************************************-->
+
+  This page lists a variety of open projects that are natural (and tractable)
+  extensions of KLEE and things that we would love to see people work on.  If
+  you are interested in tackling any of the projects, please mail
+  <a href="klee-dev.html">klee-dev</a>
+  with your ideas -- or even better, your patches!.</a> 
+
+  <ul>
+    <li>
+      <em>Implement SMT support for Kleaver:</em>
+
+      <p>We would like to make Kleaver (KLEE's constraint solver) a more viable
+      standalone product. One of the steps in this direction is to implement SMT
+      support. This would also allow us to enter Kleaver into
+      the <a href="http://www.smtcomp.org/2011/">SMT-COMP</a> theorem prover
+      competition, which would be a good proving ground for our optimizations
+      and benchmarking our underlying constraint solver (STP, currently) against
+      other implementations.</p>
+    </li>
+
+    <li>
+      <em>Distributed Constraint Solving:</em>
+
+      <p>Much of the execution time of KLEE is spent inside the constraint
+      solver. A natural extension would be to implement support for a
+      distributed constraint solver, which would run KLEE on a single machine,
+      but would farm out the constraints to be solved on a network of
+      machines.</p>
+    </li>
+
+    <li>
+      <em>Improve User Interface:</em>
+
+      <p>This is not a very glamorous project, but it is still
+      important. Currently, KLEE has a myriad of command line options and flags,
+      most of which are left over from its research project roots. In order to
+      promote KLEE's use as a user tool, we would like to clean up most of the
+      UI so that the default behavior matches best practice, and so that more
+      arcane or research-only options are hidden by default.</p>
+    </li>
+
+    <li>
+      <em>Experiment With Other Constraint Solvers:</em>
+
+      <p>For the most part, KLEE has been written so that it is possible to swap
+      in other constraint solvers, but we have never tried anything other than
+      STP. We would love to see the results of using other contraint solvers
+      (like Yices or Z3) with KLEE.</p>
+    </li>
+
+    <li>
+      <em>Implement Expression Level Constraint Optimization:</em>
+
+      <p>KLEE does not currently do much optimization of constraint expressions
+      before sending them to the constraint solver. We would like to have an
+      internal framework for doing optimization of constraint expressions (e.g.,
+      (A & ~A) => 0) so that these optimizations are only done once instead of
+      on every solver query.</p>
+
+      <p>In general, because KLEE is dealing with expressions which result from
+      dynamic execution traces, many expressions end up having constant
+      components. This means we can frequently apply the same optimizations a
+      compiler would do, but to much greater effect because we are more likely
+      to see constant values. For reference, see the kinds of optimizations done
+      by LLVM's InstCombine
+      pass <a href="http://llvm.org/viewvc/llvm-project/llvm/trunk/lib/Transforms/InstCombine/">here</a>.</p>
+
+      <p>The bulk of this project involves defining a good framework for us to
+      apply optimizations to expressions, and for deciding when to attempt to
+      optimization expressions.</p>
+    </li>
+  </ul>
+</div>
+</body>
+</html>

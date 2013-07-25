@@ -1,0 +1,75 @@
+html, body {
+  padding:0px;
+  font-size:small; 
+  font-family:"Lucida Grande", "Lucida Sans Unicode", Arial, Verdana, Helvetica, sans-serif; 
+  background-color: #fff; color: #222;
+  line-height:1.5;
+}
+
+h1, h2, h3, tt { color: #000 }
+
+h1 { color:#000000; padding-top: 0px; margin-top:0px;}
+h2 { color:#333333; padding-top: 0.5em; }
+h3 { color:#2d58b7; padding-top: 0.5em; margin-bottom: -0.25em; }
+h4 { color:#2d58b7; }
+li { padding-bottom: 0.5em; }
+ul { padding-left:1.5em; }
+
+/* Slides */
+IMG.img_slide {
+    display: block;
+    margin-left: auto;
+    margin-right: auto
+}
+
+.itemTitle { color:#2d58b7 }
+
+/* Tables */
+tr { vertical-align:top }
+
+/* Syntax */
+div.syntax {
+    border: 1px solid LightSteelBlue ;
+    font-family: Courier New;
+    background-color: SeaShell;
+    padding: 7px;
+    margin: 7px;
+}
+
+/* Examples */
+div.example {
+    border: 1px solid LightSteelBlue ;
+    font-family: Courier New;
+    background-color: #E3E3E3;
+    padding: 7px;
+    margin: 7px;
+}
+
+/* Instructions */
+div.instr {
+    border: 1px solid LightSteelBlue ;
+    font-family: Courier New;
+    background-color: #E3E3E3;
+    padding: 7px;
+    margin: 7px;
+}
+
+/* Output */
+pre.output {
+    border: 1px solid LightSteelBlue ;
+    font-family: Courier New;
+    background-color: #E3E3E3;
+    padding: 7px;
+    margin: 7px;
+}
+
+/* Code */
+pre.code{
+    display:table;
+    border: 1px solid LightSteelBlue ;
+    font-family: Courier New;
+    background-color: #E3E3E3;
+    margin: 10px;
+    padding: 10px;
+}
+

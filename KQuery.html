@@ -1,0 +1,620 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+          "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+  <META http-equiv="Content-Type" content="text/html; charset=ISO-8859-1" />
+  <title>KLEE - KQuery Language Reference Manul</title>
+  <link type="text/css" rel="stylesheet" href="menu.css" />
+  <link type="text/css" rel="stylesheet" href="content.css" />
+</head>
+<body>
+
+<!--#include virtual="menu.html.incl"-->
+
+<div id="content">
+
+  <h1>KQuery Language Reference Manual</h1>
+
+  <h2>Table Of Contents</h2>
+  <ol>
+    <li><a href="#intro">Introduction</a></li>
+    <li><a href="#notation">Notation</a></li>
+    <li><a href="#structure">Structure</a></li>
+      <ol type="a">
+        <li><a href="#expr_labels">Expression and Version Labels</a>
+      </ol>
+    <li><a href="#literals">Literals</a>
+      <ol type="a">
+        <li><a href="#ident_literal">Identifiers</a></li>
+        <li><a href="#ident_number">Numbers</a></li>
+        <li><a href="#ident_types">Types</a></li>
+      </ol>
+    </li>
+    <li><a href="#decls">Declarations</a>
+      <ol type="a">
+        <li><a href="#array_decls">Arrays</a></li>
+        <li><a href="#query_commands">Query Commands</a></li>
+      </ol>
+    </li>
+    <li><a href="#versions">Versions</a></li>
+    <li><a href="#exprs">Expressions</a>
+      <ol type="a">
+        <li><a href="#primitive_expr">Primitive Expressions</a>
+          <ol type="i">
+            <li><a href="#ref_primitive_expr">Expression References</a></li>
+            <li><a href="#const_primitive_expr">Constants</a></li>
+          </ol>
+        </li>
+        <li><a href="#arith_expr">Arithmetic Operations</a>
+          <ol type="i">
+            <li><a href="#Add_expr">Add</a></li>
+            <li><a href="#Sub_expr">Sub</a></li>
+            <li><a href="#Mul_expr">Mul</a></li>
+            <li><a href="#UDiv_expr">UDiv</a></li>
+            <li><a href="#URem_expr">URem</a></li>
+            <li><a href="#SDiv_expr">SDiv</a></li>
+            <li><a href="#SRem_expr">SRem</a></li>
+          </ol>
+        </li>
+        <li><a href="#bit_expr">Bitwise Operations</a>
+          <ol type="i">
+            <li><a href="#Not_expr">Not</a></li>
+            <li><a href="#And_expr">And</a></li>
+            <li><a href="#Or_expr">Or</a></li>
+            <li><a href="#Xor_expr">Xor</a></li>
+            <li><a href="#Shl_expr">Shl</a></li>
+            <li><a href="#LShr_expr">LShr</a></li>
+            <li><a href="#AShr_expr">AShr</a></li>
+          </ol>
+        </li>
+        <li><a href="#comp_expr">Comparisons</a>
+          <ol type="i">
+            <li><a href="#Eq_expr">Eq</a></li>
+            <li><a href="#Ne_expr">Ne</a></li>
+            <li><a href="#Ult_expr">Ult</a></li>
+            <li><a href="#Ule_expr">Ule</a></li>
+            <li><a href="#Ugt_expr">Ugt</a></li>
+            <li><a href="#Uge_expr">Uge</a></li>
+            <li><a href="#Slt_expr">Slt</a></li>
+            <li><a href="#Sle_expr">Sle</a></li>
+            <li><a href="#Sgt_expr">Sgt</a></li>
+            <li><a href="#Sge_expr">Sge</a></li>
+          </ol>
+        </li>
+        <li><a href="#bv_expr">Bitvector Manipulation</a>
+          <ol type="i">
+            <li><a href="#Concat_expr">Concat</a></li>
+            <li><a href="#Extract_expr">Extract</a></li>
+            <li><a href="#ZExt_expr">ZExt</a></li>
+            <li><a href="#SExt_expr">SExt</a></li>
+          </ol>
+        </li>
+        <li><a href="#special_expr">Special Expressions</a>
+          <ol type="i">
+            <li><a href="#Read_expr">Read</a></li>
+            <li><a href="#Select_expr">Select</a></li>
+          </ol>
+        </li>
+        <li><a href="#macro_expr">Macro Expressions</a>
+          <ol type="i">
+            <li><a href="#Neg_expr">Neg</a></li>
+            <li><a href="#ReadLSB_expr">ReadLSB</a></li>
+            <li><a href="#ReadMSB_expr">ReadMSB</a></li>
+          </ol>
+        </li>
+      </ol>
+    </li>
+  </ol>
+
+  <h2><a name="intro">Introduction</a></h2> 
+  
+  <p>The KQuery language is the textual representation of constraint
+    expressions and queries which is used as input to the Kleaver
+    constraint solver.</p>
+
+  <p>Currently the language is capable of representing quantifier free
+    formulas over bitvectors and arrays, with direct support for all
+    standard operations on bitvectors. The language has been designed to
+    be compact and easy to read and write.</p>
+
+  <p>The KQuery language is closely related to the C++ API for Exprs, see
+    also the
+    doxygen <a href="http://t1.minormatter.com/~ddunbar/klee-doxygen/classklee_1_1Expr.html">Expr</a>
+    documentation.</p>
+
+  <h2><a name="notation">Notation</a></h2>
+  
+  <p>In this document, syntax is given in Extended Backus-Naur Form and appears as:</p>
+  <div class="syntax">
+    "(" "Eq" [ type  ] LHS RHS ")"
+  </div>
+  <p>Unless noted, the rules are described in terms of tokens not characters,
+    and tokens can be separate by white space and comments.</p>
+
+  <p>In some case, a production like <i>child-expression</i> is used as an alias
+  for the <i>expression</i> production, when subsequent text needs to
+  differentiate the expression.</p>
+
+  <p>Examples are shown using:</p>
+  <div class="example">
+    (Eq w32 a b)
+  </div>
+
+  <h2><a name="structure">Structure</a></h2> 
+  
+  <p>A KQuery source file consists of a sequence of declarations.</p>
+
+  <p><b>Syntax:</b></p>
+  <div class="syntax">
+    kquery = { array-declaration | query-command } 
+  </div>
+
+  <p>Currently, the language supports two kinds of declarations:</p>
+  <ul>
+    <li><i><a href="#array_decls">Array Declarations</a></i>: Use to
+      declare an array of bitvectors for use in subsequent
+      expressions.</li>
+
+    <li><i><a href="#query_commands">Query Commands</a></i>: Used to
+      define queries which should be executed by the constraint solver. A
+      query consists of a set of constraints (assumptions), a query
+      expression, and optionally expressions and arrays to compute values
+      for if the query expression is invalid.</li>
+  </ul>
+
+  <p>Comments begin with "#" and continue until the end of line. For example:</p>
+  <div class="example">
+    (Add w32 1 1) <font color="Red"># Two, hopefully</font>
+  </div>
+
+  <h3><a name="expr_labels">Expression and Version Labels</a></h3>
+
+  <p>Expressions are frequently shared among constraints and query
+    expressions. In order to keep the output succinct and readable, expression
+    labels can be used to introduce a lexical binding which can be used in
+    subsequent expressions. Expression labels are globally scoped through the
+    entire source file, and a definition must preceed any use in the source
+    file.</p>
+
+  <p><b>Syntax:</b></p>
+  <div class="syntax">
+    expression = identifier ":" expression<br>
+  </div>
+
+  <p>Likewise, versions are frequently shared among reads and can be labelled in
+  the same fashion.</p>
+
+  <p><b>Examples:</b></p>
+  <div class="example">
+    (Add w32 N0:(Add w32 1 1) N0) <font color="Red"># Four</font><br><br>
+    array const_array[] : w32 -> w8 = [5,6]<br>
+    (Read w8 0 U0:[0=255] @ const_array) <font color="Red"># U0 now refers to an array [255,6]</font><br>
+    (Read w8 1 U0) <font color="Red"># Read from byte offset 1 of [255,6]</font><br>
+  </div>
+
+  <h2><a name="literals">Literals</a></h2>
+
+  <h3><a name="ident_literal">Identifiers</a></h3>
+
+  <p>Identifiers are used for specifying array names and
+    for <a href="#expr_labels">expression labels</a>.</p>
+
+  <p><b>Syntax:</b></p>
+  <div class="syntax">
+    identifier = "[a-zA-Z_][a-zA-Z0-9._]*"<br>
+  </div>
+
+  <p><b>Examples:</b></p>
+  <div class="example">
+    _foo<br>
+    arr10_20<br>
+  </div>
+  
+  <p>Note that in order to keep open the possibility to introduce explicit
+    integral and floating-point types, the following identifiers are treated
+    as reserved keywords:</p>
+  <div class="syntax">
+    floating-point-type = "fp[0-9]+([.].*)?"<br>
+    integer-type = "i[0-9]+"<br>
+  </div>
+
+  <h3><a name="ident_number">Numbers</a></h3>
+
+  <p>Numeric constants can be specified as follows.</p>
+
+  <p><b>Syntax:</b></p>
+  <div class="syntax">
+    number = "true" | "false" | signed-constant<br>
+    signed-constant = [ "+" | "-" ] ( dec-constant | bin-constant | oct-constant | hex-constant )<br>
+    dec-constant = "[0-9_]+"<br>
+    bin-constant = "0b[01_]+"<br>
+    oct-constant = "0o[0-7_]+"<br>
+    hex-constant = "0x[0-9a-fA-F_]+"<br>
+  </div>
+
+  <p><b>Examples:</b></p>
+  <div class="example">
+    false<br>
+    -10<br>
+    0b1000_0001 <font color="Red"># 129 </font><br>
+  </div>
+  
+  <p>Non-decimal constants can be signed. The '_' character is ignored when
+  evaluating constants, but is available for use as a separator.</p>
+
+  <h3><a name="ident_type">Types</a></h3>
+
+  <p>Types are explicit operands to most expressions, and indicate the
+    bit-width of the type.</p>
+
+  <p><b>Syntax:</b></p>
+  <div class="syntax">
+    type = "w[0-9]+"<br>
+  </div>
+
+  <p><b>Example:</b></p>
+  <div class="example">
+    w32<br>
+  </div>
+
+  <p>The numeric portion of the token is taken to be a decimal integer
+    specifying the bit-width of the type.</p>
+
+  <h2><a name="decls">Declarations</a></h2>
+  
+  <h3><a name="array_decls">Arrays</a></h3>
+
+  <p>Arrays are the basic type for defining symbolic variables (the
+    language does not currently support simple variables).</p>
+
+  <p><b>Syntax:</b></p>
+  <div class="syntax">
+    array-declaration = "array" name "[" [ size ] "]" ":" domain "->" range "=" array-initializer<br>
+    array-initializer = "symbolic" | "[" number-list "]"<br>
+    number-list = number | number "," number-list<br>
+  </div>
+
+  <p>Arrays can be initialized to be either symbolic, or to have a given list of
+  constant values. For constant arrays, the initializer list must exactly match
+  the size of the array (if the size was unspecified, it will be the number of
+  constant values).</p>
+
+  <p><b>Examples:</b></p>
+  <div class="example">
+    array foo[10] : w32 -> w8 = symbolic <font color="Red"># A ten element symbolic array</font><br>
+    array foo[] : w8 -> w1 = [ true, false, false, true ] <font color="Red"># A constant array of four booleans</font><br>
+  </div>
+  
+  <h3><a name="query_commands">Query Commands</a></h3>
+
+  <p>Query declarations describe the queries that the constraint solver
+    should run, along with optional additional arguments to specify
+    expressions and arrays for which counterexamples should be provided.</p>
+
+  <p><b>Syntax:</b></p>
+  <div class="syntax">
+    query-command = "(" "query" constraint-list query-expression [ eval-expr-list [ eval-array-list ] ] ")" <br>
+    query-expression = expression<br>
+    constraint-list = "[" { expression } "]" <br>
+    eval-expr-list = "[" { expression } "]" <br>
+    eval-array-list = "[" { identifier } "]" <br>
+  </div>
+
+  <p><b>Examples:</b></p>
+  <div class="example">
+    (query [] false)<br>
+    (query [(Eq w8 (Read w8 0 mem) 10)] false [] [ mem ])<br>
+  </div>
+
+  <p>A query command consists a query, consisting of a constraint list and
+    a query expression, and two optional lists for use when a counterexample is desired.</p>
+
+  <p>The <i>constraint-list</i> is a list of expressions (with boolean
+    type) which are assumed to hold. Although not required in the language,
+    many solvers require that this set of constraints be
+    consistent. The <i>query-expression</i> is the expression to determine
+    the validity of.</p>
+
+  <p>If a counterexample is desired for invalid
+    queries, <i>eval-expr-list</i> is a list of expressions for which a
+    possible value should be constructed, and <i>eval-array-list</i> is a
+    list of arrays for which values for the entire array should be
+    provided. All counterexamples results must be simultaneously
+    feasible.</p>
+
+  <h2><a name="versions">Versions</a></h2>
+  
+  <p>Versions are used to refer to an array with an ordered sequence of writes to it.</p>
+
+  <p><b>Syntax:</b></p>
+  <div class="syntax">
+    version = identifier | "[" [ update-list ] "]" "@" version<br>
+    update-list = lhs-expression "=" rhs-expression [ "," update-list ]<br>
+  </div>
+
+  <p><b>Examples:</b></p>
+  <div class="example">
+    array small_array[2] : w32 -> w8 = symbolic <font color="Red"># The array we will read from</font><br>
+    <br>
+    (Read w8 0 thing) <font color="Red"># No Updates to small_array</font><br>
+    (Read w8 1 [1=0xff] @ small_array) <font color="Red"># Read from small_array at byte offset 1 with update where byte 1 set to decimal 255</font><br>
+  </div>
+  <p>A version can be specified either by an identifier, which can refer to an
+  array or a <a href="#expr_labels">labelled version</a>, or by an explicit list
+  of writes which are to be concatenated to another version (the most recent
+  writes are first).</p>
+
+  <h2><a name="exprs">Expressions</a></h2>
+
+  <p>Expressions are strongly typed, and have the following general
+    form:</p>
+  <div class="syntax">
+    "(" EXPR_NAME EXPR_TYPE ... arguments ... ")"
+  </div>
+  <p>where <i>EXPR_NAME</i> is the expression name, <i>EXPR_TYPE</i> is the
+    expression type (which may be optional), followed by any additional
+    arguments.</p>
+
+  <h3><a name="primitive_expr">Primitive Expressions</a></h3>
+  
+  <h4><a name="ref_primitive_expr">Expression References</a></h4>
+
+  <p>An expression reference can be used to refer to a
+    previously <a href="#expr_labels">labelled expression</a>.</p>
+
+  <p><b>Syntax:</b></p>
+  <div class="syntax">
+    expression = identifier<br>
+  </div>
+
+  <p>Expression and version labels are in separate namespaces, it is the users
+    responsibility to use separate labels to preserve readability.</p>
+
+  <h4><a name="const_primitive_expr">Constants</a></h4>
+
+  <p>Constants are specified by a numeric token or a type and numeric
+    token.</p>
+
+  <p><b>Syntax:</b></p>
+  <div class="syntax">
+    expression = number | "(" type number ")"<br>
+  </div>
+
+  <p>When a constant is specified without a type, the resulting expression
+    is only well-formed if its type can be inferred from the enclosing
+    context. The <b>true</b> and <b>false</b> constants always have
+    type <b>w1</b>.
+    
+  <p><b>Examples:</b></p>
+  <div class="example">
+    true<br>
+    (w32 0)<br>
+    (Add w32 10 20) <font color="Red"># The type for 10 and 20 is inferred to be w32.</font><br>
+  </div>
+  
+  <h3><a name="arith_expr">Arithmetic Operations</a></h3>
+
+  <h4><a name="Add_expr">Add</a>, 
+    <a name="Sub_expr">Sub</a>, 
+    <a name="Mul_expr">Mul</a>, 
+    UDiv, SDiv, URem, SRem</h4>
+
+  <p><b>Syntax:</b></p>
+  <div class="syntax">
+    arithmetic-expr-kind = ( "Add" | "Sub" | "Mul" | "UDiv" | "URem" | "SDiv" | "SRem" )<br>
+    expression = "(" arithmetic-expr-kind type expression expression ")"<br>
+  </div>
+
+  <p>Arithmetic operations are always binary and the types of the left-
+    and right-hand side expressions must match the expression type.</p>
+
+  <h4><a name="UDiv_expr">UDiv</a></h4>
+  <p>Truncated unsigned division. Undefined if divisor is 0.</p>
+
+  <h4><a name="URem_expr">URem</a></h4>
+  <p>Unsigned remainder. Undefined if divisor is 0.</p>
+  
+  <h4><a name="SDiv_expr">SDiv</a></h4>
+  <p>Signed division. Undefined if divisor is 0.</p>
+
+  <h4><a name="SRem_expr">SRem</a></h4>
+  <p>Signed remainder. Undefined if divisor is 0. Sign of the
+  remainder is the same as that of the dividend.</p>
+  
+
+  <h3><a name="bit_expr">Bitwise Operations</a></h3>
+  
+  <h4><a name="Not_expr">Not</a></h4>
+
+  <p><b>Syntax:</b></p>
+  <div class="syntax">
+    expression = "(" "Not" [ type ] expression ")"
+  </div>
+
+  <p>Bitwise negation. The result is the bitwise negation (one's complement) of
+    the input expression. If the type is specified, it must match the expression
+    type.</p>
+
+  <h4><a name="And_expr">And</a>,
+    <a name="Or_expr">Or</a>,
+    <a name="Xor_expr">Xor</a>,
+    <a name="Shl_expr">Shl</a>,
+    <a name="LShr_expr">LShr</a>,
+    <a name="AShr_expr">AShr</a></h4>
+
+  <p><b>Syntax:</b></p>
+  <div class="syntax">
+    bitwise-expr-kind = ( "And" | "Or" | "Xor" | "Shl" | "LShr" | "AShr" )<br>
+    expression = "(" bitwise-expr-kind type expression expression ")"<br>
+  </div>
+
+  <p>These bitwise operations are always binary and the types of the left- and
+    right-hand side expressions must match the expression type.</p>
+
+  <h4><a name="Shl">Shl</a></h4>
+  
+  <div class="syntax">
+    expression = "(" "Shl" type X Y ")"
+  </div>
+
+  <p>Logical shift left. Moves each bit of <b>X</b> to the left
+  by <b>Y</b> positions. The <b>Y</b> right-most bits of <b>X</b> are
+  replaced with zero, and the left-most bits discarded.</p>
+
+  <h4><a name="LShr">LShr</a></h4>
+
+  <div class="syntax">
+    expression = "(" "LShr" type X Y ")"
+  </div>
+
+  <p>Logical shift right. Moves each bit of <b>X</b> to the right
+  by <b>Y</b> positions. The <b>Y</b> left-most bits of <b>X</b> are
+  replaced with zero, and the right-most bits discarded.</p>
+
+
+  <h4><a name="AShr">AShr</a></h4>
+
+  <div class="syntax">
+    expression = "(" "AShr" type X Y ")"
+  </div>
+
+  <p>Arithmetic shift right. Behaves as <b>LShr</b> except that the
+  left-most bits of <b>X</b> copy the initial left-most bit (the sign
+  bit) of <b>X</b>.
+
+  <h3><a name="comp_expr">Comparisons</a></h3>
+  
+  <h4><a name="Eq_expr">Eq</a>,
+    <a name="Ne_expr">Ne</a>,
+    <a name="Ult_expr">Ult</a>,
+    <a name="Ule_expr">Ule</a>,
+    <a name="Ugt_expr">Ugt</a>,
+    <a name="Uge_expr">Uge</a>,
+    <a name="Slt_expr">Slt</a>,
+    <a name="Sle_expr">Sle</a>,
+    <a name="Sgt_expr">Sgt</a>,
+    <a name="Sge_expr">Sge</a></h4>
+
+  <p><b>Syntax:</b></p>
+  <div class="syntax">
+    comparison-expr-kind = ( "Eq" | "Ne" | "Ult" | "Ule" | "Ugt" | "Uge" | "Slt" | "Sle" | "Sgt" | "Sge" )<br>
+    expression = "(" comparison-expr-kind [ type ] expression expression ")"<br>
+  </div>
+
+  <p>Comparison operations are always binary and the types of the left-
+    and right-hand side expression must match. If the type is specified, it
+    must be <b>w1</b>.</p>
+
+  <h3><a name="bv_expr">Bitvector Manipulation</a></h3>
+  
+  <h4><a name="Concat_expr">Concat</a></h4>
+
+  <p><b>Syntax:</b></p>
+  <div class="syntax">
+    expression = "(" "Concat" [type] msb-expression lsb-expression ")"
+  </div>
+
+  <p><b>Concat</b> evaluates to a <i>type</i> bits formed by
+  concatenating <i>lsb-expression</i> to <i>msb-expression</i>.</p>
+
+  <h4><a name="Extract_expr">Extract</a></h4>
+
+  <p><b>Syntax:</b></p>
+  <div class="syntax">
+    expression = "(" "Extract" type offset-number child-expression ")"
+  </div>
+
+  <p><b>Extract</b> evaluates to <i>type</i> bits from <i>child-expression</i>
+  taken from <i>offset-number</i>, where <i>offset-number</i> is the index of
+  the least-significant bit in <i>child-expression</i> which should be
+  extracted.
+
+  <h4><a name="ZExt_expr">ZExt</a></h4>
+
+  <p><b>Syntax:</b></p>
+  <div class="syntax">
+    expression = "(" "ZExt" type child-expression ")"
+  </div>
+
+  <p><b>ZExt</b> evaluates to the lowest <i>type</i> bits
+  of <i>child-expression</i>, with undefined bits set to zero.</p>
+
+  <h4><a name="SExt_expr">SExt</a></h4>
+
+  <p><b>Syntax:</b></p>
+  <div class="syntax">
+    expression = "(" "SExt" type input-expression ")"
+  </div>
+
+  <p><b>SExt</b> evaluates to the lowest <i>type</i> bits
+  of <i>child-expression</i>, with undefined bits set to the most-significant
+  bit of <i>input-expression</i>.</p>
+
+  <h3><a name="special_expr">Special Expressions</a></h3>
+  
+  <h4><a name="Read_expr">Read</a></h4>
+
+  <p><b>Syntax:</b></p>
+  <div class="syntax">
+    expression = "(" "Read" type index-expression version ")"<br>
+  </div>
+
+  <p>The <b>Read</b> expression evaluates to the first write
+  in <i>version</i> for which <i>index-expression</i> is equivalent to
+  the index in the write. The type of the expression must match the range of the
+  root array in <i>version</i>, and the type
+  of <i>index-expression</i> must match the domain.</p>
+
+  <h4><a name="Select_expr">Select</a></h4>
+
+  <p><b>Syntax:</b></p>
+  <div class="syntax">
+    expression = "(" "Select" type cond-expression true-expression false-expression ")"<br>
+  </div>
+
+  <p>The <b>Select</b> expression evalues to <i>true-expression</i> if the
+  condition evaluates to true, and to <i>false-expression</i> if the condition
+  evaluates to false. The <i>cond-expression</i> must have type <b>w1</b>.</p>
+
+  <p>Both the true and false expressions must be well-formed, regardless of the
+  condition expression. In particular, it is not legal for one of the
+  expressions to cause a division-by-zero during evaluation, even if
+  the <b>Select</b> expression will never evaluate to that expression.</p>
+
+  <h3><a name="macro_expr">Macro Expressions</a></h3>
+  
+  <p>Several common expressions are not implemented directly in the Expr
+  library, but can be expressed in terms of other operations. A number of these
+  are implemented as "macros". The pretty printer recognizes and prints the
+  appropriate Expr forms as the macro, and the parser recognizes them and turns
+  them into the underlying representation.</p>
+
+  <h4><a name="Neg_expr">Neg</a></h4>
+
+  <p><b>Syntax:</b></p>
+  <div class="syntax">
+    expression = "(" "Neg" [ type ] expression ")"
+  </div>
+
+  <p>This macro form can be used to generate a <b>Sub</b> from zero.</p>
+
+  <h4><a name="ReadLSB_expr">ReadLSB</a>,
+      <a name="ReadMSB_expr">ReadMSB</a></h4>
+
+  <p><b>Syntax:</b></p>
+  <div class="syntax">
+    expression = "(" "ReadLSB" type index-expression version ")"<br>
+    expression = "(" "ReadMSB" type index-expression version ")"<br>
+  </div>
+
+  <p><b>ReadLSB</b> and <b>ReadMSB</b> can be used to simplify contiguous array
+  accesses. The type of the expression must be a multiple <i>N</i> of the array
+  range type. The expression expands to a concatenation of <i>N</i> read
+  expressions, where each read is done at a subsequent offset from
+  the <i>index-expression</i>. For <b>ReadLSB</b> (<b>ReadMSB</b>), the
+  concatentation is done such that the read at <i>index-expression</i> forms the
+  least- (most-) significant bits.</p>
+</div>
+
+</body>
+</html>

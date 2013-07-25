@@ -1,0 +1,84 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" 
+          "http://www.w3.org/TR/html4/strict.dtd">
+<!-- Material used from: HTML 4.01 specs: http://www.w3.org/TR/html401/ -->
+<html>
+<head>
+  <META http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+  <title>The KLEE Symbolic Virtual Machine</title>
+  <link type="text/css" rel="stylesheet" href="menu.css">
+  <link type="text/css" rel="stylesheet" href="content.css">
+</head>
+<body>
+<!--#include virtual="menu.html.incl"-->
+<div id="content">
+  <!--*********************************************************************-->
+  <h1>KLEE Tools</h1>
+  <!--*********************************************************************-->
+
+ <h3>
+  <a href="#ktest-tool">  1. ktest-tool</a> <br/>
+  <a href="#klee-stats"> 2. klee-stats</a> <br/>
+  </h3>
+
+  <h2 id="ktest-tool">ktest-tool</h2> 
+
+  <h2 id="klee-stats">klee-stats</h2>
+  <b><i>klee-stats</i></b> is a Python script used to extract and present in a
+  tabular form runtime statistics for a KLEE execution. The runtime statistics include:
+  <ul>
+    <li>The number of executed instructions</li>
+    <li>Instruction coverage in the LLVM bitcode (%)</li>
+    <li>Branch coverage in the LLVM bitcode (%)</li>
+    <li>Total static instructions in the LLVM bitcode</li>
+    <li>The number of currently active states</li>
+    <li>Megabytes of memory currently used</li>
+    <li>The number of queries issued to STP</li>
+    <li>The average number of query constructs per query</li>
+    <li>Various time statistics:
+    <ul>
+      <li>Total user time</li>
+      <li>Total wall time</li>
+      <li>Time spent in the constraint solver</li>
+      <li>Time spent in the counterexample caching code</li>
+      <li>Time spent forking</li>
+      <li>Time spent in object resolution</li>
+    </ul></li>
+  </ul>
+
+
+  <i>klee-stats</i> extracts statistics information from the <i>run.stats</i> file
+  present in the <i>klee-out-*</i> directory created during a KLEE execution.
+  The exact usage of <i>klee-stats</i> is as follows: 
+  <pre>klee-stats [options] directories</pre>
+  The <i>directories</i> parameter is a list of <i>klee-out-*</i> directories
+  created by KLEE.  A common scenario is to simply run <i>klee-stats</i> on <i>klee-last</i>.
+
+  <p>
+  In order to limit printed information only to the values of measured times, 
+  the following options can be used:
+ 
+  <ul>
+    <li><i>--print-rel-times</i>&#8212;display time values relative
+    to measured execution time</li>
+    
+    <li><i>--print-abs-times</i>&#8212;display absolute time values</li>
+  </ul>
+ 
+  The <i>--precision</i> option can be used to configure the number of fractional
+  digits displayed in floating point values. By default, 2 fractional digits
+  are displayed, but in some cases that might be not sufficient&#8212;if the value
+  is very small, e.g. 0.0001, with 2-digits precision it will be printed as 0.00.
+  </p>
+
+  <p> Various other options can be used to specify what values are
+  displayed and how they are displayed. Options for comparison of
+  statistics are also provided. More information about available
+  options can be obtained using the command:
+  <pre>klee-stats --help</pre>
+  </p>
+
+  <br/>
+  
+</div>
+</body>
+</html>

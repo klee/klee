@@ -1,0 +1,114 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+          "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+  <META http-equiv="Content-Type" content="text/html; charset=ISO-8859-1" />
+  <title>KLEE - Getting Started</title>
+  <link type="text/css" rel="stylesheet" href="menu.css" />
+  <link type="text/css" rel="stylesheet" href="content.css" />
+</head>
+<body>
+
+<!--#include virtual="menu.html.incl"-->
+
+<div id="content">
+
+<h1>KLEE Developer's Guide</h1>
+ 
+<p>This guide covers several areas of KLEE that may not be imediately obvious to new developers.</p>
+
+ <h3>
+  <a href="#build"> 1. KLEE's Build System</a> <br/>
+  <a href="#tests"> 2. KLEE's Test Framework</a> <br/>
+  <a href="#misc"> 3. Miscellaneous</a> <br/>
+</h3>
+
+<h2 id="build">KLEE's Build System</h2>
+<p>KLEE uses LLVM's ability to build third-party projects, which is described <a href="http://llvm.org/docs/Projects.html">here</a>. The build system uses <a href="http://www.gnu.org/software/autoconf/">GNU Autoconf</a> and <a href="http://www.gnu.org/savannah-checkouts/gnu/autoconf/manual/autoconf-2.69/html_node/autoheader-Invocation.html">AutoHeader</a> to configure the build, but does not use the rest of GNU Autotools (e.g. automake).</p>
+
+<p>LLVM's build system supports out-of-source builds and therefore so does KLEE. It is highly recommended you take advantage of this. For example, you could create three builds (Release, Release with debug symbols, Debug) 
+   that all use the same source tree. This allows you keep your source tree clean and allows multiple configurations to be tested from a single source tree.</p>
+
+<h3>Setting up a debug build of KLEE</h3>
+<p>Setting up a debug build of KLEE (we'll assume it is an out-of-source build) is very similar to the build process described in <a href="GetStarted.html">Getting Started</a>, with the exception of steps 6 and 7.</p>
+
+  <ol start="6">
+	<li>Now we will configure KLEE. Notice that we are forcing the compiler to produce unoptimised code, this isn't the default behaviour.
+	    <div class="instr">
+	      $ mkdir path/to/build-dir <br/>
+	      $ cd path/to/build-dir <br/>
+	      $ CXXFLAGS="-g -O0" CFLAGS="-g -O0" path/to/source-dir/configure --with-llvm=<i>path/to/llvm</i>  --with-stp=<i>path/to/stp/install</i> --with-uclibc=<i>path/to/klee-uclibc</i> --enable-posix-runtime --with-runtime=Debug+Asserts
+	    </div>
+	Note if you're using an out-of-source build of LLVM you will need to use <tt>--with-llvmsrc=</tt> and <tt>--with-llvmobj=</tt> configure options instead of <tt>--with-llvm=</tt>
+	</li>
+	<li>Now we can build KLEE.
+	    <div class="instr">
+	      $ make -j
+	    </div>
+	    Note that we are using the <tt>-j</tt> option of make to speed up the compilation process.
+	</li>
+  </ol>
+
+<p>Note that KLEE depends on LLVM and STP.  If you need to debug KLEE's calls to that code, then you will need to build LLVM/STP with debug support too.</p>
+
+<h3>Adding a class</h3>
+  <p>Because KLEE uses LLVM's build system, adding a class to an existing library in KLEE is very simple. For example, to add a class to <tt>libkleaverExpr</tt>, the following steps would be followed:
+    <ol>
+       <li>Create the header file (<tt>.h</tt>) for the class and place it somewhere inside <tt>include/</tt> (the location isn't really important except that <tt>#include</tt> is relative to the <tt>include/</tt> directory).
+       </li>
+       <li>Create the source file (<tt>.cpp</tt>) for the class place it in <tt>lib/Expr/</tt>. You can confirm that the library in which your new class will be included is <tt>kleaverExpr</tt> by looking at the <tt>Makefile</tt> in <tt>lib/Expr</tt>.
+       </li>
+    </ol>
+    That's it! Now LLVM's build system will detect the new <tt>.cpp</tt> file and add it to the library that is generated when you run <tt>make</tt>.
+  </p>
+
+<h3>Building code documentation</h3>
+  <p>KLEE uses <a href="http://www.doxygen.org">Doxygen</a> to generate code documentation. To generate it yourself you can run the following from KLEE's build directory root.
+    <div class="instr">
+      $ make doxygen
+    </div>
+  This will generate documentation in <tt>path/to/build-dir/docs/doxygen/</tt> folder. You can also find KLEE's latest official code documentation <a href="http://test.minormatter.com/~ddunbar/klee-doxygen/index.html">here</a>
+  </p>
+
+
+<h2 id="tests">KLEE's Test Framework</h2>
+<p>KLEE uses LLVM's testing infrastructure for its tests, which itself uses <a href="http://www.gnu.org/software/dejagnu/">DejaGnu</a>. These are the tests that are executed by the <tt>make check</tt> command. Some documentation on LLVM's testing infrastructure can be found <a href="http://llvm.org/docs/TestingGuide.html#rtcustom">here</a>.
+ </p>    
+ <p>KLEE's tests are currently divided into categories, each of which is a subdirectory in <tt>test/</tt> in the source tree (e.g. <tt>test/Feature</tt>) . The <tt>dg.exp</tt> file in each subdirectory instructs the LLVM testing infrastructure which files in the subdirectory are to be used as tests. For example, <tt>test/Expr/dg.exp</tt> contains:
+    <div class="instr">
+	load_lib llvm.exp <br/><br/>
+
+	RunLLVMTests [lsort [glob -nocomplain $srcdir/$subdir/*.{pc}]]
+   </div>
+   This instructs the testing infrastructure that every <tt>.pc</tt> file in <tt>test/Expr</tt> should be used as a test.
+ </p>
+ <p>The actions performed in each test are specified by special comments in the file. For example, in <tt>test/Feature/ByteSwap.c</tt> the first two lines are
+    <div class="instr">
+     // RUN: %llvmgcc %s -emit-llvm -O0 -c -o %t1.bc <br/>
+     // RUN: %klee --libc=klee --exit-on-error %t1.bc <br/>
+   </div>
+   This first runs <tt>llvm-gcc</tt> on the source file (<tt>%s</tt>) and generates a temporary file (<tt>%t1.bc</tt>). Then KLEE is executed on this generated temporary file. If either program returns a non-zero exit code (or crashes) then 
+   test is considered to have failed. More information on the available substitution variables (such as <tt>%s</tt>) can be found <a href="http://llvm.org/releases/3.1/docs/TestingGuide.html#rtvars">here</a>.
+ </p>
+
+ <p>It is useful to be able to execute just a single test rather than all of them. KLEE provides a makefile target for doing so which can used as shown below. Note that <i>category/test-name</i> should be the test that one would like to execute, e.g. <tt>Feature/ByteSwap.c</tt>.
+    <div class="instr">
+    $ cd path/to/build-dir/test <br/>
+    $ make check-one TESTONE=path/to/source-dir/test/<i>category/test-name</i>
+    </div>
+ </p>
+
+    
+<h2 id="misc">Miscellaneous</h2>
+<h3>Writing messages to standard error</h3>
+<p>The <tt>kleeCore</tt> library (<tt>lib/Core</tt>) provides several functions that can be used similarly to <tt>printf()</tt> in C. See <tt>lib/Core/Common.h</tt> for more information.
+</p>
+
+<h3>Adding a command line option to a tool</h3>
+  <p>KLEE uses LLVM's CommandLine library for adding options to tools in KLEE, which is well documented <a href="http://llvm.org/docs/CommandLine.html">here</a>. See <tt>lib/core/Executor.cpp</tt> for examples.</p>
+
+<br/>
+    
+</div>
+</body>
+</html>

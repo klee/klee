@@ -1,0 +1,158 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" 
+          "http://www.w3.org/TR/html4/strict.dtd">
+<!-- Material used from: HTML 4.01 specs: http://www.w3.org/TR/html401/ -->
+<html>
+<head>
+  <META http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+  <title>KLEE - Coreutils Experiments</title>
+  <link type="text/css" rel="stylesheet" href="menu.css">
+  <link type="text/css" rel="stylesheet" href="content.css">
+</head>
+<body>
+<!--#include virtual="menu.html.incl"-->
+<div id="content">
+  <!--*********************************************************************-->
+  <h1>Coreutils Experiments</h1>
+
+  <p>
+    This document is meant to give additional information regarding
+    the Coreutils experiments discussed in
+    our <a href="http://llvm.org/pubs/2008-12-OSDI-KLEE.html">KLEE
+    OSDI'08 paper</a>.  However, please note that in the last several
+    years, KLEE and its dependencies (particularly LLVM and STP), have
+    undergone major changes, which have resulted in considerable
+    different behavior on several benchmarks, including Coreutils.</p>
+
+  <p>
+    This document is structured as a series of FAQs:
+  </p>
+
+  <ol>
+    <li>How did you build Coreutils?<br/>
+      Please follow the instructions in the <a href="TestingCoreutils.html">Coreutils Tutorial</a>.
+    </li>
+
+    <li>What version of LLVM was used in the OSDI paper?<br/>
+        We generally kept in sync with the LLVM top-of-tree, which at the time
+        was somewhere around LLVM 2.2 and 2.3.</li>
+    </li>
+
+    <li>What version of STP was used in the OSDI paper?<br/>
+        An old version of STP, which is still available as part of KLEE's
+       repository, in revisions up to r161056.
+    </li>
+
+    <li>On what OS did you run your experiments?<br/>       
+      We ran most experiments on a 32-bit Fedora machine with SELinux
+      support.  The most important aspect is that this was a 32-bit
+      system: the constraints generated on a 64-bit system are typically
+      more complex and memory consumption might also increase.
+    </li>
+
+    <li>What are the 89 Coreutils applications that you tested? <br/>
+      	<div class="instr">
+      [ base64 basename cat chcon chgrp chmod chown chroot cksum comm cp csplit cut date dd df dircolors dirname du echo env expand expr factor false fmt fold head hostid hostname id ginstall join kill link ln logname ls md5sum mkdir mkfifo mknod mktemp mv nice nl nohup od paste pathchk pinky pr printenv printf ptx pwd readlink rm rmdir runcon seq setuidgid shred shuf sleep sort split stat stty sum sync tac tail tee touch tr tsort tty uname unexpand uniq unlink uptime users wc whoami who yes 
+      </div>
+    </li>
+
+    <li>What options did you run KLEE with? <br/>
+        We used the following options (the command below is for paste):
+	<div class="instr">
+$ klee --simplify-sym-indices --write-cvcs --write-cov --output-module \ <br/>
+     --max-memory=1000 --disable-inlining --optimize --use-forked-stp \  <br/>
+     --use-cex-cache --with-libc --with-file-model=release \ <br/>
+     --allow-external-sym-calls --only-output-states-covering-new \ <br/>
+     --exclude-libc-cov --exclude-cov-file=./../lib/functions.txt \ <br/>
+     --environ=test.env --run-in=/tmp/sandbox --output-dir=paste-data-1h \ <br/>
+     --max-sym-array-size=4096 --max-instruction-time=10. --max-time=3600. \ <br/>
+     --watchdog --max-memory-inhibit=false --max-static-fork-pct=1 \ <br/>
+     --max-static-solve-pct=1 --max-static-cpfork-pct=1 --switch-type=internal \ <br/>
+     --randomize-fork --use-random-path --use-interleaved-covnew-NURS \ <br/>
+     --use-batching-search --batch-instructions 10000 --init-env \ <br/>
+     ./paste.bc --sym-args 0 1 10 --sym-args 0 2 2 --sym-files 1 8 --sym-stdout
+      </div>
+      
+     Some of these options have been renamed or removed in the current
+     version of KLEE.  Most notably, the options "--exclude-libc-cov"
+     and "--exclude-cov-file" were implemented in a fragile way and we
+     decided to remove them from KLEE.  The idea was to treat the
+     functions in libc or specified in a text file as "covered".  (For
+     the Coreutils experiments, we were interested in covering the
+     code in the tools themselves, as opposed to library code, see the
+     paper for more details).  If you plan to reimplement these
+     options in a clean way, please consider contributing your code to the mainline.
+    </li>
+
+    <li>What are the options closest to the ones above that
+        work with the current version KLEE? </br>
+        Try the following:
+
+    <div class="instr">
+$ klee --simplify-sym-indices --write-cvcs --write-cov --output-module \ <br/>
+     --max-memory=1000 --disable-inlining --optimize --use-forked-stp \ <br/>
+     --use-cex-cache --libc=uclibc --posix-runtime \ <br/>
+     --allow-external-sym-calls --only-output-states-covering-new \ <br/>
+     --environ=test.env --run-in=/tmp/sandbox \ <br/>
+     --max-sym-array-size=4096 --max-instruction-time=30. --max-time=3600. \ <br/>
+     --watchdog --max-memory-inhibit=false --max-static-fork-pct=1 \ <br/>
+     --max-static-solve-pct=1 --max-static-cpfork-pct=1 --switch-type=internal \ <br/>
+     --randomize-fork --search=random-path --search=nurs:covnew \ <br/>
+     --use-batching-search --batch-instructions=10000 \ <br/>
+      ./paste.bc --sym-args 0 1 10 --sym-args 0 2 2 --sym-files 1 8 --sym-stdout 
+        </div>
+      
+    </li>
+    
+    <li>How do I generate test.env and /tmp/sandbox? <br/> 
+        We used a simple environment and a "sandbox" directory to make
+        our experiments more deterministic.  To recreate them, follow
+        these steps:
+      <ol type="a">
+	<li>Download <tt>testing-env.sh</tt> by clicking <a href="http://www.doc.ic.ac.uk/~cristic/klee/klee-cu-testing-env.html">here</a>, and place it in the current directory.</li>
+	<li>Create <tt>test.env</tt> by running:  
+            <div class="instr">
+            $ env -i /bin/bash -c '(source testing-env.sh; env >test.env)' 
+	    </div>
+	</li>
+        <li>Download <tt>sandbox.tgz</tt> by clicking <a href="http://www.doc.ic.ac.uk/~cristic/klee/klee-cu-sandbox.html">here</a>, place it in <tt>/tmp</tt>, and run:
+	    <div class="instr">
+	      $ cd /tmp
+	      $ tar xzfv sandbox.tgz
+	    </div>
+        </li>	
+      </ol>
+    </li>
+    <li>
+      What symbolic arguments did you use in your experiments? <br/>
+      We ran most utilities using the arguments below.  Our choice was
+      based on a high-level understanding of the Coreutils
+      applications: most behavior can be triggered with no more than two
+      short options, one long option, and two small input streams (stdin and one file).
+      <div class="instr">
+	--sym-args 0 1 10 --sym-args 0 2 2 --sym-files 1 8 --sym-stdout
+      </div>
+      
+
+
+      For eight tools where the coverage results were unsatisfactory,
+we consulted the man page and increased the number and size of
+arguments and files as follows:
+      <div class="instr">
+        <b>dd:</b> --sym-args 0 3 10 --sym-files 1 8 --sym-stdout <br/>
+ <b>dircolors:</b> --sym-args 0 3 10 --sym-files 2 12 --sym-stdout <br/>
+      <b>echo:</b> --sym-args 0 4 300 --sym-files 2 30 --sym-stdout <br/>
+      <b>expr:</b> --sym-args 0 1 10 --sym-args 0 3 2 --sym-stdout <br/>
+     <b>mknod:</b> --sym-args 0 1 10 --sym-args 0 3 2 --sym-files 1 8 --sym-stdout <br/>
+        <b>od:</b> --sym-args 0 3 10 --sym-files 2 12 --sym-stdout <br/>
+   <b>pathchk:</b> --sym-args 0 1 2 --sym-args 0 1 300 --sym-files 1 8 --sym-stdout <br/>
+    <b>printf:</b> --sym-args 0 3 10 --sym-files 2 12 --sym-stdout 
+      </div>
+    
+    </li>
+
+  </ol>
+
+
+</div>
+</body>
+</html>
