@@ -42,7 +42,11 @@ namespace klee {
     }
 
     void setTimeout(double t) {
-      stpSolver->setTimeout(t);
+      stpSolver->setCoreSolverTimeout(t);
+    }
+    
+    char *getConstraintLog(const Query& query) {
+      return solver->getConstraintLog(query);
     }
 
     bool evaluate(const ExecutionState&, ref<Expr>, Solver::Validity &result);

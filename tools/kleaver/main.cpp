@@ -216,7 +216,7 @@ static bool EvaluateInputAST(const char *Filename,
   if (!UseDummySolver) {
     STPSolver* stpSolver = new STPSolver(UseForkedCoreSolver);
     if (0 != MaxCoreSolverTime) {
-      stpSolver->setTimeout(MaxCoreSolverTime);    
+      stpSolver->setCoreSolverTimeout(MaxCoreSolverTime);    
     }
     STP = S = stpSolver;
   }
