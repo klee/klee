@@ -47,16 +47,27 @@
 #include "klee/Internal/Support/FloatEvaluation.h"
 #include "klee/Internal/System/Time.h"
 
-#include "llvm/Attributes.h"
-#include "llvm/BasicBlock.h"
-#include "llvm/Constants.h"
-#include "llvm/Function.h"
-#include "llvm/Instructions.h"
-#include "llvm/IntrinsicInst.h"
-#if LLVM_VERSION_CODE >= LLVM_VERSION(2, 7)
-#include "llvm/LLVMContext.h"
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+ #include "llvm/IR/Attributes.h"
+ #include "llvm/IR/BasicBlock.h"
+ #include "llvm/IR/Constants.h"
+ #include "llvm/IR/Function.h"
+ #include "llvm/IR/Instructions.h"
+ #include "llvm/IR/IntrinsicInst.h"
+ #include "llvm/IR/LLVMContext.h"
+ #include "llvm/IR/Module.h"
+#else
+ #include "llvm/Attributes.h"
+ #include "llvm/BasicBlock.h"
+ #include "llvm/Constants.h"
+ #include "llvm/Function.h"
+ #include "llvm/Instructions.h"
+ #include "llvm/IntrinsicInst.h"
+ #if LLVM_VERSION_CODE >= LLVM_VERSION(2, 7)
+  #include "llvm/LLVMContext.h"
+ #endif
+ #include "llvm/Module.h"
 #endif
-#include "llvm/Module.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/CallSite.h"
@@ -67,10 +78,12 @@
 #else
 #include "llvm/Support/Process.h"
 #endif
-#if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
-#include "llvm/Target/TargetData.h"
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+ #include "llvm/IR/DataLayout.h"
+#elif LLVM_VERSION_CODE > LLVM_VERSION(3, 1)
+ #include "llvm/DataLayout.h"
 #else
-#include "llvm/DataLayout.h"
+ #include "llvm/Target/TargetData.h"
 #endif
 
 #include <cassert>

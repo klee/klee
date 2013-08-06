@@ -22,28 +22,38 @@
 #include "klee/Internal/Support/ModuleUtil.h"
 
 #include "llvm/Bitcode/ReaderWriter.h"
-#include "llvm/Instructions.h"
-#if LLVM_VERSION_CODE >= LLVM_VERSION(2, 7)
-#include "llvm/LLVMContext.h"
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+ #include "llvm/IR/Instructions.h"
+ #include "llvm/IR/LLVMContext.h"
+ #include "llvm/IR/Module.h"
+ #include "llvm/PassManager.h"
+ #include "llvm/IR/ValueSymbolTable.h"
+#else
+ #include "llvm/Instructions.h"
+ #if LLVM_VERSION_CODE >= LLVM_VERSION(2, 7)
+  #include "llvm/LLVMContext.h"
+ #endif
+ #include "llvm/Module.h"
+ #include "llvm/PassManager.h"
+ #include "llvm/ValueSymbolTable.h"
 #endif
-#include "llvm/Module.h"
-#include "llvm/PassManager.h"
-#include "llvm/ValueSymbolTable.h"
 #include "llvm/Support/CallSite.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 #if LLVM_VERSION_CODE >= LLVM_VERSION(2, 7)
-#include "llvm/Support/raw_os_ostream.h"
+ #include "llvm/Support/raw_os_ostream.h"
 #endif
 #if LLVM_VERSION_CODE < LLVM_VERSION(2, 9)
-#include "llvm/System/Path.h"
+ #include "llvm/System/Path.h"
 #else
-#include "llvm/Support/Path.h"
+ #include "llvm/Support/Path.h"
 #endif
-#if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
-#include "llvm/Target/TargetData.h"
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+ #include "llvm/IR/DataLayout.h"
+#elif LLVM_VERSION_CODE > LLVM_VERSION(3, 1)
+ #include "llvm/DataLayout.h"
 #else
-#include "llvm/DataLayout.h"
+ #include "llvm/Target/TargetData.h"
 #endif
 #include "llvm/Transforms/Scalar.h"
 

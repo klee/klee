@@ -10,15 +10,25 @@
 #include "klee/Internal/Support/ModuleUtil.h"
 #include "klee/Config/Version.h"
 
-#include "llvm/Function.h"
-#include "llvm/Instructions.h"
-#include "llvm/IntrinsicInst.h"
-#include "llvm/Linker.h"
-#include "llvm/Module.h"
-#if LLVM_VERSION_CODE < LLVM_VERSION(2, 8)
-#include "llvm/Assembly/AsmAnnotationWriter.h"
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+ #include "llvm/IR/Function.h"
+ #include "llvm/IR/Instruction.h"
+ #include "llvm/IR/IntrinsicInst.h"
+ #include "llvm/Linker.h"
+ #include "llvm/IR/Module.h"
+ #include "llvm/Support/SourceMgr.h"
+ #include "llvm/IRReader/IRReader.h"
 #else
-#include "llvm/Assembly/AssemblyAnnotationWriter.h"
+ #include "llvm/Function.h"
+ #include "llvm/Instructions.h"
+ #include "llvm/IntrinsicInst.h"
+ #include "llvm/Linker.h"
+ #include "llvm/Module.h"
+#endif
+#if LLVM_VERSION_CODE < LLVM_VERSION(2, 8)
+ #include "llvm/Assembly/AsmAnnotationWriter.h"
+#else
+ #include "llvm/Assembly/AssemblyAnnotationWriter.h"
 #endif
 #include "llvm/Support/CFG.h"
 #include "llvm/Support/CallSite.h"
@@ -26,9 +36,9 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Analysis/ValueTracking.h"
 #if LLVM_VERSION_CODE < LLVM_VERSION(2, 9)
-#include "llvm/System/Path.h"
+ #include "llvm/System/Path.h"
 #else
-#include "llvm/Support/Path.h"
+ #include "llvm/Support/Path.h"
 #endif
 
 #include <map>
@@ -42,9 +52,21 @@ using namespace klee;
 
 Module *klee::linkWithLibrary(Module *module, 
                               const std::string &libraryName) {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+  SMDiagnostic err;
+  std::string err_str;
+  sys::Path libraryPath(libraryName);
+  Module *new_mod = ParseIRFile(libraryPath.str(), err, module->getContext());
+
+  if (Linker::LinkModules(module, new_mod, Linker::DestroySource, &err_str)) {
+    assert(0 && "linked in library failed!");
+  }
+
+  return module;
+#else
   Linker linker("klee", module, false);
 
-  llvm::sys::Path libraryPath(libraryName);
+  sys::Path libraryPath(libraryName);
   bool native = false;
     
   if (linker.LinkInFile(libraryPath, native)) {
@@ -52,6 +74,7 @@ Module *klee::linkWithLibrary(Module *module,
   }
     
   return linker.releaseModule();
+#endif
 }
 
 Function *klee::getDirectCallTarget(CallSite cs) {

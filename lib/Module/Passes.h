@@ -12,9 +12,16 @@
 
 #include "klee/Config/Version.h"
 
-#include "llvm/Constants.h"
-#include "llvm/Instructions.h"
-#include "llvm/Module.h"
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+ #include "llvm/IR/Constants.h"
+ #include "llvm/IR/Instructions.h"
+ #include "llvm/IR/Module.h"
+#else
+ #include "llvm/Constants.h"
+ #include "llvm/Instructions.h"
+ #include "llvm/Module.h"
+#endif
+
 #include "llvm/Pass.h"
 #include "llvm/CodeGen/IntrinsicLowering.h"
 

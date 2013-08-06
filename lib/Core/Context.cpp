@@ -11,8 +11,13 @@
 
 #include "klee/Expr.h"
 
-#include "llvm/Type.h"
-#include "llvm/DerivedTypes.h"
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+ #include "llvm/IR/Type.h"
+ #include "llvm/IR/DerivedTypes.h"
+#else
+ #include "llvm/Type.h"
+ #include "llvm/DerivedTypes.h"
+#endif
 
 #include <cassert>
 
