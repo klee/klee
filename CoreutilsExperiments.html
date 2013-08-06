@@ -63,7 +63,7 @@
         We used the following options (the command below is for paste):
 	<div class="instr">
 $ klee --simplify-sym-indices --write-cvcs --write-cov --output-module \ <br/>
-     --max-memory=1000 --disable-inlining --optimize --use-forked-stp \  <br/>
+     --max-memory=1000 --disable-inlining --optimize --use-forked-solver \  <br/>
      --use-cex-cache --with-libc --with-file-model=release \ <br/>
      --allow-external-sym-calls --only-output-states-covering-new \ <br/>
      --exclude-libc-cov --exclude-cov-file=./../lib/functions.txt \ <br/>
@@ -93,7 +93,7 @@ $ klee --simplify-sym-indices --write-cvcs --write-cov --output-module \ <br/>
 
     <div class="instr">
 $ klee --simplify-sym-indices --write-cvcs --write-cov --output-module \ <br/>
-     --max-memory=1000 --disable-inlining --optimize --use-forked-stp \ <br/>
+     --max-memory=1000 --disable-inlining --optimize --use-forked-solver \ <br/>
      --use-cex-cache --libc=uclibc --posix-runtime \ <br/>
      --allow-external-sym-calls --only-output-states-covering-new \ <br/>
      --environ=test.env --run-in=/tmp/sandbox \ <br/>
