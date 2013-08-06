@@ -251,16 +251,17 @@ Executor::Executor(const InterpreterOptions &opts,
     coreSolverTimeout(MaxCoreSolverTime != 0 && MaxInstructionTime != 0
       ? std::min(MaxCoreSolverTime,MaxInstructionTime)
       : std::max(MaxCoreSolverTime,MaxInstructionTime)) {
+      
   if (coreSolverTimeout) UseForkedCoreSolver = true;
-  STPSolver *stpSolver = new STPSolver(UseForkedCoreSolver, CoreSolverOptimizeDivides);
+  Solver *coreSolver = new STPSolver(UseForkedCoreSolver, CoreSolverOptimizeDivides);  
   Solver *solver = 
-    constructSolverChain(stpSolver,
+    constructSolverChain(coreSolver,
                          interpreterHandler->getOutputFilename(ALL_QUERIES_SMT2_FILE_NAME),
                          interpreterHandler->getOutputFilename(SOLVER_QUERIES_SMT2_FILE_NAME),
                          interpreterHandler->getOutputFilename(ALL_QUERIES_PC_FILE_NAME),
                          interpreterHandler->getOutputFilename(SOLVER_QUERIES_PC_FILE_NAME));
   
-  this->solver = new TimingSolver(solver, stpSolver);
+  this->solver = new TimingSolver(solver);
 
   memory = new MemoryManager();
 }
@@ -3280,7 +3281,7 @@ void Executor::getConstraintLog(const ExecutionState &state,
   case STP:
   {
 	  Query query(state.constraints, ConstantExpr::alloc(0, Expr::Bool));
-	  char *log = solver->stpSolver->getConstraintLog(query);
+	  char *log = solver->getConstraintLog(query);
 	  res = std::string(log);
 	  free(log);
   }

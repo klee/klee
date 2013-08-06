@@ -211,25 +211,19 @@ static bool EvaluateInputAST(const char *Filename,
     return false;
 
   // FIXME: Support choice of solver.
-  Solver *S   = 0;
-  Solver *STP = 0;
+  Solver *coreSolver = UseDummySolver ? createDummySolver() : new STPSolver(UseForkedCoreSolver);
+  
   if (!UseDummySolver) {
-    STPSolver* stpSolver = new STPSolver(UseForkedCoreSolver);
     if (0 != MaxCoreSolverTime) {
-      stpSolver->setCoreSolverTimeout(MaxCoreSolverTime);    
+      coreSolver->setCoreSolverTimeout(MaxCoreSolverTime);
     }
-    STP = S = stpSolver;
-  }
-  else {
-    STP = S = createDummySolver(); 
   }
 
-  S= constructSolverChain((STPSolver*) STP,
-		  	  	  	      getQueryLogPath(ALL_QUERIES_SMT2_FILE_NAME),
-		  	  	  	      getQueryLogPath(SOLVER_QUERIES_SMT2_FILE_NAME),
-		  	  	  	      getQueryLogPath(ALL_QUERIES_PC_FILE_NAME),
-		  	  	  	      getQueryLogPath(SOLVER_QUERIES_PC_FILE_NAME));
-
+  Solver *S = constructSolverChain(coreSolver,
+                                   getQueryLogPath(ALL_QUERIES_SMT2_FILE_NAME),
+                                   getQueryLogPath(SOLVER_QUERIES_SMT2_FILE_NAME),
+                                   getQueryLogPath(ALL_QUERIES_PC_FILE_NAME),
+                                   getQueryLogPath(SOLVER_QUERIES_PC_FILE_NAME));
 
   unsigned Index = 0;
   for (std::vector<Decl*>::iterator it = Decls.begin(),
