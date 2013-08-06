@@ -31,7 +31,7 @@ namespace {
 
   cl::opt<bool>
   CexCacheTryAll("cex-cache-try-all",
-                 cl::desc("try substituting all counterexamples before asking STP"),
+                 cl::desc("try substituting all counterexamples before asking the SMT solver"),
                  cl::init(false));
 
   cl::opt<bool>

@@ -189,7 +189,7 @@ namespace {
 
   cl::opt<double>
   MaxInstructionTime("max-instruction-time",
-                     cl::desc("Only allow a single instruction to take this much time (default=0s (off)). Enables --use-forked-stp"),
+                     cl::desc("Only allow a single instruction to take this much time (default=0s (off)). Enables --use-forked-solver"),
                      cl::init(0));
   
   cl::opt<double>
@@ -221,16 +221,6 @@ namespace {
   MaxMemoryInhibit("max-memory-inhibit",
             cl::desc("Inhibit forking at memory cap (vs. random terminate) (default=on)"),
             cl::init(true));
-
-  cl::opt<bool>
-  UseForkedSTP("use-forked-stp",
-	       cl::desc("Run STP in a forked process (default=off)"));
-
-  cl::opt<bool>
-  STPOptimizeDivides("stp-optimize-divides", 
-                 cl::desc("Optimize constant divides into add/shift/multiplies before passing to STP (default=on)"),
-                 cl::init(true));
-
 }
 
 
@@ -258,11 +248,11 @@ Executor::Executor(const InterpreterOptions &opts,
     inhibitForking(false),
     haltExecution(false),
     ivcEnabled(false),
-    stpTimeout(MaxSTPTime != 0 && MaxInstructionTime != 0
-      ? std::min(MaxSTPTime,MaxInstructionTime)
-      : std::max(MaxSTPTime,MaxInstructionTime)) {
-  if (stpTimeout) UseForkedSTP = true;
-  STPSolver *stpSolver = new STPSolver(UseForkedSTP, STPOptimizeDivides);
+    coreSolverTimeout(MaxCoreSolverTime != 0 && MaxInstructionTime != 0
+      ? std::min(MaxCoreSolverTime,MaxInstructionTime)
+      : std::max(MaxCoreSolverTime,MaxInstructionTime)) {
+  if (coreSolverTimeout) UseForkedCoreSolver = true;
+  STPSolver *stpSolver = new STPSolver(UseForkedCoreSolver, CoreSolverOptimizeDivides);
   Solver *solver = 
     constructSolverChain(stpSolver,
                          interpreterHandler->getOutputFilename(ALL_QUERIES_SMT2_FILE_NAME),
@@ -666,7 +656,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     }
   }
 
-  double timeout = stpTimeout;
+  double timeout = coreSolverTimeout;
   if (isSeeding)
     timeout *= it->second.size();
   solver->setTimeout(timeout);
@@ -982,7 +972,7 @@ ref<Expr> Executor::toUnique(const ExecutionState &state,
     ref<ConstantExpr> value;
     bool isTrue = false;
 
-    solver->setTimeout(stpTimeout);      
+    solver->setTimeout(coreSolverTimeout);      
     if (solver->getValue(state, e, value) &&
         solver->mustBeTrue(state, EqExpr::create(e, value), isTrue) &&
         isTrue)
@@ -2979,7 +2969,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
   // fast path: single in-bounds resolution
   ObjectPair op;
   bool success;
-  solver->setTimeout(stpTimeout);
+  solver->setTimeout(coreSolverTimeout);
   if (!state.addressSpace.resolveOne(state, solver, address, op, success)) {
     address = toConstant(state, address, "resolveOne failure");
     success = state.addressSpace.resolveOne(cast<ConstantExpr>(address), op);
@@ -2996,7 +2986,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
     ref<Expr> offset = mo->getOffsetExpr(address);
 
     bool inBounds;
-    solver->setTimeout(stpTimeout);
+    solver->setTimeout(coreSolverTimeout);
     bool success = solver->mustBeTrue(state, 
                                       mo->getBoundsCheckOffset(offset, bytes),
                                       inBounds);
@@ -3035,9 +3025,9 @@ void Executor::executeMemoryOperation(ExecutionState &state,
   // resolution with out of bounds)
   
   ResolutionList rl;  
-  solver->setTimeout(stpTimeout);
+  solver->setTimeout(coreSolverTimeout);
   bool incomplete = state.addressSpace.resolve(state, solver, address, rl,
-                                               0, stpTimeout);
+                                               0, coreSolverTimeout);
   solver->setTimeout(0);
   
   // XXX there is some query wasteage here. who cares?
@@ -3328,7 +3318,7 @@ bool Executor::getSymbolicSolution(const ExecutionState &state,
                                    std::pair<std::string,
                                    std::vector<unsigned char> > >
                                    &res) {
-  solver->setTimeout(stpTimeout);
+  solver->setTimeout(coreSolverTimeout);
 
   ExecutionState tmp(state);
   if (!NoPreferCex) {

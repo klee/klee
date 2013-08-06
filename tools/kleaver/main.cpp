@@ -214,9 +214,9 @@ static bool EvaluateInputAST(const char *Filename,
   Solver *S   = 0;
   Solver *STP = 0;
   if (!UseDummySolver) {
-    STPSolver* stpSolver = new STPSolver(true);
-    if (0 != MaxSTPTime) {
-      stpSolver->setTimeout(MaxSTPTime);    
+    STPSolver* stpSolver = new STPSolver(UseForkedCoreSolver);
+    if (0 != MaxCoreSolverTime) {
+      stpSolver->setTimeout(MaxCoreSolverTime);    
     }
     STP = S = stpSolver;
   }
