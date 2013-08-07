@@ -40,9 +40,20 @@ MinQueryTimeToLog("min-query-time-to-log",
                                  "Set this param to a negative value to log timeouts only."));
 
 llvm::cl::opt<double>
-MaxSTPTime("max-stp-time",
-           llvm::cl::desc("Maximum amount of time for a single query (default=0s (off)). Enables --use-forked-stp"),
-           llvm::cl::init(0.0));
+MaxCoreSolverTime("max-solver-time",
+           llvm::cl::desc("Maximum amount of time for a single SMT query (default=0s (off)). Enables --use-forked-solver"),
+           llvm::cl::init(0.0),
+           llvm::cl::value_desc("seconds"));
+
+llvm::cl::opt<bool>
+UseForkedCoreSolver("use-forked-solver",
+             llvm::cl::desc("Run the core SMT solver in a forked process (default=on)"),
+             llvm::cl::init(true));
+
+llvm::cl::opt<bool>
+CoreSolverOptimizeDivides("solver-optimize-divides", 
+                 llvm::cl::desc("Optimize constant divides into add/shift/multiplies before passing to core SMT solver (default=on)"),
+                 llvm::cl::init(true));
 
 
 /* Using cl::list<> instead of cl::bits<> results in quite a bit of ugliness when it comes to checking

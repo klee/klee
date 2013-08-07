@@ -110,6 +110,7 @@ ObjectState::ObjectState(const MemoryObject *mo)
     const Array *array = new Array("tmp_arr" + llvm::utostr(++id), size);
     updates = UpdateList(array, 0);
   }
+  memset(concreteStore, 0, size);
 }
 
 
@@ -126,6 +127,7 @@ ObjectState::ObjectState(const MemoryObject *mo, const Array *array)
     readOnly(false) {
   mo->refCount++;
   makeSymbolic();
+  memset(concreteStore, 0, size);
 }
 
 ObjectState::ObjectState(const ObjectState &os) 

@@ -101,6 +101,14 @@ Solver::~Solver() {
   delete impl; 
 }
 
+char *Solver::getConstraintLog(const Query& query) {
+    return impl->getConstraintLog(query);
+}
+
+void Solver::setCoreSolverTimeout(double timeout) {
+    impl->setCoreSolverTimeout(timeout);
+}
+
 bool Solver::evaluate(const Query& query, Validity &result) {
   assert(query.expr->getWidth() == Expr::Bool && "Invalid expression type!");
 
@@ -307,6 +315,8 @@ public:
                             std::vector< std::vector<unsigned char> > &values,
                             bool &hasSolution);
   SolverRunStatus getOperationStatusCode();
+  char *getConstraintLog(const Query&);
+  void setCoreSolverTimeout(double timeout);
 };
 
 bool ValidatingSolver::computeTruth(const Query& query,
@@ -408,6 +418,14 @@ SolverImpl::SolverRunStatus ValidatingSolver::getOperationStatusCode() {
     return solver->impl->getOperationStatusCode();
 }
 
+char *ValidatingSolver::getConstraintLog(const Query& query) {
+  return solver->impl->getConstraintLog(query);
+}
+
+void ValidatingSolver::setCoreSolverTimeout(double timeout) {
+  solver->impl->setCoreSolverTimeout(timeout);
+}
+
 Solver *klee::createValidatingSolver(Solver *s, Solver *oracle) {
   return new Solver(new ValidatingSolver(s, oracle));
 }
@@ -466,9 +484,9 @@ private:
 public:
   STPSolverImpl(STPSolver *_solver, bool _useForkedSTP, bool _optimizeDivides = true);
   ~STPSolverImpl();
-
+  
   char *getConstraintLog(const Query&);
-  void setTimeout(double _timeout) { timeout = _timeout; }
+  void setCoreSolverTimeout(double _timeout) { timeout = _timeout; }
 
   bool computeTruth(const Query&, bool &isValid);
   bool computeValue(const Query&, ref<Expr> &result);
@@ -532,11 +550,11 @@ STPSolver::STPSolver(bool useForkedSTP, bool optimizeDivides)
 }
 
 char *STPSolver::getConstraintLog(const Query &query) {
-  return static_cast<STPSolverImpl*>(impl)->getConstraintLog(query);  
+  return impl->getConstraintLog(query);  
 }
 
-void STPSolver::setTimeout(double timeout) {
-  static_cast<STPSolverImpl*>(impl)->setTimeout(timeout);
+void STPSolver::setCoreSolverTimeout(double timeout) {
+    impl->setCoreSolverTimeout(timeout);
 }
 
 /***/
