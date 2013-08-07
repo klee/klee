@@ -183,4 +183,11 @@ SolverImpl::SolverRunStatus QueryLoggingSolver::getOperationStatusCode() {
     return solver->impl->getOperationStatusCode();
 }
 
+char *QueryLoggingSolver::getConstraintLog(const Query& query) {
+  return solver->impl->getConstraintLog(query);
+}
+
+void QueryLoggingSolver::setCoreSolverTimeout(double timeout) {
+  solver->impl->setCoreSolverTimeout(timeout);
+}
 

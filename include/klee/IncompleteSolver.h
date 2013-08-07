@@ -102,6 +102,8 @@ public:
                             std::vector< std::vector<unsigned char> > &values,
                             bool &hasSolution);
   SolverRunStatus getOperationStatusCode();
+  char *getConstraintLog(const Query&);
+  void setCoreSolverTimeout(double timeout);
 };
 
 }

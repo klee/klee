@@ -22,7 +22,11 @@ extern llvm::cl::opt<bool> DebugValidateSolver;
   
 extern llvm::cl::opt<int> MinQueryTimeToLog;
 
-extern llvm::cl::opt<double> MaxSTPTime;
+extern llvm::cl::opt<double> MaxCoreSolverTime;
+
+extern llvm::cl::opt<bool> UseForkedCoreSolver;
+
+extern llvm::cl::opt<bool> CoreSolverOptimizeDivides;
 
 ///The different query logging solvers that can switched on/off
 enum QueryLoggingSolverType

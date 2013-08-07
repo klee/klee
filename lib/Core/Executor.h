@@ -173,8 +173,9 @@ private:
   /// false, it is buggy (it needs to validate its writes).
   bool ivcEnabled;
 
-  /// The maximum time to allow for a single stp query.
-  double stpTimeout;  
+  /// The maximum time to allow for a single core solver query.
+  /// (e.g. for a single STP query)
+  double coreSolverTimeout; 
 
   llvm::Function* getTargetFunction(llvm::Value *calledVal,
                                     ExecutionState &state);

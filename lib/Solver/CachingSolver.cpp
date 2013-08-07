@@ -85,6 +85,8 @@ public:
                                               hasSolution);
   }
   SolverRunStatus getOperationStatusCode();
+  char *getConstraintLog(const Query&);
+  void setCoreSolverTimeout(double timeout);
 };
 
 /** @returns the canonical version of the given query.  The reference
@@ -242,6 +244,14 @@ bool CachingSolver::computeTruth(const Query& query,
 
 SolverImpl::SolverRunStatus CachingSolver::getOperationStatusCode() {
   return solver->impl->getOperationStatusCode();
+}
+
+char *CachingSolver::getConstraintLog(const Query& query) {
+  return solver->impl->getConstraintLog(query);
+}
+
+void CachingSolver::setCoreSolverTimeout(double timeout) {
+  solver->impl->setCoreSolverTimeout(timeout);
 }
 
 ///

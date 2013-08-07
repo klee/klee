@@ -22,7 +22,7 @@ namespace klee {
     const char ALL_QUERIES_PC_FILE_NAME[]="all-queries.pc";
     const char SOLVER_QUERIES_PC_FILE_NAME[]="solver-queries.pc";
 
-    Solver *constructSolverChain(STPSolver *stpSolver,
+    Solver *constructSolverChain(Solver *coreSolver,
                                  std::string querySMT2LogPath,
                                  std::string baseSolverQuerySMT2LogPath,
                                  std::string queryPCLogPath,

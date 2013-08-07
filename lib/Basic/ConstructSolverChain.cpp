@@ -16,13 +16,13 @@
 
 namespace klee
 {
-	Solver *constructSolverChain(STPSolver *stpSolver,
-								 std::string querySMT2LogPath,
-								 std::string baseSolverQuerySMT2LogPath,
-								 std::string queryPCLogPath,
-								 std::string baseSolverQueryPCLogPath)
+        Solver *constructSolverChain(Solver *coreSolver,
+                                     std::string querySMT2LogPath,
+                                     std::string baseSolverQuerySMT2LogPath,
+                                     std::string queryPCLogPath,
+                                     std::string baseSolverQueryPCLogPath)
 	{
-	  Solver *solver = stpSolver;
+	  Solver *solver = coreSolver;
 
 	  if (optionIsSet(queryLoggingOptions, SOLVER_PC))
 	  {
@@ -55,7 +55,7 @@ namespace klee
 		solver = createIndependentSolver(solver);
 
 	  if (DebugValidateSolver)
-		solver = createValidatingSolver(solver, stpSolver);
+		solver = createValidatingSolver(solver, coreSolver);
 
 	  if (optionIsSet(queryLoggingOptions, ALL_PC))
 	  {
