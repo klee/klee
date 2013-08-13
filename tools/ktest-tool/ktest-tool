@@ -13,21 +13,21 @@ class KTest:
     @staticmethod
     def fromfile(path):
         if not os.path.exists(path):
-            print "ERROR: file %s not found" % (path)
+            print("ERROR: file %s not found" % (path))
             sys.exit(1)
             
         f = open(path,'rb')
         hdr = f.read(5)
-        if len(hdr)!=5 or (hdr!='KTEST' and hdr != "BOUT\n"):
-            raise KTestError,'unrecognized file'
+        if len(hdr)!=5 or (hdr!=b'KTEST' and hdr != b"BOUT\n"):
+            raise KTestError('unrecognized file')
         version, = struct.unpack('>i', f.read(4))
         if version > version_no:
-            raise KTestError,'unrecognized version'
+            raise KTestError('unrecognized version')
         numArgs, = struct.unpack('>i', f.read(4))
         args = []
         for i in range(numArgs):
             size, = struct.unpack('>i', f.read(4))
-            args.append(f.read(size))
+            args.append(str(f.read(size).decode(encoding='ascii')))
             
         if version >= 2:
             symArgvs, = struct.unpack('>i', f.read(4))
@@ -90,23 +90,23 @@ def main(args):
     for file in args:
         b = KTest.fromfile(file)
         pos = 0
-        print 'ktest file : %r' % file
-        print 'args       : %r' % b.args
-        print 'num objects: %r' % len(b.objects)
+        print('ktest file : %r' % file)
+        print('args       : %r' % b.args)
+        print('num objects: %r' % len(b.objects))
         for i,(name,data) in enumerate(b.objects):
             if opts.trimZeros:
                 str = trimZeros(data)
             else:
                 str = data
 
-            print 'object %4d: name: %r' % (i, name)
-            print 'object %4d: size: %r' % (i, len(data))
+            print('object %4d: name: %r' % (i, name))
+            print('object %4d: size: %r' % (i, len(data)))
             if opts.writeInts and len(data) == 4: 
-                print 'object %4d: data: %r' % (i, struct.unpack('i',str)[0])
+                print('object %4d: data: %r' % (i, struct.unpack('i',str)[0]))
             else:
-                print 'object %4d: data: %r' % (i, str)
+                print('object %4d: data: %r' % (i, str))
         if file != args[-1]:
-            print
+            print()
 
 if __name__=='__main__':
     main(sys.argv)
