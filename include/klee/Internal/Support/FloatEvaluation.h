@@ -17,6 +17,8 @@
 
 #include "llvm/Support/MathExtras.h"
 
+#include <cassert>
+
 namespace klee {
 namespace floats {
 

@@ -46,9 +46,12 @@ else
   TEST_FEATURE_LIST += no-selinux
 endif
 
-CFLAGS := @CFLAGS@
-CXXFLAGS := @CXXFLAGS@
-LDFLAGS := @LDFLAGS@
+# disable unwind test
+TEST_FEATURE_LIST += no-unwind
+
+CFLAGS := @CFLAGS@ -Wall -g
+CXXFLAGS := @CXXFLAGS@ -g -Wall
+LDFLAGS := @LDFLAGS@ -g
 
 REQUIRES_RTTI := @REQUIRES_RTTI@
 RUNTEST := @RUNTEST@

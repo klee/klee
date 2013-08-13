@@ -10,11 +10,22 @@
 #include "klee/Internal/Support/ModuleUtil.h"
 #include "klee/Config/Version.h"
 
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+#include "llvm/Bitcode/ReaderWriter.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Module.h"
+#include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/DataStream.h"
+#else
 #include "llvm/Function.h"
 #include "llvm/Instructions.h"
 #include "llvm/IntrinsicInst.h"
-#include "llvm/Linker.h"
 #include "llvm/Module.h"
+#endif
+
+#include "llvm/Linker.h"
 #if LLVM_VERSION_CODE < LLVM_VERSION(2, 8)
 #include "llvm/Assembly/AsmAnnotationWriter.h"
 #else
@@ -42,6 +53,36 @@ using namespace klee;
 
 Module *klee::linkWithLibrary(Module *module, 
                               const std::string &libraryName) {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+  Linker linker(module);
+  std::string errorMessage;
+
+  DataStreamer * streamer = getDataFileStreamer(libraryName, &errorMessage);
+
+  if (!streamer)
+    fprintf(stderr, "Error Loading file: %s\n", errorMessage.c_str());
+  assert(streamer);
+  
+  OwningPtr<Module> library_module;
+  library_module.reset(getStreamedBitcodeModule(libraryName, streamer, getGlobalContext(), &errorMessage));
+  if (library_module.get() != 0
+	  && library_module->MaterializeAllPermanently(&errorMessage)) {
+	  library_module.reset();
+  }
+
+  if (library_module.get() == 0) {
+	  errs() << errorMessage << " for " << libraryName << "\n";
+	  assert(library_module.get());
+  }
+  if (linker.linkInModule(library_module.get(), &errorMessage)){
+	  fprintf(stderr, "Error in Linking %s; Existing module: %s, library to be linked in %s\n", errorMessage.c_str(),
+	      module->getModuleIdentifier().c_str(), libraryName.c_str());
+	  assert(0 && "linking in library failed!");
+  }
+
+  return linker.getModule();
+
+#else
   Linker linker("klee", module, false);
 
   llvm::sys::Path libraryPath(libraryName);
@@ -52,6 +93,7 @@ Module *klee::linkWithLibrary(Module *module,
   }
     
   return linker.releaseModule();
+#endif
 }
 
 Function *klee::getDirectCallTarget(CallSite cs) {

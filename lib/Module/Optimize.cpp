@@ -16,7 +16,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "klee/Config/Version.h"
-#include "llvm/Module.h"
 #include "llvm/PassManager.h"
 #include "llvm/Analysis/Passes.h"
 #include "llvm/Analysis/LoopPass.h"
@@ -27,11 +26,19 @@
 #else
 #include "llvm/Support/DynamicLibrary.h"
 #endif
+
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+#include "llvm/IR/Module.h"
+#include "llvm/IR/DataLayout.h"
+#else
+#include "llvm/Module.h"
 #if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
 #include "llvm/Target/TargetData.h"
 #else
 #include "llvm/DataLayout.h"
 #endif
+#endif
+
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Scalar.h"

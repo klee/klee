@@ -19,9 +19,16 @@
 #include "ObjectHolder.h"
 #include "MemoryManager.h"
 
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+#include <llvm/IR/Function.h>
+#include <llvm/IR/Instruction.h>
+#include <llvm/IR/Value.h>
+#else
 #include <llvm/Function.h>
 #include <llvm/Instruction.h>
 #include <llvm/Value.h>
+#endif
+
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 
