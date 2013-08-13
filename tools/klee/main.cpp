@@ -676,8 +676,8 @@ static int initEnv(Module *mainModule) {
 }
 
 
-// This is a terrible hack until we get some real modelling of the
-// system. All we do is check the undefined symbols and m and warn about
+// This is a terrible hack until we get some real modeling of the
+// system. All we do is check the undefined symbols and warn about
 // any "unrecognized" externals and about any obviously unsafe ones.
 
 // Symbols we explicitly support
