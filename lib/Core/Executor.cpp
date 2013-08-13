@@ -48,6 +48,19 @@
 #include "klee/Internal/Support/FloatEvaluation.h"
 #include "klee/Internal/System/Time.h"
 
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+#include "llvm/IR/Function.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/DataLayout.h"
+#include "llvm/IR/TypeBuilder.h"
+#else
 #include "llvm/Attributes.h"
 #include "llvm/BasicBlock.h"
 #include "llvm/Constants.h"
@@ -58,6 +71,13 @@
 #include "llvm/LLVMContext.h"
 #endif
 #include "llvm/Module.h"
+#if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
+#include "llvm/Target/TargetData.h"
+#else
+#include "llvm/DataLayout.h"
+#include "llvm/TypeBuilder.h"
+#endif
+#endif
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/CallSite.h"
@@ -67,11 +87,6 @@
 #include "llvm/System/Process.h"
 #else
 #include "llvm/Support/Process.h"
-#endif
-#if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
-#include "llvm/Target/TargetData.h"
-#else
-#include "llvm/DataLayout.h"
 #endif
 
 #include <cassert>
@@ -391,10 +406,10 @@ void Executor::initializeGlobals(ExecutionState &state) {
 
   if (m->getModuleInlineAsm() != "")
     klee_warning("executable has module level assembly (ignoring)");
-
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 3)
   assert(m->lib_begin() == m->lib_end() &&
          "XXX do not support dependent libraries");
-
+#endif
   // represent function globals using the address of the actual llvm function
   // object. given that we use malloc to allocate memory in states this also
   // ensures that we won't conflict. we don't need to allocate a memory object
@@ -1385,7 +1400,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
                            CallSite(cast<CallInst>(caller)));
 
             // XXX need to check other param attrs ?
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 2)
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+      bool isSExt = cs.paramHasAttr(0, llvm::Attribute::SExt);
+#elif LLVM_VERSION_CODE >= LLVM_VERSION(3, 2)
 	    bool isSExt = cs.paramHasAttr(0, llvm::Attributes::SExt);
 #else
 	    bool isSExt = cs.paramHasAttr(0, llvm::Attribute::SExt);
@@ -1589,7 +1606,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
             if (from != to) {
               // XXX need to check other param attrs ?
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 2)
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+              bool isSExt = cs.paramHasAttr(i+1, llvm::Attribute::SExt);
+#elif LLVM_VERSION_CODE >= LLVM_VERSION(3, 2)
 	      bool isSExt = cs.paramHasAttr(i+1, llvm::Attributes::SExt);
 #else
 	      bool isSExt = cs.paramHasAttr(i+1, llvm::Attribute::SExt);
@@ -1987,8 +2006,13 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         !fpWidthToSemantics(right->getWidth()))
       return terminateStateOnExecError(state, "Unsupported FAdd operation");
 
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+    llvm::APFloat Res(*fpWidthToSemantics(left->getWidth()), left->getAPValue());
+    Res.add(APFloat(*fpWidthToSemantics(right->getWidth()),right->getAPValue()), APFloat::rmNearestTiesToEven);
+#else
     llvm::APFloat Res(left->getAPValue());
     Res.add(APFloat(right->getAPValue()), APFloat::rmNearestTiesToEven);
+#endif
     bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
     break;
   }
@@ -2001,9 +2025,13 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     if (!fpWidthToSemantics(left->getWidth()) ||
         !fpWidthToSemantics(right->getWidth()))
       return terminateStateOnExecError(state, "Unsupported FSub operation");
-
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+    llvm::APFloat Res(*fpWidthToSemantics(left->getWidth()), left->getAPValue());
+    Res.subtract(APFloat(*fpWidthToSemantics(right->getWidth()), right->getAPValue()), APFloat::rmNearestTiesToEven);
+#else
     llvm::APFloat Res(left->getAPValue());
     Res.subtract(APFloat(right->getAPValue()), APFloat::rmNearestTiesToEven);
+#endif
     bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
     break;
   }
@@ -2017,8 +2045,13 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         !fpWidthToSemantics(right->getWidth()))
       return terminateStateOnExecError(state, "Unsupported FMul operation");
 
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+    llvm::APFloat Res(*fpWidthToSemantics(left->getWidth()), left->getAPValue());
+    Res.multiply(APFloat(*fpWidthToSemantics(right->getWidth()), right->getAPValue()), APFloat::rmNearestTiesToEven);
+#else
     llvm::APFloat Res(left->getAPValue());
     Res.multiply(APFloat(right->getAPValue()), APFloat::rmNearestTiesToEven);
+#endif
     bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
     break;
   }
@@ -2032,8 +2065,13 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         !fpWidthToSemantics(right->getWidth()))
       return terminateStateOnExecError(state, "Unsupported FDiv operation");
 
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+    llvm::APFloat Res(*fpWidthToSemantics(left->getWidth()), left->getAPValue());
+    Res.divide(APFloat(*fpWidthToSemantics(right->getWidth()), right->getAPValue()), APFloat::rmNearestTiesToEven);
+#else
     llvm::APFloat Res(left->getAPValue());
     Res.divide(APFloat(right->getAPValue()), APFloat::rmNearestTiesToEven);
+#endif
     bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
     break;
   }
@@ -2046,9 +2084,13 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     if (!fpWidthToSemantics(left->getWidth()) ||
         !fpWidthToSemantics(right->getWidth()))
       return terminateStateOnExecError(state, "Unsupported FRem operation");
-
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+    llvm::APFloat Res(*fpWidthToSemantics(left->getWidth()), left->getAPValue());
+    Res.remainder(APFloat(*fpWidthToSemantics(right->getWidth()),right->getAPValue()));
+#else
     llvm::APFloat Res(left->getAPValue());
     Res.mod(APFloat(right->getAPValue()), APFloat::rmNearestTiesToEven);
+#endif
     bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
     break;
   }
@@ -2061,7 +2103,11 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     if (!fpWidthToSemantics(arg->getWidth()) || resultType > arg->getWidth())
       return terminateStateOnExecError(state, "Unsupported FPTrunc operation");
 
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+    llvm::APFloat Res(*fpWidthToSemantics(arg->getWidth()), arg->getAPValue());
+#else
     llvm::APFloat Res(arg->getAPValue());
+#endif
     bool losesInfo = false;
     Res.convert(*fpWidthToSemantics(resultType),
                 llvm::APFloat::rmNearestTiesToEven,
@@ -2077,8 +2123,11 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
                                         "floating point");
     if (!fpWidthToSemantics(arg->getWidth()) || arg->getWidth() > resultType)
       return terminateStateOnExecError(state, "Unsupported FPExt operation");
-
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+    llvm::APFloat Res(*fpWidthToSemantics(arg->getWidth()), arg->getAPValue());
+#else
     llvm::APFloat Res(arg->getAPValue());
+#endif
     bool losesInfo = false;
     Res.convert(*fpWidthToSemantics(resultType),
                 llvm::APFloat::rmNearestTiesToEven,
@@ -2095,7 +2144,11 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     if (!fpWidthToSemantics(arg->getWidth()) || resultType > 64)
       return terminateStateOnExecError(state, "Unsupported FPToUI operation");
 
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+    llvm::APFloat Arg(*fpWidthToSemantics(arg->getWidth()), arg->getAPValue());
+#else
     llvm::APFloat Arg(arg->getAPValue());
+#endif
     uint64_t value = 0;
     bool isExact = true;
     Arg.convertToInteger(&value, resultType, false,
@@ -2111,8 +2164,12 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
                                        "floating point");
     if (!fpWidthToSemantics(arg->getWidth()) || resultType > 64)
       return terminateStateOnExecError(state, "Unsupported FPToSI operation");
-
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+    llvm::APFloat Arg(*fpWidthToSemantics(arg->getWidth()), arg->getAPValue());
+#else
     llvm::APFloat Arg(arg->getAPValue());
+
+#endif
     uint64_t value = 0;
     bool isExact = true;
     Arg.convertToInteger(&value, resultType, true,
@@ -2163,8 +2220,13 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         !fpWidthToSemantics(right->getWidth()))
       return terminateStateOnExecError(state, "Unsupported FCmp operation");
 
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+    APFloat LHS(*fpWidthToSemantics(left->getWidth()),left->getAPValue());
+    APFloat RHS(*fpWidthToSemantics(right->getWidth()),right->getAPValue());
+#else
     APFloat LHS(left->getAPValue());
     APFloat RHS(right->getAPValue());
+#endif
     APFloat::cmpResult CmpRes = LHS.compare(RHS);
 
     bool Result = false;
@@ -2475,8 +2537,11 @@ void Executor::run(ExecutionState &initialState) {
         // We need to avoid calling GetMallocUsage() often because it
         // is O(elts on freelist). This is really bad since we start
         // to pummel the freelist once we hit the memory cap.
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+        unsigned mbs = sys::Process::GetMallocUsage() >> 20;
+#else
         unsigned mbs = sys::Process::GetTotalMemoryUsage() >> 20;
-        
+#endif
         if (mbs > MaxMemory) {
           if (mbs > MaxMemory + 100) {
             // just guess at how many to kill

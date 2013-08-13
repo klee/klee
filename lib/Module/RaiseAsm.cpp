@@ -9,11 +9,16 @@
 
 #include "Passes.h"
 #include "klee/Config/Version.h"
-
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+#include "llvm/IR/InlineAsm.h"
+#include "llvm/IR/LLVMContext.h"
+#else
 #include "llvm/InlineAsm.h"
 #if LLVM_VERSION_CODE >= LLVM_VERSION(2, 7)
 #include "llvm/LLVMContext.h"
 #endif
+#endif
+
 #if LLVM_VERSION_CODE >= LLVM_VERSION(2, 9)
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/Host.h"
