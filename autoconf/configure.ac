@@ -120,7 +120,7 @@ AC_MSG_CHECKING([llvm package version])
 llvm_package_version=`grep PACKAGE_VERSION= $with_llvmsrc/configure | cut -d\' -f 2`
 AC_MSG_RESULT([$llvm_package_version])
 
-llvm_version_split=`python -c "import re; print '\t'.join(map(str, re.match('([[0-9]]+)[.]([[0-9]]+)(svn)?', \"$llvm_package_version\").groups()))"`
+llvm_version_split=`python -c "import re; print('\t'.join(map(str, re.match('([[0-9]]+)[.]([[0-9]]+)(svn)?', \"$llvm_package_version\").groups())))"`
 
 AC_MSG_CHECKING([llvm version major])
 llvm_version_major=`echo "$llvm_version_split" | cut -f 1`
