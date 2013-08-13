@@ -127,6 +127,10 @@ KModule::~KModule() {
          ie = functions.end(); it != ie; ++it)
     delete *it;
 
+  for (std::map<llvm::Constant*, KConstant*>::iterator it=constantMap.begin(),
+      itE=constantMap.end(); it!=itE;++it)
+    delete it->second;
+
   delete targetData;
   delete module;
 }
