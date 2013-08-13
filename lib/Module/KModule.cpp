@@ -113,6 +113,10 @@ KModule::~KModule() {
          ie = functions.end(); it != ie; ++it)
     delete *it;
 
+  for (llvm::SmallSet<KConstant*,10>::iterator it=usedKConstants.begin(),
+      itE=usedKConstants.end(); it!=itE;++it){
+    delete *it;
+  }
   delete targetData;
   delete module;
 }
@@ -485,6 +489,7 @@ unsigned KModule::getConstantID(Constant *c, KInstruction* ki) {
 
   unsigned id = constants.size();
   kc = new KConstant(c, id, ki);
+  usedKConstants.insert(kc);
   constantMap.insert(std::make_pair(c, kc));
   constants.push_back(c);
   return id;
