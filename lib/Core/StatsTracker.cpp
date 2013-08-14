@@ -27,6 +27,15 @@
 #include "UserSearcher.h"
 #include "../Solver/SolverStats.h"
 
+#if LLVM_VERSION_CODE > LLVM_VERSION(3, 2)
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/InlineAsm.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/Type.h"
+#else
 #include "llvm/BasicBlock.h"
 #include "llvm/Function.h"
 #include "llvm/Instructions.h"
@@ -34,8 +43,10 @@
 #include "llvm/InlineAsm.h"
 #include "llvm/Module.h"
 #include "llvm/Type.h"
+#endif
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/CFG.h"
+#include "llvm/Support/raw_os_ostream.h"
 #if LLVM_VERSION_CODE < LLVM_VERSION(2, 9)
 #include "llvm/System/Process.h"
 #else
@@ -45,6 +56,9 @@
 #include "llvm/System/Path.h"
 #else
 #include "llvm/Support/Path.h"
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 1)
+#include "llvm/Support/FileSystem.h"
+#endif
 #endif
 
 #include <iostream>
@@ -177,10 +191,18 @@ StatsTracker::StatsTracker(Executor &_executor, std::string _objectFilename,
   KModule *km = executor.kmodule;
 
   sys::Path module(objectFilename);
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 1)
   if (!sys::Path(objectFilename).isAbsolute()) {
+#else
+  if (!sys::path::is_absolute(objectFilename)) {
+#endif
     sys::Path current = sys::Path::GetCurrentDirectory();
     current.appendComponent(objectFilename);
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 1)
     if (current.exists())
+#else
+    if (sys::fs::exists(current.c_str()))
+#endif
       objectFilename = current.c_str();
   }
 
@@ -390,7 +412,11 @@ void StatsTracker::writeStatsLine() {
              << "," << numBranches
              << "," << util::getUserTime()
              << "," << executor.states.size()
+#if LLVM_VERSION_CODE > LLVM_VERSION(3, 2)
+             << "," << sys::Process::GetMallocUsage()
+#else
              << "," << sys::Process::GetTotalMemoryUsage()
+#endif
              << "," << stats::queries
              << "," << stats::queryConstructs
              << "," << 0 // was numObjects

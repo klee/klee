@@ -12,6 +12,7 @@
 
 #include "klee/Config/Version.h"
 #include "klee/Interpreter.h"
+#include "llvm/ADT/SmallSet.h"
 
 #include <map>
 #include <set>
@@ -122,6 +123,9 @@ namespace klee {
 
     /// Return an id for the given constant, creating a new one if necessary.
     unsigned getConstantID(llvm::Constant *c, KInstruction* ki);
+
+  private:
+    llvm::SmallSet<KConstant*,10> usedKConstants;
   };
 } // End klee namespace
 

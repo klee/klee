@@ -9,7 +9,7 @@
 
 #include <stdlib.h>
 
-void *memmove(void *dst, const void *src, size_t count) {
+__attribute__((weak)) void *memmove(void *dst, const void *src, size_t count) {
   char *a = dst;
   const char *b = src;
 

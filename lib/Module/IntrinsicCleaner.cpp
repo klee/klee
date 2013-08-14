@@ -10,6 +10,19 @@
 #include "Passes.h"
 
 #include "klee/Config/Version.h"
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/IRBuilder.h"
+
+#else
 #include "llvm/Constants.h"
 #include "llvm/DerivedTypes.h"
 #include "llvm/Function.h"
@@ -21,20 +34,21 @@
 #include "llvm/LLVMContext.h"
 #endif
 #include "llvm/Module.h"
-#include "llvm/Pass.h"
 #include "llvm/Type.h"
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 2)
 #include "llvm/IRBuilder.h"
 #else
 #include "llvm/Support/IRBuilder.h"
 #endif
-#include "llvm/Transforms/Scalar.h"
-#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
 #include "llvm/Target/TargetData.h"
 #else
 #include "llvm/DataLayout.h"
 #endif
+#endif
+#include "llvm/Pass.h"
+#include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
 using namespace llvm;
 
@@ -107,7 +121,8 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b) {
         break;
       }
 
-      case Intrinsic::uadd_with_overflow: {
+      case Intrinsic::uadd_with_overflow:
+      case Intrinsic::umul_with_overflow: {
         IRBuilder<> builder(ii->getParent(), ii);
 
 #if LLVM_VERSION_CODE < LLVM_VERSION(2, 8)
@@ -118,7 +133,12 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b) {
         Value *op2 = ii->getArgOperand(1);
 #endif
         
-        Value *result = builder.CreateAdd(op1, op2);
+        Value *result = 0;
+        if (ii->getIntrinsicID() == Intrinsic::uadd_with_overflow)
+          result = builder.CreateAdd(op1, op2);
+        else
+          result = builder.CreateMul(op1, op2);
+
         Value *overflow = builder.CreateICmpULT(result, op1);
         
         Value *resultStruct =

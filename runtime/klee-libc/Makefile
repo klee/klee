@@ -10,11 +10,13 @@
 LEVEL=../..
 
 LIBRARYNAME=klee-libc
-DONT_BUILD_RELINKED=1
+MODULE_NAME=klee-libc
+#DONT_BUILD_RELINKED=1
 BYTECODE_LIBRARY=1
+MODULE_NAME=klee-libc
 # Don't strip debug info from the module.
 DEBUG_RUNTIME=1
-NO_PEDANTIC=1
+#NO_PEDANTIC=1
 
 # Add __NO_INLINE__ to prevent glibc from using inline definitions of some
 # builtins.

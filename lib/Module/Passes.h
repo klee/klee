@@ -12,9 +12,15 @@
 
 #include "klee/Config/Version.h"
 
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/Module.h"
+#else
 #include "llvm/Constants.h"
 #include "llvm/Instructions.h"
 #include "llvm/Module.h"
+#endif
 #include "llvm/Pass.h"
 #include "llvm/CodeGen/IntrinsicLowering.h"
 
@@ -58,7 +64,7 @@ public:
 #if LLVM_VERSION_CODE < LLVM_VERSION(2, 8)
   RaiseAsmPass() : llvm::ModulePass((intptr_t) &ID) {}
 #else
-  RaiseAsmPass() : llvm::ModulePass(ID) {}
+  RaiseAsmPass() : llvm::ModulePass(ID), TLI(0) {}
 #endif
   
   virtual bool runOnModule(llvm::Module &M);

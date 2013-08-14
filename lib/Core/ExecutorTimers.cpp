@@ -13,6 +13,7 @@
 #include "Executor.h"
 #include "PTree.h"
 #include "StatsTracker.h"
+#include "ExecutorTimerInfo.h"
 
 #include "klee/ExecutionState.h"
 #include "klee/Internal/Module/InstructionInfoTable.h"
@@ -20,7 +21,12 @@
 #include "klee/Internal/Module/KModule.h"
 #include "klee/Internal/System/Time.h"
 
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+#include "llvm/IR/Function.h"
+#else
 #include "llvm/Function.h"
+#endif
+
 #include "llvm/Support/CommandLine.h"
 
 #include <unistd.h>
@@ -88,7 +94,7 @@ void Executor::initTimers() {
   }
 
   if (MaxTime) {
-    addTimer(new HaltTimer(this), MaxTime);
+    addTimer(new HaltTimer(this), MaxTime.getValue());
   }
 }
 
@@ -97,23 +103,6 @@ void Executor::initTimers() {
 Executor::Timer::Timer() {}
 
 Executor::Timer::~Timer() {}
-
-class Executor::TimerInfo {
-public:
-  Timer *timer;
-  
-  /// Approximate delay per timer firing.
-  double rate;
-  /// Wall time for next firing.
-  double nextFireTime;
-  
-public:
-  TimerInfo(Timer *_timer, double _rate) 
-    : timer(_timer),
-      rate(_rate),
-      nextFireTime(util::getWallTime() + rate) {}
-  ~TimerInfo() { delete timer; }
-};
 
 void Executor::addTimer(Timer *timer, double rate) {
   timers.push_back(new TimerInfo(timer, rate));
