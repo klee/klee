@@ -451,6 +451,13 @@ else
     LLVMCC := $(LLVMGCC)
     LLVMCXX := $(LLVMGXX)
   endif
+
+  ifeq ($(wildcard $(LLVMCC)),)
+    $(warning Provided Compiler "$(LLVMCC)" is not found. Provide full path!)
+  endif
+  ifeq ($(wildcard $(LLVMCXX)),)
+    $(warning Provided Compiler "$(LLVMCXX)" is not found. Provide full path!)
+  endif
 endif
 
 #--------------------------------------------------------------------
@@ -470,7 +477,7 @@ ifndef TBLGEN
 endif
 LLVM_CONFIG := $(LLVMToolDir)/llvm-config
 ifndef LLVMLD
-LLVMLD    := $(LLVMToolDir)/llvm-ld$(EXEEXT)
+LLVMLD    := $(LLVMToolDir)/llvm-link$(EXEEXT)
 endif
 ifndef LLVMDIS
 LLVMDIS  := $(LLVMToolDir)/llvm-dis$(EXEEXT)
@@ -1039,7 +1046,7 @@ $(warning Modules require LLVM capable compiler but none is available ****)
 else
 
 Module     := $(LibDir)/$(MODULE_NAME).bc
-LinkModule := $(LLVMLD) -r
+LinkModule := $(LLVMLD)
 
 
 ifdef EXPORTED_SYMBOL_FILE
@@ -1174,7 +1181,6 @@ ifdef BYTECODE_LIBRARY
 ifeq ($(strip $(LLVMCC)),)
 $(warning Bytecode libraries require LLVM capable compiler but none is available ****)
 else
-
 all-local:: $(LibName.BCA)
 
 ifdef EXPORTED_SYMBOL_FILE
