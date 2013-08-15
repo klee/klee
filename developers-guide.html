@@ -22,12 +22,24 @@
 <p>This guide covers several areas of KLEE that may not be imediately obvious to new developers.</p>
 
  <h3>
-  <a href="#build"> 1. KLEE's Build System</a> <br/>
-  <a href="#tests"> 2. KLEE's Test Framework</a> <br/>
-  <a href="#misc"> 3. Miscellaneous</a> <br/>
+  <a href="#github"> 1. GitHub Environment</a> <br/>
+  <a href="#build">  2. Build System</a> <br/>
+  <a href="#tests">  3. Regression Testing Framework</a> <br/>
+  <a href="#misc">   4. Miscellaneous</a> <br/>
 </h3>
 
-<h2 id="build">KLEE's Build System</h2>
+<h2 id="build">GitHub Environment</h2>
+<p>
+  KLEE's codebase is currently hosted on <a href="https://github.com/ccadar/klee">GitHub</a>.  For those unfamiliar with GitHub, a good starting point is <a href="https://help.github.com/categories/54/articles">here</a>.
+</p>
+
+<p>We are using a fork&amppull model in KLEE, based on pull requests.  For those of you unfamiliar with the process, you can find more information <a href="https://help.github.com/articles/using-pull-requests">here</a>.
+</p>
+
+<p>When submitting patches to KLEE, please open a separate pull request for each independent feature or bug fix.  This makes it easier to review and approve patches.</p>
+
+
+<h2 id="build">Build System</h2>
 <p>KLEE uses LLVM's ability to build third-party projects, which is described <a href="http://llvm.org/docs/Projects.html">here</a>. The build system uses <a href="http://www.gnu.org/software/autoconf/">GNU Autoconf</a> and <a href="http://www.gnu.org/savannah-checkouts/gnu/autoconf/manual/autoconf-2.69/html_node/autoheader-Invocation.html">AutoHeader</a> to configure the build, but does not use the rest of GNU Autotools (e.g. automake).</p>
 
 <p>LLVM's build system supports out-of-source builds and therefore so does KLEE. It is highly recommended you take advantage of this. For example, you could create three builds (Release, Release with debug symbols, Debug) 
@@ -75,8 +87,8 @@
   </p>
 
 
-<h2 id="tests">KLEE's Test Framework</h2>
-<p>KLEE uses LLVM's testing infrastructure for its tests, which itself uses <a href="http://www.gnu.org/software/dejagnu/">DejaGnu</a>. These are the tests that are executed by the <tt>make check</tt> command. Some documentation on LLVM's testing infrastructure can be found <a href="http://llvm.org/docs/TestingGuide.html#rtcustom">here</a>.
+<h2 id="tests">Regression Testing Framework</h2>
+<p>KLEE uses LLVM's testing infrastructure for its regression tests, which itself uses <a href="http://www.gnu.org/software/dejagnu/">DejaGnu</a>. These are the tests that are executed by the <tt>make check</tt> command. Some documentation on LLVM's testing infrastructure can be found <a href="http://llvm.org/docs/TestingGuide.html#rtcustom">here</a>.
  </p>    
  <p>KLEE's tests are currently divided into categories, each of which is a subdirectory in <tt>test/</tt> in the source tree (e.g. <tt>test/Feature</tt>) . The <tt>dg.exp</tt> file in each subdirectory instructs the LLVM testing infrastructure which files in the subdirectory are to be used as tests. For example, <tt>test/Expr/dg.exp</tt> contains:
     <div class="instr">
