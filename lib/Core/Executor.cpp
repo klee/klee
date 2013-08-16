@@ -3219,24 +3219,20 @@ void Executor::runFunctionAsMain(Function *f,
     ObjectState *argvOS = bindObjectInState(*state, argvMO, false);
 
     for (int i=0; i<argc+1+envc+1+1; i++) {
-      MemoryObject *arg;
-      
       if (i==argc || i>=argc+1+envc) {
-        arg = 0;
+        // Write NULL pointer
+        argvOS->write(i * NumPtrBytes, Expr::createPointer(0));
       } else {
         char *s = i<argc ? argv[i] : envp[i-(argc+1)];
         int j, len = strlen(s);
         
-        arg = memory->allocate(len+1, false, true, state->pc->inst);
+        MemoryObject *arg = memory->allocate(len+1, false, true, state->pc->inst);
         ObjectState *os = bindObjectInState(*state, arg, false);
         for (j=0; j<len+1; j++)
           os->write8(j, s[j]);
-      }
 
-      if (arg) {
+        // Write pointer to newly allocated and initialised argv/envp c-string
         argvOS->write(i * NumPtrBytes, arg->getBaseExpr());
-      } else {
-        argvOS->write(i * NumPtrBytes, Expr::createPointer(0));
       }
     }
   }
