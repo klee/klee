@@ -61,9 +61,7 @@ void testOperation(Solver &solver,
   // replaced value is appropriated constrained.
   for (unsigned kid = 0; kid < T::numKids; kid++) {
     std::vector<Expr::CreateArg> partiallyConstantArgs(symbolicArgs);
-    for (unsigned i = 0; i < T::numKids; i++)
-      if (i==kid)
-        partiallyConstantArgs[i] = getConstant(value, operandWidth);
+    partiallyConstantArgs[kid] = getConstant(value, operandWidth);
 
     ref<Expr> expr = 
       NotOptimizedExpr::create(EqExpr::create(partiallyConstantArgs[kid].expr,
