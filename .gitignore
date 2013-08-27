@@ -1,5 +1,7 @@
 Release/
 Release+Asserts/
+Debug/
+Debug+Asserts/
 
 cscope.*
 
