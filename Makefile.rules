@@ -941,7 +941,7 @@ LLVMLibsOptions += -Wl,--enable-auto-import,--enable-runtime-pseudo-reloc \
                    -L $(SharedLibDir)
 endif
 LLVMLibsOptions += -lLLVM-$(LLVMVersion)
-LLVMLibsPaths += $(SharedLibDir)/$(SharedPrefix)LLVM-$(LLVMVersion)$(SHLIBEXT)
+LLVMLibsPaths += $(LLVMSharedLibDir)/$(SharedPrefix)LLVM-$(LLVMVersion)$(SHLIBEXT)
 else
 
 ifndef NO_LLVM_CONFIG
