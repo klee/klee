@@ -1,0 +1,14 @@
+Release/
+Release+Asserts/
+
+cscope.*
+
+*.log
+*.sum
+*.out
+*.status
+
+*.config
+*.cfg
+
+config.h
