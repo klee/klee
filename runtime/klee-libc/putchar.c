@@ -15,6 +15,7 @@
 
 int putchar(int c) {
   char x = c;
-  write(1, &x, 1);
-  return 1;
+  if (1 == write(1, &x, 1))
+    return c;
+  return EOF;
 }
