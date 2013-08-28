@@ -54,7 +54,7 @@ const char *Token::getKindName() const {
 
 void Token::dump() {
   llvm::errs() << "(Token \"" << getKindName() << "\" "
-               << (void*) start << " " << length << " "
+               << (const void*) start << " " << length << " "
                << line << " " << column << ")";
 }
 
