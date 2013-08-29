@@ -303,7 +303,7 @@ KleeHandler::KleeHandler(int argc, char **argv)
   }
   
   sys::Path p(theDir);
-#if LLVM_VERSION_CODE < LLVM_VERSION(2, 9)
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 1)
   if (!p.isAbsolute()) {
 #else
   if (!sys::path::is_absolute(p.c_str())) {
