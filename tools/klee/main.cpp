@@ -148,7 +148,12 @@ namespace {
   CheckDivZero("check-div-zero", 
                cl::desc("Inject checks for division-by-zero"),
                cl::init(true));
-    
+
+  cl::opt<bool>
+  CheckOvershift("check-overshift",
+               cl::desc("Inject checks for overshift"),
+               cl::init(true));
+
   cl::opt<std::string>
   OutputDir("output-dir", 
             cl::desc("Directory to write results in (defaults to klee-out-N)"),
@@ -1241,7 +1246,8 @@ int main(int argc, char **argv, char **envp) {
 #endif
   Interpreter::ModuleOptions Opts(LibraryDir.c_str(),
                                   /*Optimize=*/OptimizeModule, 
-                                  /*CheckDivZero=*/CheckDivZero);
+                                  /*CheckDivZero=*/CheckDivZero,
+                                  /*CheckOvershift=*/CheckOvershift);
   
   switch (Libc) {
   case NoLibc: /* silence compiler warning */

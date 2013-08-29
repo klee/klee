@@ -137,6 +137,31 @@ public:
   virtual bool runOnModule(llvm::Module &M);
 };
 
+/// This pass injects checks to check for overshifting.
+///
+/// Overshifting is where a Shl, LShr or AShr is performed
+/// where the shift amount is greater than width of the bitvector
+/// being shifted.
+/// In LLVM (and in C/C++) this undefined behaviour!
+///
+/// Example:
+/// \code
+///     unsigned char x=15;
+///     x << 4 ; // Defined behaviour
+///     x << 8 ; // Undefined behaviour
+///     x << 255 ; // Undefined behaviour
+/// \endcode
+class OvershiftCheckPass : public llvm::ModulePass {
+  static char ID;
+public:
+#if LLVM_VERSION_CODE < LLVM_VERSION(2, 8)
+  OvershiftCheckPass(): ModulePass((intptr_t) &ID) {}
+#else
+  OvershiftCheckPass(): ModulePass(ID) {}
+#endif
+  virtual bool runOnModule(llvm::Module &M);
+};
+
 /// LowerSwitchPass - Replace all SwitchInst instructions with chained branch
 /// instructions.  Note that this cannot be a BasicBlock pass because it
 /// modifies the CFG!

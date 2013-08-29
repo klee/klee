@@ -322,6 +322,7 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   PassManager pm;
   pm.add(new RaiseAsmPass());
   if (opts.CheckDivZero) pm.add(new DivCheckPass());
+  if (opts.CheckOvershift) pm.add(new OvershiftCheckPass());
   // FIXME: This false here is to work around a bug in
   // IntrinsicLowering which caches values which may eventually be
   // deleted (via RAUW). This can be removed once LLVM fixes this
@@ -371,6 +372,8 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
    */
   if (opts.CheckDivZero)
     inlineChecks(module, "klee_div_zero_check");
+  if (opts.CheckOvershift)
+    inlineChecks(module, "klee_overshift_check");
 
 
   // Needs to happen after linking (since ctors/dtors can be modified)
