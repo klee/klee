@@ -435,7 +435,7 @@ ExprHandle STPBuilder::constructSDivByConstant(ExprHandle expr_n, unsigned width
     // STP uniques arrays by name, so we make sure the name is unique by
     // including the address.
     char buf[32];
-    unsigned const addrlen = sprintf(buf, "_%p", (void*)root) + 1; // +1 for null-termination
+    unsigned const addrlen = sprintf(buf, "_%p", (const void*)root) + 1; // +1 for null-termination
     unsigned const space = (root->name.length() > 32 - addrlen)?(32 - addrlen):root->name.length();
     memmove(buf + space, buf, addrlen); // moving the address part to the end
     memcpy(buf, root->name.c_str(), space); // filling out the name part

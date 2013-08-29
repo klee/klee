@@ -342,7 +342,7 @@ void ConstantExpr::toMemory(void *address) {
   case Expr::Int64: *((uint64_t*) address) = getZExtValue(64); break;
   // FIXME: what about machines without x87 support?
   case Expr::Fl80:
-    *((long double*) address) = *(long double*) value.getRawData();
+    *((long double*) address) = *(const long double*) value.getRawData();
     break;
   }
 }
