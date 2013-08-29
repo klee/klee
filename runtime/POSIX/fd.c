@@ -198,6 +198,108 @@ int __fd_open(const char *pathname, int flags, mode_t mode) {
   return fd;
 }
 
+int __fd_openat(int basefd, const char *pathname, int flags, mode_t mode) {
+  exe_file_t *f;
+  int fd;
+  if (basefd != AT_FDCWD) {
+    exe_file_t *bf = __get_file(basefd);
+
+    if (!bf) {
+      errno = EBADF;
+      return -1;
+    } else if (bf->dfile) {
+      klee_warning("symbolic file descriptor, ignoring (ENOENT)");
+      errno = ENOENT;
+      return -1;
+    }
+    basefd = bf->fd;
+  }
+
+  if (__get_sym_file(pathname)) {
+    /* for a symbolic file, it doesn't matter if/where it exists on disk */
+    return __fd_open(pathname, flags, mode);
+  }
+
+  for (fd = 0; fd < MAX_FDS; ++fd)
+    if (!(__exe_env.fds[fd].flags & eOpen))
+      break;
+  if (fd == MAX_FDS) {
+    errno = EMFILE;
+    return -1;
+  }
+  
+  f = &__exe_env.fds[fd];
+
+  /* Should be the case if file was available, but just in case. */
+  memset(f, 0, sizeof *f);
+
+  int os_fd = syscall(__NR_openat, (long)basefd, __concretize_string(pathname), (long)flags, mode);
+  if (os_fd == -1) {
+    errno = klee_get_errno();
+    return -1;
+  }
+
+  f->fd = os_fd;
+  f->flags = eOpen;
+  if ((flags & O_ACCMODE) == O_RDONLY) {
+    f->flags |= eReadable;
+  } else if ((flags & O_ACCMODE) == O_WRONLY) {
+    f->flags |= eWriteable;
+  } else { /* XXX What actually happens here if != O_RDWR. */
+    f->flags |= eReadable | eWriteable;
+  }
+
+  return fd;
+}
+
+
+int utimes(const char *path, const struct timeval times[2]) {
+  exe_disk_file_t *dfile = __get_sym_file(path);
+
+  if (dfile) {
+    /* don't bother with usecs */
+    dfile->stat->st_atime = times[0].tv_sec;
+    dfile->stat->st_mtime = times[1].tv_sec;
+#ifdef _BSD_SOURCE
+    dfile->stat->st_atim.tv_nsec = 1000000000ll * times[0].tv_sec;
+    dfile->stat->st_mtim.tv_nsec = 1000000000ll * times[1].tv_sec;
+#endif
+    return 0;
+  }
+  int r = syscall(__NR_utimes, __concretize_string(path), times);
+  if (r == -1)
+    errno = klee_get_errno();
+
+  return r;
+}
+
+
+int futimesat(int fd, const char* path, const struct timeval times[2]) {
+  if (fd != AT_FDCWD) {
+    exe_file_t *f = __get_file(fd);
+
+    if (!f) {
+      errno = EBADF;
+      return -1;
+    } else if (f->dfile) {
+      klee_warning("symbolic file descriptor, ignoring (ENOENT)");
+      errno = ENOENT;
+      return -1;
+    }
+    fd = f->fd;
+  }
+  if (__get_sym_file(path)) {
+    return utimes(path, times);
+  }
+
+  int r = syscall(__NR_futimesat, (long)fd,
+                 (path ? __concretize_string(path) : NULL),
+                 times);
+  if (r == -1)
+    errno = klee_get_errno();
+  return r;
+}
+ 
 int close(int fd) {
   static int n_calls = 0;
   exe_file_t *f;
@@ -445,6 +547,42 @@ int __fd_stat(const char *path, struct stat64 *buf) {
     return r;
   }
 }
+
+int fstatat(int fd, const char *path, struct stat *buf, int flags) {  
+  if (fd != AT_FDCWD) {
+    exe_file_t *f = __get_file(fd);
+
+    if (!f) {
+      errno = EBADF;
+      return -1;
+    } else if (f->dfile) {
+      klee_warning("symbolic file descriptor, ignoring (ENOENT)");
+      errno = ENOENT;
+      return -1;
+    }
+    fd = f->fd;
+  }
+  exe_disk_file_t *dfile = __get_sym_file(path);
+  if (dfile) {
+    memcpy(buf, dfile->stat, sizeof(*dfile->stat));
+    return 0;
+  } 
+
+#if (defined __NR_newfstatat) && (__NR_newfstatat != 0)
+  int r = syscall(__NR_newfstatat, (long)fd,
+               (path ? __concretize_string(path) : NULL),
+               buf, (long)flags);
+#else
+  int r = syscall(__NR_fstatat64, (long)fd,
+               (path ? __concretize_string(path) : NULL),
+               buf, (long)flags);
+#endif
+
+  if (r == -1)
+    errno = klee_get_errno();
+  return r;
+}
+
 
 int __fd_lstat(const char *path, struct stat64 *buf) {
   exe_disk_file_t *dfile = __get_sym_file(path);
@@ -1076,6 +1214,29 @@ int rmdir(const char *pathname) {
 }
 
 int unlink(const char *pathname) {
+  exe_disk_file_t *dfile = __get_sym_file(pathname);
+  if (dfile) {
+    /* XXX check access */ 
+    if (S_ISREG(dfile->stat->st_mode)) {
+      dfile->stat->st_ino = 0;
+      return 0;
+    } else if (S_ISDIR(dfile->stat->st_mode)) {
+      errno = EISDIR;
+      return -1;
+    } else {
+      errno = EPERM;
+      return -1;
+    }
+  }
+
+  klee_warning("ignoring (EPERM)");
+  errno = EPERM;
+  return -1;
+}
+
+int unlinkat(int dirfd, const char *pathname, int flags) {
+  /* similar to unlink. keep them separated though to avoid
+     problems if unlink changes to actually delete files */
   exe_disk_file_t *dfile = __get_sym_file(pathname);
   if (dfile) {
     /* XXX check access */ 

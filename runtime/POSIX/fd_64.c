@@ -46,6 +46,20 @@ int open(const char *pathname, int flags, ...) {
   return __fd_open(pathname, flags, mode);
 }
 
+int openat(int fd, const char *pathname, int flags, ...) {
+  mode_t mode = 0;
+  
+  if (flags & O_CREAT) {
+    /* get mode */
+    va_list ap;
+    va_start(ap, flags);
+    mode = va_arg(ap, mode_t);
+    va_end(ap);
+  }
+
+  return __fd_openat(fd, pathname, flags, mode);
+}
+
 off64_t lseek(int fd, off64_t offset, int whence) {
   return __fd_lseek(fd, offset, whence);
 }
