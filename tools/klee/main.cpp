@@ -303,7 +303,7 @@ KleeHandler::KleeHandler(int argc, char **argv)
   }
   
   sys::Path p(theDir);
-#if LLVM_VERSION_CODE < LLVM_VERSION(3, 1)
+#if LLVM_VERSION_CODE < LLVM_VERSION(2, 9)
   if (!p.isAbsolute()) {
 #else
   if (!sys::path::is_absolute(p.c_str())) {
@@ -604,7 +604,11 @@ static void parseArguments(int argc, char **argv) {
     argArray[i] = arguments[i-1].c_str();
   }
 
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 2)
   cl::ParseCommandLineOptions(numArgs, (const char**) argArray, " klee\n");
+#else
+  cl::ParseCommandLineOptions(numArgs, (char**) argArray, " klee\n");
+#endif
   delete[] argArray;
 }
 

@@ -38,16 +38,11 @@
 #include "llvm/Support/CFG.h"
 #if LLVM_VERSION_CODE < LLVM_VERSION(2, 9)
 #include "llvm/System/Process.h"
-#else
-#include "llvm/Support/Process.h"
-#endif
-#if LLVM_VERSION_CODE < LLVM_VERSION(2, 9)
 #include "llvm/System/Path.h"
 #else
+#include "llvm/Support/Process.h"
 #include "llvm/Support/Path.h"
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 1)
 #include "llvm/Support/FileSystem.h"
-#endif
 #endif
 
 #include <iostream>
@@ -180,14 +175,14 @@ StatsTracker::StatsTracker(Executor &_executor, std::string _objectFilename,
   KModule *km = executor.kmodule;
 
   sys::Path module(objectFilename);
-#if LLVM_VERSION_CODE < LLVM_VERSION(3, 1)
+#if LLVM_VERSION_CODE < LLVM_VERSION(2, 9)
   if (!sys::Path(objectFilename).isAbsolute()) {
 #else
   if (!sys::path::is_absolute(objectFilename)) {
 #endif
     sys::Path current = sys::Path::GetCurrentDirectory();
     current.appendComponent(objectFilename);
-#if LLVM_VERSION_CODE < LLVM_VERSION(3, 1)
+#if LLVM_VERSION_CODE < LLVM_VERSION(2, 9)
     if (current.exists())
 #else
     if (sys::fs::exists(current.c_str()))
