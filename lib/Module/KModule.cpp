@@ -47,6 +47,10 @@
 #endif
 #include "llvm/Transforms/Scalar.h"
 
+#include <llvm/Transforms/Utils/Cloning.h>
+#include <llvm/Support/InstIterator.h>
+#include <llvm/Support/Debug.h>
+
 #include <sstream>
 
 using namespace llvm;
@@ -212,6 +216,52 @@ static void forceImport(Module *m, const char *name, LLVM_TYPE_Q Type *retType,
   }
 }
 
+/// This function will take try to inline all calls to \p functionName
+/// in the module \p module .
+///
+/// It is intended that this function be used for inling calls to
+/// check functions like <tt>klee_div_zero_check()</tt>
+static void inlineChecks(Module *module, const char * functionName) {
+  std::vector<CallInst*> checkCalls;
+    Function* runtimeCheckCall = module->getFunction(functionName);
+    if (runtimeCheckCall == 0)
+    {
+      DEBUG( klee_warning("Failed to inline %s because no calls were made to it in module", functionName) );
+      return;
+    }
+
+    // Iterate through instructions in module and collect all
+    // call instructions to "functionName" that we care about.
+    for (Module::iterator f = module->begin(), fe = module->end(); f != fe; ++f) {
+      for (inst_iterator i=inst_begin(f), ie = inst_end(f); i != ie; ++i) {
+        if ( CallInst* ci = dyn_cast<CallInst>(&*i) )
+        {
+          if ( ci->getCalledFunction() == runtimeCheckCall)
+            checkCalls.push_back(ci);
+        }
+      }
+    }
+
+    unsigned int successCount=0;
+    unsigned int failCount=0;
+    InlineFunctionInfo IFI(0,0);
+    for ( std::vector<CallInst*>::iterator ci = checkCalls.begin(),
+          cie = checkCalls.end();
+          ci != cie; ++ci)
+    {
+      // Try to inline the function
+      if (InlineFunction(*ci,IFI))
+        ++successCount;
+      else
+      {
+        ++failCount;
+        klee_warning("Failed to inline function %s", functionName);
+      }
+    }
+
+    DEBUG( klee_message("Tried to inline calls to %s. %u successes, %u failures",functionName, successCount, failCount) );
+}
+
 void KModule::prepare(const Interpreter::ModuleOptions &opts,
                       InterpreterHandler *ih) {
   if (!MergeAtExit.empty()) {
@@ -311,6 +361,17 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   llvm::sys::Path path(opts.LibraryDir);
   path.appendComponent("libkleeRuntimeIntrinsic.bca");
   module = linkWithLibrary(module, path.c_str());
+
+  /* In order for KLEE to report ALL errors at instrumented
+   * locations the instrumentation call (e.g. "klee_div_zero_check")
+   * must be inlined. Otherwise one of the instructions in the
+   * instrumentation function will be used as the the location of
+   * the error which means that the error cannot be recorded again
+   * ( unless -emit-all-errors is used).
+   */
+  if (opts.CheckDivZero)
+    inlineChecks(module, "klee_div_zero_check");
+
 
   // Needs to happen after linking (since ctors/dtors can be modified)
   // and optimization (since global optimization can rewrite lists).
