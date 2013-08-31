@@ -622,6 +622,7 @@ LDFLAGS
 CFLAGS
 CC
 RUNTIME_CONFIGURATION
+RUNTIME_DEBUG_SYMBOLS
 RUNTIME_DISABLE_ASSERTIONS
 RUNTIME_ENABLE_OPTIMIZED
 ENABLE_POSIX_RUNTIME
@@ -2707,12 +2708,16 @@ $as_echo "Release" >&6; }
 
     RUNTIME_DISABLE_ASSERTIONS=1
 
+    RUNTIME_DEBUG_SYMBOLS=
+
 elif test X${with_runtime} = XRelease+Asserts; then
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: Release+Asserts" >&5
 $as_echo "Release+Asserts" >&6; }
     RUNTIME_ENABLE_OPTIMIZED=1
 
     RUNTIME_DISABLE_ASSERTIONS=0
+
+    RUNTIME_DEBUG_SYMBOLS=
 
 elif test X${with_runtime} = XDebug; then
    { $as_echo "$as_me:${as_lineno-$LINENO}: result: Debug" >&5
@@ -2721,12 +2726,16 @@ $as_echo "Debug" >&6; }
 
    RUNTIME_DISABLE_ASSERTIONS=1
 
+   RUNTIME_DEBUG_SYMBOLS=1
+
 elif test X${with_runtime} = XDebug+Asserts; then
    { $as_echo "$as_me:${as_lineno-$LINENO}: result: Debug+Asserts" >&5
 $as_echo "Debug+Asserts" >&6; }
    RUNTIME_ENABLE_OPTIMIZED=0
 
    RUNTIME_DISABLE_ASSERTIONS=0
+
+   RUNTIME_DEBUG_SYMBOLS=1
 
 else
    as_fn_error $? "invalid configuration: ${with_runtime}" "$LINENO" 5

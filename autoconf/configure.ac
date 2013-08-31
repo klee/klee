@@ -269,18 +269,22 @@ if test X${with_runtime} = XRelease; then
     AC_MSG_RESULT([Release])
     AC_SUBST(RUNTIME_ENABLE_OPTIMIZED,[[1]])
     AC_SUBST(RUNTIME_DISABLE_ASSERTIONS,[[1]])
+    AC_SUBST(RUNTIME_DEBUG_SYMBOLS,[[]])
 elif test X${with_runtime} = XRelease+Asserts; then
     AC_MSG_RESULT([Release+Asserts])
     AC_SUBST(RUNTIME_ENABLE_OPTIMIZED,[[1]])
     AC_SUBST(RUNTIME_DISABLE_ASSERTIONS,[[0]])
+    AC_SUBST(RUNTIME_DEBUG_SYMBOLS,[[]])
 elif test X${with_runtime} = XDebug; then
    AC_MSG_RESULT([Debug])
    AC_SUBST(RUNTIME_ENABLE_OPTIMIZED,[[0]])
    AC_SUBST(RUNTIME_DISABLE_ASSERTIONS,[[1]])
+   AC_SUBST(RUNTIME_DEBUG_SYMBOLS,[[1]])
 elif test X${with_runtime} = XDebug+Asserts; then
    AC_MSG_RESULT([Debug+Asserts])
    AC_SUBST(RUNTIME_ENABLE_OPTIMIZED,[[0]])
    AC_SUBST(RUNTIME_DISABLE_ASSERTIONS,[[0]])
+   AC_SUBST(RUNTIME_DEBUG_SYMBOLS,[[1]])
 else
    AC_MSG_ERROR([invalid configuration: ${with_runtime}])
 fi
