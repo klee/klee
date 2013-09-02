@@ -6,7 +6,18 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+// Contains 32bit definitions of posix file functions
+//===---
 
+#if __GNUC__
+#if __x86_64__ || __ppc64__
+#define ENV64
+#else
+#define ENV32
+#endif
+#endif
+
+#ifdef ENV32
 #define _LARGEFILE64_SOURCE
 #include "fd.h"
 
@@ -194,3 +205,5 @@ int fstat64(int fd, struct stat64 *buf) __attribute__((weak));
 int fstat64(int fd, struct stat64 *buf) {
   return __fd_fstat(fd, buf);
 }
+
+#endif
