@@ -199,6 +199,7 @@ static void injectStaticConstructorsAndDestructors(Module *m) {
   }
 }
 
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 3)
 static void forceImport(Module *m, const char *name, LLVM_TYPE_Q Type *retType,
                         ...) {
   // If module lacks an externally visible symbol for the name then we
@@ -221,6 +222,7 @@ static void forceImport(Module *m, const char *name, LLVM_TYPE_Q Type *retType,
     m->getOrInsertFunction(name, FunctionType::get(retType, argTypes, false));
   }
 }
+#endif
 
 void KModule::prepare(const Interpreter::ModuleOptions &opts,
                       InterpreterHandler *ih) {
