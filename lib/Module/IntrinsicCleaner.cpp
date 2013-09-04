@@ -60,11 +60,11 @@ bool IntrinsicCleanerPass::runOnModule(Module &M) {
   bool dirty = false;
   for (Module::iterator f = M.begin(), fe = M.end(); f != fe; ++f)
     for (Function::iterator b = f->begin(), be = f->end(); b != be; ++b)
-      dirty |= runOnBasicBlock(*b);
+      dirty |= runOnBasicBlock(*b, M);
   return dirty;
 }
 
-bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b) { 
+bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
   bool dirty = false;
   
 #if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
@@ -195,6 +195,27 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b) {
         ii->eraseFromParent();
         dirty = true;
         break;
+
+      case Intrinsic::trap: {
+        // Intrisic instruction "llvm.trap" found. Directly lower it to
+        // a call of the abort() function.
+        Function *F = cast<Function>(
+          M.getOrInsertFunction(
+            "abort", Type::getVoidTy(getGlobalContext()), NULL));
+        F->setDoesNotReturn();
+        F->setDoesNotThrow();
+
+        CallInst::Create(F, Twine(), ii);
+        new UnreachableInst(getGlobalContext(), ii);
+
+        ii->eraseFromParent();
+
+        if (Function *Declare = M.getFunction("llvm.trap"))
+          Declare->eraseFromParent();
+
+        dirty = true;
+        break;
+      }
                     
       default:
         if (LowerIntrinsics)
