@@ -1,0 +1,87 @@
+#!/usr/bin/env python2
+#-*- coding: utf-8 -*-
+#
+# Buiding chroot environment for the program under test.
+#
+# This script uses `ldd' to get the shared libraries required by a program,
+# and copies those libraries to the directory for chroot'ing, maintaining
+# each library's relative path against root directory.
+#
+# Usage example:
+# $ ./klee-chroot-env /tmp/sandbox `which rm` # build env for 'rm'
+# $ cp `which rm` /tm/sandbox/rm              # copy the binary into the jail
+# $ sudo setcap SYS_CAP_CHROOT+ep `which klee-replay`
+#              # give klee-replay the capability to call 'chroot' system call
+# $ klee-replay --chroot-to-dir=/tmp/sandbox /tmp/sandbox/rm /path/to/ktest
+#              # replay some ktest in chroot jail rooted at /tmp/sandbox
+
+import sys
+import os
+import shutil
+import re
+
+from subprocess import Popen, PIPE
+
+
+def get_shared_library_dependency(program):
+    """Calls `ldd' to get the shared library dependency of a `program'."""
+
+    cmd = "ldd %s" % program
+    prog = Popen(cmd.split(), stdout=PIPE, stderr=PIPE, shell=False)
+    out, err = prog.communicate(None)
+    prog.stdout.close()
+    prog.stderr.close()
+
+    regexp = re.compile(r"\s*\(\S+\)\s*")
+
+    dep = out.splitlines()
+    dep = [e.strip() for e in dep]
+    dep = [regexp.sub("", e) for e in dep]
+    dep = [e for e in dep if not e.startswith("linux-vdso.so")]
+    libs = []
+    for e in dep:
+        if (" => " in e):
+            libs.append(e.split(" => "))
+        else:
+            libs.append((os.path.basename(e), e))
+
+    # Outputs a list of (link-name, original-path) pairs.
+    return libs
+
+
+def build_environment(root, libs):
+    """Copies all library dependencies to the specified `root' dir."""
+
+    if not os.path.exists(root):
+        os.makedirs(root)
+    os.chdir(root)
+
+    for e in libs:
+        link_name = e[0]
+        original_path = e[1]
+        relative_dir = os.path.dirname(e[1]).lstrip("/")
+        chrooted_path = root + os.path.dirname(e[1]) + "/" + link_name
+        if not os.path.exists(relative_dir):
+            os.makedirs(relative_dir)
+        shutil.copyfile(original_path, chrooted_path)
+        shutil.copymode(original_path, chrooted_path)
+
+
+def usage():
+    print("Usage: %s /path/to/root/dir /path/to/program" % sys.argv[0])
+
+
+if __name__ == "__main__":
+    if (len(sys.argv) != 3):
+        usage()
+        exit(1)
+
+    rootdir = sys.argv[1]
+    program = sys.argv[2]
+
+    if not os.path.isfile(program) or not os.access(program, os.X_OK):
+        print("Error: executable not existing or not executable")
+        exit(1)
+
+    libs = get_shared_library_dependency(program)
+    build_environment(rootdir, libs)
