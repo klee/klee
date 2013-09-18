@@ -17,7 +17,8 @@
 #endif
 #endif
 
-#ifdef ENV32
+#include "klee/Config/Version.h"
+#if defined(ENV32) || (LLVM_VERSION_CODE < LLVM_VERSION(3, 3))
 #define _LARGEFILE64_SOURCE
 #include "fd.h"
 
