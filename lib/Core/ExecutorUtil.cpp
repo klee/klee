@@ -20,6 +20,13 @@
 
 #include "klee/util/GetElementPtrTypeIterator.h"
 
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+#include "llvm/IR/Function.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/DataLayout.h"
+#else
 #include "llvm/Constants.h"
 #include "llvm/Function.h"
 #include "llvm/Instructions.h"
@@ -27,12 +34,16 @@
 #if LLVM_VERSION_CODE < LLVM_VERSION(2, 7)
 #include "llvm/ModuleProvider.h"
 #endif
-#include "llvm/Support/CallSite.h"
 #if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
 #include "llvm/Target/TargetData.h"
 #else
 #include "llvm/DataLayout.h"
 #endif
+#endif
+
+#include "llvm/Support/CallSite.h"
+
+
 #include <iostream>
 #include <cassert>
 

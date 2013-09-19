@@ -13,17 +13,27 @@
 #include "klee/Internal/Support/ModuleUtil.h"
 #include "klee/Internal/System/Time.h"
 
+#if LLVM_VERSION_CODE > LLVM_VERSION(3, 2)
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/LLVMContext.h"
+#else
 #include "llvm/Constants.h"
 #include "llvm/Module.h"
-#if LLVM_VERSION_CODE < LLVM_VERSION(2, 7)
-#include "llvm/ModuleProvider.h"
-#endif
 #include "llvm/Type.h"
 #include "llvm/InstrTypes.h"
 #include "llvm/Instruction.h"
 #include "llvm/Instructions.h"
 #if LLVM_VERSION_CODE >= LLVM_VERSION(2, 7)
 #include "llvm/LLVMContext.h"
+#endif
+#endif
+#if LLVM_VERSION_CODE < LLVM_VERSION(2, 7)
+#include "llvm/ModuleProvider.h"
 #endif
 #include "llvm/Bitcode/ReaderWriter.h"
 #include "llvm/Support/CommandLine.h"
@@ -1250,7 +1260,11 @@ int main(int argc, char **argv, char **envp) {
   case KleeLibc: {
     // FIXME: Find a reasonable solution for this.
     llvm::sys::Path Path(Opts.LibraryDir);
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+    Path.appendComponent("klee-libc.bc");
+#else
     Path.appendComponent("libklee-libc.bca");
+#endif
     mainModule = klee::linkWithLibrary(mainModule, Path.c_str());
     assert(mainModule && "unable to link with klee-libc");
     break;

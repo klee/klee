@@ -17,6 +17,13 @@
 #undef PACKAGE_TARNAME
 #undef PACKAGE_VERSION
 
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+#include "llvm/IR/Module.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/LLVMContext.h"
+#else
 #include "llvm/Module.h"
 #include "llvm/Constants.h"
 #include "llvm/DerivedTypes.h"
@@ -26,6 +33,7 @@
 #endif
 #if LLVM_VERSION_CODE >= LLVM_VERSION(2, 7)
 #include "llvm/LLVMContext.h"
+#endif
 #endif
 #include "llvm/ExecutionEngine/JIT.h"
 #include "llvm/ExecutionEngine/GenericValue.h"
