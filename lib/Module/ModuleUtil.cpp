@@ -54,34 +54,18 @@ using namespace klee;
 Module *klee::linkWithLibrary(Module *module, 
                               const std::string &libraryName) {
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
-  Linker linker(module);
-  std::string errorMessage;
+  SMDiagnostic err;
+  std::string err_str;
+  sys::Path libraryPath(libraryName);
+  Module *new_mod = ParseIRFile(libraryPath.str(), err, 
+module->getContext());
 
-  DataStreamer * streamer = getDataFileStreamer(libraryName, &errorMessage);
-
-  if (!streamer)
-    fprintf(stderr, "Error Loading file: %s\n", errorMessage.c_str());
-  assert(streamer);
-  
-  OwningPtr<Module> library_module;
-  library_module.reset(getStreamedBitcodeModule(libraryName, streamer, getGlobalContext(), &errorMessage));
-  if (library_module.get() != 0
-	  && library_module->MaterializeAllPermanently(&errorMessage)) {
-	  library_module.reset();
+  if (Linker::LinkModules(module, new_mod, Linker::DestroySource, 
+&err_str)) {
+    assert(0 && "linked in library failed!");
   }
 
-  if (library_module.get() == 0) {
-	  errs() << errorMessage << " for " << libraryName << "\n";
-	  assert(library_module.get());
-  }
-  if (linker.linkInModule(library_module.get(), &errorMessage)){
-	  fprintf(stderr, "Error in Linking %s; Existing module: %s, library to be linked in %s\n", errorMessage.c_str(),
-	      module->getModuleIdentifier().c_str(), libraryName.c_str());
-	  assert(0 && "linking in library failed!");
-  }
-
-  return linker.getModule();
-
+  return module;
 #else
   Linker linker("klee", module, false);
 
