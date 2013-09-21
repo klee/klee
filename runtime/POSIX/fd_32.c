@@ -6,7 +6,19 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+// Contains 32bit definitions of posix file functions
+//===---
 
+#if __GNUC__
+#if __x86_64__ || __ppc64__
+#define ENV64
+#else
+#define ENV32
+#endif
+#endif
+
+#include "klee/Config/Version.h"
+#if defined(ENV32) || (LLVM_VERSION_CODE < LLVM_VERSION(3, 3))
 #define _LARGEFILE64_SOURCE
 #include "fd.h"
 
@@ -189,3 +201,5 @@ __attribute__((weak)) int lstat64(const char *path, struct stat64 *buf) {
 __attribute__((weak)) int fstat64(int fd, struct stat64 *buf) {
   return __fd_fstat(fd, buf);
 }
+
+#endif
