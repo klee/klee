@@ -15,13 +15,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "Passes.h"
-
 #include "klee/Config/Version.h"
-
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
- #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/LLVMContext.h"
 #elif LLVM_VERSION_CODE >= LLVM_VERSION(2, 7)
- #include "llvm/LLVMContext.h"
+#include "llvm/LLVMContext.h"
 #endif
 #include <algorithm>
 

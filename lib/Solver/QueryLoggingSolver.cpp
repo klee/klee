@@ -74,6 +74,7 @@ void QueryLoggingSolver::flushBuffer() {
               // we do additional check here to log only timeouts in case
               // user specified negative value for minQueryTimeToLog param
               os << logBuffer.str();              
+              os.flush();
           }                    
       }
       
@@ -183,4 +184,11 @@ SolverImpl::SolverRunStatus QueryLoggingSolver::getOperationStatusCode() {
     return solver->impl->getOperationStatusCode();
 }
 
+char *QueryLoggingSolver::getConstraintLog(const Query& query) {
+  return solver->impl->getConstraintLog(query);
+}
+
+void QueryLoggingSolver::setCoreSolverTimeout(double timeout) {
+  solver->impl->setCoreSolverTimeout(timeout);
+}
 

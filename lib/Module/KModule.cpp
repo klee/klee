@@ -23,37 +23,37 @@
 
 #include "llvm/Bitcode/ReaderWriter.h"
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
- #include "llvm/IR/Instructions.h"
- #include "llvm/IR/LLVMContext.h"
- #include "llvm/IR/Module.h"
- #include "llvm/PassManager.h"
- #include "llvm/IR/ValueSymbolTable.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/ValueSymbolTable.h"
+#include "llvm/IR/DataLayout.h"
 #else
- #include "llvm/Instructions.h"
- #if LLVM_VERSION_CODE >= LLVM_VERSION(2, 7)
-  #include "llvm/LLVMContext.h"
- #endif
- #include "llvm/Module.h"
- #include "llvm/PassManager.h"
- #include "llvm/ValueSymbolTable.h"
+#include "llvm/Instructions.h"
+#if LLVM_VERSION_CODE >= LLVM_VERSION(2, 7)
+#include "llvm/LLVMContext.h"
 #endif
+#include "llvm/Module.h"
+#include "llvm/ValueSymbolTable.h"
+#if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
+#include "llvm/Target/TargetData.h"
+#else
+#include "llvm/DataLayout.h"
+#endif
+
+#endif
+
+#include "llvm/PassManager.h"
 #include "llvm/Support/CallSite.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 #if LLVM_VERSION_CODE >= LLVM_VERSION(2, 7)
- #include "llvm/Support/raw_os_ostream.h"
+#include "llvm/Support/raw_os_ostream.h"
 #endif
 #if LLVM_VERSION_CODE < LLVM_VERSION(2, 9)
- #include "llvm/System/Path.h"
+#include "llvm/System/Path.h"
 #else
- #include "llvm/Support/Path.h"
-#endif
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
- #include "llvm/IR/DataLayout.h"
-#elif LLVM_VERSION_CODE > LLVM_VERSION(3, 1)
- #include "llvm/DataLayout.h"
-#else
- #include "llvm/Target/TargetData.h"
+#include "llvm/Support/Path.h"
 #endif
 #include "llvm/Transforms/Scalar.h"
 
@@ -199,6 +199,7 @@ static void injectStaticConstructorsAndDestructors(Module *m) {
   }
 }
 
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 3)
 static void forceImport(Module *m, const char *name, LLVM_TYPE_Q Type *retType,
                         ...) {
   // If module lacks an externally visible symbol for the name then we
@@ -221,6 +222,7 @@ static void forceImport(Module *m, const char *name, LLVM_TYPE_Q Type *retType,
     m->getOrInsertFunction(name, FunctionType::get(retType, argTypes, false));
   }
 }
+#endif
 
 void KModule::prepare(const Interpreter::ModuleOptions &opts,
                       InterpreterHandler *ih) {
@@ -291,7 +293,7 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
 
   if (opts.Optimize)
     Optimize(module);
-
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 3)
   // Force importing functions required by intrinsic lowering. Kind of
   // unfortunate clutter when we don't need them but we won't know
   // that until after all linking and intrinsic lowering is
@@ -312,14 +314,18 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
               PointerType::getUnqual(i8Ty),
               Type::getInt32Ty(getGlobalContext()),
               targetData->getIntPtrType(getGlobalContext()), (Type*) 0);
-
+#endif
   // FIXME: Missing force import for various math functions.
 
   // FIXME: Find a way that we can test programs without requiring
   // this to be linked in, it makes low level debugging much more
   // annoying.
   llvm::sys::Path path(opts.LibraryDir);
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+  path.appendComponent("kleeRuntimeIntrinsic.bc");
+#else
   path.appendComponent("libkleeRuntimeIntrinsic.bca");
+#endif
   module = linkWithLibrary(module, path.c_str());
 
   // Needs to happen after linking (since ctors/dtors can be modified)
@@ -342,7 +348,7 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   pm3.add(new IntrinsicCleanerPass(*targetData));
   pm3.add(new PhiCleanerPass());
   pm3.run(*module);
-
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 3)
   // For cleanliness see if we can discard any of the functions we
   // forced to import.
   Function *f;
@@ -352,7 +358,7 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   if (f && f->use_empty()) f->eraseFromParent();
   f = module->getFunction("memset");
   if (f && f->use_empty()) f->eraseFromParent();
-
+#endif
 
   // Write out the .ll assembly file. We truncate long lines to work
   // around a kcachegrind parsing bug (it puts them on new lines), so
@@ -400,7 +406,6 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
     if (NoTruncateSourceLines) {
       *ros << *module;
     } else {
-      bool truncated = false;
       std::string string;
       llvm::raw_string_ostream rss(string);
       rss << *module;
@@ -419,7 +424,6 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
           } else {
             ros->write(position, 254);
             *ros << "\n";
-            truncated = true;
           }
           position = end+1;
         }

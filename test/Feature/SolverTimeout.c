@@ -1,5 +1,5 @@
 // RUN: %llvmgcc %s -emit-llvm -O0 -c -o %t1.bc
-// RUN: %klee --max-stp-time=1 %t1.bc
+// RUN: %klee --max-solver-time=1 %t1.bc
 #include <stdio.h>
 
 int main() {

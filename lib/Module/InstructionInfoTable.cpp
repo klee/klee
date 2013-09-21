@@ -11,31 +11,30 @@
 #include "klee/Config/Version.h"
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
- #include "llvm/IR/Function.h"
- #include "llvm/IR/Instructions.h"
- #include "llvm/IR/IntrinsicInst.h"
- #include "llvm/Linker.h"
- #include "llvm/IR/Module.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Module.h"
 #else
- #include "llvm/Function.h"
- #include "llvm/Instructions.h"
- #include "llvm/IntrinsicInst.h"
- #include "llvm/Linker.h"
- #include "llvm/Module.h"
+#include "llvm/Function.h"
+#include "llvm/Instructions.h"
+#include "llvm/IntrinsicInst.h"
+#include "llvm/Module.h"
 #endif
+#include "llvm/Linker.h"
 #if LLVM_VERSION_CODE < LLVM_VERSION(2, 8)
- #include "llvm/Assembly/AsmAnnotationWriter.h"
+#include "llvm/Assembly/AsmAnnotationWriter.h"
 #else
- #include "llvm/Assembly/AssemblyAnnotationWriter.h"
- #include "llvm/Support/FormattedStream.h"
+#include "llvm/Assembly/AssemblyAnnotationWriter.h"
+#include "llvm/Support/FormattedStream.h"
 #endif
 #include "llvm/Support/CFG.h"
 #include "llvm/Support/InstIterator.h"
 #include "llvm/Support/raw_ostream.h"
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 2)
- #include "llvm/DebugInfo.h"
+#include "llvm/DebugInfo.h"
 #elif LLVM_VERSION_CODE >= LLVM_VERSION(2, 7)
- #include "llvm/Analysis/DebugInfo.h"
+#include "llvm/Analysis/DebugInfo.h"
 #endif
 #include "llvm/Analysis/ValueTracking.h"
 

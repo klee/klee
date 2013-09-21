@@ -173,8 +173,9 @@ private:
   /// false, it is buggy (it needs to validate its writes).
   bool ivcEnabled;
 
-  /// The maximum time to allow for a single stp query.
-  double stpTimeout;  
+  /// The maximum time to allow for a single core solver query.
+  /// (e.g. for a single STP query)
+  double coreSolverTimeout; 
 
   llvm::Function* getTargetFunction(llvm::Value *calledVal,
                                     ExecutionState &state);
@@ -286,7 +287,7 @@ private:
 
   /// Add the given (boolean) condition as a constraint on state. This
   /// function is a wrapper around the state's addConstraint function
-  /// which also manages manages propogation of implied values,
+  /// which also manages propagation of implied values,
   /// validity checks, and seed patching.
   void addConstraint(ExecutionState &state, ref<Expr> condition);
 

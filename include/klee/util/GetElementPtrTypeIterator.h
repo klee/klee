@@ -18,24 +18,21 @@
 #ifndef KLEE_UTIL_GETELEMENTPTRTYPE_H
 #define KLEE_UTIL_GETELEMENTPTRTYPE_H
 
-#include "klee/Config/Version.h"
-
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
- #include "llvm/IR/User.h"
- #include "llvm/IR/DerivedTypes.h"
- #include "llvm/IR/Instructions.h"
+#include "llvm/IR/User.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/Constants.h"
 #else
- #include "llvm/User.h"
- #include "llvm/DerivedTypes.h"
- #include "llvm/Instructions.h"
+#include "llvm/User.h"
+#include "llvm/DerivedTypes.h"
+#include "llvm/Instructions.h"
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 0)
+#include "llvm/Constants.h"
+#endif
 #endif
 
 #include "klee/Config/Version.h"
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
- #include "llvm/IR/Constants.h"
-#elif LLVM_VERSION_CODE >= LLVM_VERSION(3, 0)
- #include "llvm/Constants.h"
-#endif
 
 namespace klee {
   template<typename ItTy = llvm::User::const_op_iterator>

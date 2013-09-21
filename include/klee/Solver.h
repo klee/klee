@@ -194,6 +194,9 @@ namespace klee {
     //
     // FIXME: This should go into a helper class, and should handle failure.
     virtual std::pair< ref<Expr>, ref<Expr> > getRange(const Query&);
+    
+    virtual char *getConstraintLog(const Query& query);
+    virtual void setCoreSolverTimeout(double timeout);
   };
 
   /// STPSolver - A complete solver based on STP.
@@ -207,15 +210,13 @@ namespace klee {
     /// be optimized into add/shift/multiply operations.
     STPSolver(bool useForkedSTP, bool optimizeDivides = true);
 
-    
-    
     /// getConstraintLog - Return the constraint log for the given state in CVC
     /// format.
-    char *getConstraintLog(const Query&);
-    
-    /// setTimeout - Set constraint solver timeout delay to the given value; 0
+    virtual char *getConstraintLog(const Query&);
+
+    /// setCoreSolverTimeout - Set constraint solver timeout delay to the given value; 0
     /// is off.
-    void setTimeout(double timeout);
+    virtual void setCoreSolverTimeout(double timeout);
   };
 
   /* *** */

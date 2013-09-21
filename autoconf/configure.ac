@@ -120,7 +120,7 @@ AC_MSG_CHECKING([llvm package version])
 llvm_package_version=`grep PACKAGE_VERSION= $with_llvmsrc/configure | cut -d\' -f 2`
 AC_MSG_RESULT([$llvm_package_version])
 
-llvm_version_split=`python -c "import re; print '\t'.join(map(str, re.match('([[0-9]]+)[.]([[0-9]]+)(svn)?', \"$llvm_package_version\").groups()))"`
+llvm_version_split=`python -c "import re; print('\t'.join(map(str, re.match('([[0-9]]+)[.]([[0-9]]+)(svn)?', \"$llvm_package_version\").groups())))"`
 
 AC_MSG_CHECKING([llvm version major])
 llvm_version_major=`echo "$llvm_version_split" | cut -f 1`
@@ -269,18 +269,22 @@ if test X${with_runtime} = XRelease; then
     AC_MSG_RESULT([Release])
     AC_SUBST(RUNTIME_ENABLE_OPTIMIZED,[[1]])
     AC_SUBST(RUNTIME_DISABLE_ASSERTIONS,[[1]])
+    AC_SUBST(RUNTIME_DEBUG_SYMBOLS,[[]])
 elif test X${with_runtime} = XRelease+Asserts; then
     AC_MSG_RESULT([Release+Asserts])
     AC_SUBST(RUNTIME_ENABLE_OPTIMIZED,[[1]])
     AC_SUBST(RUNTIME_DISABLE_ASSERTIONS,[[0]])
+    AC_SUBST(RUNTIME_DEBUG_SYMBOLS,[[]])
 elif test X${with_runtime} = XDebug; then
    AC_MSG_RESULT([Debug])
    AC_SUBST(RUNTIME_ENABLE_OPTIMIZED,[[0]])
    AC_SUBST(RUNTIME_DISABLE_ASSERTIONS,[[1]])
+   AC_SUBST(RUNTIME_DEBUG_SYMBOLS,[[1]])
 elif test X${with_runtime} = XDebug+Asserts; then
    AC_MSG_RESULT([Debug+Asserts])
    AC_SUBST(RUNTIME_ENABLE_OPTIMIZED,[[0]])
    AC_SUBST(RUNTIME_DISABLE_ASSERTIONS,[[0]])
+   AC_SUBST(RUNTIME_DEBUG_SYMBOLS,[[1]])
 else
    AC_MSG_ERROR([invalid configuration: ${with_runtime}])
 fi
@@ -346,6 +350,11 @@ else
 
   AC_SUBST(STP_ROOT,$stp_root)
 fi
+
+dnl **************************************************************************
+dnl * Check for dejagnu
+dnl **************************************************************************
+AC_PATH_PROG(RUNTEST, [runtest])
 
 dnl **************************************************************************
 dnl * Create the output files

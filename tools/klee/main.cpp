@@ -13,17 +13,27 @@
 #include "klee/Internal/Support/ModuleUtil.h"
 #include "klee/Internal/System/Time.h"
 
+#if LLVM_VERSION_CODE > LLVM_VERSION(3, 2)
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/LLVMContext.h"
+#else
 #include "llvm/Constants.h"
 #include "llvm/Module.h"
-#if LLVM_VERSION_CODE < LLVM_VERSION(2, 7)
-#include "llvm/ModuleProvider.h"
-#endif
 #include "llvm/Type.h"
 #include "llvm/InstrTypes.h"
 #include "llvm/Instruction.h"
 #include "llvm/Instructions.h"
 #if LLVM_VERSION_CODE >= LLVM_VERSION(2, 7)
 #include "llvm/LLVMContext.h"
+#endif
+#endif
+#if LLVM_VERSION_CODE < LLVM_VERSION(2, 7)
+#include "llvm/ModuleProvider.h"
 #endif
 #include "llvm/Bitcode/ReaderWriter.h"
 #include "llvm/Support/CommandLine.h"
@@ -303,7 +313,11 @@ KleeHandler::KleeHandler(int argc, char **argv)
   }
   
   sys::Path p(theDir);
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 1)
   if (!p.isAbsolute()) {
+#else
+  if (!sys::path::is_absolute(p.c_str())) {
+#endif
     sys::Path cwd = sys::Path::GetCurrentDirectory();
     cwd.appendComponent(theDir);
     p = cwd;
@@ -600,7 +614,11 @@ static void parseArguments(int argc, char **argv) {
     argArray[i] = arguments[i-1].c_str();
   }
 
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 2)
+  cl::ParseCommandLineOptions(numArgs, (const char**) argArray, " klee\n");
+#else
   cl::ParseCommandLineOptions(numArgs, (char**) argArray, " klee\n");
+#endif
   delete[] argArray;
 }
 
@@ -670,8 +688,8 @@ static int initEnv(Module *mainModule) {
 }
 
 
-// This is a terrible hack until we get some real modelling of the
-// system. All we do is check the undefined symbols and m and warn about
+// This is a terrible hack until we get some real modeling of the
+// system. All we do is check the undefined symbols and warn about
 // any "unrecognized" externals and about any obviously unsafe ones.
 
 // Symbols we explicitly support
@@ -715,7 +733,11 @@ static const char *modelledExternals[] = {
   "klee_warning_once", 
   "klee_alias_function",
   "klee_stack_trace",
-  "llvm.dbg.stoppoint", 
+  "llvm.dbg.stoppoint",
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 1)
+  "llvm.dbg.declare",
+  "llvm.dbg.value",
+#endif
   "llvm.va_start", 
   "llvm.va_end", 
   "malloc", 
@@ -1238,7 +1260,11 @@ int main(int argc, char **argv, char **envp) {
   case KleeLibc: {
     // FIXME: Find a reasonable solution for this.
     llvm::sys::Path Path(Opts.LibraryDir);
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+    Path.appendComponent("klee-libc.bc");
+#else
     Path.appendComponent("libklee-libc.bca");
+#endif
     mainModule = klee::linkWithLibrary(mainModule, Path.c_str());
     assert(mainModule && "unable to link with klee-libc");
     break;

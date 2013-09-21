@@ -25,10 +25,15 @@
 #include "klee/Internal/ADT/RNG.h"
 #include "klee/Internal/Support/ModuleUtil.h"
 #include "klee/Internal/System/Time.h"
-
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/Module.h"
+#else
 #include "llvm/Constants.h"
 #include "llvm/Instructions.h"
 #include "llvm/Module.h"
+#endif
 #include "llvm/Support/CallSite.h"
 #include "llvm/Support/CFG.h"
 #include "llvm/Support/CommandLine.h"
@@ -73,6 +78,40 @@ void DFSSearcher::update(ExecutionState *current,
       bool ok = false;
 
       for (std::vector<ExecutionState*>::iterator it = states.begin(),
+             ie = states.end(); it != ie; ++it) {
+        if (es==*it) {
+          states.erase(it);
+          ok = true;
+          break;
+        }
+      }
+
+      assert(ok && "invalid state removed");
+    }
+  }
+}
+
+///
+
+ExecutionState &BFSSearcher::selectState() {
+  return *states.front();
+}
+
+void BFSSearcher::update(ExecutionState *current,
+                         const std::set<ExecutionState*> &addedStates,
+                         const std::set<ExecutionState*> &removedStates) {
+  states.insert(states.end(),
+                addedStates.begin(),
+                addedStates.end());
+  for (std::set<ExecutionState*>::const_iterator it = removedStates.begin(),
+         ie = removedStates.end(); it != ie; ++it) {
+    ExecutionState *es = *it;
+    if (es == states.front()) {
+      states.pop_front();
+    } else {
+      bool ok = false;
+
+      for (std::deque<ExecutionState*>::iterator it = states.begin(),
              ie = states.end(); it != ie; ++it) {
         if (es==*it) {
           states.erase(it);

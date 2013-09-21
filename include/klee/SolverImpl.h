@@ -93,10 +93,17 @@ namespace klee {
     
     /// getOperationStatusCode - get the status of the last solver operation
     virtual SolverRunStatus getOperationStatusCode() = 0;
-    
+
     /// getOperationStatusString - get string representation of the operation
     /// status code
     static const char* getOperationStatusString(SolverRunStatus statusCode);
+
+    virtual char *getConstraintLog(const Query& query)  {
+        // dummy
+        return(NULL);
+    }
+
+    virtual void setCoreSolverTimeout(double timeout) {};
 };
 
 }

@@ -11,24 +11,25 @@
 #include "klee/Config/Version.h"
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
- #include "llvm/IR/Function.h"
- #include "llvm/IR/Instruction.h"
- #include "llvm/IR/IntrinsicInst.h"
- #include "llvm/Linker.h"
- #include "llvm/IR/Module.h"
- #include "llvm/Support/SourceMgr.h"
- #include "llvm/IRReader/IRReader.h"
+#include "llvm/Bitcode/ReaderWriter.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Module.h"
+#include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/DataStream.h"
 #else
- #include "llvm/Function.h"
- #include "llvm/Instructions.h"
- #include "llvm/IntrinsicInst.h"
- #include "llvm/Linker.h"
- #include "llvm/Module.h"
+#include "llvm/Function.h"
+#include "llvm/Instructions.h"
+#include "llvm/IntrinsicInst.h"
+#include "llvm/Module.h"
 #endif
+
+#include "llvm/Linker.h"
 #if LLVM_VERSION_CODE < LLVM_VERSION(2, 8)
- #include "llvm/Assembly/AsmAnnotationWriter.h"
+#include "llvm/Assembly/AsmAnnotationWriter.h"
 #else
- #include "llvm/Assembly/AssemblyAnnotationWriter.h"
+#include "llvm/Assembly/AssemblyAnnotationWriter.h"
 #endif
 #include "llvm/Support/CFG.h"
 #include "llvm/Support/CallSite.h"
@@ -36,9 +37,9 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Analysis/ValueTracking.h"
 #if LLVM_VERSION_CODE < LLVM_VERSION(2, 9)
- #include "llvm/System/Path.h"
+#include "llvm/System/Path.h"
 #else
- #include "llvm/Support/Path.h"
+#include "llvm/Support/Path.h"
 #endif
 
 #include <map>
@@ -53,20 +54,38 @@ using namespace klee;
 Module *klee::linkWithLibrary(Module *module, 
                               const std::string &libraryName) {
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
-  SMDiagnostic err;
-  std::string err_str;
-  sys::Path libraryPath(libraryName);
-  Module *new_mod = ParseIRFile(libraryPath.str(), err, module->getContext());
+  Linker linker(module);
+  std::string errorMessage;
 
-  if (Linker::LinkModules(module, new_mod, Linker::DestroySource, &err_str)) {
-    assert(0 && "linked in library failed!");
+  DataStreamer * streamer = getDataFileStreamer(libraryName, &errorMessage);
+
+  if (!streamer)
+    fprintf(stderr, "Error Loading file: %s\n", errorMessage.c_str());
+  assert(streamer);
+  
+  OwningPtr<Module> library_module;
+  library_module.reset(getStreamedBitcodeModule(libraryName, streamer, getGlobalContext(), &errorMessage));
+  if (library_module.get() != 0
+	  && library_module->MaterializeAllPermanently(&errorMessage)) {
+	  library_module.reset();
   }
 
-  return module;
+  if (library_module.get() == 0) {
+	  errs() << errorMessage << " for " << libraryName << "\n";
+	  assert(library_module.get());
+  }
+  if (linker.linkInModule(library_module.get(), &errorMessage)){
+	  fprintf(stderr, "Error in Linking %s; Existing module: %s, library to be linked in %s\n", errorMessage.c_str(),
+	      module->getModuleIdentifier().c_str(), libraryName.c_str());
+	  assert(0 && "linking in library failed!");
+  }
+
+  return linker.getModule();
+
 #else
   Linker linker("klee", module, false);
 
-  sys::Path libraryPath(libraryName);
+  llvm::sys::Path libraryPath(libraryName);
   bool native = false;
     
   if (linker.LinkInFile(libraryPath, native)) {

@@ -21,7 +21,11 @@
 #include "Executor.h"
 #include "MemoryManager.h"
 
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+#include "llvm/IR/Module.h"
+#else
 #include "llvm/Module.h"
+#endif
 #include "llvm/ADT/Twine.h"
 
 #include <errno.h>
@@ -131,7 +135,9 @@ void SpecialFunctionHandler::prepare() {
       // Make sure NoReturn attribute is set, for optimization and
       // coverage counting.
       if (hi.doesNotReturn)
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 2)
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+        f->addFnAttr(Attribute::NoReturn);
+#elif LLVM_VERSION_CODE >= LLVM_VERSION(3, 2)
         f->addFnAttr(Attributes::NoReturn);
 #else
         f->addFnAttr(Attribute::NoReturn);

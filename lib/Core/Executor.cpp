@@ -48,25 +48,34 @@
 #include "klee/Internal/System/Time.h"
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
- #include "llvm/IR/Attributes.h"
- #include "llvm/IR/BasicBlock.h"
- #include "llvm/IR/Constants.h"
- #include "llvm/IR/Function.h"
- #include "llvm/IR/Instructions.h"
- #include "llvm/IR/IntrinsicInst.h"
- #include "llvm/IR/LLVMContext.h"
- #include "llvm/IR/Module.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/DataLayout.h"
+#include "llvm/IR/TypeBuilder.h"
 #else
- #include "llvm/Attributes.h"
- #include "llvm/BasicBlock.h"
- #include "llvm/Constants.h"
- #include "llvm/Function.h"
- #include "llvm/Instructions.h"
- #include "llvm/IntrinsicInst.h"
- #if LLVM_VERSION_CODE >= LLVM_VERSION(2, 7)
-  #include "llvm/LLVMContext.h"
- #endif
- #include "llvm/Module.h"
+#include "llvm/Attributes.h"
+#include "llvm/BasicBlock.h"
+#include "llvm/Constants.h"
+#include "llvm/Function.h"
+#include "llvm/Instructions.h"
+#include "llvm/IntrinsicInst.h"
+#if LLVM_VERSION_CODE >= LLVM_VERSION(2, 7)
+#include "llvm/LLVMContext.h"
+#endif
+#include "llvm/Module.h"
+#if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
+#include "llvm/Target/TargetData.h"
+#else
+#include "llvm/DataLayout.h"
+#include "llvm/TypeBuilder.h"
+#endif
 #endif
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringExtras.h"
@@ -77,13 +86,6 @@
 #include "llvm/System/Process.h"
 #else
 #include "llvm/Support/Process.h"
-#endif
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
- #include "llvm/IR/DataLayout.h"
-#elif LLVM_VERSION_CODE > LLVM_VERSION(3, 1)
- #include "llvm/DataLayout.h"
-#else
- #include "llvm/Target/TargetData.h"
 #endif
 
 #include <cassert>
@@ -202,7 +204,7 @@ namespace {
 
   cl::opt<double>
   MaxInstructionTime("max-instruction-time",
-                     cl::desc("Only allow a single instruction to take this much time (default=0s (off)). Enables --use-forked-stp"),
+                     cl::desc("Only allow a single instruction to take this much time (default=0s (off)). Enables --use-forked-solver"),
                      cl::init(0));
   
   cl::opt<double>
@@ -234,16 +236,6 @@ namespace {
   MaxMemoryInhibit("max-memory-inhibit",
             cl::desc("Inhibit forking at memory cap (vs. random terminate) (default=on)"),
             cl::init(true));
-
-  cl::opt<bool>
-  UseForkedSTP("use-forked-stp",
-	       cl::desc("Run STP in a forked process (default=off)"));
-
-  cl::opt<bool>
-  STPOptimizeDivides("stp-optimize-divides", 
-                 cl::desc("Optimize constant divides into add/shift/multiplies before passing to STP (default=on)"),
-                 cl::init(true));
-
 }
 
 
@@ -271,19 +263,20 @@ Executor::Executor(const InterpreterOptions &opts,
     inhibitForking(false),
     haltExecution(false),
     ivcEnabled(false),
-    stpTimeout(MaxSTPTime != 0 && MaxInstructionTime != 0
-      ? std::min(MaxSTPTime,MaxInstructionTime)
-      : std::max(MaxSTPTime,MaxInstructionTime)) {
-  if (stpTimeout) UseForkedSTP = true;
-  STPSolver *stpSolver = new STPSolver(UseForkedSTP, STPOptimizeDivides);
+    coreSolverTimeout(MaxCoreSolverTime != 0 && MaxInstructionTime != 0
+      ? std::min(MaxCoreSolverTime,MaxInstructionTime)
+      : std::max(MaxCoreSolverTime,MaxInstructionTime)) {
+      
+  if (coreSolverTimeout) UseForkedCoreSolver = true;
+  Solver *coreSolver = new STPSolver(UseForkedCoreSolver, CoreSolverOptimizeDivides);  
   Solver *solver = 
-    constructSolverChain(stpSolver,
+    constructSolverChain(coreSolver,
                          interpreterHandler->getOutputFilename(ALL_QUERIES_SMT2_FILE_NAME),
                          interpreterHandler->getOutputFilename(SOLVER_QUERIES_SMT2_FILE_NAME),
                          interpreterHandler->getOutputFilename(ALL_QUERIES_PC_FILE_NAME),
                          interpreterHandler->getOutputFilename(SOLVER_QUERIES_PC_FILE_NAME));
   
-  this->solver = new TimingSolver(solver, stpSolver);
+  this->solver = new TimingSolver(solver);
 
   memory = new MemoryManager();
 }
@@ -408,10 +401,10 @@ void Executor::initializeGlobals(ExecutionState &state) {
 
   if (m->getModuleInlineAsm() != "")
     klee_warning("executable has module level assembly (ignoring)");
-
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 3)
   assert(m->lib_begin() == m->lib_end() &&
          "XXX do not support dependent libraries");
-
+#endif
   // represent function globals using the address of the actual llvm function
   // object. given that we use malloc to allocate memory in states this also
   // ensures that we won't conflict. we don't need to allocate a memory object
@@ -447,17 +440,17 @@ void Executor::initializeGlobals(ExecutionState &state) {
        char' value [0,255]; by EOF (-1); or by any `signed char' value
        [-128,-1).  ISO C requires that the ctype functions work for `unsigned */
   const uint16_t **addr = __ctype_b_loc();
-  addExternalObject(state, (void *)(*addr-128), 
+  addExternalObject(state, const_cast<uint16_t*>(*addr-128),
                     384 * sizeof **addr, true);
   addExternalObject(state, addr, sizeof(*addr), true);
     
   const int32_t **lower_addr = __ctype_tolower_loc();
-  addExternalObject(state, (void *)(*lower_addr-128), 
+  addExternalObject(state, const_cast<int32_t*>(*lower_addr-128),
                     384 * sizeof **lower_addr, true);
   addExternalObject(state, lower_addr, sizeof(*lower_addr), true);
   
   const int32_t **upper_addr = __ctype_toupper_loc();
-  addExternalObject(state, (void *)(*upper_addr-128), 
+  addExternalObject(state, const_cast<int32_t*>(*upper_addr-128),
                     384 * sizeof **upper_addr, true);
   addExternalObject(state, upper_addr, sizeof(*upper_addr), true);
 #endif
@@ -679,7 +672,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     }
   }
 
-  double timeout = stpTimeout;
+  double timeout = coreSolverTimeout;
   if (isSeeding)
     timeout *= it->second.size();
   solver->setTimeout(timeout);
@@ -951,8 +944,17 @@ ref<klee::ConstantExpr> Executor::evalConstant(const Constant *c) {
       }
       ref<Expr> res = ConcatExpr::createN(kids.size(), kids.data());
       return cast<ConstantExpr>(res);
+    } else if (const ConstantArray *ca = dyn_cast<ConstantArray>(c)){
+      llvm::SmallVector<ref<Expr>, 4> kids;
+      for (unsigned i = ca->getNumOperands(); i != 0; --i) {
+        unsigned op = i-1;
+        ref<Expr> kid = evalConstant(ca->getOperand(op));
+        kids.push_back(kid);
+      }
+      ref<Expr> res = ConcatExpr::createN(kids.size(), kids.data());
+      return cast<ConstantExpr>(res);
     } else {
-      // Constant{Array,Vector}
+      // Constant{Vector}
       assert(0 && "invalid argument to evalConstant()");
     }
   }
@@ -995,7 +997,7 @@ ref<Expr> Executor::toUnique(const ExecutionState &state,
     ref<ConstantExpr> value;
     bool isTrue = false;
 
-    solver->setTimeout(stpTimeout);      
+    solver->setTimeout(coreSolverTimeout);      
     if (solver->getValue(state, e, value) &&
         solver->mustBeTrue(state, EqExpr::create(e, value), isTrue) &&
         isTrue)
@@ -1393,7 +1395,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
                            CallSite(cast<CallInst>(caller)));
 
             // XXX need to check other param attrs ?
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 2)
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+      bool isSExt = cs.paramHasAttr(0, llvm::Attribute::SExt);
+#elif LLVM_VERSION_CODE >= LLVM_VERSION(3, 2)
 	    bool isSExt = cs.paramHasAttr(0, llvm::Attributes::SExt);
 #else
 	    bool isSExt = cs.paramHasAttr(0, llvm::Attribute::SExt);
@@ -1597,7 +1601,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
             if (from != to) {
               // XXX need to check other param attrs ?
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 2)
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+              bool isSExt = cs.paramHasAttr(i+1, llvm::Attribute::SExt);
+#elif LLVM_VERSION_CODE >= LLVM_VERSION(3, 2)
 	      bool isSExt = cs.paramHasAttr(i+1, llvm::Attributes::SExt);
 #else
 	      bool isSExt = cs.paramHasAttr(i+1, llvm::Attribute::SExt);
@@ -1995,8 +2001,13 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         !fpWidthToSemantics(right->getWidth()))
       return terminateStateOnExecError(state, "Unsupported FAdd operation");
 
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+    llvm::APFloat Res(*fpWidthToSemantics(left->getWidth()), left->getAPValue());
+    Res.add(APFloat(*fpWidthToSemantics(right->getWidth()),right->getAPValue()), APFloat::rmNearestTiesToEven);
+#else
     llvm::APFloat Res(left->getAPValue());
     Res.add(APFloat(right->getAPValue()), APFloat::rmNearestTiesToEven);
+#endif
     bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
     break;
   }
@@ -2009,9 +2020,13 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     if (!fpWidthToSemantics(left->getWidth()) ||
         !fpWidthToSemantics(right->getWidth()))
       return terminateStateOnExecError(state, "Unsupported FSub operation");
-
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+    llvm::APFloat Res(*fpWidthToSemantics(left->getWidth()), left->getAPValue());
+    Res.subtract(APFloat(*fpWidthToSemantics(right->getWidth()), right->getAPValue()), APFloat::rmNearestTiesToEven);
+#else
     llvm::APFloat Res(left->getAPValue());
     Res.subtract(APFloat(right->getAPValue()), APFloat::rmNearestTiesToEven);
+#endif
     bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
     break;
   }
@@ -2025,8 +2040,13 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         !fpWidthToSemantics(right->getWidth()))
       return terminateStateOnExecError(state, "Unsupported FMul operation");
 
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+    llvm::APFloat Res(*fpWidthToSemantics(left->getWidth()), left->getAPValue());
+    Res.multiply(APFloat(*fpWidthToSemantics(right->getWidth()), right->getAPValue()), APFloat::rmNearestTiesToEven);
+#else
     llvm::APFloat Res(left->getAPValue());
     Res.multiply(APFloat(right->getAPValue()), APFloat::rmNearestTiesToEven);
+#endif
     bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
     break;
   }
@@ -2040,8 +2060,13 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         !fpWidthToSemantics(right->getWidth()))
       return terminateStateOnExecError(state, "Unsupported FDiv operation");
 
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+    llvm::APFloat Res(*fpWidthToSemantics(left->getWidth()), left->getAPValue());
+    Res.divide(APFloat(*fpWidthToSemantics(right->getWidth()), right->getAPValue()), APFloat::rmNearestTiesToEven);
+#else
     llvm::APFloat Res(left->getAPValue());
     Res.divide(APFloat(right->getAPValue()), APFloat::rmNearestTiesToEven);
+#endif
     bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
     break;
   }
@@ -2054,9 +2079,13 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     if (!fpWidthToSemantics(left->getWidth()) ||
         !fpWidthToSemantics(right->getWidth()))
       return terminateStateOnExecError(state, "Unsupported FRem operation");
-
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+    llvm::APFloat Res(*fpWidthToSemantics(left->getWidth()), left->getAPValue());
+    Res.remainder(APFloat(*fpWidthToSemantics(right->getWidth()),right->getAPValue()));
+#else
     llvm::APFloat Res(left->getAPValue());
     Res.mod(APFloat(right->getAPValue()), APFloat::rmNearestTiesToEven);
+#endif
     bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
     break;
   }
@@ -2069,7 +2098,11 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     if (!fpWidthToSemantics(arg->getWidth()) || resultType > arg->getWidth())
       return terminateStateOnExecError(state, "Unsupported FPTrunc operation");
 
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+    llvm::APFloat Res(*fpWidthToSemantics(arg->getWidth()), arg->getAPValue());
+#else
     llvm::APFloat Res(arg->getAPValue());
+#endif
     bool losesInfo = false;
     Res.convert(*fpWidthToSemantics(resultType),
                 llvm::APFloat::rmNearestTiesToEven,
@@ -2085,8 +2118,11 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
                                         "floating point");
     if (!fpWidthToSemantics(arg->getWidth()) || arg->getWidth() > resultType)
       return terminateStateOnExecError(state, "Unsupported FPExt operation");
-
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+    llvm::APFloat Res(*fpWidthToSemantics(arg->getWidth()), arg->getAPValue());
+#else
     llvm::APFloat Res(arg->getAPValue());
+#endif
     bool losesInfo = false;
     Res.convert(*fpWidthToSemantics(resultType),
                 llvm::APFloat::rmNearestTiesToEven,
@@ -2103,7 +2139,11 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     if (!fpWidthToSemantics(arg->getWidth()) || resultType > 64)
       return terminateStateOnExecError(state, "Unsupported FPToUI operation");
 
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+    llvm::APFloat Arg(*fpWidthToSemantics(arg->getWidth()), arg->getAPValue());
+#else
     llvm::APFloat Arg(arg->getAPValue());
+#endif
     uint64_t value = 0;
     bool isExact = true;
     Arg.convertToInteger(&value, resultType, false,
@@ -2119,8 +2159,12 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
                                        "floating point");
     if (!fpWidthToSemantics(arg->getWidth()) || resultType > 64)
       return terminateStateOnExecError(state, "Unsupported FPToSI operation");
-
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+    llvm::APFloat Arg(*fpWidthToSemantics(arg->getWidth()), arg->getAPValue());
+#else
     llvm::APFloat Arg(arg->getAPValue());
+
+#endif
     uint64_t value = 0;
     bool isExact = true;
     Arg.convertToInteger(&value, resultType, true,
@@ -2171,8 +2215,13 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         !fpWidthToSemantics(right->getWidth()))
       return terminateStateOnExecError(state, "Unsupported FCmp operation");
 
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+    APFloat LHS(*fpWidthToSemantics(left->getWidth()),left->getAPValue());
+    APFloat RHS(*fpWidthToSemantics(right->getWidth()),right->getAPValue());
+#else
     APFloat LHS(left->getAPValue());
     APFloat RHS(right->getAPValue());
+#endif
     APFloat::cmpResult CmpRes = LHS.compare(RHS);
 
     bool Result = false;
@@ -2483,8 +2532,11 @@ void Executor::run(ExecutionState &initialState) {
         // We need to avoid calling GetMallocUsage() often because it
         // is O(elts on freelist). This is really bad since we start
         // to pummel the freelist once we hit the memory cap.
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+        unsigned mbs = sys::Process::GetMallocUsage() >> 20;
+#else
         unsigned mbs = sys::Process::GetTotalMemoryUsage() >> 20;
-        
+#endif
         if (mbs > MaxMemory) {
           if (mbs > MaxMemory + 100) {
             // just guess at how many to kill
@@ -2992,7 +3044,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
   // fast path: single in-bounds resolution
   ObjectPair op;
   bool success;
-  solver->setTimeout(stpTimeout);
+  solver->setTimeout(coreSolverTimeout);
   if (!state.addressSpace.resolveOne(state, solver, address, op, success)) {
     address = toConstant(state, address, "resolveOne failure");
     success = state.addressSpace.resolveOne(cast<ConstantExpr>(address), op);
@@ -3009,7 +3061,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
     ref<Expr> offset = mo->getOffsetExpr(address);
 
     bool inBounds;
-    solver->setTimeout(stpTimeout);
+    solver->setTimeout(coreSolverTimeout);
     bool success = solver->mustBeTrue(state, 
                                       mo->getBoundsCheckOffset(offset, bytes),
                                       inBounds);
@@ -3048,9 +3100,9 @@ void Executor::executeMemoryOperation(ExecutionState &state,
   // resolution with out of bounds)
   
   ResolutionList rl;  
-  solver->setTimeout(stpTimeout);
+  solver->setTimeout(coreSolverTimeout);
   bool incomplete = state.addressSpace.resolve(state, solver, address, rl,
-                                               0, stpTimeout);
+                                               0, coreSolverTimeout);
   solver->setTimeout(0);
   
   // XXX there is some query wasteage here. who cares?
@@ -3241,24 +3293,20 @@ void Executor::runFunctionAsMain(Function *f,
     ObjectState *argvOS = bindObjectInState(*state, argvMO, false);
 
     for (int i=0; i<argc+1+envc+1+1; i++) {
-      MemoryObject *arg;
-      
       if (i==argc || i>=argc+1+envc) {
-        arg = 0;
+        // Write NULL pointer
+        argvOS->write(i * NumPtrBytes, Expr::createPointer(0));
       } else {
         char *s = i<argc ? argv[i] : envp[i-(argc+1)];
         int j, len = strlen(s);
         
-        arg = memory->allocate(len+1, false, true, state->pc->inst);
+        MemoryObject *arg = memory->allocate(len+1, false, true, state->pc->inst);
         ObjectState *os = bindObjectInState(*state, arg, false);
         for (j=0; j<len+1; j++)
           os->write8(j, s[j]);
-      }
 
-      if (arg) {
+        // Write pointer to newly allocated and initialised argv/envp c-string
         argvOS->write(i * NumPtrBytes, arg->getBaseExpr());
-      } else {
-        argvOS->write(i * NumPtrBytes, Expr::createPointer(0));
       }
     }
   }
@@ -3303,7 +3351,7 @@ void Executor::getConstraintLog(const ExecutionState &state,
   case STP:
   {
 	  Query query(state.constraints, ConstantExpr::alloc(0, Expr::Bool));
-	  char *log = solver->stpSolver->getConstraintLog(query);
+	  char *log = solver->getConstraintLog(query);
 	  res = std::string(log);
 	  free(log);
   }
@@ -3341,7 +3389,7 @@ bool Executor::getSymbolicSolution(const ExecutionState &state,
                                    std::pair<std::string,
                                    std::vector<unsigned char> > >
                                    &res) {
-  solver->setTimeout(stpTimeout);
+  solver->setTimeout(coreSolverTimeout);
 
   ExecutionState tmp(state);
   if (!NoPreferCex) {

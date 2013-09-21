@@ -16,29 +16,29 @@
 //===----------------------------------------------------------------------===//
 
 #include "klee/Config/Version.h"
-
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
- #include "llvm/IR/Module.h"
-#else
- #include "llvm/Module.h"
-#endif
 #include "llvm/PassManager.h"
 #include "llvm/Analysis/Passes.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/Verifier.h"
 #include "llvm/Support/CommandLine.h"
 #if LLVM_VERSION_CODE < LLVM_VERSION(2, 9)
- #include "llvm/System/DynamicLibrary.h"
+#include "llvm/System/DynamicLibrary.h"
 #else
- #include "llvm/Support/DynamicLibrary.h"
+#include "llvm/Support/DynamicLibrary.h"
 #endif
+
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
- #include "llvm/IR/DataLayout.h"
-#elif LLVM_VERSION_CODE > LLVM_VERSION(3, 1)
- #include "llvm/DataLayout.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/DataLayout.h"
 #else
- #include "llvm/Target/TargetData.h"
+#include "llvm/Module.h"
+#if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
+#include "llvm/Target/TargetData.h"
+#else
+#include "llvm/DataLayout.h"
 #endif
+#endif
+
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Scalar.h"

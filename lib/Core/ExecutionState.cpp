@@ -17,11 +17,10 @@
 #include "klee/Expr.h"
 
 #include "Memory.h"
-
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
- #include "llvm/IR/Function.h"
+#include "llvm/IR/Function.h"
 #else
- #include "llvm/Function.h"
+#include "llvm/Function.h"
 #endif
 #include "llvm/Support/CommandLine.h"
 

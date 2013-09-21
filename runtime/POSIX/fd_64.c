@@ -7,6 +7,17 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if __GNUC__
+#if __x86_64__ || __ppc64__
+#define ENV64
+#else
+#define ENV32
+#endif
+#endif
+
+
+#include "klee/Config/Version.h"
+#if defined(ENV64) || (LLVM_VERSION_CODE < LLVM_VERSION(3, 3))
 #define _LARGEFILE64_SOURCE
 #define _FILE_OFFSET_BITS 64
 #include "fd.h"
@@ -88,3 +99,5 @@ int getdents64(unsigned int fd, struct dirent *dirp, unsigned int count) {
 }
 int __getdents64(unsigned int fd, struct dirent *dirp, unsigned int count)
      __attribute__((alias("getdents64")));
+
+#endif
