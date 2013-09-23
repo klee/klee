@@ -82,7 +82,7 @@ class IntrinsicCleanerPass : public llvm::ModulePass {
   llvm::IntrinsicLowering *IL;
   bool LowerIntrinsics;
 
-  bool runOnBasicBlock(llvm::BasicBlock &b);
+  bool runOnBasicBlock(llvm::BasicBlock &b, llvm::Module &M);
 public:
 #if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
   IntrinsicCleanerPass(const llvm::TargetData &TD,
