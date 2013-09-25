@@ -557,20 +557,31 @@ void Executor::branch(ExecutionState &state,
   unsigned N = conditions.size();
   assert(N);
 
-  stats::forks += N-1;
+  if (MaxForks!=~0u && stats::forks >= MaxForks) {
+    unsigned next = theRNG.getInt32() % N;
+    for (unsigned i=0; i<N; ++i) {
+      if (i == next) {
+        result.push_back(&state);
+      } else {
+        result.push_back(NULL);
+      }
+    }
+  } else {
+    stats::forks += N-1;
 
-  // XXX do proper balance or keep random?
-  result.push_back(&state);
-  for (unsigned i=1; i<N; ++i) {
-    ExecutionState *es = result[theRNG.getInt32() % i];
-    ExecutionState *ns = es->branch();
-    addedStates.insert(ns);
-    result.push_back(ns);
-    es->ptreeNode->data = 0;
-    std::pair<PTree::Node*,PTree::Node*> res = 
-      processTree->split(es->ptreeNode, ns, es);
-    ns->ptreeNode = res.first;
-    es->ptreeNode = res.second;
+    // XXX do proper balance or keep random?
+    result.push_back(&state);
+    for (unsigned i=1; i<N; ++i) {
+      ExecutionState *es = result[theRNG.getInt32() % i];
+      ExecutionState *ns = es->branch();
+      addedStates.insert(ns);
+      result.push_back(ns);
+      es->ptreeNode->data = 0;
+      std::pair<PTree::Node*,PTree::Node*> res = 
+        processTree->split(es->ptreeNode, ns, es);
+      ns->ptreeNode = res.first;
+      es->ptreeNode = res.second;
+    }
   }
 
   // If necessary redistribute seeds to match conditions, killing
@@ -605,12 +616,14 @@ void Executor::branch(ExecutionState &state,
       if (i==N)
         i = theRNG.getInt32() % N;
 
-      seedMap[result[i]].push_back(*siit);
+      // Extra check in case we're replaying seeds with a max-fork
+      if (result[i])
+        seedMap[result[i]].push_back(*siit);
     }
 
     if (OnlyReplaySeeds) {
       for (unsigned i=0; i<N; ++i) {
-        if (!seedMap.count(result[i])) {
+        if (result[i] && !seedMap.count(result[i])) {
           terminateState(*result[i]);
           result[i] = NULL;
         }
