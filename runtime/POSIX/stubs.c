@@ -222,13 +222,6 @@ int utime(const char *filename, const struct utimbuf *buf) {
   return -1;
 }
 
-int utimes(const char *filename, const struct timeval times[2]) __attribute__((weak));
-int utimes(const char *filename, const struct timeval times[2]) {
-  klee_warning("ignoring (EPERM)");
-  errno = EPERM;
-  return -1;
-}
-
 int futimes(int fd, const struct timeval times[2]) __attribute__((weak));
 int futimes(int fd, const struct timeval times[2]) {
   klee_warning("ignoring (EBADF)");
