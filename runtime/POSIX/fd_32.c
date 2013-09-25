@@ -53,6 +53,12 @@ static void __stat64_to_stat(struct stat64 *a, struct stat *b) {
   b->st_ctime = a->st_ctime;
   b->st_blksize = a->st_blksize;
   b->st_blocks = a->st_blocks;
+#ifdef _BSD_SOURCE
+  b->st_atim.tv_nsec = a->st_atim.tv_nsec;
+  b->st_mtim.tv_nsec = a->st_mtim.tv_nsec;
+  b->st_ctim.tv_nsec = a->st_ctim.tv_nsec;
+#endif
+
 }
 
 /***/
@@ -69,6 +75,20 @@ int open(const char *pathname, int flags, ...) {
   }
 
   return __fd_open(pathname, flags, mode);
+}
+
+int openat(int fd, const char *pathname, int flags, ...) {
+  mode_t mode = 0;
+
+  if (flags & O_CREAT) {
+    /* get mode */
+    va_list ap;
+    va_start(ap, flags);
+    mode = va_arg(ap, mode_t);
+    va_end(ap);
+  }
+
+  return __fd_openat(fd, pathname, flags, mode);
 }
 
 off_t lseek(int fd, off_t off, int whence) {
