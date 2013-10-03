@@ -78,4 +78,7 @@
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
 
+/* Supporting metaSMT API */
+#undef SUPPORT_METASMT
+
 #endif
