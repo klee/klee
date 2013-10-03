@@ -352,6 +352,39 @@ else
 fi
 
 dnl **************************************************************************
+dnl User option to enable metaSMT constraint solvers and to specify the 
+dnl the location of the metaSMT root directory
+dnl **************************************************************************
+
+AC_ARG_WITH(metasmt,
+  AS_HELP_STRING([--with-metasmt],
+    [Location of metaSMT installation directory]),,)
+
+if test X$with_metasmt = X ; then
+  AC_SUBST(ENABLE_METASMT,[[0]])
+else
+  metasmt_root=`cd $with_metasmt 2> /dev/null; pwd`
+
+  dnl AC_LANG(C++)
+  old_CPPFLAGS="$CPPFLAGS"
+  old_LDFLAGS="$LDFLAGS"  
+  CPPFLAGS="$CPPFLAGS -I$metasmt_root/include"
+  LDFLAGS="$LDFLAGS -L$metasmt_root/lib -lmetaSMT"
+  AC_CHECK_HEADERS([$metasmt_root/include/metaSMT/DirectSolver_Context.hpp $metasmt_root/include/metaSMT/frontend/QF_BV.hpp],, [
+         AC_MSG_ERROR([Unable to use $metasmt_root/include/metaSMT/DirectSolver_Context.hpp header])
+  ])
+  AC_LINK_IFELSE(
+      [AC_LANG_PROGRAM([#include $metasmt_root/include/metaSMT/frontend/QF_BV.hpp], [metaSMT::logic::QF_BV::new_bitvector(3)])],
+      [],[AC_MSG_CHECKING([for new_bitvector() in -lmetaSMT])],[AC_MSG_ERROR([Unable to link with libmetaSMT])])  
+  CPPFLAGS="$old_CPPFLAGS"
+  LDFLAGS="$old_LDFLAGS"
+
+  AC_DEFINE(SUPPORT_METASMT, 1, [Supporting metaSMT API])
+  AC_SUBST(ENABLE_METASMT,[[1]])
+  AC_SUBST(METASMT_ROOT,$metasmt_root)
+fi
+
+dnl **************************************************************************
 dnl * Check for dejagnu
 dnl **************************************************************************
 AC_PATH_PROG(RUNTEST, [runtest])
