@@ -4533,6 +4533,8 @@ $as_echo "#define SUPPORT_METASMT 1" >>confdefs.h
 
   METASMT_ROOT=$metasmt_root
 
+  REQUIRES_RTTI=1
+
 fi
 
 # Extract the first word of "runtest", so it can be a program name with args.

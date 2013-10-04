@@ -45,6 +45,28 @@ using namespace llvm;
 using namespace klee;
 using namespace klee::expr;
 
+#ifdef SUPPORT_METASMT
+
+#include <metaSMT/DirectSolver_Context.hpp>
+#include <metaSMT/backend/Z3_Backend.hpp>
+#include <metaSMT/backend/Boolector.hpp>
+
+#define Expr VCExpr
+#define Type VCType
+#define STP STP_Backend
+#include <metaSMT/backend/STP.hpp>
+#undef Expr
+#undef Type
+#undef STP
+
+using namespace metaSMT;
+using namespace metaSMT::solver;
+
+#endif /* SUPPORT_METASMT */
+
+
+
+
 namespace {
   llvm::cl::opt<std::string>
   InputFile(llvm::cl::desc("<input query log>"), llvm::cl::Positional,
@@ -211,7 +233,39 @@ static bool EvaluateInputAST(const char *Filename,
     return false;
 
   // FIXME: Support choice of solver.
-  Solver *coreSolver = UseDummySolver ? createDummySolver() : new STPSolver(UseForkedCoreSolver);
+  Solver *coreSolver = NULL; // 
+  
+#ifdef SUPPORT_METASMT
+  if (UseMetaSMT != METASMT_BACKEND_NONE) {
+    
+    std::string backend;
+    
+    switch (UseMetaSMT) {
+          case METASMT_BACKEND_STP:
+              backend = "STP"; 
+              coreSolver = new MetaSMTSolver< DirectSolver_Context < STP_Backend > >(UseForkedCoreSolver, CoreSolverOptimizeDivides);
+              break;
+          case METASMT_BACKEND_Z3:
+              backend = "Z3";
+              coreSolver = new MetaSMTSolver< DirectSolver_Context < Z3_Backend > >(UseForkedCoreSolver, CoreSolverOptimizeDivides);
+              break;
+          case METASMT_BACKEND_BOOLECTOR:
+              backend = "Boolector";
+              coreSolver = new MetaSMTSolver< DirectSolver_Context < Boolector > >(UseForkedCoreSolver, CoreSolverOptimizeDivides);
+              break;
+          default:
+              assert(false);
+              break;
+    };
+    std::cerr << "Starting MetaSMTSolver(" << backend << ") ...\n";
+  }
+  else {
+    coreSolver = UseDummySolver ? createDummySolver() : new STPSolver(UseForkedCoreSolver);
+  }
+#else
+  coreSolver = UseDummySolver ? createDummySolver() : new STPSolver(UseForkedCoreSolver);
+#endif /* SUPPORT_METASMT */
+  
   
   if (!UseDummySolver) {
     if (0 != MaxCoreSolverTime) {

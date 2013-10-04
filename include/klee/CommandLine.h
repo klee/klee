@@ -43,6 +43,15 @@ enum QueryLoggingSolverType
  */
 extern llvm::cl::list<QueryLoggingSolverType> queryLoggingOptions;
 
+enum MetaSMTBackendType
+{
+    METASMT_BACKEND_NONE,
+    METASMT_BACKEND_STP,
+    METASMT_BACKEND_Z3,
+    METASMT_BACKEND_BOOLECTOR
+};
+
+extern llvm::cl::opt<klee::MetaSMTBackendType> UseMetaSMT;
 
 //A bit of ugliness so we can use cl::list<> like cl::bits<>, see queryLoggingOptions
 template <typename T>

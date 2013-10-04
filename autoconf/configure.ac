@@ -382,6 +382,7 @@ else
   AC_DEFINE(SUPPORT_METASMT, 1, [Supporting metaSMT API])
   AC_SUBST(ENABLE_METASMT,[[1]])
   AC_SUBST(METASMT_ROOT,$metasmt_root)
+  AC_SUBST(REQUIRES_RTTI,[[1]])
 fi
 
 dnl **************************************************************************
