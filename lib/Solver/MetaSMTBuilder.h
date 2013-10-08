@@ -928,8 +928,8 @@ typename SolverContext::result_type MetaSMTBuilder<SolverContext>::constructActu
             if (*width_out == 1) {
                 res = evaluate(_solver, metaSMT::logic::Not(child));
             }
-            else {
-                res = evaluate(_solver, bvneg(child));
+            else {                
+                res = evaluate(_solver, bvnot(child));
             }    
             break;	  
         }
