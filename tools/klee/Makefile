@@ -13,7 +13,7 @@ TOOLNAME = klee
 include $(LEVEL)/Makefile.config
 
 USEDLIBS = kleeCore.a kleeBasic.a kleeModule.a  kleaverSolver.a kleaverExpr.a kleeSupport.a 
-LINK_COMPONENTS = jit bitreader bitwriter ipo linker engine
+LINK_COMPONENTS = jit bitreader bitwriter ipo linker engine irreader
 
 include $(LEVEL)/Makefile.common
 
