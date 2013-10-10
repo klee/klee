@@ -935,7 +935,10 @@ MetaSMTSolverImpl<SolverContext>::~MetaSMTSolverImpl() {
 
 template<typename SolverContext>
 char *MetaSMTSolverImpl<SolverContext>::getConstraintLog(const Query&) {
-  // ToDo
+  const char* msg = "Not supported";
+  char *buf = new char[strlen(msg) + 1];
+  strcpy(buf, msg);
+  return(buf);
 }
 
 template<typename SolverContext>

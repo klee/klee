@@ -1,5 +1,6 @@
 // RUN: %llvmgcc %s -emit-llvm -g -O0 -c -o %t1.bc
-// RUN: %klee --use-query-log=all:pc,all:smt2,solver:pc,solver:smt2 --write-pcs --write-cvcs --write-smt2s %t1.bc 2> %t2.log
+// RUN: %klee --use-query-log=all:pc,all:smt2,solver:pc,solver:smt2 --use-metasmt=none --write-pcs --write-cvcs --write-smt2s %t1.bc 2> %t2.log
+// RUN: %klee --use-query-log=all:pc,all:smt2,solver:pc,solver:smt2 --write-pcs --write-smt2s %t1.bc 2> %t2.log
 // RUN: %kleaver -print-ast klee-last/all-queries.pc > %t3.log
 // RUN: %kleaver -print-ast %t3.log > %t4.log
 // RUN: diff %t3.log %t4.log
