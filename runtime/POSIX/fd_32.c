@@ -18,7 +18,7 @@
 #endif
 
 #include "klee/Config/Version.h"
-#if defined(ENV32) || (LLVM_VERSION_CODE < LLVM_VERSION(3, 3))
+#if defined(ENV32) || (LLVM_VERSION_CODE < LLVM_VERSION(3, 2))
 #define _LARGEFILE64_SOURCE
 #include "fd.h"
 
