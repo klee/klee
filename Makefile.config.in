@@ -11,6 +11,9 @@ LLVM_SRC_ROOT = @LLVM_SRC@
 # (this is *not* the same as OBJ_ROOT as defined in LLVM's Makefile.config).
 LLVM_OBJ_ROOT = @LLVM_OBJ@
 
+LLVM_VERSION_MAJOR = @LLVM_VERSION_MAJOR@
+LLVM_VERSION_MINOR = @LLVM_VERSION_MINOR@
+
 # Set this to the build mode used to build LLVM (not necessarily the same
 # as the build mode used for KLEE)
 LLVM_BUILD_MODE = @LLVM_BUILD_MODE@
