@@ -2,6 +2,7 @@ Release/
 Release+Asserts/
 Debug/
 Debug+Asserts/
+Output/
 
 cscope.*
 
@@ -14,3 +15,4 @@ cscope.*
 *.cfg
 
 config.h
+site.exp
