@@ -30,6 +30,9 @@
 <h2 id="cde">Trying out KLEE without installing any dependencies</h2>
 
 <p>
+<b>NOTE:</b> The CDE package is outdated.  If anyone would like to regenerate it, please send us an email on the <a href="https://mailman.ic.ac.uk/mailman/listinfo/klee-commits">klee-commits</a> mailing list.
+
+<p>
 If you would like to try out KLEE without the hassle of compiling or installing dependencies, <a href="http://keeda.stanford.edu/~pgbovine/klee-cde-package.v2.tar.bz2">download the self-contained package</a> (200MB), and follow the instructions in <tt>klee-cde-package/README</tt> to get up-and-running!
 </p>
 
@@ -70,10 +73,10 @@ case you will need to follow the full installation instructions below.
 
 <li><b>Install dependencies:</b>
 
-KLEE requires all the dependencies of LLVM, which are discussed <a href="http://llvm.org/docs/GettingStarted.html#requirements">here</a>.  In particular, you should have the following packages (the list is likely not complete): g++, curl, dejagnu, subversion, bison, flex:
+KLEE requires all the dependencies of LLVM, which are discussed <a href="http://llvm.org/docs/GettingStarted.html#requirements">here</a>.  In particular, you should have the following packages (the list is likely not complete): g++, curl, dejagnu, subversion, bison, flex, bc:
     <div class="instr">
-      $ sudo apt-get install g++ curl dejagnu subversion bison flex   (Ubuntu) <br/>
-      $ sudo yum install g++ curl dejagnu subversion bison flex   (Fedora)
+      $ sudo apt-get install g++ curl dejagnu subversion bison flex bc   (Ubuntu) <br/>
+      $ sudo yum install g++ curl dejagnu subversion bison flex bc   (Fedora)
     </div>
 </p>
 
