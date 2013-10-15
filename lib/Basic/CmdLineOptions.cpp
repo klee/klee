@@ -73,6 +73,7 @@ llvm::cl::list<QueryLoggingSolverType> queryLoggingOptions(
     llvm::cl::CommaSeparated
 );
 
+#ifdef SUPPORT_METASMT
 
 llvm::cl::opt<klee::MetaSMTBackendType>
 UseMetaSMT("use-metasmt",
@@ -84,6 +85,10 @@ UseMetaSMT("use-metasmt",
                       clEnumValEnd),  
            llvm::cl::init(METASMT_BACKEND_NONE));
 
+#endif /* SUPPORT_METASMT */
 
 }
+
+
+
 
