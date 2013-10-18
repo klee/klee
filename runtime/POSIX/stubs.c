@@ -9,19 +9,19 @@
 
 #define _XOPEN_SOURCE 700
 
-#include <string.h>
-#include <stdio.h>
 #include <errno.h>
+#include <limits.h>
 #include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <time.h>
+#include <unistd.h>
 #include <utime.h>
 #include <utmp.h>
-#include <unistd.h>
-#include <limits.h>
-#include <stdlib.h>
 #include <sys/mman.h>
-#include <sys/stat.h>
 #include <sys/resource.h>
+#include <sys/stat.h>
 #include <sys/times.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -33,20 +33,20 @@ void klee_warning_once(const char*);
 
 /* Silent ignore */
 
-int __syscall_rt_sigaction(int signum, const struct sigaction *act, 
+int __syscall_rt_sigaction(int signum, const struct sigaction *act,
                            struct sigaction *oldact, size_t _something)
      __attribute__((weak));
 
-int __syscall_rt_sigaction(int signum, const struct sigaction *act, 
+int __syscall_rt_sigaction(int signum, const struct sigaction *act,
                            struct sigaction *oldact, size_t _something) {
   klee_warning_once("silently ignoring");
   return 0;
 }
 
-int sigaction(int signum, const struct sigaction *act, 
+int sigaction(int signum, const struct sigaction *act,
               struct sigaction *oldact) __attribute__((weak));
 
-int sigaction(int signum, const struct sigaction *act, 
+int sigaction(int signum, const struct sigaction *act,
               struct sigaction *oldact) {
   klee_warning_once("silently ignoring");
   return 0;
@@ -124,21 +124,21 @@ int link(const char *oldpath, const char *newpath) __attribute__((weak));
 int link(const char *oldpath, const char *newpath) {
   klee_warning("ignoring (EPERM)");
   errno = EPERM;
-  return -1;  
+  return -1;
 }
 
 int symlink(const char *oldpath, const char *newpath) __attribute__((weak));
 int symlink(const char *oldpath, const char *newpath) {
   klee_warning("ignoring (EPERM)");
   errno = EPERM;
-  return -1;  
+  return -1;
 }
 
 int rename(const char *oldpath, const char *newpath) __attribute__((weak));
 int rename(const char *oldpath, const char *newpath) {
   klee_warning("ignoring (EPERM)");
   errno = EPERM;
-  return -1;  
+  return -1;
 }
 
 int nanosleep(const struct timespec *req, struct timespec *rem) __attribute__((weak));
@@ -248,8 +248,8 @@ unsigned int gnu_dev_minor(unsigned long long int __dev) {
 unsigned long long int gnu_dev_makedev(unsigned int __major, unsigned int __minor) __attribute__((weak));
 unsigned long long int gnu_dev_makedev(unsigned int __major, unsigned int __minor) {
   return ((__minor & 0xff) | ((__major & 0xfff) << 8)
-	  | (((unsigned long long int) (__minor & ~0xff)) << 12)
-	  | (((unsigned long long int) (__major & ~0xfff)) << 32));
+          | (((unsigned long long int) (__minor & ~0xff)) << 12)
+          | (((unsigned long long int) (__major & ~0xfff)) << 32));
 }
 
 char *canonicalize_file_name (const char *name) __attribute__((weak));
