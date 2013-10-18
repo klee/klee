@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#define _XOPEN_SOURCE 700
+
 #include <string.h>
 #include <stdio.h>
 #include <errno.h>
@@ -252,11 +254,7 @@ unsigned long long int gnu_dev_makedev(unsigned int __major, unsigned int __mino
 
 char *canonicalize_file_name (const char *name) __attribute__((weak));
 char *canonicalize_file_name (const char *name) {
-  char *res = malloc(PATH_MAX);
-  char *rp_res = realpath(name, res);
-  if (!rp_res)
-    free(res);
-  return rp_res;
+  return realpath(name, NULL);
 }
 
 int getloadavg(double loadavg[], int nelem) __attribute__((weak));
