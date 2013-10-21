@@ -106,8 +106,8 @@ static void timeout_handler(int signal) {
 }
 
 void process_status(int status,
-		    time_t elapsed,
-		    const char *pfx) {
+                    time_t elapsed,
+                    const char *pfx) {
   fprintf(stderr, "%s: ", progname);
   if (pfx)
     fprintf(stderr, "%s: ", pfx);
@@ -361,9 +361,9 @@ void klee_make_symbolic(void *addr, size_t nbytes, const char *name) {
       *((int*) addr) = 0;
     } else {
       if (boo->numBytes != nbytes) {
-	fprintf(stderr, "make_symbolic mismatch, different sizes: "
-		"%d in input file, %lu in code\n", boo->numBytes, (unsigned long)nbytes);
-	exit(1);
+        fprintf(stderr, "make_symbolic mismatch, different sizes: "
+                "%d in input file, %lu in code\n", boo->numBytes, (unsigned long)nbytes);
+        exit(1);
       } else {
         memcpy(addr, boo->bytes, nbytes);
         obj_index++;
@@ -388,7 +388,7 @@ int klee_range(int start, int end, const char* name) {
 
     if (r < start || r >= end) {
       fprintf(stderr, "klee_range(%d, %d, %s) returned invalid result: %d\n",
-	      start, end, name, r);
+              start, end, name, r);
       exit(1);
     }
 
@@ -397,7 +397,7 @@ int klee_range(int start, int end, const char* name) {
 }
 
 void klee_report_error(const char *file, int line,
-		       const char *message, const char *suffix) {
+                       const char *message, const char *suffix) {
   __emit_error(message);
 }
 

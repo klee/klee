@@ -156,7 +156,7 @@ int __fd_open(const char *pathname, int flags, mode_t mode) {
 
     if ((flags & O_TRUNC) && (flags & O_RDONLY)) {
       /* The result of using O_TRUNC with O_RDONLY is undefined, so we
-	 return error */
+         return error */
       fprintf(stderr, "Undefined call to open(): O_TRUNC | O_RDONLY\n");
       errno = EACCES;
       return -1;
@@ -164,19 +164,19 @@ int __fd_open(const char *pathname, int flags, mode_t mode) {
 
     if ((flags & O_EXCL) && !(flags & O_CREAT)) {
       /* The result of using O_EXCL without O_CREAT is undefined, so
-	 we return error */
+         we return error */
       fprintf(stderr, "Undefined call to open(): O_EXCL w/o O_RDONLY\n");
       errno = EACCES;
       return -1;
     }
 
     if (!has_permission(flags, df->stat)) {
-	errno = EACCES;
-	return -1;
+        errno = EACCES;
+        return -1;
     }
     else
       f->dfile->stat->st_mode = ((f->dfile->stat->st_mode & ~0777) |
-				 (mode & ~__exe_env.umask));
+                                 (mode & ~__exe_env.umask));
   } else {
     int os_fd = syscall(__NR_open, __concretize_string(pathname), flags, mode);
     if (os_fd == -1) {
@@ -450,10 +450,10 @@ ssize_t write(int fd, const void *buf, size_t count) {
       actual_count = count;
     else {
       if (__exe_env.save_all_writes)
-	assert(0);
+        assert(0);
       else {
-	if (f->off < (off64_t) f->dfile->size)
-	  actual_count = f->dfile->size - f->off;
+        if (f->off < (off64_t) f->dfile->size)
+          actual_count = f->dfile->size - f->off;
       }
     }
 
@@ -1078,10 +1078,10 @@ int fcntl(int fd, int cmd, ...) {
     }
     case F_GETFL: {
       /* XXX (CrC): This should return the status flags: O_APPEND,
-	 O_ASYNC, O_DIRECT, O_NOATIME, O_NONBLOCK.  As of now, we
-	 discard these flags during open().  We should save them and
-	 return them here.  These same flags can be set by F_SETFL,
-	 which we could also handle properly.
+         O_ASYNC, O_DIRECT, O_NOATIME, O_NONBLOCK.  As of now, we
+         discard these flags during open().  We should save them and
+         return them here.  These same flags can be set by F_SETFL,
+         which we could also handle properly.
       */
       return 0;
     }

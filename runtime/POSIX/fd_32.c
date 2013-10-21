@@ -146,7 +146,7 @@ int statfs(const char *path, struct statfs *buf32) {
     struct statfs64 buf;
 
     if (__fd_statfs(path, &buf) < 0)
-	return -1;
+        return -1;
 
     buf32->f_type = buf.f_type;
     buf32->f_bsize = buf.f_bsize;

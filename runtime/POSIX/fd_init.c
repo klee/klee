@@ -105,11 +105,11 @@ static unsigned __sym_uint32(const char *name) {
    sym_stdout_flag: 1 if stdout should be symbolic, 0 otherwise
    save_all_writes_flag: 1 if all writes are executed as expected, 0 if
                          writes past the initial file size are discarded
-			 (file offset is always incremented)
+                         (file offset is always incremented)
    max_failures: maximum number of system call failures */
 void klee_init_fds(unsigned n_files, unsigned file_length,
-		   int sym_stdout_flag, int save_all_writes_flag,
-		   unsigned max_failures) {
+                   int sym_stdout_flag, int save_all_writes_flag,
+                   unsigned max_failures) {
   unsigned k;
   char name[7] = "?-data";
   struct stat64 s;

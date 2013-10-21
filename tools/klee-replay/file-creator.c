@@ -173,17 +173,17 @@ static int create_char_dev(const char *fname, exe_disk_file_t *dfile,
       close(aslave);
 
       while (pos < flen) {
-	int res = write(amaster, &contents[pos], flen - pos);
-	if (res<0) {
-	  if (errno != EINTR) {
-	    fprintf(stderr, "note: pty master: write error\n");
-	    perror("errno");
-	    break;
-	  }
-	} else if (res) {
-	  fprintf(stderr, "note: pty master: wrote: %d (of %d)\n", res, flen);
-	  pos += res;
-	}
+        int res = write(amaster, &contents[pos], flen - pos);
+        if (res<0) {
+          if (errno != EINTR) {
+            fprintf(stderr, "note: pty master: write error\n");
+            perror("errno");
+            break;
+          }
+        } else if (res) {
+          fprintf(stderr, "note: pty master: wrote: %d (of %d)\n", res, flen);
+          pos += res;
+        }
       }
 
       if (wait_for_timeout_or_exit(pid, "pty master", &status))
@@ -192,13 +192,13 @@ static int create_char_dev(const char *fname, exe_disk_file_t *dfile,
       fprintf(stderr, "note: pty master: closing & waiting\n");
       close(amaster);
       while (1) {
-	int res = waitpid(pid, &status, 0);
-	if (res < 0) {
-	  if (errno != EINTR)
-	    break;
-	} else {
-	  break;
-	}
+        int res = waitpid(pid, &status, 0);
+        if (res < 0) {
+          if (errno != EINTR)
+            break;
+        } else {
+          break;
+        }
       }
 
     pty_exit:
@@ -240,10 +240,10 @@ static int create_pipe(const char *fname, exe_disk_file_t *dfile,
     while (pos < flen) {
       int res = write(fds[1], &contents[pos], flen - pos);
       if (res<0) {
-	if (errno != EINTR)
-	  break;
+        if (errno != EINTR)
+          break;
       } else if (res) {
-	pos += res;
+        pos += res;
       }
     }
 
@@ -255,10 +255,10 @@ static int create_pipe(const char *fname, exe_disk_file_t *dfile,
     while (1) {
       int res = waitpid(pid, &status, 0);
       if (res < 0) {
-	if (errno != EINTR)
-	  break;
+        if (errno != EINTR)
+          break;
       } else {
-	break;
+        break;
       }
     }
 

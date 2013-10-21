@@ -114,9 +114,9 @@ void klee_assume(uintptr_t x) {
 }
 
 #define KLEE_GET_VALUE_STUB(suffix, type)	\
-	type klee_get_value##suffix(type x) { \
-		return x; \
-	}
+        type klee_get_value##suffix(type x) { \
+                return x; \
+        }
 
 KLEE_GET_VALUE_STUB(f, float)
 KLEE_GET_VALUE_STUB(d, double)
