@@ -5,7 +5,7 @@
 
 int main() {
   int d;
-  
+
   klee_make_symbolic( &d, sizeof(d) );
 
   int l = d - 1;

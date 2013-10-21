@@ -40,7 +40,7 @@ void *realloc(void *ptr, size_t nbytes) {
 		//printf("REALLOC: copying = %d bytes!\n", copy_nbytes);
 		memcpy(addr, ptr, copy_nbytes);
 		free(ptr);
-	} 
+	}
 	return addr;
 }
 #endif

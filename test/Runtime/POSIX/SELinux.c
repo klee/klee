@@ -15,11 +15,11 @@ int main(int argc, char** argv) {
 
   int selinux = is_selinux_enabled();
   printf("selinux enabled = %d\n", selinux);
-  
+
   if (setfscreatecon(argv[1]) < 0)
     printf("Error: set\n");
   else printf("Success: set\n");
-  
+
   if (getfscreatecon(&con) < 0)
     printf("Error: get\n");
   else printf("Success: get\n");

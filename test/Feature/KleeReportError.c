@@ -6,7 +6,7 @@
 
 int main(int argc, char** argv) {
   int x, y, *p = 0;
-  
+
   klee_make_symbolic(&x, sizeof x);
   klee_make_symbolic(&y, sizeof y);
 

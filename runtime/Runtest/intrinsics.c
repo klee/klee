@@ -88,7 +88,7 @@ void klee_make_symbolic(void *array, size_t nbytes, const char *name) {
     memcpy(array, o->bytes, nbytes<o->numBytes ? nbytes : o->numBytes);
     if (nbytes != o->numBytes) {
       fprintf(stderr, "ERROR: object sizes differ\n");
-      if (o->numBytes < nbytes) 
+      if (o->numBytes < nbytes)
         memset((char*) array + o->numBytes, 0, nbytes - o->numBytes);
     }
   }
@@ -131,8 +131,8 @@ int klee_range(int begin, int end, const char* name) {
   int x;
   klee_make_symbolic(&x, sizeof x, name);
   if (x<begin || x>=end) {
-    fprintf(stderr, 
-            "KLEE: ERROR: invalid klee_range(%u,%u,%s) value, got: %u\n", 
+    fprintf(stderr,
+            "KLEE: ERROR: invalid klee_range(%u,%u,%s) value, got: %u\n",
             begin, end, name, x);
     abort();
   }

@@ -14,7 +14,7 @@
 
 int main(int argc, char** argv) {
   char buf[32];
-  
+
   int fd = open("A", O_RDWR | O_CREAT, S_IRWXU);
   assert(fd != -1);
   int nbytes = write(fd, "Hello", sizeof("Hello"));
@@ -25,7 +25,7 @@ int main(int argc, char** argv) {
 
   nbytes = read(fd, buf, sizeof("Hello"));
   assert(nbytes == sizeof("Hello"));
-  
+
   int r = close(fd);
   assert(r == 0);
 

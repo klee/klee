@@ -20,12 +20,12 @@ int main(int argc, char** argv) {
   int fd1 = 1; // stdout
 
   int r = isatty(fd0);
-  if (r) 
+  if (r)
     fprintf(stderr, "stdin is a tty\n");
   else fprintf(stderr, "stdin is NOT a tty\n");
-  
+
   r = isatty(fd1);
-  if (r) 
+  if (r)
     fprintf(stderr, "stdout is a tty\n");
   else fprintf(stderr, "stdout is NOT a tty\n");
 

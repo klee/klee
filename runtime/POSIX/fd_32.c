@@ -174,7 +174,7 @@ ssize_t getdents(int fd, struct dirent *dirp, size_t nbytes) {
     struct dirent64 *end = (struct dirent64*) ((char*) dp64 + res);
     while (dp64 < end) {
       struct dirent *dp = (struct dirent *) dp64;
-      size_t name_len = (dp64->d_reclen - 
+      size_t name_len = (dp64->d_reclen -
                            (size_t) &((struct dirent64*) 0)->d_name);
       dp->d_ino = dp64->d_ino;
       dp->d_off = dp64->d_off;

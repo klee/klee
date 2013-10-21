@@ -14,6 +14,6 @@ int main() {
   if (a) {
     assert(0);
   }
-  
+
   return 0;
 }

@@ -50,7 +50,7 @@ int main(int argc, char **argv) {
   rewinddir(d);
   de = readdir(d);
   assert(de);
-  assert(strcmp(de->d_name, first) == 0);  
+  assert(strcmp(de->d_name, first) == 0);
   closedir(d);
 
   return 0;

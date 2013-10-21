@@ -19,12 +19,12 @@ int main() {
   if (x > 10)
   {
     // foo -> bar
-    klee_alias_function("foo", "bar");    
+    klee_alias_function("foo", "bar");
 
     if (x > 20)
       foo();
   }
-  
+
   foo();
 
   // undo

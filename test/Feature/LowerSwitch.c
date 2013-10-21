@@ -8,7 +8,7 @@
 
 int main(int argc, char **argv) {
   int c = klee_range(0, 256, "range");
-  
+
   switch(c) {
   case 0: printf("0\n"); break;
   case 10: printf("10\n"); break;
@@ -21,7 +21,7 @@ int main(int argc, char **argv) {
 #define C3(x) C2(x): C2(x+16): C2(x+32): C2(x+48)
   C3(128):
     printf("bignums: %d\n", c); break;
-  default: 
+  default:
     printf("default\n");
     break;
   }

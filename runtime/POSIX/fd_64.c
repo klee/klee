@@ -45,7 +45,7 @@
 
 int open(const char *pathname, int flags, ...) {
   mode_t mode = 0;
-  
+
   if (flags & O_CREAT) {
     /* get mode */
     va_list ap;
@@ -59,7 +59,7 @@ int open(const char *pathname, int flags, ...) {
 
 int openat(int fd, const char *pathname, int flags, ...) {
   mode_t mode = 0;
-  
+
   if (flags & O_CREAT) {
     /* get mode */
     va_list ap;

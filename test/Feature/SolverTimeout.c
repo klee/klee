@@ -10,6 +10,6 @@ int main() {
   if (x*x*x*x*x*x*x*x*x*x*x*x*x*x*x*x + (x*x % (x+12)) == y*y*y*y*y*y*y*y*y*y*y*y*y*y*y*y % i)
     printf("Yes\n");
   else printf("No\n");
-  
+
   return 0;
 }

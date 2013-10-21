@@ -17,7 +17,7 @@
 #include <stdio.h>
 
 int main(int argc, char** argv) {
-  char buf[1024];  
+  char buf[1024];
   int fd = open("A", O_RDONLY);
   assert(fd != -1);
 

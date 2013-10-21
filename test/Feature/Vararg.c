@@ -25,7 +25,7 @@ int test1(int x, ...) {
 int sum(int N, ...) {
   int i, res = 0;
   va_list ap,ap2;
-  
+
   va_start(ap, N);
   for (i=0; i<N; i++) {
     if (i==1)
@@ -48,7 +48,7 @@ int va_array(int N, ...) {
 
   for (i=0; i<2; i++)
     va_start(aps[i], N);
-  
+
   for (i=0; i<N; i++) {
     unsigned cmd = va_arg(aps[0], int);
 

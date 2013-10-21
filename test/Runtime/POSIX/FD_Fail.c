@@ -9,16 +9,16 @@
 #include <assert.h>
 
 int main(int argc, char** argv) {
-  char buf[1024];  
+  char buf[1024];
   FILE* f = fopen("/etc/fstab", "r");
   assert(f);
-    
+
   int r = fread(buf, 1, 100, f);
-  printf("fread(): %s\n", 
+  printf("fread(): %s\n",
          r ? "ok" : "fail");
 
   r = fclose(f);
-  printf("fclose(): %s\n", 
+  printf("fclose(): %s\n",
          r ? "ok" : "fail");
 
   return 0;

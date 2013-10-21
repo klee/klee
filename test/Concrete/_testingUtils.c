@@ -4,7 +4,7 @@ void print_int(unsigned long long val);
 
 #define TYPED_PRINT(_name_type, _arg_type)  \
     void print_ ## _name_type(_arg_type val) { print_int(val); }
- 
+
 TYPED_PRINT(i1, unsigned char)
 TYPED_PRINT(i8, unsigned char)
 TYPED_PRINT(i16, unsigned short)
@@ -23,10 +23,10 @@ void print_int(unsigned long long val) {
         int digit = val / cur;
 
         putchar(digit + '0');
-        
+
         val = val % cur;
         cur /= 10;
     }
-    
+
     putchar('\n');
 }
