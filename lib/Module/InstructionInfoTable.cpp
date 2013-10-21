@@ -56,9 +56,9 @@ public:
     os << (uintptr_t) i;
   }
 };
-        
+
 static void buildInstructionToLineMap(Module *m,
-                                      std::map<const Instruction*, unsigned> &out) {  
+                                      std::map<const Instruction*, unsigned> &out) {
   InstructionToLineAnnotator a;
   std::string str;
   llvm::raw_string_ostream os(str);
@@ -104,7 +104,7 @@ static std::string getDSPIPath(DILocation Loc) {
   }
 }
 
-bool InstructionInfoTable::getInstructionDebugInfo(const llvm::Instruction *I, 
+bool InstructionInfoTable::getInstructionDebugInfo(const llvm::Instruction *I,
                                                    const std::string *&File,
                                                    unsigned &Line) {
 #if LLVM_VERSION_CODE < LLVM_VERSION(2, 7)
@@ -125,13 +125,13 @@ bool InstructionInfoTable::getInstructionDebugInfo(const llvm::Instruction *I,
   return false;
 }
 
-InstructionInfoTable::InstructionInfoTable(Module *m) 
+InstructionInfoTable::InstructionInfoTable(Module *m)
   : dummyString(""), dummyInfo(0, dummyString, 0, 0) {
   unsigned id = 0;
   std::map<const Instruction*, unsigned> lineTable;
   buildInstructionToLineMap(m, lineTable);
 
-  for (Module::iterator fnIt = m->begin(), fn_ie = m->end(); 
+  for (Module::iterator fnIt = m->begin(), fn_ie = m->end();
        fnIt != fn_ie; ++fnIt) {
     const std::string *initialFile = &dummyString;
     unsigned initialLine = 0;
@@ -143,11 +143,11 @@ InstructionInfoTable::InstructionInfoTable(Module *m)
          it != ie; ++it)
       if (getInstructionDebugInfo(&*it, initialFile, initialLine))
         break;
-    
-    typedef std::map<BasicBlock*, std::pair<const std::string*,unsigned> > 
+
+    typedef std::map<BasicBlock*, std::pair<const std::string*,unsigned> >
       sourceinfo_ty;
     sourceinfo_ty sourceInfo;
-    for (llvm::Function::iterator bbIt = fnIt->begin(), bbie = fnIt->end(); 
+    for (llvm::Function::iterator bbIt = fnIt->begin(), bbie = fnIt->end();
          bbIt != bbie; ++bbIt) {
       std::pair<sourceinfo_ty::iterator, bool>
         res = sourceInfo.insert(std::make_pair(bbIt,
@@ -167,12 +167,12 @@ InstructionInfoTable::InstructionInfoTable(Module *m)
         assert(si != sourceInfo.end());
         const std::string *file = si->second.first;
         unsigned line = si->second.second;
-        
+
         for (BasicBlock::iterator it = bb->begin(), ie = bb->end();
              it != ie; ++it) {
           Instruction *instr = it;
           unsigned assemblyLine = 0;
-          std::map<const Instruction*, unsigned>::const_iterator ltit = 
+          std::map<const Instruction*, unsigned>::const_iterator ltit =
             lineTable.find(instr);
           if (ltit!=lineTable.end())
             assemblyLine = ltit->second;
@@ -181,10 +181,10 @@ InstructionInfoTable::InstructionInfoTable(Module *m)
                                       InstructionInfo(id++,
                                                       *file,
                                                       line,
-                                                      assemblyLine)));        
+                                                      assemblyLine)));
         }
-        
-        for (succ_iterator it = succ_begin(bb), ie = succ_end(bb); 
+
+        for (succ_iterator it = succ_begin(bb), ie = succ_end(bb);
              it != ie; ++it) {
           if (sourceInfo.insert(std::make_pair(*it,
                                                std::make_pair(file, line))).second)
@@ -219,7 +219,7 @@ unsigned InstructionInfoTable::getMaxID() const {
 
 const InstructionInfo &
 InstructionInfoTable::getInfo(const Instruction *inst) const {
-  std::map<const llvm::Instruction*, InstructionInfo>::const_iterator it = 
+  std::map<const llvm::Instruction*, InstructionInfo>::const_iterator it =
     infos.find(inst);
   if (it==infos.end()) {
     return dummyInfo;

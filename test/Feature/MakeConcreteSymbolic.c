@@ -11,7 +11,7 @@
 int main() {
   int i;
   char a;
-  
+
   a = 10;
   assert(a == 10);
 

@@ -55,7 +55,7 @@ namespace klee {
       if (x&0xCCCCCCCC) res += 2;
       if (x&0xAAAAAAAA) res += 1;
       return res;
-    } 
+    }
 
     inline unsigned indexOfRightmostBit(unsigned x) {
       return indexOfSingleBit(isolateRightmostBit(x));
@@ -70,7 +70,7 @@ namespace klee {
         return 0;
       return ((uint64_t) (int64_t) -1) >> (64 - N);
     }
-    
+
     // @pre(0 < N <= 64)
     inline uint64_t truncateToNBits(uint64_t x, unsigned N) {
       return x&(((uint64_t) (int64_t) -1) >> (64 - N));
@@ -94,9 +94,9 @@ namespace klee {
     inline unsigned indexOfSingleBit(uint64_t x) {
       unsigned res = bits32::indexOfSingleBit((unsigned) (x | (x>>32)));
       if (x&((uint64_t) 0xFFFFFFFF << 32))
-	  res += 32;
+          res += 32;
       return res;
-    } 
+    }
 
     inline uint64_t indexOfRightmostBit(uint64_t x) {
       return indexOfSingleBit(isolateRightmostBit(x));

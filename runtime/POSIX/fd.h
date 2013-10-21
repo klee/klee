@@ -17,7 +17,7 @@
 #include <sys/statfs.h>
 #include <dirent.h>
 
-typedef struct {  
+typedef struct {
   unsigned size;  /* in bytes */
   char* contents;
   struct stat64* stat;
@@ -30,7 +30,7 @@ typedef enum {
   eWriteable    = (1 << 3)
 } exe_file_flag_t;
 
-typedef struct {      
+typedef struct {
   int fd;                   /* actual fd if not symbolic */
   unsigned flags;           /* set of exe_file_flag_t values. fields
                                are only defined when flags at least
@@ -46,7 +46,7 @@ typedef struct {
   exe_disk_file_t *sym_files;
   /* --- */
   /* the maximum number of failures on one path; gets decremented after each failure */
-  unsigned max_failures; 
+  unsigned max_failures;
 
   /* Which read, write etc. call should fail */
   int *read_fail, *write_fail, *close_fail, *ftruncate_fail, *getcwd_fail;
@@ -65,15 +65,15 @@ typedef struct {
   /* If set, writes execute as expected.  Otherwise, writes extending
      the file size only change the contents up to the initial
      size. The file offset is always incremented correctly. */
-  int save_all_writes; 
+  int save_all_writes;
 } exe_sym_env_t;
 
 extern exe_file_system_t __exe_fs;
 extern exe_sym_env_t __exe_env;
 
-void klee_init_fds(unsigned n_files, unsigned file_length, 
-		   int sym_stdout_flag, int do_all_writes_flag, 
-		   unsigned max_failures);
+void klee_init_fds(unsigned n_files, unsigned file_length,
+                   int sym_stdout_flag, int do_all_writes_flag,
+                   unsigned max_failures);
 void klee_init_env(int *argcPtr, char ***argvPtr);
 
 /* *** */

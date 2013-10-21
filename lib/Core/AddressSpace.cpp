@@ -31,7 +31,7 @@ void AddressSpace::unbindObject(const MemoryObject *mo) {
 
 const ObjectState *AddressSpace::findObject(const MemoryObject *mo) const {
   const MemoryMap::value_type *res = objects.lookup(mo);
-  
+
   return res ? res->second : 0;
 }
 
@@ -45,13 +45,13 @@ ObjectState *AddressSpace::getWriteable(const MemoryObject *mo,
     ObjectState *n = new ObjectState(*os);
     n->copyOnWriteOwner = cowKey;
     objects = objects.replace(std::make_pair(mo, n));
-    return n;    
+    return n;
   }
 }
 
-/// 
+///
 
-bool AddressSpace::resolveOne(const ref<ConstantExpr> &addr, 
+bool AddressSpace::resolveOne(const ref<ConstantExpr> &addr,
                               ObjectPair &result) {
   uint64_t address = addr->getZExtValue();
   MemoryObject hack(address);
@@ -87,7 +87,7 @@ bool AddressSpace::resolveOne(ExecutionState &state,
     uint64_t example = cex->getZExtValue();
     MemoryObject hack(example);
     const MemoryMap::value_type *res = objects.lookup_previous(&hack);
-    
+
     if (res) {
       const MemoryObject *mo = res->first;
       if (example - mo->address < mo->size) {
@@ -98,18 +98,18 @@ bool AddressSpace::resolveOne(ExecutionState &state,
     }
 
     // didn't work, now we have to search
-       
+
     MemoryMap::iterator oi = objects.upper_bound(&hack);
     MemoryMap::iterator begin = objects.begin();
     MemoryMap::iterator end = objects.end();
-      
+
     MemoryMap::iterator start = oi;
     while (oi!=begin) {
       --oi;
       const MemoryObject *mo = oi->first;
-        
+
       bool mayBeTrue;
-      if (!solver->mayBeTrue(state, 
+      if (!solver->mayBeTrue(state,
                              mo->getBoundsCheckPointer(address), mayBeTrue))
         return false;
       if (mayBeTrue) {
@@ -118,7 +118,7 @@ bool AddressSpace::resolveOne(ExecutionState &state,
         return true;
       } else {
         bool mustBeTrue;
-        if (!solver->mustBeTrue(state, 
+        if (!solver->mustBeTrue(state,
                                 UgeExpr::create(address, mo->getBaseExpr()),
                                 mustBeTrue))
           return false;
@@ -132,7 +132,7 @@ bool AddressSpace::resolveOne(ExecutionState &state,
       const MemoryObject *mo = oi->first;
 
       bool mustBeTrue;
-      if (!solver->mustBeTrue(state, 
+      if (!solver->mustBeTrue(state,
                               UltExpr::create(address, mo->getBaseExpr()),
                               mustBeTrue))
         return false;
@@ -141,7 +141,7 @@ bool AddressSpace::resolveOne(ExecutionState &state,
       } else {
         bool mayBeTrue;
 
-        if (!solver->mayBeTrue(state, 
+        if (!solver->mayBeTrue(state,
                                mo->getBoundsCheckPointer(address),
                                mayBeTrue))
           return false;
@@ -159,9 +159,9 @@ bool AddressSpace::resolveOne(ExecutionState &state,
 }
 
 bool AddressSpace::resolve(ExecutionState &state,
-                           TimingSolver *solver, 
-                           ref<Expr> p, 
-                           ResolutionList &rl, 
+                           TimingSolver *solver,
+                           ref<Expr> p,
+                           ResolutionList &rl,
                            unsigned maxResolutions,
                            double timeout) {
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(p)) {
@@ -178,32 +178,32 @@ bool AddressSpace::resolve(ExecutionState &state,
     // we want to find the first object, find a cex assuming
     // not the first, find a cex assuming not the second...
     // etc.
-    
+
     // XXX how do we smartly amortize the cost of checking to
     // see if we need to keep searching up/down, in bad cases?
     // maybe we don't care?
-    
+
     // XXX we really just need a smart place to start (although
     // if its a known solution then the code below is guaranteed
     // to hit the fast path with exactly 2 queries). we could also
     // just get this by inspection of the expr.
-    
+
     ref<ConstantExpr> cex;
     if (!solver->getValue(state, p, cex))
       return true;
     uint64_t example = cex->getZExtValue();
     MemoryObject hack(example);
-    
+
     MemoryMap::iterator oi = objects.upper_bound(&hack);
     MemoryMap::iterator begin = objects.begin();
     MemoryMap::iterator end = objects.end();
-      
+
     MemoryMap::iterator start = oi;
-      
+
     // XXX in the common case we can save one query if we ask
     // mustBeTrue before mayBeTrue for the first result. easy
     // to add I just want to have a nice symbolic test case first.
-      
+
     // search backwards, start with one minus because this
     // is the object that p *should* be within, which means we
     // get write off the end with 4 queries (XXX can be better,
@@ -221,7 +221,7 @@ bool AddressSpace::resolve(ExecutionState &state,
         return true;
       if (mayBeTrue) {
         rl.push_back(*oi);
-        
+
         // fast path check
         unsigned size = rl.size();
         if (size==1) {
@@ -234,9 +234,9 @@ bool AddressSpace::resolve(ExecutionState &state,
           return true;
         }
       }
-        
+
       bool mustBeTrue;
-      if (!solver->mustBeTrue(state, 
+      if (!solver->mustBeTrue(state,
                               UgeExpr::create(p, mo->getBaseExpr()),
                               mustBeTrue))
         return true;
@@ -250,13 +250,13 @@ bool AddressSpace::resolve(ExecutionState &state,
         return true;
 
       bool mustBeTrue;
-      if (!solver->mustBeTrue(state, 
+      if (!solver->mustBeTrue(state,
                               UltExpr::create(p, mo->getBaseExpr()),
                               mustBeTrue))
         return true;
       if (mustBeTrue)
         break;
-      
+
       // XXX I think there is some query wasteage here?
       ref<Expr> inBounds = mo->getBoundsCheckPointer(p);
       bool mayBeTrue;
@@ -264,7 +264,7 @@ bool AddressSpace::resolve(ExecutionState &state,
         return true;
       if (mayBeTrue) {
         rl.push_back(*oi);
-        
+
         // fast path check
         unsigned size = rl.size();
         if (size==1) {
@@ -290,7 +290,7 @@ bool AddressSpace::resolve(ExecutionState &state,
 // then its concrete cache byte isn't being used) but is just a hack.
 
 void AddressSpace::copyOutConcretes() {
-  for (MemoryMap::iterator it = objects.begin(), ie = objects.end(); 
+  for (MemoryMap::iterator it = objects.begin(), ie = objects.end();
        it != ie; ++it) {
     const MemoryObject *mo = it->first;
 
@@ -305,7 +305,7 @@ void AddressSpace::copyOutConcretes() {
 }
 
 bool AddressSpace::copyInConcretes() {
-  for (MemoryMap::iterator it = objects.begin(), ie = objects.end(); 
+  for (MemoryMap::iterator it = objects.begin(), ie = objects.end();
        it != ie; ++it) {
     const MemoryObject *mo = it->first;
 

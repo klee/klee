@@ -26,7 +26,7 @@ StatisticManager::~StatisticManager() {
   if (indexedStats) delete[] indexedStats;
 }
 
-void StatisticManager::useIndexedStats(unsigned totalIndices) {  
+void StatisticManager::useIndexedStats(unsigned totalIndices) {
   if (indexedStats) delete[] indexedStats;
   indexedStats = new uint64_t[totalIndices * stats.size()];
   memset(indexedStats, 0, sizeof(*indexedStats) * totalIndices * stats.size());
@@ -64,9 +64,9 @@ static StatisticManager &getStatisticManager() {
 
 /* *** */
 
-Statistic::Statistic(const std::string &_name, 
-                     const std::string &_shortName) 
-  : name(_name), 
+Statistic::Statistic(const std::string &_name,
+                     const std::string &_shortName)
+  : name(_name),
     shortName(_shortName) {
   getStatisticManager().registerStatistic(*this);
 }

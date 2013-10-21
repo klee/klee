@@ -31,7 +31,7 @@ void ImpliedValue::getImpliedValues(ref<Expr> e,
                                     ImpliedValueList &results) {
   switch (e->getKind()) {
   case Expr::Constant: {
-    assert(value == cast<ConstantExpr>(e) && 
+    assert(value == cast<ConstantExpr>(e) &&
            "error in implied value calculation");
     break;
   }
@@ -49,21 +49,21 @@ void ImpliedValue::getImpliedValues(ref<Expr> e,
     results.push_back(std::make_pair(re, value));
     break;
   }
-    
+
   case Expr::Select: {
     // not much to do, could improve with range analysis
     SelectExpr *se = cast<SelectExpr>(e);
-    
+
     if (ConstantExpr *TrueCE = dyn_cast<ConstantExpr>(se->trueExpr)) {
       if (ConstantExpr *FalseCE = dyn_cast<ConstantExpr>(se->falseExpr)) {
         if (TrueCE != FalseCE) {
           if (value == TrueCE) {
-            getImpliedValues(se->cond, ConstantExpr::alloc(1, Expr::Bool), 
+            getImpliedValues(se->cond, ConstantExpr::alloc(1, Expr::Bool),
                              results);
           } else {
             assert(value == FalseCE &&
                    "err in implied value calculation");
-            getImpliedValues(se->cond, ConstantExpr::alloc(0, Expr::Bool), 
+            getImpliedValues(se->cond, ConstantExpr::alloc(0, Expr::Bool),
                              results);
           }
         }
@@ -82,7 +82,7 @@ void ImpliedValue::getImpliedValues(ref<Expr> e,
                      results);
     break;
   }
-    
+
   case Expr::Extract: {
     // XXX, could do more here with "some bits" mask
     break;
@@ -90,7 +90,7 @@ void ImpliedValue::getImpliedValues(ref<Expr> e,
 
     // Casting
 
-  case Expr::ZExt: 
+  case Expr::ZExt:
   case Expr::SExt: {
     CastExpr *ce = cast<CastExpr>(e);
     getImpliedValues(ce->src, value->Extract(0, ce->src->getWidth()),
@@ -159,7 +159,7 @@ void ImpliedValue::getImpliedValues(ref<Expr> e,
   }
 
     // Comparison
-  case Expr::Ne: 
+  case Expr::Ne:
     value = value->Not();
     /* fallthru */
   case Expr::Eq: {
@@ -174,20 +174,20 @@ void ImpliedValue::getImpliedValues(ref<Expr> e,
       // this trick. The only obvious case where this occurs, aside from
       // booleans, is as the result of a select expression where the true and
       // false branches are single valued and distinct.
-      
+
       if (ConstantExpr *CE = dyn_cast<ConstantExpr>(ee->left))
         if (CE->getWidth() == Expr::Bool)
           getImpliedValues(ee->right, CE->Not(), results);
     }
     break;
   }
-    
+
   default:
     break;
   }
 }
-    
-void ImpliedValue::checkForImpliedValues(Solver *S, ref<Expr> e, 
+
+void ImpliedValue::checkForImpliedValues(Solver *S, ref<Expr> e,
                                          ref<ConstantExpr> value) {
   std::vector<ref<ReadExpr> > reads;
   std::map<ref<ReadExpr>, ref<ConstantExpr> > found;
@@ -197,7 +197,7 @@ void ImpliedValue::checkForImpliedValues(Solver *S, ref<Expr> e,
 
   for (ImpliedValueList::iterator i = results.begin(), ie = results.end();
        i != ie; ++i) {
-    std::map<ref<ReadExpr>, ref<ConstantExpr> >::iterator it = 
+    std::map<ref<ReadExpr>, ref<ConstantExpr> >::iterator it =
       found.find(i->first);
     if (it != found.end()) {
       assert(it->second == i->second && "Invalid ImpliedValue!");
@@ -219,25 +219,25 @@ void ImpliedValue::checkForImpliedValues(Solver *S, ref<Expr> e,
   // bounds indices which will not get picked up. this is of utmost
   // importance if we are being backed by the CexCachingSolver.
 
-  for (std::vector< ref<ReadExpr> >::iterator i = reads.begin(), 
+  for (std::vector< ref<ReadExpr> >::iterator i = reads.begin(),
          ie = reads.end(); i != ie; ++i) {
     ReadExpr *re = i->get();
-    assumption.push_back(UltExpr::create(re->index, 
-                                         ConstantExpr::alloc(re->updates.root->size, 
+    assumption.push_back(UltExpr::create(re->index,
+                                         ConstantExpr::alloc(re->updates.root->size,
                                                              Context::get().getPointerWidth())));
   }
 
   ConstraintManager assume(assumption);
-  for (std::vector< ref<ReadExpr> >::iterator i = reads.begin(), 
+  for (std::vector< ref<ReadExpr> >::iterator i = reads.begin(),
          ie = reads.end(); i != ie; ++i) {
     ref<ReadExpr> var = *i;
     ref<ConstantExpr> possible;
     bool success = S->getValue(Query(assume, var), possible);
-    assert(success && "FIXME: Unhandled solver failure");    
+    assert(success && "FIXME: Unhandled solver failure");
     std::map<ref<ReadExpr>, ref<ConstantExpr> >::iterator it = found.find(var);
     bool res;
     success = S->mustBeTrue(Query(assume, EqExpr::create(var, possible)), res);
-    assert(success && "FIXME: Unhandled solver failure");    
+    assert(success && "FIXME: Unhandled solver failure");
     if (res) {
       if (it != found.end()) {
         assert(possible == it->second && "Invalid ImpliedValue!");

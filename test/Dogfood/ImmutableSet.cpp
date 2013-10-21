@@ -70,7 +70,7 @@ void check_set(T &set, unsigned num, unsigned *values) {
     assert(set.find(item2) == set.end());
 
     T::iterator lb = set.lower_bound(item2);
-    for (T::iterator it=set.begin(); it!=lb; ++it)      
+    for (T::iterator it=set.begin(); it!=lb; ++it)
       assert(*it < item2);
     for (T::iterator it=lb, ie=set.end(); it!=ie; ++it)
       assert(*it >= item2);
@@ -100,10 +100,10 @@ void test() {
     set = set.insert(item);
     values[num++] = item;
   }
-  
+
   check_set(set, num, values);
 
-  unsigned item = klee_range(0, 256, "range");  
+  unsigned item = klee_range(0, 256, "range");
   if (contains(values, values+num, item)) { // in tree
     // insertion is invariant
     T set2 = set.insert(item);

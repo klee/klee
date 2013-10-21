@@ -22,11 +22,11 @@ using namespace klee;
 
 ///
 
-TreeStreamWriter::TreeStreamWriter(const std::string &_path) 
+TreeStreamWriter::TreeStreamWriter(const std::string &_path)
   : lastID(0),
     bufferCount(0),
     path(_path),
-    output(new std::ofstream(path.c_str(), 
+    output(new std::ofstream(path.c_str(),
                              std::ios::out | std::ios::binary)),
     ids(1) {
   if (!output->good()) {
@@ -61,7 +61,7 @@ TreeOStream TreeStreamWriter::open(const TreeOStream &os) {
 
 void TreeStreamWriter::write(TreeOStream &os, const char *s, unsigned size) {
 #if 1
-  if (bufferCount && 
+  if (bufferCount &&
       (os.id!=lastID || size+bufferCount>bufferSize))
     flushBuffer();
   if (bufferCount) { // (os.id==lastID && size+bufferCount<=bufferSize)
@@ -84,7 +84,7 @@ void TreeStreamWriter::write(TreeOStream &os, const char *s, unsigned size) {
 }
 
 void TreeStreamWriter::flushBuffer() {
-  if (bufferCount) {    
+  if (bufferCount) {
     output->write(reinterpret_cast<const char*>(&lastID), 4);
     output->write(reinterpret_cast<const char*>(&bufferCount), 4);
     output->write(buffer, bufferCount);
@@ -101,14 +101,14 @@ void TreeStreamWriter::readStream(TreeStreamID streamID,
                                   std::vector<unsigned char> &out) {
   assert(streamID>0 && streamID<ids);
   flush();
-  
+
   std::ifstream is(path.c_str(),
                    std::ios::in | std::ios::binary);
   assert(is.good());
 #if 0
   std::cout << "finding chain for: " << streamID << "\n";
 #endif
-  
+
   std::map<unsigned,unsigned> parents;
   std::vector<unsigned> roots;
   for (;;) {
@@ -127,7 +127,7 @@ void TreeStreamWriter::readStream(TreeStreamID streamID,
           std::map<unsigned, unsigned>::iterator it = parents.find(id);
           assert(it!=parents.end());
           id = it->second;
-        } 
+        }
         break;
       } else {
         parents.insert(std::make_pair(child,id));
@@ -140,7 +140,7 @@ void TreeStreamWriter::readStream(TreeStreamID streamID,
 #if 0
   std::cout << "roots: ";
   std::copy(roots.begin(), roots.end(), std::ostream_iterator<unsigned>(std::cout, " "));
-  std::cout << "\n"; 
+  std::cout << "\n";
 #endif
   is.seekg(0, std::ios::beg);
   for (;;) {
@@ -161,7 +161,7 @@ void TreeStreamWriter::readStream(TreeStreamID streamID,
         while (size--) is.get();
       }
     }
-  }  
+  }
 }
 
 ///

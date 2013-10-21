@@ -16,66 +16,62 @@
 
 namespace klee
 {
-        Solver *constructSolverChain(Solver *coreSolver,
-                                     std::string querySMT2LogPath,
-                                     std::string baseSolverQuerySMT2LogPath,
-                                     std::string queryPCLogPath,
-                                     std::string baseSolverQueryPCLogPath)
-	{
-	  Solver *solver = coreSolver;
+  Solver *constructSolverChain(Solver *coreSolver,
+                               std::string querySMT2LogPath,
+                               std::string baseSolverQuerySMT2LogPath,
+                               std::string queryPCLogPath,
+                               std::string baseSolverQueryPCLogPath)
+  {
+    Solver *solver = coreSolver;
 
-	  if (optionIsSet(queryLoggingOptions, SOLVER_PC))
-	  {
-		solver = createPCLoggingSolver(solver,
-					       baseSolverQueryPCLogPath,
-					       MinQueryTimeToLog);
-		std::cerr << "Logging queries that reach solver in .pc format to " 
-			  << baseSolverQueryPCLogPath.c_str() << std::endl;
-	  }
+    if (optionIsSet(queryLoggingOptions, SOLVER_PC)) {
+      solver = createPCLoggingSolver(solver,
+                                     baseSolverQueryPCLogPath,
+                                     MinQueryTimeToLog);
+      std::cerr << "Logging queries that reach solver in .pc format to "
+                << baseSolverQueryPCLogPath.c_str() << std::endl;
+    }
 
-	  if (optionIsSet(queryLoggingOptions, SOLVER_SMTLIB))
-	  {
-		solver = createSMTLIBLoggingSolver(solver,
-						   baseSolverQuerySMT2LogPath,
-						   MinQueryTimeToLog);
-		std::cerr << "Logging queries that reach solver in .smt2 format to " 
-			  << baseSolverQuerySMT2LogPath.c_str() << std::endl;
-	  }
+    if (optionIsSet(queryLoggingOptions, SOLVER_SMTLIB)) {
+      solver = createSMTLIBLoggingSolver(solver,
+                                         baseSolverQuerySMT2LogPath,
+                                         MinQueryTimeToLog);
+      std::cerr << "Logging queries that reach solver in .smt2 format to "
+                << baseSolverQuerySMT2LogPath.c_str() << std::endl;
+    }
 
-	  if (UseFastCexSolver)
-		solver = createFastCexSolver(solver);
+    if (UseFastCexSolver)
+      solver = createFastCexSolver(solver);
 
-	  if (UseCexCache)
-		solver = createCexCachingSolver(solver);
+    if (UseCexCache)
+      solver = createCexCachingSolver(solver);
 
-	  if (UseCache)
-		solver = createCachingSolver(solver);
+    if (UseCache)
+      solver = createCachingSolver(solver);
 
-	  if (UseIndependentSolver)
-		solver = createIndependentSolver(solver);
+    if (UseIndependentSolver)
+      solver = createIndependentSolver(solver);
 
-	  if (DebugValidateSolver)
-		solver = createValidatingSolver(solver, coreSolver);
+    if (DebugValidateSolver)
+      solver = createValidatingSolver(solver, coreSolver);
 
-	  if (optionIsSet(queryLoggingOptions, ALL_PC))
-	  {
-		solver = createPCLoggingSolver(solver,
-					       queryPCLogPath,
-					       MinQueryTimeToLog);
-		std::cerr << "Logging all queries in .pc format to " 
-			  << queryPCLogPath.c_str() << std::endl;
-	  }
+    if (optionIsSet(queryLoggingOptions, ALL_PC)) {
+      solver = createPCLoggingSolver(solver,
+                                     queryPCLogPath,
+                                     MinQueryTimeToLog);
+      std::cerr << "Logging all queries in .pc format to "
+                << queryPCLogPath.c_str() << std::endl;
+    }
 
-	  if (optionIsSet(queryLoggingOptions, ALL_SMTLIB))
-	  {
-		solver = createSMTLIBLoggingSolver(solver,querySMT2LogPath,
-						   MinQueryTimeToLog);
-		std::cerr << "Logging all queries in .smt2 format to " 
-			  << querySMT2LogPath.c_str() << std::endl;
-	  }
+    if (optionIsSet(queryLoggingOptions, ALL_SMTLIB)) {
+      solver = createSMTLIBLoggingSolver(solver,querySMT2LogPath,
+                                         MinQueryTimeToLog);
+      std::cerr << "Logging all queries in .smt2 format to "
+                << querySMT2LogPath.c_str() << std::endl;
+    }
 
-	  return solver;
-	}
+    return solver;
+  }
 
 }
 

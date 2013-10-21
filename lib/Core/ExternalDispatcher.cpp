@@ -70,7 +70,7 @@ static void sigsegv_handler(int signal, siginfo_t *info, void *context) {
 
 void *ExternalDispatcher::resolveSymbol(const std::string &name) {
   assert(executionEngine);
-  
+
   const char *str = name.c_str();
 
   // We use this to validate that function names can be resolved so we
@@ -84,10 +84,10 @@ void *ExternalDispatcher::resolveSymbol(const std::string &name) {
   void *addr = sys::DynamicLibrary::SearchForAddressOfSymbol(str);
   if (addr)
     return addr;
-  
+
   // If it has an asm specifier and starts with an underscore we retry
   // without the underscore. I (DWD) don't know why.
-  if (name[0] == 1 && str[0]=='_') { 
+  if (name[0] == 1 && str[0]=='_') {
     ++str;
     addr = sys::DynamicLibrary::SearchForAddressOfSymbol(str);
   }
@@ -142,7 +142,7 @@ bool ExternalDispatcher::executeCall(Function *f, Instruction *i, uint64_t *args
 
   if (it == dispatchers.end()) {
 #ifdef WINDOWS
-    std::map<std::string, void*>::iterator it2 = 
+    std::map<std::string, void*>::iterator it2 =
       preboundFunctions.find(f->getName()));
 
     if (it2 != preboundFunctions.end()) {
@@ -178,7 +178,7 @@ static uint64_t *gTheArgsP;
 bool ExternalDispatcher::runProtectedCall(Function *f, uint64_t *args) {
   struct sigaction segvAction, segvActionOld;
   bool res;
-  
+
   if (!f)
     return false;
 
@@ -222,24 +222,24 @@ Function *ExternalDispatcher::createDispatcher(Function *target, Instruction *in
   Value **args = new Value*[cs.arg_size()];
 
   std::vector<LLVM_TYPE_Q Type*> nullary;
-  
-  Function *dispatcher = Function::Create(FunctionType::get(Type::getVoidTy(getGlobalContext()), 
-							    nullary, false),
-					  GlobalVariable::ExternalLinkage, 
-					  "",
-					  dispatchModule);
+
+  Function *dispatcher = Function::Create(FunctionType::get(Type::getVoidTy(getGlobalContext()),
+                                                            nullary, false),
+                                          GlobalVariable::ExternalLinkage,
+                                          "",
+                                          dispatchModule);
 
 
   BasicBlock *dBB = BasicBlock::Create(getGlobalContext(), "entry", dispatcher);
 
   // Get a Value* for &gTheArgsP, as an i64**.
-  Instruction *argI64sp = 
-    new IntToPtrInst(ConstantInt::get(Type::getInt64Ty(getGlobalContext()), 
+  Instruction *argI64sp =
+    new IntToPtrInst(ConstantInt::get(Type::getInt64Ty(getGlobalContext()),
                                       (uintptr_t) (void*) &gTheArgsP),
                      PointerType::getUnqual(PointerType::getUnqual(Type::getInt64Ty(getGlobalContext()))),
                      "argsp", dBB);
-  Instruction *argI64s = new LoadInst(argI64sp, "args", dBB); 
-  
+  Instruction *argI64s = new LoadInst(argI64sp, "args", dBB);
+
   // Get the target function type.
   LLVM_TYPE_Q FunctionType *FTy =
     cast<FunctionType>(cast<PointerType>(target->getType())->getElementType());
@@ -251,12 +251,12 @@ Function *ExternalDispatcher::createDispatcher(Function *target, Instruction *in
     // Determine the type the argument will be passed as. This accomodates for
     // the corresponding code in Executor.cpp for handling calls to bitcasted
     // functions.
-    LLVM_TYPE_Q Type *argTy = (i < FTy->getNumParams() ? FTy->getParamType(i) : 
+    LLVM_TYPE_Q Type *argTy = (i < FTy->getNumParams() ? FTy->getParamType(i) :
                                (*ai)->getType());
-    Instruction *argI64p = 
-      GetElementPtrInst::Create(argI64s, 
-                                ConstantInt::get(Type::getInt32Ty(getGlobalContext()), 
-                                                 idx), 
+    Instruction *argI64p =
+      GetElementPtrInst::Create(argI64s,
+                                ConstantInt::get(Type::getInt32Ty(getGlobalContext()),
+                                                 idx),
                                 "", dBB);
 
     Instruction *argp = new BitCastInst(argI64p, PointerType::getUnqual(argTy),
@@ -278,8 +278,8 @@ Function *ExternalDispatcher::createDispatcher(Function *target, Instruction *in
   Instruction *result = CallInst::Create(dispatchTarget, args, args+i, "", dBB);
 #endif
   if (result->getType() != Type::getVoidTy(getGlobalContext())) {
-    Instruction *resp = 
-      new BitCastInst(argI64s, PointerType::getUnqual(result->getType()), 
+    Instruction *resp =
+      new BitCastInst(argI64s, PointerType::getUnqual(result->getType()),
                       "", dBB);
     new StoreInst(result, resp, dBB);
   }

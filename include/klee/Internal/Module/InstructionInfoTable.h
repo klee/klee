@@ -17,7 +17,7 @@
 namespace llvm {
   class Function;
   class Instruction;
-  class Module; 
+  class Module;
 }
 
 namespace klee {
@@ -34,7 +34,7 @@ namespace klee {
                     const std::string &_file,
                     unsigned _line,
                     unsigned _assemblyLine)
-      : id(_id), 
+      : id(_id),
         file(_file),
         line(_line),
         assemblyLine(_assemblyLine) {
@@ -42,7 +42,7 @@ namespace klee {
   };
 
   class InstructionInfoTable {
-    struct ltstr { 
+    struct ltstr {
       bool operator()(const std::string *a, const std::string *b) const {
         return *a<*b;
       }

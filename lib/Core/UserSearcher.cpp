@@ -22,32 +22,32 @@ using namespace klee;
 namespace {
   cl::list<Searcher::CoreSearchType>
   CoreSearch("search", cl::desc("Specify the search heuristic (default=random-path interleaved with nurs:covnew)"),
-	     cl::values(clEnumValN(Searcher::DFS, "dfs", "use Depth First Search (DFS)"),
-			clEnumValN(Searcher::BFS, "bfs", "use Breadth First Search (BFS)"),
-			clEnumValN(Searcher::RandomState, "random-state", "randomly select a state to explore"),
-			clEnumValN(Searcher::RandomPath, "random-path", "use Random Path Selection (see OSDI'08 paper)"),
-			clEnumValN(Searcher::NURS_CovNew, "nurs:covnew", "use Non Uniform Random Search (NURS) with Coverage-New"),
-			clEnumValN(Searcher::NURS_MD2U, "nurs:md2u", "use NURS with Min-Dist-to-Uncovered"),
-			clEnumValN(Searcher::NURS_Depth, "nurs:depth", "use NURS with 2^depth"),
-			clEnumValN(Searcher::NURS_ICnt, "nurs:icnt", "use NURS with Instr-Count"),
-			clEnumValN(Searcher::NURS_CPICnt, "nurs:cpicnt", "use NURS with CallPath-Instr-Count"),
-			clEnumValN(Searcher::NURS_QC, "nurs:qc", "use NURS with Query-Cost"),
-			clEnumValEnd));
+             cl::values(clEnumValN(Searcher::DFS, "dfs", "use Depth First Search (DFS)"),
+                        clEnumValN(Searcher::BFS, "bfs", "use Breadth First Search (BFS)"),
+                        clEnumValN(Searcher::RandomState, "random-state", "randomly select a state to explore"),
+                        clEnumValN(Searcher::RandomPath, "random-path", "use Random Path Selection (see OSDI'08 paper)"),
+                        clEnumValN(Searcher::NURS_CovNew, "nurs:covnew", "use Non Uniform Random Search (NURS) with Coverage-New"),
+                        clEnumValN(Searcher::NURS_MD2U, "nurs:md2u", "use NURS with Min-Dist-to-Uncovered"),
+                        clEnumValN(Searcher::NURS_Depth, "nurs:depth", "use NURS with 2^depth"),
+                        clEnumValN(Searcher::NURS_ICnt, "nurs:icnt", "use NURS with Instr-Count"),
+                        clEnumValN(Searcher::NURS_CPICnt, "nurs:cpicnt", "use NURS with CallPath-Instr-Count"),
+                        clEnumValN(Searcher::NURS_QC, "nurs:qc", "use NURS with Query-Cost"),
+                        clEnumValEnd));
 
   cl::opt<bool>
-  UseIterativeDeepeningTimeSearch("use-iterative-deepening-time-search", 
+  UseIterativeDeepeningTimeSearch("use-iterative-deepening-time-search",
                                     cl::desc("(experimental)"));
 
   cl::opt<bool>
-  UseBatchingSearch("use-batching-search", 
-		    cl::desc("Use batching searcher (keep running selected state for N instructions/time, see --batch-instructions and --batch-time)"),
-		    cl::init(false));
+  UseBatchingSearch("use-batching-search",
+                    cl::desc("Use batching searcher (keep running selected state for N instructions/time, see --batch-instructions and --batch-time)"),
+                    cl::init(false));
 
   cl::opt<unsigned>
   BatchInstructions("batch-instructions",
                     cl::desc("Number of instructions to batch when using --use-batching-search"),
                     cl::init(10000));
-  
+
   cl::opt<double>
   BatchTime("batch-time",
             cl::desc("Amount of time to batch when using --use-batching-search"),
@@ -55,11 +55,11 @@ namespace {
 
 
   cl::opt<bool>
-  UseMerge("use-merge", 
+  UseMerge("use-merge",
            cl::desc("Enable support for klee_merge() (experimental)"));
- 
+
   cl::opt<bool>
-  UseBumpMerge("use-bump-merge", 
+  UseBumpMerge("use-bump-merge",
            cl::desc("Enable support for klee_merge() (extra experimental)"));
 
 }
@@ -67,10 +67,10 @@ namespace {
 
 bool klee::userSearcherRequiresMD2U() {
   return (std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::NURS_MD2U) != CoreSearch.end() ||
-	  std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::NURS_CovNew) != CoreSearch.end() ||
-	  std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::NURS_ICnt) != CoreSearch.end() ||
-	  std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::NURS_CPICnt) != CoreSearch.end() ||
-	  std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::NURS_QC) != CoreSearch.end());
+          std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::NURS_CovNew) != CoreSearch.end() ||
+          std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::NURS_ICnt) != CoreSearch.end() ||
+          std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::NURS_CPICnt) != CoreSearch.end() ||
+          std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::NURS_QC) != CoreSearch.end());
 }
 
 
@@ -101,14 +101,14 @@ Searcher *klee::constructUserSearcher(Executor &executor) {
   }
 
   Searcher *searcher = getNewSearcher(CoreSearch[0], executor);
-  
+
   if (CoreSearch.size() > 1) {
     std::vector<Searcher *> s;
     s.push_back(searcher);
 
     for (unsigned i=1; i<CoreSearch.size(); i++)
       s.push_back(getNewSearcher(CoreSearch[i], executor));
-    
+
     searcher = new InterleavedSearcher(s);
   }
 
@@ -124,7 +124,7 @@ Searcher *klee::constructUserSearcher(Executor &executor) {
   } else if (UseBumpMerge) {
     searcher = new BumpMergingSearcher(executor, searcher);
   }
-  
+
   if (UseIterativeDeepeningTimeSearch) {
     searcher = new IterativeDeepeningTimeSearcher(searcher);
   }

@@ -25,10 +25,10 @@ namespace klee {
   protected:
     Context(bool _IsLittleEndian, Expr::Width _PointerWidth)
       : IsLittleEndian(_IsLittleEndian), PointerWidth(_PointerWidth) {}
-    
+
   public:
     Context() {}
-    
+
     /// initialize - Construct the global Context instance.
     static void initialize(bool IsLittleEndian, Expr::Width PointerWidth);
 
@@ -39,7 +39,7 @@ namespace klee {
 
     Expr::Width getPointerWidth() const { return PointerWidth; }
   };
-  
+
 } // End klee namespace
 
 #endif

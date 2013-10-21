@@ -22,7 +22,7 @@ using namespace klee;
 FILE* klee::klee_warning_file = NULL;
 FILE* klee::klee_message_file = NULL;
 
-static void klee_vfmessage(FILE *fp, const char *pfx, const char *msg, 
+static void klee_vfmessage(FILE *fp, const char *pfx, const char *msg,
                            va_list ap) {
   if (!fp)
     return;
@@ -35,14 +35,14 @@ static void klee_vfmessage(FILE *fp, const char *pfx, const char *msg,
 }
 
 /* Prints a message/warning.
-   
+
    If pfx is NULL, this is a regular message, and it's sent to
-   klee_message_file (messages.txt).  Otherwise, it is sent to 
+   klee_message_file (messages.txt).  Otherwise, it is sent to
    klee_warning_file (warnings.txt).
 
    Iff onlyToFile is false, the message is also printed on stderr.
 */
-static void klee_vmessage(const char *pfx, bool onlyToFile, const char *msg, 
+static void klee_vmessage(const char *pfx, bool onlyToFile, const char *msg,
                           va_list ap) {
   if (!onlyToFile) {
     va_list ap2;
@@ -98,10 +98,10 @@ void klee::klee_warning_once(const void *id, const char *msg, ...) {
   if (strncmp(msg, "calling external", strlen("calling external")) != 0)
     key = std::make_pair(id, msg);
   else key = std::make_pair(id, "calling external");
-  
+
   if (!keys.count(key)) {
     keys.insert(key);
-    
+
     va_list ap;
     va_start(ap, msg);
     klee_vmessage("WARNING ONCE", false, msg, ap);

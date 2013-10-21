@@ -18,14 +18,14 @@
 
 using namespace klee;
 
-void klee::findReads(ref<Expr> e, 
+void klee::findReads(ref<Expr> e,
                      bool visitUpdates,
                      std::vector< ref<ReadExpr> > &results) {
-  // Invariant: \forall_{i \in stack} !i.isConstant() && i \in visited 
+  // Invariant: \forall_{i \in stack} !i.isConstant() && i \in visited
   std::vector< ref<Expr> > stack;
   ExprHashSet visited;
   std::set<const UpdateNode *> updates;
-  
+
   if (!isa<ConstantExpr>(e)) {
     visited.insert(e);
     stack.push_back(e);
@@ -43,7 +43,7 @@ void klee::findReads(ref<Expr> e,
       if (!isa<ConstantExpr>(re->index) &&
           visited.insert(re->index).second)
         stack.push_back(re->index);
-      
+
       if (visitUpdates) {
         // XXX this is probably suboptimal. We want to avoid a potential
         // explosion traversing update lists which can be quite
@@ -99,7 +99,7 @@ protected:
 public:
   std::set<const Array*> results;
   std::vector<const Array*> &objects;
-  
+
   SymbolicObjectFinder(std::vector<const Array*> &_objects)
     : objects(_objects) {}
 };
@@ -107,7 +107,7 @@ public:
 }
 
 template<typename InputIterator>
-void klee::findSymbolicObjects(InputIterator begin, 
+void klee::findSymbolicObjects(InputIterator begin,
                                InputIterator end,
                                std::vector<const Array*> &results) {
   SymbolicObjectFinder of(results);

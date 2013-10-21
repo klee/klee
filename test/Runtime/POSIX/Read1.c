@@ -14,14 +14,14 @@ int main(int argc, char** argv) {
   // If count is zero, read() returns zero and has  no  other  results. (man page)
   int x = read(0, 0, 0);
   assert(x == 0);
-  
+
   int fd = open("A", O_RDONLY);
   assert(fd != -1);
 
   // EFAULT buf is outside your accessible address space. (man page)
   x = read(fd, 0, 1);
   assert(x == -1 && errno == EFAULT);
- 
+
   // EBADF  fd is not a valid file descriptor (man page)
   x = read(-1, buf, 1);
   assert(x == -1 && errno == EBADF);
@@ -29,6 +29,6 @@ int main(int argc, char** argv) {
   fd = open("A", O_RDONLY);
   assert(fd != -1);
   x = read(fd, buf, 1);
-  assert(x == 1);  
+  assert(x == 1);
 }
 

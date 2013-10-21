@@ -16,10 +16,10 @@ extern int foo() __attribute__((alias("__foo")));
 
 int *c = &a;
 
-int main() { 
+int main() {
   assert(a == 52);
   assert(foo() == 52);
   assert(*c == 52);
-  
+
   return 0;
 }

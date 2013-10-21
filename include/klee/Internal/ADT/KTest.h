@@ -21,12 +21,12 @@ extern "C" {
     unsigned numBytes;
     unsigned char *bytes;
   };
-  
+
   typedef struct KTest KTest;
   struct KTest {
     /* file format version */
-    unsigned version; 
-    
+    unsigned version;
+
     unsigned numArgs;
     char **args;
 
@@ -37,10 +37,10 @@ extern "C" {
     KTestObject *objects;
   };
 
-  
+
   /* returns the current .ktest file format version */
   unsigned kTest_getCurrentVersion();
-  
+
   /* return true iff file at path matches KTest header */
   int   kTest_isKTestFile(const char *path);
 
@@ -49,7 +49,7 @@ extern "C" {
 
   /* returns 1 on success, 0 on (unspecified) error */
   int   kTest_toFile(KTest *, const char *path);
-  
+
   /* returns total number of object bytes */
   unsigned kTest_numBytes(KTest *);
 

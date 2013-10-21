@@ -6,13 +6,13 @@
 
 int main(int argc, char** argv) {
   char buf[32];
-  
+
   FILE* f = fopen("A", "w");
   if (!f)
     klee_silent_exit(0);
   fwrite("Hello", sizeof("Hello"), 1, f);
   fclose(f);
-  
+
   f = fopen("A", "r");
   fread(buf, sizeof("Hello"), 1, f);
   fclose(f);

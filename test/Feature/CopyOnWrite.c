@@ -11,7 +11,7 @@ void explode(int *ap, int i, int *result) {
   if (i<N) {
     (*result)++;
     if (ap[i]) // just cause a fork
-      branches++; 
+      branches++;
     return explode(ap, i+1, result);
   }
 }

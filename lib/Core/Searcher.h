@@ -43,7 +43,7 @@ namespace klee {
 
     // prints name of searcher as a klee_message()
     // TODO: could probably make prettier or more flexible
-    virtual void printName(std::ostream &os) { 
+    virtual void printName(std::ostream &os) {
       os << "<unnamed searcher>\n";
     }
 
@@ -139,7 +139,7 @@ namespace klee {
     DiscretePDF<ExecutionState*> *states;
     WeightType type;
     bool updateWeights;
-    
+
     double getWeight(ExecutionState*);
 
   public:
@@ -238,7 +238,7 @@ namespace klee {
     unsigned lastStartInstructions;
 
   public:
-    BatchingSearcher(Searcher *baseSearcher, 
+    BatchingSearcher(Searcher *baseSearcher,
                      double _timeBudget,
                      unsigned _instructionBudget);
     ~BatchingSearcher();

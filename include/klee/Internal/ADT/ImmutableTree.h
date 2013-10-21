@@ -123,7 +123,7 @@ namespace klee {
 
 
     FixedStack &operator=(const FixedStack &b) {
-      assert(max == b.max); 
+      assert(max == b.max);
       pos = b.pos;
       std::copy(b.elts, b.elts+pos, elts);
       return *this;
@@ -142,7 +142,7 @@ namespace klee {
   private:
     Node *root; // so can back up from end
     FixedStack<Node*> stack;
-    
+
   public:
     iterator(Node *_root, bool atBeginning) : root(_root->incref()),
                                               stack(root->height) {
@@ -182,7 +182,7 @@ namespace klee {
     bool operator!=(const iterator &b) {
       return stack!=b.stack;
     }
-    
+
     iterator &operator--() {
       if (stack.empty()) {
         for (Node *n=root; !n->isTerminator(); n=n->right)
@@ -236,29 +236,29 @@ namespace klee {
 
   /***/
 
-  template<class K, class V, class KOV, class CMP> 
-  typename ImmutableTree<K,V,KOV,CMP>::Node 
+  template<class K, class V, class KOV, class CMP>
+  typename ImmutableTree<K,V,KOV,CMP>::Node
   ImmutableTree<K,V,KOV,CMP>::Node::terminator;
 
-  template<class K, class V, class KOV, class CMP> 
+  template<class K, class V, class KOV, class CMP>
   size_t ImmutableTree<K,V,KOV,CMP>::allocated = 0;
 
   template<class K, class V, class KOV, class CMP>
-  ImmutableTree<K,V,KOV,CMP>::Node::Node() 
-    : left(&terminator), 
-      right(&terminator), 
-      height(0), 
-      references(3) { 
+  ImmutableTree<K,V,KOV,CMP>::Node::Node()
+    : left(&terminator),
+      right(&terminator),
+      height(0),
+      references(3) {
     assert(this==&terminator);
   }
 
   template<class K, class V, class KOV, class CMP>
   ImmutableTree<K,V,KOV,CMP>::Node::Node(Node *_left, Node *_right, const value_type &_value)
-    : left(_left), 
-      right(_right), 
-      value(_value), 
+    : left(_left),
+      right(_right),
+      value(_value),
       height(std::max(left->height, right->height) + 1),
-      references(1) 
+      references(1)
   {
     ++allocated;
   }
@@ -421,23 +421,23 @@ namespace klee {
   /***/
 
   template<class K, class V, class KOV, class CMP>
-  ImmutableTree<K,V,KOV,CMP>::ImmutableTree() 
+  ImmutableTree<K,V,KOV,CMP>::ImmutableTree()
     : node(Node::terminator.incref()) {
   }
 
   template<class K, class V, class KOV, class CMP>
-  ImmutableTree<K,V,KOV,CMP>::ImmutableTree(Node *_node) 
+  ImmutableTree<K,V,KOV,CMP>::ImmutableTree(Node *_node)
     : node(_node) {
   }
 
   template<class K, class V, class KOV, class CMP>
-  ImmutableTree<K,V,KOV,CMP>::ImmutableTree(const ImmutableTree &s) 
+  ImmutableTree<K,V,KOV,CMP>::ImmutableTree(const ImmutableTree &s)
     : node(s.node->incref()) {
   }
 
   template<class K, class V, class KOV, class CMP>
   ImmutableTree<K,V,KOV,CMP>::~ImmutableTree() {
-    node->decref(); 
+    node->decref();
   }
 
   template<class K, class V, class KOV, class CMP>
@@ -507,7 +507,7 @@ namespace klee {
 
   template<class K, class V, class KOV, class CMP>
   const typename ImmutableTree<K,V,KOV,CMP>::value_type &
-  ImmutableTree<K,V,KOV,CMP>::min() const { 
+  ImmutableTree<K,V,KOV,CMP>::min() const {
     Node *n = node;
     assert(!n->isTerminator());
     while (!n->left->isTerminator()) n = n->left;
@@ -529,49 +529,49 @@ namespace klee {
   }
 
   template<class K, class V, class KOV, class CMP>
-  ImmutableTree<K,V,KOV,CMP> 
-  ImmutableTree<K,V,KOV,CMP>::insert(const value_type &value) const { 
-    return ImmutableTree(node->insert(value)); 
+  ImmutableTree<K,V,KOV,CMP>
+  ImmutableTree<K,V,KOV,CMP>::insert(const value_type &value) const {
+    return ImmutableTree(node->insert(value));
   }
 
   template<class K, class V, class KOV, class CMP>
-  ImmutableTree<K,V,KOV,CMP> 
-  ImmutableTree<K,V,KOV,CMP>::replace(const value_type &value) const { 
-    return ImmutableTree(node->replace(value)); 
+  ImmutableTree<K,V,KOV,CMP>
+  ImmutableTree<K,V,KOV,CMP>::replace(const value_type &value) const {
+    return ImmutableTree(node->replace(value));
   }
 
   template<class K, class V, class KOV, class CMP>
-  ImmutableTree<K,V,KOV,CMP> 
-  ImmutableTree<K,V,KOV,CMP>::remove(const key_type &key) const { 
-    return ImmutableTree(node->remove(key)); 
+  ImmutableTree<K,V,KOV,CMP>
+  ImmutableTree<K,V,KOV,CMP>::remove(const key_type &key) const {
+    return ImmutableTree(node->remove(key));
   }
 
   template<class K, class V, class KOV, class CMP>
-  ImmutableTree<K,V,KOV,CMP> 
-  ImmutableTree<K,V,KOV,CMP>::popMin(value_type &valueOut) const { 
-    return ImmutableTree(node->popMin(valueOut)); 
+  ImmutableTree<K,V,KOV,CMP>
+  ImmutableTree<K,V,KOV,CMP>::popMin(value_type &valueOut) const {
+    return ImmutableTree(node->popMin(valueOut));
   }
 
   template<class K, class V, class KOV, class CMP>
-  ImmutableTree<K,V,KOV,CMP> 
-  ImmutableTree<K,V,KOV,CMP>::popMax(value_type &valueOut) const { 
-    return ImmutableTree(node->popMax(valueOut)); 
+  ImmutableTree<K,V,KOV,CMP>
+  ImmutableTree<K,V,KOV,CMP>::popMax(value_type &valueOut) const {
+    return ImmutableTree(node->popMax(valueOut));
   }
 
   template<class K, class V, class KOV, class CMP>
-  inline typename ImmutableTree<K,V,KOV,CMP>::iterator 
+  inline typename ImmutableTree<K,V,KOV,CMP>::iterator
   ImmutableTree<K,V,KOV,CMP>::begin() const {
     return iterator(node, true);
   }
 
   template<class K, class V, class KOV, class CMP>
-  inline typename ImmutableTree<K,V,KOV,CMP>::iterator 
+  inline typename ImmutableTree<K,V,KOV,CMP>::iterator
   ImmutableTree<K,V,KOV,CMP>::end() const {
     return iterator(node, false);
   }
 
   template<class K, class V, class KOV, class CMP>
-  inline typename ImmutableTree<K,V,KOV,CMP>::iterator 
+  inline typename ImmutableTree<K,V,KOV,CMP>::iterator
   ImmutableTree<K,V,KOV,CMP>::find(const key_type &key) const {
     iterator end(node,false), it = lower_bound(key);
     if (it==end || key_compare()(key,key_of_value()(*it))) {
@@ -582,7 +582,7 @@ namespace klee {
   }
 
   template<class K, class V, class KOV, class CMP>
-  inline typename ImmutableTree<K,V,KOV,CMP>::iterator 
+  inline typename ImmutableTree<K,V,KOV,CMP>::iterator
   ImmutableTree<K,V,KOV,CMP>::lower_bound(const key_type &k) const {
     // XXX ugh this doesn't have to be so ugly does it?
     iterator it(node,false);
@@ -606,10 +606,10 @@ namespace klee {
   }
 
   template<class K, class V, class KOV, class CMP>
-  typename ImmutableTree<K,V,KOV,CMP>::iterator 
+  typename ImmutableTree<K,V,KOV,CMP>::iterator
   ImmutableTree<K,V,KOV,CMP>::upper_bound(const key_type &key) const {
     iterator end(node,false),it = lower_bound(key);
-    if (it!=end && 
+    if (it!=end &&
         !key_compare()(key,key_of_value()(*it))) // no need to loop, no duplicates
       ++it;
     return it;

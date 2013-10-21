@@ -18,7 +18,7 @@ namespace klee {
   class ExprPPrinter {
   protected:
     ExprPPrinter() {}
-    
+
   public:
     static ExprPPrinter *create(std::ostream &os);
 
@@ -44,7 +44,7 @@ namespace klee {
 
     /// printOne - Pretty print a single expression prefixed by a
     /// message and followed by a line break.
-    static void printOne(std::ostream &os, const char *message, 
+    static void printOne(std::ostream &os, const char *message,
                          const ref<Expr> &e);
 
     /// printSingleExpr - Pretty print a single expression.

@@ -34,7 +34,7 @@
 using namespace llvm;
 using namespace klee;
 
-namespace { 
+namespace {
   cl::opt<bool>
   DebugLogStateMerge("debug-log-state-merge");
 }
@@ -42,12 +42,12 @@ namespace {
 /***/
 
 StackFrame::StackFrame(KInstIterator _caller, KFunction *_kf)
-  : caller(_caller), kf(_kf), callPathNode(0), 
+  : caller(_caller), kf(_kf), callPathNode(0),
     minDistToUncoveredOnReturn(0), varargs(0) {
   locals = new Cell[kf->numRegisters];
 }
 
-StackFrame::StackFrame(const StackFrame &s) 
+StackFrame::StackFrame(const StackFrame &s)
   : caller(s.caller),
     kf(s.kf),
     callPathNode(s.callPathNode),
@@ -59,19 +59,19 @@ StackFrame::StackFrame(const StackFrame &s)
     locals[i] = s.locals[i];
 }
 
-StackFrame::~StackFrame() { 
-  delete[] locals; 
+StackFrame::~StackFrame() {
+  delete[] locals;
 }
 
 /***/
 
-ExecutionState::ExecutionState(KFunction *kf) 
+ExecutionState::ExecutionState(KFunction *kf)
   : fakeState(false),
     underConstrained(false),
     depth(0),
     pc(kf->instructions),
     prevPC(pc),
-    queryCost(0.), 
+    queryCost(0.),
     weight(1),
     instsSinceCovNew(0),
     coveredNew(false),
@@ -80,7 +80,7 @@ ExecutionState::ExecutionState(KFunction *kf)
   pushFrame(0, kf);
 }
 
-ExecutionState::ExecutionState(const std::vector<ref<Expr> > &assumptions) 
+ExecutionState::ExecutionState(const std::vector<ref<Expr> > &assumptions)
   : fakeState(true),
     underConstrained(false),
     constraints(assumptions),
@@ -148,13 +148,13 @@ void ExecutionState::pushFrame(KInstIterator caller, KFunction *kf) {
 
 void ExecutionState::popFrame() {
   StackFrame &sf = stack.back();
-  for (std::vector<const MemoryObject*>::iterator it = sf.allocas.begin(), 
+  for (std::vector<const MemoryObject*>::iterator it = sf.allocas.begin(),
          ie = sf.allocas.end(); it != ie; ++it)
     addressSpace.unbindObject(*it);
   stack.pop_back();
 }
 
-void ExecutionState::addSymbolic(const MemoryObject *mo, const Array *array) { 
+void ExecutionState::addSymbolic(const MemoryObject *mo, const Array *array) {
   mo->refCount++;
   symbolics.push_back(std::make_pair(mo, array));
 }
@@ -192,7 +192,7 @@ std::ostream &klee::operator<<(std::ostream &os, const MemoryMap &mm) {
 
 bool ExecutionState::merge(const ExecutionState &b) {
   if (DebugLogStateMerge)
-    std::cerr << "-- attempting merge of A:" 
+    std::cerr << "-- attempting merge of A:"
                << this << " with B:" << &b << "--\n";
   if (pc != b.pc)
     return false;
@@ -217,7 +217,7 @@ bool ExecutionState::merge(const ExecutionState &b) {
   }
 
   std::set< ref<Expr> > aConstraints(constraints.begin(), constraints.end());
-  std::set< ref<Expr> > bConstraints(b.constraints.begin(), 
+  std::set< ref<Expr> > bConstraints(b.constraints.begin(),
                                      b.constraints.end());
   std::set< ref<Expr> > commonConstraints, aSuffix, bSuffix;
   std::set_intersection(aConstraints.begin(), aConstraints.end(),
@@ -231,17 +231,17 @@ bool ExecutionState::merge(const ExecutionState &b) {
                       std::inserter(bSuffix, bSuffix.end()));
   if (DebugLogStateMerge) {
     std::cerr << "\tconstraint prefix: [";
-    for (std::set< ref<Expr> >::iterator it = commonConstraints.begin(), 
+    for (std::set< ref<Expr> >::iterator it = commonConstraints.begin(),
            ie = commonConstraints.end(); it != ie; ++it)
       std::cerr << *it << ", ";
     std::cerr << "]\n";
     std::cerr << "\tA suffix: [";
-    for (std::set< ref<Expr> >::iterator it = aSuffix.begin(), 
+    for (std::set< ref<Expr> >::iterator it = aSuffix.begin(),
            ie = aSuffix.end(); it != ie; ++it)
       std::cerr << *it << ", ";
     std::cerr << "]\n";
     std::cerr << "\tB suffix: [";
-    for (std::set< ref<Expr> >::iterator it = bSuffix.begin(), 
+    for (std::set< ref<Expr> >::iterator it = bSuffix.begin(),
            ie = bSuffix.end(); it != ie; ++it)
       std::cerr << *it << ", ";
     std::cerr << "]\n";
@@ -249,7 +249,7 @@ bool ExecutionState::merge(const ExecutionState &b) {
 
   // We cannot merge if addresses would resolve differently in the
   // states. This means:
-  // 
+  //
   // 1. Any objects created since the branch in either object must
   // have been free'd.
   //
@@ -261,7 +261,7 @@ bool ExecutionState::merge(const ExecutionState &b) {
     std::cerr << "A: " << addressSpace.objects << "\n";
     std::cerr << "B: " << b.addressSpace.objects << "\n";
   }
-    
+
   std::set<const MemoryObject*> mutated;
   MemoryMap::iterator ai = addressSpace.objects.begin();
   MemoryMap::iterator bi = b.addressSpace.objects.begin();
@@ -289,15 +289,15 @@ bool ExecutionState::merge(const ExecutionState &b) {
       std::cerr << "\t\tmappings differ\n";
     return false;
   }
-  
+
   // merge stack
 
   ref<Expr> inA = ConstantExpr::alloc(1, Expr::Bool);
   ref<Expr> inB = ConstantExpr::alloc(1, Expr::Bool);
-  for (std::set< ref<Expr> >::iterator it = aSuffix.begin(), 
+  for (std::set< ref<Expr> >::iterator it = aSuffix.begin(),
          ie = aSuffix.end(); it != ie; ++it)
     inA = AndExpr::create(inA, *it);
-  for (std::set< ref<Expr> >::iterator it = bSuffix.begin(), 
+  for (std::set< ref<Expr> >::iterator it = bSuffix.begin(),
          ie = bSuffix.end(); it != ie; ++it)
     inB = AndExpr::create(inB, *it);
 
@@ -322,12 +322,12 @@ bool ExecutionState::merge(const ExecutionState &b) {
     }
   }
 
-  for (std::set<const MemoryObject*>::iterator it = mutated.begin(), 
+  for (std::set<const MemoryObject*>::iterator it = mutated.begin(),
          ie = mutated.end(); it != ie; ++it) {
     const MemoryObject *mo = *it;
     const ObjectState *os = addressSpace.findObject(mo);
     const ObjectState *otherOS = b.addressSpace.findObject(mo);
-    assert(os && !os->readOnly && 
+    assert(os && !os->readOnly &&
            "objects mutated but not writable in merging state");
     assert(otherOS);
 
@@ -340,7 +340,7 @@ bool ExecutionState::merge(const ExecutionState &b) {
   }
 
   constraints = ConstraintManager();
-  for (std::set< ref<Expr> >::iterator it = commonConstraints.begin(), 
+  for (std::set< ref<Expr> >::iterator it = commonConstraints.begin(),
          ie = commonConstraints.end(); it != ie; ++it)
     constraints.addConstraint(*it);
   constraints.addConstraint(OrExpr::create(inA, inB));
@@ -357,7 +357,7 @@ void ExecutionState::dumpStack(std::ostream &out) const {
     const StackFrame &sf = *it;
     Function *f = sf.kf->function;
     const InstructionInfo &ii = *target->info;
-    out << "\t#" << idx++ 
+    out << "\t#" << idx++
         << " " << std::setw(8) << std::setfill('0') << ii.assemblyLine
         << " in " << f->getName().str() << " (";
     // Yawn, we could go up and print varargs if we wanted to.
@@ -368,7 +368,7 @@ void ExecutionState::dumpStack(std::ostream &out) const {
 
       out << ai->getName().str();
       // XXX should go through function
-      ref<Expr> value = sf.locals[sf.kf->getArgRegister(index++)].value; 
+      ref<Expr> value = sf.locals[sf.kf->getArgRegister(index++)].value;
       if (isa<ConstantExpr>(value))
         out << "=" << value;
     }

@@ -43,11 +43,11 @@ namespace klee {
     iterator begin();
     iterator end();
 
-    void subsets(const std::set<K> &set, 
+    void subsets(const std::set<K> &set,
                  std::vector< std::pair<std::set<K>, V> > &resultOut);
-    void supersets(const std::set<K> &set, 
+    void supersets(const std::set<K> &set,
                    std::vector< std::pair<std::set<K>, V> > &resultOut);
-    
+
     template<class Predicate>
     V *findSuperset(const std::set<K> &set, const Predicate &p);
     template<class Predicate>
@@ -59,25 +59,25 @@ namespace klee {
     Node root;
 
     template<class Iterator, class Vector>
-    void findSubsets(Node *n, 
+    void findSubsets(Node *n,
                      const std::set<K> &accum,
-                     Iterator begin, 
+                     Iterator begin,
                      Iterator end,
                      Vector &resultsOut);
     template<class Iterator, class Vector>
-    void findSupersets(Node *n, 
+    void findSupersets(Node *n,
                        const std::set<K> &accum,
-                       Iterator begin, 
+                       Iterator begin,
                        Iterator end,
                        Vector &resultsOut);
     template<class Predicate>
-    V *findSuperset(Node *n, 
-                    typename std::set<K>::iterator begin, 
+    V *findSuperset(Node *n,
+                    typename std::set<K>::iterator begin,
                     typename std::set<K>::iterator end,
                     const Predicate &p);
     template<class Predicate>
-    V *findSubset(Node *n, 
-                  typename std::set<K>::iterator begin, 
+    V *findSubset(Node *n,
+                  typename std::set<K>::iterator begin,
                   typename std::set<K>::iterator end,
                   const Predicate &p);
   };
@@ -97,11 +97,11 @@ namespace klee {
   private:
     bool isEndOfSet;
     std::map<K, Node> children;
-    
+
   public:
     Node() : isEndOfSet(false) {}
   };
-  
+
   template<class K, class V>
   class MapOfSets<K,V>::iterator {
     typedef std::vector< typename std::map<K, Node>::iterator > stack_ty;
@@ -122,7 +122,7 @@ namespace klee {
             onEntry = true;
             return;
           }
-        } 
+        }
       }
 
       while (!stack.empty()) {
@@ -144,12 +144,12 @@ namespace klee {
           onEntry = true;
           break;
         }
-      } 
+      }
     }
 
   public:
     // end()
-    iterator() : onEntry(false) {} 
+    iterator() : onEntry(false) {}
     // begin()
     iterator(Node *_n) : root(_n), onEntry(true) {
       if (!root->isEndOfSet)
@@ -182,7 +182,7 @@ namespace klee {
   /***/
 
   template<class K, class V>
-  MapOfSets<K,V>::MapOfSets() {}  
+  MapOfSets<K,V>::MapOfSets() {}
 
   template<class K, class V>
   void MapOfSets<K,V>::insert(const std::set<K> &set, const V &value) {
@@ -214,24 +214,24 @@ namespace klee {
   }
 
   template<class K, class V>
-  typename MapOfSets<K,V>::iterator 
+  typename MapOfSets<K,V>::iterator
   MapOfSets<K,V>::begin() { return iterator(&root); }
-  
+
   template<class K, class V>
-  typename MapOfSets<K,V>::iterator 
+  typename MapOfSets<K,V>::iterator
   MapOfSets<K,V>::end() { return iterator(); }
 
   template<class K, class V>
   template<class Iterator, class Vector>
-  void MapOfSets<K,V>::findSubsets(Node *n, 
+  void MapOfSets<K,V>::findSubsets(Node *n,
                                   const std::set<K> &accum,
-                                  Iterator begin, 
+                                  Iterator begin,
                                   Iterator end,
                                   Vector &resultsOut) {
     if (n->isEndOfSet) {
       resultsOut.push_back(std::make_pair(accum, n->value));
     }
-    
+
     for (Iterator it=begin; it!=end;) {
       K elt = *it;
       typename Node::children_ty::iterator kit = n->children.find(elt);
@@ -246,16 +246,16 @@ namespace klee {
 
   template<class K, class V>
   void MapOfSets<K,V>::subsets(const std::set<K> &set,
-                               std::vector< std::pair<std::set<K>, 
+                               std::vector< std::pair<std::set<K>,
                                                       V> > &resultOut) {
     findSubsets(&root, std::set<K>(), set.begin(), set.end(), resultOut);
   }
 
   template<class K, class V>
   template<class Iterator, class Vector>
-  void MapOfSets<K,V>::findSupersets(Node *n, 
+  void MapOfSets<K,V>::findSupersets(Node *n,
                                      const std::set<K> &accum,
-                                     Iterator begin, 
+                                     Iterator begin,
                                      Iterator end,
                                      Vector &resultsOut) {
     if (begin==end) {
@@ -294,17 +294,17 @@ namespace klee {
 
   template<class K, class V>
   template<class Predicate>
-  V *MapOfSets<K,V>::findSubset(Node *n, 
-                                typename std::set<K>::iterator begin, 
+  V *MapOfSets<K,V>::findSubset(Node *n,
+                                typename std::set<K>::iterator begin,
                                 typename std::set<K>::iterator end,
-                                const Predicate &p) {   
+                                const Predicate &p) {
     if (n->isEndOfSet && p(n->value)) {
       return &n->value;
     } else if (begin==end) {
       return 0;
     } else {
       typename Node::children_ty::iterator kend = n->children.end();
-      typename Node::children_ty::iterator 
+      typename Node::children_ty::iterator
         kbegin = n->children.lower_bound(*begin);
       typename std::set<K>::iterator it = begin;
       if (kbegin==kend)
@@ -329,13 +329,13 @@ namespace klee {
       }
     }
   }
-  
+
   template<class K, class V>
   template<class Predicate>
-  V *MapOfSets<K,V>::findSuperset(Node *n, 
-                                  typename std::set<K>::iterator begin, 
+  V *MapOfSets<K,V>::findSuperset(Node *n,
+                                  typename std::set<K>::iterator begin,
                                   typename std::set<K>::iterator end,
-                                  const Predicate &p) {   
+                                  const Predicate &p) {
     if (begin==end) {
       if (n->isEndOfSet && p(n->value))
         return &n->value;
@@ -345,7 +345,7 @@ namespace klee {
         if (res) return res;
       }
     } else {
-      typename Node::children_ty::iterator kmid = 
+      typename Node::children_ty::iterator kmid =
         n->children.lower_bound(*begin);
       for (typename Node::children_ty::iterator it = n->children.begin(),
              ie = n->children.end(); it != ie; ++it) {
@@ -362,13 +362,13 @@ namespace klee {
 
   template<class K, class V>
   template<class Predicate>
-  V *MapOfSets<K,V>::findSuperset(const std::set<K> &set, const Predicate &p) {    
+  V *MapOfSets<K,V>::findSuperset(const std::set<K> &set, const Predicate &p) {
     return findSuperset(&root, set.begin(), set.end(), p);
   }
 
   template<class K, class V>
   template<class Predicate>
-  V *MapOfSets<K,V>::findSubset(const std::set<K> &set, const Predicate &p) {    
+  V *MapOfSets<K,V>::findSubset(const std::set<K> &set, const Predicate &p) {
     return findSubset(&root, set.begin(), set.end(), p);
   }
 

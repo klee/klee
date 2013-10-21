@@ -14,7 +14,7 @@
 
 namespace {
   llvm::cl::opt<bool>
-  UseVisitorHash("use-visitor-hash", 
+  UseVisitorHash("use-visitor-hash",
                  llvm::cl::desc("Use hash-consing during expr visitation."),
                  llvm::cl::init(true));
 }
@@ -38,7 +38,7 @@ ref<Expr> ExprVisitor::visit(const ref<Expr> &e) {
 }
 
 ref<Expr> ExprVisitor::visitActual(const ref<Expr> &e) {
-  if (isa<ConstantExpr>(e)) {    
+  if (isa<ConstantExpr>(e)) {
     return e;
   } else {
     Expr &ep = *e.get();
@@ -94,7 +94,7 @@ ref<Expr> ExprVisitor::visitActual(const ref<Expr> &e) {
     switch(res.kind) {
     default:
       assert(0 && "invalid kind");
-    case Action::DoChildren: {  
+    case Action::DoChildren: {
       bool rebuild = false;
       ref<Expr> e(&ep), kids[8];
       unsigned count = ep.getNumKids();
@@ -133,126 +133,126 @@ ExprVisitor::Action ExprVisitor::visitExprPost(const Expr&) {
 }
 
 ExprVisitor::Action ExprVisitor::visitNotOptimized(const NotOptimizedExpr&) {
-  return Action::doChildren(); 
+  return Action::doChildren();
 }
 
 ExprVisitor::Action ExprVisitor::visitRead(const ReadExpr&) {
-  return Action::doChildren(); 
+  return Action::doChildren();
 }
 
 ExprVisitor::Action ExprVisitor::visitSelect(const SelectExpr&) {
-  return Action::doChildren(); 
+  return Action::doChildren();
 }
 
 ExprVisitor::Action ExprVisitor::visitConcat(const ConcatExpr&) {
-  return Action::doChildren(); 
+  return Action::doChildren();
 }
 
 ExprVisitor::Action ExprVisitor::visitExtract(const ExtractExpr&) {
-  return Action::doChildren(); 
+  return Action::doChildren();
 }
 
 ExprVisitor::Action ExprVisitor::visitZExt(const ZExtExpr&) {
-  return Action::doChildren(); 
+  return Action::doChildren();
 }
 
 ExprVisitor::Action ExprVisitor::visitSExt(const SExtExpr&) {
-  return Action::doChildren(); 
+  return Action::doChildren();
 }
 
 ExprVisitor::Action ExprVisitor::visitAdd(const AddExpr&) {
-  return Action::doChildren(); 
+  return Action::doChildren();
 }
 
 ExprVisitor::Action ExprVisitor::visitSub(const SubExpr&) {
-  return Action::doChildren(); 
+  return Action::doChildren();
 }
 
 ExprVisitor::Action ExprVisitor::visitMul(const MulExpr&) {
-  return Action::doChildren(); 
+  return Action::doChildren();
 }
 
 ExprVisitor::Action ExprVisitor::visitUDiv(const UDivExpr&) {
-  return Action::doChildren(); 
+  return Action::doChildren();
 }
 
 ExprVisitor::Action ExprVisitor::visitSDiv(const SDivExpr&) {
-  return Action::doChildren(); 
+  return Action::doChildren();
 }
 
 ExprVisitor::Action ExprVisitor::visitURem(const URemExpr&) {
-  return Action::doChildren(); 
+  return Action::doChildren();
 }
 
 ExprVisitor::Action ExprVisitor::visitSRem(const SRemExpr&) {
-  return Action::doChildren(); 
+  return Action::doChildren();
 }
 
 ExprVisitor::Action ExprVisitor::visitNot(const NotExpr&) {
-  return Action::doChildren(); 
+  return Action::doChildren();
 }
 
 ExprVisitor::Action ExprVisitor::visitAnd(const AndExpr&) {
-  return Action::doChildren(); 
+  return Action::doChildren();
 }
 
 ExprVisitor::Action ExprVisitor::visitOr(const OrExpr&) {
-  return Action::doChildren(); 
+  return Action::doChildren();
 }
 
 ExprVisitor::Action ExprVisitor::visitXor(const XorExpr&) {
-  return Action::doChildren(); 
+  return Action::doChildren();
 }
 
 ExprVisitor::Action ExprVisitor::visitShl(const ShlExpr&) {
-  return Action::doChildren(); 
+  return Action::doChildren();
 }
 
 ExprVisitor::Action ExprVisitor::visitLShr(const LShrExpr&) {
-  return Action::doChildren(); 
+  return Action::doChildren();
 }
 
 ExprVisitor::Action ExprVisitor::visitAShr(const AShrExpr&) {
-  return Action::doChildren(); 
+  return Action::doChildren();
 }
 
 ExprVisitor::Action ExprVisitor::visitEq(const EqExpr&) {
-  return Action::doChildren(); 
+  return Action::doChildren();
 }
 
 ExprVisitor::Action ExprVisitor::visitNe(const NeExpr&) {
-  return Action::doChildren(); 
+  return Action::doChildren();
 }
 
 ExprVisitor::Action ExprVisitor::visitUlt(const UltExpr&) {
-  return Action::doChildren(); 
+  return Action::doChildren();
 }
 
 ExprVisitor::Action ExprVisitor::visitUle(const UleExpr&) {
-  return Action::doChildren(); 
+  return Action::doChildren();
 }
 
 ExprVisitor::Action ExprVisitor::visitUgt(const UgtExpr&) {
-  return Action::doChildren(); 
+  return Action::doChildren();
 }
 
 ExprVisitor::Action ExprVisitor::visitUge(const UgeExpr&) {
-  return Action::doChildren(); 
+  return Action::doChildren();
 }
 
 ExprVisitor::Action ExprVisitor::visitSlt(const SltExpr&) {
-  return Action::doChildren(); 
+  return Action::doChildren();
 }
 
 ExprVisitor::Action ExprVisitor::visitSle(const SleExpr&) {
-  return Action::doChildren(); 
+  return Action::doChildren();
 }
 
 ExprVisitor::Action ExprVisitor::visitSgt(const SgtExpr&) {
-  return Action::doChildren(); 
+  return Action::doChildren();
 }
 
 ExprVisitor::Action ExprVisitor::visitSge(const SgeExpr&) {
-  return Action::doChildren(); 
+  return Action::doChildren();
 }
 

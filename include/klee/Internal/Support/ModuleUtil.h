@@ -15,14 +15,14 @@
 namespace llvm {
   class Function;
   class Instruction;
-  class Module; 
-  class CallSite; 
+  class Module;
+  class CallSite;
 }
 
 namespace klee {
- 
+
   /// Link a module with a specified bitcode archive.
-  llvm::Module *linkWithLibrary(llvm::Module *module, 
+  llvm::Module *linkWithLibrary(llvm::Module *module,
                                 const std::string &libraryName);
 
   /// Return the Function* target of a Call or Invoke instruction, or

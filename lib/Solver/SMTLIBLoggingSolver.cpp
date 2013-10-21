@@ -14,49 +14,44 @@ using namespace klee;
 
 /// This QueryLoggingSolver will log queries to a file in the SMTLIBv2 format
 /// and pass the query down to the underlying solver.
-class SMTLIBLoggingSolver : public QueryLoggingSolver
-{
-        private:
-    
-                ExprSMTLIBPrinter* printer;
+class SMTLIBLoggingSolver : public QueryLoggingSolver {
+private:
 
-                virtual void printQuery(const Query& query,
-                                        const Query* falseQuery = 0,
-                                        const std::vector<const Array*>* objects = 0) 
-                {
-                        if (0 == falseQuery) 
-                        {
-                                printer->setQuery(query);
-                        }
-                        else
-                        {
-                                printer->setQuery(*falseQuery);                
-                        }
+  ExprSMTLIBPrinter* printer;
 
-                        if (0 != objects)
-                        {
-                                printer->setArrayValuesToGet(*objects);
-                        }
+  virtual void printQuery(const Query& query,
+                          const Query* falseQuery = 0,
+                          const std::vector<const Array*>* objects = 0)
+  {
+    if (0 == falseQuery) {
+      printer->setQuery(query);
+    } else {
+      printer->setQuery(*falseQuery);
+    }
 
-                        printer->generateOutput();
-                }    
-        
-	public:
-		SMTLIBLoggingSolver(Solver *_solver,
-                                    std::string path,
-                                    int queryTimeToLog)                
-		: QueryLoggingSolver(_solver, path, ";", queryTimeToLog),
-		printer()
-		{
-		  //Setup the printer
-		  printer = createSMTLIBPrinter();
-		  printer->setOutput(logBuffer);
-		}
+    if (0 != objects) {
+      printer->setArrayValuesToGet(*objects);
+    }
 
-		~SMTLIBLoggingSolver()
-		{
-			delete printer;
-		}
+    printer->generateOutput();
+  }
+
+public:
+  SMTLIBLoggingSolver(Solver *_solver,
+                      std::string path,
+                      int queryTimeToLog)
+  : QueryLoggingSolver(_solver, path, ";", queryTimeToLog),
+  printer()
+  {
+    //Setup the printer
+    printer = createSMTLIBPrinter();
+    printer->setOutput(logBuffer);
+  }
+
+  ~SMTLIBLoggingSolver()
+  {
+    delete printer;
+  }
 };
 
 

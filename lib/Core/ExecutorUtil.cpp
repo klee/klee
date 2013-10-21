@@ -69,7 +69,7 @@ namespace klee {
                 << "opcode: " << ce->getOpcode() << "\n";
       abort();
 
-    case Instruction::Trunc: 
+    case Instruction::Trunc:
       return op1->Extract(0, getWidthForLLVMType(type));
     case Instruction::ZExt:  return op1->ZExt(getWidthForLLVMType(type));
     case Instruction::SExt:  return op1->SExt(getWidthForLLVMType(type));
@@ -99,7 +99,7 @@ namespace klee {
 
       for (gep_type_iterator ii = gep_type_begin(ce), ie = gep_type_end(ce);
            ii != ie; ++ii) {
-        ref<ConstantExpr> addend = 
+        ref<ConstantExpr> addend =
           ConstantExpr::alloc(0, Context::get().getPointerWidth());
 
         if (LLVM_TYPE_Q StructType *st = dyn_cast<StructType>(*ii)) {
@@ -111,13 +111,13 @@ namespace klee {
                                        Context::get().getPointerWidth());
         } else {
           const SequentialType *set = cast<SequentialType>(*ii);
-          ref<ConstantExpr> index = 
+          ref<ConstantExpr> index =
             evalConstant(cast<Constant>(ii.getOperand()));
-          unsigned elementSize = 
+          unsigned elementSize =
             kmodule->targetData->getTypeStoreSize(set->getElementType());
 
           index = index->ZExt(Context::get().getPointerWidth());
-          addend = index->Mul(ConstantExpr::alloc(elementSize, 
+          addend = index->Mul(ConstantExpr::alloc(elementSize,
                                                   Context::get().getPointerWidth()));
         }
 
@@ -126,7 +126,7 @@ namespace klee {
 
       return base;
     }
-      
+
     case Instruction::ICmp: {
       switch(ce->getPredicate()) {
       default: assert(0 && "unhandled ICmp predicate");

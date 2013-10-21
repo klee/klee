@@ -17,12 +17,12 @@ int main() {
   // value was being created when implied value did not
   // subtract using the proper type (so overflowed into
   // invalid bits)
-  if (util_make_concat2(a+0xCD,0xCD) == 0xABCD) { 
+  if (util_make_concat2(a+0xCD,0xCD) == 0xABCD) {
     assert(!klee_is_symbolic(a));
     printf("add constant case: %d\n", a);
   }
 
-  if (util_make_concat2(0x0B-a,0xCD) == 0xABCD) { 
+  if (util_make_concat2(0x0B-a,0xCD) == 0xABCD) {
     assert(!klee_is_symbolic(a));
     printf("sub constant case: %d\n", a);
   }

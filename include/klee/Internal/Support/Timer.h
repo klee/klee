@@ -15,7 +15,7 @@
 namespace klee {
   class WallTimer {
     uint64_t startMicroseconds;
-    
+
   public:
     WallTimer();
 
