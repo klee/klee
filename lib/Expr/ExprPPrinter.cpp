@@ -242,7 +242,7 @@ private:
     while (e->getKind() == Expr::Concat) {
       offset = AddExpr::create(offset, strideExpr);
       if (!isReadExprAtOffset(e->getKid(0), base, offset))
-	return NULL;
+        return NULL;
 
       e = e->getKid(1);
     }
@@ -262,15 +262,15 @@ private:
   bool hasAllByteReads(const Expr *ep) {
     switch (ep->kind) {
       Expr::Read: {
-	// right now, all Reads are byte reads but some
-	// transformations might change this
-	return ep->getWidth() == Expr::Int8;
+        // right now, all Reads are byte reads but some
+        // transformations might change this
+        return ep->getWidth() == Expr::Int8;
       }
       Expr::Concat: {
-	for (unsigned i=0; i<ep->getNumKids(); ++i) {
-	  if (!hashAllByteReads(ep->getKid(i)))
-	    return false;
-	}
+        for (unsigned i=0; i<ep->getNumKids(); ++i) {
+          if (!hashAllByteReads(ep->getKid(i)))
+            return false;
+        }
       }
     default: return false;
     }
@@ -336,10 +336,10 @@ public:
       PC << (e->isTrue() ? "true" : "false");
     else {
       if (PCAllConstWidths)
-	printWidth = true;
+        printWidth = true;
 
       if (printWidth)
-	PC << "(w" << e->getWidth() << " ";
+        PC << "(w" << e->getWidth() << " ";
 
       if (e->getWidth() <= 64) {
         PC << e->getZExtValue();
@@ -350,7 +350,7 @@ public:
       }
 
       if (printWidth)
-	PC << ")";
+        PC << ")";
     }
   }
 
@@ -375,21 +375,21 @@ public:
         // or they are (base + offset) and base will get printed with
         // a declaration.
         if (PCMultibyteReads && e->getKind() == Expr::Concat) {
-	  const ReadExpr *base = hasOrderedReads(e, -1);
-	  int isLSB = (base != NULL);
-	  if (!isLSB)
-	    base = hasOrderedReads(e, 1);
-	  if (base) {
-	    PC << "(Read" << (isLSB ? "LSB" : "MSB");
-	    printWidth(PC, e);
-	    PC << ' ';
-	    printRead(base, PC, PC.pos);
-	    PC << ')';
-	    return;
-	  }
+          const ReadExpr *base = hasOrderedReads(e, -1);
+          int isLSB = (base != NULL);
+          if (!isLSB)
+            base = hasOrderedReads(e, 1);
+          if (base) {
+            PC << "(Read" << (isLSB ? "LSB" : "MSB");
+            printWidth(PC, e);
+            PC << ' ';
+            printRead(base, PC, PC.pos);
+            PC << ')';
+            return;
+          }
         }
 
-	PC << '(' << e->getKind();
+        PC << '(' << e->getKind();
         printWidth(PC, e);
         PC << ' ';
 
@@ -401,8 +401,8 @@ public:
         } else if (const ExtractExpr *ee = dyn_cast<ExtractExpr>(e)) {
           printExtract(ee, PC, indent);
         } else if (e->getKind() == Expr::Concat || e->getKind() == Expr::SExt)
-	  printExpr(e.get(), PC, indent, true);
-	else
+          printExpr(e.get(), PC, indent, true);
+        else
           printExpr(e.get(), PC, indent);
         PC << ")";
       }

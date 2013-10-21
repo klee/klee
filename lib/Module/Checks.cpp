@@ -85,7 +85,7 @@ bool DivCheckPass::runOnModule(Module &M) {
               divZeroCheckFunction = cast<Function>(fc);
             }
 
-	    CallInst::Create(divZeroCheckFunction, denominator, "", &*i);
+            CallInst::Create(divZeroCheckFunction, denominator, "", &*i);
             moduleChanged = true;
           }
         }

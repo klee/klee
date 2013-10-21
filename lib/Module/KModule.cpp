@@ -143,9 +143,9 @@ static Function *getStubFunctionForCtorList(Module *m,
   std::vector<LLVM_TYPE_Q Type*> nullary;
 
   Function *fn = Function::Create(FunctionType::get(Type::getVoidTy(getGlobalContext()),
-						    nullary, false),
-				  GlobalVariable::InternalLinkage,
-				  name,
+                                                    nullary, false),
+                                  GlobalVariable::InternalLinkage,
+                                  name,
                               m);
   BasicBlock *bb = BasicBlock::Create(getGlobalContext(), "entry", fn);
 
@@ -164,7 +164,7 @@ static Function *getStubFunctionForCtorList(Module *m,
           fp = ce->getOperand(0);
 
         if (Function *f = dyn_cast<Function>(fp)) {
-	  CallInst::Create(f, "", bb);
+          CallInst::Create(f, "", bb);
         } else {
           assert(0 && "unable to get function pointer from ctor initializer list");
         }
@@ -187,13 +187,13 @@ static void injectStaticConstructorsAndDestructors(Module *m) {
 
     if (ctors)
     CallInst::Create(getStubFunctionForCtorList(m, ctors, "klee.ctor_stub"),
-		     "", mainFn->begin()->begin());
+                     "", mainFn->begin()->begin());
     if (dtors) {
       Function *dtorStub = getStubFunctionForCtorList(m, dtors, "klee.dtor_stub");
       for (Function::iterator it = mainFn->begin(), ie = mainFn->end();
            it != ie; ++it) {
         if (isa<ReturnInst>(it->getTerminator()))
-	  CallInst::Create(dtorStub, "", it->getTerminator());
+          CallInst::Create(dtorStub, "", it->getTerminator());
       }
     }
   }
@@ -233,8 +233,8 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
         FunctionType::get(Type::getVoidTy(getGlobalContext()),
                           std::vector<LLVM_TYPE_Q Type*>(), false);
       mergeFn = Function::Create(Ty, GlobalVariable::ExternalLinkage,
-				 "klee_merge",
-				 module);
+                                 "klee_merge",
+                                 module);
     }
 
     for (cl::list<std::string>::iterator it = MergeAtExit.begin(),
@@ -255,7 +255,7 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 0)
         result = PHINode::Create(f->getReturnType(), 0, "retval", exit);
 #else
-		result = PHINode::Create(f->getReturnType(), "retval", exit);
+                result = PHINode::Create(f->getReturnType(), "retval", exit);
 #endif
       CallInst::Create(mergeFn, "", exit);
       ReturnInst::Create(getGlobalContext(), result, exit);
@@ -270,7 +270,7 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
               result->addIncoming(i->getOperand(0), bbit);
             }
             i->eraseFromParent();
-	    BranchInst::Create(exit, bbit);
+            BranchInst::Create(exit, bbit);
           }
         }
       }

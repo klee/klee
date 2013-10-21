@@ -37,13 +37,13 @@ extern void smtlib_setInteractive(bool);
 SMTParser* SMTParser::parserTemp = NULL;
 
 SMTParser::SMTParser(const std::string _filename,
-		     ExprBuilder* _builder) : fileName(_filename),
-					      lineNum(1),
-					      done(false),
-					      satQuery(NULL),
-					      bvSize(0),
-					      queryParsed(false),
-					      builder(_builder) {
+                     ExprBuilder* _builder) : fileName(_filename),
+                                              lineNum(1),
+                                              done(false),
+                                              satQuery(NULL),
+                                              bvSize(0),
+                                              queryParsed(false),
+                                              builder(_builder) {
   is = new ifstream(fileName.c_str());
 
   // Initial empty environments
@@ -63,8 +63,8 @@ void SMTParser::Parse() {
 
 Decl* SMTParser::ParseTopLevelDecl() {
   return new QueryCommand(assumptions, builder->Not(satQuery),
-			  std::vector<ExprHandle>(),
-			  std::vector<const Array*>());
+                          std::vector<ExprHandle>(),
+                          std::vector<const Array*>());
 }
 
 bool SMTParser::Solve() {
@@ -90,9 +90,9 @@ bool SMTParser::Solve() {
     if (QC->Values.empty() && QC->Objects.empty()) {
       bool result;
       if (S->mustBeTrue(Query(ConstraintManager(QC->Constraints), QC->Query),
-			result)) {
-	//std::cout << (result ? "VALID" : "INVALID") << "\n";
-	return result;
+                        result)) {
+        //std::cout << (result ? "VALID" : "INVALID") << "\n";
+        return result;
       }
     }
   }
@@ -104,8 +104,8 @@ bool SMTParser::Solve() {
 // XXX: give more info
 int SMTParser::Error(const string& msg) {
   std::cerr << SMTParser::parserTemp->fileName << ":"
-	    << SMTParser::parserTemp->lineNum
-	    << ": " << msg << "\n";
+            << SMTParser::parserTemp->lineNum
+            << ": " << msg << "\n";
   exit(1);
   return 0;
 }
@@ -173,7 +173,7 @@ void SMTParser::DeclareExpr(std::string name, Expr::Width w) {
   ref<Expr> *kids = new ref<Expr>[w/8];
   for (unsigned i=0; i < w/8; i++)
     kids[i] = builder->Read(UpdateList(arr, NULL),
-			    builder->Constant(i, 32));
+                            builder->Constant(i, 32));
   ref<Expr> var = ConcatExpr::createN(w/8, kids); // XXX: move to builder?
   delete [] kids;
 

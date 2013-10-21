@@ -699,7 +699,7 @@ public:
 
     case Expr::Not: {
       if (e->getWidth() == Expr::Bool && range.isFixed()) {
-	propogatePossibleValue(e->getKid(0), !range.min());
+        propogatePossibleValue(e->getKid(0), !range.min());
       }
       break;
     }
@@ -897,7 +897,7 @@ public:
     // If a boolean not, and the result is known, propagate it
     case Expr::Not: {
       if (e->getWidth() == Expr::Bool && range.isFixed()) {
-	propogateExactValue(e->getKid(0), !range.min());
+        propogateExactValue(e->getKid(0), !range.min());
       }
       break;
     }

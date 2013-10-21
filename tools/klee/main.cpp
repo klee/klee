@@ -139,20 +139,20 @@ namespace {
        cl::desc("Choose libc version (none by default)."),
        cl::values(clEnumValN(NoLibc, "none", "Don't link in a libc"),
                   clEnumValN(KleeLibc, "klee", "Link in klee libc"),
-		  clEnumValN(UcLibc, "uclibc", "Link in uclibc (adapted for klee)"),
-		  clEnumValEnd),
+                  clEnumValN(UcLibc, "uclibc", "Link in uclibc (adapted for klee)"),
+                  clEnumValEnd),
        cl::init(NoLibc));
 
 
   cl::opt<bool>
   WithPOSIXRuntime("posix-runtime",
-		cl::desc("Link with POSIX runtime.  Options that can be passed as arguments to the programs are: --sym-argv <max-len>  --sym-argvs <min-argvs> <max-argvs> <max-len> + file model options"),
-		cl::init(false));
+                cl::desc("Link with POSIX runtime.  Options that can be passed as arguments to the programs are: --sym-argv <max-len>  --sym-argvs <min-argvs> <max-argvs> <max-len> + file model options"),
+                cl::init(false));
 
   cl::opt<bool>
   OptimizeModule("optimize",
                  cl::desc("Optimize before execution"),
-		 cl::init(false));
+                 cl::init(false));
 
   cl::opt<bool>
   CheckDivZero("check-div-zero",
@@ -181,8 +181,8 @@ namespace {
 
   cl::list<std::string>
   ReplayOutDir("replay-out-dir",
-	       cl::desc("Specify a directory to replay .out files from"),
-	       cl::value_desc("output directory"));
+               cl::desc("Specify a directory to replay .out files from"),
+               cl::value_desc("output directory"));
 
   cl::opt<std::string>
   ReplayPathFile("replay-path",
@@ -202,8 +202,8 @@ namespace {
 
   cl::opt<unsigned>
   StopAfterNTests("stop-after-n-tests",
-	     cl::desc("Stop execution after generating the given number of tests.  Extra tests corresponding to partially explored paths will also be dumped."),
-	     cl::init(0));
+             cl::desc("Stop execution after generating the given number of tests.  Extra tests corresponding to partially explored paths will also be dumped."),
+             cl::init(0));
 
   cl::opt<bool>
   Watchdog("watchdog",
@@ -258,7 +258,7 @@ public:
                            std::vector<bool> &buffer);
 
   static void getOutFiles(std::string path,
-			  std::vector<std::string> &results);
+                          std::vector<std::string> &results);
 };
 
 KleeHandler::KleeHandler(int argc, char **argv)
@@ -481,11 +481,11 @@ void KleeHandler::processTestCase(const ExecutionState &state,
     }
 
     if(WriteSMT2s) {
-    	std::string constraints;
-        m_interpreter->getConstraintLog(state, constraints, Interpreter::SMTLIB2);
-        std::ostream *f = openTestFile("smt2", id);
-        *f << constraints;
-        delete f;
+      std::string constraints;
+      m_interpreter->getConstraintLog(state, constraints, Interpreter::SMTLIB2);
+      std::ostream *f = openTestFile("smt2", id);
+      *f << constraints;
+      delete f;
     }
 
     if (m_symPathWriter) {
@@ -503,10 +503,10 @@ void KleeHandler::processTestCase(const ExecutionState &state,
       m_interpreter->getCoveredLines(state, cov);
       std::ostream *f = openTestFile("cov", id);
       for (std::map<const std::string*, std::set<unsigned> >::iterator
-             it = cov.begin(), ie = cov.end();
+           it = cov.begin(), ie = cov.end();
            it != ie; ++it) {
         for (std::set<unsigned>::iterator
-               it2 = it->second.begin(), ie = it->second.end();
+             it2 = it->second.begin(), ie = it->second.end();
              it2 != ie; ++it2)
           *f << *it->first << ":" << *it2 << "\n";
       }
@@ -543,7 +543,7 @@ void KleeHandler::loadPathFile(std::string name,
 }
 
 void KleeHandler::getOutFiles(std::string path,
-			      std::vector<std::string> &results) {
+                              std::vector<std::string> &results) {
   llvm::sys::Path p(path);
   std::set<llvm::sys::Path> contents;
   std::string error;
@@ -670,10 +670,10 @@ static int initEnv(Module *mainModule) {
   args.push_back(argvPtr);
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 0)
   Instruction* initEnvCall = CallInst::Create(initEnvFn, args,
-					      "", firstInst);
+                                              "", firstInst);
 #else
   Instruction* initEnvCall = CallInst::Create(initEnvFn, args.begin(), args.end(),
-					      "", firstInst);
+                                              "", firstInst);
 #endif
   Value *argc = new LoadInst(argcPtr, "newArgc", firstInst);
   Value *argv = new LoadInst(argvPtr, "newArgv", firstInst);
@@ -982,7 +982,7 @@ static llvm::Module *linkWithUclibc(llvm::Module *mainModule) {
 }
 #else
 static void replaceOrRenameFunction(llvm::Module *module,
-		const char *old_name, const char *new_name)
+                const char *old_name, const char *new_name)
 {
   Function *f, *f2;
   f = module->getFunction(new_name);
@@ -1088,9 +1088,9 @@ static llvm::Module *linkWithUclibc(llvm::Module *mainModule) {
   fArgs.push_back(ft->getParamType(1)); // argc
   fArgs.push_back(ft->getParamType(2)); // argv
   Function *stub = Function::Create(FunctionType::get(Type::getInt32Ty(getGlobalContext()), fArgs, false),
-      			      GlobalVariable::ExternalLinkage,
-      			      "main",
-      			      mainModule);
+                                    GlobalVariable::ExternalLinkage,
+                                    "main",
+                                    mainModule);
   BasicBlock *bb = BasicBlock::Create(getGlobalContext(), "entry", stub);
 
   std::vector<llvm::Value*> args;

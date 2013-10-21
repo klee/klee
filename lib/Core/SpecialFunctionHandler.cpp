@@ -254,8 +254,8 @@ void SpecialFunctionHandler::handleSilentExit(ExecutionState &state,
 }
 
 void SpecialFunctionHandler::handleAliasFunction(ExecutionState &state,
-						 KInstruction *target,
-						 std::vector<ref<Expr> > &arguments) {
+                                                 KInstruction *target,
+                                                 std::vector<ref<Expr> > &arguments) {
   assert(arguments.size()==2 &&
          "invalid number of arguments to klee_alias_function");
   std::string old_fn = readStringAtAddress(state, arguments[0]);

@@ -21,10 +21,10 @@ namespace {
 
 const int g_constants[] = { -1, 1, 4, 17, 0 };
 const Expr::Width g_types[] = { Expr::Bool,
-				Expr::Int8,
-				Expr::Int16,
-				Expr::Int32,
-				Expr::Int64 };
+                                Expr::Int8,
+                                Expr::Int16,
+                                Expr::Int32,
+                                Expr::Int64 };
 
 ref<Expr> getConstant(int value, Expr::Width width) {
   int64_t ext = value;

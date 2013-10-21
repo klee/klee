@@ -702,7 +702,7 @@ static SolverImpl::SolverRunStatus runAndGetCexForked(::VC vc,
     if (res < 0) {
       fprintf(stderr, "ERROR: waitpid() for STP failed");
       if (!IgnoreSolverFailures)
-	exit(1);
+        exit(1);
       return SolverImpl::SOLVER_RUN_STATUS_WAITPID_FAILED;
     }
 
@@ -712,7 +712,7 @@ static SolverImpl::SolverRunStatus runAndGetCexForked(::VC vc,
     if (WIFSIGNALED(status) || !WIFEXITED(status)) {
       fprintf(stderr, "ERROR: STP did not return successfully.  Most likely you forgot to run 'ulimit -s unlimited'\n");
       if (!IgnoreSolverFailures)  {
-	exit(1);
+        exit(1);
       }
       return SolverImpl::SOLVER_RUN_STATUS_INTERRUPTED;
     }
@@ -729,7 +729,7 @@ static SolverImpl::SolverRunStatus runAndGetCexForked(::VC vc,
     } else {
       fprintf(stderr, "error: STP did not return a recognized code");
       if (!IgnoreSolverFailures)
-	exit(1);
+        exit(1);
       return SolverImpl::SOLVER_RUN_STATUS_UNEXPECTED_EXIT_CODE;
     }
 

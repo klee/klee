@@ -447,11 +447,11 @@ ExprHandle STPBuilder::constructSDivByConstant(ExprHandle expr_n, unsigned width
       // using assertions, which is much faster, but we need to fix the caching
       // to work correctly in that case.
       for (unsigned i = 0, e = root->size; i != e; ++i) {
-	::VCExpr prev = array_expr;
-	array_expr = vc_writeExpr(vc, prev,
+        ::VCExpr prev = array_expr;
+        array_expr = vc_writeExpr(vc, prev,
                        construct(ConstantExpr::alloc(i, root->getDomain()), 0),
                        construct(root->constantValues[i], 0));
-	vc_DeleteExpr(prev);
+        vc_DeleteExpr(prev);
       }
     }
 
@@ -476,12 +476,12 @@ ExprHandle STPBuilder::getInitialRead(const Array *root, unsigned index) {
       bool hashed = _arr_hash.lookupUpdateNodeExpr(un, un_expr);
 
       if (!hashed) {
-	un_expr = vc_writeExpr(vc,
+        un_expr = vc_writeExpr(vc,
                                getArrayForUpdate(root, un->next),
                                construct(un->index, 0),
                                construct(un->value, 0));
 
-	_arr_hash.hashUpdateNodeExpr(un, un_expr);
+        _arr_hash.hashUpdateNodeExpr(un, un_expr);
       }
 
       return(un_expr);
@@ -680,8 +680,8 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
 
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(de->right))
       if (optimizeDivides)
-	if (*width_out == 32) //only works for 32-bit division
-	  return constructSDivByConstant( left, *width_out,
+        if (*width_out == 32) //only works for 32-bit division
+          return constructSDivByConstant( left, *width_out,
                                           CE->getZExtValue(32));
 
     // XXX need to test for proper handling of sign, not sure I
@@ -739,15 +739,15 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
 #if 0 //not faster per first benchmark
     if (optimizeDivides) {
       if (ConstantExpr *cre = de->right->asConstant()) {
-	uint64_t divisor = cre->asUInt64;
+        uint64_t divisor = cre->asUInt64;
 
-	//use fast division to compute modulo without explicit division for constant divisor
-      	if( *width_out == 32 ) { //only works for 32-bit division
-	  ExprHandle quotient = constructSDivByConstant( left, *width_out, divisor );
-	  ExprHandle quot_times_divisor = constructMulByConstant( quotient, *width_out, divisor );
-	  ExprHandle rem = vc_bvMinusExpr( vc, *width_out, left, quot_times_divisor );
-	  return rem;
-	}
+        //use fast division to compute modulo without explicit division for constant divisor
+              if( *width_out == 32 ) { //only works for 32-bit division
+          ExprHandle quotient = constructSDivByConstant( left, *width_out, divisor );
+          ExprHandle quot_times_divisor = constructMulByConstant( quotient, *width_out, divisor );
+          ExprHandle rem = vc_bvMinusExpr( vc, *width_out, left, quot_times_divisor );
+          return rem;
+        }
       }
     }
 #endif

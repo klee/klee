@@ -95,8 +95,8 @@ TEST(ExprTest, ExtractConcat) {
   ref<Expr> extract5 = ExtractExpr::create(read64, 2, 8);
 
   ref<Expr> kids1[6] = { extract1, extract2,
-			 read8_2,
-			 extract3, extract4, extract5 };
+                         read8_2,
+                         extract3, extract4, extract5 };
   ref<Expr> concat1 = ConcatExpr::createN(6, kids1);
   EXPECT_EQ(29U, concat1->getWidth());
 

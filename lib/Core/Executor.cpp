@@ -109,7 +109,7 @@ namespace {
   cl::opt<bool>
   DumpStatesOnHalt("dump-states-on-halt",
                    cl::init(true),
-		   cl::desc("Dump test cases for all active states on exit (default=on)"));
+                   cl::desc("Dump test cases for all active states on exit (default=on)"));
 
   cl::opt<bool>
   NoPreferCex("no-prefer-cex",
@@ -122,12 +122,12 @@ namespace {
   cl::opt<bool>
   RandomizeFork("randomize-fork",
                 cl::init(false),
-		cl::desc("Randomly swap the true and false states on a fork (default=off)"));
+                cl::desc("Randomly swap the true and false states on a fork (default=off)"));
 
   cl::opt<bool>
   AllowExternalSymCalls("allow-external-sym-calls",
                         cl::init(false),
-			cl::desc("Allow calls with symbolic arguments to external functions.  This concretizes the symbolic arguments.  (default=off)"));
+                        cl::desc("Allow calls with symbolic arguments to external functions.  This concretizes the symbolic arguments.  (default=off)"));
 
   cl::opt<bool>
   DebugPrintInstructions("debug-print-instructions",
@@ -154,7 +154,7 @@ namespace {
   cl::opt<bool>
   OnlyOutputStatesCoveringNew("only-output-states-covering-new",
                               cl::init(false),
-			      cl::desc("Only output test cases covering new code."));
+                              cl::desc("Only output test cases covering new code."));
 
   cl::opt<bool>
   EmitAllErrors("emit-all-errors",
@@ -168,7 +168,7 @@ namespace {
 
   cl::opt<bool>
   AlwaysOutputSeeds("always-output-seeds",
-		    cl::init(true));
+                    cl::init(true));
 
   cl::opt<bool>
   OnlyReplaySeeds("only-replay-seeds",
@@ -341,7 +341,7 @@ void Executor::initializeGlobalObject(ExecutionState &state, ObjectState *os,
       targetData->getTypeStoreSize(cp->getType()->getElementType());
     for (unsigned i=0, e=cp->getNumOperands(); i != e; ++i)
       initializeGlobalObject(state, os, cp->getOperand(i),
-			     offset + i*elementSize);
+                             offset + i*elementSize);
   } else if (isa<ConstantAggregateZero>(c)) {
     unsigned i, size = targetData->getTypeStoreSize(c->getType());
     for (i=0; i<size; i++)
@@ -351,13 +351,13 @@ void Executor::initializeGlobalObject(ExecutionState &state, ObjectState *os,
       targetData->getTypeStoreSize(ca->getType()->getElementType());
     for (unsigned i=0, e=ca->getNumOperands(); i != e; ++i)
       initializeGlobalObject(state, os, ca->getOperand(i),
-			     offset + i*elementSize);
+                             offset + i*elementSize);
   } else if (const ConstantStruct *cs = dyn_cast<ConstantStruct>(c)) {
     const StructLayout *sl =
       targetData->getStructLayout(cast<StructType>(cs->getType()));
     for (unsigned i=0, e=cs->getNumOperands(); i != e; ++i)
       initializeGlobalObject(state, os, cs->getOperand(i),
-			     offset + sl->getElementOffset(i));
+                             offset + sl->getElementOffset(i));
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 1)
   } else if (const ConstantDataSequential *cds =
                dyn_cast<ConstantDataSequential>(c)) {
@@ -725,14 +725,14 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
           inhibitForking ||
           (MaxForks!=~0u && stats::forks >= MaxForks)) {
 
-	if (MaxMemoryInhibit && atMemoryLimit)
-	  klee_warning_once(0, "skipping fork (memory cap exceeded)");
-	else if (current.forkDisabled)
-	  klee_warning_once(0, "skipping fork (fork disabled on current path)");
-	else if (inhibitForking)
-	  klee_warning_once(0, "skipping fork (fork disabled globally)");
-	else
-	  klee_warning_once(0, "skipping fork (max-forks reached)");
+        if (MaxMemoryInhibit && atMemoryLimit)
+          klee_warning_once(0, "skipping fork (memory cap exceeded)");
+        else if (current.forkDisabled)
+          klee_warning_once(0, "skipping fork (fork disabled on current path)");
+        else if (inhibitForking)
+          klee_warning_once(0, "skipping fork (fork disabled globally)");
+        else
+          klee_warning_once(0, "skipping fork (max-forks reached)");
 
         TimerStatIncrementer timer(stats::forkTime);
         if (theRNG.getBool()) {
@@ -1409,11 +1409,11 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
             // XXX need to check other param attrs ?
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
-      bool isSExt = cs.paramHasAttr(0, llvm::Attribute::SExt);
+            bool isSExt = cs.paramHasAttr(0, llvm::Attribute::SExt);
 #elif LLVM_VERSION_CODE >= LLVM_VERSION(3, 2)
-	    bool isSExt = cs.paramHasAttr(0, llvm::Attributes::SExt);
+            bool isSExt = cs.paramHasAttr(0, llvm::Attributes::SExt);
 #else
-	    bool isSExt = cs.paramHasAttr(0, llvm::Attribute::SExt);
+            bool isSExt = cs.paramHasAttr(0, llvm::Attribute::SExt);
 #endif
             if (isSExt) {
               result = SExtExpr::create(result, to);
@@ -1617,9 +1617,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
               bool isSExt = cs.paramHasAttr(i+1, llvm::Attribute::SExt);
 #elif LLVM_VERSION_CODE >= LLVM_VERSION(3, 2)
-	      bool isSExt = cs.paramHasAttr(i+1, llvm::Attributes::SExt);
+              bool isSExt = cs.paramHasAttr(i+1, llvm::Attributes::SExt);
 #else
-	      bool isSExt = cs.paramHasAttr(i+1, llvm::Attribute::SExt);
+              bool isSExt = cs.paramHasAttr(i+1, llvm::Attribute::SExt);
 #endif
               if (isSExt) {
                 arguments[i] = SExtExpr::create(arguments[i], to);
@@ -2789,7 +2789,7 @@ void Executor::callExternalFunction(ExecutionState &state,
     for (unsigned i=0; i<arguments.size(); i++) {
       os << arguments[i];
       if (i != arguments.size()-1)
-	os << ", ";
+        os << ", ";
     }
     os << ")";
 
@@ -3204,11 +3204,11 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
               ((!(AllowSeedExtension || ZeroSeedExtension)
                 && obj->numBytes < mo->size) ||
                (!AllowSeedTruncation && obj->numBytes > mo->size))) {
-	    std::stringstream msg;
-	    msg << "replace size mismatch: "
-		<< mo->name << "[" << mo->size << "]"
-		<< " vs " << obj->name << "[" << obj->numBytes << "]"
-		<< " in test\n";
+            std::stringstream msg;
+            msg << "replace size mismatch: "
+                << mo->name << "[" << mo->size << "]"
+                << " vs " << obj->name << "[" << obj->numBytes << "]"
+                << " in test\n";
 
             terminateStateOnError(state,
                                   msg.str(),
@@ -3245,9 +3245,9 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
 /***/
 
 void Executor::runFunctionAsMain(Function *f,
-				 int argc,
-				 char **argv,
-				 char **envp) {
+                                 int argc,
+                                 char **argv,
+                                 char **envp) {
   std::vector<ref<Expr> > arguments;
 
   // force deterministic initialization of memory objects
@@ -3363,36 +3363,36 @@ void Executor::getConstraintLog(const ExecutionState &state,
   {
   case STP:
   {
-	  Query query(state.constraints, ConstantExpr::alloc(0, Expr::Bool));
-	  char *log = solver->getConstraintLog(query);
-	  res = std::string(log);
-	  free(log);
+          Query query(state.constraints, ConstantExpr::alloc(0, Expr::Bool));
+          char *log = solver->getConstraintLog(query);
+          res = std::string(log);
+          free(log);
   }
-	  break;
+          break;
 
   case KQUERY:
   {
-	  std::ostringstream info;
-	  ExprPPrinter::printConstraints(info, state.constraints);
-	  res = info.str();
+          std::ostringstream info;
+          ExprPPrinter::printConstraints(info, state.constraints);
+          res = info.str();
   }
-	  break;
+          break;
 
   case SMTLIB2:
   {
-	  std::ostringstream info;
-	  ExprSMTLIBPrinter* printer = createSMTLIBPrinter();
-	  printer->setOutput(info);
-	  Query query(state.constraints, ConstantExpr::alloc(0, Expr::Bool));
-	  printer->setQuery(query);
-	  printer->generateOutput();
-	  res = info.str();
-	  delete printer;
+          std::ostringstream info;
+          ExprSMTLIBPrinter* printer = createSMTLIBPrinter();
+          printer->setOutput(info);
+          Query query(state.constraints, ConstantExpr::alloc(0, Expr::Bool));
+          printer->setQuery(query);
+          printer->generateOutput();
+          res = info.str();
+          delete printer;
   }
-	  break;
+          break;
 
   default:
-	  klee_warning("Executor::getConstraintLog() : Log format not supported!");
+          klee_warning("Executor::getConstraintLog() : Log format not supported!");
   }
 
 }

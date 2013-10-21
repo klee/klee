@@ -29,8 +29,8 @@ using namespace llvm;
 namespace {
   cl::opt<bool>
   ConstArrayOpt("const-array-opt",
-	 cl::init(false),
-	 cl::desc("Enable various optimizations involving all-constant arrays."));
+         cl::init(false),
+         cl::desc("Enable various optimizations involving all-constant arrays."));
 }
 
 /***/
@@ -602,11 +602,11 @@ ref<Expr> ConcatExpr::create4(const ref<Expr> &kid1, const ref<Expr> &kid2,
 
 /// Shortcut to concat 8 kids.  The chain returned is unbalanced to the right
 ref<Expr> ConcatExpr::create8(const ref<Expr> &kid1, const ref<Expr> &kid2,
-			      const ref<Expr> &kid3, const ref<Expr> &kid4,
-			      const ref<Expr> &kid5, const ref<Expr> &kid6,
-			      const ref<Expr> &kid7, const ref<Expr> &kid8) {
+                              const ref<Expr> &kid3, const ref<Expr> &kid4,
+                              const ref<Expr> &kid5, const ref<Expr> &kid6,
+                              const ref<Expr> &kid7, const ref<Expr> &kid8) {
   return ConcatExpr::create(kid1, ConcatExpr::create(kid2, ConcatExpr::create(kid3,
-			      ConcatExpr::create(kid4, ConcatExpr::create4(kid5, kid6, kid7, kid8)))));
+                              ConcatExpr::create(kid4, ConcatExpr::create4(kid5, kid6, kid7, kid8)))));
 }
 
 /***/
@@ -624,15 +624,15 @@ ref<Expr> ExtractExpr::create(ref<Expr> expr, unsigned off, Width w) {
     if (ConcatExpr *ce = dyn_cast<ConcatExpr>(expr)) {
       // if the extract skips the right side of the concat
       if (off >= ce->getRight()->getWidth())
-	return ExtractExpr::create(ce->getLeft(), off - ce->getRight()->getWidth(), w);
+        return ExtractExpr::create(ce->getLeft(), off - ce->getRight()->getWidth(), w);
 
       // if the extract skips the left side of the concat
       if (off + w <= ce->getRight()->getWidth())
-	return ExtractExpr::create(ce->getRight(), off, w);
+        return ExtractExpr::create(ce->getRight(), off, w);
 
       // E(C(x,y)) = C(E(x), E(y))
       return ConcatExpr::create(ExtractExpr::create(ce->getKid(0), 0, w - ce->getKid(1)->getWidth() + off),
-				ExtractExpr::create(ce->getKid(1), off, ce->getKid(1)->getWidth() - off));
+                                ExtractExpr::create(ce->getKid(1), off, ce->getKid(1)->getWidth() - off));
     }
   }
 
@@ -990,7 +990,7 @@ static ref<Expr> EqExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
 /// returns a disjunction of equalities on the index.  Otherwise,
 /// returns the initial equality expression.
 static ref<Expr> TryConstArrayOpt(const ref<ConstantExpr> &cl,
-				  ReadExpr *rd) {
+                                  ReadExpr *rd) {
   if (rd->updates.root->isSymbolicArray() || rd->updates.getSize())
     return EqExpr_create(cl, rd);
 

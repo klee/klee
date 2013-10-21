@@ -224,10 +224,10 @@ Function *ExternalDispatcher::createDispatcher(Function *target, Instruction *in
   std::vector<LLVM_TYPE_Q Type*> nullary;
 
   Function *dispatcher = Function::Create(FunctionType::get(Type::getVoidTy(getGlobalContext()),
-							    nullary, false),
-					  GlobalVariable::ExternalLinkage,
-					  "",
-					  dispatchModule);
+                                                            nullary, false),
+                                          GlobalVariable::ExternalLinkage,
+                                          "",
+                                          dispatchModule);
 
 
   BasicBlock *dBB = BasicBlock::Create(getGlobalContext(), "entry", dispatcher);

@@ -961,7 +961,7 @@ namespace {
           return RHS;
 
         // false == ... (not)
-	return Base->Not(RHS);
+        return Base->Not(RHS);
       }
 
       return Base->Eq(LHS, RHS);
@@ -996,7 +996,7 @@ namespace {
           return RHS;
 
         // false == X (not)
-	return Base->Not(RHS);
+        return Base->Not(RHS);
       }
 
       return Base->Eq(LHS, RHS);
@@ -1019,8 +1019,8 @@ namespace {
     ref<Expr> Not(const ref<NonConstantExpr> &LHS) {
       // Transform !(a or b) ==> !a and !b.
       if (const OrExpr *OE = dyn_cast<OrExpr>(LHS))
-	return Builder->And(Builder->Not(OE->left),
-			    Builder->Not(OE->right));
+        return Builder->And(Builder->Not(OE->left),
+                            Builder->Not(OE->right));
       return Base->Not(LHS);
     }
 
