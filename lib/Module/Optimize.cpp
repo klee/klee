@@ -73,10 +73,10 @@ static cl::alias ExportDynamic("export-dynamic",
   cl::aliasopt(DisableInternalize),
   cl::desc("Alias for -disable-internalize"));
 
-static cl::opt<bool> Strip("strip-all", 
+static cl::opt<bool> Strip("strip-all",
   cl::desc("Strip all symbol info from executable"));
 
-static cl::alias A0("s", cl::desc("Alias for --strip-all"), 
+static cl::alias A0("s", cl::desc("Alias for --strip-all"),
   cl::aliasopt(Strip));
 
 static cl::opt<bool> StripDebug("strip-debug",
@@ -215,7 +215,7 @@ void Optimize(Module* M) {
 
     // Propagate constants at call sites into the functions they call.  This
     // opens opportunities for globalopt (and inlining) by substituting function
-    // pointers passed as arguments to direct uses of functions.  
+    // pointers passed as arguments to direct uses of functions.
     addPass(Passes, createIPSCCPPass());
 
     // Now that we internalized some globals, see if we can hack on them!
@@ -264,7 +264,7 @@ void Optimize(Module* M) {
 
     addPass(Passes, createJumpThreadingPass());        // Thread jumps.
     addPass(Passes, createPromoteMemoryToRegisterPass()); // Cleanup jumpthread.
-    
+
     // Delete basic blocks, which optimization passes may have killed...
     addPass(Passes, createCFGSimplificationPass());
 
@@ -286,7 +286,7 @@ void Optimize(Module* M) {
     if (Opt->getNormalCtor())
       addPass(Passes, Opt->getNormalCtor()());
     else
-      std::cerr << "llvm-ld: cannot create pass: " << Opt->getPassName() 
+      std::cerr << "llvm-ld: cannot create pass: " << Opt->getPassName()
                 << "\n";
   }
 #endif

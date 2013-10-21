@@ -12,7 +12,7 @@ int main(int argc, char** argv) {
     cout << "Usage: " << argv[0] << " <smt-filename>\n";
     return 1;
   }
-  
+
   enum BuilderKinds {
     DefaultBuilder,
     ConstantFoldingBuilder,
@@ -34,10 +34,10 @@ int main(int argc, char** argv) {
     Builder = createSimplifyingExprBuilder(Builder);
     break;
   }
-  
+
   klee::expr::SMTParser smtParser(argv[1], Builder);
   smtParser.Parse();
   int result = smtParser.Solve();
-  
-  cout << (result ? "UNSAT":"SAT") << "\n"; 
+
+  cout << (result ? "UNSAT":"SAT") << "\n";
 }

@@ -57,7 +57,7 @@ namespace {
     Evaluate
   };
 
-  static llvm::cl::opt<ToolActions> 
+  static llvm::cl::opt<ToolActions>
   ToolAction(llvm::cl::desc("Tool actions:"),
              llvm::cl::init(Evaluate),
              llvm::cl::values(
@@ -78,7 +78,7 @@ namespace {
     SimplifyingBuilder
   };
 
-  static llvm::cl::opt<BuilderKinds> 
+  static llvm::cl::opt<BuilderKinds>
   BuilderKind("builder",
               llvm::cl::desc("Expression builder:"),
               llvm::cl::init(DefaultBuilder),
@@ -136,8 +136,8 @@ static std::string escapedString(const char *start, unsigned length) {
     } else if (c == '\n') {
       s << "\\n";
     } else {
-      s << "\\x" 
-        << hexdigit(((unsigned char) c >> 4) & 0xF) 
+      s << "\\x"
+        << hexdigit(((unsigned char) c >> 4) & 0xF)
         << hexdigit((unsigned char) c & 0xF);
     }
   }
@@ -205,14 +205,14 @@ static bool EvaluateInputAST(const char *Filename,
     std::cerr << Filename << ": parse failure: "
                << N << " errors.\n";
     success = false;
-  }  
+  }
 
   if (!success)
     return false;
 
   // FIXME: Support choice of solver.
   Solver *coreSolver = UseDummySolver ? createDummySolver() : new STPSolver(UseForkedCoreSolver);
-  
+
   if (!UseDummySolver) {
     if (0 != MaxCoreSolverTime) {
       coreSolver->setCoreSolverTimeout(MaxCoreSolverTime);
@@ -239,32 +239,32 @@ static bool EvaluateInputAST(const char *Filename,
                           result)) {
           std::cout << (result ? "VALID" : "INVALID");
         } else {
-          std::cout << "FAIL (reason: " 
+          std::cout << "FAIL (reason: "
                     << SolverImpl::getOperationStatusString(S->impl->getOperationStatusCode())
                     << ")";
         }
       } else if (!QC->Values.empty()) {
-        assert(QC->Objects.empty() && 
+        assert(QC->Objects.empty() &&
                "FIXME: Support counterexamples for values and objects!");
         assert(QC->Values.size() == 1 &&
                "FIXME: Support counterexamples for multiple values!");
         assert(QC->Query->isFalse() &&
                "FIXME: Support counterexamples with non-trivial query!");
         ref<ConstantExpr> result;
-        if (S->getValue(Query(ConstraintManager(QC->Constraints), 
+        if (S->getValue(Query(ConstraintManager(QC->Constraints),
                               QC->Values[0]),
                         result)) {
           std::cout << "INVALID\n";
           std::cout << "\tExpr 0:\t" << result;
         } else {
-          std::cout << "FAIL (reason: " 
+          std::cout << "FAIL (reason: "
                     << SolverImpl::getOperationStatusString(S->impl->getOperationStatusCode())
                     << ")";
         }
       } else {
         std::vector< std::vector<unsigned char> > result;
-        
-        if (S->getInitialValues(Query(ConstraintManager(QC->Constraints), 
+
+        if (S->getInitialValues(Query(ConstraintManager(QC->Constraints),
                                       QC->Query),
                                 QC->Objects, result)) {
           std::cout << "INVALID\n";
@@ -285,10 +285,10 @@ static bool EvaluateInputAST(const char *Filename,
         } else {
           SolverImpl::SolverRunStatus retCode = S->impl->getOperationStatusCode();
           if (SolverImpl::SOLVER_RUN_STATUS_TIMEOUT == retCode) {
-            std::cout << " FAIL (reason: " 
+            std::cout << " FAIL (reason: "
                       << SolverImpl::getOperationStatusString(retCode)
                       << ")";
-          }           
+          }
           else {
             std::cout << "VALID (counterexample request ignored)";
           }
@@ -308,16 +308,16 @@ static bool EvaluateInputAST(const char *Filename,
   delete S;
 
   if (uint64_t queries = *theStatisticManager->getStatisticByName("Queries")) {
-    std::cout 
+    std::cout
       << "--\n"
       << "total queries = " << queries << "\n"
-      << "total queries constructs = " 
+      << "total queries constructs = "
       << *theStatisticManager->getStatisticByName("QueriesConstructs") << "\n"
-      << "valid queries = " 
+      << "valid queries = "
       << *theStatisticManager->getStatisticByName("QueriesValid") << "\n"
-      << "invalid queries = " 
+      << "invalid queries = "
       << *theStatisticManager->getStatisticByName("QueriesInvalid") << "\n"
-      << "query cex = " 
+      << "query cex = "
       << *theStatisticManager->getStatisticByName("QueriesCEX") << "\n";
   }
 
@@ -404,7 +404,7 @@ int main(int argc, char **argv) {
   llvm::cl::ParseCommandLineOptions(argc, argv);
 
   std::string ErrorStr;
-  
+
 #if LLVM_VERSION_CODE < LLVM_VERSION(2, 9)
   MemoryBuffer *MB = MemoryBuffer::getFileOrSTDIN(InputFile.c_str(), &ErrorStr);
   if (!MB) {
@@ -419,7 +419,7 @@ int main(int argc, char **argv) {
     return 1;
   }
 #endif
-  
+
   ExprBuilder *Builder = 0;
   switch (BuilderKind) {
   case DefaultBuilder:

@@ -29,7 +29,7 @@ namespace klee
 		solver = createPCLoggingSolver(solver,
 					       baseSolverQueryPCLogPath,
 					       MinQueryTimeToLog);
-		std::cerr << "Logging queries that reach solver in .pc format to " 
+		std::cerr << "Logging queries that reach solver in .pc format to "
 			  << baseSolverQueryPCLogPath.c_str() << std::endl;
 	  }
 
@@ -38,7 +38,7 @@ namespace klee
 		solver = createSMTLIBLoggingSolver(solver,
 						   baseSolverQuerySMT2LogPath,
 						   MinQueryTimeToLog);
-		std::cerr << "Logging queries that reach solver in .smt2 format to " 
+		std::cerr << "Logging queries that reach solver in .smt2 format to "
 			  << baseSolverQuerySMT2LogPath.c_str() << std::endl;
 	  }
 
@@ -62,7 +62,7 @@ namespace klee
 		solver = createPCLoggingSolver(solver,
 					       queryPCLogPath,
 					       MinQueryTimeToLog);
-		std::cerr << "Logging all queries in .pc format to " 
+		std::cerr << "Logging all queries in .pc format to "
 			  << queryPCLogPath.c_str() << std::endl;
 	  }
 
@@ -70,7 +70,7 @@ namespace klee
 	  {
 		solver = createSMTLIBLoggingSolver(solver,querySMT2LogPath,
 						   MinQueryTimeToLog);
-		std::cerr << "Logging all queries in .smt2 format to " 
+		std::cerr << "Logging all queries in .smt2 format to "
 			  << querySMT2LogPath.c_str() << std::endl;
 	  }
 

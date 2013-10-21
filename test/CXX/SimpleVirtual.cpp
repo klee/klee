@@ -18,7 +18,7 @@ public:
   virtual int getX() { return 2; };
 };
 
-Thing *getThing(bool which) { 
+Thing *getThing(bool which) {
   return which ? new Thing() : new Thing2();
 }
 
@@ -31,7 +31,7 @@ int main(int argc) {
 
   delete two;
   delete one;
-  
+
   assert(decon==2);
 
   return 0;

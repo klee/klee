@@ -38,7 +38,7 @@ char RaiseAsmPass::ID = 0;
 Function *RaiseAsmPass::getIntrinsic(llvm::Module &M,
                                      unsigned IID,
                                      LLVM_TYPE_Q Type **Tys,
-                                     unsigned NumTys) {  
+                                     unsigned NumTys) {
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 0)
   return Intrinsic::getDeclaration(&M, (llvm::Intrinsic::ID) IID,
                                    llvm::ArrayRef<llvm::Type*>(Tys, NumTys));
@@ -69,7 +69,7 @@ bool RaiseAsmPass::runOnInstruction(Module &M, Instruction *I) {
       llvm::Value *Arg0 = NumOperands > 1 ? ci->getArgOperand(0) : 0;
 #endif
       if (Arg0 && T == Arg0->getType() &&
-          ((T == llvm::Type::getInt16Ty(getGlobalContext()) && 
+          ((T == llvm::Type::getInt16Ty(getGlobalContext()) &&
             as == "rorw $$8, ${0:w}" &&
             cs == "=r,0,~{dirflag},~{fpsr},~{flags},~{cc}") ||
            (T == llvm::Type::getInt32Ty(getGlobalContext()) &&
@@ -116,12 +116,12 @@ bool RaiseAsmPass::runOnModule(Module &M) {
     TLI = TM->getTargetLowering();
   }
 #endif
-  
+
   for (Module::iterator fi = M.begin(), fe = M.end(); fi != fe; ++fi) {
     for (Function::iterator bi = fi->begin(), be = fi->end(); bi != be; ++bi) {
       for (BasicBlock::iterator ii = bi->begin(), ie = bi->end(); ii != ie;) {
         Instruction *i = ii;
-        ++ii;  
+        ++ii;
         changed |= runOnInstruction(M, i);
       }
     }

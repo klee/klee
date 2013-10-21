@@ -64,8 +64,8 @@ static inline bool isInternalIdentifierChar(int Char) {
   return isalnum(Char) || Char == '_' || Char == '.' || Char == '-';
 }
 
-Lexer::Lexer(const llvm::MemoryBuffer *MB) 
-  : BufferPos(MB->getBufferStart()), BufferEnd(MB->getBufferEnd()), 
+Lexer::Lexer(const llvm::MemoryBuffer *MB)
+  : BufferPos(MB->getBufferStart()), BufferEnd(MB->getBufferEnd()),
     LineNumber(1), ColumnNumber(0) {
 }
 
@@ -127,7 +127,7 @@ static bool isReservedKW(const char *Str, unsigned N) {
     if (i==N || Str[i]=='.')
       return true;
   }
-  
+
   return false;
 }
 static bool isWidthKW(const char *Str, unsigned N) {
@@ -160,8 +160,8 @@ Token &Lexer::SetIdentifierTokenKind(Token &Result) {
       return SetTokenKind(Result, Token::KWFalse);
     if (memcmp("query", Result.start, 5) == 0)
       return SetTokenKind(Result, Token::KWQuery);
-    break;      
-    
+    break;
+
   case 6:
     if (memcmp("define", Result.start, 6) == 0)
       return SetTokenKind(Result, Token::KWReserved);
@@ -212,7 +212,7 @@ Token &Lexer::Lex(Token &Result) {
   Result.kind = Token::Unknown;
   Result.length = 0;
   Result.start = BufferPos;
-  
+
   // Skip whitespace.
   while (isspace(PeekNextChar()))
     GetNextChar();
@@ -223,7 +223,7 @@ Token &Lexer::Lex(Token &Result) {
   int Char = GetNextChar();
   switch (Char) {
   case -1:  return SetTokenKind(Result, Token::EndOfFile);
-    
+
   case '(': return SetTokenKind(Result, Token::LParen);
   case ')': return SetTokenKind(Result, Token::RParen);
   case ',': return SetTokenKind(Result, Token::Comma);

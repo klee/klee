@@ -11,8 +11,8 @@ class Test {
 
 public:
   Test() : p(0) {}
-  ~Test() { 
-    assert(!p); 
+  ~Test() {
+    assert(!p);
     assert(*p == 10); // crash here
   }
 };

@@ -23,7 +23,7 @@ static int getint(char *i) {
 }
 
 #define MAX 64
-static void push_obj(KTest *b, const char *name, unsigned non_zero_bytes, 
+static void push_obj(KTest *b, const char *name, unsigned non_zero_bytes,
                      unsigned total_bytes) {
   KTestObject *o = &b->objects[b->numObjects++];
   assert(b->numObjects < MAX);
@@ -102,7 +102,7 @@ int main(int argc, char *argv[]) {
       if(!sym_stdout) {
         sym_stdout = 1;
         push_obj(&b, "stdout", 1024, 1024);
-        push_obj(&b, "stdout-stat", sizeof(struct stat64), 
+        push_obj(&b, "stdout-stat", sizeof(struct stat64),
                  sizeof(struct stat64));
       }
     } else if(strcmp(argv[i], "--sym-files") == 0) {

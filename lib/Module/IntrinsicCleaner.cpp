@@ -68,22 +68,22 @@ bool IntrinsicCleanerPass::runOnModule(Module &M) {
 
 bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
   bool dirty = false;
-  
+
 #if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
   unsigned WordSize = TargetData.getPointerSizeInBits() / 8;
 #else
   unsigned WordSize = DataLayout.getPointerSizeInBits() / 8;
 #endif
-  for (BasicBlock::iterator i = b.begin(), ie = b.end(); i != ie;) {     
+  for (BasicBlock::iterator i = b.begin(), ie = b.end(); i != ie;) {
     IntrinsicInst *ii = dyn_cast<IntrinsicInst>(&*i);
     // increment now since LowerIntrinsic deletion makes iterator invalid.
-    ++i;  
+    ++i;
     if(ii) {
       switch (ii->getIntrinsicID()) {
       case Intrinsic::vastart:
       case Intrinsic::vaend:
         break;
-        
+
         // Lower vacopy so that object resolution etc is handled by
         // normal instructions.
         //
@@ -134,7 +134,7 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
         Value *op1 = ii->getArgOperand(0);
         Value *op2 = ii->getArgOperand(1);
 #endif
-        
+
         Value *result = 0;
         if (ii->getIntrinsicID() == Intrinsic::uadd_with_overflow)
           result = builder.CreateAdd(op1, op2);
@@ -142,11 +142,11 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
           result = builder.CreateMul(op1, op2);
 
         Value *overflow = builder.CreateICmpULT(result, op1);
-        
+
         Value *resultStruct =
           builder.CreateInsertValue(UndefValue::get(ii->getType()), result, 0);
         resultStruct = builder.CreateInsertValue(resultStruct, overflow, 1);
-        
+
         ii->replaceAllUsesWith(resultStruct);
         ii->removeFromParent();
         delete ii;
@@ -215,7 +215,7 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
         dirty = true;
         break;
       }
-                    
+
       default:
         if (LowerIntrinsics)
           IL->LowerIntrinsicCall(ii);
