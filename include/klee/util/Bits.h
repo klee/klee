@@ -94,7 +94,7 @@ namespace klee {
     inline unsigned indexOfSingleBit(uint64_t x) {
       unsigned res = bits32::indexOfSingleBit((unsigned) (x | (x>>32)));
       if (x&((uint64_t) 0xFFFFFFFF << 32))
-	  res += 32;
+          res += 32;
       return res;
     }
 

@@ -60,9 +60,9 @@ public:
 
   enum LogType
   {
-	  STP, //.CVC (STP's native language)
-	  KQUERY, //.PC files (kQuery native language)
-	  SMTLIB2 //.SMT2 files (SMTLIB version 2 files)
+          STP, //.CVC (STP's native language)
+          KQUERY, //.PC files (kQuery native language)
+          SMTLIB2 //.SMT2 files (SMTLIB version 2 files)
   };
 
   /// InterpreterOptions - Options varying the runtime behavior during

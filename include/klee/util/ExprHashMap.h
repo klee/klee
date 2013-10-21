@@ -34,14 +34,14 @@ namespace klee {
   class ExprHashMap :
 
     public std::tr1::unordered_map<ref<Expr>,
-				   T,
-				   klee::util::ExprHash,
-				   klee::util::ExprCmp> {
+                                   T,
+                                   klee::util::ExprHash,
+                                   klee::util::ExprCmp> {
   };
 
   typedef std::tr1::unordered_set<ref<Expr>,
-				  klee::util::ExprHash,
-				  klee::util::ExprCmp> ExprHashSet;
+                                  klee::util::ExprHash,
+                                  klee::util::ExprCmp> ExprHashSet;
 
 }
 

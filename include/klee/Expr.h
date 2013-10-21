@@ -53,7 +53,7 @@ The general rules are:
      <li> \c Ne, \c Ugt, \c Uge, \c Sgt, \c Sge are not used </li>
      <li> The only acceptable operations with boolean arguments are
           \c Not \c And, \c Or, \c Xor, \c Eq,
-	  as well as \c SExt, \c ZExt,
+          as well as \c SExt, \c ZExt,
           \c Select and \c NotOptimized. </li>
      <li> The only boolean operation which may involve a constant is boolean not (<tt>== false</tt>). </li>
      </ol>
@@ -786,11 +786,11 @@ public:
   /// Shortcuts to create larger concats.  The chain returned is unbalanced to the right
   static ref<Expr> createN(unsigned nKids, const ref<Expr> kids[]);
   static ref<Expr> create4(const ref<Expr> &kid1, const ref<Expr> &kid2,
-			   const ref<Expr> &kid3, const ref<Expr> &kid4);
+                           const ref<Expr> &kid3, const ref<Expr> &kid4);
   static ref<Expr> create8(const ref<Expr> &kid1, const ref<Expr> &kid2,
-			   const ref<Expr> &kid3, const ref<Expr> &kid4,
-			   const ref<Expr> &kid5, const ref<Expr> &kid6,
-			   const ref<Expr> &kid7, const ref<Expr> &kid8);
+                           const ref<Expr> &kid3, const ref<Expr> &kid4,
+                           const ref<Expr> &kid5, const ref<Expr> &kid6,
+                           const ref<Expr> &kid7, const ref<Expr> &kid8);
 
   virtual ref<Expr> rebuild(ref<Expr> kids[]) const { return create(kids[0], kids[1]); }
 

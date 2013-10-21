@@ -32,7 +32,7 @@ public:
 
   PrintContext(std::ostream &_os) : os(_os), newline("\n"), indentStack(), pos()
   {
-	  indentStack.push(pos);
+          indentStack.push(pos);
   }
 
   void setNewline(const std::string &_newline) {
@@ -50,24 +50,24 @@ public:
   /// \return The PrintContext object so the method is chainable
   PrintContext& breakLineI()
   {
-	  breakLine(indentStack.top());
-	  return *this;
+          breakLine(indentStack.top());
+          return *this;
   }
 
   ///Add the current position on the line to the top of the indent stack
   /// \return The PrintContext object so the method is chainable
   PrintContext& pushIndent()
   {
-	  indentStack.push(pos);
-	  return *this;
+          indentStack.push(pos);
+          return *this;
   }
 
   ///Pop the top off the indent stack
   /// \return The PrintContext object so the method is chainable
   PrintContext& popIndent()
   {
-	  indentStack.pop();
-	  return *this;
+          indentStack.pop();
+          return *this;
   }
 
   /// write - Output a string to the stream and update the
