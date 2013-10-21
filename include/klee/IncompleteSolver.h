@@ -67,7 +67,7 @@ public:
   ///
   /// The passed expression is non-constant with bool type.
   virtual IncompleteSolver::PartialValidity computeTruth(const Query&) = 0;
-  
+
   /// computeValue - Attempt to compute a value for the given expression.
   virtual bool computeValue(const Query&, ref<Expr> &result) = 0;
 
@@ -75,9 +75,9 @@ public:
   /// for the initial state of each given object. If a correct result
   /// is not found, then the values array must be unmodified.
   virtual bool computeInitialValues(const Query&,
-                                    const std::vector<const Array*> 
+                                    const std::vector<const Array*>
                                       &objects,
-                                    std::vector< std::vector<unsigned char> > 
+                                    std::vector< std::vector<unsigned char> >
                                       &values,
                                     bool &hasSolution) = 0;
 };
@@ -89,11 +89,11 @@ class StagedSolverImpl : public SolverImpl {
 private:
   IncompleteSolver *primary;
   Solver *secondary;
-  
+
 public:
   StagedSolverImpl(IncompleteSolver *_primary, Solver *_secondary);
   ~StagedSolverImpl();
-    
+
   bool computeTruth(const Query&, bool &isValid);
   bool computeValidity(const Query&, Solver::Validity &result);
   bool computeValue(const Query&, ref<Expr> &result);

@@ -25,12 +25,12 @@ namespace klee {
 
     virtual ref<Expr> Constant(const llvm::APInt &Value) = 0;
     virtual ref<Expr> NotOptimized(const ref<Expr> &Index) = 0;
-    virtual ref<Expr> Read(const UpdateList &Updates, 
+    virtual ref<Expr> Read(const UpdateList &Updates,
                            const ref<Expr> &Index) = 0;
     virtual ref<Expr> Select(const ref<Expr> &Cond,
                              const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
     virtual ref<Expr> Concat(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
-    virtual ref<Expr> Extract(const ref<Expr> &LHS, 
+    virtual ref<Expr> Extract(const ref<Expr> &LHS,
                               unsigned Offset, Expr::Width W) = 0;
     virtual ref<Expr> ZExt(const ref<Expr> &LHS, Expr::Width W) = 0;
     virtual ref<Expr> SExt(const ref<Expr> &LHS, Expr::Width W) = 0;

@@ -67,7 +67,7 @@ public:
 
 private:
   // unsupported, use copy constructor
-  ExecutionState &operator=(const ExecutionState&); 
+  ExecutionState &operator=(const ExecutionState&);
   std::map< std::string, std::string > fnAliases;
 
 public:
@@ -76,7 +76,7 @@ public:
   // objects.
   unsigned underConstrained;
   unsigned depth;
-  
+
   // pc - pointer to current instruction stream
   KInstIterator pc, prevPC;
   stack_ty stack;
@@ -94,7 +94,7 @@ public:
   std::map<const std::string*, std::set<unsigned> > coveredLines;
   PTreeNode *ptreeNode;
 
-  /// ordered list of symbolics: used to generate test cases. 
+  /// ordered list of symbolics: used to generate test cases.
   //
   // FIXME: Move to a shared list structure (not critical).
   std::vector< std::pair<const MemoryObject*, const Array*> > symbolics;
@@ -111,7 +111,7 @@ public:
   std::string getFnAlias(std::string fn);
   void addFnAlias(std::string old_fn, std::string new_fn);
   void removeFnAlias(std::string fn);
-  
+
 private:
   ExecutionState() : fakeState(false), underConstrained(0), ptreeNode(0) {}
 
@@ -125,15 +125,15 @@ public:
   ExecutionState(const ExecutionState& state);
 
   ~ExecutionState();
-  
+
   ExecutionState *branch();
 
   void pushFrame(KInstIterator caller, KFunction *kf);
   void popFrame();
 
   void addSymbolic(const MemoryObject *mo, const Array *array);
-  void addConstraint(ref<Expr> e) { 
-    constraints.addConstraint(e); 
+  void addConstraint(ref<Expr> e) {
+    constraints.addConstraint(e);
   }
 
   bool merge(const ExecutionState &b);

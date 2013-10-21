@@ -44,13 +44,13 @@ namespace expr {
       RSquare,                  ///< ']'
       Semicolon,                ///< ';'
       Unknown,                  ///< <other>
-      
+
       KWKindFirst=KWArray,
       KWKindLast=KWWidth
     };
 
     Kind        kind;           /// The token kind.
-    const char *start;          /// The beginning of the token string. 
+    const char *start;          /// The beginning of the token string.
     unsigned    length;         /// The length of the token.
     unsigned    line;           /// The line number of the start of this token.
     unsigned    column;         /// The column number at the start of
@@ -64,8 +64,8 @@ namespace expr {
     std::string getString() const { return std::string(start, length); }
 
     /// isKeyword - True if this token is a keyword.
-    bool isKeyword() const { 
-      return kind >= KWKindFirst && kind <= KWKindLast; 
+    bool isKeyword() const {
+      return kind >= KWKindFirst && kind <= KWKindLast;
     }
 
     // dump - Dump the token to stderr.
@@ -95,7 +95,7 @@ namespace expr {
     /// same requirements as SetTokenKind and additionally takes care
     /// of keyword recognition.
     Token &SetIdentifierTokenKind(Token &Result);
-  
+
     void SkipToEndOfLine();
 
     /// LexNumber - Lex a number which does not have a base specifier.

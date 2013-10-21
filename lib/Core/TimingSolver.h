@@ -17,7 +17,7 @@
 
 namespace klee {
   class ExecutionState;
-  class Solver;  
+  class Solver;
 
   /// TimingSolver - A simple class which wraps a solver and handles
   /// tracking the statistics that we care about.
@@ -32,7 +32,7 @@ namespace klee {
     /// \param _simplifyExprs - Whether expressions should be
     /// simplified (via the constraint manager interface) prior to
     /// querying.
-    TimingSolver(Solver *_solver, bool _simplifyExprs = true) 
+    TimingSolver(Solver *_solver, bool _simplifyExprs = true)
       : solver(_solver), simplifyExprs(_simplifyExprs) {}
     ~TimingSolver() {
       delete solver;
@@ -41,7 +41,7 @@ namespace klee {
     void setTimeout(double t) {
       solver->setCoreSolverTimeout(t);
     }
-    
+
     char *getConstraintLog(const Query& query) {
       return solver->getConstraintLog(query);
     }
@@ -56,10 +56,10 @@ namespace klee {
 
     bool mayBeFalse(const ExecutionState&, ref<Expr>, bool &result);
 
-    bool getValue(const ExecutionState &, ref<Expr> expr, 
+    bool getValue(const ExecutionState &, ref<Expr> expr,
                   ref<ConstantExpr> &result);
 
-    bool getInitialValues(const ExecutionState&, 
+    bool getInitialValues(const ExecutionState&,
                           const std::vector<const Array*> &objects,
                           std::vector< std::vector<unsigned char> > &result);
 

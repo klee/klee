@@ -57,7 +57,7 @@ namespace klee {
   private:
     TreeStreamWriter *writer;
     unsigned id;
-    
+
     TreeOStream(TreeStreamWriter &_writer, unsigned _id);
 
   public:
