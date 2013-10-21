@@ -63,8 +63,8 @@ namespace {
              llvm::cl::values(
              clEnumValN(PrintTokens, "print-tokens",
                         "Print tokens from the input file."),
-			clEnumValN(PrintSMTLIBv2, "print-smtlib",
-					   "Print parsed input file as SMT-LIBv2 query."),
+                        clEnumValN(PrintSMTLIBv2, "print-smtlib",
+                        "Print parsed input file as SMT-LIBv2 query."),
              clEnumValN(PrintAST, "print-ast",
                         "Print parsed AST nodes from the input file."),
              clEnumValN(Evaluate, "evaluate",
@@ -92,38 +92,37 @@ namespace {
               clEnumValEnd));
 
   cl::opt<bool>
-  UseDummySolver("use-dummy-solver",
-		   cl::init(false));
+  UseDummySolver("use-dummy-solver", cl::init(false));
 
   llvm::cl::opt<std::string> directoryToWriteQueryLogs("query-log-dir",llvm::cl::desc("The folder to write query logs to. Defaults is current working directory."),
-		                                               llvm::cl::init("."));
+                                                       llvm::cl::init("."));
 
 }
 
 static std::string getQueryLogPath(const char filename[])
 {
-	//check directoryToWriteLogs exists
-	struct stat s;
-	if( !(stat(directoryToWriteQueryLogs.c_str(),&s) == 0 && S_ISDIR(s.st_mode)) )
-	{
-		std::cerr << "Directory to log queries \"" << directoryToWriteQueryLogs << "\" does not exist!" << std::endl;
-		exit(1);
-	}
+  //check directoryToWriteLogs exists
+  struct stat s;
+  if( !(stat(directoryToWriteQueryLogs.c_str(),&s) == 0 && S_ISDIR(s.st_mode)) )
+  {
+    std::cerr << "Directory to log queries \"" << directoryToWriteQueryLogs << "\" does not exist!" << std::endl;
+    exit(1);
+  }
 
-	//check permissions okay
-	if( !( (s.st_mode & S_IWUSR) && getuid() == s.st_uid) &&
-	    !( (s.st_mode & S_IWGRP) && getgid() == s.st_gid) &&
-	    !( s.st_mode & S_IWOTH)
-	)
-	{
-		std::cerr << "Directory to log queries \"" << directoryToWriteQueryLogs << "\" is not writable!" << std::endl;
-		exit(1);
-	}
+  //check permissions okay
+  if( !( (s.st_mode & S_IWUSR) && getuid() == s.st_uid) &&
+      !( (s.st_mode & S_IWGRP) && getgid() == s.st_gid) &&
+      !( s.st_mode & S_IWOTH)
+  )
+  {
+    std::cerr << "Directory to log queries \"" << directoryToWriteQueryLogs << "\" is not writable!" << std::endl;
+    exit(1);
+  }
 
-	std::string path=directoryToWriteQueryLogs;
-	path+="/";
-	path+=filename;
-	return path;
+  std::string path=directoryToWriteQueryLogs;
+  path+="/";
+  path+=filename;
+  return path;
 }
 
 static std::string escapedString(const char *start, unsigned length) {
@@ -328,73 +327,73 @@ static bool printInputAsSMTLIBv2(const char *Filename,
                              const MemoryBuffer *MB,
                              ExprBuilder *Builder)
 {
-	//Parse the input file
-	std::vector<Decl*> Decls;
-	Parser *P = Parser::Create(Filename, MB, Builder);
-	P->SetMaxErrors(20);
-	while (Decl *D = P->ParseTopLevelDecl())
-	{
-		Decls.push_back(D);
-	}
+  //Parse the input file
+  std::vector<Decl*> Decls;
+  Parser *P = Parser::Create(Filename, MB, Builder);
+  P->SetMaxErrors(20);
+  while (Decl *D = P->ParseTopLevelDecl())
+  {
+    Decls.push_back(D);
+  }
 
-	bool success = true;
-	if (unsigned N = P->GetNumErrors())
-	{
-		std::cerr << Filename << ": parse failure: "
-				   << N << " errors.\n";
-		success = false;
-	}
+  bool success = true;
+  if (unsigned N = P->GetNumErrors())
+  {
+    std::cerr << Filename << ": parse failure: "
+           << N << " errors.\n";
+    success = false;
+  }
 
-	if (!success)
-	return false;
+  if (!success)
+  return false;
 
-	ExprSMTLIBPrinter* printer = createSMTLIBPrinter();
-	printer->setOutput(std::cout);
+  ExprSMTLIBPrinter* printer = createSMTLIBPrinter();
+  printer->setOutput(std::cout);
 
-	unsigned int queryNumber = 0;
-	//Loop over the declarations
-	for (std::vector<Decl*>::iterator it = Decls.begin(), ie = Decls.end(); it != ie; ++it)
-	{
-		Decl *D = *it;
-		if (QueryCommand *QC = dyn_cast<QueryCommand>(D))
-		{
-			//print line break to separate from previous query
-			if(queryNumber!=0) 	std::cout << std::endl;
+  unsigned int queryNumber = 0;
+  //Loop over the declarations
+  for (std::vector<Decl*>::iterator it = Decls.begin(), ie = Decls.end(); it != ie; ++it)
+  {
+    Decl *D = *it;
+    if (QueryCommand *QC = dyn_cast<QueryCommand>(D))
+    {
+      //print line break to separate from previous query
+      if(queryNumber!=0)   std::cout << std::endl;
 
-			//Output header for this query as a SMT-LIBv2 comment
-			std::cout << ";SMTLIBv2 Query " << queryNumber << std::endl;
+      //Output header for this query as a SMT-LIBv2 comment
+      std::cout << ";SMTLIBv2 Query " << queryNumber << std::endl;
 
-			/* Can't pass ConstraintManager constructor directly
-			 * as argument to Query object. Like...
-			 * query(ConstraintManager(QC->Constraints),QC->Query);
-			 *
-			 * For some reason if constructed this way the first
-			 * constraint in the constraint set is set to NULL and
-			 * will later cause a NULL pointer dereference.
-			 */
-			ConstraintManager constraintM(QC->Constraints);
-			Query query(constraintM,QC->Query);
-			printer->setQuery(query);
+      /* Can't pass ConstraintManager constructor directly
+       * as argument to Query object. Like...
+       * query(ConstraintManager(QC->Constraints),QC->Query);
+       *
+       * For some reason if constructed this way the first
+       * constraint in the constraint set is set to NULL and
+       * will later cause a NULL pointer dereference.
+       */
+      ConstraintManager constraintM(QC->Constraints);
+      Query query(constraintM,QC->Query);
+      printer->setQuery(query);
 
-			if(!QC->Objects.empty())
-				printer->setArrayValuesToGet(QC->Objects);
+      if(!QC->Objects.empty())
+        printer->setArrayValuesToGet(QC->Objects);
 
-			printer->generateOutput();
+      printer->generateOutput();
 
 
-			queryNumber++;
-		}
-	}
+      queryNumber++;
+    }
+  }
 
-	//Clean up
-	for (std::vector<Decl*>::iterator it = Decls.begin(),
-			ie = Decls.end(); it != ie; ++it)
-		delete *it;
-	delete P;
+  //Clean up
+  for (std::vector<Decl*>::iterator it = Decls.begin(),
+      ie = Decls.end(); it != ie; ++it)
+    delete *it;
+  delete P;
 
-	delete printer;
+  delete printer;
 
-	return true;
+  return true;
 }
 
 int main(int argc, char **argv) {
