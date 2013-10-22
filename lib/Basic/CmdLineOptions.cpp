@@ -73,5 +73,22 @@ llvm::cl::list<QueryLoggingSolverType> queryLoggingOptions(
     llvm::cl::CommaSeparated
 );
 
+#ifdef SUPPORT_METASMT
+
+llvm::cl::opt<klee::MetaSMTBackendType>
+UseMetaSMT("use-metasmt",
+           llvm::cl::desc("Use MetaSMT as an underlying SMT solver and specify the solver backend type."),
+           llvm::cl::values(clEnumValN(METASMT_BACKEND_NONE, "none", "Don't use metaSMT"),
+                      clEnumValN(METASMT_BACKEND_STP, "stp", "Use metaSMT with STP"),
+                      clEnumValN(METASMT_BACKEND_Z3, "z3", "Use metaSMT with Z3"),
+                      clEnumValN(METASMT_BACKEND_BOOLECTOR, "btor", "Use metaSMT with Boolector"),
+                      clEnumValEnd),  
+           llvm::cl::init(METASMT_BACKEND_NONE));
+
+#endif /* SUPPORT_METASMT */
+
 }
+
+
+
 

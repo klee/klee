@@ -219,6 +219,21 @@ namespace klee {
     virtual void setCoreSolverTimeout(double timeout);
   };
 
+  
+#ifdef SUPPORT_METASMT
+  
+  template<typename SolverContext>
+  class MetaSMTSolver : public Solver {
+  public:
+    MetaSMTSolver(bool useForked, bool optimizeDivides);
+    virtual ~MetaSMTSolver();
+  
+    virtual char *getConstraintLog(const Query&);
+    virtual void setCoreSolverTimeout(double timeout);
+};
+
+#endif /* SUPPORT_METASMT */
+
   /* *** */
 
   /// createValidatingSolver - Create a solver which will validate all query

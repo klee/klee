@@ -7,6 +7,7 @@
 #define KLEE_COMMANDLINE_H
 
 #include "llvm/Support/CommandLine.h"
+#include "klee/Config/config.h"
 
 namespace klee {
 
@@ -43,6 +44,19 @@ enum QueryLoggingSolverType
  */
 extern llvm::cl::list<QueryLoggingSolverType> queryLoggingOptions;
 
+#ifdef SUPPORT_METASMT
+
+enum MetaSMTBackendType
+{
+    METASMT_BACKEND_NONE,
+    METASMT_BACKEND_STP,
+    METASMT_BACKEND_Z3,
+    METASMT_BACKEND_BOOLECTOR
+};
+
+extern llvm::cl::opt<klee::MetaSMTBackendType> UseMetaSMT;
+
+#endif /* SUPPORT_METASMT */
 
 //A bit of ugliness so we can use cl::list<> like cl::bits<>, see queryLoggingOptions
 template <typename T>
