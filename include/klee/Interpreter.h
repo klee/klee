@@ -51,11 +51,13 @@ public:
     std::string LibraryDir;
     bool Optimize;
     bool CheckDivZero;
+    bool CheckOvershift;
 
     ModuleOptions(const std::string& _LibraryDir, 
-                  bool _Optimize, bool _CheckDivZero)
+                  bool _Optimize, bool _CheckDivZero,
+                  bool _CheckOvershift)
       : LibraryDir(_LibraryDir), Optimize(_Optimize), 
-        CheckDivZero(_CheckDivZero) {}
+        CheckDivZero(_CheckDivZero), CheckOvershift(_CheckOvershift) {}
   };
 
   enum LogType
