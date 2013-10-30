@@ -57,21 +57,20 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/system_error.h"
 #endif
-#include <iostream>
-#include <fstream>
-#include <cerrno>
+
 #include <dirent.h>
+#include <signal.h>
 #include <unistd.h>
-#include <errno.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
-#include <signal.h>
 
+#include <cerrno>
+#include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <iterator>
-#include <fstream>
 #include <sstream>
-#include <iomanip>
+
 
 using namespace llvm;
 using namespace klee;
