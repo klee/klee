@@ -71,6 +71,7 @@
 #include <iterator>
 #include <fstream>
 #include <sstream>
+#include <iomanip>
 
 using namespace llvm;
 using namespace klee;
@@ -226,7 +227,7 @@ private:
   TreeStreamWriter *m_pathWriter, *m_symPathWriter;
   std::ostream *m_infoFile;
 
-  char m_outputDirectory[1024];
+  sys::Path m_outputDirectory;
   unsigned m_testIndex;  // number of tests written so far
   unsigned m_pathsExplored; // number of paths explored so far
 
@@ -271,6 +272,7 @@ KleeHandler::KleeHandler(int argc, char **argv)
     m_pathWriter(0),
     m_symPathWriter(0),
     m_infoFile(0),
+    m_outputDirectory(),
     m_testIndex(0),
     m_pathsExplored(0),
     m_argc(argc),
@@ -302,17 +304,15 @@ KleeHandler::KleeHandler(int argc, char **argv)
     std::cerr << "KLEE: output directory = \"" << dirname << "\"\n";
 
     llvm::sys::Path klee_last(directory);
-    klee_last.appendComponent("klee-last");
-      
-    if ((unlink(klee_last.c_str()) < 0) && (errno != ENOENT)) {
-      perror("Cannot unlink klee-last");
-      assert(0 && "exiting.");
-    }
+    if(!klee_last.appendComponent("klee-last"))
+      klee_error("cannot create path name for klee-last");
+
+    if ((unlink(klee_last.c_str()) < 0) && (errno != ENOENT))
+      klee_error("cannot unlink klee-last: %s", strerror(errno));
     
-    if (symlink(dirname.c_str(), klee_last.c_str()) < 0) {
-      perror("Cannot make symlink");
-      assert(0 && "exiting.");
-    }
+    if (symlink(dirname.c_str(), klee_last.c_str()) < 0)
+      klee_error("cannot create klee-last symlink: %s", strerror(errno));
+
   } else {
     theDir = OutputDir;
   }
@@ -324,26 +324,22 @@ KleeHandler::KleeHandler(int argc, char **argv)
   if (!sys::path::is_absolute(p.c_str())) {
 #endif
     sys::Path cwd = sys::Path::GetCurrentDirectory();
-    cwd.appendComponent(theDir);
+    if(!cwd.appendComponent(theDir))
+      klee_error("cannot create absolute path name for output directory");
     p = cwd;
   }
-  strcpy(m_outputDirectory, p.c_str());
+  m_outputDirectory = p;
 
-  if (mkdir(m_outputDirectory, 0775) < 0) {
-    std::cerr << "KLEE: ERROR: Unable to make output directory: \"" 
-               << m_outputDirectory 
-               << "\", refusing to overwrite.\n";
-    exit(1);
-  }
+  if (mkdir(m_outputDirectory.c_str(), 0775) < 0)
+    klee_error("cannot create directory \"%s\": %s", m_outputDirectory.c_str(), strerror(errno));
 
-  char fname[1024];
-  snprintf(fname, sizeof(fname), "%s/warnings.txt", m_outputDirectory);
-  klee_warning_file = fopen(fname, "w");
-  assert(klee_warning_file);
+  std::string file_path = getOutputFilename("warnings.txt");
+  if ((klee_warning_file = fopen(file_path.c_str(), "w")) == NULL)
+    klee_error("cannot open file \"%s\": %s", file_path.c_str(), strerror(errno));
 
-  snprintf(fname, sizeof(fname), "%s/messages.txt", m_outputDirectory);
-  klee_message_file = fopen(fname, "w");
-  assert(klee_message_file);
+  file_path = getOutputFilename("messages.txt");
+  if ((klee_message_file = fopen(file_path.c_str(), "w")) == NULL)
+    klee_error("cannot open file \"%s\": %s", file_path.c_str(), strerror(errno));
 
   m_infoFile = openOutputFile("info");
 }
@@ -371,9 +367,12 @@ void KleeHandler::setInterpreter(Interpreter *i) {
 }
 
 std::string KleeHandler::getOutputFilename(const std::string &filename) {
-  char outfile[1024];
-  sprintf(outfile, "%s/%s", m_outputDirectory, filename.c_str());
-  return outfile;
+  sys::Path path(m_outputDirectory);
+  if(!path.appendComponent(filename)) {
+    klee_error("cannot create path name for \"%s\"", filename.c_str());
+  }
+
+  return path.str();
 }
 
 std::ostream *KleeHandler::openOutputFile(const std::string &filename) {
@@ -394,15 +393,13 @@ std::ostream *KleeHandler::openOutputFile(const std::string &filename) {
 }
 
 std::string KleeHandler::getTestFilename(const std::string &suffix, unsigned id) {
-  char filename[1024];
-  sprintf(filename, "test%06d.%s", id, suffix.c_str());
-  return getOutputFilename(filename);
+  std::stringstream filename;
+  filename << "test" << std::setfill('0') << std::setw(6) << id << '.' << suffix;
+  return filename.str();
 }
 
 std::ostream *KleeHandler::openTestFile(const std::string &suffix, unsigned id) {
-  char filename[1024];
-  sprintf(filename, "test%06d.%s", id, suffix.c_str());
-  return openOutputFile(filename);
+  return openOutputFile(getTestFilename(suffix, id));
 }
 
 
@@ -444,7 +441,7 @@ void KleeHandler::processTestCase(const ExecutionState &state,
         std::copy(out[i].second.begin(), out[i].second.end(), o->bytes);
       }
       
-      if (!kTest_toFile(&b, getTestFilename("ktest", id).c_str())) {
+      if (!kTest_toFile(&b, getOutputFilename(getTestFilename("ktest", id)).c_str())) {
         klee_warning("unable to write output test case, losing it");
       }
       
