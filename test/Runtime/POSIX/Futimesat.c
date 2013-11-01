@@ -6,7 +6,9 @@
 #include <assert.h>
 #include <fcntl.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <time.h>
+#include <unistd.h>
 
 int main(int argc, char **argv) {
   int r;
