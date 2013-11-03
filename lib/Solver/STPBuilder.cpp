@@ -223,6 +223,10 @@ ExprHandle STPBuilder::bvVarLeftShift(ExprHandle expr, ExprHandle amount, unsign
                      bvLeftShift(expr, i, shiftBits),
                      res);
   }
+  res = vc_iteExpr(vc,
+                   vc_bvLtExpr(vc, amount, bvConst32(32, width)),
+                   res,
+                   bvZero(width));
   return res;
 }
 
