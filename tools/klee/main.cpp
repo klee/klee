@@ -65,6 +65,7 @@
 #include <sys/wait.h>
 
 #include <cerrno>
+#include <cstring>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -303,17 +304,15 @@ KleeHandler::KleeHandler(int argc, char **argv)
     std::cerr << "KLEE: output directory = \"" << dirname << "\"\n";
 
     llvm::sys::Path klee_last(directory);
-    klee_last.appendComponent("klee-last");
-      
-    if ((unlink(klee_last.c_str()) < 0) && (errno != ENOENT)) {
-      perror("Cannot unlink klee-last");
-      assert(0 && "exiting.");
-    }
+    if(!klee_last.appendComponent("klee-last"))
+      klee_error("cannot create path name for klee-last");
+
+    if ((unlink(klee_last.c_str()) < 0) && (errno != ENOENT))
+      klee_error("cannot unlink klee-last: %s", strerror(errno));
     
-    if (symlink(dirname.c_str(), klee_last.c_str()) < 0) {
-      perror("Cannot make symlink");
-      assert(0 && "exiting.");
-    }
+    if (symlink(dirname.c_str(), klee_last.c_str()) < 0)
+      klee_error("cannot create klee-last symlink: %s", strerror(errno));
+
   } else {
     theDir = OutputDir;
   }
@@ -325,27 +324,22 @@ KleeHandler::KleeHandler(int argc, char **argv)
   if (!sys::path::is_absolute(p.c_str())) {
 #endif
     sys::Path cwd = sys::Path::GetCurrentDirectory();
-    cwd.appendComponent(theDir);
+    if(!cwd.appendComponent(theDir))
+      klee_error("cannot create absolute path name for output directory");
     p = cwd;
   }
   m_outputDirectory = p;
 
-  if (mkdir(m_outputDirectory.c_str(), 0775) < 0) {
-    std::cerr << "KLEE: ERROR: Unable to make output directory: \"" 
-               << m_outputDirectory.str()
-               << "\", refusing to overwrite.\n";
-    exit(1);
-  }
+  if (mkdir(m_outputDirectory.c_str(), 0775) < 0)
+    klee_error("cannot create directory \"%s\": %s", m_outputDirectory.c_str(), strerror(errno));
 
-  sys::Path file_path(m_outputDirectory);
-  assert(file_path.appendComponent("warnings.txt"));
-  klee_warning_file = fopen(file_path.c_str(), "w");
-  assert(klee_warning_file);
+  std::string file_path = getOutputFilename("warnings.txt");
+  if ((klee_warning_file = fopen(file_path.c_str(), "w")) == NULL)
+    klee_error("cannot open file \"%s\": %s", file_path.c_str(), strerror(errno));
 
-  file_path = m_outputDirectory;
-  assert(file_path.appendComponent("messages.txt"));
-  klee_message_file = fopen(file_path.c_str(), "w");
-  assert(klee_message_file);
+  file_path = getOutputFilename("messages.txt");
+  if ((klee_message_file = fopen(file_path.c_str(), "w")) == NULL)
+    klee_error("cannot open file \"%s\": %s", file_path.c_str(), strerror(errno));
 
   m_infoFile = openOutputFile("info");
 }
@@ -375,7 +369,7 @@ void KleeHandler::setInterpreter(Interpreter *i) {
 std::string KleeHandler::getOutputFilename(const std::string &filename) {
   sys::Path path(m_outputDirectory);
   if(!path.appendComponent(filename)) {
-    klee_error("error creating path for \"%s\"", filename.c_str());
+    klee_error("cannot create path name for \"%s\"", filename.c_str());
   }
 
   return path.str();
