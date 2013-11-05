@@ -35,6 +35,7 @@
 #if LLVM_VERSION_CODE < LLVM_VERSION(2, 7)
 #include "llvm/ModuleProvider.h"
 #endif
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Bitcode/ReaderWriter.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ManagedStatic.h"
@@ -276,31 +277,47 @@ KleeHandler::KleeHandler(int argc, char **argv)
     m_pathsExplored(0),
     m_argc(argc),
     m_argv(argv) {
-  std::string theDir;
 
   if (OutputDir=="") {
     llvm::sys::Path directory(InputFile);
-    std::string dirname = "";
+    std::stringstream dirname;
     directory.eraseComponent();
     
     if (directory.isEmpty())
       directory.set(".");
     
-    for (int i = 0; ; i++) {
-      char buf[256], tmp[64];
-      sprintf(tmp, "klee-out-%d", i);
-      dirname = tmp;
-      sprintf(buf, "%s/%s", directory.c_str(), tmp);
-      theDir = buf;
+    for (int i = 0; i< INT_MAX ; i++) {
+      dirname << "klee-out-";
+      dirname << i;
+
+      m_outputDirectory = llvm::sys::Path(directory); // Copy
+      if (!m_outputDirectory.appendComponent(dirname.str()))
+        klee_error("Failed to append \"%s\" to \"%s\"", dirname.str().c_str(), directory.c_str());
       
-      if (DIR *dir = opendir(theDir.c_str())) {
-        closedir(dir);
-      } else {
-        break;
+      bool isDir = true;
+      llvm::error_code e = llvm::sys::fs::exists(m_outputDirectory.str(), isDir);
+      if ( e != llvm::errc::success )
+        klee_error("Failed to check if \"%s\" exists.", m_outputDirectory.str().c_str());
+
+      if (!isDir)
+      {
+        break; // Found an available directory name
       }
+
+      // Warn the user if the klee-out-* exists but is not a directory
+      e = llvm::sys::fs::is_directory(m_outputDirectory.str(), isDir);
+      if ( e == llvm::errc::success && !isDir )
+        klee_warning("A file \"%s\" exists, but it is not a directory",
+                     m_outputDirectory.str().c_str());
+
+      dirname.str(""); // Clear
+      m_outputDirectory.clear();
     }    
 
-    std::cerr << "KLEE: output directory = \"" << dirname << "\"\n";
+    if (m_outputDirectory.empty())
+      klee_error("Failed to find available output directory in %s", dirname.str().c_str());
+
+    std::cerr << "KLEE: output directory = \"" << dirname.str() << "\"\n";
 
     llvm::sys::Path klee_last(directory);
     if(!klee_last.appendComponent("klee-last"))
@@ -309,25 +326,21 @@ KleeHandler::KleeHandler(int argc, char **argv)
     if ((unlink(klee_last.c_str()) < 0) && (errno != ENOENT))
       klee_error("cannot unlink klee-last: %s", strerror(errno));
     
-    if (symlink(dirname.c_str(), klee_last.c_str()) < 0)
+    if (symlink(dirname.str().c_str(), klee_last.c_str()) < 0)
       klee_error("cannot create klee-last symlink: %s", strerror(errno));
 
   } else {
-    theDir = OutputDir;
+    if (!m_outputDirectory.set(OutputDir))
+      klee_error("cannot use klee output directory: %s", OutputDir.c_str());
   }
   
-  sys::Path p(theDir);
-#if LLVM_VERSION_CODE < LLVM_VERSION(3, 1)
-  if (!p.isAbsolute()) {
-#else
-  if (!sys::path::is_absolute(p.c_str())) {
-#endif
+  if (!sys::path::is_absolute(m_outputDirectory.c_str())) {
     sys::Path cwd = sys::Path::GetCurrentDirectory();
-    if(!cwd.appendComponent(theDir))
+    if(!cwd.appendComponent( m_outputDirectory.c_str()))
       klee_error("cannot create absolute path name for output directory");
-    p = cwd;
+
+    m_outputDirectory = cwd;
   }
-  m_outputDirectory = p;
 
   if (mkdir(m_outputDirectory.c_str(), 0775) < 0)
     klee_error("cannot create directory \"%s\": %s", m_outputDirectory.c_str(), strerror(errno));
