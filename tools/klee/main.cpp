@@ -30,6 +30,7 @@
 #include "llvm/Instructions.h"
 #if LLVM_VERSION_CODE >= LLVM_VERSION(2, 7)
 #include "llvm/LLVMContext.h"
+#include "llvm/Support/FileSystem.h"
 #endif
 #endif
 #if LLVM_VERSION_CODE < LLVM_VERSION(2, 7)
@@ -1013,6 +1014,12 @@ static void replaceOrRenameFunction(llvm::Module *module,
 }
 
 static llvm::Module *linkWithUclibc(llvm::Module *mainModule) {
+  // Ensure that KLEE_UCLIBC exists
+  bool uclibcRootExists=false;
+  llvm::sys::fs::is_directory(KLEE_UCLIBC, uclibcRootExists);
+  if (!uclibcRootExists)
+    klee_error("Cannot link with uclibc. KLEE_UCLIBC (\"" KLEE_UCLIBC "\") is not a directory.");
+
   Function *f;
   // force import of __uClibc_main
   mainModule->getOrInsertFunction("__uClibc_main",
