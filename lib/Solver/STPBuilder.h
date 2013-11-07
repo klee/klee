@@ -104,7 +104,7 @@ private:
   ExprHandle bvRightShift(ExprHandle expr, unsigned shift);
   ExprHandle bvVarLeftShift(ExprHandle expr, ExprHandle shift);
   ExprHandle bvVarRightShift(ExprHandle expr, ExprHandle shift);
-  ExprHandle bvVarArithRightShift(ExprHandle expr, ExprHandle amount, unsigned width);
+  ExprHandle bvVarArithRightShift(ExprHandle expr, ExprHandle shift);
 
   ExprHandle constructAShrByConstant(ExprHandle expr, unsigned shift, 
                                      ExprHandle isSigned, unsigned shiftBits);
