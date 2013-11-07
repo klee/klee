@@ -79,13 +79,6 @@ class STPBuilder {
   STPArrayExprHash _arr_hash;
 
 private:  
-  unsigned getShiftBits(unsigned amount) {
-    unsigned bits = 1;
-    amount--;
-    while (amount >>= 1)
-      bits++;
-    return bits;
-  }
 
   ExprHandle bvOne(unsigned width);
   ExprHandle bvZero(unsigned width);
