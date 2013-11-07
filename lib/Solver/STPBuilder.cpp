@@ -228,22 +228,23 @@ ExprHandle STPBuilder::bvVarLeftShift(ExprHandle expr, ExprHandle shift) {
 }
 
 // logical right shift by a variable amount on an expression of the specified width
-ExprHandle STPBuilder::bvVarRightShift(ExprHandle expr, ExprHandle amount, unsigned width) {
+ExprHandle STPBuilder::bvVarRightShift(ExprHandle expr, ExprHandle shift) {
+  unsigned width = vc_getBVLength(vc, expr);
   ExprHandle res = bvZero(width);
-
-  int shiftBits = getShiftBits( width );
-
-  //get the shift amount (looking only at the bits appropriate for the given width)
-  ExprHandle shift = vc_bvExtract( vc, amount, shiftBits - 1, 0 ); 
 
   //construct a big if-then-elif-elif-... with one case per possible shift amount
   for( int i=width-1; i>=0; i-- ) {
     res = vc_iteExpr(vc,
-                     eqExpr(shift, bvConst32(shiftBits, i)),
-                     bvRightShift(expr, i, shiftBits),
+                     eqExpr(shift, bvConst32(width, i)),
+                     bvRightShift(expr, i, width),
                      res);
   }
 
+  // If overshifting, shift to zero
+  res = vc_iteExpr(vc,
+                   vc_bvLtExpr(vc, shift, bvConst32(width, width)),
+                   res,
+                   bvZero(width));
   return res;
 }
 
@@ -367,9 +368,9 @@ ExprHandle STPBuilder::constructUDivByConstant(ExprHandle expr_n, unsigned width
 
   // n/d = (((n - t1) >> sh1) + t1) >> sh2;
   ExprHandle n_minus_t1  = vc_bvMinusExpr( vc, width, expr_n, t1 );
-  ExprHandle shift_sh1   = bvVarRightShift( n_minus_t1, expr_sh1, 32 );
+  ExprHandle shift_sh1   = bvVarRightShift( n_minus_t1, expr_sh1);
   ExprHandle plus_t1     = vc_bvPlusExpr( vc, width, shift_sh1, t1 );
-  ExprHandle res         = bvVarRightShift( plus_t1, expr_sh2, 32 );
+  ExprHandle res         = bvVarRightShift( plus_t1, expr_sh2);
 
   return res;
 }
@@ -407,7 +408,7 @@ ExprHandle STPBuilder::constructSDivByConstant(ExprHandle expr_n, unsigned width
   // Improved variable arithmetic right shift: sign extend, shift,
   // extract.
   ExprHandle extend_npm   = vc_bvSignExtend( vc, n_plus_mulsh, 64 );
-  ExprHandle shift_npm    = bvVarRightShift( extend_npm, expr_shpost, 64 );
+  ExprHandle shift_npm    = bvVarRightShift( extend_npm, expr_shpost);
   ExprHandle shift_shpost = vc_bvExtract( vc, shift_npm, 31, 0 ); //lower 32-bits
 
   // XSIGN(n) is -1 if n is negative, positive one otherwise
@@ -830,7 +831,7 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
     } else {
       int shiftWidth;
       ExprHandle amount = construct(lse->right, &shiftWidth);
-      return bvVarRightShift( left, amount, *width_out );
+      return bvVarRightShift( left, amount);
     }
   }
 
