@@ -181,6 +181,163 @@ AC_MSG_RESULT([$llvm_build_mode])
 AC_SUBST(LLVM_BUILD_MODE,$llvm_build_mode)
 
 dnl **************************************************************************
+dnl Detect a LLVM Bitcode compiler for building KLEE runtime library
+
+dnl Check for clang built with llvm build
+AC_MSG_CHECKING([LLVM Bitcode compiler])
+klee_llvm_bc_c_compiler=""
+klee_llvm_bc_cxx_compiler=""
+
+AC_ARG_WITH([llvmcc],
+            AS_HELP_STRING([--with-llvmcc],
+                           [Set the path to the C LLVM bitcode compiler to use (Default: auto-detect). If set, --with-llvmcxx= must be set too.]
+                          ),
+            [],
+            [with_llvmcc=none]
+           )
+
+AC_ARG_WITH([llvmcxx],
+            AS_HELP_STRING([--with-llvmcxx],
+                           [Set the path to the C++ LLVM bitcode compiler to use (Default: auto-detect). If set, --with-llvmcc= must be set too.]
+                          ),
+            [],
+            [with_llvmcxx=none]
+           )
+if test \( "X$with_llvmcc" != Xnone -a "X$with_llvmcxx" = Xnone \) -o \( "X$with_llvmcxx" != Xnone -a "X$with_llvmcc" = Xnone \) ; then
+    AC_MSG_ERROR([You must set both --with-llvmcc= and --with-llvmcxx= or set neither])
+fi
+
+if test X$with_llvmcc = Xnone ; then
+    dnl Try to automatically find compiler
+    
+    dnl Try Clang inside the LLVM build
+    if test -x "$llvm_obj/$llvm_build_mode/bin/clang" ; then
+        AC_MSG_RESULT([Found clang in LLVM Build])
+        klee_llvm_bc_c_compiler="$llvm_obj/$llvm_build_mode/bin/clang"
+
+        if test -x "$llvm_obj/$llvm_build_mode/bin/clang++" ; then
+            klee_llvm_bc_cxx_compiler="$llvm_obj/$llvm_build_mode/bin/clang++"
+        else
+            AC_MSG_ERROR([Found clang but could not find clang++])
+        fi
+    fi
+
+    dnl Try llvm-gcc in PATH
+    if test "X${klee_llvm_bc_c_compiler}" = X ; then
+        AC_MSG_RESULT([]) # Force a new line
+        AC_CHECK_PROG(llvm_gcc,llvm-gcc,FOUND,NOT_FOUND)
+        if test ${llvm_gcc} = FOUND ; then
+            klee_llvm_bc_c_compiler=`which llvm-gcc`
+
+            AC_CHECK_PROG(llvm_gxx,llvm-g++,FOUND,NOT_FOUND)
+            if test ${llvm_gxx} = FOUND; then
+                klee_llvm_bc_cxx_compiler=`which llvm-g++`
+            else
+                AC_MSG_ERROR([Found llvm-gcc but could not find llvm-g++ in PATH])
+            fi
+        fi
+
+    fi
+
+    dnl Try clang in PATH
+    if test "X${klee_llvm_bc_c_compiler}" = X ; then
+        AC_MSG_RESULT([]) # Force a new line
+        AC_CHECK_PROG(clang,clang,FOUND,NOT_FOUND)
+        if test ${clang} = FOUND ; then
+            klee_llvm_bc_c_compiler=`which clang`
+
+            AC_CHECK_PROG(clang_cxx,clang++,FOUND,NOT_FOUND)
+            if test ${clang_cxx} = FOUND; then
+                klee_llvm_bc_cxx_compiler=`which clang++`
+            else
+                AC_MSG_ERROR([Found clang but could not find clang++ in PATH])
+            fi
+        fi
+
+    fi
+
+    if test X"${klee_llvm_bc_c_compiler}" = X ; then
+        AC_MSG_ERROR([Could not find a C LLVM Bitcode compiler. Did you try building Clang in the LLVM Build directory or putting llvm-gcc or clang in your path?])
+    fi
+
+    if test X"${klee_llvm_bc_cxx_compiler}" = X ; then
+        AC_MSG_ERROR([Could not find a C++ LLVM Bitcode compiler. Did you try building Clang in the LLVM Build directory or putting llvm-gcc or clang in your path?])
+    fi
+
+else
+    dnl Use user supplied values
+    klee_llvm_bc_c_compiler="$with_llvmcc"
+    klee_llvm_bc_cxx_compiler="$with_llvmcxx"
+
+    if test \! -x "${klee_llvm_bc_c_compiler}"; then
+        AC_MSG_ERROR([--with-llvmcc= supplied compiler does not exist])
+    fi
+
+    if test \! -x "${klee_llvm_bc_cxx_compiler}"; then
+        AC_MSG_ERROR([--with-llvmcxx= supplied compiler does not exist])
+    fi
+    AC_MSG_RESULT([Using user supplied LLVM bitcode compilers.])
+fi
+
+dnl Tell the user what we are going to try and use
+AC_MSG_RESULT([Using C llvm compiler : $klee_llvm_bc_c_compiler])
+AC_MSG_RESULT([Using C++ llvm compiler : $klee_llvm_bc_cxx_compiler])
+
+dnl Test that the bitcode compiler works
+
+dnl Function for checking bitcode compiler works
+dnl $1 : compiler to invoke
+dnl $2 : source code extension (e.g. cpp or c)
+dnl $3 : Compiler string (e.g. CXX or C)
+function klee_check_bc()
+{
+    AC_MSG_CHECKING([${3} LLVM Bitcode compiler works])
+    dnl FIXME: write to tmp directory instead of binary build dir
+    klee_bc_test_file="./.klee_llvm_bitcode_test.${2}"
+
+    echo "int main() { return 0;}" > "${klee_bc_test_file}"
+    "${1}" -emit-llvm -c "${klee_bc_test_file}" -o "${klee_bc_test_file}.bc"
+    if test $? -ne 0 ; then
+        AC_MSG_ERROR([Failed running ${3} LLVM Bitcode compiler])
+    fi
+
+    if test \! -e "${klee_bc_test_file}.bc"; then
+        AC_MSG_ERROR([ ${3} LLVM Bitcode compiler did not produce any output])
+    fi
+
+    dnl Convert bitcode to human readable form as a hacky check
+    dnl that the version of LLVM we are configuring with can
+    dnl parse the LLVM bitcode produced by the detected compiler
+    if test -x "$llvm_obj/$llvm_build_mode/bin/llvm-dis" ; then
+        "$llvm_obj/$llvm_build_mode/bin/llvm-dis" -o "${klee_bc_test_file}.ll" "${klee_bc_test_file}.bc"
+
+        if test $? -ne 0; then
+            AC_MSG_ERROR([Failed converting LLVM Bitcode to LLVM assembly. Maybe your LLVM versions do not match?])
+        fi
+
+        if test -e "${klee_bc_test_file}.ll" ; then
+            AC_MSG_RESULT([Success])
+            rm "${klee_bc_test_file}" "${klee_bc_test_file}.bc" "${klee_bc_test_file}.ll"
+        else
+            rm "${klee_bc_test_file}" "${klee_bc_test_file}.bc" "${klee_bc_test_file}.ll"
+            AC_MSG_ERROR([Failed converting LLVM Bitcode to LLVM assembly. Maybe your LLVM versions do not match?])
+        fi
+        
+    else
+        rm "${klee_bc_test_file}" "${klee_bc_test_file}.bc"
+        AC_MSG_ERROR([Could not find llvm-dis])
+    fi
+}
+
+dnl Invoke previously defined function to check the LLVM bitcode compilers
+klee_check_bc "${klee_llvm_bc_c_compiler}" "c" "C"
+klee_check_bc "${klee_llvm_bc_cxx_compiler}" "cpp" "CXX"
+
+dnl Set variable for Makefile.config
+AC_SUBST(KLEE_BITCODE_C_COMPILER,$klee_llvm_bc_c_compiler)
+AC_SUBST(KLEE_BITCODE_CXX_COMPILER,$klee_llvm_bc_cxx_compiler)
+
+dnl **************************************************************************
 dnl User option to enable uClibc support.
 
 AC_ARG_WITH(uclibc,

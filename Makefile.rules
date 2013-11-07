@@ -433,24 +433,9 @@ endif
 # LLVM Capable Compiler
 #--------------------------------------------------------------------
 
-ifeq ($(LLVMCC_OPTION),llvm-gcc)
-  LLVMCC := $(LLVMGCC)
-  LLVMCXX := $(LLVMGXX)
-else
-  ifeq ($(LLVMCC_OPTION),clang)
-    ifneq ($(CLANGPATH),)
-      LLVMCC := $(CLANGPATH)
-      LLVMCXX := $(CLANGXXPATH)
-    else
-      ifeq ($(ENABLE_BUILT_CLANG),1)
-        LLVMCC := $(LLVMToolDir)/clang
-        LLVMCXX := $(LLVMToolDir)/clang++
-      endif
-    endif
-  else
-    LLVMCC := $(LLVMGCC)
-    LLVMCXX := $(LLVMGXX)
-  endif
+# Use detected compiler at KLEE configure time, not llvm configure time
+LLVMCC := $(KLEE_BITCODE_C_COMPILER)
+LLVMCXX := $(KLEE_BITCODE_CXX_COMPILER)
 
   ifeq ($(wildcard $(LLVMCC)),)
     $(warning Provided Compiler "$(LLVMCC)" is not found. Provide full path!)
@@ -458,7 +443,6 @@ else
   ifeq ($(wildcard $(LLVMCXX)),)
     $(warning Provided Compiler "$(LLVMCXX)" is not found. Provide full path!)
   endif
-endif
 
 #--------------------------------------------------------------------
 # Full Paths To Compiled Tools and Utilities
