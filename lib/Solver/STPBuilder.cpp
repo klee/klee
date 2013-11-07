@@ -174,14 +174,13 @@ ExprHandle STPBuilder::eqExpr(ExprHandle a, ExprHandle b) {
 }
 
 // logical right shift
-ExprHandle STPBuilder::bvRightShift(ExprHandle expr, unsigned amount, unsigned shiftBits) {
+ExprHandle STPBuilder::bvRightShift(ExprHandle expr, unsigned shift) {
   unsigned width = vc_getBVLength(vc, expr);
-  unsigned shift = amount & ((1<<shiftBits) - 1);
 
   if (shift==0) {
     return expr;
   } else if (shift>=width) {
-    return bvZero(width);
+    return bvZero(width); // Overshift to zero
   } else {
     return vc_bvConcatExpr(vc,
                            bvZero(shift),
@@ -236,7 +235,7 @@ ExprHandle STPBuilder::bvVarRightShift(ExprHandle expr, ExprHandle shift) {
   for( int i=width-1; i>=0; i-- ) {
     res = vc_iteExpr(vc,
                      eqExpr(shift, bvConst32(width, i)),
-                     bvRightShift(expr, i, width),
+                     bvRightShift(expr, i),
                      res);
   }
 
@@ -294,7 +293,7 @@ ExprHandle STPBuilder::constructAShrByConstant(ExprHandle expr,
                       ExprHandle(vc_bvConcatExpr(vc,
                                                  bvMinusOne(shift),
                                                  bvExtract(expr, width - 1, shift))),
-                      bvRightShift(expr, shift, shiftBits));
+                      bvRightShift(expr, shift));
   }
 }
 
@@ -660,8 +659,7 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
       
         if (bits64::isPowerOfTwo(divisor)) {
           return bvRightShift(left,
-                              bits64::indexOfSingleBit(divisor),
-                              getShiftBits(*width_out));
+                              bits64::indexOfSingleBit(divisor));
         } else if (optimizeDivides) {
           if (*width_out == 32) //only works for 32-bit division
             return constructUDivByConstant( left, *width_out, 
@@ -822,12 +820,10 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
   case Expr::LShr: {
     LShrExpr *lse = cast<LShrExpr>(e);
     ExprHandle left = construct(lse->left, width_out);
-    unsigned shiftBits = getShiftBits(*width_out);
     assert(*width_out!=1 && "uncanonicalized lshr");
 
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(lse->right)) {
-      return bvRightShift(left, (unsigned) CE->getLimitedValue(), 
-                          shiftBits);
+      return bvRightShift(left, (unsigned) CE->getLimitedValue());
     } else {
       int shiftWidth;
       ExprHandle amount = construct(lse->right, &shiftWidth);

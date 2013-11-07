@@ -101,7 +101,7 @@ private:
 
   //logical left and right shift (not arithmetic)
   ExprHandle bvLeftShift(ExprHandle expr, unsigned shift);
-  ExprHandle bvRightShift(ExprHandle expr, unsigned amount, unsigned shiftBits);
+  ExprHandle bvRightShift(ExprHandle expr, unsigned shift);
   ExprHandle bvVarLeftShift(ExprHandle expr, ExprHandle shift);
   ExprHandle bvVarRightShift(ExprHandle expr, ExprHandle shift);
   ExprHandle bvVarArithRightShift(ExprHandle expr, ExprHandle amount, unsigned width);
