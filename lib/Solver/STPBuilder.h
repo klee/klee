@@ -107,7 +107,7 @@ private:
   ExprHandle bvVarArithRightShift(ExprHandle expr, ExprHandle shift);
 
   ExprHandle constructAShrByConstant(ExprHandle expr, unsigned shift, 
-                                     ExprHandle isSigned, unsigned shiftBits);
+                                     ExprHandle isSigned);
   ExprHandle constructMulByConstant(ExprHandle expr, unsigned width, uint64_t x);
   ExprHandle constructUDivByConstant(ExprHandle expr_n, unsigned width, uint64_t d);
   ExprHandle constructSDivByConstant(ExprHandle expr_n, unsigned width, uint64_t d);

@@ -255,7 +255,7 @@ ExprHandle STPBuilder::bvVarArithRightShift(ExprHandle expr, ExprHandle shift) {
   ExprHandle signedBool = bvBoolExtract(expr, width-1);
 
   //start with the result if shifting by width-1
-  ExprHandle res = constructAShrByConstant(expr, width-1, signedBool, width);
+  ExprHandle res = constructAShrByConstant(expr, width-1, signedBool);
 
   //construct a big if-then-elif-elif-... with one case per possible shift amount
   // XXX more efficient to move the ite on the sign outside all exprs?
@@ -265,8 +265,7 @@ ExprHandle STPBuilder::bvVarArithRightShift(ExprHandle expr, ExprHandle shift) {
                      eqExpr(shift, bvConst32(width,i)),
                      constructAShrByConstant(expr, 
                                              i, 
-                                             signedBool, 
-                                             width),
+                                             signedBool),
                      res);
   }
 
@@ -279,16 +278,14 @@ ExprHandle STPBuilder::bvVarArithRightShift(ExprHandle expr, ExprHandle shift) {
 }
 
 ExprHandle STPBuilder::constructAShrByConstant(ExprHandle expr,
-                                               unsigned amount,
-                                               ExprHandle isSigned, 
-                                               unsigned shiftBits) {
+                                               unsigned shift,
+                                               ExprHandle isSigned) {
   unsigned width = vc_getBVLength(vc, expr);
-  unsigned shift = amount & ((1<<shiftBits) - 1);
 
   if (shift==0) {
     return expr;
   } else if (shift>=width-1) {
-    return vc_iteExpr(vc, isSigned, bvMinusOne(width), bvZero(width));
+    return bvZero(width); // Overshift to zero
   } else {
     return vc_iteExpr(vc,
                       isSigned,
@@ -841,7 +838,7 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(ase->right)) {
       unsigned shift = (unsigned) CE->getLimitedValue();
       ExprHandle signedBool = bvBoolExtract(left, *width_out-1);
-      return constructAShrByConstant(left, shift, signedBool, getShiftBits(*width_out));
+      return constructAShrByConstant(left, shift, signedBool);
     } else {
       int shiftWidth;
       ExprHandle amount = construct(ase->right, &shiftWidth);
