@@ -190,14 +190,13 @@ ExprHandle STPBuilder::bvRightShift(ExprHandle expr, unsigned amount, unsigned s
 }
 
 // logical left shift
-ExprHandle STPBuilder::bvLeftShift(ExprHandle expr, unsigned amount, unsigned shiftBits) {
+ExprHandle STPBuilder::bvLeftShift(ExprHandle expr, unsigned shift) {
   unsigned width = vc_getBVLength(vc, expr);
-  unsigned shift = amount & ((1<<shiftBits) - 1);
 
   if (shift==0) {
     return expr;
   } else if (shift>=width) {
-    return bvZero(width);
+    return bvZero(width); // Overshift to zero
   } else {
     // stp shift does "expr @ [0 x s]" which we then have to extract,
     // rolling our own gives slightly smaller exprs
@@ -208,25 +207,21 @@ ExprHandle STPBuilder::bvLeftShift(ExprHandle expr, unsigned amount, unsigned sh
 }
 
 // left shift by a variable amount on an expression of the specified width
-ExprHandle STPBuilder::bvVarLeftShift(ExprHandle expr, ExprHandle amount, unsigned width) {
+ExprHandle STPBuilder::bvVarLeftShift(ExprHandle expr, ExprHandle shift) {
+  unsigned width = vc_getBVLength(vc, expr);
   ExprHandle res = bvZero(width);
-
-  int shiftBits = getShiftBits( width );
-
-  //get the shift amount (looking only at the bits appropriate for the given width)
-  ExprHandle shift = vc_bvExtract( vc, amount, shiftBits - 1, 0 ); 
 
   //construct a big if-then-elif-elif-... with one case per possible shift amount
   for( int i=width-1; i>=0; i-- ) {
     res = vc_iteExpr(vc,
-                     eqExpr(shift, bvConst32(shiftBits, i)),
-                     bvLeftShift(expr, i, shiftBits),
+                     eqExpr(shift, bvConst32(width, i)),
+                     bvLeftShift(expr, i),
                      res);
   }
 
   // If overshifting, shift to zero
   res = vc_iteExpr(vc,
-                   vc_bvLtExpr(vc, amount, bvConst32(width, width)),
+                   vc_bvLtExpr(vc, shift, bvConst32(width, width)),
                    res,
                    bvZero(width));
   return res;
@@ -303,7 +298,6 @@ ExprHandle STPBuilder::constructAShrByConstant(ExprHandle expr,
 }
 
 ExprHandle STPBuilder::constructMulByConstant(ExprHandle expr, unsigned width, uint64_t x) {
-  unsigned shiftBits = getShiftBits(width);
   uint64_t add, sub;
   ExprHandle res = 0;
 
@@ -319,7 +313,7 @@ ExprHandle STPBuilder::constructMulByConstant(ExprHandle expr, unsigned width, u
 
     if ((add&bit) || (sub&bit)) {
       assert(!((add&bit) && (sub&bit)) && "invalid mult constants");
-      ExprHandle op = bvLeftShift(expr, j, shiftBits);
+      ExprHandle op = bvLeftShift(expr, j);
       
       if (add&bit) {
         if (res) {
@@ -816,12 +810,11 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
     assert(*width_out!=1 && "uncanonicalized shl");
 
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(se->right)) {
-      return bvLeftShift(left, (unsigned) CE->getLimitedValue(), 
-                         getShiftBits(*width_out));
+      return bvLeftShift(left, (unsigned) CE->getLimitedValue());
     } else {
       int shiftWidth;
       ExprHandle amount = construct(se->right, &shiftWidth);
-      return bvVarLeftShift( left, amount, *width_out );
+      return bvVarLeftShift( left, amount);
     }
   }
 
