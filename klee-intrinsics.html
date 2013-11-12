@@ -1,0 +1,115 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" 
+          "http://www.w3.org/TR/html4/strict.dtd">
+<!-- Material used from: HTML 4.01 specs: http://www.w3.org/TR/html401/ -->
+<html>
+<head>
+  <META http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+  <title>Intrinsics - The KLEE Symbolic Virtual Machine</title>
+  <link type="text/css" rel="stylesheet" href="menu.css">
+  <link type="text/css" rel="stylesheet" href="content.css">
+</head>
+<body>
+<div id="menu">
+<iframe src="menu.html" height="500" frameborder="0" scrolling="auto">
+<a href="menu.html">Click here to load the iframe menu.</a>
+</iframe>
+</div>
+<div id="content">
+  <!--*********************************************************************-->
+  <h1>KLEE Intrinsics</h1>
+  <!--*********************************************************************-->
+
+  <h3>
+  <a href="#overview">  1. Overview</a> <br/>
+  <a href="#kleeassume"> 2. klee_assume</a> <br/>
+  </h3>
+  
+  <h2 id="overview">Overview</h2> 
+
+  <p>
+  KLEE provides a set of special functions which are useful in the context of symbolic execution. Whenever a program calls one of
+  these functions, KLEE handles internally the call, hence their intrinsic nature. The functions are declared in
+  <tt>include/klee/klee.h</tt>
+  The most often used intrinsic is <a href="Tutorial-1.html">klee_make_symbolic</a>, which creates an unconstrained symbolic object.
+  </p>   
+
+  <h2 id="kleeassume">klee_assume(condition)</h2> 
+  
+  <h3>Usage</h3>
+  <p>
+  klee_assume is used to constrain the values symbolic variables can take. The remainder of the program's execution will only consider
+  variable values which satisfy <em>condition</em>. Conceptually, <tt>klee_assume(condition)</tt> is equivalent to wrapping the rest of the
+  program in an <tt>if(condition) { }</tt> statement, except that the former prints an error if the condition is unsatisfiable.
+  Technically speaking, <tt>klee_assume(condition)</tt> adds <em>condition</em> to the current path constraints.
+  </p>
+
+  <h3>Interaction with short-circuit operators</h3>
+  <p>When <em>condition</em> contains <a href="https://en.wikipedia.org/wiki/Short-circuit_evaluation" target="_blank">short-circuit operators</a>,
+  the results of the <tt>klee_assume</tt> instrinsics may come unexpected. For example, consider the following code and the corresponding KLEE output:<br />
+  Note: the output was obtained after compilation with llvm-gcc 2.9. Other compilers/versions may yield slightly different results.
+  </p>
+  <pre class="output">
+int main()
+{
+  int c,d;
+  klee_make_symbolic(&c, sizeof(c), "c");
+  klee_make_symbolic(&d, sizeof(d), "d");
+
+  klee_assume((c==2)||(d==3));
+
+  return 0;
+}
+  </pre>
+  <pre class="output">
+$ llvm-gcc -c -emit-llvm p.c -o p.bc
+$ klee p.bc
+KLEE: output directory = "klee-out-0"
+KLEE: ERROR: invalid klee_assume call (provably false)
+KLEE: NOTE: now ignoring this error at this location
+
+KLEE: done: total instructions = 53
+KLEE: done: completed paths = 3
+KLEE: done: generated tests = 3
+  </pre>
+  <p>
+  One might reasonably expect a single path through the progam and no error reports, while KLEE finds 3 paths, one of which triggers an error.
+  The reason lies in the way compilers handle short-circuit operators. Upon compilation, the above code is transformed into
+  </p>
+  <pre>
+int main()
+{
+  int c,d;
+  klee_make_symbolic(&c, sizeof(c), "c");
+  klee_make_symbolic(&d, sizeof(d), "d");
+
+  int tmp;
+  if (c == 2) {
+    tmp = 1;
+  } else if (d == 3) {
+    tmp = 1;
+  } else {
+    tmp = 0;
+  }
+  klee_assume(tmp);
+
+  return 0;
+}
+  </pre>
+  <p>Since the program contains 3 paths and all are feasible, klee_assume will be called 3 times with trivial arguments:</p>
+  <pre>
+  klee_assume(1);
+  klee_assume(1);
+  klee_assume(0);
+  </pre>
+  <p>
+  The first two paths go further while the 3rd is terminated with an error, which is the intended behavior, albeit in a rather non-straightforward way.
+  Ideally the paths which satisfy the assume would be merged but klee currently has only some experimental support for path merging.
+  </p>
+
+  <p>
+  As a side note, it is possible to obtain the 'one path' behavior by replacing the logical <tt>&&</tt> and <tt>||</tt> operators with
+  their bitwise counterparts. To correctly do this, ensure that all operands have boolean values and no side effects.
+  </p>
+</div>
+</body>
+</html>
