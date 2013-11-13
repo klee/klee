@@ -269,6 +269,17 @@ static void inlineChecks(Module *module, const char * functionName) {
     DEBUG( klee_message("Tried to inline calls to %s. %u successes, %u failures",functionName, successCount, failCount) );
 }
 
+void KModule::addInternalFunction(const char* functionName){
+  Function* internalFunction = module->getFunction(functionName);
+  if (!internalFunction) {
+    DEBUG_WITH_TYPE("KModule", klee_warning(
+        "Failed to add internal function %s. Not found.", functionName));
+    return ;
+  }
+  DEBUG( klee_message("Added function %s.",functionName));
+  internalFunctions.insert(internalFunction);
+}
+
 void KModule::prepare(const Interpreter::ModuleOptions &opts,
                       InterpreterHandler *ih) {
   if (!MergeAtExit.empty()) {
@@ -374,17 +385,12 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
 #endif
   module = linkWithLibrary(module, path.c_str());
 
-  /* In order for KLEE to report ALL errors at instrumented
-   * locations the instrumentation call (e.g. "klee_div_zero_check")
-   * must be inlined. Otherwise one of the instructions in the
-   * instrumentation function will be used as the the location of
-   * the error which means that the error cannot be recorded again
-   * ( unless -emit-all-errors is used).
-   */
+  // Add internal functions which are not used to check if instructions
+  // have been already visited
   if (opts.CheckDivZero)
-    inlineChecks(module, "klee_div_zero_check");
+    addInternalFunction("klee_div_zero_check");
   if (opts.CheckOvershift)
-    inlineChecks(module, "klee_overshift_check");
+    addInternalFunction("klee_overshift_check");
 
 
   // Needs to happen after linking (since ctors/dtors can be modified)
