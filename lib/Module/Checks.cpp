@@ -82,8 +82,13 @@ bool DivCheckPass::runOnModule(Module &M) {
                                                    NULL);
               divZeroCheckFunction = cast<Function>(fc);
             }
-
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 0)
+            CallInst * ci =
+#endif
 	    CallInst::Create(divZeroCheckFunction, denominator, "", &*i);
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 0)
+            ci->setDebugLoc(binOp->getDebugLoc());
+#endif
             moduleChanged = true;
           }
         }
@@ -139,7 +144,9 @@ bool OvershiftCheckPass::runOnModule(Module &M) {
 
             // Inject CallInstr to check if overshifting possible
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 0)
-            CallInst::Create(overshiftCheckFunction, args, "", &*i);
+            CallInst * ci = CallInst::Create(overshiftCheckFunction, args, "", &*i);
+            // set debug information from binary operand to preserve it
+            ci->setDebugLoc(binOp->getDebugLoc());
 #else
             CallInst::Create(overshiftCheckFunction, args.begin(), args.end(), "", &*i);
 #endif
