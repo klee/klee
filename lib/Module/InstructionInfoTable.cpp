@@ -111,6 +111,26 @@ InstructionInfoTable::InstructionInfoTable(Module *m)
     const std::string *initialFile = &dummyString;
     unsigned initialLine = 0;
 
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+    for (inst_iterator it = inst_begin(fnIt), ie = inst_end(fnIt); it != ie;
+        ++it) {
+      const std::string *initialFile = &dummyString;
+      unsigned initialLine = 0;
+      Instruction *instr = &*it;
+      unsigned assemblyLine = 0;
+
+      std::map<const Instruction*, unsigned>::const_iterator ltit =
+        lineTable.find(instr);
+      if (ltit!=lineTable.end())
+        assemblyLine = ltit->second;
+      getInstructionDebugInfo(instr, initialFile, initialLine);
+      infos.insert(std::make_pair(instr,
+                                  InstructionInfo(id++,
+                                                  *initialFile,
+                                                  initialLine,
+                                                  assemblyLine)));
+    }
+#else
     // It may be better to look for the closest stoppoint to the entry
     // following the CFG, but it is not clear that it ever matters in
     // practice.
@@ -118,7 +138,7 @@ InstructionInfoTable::InstructionInfoTable(Module *m)
          it != ie; ++it)
       if (getInstructionDebugInfo(&*it, initialFile, initialLine))
         break;
-    
+
     typedef std::map<BasicBlock*, std::pair<const std::string*,unsigned> > 
       sourceinfo_ty;
     sourceinfo_ty sourceInfo;
@@ -167,6 +187,7 @@ InstructionInfoTable::InstructionInfoTable(Module *m)
         }
       } while (!worklist.empty());
     }
+#endif
   }
 }
 
