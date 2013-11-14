@@ -229,7 +229,7 @@ static void forceImport(Module *m, const char *name, LLVM_TYPE_Q Type *retType,
 /// It is intended that this function be used for inling calls to
 /// check functions like <tt>klee_div_zero_check()</tt>
 static void inlineChecks(Module *module, const char * functionName) {
-  std::vector<CallInst*> checkCalls;
+  std::vector<CallSite> checkCalls;
     Function* runtimeCheckCall = module->getFunction(functionName);
     if (runtimeCheckCall == 0)
     {
@@ -237,22 +237,19 @@ static void inlineChecks(Module *module, const char * functionName) {
       return;
     }
 
-    // Iterate through instructions in module and collect all
-    // call instructions to "functionName" that we care about.
-    for (Module::iterator f = module->begin(), fe = module->end(); f != fe; ++f) {
-      for (inst_iterator i=inst_begin(f), ie = inst_end(f); i != ie; ++i) {
-        if ( CallInst* ci = dyn_cast<CallInst>(&*i) )
-        {
-          if ( ci->getCalledFunction() == runtimeCheckCall)
-            checkCalls.push_back(ci);
-        }
+    for (Value::use_iterator i = runtimeCheckCall->use_begin(),
+        e = runtimeCheckCall->use_end(); i != e; ++i)
+      if (isa<InvokeInst>(*i) || isa<CallInst>(*i)) {
+        CallSite cs(*i);
+        if (!cs.getCalledFunction())
+          continue;
+        checkCalls.push_back(cs);
       }
-    }
 
     unsigned int successCount=0;
     unsigned int failCount=0;
     InlineFunctionInfo IFI(0,0);
-    for ( std::vector<CallInst*>::iterator ci = checkCalls.begin(),
+    for ( std::vector<CallSite>::iterator ci = checkCalls.begin(),
           cie = checkCalls.end();
           ci != cie; ++ci)
     {
