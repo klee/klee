@@ -1,16 +1,16 @@
 // RUN: %llvmgcc %s -emit-llvm -O0 -c -o %t.bc
 // RUN: %klee --libc=uclibc --posix-runtime %t.bc --sym-files 0 10 --sym-stdout 2>%t.log
-
 // RUN: test -f klee-last/test000001.ktest
 // RUN: test -f klee-last/test000002.ktest
 // RUN: test -f klee-last/test000003.ktest
 // RUN: test -f klee-last/test000004.ktest
-
 // RUN: grep -q "stdin is a tty" %t.log
 // RUN: grep -q "stdin is NOT a tty" %t.log
 // RUN: grep -q "stdout is a tty" %t.log
 // RUN: grep -q "stdout is NOT a tty" %t.log
 
+// Depending on how uClibc is compiled (i.e. without -DKLEE_SYM_PRINTF)
+// fprintf prints out on stdout even stderr is provided.
 #include <unistd.h>
 #include <stdio.h>
 #include <assert.h>

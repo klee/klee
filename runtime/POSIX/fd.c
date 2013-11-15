@@ -35,7 +35,7 @@ void klee_warning(const char*);
 void klee_warning_once(const char*);
 int klee_get_errno(void);
 
-/* Returns pointer to the symbolic file structure is the pathname is symbolic */
+/* Returns pointer to the symbolic file structure fs the pathname is symbolic */
 static exe_disk_file_t *__get_sym_file(const char *pathname) {
   char c = pathname[0];
   unsigned i;
@@ -489,15 +489,15 @@ off64_t __fd_lseek(int fd, off64_t offset, int whence) {
        the offset, but really directories should only be SEEK_SET, so
        this solves the problem. */
     if (whence == SEEK_SET) {
-      new_off = syscall(__NR_lseek, f->fd, (int) offset, SEEK_SET);
+      new_off = syscall(__NR_lseek, f->fd, offset, SEEK_SET);
     } else {
-      new_off = syscall(__NR_lseek, f->fd, (int) f->off, SEEK_SET);
+      new_off = syscall(__NR_lseek, f->fd, f->off, SEEK_SET);
 
       /* If we can't seek to start off, just return same error.
          Probably ESPIPE. */
       if (new_off != -1) {
         assert(new_off == f->off);
-        new_off = syscall(__NR_lseek, f->fd, (int) offset, whence);
+        new_off = syscall(__NR_lseek, f->fd, offset, whence);
       }
     }
 
@@ -818,7 +818,7 @@ int __fd_getdents(unsigned int fd, struct dirent64 *dirp, unsigned int count) {
     errno = EBADF;
     return -1;
   }
-  
+
   if (f->dfile) {
     klee_warning("symbolic file, ignoring (EINVAL)");
     errno = EINVAL;
@@ -826,7 +826,7 @@ int __fd_getdents(unsigned int fd, struct dirent64 *dirp, unsigned int count) {
   } else {
     if ((unsigned long) f->off < 4096u) {
       /* Return our dirents */
-      unsigned i, pad, bytes=0;
+      off64_t i, pad, bytes=0;
 
       /* What happens for bad offsets? */
       i = f->off / sizeof(*dirp);
@@ -856,10 +856,12 @@ int __fd_getdents(unsigned int fd, struct dirent64 *dirp, unsigned int count) {
       dirp->d_off = 4096;
       bytes += dirp->d_reclen;
       f->off = pad;
+
       return bytes;
     } else {
-      unsigned os_pos = f->off - 4096;
-      int res, s;
+      off64_t os_pos = f->off - 4096;
+      int res;
+      off64_t s = 0;
 
       /* For reasons which I really don't understand, if I don't
          memset this then sometimes the kernel returns d_ino==0 for
@@ -869,14 +871,13 @@ int __fd_getdents(unsigned int fd, struct dirent64 *dirp, unsigned int count) {
          Even more bizarre, interchanging the memset and the seek also
          case strange behavior. Really should be debugged properly. */
       memset(dirp, 0, count);
-      s = syscall(__NR_lseek, f->fd, (int) os_pos, SEEK_SET);
+      s = syscall(__NR_lseek, f->fd, os_pos, SEEK_SET);
       assert(s != (off64_t) -1);
       res = syscall(__NR_getdents64, f->fd, dirp, count);
       if (res == -1) {
         errno = klee_get_errno();
       } else {
         int pos = 0;
-
         f->off = syscall(__NR_lseek, f->fd, 0, SEEK_CUR) + 4096;
 
         /* Patch offsets */
@@ -885,6 +886,7 @@ int __fd_getdents(unsigned int fd, struct dirent64 *dirp, unsigned int count) {
           struct dirent64 *dp = (struct dirent64*) ((char*) dirp + pos);
           dp->d_off += 4096;
           pos += dp->d_reclen;
+
         }
       }
       return res;
