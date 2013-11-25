@@ -577,9 +577,17 @@ void Executor::initializeGlobals(ExecutionState &state) {
       uint64_t size = kmodule->targetData->getTypeStoreSize(ty);
       MemoryObject *mo = 0;
 
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 3)
       if (UseAsmAddresses && i->getName()[0]=='\01') {
+#else
+      if (UseAsmAddresses && !i->getName().empty()) {
+#endif
         char *end;
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 3)
         uint64_t address = ::strtoll(i->getName().str().c_str()+1, &end, 0);
+#else
+        uint64_t address = ::strtoll(i->getName().str().c_str(), &end, 0);
+#endif
 
         if (end && *end == '\0') {
           klee_message("NOTE: allocated global at asm specified address: %#08llx"
