@@ -19,6 +19,9 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Object/Archive.h"
+#include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/DataStream.h"
 #else
@@ -49,15 +52,79 @@ using namespace klee;
 Module *klee::linkWithLibrary(Module *module, 
                               const std::string &libraryName) {
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
-  SMDiagnostic err;
-  std::string err_str;
-  sys::Path libraryPath(libraryName);
-  Module *new_mod = ParseIRFile(libraryPath.str(), err, 
-module->getContext());
+  if (!sys::fs::exists(libraryName)) {
+    klee_error("Link with library %s failed. No such file.",
+        libraryName.c_str());
+  }
 
-  if (Linker::LinkModules(module, new_mod, Linker::DestroySource, 
-&err_str)) {
-    klee_error("Linking library %s failed", libraryName.c_str());
+  OwningPtr<MemoryBuffer> Buffer;
+  if (error_code ec = MemoryBuffer::getFile(libraryName,Buffer)) {
+    klee_error("Link with library %s failed: %s", libraryName.c_str(),
+        ec.message().c_str());
+  }
+
+  sys::fs::file_magic magic = sys::fs::identify_magic(Buffer->getBuffer());
+
+  LLVMContext &Context = getGlobalContext();
+  std::string ErrorMessage;
+
+  if (magic == sys::fs::file_magic::bitcode) {
+    Module *Result = 0;
+    Result = ParseBitcodeFile(Buffer.get(), Context, &ErrorMessage);
+
+
+    if (!Result || Linker::LinkModules(module, Result, Linker::DestroySource,
+        &ErrorMessage))
+      klee_error("Link with library %s failed: %s", libraryName.c_str(),
+          ErrorMessage.c_str());
+
+    delete Result;
+
+  } else if (magic == sys::fs::file_magic::archive) {
+    OwningPtr<object::Binary> arch;
+    if (error_code ec = object::createBinary(Buffer.take(), arch))
+      klee_error("Link with library %s failed: %s", libraryName.c_str(),
+          ec.message().c_str());
+
+    if (object::Archive *a = dyn_cast<object::Archive>(arch.get())) {
+      for (object::Archive::child_iterator i = a->begin_children(),
+          e = a->end_children(); i != e; ++i) {
+        OwningPtr<object::Binary> child;
+        if (i->getAsBinary(child)) {
+          // Try opening it as a bitcode file.
+          OwningPtr<MemoryBuffer> buff;
+          if (error_code ec = i->getMemoryBuffer(buff))
+            klee_error("Link with library %s failed: %s", libraryName.c_str(),
+                ec.message().c_str());
+          Module *Result = 0;
+          if (buff)
+            Result = ParseBitcodeFile(buff.get(), Context, &ErrorMessage);
+
+          if (!Result || Linker::LinkModules(module, Result,
+              Linker::DestroySource, &ErrorMessage))
+            klee_error("Link with library %s failed: %s", libraryName.c_str(),
+                ErrorMessage.c_str());
+          delete Result;
+
+          continue;
+        }
+        if (object::ObjectFile *o = dyn_cast<object::ObjectFile>(child.get())) {
+          klee_warning("Link with library: Object file %s in archive %s found. "
+              "Currently not supported.",
+              o->getFileName().data(), libraryName.c_str());
+        }
+      }
+    }
+  } else if (magic.is_object()) {
+    OwningPtr<object::Binary> obj;
+    if (object::ObjectFile *o = dyn_cast<object::ObjectFile>(obj.get())) {
+      klee_warning("Link with library: Object file %s in archive %s found. "
+          "Currently not supported.",
+          o->getFileName().data(), libraryName.c_str());
+    }
+  } else {
+    klee_error("Link with library %s failed: Unrecognized file type.",
+        libraryName.c_str());
   }
 
   return module;
