@@ -10,11 +10,7 @@
 #include "klee/Config/Version.h"
 #include "klee/Internal/Support/Timer.h"
 
-#if LLVM_VERSION_CODE < LLVM_VERSION(2, 9)
-#include "llvm/System/Process.h"
-#else
 #include "llvm/Support/Process.h"
-#endif
 
 using namespace klee;
 using namespace llvm;

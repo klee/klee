@@ -31,9 +31,6 @@
 #include "llvm/Function.h"
 #include "llvm/Instructions.h"
 #include "llvm/Module.h"
-#if LLVM_VERSION_CODE < LLVM_VERSION(2, 7)
-#include "llvm/ModuleProvider.h"
-#endif
 #if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
 #include "llvm/Target/TargetData.h"
 #else

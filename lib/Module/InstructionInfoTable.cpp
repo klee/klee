@@ -22,18 +22,14 @@
 #include "llvm/Module.h"
 #endif
 #include "llvm/Linker.h"
-#if LLVM_VERSION_CODE < LLVM_VERSION(2, 8)
-#include "llvm/Assembly/AsmAnnotationWriter.h"
-#else
 #include "llvm/Assembly/AssemblyAnnotationWriter.h"
 #include "llvm/Support/FormattedStream.h"
-#endif
 #include "llvm/Support/CFG.h"
 #include "llvm/Support/InstIterator.h"
 #include "llvm/Support/raw_ostream.h"
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 2)
 #include "llvm/DebugInfo.h"
-#elif LLVM_VERSION_CODE >= LLVM_VERSION(2, 7)
+#else
 #include "llvm/Analysis/DebugInfo.h"
 #endif
 #include "llvm/Analysis/ValueTracking.h"
@@ -46,12 +42,8 @@ using namespace klee;
 
 class InstructionToLineAnnotator : public llvm::AssemblyAnnotationWriter {
 public:
-#if LLVM_VERSION_CODE < LLVM_VERSION(2, 8)
-  void emitInstructionAnnot(const Instruction *i, llvm::raw_ostream &os) {
-#else
   void emitInstructionAnnot(const Instruction *i,
                             llvm::formatted_raw_ostream &os) {
-#endif
     os << "%%%";
     os << (uintptr_t) i;
   }
@@ -83,18 +75,9 @@ static void buildInstructionToLineMap(Module *m,
   }
 }
 
-#if LLVM_VERSION_CODE < LLVM_VERSION(2, 7)
-static std::string getDSPIPath(const DbgStopPointInst *dspi) {
-  std::string dir, file;
-  bool res = GetConstantStringInfo(dspi->getDirectory(), dir);
-  assert(res && "GetConstantStringInfo failed");
-  res = GetConstantStringInfo(dspi->getFileName(), file);
-  assert(res && "GetConstantStringInfo failed");
-#else
 static std::string getDSPIPath(DILocation Loc) {
   std::string dir = Loc.getDirectory();
   std::string file = Loc.getFilename();
-#endif
   if (dir.empty() || file[0] == '/') {
     return file;
   } else if (*dir.rbegin() == '/') {
@@ -107,20 +90,12 @@ static std::string getDSPIPath(DILocation Loc) {
 bool InstructionInfoTable::getInstructionDebugInfo(const llvm::Instruction *I, 
                                                    const std::string *&File,
                                                    unsigned &Line) {
-#if LLVM_VERSION_CODE < LLVM_VERSION(2, 7)
-  if (const DbgStopPointInst *dspi = dyn_cast<DbgStopPointInst>(I)) {
-    File = internString(getDSPIPath(dspi));
-    Line = dspi->getLine();
-    return true;
-  }
-#else
   if (MDNode *N = I->getMetadata("dbg")) {
     DILocation Loc(N);
     File = internString(getDSPIPath(Loc));
     Line = Loc.getLineNumber();
     return true;
   }
-#endif
 
   return false;
 }

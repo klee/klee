@@ -34,12 +34,8 @@
 #undef PACKAGE_TARNAME
 #undef PACKAGE_VERSION
 
-#if LLVM_VERSION_CODE < LLVM_VERSION(2, 9)
-#include "llvm/System/Signals.h"
-#else
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/system_error.h"
-#endif
 
 using namespace llvm;
 using namespace klee;
@@ -459,20 +455,12 @@ int main(int argc, char **argv) {
 
   std::string ErrorStr;
   
-#if LLVM_VERSION_CODE < LLVM_VERSION(2, 9)
-  MemoryBuffer *MB = MemoryBuffer::getFileOrSTDIN(InputFile.c_str(), &ErrorStr);
-  if (!MB) {
-    std::cerr << argv[0] << ": error: " << ErrorStr << "\n";
-    return 1;
-  }
-#else
   OwningPtr<MemoryBuffer> MB;
   error_code ec=MemoryBuffer::getFileOrSTDIN(InputFile.c_str(), MB);
   if (ec) {
     std::cerr << argv[0] << ": error: " << ec.message() << "\n";
     return 1;
   }
-#endif
   
   ExprBuilder *Builder = 0;
   switch (BuilderKind) {
@@ -492,45 +480,24 @@ int main(int argc, char **argv) {
 
   switch (ToolAction) {
   case PrintTokens:
-#if LLVM_VERSION_CODE < LLVM_VERSION(2, 9)
-    PrintInputTokens(MB);
-#else
     PrintInputTokens(MB.get());
-#endif
     break;
   case PrintAST:
-#if LLVM_VERSION_CODE < LLVM_VERSION(2, 9)
-    success = PrintInputAST(InputFile=="-" ? "<stdin>" : InputFile.c_str(), MB,
-                            Builder);
-#else
     success = PrintInputAST(InputFile=="-" ? "<stdin>" : InputFile.c_str(), MB.get(),
                             Builder);
-#endif
     break;
   case Evaluate:
-#if LLVM_VERSION_CODE < LLVM_VERSION(2, 9)
-    success = EvaluateInputAST(InputFile=="-" ? "<stdin>" : InputFile.c_str(),
-                               MB, Builder);
-#else
     success = EvaluateInputAST(InputFile=="-" ? "<stdin>" : InputFile.c_str(),
                                MB.get(), Builder);
-#endif
     break;
   case PrintSMTLIBv2:
-#if LLVM_VERSION_CODE < LLVM_VERSION(2, 9)
-    success = printInputAsSMTLIBv2(InputFile=="-"? "<stdin>" : InputFile.c_str(), MB,Builder);
-#else
     success = printInputAsSMTLIBv2(InputFile=="-"? "<stdin>" : InputFile.c_str(), MB.get(),Builder);
-#endif
     break;
   default:
     std::cerr << argv[0] << ": error: Unknown program action!\n";
   }
 
   delete Builder;
-#if LLVM_VERSION_CODE < LLVM_VERSION(2, 9)
-  delete MB;
-#endif
   llvm::llvm_shutdown();
   return success ? 0 : 1;
 }

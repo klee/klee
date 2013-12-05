@@ -28,13 +28,8 @@
 #include "llvm/InstrTypes.h"
 #include "llvm/Instruction.h"
 #include "llvm/Instructions.h"
-#if LLVM_VERSION_CODE >= LLVM_VERSION(2, 7)
 #include "llvm/LLVMContext.h"
 #include "llvm/Support/FileSystem.h"
-#endif
-#endif
-#if LLVM_VERSION_CODE < LLVM_VERSION(2, 7)
-#include "llvm/ModuleProvider.h"
 #endif
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Bitcode/ReaderWriter.h"
@@ -53,12 +48,8 @@
 #else
 #include "llvm/Support/TargetSelect.h"
 #endif
-#if LLVM_VERSION_CODE < LLVM_VERSION(2, 9)
-#include "llvm/System/Signals.h"
-#else
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/system_error.h"
-#endif
 
 #include <dirent.h>
 #include <signal.h>
@@ -571,11 +562,7 @@ void KleeHandler::getOutFiles(std::string path,
   }
   for (std::set<llvm::sys::Path>::iterator it = contents.begin(),
          ie = contents.end(); it != ie; ++it) {
-#if LLVM_VERSION_CODE != LLVM_VERSION(2, 6)
     std::string f = it->str();
-#else
-    std::string f = it->toString();
-#endif
     if (f.substr(f.size()-6,f.size()) == ".ktest") {
       results.push_back(f);
     }
@@ -1216,28 +1203,7 @@ int main(int argc, char **argv, char **envp) {
 
   // Load the bytecode...
   std::string ErrorMsg;
-#if LLVM_VERSION_CODE < LLVM_VERSION(2, 7)
-  ModuleProvider *MP = 0;
-  if (MemoryBuffer *Buffer = MemoryBuffer::getFileOrSTDIN(InputFile, &ErrorMsg)) {
-    MP = getBitcodeModuleProvider(Buffer, getGlobalContext(), &ErrorMsg);
-    if (!MP) delete Buffer;
-  }
-  
-  if (!MP)
-    klee_error("error loading program '%s': %s", InputFile.c_str(), ErrorMsg.c_str());
-
-  Module *mainModule = MP->materializeModule();
-  MP->releaseModule();
-  delete MP;
-#else
   Module *mainModule = 0;
-#if LLVM_VERSION_CODE < LLVM_VERSION(2, 9)
-  MemoryBuffer *Buffer = MemoryBuffer::getFileOrSTDIN(InputFile, &ErrorMsg);
-  if (Buffer) {
-    mainModule = getLazyBitcodeModule(Buffer, getGlobalContext(), &ErrorMsg);
-    if (!mainModule) delete Buffer;
-  }
-#else
   OwningPtr<MemoryBuffer> BufferPtr;
   error_code ec=MemoryBuffer::getFileOrSTDIN(InputFile.c_str(), BufferPtr);
   if (ec) {
@@ -1246,7 +1212,6 @@ int main(int argc, char **argv, char **envp) {
   }
   mainModule = getLazyBitcodeModule(BufferPtr.get(), getGlobalContext(), &ErrorMsg);
 
-#endif
   if (mainModule) {
     if (mainModule->MaterializeAllPermanently(&ErrorMsg)) {
       delete mainModule;
@@ -1256,7 +1221,6 @@ int main(int argc, char **argv, char **envp) {
   if (!mainModule)
     klee_error("error loading program '%s': %s", InputFile.c_str(),
                ErrorMsg.c_str());
-#endif
 
   if (WithPOSIXRuntime) {
     int r = initEnv(mainModule);
@@ -1540,9 +1504,7 @@ int main(int argc, char **argv, char **envp) {
   std::cerr << stats.str();
   handler->getInfoStream() << stats.str();
 
-#if LLVM_VERSION_CODE >= LLVM_VERSION(2, 9)
   BufferPtr.take();
-#endif
   delete handler;
 
   return 0;

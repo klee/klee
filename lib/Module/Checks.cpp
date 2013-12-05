@@ -34,9 +34,7 @@
 #include "llvm/Module.h"
 #include "llvm/Type.h"
 
-#if LLVM_VERSION_CODE >= LLVM_VERSION(2, 7)
 #include "llvm/LLVMContext.h"
-#endif
 
 #if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
 #include "llvm/Target/TargetData.h"
