@@ -105,7 +105,6 @@ KModule::KModule(Module *_module)
 #else
     targetData(new DataLayout(module)),
 #endif
-    dbgStopPointFn(0),
     kleeMergeFn(0),
     infos(0),
     constantTable(0) {
@@ -470,7 +469,6 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
     delete f;
   }
 
-  dbgStopPointFn = module->getFunction("llvm.dbg.stoppoint");
   kleeMergeFn = module->getFunction("klee_merge");
 
   /* Build shadow structures */

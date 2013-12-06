@@ -737,7 +737,6 @@ static const char *modelledExternals[] = {
   "klee_warning_once", 
   "klee_alias_function",
   "klee_stack_trace",
-  "llvm.dbg.stoppoint",
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 1)
   "llvm.dbg.declare",
   "llvm.dbg.value",
