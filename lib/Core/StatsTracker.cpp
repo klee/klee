@@ -47,18 +47,10 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/CFG.h"
 #include "llvm/Support/raw_os_ostream.h"
-#if LLVM_VERSION_CODE < LLVM_VERSION(2, 9)
-#include "llvm/System/Process.h"
-#else
 #include "llvm/Support/Process.h"
-#endif
-#if LLVM_VERSION_CODE < LLVM_VERSION(2, 9)
-#include "llvm/System/Path.h"
-#else
 #include "llvm/Support/Path.h"
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 1)
 #include "llvm/Support/FileSystem.h"
-#endif
 #endif
 
 #include <iostream>
@@ -305,9 +297,6 @@ void StatsTracker::stepInstruction(ExecutionState &es) {
         //
         // FIXME: This trick no longer works, we should fix this in the line
         // number propogation.
-#if LLVM_VERSION_CODE < LLVM_VERSION(2, 7)
-        if (isa<DbgStopPointInst>(inst))
-#endif
           es.coveredLines[&ii.file].insert(ii.line);
 	es.coveredNew = true;
         es.instsSinceCovNew = 1;

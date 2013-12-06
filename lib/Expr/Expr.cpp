@@ -354,11 +354,7 @@ void ConstantExpr::toString(std::string &Res, unsigned radix) const {
 ref<ConstantExpr> ConstantExpr::Concat(const ref<ConstantExpr> &RHS) {
   Expr::Width W = getWidth() + RHS->getWidth();
   APInt Tmp(value);
-#if LLVM_VERSION_CODE <= LLVM_VERSION(2, 8)
-  Tmp.zext(W);
-#else
   Tmp=Tmp.zext(W);
-#endif
   Tmp <<= RHS->getWidth();
   Tmp |= APInt(RHS->value).zext(W);
 

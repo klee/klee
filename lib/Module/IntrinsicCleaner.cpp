@@ -30,9 +30,7 @@
 #include "llvm/Instruction.h"
 #include "llvm/Instructions.h"
 #include "llvm/IntrinsicInst.h"
-#if LLVM_VERSION_CODE >= LLVM_VERSION(2, 7)
 #include "llvm/LLVMContext.h"
-#endif
 #include "llvm/Module.h"
 #include "llvm/Type.h"
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 2)
@@ -90,13 +88,8 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
         // FIXME: This is much more target dependent than just the word size,
         // however this works for x86-32 and x86-64.
       case Intrinsic::vacopy: { // (dst, src) -> *((i8**) dst) = *((i8**) src)
-#if LLVM_VERSION_CODE < LLVM_VERSION(2, 8)
-        Value *dst = ii->getOperand(1);
-        Value *src = ii->getOperand(2);
-#else
         Value *dst = ii->getArgOperand(0);
         Value *src = ii->getArgOperand(1);
-#endif
 
         if (WordSize == 4) {
           Type *i8pp = PointerType::getUnqual(PointerType::getUnqual(Type::getInt8Ty(getGlobalContext())));
@@ -127,13 +120,8 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
       case Intrinsic::umul_with_overflow: {
         IRBuilder<> builder(ii->getParent(), ii);
 
-#if LLVM_VERSION_CODE < LLVM_VERSION(2, 8)
-        Value *op1 = ii->getOperand(1);
-        Value *op2 = ii->getOperand(2);
-#else
         Value *op1 = ii->getArgOperand(0);
         Value *op2 = ii->getArgOperand(1);
-#endif
         
         Value *result = 0;
         if (ii->getIntrinsicID() == Intrinsic::uadd_with_overflow)
@@ -154,42 +142,7 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
         break;
       }
 
-#if LLVM_VERSION_CODE < LLVM_VERSION(2, 7)
-      case Intrinsic::dbg_stoppoint: {
-        // We can remove this stoppoint if the next instruction is
-        // sure to be another stoppoint. This is nice for cleanliness
-        // but also important for switch statements where it can allow
-        // the targets to be joined.
-        bool erase = false;
-        if (isa<DbgStopPointInst>(i) ||
-            isa<UnreachableInst>(i)) {
-          erase = true;
-        } else if (isa<BranchInst>(i) ||
-                   isa<SwitchInst>(i)) {
-          BasicBlock *bb = i->getParent();
-          erase = true;
-          for (succ_iterator it=succ_begin(bb), ie=succ_end(bb);
-               it!=ie; ++it) {
-            if (!isa<DbgStopPointInst>(it->getFirstNonPHI())) {
-              erase = false;
-              break;
-            }
-          }
-        }
-
-        if (erase) {
-          ii->eraseFromParent();
-          dirty = true;
-        }
-        break;
-      }
-
-      case Intrinsic::dbg_region_start:
-      case Intrinsic::dbg_region_end:
-      case Intrinsic::dbg_func_start:
-#else
       case Intrinsic::dbg_value:
-#endif
       case Intrinsic::dbg_declare:
         // Remove these regardless of lower intrinsics flag. This can
         // be removed once IntrinsicLowering is fixed to not have bad

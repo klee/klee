@@ -14,12 +14,9 @@
 #include "llvm/IR/LLVMContext.h"
 #else
 #include "llvm/InlineAsm.h"
-#if LLVM_VERSION_CODE >= LLVM_VERSION(2, 7)
 #include "llvm/LLVMContext.h"
 #endif
-#endif
 
-#if LLVM_VERSION_CODE >= LLVM_VERSION(2, 9)
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Target/TargetLowering.h"
@@ -27,7 +24,6 @@
 #include "llvm/Target/TargetRegistry.h"
 #else
 #include "llvm/Support/TargetRegistry.h"
-#endif
 #endif
 
 using namespace llvm;
@@ -52,38 +48,8 @@ Function *RaiseAsmPass::getIntrinsic(llvm::Module &M,
 bool RaiseAsmPass::runOnInstruction(Module &M, Instruction *I) {
   if (CallInst *ci = dyn_cast<CallInst>(I)) {
     if (InlineAsm *ia = dyn_cast<InlineAsm>(ci->getCalledValue())) {
-#if LLVM_VERSION_CODE >= LLVM_VERSION(2, 9)
       (void) ia;
       return TLI && TLI->ExpandInlineAsm(ci);
-#else
-      const std::string &as = ia->getAsmString();
-      const std::string &cs = ia->getConstraintString();
-      const llvm::Type *T = ci->getType();
-
-      // bswaps
-#if LLVM_VERSION_CODE < LLVM_VERSION(2, 8)
-      unsigned NumOperands = ci->getNumOperands();
-      llvm::Value *Arg0 = NumOperands > 1 ? ci->getOperand(1) : 0;
-#else
-      unsigned NumOperands = ci->getNumArgOperands() + 1;
-      llvm::Value *Arg0 = NumOperands > 1 ? ci->getArgOperand(0) : 0;
-#endif
-      if (Arg0 && T == Arg0->getType() &&
-          ((T == llvm::Type::getInt16Ty(getGlobalContext()) && 
-            as == "rorw $$8, ${0:w}" &&
-            cs == "=r,0,~{dirflag},~{fpsr},~{flags},~{cc}") ||
-           (T == llvm::Type::getInt32Ty(getGlobalContext()) &&
-            as == "rorw $$8, ${0:w};rorl $$16, $0;rorw $$8, ${0:w}" &&
-            cs == "=r,0,~{dirflag},~{fpsr},~{flags},~{cc}"))) {
-        Function *F = getIntrinsic(M, Intrinsic::bswap, Arg0->getType());
-#if LLVM_VERSION_CODE < LLVM_VERSION(2, 8)
-        ci->setOperand(0, F);
-#else
-        ci->setCalledFunction(F);
-#endif
-        return true;
-      }
-#endif
     }
   }
 
@@ -93,7 +59,6 @@ bool RaiseAsmPass::runOnInstruction(Module &M, Instruction *I) {
 bool RaiseAsmPass::runOnModule(Module &M) {
   bool changed = false;
 
-#if LLVM_VERSION_CODE >= LLVM_VERSION(2, 9)
   std::string Err;
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 1)
   std::string HostTriple = llvm::sys::getDefaultTargetTriple();
@@ -115,7 +80,6 @@ bool RaiseAsmPass::runOnModule(Module &M) {
 #endif
     TLI = TM->getTargetLowering();
   }
-#endif
   
   for (Module::iterator fi = M.begin(), fe = M.end(); fi != fe; ++fi) {
     for (Function::iterator bi = fi->begin(), be = fi->end(); bi != be; ++bi) {

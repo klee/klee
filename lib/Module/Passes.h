@@ -44,9 +44,7 @@ namespace klee {
 class RaiseAsmPass : public llvm::ModulePass {
   static char ID;
 
-#if LLVM_VERSION_CODE >= LLVM_VERSION(2, 9)
   const llvm::TargetLowering *TLI;
-#endif
 
   llvm::Function *getIntrinsic(llvm::Module &M,
                                unsigned IID,
@@ -61,11 +59,7 @@ class RaiseAsmPass : public llvm::ModulePass {
   bool runOnInstruction(llvm::Module &M, llvm::Instruction *I);
 
 public:
-#if LLVM_VERSION_CODE < LLVM_VERSION(2, 8)
-  RaiseAsmPass() : llvm::ModulePass((intptr_t) &ID) {}
-#else
   RaiseAsmPass() : llvm::ModulePass(ID), TLI(0) {}
-#endif
   
   virtual bool runOnModule(llvm::Module &M);
 };
@@ -90,11 +84,7 @@ public:
   IntrinsicCleanerPass(const llvm::DataLayout &TD,
 #endif
                        bool LI=true)
-#if LLVM_VERSION_CODE < LLVM_VERSION(2, 8)
-    : llvm::ModulePass((intptr_t) &ID),
-#else
     : llvm::ModulePass(ID),
-#endif
 #if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
       TargetData(TD),
 #else
@@ -123,11 +113,7 @@ class PhiCleanerPass : public llvm::FunctionPass {
   static char ID;
 
 public:
-#if LLVM_VERSION_CODE < LLVM_VERSION(2, 8)
-  PhiCleanerPass() : llvm::FunctionPass((intptr_t) &ID) {}
-#else
   PhiCleanerPass() : llvm::FunctionPass(ID) {}
-#endif
   
   virtual bool runOnFunction(llvm::Function &f);
 };
@@ -135,11 +121,7 @@ public:
 class DivCheckPass : public llvm::ModulePass {
   static char ID;
 public:
-#if LLVM_VERSION_CODE < LLVM_VERSION(2, 8)
-  DivCheckPass(): ModulePass((intptr_t) &ID) {}
-#else
   DivCheckPass(): ModulePass(ID) {}
-#endif
   virtual bool runOnModule(llvm::Module &M);
 };
 
@@ -160,11 +142,7 @@ public:
 class OvershiftCheckPass : public llvm::ModulePass {
   static char ID;
 public:
-#if LLVM_VERSION_CODE < LLVM_VERSION(2, 8)
-  OvershiftCheckPass(): ModulePass((intptr_t) &ID) {}
-#else
   OvershiftCheckPass(): ModulePass(ID) {}
-#endif
   virtual bool runOnModule(llvm::Module &M);
 };
 
@@ -174,11 +152,7 @@ public:
 class LowerSwitchPass : public llvm::FunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
-#if LLVM_VERSION_CODE < LLVM_VERSION(2, 8)
-  LowerSwitchPass() : FunctionPass((intptr_t) &ID) {} 
-#else
   LowerSwitchPass() : FunctionPass(ID) {} 
-#endif
   
   virtual bool runOnFunction(llvm::Function &F);
   

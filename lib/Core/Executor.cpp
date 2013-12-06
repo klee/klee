@@ -67,9 +67,7 @@
 #include "llvm/Function.h"
 #include "llvm/Instructions.h"
 #include "llvm/IntrinsicInst.h"
-#if LLVM_VERSION_CODE >= LLVM_VERSION(2, 7)
 #include "llvm/LLVMContext.h"
-#endif
 #include "llvm/Module.h"
 #if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
 #include "llvm/Target/TargetData.h"
@@ -83,11 +81,7 @@
 #include "llvm/Support/CallSite.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
-#if LLVM_VERSION_CODE < LLVM_VERSION(2, 9)
-#include "llvm/System/Process.h"
-#else
 #include "llvm/Support/Process.h"
-#endif
 
 #include <cassert>
 #include <algorithm>
@@ -1404,26 +1398,9 @@ Function* Executor::getTargetFunction(Value *calledVal, ExecutionState &state) {
   }
 }
 
+/// TODO remove?
 static bool isDebugIntrinsic(const Function *f, KModule *KM) {
-#if LLVM_VERSION_CODE < LLVM_VERSION(2, 7)
-  // Fast path, getIntrinsicID is slow.
-  if (f == KM->dbgStopPointFn)
-    return true;
-
-  switch (f->getIntrinsicID()) {
-  case Intrinsic::dbg_stoppoint:
-  case Intrinsic::dbg_region_start:
-  case Intrinsic::dbg_region_end:
-  case Intrinsic::dbg_func_start:
-  case Intrinsic::dbg_declare:
-    return true;
-
-  default:
-    return false;
-  }
-#else
   return false;
-#endif
 }
 
 static inline const llvm::fltSemantics * fpWidthToSemantics(unsigned width) {
@@ -1973,14 +1950,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
  
     // Memory instructions...
-#if LLVM_VERSION_CODE < LLVM_VERSION(2, 7)
-  case Instruction::Malloc:
-  case Instruction::Alloca: {
-    AllocationInst *ai = cast<AllocationInst>(i);
-#else
   case Instruction::Alloca: {
     AllocaInst *ai = cast<AllocaInst>(i);
-#endif
     unsigned elementSize = 
       kmodule->targetData->getTypeStoreSize(ai->getAllocatedType());
     ref<Expr> size = Expr::createPointer(elementSize);
@@ -1993,12 +1964,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     executeAlloc(state, size, isLocal, ki);
     break;
   }
-#if LLVM_VERSION_CODE < LLVM_VERSION(2, 7)
-  case Instruction::Free: {
-    executeFree(state, eval(ki, 0, state).value);
-    break;
-  }
-#endif
 
   case Instruction::Load: {
     ref<Expr> base = eval(ki, 0, state).value;

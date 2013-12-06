@@ -21,11 +21,7 @@
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/Verifier.h"
 #include "llvm/Support/CommandLine.h"
-#if LLVM_VERSION_CODE < LLVM_VERSION(2, 9)
-#include "llvm/System/DynamicLibrary.h"
-#else
 #include "llvm/Support/DynamicLibrary.h"
-#endif
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
 #include "llvm/IR/Module.h"
@@ -112,9 +108,6 @@ static void AddStandardCompilePasses(PassManager &PM) {
 
   if (DisableOptimizations) return;
 
-#if LLVM_VERSION_CODE < LLVM_VERSION(2, 7)
-  addPass(PM, createRaiseAllocationsPass());     // call %malloc -> malloc inst
-#endif
   addPass(PM, createCFGSimplificationPass());    // Clean up disgusting code
   addPass(PM, createPromoteMemoryToRegisterPass());// Kill useless allocas
   addPass(PM, createGlobalOptimizerPass());      // Optimize out global vars
@@ -137,9 +130,6 @@ static void AddStandardCompilePasses(PassManager &PM) {
   addPass(PM, createCFGSimplificationPass());    // Merge & remove BBs
   addPass(PM, createScalarReplAggregatesPass()); // Break up aggregate allocas
   addPass(PM, createInstructionCombiningPass()); // Combine silly seq's
-#if LLVM_VERSION_CODE < LLVM_VERSION(2, 7)
-  addPass(PM, createCondPropagationPass());      // Propagate conditionals
-#endif
 
   addPass(PM, createTailCallEliminationPass());  // Eliminate tail calls
   addPass(PM, createCFGSimplificationPass());    // Merge & remove BBs
@@ -147,9 +137,6 @@ static void AddStandardCompilePasses(PassManager &PM) {
   addPass(PM, createLoopRotatePass());
   addPass(PM, createLICMPass());                 // Hoist loop invariants
   addPass(PM, createLoopUnswitchPass());         // Unswitch loops.
-#if LLVM_VERSION_CODE < LLVM_VERSION(2, 9)
-  addPass(PM, createLoopIndexSplitPass());       // Index split loops.
-#endif
   // FIXME : Removing instcombine causes nestedloop regression.
   addPass(PM, createInstructionCombiningPass());
   addPass(PM, createIndVarSimplifyPass());       // Canonicalize indvars
@@ -163,9 +150,6 @@ static void AddStandardCompilePasses(PassManager &PM) {
   // Run instcombine after redundancy elimination to exploit opportunities
   // opened up by them.
   addPass(PM, createInstructionCombiningPass());
-#if LLVM_VERSION_CODE < LLVM_VERSION(2, 7)
-  addPass(PM, createCondPropagationPass());      // Propagate conditionals
-#endif
 
   addPass(PM, createDeadStoreEliminationPass()); // Delete dead stores
   addPass(PM, createAggressiveDCEPass());        // Delete dead instructions

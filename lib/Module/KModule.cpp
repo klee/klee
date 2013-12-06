@@ -30,9 +30,7 @@
 #include "llvm/IR/DataLayout.h"
 #else
 #include "llvm/Instructions.h"
-#if LLVM_VERSION_CODE >= LLVM_VERSION(2, 7)
 #include "llvm/LLVMContext.h"
-#endif
 #include "llvm/Module.h"
 #include "llvm/ValueSymbolTable.h"
 #if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
@@ -47,14 +45,8 @@
 #include "llvm/Support/CallSite.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
-#if LLVM_VERSION_CODE >= LLVM_VERSION(2, 7)
 #include "llvm/Support/raw_os_ostream.h"
-#endif
-#if LLVM_VERSION_CODE < LLVM_VERSION(2, 9)
-#include "llvm/System/Path.h"
-#else
 #include "llvm/Support/Path.h"
-#endif
 #include "llvm/Transforms/Scalar.h"
 
 #include <llvm/Transforms/Utils/Cloning.h>
@@ -113,7 +105,6 @@ KModule::KModule(Module *_module)
 #else
     targetData(new DataLayout(module)),
 #endif
-    dbgStopPointFn(0),
     kleeMergeFn(0),
     infos(0),
     constantTable(0) {
@@ -435,38 +426,6 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
     std::ostream *os = ih->openOutputFile("assembly.ll");
     assert(os && os->good() && "unable to open source output");
 
-#if LLVM_VERSION_CODE < LLVM_VERSION(2, 6)
-    // We have an option for this in case the user wants a .ll they
-    // can compile.
-    if (NoTruncateSourceLines) {
-      os << *module;
-    } else {
-      bool truncated = false;
-      std::string string;
-      llvm::raw_string_ostream rss(string);
-      rss << *module;
-      rss.flush();
-      const char *position = string.c_str();
-
-      for (;;) {
-        const char *end = index(position, '\n');
-        if (!end) {
-          os << position;
-          break;
-        } else {
-          unsigned count = (end - position) + 1;
-          if (count<255) {
-            os->write(position, count);
-          } else {
-            os->write(position, 254);
-            os << "\n";
-            truncated = true;
-          }
-          position = end+1;
-        }
-      }
-    }
-#else
     llvm::raw_os_ostream *ros = new llvm::raw_os_ostream(*os);
 
     // We have an option for this in case the user wants a .ll they
@@ -498,7 +457,6 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
       }
     }
     delete ros;
-#endif
 
     delete os;
   }
@@ -511,7 +469,6 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
     delete f;
   }
 
-  dbgStopPointFn = module->getFunction("llvm.dbg.stoppoint");
   kleeMergeFn = module->getFunction("klee_merge");
 
   /* Build shadow structures */
