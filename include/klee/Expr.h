@@ -17,10 +17,12 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include <set>
 #include <vector>
 #include <iosfwd> // FIXME: Remove this!!!
+#include <sstream> // For llvm::raw_ostream hack
 
 namespace llvm {
   class Type;
@@ -297,6 +299,24 @@ inline std::ostream &operator<<(std::ostream &os, const Expr &e) {
 inline std::ostream &operator<<(std::ostream &os, const Expr::Kind kind) {
   Expr::printKind(os, kind);
   return os;
+}
+
+inline llvm::raw_ostream& operator<<(llvm::raw_ostream& ros, const Expr &e){
+    // This is a hack. I do not want to template Expr to support
+    // llvm::raw_ostream so this will have to do!
+    std::ostringstream ss;
+    ss << e;
+    ros << ss.str();
+    return ros;
+}
+
+inline llvm::raw_ostream& operator<<(llvm::raw_ostream& ros, const Expr::Kind kind){
+    // This is a hack. I do not want to template Expr to support
+    // llvm::raw_ostream so this will have to do!
+    std::ostringstream ss;
+    ss << kind;
+    ros << ss.str();
+    return ros;
 }
 
 // Terminal Exprs
