@@ -33,6 +33,7 @@
 #include "llvm/Analysis/DebugInfo.h"
 #endif
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/Support/Debug.h"
 
 #include <map>
 #include <string>
@@ -120,12 +121,23 @@ InstructionInfoTable::InstructionInfoTable(Module *m)
         lineTable.find(instr);
       if (ltit!=lineTable.end())
         assemblyLine = ltit->second;
-      getInstructionDebugInfo(instr, initialFile, initialLine);
-      infos.insert(std::make_pair(instr,
-                                  InstructionInfo(id++,
-                                                  *initialFile,
-                                                  initialLine,
-                                                  assemblyLine)));
+      if (getInstructionDebugInfo(instr, initialFile, initialLine))
+      {
+        infos.insert(std::make_pair(instr,
+                                    InstructionInfo(id++,
+                                                    *initialFile,
+                                                    initialLine,
+                                                    assemblyLine)));
+        DEBUG_WITH_TYPE("klee_obtained_debug", dbgs() <<
+          "Instruction: \"" << *instr << "\" (assembly line " << assemblyLine <<
+          ") has debug location " << *initialFile << ":" << initialLine << "\n");
+      }
+      else
+      {
+        DEBUG_WITH_TYPE("klee_missing_debug", dbgs() <<
+          "Instruction: \"" << *instr << "\" (assembly line " << assemblyLine <<
+          ") is missing debug info.\n");
+      }
     }
   }
 }
