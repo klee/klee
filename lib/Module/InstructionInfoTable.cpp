@@ -108,10 +108,7 @@ InstructionInfoTable::InstructionInfoTable(Module *m)
 
   for (Module::iterator fnIt = m->begin(), fn_ie = m->end(); 
        fnIt != fn_ie; ++fnIt) {
-    const std::string *initialFile = &dummyString;
-    unsigned initialLine = 0;
 
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
     for (inst_iterator it = inst_begin(fnIt), ie = inst_end(fnIt); it != ie;
         ++it) {
       const std::string *initialFile = &dummyString;
@@ -130,64 +127,6 @@ InstructionInfoTable::InstructionInfoTable(Module *m)
                                                   initialLine,
                                                   assemblyLine)));
     }
-#else
-    // It may be better to look for the closest stoppoint to the entry
-    // following the CFG, but it is not clear that it ever matters in
-    // practice.
-    for (inst_iterator it = inst_begin(fnIt), ie = inst_end(fnIt);
-         it != ie; ++it)
-      if (getInstructionDebugInfo(&*it, initialFile, initialLine))
-        break;
-
-    typedef std::map<BasicBlock*, std::pair<const std::string*,unsigned> > 
-      sourceinfo_ty;
-    sourceinfo_ty sourceInfo;
-    for (llvm::Function::iterator bbIt = fnIt->begin(), bbie = fnIt->end(); 
-         bbIt != bbie; ++bbIt) {
-      std::pair<sourceinfo_ty::iterator, bool>
-        res = sourceInfo.insert(std::make_pair(bbIt,
-                                               std::make_pair(initialFile,
-                                                              initialLine)));
-      if (!res.second)
-        continue;
-
-      std::vector<BasicBlock*> worklist;
-      worklist.push_back(bbIt);
-
-      do {
-        BasicBlock *bb = worklist.back();
-        worklist.pop_back();
-
-        sourceinfo_ty::iterator si = sourceInfo.find(bb);
-        assert(si != sourceInfo.end());
-        const std::string *file = si->second.first;
-        unsigned line = si->second.second;
-        
-        for (BasicBlock::iterator it = bb->begin(), ie = bb->end();
-             it != ie; ++it) {
-          Instruction *instr = it;
-          unsigned assemblyLine = 0;
-          std::map<const Instruction*, unsigned>::const_iterator ltit = 
-            lineTable.find(instr);
-          if (ltit!=lineTable.end())
-            assemblyLine = ltit->second;
-          getInstructionDebugInfo(instr, file, line);
-          infos.insert(std::make_pair(instr,
-                                      InstructionInfo(id++,
-                                                      *file,
-                                                      line,
-                                                      assemblyLine)));        
-        }
-        
-        for (succ_iterator it = succ_begin(bb), ie = succ_end(bb); 
-             it != ie; ++it) {
-          if (sourceInfo.insert(std::make_pair(*it,
-                                               std::make_pair(file, line))).second)
-            worklist.push_back(*it);
-        }
-      } while (!worklist.empty());
-    }
-#endif
   }
 }
 
