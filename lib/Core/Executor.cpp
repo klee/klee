@@ -2790,6 +2790,7 @@ void Executor::terminateStateOnError(ExecutionState &state,
     if (ii.file != "") {
       msg << "File: " << ii.file << "\n";
       msg << "Line: " << ii.line << "\n";
+      msg << "assembly.ll line: " << ii.assemblyLine << "\n";
     }
     msg << "Stack: \n";
     state.dumpStack(msg);
