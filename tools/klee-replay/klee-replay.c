@@ -16,12 +16,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <getopt.h>
 
 #include <errno.h>
 #include <time.h>
 #include <unistd.h>
 #include <sys/signal.h>
 #include <sys/wait.h>
+#include <sys/capability.h>
 
 static void __emit_error(const char *msg);
 
@@ -31,6 +33,14 @@ static unsigned obj_index;
 static const char *progname = 0;
 static unsigned monitored_pid = 0;    
 static unsigned monitored_timeout;
+
+static char *rootdir = NULL;
+static struct option long_options[] = {
+  {"create-files-only", required_argument, 0, 'f'},
+  {"chroot-to-dir", required_argument, 0, 'r'},
+  {"help", no_argument, 0, 'h'},
+  {0, 0, 0, 0},
+};
 
 static void stop_monitored(int process) {
   fprintf(stderr, "TIMEOUT: ATTEMPTING GDB EXIT\n");
@@ -105,9 +115,7 @@ static void timeout_handler(int signal) {
   }
 }
 
-void process_status(int status,
-		    time_t elapsed, 
-		    const char *pfx) {
+void process_status(int status, time_t elapsed, const char *pfx) {
   fprintf(stderr, "%s: ", progname);
   if (pfx)
     fprintf(stderr, "%s: ", pfx);
@@ -130,6 +138,13 @@ void process_status(int status,
     fprintf(stderr, "EXIT STATUS: NONE (%d seconds)\n", (int) elapsed);
     _exit(0);
   }
+}
+
+/* This function assumes that executable is a path pointing to some existing
+ * binary and rootdir is a path pointing to some directory.
+ */
+static inline char *strip_root_dir(char *executable, char *rootdir) {
+  return executable + strlen(rootdir);
 }
 
 static void run_monitored(char *executable, int argc, char **argv) {
@@ -162,8 +177,22 @@ static void run_monitored(char *executable, int argc, char **argv) {
      */
     setpgrp();
 
-    execv(executable, argv);
-    perror("execv");
+    if (!rootdir) {
+      execv(executable, argv);
+      perror("execv");
+      _exit(66);
+    }
+
+    fprintf(stderr, "rootdir: %s\n", rootdir);
+    const char *msg;
+    if ((msg = "chdir", chdir(rootdir) == 0) &&
+      (msg = "chroot", chroot(rootdir) == 0)) {
+      msg = "execv";
+      executable = strip_root_dir(executable, rootdir);
+      argv[0] = strip_root_dir(argv[0], rootdir);
+      execv(executable, argv);
+    }
+    perror(msg);
     _exit(66);
   } else {
     /* Parent process which monitors the child. */
@@ -192,11 +221,31 @@ static void run_monitored(char *executable, int argc, char **argv) {
   }
 }
 
+/* ensure this process has CAP_SYS_CHROOT capability. */
+void ensure_capsyschroot(const char *executable) {
+  cap_t caps = cap_get_proc();  // all current capabilities.
+  cap_flag_value_t chroot_permitted, chroot_effective;
+
+  if (!caps)
+    perror("cap_get_proc");
+  /* effective and permitted flags should be set for CAP_SYS_CHROOT. */
+  cap_get_flag(caps, CAP_SYS_CHROOT, CAP_PERMITTED, &chroot_permitted);
+  cap_get_flag(caps, CAP_SYS_CHROOT, CAP_EFFECTIVE, &chroot_effective);
+  if (chroot_permitted != CAP_SET || chroot_effective != CAP_SET) {
+    fprintf(stderr, "Error: chroot: No CAP_SYS_CHROOT capability.\n");
+    exit(1);
+  }
+  cap_free(caps);
+}
+
 static void usage(void) {
-  fprintf(stderr, "Usage: %s <executable> { <ktest-files> }\n", progname);
+  fprintf(stderr, "Usage: %s [option]... <executable> <ktest-file>...\n", progname);
   fprintf(stderr, "   or: %s --create-files-only <ktest-file>\n", progname);
   fprintf(stderr, "\n");
-  fprintf(stderr, "Set KLEE_REPLAY_TIMEOUT environment variable to set a timeout (in seconds).\n");
+  fprintf(stderr, "-r, --chroot-to-dir=DIR  use chroot jail, requires CAP_SYS_CHROOT\n");
+  fprintf(stderr, "-h, --help               display this help and exit\n");
+  fprintf(stderr, "\n");
+  fprintf(stderr, "Use KLEE_REPLAY_TIMEOUT environment variable to set a timeout (in seconds).\n");
   exit(1);
 }
 
@@ -209,35 +258,53 @@ int main(int argc, char** argv) {
   if (argc < 3)
     usage();
 
-  /* Special case hack for only creating files and not actually executing the
-   * program.
-   */
-  if (strcmp(argv[1], "--create-files-only") == 0) {
-    if (argc != 3)
-      usage();
+  int c, opt_index;
+  while ((c = getopt_long(argc, argv, "f:r:", long_options, &opt_index)) != -1) {
+    switch (c) {
+      case 'f': {
+        /* Special case hack for only creating files and not actually executing
+        * the program.
+         */
+        if (argc != 3)
+          usage();
+    
+        char* input_fname = optarg;
+    
+        input = kTest_fromFile(input_fname);
+        if (!input) {
+          fprintf(stderr, "%s: error: input file %s not valid.\n", progname,
+                  input_fname);
+          exit(1);
+        }
 
-    char* input_fname = argv[2];
+        prg_argc = input->numArgs;
+        prg_argv = input->args;
+        prg_argv[0] = argv[1];
+        klee_init_env(&prg_argc, &prg_argv);
 
-    input = kTest_fromFile(input_fname);
-    if (!input) {
-      fprintf(stderr, "%s: error: input file %s not valid.\n", progname,
-              input_fname);
-      exit(1);
+        replay_create_files(&__exe_fs);
+        return 0;
+      }
+      case 'r':
+        rootdir = optarg;
+        break;
     }
-    
-    prg_argc = input->numArgs;
-    prg_argv = input->args;
-    prg_argv[0] = argv[1];
-    klee_init_env(&prg_argc, &prg_argv);
-    
-    replay_create_files(&__exe_fs);
-    return 0;
   }
 
   /* Normal execution path ... */
 
-  char* executable = argv[1];
+  char* executable = argv[optind];
+
+  /* make sure this process has the CAP_SYS_CHROOT capability. */
+  if (rootdir)
+    ensure_capsyschroot(progname);
   
+  /* rootdir should be a prefix of executable's path. */
+  if (rootdir && strstr(executable, rootdir) != executable) {
+    fprintf(stderr, "Error: chroot: root dir should be a parent dir of executable.\n");
+    exit(1);
+  }
+
   /* Verify the executable exists. */
   FILE *f = fopen(executable, "r");
   if (!f) {
@@ -247,7 +314,7 @@ int main(int argc, char** argv) {
   fclose(f);
 
   int idx = 0;
-  for (idx = 2; idx != argc; ++idx) {
+  for (idx = optind + 1; idx != argc; ++idx) {
     char* input_fname = argv[idx];
     unsigned i;
     
@@ -261,7 +328,7 @@ int main(int argc, char** argv) {
     obj_index = 0;
     prg_argc = input->numArgs;
     prg_argv = input->args;
-    prg_argv[0] = argv[1];
+    prg_argv[0] = argv[optind];
     klee_init_env(&prg_argc, &prg_argv);
 
     if (idx > 2)
@@ -361,9 +428,9 @@ void klee_make_symbolic(void *addr, size_t nbytes, const char *name) {
       *((int*) addr) = 0;
     } else {
       if (boo->numBytes != nbytes) {
-	fprintf(stderr, "make_symbolic mismatch, different sizes: "
-		"%d in input file, %lu in code\n", boo->numBytes, (unsigned long)nbytes);
-	exit(1);
+        fprintf(stderr, "make_symbolic mismatch, different sizes: "
+           "%d in input file, %lu in code\n", boo->numBytes, (unsigned long)nbytes);
+        exit(1);
       } else {
         memcpy(addr, boo->bytes, nbytes);
         obj_index++;
@@ -388,7 +455,7 @@ int klee_range(int start, int end, const char* name) {
 
     if (r < start || r >= end) {
       fprintf(stderr, "klee_range(%d, %d, %s) returned invalid result: %d\n", 
-	      start, end, name, r);
+        start, end, name, r);
       exit(1);
     }
     
@@ -397,7 +464,7 @@ int klee_range(int start, int end, const char* name) {
 }
 
 void klee_report_error(const char *file, int line, 
-		       const char *message, const char *suffix) {
+                       const char *message, const char *suffix) {
   __emit_error(message);
 }
 

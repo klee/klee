@@ -16,4 +16,4 @@ NO_PEDANTIC=1
 
 include $(LEVEL)/Makefile.common
 
-LIBS += -lutil
+LIBS += -lutil -lcap

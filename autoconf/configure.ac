@@ -467,6 +467,15 @@ AC_LANG_PUSH([C])
 
 AC_CHECK_HEADERS([sys/acl.h])
 
+AC_CHECK_LIB([cap], [cap_get_proc], [have_cap=yes], [have_cap=no])
+if test "x${have_cap}" = xyes; then
+  AC_CHECK_HEADERS([sys/capability.h], [], [have_cap=no])
+fi
+if test "x${have_cap}" = xno; then
+  AC_MSG_ERROR([Library cap and its header file sys/capability.h required for \
+klee-replay. Please install package libcap-dev/libcap-devel.])
+fi
+
 AC_LANG_POP([C])
 
 AC_CHECK_HEADERS([selinux/selinux.h],
