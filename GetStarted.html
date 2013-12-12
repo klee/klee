@@ -108,18 +108,15 @@ only experimental support for LLVM 3.3.
     <ul>
       <li>Download and install the LLVM 2.9 release of <tt>llvm-gcc</tt>
         from <a href="http://llvm.org/releases/download.html#2.9">here</a>.  
-	On an x86_64 Linux platform you are going to need the archive <a href="http://llvm.org/releases/2.9/llvm-gcc4.2-2.9-x86_64-linux.tar.bz2">LLVM-GCC 4.2 Front End Binaries for Linux/x86_64</a>. 
+	On an x86_64 Linux platform you are going to need the archive <a href="http://llvm.org/releases/2.9/llvm-gcc4.2-2.9-x86_64-linux.tar.bz2">LLVM-GCC 4.2 Front End Binaries for Linux/x86_64</a>. </li>
 
-	<br/>Add <tt>llvm-gcc</tt> to your <tt>PATH</tt>.  It
-        is important to do this first so that <tt>llvm-gcc</tt> is
-        found in subsequent <tt>configure</tt>
-        steps. <tt>llvm-gcc</tt> will be used later to compile
-        programs that KLEE can execute.
-      </li>
-
-      <li><b>Forgetting to add llvm-gcc to your PATH at this point is
-        by far the most common source of build errors reported by new
-        users.</b></li>
+      <li>Add <tt>llvm-gcc</tt> to your <tt>PATH</tt>.  It is
+        important to do this first so that <tt>llvm-gcc</tt> is found
+        in subsequent <tt>configure</tt> steps. <tt>llvm-gcc</tt> will
+        be used later to compile programs that KLEE can execute.
+        <b>Forgetting to add <tt>llvm-gcc</tt> to your <tt>PATH</tt>
+        at this point is by far the most common source of build errors
+        reported by new users.</b></li>
     </ul>
   </li>
 
@@ -176,19 +173,19 @@ command before using STP (and thus KLEE):
 By default, KLEE works on closed programs (programs that don't use any
 external code such as C library functions). However, if you want to
 use KLEE to run real programs you will want to enable the KLEE POSIX
-runtime, which is built on top of the uClibc C library.
+runtime, which is built on top of
+the <a href="http://uclibc.org">uClibc</a> C library.
 </p>
 
 <ol type="a">
-  <li>Download KLEE's uClibc. KLEE uses a version
-        of <a href="http://uclibc.org">uClibc</a> which has been
-        modified slightly for our purposes. 
+  <li>Download KLEE's uClibc. KLEE uses a version of uclibc which has
+        been modified slightly for our purposes.
 	<ul>
-	  <li>A version that works on 32-bit Linux can be found
-	  <a href="http://www.doc.ic.ac.uk/~cristic/klee/klee-uclibc-i386.html">here</a>
-	  </li>
 	  <li>A version that works on 64-bit Linux can be found
 	    <a href="http://www.doc.ic.ac.uk/~cristic/klee/klee-uclibc-x64.html">here</a>
+	  </li>
+	  <li>A version that works on 32-bit Linux can be found
+	  <a href="http://www.doc.ic.ac.uk/~cristic/klee/klee-uclibc-i386.html">here</a>
 	  </li>
 	</ul>
   </li>
@@ -196,7 +193,7 @@ runtime, which is built on top of the uClibc C library.
   <li>Build uClibc with <tt>llvm-gcc</tt>:
     <div class="instr">
       $ tar zxvf klee-uclibc-0.02.tgz <br/>
-      $ ./configure --with-llvm=<i>path/to/llvm</i> <br/>
+      $ ./configure --with-llvm=<i>path-to-llvm</i> <br/>
       $ make <br/>
     </div>
 
@@ -209,7 +206,7 @@ runtime, which is built on top of the uClibc C library.
   </ol>
 
 
-  <li><b>Checkout KLEE (to any path you like):</b>
+  <li><b>Download KLEE:</b>
     <div class="instr">
       $ git clone https://github.com/ccadar/klee.git
     </div>
