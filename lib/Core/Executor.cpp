@@ -2743,9 +2743,14 @@ const InstructionInfo & Executor::getLastNonKleeInternalInstruction(const Execut
   if (kmodule->internalFunctions.count(it->kf->function) == 0){
     ii =  state.prevPC->info;
     *lastInstruction = state.prevPC->inst;
+    //  Cannot return yet because even though
+    //  it->function is not an internal function it might of
+    //  been called from an internal function.
   }
 
-  // wind up the stack and check if we are in a KLEE internal function
+  // Wind up the stack and check if we are in a KLEE internal function.
+  // We visit the entire stack because we want to return a CallInstruction
+  // that was not reached via any KLEE internal functions.
   for (;it != itE; ++it) {
     // check calling instruction and if it is contained in a KLEE internal function
     const Function * f = (*it->caller).inst->getParent()->getParent();
