@@ -34,6 +34,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Bitcode/ReaderWriter.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
 
@@ -257,6 +258,8 @@ public:
 
   static void getOutFiles(std::string path,
 			  std::vector<std::string> &results);
+
+  static llvm::sys::Path getRunTimeLibraryPath(const char* argv0, void *MainExecAddr);
 };
 
 KleeHandler::KleeHandler(int argc, char **argv) 
@@ -567,6 +570,32 @@ void KleeHandler::getOutFiles(std::string path,
       results.push_back(f);
     }
   }
+}
+
+
+llvm::sys::Path KleeHandler::getRunTimeLibraryPath(const char* argv0, void* MainExecAddr)
+{
+  llvm::sys::Path toolRoot = llvm::sys::Path::GetMainExecutable(argv0, MainExecAddr);
+  toolRoot.eraseComponent(); // Strip off executable so we have a directory path
+
+  llvm::sys::Path libDir;
+
+  if ( strcmp(toolRoot.c_str(), KLEE_INSTALL_BIN_DIR ) == 0)
+  {
+    DEBUG_WITH_TYPE("klee_runtime", llvm::dbgs() <<
+                    "Using installed KLEE library runtime: ");
+    libDir = llvm::sys::Path( KLEE_INSTALL_LIB_DIR );
+  }
+  else
+  {
+    DEBUG_WITH_TYPE("klee_runtime", llvm::dbgs() <<
+                    "Using build directory KLEE library runtime :");
+    libDir = llvm::sys::Path(KLEE_DIR "/" RUNTIME_CONFIGURATION "/lib");
+  }
+
+  DEBUG_WITH_TYPE("klee_runtime", llvm::dbgs() <<
+                  libDir.c_str() << "\n");
+  return libDir;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1227,7 +1256,8 @@ int main(int argc, char **argv, char **envp) {
       return r;
   }
 
-  llvm::sys::Path LibraryDir(KLEE_DIR "/" RUNTIME_CONFIGURATION "/lib");
+  llvm::sys::Path LibraryDir = KleeHandler::getRunTimeLibraryPath(argv[0], 
+                              reinterpret_cast<void*>(main));
   Interpreter::ModuleOptions Opts(LibraryDir.c_str(),
                                   /*Optimize=*/OptimizeModule, 
                                   /*CheckDivZero=*/CheckDivZero,
