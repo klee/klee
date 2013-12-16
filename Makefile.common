@@ -31,7 +31,7 @@ endif
 C.Flags += -std=gnu89
 
 LD.Flags += -L$(STP_ROOT)/lib
-CXX.Flags += -I$(STP_ROOT)/include
+CXX.Flags += -I$(STP_ROOT)/include -I$(shell $(LLVM_CONFIG) --includedir)
 CXX.Flags += -DKLEE_DIR=\"$(PROJ_OBJ_ROOT)\" -DKLEE_LIB_DIR=\"$(PROJ_libdir)\"
 
 # For STP.
