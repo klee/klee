@@ -23,4 +23,8 @@ ifeq ($(ENABLE_POSIX_RUNTIME),1)
 PARALLEL_DIRS += POSIX
 endif
 
+ifeq ($(ENABLE_UCLIBC),1)
+PARALLEL_DIRS += klee-uclibc
+endif
+
 include $(LEVEL)/Makefile.common

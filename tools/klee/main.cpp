@@ -1006,8 +1006,8 @@ static char *format_tdiff(char *buf, long seconds)
   return buf;
 }
 
-#ifndef KLEE_UCLIBC
-static llvm::Module *linkWithUclibc(llvm::Module *mainModule) {
+#ifndef SUPPORT_KLEE_UCLIBC
+static llvm::Module *linkWithUclibc(llvm::Module *mainModule, llvm::sys::Path libDir) {
   fprintf(stderr, "error: invalid libc, no uclibc support!\n");
   exit(1);
   return 0;
@@ -1030,12 +1030,15 @@ static void replaceOrRenameFunction(llvm::Module *module,
   }
 }
 
-static llvm::Module *linkWithUclibc(llvm::Module *mainModule) {
-  // Ensure that KLEE_UCLIBC exists
-  bool uclibcRootExists=false;
-  llvm::sys::fs::is_directory(KLEE_UCLIBC, uclibcRootExists);
-  if (!uclibcRootExists)
-    klee_error("Cannot link with uclibc. KLEE_UCLIBC (\"" KLEE_UCLIBC "\") is not a directory.");
+static llvm::Module *linkWithUclibc(llvm::Module *mainModule, llvm::sys::Path libDir) {
+  // Ensure that klee-uclibc exists
+  llvm::sys::Path uclibcBCA(libDir);
+  uclibcBCA.appendComponent(KLEE_UCLIBC_BCA_NAME);
+
+  bool uclibcExists=false;
+  llvm::sys::fs::exists(uclibcBCA.c_str(), uclibcExists);
+  if (!uclibcExists)
+    klee_error("Cannot find klee-uclibc : %s", uclibcBCA.c_str());
 
   Function *f;
   // force import of __uClibc_main
@@ -1094,8 +1097,7 @@ static llvm::Module *linkWithUclibc(llvm::Module *mainModule) {
     }
   }
   
-  mainModule = klee::linkWithLibrary(mainModule, 
-                                     KLEE_UCLIBC "/lib/libc.a");
+  mainModule = klee::linkWithLibrary(mainModule, uclibcBCA.c_str());
   assert(mainModule && "unable to link with uclibc");
 
 
@@ -1148,6 +1150,7 @@ static llvm::Module *linkWithUclibc(llvm::Module *mainModule) {
   
   new UnreachableInst(getGlobalContext(), bb);
 
+  klee_message("NOTE: Using klee-uclibc : %s", uclibcBCA.c_str());
   return mainModule;
 }
 #endif
@@ -1281,7 +1284,7 @@ int main(int argc, char **argv, char **envp) {
   }
 
   case UcLibc:
-    mainModule = linkWithUclibc(mainModule);
+    mainModule = linkWithUclibc(mainModule, LibraryDir);
     break;
   }
 

@@ -45,9 +45,6 @@
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
 
-/* Path to KLEE's uClibc */
-#undef KLEE_UCLIBC
-
 /* LLVM version is release (instead of development) */
 #undef LLVM_IS_RELEASE
 
@@ -80,6 +77,9 @@
 
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
+
+/* klee-uclibc is supported */
+#undef SUPPORT_KLEE_UCLIBC
 
 /* Supporting metaSMT API */
 #undef SUPPORT_METASMT

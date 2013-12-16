@@ -30,10 +30,17 @@ endif
 # Needed to build runtime library using clang (gnu89 is the gcc default)
 C.Flags += -std=gnu89
 
+# This is filename that KLEE will look for when trying to load klee-uclibc
+KLEE_UCLIBC_BCA_NAME="klee-uclibc.bca"
+
 LD.Flags += -L$(STP_ROOT)/lib
 CXX.Flags += -I$(STP_ROOT)/include
 CXX.Flags += -DKLEE_DIR=\"$(PROJ_OBJ_ROOT)\" -DKLEE_INSTALL_BIN_DIR=\"$(PROJ_bindir)\"
 CXX.Flags += -DKLEE_INSTALL_LIB_DIR=\"$(PROJ_libdir)\"
+
+ifeq ($(ENABLE_UCLIBC),1)
+	CXX.Flags += -DKLEE_UCLIBC_BCA_NAME=\"$(KLEE_UCLIBC_BCA_NAME)\"
+endif
 
 # For STP.
 CXX.Flags += -DEXT_HASH_MAP

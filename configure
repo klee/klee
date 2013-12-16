@@ -649,8 +649,8 @@ RUNTIME_DEBUG_SYMBOLS
 RUNTIME_DISABLE_ASSERTIONS
 RUNTIME_ENABLE_OPTIMIZED
 ENABLE_POSIX_RUNTIME
+KLEE_UCLIBC_BCA
 ENABLE_UCLIBC
-KLEE_UCLIBC
 KLEE_BITCODE_CXX_COMPILER
 KLEE_BITCODE_C_COMPILER
 clang_cxx
@@ -1374,6 +1374,7 @@ Optional Packages:
                           (Default: auto-detect). If set, --with-llvmcc= must
                           be set too.
   --with-uclibc           Enable use of the klee uclibc at the given path
+                          (klee-uclibc root directory or libc.a file
   --with-runtime          Select build configuration for runtime libraries
                           (default [Release+Asserts])
   --with-stp              Location of STP installation directory
@@ -2991,41 +2992,46 @@ if test "${with_uclibc+set}" = set; then :
 fi
 
 
-if (test X${with_uclibc} = X && test -d uclibc); then
-   with_uclibc=uclibc
-fi
-
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking uclibc" >&5
 $as_echo_n "checking uclibc... " >&6; }
 if (test X${with_uclibc} != X); then
-   if test ! -d ${with_uclibc}; then
-       as_fn_error $? "invalid uclibc directory: ${with_uclibc}" "$LINENO" 5
+   if test  -d ${with_uclibc}; then
+
+            with_uclibc=`cd $with_uclibc 2> /dev/null; pwd`
+
+            KLEE_UCLIBC_BCA="${with_uclibc}/lib/libc.a"
+
+      if test ! -e "${KLEE_UCLIBC_BCA}"; then
+      as_fn_error $? "Could not find file ${KLEE_UCLIBC_BCA}" "$LINENO" 5
+      fi
+   elif test -f ${with_uclibc}; then
+
+            _kud=`dirname ${with_uclibc}`
+      _kud=`cd ${_kud}; pwd 2> /dev/null`
+      _kuf=`basename ${with_uclibc}`
+
+      KLEE_UCLIBC_BCA="${_kud}/${_kuf}"
+   else
+      as_fn_error $? "Could not detect klee-uclibc" "$LINENO" 5
    fi
 
-      with_uclibc=`cd $with_uclibc 2> /dev/null; pwd`
 
-   { $as_echo "$as_me:${as_lineno-$LINENO}: result: $with_uclibc" >&5
-$as_echo "$with_uclibc" >&6; }
+   { $as_echo "$as_me:${as_lineno-$LINENO}: result: $KLEE_UCLIBC_BCA" >&5
+$as_echo "$KLEE_UCLIBC_BCA" >&6; }
+   ENABLE_UCLIBC=1
+
+
+
+$as_echo "#define SUPPORT_KLEE_UCLIBC 1" >>confdefs.h
+
 else
    { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
-fi
-
-
-cat >>confdefs.h <<_ACEOF
-#define KLEE_UCLIBC "$with_uclibc"
-_ACEOF
-
-
-
-if test X${with_uclibc} != X ; then
-  ENABLE_UCLIBC=1
-
-else
-  ENABLE_UCLIBC=0
+   ENABLE_UCLIBC=0
 
 fi
+
 
 
 # Check whether --enable-posix-runtime was given.
