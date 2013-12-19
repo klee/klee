@@ -2660,8 +2660,8 @@ fi
 $as_echo_n "checking llvm build mode... " >&6; }
 
 if test X${with_llvm_build_mode} = Xcheck ; then
-  llvm_configs="`echo $llvm_obj/*/bin/llvm-config`"
-    if test -x "$llvm_configs" ; then
+  llvm_configs="`ls -1 $llvm_obj/*/bin/llvm-config 2>/dev/null | head -n 1`"
+  if test -x "$llvm_configs" ; then
     llvm_build_mode="`$llvm_configs --build-mode`"
   else
     as_fn_error $? "Could not autodetect build mode" "$LINENO" 5

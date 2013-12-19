@@ -161,8 +161,7 @@ AC_ARG_WITH(llvm-build-mode,
 AC_MSG_CHECKING([llvm build mode])
 
 if test X${with_llvm_build_mode} = Xcheck ; then
-  llvm_configs="`echo $llvm_obj/*/bin/llvm-config`"
-  dnl This will be true if the user has exactly 1 build mode built
+  llvm_configs="`ls -1 $llvm_obj/*/bin/llvm-config 2>/dev/null | head -n 1`"
   if test -x "$llvm_configs" ; then
     llvm_build_mode="`$llvm_configs --build-mode`"
   else
