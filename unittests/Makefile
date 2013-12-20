@@ -14,5 +14,9 @@ DIRS = Expr Solver Ref
 
 include $(LEVEL)/Makefile.common
 
+# Remove -fno-rtti as this prevents typeid() being used
+# in gtest
+CXX.Flags := $(filter-out -fno-rtti,$(CPP.Flags))
+
 clean::
 	$(Verb) $(RM) -f *Tests
