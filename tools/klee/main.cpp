@@ -34,6 +34,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Bitcode/ReaderWriter.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
 
@@ -257,6 +258,8 @@ public:
 
   static void getOutFiles(std::string path,
 			  std::vector<std::string> &results);
+
+  static llvm::sys::Path getRunTimeLibraryPath(const char* argv0, void *MainExecAddr);
 };
 
 KleeHandler::KleeHandler(int argc, char **argv) 
@@ -567,6 +570,32 @@ void KleeHandler::getOutFiles(std::string path,
       results.push_back(f);
     }
   }
+}
+
+
+llvm::sys::Path KleeHandler::getRunTimeLibraryPath(const char* argv0, void* MainExecAddr)
+{
+  llvm::sys::Path toolRoot = llvm::sys::Path::GetMainExecutable(argv0, MainExecAddr);
+  toolRoot.eraseComponent(); // Strip off executable so we have a directory path
+
+  llvm::sys::Path libDir;
+
+  if ( strcmp(toolRoot.c_str(), KLEE_INSTALL_BIN_DIR ) == 0)
+  {
+    DEBUG_WITH_TYPE("klee_runtime", llvm::dbgs() <<
+                    "Using installed KLEE library runtime: ");
+    libDir = llvm::sys::Path( KLEE_INSTALL_LIB_DIR );
+  }
+  else
+  {
+    DEBUG_WITH_TYPE("klee_runtime", llvm::dbgs() <<
+                    "Using build directory KLEE library runtime :");
+    libDir = llvm::sys::Path(KLEE_DIR "/" RUNTIME_CONFIGURATION "/lib");
+  }
+
+  DEBUG_WITH_TYPE("klee_runtime", llvm::dbgs() <<
+                  libDir.c_str() << "\n");
+  return libDir;
 }
 
 //===----------------------------------------------------------------------===//
@@ -977,8 +1006,8 @@ static char *format_tdiff(char *buf, long seconds)
   return buf;
 }
 
-#ifndef KLEE_UCLIBC
-static llvm::Module *linkWithUclibc(llvm::Module *mainModule) {
+#ifndef SUPPORT_KLEE_UCLIBC
+static llvm::Module *linkWithUclibc(llvm::Module *mainModule, llvm::sys::Path libDir) {
   fprintf(stderr, "error: invalid libc, no uclibc support!\n");
   exit(1);
   return 0;
@@ -1001,12 +1030,15 @@ static void replaceOrRenameFunction(llvm::Module *module,
   }
 }
 
-static llvm::Module *linkWithUclibc(llvm::Module *mainModule) {
-  // Ensure that KLEE_UCLIBC exists
-  bool uclibcRootExists=false;
-  llvm::sys::fs::is_directory(KLEE_UCLIBC, uclibcRootExists);
-  if (!uclibcRootExists)
-    klee_error("Cannot link with uclibc. KLEE_UCLIBC (\"" KLEE_UCLIBC "\") is not a directory.");
+static llvm::Module *linkWithUclibc(llvm::Module *mainModule, llvm::sys::Path libDir) {
+  // Ensure that klee-uclibc exists
+  llvm::sys::Path uclibcBCA(libDir);
+  uclibcBCA.appendComponent(KLEE_UCLIBC_BCA_NAME);
+
+  bool uclibcExists=false;
+  llvm::sys::fs::exists(uclibcBCA.c_str(), uclibcExists);
+  if (!uclibcExists)
+    klee_error("Cannot find klee-uclibc : %s", uclibcBCA.c_str());
 
   Function *f;
   // force import of __uClibc_main
@@ -1065,8 +1097,7 @@ static llvm::Module *linkWithUclibc(llvm::Module *mainModule) {
     }
   }
   
-  mainModule = klee::linkWithLibrary(mainModule, 
-                                     KLEE_UCLIBC "/lib/libc.a");
+  mainModule = klee::linkWithLibrary(mainModule, uclibcBCA.c_str());
   assert(mainModule && "unable to link with uclibc");
 
 
@@ -1119,6 +1150,7 @@ static llvm::Module *linkWithUclibc(llvm::Module *mainModule) {
   
   new UnreachableInst(getGlobalContext(), bb);
 
+  klee_message("NOTE: Using klee-uclibc : %s", uclibcBCA.c_str());
   return mainModule;
 }
 #endif
@@ -1227,14 +1259,8 @@ int main(int argc, char **argv, char **envp) {
       return r;
   }
 
-#if defined(KLEE_LIB_DIR) && defined(USE_KLEE_LIB_DIR)
-  /* KLEE_LIB_DIR is the lib dir of installed files as opposed to 
-   * where libs in the klee source tree are generated.
-   */
-  llvm::sys::Path LibraryDir(KLEE_LIB_DIR);
-#else
-  llvm::sys::Path LibraryDir(KLEE_DIR "/" RUNTIME_CONFIGURATION "/lib");
-#endif
+  llvm::sys::Path LibraryDir = KleeHandler::getRunTimeLibraryPath(argv[0], 
+                              reinterpret_cast<void*>(main));
   Interpreter::ModuleOptions Opts(LibraryDir.c_str(),
                                   /*Optimize=*/OptimizeModule, 
                                   /*CheckDivZero=*/CheckDivZero,
@@ -1258,7 +1284,7 @@ int main(int argc, char **argv, char **envp) {
   }
 
   case UcLibc:
-    mainModule = linkWithUclibc(mainModule);
+    mainModule = linkWithUclibc(mainModule, LibraryDir);
     break;
   }
 

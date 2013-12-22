@@ -341,38 +341,52 @@ dnl User option to enable uClibc support.
 
 AC_ARG_WITH(uclibc,
   AS_HELP_STRING([--with-uclibc],
-    [Enable use of the klee uclibc at the given path]),,)
-
-dnl If uclibc wasn't given, check for a uclibc in the current
-dnl directory.
-if (test X${with_uclibc} = X && test -d uclibc); then
-   with_uclibc=uclibc
-fi
+                 [Enable use of the klee uclibc at the given path (klee-uclibc root directory or libc.a file]),,)
 
 dnl Validate uclibc if given.
 
 AC_MSG_CHECKING([uclibc])
 if (test X${with_uclibc} != X); then
-   if test ! -d ${with_uclibc}; then
-       AC_MSG_ERROR([invalid uclibc directory: ${with_uclibc}])
+   if test  -d ${with_uclibc}; then
+      dnl Support the legacy way of configuring with 
+      dnl klee-uclibc, i.e. the root klee-uclibc
+      dnl directory is passed as an argument.
+
+      dnl Make the path absolute
+      with_uclibc=`cd $with_uclibc 2> /dev/null; pwd`
+
+      dnl create path to libc file
+      KLEE_UCLIBC_BCA="${with_uclibc}/lib/libc.a"
+
+      if test ! -e "${KLEE_UCLIBC_BCA}"; then
+      AC_MSG_ERROR([Could not find file ${KLEE_UCLIBC_BCA}])
+      fi
+   elif test -f ${with_uclibc}; then
+      dnl Support the new way of configuring klee-uclibc
+      dnl i.e. the built bitcode archive is passed as the
+      dnl argument.
+
+      dnl Get absolute path to file
+      _kud=`dirname ${with_uclibc}`
+      _kud=`cd ${_kud}; pwd 2> /dev/null`
+      _kuf=`basename ${with_uclibc}`
+
+      KLEE_UCLIBC_BCA="${_kud}/${_kuf}" 
+   else
+      AC_MSG_ERROR([Could not detect klee-uclibc])
    fi
 
-   dnl Make the path absolute
-   with_uclibc=`cd $with_uclibc 2> /dev/null; pwd`
+   dnl FIXME: Validate the libc.a file
 
-   AC_MSG_RESULT([$with_uclibc])
+   AC_MSG_RESULT([$KLEE_UCLIBC_BCA])
+   AC_SUBST(ENABLE_UCLIBC,[[1]])
+   AC_SUBST(KLEE_UCLIBC_BCA)
+   AC_DEFINE(SUPPORT_KLEE_UCLIBC, [[1]], [klee-uclibc is supported])
 else
    AC_MSG_RESULT([no])
+   AC_SUBST(ENABLE_UCLIBC,[[0]])
 fi
 
-AC_DEFINE_UNQUOTED(KLEE_UCLIBC, "$with_uclibc", [Path to KLEE's uClibc])
-AC_SUBST(KLEE_UCLIBC)         
-
-if test X${with_uclibc} != X ; then
-  AC_SUBST(ENABLE_UCLIBC,[[1]])
-else
-  AC_SUBST(ENABLE_UCLIBC,[[0]])
-fi
 
 dnl **************************************************************************
 dnl User option to enable the POSIX runtime

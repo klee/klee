@@ -14,6 +14,12 @@ LEVEL = .
 
 include $(LEVEL)/Makefile.config
 
+# The header files are normally installed
+# by the install-local target in the top-level
+# makefile. This disables installing anything
+# in the top-level makefile.
+NO_INSTALL=1
+
 DIRS = lib tools runtime
 EXTRA_DIST = include
 

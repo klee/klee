@@ -12,5 +12,6 @@ LEVEL=../..
 LIBRARYNAME=kleeCore
 DONT_BUILD_RELINKED=1
 BUILD_ARCHIVE=1
+NO_INSTALL=1
 
 include $(LEVEL)/Makefile.common
