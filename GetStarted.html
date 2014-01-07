@@ -167,7 +167,7 @@ command before using STP (and thus KLEE):
 </div>
 
 
-<li>[Optional] <b>Build uclibc and the POSIX environment model:</b>
+<li>[Optional] <b>Build klee-uclibc and the POSIX environment model:</b>
 
 <p>
 By default, KLEE works on closed programs (programs that don't use any
@@ -177,33 +177,41 @@ runtime, which is built on top of
 the <a href="http://uclibc.org">uClibc</a> C library.
 </p>
 
+<p>
+  <b>NOTE</b> <tt>klee-uclibc</tt> has an additional dependency on the <tt>ncurses</tt> library and
+  development headers. Make sure these are installed before you continue building.
+</p>
+
 <ol type="a">
-  <li>Download KLEE's uClibc. KLEE uses a version of uclibc which has
-        been modified slightly for our purposes.
-	<ul>
-	  <li>A version that works on 64-bit Linux can be found
-	    <a href="http://www.doc.ic.ac.uk/~cristic/klee/klee-uclibc-x64.html">here</a>
-	  </li>
-	  <li>A version that works on 32-bit Linux can be found
-	  <a href="http://www.doc.ic.ac.uk/~cristic/klee/klee-uclibc-i386.html">here</a>
-	  </li>
-	</ul>
+  <li>Obtain the klee-uclibc source
+    <div class="instr">
+      $ git clone --depth 1 --branch klee_0_9_29 https://github.com/klee/klee-uclibc.git </br>
+    </div>
+    Note if you need the older version of <tt>klee-uclibc</tt> that used to be available on this page use the 
+    <tt>klee_legacy_x86_64</tt> or <tt>klee_legacy_i686</tt> branches instead. <b>These older versions
+    are not supported so do not report bugs/issues with these versions!</b>
   </li>
   
-  <li>Build uClibc with <tt>llvm-gcc</tt>:
+  <li>Build klee-uclibc
     <div class="instr">
-      $ tar zxvf klee-uclibc-0.02.tgz <br/>
-      $ ./configure --with-llvm=<i>path-to-llvm</i> <br/>
-      $ make <br/>
+      $ cd klee-uclibc </br>
+      $ ./configure --make-llvm-lib </br>
+      $ make -jN</br>
     </div>
+    Where <tt>N</tt> is number of jobs to run in parallel.
 
     <p><b>NOTE:</b> If you are on a different target (i.e., not i386
-      or x64), you will need to run <tt>make config</tt> and select the
+      or x86_64), you will need to run <tt>make menuconfig</tt> and select the
       correct target. The defaults for the other uClibc configuration
       variables should be fine.<p>
   </li>
+</ol>
 
-  </ol>
+<p>
+  More detailed information on <tt>klee-uclibc</tt> can be found <a href="https://github.com/klee/klee-uclibc/wiki">here</a>.
+  <tt>klee-uclibc</tt> is now under version control on GitHub so please to report issues and bugs on the <tt>klee-uclibc</tt>
+  issue tracker.
+</p>
 
 
   <li><b>Download KLEE:</b>
