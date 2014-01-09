@@ -11,6 +11,10 @@ LEVEL = ../..
 
 TOOLSCRIPTNAME := klee-stats
 
+# Hack to prevent install trying to strip
+# symbols from a python script
+KEEP_SYMBOLS := 1
+
 include $(LEVEL)/Makefile.common
 
 # FIXME: Move this stuff (to "build" a script) into Makefile.rules.
