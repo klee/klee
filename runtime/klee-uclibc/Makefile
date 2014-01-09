@@ -31,6 +31,7 @@ all-local:: $(uclibc_symlink)
 
 $(uclibc_symlink):
 	@echo "Setting up symbolic link to klee-uclibc"
+	-$(Verb) $(MKDIR) $(PROJ_OBJ_ROOT)/$(BuildMode)/lib
 	$(Verb) ln -s -f $(KLEE_UCLIBC_BCA) $(uclibc_symlink)
 
 # The reasons for copying over klee-uclibc on install are
