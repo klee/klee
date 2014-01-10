@@ -67,7 +67,8 @@
   we run:
 
   <div class="instr">
-  llvm-gcc --emit-llvm -c -g get_sign.c
+  cd examples/get_sign.c
+  llvm-gcc -I ../../include --emit-llvm -c -g get_sign.c
   </div>
 
   to generate the LLVM bitcode file <tt>get_sign.o</tt>.
