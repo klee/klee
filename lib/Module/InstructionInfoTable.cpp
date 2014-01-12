@@ -33,6 +33,7 @@
 #include "llvm/Analysis/DebugInfo.h"
 #endif
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/Support/Debug.h"
 
 #include <map>
 #include <string>
@@ -108,64 +109,35 @@ InstructionInfoTable::InstructionInfoTable(Module *m)
 
   for (Module::iterator fnIt = m->begin(), fn_ie = m->end(); 
        fnIt != fn_ie; ++fnIt) {
-    const std::string *initialFile = &dummyString;
-    unsigned initialLine = 0;
 
-    // It may be better to look for the closest stoppoint to the entry
-    // following the CFG, but it is not clear that it ever matters in
-    // practice.
-    for (inst_iterator it = inst_begin(fnIt), ie = inst_end(fnIt);
-         it != ie; ++it)
-      if (getInstructionDebugInfo(&*it, initialFile, initialLine))
-        break;
-    
-    typedef std::map<BasicBlock*, std::pair<const std::string*,unsigned> > 
-      sourceinfo_ty;
-    sourceinfo_ty sourceInfo;
-    for (llvm::Function::iterator bbIt = fnIt->begin(), bbie = fnIt->end(); 
-         bbIt != bbie; ++bbIt) {
-      std::pair<sourceinfo_ty::iterator, bool>
-        res = sourceInfo.insert(std::make_pair(bbIt,
-                                               std::make_pair(initialFile,
-                                                              initialLine)));
-      if (!res.second)
-        continue;
+    for (inst_iterator it = inst_begin(fnIt), ie = inst_end(fnIt); it != ie;
+        ++it) {
+      const std::string *initialFile = &dummyString;
+      unsigned initialLine = 0;
+      Instruction *instr = &*it;
+      unsigned assemblyLine = 0;
 
-      std::vector<BasicBlock*> worklist;
-      worklist.push_back(bbIt);
-
-      do {
-        BasicBlock *bb = worklist.back();
-        worklist.pop_back();
-
-        sourceinfo_ty::iterator si = sourceInfo.find(bb);
-        assert(si != sourceInfo.end());
-        const std::string *file = si->second.first;
-        unsigned line = si->second.second;
-        
-        for (BasicBlock::iterator it = bb->begin(), ie = bb->end();
-             it != ie; ++it) {
-          Instruction *instr = it;
-          unsigned assemblyLine = 0;
-          std::map<const Instruction*, unsigned>::const_iterator ltit = 
-            lineTable.find(instr);
-          if (ltit!=lineTable.end())
-            assemblyLine = ltit->second;
-          getInstructionDebugInfo(instr, file, line);
-          infos.insert(std::make_pair(instr,
-                                      InstructionInfo(id++,
-                                                      *file,
-                                                      line,
-                                                      assemblyLine)));        
-        }
-        
-        for (succ_iterator it = succ_begin(bb), ie = succ_end(bb); 
-             it != ie; ++it) {
-          if (sourceInfo.insert(std::make_pair(*it,
-                                               std::make_pair(file, line))).second)
-            worklist.push_back(*it);
-        }
-      } while (!worklist.empty());
+      std::map<const Instruction*, unsigned>::const_iterator ltit =
+        lineTable.find(instr);
+      if (ltit!=lineTable.end())
+        assemblyLine = ltit->second;
+      if (getInstructionDebugInfo(instr, initialFile, initialLine))
+      {
+        infos.insert(std::make_pair(instr,
+                                    InstructionInfo(id++,
+                                                    *initialFile,
+                                                    initialLine,
+                                                    assemblyLine)));
+        DEBUG_WITH_TYPE("klee_obtained_debug", dbgs() <<
+          "Instruction: \"" << *instr << "\" (assembly line " << assemblyLine <<
+          ") has debug location " << *initialFile << ":" << initialLine << "\n");
+      }
+      else
+      {
+        DEBUG_WITH_TYPE("klee_missing_debug", dbgs() <<
+          "Instruction: \"" << *instr << "\" (assembly line " << assemblyLine <<
+          ") is missing debug info.\n");
+      }
     }
   }
 }

@@ -2729,20 +2729,63 @@ void Executor::terminateStateOnExit(ExecutionState &state) {
   terminateState(state);
 }
 
+const InstructionInfo & Executor::getLastNonKleeInternalInstruction(const ExecutionState &state,
+    Instruction ** lastInstruction) {
+  // unroll the stack of the applications state and find
+  // the last instruction which is not inside a KLEE internal function
+  ExecutionState::stack_ty::const_reverse_iterator it = state.stack.rbegin(),
+      itE = state.stack.rend();
+
+  // don't check beyond the outermost function (i.e. main())
+  itE--;
+
+  const InstructionInfo * ii = 0;
+  if (kmodule->internalFunctions.count(it->kf->function) == 0){
+    ii =  state.prevPC->info;
+    *lastInstruction = state.prevPC->inst;
+    //  Cannot return yet because even though
+    //  it->function is not an internal function it might of
+    //  been called from an internal function.
+  }
+
+  // Wind up the stack and check if we are in a KLEE internal function.
+  // We visit the entire stack because we want to return a CallInstruction
+  // that was not reached via any KLEE internal functions.
+  for (;it != itE; ++it) {
+    // check calling instruction and if it is contained in a KLEE internal function
+    const Function * f = (*it->caller).inst->getParent()->getParent();
+    if (kmodule->internalFunctions.count(f)){
+      ii = 0;
+      continue;
+    }
+    if (!ii){
+      ii = (*it->caller).info;
+      *lastInstruction = (*it->caller).inst;
+    }
+  }
+
+  if (!ii) {
+    // something went wrong, play safe and return the current instruction info
+    *lastInstruction = state.prevPC->inst;
+    return *state.prevPC->info;
+  }
+  return *ii;
+}
 void Executor::terminateStateOnError(ExecutionState &state,
                                      const llvm::Twine &messaget,
                                      const char *suffix,
                                      const llvm::Twine &info) {
   std::string message = messaget.str();
   static std::set< std::pair<Instruction*, std::string> > emittedErrors;
-  const InstructionInfo &ii = *state.prevPC->info;
+  Instruction * lastInst;
+  const InstructionInfo &ii = getLastNonKleeInternalInstruction(state, &lastInst);
   
   if (EmitAllErrors ||
-      emittedErrors.insert(std::make_pair(state.prevPC->inst, message)).second) {
+      emittedErrors.insert(std::make_pair(lastInst, message)).second) {
     if (ii.file != "") {
       klee_message("ERROR: %s:%d: %s", ii.file.c_str(), ii.line, message.c_str());
     } else {
-      klee_message("ERROR: %s", message.c_str());
+      klee_message("ERROR: (location information missing) %s", message.c_str());
     }
     if (!EmitAllErrors)
       klee_message("NOTE: now ignoring this error at this location");
@@ -2752,6 +2795,7 @@ void Executor::terminateStateOnError(ExecutionState &state,
     if (ii.file != "") {
       msg << "File: " << ii.file << "\n";
       msg << "Line: " << ii.line << "\n";
+      msg << "assembly.ll line: " << ii.assemblyLine << "\n";
     }
     msg << "Stack: \n";
     state.dumpStack(msg);

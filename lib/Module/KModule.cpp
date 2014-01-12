@@ -229,7 +229,7 @@ static void forceImport(Module *m, const char *name, LLVM_TYPE_Q Type *retType,
 /// It is intended that this function be used for inling calls to
 /// check functions like <tt>klee_div_zero_check()</tt>
 static void inlineChecks(Module *module, const char * functionName) {
-  std::vector<CallInst*> checkCalls;
+  std::vector<CallSite> checkCalls;
     Function* runtimeCheckCall = module->getFunction(functionName);
     if (runtimeCheckCall == 0)
     {
@@ -237,22 +237,19 @@ static void inlineChecks(Module *module, const char * functionName) {
       return;
     }
 
-    // Iterate through instructions in module and collect all
-    // call instructions to "functionName" that we care about.
-    for (Module::iterator f = module->begin(), fe = module->end(); f != fe; ++f) {
-      for (inst_iterator i=inst_begin(f), ie = inst_end(f); i != ie; ++i) {
-        if ( CallInst* ci = dyn_cast<CallInst>(&*i) )
-        {
-          if ( ci->getCalledFunction() == runtimeCheckCall)
-            checkCalls.push_back(ci);
-        }
+    for (Value::use_iterator i = runtimeCheckCall->use_begin(),
+        e = runtimeCheckCall->use_end(); i != e; ++i)
+      if (isa<InvokeInst>(*i) || isa<CallInst>(*i)) {
+        CallSite cs(*i);
+        if (!cs.getCalledFunction())
+          continue;
+        checkCalls.push_back(cs);
       }
-    }
 
     unsigned int successCount=0;
     unsigned int failCount=0;
     InlineFunctionInfo IFI(0,0);
-    for ( std::vector<CallInst*>::iterator ci = checkCalls.begin(),
+    for ( std::vector<CallSite>::iterator ci = checkCalls.begin(),
           cie = checkCalls.end();
           ci != cie; ++ci)
     {
@@ -267,6 +264,17 @@ static void inlineChecks(Module *module, const char * functionName) {
     }
 
     DEBUG( klee_message("Tried to inline calls to %s. %u successes, %u failures",functionName, successCount, failCount) );
+}
+
+void KModule::addInternalFunction(const char* functionName){
+  Function* internalFunction = module->getFunction(functionName);
+  if (!internalFunction) {
+    DEBUG_WITH_TYPE("KModule", klee_warning(
+        "Failed to add internal function %s. Not found.", functionName));
+    return ;
+  }
+  DEBUG( klee_message("Added function %s.",functionName));
+  internalFunctions.insert(internalFunction);
 }
 
 void KModule::prepare(const Interpreter::ModuleOptions &opts,
@@ -374,17 +382,12 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
 #endif
   module = linkWithLibrary(module, path.c_str());
 
-  /* In order for KLEE to report ALL errors at instrumented
-   * locations the instrumentation call (e.g. "klee_div_zero_check")
-   * must be inlined. Otherwise one of the instructions in the
-   * instrumentation function will be used as the the location of
-   * the error which means that the error cannot be recorded again
-   * ( unless -emit-all-errors is used).
-   */
+  // Add internal functions which are not used to check if instructions
+  // have been already visited
   if (opts.CheckDivZero)
-    inlineChecks(module, "klee_div_zero_check");
+    addInternalFunction("klee_div_zero_check");
   if (opts.CheckOvershift)
-    inlineChecks(module, "klee_overshift_check");
+    addInternalFunction("klee_overshift_check");
 
 
   // Needs to happen after linking (since ctors/dtors can be modified)
