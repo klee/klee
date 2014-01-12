@@ -1,14 +1,14 @@
 // RUN: %llvmgcc %s -emit-llvm -g -O0 -c -o %t1.bc
 // We disable the cex-cache to eliminate nondeterminism across different solvers, in particular when counting the number of queries in the last two commands
 // RUN: %klee --use-cex-cache=false --use-query-log=all:pc,all:smt2,solver:pc,solver:smt2 --write-pcs --write-cvcs --write-smt2s %t1.bc 2> %t2.log
-// RUN: %kleaver -print-ast klee-last/all-queries.pc > %t3.log
+// RUN: %kleaver -print-ast %T/klee-last/all-queries.pc > %t3.log
 // RUN: %kleaver -print-ast %t3.log > %t4.log
 // RUN: diff %t3.log %t4.log
-// RUN: %kleaver -print-ast klee-last/solver-queries.pc > %t3.log
+// RUN: %kleaver -print-ast %T/klee-last/solver-queries.pc > %t3.log
 // RUN: %kleaver -print-ast %t3.log > %t4.log
 // RUN: diff %t3.log %t4.log
-// RUN: grep "^; Query" klee-last/all-queries.smt2 | wc -l | grep -q 17
-// RUN: grep "^; Query" klee-last/solver-queries.smt2 | wc -l | grep -q 17
+// RUN: grep "^; Query" %T/klee-last/all-queries.smt2 | wc -l | grep -q 17
+// RUN: grep "^; Query" %T/klee-last/solver-queries.smt2 | wc -l | grep -q 17
 
 #include <assert.h>
 

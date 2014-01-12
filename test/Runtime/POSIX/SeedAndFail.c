@@ -1,8 +1,8 @@
 // RUN: %llvmgcc %s -emit-llvm -g -O0 -c -o %t.bc
-// RUN: rm -rf tmp-123
-// RUN: %klee --libc=uclibc --output-dir=tmp-123 --posix-runtime %t.bc --sym-files 1 10  2>%t.log
-// RUN: %klee --seed-out-dir=tmp-123 --zero-seed-extension --libc=uclibc --posix-runtime %t.bc --sym-files 1 10 --max-fail 1
-// RUN: ls klee-last | grep -c assert | grep 4
+// RUN: rm -rf %T/tmp-123
+// RUN: %klee --libc=uclibc --output-dir=%T/tmp-123 --posix-runtime %t.bc --sym-files 1 10  2>%t.log
+// RUN: %klee --seed-out-dir=%T/tmp-123 --zero-seed-extension --libc=uclibc --posix-runtime %t.bc --sym-files 1 10 --max-fail 1
+// RUN: ls %T/klee-last | grep -c assert | grep 4
 
 #include <string.h>
 #include <assert.h>
