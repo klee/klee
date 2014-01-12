@@ -1,6 +1,6 @@
-# RUN: %kleaver -print-ast -pc-multibyte-reads=true %s >log
-# RUN: grep -q "(ReadLSB w32 4 arr1)" log
-# RUN: grep -q "(ReadMSB w32 2 arr2)" log
+# RUN: %kleaver -print-ast -pc-multibyte-reads=true %s > %t.log
+# RUN: grep -q "(ReadLSB w32 4 arr1)" %t.log
+# RUN: grep -q "(ReadMSB w32 2 arr2)" %t.log
 
 array arr1[8] : w32 -> w8 = symbolic
 array arr2[8] : w32 -> w8 = symbolic
