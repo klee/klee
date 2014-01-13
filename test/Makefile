@@ -51,12 +51,14 @@ check-local:: site.exp
 endif
 
 check-local-lit:: lit.site.cfg
+	# FIXME: Detect python at configure time
 	( $(ULIMIT) \
-	  $(LLVM_SRC_ROOT)/utils/lit/lit.py $(LIT_ARGS) $(LIT_TESTSUITE) )
+	  python2 $(LLVM_SRC_ROOT)/utils/lit/lit.py $(LIT_ARGS) $(LIT_TESTSUITE) )
 
 check-local-all:: lit.site.cfg
+	# FIXME: Detect python at configure time
 	( $(ULIMIT) \
-	  $(LLVM_SRC_ROOT)/utils/lit/lit.py $(LIT_ARGS) $(LIT_TESTSUITE) )
+	  python2 $(LLVM_SRC_ROOT)/utils/lit/lit.py $(LIT_ARGS) $(LIT_TESTSUITE) )
 
 ifdef TESTONE
 CLEANED_TESTONE := $(patsubst %/,%,$(TESTONE))
