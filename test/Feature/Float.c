@@ -1,4 +1,4 @@
-// RUN: %llvmgcc -g -c %s -o %t.bc
+// RUN: %llvmgcc -emit-llvm -g -c %s -o %t.bc
 // RUN: %klee %t.bc > %t.log
 // RUN: grep "3.30* -1.10* 2.420*" %t.log
 
