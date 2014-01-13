@@ -36,18 +36,23 @@ else
 LIT_TESTSUITE := .
 endif
 
+# Older LLVM versions don't detect python at configure time
+# so guess the location
+ifndef PYTHON
+	# llvm-lit doesn't work with python3 so force python2
+	PYTHON := python2
+endif
+
 # Potential support in the future for multiple test suites
 LIT_ALL_TESTSUITES := $(LIT_TESTSUITE)
 
 check-local:: lit.site.cfg
-	# FIXME: Detect python at configure time
 	( $(ULIMIT) \
-	  python2 $(LLVM_SRC_ROOT)/utils/lit/lit.py $(LIT_ARGS) $(LIT_TESTSUITE) )
+	  $(PYTHON) $(LLVM_SRC_ROOT)/utils/lit/lit.py $(LIT_ARGS) $(LIT_TESTSUITE) )
 
 check-local-all:: lit.site.cfg
-	# FIXME: Detect python at configure time
 	( $(ULIMIT) \
-	  python2 $(LLVM_SRC_ROOT)/utils/lit/lit.py $(LIT_ARGS) $(LIT_ALL_TESTSUITES) )
+	  $(PYTHON) $(LLVM_SRC_ROOT)/utils/lit/lit.py $(LIT_ARGS) $(LIT_ALL_TESTSUITES) )
 
 clean::
 	$(RM) -rf `find $(PROJ_OBJ_ROOT)/test -name Output -type d -print`
