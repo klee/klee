@@ -123,4 +123,5 @@ lit.site.cfg: lit.site.cfg.in
 	     -e "s#@ENABLE_UCLIBC@#$(ENABLE_UCLIBC)#g" \
 	     -e "s#@ENABLE_POSIX_RUNTIME@#$(ENABLE_POSIX_RUNTIME)#g" \
 	     -e "s#@TARGET_TRIPLE@#$(TARGET_TRIPLE)#g" \
+	     -e "s#@HAVE_SELINUX@#$(HAVE_SELINUX)#g" \
 	     $(PROJ_SRC_DIR)/lit.site.cfg.in > $@
