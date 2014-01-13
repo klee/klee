@@ -4,7 +4,21 @@ config.klee_src_root = "@KLEE_SOURCE_DIR@"
 config.klee_obj_root = "@KLEE_BINARY_DIR@"
 config.klee_tools_dir = "@KLEE_TOOLS_DIR@"
 config.llvm_tools_dir = "@LLVM_TOOLS_DIR@"
+
+# Needed to check if a hack needs to be applied
 config.llvm_version_major = "@LLVM_VERSION_MAJOR@"
+
+# Compilers
+# FIXME: use llvmcc not llvmgcc
+config.llvmgcc = "@LLVMCC@"
+config.llvmgxx = "@LLVMCXX@"
+
+# Features
+config.enable_uclibc = True if @ENABLE_UCLIBC@ == 1 else False
+config.enable_posix_runtime = True if @ENABLE_POSIX_RUNTIME@ == 1 else False
+
+# Current target
+config.target_triple = "@TARGET_TRIPLE@"
 
 # Let the main config do the real work.
 lit.load_config(config, "@KLEE_SOURCE_DIR@/test/lit.cfg")

@@ -111,11 +111,16 @@ site.exp: Makefile $(LEVEL)/Makefile.config
 	@test ! -f site.exp || mv site.exp site.bak
 	@mv site.tmp site.exp
 
-lit.site.cfg: site.exp
+lit.site.cfg: lit.site.cfg.in
 	@echo "Making KLEE 'lit.site.cfg' file..."
 	@sed -e "s#@KLEE_SOURCE_DIR@#$(PROJ_SRC_ROOT)#g" \
 	     -e "s#@KLEE_BINARY_DIR@#$(PROJ_OBJ_ROOT)#g" \
 	     -e "s#@KLEE_TOOLS_DIR@#$(ToolDir)#g" \
 	     -e "s#@LLVM_TOOLS_DIR@#$(LLVMToolDir)#g" \
 	     -e "s#@LLVM_VERSION_MAJOR@#$(LLVM_VERSION_MAJOR)#g" \
+	     -e "s#@LLVMCC@#$(KLEE_BITCODE_C_COMPILER) -I$(PROJ_SRC_ROOT)/include#g" \
+	     -e "s#@LLVMCXX@#$(KLEE_BITCODE_CXX_COMPILER) -I$(PROJ_SRC_ROOT)/include#g" \
+	     -e "s#@ENABLE_UCLIBC@#$(ENABLE_UCLIBC)#g" \
+	     -e "s#@ENABLE_POSIX_RUNTIME@#$(ENABLE_POSIX_RUNTIME)#g" \
+	     -e "s#@TARGET_TRIPLE@#$(TARGET_TRIPLE)#g" \
 	     $(PROJ_SRC_DIR)/lit.site.cfg.in > $@
