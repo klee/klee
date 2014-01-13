@@ -1,8 +1,8 @@
 // RUN: %llvmgcc %s -g -emit-llvm -O0 -c -o %t1.bc
 // RUN: %klee %t1.bc 2>&1 | FileCheck %s
-// RUN: test -f %T/klee-last/test000001.ptr.err -o -f %T/klee-last/test000002.ptr.err 
-// RUN: test ! -f %T/klee-last/test000001.ptr.err -o ! -f %T/klee-last/test000002.ptr.err 
-// RUN: test ! -f %T/klee-last/test000003.ktest
+// RUN: test -f %T/klee-last/test000001.ptr.err -o -f %T/klee-last/test000002.ptr.err
+// RUN: not test -f %T/klee-last/test000001.ptr.err -a -f %T/klee-last/test000002.ptr.err
+// RUN: not test -f %T/klee-last/test000003.ktest
 
 unsigned klee_urange(unsigned start, unsigned end) {
   unsigned x;
