@@ -12,7 +12,9 @@ cscope.*
 *.status
 
 *.config
-*.cfg
 
 config.h
 site.exp
+
+# Site file for llvm-lit
+lit.site.cfg
