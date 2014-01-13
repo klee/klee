@@ -4,6 +4,7 @@ config.klee_src_root = "@KLEE_SOURCE_DIR@"
 config.klee_obj_root = "@KLEE_BINARY_DIR@"
 config.klee_tools_dir = "@KLEE_TOOLS_DIR@"
 config.llvm_tools_dir = "@LLVM_TOOLS_DIR@"
+config.llvm_version_major = "@LLVM_VERSION_MAJOR@"
 
 # Let the main config do the real work.
 lit.load_config(config, "@KLEE_SOURCE_DIR@/test/lit.cfg")

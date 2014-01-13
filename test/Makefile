@@ -115,4 +115,5 @@ lit.site.cfg: site.exp
 	     -e "s#@KLEE_BINARY_DIR@#$(PROJ_OBJ_ROOT)#g" \
 	     -e "s#@KLEE_TOOLS_DIR@#$(ToolDir)#g" \
 	     -e "s#@LLVM_TOOLS_DIR@#$(LLVMToolDir)#g" \
+	     -e "s#@LLVM_VERSION_MAJOR@#$(LLVM_VERSION_MAJOR)#g" \
 	     $(PROJ_SRC_DIR)/lit.site.cfg.in > $@
