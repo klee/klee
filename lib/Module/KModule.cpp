@@ -182,7 +182,8 @@ static void injectStaticConstructorsAndDestructors(Module *m) {
   
   if (ctors || dtors) {
     Function *mainFn = m->getFunction("main");
-    assert(mainFn && "unable to find main function");
+    if (!mainFn)
+      klee_error("Could not find main() function.");
 
     if (ctors)
     CallInst::Create(getStubFunctionForCtorList(m, ctors, "klee.ctor_stub"),

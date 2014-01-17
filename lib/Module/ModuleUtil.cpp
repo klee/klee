@@ -9,6 +9,8 @@
 
 #include "klee/Internal/Support/ModuleUtil.h"
 #include "klee/Config/Version.h"
+// FIXME: This does not belong here.
+#include "../Core/Common.h"
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
 #include "llvm/Bitcode/ReaderWriter.h"
@@ -55,7 +57,7 @@ module->getContext());
 
   if (Linker::LinkModules(module, new_mod, Linker::DestroySource, 
 &err_str)) {
-    assert(0 && "linked in library failed!");
+    klee_error("Linking library %s failed", libraryName.c_str());
   }
 
   return module;
@@ -66,7 +68,7 @@ module->getContext());
   bool native = false;
     
   if (linker.LinkInFile(libraryPath, native)) {
-    assert(0 && "linking in library failed!");
+    klee_error("Linking library %s failed", libraryName.c_str());
   }
     
   return linker.releaseModule();
