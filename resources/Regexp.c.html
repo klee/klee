@@ -64,7 +64,7 @@
 </FONT></I>  <B><FONT COLOR="#228B22">char</FONT></B> re[SIZE];
   
   <I><FONT COLOR="#B22222">// Make the input symbolic. 
-</FONT></I>  klee_make_symbolic_name(re, <B><FONT COLOR="#A020F0">sizeof</FONT></B> re, <B><FONT COLOR="#BC8F8F">&quot;re&quot;</FONT></B>);
+</FONT></I>  klee_make_symbolic(re, <B><FONT COLOR="#A020F0">sizeof</FONT></B> re, <B><FONT COLOR="#BC8F8F">&quot;re&quot;</FONT></B>);
 
   <I><FONT COLOR="#B22222">// Try to match against a constant string &quot;hello&quot;.
 </FONT></I>  match(re, <B><FONT COLOR="#BC8F8F">&quot;hello&quot;</FONT></B>);
