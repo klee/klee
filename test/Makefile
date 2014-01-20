@@ -47,12 +47,12 @@ endif
 LIT_ALL_TESTSUITES := $(LIT_TESTSUITE)
 
 check-local:: lit.site.cfg
-	( $(ULIMIT) \
-	  $(PYTHON) $(LLVM_SRC_ROOT)/utils/lit/lit.py $(LIT_ARGS) $(LIT_TESTSUITE) )
+	$(Verb) ( $(ULIMIT) \
+	          $(PYTHON) $(LLVM_SRC_ROOT)/utils/lit/lit.py $(LIT_ARGS) $(LIT_TESTSUITE) )
 
 check-local-all:: lit.site.cfg
-	( $(ULIMIT) \
-	  $(PYTHON) $(LLVM_SRC_ROOT)/utils/lit/lit.py $(LIT_ARGS) $(LIT_ALL_TESTSUITES) )
+	$(Verb) ( $(ULIMIT) \
+	          $(PYTHON) $(LLVM_SRC_ROOT)/utils/lit/lit.py $(LIT_ARGS) $(LIT_ALL_TESTSUITES) )
 
 clean::
 	$(RM) -rf `find $(PROJ_OBJ_ROOT)/test -name Output -type d -print`
