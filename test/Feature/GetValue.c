@@ -1,4 +1,4 @@
-// RUN: %llvmgcc -c -o %t1.bc %s
+// RUN: %llvmgcc -emit-llvm -c -o %t1.bc %s
 // RUN: %klee --exit-on-error %t1.bc
 
 #include <stdio.h>

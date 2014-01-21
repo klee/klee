@@ -1,6 +1,6 @@
-// RUN: %llvmgcc -g -c -o %t.bc %s
+// RUN: %llvmgcc -emit-llvm -g -c -o %t.bc %s
 // RUN: %klee --exit-on-error --use-asm-addresses %t.bc
-// RUN: %llvmgcc -DOVERLAP -g -c -o %t.bc %s
+// RUN: %llvmgcc -emit-llvm -DOVERLAP -g -c -o %t.bc %s
 // RUN: not %klee --exit-on-error --use-asm-addresses %t.bc
 
 #include <assert.h>

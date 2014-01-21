@@ -1,6 +1,6 @@
 // RUN: %llvmgcc %s -emit-llvm -O0 -c -o %t1.bc
 // RUN: %klee %t1.bc
-// RUN: grep "total queries = 2" klee-last/info
+// RUN: grep "total queries = 2" %T/klee-last/info
 
 #include <assert.h>
 

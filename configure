@@ -624,8 +624,6 @@ ac_includes_default="\
 
 ac_subst_vars='LTLIBOBJS
 LIBOBJS
-TCLSH
-RUNTEST
 METASMT_ROOT
 ENABLE_METASMT
 STP_ROOT
@@ -728,7 +726,6 @@ enable_posix_runtime
 with_runtime
 with_stp
 with_metasmt
-with_tclinclude
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1379,7 +1376,6 @@ Optional Packages:
                           (default [Release+Asserts])
   --with-stp              Location of STP installation directory
   --with-metasmt          Location of metaSMT installation directory
-  --with-tclinclude       directory where tcl headers are
 
 Some influential environment variables:
   CC          C compiler command
@@ -4991,134 +4987,6 @@ $as_echo "#define SUPPORT_METASMT 1" >>confdefs.h
   METASMT_ROOT=$metasmt_root
 
   REQUIRES_RTTI=1
-
-fi
-
-# Extract the first word of "runtest", so it can be a program name with args.
-set dummy runtest; ac_word=$2
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
-$as_echo_n "checking for $ac_word... " >&6; }
-if ${ac_cv_path_RUNTEST+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  case $RUNTEST in
-  [\\/]* | ?:[\\/]*)
-  ac_cv_path_RUNTEST="$RUNTEST" # Let the user override the test with a path.
-  ;;
-  *)
-  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-for as_dir in $PATH
-do
-  IFS=$as_save_IFS
-  test -z "$as_dir" && as_dir=.
-    for ac_exec_ext in '' $ac_executable_extensions; do
-  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
-    ac_cv_path_RUNTEST="$as_dir/$ac_word$ac_exec_ext"
-    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
-    break 2
-  fi
-done
-  done
-IFS=$as_save_IFS
-
-  ;;
-esac
-fi
-RUNTEST=$ac_cv_path_RUNTEST
-if test -n "$RUNTEST"; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $RUNTEST" >&5
-$as_echo "$RUNTEST" >&6; }
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-fi
-
-
-
-no_itcl=true
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for the tclsh program in tclinclude directory" >&5
-$as_echo_n "checking for the tclsh program in tclinclude directory... " >&6; }
-
-# Check whether --with-tclinclude was given.
-if test "${with_tclinclude+set}" = set; then :
-  withval=$with_tclinclude; with_tclinclude=${withval}
-else
-  with_tclinclude=''
-fi
-
-if ${ac_cv_path_tclsh+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-
-if test x"${with_tclinclude}" != x ; then
-  if test -f ${with_tclinclude}/tclsh ; then
-    ac_cv_path_tclsh=`(cd ${with_tclinclude}; pwd)`
-  elif test -f ${with_tclinclude}/src/tclsh ; then
-    ac_cv_path_tclsh=`(cd ${with_tclinclude}/src; pwd)`
-  else
-    as_fn_error $? "${with_tclinclude} directory doesn't contain tclsh" "$LINENO" 5
-  fi
-fi
-fi
-
-
-if test x"${ac_cv_path_tclsh}" = x ; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: none" >&5
-$as_echo "none" >&6; }
-  for ac_prog in tclsh8.4 tclsh8.4.8 tclsh8.4.7 tclsh8.4.6 tclsh8.4.5 tclsh8.4.4 tclsh8.4.3 tclsh8.4.2 tclsh8.4.1 tclsh8.4.0 tclsh8.3 tclsh8.3.5 tclsh8.3.4 tclsh8.3.3 tclsh8.3.2 tclsh8.3.1 tclsh8.3.0 tclsh
-do
-  # Extract the first word of "$ac_prog", so it can be a program name with args.
-set dummy $ac_prog; ac_word=$2
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
-$as_echo_n "checking for $ac_word... " >&6; }
-if ${ac_cv_path_TCLSH+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  case $TCLSH in
-  [\\/]* | ?:[\\/]*)
-  ac_cv_path_TCLSH="$TCLSH" # Let the user override the test with a path.
-  ;;
-  *)
-  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-for as_dir in $PATH
-do
-  IFS=$as_save_IFS
-  test -z "$as_dir" && as_dir=.
-    for ac_exec_ext in '' $ac_executable_extensions; do
-  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
-    ac_cv_path_TCLSH="$as_dir/$ac_word$ac_exec_ext"
-    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
-    break 2
-  fi
-done
-  done
-IFS=$as_save_IFS
-
-  ;;
-esac
-fi
-TCLSH=$ac_cv_path_TCLSH
-if test -n "$TCLSH"; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $TCLSH" >&5
-$as_echo "$TCLSH" >&6; }
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-fi
-
-
-  test -n "$TCLSH" && break
-done
-
-  if test x"${TCLSH}" = x ; then
-    ac_cv_path_tclsh='';
-  else
-    ac_cv_path_tclsh="${TCLSH}";
-  fi
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: ${ac_cv_path_tclsh}" >&5
-$as_echo "${ac_cv_path_tclsh}" >&6; }
-  TCLSH="${ac_cv_path_tclsh}"
 
 fi
 

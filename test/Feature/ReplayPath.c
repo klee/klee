@@ -1,7 +1,7 @@
 // RUN: %llvmgcc %s -emit-llvm -O0 -DCOND_EXIT -c -o %t1.bc
 // RUN: klee --write-paths %t1.bc > %t3.good
 // RUN: %llvmgcc %s -emit-llvm -O0 -c -o %t2.bc
-// RUN: %klee --replay-path klee-last/test000001.path %t2.bc >%t3.log
+// RUN: %klee --replay-path %T/klee-last/test000001.path %t2.bc > %t3.log
 // RUN: diff %t3.log %t3.good
 
 #include <unistd.h>

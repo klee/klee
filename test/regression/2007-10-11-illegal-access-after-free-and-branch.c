@@ -1,6 +1,6 @@
 // RUN: %llvmgcc %s -emit-llvm -g -c -o %t1.bc
-// RUN: %klee --optimize %t1.bc
-// RUN: test -f klee-last/test000001.ptr.err
+// RUN: %klee --optimize %t1.bc 2>&1 | FileCheck %s
+// RUN: test -f %T/klee-last/test000001.ptr.err
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -13,7 +13,10 @@ int main(int argc, char **argv) {
   unsigned char x = buf[1];
   free(buf);
   if (x)
+  {
+    // CHECK: 2007-10-11-illegal-access-after-free-and-branch.c:18: memory error: out of bound pointer
     return buf[2];
+  }
   klee_silent_exit(0);
   return 0;
 }

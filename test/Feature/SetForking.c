@@ -1,4 +1,4 @@
-// RUN: %llvmgcc -g -c %s -o %t.bc
+// RUN: %llvmgcc -emit-llvm -g -c %s -o %t.bc
 // RUN: %klee %t.bc > %t.log
 // RUN: sort %t.log | uniq -c > %t.uniq.log
 // RUN: grep "1 A" %t.uniq.log

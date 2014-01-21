@@ -1,4 +1,4 @@
-// RUN: %llvmgcc -g -c %s -o %t.bc
+// RUN: %llvmgcc -emit-llvm -g -c %s -o %t.bc
 // RUN: %klee %t.bc > %t.log
 // RUN: grep -q "good" %t.log
 // RUN: not grep -q "bad" %t.log

@@ -1,4 +1,4 @@
-// RUN: %llvmgcc -c -g %s -o %t.bc
+// RUN: %llvmgcc -emit-llvm -c -g %s -o %t.bc
 // RUN: rm -rf %t.out
 // RUN: %klee --output-dir=%t.out %t.bc "initial"
 // RUN: test -f %t.out/test000001.ktest

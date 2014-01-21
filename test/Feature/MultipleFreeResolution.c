@@ -1,7 +1,7 @@
-// RUN: %llvmgcc %s -emit-llvm -O0 -c -o %t1.bc
-// RUN: %klee --emit-all-errors %t1.bc
-// RUN: ls klee-last/ | grep .ktest | wc -l | grep 4
-// RUN: ls klee-last/ | grep .err | wc -l | grep 3
+// RUN: %llvmgcc %s -g -emit-llvm -O0 -c -o %t1.bc
+// RUN: %klee --emit-all-errors %t1.bc 2>&1 | FileCheck %s
+// RUN: ls %T/klee-last/ | grep .ktest | wc -l | grep 4
+// RUN: ls %T/klee-last/ | grep .err | wc -l | grep 3
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -31,9 +31,14 @@ int main() {
 
   free(buf[s]);
 
+  // CHECK: MultipleFreeResolution.c:39: memory error: out of bound pointer
+  // CHECK: MultipleFreeResolution.c:39: memory error: out of bound pointer
+  // CHECK: MultipleFreeResolution.c:39: memory error: out of bound pointer
+  // FIXME: Use FileCheck's relative line numbers
   for (i=0; i<3; i++) {
     printf("*buf[%d] = %d\n", i, *buf[i]);
   }
 
   return 0;
 }
+// CHECK: KLEE: done: generated tests = 4
