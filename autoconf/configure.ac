@@ -523,9 +523,29 @@ else
   ])
   CPPFLAGS="$old_CPPFLAGS"
 
+  STP_NEEDS_BOOST=0
+
+  # Try old STP
   AC_CHECK_LIB(stp, vc_setInterfaceFlags,, [
-         AC_MSG_ERROR([Unable to link with libstp])
+         STP_NEEDS_BOOST=1 ; AC_MSG_RESULT([Could not link with libstp. Checking if newer STP is being used])
   ], -L$stp_root/lib)
+
+  dnl Flags for upstream STP which has boost dependency
+  UPSTREAM_STP_LINK_FLAGS="-lboost_system -lboost_program_options"
+  if test "X$STP_NEEDS_BOOST" != X0 ; then
+    # Need to clear cached result
+    unset ac_cv_lib_stp_vc_setInterfaceFlags
+
+    AC_CHECK_LIB(stp,
+                 vc_setInterfaceFlags,, [
+                 AC_MSG_ERROR([Unable to link with libstp. Check config.log to see what went wrong])
+    ], -L$stp_root/lib $UPSTREAM_STP_LINK_FLAGS )
+
+    AC_SUBST(UPSTREAM_STP_LINK_FLAGS, $UPSTREAM_STP_LINK_FLAGS)
+    AC_SUBST(STP_NEEDS_BOOST, $STP_NEEDS_BOOST)
+  else
+    AC_MSG_RESULT([Using old STP])
+  fi
 
   AC_SUBST(STP_ROOT,$stp_root)
 fi
