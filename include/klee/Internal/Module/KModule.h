@@ -92,7 +92,7 @@ namespace klee {
 #endif
     
     // Some useful functions to know the address of
-    llvm::Function *dbgStopPointFn, *kleeMergeFn;
+    llvm::Function *kleeMergeFn;
 
     // Our shadow versions of LLVM structures.
     std::vector<KFunction*> functions;
