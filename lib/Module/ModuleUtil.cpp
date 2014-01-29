@@ -70,6 +70,7 @@ using namespace klee;
 ///
 static void
 GetAllUndefinedSymbols(Module *M, std::set<std::string> &UndefinedSymbols) {
+  static const std::string llvmIntrinsicPrefix="llvm.";
   std::set<std::string> DefinedSymbols;
   UndefinedSymbols.clear();
   DEBUG_WITH_TYPE("klee_linker", dbgs() << "*** Computing undefined symbols ***\n");
@@ -102,18 +103,33 @@ GetAllUndefinedSymbols(Module *M, std::set<std::string> &UndefinedSymbols) {
     if (I->hasName())
       DefinedSymbols.insert(I->getName());
 
-  // Prune out any defined symbols from the undefined symbols set...
+  // Prune out any defined symbols from the undefined symbols set
+  // and other symbols we don't want to treat as an undefined symbol
   for (std::set<std::string>::iterator I = UndefinedSymbols.begin();
        I != UndefinedSymbols.end(); )
+  {
     if (DefinedSymbols.count(*I))
-      UndefinedSymbols.erase(I++);  // This symbol really is defined!
-    else
     {
-      DEBUG_WITH_TYPE("klee_linker", dbgs() << "Symbol " << *I << " is undefined.\n");
-      ++I; // Keep this symbol in the undefined symbols list
+      UndefinedSymbols.erase(I++);  // This symbol really is defined!
+      continue;
     }
 
-  // FIXME: Remove KLEE special functions and LLVM intrinsics
+    // Strip out llvm intrinsics
+    if ( (I->size() >= llvmIntrinsicPrefix.size() ) &&
+       (I->compare(0, llvmIntrinsicPrefix.size(), llvmIntrinsicPrefix) == 0) )
+    {
+      DEBUG_WITH_TYPE("klee_linker", dbgs() << "LLVM intrinsic " << *I <<
+                      " has been removed from undefined symbols"<< "\n");
+      UndefinedSymbols.erase(I++);
+      continue;
+    }
+
+    // Symbol really is undefined
+    DEBUG_WITH_TYPE("klee_linker", dbgs() << "Symbol " << *I << " is undefined.\n");
+    ++I; // Keep this symbol in the undefined symbols list
+  }
+
+  // FIXME: Remove KLEE special functions
   // from the list of undefined symbols. HandlerInfo in SpecialFunctionHandler
   // needs to be moved so we can use it here.
 
