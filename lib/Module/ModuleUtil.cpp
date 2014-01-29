@@ -11,6 +11,7 @@
 #include "klee/Config/Version.h"
 // FIXME: This does not belong here.
 #include "../Core/Common.h"
+#include "../Core/SpecialFunctionHandler.h"
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
 #include "llvm/Bitcode/ReaderWriter.h"
@@ -103,6 +104,7 @@ GetAllUndefinedSymbols(Module *M, std::set<std::string> &UndefinedSymbols) {
     if (I->hasName())
       DefinedSymbols.insert(I->getName());
 
+
   // Prune out any defined symbols from the undefined symbols set
   // and other symbols we don't want to treat as an undefined symbol
   for (std::set<std::string>::iterator I = UndefinedSymbols.begin();
@@ -124,14 +126,27 @@ GetAllUndefinedSymbols(Module *M, std::set<std::string> &UndefinedSymbols) {
       continue;
     }
 
+    // Remove KLEE intrinsics from set of undefined symbols
+    bool kleeIntrinsicStripped=false;
+    for (SpecialFunctionHandler::const_iterator sf = SpecialFunctionHandler::begin(),
+         se = SpecialFunctionHandler::end(); sf != se; ++sf)
+    {
+      if (*I == sf->name)
+      {
+        DEBUG_WITH_TYPE("klee_linker", dbgs() << "KLEE intrinsic " << sf->name <<
+                        " has been removed from undefined symbols"<< "\n");
+        UndefinedSymbols.erase(I++);
+        kleeIntrinsicStripped=true;
+        break;
+      }
+    }
+
+    if (kleeIntrinsicStripped) continue;
+
     // Symbol really is undefined
     DEBUG_WITH_TYPE("klee_linker", dbgs() << "Symbol " << *I << " is undefined.\n");
     ++I; // Keep this symbol in the undefined symbols list
   }
-
-  // FIXME: Remove KLEE special functions
-  // from the list of undefined symbols. HandlerInfo in SpecialFunctionHandler
-  // needs to be moved so we can use it here.
 
   DEBUG_WITH_TYPE("klee_linker", dbgs() << "*** Finished computing undefined symbols ***\n");
 }
