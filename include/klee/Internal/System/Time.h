@@ -12,7 +12,9 @@
 
 namespace klee {
   namespace util {
+    // Returns the current time spent by the process in userland in seconds
     double getUserTime();
+    // Returns the current wall time in seconds
     double getWallTime();
   }
 }
