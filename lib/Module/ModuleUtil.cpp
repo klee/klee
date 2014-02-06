@@ -46,6 +46,7 @@
 #include "llvm/Support/Path.h"
 
 #include <map>
+#include <set>
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -107,12 +108,13 @@ GetAllUndefinedSymbols(Module *M, std::set<std::string> &UndefinedSymbols) {
 
   // Prune out any defined symbols from the undefined symbols set
   // and other symbols we don't want to treat as an undefined symbol
+  std::vector<std::string> RemovedSymbols;
   for (std::set<std::string>::iterator I = UndefinedSymbols.begin();
-       I != UndefinedSymbols.end(); )
+       I != UndefinedSymbols.end(); ++I )
   {
     if (DefinedSymbols.count(*I))
     {
-      UndefinedSymbols.erase(I++);  // This symbol really is defined!
+      RemovedSymbols.push_back(*I);
       continue;
     }
 
@@ -122,31 +124,28 @@ GetAllUndefinedSymbols(Module *M, std::set<std::string> &UndefinedSymbols) {
     {
       DEBUG_WITH_TYPE("klee_linker", dbgs() << "LLVM intrinsic " << *I <<
                       " has been removed from undefined symbols"<< "\n");
-      UndefinedSymbols.erase(I++);
+      RemovedSymbols.push_back(*I);
       continue;
     }
 
-    // Remove KLEE intrinsics from set of undefined symbols
-    bool kleeIntrinsicStripped=false;
-    for (SpecialFunctionHandler::const_iterator sf = SpecialFunctionHandler::begin(),
-         se = SpecialFunctionHandler::end(); sf != se; ++sf)
-    {
-      if (*I == sf->name)
-      {
-        DEBUG_WITH_TYPE("klee_linker", dbgs() << "KLEE intrinsic " << sf->name <<
-                        " has been removed from undefined symbols"<< "\n");
-        UndefinedSymbols.erase(I++);
-        kleeIntrinsicStripped=true;
-        break;
-      }
-    }
-
-    if (kleeIntrinsicStripped) continue;
-
     // Symbol really is undefined
     DEBUG_WITH_TYPE("klee_linker", dbgs() << "Symbol " << *I << " is undefined.\n");
-    ++I; // Keep this symbol in the undefined symbols list
   }
+
+  // Remove KLEE intrinsics from set of undefined symbols
+  for (SpecialFunctionHandler::const_iterator sf = SpecialFunctionHandler::begin(),
+       se = SpecialFunctionHandler::end(); sf != se; ++sf)
+  {
+    if (UndefinedSymbols.find(sf->name) == UndefinedSymbols.end())
+      continue;
+
+    RemovedSymbols.push_back(sf->name);
+    DEBUG_WITH_TYPE("klee_linker", dbgs() << "KLEE intrinsic " << sf->name <<
+                    " has been removed from undefined symbols"<< "\n");
+  }
+
+  for (size_t i = 0, j = RemovedSymbols.size(); i < j; ++i )
+    UndefinedSymbols.erase(RemovedSymbols[i]);
 
   DEBUG_WITH_TYPE("klee_linker", dbgs() << "*** Finished computing undefined symbols ***\n");
 }
@@ -262,33 +261,36 @@ static bool linkBCA(object::Archive* archive, Module* composite, std::string& er
     unsigned int modulesLoadedOnPass=0;
     previouslyUndefinedSymbols = undefinedSymbols;
 
-    for (std::vector<Module*>::iterator M = archiveModules.begin(), ME = archiveModules.end();
-        M != ME ;)
+    for (size_t i = 0, j = archiveModules.size(); i < j; ++i)
     {
+      // skip empty archives
+      if (archiveModules[i] == 0)
+        continue;
+      Module * M = archiveModules[i];
       // Look for the undefined symbols in the composite module
       for (std::set<std::string>::iterator S = undefinedSymbols.begin(), SE = undefinedSymbols.end();
          S != SE; ++S)
       {
+
         // FIXME: We aren't handling weak symbols here!
         // However the algorithm used in LLVM3.2 didn't seem to either
         // so maybe it doesn't matter?
+       // klee_warning("S: %s",(*S).c_str());
 
-        if ( GlobalValue* GV = dyn_cast_or_null<GlobalValue>((**M).getValueSymbolTable().lookup(*S)))
+        if ( GlobalValue* GV = dyn_cast_or_null<GlobalValue>(M->getValueSymbolTable().lookup(*S)))
         {
           if (GV->isDeclaration()) continue; // Not a definition
 
-          Module* moduleToLinkIn = *M;
-
-
           DEBUG_WITH_TYPE("klee_linker", dbgs() << "Found " << GV->getName() <<
-              " in " << (**M).getModuleIdentifier() << "\n");
+              " in " << M->getModuleIdentifier() << "\n");
 
 
-          if (Linker::LinkModules(composite, moduleToLinkIn, Linker::DestroySource, &errorMessage))
+          if (Linker::LinkModules(composite, M, Linker::DestroySource, &errorMessage))
           {
             // Linking failed
             SS << "Linking archive module with composite failed:" << errorMessage;
             SS.flush();
+            delete M;
             return false;
           }
           else
@@ -297,10 +299,8 @@ static bool linkBCA(object::Archive* archive, Module* composite, std::string& er
             modulesLoadedOnPass++;
             DEBUG_WITH_TYPE("klee_linker", dbgs() << "Linking succeeded.\n");
 
-            // Note use of postfix operator here so that the iterator gets incremented
-            // BEFORE we remove it from the vector so the iterator is not invalidated
-            archiveModules.erase(M++);
-            delete moduleToLinkIn;
+            delete M;
+            archiveModules[i] = 0;
 
             // We need to recompute the undefined symbols in the composite module
             // after linking
@@ -311,8 +311,6 @@ static bool linkBCA(object::Archive* archive, Module* composite, std::string& er
 
         }
       }
-
-      ++M; // Try next module
     }
 
     passCounter++;
