@@ -55,6 +55,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <unistd.h>
 
 using namespace klee;
 using namespace llvm;
@@ -182,12 +183,13 @@ StatsTracker::StatsTracker(Executor &_executor, std::string _objectFilename,
     updateMinDistToUncovered(_updateMinDistToUncovered) {
   KModule *km = executor.kmodule;
 
-  sys::Path module(objectFilename);
 #if LLVM_VERSION_CODE < LLVM_VERSION(3, 1)
   if (!sys::Path(objectFilename).isAbsolute()) {
 #else
   if (!sys::path::is_absolute(objectFilename)) {
 #endif
+
+#if LLVM_VERSION_CODE < LLVM_VERSION(3,4)
     sys::Path current = sys::Path::GetCurrentDirectory();
     current.appendComponent(objectFilename);
 #if LLVM_VERSION_CODE < LLVM_VERSION(3, 1)
@@ -196,6 +198,12 @@ StatsTracker::StatsTracker(Executor &_executor, std::string _objectFilename,
     if (sys::fs::exists(current.c_str()))
 #endif
       objectFilename = current.c_str();
+#else
+    SmallString<128> current(objectFilename);
+    if(sys::fs::make_absolute(current) && sys::fs::exists(current.str()))
+      objectFilename = current.c_str();
+#endif
+
   }
 
   if (OutputIStats)
