@@ -22,4 +22,11 @@ config.have_selinux = True if @HAVE_SELINUX@ == 1 else False
 config.target_triple = "@TARGET_TRIPLE@"
 
 # Let the main config do the real work.
-lit.load_config(config, "@KLEE_SOURCE_DIR@/test/lit.cfg")
+try:
+  lit
+except NameError:
+  # Use lit_config class
+  lit_config.load_config(config, "@KLEE_SOURCE_DIR@/test/lit.cfg")
+else:
+  # Use old lit class
+  lit.load_config(config, "@KLEE_SOURCE_DIR@/test/lit.cfg")
