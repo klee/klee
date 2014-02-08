@@ -1174,6 +1174,7 @@ void Executor::stepInstruction(ExecutionState &state) {
     statsTracker->stepInstruction(state);
 
   ++stats::instructions;
+  ++state.numInstExecuted;
   state.prevPC = state.pc;
   ++state.pc;
 

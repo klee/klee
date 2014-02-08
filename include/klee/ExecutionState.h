@@ -76,6 +76,7 @@ public:
   // objects.
   unsigned underConstrained;
   unsigned depth;
+  unsigned numInstExecuted;
   
   // pc - pointer to current instruction stream
   KInstIterator pc, prevPC;
