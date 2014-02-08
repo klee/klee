@@ -43,6 +43,11 @@ MaxTime("max-time",
         cl::desc("Halt execution after the specified number of seconds (0=off)"),
         cl::init(0));
 
+cl::opt<double>
+StopAfterNoGainInTime("stop-after-no-gain-in-time",
+                      cl::desc("Halt execution after not covering new codes in the specified number of seconds (0=off)"),
+                      cl::init(0));
+
 ///
 
 class HaltTimer : public Executor::Timer {
@@ -62,6 +67,7 @@ public:
 
 static const double kSecondsPerTick = .1;
 static volatile unsigned timerTicks = 0;
+static volatile unsigned timerTicksSinceCoverNew = 0;
 
 // XXX hack
 extern "C" unsigned dumpStates, dumpPTree;
@@ -69,6 +75,7 @@ unsigned dumpStates = 0, dumpPTree = 0;
 
 static void onAlarm(int) {
   ++timerTicks;
+  ++timerTicksSinceCoverNew;
 }
 
 // oooogalay
@@ -116,6 +123,15 @@ void Executor::processTimers(ExecutionState *current,
   if (!ticks && ++callsWithoutCheck > 1000) {
     setupHandler();
     ticks = 1;
+  }
+
+  if (!current->pc->status.isCovered()) {
+    current->pc->status.setCovered();
+    timerTicksSinceCoverNew = 0;
+  } else {
+    if (StopAfterNoGainInTime &&
+        timerTicksSinceCoverNew * kSecondsPerTick >= StopAfterNoGainInTime)
+      haltExecution = true;
   }
 
   if (ticks || dumpPTree || dumpStates) {

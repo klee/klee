@@ -23,12 +23,25 @@ namespace klee {
   struct InstructionInfo;
   class KModule;
 
+  /* Stores running status for a KInstruction */
+  struct InstructionStatus {
+    bool covered;
+
+  public:
+    InstructionStatus()
+      : covered(false) {}
+
+    bool isCovered() const { return covered; }
+    void setCovered() { covered = true; }
+  };
+
 
   /// KInstruction - Intermediate instruction representation used
   /// during execution.
   struct KInstruction {
     llvm::Instruction *inst;    
     const InstructionInfo *info;
+    InstructionStatus status;
 
     /// Value numbers for each operand. -1 is an invalid value,
     /// otherwise negative numbers are indices (negated and offset by
