@@ -88,7 +88,6 @@ Todo: Shouldn't bool \c Xor just be written as not equal?
 
 class Expr {
 public:
-  static unsigned count;
   static const unsigned MAGIC_HASH_CONSTANT = 39;
 
   /// The type of an expression is simply its width, in bits. 
@@ -175,8 +174,8 @@ protected:
   unsigned hashValue;
   
 public:
-  Expr() : refCount(0) { Expr::count++; }
-  virtual ~Expr() { Expr::count--; } 
+  Expr() : refCount(0), hashValue(0) {}
+  virtual ~Expr() {}
 
   virtual Kind getKind() const = 0;
   virtual Width getWidth() const = 0;
