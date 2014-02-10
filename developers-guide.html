@@ -157,19 +157,20 @@
  <b>Note the test suite currently cannot be executed in parallel so the <tt>-j1</tt> flag must be passed to <tt>llvm-lit</tt> to prevent tests from being run in parallel.</b>
 
   <p>
-    Sometimes it can be useful to pass extra command line options to <tt>klee</tt> or <tt>kleaver</tt> when running tests. This could be used for example could be used to quickly see if changing
-    the default value for a command option changes the passing/failing of a test. This is <b>not</b> a substitute for writing new tests for klee or kleaver! If you add a new feature
-    to KLEE or kleaver that is exposed by a new command line option a new test should be added that tests this behaviour.
+    Sometimes it can be useful to pass extra command line options to <tt>klee</tt> or <tt>kleaver</tt> when running tests. This could be used for example to quickly see if changing
+    the default value for a command line option changes the passing/failing of a test. This is <b>not</b> a substitute for writing new tests for <tt>klee</tt> or <tt>kleaver</tt>! 
+    If you add a new feature that is exposed by a new command line option a new test should be added that tests this behaviour.
   </p>
 
   <p>Here is an example:</p>
   <div class="instr">
-       $ llvm-lit --param klee_opts=-use-forked-solver=0 --param kleaver_opts="-use-forked-solver=0 -use-query-log=all:smt2"</br>
+       $ cd test/
+       $ llvm-lit --param klee_opts=-use-forked-solver=0 --param kleaver_opts="-use-forked-solver=0 -use-query-log=all:smt2" .</br>
   </div>
 
-  In this example when running <tt>klee</tt> in tests an extra option <tt>-use-forked-solver=0</tt> and when running <tt>kleaver</tt> the <tt>-use-forked-solver=0</tt>
+  In this example when running <tt>klee</tt> in tests an extra option <tt>-use-forked-solver=0</tt> is passed to <tt>klee</tt> and when running <tt>kleaver</tt> the <tt>-use-forked-solver=0</tt>
   and <tt>-use-query-log=all:smt2</tt> options will be passed to <tt>kleaver</tt>. It is important to realise if the test already invokes <tt>klee</tt> or <tt>kleaver</tt>
-  with an option you will not be able to override that option because the <tt>klee_opts</tt> and <tt>kleaver_opts</tt> are substituted just after the tool name so subsequent options
+  with a particular option you will not be able to override that option because the <tt>klee_opts</tt> and <tt>kleaver_opts</tt> are substituted just after the tool name so subsequent options
   used in the test will override these.
 
 
