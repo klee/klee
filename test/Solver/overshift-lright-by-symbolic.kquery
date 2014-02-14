@@ -1,0 +1,26 @@
+# RUN: %kleaver %s > %t
+# RUN: not grep INVALID %t
+
+array shift[4] : w32 -> w8 = symbolic
+# ∀ x. x >= 32 → ( (2 >> x) = 0 )
+# Check we logical right overshift to zero when shifting a constant ALWAYS!
+
+(query [ (Ule  (w32 32) (ReadLSB w32 (w32 0) shift)) ]
+    (Eq
+        (LShr w32 (w32 2)
+            (ReadLSB w32 (w32 0) shift)
+        )
+        (w32 0)
+    ) [ ] [shift] )
+
+# 64-bit version
+# ∀ x. x >= 64 → ( (2 >> x) = 0 )
+array shift64[8] : w32 -> w8 = symbolic
+
+(query [ (Ule  (w64 64) (ReadLSB w64 (w32 0) shift64)) ]
+    (Eq
+        (LShr w64 (w64 2)
+            (ReadLSB w64 (w32 0) shift64)
+        )
+        (w64 0)
+    ) [ ] [shift64] )

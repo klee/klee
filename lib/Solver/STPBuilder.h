@@ -79,13 +79,6 @@ class STPBuilder {
   STPArrayExprHash _arr_hash;
 
 private:  
-  unsigned getShiftBits(unsigned amount) {
-    unsigned bits = 1;
-    amount--;
-    while (amount >>= 1)
-      bits++;
-    return bits;
-  }
 
   ExprHandle bvOne(unsigned width);
   ExprHandle bvZero(unsigned width);
@@ -100,14 +93,14 @@ private:
   ExprHandle eqExpr(ExprHandle a, ExprHandle b);
 
   //logical left and right shift (not arithmetic)
-  ExprHandle bvLeftShift(ExprHandle expr, unsigned shift, unsigned shiftBits);
-  ExprHandle bvRightShift(ExprHandle expr, unsigned amount, unsigned shiftBits);
-  ExprHandle bvVarLeftShift(ExprHandle expr, ExprHandle amount, unsigned width);
-  ExprHandle bvVarRightShift(ExprHandle expr, ExprHandle amount, unsigned width);
-  ExprHandle bvVarArithRightShift(ExprHandle expr, ExprHandle amount, unsigned width);
+  ExprHandle bvLeftShift(ExprHandle expr, unsigned shift);
+  ExprHandle bvRightShift(ExprHandle expr, unsigned shift);
+  ExprHandle bvVarLeftShift(ExprHandle expr, ExprHandle shift);
+  ExprHandle bvVarRightShift(ExprHandle expr, ExprHandle shift);
+  ExprHandle bvVarArithRightShift(ExprHandle expr, ExprHandle shift);
 
   ExprHandle constructAShrByConstant(ExprHandle expr, unsigned shift, 
-                                     ExprHandle isSigned, unsigned shiftBits);
+                                     ExprHandle isSigned);
   ExprHandle constructMulByConstant(ExprHandle expr, unsigned width, uint64_t x);
   ExprHandle constructUDivByConstant(ExprHandle expr_n, unsigned width, uint64_t d);
   ExprHandle constructSDivByConstant(ExprHandle expr_n, unsigned width, uint64_t d);

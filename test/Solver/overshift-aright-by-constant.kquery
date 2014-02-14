@@ -1,0 +1,14 @@
+# RUN: %kleaver %s > %t
+# RUN: not grep INVALID %t
+array x[4] : w32 -> w8 = symbolic
+# ∀ x. x > 0 → ( ((signed int) x) >> 32  = 0 )
+# Check we overshift to zero for when shifting for all 32-bit values >0
+
+(query [ (Ult  (w32 0) (ReadLSB w32 (w32 0) x)) ]
+    (Eq
+        (AShr w32
+            (ReadLSB w32 (w32 0) x)
+            (w32 32)
+        )
+        (w32 0)
+    ) [ ] [x] )
