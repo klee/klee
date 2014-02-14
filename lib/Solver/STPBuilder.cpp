@@ -220,7 +220,7 @@ ExprHandle STPBuilder::bvVarLeftShift(ExprHandle expr, ExprHandle shift) {
 
   // If overshifting, shift to zero
   res = vc_iteExpr(vc,
-                   vc_bvLtExpr(vc, shift, bvConst32(width, width)),
+                   vc_bvLtExpr(vc, shift, bvConst32(vc_getBVLength(vc,shift), width)),
                    res,
                    bvZero(width));
   return res;
@@ -241,7 +241,7 @@ ExprHandle STPBuilder::bvVarRightShift(ExprHandle expr, ExprHandle shift) {
 
   // If overshifting, shift to zero
   res = vc_iteExpr(vc,
-                   vc_bvLtExpr(vc, shift, bvConst32(width, width)),
+                   vc_bvLtExpr(vc, shift, bvConst32(vc_getBVLength(vc,shift), width)),
                    res,
                    bvZero(width));
   return res;
@@ -271,7 +271,7 @@ ExprHandle STPBuilder::bvVarArithRightShift(ExprHandle expr, ExprHandle shift) {
 
   // If overshifting, shift to zero
   res = vc_iteExpr(vc,
-                   vc_bvLtExpr(vc, shift, bvConst32(width, width)),
+                   vc_bvLtExpr(vc, shift, bvConst32(vc_getBVLength(vc,shift), width)),
                    res,
                    bvZero(width));
   return res;
