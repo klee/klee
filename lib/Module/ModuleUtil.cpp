@@ -327,8 +327,7 @@ static bool linkBCA(object::Archive* archive, Module* composite, std::string& er
     passCounter++;
     DEBUG_WITH_TYPE("klee_linker", dbgs() << "Completed " << passCounter <<
                 " linker passes.\n" << modulesLoadedOnPass <<
-                " modules loaded on the last pass\n" <<
-                archiveModules.size() << " modules left.\n");
+                " modules loaded on the last pass\n");
   } while (undefinedSymbols != previouslyUndefinedSymbols); // Iterate until we reach a fixed point
 
 
