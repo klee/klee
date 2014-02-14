@@ -152,6 +152,17 @@ GetAllUndefinedSymbols(Module *M, std::set<std::string> &UndefinedSymbols) {
 }
 
 
+/*!  A helper function for linkBCA() which cleans up
+ *   memory allocated by that function.
+ */
+static void CleanUpLinkBCA(std::vector<Module*> &archiveModules)
+{
+  for (std::vector<Module*>::iterator I = archiveModules.begin(), E = archiveModules.end();
+      I != E; ++I)
+  {
+    delete (*I);
+  }
+}
 
 /*! A helper function for klee::linkWithLibrary() that links in an archive of bitcode
  *  modules into a composite bitcode module
@@ -290,7 +301,7 @@ static bool linkBCA(object::Archive* archive, Module* composite, std::string& er
             // Linking failed
             SS << "Linking archive module with composite failed:" << errorMessage;
             SS.flush();
-            delete M;
+            CleanUpLinkBCA(archiveModules);
             return false;
           }
           else
@@ -320,13 +331,9 @@ static bool linkBCA(object::Archive* archive, Module* composite, std::string& er
                 archiveModules.size() << " modules left.\n");
   } while (undefinedSymbols != previouslyUndefinedSymbols); // Iterate until we reach a fixed point
 
-  // What's left in archiveModules we don't want to link in so free it
-  for (std::vector<Module*>::iterator I = archiveModules.begin(), E = archiveModules.end();
-      I != E; ++I)
-  {
-    delete (*I);
-  }
 
+  // What's left in archiveModules we don't want to link in so free it
+  CleanUpLinkBCA(archiveModules);
 
   return true;
 
