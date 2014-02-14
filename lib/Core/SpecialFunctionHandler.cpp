@@ -38,20 +38,14 @@ using namespace klee;
 
 ///
 
-struct HandlerInfo {
-  const char *name;
-  SpecialFunctionHandler::Handler handler;
-  bool doesNotReturn; /// Intrinsic terminates the process
-  bool hasReturnValue; /// Intrinsic has a return value
-  bool doNotOverride; /// Intrinsic should not be used if already defined
-};
+
 
 // FIXME: We are more or less committed to requiring an intrinsic
 // library these days. We can move some of this stuff there,
 // especially things like realloc which have complicated semantics
 // w.r.t. forking. Among other things this makes delayed query
 // dispatch easier to implement.
-HandlerInfo handlerInfo[] = {
+static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
 #define add(name, handler, ret) { name, \
                                   &SpecialFunctionHandler::handler, \
                                   false, ret, false }
@@ -117,12 +111,37 @@ HandlerInfo handlerInfo[] = {
 #undef add  
 };
 
+SpecialFunctionHandler::const_iterator SpecialFunctionHandler::begin() {
+  return SpecialFunctionHandler::const_iterator(handlerInfo);
+}
+
+SpecialFunctionHandler::const_iterator SpecialFunctionHandler::end() {
+  // NULL pointer is sentinel
+  return SpecialFunctionHandler::const_iterator(0);
+}
+
+SpecialFunctionHandler::const_iterator& SpecialFunctionHandler::const_iterator::operator++() {
+  ++index;
+  if ( index >= SpecialFunctionHandler::size())
+  {
+    // Out of range, return .end()
+    base=0; // Sentinel
+    index=0;
+  }
+
+  return *this;
+}
+
+int SpecialFunctionHandler::size() {
+	return sizeof(handlerInfo)/sizeof(handlerInfo[0]);
+}
+
 SpecialFunctionHandler::SpecialFunctionHandler(Executor &_executor) 
   : executor(_executor) {}
 
 
 void SpecialFunctionHandler::prepare() {
-  unsigned N = sizeof(handlerInfo)/sizeof(handlerInfo[0]);
+  unsigned N = size();
 
   for (unsigned i=0; i<N; ++i) {
     HandlerInfo &hi = handlerInfo[i];
@@ -715,3 +734,5 @@ void SpecialFunctionHandler::handleMarkGlobal(ExecutionState &state,
     mo->isGlobal = true;
   }
 }
+
+
