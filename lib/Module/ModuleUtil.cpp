@@ -156,7 +156,7 @@ GetAllUndefinedSymbols(Module *M, std::set<std::string> &UndefinedSymbols) {
  *  modules into a composite bitcode module
  *
  *  \param[in] archive Archive of bitcode modules
- *  \param[in,out] composite The archive to link the archive with
+ *  \param[in,out] composite The bitcode module to link against the archive
  *  \param[out] errorMessage Set to an error message if linking fails
  *
  *  \return True if linking succeeds otherwise false
@@ -275,7 +275,6 @@ static bool linkBCA(object::Archive* archive, Module* composite, std::string& er
         // FIXME: We aren't handling weak symbols here!
         // However the algorithm used in LLVM3.2 didn't seem to either
         // so maybe it doesn't matter?
-       // klee_warning("S: %s",(*S).c_str());
 
         if ( GlobalValue* GV = dyn_cast_or_null<GlobalValue>(M->getValueSymbolTable().lookup(*S)))
         {
