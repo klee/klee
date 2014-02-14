@@ -108,13 +108,13 @@ GetAllUndefinedSymbols(Module *M, std::set<std::string> &UndefinedSymbols) {
 
   // Prune out any defined symbols from the undefined symbols set
   // and other symbols we don't want to treat as an undefined symbol
-  std::vector<std::string> RemovedSymbols;
+  std::vector<std::string> SymbolsToRemove;
   for (std::set<std::string>::iterator I = UndefinedSymbols.begin();
        I != UndefinedSymbols.end(); ++I )
   {
     if (DefinedSymbols.count(*I))
     {
-      RemovedSymbols.push_back(*I);
+      SymbolsToRemove.push_back(*I);
       continue;
     }
 
@@ -123,8 +123,8 @@ GetAllUndefinedSymbols(Module *M, std::set<std::string> &UndefinedSymbols) {
        (I->compare(0, llvmIntrinsicPrefix.size(), llvmIntrinsicPrefix) == 0) )
     {
       DEBUG_WITH_TYPE("klee_linker", dbgs() << "LLVM intrinsic " << *I <<
-                      " has been removed from undefined symbols"<< "\n");
-      RemovedSymbols.push_back(*I);
+                      " has will be removed from undefined symbols"<< "\n");
+      SymbolsToRemove.push_back(*I);
       continue;
     }
 
@@ -139,13 +139,14 @@ GetAllUndefinedSymbols(Module *M, std::set<std::string> &UndefinedSymbols) {
     if (UndefinedSymbols.find(sf->name) == UndefinedSymbols.end())
       continue;
 
-    RemovedSymbols.push_back(sf->name);
+    SymbolsToRemove.push_back(sf->name);
     DEBUG_WITH_TYPE("klee_linker", dbgs() << "KLEE intrinsic " << sf->name <<
-                    " has been removed from undefined symbols"<< "\n");
+                    " has will be removed from undefined symbols"<< "\n");
   }
 
-  for (size_t i = 0, j = RemovedSymbols.size(); i < j; ++i )
-    UndefinedSymbols.erase(RemovedSymbols[i]);
+  // Now remove the symbols from undefined set.
+  for (size_t i = 0, j = SymbolsToRemove.size(); i < j; ++i )
+    UndefinedSymbols.erase(SymbolsToRemove[i]);
 
   DEBUG_WITH_TYPE("klee_linker", dbgs() << "*** Finished computing undefined symbols ***\n");
 }
