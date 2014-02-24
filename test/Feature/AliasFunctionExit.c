@@ -13,7 +13,7 @@ void start(int x) {
     exit(1);
 }
 
-void end(int status) {
+void __attribute__ ((noinline)) end(int status) {
   klee_alias_function("exit", "exit");
   printf("END: status = %d\n", status);
   exit(status);
