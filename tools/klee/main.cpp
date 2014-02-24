@@ -170,7 +170,7 @@ namespace {
     
   cl::opt<bool>
   ReplayKeepSymbolic("replay-keep-symbolic", 
-                     cl::desc("Replay the test cases only by asserting"
+                     cl::desc("Replay the test cases only by asserting "
                               "the bytes, not necessarily making them concrete."));
     
   cl::list<std::string>
@@ -196,7 +196,9 @@ namespace {
   
   cl::opt<unsigned>
   MakeConcreteSymbolic("make-concrete-symbolic",
-                       cl::desc("Rate at which to make concrete reads symbolic (0=off)"),
+                       cl::desc("Probabilistic rate at which to make concrete reads symbolic, "
+				"i.e. approximately 1 in n concrete reads will be made symbolic (0=off, 1=all).  "
+				"Used for testing."),
                        cl::init(0));
  
   cl::opt<unsigned>

@@ -2911,11 +2911,11 @@ ref<Expr> Executor::replaceReadWithSymbolic(ExecutionState &state,
   if (!n || replayOut || replayPath)
     return e;
 
-  // right now, we don't replace symbolics (is there any reason too?)
+  // right now, we don't replace symbolics (is there any reason to?)
   if (!isa<ConstantExpr>(e))
     return e;
 
-  if (n != 1 && random() %  n)
+  if (n != 1 && random() % n)
     return e;
 
   // create a new fresh location, assert it is equal to concrete value in e
