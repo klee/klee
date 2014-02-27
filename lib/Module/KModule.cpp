@@ -72,10 +72,6 @@ namespace {
 
   cl::list<std::string>
   MergeAtExit("merge-at-exit");
-    
-  cl::opt<bool>
-  NoTruncateSourceLines("no-truncate-source-lines",
-                        cl::desc("Don't truncate long lines in the output source"));
 
   cl::opt<bool>
   OutputSource("output-source",
@@ -389,41 +385,11 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   if (f && f->use_empty()) f->eraseFromParent();
 #endif
 
-  // Write out the .ll assembly file. We truncate long lines to work
-  // around a kcachegrind parsing bug (it puts them on new lines), so
-  // that source browsing works.
   if (OutputSource) {
     llvm::raw_fd_ostream *os = ih->openOutputFile("assembly.ll");
     assert(os && !os->has_error() && "unable to open source output");
+    *os << *module;
 
-    // We have an option for this in case the user wants a .ll they
-    // can compile.
-    if (NoTruncateSourceLines) {
-      *os << *module;
-    } else {
-      std::string string;
-      llvm::raw_string_ostream rss(string);
-      rss << *module;
-      rss.flush();
-      const char *position = string.c_str();
-
-      for (;;) {
-        const char *end = index(position, '\n');
-        if (!end) {
-          *os << position;
-          break;
-        } else {
-          unsigned count = (end - position) + 1;
-          if (count<255) {
-            os->write(position, count);
-          } else {
-            os->write(position, 254);
-            *os << "\n";
-          }
-          position = end+1;
-        }
-      }
-    }
     delete os;
   }
 
