@@ -468,7 +468,7 @@ ref<Expr> ObjectState::read(ref<Expr> offset, Expr::Width width) const {
 
   // Otherwise, follow the slow general case.
   unsigned NumBytes = width / 8;
-  assert(width == NumBytes * 8 && "Invalid write size!");
+  assert(width == NumBytes * 8 && "Invalid read size!");
   ref<Expr> Res(0);
   for (unsigned i = 0; i != NumBytes; ++i) {
     unsigned idx = Context::get().isLittleEndian() ? i : (NumBytes - i - 1);
@@ -488,7 +488,7 @@ ref<Expr> ObjectState::read(unsigned offset, Expr::Width width) const {
 
   // Otherwise, follow the slow general case.
   unsigned NumBytes = width / 8;
-  assert(width == NumBytes * 8 && "Invalid write size!");
+  assert(width == NumBytes * 8 && "Invalid width for read size!");
   ref<Expr> Res(0);
   for (unsigned i = 0; i != NumBytes; ++i) {
     unsigned idx = Context::get().isLittleEndian() ? i : (NumBytes - i - 1);
