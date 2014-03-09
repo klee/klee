@@ -1,4 +1,5 @@
-//===-- ExprSMTLIBPrinter.h ------------------------------------------*- C++ -*-===//
+//===-- ExprSMTLIBPrinter.h ------------------------------------------*- C++
+//-*-===//
 //
 //                     The KLEE Symbolic Virtual Machine
 //
@@ -21,302 +22,324 @@
 
 namespace klee {
 
-  ///Base Class for SMTLIBv2 printer for KLEE Queries. It uses the QF_ABV logic. Note however the logic can be
-  ///set to QF_AUFBV because some solvers (e.g. STP) complain if this logic is set to QF_ABV.
+/// Base Class for SMTLIBv2 printer for KLEE Queries. It uses the QF_ABV logic.
+/// Note however the logic can be
+/// set to QF_AUFBV because some solvers (e.g. STP) complain if this logic is
+/// set to QF_ABV.
+///
+/// This printer does not abbreviate expressions. The printer
+/// ExprSMTLIBLetPrinter does though.
+///
+/// It is intended to be used as follows
+/// -# Create instance of this class
+/// -# Set output ( setOutput() )
+/// -# Set query to print ( setQuery() )
+/// -# Set options using the methods prefixed with the word "set".
+/// -# Call generateOutput()
+///
+/// The class can then be used again on another query ( setQuery() ).
+/// The options set are persistent across queries (apart from
+/// setArrayValuesToGet() and PRODUCE_MODELS).
+///
+///
+/// Note that in KLEE at the lowest level the solver checks for validity of the
+/// query, i.e.
+///
+/// \f[ \forall X constraints(X) \to query(X) \f]
+///
+/// Where \f$X\f$ is some assignment, \f$constraints(X)\f$ are the constraints
+/// in the query and \f$query(X)\f$ is the query expression.
+/// If the above formula is true the query is said to be **valid**, otherwise it
+/// is
+/// **invalid**.
+///
+/// The SMTLIBv2 language works in terms of satisfiability rather than validity
+/// so instead
+/// this class must ask the equivalent query but in terms of satisfiability
+/// which is:
+///
+/// \f[ \lnot \exists X constraints(X) \land \lnot query(X) \f]
+///
+/// The printed SMTLIBv2 query actually asks the following:
+///
+///  \f[ \exists X constraints(X) \land \lnot query(X) \f]
+/// Hence the printed SMTLIBv2 query will just assert the constraints and the
+/// negation
+/// of the query expression.
+///
+/// If a SMTLIBv2 solver says the printed query is satisfiable the then original
+/// query passed to this class was **invalid** and if a SMTLIBv2 solver says the
+/// printed
+/// query is unsatisfiable then the original query passed to this class was
+/// **valid**.
+///
+class ExprSMTLIBPrinter {
+public:
+  /// Different SMTLIBv2 logics supported by this class
+  /// \sa setLogic()
+  enum SMTLIBv2Logic {
+    QF_ABV,  ///< Logic using Theory of Arrays and Theory of Bitvectors
+    QF_AUFBV ///< Logic using Theory of Arrays and Theory of Bitvectors and has
+             ///uninterpreted functions
+  };
+
+  /// Different SMTLIBv2 options that have a boolean value that can be set
+  /// \sa setSMTLIBboolOption
+  enum SMTLIBboolOptions {
+    PRINT_SUCCESS,   ///< print-success SMTLIBv2 option
+    PRODUCE_MODELS,  ///< produce-models SMTLIBv2 option
+    INTERACTIVE_MODE ///< interactive-mode SMTLIBv2 option
+  };
+
+  /// Different SMTLIBv2 bool option values
+  /// \sa setSMTLIBboolOption
+  enum SMTLIBboolValues {
+    OPTION_TRUE,   ///< Set option to true
+    OPTION_FALSE,  ///< Set option to false
+    OPTION_DEFAULT ///< Use solver's defaults (the option will not be set in
+                   ///output)
+  };
+
+  enum ConstantDisplayMode {
+    BINARY, ///< Display bit vector constants in binary e.g. #b00101101
+    HEX,    ///< Display bit vector constants in Hexidecimal e.g.#x2D
+    DECIMAL ///< Display bit vector constants in Decimal e.g. (_ bv45 8)
+  };
+
+  /// Different supported SMTLIBv2 sorts (a.k.a type) in QF_AUFBV
+  enum SMTLIB_SORT { SORT_BITVECTOR, SORT_BOOL };
+
+  /// Allows the way Constant bitvectors are printed to be changed.
+  /// This setting is persistent across queries.
+  /// \return true if setting the mode was successful
+  bool setConstantDisplayMode(ConstantDisplayMode cdm);
+
+  ConstantDisplayMode getConstantDisplayMode() { return cdm; }
+
+  /// Create a new printer that will print a query in the SMTLIBv2 language.
+  ExprSMTLIBPrinter();
+
+  /// Set the output stream that will be printed to.
+  /// This call is persistent across queries.
+  void setOutput(std::ostream &output);
+
+  /// Set the query to print. This will setArrayValuesToGet()
+  /// to none (i.e. no array values will be requested using
+  /// the SMTLIBv2 (get-value ()) command).
+  void setQuery(const Query &q);
+
+  virtual ~ExprSMTLIBPrinter();
+
+  /// Print the query to the std::ostream
+  /// setOutput() and setQuery() must be called before calling this.
   ///
-  ///This printer does not abbreviate expressions. The printer ExprSMTLIBLetPrinter does though.
+  /// All options should be set before calling this.
+  /// \sa setConstantDisplayMode
+  /// \sa setLogic()
+  /// \sa setHumanReadable
+  /// \sa setSMTLIBboolOption
+  /// \sa setArrayValuesToGet
   ///
-  /// It is intended to be used as follows
-  /// -# Create instance of this class
-  /// -# Set output ( setOutput() )
-  /// -# Set query to print ( setQuery() )
-  /// -# Set options using the methods prefixed with the word "set".
-  /// -# Call generateOutput()
+  /// Mostly it does not matter what order the options are set in. However
+  /// calling
+  /// setArrayValuesToGet() implies PRODUCE_MODELS is set so, if a call to
+  /// setSMTLIBboolOption()
+  /// is made that uses the PRODUCE_MODELS before calling setArrayValuesToGet()
+  /// then the setSMTLIBboolOption()
+  /// call will be ineffective.
+  virtual void generateOutput();
+
+  /// Set which SMTLIBv2 logic to use.
+  /// This only affects what logic is used in the (set-logic <logic>) command.
+  /// The rest of the printed SMTLIBv2 commands are the same regardless of the
+  /// logic used.
   ///
-  ///The class can then be used again on another query ( setQuery() ).
-  ///The options set are persistent across queries (apart from setArrayValuesToGet() and PRODUCE_MODELS).
+  /// \return true if setting logic was successful.
+  bool setLogic(SMTLIBv2Logic l);
+
+  /// Sets how readable the printed SMTLIBv2 commands are.
+  /// \param hr If set to true the printed commands are made more human
+  /// readable.
   ///
+  /// The printed commands are made human readable by...
+  /// - Indenting and line breaking.
+  /// - Adding comments
+  void setHumanReadable(bool hr);
+
+  /// Set SMTLIB options.
+  /// These options will be printed when generateOutput() is called via
+  /// the SMTLIBv2 command (set-option :option-name <value>)
   ///
-  ///Note that in KLEE at the lowest level the solver checks for validity of the query, i.e.
+  /// By default no options will be printed so the SMTLIBv2 solver will use
+  /// its default values for all options.
   ///
-  /// \f[ \forall X constraints(X) \to query(X) \f]
+  /// \return true if option was successfully set.
   ///
-  /// Where \f$X\f$ is some assignment, \f$constraints(X)\f$ are the constraints
-  /// in the query and \f$query(X)\f$ is the query expression.
-  /// If the above formula is true the query is said to be **valid**, otherwise it is
-  /// **invalid**.
+  /// The options set are persistent across calls to setQuery() apart from the
+  /// PRODUCE_MODELS option which this printer may automatically set/unset.
+  bool setSMTLIBboolOption(SMTLIBboolOptions option, SMTLIBboolValues value);
+
+  /// Set the array names that the SMTLIBv2 solver will be asked to determine.
+  /// Calling this method implies the PRODUCE_MODELS option is true and will
+  /// change
+  /// any previously set value.
   ///
-  /// The SMTLIBv2 language works in terms of satisfiability rather than validity so instead
-  /// this class must ask the equivalent query but in terms of satisfiability which is:
+  /// If no call is made to this function before
+  /// ExprSMTLIBPrinter::generateOutput() then
+  /// the solver will only be asked to check satisfiability.
   ///
-  /// \f[ \lnot \exists X constraints(X) \land \lnot query(X) \f]
-  ///
-  /// The printed SMTLIBv2 query actually asks the following:
-  ///
-  ///  \f[ \exists X constraints(X) \land \lnot query(X) \f]
-  /// Hence the printed SMTLIBv2 query will just assert the constraints and the negation
-  /// of the query expression.
-  ///
-  /// If a SMTLIBv2 solver says the printed query is satisfiable the then original
-  /// query passed to this class was **invalid** and if a SMTLIBv2 solver says the printed
-  /// query is unsatisfiable then the original query passed to this class was **valid**.
-  ///
-	class ExprSMTLIBPrinter
-	{
-		public:
+  /// If the passed vector is not empty then the values of those arrays will be
+  /// requested
+  /// via (get-value ()) SMTLIBv2 command in the output stream in the same order
+  /// as vector.
+  void setArrayValuesToGet(const std::vector<const Array *> &a);
 
-			///Different SMTLIBv2 logics supported by this class
-			/// \sa setLogic()
-			enum SMTLIBv2Logic
-			{
-				QF_ABV,  ///< Logic using Theory of Arrays and Theory of Bitvectors
-				QF_AUFBV ///< Logic using Theory of Arrays and Theory of Bitvectors and has uninterpreted functions
-			};
+  /// \return True if human readable mode is switched on
+  bool isHumanReadable();
 
-			///Different SMTLIBv2 options that have a boolean value that can be set
-			/// \sa setSMTLIBboolOption
-			enum SMTLIBboolOptions
-			{
-				PRINT_SUCCESS, ///< print-success SMTLIBv2 option
-				PRODUCE_MODELS,///< produce-models SMTLIBv2 option
-				INTERACTIVE_MODE ///< interactive-mode SMTLIBv2 option
-			};
+protected:
+  /// Contains the arrays found during scans
+  std::set<const Array *> usedArrays;
 
-			///Different SMTLIBv2 bool option values
-			/// \sa setSMTLIBboolOption
-			enum SMTLIBboolValues
-			{
-				OPTION_TRUE, ///< Set option to true
-				OPTION_FALSE, ///< Set option to false
-				OPTION_DEFAULT ///< Use solver's defaults (the option will not be set in output)
-			};
+  /// Output stream to write to
+  std::ostream *o;
 
-			enum ConstantDisplayMode
-			{
-				BINARY,///< Display bit vector constants in binary e.g. #b00101101
-				HEX, ///< Display bit vector constants in Hexidecimal e.g.#x2D
-				DECIMAL ///< Display bit vector constants in Decimal e.g. (_ bv45 8)
-			};
+  /// The query to print
+  const Query *query;
 
-			///Different supported SMTLIBv2 sorts (a.k.a type) in QF_AUFBV
-			enum SMTLIB_SORT
-			{
-				SORT_BITVECTOR,
-				SORT_BOOL
-			};
+  /// Determine the SMTLIBv2 sort of the expression
+  SMTLIB_SORT getSort(const ref<Expr> &e);
 
+  /// Print an expression but cast it to a particular SMTLIBv2 sort first.
+  void printCastToSort(const ref<Expr> &e, ExprSMTLIBPrinter::SMTLIB_SORT sort);
 
+  // Resets various internal objects for a new query
+  virtual void reset();
 
-			///Allows the way Constant bitvectors are printed to be changed.
-			///This setting is persistent across queries.
-			/// \return true if setting the mode was successful
-			bool setConstantDisplayMode(ConstantDisplayMode cdm);
+  // Scan all constraints and the query
+  virtual void scanAll();
 
-			ConstantDisplayMode getConstantDisplayMode() { return cdm;}
+  // Print an initial SMTLIBv2 comment before anything else is printed
+  virtual void printNotice();
 
-			///Create a new printer that will print a query in the SMTLIBv2 language.
-			ExprSMTLIBPrinter();
+  // Print SMTLIBv2 options e.g. (set-option :option-name <value>) command
+  virtual void printOptions();
 
-			///Set the output stream that will be printed to.
-			///This call is persistent across queries.
-			void setOutput(std::ostream& output);
+  // Print SMTLIBv2 logic to use e.g. (set-logic QF_ABV)
+  virtual void printSetLogic();
 
-			///Set the query to print. This will setArrayValuesToGet()
-			///to none (i.e. no array values will be requested using
-			///the SMTLIBv2 (get-value ()) command).
-			void setQuery(const Query& q);
+  // Print SMTLIBv2 assertions for constant arrays
+  virtual void printArrayDeclarations();
 
-			virtual ~ExprSMTLIBPrinter();
+  // Print SMTLIBv2 for all constraints in the query
+  virtual void printConstraints();
 
-			/// Print the query to the std::ostream
-			/// setOutput() and setQuery() must be called before calling this.
-			///
-			/// All options should be set before calling this.
-			/// \sa setConstantDisplayMode
-			/// \sa setLogic()
-			/// \sa setHumanReadable
-			/// \sa setSMTLIBboolOption
-			/// \sa setArrayValuesToGet
-			///
-			/// Mostly it does not matter what order the options are set in. However calling
-			/// setArrayValuesToGet() implies PRODUCE_MODELS is set so, if a call to setSMTLIBboolOption()
-			/// is made that uses the PRODUCE_MODELS before calling setArrayValuesToGet() then the setSMTLIBboolOption()
-			/// call will be ineffective.
-			virtual void generateOutput();
+  // Print SMTLIBv2 assert statement for the negated query expression
+  virtual void printQuery();
 
-			///Set which SMTLIBv2 logic to use.
-			///This only affects what logic is used in the (set-logic <logic>) command.
-			///The rest of the printed SMTLIBv2 commands are the same regardless of the logic used.
-			///
-			/// \return true if setting logic was successful.
-			bool setLogic(SMTLIBv2Logic l);
+  /// Print the SMTLIBv2 command to check satisfiability and also optionally
+  /// request for values
+  /// \sa setArrayValuesToGet()
+  virtual void printAction();
 
-			///Sets how readable the printed SMTLIBv2 commands are.
-			/// \param hr If set to true the printed commands are made more human readable.
-			///
-			/// The printed commands are made human readable by...
-			/// - Indenting and line breaking.
-			/// - Adding comments
-			void setHumanReadable(bool hr);
+  /// Print the SMTLIBv2 command to exit
+  virtual void printExit();
 
-			///Set SMTLIB options.
-			/// These options will be printed when generateOutput() is called via
-			/// the SMTLIBv2 command (set-option :option-name <value>)
-			///
-			/// By default no options will be printed so the SMTLIBv2 solver will use
-			/// its default values for all options.
-			///
-			/// \return true if option was successfully set.
-			///
-			/// The options set are persistent across calls to setQuery() apart from the
-			/// PRODUCE_MODELS option which this printer may automatically set/unset.
-			bool setSMTLIBboolOption(SMTLIBboolOptions option, SMTLIBboolValues value);
+  /// Print a Constant in the format specified by the current "Constant Display
+  /// Mode"
+  void printConstant(const ref<ConstantExpr> &e);
 
-			/// Set the array names that the SMTLIBv2 solver will be asked to determine.
-			/// Calling this method implies the PRODUCE_MODELS option is true and will change
-			/// any previously set value.
-			///
-			/// If no call is made to this function before ExprSMTLIBPrinter::generateOutput() then
-			/// the solver will only be asked to check satisfiability.
-			///
-			/// If the passed vector is not empty then the values of those arrays will be requested
-			/// via (get-value ()) SMTLIBv2 command in the output stream in the same order as vector.
-			void setArrayValuesToGet(const std::vector<const Array*>& a);
+  /// Recursively print expression
+  /// \param e is the expression to print
+  /// \param expectedSort is the sort we want. If "e" is not of the right type a
+  /// cast will be performed.
+  virtual void printExpression(const ref<Expr> &e,
+                               ExprSMTLIBPrinter::SMTLIB_SORT expectedSort);
 
-			/// \return True if human readable mode is switched on
-			bool isHumanReadable();
+  /// Scan Expression recursively for Arrays in expressions. Found arrays are
+  /// added to
+  /// the usedArrays vector.
+  virtual void scan(const ref<Expr> &e);
 
+  /* Rules of recursion for "Special Expression handlers" and
+   *printSortArgsExpr()
+   *
+   * 1. The parent of the recursion will have created an indent level for you so
+   *you don't need to add another initially.
+   * 2. You do not need to add a line break (via printSeperator() ) at the end,
+   *the parent caller will handle that.
+   * 3. The effect of a single recursive call should not affect the depth of the
+   *indent stack (nor the contents
+   *    of the indent stack prior to the call). I.e. After executing a single
+   *recursive call the indent stack
+   *    should have the same size and contents as before executing the recursive
+   *call.
+   */
 
-		protected:
-			///Contains the arrays found during scans
-			std::set<const Array*> usedArrays;
+  // Special Expression handlers
+  virtual void printReadExpr(const ref<ReadExpr> &e);
+  virtual void printExtractExpr(const ref<ExtractExpr> &e);
+  virtual void printCastExpr(const ref<CastExpr> &e);
+  virtual void printNotEqualExpr(const ref<NeExpr> &e);
+  virtual void printSelectExpr(const ref<SelectExpr> &e,
+                               ExprSMTLIBPrinter::SMTLIB_SORT s);
 
-			///Output stream to write to
-			std::ostream* o;
+  // For the set of operators that take sort "s" arguments
+  virtual void printSortArgsExpr(const ref<Expr> &e,
+                                 ExprSMTLIBPrinter::SMTLIB_SORT s);
 
-			///The query to print
-			const Query* query;
+  /// For the set of operators that come in two sorts (e.g. (and () ()) (bvand
+  /// () ()) )
+  /// These are and,xor,or,not
+  /// \param e the Expression to print
+  /// \param s the sort of the expression we want
+  virtual void printLogicalOrBitVectorExpr(const ref<Expr> &e,
+                                           ExprSMTLIBPrinter::SMTLIB_SORT s);
 
-			///Determine the SMTLIBv2 sort of the expression
-			SMTLIB_SORT getSort(const ref<Expr>& e);
+  /// Recursively prints updatesNodes
+  virtual void printUpdatesAndArray(const UpdateNode *un, const Array *root);
 
-			///Print an expression but cast it to a particular SMTLIBv2 sort first.
-			void printCastToSort(const ref<Expr>& e, ExprSMTLIBPrinter::SMTLIB_SORT sort);
+  /// This method does the translation between Expr classes and SMTLIBv2
+  /// keywords
+  /// \return A C-string of the SMTLIBv2 keyword
+  virtual const char *getSMTLIBKeyword(const ref<Expr> &e);
 
-			//Resets various internal objects for a new query
-			virtual void reset();
+  virtual void printSeperator();
 
-			//Scan all constraints and the query
-			virtual void scanAll();
+  /// Helper function for scan() that scans the expressions of an update node
+  virtual void scanUpdates(const UpdateNode *un);
 
-			//Print an initial SMTLIBv2 comment before anything else is printed
-			virtual void printNotice();
+  /// Helper printer class
+  PrintContext *p;
 
-			//Print SMTLIBv2 options e.g. (set-option :option-name <value>) command
-			virtual void printOptions();
+  /// This contains the query from the solver but negated for our purposes.
+  /// \sa negateQueryExpression()
+  ref<Expr> queryAssert;
 
-			//Print SMTLIBv2 logic to use e.g. (set-logic QF_ABV)
-			virtual void printSetLogic();
+  /// Indicates if there were any constant arrays founds during a scan()
+  bool haveConstantArray;
 
-			//Print SMTLIBv2 assertions for constant arrays
-			virtual void printArrayDeclarations();
+private:
+  SMTLIBv2Logic logicToUse;
 
-			//Print SMTLIBv2 for all constraints in the query
-			virtual void printConstraints();
+  volatile bool humanReadable;
 
-			//Print SMTLIBv2 assert statement for the negated query expression
-			virtual void printQuery();
+  // Map of enabled SMTLIB Options
+  std::map<SMTLIBboolOptions, bool> smtlibBoolOptions;
 
-			///Print the SMTLIBv2 command to check satisfiability and also optionally request for values
-			/// \sa setArrayValuesToGet()
-			virtual void printAction();
+  /// This sets queryAssert to be the boolean negation of the original Query
+  void negateQueryExpression();
 
-			///Print the SMTLIBv2 command to exit
-			virtual void printExit();
+  // Print a SMTLIBv2 option as a C-string
+  const char *
+  getSMTLIBOptionString(ExprSMTLIBPrinter::SMTLIBboolOptions option);
 
-			///Print a Constant in the format specified by the current "Constant Display Mode"
-			void printConstant(const ref<ConstantExpr>& e);
+  // Pointer to a vector of Arrays. These will be used for the (get-value () )
+  // call.
+  const std::vector<const Array *> *arraysToCallGetValueOn;
 
-			///Recursively print expression
-			/// \param e is the expression to print
-			/// \param expectedSort is the sort we want. If "e" is not of the right type a cast will be performed.
-			virtual void printExpression(const ref<Expr>& e, ExprSMTLIBPrinter::SMTLIB_SORT expectedSort);
-
-			///Scan Expression recursively for Arrays in expressions. Found arrays are added to
-			/// the usedArrays vector.
-			virtual void scan(const ref<Expr>& e);
-
-			/* Rules of recursion for "Special Expression handlers" and printSortArgsExpr()
-			 *
-			 * 1. The parent of the recursion will have created an indent level for you so you don't need to add another initially.
-			 * 2. You do not need to add a line break (via printSeperator() ) at the end, the parent caller will handle that.
-			 * 3. The effect of a single recursive call should not affect the depth of the indent stack (nor the contents
-			 *    of the indent stack prior to the call). I.e. After executing a single recursive call the indent stack
-			 *    should have the same size and contents as before executing the recursive call.
-			 */
-
-			//Special Expression handlers
-			virtual void printReadExpr(const ref<ReadExpr>& e);
-			virtual void printExtractExpr(const ref<ExtractExpr>& e);
-			virtual void printCastExpr(const ref<CastExpr>& e);
-			virtual void printNotEqualExpr(const ref<NeExpr>& e);
-			virtual void printSelectExpr(const ref<SelectExpr>& e, ExprSMTLIBPrinter::SMTLIB_SORT s);
-
-			//For the set of operators that take sort "s" arguments
-			virtual void printSortArgsExpr(const ref<Expr>& e, ExprSMTLIBPrinter::SMTLIB_SORT s);
-
-			///For the set of operators that come in two sorts (e.g. (and () ()) (bvand () ()) )
-			///These are and,xor,or,not
-			/// \param e the Expression to print
-			/// \param s the sort of the expression we want
-			virtual void printLogicalOrBitVectorExpr(const ref<Expr>& e, ExprSMTLIBPrinter::SMTLIB_SORT s);
-
-			///Recursively prints updatesNodes
-			virtual void printUpdatesAndArray(const UpdateNode* un, const Array* root);
-
-			///This method does the translation between Expr classes and SMTLIBv2 keywords
-			/// \return A C-string of the SMTLIBv2 keyword
-			virtual const char* getSMTLIBKeyword(const ref<Expr>& e);
-
-			virtual void printSeperator();
-
-			///Helper function for scan() that scans the expressions of an update node
-			virtual void scanUpdates(const UpdateNode* un);
-
-			///Helper printer class
-			PrintContext* p;
-
-			///This contains the query from the solver but negated for our purposes.
-			/// \sa negateQueryExpression()
-			ref<Expr> queryAssert;
-
-			///Indicates if there were any constant arrays founds during a scan()
-			bool haveConstantArray;
-
-
-		private:
-			SMTLIBv2Logic logicToUse;
-
-			volatile bool humanReadable;
-
-			//Map of enabled SMTLIB Options
-			std::map<SMTLIBboolOptions,bool> smtlibBoolOptions;
-
-			///This sets queryAssert to be the boolean negation of the original Query
-			void negateQueryExpression();
-
-			//Print a SMTLIBv2 option as a C-string
-			const char* getSMTLIBOptionString(ExprSMTLIBPrinter::SMTLIBboolOptions option);
-
-			//Pointer to a vector of Arrays. These will be used for the (get-value () ) call.
-			const std::vector<const Array*> * arraysToCallGetValueOn;
-
-			ConstantDisplayMode cdm;
-
-	};
-
-
-
+  ConstantDisplayMode cdm;
+};
 }
 
 #endif
