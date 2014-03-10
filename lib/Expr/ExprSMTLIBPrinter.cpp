@@ -454,14 +454,26 @@ void ExprSMTLIBPrinter::printSetLogic() {
   *o << " )" << std::endl;
 }
 
+namespace {
+
+struct ArrayPtrsByName {
+  bool operator()(const Array *a1, const Array *a2) const {
+    return a1->name < a2->name;
+  }
+};
+
+}
+
 void ExprSMTLIBPrinter::printArrayDeclarations() {
   // Assume scan() has been called
   if (humanReadable)
     *o << "; Array declarations" << endl;
 
-  // declare arrays
-  for (set<const Array *>::iterator it = usedArrays.begin();
-       it != usedArrays.end(); it++) {
+  // Declare arrays in a deterministic order.
+  std::vector<const Array *> sortedArrays(usedArrays.begin(), usedArrays.end());
+  std::sort(sortedArrays.begin(), sortedArrays.end(), ArrayPtrsByName());
+  for (std::vector<const Array *>::iterator it = sortedArrays.begin();
+       it != sortedArrays.end(); it++) {
     *o << "(declare-fun " << (*it)->name << " () "
                                             "(Array (_ BitVec "
        << (*it)->getDomain() << ") "
@@ -477,8 +489,8 @@ void ExprSMTLIBPrinter::printArrayDeclarations() {
     const Array *array;
 
     // loop over found arrays
-    for (set<const Array *>::iterator it = usedArrays.begin();
-         it != usedArrays.end(); it++) {
+    for (std::vector<const Array *>::iterator it = sortedArrays.begin();
+         it != sortedArrays.end(); it++) {
       array = *it;
       int byteIndex = 0;
       if (array->isConstantArray()) {
