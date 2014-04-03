@@ -440,7 +440,7 @@ void StatsTracker::writeIStats() {
 
   of << "version: 1\n";
   of << "creator: klee\n";
-  of << "pid: " << getuid() << "\n";
+  of << "pid: " << getpid() << "\n";
   of << "cmd: " << m->getModuleIdentifier() << "\n\n";
   of << "\n";
   
