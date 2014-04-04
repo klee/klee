@@ -277,80 +277,66 @@ KleeHandler::KleeHandler(int argc, char **argv)
     m_argc(argc),
     m_argv(argv) {
 
-  if (OutputDir=="") {
+  // create output directory (OutputDir or "klee-out-<i>")
+  bool dir_given = OutputDir != "";
+  SmallString<128> directory(dir_given ? OutputDir : InputFile);
 
-    SmallString<128> directory(InputFile);
-    llvm::sys::path::remove_filename(directory);
+  error_code ec;
+  if (!dir_given) sys::path::remove_filename(directory);
+  if ((ec = sys::fs::make_absolute(directory)) != errc::success)
+    klee_error("unable to determine absolute path: %s", ec.message().c_str());
 
-    std::string dirname_str;
-    llvm::raw_string_ostream dirname(dirname_str);
+  if (dir_given) {
+    // OutputDir
+    if (mkdir(directory.c_str(), 0775) < 0)
+      klee_error("cannot create \"%s\": %s", directory.c_str(), strerror(errno));
 
-    for (int i = 0; i< INT_MAX ; i++) {
-      dirname << "klee-out-";
-      dirname << i;
-      dirname.flush();
+    m_outputDirectory = directory;
+  } else {
+    // "klee-out-<i>"
+    SmallString<128> d;
+    raw_svector_ostream ds(d);
+    int i = 0;
+    for (; i <= INT_MAX; ++i) {
+      d.clear(); ds << directory << "klee-out-" << i; ds.flush();
 
-      m_outputDirectory = directory; // Copy
-      llvm::sys::path::append(m_outputDirectory,dirname_str);
+      // create directory and try to link klee-last
+      if (mkdir(d.c_str(), 0775) == 0) {
+        m_outputDirectory = d;
 
-      bool isDir = true;
-      llvm::error_code e = llvm::sys::fs::exists(m_outputDirectory.str(), isDir);
-      if ( e != llvm::errc::success )
-        klee_error("Failed to check if \"%s\" exists.", m_outputDirectory.c_str());
+        SmallString<128> klee_last(directory);
+        llvm::sys::path::append(klee_last, "klee-last");
 
-      if (!isDir)
-      {
-        break; // Found an available directory name
+        if (((unlink(klee_last.c_str()) < 0) && (errno != ENOENT)) ||
+            symlink(m_outputDirectory.c_str(), klee_last.c_str()) < 0) {
+
+          klee_warning("cannot create klee-last symlink: %s", strerror(errno));
+        }
+
+        break;
       }
 
-      // Warn the user if the klee-out-* exists but is not a directory
-      e = llvm::sys::fs::is_directory(m_outputDirectory.str(), isDir);
-      if ( e == llvm::errc::success && !isDir )
-        klee_warning("A file \"%s\" exists, but it is not a directory",
-                     m_outputDirectory.c_str());
-
-      dirname_str.clear();
-      m_outputDirectory.clear();
+      // otherwise try again or exit on error
+      if (errno != EEXIST)
+        klee_error("cannot create \"%s\": %s", m_outputDirectory.c_str(), strerror(errno));
     }
-
-    if (m_outputDirectory.empty())
-      klee_error("Failed to find available output directory in %s",
-          dirname_str.c_str());
-
-    std::cerr << "KLEE: output directory = \"" << dirname.str() << "\"\n";
-
-
-    SmallString<128> klee_last(directory);
-    llvm::sys::path::append(klee_last,"klee-last");
-
-    if ((unlink(klee_last.c_str()) < 0) && (errno != ENOENT))
-        klee_error("cannot unlink klee-last: %s for %s", strerror(errno),
-            klee_last.c_str());
-
-    if (symlink(dirname_str.c_str(), klee_last.c_str()) < 0)
-      klee_error("cannot create klee-last symlink: %s", strerror(errno));
-
-  } else {
-    m_outputDirectory = OutputDir;
+    if (i == INT_MAX && m_outputDirectory.equals(""))
+        klee_error("cannot create output directory: index out of range");
   }
 
-  if (!sys::path::is_absolute(m_outputDirectory.c_str())) {
-    SmallString<128> cwd(get_current_dir_name());
-    sys::path::append(cwd, m_outputDirectory.str());
-    m_outputDirectory = cwd;
-  }
+  klee_message("output directory is \"%s\"", m_outputDirectory.c_str());
 
-  if (mkdir(m_outputDirectory.c_str(), 0775) < 0)
-    klee_error("cannot create directory \"%s\": %s", m_outputDirectory.c_str(), strerror(errno));
-
+  // open warnings.txt
   std::string file_path = getOutputFilename("warnings.txt");
   if ((klee_warning_file = fopen(file_path.c_str(), "w")) == NULL)
     klee_error("cannot open file \"%s\": %s", file_path.c_str(), strerror(errno));
 
+  // open messages.txt
   file_path = getOutputFilename("messages.txt");
   if ((klee_message_file = fopen(file_path.c_str(), "w")) == NULL)
     klee_error("cannot open file \"%s\": %s", file_path.c_str(), strerror(errno));
 
+  // open info
   m_infoFile = openOutputFile("info");
 }
 
