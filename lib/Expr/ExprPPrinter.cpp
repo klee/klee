@@ -51,6 +51,7 @@ private:
   unsigned counter;
   unsigned updateCounter;
   bool hasScan;
+  bool forceNoLineBreaks;
   std::string newline;
 
   /// shouldPrintWidth - Predicate for whether this expression should
@@ -307,10 +308,15 @@ public:
     newline = _newline;
   }
 
+  void setForceNoLineBreaks(bool _forceNoLineBreaks) {
+    forceNoLineBreaks = _forceNoLineBreaks;
+  }
+
   void reset() {
     counter = 0;
     updateCounter = 0;
     hasScan = false;
+    forceNoLineBreaks = false;
     bindings.clear();
     updateBindings.clear();
     couldPrint.clear();
@@ -412,7 +418,7 @@ public:
   /* Public utility functions */
 
   void printSeparator(PrintContext &PC, bool simple, unsigned indent) {
-    if (simple) {
+    if (simple || forceNoLineBreaks) {
       PC << ' ';
     } else {
       PC.breakLine(indent);
