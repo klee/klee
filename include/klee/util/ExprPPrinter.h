@@ -25,6 +25,7 @@ namespace klee {
     virtual ~ExprPPrinter() {}
 
     virtual void setNewline(const std::string &newline) = 0;
+    virtual void setForceNoLineBreaks(bool forceNoLineBreaks) = 0;
     virtual void reset() = 0;
     virtual void scan(const ref<Expr> &e) = 0;
     virtual void print(const ref<Expr> &e, unsigned indent=0) = 0;
