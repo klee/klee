@@ -320,7 +320,7 @@ KleeHandler::KleeHandler(int argc, char **argv)
       if (errno != EEXIST)
         klee_error("cannot create \"%s\": %s", m_outputDirectory.c_str(), strerror(errno));
     }
-    if (i == INT_MAX && m_outputDirectory.equals(""))
+    if (i == INT_MAX && m_outputDirectory.str().equals(""))
         klee_error("cannot create output directory: index out of range");
   }
 
