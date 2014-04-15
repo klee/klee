@@ -13,6 +13,10 @@
 #include "../Core/Common.h"
 #include "../Core/SpecialFunctionHandler.h"
 
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 4)
+#include "llvm/IR/LLVMContext.h"
+#endif
+
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
 #include "llvm/Bitcode/ReaderWriter.h"
 #include "llvm/IR/Function.h"

@@ -49,12 +49,11 @@
 #include "llvm/Support/raw_os_ostream.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Path.h"
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 1)
 #include "llvm/Support/FileSystem.h"
-#endif
 
 #include <iostream>
 #include <fstream>
+#include <unistd.h>
 
 using namespace klee;
 using namespace llvm;
@@ -182,20 +181,15 @@ StatsTracker::StatsTracker(Executor &_executor, std::string _objectFilename,
     updateMinDistToUncovered(_updateMinDistToUncovered) {
   KModule *km = executor.kmodule;
 
-  sys::Path module(objectFilename);
-#if LLVM_VERSION_CODE < LLVM_VERSION(3, 1)
-  if (!sys::Path(objectFilename).isAbsolute()) {
-#else
   if (!sys::path::is_absolute(objectFilename)) {
-#endif
-    sys::Path current = sys::Path::GetCurrentDirectory();
-    current.appendComponent(objectFilename);
-#if LLVM_VERSION_CODE < LLVM_VERSION(3, 1)
-    if (current.exists())
-#else
-    if (sys::fs::exists(current.c_str()))
-#endif
-      objectFilename = current.c_str();
+    SmallString<128> current(objectFilename);
+    if(sys::fs::make_absolute(current)) {
+      bool exists = false;
+      error_code ec = sys::fs::exists(current.str(), exists);
+      if (ec == errc::success && exists) {
+        objectFilename = current.c_str();
+      }
+    }
   }
 
   if (OutputIStats)
@@ -446,7 +440,7 @@ void StatsTracker::writeIStats() {
 
   of << "version: 1\n";
   of << "creator: klee\n";
-  of << "pid: " << sys::Process::GetCurrentUserId() << "\n";
+  of << "pid: " << getpid() << "\n";
   of << "cmd: " << m->getModuleIdentifier() << "\n\n";
   of << "\n";
   
