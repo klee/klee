@@ -294,11 +294,11 @@ KleeHandler::KleeHandler(int argc, char **argv)
     m_outputDirectory = directory;
   } else {
     // "klee-out-<i>"
-    SmallString<128> d;
-    raw_svector_ostream ds(d);
     int i = 0;
     for (; i <= INT_MAX; ++i) {
-      d.clear(); ds << directory << "klee-out-" << i; ds.flush();
+      SmallString<128> d(directory);
+      llvm::sys::path::append(d, "klee-out-");
+      raw_svector_ostream ds(d); ds << i; ds.flush();
 
       // create directory and try to link klee-last
       if (mkdir(d.c_str(), 0775) == 0) {
