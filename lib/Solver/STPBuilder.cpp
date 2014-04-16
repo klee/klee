@@ -439,7 +439,7 @@ ExprHandle STPBuilder::constructSDivByConstant(ExprHandle expr_n, unsigned width
     memmove(buf + space, buf, addrlen); // moving the address part to the end
     memcpy(buf, root->name.c_str(), space); // filling out the name part
     
-    array_expr = buildArray(buf, 32, 8);
+    array_expr = buildArray(buf, root->getDomain(), root->getRange());
     
     if (root->isConstantArray()) {
       // FIXME: Flush the concrete values into STP. Ideally we would do this
