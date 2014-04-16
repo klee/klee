@@ -1000,7 +1000,7 @@ static char *format_tdiff(char *buf, long seconds)
 }
 
 #ifndef SUPPORT_KLEE_UCLIBC
-static llvm::Module *linkWithUclibc(llvm::Module *mainModule, llvm::sys::Path libDir) {
+static llvm::Module *linkWithUclibc(llvm::Module *mainModule, StringRef libDir) {
   fprintf(stderr, "error: invalid libc, no uclibc support!\n");
   exit(1);
   return 0;
