@@ -675,15 +675,15 @@ public:
   
   static ref<Expr> create(const UpdateList &updates, ref<Expr> i);
   
-  Width getWidth() const { return updates.root->getRange(); }
+  Width getWidth() const { return updates.root ? updates.root->getRange() : Expr::Int8; }
   Kind getKind() const { return Read; }
   
   unsigned getNumKids() const { return numKids; }
-  ref<Expr> getKid(unsigned i) const { return !i ? index : 0; }  
+  ref<Expr> getKid(unsigned i) const { return !i ? index : 0; }
   
   int compareContents(const Expr &b) const;
 
-  virtual ref<Expr> rebuild(ref<Expr> kids[]) const { 
+  virtual ref<Expr> rebuild(ref<Expr> kids[]) const {
     return create(updates, kids[0]);
   }
 

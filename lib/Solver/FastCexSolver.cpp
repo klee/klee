@@ -363,12 +363,12 @@ protected:
     // value cannot be part of the assignment.
     if (index >= array.size)
       return ReadExpr::create(UpdateList(&array, 0), 
-                              ConstantExpr::alloc(index, Expr::Int32));
+                              ConstantExpr::alloc(index, array.getDomain()));
       
     std::map<const Array*, CexObjectData*>::iterator it = objects.find(&array);
     return ConstantExpr::alloc((it == objects.end() ? 127 : 
                                 it->second->getPossibleValue(index)),
-                               Expr::Int8);
+                               array.getRange());
   }
 
 public:
@@ -384,19 +384,19 @@ protected:
     // value cannot be part of the assignment.
     if (index >= array.size)
       return ReadExpr::create(UpdateList(&array, 0), 
-                              ConstantExpr::alloc(index, Expr::Int32));
+                              ConstantExpr::alloc(index, array.getDomain()));
       
     std::map<const Array*, CexObjectData*>::iterator it = objects.find(&array);
     if (it == objects.end())
       return ReadExpr::create(UpdateList(&array, 0), 
-                              ConstantExpr::alloc(index, Expr::Int32));
+                              ConstantExpr::alloc(index, array.getDomain()));
 
     CexValueData cvd = it->second->getExactValues(index);
     if (!cvd.isFixed())
       return ReadExpr::create(UpdateList(&array, 0), 
-                              ConstantExpr::alloc(index, Expr::Int32));
+                              ConstantExpr::alloc(index, array.getDomain()));
 
-    return ConstantExpr::alloc(cvd.min(), Expr::Int8);
+    return ConstantExpr::alloc(cvd.min(), array.getRange());
   }
 
 public:
@@ -1109,13 +1109,14 @@ FastCexSolver::computeInitialValues(const Query& query,
   // Propogation found a satisfying assignment, compute the initial values.
   for (unsigned i = 0; i != objects.size(); ++i) {
     const Array *array = objects[i];
+    assert(array);
     std::vector<unsigned char> data;
     data.reserve(array->size);
 
     for (unsigned i=0; i < array->size; i++) {
       ref<Expr> read = 
         ReadExpr::create(UpdateList(array, 0),
-                         ConstantExpr::create(i, Expr::Int32));
+                         ConstantExpr::create(i, array->getDomain()));
       ref<Expr> value = cd.evaluatePossible(read);
       
       if (ConstantExpr *CE = dyn_cast<ConstantExpr>(value)) {
