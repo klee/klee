@@ -30,7 +30,7 @@ ifeq ($(ENABLE_METASMT),1)
               -L$(METASMT_ROOT)/../../deps/boost-1_52_0/lib 
   CXX.Flags += -DBOOST_HAS_GCC_TR1
   CXX.Flags := $(filter-out -fno-exceptions,$(CXX.Flags)) 
-  LIBS += -lrt -lgomp -lboost_iostreams -lboost_thread -lboost_system -lmetaSMT -lz3 -lboolector -lminisat_core
+  LIBS += -lgomp -lboost_iostreams -lboost_thread -lboost_system -lmetaSMT -lz3 -lrt -lboolector -lminisat_core
 endif
 
 ifeq ($(STP_NEEDS_BOOST),1)
