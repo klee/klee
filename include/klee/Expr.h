@@ -675,7 +675,7 @@ public:
   
   static ref<Expr> create(const UpdateList &updates, ref<Expr> i);
   
-  Width getWidth() const { return updates.root ? updates.root->getRange() : Expr::Int8; }
+  Width getWidth() const { assert(updates.root); return updates.root->getRange(); }
   Kind getKind() const { return Read; }
   
   unsigned getNumKids() const { return numKids; }
@@ -691,7 +691,7 @@ public:
 
 private:
   ReadExpr(const UpdateList &_updates, const ref<Expr> &_index) : 
-    updates(_updates), index(_index) {}
+    updates(_updates), index(_index) { assert(updates.root); }
 
 public:
   static bool classof(const Expr *E) {

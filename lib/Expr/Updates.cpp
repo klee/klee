@@ -88,6 +88,12 @@ UpdateList &UpdateList::operator=(const UpdateList &b) {
 }
 
 void UpdateList::extend(const ref<Expr> &index, const ref<Expr> &value) {
+  
+  if (root) {
+    assert(root->getDomain() == index->getWidth());
+    assert(root->getRange() == value->getWidth());
+  }
+
   if (head) --head->refCount;
   head = new UpdateNode(head, index, value);
   ++head->refCount;
