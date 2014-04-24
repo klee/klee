@@ -187,7 +187,7 @@ typename SolverContext::result_type MetaSMTBuilder<SolverContext>::getInitialArr
 
     if (!hashed) {
 
-        array_expr = evaluate(_solver, buildArray(8, 32));	
+        array_expr = evaluate(_solver, buildArray(root->getDomain(), root->getRange()));
 
         if (root->isConstantArray()) {    
             for (unsigned i = 0, e = root->size; i != e; ++i) {
@@ -603,7 +603,7 @@ typename SolverContext::result_type MetaSMTBuilder<SolverContext>::constructActu
 //     ExprPPrinter::printSingleExpr(std::cerr, e);
 //     std::cerr << "\n";
 
-    switch (e->getKind()) {    
+    switch (e->getKind()) {
 
         case Expr::Constant:
         {
@@ -614,7 +614,7 @@ typename SolverContext::result_type MetaSMTBuilder<SolverContext>::constructActu
 
             // Coerce to bool if necessary.
             if (coe_width == 1) {
-                res = (coe->isTrue()) ? getTrue() : getFalse();      
+                res = (coe->isTrue()) ? getTrue() : getFalse();
             }
             else if (coe_width <= 32) {
                  res = bvConst32(coe_width, coe->getZExtValue(32));
@@ -624,7 +624,7 @@ typename SolverContext::result_type MetaSMTBuilder<SolverContext>::constructActu
             }
             else {
                  ref<ConstantExpr> tmp = coe;
-                 res = bvConst64(64, tmp->Extract(0, 64)->getZExtValue());                 
+                 res = bvConst64(64, tmp->Extract(0, 64)->getZExtValue());
                  while (tmp->getWidth() > 64) {
                      tmp = tmp->Extract(64, tmp->getWidth() -  64);
                      unsigned min_width = std::min(64U, tmp->getWidth());
@@ -658,9 +658,9 @@ typename SolverContext::result_type MetaSMTBuilder<SolverContext>::constructActu
         case Expr::Read:
         {
             ReadExpr *re = cast<ReadExpr>(e);
-            assert(re);
+            assert(re && re->updates.root);
+            *width_out = re->updates.root->getRange();
             // FixMe call method of Array
-            *width_out = 8;
             res = evaluate(_solver, 
                            metaSMT::logic::Array::select(
                                   getArrayForUpdate(re->updates.root, re->updates.head),
