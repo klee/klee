@@ -81,12 +81,12 @@ Searcher *getNewSearcher(Searcher::CoreSearchType type, Executor &executor) {
   case Searcher::BFS: searcher = new BFSSearcher(); break;
   case Searcher::RandomState: searcher = new RandomSearcher(); break;
   case Searcher::RandomPath: searcher = new RandomPathSearcher(executor); break;
-  case Searcher::NURS_CovNew: searcher = new WeightedRandomSearcher(executor, WeightedRandomSearcher::CoveringNew); break;
-  case Searcher::NURS_MD2U: searcher = new WeightedRandomSearcher(executor, WeightedRandomSearcher::MinDistToUncovered); break;
-  case Searcher::NURS_Depth: searcher = new WeightedRandomSearcher(executor, WeightedRandomSearcher::Depth); break;
-  case Searcher::NURS_ICnt: searcher = new WeightedRandomSearcher(executor, WeightedRandomSearcher::InstCount); break;
-  case Searcher::NURS_CPICnt: searcher = new WeightedRandomSearcher(executor, WeightedRandomSearcher::CPInstCount); break;
-  case Searcher::NURS_QC: searcher = new WeightedRandomSearcher(executor, WeightedRandomSearcher::QueryCost); break;
+  case Searcher::NURS_CovNew: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::CoveringNew); break;
+  case Searcher::NURS_MD2U: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::MinDistToUncovered); break;
+  case Searcher::NURS_Depth: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::Depth); break;
+  case Searcher::NURS_ICnt: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::InstCount); break;
+  case Searcher::NURS_CPICnt: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::CPInstCount); break;
+  case Searcher::NURS_QC: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::QueryCost); break;
   }
 
   return searcher;

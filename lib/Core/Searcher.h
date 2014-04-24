@@ -135,7 +135,6 @@ namespace klee {
     };
 
   private:
-    Executor &executor;
     DiscretePDF<ExecutionState*> *states;
     WeightType type;
     bool updateWeights;
@@ -143,7 +142,7 @@ namespace klee {
     double getWeight(ExecutionState*);
 
   public:
-    WeightedRandomSearcher(Executor &executor, WeightType type);
+    WeightedRandomSearcher(WeightType type);
     ~WeightedRandomSearcher();
 
     ExecutionState &selectState();
