@@ -494,8 +494,6 @@ Solver *klee::createDummySolver() {
 
 class STPSolverImpl : public SolverImpl {
 private:
-  /// The solver we are part of, for access to public information.
-  STPSolver *solver;
   VC vc;
   STPBuilder *builder;
   double timeout;
@@ -503,7 +501,7 @@ private:
   SolverRunStatus runStatusCode;
 
 public:
-  STPSolverImpl(STPSolver *_solver, bool _useForkedSTP, bool _optimizeDivides = true);
+  STPSolverImpl(bool _useForkedSTP, bool _optimizeDivides = true);
   ~STPSolverImpl();
   
   char *getConstraintLog(const Query&);
@@ -527,9 +525,8 @@ static void stp_error_handler(const char* err_msg) {
   abort();
 }
 
-STPSolverImpl::STPSolverImpl(STPSolver *_solver, bool _useForkedSTP, bool _optimizeDivides)
-  : solver(_solver),
-    vc(vc_createValidityChecker()),
+STPSolverImpl::STPSolverImpl(bool _useForkedSTP, bool _optimizeDivides)
+  : vc(vc_createValidityChecker()),
     builder(new STPBuilder(vc, _optimizeDivides)),
     timeout(0.0),
     useForkedSTP(_useForkedSTP),
@@ -566,7 +563,7 @@ STPSolverImpl::~STPSolverImpl() {
 /***/
 
 STPSolver::STPSolver(bool useForkedSTP, bool optimizeDivides)
-  : Solver(new STPSolverImpl(this, useForkedSTP, optimizeDivides))
+  : Solver(new STPSolverImpl(useForkedSTP, optimizeDivides))
 {
 }
 
