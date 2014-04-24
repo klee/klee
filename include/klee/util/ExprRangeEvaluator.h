@@ -102,7 +102,7 @@ T ExprRangeEvaluator<T>::evaluate(const ref<Expr> &e) {
     const ReadExpr *re = cast<ReadExpr>(e);
     T index = evaluate(re->index);
 
-    assert(re->getWidth()==Expr::Int8 && "unexpected multibyte read");
+    assert(re->updates.root && re->getWidth() == re->updates.root->range && "unexpected multibyte read");
 
     return evalRead(re->updates, index);
   }

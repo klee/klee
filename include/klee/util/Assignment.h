@@ -67,15 +67,16 @@ namespace klee {
 
   inline ref<Expr> Assignment::evaluate(const Array *array, 
                                         unsigned index) const {
+    assert(array);
     bindings_ty::const_iterator it = bindings.find(array);
     if (it!=bindings.end() && index<it->second.size()) {
-      return ConstantExpr::alloc(it->second[index], Expr::Int8);
+      return ConstantExpr::alloc(it->second[index], array->getRange());
     } else {
       if (allowFreeValues) {
         return ReadExpr::create(UpdateList(array, 0), 
-                                ConstantExpr::alloc(index, Expr::Int32));
+                                ConstantExpr::alloc(index, array->getDomain()));
       } else {
-        return ConstantExpr::alloc(0, Expr::Int8);
+        return ConstantExpr::alloc(0, array->getRange());
       }
     }
   }

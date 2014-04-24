@@ -22,8 +22,12 @@ UpdateNode::UpdateNode(const UpdateNode *_next,
     next(_next),
     index(_index),
     value(_value) {
+  // FIXME: What we need to check here instead is that _value is of the same width 
+  // as the range of the array that the update node is part of.
+  /*
   assert(_value->getWidth() == Expr::Int8 && 
          "Update value should be 8-bit wide.");
+  */
   computeHash();
   if (next) {
     ++next->refCount;
@@ -84,6 +88,12 @@ UpdateList &UpdateList::operator=(const UpdateList &b) {
 }
 
 void UpdateList::extend(const ref<Expr> &index, const ref<Expr> &value) {
+  
+  if (root) {
+    assert(root->getDomain() == index->getWidth());
+    assert(root->getRange() == value->getWidth());
+  }
+
   if (head) --head->refCount;
   head = new UpdateNode(head, index, value);
   ++head->refCount;
