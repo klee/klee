@@ -13,7 +13,13 @@
 using namespace klee;
 
 size_t util::GetTotalMemoryUsage() {
-  // This is linux platform specific
   struct mallinfo mi = ::mallinfo();
+  // The malloc implementation in glibc (pmalloc2)
+  // does not include mmap()'ed memory in mi.uordblks
+  // but other implementations (e.g. tcmalloc) do.
+#if defined(__GLIBC__)
   return mi.uordblks + mi.hblkhd;
+#else
+  return mi.uordblks;
+#endif
 }
