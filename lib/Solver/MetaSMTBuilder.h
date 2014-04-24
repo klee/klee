@@ -187,7 +187,7 @@ typename SolverContext::result_type MetaSMTBuilder<SolverContext>::getInitialArr
 
     if (!hashed) {
 
-        array_expr = evaluate(_solver, buildArray(root->getDomain(), root->getRange()));
+        array_expr = evaluate(_solver, buildArray(root->getRange(), root->getDomain()));
 
         if (root->isConstantArray()) {    
             for (unsigned i = 0, e = root->size; i != e; ++i) {
