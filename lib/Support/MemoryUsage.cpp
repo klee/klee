@@ -12,7 +12,7 @@
 
 using namespace klee;
 
-size_t util::GetTotalMemoryUsage() {
+size_t util::GetTotalMallocUsage() {
   struct mallinfo mi = ::mallinfo();
   // The malloc implementation in glibc (pmalloc2)
   // does not include mmap()'ed memory in mi.uordblks

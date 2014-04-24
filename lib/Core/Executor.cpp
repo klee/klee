@@ -2585,7 +2585,7 @@ void Executor::run(ExecutionState &initialState) {
         // We need to avoid calling GetMallocUsage() often because it
         // is O(elts on freelist). This is really bad since we start
         // to pummel the freelist once we hit the memory cap.
-        unsigned mbs = util::GetTotalMemoryUsage() >> 20;
+        unsigned mbs = util::GetTotalMallocUsage() >> 20;
         if (mbs > MaxMemory) {
           if (mbs > MaxMemory + 100) {
             // just guess at how many to kill

@@ -14,7 +14,7 @@
 
 namespace klee {
   namespace util {
-    size_t GetTotalMemoryUsage();
+    size_t GetTotalMallocUsage();
   }
 }
 
