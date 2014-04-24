@@ -12,6 +12,9 @@
 /* Define to 1 if you have the `stp' library (-lstp). */
 #undef HAVE_LIBSTP
 
+/* Define if mallinfo() is available on this platform. */
+#undef HAVE_MALLINFO
+
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
 

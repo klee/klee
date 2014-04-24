@@ -496,6 +496,14 @@ AC_CHECK_HEADERS([selinux/selinux.h],
         AC_SUBST(HAVE_SELINUX, 0))
 
 dnl **************************************************************************
+dnl Test for features
+dnl **************************************************************************
+AC_SEARCH_LIBS(mallinfo,malloc,
+               AC_DEFINE([HAVE_MALLINFO],[1],[Define if mallinfo() is available on this platform.]),
+               AC_MSG_ERROR([mallinfo() must be supported by your malloc implementation])
+              )
+
+dnl **************************************************************************
 dnl Find an install of STP
 dnl **************************************************************************
 
