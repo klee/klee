@@ -47,6 +47,7 @@
 #include "klee/Internal/Module/KModule.h"
 #include "klee/Internal/Support/FloatEvaluation.h"
 #include "klee/Internal/System/Time.h"
+#include "klee/Internal/System/MemoryUsage.h"
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
 #include "llvm/IR/Function.h"
@@ -2584,11 +2585,7 @@ void Executor::run(ExecutionState &initialState) {
         // We need to avoid calling GetMallocUsage() often because it
         // is O(elts on freelist). This is really bad since we start
         // to pummel the freelist once we hit the memory cap.
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
-        unsigned mbs = sys::Process::GetMallocUsage() >> 20;
-#else
-        unsigned mbs = sys::Process::GetTotalMemoryUsage() >> 20;
-#endif
+        unsigned mbs = util::GetTotalMallocUsage() >> 20;
         if (mbs > MaxMemory) {
           if (mbs > MaxMemory + 100) {
             // just guess at how many to kill
