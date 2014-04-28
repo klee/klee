@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <assert.h>
-#include <klee/klee.h>
+#include "klee/klee.h"
 
 int klee_int(const char *name) {
   int x;
