@@ -1,10 +1,13 @@
 // RUN: %llvmgcc %s -emit-llvm -O0 -c -o %t2.bc
-// RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --run-in=/tmp --libc=uclibc --posix-runtime --exit-on-error %t2.bc --sym-files 2 2
-// RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --run-in=/tmp --libc=uclibc --posix-runtime --exit-on-error %t2.bc --sym-files 1 2
-// RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --run-in=/tmp --libc=uclibc --posix-runtime --exit-on-error %t2.bc --sym-files 0 2
+// RUN: rm -rf %t.klee-out %t.klee-out-tmp
+// RUN: %gentmp %t.klee-out-tmp
+// RUN: %klee --output-dir=%t.klee-out --run-in=%t.klee-out-tmp --libc=uclibc --posix-runtime --exit-on-error %t2.bc --sym-files 2 2
+// RUN: rm -rf %t.klee-out %t.klee-out-tmp
+// RUN: %gentmp %t.klee-out-tmp
+// RUN: %klee --output-dir=%t.klee-out --run-in=%t.klee-out-tmp --libc=uclibc --posix-runtime --exit-on-error %t2.bc --sym-files 1 2
+// RUN: rm -rf %t.klee-out %t.klee-out-tmp
+// RUN: %gentmp %t.klee-out-tmp
+// RUN: %klee --output-dir=%t.klee-out --run-in=%t.klee-out-tmp --libc=uclibc --posix-runtime --exit-on-error %t2.bc --sym-files 0 2
 
 // For this test really to work as intended it needs to be run in a
 // directory large enough to cause uclibc to do multiple getdents
