@@ -262,7 +262,7 @@ public:
   static void getOutFiles(std::string path,
 			  std::vector<std::string> &results);
 
-  static std::string getRunTimeLibraryPath(const char* argv0, void *MainExecAddr);
+  static std::string getRunTimeLibraryPath(const char *argv0);
 };
 
 KleeHandler::KleeHandler(int argc, char **argv) 
@@ -564,8 +564,10 @@ void KleeHandler::getOutFiles(std::string path,
   }
 }
 
-std::string KleeHandler::getRunTimeLibraryPath(const char* argv0, void* MainExecAddr)
-{
+std::string KleeHandler::getRunTimeLibraryPath(const char *argv0) {
+  // Take any function from the execution binary but not main (as not allowed by
+  // C++ standard)
+  void *MainExecAddr = (void *)(intptr_t)getRunTimeLibraryPath;
   SmallString<128> toolRoot(
       #if LLVM_VERSION_CODE >= LLVM_VERSION(3,4)
       llvm::sys::fs::getMainExecutable(argv0, MainExecAddr)
@@ -1259,8 +1261,7 @@ int main(int argc, char **argv, char **envp) {
       return r;
   }
 
-  std::string LibraryDir = KleeHandler::getRunTimeLibraryPath(argv[0],
-                              reinterpret_cast<void*>(main));
+  std::string LibraryDir = KleeHandler::getRunTimeLibraryPath(argv[0]);
   Interpreter::ModuleOptions Opts(LibraryDir.c_str(),
                                   /*Optimize=*/OptimizeModule, 
                                   /*CheckDivZero=*/CheckDivZero,
