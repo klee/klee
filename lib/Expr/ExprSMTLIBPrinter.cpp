@@ -663,23 +663,36 @@ void ExprSMTLIBPrinter::printQuery() {
 }
 
 ExprSMTLIBPrinter::SMTLIB_SORT ExprSMTLIBPrinter::getSort(const ref<Expr> &e) {
-  /* We could handle every operator in a large switch statement,
-   * but this seems more elegant.
-   */
+  switch (e->getKind()) {
+  case Expr::NotOptimized:
+    return getSort(e->getKid(0));
 
-  if (e->getKind() == Expr::Extract) {
-    /* This is a special corner case. In most cases if a node in the expression
-     * tree
-     * is of width 1 it should be considered as SORT_BOOL. However it is
-     * possible to
-     * perform an extract operation on a SORT_BITVECTOR and produce a
-     * SORT_BITVECTOR of length 1.
-     * The ((_ extract i j) () ) operation in SMTLIBv2 always produces
-     * SORT_BITVECTOR
-     */
+  // The relational operators are bools.
+  case Expr::Eq:
+  case Expr::Ne:
+  case Expr::Slt:
+  case Expr::Sle:
+  case Expr::Sgt:
+  case Expr::Sge:
+  case Expr::Ult:
+  case Expr::Ule:
+  case Expr::Ugt:
+  case Expr::Uge:
+    return SORT_BOOL;
+
+  // These may be bitvectors or bools depending on their width (see
+  // printConstant and printLogicalOrBitVectorExpr).
+  case Expr::Constant:
+  case Expr::And:
+  case Expr::Not:
+  case Expr::Or:
+  case Expr::Xor:
+    return e->getWidth() == Expr::Bool ? SORT_BOOL : SORT_BITVECTOR;
+
+  // Everything else is a bitvector.
+  default:
     return SORT_BITVECTOR;
-  } else
-    return (e->getWidth() == Expr::Bool) ? (SORT_BOOL) : (SORT_BITVECTOR);
+  }
 }
 
 void ExprSMTLIBPrinter::printCastToSort(const ref<Expr> &e,
