@@ -1,8 +1,7 @@
-//===----------------------------------------------------------------------===//
-// Klee Symbolic Virtual Machine
-//===----------------------------------------------------------------------===//
+Klee Symbolic Virtual Machine
+=============================
 
-klee is a symbolic virtual machine built on top of the LLVM compiler
+`klee` is a symbolic virtual machine built on top of the LLVM compiler
 infrastructure. Currently, there are two primary components:
 
   1. The core symbolic virtual machine engine; this is responsible for
@@ -21,4 +20,4 @@ environment that matches a computed test input, including setting up
 files, pipes, environment variables, and passing command line
 arguments.
 
-For further information, see the webpage or docs in www/.
+For further information, see the [webpage](http://klee.github.io/klee/).
