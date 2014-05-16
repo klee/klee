@@ -1,7 +1,7 @@
 // don't optimize this, llvm likes to turn the *p into unreachable
 
 // RUN: %llvmgxx %s -emit-llvm -g -O0 -c -o %t1.bc
-// RUN: %klee --libc=klee --no-output %t1.bc 2> %t1.log
+// RUN: %klee --optimize=false --libc=uclibc --no-output %t1.bc 2> %t1.log
 // RUN: grep ":16: memory error" %t1.log
 
 #include <cassert>
@@ -19,6 +19,6 @@ public:
 
 Test t;
 
-int main() {
+int main(int argc, char** argv) {
   return 0;
 }
