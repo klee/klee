@@ -165,9 +165,9 @@ namespace {
                      cl::init(false));
 
   cl::opt<bool>
-  SimplifyExpressions("simplify-expressions",
+  EqualitySubstitution("equality-substitution",
                      cl::init(true),
-                     cl::desc("Simplify symbolic expressions before querying the solver (default=on)."));
+                     cl::desc("Simplify equality expressions before querying the solver (default=on)."));
 
   cl::opt<unsigned>
   MaxSymArraySize("max-sym-array-size",
@@ -338,7 +338,7 @@ Executor::Executor(const InterpreterOptions &opts,
                          interpreterHandler->getOutputFilename(ALL_QUERIES_PC_FILE_NAME),
                          interpreterHandler->getOutputFilename(SOLVER_QUERIES_PC_FILE_NAME));
   
-  this->solver = new TimingSolver(solver, SimplifyExpressions);
+  this->solver = new TimingSolver(solver, EqualitySubstitution);
 
   memory = new MemoryManager();
 }
