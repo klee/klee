@@ -1,0 +1,185 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+          "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+  <META http-equiv="Content-Type" content="text/html; charset=ISO-8859-1" />
+  <title>KLEE - Getting Started</title>
+  <link type="text/css" rel="stylesheet" href="menu.css" />
+  <link type="text/css" rel="stylesheet" href="content.css" />
+</head>
+<body>
+
+<div id="menu">
+<iframe src="menu.html" height="500" frameborder="0" scrolling="auto">
+<a href="menu.html">Click here to load the iframe menu.</a>
+</iframe>
+</div>
+
+<div id="content">
+
+<h1>Getting Started: Building and Running KLEE (Experimental Version)</h1>
+
+<!-- <p>FIXME: Intro and disclaimer.</p> -->
+
+<!--
+<h3>
+<a href="#build_new">Building KLEE (with LLVM >= 3.4)</a> <br/>
+</h3>
+  -->
+<h2 id="build_new">Building KLEE with >=LLVM 3.4</h2>
+
+
+<p>The current procedure for building is outlined below.</p>
+
+<ol>
+
+<li><b>Install dependencies:</b>
+<p>
+KLEE requires all the dependencies of LLVM, which are discussed <a href="http://llvm.org/docs/GettingStarted.html#requirements">here</a>.  In particular, you should have the following packages (the list is likely not complete): g++, curl, dejagnu, subversion, bison, flex:
+    <div class="instr">
+      $ sudo apt-get install git cmake bison flex libboost-program-options-dev libboost-system-dev libncurses5-dev libcap-dev g++ libgtest-dev (Ubuntu) <br/>
+      $ sudo yum install g++ curl dejagnu subversion bison flex   (Fedora)
+    </div>
+</p>
+</li>
+<li><b>Install LLVM:</b>
+
+<p>
+If you are using a recent Ubuntu (&gt;=12.04, e.g. 14.04 LTS) or Debian, we recommend you to use the LLVM packages provided by LLVM itself.
+Use <a href="http://www.llvm.org/apt/">LLVM Package Repository</a> to add the appropriate line to your /etc/apt/sources.list .
+
+As an example, for Ubuntu 14.04 - the following lines should be added:
+
+<div class="instr">
+	# 3.4 <br/>
+	deb http://llvm.org/apt/trusty/ llvm-toolchain-trusty-3.4 main <br/>
+	deb-src http://llvm.org/apt/trusty/ llvm-toolchain-trusty-3.4 main <br/>
+</div>
+
+Add the repository key and install the 3.4 packges.
+<div class="instr">
+	$ wget -O - http://llvm.org/apt/llvm-snapshot.gpg.key|sudo apt-key add - <br/>
+	$ sudo apt-get update <br/>
+	$ sudo apt-get install llvm-3.4-tools clang-3.4 
+</div>
+
+Make sure llvm-config is in your path.
+<div class="instr">
+	$ mkdir -p ~/bin/ <br/>
+	$ ln -sf /usr/bin/llvm-config-3.4 ~/bin/llvm-config <br/>
+	$ echo "export PATH=\"\$PATH:\$HOME/bin\"" >> ~/.bashrc <br/>
+        $ source ~/.bashrc
+</div>
+
+That's it for LLVM. If you want to install it manually, please refer to the official <a href="http://www.llvm.org/docs/GettingStarted.html">LLVM Get-Started documentation</a>.
+</p>
+
+</li>
+
+
+<li> <b>Build STP:</b>
+
+<p>KLEE is based on
+the <a href="http://sites.google.com/site/stpfastprover/">STP</a>
+constraint solver.  STP does not make frequent releases, and its
+Subversion repository is under constant development and may be
+unstable.  The instructions below are for a particular revision which
+we have used successfully, but you can try a more recent revision by
+changing or removing the <tt>-r</tt> argument to the <tt>svn co</tt>
+command.  (Please let us know if you have successfully and extensively
+used KLEE with a more recent version of STP.)
+</p>
+
+<div class="instr">
+  $ git clone https://github.com/stp/stp.git<br/>
+  $ mkdir stp_build &amp;&amp; cd stp_build <br/>
+  $ cmake -G 'Unix Makefiles' ../stp<br/>
+  $ make <br/>
+  $ cd ../
+</div>
+</li>
+
+As documented on the STP website, it is essential to run the following
+command before using STP (and thus KLEE):
+<div class="instr">
+  $ ulimit -s unlimited
+</div>
+
+
+<li>[Optional] <b>Build uclibc and the POSIX environment model:</b>
+
+<p>
+By default, KLEE works on closed programs (programs that don't use any
+external code such as C library functions). However, if you want to
+use KLEE to run real programs you will want to enable the KLEE POSIX
+runtime, which is built on top of the uClibc C library.
+</p>
+
+<div class="instr">
+	$ git clone https://github.com/klee/klee-uclibc.git <br/>
+	$ cd klee-uclibc <br/>
+	$ ./configure --make-llvm-lib <br/>
+	$ make <br/>
+	$ cd ..
+</div>
+
+    <p><b>NOTE:</b> If you are on a different target (i.e., not i386
+      or x64), you will need to run <tt>make config</tt> and select the
+      correct target. The defaults for the other uClibc configuration
+      variables should be fine.<p>
+  </li>
+
+  <li>[Optional] <b>Build libgtest:</b>
+  <p>
+  Build Google test libraries for unittests.
+  </p>
+
+  <div class="instr">
+	$ mkdir gtest <br/>
+	$ cd gtest <br/>
+	$ cmake /usr/src/gtest/ <br/>
+	$ pwd <br/>
+	$ cd ..
+  </div>
+  Note down the output of pwd it will be used later for KLEEs unittests.
+
+  </li>
+
+  <li><b>Checkout KLEE (to any path you like):</b>
+    <div class="instr">
+      $ git clone https://github.com/klee/klee.git
+    </div>
+  </li>
+  
+  <li><b>Configure KLEE:</b>
+    <p>From the KLEE source directory, run:</p>
+    <div class="instr">
+	$ mkdir klee-build </br>
+	$ cd klee-build <br/>
+      $ ../klee/configure --with-stp=<i>../stp_build</i> --with-uclibc=<i>../klee-uclibc</i> --enable-posix-runtime
+    </div>
+    
+    <p><b>NOTE:</b> If you skipped step 4, simply remove the <tt>--with-uclibc</tt> and <tt>--enable-posix-runtime options</tt>. </p>
+  </li>
+
+  <li><b>Build KLEE:</b>
+    <div class="instr">
+      $ make ENABLE_OPTIMIZED=1
+    </div>
+  </li>
+
+  <li>Run the regression suite to verify your build:
+    <div class="instr">
+      $ make check<br/>
+      $ make LDFLAGS=-LPATH_TO_GTEST_DIRECTORY unittests<br/>
+    </div>
+    For the unittest replace PATH_TO_GTEST_DIRECTORY with the absolute path to the build directory of Google tests.
+  </li>
+
+  <li>You're ready to go!  Go to the <a href="Tutorials.html">Tutorials</a> page
+  to try KLEE.</li>
+</ol>
+
+</div>
+</body>
+</html>
