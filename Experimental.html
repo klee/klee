@@ -154,8 +154,9 @@ runtime, which is built on top of the uClibc C library.
   <li><b>Configure KLEE:</b>
     <p>From the KLEE source directory, run:</p>
     <div class="instr">
-	$ cd klee <br/>
-      $ ./configure --with-stp=<i>../stp_build</i> --with-uclibc=<i>../klee-uclibc</i> --enable-posix-runtime
+	$ mkdir klee-build </br>
+	$ cd klee-build <br/>
+      $ ../klee/configure --with-stp=<i>../stp_build</i> --with-uclibc=<i>../klee-uclibc</i> --enable-posix-runtime
     </div>
     
     <p><b>NOTE:</b> If you skipped step 4, simply remove the <tt>--with-uclibc</tt> and <tt>--enable-posix-runtime options</tt>. </p>
