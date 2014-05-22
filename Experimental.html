@@ -3,7 +3,7 @@
 <html>
 <head>
   <META http-equiv="Content-Type" content="text/html; charset=ISO-8859-1" />
-  <title>KLEE - Getting Started</title>
+  <title>KLEE - Getting Started (Experimental)</title>
   <link type="text/css" rel="stylesheet" href="menu.css" />
   <link type="text/css" rel="stylesheet" href="content.css" />
 </head>
@@ -19,14 +19,7 @@
 
 <h1>Getting Started: Building and Running KLEE (Experimental Version)</h1>
 
-<!-- <p>FIXME: Intro and disclaimer.</p> -->
-
-<!--
-<h3>
-<a href="#build_new">Building KLEE (with LLVM >= 3.4)</a> <br/>
-</h3>
-  -->
-<h2 id="build_new">Building KLEE with >=LLVM 3.4</h2>
+<h2 id="build_new">Building KLEE with LLVM 3.4</h2>
 
 
 <p>The current procedure for building is outlined below.</p>
@@ -35,20 +28,24 @@
 
 <li><b>Install dependencies:</b>
 <p>
-KLEE requires all the dependencies of LLVM, which are discussed <a href="http://llvm.org/docs/GettingStarted.html#requirements">here</a>.  In particular, you should have the following packages (the list is likely not complete): g++, curl, dejagnu, subversion, bison, flex:
+KLEE requires all the dependencies of LLVM, which are discussed <a href="http://llvm.org/docs/GettingStarted.html#requirements">here</a>.  In particular, you should install the following programs and libraries, listed below as Ubuntu packages:
     <div class="instr">
-      $ sudo apt-get install git cmake bison flex libboost-program-options-dev libboost-system-dev libncurses5-dev libcap-dev g++ libgtest-dev (Ubuntu) <br/>
-      $ sudo yum install g++ curl dejagnu subversion bison flex   (Fedora)
+      $ sudo apt-get install git cmake bison flex libboost-program-options-dev libboost-system-dev libncurses5-dev libcap-dev g++ libgtest-dev <br/>
     </div>
 </p>
+
+You will also need gcc 4.8 or later installed on your system. On
+Ubuntu &#8805; 12.04, you can follow the instructions
+at <a href="http://ubuntuhandbook.org/index.php/2013/08/install-gcc-4-8-via-ppa-in-ubuntu-12-04-13-04/">here</a>
+if you need to install it.
+
 </li>
 <li><b>Install LLVM:</b>
 
 <p>
-If you are using a recent Ubuntu (&gt;=12.04, e.g. 14.04 LTS) or Debian, we recommend you to use the LLVM packages provided by LLVM itself.
-Use <a href="http://www.llvm.org/apt/">LLVM Package Repository</a> to add the appropriate line to your /etc/apt/sources.list .
+If you are using a recent Ubuntu (&#8805; 12.04, e.g. 14.04 LTS) or Debian, we recommend you to use the LLVM packages provided by LLVM itself.  
 
-As an example, for Ubuntu 14.04 - the following lines should be added:
+Use <a href="http://www.llvm.org/apt/">LLVM Package Repository</a> to add the appropriate line to your /etc/apt/sources.list. As an example, for Ubuntu 14.04, the following lines should be added:
 
 <div class="instr">
 	# 3.4 <br/>
@@ -56,14 +53,15 @@ As an example, for Ubuntu 14.04 - the following lines should be added:
 	deb-src http://llvm.org/apt/trusty/ llvm-toolchain-trusty-3.4 main <br/>
 </div>
 
-Add the repository key and install the 3.4 packges.
+<p>
+Then add the repository key and install the 3.4 packages:
 <div class="instr">
 	$ wget -O - http://llvm.org/apt/llvm-snapshot.gpg.key|sudo apt-key add - <br/>
 	$ sudo apt-get update <br/>
 	$ sudo apt-get install llvm-3.4-tools clang-3.4 
 </div>
 
-Make sure llvm-config is in your path.
+Finally, make sure llvm-config is in your path:
 <div class="instr">
 	$ mkdir -p ~/bin/ <br/>
 	$ ln -sf /usr/bin/llvm-config-3.4 ~/bin/llvm-config <br/>
@@ -71,7 +69,7 @@ Make sure llvm-config is in your path.
         $ source ~/.bashrc
 </div>
 
-That's it for LLVM. If you want to install it manually, please refer to the official <a href="http://www.llvm.org/docs/GettingStarted.html">LLVM Get-Started documentation</a>.
+That's it for LLVM. If you want to install it manually, please refer to the official <a href="http://www.llvm.org/docs/GettingStarted.html">LLVM Getting-Started documentation</a>.
 </p>
 
 </li>
@@ -138,6 +136,7 @@ runtime, which is built on top of the uClibc C library.
 	$ mkdir gtest <br/>
 	$ cd gtest <br/>
 	$ cmake /usr/src/gtest/ <br/>
+        $ make <br/>
 	$ pwd <br/>
 	$ cd ..
   </div>
@@ -154,9 +153,9 @@ runtime, which is built on top of the uClibc C library.
   <li><b>Configure KLEE:</b>
     <p>From the KLEE source directory, run:</p>
     <div class="instr">
-	$ mkdir klee-build </br>
-	$ cd klee-build <br/>
-      $ ../klee/configure --with-stp=<i>../stp_build</i> --with-uclibc=<i>../klee-uclibc</i> --enable-posix-runtime
+	$ mkdir build </br>
+	$ cd build <br/>
+      $ ../configure --with-stp=<i>../stp_build</i> --with-uclibc=<i>../klee-uclibc</i> --enable-posix-runtime
     </div>
     
     <p><b>NOTE:</b> If you skipped step 4, simply remove the <tt>--with-uclibc</tt> and <tt>--enable-posix-runtime options</tt>. </p>
@@ -173,7 +172,7 @@ runtime, which is built on top of the uClibc C library.
       $ make check<br/>
       $ make LDFLAGS=-LPATH_TO_GTEST_DIRECTORY unittests<br/>
     </div>
-    For the unittest replace PATH_TO_GTEST_DIRECTORY with the absolute path to the build directory of Google tests.
+    For the unittests, replace PATH_TO_GTEST_DIRECTORY with the absolute path to the build directory of Google tests.
   </li>
 
   <li>You're ready to go!  Go to the <a href="Tutorials.html">Tutorials</a> page
