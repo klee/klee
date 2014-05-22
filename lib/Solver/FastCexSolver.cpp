@@ -18,6 +18,8 @@
 // FIXME: Use APInt.
 #include "klee/Internal/Support/IntEvaluation.h"
 
+#define DEBUG_TYPE "cex-solver"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <sstream>
 #include <cassert>
@@ -406,10 +408,6 @@ public:
     : objects(_objects) {}
 };
 
-#if 0
-#define DEBUG
-#endif
-
 class CexData {
 public:
   std::map<const Array*, CexObjectData*> objects;
@@ -443,9 +441,7 @@ public:
   }
 
   void propogatePossibleValues(ref<Expr> e, CexValueData range) {
-    #ifdef DEBUG
-        llvm::errs() << "propogate: " << range << " for\n" << e << "\n";
-    #endif
+    DEBUG(llvm::errs() << "propogate: " << range << " for\n" << e << "\n";);
 
     switch (e->getKind()) {
     case Expr::Constant:
@@ -1012,9 +1008,7 @@ static bool propogateValues(const Query& query, CexData &cd,
     cd.propogateExactValue(query.expr, 0);
   }
 
-#ifdef DEBUG
-  cd.dump();
-#endif
+  DEBUG(cd.dump(););
   
   // Check the result.
   bool hasSatisfyingAssignment = true;

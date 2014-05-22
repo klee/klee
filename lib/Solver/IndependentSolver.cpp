@@ -15,6 +15,8 @@
 
 #include "klee/util/ExprUtil.h"
 
+#define DEBUG_TYPE "independent-solver"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <map>
 #include <vector>
@@ -249,8 +251,7 @@ IndependentElementSet getIndependentConstraints(const Query& query,
     worklist.swap(newWorklist);
   } while (!done);
 
-#if 0
-  if (0) {
+DEBUG(
     std::set< ref<Expr> > reqset(result.begin(), result.end());
     errs() << "--\n";
     errs() << "Q: " << query.expr << "\n";
@@ -263,8 +264,8 @@ IndependentElementSet getIndependentConstraints(const Query& query,
       errs() << "\telts: " << IndependentElementSet(*it) << "\n";
     }
     errs() << "elts closure: " << eltsClosure << "\n";
-  }
-#endif
+ );
+
 
   return eltsClosure;
 }
