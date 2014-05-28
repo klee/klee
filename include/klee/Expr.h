@@ -298,10 +298,13 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Expr &e) {
   return os;
 }
 
+// XXX the following macro is to work around the ExprTest unit test compile error
+#ifndef LLVM_29_UNITTEST
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Expr::Kind kind) {
   Expr::printKind(os, kind);
   return os;
 }
+#endif
 
 inline std::stringstream &operator<<(std::stringstream &os, const Expr &e) {
   std::string str;
