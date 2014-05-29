@@ -430,15 +430,13 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   // around a kcachegrind parsing bug (it puts them on new lines), so
   // that source browsing works.
   if (OutputSource) {
-    std::ostream *os = ih->openOutputFile("assembly.ll");
-    assert(os && os->good() && "unable to open source output");
-
-    llvm::raw_os_ostream *ros = new llvm::raw_os_ostream(*os);
+    llvm::raw_fd_ostream *os = ih->openOutputFile("assembly.ll");
+    assert(os && !os->has_error() && "unable to open source output");
 
     // We have an option for this in case the user wants a .ll they
     // can compile.
     if (NoTruncateSourceLines) {
-      *ros << *module;
+      *os << *module;
     } else {
       std::string string;
       llvm::raw_string_ostream rss(string);
@@ -449,30 +447,26 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
       for (;;) {
         const char *end = index(position, '\n');
         if (!end) {
-          *ros << position;
+          *os << position;
           break;
         } else {
           unsigned count = (end - position) + 1;
           if (count<255) {
-            ros->write(position, count);
+            os->write(position, count);
           } else {
-            ros->write(position, 254);
-            *ros << "\n";
+            os->write(position, 254);
+            *os << "\n";
           }
           position = end+1;
         }
       }
     }
-    delete ros;
-
     delete os;
   }
 
   if (OutputModule) {
-    std::ostream *f = ih->openOutputFile("final.bc");
-    llvm::raw_os_ostream* rfs = new llvm::raw_os_ostream(*f);
-    WriteBitcodeToFile(module, *rfs);
-    delete rfs;
+    llvm::raw_fd_ostream *f = ih->openOutputFile("final.bc");
+    WriteBitcodeToFile(module, *f);
     delete f;
   }
 

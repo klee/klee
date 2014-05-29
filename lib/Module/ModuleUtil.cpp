@@ -28,7 +28,6 @@
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/raw_os_ostream.h"
 #include "llvm/IR/ValueSymbolTable.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/DataStream.h"
@@ -51,7 +50,6 @@
 
 #include <map>
 #include <set>
-#include <iostream>
 #include <fstream>
 #include <sstream>
 #include <string>

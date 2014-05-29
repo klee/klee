@@ -12,10 +12,6 @@
 
 #include <klee/Expr.h>
 
-#include <utility>
-#include <cassert>
-#include <iostream>
-
 namespace klee {
   class ExecutionState;
 
@@ -34,7 +30,7 @@ namespace klee {
                                  const data_type &rightData);
     void remove(Node *n);
 
-    void dump(std::ostream &os);
+    void dump(llvm::raw_ostream &os);
   };
 
   class PTreeNode {

@@ -12,6 +12,7 @@
 
 #include "klee/Solver.h"
 #include "klee/SolverImpl.h"
+#include "llvm/Support/raw_ostream.h"
 #include <fstream>
 #include <sstream>
 
@@ -25,9 +26,12 @@ class QueryLoggingSolver : public SolverImpl {
 
 protected:
     Solver *solver;
-    std::ofstream os;
-    std::ostringstream logBuffer; // buffer to store logs before flushing to 
-                                  // file
+    std::string ErrorInfo;
+    llvm::raw_fd_ostream os;
+    // @brief Buffer used by logBuffer
+    std::string BufferString;
+    // @brief buffer to store logs before flushing to file
+    llvm::raw_string_ostream logBuffer;
     unsigned queryCount;
     int minQueryTimeToLog; // we log to file only those queries
                            // which take longer than the specified time (ms);

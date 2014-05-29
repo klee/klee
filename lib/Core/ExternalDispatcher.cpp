@@ -42,7 +42,6 @@
 #endif
 #include <setjmp.h>
 #include <signal.h>
-#include <iostream>
 
 using namespace llvm;
 using namespace klee;
@@ -92,7 +91,7 @@ ExternalDispatcher::ExternalDispatcher() {
   std::string error;
   executionEngine = ExecutionEngine::createJIT(dispatchModule, &error);
   if (!executionEngine) {
-    std::cerr << "unable to make jit: " << error << "\n";
+    llvm::errs() << "unable to make jit: " << error << "\n";
     abort();
   }
 

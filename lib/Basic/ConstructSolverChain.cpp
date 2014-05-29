@@ -10,9 +10,9 @@
 /*
  * This file groups declarations that are common to both KLEE and Kleaver.
  */
-#include <iostream>
 #include "klee/Common.h"
 #include "klee/CommandLine.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace klee
 {
@@ -29,8 +29,8 @@ namespace klee
 		solver = createPCLoggingSolver(solver,
 					       baseSolverQueryPCLogPath,
 					       MinQueryTimeToLog);
-		std::cerr << "Logging queries that reach solver in .pc format to " 
-			  << baseSolverQueryPCLogPath.c_str() << std::endl;
+		llvm::errs() << "Logging queries that reach solver in .pc format to "
+			  << baseSolverQueryPCLogPath.c_str() << "\n";
 	  }
 
 	  if (optionIsSet(queryLoggingOptions, SOLVER_SMTLIB))
@@ -38,8 +38,8 @@ namespace klee
 		solver = createSMTLIBLoggingSolver(solver,
 						   baseSolverQuerySMT2LogPath,
 						   MinQueryTimeToLog);
-		std::cerr << "Logging queries that reach solver in .smt2 format to " 
-			  << baseSolverQuerySMT2LogPath.c_str() << std::endl;
+		llvm::errs() << "Logging queries that reach solver in .smt2 format to "
+			  << baseSolverQuerySMT2LogPath.c_str() << "\n";
 	  }
 
 	  if (UseFastCexSolver)
@@ -62,16 +62,16 @@ namespace klee
 		solver = createPCLoggingSolver(solver,
 					       queryPCLogPath,
 					       MinQueryTimeToLog);
-		std::cerr << "Logging all queries in .pc format to " 
-			  << queryPCLogPath.c_str() << std::endl;
+		llvm::errs() << "Logging all queries in .pc format to "
+			  << queryPCLogPath.c_str() << "\n";
 	  }
 
 	  if (optionIsSet(queryLoggingOptions, ALL_SMTLIB))
 	  {
 		solver = createSMTLIBLoggingSolver(solver,querySMT2LogPath,
 						   MinQueryTimeToLog);
-		std::cerr << "Logging all queries in .smt2 format to " 
-			  << querySMT2LogPath.c_str() << std::endl;
+		llvm::errs() << "Logging all queries in .smt2 format to "
+			  << querySMT2LogPath.c_str() << "\n";
 	  }
 
 	  return solver;

@@ -32,7 +32,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include <iostream>
 #include <cassert>
 #include <sstream>
 
@@ -585,23 +584,23 @@ void ObjectState::write64(unsigned offset, uint64_t value) {
 }
 
 void ObjectState::print() {
-  std::cerr << "-- ObjectState --\n";
-  std::cerr << "\tMemoryObject ID: " << object->id << "\n";
-  std::cerr << "\tRoot Object: " << updates.root << "\n";
-  std::cerr << "\tSize: " << size << "\n";
+  llvm::errs() << "-- ObjectState --\n";
+  llvm::errs() << "\tMemoryObject ID: " << object->id << "\n";
+  llvm::errs() << "\tRoot Object: " << updates.root << "\n";
+  llvm::errs() << "\tSize: " << size << "\n";
 
-  std::cerr << "\tBytes:\n";
+  llvm::errs() << "\tBytes:\n";
   for (unsigned i=0; i<size; i++) {
-    std::cerr << "\t\t["<<i<<"]"
+    llvm::errs() << "\t\t["<<i<<"]"
                << " concrete? " << isByteConcrete(i)
                << " known-sym? " << isByteKnownSymbolic(i)
                << " flushed? " << isByteFlushed(i) << " = ";
     ref<Expr> e = read8(i);
-    std::cerr << e << "\n";
+    llvm::errs() << e << "\n";
   }
 
-  std::cerr << "\tUpdates:\n";
+  llvm::errs() << "\tUpdates:\n";
   for (const UpdateNode *un=updates.head; un; un=un->next) {
-    std::cerr << "\t\t[" << un->index << "] = " << un->value << "\n";
+    llvm::errs() << "\t\t[" << un->index << "] = " << un->value << "\n";
   }
 }

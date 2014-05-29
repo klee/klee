@@ -1,5 +1,3 @@
-#include <iostream>
-
 #include "expr/Lexer.h"
 #include "expr/Parser.h"
 
@@ -124,9 +122,11 @@ static std::string getQueryLogPath(const char filename[])
 	struct stat s;
 	if( !(stat(directoryToWriteQueryLogs.c_str(),&s) == 0 && S_ISDIR(s.st_mode)) )
 	{
-		std::cerr << "Directory to log queries \"" << directoryToWriteQueryLogs << "\" does not exist!" << std::endl;
-		exit(1);
-	}
+          llvm::errs() << "Directory to log queries \""
+                       << directoryToWriteQueryLogs << "\" does not exist!"
+                       << "\n";
+          exit(1);
+        }
 
 	//check permissions okay
 	if( !( (s.st_mode & S_IWUSR) && getuid() == s.st_uid) &&
@@ -134,9 +134,11 @@ static std::string getQueryLogPath(const char filename[])
 	    !( s.st_mode & S_IWOTH)
 	)
 	{
-		std::cerr << "Directory to log queries \"" << directoryToWriteQueryLogs << "\" is not writable!" << std::endl;
-		exit(1);
-	}
+          llvm::errs() << "Directory to log queries \""
+                       << directoryToWriteQueryLogs << "\" is not writable!"
+                       << "\n";
+          exit(1);
+        }
 
 	std::string path=directoryToWriteQueryLogs;
 	path+="/";
@@ -167,10 +169,9 @@ static void PrintInputTokens(const MemoryBuffer *MB) {
   Token T;
   do {
     L.Lex(T);
-    std::cout << "(Token \"" << T.getKindName() << "\" "
-               << "\"" << escapedString(T.start, T.length) << "\" "
-               << T.length << " "
-               << T.line << " " << T.column << ")\n";
+    llvm::outs() << "(Token \"" << T.getKindName() << "\" "
+                 << "\"" << escapedString(T.start, T.length) << "\" "
+                 << T.length << " " << T.line << " " << T.column << ")\n";
   } while (T.kind != Token::EndOfFile);
 }
 
@@ -185,7 +186,7 @@ static bool PrintInputAST(const char *Filename,
   while (Decl *D = P->ParseTopLevelDecl()) {
     if (!P->GetNumErrors()) {
       if (isa<QueryCommand>(D))
-        std::cout << "# Query " << ++NumQueries << "\n";
+        llvm::outs() << "# Query " << ++NumQueries << "\n";
 
       D->dump();
     }
@@ -194,8 +195,7 @@ static bool PrintInputAST(const char *Filename,
 
   bool success = true;
   if (unsigned N = P->GetNumErrors()) {
-    std::cerr << Filename << ": parse failure: "
-               << N << " errors.\n";
+    llvm::errs() << Filename << ": parse failure: " << N << " errors.\n";
     success = false;
   }
 
@@ -220,8 +220,7 @@ static bool EvaluateInputAST(const char *Filename,
 
   bool success = true;
   if (unsigned N = P->GetNumErrors()) {
-    std::cerr << Filename << ": parse failure: "
-               << N << " errors.\n";
+    llvm::errs() << Filename << ": parse failure: " << N << " errors.\n";
     success = false;
   }  
 
@@ -253,7 +252,7 @@ static bool EvaluateInputAST(const char *Filename,
               assert(false);
               break;
     };
-    std::cerr << "Starting MetaSMTSolver(" << backend << ") ...\n";
+    llvm::errs() << "Starting MetaSMTSolver(" << backend << ") ...\n";
   }
   else {
     coreSolver = UseDummySolver ? createDummySolver() : new STPSolver(UseForkedCoreSolver);
@@ -280,16 +279,16 @@ static bool EvaluateInputAST(const char *Filename,
          ie = Decls.end(); it != ie; ++it) {
     Decl *D = *it;
     if (QueryCommand *QC = dyn_cast<QueryCommand>(D)) {
-      std::cout << "Query " << Index << ":\t";
+      llvm::outs() << "Query " << Index << ":\t";
 
       assert("FIXME: Support counterexample query commands!");
       if (QC->Values.empty() && QC->Objects.empty()) {
         bool result;
         if (S->mustBeTrue(Query(ConstraintManager(QC->Constraints), QC->Query),
                           result)) {
-          std::cout << (result ? "VALID" : "INVALID");
+          llvm::outs() << (result ? "VALID" : "INVALID");
         } else {
-          std::cout << "FAIL (reason: " 
+          llvm::outs() << "FAIL (reason: "
                     << SolverImpl::getOperationStatusString(S->impl->getOperationStatusCode())
                     << ")";
         }
@@ -304,10 +303,10 @@ static bool EvaluateInputAST(const char *Filename,
         if (S->getValue(Query(ConstraintManager(QC->Constraints), 
                               QC->Values[0]),
                         result)) {
-          std::cout << "INVALID\n";
-          std::cout << "\tExpr 0:\t" << result;
+          llvm::outs() << "INVALID\n";
+          llvm::outs() << "\tExpr 0:\t" << result;
         } else {
-          std::cout << "FAIL (reason: " 
+          llvm::outs() << "FAIL (reason: "
                     << SolverImpl::getOperationStatusString(S->impl->getOperationStatusCode())
                     << ")";
         }
@@ -317,35 +316,35 @@ static bool EvaluateInputAST(const char *Filename,
         if (S->getInitialValues(Query(ConstraintManager(QC->Constraints), 
                                       QC->Query),
                                 QC->Objects, result)) {
-          std::cout << "INVALID\n";
+          llvm::outs() << "INVALID\n";
 
           for (unsigned i = 0, e = result.size(); i != e; ++i) {
-            std::cout << "\tArray " << i << ":\t"
+            llvm::outs() << "\tArray " << i << ":\t"
                        << QC->Objects[i]->name
                        << "[";
             for (unsigned j = 0; j != QC->Objects[i]->size; ++j) {
-              std::cout << (unsigned) result[i][j];
+              llvm::outs() << (unsigned) result[i][j];
               if (j + 1 != QC->Objects[i]->size)
-                std::cout << ", ";
+                llvm::outs() << ", ";
             }
-            std::cout << "]";
+            llvm::outs() << "]";
             if (i + 1 != e)
-              std::cout << "\n";
+              llvm::outs() << "\n";
           }
         } else {
           SolverImpl::SolverRunStatus retCode = S->impl->getOperationStatusCode();
           if (SolverImpl::SOLVER_RUN_STATUS_TIMEOUT == retCode) {
-            std::cout << " FAIL (reason: " 
+            llvm::outs() << " FAIL (reason: "
                       << SolverImpl::getOperationStatusString(retCode)
                       << ")";
           }           
           else {
-            std::cout << "VALID (counterexample request ignored)";
+            llvm::outs() << "VALID (counterexample request ignored)";
           }
         }
       }
 
-      std::cout << "\n";
+      llvm::outs() << "\n";
       ++Index;
     }
   }
@@ -358,7 +357,7 @@ static bool EvaluateInputAST(const char *Filename,
   delete S;
 
   if (uint64_t queries = *theStatisticManager->getStatisticByName("Queries")) {
-    std::cout 
+    llvm::outs()
       << "--\n"
       << "total queries = " << queries << "\n"
       << "total queries constructs = " 
@@ -390,7 +389,7 @@ static bool printInputAsSMTLIBv2(const char *Filename,
 	bool success = true;
 	if (unsigned N = P->GetNumErrors())
 	{
-		std::cerr << Filename << ": parse failure: "
+		llvm::errs() << Filename << ": parse failure: "
 				   << N << " errors.\n";
 		success = false;
 	}
@@ -399,7 +398,7 @@ static bool printInputAsSMTLIBv2(const char *Filename,
 	return false;
 
 	ExprSMTLIBPrinter* printer = createSMTLIBPrinter();
-	printer->setOutput(std::cout);
+	printer->setOutput(llvm::outs());
 
 	unsigned int queryNumber = 0;
 	//Loop over the declarations
@@ -409,10 +408,10 @@ static bool printInputAsSMTLIBv2(const char *Filename,
 		if (QueryCommand *QC = dyn_cast<QueryCommand>(D))
 		{
 			//print line break to separate from previous query
-			if(queryNumber!=0) 	std::cout << std::endl;
+			if(queryNumber!=0) 	llvm::outs() << "\n";
 
 			//Output header for this query as a SMT-LIBv2 comment
-			std::cout << ";SMTLIBv2 Query " << queryNumber << std::endl;
+			llvm::outs() << ";SMTLIBv2 Query " << queryNumber << "\n";
 
 			/* Can't pass ConstraintManager constructor directly
 			 * as argument to Query object. Like...
@@ -458,7 +457,7 @@ int main(int argc, char **argv) {
   OwningPtr<MemoryBuffer> MB;
   error_code ec=MemoryBuffer::getFileOrSTDIN(InputFile.c_str(), MB);
   if (ec) {
-    std::cerr << argv[0] << ": error: " << ec.message() << "\n";
+    llvm::errs() << argv[0] << ": error: " << ec.message() << "\n";
     return 1;
   }
   
@@ -494,7 +493,7 @@ int main(int argc, char **argv) {
     success = printInputAsSMTLIBv2(InputFile=="-"? "<stdin>" : InputFile.c_str(), MB.get(),Builder);
     break;
   default:
-    std::cerr << argv[0] << ": error: Unknown program action!\n";
+    llvm::errs() << argv[0] << ": error: Unknown program action!\n";
   }
 
   delete Builder;

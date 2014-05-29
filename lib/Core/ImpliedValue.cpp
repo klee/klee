@@ -18,7 +18,6 @@
 
 #include "klee/util/ExprUtil.h"
 
-#include <iostream>
 #include <map>
 #include <set>
 
@@ -246,7 +245,7 @@ void ImpliedValue::checkForImpliedValues(Solver *S, ref<Expr> e,
     } else {
       if (it!=found.end()) {
         ref<Expr> binding = it->second;
-        std::cerr << "checkForImpliedValues: " << e  << " = " << value << "\n"
+        llvm::errs() << "checkForImpliedValues: " << e  << " = " << value << "\n"
                   << "\t\t implies " << var << " == " << binding
                   << " (error)\n";
         assert(0);

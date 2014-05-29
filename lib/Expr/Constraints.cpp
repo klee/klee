@@ -19,7 +19,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "klee/Internal/Module/KModule.h"
 
-#include <iostream>
 #include <map>
 
 using namespace klee;

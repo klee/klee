@@ -8,11 +8,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <iostream>
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/CommandLine.h"
 #include "klee/util/ExprSMTLIBLetPrinter.h"
-
-using namespace std;
 
 namespace ExprSMTLIBOptions {
 llvm::cl::opt<bool>
@@ -31,7 +29,7 @@ ExprSMTLIBLetPrinter::ExprSMTLIBLetPrinter()
 
 void ExprSMTLIBLetPrinter::generateOutput() {
   if (p == NULL || query == NULL || o == NULL) {
-    std::cerr << "Can't print SMTLIBv2. Output or query bad!" << std::endl;
+    llvm::errs() << "Can't print SMTLIBv2. Output or query bad!\n";
     return;
   }
 
@@ -85,7 +83,7 @@ void ExprSMTLIBLetPrinter::scan(const ref<Expr> &e) {
 void ExprSMTLIBLetPrinter::generateBindings() {
   // Assign a number to each binding that will be used
   unsigned int counter = 0;
-  for (set<ref<Expr> >::const_iterator i = twoOrMoreEO.begin();
+  for (std::set<ref<Expr> >::const_iterator i = twoOrMoreEO.begin();
        i != twoOrMoreEO.end(); ++i) {
     bindings.insert(std::make_pair(*i, counter));
     ++counter;
@@ -94,7 +92,7 @@ void ExprSMTLIBLetPrinter::generateBindings() {
 
 void ExprSMTLIBLetPrinter::printExpression(
     const ref<Expr> &e, ExprSMTLIBPrinter::SMTLIB_SORT expectedSort) {
-  map<const ref<Expr>, unsigned int>::const_iterator i = bindings.find(e);
+  std::map<const ref<Expr>, unsigned int>::const_iterator i = bindings.find(e);
 
   if (disablePrintedAbbreviations || i == bindings.end()) {
     /*There is no abbreviation for this expression so print it normally.
@@ -143,7 +141,7 @@ void ExprSMTLIBLetPrinter::printLetExpression() {
     p->pushIndent();
 
     // Print each binding
-    for (map<const ref<Expr>, unsigned int>::const_iterator i =
+    for (std::map<const ref<Expr>, unsigned int>::const_iterator i =
              bindings.begin();
          i != bindings.end(); ++i) {
       printSeperator();
@@ -173,7 +171,8 @@ void ExprSMTLIBLetPrinter::printLetExpression() {
   // print out Expressions with abbreviations.
   unsigned int numberOfItems = query->constraints.size() + 1; //+1 for query
   unsigned int itemsLeft = numberOfItems;
-  vector<ref<Expr> >::const_iterator constraint = query->constraints.begin();
+  std::vector<ref<Expr> >::const_iterator constraint =
+      query->constraints.begin();
 
   /* Produce nested (and () () statements. If the constraint set
    * is empty then we will only print the "queryAssert".

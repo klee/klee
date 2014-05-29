@@ -12,13 +12,13 @@
 
 #include "CallPathManager.h"
 
-#include <iostream>
 #include <set>
 
 namespace llvm {
   class BranchInst;
   class Function;
   class Instruction;
+  class raw_fd_ostream;
 }
 
 namespace klee {
@@ -36,7 +36,7 @@ namespace klee {
     Executor &executor;
     std::string objectFilename;
 
-    std::ostream *statsFile, *istatsFile;
+    llvm::raw_fd_ostream *statsFile, *istatsFile;
     double startWallTime;
     
     unsigned numBranches;

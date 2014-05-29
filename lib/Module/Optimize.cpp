@@ -40,7 +40,6 @@
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Support/PassNameParser.h"
 #include "llvm/Support/PluginLoader.h"
-#include <iostream>
 using namespace llvm;
 
 #if 0
@@ -272,7 +271,7 @@ void Optimize(Module* M) {
     if (Opt->getNormalCtor())
       addPass(Passes, Opt->getNormalCtor()());
     else
-      std::cerr << "llvm-ld: cannot create pass: " << Opt->getPassName() 
+      llvm::errs() << "llvm-ld: cannot create pass: " << Opt->getPassName()
                 << "\n";
   }
 #endif

@@ -1,14 +1,14 @@
 #ifndef PRINTCONTEXT_H_
 #define PRINTCONTEXT_H_
 
-#include <ostream>
+#include "klee/Expr.h"
+#include "llvm/Support/raw_ostream.h"
 #include <sstream>
 #include <string>
 #include <stack>
-#include <iomanip>
 
 /// PrintContext - Helper class for pretty printing.
-/// It provides a basic wrapper around std::ostream that keeps track of
+/// It provides a basic wrapper around llvm::raw_ostream that keeps track of
 /// how many characters have been used on the current line.
 ///
 /// It also provides an optional way keeping track of the various levels of indentation
@@ -16,8 +16,7 @@
 /// \sa breakLineI() , \sa pushIndent(), \sa popIndent()
 class PrintContext {
 private:
-  std::ostream &os;
-  std::stringstream ss;
+  llvm::raw_ostream &os;
   std::string newline;
 
   ///This is used to keep track of the stack of indentations used by
@@ -30,7 +29,7 @@ public:
   /// Number of characters on the current line.
   unsigned pos;
 
-  PrintContext(std::ostream &_os) : os(_os), newline("\n"), indentStack(), pos()
+  PrintContext(llvm::raw_ostream &_os) : os(_os), newline("\n"), indentStack(), pos()
   {
 	  indentStack.push(pos);
   }
@@ -42,7 +41,7 @@ public:
   void breakLine(unsigned indent=0) {
     os << newline;
     if (indent)
-      os << std::setw(indent) << ' ';
+      os.indent(indent) << ' ';
     pos = indent;
   }
 
@@ -79,7 +78,8 @@ public:
 
   template <typename T>
   PrintContext &operator<<(T elt) {
-    ss.str("");
+    std::string str;
+    llvm::raw_string_ostream ss(str);
     ss << elt;
     write(ss.str());
     return *this;

@@ -2,9 +2,6 @@
 
 #include "klee/ExprBuilder.h"
 
-#include <iostream>
-
-using namespace std;
 using namespace klee;
 
 int main(int argc, char** argv) {

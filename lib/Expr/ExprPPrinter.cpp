@@ -13,12 +13,10 @@
 #include "klee/Constraints.h"
 
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include <map>
 #include <vector>
-#include <iostream>
-#include <sstream>
-#include <iomanip>
 
 using namespace klee;
 
@@ -47,7 +45,7 @@ private:
   std::map<const UpdateNode*, unsigned> updateBindings;
   std::set< ref<Expr> > couldPrint, shouldPrint;
   std::set<const UpdateNode*> couldPrintUpdates, shouldPrintUpdates;
-  std::ostream &os;
+  llvm::raw_ostream &os;
   unsigned counter;
   unsigned updateCounter;
   bool hasScan;
@@ -300,7 +298,7 @@ private:
   }
 
 public:
-  PPrinter(std::ostream &_os) : os(_os), newline("\n") {
+  PPrinter(llvm::raw_ostream &_os) : os(_os), newline("\n") {
     reset();
   }
 
@@ -426,11 +424,11 @@ public:
   }
 };
 
-ExprPPrinter *klee::ExprPPrinter::create(std::ostream &os) {
+ExprPPrinter *klee::ExprPPrinter::create(llvm::raw_ostream &os) {
   return new PPrinter(os);
 }
 
-void ExprPPrinter::printOne(std::ostream &os,
+void ExprPPrinter::printOne(llvm::raw_ostream &os,
                             const char *message, 
                             const ref<Expr> &e) {
   PPrinter p(os);
@@ -444,7 +442,7 @@ void ExprPPrinter::printOne(std::ostream &os,
   PC.breakLine();
 }
 
-void ExprPPrinter::printSingleExpr(std::ostream &os, const ref<Expr> &e) {
+void ExprPPrinter::printSingleExpr(llvm::raw_ostream &os, const ref<Expr> &e) {
   PPrinter p(os);
   p.scan(e);
 
@@ -454,13 +452,13 @@ void ExprPPrinter::printSingleExpr(std::ostream &os, const ref<Expr> &e) {
   p.print(e, PC);
 }
 
-void ExprPPrinter::printConstraints(std::ostream &os,
+void ExprPPrinter::printConstraints(llvm::raw_ostream &os,
                                     const ConstraintManager &constraints) {
   printQuery(os, constraints, ConstantExpr::alloc(false, Expr::Bool));
 }
 
 
-void ExprPPrinter::printQuery(std::ostream &os,
+void ExprPPrinter::printQuery(llvm::raw_ostream &os,
                               const ConstraintManager &constraints,
                               const ref<Expr> &q,
                               const ref<Expr> *evalExprsBegin,

@@ -23,9 +23,10 @@
 #include "llvm/Function.h"
 #endif
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/raw_ostream.h"
 
-#include <iostream>
 #include <iomanip>
+#include <sstream>
 #include <cassert>
 #include <map>
 #include <set>
@@ -177,7 +178,7 @@ void ExecutionState::removeFnAlias(std::string fn) {
 
 /**/
 
-std::ostream &klee::operator<<(std::ostream &os, const MemoryMap &mm) {
+llvm::raw_ostream &klee::operator<<(llvm::raw_ostream &os, const MemoryMap &mm) {
   os << "{";
   MemoryMap::iterator it = mm.begin();
   MemoryMap::iterator ie = mm.end();
@@ -192,8 +193,8 @@ std::ostream &klee::operator<<(std::ostream &os, const MemoryMap &mm) {
 
 bool ExecutionState::merge(const ExecutionState &b) {
   if (DebugLogStateMerge)
-    std::cerr << "-- attempting merge of A:" 
-               << this << " with B:" << &b << "--\n";
+    llvm::errs() << "-- attempting merge of A:" << this << " with B:" << &b
+                 << "--\n";
   if (pc != b.pc)
     return false;
 
@@ -230,21 +231,24 @@ bool ExecutionState::merge(const ExecutionState &b) {
                       commonConstraints.begin(), commonConstraints.end(),
                       std::inserter(bSuffix, bSuffix.end()));
   if (DebugLogStateMerge) {
-    std::cerr << "\tconstraint prefix: [";
-    for (std::set< ref<Expr> >::iterator it = commonConstraints.begin(), 
-           ie = commonConstraints.end(); it != ie; ++it)
-      std::cerr << *it << ", ";
-    std::cerr << "]\n";
-    std::cerr << "\tA suffix: [";
-    for (std::set< ref<Expr> >::iterator it = aSuffix.begin(), 
-           ie = aSuffix.end(); it != ie; ++it)
-      std::cerr << *it << ", ";
-    std::cerr << "]\n";
-    std::cerr << "\tB suffix: [";
-    for (std::set< ref<Expr> >::iterator it = bSuffix.begin(), 
-           ie = bSuffix.end(); it != ie; ++it)
-      std::cerr << *it << ", ";
-    std::cerr << "]\n";
+    llvm::errs() << "\tconstraint prefix: [";
+    for (std::set<ref<Expr> >::iterator it = commonConstraints.begin(),
+                                        ie = commonConstraints.end();
+         it != ie; ++it)
+      llvm::errs() << *it << ", ";
+    llvm::errs() << "]\n";
+    llvm::errs() << "\tA suffix: [";
+    for (std::set<ref<Expr> >::iterator it = aSuffix.begin(),
+                                        ie = aSuffix.end();
+         it != ie; ++it)
+      llvm::errs() << *it << ", ";
+    llvm::errs() << "]\n";
+    llvm::errs() << "\tB suffix: [";
+    for (std::set<ref<Expr> >::iterator it = bSuffix.begin(),
+                                        ie = bSuffix.end();
+         it != ie; ++it)
+      llvm::errs() << *it << ", ";
+    llvm::errs() << "]\n";
   }
 
   // We cannot merge if addresses would resolve differently in the
@@ -257,9 +261,9 @@ bool ExecutionState::merge(const ExecutionState &b) {
   // and not the other
 
   if (DebugLogStateMerge) {
-    std::cerr << "\tchecking object states\n";
-    std::cerr << "A: " << addressSpace.objects << "\n";
-    std::cerr << "B: " << b.addressSpace.objects << "\n";
+    llvm::errs() << "\tchecking object states\n";
+    llvm::errs() << "A: " << addressSpace.objects << "\n";
+    llvm::errs() << "B: " << b.addressSpace.objects << "\n";
   }
     
   std::set<const MemoryObject*> mutated;
@@ -271,22 +275,22 @@ bool ExecutionState::merge(const ExecutionState &b) {
     if (ai->first != bi->first) {
       if (DebugLogStateMerge) {
         if (ai->first < bi->first) {
-          std::cerr << "\t\tB misses binding for: " << ai->first->id << "\n";
+          llvm::errs() << "\t\tB misses binding for: " << ai->first->id << "\n";
         } else {
-          std::cerr << "\t\tA misses binding for: " << bi->first->id << "\n";
+          llvm::errs() << "\t\tA misses binding for: " << bi->first->id << "\n";
         }
       }
       return false;
     }
     if (ai->second != bi->second) {
       if (DebugLogStateMerge)
-        std::cerr << "\t\tmutated: " << ai->first->id << "\n";
+        llvm::errs() << "\t\tmutated: " << ai->first->id << "\n";
       mutated.insert(ai->first);
     }
   }
   if (ai!=ae || bi!=be) {
     if (DebugLogStateMerge)
-      std::cerr << "\t\tmappings differ\n";
+      llvm::errs() << "\t\tmappings differ\n";
     return false;
   }
   
@@ -348,7 +352,7 @@ bool ExecutionState::merge(const ExecutionState &b) {
   return true;
 }
 
-void ExecutionState::dumpStack(std::ostream &out) const {
+void ExecutionState::dumpStack(llvm::raw_ostream &out) const {
   unsigned idx = 0;
   const KInstruction *target = prevPC;
   for (ExecutionState::stack_ty::const_reverse_iterator
@@ -357,9 +361,11 @@ void ExecutionState::dumpStack(std::ostream &out) const {
     const StackFrame &sf = *it;
     Function *f = sf.kf->function;
     const InstructionInfo &ii = *target->info;
-    out << "\t#" << idx++ 
-        << " " << std::setw(8) << std::setfill('0') << ii.assemblyLine
-        << " in " << f->getName().str() << " (";
+    out << "\t#" << idx++;
+    std::stringstream AssStream;
+    AssStream << std::setw(8) << std::setfill('0') << ii.assemblyLine;
+    out << AssStream.str();
+    out << " in " << f->getName().str() << " (";
     // Yawn, we could go up and print varargs if we wanted to.
     unsigned index = 0;
     for (Function::arg_iterator ai = f->arg_begin(), ae = f->arg_end();

@@ -11,7 +11,6 @@
 #define __UTIL_TREESTREAM_H__
 
 #include <string>
-#include <iostream>
 #include <vector>
 
 namespace klee {

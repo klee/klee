@@ -14,7 +14,6 @@
 #include "klee/Constraints.h"
 #include "expr/Parser.h"
 
-#include <iostream>
 #include <fstream>
 #include <string>
 #include <sstream>
@@ -23,7 +22,6 @@
 
 //#define DEBUG
 
-using namespace std;
 using namespace klee;
 using namespace klee::expr;
 
@@ -103,9 +101,8 @@ bool SMTParser::Solve() {
 
 // XXX: give more info
 int SMTParser::Error(const string& msg) {
-  std::cerr << SMTParser::parserTemp->fileName << ":" 
-	    << SMTParser::parserTemp->lineNum
-	    << ": " << msg << "\n";
+  llvm::errs() << SMTParser::parserTemp->fileName << ":"
+               << SMTParser::parserTemp->lineNum << ": " << msg << "\n";
   exit(1);
   return 0;
 }
@@ -213,7 +210,7 @@ void SMTParser::AddVar(std::string name, ExprHandle val) {
 ExprHandle SMTParser::GetVar(std::string name) {
   VarEnv top = varEnvs.top();
   if (top.find(name) == top.end()) {
-    std::cerr << "Cannot find variable ?" << name << "\n";
+    llvm::errs() << "Cannot find variable ?" << name << "\n";
     exit(1);
   }
   return top[name];
@@ -241,7 +238,7 @@ void SMTParser::AddFVar(std::string name, ExprHandle val) {
 ExprHandle SMTParser::GetFVar(std::string name) {
   FVarEnv top = fvarEnvs.top();
   if (top.find(name) == top.end()) {
-    std::cerr << "Cannot find fvar $" << name << "\n";
+    llvm::errs() << "Cannot find fvar $" << name << "\n";
     exit(1);
   }
   return top[name];

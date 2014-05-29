@@ -18,7 +18,9 @@
 // FIXME: Use APInt.
 #include "klee/Internal/Support/IntEvaluation.h"
 
-#include <iostream>
+#define DEBUG_TYPE "cex-solver"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/raw_ostream.h"
 #include <sstream>
 #include <cassert>
 #include <map>
@@ -109,7 +111,7 @@ public:
   ValueRange(uint64_t _min, uint64_t _max) : m_min(_min), m_max(_max) {}
   ValueRange(const ValueRange &b) : m_min(b.m_min), m_max(b.m_max) {}
 
-  void print(std::ostream &os) const {
+  void print(llvm::raw_ostream &os) const {
     if (isFixed()) {
       os << m_min;
     } else {
@@ -283,7 +285,8 @@ public:
   }
 };
 
-inline std::ostream &operator<<(std::ostream &os, const ValueRange &vr) {
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
+                                     const ValueRange &vr) {
   vr.print(os);
   return os;
 }
@@ -405,10 +408,6 @@ public:
     : objects(_objects) {}
 };
 
-#if 0
-#define DEBUG
-#endif
-
 class CexData {
 public:
   std::map<const Array*, CexObjectData*> objects;
@@ -442,9 +441,7 @@ public:
   }
 
   void propogatePossibleValues(ref<Expr> e, CexValueData range) {
-    #ifdef DEBUG
-    std::cerr << "propogate: " << range << " for\n" << e << "\n";
-    #endif
+    DEBUG(llvm::errs() << "propogate: " << range << " for\n" << e << "\n";);
 
     switch (e->getKind()) {
     case Expr::Constant:
@@ -938,27 +935,29 @@ public:
   }
 
   void dump() {
-    std::cerr << "-- propogated values --\n";
-    for (std::map<const Array*, CexObjectData*>::iterator 
-           it = objects.begin(), ie = objects.end(); it != ie; ++it) {
+    llvm::errs() << "-- propogated values --\n";
+    for (std::map<const Array *, CexObjectData *>::iterator
+             it = objects.begin(),
+             ie = objects.end();
+         it != ie; ++it) {
       const Array *A = it->first;
       CexObjectData *COD = it->second;
-    
-      std::cerr << A->name << "\n";
-      std::cerr << "possible: [";
+
+      llvm::errs() << A->name << "\n";
+      llvm::errs() << "possible: [";
       for (unsigned i = 0; i < A->size; ++i) {
         if (i)
-          std::cerr << ", ";
-        std::cerr << COD->getPossibleValues(i);
+          llvm::errs() << ", ";
+        llvm::errs() << COD->getPossibleValues(i);
       }
-      std::cerr << "]\n";
-      std::cerr << "exact   : [";
+      llvm::errs() << "]\n";
+      llvm::errs() << "exact   : [";
       for (unsigned i = 0; i < A->size; ++i) {
         if (i)
-          std::cerr << ", ";
-        std::cerr << COD->getExactValues(i);
+          llvm::errs() << ", ";
+        llvm::errs() << COD->getExactValues(i);
       }
-      std::cerr << "]\n";
+      llvm::errs() << "]\n";
     }
   }
 };
@@ -1009,9 +1008,7 @@ static bool propogateValues(const Query& query, CexData &cd,
     cd.propogateExactValue(query.expr, 0);
   }
 
-#ifdef DEBUG
-  cd.dump();
-#endif
+  DEBUG(cd.dump(););
   
   // Check the result.
   bool hasSatisfyingAssignment = true;

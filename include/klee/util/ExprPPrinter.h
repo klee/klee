@@ -12,6 +12,9 @@
 
 #include "klee/Expr.h"
 
+namespace llvm {
+  class raw_ostream;
+}
 namespace klee {
   class ConstraintManager;
 
@@ -20,7 +23,7 @@ namespace klee {
     ExprPPrinter() {}
     
   public:
-    static ExprPPrinter *create(std::ostream &os);
+    static ExprPPrinter *create(llvm::raw_ostream &os);
 
     virtual ~ExprPPrinter() {}
 
@@ -45,7 +48,7 @@ namespace klee {
 
     /// printOne - Pretty print a single expression prefixed by a
     /// message and followed by a line break.
-    static void printOne(std::ostream &os, const char *message, 
+    static void printOne(llvm::raw_ostream &os, const char *message,
                          const ref<Expr> &e);
 
     /// printSingleExpr - Pretty print a single expression.
@@ -55,12 +58,12 @@ namespace klee {
     /// Note that if the output stream is not positioned at the
     /// beginning of a line then printing will not resume at the
     /// correct position following any output line breaks.
-    static void printSingleExpr(std::ostream &os, const ref<Expr> &e);
+    static void printSingleExpr(llvm::raw_ostream &os, const ref<Expr> &e);
 
-    static void printConstraints(std::ostream &os,
+    static void printConstraints(llvm::raw_ostream &os,
                                  const ConstraintManager &constraints);
 
-    static void printQuery(std::ostream &os,
+    static void printQuery(llvm::raw_ostream &os,
                            const ConstraintManager &constraints,
                            const ref<Expr> &q,
                            const ref<Expr> *evalExprsBegin = 0,
