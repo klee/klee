@@ -41,7 +41,6 @@
 #include "llvm/Support/CallSite.h"
 
 
-#include <iostream>
 #include <cassert>
 
 using namespace klee;

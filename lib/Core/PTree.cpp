@@ -13,7 +13,6 @@
 #include <klee/util/ExprPPrinter.h>
 
 #include <vector>
-#include <iostream>
 
 using namespace klee;
 

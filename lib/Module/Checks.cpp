@@ -46,7 +46,6 @@
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Support/CallSite.h"
-#include <iostream>
 
 using namespace llvm;
 using namespace klee;

@@ -1,5 +1,4 @@
 #include <klee/Expr.h>
-#include <iostream>
 
 void kdb_printExpr(klee::Expr *e) {
   llvm::errs() << "expr: " << e << " -- ";

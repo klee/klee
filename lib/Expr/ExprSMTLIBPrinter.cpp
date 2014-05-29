@@ -7,8 +7,6 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-#include <iostream>
-
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "klee/util/ExprSMTLIBPrinter.h"

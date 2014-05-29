@@ -19,7 +19,6 @@
 #include "klee/Internal/Support/IntEvaluation.h"
 
 #include "llvm/Support/raw_ostream.h"
-#include <iostream>
 #include <sstream>
 #include <cassert>
 #include <map>

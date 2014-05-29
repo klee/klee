@@ -10,7 +10,6 @@
 #include "klee/Internal/ADT/TreeStream.h"
 
 #include <cassert>
-#include <iostream>
 #include <iomanip>
 #include <fstream>
 #include <iterator>

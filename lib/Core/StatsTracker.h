@@ -12,7 +12,6 @@
 
 #include "CallPathManager.h"
 
-#include <iostream>
 #include <set>
 
 namespace llvm {

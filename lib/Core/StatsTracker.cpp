@@ -46,12 +46,10 @@
 #endif
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/CFG.h"
-#include "llvm/Support/raw_os_ostream.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/FileSystem.h"
 
-#include <iostream>
 #include <fstream>
 #include <unistd.h>
 

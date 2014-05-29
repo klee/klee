@@ -27,6 +27,7 @@
 #include "llvm/Module.h"
 #endif
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/Debug.h"
 
 #include <errno.h>
 
@@ -279,8 +280,8 @@ void SpecialFunctionHandler::handleAliasFunction(ExecutionState &state,
          "invalid number of arguments to klee_alias_function");
   std::string old_fn = readStringAtAddress(state, arguments[0]);
   std::string new_fn = readStringAtAddress(state, arguments[1]);
-  DEBUG_WITH_TYPE("alias_handling", errs() << "Replacing " << old_fn
-                                           << "() with " << new_fn << "()\n";);
+  DEBUG_WITH_TYPE("alias_handling", llvm::errs() << "Replacing " << old_fn
+                                           << "() with " << new_fn << "()\n");
   if (old_fn == new_fn)
     state.removeFnAlias(old_fn);
   else state.addFnAlias(old_fn, new_fn);

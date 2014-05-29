@@ -21,7 +21,6 @@
 
 #include "klee/util/ExprPPrinter.h"
 
-#include <iostream>
 #include <sstream>
 
 using namespace klee;

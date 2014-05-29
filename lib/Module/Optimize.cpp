@@ -40,7 +40,6 @@
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Support/PassNameParser.h"
 #include "llvm/Support/PluginLoader.h"
-#include <iostream>
 using namespace llvm;
 
 #if 0

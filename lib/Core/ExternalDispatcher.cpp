@@ -42,7 +42,6 @@
 #endif
 #include <setjmp.h>
 #include <signal.h>
-#include <iostream>
 
 using namespace llvm;
 using namespace klee;

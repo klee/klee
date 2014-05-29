@@ -18,7 +18,6 @@
 
 #include "klee/util/ExprUtil.h"
 
-#include <iostream>
 #include <map>
 #include <set>
 

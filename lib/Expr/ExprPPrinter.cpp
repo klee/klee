@@ -17,9 +17,6 @@
 
 #include <map>
 #include <vector>
-#include <iostream>
-#include <sstream>
-#include <iomanip>
 
 using namespace klee;
 

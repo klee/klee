@@ -22,7 +22,6 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <cassert>
-#include <iostream>
 #include <map>
 #include <cstring>
 

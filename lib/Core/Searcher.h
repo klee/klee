@@ -10,13 +10,11 @@
 #ifndef KLEE_SEARCHER_H
 #define KLEE_SEARCHER_H
 
+#include "llvm/Support/raw_ostream.h"
 #include <vector>
 #include <set>
 #include <map>
 #include <queue>
-
-// FIXME: Move out of header, use llvm streams.
-#include <ostream>
 
 namespace llvm {
   class BasicBlock;

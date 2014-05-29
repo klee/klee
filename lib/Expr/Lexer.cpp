@@ -13,7 +13,6 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <iomanip>
-#include <iostream>
 #include <string.h>
 
 using namespace llvm;

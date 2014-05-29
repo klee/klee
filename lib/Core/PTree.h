@@ -12,10 +12,6 @@
 
 #include <klee/Expr.h>
 
-#include <utility>
-#include <cassert>
-#include <iostream>
-
 namespace klee {
   class ExecutionState;
 
