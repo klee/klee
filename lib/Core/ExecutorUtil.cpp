@@ -62,7 +62,7 @@ namespace klee {
     switch (ce->getOpcode()) {
     default :
       ce->dump();
-      std::cerr << "error: unknown ConstantExpr type\n"
+      llvm::errs() << "error: unknown ConstantExpr type\n"
                 << "opcode: " << ce->getOpcode() << "\n";
       abort();
 

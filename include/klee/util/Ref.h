@@ -20,6 +20,10 @@ using llvm::dyn_cast_or_null;
 #include <assert.h>
 #include <iosfwd> // FIXME: Remove this!!!
 
+namespace llvm {
+  class raw_ostream;
+}
+
 namespace klee {
 
 template<class T>
@@ -107,7 +111,13 @@ public:
 };
 
 template<class T>
-inline std::ostream &operator<<(std::ostream &os, const ref<T> &e) {
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const ref<T> &e) {
+  os << *e;
+  return os;
+}
+
+template<class T>
+inline std::stringstream &operator<<(std::stringstream &os, const ref<T> &e) {
   os << *e;
   return os;
 }

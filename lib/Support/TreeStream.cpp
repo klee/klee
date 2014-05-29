@@ -16,6 +16,8 @@
 #include <iterator>
 #include <map>
 
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/raw_ostream.h"
 #include <string.h>
 
 using namespace klee;
@@ -105,10 +107,9 @@ void TreeStreamWriter::readStream(TreeStreamID streamID,
   std::ifstream is(path.c_str(),
                    std::ios::in | std::ios::binary);
   assert(is.good());
-#if 0
-  std::cout << "finding chain for: " << streamID << "\n";
-#endif
-  
+  DEBUG_WITH_TYPE("TreeStreamWriter",
+                  llvm::errs() << "finding chain for: " << streamID << "\n");
+
   std::map<unsigned,unsigned> parents;
   std::vector<unsigned> roots;
   for (;;) {
@@ -137,11 +138,11 @@ void TreeStreamWriter::readStream(TreeStreamID streamID,
       while (size--) is.get();
     }
   }
-#if 0
-  std::cout << "roots: ";
-  std::copy(roots.begin(), roots.end(), std::ostream_iterator<unsigned>(std::cout, " "));
-  std::cout << "\n"; 
-#endif
+  DEBUG(llvm::errs() << "roots: ";
+	for (size_t i = 0, e = roots.size(); i < e; ++i) {
+	  llvm::errs() << roots[i] << " ";
+	}
+        llvm::errs() << "\n";);
   is.seekg(0, std::ios::beg);
   for (;;) {
     unsigned id;

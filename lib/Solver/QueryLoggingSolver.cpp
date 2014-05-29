@@ -18,9 +18,10 @@ QueryLoggingSolver::QueryLoggingSolver(Solver *_solver,
                                        std::string path,
                                        const std::string& commentSign,
                                        int queryTimeToLog)                                  
-    : solver(_solver), 
-      os(path.c_str(), std::ios::trunc),
-      logBuffer(""),
+    : solver(_solver),
+      os(path.c_str(), ErrorInfo),
+      BufferString(""),
+      logBuffer(BufferString),
       queryCount(0),    
       minQueryTimeToLog(queryTimeToLog),
       startTime(0.0f),
@@ -79,8 +80,7 @@ void QueryLoggingSolver::flushBuffer() {
       }
       
       // prepare the buffer for reuse
-      logBuffer.clear();
-      logBuffer.str("");
+      BufferString = "";
 }
 
 bool QueryLoggingSolver::computeTruth(const Query& query, bool& isValid) {

@@ -129,7 +129,7 @@ Searcher *klee::constructUserSearcher(Executor &executor) {
     searcher = new IterativeDeepeningTimeSearcher(searcher);
   }
 
-  std::ostream &os = executor.getHandler().getInfoStream();
+  llvm::raw_ostream &os = executor.getHandler().getInfoStream();
 
   os << "BEGIN searcher description\n";
   searcher->printName(os);

@@ -31,7 +31,7 @@ ExprSMTLIBLetPrinter::ExprSMTLIBLetPrinter()
 
 void ExprSMTLIBLetPrinter::generateOutput() {
   if (p == NULL || query == NULL || o == NULL) {
-    std::cerr << "Can't print SMTLIBv2. Output or query bad!" << std::endl;
+    llvm::errs() << "Can't print SMTLIBv2. Output or query bad!\n";
     return;
   }
 

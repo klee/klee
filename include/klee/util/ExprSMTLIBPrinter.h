@@ -11,7 +11,6 @@
 #ifndef KLEE_EXPRSMTLIBPRINTER_H
 #define KLEE_EXPRSMTLIBPRINTER_H
 
-#include <ostream>
 #include <string>
 #include <set>
 #include <map>
@@ -19,6 +18,10 @@
 #include <klee/Expr.h>
 #include <klee/util/PrintContext.h>
 #include <klee/Solver.h>
+
+namespace llvm {
+class raw_ostream;
+}
 
 namespace klee {
 
@@ -121,7 +124,7 @@ public:
 
   /// Set the output stream that will be printed to.
   /// This call is persistent across queries.
-  void setOutput(std::ostream &output);
+  void setOutput(llvm::raw_ostream &output);
 
   /// Set the query to print. This will setArrayValuesToGet()
   /// to none (i.e. no array values will be requested using
@@ -130,7 +133,7 @@ public:
 
   virtual ~ExprSMTLIBPrinter();
 
-  /// Print the query to the std::ostream
+  /// Print the query to the llvm::raw_ostream
   /// setOutput() and setQuery() must be called before calling this.
   ///
   /// All options should be set before calling this.
@@ -202,7 +205,7 @@ protected:
   std::set<const Array *> usedArrays;
 
   /// Output stream to write to
-  std::ostream *o;
+  llvm::raw_ostream *o;
 
   /// The query to print
   const Query *query;

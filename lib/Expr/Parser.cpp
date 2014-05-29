@@ -1522,7 +1522,7 @@ void ParserImpl::Error(const char *Message, const Token &At) {
   if (MaxErrors && NumErrors >= MaxErrors)
     return;
 
-  std::cerr << Filename
+  llvm::errs() << Filename
             << ":" << At.line << ":" << At.column 
             << ": error: " << Message << "\n";
 
@@ -1544,18 +1544,18 @@ void ParserImpl::Error(const char *Message, const Token &At) {
     ++LineEnd;
 
   // Show the line.
-  std::cerr << std::string(LineBegin, LineEnd) << "\n";
+  llvm::errs() << std::string(LineBegin, LineEnd) << "\n";
 
   // Show the caret or squiggly, making sure to print back spaces the
   // same.
   for (const char *S=LineBegin; S != At.start; ++S)
-    std::cerr << (isspace(*S) ? *S : ' ');
+    llvm::errs() << (isspace(*S) ? *S : ' ');
   if (At.length > 1) {
     for (unsigned i=0; i<At.length; ++i)
-      std::cerr << '~';
+      llvm::errs() << '~';
   } else
-    std::cerr << '^';
-  std::cerr << '\n';
+    llvm::errs() << '^';
+  llvm::errs() << '\n';
 }
 
 // AST API
@@ -1564,20 +1564,20 @@ void ParserImpl::Error(const char *Message, const Token &At) {
 Decl::Decl(DeclKind _Kind) : Kind(_Kind) {}
 
 void ArrayDecl::dump() {
-  std::cout << "array " << Root->name
+  llvm::outs() << "array " << Root->name
             << "[" << Root->size << "]"
             << " : " << 'w' << Domain << " -> " << 'w' << Range << " = ";
 
   if (Root->isSymbolicArray()) {
-    std::cout << "symbolic\n";
+    llvm::outs() << "symbolic\n";
   } else {
-    std::cout << '[';
+    llvm::outs() << '[';
     for (unsigned i = 0, e = Root->size; i != e; ++i) {
       if (i)
-        std::cout << " ";
-      std::cout << Root->constantValues[i];
+        llvm::outs() << " ";
+      llvm::outs() << Root->constantValues[i];
     }
-    std::cout << "]\n";
+    llvm::outs() << "]\n";
   }
 }
 
@@ -1592,7 +1592,7 @@ void QueryCommand::dump() {
     ObjectsBegin = &Objects[0];
     ObjectsEnd = ObjectsBegin + Objects.size();
   }
-  ExprPPrinter::printQuery(std::cout, ConstraintManager(Constraints), 
+  ExprPPrinter::printQuery(llvm::outs(), ConstraintManager(Constraints),
                            Query, ValuesBegin, ValuesEnd,
                            ObjectsBegin, ObjectsEnd,
                            false);

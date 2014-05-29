@@ -254,7 +254,7 @@ bench_attribute:
   | COLON_TOK LOGIC_TOK logic_name 
     {
       if (*$3 != "QF_BV" && *$3 != "QF_AUFBV" && *$3 != "QF_UFBV") {
-	std::cerr << "ERROR: Logic " << *$3 << " not supported.";
+	llvm::errs() << "ERROR: Logic " << *$3 << " not supported.";
 	exit(1);
       }
 

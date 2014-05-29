@@ -221,7 +221,7 @@ class KleeHandler : public InterpreterHandler {
 private:
   Interpreter *m_interpreter;
   TreeStreamWriter *m_pathWriter, *m_symPathWriter;
-  std::ostream *m_infoFile;
+  llvm::raw_ostream *m_infoFile;
 
   SmallString<128> m_outputDirectory;
 
@@ -236,7 +236,7 @@ public:
   KleeHandler(int argc, char **argv);
   ~KleeHandler();
 
-  std::ostream &getInfoStream() const { return *m_infoFile; }
+  llvm::raw_ostream &getInfoStream() const { return *m_infoFile; }
   unsigned getNumTestCases() { return m_testIndex; }
   unsigned getNumPathsExplored() { return m_pathsExplored; }
   void incPathsExplored() { m_pathsExplored++; }
@@ -248,9 +248,9 @@ public:
                        const char *errorSuffix);
 
   std::string getOutputFilename(const std::string &filename);
-  std::ostream *openOutputFile(const std::string &filename);
+  llvm::raw_fd_ostream *openOutputFile(const std::string &filename);
   std::string getTestFilename(const std::string &suffix, unsigned id);
-  std::ostream *openTestFile(const std::string &suffix, unsigned id);
+  llvm::raw_fd_ostream *openTestFile(const std::string &suffix, unsigned id);
 
   // load a .out file
   static void loadOutFile(std::string name, 
@@ -370,16 +370,20 @@ std::string KleeHandler::getOutputFilename(const std::string &filename) {
   return path.str();
 }
 
-std::ostream *KleeHandler::openOutputFile(const std::string &filename) {
-  std::ios::openmode io_mode = std::ios::out | std::ios::trunc 
-                             | std::ios::binary;
-  std::ostream *f;
+llvm::raw_fd_ostream *KleeHandler::openOutputFile(const std::string &filename) {
+  llvm::raw_fd_ostream *f;
+  std::string Error;
   std::string path = getOutputFilename(filename);
-  f = new std::ofstream(path.c_str(), io_mode);
-  if (!f) {
-    klee_error("error opening file \"%s\" (out of memory)", filename.c_str());
-  } else if (!f->good()) {
-    klee_error("error opening file \"%s\".  KLEE may have run out of file descriptors: try to increase the maximum number of open file descriptors by using ulimit.", filename.c_str());
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3,0)
+  f = new llvm::raw_fd_ostream(path.c_str(), Error, llvm::sys::fs::F_Binary);
+#else
+  f = new llvm::raw_fd_ostream(path.c_str(), Error, llvm::raw_fd_ostream::F_Binary);
+#endif
+  if (!Error.empty()) {
+    klee_error("error opening file \"%s\".  KLEE may have run out of file "
+               "descriptors: try to increase the maximum number of open file "
+               "descriptors by using ulimit (%s).",
+               filename.c_str(), Error.c_str());
     delete f;
     f = NULL;
   }
@@ -393,7 +397,8 @@ std::string KleeHandler::getTestFilename(const std::string &suffix, unsigned id)
   return filename.str();
 }
 
-std::ostream *KleeHandler::openTestFile(const std::string &suffix, unsigned id) {
+llvm::raw_fd_ostream *KleeHandler::openTestFile(const std::string &suffix,
+                                                unsigned id) {
   return openOutputFile(getTestFilename(suffix, id));
 }
 
@@ -403,7 +408,7 @@ void KleeHandler::processTestCase(const ExecutionState &state,
                                   const char *errorMessage, 
                                   const char *errorSuffix) {
   if (errorMessage && ExitOnError) {
-    std::cerr << "EXITING ON ERROR:\n" << errorMessage << "\n";
+    llvm::errs() << "EXITING ON ERROR:\n" << errorMessage << "\n";
     exit(1);
   }
 
@@ -446,7 +451,7 @@ void KleeHandler::processTestCase(const ExecutionState &state,
     }
 
     if (errorMessage) {
-      std::ostream *f = openTestFile(errorSuffix, id);
+      llvm::raw_ostream *f = openTestFile(errorSuffix, id);
       *f << errorMessage;
       delete f;
     }
@@ -455,16 +460,19 @@ void KleeHandler::processTestCase(const ExecutionState &state,
       std::vector<unsigned char> concreteBranches;
       m_pathWriter->readStream(m_interpreter->getPathStreamID(state),
                                concreteBranches);
-      std::ostream *f = openTestFile("path", id);
-      std::copy(concreteBranches.begin(), concreteBranches.end(), 
-                std::ostream_iterator<unsigned char>(*f, "\n"));
+      llvm::raw_fd_ostream *f = openTestFile("path", id);
+      for (std::vector<unsigned char>::iterator I = concreteBranches.begin(),
+                                                E = concreteBranches.end();
+           I != E; ++I) {
+        *f << *I << "\n";
+      }
       delete f;
     }
    
     if (errorMessage || WritePCs) {
       std::string constraints;
       m_interpreter->getConstraintLog(state, constraints,Interpreter::KQUERY);
-      std::ostream *f = openTestFile("pc", id);
+      llvm::raw_ostream *f = openTestFile("pc", id);
       *f << constraints;
       delete f;
     }
@@ -472,7 +480,7 @@ void KleeHandler::processTestCase(const ExecutionState &state,
     if (WriteCVCs) {
       std::string constraints;
       m_interpreter->getConstraintLog(state, constraints, Interpreter::STP);
-      std::ostream *f = openTestFile("cvc", id);
+      llvm::raw_ostream *f = openTestFile("cvc", id);
       *f << constraints;
       delete f;
     }
@@ -480,7 +488,7 @@ void KleeHandler::processTestCase(const ExecutionState &state,
     if(WriteSMT2s) {
     	std::string constraints;
         m_interpreter->getConstraintLog(state, constraints, Interpreter::SMTLIB2);
-        std::ostream *f = openTestFile("smt2", id);
+        llvm::raw_ostream *f = openTestFile("smt2", id);
         *f << constraints;
         delete f;
     }
@@ -489,16 +497,17 @@ void KleeHandler::processTestCase(const ExecutionState &state,
       std::vector<unsigned char> symbolicBranches;
       m_symPathWriter->readStream(m_interpreter->getSymbolicPathStreamID(state),
                                   symbolicBranches);
-      std::ostream *f = openTestFile("sym.path", id);
-      std::copy(symbolicBranches.begin(), symbolicBranches.end(), 
-                std::ostream_iterator<unsigned char>(*f, "\n"));
+      llvm::raw_fd_ostream *f = openTestFile("sym.path", id);
+      for (std::vector<unsigned char>::iterator I = symbolicBranches.begin(), E = symbolicBranches.end(); I!=E; ++I) {
+        *f << *I << "\n";
+      }
       delete f;
     }
 
     if (WriteCov) {
       std::map<const std::string*, std::set<unsigned> > cov;
       m_interpreter->getCoveredLines(state, cov);
-      std::ostream *f = openTestFile("cov", id);
+      llvm::raw_ostream *f = openTestFile("cov", id);
       for (std::map<const std::string*, std::set<unsigned> >::iterator
              it = cov.begin(), ie = cov.end();
            it != ie; ++it) {
@@ -515,7 +524,7 @@ void KleeHandler::processTestCase(const ExecutionState &state,
 
     if (WriteTestInfo) {
       double elapsed_time = util::getWallTime() - start_time;
-      std::ostream *f = openTestFile("info", id);
+      llvm::raw_ostream *f = openTestFile("info", id);
       *f << "Time to generate test case: " 
          << elapsed_time << "s\n";
       delete f;
@@ -550,8 +559,8 @@ void KleeHandler::getOutFiles(std::string path,
   }
 
   if (ec) {
-    std::cerr << "ERROR: unable to read output directory: " << path
-               << ": " << ec.message() << "\n";
+    llvm::errs() << "ERROR: unable to read output directory: " << path << ": "
+                 << ec.message() << "\n";
     exit(1);
   }
 }
@@ -954,11 +963,11 @@ void stop_forking() {
 
 static void interrupt_handle() {
   if (!interrupted && theInterpreter) {
-    std::cerr << "KLEE: ctrl-c detected, requesting interpreter to halt.\n";
+    llvm::errs() << "KLEE: ctrl-c detected, requesting interpreter to halt.\n";
     halt_execution();
     sys::SetInterruptFunction(interrupt_handle);
   } else {
-    std::cerr << "KLEE: ctrl-c detected, exiting.\n";
+    llvm::errs() << "KLEE: ctrl-c detected, exiting.\n";
     exit(1);
   }
   interrupted = true;
@@ -1292,7 +1301,7 @@ int main(int argc, char **argv, char **envp) {
   // locale and other data and then calls main.
   Function *mainFn = mainModule->getFunction("main");
   if (!mainFn) {
-    std::cerr << "'main' function not found in module.\n";
+    llvm::errs() << "'main' function not found in module.\n";
     return -1;
   }
 
@@ -1347,8 +1356,8 @@ int main(int argc, char **argv, char **envp) {
   Interpreter *interpreter = 
     theInterpreter = Interpreter::create(IOpts, handler);
   handler->setInterpreter(interpreter);
-  
-  std::ostream &infoFile = handler->getInfoStream();
+
+  llvm::raw_ostream &infoFile = handler->getInfoStream();
   for (int i=0; i<argc; i++) {
     infoFile << argv[i] << (i+1<argc ? " ":"\n");
   }
@@ -1386,7 +1395,7 @@ int main(int argc, char **argv, char **envp) {
       if (out) {
         kTests.push_back(out);
       } else {
-        std::cerr << "KLEE: unable to open: " << *it << "\n";
+        llvm::errs() << "KLEE: unable to open: " << *it << "\n";
       }
     }
 
@@ -1403,8 +1412,9 @@ int main(int argc, char **argv, char **envp) {
          it != ie; ++it) {
       KTest *out = *it;
       interpreter->setReplayOut(out);
-      std::cerr << "KLEE: replaying: " << *it << " (" << kTest_numBytes(out) << " bytes)"
-                 << " (" << ++i << "/" << outFiles.size() << ")\n";
+      llvm::errs() << "KLEE: replaying: " << *it << " (" << kTest_numBytes(out)
+                   << " bytes)"
+                   << " (" << ++i << "/" << outFiles.size() << ")\n";
       // XXX should put envp in .ktest ?
       interpreter->runFunctionAsMain(mainFn, out->numArgs, out->args, pEnvp);
       if (interrupted) break;
@@ -1421,7 +1431,7 @@ int main(int argc, char **argv, char **envp) {
          it != ie; ++it) {
       KTest *out = kTest_fromFile(it->c_str());
       if (!out) {
-        std::cerr << "KLEE: unable to open: " << *it << "\n";
+        llvm::errs() << "KLEE: unable to open: " << *it << "\n";
         exit(1);
       }
       seeds.push_back(out);
@@ -1436,19 +1446,19 @@ int main(int argc, char **argv, char **envp) {
            it2 != ie; ++it2) {
         KTest *out = kTest_fromFile(it2->c_str());
         if (!out) {
-          std::cerr << "KLEE: unable to open: " << *it2 << "\n";
+          llvm::errs() << "KLEE: unable to open: " << *it2 << "\n";
           exit(1);
         }
         seeds.push_back(out);
       }
       if (outFiles.empty()) {
-        std::cerr << "KLEE: seeds directory is empty: " << *it << "\n";
+        llvm::errs() << "KLEE: seeds directory is empty: " << *it << "\n";
         exit(1);
       }
     }
        
     if (!seeds.empty()) {
-      std::cerr << "KLEE: using " << seeds.size() << " seeds\n";
+      llvm::errs() << "KLEE: using " << seeds.size() << " seeds\n";
       interpreter->useSeeds(&seeds);
     }
     if (RunInDir != "") {
@@ -1518,7 +1528,7 @@ int main(int argc, char **argv, char **envp) {
         << handler->getNumPathsExplored() << "\n";
   stats << "KLEE: done: generated tests = " 
         << handler->getNumTestCases() << "\n";
-  std::cerr << stats.str();
+  llvm::errs() << stats.str();
   handler->getInfoStream() << stats.str();
 
   BufferPtr.take();

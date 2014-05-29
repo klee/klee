@@ -51,7 +51,7 @@ void PTree::remove(Node *n) {
   } while (n && !n->left && !n->right);
 }
 
-void PTree::dump(std::ostream &os) {
+void PTree::dump(llvm::raw_ostream &os) {
   ExprPPrinter *pp = ExprPPrinter::create(os);
   pp->setNewline("\\l");
   os << "digraph G {\n";

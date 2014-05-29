@@ -272,7 +272,7 @@ void Optimize(Module* M) {
     if (Opt->getNormalCtor())
       addPass(Passes, Opt->getNormalCtor()());
     else
-      std::cerr << "llvm-ld: cannot create pass: " << Opt->getPassName() 
+      llvm::errs() << "llvm-ld: cannot create pass: " << Opt->getPassName()
                 << "\n";
   }
 #endif

@@ -92,7 +92,7 @@ ExternalDispatcher::ExternalDispatcher() {
   std::string error;
   executionEngine = ExecutionEngine::createJIT(dispatchModule, &error);
   if (!executionEngine) {
-    std::cerr << "unable to make jit: " << error << "\n";
+    llvm::errs() << "unable to make jit: " << error << "\n";
     abort();
   }
 
