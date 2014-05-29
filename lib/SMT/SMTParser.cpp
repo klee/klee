@@ -22,7 +22,6 @@
 
 //#define DEBUG
 
-using namespace std;
 using namespace klee;
 using namespace klee::expr;
 

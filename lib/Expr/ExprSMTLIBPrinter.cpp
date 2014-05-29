@@ -11,8 +11,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "klee/util/ExprSMTLIBPrinter.h"
 
-using namespace std;
-
 namespace ExprSMTLIBOptions {
 // Command line options
 llvm::cl::opt<klee::ExprSMTLIBPrinter::ConstantDisplayMode>
@@ -495,7 +493,7 @@ void ExprSMTLIBPrinter::printArrayDeclarations() {
         /*loop over elements in the array and generate an assert statement
           for each one
          */
-        for (vector<ref<ConstantExpr> >::const_iterator
+        for (std::vector<ref<ConstantExpr> >::const_iterator
                  ce = array->constantValues.begin();
              ce != array->constantValues.end(); ce++, byteIndex++) {
           *p << "(assert (";
@@ -556,7 +554,7 @@ void ExprSMTLIBPrinter::printAction() {
     const Array *theArray = 0;
 
     // loop over the array names
-    for (vector<const Array *>::const_iterator it =
+    for (std::vector<const Array *>::const_iterator it =
              arraysToCallGetValueOn->begin();
          it != arraysToCallGetValueOn->end(); it++) {
       theArray = *it;
@@ -882,7 +880,8 @@ ExprSMTLIBPrinter::setArrayValuesToGet(const std::vector<const Array *> &a) {
    * that the solver knows what to do when we ask for the values of arrays
    * that don't feature in our query!
    */
-  for (vector<const Array *>::const_iterator i = a.begin(); i != a.end(); ++i) {
+  for (std::vector<const Array *>::const_iterator i = a.begin(); i != a.end();
+       ++i) {
     usedArrays.insert(*i);
   }
 }
