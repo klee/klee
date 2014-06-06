@@ -164,6 +164,11 @@ namespace {
   SimplifySymIndices("simplify-sym-indices",
                      cl::init(false));
 
+  cl::opt<bool>
+  EqualitySubstitution("equality-substitution",
+                     cl::init(true),
+                     cl::desc("Simplify equality expressions before querying the solver (default=on)."));
+
   cl::opt<unsigned>
   MaxSymArraySize("max-sym-array-size",
                   cl::init(0));
@@ -333,7 +338,7 @@ Executor::Executor(const InterpreterOptions &opts,
                          interpreterHandler->getOutputFilename(ALL_QUERIES_PC_FILE_NAME),
                          interpreterHandler->getOutputFilename(SOLVER_QUERIES_PC_FILE_NAME));
   
-  this->solver = new TimingSolver(solver);
+  this->solver = new TimingSolver(solver, EqualitySubstitution);
 
   memory = new MemoryManager();
 }
