@@ -2808,7 +2808,8 @@ void Executor::terminateStateOnError(ExecutionState &state,
     std::string info_str = info.str();
     if (info_str != "")
       msg << "Info: \n" << info_str;
-    interpreterHandler->processTestCase(state, MsgString.c_str(), suffix);
+
+    interpreterHandler->processTestCase(state, msg.str().c_str(), suffix);
   }
     
   terminateState(state);
