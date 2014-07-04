@@ -1529,7 +1529,18 @@ int main(int argc, char **argv, char **envp) {
         << handler->getNumPathsExplored() << "\n";
   stats << "KLEE: done: generated tests = " 
         << handler->getNumTestCases() << "\n";
+
+  bool useColors = llvm::errs().is_displayed();
+  if (useColors)
+    llvm::errs().changeColor(llvm::raw_ostream::GREEN,
+                             /*bold=*/true,
+                             /*bg=*/false);
+
   llvm::errs() << stats.str();
+
+  if (useColors)
+    llvm::errs().resetColor();
+
   handler->getInfoStream() << stats.str();
 
   BufferPtr.take();
