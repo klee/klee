@@ -1,321 +1,458 @@
 #!/usr/bin/env python
+# -*- encoding: utf-8 -*-
+"""Output statistics logged by Klee."""
 
+# use '/' to mean true division and '//' to mean floor division
 from __future__ import division
+from __future__ import print_function
 
-import sys
 import os
-    
-def getFile(dir):
-    return os.path.join(dir,'run.stats')
+import re
+import sys
+import argparse
 
-def getLastRecord(dir):
-    f = open(getFile(dir))
-    try:
-        f.seek(-1024, 2)
-    except IOError:
-        pass # at beginning?
-    for ln in f.read(1024).split('\n')[::-1]:
-        ln = ln.strip()
-        if ln.startswith('(') and ln.endswith(')'):
-            if '(' in ln[1:]:
-                print >>sys.stderr, 'WARNING: corrupted line in file, out of disk space?'
-                ln = ln[ln.index('(',1):]
-            return eval(ln)
-    raise IOError
+from operator import itemgetter
+try:
+    from tabulate import TableFormat, Line, DataRow, tabulate
+except:
+    print('Error: Package "tabulate" required for table formatting. '
+          'Please install it using "pip" or your package manager.',
+          file=sys.stderr)
+    exit(1)
+
+Legend = [
+    ('Instrs', 'number of executed instructions'),
+    ('Time', 'total wall time (s)'),
+    ('TUser', 'total user time'),
+    ('ICov', 'instruction coverage in the LLVM bitcode (%)'),
+    ('BCov', 'branch coverage in the LLVM bitcode (%)'),
+    ('ICount', 'total static instructions in the LLVM bitcode'),
+    ('TSolver', 'time spent in the constraint solver'),
+    ('States', 'number of currently active states'),
+    ('Mem', 'megabytes of memory currently used'),
+    ('Queries', 'number of queries issued to STP'),
+    ('AvgQC', 'average number of query constructs per query'),
+    ('Tcex', 'time spent in the counterexample caching code'),
+    ('Tfork', 'time spent forking'),
+    ('TResolve', 'time spent in object resolution'),
+]
+
+KleeTable = TableFormat(lineabove=Line("-", "-", "-", "-"),
+                        linebelowheader=Line("-", "-", "-", "-"),
+                        linebetweenrows=None,
+                        linebelow=Line("-", "-", "-", "-"),
+                        headerrow=DataRow("|", "|", "|"),
+                        datarow=DataRow("|", "|", "|"),
+                        padding=0,
+                        with_header_hide=None)
+
+def getLogFile(path):
+    """Return the path to run.stats."""
+    return os.path.join(path, 'run.stats')
 
 
 class LazyEvalList:
+    """Store all the lines in run.stats and eval() when needed."""
     def __init__(self, lines):
-        self.lines = lines
+        # The first line in the records contains headers.
+        self.lines = lines[1:]
 
     def __getitem__(self, index):
-        item = self.lines[index]
-        if isinstance(item,str):
-            item = self.lines[index] = eval(item)
-        return item
+        if isinstance(self.lines[index], str):
+            self.lines[index] = eval(self.lines[index])
+        return self.lines[index]
 
     def __len__(self):
         return len(self.lines)
 
 
-def getMatchedRecordIdx(data,reference,key):
-    reference = int(reference)
-    lo = 1 # header
-    hi = len(data)-1
-    while lo<hi:
-        mid = (lo+hi)//2
-        if key(data[mid])<=reference:
+def getMatchedRecordIndex(records, column, target):
+    """Find target from the specified column in records."""
+    target = int(target)
+    lo = 0
+    hi = len(records) - 1
+    while lo < hi:
+        mid = (lo + hi) // 2
+        if column(records[mid]) <= target:
             lo = mid + 1
         else:
             hi = mid
     return lo
 
-def getStatisticalData(data):
-    memIndex = 6;
-    stateIndex = 5;
 
-    memValues = map(lambda rec: rec[memIndex], LazyEvalList(data[1:]));
-    maxMem = max(memValues);
-    maxMem = maxMem/1024./1024.
+def aggregateRecords(records):
+    # index for memUsage and stateCount in run.stats
+    memIndex = 6
+    stateIndex = 5
 
-    avgMem = sum(memValues)/len(memValues);
-    avgMem = avgMem/1024./1024.
+    # maximum and average memory usage
+    memValues = list(map(itemgetter(memIndex), records))
+    maxMem = max(memValues) / 1024 / 1024
+    avgMem = sum(memValues) / len(memValues) / 1024 / 1024
 
-    stateValues = map(lambda rec: rec[stateIndex], LazyEvalList(data[1:]));
-    maxStates = max(stateValues);
-    avgStates = sum(stateValues)/len(stateValues)
+    # maximum and average number of states
+    stateValues = list(map(itemgetter(stateIndex), records))
+    maxStates = max(stateValues)
+    avgStates = sum(stateValues) / len(stateValues)
 
     return (maxMem, avgMem, maxStates, avgStates)
 
-def stripCommonPathPrefix(table, col):
-    paths = map(os.path.normpath, [row[col] for row in table])
-    pathElts = [p.split('/') for p in paths]
-    zipped = zip(*pathElts)
-    idx = 0
-    for idx,elts in enumerate(zipped):
-        if len(set(elts))>1:
+
+def stripCommonPathPrefix(paths):
+    paths = map(os.path.normpath, paths)
+    paths = [p.split('/') for p in paths]
+    zipped = zip(*paths)
+    i = 0
+    for i, elts in enumerate(zipped):
+        if len(set(elts)) > 1:
             break
-    paths = ['/'.join(elts[idx:]) for elts in pathElts]
-    for i,row in enumerate(table):
-        table[i] = row[:col] + (paths[i],) + row[col+1:]
+    return ['/'.join(p[i:]) for p in paths]
 
 
-def getKeyIndex(keyName,labels):
-    def normalizedKey(key):
-        if key.endswith("(#)") or key.endswith("(%)") or key.endswith("(s)"):
-            key = key[:-3]
-        return key.lower()
+def getKeyIndex(key, labels):
+    """Get the index of the specified key in labels."""
+    def normalizeKey(key):
+        return re.split('\W', key)[0]
 
-    keyIndex = None
-    for i,title in enumerate(labels):
-        if normalizedKey(title)==normalizedKey(keyName):
-            keyIndex = i
-            break
+    for i, title in enumerate(labels):
+        if normalizeKey(title) == normalizeKey(key):
+            return i
     else:
-        raise ValueError,'invalid keyName to sort by: %s'%`keyName`
-    return keyIndex
+        raise ValueError('invalid key: {0}'.format(key))
 
 
-def sortTable(table, labels, keyName, ascending=False):   
-    indices = range(len(table))
-    keyIndex = getKeyIndex(keyName,labels)
-    indices.sort(key = lambda n: table[n][keyIndex])
-    if not ascending:
-        indices.reverse()
-    table[:] = [table[n] for n in indices]
-
-
-def printTable(table, precision):
-    def strOrNone(ob):
-        if ob is None:
-            return ''
-        elif isinstance(ob,float):
-            # prepare format string according to settings of
-            # floating number
-            formatString = '%.'
-            formatString += '%d'%precision
-            formatString += 'f'
-            return formatString%ob
-        else:
-            return str(ob)
-    def printRow(row):
-        if row is None:
-            print header
-        else:
-            out.write('|')
-            for j,elt in enumerate(row):
-                if j:
-                    out.write(' %*s |'%(widths[j],elt))
-                else:
-                    out.write(' %-*s |'%(widths[j],elt))
-            out.write('\n')
-    maxLen = max([len(r) for r in table if r])
-    for i,row in enumerate(table):
-        if row:
-            table[i] = row + (None,)*(maxLen-len(row))
-    table = [row and map(strOrNone,row) or None for row in table]
-    tableLens = [map(len,row) for row in table if row]
-    from pprint import pprint
-    widths = map(max, zip(*tableLens))
-    out = sys.stdout
-    header = '-'*(sum(widths) + maxLen*3 + 1)
-    map(printRow, table)
-        
-
-def main(args):
-    from optparse import OptionParser
-    
-    # inherit from the OptionParser class and override format_epilog
-    # in order to get newlines in the 'epilog' text
-    class MyParser(OptionParser):
-        def format_epilog(self, formatter):
-            return self.epilog
-       
-    op = MyParser(usage="usage: %prog [options] directories",
-                  epilog="""\
-
-LEGEND
-------
-Instrs:      Number of executed instructions
-Time:        Total wall time (s)
-TUser:       Total user time
-ICov:        Instruction coverage in the LLVM bitcode (%)
-BCov:        Branch coverage in the LLVM bitcode (%)
-ICount:      Total static instructions in the LLVM bitcode
-TSolver:     Time spent in the constraint solver
-States:      Number of currently active states
-Mem:         Megabytes of memory currently used
-Queries:     Number of queries issued to STP
-AvgQC:       Average number of query constructs per query
-Tcex:        Time spent in the counterexample caching code
-Tfork:       Time spent forking
-TResolve:    Time spent in object resolution
-\n""")
-
-    op.add_option('', '--print-more', dest='printMore',
-                  action='store_true', default=False,
-                  help='Print extra information (needed when monitoring an ongoing run).')
-    op.add_option('', '--print-all', dest='printAll',
-                  action='store_true', default=False,
-                  help='Print all available information.')
-    op.add_option('', '--print-rel-times', dest='printRelTimes',
-                  action='store_true', default=False,
-                  help='Print only values of measured times. Values are relative to the measured system execution time.')
-    op.add_option('', '--print-abs-times', dest='printAbsTimes',
-                  action='store_true', default=False,
-                  help='Print only values of measured times. Absolute values (in seconds) are printed.')    
-    op.add_option('','--sort-by', dest='sortBy',
-                  help='key value to sort by, e.g. --sort-by=Instrs')
-    op.add_option('','--ascending', dest='ascending',
-                  action='store_true', default=False,
-                  help='sort in ascending order (default is descending)')
-    op.add_option('','--compare-by', dest='compBy',
-                  help="key value on which to compare runs to the reference one (which is the first one).  E.g., --compare-by=Instrs shows how each run compares to the reference run after executing the same number of instructions as the reference run.  If a run hasn't executed as many instructions as the reference one, we simply print the statistics at the end of that run.")
-    op.add_option('','--compare-at', dest='compAt',
-                  help='value to compare the runs at. Can be special value \'last\' to compare at the last point which makes sense. Use in conjunction with --compare-by')
-    op.add_option('','--precision', dest='dispPrecision', default=2, metavar='INTEGER',
-                  help='Floating point numbers display precision. By default it is set to 2.')
-    opts,dirs = op.parse_args()
-    
-    if not dirs:
-        op.error("no directories given.")
-
-    # make sure that precision is a positive integer            
-    if not isinstance(opts.dispPrecision, int):
-        try:            
-            precision = int(opts.dispPrecision)              
-        except ValueError:
-            op.error("display precision should be an integer")           
-            # make sure that the precision is a positive integer as well
-        if not (0 <= precision):
-            op.error("display precision should be positive")
-    else:
-        precision = opts.dispPrecision
-            
-
-    actualDirs = []
+def getKleeOutDirs(dirs):
+    kleeOutDirs = []
     for dir in dirs:
-        if os.path.exists(os.path.join(dir,'info')):
-            actualDirs.append(dir)
+        if os.path.exists(os.path.join(dir, 'info')):
+            kleeOutDirs.append(dir)
         else:
-            for root,dirs,_ in os.walk(dir):
-                for d in dirs:
-                    p = os.path.join(root,d)
-                    if os.path.exists(os.path.join(p,'info')):
-                        actualDirs.append(p)
-    dirs = actualDirs
-    
-    summary = []
-    ssummary = []
-    
-    if (opts.printAll):
-        labels = ('Path','Instrs','Time(s)','ICov(%)','BCov(%)','ICount','TSolver(%)', 'States', 'maxStates', 'avgStates', 'Mem(MB)', 'maxMem(MB)', 'avgMem(MB)', 'Queries', 'AvgQC', 'Tcex(%)', 'Tfork(%)')
-    elif (opts.printRelTimes):
-        labels = ('Path', 'Time(s)', 'TUser(%)', 'TSolver(%)', 'Tcex(%)', 'Tfork(%)', 'TResolve(%)')
-    elif (opts.printAbsTimes):
-        labels = ('Path', 'Time(s)', 'TUser(s)', 'TSolver(s)', 'Tcex(s)', 'Tfork(s)', 'TResolve(s)')
-    elif (opts.printMore):
-        labels = ('Path','Instrs','Time(s)','ICov(%)','BCov(%)','ICount','TSolver(%)', 'States', 'maxStates', 'Mem(MB)', 'maxMem(MB)')
+            for root, subdirs, _ in os.walk(dir):
+                for d in subdirs:
+                    path = os.path.join(root, d)
+                    if os.path.exists(os.path.join(path, 'info')):
+                        kleeOutDirs.append(path)
+    return kleeOutDirs
+
+
+def getLabels(pr):
+    if pr == 'all':
+        labels = ('Path', 'Instrs', 'Time(s)', 'ICov(%)', 'BCov(%)', 'ICount',
+                  'TSolver(%)', 'States', 'maxStates', 'avgStates', 'Mem(MB)',
+                  'maxMem(MB)', 'avgMem(MB)', 'Queries', 'AvgQC', 'Tcex(%)',
+                  'Tfork(%)')
+    elif pr == 'reltime':
+        labels = ('Path', 'Time(s)', 'TUser(%)', 'TSolver(%)',
+                  'Tcex(%)', 'Tfork(%)', 'TResolve(%)')
+    elif pr == 'abstime':
+        labels = ('Path', 'Time(s)', 'TUser(s)', 'TSolver(s)',
+                  'Tcex(s)', 'Tfork(s)', 'TResolve(s)')
+    elif pr == 'more':
+        labels = ('Path', 'Instrs', 'Time(s)', 'ICov(%)', 'BCov(%)', 'ICount',
+                  'TSolver(%)', 'States', 'maxStates', 'Mem(MB)', 'maxMem(MB)')
     else:
-        labels = ('Path','Instrs','Time(s)','ICov(%)','BCov(%)','ICount','TSolver(%)')
+        labels = ('Path', 'Instrs', 'Time(s)', 'ICov(%)',
+                  'BCov(%)', 'ICount', 'TSolver(%)')
+    return labels
 
 
-    def addRecord(Path,rec, stats):
-        (I,BFull,BPart,BTot,T,St,Mem,QTot,QCon,NObjs,Treal,SCov,SUnc,QT,Ts,Tcex,Tf,Tr) = rec
-        (maxMem,avgMem,maxStates,avgStates) = stats
-        # special case for straight-line code: report 100% branch coverage
-        if BTot == 0:
-            BFull = BTot = 1
+def getRow(record, stats, pr):
+    """Compose data for the current run into a row."""
+    I, BFull, BPart, BTot, T, St, Mem, QTot, QCon,\
+        _, Treal, SCov, SUnc, _, Ts, Tcex, Tf, Tr = record
+    maxMem, avgMem, maxStates, avgStates = stats
 
-        Mem=Mem/1024./1024.
-        AvgQC = int(QCon/max(1,QTot))
-        if (opts.printAll):
-            table.append((Path, I, Treal, 100.*SCov/(SCov+SUnc), 100.*(2*BFull+BPart)/(2.*BTot),
-                          SCov+SUnc, 100.*Ts/Treal, St, maxStates, avgStates, Mem, maxMem, avgMem, QTot, AvgQC, 100.*Tcex/Treal, 100.*Tf/Treal))
-        elif (opts.printRelTimes):
-            table.append((Path, Treal, 100.*T/Treal, 100.*Ts/Treal, 100.*Tcex/Treal, 100.*Tf/Treal, 100.*Tr/Treal))
-        elif (opts.printAbsTimes):
-            table.append((Path, Treal, T, Ts, Tcex, Tf, Tr))
-        elif (opts.printMore):
-            table.append((Path, I, Treal, 100.*SCov/(SCov+SUnc), 100.*(2*BFull+BPart)/(2.*BTot),
-                          SCov+SUnc, 100.*Ts/Treal, St, maxStates, Mem, maxMem))
-        else:
-            table.append((Path, I, Treal, 100.*SCov/(SCov+SUnc), 100.*(2*BFull+BPart)/(2.*BTot),
-                          SCov+SUnc, 100.*Ts/Treal))
-        
-    def addRow(Path,data,stats):
-        data = tuple(data[:18]) + (None,)*(18-len(data))
-        addRecord(Path,data,stats)
-        if not summary:
-            summary[:] = list(data)
-            ssummary[:] = list(stats);
-        else:
-            summary[:] = [(a+b) for a,b in zip(summary,data)]
-            ssummary[:] = [(a+b) for a,b in zip(ssummary,stats)]
+    # special case for straight-line code: report 100% branch coverage
+    if BTot == 0:
+        BFull = BTot = 1
 
-    datas = [(dir,LazyEvalList(list(open(getFile(dir))))) for dir in dirs]
+    Mem = Mem / 1024 / 1024
+    AvgQC = int(QCon / max(1, QTot))
 
-    #labels in the same order as in the stats file. used by --compare-by.
-    #current impl needs monotonic values. keep only the ones which make sense
-    rawLabels=('Instrs','','','','','','','Queries','','','Time','ICov','','','','','','')
-    
-    if opts.compBy:
-        compareIndex = getKeyIndex(opts.compBy,rawLabels)
-        if opts.compAt:
-            if opts.compAt == 'last':
-                referenceValue = min(map(lambda rec: rec[1][-1][compareIndex], datas))
-            else:
-                referenceValue = opts.compAt
-        else:
-            referenceValue = datas[0][1][-1][compareIndex]
+    if pr == 'all':
+        row = (I, Treal, 100 * SCov / (SCov + SUnc),
+               100 * (2 * BFull + BPart) / (2 * BTot), SCov + SUnc,
+               100 * Ts / Treal, St, maxStates, avgStates,
+               Mem, maxMem, avgMem, QTot, AvgQC,
+               100 * Tcex / Treal, 100 * Tf / Treal)
+    elif pr == 'reltime':
+        row = (Treal, 100 * T / Treal, 100 * Ts / Treal,
+               100 * Tcex / Treal, 100 * Tf / Treal,
+               100 * Tr / Treal)
+    elif pr == 'abstime':
+        row = (Treal, T, Ts, Tcex, Tf, Tr)
+    elif pr == 'more':
+        row = (I, Treal, 100 * SCov / (SCov + SUnc),
+               100 * (2 * BFull + BPart) / (2 * BTot),
+               SCov + SUnc, 100 * Ts / Treal,
+               St, maxStates, Mem, maxMem)
+    else:
+        row = (I, Treal, 100 * SCov / (SCov + SUnc),
+               100 * (2 * BFull + BPart) / (2 * BTot),
+               SCov + SUnc, 100 * Ts / Treal)
+    return row
 
-    table = []    
-    for dir,data in datas:
+
+def drawLineChart(vectors, titles):
+    """Draw a line chart based on data from vectors.
+
+    Args:
+        vectors: A list of vectors. Each vector is drawn in a separate
+                 subchart.
+        titles: A list of strings. Each string is an explanation of the
+                corresponding vector.
+    """
+    try:
+        import matplotlib
+        matplotlib.use('Agg')  # plot without X-server connection
+        import matplotlib.pyplot as plt
+    except:
+        print('Error: Package "matplotlib" required for figure plotting. '
+              'Please install it using "pip" or your package manager.',
+              file=sys.stderr)
+        exit(1)
+    from math import sqrt, ceil
+
+    nFigs = len(vectors)       # number of subfigures
+    nRow = int(sqrt(nFigs))    # number of rows in the figure
+    nCol = ceil(nFigs / nRow)  # number of columns in the figure
+
+    fig = plt.figure()
+    for i in range(nFigs):
+        ax = fig.add_subplot(nRow, nCol, i)
+        ax.plot(vectors[i])
+        ax.set_title(titles[i])
+        #ax.set_xlabel()
+        #ax.set_ylabel()
+
+    #fig.show()
+    #raw_input('Press any key to continue..')
+
+    def getFileName():
+        """Get a unused file name in current directory."""
+        i = 0
+        fileName = 'fig-klee-stats-{0}.png'.format(i)
+        while os.path.exists(fileName):
+            i = i + 1
+            fileName = 'fig-klee-stats-{0}.png'.format(i)
+        return fileName
+
+    plt.savefig(getFileName(),
+                dpi=150,  # dots-per-inch, default: 100
+                bbox_inches='tight',  # tighter bbox
+                transparent=False)
+
+
+def main():
+    # function for sanitizing arguments
+    def isPositiveInt(value):
         try:
-            if opts.compBy:
-                matchIdx = getMatchedRecordIdx(data,referenceValue,lambda f: f[compareIndex])
-                stats = getStatisticalData(LazyEvalList(data[0:matchIdx+1]))
-                addRow(dir,data[matchIdx],stats)
-            else:
-                stats = getStatisticalData(data)
-                addRow(dir, data[len(data)-1],stats)  #getLastRecord(dir))
-        except IOError:
-            print 'Unable to open: ',dir
-            continue
+            value = int(value)
+        except ValueError:
+            raise argparse.ArgumentTypeError(
+                'integer expected: {0}'.format(value))
+        if value <= 0:
+            raise argparse.ArgumentTypeError(
+                'positive integer expected: {0}'.format(value))
+        return value
 
-    stripCommonPathPrefix(table, 0)
-    if opts.sortBy:
-        sortTable(table, labels, opts.sortBy, opts.ascending)
-    if not table:
-        sys.exit(1)
-    elif len(table)>1:
-        table.append(None)
-        addRecord('Total (%d)'%(len(table)-1,),summary, ssummary)
-    table[0:0] = [None,labels,None]
-    table.append(None)
-                
-    printTable(table, precision)              
-        
-        
-if __name__=='__main__':
-    main(sys.argv)
+    parser = argparse.ArgumentParser(
+        description='output statistics logged by klee',
+        epilog='LEGEND\n' + tabulate(Legend),
+        formatter_class=argparse.RawDescriptionHelpFormatter)
+
+    parser.add_argument('dir', nargs='+', help='klee output directory')
+
+    parser.add_argument('--precision',
+                        dest='precision', type=isPositiveInt,
+                        default=2, metavar='n',
+                        help='Floating point numbers display precision '
+                        '(default: 2).')
+    parser.add_argument('--table-format',
+                        choices=['plain', 'simple', 'grid', 'pipe', 'orgtbl',
+                                 'rst', 'mediawiki', 'latex', 'klee'],
+                        dest='tableFormat', default='klee',
+                        help='Table format for the summary.')
+    parser.add_argument('--draw-line-chart',
+                        dest='drawLineChart', metavar='header-list',
+                        help='Draw line chart for a list of columns. '
+                        'Columns must be chosen from the headers of the '
+                        'table outputted and seperated by comma (e.g., '
+                        '--draw-line-chart=Instrs,Time). Data points '
+                        'on x-axis correspond to lines in run.stats.')
+    parser.add_argument('--sample-interval', dest='sampleInterv',
+                        type=isPositiveInt, default='10', metavar='n',
+                        help='Sample a data point every n lines for a '
+                        'run.stats (default: 10)')
+
+    # argument group for controlling output verboseness
+    pControl = parser.add_mutually_exclusive_group(required=False)
+    pControl.add_argument('--print-all',
+                          action='store_true', dest='pAll',
+                          help='Print all available information.')
+    pControl.add_argument('--print-rel-times',
+                          action='store_true', dest='pRelTimes',
+                          help='Print only values of measured times. '
+                          'Values are relative to the measured system '
+                          'execution time.')
+    pControl.add_argument('--print-abs-times',
+                          action='store_true', dest='pAbsTimes',
+                          help='Print only values of measured times. '
+                          'Absolute values (in seconds) are printed.')
+    pControl.add_argument('--print-more',
+                          action='store_true', dest='pMore',
+                          help='Print extra information (needed when '
+                          'monitoring an ongoing run).')
+
+    # arguments for sorting
+    parser.add_argument('--sort-by', dest='sortBy', metavar='header',
+                        help='Key value to sort by. Must be chosen from '
+                        'the headers of the table outputted  (e.g., '
+                        '--sort-by=Instrs).')
+    parser.add_argument('--ascending',
+                        dest='ascending', action='store_true',
+                        help='Sort in ascending order (default: False).')
+
+    # arguments for comparing
+    parser.add_argument('--compare-by', dest='compBy', metavar='header',
+                        help='Key value on which to compare runs to the '
+                        'reference one (which is the first one). Must be '
+                        'chosen from the headers of the table oputputted. '
+                        'e.g., --compare-by=Instrs shows how each run '
+                        'compares to the reference run after executing the '
+                        'same number of instructions as the reference run. '
+                        "If a run hasn't executed as many instructions as "
+                        'the reference one, we simply print the statistics '
+                        'at the end of that run.')
+    parser.add_argument('--compare-at', dest='compAt', metavar='value',
+                        help='Value to compare the runs at. Can be special '
+                        "value 'last' to compare at the last point which "
+                        'makes sense. Use in conjunction with --compare-by.')
+
+    args = parser.parse_args()
+
+    # get print controls
+    pr = 'NONE'
+    if args.pAll:
+        pr = 'all'
+    elif args.pRelTimes:
+        pr = 'reltime'
+    elif args.pAbsTimes:
+        pr = 'abstime'
+    elif args.pMore:
+        pr = 'more'
+
+    dirs = getKleeOutDirs(args.dir)
+    if len(dirs) == 0:
+        print('no klee output dir found', file=sys.stderr)
+        exit(1)
+    # read contents from every run.stats file into LazyEvalList
+    data = [LazyEvalList(list(open(getLogFile(d)))) for d in dirs]
+    if len(data) > 1:
+        dirs = stripCommonPathPrefix(dirs)
+    # attach the stripped path
+    data = list(zip(dirs, data))
+
+    labels = getLabels(pr)
+    # labels in the same order as in the run.stats file. used by --compare-by.
+    # current impl needs monotonic values, so only keep the ones making sense.
+    rawLabels = ('Instrs', '', '', '', '', '', '', 'Queries',
+                 '', '', 'Time', 'ICov', '', '', '', '', '', '')
+
+    if args.compBy:
+        # index in the record of run.stats
+        compIndex = getKeyIndex(args.compBy, rawLabels)
+        if args.compAt:
+            if args.compAt == 'last':
+                # [records][last-record][compare-by-index]
+                refValue = min(map(lambda r: r[1][-1][compIndex], data))
+            else:
+                refValue = args.compAt
+        else:
+            refValue = data[0][1][-1][compIndex]
+
+    # build the main body of the table
+    table = []
+    totRecords = []  # accumulated records
+    totStats = []    # accumulated stats
+    for path, records in data:
+        row = [path]
+        if args.compBy:
+            matchIndex = getMatchedRecordIndex(
+                records, itemgetter(compIndex), refValue)
+            stats = aggregateRecords(LazyEvalList(records[:matchIndex + 1]))
+            totStats.append(stats)
+            row.extend(getRow(records[matchIndex], stats, pr))
+            totRecords.append(records[matchIndex])
+        else:
+            stats = aggregateRecords(records)
+            totStats.append(stats)
+            row.extend(getRow(records[-1], stats, pr))
+            totRecords.append(records[-1])
+        table.append(row)
+    # calculate the total
+    totRecords = [sum(e) for e in zip(*totRecords)]
+    totStats = [sum(e) for e in zip(*totStats)]
+    totalRow = ['Total ({0})'.format(len(table))]
+    totalRow.extend(getRow(totRecords, totStats, pr))
+
+    if args.sortBy:
+        table = sorted(table, key=itemgetter(getKeyIndex(args.sortBy, labels)),
+                       reverse=(not args.ascending))
+
+    if len(data) > 1:
+        table.append(totalRow)
+    table.insert(0, labels)
+
+    if args.tableFormat != 'klee':
+        print(tabulate(
+            table, headers='firstrow',
+            tablefmt=args.tableFormat,
+            floatfmt='.{p}f'.format(p=args.precision),
+            numalign='right', stralign='center'))
+    else:
+        stream = tabulate(
+            table, headers='firstrow',
+            tablefmt=KleeTable,
+            floatfmt='.{p}f'.format(p=args.precision),
+            numalign='right', stralign='center')
+        # add a line separator before the total line
+        if len(data) > 1:
+            stream = stream.splitlines()
+            stream.insert(-2, stream[-1])
+            stream = '\n'.join(stream)
+        print(stream)
+
+    if args.drawLineChart:
+        if len(dirs) != 1:
+            print('--draw-line-chart only supports using a single file',
+                  file=sys.stderr)
+            exit(1)
+
+        # sample according to the given interval
+        samples = [r for i, r in enumerate(data[0][1])
+                   if i % args.sampleInterv == 0]
+        vectors = []
+        for i in range(len(samples)):
+            # aggregate all the samples upto the i-th one
+            stats = aggregateRecords(samples[:i + 1])
+            vectors.append(getRow(samples[i], stats, pr))
+
+        titles = args.drawLineChart.split(',')
+        # Index returned by getKeyIndex() against labels is starting from
+        # 'Path' column.  vectors here doesn't have the 'Path' column.
+        indices = [getKeyIndex(e, labels) - 1 for e in titles]
+        # get one more column to make sure itemgetter always return tuples
+        indices.append(0)
+        # strip columns not specified by the user
+        vectors = map(itemgetter(*indices), vectors)
+        # combine elements in the same column into the same tuple
+        vectors = list(zip(*vectors))
+        # remove the column we get but not needed
+        vectors = vectors[:-1]
+
+        drawLineChart(vectors, titles)
+
+
+if __name__ == '__main__':
+    main()
