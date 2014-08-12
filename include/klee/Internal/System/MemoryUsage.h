@@ -14,6 +14,7 @@
 
 namespace klee {
   namespace util {
+  	/** \brief returns KLEE's total malloc usage in mb */
     size_t GetTotalMallocUsage();
   }
 }
