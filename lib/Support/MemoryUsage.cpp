@@ -18,17 +18,15 @@
 using namespace klee;
 
 size_t util::GetTotalMallocUsage() {
-    double residentSet = 0.0;
-
-    long rss;
     std::string ignore;
     std::ifstream ifs("/proc/self/stat", std::ios_base::in);
-    ifs >> ignore >> ignore >> ignore >> ignore >> ignore >> ignore >> ignore 
-        >> ignore >> ignore >> ignore >> ignore >> ignore >> ignore >> ignore 
-        >> ignore >> ignore >> ignore >> ignore >> ignore >> ignore >> ignore 
-        >> ignore >> ignore >> rss;
-
-    long pageSizeKb = sysconf(_SC_PAGE_SIZE) / 1024; // in case x86-64 is configured to use 2MB pages
-    residentSet = rss * pageSizeKb / 1024.0;
-    return residentSet;
+    for(int i = 1; i <= 22; i++) // we're not interested in the first 22 fields
+    	ifs >> ignore;
+    
+    unsigned long vsize; // swap + ram usage in mb
+    ifs >> vsize;
+    vsize /= 1048576.0;
+		
+		ifs.close();
+    return vsize;
 }
