@@ -40,7 +40,6 @@
 
 #include "llvm/Linker.h"
 #include "llvm/Assembly/AssemblyAnnotationWriter.h"
-#include "llvm/Support/CFG.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/InstIterator.h"
 #include "llvm/Support/raw_ostream.h"
@@ -49,6 +48,7 @@
 
 #if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
 #include "llvm/Support/CallSite.h"
+#include "llvm/Support/CFG.h"
 #else
 #include "llvm/IR/CallSite.h"
 #endif
