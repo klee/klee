@@ -177,9 +177,12 @@ void Optimize(Module* M) {
 #if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
   // Add an appropriate TargetData instance for this module...
   addPass(Passes, new TargetData(M));
-#else
+#elif LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
   // Add an appropriate DataLayout instance for this module...
   addPass(Passes, new DataLayout(M));
+#else
+  // Add an appropriate DataLayout instance for this module...
+  addPass(Passes, new DataLayoutPass(M));
 #endif
 
   // DWD - Run the opt standard pass list as well.
