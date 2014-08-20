@@ -1278,9 +1278,15 @@ int main(int argc, char **argv, char **envp) {
 
   auto mainModuleOrError = getLazyBitcodeModule(Buffer->get(), getGlobalContext());
 
-  if (!mainModuleOrError)
+  if (!mainModuleOrError) {
     klee_error("error loading program '%s': %s", InputFile.c_str(),
                mainModuleOrError.getError().message().c_str());
+  }
+  else {
+    // The module has taken ownership of the MemoryBuffer so release it
+    // from the std::unique_ptr
+    Buffer->release();
+  }
 
   mainModule = *mainModuleOrError;
   if (auto ec = mainModule->materializeAllPermanently()) {
