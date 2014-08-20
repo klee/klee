@@ -52,7 +52,10 @@
 #include "llvm/Support/TargetSelect.h"
 #endif
 #include "llvm/Support/Signals.h"
+
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
 #include "llvm/Support/system_error.h"
+#endif
 
 #include <dirent.h>
 #include <signal.h>
