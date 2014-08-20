@@ -19,7 +19,11 @@
 #include "llvm/PassManager.h"
 #include "llvm/Analysis/Passes.h"
 #include "llvm/Analysis/LoopPass.h"
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
 #include "llvm/Analysis/Verifier.h"
+#else
+#include "llvm/IR/Verifier.h"
+#endif
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/DynamicLibrary.h"
 
