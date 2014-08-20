@@ -34,8 +34,14 @@
 #include "llvm/Instructions.h"
 #include "llvm/Module.h"
 #endif
+
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
 #include "llvm/Support/CallSite.h"
 #include "llvm/Support/CFG.h"
+#else
+#include "llvm/IR/CallSite.h"
+#include "llvm/IR/CFG.h"
+#endif
 #include "llvm/Support/CommandLine.h"
 
 #include <cassert>
