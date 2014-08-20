@@ -60,6 +60,8 @@
 
 #include <sstream>
 
+#define DEBUG_TYPE "kmodule"
+
 using namespace llvm;
 using namespace klee;
 
@@ -275,8 +277,7 @@ static void inlineChecks(Module *module, const char * functionName) {
 void KModule::addInternalFunction(const char* functionName){
   Function* internalFunction = module->getFunction(functionName);
   if (!internalFunction) {
-    DEBUG_WITH_TYPE("KModule", klee_warning(
-        "Failed to add internal function %s. Not found.", functionName));
+    DEBUG(klee_warning("Failed to add internal function %s. Not found.", functionName));
     return ;
   }
   DEBUG( klee_message("Added function %s.",functionName));
@@ -638,3 +639,5 @@ KFunction::~KFunction() {
     delete instructions[i];
   delete[] instructions;
 }
+
+#undef DEBUG_TYPE
