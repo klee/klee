@@ -555,7 +555,11 @@ void KleeHandler::loadPathFile(std::string name,
 
 void KleeHandler::getOutFiles(std::string path,
 			      std::vector<std::string> &results) {
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
   error_code ec;
+#else
+  std::error_code ec;
+#endif
   for (llvm::sys::fs::directory_iterator i(path,ec),e; i!=e && !ec; i.increment(ec)){
     std::string f = (*i).path();
     if (f.substr(f.size()-6,f.size()) == ".ktest") {
@@ -1210,12 +1214,14 @@ int main(int argc, char **argv, char **envp) {
   // Load the bytecode...
   std::string ErrorMsg;
   Module *mainModule = 0;
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
   OwningPtr<MemoryBuffer> BufferPtr;
   error_code ec=MemoryBuffer::getFileOrSTDIN(InputFile.c_str(), BufferPtr);
   if (ec) {
     klee_error("error loading program '%s': %s", InputFile.c_str(),
                ec.message().c_str());
   }
+
   mainModule = getLazyBitcodeModule(BufferPtr.get(), getGlobalContext(), &ErrorMsg);
 
   if (mainModule) {
@@ -1227,6 +1233,25 @@ int main(int argc, char **argv, char **envp) {
   if (!mainModule)
     klee_error("error loading program '%s': %s", InputFile.c_str(),
                ErrorMsg.c_str());
+#else
+  auto Buffer = MemoryBuffer::getFileOrSTDIN(InputFile.c_str());
+  if (!Buffer)
+    klee_error("error loading program '%s': %s", InputFile.c_str(),
+               Buffer.getError().message().c_str());
+
+  auto mainModuleOrError = getLazyBitcodeModule(Buffer->get(), getGlobalContext());
+
+  if (!mainModuleOrError)
+    klee_error("error loading program '%s': %s", InputFile.c_str(),
+               mainModuleOrError.getError().message().c_str());
+
+  mainModule = *mainModuleOrError;
+  if (auto ec = mainModule->materializeAllPermanently()) {
+    klee_error("error loading program '%s': %s", InputFile.c_str(),
+               ec.message().c_str());
+  }
+#endif
+
 
   if (WithPOSIXRuntime) {
     int r = initEnv(mainModule);
@@ -1515,7 +1540,12 @@ int main(int argc, char **argv, char **envp) {
 
   handler->getInfoStream() << stats.str();
 
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
+  // FIXME: This really doesn't look right
+  // This is preventing the module from being
+  // deleted automatically
   BufferPtr.take();
+#endif
   delete handler;
 
   return 0;
