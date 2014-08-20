@@ -30,6 +30,11 @@ endif
 # Needed to build runtime library using clang (gnu89 is the gcc default)
 C.Flags += -std=gnu89
 
+# Build using C++11 if requested
+ifeq ($(KLEE_USE_CXX11),1)
+	CXX.Flags += -std=c++11
+endif
+
 # This is filename that KLEE will look for when trying to load klee-uclibc
 KLEE_UCLIBC_BCA_NAME="klee-uclibc.bca"
 
