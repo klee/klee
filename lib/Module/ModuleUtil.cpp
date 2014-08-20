@@ -96,8 +96,11 @@ GetAllUndefinedSymbols(Module *M, std::set<std::string> &UndefinedSymbols) {
       if (I->isDeclaration())
         UndefinedSymbols.insert(I->getName());
       else if (!I->hasLocalLinkage()) {
-        assert(!I->hasDLLImportLinkage()
-               && "Found dllimported non-external symbol!");
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
+            assert(!I->hasDLLImportLinkage() && "Found dllimported non-external symbol!");
+#else
+            assert(!I->hasDLLImportStorageClass() && "Found dllimported non-external symbol!");
+#endif
         DefinedSymbols.insert(I->getName());
       }
     }
@@ -108,8 +111,11 @@ GetAllUndefinedSymbols(Module *M, std::set<std::string> &UndefinedSymbols) {
       if (I->isDeclaration())
         UndefinedSymbols.insert(I->getName());
       else if (!I->hasLocalLinkage()) {
-        assert(!I->hasDLLImportLinkage()
-               && "Found dllimported non-external symbol!");
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
+            assert(!I->hasDLLImportLinkage() && "Found dllimported non-external symbol!");
+#else
+            assert(!I->hasDLLImportStorageClass() && "Found dllimported non-external symbol!");
+#endif
         DefinedSymbols.insert(I->getName());
       }
     }
