@@ -45,7 +45,11 @@
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+
+// FIXME: Do we even use this?
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
 #include "llvm/Support/CallSite.h"
+#endif
 
 using namespace llvm;
 using namespace klee;
