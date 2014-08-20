@@ -204,8 +204,15 @@ static bool linkBCA(object::Archive* archive, Module* composite, std::string& er
 
   DEBUG_WITH_TYPE("klee_linker", dbgs() << "Loading modules\n");
   // Load all bitcode files in to memory so we can examine their symbols
-  for (object::Archive::child_iterator AI = archive->begin_children(),
-       AE = archive->end_children(); AI != AE; ++AI)
+  for (object::Archive::child_iterator
+ #if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
+       AI = archive->begin_children(),
+       AE = archive->end_children();
+#else
+       AI = archive->child_begin(),
+       AE = archive->child_end();
+#endif
+       AI != AE; ++AI)
   {
 
     StringRef memberName;
