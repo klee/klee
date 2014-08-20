@@ -21,12 +21,17 @@
 #include "llvm/IntrinsicInst.h"
 #include "llvm/Module.h"
 #endif
+
 #include "llvm/Linker.h"
 #include "llvm/Assembly/AssemblyAnnotationWriter.h"
 #include "llvm/Support/FormattedStream.h"
-#include "llvm/Support/CFG.h"
 #include "llvm/Support/InstIterator.h"
 #include "llvm/Support/raw_ostream.h"
+
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
+#include "llvm/Support/CFG.h"
+#endif
+
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 2)
 #include "llvm/DebugInfo.h"
 #else
