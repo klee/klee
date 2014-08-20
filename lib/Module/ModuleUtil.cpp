@@ -205,7 +205,7 @@ static bool linkBCA(object::Archive* archive, Module* composite, std::string& er
   DEBUG_WITH_TYPE("klee_linker", dbgs() << "Loading modules\n");
   // Load all bitcode files in to memory so we can examine their symbols
   for (object::Archive::child_iterator
- #if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
        AI = archive->begin_children(),
        AE = archive->end_children();
 #else
@@ -215,13 +215,21 @@ static bool linkBCA(object::Archive* archive, Module* composite, std::string& er
        AI != AE; ++AI)
   {
 
+
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
     StringRef memberName;
     error_code ec = AI->getName(memberName);
-
     if ( ec == errc::success )
     {
       DEBUG_WITH_TYPE("klee_linker", dbgs() << "Loading archive member " << memberName << "\n");
     }
+#else
+    auto memberName = AI->getName();
+    if (memberName)
+    {
+      DEBUG_WITH_TYPE("klee_linker", dbgs() << "Loading archive member " << *memberName << "\n");
+    }
+#endif
     else
     {
       errorMessage="Archive member does not have a name!\n";
