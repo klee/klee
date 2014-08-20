@@ -189,8 +189,13 @@ StatsTracker::StatsTracker(Executor &_executor, std::string _objectFilename,
     SmallString<128> current(objectFilename);
     if(sys::fs::make_absolute(current)) {
       bool exists = false;
+
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
       error_code ec = sys::fs::exists(current.str(), exists);
       if (ec == errc::success && exists) {
+#else
+      if (!sys::fs::exists(current.str(), exists)) {
+#endif
         objectFilename = current.c_str();
       }
     }
