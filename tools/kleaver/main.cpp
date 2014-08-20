@@ -457,12 +457,21 @@ int main(int argc, char **argv) {
 
   std::string ErrorStr;
   
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
   OwningPtr<MemoryBuffer> MB;
   error_code ec=MemoryBuffer::getFileOrSTDIN(InputFile.c_str(), MB);
   if (ec) {
     llvm::errs() << argv[0] << ": error: " << ec.message() << "\n";
     return 1;
   }
+#else
+  auto MB = MemoryBuffer::getFileOrSTDIN(InputFile.c_str());
+  if (!MB) {
+    llvm::errs() << argv[0] << ": error: " << MB.getError().message() << "\n";
+    return 1;
+  }
+
+#endif
   
   ExprBuilder *Builder = 0;
   switch (BuilderKind) {
@@ -482,18 +491,38 @@ int main(int argc, char **argv) {
 
   switch (ToolAction) {
   case PrintTokens:
-    PrintInputTokens(MB.get());
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
+                               PrintInputTokens(MB.get());
+#else
+                               PrintInputTokens(MB->get());
+#endif
     break;
   case PrintAST:
-    success = PrintInputAST(InputFile=="-" ? "<stdin>" : InputFile.c_str(), MB.get(),
+    success = PrintInputAST(InputFile=="-" ? "<stdin>" : InputFile.c_str(),
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
+                            MB.get(),
+#else
+                            MB->get(),
+#endif
                             Builder);
     break;
   case Evaluate:
     success = EvaluateInputAST(InputFile=="-" ? "<stdin>" : InputFile.c_str(),
-                               MB.get(), Builder);
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
+                               MB.get(),
+#else
+                               MB->get(),
+#endif
+                               Builder);
     break;
   case PrintSMTLIBv2:
-    success = printInputAsSMTLIBv2(InputFile=="-"? "<stdin>" : InputFile.c_str(), MB.get(),Builder);
+    success = printInputAsSMTLIBv2(InputFile=="-"? "<stdin>" : InputFile.c_str(),
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
+                                   MB.get(),
+#else
+                                   MB->get(),
+#endif
+                                   Builder);
     break;
   default:
     llvm::errs() << argv[0] << ": error: Unknown program action!\n";
