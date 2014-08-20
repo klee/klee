@@ -279,10 +279,15 @@ KleeHandler::KleeHandler(int argc, char **argv)
   bool dir_given = OutputDir != "";
   SmallString<128> directory(dir_given ? OutputDir : InputFile);
 
-  error_code ec;
   if (!dir_given) sys::path::remove_filename(directory);
-  if ((ec = sys::fs::make_absolute(directory)) != errc::success)
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
+  error_code ec;
+  if ((ec = sys::fs::make_absolute(directory)) != errc::success) {
+#else
+  if (auto ec = sys::fs::make_absolute(directory)) {
+#endif
     klee_error("unable to determine absolute path: %s", ec.message().c_str());
+  }
 
   if (dir_given) {
     // OutputDir
