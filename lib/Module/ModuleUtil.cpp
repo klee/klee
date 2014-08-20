@@ -187,6 +187,20 @@ static void CleanUpLinkBCA(std::vector<Module*> &archiveModules)
   }
 }
 
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
+static void archiveGetName(object::Archive::child_iterator AI, StringRef &res,
+                           error_code &ec) {
+  ec = AI->getName(res);
+}
+#else
+static void archiveGetName(object::Archive::child_iterator AI, StringRef &res,
+                           std::error_code &ec) {
+  auto resErr = AI->getName();
+  ec = resErr.getError();
+  res = ec ? nullptr : resErr.get();
+}
+#endif
+
 /*! A helper function for klee::linkWithLibrary() that links in an archive of bitcode
  *  modules into a composite bitcode module
  *
@@ -225,11 +239,15 @@ static bool linkBCA(object::Archive* archive, Module* composite, std::string& er
        AI != AE; ++AI)
   {
 
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
+    error_code ec;
+#else
+    std::error_code ec;
+#endif
     StringRef memberName;
-    error_code ec = AI->getName(memberName);
 
-    if ( ec == errc::success )
-    {
+    archiveGetName(AI, memberName, ec);
+    if (!ec) {
       KLEE_DEBUG_WITH_TYPE("klee_linker", dbgs() << "Loading archive member " << memberName << "\n");
     }
     else
