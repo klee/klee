@@ -236,27 +236,41 @@ static bool linkBCA(object::Archive* archive, Module* composite, std::string& er
       return false;
     }
 
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
     OwningPtr<object::Binary> child;
     ec = AI->getAsBinary(child);
     if (ec != object::object_error::success)
+#else
+    auto child = AI->getAsBinary();
+    if (! child)
+#endif
     {
       // If we can't open as a binary object file its hopefully a bitcode file
 
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
       OwningPtr<MemoryBuffer> buff; // Once this is destroyed will Module still be valid??
-      Module *Result = 0;
-
       if (error_code ec = AI->getMemoryBuffer(buff))
       {
-        SS << "Failed to get MemoryBuffer: " <<ec.message();
+        SS << "Failed to get MemoryBuffer: " << ec.message();
         SS.flush();
         return false;
       }
+#else
+      auto buff = AI->getMemoryBuffer();
+      if (!buff)
+      {
+        SS << "Failed to get MemoryBuffer: " << buff.getError().message();
+        SS.flush();
+        return false;
+      }
+#endif
 
       if (buff)
       {
         // FIXME: Maybe load bitcode file lazily? Then if we need to link, materialise the module
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
+        Module *Result = 0;
         Result = ParseBitcodeFile(buff.get(), getGlobalContext(), &errorMessage);
-
         if(!Result)
         {
           SS << "Loading module failed : " << errorMessage << "\n";
@@ -264,6 +278,16 @@ static bool linkBCA(object::Archive* archive, Module* composite, std::string& er
           return false;
         }
         archiveModules.push_back(Result);
+#else
+        auto Result = parseBitcodeFile(buff->get(), getGlobalContext());
+        if(!Result)
+        {
+          SS << "Loading module failed : " << Result.getError().message() << "\n";
+          SS.flush();
+          return false;
+        }
+        archiveModules.push_back(*Result);
+#endif
       }
       else
       {
@@ -271,6 +295,7 @@ static bool linkBCA(object::Archive* archive, Module* composite, std::string& er
         return false;
       }
 
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
     }
     else if (object::ObjectFile *o = dyn_cast<object::ObjectFile>(child.get()))
     {
@@ -285,6 +310,22 @@ static bool linkBCA(object::Archive* archive, Module* composite, std::string& er
       SS.flush();
       return false;
     }
+#else
+    }
+    else if (object::ObjectFile *o = dyn_cast<object::ObjectFile>(child->get()))
+    {
+      SS << "Object file " << o->getFileName().data() <<
+            " in archive is not supported";
+      SS.flush();
+      return false;
+    }
+    else
+    {
+      SS << "Loading archive child with error "<< child.getError().message();
+      SS.flush();
+      return false;
+    }
+#endif
 
   }
 
@@ -377,30 +418,51 @@ DEBUG_WITH_TYPE("klee_linker", dbgs() << "Linking file " << libraryName << "\n")
         libraryName.c_str());
   }
 
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
   OwningPtr<MemoryBuffer> Buffer;
   if (error_code ec = MemoryBuffer::getFile(libraryName,Buffer)) {
     klee_error("Link with library %s failed: %s", libraryName.c_str(),
         ec.message().c_str());
   }
-
   sys::fs::file_magic magic = sys::fs::identify_magic(Buffer->getBuffer());
+#else
+  auto Buffer = MemoryBuffer::getFile( libraryName );
+  if (!Buffer) {
+    klee_error("Link with library %s failed: %s", libraryName.c_str(),
+        Buffer.getError().message().c_str());
+  }
+  sys::fs::file_magic magic = sys::fs::identify_magic((*Buffer)->getBuffer());
+#endif
+
 
   LLVMContext &Context = getGlobalContext();
   std::string ErrorMessage;
 
   if (magic == sys::fs::file_magic::bitcode) {
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
     Module *Result = 0;
     Result = ParseBitcodeFile(Buffer.get(), Context, &ErrorMessage);
-
-
     if (!Result || Linker::LinkModules(module, Result, Linker::DestroySource,
         &ErrorMessage))
       klee_error("Link with library %s failed: %s", libraryName.c_str(),
           ErrorMessage.c_str());
-
     delete Result;
+#else
+    auto Result = parseBitcodeFile(Buffer->get(), Context);
+    // FIXME: ErrorMesage is not set correctly
+    if (!Result || Linker::LinkModules(module, *Result, Linker::DestroySource,
+        &ErrorMessage))
+      klee_error("Link with library %s failed: %s", libraryName.c_str(),
+          ErrorMessage.c_str());
+
+    delete *Result;
+#endif
+
+
+
 
   } else if (magic == sys::fs::file_magic::archive) {
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
     OwningPtr<object::Binary> arch;
     if (error_code ec = object::createBinary(Buffer.take(), arch))
       klee_error("Link with library %s failed: %s", libraryName.c_str(),
@@ -415,14 +477,28 @@ DEBUG_WITH_TYPE("klee_linker", dbgs() << "Linking file " << libraryName << "\n")
     else {
     	klee_error("Link with library %s failed: Cast to archive failed", libraryName.c_str());
     }
+#else
+    // WTF? Ask about the std::move()
+    auto arch = object::createBinary(std::move(*Buffer));
+    if (!arch)
+      klee_error("Link with library %s failed: %s", libraryName.c_str(),
+          arch.getError().message().c_str());
+
+    if (object::Archive *a = dyn_cast<object::Archive>(*arch)) {
+      // Handle in helper
+      if (!linkBCA(a, module, ErrorMessage))
+        klee_error("Link with library %s failed: %s", libraryName.c_str(),
+            ErrorMessage.c_str());
+    }
+    else {
+    	klee_error("Link with library %s failed: Cast to archive failed", libraryName.c_str());
+    }
+#endif
 
   } else if (magic.is_object()) {
-    OwningPtr<object::Binary> obj;
-    if (object::ObjectFile *o = dyn_cast<object::ObjectFile>(obj.get())) {
-      klee_warning("Link with library: Object file %s in archive %s found. "
-          "Currently not supported.",
-          o->getFileName().data(), libraryName.c_str());
-    }
+    klee_warning("Link with library: Object file in archive %s found. "
+        "Currently not supported.",
+        libraryName.c_str());
   } else {
     klee_error("Link with library %s failed: Unrecognized file type.",
         libraryName.c_str());
