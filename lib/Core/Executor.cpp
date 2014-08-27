@@ -117,11 +117,6 @@ namespace {
 		   cl::desc("Dump test cases for all active states on exit (default=on)"));
  
   cl::opt<bool>
-  RandomizeFork("randomize-fork",
-                cl::init(false),
-		cl::desc("Randomly swap the true and false states on a fork (default=off)"));
- 
-  cl::opt<bool>
   AllowExternalSymCalls("allow-external-sym-calls",
                         cl::init(false),
 			cl::desc("Allow calls with symbolic arguments to external functions.  This concretizes the symbolic arguments.  (default=off)"));
@@ -861,9 +856,6 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
 
     falseState = trueState->branch();
     addedStates.insert(falseState);
-
-    if (RandomizeFork && theRNG.getBool())
-      std::swap(trueState, falseState);
 
     if (it != seedMap.end()) {
       std::vector<SeedInfo> seeds = it->second;
