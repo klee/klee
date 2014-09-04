@@ -21,7 +21,7 @@ namespace stats {
   extern Statistic instructionTime;
   extern Statistic instructionRealTime;
   extern Statistic coveredInstructions;
-  extern Statistic uncoveredInstructions;  
+  extern Statistic uncoveredInstructions;
   extern Statistic trueBranches;
   extern Statistic falseBranches;
   extern Statistic forkTime;

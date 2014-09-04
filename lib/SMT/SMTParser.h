@@ -19,13 +19,13 @@
 
 namespace klee {
   class ExprBuilder;
-  
+
 namespace expr {
 
 class SMTParser : public klee::expr::Parser {
   private:
     void *buf;
-    
+
  public:
   /* For interacting w/ the actual parser, should make this nicer */
   static SMTParser* parserTemp;
@@ -34,39 +34,39 @@ class SMTParser : public klee::expr::Parser {
   int lineNum;
   bool done;
   bool arraysEnabled;
-  
+
   std::vector<ExprHandle> assumptions;
   klee::expr::ExprHandle satQuery;
 
   int bvSize;
   bool queryParsed;
-  
+
   klee::ExprBuilder *builder;
-    
+
   SMTParser(const std::string filename, ExprBuilder *builder);
-  
+
   virtual klee::expr::Decl *ParseTopLevelDecl();
   bool Solve();
-  
+
   virtual void SetMaxErrors(unsigned N) { }
-  
+
   virtual unsigned GetNumErrors() const {  return 1; }
-  
+
   virtual ~SMTParser() {}
-  
+
   void Parse(void);
-  
+
   int Error(const std::string& s);
-  
+
   int StringToInt(const std::string& s);
   ExprHandle GetConstExpr(std::string val, uint8_t base, klee::Expr::Width w);
-  
+
   void DeclareExpr(std::string name, Expr::Width w);
-  
+
   ExprHandle CreateAnd(std::vector<ExprHandle>);
   ExprHandle CreateOr(std::vector<ExprHandle>);
   ExprHandle CreateXor(std::vector<ExprHandle>);
-  
+
 
   typedef std::map<const std::string, ExprHandle> VarEnv;
   typedef std::map<const std::string, ExprHandle> FVarEnv;

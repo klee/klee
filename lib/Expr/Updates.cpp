@@ -15,17 +15,17 @@ using namespace klee;
 
 ///
 
-UpdateNode::UpdateNode(const UpdateNode *_next, 
-                       const ref<Expr> &_index, 
-                       const ref<Expr> &_value) 
-  : refCount(0),    
+UpdateNode::UpdateNode(const UpdateNode *_next,
+                       const ref<Expr> &_index,
+                       const ref<Expr> &_value)
+  : refCount(0),
     next(_next),
     index(_index),
     value(_value) {
-  // FIXME: What we need to check here instead is that _value is of the same width 
+  // FIXME: What we need to check here instead is that _value is of the same width
   // as the range of the array that the update node is part of.
   /*
-  assert(_value->getWidth() == Expr::Int8 && 
+  assert(_value->getWidth() == Expr::Int8 &&
          "Update value should be 8-bit wide.");
   */
   computeHash();
@@ -42,7 +42,7 @@ UpdateNode::~UpdateNode() {
 }
 
 int UpdateNode::compare(const UpdateNode &b) const {
-  if (int i = index.compare(b.index)) 
+  if (int i = index.compare(b.index))
     return i;
   return value.compare(b.value);
 }
@@ -88,7 +88,7 @@ UpdateList &UpdateList::operator=(const UpdateList &b) {
 }
 
 void UpdateList::extend(const ref<Expr> &index, const ref<Expr> &value) {
-  
+
   if (root) {
     assert(root->getDomain() == index->getWidth());
     assert(root->getRange() == value->getWidth());
@@ -109,7 +109,7 @@ int UpdateList::compare(const UpdateList &b) const {
     return root < b.root ? -1 : 1;
 
   if (getSize() < b.getSize()) return -1;
-  else if (getSize() > b.getSize()) return 1;    
+  else if (getSize() > b.getSize()) return 1;
 
   // XXX build comparison into update, make fast
   const UpdateNode *an=head, *bn=b.head;
@@ -121,7 +121,7 @@ int UpdateList::compare(const UpdateList &b) const {
         return res;
     }
   }
-  assert(!an && !bn);  
+  assert(!an && !bn);
   return 0;
 }
 

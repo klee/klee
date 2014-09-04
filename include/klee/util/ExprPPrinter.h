@@ -21,7 +21,7 @@ namespace klee {
   class ExprPPrinter {
   protected:
     ExprPPrinter() {}
-    
+
   public:
     static ExprPPrinter *create(llvm::raw_ostream &os);
 

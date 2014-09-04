@@ -30,7 +30,7 @@ UseIndependentSolver("use-independent-solver",
 llvm::cl::opt<bool>
 DebugValidateSolver("debug-validate-solver",
 		             llvm::cl::init(false));
-  
+
 llvm::cl::opt<int>
 MinQueryTimeToLog("min-query-time-to-log",
                   llvm::cl::init(0),
@@ -51,7 +51,7 @@ UseForkedCoreSolver("use-forked-solver",
              llvm::cl::init(true));
 
 llvm::cl::opt<bool>
-CoreSolverOptimizeDivides("solver-optimize-divides", 
+CoreSolverOptimizeDivides("solver-optimize-divides",
                  llvm::cl::desc("Optimize constant divides into add/shift/multiplies before passing to core SMT solver (default=on)"),
                  llvm::cl::init(true));
 
@@ -82,7 +82,7 @@ UseMetaSMT("use-metasmt",
                       clEnumValN(METASMT_BACKEND_STP, "stp", "Use metaSMT with STP"),
                       clEnumValN(METASMT_BACKEND_Z3, "z3", "Use metaSMT with Z3"),
                       clEnumValN(METASMT_BACKEND_BOOLECTOR, "btor", "Use metaSMT with Boolector"),
-                      clEnumValEnd),  
+                      clEnumValEnd),
            llvm::cl::init(METASMT_BACKEND_NONE));
 
 #endif /* SUPPORT_METASMT */

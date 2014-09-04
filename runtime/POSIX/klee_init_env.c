@@ -26,7 +26,7 @@ static void __emit_error(const char *msg) {
 
 /* Helper function that converts a string to an integer, and
    terminates the program with an error message is the string is not a
-   proper number */   
+   proper number */
 static long int __str_to_int(char *s, const char *error_msg) {
   long int res = 0;
   char c;
@@ -68,7 +68,7 @@ static char *__get_sym_str(int numChars, char *name) {
 
   for (i=0; i<numChars; i++)
     klee_prefer_cex(s, __isprint(s[i]));
-  
+
   s[numChars] = '\0';
   return s;
 }
@@ -117,22 +117,22 @@ usage: (klee_init_env) [options] [program arguments]\n\
   while (k < argc) {
     if (__streq(argv[k], "--sym-arg") || __streq(argv[k], "-sym-arg")) {
       const char *msg = "--sym-arg expects an integer argument <max-len>";
-      if (++k == argc)        
+      if (++k == argc)
 	__emit_error(msg);
-		
+
       max_len = __str_to_int(argv[k++], msg);
       sym_arg_name[3] = '0' + sym_arg_num++;
-      __add_arg(&new_argc, new_argv, 
+      __add_arg(&new_argc, new_argv,
                 __get_sym_str(max_len, sym_arg_name),
                 1024);
     }
     else if (__streq(argv[k], "--sym-args") || __streq(argv[k], "-sym-args")) {
-      const char *msg = 
+      const char *msg =
         "--sym-args expects three integer arguments <min-argvs> <max-argvs> <max-len>";
 
       if (k+3 >= argc)
 	__emit_error(msg);
-      
+
       k++;
       min_argvs = __str_to_int(argv[k++], msg);
       max_argvs = __str_to_int(argv[k++], msg);
@@ -141,17 +141,17 @@ usage: (klee_init_env) [options] [program arguments]\n\
       n_args = klee_range(min_argvs, max_argvs+1, "n_args");
       for (i=0; i < n_args; i++) {
         sym_arg_name[3] = '0' + sym_arg_num++;
-        __add_arg(&new_argc, new_argv, 
+        __add_arg(&new_argc, new_argv,
                   __get_sym_str(max_len, sym_arg_name),
                   1024);
       }
     }
     else if (__streq(argv[k], "--sym-files") || __streq(argv[k], "-sym-files")) {
-      const char* msg = "--sym-files expects two integer arguments <no-sym-files> <sym-file-len>";      
+      const char* msg = "--sym-files expects two integer arguments <no-sym-files> <sym-file-len>";
 
       if (k+2 >= argc)
 	__emit_error(msg);
-      
+
       k++;
       sym_files = __str_to_int(argv[k++], msg);
       sym_file_len = __str_to_int(argv[k++], msg);
@@ -173,7 +173,7 @@ usage: (klee_init_env) [options] [program arguments]\n\
       const char *msg = "--max-fail expects an integer argument <max-failures>";
       if (++k == argc)
 	__emit_error(msg);
-		
+
       fd_fail = __str_to_int(argv[k++], msg);
     }
     else {
@@ -190,8 +190,8 @@ usage: (klee_init_env) [options] [program arguments]\n\
   *argcPtr = new_argc;
   *argvPtr = final_argv;
 
-  klee_init_fds(sym_files, sym_file_len, 
-		sym_stdout_flag, save_all_writes_flag, 
+  klee_init_fds(sym_files, sym_file_len,
+		sym_stdout_flag, save_all_writes_flag,
 		fd_fail);
 }
 

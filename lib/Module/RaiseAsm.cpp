@@ -34,7 +34,7 @@ char RaiseAsmPass::ID = 0;
 Function *RaiseAsmPass::getIntrinsic(llvm::Module &M,
                                      unsigned IID,
                                      LLVM_TYPE_Q Type **Tys,
-                                     unsigned NumTys) {  
+                                     unsigned NumTys) {
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 0)
   return Intrinsic::getDeclaration(&M, (llvm::Intrinsic::ID) IID,
                                    llvm::ArrayRef<llvm::Type*>(Tys, NumTys));
@@ -80,12 +80,12 @@ bool RaiseAsmPass::runOnModule(Module &M) {
 #endif
     TLI = TM->getTargetLowering();
   }
-  
+
   for (Module::iterator fi = M.begin(), fe = M.end(); fi != fe; ++fi) {
     for (Function::iterator bi = fi->begin(), be = fi->end(); bi != be; ++bi) {
       for (BasicBlock::iterator ii = bi->begin(), ie = bi->end(); ii != ie;) {
         Instruction *i = ii;
-        ++ii;  
+        ++ii;
         changed |= runOnInstruction(M, i);
       }
     }

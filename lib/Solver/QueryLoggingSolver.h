@@ -18,7 +18,7 @@
 
 using namespace klee;
 
-/// This abstract class represents a solver that is capable of logging 
+/// This abstract class represents a solver that is capable of logging
 /// queries to a file.
 /// Derived classes might specialize this one by providing different formats
 /// for the query output.
@@ -46,23 +46,23 @@ protected:
     virtual void startQuery(const Query& query, const char* typeName,
                             const Query* falseQuery = 0,
                             const std::vector<const Array*>* objects = 0);
-           
-    virtual void finishQuery(bool success);        
-  
+
+    virtual void finishQuery(bool success);
+
     /// flushBuffer - flushes the temporary logs buffer. Depending on threshold
-    /// settings, contents of the buffer are either discarded or written to a file.  
+    /// settings, contents of the buffer are either discarded or written to a file.
     void flushBuffer(void);
-    
+
     virtual void printQuery(const Query& query,
                             const Query* falseQuery = 0,
                             const std::vector<const Array*>* objects = 0) = 0;
-  
+
 public:
     QueryLoggingSolver(Solver *_solver,
                        std::string path,
                        const std::string& commentSign,
                        int queryTimeToLog);
-  
+
     virtual ~QueryLoggingSolver();
 
     /// implementation of the SolverImpl interface

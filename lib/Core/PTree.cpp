@@ -24,8 +24,8 @@ PTree::PTree(const data_type &_root) : root(new Node(0,_root)) {
 PTree::~PTree() {}
 
 std::pair<PTreeNode*, PTreeNode*>
-PTree::split(Node *n, 
-             const data_type &leftData, 
+PTree::split(Node *n,
+             const data_type &leftData,
              const data_type &rightData) {
   assert(n && !n->left && !n->right);
   n->left = new Node(n, leftData);
@@ -88,8 +88,8 @@ void PTree::dump(llvm::raw_ostream &os) {
   delete pp;
 }
 
-PTreeNode::PTreeNode(PTreeNode *_parent, 
-                     ExecutionState *_data) 
+PTreeNode::PTreeNode(PTreeNode *_parent,
+                     ExecutionState *_data)
   : parent(_parent),
     left(0),
     right(0),

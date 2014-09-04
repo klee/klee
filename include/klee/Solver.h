@@ -55,7 +55,7 @@ namespace klee {
       False = -1,
       Unknown = 0
     };
-  
+
   public:
     /// validity_to_str - Return the name of given Validity enum value.
     static const char *validity_to_str(Validity v);
@@ -81,9 +81,9 @@ namespace klee {
     ///
     /// \return True on success.
     bool evaluate(const Query&, Validity &result);
-  
+
     /// mustBeTrue - Determine if the expression is provably true.
-    /// 
+    ///
     /// This evaluates the following logical formula:
     ///
     /// \f[ \forall X constraints(X) \to query(X) \f]
@@ -179,7 +179,7 @@ namespace klee {
     // FIXME: This API is lame. We should probably just provide an API which
     // returns an Assignment object, then clients can get out whatever values
     // they want. This also allows us to optimize the representation.
-    bool getInitialValues(const Query&, 
+    bool getInitialValues(const Query&,
                           const std::vector<const Array*> &objects,
                           std::vector< std::vector<unsigned char> > &result);
 
@@ -188,13 +188,13 @@ namespace klee {
     ///
     /// \return - A pair with (min, max) values for the expression.
     ///
-    /// \post(mustBeTrue(min <= e <= max) && 
+    /// \post(mustBeTrue(min <= e <= max) &&
     ///       mayBeTrue(min == e) &&
     ///       mayBeTrue(max == e))
     //
     // FIXME: This should go into a helper class, and should handle failure.
     virtual std::pair< ref<Expr>, ref<Expr> > getRange(const Query&);
-    
+
     virtual char *getConstraintLog(const Query& query);
     virtual void setCoreSolverTimeout(double timeout);
   };
@@ -219,15 +219,15 @@ namespace klee {
     virtual void setCoreSolverTimeout(double timeout);
   };
 
-  
+
 #ifdef SUPPORT_METASMT
-  
+
   template<typename SolverContext>
   class MetaSMTSolver : public Solver {
   public:
     MetaSMTSolver(bool useForked, bool optimizeDivides);
     virtual ~MetaSMTSolver();
-  
+
     virtual char *getConstraintLog(const Query&);
     virtual void setCoreSolverTimeout(double timeout);
 };
@@ -272,7 +272,7 @@ namespace klee {
   ///
   /// \param s - The underlying solver to use.
   Solver *createIndependentSolver(Solver *s);
-  
+
   /// createPCLoggingSolver - Create a solver which will forward all queries
   /// after writing them to the given path in .pc format.
   Solver *createPCLoggingSolver(Solver *s, std::string path,
@@ -287,7 +287,7 @@ namespace klee {
   /// createDummySolver - Create a dummy solver implementation which always
   /// fails.
   Solver *createDummySolver();
-  
+
 }
 
 #endif

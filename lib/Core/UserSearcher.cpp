@@ -35,11 +35,11 @@ namespace {
 			clEnumValEnd));
 
   cl::opt<bool>
-  UseIterativeDeepeningTimeSearch("use-iterative-deepening-time-search", 
+  UseIterativeDeepeningTimeSearch("use-iterative-deepening-time-search",
                                     cl::desc("(experimental)"));
 
   cl::opt<bool>
-  UseBatchingSearch("use-batching-search", 
+  UseBatchingSearch("use-batching-search",
 		    cl::desc("Use batching searcher (keep running selected state for N instructions/time, see --batch-instructions and --batch-time)"),
 		    cl::init(false));
 
@@ -47,7 +47,7 @@ namespace {
   BatchInstructions("batch-instructions",
                     cl::desc("Number of instructions to batch when using --use-batching-search"),
                     cl::init(10000));
-  
+
   cl::opt<double>
   BatchTime("batch-time",
             cl::desc("Amount of time to batch when using --use-batching-search"),
@@ -55,11 +55,11 @@ namespace {
 
 
   cl::opt<bool>
-  UseMerge("use-merge", 
+  UseMerge("use-merge",
            cl::desc("Enable support for klee_merge() (experimental)"));
- 
+
   cl::opt<bool>
-  UseBumpMerge("use-bump-merge", 
+  UseBumpMerge("use-bump-merge",
            cl::desc("Enable support for klee_merge() (extra experimental)"));
 
 }
@@ -101,14 +101,14 @@ Searcher *klee::constructUserSearcher(Executor &executor) {
   }
 
   Searcher *searcher = getNewSearcher(CoreSearch[0], executor);
-  
+
   if (CoreSearch.size() > 1) {
     std::vector<Searcher *> s;
     s.push_back(searcher);
 
     for (unsigned i=1; i<CoreSearch.size(); i++)
       s.push_back(getNewSearcher(CoreSearch[i], executor));
-    
+
     searcher = new InterleavedSearcher(s);
   }
 
@@ -124,7 +124,7 @@ Searcher *klee::constructUserSearcher(Executor &executor) {
   } else if (UseBumpMerge) {
     searcher = new BumpMergingSearcher(executor, searcher);
   }
-  
+
   if (UseIterativeDeepeningTimeSearch) {
     searcher = new IterativeDeepeningTimeSearcher(searcher);
   }

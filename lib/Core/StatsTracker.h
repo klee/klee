@@ -23,7 +23,7 @@ namespace llvm {
 
 namespace klee {
   class ExecutionState;
-  class Executor;  
+  class Executor;
   class InstructionInfoTable;
   class InterpreterHandler;
   struct KInstruction;
@@ -38,11 +38,11 @@ namespace klee {
 
     llvm::raw_fd_ostream *statsFile, *istatsFile;
     double startWallTime;
-    
+
     unsigned numBranches;
     unsigned fullBranches, partialBranches;
 
-    CallPathManager callPathManager;    
+    CallPathManager callPathManager;
 
     bool updateMinDistToUncovered;
 
@@ -63,15 +63,15 @@ namespace klee {
     // called after a new StackFrame has been pushed (for callpath tracing)
     void framePushed(ExecutionState &es, StackFrame *parentFrame);
 
-    // called after a StackFrame has been popped 
+    // called after a StackFrame has been popped
     void framePopped(ExecutionState &es);
 
     // called when some side of a branch has been visited. it is
     // imperative that this be called when the statistics index is at
     // the index for the branch itself.
-    void markBranchVisited(ExecutionState *visitedTrue, 
+    void markBranchVisited(ExecutionState *visitedTrue,
                            ExecutionState *visitedFalse);
-    
+
     // called when execution is done and stats files should be flushed
     void done();
 

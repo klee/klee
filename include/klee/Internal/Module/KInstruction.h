@@ -27,7 +27,7 @@ namespace klee {
   /// KInstruction - Intermediate instruction representation used
   /// during execution.
   struct KInstruction {
-    llvm::Instruction *inst;    
+    llvm::Instruction *inst;
     const InstructionInfo *info;
 
     /// Value numbers for each operand. -1 is an invalid value,
@@ -39,7 +39,7 @@ namespace klee {
     unsigned dest;
 
   public:
-    virtual ~KInstruction(); 
+    virtual ~KInstruction();
   };
 
   struct KGEPInstruction : KInstruction {

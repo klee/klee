@@ -30,10 +30,10 @@ namespace klee {
     llvm::Module *dispatchModule;
     llvm::ExecutionEngine *executionEngine;
     std::map<std::string, void*> preboundFunctions;
-    
+
     llvm::Function *createDispatcher(llvm::Function *f, llvm::Instruction *i);
     bool runProtectedCall(llvm::Function *f, uint64_t *args);
-    
+
   public:
     ExternalDispatcher();
     ~ExternalDispatcher();
@@ -44,7 +44,7 @@ namespace klee {
      */
     bool executeCall(llvm::Function *function, llvm::Instruction *i, uint64_t *args);
     void *resolveSymbol(const std::string &name);
-  };  
+  };
 }
 
 #endif

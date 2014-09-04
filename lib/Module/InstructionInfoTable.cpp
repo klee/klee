@@ -49,9 +49,9 @@ public:
     os << (uintptr_t) i;
   }
 };
-        
+
 static void buildInstructionToLineMap(Module *m,
-                                      std::map<const Instruction*, unsigned> &out) {  
+                                      std::map<const Instruction*, unsigned> &out) {
   InstructionToLineAnnotator a;
   std::string str;
   llvm::raw_string_ostream os(str);
@@ -88,7 +88,7 @@ static std::string getDSPIPath(DILocation Loc) {
   }
 }
 
-bool InstructionInfoTable::getInstructionDebugInfo(const llvm::Instruction *I, 
+bool InstructionInfoTable::getInstructionDebugInfo(const llvm::Instruction *I,
                                                    const std::string *&File,
                                                    unsigned &Line) {
   if (MDNode *N = I->getMetadata("dbg")) {
@@ -101,13 +101,13 @@ bool InstructionInfoTable::getInstructionDebugInfo(const llvm::Instruction *I,
   return false;
 }
 
-InstructionInfoTable::InstructionInfoTable(Module *m) 
+InstructionInfoTable::InstructionInfoTable(Module *m)
   : dummyString(""), dummyInfo(0, dummyString, 0, 0) {
   unsigned id = 0;
   std::map<const Instruction*, unsigned> lineTable;
   buildInstructionToLineMap(m, lineTable);
 
-  for (Module::iterator fnIt = m->begin(), fn_ie = m->end(); 
+  for (Module::iterator fnIt = m->begin(), fn_ie = m->end();
        fnIt != fn_ie; ++fnIt) {
 
     for (inst_iterator it = inst_begin(fnIt), ie = inst_end(fnIt); it != ie;
@@ -166,7 +166,7 @@ unsigned InstructionInfoTable::getMaxID() const {
 
 const InstructionInfo &
 InstructionInfoTable::getInfo(const Instruction *inst) const {
-  std::map<const llvm::Instruction*, InstructionInfo>::const_iterator it = 
+  std::map<const llvm::Instruction*, InstructionInfo>::const_iterator it =
     infos.find(inst);
   if (it==infos.end()) {
     return dummyInfo;
