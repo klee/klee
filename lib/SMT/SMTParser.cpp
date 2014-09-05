@@ -25,7 +25,7 @@
 using namespace klee;
 using namespace klee::expr;
 
-extern int smtlibparse(); 
+extern int smtlibparse();
 extern void *smtlib_createBuffer(int);
 extern void smtlib_deleteBuffer(void *);
 extern void smtlib_switchToBuffer(void *);
@@ -34,7 +34,7 @@ extern void smtlib_setInteractive(bool);
 
 SMTParser* SMTParser::parserTemp = NULL;
 
-SMTParser::SMTParser(const std::string _filename, 
+SMTParser::SMTParser(const std::string _filename,
 		     ExprBuilder* _builder) : fileName(_filename),
 					      lineNum(1),
 					      done(false),
@@ -43,7 +43,7 @@ SMTParser::SMTParser(const std::string _filename,
 					      queryParsed(false),
 					      builder(_builder) {
   is = new ifstream(fileName.c_str());
-  
+
   // Initial empty environments
   varEnvs.push(VarEnv());
   fvarEnvs.push(FVarEnv());
@@ -61,14 +61,14 @@ void SMTParser::Parse() {
 
 Decl* SMTParser::ParseTopLevelDecl() {
   return new QueryCommand(assumptions, builder->Not(satQuery),
-			  std::vector<ExprHandle>(), 
+			  std::vector<ExprHandle>(),
 			  std::vector<const Array*>());
 }
 
 bool SMTParser::Solve() {
   // FIXME: Support choice of solver.
   bool UseDummySolver = false, UseFastCexSolver = true, UseSTPQueryPCLog = true;
-  Solver *S, *STP = S = 
+  Solver *S, *STP = S =
     UseDummySolver ? createDummySolver() : new STPSolver(true);
   if (UseSTPQueryPCLog)
     S = createPCLoggingSolver(S, "stp-queries.pc");
@@ -90,7 +90,7 @@ bool SMTParser::Solve() {
       if (S->mustBeTrue(Query(ConstraintManager(QC->Constraints), QC->Query),
 			result)) {
 	//std::cout << (result ? "VALID" : "INVALID") << "\n";
-	return result;	
+	return result;
       }
     }
   }
@@ -160,20 +160,20 @@ void SMTParser::DeclareExpr(std::string name, Expr::Width w) {
     cout << "BitVec not multiple of 8 (" << w << ").  Need to update code.\n";
     exit(1);
   }
-  
+
 #ifdef DEBUG
   std::cout << "Declaring " << name << " of width " << w << "\n";
 #endif
-  
+
   Array *arr = new Array(name, w / 8);
-  
+
   ref<Expr> *kids = new ref<Expr>[w/8];
   for (unsigned i=0; i < w/8; i++)
-    kids[i] = builder->Read(UpdateList(arr, NULL), 
+    kids[i] = builder->Read(UpdateList(arr, NULL),
 			    builder->Constant(i, 32));
   ref<Expr> var = ConcatExpr::createN(w/8, kids); // XXX: move to builder?
   delete [] kids;
-  
+
   AddVar(name, var);
 }
 
@@ -181,7 +181,7 @@ void SMTParser::DeclareExpr(std::string name, Expr::Width w) {
 ExprHandle SMTParser::GetConstExpr(std::string val, uint8_t base, klee::Expr::Width w) {
   assert(base == 2 || base == 10 || base == 16);
   llvm::APInt ap(w, val.c_str(), val.length(), base);
-  
+
   return klee::ConstantExpr::alloc(ap);
 }
 

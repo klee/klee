@@ -51,7 +51,7 @@ class RaiseAsmPass : public llvm::ModulePass {
                                LLVM_TYPE_Q llvm::Type **Tys,
                                unsigned NumTys);
   llvm::Function *getIntrinsic(llvm::Module &M,
-                               unsigned IID, 
+                               unsigned IID,
                                LLVM_TYPE_Q llvm::Type *Ty0) {
     return getIntrinsic(M, IID, &Ty0, 1);
   }
@@ -60,7 +60,7 @@ class RaiseAsmPass : public llvm::ModulePass {
 
 public:
   RaiseAsmPass() : llvm::ModulePass(ID), TLI(0) {}
-  
+
   virtual bool runOnModule(llvm::Module &M);
 };
 
@@ -92,11 +92,11 @@ public:
 #endif
       IL(new llvm::IntrinsicLowering(TD)),
       LowerIntrinsics(LI) {}
-  ~IntrinsicCleanerPass() { delete IL; } 
-  
+  ~IntrinsicCleanerPass() { delete IL; }
+
   virtual bool runOnModule(llvm::Module &M);
 };
-  
+
   // performs two transformations which make interpretation
   // easier and faster.
   //
@@ -104,7 +104,7 @@ public:
   //    the incoming block list in the same order. Thus the
   //    incoming block index only needs to be computed once
   //    for each transfer.
-  // 
+  //
   // 2) Ensure that no PHI node result is used as an argument to
   //    a subsequent PHI node in the same basic block. This allows
   //    the transfer to execute the instructions in order instead
@@ -114,10 +114,10 @@ class PhiCleanerPass : public llvm::FunctionPass {
 
 public:
   PhiCleanerPass() : llvm::FunctionPass(ID) {}
-  
+
   virtual bool runOnFunction(llvm::Function &f);
 };
-  
+
 class DivCheckPass : public llvm::ModulePass {
   static char ID;
 public:
@@ -152,22 +152,22 @@ public:
 class LowerSwitchPass : public llvm::FunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
-  LowerSwitchPass() : FunctionPass(ID) {} 
-  
+  LowerSwitchPass() : FunctionPass(ID) {}
+
   virtual bool runOnFunction(llvm::Function &F);
-  
+
   struct SwitchCase {
     llvm ::Constant *value;
     llvm::BasicBlock *block;
-    
+
     SwitchCase() : value(0), block(0) { }
     SwitchCase(llvm::Constant *v, llvm::BasicBlock *b) :
       value(v), block(b) { }
   };
-  
+
   typedef std::vector<SwitchCase>           CaseVector;
   typedef std::vector<SwitchCase>::iterator CaseItr;
-  
+
 private:
   void processSwitchInst(llvm::SwitchInst *SI);
   void switchConvert(CaseItr begin,

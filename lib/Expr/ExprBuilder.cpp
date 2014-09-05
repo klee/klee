@@ -164,7 +164,7 @@ namespace {
     ExprBuilder *Base;
 
   public:
-    ChainedBuilder(ExprBuilder *_Builder, ExprBuilder *_Base) 
+    ChainedBuilder(ExprBuilder *_Builder, ExprBuilder *_Base)
       : Builder(_Builder), Base(_Base) {}
     ~ChainedBuilder() { delete Base; }
 
@@ -951,10 +951,10 @@ namespace {
       return Base->Xor(LHS, RHS);
     }
 
-    ref<Expr> Eq(const ref<ConstantExpr> &LHS, 
+    ref<Expr> Eq(const ref<ConstantExpr> &LHS,
                  const ref<NonConstantExpr> &RHS) {
       Expr::Width Width = LHS->getWidth();
-      
+
       if (Width == Expr::Bool) {
         // true == X ==> X
         if (LHS->isTrue())
@@ -967,12 +967,12 @@ namespace {
       return Base->Eq(LHS, RHS);
     }
 
-    ref<Expr> Eq(const ref<NonConstantExpr> &LHS, 
+    ref<Expr> Eq(const ref<NonConstantExpr> &LHS,
                  const ref<ConstantExpr> &RHS) {
       return Eq(RHS, LHS);
     }
 
-    ref<Expr> Eq(const ref<NonConstantExpr> &LHS, 
+    ref<Expr> Eq(const ref<NonConstantExpr> &LHS,
                  const ref<NonConstantExpr> &RHS) {
       return Base->Eq(LHS, RHS);
     }
@@ -986,10 +986,10 @@ namespace {
     SimplifyingBuilder(ExprBuilder *Builder, ExprBuilder *Base)
       : ChainedBuilder(Builder, Base) {}
 
-    ref<Expr> Eq(const ref<ConstantExpr> &LHS, 
+    ref<Expr> Eq(const ref<ConstantExpr> &LHS,
                  const ref<NonConstantExpr> &RHS) {
       Expr::Width Width = LHS->getWidth();
-      
+
       if (Width == Expr::Bool) {
         // true == X ==> X
         if (LHS->isTrue())
@@ -1002,12 +1002,12 @@ namespace {
       return Base->Eq(LHS, RHS);
     }
 
-    ref<Expr> Eq(const ref<NonConstantExpr> &LHS, 
+    ref<Expr> Eq(const ref<NonConstantExpr> &LHS,
                  const ref<ConstantExpr> &RHS) {
       return Eq(RHS, LHS);
     }
 
-    ref<Expr> Eq(const ref<NonConstantExpr> &LHS, 
+    ref<Expr> Eq(const ref<NonConstantExpr> &LHS,
                  const ref<NonConstantExpr> &RHS) {
       // X == X ==> true
       if (LHS == RHS)

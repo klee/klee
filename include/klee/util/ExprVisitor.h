@@ -22,9 +22,9 @@ namespace klee {
 
     private:
       //      Action() {}
-      Action(Kind _kind) 
+      Action(Kind _kind)
         : kind(_kind), argument(ConstantExpr::alloc(0, Expr::Bool)) {}
-      Action(Kind _kind, const ref<Expr> &_argument) 
+      Action(Kind _kind, const ref<Expr> &_argument)
         : kind(_kind), argument(_argument) {}
 
       friend class ExprVisitor;
@@ -33,8 +33,8 @@ namespace klee {
       Kind kind;
       ref<Expr> argument;
 
-      static Action changeTo(const ref<Expr> &expr) { 
-        return Action(ChangeTo,expr); 
+      static Action changeTo(const ref<Expr> &expr) {
+        return Action(ChangeTo,expr);
       }
       static Action doChildren() { return Action(DoChildren); }
       static Action skipChildren() { return Action(SkipChildren); }
@@ -86,7 +86,7 @@ namespace klee {
     bool recursive;
 
     ref<Expr> visitActual(const ref<Expr> &e);
-    
+
   public:
     // apply the visitor to the expression and return a possibly
     // modified new expression.

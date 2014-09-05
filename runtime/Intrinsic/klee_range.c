@@ -19,7 +19,7 @@ int klee_range(int start, int end, const char* name) {
   if (start+1==end) {
     return start;
   } else {
-    klee_make_symbolic(&x, sizeof x, name); 
+    klee_make_symbolic(&x, sizeof x, name);
 
     /* Make nicer constraint when simple... */
     if (start==0) {

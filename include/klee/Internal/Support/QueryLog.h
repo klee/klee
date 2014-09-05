@@ -25,7 +25,7 @@ namespace klee {
       Value,
       Cex
     };
-    
+
     typedef std::vector< ref<Expr> > exprs_ty;
     exprs_ty exprs;
 
@@ -33,11 +33,11 @@ namespace klee {
     ref<Expr> query;
     unsigned instruction;
     std::vector<const Array*> objects;
-    
+
   public:
     QueryLogEntry() : query(ConstantExpr::alloc(0,Expr::Bool)) {}
     QueryLogEntry(const QueryLogEntry &b);
-    QueryLogEntry(const Query &_query, 
+    QueryLogEntry(const Query &_query,
                   Type _type,
                   const std::vector<const Array*> *objects = 0);
   };
@@ -49,7 +49,7 @@ namespace klee {
 
   public:
     QueryLogResult() {}
-    QueryLogResult(bool _success, uint64_t _result, double _time) 
+    QueryLogResult(bool _success, uint64_t _result, double _time)
       : result(_result), time(_time) {
       if (!_success) { // la la la
         result = 0;
@@ -57,7 +57,7 @@ namespace klee {
       }
     }
   };
-  
+
 }
 
 #endif

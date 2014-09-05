@@ -18,7 +18,7 @@ namespace klee {
 class BitArray {
 private:
   uint32_t *bits;
-  
+
 protected:
   static uint32_t length(unsigned size) { return (size+31)/32; }
 

@@ -342,7 +342,7 @@ static bool linkBCA(object::Archive* archive, Module* composite, std::string& er
 #endif
 
 
-Module *klee::linkWithLibrary(Module *module, 
+Module *klee::linkWithLibrary(Module *module,
                               const std::string &libraryName) {
 DEBUG_WITH_TYPE("klee_linker", dbgs() << "Linking file " << libraryName << "\n");
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
@@ -408,11 +408,11 @@ DEBUG_WITH_TYPE("klee_linker", dbgs() << "Linking file " << libraryName << "\n")
 
   llvm::sys::Path libraryPath(libraryName);
   bool native = false;
-    
+
   if (linker.LinkInFile(libraryPath, native)) {
     klee_error("Linking library %s failed", libraryName.c_str());
   }
-    
+
   return linker.releaseModule();
 #endif
 }
@@ -432,7 +432,7 @@ Function *klee::getDirectCallTarget(CallSite cs) {
     // can be disabled, I just wanted to know when and if it happened.
     assert(0 && "FIXME: Unresolved direct target for a constant expression.");
   }
-  
+
   return 0;
 }
 
@@ -442,13 +442,13 @@ static bool valueIsOnlyCalled(const Value *v) {
     if (const Instruction *instr = dyn_cast<Instruction>(*it)) {
       if (instr->getOpcode()==0) continue; // XXX function numbering inst
       if (!isa<CallInst>(instr) && !isa<InvokeInst>(instr)) return false;
-      
+
       // Make sure that the value is only the target of this call and
       // not an argument.
       for (unsigned i=1,e=instr->getNumOperands(); i!=e; ++i)
         if (instr->getOperand(i)==v)
           return false;
-    } else if (const llvm::ConstantExpr *ce = 
+    } else if (const llvm::ConstantExpr *ce =
                dyn_cast<llvm::ConstantExpr>(*it)) {
       if (ce->getOpcode()==Instruction::BitCast)
         if (valueIsOnlyCalled(ce))

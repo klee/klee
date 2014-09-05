@@ -75,12 +75,12 @@ static void onAlarm(int) {
 static void setupHandler() {
   struct itimerval t;
   struct timeval tv;
-  
+
   tv.tv_sec = (long) kSecondsPerTick;
   tv.tv_usec = (long) (fmod(kSecondsPerTick, 1.)*1000000);
-  
+
   t.it_interval = t.it_value = tv;
-  
+
   ::setitimer(ITIMER_REAL, &t, 0);
   ::signal(SIGALRM, onAlarm);
 }
@@ -127,15 +127,15 @@ void Executor::processTimers(ExecutionState *current,
         processTree->dump(*os);
         delete os;
       }
-      
+
       dumpPTree = 0;
     }
 
     if (dumpStates) {
       llvm::raw_ostream *os = interpreterHandler->openOutputFile("states.txt");
-      
+
       if (os) {
-        for (std::set<ExecutionState*>::const_iterator it = states.begin(), 
+        for (std::set<ExecutionState*>::const_iterator it = states.begin(),
                ie = states.end(); it != ie; ++it) {
           ExecutionState *es = *it;
           *os << "(" << es << ",";
@@ -173,7 +173,7 @@ void Executor::processTimers(ExecutionState *current,
           *os << "}";
           *os << ")\n";
         }
-        
+
         delete os;
       }
 
@@ -191,10 +191,10 @@ void Executor::processTimers(ExecutionState *current,
     if (!timers.empty()) {
       double time = util::getWallTime();
 
-      for (std::vector<TimerInfo*>::iterator it = timers.begin(), 
+      for (std::vector<TimerInfo*>::iterator it = timers.begin(),
              ie = timers.end(); it != ie; ++it) {
         TimerInfo *ti = *it;
-        
+
         if (time >= ti->nextFireTime) {
           ti->timer->run();
           ti->nextFireTime = time + ti->rate;

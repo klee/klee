@@ -32,13 +32,13 @@ namespace klee {
   };
 
   typedef std::map<llvm::Instruction*,
-                   std::map<llvm::Function*, CallSiteInfo> > CallSiteSummaryTable;    
-  
+                   std::map<llvm::Function*, CallSiteInfo> > CallSiteSummaryTable;
+
   class CallPathNode {
     friend class CallPathManager;
 
   public:
-    typedef std::map<std::pair<llvm::Instruction*, 
+    typedef std::map<std::pair<llvm::Instruction*,
                                llvm::Function*>, CallPathNode*> children_ty;
 
     // form list of (callSite,function) path
@@ -52,7 +52,7 @@ namespace klee {
     unsigned count;
 
   public:
-    CallPathNode(CallPathNode *parent, 
+    CallPathNode(CallPathNode *parent,
                  llvm::Instruction *callSite,
                  llvm::Function *function);
 
@@ -64,17 +64,17 @@ namespace klee {
     std::vector<CallPathNode*> paths;
 
   private:
-    CallPathNode *computeCallPath(CallPathNode *parent, 
+    CallPathNode *computeCallPath(CallPathNode *parent,
                                   llvm::Instruction *callSite,
                                   llvm::Function *f);
-    
+
   public:
     CallPathManager();
     ~CallPathManager();
 
     void getSummaryStatistics(CallSiteSummaryTable &result);
-    
-    CallPathNode *getCallPath(CallPathNode *parent, 
+
+    CallPathNode *getCallPath(CallPathNode *parent,
                               llvm::Instruction *callSite,
                               llvm::Function *f);
   };

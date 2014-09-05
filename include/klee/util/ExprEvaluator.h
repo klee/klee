@@ -19,13 +19,13 @@ namespace klee {
     Action evalRead(const UpdateList &ul, unsigned index);
     Action visitRead(const ReadExpr &re);
     Action visitExpr(const Expr &e);
-      
+
     Action protectedDivOperation(const BinaryExpr &e);
     Action visitUDiv(const UDivExpr &e);
     Action visitSDiv(const SDivExpr &e);
     Action visitURem(const URemExpr &e);
     Action visitSRem(const SRemExpr &e);
-      
+
   public:
     ExprEvaluator() {}
 

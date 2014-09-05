@@ -52,7 +52,7 @@ private:
   const std::map< ref<Expr>, ref<Expr> > &replacements;
 
 public:
-  ExprReplaceVisitor2(const std::map< ref<Expr>, ref<Expr> > &_replacements) 
+  ExprReplaceVisitor2(const std::map< ref<Expr>, ref<Expr> > &_replacements)
     : ExprVisitor(true),
       replacements(_replacements) {}
 
@@ -72,7 +72,7 @@ bool ConstraintManager::rewriteConstraints(ExprVisitor &visitor) {
   bool changed = false;
 
   constraints.swap(old);
-  for (ConstraintManager::constraints_ty::iterator 
+  for (ConstraintManager::constraints_ty::iterator
          it = old.begin(), ie = old.end(); it != ie; ++it) {
     ref<Expr> &ce = *it;
     ref<Expr> e = visitor.visit(ce);
@@ -89,7 +89,7 @@ bool ConstraintManager::rewriteConstraints(ExprVisitor &visitor) {
 }
 
 void ConstraintManager::simplifyForValidConstraint(ref<Expr> e) {
-  // XXX 
+  // XXX
 }
 
 ref<Expr> ConstraintManager::simplifyExpr(ref<Expr> e) const {
@@ -97,8 +97,8 @@ ref<Expr> ConstraintManager::simplifyExpr(ref<Expr> e) const {
     return e;
 
   std::map< ref<Expr>, ref<Expr> > equalities;
-  
-  for (ConstraintManager::constraints_ty::const_iterator 
+
+  for (ConstraintManager::constraints_ty::const_iterator
          it = constraints.begin(), ie = constraints.end(); it != ie; ++it) {
     if (const EqExpr *ee = dyn_cast<EqExpr>(*it)) {
       if (isa<ConstantExpr>(ee->left)) {
@@ -118,7 +118,7 @@ ref<Expr> ConstraintManager::simplifyExpr(ref<Expr> e) const {
 }
 
 void ConstraintManager::addConstraintInternal(ref<Expr> e) {
-  // rewrite any known equalities 
+  // rewrite any known equalities
 
   // XXX should profile the effects of this and the overhead.
   // traversing the constraints looking for equalities is hardly the
@@ -128,10 +128,10 @@ void ConstraintManager::addConstraintInternal(ref<Expr> e) {
 
   switch (e->getKind()) {
   case Expr::Constant:
-    assert(cast<ConstantExpr>(e)->isTrue() && 
+    assert(cast<ConstantExpr>(e)->isTrue() &&
            "attempt to add invalid (false) constraint");
     break;
-    
+
     // split to enable finer grained independence and other optimizations
   case Expr::And: {
     BinaryExpr *be = cast<BinaryExpr>(e);
@@ -149,7 +149,7 @@ void ConstraintManager::addConstraintInternal(ref<Expr> e) {
     constraints.push_back(e);
     break;
   }
-    
+
   default:
     constraints.push_back(e);
     break;

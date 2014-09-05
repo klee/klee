@@ -26,7 +26,7 @@ using namespace klee;
 
 ///
 
-CallPathNode::CallPathNode(CallPathNode *_parent, 
+CallPathNode::CallPathNode(CallPathNode *_parent,
                            Instruction *_callSite,
                            Function *_function)
   : parent(_parent),
@@ -77,25 +77,25 @@ void CallPathManager::getSummaryStatistics(CallSiteSummaryTable &results) {
 }
 
 
-CallPathNode *CallPathManager::computeCallPath(CallPathNode *parent, 
+CallPathNode *CallPathManager::computeCallPath(CallPathNode *parent,
                                                Instruction *cs,
                                                Function *f) {
   for (CallPathNode *p=parent; p; p=p->parent)
     if (cs==p->callSite && f==p->function)
       return p;
-  
+
   CallPathNode *cp = new CallPathNode(parent, cs, f);
   paths.push_back(cp);
   return cp;
 }
 
-CallPathNode *CallPathManager::getCallPath(CallPathNode *parent, 
+CallPathNode *CallPathManager::getCallPath(CallPathNode *parent,
                                            Instruction *cs,
                                            Function *f) {
   std::pair<Instruction*,Function*> key(cs, f);
   if (!parent)
     parent = &root;
-  
+
   CallPathNode::children_ty::iterator it = parent->children.find(key);
   if (it==parent->children.end()) {
     CallPathNode *cp = computeCallPath(parent, cs, f);

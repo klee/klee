@@ -33,7 +33,7 @@ char LowerSwitchPass::ID = 0;
 struct SwitchCaseCmp {
   bool operator () (const LowerSwitchPass::SwitchCase& C1,
                     const LowerSwitchPass::SwitchCase& C2) {
-    
+
     const ConstantInt* CI1 = cast<const ConstantInt>(C1.value);
     const ConstantInt* CI2 = cast<const ConstantInt>(C2.value);
     return CI1->getValue().slt(CI2->getValue());
@@ -63,14 +63,14 @@ void LowerSwitchPass::switchConvert(CaseItr begin, CaseItr end,
 {
   BasicBlock *curHead = defaultBlock;
   Function *F = origBlock->getParent();
-  
+
   // iterate through all the cases, creating a new BasicBlock for each
   for (CaseItr it = begin; it < end; ++it) {
     BasicBlock *newBlock = BasicBlock::Create(getGlobalContext(), "NodeBlock");
     Function::iterator FI = origBlock;
     F->getBasicBlockList().insert(++FI, newBlock);
-    
-    ICmpInst *cmpInst = 
+
+    ICmpInst *cmpInst =
       new ICmpInst(*newBlock, ICmpInst::ICMP_EQ, value, it->value, "case.cmp");
     BranchInst::Create(it->block, curHead, cmpInst, newBlock);
 
@@ -83,7 +83,7 @@ void LowerSwitchPass::switchConvert(CaseItr begin, CaseItr end,
       assert(blockIndex != -1 && "Switch didn't go to this successor??");
       PN->setIncomingBlock((unsigned)blockIndex, newBlock);
     }
-    
+
     curHead = newBlock;
   }
 
@@ -115,25 +115,25 @@ void LowerSwitchPass::processSwitchInst(SwitchInst *SI) {
     assert(BlockIdx != -1 && "Switch didn't go to this successor??");
     PN->setIncomingBlock((unsigned)BlockIdx, newDefault);
   }
-  
+
   CaseVector cases;
-  
+
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 1)
   for (SwitchInst::CaseIt i = SI->case_begin(), e = SI->case_end(); i != e; ++i)
     cases.push_back(SwitchCase(i.getCaseValue(),
                                i.getCaseSuccessor()));
 #else
-  for (unsigned i = 1; i < SI->getNumSuccessors(); ++i)  
+  for (unsigned i = 1; i < SI->getNumSuccessors(); ++i)
     cases.push_back(SwitchCase(SI->getSuccessorValue(i),
                                SI->getSuccessor(i)));
 #endif
-  
+
   // reverse cases, as switchConvert constructs a chain of
   //   basic blocks by appending to the front. if we reverse,
   //   the if comparisons will happen in the same order
   //   as the cases appear in the switch
   std::reverse(cases.begin(), cases.end());
-  
+
   switchConvert(cases.begin(), cases.end(), switchValue, origBlock, newDefault);
 
   // We are now done with the switch instruction, so delete it

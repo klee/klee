@@ -46,7 +46,7 @@ namespace klee {
     __attribute__ ((format (printf, 1, 2)));
 
   /// Print "KLEE: WARNING" followed by the msg in printf format and a
-  /// newline on stderr and to warnings.txt. However, the warning is only 
+  /// newline on stderr and to warnings.txt. However, the warning is only
   /// printed once for each unique (id, msg) pair (as pointers).
   void klee_warning_once(const void *id,
                          const char *msg, ...)

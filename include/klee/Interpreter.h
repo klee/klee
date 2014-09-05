@@ -41,7 +41,7 @@ public:
   virtual void incPathsExplored() = 0;
 
   virtual void processTestCase(const ExecutionState &state,
-                               const char *err, 
+                               const char *err,
                                const char *suffix) = 0;
 };
 
@@ -55,10 +55,10 @@ public:
     bool CheckDivZero;
     bool CheckOvershift;
 
-    ModuleOptions(const std::string& _LibraryDir, 
+    ModuleOptions(const std::string& _LibraryDir,
                   bool _Optimize, bool _CheckDivZero,
                   bool _CheckOvershift)
-      : LibraryDir(_LibraryDir), Optimize(_Optimize), 
+      : LibraryDir(_LibraryDir), Optimize(_Optimize),
         CheckDivZero(_CheckDivZero), CheckOvershift(_CheckOvershift) {}
   };
 
@@ -95,12 +95,12 @@ public:
   static Interpreter *create(const InterpreterOptions &_interpreterOpts,
                              InterpreterHandler *ih);
 
-  /// Register the module to be executed.  
+  /// Register the module to be executed.
   ///
   /// \return The final module after it has been optimized, checks
   /// inserted, and modified for interpretation.
-  virtual const llvm::Module * 
-  setModule(llvm::Module *module, 
+  virtual const llvm::Module *
+  setModule(llvm::Module *module,
             const ModuleOptions &opts) = 0;
 
   // supply a tree stream writer which the interpreter will use
@@ -140,13 +140,13 @@ public:
   virtual unsigned getPathStreamID(const ExecutionState &state) = 0;
 
   virtual unsigned getSymbolicPathStreamID(const ExecutionState &state) = 0;
-  
+
   virtual void getConstraintLog(const ExecutionState &state,
                                 std::string &res,
                                 LogType logFormat = STP) = 0;
 
-  virtual bool getSymbolicSolution(const ExecutionState &state, 
-                                   std::vector< 
+  virtual bool getSymbolicSolution(const ExecutionState &state,
+                                   std::vector<
                                    std::pair<std::string,
                                    std::vector<unsigned char> > >
                                    &res) = 0;

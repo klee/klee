@@ -87,7 +87,7 @@ int kTest_isKTestFile(const char *path) {
     return 0;
   res = kTest_checkHeader(f);
   fclose(f);
-  
+
   return res;
 }
 
@@ -96,37 +96,37 @@ KTest *kTest_fromFile(const char *path) {
   KTest *res = 0;
   unsigned i, version;
 
-  if (!f) 
+  if (!f)
     goto error;
-  if (!kTest_checkHeader(f)) 
+  if (!kTest_checkHeader(f))
     goto error;
 
   res = (KTest*) calloc(1, sizeof(*res));
-  if (!res) 
+  if (!res)
     goto error;
 
-  if (!read_uint32(f, &version)) 
+  if (!read_uint32(f, &version))
     goto error;
-  
+
   if (version > kTest_getCurrentVersion())
     goto error;
 
   res->version = version;
 
-  if (!read_uint32(f, &res->numArgs)) 
+  if (!read_uint32(f, &res->numArgs))
     goto error;
   res->args = (char**) calloc(res->numArgs, sizeof(*res->args));
-  if (!res->args) 
+  if (!res->args)
     goto error;
-  
+
   for (i=0; i<res->numArgs; i++)
     if (!read_string(f, &res->args[i]))
       goto error;
 
   if (version >= 2) {
-    if (!read_uint32(f, &res->symArgvs)) 
+    if (!read_uint32(f, &res->symArgvs))
       goto error;
-    if (!read_uint32(f, &res->symArgvLen)) 
+    if (!read_uint32(f, &res->symArgvLen))
       goto error;
   }
 
@@ -179,13 +179,13 @@ int kTest_toFile(KTest *bo, const char *path) {
   FILE *f = fopen(path, "wb");
   unsigned i;
 
-  if (!f) 
+  if (!f)
     goto error;
   if (fwrite(KTEST_MAGIC, strlen(KTEST_MAGIC), 1, f)!=1)
     goto error;
   if (!write_uint32(f, KTEST_VERSION))
     goto error;
-      
+
   if (!write_uint32(f, bo->numArgs))
     goto error;
   for (i=0; i<bo->numArgs; i++) {
@@ -197,7 +197,7 @@ int kTest_toFile(KTest *bo, const char *path) {
     goto error;
   if (!write_uint32(f, bo->symArgvLen))
     goto error;
-  
+
   if (!write_uint32(f, bo->numObjects))
     goto error;
   for (i=0; i<bo->numObjects; i++) {
@@ -215,7 +215,7 @@ int kTest_toFile(KTest *bo, const char *path) {
   return 1;
  error:
   if (f) fclose(f);
-  
+
   return 0;
 }
 

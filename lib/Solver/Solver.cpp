@@ -105,8 +105,8 @@ const char* SolverImpl::getOperationStatusString(SolverRunStatus statusCode)
         case SOLVER_RUN_STATUS_WAITPID_FAILED:
             return "WAITPID FAILED FOR SOLVER PROCESS";
         default:
-            return "UNRECOGNIZED OPERATION STATUS";        
-    }    
+            return "UNRECOGNIZED OPERATION STATUS";
+    }
 }
 
 const char *Solver::validity_to_str(Validity v) {
@@ -117,8 +117,8 @@ const char *Solver::validity_to_str(Validity v) {
   }
 }
 
-Solver::~Solver() { 
-  delete impl; 
+Solver::~Solver() {
+  delete impl;
 }
 
 char *Solver::getConstraintLog(const Query& query) {
@@ -184,12 +184,12 @@ bool Solver::getValue(const Query& query, ref<ConstantExpr> &result) {
   ref<Expr> tmp;
   if (!impl->computeValue(query, tmp))
     return false;
-  
+
   result = cast<ConstantExpr>(tmp);
   return true;
 }
 
-bool 
+bool
 Solver::getInitialValues(const Query& query,
                          const std::vector<const Array*> &objects,
                          std::vector< std::vector<unsigned char> > &values) {
@@ -199,7 +199,7 @@ Solver::getInitialValues(const Query& query,
   // FIXME: Propogate this out.
   if (!hasSolution)
     return false;
-    
+
   return success;
 }
 
@@ -213,9 +213,9 @@ std::pair< ref<Expr>, ref<Expr> > Solver::getRange(const Query& query) {
     if (!evaluate(query, result))
       assert(0 && "computeValidity failed");
     switch (result) {
-    case Solver::True: 
+    case Solver::True:
       min = max = 1; break;
-    case Solver::False: 
+    case Solver::False:
       min = max = 0; break;
     default:
       min = 0, max = 1; break;
@@ -228,10 +228,10 @@ std::pair< ref<Expr>, ref<Expr> > Solver::getRange(const Query& query) {
     while (lo<hi) {
       mid = lo + (hi - lo)/2;
       bool res;
-      bool success = 
+      bool success =
         mustBeTrue(query.withExpr(
                      EqExpr::create(LShrExpr::create(e,
-                                                     ConstantExpr::create(mid, 
+                                                     ConstantExpr::create(mid,
                                                                           width)),
                                     ConstantExpr::create(0, width))),
                    res);
@@ -247,18 +247,18 @@ std::pair< ref<Expr>, ref<Expr> > Solver::getRange(const Query& query) {
 
       bits = lo;
     }
-    
+
     // could binary search for training zeros and offset
     // min max but unlikely to be very useful
 
     // check common case
     bool res = false;
-    bool success = 
-      mayBeTrue(query.withExpr(EqExpr::create(e, ConstantExpr::create(0, 
-                                                                      width))), 
+    bool success =
+      mayBeTrue(query.withExpr(EqExpr::create(e, ConstantExpr::create(0,
+                                                                      width))),
                 res);
 
-    assert(success && "FIXME: Unhandled solver failure");      
+    assert(success && "FIXME: Unhandled solver failure");
     (void) success;
 
     if (res) {
@@ -269,13 +269,13 @@ std::pair< ref<Expr>, ref<Expr> > Solver::getRange(const Query& query) {
       while (lo<hi) {
         mid = lo + (hi - lo)/2;
         bool res = false;
-        bool success = 
-          mayBeTrue(query.withExpr(UleExpr::create(e, 
-                                                   ConstantExpr::create(mid, 
+        bool success =
+          mayBeTrue(query.withExpr(UleExpr::create(e,
+                                                   ConstantExpr::create(mid,
                                                                         width))),
                     res);
 
-        assert(success && "FIXME: Unhandled solver failure");      
+        assert(success && "FIXME: Unhandled solver failure");
         (void) success;
 
         if (res) {
@@ -293,13 +293,13 @@ std::pair< ref<Expr>, ref<Expr> > Solver::getRange(const Query& query) {
     while (lo<hi) {
       mid = lo + (hi - lo)/2;
       bool res;
-      bool success = 
-        mustBeTrue(query.withExpr(UleExpr::create(e, 
-                                                  ConstantExpr::create(mid, 
+      bool success =
+        mustBeTrue(query.withExpr(UleExpr::create(e,
+                                                  ConstantExpr::create(mid,
                                                                        width))),
                    res);
 
-      assert(success && "FIXME: Unhandled solver failure");      
+      assert(success && "FIXME: Unhandled solver failure");
       (void) success;
 
       if (res) {
@@ -322,11 +322,11 @@ class ValidatingSolver : public SolverImpl {
 private:
   Solver *solver, *oracle;
 
-public: 
-  ValidatingSolver(Solver *_solver, Solver *_oracle) 
+public:
+  ValidatingSolver(Solver *_solver, Solver *_oracle)
     : solver(_solver), oracle(_oracle) {}
   ~ValidatingSolver() { delete solver; }
-  
+
   bool computeValidity(const Query&, Solver::Validity &result);
   bool computeTruth(const Query&, bool &isValid);
   bool computeValue(const Query&, ref<Expr> &result);
@@ -342,42 +342,42 @@ public:
 bool ValidatingSolver::computeTruth(const Query& query,
                                     bool &isValid) {
   bool answer;
-  
+
   if (!solver->impl->computeTruth(query, isValid))
     return false;
   if (!oracle->impl->computeTruth(query, answer))
     return false;
-  
+
   if (isValid != answer)
     assert(0 && "invalid solver result (computeTruth)");
-  
+
   return true;
 }
 
 bool ValidatingSolver::computeValidity(const Query& query,
                                        Solver::Validity &result) {
   Solver::Validity answer;
-  
+
   if (!solver->impl->computeValidity(query, result))
     return false;
   if (!oracle->impl->computeValidity(query, answer))
     return false;
-  
+
   if (result != answer)
     assert(0 && "invalid solver result (computeValidity)");
-  
+
   return true;
 }
 
 bool ValidatingSolver::computeValue(const Query& query,
-                                    ref<Expr> &result) {  
+                                    ref<Expr> &result) {
   bool answer;
 
   if (!solver->impl->computeValue(query, result))
     return false;
   // We don't want to compare, but just make sure this is a legal
   // solution.
-  if (!oracle->impl->computeTruth(query.withExpr(NeExpr::create(query.expr, 
+  if (!oracle->impl->computeTruth(query.withExpr(NeExpr::create(query.expr,
                                                                 result)),
                                   answer))
     return false;
@@ -388,7 +388,7 @@ bool ValidatingSolver::computeValue(const Query& query,
   return true;
 }
 
-bool 
+bool
 ValidatingSolver::computeInitialValues(const Query& query,
                                        const std::vector<const Array*>
                                          &objects,
@@ -397,7 +397,7 @@ ValidatingSolver::computeInitialValues(const Query& query,
                                        bool &hasSolution) {
   bool answer;
 
-  if (!solver->impl->computeInitialValues(query, objects, values, 
+  if (!solver->impl->computeInitialValues(query, objects, values,
                                           hasSolution))
     return false;
 
@@ -417,10 +417,10 @@ ValidatingSolver::computeInitialValues(const Query& query,
     }
     ConstraintManager tmp(bindings);
     ref<Expr> constraints = Expr::createIsZero(query.expr);
-    for (ConstraintManager::const_iterator it = query.constraints.begin(), 
+    for (ConstraintManager::const_iterator it = query.constraints.begin(),
            ie = query.constraints.end(); it != ie; ++it)
       constraints = AndExpr::create(constraints, *it);
-    
+
     if (!oracle->impl->computeTruth(Query(tmp, constraints), answer))
       return false;
     if (!answer)
@@ -429,7 +429,7 @@ ValidatingSolver::computeInitialValues(const Query& query,
     if (!oracle->impl->computeTruth(query, answer))
       return false;
     if (!answer)
-      assert(0 && "invalid solver result (computeInitialValues)");    
+      assert(0 && "invalid solver result (computeInitialValues)");
   }
 
   return true;
@@ -454,36 +454,36 @@ Solver *klee::createValidatingSolver(Solver *s, Solver *oracle) {
 /***/
 
 class DummySolverImpl : public SolverImpl {
-public: 
+public:
   DummySolverImpl() {}
-  
-  bool computeValidity(const Query&, Solver::Validity &result) { 
+
+  bool computeValidity(const Query&, Solver::Validity &result) {
     ++stats::queries;
     // FIXME: We should have stats::queriesFail;
-    return false; 
+    return false;
   }
-  bool computeTruth(const Query&, bool &isValid) { 
+  bool computeTruth(const Query&, bool &isValid) {
     ++stats::queries;
     // FIXME: We should have stats::queriesFail;
-    return false; 
+    return false;
   }
-  bool computeValue(const Query&, ref<Expr> &result) { 
+  bool computeValue(const Query&, ref<Expr> &result) {
     ++stats::queries;
     ++stats::queryCounterexamples;
-    return false; 
+    return false;
   }
   bool computeInitialValues(const Query&,
                             const std::vector<const Array*> &objects,
                             std::vector< std::vector<unsigned char> > &values,
-                            bool &hasSolution) { 
+                            bool &hasSolution) {
     ++stats::queries;
     ++stats::queryCounterexamples;
-    return false; 
+    return false;
   }
   SolverRunStatus getOperationStatusCode() {
       return SOLVER_RUN_STATUS_FAILURE;
   }
-  
+
 };
 
 Solver *klee::createDummySolver() {
@@ -503,7 +503,7 @@ private:
 public:
   STPSolverImpl(bool _useForkedSTP, bool _optimizeDivides = true);
   ~STPSolverImpl();
-  
+
   char *getConstraintLog(const Query&);
   void setCoreSolverTimeout(double _timeout) { timeout = _timeout; }
 
@@ -568,7 +568,7 @@ STPSolver::STPSolver(bool useForkedSTP, bool optimizeDivides)
 }
 
 char *STPSolver::getConstraintLog(const Query &query) {
-  return impl->getConstraintLog(query);  
+  return impl->getConstraintLog(query);
 }
 
 void STPSolver::setCoreSolverTimeout(double timeout) {
@@ -579,7 +579,7 @@ void STPSolver::setCoreSolverTimeout(double timeout) {
 
 char *STPSolverImpl::getConstraintLog(const Query &query) {
   vc_push(vc);
-  for (std::vector< ref<Expr> >::const_iterator it = query.constraints.begin(), 
+  for (std::vector< ref<Expr> >::const_iterator it = query.constraints.begin(),
          ie = query.constraints.end(); it != ie; ++it)
     vc_assertFormula(vc, builder->construct(*it));
   assert(query.expr == ConstantExpr::alloc(0, Expr::Bool) &&
@@ -587,7 +587,7 @@ char *STPSolverImpl::getConstraintLog(const Query &query) {
 
   char *buffer;
   unsigned long length;
-  vc_printQueryStateToBuffer(vc, builder->getFalse(), 
+  vc_printQueryStateToBuffer(vc, builder->getFalse(),
                              &buffer, &length, false);
   vc_pop(vc);
 
@@ -619,7 +619,7 @@ bool STPSolverImpl::computeValue(const Query& query,
   if (!computeInitialValues(query.withFalse(), objects, values, hasSolution))
     return false;
   assert(hasSolution && "state has invalid constraint set");
-  
+
   // Evaluate the expression with the computed assignment.
   Assignment a(objects, values);
   result = a.evaluate(query.expr);
@@ -640,24 +640,24 @@ static SolverImpl::SolverRunStatus runAndGetCex(::VC vc, STPBuilder *builder, ::
            it = objects.begin(), ie = objects.end(); it != ie; ++it) {
       const Array *array = *it;
       std::vector<unsigned char> data;
-      
+
       data.reserve(array->size);
       for (unsigned offset = 0; offset < array->size; offset++) {
-        ExprHandle counter = 
+        ExprHandle counter =
           vc_getCounterExample(vc, builder->getInitialRead(array, offset));
         unsigned char val = getBVUnsigned(counter);
         data.push_back(val);
       }
-      
+
       values.push_back(data);
     }
   }
-  
+
   if (true == hasSolution) {
     return SolverImpl::SOLVER_RUN_STATUS_SUCCESS_SOLVABLE;
   }
   else {
-    return SolverImpl::SOLVER_RUN_STATUS_SUCCESS_UNSOLVABLE;  
+    return SolverImpl::SOLVER_RUN_STATUS_SUCCESS_UNSOLVABLE;
   }
 }
 
@@ -665,7 +665,7 @@ static void stpTimeoutHandler(int x) {
   _exit(52);
 }
 
-static SolverImpl::SolverRunStatus runAndGetCexForked(::VC vc, 
+static SolverImpl::SolverRunStatus runAndGetCexForked(::VC vc,
                                                       STPBuilder *builder,
                                                       ::VCExpr q,
                                                       const std::vector<const Array*> &objects,
@@ -685,24 +685,24 @@ static SolverImpl::SolverRunStatus runAndGetCexForked(::VC vc,
   int pid = fork();
   if (pid==-1) {
     fprintf(stderr, "ERROR: fork failed (for STP)");
-    if (!IgnoreSolverFailures) 
+    if (!IgnoreSolverFailures)
       exit(1);
     return SolverImpl::SOLVER_RUN_STATUS_FORK_FAILED;
   }
 
   if (pid == 0) {
-    if (timeout) {      
+    if (timeout) {
       ::alarm(0); /* Turn off alarm so we can safely set signal handler */
       ::signal(SIGALRM, stpTimeoutHandler);
       ::alarm(std::max(1, (int)timeout));
-    }    
+    }
     unsigned res = vc_query(vc, q);
     if (!res) {
       for (std::vector<const Array*>::const_iterator
              it = objects.begin(), ie = objects.end(); it != ie; ++it) {
         const Array *array = *it;
         for (unsigned offset = 0; offset < array->size; offset++) {
-          ExprHandle counter = 
+          ExprHandle counter =
             vc_getCounterExample(vc, builder->getInitialRead(array, offset));
           *pos++ = getBVUnsigned(counter);
         }
@@ -716,14 +716,14 @@ static SolverImpl::SolverRunStatus runAndGetCexForked(::VC vc,
     do {
       res = waitpid(pid, &status, 0);
     } while (res < 0 && errno == EINTR);
-    
+
     if (res < 0) {
       fprintf(stderr, "ERROR: waitpid() for STP failed");
-      if (!IgnoreSolverFailures) 
+      if (!IgnoreSolverFailures)
 	exit(1);
       return SolverImpl::SOLVER_RUN_STATUS_WAITPID_FAILED;
     }
-    
+
     // From timed_run.py: It appears that linux at least will on
     // "occasion" return a status when the process was terminated by a
     // signal, so test signal first.
@@ -746,11 +746,11 @@ static SolverImpl::SolverRunStatus runAndGetCexForked(::VC vc,
       return SolverImpl::SOLVER_RUN_STATUS_TIMEOUT;
     } else {
       fprintf(stderr, "error: STP did not return a recognized code");
-      if (!IgnoreSolverFailures) 
+      if (!IgnoreSolverFailures)
 	exit(1);
       return SolverImpl::SOLVER_RUN_STATUS_UNEXPECTED_EXIT_CODE;
     }
-    
+
     if (hasSolution) {
       values = std::vector< std::vector<unsigned char> >(objects.size());
       unsigned i=0;
@@ -762,37 +762,37 @@ static SolverImpl::SolverRunStatus runAndGetCexForked(::VC vc,
         pos += array->size;
       }
     }
-    
+
     if (true == hasSolution) {
       return SolverImpl::SOLVER_RUN_STATUS_SUCCESS_SOLVABLE;
     }
-    else {        
+    else {
       return SolverImpl::SOLVER_RUN_STATUS_SUCCESS_UNSOLVABLE;
     }
   }
 }
 bool
 STPSolverImpl::computeInitialValues(const Query &query,
-                                    const std::vector<const Array*> 
+                                    const std::vector<const Array*>
                                       &objects,
-                                    std::vector< std::vector<unsigned char> > 
+                                    std::vector< std::vector<unsigned char> >
                                       &values,
                                     bool &hasSolution) {
-  runStatusCode =  SOLVER_RUN_STATUS_FAILURE; 
-    
+  runStatusCode =  SOLVER_RUN_STATUS_FAILURE;
+
   TimerStatIncrementer t(stats::queryTime);
 
   vc_push(vc);
 
-  for (ConstraintManager::const_iterator it = query.constraints.begin(), 
+  for (ConstraintManager::const_iterator it = query.constraints.begin(),
          ie = query.constraints.end(); it != ie; ++it)
     vc_assertFormula(vc, builder->construct(*it));
-  
+
   ++stats::queries;
   ++stats::queryCounterexamples;
 
   ExprHandle stp_e = builder->construct(query.expr);
-     
+
   if (0) {
     char *buf;
     unsigned long len;
@@ -802,24 +802,24 @@ STPSolverImpl::computeInitialValues(const Query &query,
 
   bool success;
   if (useForkedSTP) {
-    runStatusCode = runAndGetCexForked(vc, builder, stp_e, objects, values, 
+    runStatusCode = runAndGetCexForked(vc, builder, stp_e, objects, values,
                                        hasSolution, timeout);
     success = ((SOLVER_RUN_STATUS_SUCCESS_SOLVABLE == runStatusCode) ||
-               (SOLVER_RUN_STATUS_SUCCESS_UNSOLVABLE == runStatusCode));    
+               (SOLVER_RUN_STATUS_SUCCESS_UNSOLVABLE == runStatusCode));
   } else {
-    runStatusCode = runAndGetCex(vc, builder, stp_e, objects, values, hasSolution);    
+    runStatusCode = runAndGetCex(vc, builder, stp_e, objects, values, hasSolution);
     success = true;
   }
-  
+
   if (success) {
     if (hasSolution)
       ++stats::queriesInvalid;
     else
       ++stats::queriesValid;
   }
-  
+
   vc_pop(vc);
-  
+
   return success;
 }
 
@@ -836,42 +836,42 @@ class MetaSMTSolverImpl : public SolverImpl {
 private:
 
   SolverContext _meta_solver;
-  MetaSMTSolver<SolverContext>  *_solver;  
+  MetaSMTSolver<SolverContext>  *_solver;
   MetaSMTBuilder<SolverContext> *_builder;
   double _timeout;
   bool   _useForked;
   SolverRunStatus _runStatusCode;
 
 public:
-  MetaSMTSolverImpl(MetaSMTSolver<SolverContext> *solver, bool useForked, bool optimizeDivides);  
+  MetaSMTSolverImpl(MetaSMTSolver<SolverContext> *solver, bool useForked, bool optimizeDivides);
   virtual ~MetaSMTSolverImpl();
-  
+
   char *getConstraintLog(const Query&);
   void setCoreSolverTimeout(double timeout) { _timeout = timeout; }
 
   bool computeTruth(const Query&, bool &isValid);
   bool computeValue(const Query&, ref<Expr> &result);
-    
+
   bool computeInitialValues(const Query &query,
                             const std::vector<const Array*> &objects,
                             std::vector< std::vector<unsigned char> > &values,
                             bool &hasSolution);
-    
+
   SolverImpl::SolverRunStatus runAndGetCex(ref<Expr> query_expr,
                                            const std::vector<const Array*> &objects,
                                            std::vector< std::vector<unsigned char> > &values,
                                            bool &hasSolution);
-  
+
   SolverImpl::SolverRunStatus runAndGetCexForked(const Query &query,
                                                  const std::vector<const Array*> &objects,
                                                  std::vector< std::vector<unsigned char> > &values,
                                                  bool &hasSolution,
                                                  double timeout);
-  
+
   SolverRunStatus getOperationStatusCode();
-  
+
   SolverContext& get_meta_solver() { return(_meta_solver); };
-  
+
 };
 
 
@@ -879,16 +879,16 @@ public:
 
 
 template<typename SolverContext>
-MetaSMTSolver<SolverContext>::MetaSMTSolver(bool useForked, bool optimizeDivides) 
+MetaSMTSolver<SolverContext>::MetaSMTSolver(bool useForked, bool optimizeDivides)
   : Solver(new MetaSMTSolverImpl<SolverContext>(this, useForked, optimizeDivides))
 {
-   
+
 }
 
 template<typename SolverContext>
 MetaSMTSolver<SolverContext>::~MetaSMTSolver()
 {
-  
+
 }
 
 template<typename SolverContext>
@@ -908,14 +908,14 @@ void MetaSMTSolver<SolverContext>::setCoreSolverTimeout(double timeout) {
 
 template<typename SolverContext>
 MetaSMTSolverImpl<SolverContext>::MetaSMTSolverImpl(MetaSMTSolver<SolverContext> *solver, bool useForked, bool optimizeDivides)
-  : _solver(solver),    
+  : _solver(solver),
     _builder(new MetaSMTBuilder<SolverContext>(_meta_solver, optimizeDivides)),
     _timeout(0.0),
     _useForked(useForked)
-{  
+{
   assert(_solver && "unable to create MetaSMTSolver");
   assert(_builder && "unable to create MetaSMTBuilder");
-  
+
   if (_useForked) {
       shared_memory_id = shmget(IPC_PRIVATE, shared_memory_size, IPC_CREAT | 0700);
       assert(shared_memory_id >= 0 && "shmget failed");
@@ -939,7 +939,7 @@ char *MetaSMTSolverImpl<SolverContext>::getConstraintLog(const Query&) {
 }
 
 template<typename SolverContext>
-bool MetaSMTSolverImpl<SolverContext>::computeTruth(const Query& query, bool &isValid) {  
+bool MetaSMTSolverImpl<SolverContext>::computeTruth(const Query& query, bool &isValid) {
 
   bool success = false;
   std::vector<const Array*> objects;
@@ -957,15 +957,15 @@ bool MetaSMTSolverImpl<SolverContext>::computeTruth(const Query& query, bool &is
 
 template<typename SolverContext>
 bool MetaSMTSolverImpl<SolverContext>::computeValue(const Query& query, ref<Expr> &result) {
-  
+
   bool success = false;
   std::vector<const Array*> objects;
   std::vector< std::vector<unsigned char> > values;
   bool hasSolution;
 
   // Find the object used in the expression, and compute an assignment for them.
-  findSymbolicObjects(query.expr, objects);  
-  if (computeInitialValues(query.withFalse(), objects, values, hasSolution)) {  
+  findSymbolicObjects(query.expr, objects);
+  if (computeInitialValues(query.withFalse(), objects, values, hasSolution)) {
       assert(hasSolution && "state has invalid constraint set");
       // Evaluate the expression with the computed assignment.
       Assignment a(objects, values);
@@ -981,7 +981,7 @@ template<typename SolverContext>
 bool MetaSMTSolverImpl<SolverContext>::computeInitialValues(const Query &query,
                                              const std::vector<const Array*> &objects,
                                              std::vector< std::vector<unsigned char> > &values,
-                                             bool &hasSolution) {  
+                                             bool &hasSolution) {
 
   _runStatusCode =  SOLVER_RUN_STATUS_FAILURE;
 
@@ -998,13 +998,13 @@ bool MetaSMTSolverImpl<SolverContext>::computeInitialValues(const Query &query,
   if (!_useForked) {
       for (ConstraintManager::const_iterator it = query.constraints.begin(), ie = query.constraints.end(); it != ie; ++it) {
           //assertion(_meta_solver, _builder->construct(*it));
-          assumption(_meta_solver, _builder->construct(*it));  
-      }  
-  }  
-    
+          assumption(_meta_solver, _builder->construct(*it));
+      }
+  }
+
   ++stats::queries;
-  ++stats::queryCounterexamples;  
- 
+  ++stats::queryCounterexamples;
+
   bool success = true;
   if (_useForked) {
       _runStatusCode = runAndGetCexForked(query, objects, values, hasSolution, _timeout);
@@ -1013,8 +1013,8 @@ bool MetaSMTSolverImpl<SolverContext>::computeInitialValues(const Query &query,
   else {
       _runStatusCode = runAndGetCex(query.expr, objects, values, hasSolution);
       success = true;
-  } 
-    
+  }
+
   if (success) {
       if (hasSolution) {
           ++stats::queriesInvalid;
@@ -1022,10 +1022,10 @@ bool MetaSMTSolverImpl<SolverContext>::computeInitialValues(const Query &query,
       else {
           ++stats::queriesValid;
       }
-  }  
-   
-  //pop(_meta_solver); 
-  
+  }
+
+  //pop(_meta_solver);
+
   return(success);
 }
 
@@ -1036,21 +1036,21 @@ SolverImpl::SolverRunStatus MetaSMTSolverImpl<SolverContext>::runAndGetCex(ref<E
                                              bool &hasSolution)
 {
 
-  // assume the negation of the query  
-  assumption(_meta_solver, _builder->construct(Expr::createIsZero(query_expr)));  
-  hasSolution = solve(_meta_solver);  
-  
+  // assume the negation of the query
+  assumption(_meta_solver, _builder->construct(Expr::createIsZero(query_expr)));
+  hasSolution = solve(_meta_solver);
+
   if (hasSolution) {
       values.reserve(objects.size());
       for (std::vector<const Array*>::const_iterator it = objects.begin(), ie = objects.end(); it != ie; ++it) {
-        
+
           const Array *array = *it;
           assert(array);
           typename SolverContext::result_type array_exp = _builder->getInitialArray(array);
-           
-          std::vector<unsigned char> data;      
-          data.reserve(array->size);       
-           
+
+          std::vector<unsigned char> data;
+          data.reserve(array->size);
+
           for (unsigned offset = 0; offset < array->size; offset++) {
               typename SolverContext::result_type elem_exp = evaluate(
                        _meta_solver,
@@ -1058,16 +1058,16 @@ SolverImpl::SolverRunStatus MetaSMTSolverImpl<SolverContext>::runAndGetCex(ref<E
               unsigned char elem_value = metaSMT::read_value(_meta_solver, elem_exp);
               data.push_back(elem_value);
           }
-                   
+
           values.push_back(data);
       }
   }
-  
+
   if (true == hasSolution) {
       return(SolverImpl::SOLVER_RUN_STATUS_SUCCESS_SOLVABLE);
   }
   else {
-      return(SolverImpl::SOLVER_RUN_STATUS_SUCCESS_UNSOLVABLE);  
+      return(SolverImpl::SOLVER_RUN_STATUS_SUCCESS_UNSOLVABLE);
   }
 }
 
@@ -1085,7 +1085,7 @@ SolverImpl::SolverRunStatus MetaSMTSolverImpl<SolverContext>::runAndGetCexForked
   unsigned char *pos = shared_memory_ptr;
   unsigned sum = 0;
   for (std::vector<const Array*>::const_iterator it = objects.begin(), ie = objects.end(); it != ie; ++it) {
-      sum += (*it)->size;    
+      sum += (*it)->size;
   }
   // sum += sizeof(uint64_t);
   sum += sizeof(stats::queryConstructs);
@@ -1098,29 +1098,29 @@ SolverImpl::SolverRunStatus MetaSMTSolverImpl<SolverContext>::runAndGetCexForked
       fprintf(stderr, "error: fork failed (for metaSMT)");
       return(SolverImpl::SOLVER_RUN_STATUS_FORK_FAILED);
   }
-  
+
   if (pid == 0) {
       if (timeout) {
           ::alarm(0); /* Turn off alarm so we can safely set signal handler */
           ::signal(SIGALRM, metaSMTTimeoutHandler);
           ::alarm(std::max(1, (int) timeout));
-      }     
-      
-      for (ConstraintManager::const_iterator it = query.constraints.begin(), ie = query.constraints.end(); it != ie; ++it) {      
+      }
+
+      for (ConstraintManager::const_iterator it = query.constraints.begin(), ie = query.constraints.end(); it != ie; ++it) {
           assertion(_meta_solver, _builder->construct(*it));
-          //assumption(_meta_solver, _builder->construct(*it));  
-      } 
-      
-      
+          //assumption(_meta_solver, _builder->construct(*it));
+      }
+
+
       std::vector< std::vector<typename SolverContext::result_type> > aux_arr_exprs;
       if (UseMetaSMT == METASMT_BACKEND_BOOLECTOR) {
           for (std::vector<const Array*>::const_iterator it = objects.begin(), ie = objects.end(); it != ie; ++it) {
-            
-              std::vector<typename SolverContext::result_type> aux_arr;          
+
+              std::vector<typename SolverContext::result_type> aux_arr;
               const Array *array = *it;
               assert(array);
               typename SolverContext::result_type array_exp = _builder->getInitialArray(array);
-              
+
               for (unsigned offset = 0; offset < array->size; offset++) {
                   typename SolverContext::result_type elem_exp = evaluate(
                       _meta_solver,
@@ -1131,11 +1131,11 @@ SolverImpl::SolverRunStatus MetaSMTSolverImpl<SolverContext>::runAndGetCexForked
           }
           assert(aux_arr_exprs.size() == objects.size());
       }
-      
-           
+
+
       // assume the negation of the query
       // can be also asserted instead of assumed as we are in a child process
-      assumption(_meta_solver, _builder->construct(Expr::createIsZero(query.expr)));        
+      assumption(_meta_solver, _builder->construct(Expr::createIsZero(query.expr)));
       unsigned res = solve(_meta_solver);
 
       if (res) {
@@ -1146,7 +1146,7 @@ SolverImpl::SolverRunStatus MetaSMTSolverImpl<SolverContext>::runAndGetCexForked
 
                   const Array *array = *it;
                   assert(array);
-                  typename SolverContext::result_type array_exp = _builder->getInitialArray(array);      
+                  typename SolverContext::result_type array_exp = _builder->getInitialArray(array);
 
                   for (unsigned offset = 0; offset < array->size; offset++) {
 
@@ -1174,8 +1174,8 @@ SolverImpl::SolverRunStatus MetaSMTSolverImpl<SolverContext>::runAndGetCexForked
           }
       }
       assert((uint64_t*) pos);
-      *((uint64_t*) pos) = stats::queryConstructs;      
-      
+      *((uint64_t*) pos) = stats::queryConstructs;
+
       _exit(!res);
   }
   else {
@@ -1184,14 +1184,14 @@ SolverImpl::SolverRunStatus MetaSMTSolverImpl<SolverContext>::runAndGetCexForked
 
       do {
           res = waitpid(pid, &status, 0);
-      } 
+      }
       while (res < 0 && errno == EINTR);
-    
+
       if (res < 0) {
           fprintf(stderr, "error: waitpid() for metaSMT failed");
           return(SolverImpl::SOLVER_RUN_STATUS_WAITPID_FAILED);
       }
-      
+
       // From timed_run.py: It appears that linux at least will on
       // "occasion" return a status when the process was terminated by a
       // signal, so test signal first.
@@ -1203,7 +1203,7 @@ SolverImpl::SolverRunStatus MetaSMTSolverImpl<SolverContext>::runAndGetCexForked
       int exitcode = WEXITSTATUS(status);
       if (exitcode == 0) {
           hasSolution = true;
-      } 
+      }
       else if (exitcode == 1) {
           hasSolution = false;
       }
@@ -1215,7 +1215,7 @@ SolverImpl::SolverRunStatus MetaSMTSolverImpl<SolverContext>::runAndGetCexForked
           fprintf(stderr, "error: metaSMT did not return a recognized code");
           return(SolverImpl::SOLVER_RUN_STATUS_UNEXPECTED_EXIT_CODE);
       }
-      
+
       if (hasSolution) {
           values = std::vector< std::vector<unsigned char> >(objects.size());
           unsigned i = 0;
@@ -1227,7 +1227,7 @@ SolverImpl::SolverRunStatus MetaSMTSolverImpl<SolverContext>::runAndGetCexForked
               pos += array->size;
           }
       }
-      stats::queryConstructs += (*((uint64_t*) pos) - stats::queryConstructs);      
+      stats::queryConstructs += (*((uint64_t*) pos) - stats::queryConstructs);
 
       if (true == hasSolution) {
           return SolverImpl::SOLVER_RUN_STATUS_SUCCESS_SOLVABLE;
