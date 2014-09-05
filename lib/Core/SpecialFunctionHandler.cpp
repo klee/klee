@@ -108,6 +108,11 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
   // operator new(unsigned long)
   add("_Znwm", handleNew, true),
 
+  // clang -fsanitize=unsigned-integer-overflow
+  add("__ubsan_handle_add_overflow", handleAddOverflow, false),
+  add("__ubsan_handle_sub_overflow", handleSubOverflow, false),
+  add("__ubsan_handle_mul_overflow", handleMulOverflow, false),
+
 #undef addDNR
 #undef add  
 };
@@ -737,4 +742,26 @@ void SpecialFunctionHandler::handleMarkGlobal(ExecutionState &state,
   }
 }
 
+void SpecialFunctionHandler::handleAddOverflow(ExecutionState &state,
+                                               KInstruction *target,
+                                               std::vector<ref<Expr> > &arguments) {
+  executor.terminateStateOnError(state,
+                                 "overflow on unsigned addition",
+                                 "overflow.err");
+}
 
+void SpecialFunctionHandler::handleSubOverflow(ExecutionState &state,
+                                               KInstruction *target,
+                                               std::vector<ref<Expr> > &arguments) {
+  executor.terminateStateOnError(state,
+                                 "overflow on unsigned subtraction",
+                                 "overflow.err");
+}
+
+void SpecialFunctionHandler::handleMulOverflow(ExecutionState &state,
+                                               KInstruction *target,
+                                               std::vector<ref<Expr> > &arguments) {
+  executor.terminateStateOnError(state,
+                                 "overflow on unsigned multiplication",
+                                 "overflow.err");
+}
