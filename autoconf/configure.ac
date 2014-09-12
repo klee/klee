@@ -500,8 +500,7 @@ dnl Test for features
 dnl **************************************************************************
 AC_SEARCH_LIBS(mallinfo,malloc,
                AC_DEFINE([HAVE_MALLINFO],[1],[Define if mallinfo() is available on this platform.]),
-               AC_MSG_ERROR([mallinfo() must be supported by your malloc implementation])
-              )
+               AC_MSG_WARN([mallinfo() was not found - disabling memory usage checking]))
 
 dnl **************************************************************************
 dnl Find an install of STP

@@ -8,11 +8,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "klee/Internal/System/MemoryUsage.h"
+
+#include "klee/Config/config.h"
+
+#ifdef HAVE_MALLINFO
 #include <malloc.h>
+#endif
 
 using namespace klee;
 
 size_t util::GetTotalMallocUsage() {
+#ifdef HAVE_MALLINFO
   struct mallinfo mi = ::mallinfo();
   // The malloc implementation in glibc (pmalloc2)
   // does not include mmap()'ed memory in mi.uordblks
@@ -21,5 +27,12 @@ size_t util::GetTotalMallocUsage() {
   return mi.uordblks + mi.hblkhd;
 #else
   return mi.uordblks;
+#endif
+
+#else // HAVE_MALLINFO
+
+#warning Cannot get malloc info on this platform
+  return 0;
+
 #endif
 }
