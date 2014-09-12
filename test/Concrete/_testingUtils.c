@@ -1,3 +1,7 @@
+// This isn't a real test, just common code for the other ones.
+//
+// RUN: true
+
 int printf(const char *fmt, ...);
 
 void print_int(unsigned long long val);

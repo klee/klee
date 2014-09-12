@@ -1,3 +1,5 @@
+; RUN: %S/ConcreteTest.py --klee=%klee --lli=%lli %s
+
 declare void @print_i32(i32)
 
 define i8 @sum(i8 %a, i8 %b) {

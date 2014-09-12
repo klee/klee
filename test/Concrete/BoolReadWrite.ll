@@ -1,3 +1,5 @@
+; RUN: %S/ConcreteTest.py --klee=%klee --lli=%lli %s
+
 declare void @print_i1(i1)
 
 define i32 @main() {

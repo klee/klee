@@ -1,4 +1,4 @@
-// llvm-gcc -O2 --emit-llvm -c ackermann.c && ../../Debug/bin/klee ackermann.o 2 2
+// RUN: %S/ConcreteTest.py --klee=%klee --lli=%lli %s
 
 #include <stdio.h>
 

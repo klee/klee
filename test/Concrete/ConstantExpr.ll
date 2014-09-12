@@ -1,3 +1,5 @@
+; RUN: %S/ConcreteTest.py --klee=%klee --lli=%lli %s
+
 @gInt = global i32 10
 @gIntWithConstant = global i32 sub(i32 ptrtoint(i32* @gInt to i32), 
                                  i32 ptrtoint(i32* @gInt to i32))

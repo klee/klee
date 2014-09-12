@@ -1,4 +1,4 @@
-; (cd .. && make) && ../llvm/Release/bin/llvm-as test.ll -o=- | ../Debug/bin/klee 
+; RUN: %S/ConcreteTest.py --klee=%klee --lli=%lli %s
 
 declare void @print_i32(i32)
 

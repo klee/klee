@@ -1,3 +1,5 @@
+; RUN: %S/ConcreteTest.py --klee=%klee --lli=%lli %s
+
 declare void @print_i32(i32)
 
 @anInt = global i32 1

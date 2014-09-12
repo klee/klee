@@ -1,3 +1,4 @@
+; RUN: %S/ConcreteTest.py --klee=%klee --lli=%lli %s
 
 ; casting error messages
 @.strTrunc     = internal constant [15 x i8] c"FPTrunc broken\00"
