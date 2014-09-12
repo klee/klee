@@ -14,6 +14,9 @@
 #ifdef HAVE_MALLINFO
 #include <malloc.h>
 #endif
+#ifdef HAVE_MALLOC_MALLOC_H
+#include <malloc/malloc.h>
+#endif
 
 using namespace klee;
 
@@ -28,6 +31,13 @@ size_t util::GetTotalMallocUsage() {
 #else
   return mi.uordblks;
 #endif
+
+#elif defined(HAVE_MALLOC_ZONE_STATISTICS) && defined(HAVE_MALLOC_MALLOC_H)
+
+  // Support memory usage on Darwin.
+  malloc_statistics_t Stats;
+  malloc_zone_statistics(malloc_default_zone(), &Stats);
+  return Stats.size_in_use;
 
 #else // HAVE_MALLINFO
 

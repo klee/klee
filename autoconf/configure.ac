@@ -498,9 +498,11 @@ AC_CHECK_HEADERS([selinux/selinux.h],
 dnl **************************************************************************
 dnl Test for features
 dnl **************************************************************************
+
+AC_CHECK_HEADERS([malloc/malloc.h])
+AC_CHECK_FUNCS([malloc_zone_statistics])
 AC_SEARCH_LIBS(mallinfo,malloc,
-               AC_DEFINE([HAVE_MALLINFO],[1],[Define if mallinfo() is available on this platform.]),
-               AC_MSG_WARN([mallinfo() was not found - disabling memory usage checking]))
+               AC_DEFINE([HAVE_MALLINFO],[1],[Define if mallinfo() is available on this platform.]))
 
 dnl **************************************************************************
 dnl Find an install of STP
