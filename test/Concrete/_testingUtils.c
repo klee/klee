@@ -1,4 +1,4 @@
-int putchar(int x);
+int printf(const char *fmt, ...);
 
 void print_int(unsigned long long val);
 
@@ -22,11 +22,11 @@ void print_int(unsigned long long val) {
     while (cur) {
         int digit = val / cur;
 
-        putchar(digit + '0');
+        printf("%c", digit + '0');
         
         val = val % cur;
         cur /= 10;
     }
     
-    putchar('\n');
+    printf("%c", '\n');
 }
