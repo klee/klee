@@ -15,6 +15,12 @@
 /* Define if mallinfo() is available on this platform. */
 #undef HAVE_MALLINFO
 
+/* Define to 1 if you have the <malloc/malloc.h> header file. */
+#undef HAVE_MALLOC_MALLOC_H
+
+/* Define to 1 if you have the `malloc_zone_statistics' function. */
+#undef HAVE_MALLOC_ZONE_STATISTICS
+
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
 
