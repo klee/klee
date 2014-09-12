@@ -27,6 +27,13 @@
 #include "UserSearcher.h"
 #include "../Solver/SolverStats.h"
 
+// FIXME: Ugh, this is gross. But otherwise our config.h conflicts with LLVMs.
+#undef PACKAGE_BUGREPORT
+#undef PACKAGE_NAME
+#undef PACKAGE_STRING
+#undef PACKAGE_TARNAME
+#undef PACKAGE_VERSION
+
 #if LLVM_VERSION_CODE > LLVM_VERSION(3, 2)
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Function.h"
