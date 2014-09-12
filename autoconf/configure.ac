@@ -485,8 +485,8 @@ if test "x${have_cap}" = xyes; then
   AC_CHECK_HEADERS([sys/capability.h], [], [have_cap=no])
 fi
 if test "x${have_cap}" = xno; then
-  AC_MSG_ERROR([Library cap and its header file sys/capability.h required for \
-klee-replay. Please install package libcap-dev/libcap-devel.])
+  AC_MSG_WARN([Library cap and its header file sys/capability.h not found, disabling chroot \
+capability checking support for klee-replay.])
 fi
 
 AC_LANG_POP([C])

@@ -10,6 +10,7 @@
 #include "klee-replay.h"
 
 #include "klee/Internal/ADT/KTest.h"
+#include "klee/Config/config.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -23,7 +24,10 @@
 #include <unistd.h>
 #include <sys/signal.h>
 #include <sys/wait.h>
+
+#ifdef HAVE_SYS_CAPABILITY_H
 #include <sys/capability.h>
+#endif
 
 static void __emit_error(const char *msg);
 
@@ -221,6 +225,7 @@ static void run_monitored(char *executable, int argc, char **argv) {
   }
 }
 
+#ifdef HAVE_SYS_CAPABILITY_H
 /* ensure this process has CAP_SYS_CHROOT capability. */
 void ensure_capsyschroot(const char *executable) {
   cap_t caps = cap_get_proc();  // all current capabilities.
@@ -237,6 +242,7 @@ void ensure_capsyschroot(const char *executable) {
   }
   cap_free(caps);
 }
+#endif
 
 static void usage(void) {
   fprintf(stderr, "Usage: %s [option]... <executable> <ktest-file>...\n", progname);
@@ -295,9 +301,11 @@ int main(int argc, char** argv) {
 
   char* executable = argv[optind];
 
-  /* make sure this process has the CAP_SYS_CHROOT capability. */
+  /* make sure this process has the CAP_SYS_CHROOT capability, if possible. */
+#ifdef HAVE_SYS_CAPABILITY_H
   if (rootdir)
     ensure_capsyschroot(progname);
+#endif
   
   /* rootdir should be a prefix of executable's path. */
   if (rootdir && strstr(executable, rootdir) != executable) {
