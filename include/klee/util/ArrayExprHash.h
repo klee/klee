@@ -15,7 +15,15 @@
 #include "SolverStats.h"
 
 #include <map>
+
+#include <ciso646>
+#ifdef _LIBCPP_VERSION
+#include <unordered_map>
+#define unordered_map std::unordered_map
+#else
 #include <tr1/unordered_map>
+#define unordered_map std::tr1::unordered_map
+#endif
 
 namespace klee {
   
@@ -60,11 +68,11 @@ public:
   void hashUpdateNodeExpr(const UpdateNode* un, T& exp);  
   
 protected:
-  typedef std::tr1::unordered_map<const Array*, T, ArrayHashFn, ArrayCmpFn> ArrayHash;
+  typedef unordered_map<const Array*, T, ArrayHashFn, ArrayCmpFn> ArrayHash;
   typedef typename ArrayHash::iterator ArrayHashIter;
   typedef typename ArrayHash::const_iterator ArrayHashConstIter;
   
-  typedef std::tr1::unordered_map<const UpdateNode*, T, UpdateNodeHashFn, UpdateNodeCmpFn> UpdateNodeHash;
+  typedef unordered_map<const UpdateNode*, T, UpdateNodeHashFn, UpdateNodeCmpFn> UpdateNodeHash;
   typedef typename UpdateNodeHash::iterator UpdateNodeHashIter;
   typedef typename UpdateNodeHash::const_iterator UpdateNodeHashConstIter;
   
