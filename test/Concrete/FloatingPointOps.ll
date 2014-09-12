@@ -1,6 +1,3 @@
-%struct.stdout = type { i32, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, %struct._IO_marker*, %struct.stdout*, i32, i32, i32, i16, i8, [1 x i8], i8*, i64, i8*, i8*, i8*, i8*, i32, i32, [40 x i8] }
-%struct._IO_marker = type { %struct._IO_marker*, %struct.stdout*, i32 }
-@stdout = external global %struct.stdout*
 
 ; casting error messages
 @.strTrunc     = internal constant [15 x i8] c"FPTrunc broken\00"
@@ -66,9 +63,8 @@
 @.strWorks     = internal constant [20 x i8] c"Everything works!\0D\0A\00"
 @.strNL        = internal constant [3 x i8]  c"\0D\0A\00"
 
-declare i32 @fprintf(%struct.stdout*, i8*, ...)
+declare i32 @printf(i8*, ...)
 declare void @exit(i32)
-declare void @llvm.memcpy.i32(i8*, i8*, i32, i32)
 
 ; if isOk is false, then print errMsg to stdout and exit(1)
 define void @failCheck(i1 %isOk, i8* %errMsg) {
@@ -78,12 +74,11 @@ entry:
 
 failed:
   ; print the error msg
-  %err_stream = load %struct.stdout** @stdout
-  %ret = call i32 (%struct.stdout*, i8*, ...)* @fprintf( %struct.stdout* %err_stream, i8* %errMsg )
+  %ret = call i32 (i8*, ...)* @printf( i8* %errMsg )
 
   ; add a newline to the ostream
   %nl = getelementptr [3 x i8]* @.strNL, i32 0, i32 0
-  %ret2 = call i32 (%struct.stdout*, i8*, ...)* @fprintf( %struct.stdout* %err_stream, i8* %nl )
+  %ret2 = call i32 (i8*, ...)* @printf( i8* %nl )
 
   ; exit with return value 1 to denote that an error occurred
   call void @exit( i32 1 )
@@ -267,7 +262,7 @@ entry:
   ret void
 }
 
-; test addition (fp and int since add is polymorphic)
+; test addition
 define void @testAdd() {
 entry:
   %f1_addr = alloca float, align 4
@@ -286,7 +281,7 @@ entry:
   store float 0x4010CCCCC0000000, float* %f2_addr
   %f1 = load float* %f1_addr
   %f2 = load float* %f2_addr
-  %sumf = add float %f1, %f2
+  %sumf = fadd float %f1, %f2
   %matchesf = fcmp oeq float %sumf, 0x401ECCCCC0000000
   %err_msgf = getelementptr [18 x i8]* @.strAddFlt, i32 0, i32 0
   call void @failCheck( i1 %matchesf, i8* %err_msgf )
@@ -296,7 +291,7 @@ entry:
   store double -4.200000e+00, double* %d2_addr
   %d1 = load double* %d1_addr
   %d2 = load double* %d2_addr
-  %sumd = add double %d1, %d2
+  %sumd = fadd double %d1, %d2
   %matchesd = fcmp oeq double %sumd, 0xBFE6666666666668
   %err_msgd = getelementptr [19 x i8]* @.strAddDbl, i32 0, i32 0
   call void @failCheck( i1 %matchesd, i8* %err_msgd )
@@ -304,7 +299,7 @@ entry:
   ret void
 }
 
-; test subtraction (fp and int since sub is polymorphic)
+; test subtraction
 define void @testSub() {
 entry:
   %f1_addr = alloca float, align 4
@@ -323,7 +318,7 @@ entry:
   store float 0x4010CCCCC0000000, float* %f2_addr
   %f1 = load float* %f1_addr
   %f2 = load float* %f2_addr
-  %subf = sub float %f1, %f2
+  %subf = fsub float %f1, %f2
   %matchesf = fcmp oeq float %subf, 0xBFE6666600000000
   %err_msgf = getelementptr [18 x i8]* @.strSubFlt, i32 0, i32 0
   call void @failCheck( i1 %matchesf, i8* %err_msgf )
@@ -333,7 +328,7 @@ entry:
   store double -4.200000e+00, double* %d2_addr
   %d1 = load double* %d1_addr
   %d2 = load double* %d2_addr
-  %subd = sub double %d1, %d2
+  %subd = fsub double %d1, %d2
   %matchesd = fcmp oeq double %subd, 7.700000e+00
   %err_msgd = getelementptr [19 x i8]* @.strSubDbl, i32 0, i32 0
   call void @failCheck( i1 %matchesd, i8* %err_msgd )
@@ -341,7 +336,7 @@ entry:
   ret void
 }
 
-; test multiplication (fp and int since mul is polymorphic)
+; test multiplication
 define void @testMul() {
 entry:
   %f1_addr = alloca float, align 4
@@ -360,7 +355,7 @@ entry:
   store float 0x4010CCCCC0000000, float* %f2_addr
   %f1 = load float* %f1_addr
   %f2 = load float* %f2_addr
-  %mulf = mul float %f1, %f2
+  %mulf = fmul float %f1, %f2
   %matchesf = fcmp oeq float %mulf, 0x402D666640000000
   %err_msgf = getelementptr [18 x i8]* @.strMulFlt, i32 0, i32 0
   call void @failCheck( i1 %matchesf, i8* %err_msgf )
@@ -370,7 +365,7 @@ entry:
   store double -4.200000e+00, double* %d2_addr
   %d1 = load double* %d1_addr
   %d2 = load double* %d2_addr
-  %muld = mul double %d1, %d2
+  %muld = fmul double %d1, %d2
   %matchesd = fcmp oeq double %muld, 0xC02D666666666667
   %err_msgd = getelementptr [19 x i8]* @.strMulDbl, i32 0, i32 0
   call void @failCheck( i1 %matchesd, i8* %err_msgd )
@@ -639,16 +634,15 @@ entry:
   call void @testFCmpBoth( double 1.000000e+00, double 0.000000e+00, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0 )
 
   ; build NaN
-  store i64 -1, i64* %x
-  %nan_as_i8 = bitcast double* %nan to i8*
-  %x_as_i8 = bitcast i64* %x to i8*
-  call void @llvm.memcpy.i32( i8* %nan_as_i8, i8* %x_as_i8, i32 8, i32 8 )
+  %nan_as_i64 = bitcast double* %nan to i64*
+  store i64 -1, i64* %nan_as_i64
 
   ; load two copies of our NaN
   %nan1 = load double* %nan
   %nan2 = load double* %nan
 
   ; Warning: NaN comparisons with normal operators is BROKEN in LLVM JIT v2.0.  Fixed in v2.1.
+  ; FIXME: Just check against 2.9 and the Unordered checks work, but the ordered ones do not. Should be investigated.
   ; NaNs do different things depending on ordered vs unordered
 ;  call void @testFCmpBothOrdered( double %nan1, double 0.000000e+00, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0 )
 ;  call void @testFCmpBothOrdered( double %nan1, double %nan2, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0 )
@@ -678,8 +672,7 @@ entry:
 
   ; everything worked -- print a message saying so
   %works_msg = getelementptr [20 x i8]* @.strWorks, i32 0, i32 0
-  %err_stream = load %struct.stdout** @stdout
-  %ret = call i32 (%struct.stdout*, i8*, ...)* @fprintf( %struct.stdout* %err_stream, i8* %works_msg )
+  %ret = call i32 (i8*, ...)* @printf( i8* %works_msg )
 
   ret i32 0
 }
