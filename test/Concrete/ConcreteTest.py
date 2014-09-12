@@ -1,20 +1,9 @@
 #!/usr/bin/python
 
+import argparse
 import os
-import sys
 import popen2
-
-class TestError(Exception):
-    pass
-
-kLLIPath = '../../llvm/Debug/bin/lli'
-kKleePath = '../../Debug/bin/klee'
-
-def getFiles():
-    for name in os.listdir('.'):
-        if (name[0]!='.' and name[0]!='_' and
-            (name.endswith('.ll') or name.endswith('.c'))):
-            yield name
+import sys
 
 def readFile(f):
     s = ""
@@ -25,40 +14,42 @@ def readFile(f):
         s += data
     return s
 
-def testFile(name, printOutput=False):
+def testFile(name, klee_path, lli_path):
     baseName,ext = os.path.splitext(name)
     exeFile = 'Output/linked_%s.bc'%baseName
-    if printOutput:
-        redirectStderr = ''
-    else:
-        redirectStderr = '2> /dev/null'
 
-    if os.system('make %s > /dev/null %s'%(exeFile,redirectStderr)):
-        raise TestError('make failed')
+    print '-- building test bitcode --'
+    make_cmd = 'make %s 2>&1' % (exeFile,)
+    print "EXECUTING: %s" % (make_cmd,)
+    sys.stdout.flush()
+    if os.system(make_cmd):
+        raise SystemExit('make failed')
 
-    if printOutput:
-        print '-- running lli --'
-    lli = popen2.Popen3('%s -force-interpreter=true %s %s'%(kLLIPath,exeFile,redirectStderr))
+    print '\n-- running lli --'
+    lli_cmd = '%s -force-interpreter=true %s' % (lli_path, exeFile)
+    print "EXECUTING: %s" % (lli_cmd,)
+    lli = popen2.Popen3(lli_cmd)
     lliOut = readFile(lli.fromchild)
     if lli.wait():
-        raise TestError('lli execution failed')
+        raise SystemExit('lli execution failed')
 
-    if printOutput:
-        print lliOut
+    print '-- lli output --\n%s--\n' % (lliOut,)
 
-    if printOutput:
-        print '-- running klee --'
-    klee = popen2.Popen3('%s --no-output %s %s'%(kKleePath,exeFile,redirectStderr))
+    print '-- running klee --'
+    klee_cmd = '%s --no-output %s' % (klee_path, exeFile)
+    print "EXECUTING: %s" % (klee_cmd,)
+    sys.stdout.flush()
+    klee = popen2.Popen3(klee_cmd)
     kleeOut = readFile(klee.fromchild)
     if klee.wait():
-        raise TestError('klee execution failed')
-    if printOutput:
-        print kleeOut
+        raise SystemExit('klee execution failed')
+
+    print '-- klee output --\n%s--\n' % (kleeOut,)
         
-    if lliOut!=kleeOut:
-        raise TestError('outputs differ')
+    if lliOut != kleeOut:
+        raise SystemExit('outputs differ')
         
-def testOneFile(f, printOutput=False, log=None):
+def testOneFile(f, printOutput=False):
     try:
         testFile(f, printOutput)
         code = ['pass','xpass'][f.startswith('broken')]
@@ -68,32 +59,22 @@ def testOneFile(f, printOutput=False, log=None):
         extra = str(e)
 
     print '%s: %s -- %s'%(code,f,extra)
-    if log:
-        print >>log,'%s: %s -- %s'%(code,f,extra)
 
-def test():
-    if not os.path.exists('Output'):
-        os.mkdir('Output')
-    log = open("Output/test.log","w")
-    files = list(getFiles())
-    files.sort(key = lambda n: n.lower())
-    for f in files:
-        testOneFile(f, log=log)
-    log.close()
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('test_path', help='test path')
+
+    parser.add_argument('--klee', dest='klee_path',
+                        help="path to the klee binary",
+                        required=True)
+    parser.add_argument('--lli', dest='lli_path',
+                        help="path to the lli binary",
+                        required=True)
+
+    opts = parser.parse_args()
+
+    test_name = os.path.basename(opts.test_path)
+    testFile(test_name, opts.klee_path, opts.lli_path)
 
 if __name__=='__main__':
-    args = sys.argv
-    args.pop(0)
-    
-    runAll = not args
-
-    while args:
-        arg = args.pop(0)
-        if arg=='--run':
-            testFile(args.pop(0), printOutput=True)
-        else:
-            raise ValueError,'invalid argument: %s'%arg
-
-    if runAll:
-        test()
-        
+    main()
