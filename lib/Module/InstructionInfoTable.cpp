@@ -25,13 +25,14 @@
 # if LLVM_VERSION_CODE < LLVM_VERSION(3,5)
 #include "llvm/Assembly/AssemblyAnnotationWriter.h"
 #include "llvm/Linker.h"
+#include "llvm/Support/InstIterator.h"
 #else
 #include "llvm/IR/AssemblyAnnotationWriter.h"
 #include "llvm/Linker/Linker.h"
+#include "llvm/IR/InstIterator.h"
 #endif
 
 #include "llvm/Support/FormattedStream.h"
-#include "llvm/Support/InstIterator.h"
 #include "llvm/Support/raw_ostream.h"
 
 #if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
