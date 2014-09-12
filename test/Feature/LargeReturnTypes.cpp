@@ -5,6 +5,12 @@
  * (i.e. structs).  In this test case, fstream::ftellg() returns a
  * streampos (an {i64, i64} pair) which is implicitly converted to a size_t. */
 
+// This test currently doesn't work on darwin because this isn't how things work
+// in libc++. This test should be rewritten to not depend on an external
+// dependency.
+//
+// XFAIL: darwin
+
 #include <fstream>
 
 using namespace std;
