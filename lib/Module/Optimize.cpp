@@ -21,6 +21,7 @@
 #include "llvm/Analysis/LoopPass.h"
 #if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
 #include "llvm/Analysis/Verifier.h"
+#include "llvm/Support/PassNameParser.h"
 #else
 #include "llvm/IR/Verifier.h"
 #endif
@@ -42,7 +43,6 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Scalar.h"
-#include "llvm/Support/PassNameParser.h"
 #include "llvm/Support/PluginLoader.h"
 using namespace llvm;
 
