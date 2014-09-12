@@ -19,15 +19,15 @@ include ${LEVEL}/Makefile.common
 
 # Compile from X.c to Output/X.ll
 Output/%.ll: %.c $(LCC1) Output/.dir $(INCLUDES)
-	$(LLVMGCCWITHPATH) --emit-llvm $(CPPFLAGS) $(LCCFLAGS) -S $< -o $@
+	$(LLVMCC) -emit-llvm $(CPPFLAGS) $(LCCFLAGS) -S $< -o $@
 
 # Compile from X.cpp to Output/X.ll
 Output/%.ll: %.cpp $(LCC1XX) Output/.dir $(INCLUDES)
-	$(LLVMGXXWITHPATH) --emit-llvm $(CPPFLAGS) $(LCXXFLAGS) -S $< -o $@
+	$(LLVMCXX) -emit-llvm $(CPPFLAGS) $(LCXXFLAGS) -S $< -o $@
 
 # Compile from X.cc to Output/X.ll
 Output/%.ll: %.cc $(LCC1XX) Output/.dir $(INCLUDES)
-	$(LLVMGXXWITHPATH) --emit-llvm $(CPPFLAGS) $(LCXXFLAGS) -S $< -o $@
+	$(LLVMCXX) -emit-llvm $(CPPFLAGS) $(LCXXFLAGS) -S $< -o $@
 
 # LLVM Assemble from Output/X.ll to Output/X.bc.  Output/X.ll must have come
 # from GCC output, so use GCCAS.
@@ -42,7 +42,7 @@ Output/%.bc: %.ll $(LLVMAS) Output/.dir
 	$(LLVMAS) -f $< -o $@
 
 Output/linked_%.bc: Output/%.bc Output/_testingUtils.bc
-	$(LLVMLD) -disable-opt -link-as-library Output/_testingUtils.bc $< -o $@
+	$(LLVMLD) Output/_testingUtils.bc $< -o $@
 
 .PRECIOUS: Output/.dir
 
