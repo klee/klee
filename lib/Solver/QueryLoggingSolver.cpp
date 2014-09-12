@@ -4,6 +4,10 @@
 #include "klee/Internal/System/Time.h"
 #include "klee/Statistics.h"
 
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 5)
+#include "llvm/Support/FileSystem.h"
+#endif
+
 //
 //                     The KLEE Symbolic Virtual Machine
 //
@@ -19,7 +23,11 @@ QueryLoggingSolver::QueryLoggingSolver(Solver *_solver,
                                        const std::string& commentSign,
                                        int queryTimeToLog)                                  
     : solver(_solver),
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 5)
+      os(path.c_str(), ErrorInfo, llvm::sys::fs::OpenFlags::F_Text),
+#else
       os(path.c_str(), ErrorInfo),
+#endif
       BufferString(""),
       logBuffer(BufferString),
       queryCount(0),    

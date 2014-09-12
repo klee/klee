@@ -38,7 +38,11 @@
 #endif
 #endif
 
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
 #include "llvm/Support/CallSite.h"
+#else
+#include "llvm/IR/CallSite.h"
+#endif
 
 
 #include <cassert>

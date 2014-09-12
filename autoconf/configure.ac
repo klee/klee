@@ -154,6 +154,38 @@ else
 fi
 AC_SUBST(REQUIRES_RTTI,$requires_rtti)
 
+dnl Provide option to use C++11
+AC_ARG_ENABLE([cxx11],[  --enable-cxx11          Build using C++11], [klee_use_cxx11=1], [klee_use_cxx11=0])
+
+dnl LLVM >= 3.5 requires C++11
+AC_MSG_CHECKING([Checking if LLVM needs C++11])
+if test '(' $llvm_version_major -eq 3 -a $llvm_version_minor -ge 5 ')' -o '(' $llvm_version_major -gt 3 ')' ; then
+  klee_use_cxx11=1
+  AC_MSG_RESULT([yes])
+else
+  AC_MSG_RESULT([no])
+fi
+
+if test X${klee_use_cxx11} = X1; then
+  dnl This check is taken from LLVM's configure.ac
+  klee_old_cxxflags="$CXXFLAGS"
+  CXXFLAGS="$CXXFLAGS -std=c++11"
+  AC_LINK_IFELSE([AC_LANG_SOURCE([[
+#include <atomic>
+std::atomic<float> x(0.0f);
+int main() { return (float)x; }
+]])],
+            [AC_MSG_RESULT([yes])],
+            [AC_MSG_RESULT([no])
+             AC_MSG_ERROR([C++11 not supported])])
+
+  CXX_FLAGS="$klee_old_cxxflags"
+  AC_SUBST(KLEE_USE_CXX11,$klee_use_cxx11)
+fi
+
+AC_SUBST(KLEE_USE_CXX11,$klee_use_cxx11)
+
+
 AC_ARG_WITH(llvm-build-mode,
   AS_HELP_STRING([--with-llvm-build-mode],
     [LLVM build mode (e.g. Debug or Release, default autodetect)]),,[with_llvm_build_mode=check])

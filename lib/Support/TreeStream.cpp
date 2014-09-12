@@ -23,6 +23,7 @@ using namespace klee;
 
 ///
 
+#define DEBUG_TYPE "TreeStreamWriter"
 TreeStreamWriter::TreeStreamWriter(const std::string &_path) 
   : lastID(0),
     bufferCount(0),
@@ -106,8 +107,7 @@ void TreeStreamWriter::readStream(TreeStreamID streamID,
   std::ifstream is(path.c_str(),
                    std::ios::in | std::ios::binary);
   assert(is.good());
-  DEBUG_WITH_TYPE("TreeStreamWriter",
-                  llvm::errs() << "finding chain for: " << streamID << "\n");
+  DEBUG(llvm::errs() << "finding chain for: " << streamID << "\n");
 
   std::map<unsigned,unsigned> parents;
   std::vector<unsigned> roots;
@@ -199,3 +199,5 @@ void TreeOStream::flush() {
   assert(writer);
   writer->flush();
 }
+
+#undef DEBUG_TYPE

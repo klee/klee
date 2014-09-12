@@ -51,7 +51,10 @@
 #include "llvm/Support/TargetSelect.h"
 #endif
 #include "llvm/Support/Signals.h"
+
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
 #include "llvm/Support/system_error.h"
+#endif
 
 #include <dirent.h>
 #include <signal.h>
@@ -280,10 +283,15 @@ KleeHandler::KleeHandler(int argc, char **argv)
   bool dir_given = OutputDir != "";
   SmallString<128> directory(dir_given ? OutputDir : InputFile);
 
-  error_code ec;
   if (!dir_given) sys::path::remove_filename(directory);
-  if ((ec = sys::fs::make_absolute(directory)) != errc::success)
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
+  error_code ec;
+  if ((ec = sys::fs::make_absolute(directory)) != errc::success) {
+#else
+  if (auto ec = sys::fs::make_absolute(directory)) {
+#endif
     klee_error("unable to determine absolute path: %s", ec.message().c_str());
+  }
 
   if (dir_given) {
     // OutputDir
@@ -373,7 +381,9 @@ llvm::raw_fd_ostream *KleeHandler::openOutputFile(const std::string &filename) {
   llvm::raw_fd_ostream *f;
   std::string Error;
   std::string path = getOutputFilename(filename);
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3,0)
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3,5)
+  f = new llvm::raw_fd_ostream(path.c_str(), Error, llvm::sys::fs::F_None);
+#elif LLVM_VERSION_CODE >= LLVM_VERSION(3,0)
   f = new llvm::raw_fd_ostream(path.c_str(), Error, llvm::sys::fs::F_Binary);
 #else
   f = new llvm::raw_fd_ostream(path.c_str(), Error, llvm::raw_fd_ostream::F_Binary);
@@ -549,7 +559,11 @@ void KleeHandler::loadPathFile(std::string name,
 
 void KleeHandler::getOutFiles(std::string path,
 			      std::vector<std::string> &results) {
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
   error_code ec;
+#else
+  std::error_code ec;
+#endif
   for (llvm::sys::fs::directory_iterator i(path,ec),e; i!=e && !ec; i.increment(ec)){
     std::string f = (*i).path();
     if (f.substr(f.size()-6,f.size()) == ".ktest") {
@@ -1237,12 +1251,14 @@ int main(int argc, char **argv, char **envp) {
   // Load the bytecode...
   std::string ErrorMsg;
   Module *mainModule = 0;
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
   OwningPtr<MemoryBuffer> BufferPtr;
   error_code ec=MemoryBuffer::getFileOrSTDIN(InputFile.c_str(), BufferPtr);
   if (ec) {
     klee_error("error loading program '%s': %s", InputFile.c_str(),
                ec.message().c_str());
   }
+
   mainModule = getLazyBitcodeModule(BufferPtr.get(), getGlobalContext(), &ErrorMsg);
 
   if (mainModule) {
@@ -1254,6 +1270,31 @@ int main(int argc, char **argv, char **envp) {
   if (!mainModule)
     klee_error("error loading program '%s': %s", InputFile.c_str(),
                ErrorMsg.c_str());
+#else
+  auto Buffer = MemoryBuffer::getFileOrSTDIN(InputFile.c_str());
+  if (!Buffer)
+    klee_error("error loading program '%s': %s", InputFile.c_str(),
+               Buffer.getError().message().c_str());
+
+  auto mainModuleOrError = getLazyBitcodeModule(Buffer->get(), getGlobalContext());
+
+  if (!mainModuleOrError) {
+    klee_error("error loading program '%s': %s", InputFile.c_str(),
+               mainModuleOrError.getError().message().c_str());
+  }
+  else {
+    // The module has taken ownership of the MemoryBuffer so release it
+    // from the std::unique_ptr
+    Buffer->release();
+  }
+
+  mainModule = *mainModuleOrError;
+  if (auto ec = mainModule->materializeAllPermanently()) {
+    klee_error("error loading program '%s': %s", InputFile.c_str(),
+               ec.message().c_str());
+  }
+#endif
+
 
   if (WithPOSIXRuntime) {
     int r = initEnv(mainModule);
@@ -1531,7 +1572,12 @@ int main(int argc, char **argv, char **envp) {
   llvm::errs() << stats.str();
   handler->getInfoStream() << stats.str();
 
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
+  // FIXME: This really doesn't look right
+  // This is preventing the module from being
+  // deleted automatically
   BufferPtr.take();
+#endif
   delete handler;
 
   return 0;

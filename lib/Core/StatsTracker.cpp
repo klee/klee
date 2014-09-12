@@ -45,7 +45,13 @@
 #include "llvm/Type.h"
 #endif
 #include "llvm/Support/CommandLine.h"
+
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
 #include "llvm/Support/CFG.h"
+#else
+#include "llvm/IR/CFG.h"
+#endif
+
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/FileSystem.h"
@@ -183,8 +189,13 @@ StatsTracker::StatsTracker(Executor &_executor, std::string _objectFilename,
     SmallString<128> current(objectFilename);
     if(sys::fs::make_absolute(current)) {
       bool exists = false;
+
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
       error_code ec = sys::fs::exists(current.str(), exists);
       if (ec == errc::success && exists) {
+#else
+      if (!sys::fs::exists(current.str(), exists)) {
+#endif
         objectFilename = current.c_str();
       }
     }

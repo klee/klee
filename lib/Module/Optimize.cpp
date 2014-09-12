@@ -19,7 +19,12 @@
 #include "llvm/PassManager.h"
 #include "llvm/Analysis/Passes.h"
 #include "llvm/Analysis/LoopPass.h"
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
 #include "llvm/Analysis/Verifier.h"
+#include "llvm/Support/PassNameParser.h"
+#else
+#include "llvm/IR/Verifier.h"
+#endif
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/DynamicLibrary.h"
 
@@ -38,7 +43,6 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Scalar.h"
-#include "llvm/Support/PassNameParser.h"
 #include "llvm/Support/PluginLoader.h"
 using namespace llvm;
 
@@ -177,9 +181,12 @@ void Optimize(Module* M) {
 #if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
   // Add an appropriate TargetData instance for this module...
   addPass(Passes, new TargetData(M));
-#else
+#elif LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
   // Add an appropriate DataLayout instance for this module...
   addPass(Passes, new DataLayout(M));
+#else
+  // Add an appropriate DataLayout instance for this module...
+  addPass(Passes, new DataLayoutPass(M));
 #endif
 
   // DWD - Run the opt standard pass list as well.

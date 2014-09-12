@@ -27,6 +27,8 @@ PROJ_OBJ_ROOT := $(subst //,/,@abs_top_builddir@)
 # Set the root directory of this project's install prefix
 PROJ_INSTALL_ROOT := @prefix@
 
+KLEE_USE_CXX11 := @KLEE_USE_CXX11@
+
 STP_ROOT := @STP_ROOT@
 
 STP_NEEDS_BOOST := @STP_NEEDS_BOOST@

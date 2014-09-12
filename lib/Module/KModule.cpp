@@ -41,8 +41,13 @@
 
 #endif
 
-#include "llvm/PassManager.h"
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
 #include "llvm/Support/CallSite.h"
+#else
+#include "llvm/IR/CallSite.h"
+#endif
+
+#include "llvm/PassManager.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/raw_os_ostream.h"
@@ -50,10 +55,11 @@
 #include "llvm/Transforms/Scalar.h"
 
 #include <llvm/Transforms/Utils/Cloning.h>
-#include <llvm/Support/InstIterator.h>
 #include <llvm/Support/Debug.h>
 
 #include <sstream>
+
+#define DEBUG_TYPE "kmodule"
 
 using namespace llvm;
 using namespace klee;
@@ -155,7 +161,13 @@ static Function *getStubFunctionForCtorList(Module *m,
   if (arr) {
     for (unsigned i=0; i<arr->getNumOperands(); i++) {
       ConstantStruct *cs = cast<ConstantStruct>(arr->getOperand(i));
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
       assert(cs->getNumOperands()==2 && "unexpected element in ctor initializer list");
+#else
+      // There is a third element in global_ctor elements (``i8 @data``). I'm not sure
+      // what it is for.
+      assert(cs->getNumOperands()==3 && "unexpected element in ctor initializer list");
+#endif
       
       Constant *fp = cs->getOperand(1);      
       if (!fp->isNullValue()) {
@@ -270,8 +282,7 @@ static void inlineChecks(Module *module, const char * functionName) {
 void KModule::addInternalFunction(const char* functionName){
   Function* internalFunction = module->getFunction(functionName);
   if (!internalFunction) {
-    DEBUG_WITH_TYPE("KModule", klee_warning(
-        "Failed to add internal function %s. Not found.", functionName));
+    DEBUG(klee_warning("Failed to add internal function %s. Not found.", functionName));
     return ;
   }
   DEBUG( klee_message("Added function %s.",functionName));
@@ -633,3 +644,5 @@ KFunction::~KFunction() {
     delete instructions[i];
   delete[] instructions;
 }
+
+#undef DEBUG_TYPE
