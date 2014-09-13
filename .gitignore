@@ -5,6 +5,7 @@ Debug+Asserts/
 Output/
 
 cscope.*
+*~
 
 *.log
 *.sum
