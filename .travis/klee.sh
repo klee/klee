@@ -90,7 +90,10 @@ RETURN="$?"
 # Note can't use ``make check`` because llvm-lit is not available
 cd test
 # The build system needs to generate this file before we can run lit
-make lit.site.cfg
+make lit.site.cfg \
+    DISABLE_ASSERTIONS=${DISABLE_ASSERTIONS} \
+    ENABLE_OPTIMIZED=${ENABLE_OPTIMIZED} \
+    ENABLE_SHARED=0
 # Running is parallel is broken and there's no point on our "single core" VM anyway
 
 set +e # We want to let all the tests run before we exit
