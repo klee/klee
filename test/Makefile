@@ -47,9 +47,10 @@ endif
 LIT_ALL_TESTSUITES := $(LIT_TESTSUITE)
 
 check-local:: lit.site.cfg
+	$(Verb) $(MAKE) -s clean
 	$(Verb) ( $(ULIMIT) \
 	          $(PYTHON) $(LLVM_SRC_ROOT)/utils/lit/lit.py $(LIT_ARGS) $(LIT_TESTSUITE) )
-	@klee_last_path=$$(find . -name klee-last | head -1); \
+	$(Verb) klee_last_path=$$(find . -name klee-last | head -1); \
 	 if [ ! -z "$$klee_last_path" ]; then \
 	  echo "error: one of the tests failed to use --output-dir, found: $$klee_last_path"; \
 	  exit 1; \
