@@ -1,0 +1,69 @@
+language: cpp
+compiler:
+    - clang
+    - gcc
+env:
+    ###########################################################################
+    # Configurations
+    #
+    # Each line in the "env" section represents a set of environmental variables
+    # pass to a build. Thus each line represents a different build
+    ###########################################################################
+    # FIXME: I want to enable assertions but I can't because Release+Asserts build fails
+    #  Release builds
+    # FIXME: Enable when we want to test LLVM3.5
+    #- LLVM_VERSION=3.5 STP_VERSION=UPSTREAM KLEE_UCLIBC=0 DISABLE_ASSERTIONS=1 ENABLE_OPTIMIZED=1
+    #- LLVM_VERSION=3.5 STP_VERSION=UPSTREAM KLEE_UCLIBC=1 DISABLE_ASSERTIONS=1 ENABLE_OPTIMIZED=1
+    - LLVM_VERSION=3.4 STP_VERSION=UPSTREAM KLEE_UCLIBC=0 DISABLE_ASSERTIONS=1 ENABLE_OPTIMIZED=1
+    - LLVM_VERSION=3.4 STP_VERSION=UPSTREAM KLEE_UCLIBC=1 DISABLE_ASSERTIONS=1 ENABLE_OPTIMIZED=1
+    - LLVM_VERSION=2.9 STP_VERSION=UPSTREAM KLEE_UCLIBC=0 DISABLE_ASSERTIONS=1 ENABLE_OPTIMIZED=1
+    - LLVM_VERSION=2.9 STP_VERSION=UPSTREAM KLEE_UCLIBC=1 DISABLE_ASSERTIONS=1 ENABLE_OPTIMIZED=1
+    - LLVM_VERSION=3.4 STP_VERSION=r940 KLEE_UCLIBC=0 DISABLE_ASSERTIONS=1 ENABLE_OPTIMIZED=1
+    - LLVM_VERSION=3.4 STP_VERSION=r940 KLEE_UCLIBC=1 DISABLE_ASSERTIONS=1 ENABLE_OPTIMIZED=1
+    - LLVM_VERSION=2.9 STP_VERSION=r940 KLEE_UCLIBC=0 DISABLE_ASSERTIONS=1 ENABLE_OPTIMIZED=1
+    - LLVM_VERSION=2.9 STP_VERSION=r940 KLEE_UCLIBC=1 DISABLE_ASSERTIONS=1 ENABLE_OPTIMIZED=1
+    # FIXME: Do Debug+Asserts builds
+cache: apt
+before_install:
+    # Assume Travis image uses Ubuntu 12.04 LTS
+    - sudo sh -c 'echo "deb http://llvm.org/apt/precise/ llvm-toolchain-precise-3.4 main" >> /etc/apt/sources.list.d/llvm.list'
+    - sudo sh -c 'echo "deb-src http://llvm.org/apt/precise/ llvm-toolchain-precise-3.4 main" >> /etc/apt/sources.list.d/llvm.list'
+    - sudo sh -c 'echo "deb http://llvm.org/apt/precise/ llvm-toolchain-precise-3.5 main" >> /etc/apt/sources.list.d/llvm.list'
+    - sudo sh -c 'echo "deb-src http://llvm.org/apt/precise/ llvm-toolchain-precise-3.5 main" >> /etc/apt/sources.list.d/llvm.list'
+    - sudo add-apt-repository -y ppa:ubuntu-sdk-team/ppa
+    - sudo add-apt-repository --yes ppa:ubuntu-toolchain-r/test/
+    - wget -O - http://llvm.org/apt/llvm-snapshot.gpg.key|sudo apt-key add -
+    # Needed for new libstdc++ and gcc4.8
+    - sudo apt-get update
+    # FIXME: STP doesn't need everything from Boost!
+    - sudo apt-get install gcc-4.8 g++-4.8 libcap-dev cmake libboost-all-dev
+    # Make gcc4.8 the default gcc version
+    - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.8 20
+    - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.8 20
+    - sudo apt-get install llvm-${LLVM_VERSION} llvm-${LLVM_VERSION}-dev clang-3.4
+    # Make Clang3.4 the default clang version (for building KLEE)
+    - sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-3.4 20
+    - sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-3.4 20
+    # Install lit (llvm-lit is not available)
+    - sudo pip install lit
+    # Gross! tools/klee/Makefile depends on "bc"
+    - sudo apt-get install bc
+    # Setup out of source build
+    - export KLEE_SRC=`pwd`
+    - cd ../
+    - mkdir build
+    - cd build/
+    - export BUILD_DIR=`pwd`
+    # Build STP
+    - mkdir stp
+    - cd stp
+    - ${KLEE_SRC}/.travis/stp.sh
+    - cd ../
+script:
+    # Get need utlities/libraries for testing KLEE
+    - mkdir test-utils/
+    - cd test-utils/
+    - ${KLEE_SRC}/.travis/testing-utils.sh
+    - cd ../
+    # Build KLEE
+    - ${KLEE_SRC}/.travis/klee.sh
