@@ -15,6 +15,11 @@ TYPED_PRINT(i16, unsigned short)
 TYPED_PRINT(i32, unsigned int)
 TYPED_PRINT(i64, unsigned long long)
 
+// This is a workaround to hide the "%c" only format string from the compiler --
+// llvm-gcc can optimize this into putchar even at -O0, and the LLVM JIT doesn't
+// recognize putchar() as a valid external function.
+char *char_format_string = "%c";
+
 void print_int(unsigned long long val) {
     int cur = 1;
 
@@ -26,11 +31,11 @@ void print_int(unsigned long long val) {
     while (cur) {
         int digit = val / cur;
 
-        printf("%c", digit + '0');
+        printf(char_format_string, digit + '0');
         
         val = val % cur;
         cur /= 10;
     }
     
-    printf("%c", '\n');
+    printf(char_format_string, '\n');
 }
