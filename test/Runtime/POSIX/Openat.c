@@ -1,6 +1,7 @@
 // RUN: %llvmgcc %s -emit-llvm -O0 -c -o %t2.bc
-// RUN: %klee --posix-runtime --exit-on-error %t2.bc --sym-files 1 10
-// RUN: test -f %T/klee-last/test000001.ktest
+// RUN: rm -rf %t.klee-out
+// RUN: %klee --output-dir=%t.klee-out --posix-runtime --exit-on-error %t2.bc --sym-files 1 10
+// RUN: test -f %t.klee-out/test000001.ktest
 
 #include <assert.h>
 #include <fcntl.h>

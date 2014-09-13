@@ -1,6 +1,7 @@
 // RUN: %llvmgcc %s -emit-llvm -O0 -c -o %t1.bc
 // RUN: rm -f %t1.log
-// RUN: %klee --log-file %t1.log --debug-check-for-implied-values %t1.bc
+// RUN: rm -rf %t.klee-out
+// RUN: %klee --output-dir=%t.klee-out --log-file %t1.log --debug-check-for-implied-values %t1.bc
 // RUN: grep "= 0 (ok)" %t1.log
 // RUN: grep "= 2 (missed)" %t1.log
 

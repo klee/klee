@@ -1,6 +1,7 @@
 // RUN: %llvmgcc %s -emit-llvm -O0 -c -o %t1.bc
-// RUN: %klee %t1.bc
-// RUN: ls %T/klee-last | not grep *.err
+// RUN: rm -rf %t.klee-out
+// RUN: %klee --output-dir=%t.klee-out %t1.bc
+// RUN: ls %t.klee-out | not grep *.err
 
 #include <stdlib.h>
 

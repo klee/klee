@@ -1,6 +1,7 @@
 // RUN: %llvmgcc %s -emit-llvm -O0 -c -o %t1.bc
-// RUN: %klee %t1.bc
-// RUN: grep "total queries = 2" %T/klee-last/info
+// RUN: rm -rf %t.klee-out
+// RUN: %klee --output-dir=%t.klee-out %t1.bc
+// RUN: grep "total queries = 2" %t.klee-out/info
 
 #include <assert.h>
 

@@ -1,7 +1,9 @@
 // RUN: %llvmgcc %s -emit-llvm -O0 -c -o %t.bc
-// RUN: %klee --run-in=/tmp --search=random-state --libc=uclibc --posix-runtime --exit-on-error %t.bc --sym-files 1 1 > %t1.log
+// RUN: rm -rf %t.klee-out
+// RUN: %klee --output-dir=%t.klee-out --run-in=/tmp --search=random-state --libc=uclibc --posix-runtime --exit-on-error %t.bc --sym-files 1 1 > %t1.log
 // RUN: %llvmgcc -D_FILE_OFFSET_BITS=64 %s -emit-llvm -O0 -c -o %t.bc
-// RUN: %klee --run-in=/tmp --search=random-state --libc=uclibc --posix-runtime --exit-on-error %t.bc --sym-files 1 1 > %t2.log
+// RUN: rm -rf %t.klee-out
+// RUN: %klee --output-dir=%t.klee-out --run-in=/tmp --search=random-state --libc=uclibc --posix-runtime --exit-on-error %t.bc --sym-files 1 1 > %t2.log
 // RUN: sort %t1.log %t2.log | uniq -c > %t3.log
 // RUN: grep -q "4 COUNT" %t3.log
 

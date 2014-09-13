@@ -1,5 +1,6 @@
 // RUN: %llvmgcc -emit-llvm -g -c %s -o %t.bc
-// RUN: %klee %t.bc > %t.log
+// RUN: rm -rf %t.klee-out
+// RUN: %klee --output-dir=%t.klee-out %t.bc > %t.log
 // RUN: grep "3.30* -1.10* 2.420*" %t.log
 
 #include <stdio.h>

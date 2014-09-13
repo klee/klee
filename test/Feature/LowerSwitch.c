@@ -1,8 +1,11 @@
 // RUN: %llvmgcc %s -emit-llvm -g -c -o %t.bc
-// RUN: %klee --exit-on-error --allow-external-sym-calls --switch-type=internal %t.bc
-// RUN: not test -f %T/klee-last/test000010.ktest
-// RUN: %klee --exit-on-error --allow-external-sym-calls --switch-type=simple %t.bc
-// RUN: test -f %T/klee-last/test000010.ktest
+// RUN: rm -rf %t.klee-out
+// RUN: %klee --output-dir=%t.klee-out --exit-on-error --allow-external-sym-calls --switch-type=internal %t.bc
+// RUN: not test -f %t.klee-out/test000010.ktest
+
+// RUN: rm -rf %t.klee-out
+// RUN: %klee --output-dir=%t.klee-out --exit-on-error --allow-external-sym-calls --switch-type=simple %t.bc
+// RUN: test -f %t.klee-out/test000010.ktest
 
 #include <stdio.h>
 

@@ -1,5 +1,6 @@
 // RUN: %llvmgxx -g -fno-exceptions -emit-llvm -O0 -c -o %t.bc %s
-// RUN: %klee --libc=klee --no-output --exit-on-error %t.bc > %t.log
+// RUN: rm -rf %t.klee-out
+// RUN: %klee --output-dir=%t.klee-out --libc=klee --no-output --exit-on-error %t.bc > %t.log
 
 /* Tests the ability to call external functions which return large values
  * (i.e. structs).  In this test case, fstream::ftellg() returns a

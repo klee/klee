@@ -1,5 +1,6 @@
 // RUN: %llvmgcc %s -emit-llvm -O0 -c -o %t1.bc
-// RUN: %klee %t1.bc > %t1.log
+// RUN: rm -rf %t.klee-out
+// RUN: %klee --output-dir=%t.klee-out %t1.bc > %t1.log
 // RUN: grep -c START %t1.log | grep 1
 // RUN: grep -c END %t1.log | grep 2
 

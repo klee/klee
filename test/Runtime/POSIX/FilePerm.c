@@ -1,8 +1,9 @@
 // RUN: %llvmgcc %s -emit-llvm -O0 -c -o %t.bc
-// RUN: %klee --posix-runtime %t.bc --sym-files 1 10 --sym-stdout 2>%t.log 
-// RUN: test -f %T/klee-last/test000001.ktest
-// RUN: test -f %T/klee-last/test000002.ktest
-// RUN: test -f %T/klee-last/test000003.ktest
+// RUN: rm -rf %t.klee-out
+// RUN: %klee --output-dir=%t.klee-out --posix-runtime %t.bc --sym-files 1 10 --sym-stdout 2>%t.log 
+// RUN: test -f %t.klee-out/test000001.ktest
+// RUN: test -f %t.klee-out/test000002.ktest
+// RUN: test -f %t.klee-out/test000003.ktest
 
 #include <stdio.h>       
 #include <sys/types.h>

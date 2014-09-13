@@ -1,7 +1,8 @@
 // RUN: %llvmgcc %s -g -emit-llvm -O0 -c -o %t1.bc
-// RUN: %klee %t1.bc
-// RUN: ls %T/klee-last/ | grep .ktest | wc -l | grep 4
-// RUN: ls %T/klee-last/ | grep .ptr.err | wc -l | grep 2
+// RUN: rm -rf %t.klee-out
+// RUN: %klee --output-dir=%t.klee-out %t1.bc
+// RUN: ls %t.klee-out/ | grep .ktest | wc -l | grep 4
+// RUN: ls %t.klee-out/ | grep .ptr.err | wc -l | grep 2
 
 #include <stdlib.h>
 

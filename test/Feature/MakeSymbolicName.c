@@ -1,5 +1,6 @@
 // RUN: %llvmgcc %s -emit-llvm -g -c -o %t1.bc
-// RUN: %klee --search=random-state --exit-on-error %t1.bc
+// RUN: rm -rf %t.klee-out
+// RUN: %klee --output-dir=%t.klee-out --search=random-state --exit-on-error %t1.bc
 
 #include <assert.h>
 

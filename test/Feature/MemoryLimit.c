@@ -1,7 +1,9 @@
 // RUN: %llvmgcc -emit-llvm -DLITTLE_ALLOC -g -c %s -o %t.little.bc
 // RUN: %llvmgcc -emit-llvm -g -c %s -o %t.big.bc
-// RUN: %klee --max-memory=20 %t.little.bc > %t.little.log
-// RUN: %klee --max-memory=20 %t.big.bc > %t.big.log
+// RUN: rm -rf %t.klee-out
+// RUN: %klee --output-dir=%t.klee-out --max-memory=20 %t.little.bc > %t.little.log
+// RUN: rm -rf %t.klee-out
+// RUN: %klee --output-dir=%t.klee-out --max-memory=20 %t.big.bc > %t.big.log
 // RUN: not grep -q "MALLOC FAILED" %t.little.log
 // RUN: not grep -q "MALLOC FAILED" %t.big.log
 // RUN: not grep -q "DONE" %t.little.log

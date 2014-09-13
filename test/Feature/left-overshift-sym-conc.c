@@ -1,7 +1,8 @@
 // RUN: %llvmgcc %s -emit-llvm -g -O0 -c -o %t.bc
-// RUN: %klee -use-cex-cache=1 -check-overshift=0 %t.bc
-// RUN: not grep "ASSERTION FAIL" %T/klee-last/messages.txt
-// RUN: grep "KLEE: done: explored paths = 1" %T/klee-last/info
+// RUN: rm -rf %t.klee-out
+// RUN: %klee --output-dir=%t.klee-out -use-cex-cache=1 -check-overshift=0 %t.bc
+// RUN: not grep "ASSERTION FAIL" %t.klee-out/messages.txt
+// RUN: grep "KLEE: done: explored paths = 1" %t.klee-out/info
 #include <stdio.h>
 #include <assert.h>
 

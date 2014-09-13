@@ -1,7 +1,10 @@
 // RUN: %llvmgcc -emit-llvm -g -c -o %t.bc %s
-// RUN: %klee --exit-on-error --use-asm-addresses %t.bc
+// RUN: rm -rf %t.klee-out
+// RUN: %klee --output-dir=%t.klee-out --exit-on-error --use-asm-addresses %t.bc
+
 // RUN: %llvmgcc -emit-llvm -DOVERLAP -g -c -o %t.bc %s
-// RUN: not %klee --exit-on-error --use-asm-addresses %t.bc
+// RUN: rm -rf %t.klee-out
+// RUN: not %klee --output-dir=%t.klee-out --exit-on-error --use-asm-addresses %t.bc
 
 #include <assert.h>
 

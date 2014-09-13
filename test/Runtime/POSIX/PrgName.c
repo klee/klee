@@ -1,7 +1,8 @@
 // RUN: %llvmgcc %s -emit-llvm -O0 -c -o %t2.bc
-// RUN: %klee --posix-runtime --exit-on-error %t2.bc --sym-arg 10 >%t.log
-// RUN: test -f %T/klee-last/test000001.ktest
-// RUN: test -f %T/klee-last/test000002.ktest
+// RUN: rm -rf %t.klee-out
+// RUN: %klee --output-dir=%t.klee-out --posix-runtime --exit-on-error %t2.bc --sym-arg 10 >%t.log
+// RUN: test -f %t.klee-out/test000001.ktest
+// RUN: test -f %t.klee-out/test000002.ktest
 // RUN: grep -q "No" %t.log
 // RUN: grep -qv "Yes" %t.log
 

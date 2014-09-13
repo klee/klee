@@ -1,22 +1,40 @@
 // RUN: %llvmgcc %s -emit-llvm -O0 -c -o %t2.bc
-// RUN: %klee %t2.bc
-// RUN: %klee --search=random-state %t2.bc
-// RUN: %klee --search=nurs:depth %t2.bc
-// RUN: %klee --search=nurs:qc %t2.bc
-// RUN: %klee --use-batching-search %t2.bc
-// RUN: %klee --use-batching-search --search=random-state %t2.bc
-// RUN: %klee --use-batching-search --search=nurs:depth %t2.bc
-// RUN: %klee --use-batching-search --search=nurs:qc %t2.bc
-// RUN: %klee --search=random-path --search=nurs:qc %t2.bc
-// RUN: %klee --use-merge --search=dfs --debug-log-merge --debug-log-state-merge %t2.bc
-// RUN: %klee --use-merge --use-batching-search --search=dfs %t2.bc
-// RUN: %klee --use-merge --use-batching-search --search=random-state %t2.bc
-// RUN: %klee --use-merge --use-batching-search --search=nurs:depth %t2.bc
-// RUN: %klee --use-merge --use-batching-search --search=nurs:qc %t2.bc
-// RUN: %klee --use-iterative-deepening-time-search --use-batching-search %t2.bc
-// RUN: %klee --use-iterative-deepening-time-search --use-batching-search --search=random-state %t2.bc
-// RUN: %klee --use-iterative-deepening-time-search --use-batching-search --search=nurs:depth %t2.bc
-// RUN: %klee --use-iterative-deepening-time-search --use-batching-search --search=nurs:qc %t2.bc
+// RUN: rm -rf %t.klee-out
+// RUN: %klee --output-dir=%t.klee-out %t2.bc
+// RUN: rm -rf %t.klee-out
+// RUN: %klee --output-dir=%t.klee-out --search=random-state %t2.bc
+// RUN: rm -rf %t.klee-out
+// RUN: %klee --output-dir=%t.klee-out --search=nurs:depth %t2.bc
+// RUN: rm -rf %t.klee-out
+// RUN: %klee --output-dir=%t.klee-out --search=nurs:qc %t2.bc
+// RUN: rm -rf %t.klee-out
+// RUN: %klee --output-dir=%t.klee-out --use-batching-search %t2.bc
+// RUN: rm -rf %t.klee-out
+// RUN: %klee --output-dir=%t.klee-out --use-batching-search --search=random-state %t2.bc
+// RUN: rm -rf %t.klee-out
+// RUN: %klee --output-dir=%t.klee-out --use-batching-search --search=nurs:depth %t2.bc
+// RUN: rm -rf %t.klee-out
+// RUN: %klee --output-dir=%t.klee-out --use-batching-search --search=nurs:qc %t2.bc
+// RUN: rm -rf %t.klee-out
+// RUN: %klee --output-dir=%t.klee-out --search=random-path --search=nurs:qc %t2.bc
+// RUN: rm -rf %t.klee-out
+// RUN: %klee --output-dir=%t.klee-out --use-merge --search=dfs --debug-log-merge --debug-log-state-merge %t2.bc
+// RUN: rm -rf %t.klee-out
+// RUN: %klee --output-dir=%t.klee-out --use-merge --use-batching-search --search=dfs %t2.bc
+// RUN: rm -rf %t.klee-out
+// RUN: %klee --output-dir=%t.klee-out --use-merge --use-batching-search --search=random-state %t2.bc
+// RUN: rm -rf %t.klee-out
+// RUN: %klee --output-dir=%t.klee-out --use-merge --use-batching-search --search=nurs:depth %t2.bc
+// RUN: rm -rf %t.klee-out
+// RUN: %klee --output-dir=%t.klee-out --use-merge --use-batching-search --search=nurs:qc %t2.bc
+// RUN: rm -rf %t.klee-out
+// RUN: %klee --output-dir=%t.klee-out --use-iterative-deepening-time-search --use-batching-search %t2.bc
+// RUN: rm -rf %t.klee-out
+// RUN: %klee --output-dir=%t.klee-out --use-iterative-deepening-time-search --use-batching-search --search=random-state %t2.bc
+// RUN: rm -rf %t.klee-out
+// RUN: %klee --output-dir=%t.klee-out --use-iterative-deepening-time-search --use-batching-search --search=nurs:depth %t2.bc
+// RUN: rm -rf %t.klee-out
+// RUN: %klee --output-dir=%t.klee-out --use-iterative-deepening-time-search --use-batching-search --search=nurs:qc %t2.bc
 
 
 /* this test is basically just for coverage and doesn't really do any

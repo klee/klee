@@ -3,7 +3,8 @@
 // RUN: echo "x" >> %t1.res
 // RUN: echo "x" >> %t1.res
 // RUN: %llvmgcc %s -emit-llvm -O0 -c -o %t1.bc
-// RUN: %klee %t1.bc > %t1.log
+// RUN: rm -rf %t.klee-out
+// RUN: %klee --output-dir=%t.klee-out %t1.bc > %t1.log
 // RUN: diff %t1.res %t1.log
 
 #include <stdio.h>

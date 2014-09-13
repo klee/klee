@@ -1,5 +1,6 @@
 // RUN: %llvmgxx -I../../../include -g -fno-exceptions -emit-llvm -O0 -c -o %t.bc %s
-// RUN: %klee --libc=klee --no-output --exit-on-error %t.bc > %t.log
+// RUN: rm -rf %t.klee-out
+// RUN: %klee --output-dir=%t.klee-out --libc=klee --no-output --exit-on-error %t.bc > %t.log
 // RUN: grep -q powl\(-11\\.0,0\)=1\\.0\\+ %t.log
 // RUN: grep -q powl\(-11\\.0,1\)=-11\\.0\\+ %t.log
 // RUN: grep -q powl\(-11\\.0,2\)=121\\.0\\+ %t.log

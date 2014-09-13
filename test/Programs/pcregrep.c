@@ -1,5 +1,6 @@
 // RUN: %llvmgcc -m32 %s -emit-llvm -O0 -c -o %t1.bc
-// RUN: %klee --libc=klee --exit-on-error %t1.bc 2 2
+// RUN: rm -rf %t.klee-out
+// RUN: %klee --output-dir=%t.klee-out --libc=klee --exit-on-error %t1.bc 2 2
 // XFAIL: x86_64
 
 /* Provide Declarations */

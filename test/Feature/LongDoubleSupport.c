@@ -1,5 +1,6 @@
 // RUN: %llvmgcc %s -emit-llvm -O0 -c -o %t1.bc
-// RUN: %klee --optimize=0 --exit-on-error %t1.bc > %t2.out
+// RUN: rm -rf %t.klee-out
+// RUN: %klee --output-dir=%t.klee-out --optimize=0 --exit-on-error %t1.bc > %t2.out
 
 #include <stdio.h>
 #include <float.h>

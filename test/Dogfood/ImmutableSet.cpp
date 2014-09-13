@@ -1,5 +1,6 @@
 // RUN: %llvmgxx -I../../../include -g -DMAX_ELEMENTS=4 -fno-exceptions -emit-llvm -c -o %t1.bc %s
-// RUN: %klee --libc=klee --max-forks=200 --no-output --exit-on-error --optimize --disable-inlining --search=nurs:depth --use-cex-cache %t1.bc
+// RUN: rm -rf %t.klee-out
+// RUN: %klee --output-dir=%t.klee-out --libc=klee --max-forks=200 --no-output --exit-on-error --optimize --disable-inlining --search=nurs:depth --use-cex-cache %t1.bc
 
 #include "klee/klee.h"
 #include "klee/Internal/ADT/ImmutableSet.h"

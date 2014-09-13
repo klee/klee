@@ -1,7 +1,8 @@
 // RUN: %llvmgcc %s -emit-llvm -O0 -c -o %t1.bc
-// RUN: %klee %t1.bc > %t2.out
+// RUN: rm -rf %t.klee-out
+// RUN: %klee --output-dir=%t.klee-out %t1.bc > %t2.out
 // RUN: grep "types: (52, 37, 2.00, (9,12,15))" %t2.out
-// RUN: test -f %T/klee-last/test000001.ptr.err
+// RUN: test -f %t.klee-out/test000001.ptr.err
 
 #include <stdarg.h>
 #include <assert.h>
