@@ -34,6 +34,7 @@
 #endif
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 
 #include <map>
 #include <string>
@@ -121,23 +122,12 @@ InstructionInfoTable::InstructionInfoTable(Module *m)
         lineTable.find(instr);
       if (ltit!=lineTable.end())
         assemblyLine = ltit->second;
-      if (getInstructionDebugInfo(instr, initialFile, initialLine))
-      {
-        infos.insert(std::make_pair(instr,
-                                    InstructionInfo(id++,
-                                                    *initialFile,
-                                                    initialLine,
-                                                    assemblyLine)));
-        DEBUG_WITH_TYPE("klee_obtained_debug", dbgs() <<
-          "Instruction: \"" << *instr << "\" (assembly line " << assemblyLine <<
-          ") has debug location " << *initialFile << ":" << initialLine << "\n");
-      }
-      else
-      {
-        DEBUG_WITH_TYPE("klee_missing_debug", dbgs() <<
-          "Instruction: \"" << *instr << "\" (assembly line " << assemblyLine <<
-          ") is missing debug info.\n");
-      }
+      getInstructionDebugInfo(instr, initialFile, initialLine);
+      infos.insert(std::make_pair(instr,
+                                  InstructionInfo(id++,
+                                                  *initialFile,
+                                                  initialLine,
+                                                  assemblyLine)));
     }
   }
 }
@@ -168,16 +158,20 @@ const InstructionInfo &
 InstructionInfoTable::getInfo(const Instruction *inst) const {
   std::map<const llvm::Instruction*, InstructionInfo>::const_iterator it = 
     infos.find(inst);
-  if (it==infos.end()) {
-    return dummyInfo;
-  } else {
-    return it->second;
-  }
+  if (it == infos.end())
+    llvm::report_fatal_error("invalid instruction, not present in "
+                             "initial module!");
+  return it->second;
 }
 
 const InstructionInfo &
 InstructionInfoTable::getFunctionInfo(const Function *f) const {
   if (f->isDeclaration()) {
+    // FIXME: We should probably eliminate this dummyInfo object, and instead
+    // allocate a per-function object to track the stats for that function
+    // (otherwise, anyone actually trying to use those stats is getting ones
+    // shared across all functions). I'd like to see if this matters in practice
+    // and construct a test case for it if it does, though.
     return dummyInfo;
   } else {
     return getInfo(f->begin()->begin());
