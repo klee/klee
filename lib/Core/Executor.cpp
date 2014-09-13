@@ -81,8 +81,9 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/CallSite.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include <cassert>
 #include <algorithm>
@@ -955,7 +956,8 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
 
 void Executor::addConstraint(ExecutionState &state, ref<Expr> condition) {
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(condition)) {
-    assert(CE->isTrue() && "attempt to add invalid constraint");
+    if (!CE->isTrue())
+      llvm::report_fatal_error("attempt to add invalid constraint");
     return;
   }
 
@@ -1042,7 +1044,7 @@ ref<klee::ConstantExpr> Executor::evalConstant(const Constant *c) {
       return cast<ConstantExpr>(res);
     } else {
       // Constant{Vector}
-      assert(0 && "invalid argument to evalConstant()");
+      llvm::report_fatal_error("invalid argument to evalConstant()");
     }
   }
 }
@@ -1745,9 +1747,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Special instructions
   case Instruction::Select: {
-    SelectInst *SI = cast<SelectInst>(ki->inst);
-    assert(SI->getCondition() == SI->getOperand(0) &&
-           "Wrong operand index!");
     ref<Expr> cond = eval(ki, 0, state).value;
     ref<Expr> tExpr = eval(ki, 1, state).value;
     ref<Expr> fExpr = eval(ki, 2, state).value;
