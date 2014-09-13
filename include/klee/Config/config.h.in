@@ -3,6 +3,9 @@
 #ifndef KLEE_CONFIG_CONFIG_H
 #define KLEE_CONFIG_CONFIG_H
 
+/* Enable KLEE DEBUG checks */
+#undef ENABLE_KLEE_DEBUG
+
 /* Does the platform use __ctype_b_loc, etc. */
 #undef HAVE_CTYPE_EXTERNALS
 

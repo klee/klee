@@ -10,6 +10,7 @@
 #include "klee/Config/Version.h"
 #include "klee/Internal/ADT/KTest.h"
 #include "klee/Internal/ADT/TreeStream.h"
+#include "klee/Internal/Support/Debug.h"
 #include "klee/Internal/Support/ModuleUtil.h"
 #include "klee/Internal/System/Time.h"
 
@@ -41,7 +42,6 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Bitcode/ReaderWriter.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
@@ -584,21 +584,21 @@ std::string KleeHandler::getRunTimeLibraryPath(const char *argv0) {
 
   if ( strcmp(toolRoot.c_str(), KLEE_INSTALL_BIN_DIR ) == 0)
   {
-    DEBUG_WITH_TYPE("klee_runtime", llvm::dbgs() <<
-                    "Using installed KLEE library runtime: ");
+    KLEE_DEBUG_WITH_TYPE("klee_runtime", llvm::dbgs() <<
+                         "Using installed KLEE library runtime: ");
     libDir = KLEE_INSTALL_LIB_DIR ;
   }
   else
   {
-    DEBUG_WITH_TYPE("klee_runtime", llvm::dbgs() <<
-                    "Using build directory KLEE library runtime :");
+    KLEE_DEBUG_WITH_TYPE("klee_runtime", llvm::dbgs() <<
+                         "Using build directory KLEE library runtime :");
     libDir = KLEE_DIR;
     llvm::sys::path::append(libDir,RUNTIME_CONFIGURATION);
     llvm::sys::path::append(libDir,"lib");
   }
 
-  DEBUG_WITH_TYPE("klee_runtime", llvm::dbgs() <<
-                  libDir.c_str() << "\n");
+  KLEE_DEBUG_WITH_TYPE("klee_runtime", llvm::dbgs() <<
+                       libDir.c_str() << "\n");
   return libDir.str();
 }
 

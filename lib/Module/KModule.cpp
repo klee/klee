@@ -19,6 +19,7 @@
 #include "klee/Internal/Module/Cell.h"
 #include "klee/Internal/Module/KInstruction.h"
 #include "klee/Internal/Module/InstructionInfoTable.h"
+#include "klee/Internal/Support/Debug.h"
 #include "klee/Internal/Support/ModuleUtil.h"
 
 #include "llvm/Bitcode/ReaderWriter.h"
@@ -51,7 +52,6 @@
 
 #include <llvm/Transforms/Utils/Cloning.h>
 #include <llvm/Support/InstIterator.h>
-#include <llvm/Support/Debug.h>
 
 #include <sstream>
 
@@ -234,7 +234,8 @@ static void inlineChecks(Module *module, const char * functionName) {
     Function* runtimeCheckCall = module->getFunction(functionName);
     if (runtimeCheckCall == 0)
     {
-      DEBUG( klee_warning("Failed to inline %s because no calls were made to it in module", functionName) );
+      KLEE_DEBUG(klee_warning("Failed to inline %s because no calls were made "
+                              "to it in module", functionName));
       return;
     }
 
@@ -264,17 +265,19 @@ static void inlineChecks(Module *module, const char * functionName) {
       }
     }
 
-    DEBUG( klee_message("Tried to inline calls to %s. %u successes, %u failures",functionName, successCount, failCount) );
+    KLEE_DEBUG(klee_message("Tried to inline calls to %s. %u successes, "
+                            "%u failures", functionName, successCount,
+                            failCount));
 }
 
 void KModule::addInternalFunction(const char* functionName){
   Function* internalFunction = module->getFunction(functionName);
   if (!internalFunction) {
-    DEBUG_WITH_TYPE("KModule", klee_warning(
+    KLEE_DEBUG_WITH_TYPE("KModule", klee_warning(
         "Failed to add internal function %s. Not found.", functionName));
     return ;
   }
-  DEBUG( klee_message("Added function %s.",functionName));
+  KLEE_DEBUG(klee_message("Added function %s.",functionName));
   internalFunctions.insert(internalFunction);
 }
 

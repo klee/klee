@@ -7,16 +7,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+#define DEBUG_TYPE "independent-solver"
 #include "klee/Solver.h"
 
 #include "klee/Expr.h"
 #include "klee/Constraints.h"
 #include "klee/SolverImpl.h"
+#include "klee/Internal/Support/Debug.h"
 
 #include "klee/util/ExprUtil.h"
 
-#define DEBUG_TYPE "independent-solver"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <map>
 #include <vector>
@@ -251,7 +251,7 @@ IndependentElementSet getIndependentConstraints(const Query& query,
     worklist.swap(newWorklist);
   } while (!done);
 
-DEBUG(
+  KLEE_DEBUG(
     std::set< ref<Expr> > reqset(result.begin(), result.end());
     errs() << "--\n";
     errs() << "Q: " << query.expr << "\n";

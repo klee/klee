@@ -179,6 +179,17 @@ fi
 AC_MSG_RESULT([$llvm_build_mode])
 AC_SUBST(LLVM_BUILD_MODE,$llvm_build_mode)
 
+dnl Check if we are building against a +Asserts LLVM, and enable the DEBUG_*
+dnl macros if so (they use symbols only available in +Asserts builds).
+AC_MSG_CHECKING([llvm has asserts enabled])
+if test `expr "$llvm_build_mode" : ".*Asserts.*"` -ne 0; then
+   llvm_has_asserts_enabled=1
+   AC_DEFINE_UNQUOTED(ENABLE_KLEE_DEBUG, 1, [Enable KLEE DEBUG checks])
+else
+   llvm_has_asserts_enabled=0
+fi
+AC_MSG_RESULT([$llvm_has_asserts_enabled])
+
 dnl **************************************************************************
 dnl Detect a LLVM Bitcode compiler for building KLEE runtime library
 

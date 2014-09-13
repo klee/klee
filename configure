@@ -2145,6 +2145,21 @@ echo "${ECHO_T}$llvm_build_mode" >&6; }
 LLVM_BUILD_MODE=$llvm_build_mode
 
 
+{ echo "$as_me:$LINENO: checking llvm has asserts enabled" >&5
+echo $ECHO_N "checking llvm has asserts enabled... $ECHO_C" >&6; }
+if test `expr "$llvm_build_mode" : ".*Asserts.*"` -ne 0; then
+   llvm_has_asserts_enabled=1
+
+cat >>confdefs.h <<_ACEOF
+#define ENABLE_KLEE_DEBUG 1
+_ACEOF
+
+else
+   llvm_has_asserts_enabled=0
+fi
+{ echo "$as_me:$LINENO: result: $llvm_has_asserts_enabled" >&5
+echo "${ECHO_T}$llvm_has_asserts_enabled" >&6; }
+
 
 { echo "$as_me:$LINENO: checking LLVM Bitcode compiler" >&5
 echo $ECHO_N "checking LLVM Bitcode compiler... $ECHO_C" >&6; }

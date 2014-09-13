@@ -8,7 +8,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "klee/Internal/Support/ModuleUtil.h"
+
 #include "klee/Config/Version.h"
+#include "klee/Internal/Support/Debug.h"
+
 // FIXME: This does not belong here.
 #include "../Core/Common.h"
 #include "../Core/SpecialFunctionHandler.h"
@@ -42,7 +45,6 @@
 #include "llvm/Assembly/AssemblyAnnotationWriter.h"
 #include "llvm/Support/CFG.h"
 #include "llvm/Support/CallSite.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/InstIterator.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -77,7 +79,8 @@ GetAllUndefinedSymbols(Module *M, std::set<std::string> &UndefinedSymbols) {
   static const std::string llvmIntrinsicPrefix="llvm.";
   std::set<std::string> DefinedSymbols;
   UndefinedSymbols.clear();
-  DEBUG_WITH_TYPE("klee_linker", dbgs() << "*** Computing undefined symbols ***\n");
+  KLEE_DEBUG_WITH_TYPE("klee_linker",
+                       dbgs() << "*** Computing undefined symbols ***\n");
 
   for (Module::iterator I = M->begin(), E = M->end(); I != E; ++I)
     if (I->hasName()) {
@@ -124,14 +127,15 @@ GetAllUndefinedSymbols(Module *M, std::set<std::string> &UndefinedSymbols) {
     if ( (I->size() >= llvmIntrinsicPrefix.size() ) &&
        (I->compare(0, llvmIntrinsicPrefix.size(), llvmIntrinsicPrefix) == 0) )
     {
-      DEBUG_WITH_TYPE("klee_linker", dbgs() << "LLVM intrinsic " << *I <<
+      KLEE_DEBUG_WITH_TYPE("klee_linker", dbgs() << "LLVM intrinsic " << *I <<
                       " has will be removed from undefined symbols"<< "\n");
       SymbolsToRemove.push_back(*I);
       continue;
     }
 
     // Symbol really is undefined
-    DEBUG_WITH_TYPE("klee_linker", dbgs() << "Symbol " << *I << " is undefined.\n");
+    KLEE_DEBUG_WITH_TYPE("klee_linker",
+                         dbgs() << "Symbol " << *I << " is undefined.\n");
   }
 
   // Remove KLEE intrinsics from set of undefined symbols
@@ -142,15 +146,17 @@ GetAllUndefinedSymbols(Module *M, std::set<std::string> &UndefinedSymbols) {
       continue;
 
     SymbolsToRemove.push_back(sf->name);
-    DEBUG_WITH_TYPE("klee_linker", dbgs() << "KLEE intrinsic " << sf->name <<
-                    " has will be removed from undefined symbols"<< "\n");
+    KLEE_DEBUG_WITH_TYPE("klee_linker",
+                         dbgs() << "KLEE intrinsic " << sf->name <<
+                         " has will be removed from undefined symbols"<< "\n");
   }
 
   // Now remove the symbols from undefined set.
   for (size_t i = 0, j = SymbolsToRemove.size(); i < j; ++i )
     UndefinedSymbols.erase(SymbolsToRemove[i]);
 
-  DEBUG_WITH_TYPE("klee_linker", dbgs() << "*** Finished computing undefined symbols ***\n");
+  KLEE_DEBUG_WITH_TYPE("klee_linker",
+                       dbgs() << "*** Finished computing undefined symbols ***\n");
 }
 
 
@@ -187,11 +193,11 @@ static bool linkBCA(object::Archive* archive, Module* composite, std::string& er
   if (undefinedSymbols.size() == 0)
   {
     // Nothing to do
-    DEBUG_WITH_TYPE("klee_linker", dbgs() << "No undefined symbols. Not linking anything in!\n");
+    KLEE_DEBUG_WITH_TYPE("klee_linker", dbgs() << "No undefined symbols. Not linking anything in!\n");
     return true;
   }
 
-  DEBUG_WITH_TYPE("klee_linker", dbgs() << "Loading modules\n");
+  KLEE_DEBUG_WITH_TYPE("klee_linker", dbgs() << "Loading modules\n");
   // Load all bitcode files in to memory so we can examine their symbols
   for (object::Archive::child_iterator AI = archive->begin_children(),
        AE = archive->end_children(); AI != AE; ++AI)
@@ -202,7 +208,7 @@ static bool linkBCA(object::Archive* archive, Module* composite, std::string& er
 
     if ( ec == errc::success )
     {
-      DEBUG_WITH_TYPE("klee_linker", dbgs() << "Loading archive member " << memberName << "\n");
+      KLEE_DEBUG_WITH_TYPE("klee_linker", dbgs() << "Loading archive member " << memberName << "\n");
     }
     else
     {
@@ -262,7 +268,7 @@ static bool linkBCA(object::Archive* archive, Module* composite, std::string& er
 
   }
 
-  DEBUG_WITH_TYPE("klee_linker", dbgs() << "Loaded " << archiveModules.size() << " modules\n");
+  KLEE_DEBUG_WITH_TYPE("klee_linker", dbgs() << "Loaded " << archiveModules.size() << " modules\n");
 
 
   std::set<std::string> previouslyUndefinedSymbols;
@@ -294,7 +300,7 @@ static bool linkBCA(object::Archive* archive, Module* composite, std::string& er
         {
           if (GV->isDeclaration()) continue; // Not a definition
 
-          DEBUG_WITH_TYPE("klee_linker", dbgs() << "Found " << GV->getName() <<
+          KLEE_DEBUG_WITH_TYPE("klee_linker", dbgs() << "Found " << GV->getName() <<
               " in " << M->getModuleIdentifier() << "\n");
 
 
@@ -310,7 +316,7 @@ static bool linkBCA(object::Archive* archive, Module* composite, std::string& er
           {
             // Link succeed, now clean up
             modulesLoadedOnPass++;
-            DEBUG_WITH_TYPE("klee_linker", dbgs() << "Linking succeeded.\n");
+            KLEE_DEBUG_WITH_TYPE("klee_linker", dbgs() << "Linking succeeded.\n");
 
             delete M;
             archiveModules[i] = 0;
@@ -327,7 +333,7 @@ static bool linkBCA(object::Archive* archive, Module* composite, std::string& er
     }
 
     passCounter++;
-    DEBUG_WITH_TYPE("klee_linker", dbgs() << "Completed " << passCounter <<
+    KLEE_DEBUG_WITH_TYPE("klee_linker", dbgs() << "Completed " << passCounter <<
                 " linker passes.\n" << modulesLoadedOnPass <<
                 " modules loaded on the last pass\n");
   } while (undefinedSymbols != previouslyUndefinedSymbols); // Iterate until we reach a fixed point
@@ -344,7 +350,7 @@ static bool linkBCA(object::Archive* archive, Module* composite, std::string& er
 
 Module *klee::linkWithLibrary(Module *module, 
                               const std::string &libraryName) {
-DEBUG_WITH_TYPE("klee_linker", dbgs() << "Linking file " << libraryName << "\n");
+  KLEE_DEBUG_WITH_TYPE("klee_linker", dbgs() << "Linking file " << libraryName << "\n");
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
   if (!sys::fs::exists(libraryName)) {
     klee_error("Link with library %s failed. No such file.",

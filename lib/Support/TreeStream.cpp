@@ -9,13 +9,14 @@
 
 #include "klee/Internal/ADT/TreeStream.h"
 
+#include "klee/Internal/Support/Debug.h"
+
 #include <cassert>
 #include <iomanip>
 #include <fstream>
 #include <iterator>
 #include <map>
 
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <string.h>
 
@@ -106,7 +107,7 @@ void TreeStreamWriter::readStream(TreeStreamID streamID,
   std::ifstream is(path.c_str(),
                    std::ios::in | std::ios::binary);
   assert(is.good());
-  DEBUG_WITH_TYPE("TreeStreamWriter",
+  KLEE_DEBUG_WITH_TYPE("TreeStreamWriter",
                   llvm::errs() << "finding chain for: " << streamID << "\n");
 
   std::map<unsigned,unsigned> parents;
@@ -137,11 +138,13 @@ void TreeStreamWriter::readStream(TreeStreamID streamID,
       while (size--) is.get();
     }
   }
-  DEBUG(llvm::errs() << "roots: ";
-	for (size_t i = 0, e = roots.size(); i < e; ++i) {
-	  llvm::errs() << roots[i] << " ";
-	}
-        llvm::errs() << "\n";);
+  KLEE_DEBUG({
+      llvm::errs() << "roots: ";
+      for (size_t i = 0, e = roots.size(); i < e; ++i) {
+        llvm::errs() << roots[i] << " ";
+      }
+      llvm::errs() << "\n";
+    });
   is.seekg(0, std::ios::beg);
   for (;;) {
     unsigned id;

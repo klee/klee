@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#define DEBUG_TYPE "cex-solver"
 #include "klee/Solver.h"
 
 #include "klee/Constraints.h"
@@ -16,10 +17,9 @@
 #include "klee/util/ExprRangeEvaluator.h"
 #include "klee/util/ExprVisitor.h"
 // FIXME: Use APInt.
+#include "klee/Internal/Support/Debug.h"
 #include "klee/Internal/Support/IntEvaluation.h"
 
-#define DEBUG_TYPE "cex-solver"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <sstream>
 #include <cassert>
@@ -441,7 +441,8 @@ public:
   }
 
   void propogatePossibleValues(ref<Expr> e, CexValueData range) {
-    DEBUG(llvm::errs() << "propogate: " << range << " for\n" << e << "\n";);
+    KLEE_DEBUG(llvm::errs() << "propogate: " << range << " for\n"
+               << e << "\n");
 
     switch (e->getKind()) {
     case Expr::Constant:
@@ -1008,7 +1009,7 @@ static bool propogateValues(const Query& query, CexData &cd,
     cd.propogateExactValue(query.expr, 0);
   }
 
-  DEBUG(cd.dump(););
+  KLEE_DEBUG(cd.dump());
   
   // Check the result.
   bool hasSatisfyingAssignment = true;
