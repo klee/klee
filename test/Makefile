@@ -39,7 +39,7 @@ endif
 # Older LLVM versions don't detect python at configure time
 # so guess the location
 ifndef PYTHON
-	# llvm-lit doesn't work with python3 so force python2
+        # llvm-lit doesn't work with python3 so force python2
 	PYTHON := python2
 endif
 
@@ -68,7 +68,6 @@ clean::
 	$(RM) -rf `find $(PROJ_OBJ_ROOT)/test -name 'klee-out*'`
 	$(RM) -rf `find $(PROJ_OBJ_ROOT)/test -name '*~'`
 	$(RM) -rf `find $(PROJ_OBJ_ROOT)/test -name test.log`
-	rm -f site.exp
 
 lit.site.cfg: lit.site.cfg.in
 	@echo "Making KLEE 'lit.site.cfg' file..."

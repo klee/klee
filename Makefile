@@ -62,4 +62,4 @@ klee-cov:
 clean::
 	$(MAKE) -C test clean 
 	$(MAKE) -C unittests clean
-	rm -rf docs/doxygen
+	rm -rf docs/doxygen test/lit.site.cfg
