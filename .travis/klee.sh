@@ -78,7 +78,10 @@ svn export  http://llvm.org/svn/llvm-project/llvm/branches/${SVN_BRANCH}/unittes
 sudo mv ../Makefile.unittest /usr/lib/llvm-${LLVM_VERSION}/build/unittests/
 
 
-make unittests ENABLE_SHARED=0
+make unittests \
+    DISABLE_ASSERTIONS=${DISABLE_ASSERTIONS} \
+    ENABLE_OPTIMIZED=${ENABLE_OPTIMIZED} \
+    ENABLE_SHARED=0
 RETURN="$?"
 
 ###############################################################################
