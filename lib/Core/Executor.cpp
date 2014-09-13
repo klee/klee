@@ -8,9 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Common.h"
-
 #include "Executor.h"
- 
 #include "Context.h"
 #include "CoreStats.h"
 #include "ExternalDispatcher.h"
@@ -25,6 +23,7 @@
 #include "TimingSolver.h"
 #include "UserSearcher.h"
 #include "ExecutorTimerInfo.h"
+
 #include "../Solver/SolverStats.h"
 
 #include "klee/ExecutionState.h"
