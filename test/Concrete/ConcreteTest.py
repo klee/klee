@@ -4,6 +4,7 @@ import argparse
 import os
 import popen2
 import sys
+import shutil
 
 def readFile(f):
     s = ""
@@ -36,7 +37,11 @@ def testFile(name, klee_path, lli_path):
     print '-- lli output --\n%s--\n' % (lliOut,)
 
     print '-- running klee --'
-    klee_cmd = '%s --no-output %s' % (klee_path, exeFile)
+    klee_out_path = "Output/%s.klee-out" % (baseName,)
+    if os.path.exists(klee_out_path):
+        shutil.rmtree(klee_out_path)
+    klee_cmd = '%s --output-dir=%s --no-output %s' % (
+        klee_path, klee_out_path, exeFile)
     print "EXECUTING: %s" % (klee_cmd,)
     sys.stdout.flush()
     klee = popen2.Popen3(klee_cmd)
