@@ -605,6 +605,7 @@ AC_CONFIG_MAKEFILE(lib/Makefile)
 AC_CONFIG_MAKEFILE(runtime/Makefile)
 AC_CONFIG_MAKEFILE(test/Makefile)
 AC_CONFIG_MAKEFILE(test/Makefile.tests)
+AC_CONFIG_MAKEFILE(test/Concrete/Makefile)
 AC_CONFIG_MAKEFILE(tools/Makefile)
 AC_CONFIG_MAKEFILE(unittests/Makefile)
 
