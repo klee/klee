@@ -2,9 +2,6 @@
 # Make sure we exit if there is a failure
 set -e
 
-# Travis doesn't seem to like this in the yaml file so put it here instead
-[ "${LLVM_VERSION}" != "2.9" ] && sudo apt-get install llvm-${LLVM_VERSION}-tools clang-${LLVM_VERSION}
-
 # Calculate LLVM branch name to retrieve missing files from
 SVN_BRANCH="release_$( echo ${LLVM_VERSION} | sed 's/\.//g')"
 
@@ -15,11 +12,9 @@ if [ "${LLVM_VERSION}" != "2.9" ]; then
     KLEE_CC=/usr/bin/clang-${LLVM_VERSION}
     KLEE_CXX=/usr/bin/clang++-${LLVM_VERSION}
 else
-    # Just use pre-built llvm-gcc.
-    wget http://llvm.org/releases/2.9/llvm-gcc4.2-2.9-x86_64-linux.tar.bz2 || exit
-    tar -xjf llvm-gcc4.2-2.9-x86_64-linux.tar.bz2
-    KLEE_CC=$(pwd)/llvm-gcc4.2-2.9-x86_64-linux/bin/llvm-gcc
-    KLEE_CXX=$(pwd)/llvm-gcc4.2-2.9-x86_64-linux/bin/llvm-g++
+    # Just use pre-built llvm-gcc downloaded earlier
+    KLEE_CC=${BUILD_DIR}/llvm-gcc/bin/llvm-gcc
+    KLEE_CXX=${BUILD_DIR}/llvm-gcc/bin/llvm-g++
     export C_INCLUDE_PATH=/usr/include/x86_64-linux-gnu
     export CPLUS_INCLUDE_PATH=/usr/include/x86_64-linux-gnu
 
@@ -67,6 +62,7 @@ ${KLEE_SRC}/configure --with-llvmsrc=/usr/lib/llvm-${LLVM_VERSION}/build \
 ###############################################################################
 # Testing
 ###############################################################################
+set +e # We want to let all the tests run before we exit
 
 ###############################################################################
 # Unit tests
@@ -76,7 +72,6 @@ sudo mkdir -p /usr/lib/llvm-${LLVM_VERSION}/build/unittests/
 svn export  http://llvm.org/svn/llvm-project/llvm/branches/${SVN_BRANCH}/unittests/Makefile.unittest \
     ../Makefile.unittest
 sudo mv ../Makefile.unittest /usr/lib/llvm-${LLVM_VERSION}/build/unittests/
-
 
 make unittests \
     DISABLE_ASSERTIONS=${DISABLE_ASSERTIONS} \
