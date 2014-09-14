@@ -76,6 +76,7 @@ lit.site.cfg: lit.site.cfg.in
 	     -e "s#@KLEE_TOOLS_DIR@#$(ToolDir)#g" \
 	     -e "s#@LLVM_TOOLS_DIR@#$(LLVMToolDir)#g" \
 	     -e "s#@LLVM_VERSION_MAJOR@#$(LLVM_VERSION_MAJOR)#g" \
+	     -e "s#@LLVM_VERSION_MINOR@#$(LLVM_VERSION_MINOR)#g" \
 	     -e "s#@LLVMCC@#$(KLEE_BITCODE_C_COMPILER) -I$(PROJ_SRC_ROOT)/include#g" \
 	     -e "s#@LLVMCXX@#$(KLEE_BITCODE_CXX_COMPILER) -I$(PROJ_SRC_ROOT)/include#g" \
 	     -e "s#@ENABLE_UCLIBC@#$(ENABLE_UCLIBC)#g" \
