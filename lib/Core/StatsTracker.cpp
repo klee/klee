@@ -57,6 +57,12 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/FileSystem.h"
 
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
+#include "llvm/Support/CallSite.h"
+#else
+#include "llvm/IR/CallSite.h"
+#endif
+
 #include <fstream>
 #include <unistd.h>
 
