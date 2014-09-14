@@ -67,6 +67,7 @@ ${KLEE_SRC}/configure --with-llvmsrc=/usr/lib/llvm-${LLVM_VERSION}/build \
 ###############################################################################
 # Testing
 ###############################################################################
+set +e # We want to let all the tests run before we exit
 
 ###############################################################################
 # Unit tests
@@ -76,7 +77,6 @@ sudo mkdir -p /usr/lib/llvm-${LLVM_VERSION}/build/unittests/
 svn export  http://llvm.org/svn/llvm-project/llvm/branches/${SVN_BRANCH}/unittests/Makefile.unittest \
     ../Makefile.unittest
 sudo mv ../Makefile.unittest /usr/lib/llvm-${LLVM_VERSION}/build/unittests/
-
 
 make unittests \
     DISABLE_ASSERTIONS=${DISABLE_ASSERTIONS} \
