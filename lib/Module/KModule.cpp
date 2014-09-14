@@ -229,51 +229,6 @@ static void forceImport(Module *m, const char *name, LLVM_TYPE_Q Type *retType,
 }
 #endif
 
-/// This function will take try to inline all calls to \p functionName
-/// in the module \p module .
-///
-/// It is intended that this function be used for inling calls to
-/// check functions like <tt>klee_div_zero_check()</tt>
-static void inlineChecks(Module *module, const char * functionName) {
-  std::vector<CallSite> checkCalls;
-    Function* runtimeCheckCall = module->getFunction(functionName);
-    if (runtimeCheckCall == 0)
-    {
-      KLEE_DEBUG(klee_warning("Failed to inline %s because no calls were made "
-                              "to it in module", functionName));
-      return;
-    }
-
-    for (Value::use_iterator i = runtimeCheckCall->use_begin(),
-        e = runtimeCheckCall->use_end(); i != e; ++i)
-      if (isa<InvokeInst>(*i) || isa<CallInst>(*i)) {
-        CallSite cs(*i);
-        if (!cs.getCalledFunction())
-          continue;
-        checkCalls.push_back(cs);
-      }
-
-    unsigned int successCount=0;
-    unsigned int failCount=0;
-    InlineFunctionInfo IFI(0,0);
-    for ( std::vector<CallSite>::iterator ci = checkCalls.begin(),
-          cie = checkCalls.end();
-          ci != cie; ++ci)
-    {
-      // Try to inline the function
-      if (InlineFunction(*ci,IFI))
-        ++successCount;
-      else
-      {
-        ++failCount;
-        klee_warning("Failed to inline function %s", functionName);
-      }
-    }
-
-    KLEE_DEBUG(klee_message("Tried to inline calls to %s. %u successes, "
-                            "%u failures", functionName, successCount,
-                            failCount));
-}
 
 void KModule::addInternalFunction(const char* functionName){
   Function* internalFunction = module->getFunction(functionName);
