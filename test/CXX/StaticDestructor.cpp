@@ -2,7 +2,7 @@
 
 // RUN: %llvmgxx %s -emit-llvm -g -O0 -c -o %t1.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --optimize=false --libc=uclibc --no-output %t1.bc 2> %t1.log
+// RUN: %klee --output-dir=%t.klee-out --optimize=false --libc=klee --no-output %t1.bc 2> %t1.log
 // RUN: grep ":17: memory error" %t1.log
 
 #include <cassert>
