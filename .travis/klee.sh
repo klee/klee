@@ -94,10 +94,9 @@ make lit.site.cfg \
     DISABLE_ASSERTIONS=${DISABLE_ASSERTIONS} \
     ENABLE_OPTIMIZED=${ENABLE_OPTIMIZED} \
     ENABLE_SHARED=0
-# Running is parallel is broken and there's no point on our "single core" VM anyway
 
 set +e # We want to let all the tests run before we exit
-lit -v -j1 .
+lit -v .
 RETURN="${RETURN}$?"
 
 ###############################################################################

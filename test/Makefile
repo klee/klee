@@ -23,11 +23,10 @@ include Makefile.tests
 #===------------------------------------------------------------------------===#
 ULIMIT = ulimit -t 600 ; ulimit -d 512000 ;
 
-# FIXME: Fix test suite so we can run lit in parallel.
 ifdef VERBOSE
-LIT_ARGS := -j1 -v
+LIT_ARGS := -v
 else
-LIT_ARGS := -j1 -s -v
+LIT_ARGS := -s -v
 endif
 
 ifdef TESTSUITE
