@@ -501,6 +501,15 @@ void StatsTracker::writeIStats() {
   for (Module::iterator fnIt = m->begin(), fn_ie = m->end(); 
        fnIt != fn_ie; ++fnIt) {
     if (!fnIt->isDeclaration()) {
+      // Always try to write the filename before the function name, as otherwise
+      // KCachegrind can create two entries for the function, one with an
+      // unnamed file and one without.
+      const InstructionInfo &ii = executor.kmodule->infos->getFunctionInfo(fnIt);
+      if (ii.file != sourceFile) {
+        of << "fl=" << ii.file << "\n";
+        sourceFile = ii.file;
+      }
+      
       of << "fn=" << fnIt->getName().str() << "\n";
       for (Function::iterator bbIt = fnIt->begin(), bb_ie = fnIt->end(); 
            bbIt != bb_ie; ++bbIt) {

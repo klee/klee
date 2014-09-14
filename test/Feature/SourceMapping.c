@@ -9,13 +9,14 @@
 // CHECK: positions: instr line
 // CHECK: ob={{.*}}/SourceMapping.c{{.*}}/assembly.ll
 
-// Assuming the compiler doesn't reorder things, f0 should be first.
-// CHECK: fn=f0
+// Assuming the compiler doesn't reorder things, f0 should be first, and it
+// should immediately follow the first file name marker.
+// CHECK: fl={{.*}}/SourceMapping.c
+// CHECK-NEXT: fn=f0
 
 // Ensure we have a known position for the first instruction (instr and line
 // should be non-zero).
 
-// CHECK-NEXT: fl={{.*}}/SourceMapping.c
 // CHECK-NEXT: {{[1-9][0-9]*}} {{[1-9][0-9]*}}
 
 
@@ -29,7 +30,6 @@
 // appropriate region of the run.istats file.
 //
 // CHECK: fn=main
-
 
 
 
