@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#define DEBUG_TYPE "TreeStreamWriter"
 #include "klee/Internal/ADT/TreeStream.h"
 
 #include "klee/Internal/Support/Debug.h"
@@ -107,8 +108,7 @@ void TreeStreamWriter::readStream(TreeStreamID streamID,
   std::ifstream is(path.c_str(),
                    std::ios::in | std::ios::binary);
   assert(is.good());
-  KLEE_DEBUG_WITH_TYPE("TreeStreamWriter",
-                  llvm::errs() << "finding chain for: " << streamID << "\n");
+  KLEE_DEBUG(llvm::errs() << "finding chain for: " << streamID << "\n");
 
   std::map<unsigned,unsigned> parents;
   std::vector<unsigned> roots;
@@ -202,3 +202,4 @@ void TreeOStream::flush() {
   assert(writer);
   writer->flush();
 }
+

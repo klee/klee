@@ -10,6 +10,7 @@
 // FIXME: This does not belong here.
 #include "../Core/Common.h"
 
+#define DEBUG_TYPE "KModule"
 #include "klee/Internal/Module/KModule.h"
 
 #include "Passes.h"
@@ -273,7 +274,7 @@ static void inlineChecks(Module *module, const char * functionName) {
 void KModule::addInternalFunction(const char* functionName){
   Function* internalFunction = module->getFunction(functionName);
   if (!internalFunction) {
-    KLEE_DEBUG_WITH_TYPE("KModule", klee_warning(
+    KLEE_DEBUG(klee_warning(
         "Failed to add internal function %s. Not found.", functionName));
     return ;
   }
