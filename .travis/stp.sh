@@ -3,6 +3,8 @@
 # Make sure we exit if there is a failure
 set -e
 
+STP_LOG="$(pwd)/stp-build.log"
+
 if [ "${STP_VERSION}" == "UPSTREAM" ]; then
     git clone --depth 1 git://github.com/stp/stp.git src
     mkdir build
@@ -10,7 +12,10 @@ if [ "${STP_VERSION}" == "UPSTREAM" ]; then
     # Disabling building of shared libs is a workaround
     cmake -DBUILD_SHARED_LIBS:BOOL=OFF -DENABLE_PYTHON_INTERFACE:BOOL=OFF ../src
     # Don't try to build stp executable, there's an issue with using gcc4.8 with boost libraries built with gcc4.6
-    make libstp CopyPublicHeaders
+
+    set +e # Do not exit if build fails because we need to display the log
+    make libstp CopyPublicHeaders >> "${STP_LOG}" 2>&1
+
 elif [ "${STP_VERSION}" == "r940" ]; then
     # Building the old "r940" version that for some reason we love so much!
     git clone git://github.com/stp/stp.git src_build
@@ -33,8 +38,16 @@ elif [ "${STP_VERSION}" == "r940" ]; then
     export CXX=g++
     ./scripts/configure --with-prefix=${BUILD_DIR}/stp/build --with-cryptominisat2
     echo "WARNING FORCING GCC TO BE USED TO COMPILE STP"
-    make OPTIMIZE=-O2 CFLAGS_M32=    install
+
+    set +e # Do not exit if build fails because we need to display the log
+    make OPTIMIZE=-O2 CFLAGS_M32=    install >> "${STP_LOG}" 2>&1
 else
     echo "Unsupported STP_VERSION"
     exit 1
+fi
+
+# Only show build output if something went wrong to keep log output short
+if [ $? -ne 0 ]; then
+    echo "Build error"
+    cat "${STP_LOG}"
 fi
