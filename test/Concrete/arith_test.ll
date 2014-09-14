@@ -1,7 +1,6 @@
 ; RUN: %S/ConcreteTest.py --klee=%klee --lli=%lli %s
 
-define void @"test_simple_arith"(i16 %i0, i16 %j0)
-begin
+define void @"test_simple_arith"(i16 %i0, i16 %j0) {
   %t1 = add i16 %i0, %j0
   %t2 = sub i16 %i0, %j0
   %t3 = mul i16 %t1, %t2
@@ -9,10 +8,9 @@ begin
   call void @print_i16(i16 %t3)
 
   ret void     
-end
+}
 
-define void @"test_div_and_mod"(i16 %op1, i16 %op2)
-begin
+define void @"test_div_and_mod"(i16 %op1, i16 %op2) {
   %t1 = udiv i16 %op1, %op2
   %t2 = urem i16 %op1, %op2  
   %t3 = sdiv i16 %op1, %op2  
@@ -24,10 +22,9 @@ begin
   call void @print_i16(i16 %t4)
 
   ret void     
-end
+}
         
-define void @test_cmp(i16 %op1, i16 %op2)
-begin
+define void @test_cmp(i16 %op1, i16 %op2) {
   %t1 = icmp ule i16 %op1, %op2
   %t2 = icmp ult i16 %op1, %op2  
   %t3 = icmp uge i16 %op1, %op2  
@@ -51,10 +48,9 @@ begin
   call void @print_i1(i1 %t10)
 
   ret void
-end
+}
 
-define i32 @main()
-begin
+define i32 @main() {
     call void @test_simple_arith(i16 111, i16 100)
 
     call void @test_div_and_mod(i16 63331, i16 3123)
@@ -68,7 +64,7 @@ begin
     call void @test_cmp(i16 1000, i16 25)
         
     ret i32 0
-end
+}
 
 ; defined in print_int.c
 declare void @print_i1(i1)

@@ -8,8 +8,7 @@
 @gIntWithConstant = global i32 sub(i32 ptrtoint(i32* @gInt to i32), 
                                  i32 ptrtoint(i32* @gInt to i32))
 
-define void @"test_int_to_ptr"()
-begin
+define void @"test_int_to_ptr"() {
   %t1 = add i8 ptrtoint(i8* inttoptr(i32 100 to i8*) to i8), 0
   %t2 = add i32 ptrtoint(i32* inttoptr(i8 100 to i32*) to i32), 0
   %t3 = add i32 ptrtoint(i32* inttoptr(i64 100 to i32*) to i32), 0
@@ -21,10 +20,9 @@ begin
   call void @print_i64(i64 %t4)
     
   ret void
-end
+}
 
-define void @"test_constant_ops"()
-begin
+define void @"test_constant_ops"() {
   %t1 = add i8 trunc(i64 add(i64 ptrtoint(i32* @gInt to i64), i64 -10) to i8), 10
   %t2 = sub i64 sext(i32 ptrtoint(i32* @gInt to i32) to i64), ptrtoint(i32* @gInt to i64)
   %t3 = sub i64 zext(i32 ptrtoint(i32* @gInt to i32) to i64), ptrtoint(i32* @gInt to i64)
@@ -37,10 +35,9 @@ begin
   call void @print_i64(i64 %t3)
   
   ret void
-end
+}
 
-define void @"test_logical_ops"()
-begin
+define void @"test_logical_ops"() {
   %t1 = add i32 -10, and(i32 ptrtoint(i32* @gInt to i32), i32 xor(i32 ptrtoint(i32* @gInt to i32), i32 -1))
   %t2 = add i32 -10, or(i32 ptrtoint(i32* @gInt to i32), i32 xor(i32 ptrtoint(i32* @gInt to i32), i32 -1))
   %t3 = add i32 -10, xor(i32 xor(i32 ptrtoint(i32* @gInt to i32), i32 1024),  i32 ptrtoint(i32* @gInt to i32))
@@ -63,13 +60,12 @@ begin
   call void @print_i8(i8 %t10)
   
   ret void   
-end
+}
 
 %test.struct.type = type { i32, i32 }
 @test_struct = global %test.struct.type { i32 0, i32 10 }
 
-define void @"test_misc"()
-begin
+define void @"test_misc"() {
   ; probability that @gInt == 100 is very very low 
   %t1 = add i32 select(i1 icmp eq (i32* @gInt, i32* inttoptr(i32 100 to i32*)), i32 10, i32 0), 0
   call void @print_i32(i32 %t1)
@@ -78,10 +74,9 @@ begin
   call void @print_i32(i32 %t2)                             
         
   ret void
-end
+}
 
-define void @"test_simple_arith"()
-begin
+define void @"test_simple_arith"() {
   %t1 = add i32 add(i32 ptrtoint(i32* @gInt to i32), i32 0), 0
   %t2 = add i32 sub(i32 0, i32 ptrtoint(i32* @gInt to i32)), %t1
   %t3 = mul i32 mul(i32 ptrtoint(i32* @gInt to i32), i32 10), %t2
@@ -89,10 +84,9 @@ begin
   call void @print_i32(i32 %t3)
 
   ret void     
-end
+}
 
-define void @"test_div_and_mod"()
-begin
+define void @"test_div_and_mod"() {
   %t1 = add i32 udiv(i32 ptrtoint(i32* @gInt to i32), i32 13), 0
   %t2 = add i32 urem(i32 ptrtoint(i32* @gInt to i32), i32 13), 0
   %t3 = add i32 sdiv(i32 ptrtoint(i32* @gInt to i32), i32 13), 0
@@ -116,10 +110,9 @@ begin
   call void @print_i32(i32 %x4)
 
   ret void     
-end
+}
         
-define void @test_cmp()
-begin
+define void @test_cmp() {
   %t1 = add i8 zext(i1 icmp ult (i64 ptrtoint(i32* @gInt to i64), i64 0) to i8), 1
   %t2 = add i8 zext(i1 icmp ule (i64 ptrtoint(i32* @gInt to i64), i64 0) to i8), 1
   %t3 = add i8 zext(i1 icmp uge (i64 ptrtoint(i32* @gInt to i64), i64 0) to i8), 1
@@ -143,26 +136,25 @@ begin
   call void @print_i1(i8 %t10)
 
   ret void
-end
+}
 
-define i32 @main()
-begin
-;    call void @test_simple_arith()
+define i32 @main() {
+    call void @test_simple_arith()
 
-;    call void @test_div_and_mod()
+    call void @test_div_and_mod()
 
     call void @test_cmp()
  
-;    call void @test_int_to_ptr()
+    call void @test_int_to_ptr()
 
-;    call void @test_constant_ops()
+    call void @test_constant_ops()
 
-;    call void @test_logical_ops()
+    call void @test_logical_ops()
 
-;    call void @test_misc()
+    call void @test_misc()
     
     ret i32 0
-end
+}
 
 ; defined in print_int.c
 declare void @print_i1(i8)
