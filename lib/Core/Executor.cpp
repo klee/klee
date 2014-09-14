@@ -139,10 +139,6 @@ namespace {
               cl::init(false));
  
   cl::opt<bool>
-  UseAsmAddresses("use-asm-addresses",
-                  cl::init(false));
- 
-  cl::opt<bool>
   RandomizeFork("randomize-fork",
                 cl::init(false),
 		cl::desc("Randomly swap the true and false states on a fork (default=off)"));
@@ -580,32 +576,9 @@ void Executor::initializeGlobals(ExecutionState &state) {
     } else {
       LLVM_TYPE_Q Type *ty = i->getType()->getElementType();
       uint64_t size = kmodule->targetData->getTypeStoreSize(ty);
-      MemoryObject *mo = 0;
-
-#if LLVM_VERSION_CODE < LLVM_VERSION(3, 3)
-      if (UseAsmAddresses && i->getName()[0]=='\01') {
-#else
-      if (UseAsmAddresses && !i->getName().empty()) {
-#endif
-        char *end;
-#if LLVM_VERSION_CODE < LLVM_VERSION(3, 3)
-        uint64_t address = ::strtoll(i->getName().str().c_str()+1, &end, 0);
-#else
-        uint64_t address = ::strtoll(i->getName().str().c_str(), &end, 0);
-#endif
-
-        if (end && *end == '\0') {
-          klee_message("NOTE: allocated global at asm specified address: %#08llx"
-                       " (%llu bytes)",
-                       (long long) address, (unsigned long long) size);
-          mo = memory->allocateFixed(address, size, &*i);
-          mo->isUserSpecified = true; // XXX hack;
-        }
-      }
-
+      MemoryObject *mo = memory->allocate(size, false, true, &*i);
       if (!mo)
-        mo = memory->allocate(size, false, true, &*i);
-      assert(mo && "out of memory");
+        llvm::report_fatal_error("out of memory");
       ObjectState *os = bindObjectInState(state, mo, false);
       globalObjects.insert(std::make_pair(i, mo));
       globalAddresses.insert(std::make_pair(i, mo->getBaseExpr()));
