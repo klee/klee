@@ -55,8 +55,6 @@ before_install:
     - sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-3.4 20
     # Install lit (llvm-lit is not available)
     - sudo pip install lit
-    # Gross! tools/klee/Makefile depends on "bc"
-    - sudo apt-get install bc
     # Setup out of source build
     - export KLEE_SRC=`pwd`
     - cd ../
