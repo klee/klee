@@ -15,7 +15,7 @@ include $(LEVEL)/Makefile.config
 USEDLIBS = kleeCore.a kleeBasic.a kleeModule.a  kleaverSolver.a kleaverExpr.a kleeSupport.a 
 LINK_COMPONENTS = jit bitreader bitwriter ipo linker engine
 
-ifeq ($(shell echo "$(LLVM_VERSION_MAJOR).$(LLVM_VERSION_MINOR) >= 3.3" | bc), 1)
+ifeq ($(shell python -c "print($(LLVM_VERSION_MAJOR).$(LLVM_VERSION_MINOR) >= 3.3)"), True)
 LINK_COMPONENTS += irreader
 endif
 include $(LEVEL)/Makefile.common
