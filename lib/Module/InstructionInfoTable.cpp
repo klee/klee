@@ -21,16 +21,28 @@
 #include "llvm/IntrinsicInst.h"
 #include "llvm/Module.h"
 #endif
-#include "llvm/Linker.h"
+
+# if LLVM_VERSION_CODE < LLVM_VERSION(3,5)
 #include "llvm/Assembly/AssemblyAnnotationWriter.h"
-#include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/InstIterator.h"
+#include "llvm/Linker.h"
+#else
+#include "llvm/IR/AssemblyAnnotationWriter.h"
+#include "llvm/IR/InstIterator.h"
+#include "llvm/Linker/Linker.h"
+#endif
+
+#include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/raw_ostream.h"
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 2)
+
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3,5)
+#include "llvm/IR/DebugInfo.h"
+#elif LLVM_VERSION_CODE >= LLVM_VERSION(3, 2)
 #include "llvm/DebugInfo.h"
 #else
 #include "llvm/Analysis/DebugInfo.h"
 #endif
+
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Support/ErrorHandling.h"
 

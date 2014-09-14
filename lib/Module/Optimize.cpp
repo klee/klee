@@ -19,7 +19,6 @@
 #include "llvm/PassManager.h"
 #include "llvm/Analysis/Passes.h"
 #include "llvm/Analysis/LoopPass.h"
-#include "llvm/Analysis/Verifier.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/DynamicLibrary.h"
 
@@ -33,6 +32,12 @@
 #else
 #include "llvm/DataLayout.h"
 #endif
+#endif
+
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 5)
+#include "llvm/IR/Verifier.h"
+#else
+#include "llvm/Analysis/Verifier.h"
 #endif
 
 #include "llvm/Target/TargetMachine.h"

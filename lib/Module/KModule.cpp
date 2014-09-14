@@ -57,7 +57,6 @@
 #include "llvm/Transforms/Scalar.h"
 
 #include <llvm/Transforms/Utils/Cloning.h>
-#include <llvm/Support/InstIterator.h>
 
 #include <sstream>
 

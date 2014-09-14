@@ -41,9 +41,14 @@
 #include "llvm/Module.h"
 #endif
 
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
 #include "llvm/Linker.h"
 #include "llvm/Assembly/AssemblyAnnotationWriter.h"
-#include "llvm/Support/InstIterator.h"
+#else
+#include "llvm/Linker/Linker.h"
+#include "llvm/IR/AssemblyAnnotationWriter.h"
+#endif
+
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Support/Path.h"
