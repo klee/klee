@@ -110,22 +110,31 @@ InstructionInfoTable::InstructionInfoTable(Module *m)
   for (Module::iterator fnIt = m->begin(), fn_ie = m->end(); 
        fnIt != fn_ie; ++fnIt) {
 
+    // We want to ensure that as all instructions have source information, if
+    // available. Clang sometimes will not write out debug information on the
+    // initial instructions in a function (correspond to the formal parameters),
+    // so we first search forward to find the first instruction with debug info,
+    // if any.
+    const std::string *initialFile = &dummyString;
+    unsigned initialLine = 0;
+    for (inst_iterator it = inst_begin(fnIt), ie = inst_end(fnIt); it != ie;
+         ++it) {
+      if (getInstructionDebugInfo(&*it, initialFile, initialLine))
+        break;
+    }
+
+    const std::string *file = initialFile;
+    unsigned line = initialLine;
     for (inst_iterator it = inst_begin(fnIt), ie = inst_end(fnIt); it != ie;
         ++it) {
-      const std::string *initialFile = &dummyString;
-      unsigned initialLine = 0;
       Instruction *instr = &*it;
-      unsigned assemblyLine = 0;
+      unsigned assemblyLine = lineTable[instr];
 
-      std::map<const Instruction*, unsigned>::const_iterator ltit =
-        lineTable.find(instr);
-      if (ltit!=lineTable.end())
-        assemblyLine = ltit->second;
-      getInstructionDebugInfo(instr, initialFile, initialLine);
+      // Update our source level debug information.
+      getInstructionDebugInfo(instr, file, line);
+
       infos.insert(std::make_pair(instr,
-                                  InstructionInfo(id++,
-                                                  *initialFile,
-                                                  initialLine,
+                                  InstructionInfo(id++, *file, line,
                                                   assemblyLine)));
     }
   }
