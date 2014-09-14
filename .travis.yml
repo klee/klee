@@ -1,6 +1,12 @@
 language: cpp
 compiler:
-    - clang
+    # FIXME: For now, building with Clang is disabled because the STP built with
+    # it hits an assertion failure during some tests. We should sort this out
+    # eventually and file the bug against STP or Clang whichever is appropriate,
+    # but for now it is easier to just reduce the number of configs we test
+    # anyway.
+    # - clang
+
     - gcc
 env:
     ###########################################################################
