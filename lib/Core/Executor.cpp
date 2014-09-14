@@ -2138,7 +2138,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       return terminateStateOnExecError(state, "Unsupported FRem operation");
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
     llvm::APFloat Res(*fpWidthToSemantics(left->getWidth()), left->getAPValue());
-    Res.remainder(APFloat(*fpWidthToSemantics(right->getWidth()),right->getAPValue()));
+    Res.mod(APFloat(*fpWidthToSemantics(right->getWidth()),right->getAPValue()),
+            APFloat::rmNearestTiesToEven);
 #else
     llvm::APFloat Res(left->getAPValue());
     Res.mod(APFloat(right->getAPValue()), APFloat::rmNearestTiesToEven);
