@@ -10,7 +10,7 @@
 // RUN: test -f %t.klee-out/test000002.ktest
 // RUN: test -f %t.klee-out/test000003.ktest
 // RUN: test -f %t.klee-out/test000004.ktest
-// FAIL: test -f %t.klee-out/test000005.ktest
+// RUN: not test -f %t.klee-out/test000005.ktest
 
 #include <stdio.h>
 #include <assert.h>
