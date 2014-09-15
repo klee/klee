@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 set -ev
 
 sudo apt-get install llvm-${LLVM_VERSION} llvm-${LLVM_VERSION}-dev
