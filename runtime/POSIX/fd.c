@@ -157,7 +157,7 @@ int __fd_open(const char *pathname, int flags, mode_t mode) {
     if ((flags & O_TRUNC) && (flags & O_RDONLY)) {
       /* The result of using O_TRUNC with O_RDONLY is undefined, so we
 	 return error */
-      fprintf(stderr, "Undefined call to open(): O_TRUNC | O_RDONLY\n");
+      klee_warning("Undefined call to open(): O_TRUNC | O_RDONLY\n");
       errno = EACCES;
       return -1;
     }
@@ -165,7 +165,7 @@ int __fd_open(const char *pathname, int flags, mode_t mode) {
     if ((flags & O_EXCL) && !(flags & O_CREAT)) {
       /* The result of using O_EXCL without O_CREAT is undefined, so
 	 we return error */
-      fprintf(stderr, "Undefined call to open(): O_EXCL w/o O_RDONLY\n");
+      klee_warning("Undefined call to open(): O_EXCL w/o O_RDONLY\n");
       errno = EACCES;
       return -1;
     }
@@ -461,7 +461,7 @@ ssize_t write(int fd, const void *buf, size_t count) {
       memcpy(f->dfile->contents + f->off, buf, actual_count);
     
     if (count != actual_count)
-      fprintf(stderr, "WARNING: write() ignores bytes.\n");
+      klee_warning("write() ignores bytes.\n");
 
     if (f->dfile == __exe_fs.sym_stdout)
       __exe_fs.stdout_writes += actual_count;
