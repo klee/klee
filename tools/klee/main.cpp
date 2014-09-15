@@ -164,11 +164,6 @@ namespace {
             cl::desc("Directory to write results in (defaults to klee-out-N)"),
             cl::init(""));
 
-  // this is a fake entry, its automagically handled
-  cl::list<std::string>
-  ReadArgsFilesFake("read-args", 
-                    cl::desc("File to read arguments from (one arg per line)"));
-    
   cl::opt<bool>
   ReplayKeepSymbolic("replay-keep-symbolic", 
                      cl::desc("Replay the test cases only by asserting "
@@ -619,47 +614,14 @@ static std::string strip(std::string &in) {
   return in.substr(lead, trail-lead);
 }
 
-static void readArgumentsFromFile(char *file, std::vector<std::string> &results) {
-  std::ifstream f(file);
-  assert(f.is_open() && "unable to open input for reading arguments");
-  while (!f.eof()) {
-    std::string line;
-    std::getline(f, line);
-    line = strip(line);
-    if (!line.empty())
-      results.push_back(line);
-  }
-  f.close();
-}
-
 static void parseArguments(int argc, char **argv) {
-  std::vector<std::string> arguments;
-
-  for (int i=1; i<argc; i++) {
-    if (!strcmp(argv[i],"--read-args") && i+1<argc) {
-      readArgumentsFromFile(argv[++i], arguments);
-    } else {
-      arguments.push_back(argv[i]);
-    }
-  }
-    
-  int numArgs = arguments.size() + 1;
-  const char **argArray = new const char*[numArgs+1];
-  argArray[0] = argv[0];
-  argArray[numArgs] = 0;
-  for (int i=1; i<numArgs; i++) {
-    argArray[i] = arguments[i-1].c_str();
-  }
-
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 2)
-  cl::ParseCommandLineOptions(numArgs, (const char**) argArray, " klee\n");
+  // This version always reads response files
+  cl::ParseCommandLineOptions(argc, (const char**) argv, " klee\n");
 #else
-  cl::ParseCommandLineOptions(numArgs, (char**) argArray, " klee\n");
+  cl::ParseCommandLineOptions(argc, (char**) argv, " klee\n", /*ReadResponseFiles=*/ true);
 #endif
-  delete[] argArray;
 }
-
-
 
 static int initEnv(Module *mainModule) {
 
