@@ -8,6 +8,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "Common.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -22,16 +24,72 @@ using namespace klee;
 FILE* klee::klee_warning_file = NULL;
 FILE* klee::klee_message_file = NULL;
 
-static void klee_vfmessage(FILE *fp, const char *pfx, const char *msg, 
+static const char* warningPrefix = "WARNING";
+static const char* warningOncePrefix = "WARNING ONCE";
+static const char* errorPrefix = "ERROR";
+static const char* notePrefix = "NOTE";
+
+static bool shouldSetColor(const char* pfx, const char* msg, const char* prefixToSearchFor)
+{
+  if (pfx && strcmp(pfx, prefixToSearchFor) == 0)
+    return true;
+
+  if (llvm::StringRef(msg).startswith(prefixToSearchFor))
+    return true;
+
+  return false;
+}
+
+static void klee_vfmessage(FILE *fp, const char *pfx, const char *msg,
                            va_list ap) {
   if (!fp)
     return;
 
-  fprintf(fp, "KLEE: ");
-  if (pfx) fprintf(fp, "%s: ", pfx);
+  llvm::raw_fd_ostream fdos(fileno(fp), /*shouldClose=*/false, /*unbuffered=*/ true);
+  bool modifyConsoleColor = fdos.is_displayed() && (fp == stderr);
+
+  if (modifyConsoleColor) {
+
+    // Warnings
+    if (shouldSetColor(pfx, msg, warningPrefix))
+      fdos.changeColor(llvm::raw_ostream::MAGENTA,
+                       /*bold=*/ false,
+                       /*bg=*/ false);
+
+    // Once warning
+    if (shouldSetColor(pfx, msg, warningOncePrefix))
+      fdos.changeColor(llvm::raw_ostream::MAGENTA,
+                       /*bold=*/ true,
+                       /*bg=*/ false);
+
+    // Errors
+    if (shouldSetColor(pfx, msg, errorPrefix))
+      fdos.changeColor(llvm::raw_ostream::RED,
+                       /*bold=*/ true,
+                       /*bg=*/ false);
+
+    // Notes
+    if (shouldSetColor(pfx, msg, notePrefix))
+      fdos.changeColor(llvm::raw_ostream::WHITE,
+                       /*bold=*/ true,
+                       /*bg=*/ false);
+
+  }
+
+  fdos << "KLEE: ";
+  if (pfx) fdos << pfx << ": ";
+
+  // FIXME: Can't use fdos here because we need to print
+  // a variable number of arguments and do substitution
   vfprintf(fp, msg, ap);
-  fprintf(fp, "\n");
   fflush(fp);
+
+  fdos << "\n";
+
+  if (modifyConsoleColor)
+      fdos.resetColor();
+
+  fdos.flush();
 }
 
 /* Prints a message/warning.
@@ -73,7 +131,7 @@ void klee::klee_message_to_file(const char *msg, ...) {
 void klee::klee_error(const char *msg, ...) {
   va_list ap;
   va_start(ap, msg);
-  klee_vmessage("ERROR", false, msg, ap);
+  klee_vmessage(errorPrefix, false, msg, ap);
   va_end(ap);
   exit(1);
 }
@@ -81,7 +139,7 @@ void klee::klee_error(const char *msg, ...) {
 void klee::klee_warning(const char *msg, ...) {
   va_list ap;
   va_start(ap, msg);
-  klee_vmessage("WARNING", false, msg, ap);
+  klee_vmessage(warningPrefix, false, msg, ap);
   va_end(ap);
 }
 
@@ -104,7 +162,7 @@ void klee::klee_warning_once(const void *id, const char *msg, ...) {
     
     va_list ap;
     va_start(ap, msg);
-    klee_vmessage("WARNING ONCE", false, msg, ap);
+    klee_vmessage(warningOncePrefix, false, msg, ap);
     va_end(ap);
   }
 }
