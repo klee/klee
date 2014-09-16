@@ -457,12 +457,22 @@ int main(int argc, char **argv) {
 
   std::string ErrorStr;
   
+#if LLVM_VERSION_CODE < LLVM_VERSION(3,5)
   OwningPtr<MemoryBuffer> MB;
   error_code ec=MemoryBuffer::getFileOrSTDIN(InputFile.c_str(), MB);
   if (ec) {
     llvm::errs() << argv[0] << ": error: " << ec.message() << "\n";
     return 1;
   }
+#else
+  auto MBResult = MemoryBuffer::getFileOrSTDIN(InputFile.c_str());
+  if (!MBResult) {
+    llvm::errs() << argv[0] << ": error: " << MBResult.getError().message()
+                 << "\n";
+    return 1;
+  }
+  std::unique_ptr<MemoryBuffer> &MB = *MBResult;
+#endif
   
   ExprBuilder *Builder = 0;
   switch (BuilderKind) {
