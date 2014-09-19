@@ -72,9 +72,6 @@ private:
 
 public:
   bool fakeState;
-  // Are we currently underconstrained?  Hack: value is size to make fake
-  // objects.
-  unsigned underConstrained;
   unsigned depth;
   
   // pc - pointer to current instruction stream
@@ -113,7 +110,7 @@ public:
   void removeFnAlias(std::string fn);
   
 private:
-  ExecutionState() : fakeState(false), underConstrained(0), ptreeNode(0) {}
+  ExecutionState() : fakeState(false), ptreeNode(0) {}
 
 public:
   ExecutionState(KFunction *kf);
