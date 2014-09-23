@@ -66,13 +66,15 @@ bool IntrinsicCleanerPass::runOnModule(Module &M) {
 
 bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
   bool dirty = false;
+  bool block_split=false;
   
 #if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
   unsigned WordSize = TargetData.getPointerSizeInBits() / 8;
 #else
   unsigned WordSize = DataLayout.getPointerSizeInBits() / 8;
 #endif
-  for (BasicBlock::iterator i = b.begin(), ie = b.end(); i != ie;) {     
+  for (BasicBlock::iterator i = b.begin(), ie = b.end();
+       (i != ie) && (block_split == false);) {
     IntrinsicInst *ii = dyn_cast<IntrinsicInst>(&*i);
     // increment now since LowerIntrinsic deletion makes iterator invalid.
     ++i;  
@@ -120,6 +122,7 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
       case Intrinsic::usub_with_overflow:
       case Intrinsic::umul_with_overflow: {
         IRBuilder<> builder(ii->getParent(), ii);
+        Function *F = builder.GetInsertBlock()->getParent();
 
         Value *op1 = ii->getArgOperand(0);
         Value *op2 = ii->getArgOperand(1);
@@ -133,8 +136,39 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
           result = builder.CreateSub(op1, op2);
           overflow = builder.CreateICmpUGT(result, op1);
         } else if (ii->getIntrinsicID() == Intrinsic::umul_with_overflow){
+          BasicBlock *entry = builder.GetInsertBlock();
+          entry->setName(Twine(entry->getName(), "_umul_start"));
+          BasicBlock *cont_of = entry->splitBasicBlock(builder.GetInsertPoint(),
+                                                       "umul_end");
+          BasicBlock *on_of = BasicBlock::Create(builder.getContext(),
+                                                 "umul_overflow", F, cont_of);
+
+          // remove the branch inserted by splitBasicBlock, we'll add our own
+          entry->getTerminator()->eraseFromParent();
+          builder.SetInsertPoint(entry);
+          Value *no_overflow = builder.getFalse();
+          Value *one = ConstantInt::getSigned(op1->getType(), 1);
+          Value *op1_g1 = builder.CreateICmpUGT(op1, one);
+          Value *op2_g1 = builder.CreateICmpUGT(op2, one);
+          Value *may_of = builder.CreateAnd(op1_g1, op2_g1);
+          builder.CreateCondBr(may_of, on_of, cont_of);
+
+          builder.SetInsertPoint(on_of);
+          uint64_t bit_size = op1->getType()->getPrimitiveSizeInBits();
+          Value *uint_max = ConstantInt::get(op1->getType(),
+                                             APInt::getMaxValue(bit_size));
+          Value *div1 = builder.CreateUDiv(uint_max, op1);
+          Value *overflow1 = builder.CreateICmpUGT(op2, div1);
+          builder.CreateBr(cont_of);
+
+          builder.SetInsertPoint(cont_of, cont_of->begin());
+          PHINode *phi_of = builder.CreatePHI(no_overflow->getType(), 2);
+          phi_of->addIncoming(overflow1, on_of);
+          phi_of->addIncoming(no_overflow, entry);
+
           result = builder.CreateMul(op1, op2);
-          overflow = builder.CreateICmpULT(result, op1);
+          overflow = phi_of;
+          block_split = true;
         }
 
         Value *resultStruct =
