@@ -379,7 +379,7 @@ llvm::raw_fd_ostream *KleeHandler::openOutputFile(const std::string &filename) {
   std::string path = getOutputFilename(filename);
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3,5)
   f = new llvm::raw_fd_ostream(path.c_str(), Error, llvm::sys::fs::F_None);
-#elif LLVM_VERSION_CODE >= LLVM_VERSION(3,0)
+#elif LLVM_VERSION_CODE >= LLVM_VERSION(3,4)
   f = new llvm::raw_fd_ostream(path.c_str(), Error, llvm::sys::fs::F_Binary);
 #else
   f = new llvm::raw_fd_ostream(path.c_str(), Error, llvm::raw_fd_ostream::F_Binary);
