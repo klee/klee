@@ -1,6 +1,6 @@
-// This isn't a real test, just common code for the other ones.
-//
-// RUN: true
+// RUN: %llvmgcc -D_TESTINGUTILS_TEST %s -o %t
+// RUN: %t | FileCheck %s
+// XFAIL:
 
 int printf(const char *fmt, ...);
 
@@ -39,3 +39,41 @@ void print_int(unsigned long long val) {
     
     printf(char_format_string, '\n');
 }
+
+
+#ifdef _TESTINGUTILS_TEST
+int main(int argc, char *argv[])
+{
+        print_i64(0xf000000000000064);
+        // CHECK: 17293822569102704740
+        print_i64(0x7000000000000064);
+        // CHECK: 8070450532247928932
+
+        print_i32(0xf0000032);
+        // CHECK: 4026531890
+        print_i32(0x70000032);
+        // CHECK: 1879048242
+
+        print_i16(0xf016);
+        // CHECK: 61462
+        print_i16(0x7016);
+        // CHECK: 28694
+
+
+        print_i8(0xf8);
+        // CHECK: 248
+        print_i8(0x78);
+        // CHECK: 120
+
+        printf("print_i1(0)\n");
+        print_i1(0);
+        // CHECK: i1(0)
+        // CHECK_NEXT: 0
+
+        printf("print_i1(1)\n");
+        print_i1(1);
+        // CHECK: i1(1)
+        // CHECK_NEXT: 1
+
+}
+#endif
