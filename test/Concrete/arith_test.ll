@@ -1,4 +1,4 @@
-; RUN: %S/ConcreteTest.py --klee=%klee --lli=%lli %s
+; RUN: %S/ConcreteTest.py --klee='%klee' --lli=%lli %s
 
 define void @"test_simple_arith"(i16 %i0, i16 %j0) {
   %t1 = add i16 %i0, %j0

@@ -1,4 +1,4 @@
-; RUN: %S/ConcreteTest.py --klee=%klee --lli=%lli %s
+; RUN: %S/ConcreteTest.py --klee='%klee' --lli=%lli %s
 
 ; Most of the test below use the *address* of gInt as part of their computation,
 ; and then perform some operation (like x | ~x) which makes the result

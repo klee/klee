@@ -1,4 +1,4 @@
-// RUN: %S/ConcreteTest.py --klee=%klee --lli=%lli %s
+// RUN: %S/ConcreteTest.py --klee='%klee' --lli=%lli %s
 
 #include <stdio.h>
 
