@@ -1,6 +1,7 @@
 // RUN: %llvmgcc -D_TESTINGUTILS_TEST %s -o %t
 // RUN: %t | FileCheck %s
-// XFAIL:
+
+#include <stdint.h>
 
 int printf(const char *fmt, ...);
 
@@ -9,19 +10,19 @@ void print_int(unsigned long long val);
 #define TYPED_PRINT(_name_type, _arg_type)  \
     void print_ ## _name_type(_arg_type val) { print_int(val); }
  
-TYPED_PRINT(i1, unsigned char)
-TYPED_PRINT(i8, unsigned char)
-TYPED_PRINT(i16, unsigned short)
-TYPED_PRINT(i32, unsigned int)
-TYPED_PRINT(i64, unsigned long long)
+TYPED_PRINT(i1, uint8_t)
+TYPED_PRINT(i8, uint8_t)
+TYPED_PRINT(i16, uint16_t)
+TYPED_PRINT(i32, uint32_t)
+TYPED_PRINT(i64, uint64_t)
 
 // This is a workaround to hide the "%c" only format string from the compiler --
 // llvm-gcc can optimize this into putchar even at -O0, and the LLVM JIT doesn't
 // recognize putchar() as a valid external function.
 char *char_format_string = "%c";
 
-void print_int(unsigned long long val) {
-    int cur = 1;
+void print_int(uint64_t val) {
+    uint64_t cur = 1;
 
     // effectively do a log (can't call log because it returns floats)
     // do the nasty divide to prevent overflow
