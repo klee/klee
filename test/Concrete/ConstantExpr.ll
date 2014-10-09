@@ -24,8 +24,8 @@ define void @"test_int_to_ptr"() {
 
 define void @"test_constant_ops"() {
   %t1 = add i8 trunc(i64 add(i64 ptrtoint(i32* @gInt to i64), i64 -10) to i8), 10
-  %t2 = sub i64 sext(i32 ptrtoint(i32* @gInt to i32) to i64), ptrtoint(i32* @gInt to i64)
-  %t3 = sub i64 zext(i32 ptrtoint(i32* @gInt to i32) to i64), ptrtoint(i32* @gInt to i64)
+  %t2 = and i64 sub(i64 sext(i32 ptrtoint(i32* @gInt to i32) to i64), i64 ptrtoint(i32* @gInt to i64)), 4294967295
+  %t3 = and i64 sub(i64 zext(i32 ptrtoint(i32* @gInt to i32) to i64), i64 ptrtoint(i32* @gInt to i64)), 4294967295
 
   %t4 = icmp eq i8 trunc(i64 ptrtoint(i32* @gInt to i64) to i8), %t1
   %t5 = zext i1 %t4 to i8
