@@ -5,7 +5,7 @@
 
 int printf(const char *fmt, ...);
 
-void print_int(unsigned long long val);
+void print_int(uint64_t val);
 
 #define TYPED_PRINT(_name_type, _arg_type)  \
     void print_ ## _name_type(_arg_type val) { print_int(val); }
