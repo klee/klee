@@ -64,6 +64,8 @@ void ExprSMTLIBPrinter::setQuery(const Query &q) {
 }
 
 void ExprSMTLIBPrinter::reset() {
+  bindings.clear();
+  seenExprs.clear();
   usedArrays.clear();
   haveConstantArray = false;
 
