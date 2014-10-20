@@ -66,17 +66,18 @@ bool RaiseAsmPass::runOnModule(Module &M) {
   std::string HostTriple = llvm::sys::getHostTriple();
 #endif
   const Target *NativeTarget = TargetRegistry::lookupTarget(HostTriple, Err);
+  TargetMachine * TM = 0;
   if (NativeTarget == 0) {
     llvm::errs() << "Warning: unable to select native target: " << Err << "\n";
     TLI = 0;
   } else {
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 1)
-    TargetMachine *TM = NativeTarget->createTargetMachine(HostTriple, "", "",
+    TM = NativeTarget->createTargetMachine(HostTriple, "", "",
                                                           TargetOptions());
 #elif LLVM_VERSION_CODE >= LLVM_VERSION(3, 0)
-    TargetMachine *TM = NativeTarget->createTargetMachine(HostTriple, "", "");
+    TM = NativeTarget->createTargetMachine(HostTriple, "", "");
 #else
-    TargetMachine *TM = NativeTarget->createTargetMachine(HostTriple, "");
+    TM = NativeTarget->createTargetMachine(HostTriple, "");
 #endif
     TLI = TM->getTargetLowering();
   }
@@ -90,6 +91,9 @@ bool RaiseAsmPass::runOnModule(Module &M) {
       }
     }
   }
+
+  if (TM)
+    delete TM;
 
   return changed;
 }
