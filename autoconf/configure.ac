@@ -552,54 +552,55 @@ dnl **************************************************************************
 
 AC_ARG_WITH(stp,
   AS_HELP_STRING([--with-stp],
-    [Location of STP installation directory]),,
-    [AC_MSG_ERROR([The --with-stp=<path> argument is mandatory where <path> is the path \
-to the root of your STP install])])
+    [Location of STP installation directory]),[
+      #Check for empty argument
+      if test "X$withval" = X ; then
+	      AC_MSG_ERROR([<path> cannot be empty in --with-stp=<path>])
+      fi
+      stp_root=`(cd $withval && pwd) 2> /dev/null`
 
-#Check for empty argument
-if test "X$with_stp" = X ; then
-	AC_MSG_ERROR([<path> cannot be empty in --with-stp=<path>])
+      #Check for bad path
+      if test "X$stp_root" = X ; then
+	    AC_MSG_ERROR([Cannot access path $with_stp passed to --with-stp])
+      fi
+
+      STP_CFLAGS="-I$stp_root/include"
+      STP_LDFLAGS="-L$stp_root/lib"
+    ])
+
+old_CPPFLAGS="$CPPFLAGS"
+CPPFLAGS="$CPPFLAGS $STP_CFLAGS"
+AC_CHECK_HEADER(stp/c_interface.h,, [
+       AC_MSG_ERROR([Unable to use stp/c_interface.h header])
+])
+CPPFLAGS="$old_CPPFLAGS"
+
+STP_NEEDS_BOOST=0
+
+# Try old STP
+AC_CHECK_LIB(stp, vc_setInterfaceFlags,, [
+       STP_NEEDS_BOOST=1 ; AC_MSG_RESULT([Could not link with libstp. Checking if newer STP is being used])
+], "$STP_LDFLAGS")
+
+dnl Flags for upstream STP which has boost dependency
+UPSTREAM_STP_LINK_FLAGS="-lboost_system -lboost_program_options"
+if test "X$STP_NEEDS_BOOST" != X0 ; then
+  # Need to clear cached result
+  unset ac_cv_lib_stp_vc_setInterfaceFlags
+
+  AC_CHECK_LIB(stp,
+	       vc_setInterfaceFlags,, [
+	       AC_MSG_ERROR([Unable to link with libstp. Check config.log to see what went wrong])
+  ], "$STP_LDFLAGS" $UPSTREAM_STP_LINK_FLAGS )
+
+  AC_SUBST(UPSTREAM_STP_LINK_FLAGS, $UPSTREAM_STP_LINK_FLAGS)
+  AC_SUBST(STP_NEEDS_BOOST, $STP_NEEDS_BOOST)
 else
-  stp_root=`(cd $with_stp && pwd) 2> /dev/null`
-
-  #Check for bad path
-  if test "X$stp_root" = X ; then
-  	AC_MSG_ERROR([Cannot access path $with_stp passed to --with-stp])
-  fi
-
-  old_CPPFLAGS="$CPPFLAGS"
-  CPPFLAGS="$CPPFLAGS -I$stp_root/include"
-  AC_CHECK_HEADER(stp/c_interface.h,, [
-         AC_MSG_ERROR([Unable to use stp/c_interface.h header])
-  ])
-  CPPFLAGS="$old_CPPFLAGS"
-
-  STP_NEEDS_BOOST=0
-
-  # Try old STP
-  AC_CHECK_LIB(stp, vc_setInterfaceFlags,, [
-         STP_NEEDS_BOOST=1 ; AC_MSG_RESULT([Could not link with libstp. Checking if newer STP is being used])
-  ], -L$stp_root/lib)
-
-  dnl Flags for upstream STP which has boost dependency
-  UPSTREAM_STP_LINK_FLAGS="-lboost_system -lboost_program_options"
-  if test "X$STP_NEEDS_BOOST" != X0 ; then
-    # Need to clear cached result
-    unset ac_cv_lib_stp_vc_setInterfaceFlags
-
-    AC_CHECK_LIB(stp,
-                 vc_setInterfaceFlags,, [
-                 AC_MSG_ERROR([Unable to link with libstp. Check config.log to see what went wrong])
-    ], -L$stp_root/lib $UPSTREAM_STP_LINK_FLAGS )
-
-    AC_SUBST(UPSTREAM_STP_LINK_FLAGS, $UPSTREAM_STP_LINK_FLAGS)
-    AC_SUBST(STP_NEEDS_BOOST, $STP_NEEDS_BOOST)
-  else
-    AC_MSG_RESULT([Using old STP])
-  fi
-
-  AC_SUBST(STP_ROOT,$stp_root)
+  AC_MSG_RESULT([Using old STP])
 fi
+
+AC_SUBST(STP_CFLAGS)
+AC_SUBST(STP_LDFLAGS)
 
 dnl **************************************************************************
 dnl User option to enable metaSMT constraint solvers and to specify the 
