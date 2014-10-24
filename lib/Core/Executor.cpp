@@ -562,7 +562,13 @@ void Executor::initializeGlobals(ExecutionState &state) {
       // hack where we check the object file information.
 
       LLVM_TYPE_Q Type *ty = i->getType()->getElementType();
-      uint64_t size = kmodule->targetData->getTypeStoreSize(ty);
+      uint64_t size = 0;
+      if (ty->isSized()) {
+	size = kmodule->targetData->getTypeStoreSize(ty);
+      } else {
+        klee_warning("Type for %.*s is not sized", (int)i->getName().size(),
+			i->getName().data());
+      }
 
       // XXX - DWD - hardcode some things until we decide how to fix.
 #ifndef WINDOWS
@@ -576,9 +582,8 @@ void Executor::initializeGlobals(ExecutionState &state) {
 #endif
 
       if (size == 0) {
-        llvm::errs() << "Unable to find size for global variable: " 
-                     << i->getName() 
-                     << " (use will result in out of bounds access)\n";
+        klee_warning("Unable to find size for global variable: %.*s (use will result in out of bounds access)",
+			(int)i->getName().size(), i->getName().data());
       }
 
       MemoryObject *mo = memory->allocate(size, false, true, i);
