@@ -504,7 +504,12 @@ void Executor::initializeGlobals(ExecutionState &state) {
       // hack where we check the object file information.
 
       LLVM_TYPE_Q Type *ty = i->getType()->getElementType();
-      uint64_t size = kmodule->targetData->getTypeStoreSize(ty);
+      uint64_t size = 0;
+      if (ty->isSized()) {
+	size = kmodule->targetData->getTypeStoreSize(ty);
+      } else {
+        llvm::errs() << "Type for " << i->getName() << " is not sized\n";
+      }
 
       // XXX - DWD - hardcode some things until we decide how to fix.
 #ifndef WINDOWS
