@@ -51,11 +51,6 @@ namespace {
 
 
 STPArrayExprHash::~STPArrayExprHash() {
-  
-  // Design decision: STPArrayExprHash is destroyed from the destructor of STPBuilder at the end of the KLEE run;
-  // Therefore, freeing memory allocated for STP::VCExpr's is currently disabled.
-  
-   /*
   for (ArrayHashIter it = _array_hash.begin(); it != _array_hash.end(); ++it) {
     ::VCExpr array_expr = it->second;
     if (array_expr) {
@@ -63,16 +58,16 @@ STPArrayExprHash::~STPArrayExprHash() {
       array_expr = 0;
     }
   }
-  
-  
-  for (UpdateNodeHashConstIter it = _update_node_hash.begin(); it != _update_node_hash.end(); ++it) {
+
+
+  for (UpdateNodeHashConstIter it = _update_node_hash.begin();
+      it != _update_node_hash.end(); ++it) {
     ::VCExpr un_expr = it->second;
     if (un_expr) {
       ::vc_DeleteExpr(un_expr);
       un_expr = 0;
     }
   }
-  */
 }
 
 /***/
@@ -218,10 +213,9 @@ ExprHandle STPBuilder::bvVarLeftShift(ExprHandle expr, ExprHandle shift) {
   }
 
   // If overshifting, shift to zero
-  res = vc_iteExpr(vc,
-                   vc_bvLtExpr(vc, shift, bvConst32(vc_getBVLength(vc,shift), width)),
-                   res,
-                   bvZero(width));
+  ExprHandle ex = vc_bvLtExpr(vc, shift, bvConst32(vc_getBVLength(vc,shift), width));
+
+  res = vc_iteExpr(vc, ex, res, bvZero(width));
   return res;
 }
 
@@ -239,8 +233,9 @@ ExprHandle STPBuilder::bvVarRightShift(ExprHandle expr, ExprHandle shift) {
   }
 
   // If overshifting, shift to zero
+  ExprHandle ex = vc_bvLtExpr(vc, shift, bvConst32(vc_getBVLength(vc,shift), width));
   res = vc_iteExpr(vc,
-                   vc_bvLtExpr(vc, shift, bvConst32(vc_getBVLength(vc,shift), width)),
+                   ex,
                    res,
                    bvZero(width));
   return res;
@@ -269,8 +264,9 @@ ExprHandle STPBuilder::bvVarArithRightShift(ExprHandle expr, ExprHandle shift) {
   }
 
   // If overshifting, shift to zero
+  ExprHandle ex = vc_bvLtExpr(vc, shift, bvConst32(vc_getBVLength(vc,shift), width));
   res = vc_iteExpr(vc,
-                   vc_bvLtExpr(vc, shift, bvConst32(vc_getBVLength(vc,shift), width)),
+                   ex,
                    res,
                    bvZero(width));
   return res;
