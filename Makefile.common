@@ -38,8 +38,8 @@ endif
 # This is filename that KLEE will look for when trying to load klee-uclibc
 KLEE_UCLIBC_BCA_NAME="klee-uclibc.bca"
 
-LD.Flags += -L$(STP_ROOT)/lib
-CXX.Flags += -I$(STP_ROOT)/include
+LD.Flags += $(STP_LDFLAGS)
+CXX.Flags += $(STP_CFLAGS)
 CXX.Flags += -DKLEE_DIR=\"$(PROJ_OBJ_ROOT)\" -DKLEE_INSTALL_BIN_DIR=\"$(PROJ_bindir)\"
 CXX.Flags += -DKLEE_INSTALL_LIB_DIR=\"$(PROJ_libdir)\"
 
