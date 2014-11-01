@@ -628,8 +628,6 @@ METASMT_ROOT
 ENABLE_METASMT
 STP_LDFLAGS
 STP_CFLAGS
-STP_NEEDS_BOOST
-UPSTREAM_STP_LINK_FLAGS
 CXXCPP
 HAVE_SELINUX
 EGREP
@@ -5080,16 +5078,13 @@ if test "x$ac_cv_header_stp_c_interface_h" = xyes; then :
 
 else
 
-       as_fn_error $? "Unable to use stp/c_interface.h header" "$LINENO" 5
+        as_fn_error $? "Unable to use stp/c_interface.h header" "$LINENO" 5
 
 fi
 
 
 CPPFLAGS="$old_CPPFLAGS"
 
-STP_NEEDS_BOOST=0
-
-# Try old STP
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for vc_setInterfaceFlags in -lstp" >&5
 $as_echo_n "checking for vc_setInterfaceFlags in -lstp... " >&6; }
 if ${ac_cv_lib_stp_vc_setInterfaceFlags+:} false; then :
@@ -5135,75 +5130,10 @@ _ACEOF
 
 else
 
-       STP_NEEDS_BOOST=1 ; { $as_echo "$as_me:${as_lineno-$LINENO}: result: Could not link with libstp. Checking if newer STP is being used" >&5
-$as_echo "Could not link with libstp. Checking if newer STP is being used" >&6; }
+       as_fn_error $? "Could not link with libstp" "$LINENO" 5
 
 fi
 
-
-UPSTREAM_STP_LINK_FLAGS="-lboost_system -lboost_program_options"
-if test "X$STP_NEEDS_BOOST" != X0 ; then
-  # Need to clear cached result
-  unset ac_cv_lib_stp_vc_setInterfaceFlags
-
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for vc_setInterfaceFlags in -lstp" >&5
-$as_echo_n "checking for vc_setInterfaceFlags in -lstp... " >&6; }
-if ${ac_cv_lib_stp_vc_setInterfaceFlags+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lstp "$STP_LDFLAGS" $UPSTREAM_STP_LINK_FLAGS  $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char vc_setInterfaceFlags ();
-int
-main ()
-{
-return vc_setInterfaceFlags ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_cxx_try_link "$LINENO"; then :
-  ac_cv_lib_stp_vc_setInterfaceFlags=yes
-else
-  ac_cv_lib_stp_vc_setInterfaceFlags=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_stp_vc_setInterfaceFlags" >&5
-$as_echo "$ac_cv_lib_stp_vc_setInterfaceFlags" >&6; }
-if test "x$ac_cv_lib_stp_vc_setInterfaceFlags" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_LIBSTP 1
-_ACEOF
-
-  LIBS="-lstp $LIBS"
-
-else
-
-	       as_fn_error $? "Unable to link with libstp. Check config.log to see what went wrong" "$LINENO" 5
-
-fi
-
-
-  UPSTREAM_STP_LINK_FLAGS=$UPSTREAM_STP_LINK_FLAGS
-
-  STP_NEEDS_BOOST=$STP_NEEDS_BOOST
-
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: Using old STP" >&5
-$as_echo "Using old STP" >&6; }
-fi
 
 
 
