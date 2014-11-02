@@ -10,7 +10,3 @@ LINK_COMPONENTS := support
 include $(LLVM_SRC_ROOT)/unittests/Makefile.unittest
 
 LIBS += -lstp
-
-ifeq ($(STP_NEEDS_BOOST),1)
-	LIBS += $(UPSTREAM_STP_LINK_FLAGS)
-endif
