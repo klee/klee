@@ -31,6 +31,19 @@ llvm::cl::opt<bool> humanReadableSMTLIB(
     llvm::cl::desc(
         "Enables generated SMT-LIBv2 files to be human readable (default=off)"),
     llvm::cl::init(false));
+
+llvm::cl::opt<klee::ExprSMTLIBPrinter::AbbreviationMode> abbreviationMode(
+    "smtlib-abbreviation-mode",
+    llvm::cl::desc(
+        "Choose abbreviation mode to use in SMT-LIBv2 files (default=let)"),
+    llvm::cl::values(clEnumValN(klee::ExprSMTLIBPrinter::ABBR_NONE, "none",
+                                "Do not abbreviate"),
+                     clEnumValN(klee::ExprSMTLIBPrinter::ABBR_LET, "let",
+                                "Abbreviate with let"),
+                     clEnumValN(klee::ExprSMTLIBPrinter::ABBR_NAMED, "named",
+                                "Abbreviate with :named annotations"),
+                     clEnumValEnd),
+    llvm::cl::init(klee::ExprSMTLIBPrinter::ABBR_LET));
 }
 
 namespace klee {
@@ -41,6 +54,7 @@ ExprSMTLIBPrinter::ExprSMTLIBPrinter()
       humanReadable(ExprSMTLIBOptions::humanReadableSMTLIB),
       smtlibBoolOptions(), arraysToCallGetValueOn(NULL) {
   setConstantDisplayMode(ExprSMTLIBOptions::argConstantDisplayMode);
+  setAbbreviationMode(ExprSMTLIBOptions::abbreviationMode);
 }
 
 ExprSMTLIBPrinter::~ExprSMTLIBPrinter() {
@@ -60,10 +74,11 @@ void ExprSMTLIBPrinter::setQuery(const Query &q) {
   query = &q;
   reset(); // clear the data structures
   scanAll();
-  negateQueryExpression();
 }
 
 void ExprSMTLIBPrinter::reset() {
+  bindings.clear();
+  seenExprs.clear();
   usedArrays.clear();
   haveConstantArray = false;
 
@@ -154,6 +169,41 @@ void ExprSMTLIBPrinter::printExpression(
     return;
   }
 
+  switch (abbrMode) {
+  case ABBR_NONE:
+    break;
+
+  case ABBR_LET: {
+    BindingMap::iterator i = bindings.find(e);
+    if (i != bindings.end()) {
+      *p << "?B" << i->second;
+      return;
+    }
+    break;
+  }
+
+  case ABBR_NAMED: {
+    BindingMap::iterator i = bindings.find(e);
+    if (i != bindings.end()) {
+      if (i->second > 0) {
+        *p << "(! ";
+        printFullExpression(e, expectedSort);
+        *p << " :named ?B" << i->second << ")";
+        i->second = -i->second;
+      } else {
+        *p << "?B" << -i->second;
+      }
+      return;
+    }
+    break;
+  }
+  }
+
+  printFullExpression(e, expectedSort);
+}
+
+void ExprSMTLIBPrinter::printFullExpression(
+    const ref<Expr> &e, ExprSMTLIBPrinter::SMTLIB_SORT expectedSort) {
   switch (e->getKind()) {
   case Expr::Constant:
     printConstant(cast<ConstantExpr>(e));
@@ -576,24 +626,32 @@ void ExprSMTLIBPrinter::scan(const ref<Expr> &e) {
   if (isa<ConstantExpr>(e))
     return; // we don't need to scan simple constants
 
-  if (const ReadExpr *re = dyn_cast<ReadExpr>(e)) {
+  if (seenExprs.insert(e).second) {
+    // We've not seen this expression before
 
-    // Attempt to insert array and if array wasn't present before do more things
-    if (usedArrays.insert(re->updates.root).second) {
+    if (const ReadExpr *re = dyn_cast<ReadExpr>(e)) {
 
-      // check if the array is constant
-      if (re->updates.root->isConstantArray())
-        haveConstantArray = true;
+      // Attempt to insert array and if array wasn't present before do more things
+      if (usedArrays.insert(re->updates.root).second) {
 
-      // scan the update list
-      scanUpdates(re->updates.head);
+        // check if the array is constant
+        if (re->updates.root->isConstantArray())
+          haveConstantArray = true;
+
+        // scan the update list
+        scanUpdates(re->updates.head);
+      }
     }
-  }
 
-  // recurse into the children
-  Expr *ep = e.get();
-  for (unsigned int i = 0; i < ep->getNumKids(); i++)
-    scan(ep->getKid(i));
+    // recurse into the children
+    Expr *ep = e.get();
+    for (unsigned int i = 0; i < ep->getNumKids(); i++)
+      scan(ep->getKid(i));
+  } else {
+    // Add the expression to the binding map. The semantics of std::map::insert
+    // are such that it will not be inserted twice.
+    bindings.insert(std::make_pair(e, bindings.size()+1));
+  }
 }
 
 void ExprSMTLIBPrinter::scanUpdates(const UpdateNode *un) {
@@ -637,24 +695,73 @@ void ExprSMTLIBPrinter::printOptions() {
   }
 }
 
-void ExprSMTLIBPrinter::printQuery() {
-  if (humanReadable) {
-    *p << "; Query from solver turned into an assert";
-    p->breakLineI();
-  }
-
+void ExprSMTLIBPrinter::printAssert(const ref<Expr> &e) {
   p->pushIndent();
   *p << "(assert";
   p->pushIndent();
   printSeperator();
 
-  printExpression(queryAssert, SORT_BOOL);
+  if (abbrMode == ABBR_LET && bindings.size() != 0) {
+    // Only print let expression if we have bindings to use.
+    *p << "(let";
+    p->pushIndent();
+    printSeperator();
+    *p << "( ";
+    p->pushIndent();
+
+    // Disable abbreviations so none are used here.
+    abbrMode = ABBR_NONE;
+
+    // Print each binding
+    for (BindingMap::const_iterator i = bindings.begin(); i != bindings.end();
+         ++i) {
+      printSeperator();
+      *p << "(?B" << i->second << " ";
+      p->pushIndent();
+
+      // We can abbreviate SORT_BOOL or SORT_BITVECTOR in let expressions
+      printExpression(i->first, getSort(i->first));
+
+      p->popIndent();
+      printSeperator();
+      *p << ")";
+    }
+
+    // Re-enable printing abbreviations.
+    abbrMode = ABBR_LET;
+
+    p->popIndent();
+    printSeperator();
+    *p << ")";
+    printSeperator();
+
+    printExpression(e, SORT_BOOL);
+
+    *p << ")";
+  } else {
+    printExpression(e, SORT_BOOL);
+  }
 
   p->popIndent();
   printSeperator();
   *p << ")";
   p->popIndent();
   p->breakLineI();
+}
+
+void ExprSMTLIBPrinter::printQuery() {
+  if (humanReadable) {
+    *p << "; Query from solver turned into an assert";
+    p->breakLineI();
+  }
+
+  ref<Expr> queryAssert = Expr::createIsZero(query->expr);
+  for (std::vector<ref<Expr> >::const_iterator i = query->constraints.begin(),
+                                          e = query->constraints.end();
+       i != e; ++i) {
+    queryAssert = AndExpr::create(queryAssert, *i);
+  }
+  printAssert(queryAssert);
 }
 
 ExprSMTLIBPrinter::SMTLIB_SORT ExprSMTLIBPrinter::getSort(const ref<Expr> &e) {
@@ -829,11 +936,6 @@ void ExprSMTLIBPrinter::printLogicalOrBitVectorExpr(
   p->popIndent(); // pop indent added for recursive call
   printSeperator();
   *p << ")";
-}
-
-void ExprSMTLIBPrinter::negateQueryExpression() {
-  // Negating the query
-  queryAssert = Expr::createIsZero(query->expr);
 }
 
 bool ExprSMTLIBPrinter::setSMTLIBboolOption(SMTLIBboolOptions option,

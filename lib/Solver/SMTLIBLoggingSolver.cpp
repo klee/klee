@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "QueryLoggingSolver.h"
-#include "klee/util/ExprSMTLIBLetPrinter.h"
+#include "klee/util/ExprSMTLIBPrinter.h"
 
 using namespace klee;
 
@@ -18,7 +18,7 @@ class SMTLIBLoggingSolver : public QueryLoggingSolver
 {
         private:
     
-                ExprSMTLIBPrinter* printer;
+                ExprSMTLIBPrinter printer;
 
                 virtual void printQuery(const Query& query,
                                         const Query* falseQuery = 0,
@@ -26,36 +26,29 @@ class SMTLIBLoggingSolver : public QueryLoggingSolver
                 {
                         if (0 == falseQuery) 
                         {
-                                printer->setQuery(query);
+                                printer.setQuery(query);
                         }
                         else
                         {
-                                printer->setQuery(*falseQuery);                
+                                printer.setQuery(*falseQuery);
                         }
 
                         if (0 != objects)
                         {
-                                printer->setArrayValuesToGet(*objects);
+                                printer.setArrayValuesToGet(*objects);
                         }
 
-                        printer->generateOutput();
+                        printer.generateOutput();
                 }    
         
 	public:
 		SMTLIBLoggingSolver(Solver *_solver,
                                     std::string path,
                                     int queryTimeToLog)                
-		: QueryLoggingSolver(_solver, path, ";", queryTimeToLog),
-		printer()
+		: QueryLoggingSolver(_solver, path, ";", queryTimeToLog)
 		{
 		  //Setup the printer
-		  printer = createSMTLIBPrinter();
-		  printer->setOutput(logBuffer);
-		}
-
-		~SMTLIBLoggingSolver()
-		{
-			delete printer;
+		  printer.setOutput(logBuffer);
 		}
 };
 

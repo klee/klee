@@ -30,8 +30,7 @@ namespace klee {
 /// set to QF_AUFBV because some solvers (e.g. STP) complain if this logic is
 /// set to QF_ABV.
 ///
-/// This printer does not abbreviate expressions. The printer
-/// ExprSMTLIBLetPrinter does though.
+/// This printer abbreviates expressions according to its abbreviation mode.
 ///
 /// It is intended to be used as follows
 /// -# Create instance of this class
@@ -109,6 +108,14 @@ public:
     DECIMAL ///< Display bit vector constants in Decimal e.g. (_ bv45 8)
   };
 
+  /// How to abbreviate repeatedly mentioned expressions. Some solvers do not
+  /// understand all of them, hence the flexibility.
+  enum AbbreviationMode {
+    ABBR_NONE, ///< Do not abbreviate.
+    ABBR_LET,  ///< Abbreviate with let.
+    ABBR_NAMED ///< Abbreviate with :named annotations.
+  };
+
   /// Different supported SMTLIBv2 sorts (a.k.a type) in QF_AUFBV
   enum SMTLIB_SORT { SORT_BITVECTOR, SORT_BOOL };
 
@@ -118,6 +125,8 @@ public:
   bool setConstantDisplayMode(ConstantDisplayMode cdm);
 
   ConstantDisplayMode getConstantDisplayMode() { return cdm; }
+
+  void setAbbreviationMode(AbbreviationMode am) { abbrMode = am; }
 
   /// Create a new printer that will print a query in the SMTLIBv2 language.
   ExprSMTLIBPrinter();
@@ -131,7 +140,7 @@ public:
   /// the SMTLIBv2 (get-value ()) command).
   void setQuery(const Query &q);
 
-  virtual ~ExprSMTLIBPrinter();
+  ~ExprSMTLIBPrinter();
 
   /// Print the query to the llvm::raw_ostream
   /// setOutput() and setQuery() must be called before calling this.
@@ -150,7 +159,7 @@ public:
   /// is made that uses the PRODUCE_MODELS before calling setArrayValuesToGet()
   /// then the setSMTLIBboolOption()
   /// call will be ineffective.
-  virtual void generateOutput();
+  void generateOutput();
 
   /// Set which SMTLIBv2 logic to use.
   /// This only affects what logic is used in the (set-logic <logic>) command.
@@ -204,6 +213,16 @@ protected:
   /// Contains the arrays found during scans
   std::set<const Array *> usedArrays;
 
+  /// Set of expressions seen during scan.
+  std::set<ref<Expr> > seenExprs;
+
+  typedef std::map<const ref<Expr>, int> BindingMap;
+
+  /// Let expression binding number map. Under the :named abbreviation mode,
+  /// negative binding numbers indicate that the abbreviation has already been
+  /// emitted, so it may be used.
+  BindingMap bindings;
+
   /// Output stream to write to
   llvm::raw_ostream *o;
 
@@ -217,36 +236,36 @@ protected:
   void printCastToSort(const ref<Expr> &e, ExprSMTLIBPrinter::SMTLIB_SORT sort);
 
   // Resets various internal objects for a new query
-  virtual void reset();
+  void reset();
 
   // Scan all constraints and the query
-  virtual void scanAll();
+  void scanAll();
 
   // Print an initial SMTLIBv2 comment before anything else is printed
-  virtual void printNotice();
+  void printNotice();
 
   // Print SMTLIBv2 options e.g. (set-option :option-name <value>) command
-  virtual void printOptions();
+  void printOptions();
 
   // Print SMTLIBv2 logic to use e.g. (set-logic QF_ABV)
-  virtual void printSetLogic();
+  void printSetLogic();
 
   // Print SMTLIBv2 assertions for constant arrays
-  virtual void printArrayDeclarations();
+  void printArrayDeclarations();
 
   // Print SMTLIBv2 for all constraints in the query
-  virtual void printConstraints();
+  void printConstraints();
 
   // Print SMTLIBv2 assert statement for the negated query expression
-  virtual void printQuery();
+  void printQuery();
 
   /// Print the SMTLIBv2 command to check satisfiability and also optionally
   /// request for values
   /// \sa setArrayValuesToGet()
-  virtual void printAction();
+  void printAction();
 
   /// Print the SMTLIBv2 command to exit
-  virtual void printExit();
+  void printExit();
 
   /// Print a Constant in the format specified by the current "Constant Display
   /// Mode"
@@ -256,13 +275,13 @@ protected:
   /// \param e is the expression to print
   /// \param expectedSort is the sort we want. If "e" is not of the right type a
   /// cast will be performed.
-  virtual void printExpression(const ref<Expr> &e,
-                               ExprSMTLIBPrinter::SMTLIB_SORT expectedSort);
+  /// \param abbrMode the abbreviation mode to use for this expression
+  void printExpression(const ref<Expr> &e, SMTLIB_SORT expectedSort);
 
   /// Scan Expression recursively for Arrays in expressions. Found arrays are
   /// added to
   /// the usedArrays vector.
-  virtual void scan(const ref<Expr> &e);
+  void scan(const ref<Expr> &e);
 
   /* Rules of recursion for "Special Expression handlers" and
    *printSortArgsExpr()
@@ -280,15 +299,15 @@ protected:
    */
 
   // Special Expression handlers
-  virtual void printReadExpr(const ref<ReadExpr> &e);
-  virtual void printExtractExpr(const ref<ExtractExpr> &e);
-  virtual void printCastExpr(const ref<CastExpr> &e);
-  virtual void printNotEqualExpr(const ref<NeExpr> &e);
-  virtual void printSelectExpr(const ref<SelectExpr> &e,
+  void printReadExpr(const ref<ReadExpr> &e);
+  void printExtractExpr(const ref<ExtractExpr> &e);
+  void printCastExpr(const ref<CastExpr> &e);
+  void printNotEqualExpr(const ref<NeExpr> &e);
+  void printSelectExpr(const ref<SelectExpr> &e,
                                ExprSMTLIBPrinter::SMTLIB_SORT s);
 
   // For the set of operators that take sort "s" arguments
-  virtual void printSortArgsExpr(const ref<Expr> &e,
+  void printSortArgsExpr(const ref<Expr> &e,
                                  ExprSMTLIBPrinter::SMTLIB_SORT s);
 
   /// For the set of operators that come in two sorts (e.g. (and () ()) (bvand
@@ -296,21 +315,21 @@ protected:
   /// These are and,xor,or,not
   /// \param e the Expression to print
   /// \param s the sort of the expression we want
-  virtual void printLogicalOrBitVectorExpr(const ref<Expr> &e,
+  void printLogicalOrBitVectorExpr(const ref<Expr> &e,
                                            ExprSMTLIBPrinter::SMTLIB_SORT s);
 
   /// Recursively prints updatesNodes
-  virtual void printUpdatesAndArray(const UpdateNode *un, const Array *root);
+  void printUpdatesAndArray(const UpdateNode *un, const Array *root);
 
   /// This method does the translation between Expr classes and SMTLIBv2
   /// keywords
   /// \return A C-string of the SMTLIBv2 keyword
-  virtual const char *getSMTLIBKeyword(const ref<Expr> &e);
+  const char *getSMTLIBKeyword(const ref<Expr> &e);
 
-  virtual void printSeperator();
+  void printSeperator();
 
   /// Helper function for scan() that scans the expressions of an update node
-  virtual void scanUpdates(const UpdateNode *un);
+  void scanUpdates(const UpdateNode *un);
 
   /// Helper printer class
   PrintContext *p;
@@ -330,18 +349,22 @@ private:
   // Map of enabled SMTLIB Options
   std::map<SMTLIBboolOptions, bool> smtlibBoolOptions;
 
-  /// This sets queryAssert to be the boolean negation of the original Query
-  void negateQueryExpression();
-
   // Print a SMTLIBv2 option as a C-string
   const char *
   getSMTLIBOptionString(ExprSMTLIBPrinter::SMTLIBboolOptions option);
+
+  /// Print expression without top-level abbreviations
+  void printFullExpression(const ref<Expr> &e, SMTLIB_SORT expectedSort);
+
+  /// Print an assert statement for the given expr.
+  void printAssert(const ref<Expr> &e);
 
   // Pointer to a vector of Arrays. These will be used for the (get-value () )
   // call.
   const std::vector<const Array *> *arraysToCallGetValueOn;
 
   ConstantDisplayMode cdm;
+  AbbreviationMode abbrMode;
 };
 }
 
