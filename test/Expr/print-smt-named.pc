@@ -1,5 +1,5 @@
-# RUN: %kleaver -print-smtlib %s > %t1.smt2
-# RUN: diff %t1.smt2 %p/print-smt.smt2.good
+# RUN: %kleaver -print-smtlib -smtlib-abbreviation-mode=named %s > %t1.smt2
+# RUN: diff %t1.smt2 %p/print-smt-named.smt2.good
 # Query 0 -- Type: InitialValues, Instructions: 27
 (query [] false)
 

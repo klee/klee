@@ -34,7 +34,7 @@
 #include "klee/Common.h"
 #include "klee/util/Assignment.h"
 #include "klee/util/ExprPPrinter.h"
-#include "klee/util/ExprSMTLIBLetPrinter.h"
+#include "klee/util/ExprSMTLIBPrinter.h"
 #include "klee/util/ExprUtil.h"
 #include "klee/util/GetElementPtrTypeIterator.h"
 #include "klee/Config/Version.h"
@@ -3446,13 +3446,12 @@ void Executor::getConstraintLog(const ExecutionState &state, std::string &res,
   case SMTLIB2: {
     std::string Str;
     llvm::raw_string_ostream info(Str);
-    ExprSMTLIBPrinter *printer = createSMTLIBPrinter();
-    printer->setOutput(info);
+    ExprSMTLIBPrinter printer;
+    printer.setOutput(info);
     Query query(state.constraints, ConstantExpr::alloc(0, Expr::Bool));
-    printer->setQuery(query);
-    printer->generateOutput();
+    printer.setQuery(query);
+    printer.generateOutput();
     res = info.str();
-    delete printer;
   } break;
 
   default:
