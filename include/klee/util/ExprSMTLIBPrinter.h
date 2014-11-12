@@ -253,7 +253,8 @@ protected:
   // Print SMTLIBv2 assertions for constant arrays
   void printArrayDeclarations();
 
-  // Print SMTLIBv2 for all constraints in the query
+  // Print SMTLIBv2 for all constraints in the query.
+  // This function is ought to be called in human readable mode only.
   void printConstraints();
 
   // Print SMTLIBv2 assert statement for the negated query expression

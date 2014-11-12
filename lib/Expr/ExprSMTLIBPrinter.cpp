@@ -480,8 +480,9 @@ void ExprSMTLIBPrinter::generateOutput() {
   printOptions();
   printSetLogic();
   printArrayDeclarations();
-  printConstraints();
   printQueryExpr();
+  if (humanReadable)
+    printConstraints();
   printAction();
   printExit();
 }
@@ -571,9 +572,11 @@ void ExprSMTLIBPrinter::printArrayDeclarations() {
 }
 
 void ExprSMTLIBPrinter::printConstraints() {
-  if (humanReadable)
-    *o << "; Constraints\n";
+  assert(humanReadable && "Not in human readable mode!");
+  *o << "; Constraints\n";
 
+  // Clear bindings
+  bindings.clear();
   // Generate assert statements for each constraint
   for (ConstraintManager::const_iterator i = query->constraints.begin();
        i != query->constraints.end(); i++) {
@@ -755,6 +758,14 @@ void ExprSMTLIBPrinter::printQueryExpr() {
     p->breakLineI();
   }
   ref<Expr> queryAssert = Expr::createIsZero(query->expr);
+  if (!humanReadable) {
+    // Print constraints inside the main query to reuse the Expr bindings
+    for (std::vector<ref<Expr> >::const_iterator i = query->constraints.begin(),
+                                                 e = query->constraints.end();
+         i != e; ++i) {
+      queryAssert = AndExpr::create(queryAssert, *i);
+    }
+  }
   printAssert(queryAssert);
 }
 
