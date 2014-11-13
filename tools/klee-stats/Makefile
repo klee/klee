@@ -36,11 +36,11 @@ install-local::
 uninstall-local::
 	$(Echo) Uninstall circumvented with NO_INSTALL
 else
-DestTool = $(PROJ_bindir)/$(TOOLSCRIPTNAME)
+DestTool = $(DESTDIR)$(PROJ_bindir)/$(TOOLSCRIPTNAME)
 
 install-local:: $(DestTool)
 
-$(DestTool): $(ToolBuildPath) $(PROJ_bindir)
+$(DestTool): $(ToolBuildPath) $(DESTDIR)$(PROJ_bindir)
 	$(Echo) Installing $(BuildMode) $(DestTool)
 	$(Verb) $(ProgInstall) $(ToolBuildPath) $(DestTool)
 
