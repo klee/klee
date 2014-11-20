@@ -112,6 +112,7 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
   add("__ubsan_handle_add_overflow", handleAddOverflow, false),
   add("__ubsan_handle_sub_overflow", handleSubOverflow, false),
   add("__ubsan_handle_mul_overflow", handleMulOverflow, false),
+  add("__ubsan_handle_divrem_overflow", handleDivRemOverflow, false),
 
 #undef addDNR
 #undef add  
@@ -763,5 +764,13 @@ void SpecialFunctionHandler::handleMulOverflow(ExecutionState &state,
                                                std::vector<ref<Expr> > &arguments) {
   executor.terminateStateOnError(state,
                                  "overflow on unsigned multiplication",
+                                 "overflow.err");
+}
+
+void SpecialFunctionHandler::handleDivRemOverflow(ExecutionState &state,
+                                               KInstruction *target,
+                                               std::vector<ref<Expr> > &arguments) {
+  executor.terminateStateOnError(state,
+                                 "overflow on division or remainder",
                                  "overflow.err");
 }

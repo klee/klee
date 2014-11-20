@@ -1,7 +1,7 @@
 // RUN: %llvmgcc %s -fsanitize=unsigned-integer-overflow -emit-llvm -g -O0 -c -o %t.bc
 // RUN: %klee %t.bc 2> %t.log
-// RUN: grep -c "overflow on unsigned subtraction" %t.log
-// RUN: grep -c "ubsan_sub_overflow.c:16: overflow" %t.log
+// RUN: grep -c "overflow on unsigned addition" %t.log
+// RUN: grep -c "ubsan_uadd_overflow.c:16: overflow" %t.log
 
 #include "klee/klee.h"
 
@@ -13,7 +13,7 @@ int main()
 
   klee_make_symbolic(&x, sizeof(x), "unsigned add 1");
   klee_make_symbolic(&y, sizeof(y), "unsigned add 2");
-  result = x - y;
+  result = x + y;
 
   return 0;
 }
