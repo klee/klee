@@ -2592,9 +2592,7 @@ void Executor::run(ExecutionState &initialState) {
             unsigned numStates = states.size();
             unsigned toKill = std::max(1U, numStates - numStates*MaxMemory/mbs);
 
-            if (MaxMemoryInhibit)
-              klee_warning("killing %d states (over memory cap)",
-                           toKill);
+            klee_warning("killing %d states (over memory cap)", toKill);
 
             std::vector<ExecutionState*> arr(states.begin(), states.end());
             for (unsigned i=0,N=arr.size(); N && i<toKill; ++i,--N) {
