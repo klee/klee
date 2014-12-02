@@ -586,6 +586,9 @@ void ExprSMTLIBPrinter::printHumanReadableQuery() {
     }
 
     *o << "; QueryExpr\n";
+
+    // We negate the Query Expr because in KLEE queries are solved
+    // in terms of validity, but SMT-LIB works in terms of satisfiability
     ref<Expr> queryAssert = Expr::createIsZero(query->expr);
     printAssert(queryAssert);
   } else {
@@ -602,6 +605,8 @@ void ExprSMTLIBPrinter::printMachineReadableQuery() {
 
 
 void ExprSMTLIBPrinter::printQueryInSingleAssert() {
+  // We negate the Query Expr because in KLEE queries are solved
+  // in terms of validity, but SMT-LIB works in terms of satisfiability
   ref<Expr> queryAssert = Expr::createIsZero(query->expr);
 
   // Print constraints inside the main query to reuse the Expr bindings
