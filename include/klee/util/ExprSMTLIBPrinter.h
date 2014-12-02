@@ -253,11 +253,15 @@ protected:
   // Print SMTLIBv2 assertions for constant arrays
   void printArrayDeclarations();
 
-  // Print SMTLIBv2 for all constraints in the query
-  void printConstraints();
+  // Print SMTLIBv2 for the query optimised for human readability
+  void printHumanReadableQuery();
 
-  // Print SMTLIBv2 assert statement for the negated query expression
-  void printQueryExpr();
+  // Print SMTLIBv2 for the query optimised for minimal query size.
+  // This does not imply ABBR_LET or ABBR_NAMED (although it would be wise
+  // to use them to minimise the query size further)
+  void printMachineReadableQuery();
+
+  void printQueryInSingleAssert();
 
   /// Print the SMTLIBv2 command to check satisfiability and also optionally
   /// request for values

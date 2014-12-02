@@ -480,8 +480,12 @@ void ExprSMTLIBPrinter::generateOutput() {
   printOptions();
   printSetLogic();
   printArrayDeclarations();
-  printConstraints();
-  printQueryExpr();
+
+  if (humanReadable)
+    printHumanReadableQuery();
+  else
+    printMachineReadableQuery();
+
   printAction();
   printExit();
 }
@@ -570,25 +574,45 @@ void ExprSMTLIBPrinter::printArrayDeclarations() {
   }
 }
 
-void ExprSMTLIBPrinter::printConstraints() {
-  if (humanReadable)
-    *o << "; Constraints\n";
+void ExprSMTLIBPrinter::printHumanReadableQuery() {
+  assert(humanReadable && "method must be called in humanReadable mode");
+  *o << "; Constraints\n";
 
-  // Generate assert statements for each constraint
-  for (ConstraintManager::const_iterator i = query->constraints.begin();
-       i != query->constraints.end(); i++) {
-    *p << "(assert ";
-    p->pushIndent();
-    printSeperator();
+  if (abbrMode != ABBR_LET) {
+    // Generate assert statements for each constraint
+    for (ConstraintManager::const_iterator i = query->constraints.begin();
+         i != query->constraints.end(); i++) {
+      printAssert(*i);
+    }
 
-    // recurse into Expression
-    printExpression(*i, SORT_BOOL);
-
-    p->popIndent();
-    printSeperator();
-    *p << ")";
-    p->breakLineI();
+    *o << "; QueryExpr\n";
+    ref<Expr> queryAssert = Expr::createIsZero(query->expr);
+    printAssert(queryAssert);
+  } else {
+    // let bindings are only scoped within a single (assert ...) so
+    // the entire query must be printed within a single assert
+    *o << "; Constraints and QueryExpr\n";
+    printQueryInSingleAssert();
   }
+}
+void ExprSMTLIBPrinter::printMachineReadableQuery() {
+  assert(!humanReadable && "method should not be called in humanReadable mode");
+  printQueryInSingleAssert();
+}
+
+
+void ExprSMTLIBPrinter::printQueryInSingleAssert() {
+  ref<Expr> queryAssert = Expr::createIsZero(query->expr);
+
+  // Print constraints inside the main query to reuse the Expr bindings
+  for (std::vector<ref<Expr> >::const_iterator i = query->constraints.begin(),
+                                               e = query->constraints.end();
+       i != e; ++i) {
+    queryAssert = AndExpr::create(queryAssert, *i);
+  }
+
+  // print just a single (assert ...) containing entire query
+  printAssert(queryAssert);
 }
 
 void ExprSMTLIBPrinter::printAction() {
@@ -706,7 +730,7 @@ void ExprSMTLIBPrinter::printAssert(const ref<Expr> &e) {
     *p << "(let";
     p->pushIndent();
     printSeperator();
-    *p << "( ";
+    *p << "(";
     p->pushIndent();
 
     // Disable abbreviations so none are used here.
@@ -716,8 +740,9 @@ void ExprSMTLIBPrinter::printAssert(const ref<Expr> &e) {
     for (BindingMap::const_iterator i = bindings.begin(); i != bindings.end();
          ++i) {
       printSeperator();
-      *p << "(?B" << i->second << " ";
+      *p << "(?B" << i->second;
       p->pushIndent();
+      printSeperator();
 
       // We can abbreviate SORT_BOOL or SORT_BITVECTOR in let expressions
       printExpression(i->first, getSort(i->first));
@@ -736,7 +761,8 @@ void ExprSMTLIBPrinter::printAssert(const ref<Expr> &e) {
     printSeperator();
 
     printExpression(e, SORT_BOOL);
-
+    p->popIndent();
+    printSeperator();
     *p << ")";
   } else {
     printExpression(e, SORT_BOOL);
@@ -747,15 +773,6 @@ void ExprSMTLIBPrinter::printAssert(const ref<Expr> &e) {
   *p << ")";
   p->popIndent();
   p->breakLineI();
-}
-
-void ExprSMTLIBPrinter::printQueryExpr() {
-  if (humanReadable) {
-    *p << "; Query from solver turned into an assert";
-    p->breakLineI();
-  }
-  ref<Expr> queryAssert = Expr::createIsZero(query->expr);
-  printAssert(queryAssert);
 }
 
 ExprSMTLIBPrinter::SMTLIB_SORT ExprSMTLIBPrinter::getSort(const ref<Expr> &e) {
