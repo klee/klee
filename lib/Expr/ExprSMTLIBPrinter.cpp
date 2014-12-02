@@ -624,7 +624,7 @@ void ExprSMTLIBPrinter::printAction() {
   // Ask solver to check for satisfiability
   *o << "(check-sat)\n";
 
-  /* If we has arrays to find the values of then we'll
+  /* If we have arrays to find the values of then we'll
    * ask the solver for the value of each bitvector in each array
    */
   if (arraysToCallGetValueOn != NULL && !arraysToCallGetValueOn->empty()) {
