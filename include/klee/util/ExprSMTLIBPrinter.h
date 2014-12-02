@@ -223,6 +223,11 @@ protected:
   /// emitted, so it may be used.
   BindingMap bindings;
 
+  /// An ordered list of expression bindings.
+  /// Exprs in BindingMap at index i depend on Exprs in BindingMap at i-1.
+  /// Exprs in orderedBindings[0] have no dependencies.
+  std::vector<BindingMap> orderedBindings;
+
   /// Output stream to write to
   llvm::raw_ostream *o;
 
@@ -286,6 +291,11 @@ protected:
   /// added to
   /// the usedArrays vector.
   void scan(const ref<Expr> &e);
+
+  /// Scan bindings for expression intra-dependencies. The result is written
+  /// to the orderedBindings vector that is later used for nested expression
+  /// printing in the let abbreviation mode.
+  void scanBindingExprDeps();
 
   /* Rules of recursion for "Special Expression handlers" and
    *printSortArgsExpr()

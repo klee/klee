@@ -10,6 +10,8 @@
 #include "llvm/Support/CommandLine.h"
 #include "klee/util/ExprSMTLIBPrinter.h"
 
+#include <stack>
+
 namespace ExprSMTLIBOptions {
 // Command line options
 llvm::cl::opt<klee::ExprSMTLIBPrinter::ConstantDisplayMode>
@@ -78,6 +80,7 @@ void ExprSMTLIBPrinter::setQuery(const Query &q) {
 
 void ExprSMTLIBPrinter::reset() {
   bindings.clear();
+  orderedBindings.clear();
   seenExprs.clear();
   usedArrays.clear();
   haveConstantArray = false;
@@ -466,6 +469,10 @@ void ExprSMTLIBPrinter::scanAll() {
 
   // Scan the query too
   scan(query->expr);
+
+  // Scan bindings for expression intra-dependencies
+  if (abbrMode == ABBR_LET)
+    scanBindingExprDeps();
 }
 
 void ExprSMTLIBPrinter::generateOutput() {
@@ -683,6 +690,92 @@ void ExprSMTLIBPrinter::scan(const ref<Expr> &e) {
   }
 }
 
+void ExprSMTLIBPrinter::scanBindingExprDeps() {
+  if (!bindings.size())
+    return;
+  // Mutual dependency storage
+  typedef std::map<const ref<Expr>, std::set<ref<Expr> > > ExprDepMap;
+  // A map from binding Expr (need abbreviating) "e" to the set of binding Expr
+  // that are sub expressions of "e" (i.e. "e" uses these sub expressions).
+  // usesSubExprMap[a].count(b) == 1  means that binding Expr "a" uses
+  // sub Expr "b" (also a binding Expr).
+  // One can think of this map representing the "depends on" edges
+  // in a "dependency graph" where nodes are binding Expr roots
+  ExprDepMap usesSubExprMap;
+  // A map from Binding Expr "e" to the set of binding Expr that use "e"
+  // subExprOfMap[a].count(b) == 1 means that binding Expr "a" is a sub Expr
+  // of binding Expr "b".
+  // One can think of this map as representing the edges in the previously
+  // mentioned "dependency graph" except the direction of the edges
+  // has been reversed
+  ExprDepMap subExprOfMap;
+  // Working queue holding expressions with no dependencies
+  std::vector<ref<Expr> > nonDepBindings;
+  // Iterate over bindings and collect dependencies
+  for (BindingMap::const_iterator it = bindings.begin();
+       it != bindings.end(); ++it) {
+    std::stack<ref<Expr> > childQueue;
+    childQueue.push(it->first);
+    // Non-recursive expression parsing
+    while (childQueue.size()) {
+      Expr *ep = childQueue.top().get();
+      childQueue.pop();
+      for (unsigned i = 0; i < ep->getNumKids(); ++i) {
+        ref<Expr> e = ep->getKid(i);
+        if (isa<ConstantExpr>(e))
+          continue;
+        // Are there any dependencies in the bindings?
+        if (bindings.count(e)) {
+          usesSubExprMap[it->first].insert(e);
+          subExprOfMap[e].insert(it->first);
+        } else {
+          childQueue.push(e);
+        }
+      }
+    }
+    // Store expressions with zero deps
+    if (!usesSubExprMap.count(it->first))
+      nonDepBindings.push_back(it->first);
+  }
+  assert(nonDepBindings.size() && "there must be expr bindings with no deps");
+  // Unroll the dependency tree starting with zero-dep expressions
+  // and redefine bindings
+  unsigned counter = 1;
+  // nonDepBindings always holds expressions with no dependencies
+  while (nonDepBindings.size()) {
+    BindingMap levelExprs;
+    std::vector<ref<Expr> > tmp(nonDepBindings);
+    nonDepBindings.clear();
+    for (std::vector<ref<Expr> >::const_iterator nonDepExprIt = tmp.begin();
+         nonDepExprIt != tmp.end(); ++nonDepExprIt) {
+      // Save to the level expression bindings
+      levelExprs.insert(std::make_pair(*nonDepExprIt, counter++));
+      // Who is dependent on me?
+      ExprDepMap::iterator depsIt = subExprOfMap.find(*nonDepExprIt);
+      if (depsIt != subExprOfMap.end()) {
+        for (std::set<ref<Expr> >::iterator exprIt = depsIt->second.begin();
+             exprIt != depsIt->second.end(); ) {
+          // Erase dependency
+          ExprDepMap::iterator subExprIt = usesSubExprMap.find(*exprIt);
+          assert(subExprIt != usesSubExprMap.end());
+          assert(subExprIt->second.count(*nonDepExprIt));
+          subExprIt->second.erase(*nonDepExprIt);
+          // If the expression *exprIt does not have any
+          // dependencies anymore, add it to the queue
+          if (!subExprIt->second.size()) {
+            nonDepBindings.push_back(*exprIt);
+            depsIt->second.erase(exprIt++);
+          } else {
+            ++exprIt;
+          }
+        }
+      }
+    }
+    // Store level bindings
+    orderedBindings.push_back(levelExprs);
+  }
+}
+
 void ExprSMTLIBPrinter::scanUpdates(const UpdateNode *un) {
   while (un != NULL) {
     scan(un->index);
@@ -730,7 +823,7 @@ void ExprSMTLIBPrinter::printAssert(const ref<Expr> &e) {
   p->pushIndent();
   printSeperator();
 
-  if (abbrMode == ABBR_LET && bindings.size() != 0) {
+  if (abbrMode == ABBR_LET && orderedBindings.size() != 0) {
     // Only print let expression if we have bindings to use.
     *p << "(let";
     p->pushIndent();
@@ -738,37 +831,52 @@ void ExprSMTLIBPrinter::printAssert(const ref<Expr> &e) {
     *p << "(";
     p->pushIndent();
 
-    // Disable abbreviations so none are used here.
-    abbrMode = ABBR_NONE;
+    // Clear original bindings, we'll be using orderedBindings
+    // to print nested let expressions
+    bindings.clear();
 
-    // Print each binding
-    for (BindingMap::const_iterator i = bindings.begin(); i != bindings.end();
-         ++i) {
+    // Print each binding on it's level
+    for (unsigned i = 0; i < orderedBindings.size(); ++i) {
+      BindingMap levelBindings = orderedBindings[i];
+      for (BindingMap::const_iterator j = levelBindings.begin();
+           j != levelBindings.end(); ++j) {
+        printSeperator();
+        *p << "(?B" << j->second;
+        p->pushIndent();
+        printSeperator();
+
+        // We can abbreviate SORT_BOOL or SORT_BITVECTOR in let expressions
+        printExpression(j->first, getSort(j->first));
+
+        p->popIndent();
+        printSeperator();
+        *p << ")";
+      }
+      p->popIndent();
       printSeperator();
-      *p << "(?B" << i->second;
-      p->pushIndent();
+      *p << ")";
       printSeperator();
 
-      // We can abbreviate SORT_BOOL or SORT_BITVECTOR in let expressions
-      printExpression(i->first, getSort(i->first));
+      // Add nested let expressions (if any)
+      if (i < orderedBindings.size()-1) {
+        *p << "(let";
+        p->pushIndent();
+        printSeperator();
+        *p << "(";
+        p->pushIndent();
+      }
+      // Insert current level bindings so that they can be used
+      // in the next level during expression printing
+      bindings.insert(levelBindings.begin(), levelBindings.end());
+    }
 
+    printExpression(e, SORT_BOOL);
+
+    for (unsigned i = 0; i < orderedBindings.size(); ++i) {
       p->popIndent();
       printSeperator();
       *p << ")";
     }
-
-    // Re-enable printing abbreviations.
-    abbrMode = ABBR_LET;
-
-    p->popIndent();
-    printSeperator();
-    *p << ")";
-    printSeperator();
-
-    printExpression(e, SORT_BOOL);
-    p->popIndent();
-    printSeperator();
-    *p << ")";
   } else {
     printExpression(e, SORT_BOOL);
   }
