@@ -56,4 +56,7 @@ namespace klee {
 
 }
 
+#undef unordered_map
+#undef unordered_set
+
 #endif
