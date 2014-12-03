@@ -15,6 +15,7 @@ int main() {
   klee_prefer_cex(buf, buf[0]=='H');
   klee_prefer_cex(buf, buf[1]=='i');
   klee_prefer_cex(buf, buf[2]=='\0');
+  klee_prefer_cex(buf, buf[3]=='\0');
 
   return 0;
 }
