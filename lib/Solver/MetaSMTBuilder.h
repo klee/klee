@@ -499,6 +499,11 @@ typename SolverContext::result_type MetaSMTBuilder<SolverContext>::bvVarLeftShif
                                                     bvLeftShift(expr, width, i, shiftBits),
                                                     res));
     }
+    
+    // If overshifting, shift to zero    
+    res = evaluate(_solver, metaSMT::logic::Ite(bvult(shift, bvConst32(shiftBits, width)),
+                                                res,
+                                                bvZero(width)));                                                
 
     return(res);
 }
@@ -521,6 +526,11 @@ typename SolverContext::result_type MetaSMTBuilder<SolverContext>::bvVarRightShi
                                                     res));
          // ToDo Reconsider widht to provide to bvRightShift
     }
+    
+    // If overshifting, shift to zero
+    res = evaluate(_solver, metaSMT::logic::Ite(bvult(shift, bvConst32(shiftBits, width)),
+                                                res,
+                                                bvZero(width)));                                                
 
     return(res);
 }
@@ -548,6 +558,11 @@ typename SolverContext::result_type MetaSMTBuilder<SolverContext>::bvVarArithRig
                                                     constructAShrByConstant(expr, width, i, signedBool, shiftBits),
                                                     res));
     }
+    
+    // If overshifting, shift to zero
+    res = evaluate(_solver, metaSMT::logic::Ite(bvult(shift, bvConst32(shiftBits, width)),
+                                                res,
+                                                bvZero(width)));      
 
     return(res);
 }
