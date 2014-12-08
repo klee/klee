@@ -284,7 +284,7 @@ typename SolverContext::result_type MetaSMTBuilder<SolverContext>::constructAShr
     if (shift == 0) {
         res = expr;
     }
-    else if (shift >= width - 1) {
+    else if (shift >= width) {
         res = evaluate(_solver, metaSMT::logic::Ite(isSigned, bvMinusOne(width), bvZero(width)));
     }
     else {
