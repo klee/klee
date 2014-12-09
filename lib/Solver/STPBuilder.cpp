@@ -283,7 +283,7 @@ ExprHandle STPBuilder::constructAShrByConstant(ExprHandle expr,
 
   if (shift==0) {
     return expr;
-  } else if (shift>=width-1) {
+  } else if (shift>=width) {
     return bvZero(width); // Overshift to zero
   } else {
     return vc_iteExpr(vc,
