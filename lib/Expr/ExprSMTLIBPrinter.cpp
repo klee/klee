@@ -689,8 +689,10 @@ void ExprSMTLIBPrinter::scan(const ref<Expr> &e) {
 void ExprSMTLIBPrinter::scanBindingExprDeps() {
   if (!bindings.size())
     return;
+
   // Mutual dependency storage
   typedef std::map<const ref<Expr>, std::set<ref<Expr> > > ExprDepMap;
+
   // A map from binding Expr (need abbreviating) "e" to the set of binding Expr
   // that are sub expressions of "e" (i.e. "e" uses these sub expressions).
   // usesSubExprMap[a].count(b) == 1  means that binding Expr "a" uses
@@ -698,15 +700,18 @@ void ExprSMTLIBPrinter::scanBindingExprDeps() {
   // One can think of this map representing the "depends on" edges
   // in a "dependency graph" where nodes are binding Expr roots
   ExprDepMap usesSubExprMap;
+
   // A map from Binding Expr "e" to the set of binding Expr that use "e"
   // subExprOfMap[a].count(b) == 1 means that binding Expr "a" is a sub Expr
   // of binding Expr "b".
   // One can think of this map as representing the edges in the previously
   // mentioned "dependency graph" except the direction of the edges
-  // has been reversed
+  // have been reversed
   ExprDepMap subExprOfMap;
+
   // Working queue holding expressions with no dependencies
   std::vector<ref<Expr> > nonDepBindings;
+
   // Iterate over bindings and collect dependencies
   for (BindingMap::const_iterator it = bindings.begin();
        it != bindings.end(); ++it) {
@@ -734,6 +739,7 @@ void ExprSMTLIBPrinter::scanBindingExprDeps() {
       nonDepBindings.push_back(it->first);
   }
   assert(nonDepBindings.size() && "there must be expr bindings with no deps");
+
   // Unroll the dependency tree starting with zero-dep expressions
   // and redefine bindings
   unsigned counter = 1;
