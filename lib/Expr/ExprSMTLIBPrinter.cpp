@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "klee/util/ExprSMTLIBPrinter.h"
 
 #include <stack>
@@ -159,8 +160,7 @@ void ExprSMTLIBPrinter::printConstant(const ref<ConstantExpr> &e) {
     break;
 
   default:
-    llvm::errs() << "ExprSMTLIBPrinter::printConstant() : Unexpected Constant "
-                    "display mode\n";
+    llvm_unreachable("Unexpected constant display mode");
   }
 }
 
@@ -429,7 +429,7 @@ const char *ExprSMTLIBPrinter::getSMTLIBKeyword(const ref<Expr> &e) {
     return "bvsge";
 
   default:
-    return "<error>";
+    llvm_unreachable("Conversion from Expr to SMTLIB keyword failed");
   }
 }
 
@@ -653,11 +653,7 @@ void ExprSMTLIBPrinter::printAction() {
 }
 
 void ExprSMTLIBPrinter::scan(const ref<Expr> &e) {
-  if (e.isNull()) {
-    llvm::errs() << "ExprSMTLIBPrinter::scan() : Found NULL expression!"
-                 << "\n";
-    return;
-  }
+  assert(!(e.isNull()) && "found NULL expression");
 
   if (isa<ConstantExpr>(e))
     return; // we don't need to scan simple constants
@@ -974,7 +970,7 @@ void ExprSMTLIBPrinter::printCastToSort(const ref<Expr> &e,
 
   } break;
   default:
-    assert(0 && "Unsupported cast!");
+    llvm_unreachable("Unsupported cast");
   }
 }
 
@@ -1045,7 +1041,7 @@ void ExprSMTLIBPrinter::printLogicalOrBitVectorExpr(
     *p << ((s == SORT_BITVECTOR) ? "bvxor" : "xor");
     break;
   default:
-    *p << "ERROR"; // this shouldn't happen
+    llvm_unreachable("Conversion from Expr to SMTLIB keyword failed");
   }
   *p << " ";
 
