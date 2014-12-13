@@ -82,7 +82,7 @@ public:
   enum SMTLIBv2Logic {
     QF_ABV,  ///< Logic using Theory of Arrays and Theory of Bitvectors
     QF_AUFBV ///< Logic using Theory of Arrays and Theory of Bitvectors and has
-             ///uninterpreted functions
+             ///< uninterpreted functions
   };
 
   /// Different SMTLIBv2 options that have a boolean value that can be set
@@ -99,7 +99,7 @@ public:
     OPTION_TRUE,   ///< Set option to true
     OPTION_FALSE,  ///< Set option to false
     OPTION_DEFAULT ///< Use solver's defaults (the option will not be set in
-                   ///output)
+                   ///< output)
   };
 
   enum ConstantDisplayMode {

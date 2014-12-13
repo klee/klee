@@ -241,7 +241,7 @@ void ExprSMTLIBPrinter::printFullExpression(
 
   case Expr::Eq:
     /* The "=" operator is special in that it can take any sort but we must
-     * enforce that both arguments are the same type. We do this a lazy way
+     * enforce that both arguments are the same sort. We do this in a lazy way
      * by enforcing the second argument is of the same type as the first.
      */
     printSortArgsExpr(e, getSort(e->getKid(0)));
@@ -254,8 +254,8 @@ void ExprSMTLIBPrinter::printFullExpression(
   case Expr::Not:
     /* These operators have a bitvector version and a bool version.
      * For these operators only (e.g. wouldn't apply to bvult) if the expected
-     * sort the
-     * expression is T then that implies the arguments are also of type T.
+     * sort of the expression is T then that implies the arguments are also of
+     * type T.
      */
     printLogicalOrBitVectorExpr(e, expectedSort);
 
@@ -307,7 +307,7 @@ void ExprSMTLIBPrinter::printExtractExpr(const ref<ExtractExpr> &e) {
 }
 
 void ExprSMTLIBPrinter::printCastExpr(const ref<CastExpr> &e) {
-  /* sign_extend and zero_extend behave slightly unusually in SMTLIBv2
+  /* sign_extend and zero_extend behave slightly unusually in SMTLIBv2,
    * instead of specifying of what bit-width we would like to extend to
    * we specify how many bits to add to the child expression
    *
@@ -667,8 +667,8 @@ void ExprSMTLIBPrinter::scan(const ref<Expr> &e) {
 
     if (const ReadExpr *re = dyn_cast<ReadExpr>(e)) {
 
-      // Attempt to insert array and if array wasn't present before do more things
       if (usedArrays.insert(re->updates.root).second) {
+        // Array was not recorded before
 
         // check if the array is constant
         if (re->updates.root->isConstantArray())
@@ -835,7 +835,7 @@ void ExprSMTLIBPrinter::printAssert(const ref<Expr> &e) {
     // to print nested let expressions
     bindings.clear();
 
-    // Print each binding on it's level
+    // Print each binding on its level
     for (unsigned i = 0; i < orderedBindings.size(); ++i) {
       BindingMap levelBindings = orderedBindings[i];
       for (BindingMap::const_iterator j = levelBindings.begin();
@@ -944,9 +944,9 @@ void ExprSMTLIBPrinter::printCastToSort(const ref<Expr> &e,
     *p << ")";
     break;
   case SORT_BOOL: {
-    /* We make the assumption (might be wrong) that any bitvector whos unsigned
-     *decimal value is
-     * is zero is interpreted as "false", otherwise it is true.
+    /* We make the assumption (might be wrong) that any bitvector whose unsigned
+     * decimal value is is zero is interpreted as "false", otherwise it is
+     * true.
      *
      * This may not be the interpretation we actually want!
      */
