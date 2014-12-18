@@ -575,6 +575,11 @@ void KleeHandler::getOutFiles(std::string path,
 }
 
 std::string KleeHandler::getRunTimeLibraryPath(const char *argv0) {
+  // allow specifying the path to the runtime library
+  const char *env = getenv("KLEE_RUNTIME_LIBRARY_PATH");
+  if (env)
+    return std::string(env);
+
   // Take any function from the execution binary but not main (as not allowed by
   // C++ standard)
   void *MainExecAddr = (void *)(intptr_t)getRunTimeLibraryPath;
