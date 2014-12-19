@@ -1260,6 +1260,8 @@ void Executor::executeCall(ExecutionState &state,
         return;
       }
     } else {
+      Expr::Width WordSize = Context::get().getPointerWidth();
+
       if (callingArgs < funcArgs) {
         terminateStateOnError(state, "calling function with too few arguments", 
                               "user.err");
@@ -1271,12 +1273,18 @@ void Executor::executeCall(ExecutionState &state,
       for (unsigned i = funcArgs; i < callingArgs; i++) {
         // FIXME: This is really specific to the architecture, not the pointer
         // size. This happens to work fir x86-32 and x86-64, however.
-        Expr::Width WordSize = Context::get().getPointerWidth();
         if (WordSize == Expr::Int32) {
           size += Expr::getMinBytesForWidth(arguments[i]->getWidth());
         } else {
-          size += llvm::RoundUpToAlignment(arguments[i]->getWidth(), 
-                                           WordSize) / 8;
+          Expr::Width argWidth = arguments[i]->getWidth();
+          // AMD64-ABI 3.5.7p5: Step 7. Align l->overflow_arg_area upwards to a 16
+          // byte boundary if alignment needed by type exceeds 8 byte boundary.
+          //
+          // Alignment requirements for scalar types is the same as their size
+          if (argWidth > Expr::Int64) {
+             size = llvm::RoundUpToAlignment(size, 16);
+          }
+          size += llvm::RoundUpToAlignment(argWidth, WordSize) / 8;
         }
       }
 
@@ -1286,20 +1294,29 @@ void Executor::executeCall(ExecutionState &state,
         terminateStateOnExecError(state, "out of memory (varargs)");
         return;
       }
+
+      if ((WordSize == Expr::Int64) && (mo->address & 15)) {
+        // Both 64bit Linux/Glibc and 64bit MacOSX should align to 16 bytes.
+        klee_warning_once(0, "While allocating varargs: malloc did not align to 16 bytes.");
+      }
+
       ObjectState *os = bindObjectInState(state, mo, true);
       unsigned offset = 0;
       for (unsigned i = funcArgs; i < callingArgs; i++) {
         // FIXME: This is really specific to the architecture, not the pointer
         // size. This happens to work fir x86-32 and x86-64, however.
-        Expr::Width WordSize = Context::get().getPointerWidth();
         if (WordSize == Expr::Int32) {
           os->write(offset, arguments[i]);
           offset += Expr::getMinBytesForWidth(arguments[i]->getWidth());
         } else {
           assert(WordSize == Expr::Int64 && "Unknown word size!");
+
+          Expr::Width argWidth = arguments[i]->getWidth();
+          if (argWidth > Expr::Int64) {
+             offset = llvm::RoundUpToAlignment(offset, 16);
+          }
           os->write(offset, arguments[i]);
-          offset += llvm::RoundUpToAlignment(arguments[i]->getWidth(), 
-                                             WordSize) / 8;
+          offset += llvm::RoundUpToAlignment(argWidth, WordSize) / 8;
         }
       }
     }
