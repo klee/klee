@@ -11,12 +11,44 @@ Build System / Configure / Release Cleanups
 
  o Need a way to hide LLVM options in "klee --help".
 
+
 Klee Internal
 --
  o Make sure that namespaces and .cpp locations match with reorganized
    include locations.
 
  o Add replay framework for POSIX model tests.
+
+ o We need to reimplement the constant Expr optimization which
+   previously was embedded in the ref<> class to improve concrete
+   interpretation performance. See:
+   http://llvm.org/viewvc/llvm-project?view=rev&revision=72753
+
+   The idea is that only the interpreter should have to deal with this
+   distinction. The new scheme is that we embed small constants inside
+   the Cell data structure. Clients which want to get an Expr will use
+   a standard accessor method which will automatically cons up the
+   appropriate ConstantExpr if needed, and the core interpretation
+   functions will be modified to operator on Cells directly so that
+   they can avoid the allocation overhead.
+
+   In the end, this should actually improve concrete execution
+   performance because we have will have tightened the interpreter
+   loop. The downside is that the Expr language will always allocate
+   constants, but since performance is usually out-the-window once
+   dealing with constraints, this seems like the correct tradeoff.
+
+ o Support executing programs which are compiled for a different
+   architecture than that of the host.  Steps:
+   
+   1. Provide a way to find the correct runtime libraries, based on the target architecture.
+
+   2. Extend build system to support building the runtime libraries for a separate target.
+
+   3. Since calling external functions will be totally invalid in this
+      environment, we will have to invent replacements for the useful
+      ones (printf). 
+
 
 Kleaver Internal
 --
@@ -55,4 +87,8 @@ Kleaver Internal
        builder.
 
 
+Testing
+-------
 
+ o We should try using klee instead of lli on a nightlytester setup,
+   to flush out problems with concrete execution.
