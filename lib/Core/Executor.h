@@ -457,6 +457,8 @@ public:
   virtual void getConstraintLog(const ExecutionState &state,
                                 std::string &res,
                                 Interpreter::LogType logFormat = Interpreter::STP);
+  virtual void getRanges(const ExecutionState &state,
+          std::string &res);
 
   virtual bool getSymbolicSolution(const ExecutionState &state, 
                                    std::vector< 

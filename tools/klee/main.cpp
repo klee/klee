@@ -110,7 +110,11 @@ namespace {
   cl::opt<bool>
   WriteCov("write-cov", 
            cl::desc("Write coverage information for each test case"));
-  
+
+  cl::opt<bool>
+      WriteRange("write-range",
+              cl::desc("Write the range of values for symbolic value."));
+
   cl::opt<bool>
   WriteTestInfo("write-test-info", 
                 cl::desc("Write additional test case information"));
@@ -495,6 +499,14 @@ void KleeHandler::processTestCase(const ExecutionState &state,
         m_interpreter->getConstraintLog(state, constraints, Interpreter::SMTLIB2);
         llvm::raw_ostream *f = openTestFile("smt2", id);
         *f << constraints;
+        delete f;
+    }
+
+    if (WriteRange) {
+        std::string ranges;
+        m_interpreter->getRanges(state, ranges);
+        llvm::raw_ostream *f = openTestFile("range", id);
+        *f << ranges;
         delete f;
     }
 
