@@ -265,6 +265,11 @@ namespace {
   MaxMemoryInhibit("max-memory-inhibit",
             cl::desc("Inhibit forking at memory cap (vs. random terminate) (default=on)"),
             cl::init(true));
+
+  cl::opt<unsigned>
+  MaxForksTerminate("max-forks-terminate",
+		  cl::desc("Only fork this many times and then dump states (default=-1 (off))"),
+          cl::init(~0u));
 }
 
 
@@ -796,6 +801,10 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
         }
       }
     }
+  }
+
+  if(stats::forks >= MaxForksTerminate){
+	  haltExecution = true;
   }
 
   // Fix branch in only-replay-seed mode, if we don't have both true
