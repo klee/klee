@@ -22,6 +22,7 @@
 #include <sstream>
 #include <set>
 #include <vector>
+#include <map>
 
 namespace llvm {
   class Type;
