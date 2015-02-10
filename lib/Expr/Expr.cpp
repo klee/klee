@@ -494,6 +494,30 @@ unsigned Array::computeHash() {
   return hashValue; 
 }
 
+std::map<unsigned, const Array *> Array::symbolicArraySingletonMap;
+
+const Array * Array::CreateArray(const std::string &_name, uint64_t _size,
+		const ref<ConstantExpr> *constantValuesBegin,
+		const ref<ConstantExpr> *constantValuesEnd,
+		Expr::Width _domain, Expr::Width _range){
+
+	const Array * array = new Array(_name, _size, constantValuesBegin, constantValuesEnd, _domain,_range);
+	if(array->constantValues.size() == 0){
+		//means is a symbolic array and we should look up the values;
+		unsigned hash = array->hash();
+		if(Array::symbolicArraySingletonMap.count(hash)){
+			delete array;
+			return Array::symbolicArraySingletonMap[hash];
+		}else{
+			Array::symbolicArraySingletonMap[hash] = array;
+			return array;
+		}
+	}else{
+		return array;
+	}
+	return 0;
+}
+
 /***/
 
 ref<Expr> ReadExpr::create(const UpdateList &ul, ref<Expr> index) {

@@ -46,7 +46,7 @@ void testOperation(Solver &solver,
 
     unsigned size = Expr::getMinBytesForWidth(operandWidth);
     static uint64_t id = 0;
-    Array *array = new Array("arr" + llvm::utostr(++id), size);
+    Array *array = Array::CreateArray("arr" + llvm::utostr(++id), size);
     symbolicArgs.push_back(Expr::CreateArg(Expr::createTempRead(array, 
                                                                 operandWidth)));
   }
