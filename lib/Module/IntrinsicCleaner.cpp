@@ -66,13 +66,15 @@ bool IntrinsicCleanerPass::runOnModule(Module &M) {
 
 bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
   bool dirty = false;
+  bool block_split=false;
   
 #if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
   unsigned WordSize = TargetData.getPointerSizeInBits() / 8;
 #else
   unsigned WordSize = DataLayout.getPointerSizeInBits() / 8;
 #endif
-  for (BasicBlock::iterator i = b.begin(), ie = b.end(); i != ie;) {     
+  for (BasicBlock::iterator i = b.begin(), ie = b.end();
+       (i != ie) && (block_split == false);) {
     IntrinsicInst *ii = dyn_cast<IntrinsicInst>(&*i);
     // increment now since LowerIntrinsic deletion makes iterator invalid.
     ++i;  
@@ -116,7 +118,11 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
         break;
       }
 
+      case Intrinsic::sadd_with_overflow:
+      case Intrinsic::ssub_with_overflow:
+      case Intrinsic::smul_with_overflow:
       case Intrinsic::uadd_with_overflow:
+      case Intrinsic::usub_with_overflow:
       case Intrinsic::umul_with_overflow: {
         IRBuilder<> builder(ii->getParent(), ii);
 
@@ -124,13 +130,71 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
         Value *op2 = ii->getArgOperand(1);
         
         Value *result = 0;
-        if (ii->getIntrinsicID() == Intrinsic::uadd_with_overflow)
-          result = builder.CreateAdd(op1, op2);
-        else
-          result = builder.CreateMul(op1, op2);
+        Value *result_ext = 0;
+        Value *overflow = 0;
 
-        Value *overflow = builder.CreateICmpULT(result, op1);
-        
+        unsigned int bw = op1->getType()->getPrimitiveSizeInBits();
+        unsigned int bw2 = op1->getType()->getPrimitiveSizeInBits()*2;
+
+        if ((ii->getIntrinsicID() == Intrinsic::uadd_with_overflow) ||
+            (ii->getIntrinsicID() == Intrinsic::usub_with_overflow) ||
+            (ii->getIntrinsicID() == Intrinsic::umul_with_overflow)) {
+
+          Value *op1ext =
+            builder.CreateZExt(op1, IntegerType::get(M.getContext(), bw2));
+          Value *op2ext =
+            builder.CreateZExt(op2, IntegerType::get(M.getContext(), bw2));
+          Value *int_max_s =
+            ConstantInt::get(op1->getType(), APInt::getMaxValue(bw));
+          Value *int_max =
+            builder.CreateZExt(int_max_s, IntegerType::get(M.getContext(), bw2));
+
+          if (ii->getIntrinsicID() == Intrinsic::uadd_with_overflow){
+            result_ext = builder.CreateAdd(op1ext, op2ext);
+          } else if (ii->getIntrinsicID() == Intrinsic::usub_with_overflow){
+            result_ext = builder.CreateSub(op1ext, op2ext);
+          } else if (ii->getIntrinsicID() == Intrinsic::umul_with_overflow){
+            result_ext = builder.CreateMul(op1ext, op2ext);
+          }
+          overflow = builder.CreateICmpUGT(result_ext, int_max);
+
+        } else if ((ii->getIntrinsicID() == Intrinsic::sadd_with_overflow) ||
+                   (ii->getIntrinsicID() == Intrinsic::ssub_with_overflow) ||
+                   (ii->getIntrinsicID() == Intrinsic::smul_with_overflow)) {
+
+          Value *op1ext =
+            builder.CreateSExt(op1, IntegerType::get(M.getContext(), bw2));
+          Value *op2ext =
+            builder.CreateSExt(op2, IntegerType::get(M.getContext(), bw2));
+          Value *int_max_s =
+            ConstantInt::get(op1->getType(), APInt::getSignedMaxValue(bw));
+          Value *int_min_s =
+            ConstantInt::get(op1->getType(), APInt::getSignedMinValue(bw));
+          Value *int_max =
+            builder.CreateSExt(int_max_s, IntegerType::get(M.getContext(), bw2));
+          Value *int_min =
+            builder.CreateSExt(int_min_s, IntegerType::get(M.getContext(), bw2));
+
+          if (ii->getIntrinsicID() == Intrinsic::sadd_with_overflow){
+            result_ext = builder.CreateAdd(op1ext, op2ext);
+          } else if (ii->getIntrinsicID() == Intrinsic::ssub_with_overflow){
+            result_ext = builder.CreateSub(op1ext, op2ext);
+          } else if (ii->getIntrinsicID() == Intrinsic::smul_with_overflow){
+            result_ext = builder.CreateMul(op1ext, op2ext);
+          }
+          overflow = builder.CreateOr(builder.CreateICmpSGT(result_ext, int_max),
+                                      builder.CreateICmpSLT(result_ext, int_min));
+        }
+
+        // This trunc cound be replaced by a more general trunc replacement
+        // that allows to detect also undefined behavior in assignments or
+        // overflow in operation with integers whose dimension is smaller than
+        // int's dimension, e.g.
+        //     uint8_t = uint8_t + uint8_t;
+        // if one desires the wrapping should write
+        //     uint8_t = (uint8_t + uint8_t) & 0xFF;
+        // before this, must check if it has side effects on other operations
+        result = builder.CreateTrunc(result_ext, op1->getType());
         Value *resultStruct =
           builder.CreateInsertValue(UndefValue::get(ii->getType()), result, 0);
         resultStruct = builder.CreateInsertValue(resultStruct, overflow, 1);
