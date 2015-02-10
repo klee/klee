@@ -305,7 +305,7 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Expr::Kind kin
   Expr::printKind(os, kind);
   return os;
 }
-#endif
+#endif //LLVM_29_UNITTEST
 
 inline std::stringstream &operator<<(std::stringstream &os, const Expr &e) {
   std::string str;
@@ -601,55 +601,92 @@ private:
 
 class Array {
 public:
-  const std::string name;
-  // FIXME: Not 64-bit clean.
-  unsigned size;  
+	//Name of the array
+	const std::string name;
 
-  /// constantValues - The constant initial values for this array, or empty for
-  /// a symbolic array. If non-empty, this size of this array is equivalent to
-  /// the array size.
-  const std::vector< ref<ConstantExpr> > constantValues;
+	// FIXME: Not 64-bit clean.
+	const unsigned size;
 
-  Expr::Width domain, range;
+	//Domain is how many bits can be used to access the array [32 bits]
+	//Range is the size (in bits) of the number stored there (array of bytes -> 8)
+	const Expr::Width domain, range;
+
+	/// constantValues - The constant initial values for this array, or empty for
+	/// a symbolic array. If non-empty, this size of this array is equivalent to
+	/// the array size.
+	const std::vector<ref<ConstantExpr> > constantValues;
+
+	/// Array - Construct a new array object.
+	///
+	/// \param _name - The name for this array. Names should generally be unique
+	/// across an application, but this is not necessary for correctness, except
+	/// when printing expressions. When expressions are printed the output will
+	/// not parse correctly since two arrays with the same name cannot be
+	/// distinguished once printed.
+
+private:
+	unsigned hashValue;
+
+	/*
+	 * The symbolic array singleton map is necessary to prevent aliasing issues on arrays.
+	 * A lot of the Solvers use maps such as <const * Array, std::vector<unsigned>>.
+	 * This causes problems because stored answers can't be easily recovered.
+	 * Even worse, in read expressions, such as (read array 32), array is a pointer,
+	 * meaning actual solutions don't "work" because the two instances of array
+	 * aren't recognized as the same.
+	 */
+	static std::map<unsigned, const Array *> symbolicArraySingletonMap;
+
+	//This shouldn't be allowed since it's a singleton class
+	Array(const Array& array);
+
+	//This shouldn't be allowed since it's a singleton class
+	Array& operator =(const Array& array);
+
+	~Array();
+
+	Array(const std::string &_name, uint64_t _size,
+			const ref<ConstantExpr> *constantValuesBegin = 0,
+			const ref<ConstantExpr> *constantValuesEnd = 0,
+			Expr::Width _domain = Expr::Int32, Expr::Width _range = Expr::Int8)
+	: name(_name), size(_size), domain(_domain), range(_range),
+	  constantValues(constantValuesBegin, constantValuesEnd)
+	{
+		assert((isSymbolicArray() || constantValues.size() == size) &&
+				"Invalid size for constant array!");
+		computeHash();
+#ifndef NDEBUG
+		for (const ref<ConstantExpr> *it = constantValuesBegin;
+				it != constantValuesEnd; ++it)
+			assert((*it)->getWidth() == getRange() &&
+					"Invalid initial constant value!");
+#endif //NDEBUG
+	}
 
 public:
-  /// Array - Construct a new array object.
-  ///
-  /// \param _name - The name for this array. Names should generally be unique
-  /// across an application, but this is not necessary for correctness, except
-  /// when printing expressions. When expressions are printed the output will
-  /// not parse correctly since two arrays with the same name cannot be
-  /// distinguished once printed.
-  Array(const std::string &_name, uint64_t _size, 
-        const ref<ConstantExpr> *constantValuesBegin = 0,
-        const ref<ConstantExpr> *constantValuesEnd = 0,
-        Expr::Width _domain = Expr::Int32, Expr::Width _range = Expr::Int8)
-    : name(_name), size(_size), 
-      constantValues(constantValuesBegin, constantValuesEnd),
-      domain(_domain), range(_range) {
-    assert((isSymbolicArray() || constantValues.size() == size) &&
-           "Invalid size for constant array!");
-    computeHash();
-#ifndef NDEBUG
-    for (const ref<ConstantExpr> *it = constantValuesBegin;
-         it != constantValuesEnd; ++it)
-      assert((*it)->getWidth() == getRange() &&
-             "Invalid initial constant value!");
-#endif
-  }
-  ~Array();
+	bool isSymbolicArray() const { return constantValues.empty(); }
+	bool isConstantArray() const { return !isSymbolicArray(); }
 
-  bool isSymbolicArray() const { return constantValues.empty(); }
-  bool isConstantArray() const { return !isSymbolicArray(); }
+	const std::string getName() const { return name; }
+	unsigned getSize() const { return size; }
+	Expr::Width getDomain() const { return domain; }
+	Expr::Width getRange() const { return range; }
 
-  Expr::Width getDomain() const { return domain; }
-  Expr::Width getRange() const { return range; }
-  
-  unsigned computeHash();
-  unsigned hash() const { return hashValue; }
-   
-private:
-  unsigned hashValue;
+	unsigned computeHash();
+	unsigned hash() const { return hashValue; }
+
+	/*
+	 * Fairly simple idea.  Since by defn (see Array), symbolic arrays
+	 * have constant values of size 0.  Concrete Arrays have their respective
+	 * values stored in each element.  Therefore, each incoming call is tested.
+	 * An array is created and, if it's concrete, it's simply returned.  If
+	 * instead it is symbolic, then a map is checked to see if it was created
+	 * before, so there is only a single instance floating out there.
+	 */
+	static const Array * CreateArray(const std::string &_name, uint64_t _size,
+			const ref<ConstantExpr> *constantValuesBegin = 0,
+			const ref<ConstantExpr> *constantValuesEnd = 0,
+			Expr::Width _domain = Expr::Int32, Expr::Width _range = Expr::Int8);
 };
 
 /// Class representing a complete list of updates into an array.
@@ -1108,4 +1145,4 @@ inline bool Expr::isFalse() const {
 
 } // End klee namespace
 
-#endif
+#endif //KLEE_EXPR_H

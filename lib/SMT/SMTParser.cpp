@@ -165,7 +165,7 @@ void SMTParser::DeclareExpr(std::string name, Expr::Width w) {
   std::cout << "Declaring " << name << " of width " << w << "\n";
 #endif
   
-  Array *arr = new Array(name, w / 8);
+  Array *arr = Array::CreateArray(name, w / 8);
   
   ref<Expr> *kids = new ref<Expr>[w/8];
   for (unsigned i=0; i < w/8; i++)

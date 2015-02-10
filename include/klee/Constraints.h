@@ -66,9 +66,8 @@ public:
   }
   
   ref<Expr> get(unsigned index) const{
-    return constraints[index];
+	  return constraints[index];
   }
-
 
 private:
   std::vector< ref<Expr> > constraints;
