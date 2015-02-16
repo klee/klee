@@ -49,12 +49,78 @@ struct AssignmentLessThan {
   }
 };
 
+/*
+ * Contains a list of pairs of expressions and their answers that happen
+ * to map to the same hash value.  Prevents a hash collision.
+ */
+class AssignmentBundle{
+	typedef std::pair<std::set<unsigned>, Assignment *> answer;
+
+private:
+	//The list of possible answers to iterate through should a collision occur
+	std::vector<answer> possibleAnswers;
+
+public :
+	AssignmentBundle(){}
+
+	bool match(const KeyType &key, answer &possible){
+		if(key.size() != possible.first.size()){
+			return false;
+		}
+
+		for(std::set<ref<Expr> >::const_iterator it = key.begin(); it != key.end(); it ++){
+			if(possible.first.count(it->get()->hash()) == 0){
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	bool get(const KeyType &key, Assignment * &assignment){
+		for(std::vector<answer>::const_iterator it = possibleAnswers.begin(); it != possibleAnswers.end(); it++){
+			answer a = * it;
+			if(match(key, a)){
+				assignment = it->second;
+				return true;
+			}
+		}
+		assignment = 0;
+		return false;
+	}
+
+	bool get(const std::vector<ref<Expr> > & key, Assignment * &result){
+		KeyType pass;
+		for(std::vector<ref<Expr> >::const_iterator it = key.begin(); it != key.end(); it++){
+			ref<Expr> e = * it;
+			pass.insert(e);
+		}
+		return get(pass, result);
+	}
+
+	void put(const KeyType & key, Assignment * &result){
+		for(std::vector<answer>::const_iterator it = possibleAnswers.begin(); it != possibleAnswers.end(); it++){
+			answer a = * it;
+			if(match(key, a)){
+				return;
+			}
+		}
+		std::set<unsigned> add;
+		for(KeyType::const_iterator it = key.begin(); it != key.end(); it ++){
+			ref<Expr> expr = *it;
+			add.insert(expr.get()->hash());
+		}
+
+		answer a(add, result);
+		possibleAnswers.push_back(a);
+	}
+};
 
 class CexCachingSolver : public SolverImpl {
   typedef std::set<Assignment*, AssignmentLessThan> assignmentsTable_ty;
 
   Solver *solver;
-  
+
   MapOfSets<ref<Expr>, Assignment*> cache;
   // memo table
   assignmentsTable_ty assignmentsTable;
