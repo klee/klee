@@ -2924,7 +2924,7 @@ ref<Expr> Executor::replaceReadWithSymbolic(ExecutionState &state,
   // and return it.
   
   static unsigned id;
-  const Array *array = new Array("rrws_arr" + llvm::utostr(++id), 
+  const Array *array = Array::CreateArray("rrws_arr" + llvm::utostr(++id),
                                  Expr::getMinBytesForWidth(e->getWidth()));
   ref<Expr> res = Expr::createTempRead(array, e->getWidth());
   ref<Expr> eq = NotOptimizedExpr::create(EqExpr::create(e, res));
@@ -3263,7 +3263,7 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
     while (!state.arrayNames.insert(uniqueName).second) {
       uniqueName = name + "_" + llvm::utostr(++id);
     }
-    const Array *array = new Array(uniqueName, mo->size);
+    const Array *array = Array::CreateArray(uniqueName, mo->size);
     bindObjectInState(state, mo, false, array);
     state.addSymbolic(mo, array);
     
