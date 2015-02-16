@@ -29,13 +29,13 @@ namespace klee {
   public:
     Assignment(bool _allowFreeValues=false) 
       : allowFreeValues(_allowFreeValues) {}
-    Assignment(std::vector<const Array*> &objects, 
+    Assignment(const std::vector<const Array*> &objects,
                std::vector< std::vector<unsigned char> > &values,
                bool _allowFreeValues=false) 
       : allowFreeValues(_allowFreeValues){
       std::vector< std::vector<unsigned char> >::iterator valIt = 
         values.begin();
-      for (std::vector<const Array*>::iterator it = objects.begin(),
+      for (std::vector<const Array*>::const_iterator it = objects.begin(),
              ie = objects.end(); it != ie; ++it) {
         const Array *os = *it;
         std::vector<unsigned char> &arr = *valIt;
