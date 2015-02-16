@@ -252,6 +252,11 @@ namespace {
            cl::init(~0u));
   
   cl::opt<unsigned>
+  MaxForksTerminate("max-forks-terminate",
+           cl::desc("Only fork this many times.  After reaching limit, terminate exploration completely (default=-1 (off))"),
+           cl::init(~0u));
+
+  cl::opt<unsigned>
   MaxDepth("max-depth",
            cl::desc("Only allow this many symbolic branches (default=0 (off))"),
            cl::init(0));
@@ -1202,7 +1207,8 @@ void Executor::stepInstruction(ExecutionState &state) {
   state.prevPC = state.pc;
   ++state.pc;
 
-  if (stats::instructions==StopAfterNInstructions)
+  if ((stats::instructions==StopAfterNInstructions) ||
+      (MaxForksTerminate!=~0u && stats::forks >= MaxForksTerminate))
     haltExecution = true;
 }
 
