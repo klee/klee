@@ -120,6 +120,8 @@ class CexCachingSolver : public SolverImpl {
   typedef std::set<Assignment*, AssignmentLessThan> assignmentsTable_ty;
 
   Solver *solver;
+  
+  std::map<long, AssignmentBundle *> quickCache;
 
   MapOfSets<ref<Expr>, Assignment*> cache;
   // memo table
@@ -134,6 +136,13 @@ class CexCachingSolver : public SolverImpl {
     KeyType key;
     return lookupAssignment(query, key, result);
   }
+
+  //Caching operations
+  bool getFromQuickCache(const KeyType & key, Assignment * &assignment);
+  void insertInQuickCache(const KeyType & key, Assignment * &binding);
+  void insertInCaches(const KeyType & key, Assignment * &binding);
+
+  bool quickMatch(const Query &query, const KeyType &key, Assignment *&result);
 
   bool getAssignment(const Query& query, Assignment *&result);
   
@@ -237,6 +246,53 @@ bool CexCachingSolver::searchForAssignment(KeyType &key, Assignment *&result) {
   return false;
 }
 
+bool
+CexCachingSolver::getFromQuickCache(const KeyType &key, Assignment * &result){
+	long comboHash = 0;
+	for(KeyType::const_iterator it = key.begin(); it != key.end(); it++){
+		comboHash += (*it).get()->hash();
+	}
+
+	if(quickCache.count(comboHash)){
+		AssignmentBundle * bundle = quickCache[comboHash];
+		return bundle->get(key, result);
+	}
+	result = 0;
+	return false;
+}
+
+void
+CexCachingSolver::insertInQuickCache(const KeyType &key, Assignment * &binding){
+	long comboHash = 0;
+	for(KeyType::iterator it = key.begin(); it != key.end(); it++){
+		comboHash += (*it).get()->hash();
+	}
+
+	AssignmentBundle * b = quickCache[comboHash];
+	if(! b){
+		b = new AssignmentBundle();
+		quickCache[comboHash] = b;
+	}
+
+	b->put(key, binding);
+}
+
+void
+CexCachingSolver::insertInCaches(const KeyType &key, Assignment * &binding){
+	insertInQuickCache(key, binding);
+	cache.insert(key, binding);
+}
+
+bool CexCachingSolver::quickMatch(const Query &query,
+								  const KeyType &key,
+								  Assignment *&result) {
+	if(getFromQuickCache(key, result)){
+		return true;
+	}
+	result = 0;
+	return false;
+}
+
 /// lookupAssignment - Lookup a cached result for the given \arg query.
 ///
 /// \param query - The query to lookup.
@@ -260,10 +316,20 @@ bool CexCachingSolver::lookupAssignment(const Query &query,
     key.insert(neg);
   }
 
-  bool found = searchForAssignment(key, result);
-  if (found)
+  bool found = quickMatch(query, key, result);
+
+  if(!found){
+	  found = searchForAssignment(key, result);
+	  if(found){
+		  insertInQuickCache(key, result);
+	  }
+  }
+
+  if (found){
     ++stats::queryCexCacheHits;
-  else ++stats::queryCexCacheMisses;
+  }else{
+	  ++stats::queryCexCacheMisses;
+  }
     
   return found;
 }
@@ -301,7 +367,7 @@ bool CexCachingSolver::getAssignment(const Query& query, Assignment *&result) {
   }
   
   result = binding;
-  cache.insert(key, binding);
+  insertInCaches(key, binding);
 
   return true;
 }
@@ -383,10 +449,8 @@ bool CexCachingSolver::computeValue(const Query& query,
 
 bool 
 CexCachingSolver::computeInitialValues(const Query& query,
-                                       const std::vector<const Array*> 
-                                         &objects,
-                                       std::vector< std::vector<unsigned char> >
-                                         &values,
+                                       const std::vector<const Array*>  &objects,
+									   std::vector< std::vector<unsigned char> > &values,
                                        bool &hasSolution) {
   TimerStatIncrementer t(stats::cexCacheTime);
   Assignment *a;
