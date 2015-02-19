@@ -230,22 +230,19 @@ void ExprSMTLIBPrinter::printFullExpression(
     printCastExpr(cast<CastExpr>(e));
     return;
 
-  case Expr::Ne:
-    printNotEqualExpr(cast<NeExpr>(e));
-    return;
-
   case Expr::Select:
     // the if-then-else expression.
     printSelectExpr(cast<SelectExpr>(e), expectedSort);
     return;
 
   case Expr::Eq:
-    /* The "=" operator is special in that it can take any sort but we must
-     * enforce that both arguments are the same sort. We do this in a lazy way
-     * by enforcing the second argument is of the same type as the first.
+  case Expr::Ne:
+    /* The "=" and distinct operators are special in that it can take any sort
+     * but we must enforce that both arguments are the same sort. We do this in
+     * a lazy way by enforcing the second argument is of the same type as the
+     * first.
      */
     printSortArgsExpr(e, getSort(e->getKid(0)));
-
     return;
 
   case Expr::And:
@@ -337,32 +334,6 @@ void ExprSMTLIBPrinter::printCastExpr(const ref<CastExpr> &e) {
   *p << ")";
 }
 
-void ExprSMTLIBPrinter::printNotEqualExpr(const ref<NeExpr> &e) {
-  *p << "(not (";
-  p->pushIndent();
-  *p << "="
-     << " ";
-  p->pushIndent();
-  printSeperator();
-
-  /* The "=" operators allows both sorts. We assume
-   * that the second argument sort should be forced to be the same sort as the
-   * first argument
-   */
-  SMTLIB_SORT s = getSort(e->getKid(0));
-
-  printExpression(e->getKid(0), s);
-  printSeperator();
-  printExpression(e->getKid(1), s);
-  p->popIndent();
-  printSeperator();
-
-  *p << ")";
-  p->popIndent();
-  printSeperator();
-  *p << ")";
-}
-
 const char *ExprSMTLIBPrinter::getSMTLIBKeyword(const ref<Expr> &e) {
 
   switch (e->getKind()) {
@@ -407,8 +378,8 @@ const char *ExprSMTLIBPrinter::getSMTLIBKeyword(const ref<Expr> &e) {
 
   case Expr::Eq:
     return "=";
-
-  // Not Equal does not exist directly in SMTLIBv2
+  case Expr::Ne:
+    return "distinct";
 
   case Expr::Ult:
     return "bvult";
