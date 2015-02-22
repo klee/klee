@@ -248,7 +248,7 @@ namespace {
   
   cl::opt<unsigned>
   MaxForks("max-forks",
-           cl::desc("Only fork this many times (default=-1 (off))"),
+           cl::desc("Only fork this many times.  After reaching limit, push remaining symbolic states to an exit (default=-1 (off))"),
            cl::init(~0u));
   
   cl::opt<unsigned>
@@ -617,6 +617,27 @@ void Executor::initializeGlobals(ExecutionState &state) {
   }
 }
 
+/// Helper method to get an Assignment for a state.  This method is called
+/// when we have reached the maximum number of forks allotted for a particular
+/// exploration.
+Assignment * generateAssignmentForDanglingState(std::map<ExecutionState*, Assignment*> &maxForksMap,
+                                                TimingSolver * solver, ExecutionState &current){
+  Assignment *a = maxForksMap[&current];
+  if (!a){
+    std::vector< std::vector<unsigned char> > values;
+    std::vector<const Array*> objects;
+    for (unsigned i = 0; i != current.symbolics.size(); ++i){
+      objects.push_back(current.symbolics[i].second);
+    }
+    bool success = solver->getInitialValues(current, objects, values);
+    assert(success && "We have shown the state is SAT so we "
+           "should be able to generate a solution");
+    a = new Assignment(objects, values);
+    maxForksMap[&current] = a;
+  }
+  return a;
+}
+
 void Executor::branch(ExecutionState &state, 
                       const std::vector< ref<Expr> > &conditions,
                       std::vector<ExecutionState*> &result) {
@@ -625,9 +646,16 @@ void Executor::branch(ExecutionState &state,
   assert(N);
 
   if (MaxForks!=~0u && stats::forks >= MaxForks) {
-    unsigned next = theRNG.getInt32() % N;
+    //See if the state has a previously calculated solution
+    Assignment *a =  generateAssignmentForDanglingState(maxForksMap, solver, state);
     for (unsigned i=0; i<N; ++i) {
-      if (i == next) {
+      ref<Expr> r = a->evaluate(conditions[i]);
+      assert(isa<ConstantExpr>(r) && "Must evaluate to t/f");
+      /// Based on whether the solution follows the true or false branch,
+      /// (Note: it must do one of the two) we add that state to the queue
+      /// to be further extended.  Since we don't want to fork, the other
+      /// option is simply dropped.
+      if (cast<ConstantExpr>(r)->isTrue()){
         result.push_back(&state);
       } else {
         result.push_back(NULL);
@@ -741,7 +769,42 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
   if (isSeeding)
     timeout *= it->second.size();
   solver->setTimeout(timeout);
-  bool success = solver->evaluate(current, condition, res);
+  bool success;
+  if ((MaxMemoryInhibit && atMemoryLimit) ||
+      current.forkDisabled ||
+      inhibitForking ||
+      (MaxForks!=~0u && stats::forks >= MaxForks)){
+
+    if (MaxMemoryInhibit && atMemoryLimit)
+      klee_warning_once(0, "skipping fork (memory cap exceeded)");
+    else if (current.forkDisabled)
+      klee_warning_once(0, "skipping fork (fork disabled on current path)");
+    else if (inhibitForking)
+      klee_warning_once(0, "skipping fork (fork disabled globally)");
+    else
+      klee_warning_once(0, "skipping fork (max-forks reached)");
+
+    TimerStatIncrementer timer(stats::forkTime);
+    //See if the state has a previously calculated solution
+    Assignment *a =  generateAssignmentForDanglingState(maxForksMap, solver, current);
+    ref<Expr> r = a->evaluate(condition);
+    assert(isa<ConstantExpr>(r) && "Must evaluate to t/f");
+    /// Based on whether the solution follows the true or false branch,
+    /// (Note: it must do one of the two) we add that state to the queue
+    /// to be further extended.  Since we don't want to fork, the other
+    /// option is simply dropped.
+    if (cast<ConstantExpr>(r)->isTrue()){
+      addConstraint(current, condition);
+      res = Solver::True;
+    } else {
+      addConstraint(current, Expr::createIsZero(condition));
+      res = Solver::False;
+    }
+    success = true;
+  } else {
+    success = solver->evaluate(current, condition, res);
+  }
+
   solver->setTimeout(0);
   if (!success) {
     current.pc = current.prevPC;
@@ -771,30 +834,6 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       }
     } else if (res==Solver::Unknown) {
       assert(!replayOut && "in replay mode, only one branch can be true.");
-      
-      if ((MaxMemoryInhibit && atMemoryLimit) || 
-          current.forkDisabled ||
-          inhibitForking || 
-          (MaxForks!=~0u && stats::forks >= MaxForks)) {
-
-	if (MaxMemoryInhibit && atMemoryLimit)
-	  klee_warning_once(0, "skipping fork (memory cap exceeded)");
-	else if (current.forkDisabled)
-	  klee_warning_once(0, "skipping fork (fork disabled on current path)");
-	else if (inhibitForking)
-	  klee_warning_once(0, "skipping fork (fork disabled globally)");
-	else 
-	  klee_warning_once(0, "skipping fork (max-forks reached)");
-
-        TimerStatIncrementer timer(stats::forkTime);
-        if (theRNG.getBool()) {
-          addConstraint(current, condition);
-          res = Solver::True;        
-        } else {
-          addConstraint(current, Expr::createIsZero(condition));
-          res = Solver::False;
-        }
-      }
     }
   }
 
@@ -1558,6 +1597,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     } else {
       std::map<BasicBlock*, ref<Expr> > targets;
       ref<Expr> isDefault = ConstantExpr::alloc(1, Expr::Bool);
+
+      bool forkingEnabled = !(MaxForks!=~0u && stats::forks >= MaxForks);
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 1)      
       for (SwitchInst::CaseIt i = si->case_begin(), e = si->case_end();
            i != e; ++i) {
@@ -1568,11 +1609,21 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 #endif
         ref<Expr> match = EqExpr::create(cond, value);
         isDefault = AndExpr::create(isDefault, Expr::createIsZero(match));
-        bool result;
-        bool success = solver->mayBeTrue(state, match, result);
-        assert(success && "FIXME: Unhandled solver failure");
-        (void) success;
-        if (result) {
+
+        // If forking is disabled, we can create all of the case statements without
+        // any worry, since only the one that satisfies the cached assignment,
+        // (and therefore necessarily SAT) will be taken.  In addition, this naive
+        // creation allows us to avoid invoking the solver->mayBeTrue() function.
+        bool casePossible = true;
+        if (forkingEnabled){
+          // If, instead, forking is enabled, we want to create each case that can
+          // possibly be SAT.  Therefore, we create a sucessor whenever solver->
+          // mayBeTrue() determines the path is possible.
+          bool success = solver->mayBeTrue(state, match, casePossible);
+          assert(success && "FIXME: Unhandled solver failure");
+          (void) success;
+        }
+        if (casePossible) {
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 1)
           BasicBlock *caseSuccessor = i.getCaseSuccessor();
 #else
@@ -1585,11 +1636,19 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
           it->second = OrExpr::create(match, it->second);
         }
       }
-      bool res;
-      bool success = solver->mayBeTrue(state, isDefault, res);
-      assert(success && "FIXME: Unhandled solver failure");
-      (void) success;
-      if (res)
+
+      // As above, if there is no forking, we can create the block since,
+      // if it isn't taken by the cached solution, it will immediately be
+      // thrown out.
+      bool defaultPathPossible = true;
+      if (forkingEnabled){
+        // If forking is enabled, we want to check whether the default path is
+        // SAT. If it is, we add it to the list of targets to be explored.
+        bool success = solver->mayBeTrue(state, isDefault, defaultPathPossible);
+        assert(success && "FIXME: Unhandled solver failure");
+        (void) success;
+      }
+      if (defaultPathPossible)
         targets.insert(std::make_pair(si->getDefaultDest(), isDefault));
       
       std::vector< ref<Expr> > conditions;

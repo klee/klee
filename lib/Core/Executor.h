@@ -21,6 +21,7 @@
 #include "klee/Internal/Module/KInstruction.h"
 #include "klee/Internal/Module/KModule.h"
 
+#include "klee/util/Assignment.h"
 #include "llvm/ADT/Twine.h"
 
 #include <vector>
@@ -136,6 +137,12 @@ private:
   /// on as-yet-to-be-determined flags.
   std::map<ExecutionState*, std::vector<SeedInfo> > seedMap;
   
+  /// When the maximum number of forks is reached, we cache the solution
+  /// to each state that is on the frontier.  We then follow the solution
+  /// through the program until it either exits correctly, causes an
+  /// error, or triggers an assertion violation.
+  std::map<ExecutionState*, Assignment *> maxForksMap;
+
   /// Map of globals to their representative memory object.
   std::map<const llvm::GlobalValue*, MemoryObject*> globalObjects;
 
