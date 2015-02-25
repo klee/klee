@@ -49,12 +49,80 @@ struct AssignmentLessThan {
   }
 };
 
+/*
+ * Contains a list of pairs of expressions and their answers that happen
+ * to map to the same hash value.  Prevents a hash collision.
+ */
+class AssignmentBundle{
+	typedef std::pair<std::set<unsigned>, Assignment *> answer;
+
+private:
+	//The list of possible answers to iterate through should a collision occur
+	std::vector<answer> possibleAnswers;
+
+public :
+	AssignmentBundle(){}
+
+	bool match(const KeyType &key, answer &possible){
+		if(key.size() != possible.first.size()){
+			return false;
+		}
+
+		for(std::set<ref<Expr> >::const_iterator it = key.begin(); it != key.end(); it ++){
+			if(possible.first.count(it->get()->hash()) == 0){
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	bool get(const KeyType &key, Assignment * &assignment){
+		for(std::vector<answer>::const_iterator it = possibleAnswers.begin(); it != possibleAnswers.end(); it++){
+			answer a = * it;
+			if(match(key, a)){
+				assignment = it->second;
+				return true;
+			}
+		}
+		assignment = 0;
+		return false;
+	}
+
+	bool get(const std::vector<ref<Expr> > & key, Assignment * &result){
+		KeyType pass;
+		for(std::vector<ref<Expr> >::const_iterator it = key.begin(); it != key.end(); it++){
+			ref<Expr> e = * it;
+			pass.insert(e);
+		}
+		return get(pass, result);
+	}
+
+	void put(const KeyType & key, Assignment * &result){
+		for(std::vector<answer>::const_iterator it = possibleAnswers.begin(); it != possibleAnswers.end(); it++){
+			answer a = * it;
+			if(match(key, a)){
+				return;
+			}
+		}
+		std::set<unsigned> add;
+		for(KeyType::const_iterator it = key.begin(); it != key.end(); it ++){
+			ref<Expr> expr = *it;
+			add.insert(expr.get()->hash());
+		}
+
+		answer a(add, result);
+		possibleAnswers.push_back(a);
+	}
+};
 
 class CexCachingSolver : public SolverImpl {
   typedef std::set<Assignment*, AssignmentLessThan> assignmentsTable_ty;
 
   Solver *solver;
   
+  std::map<long, AssignmentBundle *> quickCache;
+
   MapOfSets<ref<Expr>, Assignment*> cache;
   // memo table
   assignmentsTable_ty assignmentsTable;
@@ -68,6 +136,16 @@ class CexCachingSolver : public SolverImpl {
     KeyType key;
     return lookupAssignment(query, key, result);
   }
+
+  //Caching operations
+  bool getFromQuickCache(const KeyType & key, Assignment * &assignment);
+  void insertInQuickCache(const KeyType & key, Assignment * &binding);
+  void insertInCaches(const KeyType & key, Assignment * &binding);
+
+  bool quickMatch(const Query &query, const KeyType &key, Assignment *&result);
+
+  bool checkPreviousSolutionHelper(const ref<Expr>, const std::set<ref<Expr> > &key, Assignment * &result);
+  bool checkPreviousSolution(const Query &query, Assignment *&result);
 
   bool getAssignment(const Query& query, Assignment *&result);
   
@@ -171,6 +249,131 @@ bool CexCachingSolver::searchForAssignment(KeyType &key, Assignment *&result) {
   return false;
 }
 
+bool
+CexCachingSolver::getFromQuickCache(const KeyType &key, Assignment * &result){
+	long comboHash = 0;
+	for(KeyType::const_iterator it = key.begin(); it != key.end(); it++){
+		comboHash += (*it).get()->hash();
+	}
+
+	if(quickCache.count(comboHash)){
+		AssignmentBundle * bundle = quickCache[comboHash];
+		return bundle->get(key, result);
+	}
+	result = 0;
+	return false;
+}
+
+void
+CexCachingSolver::insertInQuickCache(const KeyType &key, Assignment * &binding){
+	long comboHash = 0;
+	for(KeyType::iterator it = key.begin(); it != key.end(); it++){
+		comboHash += (*it).get()->hash();
+	}
+
+	AssignmentBundle * b = quickCache[comboHash];
+	if(! b){
+		b = new AssignmentBundle();
+		quickCache[comboHash] = b;
+	}
+
+	b->put(key, binding);
+}
+
+void
+CexCachingSolver::insertInCaches(const KeyType &key, Assignment * &binding){
+	insertInQuickCache(key, binding);
+	cache.insert(key, binding);
+}
+
+bool CexCachingSolver::quickMatch(const Query &query,
+								  const KeyType &key,
+								  Assignment *&result) {
+	if(getFromQuickCache(key, result)){
+		return true;
+	}
+	result = 0;
+	return false;
+}
+
+bool CexCachingSolver::checkPreviousSolutionHelper(const ref<Expr> queryExpr,	//If anything other than query.expr, then negated.
+										   const std::set<ref<Expr> > &key,
+										   Assignment * &result){
+	Assignment * parentSolution;
+	if(getFromQuickCache(key, parentSolution)){
+		if(!parentSolution){
+			//means that the the previous state was UNSAT and therefore the
+			//new answer will also necessarily be UNSAT
+			assert(!result);
+			return true;
+		}else{
+			/*
+			 * Means that there is in fact a parent solution.  In this case,
+			 * we can now check whether this parent solution satisfies the
+			 * child state.  There's a pretty good chance... at least 50/50
+			 */
+			ref<Expr> neg = Expr::createIsZero(queryExpr);
+			ref<Expr> q = parentSolution->evaluate(neg);
+
+			assert(isa<ConstantExpr>(q) && "assignment evaluation did not result in constant");
+			if(cast<ConstantExpr>(q)->isTrue()){
+				result = parentSolution;
+				return true;
+			}else{
+				/*
+				 * If goes false, that means that the point that had gotten us to our parent
+				 * went along the opposing branch and it won't help us at this stage.  The
+				 * value stored in oldAnswer could help someone though.
+				 */
+				assert(!result);
+				return false;
+			}
+		}
+	}
+	assert(!parentSolution);
+	assert(!result);
+	return false;
+}
+
+bool CexCachingSolver::checkPreviousSolution(const Query &query,
+										  Assignment *&result){
+	if(query.constraints.size() == 0){
+		return false;
+	}
+
+	std::set<ref<Expr> > parentKey;
+	ref<Expr> queryExpr;
+	if(isa<ConstantExpr>(query.expr)){
+		assert(cast<ConstantExpr>(query.expr)->isFalse() && "query.expr == true should'd happen");
+		for(unsigned i = 0; i < query.constraints.size() - 1; i ++){
+			ref<Expr> ref = query.constraints.get(i);
+			parentKey.insert(ref);
+		}
+
+        ref<Expr> toNeg = query.constraints.get(query.constraints.size() - 1);
+        queryExpr = Expr::createIsZero(toNeg);
+	}else{
+		for(unsigned i = 0; i < query.constraints.size(); i ++){
+			ref<Expr> ref = query.constraints.get(i);
+			parentKey.insert(ref);
+		}
+		queryExpr = query.expr;
+	}
+
+	if(checkPreviousSolutionHelper(queryExpr, parentKey, result)){
+		/*
+		 * result may contain one of two things
+		 * 	- A 0, meaning that the previous piece of the was UNSAT and therefore new is too
+		 *	  (I put an assertion in checkPrevHelper to discount this case, but being careful)
+		 * 	- An actual result which we should verify is correct.
+		 */
+		return true;
+	}else{
+		return false;
+	}
+}
+
+
 /// lookupAssignment - Lookup a cached result for the given \arg query.
 ///
 /// \param query - The query to lookup.
@@ -194,10 +397,27 @@ bool CexCachingSolver::lookupAssignment(const Query &query,
     key.insert(neg);
   }
 
-  bool found = searchForAssignment(key, result);
-  if (found)
+  bool found = quickMatch(query, key, result);
+
+  if(!found){
+  		found = checkPreviousSolution(query, result);
+  		if(found){
+  			insertInQuickCache(key, result);
+  		}
+  }
+
+  if(!found){
+	  found = searchForAssignment(key, result);
+	  if(found){
+		  insertInQuickCache(key, result);
+	  }
+  }
+
+  if (found){
     ++stats::queryCexCacheHits;
-  else ++stats::queryCexCacheMisses;
+  }else{
+	  ++stats::queryCexCacheMisses;
+  }
     
   return found;
 }
@@ -235,7 +455,7 @@ bool CexCachingSolver::getAssignment(const Query& query, Assignment *&result) {
   }
   
   result = binding;
-  cache.insert(key, binding);
+  insertInCaches(key, binding);
 
   return true;
 }
@@ -317,10 +537,8 @@ bool CexCachingSolver::computeValue(const Query& query,
 
 bool 
 CexCachingSolver::computeInitialValues(const Query& query,
-                                       const std::vector<const Array*> 
-                                         &objects,
-                                       std::vector< std::vector<unsigned char> >
-                                         &values,
+                                       const std::vector<const Array*>  &objects,
+									   std::vector< std::vector<unsigned char> > &values,
                                        bool &hasSolution) {
   TimerStatIncrementer t(stats::cexCacheTime);
   Assignment *a;
