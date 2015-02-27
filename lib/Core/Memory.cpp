@@ -223,8 +223,8 @@ const UpdateList &ObjectState::getUpdates() const {
     // FIXME: Leaked.
     static unsigned id = 0;
     const Array *array = Array::CreateArray("const_arr" + llvm::utostr(++id), size,
-                                   &Contents[0],
-                                   &Contents[0] + Contents.size());
+					    &Contents[0],
+					    &Contents[0] + Contents.size());
     updates = UpdateList(array, 0);
 
     // Apply the remaining (non-constant) writes.

@@ -2925,7 +2925,7 @@ ref<Expr> Executor::replaceReadWithSymbolic(ExecutionState &state,
   
   static unsigned id;
   const Array *array = Array::CreateArray("rrws_arr" + llvm::utostr(++id),
-                                 Expr::getMinBytesForWidth(e->getWidth()));
+					  Expr::getMinBytesForWidth(e->getWidth()));
   ref<Expr> res = Expr::createTempRead(array, e->getWidth());
   ref<Expr> eq = NotOptimizedExpr::create(EqExpr::create(e, res));
   llvm::errs() << "Making symbolic: " << eq << "\n";

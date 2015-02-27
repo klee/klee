@@ -601,7 +601,7 @@ private:
 
 class Array {
 public:
-  //Name of the array
+  // Name of the array
   const std::string name;
 
   // FIXME: Not 64-bit clean.
@@ -620,18 +620,20 @@ private:
   unsigned hashValue;
 
 
-  /// The symbolic array singleton map is necessary to prevent aliasing issues on arrays.
-  /// A lot of the Solvers use maps such as <const * Array, std::vector<unsigned>>.
-  /// This causes problems because stored answers can't be easily recovered.
-  /// Even worse, in read expressions, such as (read array 32), array is a pointer,
-  /// meaning actual solutions don't "work" because the two instances of array
+  /// The symbolic array singleton map is necessary to allow sharing
+  /// of Arrays across states, essentially performing a (limited) form
+  /// of alpha renaming.  Some Solvers use maps such as < const *Array,
+  /// std::vector<unsigned> >.  This causes problems because stored
+  /// answers can't be easily recovered.  Even worse, in read
+  /// expressions, such as (read array 32), array is a pointer, and
+  /// cached solutions are missed because the two Array instances
   /// aren't recognized as the same.
-  static std::map<unsigned, std::vector<const Array *> *> symbolicArraySingletonMap;
+  static std::map < unsigned, std::vector < const Array * > * > symbolicArraySingletonMap;
 
-  //This shouldn't be allowed since it's a singleton class
+  // This shouldn't be allowed since it is a singleton class
   Array(const Array& array);
 
-  //This shouldn't be allowed since it's a singleton class
+  // This shouldn't be allowed since it is a singleton class
   Array& operator =(const Array& array);
 
   ~Array();
@@ -644,11 +646,12 @@ private:
   /// not parse correctly since two arrays with the same name cannot be
   /// distinguished once printed.
   Array(const std::string &_name, uint64_t _size,
-		const ref<ConstantExpr> *constantValuesBegin = 0,
-		const ref<ConstantExpr> *constantValuesEnd = 0,
-		Expr::Width _domain = Expr::Int32, Expr::Width _range = Expr::Int8)
+	const ref<ConstantExpr> *constantValuesBegin = 0,
+	const ref<ConstantExpr> *constantValuesEnd = 0,
+	Expr::Width _domain = Expr::Int32, Expr::Width _range = Expr::Int8)
     : name(_name), size(_size), domain(_domain), range(_range),
-	  constantValues(constantValuesBegin, constantValuesEnd) {
+      constantValues(constantValuesBegin, constantValuesEnd) {
+    
     assert((isSymbolicArray() || constantValues.size() == size) &&
            "Invalid size for constant array!");
     computeHash();
@@ -674,18 +677,18 @@ public:
   unsigned hash() const { return hashValue; }
 
   /*
-   * Fairly simple idea.  Since by defn (see Array), symbolic arrays
-   * have constant values of size 0.  Concrete Arrays have their respective
-   * values stored in each element.  Therefore, each incoming call is tested.
-   * An array is created and, if it's concrete, it's simply returned.  If
-   * instead it is symbolic, then a map is checked to see if it was created
-   * before, so there is only a single instance floating out there.
+   * Fairly simple idea.  Symbolic arrays have constant values of size
+   * 0, while concrete arrays have constant values of size > 0.
+   * Therefore, on each call, an array is created and, if it is
+   * concrete, it is simply returned.  If instead it is symbolic, then
+   * a map is checked to see if it was created before, so there is
+   * only a single instance floating out there.
    */
   static const Array * CreateArray(const std::string &_name, uint64_t _size,
-	                               const ref<ConstantExpr> *constantValuesBegin = 0,
-			                       const ref<ConstantExpr> *constantValuesEnd = 0,
-			                       Expr::Width _domain = Expr::Int32,
-								   Expr::Width _range = Expr::Int8);
+				   const ref<ConstantExpr> *constantValuesBegin = 0,
+				   const ref<ConstantExpr> *constantValuesEnd = 0,
+				   Expr::Width _domain = Expr::Int32,
+				   Expr::Width _range = Expr::Int8);
 };
 
 /// Class representing a complete list of updates into an array.

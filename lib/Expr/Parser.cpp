@@ -522,7 +522,7 @@ DeclResult ParserImpl::ParseArrayDecl() {
   const Array *Root;
   if (!Values.empty())
     Root = Array::CreateArray(Label->Name, Size.get(),
-                     &Values[0], &Values[0] + Values.size());
+			      &Values[0], &Values[0] + Values.size());
   else
     Root = Array::CreateArray(Label->Name, Size.get());
   ArrayDecl *AD = new ArrayDecl(Label, Size.get(), 
