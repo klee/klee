@@ -490,8 +490,44 @@ unsigned Array::computeHash() {
   unsigned res = 0;
   for (unsigned i = 0, e = name.size(); i != e; ++i)
     res = (res * Expr::MAGIC_HASH_CONSTANT) + name[i];
+  res = (res * Expr::MAGIC_HASH_CONSTANT) + size;
   hashValue = res;
   return hashValue; 
+}
+
+std::map<unsigned, std::vector<const Array *> *> Array::symbolicArraySingletonMap;
+
+const Array * Array::CreateArray(const std::string &_name, uint64_t _size,
+                                 const ref<ConstantExpr> *constantValuesBegin,
+                                 const ref<ConstantExpr> *constantValuesEnd,
+                                 Expr::Width _domain,
+								 Expr::Width _range){
+
+  const Array * array = new Array(_name, _size, constantValuesBegin, constantValuesEnd, _domain,_range);
+  if(array->constantValues.size() == 0){
+    //means is a symbolic array and we should look up the values;
+    unsigned hash = array->hash();
+    std::vector<const Array *> * bucket = Array::symbolicArraySingletonMap[hash];
+    if(bucket){
+      for(std::vector<const Array*>::const_iterator it = bucket->begin();
+          it != bucket->end(); it ++){
+        const Array* prospect = *it;
+    	if(prospect->size == array->size && prospect->name == array->name){
+    	  delete array;
+    	  return prospect;
+    	}
+      }
+      bucket->push_back(array);
+      return array;
+    }else{
+      bucket = new std::vector<const Array *>();
+      bucket->push_back(array);
+      Array::symbolicArraySingletonMap[hash] = bucket;
+      return array;
+    }
+  }else{
+    return array;
+  }
 }
 
 /***/
