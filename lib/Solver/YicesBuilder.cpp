@@ -168,10 +168,8 @@ YicesBuilder::~YicesBuilder() {
 }
 
 ::YicesExpr YicesBuilder::constructAShrByConstant(::YicesExpr expr, unsigned shift, ::YicesExpr isSigned) {
-  //ticked by RaiseAsm in the tests
-  //assert(0);
   uint32_t width = yices_term_bitsize(expr);
-  if (shift >= width - 1)
+  if (shift >= width)
     return yices_bvconst_zero(width);
   else
     return yices_ite(isSigned,
