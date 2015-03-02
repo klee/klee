@@ -20,8 +20,6 @@
 
 #include "MetaSMTBuilder.h"
 
-#include "SharedMem.h"
-
 #include "klee/Constraints.h"
 #include "klee/Expr.h"
 #include "klee/TimerStatIncrementer.h"
@@ -51,6 +49,8 @@
 using namespace klee;
 
 #ifdef SUPPORT_METASMT
+
+#include "SharedMem.h"
 
 #include <metaSMT/DirectSolver_Context.hpp>
 #include <metaSMT/backend/Z3_Backend.hpp>
