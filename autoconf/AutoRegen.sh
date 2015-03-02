@@ -26,7 +26,7 @@ echo "Regenerating aclocal.m4 with aclocal"
 rm -f aclocal.m4
 echo aclocal -I $llvm_m4 -I "$llvm_m4/.." || die "aclocal failed"
 aclocal -I $llvm_m4 -I "$llvm_m4/.." || die "aclocal failed"
-echo "Regenerating configure with autoconf 2.60"
+echo "Regenerating configure with autoconf 2.69"
 echo autoconf --warnings=all -o ../configure configure.tmp.ac || die "autoconf failed"
 autoconf --warnings=all -o ../configure configure.tmp.ac || die "autoconf failed"
 cp ../configure ../configure.bak
