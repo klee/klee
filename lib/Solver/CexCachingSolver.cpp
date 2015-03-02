@@ -22,6 +22,15 @@
 
 #include "llvm/Support/CommandLine.h"
 
+#include <ciso646>
+#ifdef _LIBCPP_VERSION
+#include <unordered_map>
+#define unordered_map std::unordered_map
+#else
+#include <tr1/unordered_map>
+#define unordered_map std::tr1::unordered_map
+#endif
+
 using namespace klee;
 using namespace llvm;
 
@@ -49,12 +58,42 @@ struct AssignmentLessThan {
   }
 };
 
+struct QuickCacheEntry {
+  KeyType constraints;
+
+  QuickCacheEntry(const KeyType &key)
+    : constraints(key) {}
+
+  QuickCacheEntry(const QuickCacheEntry &ce)
+    : constraints(ce.constraints) {}
+
+  bool operator==(const QuickCacheEntry &b) const {
+    return constraints.size() == b.constraints.size() && constraints == b.constraints;
+  }
+};
+
+struct QuickCacheEntryHash {
+  unsigned operator()(const QuickCacheEntry &ce) const {
+    unsigned comboHash = 0;
+    for (KeyType::const_iterator it = ce.constraints.begin(); it != ce.constraints.end(); it++){
+      comboHash += (*it).get()->hash();
+    }
+    return comboHash;
+  }
+};
+
 
 class CexCachingSolver : public SolverImpl {
   typedef std::set<Assignment*, AssignmentLessThan> assignmentsTable_ty;
 
+  typedef unordered_map<QuickCacheEntry,
+                        Assignment *,
+                        QuickCacheEntryHash> cache_map;
+
   Solver *solver;
   
+  cache_map quickCache;
+
   MapOfSets<ref<Expr>, Assignment*> cache;
   // memo table
   assignmentsTable_ty assignmentsTable;
@@ -68,6 +107,11 @@ class CexCachingSolver : public SolverImpl {
     KeyType key;
     return lookupAssignment(query, key, result);
   }
+
+  // Caching operations
+  bool getFromQuickCache(const KeyType & key, Assignment * &assignment);
+  void insertInQuickCache(const KeyType & key, Assignment * &binding);
+  void insertInCaches(const KeyType & key, Assignment * &binding);
 
   bool getAssignment(const Query& query, Assignment *&result);
   
@@ -171,6 +215,31 @@ bool CexCachingSolver::searchForAssignment(KeyType &key, Assignment *&result) {
   return false;
 }
 
+
+bool
+CexCachingSolver::getFromQuickCache(const KeyType &key, Assignment * &result){
+  QuickCacheEntry ce(key);
+  cache_map::iterator it = quickCache.find(ce);
+
+  if (it != quickCache.end()) {
+    result = it ->second;
+    return true;
+  }
+  return false;
+}
+
+void
+CexCachingSolver::insertInQuickCache(const KeyType &key, Assignment * &binding){
+  QuickCacheEntry ce(key);
+  quickCache.insert(std::make_pair(ce, binding));
+}
+
+void
+CexCachingSolver::insertInCaches(const KeyType &key, Assignment * &binding){
+  insertInQuickCache(key, binding);
+  cache.insert(key, binding);
+}
+
 /// lookupAssignment - Lookup a cached result for the given \arg query.
 ///
 /// \param query - The query to lookup.
@@ -194,10 +263,19 @@ bool CexCachingSolver::lookupAssignment(const Query &query,
     key.insert(neg);
   }
 
-  bool found = searchForAssignment(key, result);
+  bool found = getFromQuickCache(key, result);
+
+  if (!found){
+    found = searchForAssignment(key, result);
+    if (found){
+      insertInQuickCache(key, result);
+    }
+  }
+
   if (found)
     ++stats::queryCexCacheHits;
-  else ++stats::queryCexCacheMisses;
+  else
+    ++stats::queryCexCacheMisses;
     
   return found;
 }
@@ -235,7 +313,7 @@ bool CexCachingSolver::getAssignment(const Query& query, Assignment *&result) {
   }
   
   result = binding;
-  cache.insert(key, binding);
+  insertInCaches(key, binding);
 
   return true;
 }
@@ -244,6 +322,7 @@ bool CexCachingSolver::getAssignment(const Query& query, Assignment *&result) {
 
 CexCachingSolver::~CexCachingSolver() {
   cache.clear();
+  quickCache.clear();
   delete solver;
   for (assignmentsTable_ty::iterator it = assignmentsTable.begin(), 
          ie = assignmentsTable.end(); it != ie; ++it)
