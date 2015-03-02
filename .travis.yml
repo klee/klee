@@ -85,7 +85,7 @@ before_install:
     - ${KLEE_SRC}/.travis/stp.sh
     - cd ../
 script:
-    # Get needed utlities/libraries for testing KLEE
+    # Get needed utilities/libraries for testing KLEE
     - mkdir test-utils/
     - cd test-utils/
     - ${KLEE_SRC}/.travis/testing-utils.sh
