@@ -22,6 +22,7 @@
 #include <sstream>
 #include <set>
 #include <vector>
+#include <map>
 
 namespace llvm {
   class Type;
@@ -600,18 +601,43 @@ private:
 
 class Array {
 public:
+  // Name of the array
   const std::string name;
+
   // FIXME: Not 64-bit clean.
-  unsigned size;  
+  const unsigned size;
+
+  /// Domain is how many bits can be used to access the array [32 bits]
+  /// Range is the size (in bits) of the number stored there (array of bytes -> 8)
+  const Expr::Width domain, range;
 
   /// constantValues - The constant initial values for this array, or empty for
   /// a symbolic array. If non-empty, this size of this array is equivalent to
   /// the array size.
-  const std::vector< ref<ConstantExpr> > constantValues;
+  const std::vector<ref<ConstantExpr> > constantValues;
 
-  Expr::Width domain, range;
+private:
+  unsigned hashValue;
 
-public:
+
+  /// The symbolic array singleton map is necessary to allow sharing
+  /// of Arrays across states, essentially performing a (limited) form
+  /// of alpha renaming.  Some Solvers use maps such as < const *Array,
+  /// std::vector<unsigned> >.  This causes problems because stored
+  /// answers can't be easily recovered.  Even worse, in read
+  /// expressions, such as (read array 32), array is a pointer, and
+  /// cached solutions are missed because the two Array instances
+  /// aren't recognized as the same.
+  static std::map < unsigned, std::vector < const Array * > * > symbolicArraySingletonMap;
+
+  // This shouldn't be allowed since it is a singleton class
+  Array(const Array& array);
+
+  // This shouldn't be allowed since it is a singleton class
+  Array& operator =(const Array& array);
+
+  ~Array();
+
   /// Array - Construct a new array object.
   ///
   /// \param _name - The name for this array. Names should generally be unique
@@ -619,13 +645,13 @@ public:
   /// when printing expressions. When expressions are printed the output will
   /// not parse correctly since two arrays with the same name cannot be
   /// distinguished once printed.
-  Array(const std::string &_name, uint64_t _size, 
-        const ref<ConstantExpr> *constantValuesBegin = 0,
-        const ref<ConstantExpr> *constantValuesEnd = 0,
-        Expr::Width _domain = Expr::Int32, Expr::Width _range = Expr::Int8)
-    : name(_name), size(_size), 
-      constantValues(constantValuesBegin, constantValuesEnd),
-      domain(_domain), range(_range) {
+  Array(const std::string &_name, uint64_t _size,
+	const ref<ConstantExpr> *constantValuesBegin = 0,
+	const ref<ConstantExpr> *constantValuesEnd = 0,
+	Expr::Width _domain = Expr::Int32, Expr::Width _range = Expr::Int8)
+    : name(_name), size(_size), domain(_domain), range(_range),
+      constantValues(constantValuesBegin, constantValuesEnd) {
+    
     assert((isSymbolicArray() || constantValues.size() == size) &&
            "Invalid size for constant array!");
     computeHash();
@@ -634,21 +660,35 @@ public:
          it != constantValuesEnd; ++it)
       assert((*it)->getWidth() == getRange() &&
              "Invalid initial constant value!");
-#endif
+#endif //NDEBUG
   }
-  ~Array();
 
+public:
   bool isSymbolicArray() const { return constantValues.empty(); }
   bool isConstantArray() const { return !isSymbolicArray(); }
 
+  const std::string getName() const { return name; }
+  unsigned getSize() const { return size; }
   Expr::Width getDomain() const { return domain; }
   Expr::Width getRange() const { return range; }
-  
+
+  /// ComputeHash must take into account the name, the size, the domain, and the range
   unsigned computeHash();
   unsigned hash() const { return hashValue; }
-   
-private:
-  unsigned hashValue;
+
+  /*
+   * Fairly simple idea.  Symbolic arrays have constant values of size
+   * 0, while concrete arrays have constant values of size > 0.
+   * Therefore, on each call, an array is created and, if it is
+   * concrete, it is simply returned.  If instead it is symbolic, then
+   * a map is checked to see if it was created before, so there is
+   * only a single instance floating out there.
+   */
+  static const Array * CreateArray(const std::string &_name, uint64_t _size,
+				   const ref<ConstantExpr> *constantValuesBegin = 0,
+				   const ref<ConstantExpr> *constantValuesEnd = 0,
+				   Expr::Width _domain = Expr::Int32,
+				   Expr::Width _range = Expr::Int8);
 };
 
 /// Class representing a complete list of updates into an array.

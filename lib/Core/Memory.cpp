@@ -113,7 +113,7 @@ ObjectState::ObjectState(const MemoryObject *mo)
   if (!UseConstantArrays) {
     // FIXME: Leaked.
     static unsigned id = 0;
-    const Array *array = new Array("tmp_arr" + llvm::utostr(++id), size);
+    const Array *array = Array::CreateArray("tmp_arr" + llvm::utostr(++id), size);
     updates = UpdateList(array, 0);
   }
   memset(concreteStore, 0, size);
@@ -222,9 +222,9 @@ const UpdateList &ObjectState::getUpdates() const {
     // Start a new update list.
     // FIXME: Leaked.
     static unsigned id = 0;
-    const Array *array = new Array("const_arr" + llvm::utostr(++id), size,
-                                   &Contents[0],
-                                   &Contents[0] + Contents.size());
+    const Array *array = Array::CreateArray("const_arr" + llvm::utostr(++id), size,
+					    &Contents[0],
+					    &Contents[0] + Contents.size());
     updates = UpdateList(array, 0);
 
     // Apply the remaining (non-constant) writes.
