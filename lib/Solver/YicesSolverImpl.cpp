@@ -34,6 +34,7 @@
 
 #include <cstring>
 
+#include <errno.h>
 #include <unistd.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
@@ -41,6 +42,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
+#include "llvm/Support/ErrorHandling.h"
 
 using namespace klee;
 

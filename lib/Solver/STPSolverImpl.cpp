@@ -20,6 +20,8 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
+#include "llvm/Support/ErrorHandling.h"
+
 using namespace klee;
 
 static void stp_error_handler(const char* err_msg) {
