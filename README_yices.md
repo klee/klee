@@ -16,9 +16,17 @@ an SMT solver, follow these steps:
      extra flag to the step that configures `klee` (07):
 
 ```
- --with-yices=<where you installed yices; default is /usr/local>
+ --with-yices=<where you installed yices>
 ```
 
-After successfully building `klee-with-yices` you can select `yices`
+for example, if you installed `yices` in its default location,
+you would add:
+
+
+```
+ --with-yices=/usr/local
+```
+
+After successfully building `klee` with `yices` you can select `yices`
 as the solver to be used by passing `klee` the extra commandline 
 argument `-use-yices`.
