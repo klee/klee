@@ -63,7 +63,7 @@ static uint32_t ldz( register uint32_t x ) {
 
 /* exp_base_2(n) -- 2^n computed as an integer */
 static uint32_t exp_base_2( register int32_t n ) {
-  register uint32_t x = ~n & (n - 32);
+  uint32_t x = ~n & (n - 32);
   x = x >> 31;
   return( x << n );
 }

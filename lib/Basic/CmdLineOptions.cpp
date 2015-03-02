@@ -1,12 +1,34 @@
 /*
  * This file groups command line options definitions and associated
  * data that are common to both KLEE and Kleaver.
+ *
+ * Incorporating Yices into Klee was supported by DARPA under 
+ * contract N66001-13-C-4057.
+ *  
+ * Approved for Public Release, Distribution Unlimited.
+ *
+ * Bruno Dutertre & Ian A. Mason @  SRI International.
  */
 
 #include "klee/CommandLine.h"
 
 namespace klee {
 
+#ifdef SUPPORT_YICES
+
+llvm::cl::opt<bool>
+UseYices("use-yices",
+         llvm::cl::init(false),
+         llvm::cl::desc("Use the SRI's solver yices instead of STP (default=off)"));
+
+#endif /* SUPPORT_YICES */
+
+llvm::cl::opt<bool>
+IgnoreSolverFailures("ignore-solver-failures",
+                     llvm::cl::init(false),
+                     llvm::cl::desc("Ignore any solver failures (default=off)"));
+
+  
 llvm::cl::opt<bool>
 UseFastCexSolver("use-fast-cex-solver",
 		 llvm::cl::init(false),

@@ -6,6 +6,14 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+//
+// Incorporating Yices into Klee was supported by DARPA under 
+// contract N66001-13-C-4057.
+//  
+// Approved for Public Release, Distribution Unlimited.
+//
+// Bruno Dutertre & Ian A. Mason @  SRI International.
+//===----------------------------------------------------------------------===//
 
 #ifndef __UTIL_STPBUILDER_H__
 #define __UTIL_STPBUILDER_H__
@@ -16,13 +24,17 @@
 
 #include <vector>
 
+//a hack to prevent klee Expr from clashing with stp Expr
 #define Expr VCExpr
+//a hack to prevent stp type_t from clashing with yices Expr
+#define type_t vc_type_t
 #include <stp/c_interface.h>
 
 #if ENABLE_STPLOG == 1
 #include "stp/stplog.h"
 #endif
 #undef Expr
+#undef type_t
 
 namespace klee {
   class ExprHolder {

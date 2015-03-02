@@ -219,6 +219,26 @@ namespace klee {
     virtual void setCoreSolverTimeout(double timeout);
   };
 
+  /// YicesSolver - A complete solver based on Yices.
+  class YicesSolver : public Solver {
+  public:
+    /// YicesSolver - Construct a new YicesSolver.
+    ///
+    /// \param useForkedYices - Whether Yices should be run in a separate process
+    /// (required for using timeouts).
+    /// \param optimizeDivides - Whether constant division operations should
+    /// be optimized into add/shift/multiply operations.
+    YicesSolver(bool useForkedYices, bool optimizeDivides = true);
+
+    /// getConstraintLog - Return the constraint log for the given state in CVC
+    /// format.
+    virtual char *getConstraintLog(const Query&);
+
+    /// setCoreSolverTimeout - Set constraint solver timeout delay to the given value; 0
+    /// is off.
+    virtual void setCoreSolverTimeout(double timeout);
+  };
+
   
 #ifdef SUPPORT_METASMT
   

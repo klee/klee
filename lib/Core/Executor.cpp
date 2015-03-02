@@ -328,7 +328,21 @@ Executor::Executor(const InterpreterOptions &opts,
     coreSolver = new STPSolver(UseForkedCoreSolver, CoreSolverOptimizeDivides);
   }
 #else
-  coreSolver = new STPSolver(UseForkedCoreSolver, CoreSolverOptimizeDivides);
+
+#ifdef SUPPORT_YICES
+
+  if (UseYices) {
+    coreSolver = new YicesSolver(UseForkedCoreSolver, CoreSolverOptimizeDivides);
+  } else {
+    coreSolver = new STPSolver(UseForkedCoreSolver, CoreSolverOptimizeDivides);
+  }
+
+#else 
+
+    coreSolver = new STPSolver(UseForkedCoreSolver, CoreSolverOptimizeDivides);
+
+#endif /* SUPPORT_YICES   */
+  
 #endif /* SUPPORT_METASMT */
   
    
