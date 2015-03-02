@@ -24,9 +24,26 @@ include Makefile.tests
 ULIMIT = ulimit -t 600 ; ulimit -d 512000 ;
 
 ifdef VERBOSE
-LIT_ARGS := -v
+
+ifeq ($(ENABLE_YICES),1)
+$(warning "Using Yices")
+LIT_ARGS :=  -v --param klee_opts="-use-yices" --param kleaver_opts="-use-yices"
 else
-LIT_ARGS := -s -v
+$(warning "Using STP")
+LIT_ARGS :=  -v 
+endif
+
+# LIT_ARGS := -v --param klee_opts="-use-yices -use-forked-solver" --param kleaver_opts="-use-yices"
+else 
+
+ifeq ($(ENABLE_YICES),1)
+$(warning "Using Yices")
+LIT_ARGS := -s -v --param klee_opts="-use-yices" --param kleaver_opts="-use-yices"
+else
+$(warning "Using STP")
+LIT_ARGS := -s -v 
+endif
+
 endif
 
 ifdef TESTSUITE
