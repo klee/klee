@@ -584,6 +584,57 @@ AC_SUBST(STP_CFLAGS)
 AC_SUBST(STP_LDFLAGS)
 
 dnl **************************************************************************
+dnl Find an install of yices
+dnl **************************************************************************
+
+support_yices="no"
+AC_ARG_WITH(yices,
+  AS_HELP_STRING([--with-yices],[Location of YICES installation directory]),
+  [if test X$with_yices = X ; then
+     support_yices="no"
+   else
+     support_yices="yes"
+     yices_root=""
+     if test $with_yices != yes ; then 
+       yices_root=`(cd $with_yices && pwd) 2> /dev/null`
+       #Check for bad path
+       if test "X$yices_root" = X ; then
+          AC_MSG_ERROR([Cannot access path $yices_root passed to --with-yices])
+       fi
+     fi
+   fi]
+  ,)
+
+#
+# Check for the yices header and library
+#
+if test $support_yices = yes ; then
+
+  old_CPPFLAGS="$CPPFLAGS"
+  old_LDFLAGS="$LDFLAGS"  
+  if test "X$yices_root" != X ; then
+     CPPFLAGS="$CPPFLAGS -I$yices_root/include"
+     LDFLAGS="$LDFLAGS -L$yices_root/lib"
+  fi
+  AC_CHECK_HEADER(yices.h,, [
+         AC_MSG_ERROR([Unable to use yices.h header])
+  ])
+  AC_CHECK_LIB(yices, yices_init,, [
+        AC_MSG_ERROR([Could not link with libyices.])
+  ],)
+  CPPFLAGS="$old_CPPFLAGS"
+  LDFLAGS="$old_LDFLAGS"
+
+  AC_DEFINE(SUPPORT_YICES, 1, [Supporting Yices API])
+  AC_SUBST(ENABLE_YICES,[[1]])
+  AC_SUBST(YICES_ROOT,$yices_root)
+
+else
+  AC_SUBST(ENABLE_YICES,[[0]])
+fi
+
+
+dnl **************************************************************************
 dnl User option to enable metaSMT constraint solvers and to specify the 
 dnl the location of the metaSMT root directory
 dnl **************************************************************************
