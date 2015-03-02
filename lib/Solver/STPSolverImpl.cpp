@@ -13,6 +13,7 @@
 #include "STPSolverImpl.h"
 #include "SharedMem.h"
 
+#include <errno.h>
 #include <unistd.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
