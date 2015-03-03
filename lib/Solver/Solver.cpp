@@ -41,9 +41,6 @@
 #include <sys/ipc.h>
 #include <sys/shm.h>
 
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/ErrorHandling.h"
-
 
 
 using namespace klee;
