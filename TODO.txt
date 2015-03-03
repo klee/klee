@@ -12,7 +12,7 @@ Build System / Configure / Release Cleanups
  o Need a way to hide LLVM options in "klee --help".
 
 
-Klee Internal
+KLEE Internal
 --
  o Make sure that namespaces and .cpp locations match with reorganized
    include locations.
