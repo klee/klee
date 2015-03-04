@@ -1,7 +1,7 @@
 Building Klee with Yices
 =============================
 
-[![Build Status](https://travis-ci.org/klee/klee.svg?branch=master)](https://travis-ci.org/klee/klee)
+[![Build Status](https://travis-ci.org/SRI-CSL/klee.svg?branch=master)](https://travis-ci.org/SRI-CSL/klee)
 
 `Yices` is an alternative SMT solver that can be used with `klee`
 instead of the STP solver. To build `klee` with `yices` enabled as 
