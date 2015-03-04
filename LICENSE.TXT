@@ -1,19 +1,30 @@
 ==============================================================================
-klee Release License
+KLEE Release License
 ==============================================================================
 University of Illinois/NCSA
 Open Source License
 
+http://klee.github.io/
+
+Developed by:
+    KLEE Team
+    Stanford Checking Group
+
 Copyright (c) 2007-2009 Stanford University.
 All rights reserved.
 
-Developed by:
 
-    klee Team
+Maintained since 2009 by:
+    Software Reliability Group
+    http://srg.doc.ic.ac.uk/
+    Imperial College London
 
-    Stanford Checking Group
 
-    http://klee.llvm.org
+Improved and extended since 2009 by many developers.  For a full list
+of contributors, refer to
+         https://github.com/klee/klee/graphs/contributors
+and the Git commit history.
+
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal with
@@ -29,10 +40,10 @@ so, subject to the following conditions:
       this list of conditions and the following disclaimers in the
       documentation and/or other materials provided with the distribution.
 
-    * Neither the names of the klee Team, Stanford University, nor the
-      names of its contributors may be used to endorse or promote
-      products derived from this Software without specific prior
-      written permission.
+    * Neither the names of the KLEE Team, Stanford University,
+      Imperial College London, nor the names of its contributors may
+      be used to endorse or promote products derived from this
+      Software without specific prior written permission.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
@@ -43,15 +54,16 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH THE
 SOFTWARE.
 
 ==============================================================================
-The klee software contains code written by third parties.  Such software will
+The KLEE software contains code written by third parties.  Such software will
 have its own individual LICENSE.TXT file in the directory in which it appears.
 This file will describe the copyrights, license, and restrictions which apply
 to that code.
 
-The disclaimer of warranty in the University of Illinois Open Source License
-applies to all code in the klee Distribution, and nothing in any of the other 
-licenses gives permission to use the names of the klee Team or Stanford 
-University to endorse or promote products derived from this Software.
+The disclaimer of warranty in the University of Illinois Open Source
+License applies to all code in the KLEE distribution, and nothing in
+any of the other licenses gives permission to use the names of the
+KLEE team, Stanford University, or the names of its contributors to
+endorse or promote products derived from this Software.
 
 The following pieces of software have additional or alternate copyrights,
 licenses, and/or restrictions:

@@ -1,9 +1,9 @@
-Klee Symbolic Virtual Machine
+KLEE Symbolic Virtual Machine
 =============================
 
 [![Build Status](https://travis-ci.org/klee/klee.svg?branch=master)](https://travis-ci.org/klee/klee)
 
-`klee` is a symbolic virtual machine built on top of the LLVM compiler
+`KLEE` is a symbolic virtual machine built on top of the LLVM compiler
 infrastructure. Currently, there are two primary components:
 
   1. The core symbolic virtual machine engine; this is responsible for
