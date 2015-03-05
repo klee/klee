@@ -54,11 +54,6 @@ pthread_t pthread_self(void) {
 
 int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
     void *(*start_routine)(void*), void *arg) {
-
-  if (INJECT_FAULT(pthread_create, EAGAIN)) {
-    return -1;
-  }
-
   unsigned int newIdx;
   STATIC_LIST_ALLOC(__tsync.threads, newIdx);
 

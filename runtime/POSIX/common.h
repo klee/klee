@@ -39,29 +39,6 @@
 #include <string.h>
 #include <stdint.h>
 
-#ifdef HAVE_FAULT_INJECTION
-
-#define INJECT_FAULT(name, ...) \
-    __inject_fault(#name, ##__VA_ARGS__)
-
-#else
-
-#define INJECT_FAULT(name, ...)     0
-
-#endif
-
-////////////////////////////////////////////////////////////////////////////////
-// Klee Fork Types
-////////////////////////////////////////////////////////////////////////////////
-
-#define __KLEE_FORK_DEFAULT       0
-#define __KLEE_FORK_FAULTINJ      1
-#define __KLEE_FORK_SCHEDULE      2
-#define __KLEE_FORK_INTERNAL      3
-#define __KLEE_FORK_MULTI         4
-#define __KLEE_FORK_TIMEOUT       5
-#define __KLEE_FORK_FUZZ          6
-
 ////////////////////////////////////////////////////////////////////////////////
 // Basic Arrays
 ////////////////////////////////////////////////////////////////////////////////

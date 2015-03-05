@@ -57,10 +57,6 @@ static void _set_mutexattr_data(pthread_mutexattr_t *attr, int val) {
 
 int pthread_mutexattr_init(pthread_mutexattr_t *attr)
 {
-  if (INJECT_FAULT(pthread_mutexattr_init, ENOMEM, EPERM)) {
-    return -1;
-  }
-
   _mutexattr_init(attr);
 
   return 0;
@@ -107,10 +103,6 @@ static mutex_data_t *_get_mutex_data(pthread_mutex_t *mutex) {
 }
 
 int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr) {
-  if (INJECT_FAULT(pthread_mutex_init, ENOMEM, EPERM)) {
-    return -1;
-  }
-
   _mutex_init(mutex, attr);
 
   return 0;
@@ -224,10 +216,6 @@ static condvar_data_t *_get_condvar_data(pthread_cond_t *cond) {
 }
 
 int pthread_cond_init(pthread_cond_t *cond, const pthread_condattr_t *attr) {
-  if (INJECT_FAULT(pthread_cond_init, ENOMEM, EAGAIN)) {
-    return -1;
-  }
-
   _cond_init(cond, attr);
 
   return 0;
@@ -348,10 +336,6 @@ static barrier_data_t *_get_barrier_data(pthread_barrier_t *barrier) {
 }
 
 int pthread_barrier_init(pthread_barrier_t *barrier, const pthread_barrierattr_t *attr, unsigned int count) {
-  if (INJECT_FAULT(pthread_barrier_init, ENOMEM, EPERM)) {
-    return -1;
-  }
-
   _barrier_init(barrier, attr, count);
 
   return 0;
@@ -419,10 +403,6 @@ static rwlock_data_t *_get_rwlock_data(pthread_rwlock_t *rwlock) {
 }
 
 int pthread_rwlock_init(pthread_rwlock_t *rwlock, const pthread_rwlockattr_t *attr) {
-  if (INJECT_FAULT(pthread_rwlock_init, ENOMEM, EPERM)) {
-    return -1;
-  }
-
   _rwlock_init(rwlock, attr);
 
   return 0;
