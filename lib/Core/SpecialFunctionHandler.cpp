@@ -62,6 +62,7 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
   addDNR("klee_abort", handleAbort),
   addDNR("klee_silent_exit", handleSilentExit),  
   addDNR("klee_report_error", handleReportError),
+  addDNR("klee_thread_terminate", handleThreadTerminate),
 
   add("calloc", handleCalloc, true),
   add("free", handleFree, false),
@@ -85,6 +86,10 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
   add("klee_print_range", handlePrintRange, false),
   add("klee_set_forking", handleSetForking, false),
   add("klee_stack_trace", handleStackTrace, false),
+  add("klee_thread_create", handleThreadCreate, false),
+  add("klee_thread_notify", handleThreadNotify, false),
+  add("klee_thread_preempt", handleThreadPreempt, false),
+  add("klee_thread_sleep", handleThreadSleep, false),
   add("klee_warning", handleWarning, false),
   add("klee_warning_once", handleWarningOnce, false),
   add("klee_alias_function", handleAliasFunction, false),
@@ -745,3 +750,79 @@ void SpecialFunctionHandler::handleDivRemOverflow(ExecutionState &state,
                                  "overflow on division or remainder",
                                  "overflow.err");
 }
+
+void SpecialFunctionHandler::handleThreadCreate(ExecutionState &state,
+        KInstruction *target,
+        std::vector<ref<Expr> > &arguments) {
+    assert(arguments.size() == 3 && "invalid number of arguments to klee_thread_create");
+
+    ref<Expr> tid = executor.toUnique(state, arguments[0]);
+
+    if (!isa<ConstantExpr>(tid)) {
+        executor.terminateStateOnError(state, "klee_thread_create", "user.err");
+        return;
+    }
+
+    executor.executeThreadCreate(state, cast<ConstantExpr>(tid)->getZExtValue(),
+            arguments[1], arguments[2]);
+}
+
+void SpecialFunctionHandler::handleThreadTerminate(ExecutionState &state,
+                    KInstruction *target,
+                                        std::vector<ref<Expr> > &arguments) {
+      assert(arguments.empty() && "invalid number of arguments to klee_thread_terminate");
+
+        executor.executeThreadExit(state);
+}
+
+void SpecialFunctionHandler::handleThreadPreempt(ExecutionState &state,
+        KInstruction *target,
+        std::vector<ref<Expr> > &arguments) {
+    assert(arguments.size() == 1 && "invalid number of arguments to klee_thread_preempt");
+
+    if (!isa<ConstantExpr>(arguments[0])) {
+        executor.terminateStateOnError(state, "klee_thread_preempt", "user.err");
+    }
+
+    executor.schedule(state, !arguments[0]->isZero());
+}
+
+void SpecialFunctionHandler::handleThreadSleep(ExecutionState &state,
+        KInstruction *target,
+        std::vector<ref<Expr> > &arguments) {
+
+    assert(arguments.size() == 1 && "invalid number of arguments to klee_thread_sleep");
+
+    ref<Expr> wlistExpr = executor.toUnique(state, arguments[0]);
+
+    if (!isa<ConstantExpr>(wlistExpr)) {
+        executor.terminateStateOnError(state, "klee_thread_sleep", "user.err");
+        return;
+    }
+
+    state.sleepThread(cast<ConstantExpr>(wlistExpr)->getZExtValue());
+    executor.schedule(state, false);
+}
+
+void SpecialFunctionHandler::handleThreadNotify(ExecutionState &state,
+        KInstruction *target,
+        std::vector<ref<Expr> > &arguments) {
+    assert(arguments.size() == 2 && "invalid number of arguments to klee_thread_notify");
+
+    ref<Expr> wlist = executor.toUnique(state, arguments[0]);
+    ref<Expr> all = executor.toUnique(state, arguments[1]);
+
+    if (!isa<ConstantExpr>(wlist) || !isa<ConstantExpr>(all)) {
+        executor.terminateStateOnError(state, "klee_thread_notify", "user.err");
+        return;
+    }
+
+    if (all->isZero()) {
+        executor.executeThreadNotifyOne(state, cast<ConstantExpr>(wlist)->getZExtValue());
+    } else {
+        // It's simple enough such that it can be handled by the state class itself
+        state.notifyAll(cast<ConstantExpr>(wlist)->getZExtValue());
+    }
+}
+
+

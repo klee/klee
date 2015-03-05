@@ -288,6 +288,7 @@ private:
   // not hold, respectively. One of the states is necessarily the
   // current state, and one of the states may be null.
   StatePair fork(ExecutionState &current, ref<Expr> condition, bool isInternal);
+  StatePair fork(ExecutionState &current);
 
   /// Add the given (boolean) condition as a constraint on state. This
   /// function is a wrapper around the state's addConstraint function
@@ -408,6 +409,14 @@ private:
 
   void executeThreadNotifyOne(ExecutionState &state, wlist_id_t wlist);
 
+  KFunction* resolveFunction(ref<Expr> address);
+
+  void bindArgumentToPthreadCreate(KFunction *kf, unsigned index, StackFrame &sf, ref<Expr> value);
+
+  Cell& getArgumentCell(StackFrame &sf, KFunction *kf, unsigned index) {
+      return sf.locals[kf->getArgRegister(index)];
+  }
+  
 public:
   Executor(const InterpreterOptions &opts, InterpreterHandler *ie);
   virtual ~Executor();

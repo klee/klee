@@ -265,8 +265,21 @@ namespace {
   MaxMemoryInhibit("max-memory-inhibit",
             cl::desc("Inhibit forking at memory cap (vs. random terminate) (default=on)"),
             cl::init(true));
-}
 
+  cl::opt<bool>
+  DebugSchedulingHistory("debug-sched-history", cl::init(false));
+
+  cl::opt<bool>
+  ForkOnSchedule("fork-on-schedule",
+     cl::desc("fork when various schedules are possible (defaul=disabled)"),
+        cl::init(false));
+
+  cl::opt<unsigned int>
+  MaxPreemptions("scheduler-preemption-bound",
+     cl::desc("scheduler preemption bound (default=0)"),
+        cl::init(0));
+
+}
 
 namespace klee {
   RNG theRNG;
@@ -929,6 +942,25 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
 
     return StatePair(trueState, falseState);
   }
+}
+
+Executor::StatePair
+Executor::fork(ExecutionState &current) {
+    ExecutionState *lastState = &current;
+
+    ExecutionState *newState = lastState->branch();
+
+    addedStates.insert(newState);
+
+    if (lastState->ptreeNode) {
+        lastState->ptreeNode->data = 0;
+        std::pair<PTree::Node*,PTree::Node*> res =
+            processTree->split(lastState->ptreeNode, newState, lastState);
+        newState->ptreeNode = res.first;
+        lastState->ptreeNode = res.second;
+    }
+
+    return StatePair(newState, lastState);
 }
 
 void Executor::addConstraint(ExecutionState &state, ref<Expr> condition) {
@@ -3561,9 +3593,167 @@ Expr::Width Executor::getWidthForLLVMType(LLVM_TYPE_Q llvm::Type *type) const {
   return kmodule->targetData->getTypeSizeInBits(type);
 }
 
+bool Executor::schedule(ExecutionState &state, bool yield) {
+    int enabledCount = 0;
+    for(ExecutionState::threads_ty::iterator it = state.threads.begin();
+            it != state.threads.end();  it++) {
+        if(it->second.enabled) {
+            enabledCount++;
+        }
+    }
+
+    if (enabledCount == 0) {
+        terminateStateOnError(state, " ******** hang (possible deadlock?)", "user.err");
+        return false;
+    }
+
+    bool forkSchedule = false;
+    bool incPreemptions = false;
+
+    ExecutionState::threads_ty::iterator oldIt = state.crtThreadIt;
+
+    if(!state.crtThread().enabled || yield) {
+        ExecutionState::threads_ty::iterator it = state.nextThread(state.crtThreadIt);
+
+        while (!it->second.enabled)
+            it = state.nextThread(it);
+
+        state.scheduleNext(it);
+
+        if (ForkOnSchedule)
+            forkSchedule = true;
+    } else {
+        if (state.preemptions < MaxPreemptions) {
+            forkSchedule = true;
+            incPreemptions = true;
+        }
+    }
+
+    if (DebugSchedulingHistory) {
+        std::string Str;
+        llvm::raw_string_ostream msg(Str);
+        msg << "Context Switch: --- TID: " << state.crtThread().tid << " -----------------------";
+        klee_message("%s", msg.str().c_str());
+
+        unsigned int depth = state.stack().size() - 1;
+        msg << "Call: " << std::string(depth, ' ') << state.stack().back().kf->function->getName().str();
+        klee_message("%s", msg.str().c_str());
+    }
+
+    if (forkSchedule) {
+        ExecutionState::threads_ty::iterator finalIt = state.crtThreadIt;
+        ExecutionState::threads_ty::iterator it = state.nextThread(finalIt);
+        ExecutionState *lastState = &state;
+
+        while (it != finalIt) {
+            // Choose only enabled states, and, in the case of yielding, do not
+            // reschedule the same thread
+            if (it->second.enabled && (!yield || it != oldIt)) {
+                StatePair sp = fork(*lastState); 
+
+                if (incPreemptions)
+                    sp.first->preemptions = state.preemptions + 1;
+
+                sp.first->scheduleNext(sp.first->threads.find(it->second.tid));
+
+                lastState = sp.first;
+            }
+
+            it = state.nextThread(it);
+        }
+    }
+
+    return true;
+}
+
+void Executor::executeThreadCreate(ExecutionState &state, thread_id_t tid,
+        ref<Expr> start_function, ref<Expr> arg)
+{
+    klee_message("Creating thread...");
+    KFunction *kf = resolveFunction(start_function);
+    assert(kf && "cannot resolve thread start function");
+
+    Thread &t = state.createThread(tid, kf);
+
+    bindArgumentToPthreadCreate(kf, 0, t.stack.back(), arg);
+
+    if (statsTracker)
+        statsTracker->framePushed(&t.stack.back(), 0);
+}
+
+
+void Executor::executeThreadExit(ExecutionState &state) {
+    //terminate this thread and schedule another one
+    klee_message("Exiting thread...");
+
+    if (state.threads.size() == 1) {
+        klee_message("Terminating state");
+        terminateStateOnExit(state);
+        return;
+    }
+
+    assert(state.threads.size() > 1);
+
+    ExecutionState::threads_ty::iterator thrIt = state.crtThreadIt;
+    thrIt->second.enabled = false;
+
+    if (!schedule(state, false))
+        return;
+
+    state.terminateThread(thrIt);
+}
+
+
+void Executor::executeThreadNotifyOne(ExecutionState &state, wlist_id_t wlist) {
+    // Copy the waiting list
+    std::set<thread_id_t> wl = state.waitingLists[wlist];
+
+    if (!ForkOnSchedule || wl.size() <= 1) {
+        if (wl.size() == 0)
+            state.waitingLists.erase(wlist);
+        else
+            state.notifyOne(wlist, *wl.begin()); // Deterministically pick the first thread in the queue
+
+        return;
+    }
+
+    ExecutionState *lastState = &state;
+
+    for (std::set<thread_id_t>::iterator it = wl.begin(); it != wl.end();) {
+        thread_id_t tid = *it++;
+
+        if (it != wl.end()) {
+            StatePair sp = fork(*lastState);
+
+            sp.second->notifyOne(wlist, tid);
+
+            lastState = sp.first;
+        } else {
+            lastState->notifyOne(wlist, tid);
+        }
+    }
+}
+
+KFunction* Executor::resolveFunction(ref<Expr> address)
+{
+    for (std::vector<KFunction*>::iterator fi = kmodule->functions.begin();
+            fi != kmodule->functions.end(); fi++) {
+        KFunction* f = (*fi);
+        ref<Expr> addr = Expr::createPointer((uint64_t) (void*) f->function);
+        if(addr == address)
+            return f;
+    }
+    return NULL;
+}
+
+void Executor::bindArgumentToPthreadCreate(KFunction *kf, unsigned index,
+             StackFrame &sf, ref<Expr> value) {
+      getArgumentCell(sf, kf, index).value = value;
+}
+
 ///
 
 Interpreter *Interpreter::create(const InterpreterOptions &opts,
-                                 InterpreterHandler *ih) {
-  return new Executor(opts, ih);
+        InterpreterHandler *ih) {
+    return new Executor(opts, ih);
 }

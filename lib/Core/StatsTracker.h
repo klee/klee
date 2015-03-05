@@ -61,6 +61,7 @@ namespace klee {
     ~StatsTracker();
 
     // called after a new StackFrame has been pushed (for callpath tracing)
+    void framePushed(StackFrame *frame, StackFrame *parentFrame);
     void framePushed(ExecutionState &es, StackFrame *parentFrame);
 
     // called after a StackFrame has been popped 

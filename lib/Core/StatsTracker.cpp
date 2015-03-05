@@ -345,6 +345,28 @@ void StatsTracker::framePushed(ExecutionState &es, StackFrame *parentFrame) {
   }
 }
 
+void StatsTracker::framePushed(StackFrame *frame, StackFrame *parentFrame) {
+    if (OutputIStats) {
+
+        if (UseCallPaths) {
+            CallPathNode *parent = parentFrame ? parentFrame->callPathNode : 0;
+            CallPathNode *cp = callPathManager.getCallPath(parent,
+                    frame->caller ? frame->caller->inst : 0,
+                    frame->kf->function);
+            frame->callPathNode = cp;
+            cp->count++;
+        }
+
+        uint64_t minDistAtRA = 0;
+        if (parentFrame)
+            minDistAtRA = parentFrame->minDistToUncoveredOnReturn;
+
+        frame->minDistToUncoveredOnReturn = frame->caller ?
+            computeMinDistToUncovered(frame->caller, minDistAtRA) : 0;
+    }
+}
+
+
 /* Should be called _after_ the es->popFrame() */
 void StatsTracker::framePopped(ExecutionState &es) {
   // XXX remove me?
