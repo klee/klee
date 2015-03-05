@@ -142,6 +142,34 @@ extern "C" {
   /* Print stack trace. */
   void klee_stack_trace(void);
 
+  //////////////////////////////////////////////////////////////////////////////
+  // Thread Scheduling Management
+  //////////////////////////////////////////////////////////////////////////////
+
+  void klee_thread_create(uint64_t tid, void *(*start_routine)(void*), void *arg);
+  void klee_thread_terminate() __attribute__ ((__noreturn__));
+
+  void klee_get_context(uint64_t *tid);
+
+  uint64_t klee_get_wlist(void);
+
+  void klee_thread_preempt(int yield);
+
+  void klee_thread_sleep(uint64_t wlist);
+
+  void klee_thread_notify(uint64_t wlist, int all);
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Misc
+  //////////////////////////////////////////////////////////////////////////////
+
+  uint64_t klee_get_time(void);
+  void klee_set_time(uint64_t value);
+
+  uintptr_t klee_branch(uintptr_t expr, int reason);
+  int klee_fork(uint64_t reason);
+
+
 #ifdef __cplusplus
 }
 #endif
