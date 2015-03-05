@@ -49,10 +49,7 @@ ExecutionState::ExecutionState(KFunction *kf)
     coveredNew(false),
     forkDisabled(false),
     ptreeNode(0) {
-        pushFrame(0, kf);
         setupMain(kf);
-        pc(kf->instructions);
-        prevPC(pc());
 }
 
 ExecutionState::ExecutionState(const std::vector<ref<Expr> > &assumptions) 
@@ -79,7 +76,12 @@ ExecutionState::~ExecutionState() {
       delete mo;
   }
 
-  while (!stack().empty()) popFrame();
+  for (threads_ty::iterator it = threads.begin(); it != threads.end(); it++) {
+      Thread &t = it->second;
+      while (!t.stack.empty())
+          popFrame(t);
+  }
+
 }
 
 ExecutionState::ExecutionState(const ExecutionState& state)
@@ -125,12 +127,16 @@ void ExecutionState::pushFrame(KInstIterator caller, KFunction *kf) {
   stack().push_back(StackFrame(caller,kf));
 }
 
+void ExecutionState::popFrame(Thread &t) {
+    StackFrame &sf = t.stack.back();
+    for (std::vector<const MemoryObject*>::iterator it = sf.allocas.begin(),
+            ie = sf.allocas.end(); it != ie; ++it)
+        addressSpace.unbindObject(*it);
+    t.stack.pop_back();
+}
+
 void ExecutionState::popFrame() {
-  StackFrame &sf = stack().back();
-  for (std::vector<const MemoryObject*>::iterator it = sf.allocas.begin(), 
-         ie = sf.allocas.end(); it != ie; ++it)
-    addressSpace.unbindObject(*it);
-  stack().pop_back();
+    popFrame(crtThread());
 }
 
 void ExecutionState::addSymbolic(const MemoryObject *mo, const Array *array) { 
@@ -163,8 +169,8 @@ Thread& ExecutionState::createThread(thread_id_t tid, KFunction *kf) {
 void ExecutionState::terminateThread(threads_ty::iterator thrIt) {
     assert(threads.size() > 1);
     assert(thrIt != crtThreadIt); // We assume the scheduler found a new thread first
-    assert(!thrIt->enabled);
-    assert(thrIt->waitingList == 0);
+    assert(!thrIt->second.enabled);
+    assert(thrIt->second.waitingList == 0);
     threads.erase(thrIt);
 }
 

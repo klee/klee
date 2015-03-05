@@ -1452,6 +1452,7 @@ static inline const llvm::fltSemantics * fpWidthToSemantics(unsigned width) {
 }
 
 void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
+    klee_warning("Stack size %lu",state.stack().size());
   Instruction *i = ki->inst;
   switch (i->getOpcode()) {
     // Control flow
@@ -1468,7 +1469,17 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     
     if (state.stack().size() <= 1) {
       assert(!caller && "caller set on initial stack frame");
-      terminateStateOnExit(state);
+      if (state.threads.size() == 1) {
+          //main exit
+          terminateStateOnExit(state);
+      } else {
+          // Invoke pthread_exit()
+          Function *f = kmodule->module->getFunction("pthread_exit");
+          std::vector<ref<Expr> > arguments;
+          arguments.push_back(result);
+
+          executeCall(state, NULL, f, arguments);
+      }
     } else {
       state.popFrame();
 

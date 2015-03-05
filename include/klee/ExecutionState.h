@@ -162,6 +162,7 @@ public:
   ExecutionState *branch();
 
   void pushFrame(KInstIterator caller, KFunction *kf);
+  void popFrame(Thread &t);
   void popFrame();
 
   void addSymbolic(const MemoryObject *mo, const Array *array);
