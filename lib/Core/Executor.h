@@ -23,6 +23,8 @@
 
 #include "llvm/ADT/Twine.h"
 
+#include "Threading.h"
+
 #include <vector>
 #include <string>
 #include <map>
@@ -303,12 +305,12 @@ private:
   Cell& getArgumentCell(ExecutionState &state,
                         KFunction *kf,
                         unsigned index) {
-    return state.stack.back().locals[kf->getArgRegister(index)];
+    return state.stack().back().locals[kf->getArgRegister(index)];
   }
 
   Cell& getDestCell(ExecutionState &state,
                     KInstruction *target) {
-    return state.stack.back().locals[target->dest];
+    return state.stack().back().locals[target->dest];
   }
 
   void bindLocal(KInstruction *target, 
@@ -395,7 +397,17 @@ private:
   void initTimers();
   void processTimers(ExecutionState *current,
                      double maxInstTime);
-                
+
+  // pthread handlers
+  void executeThreadCreate(ExecutionState &state, thread_id_t tid,
+          ref<Expr> start_function, ref<Expr> arg);
+
+  void executeThreadExit(ExecutionState &state);
+
+  bool schedule(ExecutionState &state, bool yield);
+
+  void executeThreadNotifyOne(ExecutionState &state, wlist_id_t wlist);
+
 public:
   Executor(const InterpreterOptions &opts, InterpreterHandler *ie);
   virtual ~Executor();

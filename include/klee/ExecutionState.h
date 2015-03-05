@@ -16,6 +16,7 @@
 
 // FIXME: We do not want to be exposing these? :(
 #include "../../lib/Core/AddressSpace.h"
+#include "../../lib/Core/Threading.h"
 #include "klee/Internal/Module/KInstIterator.h"
 
 #include <map>
@@ -24,46 +25,22 @@
 
 namespace klee {
   class Array;
-  class CallPathNode;
-  struct Cell;
   struct KFunction;
   struct KInstruction;
   class MemoryObject;
   class PTreeNode;
   struct InstructionInfo;
+//  class Thread;
+//  struct StackFrame;
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const MemoryMap &mm);
 
-struct StackFrame {
-  KInstIterator caller;
-  KFunction *kf;
-  CallPathNode *callPathNode;
-
-  std::vector<const MemoryObject*> allocas;
-  Cell *locals;
-
-  /// Minimum distance to an uncovered instruction once the function
-  /// returns. This is not a good place for this but is used to
-  /// quickly compute the context sensitive minimum distance to an
-  /// uncovered instruction. This value is updated by the StatsTracker
-  /// periodically.
-  unsigned minDistToUncoveredOnReturn;
-
-  // For vararg functions: arguments not passed via parameter are
-  // stored (packed tightly) in a local (alloca) memory object. This
-  // is setup to match the way the front-end generates vaarg code (it
-  // does not pass vaarg through as expected). VACopy is lowered inside
-  // of intrinsic lowering.
-  MemoryObject *varargs;
-
-  StackFrame(KInstIterator caller, KFunction *kf);
-  StackFrame(const StackFrame &s);
-  ~StackFrame();
-};
-
 class ExecutionState {
+
 public:
   typedef std::vector<StackFrame> stack_ty;
+  typedef std::map<thread_id_t, Thread> threads_ty;
+  typedef std::map<wlist_id_t, std::set<thread_id_t> > wlists_ty;
 
 private:
   // unsupported, use copy constructor
@@ -74,9 +51,6 @@ public:
   bool fakeState;
   unsigned depth;
   
-  // pc - pointer to current instruction stream
-  KInstIterator pc, prevPC;
-  stack_ty stack;
   ConstraintManager constraints;
   mutable double queryCost;
   double weight;
@@ -103,15 +77,77 @@ public:
   // FIXME: not freeing things on branch deletion.
   MemoryMap shadowObjects;
 
-  unsigned incomingBBIndex;
-
   std::string getFnAlias(std::string fn);
   void addFnAlias(std::string old_fn, std::string new_fn);
   void removeFnAlias(std::string fn);
+
+  // Thread scheduling
+  // For a multi threaded ExecutionState
+  threads_ty threads;
+
+  wlists_ty waitingLists;
+  wlist_id_t wlistCounter;
+
+  Thread& createThread(thread_id_t tid, KFunction *kf);
+  void terminateThread(threads_ty::iterator it);
+
+  threads_ty::iterator nextThread(threads_ty::iterator it) {
+      if (it == threads.end())
+          it = threads.begin();
+      else {
+          it++;
+          if (it == threads.end())
+              it = threads.begin();
+      }
+
+      return it;
+  }
+
+  void scheduleNext(threads_ty::iterator it) {
+      assert(it != threads.end());
+      crtThreadIt = it;
+  }
+
+  wlist_id_t getWaitingList() { return wlistCounter++; }
+  void sleepThread(wlist_id_t wlist);
+  void notifyOne(wlist_id_t wlist, thread_id_t tid);
+  void notifyAll(wlist_id_t wlist);
+
+  threads_ty::iterator crtThreadIt;
+
+  unsigned int preemptions;
+
+  /* Shortcut methods */
+
+  Thread &crtThread() { return crtThreadIt->second; }
+  const Thread &crtThread() const { return crtThreadIt->second; }
+
+  KInstIterator& pc() { return crtThread().pc; }
+  const KInstIterator& pc() const { return crtThread().pc; }
+  
+  void pc(KInstIterator& ki) { crtThread().pc = ki; }
+  void pc(const KInstIterator& ki) { crtThread().pc = ki; }
+  
+  KInstIterator& prevPC() { return crtThread().prevPC; }
+  const KInstIterator& prevPC() const { return crtThread().prevPC; }
+  
+  void prevPC(KInstIterator& ki) { crtThread().prevPC = ki; }
+  void prevPC(const KInstIterator& ki) { crtThread().prevPC = ki; }
+ 
+  stack_ty& stack() { return crtThread().stack; }
+  const stack_ty& stack() const { return crtThread().stack; }
+  
+  void stack(stack_ty& s) { crtThread().stack = s; }
+  void stack(const stack_ty& s) { crtThread().stack = s; }
+  
+  unsigned incomingBBIndex() { return crtThread().incomingBBIndex; }
+  
+  void incomingBBIndex(unsigned ibbi) { crtThread().incomingBBIndex = ibbi; }
   
 private:
   ExecutionState() : fakeState(false), ptreeNode(0) {}
 
+  void setupMain(KFunction *kf);
 public:
   ExecutionState(KFunction *kf);
 
