@@ -105,6 +105,13 @@ typedef struct {
 } rwlock_data_t;
 
 typedef struct {
+    wlist_id_t wlist;
+
+    int count;
+    char allocated;
+} sem_data_t;
+
+typedef struct {
   thread_data_t threads[MAX_THREADS];
 } tsync_data_t;
 
