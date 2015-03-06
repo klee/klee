@@ -24,8 +24,10 @@
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
 #include "llvm/IR/Module.h"
+#include "llvm/IR/LLVMContext.h"
 #else
 #include "llvm/Module.h"
+#include "llvm/LLVMContext.h"
 #endif
 #include "llvm/ADT/Twine.h"
 
@@ -86,6 +88,8 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
   add("klee_print_range", handlePrintRange, false),
   add("klee_set_forking", handleSetForking, false),
   add("klee_stack_trace", handleStackTrace, false),
+  add("klee_get_context", handleGetContext, false),
+  add("klee_get_wlist", handleGetWList, true),
   add("klee_thread_create", handleThreadCreate, false),
   add("klee_thread_notify", handleThreadNotify, false),
   add("klee_thread_preempt", handleThreadPreempt, false),
@@ -825,4 +829,52 @@ void SpecialFunctionHandler::handleThreadNotify(ExecutionState &state,
     }
 }
 
+void SpecialFunctionHandler::handleGetWList(ExecutionState &state,
+        KInstruction *target,
+        std::vector<ref<Expr> > &arguments) {
+    assert(arguments.empty() && "invalid number of arguments to klee_get_wlist");
+
+    wlist_id_t id = state.getWaitingList();
+
+    executor.bindLocal(target, state, ConstantExpr::create(id,
+                executor.getWidthForLLVMType(target->inst->getType())));
+}
+
+void SpecialFunctionHandler::handleGetContext(ExecutionState &state,
+        KInstruction *target,
+        std::vector<ref<Expr> > &arguments) {
+    assert(arguments.size() == 1 &&
+            "invalid number of arguments to klee_get_context");
+
+    ref<Expr> tidAddr = executor.toUnique(state, arguments[0]);
+
+    if (!isa<ConstantExpr>(tidAddr)) {
+        executor.terminateStateOnError(state,
+                "klee_get_context requires constant args",
+                "user.err");
+        return;
+    }
+
+    if (!tidAddr->isZero()) {
+        if (!writeConcreteValue(state, tidAddr, state.crtThread().getTid(),
+                    executor.getWidthForLLVMType(Type::getInt64Ty(getGlobalContext()))))
+            return;
+    }
+}
+
+bool SpecialFunctionHandler::writeConcreteValue(ExecutionState &state,
+        ref<Expr> address, uint64_t value, Expr::Width width) {
+    ObjectPair op;
+
+    if (!state.addressSpace.resolveOne(cast<ConstantExpr>(address), op)) {
+        executor.terminateStateOnError(state, "invalid pointer for writing concrete value into", "user.err");
+        return false;
+    }
+
+    ObjectState *os = state.addressSpace.getWriteable(op.first, op.second);
+
+    os->write(op.first->getOffsetExpr(address), ConstantExpr::create(value, width));
+
+    return true;
+}
 

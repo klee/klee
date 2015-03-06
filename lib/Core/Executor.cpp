@@ -1203,8 +1203,10 @@ void Executor::executeCall(ExecutionState &state,
                            KInstruction *ki,
                            Function *f,
                            std::vector< ref<Expr> > &arguments) {
-  Instruction *i = ki->inst;
-  if (f && f->isDeclaration()) {
+  Instruction *i = NULL;
+  if (ki)
+      i = ki->inst;
+  if (ki && f && f->isDeclaration()) {
     switch(f->getIntrinsicID()) {
     case Intrinsic::not_intrinsic:
       // state may be destroyed by this call, cannot touch
@@ -1272,7 +1274,7 @@ void Executor::executeCall(ExecutionState &state,
     // from just an instruction (unlike LLVM).
     KFunction *kf = kmodule->functionMap[f];
     state.pushFrame(state.prevPC(), kf);
-    state.pc(kf->instructions);
+    state.pc() = kf->instructions;
         
     if (statsTracker)
       statsTracker->framePushed(state, &state.stack()[state.stack().size()-2]);
@@ -1452,7 +1454,6 @@ static inline const llvm::fltSemantics * fpWidthToSemantics(unsigned width) {
 }
 
 void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
-    klee_warning("Stack size %lu",state.stack().size());
   Instruction *i = ki->inst;
   switch (i->getOpcode()) {
     // Control flow

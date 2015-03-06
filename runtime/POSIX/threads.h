@@ -39,6 +39,8 @@
 
 #include "common.h"
 
+#define MAX_THREADS         16
+
 typedef uint64_t wlist_id_t;
 
 #define DEFAULT_THREAD  0

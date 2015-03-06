@@ -30,23 +30,27 @@
  *
  */
 
-#ifndef POSIX_CONFIG_H_
-#define POSIX_CONFIG_H_
+#include "common.h"
+#include "threads.h"
+
+#include <string.h>
+
+#include <klee/klee.h>
 
 ////////////////////////////////////////////////////////////////////////////////
-// System Limits
+// Threads
 ////////////////////////////////////////////////////////////////////////////////
 
-#define MAX_THREADS         16
+tsync_data_t __tsync;
 
-////////////////////////////////////////////////////////////////////////////////
-// Enabled Components
-////////////////////////////////////////////////////////////////////////////////
+void klee_init_threads(void) {
+    STATIC_LIST_INIT(__tsync.threads);
 
-//#define HAVE_FAULT_INJECTION    1
-//#define HAVE_STUBBED_STDIO      1
-//#define HAVE_SYMBOLIC_CTYPE     1
-//#define HAVE_POSIX_SIGNALS  1
-
-
-#endif /* POSIX_CONFIG_H_ */
+    // Thread initialization
+    thread_data_t *def_data = &__tsync.threads[DEFAULT_THREAD];
+    def_data->allocated = 1;
+    def_data->terminated = 0;
+    def_data->ret_value = 0;
+    def_data->joinable = 1; // Why not?
+    def_data->wlist = klee_get_wlist();
+}
