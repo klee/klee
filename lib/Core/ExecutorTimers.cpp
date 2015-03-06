@@ -13,6 +13,7 @@
 #include "Executor.h"
 #include "PTree.h"
 #include "StatsTracker.h"
+#include "Threading.h"
 #include "ExecutorTimerInfo.h"
 
 #include "klee/ExecutionState.h"
@@ -140,9 +141,9 @@ void Executor::processTimers(ExecutionState *current,
           ExecutionState *es = *it;
           *os << "(" << es << ",";
           *os << "[";
-          ExecutionState::stack_ty::iterator next = es->stack().begin();
+          Thread::stack_ty::iterator next = es->stack().begin();
           ++next;
-          for (ExecutionState::stack_ty::iterator sfIt = es->stack().begin(),
+          for (Thread::stack_ty::iterator sfIt = es->stack().begin(),
                  sf_ie = es->stack().end(); sfIt != sf_ie; ++sfIt) {
             *os << "('" << sfIt->kf->function->getName().str() << "',";
             if (next == es->stack().end()) {

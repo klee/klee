@@ -44,13 +44,6 @@
 #include <map>
 
 namespace klee {
-/*struct KFunction;
-struct KInstruction;
-class CallPathNode;
-struct Cell;
-*/
-typedef uint64_t thread_id_t;
-typedef uint64_t wlist_id_t;
 
 struct StackFrame {
     KInstIterator caller;
@@ -83,12 +76,17 @@ struct StackFrame {
 class Thread {
   friend class Executor;
   friend class ExecutionState;
-private:
 
+public:
+  typedef std::vector<StackFrame> stack_ty;
+  typedef uint64_t thread_id_t;
+  typedef uint64_t wlist_id_t;
+
+private:
   KInstIterator pc, prevPC;
   unsigned incomingBBIndex;
 
-  std::vector<StackFrame> stack;
+  stack_ty stack;
 
   bool enabled;
   wlist_id_t waitingList;

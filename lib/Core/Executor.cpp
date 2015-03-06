@@ -21,6 +21,7 @@
 #include "SpecialFunctionHandler.h"
 #include "StatsTracker.h"
 #include "TimingSolver.h"
+#include "Threading.h"
 #include "UserSearcher.h"
 #include "ExecutorTimerInfo.h"
 
@@ -2775,7 +2776,7 @@ const InstructionInfo & Executor::getLastNonKleeInternalInstruction(const Execut
     Instruction ** lastInstruction) {
   // unroll the stack of the applications state and find
   // the last instruction which is not inside a KLEE internal function
-  ExecutionState::stack_ty::const_reverse_iterator it = state.stack().rbegin(),
+  Thread::stack_ty::const_reverse_iterator it = state.stack().rbegin(),
       itE = state.stack().rend();
 
   // don't check beyond the outermost function (i.e. main())
@@ -3678,7 +3679,7 @@ bool Executor::schedule(ExecutionState &state, bool yield) {
     return true;
 }
 
-void Executor::executeThreadCreate(ExecutionState &state, thread_id_t tid,
+void Executor::executeThreadCreate(ExecutionState &state, Thread::thread_id_t tid,
         ref<Expr> start_function, ref<Expr> arg)
 {
     klee_message("Creating thread...");
@@ -3716,9 +3717,9 @@ void Executor::executeThreadExit(ExecutionState &state) {
 }
 
 
-void Executor::executeThreadNotifyOne(ExecutionState &state, wlist_id_t wlist) {
+void Executor::executeThreadNotifyOne(ExecutionState &state, Thread::wlist_id_t wlist) {
     // Copy the waiting list
-    std::set<thread_id_t> wl = state.waitingLists[wlist];
+    std::set<Thread::thread_id_t> wl = state.waitingLists[wlist];
 
     if (!ForkOnSchedule || wl.size() <= 1) {
         if (wl.size() == 0)
@@ -3731,8 +3732,8 @@ void Executor::executeThreadNotifyOne(ExecutionState &state, wlist_id_t wlist) {
 
     ExecutionState *lastState = &state;
 
-    for (std::set<thread_id_t>::iterator it = wl.begin(); it != wl.end();) {
-        thread_id_t tid = *it++;
+    for (std::set<Thread::thread_id_t>::iterator it = wl.begin(); it != wl.end();) {
+        Thread::thread_id_t tid = *it++;
 
         if (it != wl.end()) {
             StatePair sp = fork(*lastState);

@@ -400,14 +400,14 @@ private:
                      double maxInstTime);
 
   // pthread handlers
-  void executeThreadCreate(ExecutionState &state, thread_id_t tid,
+  void executeThreadCreate(ExecutionState &state, Thread::thread_id_t tid,
           ref<Expr> start_function, ref<Expr> arg);
 
   void executeThreadExit(ExecutionState &state);
 
   bool schedule(ExecutionState &state, bool yield);
 
-  void executeThreadNotifyOne(ExecutionState &state, wlist_id_t wlist);
+  void executeThreadNotifyOne(ExecutionState &state, Thread::wlist_id_t wlist);
 
   KFunction* resolveFunction(ref<Expr> address);
 

@@ -12,6 +12,7 @@
 #include "Memory.h"
 #include "SpecialFunctionHandler.h"
 #include "TimingSolver.h"
+#include "Threading.h"
 
 #include "klee/ExecutionState.h"
 
@@ -834,7 +835,7 @@ void SpecialFunctionHandler::handleGetWList(ExecutionState &state,
         std::vector<ref<Expr> > &arguments) {
     assert(arguments.empty() && "invalid number of arguments to klee_get_wlist");
 
-    wlist_id_t id = state.getWaitingList();
+    Thread::wlist_id_t id = state.getWaitingList();
 
     executor.bindLocal(target, state, ConstantExpr::create(id,
                 executor.getWidthForLLVMType(target->inst->getType())));

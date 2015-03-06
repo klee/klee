@@ -24,6 +24,7 @@
 #include "CoreStats.h"
 #include "Executor.h"
 #include "MemoryManager.h"
+#include "Threading.h"
 #include "UserSearcher.h"
 #include "../Solver/SolverStats.h"
 
@@ -885,9 +886,9 @@ void StatsTracker::computeReachableUncovered() {
          ie = executor.states.end(); it != ie; ++it) {
     ExecutionState *es = *it;
     uint64_t currentFrameMinDist = 0;
-    for (ExecutionState::stack_ty::iterator sfIt = es->stack().begin(),
+    for (Thread::stack_ty::iterator sfIt = es->stack().begin(),
            sf_ie = es->stack().end(); sfIt != sf_ie; ++sfIt) {
-      ExecutionState::stack_ty::iterator next = sfIt + 1;
+      Thread::stack_ty::iterator next = sfIt + 1;
       KInstIterator kii;
 
       if (next==es->stack().end()) {

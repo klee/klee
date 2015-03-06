@@ -30,17 +30,14 @@ namespace klee {
   class MemoryObject;
   class PTreeNode;
   struct InstructionInfo;
-//  class Thread;
-//  struct StackFrame;
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const MemoryMap &mm);
 
 class ExecutionState {
 
 public:
-  typedef std::vector<StackFrame> stack_ty;
-  typedef std::map<thread_id_t, Thread> threads_ty;
-  typedef std::map<wlist_id_t, std::set<thread_id_t> > wlists_ty;
+  typedef std::map<Thread::thread_id_t, Thread> threads_ty;
+  typedef std::map<Thread::wlist_id_t, std::set<Thread::thread_id_t> > wlists_ty;
 
 private:
   // unsupported, use copy constructor
@@ -86,9 +83,9 @@ public:
   threads_ty threads;
 
   wlists_ty waitingLists;
-  wlist_id_t wlistCounter;
+  Thread::wlist_id_t wlistCounter;
 
-  Thread& createThread(thread_id_t tid, KFunction *kf);
+  Thread& createThread(Thread::thread_id_t tid, KFunction *kf);
   void terminateThread(threads_ty::iterator it);
 
   threads_ty::iterator nextThread(threads_ty::iterator it) {
@@ -108,10 +105,10 @@ public:
       crtThreadIt = it;
   }
 
-  wlist_id_t getWaitingList() { return wlistCounter++; }
-  void sleepThread(wlist_id_t wlist);
-  void notifyOne(wlist_id_t wlist, thread_id_t tid);
-  void notifyAll(wlist_id_t wlist);
+  Thread::wlist_id_t getWaitingList() { return wlistCounter++; }
+  void sleepThread(Thread::wlist_id_t wlist);
+  void notifyOne(Thread::wlist_id_t wlist, Thread::thread_id_t tid);
+  void notifyAll(Thread::wlist_id_t wlist);
 
   threads_ty::iterator crtThreadIt;
 
@@ -134,11 +131,11 @@ public:
   void prevPC(KInstIterator& ki) { crtThread().prevPC = ki; }
   void prevPC(const KInstIterator& ki) { crtThread().prevPC = ki; }
  
-  stack_ty& stack() { return crtThread().stack; }
-  const stack_ty& stack() const { return crtThread().stack; }
+  Thread::stack_ty& stack() { return crtThread().stack; }
+  const Thread::stack_ty& stack() const { return crtThread().stack; }
   
-  void stack(stack_ty& s) { crtThread().stack = s; }
-  void stack(const stack_ty& s) { crtThread().stack = s; }
+  void stack(Thread::stack_ty& s) { crtThread().stack = s; }
+  void stack(const Thread::stack_ty& s) { crtThread().stack = s; }
   
   unsigned incomingBBIndex() { return crtThread().incomingBBIndex; }
   

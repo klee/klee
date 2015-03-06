@@ -160,7 +160,7 @@ void ExecutionState::removeFnAlias(std::string fn) {
   fnAliases.erase(fn);
 }
 
-Thread& ExecutionState::createThread(thread_id_t tid, KFunction *kf) {
+Thread& ExecutionState::createThread(Thread::thread_id_t tid, KFunction *kf) {
     Thread newThread = Thread(tid,  kf);
     threads.insert(std::make_pair(newThread.tid, newThread));
     return threads.find(tid)->second;
@@ -174,22 +174,22 @@ void ExecutionState::terminateThread(threads_ty::iterator thrIt) {
     threads.erase(thrIt);
 }
 
-void ExecutionState::sleepThread(wlist_id_t wlist) {
+void ExecutionState::sleepThread(Thread::wlist_id_t wlist) {
     assert(crtThread().enabled);
     assert(wlist > 0);
 
     crtThread().enabled = false;
     crtThread().waitingList = wlist;
 
-    std::set<thread_id_t> &wl = waitingLists[wlist];
+    std::set<Thread::thread_id_t> &wl = waitingLists[wlist];
 
     wl.insert(crtThread().tid);
 }
 
-void ExecutionState::notifyOne(wlist_id_t wlist, thread_id_t tid) {
+void ExecutionState::notifyOne(Thread::wlist_id_t wlist, Thread::thread_id_t tid) {
     assert(wlist > 0);
 
-    std::set<thread_id_t> &wl = waitingLists[wlist];
+    std::set<Thread::thread_id_t> &wl = waitingLists[wlist];
 
     if (wl.erase(tid) != 1) {
         assert(0 && "thread was not waiting");
@@ -204,13 +204,13 @@ void ExecutionState::notifyOne(wlist_id_t wlist, thread_id_t tid) {
         waitingLists.erase(wlist);
 }
 
-void ExecutionState::notifyAll(wlist_id_t wlist) {
+void ExecutionState::notifyAll(Thread::wlist_id_t wlist) {
     assert(wlist > 0);
 
-    std::set<thread_id_t> &wl = waitingLists[wlist];
+    std::set<Thread::thread_id_t> &wl = waitingLists[wlist];
 
     if (wl.size() > 0) {
-        for (std::set<thread_id_t>::iterator it = wl.begin(); it != wl.end(); it++) {
+        for (std::set<Thread::thread_id_t>::iterator it = wl.begin(); it != wl.end(); it++) {
             Thread &thread = threads.find(*it)->second;
             thread.enabled = true;
             thread.waitingList = 0;
@@ -402,7 +402,7 @@ bool ExecutionState::merge(const ExecutionState &b) {
 void ExecutionState::dumpStack(llvm::raw_ostream &out) const {
   unsigned idx = 0;
   const KInstruction *target = prevPC();
-  for (ExecutionState::stack_ty::const_reverse_iterator
+  for (Thread::stack_ty::const_reverse_iterator
          it = stack().rbegin(), ie = stack().rend();
        it != ie; ++it) {
     const StackFrame &sf = *it;
