@@ -48,7 +48,9 @@ ExecutionState::ExecutionState(KFunction *kf)
     instsSinceCovNew(0),
     coveredNew(false),
     forkDisabled(false),
-    ptreeNode(0) {
+    ptreeNode(0),
+    wlistCounter(1),
+    preemptions(0) {
         setupMain(kf);
 }
 
@@ -56,7 +58,9 @@ ExecutionState::ExecutionState(const std::vector<ref<Expr> > &assumptions)
   : fakeState(true),
     constraints(assumptions),
     queryCost(0.),
-    ptreeNode(0) {
+    ptreeNode(0),
+    wlistCounter(1),
+    preemptions(0) {
    setupMain(NULL);
 }
 
@@ -102,7 +106,10 @@ ExecutionState::ExecutionState(const ExecutionState& state)
     symbolics(state.symbolics),
     arrayNames(state.arrayNames),
     shadowObjects(state.shadowObjects),
-    threads(state.threads)
+    threads(state.threads),
+    waitingLists(state.waitingLists),
+    wlistCounter(state.wlistCounter),
+    preemptions(state.preemptions)
 {
   for (unsigned int i=0; i<symbolics.size(); i++)
     symbolics[i].first->refCount++;

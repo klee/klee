@@ -777,7 +777,7 @@ void SpecialFunctionHandler::handleThreadTerminate(ExecutionState &state,
                                         std::vector<ref<Expr> > &arguments) {
       assert(arguments.empty() && "invalid number of arguments to klee_thread_terminate");
 
-        executor.executeThreadExit(state);
+      executor.executeThreadExit(state);
 }
 
 void SpecialFunctionHandler::handleThreadPreempt(ExecutionState &state,

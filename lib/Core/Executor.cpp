@@ -3682,9 +3682,13 @@ bool Executor::schedule(ExecutionState &state, bool yield) {
 void Executor::executeThreadCreate(ExecutionState &state, Thread::thread_id_t tid,
         ref<Expr> start_function, ref<Expr> arg)
 {
-    klee_message("Creating thread...");
     KFunction *kf = resolveFunction(start_function);
     assert(kf && "cannot resolve thread start function");
+
+    std::string Str;
+    llvm::raw_string_ostream msg(Str);
+    msg << "Creating thread: TID: " << tid  << " Function: " << kf->function->getName().str() << " Parent TID: "<< state.crtThreadIt->second.tid;
+    klee_message("%s", msg.str().c_str());
 
     Thread &t = state.createThread(tid, kf);
 
@@ -3697,7 +3701,7 @@ void Executor::executeThreadCreate(ExecutionState &state, Thread::thread_id_t ti
 
 void Executor::executeThreadExit(ExecutionState &state) {
     //terminate this thread and schedule another one
-    klee_message("Exiting thread...");
+    klee_message("Exiting thread: TID: %lu", state.crtThreadIt->second.tid);
 
     if (state.threads.size() == 1) {
         klee_message("Terminating state");
@@ -3726,7 +3730,6 @@ void Executor::executeThreadNotifyOne(ExecutionState &state, Thread::wlist_id_t 
             state.waitingLists.erase(wlist);
         else
             state.notifyOne(wlist, *wl.begin()); // Deterministically pick the first thread in the queue
-
         return;
     }
 

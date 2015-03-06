@@ -84,6 +84,7 @@ public:
 
   wlists_ty waitingLists;
   Thread::wlist_id_t wlistCounter;
+  unsigned int preemptions;
 
   Thread& createThread(Thread::thread_id_t tid, KFunction *kf);
   void terminateThread(threads_ty::iterator it);
@@ -112,7 +113,6 @@ public:
 
   threads_ty::iterator crtThreadIt;
 
-  unsigned int preemptions;
 
   /* Shortcut methods */
 
