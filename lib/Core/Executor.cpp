@@ -1379,7 +1379,7 @@ void Executor::transferToBasicBlock(BasicBlock *dst, BasicBlock *src,
   // XXX this lookup has to go ?
   KFunction *kf = state.stack().back().kf;
   unsigned entry = kf->basicBlockEntry[dst];
-  state.pc(&kf->instructions[entry]);
+  state.pc() = &kf->instructions[entry];
   if (state.pc()->inst->getOpcode() == Instruction::PHI) {
     PHINode *first = static_cast<PHINode*>(state.pc()->inst);
     state.incomingBBIndex(first->getBasicBlockIndex(src));
@@ -1491,7 +1491,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       if (InvokeInst *ii = dyn_cast<InvokeInst>(caller)) {
         transferToBasicBlock(ii->getNormalDest(), caller->getParent(), state);
       } else {
-        state.pc(kcaller);
+        state.pc() = kcaller;
         ++state.pc();
       }
 
@@ -2741,7 +2741,7 @@ void Executor::terminateState(ExecutionState &state) {
 
   std::set<ExecutionState*>::iterator it = addedStates.find(&state);
   if (it==addedStates.end()) {
-    state.pc(state.prevPC());
+    state.pc() = state.prevPC();
 
     removedStates.insert(&state);
   } else {

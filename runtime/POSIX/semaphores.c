@@ -32,13 +32,8 @@
 
 #include "threads.h"
 
-//#include <unistd.h>
-//#include <string.h>
 #include <stdlib.h>
 #include <errno.h>
-//#include <time.h>
-//#include <assert.h>
-//#include <stdarg.h>
 
 #include <klee/klee.h>
 

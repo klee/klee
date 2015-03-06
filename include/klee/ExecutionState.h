@@ -122,23 +122,13 @@ public:
   KInstIterator& pc() { return crtThread().pc; }
   const KInstIterator& pc() const { return crtThread().pc; }
   
-  void pc(KInstIterator& ki) { crtThread().pc = ki; }
-  void pc(const KInstIterator& ki) { crtThread().pc = ki; }
-  
   KInstIterator& prevPC() { return crtThread().prevPC; }
   const KInstIterator& prevPC() const { return crtThread().prevPC; }
-  
-  void prevPC(KInstIterator& ki) { crtThread().prevPC = ki; }
-  void prevPC(const KInstIterator& ki) { crtThread().prevPC = ki; }
  
   Thread::stack_ty& stack() { return crtThread().stack; }
   const Thread::stack_ty& stack() const { return crtThread().stack; }
   
-  void stack(Thread::stack_ty& s) { crtThread().stack = s; }
-  void stack(const Thread::stack_ty& s) { crtThread().stack = s; }
-  
   unsigned incomingBBIndex() { return crtThread().incomingBBIndex; }
-  
   void incomingBBIndex(unsigned ibbi) { crtThread().incomingBBIndex = ibbi; }
   
 private:

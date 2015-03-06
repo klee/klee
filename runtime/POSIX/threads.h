@@ -119,20 +119,10 @@ extern tsync_data_t __tsync;
 
 void klee_init_threads(void);
 
-/*
- * Wrapper over the klee_thread_preempt() call.
- * This is done to simulate checking for received
- * signals when being first planned.
- */
 static inline void __thread_preempt(int yield) {
   klee_thread_preempt(yield);
 }
 
-/*
- * Wrapper over the klee_thread_sleep() call.
- * This is done to simulate checking for received
- * signals when being first planned.
- */
 static inline void __thread_sleep(uint64_t wlist) {
   klee_thread_sleep(wlist);
 }
