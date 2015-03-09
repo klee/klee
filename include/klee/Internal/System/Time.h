@@ -15,14 +15,22 @@
 namespace klee {
   namespace util {
 
-    /// Seconds spent by this process in user mode.
+    /// Seconds spent by this process in user mode (usually at least microsecond precision).
     double getUserTime();
 
-    /// Wall time in seconds.
+    /// Wall time in seconds (usually at least microsecond precision).
     double getWallTime();
 
-    /// Wall time as TimeValue object.
+    /// Wall time in seconds (usually millisecond precision).
+    /// If possible, uses cheaper, coarse and monotonic clock. Neither is guaranteed.
+    double getWallTimeCoarse();
+
+    /// Wall time as TimeValue object (usually at least microsecond precision).
     llvm::sys::TimeValue getWallTimeVal();
+
+    /// Wall time as TimeValue object (usually millisecond precision).
+    /// If possible, uses cheaper, coarse and monotonic clock. Neither is guaranteed.
+    llvm::sys::TimeValue getWallTimeValCoarse();
   }
 }
 

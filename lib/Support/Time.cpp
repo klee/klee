@@ -13,6 +13,9 @@
 #include "llvm/Support/TimeValue.h"
 #include "llvm/Support/Process.h"
 
+#include <sys/time.h>
+#include <time.h>
+
 using namespace llvm;
 using namespace klee;
 
@@ -27,6 +30,29 @@ double util::getWallTime() {
   return (now.seconds() + ((double) now.nanoseconds() * 1e-9));
 }
 
+double util::getWallTimeCoarse() {
+  sys::TimeValue now = getWallTimeValCoarse();
+  return (now.seconds() + ((double) now.nanoseconds() * 1e-9));
+}
+
 sys::TimeValue util::getWallTimeVal() {
+  // prefer clock_gettime(CLOCK_MONOTONIC) to gettimeofday()
+#if defined(CLOCK_MONOTONIC)
+  timespec ts;
+  clock_gettime(CLOCK_MONOTONIC, &ts);
+  return sys::TimeValue(ts.tv_sec, ts.tv_nsec);
+#else
   return sys::TimeValue::now();
+#endif
+}
+
+sys::TimeValue util::getWallTimeValCoarse() {
+  //TODO check support for other platforms
+#if defined(CLOCK_MONOTONIC_COARSE)
+  timespec ts;
+  clock_gettime(CLOCK_MONOTONIC_COARSE, &ts);
+  return sys::TimeValue(ts.tv_sec, ts.tv_nsec);
+#else
+  return getWallTimeVal();
+#endif
 }
