@@ -37,9 +37,7 @@
 #include <sys/types.h>
 #include <klee/klee.h>
 
-#include "common.h"
-
-#define MAX_THREADS         16
+#define MAX_THREADS     16
 
 typedef uint64_t wlist_id_t;
 

@@ -30,7 +30,6 @@
  *
  */
 
-#include "common.h"
 #include "threads.h"
 
 #include <string.h>
@@ -44,7 +43,9 @@
 tsync_data_t __tsync;
 
 void klee_init_threads(void) {
-    STATIC_LIST_INIT(__tsync.threads);
+    int i;
+    for(i = 0; i < MAX_THREADS; i++)
+        memset(&__tsync.threads[i],0,sizeof(__tsync.threads[i]));
 
     // Thread initialization
     thread_data_t *def_data = &__tsync.threads[DEFAULT_THREAD];

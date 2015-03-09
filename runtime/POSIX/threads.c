@@ -30,7 +30,6 @@
  *
  */
 
-#include "common.h"
 #include "threads.h"
 
 #include <assert.h>
@@ -56,8 +55,15 @@ pthread_t pthread_self(void) {
 
 int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
     void *(*start_routine)(void*), void *arg) {
-  unsigned int newIdx;
-  STATIC_LIST_ALLOC(__tsync.threads, newIdx);
+  unsigned int newIdx = MAX_THREADS;
+  unsigned int i;
+  for (i = 0; i < MAX_THREADS; i++) {
+    if (!__tsync.threads[i].allocated) {
+      __tsync.threads[i].allocated = 1;
+      newIdx = i;
+      break;
+    }
+  }
 
   if (newIdx == MAX_THREADS) {
     errno = EAGAIN;
@@ -85,7 +91,7 @@ void pthread_exit(void *value_ptr) {
 
     __thread_notify_all(tdata->wlist);
   } else {
-    STATIC_LIST_CLEAR(__tsync.threads, idx);
+    memset(&__tsync.threads[idx], 0, sizeof(__tsync.threads[idx]));
   }
 
   klee_thread_terminate(); // Does not return
@@ -122,7 +128,7 @@ int pthread_join(pthread_t thread, void **value_ptr) {
     *value_ptr = tdata->ret_value;
   }
 
-  STATIC_LIST_CLEAR(__tsync.threads, thread);
+  memset(&__tsync.threads[thread], 0, sizeof(__tsync.threads[thread]));
 
   return 0;
 }
@@ -145,7 +151,7 @@ int pthread_detach(pthread_t thread) {
   }
 
   if (tdata->terminated) {
-    STATIC_LIST_CLEAR(__tsync.threads, thread);
+    memset(&__tsync.threads[thread], 0, sizeof(__tsync.threads[thread]));
   } else {
     tdata->joinable = 0;
   }
