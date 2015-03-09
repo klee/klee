@@ -3643,13 +3643,13 @@ bool Executor::schedule(ExecutionState &state, bool yield) {
     }
 
     if (DebugSchedulingHistory) {
+        unsigned int depth = state.stack().size() - 1;
         std::string Str;
         llvm::raw_string_ostream msg(Str);
-        msg << "Context Switch: --- TID: " << state.crtThread().tid << " -----------------------";
-        klee_message("%s", msg.str().c_str());
-
-        unsigned int depth = state.stack().size() - 1;
-        msg << "Call: " << std::string(depth, ' ') << state.stack().back().kf->function->getName().str();
+        msg << "Context Switch: -- TID: " << oldIt->second.tid <<" -> " << state.crtThread().tid << " "
+                 << "Call: " << std::string(depth, ' ') << state.stack().back().kf->function->getName().str();
+        if (forkSchedule)
+            msg <<" -- Fork";
         klee_message("%s", msg.str().c_str());
     }
 
