@@ -268,18 +268,19 @@ namespace {
             cl::init(true));
 
   cl::opt<bool>
-  DebugSchedulingHistory("debug-sched-history", cl::init(false));
+  DebugSchedulingHistory("debug-sched-history", 
+            cl::desc("Print scheduling history during execution."),
+            cl::init(false));
 
   cl::opt<bool>
   ForkOnSchedule("fork-on-schedule",
-     cl::desc("fork when various schedules are possible (defaul=disabled)"),
-        cl::init(false));
+            cl::desc("Fork when various schedules are possible (defaul=disabled)"),
+            cl::init(false));
 
   cl::opt<unsigned int>
   MaxPreemptions("scheduler-preemption-bound",
-     cl::desc("scheduler preemption bound (default=0)"),
-        cl::init(0));
-
+            cl::desc("Scheduler preemption bound (default=0)"),
+            cl::init(0));
 }
 
 namespace klee {
@@ -3622,7 +3623,6 @@ bool Executor::schedule(ExecutionState &state, bool yield) {
 
     bool forkSchedule = false;
     bool incPreemptions = false;
-
     ExecutionState::threads_ty::iterator oldIt = state.crtThreadIt;
 
     if(!state.crtThread().enabled || yield) {
@@ -3648,8 +3648,6 @@ bool Executor::schedule(ExecutionState &state, bool yield) {
         llvm::raw_string_ostream msg(Str);
         msg << "Context Switch: -- TID: " << oldIt->second.tid <<" -> " << state.crtThread().tid << " "
                  << "Call: " << std::string(depth, ' ') << state.stack().back().kf->function->getName().str();
-        if (forkSchedule)
-            msg <<" -- Fork";
         klee_message("%s", msg.str().c_str());
     }
 
@@ -3667,7 +3665,17 @@ bool Executor::schedule(ExecutionState &state, bool yield) {
                 if (incPreemptions)
                     sp.first->preemptions = state.preemptions + 1;
 
+                sp.first->schedulingHistory.pop_back(); //The last sched step has been introduced automatically but do not refer to the original thread, at the beginning of the method
                 sp.first->scheduleNext(sp.first->threads.find(it->second.tid));
+
+                if (DebugSchedulingHistory) {
+                    unsigned int depth = sp.first->stack().size() - 1;
+                    std::string Str;
+                    llvm::raw_string_ostream msg(Str);
+                    msg << "                -- TID: " << oldIt->second.tid <<" -> " << sp.first->crtThread().tid << " "
+                             << "Call: " << std::string(depth, ' ') << sp.first->stack().back().kf->function->getName().str() <<" -- Fork";
+                    klee_message("%s", msg.str().c_str());
+                }
 
                 lastState = sp.first;
             }

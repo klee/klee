@@ -104,6 +104,7 @@ public:
   void scheduleNext(threads_ty::iterator it) {
       assert(it != threads.end());
       crtThreadIt = it;
+      schedulingHistory.push_back(crtThread().tid);
   }
 
   Thread::wlist_id_t getWaitingList() { return wlistCounter++; }
@@ -113,6 +114,7 @@ public:
 
   threads_ty::iterator crtThreadIt;
 
+  std::vector<Thread::thread_id_t> schedulingHistory;
 
   /* Shortcut methods */
 

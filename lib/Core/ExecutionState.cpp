@@ -109,7 +109,8 @@ ExecutionState::ExecutionState(const ExecutionState& state)
     threads(state.threads),
     waitingLists(state.waitingLists),
     wlistCounter(state.wlistCounter),
-    preemptions(state.preemptions)
+    preemptions(state.preemptions),
+    schedulingHistory(state.schedulingHistory)
 {
   for (unsigned int i=0; i<symbolics.size(); i++)
     symbolics[i].first->refCount++;
