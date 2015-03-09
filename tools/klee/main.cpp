@@ -424,7 +424,7 @@ void KleeHandler::processTestCase(const ExecutionState &state,
     if (!success)
       klee_warning("unable to get symbolic solution, losing test case");
 
-    double start_time = util::getWallTime();
+    double start_time = util::getWallTimeCoarse();
 
     unsigned id = ++m_testIndex;
 
@@ -528,7 +528,7 @@ void KleeHandler::processTestCase(const ExecutionState &state,
       m_interpreter->setHaltExecution(true);
 
     if (WriteTestInfo) {
-      double elapsed_time = util::getWallTime() - start_time;
+      double elapsed_time = util::getWallTimeCoarse() - start_time;
       llvm::raw_ostream *f = openTestFile("info", id);
       *f << "Time to generate test case: " 
          << elapsed_time << "s\n";
@@ -1168,7 +1168,7 @@ int main(int argc, char **argv, char **envp) {
       fflush(stderr);
       sys::SetInterruptFunction(interrupt_handle_watchdog);
 
-      double nextStep = util::getWallTime() + MaxTime*1.1;
+      double nextStep = util::getWallTimeCoarse() + MaxTime*1.1;
       int level = 0;
 
       // Simple stupid code...
@@ -1190,7 +1190,7 @@ int main(int argc, char **argv, char **envp) {
         } else if (res==pid && WIFEXITED(status)) {
           return WEXITSTATUS(status);
         } else {
-          double time = util::getWallTime();
+          double time = util::getWallTimeCoarse();
 
           if (time > nextStep) {
             ++level;
@@ -1209,7 +1209,7 @@ int main(int argc, char **argv, char **envp) {
 
             // Ideally this triggers a dump, which may take a while,
             // so try and give the process extra time to clean up.
-            nextStep = util::getWallTime() + std::max(15., MaxTime*.1);
+            nextStep = util::getWallTimeCoarse() + std::max(15., MaxTime*.1);
           }
         }
       }
