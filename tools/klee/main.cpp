@@ -461,12 +461,12 @@ void KleeHandler::processTestCase(const ExecutionState &state,
         for(unsigned i = 0; i < b.numSchedSteps; ++i)
           msg << b.schedSteps[i] << ' ';
         klee_message("%s", msg.str().c_str());
-
-        if (!kTest_toFile(&b, getOutputFilename(getTestFilename("ktest", id)).c_str())) {
-          klee_warning("unable to write output test case, losing it");
-        }
       }
-      
+
+      if (!kTest_toFile(&b, getOutputFilename(getTestFilename("ktest", id)).c_str())) {
+        klee_warning("unable to write output test case, losing it");
+      }
+
       for (unsigned i=0; i<b.numObjects; i++)
         delete[] b.objects[i].bytes;
       delete[] b.objects;
