@@ -31,7 +31,7 @@ public:
   TimerInfo(Timer *_timer, double _rate)
     : timer(_timer),
       rate(_rate),
-      nextFireTime(util::getWallTime() + rate) {}
+      nextFireTime(util::getWallTimeCoarse() + rate) {}
   ~TimerInfo() { delete timer; }
 };
 
