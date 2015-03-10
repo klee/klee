@@ -210,11 +210,6 @@ namespace {
   Watchdog("watchdog",
            cl::desc("Use a watchdog process to enforce --max-time."),
            cl::init(0));
-
-  cl::opt<bool>
-  DebugExploredSchedules("debug-sched-explored",
-           cl::desc("Print explored schedules during test generation."),
-           cl::init(false));
 }
 
 extern cl::opt<double> MaxTime;
@@ -454,14 +449,6 @@ void KleeHandler::processTestCase(const ExecutionState &state,
       b.numSchedSteps = state.schedulingHistory.size();
       b.schedSteps = new long unsigned[b.numSchedSteps];
       std::copy(state.schedulingHistory.begin(),state.schedulingHistory.end(),b.schedSteps);
-      if (DebugExploredSchedules && (b.numSchedSteps > 0)) {
-        std::string Str;
-        llvm::raw_string_ostream msg(Str);
-        msg << "Explored schedule: ";
-        for(unsigned i = 0; i < b.numSchedSteps; ++i)
-          msg << b.schedSteps[i] << ' ';
-        klee_message("%s", msg.str().c_str());
-      }
 
       if (!kTest_toFile(&b, getOutputFilename(getTestFilename("ktest", id)).c_str())) {
         klee_warning("unable to write output test case, losing it");

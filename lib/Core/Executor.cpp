@@ -281,6 +281,11 @@ namespace {
   MaxPreemptions("scheduler-preemption-bound",
             cl::desc("Scheduler preemption bound (default=0)"),
             cl::init(0));
+
+  cl::opt<bool>
+  DebugExploredSchedules("debug-sched-explored",
+            cl::desc("Print explored schedules during state termination."),
+            cl::init(false));
 }
 
 namespace klee {
@@ -2740,6 +2745,15 @@ void Executor::terminateState(ExecutionState &state) {
 
   interpreterHandler->incPathsExplored();
 
+  if (DebugExploredSchedules && (state.schedulingHistory.size() > 0)) {
+      std::string Str;
+      llvm::raw_string_ostream msg(Str);
+      msg << "Explored schedule: ";
+      for(std::vector<Thread::thread_id_t>::iterator it = state.schedulingHistory.begin(); it != state.schedulingHistory.end(); ++it)
+          msg << *it << ' ';
+      klee_message("%s", msg.str().c_str());
+  }
+
   std::set<ExecutionState*>::iterator it = addedStates.find(&state);
   if (it==addedStates.end()) {
     state.pc() = state.prevPC();
@@ -3607,7 +3621,7 @@ Expr::Width Executor::getWidthForLLVMType(LLVM_TYPE_Q llvm::Type *type) const {
   return kmodule->targetData->getTypeSizeInBits(type);
 }
 
-bool Executor::schedule(ExecutionState &state, bool yield) {
+bool Executor::schedule(ExecutionState &state, bool yield, bool terminateThread) {
     int enabledCount = 0;
     for(ExecutionState::threads_ty::iterator it = state.threads.begin();
             it != state.threads.end();  it++) {
@@ -3624,6 +3638,7 @@ bool Executor::schedule(ExecutionState &state, bool yield) {
     bool forkSchedule = false;
     bool incPreemptions = false;
     ExecutionState::threads_ty::iterator oldIt = state.crtThreadIt;
+    Thread::thread_id_t oldTid = oldIt->second.tid;
 
     if(!state.crtThread().enabled || yield) {
         ExecutionState::threads_ty::iterator it = state.nextThread(state.crtThreadIt);
@@ -3642,11 +3657,15 @@ bool Executor::schedule(ExecutionState &state, bool yield) {
         }
     }
 
+    if (terminateThread) {
+        state.terminateThread(oldIt);
+    }
+
     if (DebugSchedulingHistory) {
         unsigned int depth = state.stack().size() - 1;
         std::string Str;
         llvm::raw_string_ostream msg(Str);
-        msg << "Context Switch: -- TID: " << oldIt->second.tid <<" -> " << state.crtThread().tid << " "
+        msg << "Context Switch: TID: " << oldTid <<" -> " << state.crtThread().tid << " "
                  << "Call: " << std::string(depth, ' ') << state.stack().back().kf->function->getName().str();
         klee_message("%s", msg.str().c_str());
     }
@@ -3659,7 +3678,7 @@ bool Executor::schedule(ExecutionState &state, bool yield) {
         while (it != finalIt) {
             // Choose only enabled states, and, in the case of yielding, do not
             // reschedule the same thread
-            if (it->second.enabled && (!yield || it != oldIt)) {
+            if (it->second.enabled && (!yield || it->second.tid != oldTid)) {
                 StatePair sp = fork(*lastState); 
 
                 if (incPreemptions)
@@ -3672,7 +3691,7 @@ bool Executor::schedule(ExecutionState &state, bool yield) {
                     unsigned int depth = sp.first->stack().size() - 1;
                     std::string Str;
                     llvm::raw_string_ostream msg(Str);
-                    msg << "                -- TID: " << oldIt->second.tid <<" -> " << sp.first->crtThread().tid << " "
+                    msg << "                TID: " << oldTid <<" -> " << sp.first->crtThread().tid << " "
                              << "Call: " << std::string(depth, ' ') << sp.first->stack().back().kf->function->getName().str() <<" -- Fork";
                     klee_message("%s", msg.str().c_str());
                 }
@@ -3722,10 +3741,7 @@ void Executor::executeThreadExit(ExecutionState &state) {
     ExecutionState::threads_ty::iterator thrIt = state.crtThreadIt;
     thrIt->second.enabled = false;
 
-    if (!schedule(state, false))
-        return;
-
-    state.terminateThread(thrIt);
+    schedule(state, false, true);
 }
 
 

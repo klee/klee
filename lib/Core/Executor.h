@@ -405,7 +405,7 @@ private:
 
   void executeThreadExit(ExecutionState &state);
 
-  bool schedule(ExecutionState &state, bool yield);
+  bool schedule(ExecutionState &state, bool yield, bool terminateThread);
 
   void executeThreadNotifyOne(ExecutionState &state, Thread::wlist_id_t wlist);
 

@@ -789,7 +789,7 @@ void SpecialFunctionHandler::handleThreadPreempt(ExecutionState &state,
         executor.terminateStateOnError(state, "klee_thread_preempt", "user.err");
     }
 
-    executor.schedule(state, !arguments[0]->isZero());
+    executor.schedule(state, !arguments[0]->isZero(), false);
 }
 
 void SpecialFunctionHandler::handleThreadSleep(ExecutionState &state,
@@ -806,7 +806,7 @@ void SpecialFunctionHandler::handleThreadSleep(ExecutionState &state,
     }
 
     state.sleepThread(cast<ConstantExpr>(wlistExpr)->getZExtValue());
-    executor.schedule(state, false);
+    executor.schedule(state, false, false);
 }
 
 void SpecialFunctionHandler::handleThreadNotify(ExecutionState &state,
