@@ -253,6 +253,9 @@ bool ExecutionState::merge(const ExecutionState &b) {
   if (pc() != b.pc())
     return false;
 
+  if (crtThread().tid != b.crtThread().tid) // No merge if different thread
+    return false;
+
   // XXX is it even possible for these to differ? does it matter? probably
   // implies difference in object states?
   if (symbolics!=b.symbolics)
