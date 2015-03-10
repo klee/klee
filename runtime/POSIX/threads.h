@@ -26,7 +26,21 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * All contributors are listed in CLOUD9-AUTHORS file.
+ * Contributors:
+ *
+ * Stefan Bucur <stefan.bucur@epfl.ch>
+ * Vlad Ureche <vlad.ureche@epfl.ch>
+ * Cristian Zamfir <cristian.zamfir@epfl.ch>
+ * Ayrat Khalimov <ayrat.khalimov@epfl.ch>
+ * Prof. George Candea <george.candea@epfl.ch>
+ *
+ * External Contributors:
+ * Calin Iorgulescu <calin.iorgulescu@gmail.com>
+ * Tudor Cazangiu <tudor.cazangiu@gmail.com>
+ *
+ * Stefan Bucur <sbucur@google.com> (contributions done while at Google)
+ * Lorenzo Martignoni <martignlo@google.com>
+ * Burak Emir <bqe@google.com>
  *
  */
 
