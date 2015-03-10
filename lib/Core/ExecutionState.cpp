@@ -252,6 +252,10 @@ bool ExecutionState::merge(const ExecutionState &b) {
                  << "--\n";
   if (pc() != b.pc())
     return false;
+  
+  // XXX being conservative, how should be merged states with multiple threads?
+  if (threads.size() != 1 || b.threads.size() != 1)
+      return false;
 
   if (crtThread().tid != b.crtThread().tid) // No merge if different thread
     return false;
