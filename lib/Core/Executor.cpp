@@ -277,10 +277,14 @@ namespace {
             cl::desc("Fork when various schedules are possible (defaul=disabled)"),
             cl::init(false));
 
-  cl::opt<unsigned int>
+  cl::opt<unsigned>
   MaxPreemptions("scheduler-preemption-bound",
             cl::desc("Scheduler preemption bound (default=0)"),
             cl::init(0));
+
+  cl::opt<bool>
+  NoMaxPreemptions("no-scheduler-bound",
+           cl::desc("Do not bound the number of preemptions in the schedule (default=off)"));
 
   cl::opt<bool>
   DebugExploredSchedules("debug-sched-explored",
@@ -3651,7 +3655,8 @@ bool Executor::schedule(ExecutionState &state, bool yield, bool terminateThread)
         if (ForkOnSchedule)
             forkSchedule = true;
     } else {
-        if (state.preemptions < MaxPreemptions) {
+        state.schedulingHistory.push_back(oldTid); // The current thread stays as current
+        if (NoMaxPreemptions || state.preemptions < MaxPreemptions) {
             forkSchedule = true;
             incPreemptions = true;
         }
@@ -3665,7 +3670,7 @@ bool Executor::schedule(ExecutionState &state, bool yield, bool terminateThread)
         unsigned int depth = state.stack().size() - 1;
         std::string Str;
         llvm::raw_string_ostream msg(Str);
-        msg << "Context Switch: TID: " << oldTid <<" -> " << state.crtThread().tid << " "
+        msg << "Context Switch: " << oldTid <<" -> " << state.crtThread().tid << " "
                  << "Call: " << std::string(depth, ' ') << state.stack().back().kf->function->getName().str();
         klee_message("%s", msg.str().c_str());
     }
@@ -3674,7 +3679,6 @@ bool Executor::schedule(ExecutionState &state, bool yield, bool terminateThread)
         ExecutionState::threads_ty::iterator finalIt = state.crtThreadIt;
         ExecutionState::threads_ty::iterator it = state.nextThread(finalIt);
         ExecutionState *lastState = &state;
-
         while (it != finalIt) {
             // Choose only enabled states, and, in the case of yielding, do not
             // reschedule the same thread
@@ -3691,7 +3695,7 @@ bool Executor::schedule(ExecutionState &state, bool yield, bool terminateThread)
                     unsigned int depth = sp.first->stack().size() - 1;
                     std::string Str;
                     llvm::raw_string_ostream msg(Str);
-                    msg << "                TID: " << oldTid <<" -> " << sp.first->crtThread().tid << " "
+                    msg << "                " << oldTid <<" -> " << sp.first->crtThread().tid << " "
                              << "Call: " << std::string(depth, ' ') << sp.first->stack().back().kf->function->getName().str() <<" -- Fork";
                     klee_message("%s", msg.str().c_str());
                 }
@@ -3714,7 +3718,7 @@ void Executor::executeThreadCreate(ExecutionState &state, Thread::thread_id_t ti
 
     std::string Str;
     llvm::raw_string_ostream msg(Str);
-    msg << "Creating thread: TID: " << tid  << " Function: " << kf->function->getName().str() << " Parent TID: "<< state.crtThreadIt->second.tid;
+    msg << "Creating thread: " << tid  << " Function: " << kf->function->getName().str() << " Parent: "<< state.crtThreadIt->second.tid;
     klee_message("%s", msg.str().c_str());
 
     Thread &t = state.createThread(tid, kf);
@@ -3728,7 +3732,7 @@ void Executor::executeThreadCreate(ExecutionState &state, Thread::thread_id_t ti
 
 void Executor::executeThreadExit(ExecutionState &state) {
     //terminate this thread and schedule another one
-    klee_message("Exiting thread: TID: %lu", state.crtThreadIt->second.tid);
+    klee_message("Exiting thread: %lu", state.crtThreadIt->second.tid);
 
     if (state.threads.size() == 1) {
         klee_message("Terminating state");
