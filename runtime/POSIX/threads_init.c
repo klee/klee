@@ -43,11 +43,18 @@
 tsync_data_t __tsync;
 
 void klee_init_threads(void) {
+    // Initialize all thread structures
     int i;
-    for(i = 0; i < MAX_THREADS; i++)
-        memset(&__tsync.threads[i],0,sizeof(__tsync.threads[i]));
+    for(i = 0; i < MAX_THREADS; i++) {
+        thread_data_t *slot = &__tsync.threads[i];
+        slot->allocated = 0;
+        slot->terminated = 0;
+        slot->ret_value = 0;
+        slot->joinable = 0;
+        slot->wlist = 0;
+    }
 
-    // Thread initialization
+    // Main thread initialization
     thread_data_t *def_data = &__tsync.threads[DEFAULT_THREAD];
     def_data->allocated = 1;
     def_data->terminated = 0;
