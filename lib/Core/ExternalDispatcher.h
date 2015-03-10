@@ -13,7 +13,7 @@
 #include <map>
 #include <string>
 #include <stdint.h>
-
+#include <memory>
 namespace llvm {
   class ExecutionEngine;
   class Instruction;
@@ -27,7 +27,8 @@ namespace klee {
   private:
     typedef std::map<const llvm::Instruction*,llvm::Function*> dispatchers_ty;
     dispatchers_ty dispatchers;
-    llvm::Module *dispatchModule;
+    
+    std::unique_ptr<llvm::Module> dispatchModule;
     llvm::ExecutionEngine *executionEngine;
     std::map<std::string, void*> preboundFunctions;
     

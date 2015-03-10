@@ -178,6 +178,11 @@ void Optimize(Module* M) {
 #elif LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
   // Add an appropriate DataLayout instance for this module...
   addPass(Passes, new DataLayout(M));
+#elif LLVM_VERSION_CODE <= LLVM_VERSION(3, 6)
+  // Add an appropriate DataLayout instance for this module...
+  DataLayoutPass* dlpass = new DataLayoutPass();
+  dlpass->doInitialization(*M);
+  addPass(Passes, dlpass);
 #else
   // Add an appropriate DataLayout instance for this module...
   addPass(Passes, new DataLayoutPass(M));

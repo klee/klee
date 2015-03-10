@@ -1370,7 +1370,8 @@ Function* Executor::getTargetFunction(Value *calledVal, ExecutionState &state) {
 
   while (true) {
     if (GlobalValue *gv = dyn_cast<GlobalValue>(c)) {
-      if (!Visited.insert(gv))
+	  std::pair<llvm::SmallPtrSetIterator<const llvm::GlobalValue*>, bool> succ_pair = Visited.insert(gv);
+      if (!succ_pair.second)
         return 0;
 
       std::string alias = state.getFnAlias(gv->getName());

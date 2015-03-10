@@ -27,6 +27,7 @@ class QueryLoggingSolver : public SolverImpl {
 protected:
     Solver *solver;
     std::string ErrorInfo;
+    std::error_code ec;
     llvm::raw_fd_ostream os;
     // @brief Buffer used by logBuffer
     std::string BufferString;

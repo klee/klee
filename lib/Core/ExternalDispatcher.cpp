@@ -23,7 +23,12 @@
 #include "llvm/Instructions.h"
 #include "llvm/LLVMContext.h"
 #endif
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 6)
 #include "llvm/ExecutionEngine/JIT.h"
+#elif LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
+#include "llvm/ExecutionEngine/MCJIT.h"
+#endif
+
 #include "llvm/ExecutionEngine/GenericValue.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/raw_ostream.h"
@@ -86,10 +91,13 @@ void *ExternalDispatcher::resolveSymbol(const std::string &name) {
 }
 
 ExternalDispatcher::ExternalDispatcher() {
-  dispatchModule = new Module("ExternalDispatcher", getGlobalContext());
+  dispatchModule.reset(new Module("ExternalDispatcher", getGlobalContext()) );
 
-  std::string error;
-  executionEngine = ExecutionEngine::createJIT(dispatchModule, &error);
+  std::string error="";
+  
+  //executionEngine = ExecutionEngine::createJIT(dispatchModule, &error);
+  executionEngine = EngineBuilder( std::move(dispatchModule) ).create();
+  //unidpM.release();
   if (!executionEngine) {
     llvm::errs() << "unable to make jit: " << error << "\n";
     abort();
@@ -146,7 +154,8 @@ bool ExternalDispatcher::executeCall(Function *f, Instruction *i, uint64_t *args
       // ensures that any errors or assertions in the compilation process will
       // trigger crashes instead of being caught as aborts in the external
       // function.
-      executionEngine->recompileAndRelinkFunction(dispatcher);
+      //executionEngine->recompileAndRelinkFunction(dispatcher);
+      executionEngine->getPointerToFunction(dispatcher); //maybe? though I doubt it is a suitable replacement for above line
     }
   } else {
     dispatcher = it->second;
@@ -210,7 +219,7 @@ Function *ExternalDispatcher::createDispatcher(Function *target, Instruction *in
 							    nullary, false),
 					  GlobalVariable::ExternalLinkage, 
 					  "",
-					  dispatchModule);
+					  dispatchModule.get());
 
 
   BasicBlock *dBB = BasicBlock::Create(getGlobalContext(), "entry", dispatcher);
