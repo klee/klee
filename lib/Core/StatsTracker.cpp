@@ -325,13 +325,18 @@ void StatsTracker::stepInstruction(ExecutionState &es) {
 void StatsTracker::framePushed(ExecutionState &es, StackFrame *parentFrame) {
   if (OutputIStats) {
     StackFrame &sf = es.stack().back();
+    framePushed(&sf,parentFrame);
+  }
+}
 
+void StatsTracker::framePushed(StackFrame *frame, StackFrame *parentFrame) {
+  if (OutputIStats) {
     if (UseCallPaths) {
       CallPathNode *parent = parentFrame ? parentFrame->callPathNode : 0;
-      CallPathNode *cp = callPathManager.getCallPath(parent, 
-                                                     sf.caller ? sf.caller->inst : 0, 
-                                                     sf.kf->function);
-      sf.callPathNode = cp;
+      CallPathNode *cp = callPathManager.getCallPath(parent,
+                    frame->caller ? frame->caller->inst : 0,
+                    frame->kf->function);
+      frame->callPathNode = cp;
       cp->count++;
     }
 
@@ -339,32 +344,11 @@ void StatsTracker::framePushed(ExecutionState &es, StackFrame *parentFrame) {
       uint64_t minDistAtRA = 0;
       if (parentFrame)
         minDistAtRA = parentFrame->minDistToUncoveredOnReturn;
-      
-      sf.minDistToUncoveredOnReturn = sf.caller ?
-        computeMinDistToUncovered(sf.caller, minDistAtRA) : 0;
-    }
-  }
-}
-
-void StatsTracker::framePushed(StackFrame *frame, StackFrame *parentFrame) {
-    if (OutputIStats) {
-
-        if (UseCallPaths) {
-            CallPathNode *parent = parentFrame ? parentFrame->callPathNode : 0;
-            CallPathNode *cp = callPathManager.getCallPath(parent,
-                    frame->caller ? frame->caller->inst : 0,
-                    frame->kf->function);
-            frame->callPathNode = cp;
-            cp->count++;
-        }
-
-        uint64_t minDistAtRA = 0;
-        if (parentFrame)
-            minDistAtRA = parentFrame->minDistToUncoveredOnReturn;
 
         frame->minDistToUncoveredOnReturn = frame->caller ?
-            computeMinDistToUncovered(frame->caller, minDistAtRA) : 0;
+          computeMinDistToUncovered(frame->caller, minDistAtRA) : 0;
     }
+  }
 }
 
 
