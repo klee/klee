@@ -186,7 +186,7 @@ StatsTracker::StatsTracker(Executor &_executor, std::string _objectFilename,
     objectFilename(_objectFilename),
     statsFile(0),
     istatsFile(0),
-    startWallTime(util::getWallTime()),
+    startWallTime(util::getWallTimeCoarse()),
     numBranches(0),
     fullBranches(0),
     partialBranches(0),
@@ -402,7 +402,7 @@ void StatsTracker::writeStatsHeader() {
 }
 
 double StatsTracker::elapsed() {
-  return util::getWallTime() - startWallTime;
+  return util::getWallTimeCoarse() - startWallTime;
 }
 
 void StatsTracker::writeStatsLine() {
