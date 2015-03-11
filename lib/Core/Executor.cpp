@@ -1547,13 +1547,13 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 #if LLVM_VERSION_CODE < LLVM_VERSION(3, 1)
   case Instruction::Unwind: {
     for (;;) {
-      KInstruction *kcaller = state.stack.back().caller;
+      KInstruction *kcaller = state.stack().back().caller;
       state.popFrame();
 
       if (statsTracker)
         statsTracker->framePopped(state);
 
-      if (state.stack.empty()) {
+      if (state.stack().empty()) {
         terminateStateOnExecError(state, "unwind from initial stack frame");
         break;
       } else {
