@@ -5,27 +5,31 @@ include $(LEVEL)/Makefile.config
 # Include LLVM's Master Makefile config and rules.
 include $(LLVM_OBJ_ROOT)/Makefile.config
 
-ifeq ($(BYTECODE_LIBRARY), 1)
+ifeq ($(LLVMCC),)
+LLVMCC := $(KLEE_BITCODE_C_COMPILER)
+LLVMCXX := $(KLEE_BITCODE_CXX_COMPILER)
+endif
+
+#ifeq ($(BYTECODE_LIBRARY), 1)
 #
 # Override make variables based on the runtime configuration. We want
 # to override whatever the user may have said on the command line,
 # hence the use of override.
 #
 
-override ENABLE_OPTIMIZED := $(RUNTIME_ENABLE_OPTIMIZED)
-override DISABLE_ASSERTIONS := $(RUNTIME_DISABLE_ASSERTIONS)
-override ENABLE_PROFILING := $(RUNTIME_ENABLE_PROFILING)
-override ENABLE_COVERAGE := $(RUNTIME_ENABLE_COVERAGE)
-override DEBUG_SYMBOLS := $(RUNTIME_DEBUG_SYMBOLS)
+#override ENABLE_OPTIMIZED := $(RUNTIME_ENABLE_OPTIMIZED)
+#override DISABLE_ASSERTIONS := $(RUNTIME_DISABLE_ASSERTIONS)
+#override ENABLE_PROFILING := $(RUNTIME_ENABLE_PROFILING)
+#override ENABLE_COVERAGE := $(RUNTIME_ENABLE_COVERAGE)
+#override DEBUG_SYMBOLS := $(RUNTIME_DEBUG_SYMBOLS)
+#endif
+
+# handle: http://llvm.org/bugs/show_bug.cgi?id=18197
+ifeq ($(LLVMCC_EMITIR_FLAG),)
+  LLVMCC_EMITIR_FLAG := "-emit-llvm"
 endif
 
-include $(PROJ_SRC_ROOT)/Makefile.rules
-
-# LLVMCC was added in 2.7.
-ifeq ($(LLVMCC),)
-LLVMCC := $(LLVMGCC)
-LLVMCXX := $(LLVMGXX)
-endif
+include $(LLVM_SRC_ROOT)/Makefile.rules
 
 # Needed to build runtime library using clang (gnu89 is the gcc default)
 C.Flags += -std=gnu89
