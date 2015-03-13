@@ -75,19 +75,19 @@ bool RaiseAsmPass::runOnModule(Module &M) {
   } else {
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
-    TargetMachine *TM = NativeTarget->createTargetMachine(HostTriple, "", "",
+    TM = NativeTarget->createTargetMachine(HostTriple, "", "",
                                                           TargetOptions());
     //TargetSubtargetInfo* tsti = TM->getSubtargetImpl();
     TLI = TM->getSubtargetImpl()->getTargetLowering();
 #elif LLVM_VERSION_CODE >= LLVM_VERSION(3, 1)
-    TargetMachine *TM = NativeTarget->createTargetMachine(HostTriple, "", "",
+    TM = NativeTarget->createTargetMachine(HostTriple, "", "",
                                                           TargetOptions());
     TLI = TM->getTargetLowering();
 #elif LLVM_VERSION_CODE >= LLVM_VERSION(3, 0)
-    TargetMachine *TM = NativeTarget->createTargetMachine(HostTriple, "", "");
+    TM = NativeTarget->createTargetMachine(HostTriple, "", "");
     TLI = TM->getTargetLowering();
 #else
-    TargetMachine *TM = NativeTarget->createTargetMachine(HostTriple, "");
+    TM = NativeTarget->createTargetMachine(HostTriple, "");
     TLI = TM->getTargetLowering();
 #endif
     

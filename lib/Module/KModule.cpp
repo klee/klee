@@ -146,11 +146,10 @@ static Function *getStubFunctionForCtorList(Module *m,
   
   std::vector<LLVM_TYPE_Q Type*> nullary;
 
-  Function *fn = Function::Create(FunctionType::get(Type::getVoidTy(getGlobalContext()), 
-						    nullary, false),
-				  GlobalVariable::InternalLinkage, 
-				  name,
-                              m);
+  Function *fn = Function::Create(FunctionType::get(Type::getVoidTy(getGlobalContext()), nullary, false),
+				GlobalVariable::InternalLinkage, 
+				name,
+				m);
   BasicBlock *bb = BasicBlock::Create(getGlobalContext(), "entry", fn);
   
   // From lli:
@@ -160,7 +159,8 @@ static Function *getStubFunctionForCtorList(Module *m,
   if (arr) {
     for (unsigned i=0; i<arr->getNumOperands(); i++) {
       ConstantStruct *cs = cast<ConstantStruct>(arr->getOperand(i));
-      assert(cs->getNumOperands()==2 && "unexpected element in ctor initializer list");
+
+      //assert(cs->getNumOperands()==2 && "unexpected element in ctor initializer list");
       
       Constant *fp = cs->getOperand(1);      
       if (!fp->isNullValue()) {
@@ -511,8 +511,7 @@ static int getOperandNum(Value *v,
     return registerMap[inst];
   } else if (Argument *a = dyn_cast<Argument>(v)) {
     return a->getArgNo();
-  } else if (isa<BasicBlock>(v) || isa<InlineAsm>(v) ||
-             v->isUsedByMetadata() ) { //isa<MDNode>(v)) //Doubt this is right
+  } else if (isa<BasicBlock>(v) || isa<InlineAsm>(v) /*|| isa<MDNode>(v)*/) {
     return -1;
   } else {
     assert(isa<Constant>(v));
