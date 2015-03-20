@@ -15,11 +15,13 @@ typedef enum
 
 // We're using signed ints so should be doing
 // arithmetic right shift.
-int overshift(volatile unsigned int y, const char * type)
+// lhs should be a constant
+int overshift(signed int lhs, volatile unsigned int y, const char * type)
 {
     overshift_t ret;
-    volatile signed int x=15;
+    volatile signed int x = lhs;
     unsigned int limit = sizeof(x)*8;
+    assert(!klee_is_symbolic(x));
 
     volatile signed int result;
     result = x >> y; // Potential overshift
@@ -45,10 +47,13 @@ int overshift(volatile unsigned int y, const char * type)
 
 int main(int argc, char** argv)
 {
-    // Concrete overshift
     volatile unsigned int y = sizeof(unsigned int)*8;
-    overshift_t conc = overshift(y, "Concrete");
-    assert( conc == TO_ZERO);
+    // Try with +ve lhs
+    overshift_t conc = overshift(15, y, "Concrete");
+    assert(conc == TO_ZERO);
+    // Try with -ve lhs
+    conc = overshift(-1, y, "Concrete");
+    assert(conc == TO_ZERO);
 
     // Symbolic overshift
     volatile unsigned int y2;
@@ -56,11 +61,15 @@ int main(int argc, char** argv)
     // Add constraints so only one value possible
     klee_assume(y2 > (y-1));
     klee_assume(y2 < (y+1));
-    overshift_t sym = overshift(y2, "Symbolic");
-    assert( sym == TO_ZERO);
+    // Try with +ve lhs
+    overshift_t sym = overshift(15, y2, "Symbolic");
+    assert(sym == TO_ZERO);
+    // Try with -ve lhs
+    sym = overshift(-1, y2, "Symbolic");
+    assert(sym == TO_ZERO);
 
     // Concrete and symbolic behaviour should be the same
-    assert( conc == sym);
+    assert(conc == sym);
 
     return 0;
 }
