@@ -195,12 +195,12 @@ double WeightedRandomSearcher::getWeight(ExecutionState *es) {
     return es->weight;
   case InstCount: {
     uint64_t count = theStatisticManager->getIndexedValue(stats::instructions,
-                                                          es->pc->info->id);
+                                                          es->pc()->info->id);
     double inv = 1. / std::max((uint64_t) 1, count);
     return inv * inv;
   }
   case CPInstCount: {
-    StackFrame &sf = es->stack.back();
+    StackFrame &sf = es->stack().back();
     uint64_t count = sf.callPathNode->statistics.getValue(stats::instructions);
     double inv = 1. / std::max((uint64_t) 1, count);
     return inv;
@@ -209,8 +209,8 @@ double WeightedRandomSearcher::getWeight(ExecutionState *es) {
     return (es->queryCost < .1) ? 1. : 1./es->queryCost;
   case CoveringNew:
   case MinDistToUncovered: {
-    uint64_t md2u = computeMinDistToUncovered(es->pc,
-                                              es->stack.back().minDistToUncoveredOnReturn);
+    uint64_t md2u = computeMinDistToUncovered(es->pc(),
+                                              es->stack().back().minDistToUncoveredOnReturn);
 
     double invMD2U = 1. / (md2u ? md2u : 10000);
     if (type==CoveringNew) {
@@ -303,7 +303,7 @@ BumpMergingSearcher::~BumpMergingSearcher() {
 
 Instruction *BumpMergingSearcher::getMergePoint(ExecutionState &es) {  
   if (mergeFunction) {
-    Instruction *i = es.pc->inst;
+    Instruction *i = es.pc()->inst;
 
     if (i->getOpcode()==Instruction::Call) {
       CallSite cs(cast<CallInst>(i));
@@ -323,7 +323,7 @@ entry:
       statesAtMerge.begin();
     ExecutionState *es = it->second;
     statesAtMerge.erase(it);
-    ++es->pc;
+    ++es->pc();
 
     baseSearcher->addState(es);
   }
@@ -347,7 +347,7 @@ entry:
         executor.terminateState(es);
       } else {
         it->second = &es; // the bump
-        ++mergeWith->pc;
+        ++mergeWith->pc();
 
         baseSearcher->addState(mergeWith);
       }
@@ -381,7 +381,7 @@ MergingSearcher::~MergingSearcher() {
 
 Instruction *MergingSearcher::getMergePoint(ExecutionState &es) {
   if (mergeFunction) {
-    Instruction *i = es.pc->inst;
+    Instruction *i = es.pc()->inst;
 
     if (i->getOpcode()==Instruction::Call) {
       CallSite cs(cast<CallInst>(i));
@@ -462,7 +462,7 @@ ExecutionState &MergingSearcher::selectState() {
 
       // step past merge and toss base back in pool
       statesAtMerge.erase(statesAtMerge.find(base));
-      ++base->pc;
+      ++base->pc();
       baseSearcher->addState(base);
     }  
   }

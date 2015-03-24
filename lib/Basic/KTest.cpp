@@ -39,6 +39,27 @@ static int write_uint32(FILE *f, unsigned value) {
   return fwrite(data, 1, 4, f)==4;
 }
 
+static int read_uint64(FILE *f, unsigned long *value_out) {
+  unsigned char data[8];
+  if (fread(data, 8, 1, f)!=1)
+    return 0;
+  *value_out = (((((((((((((((data[0]<<8) + data[1])<<8) + data[2])<<8) + data[3])<<8) + data[4])<<8) + data[5])<<8) + data[6])<<8) + data[7])<<8);
+  return 1;
+}
+
+static int write_uint64(FILE *f, unsigned long value) {
+  unsigned char data[8];
+  data[0] = value>>56;
+  data[1] = value>>48;
+  data[2] = value>>40;
+  data[3] = value>>32;
+  data[4] = value>>24;
+  data[5] = value>>16;
+  data[6] = value>> 8;
+  data[7] = value>> 0;
+  return fwrite(data, 1, 8, f)==8;
+}
+
 static int read_string(FILE *f, char **value_out) {
   unsigned len;
   if (!read_uint32(f, &len))
@@ -118,7 +139,7 @@ KTest *kTest_fromFile(const char *path) {
   res->args = (char**) calloc(res->numArgs, sizeof(*res->args));
   if (!res->args) 
     goto error;
-  
+
   for (i=0; i<res->numArgs; i++)
     if (!read_string(f, &res->args[i]))
       goto error;
@@ -146,6 +167,16 @@ KTest *kTest_fromFile(const char *path) {
       goto error;
   }
 
+  if (!read_uint32(f, &res->numSchedSteps))
+    goto error;
+  res->schedSteps = (unsigned long*) calloc(res->numSchedSteps, sizeof(*res->schedSteps));
+  if (!res->schedSteps)
+    goto error;
+
+  for (i=0; i<res->numSchedSteps; i++)
+    if (!read_uint64(f, &res->schedSteps[i]))
+      goto error;
+
   fclose(f);
 
   return res;
@@ -167,6 +198,8 @@ KTest *kTest_fromFile(const char *path) {
       }
       free(res->objects);
     }
+    if (res->schedSteps)
+      free(res->schedSteps);
     free(res);
   }
 
@@ -210,6 +243,13 @@ int kTest_toFile(KTest *bo, const char *path) {
       goto error;
   }
 
+  if (!write_uint32(f, bo->numSchedSteps))
+    goto error;
+  for (i=0; i<bo->numSchedSteps; i++) {
+    if (!write_uint64(f, bo->schedSteps[i]))
+      goto error;
+  }
+
   fclose(f);
 
   return 1;
@@ -236,5 +276,6 @@ void kTest_free(KTest *bo) {
     free(bo->objects[i].bytes);
   }
   free(bo->objects);
+  free(bo->schedSteps);
   free(bo);
 }

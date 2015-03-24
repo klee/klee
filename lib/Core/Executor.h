@@ -23,6 +23,8 @@
 
 #include "llvm/ADT/Twine.h"
 
+#include "Threading.h"
+
 #include <vector>
 #include <string>
 #include <map>
@@ -286,6 +288,7 @@ private:
   // not hold, respectively. One of the states is necessarily the
   // current state, and one of the states may be null.
   StatePair fork(ExecutionState &current, ref<Expr> condition, bool isInternal);
+  StatePair fork(ExecutionState &current);
 
   /// Add the given (boolean) condition as a constraint on state. This
   /// function is a wrapper around the state's addConstraint function
@@ -303,12 +306,12 @@ private:
   Cell& getArgumentCell(ExecutionState &state,
                         KFunction *kf,
                         unsigned index) {
-    return state.stack.back().locals[kf->getArgRegister(index)];
+    return state.stack().back().locals[kf->getArgRegister(index)];
   }
 
   Cell& getDestCell(ExecutionState &state,
                     KInstruction *target) {
-    return state.stack.back().locals[target->dest];
+    return state.stack().back().locals[target->dest];
   }
 
   void bindLocal(KInstruction *target, 
@@ -395,7 +398,25 @@ private:
   void initTimers();
   void processTimers(ExecutionState *current,
                      double maxInstTime);
-                
+
+  // pthread handlers
+  void executeThreadCreate(ExecutionState &state, Thread::thread_id_t tid,
+          ref<Expr> start_function, ref<Expr> arg);
+
+  void executeThreadExit(ExecutionState &state);
+
+  bool schedule(ExecutionState &state, bool yield, bool terminateThread);
+
+  void executeThreadNotifyOne(ExecutionState &state, Thread::wlist_id_t wlist);
+
+  KFunction* resolveFunction(ref<Expr> address);
+
+  void bindArgumentToPthreadCreate(KFunction *kf, unsigned index, StackFrame &sf, ref<Expr> value);
+
+  Cell& getArgumentCell(StackFrame &sf, KFunction *kf, unsigned index) {
+      return sf.locals[kf->getArgRegister(index)];
+  }
+  
 public:
   Executor(const InterpreterOptions &opts, InterpreterHandler *ie);
   virtual ~Executor();

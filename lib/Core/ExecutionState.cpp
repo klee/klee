@@ -40,51 +40,34 @@ namespace {
   DebugLogStateMerge("debug-log-state-merge");
 }
 
-/***/
-
-StackFrame::StackFrame(KInstIterator _caller, KFunction *_kf)
-  : caller(_caller), kf(_kf), callPathNode(0), 
-    minDistToUncoveredOnReturn(0), varargs(0) {
-  locals = new Cell[kf->numRegisters];
-}
-
-StackFrame::StackFrame(const StackFrame &s) 
-  : caller(s.caller),
-    kf(s.kf),
-    callPathNode(s.callPathNode),
-    allocas(s.allocas),
-    minDistToUncoveredOnReturn(s.minDistToUncoveredOnReturn),
-    varargs(s.varargs) {
-  locals = new Cell[s.kf->numRegisters];
-  for (unsigned i=0; i<s.kf->numRegisters; i++)
-    locals[i] = s.locals[i];
-}
-
-StackFrame::~StackFrame() { 
-  delete[] locals; 
-}
-
-/***/
-
 ExecutionState::ExecutionState(KFunction *kf) 
   : fakeState(false),
     depth(0),
-    pc(kf->instructions),
-    prevPC(pc),
     queryCost(0.), 
     weight(1),
     instsSinceCovNew(0),
     coveredNew(false),
     forkDisabled(false),
-    ptreeNode(0) {
-  pushFrame(0, kf);
+    ptreeNode(0),
+    wlistCounter(1),
+    preemptions(0) {
+        setupMain(kf);
 }
 
 ExecutionState::ExecutionState(const std::vector<ref<Expr> > &assumptions) 
   : fakeState(true),
     constraints(assumptions),
     queryCost(0.),
-    ptreeNode(0) {
+    ptreeNode(0),
+    wlistCounter(1),
+    preemptions(0) {
+   setupMain(NULL);
+}
+
+void ExecutionState::setupMain(KFunction *kf) {
+    Thread mainThread = Thread(0, kf);
+    threads.insert(std::make_pair(mainThread.tid, mainThread));
+    crtThreadIt = threads.begin();
 }
 
 ExecutionState::~ExecutionState() {
@@ -97,16 +80,18 @@ ExecutionState::~ExecutionState() {
       delete mo;
   }
 
-  while (!stack.empty()) popFrame();
+  for (threads_ty::iterator it = threads.begin(); it != threads.end(); it++) {
+      Thread &t = it->second;
+      while (!t.stack.empty())
+          popFrame(t);
+  }
+
 }
 
 ExecutionState::ExecutionState(const ExecutionState& state)
   : fnAliases(state.fnAliases),
     fakeState(state.fakeState),
     depth(state.depth),
-    pc(state.pc),
-    prevPC(state.prevPC),
-    stack(state.stack),
     constraints(state.constraints),
     queryCost(state.queryCost),
     weight(state.weight),
@@ -121,10 +106,15 @@ ExecutionState::ExecutionState(const ExecutionState& state)
     symbolics(state.symbolics),
     arrayNames(state.arrayNames),
     shadowObjects(state.shadowObjects),
-    incomingBBIndex(state.incomingBBIndex)
+    threads(state.threads),
+    waitingLists(state.waitingLists),
+    wlistCounter(state.wlistCounter),
+    preemptions(state.preemptions),
+    schedulingHistory(state.schedulingHistory)
 {
   for (unsigned int i=0; i<symbolics.size(); i++)
     symbolics[i].first->refCount++;
+
 }
 
 ExecutionState *ExecutionState::branch() {
@@ -136,20 +126,25 @@ ExecutionState *ExecutionState::branch() {
 
   weight *= .5;
   falseState->weight -= weight;
+  falseState->crtThreadIt = falseState->threads.find(crtThreadIt->second.tid);
 
   return falseState;
 }
 
 void ExecutionState::pushFrame(KInstIterator caller, KFunction *kf) {
-  stack.push_back(StackFrame(caller,kf));
+  stack().push_back(StackFrame(caller,kf));
+}
+
+void ExecutionState::popFrame(Thread &t) {
+    StackFrame &sf = t.stack.back();
+    for (std::vector<const MemoryObject*>::iterator it = sf.allocas.begin(),
+            ie = sf.allocas.end(); it != ie; ++it)
+        addressSpace.unbindObject(*it);
+    t.stack.pop_back();
 }
 
 void ExecutionState::popFrame() {
-  StackFrame &sf = stack.back();
-  for (std::vector<const MemoryObject*>::iterator it = sf.allocas.begin(), 
-         ie = sf.allocas.end(); it != ie; ++it)
-    addressSpace.unbindObject(*it);
-  stack.pop_back();
+    popFrame(crtThread());
 }
 
 void ExecutionState::addSymbolic(const MemoryObject *mo, const Array *array) { 
@@ -173,6 +168,69 @@ void ExecutionState::removeFnAlias(std::string fn) {
   fnAliases.erase(fn);
 }
 
+Thread& ExecutionState::createThread(Thread::thread_id_t tid, KFunction *kf) {
+    Thread newThread = Thread(tid,  kf);
+    threads.insert(std::make_pair(newThread.tid, newThread));
+    return threads.find(tid)->second;
+}
+
+void ExecutionState::terminateThread(threads_ty::iterator thrIt) {
+    assert(threads.size() > 1);
+    assert(thrIt != crtThreadIt); // We assume the scheduler found a new thread first
+    assert(!thrIt->second.enabled);
+    assert(thrIt->second.waitingList == 0);
+    threads.erase(thrIt);
+}
+
+void ExecutionState::sleepThread(Thread::wlist_id_t wlist) {
+    assert(crtThread().enabled);
+    assert(wlist > 0);
+
+    crtThread().enabled = false;
+    crtThread().waitingList = wlist;
+
+    std::set<Thread::thread_id_t> &wl = waitingLists[wlist];
+
+    wl.insert(crtThread().tid);
+}
+
+void ExecutionState::notifyOne(Thread::wlist_id_t wlist, Thread::thread_id_t tid) {
+    assert(wlist > 0);
+
+    std::set<Thread::thread_id_t> &wl = waitingLists[wlist];
+
+    if (wl.erase(tid) != 1) {
+        assert(0 && "thread was not waiting");
+    }
+
+    Thread &thread = threads.find(tid)->second;
+    assert(!thread.enabled);
+    thread.enabled = true;
+    thread.waitingList = 0;
+
+    if (wl.size() == 0)
+        waitingLists.erase(wlist);
+}
+
+void ExecutionState::notifyAll(Thread::wlist_id_t wlist) {
+    assert(wlist > 0);
+
+    std::set<Thread::thread_id_t> &wl = waitingLists[wlist];
+
+    if (wl.size() > 0) {
+        for (std::set<Thread::thread_id_t>::iterator it = wl.begin(); it != wl.end(); it++) {
+            Thread &thread = threads.find(*it)->second;
+            thread.enabled = true;
+            thread.waitingList = 0;
+        }
+
+        wl.clear();
+    }
+
+    waitingLists.erase(wlist);
+}
+
+
 /**/
 
 llvm::raw_ostream &klee::operator<<(llvm::raw_ostream &os, const MemoryMap &mm) {
@@ -192,7 +250,14 @@ bool ExecutionState::merge(const ExecutionState &b) {
   if (DebugLogStateMerge)
     llvm::errs() << "-- attempting merge of A:" << this << " with B:" << &b
                  << "--\n";
-  if (pc != b.pc)
+  if (pc() != b.pc())
+    return false;
+  
+  // XXX being conservative, how should be merged states with multiple threads?
+  if (threads.size() != 1 || b.threads.size() != 1)
+      return false;
+
+  if (crtThread().tid != b.crtThread().tid) // No merge if different thread
     return false;
 
   // XXX is it even possible for these to differ? does it matter? probably
@@ -201,16 +266,16 @@ bool ExecutionState::merge(const ExecutionState &b) {
     return false;
 
   {
-    std::vector<StackFrame>::const_iterator itA = stack.begin();
-    std::vector<StackFrame>::const_iterator itB = b.stack.begin();
-    while (itA!=stack.end() && itB!=b.stack.end()) {
+    std::vector<StackFrame>::const_iterator itA = stack().begin();
+    std::vector<StackFrame>::const_iterator itB = b.stack().begin();
+    while (itA!=stack().end() && itB!=b.stack().end()) {
       // XXX vaargs?
       if (itA->caller!=itB->caller || itA->kf!=itB->kf)
         return false;
       ++itA;
       ++itB;
     }
-    if (itA!=stack.end() || itB!=b.stack.end())
+    if (itA!=stack().end() || itB!=b.stack().end())
       return false;
   }
 
@@ -306,9 +371,9 @@ bool ExecutionState::merge(const ExecutionState &b) {
   // it seems like it can make a difference, even though logically
   // they must contradict each other and so inA => !inB
 
-  std::vector<StackFrame>::iterator itA = stack.begin();
-  std::vector<StackFrame>::const_iterator itB = b.stack.begin();
-  for (; itA!=stack.end(); ++itA, ++itB) {
+  std::vector<StackFrame>::iterator itA = stack().begin();
+  std::vector<StackFrame>::const_iterator itB = b.stack().begin();
+  for (; itA!=stack().end(); ++itA, ++itB) {
     StackFrame &af = *itA;
     const StackFrame &bf = *itB;
     for (unsigned i=0; i<af.kf->numRegisters; i++) {
@@ -351,9 +416,9 @@ bool ExecutionState::merge(const ExecutionState &b) {
 
 void ExecutionState::dumpStack(llvm::raw_ostream &out) const {
   unsigned idx = 0;
-  const KInstruction *target = prevPC;
-  for (ExecutionState::stack_ty::const_reverse_iterator
-         it = stack.rbegin(), ie = stack.rend();
+  const KInstruction *target = prevPC();
+  for (Thread::stack_ty::const_reverse_iterator
+         it = stack().rbegin(), ie = stack().rend();
        it != ie; ++it) {
     const StackFrame &sf = *it;
     Function *f = sf.kf->function;
