@@ -66,13 +66,16 @@ StackFrame::~StackFrame() {
 
 /***/
 
-ExecutionState::ExecutionState(KFunction *kf) 
-  : fakeState(false),
-    depth(0),
+ExecutionState::ExecutionState(KFunction *kf) :
+    underConstrained(0),
     pc(kf->instructions),
     prevPC(pc),
+
     queryCost(0.), 
     weight(1),
+    depth(0),
+
+    fakeState(false),
     instsSinceCovNew(0),
     coveredNew(false),
     forkDisabled(false),
@@ -80,12 +83,9 @@ ExecutionState::ExecutionState(KFunction *kf)
   pushFrame(0, kf);
 }
 
-ExecutionState::ExecutionState(const std::vector<ref<Expr> > &assumptions) 
-  : fakeState(true),
-    constraints(assumptions),
-    queryCost(0.),
-    ptreeNode(0) {
-}
+ExecutionState::ExecutionState(const std::vector<ref<Expr> > &assumptions)
+    : underConstrained(0), constraints(assumptions), queryCost(0.),
+      fakeState(true), ptreeNode(0) {}
 
 ExecutionState::~ExecutionState() {
   for (unsigned int i=0; i<symbolics.size(); i++)
@@ -100,28 +100,32 @@ ExecutionState::~ExecutionState() {
   while (!stack.empty()) popFrame();
 }
 
-ExecutionState::ExecutionState(const ExecutionState& state)
-  : fnAliases(state.fnAliases),
-    fakeState(state.fakeState),
-    depth(state.depth),
+ExecutionState::ExecutionState(const ExecutionState& state):
+    fnAliases(state.fnAliases),
+    underConstrained(state.underConstrained),
     pc(state.pc),
     prevPC(state.prevPC),
     stack(state.stack),
+    incomingBBIndex(state.incomingBBIndex),
+
+    addressSpace(state.addressSpace),
     constraints(state.constraints),
+
     queryCost(state.queryCost),
     weight(state.weight),
-    addressSpace(state.addressSpace),
+    depth(state.depth),
+
     pathOS(state.pathOS),
     symPathOS(state.symPathOS),
+
+    fakeState(state.fakeState),
     instsSinceCovNew(state.instsSinceCovNew),
     coveredNew(state.coveredNew),
     forkDisabled(state.forkDisabled),
     coveredLines(state.coveredLines),
     ptreeNode(state.ptreeNode),
     symbolics(state.symbolics),
-    arrayNames(state.arrayNames),
-    shadowObjects(state.shadowObjects),
-    incomingBBIndex(state.incomingBBIndex)
+    arrayNames(state.arrayNames)
 {
   for (unsigned int i=0; i<symbolics.size(); i++)
     symbolics[i].first->refCount++;

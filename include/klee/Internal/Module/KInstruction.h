@@ -50,7 +50,7 @@ namespace klee {
     std::vector< std::pair<unsigned, uint64_t> > indices;
 
     /// offset - A constant offset to add to the pointer operand to execute the
-    /// insturction.
+    /// instruction.
     uint64_t offset;
   };
 }
