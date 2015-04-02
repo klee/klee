@@ -73,10 +73,6 @@ private:
   std::map<std::string, std::string> fnAliases;
 
 public:
-  // Are we currently underconstrained?  Hack: value is size to make fake
-  // objects.
-  unsigned underConstrained;
-
   /// Execution - Control Flow specific
 
   /// @brief pointer to instruction to be executed next after the current
@@ -154,7 +150,7 @@ public:
   void removeFnAlias(std::string fn);
 
 private:
-  ExecutionState() : underConstrained(0), fakeState(false), ptreeNode(0) {}
+  ExecutionState() : fakeState(false), ptreeNode(0) {}
 
 public:
   ExecutionState(KFunction *kf);

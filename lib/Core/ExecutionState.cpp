@@ -67,7 +67,6 @@ StackFrame::~StackFrame() {
 /***/
 
 ExecutionState::ExecutionState(KFunction *kf) :
-    underConstrained(0),
     pc(kf->instructions),
     prevPC(pc),
 
@@ -84,7 +83,7 @@ ExecutionState::ExecutionState(KFunction *kf) :
 }
 
 ExecutionState::ExecutionState(const std::vector<ref<Expr> > &assumptions)
-    : underConstrained(0), constraints(assumptions), queryCost(0.),
+    : constraints(assumptions), queryCost(0.),
       fakeState(true), ptreeNode(0) {}
 
 ExecutionState::~ExecutionState() {
@@ -102,7 +101,6 @@ ExecutionState::~ExecutionState() {
 
 ExecutionState::ExecutionState(const ExecutionState& state):
     fnAliases(state.fnAliases),
-    underConstrained(state.underConstrained),
     pc(state.pc),
     prevPC(state.prevPC),
     stack(state.stack),
