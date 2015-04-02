@@ -117,9 +117,6 @@ public:
   /// taken to reach/create this state
   TreeOStream symPathOS;
 
-  /// @brief Does not represent a real state just for patching purposes
-  bool fakeState;
-
   /// @brief Counts how many instructions were executed since the last new
   /// instruction was covered.
   unsigned instsSinceCovNew;
@@ -149,7 +146,7 @@ public:
   void removeFnAlias(std::string fn);
 
 private:
-  ExecutionState() : fakeState(false), ptreeNode(0) {}
+  ExecutionState() : ptreeNode(0) {}
 
 public:
   ExecutionState(KFunction *kf);

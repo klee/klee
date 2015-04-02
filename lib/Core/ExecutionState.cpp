@@ -74,7 +74,6 @@ ExecutionState::ExecutionState(KFunction *kf) :
     weight(1),
     depth(0),
 
-    fakeState(false),
     instsSinceCovNew(0),
     coveredNew(false),
     forkDisabled(false),
@@ -83,8 +82,7 @@ ExecutionState::ExecutionState(KFunction *kf) :
 }
 
 ExecutionState::ExecutionState(const std::vector<ref<Expr> > &assumptions)
-    : constraints(assumptions), queryCost(0.),
-      fakeState(true), ptreeNode(0) {}
+    : constraints(assumptions), queryCost(0.), ptreeNode(0) {}
 
 ExecutionState::~ExecutionState() {
   for (unsigned int i=0; i<symbolics.size(); i++)
@@ -116,7 +114,6 @@ ExecutionState::ExecutionState(const ExecutionState& state):
     pathOS(state.pathOS),
     symPathOS(state.symPathOS),
 
-    fakeState(state.fakeState),
     instsSinceCovNew(state.instsSinceCovNew),
     coveredNew(state.coveredNew),
     forkDisabled(state.forkDisabled),
