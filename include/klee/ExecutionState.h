@@ -61,7 +61,7 @@ struct StackFrame {
   ~StackFrame();
 };
 
-/// @brief ExecutionState representing the one state of execution
+/// @brief ExecutionState representing a path under exploration
 class ExecutionState {
 public:
   typedef std::vector<StackFrame> stack_ty;
@@ -75,8 +75,8 @@ private:
 public:
   /// Execution - Control Flow specific
 
-  /// @brief pointer to instruction to be executed next after the current
-  /// instruction (prevPc)
+  /// @brief pointer to instruction to be executed next after the
+  /// current instruction (prevPc)
   KInstIterator pc;
 
   /// @brief Pointer to instruction which is currently executed
@@ -85,13 +85,13 @@ public:
   /// @brief Stack representing the current instruction stream
   stack_ty stack;
 
-  /// @brief Remember from which Basic Block control flow arrived (i.e. to
-  /// select the right phi values)
+  /// @brief Remember from which Basic Block control flow arrived
+  /// (i.e. to select the right phi values)
   unsigned incomingBBIndex;
 
   /// Overall state of the state - Data specific
 
-  /// @brief Address space used by this state (e.g. Global and Heap).
+  /// @brief Address space used by this state (e.g. Global and Heap)
   AddressSpace addressSpace;
 
   /// @brief Constraints collected so far
@@ -99,23 +99,22 @@ public:
 
   /// Statistics and information
 
-  /// @brief Costs for all queries in seconds for this state
+  /// @brief Costs for all queries issued for this state, in seconds
   mutable double queryCost;
 
-  /// @brief Weight assigned for importance of this state. Can be used for
-  /// searchers to decide
+  /// @brief Weight assigned for importance of this state.  Can be
+  /// used for searchers to decide what paths to explore
   double weight;
 
-  /// @brief Counter how often KLEE branched for this state
+  /// @brief Exploration depth, i.e., number of times KLEE branched for this state
   unsigned depth;
 
-  /// @brief History of complete path: Represents branches taken to reach/create
-  /// this state
-  ///        Includes symbolic-based branches as well.
+  /// @brief History of complete path: Represents branches taken to
+  /// reach/create this state (both concrete and symbolic)
   TreeOStream pathOS;
 
-  /// @brief History of symbolic path: Represents branches taken but only
-  /// symbolic ones.
+  /// @brief History of symbolic path: Represents symbolic branches
+  /// taken to reach/create this state
   TreeOStream symPathOS;
 
   /// @brief Does not represent a real state just for patching purposes
@@ -125,19 +124,19 @@ public:
   /// instruction was covered.
   unsigned instsSinceCovNew;
 
-  /// @brief Flag if new instruction was covered or not in this state
+  /// @brief Whether a new instruction was covered in this state
   bool coveredNew;
 
-  /// @brief Disables forking for this state. Set by user code.
+  /// @brief Disables forking for this state. Set by user code
   bool forkDisabled;
 
   /// @brief Set containing which lines in which files are covered by this state
   std::map<const std::string *, std::set<unsigned> > coveredLines;
 
-  /// @brief Representing pointer to process tree of current state
+  /// @brief Pointer to the process tree of the current state
   PTreeNode *ptreeNode;
 
-  /// ordered list of symbolics: used to generate test cases.
+  /// @brief Ordered list of symbolics: used to generate test cases.
   //
   // FIXME: Move to a shared list structure (not critical).
   std::vector<std::pair<const MemoryObject *, const Array *> > symbolics;
