@@ -636,9 +636,9 @@ static std::string strip(std::string &in) {
 static void parseArguments(int argc, char **argv) {
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 2)
   // This version always reads response files
-  cl::ParseCommandLineOptions(argc, (const char**) argv, " klee\n");
+  cl::ParseCommandLineOptions(argc, argv, " klee\n");
 #else
-  cl::ParseCommandLineOptions(argc, (char**) argv, " klee\n", /*ReadResponseFiles=*/ true);
+  cl::ParseCommandLineOptions(argc, argv, " klee\n", /*ReadResponseFiles=*/ true);
 #endif
 }
 
