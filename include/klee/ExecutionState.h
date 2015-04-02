@@ -73,14 +73,14 @@ private:
   std::map<std::string, std::string> fnAliases;
 
 public:
-  /// Execution - Control Flow specific
-
-  /// @brief pointer to instruction to be executed next after the
-  /// current instruction (prevPc)
-  KInstIterator pc;
+  // Execution - Control Flow specific
 
   /// @brief Pointer to instruction which is currently executed
   KInstIterator prevPC;
+
+  /// @brief Pointer to instruction to be executed after the current
+  /// instruction
+  KInstIterator pc;
 
   /// @brief Stack representing the current instruction stream
   stack_ty stack;
@@ -89,7 +89,7 @@ public:
   /// (i.e. to select the right phi values)
   unsigned incomingBBIndex;
 
-  /// Overall state of the state - Data specific
+  // Overall state of the state - Data specific
 
   /// @brief Address space used by this state (e.g. Global and Heap)
   AddressSpace addressSpace;
