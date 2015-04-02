@@ -1,11 +1,11 @@
-//===-- htonl.c -----------------------------------------------------------===//
+/*===-- htonl.c -----------------------------------------------------------===//
 //
 //                     The KLEE Symbolic Virtual Machine
 //
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
 //
-//===----------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===*/
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -16,7 +16,7 @@
 #undef ntohs
 #undef ntohl
 
-// Make sure we can recognize the endianness.
+/* Make sure we can recognize the endianness. */
 #if (!defined(BYTE_ORDER) || !defined(BIG_ENDIAN) || !defined(LITTLE_ENDIAN))
 #error "Unknown platform endianness!"
 #endif
