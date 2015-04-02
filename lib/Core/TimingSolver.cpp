@@ -13,10 +13,11 @@
 #include "klee/ExecutionState.h"
 #include "klee/Solver.h"
 #include "klee/Statistics.h"
+#include "klee/Internal/System/Time.h"
 
 #include "CoreStats.h"
 
-#include "llvm/Support/Process.h"
+#include "llvm/Support/TimeValue.h"
 
 using namespace klee;
 using namespace llvm;
@@ -31,15 +32,14 @@ bool TimingSolver::evaluate(const ExecutionState& state, ref<Expr> expr,
     return true;
   }
 
-  sys::TimeValue now(0,0),user(0,0),delta(0,0),sys(0,0);
-  sys::Process::GetTimeUsage(now,user,sys);
+  sys::TimeValue now = util::getWallTimeVal();
 
   if (simplifyExprs)
     expr = state.constraints.simplifyExpr(expr);
 
   bool success = solver->evaluate(Query(state.constraints, expr), result);
 
-  sys::Process::GetTimeUsage(delta,user,sys);
+  sys::TimeValue delta = util::getWallTimeVal();
   delta -= now;
   stats::solverTime += delta.usec();
   state.queryCost += delta.usec()/1000000.;
@@ -55,15 +55,14 @@ bool TimingSolver::mustBeTrue(const ExecutionState& state, ref<Expr> expr,
     return true;
   }
 
-  sys::TimeValue now(0,0),user(0,0),delta(0,0),sys(0,0);
-  sys::Process::GetTimeUsage(now,user,sys);
+  sys::TimeValue now = util::getWallTimeVal();
 
   if (simplifyExprs)
     expr = state.constraints.simplifyExpr(expr);
 
   bool success = solver->mustBeTrue(Query(state.constraints, expr), result);
 
-  sys::Process::GetTimeUsage(delta,user,sys);
+  sys::TimeValue delta = util::getWallTimeVal();
   delta -= now;
   stats::solverTime += delta.usec();
   state.queryCost += delta.usec()/1000000.;
@@ -102,15 +101,14 @@ bool TimingSolver::getValue(const ExecutionState& state, ref<Expr> expr,
     return true;
   }
   
-  sys::TimeValue now(0,0),user(0,0),delta(0,0),sys(0,0);
-  sys::Process::GetTimeUsage(now,user,sys);
+  sys::TimeValue now = util::getWallTimeVal();
 
   if (simplifyExprs)
     expr = state.constraints.simplifyExpr(expr);
 
   bool success = solver->getValue(Query(state.constraints, expr), result);
 
-  sys::Process::GetTimeUsage(delta,user,sys);
+  sys::TimeValue delta = util::getWallTimeVal();
   delta -= now;
   stats::solverTime += delta.usec();
   state.queryCost += delta.usec()/1000000.;
@@ -127,14 +125,13 @@ TimingSolver::getInitialValues(const ExecutionState& state,
   if (objects.empty())
     return true;
 
-  sys::TimeValue now(0,0),user(0,0),delta(0,0),sys(0,0);
-  sys::Process::GetTimeUsage(now,user,sys);
+  sys::TimeValue now = util::getWallTimeVal();
 
   bool success = solver->getInitialValues(Query(state.constraints,
                                                 ConstantExpr::alloc(0, Expr::Bool)), 
                                           objects, result);
   
-  sys::Process::GetTimeUsage(delta,user,sys);
+  sys::TimeValue delta = util::getWallTimeVal();
   delta -= now;
   stats::solverTime += delta.usec();
   state.queryCost += delta.usec()/1000000.;
