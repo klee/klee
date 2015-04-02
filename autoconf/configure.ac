@@ -576,9 +576,26 @@ AC_CHECK_HEADER(stp/c_interface.h,,
     ])
 CPPFLAGS="$old_CPPFLAGS"
 
+STP_NEEDS_MINISAT=0
 AC_CHECK_LIB(stp, vc_setInterfaceFlags,, [
-       AC_MSG_ERROR([Could not link with libstp])
+       STP_NEEDS_MINISAT=1; AC_MSG_RESULT([Could not link with libstp])
 ], "$STP_LDFLAGS")
+
+dnl Try linking again with minisat if necessary
+if test "X$STP_NEEDS_MINISAT" != X0 ; then
+  # Need to clear cached result
+  unset ac_cv_lib_stp_vc_setInterfaceFlags
+
+  AC_CHECK_LIB(stp,
+	       vc_setInterfaceFlags,, [
+	       AC_MSG_ERROR([Unable to link with libstp. Check config.log to see what went wrong])
+  ], "$STP_LDFLAGS" "-lminisat" )
+
+  STP_LDFLAGS="${STP_LDFLAGS} -lstp -lminisat"
+else
+  STP_LDFLAGS="${STP_LDFLAGS} -lstp"
+fi
+
 
 AC_SUBST(STP_CFLAGS)
 AC_SUBST(STP_LDFLAGS)
