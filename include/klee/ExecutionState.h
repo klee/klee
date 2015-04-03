@@ -75,12 +75,12 @@ private:
 public:
   // Execution - Control Flow specific
 
-  /// @brief Pointer to instruction which is currently executed
-  KInstIterator prevPC;
-
   /// @brief Pointer to instruction to be executed after the current
   /// instruction
   KInstIterator pc;
+
+  /// @brief Pointer to instruction which is currently executed
+  KInstIterator prevPC;
 
   /// @brief Stack representing the current instruction stream
   stack_ty stack;
@@ -109,11 +109,11 @@ public:
   /// @brief Exploration depth, i.e., number of times KLEE branched for this state
   unsigned depth;
 
-  /// @brief History of complete path: Represents branches taken to
+  /// @brief History of complete path: represents branches taken to
   /// reach/create this state (both concrete and symbolic)
   TreeOStream pathOS;
 
-  /// @brief History of symbolic path: Represents symbolic branches
+  /// @brief History of symbolic path: represents symbolic branches
   /// taken to reach/create this state
   TreeOStream symPathOS;
 

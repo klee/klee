@@ -67,8 +67,8 @@ StackFrame::~StackFrame() {
 /***/
 
 ExecutionState::ExecutionState(KFunction *kf) :
-    prevPC(pc),
     pc(kf->instructions),
+    prevPC(pc),
 
     queryCost(0.), 
     weight(1),
@@ -99,8 +99,8 @@ ExecutionState::~ExecutionState() {
 
 ExecutionState::ExecutionState(const ExecutionState& state):
     fnAliases(state.fnAliases),
-    prevPC(state.prevPC),
     pc(state.pc),
+    prevPC(state.prevPC),
     stack(state.stack),
     incomingBBIndex(state.incomingBBIndex),
 
