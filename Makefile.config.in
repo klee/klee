@@ -65,6 +65,11 @@ endif
 # disable unwind test
 TEST_FEATURE_LIST += no-unwind
 
+# Deliberately override the host compiler
+# so that we use what was detected when KLEE was configured
+# and not LLVM.
+CC := @KLEE_HOST_C_COMPILER@
+CXX := @KLEE_HOST_CXX_COMPILER@
 CFLAGS := @CFLAGS@ -Wall -g
 CXXFLAGS := @CXXFLAGS@ -g -Wall
 LDFLAGS := @LDFLAGS@ -g

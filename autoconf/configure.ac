@@ -34,8 +34,11 @@ AH_BOTTOM([#endif])
 
 dnl We need to check for the compiler up here to avoid anything else
 dnl starting with a different one.
+AC_PROG_CC(gcc clang)
 AC_PROG_CXX(g++ clang++ )
 AC_LANG([C++])
+AC_SUBST(KLEE_HOST_C_COMPILER,$CC)
+AC_SUBST(KLEE_HOST_CXX_COMPILER,$CXX)
 
 dnl **************************************************************************
 dnl Find the host
