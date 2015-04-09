@@ -27,6 +27,12 @@ LLVMCC := $(LLVMGCC)
 LLVMCXX := $(LLVMGXX)
 endif
 
+# Deliberately override the host compiler
+# so that we use what was detected when KLEE was configured
+# and not LLVM.
+CC := $(KLEE_HOST_C_COMPILER)
+CXX := $(KLEE_HOST_CXX_COMPILER)
+
 # Needed to build runtime library using clang (gnu89 is the gcc default)
 C.Flags += -std=gnu89
 

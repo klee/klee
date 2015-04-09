@@ -53,6 +53,10 @@ RUNTIME_ENABLE_PROFILING :=
 KLEE_BITCODE_C_COMPILER := @KLEE_BITCODE_C_COMPILER@
 KLEE_BITCODE_CXX_COMPILER := @KLEE_BITCODE_CXX_COMPILER@
 
+# Host compiler
+KLEE_HOST_C_COMPILER := @KLEE_HOST_C_COMPILER@
+KLEE_HOST_CXX_COMPILER := @KLEE_HOST_CXX_COMPILER@
+
 # A list of "features" which tests can check for in XFAIL:
 TEST_FEATURE_LIST :=
 
@@ -65,11 +69,6 @@ endif
 # disable unwind test
 TEST_FEATURE_LIST += no-unwind
 
-# Deliberately override the host compiler
-# so that we use what was detected when KLEE was configured
-# and not LLVM.
-CC := @KLEE_HOST_C_COMPILER@
-CXX := @KLEE_HOST_CXX_COMPILER@
 CFLAGS := @CFLAGS@ -Wall -g
 CXXFLAGS := @CXXFLAGS@ -g -Wall
 LDFLAGS := @LDFLAGS@ -g
