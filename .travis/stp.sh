@@ -7,7 +7,7 @@ STP_LOG="$(pwd)/stp-build.log"
 
 if [ "${STP_VERSION}" == "UPSTREAM" ]; then
     # Build minisat
-    git clone https://github.com/niklasso/minisat
+    git clone https://github.com/stp/minisat
     cd minisat
     mkdir build
     cd build
