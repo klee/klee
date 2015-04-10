@@ -39,7 +39,7 @@ RUN apt-get update && \
         unzip \
         binutils && \
     pip install -U setuptools && \
-    pip install -U pip &&
+    pip install -U pip && \
     pip install -U lit tabulate
 
 # Create ``klee`` user for container with password ``klee``.
