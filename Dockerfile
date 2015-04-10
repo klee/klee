@@ -38,7 +38,9 @@ RUN apt-get update && \
         wget \
         unzip \
         binutils && \
-    pip install lit
+    pip install -U setuptools && \
+    pip install -U pip &&
+    pip install -U lit tabulate
 
 # Create ``klee`` user for container with password ``klee``.
 # and give it password-less sudo access (temporarily so we can use the TravisCI scripts)
