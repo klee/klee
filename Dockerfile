@@ -26,9 +26,9 @@ RUN apt-get update && \
         cmake \
         make \
         libboost-program-options-dev \
-        python \
-        python-dev \
-        python-pip \
+        python3 \
+        python3-dev \
+        python3-pip \
         perl \
         flex \
         bison \
@@ -38,7 +38,8 @@ RUN apt-get update && \
         wget \
         unzip \
         binutils && \
-    pip install -U lit tabulate
+    pip3 install -U lit tabulate && \
+    update-alternatives --install /usr/bin/python python /usr/bin/python3 50
 
 # Create ``klee`` user for container with password ``klee``.
 # and give it password-less sudo access (temporarily so we can use the TravisCI scripts)
