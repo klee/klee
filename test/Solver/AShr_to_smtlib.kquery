@@ -1,0 +1,16 @@
+# RUN: %kleaver -print-smtlib -smtlib-abbreviation-mode=none %s > %t
+# RUN: diff -u %t %s.good.smt2
+
+# This test tries to check that the SMT-LIBv2 we generate when a AShrExpr is
+# used is correct.
+#
+# FIXME: We should really pass the generated query to an SMT solver that supports
+# SMT-LIBv2 and check it gives the correct answer ``unsat``. An older version of
+# KLEE where AShrExpr wasn't handled correctly would give ``sat`` for this query.
+#
+# We could fix this if we required STP to be in the user's PATH and made available
+# as a substitution in llvm-lit
+
+array value[1] : w32 -> w8 = symbolic
+array shift[1] : w32 -> w8 = symbolic
+(query [(Ule 8 (Read w8 0 shift))] (Eq 0 (AShr w8 (Read w8 0 value) (Read w8 0 shift))) )
