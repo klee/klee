@@ -255,7 +255,10 @@ void ExprSMTLIBPrinter::printFullExpression(
      * type T.
      */
     printLogicalOrBitVectorExpr(e, expectedSort);
+    return;
 
+  case Expr::AShr:
+    printAShrExpr(cast<AShrExpr>(e));
     return;
 
   default:
@@ -334,6 +337,73 @@ void ExprSMTLIBPrinter::printCastExpr(const ref<CastExpr> &e) {
   *p << ")";
 }
 
+void ExprSMTLIBPrinter::printAShrExpr(const ref<AShrExpr> &e) {
+  // There is a difference between AShr and SMT-LIBv2's
+  // bvashr function when the shift amount is >= the bit width
+  // so we need to treat it specially here.
+  //
+  // Technically this is undefined behaviour for LLVM's ashr operator
+  // but currently llvm::APInt:ashr(...) will emit 0 if the shift amount
+  // is >= the bit width but this does not match how SMT-LIBv2's bvashr
+  // behaves as demonstrates by the following query
+  //
+  // (declare-fun x () (_ BitVec 32))
+  // (declare-fun y () (_ BitVec 32))
+  // (declare-fun result () (_ BitVec 32))
+  // (assert (bvuge y (_ bv32 32)))
+  // (assert (= result (bvashr x y)))
+  // (assert (distinct (_ bv0 32) result))
+  // (check-sat)
+  // sat
+  //
+  // Our solution is to instead emit
+  //
+  // (ite (bvuge shift_amount bit_width)
+  //      (_ bv0 bitwidth)
+  //      (bvashr value_to_shift shift_amount)
+  // )
+  //
+
+  Expr::Width bitWidth = e->getKid(0)->getWidth();
+  assert(bitWidth > 0 && "Invalid bit width");
+  ref<Expr> bitWidthExpr = ConstantExpr::create(bitWidth, bitWidth);
+  ref<Expr> zeroExpr = ConstantExpr::create(0, bitWidth);
+
+  // FIXME: we print e->getKid(1) twice and it might not get
+  // abbreviated
+  *p << "(ite";
+  p->pushIndent();
+  printSeperator();
+
+  *p << "(bvuge";
+  p->pushIndent();
+  printSeperator();
+  printExpression(e->getKid(1), SORT_BITVECTOR);
+  printSeperator();
+  printExpression(bitWidthExpr, SORT_BITVECTOR);
+  p->popIndent();
+  printSeperator();
+  *p << ")";
+
+  printSeperator();
+  printExpression(zeroExpr, SORT_BITVECTOR);
+  printSeperator();
+
+  *p << "(bvashr";
+  p->pushIndent();
+  printSeperator();
+  printExpression(e->getKid(0), SORT_BITVECTOR);
+  printSeperator();
+  printExpression(e->getKid(1), SORT_BITVECTOR);
+  p->popIndent();
+  printSeperator();
+  *p << ")";
+
+  p->popIndent();
+  printSeperator();
+  *p << ")";
+}
+
 const char *ExprSMTLIBPrinter::getSMTLIBKeyword(const ref<Expr> &e) {
 
   switch (e->getKind()) {
@@ -373,8 +443,7 @@ const char *ExprSMTLIBPrinter::getSMTLIBKeyword(const ref<Expr> &e) {
     return "bvshl";
   case Expr::LShr:
     return "bvlshr";
-  case Expr::AShr:
-    return "bvashr";
+  // AShr is not supported here. See printAShrExpr()
 
   case Expr::Eq:
     return "=";
