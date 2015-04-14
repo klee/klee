@@ -25,10 +25,12 @@ if [ "${STP_VERSION}" == "UPSTREAM" ]; then
     cmake -DBUILD_SHARED_LIBS:BOOL=OFF -DENABLE_PYTHON_INTERFACE:BOOL=OFF ../src
     # Don't try to build stp executable, there's an issue with using gcc4.8 with boost libraries built with gcc4.6
 
-    set +e # Do not exit if build fails because we need to display the log
-    make libstp CopyPublicHeaders
-    sudo make install
-    #>> "${STP_LOG}" 2>&1
+    #set +e # Do not exit if build fails because we need to display the log
+    #make libstp CopyPublicHeaders >> "${STP_LOG}" 2>&1
+    #sudo make install
+    make
+    sudo make intall
+    
 
 elif [ "${STP_VERSION}" == "r940" ]; then
     # Building the old "r940" version that for some reason we love so much!
