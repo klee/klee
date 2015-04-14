@@ -23,6 +23,14 @@
 
 using namespace klee;
 
+namespace {
+  llvm::cl::opt<bool>
+  RewriteEqualities("rewrite-equalities",
+		    llvm::cl::init(true),
+		    llvm::cl::desc("Rewrite existing constraints when an equality with a constant is added (default=on)"));
+}
+
+
 class ExprReplaceVisitor : public ExprVisitor {
 private:
   ref<Expr> src, dst;
@@ -118,13 +126,7 @@ ref<Expr> ConstraintManager::simplifyExpr(ref<Expr> e) const {
 }
 
 void ConstraintManager::addConstraintInternal(ref<Expr> e) {
-  // rewrite any known equalities 
-
-  // XXX should profile the effects of this and the overhead.
-  // traversing the constraints looking for equalities is hardly the
-  // slowest thing we do, but it is probably nicer to have a
-  // ConstraintSet ADT which efficiently remembers obvious patterns
-  // (byte-constant comparison).
+  // rewrite any known equalities and split Ands into different conjuncts
 
   switch (e->getKind()) {
   case Expr::Constant:
@@ -141,10 +143,17 @@ void ConstraintManager::addConstraintInternal(ref<Expr> e) {
   }
 
   case Expr::Eq: {
-    BinaryExpr *be = cast<BinaryExpr>(e);
-    if (isa<ConstantExpr>(be->left)) {
-      ExprReplaceVisitor visitor(be->right, be->left);
-      rewriteConstraints(visitor);
+    if (RewriteEqualities) {
+      // XXX: should profile the effects of this and the overhead.
+      // traversing the constraints looking for equalities is hardly the
+      // slowest thing we do, but it is probably nicer to have a
+      // ConstraintSet ADT which efficiently remembers obvious patterns
+      // (byte-constant comparison).
+      BinaryExpr *be = cast<BinaryExpr>(e);
+      if (isa<ConstantExpr>(be->left)) {
+	ExprReplaceVisitor visitor(be->right, be->left);
+	rewriteConstraints(visitor);
+      }
     }
     constraints.push_back(e);
     break;

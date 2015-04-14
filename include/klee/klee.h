@@ -1,11 +1,11 @@
-//===-- klee.h --------------------------------------------------*- C++ -*-===//
+/*===-- klee.h --------------------------------------------------*- C++ -*-===//
 //
 //                     The KLEE Symbolic Virtual Machine
 //
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
 //
-//===----------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===*/
 
 #ifndef __KLEE_H__
 #define __KLEE_H__
@@ -18,51 +18,57 @@ extern "C" {
 #endif
   
   /* Add an accesible memory object at a user specified location. It
-     is the users responsibility to make sure that these memory
-     objects do not overlap. These memory objects will also
-     (obviously) not correctly interact with external function
-     calls. */
+   * is the users responsibility to make sure that these memory
+   * objects do not overlap. These memory objects will also
+   * (obviously) not correctly interact with external function
+   * calls.
+   */
   void klee_define_fixed_object(void *addr, size_t nbytes);
 
-  /// klee_make_symbolic - Make the contents of the object pointer to by \arg
-  /// addr symbolic. 
-  ///
-  /// \arg addr - The start of the object.
-  /// \arg nbytes - The number of bytes to make symbolic; currently this *must*
-  /// be the entire contents of the object.
-  /// \arg name - An optional name, used for identifying the object in messages,
-  /// output files, etc.
+  /* klee_make_symbolic - Make the contents of the object pointer to by \arg
+   * addr symbolic.
+   *
+   * \arg addr - The start of the object.
+   * \arg nbytes - The number of bytes to make symbolic; currently this *must*
+   * be the entire contents of the object.
+   * \arg name - An optional name, used for identifying the object in messages,
+   * output files, etc.
+   */
   void klee_make_symbolic(void *addr, size_t nbytes, const char *name);
 
-  /// klee_range - Construct a symbolic value in the signed interval
-  /// [begin,end).
-  ///
-  /// \arg name - An optional name, used for identifying the object in messages,
-  /// output files, etc.
+  /* klee_range - Construct a symbolic value in the signed interval
+   * [begin,end).
+   *
+   * \arg name - An optional name, used for identifying the object in messages,
+   * output files, etc.
+   */
   int klee_range(int begin, int end, const char *name);
 
-  /// klee_int - Construct an unconstrained symbolic integer.
-  ///
-  /// \arg name - An optional name, used for identifying the object in messages,
-  /// output files, etc.
+  /*  klee_int - Construct an unconstrained symbolic integer.
+   *
+   * \arg name - An optional name, used for identifying the object in messages,
+   * output files, etc.
+   */
   int klee_int(const char *name);
 
-  /// klee_silent_exit - Terminate the current KLEE process without generating a
-  /// test file.
+  /* klee_silent_exit - Terminate the current KLEE process without generating a
+   * test file.
+   */
   __attribute__((noreturn))
   void klee_silent_exit(int status);
 
-  /// klee_abort - Abort the current KLEE process.
+  /* klee_abort - Abort the current KLEE process. */
   __attribute__((noreturn))
   void klee_abort(void);  
 
-  /// klee_report_error - Report a user defined error and terminate the current
-  /// KLEE process.
-  ///
-  /// \arg file - The filename to report in the error message.
-  /// \arg line - The line number to report in the error message.
-  /// \arg message - A string to include in the error message.
-  /// \arg suffix - The suffix to use for error files.
+  /* klee_report_error - Report a user defined error and terminate the current
+   * KLEE process.
+   *
+   * \arg file - The filename to report in the error message.
+   * \arg line - The line number to report in the error message.
+   * \arg message - A string to include in the error message.
+   * \arg suffix - The suffix to use for error files.
+   */
   __attribute__((noreturn))
   void klee_report_error(const char *file, 
 			 int line, 
@@ -142,6 +148,11 @@ extern "C" {
   /* Print stack trace. */
   void klee_stack_trace(void);
 
+  /* Print range for given argument and tagged with name */
+  void klee_print_range(const char * name, int arg );
+
+  /* Merge current states together if possible */
+  void klee_merge();
 #ifdef __cplusplus
 }
 #endif

@@ -1,11 +1,11 @@
-//===-- strchr.c ----------------------------------------------------------===//
+/*===-- strchr.c ----------------------------------------------------------===//
 //
 //                     The KLEE Symbolic Virtual Machine
 //
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
 //
-//===----------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===*/
 
 char *strchr(const char *p, int ch) {
   char c;

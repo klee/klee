@@ -638,7 +638,7 @@ static void parseArguments(int argc, char **argv) {
   // This version always reads response files
   cl::ParseCommandLineOptions(argc, const_cast<const char**>(argv), " klee\n");
 #else
-  cl::ParseCommandLineOptions(argc, (char**) argv, " klee\n", /*ReadResponseFiles=*/ true);
+  cl::ParseCommandLineOptions(argc, argv, " klee\n", /*ReadResponseFiles=*/ true);
 #endif
 }
 
@@ -1092,6 +1092,8 @@ static llvm::Module *linkWithUclibc(llvm::Module *mainModule, StringRef libDir) 
   replaceOrRenameFunction(mainModule, "__libc_open", "open");
   replaceOrRenameFunction(mainModule, "__libc_fcntl", "fcntl");
 
+  // Take care of fortified functions
+  replaceOrRenameFunction(mainModule, "__fprintf_chk", "fprintf");
 
   // XXX we need to rearchitect so this can also be used with
   // programs externally linked with uclibc.

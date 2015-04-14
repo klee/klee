@@ -33,7 +33,7 @@ if [ "${KLEE_UCLIBC}" -eq 1 ]; then
     cd klee-uclibc
     ./configure --make-llvm-lib --with-cc "${KLEE_CC}" --with-llvm-config /usr/bin/llvm-config-${LLVM_VERSION}
     make
-    KLEE_UCLIBC_CONFIGURE_OPTION="--with-uclibc=$(pwd) --with-posix-runtime"
+    KLEE_UCLIBC_CONFIGURE_OPTION="--with-uclibc=$(pwd) --enable-posix-runtime"
     cd ../
 else
     KLEE_UCLIBC_CONFIGURE_OPTION=""

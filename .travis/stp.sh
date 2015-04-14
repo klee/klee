@@ -6,6 +6,18 @@ set -e
 STP_LOG="$(pwd)/stp-build.log"
 
 if [ "${STP_VERSION}" == "UPSTREAM" ]; then
+    # Build minisat
+    git clone https://github.com/stp/minisat
+    cd minisat
+    mkdir build
+    cd build
+    MINISAT_DIR=`pwd`
+    cmake -DCMAKE_INSTALL_PREFIX=/usr ..
+    make
+    sudo make install
+    cd ../../
+
+    # Build STP
     git clone --depth 1 git://github.com/stp/stp.git src
     mkdir build
     cd build

@@ -1,16 +1,16 @@
-//===-- putchar.c ---------------------------------------------------------===//
+/*===-- putchar.c ---------------------------------------------------------===//
 //
 //                     The KLEE Symbolic Virtual Machine
 //
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
 //
-//===----------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===*/
 
 #include <stdio.h>
 #include <unistd.h>
 
-// Some header may #define putchar.
+/* Some header may #define putchar. */
 #undef putchar
 
 int putchar(int c) {

@@ -211,7 +211,7 @@ struct l_struct_2E_pcre {
 /* Function Declarations */
 double fmod(double, double);
 float fmodf(float, float);
-unsigned int main(unsigned int llvm_cbe_argc, unsigned char **llvm_cbe_argv);
+int main(int llvm_cbe_argc, char **llvm_cbe_argv);
 unsigned int fprintf(struct l_struct_2E__IO_FILE *, unsigned char *, ...);
 unsigned int __strtol_internal(unsigned char *, unsigned char **, unsigned int , unsigned int );
 unsigned int printf(unsigned char *, ...);
@@ -319,7 +319,7 @@ static inline int llvm_fcmp_ogt(double X, double Y) { return X >  Y ; }
 static inline int llvm_fcmp_ole(double X, double Y) { return X <= Y ; }
 static inline int llvm_fcmp_oge(double X, double Y) { return X >= Y ; }
 
-unsigned int main(unsigned int llvm_cbe_argc, unsigned char **llvm_cbe_argv) {
+int main(int llvm_cbe_argc, char **llvm_cbe_argv) {
   unsigned int llvm_cbe_length_i_i;    /* Address-exposed local */
   unsigned int llvm_cbe_firstbyte_i_i;    /* Address-exposed local */
   unsigned int llvm_cbe_reqbyte_i_i;    /* Address-exposed local */

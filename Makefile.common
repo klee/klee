@@ -27,6 +27,12 @@ LLVMCC := $(LLVMGCC)
 LLVMCXX := $(LLVMGXX)
 endif
 
+# Deliberately override the host compiler
+# so that we use what was detected when KLEE was configured
+# and not LLVM.
+CC := $(KLEE_HOST_C_COMPILER)
+CXX := $(KLEE_HOST_CXX_COMPILER)
+
 # Needed to build runtime library using clang (gnu89 is the gcc default)
 C.Flags += -std=gnu89
 
@@ -38,7 +44,6 @@ endif
 # This is filename that KLEE will look for when trying to load klee-uclibc
 KLEE_UCLIBC_BCA_NAME="klee-uclibc.bca"
 
-LD.Flags += $(STP_LDFLAGS)
 CXX.Flags += $(STP_CFLAGS)
 
 ifneq ($(YICES_ROOT),)
