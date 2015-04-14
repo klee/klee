@@ -28,7 +28,7 @@ if [ "${STP_VERSION}" == "UPSTREAM" ]; then
     set +e # Do not exit if build fails because we need to display the log
     make libstp CopyPublicHeaders
     #>> "${STP_LOG}" 2>&1
-    make install 
+    sudo make install 
 
 elif [ "${STP_VERSION}" == "r940" ]; then
     # Building the old "r940" version that for some reason we love so much!
