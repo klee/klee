@@ -29,7 +29,7 @@ if [ "${STP_VERSION}" == "UPSTREAM" ]; then
     #make libstp CopyPublicHeaders >> "${STP_LOG}" 2>&1
     #sudo make install
     make libstp 
-    sudo make intall
+    sudo make install
     
 
 elif [ "${STP_VERSION}" == "r940" ]; then
