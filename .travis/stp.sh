@@ -28,7 +28,7 @@ if [ "${STP_VERSION}" == "UPSTREAM" ]; then
     #set +e # Do not exit if build fails because we need to display the log
     #make libstp CopyPublicHeaders >> "${STP_LOG}" 2>&1
     #sudo make install
-    make
+    make libstp 
     sudo make intall
     
 
