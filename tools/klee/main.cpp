@@ -619,10 +619,6 @@ std::string KleeHandler::getRunTimeLibraryPath(const char *argv0) {
 //===----------------------------------------------------------------------===//
 // main Driver function
 //
-#if ENABLE_STPLOG == 1
-extern "C" void STPLOG_init(const char *);
-#endif
-
 static std::string strip(std::string &in) {
   unsigned len = in.size();
   unsigned lead = 0, trail = len;
@@ -1145,11 +1141,7 @@ static llvm::Module *linkWithUclibc(llvm::Module *mainModule, StringRef libDir) 
 }
 #endif
 
-int main(int argc, char **argv, char **envp) {  
-#if ENABLE_STPLOG == 1
-  STPLOG_init("stplog.c");
-#endif
-
+int main(int argc, char **argv, char **envp) {
   atexit(llvm_shutdown);  // Call llvm_shutdown() on exit.
 
   llvm::InitializeNativeTarget();
