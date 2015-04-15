@@ -22,13 +22,12 @@ if [ "${STP_VERSION}" == "UPSTREAM" ]; then
     mkdir build
     cd build
     # Disabling building of shared libs is a workaround
-    cmake -DBUILD_SHARED_LIBS:BOOL=OFF -DENABLE_PYTHON_INTERFACE:BOOL=OFF ../src
+    cmake -DBUILD_SHARED_LIBS:BOOL=OFF -DENABLE_PYTHON_INTERFACE:BOOL=OFF -DNO_BOOST:BOOL=ON  ../src
     # Don't try to build stp executable, there's an issue with using gcc4.8 with boost libraries built with gcc4.6
 
-    #set +e # Do not exit if build fails because we need to display the log
+    set +e # Do not exit if build fails because we need to display the log
     #make libstp CopyPublicHeaders >> "${STP_LOG}" 2>&1
-    #sudo make install
-    make libstp 
+    make
     sudo make install
     
 
