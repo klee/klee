@@ -163,8 +163,19 @@ YicesBuilder::~YicesBuilder() {
 }
 
 // arithmetic right shift by a variable amount on an expression of the specified width
-::YicesExpr YicesBuilder::bvVarArithRightShift(::YicesExpr expr, ::YicesExpr shift) {
+::YicesExpr YicesBuilder::bvVarArithRightShift(::YicesExpr expr, ::YicesExpr shift) {  
+  /*
+   * Klee wants overflow of shift to give a zero result (even though C says it's undefined
+   * behavior). This means that we can't use yices_bvashr since it produces -1 on overflow
+   * if expr is negative.
+   */
+#if 0
   return yices_bvashr(expr, shift);
+#else
+  uint32_t width = yices_term_bitsize(expr);
+  ::YicesExpr overflow = yices_bvge_atom(shift, yices_bvconst_uint32(width, width)); // shift >= width
+  return yices_ite(overflow, yices_bvconst_zero(width), yices_bvashr(expr, shift));
+#endif
 }
 
 ::YicesExpr YicesBuilder::constructAShrByConstant(::YicesExpr expr, unsigned shift, ::YicesExpr isSigned) {
