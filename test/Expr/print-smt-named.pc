@@ -3,6 +3,9 @@
 # Query 0 -- Type: InitialValues, Instructions: 27
 (query [] false)
 
+# FIXME: STP doesn't support named abbreviations so
+# we can't check the generated SMT-LIBv2 file here!
+
 # Query 1 -- Type: InitialValues, Instructions: 27
 array unnamed_1[4] : w32 -> w8 = symbolic
 (query [] (Ult (Mul w64 4
