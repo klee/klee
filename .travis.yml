@@ -38,7 +38,8 @@ env:
     # Check at least one build with Asserts disabled.
     - LLVM_VERSION=2.9 STP_VERSION=r940 KLEE_UCLIBC=1 DISABLE_ASSERTIONS=1 ENABLE_OPTIMIZED=1
 
-    # FIXME: Do Debug+Asserts builds
+    # Check at least one Debug+Asserts build
+    - LLVM_VERSION=3.4 STP_VERSION=UPSTREAM KLEE_UCLIBC=1 DISABLE_ASSERTIONS=0 ENABLE_OPTIMIZED=0
 cache: apt
 before_install:
     ###########################################################################
