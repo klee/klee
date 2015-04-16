@@ -187,29 +187,21 @@ StatsTracker::StatsTracker(Executor &_executor, std::string _objectFilename,
   KModule *km = executor.kmodule;
 
   if (!sys::path::is_absolute(objectFilename)) {
-#if LLVM_VERSION_CODE <= LLVM_VERSION(3, 6)
-    SmallString<128> current(objectFilename);
-    if(sys::fs::make_absolute(current)) {
-      Twine current_twine(current.c_str());
-      if (sys::fs::exists(current_twine))
-		objectFilename = current.c_str();
-	}
-#else
     SmallString<128> current(objectFilename);
     if(sys::fs::make_absolute(current)) {
       bool exists = false;
-
-#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
+      Twine current_twine(current.str()); //requires a twine for this. so silly	
+      if (!sys::fs::exists(current_twine)) {
+#elif LLVM_VERSION_CODE == LLVM_VERSION(3, 5)
+      if (!sys::fs::exists(current.str(), exists)) {
+#elif LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
       error_code ec = sys::fs::exists(current.str(), exists);
-      if (ec == errc::success && exists)
-			objectFilename = current.c_str();
-#else
-      if (!sys::fs::exists(current.str(), exists))
-		objectFilename = current.c_str();
+      if (ec == errc::success && exists) {
 #endif
-
+        objectFilename = current.c_str();
+      }
     }
-#endif
   }
 
   if (OutputIStats)

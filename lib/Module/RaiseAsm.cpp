@@ -20,8 +20,10 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Target/TargetLowering.h"
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
+#endif
 #if LLVM_VERSION_CODE < LLVM_VERSION(3, 0)
 #include "llvm/Target/TargetRegistry.h"
 #else

@@ -37,7 +37,6 @@ namespace klee {
     bool runProtectedCall(llvm::Function *f, uint64_t *args);
     
   public:
-  
     ExternalDispatcher();
     ~ExternalDispatcher();
 
@@ -47,7 +46,6 @@ namespace klee {
      */
     bool executeCall(llvm::Function *function, llvm::Instruction *i, uint64_t *args);
     void *resolveSymbol(const std::string &name);
-    
   };  
 }
 

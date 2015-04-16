@@ -1370,13 +1370,14 @@ Function* Executor::getTargetFunction(Value *calledVal, ExecutionState &state) {
 
   while (true) {
     if (GlobalValue *gv = dyn_cast<GlobalValue>(c)) {
-	  std::pair<llvm::SmallPtrSetIterator<const llvm::GlobalValue*>, bool> succ_pair = Visited.insert(gv);
-      if (!succ_pair.second)
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
+      if (!Visited.insert(gv).second)
         return 0;
-
+#else
+      if (!Visited.insert(gv))
+        return 0;
+#endif
       std::string alias = state.getFnAlias(gv->getName());
-      //printf("alias gv->name: %s\n", gv->getName().str().c_str());
-      
       if (alias != "") {
         llvm::Module* currModule = kmodule->module;
         GlobalValue *old_gv = gv;
@@ -1388,14 +1389,12 @@ Function* Executor::getTargetFunction(Value *calledVal, ExecutionState &state) {
         }
       }
      
-		if (Function *f = dyn_cast<Function>(gv))
-		{
-			return f;
-		}
-		else if (GlobalAlias *ga = dyn_cast<GlobalAlias>(gv))
-			c = ga->getAliasee();
-		else
-			return 0;
+      if (Function *f = dyn_cast<Function>(gv))
+        return f;
+      else if (GlobalAlias *ga = dyn_cast<GlobalAlias>(gv))
+        c = ga->getAliasee();
+      else
+        return 0;
     } else if (llvm::ConstantExpr *ce = dyn_cast<llvm::ConstantExpr>(c)) {
       if (ce->getOpcode()==Instruction::BitCast)
         c = ce->getOperand(0);
@@ -1426,10 +1425,8 @@ static inline const llvm::fltSemantics * fpWidthToSemantics(unsigned width) {
 
 void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   Instruction *i = ki->inst;
-  
   switch (i->getOpcode()) {
     // Control flow
-    //printf(i->getOpcodeName());
   case Instruction::Ret: {
     ReturnInst *ri = cast<ReturnInst>(i);
     KInstIterator kcaller = state.stack.back().caller;
@@ -1544,106 +1541,80 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     }
     break;
   }
-	case Instruction::Switch: 
-	{
-		SwitchInst *si = cast<SwitchInst>(i);
-		ref<Expr> cond = eval(ki, 0, state).value;
-		BasicBlock *bb = si->getParent();
-		
-		cond = toUnique(state, cond);
-		if (ConstantExpr *CE = dyn_cast<ConstantExpr>(cond))
-		{
-			// Somewhat gross to create these all the time, but fine till we
-			// switch to an internal rep.
-			LLVM_TYPE_Q llvm::IntegerType *Ty = cast<IntegerType>(si->getCondition()->getType());
-			ConstantInt *ci = ConstantInt::get(Ty, CE->getZExtValue());
-		
-			#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 1)
-				unsigned index = si->findCaseValue(ci).getSuccessorIndex();
-			#else
-				unsigned index = si->findCaseValue(ci);
-			#endif
+  case Instruction::Switch: {
+    SwitchInst *si = cast<SwitchInst>(i);
+    ref<Expr> cond = eval(ki, 0, state).value;
+    BasicBlock *bb = si->getParent();
 
-			transferToBasicBlock(si->getSuccessor(index), si->getParent(), state);
-		}
-		else
-		{
-			std::map<BasicBlock*, ref<Expr> > targets;
-			ref<Expr> isDefault = ConstantExpr::alloc(1, Expr::Bool);
-			#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 1)      
-				for (SwitchInst::CaseIt i = si->case_begin(), e = si->case_end(); i != e; ++i)
-				{
-					ref<Expr> value = evalConstant(i.getCaseValue());
-					ref<Expr> match = EqExpr::create(cond, value);
-					isDefault = AndExpr::create(isDefault, Expr::createIsZero(match));
-					bool result;
-					bool success = solver->mayBeTrue(state, match, result);
-					assert(success && "FIXME: Unhandled solver failure");
-					(void) success;
-					if (result)
-					{
-						#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 1)
-							BasicBlock *caseSuccessor = i.getCaseSuccessor();
-						#else
-							BasicBlock *caseSuccessor = si->getSuccessor(i);
-						#endif
-						std::map<BasicBlock*, ref<Expr> >::iterator it =
-						targets.insert(std::make_pair(caseSuccessor,ConstantExpr::alloc(0, Expr::Bool))).first;
-		
-						it->second = OrExpr::create(match, it->second);
-					}
-				}
-			#else
-				for (unsigned i=1, cases = si->getNumCases(); i<cases; ++i)
-				{
-					ref<Expr> value = evalConstant(si->getCaseValue(i));
-					ref<Expr> match = EqExpr::create(cond, value);
-					isDefault = AndExpr::create(isDefault, Expr::createIsZero(match));
-					bool result;
-					bool success = solver->mayBeTrue(state, match, result);
-					assert(success && "FIXME: Unhandled solver failure");
-					(void) success;
-					if (result)
-					{
-						#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 1)
-							BasicBlock *caseSuccessor = i.getCaseSuccessor();
-						#else
-							BasicBlock *caseSuccessor = si->getSuccessor(i);
-						#endif
-						std::map<BasicBlock*, ref<Expr> >::iterator it =
-						targets.insert(std::make_pair(caseSuccessor,ConstantExpr::alloc(0, Expr::Bool))).first;
-		
-						it->second = OrExpr::create(match, it->second);
-					}
-				}
-			#endif
+    cond = toUnique(state, cond);
+    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(cond)) {
+      // Somewhat gross to create these all the time, but fine till we
+      // switch to an internal rep.
+      LLVM_TYPE_Q llvm::IntegerType *Ty = 
+        cast<IntegerType>(si->getCondition()->getType());
+      ConstantInt *ci = ConstantInt::get(Ty, CE->getZExtValue());
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 1)
+      unsigned index = si->findCaseValue(ci).getSuccessorIndex();
+#else
+      unsigned index = si->findCaseValue(ci);
+#endif
+      transferToBasicBlock(si->getSuccessor(index), si->getParent(), state);
+    } else {
+      std::map<BasicBlock*, ref<Expr> > targets;
+      ref<Expr> isDefault = ConstantExpr::alloc(1, Expr::Bool);
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 1)      
+      for (SwitchInst::CaseIt i = si->case_begin(), e = si->case_end();
+           i != e; ++i) {
+        ref<Expr> value = evalConstant(i.getCaseValue());
+#else
+      for (unsigned i=1, cases = si->getNumCases(); i<cases; ++i) {
+        ref<Expr> value = evalConstant(si->getCaseValue(i));
+#endif
+        ref<Expr> match = EqExpr::create(cond, value);
+        isDefault = AndExpr::create(isDefault, Expr::createIsZero(match));
+        bool result;
+        bool success = solver->mayBeTrue(state, match, result);
+        assert(success && "FIXME: Unhandled solver failure");
+        (void) success;
+        if (result) {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 1)
+          BasicBlock *caseSuccessor = i.getCaseSuccessor();
+#else
+          BasicBlock *caseSuccessor = si->getSuccessor(i);
+#endif
+          std::map<BasicBlock*, ref<Expr> >::iterator it =
+            targets.insert(std::make_pair(caseSuccessor,
+                           ConstantExpr::alloc(0, Expr::Bool))).first;
 
-			bool res;
-			bool success = solver->mayBeTrue(state, isDefault, res);
-			assert(success && "FIXME: Unhandled solver failure");
-			(void) success;
-			if (res)
-			targets.insert(std::make_pair(si->getDefaultDest(), isDefault));
-			
-			std::vector< ref<Expr> > conditions;
-			for (std::map<BasicBlock*, ref<Expr> >::iterator it = 
-				targets.begin(), ie = targets.end();
-				it != ie; ++it)
-			conditions.push_back(it->second);
-			
-			std::vector<ExecutionState*> branches;
-			branch(state, conditions, branches);
-			
-			std::vector<ExecutionState*>::iterator bit = branches.begin();
-			for (std::map<BasicBlock*, ref<Expr> >::iterator it = 
-				targets.begin(), ie = targets.end();
-				it != ie; ++it) {
-			ExecutionState *es = *bit;
-			if (es)
-				transferToBasicBlock(it->first, bb, *es);
-			++bit;
-			}
-		}
+          it->second = OrExpr::create(match, it->second);
+        }
+      }
+      bool res;
+      bool success = solver->mayBeTrue(state, isDefault, res);
+      assert(success && "FIXME: Unhandled solver failure");
+      (void) success;
+      if (res)
+        targets.insert(std::make_pair(si->getDefaultDest(), isDefault));
+      
+      std::vector< ref<Expr> > conditions;
+      for (std::map<BasicBlock*, ref<Expr> >::iterator it = 
+             targets.begin(), ie = targets.end();
+           it != ie; ++it)
+        conditions.push_back(it->second);
+      
+      std::vector<ExecutionState*> branches;
+      branch(state, conditions, branches);
+        
+      std::vector<ExecutionState*>::iterator bit = branches.begin();
+      for (std::map<BasicBlock*, ref<Expr> >::iterator it = 
+             targets.begin(), ie = targets.end();
+           it != ie; ++it) {
+        ExecutionState *es = *bit;
+        if (es)
+          transferToBasicBlock(it->first, bb, *es);
+        ++bit;
+      }
+    }
     break;
  }
   case Instruction::Unreachable:
@@ -1660,7 +1631,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     unsigned numArgs = cs.arg_size();
     Value *fp = cs.getCalledValue();
-    
     Function *f = getTargetFunction(fp, state);
 
     // Skip debug intrinsics, we can't evaluate their metadata arguments.
@@ -2846,7 +2816,6 @@ static const char *okExternalsList[] = { "printf",
                                          "fprintf", 
                                          "puts",
                                          "getpid" };
-                                         
 static std::set<std::string> okExternals(okExternalsList,
                                          okExternalsList + 
                                          (sizeof(okExternalsList)/sizeof(okExternalsList[0])));
@@ -2916,10 +2885,15 @@ void Executor::callExternalFunction(ExecutionState &state,
     else
       klee_warning_once(function, "%s", os.str().c_str());
   }
-  ExternalDispatcher* e = new ExternalDispatcher();
-  bool success = e->executeCall(function, target->inst, args);
-  delete e;
-  //bool success = externalDispatcher->executeCall(function, target->inst, args);
+  #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
+    //MCJIT needs unique module, so we create quick external dispatcher for call. reference:
+    //http://blog.llvm.org/2013/07/using-mcjit-with-kaleidoscope-tutorial.html
+    ExternalDispatcher* e = new ExternalDispatcher();
+    bool success = e->executeCall(function, target->inst, args);
+    delete e;
+  #else
+    bool success = externalDispatcher->executeCall(function, target->inst, args);
+  #endif
   if (!success) {
     terminateStateOnError(state, "failed external call: " + function->getName(),
                           "external.err");
@@ -2931,7 +2905,7 @@ void Executor::callExternalFunction(ExecutionState &state,
                           "external.err");
     return;
   }
-  
+
   LLVM_TYPE_Q Type *resultType = target->inst->getType();
   if (resultType != Type::getVoidTy(getGlobalContext())) {
     ref<Expr> e = ConstantExpr::fromMemory((void*) args, 

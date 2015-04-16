@@ -23,10 +23,10 @@
 #include "llvm/Instructions.h"
 #include "llvm/LLVMContext.h"
 #endif
-#if LLVM_VERSION_CODE < LLVM_VERSION(3, 6)
-#include "llvm/ExecutionEngine/JIT.h"
-#elif LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
 #include "llvm/ExecutionEngine/MCJIT.h"
+#else
+#include "llvm/ExecutionEngine/JIT.h"
 #endif
 
 #include "llvm/ExecutionEngine/GenericValue.h"
@@ -62,20 +62,6 @@ static void sigsegv_handler(int signal, siginfo_t *info, void *context) {
 }
 
 }
-/*void showFunctionStuffBeforeCall(Function *f)
-{
-	std::string TmpStr;
-	llvm::raw_string_ostream os(TmpStr);
-	os << "Before Call to: " << function->getName().str() << "(";
-	for (unsigned i=0; i<arguments.size(); i++)
-	{
-		os << arguments[i];
-		if (i != arguments.size()-1)
-		os << ", ";
-	}
-	os << ")";
-	klee_warning("%s", os.str().c_str());
-}*/
 
 void *ExternalDispatcher::resolveSymbol(const std::string &name) {
   assert(executionEngine);
@@ -105,26 +91,27 @@ void *ExternalDispatcher::resolveSymbol(const std::string &name) {
 }
 
 ExternalDispatcher::ExternalDispatcher() {
+  dispatchModule = new Module("ExternalDispatcher", getGlobalContext());
 
-  
-  dispatchModule = new Module("ExternalDispatcher", getGlobalContext()) ;
-
-  std::string error="";
-  
-  //executionEngine = ExecutionEngine::createJIT(dispatchModule, &error);
+  std::string error;
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
   dispatchModule_uniptr.reset(dispatchModule);
   executionEngine = EngineBuilder( std::move(dispatchModule_uniptr) ).create();
-  
+#else
+  executionEngine = ExecutionEngine::createJIT(dispatchModule, &error);
+#endif  
   if (!executionEngine) {
     llvm::errs() << "unable to make jit: " << error << "\n";
     abort();
   }
+
   // If we have a native target, initialize it to ensure it is linked in and
   // usable by the JIT.
   llvm::InitializeNativeTarget();
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
   llvm::InitializeNativeTargetAsmParser();
   llvm::InitializeNativeTargetAsmPrinter();
-  //
+#endif
 
   // from ExecutionEngine::create
   if (executionEngine) {
@@ -169,20 +156,20 @@ bool ExternalDispatcher::executeCall(Function *f, Instruction *i, uint64_t *args
     dispatchers.insert(std::make_pair(i, dispatcher));
 
     if (dispatcher) {
-
       // Force the JIT execution engine to go ahead and build the function. This
       // ensures that any errors or assertions in the compilation process will
       // trigger crashes instead of being caught as aborts in the external
       // function.
-      //executionEngine->recompileAndRelinkFunction(dispatcher);
-      
-      executionEngine->finalizeObject();
-      //executionEngine->getPointerToFunction(dispatcher); //maybe? though I doubt it is a suitable replacement for above line
+      #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
+      	executionEngine->finalizeObject();
+      #else
+      	executionEngine->recompileAndRelinkFunction(dispatcher);
+      #endif
     }
   } else {
     dispatcher = it->second;
   }
-  
+
   return runProtectedCall(dispatcher, args);
 }
 
@@ -195,7 +182,7 @@ bool ExternalDispatcher::runProtectedCall(Function *f, uint64_t *args) {
   
   if (!f)
     return false;
-  
+
   std::vector<GenericValue> gvArgs;
   gTheArgsP = args;
 
@@ -208,14 +195,7 @@ bool ExternalDispatcher::runProtectedCall(Function *f, uint64_t *args) {
   if (setjmp(escapeCallJmpBuf)) {
     res = false;
   } else {
-	  
-	//printf("runFunction fptr:0x%p fname:%s\n", executionEngine->getPointerToFunction(f) ,f->getName().str().c_str() );
-		std::string str;
-	llvm::raw_string_ostream rso(str);
-	f->print(rso);
-	//printf("runFunction: \nf: %s , targetName: %s\n", str.c_str(), f->getName().str().c_str());
     executionEngine->runFunction(f, gvArgs);
-    //executionEngine->callExternalFunction (f,gvArgs);
     res = true;
   }
 
@@ -243,16 +223,15 @@ Function *ExternalDispatcher::createDispatcher(Function *target, Instruction *in
   Value **args = new Value*[cs.arg_size()];
 
   std::vector<LLVM_TYPE_Q Type*> nullary;
-  Twine dispatcherName(target->getName());
-  dispatcherName.concat("_dispatcher");
+  
+  //For MCJIT functions need unique names, or wrong func can be called
   Function *dispatcher = Function::Create(FunctionType::get(Type::getVoidTy(getGlobalContext()), 
 							    nullary, false),
 					  GlobalVariable::ExternalLinkage, 
-					  "hello"+target->getName().str(),
+					  "dispatcher_"+target->getName().str(),
 					  dispatchModule);
 
-	//printf("dispatcher:0x%p\n", executionEngine->getPointerToFunction(dispatcher) );
-	//printf("dispatcher:0x%p\n", dispatcher );
+
   BasicBlock *dBB = BasicBlock::Create(getGlobalContext(), "entry", dispatcher);
 
   // Get a Value* for &gTheArgsP, as an i64**.
@@ -289,20 +268,14 @@ Function *ExternalDispatcher::createDispatcher(Function *target, Instruction *in
     unsigned argSize = argTy->getPrimitiveSizeInBits();
     idx += ((!!argSize ? argSize : 64) + 63)/64;
   }
-  
+
   Constant *dispatchTarget =
     dispatchModule->getOrInsertFunction(target->getName(), FTy,
                                         target->getAttributes());
-	std::string str;
-	llvm::raw_string_ostream rso(str);
-	dispatchTarget->print(rso);
-	//printf("dispatchTarget: %s , targetName: %s\n", str.c_str(), target->getName().str().c_str());
-	
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 0)
   Instruction *result = CallInst::Create(dispatchTarget,
                                          llvm::ArrayRef<Value *>(args, args+i),
-                                         "", dBB
-                                         );
+                                         "", dBB);
 #else
   Instruction *result = CallInst::Create(dispatchTarget, args, args+i, "", dBB);
 #endif
@@ -316,6 +289,6 @@ Function *ExternalDispatcher::createDispatcher(Function *target, Instruction *in
   ReturnInst::Create(getGlobalContext(), dBB);
 
   delete[] args;
-//printf("ENDcreateDispatcher fptr:0x%p fname:%s\n", executionEngine->getPointerToFunction(target) ,target->getName().str().c_str() );
+
   return dispatcher;
 }
