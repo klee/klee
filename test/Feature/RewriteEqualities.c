@@ -1,8 +1,8 @@
-// XFAIL: *
 // RUN: %llvmgcc %s -emit-llvm -O0 -c -o %t.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --search=dfs --write-pcs --rewrite-equalities=false %t.bc
-// RUN: grep "(Read w8 (Extract w32 0 (SExt w64 (ZExt w32 N0)))" %t.klee-out/test000003.pc
+// RUN: grep "N0:(Read w8 2 x)" %t.klee-out/test000003.pc
+// RUN: grep "N0)" %t.klee-out/test000003.pc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --search=dfs --write-pcs --rewrite-equalities %t.bc
 // RUN: grep "(Read w8 8 const_arr1)" %t.klee-out/test000003.pc
@@ -10,7 +10,7 @@
 #include <stdio.h>
 #include <klee/klee.h>
 
-int run(unsigned char * x, char * y) {
+int run(unsigned char * x, unsigned char * y) {
   y[6] = 15;
 
   if(x[2] >= 10){
