@@ -45,6 +45,12 @@ endif
 KLEE_UCLIBC_BCA_NAME="klee-uclibc.bca"
 
 CXX.Flags += $(STP_CFLAGS)
+
+ifneq ($(YICES_ROOT),)
+        LD.Flags += -L$(YICES_ROOT)/lib
+        CXX.Flags += -I$(YICES_ROOT)/include
+endif
+
 CXX.Flags += -DKLEE_DIR=\"$(PROJ_OBJ_ROOT)\" -DKLEE_INSTALL_BIN_DIR=\"$(PROJ_bindir)\"
 CXX.Flags += -DKLEE_INSTALL_LIB_DIR=\"$(PROJ_libdir)\"
 

@@ -15,6 +15,9 @@
 /* Define to 1 if you have the `stp' library (-lstp). */
 #undef HAVE_LIBSTP
 
+/* Define to 1 if you have the `yices' library (-lyices). */
+#undef HAVE_LIBYICES
+
 /* Define if mallinfo() is available on this platform. */
 #undef HAVE_MALLINFO
 
@@ -95,5 +98,8 @@
 
 /* Supporting metaSMT API */
 #undef SUPPORT_METASMT
+
+/* Supporting Yices API */
+#undef SUPPORT_YICES
 
 #endif

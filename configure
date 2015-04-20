@@ -626,6 +626,8 @@ ac_subst_vars='LTLIBOBJS
 LIBOBJS
 METASMT_ROOT
 ENABLE_METASMT
+YICES_ROOT
+ENABLE_YICES
 STP_LDFLAGS
 STP_CFLAGS
 CXXCPP
@@ -730,6 +732,7 @@ with_uclibc
 enable_posix_runtime
 with_runtime
 with_stp
+with_yices
 with_metasmt
 '
       ac_precious_vars='build_alias
@@ -1381,6 +1384,7 @@ Optional Packages:
   --with-runtime          Select build configuration for runtime libraries
                           (default [Release+Asserts])
   --with-stp              Location of STP installation directory
+  --with-yices            Location of YICES installation directory
   --with-metasmt          Location of metaSMT installation directory
 
 Some influential environment variables:
@@ -5012,6 +5016,115 @@ fi
 
 
 
+
+
+
+support_yices="no"
+
+# Check whether --with-yices was given.
+if test "${with_yices+set}" = set; then :
+  withval=$with_yices; if test X$with_yices = X ; then
+     support_yices="no"
+   else
+     support_yices="yes"
+     yices_root=""
+     if test $with_yices != yes ; then
+       yices_root=`(cd $with_yices && pwd) 2> /dev/null`
+       #Check for bad path
+       if test "X$yices_root" = X ; then
+          as_fn_error $? "Cannot access path $yices_root passed to --with-yices" "$LINENO" 5
+       fi
+     fi
+   fi
+
+fi
+
+
+#
+# Check for the yices header and library
+#
+if test $support_yices = yes ; then
+
+  old_CPPFLAGS="$CPPFLAGS"
+  old_LDFLAGS="$LDFLAGS"
+  if test "X$yices_root" != X ; then
+     CPPFLAGS="$CPPFLAGS -I$yices_root/include"
+     LDFLAGS="$LDFLAGS -L$yices_root/lib"
+  fi
+  ac_fn_cxx_check_header_mongrel "$LINENO" "yices.h" "ac_cv_header_yices_h" "$ac_includes_default"
+if test "x$ac_cv_header_yices_h" = xyes; then :
+
+else
+
+         as_fn_error $? "Unable to use yices.h header" "$LINENO" 5
+
+fi
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for yices_init in -lyices" >&5
+$as_echo_n "checking for yices_init in -lyices... " >&6; }
+if ${ac_cv_lib_yices_yices_init+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lyices  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char yices_init ();
+int
+main ()
+{
+return yices_init ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  ac_cv_lib_yices_yices_init=yes
+else
+  ac_cv_lib_yices_yices_init=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_yices_yices_init" >&5
+$as_echo "$ac_cv_lib_yices_yices_init" >&6; }
+if test "x$ac_cv_lib_yices_yices_init" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBYICES 1
+_ACEOF
+
+  LIBS="-lyices $LIBS"
+
+else
+
+        as_fn_error $? "Could not link with libyices." "$LINENO" 5
+
+fi
+
+  CPPFLAGS="$old_CPPFLAGS"
+  LDFLAGS="$old_LDFLAGS"
+
+
+$as_echo "#define SUPPORT_YICES 1" >>confdefs.h
+
+  ENABLE_YICES=1
+
+  YICES_ROOT=$yices_root
+
+
+else
+  ENABLE_YICES=0
+
+fi
 
 
 

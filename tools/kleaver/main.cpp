@@ -261,7 +261,28 @@ static bool EvaluateInputAST(const char *Filename,
     coreSolver = UseDummySolver ? createDummySolver() : new STPSolver(UseForkedCoreSolver);
   }
 #else
-  coreSolver = UseDummySolver ? createDummySolver() : new STPSolver(UseForkedCoreSolver);
+
+#ifdef SUPPORT_YICES
+
+  if (UseYices) {
+    coreSolver = new YicesSolver(UseForkedCoreSolver);
+  } else if (UseDummySolver) {
+    coreSolver = createDummySolver();
+  } else {
+    coreSolver = new STPSolver(UseForkedCoreSolver);
+  }
+
+#else 
+
+  if (UseDummySolver) {
+    coreSolver = createDummySolver();
+  } else {
+    coreSolver = new STPSolver(UseForkedCoreSolver);
+  }
+  
+#endif /* SUPPORT_YICES   */
+
+
 #endif /* SUPPORT_METASMT */
   
   

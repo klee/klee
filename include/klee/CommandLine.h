@@ -11,6 +11,15 @@
 
 namespace klee {
 
+#ifdef SUPPORT_YICES
+
+extern llvm::cl::opt<bool> UseYices;
+
+#endif /* SUPPORT_YICES */
+
+
+extern llvm::cl::opt<bool> IgnoreSolverFailures;
+
 extern llvm::cl::opt<bool> UseFastCexSolver;
 
 extern llvm::cl::opt<bool> UseCexCache;
