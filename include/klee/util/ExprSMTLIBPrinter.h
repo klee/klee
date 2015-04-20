@@ -319,6 +319,7 @@ protected:
   void printNotEqualExpr(const ref<NeExpr> &e);
   void printSelectExpr(const ref<SelectExpr> &e,
                                ExprSMTLIBPrinter::SMTLIB_SORT s);
+  void printAShrExpr(const ref<AShrExpr> &e);
 
   // For the set of operators that take sort "s" arguments
   void printSortArgsExpr(const ref<Expr> &e,
