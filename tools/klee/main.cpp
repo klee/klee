@@ -13,13 +13,7 @@
 #include "klee/Internal/Support/Debug.h"
 #include "klee/Internal/Support/ModuleUtil.h"
 #include "klee/Internal/System/Time.h"
-
-// FIXME: Ugh, this is gross. But otherwise our config.h conflicts with LLVMs.
-#undef PACKAGE_BUGREPORT
-#undef PACKAGE_NAME
-#undef PACKAGE_STRING
-#undef PACKAGE_TARNAME
-#undef PACKAGE_VERSION
+#include "klee/Internal/Support/PrintVersion.h"
 
 #if LLVM_VERSION_CODE > LLVM_VERSION(3, 2)
 #include "llvm/IR/Constants.h"
@@ -630,6 +624,7 @@ static std::string strip(std::string &in) {
 }
 
 static void parseArguments(int argc, char **argv) {
+  cl::SetVersionPrinter(klee::printVersion);
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 2)
   // This version always reads response files
   cl::ParseCommandLineOptions(argc, argv, " klee\n");

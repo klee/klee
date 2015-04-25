@@ -1,7 +1,7 @@
 dnl **************************************************************************
 dnl * Initialize
 dnl **************************************************************************
-AC_INIT([[KLEE]],[[0.01]],[daniel@minormatter.com])
+AC_INIT([[KLEE]],[[0.2.0]],[[klee-dev@imperial.ac.uk]],[[klee-]],[[https://klee.github.io]])
 
 dnl Identify where LLVM source tree is (this is patched by
 dnl AutoRegen.sh)
