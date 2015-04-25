@@ -5,7 +5,8 @@ include $(LEVEL)/Makefile.config
 # Include LLVM's Master Makefile config and rules.
 include $(LLVM_OBJ_ROOT)/Makefile.config
 
-ifeq ($(BYTECODE_LIBRARY), 1)
+BUILDING_RUNTIME:=$(if $(or $(BYTECODE_LIBRARY),$(MODULE_NAME)),1,0)
+ifeq ($(BUILDING_RUNTIME),1)
 #
 # Override make variables based on the runtime configuration. We want
 # to override whatever the user may have said on the command line,
