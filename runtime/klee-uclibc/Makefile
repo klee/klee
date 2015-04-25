@@ -47,8 +47,8 @@ uninstall:: remove_klee_uclibc
 
 copy_klee_uclibc:
 	@echo "Installing klee-uclibc archive"
-	$(Verb) $(CP) $(KLEE_UCLIBC_BCA) $(DESTDIR)$(PROJ_libdir)/$(KLEE_UCLIBC_BCA_NAME)
+	$(Verb) $(CP) $(KLEE_UCLIBC_BCA) $(BYTECODE_DESTINATION)/$(KLEE_UCLIBC_BCA_NAME)
 
 remove_klee_uclibc:
 	@echo "Removing klee-uclibc archive"
-	$(Verb) $(RM) $(DESTDIR)$(PROJ_libdir)/$(KLEE_UCLIBC_BCA_NAME)
+	$(Verb) $(RM) $(BYTECODE_DESTINATION)/$(KLEE_UCLIBC_BCA_NAME)
