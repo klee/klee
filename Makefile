@@ -63,3 +63,8 @@ clean::
 	$(MAKE) -C test clean 
 	$(MAKE) -C unittests clean
 	rm -rf docs/doxygen test/lit.site.cfg
+
+# Install klee instrinsic header file
+install-local::
+	$(MKDIR) $(DESTDIR)$(PROJ_includedir)/klee
+	$(DataInstall) $(PROJ_SRC_ROOT)/include/klee/klee.h $(DESTDIR)$(PROJ_includedir)/klee/klee.h
