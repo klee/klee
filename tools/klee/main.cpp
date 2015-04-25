@@ -594,7 +594,7 @@ std::string KleeHandler::getRunTimeLibraryPath(const char *argv0) {
   {
     KLEE_DEBUG_WITH_TYPE("klee_runtime", llvm::dbgs() <<
                          "Using installed KLEE library runtime: ");
-    libDir = KLEE_INSTALL_LIB_DIR ;
+    libDir = KLEE_INSTALL_RUNTIME_DIR ;
   }
   else
   {
