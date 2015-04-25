@@ -25,6 +25,9 @@ void klee::printVersion()
 #else
   llvm::outs() << "unknown\n";
 #endif
+#ifdef KLEE_BUILD_TAG
+  llvm::outs() << "  Build tag: " << KLEE_BUILD_TAG "\n";
+#endif
   // Show LLVM version information
   llvm::outs() << "\n";
   llvm::cl::PrintVersionMessage();
