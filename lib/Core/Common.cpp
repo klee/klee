@@ -16,7 +16,7 @@
 #include <stdarg.h>
 #include <assert.h>
 #include <string.h>
-#include <system_error>
+
 #include <set>
 
 using namespace klee;

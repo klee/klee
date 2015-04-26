@@ -223,9 +223,10 @@ static bool linkBCA(object::Archive* archive, Module* composite, std::string& er
        AE = archive->end_children(); AI != AE; ++AI)
 #endif
   {
-	std::error_code ec;
+	
     StringRef memberName;
 	#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
+		std::error_code ec;
 		ErrorOr< StringRef > errorOr_memberName = AI->getName(); //as per http://llvm.org/docs/doxygen/html/classllvm_1_1ErrorOr.html#details
 		bool memname_success=true; //maybe a better way but this works to recreate functionality of llvm<3.6
 		if( (ec = errorOr_memberName.getError()) )
@@ -267,7 +268,7 @@ static bool linkBCA(object::Archive* archive, Module* composite, std::string& er
 	  #else
 		OwningPtr<MemoryBuffer> buff; // Once this is destroyed will Module still be valid??
 		
-		bool getMemBuff_success = (error_code ec = AI->getMemoryBuffer(buff));
+		bool getMemBuff_success = !(ec = AI->getMemoryBuffer(buff));
       #endif
       if (!getMemBuff_success)
       {

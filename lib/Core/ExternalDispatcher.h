@@ -9,7 +9,7 @@
 
 #ifndef KLEE_EXTERNALDISPATCHER_H
 #define KLEE_EXTERNALDISPATCHER_H
-
+#include "klee/Config/Version.h"
 #include <map>
 #include <string>
 #include <stdint.h>
@@ -28,7 +28,9 @@ namespace klee {
     typedef std::map<const llvm::Instruction*,llvm::Function*> dispatchers_ty;
     dispatchers_ty dispatchers;
     
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
     std::unique_ptr<llvm::Module> dispatchModule_uniptr;
+#endif
     llvm::Module *dispatchModule;
     llvm::ExecutionEngine *executionEngine;
     std::map<std::string, void*> preboundFunctions;

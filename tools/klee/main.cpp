@@ -370,9 +370,9 @@ std::string KleeHandler::getOutputFilename(const std::string &filename) {
 llvm::raw_fd_ostream *KleeHandler::openOutputFile(const std::string &filename) {
   llvm::raw_fd_ostream *f;
   std::string Error;
-  std::error_code ec;
   std::string path = getOutputFilename(filename);
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3,6)
+  std::error_code ec;
   f = new llvm::raw_fd_ostream(path.c_str(), ec, llvm::sys::fs::F_None);
   if(ec)
 	Error = ec.message();
