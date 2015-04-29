@@ -446,7 +446,7 @@ Function *klee::getDirectCallTarget(CallSite cs) {
     return f;
   } else if (llvm::ConstantExpr *ce = dyn_cast<llvm::ConstantExpr>(v)) {
     if (ce->getOpcode()==Instruction::BitCast)
-      if (Function *f = dyn_cast<Function>(ce->getOperand(0)))
+      if (Function *f = dyn_cast<Function>(ce->getOperand(0)->stripPointerCasts()))
         return f;
 
     // NOTE: This assert may fire, it isn't necessarily a problem and
