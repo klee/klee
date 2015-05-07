@@ -284,7 +284,8 @@ namespace {
 
   cl::opt<bool>
   NoMaxPreemptions("no-scheduler-bound",
-           cl::desc("Do not bound the number of preemptions in the schedule (default=off)"));
+           cl::desc("Do not bound the number of preemptions in the schedule (default=off)"),
+           cl::init(false));
 
   cl::opt<bool>
   DebugExploredSchedules("debug-sched-explored",
