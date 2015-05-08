@@ -153,6 +153,28 @@ extern "C" {
 
   /* Merge current states together if possible */
   void klee_merge();
+
+  /* Create a new thread */
+  void klee_thread_create(uint64_t tid, void *(*start_routine)(void*), void *arg);
+
+  /* Terminate current thread */
+  void klee_thread_terminate() __attribute__ ((__noreturn__));
+
+  /* Retrieve thread id of current thread */
+  void klee_get_context(uint64_t *tid);
+
+  /* Obtain waiting list id, where current thread is blocked */
+  uint64_t klee_get_wlist(void);
+
+  /* Preempt current thread. If yield is true, the current thread is not rescheduled. */
+  void klee_thread_preempt(int yield);
+
+  /* Block current thread in the specified waiting list */
+  void klee_thread_sleep(uint64_t wlist);
+
+  /* Enable one or all threads in the specified waiting list */
+  void klee_thread_notify(uint64_t wlist, int all);
+
 #ifdef __cplusplus
 }
 #endif
