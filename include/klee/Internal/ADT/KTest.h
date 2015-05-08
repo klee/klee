@@ -35,6 +35,9 @@ extern "C" {
 
     unsigned numObjects;
     KTestObject *objects;
+
+    unsigned numSchedSteps;
+    unsigned long *schedSteps;
   };
 
   
