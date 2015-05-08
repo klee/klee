@@ -351,7 +351,8 @@ int pthread_mutex_unlock(pthread_mutex_t *mutex) {
 
   int res = _atomic_mutex_unlock(mdata);
 
-  __thread_preempt(0);
+  if (res == 0)
+    __thread_preempt(0);
 
   return res;
 }
