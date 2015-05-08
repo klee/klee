@@ -57,10 +57,6 @@ typedef uint64_t wlist_id_t;
 
 #define DEFAULT_THREAD  0
 
-#define DEFAULT_PROCESS 2
-#define DEFAULT_PARENT  1
-#define DEFAULT_UMASK   (S_IWGRP | S_IWOTH)
-
 #define PTHREAD_ONCE_INIT       0
 
 #define STATIC_MUTEX_VALUE      0
