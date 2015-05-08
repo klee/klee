@@ -300,7 +300,7 @@ static int _atomic_mutex_lock(mutex_data_t *mdata, char try) {
 }
 
 int pthread_mutex_lock(pthread_mutex_t *mutex) {
-  __thread_preempt(0);
+  //__thread_preempt(0);
 
   mutex_data_t *mdata = _get_mutex_data(mutex);
 
@@ -313,7 +313,7 @@ int pthread_mutex_lock(pthread_mutex_t *mutex) {
 }
 
 int pthread_mutex_trylock(pthread_mutex_t *mutex) {
-  __thread_preempt(0);
+  //__thread_preempt(0);
 
   mutex_data_t *mdata = _get_mutex_data(mutex);
 
@@ -345,7 +345,7 @@ static int _atomic_mutex_unlock(mutex_data_t *mdata) {
 }
 
 int pthread_mutex_unlock(pthread_mutex_t *mutex) {
-  __thread_preempt(0);
+  //__thread_preempt(0);
 
   mutex_data_t *mdata = _get_mutex_data(mutex);
 
@@ -430,7 +430,7 @@ static int _atomic_cond_wait(condvar_data_t *cdata, mutex_data_t *mdata) {
 }
 
 int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex) {
-  __thread_preempt(0);
+  //__thread_preempt(0);
 
   condvar_data_t *cdata = _get_condvar_data(cond);
   mutex_data_t *mdata = _get_mutex_data(mutex);
@@ -455,7 +455,7 @@ static int _atomic_cond_notify(condvar_data_t *cdata, char all) {
 }
 
 int pthread_cond_broadcast(pthread_cond_t *cond) {
-  __thread_preempt(0);
+  //__thread_preempt(0);
 
   condvar_data_t *cdata = _get_condvar_data(cond);
 
@@ -468,7 +468,7 @@ int pthread_cond_broadcast(pthread_cond_t *cond) {
 }
 
 int pthread_cond_signal(pthread_cond_t *cond) {
-  __thread_preempt(0);
+  //__thread_preempt(0);
 
   condvar_data_t *cdata = _get_condvar_data(cond);
 
@@ -627,7 +627,7 @@ static int _atomic_rwlock_rdlock(rwlock_data_t *rwdata, char try) {
 }
 
 int pthread_rwlock_rdlock(pthread_rwlock_t *rwlock) {
-  __thread_preempt(0);
+  //__thread_preempt(0);
 
   rwlock_data_t *rwdata = *((rwlock_data_t**)rwlock);
 
@@ -640,7 +640,7 @@ int pthread_rwlock_rdlock(pthread_rwlock_t *rwlock) {
 }
 
 int pthread_rwlock_tryrdlock(pthread_rwlock_t *rwlock) {
-  __thread_preempt(0);
+  //__thread_preempt(0);
 
   rwlock_data_t *rwdata = *((rwlock_data_t**)rwlock);
 
@@ -683,7 +683,7 @@ static int _atomic_rwlock_wrlock(rwlock_data_t *rwdata, char try) {
 }
 
 int pthread_rwlock_wrlock(pthread_rwlock_t *rwlock) {
-  __thread_preempt(0);
+  //__thread_preempt(0);
 
   rwlock_data_t *rwdata = *((rwlock_data_t**)rwlock);
 
@@ -696,7 +696,7 @@ int pthread_rwlock_wrlock(pthread_rwlock_t *rwlock) {
 }
 
 int pthread_rwlock_trywrlock(pthread_rwlock_t *rwlock) {
-  __thread_preempt(0);
+  //__thread_preempt(0);
 
   rwlock_data_t *rwdata = *((rwlock_data_t**)rwlock);
 
@@ -732,7 +732,7 @@ static int _atomic_rwlock_unlock(rwlock_data_t *rwdata) {
 }
 
 int pthread_rwlock_unlock(pthread_rwlock_t *rwlock) {
-  __thread_preempt(0);
+  //__thread_preempt(0);
 
   rwlock_data_t *rwdata = *((rwlock_data_t**)rwlock);
 
