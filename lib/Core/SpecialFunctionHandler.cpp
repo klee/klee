@@ -771,8 +771,8 @@ void SpecialFunctionHandler::handleThreadCreate(ExecutionState &state,
     return;
   }
 
-  /* TODO executor.executeThreadCreate(state, cast<ConstantExpr>(tid)->getZExtValue(),
-                               arguments[1], arguments[2]);*/
+  executor.executeThreadCreate(state, cast<ConstantExpr>(tid)->getZExtValue(),
+                               arguments[1], arguments[2]);
 }
 
 void SpecialFunctionHandler::handleThreadTerminate(ExecutionState &state,
@@ -780,7 +780,7 @@ void SpecialFunctionHandler::handleThreadTerminate(ExecutionState &state,
                                                    std::vector<ref<Expr> > &arguments) {
   assert(arguments.empty() && "invalid number of arguments to klee_thread_terminate");
 
-  /* TODO executor.executeThreadExit(state);*/
+  executor.executeThreadExit(state);
 }
 
 void SpecialFunctionHandler::handleThreadPreempt(ExecutionState &state,
@@ -792,7 +792,7 @@ void SpecialFunctionHandler::handleThreadPreempt(ExecutionState &state,
     executor.terminateStateOnError(state, "klee_thread_preempt", "user.err");
   }
 
-  /* TODO executor.schedule(state, !arguments[0]->isZero(), false);*/
+  executor.schedule(state, !arguments[0]->isZero(), false);
 }
 
 void SpecialFunctionHandler::handleThreadSleep(ExecutionState &state,
@@ -809,7 +809,7 @@ void SpecialFunctionHandler::handleThreadSleep(ExecutionState &state,
   }
 
   state.sleepThread(cast<ConstantExpr>(wlistExpr)->getZExtValue());
-  /* TODO executor.schedule(state, false, false);*/
+  executor.schedule(state, false, false);
 }
 
 void SpecialFunctionHandler::handleThreadNotify(ExecutionState &state,
@@ -826,7 +826,7 @@ void SpecialFunctionHandler::handleThreadNotify(ExecutionState &state,
   }
 
   if (all->isZero()) {
-    /* TODO executor.executeThreadNotifyOne(state, cast<ConstantExpr>(wlist)->getZExtValue());*/
+    executor.executeThreadNotifyOne(state, cast<ConstantExpr>(wlist)->getZExtValue());
   } else {
     // It's simple enough such that it can be handled by the state class itself
     state.notifyAll(cast<ConstantExpr>(wlist)->getZExtValue());
