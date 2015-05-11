@@ -411,7 +411,7 @@ private:
                      double maxInstTime);
 
   KFunction* resolveFunction(ref<Expr> address);
-                
+
 public:
   Executor(const InterpreterOptions &opts, InterpreterHandler *ie);
   virtual ~Executor();

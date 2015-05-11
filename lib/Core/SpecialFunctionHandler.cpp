@@ -865,7 +865,7 @@ void SpecialFunctionHandler::handleGetContext(ExecutionState &state,
 }
 
 bool SpecialFunctionHandler::writeConcreteValue(ExecutionState &state,
-                                                ref<Expr> address, uint64_t value, 
+                                                ref<Expr> address, uint64_t value,
                                                 Expr::Width width) {
   ObjectPair op;
 

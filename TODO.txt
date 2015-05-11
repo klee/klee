@@ -48,7 +48,7 @@ KLEE Internal
    3. Since calling external functions will be totally invalid in this
       environment, we will have to invent replacements for the useful
       ones (printf). 
- 
+
  o Extend klee-replay to support specific thread schedulings.
 
 Kleaver Internal
