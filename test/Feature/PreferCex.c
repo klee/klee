@@ -1,6 +1,6 @@
 // RUN: %llvmgcc %s -emit-llvm -O0 -c -o %t1.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --exit-on-error %t1.bc
+// RUN: %klee --output-dir=%t.klee-out --exit-on-error --prefer-cex %t1.bc
 // RUN: ktest-tool %t.klee-out/test000001.ktest | FileCheck %s
 
 #include <assert.h>
