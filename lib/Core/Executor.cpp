@@ -2747,6 +2747,15 @@ void Executor::terminateState(ExecutionState &state) {
 
   interpreterHandler->incPathsExplored();
 
+  if (DebugExploredSchedules && (state.schedulingHistory.size() > 0)) {
+    std::string Str;
+    llvm::raw_string_ostream msg(Str);
+    msg << "Explored schedule: ";
+    for (std::vector<Thread::thread_id_t>::iterator it = state.schedulingHistory.begin(); it != state.schedulingHistory.end(); ++it)
+       msg << *it << ' ';
+    klee_message("%s", msg.str().c_str());
+  }
+
   std::set<ExecutionState*>::iterator it = addedStates.find(&state);
   if (it==addedStates.end()) {
     state.pc() = state.prevPC();
