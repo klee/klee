@@ -303,12 +303,12 @@ private:
   Cell& getArgumentCell(ExecutionState &state,
                         KFunction *kf,
                         unsigned index) {
-    return state.stack.back().locals[kf->getArgRegister(index)];
+    return state.stack().back().locals[kf->getArgRegister(index)];
   }
 
   Cell& getDestCell(ExecutionState &state,
                     KInstruction *target) {
-    return state.stack.back().locals[target->dest];
+    return state.stack().back().locals[target->dest];
   }
 
   void bindLocal(KInstruction *target, 
