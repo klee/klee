@@ -12,6 +12,7 @@
 #include "Memory.h"
 #include "SpecialFunctionHandler.h"
 #include "TimingSolver.h"
+#include "Thread.h"
 
 #include "klee/ExecutionState.h"
 
@@ -24,8 +25,13 @@
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
 #include "llvm/IR/Module.h"
+#include "llvm/IR/LLVMContext.h"
 #else
 #include "llvm/Module.h"
+#include "llvm/Type.h"
+#include "llvm/DerivedTypes.h"
+#include "llvm/InstrTypes.h"
+#include "llvm/LLVMContext.h"
 #endif
 #include "llvm/ADT/Twine.h"
 
@@ -62,6 +68,7 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
   addDNR("klee_abort", handleAbort),
   addDNR("klee_silent_exit", handleSilentExit),  
   addDNR("klee_report_error", handleReportError),
+  addDNR("klee_thread_terminate", handleThreadTerminate),
 
   add("calloc", handleCalloc, true),
   add("free", handleFree, false),
@@ -85,6 +92,12 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
   add("klee_print_range", handlePrintRange, false),
   add("klee_set_forking", handleSetForking, false),
   add("klee_stack_trace", handleStackTrace, false),
+  add("klee_get_context", handleGetContext, false),
+  add("klee_get_wlist", handleGetWList, true),
+  add("klee_thread_create", handleThreadCreate, false),
+  add("klee_thread_notify", handleThreadNotify, false),
+  add("klee_thread_preempt", handleThreadPreempt, false),
+  add("klee_thread_sleep", handleThreadSleep, false),
   add("klee_warning", handleWarning, false),
   add("klee_warning_once", handleWarningOnce, false),
   add("klee_alias_function", handleAliasFunction, false),
@@ -454,7 +467,7 @@ void SpecialFunctionHandler::handleWarning(ExecutionState &state,
   assert(arguments.size()==1 && "invalid number of arguments to klee_warning");
 
   std::string msg_str = readStringAtAddress(state, arguments[0]);
-  klee_warning("%s: %s", state.stack.back().kf->function->getName().data(), 
+  klee_warning("%s: %s", state.stack().back().kf->function->getName().data(), 
                msg_str.c_str());
 }
 
@@ -465,7 +478,7 @@ void SpecialFunctionHandler::handleWarningOnce(ExecutionState &state,
          "invalid number of arguments to klee_warning_once");
 
   std::string msg_str = readStringAtAddress(state, arguments[0]);
-  klee_warning_once(0, "%s: %s", state.stack.back().kf->function->getName().data(),
+  klee_warning_once(0, "%s: %s", state.stack().back().kf->function->getName().data(),
                     msg_str.c_str());
 }
 
@@ -638,7 +651,7 @@ void SpecialFunctionHandler::handleDefineFixedObject(ExecutionState &state,
   
   uint64_t address = cast<ConstantExpr>(arguments[0])->getZExtValue();
   uint64_t size = cast<ConstantExpr>(arguments[1])->getZExtValue();
-  MemoryObject *mo = executor.memory->allocateFixed(address, size, state.prevPC->inst);
+  MemoryObject *mo = executor.memory->allocateFixed(address, size, state.prevPC()->inst);
   executor.bindObjectInState(state, mo, false);
   mo->isUserSpecified = true; // XXX hack;
 }
@@ -745,3 +758,125 @@ void SpecialFunctionHandler::handleDivRemOverflow(ExecutionState &state,
                                  "overflow on division or remainder",
                                  "overflow.err");
 }
+
+void SpecialFunctionHandler::handleThreadCreate(ExecutionState &state,
+                                                KInstruction *target,
+                                                std::vector<ref<Expr> > &arguments) {
+  assert(arguments.size() == 3 && "invalid number of arguments to klee_thread_create");
+
+  ref<Expr> tid = executor.toUnique(state, arguments[0]);
+
+  if (!isa<ConstantExpr>(tid)) {
+    executor.terminateStateOnError(state, "klee_thread_create", "user.err");
+    return;
+  }
+
+  /* TODO executor.executeThreadCreate(state, cast<ConstantExpr>(tid)->getZExtValue(),
+                               arguments[1], arguments[2]);*/
+}
+
+void SpecialFunctionHandler::handleThreadTerminate(ExecutionState &state,
+                                                   KInstruction *target,
+                                                   std::vector<ref<Expr> > &arguments) {
+  assert(arguments.empty() && "invalid number of arguments to klee_thread_terminate");
+
+  /* TODO executor.executeThreadExit(state);*/
+}
+
+void SpecialFunctionHandler::handleThreadPreempt(ExecutionState &state,
+                                                 KInstruction *target,
+                                                 std::vector<ref<Expr> > &arguments) {
+  assert(arguments.size() == 1 && "invalid number of arguments to klee_thread_preempt");
+
+  if (!isa<ConstantExpr>(arguments[0])) {
+    executor.terminateStateOnError(state, "klee_thread_preempt", "user.err");
+  }
+
+  /* TODO executor.schedule(state, !arguments[0]->isZero(), false);*/
+}
+
+void SpecialFunctionHandler::handleThreadSleep(ExecutionState &state,
+                                               KInstruction *target,
+                                               std::vector<ref<Expr> > &arguments) {
+
+  assert(arguments.size() == 1 && "invalid number of arguments to klee_thread_sleep");
+
+  ref<Expr> wlistExpr = executor.toUnique(state, arguments[0]);
+
+  if (!isa<ConstantExpr>(wlistExpr)) {
+    executor.terminateStateOnError(state, "klee_thread_sleep", "user.err");
+    return;
+  }
+
+  state.sleepThread(cast<ConstantExpr>(wlistExpr)->getZExtValue());
+  /* TODO executor.schedule(state, false, false);*/
+}
+
+void SpecialFunctionHandler::handleThreadNotify(ExecutionState &state,
+                                                KInstruction *target,
+                                                std::vector<ref<Expr> > &arguments) {
+  assert(arguments.size() == 2 && "invalid number of arguments to klee_thread_notify");
+
+  ref<Expr> wlist = executor.toUnique(state, arguments[0]);
+  ref<Expr> all = executor.toUnique(state, arguments[1]);
+
+  if (!isa<ConstantExpr>(wlist) || !isa<ConstantExpr>(all)) {
+    executor.terminateStateOnError(state, "klee_thread_notify", "user.err");
+    return;
+  }
+
+  if (all->isZero()) {
+    /* TODO executor.executeThreadNotifyOne(state, cast<ConstantExpr>(wlist)->getZExtValue());*/
+  } else {
+    // It's simple enough such that it can be handled by the state class itself
+    state.notifyAll(cast<ConstantExpr>(wlist)->getZExtValue());
+  }
+}
+
+void SpecialFunctionHandler::handleGetWList(ExecutionState &state,
+                                            KInstruction *target,
+                                            std::vector<ref<Expr> > &arguments) {
+  assert(arguments.empty() && "invalid number of arguments to klee_get_wlist");
+
+  Thread::wlist_id_t id = state.getWaitingList();
+
+  executor.bindLocal(target, state, ConstantExpr::create(id,
+                     executor.getWidthForLLVMType(target->inst->getType())));
+}
+
+void SpecialFunctionHandler::handleGetContext(ExecutionState &state,
+                                              KInstruction *target,
+                                              std::vector<ref<Expr> > &arguments) {
+  assert(arguments.size() == 1 && "invalid number of arguments to klee_get_context");
+
+  ref<Expr> tidAddr = executor.toUnique(state, arguments[0]);
+
+  if (!isa<ConstantExpr>(tidAddr)) {
+    executor.terminateStateOnError(state, "klee_get_context requires constant args",
+                                   "user.err");
+    return;
+  }
+
+  if (!tidAddr->isZero()) {
+    if (!writeConcreteValue(state, tidAddr, state.crtThread().getTid(),
+         executor.getWidthForLLVMType(Type::getInt64Ty(getGlobalContext()))))
+      return;
+  }
+}
+
+bool SpecialFunctionHandler::writeConcreteValue(ExecutionState &state,
+                                                ref<Expr> address, uint64_t value, 
+                                                Expr::Width width) {
+  ObjectPair op;
+
+  if (!state.addressSpace.resolveOne(cast<ConstantExpr>(address), op)) {
+    executor.terminateStateOnError(state, "invalid pointer for writing concrete value into", "user.err");
+    return false;
+  }
+
+  ObjectState *os = state.addressSpace.getWriteable(op.first, op.second);
+  os->write(op.first->getOffsetExpr(address), ConstantExpr::create(value, width));
+
+  return true;
+}
+

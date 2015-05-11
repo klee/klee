@@ -439,11 +439,15 @@ void KleeHandler::processTestCase(const ExecutionState &state,
         assert(o->bytes);
         std::copy(out[i].second.begin(), out[i].second.end(), o->bytes);
       }
-      
+
+      b.numSchedSteps = state.schedulingHistory.size();
+      b.schedSteps = new long unsigned[b.numSchedSteps];
+      std::copy(state.schedulingHistory.begin(),state.schedulingHistory.end(),b.schedSteps);
+
       if (!kTest_toFile(&b, getOutputFilename(getTestFilename("ktest", id)).c_str())) {
         klee_warning("unable to write output test case, losing it");
       }
-      
+
       for (unsigned i=0; i<b.numObjects; i++)
         delete[] b.objects[i].bytes;
       delete[] b.objects;
@@ -720,6 +724,7 @@ static const char *modelledExternals[] = {
   "klee_assume", 
   "klee_check_memory_access",
   "klee_define_fixed_object",
+  "klee_get_context",
   "klee_get_errno", 
   "klee_get_valuef",
   "klee_get_valued",
@@ -727,7 +732,8 @@ static const char *modelledExternals[] = {
   "klee_get_valuell",
   "klee_get_value_i32",
   "klee_get_value_i64",
-  "klee_get_obj_size", 
+  "klee_get_obj_size",
+  "klee_get_wlist",
   "klee_is_symbolic", 
   "klee_make_symbolic", 
   "klee_mark_global", 
@@ -742,6 +748,11 @@ static const char *modelledExternals[] = {
   "klee_warning_once", 
   "klee_alias_function",
   "klee_stack_trace",
+  "klee_thread_create",
+  "klee_thread_notify",
+  "klee_thread_preempt",
+  "klee_thread_sleep",
+  "klee_thread_terminate",
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 1)
   "llvm.dbg.declare",
   "llvm.dbg.value",
