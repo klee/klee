@@ -1388,7 +1388,7 @@ Function* Executor::getTargetFunction(Value *calledVal, ExecutionState &state) {
           assert(0 && "function alias not found");
         }
       }
-     
+
       if (Function *f = dyn_cast<Function>(gv))
         return f;
       else if (GlobalAlias *ga = dyn_cast<GlobalAlias>(gv))
@@ -1550,8 +1550,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(cond)) {
       // Somewhat gross to create these all the time, but fine till we
       // switch to an internal rep.
-      LLVM_TYPE_Q llvm::IntegerType *Ty = 
-        cast<IntegerType>(si->getCondition()->getType());
+      LLVM_TYPE_Q llvm::IntegerType *Ty =
+          cast<IntegerType>(si->getCondition()->getType());
       ConstantInt *ci = ConstantInt::get(Ty, CE->getZExtValue());
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 1)
       unsigned index = si->findCaseValue(ci).getSuccessorIndex();
@@ -1560,14 +1560,14 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 #endif
       transferToBasicBlock(si->getSuccessor(index), si->getParent(), state);
     } else {
-      std::map<BasicBlock*, ref<Expr> > targets;
+      std::map<BasicBlock *, ref<Expr> > targets;
       ref<Expr> isDefault = ConstantExpr::alloc(1, Expr::Bool);
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 1)      
-      for (SwitchInst::CaseIt i = si->case_begin(), e = si->case_end();
-           i != e; ++i) {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 1)
+      for (SwitchInst::CaseIt i = si->case_begin(), e = si->case_end(); i != e;
+           ++i) {
         ref<Expr> value = evalConstant(i.getCaseValue());
 #else
-      for (unsigned i=1, cases = si->getNumCases(); i<cases; ++i) {
+      for (unsigned i = 1, cases = si->getNumCases(); i < cases; ++i) {
         ref<Expr> value = evalConstant(si->getCaseValue(i));
 #endif
         ref<Expr> match = EqExpr::create(cond, value);
@@ -1575,16 +1575,17 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         bool result;
         bool success = solver->mayBeTrue(state, match, result);
         assert(success && "FIXME: Unhandled solver failure");
-        (void) success;
+        (void)success;
         if (result) {
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 1)
           BasicBlock *caseSuccessor = i.getCaseSuccessor();
 #else
           BasicBlock *caseSuccessor = si->getSuccessor(i);
 #endif
-          std::map<BasicBlock*, ref<Expr> >::iterator it =
-            targets.insert(std::make_pair(caseSuccessor,
-                           ConstantExpr::alloc(0, Expr::Bool))).first;
+          std::map<BasicBlock *, ref<Expr> >::iterator it =
+              targets.insert(std::make_pair(caseSuccessor,
+                                            ConstantExpr::alloc(0, Expr::Bool)))
+                  .first;
 
           it->second = OrExpr::create(match, it->second);
         }
@@ -1592,22 +1593,22 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       bool res;
       bool success = solver->mayBeTrue(state, isDefault, res);
       assert(success && "FIXME: Unhandled solver failure");
-      (void) success;
+      (void)success;
       if (res)
         targets.insert(std::make_pair(si->getDefaultDest(), isDefault));
-      
-      std::vector< ref<Expr> > conditions;
-      for (std::map<BasicBlock*, ref<Expr> >::iterator it = 
-             targets.begin(), ie = targets.end();
+
+      std::vector<ref<Expr> > conditions;
+      for (std::map<BasicBlock *, ref<Expr> >::iterator it = targets.begin(),
+                                                        ie = targets.end();
            it != ie; ++it)
         conditions.push_back(it->second);
-      
-      std::vector<ExecutionState*> branches;
+
+      std::vector<ExecutionState *> branches;
       branch(state, conditions, branches);
-        
-      std::vector<ExecutionState*>::iterator bit = branches.begin();
-      for (std::map<BasicBlock*, ref<Expr> >::iterator it = 
-             targets.begin(), ie = targets.end();
+
+      std::vector<ExecutionState *>::iterator bit = branches.begin();
+      for (std::map<BasicBlock *, ref<Expr> >::iterator it = targets.begin(),
+                                                        ie = targets.end();
            it != ie; ++it) {
         ExecutionState *es = *bit;
         if (es)
@@ -2885,15 +2886,16 @@ void Executor::callExternalFunction(ExecutionState &state,
     else
       klee_warning_once(function, "%s", os.str().c_str());
   }
-  #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
-    //MCJIT needs unique module, so we create quick external dispatcher for call. reference:
-    //http://blog.llvm.org/2013/07/using-mcjit-with-kaleidoscope-tutorial.html
-    ExternalDispatcher* e = new ExternalDispatcher();
-    bool success = e->executeCall(function, target->inst, args);
-    delete e;
-  #else
-    bool success = externalDispatcher->executeCall(function, target->inst, args);
-  #endif
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
+  // MCJIT needs unique module, so we create quick external dispatcher for call.
+  // reference:
+  // http://blog.llvm.org/2013/07/using-mcjit-with-kaleidoscope-tutorial.html
+  ExternalDispatcher *e = new ExternalDispatcher();
+  bool success = e->executeCall(function, target->inst, args);
+  delete e;
+#else
+  bool success = externalDispatcher->executeCall(function, target->inst, args);
+#endif
   if (!success) {
     terminateStateOnError(state, "failed external call: " + function->getName(),
                           "external.err");

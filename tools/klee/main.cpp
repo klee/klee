@@ -629,9 +629,9 @@ static std::string strip(std::string &in) {
 }
 
 static void parseArguments(int argc, char **argv) {
-  
+
   cl::SetVersionPrinter(klee::printVersion);
-  
+
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
 cl::ParseCommandLineOptions(argc, (char**) argv, " klee\n"); //removes warning
 #elif LLVM_VERSION_CODE >= LLVM_VERSION(3, 2)
@@ -1023,11 +1023,11 @@ static llvm::Module *linkWithUclibc(llvm::Module *mainModule, StringRef libDir) 
   SmallString<128> uclibcBCA(libDir);
   llvm::sys::path::append(uclibcBCA, KLEE_UCLIBC_BCA_NAME);
 
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3,6)
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
   Twine uclibcBCA_twine(uclibcBCA.c_str());
   if (!llvm::sys::fs::exists(uclibcBCA_twine))
 #else
-  bool uclibcExists=false;
+  bool uclibcExists = false;
   llvm::sys::fs::exists(uclibcBCA.c_str(), uclibcExists);
   if (!uclibcExists)
 #endif
@@ -1250,10 +1250,11 @@ int main(int argc, char **argv, char **envp) {
   if (!Buffer)
     klee_error("error loading program '%s': %s", InputFile.c_str(),
                Buffer.getError().message().c_str());
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3,6)
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
   auto mainModuleOrError = getLazyBitcodeModule(std::move(Buffer.get()), getGlobalContext());
 #else
-  auto mainModuleOrError = getLazyBitcodeModule(Buffer->get(), getGlobalContext());
+  auto mainModuleOrError =
+      getLazyBitcodeModule(Buffer->get(), getGlobalContext());
 #endif
   if (!mainModuleOrError) {
     klee_error("error loading program '%s': %s", InputFile.c_str(),

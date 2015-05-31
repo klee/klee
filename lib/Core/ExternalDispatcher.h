@@ -27,7 +27,7 @@ namespace klee {
   private:
     typedef std::map<const llvm::Instruction*,llvm::Function*> dispatchers_ty;
     dispatchers_ty dispatchers;
-    
+
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
     std::unique_ptr<llvm::Module> dispatchModule_uniptr;
 #endif

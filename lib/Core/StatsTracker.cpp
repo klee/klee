@@ -191,7 +191,7 @@ StatsTracker::StatsTracker(Executor &_executor, std::string _objectFilename,
     if(sys::fs::make_absolute(current)) {
       bool exists = false;
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
-      Twine current_twine(current.str()); //requires a twine for this. so silly	
+      Twine current_twine(current.str()); // requires a twine for this. so silly
       if (!sys::fs::exists(current_twine)) {
 #elif LLVM_VERSION_CODE == LLVM_VERSION(3, 5)
       if (!sys::fs::exists(current.str(), exists)) {

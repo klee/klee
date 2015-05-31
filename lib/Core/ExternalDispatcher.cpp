@@ -96,10 +96,10 @@ ExternalDispatcher::ExternalDispatcher() {
   std::string error;
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
   dispatchModule_uniptr.reset(dispatchModule);
-  executionEngine = EngineBuilder( std::move(dispatchModule_uniptr) ).create();
+  executionEngine = EngineBuilder(std::move(dispatchModule_uniptr)).create();
 #else
   executionEngine = ExecutionEngine::createJIT(dispatchModule, &error);
-#endif  
+#endif
   if (!executionEngine) {
     llvm::errs() << "unable to make jit: " << error << "\n";
     abort();
@@ -160,11 +160,11 @@ bool ExternalDispatcher::executeCall(Function *f, Instruction *i, uint64_t *args
       // ensures that any errors or assertions in the compilation process will
       // trigger crashes instead of being caught as aborts in the external
       // function.
-      #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
-      	executionEngine->finalizeObject();
-      #else
-      	executionEngine->recompileAndRelinkFunction(dispatcher);
-      #endif
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
+      executionEngine->finalizeObject();
+#else
+      executionEngine->recompileAndRelinkFunction(dispatcher);
+#endif
     }
   } else {
     dispatcher = it->second;
@@ -223,14 +223,12 @@ Function *ExternalDispatcher::createDispatcher(Function *target, Instruction *in
   Value **args = new Value*[cs.arg_size()];
 
   std::vector<LLVM_TYPE_Q Type*> nullary;
-  
-  //For MCJIT functions need unique names, or wrong func can be called
-  Function *dispatcher = Function::Create(FunctionType::get(Type::getVoidTy(getGlobalContext()), 
-							    nullary, false),
-					  GlobalVariable::ExternalLinkage, 
-					  "dispatcher_"+target->getName().str(),
-					  dispatchModule);
 
+  // For MCJIT functions need unique names, or wrong func can be called
+  Function *dispatcher = Function::Create(
+      FunctionType::get(Type::getVoidTy(getGlobalContext()), nullary, false),
+      GlobalVariable::ExternalLinkage, "dispatcher_" + target->getName().str(),
+      dispatchModule);
 
   BasicBlock *dBB = BasicBlock::Create(getGlobalContext(), "entry", dispatcher);
 
@@ -273,9 +271,8 @@ Function *ExternalDispatcher::createDispatcher(Function *target, Instruction *in
     dispatchModule->getOrInsertFunction(target->getName(), FTy,
                                         target->getAttributes());
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 0)
-  Instruction *result = CallInst::Create(dispatchTarget,
-                                         llvm::ArrayRef<Value *>(args, args+i),
-                                         "", dBB);
+  Instruction *result = CallInst::Create(
+      dispatchTarget, llvm::ArrayRef<Value *>(args, args + i), "", dBB);
 #else
   Instruction *result = CallInst::Create(dispatchTarget, args, args+i, "", dBB);
 #endif
