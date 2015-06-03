@@ -140,10 +140,6 @@ namespace {
 		   cl::desc("Dump test cases for all active states on exit (default=on)"));
  
   cl::opt<bool>
-  NoPreferCex("no-prefer-cex",
-              cl::init(false));
- 
-  cl::opt<bool>
   RandomizeFork("randomize-fork",
                 cl::init(false),
 		cl::desc("Randomly swap the true and false states on a fork (default=off)"));
@@ -3482,20 +3478,33 @@ bool Executor::getSymbolicSolution(const ExecutionState &state,
   solver->setTimeout(coreSolverTimeout);
 
   ExecutionState tmp(state);
-  if (!NoPreferCex) {
-    for (unsigned i = 0; i != state.symbolics.size(); ++i) {
-      const MemoryObject *mo = state.symbolics[i].first;
-      std::vector< ref<Expr> >::const_iterator pi = 
-        mo->cexPreferences.begin(), pie = mo->cexPreferences.end();
-      for (; pi != pie; ++pi) {
-        bool mustBeTrue;
-        bool success = solver->mustBeTrue(tmp, Expr::createIsZero(*pi), 
-                                          mustBeTrue);
-        if (!success) break;
-        if (!mustBeTrue) tmp.addConstraint(*pi);
-      }
-      if (pi!=pie) break;
+
+  // Go through each byte in every test case and attempt to restrict
+  // it to the constraints contained in cexPreferences.  (Note:
+  // usually this means trying to make it an ASCII character (0-127)
+  // and therefore human readable. It is also possible to customize
+  // the preferred constraints.  See test/Features/PreferCex.c for
+  // an example) While this process can be very expensive, it can
+  // also make understanding individual test cases much easier.
+  for (unsigned i = 0; i != state.symbolics.size(); ++i) {
+    const MemoryObject *mo = state.symbolics[i].first;
+    std::vector< ref<Expr> >::const_iterator pi = 
+      mo->cexPreferences.begin(), pie = mo->cexPreferences.end();
+    for (; pi != pie; ++pi) {
+      bool mustBeTrue;
+      // Attempt to bound byte to constraints held in cexPreferences
+      bool success = solver->mustBeTrue(tmp, Expr::createIsZero(*pi), 
+					mustBeTrue);
+      // If it isn't possible to constrain this particular byte in the desired
+      // way (normally this would mean that the byte can't be constrained to
+      // be between 0 and 127 without making the entire constraint list UNSAT)
+      // then just continue on to the next byte.
+      if (!success) break;
+      // If the particular constraint operated on in this iteration through
+      // the loop isn't implied then add it to the list of constraints.
+      if (!mustBeTrue) tmp.addConstraint(*pi);
     }
+    if (pi!=pie) break;
   }
 
   std::vector< std::vector<unsigned char> > values;
