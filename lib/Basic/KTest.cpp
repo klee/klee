@@ -43,7 +43,7 @@ static int read_uint64(FILE *f, unsigned long *value_out) {
   unsigned char data[8];
   if (fread(data, 8, 1, f)!=1)
     return 0;
-  *value_out = (((((((((((((((data[0]<<8) + data[1])<<8) + data[2])<<8) + data[3])<<8) + data[4])<<8) + data[5])<<8) + data[6])<<8) + data[7])<<8);
+  *value_out = (((((((((((((data[0]<<8) + data[1])<<8) + data[2])<<8) + data[3])<<8) + data[4])<<8) + data[5])<<8) + data[6])<<8) + data[7];
   return 1;
 }
 
