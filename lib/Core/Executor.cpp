@@ -1372,9 +1372,13 @@ Function* Executor::getTargetFunction(Value *calledVal, ExecutionState &state) {
 
   while (true) {
     if (GlobalValue *gv = dyn_cast<GlobalValue>(c)) {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
+      if (!Visited.insert(gv).second)
+        return 0;
+#else
       if (!Visited.insert(gv))
         return 0;
-
+#endif
       std::string alias = state.getFnAlias(gv->getName());
       if (alias != "") {
         llvm::Module* currModule = kmodule->module;
@@ -2883,8 +2887,15 @@ void Executor::callExternalFunction(ExecutionState &state,
     else
       klee_warning_once(function, "%s", os.str().c_str());
   }
-  
-  bool success = externalDispatcher->executeCall(function, target->inst, args);
+  #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
+    //MCJIT needs unique module, so we create quick external dispatcher for call. reference:
+    //http://blog.llvm.org/2013/07/using-mcjit-with-kaleidoscope-tutorial.html
+    ExternalDispatcher* e = new ExternalDispatcher();
+    bool success = e->executeCall(function, target->inst, args);
+    delete e;
+  #else
+    bool success = externalDispatcher->executeCall(function, target->inst, args);
+  #endif
   if (!success) {
     terminateStateOnError(state, "failed external call: " + function->getName(),
                           "external.err");

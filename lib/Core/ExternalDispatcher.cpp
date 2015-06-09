@@ -23,7 +23,12 @@
 #include "llvm/Instructions.h"
 #include "llvm/LLVMContext.h"
 #endif
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
+#include "llvm/ExecutionEngine/MCJIT.h"
+#else
 #include "llvm/ExecutionEngine/JIT.h"
+#endif
+
 #include "llvm/ExecutionEngine/GenericValue.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/raw_ostream.h"
@@ -89,7 +94,12 @@ ExternalDispatcher::ExternalDispatcher() {
   dispatchModule = new Module("ExternalDispatcher", getGlobalContext());
 
   std::string error;
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
+  dispatchModule_uniptr.reset(dispatchModule);
+  executionEngine = EngineBuilder( std::move(dispatchModule_uniptr) ).create();
+#else
   executionEngine = ExecutionEngine::createJIT(dispatchModule, &error);
+#endif  
   if (!executionEngine) {
     llvm::errs() << "unable to make jit: " << error << "\n";
     abort();
@@ -98,6 +108,10 @@ ExternalDispatcher::ExternalDispatcher() {
   // If we have a native target, initialize it to ensure it is linked in and
   // usable by the JIT.
   llvm::InitializeNativeTarget();
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
+  llvm::InitializeNativeTargetAsmParser();
+  llvm::InitializeNativeTargetAsmPrinter();
+#endif
 
   // from ExecutionEngine::create
   if (executionEngine) {
@@ -146,7 +160,11 @@ bool ExternalDispatcher::executeCall(Function *f, Instruction *i, uint64_t *args
       // ensures that any errors or assertions in the compilation process will
       // trigger crashes instead of being caught as aborts in the external
       // function.
-      executionEngine->recompileAndRelinkFunction(dispatcher);
+      #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
+      	executionEngine->finalizeObject();
+      #else
+      	executionEngine->recompileAndRelinkFunction(dispatcher);
+      #endif
     }
   } else {
     dispatcher = it->second;
@@ -206,10 +224,11 @@ Function *ExternalDispatcher::createDispatcher(Function *target, Instruction *in
 
   std::vector<LLVM_TYPE_Q Type*> nullary;
   
+  //For MCJIT functions need unique names, or wrong func can be called
   Function *dispatcher = Function::Create(FunctionType::get(Type::getVoidTy(getGlobalContext()), 
 							    nullary, false),
 					  GlobalVariable::ExternalLinkage, 
-					  "",
+					  "dispatcher_"+target->getName().str(),
 					  dispatchModule);
 
 
