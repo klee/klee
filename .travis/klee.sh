@@ -91,7 +91,16 @@ make lit.site.cfg \
     ENABLE_SHARED=0
 
 set +e # We want to let all the tests run before we exit
-lit -v .
+
+# FIXME: This is a hack to handle the fact we don't build upstream STP with boost
+# due to ABI issues.
+if [ "${STP_VERSION}" == "UPSTREAM" ]; then
+    SMT_SOLVER="stp_simple"
+else
+    SMT_SOLVER="bin/stp"
+fi
+
+lit -v --param smtlib_solver=${BUILD_DIR}/stp/build/${SMT_SOLVER} .
 RETURN="${RETURN}$?"
 
 ###############################################################################

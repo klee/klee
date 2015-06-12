@@ -1,7 +1,13 @@
 # RUN: %kleaver -print-smtlib -smtlib-abbreviation-mode=none %s > %t1.smt2
 # RUN: diff %t1.smt2 %p/print-smt-none.smt2.good
+# RUN: %smtlib_solver %t1.smt2 | FileCheck %s
 # Query 0 -- Type: InitialValues, Instructions: 27
+# CHECK: {{^sat}}
 (query [] false)
+
+# FIXME: Due to the way printer works we only check the first query
+# THIS REALLY NEEDS FIXING. We need to introduced ``(reset)``
+# support and use an SMT-LIBv2 solver that supports this.
 
 # Query 1 -- Type: InitialValues, Instructions: 27
 array unnamed_1[4] : w32 -> w8 = symbolic
