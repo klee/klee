@@ -348,12 +348,15 @@ def main():
         exit(1)
     # read contents from every run.stats file into LazyEvalList
     data = [LazyEvalList(list(open(getLogFile(d)))) for d in dirs]
+    testLabels = eval(list(open(getLogFile(dirs[0])))[0])
+
     if len(data) > 1:
         dirs = stripCommonPathPrefix(dirs)
     # attach the stripped path
     data = list(zip(dirs, data))
 
-    labels = getLabels(pr)
+    labels = testLabels #getLabels(pr)
+    
     # labels in the same order as in the run.stats file. used by --compare-by.
     # current impl needs monotonic values, so only keep the ones making sense.
     rawLabels = ('Instrs', '', '', '', '', '', '', 'Queries',
