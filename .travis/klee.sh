@@ -39,6 +39,10 @@ else
     KLEE_UCLIBC_CONFIGURE_OPTION=""
 fi
 
+COVERAGE_FLAGS=""
+if [ ${COVERAGE} -eq 1 ]; then
+    COVERAGE_FLAGS='-fprofile-arcs -ftest-coverage'
+fi
 ###############################################################################
 # KLEE
 ###############################################################################
@@ -55,7 +59,7 @@ ${KLEE_SRC}/configure --with-llvmsrc=/usr/lib/llvm-${LLVM_VERSION}/build \
             --with-llvmcxx=${KLEE_CXX} \
             --with-stp="${BUILD_DIR}/stp/build" \
             ${KLEE_UCLIBC_CONFIGURE_OPTION} \
-            CXXFLAGS="-fprofile-arcs -ftest-coverage" \
+            CXXFLAGS="${COVERAGE_FLAGS}" \
             && make DISABLE_ASSERTIONS=${DISABLE_ASSERTIONS} \
                     ENABLE_OPTIMIZED=${ENABLE_OPTIMIZED} \
                     ENABLE_SHARED=0
@@ -99,7 +103,7 @@ RETURN="${RETURN}$?"
 if [ ${COVERAGE} -eq 1 ]; then
 
 #get zcov that works with gcov v4.8
-    git clone https://github.com/kren1/zcov.git 
+    git clone https://github.com/ddunbar/zcov.git
     cd zcov
     sudo python setup.py install
     sudo mkdir /usr/local/lib/python2.7/dist-packages/zcov-0.3.0.dev0-py2.7.egg/zcov/js
