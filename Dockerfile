@@ -11,6 +11,7 @@ ENV LLVM_VERSION=3.4 \
     ENABLE_OPTIMIZED=1 \
     KLEE_UCLIBC=1 \
     KLEE_SRC=/home/klee/klee_src \
+    COVERAGE=0 \
     BUILD_DIR=/home/klee/klee_build
 
 RUN apt-get update && \
