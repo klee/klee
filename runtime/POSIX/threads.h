@@ -109,7 +109,8 @@ typedef struct {
   unsigned int nr_readers;
   unsigned int nr_readers_queued;
   unsigned int nr_writers_queued;
-  int writer;
+  unsigned int writer;
+  char writer_taken;
 } rwlock_data_t;
 
 typedef struct {
