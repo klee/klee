@@ -153,7 +153,7 @@ def getLabelsConfig(pr):
         return ('Path', 'Instrs', 'Time(s)', 'ICov(%)',
                   'BCov(%)', 'ICount', 'TSolver(%)')
     else:
-        str = "labels = " + ConfigSectionMap("Output")[pr+"_labels"]    
+        str = "labels = " + ConfigSectionMap("Labels")[pr+"_labels"]    
         exec(str)
         return labels
 
