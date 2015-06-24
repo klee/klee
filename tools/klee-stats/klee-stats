@@ -10,6 +10,7 @@ import os
 import re
 import sys
 import argparse
+import ConfigParser
 
 from operator import itemgetter
 try:
@@ -46,6 +47,11 @@ KleeTable = TableFormat(lineabove=Line("-", "-", "-", "-"),
                         padding=0,
                         with_header_hide=None)
 
+#global config reader
+Config = ConfigParser.ConfigParser()
+#updated upon reading config
+global version
+version = None
 def getLogFile(path):
     """Return the path to run.stats."""
     return os.path.join(path, 'run.stats')
@@ -134,8 +140,24 @@ def getKleeOutDirs(dirs):
                         kleeOutDirs.append(path)
     return kleeOutDirs
 
-
 def getLabels(pr):
+    global version
+
+    if version == None:
+        return getLabelsPreV(pr)
+    else:
+        return getLabelsConfig(pr)
+
+def getLabelsConfig(pr):
+    if pr == 'NONE':
+        return ('Path', 'Instrs', 'Time(s)', 'ICov(%)',
+                  'BCov(%)', 'ICount', 'TSolver(%)')
+    else:
+        str = "labels = " + ConfigSectionMap("Output")[pr+"_labels"]    
+        exec(str)
+        return labels
+
+def getLabelsPreV(pr):
     if pr == 'all':
         labels = ('Path', 'Instrs', 'Time(s)', 'ICov(%)', 'BCov(%)', 'ICount',
                   'TSolver(%)', 'States', 'maxStates', 'avgStates', 'Mem(MB)',
@@ -155,8 +177,35 @@ def getLabels(pr):
                   'BCov(%)', 'ICount', 'TSolver(%)')
     return labels
 
-
 def getRow(record, stats, pr):
+    global version
+
+    if version == None:
+        return getRowPreV(record,stats, pr)
+    else:
+        return getRowConfig(record, stats, pr)
+
+def getRowConfig(record, stats, pr):
+    recstr = ConfigSectionMap("Input")['record'] + " = record"    
+    exec(recstr)
+
+    statstr = ConfigSectionMap("Input")['stats'] + " = stats"
+    exec(statstr)
+
+    if BTot == 0:
+        BFull = BTot = 1
+
+    Mem = Mem / 1024 / 1024
+    AvgQC = int(QCon / max(1, QTot))
+
+    if pr == 'NONE':
+        return (I, Treal, 100 * SCov / (SCov + SUnc),
+               100 * (2 * BFull + BPart) / (2 * BTot),
+               SCov + SUnc, 100 * Ts / Treal)
+    else:
+        return eval(ConfigSectionMap("Output")[pr])
+
+def getRowPreV(record, stats, pr):
     """Compose data for the current run into a row."""
     I, BFull, BPart, BTot, T, St, Mem, QTot, QCon,\
         _, Treal, SCov, SUnc, _, Ts, Tcex, Tf, Tr = record
@@ -190,6 +239,7 @@ def getRow(record, stats, pr):
         row = (I, Treal, 100 * SCov / (SCov + SUnc),
                100 * (2 * BFull + BPart) / (2 * BTot),
                SCov + SUnc, 100 * Ts / Treal)
+
     return row
 
 
@@ -242,6 +292,41 @@ def drawLineChart(vectors, titles):
                 bbox_inches='tight',  # tighter bbox
                 transparent=False)
 
+def open_config():
+    try:
+        #config must be compiled into bin for this to work
+        #open(os.path.join(sys.path[0], "default.config"), "r") 
+        Config.read(os.path.join(os.getcwd(), "default.config")) 
+        return True
+    except:
+        print("Unable to find config, assuming old version")
+        return False
+
+def ConfigSectionMap(section):
+    dict1 = {}
+    options = Config.options(section)
+    for option in options:
+        try:
+            dict1[option] = Config.get(section, option)
+            if dict1[option] == -1:
+                DebugPrint("skip: %s" % option)
+        except:
+            print("exception on %s!" % option)
+            dict1[option] = None
+    return dict1
+
+def parse_config():
+    global version
+
+    if(open_config()):
+        print(ConfigSectionMap("Info")['version'])
+        version = eval(ConfigSectionMap("Info")['version'])
+
+        #versioned
+    else:
+        print("<.1")
+        version = None
+        #preversion
 
 def main():
     # function for sanitizing arguments
@@ -255,6 +340,8 @@ def main():
             raise argparse.ArgumentTypeError(
                 'positive integer expected: {0}'.format(value))
         return value
+
+    parse_config()
 
     parser = argparse.ArgumentParser(
         description='output statistics logged by klee',
