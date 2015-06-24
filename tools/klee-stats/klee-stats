@@ -198,6 +198,18 @@ def getRowConfig(record, stats, pr):
     Mem = Mem / 1024 / 1024
     AvgQC = int(QCon / max(1, QTot))
 
+    try:
+        #groups must be in left handside 
+        equations = ConfigSectionMap("Calculation")['reltime'].split(',')
+        for equation in equations:
+            group = equation.split(' ')[0]
+            if Config.has_option("Groups", group):
+                str = 
+            
+    except:
+        print("No calculations for this")
+
+
     if pr == 'NONE':
         return (I, Treal, 100 * SCov / (SCov + SUnc),
                100 * (2 * BFull + BPart) / (2 * BTot),
