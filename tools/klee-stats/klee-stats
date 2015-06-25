@@ -313,10 +313,9 @@ def open_config():
     try:
         #config must be compiled into bin for this to work
         #open(os.path.join(sys.path[0], "default.config"), "r") 
-        Config.read(os.path.join(os.getcwd(), "default.config")) 
-        return True
+        return Config.read(os.path.join(os.getcwd(), "default.config")) 
     except:
-        print("Unable to find config, assuming old version")
+        print("Unable to read config file")
         return False
 
 def ConfigSectionMap(section):
@@ -348,7 +347,7 @@ def parse_config():
 
         #versioned
     else:
-        print("<.1")
+        print("version: <.1")
         version = None
         #preversion
 
