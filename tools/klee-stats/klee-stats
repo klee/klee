@@ -52,6 +52,10 @@ Config = ConfigParser.ConfigParser()
 #updated upon reading config
 global version
 version = None
+#hash for grouped variables
+global groups
+groups = {}
+
 def getLogFile(path):
     """Return the path to run.stats."""
     return os.path.join(path, 'run.stats')
@@ -200,14 +204,15 @@ def getRowConfig(record, stats, pr):
 
     try:
         #groups must be in left handside 
+        global groups
         equations = ConfigSectionMap("Calculation")['reltime'].split(',')
         for equation in equations:
             group = equation.split(' ')[0]
-            if Config.has_option("Groups", group):
-                str = 
-            
+            for var in groups[group]:
+                subeq = equation.replace(group, var)
+                exec(subeq)
     except:
-        print("No calculations for this")
+        print("Error in calculations")
 
 
     if pr == 'NONE':
@@ -327,12 +332,19 @@ def ConfigSectionMap(section):
             dict1[option] = None
     return dict1
 
+def parse_groups():
+    global groups
+    options = Config.options("Groups")
+    for option in options:
+        groups[option] = ConfigSectionMap("Groups")[option].split(", ")
+
 def parse_config():
     global version
 
     if(open_config()):
-        print(ConfigSectionMap("Info")['version'])
+        #print(ConfigSectionMap("Info")['version'])
         version = eval(ConfigSectionMap("Info")['version'])
+        parse_groups();
 
         #versioned
     else:
