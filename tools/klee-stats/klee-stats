@@ -202,17 +202,23 @@ def getRowConfig(record, stats, pr):
     Mem = Mem / 1024 / 1024
     AvgQC = int(QCon / max(1, QTot))
 
-    try:
+    #try:
         #groups must be in left handside 
-        global groups
-        equations = ConfigSectionMap("Calculation")['reltime'].split(',')
-        for equation in equations:
-            group = equation.split(' ')[0]
+    global groups
+    equations = ConfigSectionMap("Calculation")['reltime'].split(', ')
+    for equation in equations:
+        groupvar = equation.split(' ')[0]
+        gsplit = groupvar.split('_')
+
+        if len(gsplit) == 1 or gsplit[1] not in groups:
+            exec(equation)
+        else:
+            group = gsplit[1]
             for var in groups[group]:
                 subeq = equation.replace(group, var)
                 exec(subeq)
-    except:
-        print("Error in calculations")
+    #except:
+    #    print("Error in calculations")
 
 
     if pr == 'NONE':
@@ -314,6 +320,7 @@ def open_config():
         #config must be compiled into bin for this to work
         #open(os.path.join(sys.path[0], "default.config"), "r") 
         return Config.read(os.path.join(os.getcwd(), "default.config")) 
+        #return Config.read(os.path.join(os.getcwd(), "default.config")) 
     except:
         print("Unable to read config file")
         return False
