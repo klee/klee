@@ -190,8 +190,8 @@ def getRow(record, stats, pr):
         return getRowConfig(record, stats, pr)
 
 def getRowConfig(record, stats, pr):
-    recstr = ConfigSectionMap("Input")['record'] + " = record"    
-    exec(recstr)
+    recordstr = ConfigSectionMap("Input")['record'] + " = record"    
+    exec(recordstr)
 
     statstr = ConfigSectionMap("Input")['stats'] + " = stats"
     exec(statstr)
@@ -202,23 +202,23 @@ def getRowConfig(record, stats, pr):
     Mem = Mem / 1024 / 1024
     AvgQC = int(QCon / max(1, QTot))
 
-    #try:
+    try:
         #groups must be in left handside 
-    global groups
-    equations = ConfigSectionMap("Calculation")['reltime'].split(', ')
-    for equation in equations:
-        groupvar = equation.split(' ')[0]
-        gsplit = groupvar.split('_')
+        global groups
+        equations = ConfigSectionMap("Calculation")['reltime'].split(', ')
+        for equation in equations:
+            groupvar = equation.split(' ')[0]
+            gsplit = groupvar.split('_')
 
-        if len(gsplit) == 1 or gsplit[1] not in groups:
-            exec(equation)
-        else:
-            group = gsplit[1]
-            for var in groups[group]:
-                subeq = equation.replace(group, var)
-                exec(subeq)
-    #except:
-    #    print("Error in calculations")
+            if len(gsplit) == 1 or gsplit[1] not in groups:
+                exec(equation)
+            else:
+                group = gsplit[1]
+                for var in groups[group]:
+                    subeq = equation.replace(group, var)
+                    exec(subeq)
+    except:
+        print("Error in calculation parsing or evaluating")
 
 
     if pr == 'NONE':
@@ -317,10 +317,13 @@ def drawLineChart(vectors, titles):
 
 def open_config():
     try:
-        #config must be compiled into bin for this to work
-        #open(os.path.join(sys.path[0], "default.config"), "r") 
-        return Config.read(os.path.join(os.getcwd(), "default.config")) 
-        #return Config.read(os.path.join(os.getcwd(), "default.config")) 
+        #Overriding config file in current working directory
+        if(Config.read(os.path.join(os.getcwd(), "override.config"))):
+            print("Override Config found in working directory")
+            return True
+        else:
+            #Default Config
+            return Config.read(os.path.join(sys.path[0], "default.config"))
     except:
         print("Unable to read config file")
         return False
