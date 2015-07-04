@@ -208,17 +208,22 @@ def getRowConfig(record, stats, pr):
         equations = ConfigSectionMap("Calculation")['reltime'].split(', ')
         for equation in equations:
             groupvar = equation.split(' ')[0]
-            gsplit = groupvar.split('_')
+            gsplit = groupvar.split('-')
 
             if len(gsplit) == 1 or gsplit[1] not in groups:
-                exec(equation)
+                if gsplit[0][0] == '@':
+                    #Import equations from other categories
+                    category = gsplit[0][1:]
+                    equations.extend(ConfigSectionMap("Calculation")[category].split(', '))
+                else:
+                    exec(equation)
             else:
                 group = gsplit[1]
                 for var in groups[group]:
-                    subeq = equation.replace(group, var)
+                    subeq = equation.replace("-","_").replace(group, var)
                     exec(subeq)
     except:
-        print("Error in calculation parsing or evaluating")
+       print("Error in calculation parsing or evaluating")
 
 
     if pr == 'NONE':
