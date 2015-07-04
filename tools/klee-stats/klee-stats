@@ -351,7 +351,7 @@ def parse_config():
     global version
 
     if(open_config()):
-        #print(ConfigSectionMap("Info")['version'])
+        print(ConfigSectionMap("Info")['version'])
         version = eval(ConfigSectionMap("Info")['version'])
         parse_groups();
 
@@ -360,6 +360,61 @@ def parse_config():
         print("version: <.1")
         version = None
         #preversion
+
+def parse_control_args(pControl):
+    global version
+    # argument group for controlling output verboseness
+    if version == None:
+        #Hardcoded parameters
+        print("HC")
+        pControl.add_argument('--print-all',
+                              action='store_true', dest='pAll',
+                              help='Print all available information.')
+        pControl.add_argument('--print-rel-times',
+                              action='store_true', dest='pRelTimes',
+                              help='Print only values of measured times. '
+                              'Values are relative to the measured system '
+                              'execution time.')
+        pControl.add_argument('--print-abs-times',
+                              action='store_true', dest='pAbsTimes',
+                              help='Print only values of measured times. '
+                              'Absolute values (in seconds) are printed.')
+        pControl.add_argument('--print-more',
+                              action='store_true', dest='pMore',
+                              help='Print extra information (needed when '
+                              'monitoring an ongoing run).')
+    else:
+        #
+        for option in Config.options("Output"):
+            if Config.has_option("Help", option):
+                help = ConfigSectionMap("Help")[option]
+            else:
+                help = "No help information provided"
+            start = "'--print-%s', action='store_true', dest='p%s', help='%s'" % (option, option.capitalize(), help)
+            
+            line = "pControl.add_argument(%s)" % start
+
+            exec(line)
+
+def get_print_controls(args):
+    pr = 'NONE'
+    if version == None:
+        if args.pAll:
+            pr = 'all'
+        elif args.pRelTimes:
+            pr = 'reltime'
+        elif args.pAbsTimes:
+            pr = 'abstime'
+        elif args.pMore:
+            pr = 'more'
+    else:
+        for option in Config.options("Output"):
+            strargs = "args.p%s" % option.capitalize()
+            if eval(strargs):
+                pr = option
+    return pr
+        
+
 
 def main():
     # function for sanitizing arguments
@@ -406,23 +461,9 @@ def main():
                         'run.stats (default: 10)')
 
     # argument group for controlling output verboseness
+
     pControl = parser.add_mutually_exclusive_group(required=False)
-    pControl.add_argument('--print-all',
-                          action='store_true', dest='pAll',
-                          help='Print all available information.')
-    pControl.add_argument('--print-rel-times',
-                          action='store_true', dest='pRelTimes',
-                          help='Print only values of measured times. '
-                          'Values are relative to the measured system '
-                          'execution time.')
-    pControl.add_argument('--print-abs-times',
-                          action='store_true', dest='pAbsTimes',
-                          help='Print only values of measured times. '
-                          'Absolute values (in seconds) are printed.')
-    pControl.add_argument('--print-more',
-                          action='store_true', dest='pMore',
-                          help='Print extra information (needed when '
-                          'monitoring an ongoing run).')
+    parse_control_args(pControl);
 
     # arguments for sorting
     parser.add_argument('--sort-by', dest='sortBy', metavar='header',
@@ -451,16 +492,7 @@ def main():
 
     args = parser.parse_args()
 
-    # get print controls
-    pr = 'NONE'
-    if args.pAll:
-        pr = 'all'
-    elif args.pRelTimes:
-        pr = 'reltime'
-    elif args.pAbsTimes:
-        pr = 'abstime'
-    elif args.pMore:
-        pr = 'more'
+    pr = get_print_controls(args)
 
     dirs = getKleeOutDirs(args.dir)
     if len(dirs) == 0:
