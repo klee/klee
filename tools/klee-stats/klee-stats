@@ -205,7 +205,7 @@ def getRowConfig(record, stats, pr):
     try:
         #groups must be in left handside 
         global groups
-        equations = ConfigSectionMap("Calculation")['reltime'].split(', ')
+        equations = ConfigSectionMap("Calculation")[pr].split(', ')
         for equation in equations:
             groupvar = equation.split(' ')[0]
             gsplit = groupvar.split('-')
