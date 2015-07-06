@@ -35,6 +35,11 @@ namespace {
                  cl::init(false));
 
   cl::opt<bool>
+  CexCacheSuperSet("cex-cache-superset",
+                 cl::desc("try substituting SAT super-set counterexample before asking the SMT solver (default=false)"),
+                 cl::init(false));
+
+  cl::opt<bool>
   CexCacheExperimental("cex-cache-exp", cl::init(false));
 
 }
@@ -124,8 +129,10 @@ bool CexCachingSolver::searchForAssignment(KeyType &key, Assignment *&result) {
   if (CexCacheTryAll) {
     // Look for a satisfying assignment for a superset, which is trivially an
     // assignment for any subset.
-    Assignment **lookup = cache.findSuperset(key, NonNullAssignment());
-    
+    Assignment **lookup = 0;
+    if (CexCacheSuperSet)
+      lookup = cache.findSuperset(key, NonNullAssignment());
+
     // Otherwise, look for a subset which is unsatisfiable, see below.
     if (!lookup) 
       lookup = cache.findSubset(key, NullAssignment());
@@ -151,7 +158,9 @@ bool CexCachingSolver::searchForAssignment(KeyType &key, Assignment *&result) {
 
     // Look for a satisfying assignment for a superset, which is trivially an
     // assignment for any subset.
-    Assignment **lookup = cache.findSuperset(key, NonNullAssignment());
+    Assignment **lookup = 0;
+    if (CexCacheSuperSet)
+      lookup = cache.findSuperset(key, NonNullAssignment());
 
     // Otherwise, look for a subset which is unsatisfiable -- if the subset is
     // unsatisfiable then no additional constraints can produce a valid
