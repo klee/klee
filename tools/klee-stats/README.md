@@ -5,6 +5,7 @@ klee-stats is a script to help interpret data outputted by klee. It is used with
 
 ##How to create a new config
 
+### 1. Add Input information about the output of KLEE 
 A specific configuration must have corresponding values in the Output and Labels sections. A configuration will be identified by the flags which will be used to run it during execution. For example, to create a configuration for relative time we would identify it by Reltime and its corresponding flag would be --print-reltime . 
 In the Labels section, the corresponding value is stored as identifier_labels. So for Reltime, it would be Reltime_labels. The value for this section is a tuple corresponding to the output that this configuration will produce. For Reltime we have the following ('Path', 'Time(s)', 'TUser(%)', 'TSolver(%)','Tcex(%)', 'Tfork(%)', 'TResolve(%)'). 
 In the output section
