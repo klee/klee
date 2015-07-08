@@ -203,27 +203,30 @@ def getRowConfig(record, stats, pr):
     AvgQC = int(QCon / max(1, QTot))
 
     try:
-        #groups must be in left handside 
+    #groups must be in left handside 
         global groups
-        equations = ConfigSectionMap("Calculation")[pr].split(', ')
+        equations = parse_list(ConfigSectionMap("Calculation")[pr])
         for equation in equations:
-            groupvar = equation.split(' ')[0]
+            #lstrip to remove potential whitespace issues
+            groupvar = (equation.split(' ')[0]).lstrip(" ")
             gsplit = groupvar.split('-')
 
             if len(gsplit) == 1 or gsplit[1] not in groups:
                 if gsplit[0][0] == '@':
                     #Import equations from other categories
                     category = gsplit[0][1:]
-                    equations.extend(ConfigSectionMap("Calculation")[category].split(', '))
+                    equations.extend(parse_list(ConfigSectionMap("Calculation")[category]))
                 else:
                     exec(equation)
             else:
                 group = gsplit[1]
+                #TODO: Make replace more robust
                 for var in groups[group]:
                     subeq = equation.replace("-","_").replace(group, var)
                     exec(subeq)
     except:
        print("Error in calculation parsing or evaluating")
+       sys.exit(1)
 
 
     if pr == 'NONE':
@@ -350,7 +353,14 @@ def parse_groups():
     global groups
     options = Config.options("Groups")
     for option in options:
-        groups[option] = ConfigSectionMap("Groups")[option].split(", ")
+        groups[option] = parse_list(ConfigSectionMap("Groups")[option])
+
+def parse_list(input):
+    values = input.split(", ")
+    for i, value in enumerate(values):
+        values[i] = value.lstrip(' ')
+    return values
+
 
 def parse_config():
     global version

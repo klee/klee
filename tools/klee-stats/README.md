@@ -37,10 +37,10 @@ This group in the calculation section can be used to apply a mapping onto the va
 
  rel-time = 100 * time / Treal
 
-This expands into rel_T = 100 * T / Treal, rel_Ts = 100 * Ts / Treal, and so on. Note that this is done using replace on a string in python, and therefore can cause some unexpected renaming. The dash is used to delimit the group name in the variable name and is not legal python syntax and is therefore changed into underscores after expanding.
+This expands into **rel_T = 100 * T / Treal, rel_Ts** = 100 * Ts / Treal, and so on. Note that this is done using replace on a string in python, and therefore can cause some unexpected renaming. The dash is used to delimit the group name in the variable name and is not legal python syntax and is therefore changed into underscores after expanding.
 
 ###Calculation
-This section contains the calculations performed by klee-stats. The calculations are stored as key value pairs where the values are a list of equations using the variables defined in the input as well as newly defined variables within the equations. Entries can be referred to by other entries using the notation @key. For example, in the defualt config file, there is a key _cov_ with the value _cov = 100 * SCov / (SCov + SUnc), bcov = 100 * (2 * BFull + BPart) / (2 * BTot), icount = SCov + SUnc_. This is used by both the _All_ and _More_ key by having @cov in their list of equations. Furthermore an equation can be a mapping onto a group. To read more about this, look at the group section.
+This section contains the calculations performed by klee-stats. The calculations are stored as key value pairs where the values are a list of equations using the variables defined in the input as well as newly defined variables within the equations. Entries can be referred to by other entries using the notation @key. For example, in the defualt config file, there is a key **cov** with the value **cov = 100 * SCov / (SCov + SUnc), bcov = 100 * (2 * BFull + BPart) / (2 * BTot), icount = SCov + SUnc**. This is used by both the _All_ and _More_ key by having @cov in their list of equations. Furthermore an equation can be a mapping onto a group. To read more about this, look at the group section.
 
 ###Output
 This section specifies the data that appears in the outputted rows. The row is specified as a tuble containing variables. The variables referenced in this section can be derived variables from the calculation section or the raw inputs themselves.
