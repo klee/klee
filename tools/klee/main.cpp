@@ -72,6 +72,11 @@ namespace {
   InputFile(cl::desc("<input bytecode>"), cl::Positional, cl::init("-"));
 
   cl::opt<std::string>
+  EntryPoint("entry-point",
+               cl::desc("Consider the function with the given name as the entrypoint"),
+               cl::init("main"));
+
+  cl::opt<std::string>
   RunInDir("run-in", cl::desc("Change to the given directory prior to executing"));
 
   cl::opt<std::string>
@@ -647,7 +652,7 @@ static int initEnv(Module *mainModule) {
     oldArgv->replaceAllUsesWith(nArgv)
   */
 
-  Function *mainFn = mainModule->getFunction("main");
+  Function *mainFn = mainModule->getFunction(EntryPoint);
 
   if (mainFn->arg_size() < 2) {
     klee_error("Cannot handle ""--posix-runtime"" when main() has less than two arguments.\n");
@@ -1095,7 +1100,7 @@ static llvm::Module *linkWithUclibc(llvm::Module *mainModule, StringRef libDir) 
   // also an implicit cooperation in that runFunctionAsMain sets up
   // the environment arguments to what uclibc expects (following
   // argv), since it does not explicitly take an envp argument.
-  Function *userMainFn = mainModule->getFunction("main");
+  Function *userMainFn = mainModule->getFunction(EntryPoint);
   assert(userMainFn && "unable to get user main");
   Function *uclibcMainFn = mainModule->getFunction("__uClibc_main");
   assert(uclibcMainFn && "unable to get uclibc main");
@@ -1109,7 +1114,7 @@ static llvm::Module *linkWithUclibc(llvm::Module *mainModule, StringRef libDir) 
   fArgs.push_back(ft->getParamType(2)); // argv
   Function *stub = Function::Create(FunctionType::get(Type::getInt32Ty(getGlobalContext()), fArgs, false),
                                     GlobalVariable::ExternalLinkage,
-                                    "main",
+                                    EntryPoint,
                                     mainModule);
   BasicBlock *bb = BasicBlock::Create(getGlobalContext(), "entry", stub);
 
@@ -1300,9 +1305,9 @@ int main(int argc, char **argv, char **envp) {
 
   // Get the desired main function.  klee_main initializes uClibc
   // locale and other data and then calls main.
-  Function *mainFn = mainModule->getFunction("main");
+  Function *mainFn = mainModule->getFunction(EntryPoint);
   if (!mainFn) {
-    llvm::errs() << "'main' function not found in module.\n";
+    llvm::errs() << "'" << EntryPoint << "' function not found in module.\n";
     return -1;
   }
 
