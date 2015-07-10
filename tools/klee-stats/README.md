@@ -8,7 +8,13 @@ To use a custom config file, it must be named override.config and must be in the
 #How to create a new config
 
 ### 1. Add Input information about the output of KLEE 
-The first thing the config file must have is information about the input provided by Klee. This requires that we add in a **Record** field and a **Stats** field under out Input header. The corresponding section for the current output of Klee and the one we will be using is as follows: 
+First thing we need to do is add the version information for this config file. Currently the version is .1 so we must add this under the Info header under the **Version** field, as follows: 
+```
+[Info]
+Version: .1
+```
+
+The next thing the config file must have is information about the input provided by Klee. This requires that we add in a **Record** field and a **Stats** field under out Input header. The corresponding section for the current output of Klee and the one we will be using is as follows: 
 
 ```
 [Input]  
@@ -16,15 +22,19 @@ Record: I, BFull, BPart, BTot, T, St, Mem, QTot, QCon,\
         _, Treal, SCov, SUnc, _, Ts, Tcex, Tf, Tr
 Stats: maxMem, avgMem, maxStates, avgStates
 ```
+We should also add the version of klee-stats currently being run. This need
 
 ### 2. Add Output Labels
 
 A specific configuration must have corresponding values in the Output and Labels headers. A configuration will be identified by the flags which will be used to run it during execution. 
 For example, to create a configuration for relative times we will identify it by Reltime and its corresponding flag will be `--print-reltime`. This identifier will be used as the field value in many headers.
 In the Labels header, the corresponding value is stored as identifier`_labels`. So for Reltime, it would be **Reltime_labels**. The value for this section is a tuple corresponding to the output labels that this configuration will produce. These labels appear at the top of the table outputted by klee-stats. The following Labels section for Reltime is as follows:
-`[Labels]
+
+```
+[Labels]
 Reltime_labels: ('Path', 'Time(s)', 'TUser(%)', 'TSolver(%)',
-                  'Tcex(%)', 'Tfork(%)', 'TResolve(%)')`
+                  'Tcex(%)', 'Tfork(%)', 'TResolve(%)')
+```
 
 ### 3. Add Calculation Information (including groups)
 
