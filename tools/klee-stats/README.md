@@ -1,7 +1,10 @@
 #KLEE-Stats
-=============================
+- - - -
+
 ##Info
 klee-stats is a script to help interpret data outputted by klee. It is used with a corresponding config file and heavily uses Python's eval and exec capabilities. The config file follows the Windows INI structure however in the key-value pairs, the values are stored as segments of Python code.
+
+To use a custom config file, it must be named override.config and must be in the current working directory from where klee-stats was run.
 
 ##How to create a new config
 
@@ -65,31 +68,38 @@ Reltime: Print only values of measured times. Values are relative to the measure
 ##Config File
 
 
-Note: The values in the following sections are expected to be lists seperated with ', ': Groups and Calculation
+Note: The values in the following sections are expected to be lists seperated with ', ': Groups and Calculations
 Key Value pairs in the config file are stored as 
 
+```
 key: value 
+```
 
-in each of the sections of the config file.
+in each of the headers/sections of the config file.
 
 ###Info
-This section is used by the klee-stats script to store version information.
+This header is used by the klee-stats script to store version information.
+
 ##Input
 This is where the format of the input data is defined. In this section there must be a defintion for Record. In the default config, the definitino for Record is as follows
-
+```
 Record: I, BFull, BPart, BTot, T, St, Mem, QTot, QCon,\
         _, Treal, SCov, SUnc, _, Ts, Tcex, Tf, Tr
+```
 
 Which is meant to match the pattern of the CSVs in the run.stats file. This is also where the variables used in the Calculations section are defined.
 
 ###Groups
 This section can be used to define a group of variables which can be used in the calculation section. In the defualt config file there is a group definition as follows:
-
+```
 time: T, Ts, Tcex, Tf, Tr
+```
 
 This group in the calculation section can be used to apply a mapping onto the values in the group For example in the default config there is the following line:
 
+```
  rel-time = 100 * time / Treal
+```
 
 This expands into **rel_T = 100 * T / Treal, rel_Ts = 100 * Ts / Treal**, and so on. Note that this is done using replace on a string in python, and therefore can cause some unexpected renaming. The dash is used to delimit the group name in the variable name and is not legal python syntax and is therefore changed into underscores after expanding.
 
