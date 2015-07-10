@@ -5,6 +5,13 @@ klee-stats is a script to help interpret data outputted by klee. It is used with
 
 To use a custom config file, it must be named override.config and must be in the current working directory from where klee-stats was run.
 
+##Prerequisites
+As this script uses python, python must be installed. Furthermore, it uses the tabulate library therefore it depends on tabulate being installed. This can be done by installing tabulate from the pip manager, as the root user. The following line should install tabulate if tabulate is not installed:
+
+```
+sudo pip install tabulate
+```
+
 #How to create a new config
 
 ### 1. Add Input information about the output of KLEE 
