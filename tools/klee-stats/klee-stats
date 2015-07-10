@@ -366,13 +366,11 @@ def parse_config():
     global version
 
     if(open_config()):
-        print(ConfigSectionMap("Info")['version'])
         version = eval(ConfigSectionMap("Info")['version'])
         parse_groups();
 
         #versioned
     else:
-        print("version: <.1")
         version = None
         #preversion
 
