@@ -157,7 +157,7 @@ def getLabelsConfig(pr):
         return ('Path', 'Instrs', 'Time(s)', 'ICov(%)',
                   'BCov(%)', 'ICount', 'TSolver(%)')
     else:
-        str = "labels = " + ConfigSectionMap("Labels")[pr+"_labels"]    
+        str = "labels = " + ConfigSectionMap("Labels", pr+"_labels")   
         exec(str)
         return labels
 
@@ -190,10 +190,10 @@ def getRow(record, stats, pr):
         return getRowConfig(record, stats, pr)
 
 def getRowConfig(record, stats, pr):
-    recordstr = ConfigSectionMap("Input")['record'] + " = record"    
+    recordstr = ConfigSectionMap("Input", 'record') + " = record"    
     exec(recordstr)
 
-    statstr = ConfigSectionMap("Input")['stats'] + " = stats"
+    statstr = ConfigSectionMap("Input", 'stats') + " = stats"
     exec(statstr)
 
     if BTot == 0:
@@ -201,9 +201,6 @@ def getRowConfig(record, stats, pr):
 
     Mem = Mem / 1024 / 1024
     AvgQC = int(QCon / max(1, QTot))
-
-    
-
 
     if pr == 'NONE':
         return (I, Treal, 100 * SCov / (SCov + SUnc),
@@ -213,7 +210,7 @@ def getRowConfig(record, stats, pr):
         try:
         #groups must be in left handside 
             global groups
-            equations = parse_list(ConfigSectionMap("Calculations")[pr])
+            equations = parse_list(ConfigSectionMap("Calculations", pr))
             for equation in equations:
                 #lstrip to remove potential whitespace issues
                 groupvar = (equation.split(' ')[0]).lstrip(" ")
@@ -223,7 +220,7 @@ def getRowConfig(record, stats, pr):
                     if gsplit[0][0] == '@':
                         #Import equations from other categories
                         category = gsplit[0][1:]
-                        equations.extend(parse_list(ConfigSectionMap("Calculations")[category]))
+                        equations.extend(parse_list(ConfigSectionMap("Calculations", category)))
                     else:
                         exec(equation)
                 else:
@@ -233,10 +230,10 @@ def getRowConfig(record, stats, pr):
                         subeq = equation.replace("-","_").replace(group, var)
                         exec(subeq)
         except:
-            print("Error in calculation parsing or evaluating, please check config file")
+            print("Error in calculation parsing or evaluating, please check contents of config file")
             sys.exit(1)
         
-        return eval(ConfigSectionMap("Output")[pr])
+        return eval(ConfigSectionMap("Output", pr))
 
 def getRowPreV(record, stats, pr):
     """Compose data for the current run into a row."""
@@ -338,37 +335,33 @@ def open_config():
         print("Unable to read config file")
         return False
 
-def ConfigSectionMap(section):
-    dict1 = {}
-    options = Config.options(section)
-    for option in options:
-        try:
-            dict1[option] = Config.get(section, option)
-            if dict1[option] == -1:
-                DebugPrint("skip: %s" % option)
-        except:
-            print("exception on %s!" % option)
-            dict1[option] = None
-    return dict1
+def ConfigSectionMap(section, option):
+    if Config.has_option(section, option):
+        return Config.get(section, option)
+    else:
+        return None
 
 def parse_groups():
     global groups
     options = Config.options("Groups")
     for option in options:
-        groups[option] = parse_list(ConfigSectionMap("Groups")[option])
+        groups[option] = parse_list(ConfigSectionMap("Groups", option))
 
 def parse_list(input):
-    values = input.split(", ")
-    for i, value in enumerate(values):
-        values[i] = value.lstrip(' ')
-    return values
+    if input is not None:
+        values = input.split(", ")
+        for i, value in enumerate(values):
+            values[i] = value.lstrip(' ')
+        return values
+    else:
+        return []
 
 
 def parse_config():
     global version
 
     if(open_config()):
-        version = eval(ConfigSectionMap("Info")['version'])
+        version = eval(ConfigSectionMap("Info", 'version'))
         parse_groups();
 
         #versioned
@@ -402,7 +395,7 @@ def parse_control_args(pControl):
         #
         for option in Config.options("Output"):
             if Config.has_option("Help", option):
-                help = ConfigSectionMap("Help")[option]
+                help = ConfigSectionMap("Help", option)
             else:
                 help = "No help information provided"
             start = "'--print-%s', action='store_true', dest='p%s', help='%s'" % (option, option.capitalize(), help)
