@@ -1,12 +1,11 @@
 #KLEE-Stats
-- - - -
 
 ##Info
 klee-stats is a script to help interpret data outputted by klee. It is used with a corresponding config file and heavily uses Python's eval and exec capabilities. The config file follows the Windows INI structure however in the key-value pairs, the values are stored as segments of Python code.
 
 To use a custom config file, it must be named override.config and must be in the current working directory from where klee-stats was run.
 
-##How to create a new config
+#How to create a new config
 
 ### 1. Add Input information about the output of KLEE 
 The first thing the config file must have is information about the input provided by Klee. This requires that we add in a **Record** field and a **Stats** field under out Input header. The corresponding section for the current output of Klee and the one we will be using is as follows: 
@@ -65,7 +64,7 @@ It is possible to add help information to appear during klee-stats after it has 
 Reltime: Print only values of measured times. Values are relative to the measured system execution time.
 ```
 
-##Config File
+#Config File
 
 
 Note: The values in the following sections are expected to be lists seperated with ', ': Groups and Calculations
