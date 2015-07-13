@@ -198,18 +198,18 @@ def getRowConfig(record, stats, pr):
     Mem = Mem / 1024 / 1024
     AvgQC = int(QCon / max(1, QTot))
 
-    try:
-    #groups must be in left handside 
-        global groups
-        equations = []
-        if Config.has_option("Calculations", pr):
-            equations = parse_list(ConfigSectionMap("Calculations", pr))
-        
-        for i, equation in enumerate(equations):
-            #lstrip to remove potential whitespace issues
-            groupvar = (equation.split(' ')[0]).lstrip(" ")
-            gsplit = groupvar.split('-')
+    #groups must be in left hand side of assignment
+    global groups
+    equations = []
+    if Config.has_option("Calculations", pr):
+        equations = parse_list(ConfigSectionMap("Calculations", pr))
+    
+    for i, equation in enumerate(equations):
+        #lstrip to remove potential whitespace issues
+        groupvar = (equation.split(' ')[0]).lstrip(" ")
+        gsplit = groupvar.split('-')
 
+        try:
             if len(gsplit) == 1 or gsplit[1] not in groups:
                 if gsplit[0][0] == '@':
                     #Import equations from other categories
@@ -225,10 +225,12 @@ def getRowConfig(record, stats, pr):
                 for var in groups[group]:
                     subeq = equation.replace("-","_").replace(group, var)
                     exec(subeq)
-    except:
-        print("Error in calculation parsing or evaluating, please check contents of config file")
-        sys.exit(1)
+        except:
+            print("Error in calculation parsing for '%s', please check contents of config file" % pr)
+            print("Occurred on equation %s" % equation)
+            sys.exit(1)
     
+    #return formatted output tuble from config
     return eval(ConfigSectionMap("Output", pr))
 
 def getRowPreV(record, stats, pr):
