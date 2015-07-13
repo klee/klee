@@ -236,7 +236,7 @@ def getRowConfig(record, stats, pr):
                     subeq = equation.replace("-","_").replace(group, var)
                     exec(subeq)
         except:
-            print("Error in calculation parsing for '%s', please check contents of config file" % pr)
+            print("Error in calculation for '%s', please check contents of config file" % pr)
             print("Occurred on equation %s" % equation)
             sys.exit(1)
     
