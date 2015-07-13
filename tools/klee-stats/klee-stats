@@ -433,11 +433,13 @@ def get_print_controls(args):
     return pr
         
 def processVersions(versions):
+    print(versions)
     v = None
     for version in versions:
         if isinstance(version, tuple):
             #Changing preversioned to be compatible
-            version = 1
+            print("Adjust")
+            #version = 1
 
         if isinstance(version, int):
             if v is None:
@@ -536,7 +538,7 @@ def main():
     data = [LazyEvalList(list(open(getLogFile(d)))) for d in dirs]
 
     #Version list/configuration
-    dataVs = processVersions([eval(list(open(getLogFile(dirs[0])))[0]) for d in dirs])
+    dataVs = processVersions([eval(list(open(getLogFile(d)))[0]) for d in dirs])
 
     if len(data) > 1:
         dirs = stripCommonPathPrefix(dirs)
