@@ -188,11 +188,25 @@ static void CleanUpLinkBCA(std::vector<Module*> &archiveModules)
 }
 
 #if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
+static void archiveGetAsBinary(object::Archive::child_iterator AI,
+                               OwningPtr<object::Binary> &child,
+                               error_code &ec) {
+  ec = AI->getAsBinary(child);
+}
+
 static void archiveGetName(object::Archive::child_iterator AI, StringRef &res,
                            error_code &ec) {
   ec = AI->getName(res);
 }
 #else
+static void archiveGetAsBinary(object::Archive::child_iterator AI,
+                               std::unique_ptr<object::Binary> &child,
+                               std::error_code &ec) {
+  auto childErr = AI->getAsBinary();
+  ec = childErr.getError();
+  child = ec ? nullptr : std::move(childErr.get());
+}
+
 static void archiveGetName(object::Archive::child_iterator AI, StringRef &res,
                            std::error_code &ec) {
   auto resErr = AI->getName();
@@ -240,8 +254,10 @@ static bool linkBCA(object::Archive* archive, Module* composite, std::string& er
   {
 
 #if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
+    OwningPtr<object::Binary> child;
     error_code ec;
 #else
+    std::unique_ptr<object::Binary> child;
     std::error_code ec;
 #endif
     StringRef memberName;
@@ -256,10 +272,8 @@ static bool linkBCA(object::Archive* archive, Module* composite, std::string& er
       return false;
     }
 
-    OwningPtr<object::Binary> child;
-    ec = AI->getAsBinary(child);
-    if (ec != object::object_error::success)
-    {
+    archiveGetAsBinary(AI, child, ec);
+    if (ec) {
       // If we can't open as a binary object file its hopefully a bitcode file
 
       OwningPtr<MemoryBuffer> buff; // Once this is destroyed will Module still be valid??
