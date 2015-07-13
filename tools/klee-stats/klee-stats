@@ -441,13 +441,12 @@ def processVersions(versions):
             #Changing preversioned to be compatible
             versions[i] = 1
 
-        if isinstance(versions[i], int):
-            if v is None:
-                v = versions[i]
-            else:
-                if v != versions[i]:
-                    print("ERROR: Klee output files are inconsistent: %s and %s" % (v, versions[i]))
-                    sys.exit(1)
+        if v is None:
+            v = versions[i]
+        else:
+            if v != versions[i]:
+                print("ERROR: Klee output files are inconsistent: %s and %s" % (v, versions[i]))
+                sys.exit(1)
 
     if v != version:
         print("ERROR: Klee output files and config are inconsistent: %s and %s" % (v, version))
