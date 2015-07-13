@@ -369,6 +369,11 @@ void StatsTracker::markBranchVisited(ExecutionState *visitedTrue,
 }
 
 void StatsTracker::writeStatsHeader() {
+  //Adding Stats versioning
+  int version = 1;
+
+  *statsFile << version << "\n";
+
   *statsFile << "('Instructions',"
              << "'FullBranches',"
              << "'PartialBranches',"
