@@ -196,11 +196,19 @@ def getRow(record, stats, pr):
         return getRowConfig(record, stats, pr)
 
 def getRowConfig(record, stats, pr):
-    recordstr = ConfigSectionMap("Input", 'record') + " = record"    
-    exec(recordstr)
+    recordstr = ConfigSectionMap("Input", 'record') + " = record"  
+    try:  
+        exec(recordstr)
+    except:
+        print("ERROR: Check '%s' in section '%s'" % ("Input", 'record'))
+        sys.exit(1)
 
     statstr = ConfigSectionMap("Input", 'stats') + " = stats"
-    exec(statstr)
+    try:  
+        exec(statstr)
+    except:
+        print("ERROR: Check '%s' in section '%s'" % ("Input", 'stats'))
+        sys.exit(1)
 
     if BTot == 0:
         BFull = BTot = 1
@@ -401,7 +409,7 @@ def parse_control_args(pControl):
                               help='Print extra information (needed when '
                               'monitoring an ongoing run).')
     else:
-        #
+        #Dynamic command line option generator
         for option in Config.options("Output"):
             if Config.has_option("Help", option):
                 help = ConfigSectionMap("Help", option)
