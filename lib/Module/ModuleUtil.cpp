@@ -188,6 +188,7 @@ static void CleanUpLinkBCA(std::vector<Module*> &archiveModules)
 }
 
 #if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
+#define get_ptr(ptr) ((ptr).take())
 static void archiveGetAsBinary(object::Archive::child_iterator AI,
                                OwningPtr<object::Binary> &child,
                                error_code &ec) {
@@ -214,7 +215,14 @@ static void memoryBufferGetFile(const std::string libraryName,
                                 OwningPtr<MemoryBuffer> &res, error_code &ec) {
   ec = MemoryBuffer::getFile(libraryName, res);
 }
+
+static void objectCreateBinary(MemoryBuffer *buff,
+                               OwningPtr<object::Binary> &arch,
+                               error_code &ec) {
+  ec = object::createBinary(buff, arch);
+}
 #else
+#define get_ptr(ptr) (std::move(ptr))
 static void archiveGetAsBinary(object::Archive::child_iterator AI,
                                std::unique_ptr<object::Binary> &child,
                                std::error_code &ec) {
@@ -252,6 +260,14 @@ static void memoryBufferGetFile(const std::string libraryName,
   auto resErr = MemoryBuffer::getFile(libraryName);
   ec = resErr.getError();
   res = ec ? nullptr : std::move(resErr.get());
+}
+
+static void objectCreateBinary(std::unique_ptr<MemoryBuffer> buff,
+                               std::unique_ptr<object::Binary> &res,
+                               std::error_code &ec) {
+  auto resErr = object::createBinary(std::move(buff));
+  ec = resErr.getError();
+  res = ec ? nullptr : std::unique_ptr<object::Binary>(resErr.get());
 }
 #endif
 
@@ -345,7 +361,6 @@ static bool linkBCA(object::Archive* archive, Module* composite, std::string& er
         errorMessage="Buffer was NULL!";
         return false;
       }
-
     }
     else if (object::ObjectFile *o = dyn_cast<object::ObjectFile>(child.get()))
     {
@@ -360,7 +375,6 @@ static bool linkBCA(object::Archive* archive, Module* composite, std::string& er
       SS.flush();
       return false;
     }
-
   }
 
   KLEE_DEBUG_WITH_TYPE("klee_linker", dbgs() << "Loaded " << archiveModules.size() << " modules\n");
@@ -454,9 +468,11 @@ Module *klee::linkWithLibrary(Module *module,
 
 #if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
   OwningPtr<MemoryBuffer> Buffer;
+  OwningPtr<object::Binary> arch;
   error_code ec;
 #else
   std::unique_ptr<MemoryBuffer> Buffer;
+  std::unique_ptr<object::Binary> arch;
   std::error_code ec;
 #endif
 
@@ -465,7 +481,6 @@ Module *klee::linkWithLibrary(Module *module,
     klee_error("Link with library %s failed: %s", libraryName.c_str(),
         ec.message().c_str());
   }
-
   sys::fs::file_magic magic = sys::fs::identify_magic(Buffer->getBuffer());
 
   LLVMContext &Context = getGlobalContext();
@@ -480,8 +495,8 @@ Module *klee::linkWithLibrary(Module *module,
           ErrorMessage.c_str());
     delete Result;
   } else if (magic == sys::fs::file_magic::archive) {
-    OwningPtr<object::Binary> arch;
-    if (error_code ec = object::createBinary(Buffer.take(), arch))
+    objectCreateBinary(get_ptr(Buffer), arch, ec);
+    if (ec)
       klee_error("Link with library %s failed: %s", libraryName.c_str(),
           ec.message().c_str());
 
@@ -495,14 +510,10 @@ Module *klee::linkWithLibrary(Module *module,
       klee_error("Link with library %s failed: Cast to archive failed",
                  libraryName.c_str());
     }
-
   } else if (magic.is_object()) {
-    OwningPtr<object::Binary> obj;
-    if (object::ObjectFile *o = dyn_cast<object::ObjectFile>(obj.get())) {
-      klee_warning("Link with library: Object file %s in archive %s found. "
-                   "Currently not supported.",
-                   o->getFileName().data(), libraryName.c_str());
-    }
+    klee_warning("Link with library: Object file in archive %s found. "
+                 "Currently not supported.",
+                 libraryName.c_str());
   } else {
     klee_error("Link with library %s failed: Unrecognized file type.",
         libraryName.c_str());
