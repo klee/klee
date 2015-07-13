@@ -198,6 +198,12 @@ static void archiveGetName(object::Archive::child_iterator AI, StringRef &res,
                            error_code &ec) {
   ec = AI->getName(res);
 }
+
+static void archiveGetMemoryBuffer(object::Archive::child_iterator AI,
+                                   OwningPtr<MemoryBuffer> &buff,
+                                   error_code &ec) {
+  ec = AI->getMemoryBuffer(buff);
+}
 #else
 static void archiveGetAsBinary(object::Archive::child_iterator AI,
                                std::unique_ptr<object::Binary> &child,
@@ -212,6 +218,14 @@ static void archiveGetName(object::Archive::child_iterator AI, StringRef &res,
   auto resErr = AI->getName();
   ec = resErr.getError();
   res = ec ? nullptr : resErr.get();
+}
+
+static void archiveGetMemoryBuffer(object::Archive::child_iterator AI,
+                                   std::unique_ptr<MemoryBuffer> &buff,
+                                   std::error_code &ec) {
+  auto buffErr = AI->getMemoryBuffer();
+  ec = buffErr.getError();
+  buff = ec ? nullptr : std::move(buffErr.get());
 }
 #endif
 
@@ -255,9 +269,12 @@ static bool linkBCA(object::Archive* archive, Module* composite, std::string& er
 
 #if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
     OwningPtr<object::Binary> child;
+    OwningPtr<MemoryBuffer>
+        buff; // Once this is destroyed will Module still be valid??
     error_code ec;
 #else
     std::unique_ptr<object::Binary> child;
+    std::unique_ptr<MemoryBuffer> buff;
     std::error_code ec;
 #endif
     StringRef memberName;
@@ -276,12 +293,9 @@ static bool linkBCA(object::Archive* archive, Module* composite, std::string& er
     if (ec) {
       // If we can't open as a binary object file its hopefully a bitcode file
 
-      OwningPtr<MemoryBuffer> buff; // Once this is destroyed will Module still be valid??
-      Module *Result = 0;
-
-      if (error_code ec = AI->getMemoryBuffer(buff))
-      {
-        SS << "Failed to get MemoryBuffer: " <<ec.message();
+      archiveGetMemoryBuffer(AI, buff, ec);
+      if (ec) {
+        SS << "Failed to get MemoryBuffer: " << ec.message();
         SS.flush();
         return false;
       }
