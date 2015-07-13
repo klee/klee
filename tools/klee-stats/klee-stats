@@ -245,7 +245,7 @@ def getRowConfig(record, stats, pr):
                     exec(subeq)
         except:
             print("Error in calculation for '%s', please check contents of config file" % pr)
-            print("Occurred on equation %s" % equation)
+            print("Occurred on statement %s" % equation)
             sys.exit(1)
     
     #return formatted output tuble from config
