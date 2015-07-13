@@ -64,8 +64,18 @@ def getLogFile(path):
 class LazyEvalList:
     """Store all the lines in run.stats and eval() when needed."""
     def __init__(self, lines):
-        # The first line in the records contains headers.
-        self.lines = lines[1:]
+
+        firstLine = eval(lines[0])
+        if isinstance(firstLine, tuple):
+            #Preversioned, only remove one line
+            # The first line in the records contains headers.
+            self.lines = lines[1:]
+        else:
+            # The first line in the records contains version number
+            # The second line in the records contains headers.
+            self.lines = lines[2:]
+
+        
 
     def __getitem__(self, index):
         if isinstance(self.lines[index], str):
@@ -422,6 +432,22 @@ def get_print_controls(args):
                 pr = option
     return pr
         
+def processVersions(versions):
+    v = None
+    for version in versions:
+        if isinstance(version, tuple):
+            #Changing preversioned to be compatible
+            version = 1
+
+        if isinstance(version, int):
+            if v is None:
+                v = version
+            else:
+                if v != version:
+                    print("Klee output versions are different: %s and %s" % (v, version))
+                    sys.exit(1)
+    return versions
+
 
 
 def main():
@@ -508,6 +534,10 @@ def main():
         exit(1)
     # read contents from every run.stats file into LazyEvalList
     data = [LazyEvalList(list(open(getLogFile(d)))) for d in dirs]
+
+    #Version list/configuration
+    dataVs = processVersions([eval(list(open(getLogFile(dirs[0])))[0]) for d in dirs])
+
     if len(data) > 1:
         dirs = stripCommonPathPrefix(dirs)
     # attach the stripped path
