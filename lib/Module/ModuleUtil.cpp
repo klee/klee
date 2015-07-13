@@ -204,6 +204,10 @@ static void archiveGetMemoryBuffer(object::Archive::child_iterator AI,
                                    error_code &ec) {
   ec = AI->getMemoryBuffer(buff);
 }
+
+static void moduleParseBitCodeFile(MemoryBuffer *buff, Module *&res, std::string *err) {
+  res = ParseBitcodeFile(buff, getGlobalContext(), err);
+}
 #else
 static void archiveGetAsBinary(object::Archive::child_iterator AI,
                                std::unique_ptr<object::Binary> &child,
@@ -226,6 +230,13 @@ static void archiveGetMemoryBuffer(object::Archive::child_iterator AI,
   auto buffErr = AI->getMemoryBuffer();
   ec = buffErr.getError();
   buff = ec ? nullptr : std::move(buffErr.get());
+}
+
+static void moduleParseBitCodeFile(MemoryBuffer *buff, Module *&res, std::string *err) {
+  auto resErr = parseBitcodeFile(buff, getGlobalContext());
+  auto ec = resErr.getError();
+  res = ec ? nullptr : resErr.get();
+  *err = ec ? ec.message() : "";
 }
 #endif
 
@@ -303,8 +314,9 @@ static bool linkBCA(object::Archive* archive, Module* composite, std::string& er
       if (buff)
       {
         // FIXME: Maybe load bitcode file lazily? Then if we need to link, materialise the module
-        Result = ParseBitcodeFile(buff.get(), getGlobalContext(), &errorMessage);
-
+        Module *Result;
+        moduleParseBitCodeFile(buff.get(), Result,
+                               &errorMessage);
         if(!Result)
         {
           SS << "Loading module failed : " << errorMessage << "\n";
