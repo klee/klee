@@ -205,8 +205,9 @@ static void archiveGetMemoryBuffer(object::Archive::child_iterator AI,
   ec = AI->getMemoryBuffer(buff);
 }
 
-static void moduleParseBitCodeFile(MemoryBuffer *buff, Module *&res, std::string *err) {
-  res = ParseBitcodeFile(buff, getGlobalContext(), err);
+static void moduleParseBitCodeFile(MemoryBuffer *buff, Module *&res,
+                                   LLVMContext &ctx, std::string *err) {
+  res = ParseBitcodeFile(buff, ctx, err);
 }
 
 static void memoryBufferGetFile(const std::string libraryName,
@@ -237,8 +238,9 @@ static void archiveGetMemoryBuffer(object::Archive::child_iterator AI,
   buff = ec ? nullptr : std::move(buffErr.get());
 }
 
-static void moduleParseBitCodeFile(MemoryBuffer *buff, Module *&res, std::string *err) {
-  auto resErr = parseBitcodeFile(buff, getGlobalContext());
+static void moduleParseBitCodeFile(MemoryBuffer *buff, Module *&res,
+                                   LLVMContext &ctx, std::string *err) {
+  auto resErr = parseBitcodeFile(buff, ctx);
   auto ec = resErr.getError();
   res = ec ? nullptr : resErr.get();
   *err = ec ? ec.message() : "";
@@ -328,7 +330,7 @@ static bool linkBCA(object::Archive* archive, Module* composite, std::string& er
       {
         // FIXME: Maybe load bitcode file lazily? Then if we need to link, materialise the module
         Module *Result;
-        moduleParseBitCodeFile(buff.get(), Result,
+        moduleParseBitCodeFile(buff.get(), Result, getGlobalContext(),
                                &errorMessage);
         if(!Result)
         {
@@ -471,16 +473,12 @@ Module *klee::linkWithLibrary(Module *module,
 
   if (magic == sys::fs::file_magic::bitcode) {
     Module *Result = 0;
-    Result = ParseBitcodeFile(Buffer.get(), Context, &ErrorMessage);
-
-
+    moduleParseBitCodeFile(Buffer.get(), Result, Context, &ErrorMessage);
     if (!Result || Linker::LinkModules(module, Result, Linker::DestroySource,
         &ErrorMessage))
       klee_error("Link with library %s failed: %s", libraryName.c_str(),
           ErrorMessage.c_str());
-
     delete Result;
-
   } else if (magic == sys::fs::file_magic::archive) {
     OwningPtr<object::Binary> arch;
     if (error_code ec = object::createBinary(Buffer.take(), arch))
