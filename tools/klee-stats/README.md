@@ -15,10 +15,10 @@ sudo pip install tabulate
 #How to create a new config
 
 ### 1. Add Input information about the output of KLEE 
-First thing we need to do is add the version information for this config file. Currently the version is .1 so we must add this under the Info header under the **Version** field, as follows: 
+First thing we need to do is add the version information for this config file. Currently the KLEE output version is 1 so we must add this under the Info header under the **Version** field, as follows: 
 ```
 [Info]
-Version: .1
+Version: 1
 ```
 
 The next thing the config file must have is information about the input provided by Klee. This requires that we add in a **Record** field and a **Stats** field under out Input header. The corresponding section for the current output of Klee and the one we will be using is as follows: 
@@ -130,3 +130,6 @@ This section contains the corresponding text label for a value. The value in thi
 
 ###Help
 This section defines what appears in the help menu when klee-stats is run with this config file.
+
+###Default
+When no flags are given to klee-stats, the defaults are assumed. These are denoted in the config sections using the default field.
