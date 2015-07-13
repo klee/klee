@@ -208,6 +208,11 @@ static void archiveGetMemoryBuffer(object::Archive::child_iterator AI,
 static void moduleParseBitCodeFile(MemoryBuffer *buff, Module *&res, std::string *err) {
   res = ParseBitcodeFile(buff, getGlobalContext(), err);
 }
+
+static void memoryBufferGetFile(const std::string libraryName,
+                                OwningPtr<MemoryBuffer> &res, error_code &ec) {
+  ec = MemoryBuffer::getFile(libraryName, res);
+}
 #else
 static void archiveGetAsBinary(object::Archive::child_iterator AI,
                                std::unique_ptr<object::Binary> &child,
@@ -237,6 +242,14 @@ static void moduleParseBitCodeFile(MemoryBuffer *buff, Module *&res, std::string
   auto ec = resErr.getError();
   res = ec ? nullptr : resErr.get();
   *err = ec ? ec.message() : "";
+}
+
+static void memoryBufferGetFile(const std::string libraryName,
+                                std::unique_ptr<MemoryBuffer> &res,
+                                std::error_code &ec) {
+  auto resErr = MemoryBuffer::getFile(libraryName);
+  ec = resErr.getError();
+  res = ec ? nullptr : std::move(resErr.get());
 }
 #endif
 
@@ -437,8 +450,16 @@ Module *klee::linkWithLibrary(Module *module,
         libraryName.c_str());
   }
 
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
   OwningPtr<MemoryBuffer> Buffer;
-  if (error_code ec = MemoryBuffer::getFile(libraryName,Buffer)) {
+  error_code ec;
+#else
+  std::unique_ptr<MemoryBuffer> Buffer;
+  std::error_code ec;
+#endif
+
+  memoryBufferGetFile(libraryName, Buffer, ec);
+  if (ec) {
     klee_error("Link with library %s failed: %s", libraryName.c_str(),
         ec.message().c_str());
   }
