@@ -5,6 +5,9 @@ set -e
 # Calculate LLVM branch name to retrieve missing files from
 SVN_BRANCH="release_$( echo ${LLVM_VERSION} | sed 's/\.//g')"
 
+# Install libedit-dev dependency to fix LLVM 3.5 build
+sudo apt-get install libedit-dev
+
 ###############################################################################
 # Select the compiler to use to generate LLVM bitcode
 ###############################################################################
