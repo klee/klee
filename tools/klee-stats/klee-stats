@@ -157,20 +157,20 @@ def getKleeOutDirs(dirs):
 
 def getLabels(pr):
     #Interpreting the input description from config file
-    str = "labels = " + ConfigSectionMap("Labels", pr+"_labels")   
+    str = "labels = " + config_value("Labels", pr+"_labels")   
     exec(str)
     return labels
 
 def getRow(record, stats, pr):
     #Interprets input format from config file
-    recordstr = ConfigSectionMap("Input", 'record') + " = record"  
+    recordstr = config_value("Input", 'record') + " = record"  
     try:  
         exec(recordstr)
     except:
         print("ERROR: Check '%s' in section '%s'" % ("Input", 'record'))
         sys.exit(1)
 
-    statstr = ConfigSectionMap("Input", 'stats') + " = stats"
+    statstr = config_value("Input", 'stats') + " = stats"
     try:  
         exec(statstr)
     except:
@@ -187,7 +187,7 @@ def getRow(record, stats, pr):
     global groups
     equations = []
     if Config.has_option("Calculations", pr):
-        equations = parse_list(ConfigSectionMap("Calculations", pr))
+        equations = parse_list(config_value("Calculations", pr))
     
     for i, equation in enumerate(equations):
         #lstrip to remove potential whitespace issues
@@ -199,7 +199,7 @@ def getRow(record, stats, pr):
                 if gsplit[0][0] == '@':
                     #Import equations from other categories
                     category = gsplit[0][1:]
-                    importEqs = parse_list(ConfigSectionMap("Calculations", category))
+                    importEqs = parse_list(config_value("Calculations", category))
                     #Add equations after the current index, i.e. expand in place
                     equations[i+1:i+1] = importEqs
                 else:
@@ -216,7 +216,7 @@ def getRow(record, stats, pr):
             sys.exit(1)
     
     #return formatted output tuble from config
-    return eval(ConfigSectionMap("Output", pr))
+    return eval(config_value("Output", pr))
 
 def drawLineChart(vectors, titles):
     """Draw a line chart based on data from vectors.
@@ -281,7 +281,7 @@ def open_config():
         sys.exit(1)
         return False
 
-def ConfigSectionMap(section, option):
+def config_value(section, option):
     if Config.has_option(section, option):
         return Config.get(section, option)
     else:
@@ -292,7 +292,7 @@ def parse_groups():
     global groups
     options = Config.options("Groups")
     for option in options:
-        groups[option] = parse_list(ConfigSectionMap("Groups", option))
+        groups[option] = parse_list(config_value("Groups", option))
 
 def parse_list(input):
     if input is not None:
@@ -308,7 +308,7 @@ def parse_config():
     global version
 
     if(open_config()):
-        version = eval(ConfigSectionMap("Info", 'version'))
+        version = eval(config_value("Info", 'version'))
         parse_groups();
 
 
@@ -318,7 +318,7 @@ def parse_control_args(pControl):
     #Dynamic command line option generator
     for option in Config.options("Output"):
         if Config.has_option("Help", option):
-            help = ConfigSectionMap("Help", option)
+            help = config_value("Help", option)
         else:
             help = "No help information provided"
         start = "'--print-%s', action='store_true', dest='p%s', help='%s'" % (option, option.capitalize(), help)
