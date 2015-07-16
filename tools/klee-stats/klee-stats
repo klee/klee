@@ -154,48 +154,13 @@ def getKleeOutDirs(dirs):
                         kleeOutDirs.append(path)
     return kleeOutDirs
 
+
 def getLabels(pr):
-    global version
-
-    if version == None:
-        return getLabelsPreV(pr)
-    else:
-        return getLabelsConfig(pr)
-
-def getLabelsConfig(pr):
     str = "labels = " + ConfigSectionMap("Labels", pr+"_labels")   
     exec(str)
     return labels
 
-def getLabelsPreV(pr):
-    if pr == 'all':
-        labels = ('Path', 'Instrs', 'Time(s)', 'ICov(%)', 'BCov(%)', 'ICount',
-                  'TSolver(%)', 'States', 'maxStates', 'avgStates', 'Mem(MB)',
-                  'maxMem(MB)', 'avgMem(MB)', 'Queries', 'AvgQC', 'Tcex(%)',
-                  'Tfork(%)')
-    elif pr == 'reltime':
-        labels = ('Path', 'Time(s)', 'TUser(%)', 'TSolver(%)',
-                  'Tcex(%)', 'Tfork(%)', 'TResolve(%)')
-    elif pr == 'abstime':
-        labels = ('Path', 'Time(s)', 'TUser(s)', 'TSolver(s)',
-                  'Tcex(s)', 'Tfork(s)', 'TResolve(s)')
-    elif pr == 'more':
-        labels = ('Path', 'Instrs', 'Time(s)', 'ICov(%)', 'BCov(%)', 'ICount',
-                  'TSolver(%)', 'States', 'maxStates', 'Mem(MB)', 'maxMem(MB)')
-    else:
-        labels = ('Path', 'Instrs', 'Time(s)', 'ICov(%)',
-                  'BCov(%)', 'ICount', 'TSolver(%)')
-    return labels
-
 def getRow(record, stats, pr):
-    global version
-
-    if version == None:
-        return getRowPreV(record,stats, pr)
-    else:
-        return getRowConfig(record, stats, pr)
-
-def getRowConfig(record, stats, pr):
     recordstr = ConfigSectionMap("Input", 'record') + " = record"  
     try:  
         exec(recordstr)
@@ -250,44 +215,6 @@ def getRowConfig(record, stats, pr):
     
     #return formatted output tuble from config
     return eval(ConfigSectionMap("Output", pr))
-
-def getRowPreV(record, stats, pr):
-    """Compose data for the current run into a row."""
-    I, BFull, BPart, BTot, T, St, Mem, QTot, QCon,\
-        _, Treal, SCov, SUnc, _, Ts, Tcex, Tf, Tr = record
-    maxMem, avgMem, maxStates, avgStates = stats
-
-    # special case for straight-line code: report 100% branch coverage
-    if BTot == 0:
-        BFull = BTot = 1
-
-    Mem = Mem / 1024 / 1024
-    AvgQC = int(QCon / max(1, QTot))
-
-    if pr == 'all':
-        row = (I, Treal, 100 * SCov / (SCov + SUnc),
-               100 * (2 * BFull + BPart) / (2 * BTot), SCov + SUnc,
-               100 * Ts / Treal, St, maxStates, avgStates,
-               Mem, maxMem, avgMem, QTot, AvgQC,
-               100 * Tcex / Treal, 100 * Tf / Treal)
-    elif pr == 'reltime':
-        row = (Treal, 100 * T / Treal, 100 * Ts / Treal,
-               100 * Tcex / Treal, 100 * Tf / Treal,
-               100 * Tr / Treal)
-    elif pr == 'abstime':
-        row = (Treal, T, Ts, Tcex, Tf, Tr)
-    elif pr == 'more':
-        row = (I, Treal, 100 * SCov / (SCov + SUnc),
-               100 * (2 * BFull + BPart) / (2 * BTot),
-               SCov + SUnc, 100 * Ts / Treal,
-               St, maxStates, Mem, maxMem)
-    else:
-        row = (I, Treal, 100 * SCov / (SCov + SUnc),
-               100 * (2 * BFull + BPart) / (2 * BTot),
-               SCov + SUnc, 100 * Ts / Treal)
-
-    return row
-
 
 def drawLineChart(vectors, titles):
     """Draw a line chart based on data from vectors.
@@ -389,55 +316,24 @@ def parse_config():
 def parse_control_args(pControl):
     global version
     # argument group for controlling output verboseness
-    if version == None:
-        #Hardcoded parameters
-        print("HC")
-        pControl.add_argument('--print-all',
-                              action='store_true', dest='pAll',
-                              help='Print all available information.')
-        pControl.add_argument('--print-rel-times',
-                              action='store_true', dest='pRelTimes',
-                              help='Print only values of measured times. '
-                              'Values are relative to the measured system '
-                              'execution time.')
-        pControl.add_argument('--print-abs-times',
-                              action='store_true', dest='pAbsTimes',
-                              help='Print only values of measured times. '
-                              'Absolute values (in seconds) are printed.')
-        pControl.add_argument('--print-more',
-                              action='store_true', dest='pMore',
-                              help='Print extra information (needed when '
-                              'monitoring an ongoing run).')
-    else:
-        #Dynamic command line option generator
-        for option in Config.options("Output"):
-            if Config.has_option("Help", option):
-                help = ConfigSectionMap("Help", option)
-            else:
-                help = "No help information provided"
-            start = "'--print-%s', action='store_true', dest='p%s', help='%s'" % (option, option.capitalize(), help)
-            
-            line = "pControl.add_argument(%s)" % start
+    #Dynamic command line option generator
+    for option in Config.options("Output"):
+        if Config.has_option("Help", option):
+            help = ConfigSectionMap("Help", option)
+        else:
+            help = "No help information provided"
+        start = "'--print-%s', action='store_true', dest='p%s', help='%s'" % (option, option.capitalize(), help)
+        
+        line = "pControl.add_argument(%s)" % start
 
-            exec(line)
+        exec(line)
 
 def get_print_controls(args):
-    pr = 'NONE'
-    if version == None:
-        if args.pAll:
-            pr = 'all'
-        elif args.pRelTimes:
-            pr = 'reltime'
-        elif args.pAbsTimes:
-            pr = 'abstime'
-        elif args.pMore:
-            pr = 'more'
-    else:
-        pr = 'default'
-        for option in Config.options("Output"):
-            strargs = "args.p%s" % option.capitalize()
-            if eval(strargs):
-                pr = option
+    pr = 'default'
+    for option in Config.options("Output"):
+        strargs = "args.p%s" % option.capitalize()
+        if eval(strargs):
+            pr = option
     return pr
         
 def processVersions(versions):
@@ -461,7 +357,6 @@ def processVersions(versions):
         sys.exit(1)
 
     return versions
-
 
 
 def main():
