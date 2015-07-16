@@ -156,11 +156,13 @@ def getKleeOutDirs(dirs):
 
 
 def getLabels(pr):
+    #Interpreting the input description from config file
     str = "labels = " + ConfigSectionMap("Labels", pr+"_labels")   
     exec(str)
     return labels
 
 def getRow(record, stats, pr):
+    #Interprets input format from config file
     recordstr = ConfigSectionMap("Input", 'record') + " = record"  
     try:  
         exec(recordstr)
@@ -275,7 +277,8 @@ def open_config():
             #Default Config
             return Config.read(os.path.join(sys.path[0], "default.config"))
     except:
-        print("Unable to read config file")
+        print("Error: Unable to read config file")
+        sys.exit(1)
         return False
 
 def ConfigSectionMap(section, option):
@@ -308,10 +311,6 @@ def parse_config():
         version = eval(ConfigSectionMap("Info", 'version'))
         parse_groups();
 
-        #versioned
-    else:
-        version = None
-        #preversion
 
 def parse_control_args(pControl):
     global version
