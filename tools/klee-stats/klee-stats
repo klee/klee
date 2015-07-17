@@ -313,7 +313,6 @@ def parse_config():
 
 
 def parse_control_args(pControl):
-    global version
     # argument group for controlling output verboseness
     #Dynamic command line option generator
     for option in Config.options("Output"):

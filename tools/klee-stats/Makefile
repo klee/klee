@@ -9,6 +9,7 @@
 
 LEVEL = ../..
 
+CONFIGDIRNAME = stat-configs
 TOOLSCRIPTNAME := klee-stats
 TOOLCONFIGNAME := default.config
 
@@ -22,8 +23,9 @@ include $(LEVEL)/Makefile.common
 
 ToolBuildPath := $(ToolDir)/$(TOOLSCRIPTNAME)
 ConfigBuildPath := $(ToolDir)/$(TOOLCONFIGNAME)
+ConfigDirPath := $(ToolDir)/$(CONFIGDIRNAME)
 
-all-local:: $(ToolBuildPath) $(ConfigBuildPath)
+all-local:: $(ToolBuildPath) $(ConfigBuildPath) $(ConfigDirPath)
 
 $(ToolBuildPath): $(ToolDir)/.dir
 
@@ -34,6 +36,11 @@ $(ToolBuildPath): $(PROJ_SRC_DIR)/$(TOOLSCRIPTNAME)
 
 $(ConfigBuildPath): $(PROJ_SRC_DIR)/$(TOOLCONFIGNAME)
 	$(Verb) $(CP) -f $(PROJ_SRC_DIR)/$(TOOLCONFIGNAME) "$@"
+
+
+$(ConfigDirPath):
+	$(Echo) Copying config folder $(CONFIGDIRNAME)
+	rsync -rupE $(PROJ_SRC_DIR)/$(CONFIGDIRNAME) $(ToolDir)
 
 ifdef NO_INSTALL
 install-local::
