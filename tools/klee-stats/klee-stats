@@ -52,6 +52,11 @@ Config = ConfigParser.ConfigParser()
 #updated upon reading config
 global version
 version = None
+
+#config file location
+global ConfigFile
+ConfigFile = os.path.join(sys.path[0], "default.config")
+
 #hash for grouped variables
 global groups
 groups = {}
@@ -268,6 +273,8 @@ def drawLineChart(vectors, titles):
                 transparent=False)
 
 def open_config():
+    global ConfigFile
+
     try:
         #Overriding config file in current working directory
         if(Config.read(os.path.join(os.getcwd(), "override.config"))):
@@ -275,7 +282,7 @@ def open_config():
             return True
         else:
             #Default Config
-            return Config.read(os.path.join(sys.path[0], "default.config"))
+            return Config.read(ConfigFile)
     except:
         print("Error: Unable to read config file")
         sys.exit(1)
@@ -310,6 +317,10 @@ def parse_config():
     if(open_config()):
         version = eval(config_value("Info", 'version'))
         parse_groups();
+    else:
+        print("ERROR: Config file could not be opened")
+        print(ConfigFile)
+        sys.exit(1)
 
 
 def parse_control_args(pControl):
@@ -356,6 +367,17 @@ def processVersions(versions):
 
     return versions
 
+def preparse_cmdLine():
+    global ConfigFile
+
+    #Custom version input
+    v = eval(sys.argv[1])
+    if isinstance(v, int):
+        global ConfigFile
+        filePath = "stat-configs/version-%s.config" % v
+        ConfigFile = os.path.join(sys.path[0], filePath)
+        #Starting with specific config version
+
 
 def main():
     # function for sanitizing arguments
@@ -370,12 +392,17 @@ def main():
                 'positive integer expected: {0}'.format(value))
         return value
 
+    preparse_cmdLine()
+
     parse_config()
 
     parser = argparse.ArgumentParser(
         description='output statistics logged by klee',
         epilog='LEGEND\n' + tabulate(Legend),
         formatter_class=argparse.RawDescriptionHelpFormatter)
+
+    parser.add_argument('--version', dest='version', metavar='v',
+                        help='Specify the output version for config')
 
     parser.add_argument('dir', nargs='+', help='klee output directory')
 
@@ -432,6 +459,11 @@ def main():
                         'makes sense. Use in conjunction with --compare-by.')
 
     args = parser.parse_args()
+
+    if not args.version:
+        args.version = "None"
+
+    print("Version: " + args.version)
 
     pr = get_print_controls(args)
 
