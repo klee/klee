@@ -371,12 +371,29 @@ def preparse_cmdLine():
     global ConfigFile
 
     #Custom version input
-    v = eval(sys.argv[1])
-    if isinstance(v, int):
-        global ConfigFile
-        filePath = "stat-configs/version-%s.config" % v
-        ConfigFile = os.path.join(sys.path[0], filePath)
-        #Starting with specific config version
+    try:
+        v = eval(sys.argv[1])
+        if isinstance(v, int):
+            global ConfigFile
+            filePath = "stat-configs/version-%s.config" % v
+            #Starting with specific config version
+            ConfigFile = os.path.join(sys.path[0], filePath)
+    except SyntaxError:
+        pass
+
+def handle_version(version):
+    #Spawn new klee-stats with version specified
+
+    print("Handling Version")
+    flags = " "
+    for arg in sys.argv[1:]:
+        if "--version" not in arg:
+            flags += arg + " "
+
+    script = "klee-stats "
+    os.system(script + version + flags)
+    sys.exit(0)
+
 
 
 def main():
@@ -460,10 +477,8 @@ def main():
 
     args = parser.parse_args()
 
-    if not args.version:
-        args.version = "None"
-
-    print("Version: " + args.version)
+    if args.version:
+        handle_version(args.version)
 
     pr = get_print_controls(args)
 
