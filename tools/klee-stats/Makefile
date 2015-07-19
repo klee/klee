@@ -11,6 +11,7 @@ LEVEL = ../..
 
 CONFIGDIRNAME = stat-configs
 TOOLSCRIPTNAME := klee-stats
+TOOL2SCRIPTNAME := klee-istats
 TOOLCONFIGNAME := default.config
 
 # Hack to prevent install trying to strip
@@ -22,16 +23,23 @@ include $(LEVEL)/Makefile.common
 # FIXME: Move this stuff (to "build" a script) into Makefile.rules.
 
 ToolBuildPath := $(ToolDir)/$(TOOLSCRIPTNAME)
+Tool2BuildPath := $(ToolDir)/$(TOOL2SCRIPTNAME)
 ConfigBuildPath := $(ToolDir)/$(TOOLCONFIGNAME)
 ConfigDirPath := $(ToolDir)/$(CONFIGDIRNAME)
 
-all-local:: $(ToolBuildPath) $(ConfigBuildPath) $(ConfigDirPath)
+all-local:: $(ToolBuildPath) $(Tool2BuildPath) $(ConfigBuildPath) $(ConfigDirPath)
 
 $(ToolBuildPath): $(ToolDir)/.dir
+$(Tool2BuildPath): $(ToolDir)/.dir
 
 $(ToolBuildPath): $(PROJ_SRC_DIR)/$(TOOLSCRIPTNAME)
 	$(Echo) Copying $(BuildMode) script $(TOOLSCRIPTNAME)
 	$(Verb) $(CP) -f $(PROJ_SRC_DIR)/$(TOOLSCRIPTNAME) "$@"
+	$(Verb) chmod 0755 "$@"
+
+$(Tool2BuildPath): $(PROJ_SRC_DIR)/$(TOOL2SCRIPTNAME)
+	$(Echo) Copying $(BuildMode) script $(TOOL2SCRIPTNAME)
+	$(Verb) $(CP) -f $(PROJ_SRC_DIR)/$(TOOL2SCRIPTNAME) "$@"
 	$(Verb) chmod 0755 "$@"
 
 $(ConfigBuildPath): $(PROJ_SRC_DIR)/$(TOOLCONFIGNAME)
