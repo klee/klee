@@ -429,7 +429,9 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter)
 
     parser.add_argument('--version', dest='version', metavar='v',
-                        help='Specify the output version for config')
+                        help='Specify the output version for config'
+                        ' (if none is specified it will try to use '
+                        'the default or will automatically chose)')
 
     parser.add_argument('dir', nargs='+', help='klee output directory')
 
