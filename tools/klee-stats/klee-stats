@@ -49,13 +49,17 @@ KleeTable = TableFormat(lineabove=Line("-", "-", "-", "-"),
 
 #global config reader
 Config = ConfigParser.ConfigParser()
+#config file location
+global ConfigFile
+ConfigFile = os.path.join(sys.path[0], "default.config")
+
 #updated upon reading config
 global version
 version = None
 
-#config file location
-global ConfigFile
-ConfigFile = os.path.join(sys.path[0], "default.config")
+#for automatic version finding
+global autoVersion
+autoVersion = None
 
 #hash for grouped variables
 global groups
@@ -347,6 +351,7 @@ def get_print_controls(args):
         
 def processVersions(versions):
     global version
+    global autoVersion
 
     v = None
     for i, output_ver in enumerate(versions):
@@ -361,14 +366,17 @@ def processVersions(versions):
                 print("ERROR: Klee output files are inconsistent: %s and %s" % (v, versions[i]))
                 sys.exit(1)
 
-    if v != version:
+    if autoVersion and v != version:
         print("ERROR: Klee output files and config are inconsistent: %s and %s" % (v, version))
         sys.exit(1)
+    elif v != version:
+        handle_version(v)
 
     return versions
 
 def preparse_cmdLine():
     global ConfigFile
+    global autoVersion
 
     #Custom version input
     try:
@@ -377,6 +385,7 @@ def preparse_cmdLine():
         v = None
 
     if isinstance(v, int):
+        autoVersion = v
         filePath = "stat-configs/version-%s.config" % v
         #Starting with specific config version
         ConfigFile = os.path.join(sys.path[0], filePath)
@@ -391,7 +400,8 @@ def handle_version(version):
             flags += arg + " "
 
     script = "klee-stats "
-    os.system(script + version + flags)
+    cmd = script + str(version) + flags
+    os.system(cmd)
     sys.exit(0)
 
 
