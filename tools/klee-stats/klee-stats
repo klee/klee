@@ -369,10 +369,27 @@ def processVersions(versions):
     if autoVersion and v != version:
         print("ERROR: Klee output files and config are inconsistent: %s and %s" % (v, version))
         sys.exit(1)
-    elif v != version:
-        handle_version(v)
+    elif v != version and not handle_version(v):
+        #Error case for version file not being found
+        print("ERROR: Specified config 'version-%s' could not be loaded automatically (Version detected from run.stats)" % v)
+        sys.exit(1)
 
     return versions
+
+def getVersionFilePath(config):
+    try:
+        #Version cases
+        #Hack to prevent version-# from evaluating as it evaluates to 0 (?)
+        longbool = (isinstance(config, int) or isinstance(config, float)) or \
+            ((isinstance(eval(config), int) or isinstance(eval(config), float)) and eval(config) != 0)
+
+        if longbool:
+            config = "version-%s" % config
+    except:
+        pass
+
+    filePath = "stat-configs/%s.config" % config
+    return os.path.join(sys.path[0], filePath)
 
 def preparse_cmdLine():
     #Preparsing allows selection of config file
@@ -383,18 +400,16 @@ def preparse_cmdLine():
     v = sys.argv[1]
 
     #Check if v is a version, ie if a config file for it exists
-    filePath = "stat-configs/%s.config" % v
-    fullPath = os.path.join(sys.path[0], filePath)
+    fullPath = getVersionFilePath(v)
     if os.path.isfile(fullPath):
         autoVersion = v
         #Starting with specific config version
-        ConfigFile = os.path.join(sys.path[0], filePath)
+        ConfigFile = fullPath
     
 
 def handle_version(config):
     #Spawn new klee-stats with version specified
-    filePath = "stat-configs/%s.config" % config
-    fullPath = os.path.join(sys.path[0], filePath)
+    fullPath = getVersionFilePath(config)
     if os.path.isfile(fullPath):
         flags = " "
         for arg in sys.argv[1:]:
