@@ -322,7 +322,7 @@ def parse_config():
         version = eval(config_value("Info", 'version'))
         parse_groups();
     else:
-        print("ERROR: Config file could not be opened")
+        print("ERROR: Config file could not be opened. Please check config file")
         print(ConfigFile)
         sys.exit(1)
 
@@ -375,18 +375,19 @@ def processVersions(versions):
     return versions
 
 def preparse_cmdLine():
+    #Preparsing allows selection of config file
     global ConfigFile
     global autoVersion
 
     #Custom version input
-    try:
-        v = eval(sys.argv[1])
-    except:
-        v = None
+    v = sys.argv[1]
 
-    if isinstance(v, int):
+    #Check if v is a version, ie if a config file for it exists
+    filePath = "stat-configs/version-%s.config" % v
+    fullPath = os.path.join(sys.path[0], filePath)
+    print("Full Path %s" % fullPath)
+    if os.path.isfile(fullPath):
         autoVersion = v
-        filePath = "stat-configs/version-%s.config" % v
         #Starting with specific config version
         ConfigFile = os.path.join(sys.path[0], filePath)
     
