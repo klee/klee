@@ -15,6 +15,9 @@ As this script uses python, python must be installed. Furthermore, it uses the t
 sudo pip install tabulate
 ```
 
+##Config File Sections
+More information about each of the config file sections is available in the `README.md` file inside the `stats-config` directory.
+
 #How to create a new config
 
 ### 1. Add Input information about the output of KLEE 
@@ -32,7 +35,6 @@ Record: I, BFull, BPart, BTot, T, St, Mem, QTot, QCon,\
         _, Treal, SCov, SUnc, _, Ts, Tcex, Tf, Tr
 Stats: maxMem, avgMem, maxStates, avgStates
 ```
-We should also add the version of klee-stats currently being run. This need
 
 ### 2. Add Output Labels
 

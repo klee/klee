@@ -14,16 +14,18 @@ and appear in each of the headers/sections of the config file.
 This header is used by the klee-stats script to store version information. The version option specifies which output version of klee is supported. Klee output version numbers will change as the format of the outputted values changes. Therefore a new config file is needed for each new outout version.
 
 ##Input
-This is where the format of the input data is defined. In this section there must be a defintion for Record. In the default config, the definitino for Record is as follows
+This is where the format of the input data is defined. In this section there must be a defintion for Record. In the default config, the definition for Record is as follows
 ```
 Record: I, BFull, BPart, BTot, T, St, Mem, QTot, QCon,\
         _, Treal, SCov, SUnc, _, Ts, Tcex, Tf, Tr
 ```
 
-Which is meant to match the pattern of the CSVs in the run.stats file. This is also where the variables used in the Calculations section are defined.
+Which is meant to match the pattern of the CSVs in the rows of the run.stats file. This is also where the variables used in the Calculations section are defined.
 
 ##Groups
-This section can be used to define a group of variables which can be used in the calculation section. In the defualt config file there is a group definition as follows:
+Groups are arbitrary collections of variables to which the same calculation is to be applied. For example we have several variables which absolute measures of time. We could make a group containing these variables and then apply a normalizing operation on the group to map them into relative times.
+
+This section of the config file can be used to define these groups of variables. They can be used in the calculation section; in the defualt config file there is a group definition as follows:
 ```
 time: T, Ts, Tcex, Tf, Tr
 ```
