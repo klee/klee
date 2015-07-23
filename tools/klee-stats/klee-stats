@@ -108,23 +108,38 @@ def getMatchedRecordIndex(records, column, target):
             hi = mid
     return lo
 
+def getColumnValues(columnName, records):
+    #Instead of using itemgetter
+    recordFormat = config_value("Input", 'record')
+
+    rlist = recordFormat.split(', ')
+    index = -1
+    for i,n in enumerate(rlist):
+        if columnName == rlist[i]:
+            index = i
+
+    if index is not -1:
+        return list(map(itemgetter(index), records))
+    else:
+        print("ERROR: Cannot get column '%s' values" % columnName)
+        sys.exit(1)
 
 def aggregateRecords(records):
-    # index for memUsage and stateCount in run.stats
-    memIndex = 6
-    stateIndex = 5
+    
+    for option in Config.options("Aggregates"):
+        equations = parse_list(config_value("Aggregates", option))
+        for equation in equations:
+            exec(equation)
 
-    # maximum and average memory usage
-    memValues = list(map(itemgetter(memIndex), records))
-    maxMem = max(memValues) / 1024 / 1024
-    avgMem = sum(memValues) / len(memValues) / 1024 / 1024
+    statstr = "stats = " + config_value("Aggregates", 'stats')
+    try:  
+        exec(statstr)
+    except:
+        print("ERROR: Check '%s' in section '%s'" % ("Input", 'stats'))
+        sys.exit(1)
 
-    # maximum and average number of states
-    stateValues = list(map(itemgetter(stateIndex), records))
-    maxStates = max(stateValues)
-    avgStates = sum(stateValues) / len(stateValues)
 
-    return (maxMem, avgMem, maxStates, avgStates)
+    return stats
 
 
 def stripCommonPathPrefix(paths):
@@ -166,8 +181,12 @@ def getKleeOutDirs(dirs):
 
 def getLabels(pr):
     #Interpreting the input description from config file
-    str = "labels = " + config_value("Labels", pr+"_labels")   
-    exec(str)
+    try:
+        strLabel = "labels = " + config_value("Labels", pr+"_labels")   
+        exec(strLabel)
+    except:
+        print("ERROR: Check '%s' in section '%s'" % (pr, 'labels'))
+        sys.exit(1)
     return labels
 
 def getRow(record, stats, pr):
@@ -176,14 +195,14 @@ def getRow(record, stats, pr):
     try:  
         exec(recordstr)
     except:
-        print("ERROR: Check '%s' in section '%s'" % ("Input", 'record'))
+        print("ERROR: Check '%s' in section '%s'" % ("record", 'Input'))
         sys.exit(1)
 
-    statstr = config_value("Input", 'stats') + " = stats"
+    statstr = config_value("Aggregates", 'stats') + " = stats"
     try:  
         exec(statstr)
     except:
-        print("ERROR: Check '%s' in section '%s'" % ("Input", 'stats'))
+        print("ERROR: Check '%s' in section '%s'" % ("record", 'Input'))
         sys.exit(1)
 
     if BTot == 0:
