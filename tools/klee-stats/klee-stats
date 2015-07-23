@@ -205,11 +205,12 @@ def getRow(record, stats, pr):
         print("ERROR: Check '%s' in section '%s'" % ("record", 'Input'))
         sys.exit(1)
 
+    #Line coverage hack
     if BTot == 0:
         BFull = BTot = 1
 
-    Mem = Mem / 1024 / 1024
-    AvgQC = int(QCon / max(1, QTot))
+    #Mem = Mem / 1024 / 1024
+    #AvgQC = int(QCon / max(1, QTot))
 
     #groups must be in left hand side of assignment
     global groups
