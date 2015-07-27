@@ -108,7 +108,7 @@ def getMatchedRecordIndex(records, column, target):
             hi = mid
     return lo
 
-def getColumnValues(columnName, records):
+def getColumnIndex(columnName):
     #Instead of using itemgetter
     recordFormat = config_value("Input", 'record')
 
@@ -118,6 +118,10 @@ def getColumnValues(columnName, records):
         if columnName == rlist[i]:
             index = i
 
+    return index
+
+def getColumnValues(columnName, records):
+    index = getColumnIndex(columnName)
     if index is not -1:
         return list(map(itemgetter(index), records))
     else:
@@ -554,12 +558,17 @@ def main():
     labels = getLabels(pr)
     # labels in the same order as in the run.stats file. used by --compare-by.
     # current impl needs monotonic values, so only keep the ones making sense.
-    rawLabels = ('Instrs', '', '', '', '', '', '', 'Queries',
-                 '', '', 'Time', 'ICov', '', '', '', '', '', '')
+    #rawLabels = ('Instrs', '', '', '', '', '', '', 'Queries',
+    #             '', '', 'Time', 'ICov', '', '', '', '', '', '')
 
+    # compby now uses names given in the config file for column specification
     if args.compBy:
         # index in the record of run.stats
-        compIndex = getKeyIndex(args.compBy, rawLabels)
+        compIndex = getColumnIndex(args.compBy)
+        if compIndex == -1:
+            print("ERROR: Invalid compare-by value")
+            sys.exit(1)
+
         if args.compAt:
             if args.compAt == 'last':
                 # [records][last-record][compare-by-index]
