@@ -520,12 +520,14 @@ def main():
                         help='Key value on which to compare runs to the '
                         'reference one (which is the first one). Must be '
                         'chosen from the headers of the table oputputted. '
-                        'e.g., --compare-by=Instrs shows how each run '
+                        'e.g., --compare-by=I shows how each run '
                         'compares to the reference run after executing the '
                         'same number of instructions as the reference run. '
                         "If a run hasn't executed as many instructions as "
                         'the reference one, we simply print the statistics '
-                        'at the end of that run.')
+                        'at the end of that run. The key value for a given '
+                        'column is its corresponding value in record in the '
+                        'config')
     parser.add_argument('--compare-at', dest='compAt', metavar='value',
                         help='Value to compare the runs at. Can be special '
                         "value 'last' to compare at the last point which "

@@ -279,6 +279,54 @@ def parseStats(stats):
         del d[0]
     return d
 
+def openLLIstats(cdir):
+    assembly = os.path.join(cdir, 'assembly.ll')
+    istats   = os.path.join(cdir, 'run.istats')
+    if os.path.exists(assembly) and os.path.exists(istats):
+        asdata = parseAssembly(assembly)
+        stats = parseStats(istats)
+    else:
+        print('assembly.ll or run.istats no found', file=sys.stderr)
+        exit(1)
+
+    return asdata, stats
+
+def topInstructions(cdir):
+    asdata, stats = openLLIstats(cdir)
+
+    itimes = [(inst, map(sum, zip(*[stats[l] for l in lines if l in stats])) ) for inst, lines in asdata]
+    # Eliminate bogus instructions picked up by our imperfect LLVM IR parser
+    itimes = [item for item in itimes if item[1]]
+    validinst = set([item[0] for item in itimes])
+
+    maxitimes = dict([(inst, max([stats[l][2] for l in lines if l in stats])) for inst, lines in asdata if inst in validinst])
+    # Sort by real time
+    itimes.sort(key=lambda x : x[1][0], reverse=True)
+
+    return maxitimes, itimes
+
+def topLocationsAll(cdir):
+    asdata, stats = openLLIstats(cdir)
+
+    linemnemonic = dict([(l, m) for m, lines in asdata for l in lines])
+    data = [(stats[line][0]/1000000, stats[line][2]/1000000, line, linemnemonic[line]) for line in stats]
+    data.sort(key=lambda x : x[0], reverse=True)
+
+    return data
+
+def topLocations(cdir, TL):
+    asdata, stats = openLLIstats(cdir)
+
+    targets = []
+    for  m, lines in asdata:
+        if m == TL:
+            targets = lines
+            break
+    data = [(stats[line][0]/1000000, stats[line][2]/1000000, line, TL) for line in stats if line in targets]
+    data.sort(key=lambda x : x[0], reverse=True)
+
+    return data
+
 def main():
     # function for sanitizing arguments
     def isPositiveInt(value):
@@ -327,43 +375,24 @@ def main():
 
     args = parser.parse_args()
 
-   
-    assembly = os.path.join(args.dir, 'assembly.ll')
-    istats   = os.path.join(args.dir, 'run.istats')
-    if os.path.exists(assembly) and os.path.exists(istats):
-        asdata = parseAssembly(assembly)
-        stats = parseStats(istats)
-    else:
-        print('assembly.ll or run.istats no found', file=sys.stderr)
-        exit(1)
+    asdata, stats = openLLIstats(args.dir)
 
     if args.TI:
         labels = getLabels('all')
         table = [labels]
-        itimes = [(inst, map(sum, zip(*[stats[l] for l in lines if l in stats])) ) for inst, lines in asdata]
-        # Eliminate bogus instructions picked up by our imperfect LLVM IR parser
-        itimes = [item for item in itimes if item[1]]
-        validinst = set([item[0] for item in itimes])
 
-        maxitimes = dict([(inst, max([stats[l][2] for l in lines if l in stats])) for inst, lines in asdata if inst in validinst])
-        # Sort by real time
-        itimes.sort(key=lambda x : x[1][0], reverse=True)
+        maxitimes, itimes = topInstructions(args.dir)
+
         print(maxitimes['store'])
         table.extend([x[0], x[1][0]/1000000, x[1][0]/x[1][1]/1000, maxitimes[x[0]]/1000] for x in itimes[:10])
     elif args.TL:
         labels = getLabels('locations')
         table = [labels]
         if args.TL == 'all':
-            linemnemonic = dict([(l, m) for m, lines in asdata for l in lines])
-            data = [(stats[line][0]/1000000, stats[line][2]/1000000, line, linemnemonic[line]) for line in stats]
+            data = topLocationsAll(args.dir)
         else:
-            targets = []
-            for  m, lines in asdata:
-                if m == args.TL:
-                    targets = lines
-                    break
-            data = [(stats[line][0]/1000000, stats[line][2]/1000000, line, args.TL) for line in stats if line in targets]
-        data.sort(key=lambda x : x[0], reverse=True)
+            data = topLocations(args.dir, args.TL)
+    
         table.extend(data[:30])
 
     if args.tableFormat != 'klee':
