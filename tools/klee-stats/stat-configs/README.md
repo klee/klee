@@ -38,11 +38,16 @@ This group in the calculation section can be used to apply a mapping onto the va
 
 This expands into **rel_T = 100 * T / Treal, rel_Ts = 100 * Ts / Treal**, and so on. Note that this is done using replace on a string in python, and therefore can cause some unexpected renaming. The dash is used to delimit the group name in the variable name and is not legal python syntax and is therefore changed into underscores after expanding.
 
+##Aggregates
+
+This section is used to create aggregate values for each run. The **Stats** represents the value that is returned by this function. The values returned through this are usable in both the Calculations section or in the Output section.
+The helper function `getColumnValues({x},records)` returns all the values in the column corresponding to the variable {x} of given records. For example, using `"St"` in `getColumnValues("St",records)` returns the list of values for states. `St` is derived from the name given to the corresponding location for states in the **Record** option in the **Input** section (If state values were printed in the second entry of the column by Klee, the **Record** option would look similar to `_, St, _, _, ...`).
+
 ##Calculations
 This section contains the calculations performed by klee-stats. The calculations are stored as key value pairs where the values are a list of equations using the variables defined in the input as well as newly defined variables within the equations. Entries can be referred to by other entries using the notation @key. For example, in the defualt config file, there is a key **cov** with the value **cov = 100 * SCov / (SCov + SUnc), bcov = 100 * (2 * BFull + BPart) / (2 * BTot), icount = SCov + SUnc**. This is used by both the _All_ and _More_ key by having @cov in their list of equations. Furthermore an equation can be a mapping onto a group. To read more about this, look at the group section.
 
 ##Output
-This section specifies the data that appears in the outputted rows. The row is specified as a tuble containing variables. The variables referenced in this section can be derived variables from the calculation section or the raw inputs themselves.
+This section specifies the data that appears in the outputted rows. The row is specified as a tuble containing variables. The variables referenced in this section can be derived variables from the calculation section, from the aggregates, or the raw inputs themselves.
 
 ##Labels
 This section contains the corresponding text label for a value. The value in this section must match the corresponding output value. They will appear at the top of the column for the corresponding values.
