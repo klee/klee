@@ -65,6 +65,10 @@ autoVersion = None
 global groups
 groups = {}
 
+#Flags for postprocessing record
+global topInstrs
+topInstrs = None
+
 def getLogFile(path):
     """Return the path to run.stats."""
     return os.path.join(path, 'run.stats')
@@ -182,6 +186,17 @@ def getKleeOutDirs(dirs):
                         kleeOutDirs.append(path)
     return kleeOutDirs
 
+def postLabels(labels):
+    #Post process labels
+    global topInstrs
+
+    #Post processing for intructions
+    if topInstrs is not None and topInstrs[0] is not None:
+        ll = list(labels)
+        ll.append("Top Instr")
+        labels = tuple(ll)
+
+    return labels
 
 def getLabels(pr):
     #Interpreting the input description from config file
@@ -191,9 +206,22 @@ def getLabels(pr):
     except:
         print("ERROR: Check '%s' in section '%s'" % (pr, 'labels'))
         sys.exit(1)
-    return labels
+    return postLabels(labels)
 
-def getRow(record, stats, pr):
+def postRow(record, post):
+    #Changes to the row after calculations take place
+
+    #Post processing for intructions
+    if topInstrs is not None and topInstrs[0] is not None:
+        lr = list(record)
+        if post is not None:
+            lr.append(post)
+        else:
+            lr.append(" ")
+        record = tuple(lr)
+    return record
+
+def getRow(record, stats, pr, post):
     #Interprets input format from config file
     recordstr = config_value("Input", 'record') + " = record"  
     try:  
@@ -249,7 +277,8 @@ def getRow(record, stats, pr):
             sys.exit(1)
     
     #return formatted output tuble from config
-    return eval(config_value("Output", pr))
+    ret = eval(config_value("Output", pr))
+    return postRow(ret, post)
 
 def drawLineChart(vectors, titles):
     """Draw a line chart based on data from vectors.
@@ -449,6 +478,97 @@ def handle_version(config):
         return False
 
 
+#Istats functions
+def enum(**enums):
+    return type('Enum', (), enums)
+
+StatFields = enum(AssemblyLine=0,
+              FileLine=1,
+              Covered=2,
+              Forks=3,
+              RealTime=4,
+              UserTime=5,
+              Instructions=6,
+              MDU=7,
+              ResolveTime=8,
+              States=9,
+              Uncovered=10,
+              Queries=11)
+
+def parseAssembly(assembly):
+    """Parse an LLVM assembly file
+    """
+
+    def getInstruction(line):
+        inst = ''
+        if line.startswith('  '):
+            line = line.lstrip()
+            if line.startswith('%'):
+                _, _, line = line.partition('=')
+                line = line.lstrip()
+                inst, _, _  = line.partition(' ')
+            else:
+                inst, _, _ = line.partition(' ')
+            if inst == 'tail':
+                inst = 'call'
+        return inst
+
+    insts = [getInstruction(line) for line in open(assembly)]
+    uinsts = [i for i in set(insts) if i]
+    ilmap = zip(uinsts, [[l + 1 for l, i in enumerate(insts) if i == ui] for ui in uinsts])
+    return ilmap
+
+def parseStats(stats):
+    """Parse a klee-generated istats file
+    
+    """
+
+    def getStats(line):
+        stat = (0,(0, 0, 0))
+        items = line.split()
+        try:
+            if len(items) > 4 and items[StatFields.Covered] == '1':
+                line = int(items[StatFields.AssemblyLine])
+                time = int(items[StatFields.RealTime])
+                count = int(items[StatFields.Instructions])
+                stat = (line, (time,count,time/count))
+        except:
+            pass
+        return stat
+
+    d = dict([getStats(line) for line in open(stats)])
+    if 0 in d:
+        del d[0]
+    return d
+
+def openLLIstats(cdir):
+    assembly = os.path.join(cdir, 'assembly.ll')
+    istats   = os.path.join(cdir, 'run.istats')
+    if os.path.exists(assembly) and os.path.exists(istats):
+        asdata = parseAssembly(assembly)
+        stats = parseStats(istats)
+    else:
+        print('assembly.ll or run.istats no found', file=sys.stderr)
+        exit(1)
+
+    return asdata, stats
+
+def topInstructions(cdir):
+    asdata, stats = openLLIstats(cdir)
+
+    itimes = [(inst, map(sum, zip(*[stats[l] for l in lines if l in stats])) ) for inst, lines in asdata]
+    # Eliminate bogus instructions picked up by our imperfect LLVM IR parser
+    itimes = [item for item in itimes if item[1]]
+    validinst = set([item[0] for item in itimes])
+
+    maxitimes = dict([(inst, max([stats[l][2] for l in lines if l in stats])) for inst, lines in asdata if inst in validinst])
+    # Sort by real time
+    itimes.sort(key=lambda x : x[1][0], reverse=True)
+
+    #Hardcoded removal
+    itimes = itimes[:10]
+
+    return maxitimes, itimes
 
 def main():
     # function for sanitizing arguments
@@ -501,6 +621,10 @@ def main():
                         help='Sample a data point every n lines for a '
                         'run.stats (default: 10)')
 
+    parser.add_argument('--top-instructions',
+                          action='store_true', dest='TI',
+                          help='Show most expensive instruction per run.')
+
     # argument group for controlling output verboseness
 
     pControl = parser.add_mutually_exclusive_group(required=False)
@@ -552,18 +676,32 @@ def main():
     #Version list/configuration
     dataVs = processVersions([eval(list(open(getLogFile(d)))[0]) for d in dirs])
 
+
+
     if len(data) > 1:
         dirs = stripCommonPathPrefix(dirs)
-    # attach the stripped path
-    data = list(zip(dirs, data))
+
+    global topInstrs
+
+    if args.TI:
+       #istatsFile = os.path.join(sys.path[0], "istats")
+       #execfile(istatsFile)
+
+        # Get top inst
+        _, test = topInstructions(dirs[0])
+        idata = map(topInstructions, dirs)
+        topInstrs = [itimes[0][0] for (maxitimes, itimes) in idata]
 
     labels = getLabels(pr)
-    # labels in the same order as in the run.stats file. used by --compare-by.
-    # current impl needs monotonic values, so only keep the ones making sense.
-    #rawLabels = ('Instrs', '', '', '', '', '', '', 'Queries',
-    #             '', '', 'Time', 'ICov', '', '', '', '', '', '')
 
-    # compby now uses names given in the config file for column specification
+    #To work with the zip
+    if topInstrs is None:
+        topInstrs = [None] * len(dirs)
+
+        # attach the stripped path
+    data = list(zip(dirs, data, topInstrs))
+
+    # compBy now uses names given in the config file for column specification
     if args.compBy:
         # index in the record of run.stats
         compIndex = getColumnIndex(args.compBy)
@@ -584,26 +722,26 @@ def main():
     table = []
     totRecords = []  # accumulated records
     totStats = []    # accumulated stats
-    for path, records in data:
+    for path, records, post in data:
         row = [path]
         if args.compBy:
             matchIndex = getMatchedRecordIndex(
                 records, itemgetter(compIndex), refValue)
             stats = aggregateRecords(LazyEvalList(records[:matchIndex + 1]))
             totStats.append(stats)
-            row.extend(getRow(records[matchIndex], stats, pr))
+            row.extend(getRow(records[matchIndex], stats, pr, post))
             totRecords.append(records[matchIndex])
         else:
             stats = aggregateRecords(records)
             totStats.append(stats)
-            row.extend(getRow(records[-1], stats, pr))
+            row.extend(getRow(records[-1], stats, pr, post))
             totRecords.append(records[-1])
         table.append(row)
     # calculate the total
     totRecords = [sum(e) for e in zip(*totRecords)]
     totStats = [sum(e) for e in zip(*totStats)]
     totalRow = ['Total ({0})'.format(len(table))]
-    totalRow.extend(getRow(totRecords, totStats, pr))
+    totalRow.extend(getRow(totRecords, totStats, pr, None))
 
     if args.sortBy:
         table = sorted(table, key=itemgetter(getKeyIndex(args.sortBy, labels)),
@@ -645,7 +783,7 @@ def main():
         for i in range(len(samples)):
             # aggregate all the samples upto the i-th one
             stats = aggregateRecords(samples[:i + 1])
-            vectors.append(getRow(samples[i], stats, pr))
+            vectors.append(getRow(samples[i], stats, pr, None))
 
         titles = args.drawLineChart.split(',')
         # Index returned by getKeyIndex() against labels is starting from
