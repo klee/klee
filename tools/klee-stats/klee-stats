@@ -208,6 +208,11 @@ def getLabels(pr):
         sys.exit(1)
     return postLabels(labels)
 
+def preRow(string):
+    #For @ notation usage (expands into _)
+    string.replace("@","_")
+    return string
+
 def postRow(record, post):
     #Changes to the row after calculations take place
 
@@ -253,11 +258,12 @@ def getRow(record, stats, pr, post):
     for i, equation in enumerate(equations):
         #lstrip to remove potential whitespace issues
         groupvar = (equation.split(' ')[0]).lstrip(" ")
-        gsplit = groupvar.split('-')
+        #@ used between groups
+        gsplit = groupvar.split('@')
 
         try:
             if len(gsplit) == 1 or gsplit[1] not in groups:
-                if gsplit[0][0] == '@':
+                if gsplit[0][0] == '>':
                     #Import equations from other categories
                     category = gsplit[0][1:]
                     importEqs = parse_list(config_value("Calculations", category))
@@ -269,7 +275,7 @@ def getRow(record, stats, pr, post):
                 group = gsplit[1]
                 #TODO: Make replace more robust
                 for var in groups[group]:
-                    subeq = equation.replace("-","_").replace(group, var)
+                    subeq = equation.replace("@","_").replace(group, var)
                     exec(subeq)
         except:
             print("Error in calculation for '%s', please check contents of config file" % pr)
@@ -277,7 +283,7 @@ def getRow(record, stats, pr, post):
             sys.exit(1)
     
     #return formatted output tuble from config
-    ret = eval(config_value("Output", pr))
+    ret = eval(preRow(config_value("Output", pr)))
     return postRow(ret, post)
 
 def drawLineChart(vectors, titles):
