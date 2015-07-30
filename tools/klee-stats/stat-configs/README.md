@@ -56,4 +56,4 @@ This section contains the corresponding text label for a value. The value in thi
 This section defines what appears in the help menu when klee-stats is run with this config file.
 
 ##Default
-When no flags are given to klee-stats, the defaults are assumed. These are denoted in the config sections using the default field.
+When no flags are given to klee-stats, the defaults are assumed. These are denoted in the config sections using the `default` field.

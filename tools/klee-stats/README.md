@@ -67,10 +67,10 @@ Now to use this group, we must include it in one of our equations in the Calcula
 
 ```
 [Calculations]  
-Reltime: rel-time = 100 * time / Treal
+Reltime: rel@time = 100 * time / Treal
 ```
 
-The name given to these mapped values must include the group name delimitted by '-'. This will expand into rel_T = 100 * T / Treal, rel_Ts = 100 * Ts / Treal, ... If you wnat to know more about equation cabailities, please read the Calculations section below.
+The name given to these mapped values must include the group name delimitted by '@'. This will expand into rel@T = 100 * T / Treal, rel@Ts = 100 * Ts / Treal, ... If you wnat to know more about equation cabailities, please read the Calculations section below.
 
 ### 4. Add Output information
 
@@ -78,7 +78,7 @@ After having our calculations defined, we can now define what variables we want 
 
 ```
 [Output]  
-Reltime: (Treal, rel_T, rel_Ts, rel_Tcex, rel_Tf, rel_Tr)
+Reltime: (Treal, rel@T, rel@Ts, rel@Tcex, rel@Tf, rel@Tr)
 ```
 
 Note, we are using the derived values after the mapping of the group.
