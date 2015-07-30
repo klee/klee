@@ -564,7 +564,7 @@ def openLLIstats(cdir):
 def topInstructions(cdir):
     asdata, stats = openLLIstats(cdir)
 
-    itimes = [(inst, map(adjustedSum, zip(*[stats[l] for l in lines if l in stats])) ) for inst, lines in asdata]
+    itimes = [(inst, map(sum, zip(*[stats[l] for l in lines if l in stats])) ) for inst, lines in asdata]
     # Eliminate bogus instructions picked up by our imperfect LLVM IR parser
     itimes = [item for item in itimes if item[1]]
     validinst = set([item[0] for item in itimes])
@@ -577,13 +577,6 @@ def topInstructions(cdir):
     itimes = itimes[:10]
 
     return maxitimes, itimes
-
-def adjustedSum(values):
-    agg = 0;
-    for v in values:
-        agg += v + .0001
-
-    return agg
 
 def main():
     # function for sanitizing arguments
