@@ -86,3 +86,10 @@ It is possible to add help information to appear during klee-stats after it has 
 Reltime: Print only values of measured times. Values are relative to the measured system execution time.
 ```
 
+### 6. The File
+Here is a copy of what the file should look like, along with some extra fields to use the default klee-stats setitngs.
+
+```
+
+```
+
