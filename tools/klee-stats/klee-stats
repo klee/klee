@@ -133,18 +133,20 @@ def getColumnValues(columnName, records):
         sys.exit(1)
 
 def aggregateRecords(records):
-    
-    for option in Config.options("Aggregates"):
-        equations = parse_list(config_value("Aggregates", option))
-        for equation in equations:
-            exec(equation)
+    stats = None
+    if Config.has_section("Aggregates"):
 
-    statstr = "stats = " + config_value("Aggregates", 'stats')
-    try:  
-        exec(statstr)
-    except:
-        print("ERROR: Check '%s' in section '%s'" % ("Input", 'stats'))
-        sys.exit(1)
+        for option in Config.options("Aggregates"):
+            equations = parse_list(config_value("Aggregates", option))
+            for equation in equations:
+                exec(equation)
+
+        statstr = "stats = " + config_value("Aggregates", 'stats')
+        try:  
+            exec(statstr)
+        except:
+            print("ERROR: Check '%s' in section '%s'" % ("Input", 'stats'))
+            sys.exit(1)
 
 
     return stats
@@ -210,8 +212,7 @@ def getLabels(pr):
 
 def preRow(string):
     #For @ notation usage (expands into _)
-    string.replace("@","_")
-    return string
+    return string.replace('@','_')
 
 def postRow(record, post):
     #Changes to the row after calculations take place
@@ -235,12 +236,13 @@ def getRow(record, stats, pr, post):
         print("ERROR: Check '%s' in section '%s'" % ("record", 'Input'))
         sys.exit(1)
 
-    statstr = config_value("Aggregates", 'stats') + " = stats"
-    try:  
-        exec(statstr)
-    except:
-        print("ERROR: Check '%s' in section '%s'" % ("record", 'Input'))
-        sys.exit(1)
+    if Config.has_section("Aggregates") and Config.has_option("Aggregates", 'stats'):
+        statstr = config_value("Aggregates", 'stats') + " = stats"
+        try:  
+            exec(statstr)
+        except:
+            print("ERROR: Check '%s' in section '%s'" % ("record", 'Input'))
+            sys.exit(1)
 
     #Line coverage hack
     if BTot == 0:
@@ -562,7 +564,7 @@ def openLLIstats(cdir):
 def topInstructions(cdir):
     asdata, stats = openLLIstats(cdir)
 
-    itimes = [(inst, map(sum, zip(*[stats[l] for l in lines if l in stats])) ) for inst, lines in asdata]
+    itimes = [(inst, map(adjustedSum, zip(*[stats[l] for l in lines if l in stats])) ) for inst, lines in asdata]
     # Eliminate bogus instructions picked up by our imperfect LLVM IR parser
     itimes = [item for item in itimes if item[1]]
     validinst = set([item[0] for item in itimes])
@@ -575,6 +577,13 @@ def topInstructions(cdir):
     itimes = itimes[:10]
 
     return maxitimes, itimes
+
+def adjustedSum(values):
+    agg = 0;
+    for v in values:
+        agg += v + .0001
+
+    return agg
 
 def main():
     # function for sanitizing arguments
@@ -745,7 +754,8 @@ def main():
         table.append(row)
     # calculate the total
     totRecords = [sum(e) for e in zip(*totRecords)]
-    totStats = [sum(e) for e in zip(*totStats)]
+    if totStats.count(None) != len(totStats): #Optional stats
+        totStats = [sum(e) for e in zip(*totStats)]
     totalRow = ['Total ({0})'.format(len(table))]
     totalRow.extend(getRow(totRecords, totStats, pr, None))
 

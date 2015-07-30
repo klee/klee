@@ -293,15 +293,28 @@ def openLLIstats(cdir):
 
 def topInstructions(cdir):
     asdata, stats = openLLIstats(cdir)
+    itimes = []
+    #instruction and lines its on
+    for inst, lines in asdata:
+        statList = []
+        for l in lines:
+            if l in stats:
+                #Add stats for corresponding line
+                statList.append(stats[l])
+        values = zip(*statList)
+        agg = map(sum, values)
+        itimes.append((inst, agg))
 
-    itimes = [(inst, map(sum, zip(*[stats[l] for l in lines if l in stats])) ) for inst, lines in asdata]
     # Eliminate bogus instructions picked up by our imperfect LLVM IR parser
     itimes = [item for item in itimes if item[1]]
+
     validinst = set([item[0] for item in itimes])
 
     maxitimes = dict([(inst, max([stats[l][2] for l in lines if l in stats])) for inst, lines in asdata if inst in validinst])
+    
     # Sort by real time
     itimes.sort(key=lambda x : x[1][0], reverse=True)
+    itimes = itimes[:10]
 
     return maxitimes, itimes
 

@@ -33,10 +33,10 @@ time: T, Ts, Tcex, Tf, Tr
 This group in the calculation section can be used to apply a mapping onto the values in the group For example in the default config there is the following line:
 
 ```
- rel-time = 100 * time / Treal
+ rel@time = 100 * time / Treal
 ```
 
-This expands into **rel_T = 100 * T / Treal, rel_Ts = 100 * Ts / Treal**, and so on. Note that this is done using replace on a string in python, and therefore can cause some unexpected renaming. The dash is used to delimit the group name in the variable name and is not legal python syntax and is therefore changed into underscores after expanding.
+This expands into **rel@T = 100 * T / Treal, rel@Ts = 100 * Ts / Treal**, and so on. Note that this is done using replace on a string in python, and therefore can cause some unexpected renaming. The '@' is used to delimit the group name in the variable name and is not legal python syntax and is therefore changed into underscores after expanding.
 
 ##Aggregates
 
@@ -44,7 +44,7 @@ This section is used to create aggregate values for each run. The **Stats** repr
 The helper function `getColumnValues({x},records)` returns all the values in the column corresponding to the variable {x} of given records. For example, using `"St"` in `getColumnValues("St",records)` returns the list of values for states. `St` is derived from the name given to the corresponding location for states in the **Record** option in the **Input** section (If state values were printed in the second entry of the column by Klee, the **Record** option would look similar to `_, St, _, _, ...`).
 
 ##Calculations
-This section contains the calculations performed by klee-stats. The calculations are stored as key value pairs where the values are a list of equations using the variables defined in the input as well as newly defined variables within the equations. Entries can be referred to by other entries using the notation @key. For example, in the defualt config file, there is a key **cov** with the value **cov = 100 * SCov / (SCov + SUnc), bcov = 100 * (2 * BFull + BPart) / (2 * BTot), icount = SCov + SUnc**. This is used by both the _All_ and _More_ key by having @cov in their list of equations. Furthermore an equation can be a mapping onto a group. To read more about this, look at the group section.
+This section contains the calculations performed by klee-stats. The calculations are stored as key value pairs where the values are a list of equations using the variables defined in the input as well as newly defined variables within the equations. Entries can be referred to by other entries using the notation >key. For example, in the defualt config file, there is a key **cov** with the value **cov = 100 * SCov / (SCov + SUnc), bcov = 100 * (2 * BFull + BPart) / (2 * BTot), icount = SCov + SUnc**. This is used by both the _All_ and _More_ key by having >cov in their list of equations. Furthermore an equation can be a mapping onto a group. To read more about this, look at the group section.
 
 ##Output
 This section specifies the data that appears in the outputted rows. The row is specified as a tuble containing variables. The variables referenced in this section can be derived variables from the calculation section, from the aggregates, or the raw inputs themselves.
