@@ -87,9 +87,37 @@ Reltime: Print only values of measured times. Values are relative to the measure
 ```
 
 ### 6. The File
-Here is a copy of what the file should look like, along with some extra fields to use the default klee-stats setitngs.
+Here is a copy of what the file should look like, along with some extra fields to use the default klee-stats setitngs. Note: to use a custom config file, it must be placed in the current working directory with the name `override.config` 
 
 ```
+[Info]
+Version: 1
 
+[Input]
+Record: I, BFull, BPart, BTot, T, St, Mem, QTot, QCon,\
+        _, Treal, SCov, SUnc, _, Ts, Tcex, Tf, Tr
+
+[Groups]
+time: T, Ts, Tcex, Tf, Tr
+
+[Calculations]
+cov: cov = 100 * SCov / (SCov + SUnc), bcov = 100 * (2 * BFull + BPart) / (2 * BTot), icount = SCov + SUnc
+
+Reltime: rel@time = 100 * time / Treal
+Default: >cov, >reltime
+
+[Output]
+Reltime: (Treal, rel@T, rel@Ts, rel@Tcex, rel@Tf, rel@Tr)
+Default: (I, Treal, cov, bcov, icount, rel@Ts)
+
+[Labels]
+Reltime_labels: ('Path', 'Time(s)', 'TUser(%)',  'TSolver(%)', 'Tcex(%)',  'Tfork(%)', 'TResolve(%)')
+
+Default_labels: ('Path', 'Instrs', 'Time(s)', 'ICov(%)',
+                  'BCov(%)', 'ICount', 'TSolver(%)')
+
+[Help]
+Reltime: Print relative times
+Default: The default output configuration
 ```
 
