@@ -3,10 +3,7 @@
 ##Info
 klee-stats is a script to help interpret data outputted by klee. It is used with a corresponding config file and heavily uses Python's eval and exec capabilities. The config file follows the Windows INI structure however in the key-value pairs, the values are stored as segments of Python code.
 
-To use a custom temporary config file, it must be named override.config and must be in the current working directory from where klee-stats was run. This will override any config information given or automatically chosen by klee-stats.
-
-Config files can be saved by being placed in the stat-configs directory. If placed in this directory, the files must be of the format "{name}.config" where {name} is the given config name. This config can then be used when running klee-stats by giving the flag "--config={name}".
-Note: Make currently doesn't keep the bin folder up to date with changes. It may be necessary to perform a `make clean` before performing a `make` inorder to get the config files to build correctly
+klee-stats mainly parses the `run.stats` file in a `klee-out` directory however it also has some parsing capabilities for the `run.istats` and `assembly.ll` files.
 
 ##Prerequisites
 As this script uses python, python must be installed. Furthermore, it uses the tabulate library therefore it depends on tabulate being installed. This can be done by installing tabulate from the pip manager, as the root user. The following line should install tabulate if tabulate is not installed:
@@ -14,6 +11,15 @@ As this script uses python, python must be installed. Furthermore, it uses the t
 ```
 sudo pip install tabulate
 ```
+
+## run.istats Data
+With the command line option `--top-instructions`, klee-stats can provide data about the most expensive operation by the given klee run. This is appended as the last column of whichever configuration is chosen.
+
+##Config Files
+To use a custom temporary config file, it must be named override.config and must be in the current working directory from where klee-stats was run. This will override any config information given or automatically chosen by klee-stats.
+
+Config files can be saved by being placed in the stat-configs directory. If placed in this directory, the files must be of the format "{name}.config" where {name} is the given config name. This config can then be used when running klee-stats by giving the flag "--config={name}".
+Note: Make currently doesn't keep the bin folder up to date with changes. It may be necessary to perform a `make clean` before performing a `make` inorder to get the config files to build correctly
 
 ##Config File Sections
 More information about each of the config file sections is available in the `README.md` file inside the `stats-config` directory.
