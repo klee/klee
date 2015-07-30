@@ -39,6 +39,10 @@ else
     KLEE_UCLIBC_CONFIGURE_OPTION=""
 fi
 
+COVERAGE_FLAGS=""
+if [ ${COVERAGE} -eq 1 ]; then
+    COVERAGE_FLAGS='-fprofile-arcs -ftest-coverage'
+fi
 ###############################################################################
 # KLEE
 ###############################################################################
@@ -55,6 +59,7 @@ ${KLEE_SRC}/configure --with-llvmsrc=/usr/lib/llvm-${LLVM_VERSION}/build \
             --with-llvmcxx=${KLEE_CXX} \
             --with-stp="${BUILD_DIR}/stp/build" \
             ${KLEE_UCLIBC_CONFIGURE_OPTION} \
+            CXXFLAGS="${COVERAGE_FLAGS}" \
             && make DISABLE_ASSERTIONS=${DISABLE_ASSERTIONS} \
                     ENABLE_OPTIMIZED=${ENABLE_OPTIMIZED} \
                     ENABLE_SHARED=0
@@ -94,6 +99,37 @@ set +e # We want to let all the tests run before we exit
 lit -v .
 RETURN="${RETURN}$?"
 
+#generate and upload coverage if COVERAGE is set
+if [ ${COVERAGE} -eq 1 ]; then
+
+#get zcov that works with gcov v4.8
+    git clone https://github.com/ddunbar/zcov.git
+    cd zcov
+    sudo python setup.py install
+    sudo mkdir /usr/local/lib/python2.7/dist-packages/zcov-0.3.0.dev0-py2.7.egg/zcov/js
+    cd zcov
+
+#these files are not where zcov expects them to be after install so we move them
+    sudo cp js/sorttable.js /usr/local/lib/python2.7/dist-packages/zcov-0.3.0.dev0-py2.7.egg/zcov/js/sorttable.js 
+    sudo cp js/sourceview.js /usr/local/lib/python2.7/dist-packages/zcov-0.3.0.dev0-py2.7.egg/zcov/js/sourceview.js 
+    sudo cp style.css /usr/local/lib/python2.7/dist-packages/zcov-0.3.0.dev0-py2.7.egg/zcov/style.css
+
+#install zcov dependency
+    sudo apt-get install enscript
+
+#update gcov from v4.6 to v4.8. This is becauase gcda files are made for v4.8 and cause 
+#a segmentation fault in v4.6
+    sudo apt-get install ggcov
+    sudo rm /usr/bin/gcov
+    sudo ln -s /usr/bin/gcov-4.8 /usr/bin/gcov
+
+#scan and generate coverage
+    zcov scan output.zcov ${BUILD_DIR}
+    zcov genhtml output.zcov coverage/
+#upload the coverage data, currently to a random ftp server
+    tar -zcvf coverage.tar.gz coverage/
+    curl --form "file=@coverage.tar.gz" -u ${USER}:${PASSWORD} ${COVERAGE_SERVER}
+fi
 ###############################################################################
 # Result
 ###############################################################################
