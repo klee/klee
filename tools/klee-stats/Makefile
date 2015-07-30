@@ -9,11 +9,11 @@
 
 LEVEL = ../..
 
-CONFIGDIRNAME = stat-configs
+CONFIGDIRNAME := stat-configs
 TOOLSCRIPTNAME := klee-stats
 TOOL2SCRIPTNAME := klee-istats
 TOOLCONFIGNAME := default.config
-
+VERNAME := version-1.config
 # Hack to prevent install trying to strip
 # symbols from a python script
 KEEP_SYMBOLS := 1
@@ -46,9 +46,11 @@ $(ConfigBuildPath): $(PROJ_SRC_DIR)/$(TOOLCONFIGNAME)
 	$(Verb) $(CP) -f $(PROJ_SRC_DIR)/$(TOOLCONFIGNAME) "$@"
 
 
-$(ConfigDirPath):
-	$(Echo) Copying config folder $(CONFIGDIRNAME)
-	rsync -rupE $(PROJ_SRC_DIR)/$(CONFIGDIRNAME) $(ToolDir)
+$(ConfigDirPath): $(PROJ_SRC_DIR)/$(CONFIGDIRNAME)/$(VERNAME) 
+	$(Echo) Making config directory $(CONFIGDIRNAME)
+	mkdir -p "$@"
+	$(Echo) Copying version file $(VERNAME)
+	$(Verb) $(CP) -f $(PROJ_SRC_DIR)/$(CONFIGDIRNAME)/$(VERNAME) $@
 
 ifdef NO_INSTALL
 install-local::
