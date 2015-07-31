@@ -216,13 +216,11 @@ static bool linkBCA(object::Archive* archive, Module* composite, std::string& er
   // Load all bitcode files in to memory so we can examine their symbols
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
   for (object::Archive::child_iterator AI = archive->child_begin(),
-                                       AE = archive->child_end();
-       AI != AE; ++AI)
+       AE = archive->child_end(); AI != AE; ++AI)
 #else
 
   for (object::Archive::child_iterator AI = archive->begin_children(),
-                                       AE = archive->end_children();
-       AI != AE; ++AI)
+       AE = archive->end_children(); AI != AE; ++AI)
 #endif
   {
 

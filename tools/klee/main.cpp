@@ -374,8 +374,9 @@ llvm::raw_fd_ostream *KleeHandler::openOutputFile(const std::string &filename) {
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3,6)
   std::error_code ec;
   f = new llvm::raw_fd_ostream(path.c_str(), ec, llvm::sys::fs::F_None);
-  if(ec)
-	Error = ec.message();
+  if (ec) {
+    Error = ec.message();
+  }
 #elif LLVM_VERSION_CODE >= LLVM_VERSION(3,5)
   f = new llvm::raw_fd_ostream(path.c_str(), Error, llvm::sys::fs::F_None);
 #elif LLVM_VERSION_CODE >= LLVM_VERSION(3,4)
@@ -629,11 +630,10 @@ static std::string strip(std::string &in) {
 }
 
 static void parseArguments(int argc, char **argv) {
-
   cl::SetVersionPrinter(klee::printVersion);
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
-cl::ParseCommandLineOptions(argc, (char**) argv, " klee\n"); //removes warning
+  cl::ParseCommandLineOptions(argc, (char**) argv, " klee\n"); //removes warning
 #elif LLVM_VERSION_CODE >= LLVM_VERSION(3, 2)
   // This version always reads response files
   cl::ParseCommandLineOptions(argc, argv, " klee\n");
