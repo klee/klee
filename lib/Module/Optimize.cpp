@@ -172,15 +172,20 @@ void Optimize(Module* M) {
   if (VerifyEach)
     Passes.add(createVerifierPass());
 
-#if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
-  // Add an appropriate TargetData instance for this module...
-  addPass(Passes, new TargetData(M));
-#elif LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
+  // Add an appropriate DataLayout instance for this module...
+  DataLayoutPass* dlpass = new DataLayoutPass();
+  dlpass->doInitialization(*M);
+  addPass(Passes, dlpass);
+#elif LLVM_VERSION_CODE >= LLVM_VERSION(3, 5)
+  // Add an appropriate DataLayout instance for this module...
+  addPass(Passes, new DataLayoutPass(M));
+#elif LLVM_VERSION_CODE > LLVM_VERSION(3, 1)
   // Add an appropriate DataLayout instance for this module...
   addPass(Passes, new DataLayout(M));
 #else
-  // Add an appropriate DataLayout instance for this module...
-  addPass(Passes, new DataLayoutPass(M));
+  // Add an appropriate TargetData instance for this module...
+  addPass(Passes, new TargetData(M));
 #endif
 
   // DWD - Run the opt standard pass list as well.
