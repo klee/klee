@@ -74,20 +74,20 @@ static void __create_new_dfile(exe_disk_file_t *dfile, unsigned size,
      reasonable. */
   klee_assume((s->st_blksize & ~0xFFFF) == 0);
 
-  klee_prefer_cex(s, !(s->st_mode & ~(S_IFMT | 0777)));
-  klee_prefer_cex(s, s->st_dev == defaults->st_dev);
-  klee_prefer_cex(s, s->st_rdev == defaults->st_rdev);
-  klee_prefer_cex(s, (s->st_mode&0700) == 0600);
-  klee_prefer_cex(s, (s->st_mode&0070) == 0020);
-  klee_prefer_cex(s, (s->st_mode&0007) == 0002);
-  klee_prefer_cex(s, (s->st_mode&S_IFMT) == S_IFREG);
-  klee_prefer_cex(s, s->st_nlink == 1);
-  klee_prefer_cex(s, s->st_uid == defaults->st_uid);
-  klee_prefer_cex(s, s->st_gid == defaults->st_gid);
-  klee_prefer_cex(s, s->st_blksize == 4096);
-  klee_prefer_cex(s, s->st_atime == defaults->st_atime);
-  klee_prefer_cex(s, s->st_mtime == defaults->st_mtime);
-  klee_prefer_cex(s, s->st_ctime == defaults->st_ctime);
+  klee_posix_prefer_cex(s, !(s->st_mode & ~(S_IFMT | 0777)));
+  klee_posix_prefer_cex(s, s->st_dev == defaults->st_dev);
+  klee_posix_prefer_cex(s, s->st_rdev == defaults->st_rdev);
+  klee_posix_prefer_cex(s, (s->st_mode&0700) == 0600);
+  klee_posix_prefer_cex(s, (s->st_mode&0070) == 0020);
+  klee_posix_prefer_cex(s, (s->st_mode&0007) == 0002);
+  klee_posix_prefer_cex(s, (s->st_mode&S_IFMT) == S_IFREG);
+  klee_posix_prefer_cex(s, s->st_nlink == 1);
+  klee_posix_prefer_cex(s, s->st_uid == defaults->st_uid);
+  klee_posix_prefer_cex(s, s->st_gid == defaults->st_gid);
+  klee_posix_prefer_cex(s, s->st_blksize == 4096);
+  klee_posix_prefer_cex(s, s->st_atime == defaults->st_atime);
+  klee_posix_prefer_cex(s, s->st_mtime == defaults->st_mtime);
+  klee_posix_prefer_cex(s, s->st_ctime == defaults->st_ctime);
 
   s->st_size = dfile->size;
   s->st_blocks = 8;
