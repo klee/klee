@@ -13,6 +13,8 @@ CONFIGDIRNAME := stat-configs
 TOOLSCRIPTNAME := klee-stats
 TOOLCONFIGNAME := default.config
 VERNAME := version-1.config
+TESTNAME := test.config
+
 # Hack to prevent install trying to strip
 # symbols from a python script
 KEEP_SYMBOLS := 1
@@ -38,11 +40,13 @@ $(ToolBuildPath): $(PROJ_SRC_DIR)/$(TOOLSCRIPTNAME)
 $(ConfigBuildPath): $(PROJ_SRC_DIR)/$(TOOLCONFIGNAME)
 	$(Verb) $(CP) -f $(PROJ_SRC_DIR)/$(TOOLCONFIGNAME) "$@"
 
-$(ConfigDirPath): $(PROJ_SRC_DIR)/$(CONFIGDIRNAME)/$(VERNAME) 
+$(ConfigDirPath): $(PROJ_SRC_DIR)/$(CONFIGDIRNAME)/$(VERNAME) $(PROJ_SRC_DIR)/$(CONFIGDIRNAME)/$(TESTNAME)
 	$(Echo) Making config directory $(CONFIGDIRNAME)
 	mkdir -p "$@"
 	$(Echo) Copying version file $(VERNAME)
 	$(Verb) $(CP) -f $(PROJ_SRC_DIR)/$(CONFIGDIRNAME)/$(VERNAME) $@
+	$(Echo) Copying version file $(TESTNAME)
+	$(Verb) $(CP) -f $(PROJ_SRC_DIR)/$(CONFIGDIRNAME)/$(TESTNAME) $@
 
 ifdef NO_INSTALL
 install-local::

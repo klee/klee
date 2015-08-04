@@ -557,7 +557,7 @@ def openLLIstats(cdir):
         asdata = parseAssembly(assembly)
         stats = parseStats(istats)
     else:
-        print('assembly.ll or run.istats no found', file=sys.stderr)
+        print('assembly.ll or run.istats not found', file=sys.stderr)
         exit(1)
 
     return asdata, stats
@@ -685,11 +685,6 @@ def main():
     #Version list/configuration
     dataVs = processVersions([eval(list(open(getLogFile(d)))[0]) for d in dirs])
 
-
-
-    if len(data) > 1:
-        dirs = stripCommonPathPrefix(dirs)
-
     global topInstrs
 
     if args.TI:
@@ -700,6 +695,9 @@ def main():
         _, test = topInstructions(dirs[0])
         idata = map(topInstructions, dirs)
         topInstrs = [itimes[0][0] for (maxitimes, itimes) in idata]
+
+    if len(data) > 1:
+        dirs = stripCommonPathPrefix(dirs)
 
     labels = getLabels(pr)
 
