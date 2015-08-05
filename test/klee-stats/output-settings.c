@@ -6,7 +6,12 @@
 // RUN: %klee --output-dir=%t.klee-out1 --libc=klee --exit-on-error %t1.bc
 // RUN: %klee --output-dir=%t.klee-out2 --libc=klee --exit-on-error %t1.bc
 // RUN: %klee-stats %t.klee-out0 %t.klee-out1 %t.klee-out2 
+// RUN: %klee-stats %t.klee-out0 %t.klee-out1 %t.klee-out2 --print-all
+// RUN: %klee-stats %t.klee-out0 %t.klee-out1 %t.klee-out2 --print-reltime
+// RUN: %klee-stats %t.klee-out0 %t.klee-out1 %t.klee-out2 --print-more
+// RUN: %klee-stats %t.klee-out0 %t.klee-out1 %t.klee-out2 --print-abstime
 
+// Tests that all default output settings work
 #include <stdio.h>
 
 int ackermann(int m, int n) {

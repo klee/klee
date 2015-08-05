@@ -5,7 +5,7 @@
 // RUN: %klee --output-dir=%t.klee-out0 --libc=klee --exit-on-error %t1.bc
 // RUN: %klee --output-dir=%t.klee-out1 --libc=klee --exit-on-error %t1.bc
 // RUN: %klee --output-dir=%t.klee-out2 --libc=klee --exit-on-error %t1.bc
-// RUN: %klee-stats %t.klee-out0 %t.klee-out1 %t.klee-out2 --top-instructions
+// RUN: %klee-stats %t.klee-out0 %t.klee-out1 %t.klee-out2 --top-instructions | grep 'Top Instr'
 
 #include <stdio.h>
 

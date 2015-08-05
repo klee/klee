@@ -67,7 +67,7 @@ static char *__get_sym_str(int numChars, char *name) {
   klee_make_symbolic(s, numChars+1, name);
 
   for (i=0; i<numChars; i++)
-    klee_prefer_cex(s, __isprint(s[i]));
+    klee_posix_prefer_cex(s, __isprint(s[i]));
   
   s[numChars] = '\0';
   return s;
