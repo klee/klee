@@ -5,15 +5,7 @@
 // RUN: %klee --output-dir=%t.klee-out0 --libc=klee --exit-on-error %t1.bc
 // RUN: %klee --output-dir=%t.klee-out1 --libc=klee --exit-on-error %t1.bc
 // RUN: %klee --output-dir=%t.klee-out2 --libc=klee --exit-on-error %t1.bc
-<<<<<<< HEAD
-<<<<<<< HEAD
 // RUN: %klee-stats %t.klee-out0 %t.klee-out1 %t.klee-out2 --top-instructions
-=======
-// RUN: %klee-stats %t.klee-out0 %t.klee-out1 %t.klee-out2 --top-instruction
->>>>>>> 2ce8c2e... Added initial tests and fixed a corresponding bug
-=======
-// RUN: %klee-stats %t.klee-out0 %t.klee-out1 %t.klee-out2 --top-instructions
->>>>>>> b013981... Override functionality tests
 
 #include <stdio.h>
 
