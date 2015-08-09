@@ -240,7 +240,11 @@ bool CexCachingSolver::getAssignment(const Query& query, Assignment *&result) {
     }
     
     if (DebugCexCacheCheckBinding)
-      assert(binding->satisfies(key.begin(), key.end()));
+      if (!binding->satisfies(key.begin(), key.end())) {
+        query.dump();
+        binding->dump();
+        klee_error("Generated assignment doesn't match query");
+      }
   } else {
     binding = (Assignment*) 0;
   }
