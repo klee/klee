@@ -1267,4 +1267,16 @@ template class MetaSMTSolver< DirectSolver_Context < Z3_Backend> >;
 template class MetaSMTSolver< DirectSolver_Context < STP_Backend> >;
 
 #endif /* SUPPORT_METASMT */
+///
 
+void Query::dump() const {
+  llvm::errs() << "Constraints [\n";
+  for (ConstraintManager::const_iterator i = constraints.begin();
+      i != constraints.end(); i++) {
+    (*i)->dump();
+  }
+  llvm::errs() << "]\n";
+  llvm::errs() << "Query [\n";
+  expr->dump();
+  llvm::errs() << "]\n";
+}
