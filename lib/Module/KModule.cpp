@@ -7,11 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-// FIXME: This does not belong here.
-#include "../Core/Common.h"
-
 #define DEBUG_TYPE "KModule"
 #include "klee/Internal/Module/KModule.h"
+#include "klee/Internal/Support/ErrorHandling.h"
 
 #include "Passes.h"
 

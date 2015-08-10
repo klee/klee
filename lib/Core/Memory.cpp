@@ -7,14 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Common.h"
-
 #include "Memory.h"
 
 #include "Context.h"
 #include "klee/Expr.h"
 #include "klee/Solver.h"
 #include "klee/util/BitArray.h"
+#include "klee/Internal/Support/ErrorHandling.h"
 
 #include "ObjectHolder.h"
 #include "MemoryManager.h"
