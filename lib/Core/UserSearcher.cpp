@@ -7,13 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Common.h"
-
 #include "UserSearcher.h"
 
 #include "Searcher.h"
 #include "Executor.h"
 
+#include "klee/Internal/Support/ErrorHandling.h"
 #include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
