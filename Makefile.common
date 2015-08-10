@@ -5,6 +5,10 @@ include $(LEVEL)/Makefile.config
 # Include LLVM's Master Makefile config and rules.
 include $(LLVM_OBJ_ROOT)/Makefile.config
 
+# Assertions should be enabled by default for KLEE (but they can still
+# be disabled by running make with DISABLE_ASSERTIONS=1
+DISABLE_ASSERTIONS := 0
+
 BUILDING_RUNTIME:=$(if $(or $(BYTECODE_LIBRARY),$(MODULE_NAME)),1,0)
 ifeq ($(BUILDING_RUNTIME),1)
 #
@@ -12,7 +16,6 @@ ifeq ($(BUILDING_RUNTIME),1)
 # to override whatever the user may have said on the command line,
 # hence the use of override.
 #
-
 override ENABLE_OPTIMIZED := $(RUNTIME_ENABLE_OPTIMIZED)
 override DISABLE_ASSERTIONS := $(RUNTIME_DISABLE_ASSERTIONS)
 override ENABLE_PROFILING := $(RUNTIME_ENABLE_PROFILING)
