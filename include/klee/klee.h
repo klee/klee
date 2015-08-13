@@ -13,6 +13,10 @@
 #include "stdint.h"
 #include "stddef.h"
 
+  /*tainting interface*/
+  void klee_set_taint (unsigned int taint, void* buffer, size_t size);
+  unsigned int klee_get_taint (void* buffer, size_t size);
+
 #ifdef __cplusplus
 extern "C" {
 #endif

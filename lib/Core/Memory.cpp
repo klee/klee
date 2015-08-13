@@ -13,6 +13,7 @@
 
 #include "Context.h"
 #include "klee/Expr.h"
+#include "klee/Taint.h"
 #include "klee/Solver.h"
 #include "klee/util/BitArray.h"
 
@@ -108,7 +109,8 @@ ObjectState::ObjectState(const MemoryObject *mo)
     knownSymbolics(0),
     updates(0, 0),
     size(mo->size),
-    readOnly(false) {
+    readOnly(false),
+    taints(0) {
   mo->refCount++;
   if (!UseConstantArrays) {
     // FIXME: Leaked.
@@ -129,6 +131,7 @@ ObjectState::ObjectState(const MemoryObject *mo, const Array *array)
     flushMask(0),
     knownSymbolics(0),
     updates(array, 0),
+    taints(0),
     size(mo->size),
     readOnly(false) {
   mo->refCount++;
@@ -146,7 +149,8 @@ ObjectState::ObjectState(const ObjectState &os)
     knownSymbolics(0),
     updates(os.updates),
     size(os.size),
-    readOnly(false) {
+    readOnly(false),
+    taints(0) {
   assert(!os.readOnly && "no need to copy read only object?");
   if (object)
     object->refCount++;
@@ -156,14 +160,18 @@ ObjectState::ObjectState(const ObjectState &os)
     for (unsigned i=0; i<size; i++)
       knownSymbolics[i] = os.knownSymbolics[i];
   }
-
   memcpy(concreteStore, os.concreteStore, size*sizeof(*concreteStore));
+  if(os.taints){
+    taints = new TaintSet[os.size];
+    memcpy(taints, os.taints, size*sizeof(*taints));
+  }
 }
 
 ObjectState::~ObjectState() {
   if (concreteMask) delete concreteMask;
   if (flushMask) delete flushMask;
   if (knownSymbolics) delete[] knownSymbolics;
+  if (taints) delete[] taints;
   delete[] concreteStore;
 
   if (object)
@@ -288,7 +296,8 @@ void ObjectState::flushRangeForRead(unsigned rangeBase,
                                     unsigned rangeSize) const {
   if (!flushMask) flushMask = new BitArray(size, true);
  
-  for (unsigned offset=rangeBase; offset<rangeBase+rangeSize; offset++) {
+  for (unsigned 
+offset=rangeBase; offset<rangeBase+rangeSize; offset++) {
     if (!isByteFlushed(offset)) {
       if (isByteConcrete(offset)) {
         updates.extend(ConstantExpr::create(offset, Expr::Int32),
@@ -333,6 +342,9 @@ void ObjectState::flushRangeForWrite(unsigned rangeBase,
     }
   } 
 }
+
+
+
 
 bool ObjectState::isByteConcrete(unsigned offset) const {
   return !concreteMask || concreteMask->get(offset);
@@ -604,3 +616,23 @@ void ObjectState::print() {
     llvm::errs() << "\t\t[" << un->index << "] = " << un->value << "\n";
   }
 }
+/*Tainting begins*/
+  void ObjectState::writeByteTaint(unsigned offset, TaintSet taint){
+        if(!taints){
+            if (taint == EMPTYTAINTSET)
+                return;
+            taints = new TaintSet[size];
+            memset(taints, 0, size*sizeof(*taints));
+        }
+        taints[offset]=taint;
+   }
+
+  TaintSet ObjectState::readByteTaint(unsigned offset)  const{
+        if(!taints){
+            return EMPTYTAINTSET;
+        }
+        return taints[offset];
+  }
+/*Tainting ends*/
+
+

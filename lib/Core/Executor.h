@@ -207,7 +207,7 @@ private:
   void callExternalFunction(ExecutionState &state,
                             KInstruction *target,
                             llvm::Function *function,
-                            std::vector< ref<Expr> > &arguments);
+                            std::vector< std::pair<ref<Expr>, TaintSet> > &arguments);
 
   ObjectState *bindObjectInState(ExecutionState &state, const MemoryObject *mo,
                                  bool isLocal, const Array *array = 0);
@@ -226,6 +226,7 @@ private:
                     ref<Expr> p,
                     ExactResolutionList &results,
                     const std::string &name);
+  bool resolveOne(ExecutionState &state, ref<Expr> address,  ObjectPair &op);
 
   /// Allocate and bind a new object in a particular state. NOTE: This
   /// function may fork.
@@ -258,18 +259,20 @@ private:
                    ref<Expr> address,
                    KInstruction *target = 0);
   
-  void executeCall(ExecutionState &state, 
-                   KInstruction *ki,
-                   llvm::Function *f,
-                   std::vector< ref<Expr> > &arguments);
                    
+  void executeCall(ExecutionState &state, 
+                           KInstruction *ki,
+                           llvm::Function *f,
+		   std::vector< std::pair< ref<Expr>,  TaintSet > > &arguments);
   // do address resolution / object binding / out of bounds checking
   // and perform the operation
   void executeMemoryOperation(ExecutionState &state,
                               bool isWrite,
                               ref<Expr> address,
                               ref<Expr> value /* undef if read */,
-                              KInstruction *target /* undef if write */);
+                              KInstruction *target /* undef if write */,
+                              TaintSet taintr = 0 /* undef if write */,
+                              TaintSet taintw = 0 /* undef if read */);
 
   void executeMakeSymbolic(ExecutionState &state, const MemoryObject *mo,
                            const std::string &name);
@@ -313,11 +316,11 @@ private:
 
   void bindLocal(KInstruction *target, 
                  ExecutionState &state, 
-                 ref<Expr> value);
+                 ref<Expr> value, TaintSet taint = 0);
   void bindArgument(KFunction *kf, 
                     unsigned index,
                     ExecutionState &state,
-                    ref<Expr> value);
+                    ref<Expr> value, TaintSet taint = 0);
 
   ref<klee::ConstantExpr> evalConstantExpr(const llvm::ConstantExpr *ce);
 

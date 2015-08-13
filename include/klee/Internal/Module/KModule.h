@@ -113,6 +113,8 @@ namespace klee {
     // Functions which are part of KLEE runtime
     std::set<const llvm::Function*> internalFunctions;
 
+    //Map from basic blocs to SESE regions depth
+    std::map<llvm::BasicBlock *, int > regions; 
   private:
     // Mark function with functionName as part of the KLEE runtime
     void addInternalFunction(const char* functionName);

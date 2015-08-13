@@ -50,6 +50,7 @@ public:
   /// ModuleOptions - Module level options which can be set when
   /// registering a module with the interpreter.
   struct ModuleOptions {
+    bool CalculateRegions;
     std::string LibraryDir;
     bool Optimize;
     bool CheckDivZero;
@@ -76,9 +77,10 @@ public:
     /// symbolic values. This is used to test the correctness of the
     /// symbolic execution on concrete programs.
     unsigned MakeConcreteSymbolic;
+    unsigned TaintConfig;
 
     InterpreterOptions()
-      : MakeConcreteSymbolic(false)
+      : MakeConcreteSymbolic(false), TaintConfig(0)
     {}
   };
 
