@@ -153,6 +153,8 @@ public:
 
   virtual void getCoveredLines(const ExecutionState &state,
                                std::map<const std::string*, std::set<unsigned> > &res) = 0;
+  virtual void getRanges(const ExecutionState &state,
+          std::string &res) = 0;
 };
 
 } // End klee namespace

@@ -3470,6 +3470,27 @@ void Executor::getConstraintLog(const ExecutionState &state, std::string &res,
   }
 }
 
+void Executor::getRanges(const ExecutionState &state, std::string &res)
+{
+  llvm::raw_string_ostream info(res);
+  for (unsigned i = 0; i != state.symbolics.size(); ++i) {
+    const MemoryObject *mo = state.symbolics[i].first;
+    const ObjectState *os = state.addressSpace.findObject(mo);
+    std::string symb_name = state.symbolics[i].first->name;
+    ref<Expr> read_symb = os->read(0, 8 * mo->size);
+    Query q(state.constraints, read_symb);
+    std::pair< ref<Expr>, ref<Expr> > res =
+      solver->solver->getRange(q);
+    ConstantExpr *a = dyn_cast<ConstantExpr>(res.first);
+    ConstantExpr *b = dyn_cast<ConstantExpr>(res.second);
+
+    assert(a); assert(b);
+    info << '"' << symb_name.c_str() << "\" = [" <<
+      a->getZExtValue() << ' ' << b->getZExtValue() <<
+      "]\n";
+  }
+}
+
 bool Executor::getSymbolicSolution(const ExecutionState &state,
                                    std::vector< 
                                    std::pair<std::string,
