@@ -6,12 +6,12 @@ track it at runtime.  It allows the user to check if any data (like
 crypto keys) is leaked or reaches a certain sink.
 
 KLEE is extended with a couple of special function handlers:
-
+```
 int klee_get_taint (void *message, size_t size); // get taint value from
 message
 void klee_set_taint (int taint, void *message, size_t size); // set taint
 to message
-
+```
 As an example, see here how the taint gets propagated from "a" and "b"
 to "c":
 ```
@@ -23,7 +23,7 @@ to "c":
   c = a + b;
   klee_assert (klee_get_taint (&c, sizeof (c)) == (1 | 2));
 ```
-For more advanced taint tracking (like when a conditional brach is
+For more advanced taint tracking (like when a conditional branch is
 decided using a tainted variable), we taint also the "program counter"
 so any future assign gets tainted with the PC. For instance, here "c"
 gets tainted indirectly by "a":
