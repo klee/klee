@@ -12,6 +12,7 @@
 
 #include "Context.h"
 #include "klee/Expr.h"
+#include "klee/Taint.h"
 
 #include "llvm/ADT/StringExtras.h"
 
@@ -167,6 +168,9 @@ private:
   // mutable because we may need flush during read of const
   mutable UpdateList updates;
 
+  //taints (Concrete offset only)
+  TaintSet *taints;
+
 public:
   unsigned size;
 
@@ -206,6 +210,10 @@ public:
   void write16(unsigned offset, uint16_t value);
   void write32(unsigned offset, uint32_t value);
   void write64(unsigned offset, uint64_t value);
+  // Tainting related.
+  void writeByteTaint(unsigned offset, TaintSet taint);
+  TaintSet readByteTaint(unsigned offset) const;
+
 
 private:
   const UpdateList &getUpdates() const;

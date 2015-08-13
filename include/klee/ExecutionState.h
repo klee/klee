@@ -21,6 +21,8 @@
 #include <map>
 #include <set>
 #include <vector>
+#include <stack>
+#include <klee/Taint.h>
 
 namespace klee {
 class Array;
@@ -55,6 +57,9 @@ struct StackFrame {
   // does not pass vaarg through as expected). VACopy is lowered inside
   // of intrinsic lowering.
   MemoryObject *varargs;
+
+  //SESE Region Stack of taints
+  std::stack<TaintSet> regionStack; //stack of taints
 
   StackFrame(KInstIterator caller, KFunction *kf);
   StackFrame(const StackFrame &s);
@@ -145,8 +150,9 @@ public:
   void addFnAlias(std::string old_fn, std::string new_fn);
   void removeFnAlias(std::string fn);
 
+  TaintSet taint; //lpc Program counter taint
 private:
-  ExecutionState() : ptreeNode(0) {}
+  ExecutionState() : ptreeNode(0), taint(0) {}
 
 public:
   ExecutionState(KFunction *kf);
@@ -169,6 +175,14 @@ public:
 
   bool merge(const ExecutionState &b);
   void dumpStack(llvm::raw_ostream &out) const;
+
+  //taint related..
+  TaintSet getPCTaint();
+  void setPCTaint(TaintSet new_taint);
+  int getRegionDepth();
+  void enterRegion();
+  void leaveRegion();
+
 };
 }
 

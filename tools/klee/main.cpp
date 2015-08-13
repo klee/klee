@@ -68,6 +68,20 @@ using namespace llvm;
 using namespace klee;
 
 namespace {
+  enum TaintType {
+    NoTaint, Direct, ControlFlow, Regions
+  };
+
+  cl::opt<TaintType>
+  Taint("taint", 
+       cl::desc("Track tainting (none by default)."),
+       cl::values(clEnumValN(NoTaint, "none", "Don't track tainting (default)"),
+                  clEnumValN(Direct, "direct", "Track direct tainting assignments"),
+          clEnumValN(ControlFlow, "control-flow", "Track control-flow indirect tainting"),
+          clEnumValN(Regions, "regions", "Region-based tainting"),
+          clEnumValEnd),
+       cl::init(NoTaint));
+
   cl::opt<std::string>
   InputFile(cl::desc("<input bytecode>"), cl::Positional, cl::init("-"));
 
@@ -1269,6 +1283,7 @@ int main(int argc, char **argv, char **envp) {
                                   /*CheckDivZero=*/CheckDivZero,
                                   /*CheckOvershift=*/CheckOvershift);
   
+  Opts.CalculateRegions = Taint == Regions;
   switch (Libc) {
   case NoLibc: /* silence compiler warning */
     break;
@@ -1353,6 +1368,23 @@ int main(int argc, char **argv, char **envp) {
   }
 
   Interpreter::InterpreterOptions IOpts;
+  switch(Taint){
+      case Direct: 
+        IOpts.TaintConfig = 1;
+        break;
+      case ControlFlow: 
+        IOpts.TaintConfig = 2;
+        break;
+      case Regions: 
+        IOpts.TaintConfig = 3;
+        break;
+      case NoTaint:
+      default:
+        IOpts.TaintConfig = 0;
+        break;
+  }
+
+
   IOpts.MakeConcreteSymbolic = MakeConcreteSymbolic;
   KleeHandler *handler = new KleeHandler(pArgc, pArgv);
   Interpreter *interpreter = 
