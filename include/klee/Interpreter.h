@@ -70,6 +70,30 @@ public:
 	  SMTLIB2 //.SMT2 files (SMTLIB version 2 files)
   };
 
+
+
+  class TaintConfig {
+    public:
+     enum Config {
+       DIRECT = 0,
+       INDIRECT,
+       INDIRECT_SESE,
+       NOTAINT = 100
+     };
+    private:
+      unsigned config;
+
+    public:
+      TaintConfig(Config config): config(config) {}
+      bool has(Config config) const {
+          if (this->config == NOTAINT) {
+              return config == NOTAINT;
+          }
+          // A config also has all previously options too 
+          return config <= this->config;
+     }
+  };
+
   /// InterpreterOptions - Options varying the runtime behavior during
   /// interpretation.
   struct InterpreterOptions {
@@ -77,10 +101,10 @@ public:
     /// symbolic values. This is used to test the correctness of the
     /// symbolic execution on concrete programs.
     unsigned MakeConcreteSymbolic;
-    unsigned TaintConfig;
+    class TaintConfig TaintConfig;
 
     InterpreterOptions()
-      : MakeConcreteSymbolic(false), TaintConfig(0)
+      : MakeConcreteSymbolic(false), TaintConfig(TaintConfig.NOTAINT)
     {}
   };
 
