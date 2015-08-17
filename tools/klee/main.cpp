@@ -801,7 +801,8 @@ static const char *dontCareExternals[] = {
   "__errno_location",
   "fstat",
 #endif
-
+  "klee_get_taint",
+  "klee_set_taint",
   // static information, pretty ok to return
   "getegid",
   "geteuid",

@@ -13,6 +13,7 @@
 #include "klee/Internal/Module/InstructionInfoTable.h"
 #include "klee/Internal/Module/KInstruction.h"
 #include "klee/Internal/Module/KModule.h"
+#include "klee/Internal/Support/Debug.h"
 
 #include "klee/Expr.h"
 
@@ -152,7 +153,7 @@ TaintSet ExecutionState::getPCTaint() {
 //current Program counter taint setter
 void ExecutionState::setPCTaint(TaintSet new_taint) {
     taint = new_taint;
-    KLEE_DEBUG(llvm::errs() << "PC TAINTED! " << taint <<std::endl);
+    KLEE_DEBUG(llvm::errs() << "PC TAINTED! " << taint << "\n");
 }
 
 //get the depth of the SESE region stack
@@ -163,7 +164,7 @@ int ExecutionState::getRegionDepth() {
 //called when entering a new SESE region 
 void ExecutionState::enterRegion() {
     stack.back().regionStack.push(taint);
-    KLEE_DEBUG(llvm::errs() << "REGION CHANGED! PUSH!" << taint <<std::endl;
+    KLEE_DEBUG(llvm::errs() << "REGION CHANGED! PUSH!" << taint << "\n");
 }
 
 //called when leaving a SESE region 
