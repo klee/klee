@@ -3247,12 +3247,12 @@ void Executor::executeMemoryOperation(ExecutionState &state,
         } else {
           ObjectState *wos = state.addressSpace.getWriteable(mo, os);
           wos->write(offset, value);
-
-	      unsigned offset_cnt;
-	      toConstant(state, offset, "write taint symbolic offset not impl")->toMemory(&offset_cnt);
-	      for(unsigned j=0;j<type/8;j++)
-            wos->writeByteTaint(offset_cnt+j,taintw|taintr);
-
+          if (interpreterOpts.TaintConfig > 0){
+              unsigned offset_cnt;
+    	      toConstant(state, offset, "write taint symbolic offset not impl")->toMemory(&offset_cnt);
+	          for(unsigned j=0;j<type/8;j++)
+                  wos->writeByteTaint(offset_cnt+j,taintw|taintr);
+          }
         }
       } else {
         TaintSet taint = taintr | taintw;
@@ -3260,11 +3260,13 @@ void Executor::executeMemoryOperation(ExecutionState &state,
         if (interpreterOpts.MakeConcreteSymbolic)
           result = replaceReadWithSymbolic(state, result);
         {
-        unsigned offset_cnt;
-        unsigned int bytes = type/8;
-        toConstant(state, offset, "read taint symbolic offset not impl")->toMemory(&offset_cnt);
-        for(unsigned j=0;j<bytes;j++)
-            taint |= os->readByteTaint(offset_cnt+j);
+        if (interpreterOpts.TaintConfig > 0){
+            unsigned offset_cnt;
+            unsigned int bytes = type/8;
+            toConstant(state, offset, "read taint symbolic offset not impl")->toMemory(&offset_cnt);
+            for(unsigned j=0;j<bytes;j++)
+                taint |= os->readByteTaint(offset_cnt+j);
+            }
         }
         bindLocal(target, state, result, taint);
       }
@@ -3302,11 +3304,27 @@ void Executor::executeMemoryOperation(ExecutionState &state,
                                 "readonly.err");
         } else {
           ObjectState *wos = bound->addressSpace.getWriteable(mo, os);
-          wos->write(mo->getOffsetExpr(address), value);
+          ref<Expr> offset = mo->getOffsetExpr(address);
+          wos->write(offset, value);
+          if (interpreterOpts.TaintConfig > 0){
+              unsigned offset_cnt;
+    	      toConstant(state, offset, "write taint symbolic offset not impl")->toMemory(&offset_cnt);
+	          for(unsigned j=0;j<type/8;j++)
+                  wos->writeByteTaint(offset_cnt+j,taintw|taintr);
+          }
         }
       } else {
-        ref<Expr> result = os->read(mo->getOffsetExpr(address), type);
-        bindLocal(target, *bound, result);
+        TaintSet taint = taintr | taintw;
+        ref<Expr> offset = mo->getOffsetExpr(address);
+        ref<Expr> result = os->read(offset, type);
+        if (interpreterOpts.TaintConfig > 0){
+            unsigned offset_cnt;
+            unsigned int bytes = type/8;
+            toConstant(state, offset, "read taint symbolic offset not impl")->toMemory(&offset_cnt);
+            for(unsigned j=0;j<bytes;j++)
+                taint |= os->readByteTaint(offset_cnt+j);
+        }
+        bindLocal(target, *bound, result, taint);
       }
     }
 
