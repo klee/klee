@@ -1371,20 +1371,19 @@ int main(int argc, char **argv, char **envp) {
   Interpreter::InterpreterOptions IOpts;
   switch(Taint){
       case Direct: 
-        llvm::errs() << "Using DIRECT\n";
+        llvm::errs() << "Using direct tainting\n";
         IOpts.TaintConfig = 1;
         break;
       case ControlFlow: 
-        llvm::errs() << "Using INDIRECT\n";
+        llvm::errs() << "Using direct and control flow based tainitng\n";
         IOpts.TaintConfig = 2;
         break;
       case Regions: 
-        llvm::errs() << "Using REGION\n";
+        llvm::errs() << "Using direct and control flow based tainitng with SESE support\n";
         IOpts.TaintConfig = 3;
         break;
       case NoTaint:
       default:
-        llvm::errs() << "Using NO TAINT\n";
         IOpts.TaintConfig = 0;
         break;
   }
