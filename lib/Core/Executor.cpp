@@ -1997,12 +1997,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::Load: {
-    llvm::errs() << "LOAD " << eval(ki, 0, state).value << " Taints " << eval(ki, 0, state).taint  <<"\n";
     executeMemoryOperation(state, false, eval(ki, 0, state).value, 0, ki, eval(ki, 0, state).taint, 0);
     break;
   }
   case Instruction::Store: {
-    llvm::errs() << "STORE " << eval(ki, 1, state).value <<" <- " << eval(ki, 0, state).value << "Taints " << eval(ki, 1, state).taint << " "<<  eval(ki, 0, state).taint <<"\n";
     executeMemoryOperation(state, true, eval(ki, 1, state).value, eval(ki, 0, state).value, ki, eval(ki, 1, state).taint, eval(ki, 0, state).taint);
     break;
   }
