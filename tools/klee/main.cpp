@@ -77,9 +77,9 @@ namespace {
        cl::desc("Track tainting (none by default)."),
        cl::values(clEnumValN(NoTaint, "none", "Don't track tainting (default)"),
                   clEnumValN(Direct, "direct", "Track direct tainting assignments"),
-          clEnumValN(ControlFlow, "control-flow", "Track control-flow indirect tainting"),
-          clEnumValN(Regions, "regions", "Region-based tainting"),
-          clEnumValEnd),
+                  clEnumValN(ControlFlow, "indirect", "Track control-flow indirect tainting"),
+                  clEnumValN(Regions, "regions", "Region-based tainting"),
+                  clEnumValEnd),
        cl::init(NoTaint));
 
   cl::opt<std::string>
@@ -1370,16 +1370,20 @@ int main(int argc, char **argv, char **envp) {
   Interpreter::InterpreterOptions IOpts;
   switch(Taint){
       case Direct: 
+        llvm::errs() << "Using DIRECT\n";
         IOpts.TaintConfig = 1;
         break;
       case ControlFlow: 
+        llvm::errs() << "Using INDIRECT\n";
         IOpts.TaintConfig = 2;
         break;
       case Regions: 
+        llvm::errs() << "Using REGION\n";
         IOpts.TaintConfig = 3;
         break;
       case NoTaint:
       default:
+        llvm::errs() << "Using NO TAINT\n";
         IOpts.TaintConfig = 0;
         break;
   }
