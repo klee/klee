@@ -108,9 +108,9 @@ ObjectState::ObjectState(const MemoryObject *mo)
     flushMask(0),
     knownSymbolics(0),
     updates(0, 0),
+    taints(0),
     size(mo->size),
-    readOnly(false),
-    taints(0) {
+    readOnly(false) {
   mo->refCount++;
   if (!UseConstantArrays) {
     // FIXME: Leaked.
@@ -148,9 +148,9 @@ ObjectState::ObjectState(const ObjectState &os)
     flushMask(os.flushMask ? new BitArray(*os.flushMask, os.size) : 0),
     knownSymbolics(0),
     updates(os.updates),
+    taints(0),
     size(os.size),
-    readOnly(false),
-    taints(0) {
+    readOnly(false) {
   assert(!os.readOnly && "no need to copy read only object?");
   if (object)
     object->refCount++;
