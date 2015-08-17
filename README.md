@@ -22,4 +22,6 @@ environment that matches a computed test input, including setting up
 files, pipes, environment variables, and passing command line
 arguments.
 
+Coverage information can be found [here](http://vm-klee.doc.ic.ac.uk:55555/index.html).
+
 For further information, see the [webpage](http://klee.github.io/).
