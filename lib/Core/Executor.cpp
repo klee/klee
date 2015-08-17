@@ -1049,7 +1049,7 @@ void Executor::bindLocal(KInstruction *target, ExecutionState &state,
   Cell& cell = getDestCell(state, target);
   cell.value = value;
   cell.taint = taint;
-  if (interpreterOpts.TaintConfig.has(TaintConfig::INDIRECT))
+  if (interpreterOpts.TaintConfig.has(TaintConfig::ControlFlow))
       cell.taint |= state.getPCTaint();
 }
 
@@ -1058,7 +1058,7 @@ void Executor::bindArgument(KFunction *kf, unsigned index,
   Cell& cell = getArgumentCell(state, kf, index);
   cell.value = value;
   cell.taint = taint;
-  if (interpreterOpts.TaintConfig.has(TaintConfig::INDIRECT))
+  if (interpreterOpts.TaintConfig.has(TaintConfig::ControlFlow))
       cell.taint |= state.getPCTaint();
 }
 
@@ -1436,7 +1436,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   Instruction *i = ki->inst;
 
   //
-  if (interpreterOpts.TaintConfig.has(TaintConfig::INDIRECT_SESE)){
+  if (interpreterOpts.TaintConfig.has(TaintConfig::Regions)){
       int stack_counter = 0;
       int currentRegionDepth = state.getRegionDepth();
       int newRegionDepth = kmodule->regions.find (i->getParent())->second;
@@ -1553,7 +1553,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
              "Wrong operand index!");
       //ref<Expr> cond = eval(ki, 0, state).value;
 
-      if (interpreterOpts.TaintConfig.has(TaintConfig::INDIRECT)){
+      if (interpreterOpts.TaintConfig.has(TaintConfig::ControlFlow)){
           if (eval(ki, 0, state).taint != 0)
               klee_warning("Tainted condition PC retainted from 0x%08x to 0x%08x",
                                                         eval(ki, 0, state).taint, 
@@ -3197,7 +3197,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
                      getWidthForLLVMType(target->inst->getType()));
   
   unsigned bytes = Expr::getMinBytesForWidth(type);
-  if (interpreterOpts.TaintConfig.has(TaintConfig::INDIRECT))
+  if (interpreterOpts.TaintConfig.has(TaintConfig::ControlFlow))
       taintw |= state.getPCTaint();
   if (SimplifySymIndices) {
     if (!isa<ConstantExpr>(address))
@@ -3247,7 +3247,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
         } else {
           ObjectState *wos = state.addressSpace.getWriteable(mo, os);
           wos->write(offset, value);
-          if (interpreterOpts.TaintConfig.has(TaintConfig::DIRECT)){
+          if (interpreterOpts.TaintConfig.has(TaintConfig::Direct)){
               unsigned offset_cnt;
     	      toConstant(state, offset, "write taint symbolic offset not impl")->toMemory(&offset_cnt);
 	          for(unsigned j=0;j<type/8;j++)
@@ -3260,7 +3260,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
         if (interpreterOpts.MakeConcreteSymbolic)
           result = replaceReadWithSymbolic(state, result);
         {
-        if (interpreterOpts.TaintConfig.has(TaintConfig::DIRECT)){
+        if (interpreterOpts.TaintConfig.has(TaintConfig::Direct)){
             unsigned offset_cnt;
             unsigned int bytes = type/8;
             toConstant(state, offset, "read taint symbolic offset not impl")->toMemory(&offset_cnt);
@@ -3306,7 +3306,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
           ObjectState *wos = bound->addressSpace.getWriteable(mo, os);
           ref<Expr> offset = mo->getOffsetExpr(address);
           wos->write(offset, value);
-          if (interpreterOpts.TaintConfig.has(TaintConfig::DIRECT)){
+          if (interpreterOpts.TaintConfig.has(TaintConfig::Direct)){
               unsigned offset_cnt;
     	      toConstant(state, offset, "write taint symbolic offset not impl")->toMemory(&offset_cnt);
 	          for(unsigned j=0;j<type/8;j++)
@@ -3317,7 +3317,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
         TaintSet taint = taintr | taintw;
         ref<Expr> offset = mo->getOffsetExpr(address);
         ref<Expr> result = os->read(offset, type);
-        if (interpreterOpts.TaintConfig.has(TaintConfig::DIRECT)){
+        if (interpreterOpts.TaintConfig.has(TaintConfig::Direct)){
             unsigned offset_cnt;
             unsigned int bytes = type/8;
             toConstant(state, offset, "read taint symbolic offset not impl")->toMemory(&offset_cnt);

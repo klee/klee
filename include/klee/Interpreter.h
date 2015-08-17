@@ -75,19 +75,19 @@ public:
   class TaintConfig {
     public:
      enum Config {
-       DIRECT = 0,
-       INDIRECT,
-       INDIRECT_SESE,
-       NOTAINT = 100
+       Direct = 0,
+       ControlFlow,
+       Regions,
+       NoTaint = 100
      };
     private:
-      unsigned config;
+      Config config;
 
     public:
       TaintConfig(Config config): config(config) {}
       bool has(Config config) const {
-          if (this->config == NOTAINT) {
-              return config == NOTAINT;
+          if (this->config == NoTaint) {
+              return config == NoTaint;
           }
           // A config also has all previously options too 
           return config <= this->config;
@@ -104,7 +104,7 @@ public:
     class TaintConfig TaintConfig;
 
     InterpreterOptions()
-      : MakeConcreteSymbolic(false), TaintConfig(TaintConfig.NOTAINT)
+      : MakeConcreteSymbolic(false), TaintConfig(TaintConfig.NoTaint)
     {}
   };
 

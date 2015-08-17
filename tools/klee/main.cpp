@@ -68,19 +68,16 @@ using namespace llvm;
 using namespace klee;
 
 namespace {
-  enum TaintType {
-    NoTaint, Direct, ControlFlow, Regions
-  };
 
-  cl::opt<TaintType>
+  cl::opt<Interpreter::TaintConfig::Config>
   Taint("taint", 
        cl::desc("Track tainting (none by default)."),
-       cl::values(clEnumValN(NoTaint, "none", "Don't track tainting (default)"),
-                  clEnumValN(Direct, "direct", "Track direct tainting assignments"),
-                  clEnumValN(ControlFlow, "indirect", "Track control-flow indirect tainting"),
-                  clEnumValN(Regions, "regions", "Region-based tainting"),
+       cl::values(clEnumValN(Interpreter::TaintConfig::NoTaint, "none", "Don't track tainting (default)"),
+                  clEnumValN(Interpreter::TaintConfig::Direct, "direct", "Track direct tainting assignments"),
+                  clEnumValN(Interpreter::TaintConfig::ControlFlow, "controlflow", "Track control-flow indirect tainting"),
+                  clEnumValN(Interpreter::TaintConfig::Regions, "regions", "Region-based tainting"),
                   clEnumValEnd),
-       cl::init(NoTaint));
+       cl::init(Interpreter::TaintConfig::NoTaint));
 
   cl::opt<std::string>
   InputFile(cl::desc("<input bytecode>"), cl::Positional, cl::init("-"));
@@ -1288,7 +1285,7 @@ int main(int argc, char **argv, char **envp) {
                                   /*CheckDivZero=*/CheckDivZero,
                                   /*CheckOvershift=*/CheckOvershift);
   
-  Opts.CalculateRegions = Taint == Regions;
+  Opts.CalculateRegions = Taint == Interpreter::TaintConfig::Regions;
   switch (Libc) {
   case NoLibc: /* silence compiler warning */
     break;
@@ -1373,25 +1370,22 @@ int main(int argc, char **argv, char **envp) {
   }
 
   Interpreter::InterpreterOptions IOpts;
+  IOpts.TaintConfig = Interpreter::TaintConfig(Taint);
   switch(Taint){
-      case Direct: 
+      case Interpreter::TaintConfig::Direct: 
         llvm::errs() << "Using direct tainting\n";
-        IOpts.TaintConfig = Interpreter::TaintConfig(Interpreter::TaintConfig::DIRECT);
         break;
-      case ControlFlow: 
+      case Interpreter::TaintConfig::ControlFlow: 
         llvm::errs() << "Using direct and control flow based tainitng\n";
-        IOpts.TaintConfig = Interpreter::TaintConfig(Interpreter::TaintConfig::INDIRECT);
         break;
-      case Regions: 
+      case Interpreter::TaintConfig::Regions: 
         llvm::errs() << "Using direct and control flow based tainitng with SESE support\n";
-        IOpts.TaintConfig = Interpreter::TaintConfig(Interpreter::TaintConfig::INDIRECT_SESE);
         break;
-      case NoTaint:
+      case Interpreter::TaintConfig::NoTaint:
       default:
-        IOpts.TaintConfig = Interpreter::TaintConfig(Interpreter::TaintConfig::NOTAINT);
         break;
   }
-
+  
 
   IOpts.MakeConcreteSymbolic = MakeConcreteSymbolic;
   KleeHandler *handler = new KleeHandler(pArgc, pArgv);
