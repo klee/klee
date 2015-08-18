@@ -1551,8 +1551,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       // FIXME: Find a way that we don't have this hidden dependency.
       assert(bi->getCondition() == bi->getOperand(0) &&
              "Wrong operand index!");
-      //ref<Expr> cond = eval(ki, 0, state).value;
-
       if (interpreterOpts.TaintConfig.has(TaintConfig::ControlFlow)){
           if (eval(ki, 0, state).taint != 0)
               klee_warning("Tainted condition PC retainted from 0x%08x to 0x%08x",
@@ -1585,6 +1583,13 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     SwitchInst *si = cast<SwitchInst>(i);
     ref<Expr> cond = eval(ki, 0, state).value;
     BasicBlock *bb = si->getParent();
+
+    if (interpreterOpts.TaintConfig.has(TaintConfig::ControlFlow)){
+        if (eval(ki, 0, state).taint != 0)
+	    klee_warning("Tainted condition PC retainted from 0x%08x to 0x%08x",
+	                                                      eval(ki, 0, state).taint, state.getPCTaint()|eval(ki, 0, state).taint);
+	    state.setPCTaint( state.getPCTaint() | eval(ki, 0, state).taint );
+    }
 
     cond = toUnique(state, cond);
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(cond)) {
