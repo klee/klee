@@ -382,6 +382,7 @@ ExprHandle STPBuilder::constructUDivByConstant(ExprHandle expr_n, unsigned width
  * @return n/d without doing explicit division
  */
 ExprHandle STPBuilder::constructSDivByConstant(ExprHandle expr_n, unsigned width, uint64_t d) {
+  // Refactor using APInt::ms APInt::magic();
   assert(width==32 && "can only compute udiv constants for 32-bit division");
 
   // Compute the constants needed to compute n/d for constant d w/o division by d.
@@ -673,11 +674,14 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
     assert(*width_out!=1 && "uncanonicalized sdiv");
 
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(de->right))
-      if (optimizeDivides)
-	if (*width_out == 32) //only works for 32-bit division
-	  return constructSDivByConstant( left, *width_out, 
+      if (optimizeDivides) {
+        llvm::APInt divisor = CE->getAPValue();
+        if (divisor != llvm::APInt(CE->getWidth(),1, false /*unsigned*/) &&
+            divisor != llvm::APInt(CE->getWidth(), -1, true /*signed*/))
+            if (*width_out == 32) //only works for 32-bit division
+               return constructSDivByConstant( left, *width_out,
                                           CE->getZExtValue(32));
-
+      }
     // XXX need to test for proper handling of sign, not sure I
     // trust STP
     ExprHandle right = construct(de->right, width_out);
