@@ -5,7 +5,7 @@ set -e
 
 STP_LOG="$(pwd)/stp-build.log"
 
-if [ "${STP_VERSION}" == "UPSTREAM" ]; then
+if [ "${STP_VERSION}" != "r940" ]; then
     # Build minisat
     git clone https://github.com/stp/minisat
     cd minisat
@@ -18,7 +18,7 @@ if [ "${STP_VERSION}" == "UPSTREAM" ]; then
     cd ../../
 
     # Build STP
-    git clone --depth 1 git://github.com/stp/stp.git src
+    git clone --depth 1 -b "${STP_VERSION}" git://github.com/stp/stp.git src
     mkdir build
     cd build
     # Disabling building of shared libs is a workaround.
