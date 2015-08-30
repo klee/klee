@@ -454,6 +454,12 @@ bool IndependentSolver::computeInitialValues(const Query& query,
                                              std::vector< std::vector<unsigned char> > &values,
                                              bool &hasSolution){
   std::list<IndependentElementSet> * factors = new std::list<IndependentElementSet>;
+
+  // We assume the query has a solution except proven differently
+  // This is important in case we don't have any constraints but
+  // we need initial values for requested array objects.
+  hasSolution = true;
+
   getAllIndependentConstraintsSets(query, factors);
   //Used to rearrange all of the answers into the correct order
   std::map<const Array*, std::vector<unsigned char> > retMap;
