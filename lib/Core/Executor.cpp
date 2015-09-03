@@ -785,6 +785,28 @@ void Executor::branch(ExecutionState &state,
       addConstraint(*result[i], conditions[i]);
 }
 
+std::string Executor::getPathInfo(const ExecutionState &state, bool trueBranch)
+{
+  const llvm::BranchInst *branch =
+          dyn_cast<llvm::BranchInst>(state.prevPC->inst);
+  const llvm::Instruction *succ =
+          branch->getSuccessor(trueBranch ? 0 : 1)->getFirstNonPHI();
+
+  const InstructionInfo &ii = kmodule->infos->getInfo(succ);
+  const std::string &file = ii.file;
+  unsigned int fsize = file.size();
+  unsigned int line = ii.line;
+  std::stringstream ss;
+
+  ss << (trueBranch ? '1' : '0');
+
+  ss.write(reinterpret_cast<char*>(&fsize), sizeof(unsigned int));
+  ss << file;
+  ss.write(reinterpret_cast<char*>(&line), sizeof(unsigned int));
+
+  return ss.str();
+}
+
 Executor::StatePair 
 Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
   Solver::Validity res;
@@ -921,7 +943,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
   if (res==Solver::True) {
     if (!isInternal) {
       if (pathWriter) {
-        current.pathOS << "1";
+        current.pathOS << getPathInfo(current, true);
       }
     }
 
@@ -929,7 +951,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
   } else if (res==Solver::False) {
     if (!isInternal) {
       if (pathWriter) {
-        current.pathOS << "0";
+        current.pathOS << getPathInfo(current, false);
       }
     }
 
@@ -988,15 +1010,15 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       // is used for both falseState and trueState.
       falseState->pathOS = pathWriter->open(current.pathOS);
       if (!isInternal) {
-        trueState->pathOS << "1";
-        falseState->pathOS << "0";
+        trueState->pathOS << getPathInfo(current, true);
+        falseState->pathOS << getPathInfo(current, false);
       }
     }
     if (symPathWriter) {
       falseState->symPathOS = symPathWriter->open(current.symPathOS);
       if (!isInternal) {
-        trueState->symPathOS << "1";
-        falseState->symPathOS << "0";
+        trueState->symPathOS << getPathInfo(current, true);
+        falseState->symPathOS << getPathInfo(current, false);
       }
     }
 

@@ -420,6 +420,32 @@ llvm::raw_fd_ostream *KleeHandler::openTestFile(const std::string &suffix,
   return openOutputFile(getTestFilename(suffix, id));
 }
 
+llvm::raw_ostream &operator<<(llvm::raw_ostream &o, const PathLocation &I)
+{
+  o << I.branch << " " << I.file.size() << " " << I.file << " " << I.line;
+  return o;
+}
+
+std::istream &operator>>(std::istream &i, PathLocation &I)
+{
+  unsigned branch, count;
+
+  // >> to char is different -- use a temporary unsigned
+  i >> branch;
+  I.branch = branch;
+  i >> count;
+  i.get();
+
+  char *buf = new char[count];
+  i.read(buf, count);
+  I.file = std::string(buf, count);
+  delete[] buf;
+
+  i.get();
+  i >> I.line;
+
+  return i;
+}
 
 /* Outputs all files (.ktest, .kquery, .cov etc.) describing a test case */
 void KleeHandler::processTestCase(const ExecutionState &state,
@@ -475,11 +501,11 @@ void KleeHandler::processTestCase(const ExecutionState &state,
     }
 
     if (m_pathWriter) {
-      std::vector<unsigned char> concreteBranches;
+      std::vector<PathLocation> concreteBranches;
       m_pathWriter->readStream(m_interpreter->getPathStreamID(state),
                                concreteBranches);
       llvm::raw_fd_ostream *f = openTestFile("path", id);
-      for (std::vector<unsigned char>::iterator I = concreteBranches.begin(),
+      for (std::vector<PathLocation>::iterator I = concreteBranches.begin(),
                                                 E = concreteBranches.end();
            I != E; ++I) {
         *f << *I << "\n";
@@ -514,11 +540,11 @@ void KleeHandler::processTestCase(const ExecutionState &state,
     }
 
     if (m_symPathWriter) {
-      std::vector<unsigned char> symbolicBranches;
+      std::vector<PathLocation> symbolicBranches;
       m_symPathWriter->readStream(m_interpreter->getSymbolicPathStreamID(state),
                                   symbolicBranches);
       llvm::raw_fd_ostream *f = openTestFile("sym.path", id);
-      for (std::vector<unsigned char>::iterator I = symbolicBranches.begin(), E = symbolicBranches.end(); I!=E; ++I) {
+      for (std::vector<PathLocation>::iterator I = symbolicBranches.begin(), E = symbolicBranches.end(); I!=E; ++I) {
         *f << *I << "\n";
       }
       delete f;
@@ -561,9 +587,11 @@ void KleeHandler::loadPathFile(std::string name,
     assert(0 && "unable to open path file");
 
   while (f.good()) {
-    unsigned value;
-    f >> value;
-    buffer.push_back(!!value);
+    PathLocation loc;
+    f >> loc;
+    if (!f.good())
+            break;
+    buffer.push_back(!!loc.branch);
     f.get();
   }
 }
