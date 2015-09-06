@@ -10,6 +10,7 @@ import os
 import re
 import sys
 import argparse
+import ConfigParser
 
 from operator import itemgetter
 try:
@@ -46,6 +47,30 @@ KleeTable = TableFormat(lineabove=Line("-", "-", "-", "-"),
                         padding=0,
                         with_header_hide=None)
 
+#global config reader
+Config = ConfigParser.ConfigParser()
+#config file location
+global ConfigFile
+ConfigFile = os.path.join(sys.path[0], "default.config")
+
+#updated upon reading config
+global version
+version = None
+
+#for automatic version finding
+global autoVersion
+autoVersion = None
+
+#hash for grouped variables
+global groups
+groups = {}
+
+#Flags for postprocessing record
+global topInstrs
+topInstrs = None
+global topLocs
+topLocs = None
+
 def getLogFile(path):
     """Return the path to run.stats."""
     return os.path.join(path, 'run.stats')
@@ -54,8 +79,18 @@ def getLogFile(path):
 class LazyEvalList:
     """Store all the lines in run.stats and eval() when needed."""
     def __init__(self, lines):
-        # The first line in the records contains headers.
-        self.lines = lines[1:]
+
+        firstLine = eval(lines[0])
+        if isinstance(firstLine, tuple):
+            #Preversioned, only remove one line
+            # The first line in the records contains headers.
+            self.lines = lines[1:]
+        else:
+            # The first line in the records contains version number
+            # The second line in the records contains headers.
+            self.lines = lines[2:]
+
+        
 
     def __getitem__(self, index):
         if isinstance(self.lines[index], str):
@@ -79,23 +114,44 @@ def getMatchedRecordIndex(records, column, target):
             hi = mid
     return lo
 
+def getColumnIndex(columnName):
+    #Instead of using itemgetter
+    recordFormat = config_value("Input", 'record')
+
+    rlist = recordFormat.split(', ')
+    index = -1
+    for i,n in enumerate(rlist):
+        if columnName == rlist[i]:
+            index = i
+
+    return index
+
+def getColumnValues(columnName, records):
+    index = getColumnIndex(columnName)
+    if index is not -1:
+        return list(map(itemgetter(index), records))
+    else:
+        print("ERROR: Cannot get column '%s' values" % columnName)
+        sys.exit(1)
 
 def aggregateRecords(records):
-    # index for memUsage and stateCount in run.stats
-    memIndex = 6
-    stateIndex = 5
+    stats = None
+    if Config.has_section("Aggregates"):
 
-    # maximum and average memory usage
-    memValues = list(map(itemgetter(memIndex), records))
-    maxMem = max(memValues) / 1024 / 1024
-    avgMem = sum(memValues) / len(memValues) / 1024 / 1024
+        for option in Config.options("Aggregates"):
+            equations = parse_list(config_value("Aggregates", option))
+            for equation in equations:
+                exec(equation)
 
-    # maximum and average number of states
-    stateValues = list(map(itemgetter(stateIndex), records))
-    maxStates = max(stateValues)
-    avgStates = sum(stateValues) / len(stateValues)
+        statstr = "stats = " + config_value("Aggregates", 'stats')
+        try:  
+            exec(statstr)
+        except:
+            print("ERROR: Check '%s' in section '%s'" % ("Input", 'stats'))
+            sys.exit(1)
 
-    return (maxMem, avgMem, maxStates, avgStates)
+
+    return stats
 
 
 def stripCommonPathPrefix(paths):
@@ -134,63 +190,124 @@ def getKleeOutDirs(dirs):
                         kleeOutDirs.append(path)
     return kleeOutDirs
 
+def postLabels(labels):
+    #Post process labels
+    global topInstrs
+    global topLocs
+    ll = list(labels)
 
-def getLabels(pr):
-    if pr == 'all':
-        labels = ('Path', 'Instrs', 'Time(s)', 'ICov(%)', 'BCov(%)', 'ICount',
-                  'TSolver(%)', 'States', 'maxStates', 'avgStates', 'Mem(MB)',
-                  'maxMem(MB)', 'avgMem(MB)', 'Queries', 'AvgQC', 'Tcex(%)',
-                  'Tfork(%)')
-    elif pr == 'reltime':
-        labels = ('Path', 'Time(s)', 'TUser(%)', 'TSolver(%)',
-                  'Tcex(%)', 'Tfork(%)', 'TResolve(%)')
-    elif pr == 'abstime':
-        labels = ('Path', 'Time(s)', 'TUser(s)', 'TSolver(s)',
-                  'Tcex(s)', 'Tfork(s)', 'TResolve(s)')
-    elif pr == 'more':
-        labels = ('Path', 'Instrs', 'Time(s)', 'ICov(%)', 'BCov(%)', 'ICount',
-                  'TSolver(%)', 'States', 'maxStates', 'Mem(MB)', 'maxMem(MB)')
-    else:
-        labels = ('Path', 'Instrs', 'Time(s)', 'ICov(%)',
-                  'BCov(%)', 'ICount', 'TSolver(%)')
+    #Post processing for intructions
+    if topInstrs is not None and topInstrs[0] is not None:
+        ll.append("Top Instr")
+
+    if topLocs is not None and topLocs[0] is not None:
+        ll.append("Top Locations")
+
+    labels = tuple(ll)
+
     return labels
 
+def getLabels(pr):
+    #Interpreting the input description from config file
+    try:
+        strLabel = "labels = " + config_value("Labels", pr+"_labels")   
+        exec(strLabel)
+    except:
+        print("ERROR: Check '%s' in section '%s'" % (pr, 'labels'))
+        sys.exit(1)
+    return postLabels(labels)
 
-def getRow(record, stats, pr):
-    """Compose data for the current run into a row."""
-    I, BFull, BPart, BTot, T, St, Mem, QTot, QCon,\
-        _, Treal, SCov, SUnc, _, Ts, Tcex, Tf, Tr = record
-    maxMem, avgMem, maxStates, avgStates = stats
+def preRow(string):
+    #For @ notation usage (expands into _)
+    return string.replace('@','_')
 
-    # special case for straight-line code: report 100% branch coverage
+def postRow(record, post):
+    lr = list(record)
+
+    if post is not None:
+        topI, topL = post
+    else:
+        topI = None
+        topL = None
+
+    #Changes to the row after calculations take place
+
+    #Post processing for intructions
+    if topInstrs is not None and topInstrs[0] is not None:
+        if topI is not None:
+            lr.append(topI)
+        else:
+            lr.append(" ")
+
+    if topLocs is not None and topLocs[0] is not None:
+        if topL is not None:
+            lr.append(topL)
+        else:
+            lr.append(" ")
+
+    record = tuple(lr)
+    return record
+
+def getRow(record, stats, pr, post):
+    #Interprets input format from config file
+    recordstr = config_value("Input", 'record') + " = record"  
+    try:  
+        exec(recordstr)
+    except:
+        print("ERROR: Check '%s' in section '%s'" % ("record", 'Input'))
+        sys.exit(1)
+
+    if Config.has_section("Aggregates") and Config.has_option("Aggregates", 'stats'):
+        statstr = config_value("Aggregates", 'stats') + " = stats"
+        try:  
+            exec(statstr)
+        except:
+            print("ERROR: Check '%s' in section '%s'" % ("record", 'Input'))
+            sys.exit(1)
+
+    #Line coverage hack
     if BTot == 0:
         BFull = BTot = 1
 
-    Mem = Mem / 1024 / 1024
-    AvgQC = int(QCon / max(1, QTot))
+    #Mem = Mem / 1024 / 1024
+    #AvgQC = int(QCon / max(1, QTot))
 
-    if pr == 'all':
-        row = (I, Treal, 100 * SCov / (SCov + SUnc),
-               100 * (2 * BFull + BPart) / (2 * BTot), SCov + SUnc,
-               100 * Ts / Treal, St, maxStates, avgStates,
-               Mem, maxMem, avgMem, QTot, AvgQC,
-               100 * Tcex / Treal, 100 * Tf / Treal)
-    elif pr == 'reltime':
-        row = (Treal, 100 * T / Treal, 100 * Ts / Treal,
-               100 * Tcex / Treal, 100 * Tf / Treal,
-               100 * Tr / Treal)
-    elif pr == 'abstime':
-        row = (Treal, T, Ts, Tcex, Tf, Tr)
-    elif pr == 'more':
-        row = (I, Treal, 100 * SCov / (SCov + SUnc),
-               100 * (2 * BFull + BPart) / (2 * BTot),
-               SCov + SUnc, 100 * Ts / Treal,
-               St, maxStates, Mem, maxMem)
-    else:
-        row = (I, Treal, 100 * SCov / (SCov + SUnc),
-               100 * (2 * BFull + BPart) / (2 * BTot),
-               SCov + SUnc, 100 * Ts / Treal)
-    return row
+    #groups must be in left hand side of assignment
+    global groups
+    equations = []
+    if Config.has_option("Calculations", pr):
+        equations = parse_list(config_value("Calculations", pr))
+    
+    for i, equation in enumerate(equations):
+        #lstrip to remove potential whitespace issues
+        groupvar = (equation.split(' ')[0]).lstrip(" ")
+        #@ used between groups
+        gsplit = groupvar.split('@')
+
+        try:
+            if len(gsplit) == 1 or gsplit[1] not in groups:
+                if gsplit[0][0] == '>':
+                    #Import equations from other categories
+                    category = gsplit[0][1:]
+                    importEqs = parse_list(config_value("Calculations", category))
+                    #Add equations after the current index, i.e. expand in place
+                    equations[i+1:i+1] = importEqs
+                else:
+                    exec(equation)
+            else:
+                group = gsplit[1]
+                #TODO: Make replace more robust
+                for var in groups[group]:
+                    subeq = equation.replace("@","_").replace(group, var)
+                    exec(subeq)
+        except:
+            print("Error in calculation for '%s', please check contents of config file" % pr)
+            print("Occurred on statement %s" % equation)
+            sys.exit(1)
+    
+    #return formatted output tuble from config
+    ret = eval(preRow(config_value("Output", pr)))
+    return postRow(ret, post)
 
 
 def drawLineChart(vectors, titles):
@@ -242,6 +359,261 @@ def drawLineChart(vectors, titles):
                 bbox_inches='tight',  # tighter bbox
                 transparent=False)
 
+def open_config():
+    global ConfigFile
+
+    try:
+        #Overriding config file in current working directory
+        if(Config.read(os.path.join(os.getcwd(), "override.config"))):
+            print("Override Config found in working directory")
+            return True
+        else:
+            #Default Config
+            return Config.read(ConfigFile)
+    except:
+        print("Error: Unable to read config file")
+        sys.exit(1)
+        return False
+
+def config_value(section, option):
+    if Config.has_option(section, option):
+        return Config.get(section, option)
+    else:
+        print("Expected a %s value in section %s. Please check config file" % (option, section))
+        sys.exit(1)
+
+def parse_groups():
+    global groups
+    options = Config.options("Groups")
+    for option in options:
+        groups[option] = parse_list(config_value("Groups", option))
+
+def parse_list(input):
+    if input is not None:
+        values = input.split(", ")
+        for i, value in enumerate(values):
+            values[i] = value.lstrip(' ')
+        return values
+    else:
+        return []
+
+
+def parse_config():
+    global version
+
+    if(open_config()):
+        version = eval(config_value("Info", 'version'))
+        parse_groups();
+    else:
+        print("ERROR: Config file could not be opened. Please check config file")
+        print(ConfigFile)
+        sys.exit(1)
+
+
+def parse_control_args(pControl):
+    # argument group for controlling output verboseness
+    #Dynamic command line option generator
+    for option in Config.options("Output"):
+        if Config.has_option("Help", option):
+            help = config_value("Help", option)
+        else:
+            help = "No help information provided"
+        start = "'--print-%s', action='store_true', dest='p%s', help='%s'" % (option, option.capitalize(), help)
+        
+        line = "pControl.add_argument(%s)" % start
+
+        exec(line)
+
+def get_print_controls(args):
+    pr = 'default'
+    for option in Config.options("Output"):
+        strargs = "args.p%s" % option.capitalize()
+        if eval(strargs):
+            pr = option
+    return pr
+        
+def processVersions(versions):
+    global version
+    global autoVersion
+
+    v = None
+    for i, output_ver in enumerate(versions):
+        if isinstance(output_ver, tuple):
+            #Changing preversioned to be compatible
+            versions[i] = 1
+
+        if v is None:
+            v = versions[i]
+        else:
+            if v != versions[i]:
+                print("ERROR: Klee output files are inconsistent: %s and %s" % (v, versions[i]))
+                sys.exit(1)
+
+    if autoVersion and v != version:
+        print("ERROR: Klee output files and config are inconsistent: %s and %s" % (v, version))
+        sys.exit(1)
+    elif v != version and not handle_version(v):
+        #Error case for version file not being found
+        print("ERROR: Specified config 'version-%s' could not be loaded automatically (Version detected from run.stats)" % v)
+        sys.exit(1)
+
+    return versions
+
+def getVersionFilePath(config):
+    try:
+        #Version cases
+        #Hack to prevent version-# from evaluating as it evaluates to 0 (?)
+        longbool = (isinstance(config, int) or isinstance(config, float)) or \
+            ((isinstance(eval(config), int) or isinstance(eval(config), float)) and eval(config) != 0)
+
+        if longbool:
+            config = "version-%s" % config
+    except:
+        pass
+
+    filePath = "stat-configs/%s.config" % config
+    return os.path.join(sys.path[0], filePath)
+
+def preparse_cmdLine():
+    #Preparsing allows selection of config file
+    global ConfigFile
+    global autoVersion
+
+    #Custom version input
+    if len(sys.argv) > 1:
+        v = sys.argv[1]
+        #Check if v is a version, ie if a config file for it exists
+        fullPath = getVersionFilePath(v)
+        if os.path.isfile(fullPath):
+            autoVersion = v
+            #Starting with specific config version
+            ConfigFile = fullPath
+    
+
+def handle_version(config):
+    #Spawn new klee-stats with version specified
+    fullPath = getVersionFilePath(config)
+    if os.path.isfile(fullPath):
+        flags = " "
+        for arg in sys.argv[1:]:
+            if "--config" not in arg:
+                flags += arg + " "
+
+        script = "klee-stats "
+        cmd = script + str(config) + flags
+        code = int(os.system(cmd) / 256)
+        sys.exit(code)
+        return True
+    else:
+        return False
+
+
+#Istats functions
+def enum(**enums):
+    return type('Enum', (), enums)
+
+StatFields = enum(AssemblyLine=0,
+              FileLine=1,
+              Covered=2,
+              Forks=3,
+              RealTime=4,
+              UserTime=5,
+              Instructions=6,
+              MDU=7,
+              ResolveTime=8,
+              States=9,
+              Uncovered=10,
+              Queries=11)
+
+def parseAssembly(assembly):
+    """Parse an LLVM assembly file
+    """
+
+    def getInstruction(line):
+        inst = ''
+        if line.startswith('  '):
+            line = line.lstrip()
+            if line.startswith('%'):
+                _, _, line = line.partition('=')
+                line = line.lstrip()
+                inst, _, _  = line.partition(' ')
+            else:
+                inst, _, _ = line.partition(' ')
+            if inst == 'tail':
+                inst = 'call'
+        return inst
+
+    insts = [getInstruction(line) for line in open(assembly)]
+    uinsts = [i for i in set(insts) if i]
+    ilmap = zip(uinsts, [[l + 1 for l, i in enumerate(insts) if i == ui] for ui in uinsts])
+    return ilmap
+
+def parseStats(stats):
+    """Parse a klee-generated istats file
+    
+    """
+
+    def getStats(line):
+        stat = (0,(0, 0, 0))
+        items = line.split()
+        try:
+            if len(items) > 4 and items[StatFields.Covered] == '1':
+                line = int(items[StatFields.AssemblyLine])
+                time = int(items[StatFields.RealTime])
+                count = int(items[StatFields.Instructions])
+                stat = (line, (time,count,time/count))
+        except:
+            pass
+        return stat
+
+    d = dict([getStats(line) for line in open(stats)])
+    if 0 in d:
+        del d[0]
+    return d
+
+def openLLIstats(cdir):
+    assembly = os.path.join(cdir, 'assembly.ll')
+    istats   = os.path.join(cdir, 'run.istats')
+    if os.path.exists(assembly) and os.path.exists(istats):
+        asdata = parseAssembly(assembly)
+        stats = parseStats(istats)
+    else:
+        print('assembly.ll or run.istats not found', file=sys.stderr)
+        exit(1)
+
+    data = asdata, stats
+
+    return data
+
+
+
+def topInstructions(data):
+
+    asdata, stats = data
+
+    itimes = [(inst, map(sum, zip(*[stats[l] for l in lines if l in stats])) ) for inst, lines in asdata]
+    # Eliminate bogus instructions picked up by our imperfect LLVM IR parser
+    itimes = [item for item in itimes if item[1]]
+    validinst = set([item[0] for item in itimes])
+
+    maxitimes = dict([(inst, max([stats[l][2] for l in lines if l in stats])) for inst, lines in asdata if inst in validinst])
+    # Sort by real time
+    itimes.sort(key=lambda x : x[1][0], reverse=True)
+
+    #Hardcoded removal
+    itimes = itimes[:10]
+
+    return maxitimes, itimes
+
+def topLocationsAll(data):
+
+    asdata, stats = data
+
+    linemnemonic = dict([(l, m) for m, lines in asdata for l in lines])
+    data = [(stats[line][0]/1000000, stats[line][2]/1000000, line, linemnemonic[line]) for line in stats]
+    data.sort(key=lambda x : x[0], reverse=True)
+
+    return data
 
 def main():
     # function for sanitizing arguments
@@ -256,10 +628,19 @@ def main():
                 'positive integer expected: {0}'.format(value))
         return value
 
+    preparse_cmdLine()
+
+    parse_config()
+
     parser = argparse.ArgumentParser(
         description='output statistics logged by klee',
         epilog='LEGEND\n' + tabulate(Legend),
         formatter_class=argparse.RawDescriptionHelpFormatter)
+
+    parser.add_argument('--config', dest='config', metavar='name',
+                        help='Specify the config file used'
+                        ' (if none is specified it will try to use '
+                        'the default or will automatically chose)')
 
     parser.add_argument('dir', nargs='+', help='klee output directory')
 
@@ -285,24 +666,17 @@ def main():
                         help='Sample a data point every n lines for a '
                         'run.stats (default: 10)')
 
+    parser.add_argument('--top-instructions',
+                          action='store_true', dest='TI',
+                          help='Show most expensive instruction per run.')
+    parser.add_argument('--top-locations',
+                          action='store_true', dest='TL',
+                          help='Show most expensive instruction location per run.')
+
     # argument group for controlling output verboseness
+
     pControl = parser.add_mutually_exclusive_group(required=False)
-    pControl.add_argument('--print-all',
-                          action='store_true', dest='pAll',
-                          help='Print all available information.')
-    pControl.add_argument('--print-rel-times',
-                          action='store_true', dest='pRelTimes',
-                          help='Print only values of measured times. '
-                          'Values are relative to the measured system '
-                          'execution time.')
-    pControl.add_argument('--print-abs-times',
-                          action='store_true', dest='pAbsTimes',
-                          help='Print only values of measured times. '
-                          'Absolute values (in seconds) are printed.')
-    pControl.add_argument('--print-more',
-                          action='store_true', dest='pMore',
-                          help='Print extra information (needed when '
-                          'monitoring an ongoing run).')
+    parse_control_args(pControl);
 
     # arguments for sorting
     parser.add_argument('--sort-by', dest='sortBy', metavar='header',
@@ -318,29 +692,32 @@ def main():
                         help='Key value on which to compare runs to the '
                         'reference one (which is the first one). Must be '
                         'chosen from the headers of the table oputputted. '
-                        'e.g., --compare-by=Instrs shows how each run '
+                        'e.g., --compare-by=I shows how each run '
                         'compares to the reference run after executing the '
                         'same number of instructions as the reference run. '
                         "If a run hasn't executed as many instructions as "
                         'the reference one, we simply print the statistics '
-                        'at the end of that run.')
+                        'at the end of that run. The key value for a given '
+                        'column is its corresponding value in record in the '
+                        'config')
     parser.add_argument('--compare-at', dest='compAt', metavar='value',
                         help='Value to compare the runs at. Can be special '
                         "value 'last' to compare at the last point which "
                         'makes sense. Use in conjunction with --compare-by.')
 
-    args = parser.parse_args()
+    args, unknown = parser.parse_known_args()
 
-    # get print controls
-    pr = 'NONE'
-    if args.pAll:
-        pr = 'all'
-    elif args.pRelTimes:
-        pr = 'reltime'
-    elif args.pAbsTimes:
-        pr = 'abstime'
-    elif args.pMore:
-        pr = 'more'
+    if not args.config and len(unknown) > 0:
+        parser.print_help()
+        print("ERROR: Unknown arguments %s" % unknown)
+        sys.exit(1)
+
+    #Handling config version selection
+    if args.config and not handle_version(args.config):
+        print("ERROR: Specified config '%s' could not be found" % args.config)
+        sys.exit(1)
+
+    pr = get_print_controls(args)
 
     dirs = getKleeOutDirs(args.dir)
     if len(dirs) == 0:
@@ -348,20 +725,50 @@ def main():
         exit(1)
     # read contents from every run.stats file into LazyEvalList
     data = [LazyEvalList(list(open(getLogFile(d)))) for d in dirs]
+
+    #Version list/configuration
+    dataVs = processVersions([eval(list(open(getLogFile(d)))[0]) for d in dirs])
+
+    global topInstrs
+    global topLocs
+
+    if args.TI or args.TL:
+        datas = map(openLLIstats, dirs)
+
+        # Get top inst
+        if args.TI:
+            topInstrs = [itimes[0][0] for (maxitimes, itimes) in map(topInstructions, datas)]
+        if args.TL:
+            topLocs = ["%s: %s" % (ldata[0][2], ldata[0][3]) for ldata in map(topLocationsAll, datas)]
+
+
+
     if len(data) > 1:
         dirs = stripCommonPathPrefix(dirs)
-    # attach the stripped path
-    data = list(zip(dirs, data))
 
     labels = getLabels(pr)
-    # labels in the same order as in the run.stats file. used by --compare-by.
-    # current impl needs monotonic values, so only keep the ones making sense.
-    rawLabels = ('Instrs', '', '', '', '', '', '', 'Queries',
-                 '', '', 'Time', 'ICov', '', '', '', '', '', '')
 
+    #To work with the zip
+    if topInstrs is None:
+        topInstrs = [None] * len(dirs)
+    if topLocs is None:
+        topLocs = [None] * len(dirs)
+
+    #Used for post processing
+    topData = zip(topInstrs, topLocs)
+
+
+        # attach the stripped path
+    data = list(zip(dirs, data, topData))
+
+    # compBy now uses names given in the config file for column specification
     if args.compBy:
         # index in the record of run.stats
-        compIndex = getKeyIndex(args.compBy, rawLabels)
+        compIndex = getColumnIndex(args.compBy)
+        if compIndex == -1:
+            print("ERROR: Invalid compare-by value")
+            sys.exit(1)
+
         if args.compAt:
             if args.compAt == 'last':
                 # [records][last-record][compare-by-index]
@@ -375,26 +782,27 @@ def main():
     table = []
     totRecords = []  # accumulated records
     totStats = []    # accumulated stats
-    for path, records in data:
+    for path, records, post in data:
         row = [path]
         if args.compBy:
             matchIndex = getMatchedRecordIndex(
                 records, itemgetter(compIndex), refValue)
             stats = aggregateRecords(LazyEvalList(records[:matchIndex + 1]))
             totStats.append(stats)
-            row.extend(getRow(records[matchIndex], stats, pr))
+            row.extend(getRow(records[matchIndex], stats, pr, post))
             totRecords.append(records[matchIndex])
         else:
             stats = aggregateRecords(records)
             totStats.append(stats)
-            row.extend(getRow(records[-1], stats, pr))
+            row.extend(getRow(records[-1], stats, pr, post))
             totRecords.append(records[-1])
         table.append(row)
     # calculate the total
     totRecords = [sum(e) for e in zip(*totRecords)]
-    totStats = [sum(e) for e in zip(*totStats)]
+    if totStats.count(None) != len(totStats): #Optional stats
+        totStats = [sum(e) for e in zip(*totStats)]
     totalRow = ['Total ({0})'.format(len(table))]
-    totalRow.extend(getRow(totRecords, totStats, pr))
+    totalRow.extend(getRow(totRecords, totStats, pr, None))
 
     if args.sortBy:
         table = sorted(table, key=itemgetter(getKeyIndex(args.sortBy, labels)),
@@ -436,7 +844,7 @@ def main():
         for i in range(len(samples)):
             # aggregate all the samples upto the i-th one
             stats = aggregateRecords(samples[:i + 1])
-            vectors.append(getRow(samples[i], stats, pr))
+            vectors.append(getRow(samples[i], stats, pr, None))
 
         titles = args.drawLineChart.split(',')
         # Index returned by getKeyIndex() against labels is starting from

@@ -93,6 +93,8 @@ before_install:
     - ${KLEE_SRC}/.travis/stp.sh
     - cd ../
 script:
+    # Install tabulate for klee-stats
+    - sudo pip install tabulate
     # Get needed utlities/libraries for testing KLEE
     - mkdir test-utils/
     - cd test-utils/
