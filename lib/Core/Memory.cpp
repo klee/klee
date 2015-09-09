@@ -468,6 +468,7 @@ ref<Expr> ObjectState::read(ref<Expr> offset, Expr::Width width) const {
 
   // Otherwise, follow the slow general case.
   unsigned NumBytes = width / 8;
+  NumBytes = NumBytes == 0 ? 1 : NumBytes;
   assert(width == NumBytes * 8 && "Invalid read size!");
   ref<Expr> Res(0);
   for (unsigned i = 0; i != NumBytes; ++i) {
@@ -488,6 +489,7 @@ ref<Expr> ObjectState::read(unsigned offset, Expr::Width width) const {
 
   // Otherwise, follow the slow general case.
   unsigned NumBytes = width / 8;
+  NumBytes = NumBytes == 0 ? 1 : NumBytes;
   assert(width == NumBytes * 8 && "Invalid width for read size!");
   ref<Expr> Res(0);
   for (unsigned i = 0; i != NumBytes; ++i) {

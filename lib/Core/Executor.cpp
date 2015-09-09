@@ -3179,6 +3179,11 @@ void Executor::executeMemoryOperation(ExecutionState &state,
         }          
       } else {
         ref<Expr> result = os->read(offset, type);
+
+        if(result->getWidth() > type) {
+            // truncate back to correct size
+            result = ExtractExpr::create(result, 0, type);
+        }
         
         if (interpreterOpts.MakeConcreteSymbolic)
           result = replaceReadWithSymbolic(state, result);
@@ -3223,6 +3228,10 @@ void Executor::executeMemoryOperation(ExecutionState &state,
         }
       } else {
         ref<Expr> result = os->read(mo->getOffsetExpr(address), type);
+        if(result->getWidth() > type) {
+            // truncate back to correct size
+            result = ExtractExpr::create(result, 0, type);
+        }
         bindLocal(target, *bound, result);
       }
     }
