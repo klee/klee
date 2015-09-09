@@ -520,6 +520,7 @@ void ObjectState::write(ref<Expr> offset, ref<Expr> value) {
 
   // Otherwise, follow the slow general case.
   unsigned NumBytes = w / 8;
+  NumBytes = NumBytes == 0 ? 1 : NumBytes;
   assert(w == NumBytes * 8 && "Invalid write size!");
   for (unsigned i = 0; i != NumBytes; ++i) {
     unsigned idx = Context::get().isLittleEndian() ? i : (NumBytes - i - 1);
@@ -554,6 +555,7 @@ void ObjectState::write(unsigned offset, ref<Expr> value) {
 
   // Otherwise, follow the slow general case.
   unsigned NumBytes = w / 8;
+  NumBytes = NumBytes == 0 ? 1 : NumBytes;
   assert(w == NumBytes * 8 && "Invalid write size!");
   for (unsigned i = 0; i != NumBytes; ++i) {
     unsigned idx = Context::get().isLittleEndian() ? i : (NumBytes - i - 1);
