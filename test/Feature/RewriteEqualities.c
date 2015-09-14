@@ -1,11 +1,11 @@
 // RUN: %llvmgcc %s -emit-llvm -O0 -c -o %t.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --search=dfs --write-pcs --rewrite-equalities=false %t.bc
-// RUN: grep "N0:(Read w8 2 x)" %t.klee-out/test000003.pc
-// RUN: grep "N0)" %t.klee-out/test000003.pc
+// RUN: %klee --output-dir=%t.klee-out --search=dfs --write-kqueries --rewrite-equalities=false %t.bc
+// RUN: grep "N0:(Read w8 2 x)" %t.klee-out/test000003.kquery
+// RUN: grep "N0)" %t.klee-out/test000003.kquery
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --search=dfs --write-pcs --rewrite-equalities %t.bc
-// RUN: grep "(Read w8 8 const_arr1)" %t.klee-out/test000003.pc
+// RUN: %klee --output-dir=%t.klee-out --search=dfs --write-kqueries --rewrite-equalities %t.bc
+// RUN: grep "(Read w8 8 const_arr1)" %t.klee-out/test000003.kquery
 
 #include <stdio.h>
 #include <klee/klee.h>

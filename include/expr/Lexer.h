@@ -72,7 +72,7 @@ namespace expr {
     void dump();
   };
 
-  /// Lexer - Interface for lexing tokens from a .pc language file.
+  /// Lexer - Interface for lexing tokens from a .kquery language file.
   class Lexer {
     const char *BufferPos;      /// The current lexer position.
     const char *BufferEnd;      /// The buffer end position.

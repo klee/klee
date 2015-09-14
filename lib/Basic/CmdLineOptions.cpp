@@ -73,9 +73,9 @@ llvm::cl::list<QueryLoggingSolverType> queryLoggingOptions(
     "use-query-log",
     llvm::cl::desc("Log queries to a file. Multiple options can be specified separated by a comma. By default nothing is logged."),
     llvm::cl::values(
-        clEnumValN(ALL_PC,"all:pc","All queries in .pc (KQuery) format"),
+        clEnumValN(ALL_KQUERY,"all:kquery","All queries in .kquery (KQuery) format"),
         clEnumValN(ALL_SMTLIB,"all:smt2","All queries in .smt2 (SMT-LIBv2) format"),
-        clEnumValN(SOLVER_PC,"solver:pc","All queries reaching the solver in .pc (KQuery) format"),
+        clEnumValN(SOLVER_KQUERY,"solver:kquery","All queries reaching the solver in .kquery (KQuery) format"),
         clEnumValN(SOLVER_SMTLIB,"solver:smt2","All queries reaching the solver in .smt2 (SMT-LIBv2) format"),
         clEnumValEnd
 	),

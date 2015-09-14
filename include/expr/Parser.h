@@ -202,7 +202,7 @@ namespace expr {
     static bool classof(const QueryCommand *) { return true; }
   };
   
-  /// Parser - Public interface for parsing a .pc language file.
+  /// Parser - Public interface for parsing a .kquery language file.
   class Parser {
   protected:
     Parser();

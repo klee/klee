@@ -16,7 +16,7 @@ klee_add_component(kleaverSolver
   IncompleteSolver.cpp
   IndependentSolver.cpp
   MetaSMTSolver.cpp
-  PCLoggingSolver.cpp
+  KQueryLoggingSolver.cpp
   QueryLoggingSolver.cpp
   SMTLIBLoggingSolver.cpp
   Solver.cpp

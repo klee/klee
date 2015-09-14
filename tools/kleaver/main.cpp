@@ -224,8 +224,8 @@ static bool EvaluateInputAST(const char *Filename,
   Solver *S = constructSolverChain(coreSolver,
                                    getQueryLogPath(ALL_QUERIES_SMT2_FILE_NAME),
                                    getQueryLogPath(SOLVER_QUERIES_SMT2_FILE_NAME),
-                                   getQueryLogPath(ALL_QUERIES_PC_FILE_NAME),
-                                   getQueryLogPath(SOLVER_QUERIES_PC_FILE_NAME));
+                                   getQueryLogPath(ALL_QUERIES_KQUERY_FILE_NAME),
+                                   getQueryLogPath(SOLVER_QUERIES_KQUERY_FILE_NAME));
 
   unsigned Index = 0;
   for (std::vector<Decl*>::iterator it = Decls.begin(),

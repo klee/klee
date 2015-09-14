@@ -16,17 +16,18 @@
 #include "llvm/Support/raw_ostream.h"
 
 namespace klee {
-Solver *constructSolverChain(Solver *coreSolver, std::string querySMT2LogPath,
+Solver *constructSolverChain(Solver *coreSolver,
+                             std::string querySMT2LogPath,
                              std::string baseSolverQuerySMT2LogPath,
-                             std::string queryPCLogPath,
-                             std::string baseSolverQueryPCLogPath) {
+                             std::string queryKQueryLogPath,
+                             std::string baseSolverQueryKQueryLogPath) {
   Solver *solver = coreSolver;
 
-  if (optionIsSet(queryLoggingOptions, SOLVER_PC)) {
-    solver = createPCLoggingSolver(solver, baseSolverQueryPCLogPath,
+  if (optionIsSet(queryLoggingOptions, SOLVER_KQUERY)) {
+    solver = createKQueryLoggingSolver(solver, baseSolverQueryKQueryLogPath,
                                    MinQueryTimeToLog);
-    klee_message("Logging queries that reach solver in .pc format to %s\n",
-                 baseSolverQueryPCLogPath.c_str());
+    klee_message("Logging queries that reach solver in .kquery format to %s\n",
+                 baseSolverQueryKQueryLogPath.c_str());
   }
 
   if (optionIsSet(queryLoggingOptions, SOLVER_SMTLIB)) {
@@ -51,10 +52,11 @@ Solver *constructSolverChain(Solver *coreSolver, std::string querySMT2LogPath,
   if (DebugValidateSolver)
     solver = createValidatingSolver(solver, coreSolver);
 
-  if (optionIsSet(queryLoggingOptions, ALL_PC)) {
-    solver = createPCLoggingSolver(solver, queryPCLogPath, MinQueryTimeToLog);
-    klee_message("Logging all queries in .pc format to %s\n",
-                 queryPCLogPath.c_str());
+  if (optionIsSet(queryLoggingOptions, ALL_KQUERY)) {
+    solver = createKQueryLoggingSolver(solver, queryKQueryLogPath,
+                                       MinQueryTimeToLog);
+    klee_message("Logging all queries in .kquery format to %s\n",
+                 queryKQueryLogPath.c_str());
   }
 
   if (optionIsSet(queryLoggingOptions, ALL_SMTLIB)) {
