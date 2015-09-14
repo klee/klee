@@ -296,9 +296,9 @@ namespace klee {
   /// \param s - The underlying solver to use.
   Solver *createIndependentSolver(Solver *s);
   
-  /// createPCLoggingSolver - Create a solver which will forward all queries
-  /// after writing them to the given path in .pc format.
-  Solver *createPCLoggingSolver(Solver *s, std::string path,
+  /// createKQueryLoggingSolver - Create a solver which will forward all queries
+  /// after writing them to the given path in .kquery format.
+  Solver *createKQueryLoggingSolver(Solver *s, std::string path,
                                 int minQueryTimeToLog);
 
   /// createSMTLIBLoggingSolver - Create a solver which will forward all queries

@@ -67,11 +67,11 @@ Decl* SMTParser::ParseTopLevelDecl() {
 
 bool SMTParser::Solve() {
   // FIXME: Support choice of solver.
-  bool UseDummySolver = false, UseFastCexSolver = true, UseSTPQueryPCLog = true;
+  bool UseDummySolver = false, UseFastCexSolver = true, UseSTPQueryKQueryLog = true;
   Solver *S, *STP = S = 
     UseDummySolver ? createDummySolver() : new STPSolver(true);
-  if (UseSTPQueryPCLog)
-    S = createPCLoggingSolver(S, "stp-queries.pc");
+  if (UseSTPQueryKQueryLog)
+    S = createKQueryLoggingSolver(S, "stp-queries.kquery");
   if (UseFastCexSolver)
     S = createFastCexSolver(S);
   S = createCexCachingSolver(S);

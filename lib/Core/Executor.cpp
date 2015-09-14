@@ -353,12 +353,13 @@ Executor::Executor(const InterpreterOptions &opts, InterpreterHandler *ih)
   if (!coreSolver) {
     klee_error("Failed to create core solver\n");
   }
+
   Solver *solver = constructSolverChain(
       coreSolver,
       interpreterHandler->getOutputFilename(ALL_QUERIES_SMT2_FILE_NAME),
       interpreterHandler->getOutputFilename(SOLVER_QUERIES_SMT2_FILE_NAME),
-      interpreterHandler->getOutputFilename(ALL_QUERIES_PC_FILE_NAME),
-      interpreterHandler->getOutputFilename(SOLVER_QUERIES_PC_FILE_NAME));
+      interpreterHandler->getOutputFilename(ALL_QUERIES_KQUERY_FILE_NAME),
+      interpreterHandler->getOutputFilename(SOLVER_QUERIES_KQUERY_FILE_NAME));
 
   this->solver = new TimingSolver(solver, EqualitySubstitution);
   memory = new MemoryManager(&arrayCache);

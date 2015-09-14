@@ -32,9 +32,9 @@ extern llvm::cl::opt<bool> CoreSolverOptimizeDivides;
 ///The different query logging solvers that can switched on/off
 enum QueryLoggingSolverType
 {
-    ALL_PC,       ///< Log all queries (un-optimised) in .pc (KQuery) format
+    ALL_KQUERY,   ///< Log all queries (un-optimised) in .kquery (KQuery) format
     ALL_SMTLIB,   ///< Log all queries (un-optimised)  .smt2 (SMT-LIBv2) format
-    SOLVER_PC,    ///< Log queries passed to solver (optimised) in .pc (KQuery) format
+    SOLVER_KQUERY,///< Log queries passed to solver (optimised) in .kquery (KQuery) format
     SOLVER_SMTLIB ///< Log queries passed to solver (optimised) in .smt2 (SMT-LIBv2) format
 };
 
