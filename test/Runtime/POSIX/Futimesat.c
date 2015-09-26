@@ -1,8 +1,7 @@
-// RUN: %llvmgcc %s -emit-llvm -O0 -g -c -o %t2.bc
-// RUN: touch /tmp/futimesat-dummy
+// RUN: %llvmgcc %s -emit-llvm -O0 -g -c -DTDIR=%T -o %t2.bc
+// RUN: touch %T/futimesat-dummy
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --posix-runtime --exit-on-error %t2.bc --sym-files 1 10
-// RUN: rm /tmp/futimesat-dummy
 
 #include <assert.h>
 #include <fcntl.h>
@@ -10,6 +9,9 @@
 #include <sys/time.h>
 #include <time.h>
 #include <unistd.h>
+
+#define xstr(s) str(s)
+#define str(s) #s
 
 int main(int argc, char **argv) {
   int r;
@@ -29,8 +31,8 @@ int main(int argc, char **argv) {
   assert(buf.st_atime == times[0].tv_sec &&
          buf.st_mtime == times[1].tv_sec);
 
-  /* assumes /tmp exists and is writeable */
-  int fd = open("/tmp", O_RDONLY);
+  /* assumes TDIR exists and is writeable */
+  int fd = open( xstr(TDIR) , O_RDONLY);
   assert(fd > 0);
   r = futimesat(fd, "futimesat-dummy", times);
   assert(r != -1);
