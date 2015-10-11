@@ -1,4 +1,5 @@
-#!/bin/bash -x
+#!/bin/bash 
+set -x
 
 # Make sure we exit if there is a failure
 set -e
@@ -33,7 +34,8 @@ else
 fi
 
 # Only show build output if something went wrong to keep log output short
-if [ $? -ne 0 ]; then
+if [ $? -ne 0 ]; 
+then
     echo "Build error"
     cat "${STP_LOG}"
 fi
