@@ -12,16 +12,33 @@
 #include "CoreStats.h"
 #include "Memory.h"
 #include "MemoryManager.h"
+#include "Context.h"
 
 #include "klee/ExecutionState.h"
 #include "klee/Expr.h"
 #include "klee/Solver.h"
 
 #include "llvm/Support/CommandLine.h"
+#include "malloc.h"
 
 using namespace klee;
 
 /***/
+MemoryManager::MemoryManager(size_t pointerBitWidth) :
+  pointerBitWidth(pointerBitWidth) {
+  if (pointerBitWidth < 64) {
+    // FIXME: KLEE should implement it's own memory manager for
+    // the program we are executing and not invoke malloc so
+    // we have finer control over the addresses we use.
+    // HACK:
+    // Try make sure malloc() gives us back
+    // addresses that fit in a 32-bit integer when running
+    // 32-bit code.
+    // This works by preventing malloc() from using mmap()
+    // so it uses sbrk() instead... gross
+    mallopt(M_MMAP_MAX, 0);
+  }
+}
 
 MemoryManager::~MemoryManager() { 
   while (!objects.empty()) {

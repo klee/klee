@@ -276,6 +276,7 @@ Executor::Executor(const InterpreterOptions &opts,
     interpreterHandler(ih),
     searcher(0),
     externalDispatcher(new ExternalDispatcher()),
+    memory(0), // Can't be initialised until we know the pointer size
     statsTracker(0),
     pathWriter(0),
     symPathWriter(0),
@@ -337,7 +338,6 @@ Executor::Executor(const InterpreterOptions &opts,
   
   this->solver = new TimingSolver(solver, EqualitySubstitution);
 
-  memory = new MemoryManager();
 }
 
 
@@ -355,7 +355,7 @@ const Module *Executor::setModule(llvm::Module *module,
 #endif
   Context::initialize(TD->isLittleEndian(),
                       (Expr::Width) TD->getPointerSizeInBits());
-
+  memory = new MemoryManager(TD->getPointerSizeInBits());
   specialFunctionHandler = new SpecialFunctionHandler(*this);
 
   specialFunctionHandler->prepare();
@@ -3415,7 +3415,7 @@ void Executor::runFunctionAsMain(Function *f,
 
   // hack to clear memory objects
   delete memory;
-  memory = new MemoryManager();
+  memory = new MemoryManager(Context::get().getPointerWidth());
   
   globalObjects.clear();
   globalAddresses.clear();
