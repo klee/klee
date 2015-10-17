@@ -374,6 +374,16 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
 #else
     runtimeFileName += ".bca";
 #endif
+
+    // Some SV-COMP benchmarks might provide their own implementation of
+    // __VERIFIER functions. Remove them
+    llvm::Function* existingVERIFIER_assert = module->getFunction("__VERIFIER_assert");
+    if (existingVERIFIER_assert) {
+      existingVERIFIER_assert->deleteBody();
+      klee_warning("Deleting existing implementation of %s", existingVERIFIER_assert->getName().data());
+    }
+
+
     llvm::sys::path::append(LibPath, runtimeFileName.str());
     module = linkWithLibrary(module, LibPath.str());
 
