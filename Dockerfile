@@ -38,7 +38,8 @@ RUN apt-get update && \
         patch \
         wget \
         unzip \
-        binutils && \
+        binutils  \
+        libc6-dev-i386 && \
     pip3 install -U lit tabulate && \
     update-alternatives --install /usr/bin/python python /usr/bin/python3 50
 
