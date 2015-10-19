@@ -68,8 +68,10 @@ Decl* SMTParser::ParseTopLevelDecl() {
 bool SMTParser::Solve() {
   // FIXME: Support choice of solver.
   bool UseDummySolver = false, UseFastCexSolver = true, UseSTPQueryPCLog = true;
+  //  Solver *S, *STP = S =
+  //    UseDummySolver ? createDummySolver() : new STPSolver(true);
   Solver *S, *STP = S = 
-    UseDummySolver ? createDummySolver() : new STPSolver(true);
+    UseDummySolver ? createDummySolver() : new Z3Solver(true);
   if (UseSTPQueryPCLog)
     S = createPCLoggingSolver(S, "stp-queries.pc");
   if (UseFastCexSolver)

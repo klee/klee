@@ -122,7 +122,8 @@ void testOpcode(Solver &solver, bool tryBool = true, bool tryZero = true,
 }
 
 TEST(SolverTest, Evaluation) {
-  STPSolver *stpSolver = new STPSolver(true); 
+  // STPSolver *stpSolver = new STPSolver(true);
+  Z3Solver *stpSolver = new Z3Solver(true);
   Solver *solver = stpSolver;
 
   solver = createCexCachingSolver(solver);

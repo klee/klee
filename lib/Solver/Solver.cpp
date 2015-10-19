@@ -846,6 +846,201 @@ SolverImpl::SolverRunStatus STPSolverImpl::getOperationStatusCode() {
    return runStatusCode;
 }
 
+/***/
+
+class Z3SolverImpl : public SolverImpl {
+private:
+  VC vc;
+  STPBuilder *builder;
+  double timeout;
+  bool useForkedSTP;
+  SolverRunStatus runStatusCode;
+
+public:
+  Z3SolverImpl(bool _useForkedSTP, bool _optimizeDivides = true);
+  ~Z3SolverImpl();
+
+  char *getConstraintLog(const Query&);
+  void setCoreSolverTimeout(double _timeout) { timeout = _timeout; }
+
+  bool computeTruth(const Query&, bool &isValid);
+  bool computeValue(const Query&, ref<Expr> &result);
+  bool computeInitialValues(const Query&,
+                            const std::vector<const Array*> &objects,
+                            std::vector< std::vector<unsigned char> > &values,
+                            bool &hasSolution);
+  SolverRunStatus getOperationStatusCode();
+};
+
+Z3SolverImpl::Z3SolverImpl(bool _useForkedSTP, bool _optimizeDivides)
+  : vc(vc_createValidityChecker()),
+    builder(new STPBuilder(vc, _optimizeDivides)),
+    timeout(0.0),
+    useForkedSTP(_useForkedSTP),
+    runStatusCode(SOLVER_RUN_STATUS_FAILURE)
+{
+  assert(vc && "unable to create validity checker");
+  assert(builder && "unable to create STPBuilder");
+
+  // In newer versions of STP, a memory management mechanism has been
+  // introduced that automatically invalidates certain C interface
+  // pointers at vc_Destroy time.  This caused double-free errors
+  // due to the ExprHandle destructor also attempting to invalidate
+  // the pointers using vc_DeleteExpr.  By setting EXPRDELETE to 0
+  // we restore the old behaviour.
+  vc_setInterfaceFlags(vc, EXPRDELETE, 0);
+
+  vc_registerErrorHandler(::stp_error_handler);
+
+  if (useForkedSTP) {
+    assert(shared_memory_id == 0 && "shared memory id already allocated");
+    shared_memory_id = shmget(IPC_PRIVATE, shared_memory_size, IPC_CREAT | 0700);
+    if (shared_memory_id < 0)
+      llvm::report_fatal_error("unable to allocate shared memory region");
+    shared_memory_ptr = (unsigned char*) shmat(shared_memory_id, NULL, 0);
+    if (shared_memory_ptr == (void*)-1)
+      llvm::report_fatal_error("unable to attach shared memory region");
+    shmctl(shared_memory_id, IPC_RMID, NULL);
+  }
+}
+
+Z3SolverImpl::~Z3SolverImpl() {
+  // Detach the memory region.
+  shmdt(shared_memory_ptr);
+  shared_memory_ptr = 0;
+  shared_memory_id = 0;
+
+  delete builder;
+
+  vc_Destroy(vc);
+}
+
+/***/
+
+Z3Solver::Z3Solver(bool useForkedSTP, bool optimizeDivides)
+  : Solver(new Z3SolverImpl(useForkedSTP, optimizeDivides))
+{
+}
+
+char *Z3Solver::getConstraintLog(const Query &query) {
+  return impl->getConstraintLog(query);
+}
+
+void Z3Solver::setCoreSolverTimeout(double timeout) {
+    impl->setCoreSolverTimeout(timeout);
+}
+
+/***/
+
+char *Z3SolverImpl::getConstraintLog(const Query &query) {
+  vc_push(vc);
+  for (std::vector< ref<Expr> >::const_iterator it = query.constraints.begin(),
+         ie = query.constraints.end(); it != ie; ++it)
+    vc_assertFormula(vc, builder->construct(*it));
+  assert(query.expr == ConstantExpr::alloc(0, Expr::Bool) &&
+         "Unexpected expression in query!");
+
+  char *buffer;
+  unsigned long length;
+  vc_printQueryStateToBuffer(vc, builder->getFalse(),
+                             &buffer, &length, false);
+  vc_pop(vc);
+
+  return buffer;
+}
+
+bool Z3SolverImpl::computeTruth(const Query& query,
+                                 bool &isValid) {
+  std::vector<const Array*> objects;
+  std::vector< std::vector<unsigned char> > values;
+  bool hasSolution;
+
+  if (!computeInitialValues(query, objects, values, hasSolution))
+    return false;
+
+  isValid = !hasSolution;
+  return true;
+}
+
+bool Z3SolverImpl::computeValue(const Query& query,
+                                 ref<Expr> &result) {
+  std::vector<const Array*> objects;
+  std::vector< std::vector<unsigned char> > values;
+  bool hasSolution;
+
+  // Find the object used in the expression, and compute an assignment
+  // for them.
+  findSymbolicObjects(query.expr, objects);
+  if (!computeInitialValues(query.withFalse(), objects, values, hasSolution))
+    return false;
+  assert(hasSolution && "state has invalid constraint set");
+
+  // Evaluate the expression with the computed assignment.
+  Assignment a(objects, values);
+  result = a.evaluate(query.expr);
+
+  return true;
+}
+
+bool
+Z3SolverImpl::computeInitialValues(const Query &query,
+                                    const std::vector<const Array*>
+                                      &objects,
+                                    std::vector< std::vector<unsigned char> >
+                                      &values,
+                                    bool &hasSolution) {
+  runStatusCode =  SOLVER_RUN_STATUS_FAILURE;
+
+  TimerStatIncrementer t(stats::queryTime);
+
+  vc_push(vc);
+
+  for (ConstraintManager::const_iterator it = query.constraints.begin(),
+         ie = query.constraints.end(); it != ie; ++it)
+    vc_assertFormula(vc, builder->construct(*it));
+
+  ++stats::queries;
+  ++stats::queryCounterexamples;
+
+  ExprHandle stp_e = builder->construct(query.expr);
+
+  if (0) {
+    char *buf;
+    unsigned long len;
+    vc_printQueryStateToBuffer(vc, stp_e, &buf, &len, false);
+    fprintf(stderr, "note: STP query: %.*s\n", (unsigned) len, buf);
+  }
+
+  bool success;
+  if (useForkedSTP) {
+    runStatusCode = runAndGetCexForked(vc, builder, stp_e, objects, values,
+                                       hasSolution, timeout);
+    success = ((SOLVER_RUN_STATUS_SUCCESS_SOLVABLE == runStatusCode) ||
+               (SOLVER_RUN_STATUS_SUCCESS_UNSOLVABLE == runStatusCode));
+  } else {
+    runStatusCode = runAndGetCex(vc, builder, stp_e, objects, values, hasSolution);
+    success = true;
+  }
+
+  if (success) {
+    if (hasSolution)
+      ++stats::queriesInvalid;
+    else
+      ++stats::queriesValid;
+  }
+
+  vc_pop(vc);
+
+  return success;
+}
+
+SolverImpl::SolverRunStatus Z3SolverImpl::getOperationStatusCode() {
+   return runStatusCode;
+}
+
+
+/***/
+
 #ifdef SUPPORT_METASMT
 
 // ------------------------------------- MetaSMTSolverImpl class declaration ------------------------------
@@ -892,7 +1087,6 @@ public:
   SolverContext& get_meta_solver() { return(_meta_solver); };
   
 };
-
 
 // ------------------------------------- MetaSMTSolver methods --------------------------------------------
 

@@ -324,7 +324,8 @@ Executor::Executor(const InterpreterOptions &opts,
     coreSolver = new STPSolver(UseForkedCoreSolver, CoreSolverOptimizeDivides);
   }
 #else
-  coreSolver = new STPSolver(UseForkedCoreSolver, CoreSolverOptimizeDivides);
+  // coreSolver = new STPSolver(UseForkedCoreSolver, CoreSolverOptimizeDivides);
+  coreSolver = new Z3Solver(UseForkedCoreSolver, CoreSolverOptimizeDivides);
 #endif /* SUPPORT_METASMT */
   
    
