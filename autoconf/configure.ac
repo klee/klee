@@ -599,9 +599,41 @@ else
   STP_LDFLAGS="${STP_LDFLAGS} -lstp"
 fi
 
-
 AC_SUBST(STP_CFLAGS)
 AC_SUBST(STP_LDFLAGS)
+
+dnl **************************************************************************
+dnl Find and install Z3
+dnl **************************************************************************
+
+AC_ARG_WITH(z3,
+  AS_HELP_STRING([--with-z3], [Location of Z3 installation directory]), [
+    # Check for empty argument
+    if test "X$withval" = X ; then
+      AC_MSG_ERROR([<path> cannot be empty in --with-z3=<path>])
+    fi
+    z3_root=`(cd $withval && pwd) 2> /dev/null`
+
+    #Check for bad path
+    if test "X$z3_root" = X ; then
+      AC_MSG_ERROR([Cannot access path $with_z3 passed to --with-z3])
+    fi
+
+    Z3_CFLAGS="-I$z3_root/include"
+    Z3_LDFLAGS="-L$z3_root/lib"
+  ])
+
+old_CPPFLAGS="$CPPFLAGS"
+CPPFLAGS="$CPPFLAGS $Z3_CFLAGS"
+AC_CHECK_HEADER(z3++.h,,
+    [
+        AC_MSG_ERROR([Unable to use z3++.h header])
+    ])
+CPPFLAGS="$old_CPPFLAGS"
+
+AC_SUBST(Z3_CFLAGS)
+AC_SUBST(Z3_LDFLAGS)
+
 
 dnl **************************************************************************
 dnl User option to enable metaSMT constraint solvers and to specify the 

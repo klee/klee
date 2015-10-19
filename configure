@@ -626,6 +626,8 @@ ac_subst_vars='LTLIBOBJS
 LIBOBJS
 METASMT_ROOT
 ENABLE_METASMT
+Z3_LDFLAGS
+Z3_CFLAGS
 STP_LDFLAGS
 STP_CFLAGS
 CXXCPP
@@ -730,6 +732,7 @@ with_uclibc
 enable_posix_runtime
 with_runtime
 with_stp
+with_z3
 with_metasmt
 '
       ac_precious_vars='build_alias
@@ -1381,6 +1384,7 @@ Optional Packages:
   --with-runtime          Select build configuration for runtime libraries
                           (default [Release+Asserts])
   --with-stp              Location of STP installation directory
+  --with-z3               Location of Z3 installation directory
   --with-metasmt          Location of metaSMT installation directory
 
 Some influential environment variables:
@@ -5010,6 +5014,45 @@ fi
 else
   STP_LDFLAGS="${STP_LDFLAGS} -lstp"
 fi
+
+
+
+
+
+
+# Check whether --with-z3 was given.
+if test "${with_z3+set}" = set; then :
+  withval=$with_z3;
+    # Check for empty argument
+    if test "X$withval" = X ; then
+      as_fn_error $? "<path> cannot be empty in --with-z3=<path>" "$LINENO" 5
+    fi
+    z3_root=`(cd $withval && pwd) 2> /dev/null`
+
+    #Check for bad path
+    if test "X$z3_root" = X ; then
+      as_fn_error $? "Cannot access path $with_z3 passed to --with-z3" "$LINENO" 5
+    fi
+
+    Z3_CFLAGS="-I$z3_root/include"
+    Z3_LDFLAGS="-L$z3_root/lib"
+
+fi
+
+
+old_CPPFLAGS="$CPPFLAGS"
+CPPFLAGS="$CPPFLAGS $Z3_CFLAGS"
+ac_fn_cxx_check_header_mongrel "$LINENO" "z3++.h" "ac_cv_header_z3pp_h" "$ac_includes_default"
+if test "x$ac_cv_header_z3pp_h" = xyes; then :
+
+else
+
+        as_fn_error $? "Unable to use z3++.h header" "$LINENO" 5
+
+fi
+
+
+CPPFLAGS="$old_CPPFLAGS"
 
 
 
