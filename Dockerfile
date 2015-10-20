@@ -1,4 +1,4 @@
-FROM ubuntu:14.04
+FROM delcypher/ubuntu32:trusty
 MAINTAINER Dan Liew <daniel.liew@imperial.ac.uk>
 
 # FIXME: Docker doesn't currently offer a way to
@@ -6,7 +6,7 @@ MAINTAINER Dan Liew <daniel.liew@imperial.ac.uk>
 # the resulting image is unnecessarily large!
 
 ENV LLVM_VERSION=3.4 \
-    STP_VERSION=master \
+    STP_VERSION=2.1.x \
     DISABLE_ASSERTIONS=0 \
     ENABLE_OPTIMIZED=1 \
     KLEE_UCLIBC=1 \
@@ -38,8 +38,10 @@ RUN apt-get update && \
         patch \
         wget \
         unzip \
-        binutils  \
-        libc6-dev-i386 && \
+        libc6-dev \
+        libc6-dev-amd64 \
+        linux-libc-dev \
+        binutils && \
     pip3 install -U lit tabulate && \
     update-alternatives --install /usr/bin/python python /usr/bin/python3 50
 
