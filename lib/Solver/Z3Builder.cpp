@@ -133,7 +133,7 @@ Z3ExprHandle Z3Builder::bvConst64(unsigned width, uint64_t value) {
   return ctx.bv_val((long long int) value, width);
 }
 
-Z3ExprHandle bvConcatExpr(::z3::context ctx, Z3ExprHandle e1, Z3ExprHandle e2) {
+Z3ExprHandle bvConcatExpr(Z3ExprHandle e1, Z3ExprHandle e2) {
   return ::z3::concat(e1, e2);
 }
 
@@ -143,8 +143,8 @@ Z3ExprHandle Z3Builder::bvZExtConst(unsigned width, uint64_t value) {
 
   Z3ExprHandle expr = bvConst64(64, value), zero = bvConst64(64, 0);
   for (width -= 64; width > 64; width -= 64)
-    expr = ::z3::concat(zero, expr);
-  return ::z3::concat(bvConst64(width, 0), expr);
+    expr = bvConcatExpr(zero, expr);
+  return bvConcatExpr(bvConst64(width, 0), expr);
 }
 
 Z3ExprHandle Z3Builder::bvSExtConst(unsigned width, uint64_t value) {
@@ -159,97 +159,83 @@ Z3ExprHandle Z3Builder::bvSExtConst(unsigned width, uint64_t value) {
 	  e1 = ctx.bv_val(0, width - 64);
   }
 
-  return ::z3::concat(e1, bvConst64(64, value));
+  return bvConcatExpr(e1, bvConst64(64, value));
 }
 
 Z3ExprHandle Z3Builder::bvBoolExtract(Z3ExprHandle expr, int bit) {
-  return (bvExtract(expr, bit, bit) == bvOne(1));
+  return (((::z3::expr) bvExtract(expr, bit, bit)) == ((::z3::expr) bvOne(1)));
 }
 
 Z3ExprHandle Z3Builder::bvExtract(Z3ExprHandle expr, unsigned top, unsigned bottom) {
-  return ((::z3::expr) expr).extract(top, bottom);
+  return Z3_mk_extract(ctx, top, bottom, ((::z3::expr) expr));
 }
 
 Z3ExprHandle Z3Builder::eqExpr(Z3ExprHandle a, Z3ExprHandle b) {
-  return (a == b);
+  return (((::z3::expr) a) == ((::z3::expr) b));
 }
 
 // logical right shift
 Z3ExprHandle Z3Builder::bvRightShift(Z3ExprHandle expr, unsigned shift) {
-  unsigned width = ((::z3::expr) expr).get_sort().bv_size();
+  unsigned width = getBVLength(expr);
 
   if (shift==0) {
     return expr;
   } else if (shift>=width) {
     return bvZero(width); // Overshift to zero
   } else {
-    return ::z3::concat(bvZero(shift), bvExtract(expr, width - 1, shift));
+    return bvConcatExpr(bvZero(shift), bvExtract(expr, width - 1, shift));
   }
 }
 
 // logical left shift
 Z3ExprHandle Z3Builder::bvLeftShift(Z3ExprHandle expr, unsigned shift) {
-  unsigned width = ((::z3::expr) expr).get_sort().bv_size();
+  unsigned width = getBVLength(expr);
 
   if (shift==0) {
     return expr;
   } else if (shift>=width) {
     return bvZero(width); // Overshift to zero
   } else {
-    return ::z3::concat(bvExtract(expr, width - shift - 1, 0), bvZero(shift));
+    return bvConcatExpr(bvExtract(expr, width - shift - 1, 0), bvZero(shift));
   }
 }
 
 // left shift by a variable amount on an expression of the specified width
 Z3ExprHandle Z3Builder::bvVarLeftShift(Z3ExprHandle expr, Z3ExprHandle shift) {
-  unsigned width = ((::z3::expr) expr).get_sort().bv_size();
+  unsigned width = getBVLength(expr);
   Z3ExprHandle res = bvZero(width);
 
   //construct a big if-then-elif-elif-... with one case per possible shift amount
   for( int i=width-1; i>=0; i-- ) {
-    res = z3::to_expr(ctx, Z3_mk_ite(ctx,
-    		((::z3::expr) eqExpr(shift, bvConst32(width, i))),
-    		((::z3::expr) bvLeftShift(expr, i)),
-    		((::z3::expr) res)));
+    res = iteExpr(eqExpr(shift, bvConst32(width, i)), bvLeftShift(expr, i), res);
   }
 
   // If overshifting, shift to zero
-  Z3ExprHandle ex = (shift < bvConst32(((::z3::expr) expr).get_sort().bv_size(), width));
-
-  res = z3::to_expr(ctx, Z3_mk_ite(ctx,
-		  ((::z3::expr) ex),
-		  ((::z3::expr) res),
-		  ((::z3::expr) bvZero(width))));
+  Z3ExprHandle ex = bvLtExpr(shift, bvConst32(getBVLength(shift), width));
+  res = iteExpr(ex, res, bvZero(width));
   return res;
 }
 
 // logical right shift by a variable amount on an expression of the specified width
 Z3ExprHandle Z3Builder::bvVarRightShift(Z3ExprHandle expr, Z3ExprHandle shift) {
-  unsigned width = ((::z3::expr) expr).get_sort().bv_size();
+  unsigned width = getBVLength(expr);
   Z3ExprHandle res = bvZero(width);
 
   //construct a big if-then-elif-elif-... with one case per possible shift amount
   for( int i=width-1; i>=0; i-- ) {
-    res = z3::to_expr(ctx, Z3_mk_ite(ctx,
-    		((::z3::expr) eqExpr(shift, bvConst32(width, i))),
-            ((::z3::expr) bvRightShift(expr, i)),
-            ((::z3::expr) res)));
+    res = iteExpr(eqExpr(shift, bvConst32(width, i)),
+            	bvRightShift(expr, i), res);
   }
 
   // If overshifting, shift to zero
-  unsigned int shift_width = ((::z3::expr) expr).get_sort().bv_size();
-
-  Z3ExprHandle ex = (shift < bvConst32(shift_width, width));
-  res = z3::to_expr(ctx, Z3_mk_ite(ctx,
-                   ((::z3::expr) ex),
-                   ((::z3::expr) res),
-                   ((::z3::expr) bvZero(width))));
+  Z3ExprHandle ex = bvLtExpr(shift, bvConst32(getBVLength(shift), width));
+  res = iteExpr(ex, res, bvZero(width));
   return res;
 }
 
 // arithmetic right shift by a variable amount on an expression of the specified width
 Z3ExprHandle Z3Builder::bvVarArithRightShift(Z3ExprHandle expr, Z3ExprHandle shift) {
-  unsigned width = ((::z3::expr) expr).get_sort().bv_size();
+  unsigned width = getBVLength(expr);
 
   //get the sign bit to fill with
   Z3ExprHandle signedBool = bvBoolExtract(expr, width-1);
@@ -261,40 +247,130 @@ Z3ExprHandle Z3Builder::bvVarArithRightShift(Z3ExprHandle expr, Z3ExprHandle shi
   // XXX more efficient to move the ite on the sign outside all exprs?
   // XXX more efficient to sign extend, right shift, then extract lower bits?
   for( int i=width-2; i>=0; i-- ) {
-    res = z3::to_expr(ctx, Z3_mk_ite(ctx,
-            ((::z3::expr) eqExpr(shift, bvConst32(width,i))),
-            ((::z3::expr) constructAShrByConstant(expr,
-                                             i, 
-                                             signedBool)),
-            ((::z3::expr) res)));
+    res = iteExpr(eqExpr(shift, bvConst32(width,i)),
+    		constructAShrByConstant(expr, i, signedBool), res);
   }
 
   // If overshifting, shift to zero
-  unsigned shift_width = ((::z3::expr) shift).get_sort().bv_size();
-  Z3ExprHandle ex = (shift < bvConst32(shift_width, width));
-  res = z3::to_expr(ctx, Z3_mk_ite(ctx,
-		  ((::z3::expr) ex),
-		  ((::z3::expr) res),
-		  ((::z3::expr) bvZero(width))));
-    return res;
+  Z3ExprHandle ex = bvLtExpr(shift, bvConst32(getBVLength(shift), width));
+  res = iteExpr(ex, res, bvZero(width));
+  return res;
+}
+
+Z3ExprHandle Z3Builder::bvMinusExpr(unsigned width, Z3ExprHandle minuend, Z3ExprHandle subtrahend) {
+	return Z3_mk_extract(ctx, width - 1, 0, Z3_mk_bvsub(ctx, ((::z3::expr) minuend), ((::z3::expr) subtrahend)));
+}
+
+Z3ExprHandle Z3Builder::bvPlusExpr(unsigned width, Z3ExprHandle augend, Z3ExprHandle addend) {
+	return Z3_mk_extract(ctx, width - 1, 0, Z3_mk_bvadd(ctx, ((::z3::expr) augend), ((::z3::expr) addend)));
+}
+
+Z3ExprHandle Z3Builder::bvMultExpr(unsigned width, Z3ExprHandle multiplacand, Z3ExprHandle multiplier) {
+	return Z3_mk_extract(ctx, width - 1, 0, Z3_mk_bvmul(ctx, ((::z3::expr) multiplacand), ((::z3::expr) multiplier)));
+}
+
+Z3ExprHandle Z3Builder::bvDivExpr(unsigned width, Z3ExprHandle dividend, Z3ExprHandle divisor) {
+	return Z3_mk_extract(ctx, width - 1, 0, Z3_mk_bvudiv(ctx, ((::z3::expr) dividend), ((::z3::expr) divisor)));
+}
+
+Z3ExprHandle Z3Builder::sbvDivExpr(unsigned width, Z3ExprHandle dividend, Z3ExprHandle divisor) {
+	return Z3_mk_extract(ctx, width - 1, 0, Z3_mk_bvsdiv(ctx, ((::z3::expr) dividend), ((::z3::expr) divisor)));
+}
+
+Z3ExprHandle Z3Builder::bvModExpr(unsigned width, Z3ExprHandle dividend, Z3ExprHandle divisor) {
+	return Z3_mk_extract(ctx, width - 1, 0, Z3_mk_bvurem(ctx, ((::z3::expr) dividend), ((::z3::expr) divisor)));
+}
+
+Z3ExprHandle Z3Builder::sbvModExpr(unsigned width, Z3ExprHandle dividend, Z3ExprHandle divisor) {
+	// FIXME: An alternative is to use Z3_mk_bvsmod, need to check which one is good
+	return Z3_mk_extract(ctx, width - 1, 0, Z3_mk_bvsrem(ctx, ((::z3::expr) dividend), ((::z3::expr) divisor)));
+}
+
+Z3ExprHandle Z3Builder::notExpr(Z3ExprHandle expr) {
+	return Z3_mk_bvnot(ctx, Z3_mk_extract(ctx, 0, 0, ((::z3::expr) expr)));
+}
+
+Z3ExprHandle Z3Builder::bvNotExpr(Z3ExprHandle expr) {
+	return Z3_mk_bvnot(ctx, ((::z3::expr) expr));
+}
+
+Z3ExprHandle Z3Builder::andExpr(Z3ExprHandle lhs, Z3ExprHandle rhs) {
+	return Z3_mk_bvand(ctx, Z3_mk_extract(ctx, 0, 0, ((::z3::expr) lhs)), Z3_mk_extract(ctx, 0, 0, ((::z3::expr) rhs)));
+}
+
+Z3ExprHandle Z3Builder::bvAndExpr(Z3ExprHandle lhs, Z3ExprHandle rhs) {
+	return Z3_mk_bvand(ctx, ((::z3::expr) lhs), ((::z3::expr) rhs));
+}
+
+Z3ExprHandle Z3Builder::orExpr(Z3ExprHandle lhs, Z3ExprHandle rhs) {
+	return Z3_mk_bvor(ctx, Z3_mk_extract(ctx, 0, 0, ((::z3::expr) lhs)), Z3_mk_extract(ctx, 0, 0, ((::z3::expr) rhs)));
+}
+
+Z3ExprHandle Z3Builder::bvOrExpr(Z3ExprHandle lhs, Z3ExprHandle rhs) {
+	return Z3_mk_bvor(ctx, ((::z3::expr) lhs), ((::z3::expr) rhs));
+}
+
+Z3ExprHandle Z3Builder::iffExpr(Z3ExprHandle lhs, Z3ExprHandle rhs) {
+	return Z3_mk_extract(ctx, 0, 0, Z3_mk_bvxor(ctx, Z3_mk_bvnot(ctx, ((::z3::expr) lhs)), ((::z3::expr) rhs)));
+}
+
+Z3ExprHandle Z3Builder::eqExpr(Z3ExprHandle lhs, Z3ExprHandle rhs) {
+	return iffExpr(lhs, rhs);
+}
+
+Z3ExprHandle Z3Builder::bvXorExpr(Z3ExprHandle lhs, Z3ExprHandle rhs) {
+	return Z3_mk_xor(ctx, (::z3::expr) lhs, (::z3::expr) rhs);
+}
+
+Z3ExprHandle Z3Builder::bvSignExtend(Z3ExprHandle src, unsigned width) {
+	return Z3_mk_sign_ext(ctx, width, ((::z3::expr) src));
+}
+
+Z3ExprHandle Z3Builder::writeExpr(Z3ExprHandle array, Z3ExprHandle index, Z3ExprHandle value) {
+	return Z3_mk_store(ctx, (::z3::expr) array, (::z3::expr) index, (::z3::expr) value);
+}
+
+Z3ExprHandle Z3Builder::readExpr(Z3ExprHandle array, Z3ExprHandle index) {
+	return Z3_mk_select(ctx, ((::z3::expr) array), ((::z3::expr) index));
+}
+
+Z3ExprHandle Z3Builder::iteExpr(Z3ExprHandle condition, Z3ExprHandle whenTrue, Z3ExprHandle whenFalse) {
+	return z3::to_expr(ctx, Z3_mk_ite(ctx, (::z3::expr) condition, (::z3::expr) whenTrue, (::z3::expr) whenFalse));
+}
+
+int Z3Builder::getBVLength(Z3ExprHandle expr) {
+	return ((::z3::expr) expr).get_sort().bv_size();
+}
+
+Z3ExprHandle Z3Builder::bvLtExpr(Z3ExprHandle lhs, Z3ExprHandle rhs) {
+	return Z3_mk_bvult(ctx, ((::z3::expr) lhs), ((::z3::expr) rhs));
+}
+
+Z3ExprHandle Z3Builder::bvLeExpr(Z3ExprHandle lhs, Z3ExprHandle rhs) {
+	return Z3_mk_bvule(ctx, ((::z3::expr) lhs), ((::z3::expr) rhs));
+}
+
+Z3ExprHandle Z3Builder::sbvLtExpr(Z3ExprHandle lhs, Z3ExprHandle rhs) {
+	return Z3_mk_bvslt(ctx, ((::z3::expr) lhs), ((::z3::expr) rhs));
+}
+
+Z3ExprHandle Z3Builder::sbvLeExpr(Z3ExprHandle lhs, Z3ExprHandle rhs) {
+	return Z3_mk_bvsle(ctx, ((::z3::expr) lhs), ((::z3::expr) rhs));
 }
 
 Z3ExprHandle Z3Builder::constructAShrByConstant(Z3ExprHandle expr,
                                                unsigned shift,
                                                Z3ExprHandle isSigned) {
-  unsigned width = ((::z3::expr) expr).get_sort().bv_size();
+  unsigned width = getBVLength(expr);
 
   if (shift==0) {
     return expr;
   } else if (shift>=width) {
     return bvZero(width); // Overshift to zero
   } else {
-    return z3::to_expr(ctx,
-    		Z3_mk_ite(ctx,
-                      ((::z3::expr) isSigned),
-                      ((::z3::expr) Z3ExprHandle(::z3::concat(bvMinusOne(shift),
-                                                 bvExtract(expr, width - 1, shift)))),
-                      ((::z3::expr) bvRightShift(expr, shift))));
+    return iteExpr(isSigned,
+    		Z3ExprHandle(bvConcatExpr(bvMinusOne(shift), bvExtract(expr, width - 1, shift))),
+    		bvRightShift(expr, shift));
   }
 }
 
@@ -362,14 +438,14 @@ Z3ExprHandle Z3Builder::constructUDivByConstant(Z3ExprHandle expr_n, unsigned wi
   Z3ExprHandle expr_sh2    = bvConst32( 32, sh2);
 
   // t1  = MULUH(mprime, n) = ( (uint64_t)mprime * (uint64_t)n ) >> 32
-  Z3ExprHandle expr_n_64   = ::z3::concat(bvZero(32), expr_n ); //extend to 64 bits
+  Z3ExprHandle expr_n_64   = bvConcatExpr(bvZero(32), expr_n ); //extend to 64 bits
   Z3ExprHandle t1_64bits   = constructMulByConstant( expr_n_64, 64, (uint64_t)mprime );
   Z3ExprHandle t1          = ((::z3::expr) t1_64bits).extract(63, 32); //upper 32 bits
 
   // n/d = (((n - t1) >> sh1) + t1) >> sh2;
-  Z3ExprHandle n_minus_t1  = (expr_n - t1);
+  Z3ExprHandle n_minus_t1  = bvMinusExpr(width, expr_n, t1);
   Z3ExprHandle shift_sh1   = bvVarRightShift( n_minus_t1, expr_sh1);
-  Z3ExprHandle plus_t1     = (shift_sh1 + t1);
+  Z3ExprHandle plus_t1     = bvPlusExpr(width, shift_sh1, t1);
   Z3ExprHandle res         = bvVarRightShift( plus_t1, expr_sh2);
 
   return res;
@@ -401,36 +477,36 @@ Z3ExprHandle Z3Builder::constructSDivByConstant(Z3ExprHandle expr_n, unsigned wi
   // q0 = n + MULSH( mprime, n ) = n + (( (int64_t)mprime * (int64_t)n ) >> 32)
   int64_t mprime_64     = (int64_t)mprime;
 
-  Z3ExprHandle expr_n_64    = Z3_mk_sign_ext(ctx, 64, ((::z3::expr) expr_n)));
+  Z3ExprHandle expr_n_64    = bvSignExtend(expr_n, 64);
   Z3ExprHandle mult_64      = constructMulByConstant( expr_n_64, 64, mprime_64 );
   Z3ExprHandle mulsh        = ((::z3::expr) mult_64).extract(63, 32 ); //upper 32-bits
-  Z3ExprHandle n_plus_mulsh = vc_bvPlusExpr( vc, width, expr_n, mulsh );
+  Z3ExprHandle n_plus_mulsh = bvPlusExpr( width, expr_n, mulsh );
 
   // Improved variable arithmetic right shift: sign extend, shift,
   // extract.
-  Z3ExprHandle extend_npm   = vc_bvSignExtend( vc, n_plus_mulsh, 64 );
+  Z3ExprHandle extend_npm   = bvSignExtend(n_plus_mulsh, 64);
   Z3ExprHandle shift_npm    = bvVarRightShift( extend_npm, expr_shpost);
-  Z3ExprHandle shift_shpost = vc_bvExtract( vc, shift_npm, 31, 0 ); //lower 32-bits
+  Z3ExprHandle shift_shpost = ((::z3::expr) shift_npm).extract(31, 0); //lower 32-bits
 
   // XSIGN(n) is -1 if n is negative, positive one otherwise
   Z3ExprHandle is_signed    = bvBoolExtract( expr_n, 31 );
   Z3ExprHandle neg_one      = bvMinusOne(32);
-  Z3ExprHandle xsign_of_n   = vc_iteExpr( vc, is_signed, neg_one, bvZero(32) );
+  Z3ExprHandle xsign_of_n   = iteExpr( is_signed, neg_one, bvZero(32) );
 
   // q0 = (n_plus_mulsh >> shpost) - XSIGN(n)
-  Z3ExprHandle q0           = vc_bvMinusExpr( vc, width, shift_shpost, xsign_of_n );
+  Z3ExprHandle q0           = bvMinusExpr( width, shift_shpost, xsign_of_n );
   
   // n/d = (q0 ^ dsign) - dsign
-  Z3ExprHandle q0_xor_dsign = vc_bvXorExpr( vc, q0, expr_dsign );
-  Z3ExprHandle res          = vc_bvMinusExpr( vc, width, q0_xor_dsign, expr_dsign );
+  Z3ExprHandle q0_xor_dsign = bvXorExpr( q0, expr_dsign );
+  Z3ExprHandle res          = bvMinusExpr( width, q0_xor_dsign, expr_dsign );
 
   return res;
 }
 
-::VCExpr Z3Builder::getInitialArray(const Array *root) {
+::z3::expr Z3Builder::getInitialArray(const Array *root) {
   
   assert(root);
-  ::VCExpr array_expr;
+  ::z3::expr array_expr;
   bool hashed = _arr_hash.lookupArrayExpr(root, array_expr);
   
   if (!hashed) {
@@ -445,18 +521,17 @@ Z3ExprHandle Z3Builder::constructSDivByConstant(Z3ExprHandle expr_n, unsigned wi
     array_expr = buildArray(buf, root->getDomain(), root->getRange());
     
     if (root->isConstantArray()) {
-      // FIXME: Flush the concrete values into STP. Ideally we would do this
-      // using assertions, which is much faster, but we need to fix the caching
-      // to work correctly in that case.
-      for (unsigned i = 0, e = root->size; i != e; ++i) {
-	::VCExpr prev = array_expr;
-	array_expr = vc_writeExpr(vc, prev,
-                       construct(ConstantExpr::alloc(i, root->getDomain()), 0),
-                       construct(root->constantValues[i], 0));
-	vc_DeleteExpr(prev);
-      }
+    	// FIXME: Flush the concrete values into STP. Ideally we would do this
+    	// using assertions, which is much faster, but we need to fix the caching
+    	// to work correctly in that case.
+    	for (unsigned i = 0, e = root->size; i != e; ++i) {
+    		::z3::expr prev = array_expr;
+    		array_expr = writeExpr(prev,
+    				construct(ConstantExpr::alloc(i, root->getDomain()), 0),
+    				construct(root->constantValues[i], 0));
+    	}
     }
-    
+
     _arr_hash.hashArrayExpr(root, array_expr);
   }
   
@@ -464,29 +539,28 @@ Z3ExprHandle Z3Builder::constructSDivByConstant(Z3ExprHandle expr_n, unsigned wi
 }
 
 Z3ExprHandle Z3Builder::getInitialRead(const Array *root, unsigned index) {
-  return vc_readExpr(vc, getInitialArray(root), bvConst32(32, index));
+  return readExpr(getInitialArray(root), bvConst32(32, index));
 }
 
-::VCExpr Z3Builder::getArrayForUpdate(const Array *root,
+::z3::expr Z3Builder::getArrayForUpdate(const Array *root,
                                        const UpdateNode *un) {
   if (!un) {
       return(getInitialArray(root));
   }
   else {
-      // FIXME: This really needs to be non-recursive.
-      ::VCExpr un_expr;
-      bool hashed = _arr_hash.lookupUpdateNodeExpr(un, un_expr);
-      
-      if (!hashed) {
-	un_expr = vc_writeExpr(vc,
-                               getArrayForUpdate(root, un->next),
-                               construct(un->index, 0),
-                               construct(un->value, 0));
-	
-	_arr_hash.hashUpdateNodeExpr(un, un_expr);
-      }
-      
-      return(un_expr);
+	  // FIXME: This really needs to be non-recursive.
+	  ::z3::expr un_expr;
+	  bool hashed = _arr_hash.lookupUpdateNodeExpr(un, un_expr);
+
+	  if (!hashed) {
+		  un_expr = writeExpr(getArrayForUpdate(root, un->next),
+				  construct(un->index, 0),
+				  construct(un->value, 0));
+
+		  _arr_hash.hashUpdateNodeExpr(un, un_expr);
+	  }
+
+	  return(un_expr);
   }
 }
 
@@ -539,11 +613,11 @@ Z3ExprHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     ref<ConstantExpr> Tmp = CE;
     Z3ExprHandle Res = bvConst64(64, Tmp->Extract(0, 64)->getZExtValue());
     while (Tmp->getWidth() > 64) {
-      Tmp = Tmp->Extract(64, Tmp->getWidth()-64);
-      unsigned Width = std::min(64U, Tmp->getWidth());
-      Res = vc_bvConcatExpr(vc, bvConst64(Width,
-                                        Tmp->Extract(0, Width)->getZExtValue()),
-                            Res);
+    	Tmp = Tmp->Extract(64, Tmp->getWidth()-64);
+    	unsigned Width = std::min(64U, Tmp->getWidth());
+    	Res = bvConcatExpr(bvConst64(Width,
+    			Tmp->Extract(0, Width)->getZExtValue()),
+    			Res);
     }
     return Res;
   }
@@ -558,9 +632,8 @@ Z3ExprHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     ReadExpr *re = cast<ReadExpr>(e);
     assert(re && re->updates.root);
     *width_out = re->updates.root->getRange();
-    return vc_readExpr(vc,
-                       getArrayForUpdate(re->updates.root, re->updates.head),
-                       construct(re->index, 0));
+    return readExpr(getArrayForUpdate(re->updates.root, re->updates.head),
+                    construct(re->index, 0));
   }
     
   case Expr::Select: {
@@ -568,7 +641,7 @@ Z3ExprHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     Z3ExprHandle cond = construct(se->cond, 0);
     Z3ExprHandle tExpr = construct(se->trueExpr, width_out);
     Z3ExprHandle fExpr = construct(se->falseExpr, width_out);
-    return vc_iteExpr(vc, cond, tExpr, fExpr);
+    return iteExpr(cond, tExpr, fExpr);
   }
 
   case Expr::Concat: {
@@ -576,7 +649,7 @@ Z3ExprHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     unsigned numKids = ce->getNumKids();
     Z3ExprHandle res = construct(ce->getKid(numKids-1), 0);
     for (int i=numKids-2; i>=0; i--) {
-      res = vc_bvConcatExpr(vc, construct(ce->getKid(i), 0), res);
+      res = bvConcatExpr(construct(ce->getKid(i), 0), res);
     }
     *width_out = ce->getWidth();
     return res;
@@ -589,7 +662,7 @@ Z3ExprHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     if (*width_out==1) {
       return bvBoolExtract(src, ee->offset);
     } else {
-      return vc_bvExtract(vc, src, ee->offset + *width_out - 1, ee->offset);
+      return ((::z3::expr) src).extract(ee->offset + *width_out - 1, ee->offset);
     }
   }
 
@@ -601,9 +674,9 @@ Z3ExprHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     Z3ExprHandle src = construct(ce->src, &srcWidth);
     *width_out = ce->getWidth();
     if (srcWidth==1) {
-      return vc_iteExpr(vc, src, bvOne(*width_out), bvZero(*width_out));
+      return iteExpr(src, bvOne(*width_out), bvZero(*width_out));
     } else {
-      return vc_bvConcatExpr(vc, bvZero(*width_out-srcWidth), src);
+      return bvConcatExpr(bvZero(*width_out-srcWidth), src);
     }
   }
 
@@ -613,9 +686,9 @@ Z3ExprHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     Z3ExprHandle src = construct(ce->src, &srcWidth);
     *width_out = ce->getWidth();
     if (srcWidth==1) {
-      return vc_iteExpr(vc, src, bvMinusOne(*width_out), bvZero(*width_out));
+      return iteExpr(src, bvMinusOne(*width_out), bvZero(*width_out));
     } else {
-      return vc_bvSignExtend(vc, src, *width_out);
+      return bvSignExtend(src, *width_out);
     }
   }
 
@@ -626,7 +699,7 @@ Z3ExprHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     Z3ExprHandle left = construct(ae->left, width_out);
     Z3ExprHandle right = construct(ae->right, width_out);
     assert(*width_out!=1 && "uncanonicalized add");
-    return vc_bvPlusExpr(vc, *width_out, left, right);
+    return bvPlusExpr(*width_out, left, right);
   }
 
   case Expr::Sub: {
@@ -634,45 +707,45 @@ Z3ExprHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     Z3ExprHandle left = construct(se->left, width_out);
     Z3ExprHandle right = construct(se->right, width_out);
     assert(*width_out!=1 && "uncanonicalized sub");
-    return vc_bvMinusExpr(vc, *width_out, left, right);
+    return bvMinusExpr(*width_out, left, right);
   } 
 
   case Expr::Mul: {
-    MulExpr *me = cast<MulExpr>(e);
-    Z3ExprHandle right = construct(me->right, width_out);
-    assert(*width_out!=1 && "uncanonicalized mul");
+	  MulExpr *me = cast<MulExpr>(e);
+	  Z3ExprHandle right = construct(me->right, width_out);
+	  assert(*width_out!=1 && "uncanonicalized mul");
 
-    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(me->left))
-      if (CE->getWidth() <= 64)
-        return constructMulByConstant(right, *width_out, 
-                                      CE->getZExtValue());
+	  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(me->left))
+		  if (CE->getWidth() <= 64)
+			  return constructMulByConstant(right, *width_out,
+					  CE->getZExtValue());
 
-    Z3ExprHandle left = construct(me->left, width_out);
-    return vc_bvMultExpr(vc, *width_out, left, right);
+	  Z3ExprHandle left = construct(me->left, width_out);
+	  return bvMultExpr(*width_out, left, right);
   }
 
   case Expr::UDiv: {
-    UDivExpr *de = cast<UDivExpr>(e);
-    Z3ExprHandle left = construct(de->left, width_out);
-    assert(*width_out!=1 && "uncanonicalized udiv");
-    
-    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(de->right)) {
-      if (CE->getWidth() <= 64) {
-        uint64_t divisor = CE->getZExtValue();
-      
-        if (bits64::isPowerOfTwo(divisor)) {
-          return bvRightShift(left,
-                              bits64::indexOfSingleBit(divisor));
-        } else if (optimizeDivides) {
-          if (*width_out == 32) //only works for 32-bit division
-            return constructUDivByConstant( left, *width_out, 
-                                            (uint32_t) divisor);
-        }
-      }
-    } 
+	  UDivExpr *de = cast<UDivExpr>(e);
+	  Z3ExprHandle left = construct(de->left, width_out);
+	  assert(*width_out!=1 && "uncanonicalized udiv");
+
+	  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(de->right)) {
+		  if (CE->getWidth() <= 64) {
+			  uint64_t divisor = CE->getZExtValue();
+
+			  if (bits64::isPowerOfTwo(divisor)) {
+				  return bvRightShift(left,
+						  bits64::indexOfSingleBit(divisor));
+			  } else if (optimizeDivides) {
+				  if (*width_out == 32) //only works for 32-bit division
+					  return constructUDivByConstant( left, *width_out,
+							  (uint32_t) divisor);
+			  }
+		  }
+	  }
 
     Z3ExprHandle right = construct(de->right, width_out);
-    return vc_bvDivExpr(vc, *width_out, left, right);
+    return bvDivExpr(*width_out, left, right);
   }
 
   case Expr::SDiv: {
@@ -692,7 +765,7 @@ Z3ExprHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     // XXX need to test for proper handling of sign, not sure I
     // trust STP
     Z3ExprHandle right = construct(de->right, width_out);
-    return vc_sbvDivExpr(vc, *width_out, left, right);
+    return sbvDivExpr(*width_out, left, right);
   }
 
   case Expr::URem: {
@@ -711,8 +784,7 @@ Z3ExprHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
           if (bits == 0) {
             return bvZero(*width_out);
           } else {
-            return vc_bvConcatExpr(vc,
-                                   bvZero(*width_out - bits),
+            return bvConcatExpr(bvZero(*width_out - bits),
                                    bvExtract(left, bits - 1, 0));
           }
         }
@@ -724,7 +796,7 @@ Z3ExprHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
           if (*width_out == 32) { //only works for 32-bit division
             Z3ExprHandle quotient = constructUDivByConstant( left, *width_out, (uint32_t)divisor );
             Z3ExprHandle quot_times_divisor = constructMulByConstant( quotient, *width_out, divisor );
-            Z3ExprHandle rem = vc_bvMinusExpr( vc, *width_out, left, quot_times_divisor );
+            Z3ExprHandle rem = bvMinusExpr( *width_out, left, quot_times_divisor );
             return rem;
           }
         }
@@ -732,7 +804,7 @@ Z3ExprHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     }
     
     Z3ExprHandle right = construct(de->right, width_out);
-    return vc_bvModExpr(vc, *width_out, left, right);
+    return bvModExpr(*width_out, left, right);
   }
 
   case Expr::SRem: {
@@ -758,7 +830,7 @@ Z3ExprHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
 #endif
 
     // XXX implement my fast path and test for proper handling of sign
-    return vc_sbvModExpr(vc, *width_out, left, right);
+    return sbvModExpr(*width_out, left, right);
   }
 
     // Bitwise
@@ -767,9 +839,9 @@ Z3ExprHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     NotExpr *ne = cast<NotExpr>(e);
     Z3ExprHandle expr = construct(ne->expr, width_out);
     if (*width_out==1) {
-      return vc_notExpr(vc, expr);
+      return notExpr(expr);
     } else {
-      return vc_bvNotExpr(vc, expr);
+      return bvNotExpr(expr);
     }
   }    
 
@@ -778,9 +850,9 @@ Z3ExprHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     Z3ExprHandle left = construct(ae->left, width_out);
     Z3ExprHandle right = construct(ae->right, width_out);
     if (*width_out==1) {
-      return vc_andExpr(vc, left, right);
+      return andExpr(left, right);
     } else {
-      return vc_bvAndExpr(vc, left, right);
+      return bvAndExpr(left, right);
     }
   }
 
@@ -789,9 +861,9 @@ Z3ExprHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     Z3ExprHandle left = construct(oe->left, width_out);
     Z3ExprHandle right = construct(oe->right, width_out);
     if (*width_out==1) {
-      return vc_orExpr(vc, left, right);
+      return orExpr(left, right);
     } else {
-      return vc_bvOrExpr(vc, left, right);
+      return bvOrExpr(left, right);
     }
   }
 
@@ -802,10 +874,10 @@ Z3ExprHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     
     if (*width_out==1) {
       // XXX check for most efficient?
-      return vc_iteExpr(vc, left, 
-                        Z3ExprHandle(vc_notExpr(vc, right)), right);
+      return iteExpr(left,
+                        Z3ExprHandle(notExpr(right)), right);
     } else {
-      return vc_bvXorExpr(vc, left, right);
+      return bvXorExpr(left, right);
     }
   }
 
@@ -863,13 +935,13 @@ Z3ExprHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
       if (ConstantExpr *CE = dyn_cast<ConstantExpr>(ee->left)) {
         if (CE->isTrue())
           return right;
-        return vc_notExpr(vc, right);
+        return notExpr(right);
       } else {
-        return vc_iffExpr(vc, left, right);
+        return iffExpr(left, right);
       }
     } else {
       *width_out = 1;
-      return vc_eqExpr(vc, left, right);
+      return eqExpr(left, right);
     }
   }
 
@@ -879,7 +951,7 @@ Z3ExprHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     Z3ExprHandle right = construct(ue->right, width_out);
     assert(*width_out!=1 && "uncanonicalized ult");
     *width_out = 1;
-    return vc_bvLtExpr(vc, left, right);
+    return bvLtExpr(left, right);
   }
 
   case Expr::Ule: {
@@ -888,7 +960,7 @@ Z3ExprHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     Z3ExprHandle right = construct(ue->right, width_out);
     assert(*width_out!=1 && "uncanonicalized ule");
     *width_out = 1;
-    return vc_bvLeExpr(vc, left, right);
+    return bvLeExpr(left, right);
   }
 
   case Expr::Slt: {
@@ -897,7 +969,7 @@ Z3ExprHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     Z3ExprHandle right = construct(se->right, width_out);
     assert(*width_out!=1 && "uncanonicalized slt");
     *width_out = 1;
-    return vc_sbvLtExpr(vc, left, right);
+    return sbvLtExpr(left, right);
   }
 
   case Expr::Sle: {
@@ -906,7 +978,7 @@ Z3ExprHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     Z3ExprHandle right = construct(se->right, width_out);
     assert(*width_out!=1 && "uncanonicalized sle");
     *width_out = 1;
-    return vc_sbvLeExpr(vc, left, right);
+    return sbvLeExpr(left, right);
   }
 
     // unused due to canonicalization
@@ -920,7 +992,7 @@ Z3ExprHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
 
   default: 
     assert(0 && "unhandled Expr type");
-    return vc_trueExpr(vc);
+    return ctx.bv_val(1, 1);
   }
 }
 

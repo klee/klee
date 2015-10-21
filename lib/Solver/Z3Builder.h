@@ -93,8 +93,43 @@ private:
   Z3ExprHandle bvVarRightShift(Z3ExprHandle expr, Z3ExprHandle shift);
   Z3ExprHandle bvVarArithRightShift(Z3ExprHandle expr, Z3ExprHandle shift);
 
+  // Some STP-style bitvector arithmetic
+  Z3ExprHandle bvMinusExpr(unsigned width, Z3ExprHandle minuend, Z3ExprHandle subtrahend);
+  Z3ExprHandle bvPlusExpr(unsigned width, Z3ExprHandle augend, Z3ExprHandle addend);
+  Z3ExprHandle bvMultExpr(unsigned width, Z3ExprHandle multiplacand, Z3ExprHandle multiplier);
+  Z3ExprHandle bvDivExpr(unsigned width, Z3ExprHandle dividend, Z3ExprHandle divisor);
+  Z3ExprHandle sbvDivExpr(unsigned width, Z3ExprHandle dividend, Z3ExprHandle divisor);
+  Z3ExprHandle bvModExpr(unsigned width, Z3ExprHandle dividend, Z3ExprHandle divisor);
+  Z3ExprHandle sbvModExpr(unsigned width, Z3ExprHandle dividend, Z3ExprHandle divisor);
+  Z3ExprHandle notExpr(Z3ExprHandle expr);
+  Z3ExprHandle bvNotExpr(Z3ExprHandle expr);
+  Z3ExprHandle andExpr(Z3ExprHandle lhs, Z3ExprHandle rhs);
+  Z3ExprHandle bvAndExpr(Z3ExprHandle lhs, Z3ExprHandle rhs);
+  Z3ExprHandle orExpr(Z3ExprHandle lhs, Z3ExprHandle rhs);
+  Z3ExprHandle bvOrExpr(Z3ExprHandle lhs, Z3ExprHandle rhs);
+  Z3ExprHandle iffExpr(Z3ExprHandle lhs, Z3ExprHandle rhs);
+  Z3ExprHandle eqExpr(Z3ExprHandle lhs, Z3ExprHandle rhs);
+  Z3ExprHandle bvXorExpr(Z3ExprHandle lhs, Z3ExprHandle rhs);
+  Z3ExprHandle bvSignExtend(Z3ExprHandle src, unsigned width);
+
+  // Some STP-style array domain interface
+  Z3ExprHandle writeExpr(Z3ExprHandle array, Z3ExprHandle index, Z3ExprHandle value);
+  Z3ExprHandle readExpr(Z3ExprHandle array, Z3ExprHandle index);
+
+  // ITE-expression constructor
+  Z3ExprHandle iteExpr(Z3ExprHandle condition, Z3ExprHandle whenTrue, Z3ExprHandle whenFalse);
+
+  // Bitvector length
+  int getBVLength(Z3ExprHandle expr);
+
+  // Bitvector comparison
+  Z3ExprHandle bvLtExpr(Z3ExprHandle lhs, Z3ExprHandle rhs);
+  Z3ExprHandle bvLeExpr(Z3ExprHandle lhs, Z3ExprHandle rhs);
+  Z3ExprHandle sbvLtExpr(Z3ExprHandle lhs, Z3ExprHandle rhs);
+  Z3ExprHandle sbvLeExpr(Z3ExprHandle lhs, Z3ExprHandle rhs);
+
   Z3ExprHandle constructAShrByConstant(Z3ExprHandle expr, unsigned shift,
-                                     Z3ExprHandle isSigned);
+                                       Z3ExprHandle isSigned);
   Z3ExprHandle constructMulByConstant(Z3ExprHandle expr, unsigned width, uint64_t x);
   Z3ExprHandle constructUDivByConstant(Z3ExprHandle expr_n, unsigned width, uint64_t d);
   Z3ExprHandle constructSDivByConstant(Z3ExprHandle expr_n, unsigned width, uint64_t d);
