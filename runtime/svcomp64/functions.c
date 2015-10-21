@@ -52,7 +52,14 @@ float __VERIFIER_nondet_float() {
 }
 
 void __VERIFIER_assume(int condition) {
-  klee_assume(condition);
+  // Guard the condition we assume so that if it is not
+  // satisfiable we don't flag up an error. Instead we'll
+  // just silently terminate this state.
+  if (condition) {
+    klee_assume(condition);
+  } else {
+    klee_silent_exit(0);
+  }
 }
 
 void __VERIFIER_assert(int cond) {
