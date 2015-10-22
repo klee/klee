@@ -619,7 +619,7 @@ AC_ARG_WITH(z3,
       AC_MSG_ERROR([Cannot access path $with_z3 passed to --with-z3])
     fi
 
-    Z3_CFLAGS="-I$z3_root/include"
+    Z3_CFLAGS="-I$z3_root/include -fexceptions"
     Z3_LDFLAGS="-L$z3_root/lib"
   ])
 

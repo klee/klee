@@ -5034,7 +5034,7 @@ if test "${with_z3+set}" = set; then :
       as_fn_error $? "Cannot access path $with_z3 passed to --with-z3" "$LINENO" 5
     fi
 
-    Z3_CFLAGS="-I$z3_root/include"
+    Z3_CFLAGS="-I$z3_root/include -fexceptions"
     Z3_LDFLAGS="-L$z3_root/lib"
 
 fi

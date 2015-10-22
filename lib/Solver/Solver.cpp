@@ -850,14 +850,12 @@ SolverImpl::SolverRunStatus STPSolverImpl::getOperationStatusCode() {
 
 class Z3SolverImpl : public SolverImpl {
 private:
-  VC vc;
-  STPBuilder *builder;
+  Z3Builder *builder;
   double timeout;
-  bool useForkedSTP;
   SolverRunStatus runStatusCode;
 
 public:
-  Z3SolverImpl(bool _useForkedSTP, bool _optimizeDivides = true);
+  Z3SolverImpl();
   ~Z3SolverImpl();
 
   char *getConstraintLog(const Query&);
@@ -869,39 +867,19 @@ public:
                             const std::vector<const Array*> &objects,
                             std::vector< std::vector<unsigned char> > &values,
                             bool &hasSolution);
+  SolverRunStatus runAndGetCex(::z3::solver z3solver, Z3Builder *builder, Z3ExprHandle q,
+                               const std::vector<const Array*> &objects,
+                               std::vector< std::vector<unsigned char> > &values,
+                               bool &hasSolution);
   SolverRunStatus getOperationStatusCode();
 };
 
-Z3SolverImpl::Z3SolverImpl(bool _useForkedSTP, bool _optimizeDivides)
-  : vc(vc_createValidityChecker()),
-    builder(new STPBuilder(vc, _optimizeDivides)),
+Z3SolverImpl::Z3SolverImpl()
+  : builder(new Z3Builder()),
     timeout(0.0),
-    useForkedSTP(_useForkedSTP),
     runStatusCode(SOLVER_RUN_STATUS_FAILURE)
 {
-  assert(vc && "unable to create validity checker");
   assert(builder && "unable to create STPBuilder");
-
-  // In newer versions of STP, a memory management mechanism has been
-  // introduced that automatically invalidates certain C interface
-  // pointers at vc_Destroy time.  This caused double-free errors
-  // due to the ExprHandle destructor also attempting to invalidate
-  // the pointers using vc_DeleteExpr.  By setting EXPRDELETE to 0
-  // we restore the old behaviour.
-  vc_setInterfaceFlags(vc, EXPRDELETE, 0);
-
-  vc_registerErrorHandler(::stp_error_handler);
-
-  if (useForkedSTP) {
-    assert(shared_memory_id == 0 && "shared memory id already allocated");
-    shared_memory_id = shmget(IPC_PRIVATE, shared_memory_size, IPC_CREAT | 0700);
-    if (shared_memory_id < 0)
-      llvm::report_fatal_error("unable to allocate shared memory region");
-    shared_memory_ptr = (unsigned char*) shmat(shared_memory_id, NULL, 0);
-    if (shared_memory_ptr == (void*)-1)
-      llvm::report_fatal_error("unable to attach shared memory region");
-    shmctl(shared_memory_id, IPC_RMID, NULL);
-  }
 }
 
 Z3SolverImpl::~Z3SolverImpl() {
@@ -911,14 +889,11 @@ Z3SolverImpl::~Z3SolverImpl() {
   shared_memory_id = 0;
 
   delete builder;
-
-  vc_Destroy(vc);
 }
 
 /***/
 
-Z3Solver::Z3Solver(bool useForkedSTP, bool optimizeDivides)
-  : Solver(new Z3SolverImpl(useForkedSTP, optimizeDivides))
+Z3Solver::Z3Solver() : Solver(new Z3SolverImpl())
 {
 }
 
@@ -933,20 +908,8 @@ void Z3Solver::setCoreSolverTimeout(double timeout) {
 /***/
 
 char *Z3SolverImpl::getConstraintLog(const Query &query) {
-  vc_push(vc);
-  for (std::vector< ref<Expr> >::const_iterator it = query.constraints.begin(),
-         ie = query.constraints.end(); it != ie; ++it)
-    vc_assertFormula(vc, builder->construct(*it));
-  assert(query.expr == ConstantExpr::alloc(0, Expr::Bool) &&
-         "Unexpected expression in query!");
-
-  char *buffer;
-  unsigned long length;
-  vc_printQueryStateToBuffer(vc, builder->getFalse(),
-                             &buffer, &length, false);
-  vc_pop(vc);
-
-  return buffer;
+	// FIXME: We simply return an empty string for now
+	return "";
 }
 
 bool Z3SolverImpl::computeTruth(const Query& query,
@@ -993,46 +956,62 @@ Z3SolverImpl::computeInitialValues(const Query &query,
 
   TimerStatIncrementer t(stats::queryTime);
 
-  vc_push(vc);
+  ::z3::solver z3solver(builder->getContext());
 
   for (ConstraintManager::const_iterator it = query.constraints.begin(),
          ie = query.constraints.end(); it != ie; ++it)
-    vc_assertFormula(vc, builder->construct(*it));
+	  z3solver.add(builder->construct(*it));
 
   ++stats::queries;
   ++stats::queryCounterexamples;
 
-  ExprHandle stp_e = builder->construct(query.expr);
-
-  if (0) {
-    char *buf;
-    unsigned long len;
-    vc_printQueryStateToBuffer(vc, stp_e, &buf, &len, false);
-    fprintf(stderr, "note: STP query: %.*s\n", (unsigned) len, buf);
-  }
+  Z3ExprHandle stp_e = builder->construct(query.expr);
 
   bool success;
-  if (useForkedSTP) {
-    runStatusCode = runAndGetCexForked(vc, builder, stp_e, objects, values,
-                                       hasSolution, timeout);
-    success = ((SOLVER_RUN_STATUS_SUCCESS_SOLVABLE == runStatusCode) ||
-               (SOLVER_RUN_STATUS_SUCCESS_UNSOLVABLE == runStatusCode));
-  } else {
-    runStatusCode = runAndGetCex(vc, builder, stp_e, objects, values, hasSolution);
-    success = true;
-  }
+  runStatusCode = runAndGetCex(z3solver, builder, stp_e, objects, values, hasSolution);
+  success = true;
 
   if (success) {
-    if (hasSolution)
-      ++stats::queriesInvalid;
-    else
-      ++stats::queriesValid;
+	  if (hasSolution)
+		  ++stats::queriesInvalid;
+	  else
+		  ++stats::queriesValid;
   }
-
-  vc_pop(vc);
-
   return success;
 }
+
+SolverImpl::SolverRunStatus Z3SolverImpl::runAndGetCex(::z3::solver z3solver, Z3Builder *builder, Z3ExprHandle q,
+                                                const std::vector<const Array*> &objects,
+                                                std::vector< std::vector<unsigned char> > &values,
+                                                bool &hasSolution) {
+
+  z3solver.add(expr(z3solver.ctx, Z3_mk_not(((::z3::context) z3solver.ctx), ((::z3::expr) q))));
+
+  switch (z3solver.check()) {
+  case ::z3::sat:
+	  values.reserve(objects.size());
+	  for (std::vector<const Array*>::const_iterator
+			  it = objects.begin(), ie = objects.end(); it != ie; ++it) {
+		  const Array *array = *it;
+		  std::vector<unsigned char> data;
+
+		  data.reserve(array->size);
+		  for (unsigned offset = 0; offset < array->size; offset++) {
+			  ExprHandle counter =
+					  vc_getCounterExample(vc, builder->getInitialRead(array, offset));
+			  unsigned char val = getBVUnsigned(counter);
+			  data.push_back(val);
+		  }
+
+		  values.push_back(data);
+	  }
+	  return SolverImpl::SOLVER_RUN_STATUS_SUCCESS_SOLVABLE;
+  default:
+  }
+
+  return SolverImpl::SOLVER_RUN_STATUS_SUCCESS_UNSOLVABLE;
+}
+
 
 SolverImpl::SolverRunStatus Z3SolverImpl::getOperationStatusCode() {
    return runStatusCode;

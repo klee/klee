@@ -19,15 +19,18 @@
 #include <z3++.h>
 
 namespace klee {
+  ::z3::expr z3_null_expr = ::z3::context().real_const("real_null");
+
   class Z3ExprHolder {
     friend class Z3ExprHandle;
-    ::z3::expr expr;
+    ::z3::expr z3expr;
     unsigned count;
-    
+
   public:
-    Z3ExprHolder(const ::z3::expr _expr) : expr(_expr), count(0) {}
+    Z3ExprHolder() : z3expr(z3_null_expr), count(0) {}
+    Z3ExprHolder(const ::z3::expr _expr) : z3expr(_expr), count(0) {}
     ~Z3ExprHolder() {
-      if (expr) delete expr;
+    	// FIXME: Maybe we need to delete z3expr
     }
   };
 
@@ -35,7 +38,7 @@ namespace klee {
     Z3ExprHolder *H;
     
   public:
-    Z3ExprHandle() : H(new Z3ExprHolder(0)) { H->count++; }
+    Z3ExprHandle() : H(new Z3ExprHolder()) { H->count++; }
     Z3ExprHandle(::z3::expr _expr) : H(new Z3ExprHolder(_expr)) { H->count++; }
     Z3ExprHandle(const Z3ExprHandle &b) : H(b.H) { H->count++; }
     ~Z3ExprHandle() { if (--H->count == 0) delete H; }
@@ -47,8 +50,8 @@ namespace klee {
       return *this;
     }
 
-    operator bool () { return H->expr; }
-    operator ::z3::expr () { return H->expr; }
+    operator bool () { return H->z3expr; }
+    operator ::z3::expr () { return H->z3expr; }
   };
   
   class Z3ArrayExprHash : public ArrayExprHash< ::z3::expr > {
@@ -108,7 +111,6 @@ private:
   Z3ExprHandle orExpr(Z3ExprHandle lhs, Z3ExprHandle rhs);
   Z3ExprHandle bvOrExpr(Z3ExprHandle lhs, Z3ExprHandle rhs);
   Z3ExprHandle iffExpr(Z3ExprHandle lhs, Z3ExprHandle rhs);
-  Z3ExprHandle eqExpr(Z3ExprHandle lhs, Z3ExprHandle rhs);
   Z3ExprHandle bvXorExpr(Z3ExprHandle lhs, Z3ExprHandle rhs);
   Z3ExprHandle bvSignExtend(Z3ExprHandle src, unsigned width);
 
@@ -144,7 +146,7 @@ private:
   ::z3::expr buildArray(const char *name, unsigned indexWidth, unsigned valueWidth);
  
 public:
-  Z3Builder(::z3::context _ctx, bool _optimizeDivides=true);
+  Z3Builder();
   ~Z3Builder();
 
   Z3ExprHandle getTrue();
@@ -156,6 +158,10 @@ public:
     Z3ExprHandle res = construct(e, 0);
     constructed.clear();
     return res;
+  }
+
+  ::z3::context getContext() {
+	  return ctx;
   }
 };
 

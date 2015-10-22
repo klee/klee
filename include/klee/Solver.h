@@ -222,13 +222,8 @@ namespace klee {
   /// Z3Solver - A solver complete solver based on Z3
   class Z3Solver : public Solver {
   public:
-	/// Z3Solver - Construct a new STPSolver.
-	///
-	/// \param useForkedSTP - Whether STP should be run in a separate process
-	/// (required for using timeouts).
-	/// \param optimizeDivides - Whether constant division operations should
-	/// be optimized into add/shift/multiply operations.
-	Z3Solver(bool useForkedSTP, bool optimizeDivides = true);
+	/// Z3Solver - Construct a new Z3Solver.
+	Z3Solver();
 
 	/// getConstraintLog - Return the constraint log for the given state in CVC
 	/// format.

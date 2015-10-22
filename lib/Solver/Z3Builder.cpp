@@ -42,8 +42,7 @@ Z3ArrayExprHash::~Z3ArrayExprHash() {
   for (ArrayHashIter it = _array_hash.begin(); it != _array_hash.end(); ++it) {
     ::z3::expr array_expr = it->second;
     if (array_expr) {
-      delete array_expr;
-      array_expr = 0;
+    	// FIXME: Perhaps we need to delete array_expr; array_expr = 0;
     }
   }
 
@@ -52,17 +51,15 @@ Z3ArrayExprHash::~Z3ArrayExprHash() {
       it != _update_node_hash.end(); ++it) {
     ::z3::expr un_expr = it->second;
     if (un_expr) {
-      delete un_expr;
-      un_expr = 0;
+      // FIXME: Perhaps we need to delete un_expr; un_expr = 0;
     }
   }
 }
 
 /***/
 
-Z3Builder::Z3Builder(::z3::context _ctx, bool _optimizeDivides)
-  : ctx(_ctx), optimizeDivides(_optimizeDivides)
-{
+Z3Builder::Z3Builder() {
+  ctx = ::z3::context();
   tempVars[0] = buildVar("__tmpInt8", 8);
   tempVars[1] = buildVar("__tmpInt16", 16);
   tempVars[2] = buildVar("__tmpInt32", 32);
@@ -312,10 +309,6 @@ Z3ExprHandle Z3Builder::bvOrExpr(Z3ExprHandle lhs, Z3ExprHandle rhs) {
 
 Z3ExprHandle Z3Builder::iffExpr(Z3ExprHandle lhs, Z3ExprHandle rhs) {
 	return Z3_mk_extract(ctx, 0, 0, Z3_mk_bvxor(ctx, Z3_mk_bvnot(ctx, ((::z3::expr) lhs)), ((::z3::expr) rhs)));
-}
-
-Z3ExprHandle Z3Builder::eqExpr(Z3ExprHandle lhs, Z3ExprHandle rhs) {
-	return iffExpr(lhs, rhs);
 }
 
 Z3ExprHandle Z3Builder::bvXorExpr(Z3ExprHandle lhs, Z3ExprHandle rhs) {
