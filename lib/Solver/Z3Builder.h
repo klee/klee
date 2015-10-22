@@ -160,9 +160,6 @@ public:
     return res;
   }
 
-  ::z3::context getContext() {
-	  return ctx;
-  }
 };
 
 }

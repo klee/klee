@@ -12,6 +12,7 @@
 
 #include "SolverStats.h"
 #include "STPBuilder.h"
+#include "Z3Builder.h"
 #include "MetaSMTBuilder.h"
 
 #include "klee/Constraints.h"
@@ -956,7 +957,7 @@ Z3SolverImpl::computeInitialValues(const Query &query,
 
   TimerStatIncrementer t(stats::queryTime);
 
-  ::z3::solver z3solver(builder->getContext());
+  ::z3::solver z3solver(builder->ctx);
 
   for (ConstraintManager::const_iterator it = query.constraints.begin(),
          ie = query.constraints.end(); it != ie; ++it)
@@ -989,6 +990,8 @@ SolverImpl::SolverRunStatus Z3SolverImpl::runAndGetCex(::z3::solver z3solver, Z3
 
   switch (z3solver.check()) {
   case ::z3::sat:
+	  ::z3::model m = z3solver.get_model();
+
 	  values.reserve(objects.size());
 	  for (std::vector<const Array*>::const_iterator
 			  it = objects.begin(), ie = objects.end(); it != ie; ++it) {
@@ -997,9 +1000,10 @@ SolverImpl::SolverRunStatus Z3SolverImpl::runAndGetCex(::z3::solver z3solver, Z3
 
 		  data.reserve(array->size);
 		  for (unsigned offset = 0; offset < array->size; offset++) {
-			  ExprHandle counter =
-					  vc_getCounterExample(vc, builder->getInitialRead(array, offset));
-			  unsigned char val = getBVUnsigned(counter);
+			  ExprHandle counter = m.eval(builder->getInitialRead(array, offset));
+			  ::z3::expr ast_val = Z3_mk_bv2int(((::z3::context) z3solver.ctx), ((::z3::expr) counter), 0);
+			  int val = 0;
+			  Z3_get_numeral_int(((::z3::context) z3solver.ctx), ((::z3::expr) ast_val), &val);
 			  data.push_back(val);
 		  }
 
