@@ -71,7 +71,7 @@ bool SMTParser::Solve() {
   //  Solver *S, *STP = S =
   //    UseDummySolver ? createDummySolver() : new STPSolver(true);
   Solver *S, *STP = S = 
-    UseDummySolver ? createDummySolver() : new Z3Solver(true);
+    UseDummySolver ? createDummySolver() : new Z3Solver();
   if (UseSTPQueryPCLog)
     S = createPCLoggingSolver(S, "stp-queries.pc");
   if (UseFastCexSolver)

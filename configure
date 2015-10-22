@@ -5054,6 +5054,8 @@ fi
 
 CPPFLAGS="$old_CPPFLAGS"
 
+Z3_LDFLAGS="${Z3_LDFLAGS} -lz3"
+
 
 
 

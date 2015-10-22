@@ -19,7 +19,6 @@
 #include <z3++.h>
 
 namespace klee {
-  ::z3::expr z3_null_expr = ::z3::context().real_const("real_null");
 
   class Z3ExprHolder {
     friend class Z3ExprHandle;
@@ -27,7 +26,7 @@ namespace klee {
     unsigned count;
 
   public:
-    Z3ExprHolder() : z3expr(z3_null_expr), count(0) {}
+    Z3ExprHolder() : z3expr(::z3::context().real_const("real_null")), count(0) {}
     Z3ExprHolder(const ::z3::expr _expr) : z3expr(_expr), count(0) {}
     ~Z3ExprHolder() {
     	// FIXME: Maybe we need to delete z3expr
