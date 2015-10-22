@@ -49,7 +49,7 @@ Z3ArrayExprHash::~Z3ArrayExprHash() {
 
   for (UpdateNodeHashConstIter it = _update_node_hash.begin();
       it != _update_node_hash.end(); ++it) {
-    ::z3::expr un_expr = it->second;
+    Z3ExprHandle un_expr = it->second;
     if (un_expr) {
       // FIXME: Perhaps we need to delete un_expr; un_expr = 0;
     }
@@ -491,10 +491,10 @@ Z3ExprHandle Z3Builder::constructSDivByConstant(Z3ExprHandle expr_n, unsigned wi
   return res;
 }
 
-::z3::expr Z3Builder::getInitialArray(const Array *root) {
+Z3ExprHandle Z3Builder::getInitialArray(const Array *root) {
   
   assert(root);
-  ::z3::expr array_expr(ctx);
+  Z3ExprHandle array_expr;
   bool hashed = _arr_hash.lookupArrayExpr(root, array_expr);
   
   if (!hashed) {
@@ -537,7 +537,7 @@ Z3ExprHandle Z3Builder::getInitialRead(const Array *root, unsigned index) {
   }
   else {
 	  // FIXME: This really needs to be non-recursive.
-	  ::z3::expr un_expr(ctx);
+	  Z3ExprHandle un_expr;
 	  bool hashed = _arr_hash.lookupUpdateNodeExpr(un, un_expr);
 
 	  if (!hashed) {

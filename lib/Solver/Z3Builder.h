@@ -54,7 +54,7 @@ namespace klee {
     operator ::z3::expr () { return H->z3expr; }
   };
   
-  class Z3ArrayExprHash : public ArrayExprHash< ::z3::expr > {
+  class Z3ArrayExprHash : public ArrayExprHash< Z3ExprHandle > {
     
     friend class Z3Builder;
     
@@ -135,7 +135,7 @@ private:
   Z3ExprHandle constructUDivByConstant(Z3ExprHandle expr_n, unsigned width, uint64_t d);
   Z3ExprHandle constructSDivByConstant(Z3ExprHandle expr_n, unsigned width, uint64_t d);
 
-  ::z3::expr getInitialArray(const Array *os);
+  Z3ExprHandle getInitialArray(const Array *os);
   ::z3::expr getArrayForUpdate(const Array *root, const UpdateNode *un);
 
   Z3ExprHandle constructActual(ref<Expr> e, int *width_out);
