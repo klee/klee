@@ -920,7 +920,7 @@ char *Z3SolverImpl::getConstraintLog(const Query &query) {
 
 	res = the_solver.to_smt2();
 	the_solver.pop();
-	return res;
+	return strdup(res.c_str());
 }
 
 bool Z3SolverImpl::computeTruth(const Query& query,
@@ -994,10 +994,9 @@ SolverImpl::SolverRunStatus Z3SolverImpl::runAndGetCex(Z3Builder *builder, Z3Exp
                                                 std::vector< std::vector<unsigned char> > &values,
                                                 bool &hasSolution) {
 
-  the_solver.add(expr(the_solver.ctx, Z3_mk_not(((::z3::context) the_solver.ctx), ((::z3::expr) q))));
+  the_solver.add(::z3::expr(the_solver.ctx(), Z3_mk_not(the_solver.ctx(), ((::z3::expr) q))));
 
-  switch (the_solver.check()) {
-  case ::z3::sat:
+  if (the_solver.check() == ::z3::sat) {
 	  ::z3::model m = the_solver.get_model();
 
 	  values.reserve(objects.size());
@@ -1008,17 +1007,16 @@ SolverImpl::SolverRunStatus Z3SolverImpl::runAndGetCex(Z3Builder *builder, Z3Exp
 
 		  data.reserve(array->size);
 		  for (unsigned offset = 0; offset < array->size; offset++) {
-			  ExprHandle counter = m.eval(builder->getInitialRead(array, offset));
-			  ::z3::expr ast_val = Z3_mk_bv2int(((::z3::context) the_solver.ctx), ((::z3::expr) counter), 0);
+			  Z3ExprHandle counter = m.eval(builder->getInitialRead(array, offset));
+			  Z3_ast ast_val = Z3_mk_bv2int(the_solver.ctx(), ((::z3::expr) counter), 0);
 			  int val = 0;
-			  Z3_get_numeral_int(((::z3::context) the_solver.ctx), ((::z3::expr) ast_val), &val);
+			  Z3_get_numeral_int(the_solver.ctx(), ast_val, &val);
 			  data.push_back(val);
 		  }
 
 		  values.push_back(data);
 	  }
 	  return SolverImpl::SOLVER_RUN_STATUS_SUCCESS_SOLVABLE;
-  default:
   }
 
   return SolverImpl::SOLVER_RUN_STATUS_SUCCESS_UNSOLVABLE;

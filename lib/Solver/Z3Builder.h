@@ -64,7 +64,6 @@ namespace klee {
   };
 
 class Z3Builder {
-  ::z3::context ctx;
   Z3ExprHandle tempVars[4];
   ExprHashMap< std::pair<Z3ExprHandle, unsigned> > constructed;
 
@@ -146,6 +145,8 @@ private:
   ::z3::expr buildArray(const char *name, unsigned indexWidth, unsigned valueWidth);
  
 public:
+  ::z3::context ctx;
+
   Z3Builder();
   ~Z3Builder();
 

@@ -59,7 +59,6 @@ Z3ArrayExprHash::~Z3ArrayExprHash() {
 /***/
 
 Z3Builder::Z3Builder() {
-  ctx = ::z3::context();
   tempVars[0] = buildVar("__tmpInt8", 8);
   tempVars[1] = buildVar("__tmpInt16", 16);
   tempVars[2] = buildVar("__tmpInt32", 32);
@@ -148,15 +147,11 @@ Z3ExprHandle Z3Builder::bvSExtConst(unsigned width, uint64_t value) {
   if (width <= 64)
     return bvConst64(width, value);
 
-  ::z3::expr e1;
-
   if (value >> 63) {
-	  e1 = ctx.bv_val(-1, width - 64);
-  } else {
-	  e1 = ctx.bv_val(0, width - 64);
+	  return bvConcatExpr(ctx.bv_val(-1, width - 64), bvConst64(64, value));
   }
 
-  return bvConcatExpr(e1, bvConst64(64, value));
+  return bvConcatExpr(ctx.bv_val(0, width - 64), bvConst64(64, value));
 }
 
 Z3ExprHandle Z3Builder::bvBoolExtract(Z3ExprHandle expr, int bit) {
@@ -164,7 +159,7 @@ Z3ExprHandle Z3Builder::bvBoolExtract(Z3ExprHandle expr, int bit) {
 }
 
 Z3ExprHandle Z3Builder::bvExtract(Z3ExprHandle expr, unsigned top, unsigned bottom) {
-  return Z3_mk_extract(ctx, top, bottom, ((::z3::expr) expr));
+  return Z3ExprHandle(::z3::expr(ctx, Z3_mk_extract(ctx, top, bottom, ((::z3::expr) expr))));
 }
 
 Z3ExprHandle Z3Builder::eqExpr(Z3ExprHandle a, Z3ExprHandle b) {
@@ -255,76 +250,76 @@ Z3ExprHandle Z3Builder::bvVarArithRightShift(Z3ExprHandle expr, Z3ExprHandle shi
 }
 
 Z3ExprHandle Z3Builder::bvMinusExpr(unsigned width, Z3ExprHandle minuend, Z3ExprHandle subtrahend) {
-	return Z3_mk_extract(ctx, width - 1, 0, Z3_mk_bvsub(ctx, ((::z3::expr) minuend), ((::z3::expr) subtrahend)));
+	return z3::to_expr(ctx, Z3_mk_extract(ctx, width - 1, 0, Z3_mk_bvsub(ctx, ((::z3::expr) minuend), ((::z3::expr) subtrahend))));
 }
 
 Z3ExprHandle Z3Builder::bvPlusExpr(unsigned width, Z3ExprHandle augend, Z3ExprHandle addend) {
-	return Z3_mk_extract(ctx, width - 1, 0, Z3_mk_bvadd(ctx, ((::z3::expr) augend), ((::z3::expr) addend)));
+	return z3::to_expr(ctx, Z3_mk_extract(ctx, width - 1, 0, Z3_mk_bvadd(ctx, ((::z3::expr) augend), ((::z3::expr) addend))));
 }
 
 Z3ExprHandle Z3Builder::bvMultExpr(unsigned width, Z3ExprHandle multiplacand, Z3ExprHandle multiplier) {
-	return Z3_mk_extract(ctx, width - 1, 0, Z3_mk_bvmul(ctx, ((::z3::expr) multiplacand), ((::z3::expr) multiplier)));
+	return z3::to_expr(ctx, Z3_mk_extract(ctx, width - 1, 0, Z3_mk_bvmul(ctx, ((::z3::expr) multiplacand), ((::z3::expr) multiplier))));
 }
 
 Z3ExprHandle Z3Builder::bvDivExpr(unsigned width, Z3ExprHandle dividend, Z3ExprHandle divisor) {
-	return Z3_mk_extract(ctx, width - 1, 0, Z3_mk_bvudiv(ctx, ((::z3::expr) dividend), ((::z3::expr) divisor)));
+	return z3::to_expr(ctx, Z3_mk_extract(ctx, width - 1, 0, Z3_mk_bvudiv(ctx, ((::z3::expr) dividend), ((::z3::expr) divisor))));
 }
 
 Z3ExprHandle Z3Builder::sbvDivExpr(unsigned width, Z3ExprHandle dividend, Z3ExprHandle divisor) {
-	return Z3_mk_extract(ctx, width - 1, 0, Z3_mk_bvsdiv(ctx, ((::z3::expr) dividend), ((::z3::expr) divisor)));
+	return z3::to_expr(ctx, Z3_mk_extract(ctx, width - 1, 0, Z3_mk_bvsdiv(ctx, ((::z3::expr) dividend), ((::z3::expr) divisor))));
 }
 
 Z3ExprHandle Z3Builder::bvModExpr(unsigned width, Z3ExprHandle dividend, Z3ExprHandle divisor) {
-	return Z3_mk_extract(ctx, width - 1, 0, Z3_mk_bvurem(ctx, ((::z3::expr) dividend), ((::z3::expr) divisor)));
+	return z3::to_expr(ctx, Z3_mk_extract(ctx, width - 1, 0, Z3_mk_bvurem(ctx, ((::z3::expr) dividend), ((::z3::expr) divisor))));
 }
 
 Z3ExprHandle Z3Builder::sbvModExpr(unsigned width, Z3ExprHandle dividend, Z3ExprHandle divisor) {
 	// FIXME: An alternative is to use Z3_mk_bvsmod, need to check which one is good
-	return Z3_mk_extract(ctx, width - 1, 0, Z3_mk_bvsrem(ctx, ((::z3::expr) dividend), ((::z3::expr) divisor)));
+	return z3::to_expr(ctx, Z3_mk_extract(ctx, width - 1, 0, Z3_mk_bvsrem(ctx, ((::z3::expr) dividend), ((::z3::expr) divisor))));
 }
 
 Z3ExprHandle Z3Builder::notExpr(Z3ExprHandle expr) {
-	return Z3_mk_bvnot(ctx, Z3_mk_extract(ctx, 0, 0, ((::z3::expr) expr)));
+	return z3::to_expr(ctx, Z3_mk_bvnot(ctx, Z3_mk_extract(ctx, 0, 0, ((::z3::expr) expr))));
 }
 
 Z3ExprHandle Z3Builder::bvNotExpr(Z3ExprHandle expr) {
-	return Z3_mk_bvnot(ctx, ((::z3::expr) expr));
+	return z3::to_expr(ctx, Z3_mk_bvnot(ctx, ((::z3::expr) expr)));
 }
 
 Z3ExprHandle Z3Builder::andExpr(Z3ExprHandle lhs, Z3ExprHandle rhs) {
-	return Z3_mk_bvand(ctx, Z3_mk_extract(ctx, 0, 0, ((::z3::expr) lhs)), Z3_mk_extract(ctx, 0, 0, ((::z3::expr) rhs)));
+	return z3::to_expr(ctx, Z3_mk_bvand(ctx, Z3_mk_extract(ctx, 0, 0, ((::z3::expr) lhs)), Z3_mk_extract(ctx, 0, 0, ((::z3::expr) rhs))));
 }
 
 Z3ExprHandle Z3Builder::bvAndExpr(Z3ExprHandle lhs, Z3ExprHandle rhs) {
-	return Z3_mk_bvand(ctx, ((::z3::expr) lhs), ((::z3::expr) rhs));
+	return z3::to_expr(ctx, Z3_mk_bvand(ctx, ((::z3::expr) lhs), ((::z3::expr) rhs)));
 }
 
 Z3ExprHandle Z3Builder::orExpr(Z3ExprHandle lhs, Z3ExprHandle rhs) {
-	return Z3_mk_bvor(ctx, Z3_mk_extract(ctx, 0, 0, ((::z3::expr) lhs)), Z3_mk_extract(ctx, 0, 0, ((::z3::expr) rhs)));
+	return z3::to_expr(ctx, Z3_mk_bvor(ctx, Z3_mk_extract(ctx, 0, 0, ((::z3::expr) lhs)), Z3_mk_extract(ctx, 0, 0, ((::z3::expr) rhs))));
 }
 
 Z3ExprHandle Z3Builder::bvOrExpr(Z3ExprHandle lhs, Z3ExprHandle rhs) {
-	return Z3_mk_bvor(ctx, ((::z3::expr) lhs), ((::z3::expr) rhs));
+	return z3::to_expr(ctx, Z3_mk_bvor(ctx, ((::z3::expr) lhs), ((::z3::expr) rhs)));
 }
 
 Z3ExprHandle Z3Builder::iffExpr(Z3ExprHandle lhs, Z3ExprHandle rhs) {
-	return Z3_mk_extract(ctx, 0, 0, Z3_mk_bvxor(ctx, Z3_mk_bvnot(ctx, ((::z3::expr) lhs)), ((::z3::expr) rhs)));
+	return z3::to_expr(ctx, Z3_mk_extract(ctx, 0, 0, Z3_mk_bvxor(ctx, Z3_mk_bvnot(ctx, ((::z3::expr) lhs)), ((::z3::expr) rhs))));
 }
 
 Z3ExprHandle Z3Builder::bvXorExpr(Z3ExprHandle lhs, Z3ExprHandle rhs) {
-	return Z3_mk_xor(ctx, (::z3::expr) lhs, (::z3::expr) rhs);
+	return z3::to_expr(ctx, Z3_mk_xor(ctx, (::z3::expr) lhs, (::z3::expr) rhs));
 }
 
 Z3ExprHandle Z3Builder::bvSignExtend(Z3ExprHandle src, unsigned width) {
-	return Z3_mk_sign_ext(ctx, width, ((::z3::expr) src));
+	return z3::to_expr(ctx, Z3_mk_sign_ext(ctx, width, ((::z3::expr) src)));
 }
 
 Z3ExprHandle Z3Builder::writeExpr(Z3ExprHandle array, Z3ExprHandle index, Z3ExprHandle value) {
-	return Z3_mk_store(ctx, (::z3::expr) array, (::z3::expr) index, (::z3::expr) value);
+	return z3::to_expr(ctx, Z3_mk_store(ctx, (::z3::expr) array, (::z3::expr) index, (::z3::expr) value));
 }
 
 Z3ExprHandle Z3Builder::readExpr(Z3ExprHandle array, Z3ExprHandle index) {
-	return Z3_mk_select(ctx, ((::z3::expr) array), ((::z3::expr) index));
+	return z3::to_expr(ctx, Z3_mk_select(ctx, ((::z3::expr) array), ((::z3::expr) index)));
 }
 
 Z3ExprHandle Z3Builder::iteExpr(Z3ExprHandle condition, Z3ExprHandle whenTrue, Z3ExprHandle whenFalse) {
@@ -336,19 +331,19 @@ int Z3Builder::getBVLength(Z3ExprHandle expr) {
 }
 
 Z3ExprHandle Z3Builder::bvLtExpr(Z3ExprHandle lhs, Z3ExprHandle rhs) {
-	return Z3_mk_bvult(ctx, ((::z3::expr) lhs), ((::z3::expr) rhs));
+	return z3::to_expr(ctx, Z3_mk_bvult(ctx, ((::z3::expr) lhs), ((::z3::expr) rhs)));
 }
 
 Z3ExprHandle Z3Builder::bvLeExpr(Z3ExprHandle lhs, Z3ExprHandle rhs) {
-	return Z3_mk_bvule(ctx, ((::z3::expr) lhs), ((::z3::expr) rhs));
+	return z3::to_expr(ctx, Z3_mk_bvule(ctx, ((::z3::expr) lhs), ((::z3::expr) rhs)));
 }
 
 Z3ExprHandle Z3Builder::sbvLtExpr(Z3ExprHandle lhs, Z3ExprHandle rhs) {
-	return Z3_mk_bvslt(ctx, ((::z3::expr) lhs), ((::z3::expr) rhs));
+	return z3::to_expr(ctx, Z3_mk_bvslt(ctx, ((::z3::expr) lhs), ((::z3::expr) rhs)));
 }
 
 Z3ExprHandle Z3Builder::sbvLeExpr(Z3ExprHandle lhs, Z3ExprHandle rhs) {
-	return Z3_mk_bvsle(ctx, ((::z3::expr) lhs), ((::z3::expr) rhs));
+	return z3::to_expr(ctx, Z3_mk_bvsle(ctx, ((::z3::expr) lhs), ((::z3::expr) rhs)));
 }
 
 Z3ExprHandle Z3Builder::constructAShrByConstant(Z3ExprHandle expr,
@@ -369,7 +364,7 @@ Z3ExprHandle Z3Builder::constructAShrByConstant(Z3ExprHandle expr,
 
 Z3ExprHandle Z3Builder::constructMulByConstant(Z3ExprHandle expr, unsigned width, uint64_t x) {
   uint64_t add, sub;
-  Z3ExprHandle res = 0;
+  Z3ExprHandle res;
 
   // expr*x == expr*(add-sub) == expr*add - expr*sub
   ComputeMultConstants64(x, add, sub);
@@ -387,15 +382,15 @@ Z3ExprHandle Z3Builder::constructMulByConstant(Z3ExprHandle expr, unsigned width
       
       if (add&bit) {
         if (res) {
-          res = (res + op);
+          res = ((::z3::expr) res) + ((::z3::expr) op);
         } else {
           res = op;
         }
       } else {
         if (res) {
-          res = res - op;
+          res = ((::z3::expr) res) - ((::z3::expr) op);
         } else {
-          res = (bvZero(width) - op);
+          res = ((::z3::expr) bvZero(width)) - ((::z3::expr) op);
         }
       }
     }
@@ -499,7 +494,7 @@ Z3ExprHandle Z3Builder::constructSDivByConstant(Z3ExprHandle expr_n, unsigned wi
 ::z3::expr Z3Builder::getInitialArray(const Array *root) {
   
   assert(root);
-  ::z3::expr array_expr;
+  ::z3::expr array_expr(ctx);
   bool hashed = _arr_hash.lookupArrayExpr(root, array_expr);
   
   if (!hashed) {
@@ -542,7 +537,7 @@ Z3ExprHandle Z3Builder::getInitialRead(const Array *root, unsigned index) {
   }
   else {
 	  // FIXME: This really needs to be non-recursive.
-	  ::z3::expr un_expr;
+	  ::z3::expr un_expr(ctx);
 	  bool hashed = _arr_hash.lookupUpdateNodeExpr(un, un_expr);
 
 	  if (!hashed) {
