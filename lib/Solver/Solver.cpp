@@ -852,6 +852,7 @@ SolverImpl::SolverRunStatus STPSolverImpl::getOperationStatusCode() {
 class Z3SolverImpl : public SolverImpl {
 private:
   Z3Builder *builder;
+  ::z3::solver the_solver;
   double timeout;
   SolverRunStatus runStatusCode;
 
@@ -868,7 +869,7 @@ public:
                             const std::vector<const Array*> &objects,
                             std::vector< std::vector<unsigned char> > &values,
                             bool &hasSolution);
-  SolverRunStatus runAndGetCex(::z3::solver z3solver, Z3Builder *builder, Z3ExprHandle q,
+  SolverRunStatus runAndGetCex(Z3Builder *builder, Z3ExprHandle q,
                                const std::vector<const Array*> &objects,
                                std::vector< std::vector<unsigned char> > &values,
                                bool &hasSolution);
@@ -877,6 +878,7 @@ public:
 
 Z3SolverImpl::Z3SolverImpl()
   : builder(new Z3Builder()),
+    the_solver(builder->ctx),
     timeout(0.0),
     runStatusCode(SOLVER_RUN_STATUS_FAILURE)
 {
@@ -909,8 +911,16 @@ void Z3Solver::setCoreSolverTimeout(double timeout) {
 /***/
 
 char *Z3SolverImpl::getConstraintLog(const Query &query) {
-	// FIXME: We simply return an empty string for now
-	return "";
+	std::string res;
+	the_solver.push();
+
+	for (std::vector< ref<Expr> >::const_iterator it = query.constraints.begin(),
+	         ie = query.constraints.end(); it != ie; ++it)
+	    the_solver.add(builder->construct(*it));
+
+	res = the_solver.to_smt2();
+	the_solver.pop();
+	return res;
 }
 
 bool Z3SolverImpl::computeTruth(const Query& query,
@@ -957,11 +967,9 @@ Z3SolverImpl::computeInitialValues(const Query &query,
 
   TimerStatIncrementer t(stats::queryTime);
 
-  ::z3::solver z3solver(builder->ctx);
-
   for (ConstraintManager::const_iterator it = query.constraints.begin(),
          ie = query.constraints.end(); it != ie; ++it)
-	  z3solver.add(builder->construct(*it));
+	  the_solver.add(builder->construct(*it));
 
   ++stats::queries;
   ++stats::queryCounterexamples;
@@ -969,7 +977,7 @@ Z3SolverImpl::computeInitialValues(const Query &query,
   Z3ExprHandle stp_e = builder->construct(query.expr);
 
   bool success;
-  runStatusCode = runAndGetCex(z3solver, builder, stp_e, objects, values, hasSolution);
+  runStatusCode = runAndGetCex(builder, stp_e, objects, values, hasSolution);
   success = true;
 
   if (success) {
@@ -981,16 +989,16 @@ Z3SolverImpl::computeInitialValues(const Query &query,
   return success;
 }
 
-SolverImpl::SolverRunStatus Z3SolverImpl::runAndGetCex(::z3::solver z3solver, Z3Builder *builder, Z3ExprHandle q,
+SolverImpl::SolverRunStatus Z3SolverImpl::runAndGetCex(Z3Builder *builder, Z3ExprHandle q,
                                                 const std::vector<const Array*> &objects,
                                                 std::vector< std::vector<unsigned char> > &values,
                                                 bool &hasSolution) {
 
-  z3solver.add(expr(z3solver.ctx, Z3_mk_not(((::z3::context) z3solver.ctx), ((::z3::expr) q))));
+  the_solver.add(expr(the_solver.ctx, Z3_mk_not(((::z3::context) the_solver.ctx), ((::z3::expr) q))));
 
-  switch (z3solver.check()) {
+  switch (the_solver.check()) {
   case ::z3::sat:
-	  ::z3::model m = z3solver.get_model();
+	  ::z3::model m = the_solver.get_model();
 
 	  values.reserve(objects.size());
 	  for (std::vector<const Array*>::const_iterator
@@ -1001,9 +1009,9 @@ SolverImpl::SolverRunStatus Z3SolverImpl::runAndGetCex(::z3::solver z3solver, Z3
 		  data.reserve(array->size);
 		  for (unsigned offset = 0; offset < array->size; offset++) {
 			  ExprHandle counter = m.eval(builder->getInitialRead(array, offset));
-			  ::z3::expr ast_val = Z3_mk_bv2int(((::z3::context) z3solver.ctx), ((::z3::expr) counter), 0);
+			  ::z3::expr ast_val = Z3_mk_bv2int(((::z3::context) the_solver.ctx), ((::z3::expr) counter), 0);
 			  int val = 0;
-			  Z3_get_numeral_int(((::z3::context) z3solver.ctx), ((::z3::expr) ast_val), &val);
+			  Z3_get_numeral_int(((::z3::context) the_solver.ctx), ((::z3::expr) ast_val), &val);
 			  data.push_back(val);
 		  }
 
