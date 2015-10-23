@@ -852,7 +852,7 @@ SolverImpl::SolverRunStatus STPSolverImpl::getOperationStatusCode() {
 class Z3SolverImpl : public SolverImpl {
 private:
   Z3Builder *builder;
-  ::z3::solver the_solver;
+  Z3_solver the_solver;
   double timeout;
   SolverRunStatus runStatusCode;
 
@@ -869,7 +869,7 @@ public:
                             const std::vector<const Array*> &objects,
                             std::vector< std::vector<unsigned char> > &values,
                             bool &hasSolution);
-  SolverRunStatus runAndGetCex(Z3Builder *builder, Z3ExprHandle q,
+  SolverRunStatus runAndGetCex(Z3Builder *builder, Z3_ast q,
                                const std::vector<const Array*> &objects,
                                std::vector< std::vector<unsigned char> > &values,
                                bool &hasSolution);
@@ -878,11 +878,11 @@ public:
 
 Z3SolverImpl::Z3SolverImpl()
   : builder(new Z3Builder()),
-    the_solver(builder->ctx),
     timeout(0.0),
     runStatusCode(SOLVER_RUN_STATUS_FAILURE)
 {
-  assert(builder && "unable to create STPBuilder");
+	the_solver = Z3_mk_simple_solver(builder->ctx);
+	assert(builder && "unable to create STPBuilder");
 }
 
 Z3SolverImpl::~Z3SolverImpl() {
@@ -911,16 +911,18 @@ void Z3Solver::setCoreSolverTimeout(double timeout) {
 /***/
 
 char *Z3SolverImpl::getConstraintLog(const Query &query) {
-	std::string res;
-	the_solver.push();
+	const char *res;
+	Z3_solver_push(builder->ctx, the_solver);
 
 	for (std::vector< ref<Expr> >::const_iterator it = query.constraints.begin(),
-	         ie = query.constraints.end(); it != ie; ++it)
-	    the_solver.add(builder->construct(*it));
+	         ie = query.constraints.end(); it != ie; ++it) {
+	    Z3_solver_assert(builder->ctx, the_solver, builder->construct(*it));
+	}
 
-	res = the_solver.to_smt2();
-	the_solver.pop();
-	return strdup(res.c_str());
+	res = Z3_solver_to_string(builder->ctx, the_solver);
+
+	Z3_solver_pop(builder->ctx, the_solver, 1);
+	return strdup(res);
 }
 
 bool Z3SolverImpl::computeTruth(const Query& query,
@@ -968,13 +970,13 @@ Z3SolverImpl::computeInitialValues(const Query &query,
   TimerStatIncrementer t(stats::queryTime);
 
   for (ConstraintManager::const_iterator it = query.constraints.begin(),
-         ie = query.constraints.end(); it != ie; ++it)
-	  the_solver.add(builder->construct(*it));
-
+         ie = query.constraints.end(); it != ie; ++it) {
+	  Z3_solver_assert(builder->ctx, the_solver, builder->construct(*it));
+  }
   ++stats::queries;
   ++stats::queryCounterexamples;
 
-  Z3ExprHandle stp_e = builder->construct(query.expr);
+  Z3_ast stp_e = builder->construct(query.expr);
 
   bool success;
   runStatusCode = runAndGetCex(builder, stp_e, objects, values, hasSolution);
@@ -989,15 +991,14 @@ Z3SolverImpl::computeInitialValues(const Query &query,
   return success;
 }
 
-SolverImpl::SolverRunStatus Z3SolverImpl::runAndGetCex(Z3Builder *builder, Z3ExprHandle q,
+SolverImpl::SolverRunStatus Z3SolverImpl::runAndGetCex(Z3Builder *builder, Z3_ast q,
                                                 const std::vector<const Array*> &objects,
                                                 std::vector< std::vector<unsigned char> > &values,
                                                 bool &hasSolution) {
+	Z3_solver_assert(builder->ctx, the_solver, Z3_mk_not(builder->ctx, q));
 
-  the_solver.add(::z3::expr(the_solver.ctx(), Z3_mk_not(the_solver.ctx(), ((::z3::expr) q))));
-
-  if (the_solver.check() == ::z3::sat) {
-	  ::z3::model m = the_solver.get_model();
+	if (Z3_solver_check(builder->ctx, the_solver) == Z3_L_TRUE) {
+	  Z3_model m = Z3_solver_get_model(builder->ctx, the_solver);
 
 	  values.reserve(objects.size());
 	  for (std::vector<const Array*>::const_iterator
@@ -1007,15 +1008,17 @@ SolverImpl::SolverRunStatus Z3SolverImpl::runAndGetCex(Z3Builder *builder, Z3Exp
 
 		  data.reserve(array->size);
 		  for (unsigned offset = 0; offset < array->size; offset++) {
-			  Z3ExprHandle counter = m.eval(builder->getInitialRead(array, offset));
-			  Z3_ast ast_val = Z3_mk_bv2int(the_solver.ctx(), ((::z3::expr) counter), 0);
+			  Z3_ast counter;
+			  Z3_model_eval(builder->ctx, m, builder->getInitialRead(array, offset), Z3_TRUE, &counter);
+			  Z3_ast ast_val = Z3_mk_bv2int(builder->ctx, counter, 0);
 			  int val = 0;
-			  Z3_get_numeral_int(the_solver.ctx(), ast_val, &val);
+			  Z3_get_numeral_int(builder->ctx, ast_val, &val);
 			  data.push_back(val);
 		  }
 
 		  values.push_back(data);
 	  }
+
 	  return SolverImpl::SOLVER_RUN_STATUS_SUCCESS_SOLVABLE;
   }
 

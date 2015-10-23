@@ -16,35 +16,11 @@
 
 #include <vector>
 
-#include <z3++.h>
+#include <z3.h>
 
 namespace klee {
 
-  class Z3ExprHandle {
-    z3::expr z3expr;
-    
-  public:
-    Z3ExprHandle() : z3expr(z3::context().real_val(1,3))
-  	  // Some real value signifies uninitialized expression
-  	  {}
-    Z3ExprHandle(::z3::expr _expr) : z3expr(_expr) {}
-    Z3ExprHandle(const Z3ExprHandle &b) : z3expr(b.z3expr) {}
-    ~Z3ExprHandle() {}
-    
-    Z3ExprHandle &operator=(const Z3ExprHandle &b) {
-    	z3expr = b.z3expr;
-    	return *this;
-    }
-
-    operator bool () {
-    	// Return false if real (uninitialized)
-    	if (z3expr.is_real()) return false;
-    	return true;
-    }
-    operator z3::expr () { return z3expr; }
-  };
-  
-  class Z3ArrayExprHash : public ArrayExprHash< Z3ExprHandle > {
+  class Z3ArrayExprHash : public ArrayExprHash< Z3_ast > {
     
     friend class Z3Builder;
     
@@ -54,8 +30,8 @@ namespace klee {
   };
 
 class Z3Builder {
-  Z3ExprHandle tempVars[4];
-  ExprHashMap< std::pair<Z3ExprHandle, unsigned> > constructed;
+  Z3_ast tempVars[4];
+  ExprHashMap< std::pair<Z3_ast, unsigned> > constructed;
 
   /// optimizeDivides - Rewrite division and reminders by constants
   /// into multiplies and shifts. STP should probably handle this for
@@ -66,87 +42,87 @@ class Z3Builder {
 
 private:  
 
-  Z3ExprHandle bvOne(unsigned width);
-  Z3ExprHandle bvZero(unsigned width);
-  Z3ExprHandle bvMinusOne(unsigned width);
-  Z3ExprHandle bvConst32(unsigned width, uint32_t value);
-  Z3ExprHandle bvConst64(unsigned width, uint64_t value);
-  Z3ExprHandle bvZExtConst(unsigned width, uint64_t value);
-  Z3ExprHandle bvSExtConst(unsigned width, uint64_t value);
+  Z3_ast bvOne(unsigned width);
+  Z3_ast bvZero(unsigned width);
+  Z3_ast bvMinusOne(unsigned width);
+  Z3_ast bvConst32(unsigned width, uint32_t value);
+  Z3_ast bvConst64(unsigned width, uint64_t value);
+  Z3_ast bvZExtConst(unsigned width, uint64_t value);
+  Z3_ast bvSExtConst(unsigned width, uint64_t value);
 
-  Z3ExprHandle bvBoolExtract(Z3ExprHandle expr, int bit);
-  Z3ExprHandle bvExtract(Z3ExprHandle expr, unsigned top, unsigned bottom);
-  Z3ExprHandle eqExpr(Z3ExprHandle a, Z3ExprHandle b);
+  Z3_ast bvBoolExtract(Z3_ast expr, int bit);
+  Z3_ast bvExtract(Z3_ast expr, unsigned top, unsigned bottom);
+  Z3_ast eqExpr(Z3_ast a, Z3_ast b);
 
   //logical left and right shift (not arithmetic)
-  Z3ExprHandle bvLeftShift(Z3ExprHandle expr, unsigned shift);
-  Z3ExprHandle bvRightShift(Z3ExprHandle expr, unsigned shift);
-  Z3ExprHandle bvVarLeftShift(Z3ExprHandle expr, Z3ExprHandle shift);
-  Z3ExprHandle bvVarRightShift(Z3ExprHandle expr, Z3ExprHandle shift);
-  Z3ExprHandle bvVarArithRightShift(Z3ExprHandle expr, Z3ExprHandle shift);
+  Z3_ast bvLeftShift(Z3_ast expr, unsigned shift);
+  Z3_ast bvRightShift(Z3_ast expr, unsigned shift);
+  Z3_ast bvVarLeftShift(Z3_ast expr, Z3_ast shift);
+  Z3_ast bvVarRightShift(Z3_ast expr, Z3_ast shift);
+  Z3_ast bvVarArithRightShift(Z3_ast expr, Z3_ast shift);
 
   // Some STP-style bitvector arithmetic
-  Z3ExprHandle bvMinusExpr(unsigned width, Z3ExprHandle minuend, Z3ExprHandle subtrahend);
-  Z3ExprHandle bvPlusExpr(unsigned width, Z3ExprHandle augend, Z3ExprHandle addend);
-  Z3ExprHandle bvMultExpr(unsigned width, Z3ExprHandle multiplacand, Z3ExprHandle multiplier);
-  Z3ExprHandle bvDivExpr(unsigned width, Z3ExprHandle dividend, Z3ExprHandle divisor);
-  Z3ExprHandle sbvDivExpr(unsigned width, Z3ExprHandle dividend, Z3ExprHandle divisor);
-  Z3ExprHandle bvModExpr(unsigned width, Z3ExprHandle dividend, Z3ExprHandle divisor);
-  Z3ExprHandle sbvModExpr(unsigned width, Z3ExprHandle dividend, Z3ExprHandle divisor);
-  Z3ExprHandle notExpr(Z3ExprHandle expr);
-  Z3ExprHandle bvNotExpr(Z3ExprHandle expr);
-  Z3ExprHandle andExpr(Z3ExprHandle lhs, Z3ExprHandle rhs);
-  Z3ExprHandle bvAndExpr(Z3ExprHandle lhs, Z3ExprHandle rhs);
-  Z3ExprHandle orExpr(Z3ExprHandle lhs, Z3ExprHandle rhs);
-  Z3ExprHandle bvOrExpr(Z3ExprHandle lhs, Z3ExprHandle rhs);
-  Z3ExprHandle iffExpr(Z3ExprHandle lhs, Z3ExprHandle rhs);
-  Z3ExprHandle bvXorExpr(Z3ExprHandle lhs, Z3ExprHandle rhs);
-  Z3ExprHandle bvSignExtend(Z3ExprHandle src, unsigned width);
+  Z3_ast bvMinusExpr(unsigned width, Z3_ast minuend, Z3_ast subtrahend);
+  Z3_ast bvPlusExpr(unsigned width, Z3_ast augend, Z3_ast addend);
+  Z3_ast bvMultExpr(unsigned width, Z3_ast multiplacand, Z3_ast multiplier);
+  Z3_ast bvDivExpr(unsigned width, Z3_ast dividend, Z3_ast divisor);
+  Z3_ast sbvDivExpr(unsigned width, Z3_ast dividend, Z3_ast divisor);
+  Z3_ast bvModExpr(unsigned width, Z3_ast dividend, Z3_ast divisor);
+  Z3_ast sbvModExpr(unsigned width, Z3_ast dividend, Z3_ast divisor);
+  Z3_ast notExpr(Z3_ast expr);
+  Z3_ast bvNotExpr(Z3_ast expr);
+  Z3_ast andExpr(Z3_ast lhs, Z3_ast rhs);
+  Z3_ast bvAndExpr(Z3_ast lhs, Z3_ast rhs);
+  Z3_ast orExpr(Z3_ast lhs, Z3_ast rhs);
+  Z3_ast bvOrExpr(Z3_ast lhs, Z3_ast rhs);
+  Z3_ast iffExpr(Z3_ast lhs, Z3_ast rhs);
+  Z3_ast bvXorExpr(Z3_ast lhs, Z3_ast rhs);
+  Z3_ast bvSignExtend(Z3_ast src, unsigned width);
 
   // Some STP-style array domain interface
-  Z3ExprHandle writeExpr(Z3ExprHandle array, Z3ExprHandle index, Z3ExprHandle value);
-  Z3ExprHandle readExpr(Z3ExprHandle array, Z3ExprHandle index);
+  Z3_ast writeExpr(Z3_ast array, Z3_ast index, Z3_ast value);
+  Z3_ast readExpr(Z3_ast array, Z3_ast index);
 
   // ITE-expression constructor
-  Z3ExprHandle iteExpr(Z3ExprHandle condition, Z3ExprHandle whenTrue, Z3ExprHandle whenFalse);
+  Z3_ast iteExpr(Z3_ast condition, Z3_ast whenTrue, Z3_ast whenFalse);
 
   // Bitvector length
-  int getBVLength(Z3ExprHandle expr);
+  int getBVLength(Z3_ast expr);
 
   // Bitvector comparison
-  Z3ExprHandle bvLtExpr(Z3ExprHandle lhs, Z3ExprHandle rhs);
-  Z3ExprHandle bvLeExpr(Z3ExprHandle lhs, Z3ExprHandle rhs);
-  Z3ExprHandle sbvLtExpr(Z3ExprHandle lhs, Z3ExprHandle rhs);
-  Z3ExprHandle sbvLeExpr(Z3ExprHandle lhs, Z3ExprHandle rhs);
+  Z3_ast bvLtExpr(Z3_ast lhs, Z3_ast rhs);
+  Z3_ast bvLeExpr(Z3_ast lhs, Z3_ast rhs);
+  Z3_ast sbvLtExpr(Z3_ast lhs, Z3_ast rhs);
+  Z3_ast sbvLeExpr(Z3_ast lhs, Z3_ast rhs);
 
-  Z3ExprHandle constructAShrByConstant(Z3ExprHandle expr, unsigned shift,
-                                       Z3ExprHandle isSigned);
-  Z3ExprHandle constructMulByConstant(Z3ExprHandle expr, unsigned width, uint64_t x);
-  Z3ExprHandle constructUDivByConstant(Z3ExprHandle expr_n, unsigned width, uint64_t d);
-  Z3ExprHandle constructSDivByConstant(Z3ExprHandle expr_n, unsigned width, uint64_t d);
+  Z3_ast constructAShrByConstant(Z3_ast expr, unsigned shift,
+                                       Z3_ast isSigned);
+  Z3_ast constructMulByConstant(Z3_ast expr, unsigned width, uint64_t x);
+  Z3_ast constructUDivByConstant(Z3_ast expr_n, unsigned width, uint64_t d);
+  Z3_ast constructSDivByConstant(Z3_ast expr_n, unsigned width, uint64_t d);
 
-  Z3ExprHandle getInitialArray(const Array *os);
-  ::z3::expr getArrayForUpdate(const Array *root, const UpdateNode *un);
+  Z3_ast getInitialArray(const Array *os);
+  Z3_ast getArrayForUpdate(const Array *root, const UpdateNode *un);
 
-  Z3ExprHandle constructActual(ref<Expr> e, int *width_out);
-  Z3ExprHandle construct(ref<Expr> e, int *width_out);
+  Z3_ast constructActual(ref<Expr> e, int *width_out);
+  Z3_ast construct(ref<Expr> e, int *width_out);
   
-  ::z3::expr buildVar(const char *name, unsigned width);
-  ::z3::expr buildArray(const char *name, unsigned indexWidth, unsigned valueWidth);
+  Z3_ast buildVar(const char *name, unsigned width);
+  Z3_ast buildArray(const char *name, unsigned indexWidth, unsigned valueWidth);
  
 public:
-  ::z3::context ctx;
+  Z3_context ctx;
 
   Z3Builder();
   ~Z3Builder();
 
-  Z3ExprHandle getTrue();
-  Z3ExprHandle getFalse();
-  Z3ExprHandle getTempVar(Expr::Width w);
-  Z3ExprHandle getInitialRead(const Array *os, unsigned index);
+  Z3_ast getTrue();
+  Z3_ast getFalse();
+  Z3_ast getTempVar(Expr::Width w);
+  Z3_ast getInitialRead(const Array *os, unsigned index);
 
-  Z3ExprHandle construct(ref<Expr> e) {
-    Z3ExprHandle res = construct(e, 0);
+  Z3_ast construct(ref<Expr> e) {
+    Z3_ast res = construct(e, 0);
     constructed.clear();
     return res;
   }
