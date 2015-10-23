@@ -30,8 +30,8 @@ using namespace klee;
 
 namespace {
   llvm::cl::opt<bool>
-  UseConstructHash("use-construct-hash", 
-                   llvm::cl::desc("Use hash-consing during STP query construction."),
+  UseConstructHashZ3("use-construct-hash-z3",
+                   llvm::cl::desc("Use hash-consing during Z3 query construction."),
                    llvm::cl::init(true));
 }
 
@@ -568,7 +568,7 @@ Z3_ast Z3Builder::getArrayForUpdate(const Array *root,
 /** if *width_out!=1 then result is a bitvector,
     otherwise it is a bool */
 Z3_ast Z3Builder::construct(ref<Expr> e, int *width_out) {
-  if (!UseConstructHash || isa<ConstantExpr>(e)) {
+  if (!UseConstructHashZ3 || isa<ConstantExpr>(e)) {
     return constructActual(e, width_out);
   } else {
     ExprHashMap< std::pair<Z3_ast, unsigned> >::iterator it =
