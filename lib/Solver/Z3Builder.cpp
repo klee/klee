@@ -58,7 +58,7 @@ Z3ArrayExprHash::~Z3ArrayExprHash() {
 
 /***/
 
-Z3Builder::Z3Builder() {
+Z3Builder::Z3Builder() : ctx() {
   tempVars[0] = buildVar("__tmpInt8", 8);
   tempVars[1] = buildVar("__tmpInt16", 16);
   tempVars[2] = buildVar("__tmpInt32", 32);

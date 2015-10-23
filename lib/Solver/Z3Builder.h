@@ -20,37 +20,28 @@
 
 namespace klee {
 
-  class Z3ExprHolder {
-    friend class Z3ExprHandle;
-    ::z3::expr z3expr;
-    unsigned count;
-
-  public:
-    Z3ExprHolder() : z3expr(::z3::context().real_const("real_null")), count(0) {}
-    Z3ExprHolder(const ::z3::expr _expr) : z3expr(_expr), count(0) {}
-    ~Z3ExprHolder() {
-    	// FIXME: Maybe we need to delete z3expr
-    }
-  };
-
   class Z3ExprHandle {
-    Z3ExprHolder *H;
+    z3::expr z3expr;
     
   public:
-    Z3ExprHandle() : H(new Z3ExprHolder()) { H->count++; }
-    Z3ExprHandle(::z3::expr _expr) : H(new Z3ExprHolder(_expr)) { H->count++; }
-    Z3ExprHandle(const Z3ExprHandle &b) : H(b.H) { H->count++; }
-    ~Z3ExprHandle() { if (--H->count == 0) delete H; }
+    Z3ExprHandle() : z3expr(z3::context().real_val(1,3))
+  	  // Some real value signifies uninitialized expression
+  	  {}
+    Z3ExprHandle(::z3::expr _expr) : z3expr(_expr) {}
+    Z3ExprHandle(const Z3ExprHandle &b) : z3expr(b.z3expr) {}
+    ~Z3ExprHandle() {}
     
     Z3ExprHandle &operator=(const Z3ExprHandle &b) {
-      if (--H->count == 0) delete H;
-      H = b.H;
-      H->count++;
-      return *this;
+    	z3expr = b.z3expr;
+    	return *this;
     }
 
-    operator bool () { return H->z3expr; }
-    operator ::z3::expr () { return H->z3expr; }
+    operator bool () {
+    	// Return false if real (uninitialized)
+    	if (z3expr.is_real()) return false;
+    	return true;
+    }
+    operator z3::expr () { return z3expr; }
   };
   
   class Z3ArrayExprHash : public ArrayExprHash< Z3ExprHandle > {
