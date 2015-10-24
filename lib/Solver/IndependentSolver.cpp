@@ -403,6 +403,7 @@ public:
   
 bool IndependentSolver::computeValidity(const Query& query,
                                         Solver::Validity &result) {
+	llvm::errs() << "DDDD: IndependentSolver::computeValidity\n";
   std::vector< ref<Expr> > required;
   IndependentElementSet eltsClosure =
     getIndependentConstraints(query, required);

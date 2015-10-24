@@ -30,6 +30,7 @@ IncompleteSolver::negatePartialValidity(PartialValidity pv) {
 
 IncompleteSolver::PartialValidity 
 IncompleteSolver::computeValidity(const Query& query) {
+	llvm::errs() << "IncompleteSolver::computeValidity\n";
   PartialValidity trueResult = computeTruth(query);
 
   if (trueResult == MustBeTrue) {

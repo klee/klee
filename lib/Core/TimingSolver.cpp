@@ -37,6 +37,7 @@ bool TimingSolver::evaluate(const ExecutionState& state, ref<Expr> expr,
   if (simplifyExprs)
     expr = state.constraints.simplifyExpr(expr);
 
+  llvm::errs() << "DDDD: TimingSolver evaluate, calling solver->evaluate\n";
   bool success = solver->evaluate(Query(state.constraints, expr), result);
 
   sys::TimeValue delta = util::getWallTimeVal();

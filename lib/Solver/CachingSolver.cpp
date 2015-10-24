@@ -148,6 +148,7 @@ void CachingSolver::cacheInsert(const Query& query,
 
 bool CachingSolver::computeValidity(const Query& query,
                                     Solver::Validity &result) {
+	llvm::errs() << "DDDD: CachingSolver::computeValidity\n";
   IncompleteSolver::PartialValidity cachedResult;
   bool tmp, cacheHit = cacheLookup(query, cachedResult);
   

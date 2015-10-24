@@ -109,16 +109,14 @@ Z3_ast Z3Builder::getTempVar(Expr::Width w) {
  * Make 1-bit bitvector whose only element is 1.
  */
 Z3_ast Z3Builder::getTrue() {
-	Z3_sort t = Z3_mk_bv_sort(ctx, 1);
-	return Z3_mk_unsigned_int(ctx, 1, t);
+	return Z3_mk_true(ctx);
 }
 
 /**
  * Make 1-bit bitvector whose only element is 0.
  */
 Z3_ast Z3Builder::getFalse() {
-	Z3_sort t = Z3_mk_bv_sort(ctx, 1);
-	return Z3_mk_unsigned_int(ctx, 0, t);
+	return Z3_mk_false(ctx);
 }
 
 Z3_ast Z3Builder::bvOne(unsigned width) {
@@ -569,8 +567,18 @@ Z3_ast Z3Builder::getArrayForUpdate(const Array *root,
     otherwise it is a bool */
 Z3_ast Z3Builder::construct(ref<Expr> e, int *width_out) {
   if (!UseConstructHashZ3 || isa<ConstantExpr>(e)) {
+	  if (!UseConstructHashZ3) {
+		  llvm::errs() << "DDDD: Not using construct hash\n";
+	  }
+	  if ( isa<ConstantExpr>(e) ) {
+		  llvm::errs() << "DDDD: Expression is constant:\n";
+		  e->dump();
+	  }
+
+	  llvm::errs() << "DDDD: Z3Builder::construct Point 1\n";
     return constructActual(e, width_out);
   } else {
+	  llvm::errs() << "DDDD: Z3Builder::construct Point 2\n";
     ExprHashMap< std::pair<Z3_ast, unsigned> >::iterator it =
       constructed.find(e);
     if (it!=constructed.end()) {
@@ -598,12 +606,16 @@ Z3_ast Z3Builder::constructActual(ref<Expr> e, int *width_out) {
 
   switch (e->getKind()) {
   case Expr::Constant: {
+
+	  llvm::errs() << "DDDD: Z3Builder::constructActual: dealing with a constant\n";
     ConstantExpr *CE = cast<ConstantExpr>(e);
     *width_out = CE->getWidth();
 
     // Coerce to bool if necessary.
-    if (*width_out == 1)
+    if (*width_out == 1) {
+    	llvm::errs() << "DDDD: Width is 1\n";
       return CE->isTrue() ? getTrue() : getFalse();
+    }
 
     // Fast path.
     if (*width_out <= 32)
