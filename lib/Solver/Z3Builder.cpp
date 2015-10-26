@@ -132,8 +132,12 @@ Z3_ast Z3Builder::bvMinusOne(unsigned width) {
 }
 
 Z3_ast Z3Builder::bvConst32(unsigned width, uint32_t value) {
+	llvm::errs() << "DDDD: Z3Builder::bvConst32: width is " << width << " value is " << value << "\n";
 	Z3_sort t = Z3_mk_bv_sort(ctx, width);
-	return Z3_mk_unsigned_int(ctx, value, t);
+	llvm::errs() << "DDDD: Done calling Z3_mk_bv_sort\n";
+	Z3_ast res = Z3_mk_unsigned_int(ctx, value, t);
+	llvm::errs() << "DDDD: Done calling Z3_mk_unsigned_int\n";
+	return res;
 }
 
 Z3_ast Z3Builder::bvConst64(unsigned width, uint64_t value) {
@@ -618,13 +622,19 @@ Z3_ast Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     }
 
     // Fast path.
-    if (*width_out <= 32)
+    if (*width_out <= 32) {
+    	llvm::errs() << "DDDD: Width less than 32 bits: " << *width_out << "\n";
       return bvConst32(*width_out, CE->getZExtValue(32));
-    if (*width_out <= 64)
+    }
+    if (*width_out <= 64) {
+    	llvm::errs() << "DDDD: Width less than 64 bits\n";
       return bvConst64(*width_out, CE->getZExtValue());
-
+    }
     ref<ConstantExpr> Tmp = CE;
+
+    llvm::errs() << "DDDD: Calling bvConst64\n";
     Z3_ast Res = bvConst64(64, Tmp->Extract(0, 64)->getZExtValue());
+    llvm::errs() << "DDDD: Done calling bvConst64\n";
     while (Tmp->getWidth() > 64) {
     	Tmp = Tmp->Extract(64, Tmp->getWidth()-64);
     	unsigned Width = std::min(64U, Tmp->getWidth());
