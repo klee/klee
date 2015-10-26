@@ -625,9 +625,9 @@ AC_ARG_WITH(z3,
 
 old_CPPFLAGS="$CPPFLAGS"
 CPPFLAGS="$CPPFLAGS $Z3_CFLAGS"
-AC_CHECK_HEADER(z3++.h,,
+AC_CHECK_HEADER(z3.h,,
     [
-        AC_MSG_ERROR([Unable to use z3++.h header])
+        AC_MSG_ERROR([Unable to use z3.h header])
     ])
 CPPFLAGS="$old_CPPFLAGS"
 
