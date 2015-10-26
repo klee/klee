@@ -5042,12 +5042,12 @@ fi
 
 old_CPPFLAGS="$CPPFLAGS"
 CPPFLAGS="$CPPFLAGS $Z3_CFLAGS"
-ac_fn_cxx_check_header_mongrel "$LINENO" "z3++.h" "ac_cv_header_z3pp_h" "$ac_includes_default"
-if test "x$ac_cv_header_z3pp_h" = xyes; then :
+ac_fn_cxx_check_header_mongrel "$LINENO" "z3.h" "ac_cv_header_z3_h" "$ac_includes_default"
+if test "x$ac_cv_header_z3_h" = xyes; then :
 
 else
 
-        as_fn_error $? "Unable to use z3++.h header" "$LINENO" 5
+        as_fn_error $? "Unable to use z3.h header" "$LINENO" 5
 
 fi
 
