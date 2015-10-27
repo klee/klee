@@ -122,7 +122,6 @@ public:
   Z3_ast getInitialRead(const Array *os, unsigned index);
 
   Z3_ast construct(ref<Expr> e) {
-	  llvm::errs() << "DDDD: Z3Builder::construct\n";
 	  Z3_ast res = construct(e, 0);
 	  constructed.clear();
 	  return res;

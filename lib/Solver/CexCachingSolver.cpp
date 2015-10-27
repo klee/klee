@@ -222,15 +222,11 @@ bool CexCachingSolver::getAssignment(const Query& query, Assignment *&result) {
   std::vector< std::vector<unsigned char> > values;
   bool hasSolution;
   if (!solver->impl->computeInitialValues(query, objects, values, 
-                                          hasSolution)) {
-	  llvm::errs() << "DDDD: CexCachingSolver: Returning false at point 1\n";
+                                          hasSolution))
     return false;
-  }
     
-
   Assignment *binding;
   if (hasSolution) {
-	  llvm::errs() << "DDDD: CexCachingSolver: solution detected\n";
     binding = new Assignment(objects, values);
 
     // Memoize the result.
@@ -250,8 +246,6 @@ bool CexCachingSolver::getAssignment(const Query& query, Assignment *&result) {
   result = binding;
   cache.insert(key, binding);
 
-  llvm::errs() << "DDDD: CexCachingSolver: Returning true at point 2\n";
-
   return true;
 }
 
@@ -267,14 +261,10 @@ CexCachingSolver::~CexCachingSolver() {
 
 bool CexCachingSolver::computeValidity(const Query& query,
                                        Solver::Validity &result) {
-	llvm::errs() << "DDDD: CexCachingSolver::computeValidity\n";
   TimerStatIncrementer t(stats::cexCacheTime);
   Assignment *a;
-  llvm::errs() << "DDDD: getAssignment\n";
-  if (!getAssignment(query.withFalse(), a)) {
-	  llvm::errs() << "DDDD: Returning\n";
+  if (!getAssignment(query.withFalse(), a))
     return false;
-  }
   assert(a && "computeValidity() must have assignment");
   ref<Expr> q = a->evaluate(query.expr);
   assert(isa<ConstantExpr>(q) && 

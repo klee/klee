@@ -59,13 +59,9 @@ Z3ArrayExprHash::~Z3ArrayExprHash() {
 /***/
 
 Z3Builder::Z3Builder() {
-	llvm::errs() << "DDDD: Call Z3_mk_config\n";
 	Z3_config cfg = Z3_mk_config();
-	llvm::errs() << "DDDD: Call Z3_mk_context\n";
 	ctx = Z3_mk_context(cfg);
-	llvm::errs() << "DDDD: Call Z3_del_config\n";
 	Z3_del_config(cfg);
-	llvm::errs() << "DDDD: Returned from Z3_del_config\n";
 
 	tempVars[0] = buildVar("__tmpInt8", 8);
 	tempVars[1] = buildVar("__tmpInt16", 16);
@@ -74,9 +70,7 @@ Z3Builder::Z3Builder() {
 }
 
 Z3Builder::~Z3Builder() {
-	llvm::errs() << "DDDD: Call Z3_del_context\n";
   Z3_del_context(ctx);
-  llvm::errs() << "DDDD: Returned from Z3_del_context\n";
 }
 
 ///
@@ -87,20 +81,13 @@ Z3Builder::~Z3Builder() {
 
 Z3_ast Z3Builder::buildVar(const char *name, unsigned width) {
   // XXX don't rebuild if this stuff cons's
-	llvm::errs() << "DDDD: Call Z3_mk_bool_sort/Z3_mk_bv_sort\n";
   Z3_sort t = (width==1) ? Z3_mk_bool_sort(ctx) : Z3_mk_bv_sort(ctx, width);
-  llvm::errs() << "DDDD: Return Z3_mk_bool_sort/Z3_mk_bv_sort\n";
-  llvm::errs() << "DDDD: Call Z3_mk_string_symbol\n";
   Z3_symbol s  = Z3_mk_string_symbol(ctx, const_cast<char *>(name));
-  llvm::errs() << "DDDD: Return Z3_mk_string_symbol\n";
-  llvm::errs() << "DDDD: Call Z3_mk_cons\n";
   Z3_ast res = Z3_mk_const(ctx, s, t);
-  llvm::errs() << "DDDD: Return Z3_mk_const\n";
   return res;
 }
 
 Z3_ast Z3Builder::buildArray(const char *name, unsigned indexWidth, unsigned valueWidth) {
-	llvm::errs() << "DDDD: Z3Builder::buildArray\n";
   // XXX don't rebuild if this stuff cons's
   Z3_sort t1 = Z3_mk_bv_sort(ctx, indexWidth);
   Z3_sort t2 = Z3_mk_bv_sort(ctx, valueWidth);
@@ -123,7 +110,6 @@ Z3_ast Z3Builder::getTempVar(Expr::Width w) {
  * Make 1-bit bitvector whose only element is 1.
  */
 Z3_ast Z3Builder::getTrue() {
-	llvm::errs() << "DDDD: Z3Builder::getTrue\n";
 	return Z3_mk_true(ctx);
 }
 
@@ -131,42 +117,32 @@ Z3_ast Z3Builder::getTrue() {
  * Make 1-bit bitvector whose only element is 0.
  */
 Z3_ast Z3Builder::getFalse() {
-	llvm::errs() << "DDDD: Z3Builder::getFalse\n";
 	return Z3_mk_false(ctx);
 }
 
 Z3_ast Z3Builder::bvOne(unsigned width) {
-	llvm::errs() << "DDDD: Z3Builder::bvOne\n";
   return bvZExtConst(width, 1);
 }
 
 Z3_ast Z3Builder::bvZero(unsigned width) {
-	llvm::errs() << "DDDD: Z3Builder::bvZero\n";
   return bvZExtConst(width, 0);
 }
 
 Z3_ast Z3Builder::bvMinusOne(unsigned width) {
-	llvm::errs() << "DDDD: Z3Builder::bvMinusOne\n";
   return bvSExtConst(width, (int64_t) -1);
 }
 
 Z3_ast Z3Builder::bvConst32(unsigned width, uint32_t value) {
-	llvm::errs() << "DDDD: Z3Builder::bvConst32: width is " << width << " value is " << value << "\n";
 	Z3_sort t = Z3_mk_bv_sort(ctx, width);
-	llvm::errs() << "DDDD: Done calling Z3_mk_bv_sort\n";
-	Z3_ast res = Z3_mk_unsigned_int(ctx, value, t);
-	llvm::errs() << "DDDD: Done calling Z3_mk_unsigned_int\n";
-	return res;
+	return Z3_mk_unsigned_int(ctx, value, t);
 }
 
 Z3_ast Z3Builder::bvConst64(unsigned width, uint64_t value) {
-	llvm::errs() << "DDDD: Z3Builder::bvConst64\n";
 	Z3_sort t = Z3_mk_bv_sort(ctx, width);
 	return Z3_mk_unsigned_int64(ctx, value, t);
 }
 
 Z3_ast Z3Builder::bvZExtConst(unsigned width, uint64_t value) {
-	llvm::errs() << "DDDD: Z3Builder::bvZExtConst\n";
   if (width <= 64)
     return bvConst64(width, value);
 
@@ -177,7 +153,6 @@ Z3_ast Z3Builder::bvZExtConst(unsigned width, uint64_t value) {
 }
 
 Z3_ast Z3Builder::bvSExtConst(unsigned width, uint64_t value) {
-	llvm::errs() << "DDDD: Z3Builder::bvSExtConst\n";
   if (width <= 64)
     return bvConst64(width, value);
 
@@ -192,23 +167,19 @@ Z3_ast Z3Builder::bvSExtConst(unsigned width, uint64_t value) {
 }
 
 Z3_ast Z3Builder::bvBoolExtract(Z3_ast expr, int bit) {
-	llvm::errs() << "DDDD: Z3Builder::bvBoolExtract\n";
   return Z3_mk_eq(ctx, bvExtract(expr, bit, bit), bvOne(1));
 }
 
 Z3_ast Z3Builder::bvExtract(Z3_ast expr, unsigned top, unsigned bottom) {
-	llvm::errs() << "DDDD: Z3Builder::bvExtract\n";
   return Z3_mk_extract(ctx, top, bottom, expr);
 }
 
 Z3_ast Z3Builder::eqExpr(Z3_ast a, Z3_ast b) {
-	llvm::errs() << "DDDD: Z3Builder::eqExpr\n";
   return Z3_mk_eq(ctx, a, b);
 }
 
 // logical right shift
 Z3_ast Z3Builder::bvRightShift(Z3_ast expr, unsigned shift) {
-	llvm::errs() << "DDDD: Z3Builder::bvRightShft\n";
   unsigned width = getBVLength(expr);
 
   if (shift==0) {
@@ -222,7 +193,6 @@ Z3_ast Z3Builder::bvRightShift(Z3_ast expr, unsigned shift) {
 
 // logical left shift
 Z3_ast Z3Builder::bvLeftShift(Z3_ast expr, unsigned shift) {
-	llvm::errs() << "DDDD: Z3Builder::bvLeftShift\n";
   unsigned width = getBVLength(expr);
 
   if (shift==0) {
@@ -292,130 +262,105 @@ Z3_ast Z3Builder::bvVarArithRightShift(Z3_ast expr, Z3_ast shift) {
 }
 
 Z3_ast Z3Builder::bvMinusExpr(unsigned width, Z3_ast minuend, Z3_ast subtrahend) {
-	llvm::errs() << "DDDD: Z3Builder::bvMinusExpr\n";
 	return Z3_mk_extract(ctx, width - 1, 0, Z3_mk_bvsub(ctx, minuend, subtrahend));
 }
 
 Z3_ast Z3Builder::bvPlusExpr(unsigned width, Z3_ast augend, Z3_ast addend) {
-	llvm::errs() << "DDDD: Z3Builder::bvPlusExpr\n";
 	return Z3_mk_extract(ctx, width - 1, 0, Z3_mk_bvadd(ctx, augend, addend));
 }
 
 Z3_ast Z3Builder::bvMultExpr(unsigned width, Z3_ast multiplacand, Z3_ast multiplier) {
-	llvm::errs() << "DDDD: Z3Builder::bvMultExpr\n";
 	return Z3_mk_extract(ctx, width - 1, 0, Z3_mk_bvmul(ctx, multiplacand, multiplier));
 }
 
 Z3_ast Z3Builder::bvDivExpr(unsigned width, Z3_ast dividend, Z3_ast divisor) {
-	llvm::errs() << "DDDD: Z3Builder::bvDivExpr\n";
 	return Z3_mk_extract(ctx, width - 1, 0, Z3_mk_bvudiv(ctx, dividend, divisor));
 }
 
 Z3_ast Z3Builder::sbvDivExpr(unsigned width, Z3_ast dividend, Z3_ast divisor) {
-	llvm::errs() << "DDDD: Z3Builder::sbvDivExpr\n";
 	return Z3_mk_extract(ctx, width - 1, 0, Z3_mk_bvsdiv(ctx, dividend, divisor));
 }
 
 Z3_ast Z3Builder::bvModExpr(unsigned width, Z3_ast dividend, Z3_ast divisor) {
-	llvm::errs() << "DDDD: Z3Builder::bvModExpr\n";
 	return Z3_mk_extract(ctx, width - 1, 0, Z3_mk_bvurem(ctx, dividend, divisor));
 }
 
 Z3_ast Z3Builder::sbvModExpr(unsigned width, Z3_ast dividend, Z3_ast divisor) {
 	// FIXME: An alternative is to use Z3_mk_bvsmod, need to check which one is good
-	llvm::errs() << "DDDD: Z3Builder::sbvModExpr\n";
 	return Z3_mk_extract(ctx, width - 1, 0, Z3_mk_bvsrem(ctx, dividend, divisor));
 }
 
 Z3_ast Z3Builder::notExpr(Z3_ast expr) {
-	llvm::errs() << "DDDD: Z3Builder::notExpr\n";
 	return Z3_mk_not(ctx, expr);
 }
 
 Z3_ast Z3Builder::bvNotExpr(Z3_ast expr) {
-	llvm::errs() << "DDDD: Z3Builder::bvNotExpr\n";
 	return Z3_mk_bvnot(ctx, expr);
 }
 
 Z3_ast Z3Builder::andExpr(Z3_ast lhs, Z3_ast rhs) {
-	llvm::errs() << "DDDD: Z3Builder::andExpr\n";
 	return Z3_mk_bvand(ctx, Z3_mk_extract(ctx, 0, 0, lhs), Z3_mk_extract(ctx, 0, 0, rhs));
 }
 
 Z3_ast Z3Builder::bvAndExpr(Z3_ast lhs, Z3_ast rhs) {
-	llvm::errs() << "DDDD: Z3Builder::bvAndExpr\n";
 	return Z3_mk_bvand(ctx, lhs, rhs);
 }
 
 Z3_ast Z3Builder::orExpr(Z3_ast lhs, Z3_ast rhs) {
-	llvm::errs() << "DDDD: Z3Builder::orExpr\n";
 	return Z3_mk_bvor(ctx, Z3_mk_extract(ctx, 0, 0, lhs), Z3_mk_extract(ctx, 0, 0, rhs));
 }
 
 Z3_ast Z3Builder::bvOrExpr(Z3_ast lhs, Z3_ast rhs) {
-	llvm::errs() << "DDDD: Z3Builder::bvOrExpr\n";
 	return Z3_mk_bvor(ctx, lhs, rhs);
 }
 
 Z3_ast Z3Builder::iffExpr(Z3_ast lhs, Z3_ast rhs) {
-	llvm::errs() << "DDDD: Z3Builder::iffExpr\n";
 	return Z3_mk_extract(ctx, 0, 0, Z3_mk_bvxor(ctx, Z3_mk_bvnot(ctx, lhs), rhs));
 }
 
 Z3_ast Z3Builder::bvXorExpr(Z3_ast lhs, Z3_ast rhs) {
-	llvm::errs() << "DDDD: Z3Builder::bvXorExpr\n";
 	return Z3_mk_bvxor(ctx, lhs, rhs);
 }
 
 Z3_ast Z3Builder::bvSignExtend(Z3_ast src, unsigned width) {
-	llvm::errs() << "DDDD: Z3Builder::bvSignExtend\n";
 	return Z3_mk_sign_ext(ctx, width, src);
 }
 
 Z3_ast Z3Builder::writeExpr(Z3_ast array, Z3_ast index, Z3_ast value) {
-	llvm::errs() << "DDDD: Z3Builder::writeExpr\n";
 	return Z3_mk_store(ctx, array, index, value);
 }
 
 Z3_ast Z3Builder::readExpr(Z3_ast array, Z3_ast index) {
-	llvm::errs() << "DDDD: Z3Builder::readExpr\n";
 	return Z3_mk_select(ctx, array, index);
 }
 
 Z3_ast Z3Builder::iteExpr(Z3_ast condition, Z3_ast whenTrue, Z3_ast whenFalse) {
-	llvm::errs() << "DDDD: Z3Builder::iteExpr\n";
 	return Z3_mk_ite(ctx, condition, whenTrue, whenFalse);
 }
 
 int Z3Builder::getBVLength(Z3_ast expr) {
-	llvm::errs() << "DDDD: Z3Builder::getBVLength\n";
 	return Z3_get_bv_sort_size(ctx, Z3_get_sort(ctx, expr));
 }
 
 Z3_ast Z3Builder::bvLtExpr(Z3_ast lhs, Z3_ast rhs) {
-	llvm::errs() << "DDDD: Z3Builder::bvLtExpr\n";
 	return Z3_mk_bvult(ctx, lhs, rhs);
 }
 
 Z3_ast Z3Builder::bvLeExpr(Z3_ast lhs, Z3_ast rhs) {
-	llvm::errs() << "DDDD: Z3Builder::bvLeExpr\n";
 	return Z3_mk_bvule(ctx, lhs, rhs);
 }
 
 Z3_ast Z3Builder::sbvLtExpr(Z3_ast lhs, Z3_ast rhs) {
-	llvm::errs() << "DDDD: Z3Builder::sbvLtExpr\n";
 	return Z3_mk_bvslt(ctx, lhs, rhs);
 }
 
 Z3_ast Z3Builder::sbvLeExpr(Z3_ast lhs, Z3_ast rhs) {
-	llvm::errs() << "DDDD: Z3Builder::sbvLeExpr\n";
 	return Z3_mk_bvsle(ctx, lhs, rhs);
 }
 
 Z3_ast Z3Builder::constructAShrByConstant(Z3_ast expr,
                                                unsigned shift,
                                                Z3_ast isSigned) {
-	llvm::errs() << "DDDD: Z3Builder::constructAShrByConstant\n";
   unsigned width = getBVLength(expr);
 
   if (shift==0) {
@@ -430,7 +375,6 @@ Z3_ast Z3Builder::constructAShrByConstant(Z3_ast expr,
 }
 
 Z3_ast Z3Builder::constructMulByConstant(Z3_ast expr, unsigned width, uint64_t x) {
-	llvm::errs() << "DDDD: Z3Builder::constructMulByConstant\n";
   uint64_t add, sub;
   Z3_ast res = 0;
 
@@ -484,7 +428,6 @@ Z3_ast Z3Builder::constructMulByConstant(Z3_ast expr, unsigned width, uint64_t x
  * @return n/d without doing explicit division
  */
 Z3_ast Z3Builder::constructUDivByConstant(Z3_ast expr_n, unsigned width, uint64_t d) {
-	llvm::errs() << "DDDD: Z3Builder::constructUDivByConstant\n";
   assert(width==32 && "can only compute udiv constants for 32-bit division");
 
   // Compute the constants needed to compute n/d for constant d w/o
@@ -625,10 +568,8 @@ Z3_ast Z3Builder::getArrayForUpdate(const Array *root,
     otherwise it is a bool */
 Z3_ast Z3Builder::construct(ref<Expr> e, int *width_out) {
   if (!UseConstructHashZ3 || isa<ConstantExpr>(e)) {
-	  llvm::errs() << "DDDD: Z3Builder::construct calling constructActual 1\n";
     return constructActual(e, width_out);
   } else {
-	  llvm::errs() << "DDDD: Z3Builder::construct Point 2\n";
     ExprHashMap< std::pair<Z3_ast, unsigned> >::iterator it =
       constructed.find(e);
     if (it!=constructed.end()) {
@@ -638,9 +579,7 @@ Z3_ast Z3Builder::construct(ref<Expr> e, int *width_out) {
     } else {
       int width;
       if (!width_out) width_out = &width;
-	  llvm::errs() << "DDDD: Z3Builder::construct calling constructActual 2\n";
       Z3_ast res = constructActual(e, width_out);
-      llvm::errs() << "DDDD: Returned from Z3Builder::costructActual\n";
       constructed.insert(std::make_pair(e, std::make_pair(res, *width_out)));
       return res;
     }
@@ -651,7 +590,6 @@ Z3_ast Z3Builder::construct(ref<Expr> e, int *width_out) {
 /** if *width_out!=1 then result is a bitvector,
     otherwise it is a bool */
 Z3_ast Z3Builder::constructActual(ref<Expr> e, int *width_out) {
-	llvm::errs() << "DDDD: Z3Builder::constructActualt\n";
   int width;
   if (!width_out) width_out = &width;
 
@@ -659,39 +597,30 @@ Z3_ast Z3Builder::constructActual(ref<Expr> e, int *width_out) {
 
   switch (e->getKind()) {
   case Expr::Constant: {
-
-	  llvm::errs() << "DDDD: Z3Builder::constructActual: dealing with a constant\n";
     ConstantExpr *CE = cast<ConstantExpr>(e);
     *width_out = CE->getWidth();
 
     // Coerce to bool if necessary.
     if (*width_out == 1) {
-    	llvm::errs() << "DDDD: Width is 1\n";
       return CE->isTrue() ? getTrue() : getFalse();
     }
 
     // Fast path.
     if (*width_out <= 32) {
-    	llvm::errs() << "DDDD: Width less than 32 bits: " << *width_out << "\n";
       return bvConst32(*width_out, CE->getZExtValue(32));
     }
     if (*width_out <= 64) {
-    	llvm::errs() << "DDDD: Width less than 64 bits\n";
       return bvConst64(*width_out, CE->getZExtValue());
     }
     ref<ConstantExpr> Tmp = CE;
 
-    llvm::errs() << "DDDD: Calling bvConst64\n";
     Z3_ast Res = bvConst64(64, Tmp->Extract(0, 64)->getZExtValue());
-    llvm::errs() << "DDDD: Done calling bvConst64\n";
     while (Tmp->getWidth() > 64) {
     	Tmp = Tmp->Extract(64, Tmp->getWidth()-64);
     	unsigned Width = std::min(64U, Tmp->getWidth());
-    	llvm::errs() << "DDDD: Call Z3_mk_concat A\n";
     	Res = Z3_mk_concat(ctx, bvConst64(Width,
     			Tmp->Extract(0, Width)->getZExtValue()),
     			Res);
-    	llvm::errs() << "DDDD: Return Z3_mk_concat A\n";
     }
     return Res;
   }
@@ -723,9 +652,7 @@ Z3_ast Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     unsigned numKids = ce->getNumKids();
     Z3_ast res = construct(ce->getKid(numKids-1), 0);
     for (int i=numKids-2; i>=0; i--) {
-    	llvm::errs() << "DDDD: Call Z3_mk_concat B\n";
       res = Z3_mk_concat(ctx, construct(ce->getKid(i), 0), res);
-      llvm::errs() << "DDDD: Return from Z3_mk_concat B\n";
     }
     *width_out = ce->getWidth();
     return res;
@@ -752,9 +679,7 @@ Z3_ast Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     if (srcWidth==1) {
       return iteExpr(src, bvOne(*width_out), bvZero(*width_out));
     } else {
-    	llvm::errs() << "DDDD: Call Z3_mk_concat C\n";
     	Z3_ast res = Z3_mk_concat(ctx, bvZero(*width_out-srcWidth), src);
-    	llvm::errs() << "DDDD: Return Z3_mk_concat C\n";
     	return res;
     }
   }
@@ -863,10 +788,8 @@ Z3_ast Z3Builder::constructActual(ref<Expr> e, int *width_out) {
           if (bits == 0) {
             return bvZero(*width_out);
           } else {
-        	  llvm::errs() << "DDDD: Call Z3_mk_concat D\n";
             Z3_ast res = Z3_mk_concat(ctx, bvZero(*width_out - bits),
                                    bvExtract(left, bits - 1, 0));
-            llvm::errs() << "DDDD: Returned from Z3_mk_concat D\n";
             return res;
           }
         }

@@ -711,7 +711,6 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       (MaxStaticForkPct!=1. || MaxStaticSolvePct != 1. ||
        MaxStaticCPForkPct!=1. || MaxStaticCPSolvePct != 1.) &&
       statsTracker->elapsed() > 60.) {
-	  llvm::errs() << "DDDD: fork point 1\n";
     StatisticManager &sm = *theStatisticManager;
     CallPathNode *cpn = current.stack.back().callPathNode;
     if ((MaxStaticForkPct<1. &&
@@ -726,7 +725,6 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
         (MaxStaticCPForkPct<1. &&
          cpn && (cpn->statistics.getValue(stats::solverTime) > 
                  stats::solverTime*MaxStaticCPSolvePct))) {
-    	llvm::errs() << "DDDD: fork point 2\n";
       ref<ConstantExpr> value; 
       bool success = solver->getValue(current, condition, value);
       assert(success && "FIXME: Unhandled solver failure");
@@ -740,12 +738,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
   if (isSeeding)
     timeout *= it->second.size();
   solver->setTimeout(timeout);
-
-  llvm::errs() << "DDDD: fork calling solver->evaluate\n";
-
   bool success = solver->evaluate(current, condition, res);
-
-  llvm::errs() << "DDDD: fork finished evaluating\n";
   solver->setTimeout(0);
   if (!success) {
     current.pc = current.prevPC;
@@ -1428,7 +1421,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   switch (i->getOpcode()) {
     // Control flow
   case Instruction::Ret: {
-	  llvm::errs() << "DDDD: Executing Insruction::Ret\n";
     ReturnInst *ri = cast<ReturnInst>(i);
     KInstIterator kcaller = state.stack.back().caller;
     Instruction *caller = kcaller ? kcaller->inst : 0;
@@ -1496,7 +1488,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 #if LLVM_VERSION_CODE < LLVM_VERSION(3, 1)
   case Instruction::Unwind: {
-	  llvm::errs() << "DDDD: Executing Insruction::Unwind\n";
     for (;;) {
       KInstruction *kcaller = state.stack.back().caller;
       state.popFrame();
@@ -1519,7 +1510,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 #endif
   case Instruction::Br: {
-	  llvm::errs() << "DDDD: Executing Insruction::Br\n";
     BranchInst *bi = cast<BranchInst>(i);
     if (bi->isUnconditional()) {
       transferToBasicBlock(bi->getSuccessor(0), bi->getParent(), state);
@@ -1527,12 +1517,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       // FIXME: Find a way that we don't have this hidden dependency.
       assert(bi->getCondition() == bi->getOperand(0) &&
              "Wrong operand index!");
-
       ref<Expr> cond = eval(ki, 0, state).value;
-      llvm::errs() << "DDDD: Forking\n";
       Executor::StatePair branches = fork(state, cond, false);
 
-      llvm::errs() << "DDDD: Finished forking\n";
       // NOTE: There is a hidden dependency here, markBranchVisited
       // requires that we still be in the context of the branch
       // instruction (it reuses its statistic id). Should be cleaned
@@ -1548,7 +1535,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     break;
   }
   case Instruction::Switch: {
-	  llvm::errs() << "DDDD: Executing Insruction::Switch\n";
     SwitchInst *si = cast<SwitchInst>(i);
     ref<Expr> cond = eval(ki, 0, state).value;
     BasicBlock *bb = si->getParent();
@@ -1625,7 +1611,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     break;
  }
   case Instruction::Unreachable:
-	  llvm::errs() << "DDDD: Executing Insruction::Unreachable\n";
     // Note that this is not necessarily an internal bug, llvm will
     // generate unreachable instructions in cases where it knows the
     // program will crash. So it is effectively a SEGV or internal
@@ -1634,9 +1619,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     break;
 
   case Instruction::Invoke:
-	  llvm::errs() << "DDDD: Executing Insruction::Invoke\n";
   case Instruction::Call: {
-	  llvm::errs() << "DDDD: Executing Insruction::Call\n";
     CallSite cs(i);
 
     unsigned numArgs = cs.arg_size();
@@ -1744,7 +1727,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     break;
   }
   case Instruction::PHI: {
-	  llvm::errs() << "DDDD: Executing Insruction::PHI\n";
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 0)
     ref<Expr> result = eval(ki, state.incomingBBIndex, state).value;
 #else
@@ -1756,7 +1738,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Special instructions
   case Instruction::Select: {
-	  llvm::errs() << "DDDD: Executing Insruction::Unwind\n";
     ref<Expr> cond = eval(ki, 0, state).value;
     ref<Expr> tExpr = eval(ki, 1, state).value;
     ref<Expr> fExpr = eval(ki, 2, state).value;
@@ -1766,14 +1747,12 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::VAArg:
-	  llvm::errs() << "DDDD: Executing Insruction::Unwind\n";
     terminateStateOnExecError(state, "unexpected VAArg instruction");
     break;
 
     // Arithmetic / logical
 
   case Instruction::Add: {
-	  llvm::errs() << "DDDD: Executing Insruction::Unwind\n";
     ref<Expr> left = eval(ki, 0, state).value;
     ref<Expr> right = eval(ki, 1, state).value;
     bindLocal(ki, state, AddExpr::create(left, right));
@@ -1781,7 +1760,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::Sub: {
-	  llvm::errs() << "DDDD: Executing Insruction::Unwind\n";
     ref<Expr> left = eval(ki, 0, state).value;
     ref<Expr> right = eval(ki, 1, state).value;
     bindLocal(ki, state, SubExpr::create(left, right));
@@ -1789,7 +1767,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
  
   case Instruction::Mul: {
-	  llvm::errs() << "DDDD: Executing Insruction::Unwind\n";
     ref<Expr> left = eval(ki, 0, state).value;
     ref<Expr> right = eval(ki, 1, state).value;
     bindLocal(ki, state, MulExpr::create(left, right));
@@ -1797,7 +1774,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::UDiv: {
-	  llvm::errs() << "DDDD: Executing Insruction::Unwind\n";
     ref<Expr> left = eval(ki, 0, state).value;
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = UDivExpr::create(left, right);
@@ -1806,7 +1782,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::SDiv: {
-	  llvm::errs() << "DDDD: Executing Insruction::Unwind\n";
     ref<Expr> left = eval(ki, 0, state).value;
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = SDivExpr::create(left, right);
@@ -1815,7 +1790,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::URem: {
-	  llvm::errs() << "DDDD: Executing Insruction::Unwind\n";
     ref<Expr> left = eval(ki, 0, state).value;
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = URemExpr::create(left, right);
@@ -1824,7 +1798,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
  
   case Instruction::SRem: {
-	  llvm::errs() << "DDDD: Executing Insruction::Unwind\n";
     ref<Expr> left = eval(ki, 0, state).value;
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = SRemExpr::create(left, right);
@@ -1833,7 +1806,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::And: {
-	  llvm::errs() << "DDDD: Executing Insruction::Unwind\n";
     ref<Expr> left = eval(ki, 0, state).value;
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = AndExpr::create(left, right);
@@ -1842,7 +1814,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::Or: {
-	  llvm::errs() << "DDDD: Executing Insruction::Unwind\n";
     ref<Expr> left = eval(ki, 0, state).value;
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = OrExpr::create(left, right);
@@ -1851,7 +1822,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::Xor: {
-	  llvm::errs() << "DDDD: Executing Insruction::Unwind\n";
     ref<Expr> left = eval(ki, 0, state).value;
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = XorExpr::create(left, right);
@@ -1860,7 +1830,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::Shl: {
-	  llvm::errs() << "DDDD: Executing Insruction::Unwind\n";
     ref<Expr> left = eval(ki, 0, state).value;
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = ShlExpr::create(left, right);
@@ -1869,7 +1838,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::LShr: {
-	  llvm::errs() << "DDDD: Executing Insruction::Unwind\n";
     ref<Expr> left = eval(ki, 0, state).value;
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = LShrExpr::create(left, right);
@@ -1878,7 +1846,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::AShr: {
-	  llvm::errs() << "DDDD: Executing Insruction::Unwind\n";
     ref<Expr> left = eval(ki, 0, state).value;
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = AShrExpr::create(left, right);
@@ -1889,7 +1856,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     // Compare
 
   case Instruction::ICmp: {
-	  llvm::errs() << "DDDD: Executing Insruction::Unwind\n";
     CmpInst *ci = cast<CmpInst>(i);
     ICmpInst *ii = cast<ICmpInst>(ci);
  
@@ -1982,7 +1948,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
  
     // Memory instructions...
   case Instruction::Alloca: {
-	  llvm::errs() << "DDDD: Executing Insruction::Alloca\n";
     AllocaInst *ai = cast<AllocaInst>(i);
     unsigned elementSize = 
       kmodule->targetData->getTypeStoreSize(ai->getAllocatedType());
@@ -1998,13 +1963,11 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::Load: {
-	  llvm::errs() << "DDDD: Executing Insruction::Load\n";
     ref<Expr> base = eval(ki, 0, state).value;
     executeMemoryOperation(state, false, base, 0, ki);
     break;
   }
   case Instruction::Store: {
-	  llvm::errs() << "DDDD: Executing Insruction::Store\n";
     ref<Expr> base = eval(ki, 1, state).value;
     ref<Expr> value = eval(ki, 0, state).value;
     executeMemoryOperation(state, true, base, value, 0);
@@ -2012,7 +1975,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::GetElementPtr: {
-	  llvm::errs() << "DDDD: Executing Insruction::GetElementPtr\n";
     KGEPInstruction *kgepi = static_cast<KGEPInstruction*>(ki);
     ref<Expr> base = eval(ki, 0, state).value;
 
@@ -2034,7 +1996,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Conversion
   case Instruction::Trunc: {
-	  llvm::errs() << "DDDD: Executing Insruction::Trunc\n";
     CastInst *ci = cast<CastInst>(i);
     ref<Expr> result = ExtractExpr::create(eval(ki, 0, state).value,
                                            0,
@@ -2043,7 +2004,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     break;
   }
   case Instruction::ZExt: {
-	  llvm::errs() << "DDDD: Executing Insruction::ZExt\n";
     CastInst *ci = cast<CastInst>(i);
     ref<Expr> result = ZExtExpr::create(eval(ki, 0, state).value,
                                         getWidthForLLVMType(ci->getType()));
@@ -2051,7 +2011,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     break;
   }
   case Instruction::SExt: {
-	  llvm::errs() << "DDDD: Executing Insruction::SExt\n";
     CastInst *ci = cast<CastInst>(i);
     ref<Expr> result = SExtExpr::create(eval(ki, 0, state).value,
                                         getWidthForLLVMType(ci->getType()));
@@ -2060,7 +2019,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::IntToPtr: {
-	  llvm::errs() << "DDDD: Executing Insruction::IntToPtr\n";
     CastInst *ci = cast<CastInst>(i);
     Expr::Width pType = getWidthForLLVMType(ci->getType());
     ref<Expr> arg = eval(ki, 0, state).value;
@@ -2068,7 +2026,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     break;
   } 
   case Instruction::PtrToInt: {
-	  llvm::errs() << "DDDD: Executing Insruction::PtrToInt\n";
     CastInst *ci = cast<CastInst>(i);
     Expr::Width iType = getWidthForLLVMType(ci->getType());
     ref<Expr> arg = eval(ki, 0, state).value;
@@ -2077,7 +2034,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::BitCast: {
-	  llvm::errs() << "DDDD: Executing Insruction::BitCast\n";
     ref<Expr> result = eval(ki, 0, state).value;
     bindLocal(ki, state, result);
     break;
@@ -2086,7 +2042,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     // Floating point instructions
 
   case Instruction::FAdd: {
-	  llvm::errs() << "DDDD: Executing Insruction::FAdd\n";
     ref<ConstantExpr> left = toConstant(state, eval(ki, 0, state).value,
                                         "floating point");
     ref<ConstantExpr> right = toConstant(state, eval(ki, 1, state).value,
@@ -2107,7 +2062,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::FSub: {
-	  llvm::errs() << "DDDD: Executing Insruction::FSub\n";
     ref<ConstantExpr> left = toConstant(state, eval(ki, 0, state).value,
                                         "floating point");
     ref<ConstantExpr> right = toConstant(state, eval(ki, 1, state).value,
@@ -2127,7 +2081,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
  
   case Instruction::FMul: {
-	  llvm::errs() << "DDDD: Executing Insruction::FMul\n";
     ref<ConstantExpr> left = toConstant(state, eval(ki, 0, state).value,
                                         "floating point");
     ref<ConstantExpr> right = toConstant(state, eval(ki, 1, state).value,
@@ -2148,7 +2101,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::FDiv: {
-	  llvm::errs() << "DDDD: Executing Insruction::FDivn";
     ref<ConstantExpr> left = toConstant(state, eval(ki, 0, state).value,
                                         "floating point");
     ref<ConstantExpr> right = toConstant(state, eval(ki, 1, state).value,
@@ -2169,7 +2121,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::FRem: {
-	  llvm::errs() << "DDDD: Executing Insruction::FRem\n";
     ref<ConstantExpr> left = toConstant(state, eval(ki, 0, state).value,
                                         "floating point");
     ref<ConstantExpr> right = toConstant(state, eval(ki, 1, state).value,
@@ -2190,7 +2141,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::FPTrunc: {
-	  llvm::errs() << "DDDD: Executing Insruction::FPTrunc\n";
     FPTruncInst *fi = cast<FPTruncInst>(i);
     Expr::Width resultType = getWidthForLLVMType(fi->getType());
     ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
@@ -2212,7 +2162,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::FPExt: {
-	  llvm::errs() << "DDDD: Executing Insruction::FPExt\n";
     FPExtInst *fi = cast<FPExtInst>(i);
     Expr::Width resultType = getWidthForLLVMType(fi->getType());
     ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
@@ -2233,7 +2182,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::FPToUI: {
-	  llvm::errs() << "DDDD: Executing Insruction::FPToUI\n";
     FPToUIInst *fi = cast<FPToUIInst>(i);
     Expr::Width resultType = getWidthForLLVMType(fi->getType());
     ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
@@ -2255,7 +2203,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::FPToSI: {
-	  llvm::errs() << "DDDD: Executing Insruction::FPToSI\n";
     FPToSIInst *fi = cast<FPToSIInst>(i);
     Expr::Width resultType = getWidthForLLVMType(fi->getType());
     ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
@@ -2277,7 +2224,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::UIToFP: {
-	  llvm::errs() << "DDDD: Executing Insruction::UIToFP\n";
     UIToFPInst *fi = cast<UIToFPInst>(i);
     Expr::Width resultType = getWidthForLLVMType(fi->getType());
     ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
@@ -2294,7 +2240,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::SIToFP: {
-	  llvm::errs() << "DDDD: Executing Insruction::SIToFP\n";
     SIToFPInst *fi = cast<SIToFPInst>(i);
     Expr::Width resultType = getWidthForLLVMType(fi->getType());
     ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
@@ -2311,7 +2256,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::FCmp: {
-	  llvm::errs() << "DDDD: Executing Insruction::FCmp\n";
     FCmpInst *fi = cast<FCmpInst>(i);
     ref<ConstantExpr> left = toConstant(state, eval(ki, 0, state).value,
                                         "floating point");
@@ -2409,7 +2353,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     break;
   }
   case Instruction::InsertValue: {
-	  llvm::errs() << "DDDD: Executing Insruction::InsertValue\n";
     KGEPInstruction *kgepi = static_cast<KGEPInstruction*>(ki);
 
     ref<Expr> agg = eval(ki, 0, state).value;
@@ -2437,7 +2380,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     break;
   }
   case Instruction::ExtractValue: {
-	  llvm::errs() << "DDDD: Executing Insruction::ExtractValue\n";
     KGEPInstruction *kgepi = static_cast<KGEPInstruction*>(ki);
 
     ref<Expr> agg = eval(ki, 0, state).value;
@@ -2451,17 +2393,13 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     // Other instructions...
     // Unhandled
   case Instruction::ExtractElement:
-	  llvm::errs() << "DDDD: Executing Insruction::ExtractElement\n";
   case Instruction::InsertElement:
-	  llvm::errs() << "DDDD: Executing Insruction::InsertElement\n";
   case Instruction::ShuffleVector:
-	  llvm::errs() << "DDDD: Executing Insruction::ShuffleFactor\n";
     terminateStateOnError(state, "XXX vector instructions unhandled",
                           "xxx.err");
     break;
  
   default:
-	  llvm::errs() << "DDDD: Executing illegal instruction\n";
     terminateStateOnExecError(state, "illegal instruction");
     break;
   }

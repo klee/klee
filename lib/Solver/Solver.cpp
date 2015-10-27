@@ -74,7 +74,6 @@ SolverImpl::~SolverImpl() {
 
 bool SolverImpl::computeValidity(const Query& query, Solver::Validity &result) {
   bool isTrue, isFalse;
-  llvm::errs() << "DDDD: SolverImpl::computeValidity\n";
   if (!computeTruth(query, isTrue))
     return false;
   if (isTrue) {
@@ -141,7 +140,6 @@ bool Solver::evaluate(const Query& query, Validity &result) {
     return true;
   }
 
-  llvm::errs() << "DDDD: Solver::evaluate: impl->computeValidity\n";
   return impl->computeValidity(query, result);
 }
 
@@ -360,7 +358,6 @@ bool ValidatingSolver::computeTruth(const Query& query,
 
 bool ValidatingSolver::computeValidity(const Query& query,
                                        Solver::Validity &result) {
-	llvm::errs() << "DDDD: ValidatingSolver::computeValidity\n";
   Solver::Validity answer;
   
   if (!solver->impl->computeValidity(query, result))
@@ -463,7 +460,6 @@ public:
   DummySolverImpl() {}
   
   bool computeValidity(const Query&, Solver::Validity &result) { 
-	  llvm::errs() << "DDDD: DummySolverImpl::computeValidity\n";
     ++stats::queries;
     // FIXME: We should have stats::queriesFail;
     return false; 
@@ -913,26 +909,18 @@ void Z3Solver::setCoreSolverTimeout(double timeout) {
 /***/
 
 char *Z3SolverImpl::getConstraintLog(const Query &query) {
-	const char *res;
-	llvm::errs() << "EEEE: Push solver\n";
 	Z3_solver the_solver = Z3_mk_simple_solver(builder->ctx);
 
 	for (std::vector< ref<Expr> >::const_iterator it = query.constraints.begin(),
 	         ie = query.constraints.end(); it != ie; ++it) {
-		llvm::errs() << "EEEE: Assert to solver in getConstraintLog\n";
 	    Z3_solver_assert(builder->ctx, the_solver, builder->construct(*it));
 	}
 
-	llvm::errs() << "EEEE: Converting solver to string\n";
-	res = Z3_solver_to_string(builder->ctx, the_solver);
-
-	return strdup(res);
+	return strdup(Z3_solver_to_string(builder->ctx, the_solver));
 }
 
 bool Z3SolverImpl::computeTruth(const Query& query,
                                  bool &isValid) {
-
-	llvm::errs() << "DDDD: Z3SolverImpl::computeTruth\n";
   std::vector<const Array*> objects;
   std::vector< std::vector<unsigned char> > values;
   bool hasSolution;
@@ -972,22 +960,19 @@ Z3SolverImpl::computeInitialValues(const Query &query,
                                       &values,
                                     bool &hasSolution) {
 
-	Z3_solver the_solver = Z3_mk_simple_solver(builder->ctx);
+  Z3_solver the_solver = Z3_mk_simple_solver(builder->ctx);
 
-  llvm::errs() << "DDDD: Z3SolverImpl::computeInitialValues\n";
   runStatusCode =  SOLVER_RUN_STATUS_FAILURE;
 
   TimerStatIncrementer t(stats::queryTime);
 
   for (ConstraintManager::const_iterator it = query.constraints.begin(),
          ie = query.constraints.end(); it != ie; ++it) {
-	  llvm::errs() << "EEEE: Z3SolverImpl::computeInitialValues: assert to solver\n";
 	  Z3_solver_assert(builder->ctx, the_solver, builder->construct(*it));
   }
   ++stats::queries;
   ++stats::queryCounterexamples;
 
-  llvm::errs() << "DDDD: Calling builder to construct query\n";
   Z3_ast stp_e = builder->construct(query.expr);
 
   bool success;
@@ -1001,7 +986,6 @@ Z3SolverImpl::computeInitialValues(const Query &query,
 		  ++stats::queriesValid;
   }
 
-  llvm::errs() << "DDDD: Z3SolverImpl::computeInitialValues return\n";
   return success;
 }
 
@@ -1009,20 +993,10 @@ SolverImpl::SolverRunStatus Z3SolverImpl::runAndGetCex(Z3Builder *builder, Z3_so
                                                 const std::vector<const Array*> &objects,
                                                 std::vector< std::vector<unsigned char> > &values,
                                                 bool &hasSolution) {
-	llvm::errs() << "DDDD: Z3SolverImpl::runAndGetCex\n";
-	llvm::errs() << "EEEE: Z3SolverImpl::runAndGetCex calling Z3_solver_check\n";
-	// Z3_solver_check(builder->ctx, the_solver);
-
-	llvm::errs() << "DDDD: Negating " << Z3_ast_to_string(builder->ctx, q) << "\n";
-	llvm::errs() << "EEEE: Z3SolverImpl::runAndGetCex asserting to solver\n";
 	Z3_solver_assert(builder->ctx, the_solver, Z3_mk_not(builder->ctx, q));
-	llvm::errs() << "DDDD: Z3SolverImpl::runAndGetCex Point 1\n";
 
-	llvm::errs() << "EEEE: Checking the solver again\n";
 	if (Z3_solver_check(builder->ctx, the_solver) == Z3_L_TRUE) {
 		hasSolution = true;
-		llvm::errs() << "DDDD: Z3SolverImpl::runAndGetCex Point 2\n";
-		llvm::errs() << "EEEE: Getting model from the solver\n";
 		Z3_model m = Z3_solver_get_model(builder->ctx, the_solver);
 
 	  values.reserve(objects.size());
@@ -1043,11 +1017,9 @@ SolverImpl::SolverRunStatus Z3SolverImpl::runAndGetCex(Z3Builder *builder, Z3_so
 
 		  values.push_back(data);
 	  }
-	  llvm::errs() << "DDDD: Z3SolverImpl::runAndGetCex return 1\n";
 	  return SolverImpl::SOLVER_RUN_STATUS_SUCCESS_SOLVABLE;
   }
 
-  llvm::errs() << "DDDD: Z3SolverImpl::runAndGetCex return 2\n";
   return SolverImpl::SOLVER_RUN_STATUS_SUCCESS_UNSOLVABLE;
 }
 
