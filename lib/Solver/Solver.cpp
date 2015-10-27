@@ -1025,10 +1025,6 @@ SolverImpl::SolverRunStatus Z3SolverImpl::runAndGetCex(Z3Builder *builder, Z3_so
 		llvm::errs() << "EEEE: Getting model from the solver\n";
 		Z3_model m = Z3_solver_get_model(builder->ctx, the_solver);
 
-//		llvm::errs() << "EEEE: Checking solver immediately\n";
-//		Z3_solver_check(builder->ctx, the_solver);
-//		llvm::errs() << "EEEE: Solver checked ok\n";
-
 	  values.reserve(objects.size());
 	  for (std::vector<const Array*>::const_iterator
 			  it = objects.begin(), ie = objects.end(); it != ie; ++it) {
@@ -1038,10 +1034,10 @@ SolverImpl::SolverRunStatus Z3SolverImpl::runAndGetCex(Z3Builder *builder, Z3_so
 		  data.reserve(array->size);
 		  for (unsigned offset = 0; offset < array->size; offset++) {
 			  Z3_ast counter;
-			  Z3_model_eval(builder->ctx, m, builder->getInitialRead(array, offset), Z3_TRUE, &counter);
-			  Z3_ast ast_val = Z3_mk_bv2int(builder->ctx, counter, 0);
+			  Z3_ast initial_read = Z3_mk_bv2int(builder->ctx, builder->getInitialRead(array, offset), 0);
+			  Z3_model_eval(builder->ctx, m, initial_read, Z3_TRUE, &counter);
 			  int val = 0;
-			  Z3_get_numeral_int(builder->ctx, ast_val, &val);
+			  Z3_get_numeral_int(builder->ctx, counter, &val);
 			  data.push_back(val);
 		  }
 

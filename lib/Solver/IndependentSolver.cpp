@@ -435,11 +435,34 @@ bool IndependentSolver::computeValue(const Query& query, ref<Expr> &result) {
 bool assertCreatedPointEvaluatesToTrue(const Query &query,
                                        const std::vector<const Array*> &objects,
                                        std::vector< std::vector<unsigned char> > &values){
+	llvm::errs() << "DDDD: Assignment:\n";
   Assignment assign = Assignment(objects, values);
+  for(std::vector<const Array *>::const_iterator it = objects.begin(); it != objects.end(); it++) {
+	  llvm::errs() << "DDDD: Object name: " << (*it)->name << "\n";
+  }
+
+  for(std::vector< std::vector<unsigned char> >::iterator it = values.begin(); it != values.end(); it++) {
+	  llvm::errs() << "DDDD: Value:\n";
+	  for (std::vector<unsigned char>::iterator it0 = (*it).begin(); it0 != (*it).end(); it0++) {
+		  unsigned char c = (*it0);
+		  llvm::errs() << "DDDD: " << ((int) c) << "\n";
+	  }
+  }
+
   for(ConstraintManager::constraint_iterator it = query.constraints.begin();
       it != query.constraints.end(); ++it){
+	  llvm::errs() << "DDDD: Query:\n";
+	  (*it)->print(llvm::errs());
     ref<Expr> ret = assign.evaluate(*it);
     if(! isa<ConstantExpr>(ret) || ! cast<ConstantExpr>(ret)->isTrue()){
+    	if (! isa<ConstantExpr>(ret) ) {
+    		llvm::errs() << "DDDD: Found a non-constant return!\n";
+    	}
+    	if (! cast<ConstantExpr>(ret)->isTrue() ) {
+    		llvm::errs() << "DDDD: Expression is not true!\n";
+    		llvm::errs() << "DDDD: It is:\n";
+    		ret->print(llvm::errs());
+    	}
       return false;
     }
   }

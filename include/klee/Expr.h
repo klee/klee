@@ -431,6 +431,8 @@ public:
   
   /// isTrue - Is this the true expression.
   bool isTrue() const { 
+	  llvm::errs() << "DDDD: isTrue Width " << getWidth() << "\n";
+	  llvm::errs() << "DDDD: getBoolValue is " << value.getBoolValue() << "\n";
     return (getWidth() == Expr::Bool && value.getBoolValue()==true);
   }
 
