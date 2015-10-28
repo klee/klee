@@ -83,8 +83,7 @@ Z3_ast Z3Builder::buildVar(const char *name, unsigned width) {
   // XXX don't rebuild if this stuff cons's
   Z3_sort t = (width==1) ? Z3_mk_bool_sort(ctx) : Z3_mk_bv_sort(ctx, width);
   Z3_symbol s  = Z3_mk_string_symbol(ctx, const_cast<char *>(name));
-  Z3_ast res = Z3_mk_const(ctx, s, t);
-  return res;
+  return Z3_mk_const(ctx, s, t);
 }
 
 Z3_ast Z3Builder::buildArray(const char *name, unsigned indexWidth, unsigned valueWidth) {
@@ -601,19 +600,16 @@ Z3_ast Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     *width_out = CE->getWidth();
 
     // Coerce to bool if necessary.
-    if (*width_out == 1) {
+    if (*width_out == 1)
       return CE->isTrue() ? getTrue() : getFalse();
-    }
 
     // Fast path.
-    if (*width_out <= 32) {
+    if (*width_out <= 32)
       return bvConst32(*width_out, CE->getZExtValue(32));
-    }
-    if (*width_out <= 64) {
+    if (*width_out <= 64)
       return bvConst64(*width_out, CE->getZExtValue());
-    }
-    ref<ConstantExpr> Tmp = CE;
 
+    ref<ConstantExpr> Tmp = CE;
     Z3_ast Res = bvConst64(64, Tmp->Extract(0, 64)->getZExtValue());
     while (Tmp->getWidth() > 64) {
     	Tmp = Tmp->Extract(64, Tmp->getWidth()-64);
@@ -679,8 +675,7 @@ Z3_ast Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     if (srcWidth==1) {
       return iteExpr(src, bvOne(*width_out), bvZero(*width_out));
     } else {
-    	Z3_ast res = Z3_mk_concat(ctx, bvZero(*width_out-srcWidth), src);
-    	return res;
+      return Z3_mk_concat(ctx, bvZero(*width_out-srcWidth), src);
     }
   }
 
@@ -788,9 +783,8 @@ Z3_ast Z3Builder::constructActual(ref<Expr> e, int *width_out) {
           if (bits == 0) {
             return bvZero(*width_out);
           } else {
-            Z3_ast res = Z3_mk_concat(ctx, bvZero(*width_out - bits),
+            return Z3_mk_concat(ctx, bvZero(*width_out - bits),
                                    bvExtract(left, bits - 1, 0));
-            return res;
           }
         }
 

@@ -985,7 +985,6 @@ Z3SolverImpl::computeInitialValues(const Query &query,
 	  else
 		  ++stats::queriesValid;
   }
-
   return success;
 }
 
@@ -996,8 +995,8 @@ SolverImpl::SolverRunStatus Z3SolverImpl::runAndGetCex(Z3Builder *builder, Z3_so
 	Z3_solver_assert(builder->ctx, the_solver, Z3_mk_not(builder->ctx, q));
 
 	if (Z3_solver_check(builder->ctx, the_solver) == Z3_L_TRUE) {
-		hasSolution = true;
-		Z3_model m = Z3_solver_get_model(builder->ctx, the_solver);
+	  hasSolution = true;
+	  Z3_model m = Z3_solver_get_model(builder->ctx, the_solver);
 
 	  values.reserve(objects.size());
 	  for (std::vector<const Array*>::const_iterator
@@ -1017,6 +1016,7 @@ SolverImpl::SolverRunStatus Z3SolverImpl::runAndGetCex(Z3Builder *builder, Z3_so
 
 		  values.push_back(data);
 	  }
+
 	  return SolverImpl::SOLVER_RUN_STATUS_SUCCESS_SOLVABLE;
   }
 
