@@ -324,7 +324,10 @@ Z3_ast Z3Builder::bvXorExpr(Z3_ast lhs, Z3_ast rhs) {
 }
 
 Z3_ast Z3Builder::bvSignExtend(Z3_ast src, unsigned width) {
-	return Z3_mk_sign_ext(ctx, width, src);
+	unsigned src_width = Z3_get_bv_sort_size(ctx, Z3_get_sort(ctx, src));
+	assert(src_width <= width && "attempted to extend longer data");
+
+	return Z3_mk_sign_ext(ctx, width - src_width, src);
 }
 
 Z3_ast Z3Builder::writeExpr(Z3_ast array, Z3_ast index, Z3_ast value) {
