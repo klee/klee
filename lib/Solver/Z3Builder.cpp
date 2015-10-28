@@ -298,7 +298,8 @@ Z3_ast Z3Builder::bvNotExpr(Z3_ast expr) {
 }
 
 Z3_ast Z3Builder::andExpr(Z3_ast lhs, Z3_ast rhs) {
-	return Z3_mk_bvand(ctx, Z3_mk_extract(ctx, 0, 0, lhs), Z3_mk_extract(ctx, 0, 0, rhs));
+	Z3_ast args[2] = { lhs, rhs };
+	return Z3_mk_and(ctx, 2, args);
 }
 
 Z3_ast Z3Builder::bvAndExpr(Z3_ast lhs, Z3_ast rhs) {
@@ -306,7 +307,8 @@ Z3_ast Z3Builder::bvAndExpr(Z3_ast lhs, Z3_ast rhs) {
 }
 
 Z3_ast Z3Builder::orExpr(Z3_ast lhs, Z3_ast rhs) {
-	return Z3_mk_bvor(ctx, Z3_mk_extract(ctx, 0, 0, lhs), Z3_mk_extract(ctx, 0, 0, rhs));
+	Z3_ast args[2] = { lhs, rhs };
+	return Z3_mk_or(ctx, 2, args);
 }
 
 Z3_ast Z3Builder::bvOrExpr(Z3_ast lhs, Z3_ast rhs) {
