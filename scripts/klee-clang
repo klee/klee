@@ -28,11 +28,11 @@ def main():
         elif a.startswith('-Wl,'):
             continue
 
-	if a in linkArgs:
-	    continue
+    if a in linkArgs:
+        continue
 
         if a.startswith('-l'):
-	    continue
+            continue
 
         linkArgs.append(a)
     
