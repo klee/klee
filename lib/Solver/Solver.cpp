@@ -860,7 +860,20 @@ public:
   ~Z3SolverImpl();
 
   char *getConstraintLog(const Query&);
-  void setCoreSolverTimeout(double _timeout) { timeout = _timeout; }
+  void setCoreSolverTimeout(double _timeout) {
+	timeout = _timeout;
+
+	unsigned timeout_buffer_size = 100;
+	char *timeout_amount = new char[timeout_buffer_size];
+
+	int ret = snprintf(timeout_amount, timeout_buffer_size, "%lu",
+			(timeout > 0 ? ((uint64_t) (timeout * 1000)) : UINT_MAX));
+	assert(ret >= 0 && "invalid timeout value specification");
+
+	//llvm::errs() << "DDDD: Setting " << timeout_amount << "\n";
+	Z3_global_param_set("timeout", timeout_amount);
+
+  }
 
   bool computeTruth(const Query&, bool &isValid);
   bool computeValue(const Query&, ref<Expr> &result);
@@ -910,6 +923,14 @@ void Z3Solver::setCoreSolverTimeout(double timeout) {
 
 char *Z3SolverImpl::getConstraintLog(const Query &query) {
 	Z3_solver the_solver = Z3_mk_simple_solver(builder->ctx);
+	Z3_solver_inc_ref(builder->ctx, the_solver);
+
+	Z3_params params = Z3_mk_params(builder->ctx);
+	Z3_params_inc_ref(builder->ctx, params);
+	Z3_symbol r = Z3_mk_string_symbol(builder->ctx, ":timeout");
+	Z3_params_set_uint(builder->ctx, params, r, (timeout > 0 ? (uint64_t) (timeout * 1000) : UINT_MAX));
+	Z3_solver_set_params(builder->ctx, the_solver, params);
+	Z3_params_dec_ref(builder->ctx, params);
 
 	for (std::vector< ref<Expr> >::const_iterator it = query.constraints.begin(),
 	         ie = query.constraints.end(); it != ie; ++it) {
@@ -961,6 +982,14 @@ Z3SolverImpl::computeInitialValues(const Query &query,
                                     bool &hasSolution) {
 
   Z3_solver the_solver = Z3_mk_simple_solver(builder->ctx);
+  Z3_solver_inc_ref(builder->ctx, the_solver);
+
+  Z3_params params = Z3_mk_params(builder->ctx);
+  Z3_params_inc_ref(builder->ctx, params);
+  Z3_symbol r = Z3_mk_string_symbol(builder->ctx, ":timeout");
+  Z3_params_set_uint(builder->ctx, params, r, (timeout > 0 ? (uint64_t) (timeout * 1000) : UINT_MAX));
+  Z3_solver_set_params(builder->ctx, the_solver, params);
+  Z3_params_dec_ref(builder->ctx, params);
 
   runStatusCode =  SOLVER_RUN_STATUS_FAILURE;
 
