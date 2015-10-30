@@ -22,4 +22,7 @@ lit.site.cfg
 
 docs/doxygen.cfg
 include/klee/Config/CompileTimeInfo.h
+autoconf/aclocal.m4
+autoconf/autom4te.cache
+autom4te.cache
 

@@ -494,6 +494,8 @@ Solver *klee::createDummySolver() {
 
 /***/
 
+#ifndef SUPPORT_Z3
+
 class STPSolverImpl : public SolverImpl {
 private:
   VC vc;
@@ -847,7 +849,11 @@ SolverImpl::SolverRunStatus STPSolverImpl::getOperationStatusCode() {
    return runStatusCode;
 }
 
+#endif /* SUPPORT_Z3 */
+
 /***/
+
+#ifdef SUPPORT_Z3
 
 class Z3SolverImpl : public SolverImpl {
 private:
@@ -897,11 +903,6 @@ Z3SolverImpl::Z3SolverImpl()
 }
 
 Z3SolverImpl::~Z3SolverImpl() {
-  // Detach the memory region.
-  shmdt(shared_memory_ptr);
-  shared_memory_ptr = 0;
-  shared_memory_id = 0;
-
   delete builder;
 }
 
@@ -1057,6 +1058,7 @@ SolverImpl::SolverRunStatus Z3SolverImpl::getOperationStatusCode() {
    return runStatusCode;
 }
 
+#endif /* SUPPORT_Z3 */
 
 /***/
 

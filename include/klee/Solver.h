@@ -199,6 +199,7 @@ namespace klee {
     virtual void setCoreSolverTimeout(double timeout);
   };
 
+#ifndef SUPPORT_Z3
   /// STPSolver - A complete solver based on STP.
   class STPSolver : public Solver {
   public:
@@ -218,7 +219,9 @@ namespace klee {
 	/// is off.
 	virtual void setCoreSolverTimeout(double timeout);
   };
+#endif /* SUPPORT_Z3 */
 
+#ifdef SUPPORT_Z3
   /// Z3Solver - A solver complete solver based on Z3
   class Z3Solver : public Solver {
   public:
@@ -233,6 +236,7 @@ namespace klee {
 	/// is off.
 	virtual void setCoreSolverTimeout(double timeout);
   };
+#endif /* SUPPORT_Z3 */
   
 #ifdef SUPPORT_METASMT
   

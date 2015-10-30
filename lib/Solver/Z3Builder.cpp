@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Z3Builder.h"
 
 #include "klee/Expr.h"
 #include "klee/Solver.h"
@@ -15,6 +14,9 @@
 
 #include "ConstantDivision.h"
 #include "SolverStats.h"
+#include "Z3Builder.h"
+
+#ifdef SUPPORT_Z3
 
 #include "llvm/Support/CommandLine.h"
 
@@ -1000,4 +1002,4 @@ Z3_ast Z3Builder::constructActual(ref<Expr> e, int *width_out) {
   }
 }
 
-
+#endif /* SUPPORT_Z3 */

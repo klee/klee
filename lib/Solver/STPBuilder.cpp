@@ -16,6 +16,8 @@
 #include "ConstantDivision.h"
 #include "SolverStats.h"
 
+#ifndef SUPPORT_Z3
+
 #include "llvm/Support/CommandLine.h"
 
 #include <cstdio>
@@ -917,4 +919,4 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
   }
 }
 
-
+#endif /* SUPPORT_Z3 */

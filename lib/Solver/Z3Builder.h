@@ -14,6 +14,8 @@
 #include "klee/util/ArrayExprHash.h"
 #include "klee/Config/config.h"
 
+#ifdef SUPPORT_Z3
+
 #include <vector>
 
 #include <z3.h>
@@ -131,4 +133,6 @@ public:
 
 }
 
-#endif
+#endif /* SUPPORT_Z3 */
+
+#endif /* __UTIL_Z3BUILDER_H__ */
