@@ -65,6 +65,10 @@ public:
     return constraints == other.constraints;
   }
   
+  constraints_ty getConstraints() const{
+	  return constraints;
+  }
+
 private:
   std::vector< ref<Expr> > constraints;
 
