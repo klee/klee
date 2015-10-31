@@ -28,8 +28,8 @@ fi
 ###############################################################################
 # klee-uclibc
 ###############################################################################
-if [ "${KLEE_UCLIBC}" -eq 1 ]; then
-    git clone --depth 1 git://github.com/klee/klee-uclibc.git
+if [ "${KLEE_UCLIBC}" != "0" ]; then
+    git clone --depth 1 -b ${KLEE_UCLIBC} git://github.com/klee/klee-uclibc.git
     cd klee-uclibc
     ./configure --make-llvm-lib --with-cc "${KLEE_CC}" --with-llvm-config /usr/bin/llvm-config-${LLVM_VERSION}
     make
