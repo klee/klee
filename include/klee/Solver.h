@@ -199,26 +199,44 @@ namespace klee {
     virtual void setCoreSolverTimeout(double timeout);
   };
 
+#ifndef SUPPORT_Z3
   /// STPSolver - A complete solver based on STP.
   class STPSolver : public Solver {
   public:
-    /// STPSolver - Construct a new STPSolver.
-    ///
-    /// \param useForkedSTP - Whether STP should be run in a separate process
-    /// (required for using timeouts).
-    /// \param optimizeDivides - Whether constant division operations should
-    /// be optimized into add/shift/multiply operations.
-    STPSolver(bool useForkedSTP, bool optimizeDivides = true);
+	/// STPSolver - Construct a new STPSolver.
+	///
+	/// \param useForkedSTP - Whether STP should be run in a separate process
+	/// (required for using timeouts).
+	/// \param optimizeDivides - Whether constant division operations should
+	/// be optimized into add/shift/multiply operations.
+	STPSolver(bool useForkedSTP, bool optimizeDivides = true);
 
-    /// getConstraintLog - Return the constraint log for the given state in CVC
-    /// format.
-    virtual char *getConstraintLog(const Query&);
+	/// getConstraintLog - Return the constraint log for the given state in CVC
+	/// format.
+	virtual char *getConstraintLog(const Query&);
 
-    /// setCoreSolverTimeout - Set constraint solver timeout delay to the given value; 0
-    /// is off.
-    virtual void setCoreSolverTimeout(double timeout);
+	/// setCoreSolverTimeout - Set constraint solver timeout delay to the given value; 0
+	/// is off.
+	virtual void setCoreSolverTimeout(double timeout);
   };
+#endif /* SUPPORT_Z3 */
 
+#ifdef SUPPORT_Z3
+  /// Z3Solver - A solver complete solver based on Z3
+  class Z3Solver : public Solver {
+  public:
+	/// Z3Solver - Construct a new Z3Solver.
+	Z3Solver();
+
+	/// getConstraintLog - Return the constraint log for the given state in CVC
+	/// format.
+	virtual char *getConstraintLog(const Query&);
+
+	/// setCoreSolverTimeout - Set constraint solver timeout delay to the given value; 0
+	/// is off.
+	virtual void setCoreSolverTimeout(double timeout);
+  };
+#endif /* SUPPORT_Z3 */
   
 #ifdef SUPPORT_METASMT
   

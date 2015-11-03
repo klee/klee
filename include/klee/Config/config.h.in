@@ -96,4 +96,7 @@
 /* Supporting metaSMT API */
 #undef SUPPORT_METASMT
 
+/* Supporting Z3 Backend */
+#undef SUPPORT_Z3
+
 #endif

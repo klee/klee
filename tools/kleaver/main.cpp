@@ -255,7 +255,11 @@ static bool EvaluateInputAST(const char *Filename,
     coreSolver = UseDummySolver ? createDummySolver() : new STPSolver(UseForkedCoreSolver);
   }
 #else
+#ifdef SUPPORT_Z3
+  coreSolver = UseDummySolver ? createDummySolver() : new Z3Solver();
+#else
   coreSolver = UseDummySolver ? createDummySolver() : new STPSolver(UseForkedCoreSolver);
+#endif
 #endif /* SUPPORT_METASMT */
   
   
