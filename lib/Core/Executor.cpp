@@ -283,6 +283,7 @@ Executor::Executor(const InterpreterOptions &opts,
     specialFunctionHandler(0),
     processTree(0),
     interpTree(0), 
+	latestBase(0),
     replayOut(0),
     replayPath(0),    
     usingSeeds(0),
@@ -840,6 +841,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
   // hint to just use the single constraint instead of all the binary
   // search ones. If that makes sense.
   if (res==Solver::True) {
+	addConstraint(current, condition);
     if (!isInternal) {
       if (pathWriter) {
         current.pathOS << "1";
@@ -848,6 +850,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
 
     return StatePair(&current, 0);
   } else if (res==Solver::False) {
+    addConstraint(current, Expr::createIsZero(condition));
     if (!isInternal) {
       if (pathWriter) {
         current.pathOS << "0";
@@ -941,7 +944,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     Solver::Validity result;
     for (std::vector< Subsumption >::const_iterator it = interpTree->subsumptionStore.begin() ;
     		it != interpTree->subsumptionStore.end(); ++it){
-    		if(current.pc->dest == *it->programPoint){
+    		if(current.itreeNode->programPoint == it->programPoint){
     			solver->evaluate(current, it->interpolant, result);
     				if(result == Solver::True){
     					current.itreeNode->isSubsumed = true;
@@ -964,35 +967,111 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     	if(it->operationName == Add && it->base == latestBase){
     	      tempLatestLeftConds = AddExpr::create(tempLatestLeftConds, it->value);
     	}
+    	else if(it->operationName == Sub && it->base == latestBase){
+    	      tempLatestLeftConds = SubExpr::create(tempLatestLeftConds, it->value);
+    	}
+    	else if(it->operationName == Mul && it->base == latestBase){
+    	      tempLatestLeftConds = MulExpr::create(tempLatestLeftConds, it->value);
+    	}
+    	else if(it->operationName == UDiv && it->base == latestBase){
+    	      tempLatestLeftConds = UDivExpr::create(tempLatestLeftConds, it->value);
+    	}
+    	else if(it->operationName == SDiv && it->base == latestBase){
+    	      tempLatestLeftConds = SDivExpr::create(tempLatestLeftConds, it->value);
+    	}
+    	else if(it->operationName == URem && it->base == latestBase){
+    	      tempLatestLeftConds = URemExpr::create(tempLatestLeftConds, it->value);
+    	}
+    	else if(it->operationName == SRem && it->base == latestBase){
+    	      tempLatestLeftConds = SRemExpr::create(tempLatestLeftConds, it->value);
+    	}
+    	else if(it->operationName == And && it->base == latestBase){
+    	      tempLatestLeftConds = AndExpr::create(tempLatestLeftConds, it->value);
+    	}
+    	else if(it->operationName == Or && it->base == latestBase){
+    	      tempLatestLeftConds = OrExpr::create(tempLatestLeftConds, it->value);
+    	}
+    	else if(it->operationName == Xor && it->base == latestBase){
+    	      tempLatestLeftConds = XorExpr::create(tempLatestLeftConds, it->value);
+    	}
+    	else if(it->operationName == Shl && it->base == latestBase){
+    	     tempLatestLeftConds = ShlExpr::create(tempLatestLeftConds, it->value);
+    	}
+    	else if(it->operationName == LShr && it->base == latestBase){
+    	     tempLatestLeftConds = LShrExpr::create(tempLatestLeftConds, it->value);
+    	}
+    	else if(it->operationName == AShr && it->base == latestBase){
+    	    tempLatestLeftConds = AShrExpr::create(tempLatestLeftConds, it->value);
+    	}
+
     }
     ref<Expr> parentInterpolant = SgtExpr::create(tempLatestLeftConds, allPathConds);
     ref<Expr> parentIntLeft = tempLatestLeftConds;
     ref<Expr> parentIntRight = allPathConds;
     parentInterpolant = Expr::createIsZero(parentInterpolant);
+    ITreeNode *currentPredecessor = NULL;
 
-    if(current.itreeNode->parent->InterpolantStatus == NoInterpolant) {
-		current.itreeNode->parent->InterpolantStatus = HalfInterpolant;
-    	current.itreeNode->parent->interpolant = parentInterpolant;
+    if(current.itreeNode->parent != NULL){
+		if(current.itreeNode->parent->InterpolantStatus == NoInterpolant) {
+			current.itreeNode->parent->InterpolantStatus = HalfInterpolant;
+			current.itreeNode->parent->interpolant = parentInterpolant;
+		}
+		else if(current.itreeNode->parent->InterpolantStatus == HalfInterpolant){
+			current.itreeNode->parent->InterpolantStatus = FullInterpolant;
+
+			parentInterpolant = AndExpr::create(current.itreeNode->parent->interpolant,parentInterpolant);
+			current.itreeNode->parent->interpolant =  parentInterpolant;
+
+			Subsumption subsume;
+			subsume.interpolant = current.itreeNode->parent->interpolant;
+			subsume.programPoint = current.itreeNode->parent->programPoint;
+			interpTree->subsumptionStore.push_back(subsume);
+		}
+		currentPredecessor = current.itreeNode->parent->parent;
     }
-    else if(current.itreeNode->parent->InterpolantStatus == HalfInterpolant){
-    	current.itreeNode->parent->InterpolantStatus = FullInterpolant;
 
-    	Subsumption subsume;
-    	subsume.interpolant = current.itreeNode->parent->interpolant;
-    	subsume.programPoint = current.itreeNode->parent->programPoint;
-    	interpTree->subsumptionStore.push_back(subsume);
-
-    	parentInterpolant = AndExpr::create(current.itreeNode->parent->interpolant,parentInterpolant);
-    	current.itreeNode->parent->interpolant =  parentInterpolant;
-    }
-
-    ITreeNode *currentPredecessor = current.itreeNode->parent->parent;
     while(currentPredecessor != NULL){
 
     	for (std::vector< PathCondition >::const_iterator it = current.itreeNode->newPathConds.begin() ;
     	    	    		it != current.itreeNode->newPathConds.end(); ++it){
     		if(it->operationName == Add && it->base == latestBase){
     			parentIntLeft = AddExpr::create(parentIntLeft, it->value);
+    		}
+    		else if(it->operationName == Sub && it->base == latestBase){
+    			parentIntLeft = SubExpr::create(parentIntLeft, it->value);
+    		}
+    		else if(it->operationName == Mul && it->base == latestBase){
+    		    parentIntLeft = MulExpr::create(parentIntLeft, it->value);
+    		}
+    		else if(it->operationName == UDiv && it->base == latestBase){
+    		    parentIntLeft = UDivExpr::create(parentIntLeft, it->value);
+    		}
+    		else if(it->operationName == SDiv && it->base == latestBase){
+    		    parentIntLeft = SDivExpr::create(parentIntLeft, it->value);
+    		}
+    		else if(it->operationName == URem && it->base == latestBase){
+    		    parentIntLeft = URemExpr::create(parentIntLeft, it->value);
+    		}
+    		else if(it->operationName == SRem && it->base == latestBase){
+    		    parentIntLeft = SRemExpr::create(parentIntLeft, it->value);
+    		}
+    		else if(it->operationName == And && it->base == latestBase){
+    		    parentIntLeft = AndExpr::create(parentIntLeft, it->value);
+    		}
+    		else if(it->operationName == Or && it->base == latestBase){
+    		    parentIntLeft = OrExpr::create(parentIntLeft, it->value);
+    		}
+    		else if(it->operationName == Xor && it->base == latestBase){
+    		    parentIntLeft = XorExpr::create(parentIntLeft, it->value);
+    		}
+    		else if(it->operationName == Shl && it->base == latestBase){
+    		    parentIntLeft = ShlExpr::create(parentIntLeft, it->value);
+    		}
+    		else if(it->operationName == LShr && it->base == latestBase){
+    		    parentIntLeft = LShrExpr::create(parentIntLeft, it->value);
+    		}
+    		else if(it->operationName == AShr && it->base == latestBase){
+    		    parentIntLeft = AShrExpr::create(parentIntLeft, it->value);
     		}
     	}
     	ref<Expr> currPredecessorInt = SgtExpr::create(parentIntLeft, parentIntRight);
@@ -1081,7 +1160,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
 
 			for (std::vector< Subsumption >::const_iterator it = interpTree->subsumptionStore.begin() ;
 			    		it != interpTree->subsumptionStore.end(); ++it){
-				if(current.pc->dest == *it->programPoint){
+				if(current.itreeNode->programPoint == it->programPoint){
 					solver->evaluate(current, it->interpolant, result);
 					if(result == Solver::True){
 						break;
@@ -1982,14 +2061,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> right = eval(ki, 1, state).value;
     bindLocal(ki, state, AddExpr::create(left, right));
 
-    PathCondition _pathCondition;
-    _pathCondition.base = latestBase;
-    _pathCondition.value = right;
-    _pathCondition.operationName = Add;
+    if(!latestBase.isNull()){
+		PathCondition _pathCondition;
+		_pathCondition.base = latestBase;
+		_pathCondition.value = right;
+		_pathCondition.operationName = Add;
 
-    state.itreeNode->allPathConds.push_back(_pathCondition);
-    state.itreeNode->newPathConds.push_back(_pathCondition);
-
+		state.itreeNode->allPathConds.push_back(_pathCondition);
+		state.itreeNode->newPathConds.push_back(_pathCondition);
+    }
     break;
   }
 
@@ -1998,14 +2078,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> right = eval(ki, 1, state).value;
     bindLocal(ki, state, SubExpr::create(left, right));
 
-    PathCondition _pathCondition;
-    _pathCondition.base = latestBase;
-    _pathCondition.value = right;
-    _pathCondition.operationName = Sub;
+    if(!latestBase.isNull()){
+		PathCondition _pathCondition;
+		_pathCondition.base = latestBase;
+		_pathCondition.value = right;
+		_pathCondition.operationName = Sub;
 
-    state.itreeNode->allPathConds.push_back(_pathCondition);
-    state.itreeNode->newPathConds.push_back(_pathCondition);
-
+		state.itreeNode->allPathConds.push_back(_pathCondition);
+		state.itreeNode->newPathConds.push_back(_pathCondition);
+    }
     break;
   }
  
@@ -2014,14 +2095,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> right = eval(ki, 1, state).value;
     bindLocal(ki, state, MulExpr::create(left, right));
 
-    PathCondition _pathCondition;
-    _pathCondition.base = latestBase;
-    _pathCondition.value = right;
-    _pathCondition.operationName = Mul;
+    if(!latestBase.isNull()){
+		PathCondition _pathCondition;
+		_pathCondition.base = latestBase;
+		_pathCondition.value = right;
+		_pathCondition.operationName = Mul;
 
-    state.itreeNode->allPathConds.push_back(_pathCondition);
-    state.itreeNode->newPathConds.push_back(_pathCondition);
-
+		state.itreeNode->allPathConds.push_back(_pathCondition);
+		state.itreeNode->newPathConds.push_back(_pathCondition);
+    }
     break;
   }
 
@@ -2031,14 +2113,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = UDivExpr::create(left, right);
     bindLocal(ki, state, result);
 
-    PathCondition _pathCondition;
-    _pathCondition.base = latestBase;
-    _pathCondition.value = right;
-    _pathCondition.operationName = UDiv;
+    if(!latestBase.isNull()){
+		PathCondition _pathCondition;
+		_pathCondition.base = latestBase;
+		_pathCondition.value = right;
+		_pathCondition.operationName = UDiv;
 
-    state.itreeNode->allPathConds.push_back(_pathCondition);
-    state.itreeNode->newPathConds.push_back(_pathCondition);
-
+		state.itreeNode->allPathConds.push_back(_pathCondition);
+		state.itreeNode->newPathConds.push_back(_pathCondition);
+    }
     break;
   }
 
@@ -2048,13 +2131,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = SDivExpr::create(left, right);
     bindLocal(ki, state, result);
 
-    PathCondition _pathCondition;
-    _pathCondition.base = latestBase;
-    _pathCondition.value = right;
-    _pathCondition.operationName = SDiv;
+    if(!latestBase.isNull()){
+		PathCondition _pathCondition;
+		_pathCondition.base = latestBase;
+		_pathCondition.value = right;
+		_pathCondition.operationName = SDiv;
 
-    state.itreeNode->allPathConds.push_back(_pathCondition);
-    state.itreeNode->newPathConds.push_back(_pathCondition);
+		state.itreeNode->allPathConds.push_back(_pathCondition);
+		state.itreeNode->newPathConds.push_back(_pathCondition);
+    }
     break;
   }
 
@@ -2064,13 +2149,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = URemExpr::create(left, right);
     bindLocal(ki, state, result);
 
-    PathCondition _pathCondition;
-    _pathCondition.base = latestBase;
-    _pathCondition.value = right;
-    _pathCondition.operationName = URem;
+    if(!latestBase.isNull()){
+		PathCondition _pathCondition;
+		_pathCondition.base = latestBase;
+		_pathCondition.value = right;
+		_pathCondition.operationName = URem;
 
-    state.itreeNode->allPathConds.push_back(_pathCondition);
-    state.itreeNode->newPathConds.push_back(_pathCondition);
+		state.itreeNode->allPathConds.push_back(_pathCondition);
+		state.itreeNode->newPathConds.push_back(_pathCondition);
+    }
     break;
   }
  
@@ -2080,13 +2167,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = SRemExpr::create(left, right);
     bindLocal(ki, state, result);
 
-    PathCondition _pathCondition;
-    _pathCondition.base = latestBase;
-    _pathCondition.value = right;
-    _pathCondition.operationName = SRem;
+    if(!latestBase.isNull()){
+		PathCondition _pathCondition;
+		_pathCondition.base = latestBase;
+		_pathCondition.value = right;
+		_pathCondition.operationName = SRem;
 
-    state.itreeNode->allPathConds.push_back(_pathCondition);
-    state.itreeNode->newPathConds.push_back(_pathCondition);
+		state.itreeNode->allPathConds.push_back(_pathCondition);
+		state.itreeNode->newPathConds.push_back(_pathCondition);
+    }
     break;
   }
 
@@ -2096,14 +2185,16 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = AndExpr::create(left, right);
     bindLocal(ki, state, result);
 
-    PathCondition _pathCondition;
-    _pathCondition.base = latestBase;
-    _pathCondition.value = right;
-    _pathCondition.operationName = And;
+    if(!latestBase.isNull()){
+		PathCondition _pathCondition;
+		_pathCondition.base = latestBase;
+		_pathCondition.value = right;
+		_pathCondition.operationName = And;
 
-    state.itreeNode->allPathConds.push_back(_pathCondition);
-    state.itreeNode->newPathConds.push_back(_pathCondition);
-    break;
+		state.itreeNode->allPathConds.push_back(_pathCondition);
+		state.itreeNode->newPathConds.push_back(_pathCondition);
+    }
+	break;
   }
 
   case Instruction::Or: {
@@ -2112,13 +2203,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = OrExpr::create(left, right);
     bindLocal(ki, state, result);
 
-    PathCondition _pathCondition;
-    _pathCondition.base = latestBase;
-    _pathCondition.value = right;
-    _pathCondition.operationName = Or;
+    if(!latestBase.isNull()){
+		PathCondition _pathCondition;
+		_pathCondition.base = latestBase;
+		_pathCondition.value = right;
+		_pathCondition.operationName = Or;
 
-    state.itreeNode->allPathConds.push_back(_pathCondition);
-    state.itreeNode->newPathConds.push_back(_pathCondition);
+		state.itreeNode->allPathConds.push_back(_pathCondition);
+		state.itreeNode->newPathConds.push_back(_pathCondition);
+    }
     break;
   }
 
@@ -2128,14 +2221,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = XorExpr::create(left, right);
     bindLocal(ki, state, result);
 
-    PathCondition _pathCondition;
-    _pathCondition.base = latestBase;
-    _pathCondition.value = right;
-    _pathCondition.operationName = Xor;
+    if(!latestBase.isNull()){
+		PathCondition _pathCondition;
+		_pathCondition.base = latestBase;
+		_pathCondition.value = right;
+		_pathCondition.operationName = Xor;
 
-    state.itreeNode->allPathConds.push_back(_pathCondition);
-    state.itreeNode->newPathConds.push_back(_pathCondition);
-
+		state.itreeNode->allPathConds.push_back(_pathCondition);
+		state.itreeNode->newPathConds.push_back(_pathCondition);
+    }
     break;
   }
 
@@ -2145,14 +2239,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = ShlExpr::create(left, right);
     bindLocal(ki, state, result);
 
-    PathCondition _pathCondition;
-    _pathCondition.base = latestBase;
-    _pathCondition.value = right;
-    _pathCondition.operationName = Shl;
+    if(!latestBase.isNull()){
+		PathCondition _pathCondition;
+		_pathCondition.base = latestBase;
+		_pathCondition.value = right;
+		_pathCondition.operationName = Shl;
 
-    state.itreeNode->allPathConds.push_back(_pathCondition);
-    state.itreeNode->newPathConds.push_back(_pathCondition);
-
+		state.itreeNode->allPathConds.push_back(_pathCondition);
+		state.itreeNode->newPathConds.push_back(_pathCondition);
+    }
     break;
   }
 
@@ -2162,14 +2257,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = LShrExpr::create(left, right);
     bindLocal(ki, state, result);
 
-    PathCondition _pathCondition;
-    _pathCondition.base = latestBase;
-    _pathCondition.value = right;
-    _pathCondition.operationName = LShr;
+    if(!latestBase.isNull()){
+		PathCondition _pathCondition;
+		_pathCondition.base = latestBase;
+		_pathCondition.value = right;
+		_pathCondition.operationName = LShr;
 
-    state.itreeNode->allPathConds.push_back(_pathCondition);
-    state.itreeNode->newPathConds.push_back(_pathCondition);
-
+		state.itreeNode->allPathConds.push_back(_pathCondition);
+		state.itreeNode->newPathConds.push_back(_pathCondition);
+    }
     break;
   }
 
@@ -2179,14 +2275,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = AShrExpr::create(left, right);
     bindLocal(ki, state, result);
 
-    PathCondition _pathCondition;
-    _pathCondition.base = latestBase;
-    _pathCondition.value = right;
-    _pathCondition.operationName = AShr;
+    if(!latestBase.isNull()){
+		PathCondition _pathCondition;
+		_pathCondition.base = latestBase;
+		_pathCondition.value = right;
+		_pathCondition.operationName = AShr;
 
-    state.itreeNode->allPathConds.push_back(_pathCondition);
-    state.itreeNode->newPathConds.push_back(_pathCondition);
-
+		state.itreeNode->allPathConds.push_back(_pathCondition);
+		state.itreeNode->newPathConds.push_back(_pathCondition);
+    }
     break;
   }
 
