@@ -1005,7 +1005,41 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     	}
 
     }
-    ref<Expr> parentInterpolant = SgtExpr::create(tempLatestLeftConds, allPathConds);
+
+    ref<Expr> parentInterpolant;
+    if(current.itreeNode->latestBranchCond.compareName == Eq){
+    	parentInterpolant = EqExpr::create(tempLatestLeftConds, allPathConds);
+    }
+    else if(current.itreeNode->latestBranchCond.compareName == Ne){
+    	parentInterpolant = NeExpr::create(tempLatestLeftConds, allPathConds);
+    }
+    else if(current.itreeNode->latestBranchCond.compareName == Ult){
+        parentInterpolant = UltExpr::create(tempLatestLeftConds, allPathConds);
+    }
+    else if(current.itreeNode->latestBranchCond.compareName == Ule){
+        parentInterpolant = UleExpr::create(tempLatestLeftConds, allPathConds);
+    }
+    else if(current.itreeNode->latestBranchCond.compareName == Ugt){
+        parentInterpolant = UgtExpr::create(tempLatestLeftConds, allPathConds);
+    }
+    else if(current.itreeNode->latestBranchCond.compareName == Uge){
+       parentInterpolant = UgeExpr::create(tempLatestLeftConds, allPathConds);
+    }
+    else if(current.itreeNode->latestBranchCond.compareName == Slt){
+       parentInterpolant = SltExpr::create(tempLatestLeftConds, allPathConds);
+    }
+    else if(current.itreeNode->latestBranchCond.compareName == Sle){
+        parentInterpolant = SleExpr::create(tempLatestLeftConds, allPathConds);
+    }
+    else if(current.itreeNode->latestBranchCond.compareName == Sgt){
+         parentInterpolant = SgtExpr::create(tempLatestLeftConds, allPathConds);
+    }
+    else if(current.itreeNode->latestBranchCond.compareName == Sge){
+         parentInterpolant = SgeExpr::create(tempLatestLeftConds, allPathConds);
+    }
+    else if(current.itreeNode->latestBranchCond.compareName == Not){
+         parentInterpolant = NotExpr::create(tempLatestLeftConds);
+    }
     ref<Expr> parentIntLeft = tempLatestLeftConds;
     ref<Expr> parentIntRight = allPathConds;
     parentInterpolant = Expr::createIsZero(parentInterpolant);
