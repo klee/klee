@@ -751,7 +751,7 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
 #endif
 
     // XXX implement my fast path and test for proper handling of sign
-    return vc_sbvModExpr(vc, *width_out, left, right);
+    return vc_sbvRemExpr(vc, *width_out, left, right);
   }
 
     // Bitwise
