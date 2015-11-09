@@ -850,6 +850,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
 
     return StatePair(&current, 0);
   } else if (res==Solver::False) {
+
     addConstraint(current, Expr::createIsZero(condition));
     if (!isInternal) {
       if (pathWriter) {
