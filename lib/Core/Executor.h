@@ -63,6 +63,8 @@ namespace klee {
   class MemoryObject;
   class ObjectState;
   class PTree;
+  class ITree; 
+  class ITreeNode;
   class Searcher;
   class SeedInfo;
   class SpecialFunctionHandler;
@@ -115,7 +117,8 @@ private:
   SpecialFunctionHandler *specialFunctionHandler;
   std::vector<TimerInfo*> timers;
   PTree *processTree;
-
+  ITree *interpTree; 
+  ref<Expr> latestBase;
   /// Used to track states that have been added during the current
   /// instructions step. 
   /// \invariant \ref addedStates is a subset of \ref states. 

@@ -37,6 +37,11 @@
 #include <sys/wait.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
+#include <string>
+#include <stdio.h>
+#include <stdlib.h>
+#include <iostream>
+#include <sstream>
 
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -860,6 +865,7 @@ private:
   Z3Builder *builder;
   double timeout;
   SolverRunStatus runStatusCode;
+  std::vector< ref<Expr> > unsat_core;
 
 public:
   Z3SolverImpl();
@@ -879,6 +885,10 @@ public:
 	//llvm::errs() << "DDDD: Setting " << timeout_amount << "\n";
 	Z3_global_param_set("timeout", timeout_amount);
 
+  }
+
+  std::vector< ref<Expr> > getUnsatCore(){
+	  return unsat_core;
   }
 
   bool computeTruth(const Query&, bool &isValid);
@@ -996,9 +1006,17 @@ Z3SolverImpl::computeInitialValues(const Query &query,
 
   TimerStatIncrementer t(stats::queryTime);
 
+  int counter = 0;
   for (ConstraintManager::const_iterator it = query.constraints.begin(),
          ie = query.constraints.end(); it != ie; ++it) {
-	  Z3_solver_assert(builder->ctx, the_solver, builder->construct(*it));
+      Z3_sort sort = Z3_mk_bool_sort(builder->ctx);
+      std::ostringstream convert ;
+      convert<< counter;
+      const char * name = convert.str().c_str();
+      Z3_symbol symbol = Z3_mk_string_symbol(builder->ctx, name);
+      Z3_ast cons = Z3_mk_const(builder->ctx, symbol, sort);
+	  Z3_solver_assert_and_track(builder->ctx, the_solver, builder->construct(*it), cons);
+	  counter++;
   }
   ++stats::queries;
   ++stats::queryCounterexamples;
@@ -1015,6 +1033,27 @@ Z3SolverImpl::computeInitialValues(const Query &query,
 	  else
 		  ++stats::queriesValid;
   }
+
+  if(Z3_solver_check(builder->ctx, the_solver) == Z3_L_FALSE) {
+  	  Z3_ast_vector r = Z3_solver_get_unsat_core(builder->ctx, the_solver);
+  	  for(unsigned int i=0; i <  Z3_ast_vector_size(builder->ctx,r); i++){
+  		  Z3_ast temp = Z3_ast_vector_get(builder->ctx, r,i);
+  		  int idx=0;
+  		  for (ConstraintManager::const_iterator it = query.constraints.begin(),
+  		         ie = query.constraints.end(); it != ie; ++it) {
+  			 std::ostringstream convert ;
+  			 convert<< idx;
+  			 if(Z3_ast_to_string(builder->ctx,temp) == convert.str().c_str()){
+  				 unsat_core.push_back(*it);
+  				 break;
+  			 }
+
+  		    idx++;
+  		  }
+  	  }
+
+    }
+
   return success;
 }
 
@@ -1022,6 +1061,10 @@ SolverImpl::SolverRunStatus Z3SolverImpl::runAndGetCex(Z3Builder *builder, Z3_so
                                                 const std::vector<const Array*> &objects,
                                                 std::vector< std::vector<unsigned char> > &values,
                                                 bool &hasSolution) {
+//	Z3_sort sort = Z3_mk_bool_sort(builder->ctx);
+//	char const * name = "p2";
+//	Z3_symbol symbol = Z3_mk_string_symbol(builder->ctx, name);
+//	Z3_ast cons = Z3_mk_const(builder->ctx, symbol, sort);
 	Z3_solver_assert(builder->ctx, the_solver, Z3_mk_not(builder->ctx, q));
 
 	if (Z3_solver_check(builder->ctx, the_solver) == Z3_L_TRUE) {
