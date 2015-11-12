@@ -323,6 +323,10 @@ std::pair< ref<Expr>, ref<Expr> > Solver::getRange(const Query& query) {
                         ConstantExpr::create(max, width));
 }
 
+std::vector< ref<Expr> > Solver::getUnsatCore(){
+	return impl->getUnsatCore();
+}
+
 /***/
 
 class ValidatingSolver : public SolverImpl {
@@ -1012,6 +1016,7 @@ Z3SolverImpl::computeInitialValues(const Query &query,
       Z3_sort sort = Z3_mk_bool_sort(builder->ctx);
       std::ostringstream convert ;
       convert<< counter;
+      ref<Expr> constraint = *it;
       const char * name = convert.str().c_str();
       Z3_symbol symbol = Z3_mk_string_symbol(builder->ctx, name);
       Z3_ast cons = Z3_mk_const(builder->ctx, symbol, sort);
@@ -1043,7 +1048,8 @@ Z3SolverImpl::computeInitialValues(const Query &query,
   		         ie = query.constraints.end(); it != ie; ++it) {
   			 std::ostringstream convert ;
   			 convert<< idx;
-  			 if(Z3_ast_to_string(builder->ctx,temp) == convert.str().c_str()){
+  			 std::string compare = "|" + convert.str() + "|";
+  			 if(Z3_ast_to_string(builder->ctx,temp) == compare){
   				 unsat_core.push_back(*it);
   				 break;
   			 }

@@ -46,7 +46,9 @@ bool TimingSolver::evaluate(const ExecutionState& state, ref<Expr> expr,
 
   return success;
 }
-
+std::vector< ref<Expr> > TimingSolver::getUnsatCore(){
+	return solver->getUnsatCore();
+}
 bool TimingSolver::mustBeTrue(const ExecutionState& state, ref<Expr> expr, 
                               bool &result) {
   // Fast path, to avoid timer and OS overhead.

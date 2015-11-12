@@ -104,6 +104,11 @@ namespace klee {
     }
 
     virtual void setCoreSolverTimeout(double timeout) {};
+
+    virtual std::vector< ref<Expr> > getUnsatCore() {
+    	std::vector< ref<Expr> > unsat_core;
+    	return unsat_core;
+    }
 };
 
 }

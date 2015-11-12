@@ -197,6 +197,7 @@ namespace klee {
     
     virtual char *getConstraintLog(const Query& query);
     virtual void setCoreSolverTimeout(double timeout);
+    virtual std::vector < ref<Expr> > getUnsatCore();
   };
 
 #ifndef SUPPORT_Z3
@@ -235,6 +236,7 @@ namespace klee {
 	/// setCoreSolverTimeout - Set constraint solver timeout delay to the given value; 0
 	/// is off.
 	virtual void setCoreSolverTimeout(double timeout);
+
   };
 #endif /* SUPPORT_Z3 */
   
