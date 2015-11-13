@@ -208,6 +208,7 @@ static bool PrintInputAST(const char *Filename,
 static bool EvaluateInputAST(const char *Filename,
                              const MemoryBuffer *MB,
                              ExprBuilder *Builder) {
+	llvm::outs() << "EvaluateInputAST\n";
   std::vector<Decl*> Decls;
   Parser *P = Parser::Create(Filename, MB, Builder);
   P->SetMaxErrors(20);
@@ -496,6 +497,7 @@ int main(int argc, char **argv) {
                             Builder);
     break;
   case Evaluate:
+	  llvm::outs() << "EVALUATEINPUTAST\n";
     success = EvaluateInputAST(InputFile=="-" ? "<stdin>" : InputFile.c_str(),
                                MB.get(), Builder);
     break;

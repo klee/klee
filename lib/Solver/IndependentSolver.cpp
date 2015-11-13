@@ -403,6 +403,7 @@ public:
   
 bool IndependentSolver::computeValidity(const Query& query,
                                         Solver::Validity &result) {
+	llvm::outs() << "IndependentSolver::computeValidity\n";
   std::vector< ref<Expr> > required;
   IndependentElementSet eltsClosure =
     getIndependentConstraints(query, required);
@@ -453,6 +454,7 @@ bool IndependentSolver::computeInitialValues(const Query& query,
                                              const std::vector<const Array*> &objects,
                                              std::vector< std::vector<unsigned char> > &values,
                                              bool &hasSolution){
+	llvm::outs() << "IndependentSolver::computeInitialValues()\n";
   std::list<IndependentElementSet> * factors = new std::list<IndependentElementSet>;
 
   // We assume the query has a solution except proven differently

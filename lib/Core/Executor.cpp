@@ -623,6 +623,7 @@ void Executor::initializeGlobals(ExecutionState &state) {
 void Executor::branch(ExecutionState &state, 
                       const std::vector< ref<Expr> > &conditions,
                       std::vector<ExecutionState*> &result) {
+	llvm::outs() << "Executor::branch\n";
   TimerStatIncrementer timer(stats::forkTime);
   unsigned N = conditions.size();
   assert(N);
@@ -708,6 +709,7 @@ void Executor::branch(ExecutionState &state,
 
 Executor::StatePair 
 Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
+	llvm::outs() << "Executor::fork\n";
   Solver::Validity res;
   std::map< ExecutionState*, std::vector<SeedInfo> >::iterator it = 
     seedMap.find(&current);
@@ -1268,6 +1270,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
 }
 
 void Executor::addConstraint(ExecutionState &state, ref<Expr> condition) {
+	llvm::outs() << "Executor::addConstraint\n";
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(condition)) {
     if (!CE->isTrue())
       llvm::report_fatal_error("attempt to add invalid constraint");
@@ -1445,6 +1448,7 @@ Executor::toConstant(ExecutionState &state,
 void Executor::executeGetValue(ExecutionState &state,
                                ref<Expr> e,
                                KInstruction *target) {
+	llvm::outs() << "Executor::executeGetValue\n";
   e = state.constraints.simplifyExpr(e);
   std::map< ExecutionState*, std::vector<SeedInfo> >::iterator it = 
     seedMap.find(&state);
@@ -1507,6 +1511,7 @@ void Executor::executeCall(ExecutionState &state,
                            KInstruction *ki,
                            Function *f,
                            std::vector< ref<Expr> > &arguments) {
+	llvm::outs() << "Executor::executeCall\n";
   Instruction *i = ki->inst;
   if (f && f->isDeclaration()) {
     switch(f->getIntrinsicID()) {
@@ -1756,6 +1761,8 @@ static inline const llvm::fltSemantics * fpWidthToSemantics(unsigned width) {
 }
 
 void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
+
+	llvm::outs() << "Executor::executeInstruction\n";
   Instruction *i = ki->inst;
   switch (i->getOpcode()) {
     // Control flow
@@ -3026,6 +3033,8 @@ void Executor::bindModuleConstants() {
 }
 
 void Executor::run(ExecutionState &initialState) {
+
+	llvm::outs() << "Executor::run\n";
   bindModuleConstants();
 
   // Delay init till now so that ticks don't accrue during
@@ -3172,6 +3181,7 @@ void Executor::run(ExecutionState &initialState) {
 
 std::string Executor::getAddressInfo(ExecutionState &state, 
                                      ref<Expr> address) const{
+	llvm::outs() << "Executor::getAddressInfo\n";
   std::string Str;
   llvm::raw_string_ostream info(Str);
   info << "\taddress: " << address << "\n";
@@ -3247,6 +3257,8 @@ void Executor::terminateState(ExecutionState &state) {
 
 void Executor::terminateStateEarly(ExecutionState &state, 
                                    const Twine &message) {
+
+	llvm::outs() << "Executor::terminateStateEarly\n";
   if (!OnlyOutputStatesCoveringNew || state.coveredNew ||
       (AlwaysOutputSeeds && seedMap.count(&state)))
     interpreterHandler->processTestCase(state, (message + "\n").str().c_str(),
@@ -3490,6 +3502,8 @@ void Executor::executeAlloc(ExecutionState &state,
                             KInstruction *target,
                             bool zeroMemory,
                             const ObjectState *reallocFrom) {
+
+	llvm::outs() << "Executor::executeAlloc\n";
   size = toUnique(state, size);
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(size)) {
     MemoryObject *mo = memory->allocate(CE->getZExtValue(), isLocal, false, 
@@ -3597,6 +3611,7 @@ void Executor::executeAlloc(ExecutionState &state,
 void Executor::executeFree(ExecutionState &state,
                            ref<Expr> address,
                            KInstruction *target) {
+	llvm::outs() << "Executor::executeFree\n";
   StatePair zeroPointer = fork(state, Expr::createIsZero(address), true);
   if (zeroPointer.first) {
     if (target)
@@ -3664,6 +3679,8 @@ void Executor::executeMemoryOperation(ExecutionState &state,
                                       ref<Expr> address,
                                       ref<Expr> value /* undef if read */,
                                       KInstruction *target /* undef if write */) {
+
+	llvm::outs() << "Executor::executeMemoryOperation\n";
   Expr::Width type = (isWrite ? value->getWidth() : 
                      getWidthForLLVMType(target->inst->getType()));
   unsigned bytes = Expr::getMinBytesForWidth(type);
@@ -3869,6 +3886,8 @@ void Executor::runFunctionAsMain(Function *f,
 				 int argc,
 				 char **argv,
 				 char **envp) {
+
+	llvm::outs() << "Executor::runFunctionAsMain";
   std::vector<ref<Expr> > arguments;
 
   // force deterministic initialization of memory objects
@@ -4023,6 +4042,7 @@ bool Executor::getSymbolicSolution(const ExecutionState &state,
                                    std::pair<std::string,
                                    std::vector<unsigned char> > >
                                    &res) {
+	llvm::outs() << "Executor::getSymbolicSolution\n";
   solver->setTimeout(coreSolverTimeout);
 
   ExecutionState tmp(state);
@@ -4081,6 +4101,8 @@ void Executor::getCoveredLines(const ExecutionState &state,
 void Executor::doImpliedValueConcretization(ExecutionState &state,
                                             ref<Expr> e,
                                             ref<ConstantExpr> value) {
+	llvm::outs() << "Executor::doImpliedValueConcretization\n";
+
   abort(); // FIXME: Broken until we sort out how to do the write back.
 
   if (DebugCheckForImpliedValues)

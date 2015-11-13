@@ -80,6 +80,7 @@ public:
   bool computeValidity(const Query&, Solver::Validity &result);
   bool computeTruth(const Query&, bool &isValid);
   bool computeValue(const Query& query, ref<Expr> &result) {
+	  llvm::outs() << "CachingSolver::computeValue\n";
     ++stats::queryCacheMisses;
     return solver->impl->computeValue(query, result);
   }
@@ -87,6 +88,7 @@ public:
                             const std::vector<const Array*> &objects,
                             std::vector< std::vector<unsigned char> > &values,
                             bool &hasSolution) {
+	  llvm::outs() << "CachingSolver::computeInitialValues\n";
     ++stats::queryCacheMisses;
     return solver->impl->computeInitialValues(query, objects, values, 
                                               hasSolution);
@@ -148,6 +150,7 @@ void CachingSolver::cacheInsert(const Query& query,
 
 bool CachingSolver::computeValidity(const Query& query,
                                     Solver::Validity &result) {
+	llvm::outs() << "CachingSolver::computeValidity\n";
   IncompleteSolver::PartialValidity cachedResult;
   bool tmp, cacheHit = cacheLookup(query, cachedResult);
   
@@ -217,6 +220,7 @@ bool CachingSolver::computeValidity(const Query& query,
 
 bool CachingSolver::computeTruth(const Query& query,
                                  bool &isValid) {
+	llvm::outs() << "CachingSolver::computeTruth\n";
   IncompleteSolver::PartialValidity cachedResult;
   bool cacheHit = cacheLookup(query, cachedResult);
 

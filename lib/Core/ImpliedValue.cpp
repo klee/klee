@@ -188,6 +188,7 @@ void ImpliedValue::getImpliedValues(ref<Expr> e,
     
 void ImpliedValue::checkForImpliedValues(Solver *S, ref<Expr> e, 
                                          ref<ConstantExpr> value) {
+	llvm::outs() << "ImpliedValue::checkForImpliedValues\n";
   std::vector<ref<ReadExpr> > reads;
   std::map<ref<ReadExpr>, ref<ConstantExpr> > found;
   ImpliedValueList results;
