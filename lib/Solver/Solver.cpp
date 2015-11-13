@@ -137,6 +137,7 @@ void Solver::setCoreSolverTimeout(double timeout) {
 }
 
 bool Solver::evaluate(const Query& query, Validity &result) {
+	llvm::outs() << "Solver::evaluate\n";
   assert(query.expr->getWidth() == Expr::Bool && "Invalid expression type!");
 
   // Maintain invariants implementations expect.
@@ -149,6 +150,7 @@ bool Solver::evaluate(const Query& query, Validity &result) {
 }
 
 bool Solver::mustBeTrue(const Query& query, bool &result) {
+	llvm::outs() << "Solver::mustBeTrue\n";
   assert(query.expr->getWidth() == Expr::Bool && "Invalid expression type!");
 
   // Maintain invariants implementations expect.
@@ -200,6 +202,7 @@ bool
 Solver::getInitialValues(const Query& query,
                          const std::vector<const Array*> &objects,
                          std::vector< std::vector<unsigned char> > &values) {
+	llvm::outs() << "Solver::getInitialValues\n";
   bool hasSolution;
   bool success =
     impl->computeInitialValues(query, objects, values, hasSolution);
@@ -214,6 +217,8 @@ std::pair< ref<Expr>, ref<Expr> > Solver::getRange(const Query& query) {
   ref<Expr> e = query.expr;
   Expr::Width width = e->getWidth();
   uint64_t min, max;
+
+  llvm::outs() << "Solver::getRange\n";
 
   if (width==1) {
     Solver::Validity result;
@@ -348,6 +353,7 @@ public:
 
 bool ValidatingSolver::computeTruth(const Query& query,
                                     bool &isValid) {
+	llvm::outs() << "ValidatingSolver::computeTruth\n";
   bool answer;
   
   if (!solver->impl->computeTruth(query, isValid))
@@ -363,6 +369,7 @@ bool ValidatingSolver::computeTruth(const Query& query,
 
 bool ValidatingSolver::computeValidity(const Query& query,
                                        Solver::Validity &result) {
+	llvm::outs() << "ValidatingSolver::computeValidity\n";
   Solver::Validity answer;
   
   if (!solver->impl->computeValidity(query, result))
@@ -378,6 +385,7 @@ bool ValidatingSolver::computeValidity(const Query& query,
 
 bool ValidatingSolver::computeValue(const Query& query,
                                     ref<Expr> &result) {  
+	llvm::outs() << "ValidatingSolver::computeValue\n";
   bool answer;
 
   if (!solver->impl->computeValue(query, result))
@@ -402,6 +410,7 @@ ValidatingSolver::computeInitialValues(const Query& query,
                                        std::vector< std::vector<unsigned char> >
                                          &values,
                                        bool &hasSolution) {
+	llvm::outs() << "ValidatingSolver::computeInitialValues\n";
   bool answer;
 
   if (!solver->impl->computeInitialValues(query, objects, values, 
@@ -860,6 +869,11 @@ SolverImpl::SolverRunStatus STPSolverImpl::getOperationStatusCode() {
 
 #ifdef SUPPORT_Z3
 
+/**
+ * Declare the routine to extract the unsatisfiability core vector
+ */
+std::vector< ref<Expr> > getUnsatCoreVector(const Query &query, const Z3Builder *builder, const Z3_solver solver);
+
 class Z3SolverImpl : public SolverImpl {
 private:
   Z3Builder *builder;
@@ -992,6 +1006,7 @@ Z3SolverImpl::computeInitialValues(const Query &query,
                                       &values,
                                     bool &hasSolution) {
 
+	llvm::outs() << "Z3SolverImpl::computeInitialValues\n";
   Z3_solver the_solver = Z3_mk_simple_solver(builder->ctx);
   Z3_solver_inc_ref(builder->ctx, the_solver);
 
@@ -1025,6 +1040,10 @@ Z3SolverImpl::computeInitialValues(const Query &query,
 
   bool success;
   runStatusCode = runAndGetCex(builder, the_solver, stp_e, objects, values, hasSolution);
+
+  if (runStatusCode == SolverImpl::SOLVER_RUN_STATUS_SUCCESS_UNSOLVABLE)
+	  unsat_core = getUnsatCoreVector(query, builder, the_solver);
+
   success = true;
 
   if (success) {
@@ -1034,68 +1053,67 @@ Z3SolverImpl::computeInitialValues(const Query &query,
 		  ++stats::queriesValid;
   }
 
-  if(Z3_solver_check(builder->ctx, the_solver) == Z3_L_FALSE) {
-  	  Z3_ast_vector r = Z3_solver_get_unsat_core(builder->ctx, the_solver);
-  	  for(unsigned int i=0; i <  Z3_ast_vector_size(builder->ctx,r); i++){
-  		  Z3_ast temp = Z3_ast_vector_get(builder->ctx, r,i);
-  		  int idx=0;
-  		  for (ConstraintManager::const_iterator it = query.constraints.begin(),
-  		         ie = query.constraints.end(); it != ie; ++it) {
-  			 std::ostringstream convert ;
-  			 convert<< idx;
-  			 if(Z3_ast_to_string(builder->ctx,temp) == convert.str().c_str()){
-  				 unsat_core.push_back(*it);
-  				 break;
-  			 }
-
-  		    idx++;
-  		  }
-  	  }
-
-    }
-
   return success;
 }
 
 SolverImpl::SolverRunStatus Z3SolverImpl::runAndGetCex(Z3Builder *builder, Z3_solver the_solver, Z3_ast q,
-                                                const std::vector<const Array*> &objects,
-                                                std::vector< std::vector<unsigned char> > &values,
-                                                bool &hasSolution) {
-//	Z3_sort sort = Z3_mk_bool_sort(builder->ctx);
-//	char const * name = "p2";
-//	Z3_symbol symbol = Z3_mk_string_symbol(builder->ctx, name);
-//	Z3_ast cons = Z3_mk_const(builder->ctx, symbol, sort);
+		const std::vector<const Array*> &objects,
+		std::vector< std::vector<unsigned char> > &values,
+		bool &hasSolution) {
+	//	Z3_sort sort = Z3_mk_bool_sort(builder->ctx);
+	//	char const * name = "p2";
+	//	Z3_symbol symbol = Z3_mk_string_symbol(builder->ctx, name);
+	//	Z3_ast cons = Z3_mk_const(builder->ctx, symbol, sort);
 	Z3_solver_assert(builder->ctx, the_solver, Z3_mk_not(builder->ctx, q));
 
 	if (Z3_solver_check(builder->ctx, the_solver) == Z3_L_TRUE) {
-	  hasSolution = true;
-	  Z3_model m = Z3_solver_get_model(builder->ctx, the_solver);
+		hasSolution = true;
+		Z3_model m = Z3_solver_get_model(builder->ctx, the_solver);
 
-	  values.reserve(objects.size());
-	  for (std::vector<const Array*>::const_iterator
-			  it = objects.begin(), ie = objects.end(); it != ie; ++it) {
-		  const Array *array = *it;
-		  std::vector<unsigned char> data;
+		values.reserve(objects.size());
+		for (std::vector<const Array*>::const_iterator
+				it = objects.begin(), ie = objects.end(); it != ie; ++it) {
+			const Array *array = *it;
+			std::vector<unsigned char> data;
 
-		  data.reserve(array->size);
-		  for (unsigned offset = 0; offset < array->size; offset++) {
-			  Z3_ast counter;
-			  Z3_ast initial_read = Z3_mk_bv2int(builder->ctx, builder->getInitialRead(array, offset), 0);
-			  Z3_model_eval(builder->ctx, m, initial_read, Z3_TRUE, &counter);
-			  int val = 0;
-			  Z3_get_numeral_int(builder->ctx, counter, &val);
-			  data.push_back(val);
-		  }
+			data.reserve(array->size);
+			for (unsigned offset = 0; offset < array->size; offset++) {
+				Z3_ast counter;
+				Z3_ast initial_read = Z3_mk_bv2int(builder->ctx, builder->getInitialRead(array, offset), 0);
+				Z3_model_eval(builder->ctx, m, initial_read, Z3_TRUE, &counter);
+				int val = 0;
+				Z3_get_numeral_int(builder->ctx, counter, &val);
+				data.push_back(val);
+			}
 
-		  values.push_back(data);
-	  }
+			values.push_back(data);
+		}
 
-	  return SolverImpl::SOLVER_RUN_STATUS_SUCCESS_SOLVABLE;
-  }
+		return SolverImpl::SOLVER_RUN_STATUS_SUCCESS_SOLVABLE;
+	}
 
-  return SolverImpl::SOLVER_RUN_STATUS_SUCCESS_UNSOLVABLE;
+	return SolverImpl::SOLVER_RUN_STATUS_SUCCESS_UNSOLVABLE;
 }
 
+std::vector< ref<Expr> > getUnsatCoreVector(const Query &query, const Z3Builder *builder, const Z3_solver solver) {
+	std::vector< ref<Expr> > local_unsat_core;
+	Z3_ast_vector r = Z3_solver_get_unsat_core(builder->ctx, solver);
+	for(unsigned int i=0; i <  Z3_ast_vector_size(builder->ctx,r); i++){
+		Z3_ast temp = Z3_ast_vector_get(builder->ctx, r,i);
+		int constraint_index = 0;
+		for (ConstraintManager::const_iterator it = query.constraints.begin(),
+				ie = query.constraints.end(); it != ie; ++it) {
+			std::ostringstream convert ;
+			convert << constraint_index;
+			if(Z3_ast_to_string(builder->ctx,temp) == convert.str().c_str()){
+				local_unsat_core.push_back(*it);
+				break;
+			}
+			constraint_index++;
+		}
+	}
+	return local_unsat_core;
+}
 
 SolverImpl::SolverRunStatus Z3SolverImpl::getOperationStatusCode() {
    return runStatusCode;
