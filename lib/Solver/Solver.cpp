@@ -137,7 +137,6 @@ void Solver::setCoreSolverTimeout(double timeout) {
 }
 
 bool Solver::evaluate(const Query& query, Validity &result) {
-	llvm::outs() << "Solver::evaluate\n";
   assert(query.expr->getWidth() == Expr::Bool && "Invalid expression type!");
 
   // Maintain invariants implementations expect.
@@ -150,7 +149,6 @@ bool Solver::evaluate(const Query& query, Validity &result) {
 }
 
 bool Solver::mustBeTrue(const Query& query, bool &result) {
-	llvm::outs() << "Solver::mustBeTrue\n";
   assert(query.expr->getWidth() == Expr::Bool && "Invalid expression type!");
 
   // Maintain invariants implementations expect.
@@ -202,7 +200,6 @@ bool
 Solver::getInitialValues(const Query& query,
                          const std::vector<const Array*> &objects,
                          std::vector< std::vector<unsigned char> > &values) {
-	llvm::outs() << "Solver::getInitialValues\n";
   bool hasSolution;
   bool success =
     impl->computeInitialValues(query, objects, values, hasSolution);
@@ -217,8 +214,6 @@ std::pair< ref<Expr>, ref<Expr> > Solver::getRange(const Query& query) {
   ref<Expr> e = query.expr;
   Expr::Width width = e->getWidth();
   uint64_t min, max;
-
-  llvm::outs() << "Solver::getRange\n";
 
   if (width==1) {
     Solver::Validity result;
@@ -353,7 +348,6 @@ public:
 
 bool ValidatingSolver::computeTruth(const Query& query,
                                     bool &isValid) {
-	llvm::outs() << "ValidatingSolver::computeTruth\n";
   bool answer;
   
   if (!solver->impl->computeTruth(query, isValid))
@@ -369,7 +363,6 @@ bool ValidatingSolver::computeTruth(const Query& query,
 
 bool ValidatingSolver::computeValidity(const Query& query,
                                        Solver::Validity &result) {
-	llvm::outs() << "ValidatingSolver::computeValidity\n";
   Solver::Validity answer;
   
   if (!solver->impl->computeValidity(query, result))
@@ -385,7 +378,6 @@ bool ValidatingSolver::computeValidity(const Query& query,
 
 bool ValidatingSolver::computeValue(const Query& query,
                                     ref<Expr> &result) {  
-	llvm::outs() << "ValidatingSolver::computeValue\n";
   bool answer;
 
   if (!solver->impl->computeValue(query, result))
@@ -410,7 +402,6 @@ ValidatingSolver::computeInitialValues(const Query& query,
                                        std::vector< std::vector<unsigned char> >
                                          &values,
                                        bool &hasSolution) {
-	llvm::outs() << "ValidatingSolver::computeInitialValues\n";
   bool answer;
 
   if (!solver->impl->computeInitialValues(query, objects, values, 
@@ -1006,7 +997,6 @@ Z3SolverImpl::computeInitialValues(const Query &query,
                                       &values,
                                     bool &hasSolution) {
 
-	llvm::outs() << "Z3SolverImpl::computeInitialValues\n";
   Z3_solver the_solver = Z3_mk_simple_solver(builder->ctx);
   Z3_solver_inc_ref(builder->ctx, the_solver);
 
