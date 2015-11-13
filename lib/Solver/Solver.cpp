@@ -1111,7 +1111,8 @@ std::vector< ref<Expr> > getUnsatCoreVector(const Query &query, const Z3Builder 
 				ie = query.constraints.end(); it != ie; ++it) {
 			std::ostringstream convert ;
 			convert << constraint_index;
-			if(Z3_ast_to_string(builder->ctx,temp) == convert.str().c_str()){
+ 			std::string compare = "|" + convert.str() + "|";
+			if(Z3_ast_to_string(builder->ctx,temp) == compare){
 				local_unsat_core.push_back(*it);
 				break;
 			}
