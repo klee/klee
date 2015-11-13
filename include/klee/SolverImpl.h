@@ -104,6 +104,9 @@ namespace klee {
     }
 
     virtual void setCoreSolverTimeout(double timeout) {};
+
+    /// getUnsatCore - get the unsatisfiability core.
+    virtual std::vector< ref<Expr> > getUnsatCore();
 };
 
 }

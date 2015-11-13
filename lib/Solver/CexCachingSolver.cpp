@@ -90,6 +90,10 @@ public:
   SolverRunStatus getOperationStatusCode();
   char *getConstraintLog(const Query& query);
   void setCoreSolverTimeout(double timeout);
+  std::vector< ref<Expr> > getUnsatCore() {
+	  std::vector< ref<Expr> > local_unsat_core;
+	  return local_unsat_core;
+  }
 };
 
 ///

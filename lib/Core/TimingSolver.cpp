@@ -146,3 +146,8 @@ TimingSolver::getRange(const ExecutionState& state, ref<Expr> expr) {
 	llvm::outs() << "TimingSolver::getRange\n";
   return solver->getRange(Query(state.constraints, expr));
 }
+
+std::vector< ref<Expr> >
+TimingSolver::getUnsatCore() {
+	return solver->getUnsatCore();
+}

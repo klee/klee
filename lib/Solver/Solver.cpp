@@ -116,6 +116,11 @@ const char* SolverImpl::getOperationStatusString(SolverRunStatus statusCode)
     }    
 }
 
+std::vector< ref<Expr> > SolverImpl::getUnsatCore() {
+	std::vector< ref<Expr> > local_unsat_core;
+	return local_unsat_core;
+}
+
 const char *Solver::validity_to_str(Validity v) {
   switch (v) {
   default:    return "Unknown";
@@ -328,6 +333,10 @@ std::pair< ref<Expr>, ref<Expr> > Solver::getRange(const Query& query) {
                         ConstantExpr::create(max, width));
 }
 
+std::vector< ref<Expr> > Solver::getUnsatCore() {
+	return impl->getUnsatCore();
+}
+
 /***/
 
 class ValidatingSolver : public SolverImpl {
@@ -349,6 +358,7 @@ public:
   SolverRunStatus getOperationStatusCode();
   char *getConstraintLog(const Query&);
   void setCoreSolverTimeout(double timeout);
+  std::vector< ref<Expr> > getUnsatCore();
 };
 
 bool ValidatingSolver::computeTruth(const Query& query,
@@ -463,6 +473,11 @@ void ValidatingSolver::setCoreSolverTimeout(double timeout) {
   solver->impl->setCoreSolverTimeout(timeout);
 }
 
+std::vector< ref<Expr> > ValidatingSolver::getUnsatCore() {
+	std::vector< ref<Expr> > local_unsat_core;
+	return local_unsat_core;
+}
+
 Solver *klee::createValidatingSolver(Solver *s, Solver *oracle) {
   return new Solver(new ValidatingSolver(s, oracle));
 }
@@ -499,7 +514,10 @@ public:
   SolverRunStatus getOperationStatusCode() {
       return SOLVER_RUN_STATUS_FAILURE;
   }
-  
+  std::vector< ref<Expr> > getUnsatCore() {
+	  std::vector< ref<Expr> > local_unsat_core;
+	  return local_unsat_core;
+  }
 };
 
 Solver *klee::createDummySolver() {
@@ -532,6 +550,10 @@ public:
                             std::vector< std::vector<unsigned char> > &values,
                             bool &hasSolution);
   SolverRunStatus getOperationStatusCode();
+  std::vector< ref<Expr> > getUnsatCore() {
+	  std::vector< ref<Expr> > local_unsat_core;
+	  return local_unsat_core;
+  }
 };
 
 static unsigned char *shared_memory_ptr;
@@ -608,6 +630,10 @@ char *STPSolver::getConstraintLog(const Query &query) {
 
 void STPSolver::setCoreSolverTimeout(double timeout) {
     impl->setCoreSolverTimeout(timeout);
+}
+
+std::vector< ref<Expr> > STPSolver::getUnsatCore() {
+	return impl->getUnsatCore();
 }
 
 /***/
@@ -862,16 +888,16 @@ STPSolverImpl::computeInitialValues(const Query &query,
 SolverImpl::SolverRunStatus STPSolverImpl::getOperationStatusCode() {
    return runStatusCode;
 }
-
 #endif /* SUPPORT_Z3 */
 
 /***/
 
 #ifdef SUPPORT_Z3
 
-/**
- * Declare the routine to extract the unsatisfiability core vector
- */
+
+/// getUnsatCoreVector - Declare the routine to extract the unsatisfiability core vector
+///
+/// \return - A ref<Expr> vector of unsatisfiability core: empty if there was no core.
 std::vector< ref<Expr> > getUnsatCoreVector(const Query &query, const Z3Builder *builder, const Z3_solver solver);
 
 class Z3SolverImpl : public SolverImpl {
@@ -901,10 +927,6 @@ public:
 
   }
 
-  std::vector< ref<Expr> > getUnsatCore(){
-	  return unsat_core;
-  }
-
   bool computeTruth(const Query&, bool &isValid);
   bool computeValue(const Query&, ref<Expr> &result);
   bool computeInitialValues(const Query&,
@@ -916,6 +938,7 @@ public:
                                std::vector< std::vector<unsigned char> > &values,
                                bool &hasSolution);
   SolverRunStatus getOperationStatusCode();
+  std::vector< ref<Expr> > getUnsatCore();
 };
 
 Z3SolverImpl::Z3SolverImpl()
@@ -942,6 +965,10 @@ char *Z3Solver::getConstraintLog(const Query &query) {
 
 void Z3Solver::setCoreSolverTimeout(double timeout) {
     impl->setCoreSolverTimeout(timeout);
+}
+
+std::vector< ref<Expr> > Z3Solver::getUnsatCore() {
+	return impl->getUnsatCore();
 }
 
 /***/
@@ -1119,6 +1146,10 @@ SolverImpl::SolverRunStatus Z3SolverImpl::getOperationStatusCode() {
    return runStatusCode;
 }
 
+std::vector< ref<Expr> > Z3SolverImpl::getUnsatCore() {
+	return unsat_core;
+}
+
 #endif /* SUPPORT_Z3 */
 
 /***/
@@ -1167,7 +1198,11 @@ public:
   SolverRunStatus getOperationStatusCode();
   
   SolverContext& get_meta_solver() { return(_meta_solver); };
-  
+
+  std::vector< ref<Expr> > getUnsatCore() {
+	  std::vector< ref<Expr> > local_unsat_core;
+	  return local_unsat_core;
+  }
 };
 
 // ------------------------------------- MetaSMTSolver methods --------------------------------------------
