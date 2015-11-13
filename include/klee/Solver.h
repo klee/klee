@@ -62,6 +62,7 @@ namespace klee {
 
   public:
     SolverImpl *impl;
+    bool isZ3solver = false;
 
   public:
     Solver(SolverImpl *_impl) : impl(_impl) {}

@@ -76,6 +76,9 @@ public:
     SolverRunStatus getOperationStatusCode();
     char *getConstraintLog(const Query&);
     void setCoreSolverTimeout(double timeout);
+    std::vector< ref<Expr> > getUnsatCore() {
+    	return solver->getUnsatCore();
+    }
 };
 
 #endif	/* KLEE_QUERYLOGGINGSOLVER_H */

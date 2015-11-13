@@ -358,6 +358,9 @@ public:
   SolverRunStatus getOperationStatusCode();
   char *getConstraintLog(const Query&);
   void setCoreSolverTimeout(double timeout);
+  std::vector< ref<Expr> > getUnsatCore() {
+	  return solver->getUnsatCore();
+  }
 };
 
 bool ValidatingSolver::computeTruth(const Query& query,
@@ -939,6 +942,7 @@ Z3SolverImpl::~Z3SolverImpl() {
 
 Z3Solver::Z3Solver() : Solver(new Z3SolverImpl())
 {
+	isZ3solver = true;
 }
 
 char *Z3Solver::getConstraintLog(const Query &query) {
@@ -1127,6 +1131,7 @@ SolverImpl::SolverRunStatus Z3SolverImpl::getOperationStatusCode() {
 }
 
 std::vector< ref<Expr> > Z3SolverImpl::getUnsatCore() {
+	llvm::outs() << "GETTING UNSAT CORE\n";
 	return unsat_core;
 }
 

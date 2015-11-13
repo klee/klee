@@ -148,5 +148,9 @@ TimingSolver::getRange(const ExecutionState& state, ref<Expr> expr) {
 }
 
 std::vector< ref<Expr> > TimingSolver::getUnsatCore() {
+	llvm::outs() << "TimingSolver::getUnsatCore: Calling solver->getUnsatCore\n";
+	if (solver->isZ3solver) {
+		llvm::outs() << "Calling a Z3solver method\n";
+	}
 	return solver->getUnsatCore();
 }

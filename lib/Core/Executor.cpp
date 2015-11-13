@@ -331,6 +331,7 @@ Executor::Executor(const InterpreterOptions &opts,
   }
 #else
 #ifdef SUPPORT_Z3
+  llvm::outs() << "CORESOLVER IS Z3SOLVER\n";
   coreSolver = new Z3Solver();
 #else
   coreSolver = new STPSolver(UseForkedCoreSolver, CoreSolverOptimizeDivides);
@@ -752,8 +753,13 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
   bool success = solver->evaluate(current, condition, res);
 
   if(res == Solver::False){
+	  llvm::outs() << "ASKING FOR UNSAT CORE\n";
 	  std::vector< ref<Expr> > unsat_core = solver->getUnsatCore();
 	  unsat_core.push_back(condition);
+
+	  for (std::vector< ref<Expr> >::iterator it = unsat_core.begin(); it != unsat_core.end(); it++) {
+		  (*it)->dump();
+	  }
   }
 
   solver->setTimeout(0);
