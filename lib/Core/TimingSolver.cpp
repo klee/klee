@@ -26,7 +26,6 @@ using namespace llvm;
 
 bool TimingSolver::evaluate(const ExecutionState& state, ref<Expr> expr,
                             Solver::Validity &result) {
-	llvm::outs() << "TimingSolver::evaluate\n";
   // Fast path, to avoid timer and OS overhead.
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(expr)) {
     result = CE->isTrue() ? Solver::True : Solver::False;
@@ -123,7 +122,6 @@ TimingSolver::getInitialValues(const ExecutionState& state,
                                  &objects,
                                std::vector< std::vector<unsigned char> >
                                  &result) {
-	llvm::outs() << "TimingSolver::getInitialValues\n";
   if (objects.empty())
     return true;
 
@@ -143,14 +141,9 @@ TimingSolver::getInitialValues(const ExecutionState& state,
 
 std::pair< ref<Expr>, ref<Expr> >
 TimingSolver::getRange(const ExecutionState& state, ref<Expr> expr) {
-	llvm::outs() << "TimingSolver::getRange\n";
   return solver->getRange(Query(state.constraints, expr));
 }
 
 std::vector< ref<Expr> > TimingSolver::getUnsatCore() {
-	llvm::outs() << "TimingSolver::getUnsatCore: Calling solver->getUnsatCore\n";
-	if (solver->isZ3solver) {
-		llvm::outs() << "Calling a Z3solver method\n";
-	}
 	return solver->getUnsatCore();
 }

@@ -111,7 +111,6 @@ bool QueryLoggingSolver::computeTruth(const Query& query, bool& isValid) {
 
 bool QueryLoggingSolver::computeValidity(const Query& query,
                                          Solver::Validity& result) {
-	llvm::outs() << "QueryLoggingSolver::computeValidity\n";
     startQuery(query, "Validity");
     
     bool success = solver->impl->computeValidity(query, result);

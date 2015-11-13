@@ -82,7 +82,6 @@ bool StagedSolverImpl::computeTruth(const Query& query, bool &isValid) {
 
 bool StagedSolverImpl::computeValidity(const Query& query,
                                        Solver::Validity &result) {
-	llvm::outs() << "StagedSolverImpl::computeValidity\n";
   bool tmp;
 
   switch(primary->computeValidity(query)) {

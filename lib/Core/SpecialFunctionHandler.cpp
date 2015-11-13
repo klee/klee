@@ -491,7 +491,6 @@ void SpecialFunctionHandler::handleWarningOnce(ExecutionState &state,
 void SpecialFunctionHandler::handlePrintRange(ExecutionState &state,
                                   KInstruction *target,
                                   std::vector<ref<Expr> > &arguments) {
-	llvm::outs() << "SpecialFunctionHandler::handlePrintRange\n";
   assert(arguments.size()==2 &&
          "invalid number of arguments to klee_print_range");
 
@@ -640,7 +639,6 @@ void SpecialFunctionHandler::handleCheckMemoryAccess(ExecutionState &state,
 void SpecialFunctionHandler::handleGetValue(ExecutionState &state,
                                             KInstruction *target,
                                             std::vector<ref<Expr> > &arguments) {
-	llvm::outs() << "SpecialFunctionHandler::handleGetValue\n";
   assert(arguments.size()==1 &&
          "invalid number of arguments to klee_get_value");
 

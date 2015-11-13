@@ -105,7 +105,12 @@ namespace klee {
 
     virtual void setCoreSolverTimeout(double timeout) {};
 
-    /// getUnsatCore - get the unsatisfiability core.
+    /// getUnsatCore - get the unsatisfiability core. Beware that the unsat core
+    /// is only available with certain solvers, e.g., Z3, and even so, may not
+    /// be always available in unsatisfiability cases when wrapped in e.g.,
+    /// IncompleteSolver (which may replace the core Z3 solver).
+    ///
+    /// \return Vector of ref<Expr>
     virtual std::vector< ref<Expr> > getUnsatCore();
 };
 

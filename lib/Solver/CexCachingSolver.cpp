@@ -217,7 +217,6 @@ bool CexCachingSolver::lookupAssignment(const Query &query,
 bool CexCachingSolver::getAssignment(const Query& query, Assignment *&result) {
   KeyType key;
 
-  llvm::outs() << "CexCachingSolver::getAssignment()\n";
   if (lookupAssignment(query, key, result))
     return true;
 
@@ -266,7 +265,6 @@ CexCachingSolver::~CexCachingSolver() {
 
 bool CexCachingSolver::computeValidity(const Query& query,
                                        Solver::Validity &result) {
-	llvm::outs() << "CexCachingSolver::computeValidity\n";
   TimerStatIncrementer t(stats::cexCacheTime);
   Assignment *a;
   if (!getAssignment(query.withFalse(), a))
@@ -291,7 +289,6 @@ bool CexCachingSolver::computeValidity(const Query& query,
 
 bool CexCachingSolver::computeTruth(const Query& query,
                                     bool &isValid) {
-	llvm::outs() << "CexCachingSolver::computeTruth\n";
   TimerStatIncrementer t(stats::cexCacheTime);
 
   // There is a small amount of redundancy here. We only need to know
@@ -319,7 +316,6 @@ bool CexCachingSolver::computeTruth(const Query& query,
 
 bool CexCachingSolver::computeValue(const Query& query,
                                     ref<Expr> &result) {
-	llvm::outs() << "CexCachingSolver::computeValue\n";
   TimerStatIncrementer t(stats::cexCacheTime);
 
   Assignment *a;
@@ -339,7 +335,6 @@ CexCachingSolver::computeInitialValues(const Query& query,
                                        std::vector< std::vector<unsigned char> >
                                          &values,
                                        bool &hasSolution) {
-	llvm::outs() << "CexCachingSolver::computeInitialValues\n";
   TimerStatIncrementer t(stats::cexCacheTime);
   Assignment *a;
   if (!getAssignment(query, a))
