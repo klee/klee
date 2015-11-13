@@ -1032,6 +1032,7 @@ Z3SolverImpl::computeInitialValues(const Query &query,
       Z3_sort sort = Z3_mk_bool_sort(builder->ctx);
       std::ostringstream convert ;
       convert<< counter;
+      ref<Expr> constraint = *it;
       const char * name = convert.str().c_str();
       Z3_symbol symbol = Z3_mk_string_symbol(builder->ctx, name);
       Z3_ast cons = Z3_mk_const(builder->ctx, symbol, sort);

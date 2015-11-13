@@ -70,6 +70,7 @@
 #include "llvm/IntrinsicInst.h"
 #include "llvm/LLVMContext.h"
 #include "llvm/Module.h"
+
 #if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
 #include "llvm/Target/TargetData.h"
 #else
@@ -83,6 +84,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Analysis/MemoryDependenceAnalysis.h"
 
 #if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
 #include "llvm/Support/CallSite.h"
@@ -284,6 +286,7 @@ Executor::Executor(const InterpreterOptions &opts,
     processTree(0),
     interpTree(0), 
 	latestBase(0),
+	latestBaseRight(0),
     replayOut(0),
     replayPath(0),    
     usingSeeds(0),
@@ -747,6 +750,11 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     timeout *= it->second.size();
   solver->setTimeout(timeout);
   bool success = solver->evaluate(current, condition, res);
+
+  if(res == Solver::False){
+	  std::vector< ref<Expr> > unsat_core = solver->getUnsatCore();
+	  unsat_core.push_back(condition);
+  }
 
   solver->setTimeout(0);
   if (!success) {
@@ -2099,7 +2107,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     // Arithmetic / logical
 
   case Instruction::Add: {
-    ref<Expr> left = eval(ki, 0, state).value;
+	ref<Expr> left = eval(ki, 0, state).value;
     ref<Expr> right = eval(ki, 1, state).value;
     bindLocal(ki, state, AddExpr::create(left, right));
 
@@ -2503,7 +2511,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
   case Instruction::Load: {
     ref<Expr> base = eval(ki, 0, state).value;
-	latestBase = base;
+    latestBase = base;
     executeMemoryOperation(state, false, base, 0, ki);
     break;
   }
