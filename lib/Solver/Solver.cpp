@@ -1037,9 +1037,10 @@ Z3SolverImpl::computeInitialValues(const Query &query,
   bool success;
   runStatusCode = runAndGetCex(builder, the_solver, stp_e, objects, values, hasSolution);
 
-  if (runStatusCode == SolverImpl::SOLVER_RUN_STATUS_SUCCESS_UNSOLVABLE)
+  if (runStatusCode == SolverImpl::SOLVER_RUN_STATUS_SUCCESS_UNSOLVABLE){
+	  unsat_core.empty();
 	  unsat_core = getUnsatCoreVector(query, builder, the_solver);
-
+  }
   success = true;
 
   if (success) {
