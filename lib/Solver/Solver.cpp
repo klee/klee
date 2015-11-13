@@ -931,7 +931,6 @@ Z3SolverImpl::~Z3SolverImpl() {
 
 Z3Solver::Z3Solver() : Solver(new Z3SolverImpl())
 {
-	isZ3solver = true;
 }
 
 char *Z3Solver::getConstraintLog(const Query &query) {
