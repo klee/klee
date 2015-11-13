@@ -221,9 +221,6 @@ namespace klee {
 	/// setCoreSolverTimeout - Set constraint solver timeout delay to the given value; 0
 	/// is off.
 	virtual void setCoreSolverTimeout(double timeout);
-
-	/// getUnsatCore - Get the unsatisfiability core
-    virtual std::vector< ref<Expr> > getUnsatCore();
   };
 #endif /* SUPPORT_Z3 */
 
@@ -241,9 +238,6 @@ namespace klee {
 	/// setCoreSolverTimeout - Set constraint solver timeout delay to the given value; 0
 	/// is off.
 	virtual void setCoreSolverTimeout(double timeout);
-
-	/// getUnsatCore - Get the unsatisfiability core
-    virtual std::vector< ref<Expr> > getUnsatCore();
   };
 #endif /* SUPPORT_Z3 */
   
@@ -257,9 +251,6 @@ namespace klee {
   
     virtual char *getConstraintLog(const Query&);
     virtual void setCoreSolverTimeout(double timeout);
-
-    /// getUnsatCore - Get the unsatisfiability core
-    virtual std::vector< ref<Expr> > getUnsatCore();
 };
 
 #endif /* SUPPORT_METASMT */
