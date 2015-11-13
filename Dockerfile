@@ -6,7 +6,7 @@ MAINTAINER Dan Liew <daniel.liew@imperial.ac.uk>
 # the resulting image is unnecessarily large!
 
 ENV LLVM_VERSION=3.4 \
-    STP_VERSION=master \
+    STP_VERSION=2.1.0 \
     DISABLE_ASSERTIONS=0 \
     ENABLE_OPTIMIZED=1 \
     KLEE_UCLIBC=klee_uclibc_v1.0.0 \
