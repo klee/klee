@@ -23,6 +23,7 @@ for patt in link_regexp_filter_patts:
     prog = re.compile(patt)
     link_regexp_filters.append(prog)
 
+
 def main():
     llvm_path = subprocess.Popen(["llvm-config", "--bindir"], stdout=subprocess.PIPE).communicate()[0].strip()
 
