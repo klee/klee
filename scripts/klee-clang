@@ -4,6 +4,7 @@ import os, sys
 import subprocess
 import re
 
+
 def isLinkCommand():
     # Look for '-Wl,' as a signal that we are calling the linker. What a hack.
     for arg in sys.argv:
@@ -57,9 +58,10 @@ def main():
             continue
 
         linkArgs.append(a)
-    
+
     os.execvp(llvm_path+"/llvm-link", [llvm_path+"/llvm-link"] + linkArgs)
     return 1
+
 
 if __name__ == '__main__':
     main()
