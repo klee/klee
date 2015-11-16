@@ -13,7 +13,7 @@ def isLinkCommand():
 
 link_exact_filter = ['-g', '-W', '-O', '-D', '-f',
                      '-fnested-functions', '-pthread', '-fPIC', '-g',
-                     '-pedantic', '-shared', '-rdynamic']
+                     '-pedantic', '-shared', '-rdynamic', '-nodefaultlibs']
 
 link_regexp_filter_patts = ['^-Wl.*', '^-l.*', '^-W.*', '^-O\d', '^-gg.*',
                             '^-mtune.*', '^-std=c.*', '^-f.*frame-pointer',
