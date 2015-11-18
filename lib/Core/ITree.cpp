@@ -18,13 +18,25 @@ void PathCondition::dump() {
 
 void PathCondition::print(llvm::raw_ostream & stream) {
 	stream << "baseLoc = ";
-	baseLoc->print(stream);
+	if (!baseLoc.isNull()) {
+		baseLoc->print(stream);
+	} else {
+		stream << "NULL";
+	}
 	stream << "\n";
 	stream << "value = ";
-	value->print(stream);
+	if (!value.isNull()) {
+		value->print(stream);
+	} else {
+		stream << "NULL";
+	}
 	stream << "\n";
 	stream << "valueLoc = ";
-	valueLoc->print(stream);
+	if (!valueLoc.isNull()) {
+		valueLoc->print(stream);
+	} else {
+		stream << "NULL";
+	}
 	stream << "\n";
 	stream << "operationName = " << operationName << "\n";
 	stream << "isRemoved = " << isRemoved << "\n";
@@ -95,20 +107,44 @@ void ITreeNode::print(llvm::raw_ostream &stream, const unsigned int tab_num) {
 	std::string tabs_next = tabs + "\t";
 
 	stream << tabs << "ITreeNode\n";
-	stream << tabs_next << "programPoint = " << (*programPoint) << "\n";
-	stream << tabs_next << "data =\n";
-	data->dumpStack(stream);
+	stream << tabs_next << "programPoint = ";
+	if (!programPoint) {
+		stream << "NULL";
+	} else {
+		stream << (*programPoint);
+	}
+	stream << "\n";
+	stream << tabs_next << "data = ";
+	if (!data) {
+		stream << "NULL\n";
+	} else {
+		data->dumpStack(stream);
+	}
 
 	stream << tabs_next << "conditions =";
 	for (std::vector< ref<Expr> >::iterator it = conditions.begin(); it != conditions.end(); (stream << ","), it++) {
-		((*it).get())->print(stream);
+		if (!((*it).isNull())) {
+			(*it)->print(stream);
+		} else {
+			stream << "NULL";
+		}
 	}
 	stream << "\n";
 
 	stream << tabs_next << "Left:\n";
-	left->print(stream, tab_num + 1);
+	if (!left) {
+		stream << tabs_next << "NULL\n";
+	} else {
+		left->print(stream, tab_num + 1);
+		stream << "\n";
+	}
 	stream << tabs_next << "Right:\n";
-	right->print(stream, tab_num + 1);
+	if (!right) {
+		stream << tabs_next << "NULL\n";
+	} else {
+		right->print(stream, tab_num + 1);
+		stream << "\n";
+	}
 
 	stream << tabs_next << "newPathConds =";
 	for (std::vector<PathCondition>::iterator it = newPathConds.begin(); it != newPathConds.end(); (stream << ","), it++) {
@@ -124,15 +160,23 @@ void ITreeNode::print(llvm::raw_ostream &stream, const unsigned int tab_num) {
 
 	stream << tabs_next << "dependenciesLoc =";
 	for (std::vector< ref<Expr> >::iterator it = dependenciesLoc.begin(); it != dependenciesLoc.end(); (stream << ","), it++) {
-		((*it).get())->print(stream);
+		if (!((*it).isNull())) {
+			(*it)->print(stream);
+		} else {
+			stream << "NULL";
+		}
 	}
 	stream << "\n";
 
 	stream << tabs_next << "interpolant =";
-	interpolant->print(stream);
-	stream << tabs_next << "\n";
+	if (interpolant.isNull()) {
+		stream << "NULL\n";
+	} else {
+		interpolant->print(stream);
+		stream << "\n";
+	}
 
-	stream << tabs_next << "InterpolantStatus =" << InterpolantStatus << "\n";
+	stream << tabs_next << "InterpolantStatus =" << InterpolantStatus;
 
 }
 
