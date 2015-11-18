@@ -879,7 +879,9 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     int index = current.itreeNode->newPathConds.size()-1;
     ITreeNode *currentITreeNode = current.itreeNode;
 
+    llvm::errs() << "LOOPING\n";
     while(currentITreeNode != NULL){
+    	currentITreeNode->dump();
 		for (std::vector< PathCondition >::reverse_iterator it = currentITreeNode->newPathConds.rbegin() ;
 						it != currentITreeNode->newPathConds.rend(); ++it){
 
