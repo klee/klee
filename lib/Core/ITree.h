@@ -18,9 +18,11 @@ enum Comparison {Eq, Ne, Ult, Ule, Ugt, Uge, Slt, Sle, Sgt, Sge, Neg, Not};
 namespace klee {
     class ExecutionState;
 	struct PathCondition{
-    	ref<Expr> base;
+    	ref<Expr> baseLoc; //load location
 		ref<Expr> value;
+		ref<Expr> valueLoc;
 		Operation operationName;
+		bool isRemoved;
 	};
 	struct BranchCondition{
 		ref<Expr> base;
@@ -67,6 +69,7 @@ namespace klee {
 	    std::vector< ref<Expr> > conditions;
 	    std::vector< PathCondition > newPathConds;
 	    std::vector< PathCondition > allPathConds;
+	    std::vector< ref<Expr> > dependenciesLoc;
 	    ref<Expr> interpolant;
 	    Status InterpolantStatus;
 	    bool isSubsumed;

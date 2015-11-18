@@ -118,7 +118,7 @@ private:
   std::vector<TimerInfo*> timers;
   PTree *processTree;
   ITree *interpTree; 
-  ref<Expr> latestBase;
+  ref<Expr> latestBaseLeft;
   ref<Expr> latestBaseRight;
   /// Used to track states that have been added during the current
   /// instructions step. 
