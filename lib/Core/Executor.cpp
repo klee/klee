@@ -881,7 +881,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
 
     while(currentITreeNode != NULL){
     	currentITreeNode->dump();
-    	llvm::errs() << "PRINTED\n";
+    	llvm::errs() << "\nPRINTED\n";
 		for (std::vector< PathCondition >::reverse_iterator it = currentITreeNode->newPathConds.rbegin() ;
 						it != currentITreeNode->newPathConds.rend(); ++it){
 
