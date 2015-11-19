@@ -743,6 +743,14 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
   solver->setTimeout(timeout);
   bool success = solver->evaluate(current, condition, res);
   solver->setTimeout(0);
+
+  std::vector< ref<Expr> > unsat_core;
+  if (res == Solver::False) {
+      /// We collect the core in case of unsatisfiability
+      unsat_core = solver->getUnsatCore();
+      unsat_core.push_back(condition);
+  }
+
   if (!success) {
     current.pc = current.prevPC;
     terminateStateEarly(current, "Query timed out (fork).");
@@ -837,6 +845,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
   // hint to just use the single constraint instead of all the binary
   // search ones. If that makes sense.
   if (res==Solver::True) {
+
     if (!isInternal) {
       if (pathWriter) {
         current.pathOS << "1";

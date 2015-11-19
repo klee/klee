@@ -111,6 +111,12 @@ const char* SolverImpl::getOperationStatusString(SolverRunStatus statusCode)
     }    
 }
 
+std::vector< ref<Expr> > SolverImpl::getUnsatCore() {
+  // By default, we return an empty core
+  std::vector< ref<Expr> > local_unsat_core;
+  return local_unsat_core;
+}
+
 const char *Solver::validity_to_str(Validity v) {
   switch (v) {
   default:    return "Unknown";
@@ -316,6 +322,10 @@ std::pair< ref<Expr>, ref<Expr> > Solver::getRange(const Query& query) {
 
   return std::make_pair(ConstantExpr::create(min, width),
                         ConstantExpr::create(max, width));
+}
+
+std::vector< ref<Expr> > Solver::getUnsatCore() {
+  return impl->getUnsatCore();
 }
 
 /***/
@@ -855,11 +865,17 @@ SolverImpl::SolverRunStatus STPSolverImpl::getOperationStatusCode() {
 
 #ifdef SUPPORT_Z3
 
+/// getUnsatCoreVector - Declare the routine to extract the unsatisfiability core vector
+///
+/// \return - A ref<Expr> vector of unsatisfiability core: empty if there was no core.
+std::vector< ref<Expr> > getUnsatCoreVector(const Query &query, const Z3Builder *builder, const Z3_solver solver);
+
 class Z3SolverImpl : public SolverImpl {
 private:
   Z3Builder *builder;
   double timeout;
   SolverRunStatus runStatusCode;
+  std::vector< ref<Expr> > unsat_core;
 
 public:
   Z3SolverImpl();
@@ -892,6 +908,7 @@ public:
                                std::vector< std::vector<unsigned char> > &values,
                                bool &hasSolution);
   SolverRunStatus getOperationStatusCode();
+  std::vector< ref<Expr> > getUnsatCore();
 };
 
 Z3SolverImpl::Z3SolverImpl()
@@ -996,9 +1013,18 @@ Z3SolverImpl::computeInitialValues(const Query &query,
 
   TimerStatIncrementer t(stats::queryTime);
 
+  int counter = 0;
   for (ConstraintManager::const_iterator it = query.constraints.begin(),
-         ie = query.constraints.end(); it != ie; ++it) {
-	  Z3_solver_assert(builder->ctx, the_solver, builder->construct(*it));
+      ie = query.constraints.end(); it != ie; ++it) {
+      Z3_sort sort = Z3_mk_bool_sort(builder->ctx);
+      std::ostringstream convert ;
+      convert<< counter;
+      ref<Expr> constraint = *it;
+      const char * name = convert.str().c_str();
+      Z3_symbol symbol = Z3_mk_string_symbol(builder->ctx, name);
+      Z3_ast cons = Z3_mk_const(builder->ctx, symbol, sort);
+      Z3_solver_assert_and_track(builder->ctx, the_solver, builder->construct(*it), cons);
+      counter++;
   }
   ++stats::queries;
   ++stats::queryCounterexamples;
@@ -1007,6 +1033,11 @@ Z3SolverImpl::computeInitialValues(const Query &query,
 
   bool success;
   runStatusCode = runAndGetCex(builder, the_solver, stp_e, objects, values, hasSolution);
+
+  if (runStatusCode == SolverImpl::SOLVER_RUN_STATUS_SUCCESS_UNSOLVABLE) {
+      unsat_core.empty();
+      unsat_core = getUnsatCoreVector(query, builder, the_solver);
+  }
   success = true;
 
   if (success) {
@@ -1019,43 +1050,67 @@ Z3SolverImpl::computeInitialValues(const Query &query,
 }
 
 SolverImpl::SolverRunStatus Z3SolverImpl::runAndGetCex(Z3Builder *builder, Z3_solver the_solver, Z3_ast q,
-                                                const std::vector<const Array*> &objects,
-                                                std::vector< std::vector<unsigned char> > &values,
-                                                bool &hasSolution) {
-	Z3_solver_assert(builder->ctx, the_solver, Z3_mk_not(builder->ctx, q));
+                                                       const std::vector<const Array*> &objects,
+                                                       std::vector< std::vector<unsigned char> > &values,
+                                                       bool &hasSolution) {
+  Z3_solver_assert(builder->ctx, the_solver, Z3_mk_not(builder->ctx, q));
 
-	if (Z3_solver_check(builder->ctx, the_solver) == Z3_L_TRUE) {
-	  hasSolution = true;
-	  Z3_model m = Z3_solver_get_model(builder->ctx, the_solver);
+  if (Z3_solver_check(builder->ctx, the_solver) == Z3_L_TRUE) {
+      hasSolution = true;
+      Z3_model m = Z3_solver_get_model(builder->ctx, the_solver);
 
-	  values.reserve(objects.size());
-	  for (std::vector<const Array*>::const_iterator
-			  it = objects.begin(), ie = objects.end(); it != ie; ++it) {
-		  const Array *array = *it;
-		  std::vector<unsigned char> data;
+      values.reserve(objects.size());
+      for (std::vector<const Array*>::const_iterator
+	  it = objects.begin(), ie = objects.end(); it != ie; ++it) {
+	  const Array *array = *it;
+	  std::vector<unsigned char> data;
 
-		  data.reserve(array->size);
-		  for (unsigned offset = 0; offset < array->size; offset++) {
-			  Z3_ast counter;
-			  Z3_ast initial_read = Z3_mk_bv2int(builder->ctx, builder->getInitialRead(array, offset), 0);
-			  Z3_model_eval(builder->ctx, m, initial_read, Z3_TRUE, &counter);
-			  int val = 0;
-			  Z3_get_numeral_int(builder->ctx, counter, &val);
-			  data.push_back(val);
-		  }
-
-		  values.push_back(data);
+	  data.reserve(array->size);
+	  for (unsigned offset = 0; offset < array->size; offset++) {
+	      Z3_ast counter;
+	      Z3_ast initial_read = Z3_mk_bv2int(builder->ctx, builder->getInitialRead(array, offset), 0);
+	      Z3_model_eval(builder->ctx, m, initial_read, Z3_TRUE, &counter);
+	      int val = 0;
+	      Z3_get_numeral_int(builder->ctx, counter, &val);
+	      data.push_back(val);
 	  }
 
-	  return SolverImpl::SOLVER_RUN_STATUS_SUCCESS_SOLVABLE;
+	  values.push_back(data);
+      }
+
+      return SolverImpl::SOLVER_RUN_STATUS_SUCCESS_SOLVABLE;
   }
 
   return SolverImpl::SOLVER_RUN_STATUS_SUCCESS_UNSOLVABLE;
 }
 
+std::vector< ref<Expr> > getUnsatCoreVector(const Query &query, const Z3Builder *builder, const Z3_solver solver) {
+  std::vector< ref<Expr> > local_unsat_core;
+  Z3_ast_vector r = Z3_solver_get_unsat_core(builder->ctx, solver);
+  for(unsigned int i=0; i <  Z3_ast_vector_size(builder->ctx,r); i++){
+      Z3_ast temp = Z3_ast_vector_get(builder->ctx, r,i);
+      int constraint_index = 0;
+      for (ConstraintManager::const_iterator it = query.constraints.begin(),
+	  ie = query.constraints.end(); it != ie; ++it) {
+	  std::ostringstream convert ;
+	  convert << constraint_index;
+	  std::string compare = "|" + convert.str() + "|";
+	  if(Z3_ast_to_string(builder->ctx,temp) == compare){
+	      local_unsat_core.push_back(*it);
+	      break;
+	  }
+	  constraint_index++;
+      }
+  }
+  return local_unsat_core;
+}
 
 SolverImpl::SolverRunStatus Z3SolverImpl::getOperationStatusCode() {
    return runStatusCode;
+}
+
+std::vector< ref<Expr> > Z3SolverImpl::getUnsatCore() {
+       return unsat_core;
 }
 
 #endif /* SUPPORT_Z3 */
