@@ -114,13 +114,6 @@ void ITreeNode::print(llvm::raw_ostream &stream, const unsigned int tab_num) {
 		stream << (*programPoint);
 	}
 	stream << "\n";
-	stream << tabs_next << "data = ";
-	if (!data) {
-		stream << "NULL\n";
-	} else {
-		data->dumpStack(stream);
-	}
-
 	stream << tabs_next << "conditions =";
 	for (std::vector< ref<Expr> >::iterator it = conditions.begin(); it != conditions.end(); (stream << ","), it++) {
 		if (!((*it).isNull())) {

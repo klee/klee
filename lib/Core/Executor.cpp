@@ -749,16 +749,6 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
   solver->setTimeout(timeout);
   bool success = solver->evaluate(current, condition, res);
 
-  if(res == Solver::False){
-	  std::vector< ref<Expr> > unsat_core = solver->getUnsatCore();
-	  unsat_core.push_back(condition);
-
-	  // Uncomment to dump the content of the unsat core.
-
-	  // for (std::vector< ref<Expr> >::iterator it = unsat_core.begin(); it != unsat_core.end(); it++)
-	  //  (*it)->dump();
-  }
-
   solver->setTimeout(0);
   if (!success) {
     current.pc = current.prevPC;
@@ -864,6 +854,14 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     return StatePair(&current, 0);
   } else if (res==Solver::False) {
 
+    // Solver says unsatisfiable
+	std::vector< ref<Expr> > unsat_core = solver->getUnsatCore();
+	unsat_core.push_back(condition);
+
+	for (std::vector< ref<Expr> >::iterator it = unsat_core.begin(); it != unsat_core.end(); it++) {
+		(*it)->dump();
+	}
+
     addConstraint(current, Expr::createIsZero(condition));
     if (!isInternal) {
       if (pathWriter) {
@@ -881,14 +879,12 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
 
     while(currentITreeNode != NULL){
     	currentITreeNode->dump();
-    	llvm::errs() << "\nPRINTED\n";
+    	llvm::errs() << "\nPRINTED CURRENT ITREENODE\n";
 		for (std::vector< PathCondition >::reverse_iterator it = currentITreeNode->newPathConds.rbegin() ;
 						it != currentITreeNode->newPathConds.rend(); ++it){
-
 				bool isbaseloc = false, isvalueloc = false;
 				for (std::vector< ref<Expr> >::const_iterator dt = current.itreeNode->dependenciesLoc.begin() ;
 								dt != current.itreeNode->dependenciesLoc.end(); ++dt){
-
 					if(dt->operator ==(it->baseLoc))
 						isbaseloc = true;
 
