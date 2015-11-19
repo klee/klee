@@ -1,0 +1,32 @@
+KLEE 1.1.0, 13 November 2015
+============================
+
+* Made LLVM 3.4 and STP 2.1.0 the recommended versions for installing KLEE (Cristian Cadar, @ccadar; Dan Liew, @delcypher; Martin Nowack, @MartinNowack; Mate Soos, @msoos)
+* Added instructions for using the Docker images (Dan Liew, @delcypher)
+* Added NEWS file to keep track of changes for each release (Cristian Cadar, @ccadar)
+* Added coverage information for the current KLEE codebase (Timotej Kapus, @kren1)
+* Added -entry-point=FOO option, where FOO is the name of the function to use as the entry point for execution (Riccardo Schirone, @ret2libc)
+* Switched STP to v2.1.0 (instead of the old r940) in TravisCI (Martin Nowack, @MartinNowack)
+* Improved Dockerfiles to use specific dependency versions (Dan Liew, @delcypher)
+* Bug fix: Fixed signed division by constant 1/-1 (Martin Nowack, @MartinNowack, reported by Timotej Kapus, @kren1)
+* Bug fix: Generate SRrem expressions correctly (Martin Nowack, @MartinNowack, reported by Timotej Kapus, @kren1)
+* Bug fix: Allowed the generation of initial values for queries with empty constraint set (Martin Nowack, @MartinNowack)
+* Bug fix: Fixed assertion failure in getDirectCallTarget (Sean Bartell, @yotann)
+* Bug fix/test improvement: Use a temporary directory instead of /tmp in futimesat test (Andrew Chi, @andrewchi)
+* Various fixes and improvements to the website (Eric Rizzi, @holycrap872; Martin Nowack, @MartinNowack; Bheesham Persaud, @bheesham; Gu Zhengxiong, @NoviceLive; Cristian Cadar, @ccadar)
+
+
+KLEE 1.0.0, 10 August 2015
+==========================
+
+# Recent changes (from 2015)
+
+* Several performance improvements to the counterexample cache, including changing some default behaviour (Eric Rizzi, @holycrap872)
+* Computing coverage of KLEE code in Travis CI (Timotej Kapus, @kren1)
+* Added an option --readable-posix-inputs which is used to turn on/off the CEX preferences added in the POSIX model (Eric Rizzi, @holycrap872; Cristian Cadar, @ccadar)
+* Lots of improvements to the build process (Dan Liew, @delcypher)
+* Added klee-clang as alternative to klee-gcc (Martin Nowack, @MartinNowack)
+* Added Dockerfile for building a KLEE Docker image (Dan Liew, @delcypher)
+* Added a new option, --rewrite-equalities, which makes it possible to disable the optimisation that rewrites existing constraints when an equality with a constant is added (Cristian Cadar, @ccadar)
+* Cleaner, more efficient timestamps (Emil Rakadjiev, @erakadjiev)
+* Improved integer overflow detection (Luca Dariz, @luckyluke) 
