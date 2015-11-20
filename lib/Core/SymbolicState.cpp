@@ -43,6 +43,7 @@ namespace klee {
     Function *ret = NULL;
     if (!stack_frame.empty()) {
 	ret = stack_frame.top()->getFunction();
+	stack_frame.pop();
     }
     return ret;
   }
