@@ -95,7 +95,8 @@ ITreeNode::~ITreeNode() {
 }
 
 void ITreeNode::dump() {
-	this->print(llvm::errs());
+  llvm::errs() << "\n------------------------- Root ITree --------------------------------\n";
+  this->print(llvm::errs());
 }
 
 void ITreeNode::print(llvm::raw_ostream &stream) {
