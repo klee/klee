@@ -271,7 +271,7 @@ namespace klee {
 Executor::Executor(const InterpreterOptions &opts,
                    InterpreterHandler *ih) 
   : Interpreter(opts),
-    symbolicState(new SymbolicState()),
+    pointsToState(new PointsToState()),
     kmodule(0),
     interpreterHandler(ih),
     searcher(0),
@@ -1246,7 +1246,7 @@ void Executor::executeCall(ExecutionState &state,
       transferToBasicBlock(ii->getNormalDest(), i->getParent(), state);
   } else {
     // Push callee into symbolic state
-    symbolicState->push_frame(f);
+    pointsToState->push_frame(f);
 
     // FIXME: I'm not really happy about this reliance on prevPC but it is ok, I
     // guess. This just done to avoid having to pass KInstIterator everywhere
@@ -1452,7 +1452,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       assert(!caller && "caller set on initial stack frame");
       terminateStateOnExit(state);
     } else {
-      symbolicState->pop_frame();
+      pointsToState->pop_frame();
 
       state.popFrame();
 

@@ -23,14 +23,14 @@ namespace llvm {
 
 namespace klee {
 
-  class SymbolicFrame {
+  class PointsToFrame {
     Function *function;
     vector<Value *> local_ptr;
 
   public:
-    SymbolicFrame(Function *function);
+    PointsToFrame(Function *function);
 
-    ~SymbolicFrame();
+    ~PointsToFrame();
 
     Function *getFunction();
 
@@ -39,12 +39,12 @@ namespace klee {
     }
   };
 
-  class SymbolicState {
-    stack< SymbolicFrame *, vector<SymbolicFrame *> > stack_frame;
+  class PointsToState {
+    stack< PointsToFrame *, vector<PointsToFrame *> > stack_frame;
   public:
-    SymbolicState();
+    PointsToState();
 
-    ~SymbolicState();
+    ~PointsToState();
 
     void push_frame(Function *callee);
 

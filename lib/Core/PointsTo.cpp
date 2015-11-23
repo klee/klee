@@ -1,5 +1,5 @@
 
-#include "SymbolicState.h"
+#include "PointsTo.h"
 #include "klee/Config/Version.h"
 
 #if LLVM_VERSION_CODE > LLVM_VERSION(3, 2)
@@ -13,33 +13,33 @@ using namespace llvm;
 
 namespace klee {
 
-  SymbolicFrame::SymbolicFrame(Function *function) :
+  PointsToFrame::PointsToFrame(Function *function) :
       function(function) {}
 
-  SymbolicFrame::~SymbolicFrame() {
+  PointsToFrame::~PointsToFrame() {
     local_ptr.clear();
   }
 
-  Function *SymbolicFrame::getFunction() {
+  Function *PointsToFrame::getFunction() {
     return function;
   }
 
-  SymbolicState::SymbolicState() {}
+  PointsToState::PointsToState() {}
 
-  SymbolicState::~SymbolicState() {
+  PointsToState::~PointsToState() {
     /// Delete all frames
     while (!stack_frame.empty()) {
-	SymbolicFrame *frame = stack_frame.top();
+	PointsToFrame *frame = stack_frame.top();
 	stack_frame.pop();
 	delete frame;
     }
   }
 
-  void SymbolicState::push_frame(Function *function) {
-    stack_frame.push(new SymbolicFrame(function));
+  void PointsToState::push_frame(Function *function) {
+    stack_frame.push(new PointsToFrame(function));
   }
 
-  Function *SymbolicState::pop_frame() {
+  Function *PointsToState::pop_frame() {
     Function *ret = NULL;
     if (!stack_frame.empty()) {
 	ret = stack_frame.top()->getFunction();
@@ -48,7 +48,7 @@ namespace klee {
     return ret;
   }
 
-  void SymbolicState::add_local(Value *ptr) {
+  void PointsToState::add_local(Value *ptr) {
     stack_frame.top()->add_local(ptr);
   }
 }
