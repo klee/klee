@@ -23,10 +23,38 @@ namespace llvm {
 
 namespace klee {
 
+  class MemoryCell {
+    Value *llvm_value;
+  public:
+    MemoryCell(Value *cell) : llvm_value(cell) {}
+    ~MemoryCell();
+    Value *get_llvm() {
+      return llvm_value;
+    }
+  };
+
+  class Location {
+    Value *llvm_value;
+    MemoryCell *content;
+  public:
+    Location(Value *location);
+
+    Location(Value *location, MemoryCell *content);
+
+    ~Location();
+
+    void set_content(MemoryCell *content);
+
+    MemoryCell *get_content() {
+      return content;
+    }
+
+    Value *get_llvm();
+  };
+
   class PointsToFrame {
     Function *function;
-    vector<Value *> local_allocations;
-    map<Value *, vector<Value *> > local_address_of;
+    map<MemoryCell *, vector<Location *> > points_to;
 
   public:
     PointsToFrame(Function *function);
@@ -35,19 +63,21 @@ namespace klee {
 
     Function *getFunction();
 
-    void add_local(Value *cell, Value *location);
+    void alloc_local(MemoryCell *cell, Location *location);
 
-    void replace_local(Value *cell, vector<Value *> location_set);
+    void address_of_to_local(MemoryCell *target, MemoryCell *source);
 
-    vector<Value *> pointing_to(Value *cell);
+    void assign_to_local(MemoryCell *target, MemoryCell *source);
+
+    void load_to_local(MemoryCell *target, MemoryCell *address);
+
+    void store_from_local(MemoryCell *source, MemoryCell *address);
+
   };
 
   class PointsToState {
     stack< PointsToFrame *, vector<PointsToFrame *> > points_to_stack;
-    vector<Value *> global_allocations;
-    map<Value *, vector<Value *> > global_address_of;
-
-    void add_global(Value *cell, Value *location);
+    map<MemoryCell *, vector<Location *> > points_to;
 
   public:
     PointsToState();
@@ -58,15 +88,22 @@ namespace klee {
 
     Function *pop_frame();
 
-    void add_global(Value *cell, Value *location);
+    void alloc_local(MemoryCell *cell, Location *location);
 
-    void add_local(Value *cell, Value *location);
+    void alloc_global(MemoryCell *cell, Location *location);
 
-    void load(Value *cell, Value *location);
+    void assign_to_local(MemoryCell *target, MemoryCell *source);
 
-    void store(Value *cell, Value *location);
+    void assign_to_global(MemoryCell *target, MemoryCell *source);
 
-    vector<Value *> pointing_to(Value *cell);
+    void load_to_local(MemoryCell *target, MemoryCell *address);
+
+    void load_to_global(MemoryCell *target, MemoryCell *address);
+
+    void store_from_local(MemoryCell *source, MemoryCell *address);
+
+    void store_from_global(MemoryCell *source, MemoryCell *address);
+
   };
 }
 

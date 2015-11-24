@@ -13,56 +13,71 @@ using namespace llvm;
 
 namespace klee {
 
+  Location::Location(Value *location) :
+    llvm_value(location), content(0) {}
+
+  Location::Location(Value *location, MemoryCell *content) :
+    llvm_value(location), content(content) {}
+
+  Location::~Location() {}
+
+  void Location::set_content(MemoryCell *cell) {
+    content = cell;
+  }
+
+  Value *Location::get_llvm() {
+    return llvm_value;
+  }
+
   PointsToFrame::PointsToFrame(Function *function) :
       function(function) {}
 
   PointsToFrame::~PointsToFrame()     {
-    local_allocations.clear();
-    local_address_of.clear();
+    points_to.clear();
   }
 
   Function *PointsToFrame::getFunction() {
     return function;
   }
 
-  void PointsToFrame::add_local(Value *cell, Value *location) {
-    local_allocations.push_back(location);
-    local_address_of[location].push_back(cell);
+  void PointsToFrame::alloc_local(MemoryCell *cell, Location *location) {
+    points_to[cell].push_back(location);
   }
 
-  void PointsToFrame::replace_local(Value *cell, vector<Value *> location_set) {
+  void PointsToFrame::address_of_to_local(MemoryCell *target, MemoryCell *source) {
+    points_to[target].clear();
+    points_to[target].push_back(new Location(source));
+  }
 
-    // Remove cell from every value in map.
-    for (map<Value *, vector<Value *> >::iterator it = local_address_of.begin(); it != local_address_of.end(); it++) {
-	int index = 0;
-	vector<Value *> cell_list = it->second;
-	for (vector<Value *>::iterator cell_it = cell_list.begin(); cell_it != cell_list.end(); cell_it++) {
-	    if (*(cell_it) == cell) {
-		cell_list.erase(cell_list.begin() + index);
-		break;
-	    }
-	    index++;
+  void PointsToFrame::assign_to_local(MemoryCell *target, MemoryCell *source) {
+    points_to[target].clear();
+    points_to[target] = points_to[source];
+  }
+
+  void PointsToFrame::load_to_local(MemoryCell *target, MemoryCell *address) {
+    for (vector<Location *>::iterator pointed_to_location = points_to[address].begin();
+	pointed_to_location != points_to[address].end();
+	pointed_to_location++) {
+	Cell *content = (*pointed_to_location)->get_content();
+	if (content != 0) {
+	    vector<Location *> pointed_to_by_target = points_to[target];
+	    vector<Location *> pointed_to_by_content = points_to[content];
+	    pointed_to_by_target.insert(pointed_to_by_target.end(), pointed_to_by_content.begin(), pointed_to_by_content.end());
 	}
-    }
-
-    // Add cell to every location in location_set
-    for (vector<Value *>::iterator it0 = location_set.begin(); it0 != location_set.end(); it0++) {
-	local_address_of[*it0].push_back(cell);
     }
   }
 
-  vector<Value *> PointsToFrame::pointing_to(Value *cell) {
-    vector<Value *> res;
-    for (map<Value *, vector<Value *> >::iterator it = local_address_of.begin(); it != local_address_of.end(); it++) {
-	vector<Value *> cell_list = it->second;
-	for (vector<Value *>::iterator cell_it = cell_list.begin(); cell_it != cell_list.end(); cell_it++) {
-	    if ((*cell_it) == cell) {
-		res.push_back(it->first);
-		break;
-	    }
+  void PointsToFrame::store_from_local(MemoryCell *source, MemoryCell *address) {
+    for (vector<Location *>::iterator pointed_to_location = points_to[address].begin();
+	pointed_to_location != points_to[address].end();
+	pointed_to_location++) {
+	Cell *content = (*pointed_to_location)->get_content();
+	if (content != 0) {
+	    vector<Location *> pointed_to_by_source = points_to[source];
+	    vector<Location *> pointed_to_by_content = points_to[content];
+	    pointed_to_by_content.insert(pointed_to_by_content.end(), pointed_to_by_source.begin(), pointed_to_by_source.end());
 	}
     }
-    return res;
   }
 
   /**/
@@ -76,14 +91,58 @@ namespace klee {
 	points_to_stack.pop();
 	delete frame;
     }
-
-    global_allocations.clear();
-    global_address_of.clear();
+    points_to.clear();
   }
 
-  void PointsToState::add_global(Value *cell, Value *location) {
-    global_allocations.push_back(location);
-    global_address_of[location].push_back(cell);
+  void PointsToState::alloc_local(MemoryCell *cell, Location *location) {
+    points_to_stack.top()->alloc_local(cell, location);
+  }
+
+  void PointsToState::alloc_global(MemoryCell *cell, Location *location) {
+    points_to[cell].push_back(location);
+  }
+
+  void PointsToState::assign_to_local(MemoryCell *target, MemoryCell *source) {
+    points_to_stack.top()->assign_to_local(target, source);
+  }
+
+  void PointsToState::assign_to_global(MemoryCell *target, MemoryCell *source) {
+    points_to[target].clear();
+    points_to[target] = points_to[source];
+  }
+
+  void PointsToState::load_to_local(MemoryCell *target, MemoryCell *address) {
+    points_to_stack.top()->load_to_local(target, address);
+  }
+
+  void PointsToState::load_to_global(MemoryCell *target, MemoryCell *address) {
+    for (vector<Location *>::iterator pointed_to_location = points_to[address].begin();
+	pointed_to_location != points_to[address].end();
+	pointed_to_location++) {
+	Cell *content = (*pointed_to_location)->get_content();
+	if (content != 0) {
+	    vector<Location *> pointed_to_by_target = points_to[target];
+	    vector<Location *> pointed_to_by_content = points_to[content];
+	    pointed_to_by_target.insert(pointed_to_by_target.end(), pointed_to_by_content.begin(), pointed_to_by_content.end());
+	}
+    }
+  }
+
+  void PointsToState::store_from_local(MemoryCell *source, MemoryCell *address) {
+    points_to_stack.top()->store_from_local(source, address);
+  }
+
+  void PointsToState::store_from_global(MemoryCell *source, MemoryCell *address) {
+    for (vector<Location *>::iterator pointed_to_location = points_to[address].begin();
+	pointed_to_location != points_to[address].end();
+	pointed_to_location++) {
+	Cell *content = (*pointed_to_location)->get_content();
+	if (content != 0) {
+	    vector<Location *> pointed_to_by_source = points_to[source];
+	    vector<Location *> pointed_to_by_content = points_to[content];
+	    pointed_to_by_content.insert(pointed_to_by_content.end(), pointed_to_by_source.begin(), pointed_to_by_source.end());
+	}
+    }
   }
 
   void PointsToState::push_frame(Function *function) {
@@ -97,30 +156,6 @@ namespace klee {
 	points_to_stack.pop();
     }
     return ret;
-  }
-
-  void PointsToState::add_local(Value *cell, Value *location) {
-    points_to_stack.top()->add_local(cell, location);
-  }
-
-  void load(Value *cell, Value *location) {
-  }
-
-  void store(Value *cell, Value *location) {
-  }
-
-  vector<Value *> PointsToState::pointing_to(Value *cell) {
-    vector<Value *> res;
-    for (map<Value *, vector<Value *> >::iterator it = global_address_of.begin(); it != global_address_of.end(); it++) {
-	vector<Value *> cell_list = it->second;
-	for (vector<Value *>::iterator cell_it = cell_list.begin(); cell_it != cell_list.end(); cell_it++) {
-	    if ((*cell_it) == cell) {
-		res.push_back(it->first);
-		break;
-	    }
-	}
-    }
-    return res;
   }
 
 }
