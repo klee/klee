@@ -25,7 +25,8 @@ namespace klee {
 
   class PointsToFrame {
     Function *function;
-    vector<Value *> local_ptr;
+    vector<Value *> local_allocations;
+    map<Value *, vector<Value *> > local_address_of;
 
   public:
     PointsToFrame(Function *function);
@@ -34,13 +35,20 @@ namespace klee {
 
     Function *getFunction();
 
-    void add_local(Value *ptr) {
-      local_ptr.push_back(ptr);
-    }
+    void add_local(Value *cell, Value *location);
+
+    void replace_local(Value *cell, vector<Value *> location_set);
+
+    vector<Value *> pointing_to(Value *cell);
   };
 
   class PointsToState {
-    stack< PointsToFrame *, vector<PointsToFrame *> > stack_frame;
+    stack< PointsToFrame *, vector<PointsToFrame *> > points_to_stack;
+    vector<Value *> global_allocations;
+    map<Value *, vector<Value *> > global_address_of;
+
+    void add_global(Value *cell, Value *location);
+
   public:
     PointsToState();
 
@@ -50,7 +58,15 @@ namespace klee {
 
     Function *pop_frame();
 
-    void add_local(Value *ptr);
+    void add_global(Value *cell, Value *location);
+
+    void add_local(Value *cell, Value *location);
+
+    void load(Value *cell, Value *location);
+
+    void store(Value *cell, Value *location);
+
+    vector<Value *> pointing_to(Value *cell);
   };
 }
 
