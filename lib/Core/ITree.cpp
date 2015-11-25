@@ -140,14 +140,14 @@ void ITreeNode::print(llvm::raw_ostream &stream, const unsigned int tab_num) {
 		stream << "\n";
 	}
 
-	stream << tabs_next << "newPathConds =";
-	for (std::vector<PathCondition>::iterator it = newPathConds.begin(); it != newPathConds.end(); (stream << ","), it++) {
+	stream << tabs_next << "addedPathCond =";
+	for (std::vector<PathCondition>::iterator it = addedPathCond.begin(); it != addedPathCond.end(); (stream << ","), it++) {
 		it->print(stream);
 	}
 	stream << "\n";
 
-	stream << tabs_next << "allPathConds =";
-	for (std::vector<PathCondition>::iterator it = allPathConds.begin(); it != allPathConds.end(); (stream << ","), it++) {
+	stream << tabs_next << "pathCond =";
+	for (std::vector<PathCondition>::iterator it = pathCond.begin(); it != pathCond.end(); (stream << ","), it++) {
 		it->print(stream);
 	}
 	stream << "\n";
