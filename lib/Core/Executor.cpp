@@ -1150,7 +1150,6 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     timeout *= it->second.size();
   solver->setTimeout(timeout);
   bool success = solver->evaluate(current, condition, res);
-
   solver->setTimeout(0);
   if (!success) {
     current.pc = current.prevPC;

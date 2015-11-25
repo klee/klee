@@ -17,6 +17,7 @@ enum Comparison {Eq, Ne, Ult, Ule, Ugt, Uge, Slt, Sle, Sgt, Sge, Neg, Not};
 
 namespace klee {
     class ExecutionState;
+
 	struct PathCondition{
     	ref<Expr> base;
     	ref<Expr> baseLoc; //load location
@@ -24,7 +25,11 @@ namespace klee {
 		ref<Expr> valueLoc;
 		Operation operationName;
 		bool isRemoved;
+
+	    void dump();
+	    void print(llvm::raw_ostream &stream);
 	};
+
 	struct BranchCondition{
 		ref<Expr> base;
 		ref<Expr> value;
@@ -78,9 +83,23 @@ namespace klee {
 	    std::vector <pair_type> variablesTracking;
 	    BranchCondition latestBranchCond;
 
+	    void dump();
+	    void print(llvm::raw_ostream &stream);
+
 	private:
 	    ITreeNode(ITreeNode *_parent, ExecutionState *_data);
 	    ~ITreeNode();
+
+	    void print(llvm::raw_ostream &stream, const unsigned int tab_num);
+
+	    std::string make_tabs(const unsigned int tab_num) {
+	    	std::string tabs_string;
+	    	for (unsigned int i = 0; i < tab_num; i++) {
+	    		tabs_string += "\t";
+	    	}
+	    	return tabs_string;
+	    }
+
 	};
 
 }

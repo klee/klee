@@ -12,6 +12,36 @@
 
 using namespace klee;
 
+void PathCondition::dump() {
+	this->print(llvm::errs());
+}
+
+void PathCondition::print(llvm::raw_ostream & stream) {
+	stream << "baseLoc = ";
+	if (!baseLoc.isNull()) {
+		baseLoc->print(stream);
+	} else {
+		stream << "NULL";
+	}
+	stream << "\n";
+	stream << "value = ";
+	if (!value.isNull()) {
+		value->print(stream);
+	} else {
+		stream << "NULL";
+	}
+	stream << "\n";
+	stream << "valueLoc = ";
+	if (!valueLoc.isNull()) {
+		valueLoc->print(stream);
+	} else {
+		stream << "NULL";
+	}
+	stream << "\n";
+	stream << "operationName = " << operationName << "\n";
+	stream << "isRemoved = " << isRemoved << "\n";
+}
+
 ITree::ITree(const data_type &_root) : root(new ITreeNode(0,_root)) {
 }
 
@@ -63,3 +93,86 @@ ITreeNode::ITreeNode(ITreeNode *_parent,
 
 ITreeNode::~ITreeNode() {
 }
+
+void ITreeNode::dump() {
+  llvm::errs() << "\n------------------------- Root ITree --------------------------------\n";
+  this->print(llvm::errs());
+}
+
+void ITreeNode::print(llvm::raw_ostream &stream) {
+	ITreeNode::print(stream, 0);
+}
+
+void ITreeNode::print(llvm::raw_ostream &stream, const unsigned int tab_num) {
+	std::string tabs = make_tabs(tab_num);
+	std::string tabs_next = tabs + "\t";
+
+	stream << tabs << "ITreeNode\n";
+	stream << tabs_next << "programPoint = ";
+	if (!programPoint) {
+		stream << "NULL";
+	} else {
+		stream << (*programPoint);
+	}
+	stream << "\n";
+	stream << tabs_next << "conditions =";
+	for (std::vector< ref<Expr> >::iterator it = conditions.begin(); it != conditions.end(); (stream << ","), it++) {
+		if (!((*it).isNull())) {
+			(*it)->print(stream);
+		} else {
+			stream << "NULL";
+		}
+	}
+	stream << "\n";
+
+	stream << tabs_next << "Left:\n";
+	if (!left) {
+		stream << tabs_next << "NULL\n";
+	} else {
+		left->print(stream, tab_num + 1);
+		stream << "\n";
+	}
+	stream << tabs_next << "Right:\n";
+	if (!right) {
+		stream << tabs_next << "NULL\n";
+	} else {
+		right->print(stream, tab_num + 1);
+		stream << "\n";
+	}
+
+	stream << tabs_next << "addedPathCond =";
+	for (std::vector<PathCondition>::iterator it = addedPathCond.begin(); it != addedPathCond.end(); (stream << ","), it++) {
+		it->print(stream);
+	}
+	stream << "\n";
+
+	stream << tabs_next << "pathCond =";
+	for (std::vector<PathCondition>::iterator it = pathCond.begin(); it != pathCond.end(); (stream << ","), it++) {
+		it->print(stream);
+	}
+	stream << "\n";
+
+	stream << tabs_next << "dependenciesLoc =";
+	for (std::vector< ref<Expr> >::iterator it = dependenciesLoc.begin(); it != dependenciesLoc.end(); (stream << ","), it++) {
+		if (!((*it).isNull())) {
+			(*it)->print(stream);
+		} else {
+			stream << "NULL";
+		}
+	}
+	stream << "\n";
+
+	stream << tabs_next << "interpolant =";
+	if (interpolant.isNull()) {
+		stream << "NULL\n";
+	} else {
+		interpolant->print(stream);
+		stream << "\n";
+	}
+
+	stream << tabs_next << "InterpolantStatus =" << InterpolantStatus;
+
+}
+
+
+
