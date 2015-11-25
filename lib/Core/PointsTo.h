@@ -47,9 +47,7 @@ namespace klee {
 
     void set_content(MemoryCell *content);
 
-    MemoryCell *get_content() {
-      return content;
-    }
+    MemoryCell *get_content();
 
     Value *get_llvm();
   };
@@ -107,6 +105,14 @@ namespace klee {
     void store_from_global(MemoryCell *source, MemoryCell *address);
 
   };
+
+
+  /// Function declarations
+
+  void store_points_to(map<MemoryCell *, vector<Location *> > points_to, MemoryCell *source, MemoryCell *address);
+
+  void load_points_to(map<MemoryCell *, vector<Location *> > points_to, MemoryCell *target, MemoryCell *address);
+
 }
 
 #endif

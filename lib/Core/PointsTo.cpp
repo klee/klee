@@ -28,6 +28,10 @@ namespace klee {
     content = cell;
   }
 
+  MemoryCell *Location::get_content() {
+    return content;
+  }
+
   Value *Location::get_llvm() {
     return llvm_value;
   }
@@ -58,29 +62,11 @@ namespace klee {
   }
 
   void PointsToFrame::load_to_local(MemoryCell *target, MemoryCell *address) {
-    for (vector<Location *>::iterator pointed_to_location = points_to[address].begin();
-	pointed_to_location != points_to[address].end();
-	pointed_to_location++) {
-	MemoryCell *content = (*pointed_to_location)->get_content();
-	if (content != 0) {
-	    vector<Location *> pointed_to_by_target = points_to[target];
-	    vector<Location *> pointed_to_by_content = points_to[content];
-	    pointed_to_by_target.insert(pointed_to_by_target.end(), pointed_to_by_content.begin(), pointed_to_by_content.end());
-	}
-    }
+    load_points_to(points_to, target, address);
   }
 
   void PointsToFrame::store_from_local(MemoryCell *source, MemoryCell *address) {
-    for (vector<Location *>::iterator pointed_to_location = points_to[address].begin();
-	pointed_to_location != points_to[address].end();
-	pointed_to_location++) {
-	MemoryCell *content = (*pointed_to_location)->get_content();
-	if (content != 0) {
-	    vector<Location *> pointed_to_by_source = points_to[source];
-	    vector<Location *> pointed_to_by_content = points_to[content];
-	    pointed_to_by_content.insert(pointed_to_by_content.end(), pointed_to_by_source.begin(), pointed_to_by_source.end());
-	}
-    }
+    store_points_to(points_to, source, address);
   }
 
   /**/
@@ -119,16 +105,7 @@ namespace klee {
   }
 
   void PointsToState::load_to_global(MemoryCell *target, MemoryCell *address) {
-    for (vector<Location *>::iterator pointed_to_location = points_to[address].begin();
-	pointed_to_location != points_to[address].end();
-	pointed_to_location++) {
-	MemoryCell *content = (*pointed_to_location)->get_content();
-	if (content != 0) {
-	    vector<Location *> pointed_to_by_target = points_to[target];
-	    vector<Location *> pointed_to_by_content = points_to[content];
-	    pointed_to_by_target.insert(pointed_to_by_target.end(), pointed_to_by_content.begin(), pointed_to_by_content.end());
-	}
-    }
+    load_points_to(points_to, target, address);
   }
 
   void PointsToState::store_from_local(MemoryCell *source, MemoryCell *address) {
@@ -136,16 +113,7 @@ namespace klee {
   }
 
   void PointsToState::store_from_global(MemoryCell *source, MemoryCell *address) {
-    for (vector<Location *>::iterator pointed_to_location = points_to[address].begin();
-	pointed_to_location != points_to[address].end();
-	pointed_to_location++) {
-	MemoryCell *content = (*pointed_to_location)->get_content();
-	if (content != 0) {
-	    vector<Location *> pointed_to_by_source = points_to[source];
-	    vector<Location *> pointed_to_by_content = points_to[content];
-	    pointed_to_by_content.insert(pointed_to_by_content.end(), pointed_to_by_source.begin(), pointed_to_by_source.end());
-	}
-    }
+    store_points_to(points_to, source, address);
   }
 
   void PointsToState::push_frame(Function *function) {
@@ -159,6 +127,34 @@ namespace klee {
 	points_to_stack.pop();
     }
     return ret;
+  }
+
+  /**/
+
+  void load_points_to(map<MemoryCell *, vector<Location *> > points_to, MemoryCell *target, MemoryCell *address) {
+    for (vector<Location *>::iterator pointed_to_location = points_to[address].begin();
+	pointed_to_location != points_to[address].end();
+	pointed_to_location++) {
+	MemoryCell *content = (*pointed_to_location)->get_content();
+	if (content != 0) {
+	    vector<Location *> pointed_to_by_target = points_to[target];
+	    vector<Location *> pointed_to_by_content = points_to[content];
+	    pointed_to_by_target.insert(pointed_to_by_target.end(), pointed_to_by_content.begin(), pointed_to_by_content.end());
+	}
+    }
+  }
+
+  void store_points_to(map<MemoryCell *, vector<Location *> > points_to, MemoryCell *source, MemoryCell *address) {
+    for (vector<Location *>::iterator pointed_to_location = points_to[address].begin();
+	pointed_to_location != points_to[address].end();
+	pointed_to_location++) {
+	MemoryCell *content = (*pointed_to_location)->get_content();
+	if (content != 0) {
+	    vector<Location *> pointed_to_by_source = points_to[source];
+	    vector<Location *> pointed_to_by_content = points_to[content];
+	    pointed_to_by_content.insert(pointed_to_by_content.end(), pointed_to_by_source.begin(), pointed_to_by_source.end());
+	}
+    }
   }
 
 }
