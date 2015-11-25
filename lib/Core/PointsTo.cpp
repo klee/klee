@@ -7,20 +7,26 @@
 #else
 #include "llvm/Function.h"
 #endif
+#include "llvm/Support/raw_ostream.h"
+
 
 using namespace klee;
 using namespace llvm;
 
 namespace klee {
 
-  Location::Location(Value *location) :
-    llvm_value(location), content(0) {}
+  MemoryCell::MemoryCell(Value *cell) :
+      llvm_value(cell) {}
 
-  Location::Location(Value *location, MemoryCell *content) :
-    llvm_value(location), content(content) {}
+  Value *MemoryCell::get_llvm() {
+    return llvm_value;
+  }
 
-  Location::Location(MemoryCell *content) :
-    llvm_value(0), content(content) {}
+  Location::Location() :
+    content(0) {}
+
+  Location::Location(MemoryCell *cell) :
+    content(cell) {}
 
   Location::~Location() {}
 
@@ -32,12 +38,8 @@ namespace klee {
     return content;
   }
 
-  Value *Location::get_llvm() {
-    return llvm_value;
-  }
-
   PointsToFrame::PointsToFrame(Function *function) :
-      function(function) {}
+    function(function) {}
 
   PointsToFrame::~PointsToFrame()     {
     points_to.clear();
@@ -69,9 +71,16 @@ namespace klee {
     store_points_to(points_to, source, address);
   }
 
+  bool PointsToFrame::is_main_frame() {
+    return function == 0;
+  }
+
   /**/
 
-  PointsToState::PointsToState() {}
+  PointsToState::PointsToState() {
+    /// Here we insert a frame with null function indicating "main"
+    points_to_stack.push(new PointsToFrame(0));
+  }
 
   PointsToState::~PointsToState() {
     /// Delete all frames
@@ -83,40 +92,52 @@ namespace klee {
     points_to.clear();
   }
 
-  void PointsToState::alloc_local(MemoryCell *cell, Location *location) {
-    points_to_stack.top()->alloc_local(cell, location);
+  void PointsToState::alloc_local(Value *cell) {
+    points_to_stack.top()->alloc_local(new MemoryCell(cell), new Location());
   }
 
-  void PointsToState::alloc_global(MemoryCell *cell, Location *location) {
-    points_to[cell].push_back(location);
+  void PointsToState::alloc_global(Value *cell) {
+    points_to[new MemoryCell(cell)].push_back(new Location());
   }
 
-  void PointsToState::assign_to_local(MemoryCell *target, MemoryCell *source) {
-    points_to_stack.top()->assign_to_local(target, source);
+  void PointsToState::assign_to_local(Value *target, Value *source) {
+    points_to_stack.top()->assign_to_local(new MemoryCell(target), new MemoryCell(source));
   }
 
-  void PointsToState::assign_to_global(MemoryCell *target, MemoryCell *source) {
-    points_to[target].clear();
-    points_to[target] = points_to[source];
+  void PointsToState::assign_to_global(Value *target, Value *source) {
+    MemoryCell *target_cell = new MemoryCell(target);
+    points_to[target_cell].clear();
+    points_to[target_cell] = points_to[new MemoryCell(source)];
   }
 
-  void PointsToState::load_to_local(MemoryCell *target, MemoryCell *address) {
-    points_to_stack.top()->load_to_local(target, address);
+  void PointsToState::address_of_to_local(Value *target, Value *source) {
+    points_to_stack.top()->address_of_to_local(new MemoryCell(target), new MemoryCell(source));
   }
 
-  void PointsToState::load_to_global(MemoryCell *target, MemoryCell *address) {
-    load_points_to(points_to, target, address);
+  void PointsToState::address_of_to_global(Value *target, Value *source) {
+    MemoryCell *target_cell = new MemoryCell(target);
+    points_to[target_cell].clear();
+    points_to[target_cell].push_back(new Location(new MemoryCell(source)));
   }
 
-  void PointsToState::store_from_local(MemoryCell *source, MemoryCell *address) {
-    points_to_stack.top()->store_from_local(source, address);
+  void PointsToState::load_to_local(Value *target, Value *address) {
+    points_to_stack.top()->load_to_local(new MemoryCell(target), new MemoryCell(address));
   }
 
-  void PointsToState::store_from_global(MemoryCell *source, MemoryCell *address) {
-    store_points_to(points_to, source, address);
+  void PointsToState::load_to_global(Value *target, Value *address) {
+    load_points_to(points_to, new MemoryCell(target), new MemoryCell(address));
+  }
+
+  void PointsToState::store_from_local(Value *source, Value *address) {
+    points_to_stack.top()->store_from_local(new MemoryCell(source), new MemoryCell(address));
+  }
+
+  void PointsToState::store_from_global(Value *source, Value *address) {
+    store_points_to(points_to, new MemoryCell(source), new MemoryCell(address));
   }
 
   void PointsToState::push_frame(Function *function) {
+    llvm::errs() << "PUSH FRAME " << function->getName() << "\n";
     points_to_stack.push(new PointsToFrame(function));
   }
 
@@ -130,6 +151,10 @@ namespace klee {
   }
 
   /**/
+
+  bool operator==(MemoryCell *lhs, MemoryCell *rhs) {
+    return lhs->get_llvm() == rhs->get_llvm();
+  }
 
   void load_points_to(map<MemoryCell *, vector<Location *> > points_to, MemoryCell *target, MemoryCell *address) {
     for (vector<Location *>::iterator pointed_to_location = points_to[address].begin();

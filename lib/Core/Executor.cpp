@@ -1975,6 +1975,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
  
     // Memory instructions...
   case Instruction::Alloca: {
+    /// We allocate pointer analysis object
+    pointsToState->alloc_local(i->getOperand(0));
+
     AllocaInst *ai = cast<AllocaInst>(i);
     unsigned elementSize = 
       kmodule->targetData->getTypeStoreSize(ai->getAllocatedType());
@@ -1990,11 +1993,25 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::Load: {
+    llvm::errs() << "LOAD\n";
+    llvm::errs() << "OPERAND0: ";
+    i->getOperand(0)->dump();
+    llvm::errs() << "OPERAND1: ";
+    i->getOperand(1)->dump();
+    pointsToState->load_to_local(i->getOperand(0), i->getOperand(1));
+
     ref<Expr> base = eval(ki, 0, state).value;
     executeMemoryOperation(state, false, base, 0, ki);
     break;
   }
   case Instruction::Store: {
+    llvm::errs() << "STORE\n";
+    llvm::errs() << "OPERAND0: ";
+    i->getOperand(0)->dump();
+    llvm::errs() << "OPERAND1: ";
+    i->getOperand(1)->dump();
+    pointsToState->store_from_local(i->getOperand(0), i->getOperand(1));
+
     ref<Expr> base = eval(ki, 1, state).value;
     ref<Expr> value = eval(ki, 0, state).value;
     executeMemoryOperation(state, true, base, value, 0);
@@ -2002,6 +2019,13 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::GetElementPtr: {
+    llvm::errs() << "GETELEMENTPTR\n";
+    llvm::errs() << "OPERAND0: ";
+    i->getOperand(0)->dump();
+    llvm::errs() << "OPERAND1: ";
+    i->getOperand(1)->dump();
+    pointsToState->address_of_to_local(i->getOperand(0), i->getOperand(1));
+
     KGEPInstruction *kgepi = static_cast<KGEPInstruction*>(ki);
     ref<Expr> base = eval(ki, 0, state).value;
 

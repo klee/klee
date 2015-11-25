@@ -27,19 +27,16 @@ namespace klee {
     Value *llvm_value;
   public:
     MemoryCell(Value *cell) : llvm_value(cell) {}
+
     ~MemoryCell();
-    Value *get_llvm() {
-      return llvm_value;
-    }
+
+    Value *get_llvm();
   };
 
   class Location {
-    Value *llvm_value;
     MemoryCell *content;
   public:
-    Location(Value *location);
-
-    Location(Value *location, MemoryCell *content);
+    Location();
 
     Location(MemoryCell *content);
 
@@ -48,8 +45,6 @@ namespace klee {
     void set_content(MemoryCell *content);
 
     MemoryCell *get_content();
-
-    Value *get_llvm();
   };
 
   class PointsToFrame {
@@ -73,11 +68,13 @@ namespace klee {
 
     void store_from_local(MemoryCell *source, MemoryCell *address);
 
+    bool is_main_frame();
+
   };
 
   class PointsToState {
     stack< PointsToFrame *, vector<PointsToFrame *> > points_to_stack;
-    map<MemoryCell *, vector<Location *> > points_to;
+    map< MemoryCell *, vector<Location *> > points_to;
 
   public:
     PointsToState();
@@ -88,26 +85,31 @@ namespace klee {
 
     Function *pop_frame();
 
-    void alloc_local(MemoryCell *cell, Location *location);
+    void alloc_local(Value *cell);
 
-    void alloc_global(MemoryCell *cell, Location *location);
+    void alloc_global(Value *cell);
 
-    void assign_to_local(MemoryCell *target, MemoryCell *source);
+    void address_of_to_local(Value *target, Value *source);
 
-    void assign_to_global(MemoryCell *target, MemoryCell *source);
+    void address_of_to_global(Value *target, Value *source);
 
-    void load_to_local(MemoryCell *target, MemoryCell *address);
+    void assign_to_local(Value *target, Value *source);
 
-    void load_to_global(MemoryCell *target, MemoryCell *address);
+    void assign_to_global(Value *target, Value *source);
 
-    void store_from_local(MemoryCell *source, MemoryCell *address);
+    void load_to_local(Value *target, Value *address);
 
-    void store_from_global(MemoryCell *source, MemoryCell *address);
+    void load_to_global(Value *target, Value *address);
+
+    void store_from_local(Value *source, Value *address);
+
+    void store_from_global(Value *source, Value *address);
 
   };
 
 
   /// Function declarations
+  bool operator==(MemoryCell *lhs, MemoryCell *rhs);
 
   void store_points_to(map<MemoryCell *, vector<Location *> > points_to, MemoryCell *source, MemoryCell *address);
 
