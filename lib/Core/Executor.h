@@ -399,7 +399,15 @@ private:
   void initTimers();
   void processTimers(ExecutionState *current,
                      double maxInstTime);
-                
+
+  void setCurrentInterpolant(size_t predNum, ref<Expr>& tmpInterpolant,
+			ExecutionState& current, ref<Expr> baseLocation);
+  bool subsumptionCheck(ExecutionState& current);
+  void propagateInterpolant(const ref<Expr>& tmpInterpolant,
+			const std::pair< ref<Expr>, ref<Expr> > & baseLocation, ExecutionState& current);
+ ref<Expr> reExecInterpolant(ref<Expr>& interpolant, std::pair< ref<Expr> , ref<Expr> >& interpolantLoc, ExecutionState& current);
+ ref<Expr> executeComparison(ref<Expr>& tmpInterpolant, const ref<Expr>& rightValue);
+
 public:
   Executor(const InterpreterOptions &opts, InterpreterHandler *ie);
   virtual ~Executor();
