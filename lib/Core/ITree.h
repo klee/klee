@@ -19,6 +19,7 @@ namespace klee {
     class ExecutionState;
 
 	struct PathCondition{
+    	ref<Expr> base;
     	ref<Expr> baseLoc; //load location
 		ref<Expr> value;
 		ref<Expr> valueLoc;
@@ -37,6 +38,7 @@ namespace klee {
 	struct Subsumption{
 		unsigned int * programPoint;
 		ref<Expr> interpolant;
+		std::pair< ref<Expr> , ref<Expr> > interpolantLoc;
 	};
 
 	class ITree{
@@ -67,15 +69,15 @@ namespace klee {
 		typedef std::pair <expression_type, expression_type> pair_type;
 
 	public:
-		typedef class PathCondition pathCond;
 		unsigned int * programPoint;
 		ITreeNode *parent, *left, *right;
 	    ExecutionState *data;
 	    std::vector< ref<Expr> > conditions;
-	    std::vector< PathCondition > newPathConds;
-	    std::vector< PathCondition > allPathConds;
+	    std::vector< PathCondition > addedPathCond;
+	    std::vector< PathCondition > pathCond;
 	    std::vector< ref<Expr> > dependenciesLoc;
 	    ref<Expr> interpolant;
+	    std::pair< ref<Expr>, ref<Expr> > interpolantLoc;
 	    Status InterpolantStatus;
 	    bool isSubsumed;
 	    std::vector <pair_type> variablesTracking;
