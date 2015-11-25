@@ -19,6 +19,9 @@ namespace klee {
   Location::Location(Value *location, MemoryCell *content) :
     llvm_value(location), content(content) {}
 
+  Location::Location(MemoryCell *content) :
+    llvm_value(0), content(content) {}
+
   Location::~Location() {}
 
   void Location::set_content(MemoryCell *cell) {
@@ -58,7 +61,7 @@ namespace klee {
     for (vector<Location *>::iterator pointed_to_location = points_to[address].begin();
 	pointed_to_location != points_to[address].end();
 	pointed_to_location++) {
-	Cell *content = (*pointed_to_location)->get_content();
+	MemoryCell *content = (*pointed_to_location)->get_content();
 	if (content != 0) {
 	    vector<Location *> pointed_to_by_target = points_to[target];
 	    vector<Location *> pointed_to_by_content = points_to[content];
@@ -71,7 +74,7 @@ namespace klee {
     for (vector<Location *>::iterator pointed_to_location = points_to[address].begin();
 	pointed_to_location != points_to[address].end();
 	pointed_to_location++) {
-	Cell *content = (*pointed_to_location)->get_content();
+	MemoryCell *content = (*pointed_to_location)->get_content();
 	if (content != 0) {
 	    vector<Location *> pointed_to_by_source = points_to[source];
 	    vector<Location *> pointed_to_by_content = points_to[content];
@@ -119,7 +122,7 @@ namespace klee {
     for (vector<Location *>::iterator pointed_to_location = points_to[address].begin();
 	pointed_to_location != points_to[address].end();
 	pointed_to_location++) {
-	Cell *content = (*pointed_to_location)->get_content();
+	MemoryCell *content = (*pointed_to_location)->get_content();
 	if (content != 0) {
 	    vector<Location *> pointed_to_by_target = points_to[target];
 	    vector<Location *> pointed_to_by_content = points_to[content];
@@ -136,7 +139,7 @@ namespace klee {
     for (vector<Location *>::iterator pointed_to_location = points_to[address].begin();
 	pointed_to_location != points_to[address].end();
 	pointed_to_location++) {
-	Cell *content = (*pointed_to_location)->get_content();
+	MemoryCell *content = (*pointed_to_location)->get_content();
 	if (content != 0) {
 	    vector<Location *> pointed_to_by_source = points_to[source];
 	    vector<Location *> pointed_to_by_content = points_to[content];

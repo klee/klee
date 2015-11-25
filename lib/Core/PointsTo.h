@@ -41,6 +41,8 @@ namespace klee {
 
     Location(Value *location, MemoryCell *content);
 
+    Location(MemoryCell *content);
+
     ~Location();
 
     void set_content(MemoryCell *content);
