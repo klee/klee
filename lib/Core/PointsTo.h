@@ -54,7 +54,7 @@ namespace klee {
 
     MemoryCell get_content();
 
-    bool operator==(Location rhs);
+    bool operator==(Location& rhs);
   };
 
   class PointsToFrame {

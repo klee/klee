@@ -1996,9 +1996,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     llvm::errs() << "LOAD\n";
     llvm::errs() << "OPERAND0: ";
     i->getOperand(0)->dump();
-    llvm::errs() << "OPERAND1: ";
-    i->getOperand(1)->dump();
-    pointsToState->load_to_local(i->getOperand(0), i->getOperand(1));
+    pointsToState->load_to_local(i, i->getOperand(0));
 
     ref<Expr> base = eval(ki, 0, state).value;
     executeMemoryOperation(state, false, base, 0, ki);
