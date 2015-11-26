@@ -215,6 +215,7 @@ bool CexCachingSolver::lookupAssignment(const Query &query,
 }
 
 bool CexCachingSolver::getAssignment(const Query& query, Assignment *&result) {
+  llvm::errs() << "CEXCACHINGSOLVER::GETASSIGNMENT\n";
   KeyType key;
 
   if (lookupAssignment(query, key, result))
@@ -226,12 +227,15 @@ bool CexCachingSolver::getAssignment(const Query& query, Assignment *&result) {
   std::vector< std::vector<unsigned char> > values;
   bool hasSolution;
   if (!solver->impl->computeInitialValues(query, objects, values, 
-                                          hasSolution))
+                                          hasSolution)) {
+      llvm::errs() << "CEXCACHINGSOLVER::GETASSIGNMENT Returning FALSE\n";
     return false;
+  }
     
   Assignment *binding;
   if (hasSolution) {
-    binding = new Assignment(objects, values);
+      llvm::errs() << __FUNCTION__ << ": HAS SOLUTION\n";
+      binding = new Assignment(objects, values);
 
     // Memoize the result.
     std::pair<assignmentsTable_ty::iterator, bool>
@@ -250,6 +254,7 @@ bool CexCachingSolver::getAssignment(const Query& query, Assignment *&result) {
   result = binding;
   cache.insert(key, binding);
 
+  llvm::errs() << __FUNCTION__ << ": RETURNS TRUE\n";
   return true;
 }
 
@@ -265,25 +270,40 @@ CexCachingSolver::~CexCachingSolver() {
 
 bool CexCachingSolver::computeValidity(const Query& query,
                                        Solver::Validity &result) {
+  llvm::errs() << "CEXCACHINGSOLVER::COMPUTEVALIDITY\n";
   TimerStatIncrementer t(stats::cexCacheTime);
   Assignment *a;
-  if (!getAssignment(query.withFalse(), a))
+  if (!getAssignment(query.withFalse(), a)) {
+      llvm::errs() << "CEXCACHINGSOLVER::COMPUTEVALIDITY: RETURN FALSE 1\n";
     return false;
+  }
   assert(a && "computeValidity() must have assignment");
   ref<Expr> q = a->evaluate(query.expr);
   assert(isa<ConstantExpr>(q) && 
          "assignment evaluation did not result in constant");
 
   if (cast<ConstantExpr>(q)->isTrue()) {
-    if (!getAssignment(query, a))
+    if (!getAssignment(query, a)) {
+	llvm::errs() << "CEXCACHINGSOLVER::COMPUTEVALIDITY: RETURN FALSE 2\n";
       return false;
+    }
     result = !a ? Solver::True : Solver::Unknown;
   } else {
-    if (!getAssignment(query.negateExpr(), a))
+    if (!getAssignment(query.negateExpr(), a)) {
+	llvm::errs() << "CEXCACHINGSOLVER::COMPUTEVALIDITY:  RETURN FALSE 3\n";
       return false;
+    }
     result = !a ? Solver::False : Solver::Unknown;
   }
   
+  llvm::errs() << "CEXCACHINGSOLVER::COMPUTEVALIDITY: RETURN TRUE WITH RESULT ";
+  if (result == Solver::False) {
+      llvm::errs() << "Solver::False\n";
+  } else if (result == Solver::True) {
+      llvm::errs() << "Solver::False\n";
+  } else {
+      llvm::errs() << "Unknown\n";
+  }
   return true;
 }
 
@@ -335,6 +355,7 @@ CexCachingSolver::computeInitialValues(const Query& query,
                                        std::vector< std::vector<unsigned char> >
                                          &values,
                                        bool &hasSolution) {
+  llvm::errs() << "CexCachingSolver::computeInitialValues\n";
   TimerStatIncrementer t(stats::cexCacheTime);
   Assignment *a;
   if (!getAssignment(query, a))

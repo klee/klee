@@ -1091,6 +1091,7 @@ FastCexSolver::computeInitialValues(const Query& query,
                                     std::vector< std::vector<unsigned char> >
                                       &values,
                                     bool &hasSolution) {
+  llvm::errs() << "FASTCEXSOLVER::COMPUTEINITIALVALUES\n";
   CexData cd;
 
   bool isValid;
