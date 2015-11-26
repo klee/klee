@@ -34,7 +34,10 @@ namespace klee {
 
     Value *get_llvm();
 
-    bool operator==(MemoryCell rhs);
+    bool operator==(const MemoryCell& other);
+
+    friend bool operator<(const MemoryCell& lhs, const MemoryCell& rhs);
+
   };
 
   class Location {

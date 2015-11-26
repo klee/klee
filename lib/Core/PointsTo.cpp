@@ -21,12 +21,18 @@ namespace klee {
   MemoryCell::MemoryCell(Value *cell) :
       llvm_value(cell) {}
 
+  MemoryCell::~MemoryCell() {}
+
   Value *MemoryCell::get_llvm() {
     return llvm_value;
   }
 
-  bool MemoryCell::operator==(MemoryCell rhs) {
-    return llvm_value == rhs.get_llvm();
+  bool MemoryCell::operator==(const MemoryCell& other) {
+    return llvm_value == other.llvm_value;
+  }
+
+  bool operator<(const MemoryCell& lhs, const MemoryCell& rhs) {
+    return lhs.llvm_value != rhs.llvm_value;
   }
 
   Location::Location(unsigned long alloc_id) :
@@ -181,11 +187,9 @@ namespace klee {
 	pointed_to_location != points_to[address].end();
 	pointed_to_location++) {
 	MemoryCell content = pointed_to_location->get_content();
-	if (content != 0) {
-	    vector<Location> pointed_to_by_target = points_to[target];
-	    vector<Location> pointed_to_by_content = points_to[content];
-	    pointed_to_by_target.insert(pointed_to_by_target.end(), pointed_to_by_content.begin(), pointed_to_by_content.end());
-	}
+	vector<Location> pointed_to_by_target = points_to[target];
+	vector<Location> pointed_to_by_content = points_to[content];
+	pointed_to_by_target.insert(pointed_to_by_target.end(), pointed_to_by_content.begin(), pointed_to_by_content.end());
     }
   }
 
@@ -194,11 +198,9 @@ namespace klee {
 	pointed_to_location != points_to[address].end();
 	pointed_to_location++) {
 	MemoryCell content = pointed_to_location->get_content();
-	if (content != 0) {
-	    vector<Location> pointed_to_by_source = points_to[source];
-	    vector<Location> pointed_to_by_content = points_to[content];
-	    pointed_to_by_content.insert(pointed_to_by_content.end(), pointed_to_by_source.begin(), pointed_to_by_source.end());
-	}
+	vector<Location> pointed_to_by_source = points_to[source];
+	vector<Location> pointed_to_by_content = points_to[content];
+	pointed_to_by_content.insert(pointed_to_by_content.end(), pointed_to_by_source.begin(), pointed_to_by_source.end());
     }
   }
 
