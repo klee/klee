@@ -32,9 +32,9 @@ namespace klee {
 
     ~MemoryCell();
 
-    Value *get_llvm();
+    Value *get_llvm() const;
 
-    bool operator==(const MemoryCell& other);
+    friend bool operator==(const MemoryCell& lhs, const MemoryCell &rhs);
 
     friend bool operator<(const MemoryCell& lhs, const MemoryCell& rhs);
 
@@ -54,7 +54,7 @@ namespace klee {
 
     MemoryCell get_content();
 
-    bool operator==(Location& rhs);
+    friend bool operator==(Location& lhs, Location& rhs);
   };
 
   class PointsToFrame {

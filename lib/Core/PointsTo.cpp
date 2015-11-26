@@ -23,12 +23,13 @@ namespace klee {
 
   MemoryCell::~MemoryCell() {}
 
-  Value *MemoryCell::get_llvm() {
+  Value *MemoryCell::get_llvm() const {
     return llvm_value;
   }
 
-  bool MemoryCell::operator==(const MemoryCell& other) {
-    return llvm_value == other.llvm_value;
+  bool operator==(const MemoryCell& lhs, const MemoryCell &rhs) {
+    /// FIXME Attempt to retrieve llvm_value from lhs segfaults
+    return lhs.llvm_value == rhs.llvm_value;
   }
 
   bool operator<(const MemoryCell& lhs, const MemoryCell& rhs) {
@@ -51,11 +52,11 @@ namespace klee {
     return content;
   }
 
-  bool Location::operator==(Location& rhs) {
-    if (alloc_id > 0 && rhs.alloc_id > 0) {
-	return alloc_id == rhs.alloc_id;
-    } else if (alloc_id == 0 && rhs.alloc_id == 0) {
-	return content == rhs.get_content();
+  bool operator==(Location& lhs, Location& rhs) {
+    if (lhs.alloc_id > 0 && rhs.alloc_id > 0) {
+	return lhs.alloc_id == rhs.alloc_id;
+    } else if (lhs.alloc_id == 0 && rhs.alloc_id == 0) {
+	return lhs.content == rhs.get_content();
     }
     return false;
   }
@@ -183,21 +184,14 @@ namespace klee {
   /**/
 
   void load_points_to(map<MemoryCell, vector<Location> >& points_to, const MemoryCell& target, const MemoryCell& address) {
-    llvm::errs() << "0\n";
-    vector<Location> loc_vector = points_to[address];
-    llvm::errs() << "b\n";
+    /// FIXME This segfaults here: vector<Location> loc_vector = points_to[address];
     for (vector<Location>::iterator pointed_to_location = points_to[address].begin();
 	pointed_to_location != points_to[address].end();
 	pointed_to_location++) {
-	llvm::errs() << "1\n";
 	MemoryCell content = pointed_to_location->get_content();
-	llvm::errs() << "2\n";
 	vector<Location> pointed_to_by_target = points_to[target];
-	llvm::errs() << "3\n";
 	vector<Location> pointed_to_by_content = points_to[content];
-	llvm::errs() << "4\n";
 	pointed_to_by_target.insert(pointed_to_by_target.end(), pointed_to_by_content.begin(), pointed_to_by_content.end());
-	llvm::errs() << "5\n";
     }
   }
 
