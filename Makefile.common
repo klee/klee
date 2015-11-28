@@ -4,6 +4,10 @@ include $(LEVEL)/Makefile.config
 
 # Include LLVM's Master Makefile config and rules.
 include $(LLVM_OBJ_ROOT)/Makefile.config
+ifeq ($(shell test $(LLVM_VERSION_MAJOR) -le 3 -a $(LLVM_VERSION_MINOR) -le 4; echo $$?),0)
+  CFLAGS := $(filter-out -fstack-protector-strong,$(CFLAGS))
+  CXXFLAGS := $(filter-out -fstack-protector-strong,$(CXXFLAGS))
+endif
 
 # Assertions should be enabled by default for KLEE (but they can still
 # be disabled by running make with DISABLE_ASSERTIONS=1
