@@ -83,7 +83,6 @@ bool StagedSolverImpl::computeTruth(const Query& query, bool &isValid) {
 bool StagedSolverImpl::computeValidity(const Query& query,
                                        Solver::Validity &result) {
   bool tmp;
-  llvm::errs() << "STAGEDSOLVERIMPL::COMPUTEVALIDITY\n";
   switch(primary->computeValidity(query)) {
   case IncompleteSolver::MustBeTrue: 
     result = Solver::True;

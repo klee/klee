@@ -18,14 +18,20 @@ enum Comparison {Eq, Ne, Ult, Ule, Ugt, Uge, Slt, Sle, Sgt, Sge, Neg, Not};
 namespace klee {
   class ExecutionState;
 
-  struct UpdateRelation{
+  class UpdateRelation{
     ref<Expr> base;
     ref<Expr> baseLoc; //load location
     ref<Expr> value;
     ref<Expr> valueLoc;
     Operation operationName;
-    bool isRemoved;
-
+  public:
+    UpdateRelation(const ref<Expr>& baseLoc, const ref<Expr>& value, const Operation& operationName);
+    ~UpdateRelation();
+    ref<Expr> makeExpr(ref<Expr>& locToCompare, ref<Expr>& lhs) const;
+    void setBase(const ref<Expr>& base);
+    void setValueLoc(const ref<Expr>& valueLoc);
+    ref<Expr> getBaseLoc() const;
+    bool isBase(ref<Expr>& expr) const;
     void dump() const;
     void print(llvm::raw_ostream &stream) const;
   };

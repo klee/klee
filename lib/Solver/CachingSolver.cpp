@@ -151,7 +151,6 @@ void CachingSolver::cacheInsert(const Query& query,
 
 bool CachingSolver::computeValidity(const Query& query,
                                     Solver::Validity &result) {
-  llvm::errs() << "CACHINGSOLVER::COMPUTEVALIDITY\n";
   IncompleteSolver::PartialValidity cachedResult;
   bool tmp, cacheHit = cacheLookup(query, cachedResult);
   
@@ -203,11 +202,8 @@ bool CachingSolver::computeValidity(const Query& query,
 
   ++stats::queryCacheMisses;
   
-  llvm::errs() << "CACHINGSOLVER::COMPUTEVALIDITY CALLING COMPUTEVALIDITY\n";
-  if (!solver->impl->computeValidity(query, result)) {
-      llvm::errs() << "CACHINGSOLVER::COMPUTEVALIDITY RETURN FALSE\n";
+  if (!solver->impl->computeValidity(query, result))
     return false;
-  }
 
   switch (result) {
   case Solver::True: 
@@ -219,18 +215,6 @@ bool CachingSolver::computeValidity(const Query& query,
   }
   
   cacheInsert(query, cachedResult);
-  llvm::errs() << "CACHINGSOLVER::COMPUTEVALIDITY RETURN TRUE WITH RESULT\n";
-  switch (result) {
-    case Solver::True:
-      llvm::errs() << " Solver::True\n";
-      break;
-    case Solver::False:
-      llvm::errs() << " Solver::False\n";
-      break;
-    default:
-      llvm::errs() << " Unknown\n";
-      break;
-  }
   return true;
 }
 

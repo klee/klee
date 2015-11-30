@@ -78,7 +78,6 @@ SolverImpl::~SolverImpl() {
 }
 
 bool SolverImpl::computeValidity(const Query& query, Solver::Validity &result) {
-  llvm::errs() << "SOLVERIMPL::COMPUTEVALIDITY\n";
   bool isTrue, isFalse;
   if (!computeTruth(query, isTrue))
     return false;
@@ -144,14 +143,13 @@ void Solver::setCoreSolverTimeout(double timeout) {
 
 bool Solver::evaluate(const Query& query, Validity &result) {
   assert(query.expr->getWidth() == Expr::Bool && "Invalid expression type!");
-  llvm::errs() << "SOLVER::EVALUATE CALLED\n";
+
   // Maintain invariants implementations expect.
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(query.expr)) {
     result = CE->isTrue() ? True : False;
     return true;
   }
 
-  llvm::errs() << "SOLVER::EVALUATE COMPUTEVALIDITY\n";
   return impl->computeValidity(query, result);
 }
 
@@ -378,7 +376,6 @@ bool ValidatingSolver::computeTruth(const Query& query,
 bool ValidatingSolver::computeValidity(const Query& query,
                                        Solver::Validity &result) {
   Solver::Validity answer;
-  llvm::errs() << "VALIDATINGSOLVER::COMPUTEVALIDITY\n";
   if (!solver->impl->computeValidity(query, result))
     return false;
   if (!oracle->impl->computeValidity(query, answer))
@@ -416,7 +413,6 @@ ValidatingSolver::computeInitialValues(const Query& query,
                                        std::vector< std::vector<unsigned char> >
                                          &values,
                                        bool &hasSolution) {
-  llvm::errs() << "VALIDATINGSOLVER::COMPUTEINITIALVALUES\n";
   bool answer;
 
   if (!solver->impl->computeInitialValues(query, objects, values, 
@@ -480,7 +476,6 @@ public:
   DummySolverImpl() {}
   
   bool computeValidity(const Query&, Solver::Validity &result) { 
-    llvm::errs() << "DUMMYSOLVERIMPL::COMPUTEVALIDITY\n";
     ++stats::queries;
     // FIXME: We should have stats::queriesFail;
     return false; 
@@ -911,6 +906,15 @@ public:
                             const std::vector<const Array*> &objects,
                             std::vector< std::vector<unsigned char> > &values,
                             bool &hasSolution);
+  /// runAndGetCex - Determine the satisfiability of a query, given assertions
+  /// that already included in the Z3 solver.
+  ///
+  /// \param [out] hasSolution - On success, a boolean indicating the satisfiability
+  /// of the formula.
+  /// \param [out] values - On success and satisfiable, a vector containing the solution.
+  /// \return A value of SolverRunStatus: SOLVER_RUN_STATUS_SUCCESS_SOLVABLE (satisfiable)
+  /// or SOLVER_RUN_STATUS_SUCCESS_UNSOLVABLE (unsatisfiable) indicates success, others
+  /// indicate solver failure.
   SolverRunStatus runAndGetCex(Z3Builder *builder, Z3_solver the_solver, Z3_ast q,
                                const std::vector<const Array*> &objects,
                                std::vector< std::vector<unsigned char> > &values,
@@ -968,28 +972,19 @@ char *Z3SolverImpl::getConstraintLog(const Query &query) {
 
 bool Z3SolverImpl::computeTruth(const Query& query,
                                  bool &isValid) {
-  llvm::errs() << "COMPUTETRUTH\n";
   std::vector<const Array*> objects;
   std::vector< std::vector<unsigned char> > values;
   bool hasSolution;
 
-  if (!computeInitialValues(query, objects, values, hasSolution)) {\
-      llvm::errs() << __FUNCTION__ << ": RETURN FALSE\n";
+  if (!computeInitialValues(query, objects, values, hasSolution))
     return false;
-  }
 
   isValid = !hasSolution;
-  if (isValid) {
-      llvm::errs() << "FOUND VALID\n";
-  } else {
-      llvm::errs() << "FOUND INVALID: HAS C.EXAMPLE\n";
-  }
   return true;
 }
 
 bool Z3SolverImpl::computeValue(const Query& query,
                                  ref<Expr> &result) {
-  llvm::errs() << "COMPUTEVALUE\n";
   std::vector<const Array*> objects;
   std::vector< std::vector<unsigned char> > values;
   bool hasSolution;
@@ -1015,7 +1010,6 @@ Z3SolverImpl::computeInitialValues(const Query &query,
                                     std::vector< std::vector<unsigned char> >
                                       &values,
                                     bool &hasSolution) {
-  llvm::errs() << "Z3SOLVERIMPL::COMPUTEINITIALVALUES\n";
   Z3_solver the_solver = Z3_mk_simple_solver(builder->ctx);
   Z3_solver_inc_ref(builder->ctx, the_solver);
 
@@ -1032,7 +1026,7 @@ Z3SolverImpl::computeInitialValues(const Query &query,
 
   int counter = 1;
   for (ConstraintManager::const_iterator it = query.constraints.begin(),
-         ie = query.constraints.end(); it != ie; ++it) {
+      ie = query.constraints.end(); it != ie; ++it) {
       Z3_sort sort = Z3_mk_bool_sort(builder->ctx);
       std::ostringstream convert ;
       convert<< counter;
@@ -1040,8 +1034,8 @@ Z3SolverImpl::computeInitialValues(const Query &query,
       const char * name = convert.str().c_str();
       Z3_symbol symbol = Z3_mk_string_symbol(builder->ctx, name);
       Z3_ast cons = Z3_mk_const(builder->ctx, symbol, sort);
-	  Z3_solver_assert_and_track(builder->ctx, the_solver, builder->construct(*it), cons);
-	  counter++;
+      Z3_solver_assert_and_track(builder->ctx, the_solver, builder->construct(*it), cons);
+      counter++;
   }
   ++stats::queries;
   ++stats::queryCounterexamples;
@@ -1053,7 +1047,6 @@ Z3SolverImpl::computeInitialValues(const Query &query,
 
   if (runStatusCode == SolverImpl::SOLVER_RUN_STATUS_SUCCESS_UNSOLVABLE){
 	  unsat_core.clear();
-	  llvm::errs() << "Computing unsat core\n";
 	  unsat_core = getUnsatCoreVector(query, builder, the_solver);
   }
   success = true;
@@ -1077,6 +1070,7 @@ SolverImpl::SolverRunStatus Z3SolverImpl::runAndGetCex(Z3Builder *builder, Z3_so
 
   switch (Z3_solver_check(builder->ctx, the_solver)) {
     case Z3_L_TRUE: {
+      /// The assertion is satisfiable (see Z3 API manual)
       hasSolution = true;
       Z3_model m = Z3_solver_get_model(builder->ctx, the_solver);
 

@@ -406,12 +406,10 @@ public:
   
 bool IndependentSolver::computeValidity(const Query& query,
                                         Solver::Validity &result) {
-  llvm::errs() << "INDEPENDENTSOLVER::COMPUTEVALIDITY\n";
   std::vector< ref<Expr> > required;
   IndependentElementSet eltsClosure =
     getIndependentConstraints(query, required);
   ConstraintManager tmp(required);
-  llvm::errs() << "INDEPENDENTSOLVER::COMPUTEVALIDITY AND RETURN\n";
   return solver->impl->computeValidity(Query(tmp, query.expr), 
                                        result);
 }
@@ -458,7 +456,6 @@ bool IndependentSolver::computeInitialValues(const Query& query,
                                              const std::vector<const Array*> &objects,
                                              std::vector< std::vector<unsigned char> > &values,
                                              bool &hasSolution){
-  llvm::errs() << "INDEPENDENTSOLVER::COMPUTEINITIALVALUES\n";
   std::list<IndependentElementSet> * factors = new std::list<IndependentElementSet>;
 
   // We assume the query has a solution except proven differently
@@ -483,11 +480,9 @@ bool IndependentSolver::computeInitialValues(const Query& query,
     if (!solver->impl->computeInitialValues(Query(tmp, ConstantExpr::alloc(0, Expr::Bool)),
                                             arraysInFactor, tempValues, hasSolution)){
       values.clear();
-      llvm::errs() << "INDEPENDENTSOLVER::COMPUTEINITIALVALUES RETURN FALSE\n";
       return false;
     } else if (!hasSolution){
       values.clear();
-      llvm::errs() << "INDEPENDENTSOLVER::COMPUTEINITIALVALUES RETURN TRUE 1\n";
       return true;
     } else {
       assert(tempValues.size() == arraysInFactor.size() &&
@@ -527,7 +522,6 @@ bool IndependentSolver::computeInitialValues(const Query& query,
   }
   assert(assertCreatedPointEvaluatesToTrue(query, objects, values) && "should satisfy the equation");
   delete factors;
-  llvm::errs() << "INDEPENDENTSOLVER::COMPUTEINITIALVALUES RETURN TRUE 2\n";
   return true;
 }
 

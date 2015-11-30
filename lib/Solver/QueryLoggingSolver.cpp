@@ -111,22 +111,9 @@ bool QueryLoggingSolver::computeTruth(const Query& query, bool& isValid) {
 
 bool QueryLoggingSolver::computeValidity(const Query& query,
                                          Solver::Validity& result) {
-  llvm::errs() << "QUERYLOGGINGSOLVER::COMPUTEVALIDITY\n";
     startQuery(query, "Validity");
     
     bool success = solver->impl->computeValidity(query, result);
-    llvm::errs() << "QUERYLOGGINGSOLVER::COMPUTEVALIDITY SUCCESS = " << success;
-    switch (result) {
-      case Solver::True:
-	llvm::errs() << " Solver::True\n";
-	break;
-      case Solver::False:
-	llvm::errs() << " Solver::False\n";
-	break;
-      default:
-	llvm::errs() << "Other\n";
-	break;
-    }
 
     finishQuery(success);
     
@@ -163,7 +150,6 @@ bool QueryLoggingSolver::computeInitialValues(const Query& query,
                                               const std::vector<const Array*>& objects,
                                               std::vector<std::vector<unsigned char> >& values,
                                               bool& hasSolution) {
-  llvm::errs() << "QUERYLOGGINGSOLVER::COMPUTEINITIALVALUES\n";
     startQuery(query, "InitialValues", 0, &objects);
 
     bool success = solver->impl->computeInitialValues(query, objects, 

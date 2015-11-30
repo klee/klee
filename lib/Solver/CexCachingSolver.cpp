@@ -215,7 +215,6 @@ bool CexCachingSolver::lookupAssignment(const Query &query,
 }
 
 bool CexCachingSolver::getAssignment(const Query& query, Assignment *&result) {
-  llvm::errs() << "CEXCACHINGSOLVER::GETASSIGNMENT\n";
   KeyType key;
 
   if (lookupAssignment(query, key, result))
@@ -227,15 +226,12 @@ bool CexCachingSolver::getAssignment(const Query& query, Assignment *&result) {
   std::vector< std::vector<unsigned char> > values;
   bool hasSolution;
   if (!solver->impl->computeInitialValues(query, objects, values, 
-                                          hasSolution)) {
-      llvm::errs() << "CEXCACHINGSOLVER::GETASSIGNMENT Returning FALSE\n";
+                                          hasSolution))
     return false;
-  }
     
   Assignment *binding;
   if (hasSolution) {
-      llvm::errs() << __FUNCTION__ << ": HAS SOLUTION\n";
-      binding = new Assignment(objects, values);
+    binding = new Assignment(objects, values);
 
     // Memoize the result.
     std::pair<assignmentsTable_ty::iterator, bool>
@@ -254,7 +250,6 @@ bool CexCachingSolver::getAssignment(const Query& query, Assignment *&result) {
   result = binding;
   cache.insert(key, binding);
 
-  llvm::errs() << __FUNCTION__ << ": RETURNS TRUE\n";
   return true;
 }
 
@@ -270,40 +265,51 @@ CexCachingSolver::~CexCachingSolver() {
 
 bool CexCachingSolver::computeValidity(const Query& query,
                                        Solver::Validity &result) {
-  llvm::errs() << "CEXCACHINGSOLVER::COMPUTEVALIDITY\n";
   TimerStatIncrementer t(stats::cexCacheTime);
   Assignment *a;
-  if (!getAssignment(query.withFalse(), a)) {
-      llvm::errs() << "CEXCACHINGSOLVER::COMPUTEVALIDITY: RETURN FALSE 1\n";
+
+  /// Given query of the form antecedent -> consequent, here we try to
+  /// decide if antecedent was satisfiable by attempting to get an
+  /// assignment from the validity proof of antecedent -> false.
+  if (!getAssignment(query.withFalse(), a))
     return false;
-  }
+
+  /// Logically, antecedent must be satisfiable, as we eagerly terminate a
+  /// path upon the discovery of unsatisfiability.
   assert(a && "computeValidity() must have assignment");
   ref<Expr> q = a->evaluate(query.expr);
   assert(isa<ConstantExpr>(q) && 
          "assignment evaluation did not result in constant");
 
   if (cast<ConstantExpr>(q)->isTrue()) {
-    if (!getAssignment(query, a)) {
-	llvm::errs() << "CEXCACHINGSOLVER::COMPUTEVALIDITY: RETURN FALSE 2\n";
-      return false;
-    }
+    /// Antecedent is satisfiable, and its model is also a model of the
+    /// consequent, which means that the query: antecedent -> consequent
+    /// is potentially valid.
+    ///
+    /// We next try to establish the validity of the query
+    /// antecedent -> consequent itself, and when this was proven invalid,
+    /// gets the solution to "antecedent and not consequent", i.e.,
+    /// the counterexample, in a.
+    if (!getAssignment(query, a))
+      return false;                  /// Return false in case of solver error
+
+    /// Return Solver::True in result in case validity is established:
+    /// Solver::Unknown otherwise.
     result = !a ? Solver::True : Solver::Unknown;
   } else {
-    if (!getAssignment(query.negateExpr(), a)) {
-	llvm::errs() << "CEXCACHINGSOLVER::COMPUTEVALIDITY:  RETURN FALSE 3\n";
+    /// The computed model of the antecedent is not a model of the consequent.
+    /// It is possible that the query is false under any interpretation. Here
+    /// we try to prove antecedent -> not consequent given the original
+    /// query antecedent -> consequent.
+    if (!getAssignment(query.negateExpr(), a))
       return false;
-    }
+
+    /// If there was no solution, this means that antecedent -> not consequent
+    /// is valid, and therefore the original query antecedent -> consequent has
+    /// no model. Otherwise, we do not know.
     result = !a ? Solver::False : Solver::Unknown;
   }
   
-  llvm::errs() << "CEXCACHINGSOLVER::COMPUTEVALIDITY: RETURN TRUE WITH RESULT ";
-  if (result == Solver::False) {
-      llvm::errs() << "Solver::False\n";
-  } else if (result == Solver::True) {
-      llvm::errs() << "Solver::False\n";
-  } else {
-      llvm::errs() << "Unknown\n";
-  }
   return true;
 }
 
@@ -355,7 +361,6 @@ CexCachingSolver::computeInitialValues(const Query& query,
                                        std::vector< std::vector<unsigned char> >
                                          &values,
                                        bool &hasSolution) {
-  llvm::errs() << "CexCachingSolver::computeInitialValues\n";
   TimerStatIncrementer t(stats::cexCacheTime);
   Assignment *a;
   if (!getAssignment(query, a))
