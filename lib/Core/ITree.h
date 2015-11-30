@@ -31,7 +31,7 @@ namespace klee {
     void setBase(const ref<Expr>& base);
     void setValueLoc(const ref<Expr>& valueLoc);
     ref<Expr> getBaseLoc() const;
-    bool isBase(ref<Expr>& expr) const;
+    bool isBase(ref<Expr> expr) const;
     void dump() const;
     void print(llvm::raw_ostream &stream) const;
   };

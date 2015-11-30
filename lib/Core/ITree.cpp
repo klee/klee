@@ -69,7 +69,7 @@ ref<Expr> UpdateRelation::getBaseLoc() const {
   return baseLoc;
 }
 
-bool UpdateRelation::isBase(ref<Expr>& expr) const {
+bool UpdateRelation::isBase(ref<Expr> expr) const {
   return !base.isNull() && base == expr;
 }
 
