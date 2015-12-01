@@ -21,7 +21,7 @@ UpdateRelation::UpdateRelation(const ref<Expr>& baseLoc, const ref<Expr>& value,
 
 UpdateRelation::~UpdateRelation() {}
 
-ref<Expr> UpdateRelation::makeExpr(ref<Expr>& locToCompare, ref<Expr>& lhs) const {
+ref<Expr> UpdateRelation::makeExpr(ref<Expr> locToCompare, ref<Expr>& lhs) const {
   if (baseLoc != locToCompare)
     return lhs;
 
@@ -161,6 +161,52 @@ ITreeNode::ITreeNode(ITreeNode *_parent,
 ITreeNode::~ITreeNode() {
 }
 
+void ITreeNode::addUpdateRelations(std::vector<UpdateRelation> addedUpdateRelations) {
+  std::vector<UpdateRelation>::iterator it;
+  updateRelationsList.insert(it, addedUpdateRelations.begin(), addedUpdateRelations.end());
+}
+
+void ITreeNode::addUpdateRelations(ITreeNode *other) {
+  std::vector<UpdateRelation>::iterator it;
+  updateRelationsList.insert(it, other->updateRelationsList.begin(),
+                             other->updateRelationsList.end());
+}
+
+void ITreeNode::addNewUpdateRelation(UpdateRelation& updateRelation) {
+  updateRelationsList.push_back(updateRelation);
+  newUpdateRelationsList.push_back(updateRelation);
+}
+
+void ITreeNode::addStoredNewUpdateRelationsTo(std::vector<UpdateRelation>& relationsList) {
+  std::vector<UpdateRelation>::iterator it = relationsList.begin();
+  relationsList.insert(it, newUpdateRelationsList.begin(), newUpdateRelationsList.end());
+}
+
+ref<Expr> ITreeNode::buildUpdateExpression(ref<Expr>& lhs, ref<Expr> rhs) {
+  return klee::buildUpdateExpression(updateRelationsList, lhs, rhs);
+}
+
+ref<Expr> ITreeNode::buildNewUpdateExpression(ref<Expr>& lhs, ref<Expr> rhs) {
+  return klee::buildUpdateExpression(newUpdateRelationsList, lhs, rhs);
+}
+
+ref<Expr> ITreeNode::getInterpolantBaseLocation(ref<Expr>& interpolant) {
+  /// Get the base location from base
+  for (std::vector<UpdateRelation>::const_iterator it = updateRelationsList.begin();
+      it != updateRelationsList.end(); ++it) {
+      /// To search the variable from the TransferRelation: For example, we
+      /// have variable x within the constraint x <= 0 as a variable that we
+      /// are looking for. In this case, x is in the lhs of the expression,
+      /// so its index is 0, and the variable is the expression
+      /// tmpInterpolant->getKid(0), If we have found x then we save its
+      /// reference (baseLocation = it->baseLoc).
+      if (it->isBase(interpolant->getKid(0))) {
+	  return it->getBaseLoc();
+      }
+  }
+  return 0;
+}
+
 void ITreeNode::dump() {
   llvm::errs() << "\n------------------------- Root ITree --------------------------------\n";
   this->print(llvm::errs());
@@ -208,7 +254,7 @@ void ITreeNode::print(llvm::raw_ostream &stream, const unsigned int tab_num) {
   }
 
   stream << tabs_next << "addedPathCond =";
-  for (std::vector<UpdateRelation>::iterator it = appendedUpdateRelationsList.begin(); it != appendedUpdateRelationsList.end(); (stream << ","), it++) {
+  for (std::vector<UpdateRelation>::iterator it = newUpdateRelationsList.begin(); it != newUpdateRelationsList.end(); (stream << ","), it++) {
       it->print(stream);
   }
   stream << "\n";
@@ -239,6 +285,14 @@ void ITreeNode::print(llvm::raw_ostream &stream, const unsigned int tab_num) {
 
   stream << tabs_next << "InterpolantStatus =" << InterpolantStatus;
 
+}
+
+ref<Expr> klee::buildUpdateExpression(std::vector<UpdateRelation> updateRelationsList, ref<Expr>& lhs, ref<Expr> rhs) {
+  for (std::vector<UpdateRelation>::const_iterator pc = updateRelationsList.begin();
+      pc != updateRelationsList.end(); ++pc) {
+      rhs = pc->makeExpr(lhs, rhs);
+  }
+  return rhs;
 }
 
 
