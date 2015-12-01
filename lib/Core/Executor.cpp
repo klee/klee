@@ -765,42 +765,42 @@ ref<Expr> Executor::reExecInterpolant(ref<Expr>& interpolant, std::pair< ref<Exp
 }
 
 bool Executor::subsumptionCheck(ExecutionState& current) {
-	//subsumption
-	Solver::Validity result;
-	for (std::vector<Subsumption>::const_iterator it =
-			interpTree->subsumptionStore.begin();
-			it != interpTree->subsumptionStore.end(); ++it) {
-		if (current.itreeNode->programPoint == it->programPoint) {
-			solver->evaluate(current, it->interpolant, result);
-			if (result == Solver::True) {
+  //subsumption
+  Solver::Validity result;
+  for (std::vector<Subsumption>::const_iterator it =
+      interpTree->getStore().begin();
+      it != interpTree->getStore().end(); ++it) {
+      if (current.itreeNode->programPoint == it->programPoint) {
+	  solver->evaluate(current, it->interpolant, result);
+	  if (result == Solver::True) {
 
-				ref<Expr> interpolant =  it->interpolant;
-				std::pair< ref<Expr> , ref<Expr> > interpolantLoc = it->interpolantLoc;
-				ref<Expr> reExecIntp = reExecInterpolant(interpolant, interpolantLoc, current);
+	      ref<Expr> interpolant =  it->interpolant;
+	      std::pair< ref<Expr> , ref<Expr> > interpolantLoc = it->interpolantLoc;
+	      ref<Expr> reExecIntp = reExecInterpolant(interpolant, interpolantLoc, current);
 
-				Solver::Validity rslt;
-				solver->evaluate(current, reExecIntp, rslt);
-				if(rslt == Solver::True){
-					current.itreeNode->isSubsumed = true;
-					current.itreeNode->interpolant = it->interpolant;
-					current.itreeNode->interpolantLoc = std::make_pair(it->interpolantLoc.first, it->interpolantLoc.second) ;
-					current.itreeNode->InterpolantStatus =FullInterpolant;
-					return true;
-					break;
-				}
-			}
-		}
-	}
-	if (!current.itreeNode->isSubsumed) {
-		//no subsumption
-		Subsumption subsumption;
-		subsumption.interpolant = current.itreeNode->interpolant;
-		subsumption.interpolantLoc = std::make_pair(current.itreeNode->interpolantLoc.first, current.itreeNode->interpolantLoc.second);
-		subsumption.programPoint = current.itreeNode->programPoint;
-		interpTree->subsumptionStore.push_back(subsumption);
-		return false;
-	}
-	return false;
+	      Solver::Validity rslt;
+	      solver->evaluate(current, reExecIntp, rslt);
+	      if(rslt == Solver::True){
+		  current.itreeNode->isSubsumed = true;
+		  current.itreeNode->interpolant = it->interpolant;
+		  current.itreeNode->interpolantLoc = std::make_pair(it->interpolantLoc.first, it->interpolantLoc.second) ;
+		  current.itreeNode->InterpolantStatus =FullInterpolant;
+		  return true;
+		  break;
+	      }
+	  }
+      }
+  }
+  if (!current.itreeNode->isSubsumed) {
+      //no subsumption
+      Subsumption subsumption;
+      subsumption.interpolant = current.itreeNode->interpolant;
+      subsumption.interpolantLoc = std::make_pair(current.itreeNode->interpolantLoc.first, current.itreeNode->interpolantLoc.second);
+      subsumption.programPoint = current.itreeNode->programPoint;
+      interpTree->store(subsumption);
+      return false;
+  }
+  return false;
 }
 
 void Executor::propagateInterpolant(const ref<Expr>& tmpInterpolant,
@@ -834,7 +834,7 @@ void Executor::propagateInterpolant(const ref<Expr>& tmpInterpolant,
 	  subsume.interpolant = current.itreeNode->parent->interpolant;
 	  subsume.interpolantLoc = std::make_pair(current.itreeNode->parent->interpolantLoc.first, current.itreeNode->parent->interpolantLoc.second);
 	  subsume.programPoint = current.itreeNode->parent->programPoint;
-	  interpTree->subsumptionStore.push_back(subsume);
+	  interpTree->store(subsume);
       }
       currentPredecessor = current.itreeNode->parent->parent;
   }
@@ -857,7 +857,7 @@ void Executor::propagateInterpolant(const ref<Expr>& tmpInterpolant,
 	      _subsume.interpolant = currentPredecessor->interpolant;
 	      _subsume.interpolantLoc = std::make_pair(currentPredecessor->interpolantLoc.first, currentPredecessor->interpolantLoc.second);
 	      _subsume.programPoint = currentPredecessor->programPoint;
-	      interpTree->subsumptionStore.push_back(_subsume);
+	      interpTree->store(_subsume);
 
 	      //				currentPredecessor->interpolant = AndExpr::create(
 	      //						currentPredecessor->interpolant, currPredecessorInt);
@@ -872,11 +872,9 @@ void Executor::propagateInterpolant(const ref<Expr>& tmpInterpolant,
 	  == FullInterpolant) {
 
 	  if (currentPredecessor->InterpolantStatus != HalfInterpolant) {
-
 	      currentPredecessor->InterpolantStatus = HalfInterpolant;
 	      currentPredecessor->interpolant = currPredecessorInt;
 	      currentPredecessor->interpolantLoc = std::make_pair(intpLocation.first, intpLocation.second);
-
 	  }
       }
 
@@ -1105,8 +1103,8 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     }
 
     //subsumption
-    for (std::vector< Subsumption >::const_iterator it = interpTree->subsumptionStore.begin() ;
-	it != interpTree->subsumptionStore.end(); ++it){
+    for (std::vector< Subsumption >::const_iterator it = interpTree->getStore().begin() ;
+	it != interpTree->getStore().end(); ++it){
 	Solver::Validity result;
 	if(current.itreeNode->programPoint == it->programPoint){
 	    solver->evaluate(current, it->interpolant, result);
@@ -1153,7 +1151,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     addConstraint(*falseState, Expr::createIsZero(condition));
 
     current.itreeNode->data = 0;
-    std::pair<ITree::INode*, ITree::INode* > result = interpTree->split(current.itreeNode, falseState, trueState);
+    std::pair<ITreeNode*, ITreeNode* > result = interpTree->split(current.itreeNode, falseState, trueState);
     falseState->itreeNode = result.first;
     trueState->itreeNode = result.second;
 
@@ -2184,11 +2182,11 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       ref<Expr> result = EqExpr::create(left, right);
       bindLocal(ki, state, result);
 
-      if(!interpTree->currentINode->isSubsumed){
+      if(!interpTree->isSubsumed()){
     	  state.itreeNode->latestBranchCond.base = left;
           state.itreeNode->latestBranchCond.value = right;
           state.itreeNode->latestBranchCond.compareName = Eq;
-          interpTree->currentINode->conditions.push_back(result);
+          interpTree->addConditionToCurrentNode(result);
       }
 
       break;
@@ -2199,11 +2197,11 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       ref<Expr> right = eval(ki, 1, state).value;
       ref<Expr> result = NeExpr::create(left, right);
       bindLocal(ki, state, result);
-      if(!interpTree->currentINode->isSubsumed){
+      if(!interpTree->isSubsumed()){
     	  state.itreeNode->latestBranchCond.base = left;
           state.itreeNode->latestBranchCond.value = right;
           state.itreeNode->latestBranchCond.compareName = Ne;
-          interpTree->currentINode->conditions.push_back(result);
+          interpTree->addConditionToCurrentNode(result);
       }
       break;
     }
@@ -2213,11 +2211,11 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       ref<Expr> right = eval(ki, 1, state).value;
       ref<Expr> result = UgtExpr::create(left, right);
       bindLocal(ki, state,result);
-      if(!interpTree->currentINode->isSubsumed){
+      if(!interpTree->isSubsumed()){
     	  state.itreeNode->latestBranchCond.base = left;
           state.itreeNode->latestBranchCond.value = right;
           state.itreeNode->latestBranchCond.compareName = Ugt;
-          interpTree->currentINode->conditions.push_back(result);
+          interpTree->addConditionToCurrentNode(result);
       }
       break;
     }
@@ -2227,11 +2225,11 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       ref<Expr> right = eval(ki, 1, state).value;
       ref<Expr> result = UgeExpr::create(left, right);
       bindLocal(ki, state, result);
-      if(!interpTree->currentINode->isSubsumed){
+      if(!interpTree->isSubsumed()){
     	  state.itreeNode->latestBranchCond.base = left;
           state.itreeNode->latestBranchCond.value = right;
           state.itreeNode->latestBranchCond.compareName = Uge;
-          interpTree->currentINode->conditions.push_back(result);
+          interpTree->addConditionToCurrentNode(result);
       }
       break;
     }
@@ -2241,11 +2239,11 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       ref<Expr> right = eval(ki, 1, state).value;
       ref<Expr> result = UltExpr::create(left, right);
       bindLocal(ki, state, result);
-      if(!interpTree->currentINode->isSubsumed){
+      if(!interpTree->isSubsumed()){
     	  state.itreeNode->latestBranchCond.base = left;
           state.itreeNode->latestBranchCond.value = right;
           state.itreeNode->latestBranchCond.compareName = Ult;
-          interpTree->currentINode->conditions.push_back(result);
+          interpTree->addConditionToCurrentNode(result);
       }
       break;
     }
@@ -2255,11 +2253,11 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       ref<Expr> right = eval(ki, 1, state).value;
       ref<Expr> result = UleExpr::create(left, right);
       bindLocal(ki, state, result);
-      if(!interpTree->currentINode->isSubsumed){
+      if(!interpTree->isSubsumed()){
     	  state.itreeNode->latestBranchCond.base = left;
           state.itreeNode->latestBranchCond.value = right;
           state.itreeNode->latestBranchCond.compareName = Ule;
-          interpTree->currentINode->conditions.push_back(result);
+          interpTree->addConditionToCurrentNode(result);
       }
       break;
     }
@@ -2269,11 +2267,11 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       ref<Expr> right = eval(ki, 1, state).value;
       ref<Expr> result = SgtExpr::create(left, right);
 
-      if(!interpTree->currentINode->isSubsumed){
+      if(!interpTree->isSubsumed()){
     	  state.itreeNode->latestBranchCond.base = left;
     	  state.itreeNode->latestBranchCond.value = right;
     	  state.itreeNode->latestBranchCond.compareName = Sgt;
-    	  interpTree->currentINode->conditions.push_back(result);
+    	  interpTree->addConditionToCurrentNode(result);
       }
       bindLocal(ki, state, result);
       break;
@@ -2284,11 +2282,11 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       ref<Expr> right = eval(ki, 1, state).value;
       ref<Expr> result = SgeExpr::create(left, right);
       bindLocal(ki, state, result);
-      if(!interpTree->currentINode->isSubsumed){
+      if(!interpTree->isSubsumed()){
     	  state.itreeNode->latestBranchCond.base = left;
           state.itreeNode->latestBranchCond.value = right;
           state.itreeNode->latestBranchCond.compareName = Sge;
-          interpTree->currentINode->conditions.push_back(result);
+          interpTree->addConditionToCurrentNode(result);
       }
       break;
     }
@@ -2298,11 +2296,11 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       ref<Expr> right = eval(ki, 1, state).value;
       ref<Expr> result = SltExpr::create(left, right);
       bindLocal(ki, state, result);
-      if(!interpTree->currentINode->isSubsumed){
+      if(!interpTree->isSubsumed()){
     	  state.itreeNode->latestBranchCond.base = left;
           state.itreeNode->latestBranchCond.value = right;
           state.itreeNode->latestBranchCond.compareName = Slt;
-          interpTree->currentINode->conditions.push_back(result);
+          interpTree->addConditionToCurrentNode(result);
       }
       break;
     }
@@ -2312,11 +2310,11 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       ref<Expr> right = eval(ki, 1, state).value;
       ref<Expr> result = SleExpr::create(left, right);
       bindLocal(ki, state, result);
-      if(!interpTree->currentINode->isSubsumed){
+      if(!interpTree->isSubsumed()){
     	  state.itreeNode->latestBranchCond.base = left;
           state.itreeNode->latestBranchCond.value = right;
           state.itreeNode->latestBranchCond.compareName = Sle;
-          interpTree->currentINode->conditions.push_back(result);
+          interpTree->addConditionToCurrentNode(result);
       }
       break;
     }
@@ -2956,7 +2954,7 @@ void Executor::run(ExecutionState &initialState) {
   while (!states.empty() && !haltExecution) {
     ExecutionState &state = searcher->selectState();
 
-    interpTree->currentINode = state.itreeNode;
+    interpTree->setCurrentINode(state.itreeNode);
 
     KInstruction *ki = state.pc;
     stepInstruction(state);
@@ -3803,7 +3801,7 @@ void Executor::runFunctionAsMain(Function *f,
 
   interpTree = new ITree(state);//added by Felicia
   state->itreeNode = interpTree->root;
-  interpTree->currentINode = interpTree->root;
+  interpTree->setCurrentINode(interpTree->root);
 
   run(*state);
   delete processTree;

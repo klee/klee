@@ -109,25 +109,26 @@ void UpdateRelation::print(llvm::raw_ostream & stream) const {
   stream << "operationName = " << operationName << "\n";
 }
 
-ITree::ITree(const data_type &_root) : root(new ITreeNode(0,_root)) {
-}
+ITree::ITree(ExecutionState* _root) :
+    currentINode(0),
+    root(new ITreeNode(0, _root)) {}
 
 ITree::~ITree() {}
 
 std::pair<ITreeNode*, ITreeNode*>
 ITree::split(ITreeNode *n,
-             const data_type &leftData,
-             const data_type &rightData) {
+             ExecutionState *leftData,
+             ExecutionState *rightData) {
   assert(n && !n->left && !n->right);
   n->left = new ITreeNode(n, leftData);
   n->right = new ITreeNode(n, rightData);
   return std::make_pair(n->left, n->right);
 }
 
-void ITree::addCondition(INode *n, ref<Expr> cond) {
+void ITree::addCondition(ITreeNode *n, ref<Expr> cond) {
   assert(!n->left && !n->right);
   do {
-      INode *p = n->parent;
+      ITreeNode *p = n->parent;
       if (p) {
 	  if (n == p->left) {
 	      p->left->conditions.push_back(cond);
@@ -138,6 +139,26 @@ void ITree::addCondition(INode *n, ref<Expr> cond) {
       }
       n = p;
   } while (n && !n->left && !n->right);
+}
+
+void ITree::addConditionToCurrentNode(ref<Expr> cond) {
+  currentINode->conditions.push_back(cond);
+}
+
+std::vector<Subsumption> ITree::getStore() {
+  return subsumptionStore;
+}
+
+void ITree::store(Subsumption subItem) {
+  subsumptionStore.push_back(subItem);
+}
+
+bool ITree::isSubsumed() {
+  return currentINode? currentINode->isSubsumed : false;
+}
+
+void ITree::setCurrentINode(ITreeNode *node) {
+  currentINode = node;
 }
 
 ITreeNode::ITreeNode(ITreeNode *_parent,

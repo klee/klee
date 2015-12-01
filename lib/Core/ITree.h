@@ -56,24 +56,35 @@ namespace klee {
   };
 
   class ITree{
-    typedef ExecutionState* data_type;
     typedef std::vector< ref<Expr> > vectorExpr_type;
     typedef vectorExpr_type::iterator iterator;
     typedef vectorExpr_type::const_iterator const_iterator;
 
-  public:
-    typedef class ITreeNode INode;
-    INode *root;
-
-    ITree(const data_type &_root);
-    ~ITree();
-
-    std::pair<INode*, INode*> split(INode *n,
-                                    const data_type  &leftData,
-                                    const data_type  &rightData);
-    void addCondition(INode *n, ref<Expr>);
     ITreeNode *currentINode;
     std::vector<Subsumption> subsumptionStore;
+
+  public:
+    ITreeNode *root;
+
+    ITree(ExecutionState* _root);
+
+    ~ITree();
+
+    std::pair<ITreeNode*, ITreeNode*> split(ITreeNode *node,
+                                            ExecutionState* leftData,
+                                            ExecutionState* rightData);
+
+    void addCondition(ITreeNode *node, ref<Expr>);
+
+    void addConditionToCurrentNode(ref<Expr>);
+
+    std::vector<Subsumption> getStore();
+
+    void store(Subsumption subItem);
+
+    bool isSubsumed();
+
+    void setCurrentINode(ITreeNode *node);
 
   };
 
@@ -117,6 +128,7 @@ namespace klee {
 
   private:
     ITreeNode(ITreeNode *_parent, ExecutionState *_data);
+
     ~ITreeNode();
 
     void print(llvm::raw_ostream &stream, const unsigned int tab_num);
