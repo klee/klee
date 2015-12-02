@@ -404,7 +404,7 @@ private:
 			ExecutionState& current, ref<Expr> baseLocation);
   bool subsumptionCheck(ExecutionState& current);
   void propagateInterpolant(const ref<Expr>& tmpInterpolant,
-			std::pair< ref<Expr>, ref<Expr> > & baseLocation, ExecutionState& current);
+			std::pair< ref<Expr>, ref<Expr> > baseLocation, ExecutionState& current);
  ref<Expr> reExecInterpolant(ref<Expr>& interpolant, std::pair< ref<Expr> , ref<Expr> >& interpolantLoc, ExecutionState& current);
  ref<Expr> makeComparison(ref<Expr> exprKind, ref<Expr> leftValue, const ref<Expr>& rightValue);
 

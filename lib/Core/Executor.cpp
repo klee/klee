@@ -283,8 +283,8 @@ Executor::Executor(const InterpreterOptions &opts,
     specialFunctionHandler(0),
     processTree(0),
     interpTree(0), 
-	latestBaseLeft(0),
-	latestBaseRight(0),
+    latestBaseLeft(0),
+    latestBaseRight(0),
     replayOut(0),
     replayPath(0),    
     usingSeeds(0),
@@ -750,9 +750,7 @@ void Executor::setCurrentInterpolant(size_t predNum, ref<Expr>& tmpInterpolant,
   tmpInterpolant = makeComparison(tmpInterpolant, tmpInterpolant->getKid(0), rightValue);
 
   /// Updating the interpolant in the state
-  current.itreeNode->interpolant = tmpInterpolant;
-  current.itreeNode->interpolantLoc = std::make_pair(baseLocation, baseLocation); //TODO: the right base location should be fixed
-  current.itreeNode->InterpolantStatus = FullInterpolant;
+  current.itreeNode->setInterpolant(tmpInterpolant, std::make_pair(baseLocation, baseLocation), FullInterpolant);
 }
 
 ref<Expr> Executor::reExecInterpolant(ref<Expr>& interpolant, std::pair< ref<Expr> , ref<Expr> >& interpolantLoc, ExecutionState& current){
@@ -782,9 +780,9 @@ bool Executor::subsumptionCheck(ExecutionState& current) {
 	      solver->evaluate(current, reExecIntp, rslt);
 	      if(rslt == Solver::True){
 		  current.itreeNode->isSubsumed = true;
-		  current.itreeNode->interpolant = it->interpolant;
-		  current.itreeNode->interpolantLoc = std::make_pair(it->interpolantLoc.first, it->interpolantLoc.second) ;
-		  current.itreeNode->InterpolantStatus =FullInterpolant;
+		  current.itreeNode->setInterpolant(it->interpolant,
+		                                        std::make_pair(it->interpolantLoc.first, it->interpolantLoc.second),
+		                                        FullInterpolant);
 		  return true;
 		  break;
 	      }
@@ -794,8 +792,8 @@ bool Executor::subsumptionCheck(ExecutionState& current) {
   if (!current.itreeNode->isSubsumed) {
       //no subsumption
       Subsumption subsumption;
-      subsumption.interpolant = current.itreeNode->interpolant;
-      subsumption.interpolantLoc = std::make_pair(current.itreeNode->interpolantLoc.first, current.itreeNode->interpolantLoc.second);
+      subsumption.interpolant = current.itreeNode->getInterpolant();
+      subsumption.interpolantLoc = current.itreeNode->getInterpolantLoc();
       subsumption.programPoint = current.itreeNode->programPoint;
       interpTree->store(subsumption);
       return false;
@@ -804,7 +802,7 @@ bool Executor::subsumptionCheck(ExecutionState& current) {
 }
 
 void Executor::propagateInterpolant(const ref<Expr>& tmpInterpolant,
-                                    std::pair< ref<Expr>, ref<Expr> > & intpLocation, ExecutionState& current) {
+                                    std::pair< ref<Expr>, ref<Expr> > intpLocation, ExecutionState& current) {
   //get parent interpolant
   ref<Expr> leftIntpParent = tmpInterpolant->getKid(0);
   ref<Expr> rightIntpParent = tmpInterpolant->getKid(1);
@@ -819,20 +817,17 @@ void Executor::propagateInterpolant(const ref<Expr>& tmpInterpolant,
   //    parentInterpolant = Expr::createIsZero(parentInterpolant);
   ITreeNode *currentPredecessor = NULL;
   if (current.itreeNode->parent != NULL) {
-      if (current.itreeNode->parent->InterpolantStatus == NoInterpolant) {
-
-	  current.itreeNode->parent->InterpolantStatus = HalfInterpolant;
-	  current.itreeNode->parent->interpolant = parentInterpolant;
-	  current.itreeNode->parent->interpolantLoc = std::make_pair(current.itreeNode->interpolantLoc.first, current.itreeNode->interpolantLoc.second);
+      if (current.itreeNode->parent->getInterpolantStatus() == NoInterpolant) {
+	  current.itreeNode->parent->setInterpolant(parentInterpolant,
+	                                            current.itreeNode->getInterpolantLoc(),
+	                                            HalfInterpolant);
       }
-      else if (current.itreeNode->parent->InterpolantStatus
-	  == HalfInterpolant) {
-	  current.itreeNode->parent->InterpolantStatus = FullInterpolant;
-	  current.itreeNode->parent->interpolant = parentInterpolant;
+      else if (current.itreeNode->parent->getInterpolantStatus() == HalfInterpolant) {
+	  current.itreeNode->parent->setInterpolant(parentInterpolant, FullInterpolant);
 
 	  Subsumption subsume;
-	  subsume.interpolant = current.itreeNode->parent->interpolant;
-	  subsume.interpolantLoc = std::make_pair(current.itreeNode->parent->interpolantLoc.first, current.itreeNode->parent->interpolantLoc.second);
+	  subsume.interpolant = current.itreeNode->parent->getInterpolant();
+	  subsume.interpolantLoc = current.itreeNode->parent->getInterpolantLoc();
 	  subsume.programPoint = current.itreeNode->parent->programPoint;
 	  interpTree->store(subsume);
       }
@@ -846,35 +841,33 @@ void Executor::propagateInterpolant(const ref<Expr>& tmpInterpolant,
       ref<Expr> currPredecessorInt =
 	  Expr::createIsZero(makeComparison(tmpInterpolant, parentIntLeft, parentIntRight));
 
-      if (currentPredecessor->left->InterpolantStatus == FullInterpolant
-	  && currentPredecessor->right->InterpolantStatus
-	  == FullInterpolant) {
+      if (currentPredecessor->left->getInterpolantStatus() == FullInterpolant
+	  && currentPredecessor->right->getInterpolantStatus() == FullInterpolant) {
 
-	  if (currentPredecessor->InterpolantStatus != FullInterpolant) {
-	      currentPredecessor->InterpolantStatus = FullInterpolant;
+	  if (currentPredecessor->getInterpolantStatus() != FullInterpolant) {
+	      currentPredecessor->setInterpolantStatus(FullInterpolant);
 
 	      Subsumption _subsume;
-	      _subsume.interpolant = currentPredecessor->interpolant;
-	      _subsume.interpolantLoc = std::make_pair(currentPredecessor->interpolantLoc.first, currentPredecessor->interpolantLoc.second);
+	      _subsume.interpolant = currentPredecessor->getInterpolant();
+	      _subsume.interpolantLoc = currentPredecessor->getInterpolantLoc();
 	      _subsume.programPoint = currentPredecessor->programPoint;
 	      interpTree->store(_subsume);
 
 	      //				currentPredecessor->interpolant = AndExpr::create(
 	      //						currentPredecessor->interpolant, currPredecessorInt);
-	      if(currentPredecessor->interpolant.isNull()){
-		  currentPredecessor->interpolant = currPredecessorInt;
+	      if(currentPredecessor->getInterpolant().isNull()){
+		  currentPredecessor->setInterpolant(currPredecessorInt);
 	      }
 	  }
       }
 
-      else if (currentPredecessor->left->InterpolantStatus == FullInterpolant
-	  || currentPredecessor->right->InterpolantStatus
-	  == FullInterpolant) {
+      else if (currentPredecessor->left->getInterpolantStatus() == FullInterpolant
+	  || currentPredecessor->right->getInterpolantStatus() == FullInterpolant) {
 
-	  if (currentPredecessor->InterpolantStatus != HalfInterpolant) {
-	      currentPredecessor->InterpolantStatus = HalfInterpolant;
-	      currentPredecessor->interpolant = currPredecessorInt;
-	      currentPredecessor->interpolantLoc = std::make_pair(intpLocation.first, intpLocation.second);
+	  if (currentPredecessor->getInterpolantStatus() != HalfInterpolant) {
+	      currentPredecessor->setInterpolant(currPredecessorInt,
+	                                         std::make_pair(intpLocation.first, intpLocation.second),
+	                                         HalfInterpolant);
 	  }
       }
 
@@ -1117,12 +1110,12 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
 		solver->evaluate(current, reExecIntp, rslt);
 		if(rslt == Solver::True){
 		    current.itreeNode->isSubsumed = true;
-		    current.itreeNode->InterpolantStatus = FullInterpolant;
-		    current.itreeNode->interpolant = it->interpolant;
-		    current.itreeNode->interpolantLoc = it->interpolantLoc;
+		    current.itreeNode->setInterpolant(it->interpolant, it->interpolantLoc, FullInterpolant);
 		    addedStates.erase(falseState); // false state has been added before. Since we will do subsumption we can delete this added falseState
-		    current.itreeNode->parent->InterpolantStatus = FullInterpolant;
-		    propagateInterpolant(current.itreeNode->interpolant, current.itreeNode->interpolantLoc, current);
+		    current.itreeNode->parent->setInterpolantStatus(FullInterpolant);
+		    propagateInterpolant(current.itreeNode->getInterpolant(),
+		                         current.itreeNode->getInterpolantLoc(),
+		                         current);
 		    return StatePair(0, 0);
 		}
 	    }
@@ -2343,6 +2336,11 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
   case Instruction::Load: {
     ref<Expr> base = eval(ki, 0, state).value;
+
+    llvm::errs() << "IN PROCESSING LOAD INSTRUCTION:\n";
+    i->dump();
+    llvm::errs() << "BASE IS ARG 0 OF LOAD:\n";
+    base->dump();
     latestBaseLeft = base;
     latestBaseRight = base;
     executeMemoryOperation(state, false, base, 0, ki);
@@ -2954,6 +2952,8 @@ void Executor::run(ExecutionState &initialState) {
   while (!states.empty() && !haltExecution) {
     ExecutionState &state = searcher->selectState();
 
+    llvm::errs() << "Set currently active itree node to ";
+    state.itreeNode->dump();
     interpTree->setCurrentINode(state.itreeNode);
 
     KInstruction *ki = state.pc;
@@ -3799,14 +3799,18 @@ void Executor::runFunctionAsMain(Function *f,
   processTree = new PTree(state);
   state->ptreeNode = processTree->root;
 
+  llvm::errs() << "ALLOCATING NEW INTEPOLATION TREE\n";
   interpTree = new ITree(state);//added by Felicia
+  llvm::errs() << "\tSET state->itreeNode TO THE ROOT OF THE INTERPOLATION TREE\n";
   state->itreeNode = interpTree->root;
+  llvm::errs() << "\tSET THAT ROOT TO BE THE CURRENT NODE\n";
   interpTree->setCurrentINode(interpTree->root);
 
   run(*state);
   delete processTree;
   processTree = 0;
 
+  llvm::errs() << "DELETING INTEPOLATION TREE\n";
   delete interpTree;
   interpTree = 0;
 

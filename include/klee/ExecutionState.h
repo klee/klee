@@ -134,6 +134,7 @@ public:
   /// @brief Pointer to the process tree of the current state
   PTreeNode *ptreeNode;
 
+  /// @brief Pointer to the interpolation tree of the current state
   ITreeNode *itreeNode;
 
   /// @brief Ordered list of symbolics: used to generate test cases.

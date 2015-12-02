@@ -163,13 +163,13 @@ void ITree::setCurrentINode(ITreeNode *node) {
 
 ITreeNode::ITreeNode(ITreeNode *_parent,
                      ExecutionState *_data)
-: programPoint(0),
+: interpolant(NULL),
+  interpolantStatus(NoInterpolant),
+  programPoint(0),
   parent(_parent),
   left(0),
   right(0),
   data(_data),
-  interpolant(NULL),
-  InterpolantStatus(NoInterpolant),
   isSubsumed(false){
 
   for (ConstraintManager::constraints_ty::const_iterator it = _data->constraints.begin(),
@@ -226,6 +226,40 @@ ref<Expr> ITreeNode::getInterpolantBaseLocation(ref<Expr>& interpolant) {
       }
   }
   return 0;
+}
+
+void ITreeNode::setInterpolantStatus(Status interpolantStatus) {
+  this->interpolantStatus = interpolantStatus;
+}
+
+void ITreeNode::setInterpolant(ref<Expr> interpolant) {
+  this->interpolant = interpolant;
+}
+
+void ITreeNode::setInterpolant(ref<Expr> interpolant,
+                                   Status interpolantStatus) {
+  this->interpolant = interpolant;
+  this->interpolantStatus = interpolantStatus;
+}
+
+void ITreeNode::setInterpolant(ref<Expr> interpolant,
+                                   std::pair< ref<Expr>, ref<Expr> > interpolantLoc,
+                                   Status interpolantStatus) {
+  this->interpolant = interpolant;
+  this->interpolantLoc = interpolantLoc;
+  this->interpolantStatus = interpolantStatus;
+}
+
+ref<Expr> &ITreeNode::getInterpolant() {
+  return this->interpolant;
+}
+
+std::pair< ref<Expr>, ref<Expr> > ITreeNode::getInterpolantLoc() {
+  return std::make_pair(this->interpolantLoc.first, this->interpolantLoc.second);
+}
+
+Status ITreeNode::getInterpolantStatus() {
+  return this->interpolantStatus;
 }
 
 void ITreeNode::dump() {
@@ -304,7 +338,7 @@ void ITreeNode::print(llvm::raw_ostream &stream, const unsigned int tab_num) {
       stream << "\n";
   }
 
-  stream << tabs_next << "InterpolantStatus =" << InterpolantStatus;
+  stream << tabs_next << "InterpolantStatus =" << interpolantStatus << "\n";
 
 }
 

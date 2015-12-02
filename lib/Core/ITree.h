@@ -94,6 +94,9 @@ namespace klee {
     typedef std::pair <expression_type, expression_type> pair_type;
     std::vector< UpdateRelation > newUpdateRelationsList;
     std::vector< UpdateRelation > updateRelationsList;
+    ref<Expr> interpolant;
+    std::pair< ref<Expr>, ref<Expr> > interpolantLoc;
+    Status interpolantStatus;
 
   public:
     unsigned int * programPoint;
@@ -101,9 +104,6 @@ namespace klee {
     ExecutionState *data;
     std::vector< ref<Expr> > conditions;
     std::vector< ref<Expr> > dependenciesLoc;
-    ref<Expr> interpolant;
-    std::pair< ref<Expr>, ref<Expr> > interpolantLoc;
-    Status InterpolantStatus;
     bool isSubsumed;
     std::vector <pair_type> variablesTracking;
     BranchCondition latestBranchCond;
@@ -121,6 +121,21 @@ namespace klee {
     ref<Expr> buildNewUpdateExpression(ref<Expr>& lhs, ref<Expr> rhs);
 
     ref<Expr> getInterpolantBaseLocation(ref<Expr>& interpolant);
+
+    void setInterpolantStatus(Status interpolantStatus);
+
+    void setInterpolant(ref<Expr> interpolant);
+
+    void setInterpolant(ref<Expr> interpolant, Status interpolantStatus);
+
+    void setInterpolant(ref<Expr> interpolant, std::pair< ref<Expr>, ref<Expr> > interpolantLoc,
+                            Status interpolantStatus);
+
+    ref<Expr> &getInterpolant();
+
+    std::pair< ref<Expr>, ref<Expr> > getInterpolantLoc();
+
+    Status getInterpolantStatus();
 
     void dump();
 
