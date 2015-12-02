@@ -913,6 +913,13 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
   if (isSeeding)
     timeout *= it->second.size();
   solver->setTimeout(timeout);
+  llvm::errs() << "Calling solver->evaluate on query:\n";
+  for (std::vector< ref<Expr> >::const_iterator it = current.constraints.begin();
+      it != current.constraints.end(); it++) {
+      it->get()->dump();
+  }
+  llvm::errs() << "=>\n";
+  condition->dump();
   bool success = solver->evaluate(current, condition, res);
   solver->setTimeout(0);
   if (!success) {
@@ -1015,6 +1022,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       }
     }
 
+    llvm::errs() << "Solver proved the query\n";
     /// Validity proof succeeded of a query: antecedent -> consequent.
     /// We then extract the unsatisfiability core of antecedent and not
     /// consequent as the Craig interpolant.
@@ -1024,6 +1032,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
 
     /// Process the unsat core in case it was computed (non-empty)
     if(unsat_core.size() > 0){
+	llvm::errs() << "Non-empty unsatisfiability core\n";
 	predNum = unsat_core.back().first;
 	tmpInterpolant = unsat_core.back().second;
 	unsat_core.push_back(std::make_pair(current.constraints.size(), condition));
@@ -1147,6 +1156,9 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     std::pair<ITreeNode*, ITreeNode* > result = interpTree->split(current.itreeNode, falseState, trueState);
     falseState->itreeNode = result.first;
     trueState->itreeNode = result.second;
+
+    llvm::errs() << "NEXT INSTRUCTION: ";
+    current.pc->inst->dump();
 
     falseState->itreeNode->programPoint = &current.pc->dest;
     trueState->itreeNode->programPoint = &current.pc->dest;
@@ -1656,6 +1668,15 @@ static inline const llvm::fltSemantics * fpWidthToSemantics(unsigned width) {
 void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
   Instruction *i = ki->inst;
+
+  llvm::errs() << "Symbolically executing: ";
+  i->dump();
+  if (i->getParent()->front().isIdenticalTo(i)) {
+      llvm::errs() << "(FIRST INSTRUCTION IN BASIC BLOCK)\n";
+  }
+  llvm::errs() << "PROGRAM POINT: " << ki->dest << "\n";
+  llvm::errs() << "Branching depth: " << state.depth << "\n";
+
   switch (i->getOpcode()) {
     // Control flow
   case Instruction::Ret: {

@@ -338,6 +338,19 @@ void ITreeNode::print(llvm::raw_ostream &stream, const unsigned int tab_num) {
       stream << "\n";
   }
 
+  stream << tabs_next << "intepolantLoc = pair(";
+  if (!interpolantLoc.first.isNull()) {
+      interpolantLoc.first->print(stream);
+  } else {
+      stream << "NULL";
+  }
+  stream << ",";
+  if (!interpolantLoc.second.isNull()) {
+      interpolantLoc.second->print(stream);
+  } else {
+      stream << "NULL";
+  }
+  stream << ")\n";
   stream << tabs_next << "InterpolantStatus =" << interpolantStatus << "\n";
 
 }
