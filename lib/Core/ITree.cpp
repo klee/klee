@@ -145,12 +145,16 @@ void ITree::addConditionToCurrentNode(ref<Expr> cond) {
   currentINode->conditions.push_back(cond);
 }
 
-std::vector<Subsumption> ITree::getStore() {
-  return subsumptionStore;
+std::vector<SubsumptionTableEntry> ITree::getStore() {
+  return subsumptionTable;
 }
 
-void ITree::store(Subsumption subItem) {
-  subsumptionStore.push_back(subItem);
+void ITree::store(SubsumptionTableEntry subItem) {
+  llvm::errs() << "STORING subItem: ";
+  subItem.inst->dump();
+  llvm::errs() << "SIZE BEFORE: " << subsumptionTable.size() << "\n";
+  subsumptionTable.push_back(subItem);
+  llvm::errs() << "SIZE AFTER: " << subsumptionTable.size() << "\n";
 }
 
 bool ITree::isSubsumed() {
@@ -165,7 +169,7 @@ ITreeNode::ITreeNode(ITreeNode *_parent,
                      ExecutionState *_data)
 : interpolant(NULL),
   interpolantStatus(NoInterpolant),
-  programPoint(0),
+  inst(0),
   parent(_parent),
   left(0),
   right(0),
@@ -276,11 +280,11 @@ void ITreeNode::print(llvm::raw_ostream &stream, const unsigned int tab_num) {
   std::string tabs_next = tabs + "\t";
 
   stream << tabs << "ITreeNode\n";
-  stream << tabs_next << "programPoint = ";
-  if (!programPoint) {
+  stream << tabs_next << "instruction = ";
+  if (!inst) {
       stream << "NULL";
   } else {
-      stream << (*programPoint);
+      inst->print(stream);
   }
   stream << "\n";
   stream << tabs_next << "conditions =";

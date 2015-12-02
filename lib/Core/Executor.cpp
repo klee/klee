@@ -765,10 +765,11 @@ ref<Expr> Executor::reExecInterpolant(ref<Expr>& interpolant, std::pair< ref<Exp
 bool Executor::subsumptionCheck(ExecutionState& current) {
   //subsumption
   Solver::Validity result;
-  for (std::vector<Subsumption>::const_iterator it =
+  for (std::vector<SubsumptionTableEntry>::const_iterator it =
       interpTree->getStore().begin();
       it != interpTree->getStore().end(); ++it) {
-      if (current.itreeNode->programPoint == it->programPoint) {
+      llvm::errs() << "Is identical 2\n";
+      if (current.itreeNode->inst->isIdenticalTo(it->inst)) {
 	  solver->evaluate(current, it->interpolant, result);
 	  if (result == Solver::True) {
 
@@ -791,10 +792,12 @@ bool Executor::subsumptionCheck(ExecutionState& current) {
   }
   if (!current.itreeNode->isSubsumed) {
       //no subsumption
-      Subsumption subsumption;
+      SubsumptionTableEntry subsumption;
       subsumption.interpolant = current.itreeNode->getInterpolant();
       subsumption.interpolantLoc = current.itreeNode->getInterpolantLoc();
-      subsumption.programPoint = current.itreeNode->programPoint;
+      subsumption.inst = current.itreeNode->inst;
+      llvm::errs() << "STORING AT " << __LINE__ << ": ";
+      subsumption.inst->dump();
       interpTree->store(subsumption);
       return false;
   }
@@ -825,10 +828,13 @@ void Executor::propagateInterpolant(const ref<Expr>& tmpInterpolant,
       else if (current.itreeNode->parent->getInterpolantStatus() == HalfInterpolant) {
 	  current.itreeNode->parent->setInterpolant(parentInterpolant, FullInterpolant);
 
-	  Subsumption subsume;
+	  SubsumptionTableEntry subsume;
 	  subsume.interpolant = current.itreeNode->parent->getInterpolant();
 	  subsume.interpolantLoc = current.itreeNode->parent->getInterpolantLoc();
-	  subsume.programPoint = current.itreeNode->parent->programPoint;
+	  subsume.inst = current.itreeNode->parent->inst;
+	  llvm::errs() << "STORING AT " << __LINE__ << ": ";
+	  subsume.inst->dump();
+
 	  interpTree->store(subsume);
       }
       currentPredecessor = current.itreeNode->parent->parent;
@@ -847,10 +853,12 @@ void Executor::propagateInterpolant(const ref<Expr>& tmpInterpolant,
 	  if (currentPredecessor->getInterpolantStatus() != FullInterpolant) {
 	      currentPredecessor->setInterpolantStatus(FullInterpolant);
 
-	      Subsumption _subsume;
+	      SubsumptionTableEntry _subsume;
 	      _subsume.interpolant = currentPredecessor->getInterpolant();
 	      _subsume.interpolantLoc = currentPredecessor->getInterpolantLoc();
-	      _subsume.programPoint = currentPredecessor->programPoint;
+	      _subsume.inst = currentPredecessor->inst;
+	      llvm::errs() << "STORING AT " << __LINE__ << ": ";
+	      _subsume.inst->dump();
 	      interpTree->store(_subsume);
 
 	      //				currentPredecessor->interpolant = AndExpr::create(
@@ -1105,10 +1113,17 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     }
 
     //subsumption
-    for (std::vector< Subsumption >::const_iterator it = interpTree->getStore().begin() ;
+    for (std::vector< SubsumptionTableEntry >::iterator it = interpTree->getStore().begin() ;
 	it != interpTree->getStore().end(); ++it){
 	Solver::Validity result;
-	if(current.itreeNode->programPoint == it->programPoint){
+	llvm::errs() << "Is identical 1\n";
+	current.itreeNode->inst->dump();
+	if (!it->inst) {
+	    llvm::errs() << "SOMETHING WRONG\n";
+	}
+	llvm::errs() << "NAME: " << it->inst->getName() << "\n";
+	it->inst->dump();
+	if(current.itreeNode->inst->isIdenticalTo(it->inst)) {
 	    solver->evaluate(current, it->interpolant, result);
 
 	    if(result == Solver::True){
@@ -1160,8 +1175,8 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     llvm::errs() << "NEXT INSTRUCTION: ";
     current.pc->inst->dump();
 
-    falseState->itreeNode->programPoint = &current.pc->dest;
-    trueState->itreeNode->programPoint = &current.pc->dest;
+    falseState->itreeNode->inst = current.pc->inst;
+    trueState->itreeNode->inst = current.pc->inst;
 
     falseState->itreeNode->addUpdateRelations(current.itreeNode->parent);
     trueState->itreeNode->addUpdateRelations(current.itreeNode->parent);
@@ -1671,6 +1686,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
   llvm::errs() << "Symbolically executing: ";
   i->dump();
+  llvm::errs() << "Is identical 3\n";
   if (i->getParent()->front().isIdenticalTo(i)) {
       llvm::errs() << "(FIRST INSTRUCTION IN BASIC BLOCK)\n";
   }
@@ -2979,6 +2995,7 @@ void Executor::run(ExecutionState &initialState) {
 
     KInstruction *ki = state.pc;
     stepInstruction(state);
+    state.itreeNode->inst = ki->inst;
 
     executeInstruction(state, ki);
     if(state.itreeNode->isSubsumed){
