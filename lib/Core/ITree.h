@@ -49,10 +49,24 @@ namespace klee {
     ref<Expr> value;
     Comparison compareName;
   };
-  struct SubsumptionTableEntry {
+
+  class SubsumptionTableEntry {
     unsigned int programPoint;
+
     ref<Expr> interpolant;
+
     std::pair< ref<Expr> , ref<Expr> > interpolantLoc;
+
+  public:
+    SubsumptionTableEntry(ITreeNode *node);
+
+    ~SubsumptionTableEntry();
+
+    bool subsumed(ExecutionState& state);
+
+    void dump() const;
+
+    void print(llvm::raw_ostream &stream) const;
   };
 
   class ITree{
@@ -82,10 +96,11 @@ namespace klee {
 
     void store(SubsumptionTableEntry subItem);
 
-    bool isSubsumed();
+    bool isCurrentNodeSubsumed();
 
     void setCurrentINode(ITreeNode *node);
 
+    void checkCurrentNodeSubsumption();
   };
 
   class ITreeNode{
@@ -137,18 +152,18 @@ namespace klee {
 
     Status getInterpolantStatus();
 
-    void dump();
+    void dump() const;
 
-    void print(llvm::raw_ostream &stream);
+    void print(llvm::raw_ostream &stream) const;
 
   private:
     ITreeNode(ITreeNode *_parent, ExecutionState *_data);
 
     ~ITreeNode();
 
-    void print(llvm::raw_ostream &stream, const unsigned int tab_num);
+    void print(llvm::raw_ostream &stream, const unsigned int tab_num) const;
 
-    std::string make_tabs(const unsigned int tab_num) {
+    std::string make_tabs(const unsigned int tab_num) const {
       std::string tabs_string;
       for (unsigned int i = 0; i < tab_num; i++) {
 	  tabs_string += "\t";

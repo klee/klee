@@ -402,7 +402,6 @@ private:
 
   void setCurrentInterpolant(size_t predNum, ref<Expr>& tmpInterpolant,
 			ExecutionState& current, ref<Expr> baseLocation);
-  bool subsumptionCheck(ExecutionState& current);
   void propagateInterpolant(const ref<Expr>& tmpInterpolant,
 			std::pair< ref<Expr>, ref<Expr> > baseLocation, ExecutionState& current);
  ref<Expr> reExecInterpolant(ref<Expr>& interpolant, std::pair< ref<Expr> , ref<Expr> >& interpolantLoc, ExecutionState& current);

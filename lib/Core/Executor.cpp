@@ -762,45 +762,6 @@ ref<Expr> Executor::reExecInterpolant(ref<Expr>& interpolant, std::pair< ref<Exp
   return makeComparison(interpolant, intpLeft, intpRight);
 }
 
-bool Executor::subsumptionCheck(ExecutionState& current) {
-  //subsumption
-  Solver::Validity result;
-  for (std::vector<SubsumptionTableEntry>::const_iterator it =
-      interpTree->getStore().begin();
-      it != interpTree->getStore().end(); ++it) {
-      if (current.itreeNode->programPoint == it->programPoint) {
-	  solver->evaluate(current, it->interpolant, result);
-	  if (result == Solver::True) {
-
-	      ref<Expr> interpolant =  it->interpolant;
-	      std::pair< ref<Expr> , ref<Expr> > interpolantLoc = it->interpolantLoc;
-	      ref<Expr> reExecIntp = reExecInterpolant(interpolant, interpolantLoc, current);
-
-	      Solver::Validity rslt;
-	      solver->evaluate(current, reExecIntp, rslt);
-	      if(rslt == Solver::True){
-		  current.itreeNode->isSubsumed = true;
-		  current.itreeNode->setInterpolant(it->interpolant,
-		                                        std::make_pair(it->interpolantLoc.first, it->interpolantLoc.second),
-		                                        FullInterpolant);
-		  return true;
-		  break;
-	      }
-	  }
-      }
-  }
-  if (!current.itreeNode->isSubsumed) {
-      //no subsumption
-      SubsumptionTableEntry subsumption;
-      subsumption.interpolant = current.itreeNode->getInterpolant();
-      subsumption.interpolantLoc = current.itreeNode->getInterpolantLoc();
-      subsumption.programPoint = current.itreeNode->programPoint;
-      interpTree->store(subsumption);
-      return false;
-  }
-  return false;
-}
-
 void Executor::propagateInterpolant(const ref<Expr>& tmpInterpolant,
                                     std::pair< ref<Expr>, ref<Expr> > intpLocation, ExecutionState& current) {
   //get parent interpolant
@@ -825,11 +786,8 @@ void Executor::propagateInterpolant(const ref<Expr>& tmpInterpolant,
       else if (current.itreeNode->parent->getInterpolantStatus() == HalfInterpolant) {
 	  current.itreeNode->parent->setInterpolant(parentInterpolant, FullInterpolant);
 
-	  SubsumptionTableEntry subsume;
-	  subsume.interpolant = current.itreeNode->parent->getInterpolant();
-	  subsume.interpolantLoc = current.itreeNode->parent->getInterpolantLoc();
-	  subsume.programPoint = current.itreeNode->parent->programPoint;
-	  interpTree->store(subsume);
+	  SubsumptionTableEntry s(current.itreeNode);
+	  interpTree->store(s);
       }
       currentPredecessor = current.itreeNode->parent->parent;
   }
@@ -847,14 +805,9 @@ void Executor::propagateInterpolant(const ref<Expr>& tmpInterpolant,
 	  if (currentPredecessor->getInterpolantStatus() != FullInterpolant) {
 	      currentPredecessor->setInterpolantStatus(FullInterpolant);
 
-	      SubsumptionTableEntry _subsume;
-	      _subsume.interpolant = currentPredecessor->getInterpolant();
-	      _subsume.interpolantLoc = currentPredecessor->getInterpolantLoc();
-	      _subsume.programPoint = currentPredecessor->programPoint;
-	      interpTree->store(_subsume);
+	      SubsumptionTableEntry s(currentPredecessor);
+	      interpTree->store(s);
 
-	      //				currentPredecessor->interpolant = AndExpr::create(
-	      //						currentPredecessor->interpolant, currPredecessorInt);
 	      if(currentPredecessor->getInterpolant().isNull()){
 		  currentPredecessor->setInterpolant(currPredecessorInt);
 	      }
@@ -914,12 +867,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     timeout *= it->second.size();
   solver->setTimeout(timeout);
   llvm::errs() << "Calling solver->evaluate on query:\n";
-  for (std::vector< ref<Expr> >::const_iterator it = current.constraints.begin();
-      it != current.constraints.end(); it++) {
-      it->get()->dump();
-  }
-  llvm::errs() << "=>\n";
-  condition->dump();
+  ExprPPrinter::printQuery(llvm::errs(), current.constraints, condition);
   bool success = solver->evaluate(current, condition, res);
   solver->setTimeout(0);
   if (!success) {
@@ -1044,8 +992,6 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
 
 	setCurrentInterpolant(predNum, tmpInterpolant, current, baseLocation);
 
-	// subsumptionCheck(current);
-
 	propagateInterpolant(tmpInterpolant, tmpInterpolantLoc, current);
     }
 
@@ -1104,14 +1050,14 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       }
     }
 
-    //subsumption
-    llvm::errs() << "SIZE OF SUB. TABLE: " << interpTree->getStore().size() << "\n";
-    for (std::vector< SubsumptionTableEntry >::iterator it = interpTree->getStore().begin() ;
-	it != interpTree->getStore().end(); ++it){
-	llvm::errs() << "Is identical 1\n";
-	if(current.itreeNode->programPoint == it->programPoint) {
-	    /// The following evaluation seems to increase the number of iterations:
-	    /// commented out for now, also including all code in this block
+    /// Subsumption check
+
+    /// The following is the original subsumption check algorithm that was put here.
+    /// The first solver->evaluate seems to increase the number of iterations:
+    /// commented out only for future reference.
+//    for (std::vector< SubsumptionTableEntry >::iterator it = interpTree->getStore().begin() ;
+//	it != interpTree->getStore().end(); ++it){
+//	if(current.itreeNode->programPoint == it->programPoint) {
 //	    Solver::Validity result;
 //	    solver->evaluate(current, it->interpolant, result);
 //
@@ -1132,8 +1078,14 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
 //		    return StatePair(0, 0);
 //		}
 //	    }
-	}
+//	}
+//    }
+
+    interpTree->checkCurrentNodeSubsumption();
+    if (interpTree->isCurrentNodeSubsumed()) {
+	return StatePair(0, 0);
     }
+
     current.ptreeNode->data = 0;
     std::pair<PTree::Node*, PTree::Node*> res =
       processTree->split(current.ptreeNode, falseState, trueState);
@@ -1160,12 +1112,6 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     std::pair<ITreeNode*, ITreeNode* > result = interpTree->split(current.itreeNode, falseState, trueState);
     falseState->itreeNode = result.first;
     trueState->itreeNode = result.second;
-
-    /// These seem to be not necessary as we correct the program point at
-    /// the start of each loop iteration anyway.
-    ///
-    /// falseState->itreeNode->programPoint = current.pc->dest;
-    /// trueState->itreeNode->programPoint = current.pc->dest;
 
     falseState->itreeNode->addUpdateRelations(current.itreeNode->parent);
     trueState->itreeNode->addUpdateRelations(current.itreeNode->parent);
@@ -1670,17 +1616,7 @@ static inline const llvm::fltSemantics * fpWidthToSemantics(unsigned width) {
 }
 
 void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
-
   Instruction *i = ki->inst;
-
-  llvm::errs() << "Symbolically executing: ";
-  i->dump();
-  llvm::errs() << "Is identical 3\n";
-  if (i->getParent()->front().isIdenticalTo(i)) {
-      llvm::errs() << "(FIRST INSTRUCTION IN BASIC BLOCK)\n";
-  }
-  llvm::errs() << "PROGRAM POINT: " << ki->dest << "\n";
-  llvm::errs() << "Branching depth: " << state.depth << "\n";
 
   switch (i->getOpcode()) {
     // Control flow
@@ -2201,7 +2137,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       ref<Expr> result = EqExpr::create(left, right);
       bindLocal(ki, state, result);
 
-      if(!interpTree->isSubsumed()){
+      if(!interpTree->isCurrentNodeSubsumed()){
     	  state.itreeNode->latestBranchCond.base = left;
           state.itreeNode->latestBranchCond.value = right;
           state.itreeNode->latestBranchCond.compareName = Eq;
@@ -2216,7 +2152,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       ref<Expr> right = eval(ki, 1, state).value;
       ref<Expr> result = NeExpr::create(left, right);
       bindLocal(ki, state, result);
-      if(!interpTree->isSubsumed()){
+      if(!interpTree->isCurrentNodeSubsumed()){
     	  state.itreeNode->latestBranchCond.base = left;
           state.itreeNode->latestBranchCond.value = right;
           state.itreeNode->latestBranchCond.compareName = Ne;
@@ -2230,7 +2166,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       ref<Expr> right = eval(ki, 1, state).value;
       ref<Expr> result = UgtExpr::create(left, right);
       bindLocal(ki, state,result);
-      if(!interpTree->isSubsumed()){
+      if(!interpTree->isCurrentNodeSubsumed()){
     	  state.itreeNode->latestBranchCond.base = left;
           state.itreeNode->latestBranchCond.value = right;
           state.itreeNode->latestBranchCond.compareName = Ugt;
@@ -2244,7 +2180,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       ref<Expr> right = eval(ki, 1, state).value;
       ref<Expr> result = UgeExpr::create(left, right);
       bindLocal(ki, state, result);
-      if(!interpTree->isSubsumed()){
+      if(!interpTree->isCurrentNodeSubsumed()){
     	  state.itreeNode->latestBranchCond.base = left;
           state.itreeNode->latestBranchCond.value = right;
           state.itreeNode->latestBranchCond.compareName = Uge;
@@ -2258,7 +2194,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       ref<Expr> right = eval(ki, 1, state).value;
       ref<Expr> result = UltExpr::create(left, right);
       bindLocal(ki, state, result);
-      if(!interpTree->isSubsumed()){
+      if(!interpTree->isCurrentNodeSubsumed()){
     	  state.itreeNode->latestBranchCond.base = left;
           state.itreeNode->latestBranchCond.value = right;
           state.itreeNode->latestBranchCond.compareName = Ult;
@@ -2272,7 +2208,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       ref<Expr> right = eval(ki, 1, state).value;
       ref<Expr> result = UleExpr::create(left, right);
       bindLocal(ki, state, result);
-      if(!interpTree->isSubsumed()){
+      if(!interpTree->isCurrentNodeSubsumed()){
     	  state.itreeNode->latestBranchCond.base = left;
           state.itreeNode->latestBranchCond.value = right;
           state.itreeNode->latestBranchCond.compareName = Ule;
@@ -2286,7 +2222,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       ref<Expr> right = eval(ki, 1, state).value;
       ref<Expr> result = SgtExpr::create(left, right);
 
-      if(!interpTree->isSubsumed()){
+      if(!interpTree->isCurrentNodeSubsumed()){
     	  state.itreeNode->latestBranchCond.base = left;
     	  state.itreeNode->latestBranchCond.value = right;
     	  state.itreeNode->latestBranchCond.compareName = Sgt;
@@ -2301,7 +2237,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       ref<Expr> right = eval(ki, 1, state).value;
       ref<Expr> result = SgeExpr::create(left, right);
       bindLocal(ki, state, result);
-      if(!interpTree->isSubsumed()){
+      if(!interpTree->isCurrentNodeSubsumed()){
     	  state.itreeNode->latestBranchCond.base = left;
           state.itreeNode->latestBranchCond.value = right;
           state.itreeNode->latestBranchCond.compareName = Sge;
@@ -2315,7 +2251,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       ref<Expr> right = eval(ki, 1, state).value;
       ref<Expr> result = SltExpr::create(left, right);
       bindLocal(ki, state, result);
-      if(!interpTree->isSubsumed()){
+      if(!interpTree->isCurrentNodeSubsumed()){
     	  state.itreeNode->latestBranchCond.base = left;
           state.itreeNode->latestBranchCond.value = right;
           state.itreeNode->latestBranchCond.compareName = Slt;
@@ -2329,7 +2265,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       ref<Expr> right = eval(ki, 1, state).value;
       ref<Expr> result = SleExpr::create(left, right);
       bindLocal(ki, state, result);
-      if(!interpTree->isSubsumed()){
+      if(!interpTree->isCurrentNodeSubsumed()){
     	  state.itreeNode->latestBranchCond.base = left;
           state.itreeNode->latestBranchCond.value = right;
           state.itreeNode->latestBranchCond.compareName = Sle;
@@ -2982,8 +2918,7 @@ void Executor::run(ExecutionState &initialState) {
     state.itreeNode->programPoint = state.pc->dest;
     interpTree->setCurrentINode(state.itreeNode);
 
-    llvm::errs() << "START OF LOOP\n";
-    llvm::errs() << "Set currently active itree node to ";
+    llvm::errs() << "Start of loop: Set currently active interpolation tree node to ";
     state.itreeNode->dump();
 
     KInstruction *ki = state.pc;
@@ -3829,11 +3764,8 @@ void Executor::runFunctionAsMain(Function *f,
   processTree = new PTree(state);
   state->ptreeNode = processTree->root;
 
-  llvm::errs() << "ALLOCATING NEW INTEPOLATION TREE\n";
   interpTree = new ITree(state);//added by Felicia
-  llvm::errs() << "\tSET state->itreeNode TO THE ROOT OF THE INTERPOLATION TREE\n";
   state->itreeNode = interpTree->root;
-  llvm::errs() << "\tSET THAT ROOT TO BE THE CURRENT NODE\n";
   interpTree->setCurrentINode(interpTree->root);
 
   run(*state);

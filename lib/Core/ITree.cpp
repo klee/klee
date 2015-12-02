@@ -109,6 +109,43 @@ void UpdateRelation::print(llvm::raw_ostream & stream) const {
   stream << "operationName = " << operationName << "\n";
 }
 
+SubsumptionTableEntry::SubsumptionTableEntry(ITreeNode *node) :
+  programPoint(node->programPoint),
+  interpolant(node->getInterpolant()),
+  interpolantLoc(node->getInterpolantLoc()) {}
+
+SubsumptionTableEntry::~SubsumptionTableEntry() {}
+
+bool SubsumptionTableEntry::subsumed(ExecutionState& state) {
+  /// We simply return false for now
+  return false;
+}
+
+void SubsumptionTableEntry::dump() const {
+  this->print(llvm::errs());
+  llvm::errs() << "\n";
+}
+
+void SubsumptionTableEntry::print(llvm::raw_ostream &stream) const {
+  stream << "------------ Subsumption Table Entry ------------\n";
+  stream << "Program point = " << programPoint << "\n";
+  stream << "interpolant = ";
+  interpolant->print(stream);
+  stream << "\ninterpolantLoc = pair(";
+  if (!interpolantLoc.first.isNull()) {
+      interpolantLoc.first->print(stream);
+  } else {
+      stream << "NULL";
+  }
+  stream << ",";
+  if (!interpolantLoc.second.isNull()) {
+      interpolantLoc.second->print(stream);
+  } else {
+      stream << "NULL";
+  }
+  stream << ")\n";
+}
+
 ITree::ITree(ExecutionState* _root) :
     currentINode(0),
     root(new ITreeNode(0, _root)) {}
@@ -145,18 +182,31 @@ void ITree::addConditionToCurrentNode(ref<Expr> cond) {
   currentINode->conditions.push_back(cond);
 }
 
+void ITree::checkCurrentNodeSubsumption() {
+  assert(currentINode != 0);
+
+  for (std::vector<SubsumptionTableEntry>::iterator it = subsumptionTable.begin();
+      it != subsumptionTable.end(); it++) {
+      if (it->subsumed(*(currentINode->data))) {
+	  currentINode->isSubsumed = true;
+	  return;
+      }
+  }
+}
+
 std::vector<SubsumptionTableEntry> ITree::getStore() {
   return subsumptionTable;
 }
 
 void ITree::store(SubsumptionTableEntry subItem) {
-  llvm::errs() << "STORING subItem with programPoint " << subItem.programPoint << "\n";
+  llvm::errs() << "TABLING: ";
+  subItem.dump();
   llvm::errs() << "SIZE BEFORE: " << subsumptionTable.size() << "\n";
   subsumptionTable.push_back(subItem);
   llvm::errs() << "SIZE AFTER: " << subsumptionTable.size() << "\n";
 }
 
-bool ITree::isSubsumed() {
+bool ITree::isCurrentNodeSubsumed() {
   return currentINode? currentINode->isSubsumed : false;
 }
 
@@ -265,23 +315,24 @@ Status ITreeNode::getInterpolantStatus() {
   return this->interpolantStatus;
 }
 
-void ITreeNode::dump() {
+void ITreeNode::dump() const {
   llvm::errs() << "\n------------------------- Root ITree --------------------------------\n";
   this->print(llvm::errs());
 }
 
-void ITreeNode::print(llvm::raw_ostream &stream) {
-  ITreeNode::print(stream, 0);
+void ITreeNode::print(llvm::raw_ostream &stream) const {
+  this->print(stream, 0);
 }
 
-void ITreeNode::print(llvm::raw_ostream &stream, const unsigned int tab_num) {
+void ITreeNode::print(llvm::raw_ostream &stream, const unsigned int tab_num) const {
   std::string tabs = make_tabs(tab_num);
   std::string tabs_next = tabs + "\t";
 
   stream << tabs << "ITreeNode\n";
   stream << tabs_next << "programPoint = " << programPoint << "\n";
   stream << tabs_next << "conditions =";
-  for (std::vector< ref<Expr> >::iterator it = conditions.begin(); it != conditions.end(); (stream << ","), it++) {
+  for (std::vector< ref<Expr> >::const_iterator it = conditions.begin();
+      it != conditions.end(); (stream << ","), it++) {
       if (!((*it).isNull())) {
 	  (*it)->print(stream);
       } else {
@@ -306,19 +357,22 @@ void ITreeNode::print(llvm::raw_ostream &stream, const unsigned int tab_num) {
   }
 
   stream << tabs_next << "addedPathCond =";
-  for (std::vector<UpdateRelation>::iterator it = newUpdateRelationsList.begin(); it != newUpdateRelationsList.end(); (stream << ","), it++) {
+  for (std::vector<UpdateRelation>::const_iterator it = newUpdateRelationsList.begin();
+      it != newUpdateRelationsList.end(); (stream << ","), it++) {
       it->print(stream);
   }
   stream << "\n";
 
   stream << tabs_next << "pathCond =";
-  for (std::vector<UpdateRelation>::iterator it = updateRelationsList.begin(); it != updateRelationsList.end(); (stream << ","), it++) {
+  for (std::vector<UpdateRelation>::const_iterator it = updateRelationsList.begin();
+      it != updateRelationsList.end(); (stream << ","), it++) {
       it->print(stream);
   }
   stream << "\n";
 
   stream << tabs_next << "dependenciesLoc =";
-  for (std::vector< ref<Expr> >::iterator it = dependenciesLoc.begin(); it != dependenciesLoc.end(); (stream << ","), it++) {
+  for (std::vector< ref<Expr> >::const_iterator it = dependenciesLoc.begin();
+      it != dependenciesLoc.end(); (stream << ","), it++) {
       if (!((*it).isNull())) {
 	  (*it)->print(stream);
       } else {
