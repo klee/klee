@@ -768,8 +768,7 @@ bool Executor::subsumptionCheck(ExecutionState& current) {
   for (std::vector<SubsumptionTableEntry>::const_iterator it =
       interpTree->getStore().begin();
       it != interpTree->getStore().end(); ++it) {
-      llvm::errs() << "Is identical 2\n";
-      if (current.itreeNode->inst->isIdenticalTo(it->inst)) {
+      if (current.itreeNode->programPoint == it->programPoint) {
 	  solver->evaluate(current, it->interpolant, result);
 	  if (result == Solver::True) {
 
@@ -795,9 +794,7 @@ bool Executor::subsumptionCheck(ExecutionState& current) {
       SubsumptionTableEntry subsumption;
       subsumption.interpolant = current.itreeNode->getInterpolant();
       subsumption.interpolantLoc = current.itreeNode->getInterpolantLoc();
-      subsumption.inst = current.itreeNode->inst;
-      llvm::errs() << "STORING AT " << __LINE__ << ": ";
-      subsumption.inst->dump();
+      subsumption.programPoint = current.itreeNode->programPoint;
       interpTree->store(subsumption);
       return false;
   }
@@ -831,10 +828,7 @@ void Executor::propagateInterpolant(const ref<Expr>& tmpInterpolant,
 	  SubsumptionTableEntry subsume;
 	  subsume.interpolant = current.itreeNode->parent->getInterpolant();
 	  subsume.interpolantLoc = current.itreeNode->parent->getInterpolantLoc();
-	  subsume.inst = current.itreeNode->parent->inst;
-	  llvm::errs() << "STORING AT " << __LINE__ << ": ";
-	  subsume.inst->dump();
-
+	  subsume.programPoint = current.itreeNode->parent->programPoint;
 	  interpTree->store(subsume);
       }
       currentPredecessor = current.itreeNode->parent->parent;
@@ -856,9 +850,7 @@ void Executor::propagateInterpolant(const ref<Expr>& tmpInterpolant,
 	      SubsumptionTableEntry _subsume;
 	      _subsume.interpolant = currentPredecessor->getInterpolant();
 	      _subsume.interpolantLoc = currentPredecessor->getInterpolantLoc();
-	      _subsume.inst = currentPredecessor->inst;
-	      llvm::errs() << "STORING AT " << __LINE__ << ": ";
-	      _subsume.inst->dump();
+	      _subsume.programPoint = currentPredecessor->programPoint;
 	      interpTree->store(_subsume);
 
 	      //				currentPredecessor->interpolant = AndExpr::create(
@@ -1052,7 +1044,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
 
 	setCurrentInterpolant(predNum, tmpInterpolant, current, baseLocation);
 
-	subsumptionCheck(current);
+	// subsumptionCheck(current);
 
 	propagateInterpolant(tmpInterpolant, tmpInterpolantLoc, current);
     }
@@ -1113,36 +1105,33 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     }
 
     //subsumption
+    llvm::errs() << "SIZE OF SUB. TABLE: " << interpTree->getStore().size() << "\n";
     for (std::vector< SubsumptionTableEntry >::iterator it = interpTree->getStore().begin() ;
 	it != interpTree->getStore().end(); ++it){
-	Solver::Validity result;
 	llvm::errs() << "Is identical 1\n";
-	current.itreeNode->inst->dump();
-	if (!it->inst) {
-	    llvm::errs() << "SOMETHING WRONG\n";
-	}
-	llvm::errs() << "NAME: " << it->inst->getName() << "\n";
-	it->inst->dump();
-	if(current.itreeNode->inst->isIdenticalTo(it->inst)) {
-	    solver->evaluate(current, it->interpolant, result);
-
-	    if(result == Solver::True){
-		ref<Expr> interpolant =  it->interpolant;
-		std::pair< ref<Expr> , ref<Expr> > interpolantLoc = it->interpolantLoc;
-		ref<Expr> reExecIntp = reExecInterpolant(interpolant, interpolantLoc, current);
-		Solver::Validity rslt;
-		solver->evaluate(current, reExecIntp, rslt);
-		if(rslt == Solver::True){
-		    current.itreeNode->isSubsumed = true;
-		    current.itreeNode->setInterpolant(it->interpolant, it->interpolantLoc, FullInterpolant);
-		    addedStates.erase(falseState); // false state has been added before. Since we will do subsumption we can delete this added falseState
-		    current.itreeNode->parent->setInterpolantStatus(FullInterpolant);
-		    propagateInterpolant(current.itreeNode->getInterpolant(),
-		                         current.itreeNode->getInterpolantLoc(),
-		                         current);
-		    return StatePair(0, 0);
-		}
-	    }
+	if(current.itreeNode->programPoint == it->programPoint) {
+	    /// The following evaluation seems to increase the number of iterations:
+	    /// commented out for now, also including all code in this block
+//	    Solver::Validity result;
+//	    solver->evaluate(current, it->interpolant, result);
+//
+//	    if(result == Solver::True){
+//		ref<Expr> interpolant =  it->interpolant;
+//		std::pair< ref<Expr> , ref<Expr> > interpolantLoc = it->interpolantLoc;
+//		ref<Expr> reExecIntp = reExecInterpolant(interpolant, interpolantLoc, current);
+//		Solver::Validity rslt;
+//		solver->evaluate(current, reExecIntp, rslt);
+//		if(rslt == Solver::True){
+//		    current.itreeNode->isSubsumed = true;
+//		    current.itreeNode->setInterpolant(it->interpolant, it->interpolantLoc, FullInterpolant);
+//		    addedStates.erase(falseState); // false state has been added before. Since we will do subsumption we can delete this added falseState
+//		    current.itreeNode->parent->setInterpolantStatus(FullInterpolant);
+//		    propagateInterpolant(current.itreeNode->getInterpolant(),
+//		                         current.itreeNode->getInterpolantLoc(),
+//		                         current);
+//		    return StatePair(0, 0);
+//		}
+//	    }
 	}
     }
     current.ptreeNode->data = 0;
@@ -1172,11 +1161,11 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     falseState->itreeNode = result.first;
     trueState->itreeNode = result.second;
 
-    llvm::errs() << "NEXT INSTRUCTION: ";
-    current.pc->inst->dump();
-
-    falseState->itreeNode->inst = current.pc->inst;
-    trueState->itreeNode->inst = current.pc->inst;
+    /// These seem to be not necessary as we correct the program point at
+    /// the start of each loop iteration anyway.
+    ///
+    /// falseState->itreeNode->programPoint = current.pc->dest;
+    /// trueState->itreeNode->programPoint = current.pc->dest;
 
     falseState->itreeNode->addUpdateRelations(current.itreeNode->parent);
     trueState->itreeNode->addUpdateRelations(current.itreeNode->parent);
@@ -1774,7 +1763,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         terminateStateOnExecError(state, "unwind from initial stack frame");
         break;
       } else {
-        Instruction *caller = kcaller->inst;
+        Instruction *caller = kcaller->programPoint;
         if (InvokeInst *ii = dyn_cast<InvokeInst>(caller)) {
           transferToBasicBlock(ii->getUnwindDest(), caller->getParent(), state);
           break;
@@ -2989,13 +2978,16 @@ void Executor::run(ExecutionState &initialState) {
   while (!states.empty() && !haltExecution) {
     ExecutionState &state = searcher->selectState();
 
+    /// We synchronize the program point to that of the state
+    state.itreeNode->programPoint = state.pc->dest;
+    interpTree->setCurrentINode(state.itreeNode);
+
+    llvm::errs() << "START OF LOOP\n";
     llvm::errs() << "Set currently active itree node to ";
     state.itreeNode->dump();
-    interpTree->setCurrentINode(state.itreeNode);
 
     KInstruction *ki = state.pc;
     stepInstruction(state);
-    state.itreeNode->inst = ki->inst;
 
     executeInstruction(state, ki);
     if(state.itreeNode->isSubsumed){
@@ -3848,7 +3840,6 @@ void Executor::runFunctionAsMain(Function *f,
   delete processTree;
   processTree = 0;
 
-  llvm::errs() << "DELETING INTEPOLATION TREE\n";
   delete interpTree;
   interpTree = 0;
 

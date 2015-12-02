@@ -150,8 +150,7 @@ std::vector<SubsumptionTableEntry> ITree::getStore() {
 }
 
 void ITree::store(SubsumptionTableEntry subItem) {
-  llvm::errs() << "STORING subItem: ";
-  subItem.inst->dump();
+  llvm::errs() << "STORING subItem with programPoint " << subItem.programPoint << "\n";
   llvm::errs() << "SIZE BEFORE: " << subsumptionTable.size() << "\n";
   subsumptionTable.push_back(subItem);
   llvm::errs() << "SIZE AFTER: " << subsumptionTable.size() << "\n";
@@ -169,7 +168,7 @@ ITreeNode::ITreeNode(ITreeNode *_parent,
                      ExecutionState *_data)
 : interpolant(NULL),
   interpolantStatus(NoInterpolant),
-  inst(0),
+  programPoint(0),
   parent(_parent),
   left(0),
   right(0),
@@ -280,13 +279,7 @@ void ITreeNode::print(llvm::raw_ostream &stream, const unsigned int tab_num) {
   std::string tabs_next = tabs + "\t";
 
   stream << tabs << "ITreeNode\n";
-  stream << tabs_next << "instruction = ";
-  if (!inst) {
-      stream << "NULL";
-  } else {
-      inst->print(stream);
-  }
-  stream << "\n";
+  stream << tabs_next << "programPoint = " << programPoint << "\n";
   stream << tabs_next << "conditions =";
   for (std::vector< ref<Expr> >::iterator it = conditions.begin(); it != conditions.end(); (stream << ","), it++) {
       if (!((*it).isNull())) {
@@ -342,7 +335,7 @@ void ITreeNode::print(llvm::raw_ostream &stream, const unsigned int tab_num) {
       stream << "\n";
   }
 
-  stream << tabs_next << "intepolantLoc = pair(";
+  stream << tabs_next << "interpolantLoc = pair(";
   if (!interpolantLoc.first.isNull()) {
       interpolantLoc.first->print(stream);
   } else {
