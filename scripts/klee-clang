@@ -55,9 +55,6 @@ def main():
         if a in linkArgs:
             continue
 
-        if a.startswith('-l'):
-            continue
-
         linkArgs.append(a)
 
     os.execvp(llvm_path+"/llvm-link", [llvm_path+"/llvm-link"] + linkArgs)
