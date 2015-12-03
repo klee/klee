@@ -158,10 +158,6 @@ namespace klee {
                                             ExecutionState* leftData,
                                             ExecutionState* rightData);
 
-    void addCondition(ITreeNode *node, ref<Expr>);
-
-    void addConditionToCurrentNode(ref<Expr>);
-
     std::vector<SubsumptionTableEntry> getStore();
 
     void store(SubsumptionTableEntry subItem);
@@ -188,7 +184,6 @@ namespace klee {
     unsigned int programPoint;
     ITreeNode *parent, *left, *right;
     ExecutionState *data;
-    std::vector< ref<Expr> > conditions;
     std::vector< ref<Expr> > dependenciesLoc;
     bool isSubsumed;
     std::vector <pair_type> variablesTracking;

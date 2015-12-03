@@ -200,26 +200,6 @@ ITree::split(ITreeNode *n,
   return std::make_pair(n->left, n->right);
 }
 
-void ITree::addCondition(ITreeNode *n, ref<Expr> cond) {
-  assert(!n->left && !n->right);
-  do {
-      ITreeNode *p = n->parent;
-      if (p) {
-	  if (n == p->left) {
-	      p->left->conditions.push_back(cond);
-	  } else {
-	      assert(n == p->right);
-	      p->right->conditions.push_back(cond);
-	  }
-      }
-      n = p;
-  } while (n && !n->left && !n->right);
-}
-
-void ITree::addConditionToCurrentNode(ref<Expr> cond) {
-  currentINode->conditions.push_back(cond);
-}
-
 void ITree::checkCurrentNodeSubsumption() {
   assert(currentINode != 0);
 
@@ -262,14 +242,7 @@ ITreeNode::ITreeNode(ITreeNode *_parent,
   left(0),
   right(0),
   data(_data),
-  isSubsumed(false) {
-
-  for (ConstraintManager::constraints_ty::const_iterator it = _data->constraints.begin(),
-      ie = _data->constraints.end(); it != ie; ++it) {
-      //	conditions = _data->constraints.getConstraints();
-      conditions.push_back(*it);
-  }
-}
+  isSubsumed(false) {}
 
 ITreeNode::~ITreeNode() {
   delete instructionList;
@@ -379,18 +352,8 @@ void ITreeNode::print(llvm::raw_ostream &stream, const unsigned int tab_num) con
 
   stream << tabs << "ITreeNode\n";
   stream << tabs_next << "programPoint = " << programPoint << "\n";
-  stream << tabs_next << "blockList = ";
+  stream << tabs_next << "instructionList = ";
   instructionList->print(stream);
-  stream << "\n";
-  stream << tabs_next << "conditions =";
-  for (std::vector< ref<Expr> >::const_iterator it = conditions.begin();
-      it != conditions.end(); (stream << ","), it++) {
-      if (!((*it).isNull())) {
-	  (*it)->print(stream);
-      } else {
-	  stream << "NULL";
-      }
-  }
   stream << "\n";
 
   stream << tabs_next << "Left:\n";

@@ -2141,7 +2141,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     	  state.itreeNode->latestBranchCond.base = left;
           state.itreeNode->latestBranchCond.value = right;
           state.itreeNode->latestBranchCond.compareName = Eq;
-          interpTree->addConditionToCurrentNode(result);
       }
 
       break;
@@ -2156,7 +2155,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     	  state.itreeNode->latestBranchCond.base = left;
           state.itreeNode->latestBranchCond.value = right;
           state.itreeNode->latestBranchCond.compareName = Ne;
-          interpTree->addConditionToCurrentNode(result);
       }
       break;
     }
@@ -2170,7 +2168,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     	  state.itreeNode->latestBranchCond.base = left;
           state.itreeNode->latestBranchCond.value = right;
           state.itreeNode->latestBranchCond.compareName = Ugt;
-          interpTree->addConditionToCurrentNode(result);
       }
       break;
     }
@@ -2184,7 +2181,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     	  state.itreeNode->latestBranchCond.base = left;
           state.itreeNode->latestBranchCond.value = right;
           state.itreeNode->latestBranchCond.compareName = Uge;
-          interpTree->addConditionToCurrentNode(result);
       }
       break;
     }
@@ -2198,7 +2194,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     	  state.itreeNode->latestBranchCond.base = left;
           state.itreeNode->latestBranchCond.value = right;
           state.itreeNode->latestBranchCond.compareName = Ult;
-          interpTree->addConditionToCurrentNode(result);
       }
       break;
     }
@@ -2212,7 +2207,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     	  state.itreeNode->latestBranchCond.base = left;
           state.itreeNode->latestBranchCond.value = right;
           state.itreeNode->latestBranchCond.compareName = Ule;
-          interpTree->addConditionToCurrentNode(result);
       }
       break;
     }
@@ -2226,7 +2220,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     	  state.itreeNode->latestBranchCond.base = left;
     	  state.itreeNode->latestBranchCond.value = right;
     	  state.itreeNode->latestBranchCond.compareName = Sgt;
-    	  interpTree->addConditionToCurrentNode(result);
       }
       bindLocal(ki, state, result);
       break;
@@ -2241,7 +2234,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     	  state.itreeNode->latestBranchCond.base = left;
           state.itreeNode->latestBranchCond.value = right;
           state.itreeNode->latestBranchCond.compareName = Sge;
-          interpTree->addConditionToCurrentNode(result);
       }
       break;
     }
@@ -2255,7 +2247,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     	  state.itreeNode->latestBranchCond.base = left;
           state.itreeNode->latestBranchCond.value = right;
           state.itreeNode->latestBranchCond.compareName = Slt;
-          interpTree->addConditionToCurrentNode(result);
       }
       break;
     }
@@ -2269,7 +2260,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     	  state.itreeNode->latestBranchCond.base = left;
           state.itreeNode->latestBranchCond.value = right;
           state.itreeNode->latestBranchCond.compareName = Sle;
-          interpTree->addConditionToCurrentNode(result);
       }
       break;
     }
