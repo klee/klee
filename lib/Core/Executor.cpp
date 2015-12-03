@@ -1955,7 +1955,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     // Arithmetic / logical
 
   case Instruction::Add: {
-	ref<Expr> left = eval(ki, 0, state).value;
+    ref<Expr> left = eval(ki, 0, state).value;
     ref<Expr> right = eval(ki, 1, state).value;
     bindLocal(ki, state, AddExpr::create(left, right));
 
@@ -2915,7 +2915,7 @@ void Executor::run(ExecutionState &initialState) {
     ExecutionState &state = searcher->selectState();
 
     /// We synchronize the program point to that of the state
-    state.itreeNode->programPoint = state.pc->dest;
+    state.itreeNode->correctNodeLocation(*(state.pc->inst), state.pc->dest);
     interpTree->setCurrentINode(state.itreeNode);
 
     llvm::errs() << "Start of loop: Set currently active interpolation tree node to ";

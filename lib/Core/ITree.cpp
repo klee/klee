@@ -12,6 +12,40 @@
 
 using namespace klee;
 
+
+InstructionList::InstructionList(Instruction& inst) :
+    inst(inst), tail(0) {}
+
+InstructionList::InstructionList(Instruction& inst, InstructionList *prev) :
+    inst(inst), tail(prev) {}
+
+InstructionList::~InstructionList() {
+  delete tail;
+}
+
+Instruction &InstructionList::car() const {
+  return inst;
+}
+
+InstructionList *InstructionList::cdr() const {
+  return tail;
+}
+
+void InstructionList::dump() {
+  this->print(llvm::errs());
+  llvm::errs() << "\n";
+}
+
+void InstructionList::print(llvm::raw_ostream& stream) {
+  stream << "[";
+  for (InstructionList *it = this; it != 0; it = it->tail) {
+      it->inst.print(llvm::errs());
+      if (it->tail != 0) stream << ",";
+  }
+  stream << "]";
+}
+
+
 UpdateRelation::UpdateRelation(const ref<Expr>& baseLoc, const ref<Expr>& value, const Operation& operationName) :
     base(0), valueLoc(0) {
   this->baseLoc = baseLoc;
@@ -159,6 +193,10 @@ ITree::split(ITreeNode *n,
   assert(n && !n->left && !n->right);
   n->left = new ITreeNode(n, leftData);
   n->right = new ITreeNode(n, rightData);
+
+  /// Here we simply inherit the parent's block list
+  n->left->instructionList = n->instructionList;
+  n->right->instructionList = n->instructionList;
   return std::make_pair(n->left, n->right);
 }
 
@@ -218,12 +256,13 @@ ITreeNode::ITreeNode(ITreeNode *_parent,
                      ExecutionState *_data)
 : interpolant(NULL),
   interpolantStatus(NoInterpolant),
+  instructionList(0),
   programPoint(0),
   parent(_parent),
   left(0),
   right(0),
   data(_data),
-  isSubsumed(false){
+  isSubsumed(false) {
 
   for (ConstraintManager::constraints_ty::const_iterator it = _data->constraints.begin(),
       ie = _data->constraints.end(); it != ie; ++it) {
@@ -233,6 +272,7 @@ ITreeNode::ITreeNode(ITreeNode *_parent,
 }
 
 ITreeNode::~ITreeNode() {
+  delete instructionList;
 }
 
 void ITreeNode::addUpdateRelations(std::vector<UpdateRelation> addedUpdateRelations) {
@@ -315,6 +355,15 @@ Status ITreeNode::getInterpolantStatus() {
   return this->interpolantStatus;
 }
 
+void ITreeNode::correctNodeLocation(Instruction& inst, unsigned int programPoint) {
+  if (instructionList == 0) {
+      instructionList = new InstructionList(inst);
+  } else if (!instructionList->car().isIdenticalTo(&inst)) {
+      instructionList = new InstructionList(inst, instructionList);
+  }
+  this->programPoint = programPoint;
+}
+
 void ITreeNode::dump() const {
   llvm::errs() << "\n------------------------- Root ITree --------------------------------\n";
   this->print(llvm::errs());
@@ -330,6 +379,9 @@ void ITreeNode::print(llvm::raw_ostream &stream, const unsigned int tab_num) con
 
   stream << tabs << "ITreeNode\n";
   stream << tabs_next << "programPoint = " << programPoint << "\n";
+  stream << tabs_next << "blockList = ";
+  instructionList->print(stream);
+  stream << "\n";
   stream << tabs_next << "conditions =";
   for (std::vector< ref<Expr> >::const_iterator it = conditions.begin();
       it != conditions.end(); (stream << ","), it++) {
@@ -356,14 +408,14 @@ void ITreeNode::print(llvm::raw_ostream &stream, const unsigned int tab_num) con
       stream << "\n";
   }
 
-  stream << tabs_next << "addedPathCond =";
+  stream << tabs_next << "newUpdateRelationsList =";
   for (std::vector<UpdateRelation>::const_iterator it = newUpdateRelationsList.begin();
       it != newUpdateRelationsList.end(); (stream << ","), it++) {
       it->print(stream);
   }
   stream << "\n";
 
-  stream << tabs_next << "pathCond =";
+  stream << tabs_next << "updateRelationsList =";
   for (std::vector<UpdateRelation>::const_iterator it = updateRelationsList.begin();
       it != updateRelationsList.end(); (stream << ","), it++) {
       it->print(stream);
