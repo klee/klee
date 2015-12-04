@@ -130,24 +130,24 @@ ITreeNode::ITreeNode(ITreeNode *_parent,
   data(_data),
   isSubsumed(false) {
 
-  constraintList = (_parent != 0) ? _parent->constraintList : 0;
+  pathCondition = (_parent != 0) ? _parent->pathCondition : 0;
 
   if (!(_data->constraints.empty())) {
       ref<Expr> lastConstraint = _data->constraints.back();
-      if (constraintList == 0) {
-	  constraintList = new ConstraintList(lastConstraint);
-      } else if (constraintList->car().compare(lastConstraint) != 0) {
-	  constraintList = new ConstraintList(lastConstraint, constraintList);
+      if (pathCondition == 0) {
+	  pathCondition = new ConstraintList(lastConstraint);
+      } else if (pathCondition->car().compare(lastConstraint) != 0) {
+	  pathCondition = new ConstraintList(lastConstraint, pathCondition);
       }
   }
 }
 
 ITreeNode::~ITreeNode() {
-  delete constraintList;
+  delete pathCondition;
 }
 
 std::vector< ref<Expr> > ITreeNode::getInterpolant() const {
-  return this->constraintList->pack();
+  return this->pathCondition->pack();
 }
 
 void ITreeNode::correctNodeLocation(unsigned int programPoint) {
@@ -187,11 +187,11 @@ void ITreeNode::print(llvm::raw_ostream &stream, const unsigned int tab_num) con
 
   stream << tabs << "ITreeNode\n";
   stream << tabs_next << "programPoint = " << programPoint << "\n";
-  stream << tabs_next << "constraintList = ";
-  if (constraintList == 0) {
+  stream << tabs_next << "pathCondition = ";
+  if (pathCondition == 0) {
       stream << "NULL";
   } else {
-      constraintList->print(stream);
+      pathCondition->print(stream);
   }
   stream << "\n";
 

@@ -96,7 +96,7 @@ namespace klee {
     friend class ITree;
     typedef ref<Expr> expression_type;
     typedef std::pair <expression_type, expression_type> pair_type;
-    ConstraintList *constraintList;
+    ConstraintList *pathCondition;
     ITreeNode *parent, *left, *right;
 
   public:
