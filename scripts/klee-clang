@@ -2,12 +2,27 @@
 
 import os, sys
 import subprocess
+import re
+
 
 def isLinkCommand():
     # Look for '-Wl,' as a signal that we are calling the linker. What a hack.
     for arg in sys.argv:
         if arg.startswith('-Wl,'):
             return True
+
+link_exact_filter = ['-g', '-W', '-O', '-D', '-f',
+                     '-fnested-functions', '-pthread', '-fPIC', '-g',
+                     '-pedantic', '-shared', '-rdynamic', '-nodefaultlibs']
+
+link_regexp_filter_patts = ['^-Wl.*', '^-l.*', '^-W.*', '^-O\d', '^-gg.*',
+                            '^-mtune.*', '^-std=c.*', '^-f.*frame-pointer',
+                            '^-fvisibility.*']
+link_regexp_filters = []
+for patt in link_regexp_filter_patts:
+    prog = re.compile(patt)
+    link_regexp_filters.append(prog)
+
 
 def main():
     llvm_path = subprocess.Popen(["llvm-config", "--bindir"], stdout=subprocess.PIPE).communicate()[0].strip()
@@ -22,23 +37,29 @@ def main():
     args = sys.argv[1:]
     linkArgs = []
     for a in args:
-        if a in ('-g', '-W', '-O', '-D', '-f',
-                 '-fnested-functions', '-pthread'):
-            continue
-        elif a.startswith('-Wl,'):
+        a = a.strip()
+        if a in link_exact_filter:
             continue
 
-	if a in linkArgs:
-	    continue
+        match = False
+        for filt in link_regexp_filters:
+            # print "matching %s on filter" % a
+            if filt.match(a):
+                # print "MATCHED %s" % a
+                match = True
+                break
 
-        if a.startswith('-l'):
-	    continue
+        if match:
+            continue
+
+        if a in linkArgs:
+            continue
 
         linkArgs.append(a)
-    
+
     os.execvp(llvm_path+"/llvm-link", [llvm_path+"/llvm-link"] + linkArgs)
     return 1
 
+
 if __name__ == '__main__':
     main()
-
