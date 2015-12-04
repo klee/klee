@@ -10,52 +10,6 @@
 
 #include <klee/Expr.h>
 #include "klee/ExecutionState.h"
-#include "klee/Config/Version.h"
-
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
-#include "llvm/IR/Function.h"
-#include "llvm/IR/Attributes.h"
-#include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/Module.h"
-#include "llvm/IR/DataLayout.h"
-#include "llvm/IR/TypeBuilder.h"
-#else
-#include "llvm/Attributes.h"
-#include "llvm/BasicBlock.h"
-#include "llvm/Constants.h"
-#include "llvm/Function.h"
-#include "llvm/Instructions.h"
-#include "llvm/IntrinsicInst.h"
-#include "llvm/LLVMContext.h"
-#include "llvm/Module.h"
-
-#if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
-#include "llvm/Target/TargetData.h"
-#else
-#include "llvm/DataLayout.h"
-#include "llvm/TypeBuilder.h"
-#endif
-#endif
-#include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/Process.h"
-#include "llvm/Support/raw_ostream.h"
-#include "llvm/Analysis/MemoryDependenceAnalysis.h"
-
-#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
-#include "llvm/Support/CallSite.h"
-#else
-#include "llvm/IR/CallSite.h"
-#endif
-
-using namespace llvm;
 
 enum Status { NoInterpolant, HalfInterpolant, FullInterpolant};
 enum Operation { Add, Sub, Mul, UDiv, SDiv, URem, SRem, And, Or, Xor, Shl, LShr, AShr};
@@ -64,23 +18,23 @@ enum Comparison {Eq, Ne, Ult, Ule, Ugt, Uge, Slt, Sle, Sgt, Sge, Neg, Not};
 namespace klee {
   class ExecutionState;
 
-  class InstructionList {
-    /// LLVM instruction
-    Instruction& inst;
+  class ConstraintList {
+    /// KLEE expression
+    ref<Expr> constraint;
 
     /// Previous basic block
-    InstructionList *tail;
+    ConstraintList *tail;
 
   public:
-    InstructionList(Instruction& inst);
+    ConstraintList(ref<Expr>& constraint);
 
-    InstructionList(Instruction& inst, InstructionList *prev);
+    ConstraintList(ref<Expr>& constraint, ConstraintList *prev);
 
-    ~InstructionList();
+    ~ConstraintList();
 
-    Instruction& car() const;
+    ref<Expr> car() const;
 
-    InstructionList* cdr() const;
+    ConstraintList* cdr() const;
 
     void dump();
 
@@ -154,10 +108,6 @@ namespace klee {
 
     ~ITree();
 
-    std::pair<ITreeNode*, ITreeNode*> split(ITreeNode *node,
-                                            ExecutionState* leftData,
-                                            ExecutionState* rightData);
-
     std::vector<SubsumptionTableEntry> getStore();
 
     void store(SubsumptionTableEntry subItem);
@@ -178,11 +128,11 @@ namespace klee {
     ref<Expr> interpolant;
     std::pair< ref<Expr>, ref<Expr> > interpolantLoc;
     Status interpolantStatus;
-    InstructionList *instructionList;
+    ConstraintList *constraintList;
+    ITreeNode *parent, *left, *right;
 
   public:
     unsigned int programPoint;
-    ITreeNode *parent, *left, *right;
     ExecutionState *data;
     std::vector< ref<Expr> > dependenciesLoc;
     bool isSubsumed;
@@ -218,7 +168,15 @@ namespace klee {
 
     Status getInterpolantStatus();
 
-    void correctNodeLocation(Instruction& inst, unsigned int programPoint);
+    void correctNodeLocation(unsigned int programPoint);
+
+    void split(ExecutionState *leftData, ExecutionState *rightData);
+
+    ITreeNode *getParent();
+
+    ITreeNode *getLeft();
+
+    ITreeNode *getRight();
 
     void dump() const;
 

@@ -741,7 +741,7 @@ void Executor::setCurrentInterpolant(size_t predNum, ref<Expr>& tmpInterpolant,
   std::vector<UpdateRelation> updateRelationsList;
   while ((currPredNum != predNum) && (currentINode != 0)) {
       currentINode->addStoredNewUpdateRelationsTo(updateRelationsList);
-      currentINode = current.itreeNode->parent;
+      currentINode = current.itreeNode->getParent();
       currPredNum--;
   }
 
@@ -777,19 +777,19 @@ void Executor::propagateInterpolant(const ref<Expr>& tmpInterpolant,
   ref<Expr> parentIntRight = parentInterpolant->getKid(1);
   //    parentInterpolant = Expr::createIsZero(parentInterpolant);
   ITreeNode *currentPredecessor = NULL;
-  if (current.itreeNode->parent != NULL) {
-      if (current.itreeNode->parent->getInterpolantStatus() == NoInterpolant) {
-	  current.itreeNode->parent->setInterpolant(parentInterpolant,
-	                                            current.itreeNode->getInterpolantLoc(),
-	                                            HalfInterpolant);
+  if (current.itreeNode->getParent() != NULL) {
+      if (current.itreeNode->getParent()->getInterpolantStatus() == NoInterpolant) {
+	  current.itreeNode->getParent()->setInterpolant(parentInterpolant,
+	                                                 current.itreeNode->getInterpolantLoc(),
+	                                                 HalfInterpolant);
       }
-      else if (current.itreeNode->parent->getInterpolantStatus() == HalfInterpolant) {
-	  current.itreeNode->parent->setInterpolant(parentInterpolant, FullInterpolant);
+      else if (current.itreeNode->getParent()->getInterpolantStatus() == HalfInterpolant) {
+	  current.itreeNode->getParent()->setInterpolant(parentInterpolant, FullInterpolant);
 
 	  SubsumptionTableEntry s(current.itreeNode);
 	  interpTree->store(s);
       }
-      currentPredecessor = current.itreeNode->parent->parent;
+      currentPredecessor = current.itreeNode->getParent()->getParent();
   }
 
   while (currentPredecessor != NULL) {
@@ -799,8 +799,8 @@ void Executor::propagateInterpolant(const ref<Expr>& tmpInterpolant,
       ref<Expr> currPredecessorInt =
 	  Expr::createIsZero(makeComparison(tmpInterpolant, parentIntLeft, parentIntRight));
 
-      if (currentPredecessor->left->getInterpolantStatus() == FullInterpolant
-	  && currentPredecessor->right->getInterpolantStatus() == FullInterpolant) {
+      if (currentPredecessor->getLeft()->getInterpolantStatus() == FullInterpolant
+	  && currentPredecessor->getRight()->getInterpolantStatus() == FullInterpolant) {
 
 	  if (currentPredecessor->getInterpolantStatus() != FullInterpolant) {
 	      currentPredecessor->setInterpolantStatus(FullInterpolant);
@@ -814,8 +814,8 @@ void Executor::propagateInterpolant(const ref<Expr>& tmpInterpolant,
 	  }
       }
 
-      else if (currentPredecessor->left->getInterpolantStatus() == FullInterpolant
-	  || currentPredecessor->right->getInterpolantStatus() == FullInterpolant) {
+      else if (currentPredecessor->getLeft()->getInterpolantStatus() == FullInterpolant
+	  || currentPredecessor->getRight()->getInterpolantStatus() == FullInterpolant) {
 
 	  if (currentPredecessor->getInterpolantStatus() != HalfInterpolant) {
 	      currentPredecessor->setInterpolant(currPredecessorInt,
@@ -824,7 +824,7 @@ void Executor::propagateInterpolant(const ref<Expr>& tmpInterpolant,
 	  }
       }
 
-      currentPredecessor = currentPredecessor->parent;
+      currentPredecessor = currentPredecessor->getParent();
   }
 }
 
@@ -1109,12 +1109,9 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     addConstraint(*falseState, Expr::createIsZero(condition));
 
     current.itreeNode->data = 0;
-    std::pair<ITreeNode*, ITreeNode* > result = interpTree->split(current.itreeNode, falseState, trueState);
-    falseState->itreeNode = result.first;
-    trueState->itreeNode = result.second;
-
-    falseState->itreeNode->addUpdateRelations(current.itreeNode->parent);
-    trueState->itreeNode->addUpdateRelations(current.itreeNode->parent);
+    current.itreeNode->split(falseState, trueState);
+    falseState->itreeNode->addUpdateRelations(current.itreeNode->getParent());
+    trueState->itreeNode->addUpdateRelations(current.itreeNode->getParent());
 
     // Kinda gross, do we even really still want this option?
     if (MaxDepth && MaxDepth<=trueState->depth) {
@@ -2905,7 +2902,7 @@ void Executor::run(ExecutionState &initialState) {
     ExecutionState &state = searcher->selectState();
 
     /// We synchronize the program point to that of the state
-    state.itreeNode->correctNodeLocation(*(state.pc->inst), state.pc->dest);
+    state.itreeNode->correctNodeLocation(state.pc->dest);
     interpTree->setCurrentINode(state.itreeNode);
 
     llvm::errs() << "Start of loop: Set currently active interpolation tree node to ";

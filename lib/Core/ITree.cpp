@@ -13,33 +13,33 @@
 using namespace klee;
 
 
-InstructionList::InstructionList(Instruction& inst) :
-    inst(inst), tail(0) {}
+ConstraintList::ConstraintList(ref<Expr>& constraint) :
+    constraint(constraint), tail(0) {}
 
-InstructionList::InstructionList(Instruction& inst, InstructionList *prev) :
-    inst(inst), tail(prev) {}
+ConstraintList::ConstraintList(ref<Expr>& constraint, ConstraintList *prev) :
+    constraint(constraint), tail(prev) {}
 
-InstructionList::~InstructionList() {
+ConstraintList::~ConstraintList() {
   delete tail;
 }
 
-Instruction &InstructionList::car() const {
-  return inst;
+ref<Expr> ConstraintList::car() const {
+  return constraint;
 }
 
-InstructionList *InstructionList::cdr() const {
+ConstraintList *ConstraintList::cdr() const {
   return tail;
 }
 
-void InstructionList::dump() {
+void ConstraintList::dump() {
   this->print(llvm::errs());
   llvm::errs() << "\n";
 }
 
-void InstructionList::print(llvm::raw_ostream& stream) {
+void ConstraintList::print(llvm::raw_ostream& stream) {
   stream << "[";
-  for (InstructionList *it = this; it != 0; it = it->tail) {
-      it->inst.print(llvm::errs());
+  for (ConstraintList *it = this; it != 0; it = it->tail) {
+      it->constraint->print(stream);
       if (it->tail != 0) stream << ",";
   }
   stream << "]";
@@ -186,20 +186,6 @@ ITree::ITree(ExecutionState* _root) :
 
 ITree::~ITree() {}
 
-std::pair<ITreeNode*, ITreeNode*>
-ITree::split(ITreeNode *n,
-             ExecutionState *leftData,
-             ExecutionState *rightData) {
-  assert(n && !n->left && !n->right);
-  n->left = new ITreeNode(n, leftData);
-  n->right = new ITreeNode(n, rightData);
-
-  /// Here we simply inherit the parent's block list
-  n->left->instructionList = n->instructionList;
-  n->right->instructionList = n->instructionList;
-  return std::make_pair(n->left, n->right);
-}
-
 void ITree::checkCurrentNodeSubsumption() {
   assert(currentINode != 0);
 
@@ -236,16 +222,27 @@ ITreeNode::ITreeNode(ITreeNode *_parent,
                      ExecutionState *_data)
 : interpolant(NULL),
   interpolantStatus(NoInterpolant),
-  instructionList(0),
-  programPoint(0),
   parent(_parent),
   left(0),
   right(0),
+  programPoint(0),
   data(_data),
-  isSubsumed(false) {}
+  isSubsumed(false) {
+
+  constraintList = (_parent != 0) ? _parent->constraintList : 0;
+
+  if (!(_data->constraints.empty())) {
+      ref<Expr> lastConstraint = _data->constraints.back();
+      if (constraintList == 0) {
+	  constraintList = new ConstraintList(lastConstraint);
+      } else if (constraintList->car().compare(lastConstraint) != 0) {
+	  constraintList = new ConstraintList(lastConstraint, constraintList);
+      }
+  }
+}
 
 ITreeNode::~ITreeNode() {
-  delete instructionList;
+  delete constraintList;
 }
 
 void ITreeNode::addUpdateRelations(std::vector<UpdateRelation> addedUpdateRelations) {
@@ -328,13 +325,26 @@ Status ITreeNode::getInterpolantStatus() {
   return this->interpolantStatus;
 }
 
-void ITreeNode::correctNodeLocation(Instruction& inst, unsigned int programPoint) {
-  if (instructionList == 0) {
-      instructionList = new InstructionList(inst);
-  } else if (!instructionList->car().isIdenticalTo(&inst)) {
-      instructionList = new InstructionList(inst, instructionList);
-  }
+void ITreeNode::correctNodeLocation(unsigned int programPoint) {
   this->programPoint = programPoint;
+}
+
+void ITreeNode::split(ExecutionState *leftData, ExecutionState *rightData) {
+  assert (left == 0 && right == 0);
+  leftData->itreeNode = left = new ITreeNode(this, leftData);
+  rightData->itreeNode = right = new ITreeNode(this, rightData);
+}
+
+ITreeNode *ITreeNode::getParent() {
+  return parent;
+}
+
+ITreeNode *ITreeNode::getLeft() {
+  return left;
+}
+
+ITreeNode *ITreeNode::getRight() {
+  return right;
 }
 
 void ITreeNode::dump() const {
@@ -352,8 +362,12 @@ void ITreeNode::print(llvm::raw_ostream &stream, const unsigned int tab_num) con
 
   stream << tabs << "ITreeNode\n";
   stream << tabs_next << "programPoint = " << programPoint << "\n";
-  stream << tabs_next << "instructionList = ";
-  instructionList->print(stream);
+  stream << tabs_next << "constraintList = ";
+  if (constraintList == 0) {
+      stream << "NULL";
+  } else {
+      constraintList->print(stream);
+  }
   stream << "\n";
 
   stream << tabs_next << "Left:\n";
