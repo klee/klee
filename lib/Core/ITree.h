@@ -95,23 +95,19 @@ namespace klee {
     typedef std::pair <expression_type, expression_type> pair_type;
     PathCondition *pathCondition;
     ITreeNode *parent, *left, *right;
+    unsigned int programPoint;
 
   public:
-    unsigned int programPoint;
     ExecutionState *data;
     bool isSubsumed;
+
+    unsigned int getProgramPoint();
 
     std::vector< ref<Expr> > getInterpolant() const;
 
     void correctNodeLocation(unsigned int programPoint);
 
     void split(ExecutionState *leftData, ExecutionState *rightData);
-
-    ITreeNode *getParent();
-
-    ITreeNode *getLeft();
-
-    ITreeNode *getRight();
 
     void dump() const;
 

@@ -59,7 +59,7 @@ void PathCondition::print(llvm::raw_ostream& stream) {
 }
 
 SubsumptionTableEntry::SubsumptionTableEntry(ITreeNode *node) :
-  programPoint(node->programPoint),
+  programPoint(node->getProgramPoint()),
   interpolant(node->getInterpolant()) {}
 
 SubsumptionTableEntry::~SubsumptionTableEntry() {}
@@ -175,6 +175,10 @@ ITreeNode::~ITreeNode() {
   delete pathCondition;
 }
 
+unsigned int ITreeNode::getProgramPoint() {
+  return programPoint;
+}
+
 std::vector< ref<Expr> > ITreeNode::getInterpolant() const {
   return this->pathCondition->pack();
 }
@@ -187,18 +191,6 @@ void ITreeNode::split(ExecutionState *leftData, ExecutionState *rightData) {
   assert (left == 0 && right == 0);
   leftData->itreeNode = left = new ITreeNode(this, leftData);
   rightData->itreeNode = right = new ITreeNode(this, rightData);
-}
-
-ITreeNode *ITreeNode::getParent() {
-  return parent;
-}
-
-ITreeNode *ITreeNode::getLeft() {
-  return left;
-}
-
-ITreeNode *ITreeNode::getRight() {
-  return right;
 }
 
 void ITreeNode::dump() const {
