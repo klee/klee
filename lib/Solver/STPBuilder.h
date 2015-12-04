@@ -18,10 +18,6 @@
 
 #define Expr VCExpr
 #include <stp/c_interface.h>
-
-#if ENABLE_STPLOG == 1
-#include "stp/stplog.h"
-#endif
 #undef Expr
 
 namespace klee {
