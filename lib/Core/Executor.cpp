@@ -1945,13 +1945,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       ref<Expr> right = eval(ki, 1, state).value;
       ref<Expr> result = EqExpr::create(left, right);
       bindLocal(ki, state, result);
-
-      if(!interpTree->isCurrentNodeSubsumed()){
-    	  state.itreeNode->latestBranchCond.base = left;
-          state.itreeNode->latestBranchCond.value = right;
-          state.itreeNode->latestBranchCond.compareName = Eq;
-      }
-
       break;
     }
 
@@ -1960,11 +1953,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       ref<Expr> right = eval(ki, 1, state).value;
       ref<Expr> result = NeExpr::create(left, right);
       bindLocal(ki, state, result);
-      if(!interpTree->isCurrentNodeSubsumed()){
-    	  state.itreeNode->latestBranchCond.base = left;
-          state.itreeNode->latestBranchCond.value = right;
-          state.itreeNode->latestBranchCond.compareName = Ne;
-      }
       break;
     }
 
@@ -1973,11 +1961,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       ref<Expr> right = eval(ki, 1, state).value;
       ref<Expr> result = UgtExpr::create(left, right);
       bindLocal(ki, state,result);
-      if(!interpTree->isCurrentNodeSubsumed()){
-    	  state.itreeNode->latestBranchCond.base = left;
-          state.itreeNode->latestBranchCond.value = right;
-          state.itreeNode->latestBranchCond.compareName = Ugt;
-      }
       break;
     }
 
@@ -1986,11 +1969,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       ref<Expr> right = eval(ki, 1, state).value;
       ref<Expr> result = UgeExpr::create(left, right);
       bindLocal(ki, state, result);
-      if(!interpTree->isCurrentNodeSubsumed()){
-    	  state.itreeNode->latestBranchCond.base = left;
-          state.itreeNode->latestBranchCond.value = right;
-          state.itreeNode->latestBranchCond.compareName = Uge;
-      }
       break;
     }
 
@@ -1999,11 +1977,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       ref<Expr> right = eval(ki, 1, state).value;
       ref<Expr> result = UltExpr::create(left, right);
       bindLocal(ki, state, result);
-      if(!interpTree->isCurrentNodeSubsumed()){
-    	  state.itreeNode->latestBranchCond.base = left;
-          state.itreeNode->latestBranchCond.value = right;
-          state.itreeNode->latestBranchCond.compareName = Ult;
-      }
       break;
     }
 
@@ -2012,11 +1985,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       ref<Expr> right = eval(ki, 1, state).value;
       ref<Expr> result = UleExpr::create(left, right);
       bindLocal(ki, state, result);
-      if(!interpTree->isCurrentNodeSubsumed()){
-    	  state.itreeNode->latestBranchCond.base = left;
-          state.itreeNode->latestBranchCond.value = right;
-          state.itreeNode->latestBranchCond.compareName = Ule;
-      }
       break;
     }
 
@@ -2024,12 +1992,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       ref<Expr> left = eval(ki, 0, state).value;
       ref<Expr> right = eval(ki, 1, state).value;
       ref<Expr> result = SgtExpr::create(left, right);
-
-      if(!interpTree->isCurrentNodeSubsumed()){
-    	  state.itreeNode->latestBranchCond.base = left;
-    	  state.itreeNode->latestBranchCond.value = right;
-    	  state.itreeNode->latestBranchCond.compareName = Sgt;
-      }
       bindLocal(ki, state, result);
       break;
     }
@@ -2039,11 +2001,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       ref<Expr> right = eval(ki, 1, state).value;
       ref<Expr> result = SgeExpr::create(left, right);
       bindLocal(ki, state, result);
-      if(!interpTree->isCurrentNodeSubsumed()){
-    	  state.itreeNode->latestBranchCond.base = left;
-          state.itreeNode->latestBranchCond.value = right;
-          state.itreeNode->latestBranchCond.compareName = Sge;
-      }
       break;
     }
 
@@ -2052,11 +2009,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       ref<Expr> right = eval(ki, 1, state).value;
       ref<Expr> result = SltExpr::create(left, right);
       bindLocal(ki, state, result);
-      if(!interpTree->isCurrentNodeSubsumed()){
-    	  state.itreeNode->latestBranchCond.base = left;
-          state.itreeNode->latestBranchCond.value = right;
-          state.itreeNode->latestBranchCond.compareName = Slt;
-      }
       break;
     }
 
@@ -2065,11 +2017,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       ref<Expr> right = eval(ki, 1, state).value;
       ref<Expr> result = SleExpr::create(left, right);
       bindLocal(ki, state, result);
-      if(!interpTree->isCurrentNodeSubsumed()){
-    	  state.itreeNode->latestBranchCond.base = left;
-          state.itreeNode->latestBranchCond.value = right;
-          state.itreeNode->latestBranchCond.compareName = Sle;
-      }
       break;
     }
 

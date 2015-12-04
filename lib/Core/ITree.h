@@ -11,10 +11,6 @@
 #include <klee/Expr.h>
 #include "klee/ExecutionState.h"
 
-enum Status { NoInterpolant, HalfInterpolant, FullInterpolant};
-enum Operation { Add, Sub, Mul, UDiv, SDiv, URem, SRem, And, Or, Xor, Shl, LShr, AShr};
-enum Comparison {Eq, Ne, Ult, Ule, Ugt, Uge, Slt, Sle, Sgt, Sge, Neg, Not};
-
 namespace klee {
   class ExecutionState;
 
@@ -46,12 +42,6 @@ namespace klee {
     void dump();
 
     void print(llvm::raw_ostream& stream);
-  };
-
-  struct BranchCondition{
-    ref<Expr> base;
-    ref<Expr> value;
-    Comparison compareName;
   };
 
   class SubsumptionTableEntry {
@@ -110,7 +100,6 @@ namespace klee {
     unsigned int programPoint;
     ExecutionState *data;
     bool isSubsumed;
-    BranchCondition latestBranchCond;
 
     std::vector< ref<Expr> > getInterpolant() const;
 
