@@ -19,9 +19,7 @@ PathCondition::PathCondition(ref<Expr>& constraint) :
 PathCondition::PathCondition(ref<Expr>& constraint, PathCondition *prev) :
     constraint(constraint), inInterpolant(false), tail(prev) {}
 
-PathCondition::~PathCondition() {
-  delete tail;
-}
+PathCondition::~PathCondition() {}
 
 ref<Expr> PathCondition::car() const {
   return constraint;
@@ -126,10 +124,27 @@ void ITree::setCurrentINode(ITreeNode *node) {
   currentINode = node;
 }
 
+void ITree::remove(ITreeNode *node) {
+  assert(!node->left && !node->right);
+  do {
+    ITreeNode *p = node->parent;
+    delete node;
+    if (p) {
+      if (node == p->left) {
+        p->left = 0;
+      } else {
+        assert(node == p->right);
+        p->right = 0;
+      }
+    }
+    node = p;
+  } while (node && !node->left && !node->right);
+}
+
 void ITree::markPathCondition(std::vector< std::pair< size_t, ref<Expr> > > unsat_core) {
   /// Simply return in case the unsatisfiability core is empty
   if (unsat_core.size() == 0)
-	return;
+    return;
 
   /// Process the unsat core in case it was computed (non-empty)
   PathCondition *pc = currentINode->pathCondition;
@@ -183,7 +198,7 @@ std::vector< ref<Expr> > ITreeNode::getInterpolant() const {
   return this->pathCondition->pack();
 }
 
-void ITreeNode::correctNodeLocation(unsigned int programPoint) {
+void ITreeNode::setNodeLocation(unsigned int programPoint) {
   this->programPoint = programPoint;
 }
 
@@ -215,7 +230,6 @@ void ITreeNode::print(llvm::raw_ostream &stream, const unsigned int tab_num) con
       pathCondition->print(stream);
   }
   stream << "\n";
-
   stream << tabs_next << "Left:\n";
   if (!left) {
       stream << tabs_next << "NULL\n";

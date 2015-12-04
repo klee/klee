@@ -874,10 +874,10 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       }
     }
 
-    llvm::errs() << "Solver proved the query\n";
     /// Validity proof succeeded of a query: antecedent -> consequent.
     /// We then extract the unsatisfiability core of antecedent and not
     /// consequent as the Craig interpolant.
+    llvm::errs() << "Solver proved the query\n";
     interpTree->markPathCondition(solver->getUnsatCore());
 
     return StatePair(&current, 0);
@@ -887,6 +887,12 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
         current.pathOS << "0";
       }
     }
+
+    /// Falsity proof succeeded of a query: antecedent -> consequent,
+    /// which means that antecedent -> not(consequent) is valid. In this
+    /// case also we extract the unsat core of the proof
+    llvm::errs() << "Solver disproved the query\n";
+    interpTree->markPathCondition(solver->getUnsatCore());
 
     return StatePair(0, &current);
   } else {
@@ -2505,6 +2511,7 @@ void Executor::updateStates(ExecutionState *current) {
     if (it3 != seedMap.end())
       seedMap.erase(it3);
     processTree->remove(es->ptreeNode);
+    interpTree->remove(es->itreeNode);
     delete es;
   }
   removedStates.clear();
@@ -2654,7 +2661,7 @@ void Executor::run(ExecutionState &initialState) {
     ExecutionState &state = searcher->selectState();
 
     /// We synchronize the program point to that of the state
-    state.itreeNode->correctNodeLocation(state.pc->dest);
+    state.itreeNode->setNodeLocation(state.pc->dest);
     interpTree->setCurrentINode(state.itreeNode);
 
     llvm::errs() << "Start of loop: Set currently active interpolation tree node to ";
@@ -2665,7 +2672,7 @@ void Executor::run(ExecutionState &initialState) {
 
     executeInstruction(state, ki);
     if(state.itreeNode->isSubsumed){
-    	removedStates.insert(&state);
+	removedStates.insert(&state);
     }
     processTimers(&state, MaxInstructionTime);
 
@@ -2794,6 +2801,7 @@ void Executor::terminateState(ExecutionState &state) {
       seedMap.erase(it3);
     addedStates.erase(it);
     processTree->remove(state.ptreeNode);
+    interpTree->remove(state.itreeNode);
     delete &state;
   }
 }

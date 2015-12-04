@@ -14,6 +14,8 @@
 namespace klee {
   class ExecutionState;
 
+  enum TraversalCompletion { Incomplete, HalfCompleted, FullyCompleted };
+
   class PathCondition {
     /// KLEE expression
     ref<Expr> constraint;
@@ -84,9 +86,12 @@ namespace klee {
 
     void setCurrentINode(ITreeNode *node);
 
+    void remove(ITreeNode *node);
+
     void checkCurrentNodeSubsumption();
 
     void markPathCondition(std::vector< std::pair<size_t, ref<Expr> > > unsat_core);
+
   };
 
   class ITreeNode{
@@ -105,7 +110,7 @@ namespace klee {
 
     std::vector< ref<Expr> > getInterpolant() const;
 
-    void correctNodeLocation(unsigned int programPoint);
+    void setNodeLocation(unsigned int programPoint);
 
     void split(ExecutionState *leftData, ExecutionState *rightData);
 
