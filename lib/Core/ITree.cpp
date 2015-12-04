@@ -6,8 +6,10 @@
  */
 
 #include "ITree.h"
+#include "TimingSolver.h"
 
 #include <klee/Expr.h>
+#include <klee/Solver.h>
 #include <vector>
 
 using namespace klee;
@@ -41,6 +43,15 @@ std::vector< ref<Expr> > PathCondition::pack() const {
   return res;
 }
 
+std::vector< ref<Expr> > PathCondition::packInterpolant() const {
+  std::vector< ref<Expr> > res;
+  for (const PathCondition *it = this; it != 0; it = it->tail) {
+      if (it->inInterpolant)
+	res.push_back(it->constraint);
+  }
+  return res;
+}
+
 void PathCondition::dump() {
   this->print(llvm::errs());
   llvm::errs() << "\n";
@@ -62,9 +73,28 @@ SubsumptionTableEntry::SubsumptionTableEntry(ITreeNode *node) :
 
 SubsumptionTableEntry::~SubsumptionTableEntry() {}
 
-bool SubsumptionTableEntry::subsumed(ITreeNode *state) {
-  /// We simply return false for now
-  return false;
+bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
+                                     ExecutionState& state,
+                                     double timeout) {
+  if (state.itreeNode == 0)
+    return false;
+
+  if (state.itreeNode->getProgramPoint() == programPoint) {
+      for (std::vector< ref<Expr> >::iterator it = interpolant.begin();
+	  it != interpolant.end(); it++) {
+	  ref<Expr> query = *it;
+	  Solver::Validity result;
+	  solver->setTimeout(timeout);
+	  bool success = solver->evaluate(state, query, result);
+	  solver->setTimeout(0);
+	  if (success && result == Solver::True) {
+	      solver->getUnsatCore();
+	  } else {
+	      return false;
+	  }
+      }
+  }
+  return true;
 }
 
 void SubsumptionTableEntry::dump() const {
@@ -92,13 +122,13 @@ ITree::ITree(ExecutionState* _root) :
 
 ITree::~ITree() {}
 
-void ITree::checkCurrentNodeSubsumption() {
-  assert(currentINode != 0);
-
+void ITree::checkCurrentStateSubsumption(TimingSolver *solver,
+                                         ExecutionState& state,
+                                         double timeout) {
   for (std::vector<SubsumptionTableEntry>::iterator it = subsumptionTable.begin();
       it != subsumptionTable.end(); it++) {
-      if (it->subsumed(currentINode)) {
-	  currentINode->isSubsumed = true;
+      if (it->subsumed(solver, state, timeout)) {
+	  state.itreeNode->isSubsumed = true;
 	  return;
       }
   }
@@ -128,6 +158,12 @@ void ITree::remove(ITreeNode *node) {
   assert(!node->left && !node->right);
   do {
     ITreeNode *p = node->parent;
+
+    /// As the node is about to be deleted, it must have been completely
+    /// traversed, hence the correct time to table the interpolant.
+    SubsumptionTableEntry entry(node);
+    store(entry);
+
     delete node;
     if (p) {
       if (node == p->left) {
@@ -195,7 +231,7 @@ unsigned int ITreeNode::getProgramPoint() {
 }
 
 std::vector< ref<Expr> > ITreeNode::getInterpolant() const {
-  return this->pathCondition->pack();
+  return this->pathCondition->packInterpolant();
 }
 
 void ITreeNode::setNodeLocation(unsigned int programPoint) {

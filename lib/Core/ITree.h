@@ -39,6 +39,8 @@ namespace klee {
 
     std::vector< ref<Expr> > pack() const;
 
+    std::vector< ref<Expr> > packInterpolant() const;
+
     void dump();
 
     void print(llvm::raw_ostream& stream);
@@ -54,7 +56,7 @@ namespace klee {
 
     ~SubsumptionTableEntry();
 
-    bool subsumed(ITreeNode *state);
+    bool subsumed(TimingSolver *solver, ExecutionState& state, double timeout);
 
     void dump() const;
 
@@ -86,7 +88,7 @@ namespace klee {
 
     void remove(ITreeNode *node);
 
-    void checkCurrentNodeSubsumption();
+    void checkCurrentStateSubsumption(TimingSolver* solver, ExecutionState& state, double timeout);
 
     void markPathCondition(std::vector< std::pair<size_t, ref<Expr> > > unsat_core);
 

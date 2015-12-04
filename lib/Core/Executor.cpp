@@ -941,38 +941,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       }
     }
 
-    /// Subsumption check
-
-    /// The following is the original subsumption check algorithm that was put here.
-    /// The first solver->evaluate seems to increase the number of iterations:
-    /// commented out only for future reference.
-//    for (std::vector< SubsumptionTableEntry >::iterator it = interpTree->getStore().begin() ;
-//	it != interpTree->getStore().end(); ++it){
-//	if(current.itreeNode->programPoint == it->programPoint) {
-//	    Solver::Validity result;
-//	    solver->evaluate(current, it->interpolant, result);
-//
-//	    if(result == Solver::True){
-//		ref<Expr> interpolant =  it->interpolant;
-//		std::pair< ref<Expr> , ref<Expr> > interpolantLoc = it->interpolantLoc;
-//		ref<Expr> reExecIntp = reExecInterpolant(interpolant, interpolantLoc, current);
-//		Solver::Validity rslt;
-//		solver->evaluate(current, reExecIntp, rslt);
-//		if(rslt == Solver::True){
-//		    current.itreeNode->isSubsumed = true;
-//		    current.itreeNode->setInterpolant(it->interpolant, it->interpolantLoc, FullInterpolant);
-//		    addedStates.erase(falseState); // false state has been added before. Since we will do subsumption we can delete this added falseState
-//		    current.itreeNode->parent->setInterpolantStatus(FullInterpolant);
-//		    propagateInterpolant(current.itreeNode->getInterpolant(),
-//		                         current.itreeNode->getInterpolantLoc(),
-//		                         current);
-//		    return StatePair(0, 0);
-//		}
-//	    }
-//	}
-//    }
-
-    interpTree->checkCurrentNodeSubsumption();
+    interpTree->checkCurrentStateSubsumption(solver, current, timeout);
     if (interpTree->isCurrentNodeSubsumed()) {
 	return StatePair(0, 0);
     }
