@@ -68,7 +68,6 @@ namespace klee {
 
 class STPBuilder {
   ::VC vc;
-  ExprHandle tempVars[4];
   ExprHashMap< std::pair<ExprHandle, unsigned> > constructed;
 
   /// optimizeDivides - Rewrite division and reminders by constants
@@ -120,7 +119,6 @@ public:
 
   ExprHandle getTrue();
   ExprHandle getFalse();
-  ExprHandle getTempVar(Expr::Width w);
   ExprHandle getInitialRead(const Array *os, unsigned index);
 
   ExprHandle construct(ref<Expr> e) { 
