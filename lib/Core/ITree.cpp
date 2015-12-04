@@ -53,104 +53,6 @@ void ConstraintList::print(llvm::raw_ostream& stream) {
   stream << "]";
 }
 
-
-UpdateRelation::UpdateRelation(const ref<Expr>& baseLoc, const ref<Expr>& value, const Operation& operationName) :
-    base(0), valueLoc(0) {
-  this->baseLoc = baseLoc;
-  this->value = value;
-  this->operationName = operationName;
-}
-
-UpdateRelation::~UpdateRelation() {}
-
-ref<Expr> UpdateRelation::makeExpr(ref<Expr> locToCompare, ref<Expr>& lhs) const {
-  if (baseLoc != locToCompare)
-    return lhs;
-
-  switch (operationName) {
-    case Add:
-      return AddExpr::create(lhs, value);
-    case Sub:
-      return SubExpr::create(lhs, value);
-    case Mul:
-      return MulExpr::create(lhs, value);
-    case UDiv:
-      return UDivExpr::create(lhs, value);
-    case SDiv:
-      return SDivExpr::create(lhs, value);
-    case URem:
-      return URemExpr::create(lhs, value);
-    case SRem:
-      return SRemExpr::create(lhs, value);
-    case And:
-      return AndExpr::create(lhs, value);
-    case Or:
-      return OrExpr::create(lhs, value);
-    case Xor:
-      return XorExpr::create(lhs, value);
-    case Shl:
-      return ShlExpr::create(lhs, value);
-    case LShr:
-      return LShrExpr::create(lhs, value);
-    case AShr:
-      return AShrExpr::create(lhs, value);
-    default:
-      return lhs;
-  }
-}
-
-void UpdateRelation::setBase(const ref<Expr>& base) {
-  this->base = base;
-}
-
-void UpdateRelation::setValueLoc(const ref<Expr>& valueLoc) {
-  this->valueLoc = valueLoc;
-}
-
-ref<Expr> UpdateRelation::getBaseLoc() const {
-  return baseLoc;
-}
-
-bool UpdateRelation::isBase(ref<Expr> expr) const {
-  return !base.isNull() && base == expr;
-}
-
-void UpdateRelation::dump() const {
-  this->print(llvm::errs());
-}
-
-void UpdateRelation::print(llvm::raw_ostream & stream) const {
-  stream << "base = ";
-  if (!base.isNull()) {
-      base->print(stream);
-  } else {
-      stream << "NULL";
-  }
-  stream << "\n";
-  stream << "baseLoc = ";
-  if (!baseLoc.isNull()) {
-      baseLoc->print(stream);
-  } else {
-      stream << "NULL";
-  }
-  stream << "\n";
-  stream << "value = ";
-  if (!value.isNull()) {
-      value->print(stream);
-  } else {
-      stream << "NULL";
-  }
-  stream << "\n";
-  stream << "valueLoc = ";
-  if (!valueLoc.isNull()) {
-      valueLoc->print(stream);
-  } else {
-      stream << "NULL";
-  }
-  stream << "\n";
-  stream << "operationName = " << operationName << "\n";
-}
-
 SubsumptionTableEntry::SubsumptionTableEntry(ITreeNode *node) :
   programPoint(node->programPoint),
   interpolant(node->getInterpolant()) {}
@@ -221,9 +123,7 @@ void ITree::setCurrentINode(ITreeNode *node) {
 
 ITreeNode::ITreeNode(ITreeNode *_parent,
                      ExecutionState *_data)
-: interpolant(NULL),
-  interpolantStatus(NoInterpolant),
-  parent(_parent),
+: parent(_parent),
   left(0),
   right(0),
   programPoint(0),
@@ -246,84 +146,8 @@ ITreeNode::~ITreeNode() {
   delete constraintList;
 }
 
-void ITreeNode::addUpdateRelations(std::vector<UpdateRelation> addedUpdateRelations) {
-  std::vector<UpdateRelation>::iterator it;
-  updateRelationsList.insert(it, addedUpdateRelations.begin(), addedUpdateRelations.end());
-}
-
-void ITreeNode::addUpdateRelations(ITreeNode *other) {
-  std::vector<UpdateRelation>::iterator it;
-  updateRelationsList.insert(it, other->updateRelationsList.begin(),
-                             other->updateRelationsList.end());
-}
-
-void ITreeNode::addNewUpdateRelation(UpdateRelation& updateRelation) {
-  updateRelationsList.push_back(updateRelation);
-  newUpdateRelationsList.push_back(updateRelation);
-}
-
-void ITreeNode::addStoredNewUpdateRelationsTo(std::vector<UpdateRelation>& relationsList) {
-  std::vector<UpdateRelation>::iterator it = relationsList.begin();
-  relationsList.insert(it, newUpdateRelationsList.begin(), newUpdateRelationsList.end());
-}
-
-ref<Expr> ITreeNode::buildUpdateExpression(ref<Expr>& lhs, ref<Expr> rhs) {
-  return klee::buildUpdateExpression(updateRelationsList, lhs, rhs);
-}
-
-ref<Expr> ITreeNode::buildNewUpdateExpression(ref<Expr>& lhs, ref<Expr> rhs) {
-  return klee::buildUpdateExpression(newUpdateRelationsList, lhs, rhs);
-}
-
-ref<Expr> ITreeNode::getInterpolantBaseLocation(ref<Expr>& interpolant) {
-  /// Get the base location from base
-  for (std::vector<UpdateRelation>::const_iterator it = updateRelationsList.begin();
-      it != updateRelationsList.end(); ++it) {
-      /// To search the variable from the TransferRelation: For example, we
-      /// have variable x within the constraint x <= 0 as a variable that we
-      /// are looking for. In this case, x is in the lhs of the expression,
-      /// so its index is 0, and the variable is the expression
-      /// tmpInterpolant->getKid(0), If we have found x then we save its
-      /// reference (baseLocation = it->baseLoc).
-      if (it->isBase(interpolant->getKid(0))) {
-	  return it->getBaseLoc();
-      }
-  }
-  return 0;
-}
-
-void ITreeNode::setInterpolantStatus(Status interpolantStatus) {
-  this->interpolantStatus = interpolantStatus;
-}
-
-void ITreeNode::setInterpolant(ref<Expr> interpolant) {
-  this->interpolant = interpolant;
-}
-
-void ITreeNode::setInterpolant(ref<Expr> interpolant,
-                                   Status interpolantStatus) {
-  this->interpolant = interpolant;
-  this->interpolantStatus = interpolantStatus;
-}
-
-void ITreeNode::setInterpolant(ref<Expr> interpolant,
-                                   std::pair< ref<Expr>, ref<Expr> > interpolantLoc,
-                                   Status interpolantStatus) {
-  this->interpolant = interpolant;
-  this->interpolantLoc = interpolantLoc;
-  this->interpolantStatus = interpolantStatus;
-}
-
 std::vector< ref<Expr> > ITreeNode::getInterpolant() const {
   return this->constraintList->pack();
-}
-
-std::pair< ref<Expr>, ref<Expr> > ITreeNode::getInterpolantLoc() {
-  return std::make_pair(this->interpolantLoc.first, this->interpolantLoc.second);
-}
-
-Status ITreeNode::getInterpolantStatus() {
-  return this->interpolantStatus;
 }
 
 void ITreeNode::correctNodeLocation(unsigned int programPoint) {
@@ -385,63 +209,6 @@ void ITreeNode::print(llvm::raw_ostream &stream, const unsigned int tab_num) con
       right->print(stream, tab_num + 1);
       stream << "\n";
   }
-
-  stream << tabs_next << "newUpdateRelationsList =";
-  for (std::vector<UpdateRelation>::const_iterator it = newUpdateRelationsList.begin();
-      it != newUpdateRelationsList.end(); (stream << ","), it++) {
-      it->print(stream);
-  }
-  stream << "\n";
-
-  stream << tabs_next << "updateRelationsList =";
-  for (std::vector<UpdateRelation>::const_iterator it = updateRelationsList.begin();
-      it != updateRelationsList.end(); (stream << ","), it++) {
-      it->print(stream);
-  }
-  stream << "\n";
-
-  stream << tabs_next << "dependenciesLoc =";
-  for (std::vector< ref<Expr> >::const_iterator it = dependenciesLoc.begin();
-      it != dependenciesLoc.end(); (stream << ","), it++) {
-      if (!((*it).isNull())) {
-	  (*it)->print(stream);
-      } else {
-	  stream << "NULL";
-      }
-  }
-  stream << "\n";
-
-  stream << tabs_next << "interpolant =";
-  if (interpolant.isNull()) {
-      stream << "NULL\n";
-  } else {
-      interpolant->print(stream);
-      stream << "\n";
-  }
-
-  stream << tabs_next << "interpolantLoc = pair(";
-  if (!interpolantLoc.first.isNull()) {
-      interpolantLoc.first->print(stream);
-  } else {
-      stream << "NULL";
-  }
-  stream << ",";
-  if (!interpolantLoc.second.isNull()) {
-      interpolantLoc.second->print(stream);
-  } else {
-      stream << "NULL";
-  }
-  stream << ")\n";
-  stream << tabs_next << "InterpolantStatus =" << interpolantStatus << "\n";
-
-}
-
-ref<Expr> klee::buildUpdateExpression(std::vector<UpdateRelation> updateRelationsList, ref<Expr>& lhs, ref<Expr> rhs) {
-  for (std::vector<UpdateRelation>::const_iterator pc = updateRelationsList.begin();
-      pc != updateRelationsList.end(); ++pc) {
-      rhs = pc->makeExpr(lhs, rhs);
-  }
-  return rhs;
 }
 
 

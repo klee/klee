@@ -283,8 +283,6 @@ Executor::Executor(const InterpreterOptions &opts,
     specialFunctionHandler(0),
     processTree(0),
     interpTree(0), 
-    latestBaseLeft(0),
-    latestBaseRight(0),
     replayOut(0),
     replayPath(0),    
     usingSeeds(0),
@@ -734,100 +732,6 @@ ref<Expr> Executor::makeComparison(ref<Expr> exprWithKind, ref<Expr> leftValue, 
   }
 }
 
-void Executor::setCurrentInterpolant(size_t predNum, ref<Expr>& tmpInterpolant,
-                                     ExecutionState& current, ref<Expr> baseLocation) {
-  ITreeNode* currentINode = current.itreeNode;
-  size_t currPredNum = current.constraints.size();
-  std::vector<UpdateRelation> updateRelationsList;
-  while ((currPredNum != predNum) && (currentINode != 0)) {
-      currentINode->addStoredNewUpdateRelationsTo(updateRelationsList);
-      currentINode = current.itreeNode->getParent();
-      currPredNum--;
-  }
-
-  /// Forward execution
-  ref<Expr> rightValue = klee::buildUpdateExpression(updateRelationsList, baseLocation, tmpInterpolant->getKid(1));
-  tmpInterpolant = makeComparison(tmpInterpolant, tmpInterpolant->getKid(0), rightValue);
-
-  /// Updating the interpolant in the state
-  current.itreeNode->setInterpolant(tmpInterpolant, std::make_pair(baseLocation, baseLocation), FullInterpolant);
-}
-
-ref<Expr> Executor::reExecInterpolant(ref<Expr>& interpolant, std::pair< ref<Expr> , ref<Expr> >& interpolantLoc, ExecutionState& current){
-  if(interpolantLoc.first.isNull())
-    klee_warning(" interpolantLoc.first null");
-
-  ref<Expr> intpLeft = current.itreeNode->buildUpdateExpression(interpolantLoc.first, interpolant->getKid(0));
-  ref<Expr> intpRight = interpolant->getKid(1);
-  return makeComparison(interpolant, intpLeft, intpRight);
-}
-
-void Executor::propagateInterpolant(const ref<Expr>& tmpInterpolant,
-                                    std::pair< ref<Expr>, ref<Expr> > intpLocation, ExecutionState& current) {
-  //get parent interpolant
-  ref<Expr> leftIntpParent = tmpInterpolant->getKid(0);
-  ref<Expr> rightIntpParent = tmpInterpolant->getKid(1);
-  //forward execution for parent interpolant
-  if (!intpLocation.first.isNull()) {
-      leftIntpParent = current.itreeNode->buildNewUpdateExpression(intpLocation.first, leftIntpParent);
-  }
-  ref<Expr> parentInterpolant = makeComparison(tmpInterpolant, rightIntpParent, leftIntpParent);
-
-  ref<Expr> parentIntLeft = parentInterpolant->getKid(0);
-  ref<Expr> parentIntRight = parentInterpolant->getKid(1);
-  //    parentInterpolant = Expr::createIsZero(parentInterpolant);
-  ITreeNode *currentPredecessor = NULL;
-  if (current.itreeNode->getParent() != NULL) {
-      if (current.itreeNode->getParent()->getInterpolantStatus() == NoInterpolant) {
-	  current.itreeNode->getParent()->setInterpolant(parentInterpolant,
-	                                                 current.itreeNode->getInterpolantLoc(),
-	                                                 HalfInterpolant);
-      }
-      else if (current.itreeNode->getParent()->getInterpolantStatus() == HalfInterpolant) {
-	  current.itreeNode->getParent()->setInterpolant(parentInterpolant, FullInterpolant);
-
-	  SubsumptionTableEntry s(current.itreeNode);
-	  interpTree->store(s);
-      }
-      currentPredecessor = current.itreeNode->getParent()->getParent();
-  }
-
-  while (currentPredecessor != NULL) {
-
-      parentIntLeft = current.itreeNode->buildNewUpdateExpression(latestBaseLeft, parentIntLeft);
-
-      ref<Expr> currPredecessorInt =
-	  Expr::createIsZero(makeComparison(tmpInterpolant, parentIntLeft, parentIntRight));
-
-      if (currentPredecessor->getLeft()->getInterpolantStatus() == FullInterpolant
-	  && currentPredecessor->getRight()->getInterpolantStatus() == FullInterpolant) {
-
-	  if (currentPredecessor->getInterpolantStatus() != FullInterpolant) {
-	      currentPredecessor->setInterpolantStatus(FullInterpolant);
-
-	      SubsumptionTableEntry s(currentPredecessor);
-	      interpTree->store(s);
-
-	      if(currentPredecessor->getInterpolant().empty()){
-		  currentPredecessor->setInterpolant(currPredecessorInt);
-	      }
-	  }
-      }
-
-      else if (currentPredecessor->getLeft()->getInterpolantStatus() == FullInterpolant
-	  || currentPredecessor->getRight()->getInterpolantStatus() == FullInterpolant) {
-
-	  if (currentPredecessor->getInterpolantStatus() != HalfInterpolant) {
-	      currentPredecessor->setInterpolant(currPredecessorInt,
-	                                         std::make_pair(intpLocation.first, intpLocation.second),
-	                                         HalfInterpolant);
-	  }
-      }
-
-      currentPredecessor = currentPredecessor->getParent();
-  }
-}
-
 Executor::StatePair 
 Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
   Solver::Validity res;
@@ -975,24 +879,13 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     /// We then extract the unsatisfiability core of antecedent and not
     /// consequent as the Craig interpolant.
     ref<Expr> tmpInterpolant;
-    size_t predNum = 1;
     std::vector< std::pair<size_t, ref<Expr> > > unsat_core = solver->getUnsatCore();
 
     /// Process the unsat core in case it was computed (non-empty)
     if(unsat_core.size() > 0){
 	llvm::errs() << "Non-empty unsatisfiability core\n";
-	predNum = unsat_core.back().first;
 	tmpInterpolant = unsat_core.back().second;
 	unsat_core.push_back(std::make_pair(current.constraints.size(), condition));
-
-	/// Get the base location from base
-	ref<Expr> baseLocation = current.itreeNode->getInterpolantBaseLocation(tmpInterpolant);
-
-	std::pair< ref<Expr>, ref<Expr> > tmpInterpolantLoc = std::make_pair(baseLocation, baseLocation);
-
-	setCurrentInterpolant(predNum, tmpInterpolant, current, baseLocation);
-
-	propagateInterpolant(tmpInterpolant, tmpInterpolantLoc, current);
     }
 
     return StatePair(&current, 0);
@@ -1110,8 +1003,6 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
 
     current.itreeNode->data = 0;
     current.itreeNode->split(falseState, trueState);
-    falseState->itreeNode->addUpdateRelations(current.itreeNode->getParent());
-    trueState->itreeNode->addUpdateRelations(current.itreeNode->getParent());
 
     // Kinda gross, do we even really still want this option?
     if (MaxDepth && MaxDepth<=trueState->depth) {
@@ -1729,8 +1620,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       if (branches.second)
         transferToBasicBlock(bi->getSuccessor(1), bi->getParent(), *branches.second);
     }
-//    latestBaseLeft = NULL;
-//    latestBaseRight = NULL;
     break;
   }
   case Instruction::Switch: {
@@ -1955,15 +1844,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> left = eval(ki, 0, state).value;
     ref<Expr> right = eval(ki, 1, state).value;
     bindLocal(ki, state, AddExpr::create(left, right));
-
-    if(!latestBaseLeft.isNull()){
-	UpdateRelation updRel(latestBaseLeft, right, Add);
-	updRel.setBase(left);
-	if(!latestBaseRight.isNull())
-	  updRel.setValueLoc(latestBaseRight);
-
-	state.itreeNode->addNewUpdateRelation(updRel);
-    }
     break;
   }
 
@@ -1971,11 +1851,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> left = eval(ki, 0, state).value;
     ref<Expr> right = eval(ki, 1, state).value;
     bindLocal(ki, state, SubExpr::create(left, right));
-
-    if(!latestBaseLeft.isNull()){
-	UpdateRelation updRel(latestBaseLeft, right, Sub);
-	state.itreeNode->addNewUpdateRelation(updRel);
-    }
     break;
   }
  
@@ -1983,11 +1858,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> left = eval(ki, 0, state).value;
     ref<Expr> right = eval(ki, 1, state).value;
     bindLocal(ki, state, MulExpr::create(left, right));
-
-    if(!latestBaseLeft.isNull()){
-	UpdateRelation updRel(latestBaseLeft, right, Mul);
-	state.itreeNode->addNewUpdateRelation(updRel);
-    }
     break;
   }
 
@@ -1996,11 +1866,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = UDivExpr::create(left, right);
     bindLocal(ki, state, result);
-
-    if(!latestBaseLeft.isNull()){
-	UpdateRelation updRel(latestBaseLeft, right, UDiv);
-	state.itreeNode->addNewUpdateRelation(updRel);
-    }
     break;
   }
 
@@ -2009,11 +1874,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = SDivExpr::create(left, right);
     bindLocal(ki, state, result);
-
-    if(!latestBaseLeft.isNull()){
-	UpdateRelation updRel(latestBaseLeft, right, SDiv);
-	state.itreeNode->addNewUpdateRelation(updRel);
-    }
     break;
   }
 
@@ -2022,11 +1882,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = URemExpr::create(left, right);
     bindLocal(ki, state, result);
-
-    if(!latestBaseLeft.isNull()){
-	UpdateRelation updRel(latestBaseLeft, right, URem);
-	state.itreeNode->addNewUpdateRelation(updRel);
-    }
     break;
   }
  
@@ -2035,11 +1890,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = SRemExpr::create(left, right);
     bindLocal(ki, state, result);
-
-    if(!latestBaseLeft.isNull()){
-	UpdateRelation updRel(latestBaseLeft, right, SRem);
-	state.itreeNode->addNewUpdateRelation(updRel);
-    }
     break;
   }
 
@@ -2048,11 +1898,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = AndExpr::create(left, right);
     bindLocal(ki, state, result);
-
-    if(!latestBaseLeft.isNull()){
-	UpdateRelation updRel(latestBaseLeft, right, And);
-	state.itreeNode->addNewUpdateRelation(updRel);
-    }
     break;
   }
 
@@ -2061,11 +1906,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = OrExpr::create(left, right);
     bindLocal(ki, state, result);
-
-    if(!latestBaseLeft.isNull()){
-	UpdateRelation updRel(latestBaseLeft, right, Or);
-	state.itreeNode->addNewUpdateRelation(updRel);
-    }
     break;
   }
 
@@ -2074,11 +1914,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = XorExpr::create(left, right);
     bindLocal(ki, state, result);
-
-    if(!latestBaseLeft.isNull()){
-	UpdateRelation updRel(latestBaseLeft, right, Xor);
-	state.itreeNode->addNewUpdateRelation(updRel);
-    }
     break;
   }
 
@@ -2087,11 +1922,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = ShlExpr::create(left, right);
     bindLocal(ki, state, result);
-
-    if(!latestBaseLeft.isNull()){
-	UpdateRelation updRel(latestBaseLeft, right, Shl);
-	state.itreeNode->addNewUpdateRelation(updRel);
-    }
     break;
   }
 
@@ -2100,11 +1930,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = LShrExpr::create(left, right);
     bindLocal(ki, state, result);
-
-    if(!latestBaseLeft.isNull()){
-	UpdateRelation updRel(latestBaseLeft, right, LShr);
-	state.itreeNode->addNewUpdateRelation(updRel);
-    }
     break;
   }
 
@@ -2113,11 +1938,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = AShrExpr::create(left, right);
     bindLocal(ki, state, result);
-
-    if(!latestBaseLeft.isNull()){
-	UpdateRelation updRel(latestBaseLeft, right, AShr);
-	state.itreeNode->addNewUpdateRelation(updRel);
-    }
     break;
   }
 
@@ -2285,13 +2105,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
   case Instruction::Load: {
     ref<Expr> base = eval(ki, 0, state).value;
-
-    llvm::errs() << "IN PROCESSING LOAD INSTRUCTION:\n";
-    i->dump();
-    llvm::errs() << "BASE IS ARG 0 OF LOAD:\n";
-    base->dump();
-    latestBaseLeft = base;
-    latestBaseRight = base;
     executeMemoryOperation(state, false, base, 0, ki);
     break;
   }
