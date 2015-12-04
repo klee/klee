@@ -14,8 +14,6 @@
 namespace klee {
   class ExecutionState;
 
-  enum TraversalCompletion { Incomplete, HalfCompleted, FullyCompleted };
-
   class PathCondition {
     /// KLEE expression
     ref<Expr> constraint;
