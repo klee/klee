@@ -31,6 +31,14 @@ ConstraintList *ConstraintList::cdr() const {
   return tail;
 }
 
+std::vector< ref<Expr> > ConstraintList::pack() const {
+  std::vector< ref<Expr> > res;
+  for (const ConstraintList *it = this; it != 0; it = it->tail) {
+      res.push_back(it->constraint);
+  }
+  return res;
+}
+
 void ConstraintList::dump() {
   this->print(llvm::errs());
   llvm::errs() << "\n";
@@ -145,12 +153,11 @@ void UpdateRelation::print(llvm::raw_ostream & stream) const {
 
 SubsumptionTableEntry::SubsumptionTableEntry(ITreeNode *node) :
   programPoint(node->programPoint),
-  interpolant(node->getInterpolant()),
-  interpolantLoc(node->getInterpolantLoc()) {}
+  interpolant(node->getInterpolant()) {}
 
 SubsumptionTableEntry::~SubsumptionTableEntry() {}
 
-bool SubsumptionTableEntry::subsumed(ExecutionState& state) {
+bool SubsumptionTableEntry::subsumed(ITreeNode *state) {
   /// We simply return false for now
   return false;
 }
@@ -163,21 +170,15 @@ void SubsumptionTableEntry::dump() const {
 void SubsumptionTableEntry::print(llvm::raw_ostream &stream) const {
   stream << "------------ Subsumption Table Entry ------------\n";
   stream << "Program point = " << programPoint << "\n";
-  stream << "interpolant = ";
-  interpolant->print(stream);
-  stream << "\ninterpolantLoc = pair(";
-  if (!interpolantLoc.first.isNull()) {
-      interpolantLoc.first->print(stream);
-  } else {
-      stream << "NULL";
+  stream << "interpolant = [";
+  for (std::vector< ref<Expr> >::const_iterator it = interpolant.begin();
+      it != interpolant.end(); it++) {
+      it->get()->print(stream);
+      if (it + 1 != interpolant.end()) {
+	  stream << ",";
+      }
   }
-  stream << ",";
-  if (!interpolantLoc.second.isNull()) {
-      interpolantLoc.second->print(stream);
-  } else {
-      stream << "NULL";
-  }
-  stream << ")\n";
+  stream << "]\n";
 }
 
 ITree::ITree(ExecutionState* _root) :
@@ -191,7 +192,7 @@ void ITree::checkCurrentNodeSubsumption() {
 
   for (std::vector<SubsumptionTableEntry>::iterator it = subsumptionTable.begin();
       it != subsumptionTable.end(); it++) {
-      if (it->subsumed(*(currentINode->data))) {
+      if (it->subsumed(currentINode)) {
 	  currentINode->isSubsumed = true;
 	  return;
       }
@@ -313,8 +314,8 @@ void ITreeNode::setInterpolant(ref<Expr> interpolant,
   this->interpolantStatus = interpolantStatus;
 }
 
-ref<Expr> &ITreeNode::getInterpolant() {
-  return this->interpolant;
+std::vector< ref<Expr> > ITreeNode::getInterpolant() const {
+  return this->constraintList->pack();
 }
 
 std::pair< ref<Expr>, ref<Expr> > ITreeNode::getInterpolantLoc() {

@@ -36,6 +36,8 @@ namespace klee {
 
     ConstraintList* cdr() const;
 
+    std::vector< ref<Expr> > pack() const;
+
     void dump();
 
     void print(llvm::raw_ostream& stream);
@@ -77,16 +79,14 @@ namespace klee {
   class SubsumptionTableEntry {
     unsigned int programPoint;
 
-    ref<Expr> interpolant;
-
-    std::pair< ref<Expr> , ref<Expr> > interpolantLoc;
+    std::vector< ref<Expr> > interpolant;
 
   public:
     SubsumptionTableEntry(ITreeNode *node);
 
     ~SubsumptionTableEntry();
 
-    bool subsumed(ExecutionState& state);
+    bool subsumed(ITreeNode *state);
 
     void dump() const;
 
@@ -162,7 +162,7 @@ namespace klee {
     void setInterpolant(ref<Expr> interpolant, std::pair< ref<Expr>, ref<Expr> > interpolantLoc,
                             Status interpolantStatus);
 
-    ref<Expr> &getInterpolant();
+    std::vector< ref<Expr> > getInterpolant() const;
 
     std::pair< ref<Expr>, ref<Expr> > getInterpolantLoc();
 

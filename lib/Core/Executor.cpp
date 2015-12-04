@@ -808,7 +808,7 @@ void Executor::propagateInterpolant(const ref<Expr>& tmpInterpolant,
 	      SubsumptionTableEntry s(currentPredecessor);
 	      interpTree->store(s);
 
-	      if(currentPredecessor->getInterpolant().isNull()){
+	      if(currentPredecessor->getInterpolant().empty()){
 		  currentPredecessor->setInterpolant(currPredecessorInt);
 	      }
 	  }
