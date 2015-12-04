@@ -13,41 +13,46 @@
 using namespace klee;
 
 
-ConstraintList::ConstraintList(ref<Expr>& constraint) :
-    constraint(constraint), tail(0) {}
+PathCondition::PathCondition(ref<Expr>& constraint) :
+    constraint(constraint), inInterpolant(false), tail(0) {}
 
-ConstraintList::ConstraintList(ref<Expr>& constraint, ConstraintList *prev) :
-    constraint(constraint), tail(prev) {}
+PathCondition::PathCondition(ref<Expr>& constraint, PathCondition *prev) :
+    constraint(constraint), inInterpolant(false), tail(prev) {}
 
-ConstraintList::~ConstraintList() {
+PathCondition::~PathCondition() {
   delete tail;
 }
 
-ref<Expr> ConstraintList::car() const {
+ref<Expr> PathCondition::car() const {
   return constraint;
 }
 
-ConstraintList *ConstraintList::cdr() const {
+PathCondition *PathCondition::cdr() const {
   return tail;
 }
 
-std::vector< ref<Expr> > ConstraintList::pack() const {
+void PathCondition::includeInInterpolant() {
+  inInterpolant = true;
+}
+
+std::vector< ref<Expr> > PathCondition::pack() const {
   std::vector< ref<Expr> > res;
-  for (const ConstraintList *it = this; it != 0; it = it->tail) {
+  for (const PathCondition *it = this; it != 0; it = it->tail) {
       res.push_back(it->constraint);
   }
   return res;
 }
 
-void ConstraintList::dump() {
+void PathCondition::dump() {
   this->print(llvm::errs());
   llvm::errs() << "\n";
 }
 
-void ConstraintList::print(llvm::raw_ostream& stream) {
+void PathCondition::print(llvm::raw_ostream& stream) {
   stream << "[";
-  for (ConstraintList *it = this; it != 0; it = it->tail) {
+  for (PathCondition *it = this; it != 0; it = it->tail) {
       it->constraint->print(stream);
+      stream << ": " << (it->inInterpolant ? "interpolant constraint" : "non-interpolant constraint");
       if (it->tail != 0) stream << ",";
   }
   stream << "]";
@@ -121,6 +126,20 @@ void ITree::setCurrentINode(ITreeNode *node) {
   currentINode = node;
 }
 
+void ITree::markPathCondition(std::vector< std::pair< size_t, ref<Expr> > > unsat_core) {
+  /// Simply return in case the unsatisfiability core is empty
+  if (unsat_core.size() == 0)
+	return;
+
+  /// Process the unsat core in case it was computed (non-empty)
+  llvm::errs() << "Non-empty unsatisfiability core\n";
+
+  for (std::vector< std::pair<size_t, ref<Expr> > >::reverse_iterator it = unsat_core.rbegin();
+      it != unsat_core.rend(); it++) {
+      it->second.get()->dump();
+  }
+}
+
 ITreeNode::ITreeNode(ITreeNode *_parent,
                      ExecutionState *_data)
 : parent(_parent),
@@ -135,9 +154,9 @@ ITreeNode::ITreeNode(ITreeNode *_parent,
   if (!(_data->constraints.empty())) {
       ref<Expr> lastConstraint = _data->constraints.back();
       if (pathCondition == 0) {
-	  pathCondition = new ConstraintList(lastConstraint);
+	  pathCondition = new PathCondition(lastConstraint);
       } else if (pathCondition->car().compare(lastConstraint) != 0) {
-	  pathCondition = new ConstraintList(lastConstraint, pathCondition);
+	  pathCondition = new PathCondition(lastConstraint, pathCondition);
       }
   }
 }

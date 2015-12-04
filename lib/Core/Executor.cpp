@@ -878,15 +878,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     /// Validity proof succeeded of a query: antecedent -> consequent.
     /// We then extract the unsatisfiability core of antecedent and not
     /// consequent as the Craig interpolant.
-    ref<Expr> tmpInterpolant;
-    std::vector< std::pair<size_t, ref<Expr> > > unsat_core = solver->getUnsatCore();
-
-    /// Process the unsat core in case it was computed (non-empty)
-    if(unsat_core.size() > 0){
-	llvm::errs() << "Non-empty unsatisfiability core\n";
-	tmpInterpolant = unsat_core.back().second;
-	unsat_core.push_back(std::make_pair(current.constraints.size(), condition));
-    }
+    interpTree->markPathCondition(solver->getUnsatCore());
 
     return StatePair(&current, 0);
   } else if (res==Solver::False) {

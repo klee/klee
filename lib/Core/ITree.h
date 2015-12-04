@@ -18,23 +18,28 @@ enum Comparison {Eq, Ne, Ult, Ule, Ugt, Uge, Slt, Sle, Sgt, Sge, Neg, Not};
 namespace klee {
   class ExecutionState;
 
-  class ConstraintList {
+  class PathCondition {
     /// KLEE expression
     ref<Expr> constraint;
 
+    /// Should this be included in an interpolant?
+    bool inInterpolant;
+
     /// Previous basic block
-    ConstraintList *tail;
+    PathCondition *tail;
 
   public:
-    ConstraintList(ref<Expr>& constraint);
+    PathCondition(ref<Expr>& constraint);
 
-    ConstraintList(ref<Expr>& constraint, ConstraintList *prev);
+    PathCondition(ref<Expr>& constraint, PathCondition *prev);
 
-    ~ConstraintList();
+    ~PathCondition();
 
     ref<Expr> car() const;
 
-    ConstraintList* cdr() const;
+    PathCondition* cdr() const;
+
+    void includeInInterpolant();
 
     std::vector< ref<Expr> > pack() const;
 
@@ -90,13 +95,15 @@ namespace klee {
     void setCurrentINode(ITreeNode *node);
 
     void checkCurrentNodeSubsumption();
+
+    void markPathCondition(std::vector< std::pair<size_t, ref<Expr> > > unsat_core);
   };
 
   class ITreeNode{
     friend class ITree;
     typedef ref<Expr> expression_type;
     typedef std::pair <expression_type, expression_type> pair_type;
-    ConstraintList *pathCondition;
+    PathCondition *pathCondition;
     ITreeNode *parent, *left, *right;
 
   public:
