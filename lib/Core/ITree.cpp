@@ -132,11 +132,21 @@ void ITree::markPathCondition(std::vector< std::pair< size_t, ref<Expr> > > unsa
 	return;
 
   /// Process the unsat core in case it was computed (non-empty)
-  llvm::errs() << "Non-empty unsatisfiability core\n";
+  PathCondition *pc = currentINode->pathCondition;
 
-  for (std::vector< std::pair<size_t, ref<Expr> > >::reverse_iterator it = unsat_core.rbegin();
-      it != unsat_core.rend(); it++) {
-      it->second.get()->dump();
+  if (pc != 0) {
+      for (std::vector< std::pair<size_t, ref<Expr> > >::reverse_iterator it = unsat_core.rbegin();
+	  it != unsat_core.rend(); it++) {
+	  while (pc != 0) {
+	      if (pc->car().compare(it->second.get()) == 0) {
+		  pc->includeInInterpolant();
+		  pc = pc->cdr();
+		  break;
+	      }
+	      pc = pc->cdr();
+	  }
+	  if (pc == 0) break;
+      }
   }
 }
 
