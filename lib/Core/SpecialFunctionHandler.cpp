@@ -42,6 +42,11 @@ namespace {
             cl::init(false),
             cl::desc("Prefer creation of POSIX inputs (command-line arguments, files, etc.) with human readable bytes. "
                      "Note: option is expensive when creating lots of tests (default=false)"));
+
+  cl::opt<bool>
+  SilentKleeAssume("silent-klee-assume",
+                   cl::init(false),
+                   cl::desc("Do not treat infeasible assumption as error."));
 }
 
 
@@ -391,9 +396,13 @@ void SpecialFunctionHandler::handleAssume(ExecutionState &state,
   bool success __attribute__ ((unused)) = executor.solver->mustBeFalse(state, e, res);
   assert(success && "FIXME: Unhandled solver failure");
   if (res) {
-    executor.terminateStateOnError(state, 
-                                   "invalid klee_assume call (provably false)",
-                                   "user.err");
+    if (SilentKleeAssume) {
+      executor.terminateState(state);
+    } else {
+      executor.terminateStateOnError(state,
+                                     "invalid klee_assume call (provably false)",
+                                     "user.err");
+    }
   } else {
     executor.addConstraint(state, e);
   }
