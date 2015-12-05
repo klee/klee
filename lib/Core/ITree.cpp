@@ -184,19 +184,19 @@ void ITree::remove(ITreeNode *node) {
   } while (node && !node->left && !node->right);
 }
 
-void ITree::markPathCondition(std::vector< std::pair< size_t, ref<Expr> > > unsat_core) {
+void ITree::markPathCondition(std::vector< ref<Expr> > unsat_core) {
   /// Simply return in case the unsatisfiability core is empty
   if (unsat_core.size() == 0)
-    return;
+      return;
 
   /// Process the unsat core in case it was computed (non-empty)
   PathCondition *pc = currentINode->pathCondition;
 
   if (pc != 0) {
-      for (std::vector< std::pair<size_t, ref<Expr> > >::reverse_iterator it = unsat_core.rbegin();
+      for (std::vector< ref<Expr> >::reverse_iterator it = unsat_core.rbegin();
 	  it != unsat_core.rend(); it++) {
 	  while (pc != 0) {
-	      if (pc->car().compare(it->second.get()) == 0) {
+	      if (pc->car().compare(it->get()) == 0) {
 		  pc->includeInInterpolant();
 		  pc = pc->cdr();
 		  break;

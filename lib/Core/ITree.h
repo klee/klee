@@ -93,7 +93,7 @@ namespace klee {
 
     void checkCurrentStateSubsumption(TimingSolver* solver, ExecutionState& state, double timeout);
 
-    void markPathCondition(std::vector< std::pair<size_t, ref<Expr> > > unsat_core);
+    void markPathCondition(std::vector< ref<Expr> > unsat_core);
 
     void print(llvm::raw_ostream &stream);
 

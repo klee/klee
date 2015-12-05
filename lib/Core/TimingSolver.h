@@ -65,7 +65,7 @@ namespace klee {
 
     std::pair< ref<Expr>, ref<Expr> >
     getRange(const ExecutionState&, ref<Expr> query);
-    std::vector< std::pair<size_t, ref<Expr> > > getUnsatCore();
+    std::vector< ref<Expr> > getUnsatCore();
   };
 
 }
