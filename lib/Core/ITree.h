@@ -14,6 +14,19 @@
 namespace klee {
   class ExecutionState;
 
+  class PathConditionMarker {
+    bool inInterpolant;
+
+    PathCondition *pathCondition;
+
+  public:
+    PathConditionMarker(PathCondition *pathCondition);
+
+    ~PathConditionMarker();
+
+    void includeInInterpolant();
+  };
+
   class PathCondition {
     /// KLEE expression
     ref<Expr> constraint;
@@ -36,8 +49,6 @@ namespace klee {
     PathCondition* cdr() const;
 
     void includeInInterpolant();
-
-    std::vector< ref<Expr> > pack() const;
 
     std::vector< ref<Expr> > packInterpolant() const;
 

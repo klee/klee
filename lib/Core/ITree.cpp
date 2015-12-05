@@ -15,6 +15,15 @@
 
 using namespace klee;
 
+PathConditionMarker::PathConditionMarker(PathCondition *pathCondition) :
+  inInterpolant(false), pathCondition(pathCondition) {}
+
+PathConditionMarker::~PathConditionMarker() {}
+
+void PathConditionMarker::includeInInterpolant() {
+  inInterpolant = true;
+}
+
 
 PathCondition::PathCondition(ref<Expr>& constraint) :
     constraint(constraint), inInterpolant(false), tail(0) {}
@@ -34,14 +43,6 @@ PathCondition *PathCondition::cdr() const {
 
 void PathCondition::includeInInterpolant() {
   inInterpolant = true;
-}
-
-std::vector< ref<Expr> > PathCondition::pack() const {
-  std::vector< ref<Expr> > res;
-  for (const PathCondition *it = this; it != 0; it = it->tail) {
-      res.push_back(it->constraint);
-  }
-  return res;
 }
 
 std::vector< ref<Expr> > PathCondition::packInterpolant() const {

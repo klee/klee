@@ -2623,12 +2623,11 @@ void Executor::run(ExecutionState &initialState) {
   while (!states.empty() && !haltExecution) {
     ExecutionState &state = searcher->selectState();
 
-    /// We synchronize the program point to that of the state
+    /// We synchronize the node id to that of the state
     llvm::errs() << "SET NODE LOCATION TO: PROGRAM POINT: " <<
 	state.pc->dest << " INSTRUCTION: ";
     state.pc->inst->dump();
 
-    // state.itreeNode->setNodeLocation(state.pc->dest);
     state.itreeNode->setNodeLocation(reinterpret_cast<uintptr_t>(state.pc->inst));
     interpTree->setCurrentINode(state.itreeNode);
     interpTree->dump();
