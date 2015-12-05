@@ -859,7 +859,6 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     }
   }
 
-
   // XXX - even if the constraint is provable one way or the other we
   // can probably benefit by adding this constraint and allowing it to
   // reduce the other constraints. For example, if we do a binary
@@ -943,6 +942,8 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
 
     interpTree->checkCurrentStateSubsumption(solver, current, timeout);
     if (interpTree->isCurrentNodeSubsumed()) {
+	current.pc = current.prevPC;
+	terminateStateEarly(current, "Subsumed.");
 	return StatePair(0, 0);
     }
 
@@ -1652,7 +1653,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       
       std::vector<ExecutionState*> branches;
       branch(state, conditions, branches);
-        
+
       std::vector<ExecutionState*>::iterator bit = branches.begin();
       for (std::map<BasicBlock*, ref<Expr> >::iterator it = 
              targets.begin(), ie = targets.end();
@@ -2630,8 +2631,21 @@ void Executor::run(ExecutionState &initialState) {
     ExecutionState &state = searcher->selectState();
 
     /// We synchronize the program point to that of the state
-    state.itreeNode->setNodeLocation(state.pc->dest);
+    llvm::errs() << "SET NODE LOCATION TO: PROGRAM POINT: " <<
+	state.pc->dest << " INSTRUCTION: ";
+    state.pc->inst->dump();
+
+    llvm::errs() << "CURRENT LOCATION: " <<
+	state.itreeNode->getProgramPoint() << "\n";
+    if (state.itreeNode->parent != 0) {
+	llvm::errs() << "PARENT'S LOCATION: " <<
+	    state.itreeNode->parent->getProgramPoint() << "\n";
+    }
+
+    // state.itreeNode->setNodeLocation(state.pc->dest);
+    state.itreeNode->setNodeLocation(reinterpret_cast<uintptr_t>(state.pc->inst));
     interpTree->setCurrentINode(state.itreeNode);
+    interpTree->dump();
 
     llvm::errs() << "Start of loop: Set currently active interpolation tree node to ";
     state.itreeNode->dump();
@@ -2640,9 +2654,6 @@ void Executor::run(ExecutionState &initialState) {
     stepInstruction(state);
 
     executeInstruction(state, ki);
-    if(state.itreeNode->isSubsumed){
-	removedStates.insert(&state);
-    }
     processTimers(&state, MaxInstructionTime);
 
     if (MaxMemory) {

@@ -69,7 +69,10 @@ namespace klee {
     typedef ExprList::const_iterator const_iterator;
 
     ITreeNode *currentINode;
+
     std::vector<SubsumptionTableEntry> subsumptionTable;
+
+    void printNode(llvm::raw_ostream& stream, ITreeNode *n, std::string edges);
 
   public:
     ITreeNode *root;
@@ -92,6 +95,9 @@ namespace klee {
 
     void markPathCondition(std::vector< std::pair<size_t, ref<Expr> > > unsat_core);
 
+    void print(llvm::raw_ostream &stream);
+
+    void dump();
   };
 
   class ITreeNode{
@@ -99,10 +105,10 @@ namespace klee {
     typedef ref<Expr> expression_type;
     typedef std::pair <expression_type, expression_type> pair_type;
     PathCondition *pathCondition;
-    ITreeNode *parent, *left, *right;
-    unsigned int programPoint;
 
   public:
+    ITreeNode *parent, *left, *right;
+    unsigned int programPoint;
     ExecutionState *data;
     bool isSubsumed;
 

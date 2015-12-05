@@ -10,6 +10,7 @@
 
 #include <klee/Expr.h>
 #include <klee/Solver.h>
+#include <klee/util/ExprPPrinter.h>
 #include <vector>
 
 using namespace klee;
@@ -84,6 +85,10 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
 	  it != interpolant.end(); it++) {
 	  ref<Expr> query = *it;
 	  Solver::Validity result;
+
+	  llvm::errs() << "Querying for subsumption check:\n";
+	  ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
+
 	  solver->setTimeout(timeout);
 	  bool success = solver->evaluate(state, query, result);
 	  solver->setTimeout(0);
@@ -93,8 +98,10 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
 	      return false;
 	  }
       }
+      llvm::errs() << "SUBSUMED STATE\n";
+      return true;
   }
-  return true;
+  return false;
 }
 
 void SubsumptionTableEntry::dump() const {
@@ -139,7 +146,7 @@ std::vector<SubsumptionTableEntry> ITree::getStore() {
 }
 
 void ITree::store(SubsumptionTableEntry subItem) {
-  llvm::errs() << "TABLING: ";
+  llvm::errs() << "TABLING:\n";
   subItem.dump();
   llvm::errs() << "SIZE BEFORE: " << subsumptionTable.size() << "\n";
   subsumptionTable.push_back(subItem);
@@ -201,6 +208,43 @@ void ITree::markPathCondition(std::vector< std::pair< size_t, ref<Expr> > > unsa
   }
 }
 
+void ITree::printNode(llvm::raw_ostream& stream, ITreeNode *n, std::string edges) {
+  if (n->left != 0) {
+      stream << edges << "+-- L:" << n->left->programPoint;
+      if (this->currentINode == n->left) {
+	  stream << " (active)";
+      }
+      stream << "\n";
+      if (n->right != 0) {
+	  printNode(stream, n->left, edges + "|   ");
+      } else {
+	  printNode(stream, n->left, edges + "    ");
+      }
+  }
+  if (n->right != 0) {
+      stream << edges << "+-- R:" << n->right->programPoint;
+      if (this->currentINode == n->right) {
+	  stream << " (active)";
+      }
+      stream << "\n";
+      printNode(stream, n->right, edges + "    ");
+  }
+}
+
+void ITree::print(llvm::raw_ostream& stream) {
+  llvm::errs() << "------------------------- ITree Structure ---------------------------\n";
+  stream << this->root->programPoint;
+  if (this->root == this->currentINode) {
+      stream << " (active)";
+  }
+  stream << "\n";
+  this->printNode(stream, this->root, "");
+}
+
+void ITree::dump() {
+  this->print(llvm::errs());
+}
+
 ITreeNode::ITreeNode(ITreeNode *_parent,
                      ExecutionState *_data)
 : parent(_parent),
@@ -245,7 +289,7 @@ void ITreeNode::split(ExecutionState *leftData, ExecutionState *rightData) {
 }
 
 void ITreeNode::dump() const {
-  llvm::errs() << "\n------------------------- Root ITree --------------------------------\n";
+  llvm::errs() << "\n------------------------- ITree Node --------------------------------\n";
   this->print(llvm::errs());
 }
 
