@@ -47,7 +47,7 @@ namespace klee {
   };
 
   class SubsumptionTableEntry {
-    unsigned int programPoint;
+    unsigned int nodeId;
 
     std::vector< ref<Expr> > interpolant;
 
@@ -105,14 +105,14 @@ namespace klee {
     typedef ref<Expr> expression_type;
     typedef std::pair <expression_type, expression_type> pair_type;
     PathCondition *pathCondition;
+    ITreeNode *parent, *left, *right;
+    unsigned int nodeId;
 
   public:
-    ITreeNode *parent, *left, *right;
-    unsigned int programPoint;
     ExecutionState *data;
     bool isSubsumed;
 
-    unsigned int getProgramPoint();
+    unsigned int getNodeId();
 
     std::vector< ref<Expr> > getInterpolant() const;
 

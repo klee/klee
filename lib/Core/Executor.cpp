@@ -940,13 +940,6 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       }
     }
 
-    interpTree->checkCurrentStateSubsumption(solver, current, timeout);
-    if (interpTree->isCurrentNodeSubsumed()) {
-	current.pc = current.prevPC;
-	terminateStateEarly(current, "Subsumed.");
-	return StatePair(0, 0);
-    }
-
     current.ptreeNode->data = 0;
     std::pair<PTree::Node*, PTree::Node*> res =
       processTree->split(current.ptreeNode, falseState, trueState);
@@ -2630,66 +2623,63 @@ void Executor::run(ExecutionState &initialState) {
   while (!states.empty() && !haltExecution) {
     ExecutionState &state = searcher->selectState();
 
-    /// We synchronize the program point to that of the state
-    llvm::errs() << "SET NODE LOCATION TO: PROGRAM POINT: " <<
-	state.pc->dest << " INSTRUCTION: ";
-    state.pc->inst->dump();
+    interpTree->checkCurrentStateSubsumption(solver, state, 0);
+    if (interpTree->isCurrentNodeSubsumed()) {
+	terminateStateEarly(state, "Subsumed.");
+    } else {
+	/// We synchronize the program point to that of the state
+	llvm::errs() << "SET NODE LOCATION TO: PROGRAM POINT: " <<
+	    state.pc->dest << " INSTRUCTION: ";
+	state.pc->inst->dump();
 
-    llvm::errs() << "CURRENT LOCATION: " <<
-	state.itreeNode->getProgramPoint() << "\n";
-    if (state.itreeNode->parent != 0) {
-	llvm::errs() << "PARENT'S LOCATION: " <<
-	    state.itreeNode->parent->getProgramPoint() << "\n";
+	// state.itreeNode->setNodeLocation(state.pc->dest);
+	state.itreeNode->setNodeLocation(reinterpret_cast<uintptr_t>(state.pc->inst));
+	interpTree->setCurrentINode(state.itreeNode);
+	interpTree->dump();
+
+	llvm::errs() << "Start of loop: Set currently active interpolation tree node to ";
+	state.itreeNode->dump();
+
+	KInstruction *ki = state.pc;
+	stepInstruction(state);
+
+	executeInstruction(state, ki);
+	processTimers(&state, MaxInstructionTime);
+
+	if (MaxMemory) {
+	    if ((stats::instructions & 0xFFFF) == 0) {
+		// We need to avoid calling GetMallocUsage() often because it
+		// is O(elts on freelist). This is really bad since we start
+		// to pummel the freelist once we hit the memory cap.
+		unsigned mbs = util::GetTotalMallocUsage() >> 20;
+		if (mbs > MaxMemory) {
+		    if (mbs > MaxMemory + 100) {
+			// just guess at how many to kill
+			unsigned numStates = states.size();
+			unsigned toKill = std::max(1U, numStates - numStates*MaxMemory/mbs);
+
+			klee_warning("killing %d states (over memory cap)", toKill);
+
+			std::vector<ExecutionState*> arr(states.begin(), states.end());
+			for (unsigned i=0,N=arr.size(); N && i<toKill; ++i,--N) {
+			    unsigned idx = rand() % N;
+
+			    // Make two pulls to try and not hit a state that
+			    // covered new code.
+			    if (arr[idx]->coveredNew)
+			      idx = rand() % N;
+
+			    std::swap(arr[idx], arr[N-1]);
+			    terminateStateEarly(*arr[N-1], "Memory limit exceeded.");
+			}
+		    }
+		    atMemoryLimit = true;
+		} else {
+		    atMemoryLimit = false;
+		}
+	    }
+	}
     }
-
-    // state.itreeNode->setNodeLocation(state.pc->dest);
-    state.itreeNode->setNodeLocation(reinterpret_cast<uintptr_t>(state.pc->inst));
-    interpTree->setCurrentINode(state.itreeNode);
-    interpTree->dump();
-
-    llvm::errs() << "Start of loop: Set currently active interpolation tree node to ";
-    state.itreeNode->dump();
-
-    KInstruction *ki = state.pc;
-    stepInstruction(state);
-
-    executeInstruction(state, ki);
-    processTimers(&state, MaxInstructionTime);
-
-    if (MaxMemory) {
-      if ((stats::instructions & 0xFFFF) == 0) {
-        // We need to avoid calling GetMallocUsage() often because it
-        // is O(elts on freelist). This is really bad since we start
-        // to pummel the freelist once we hit the memory cap.
-        unsigned mbs = util::GetTotalMallocUsage() >> 20;
-        if (mbs > MaxMemory) {
-          if (mbs > MaxMemory + 100) {
-            // just guess at how many to kill
-            unsigned numStates = states.size();
-            unsigned toKill = std::max(1U, numStates - numStates*MaxMemory/mbs);
-
-            klee_warning("killing %d states (over memory cap)", toKill);
-
-            std::vector<ExecutionState*> arr(states.begin(), states.end());
-            for (unsigned i=0,N=arr.size(); N && i<toKill; ++i,--N) {
-              unsigned idx = rand() % N;
-
-              // Make two pulls to try and not hit a state that
-              // covered new code.
-              if (arr[idx]->coveredNew)
-                idx = rand() % N;
-
-              std::swap(arr[idx], arr[N-1]);
-              terminateStateEarly(*arr[N-1], "Memory limit exceeded.");
-            }
-          }
-          atMemoryLimit = true;
-        } else {
-          atMemoryLimit = false;
-        }
-      }
-    }
-
     updateStates(&state);
   }
 

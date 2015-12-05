@@ -69,7 +69,7 @@ void PathCondition::print(llvm::raw_ostream& stream) {
 }
 
 SubsumptionTableEntry::SubsumptionTableEntry(ITreeNode *node) :
-  programPoint(node->getProgramPoint()),
+  nodeId(node->getNodeId()),
   interpolant(node->getInterpolant()) {}
 
 SubsumptionTableEntry::~SubsumptionTableEntry() {}
@@ -80,7 +80,7 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
   if (state.itreeNode == 0)
     return false;
 
-  if (state.itreeNode->getProgramPoint() == programPoint) {
+  if (state.itreeNode->getNodeId() == nodeId) {
       for (std::vector< ref<Expr> >::iterator it = interpolant.begin();
 	  it != interpolant.end(); it++) {
 	  ref<Expr> query = *it;
@@ -111,7 +111,7 @@ void SubsumptionTableEntry::dump() const {
 
 void SubsumptionTableEntry::print(llvm::raw_ostream &stream) const {
   stream << "------------ Subsumption Table Entry ------------\n";
-  stream << "Program point = " << programPoint << "\n";
+  stream << "Program point = " << nodeId << "\n";
   stream << "interpolant = [";
   for (std::vector< ref<Expr> >::const_iterator it = interpolant.begin();
       it != interpolant.end(); it++) {
@@ -210,7 +210,7 @@ void ITree::markPathCondition(std::vector< std::pair< size_t, ref<Expr> > > unsa
 
 void ITree::printNode(llvm::raw_ostream& stream, ITreeNode *n, std::string edges) {
   if (n->left != 0) {
-      stream << edges << "+-- L:" << n->left->programPoint;
+      stream << edges << "+-- L:" << n->left->nodeId;
       if (this->currentINode == n->left) {
 	  stream << " (active)";
       }
@@ -222,7 +222,7 @@ void ITree::printNode(llvm::raw_ostream& stream, ITreeNode *n, std::string edges
       }
   }
   if (n->right != 0) {
-      stream << edges << "+-- R:" << n->right->programPoint;
+      stream << edges << "+-- R:" << n->right->nodeId;
       if (this->currentINode == n->right) {
 	  stream << " (active)";
       }
@@ -233,7 +233,7 @@ void ITree::printNode(llvm::raw_ostream& stream, ITreeNode *n, std::string edges
 
 void ITree::print(llvm::raw_ostream& stream) {
   llvm::errs() << "------------------------- ITree Structure ---------------------------\n";
-  stream << this->root->programPoint;
+  stream << this->root->nodeId;
   if (this->root == this->currentINode) {
       stream << " (active)";
   }
@@ -250,7 +250,7 @@ ITreeNode::ITreeNode(ITreeNode *_parent,
 : parent(_parent),
   left(0),
   right(0),
-  programPoint(0),
+  nodeId(0),
   data(_data),
   isSubsumed(false) {
 
@@ -270,8 +270,8 @@ ITreeNode::~ITreeNode() {
   delete pathCondition;
 }
 
-unsigned int ITreeNode::getProgramPoint() {
-  return programPoint;
+unsigned int ITreeNode::getNodeId() {
+  return nodeId;
 }
 
 std::vector< ref<Expr> > ITreeNode::getInterpolant() const {
@@ -279,7 +279,7 @@ std::vector< ref<Expr> > ITreeNode::getInterpolant() const {
 }
 
 void ITreeNode::setNodeLocation(unsigned int programPoint) {
-  this->programPoint = programPoint;
+  this->nodeId = programPoint;
 }
 
 void ITreeNode::split(ExecutionState *leftData, ExecutionState *rightData) {
@@ -302,7 +302,7 @@ void ITreeNode::print(llvm::raw_ostream &stream, const unsigned int tab_num) con
   std::string tabs_next = tabs + "\t";
 
   stream << tabs << "ITreeNode\n";
-  stream << tabs_next << "programPoint = " << programPoint << "\n";
+  stream << tabs_next << "programPoint = " << nodeId << "\n";
   stream << tabs_next << "pathCondition = ";
   if (pathCondition == 0) {
       stream << "NULL";
