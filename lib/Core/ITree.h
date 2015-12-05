@@ -14,19 +14,6 @@
 namespace klee {
   class ExecutionState;
 
-  class PathConditionMarker {
-    bool inInterpolant;
-
-    PathCondition *pathCondition;
-
-  public:
-    PathConditionMarker(PathCondition *pathCondition);
-
-    ~PathConditionMarker();
-
-    void includeInInterpolant();
-  };
-
   class PathCondition {
     /// KLEE expression
     ref<Expr> constraint;
@@ -55,6 +42,19 @@ namespace klee {
     void dump();
 
     void print(llvm::raw_ostream& stream);
+  };
+
+  class PathConditionMarker {
+    bool inInterpolant;
+
+    PathCondition *pathCondition;
+
+  public:
+    PathConditionMarker(PathCondition *pathCondition);
+
+    ~PathConditionMarker();
+
+    void includeInInterpolant();
   };
 
   class SubsumptionTableEntry {
