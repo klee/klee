@@ -45,7 +45,7 @@ namespace klee {
   };
 
   class PathConditionMarker {
-    bool inInterpolant;
+    bool mayBeInInterpolant;
 
     PathCondition *pathCondition;
 
@@ -55,6 +55,8 @@ namespace klee {
     ~PathConditionMarker();
 
     void includeInInterpolant();
+
+    void mayIncludeInInterpolant();
   };
 
   class SubsumptionTableEntry {
@@ -131,6 +133,8 @@ namespace klee {
     void dump() const;
 
     void print(llvm::raw_ostream &stream) const;
+
+    std::map< ref<Expr>, PathConditionMarker *> makeMarkerMap();
 
   private:
     ITreeNode(ITreeNode *_parent, ExecutionState *_data);

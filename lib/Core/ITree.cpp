@@ -16,14 +16,19 @@
 using namespace klee;
 
 PathConditionMarker::PathConditionMarker(PathCondition *pathCondition) :
-  inInterpolant(false), pathCondition(pathCondition) {}
+  mayBeInInterpolant(false), pathCondition(pathCondition) {}
 
 PathConditionMarker::~PathConditionMarker() {}
 
-void PathConditionMarker::includeInInterpolant() {
-  inInterpolant = true;
+void PathConditionMarker::mayIncludeInInterpolant() {
+  mayBeInInterpolant = true;
 }
 
+void PathConditionMarker::includeInInterpolant() {
+  if (mayBeInInterpolant) {
+      pathCondition->includeInInterpolant();
+  }
+}
 
 PathCondition::PathCondition(ref<Expr>& constraint) :
     constraint(constraint), inInterpolant(false), tail(0) {}
@@ -82,7 +87,8 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
     return false;
 
   if (state.itreeNode->getNodeId() == nodeId) {
-      this->dump();
+      std::map< ref<Expr>, PathConditionMarker *> markerMap =
+	  state.itreeNode->makeMarkerMap();
       for (std::vector< ref<Expr> >::iterator it = interpolant.begin();
 	  it != interpolant.end(); it++) {
 	  ref<Expr> query = *it;
@@ -95,12 +101,24 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
 	  bool success = solver->evaluate(state, query, result);
 	  solver->setTimeout(0);
 	  if (success && result == Solver::True) {
-	      solver->getUnsatCore();
+	    std::vector< ref<Expr> > unsat_core = solver->getUnsatCore();
+
+	    for (std::vector< ref<Expr> >::iterator it = unsat_core.begin();
+		it != unsat_core.end(); it++) {
+		markerMap[*it]->mayIncludeInInterpolant();
+	    }
+
 	  } else {
-	      return false;
+	    return false;
 	  }
       }
       llvm::errs() << "SUBSUMED STATE\n";
+
+      for (std::map< ref<Expr>, PathConditionMarker *>::iterator it = markerMap.begin();
+	  it != markerMap.end(); it++) {
+	  it->second->includeInInterpolant();
+      }
+      markerMap.clear();
       return true;
   }
   return false;
@@ -283,6 +301,15 @@ void ITreeNode::split(ExecutionState *leftData, ExecutionState *rightData) {
   assert (left == 0 && right == 0);
   leftData->itreeNode = left = new ITreeNode(this, leftData);
   rightData->itreeNode = right = new ITreeNode(this, rightData);
+}
+
+std::map< ref<Expr>, PathConditionMarker *> ITreeNode::makeMarkerMap() {
+  std::map< ref<Expr>, PathConditionMarker *> result;
+  for (PathCondition *it = pathCondition; it != 0; it = it->cdr()) {
+      result.insert( std::pair< ref<Expr>, PathConditionMarker *>
+	(pathCondition->car(), new PathConditionMarker(it)) );
+  }
+  return result;
 }
 
 void ITreeNode::dump() const {
