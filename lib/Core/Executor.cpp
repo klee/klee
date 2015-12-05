@@ -2623,23 +2623,22 @@ void Executor::run(ExecutionState &initialState) {
   while (!states.empty() && !haltExecution) {
     ExecutionState &state = searcher->selectState();
 
-    interpTree->checkCurrentStateSubsumption(solver, state, 0);
-    if (interpTree->isCurrentNodeSubsumed()) {
+    /// We synchronize the program point to that of the state
+    llvm::errs() << "SET NODE LOCATION TO: PROGRAM POINT: " <<
+	state.pc->dest << " INSTRUCTION: ";
+    state.pc->inst->dump();
+
+    // state.itreeNode->setNodeLocation(state.pc->dest);
+    state.itreeNode->setNodeLocation(reinterpret_cast<uintptr_t>(state.pc->inst));
+    interpTree->setCurrentINode(state.itreeNode);
+    interpTree->dump();
+
+    llvm::errs() << "Start of loop: Set currently active interpolation tree node to ";
+    state.itreeNode->dump();
+
+    if (interpTree->checkCurrentStateSubsumption(solver, state, 0)) {
 	terminateStateEarly(state, "Subsumed.");
     } else {
-	/// We synchronize the program point to that of the state
-	llvm::errs() << "SET NODE LOCATION TO: PROGRAM POINT: " <<
-	    state.pc->dest << " INSTRUCTION: ";
-	state.pc->inst->dump();
-
-	// state.itreeNode->setNodeLocation(state.pc->dest);
-	state.itreeNode->setNodeLocation(reinterpret_cast<uintptr_t>(state.pc->inst));
-	interpTree->setCurrentINode(state.itreeNode);
-	interpTree->dump();
-
-	llvm::errs() << "Start of loop: Set currently active interpolation tree node to ";
-	state.itreeNode->dump();
-
 	KInstruction *ki = state.pc;
 	stepInstruction(state);
 

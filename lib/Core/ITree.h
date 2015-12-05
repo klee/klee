@@ -85,13 +85,11 @@ namespace klee {
 
     void store(SubsumptionTableEntry subItem);
 
-    bool isCurrentNodeSubsumed();
-
     void setCurrentINode(ITreeNode *node);
 
     void remove(ITreeNode *node);
 
-    void checkCurrentStateSubsumption(TimingSolver* solver, ExecutionState& state, double timeout);
+    bool checkCurrentStateSubsumption(TimingSolver* solver, ExecutionState& state, double timeout);
 
     void markPathCondition(std::vector< ref<Expr> > unsat_core);
 
@@ -110,7 +108,6 @@ namespace klee {
 
   public:
     ExecutionState *data;
-    bool isSubsumed;
 
     unsigned int getNodeId();
 

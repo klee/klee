@@ -81,6 +81,7 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
     return false;
 
   if (state.itreeNode->getNodeId() == nodeId) {
+      this->dump();
       for (std::vector< ref<Expr> >::iterator it = interpolant.begin();
 	  it != interpolant.end(); it++) {
 	  ref<Expr> query = *it;
@@ -129,16 +130,16 @@ ITree::ITree(ExecutionState* _root) :
 
 ITree::~ITree() {}
 
-void ITree::checkCurrentStateSubsumption(TimingSolver *solver,
+bool ITree::checkCurrentStateSubsumption(TimingSolver *solver,
                                          ExecutionState& state,
                                          double timeout) {
   for (std::vector<SubsumptionTableEntry>::iterator it = subsumptionTable.begin();
       it != subsumptionTable.end(); it++) {
       if (it->subsumed(solver, state, timeout)) {
-	  state.itreeNode->isSubsumed = true;
-	  return;
+	  return true;
       }
   }
+  return false;
 }
 
 std::vector<SubsumptionTableEntry> ITree::getStore() {
@@ -151,10 +152,6 @@ void ITree::store(SubsumptionTableEntry subItem) {
   llvm::errs() << "SIZE BEFORE: " << subsumptionTable.size() << "\n";
   subsumptionTable.push_back(subItem);
   llvm::errs() << "SIZE AFTER: " << subsumptionTable.size() << "\n";
-}
-
-bool ITree::isCurrentNodeSubsumed() {
-  return currentINode? currentINode->isSubsumed : false;
 }
 
 void ITree::setCurrentINode(ITreeNode *node) {
@@ -251,8 +248,7 @@ ITreeNode::ITreeNode(ITreeNode *_parent,
   left(0),
   right(0),
   nodeId(0),
-  data(_data),
-  isSubsumed(false) {
+  data(_data) {
 
   pathCondition = (_parent != 0) ? _parent->pathCondition : 0;
 
