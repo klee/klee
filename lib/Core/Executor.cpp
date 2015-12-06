@@ -769,9 +769,11 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
   double timeout = coreSolverTimeout;
   if (isSeeding)
     timeout *= it->second.size();
+
+  /// llvm::errs() << "Calling solver->evaluate on query:\n";
+  /// ExprPPrinter::printQuery(llvm::errs(), current.constraints, condition);
+
   solver->setTimeout(timeout);
-  llvm::errs() << "Calling solver->evaluate on query:\n";
-  ExprPPrinter::printQuery(llvm::errs(), current.constraints, condition);
   bool success = solver->evaluate(current, condition, res);
   solver->setTimeout(0);
   if (!success) {
@@ -876,7 +878,6 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     /// Validity proof succeeded of a query: antecedent -> consequent.
     /// We then extract the unsatisfiability core of antecedent and not
     /// consequent as the Craig interpolant.
-    llvm::errs() << "Solver proved the query\n";
     interpTree->markPathCondition(solver->getUnsatCore());
 
     return StatePair(&current, 0);
@@ -890,7 +891,6 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     /// Falsity proof succeeded of a query: antecedent -> consequent,
     /// which means that antecedent -> not(consequent) is valid. In this
     /// case also we extract the unsat core of the proof
-    llvm::errs() << "Solver disproved the query\n";
     interpTree->markPathCondition(solver->getUnsatCore());
 
     return StatePair(0, &current);
@@ -2624,16 +2624,15 @@ void Executor::run(ExecutionState &initialState) {
     ExecutionState &state = searcher->selectState();
 
     /// We synchronize the node id to that of the state
-    llvm::errs() << "SET NODE LOCATION TO: PROGRAM POINT: " <<
-	state.pc->dest << " INSTRUCTION: ";
-    state.pc->inst->dump();
-
     state.itreeNode->setNodeLocation(reinterpret_cast<uintptr_t>(state.pc->inst));
     interpTree->setCurrentINode(state.itreeNode);
-    interpTree->dump();
 
-    llvm::errs() << "Start of loop: Set currently active interpolation tree node to ";
-    state.itreeNode->dump();
+    /// Uncomment the following instructions to show the state
+    /// of the interpolation tree and the active node.
+
+    /// llvm::errs() << "Executing new instruction: Current state:\n";
+    /// interpTree->dump();
+    /// state.itreeNode->dump();
 
     if (interpTree->checkCurrentStateSubsumption(solver, state, 0)) {
 	terminateStateEarly(state, "Subsumed.");

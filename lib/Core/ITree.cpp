@@ -87,6 +87,7 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
     return false;
 
   if (state.itreeNode->getNodeId() == nodeId) {
+      /// We create path condition needed constraints marking structure
       std::map< ref<Expr>, PathConditionMarker *> markerMap =
 	  state.itreeNode->makeMarkerMap();
       for (std::vector< ref<Expr> >::iterator it = interpolant.begin();
@@ -94,8 +95,8 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
 	  ref<Expr> query = *it;
 	  Solver::Validity result;
 
-	  llvm::errs() << "Querying for subsumption check:\n";
-	  ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
+	  /// llvm::errs() << "Querying for subsumption check:\n";
+	  /// ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
 
 	  solver->setTimeout(timeout);
 	  bool success = solver->evaluate(state, query, result);
@@ -112,8 +113,9 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
 	    return false;
 	  }
       }
-      llvm::errs() << "SUBSUMED STATE\n";
 
+      /// State subsumed, we mark needed constraints on the
+      /// path condition.
       for (std::map< ref<Expr>, PathConditionMarker *>::iterator it = markerMap.begin();
 	  it != markerMap.end(); it++) {
 	  it->second->includeInInterpolant();
@@ -166,11 +168,9 @@ std::vector<SubsumptionTableEntry> ITree::getStore() {
 }
 
 void ITree::store(SubsumptionTableEntry subItem) {
-  llvm::errs() << "TABLING:\n";
-  subItem.dump();
-  llvm::errs() << "SIZE BEFORE: " << subsumptionTable.size() << "\n";
+  /// llvm::errs() << "TABLING:\n";
+  /// subItem.dump();
   subsumptionTable.push_back(subItem);
-  llvm::errs() << "SIZE AFTER: " << subsumptionTable.size() << "\n";
 }
 
 void ITree::setCurrentINode(ITreeNode *node) {
@@ -307,7 +307,7 @@ std::map< ref<Expr>, PathConditionMarker *> ITreeNode::makeMarkerMap() {
   std::map< ref<Expr>, PathConditionMarker *> result;
   for (PathCondition *it = pathCondition; it != 0; it = it->cdr()) {
       result.insert( std::pair< ref<Expr>, PathConditionMarker *>
-	(pathCondition->car(), new PathConditionMarker(it)) );
+	(it->car(), new PathConditionMarker(it)) );
   }
   return result;
 }
