@@ -90,10 +90,6 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
       /// We create path condition needed constraints marking structure
       std::map< ref<Expr>, PathConditionMarker *> markerMap =
 	  state.itreeNode->makeMarkerMap();
-      llvm::errs() << "NODE ID: " << nodeId << "\n";
-      if (markerMap.empty()) {
-	  llvm::errs() << "EMPTY INTERPOLANT\n";
-      }
       for (std::vector< ref<Expr> >::iterator it = interpolant.begin();
 	  it != interpolant.end(); it++) {
 	  ref<Expr> query = *it;
@@ -118,7 +114,6 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
 	  }
       }
 
-      llvm::errs() << "STATE SUBSUMED\n";
       /// State subsumed, we mark needed constraints on the
       /// path condition.
       for (std::map< ref<Expr>, PathConditionMarker *>::iterator it = markerMap.begin();
@@ -181,8 +176,6 @@ std::vector<SubsumptionTableEntry> ITree::getStore() {
 }
 
 void ITree::store(SubsumptionTableEntry subItem) {
-  llvm::errs() << "TABLING:\n";
-  subItem.dump();
   subsumptionTable.push_back(subItem);
 }
 

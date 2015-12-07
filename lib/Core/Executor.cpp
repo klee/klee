@@ -2630,13 +2630,13 @@ void Executor::run(ExecutionState &initialState) {
     /// Uncomment the following instructions to show the state
     /// of the interpolation tree and the active node.
 
-    llvm::errs() << "Executing new instruction: ";
-    state.pc->inst->dump();
-    llvm::errs() << "Current state:\n";
-    interpTree->dump();
-    state.itreeNode->dump();
+    /// llvm::errs() << "Executing new instruction: ";
+    /// state.pc->inst->dump();
+    /// llvm::errs() << "Current state:\n";
+    /// interpTree->dump();
+    /// state.itreeNode->dump();
 
-    if (interpTree->checkCurrentStateSubsumption(solver, state, 0)) {
+    if (interpTree->checkCurrentStateSubsumption(solver, state, coreSolverTimeout)) {
 	terminateStateEarly(state, "Subsumed.");
     } else {
 	KInstruction *ki = state.pc;
