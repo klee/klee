@@ -90,6 +90,10 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
       /// We create path condition needed constraints marking structure
       std::map< ref<Expr>, PathConditionMarker *> markerMap =
 	  state.itreeNode->makeMarkerMap();
+      llvm::errs() << "NODE ID: " << nodeId << "\n";
+      if (markerMap.empty()) {
+	  llvm::errs() << "EMPTY INTERPOLANT\n";
+      }
       for (std::vector< ref<Expr> >::iterator it = interpolant.begin();
 	  it != interpolant.end(); it++) {
 	  ref<Expr> query = *it;
@@ -114,6 +118,7 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
 	  }
       }
 
+      llvm::errs() << "STATE SUBSUMED\n";
       /// State subsumed, we mark needed constraints on the
       /// path condition.
       for (std::map< ref<Expr>, PathConditionMarker *>::iterator it = markerMap.begin();
@@ -154,9 +159,17 @@ ITree::~ITree() {}
 bool ITree::checkCurrentStateSubsumption(TimingSolver *solver,
                                          ExecutionState& state,
                                          double timeout) {
+  assert(state.itreeNode == currentINode);
+
   for (std::vector<SubsumptionTableEntry>::iterator it = subsumptionTable.begin();
       it != subsumptionTable.end(); it++) {
       if (it->subsumed(solver, state, timeout)) {
+
+	  /// We mark as subsumed such that the node will not be
+	  /// stored into table (the table already contains a more
+	  /// general entry).
+	  currentINode->isSubsumed = true;
+
 	  return true;
       }
   }
@@ -168,8 +181,8 @@ std::vector<SubsumptionTableEntry> ITree::getStore() {
 }
 
 void ITree::store(SubsumptionTableEntry subItem) {
-  /// llvm::errs() << "TABLING:\n";
-  /// subItem.dump();
+  llvm::errs() << "TABLING:\n";
+  subItem.dump();
   subsumptionTable.push_back(subItem);
 }
 
@@ -184,8 +197,10 @@ void ITree::remove(ITreeNode *node) {
 
     /// As the node is about to be deleted, it must have been completely
     /// traversed, hence the correct time to table the interpolant.
-    SubsumptionTableEntry entry(node);
-    store(entry);
+    if (!node->isSubsumed) {
+      SubsumptionTableEntry entry(node);
+      store(entry);
+    }
 
     delete node;
     if (p) {
@@ -267,6 +282,7 @@ ITreeNode::ITreeNode(ITreeNode *_parent,
   left(0),
   right(0),
   nodeId(0),
+  isSubsumed(false),
   data(_data) {
 
   pathCondition = (_parent != 0) ? _parent->pathCondition : 0;

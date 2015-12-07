@@ -118,6 +118,7 @@ namespace klee {
     PathCondition *pathCondition;
     ITreeNode *parent, *left, *right;
     unsigned int nodeId;
+    bool isSubsumed;
 
   public:
     ExecutionState *data;
