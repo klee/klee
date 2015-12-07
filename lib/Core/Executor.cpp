@@ -134,8 +134,6 @@ using namespace metaSMT::solver;
 
 #endif /* SUPPORT_METASMT */
 
-
-
 namespace {
   cl::opt<bool>
   DumpStatesOnHalt("dump-states-on-halt",
@@ -285,8 +283,6 @@ Executor::Executor(const InterpreterOptions &opts,
     specialFunctionHandler(0),
     processTree(0),
     interpTree(0), 
-	latestBaseLeft(0),
-	latestBaseRight(0),
     replayOut(0),
     replayPath(0),    
     usingSeeds(0),
@@ -709,406 +705,31 @@ void Executor::branch(ExecutionState &state,
       addConstraint(*result[i], conditions[i]);
 }
 
-ref<Expr> Executor::executeComparison(ref<Expr>& tmpInterpolant, const ref<Expr>& rightValue) {
-	if (tmpInterpolant->getKind() == Expr::Eq) {
-		tmpInterpolant = EqExpr::create(tmpInterpolant->getKid(0), rightValue);
-	} else if (tmpInterpolant->getKind() == Expr::Sle) {
-		tmpInterpolant = SleExpr::create(tmpInterpolant->getKid(0), rightValue);
-	} else if (tmpInterpolant->getKind() == Expr::Ult) {
-		tmpInterpolant = UltExpr::create(tmpInterpolant->getKid(0), rightValue);
-	} else if (tmpInterpolant->getKind() == Expr::Ule) {
-		tmpInterpolant = UleExpr::create(tmpInterpolant->getKid(0), rightValue);
-	} else if (tmpInterpolant->getKind() == Expr::Ugt) {
-		tmpInterpolant = UgtExpr::create(tmpInterpolant->getKid(0), rightValue);
-	} else if (tmpInterpolant->getKind() == Expr::Uge) {
-		tmpInterpolant = UgeExpr::create(tmpInterpolant->getKid(0), rightValue);
-	} else if (tmpInterpolant->getKind() == Expr::Slt) {
-		tmpInterpolant = SltExpr::create(tmpInterpolant->getKid(0), rightValue);
-	} else if (tmpInterpolant->getKind() == Expr::Sle) {
-		tmpInterpolant = SleExpr::create(tmpInterpolant->getKid(0), rightValue);
-	} else if (tmpInterpolant->getKind() == Expr::Sgt) {
-		tmpInterpolant = SgtExpr::create(tmpInterpolant->getKid(0), rightValue);
-	} else if (tmpInterpolant->getKind() == Expr::Sge) {
-		tmpInterpolant = SgeExpr::create(tmpInterpolant->getKid(0), rightValue);
-	}
-	return tmpInterpolant;
-}
-
-void Executor::setCurrentInterpolant(size_t predNum,
-		ref<Expr>& tmpInterpolant, ExecutionState& current, ref<Expr> baseLocation) {
-
-	ITreeNode* currentINode = current.itreeNode;
-	size_t currPredNum = current.constraints.size();
-	std::vector<PathCondition> pathConditions;
-	while ((currPredNum != predNum) && (currentINode != NULL)) {
-		for (std::vector<PathCondition>::const_iterator it =
-				currentINode->addedPathCond.begin();
-				it != currentINode->addedPathCond.end(); ++it) {
-			pathConditions.push_back(*it);
-		}
-		currentINode = current.itreeNode->parent;
-		currPredNum--;
-
-	}
-	//forward execution
-	ref<Expr> rightValue = tmpInterpolant->getKid(1);
-	for (std::vector<PathCondition>::const_iterator it = pathConditions.begin();
-			it != pathConditions.end(); ++it) {
-		if (it->operationName == Add && it->baseLoc == baseLocation) {
-			rightValue = AddExpr::create(rightValue, it->value);
-		} else if (it->operationName == Sub && it->baseLoc == baseLocation) {
-			rightValue = SubExpr::create(rightValue, it->value);
-		} else if (it->operationName == Mul && it->baseLoc == baseLocation) {
-			rightValue = MulExpr::create(rightValue, it->value);
-		} else if (it->operationName == UDiv && it->baseLoc == baseLocation) {
-			rightValue = UDivExpr::create(rightValue, it->value);
-		} else if (it->operationName == SDiv && it->baseLoc == baseLocation) {
-			rightValue = SDivExpr::create(rightValue, it->value);
-		} else if (it->operationName == URem && it->baseLoc == baseLocation) {
-			rightValue = URemExpr::create(rightValue, it->value);
-		} else if (it->operationName == SRem && it->baseLoc == baseLocation) {
-			rightValue = SRemExpr::create(rightValue, it->value);
-		} else if (it->operationName == And && it->baseLoc == baseLocation) {
-			rightValue = AndExpr::create(rightValue, it->value);
-		} else if (it->operationName == Or && it->baseLoc == baseLocation) {
-			rightValue = OrExpr::create(rightValue, it->value);
-		} else if (it->operationName == Xor && it->baseLoc == baseLocation) {
-			rightValue = XorExpr::create(rightValue, it->value);
-		} else if (it->operationName == Shl && it->baseLoc == baseLocation) {
-			rightValue = ShlExpr::create(rightValue, it->value);
-		} else if (it->operationName == LShr && it->baseLoc == baseLocation) {
-			rightValue = LShrExpr::create(rightValue, it->value);
-		} else if (it->operationName == AShr && it->baseLoc == baseLocation) {
-			rightValue = AShrExpr::create(rightValue, it->value);
-		}
-	}
-	tmpInterpolant = executeComparison(tmpInterpolant, rightValue);
-
-	//updating the interpolant in the state
-	current.itreeNode->interpolant = tmpInterpolant;
-	current.itreeNode->interpolantLoc = std::make_pair(baseLocation, baseLocation); //TODO: the right base location should be fixed
-    current.itreeNode->InterpolantStatus = FullInterpolant;
-}
-
-ref<Expr> Executor::reExecInterpolant(ref<Expr>& interpolant, std::pair< ref<Expr> , ref<Expr> >& interpolantLoc, ExecutionState& current){
-	ref<Expr> reExecIntp;
-	ref<Expr> intpLeft = interpolant->getKid(0);
-	ref<Expr> intpRight = interpolant->getKid(1);
-
-	if( interpolantLoc.first.isNull())
-		klee_warning(" interpolantLoc.first null");
-	for (std::vector<PathCondition>::const_iterator pc = current.itreeNode->pathCond.begin();
-			pc != current.itreeNode->pathCond.end(); ++pc) {
-
-		if (pc->operationName == Add && pc->baseLoc == interpolantLoc.first) {
-			intpLeft = AddExpr::create(intpLeft, pc->value);
-		}
-		else if (pc->operationName == Sub && pc->baseLoc == interpolantLoc.first) {
-			intpLeft = SubExpr::create(intpLeft, pc->value);
-		}
-		else if (pc->operationName == Mul && pc->baseLoc == interpolantLoc.first) {
-			intpLeft = MulExpr::create(intpLeft, pc->value);
-		}
-		else if (pc->operationName == UDiv && pc->baseLoc == interpolantLoc.first) {
-			intpLeft = UDivExpr::create(intpLeft, pc->value);
-		}
-		else if (pc->operationName == SDiv && pc->baseLoc == interpolantLoc.first) {
-			intpLeft = SDivExpr::create(intpLeft, pc->value);
-		}
-		else if (pc->operationName == URem && pc->baseLoc == interpolantLoc.first) {
-			intpLeft = URemExpr::create(intpLeft, pc->value);
-		}
-		else if (pc->operationName == SRem && pc->baseLoc == interpolantLoc.first) {
-			intpLeft = SRemExpr::create(intpLeft, pc->value);
-		}
-		else if (pc->operationName == And && pc->baseLoc == interpolantLoc.first) {
-			intpLeft = AndExpr::create(intpLeft, pc->value);
-		}
-		else if (pc->operationName == Or && pc->baseLoc == interpolantLoc.first) {
-			intpLeft = OrExpr::create(intpLeft, pc->value);
-		}
-		else if (pc->operationName == Xor && pc->baseLoc == interpolantLoc.first) {
-			intpLeft = XorExpr::create(intpLeft, pc->value);
-		}
-		else if (pc->operationName == Shl && pc->baseLoc == interpolantLoc.first) {
-			intpLeft = ShlExpr::create(intpLeft, pc->value);
-		}
-		else if (pc->operationName == LShr && pc->baseLoc == interpolantLoc.first) {
-			intpLeft = LShrExpr::create(intpLeft, pc->value);
-		}
-		else if (pc->operationName == AShr && pc->baseLoc == interpolantLoc.first) {
-			intpLeft = AShrExpr::create(intpLeft, pc->value);
-		}
-	}
-
-
-	if (interpolant->getKind() == Expr::Eq) {
-		reExecIntp = EqExpr::create(intpLeft, intpRight);
-	}
-	else if(interpolant->getKind() == Expr::Ne){
-		reExecIntp = NeExpr::create(intpLeft, intpRight);
-	}
-	else if(interpolant->getKind() == Expr::Ult){
-		reExecIntp = UltExpr::create(intpLeft, intpRight);
-	}
-	else if(interpolant->getKind() == Expr::Ule){
-		reExecIntp = UleExpr::create(intpLeft, intpRight);
-	}
-	else if(interpolant->getKind() == Expr::Ugt){
-		reExecIntp = UgtExpr::create(intpLeft, intpRight);
-	}
-	else if(interpolant->getKind() == Expr::Uge){
-		reExecIntp = UgeExpr::create(intpLeft, intpRight);
-	}
-	else if(interpolant->getKind() == Expr::Slt){
-		reExecIntp = SltExpr::create(intpLeft, intpRight);
-	}
-	else if(interpolant->getKind() == Expr::Sle){
-		reExecIntp = SleExpr::create(intpLeft, intpRight);
-	}
-	else if(interpolant->getKind() == Expr::Sgt){
-		reExecIntp = SgtExpr::create(intpLeft, intpRight);
-	}
-	else if(interpolant->getKind() == Expr::Sge){
-		reExecIntp = SgeExpr::create(intpLeft, intpRight);
-	}
-
-	return reExecIntp;
-}
-
-bool Executor::subsumptionCheck(ExecutionState& current) {
-	//subsumption
-	Solver::Validity result;
-	for (std::vector<Subsumption>::const_iterator it =
-			interpTree->subsumptionStore.begin();
-			it != interpTree->subsumptionStore.end(); ++it) {
-		if (current.itreeNode->programPoint == it->programPoint) {
-			solver->evaluate(current, it->interpolant, result);
-			if (result == Solver::True) {
-
-				ref<Expr> interpolant =  it->interpolant;
-				std::pair< ref<Expr> , ref<Expr> > interpolantLoc = it->interpolantLoc;
-				ref<Expr> reExecIntp = reExecInterpolant(interpolant, interpolantLoc, current);
-
-				Solver::Validity rslt;
-				solver->evaluate(current, reExecIntp, rslt);
-				if(rslt == Solver::True){
-					current.itreeNode->isSubsumed = true;
-					current.itreeNode->interpolant = it->interpolant;
-					current.itreeNode->interpolantLoc = std::make_pair(it->interpolantLoc.first, it->interpolantLoc.second) ;
-					current.itreeNode->InterpolantStatus =FullInterpolant;
-					return true;
-					break;
-				}
-			}
-		}
-	}
-	if (!current.itreeNode->isSubsumed) {
-		//no subsumption
-		Subsumption subsumption;
-		subsumption.interpolant = current.itreeNode->interpolant;
-		subsumption.interpolantLoc = std::make_pair(current.itreeNode->interpolantLoc.first, current.itreeNode->interpolantLoc.second);
-		subsumption.programPoint = current.itreeNode->programPoint;
-		interpTree->subsumptionStore.push_back(subsumption);
-		return false;
-	}
-	return false;
-}
-
-void Executor::propagateInterpolant(const ref<Expr>& tmpInterpolant,
-		const std::pair< ref<Expr>, ref<Expr> > & intpLocation, ExecutionState& current) {
-	//get parent interpolant
-	ref<Expr> leftIntpParent = tmpInterpolant->getKid(0).get();
-	ref<Expr> RightIntpParent = tmpInterpolant->getKid(1).get();
-	//forward execution for parent interpolant
-	for (std::vector<PathCondition>::const_iterator it = current.itreeNode->addedPathCond.begin();
-			it != current.itreeNode->addedPathCond.end(); ++it) {
-		if (it->operationName == Add && it->baseLoc == intpLocation.first) {
-			leftIntpParent = AddExpr::create(leftIntpParent, it->value);
-		}
-		else if (it->operationName == Sub && it->baseLoc == intpLocation.first) {
-			leftIntpParent = SubExpr::create(leftIntpParent, it->value);
-		}
-		else if (it->operationName == Mul && it->baseLoc == intpLocation.first) {
-			leftIntpParent = MulExpr::create(leftIntpParent, it->value);
-		}
-		else if (it->operationName == UDiv && it->baseLoc == intpLocation.first) {
-			leftIntpParent = UDivExpr::create(leftIntpParent, it->value);
-		}
-		else if (it->operationName == SDiv && it->baseLoc == intpLocation.first) {
-			leftIntpParent = SDivExpr::create(leftIntpParent, it->value);
-		}
-		else if (it->operationName == URem && it->baseLoc == intpLocation.first) {
-			leftIntpParent = URemExpr::create(leftIntpParent, it->value);
-		}
-		else if (it->operationName == SRem && it->baseLoc == intpLocation.first) {
-			leftIntpParent = SRemExpr::create(leftIntpParent, it->value);
-		}
-		else if (it->operationName == And && it->baseLoc == intpLocation.first) {
-			leftIntpParent = AndExpr::create(leftIntpParent, it->value);
-		}
-		else if (it->operationName == Or && it->baseLoc == intpLocation.first) {
-			leftIntpParent = OrExpr::create(leftIntpParent, it->value);
-		}
-		else if (it->operationName == Xor && it->baseLoc == intpLocation.first) {
-			leftIntpParent = XorExpr::create(leftIntpParent, it->value);
-		}
-		else if (it->operationName == Shl && it->baseLoc == intpLocation.first) {
-			leftIntpParent = ShlExpr::create(leftIntpParent, it->value);
-		}
-		else if (it->operationName == LShr && it->baseLoc == intpLocation.first) {
-			leftIntpParent = LShrExpr::create(leftIntpParent, it->value);
-		}
-		else if (it->operationName == AShr && it->baseLoc == intpLocation.first) {
-			leftIntpParent = AShrExpr::create(leftIntpParent, it->value);
-		}
-	}
-	ref<Expr> parentInterpolant;
-	if (tmpInterpolant->getKind() == Expr::Eq) {
-		parentInterpolant = NeExpr::create(RightIntpParent, leftIntpParent);
-	} else if (tmpInterpolant->getKind() == Expr::Ne) {
-		parentInterpolant = EqExpr::create(RightIntpParent, leftIntpParent);
-	} else if (tmpInterpolant->getKind() == Expr::Ult) {
-		parentInterpolant = UgtExpr::create(RightIntpParent, leftIntpParent);
-	} else if (tmpInterpolant->getKind() == Expr::Ule) {
-		parentInterpolant = UgeExpr::create(RightIntpParent, leftIntpParent);
-	} else if (tmpInterpolant->getKind() == Expr::Ugt) {
-		parentInterpolant = UltExpr::create(RightIntpParent, leftIntpParent);
-	} else if (tmpInterpolant->getKind() == Expr::Uge) {
-		parentInterpolant = UleExpr::create(RightIntpParent, leftIntpParent);
-	} else if (tmpInterpolant->getKind() == Expr::Slt) {
-		parentInterpolant = SgtExpr::create(RightIntpParent, leftIntpParent);
-	} else if (tmpInterpolant->getKind() == Expr::Sle) {
-		parentInterpolant = SgeExpr::create(RightIntpParent, leftIntpParent);
-	} else if (tmpInterpolant->getKind() == Expr::Sgt) {
-		parentInterpolant = SltExpr::create(RightIntpParent, leftIntpParent);
-	} else if (tmpInterpolant->getKind() == Expr::Sge) {
-		parentInterpolant = SleExpr::create(RightIntpParent, leftIntpParent);
-	}
-
-	ref<Expr> parentIntLeft = parentInterpolant->getKid(0);
-	ref<Expr> parentIntRight = parentInterpolant->getKid(1);
-	//    parentInterpolant = Expr::createIsZero(parentInterpolant);
-	ITreeNode *currentPredecessor = NULL;
-	if (current.itreeNode->parent != NULL) {
-		if (current.itreeNode->parent->InterpolantStatus == NoInterpolant) {
-
-			current.itreeNode->parent->InterpolantStatus = HalfInterpolant;
-			current.itreeNode->parent->interpolant = parentInterpolant;
-			current.itreeNode->parent->interpolantLoc = std::make_pair(current.itreeNode->interpolantLoc.first, current.itreeNode->interpolantLoc.second);
-		}
-		else if (current.itreeNode->parent->InterpolantStatus
-				== HalfInterpolant) {
-			current.itreeNode->parent->InterpolantStatus = FullInterpolant;
-
-//			parentInterpolant = AndExpr::create(
-//					current.itreeNode->parent->interpolant, parentInterpolant);
-			current.itreeNode->parent->interpolant = parentInterpolant;
-
-			Subsumption subsume;
-			subsume.interpolant = current.itreeNode->parent->interpolant;
-			subsume.interpolantLoc = std::make_pair(current.itreeNode->parent->interpolantLoc.first, current.itreeNode->parent->interpolantLoc.second);
-			subsume.programPoint = current.itreeNode->parent->programPoint;
-			interpTree->subsumptionStore.push_back(subsume);
-		}
-		currentPredecessor = current.itreeNode->parent->parent;
-	}
-	while (currentPredecessor != NULL) {
-
-		for (std::vector<PathCondition>::const_iterator it = current.itreeNode->addedPathCond.begin();
-				it != current.itreeNode->addedPathCond.end(); ++it) {
-			if (it->operationName == Add && it->baseLoc == latestBaseLeft) {
-				parentIntLeft = AddExpr::create(parentIntLeft, it->value);
-			} else if (it->operationName == Sub && it->baseLoc == latestBaseLeft) {
-				parentIntLeft = SubExpr::create(parentIntLeft, it->value);
-			} else if (it->operationName == Mul && it->baseLoc == latestBaseLeft) {
-				parentIntLeft = MulExpr::create(parentIntLeft, it->value);
-			} else if (it->operationName == UDiv && it->baseLoc == latestBaseLeft) {
-				parentIntLeft = UDivExpr::create(parentIntLeft, it->value);
-			} else if (it->operationName == SDiv && it->baseLoc == latestBaseLeft) {
-				parentIntLeft = SDivExpr::create(parentIntLeft, it->value);
-			} else if (it->operationName == URem && it->baseLoc == latestBaseLeft) {
-				parentIntLeft = URemExpr::create(parentIntLeft, it->value);
-			} else if (it->operationName == SRem && it->baseLoc == latestBaseLeft) {
-				parentIntLeft = SRemExpr::create(parentIntLeft, it->value);
-			} else if (it->operationName == And && it->baseLoc == latestBaseLeft) {
-				parentIntLeft = AndExpr::create(parentIntLeft, it->value);
-			} else if (it->operationName == Or && it->baseLoc == latestBaseLeft) {
-				parentIntLeft = OrExpr::create(parentIntLeft, it->value);
-			} else if (it->operationName == Xor && it->baseLoc == latestBaseLeft) {
-				parentIntLeft = XorExpr::create(parentIntLeft, it->value);
-			} else if (it->operationName == Shl && it->baseLoc == latestBaseLeft) {
-				parentIntLeft = ShlExpr::create(parentIntLeft, it->value);
-			} else if (it->operationName == LShr && it->baseLoc == latestBaseLeft) {
-				parentIntLeft = LShrExpr::create(parentIntLeft, it->value);
-			} else if (it->operationName == AShr && it->baseLoc == latestBaseLeft) {
-				parentIntLeft = AShrExpr::create(parentIntLeft, it->value);
-			}
-		}
-		ref<Expr> currPredecessorInt;
-//		ref<Expr> currPredecessorInt = SgtExpr::create(parentIntLeft,
-//				parentIntRight);
-//
-		if (tmpInterpolant->getKind() == Expr::Eq) {
-			currPredecessorInt = EqExpr::create(parentIntLeft, parentIntRight);
-		} else if (tmpInterpolant->getKind() == Expr::Sle) {
-			currPredecessorInt = SleExpr::create(parentIntLeft, parentIntRight);
-		} else if (tmpInterpolant->getKind() == Expr::Ult) {
-			currPredecessorInt = UltExpr::create(parentIntLeft, parentIntRight);
-		} else if (tmpInterpolant->getKind() == Expr::Ule) {
-			currPredecessorInt = UleExpr::create(parentIntLeft, parentIntRight);
-		} else if (tmpInterpolant->getKind() == Expr::Ugt) {
-			currPredecessorInt = UgtExpr::create(parentIntLeft, parentIntRight);
-		} else if (tmpInterpolant->getKind() == Expr::Uge) {
-			currPredecessorInt = UgeExpr::create(parentIntLeft, parentIntRight);
-		} else if (tmpInterpolant->getKind() == Expr::Slt) {
-			currPredecessorInt = SltExpr::create(parentIntLeft, parentIntRight);
-		} else if (tmpInterpolant->getKind() == Expr::Sle) {
-			currPredecessorInt = SleExpr::create(parentIntLeft, parentIntRight);
-		} else if (tmpInterpolant->getKind() == Expr::Sgt) {
-			currPredecessorInt = SgtExpr::create(parentIntLeft, parentIntRight);
-		} else if (tmpInterpolant->getKind() == Expr::Sge) {
-			currPredecessorInt = SgeExpr::create(parentIntLeft, parentIntRight);
-		}
-
-		currPredecessorInt = Expr::createIsZero(currPredecessorInt);
-
-		if (currentPredecessor->left->InterpolantStatus == FullInterpolant
-				&& currentPredecessor->right->InterpolantStatus
-						== FullInterpolant) {
-
-			if (currentPredecessor->InterpolantStatus != FullInterpolant) {
-				currentPredecessor->InterpolantStatus = FullInterpolant;
-
-				Subsumption _subsume;
-				_subsume.interpolant = currentPredecessor->interpolant;
-				_subsume.interpolantLoc = std::make_pair(currentPredecessor->interpolantLoc.first, currentPredecessor->interpolantLoc.second);
-				_subsume.programPoint = currentPredecessor->programPoint;
-				interpTree->subsumptionStore.push_back(_subsume);
-
-//				currentPredecessor->interpolant = AndExpr::create(
-//						currentPredecessor->interpolant, currPredecessorInt);
-				if(currentPredecessor->interpolant.isNull()){
-					currentPredecessor->interpolant = currPredecessorInt;
-				}
-			}
-		}
-
-		else if (currentPredecessor->left->InterpolantStatus == FullInterpolant
-				|| currentPredecessor->right->InterpolantStatus
-						== FullInterpolant) {
-
-			if (currentPredecessor->InterpolantStatus != HalfInterpolant) {
-
-				currentPredecessor->InterpolantStatus = HalfInterpolant;
-				currentPredecessor->interpolant = currPredecessorInt;
-				currentPredecessor->interpolantLoc = std::make_pair(intpLocation.first, intpLocation.second);
-
-			}
-		}
-
-		currentPredecessor = currentPredecessor->parent;
-	}
+ref<Expr> Executor::makeComparison(ref<Expr> exprWithKind, ref<Expr> leftValue, const ref<Expr>& rightValue) {
+  switch (exprWithKind->getKind()) {
+    case Expr::Eq:
+      return EqExpr::create(leftValue, rightValue);
+    case Expr::Ne:
+      return NeExpr::create(leftValue, rightValue);
+    case Expr::Ult:
+      return UltExpr::create(leftValue, rightValue);
+    case Expr::Ule:
+      return UleExpr::create(leftValue, rightValue);
+    case Expr::Ugt:
+      return UgtExpr::create(leftValue, rightValue);
+    case Expr::Uge:
+      return UgeExpr::create(leftValue, rightValue);
+    case Expr::Slt:
+      return SltExpr::create(leftValue, rightValue);
+    case Expr::Sle:
+      return SleExpr::create(leftValue, rightValue);
+    case Expr::Sgt:
+      return SgtExpr::create(leftValue, rightValue);
+    case Expr::Sge:
+      return SgeExpr::create(leftValue, rightValue);
+    default:
+      return exprWithKind;
+  }
 }
 
 Executor::StatePair 
@@ -1148,6 +769,10 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
   double timeout = coreSolverTimeout;
   if (isSeeding)
     timeout *= it->second.size();
+
+  /// llvm::errs() << "Calling solver->evaluate on query:\n";
+  /// ExprPPrinter::printQuery(llvm::errs(), current.constraints, condition);
+
   solver->setTimeout(timeout);
   bool success = solver->evaluate(current, condition, res);
   solver->setTimeout(0);
@@ -1236,7 +861,6 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     }
   }
 
-
   // XXX - even if the constraint is provable one way or the other we
   // can probably benefit by adding this constraint and allowing it to
   // reduce the other constraints. For example, if we do a binary
@@ -1251,6 +875,11 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       }
     }
 
+    /// Validity proof succeeded of a query: antecedent -> consequent.
+    /// We then extract the unsatisfiability core of antecedent and not
+    /// consequent as the Craig interpolant.
+    interpTree->markPathCondition(solver->getUnsatCore());
+
     return StatePair(&current, 0);
   } else if (res==Solver::False) {
     if (!isInternal) {
@@ -1259,36 +888,12 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       }
     }
 
-    //get unsat core
-    ref<Expr> tmpInterpolant; size_t predNum = 1;
-    std::vector< std::pair<size_t, ref<Expr> > > unsat_core = solver->getUnsatCore();
-    if(unsat_core.size() > 0){
-    	predNum = unsat_core.back().first;
-    	tmpInterpolant = unsat_core.back().second;
-    }
-  	unsat_core.push_back(std::make_pair(current.constraints.size(), condition));
-
-  	//get the base location from base
-	ref<Expr> baseLocation = NULL;
-	for (std::vector<PathCondition>::const_iterator it =
-			current.itreeNode->pathCond.begin();
-			it != current.itreeNode->pathCond.end(); ++it) {
-		if (it->base.operator ==(tmpInterpolant->getKid(0))) {
-			baseLocation = it->baseLoc;
-			break;
-		}
-	}
-
-	std::pair< ref<Expr>, ref<Expr> > tmpInterpolantLoc = std::make_pair(baseLocation, baseLocation);
-
-  	setCurrentInterpolant(predNum, tmpInterpolant, current, baseLocation);
-
-  	subsumptionCheck(current);
-
-  	propagateInterpolant(tmpInterpolant, tmpInterpolantLoc, current);
+    /// Falsity proof succeeded of a query: antecedent -> consequent,
+    /// which means that antecedent -> not(consequent) is valid. In this
+    /// case also we extract the unsat core of the proof
+    interpTree->markPathCondition(solver->getUnsatCore());
 
     return StatePair(0, &current);
-
   } else {
     TimerStatIncrementer timer(stats::forkTime);
     ExecutionState *falseState, *trueState = &current;
@@ -1309,7 +914,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       for (std::vector<SeedInfo>::iterator siit = seeds.begin(), 
              siie = seeds.end(); siit != siie; ++siit) {
         ref<ConstantExpr> res;
-        bool success = 
+        bool success =
           solver->getValue(current, siit->assignment.evaluate(condition), res);
         assert(success && "FIXME: Unhandled solver failure");
         (void) success;
@@ -1335,32 +940,6 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       }
     }
 
-    //subsumption
-    for (std::vector< Subsumption >::const_iterator it = interpTree->subsumptionStore.begin() ;
-    			    		it != interpTree->subsumptionStore.end(); ++it){
-    		Solver::Validity result;
-    		if(current.itreeNode->programPoint == it->programPoint){
-    			solver->evaluate(current, it->interpolant, result);
-    			
-				if(result == Solver::True){
-    				ref<Expr> interpolant =  it->interpolant;
-    				std::pair< ref<Expr> , ref<Expr> > interpolantLoc = it->interpolantLoc;
-    				ref<Expr> reExecIntp = reExecInterpolant(interpolant, interpolantLoc, current);
-					Solver::Validity rslt;
-    				solver->evaluate(current, reExecIntp, rslt);
-    				if(rslt == Solver::True){
-							current.itreeNode->isSubsumed = true;
-							current.itreeNode->InterpolantStatus = FullInterpolant;
-							current.itreeNode->interpolant = it->interpolant;
-							current.itreeNode->interpolantLoc = it->interpolantLoc;
-							addedStates.erase(falseState); // false state has been added before. Since we will do subsumption we can delete this added falseState
-							current.itreeNode->parent->InterpolantStatus = FullInterpolant;
-							propagateInterpolant(current.itreeNode->interpolant, current.itreeNode->interpolantLoc, current);
-							return StatePair(0, 0);
-    				}
-    			}
-    		}
-    }
     current.ptreeNode->data = 0;
     std::pair<PTree::Node*, PTree::Node*> res =
       processTree->split(current.ptreeNode, falseState, trueState);
@@ -1384,18 +963,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     addConstraint(*falseState, Expr::createIsZero(condition));
 
     current.itreeNode->data = 0;
-    std::pair<ITree::INode*, ITree::INode* > result = interpTree->split(current.itreeNode, falseState, trueState);
-    falseState->itreeNode = result.first;
-    trueState->itreeNode = result.second;
-
-    falseState->itreeNode->programPoint = &current.pc->dest;
-    trueState->itreeNode->programPoint = &current.pc->dest;
-
-    for (std::vector< PathCondition >::const_iterator it = current.itreeNode->parent->pathCond.begin() ;
-    		it != current.itreeNode->parent->pathCond.end(); ++it){
-    	falseState->itreeNode->pathCond.push_back(*it);
-        trueState->itreeNode->pathCond.push_back(*it);
-    }
+    current.itreeNode->split(falseState, trueState);
 
     // Kinda gross, do we even really still want this option?
     if (MaxDepth && MaxDepth<=trueState->depth) {
@@ -1897,8 +1465,8 @@ static inline const llvm::fltSemantics * fpWidthToSemantics(unsigned width) {
 }
 
 void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
-
   Instruction *i = ki->inst;
+
   switch (i->getOpcode()) {
     // Control flow
   case Instruction::Ret: {
@@ -1980,7 +1548,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         terminateStateOnExecError(state, "unwind from initial stack frame");
         break;
       } else {
-        Instruction *caller = kcaller->inst;
+        Instruction *caller = kcaller->programPoint;
         if (InvokeInst *ii = dyn_cast<InvokeInst>(caller)) {
           transferToBasicBlock(ii->getUnwindDest(), caller->getParent(), state);
           break;
@@ -2013,8 +1581,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       if (branches.second)
         transferToBasicBlock(bi->getSuccessor(1), bi->getParent(), *branches.second);
     }
-//    latestBaseLeft = NULL;
-//    latestBaseRight = NULL;
     break;
   }
   case Instruction::Switch: {
@@ -2080,7 +1646,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       
       std::vector<ExecutionState*> branches;
       branch(state, conditions, branches);
-        
+
       std::vector<ExecutionState*>::iterator bit = branches.begin();
       for (std::map<BasicBlock*, ref<Expr> >::iterator it = 
              targets.begin(), ie = targets.end();
@@ -2236,24 +1802,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     // Arithmetic / logical
 
   case Instruction::Add: {
-	ref<Expr> left = eval(ki, 0, state).value;
+    ref<Expr> left = eval(ki, 0, state).value;
     ref<Expr> right = eval(ki, 1, state).value;
     bindLocal(ki, state, AddExpr::create(left, right));
-
-    if(!latestBaseLeft.isNull()){
-		PathCondition _pathCondition;
-		_pathCondition.baseLoc = latestBaseLeft;
-		_pathCondition.base = left;
-		_pathCondition.value = right;
-
-		if(!latestBaseRight.isNull())
-			_pathCondition.valueLoc = latestBaseRight;
-
-		_pathCondition.operationName = Add;
-
-		state.itreeNode->pathCond.push_back(_pathCondition);
-		state.itreeNode->addedPathCond.push_back(_pathCondition);
-    }
     break;
   }
 
@@ -2261,16 +1812,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> left = eval(ki, 0, state).value;
     ref<Expr> right = eval(ki, 1, state).value;
     bindLocal(ki, state, SubExpr::create(left, right));
-
-    if(!latestBaseLeft.isNull()){
-		PathCondition _pathCondition;
-		_pathCondition.baseLoc = latestBaseLeft;
-		_pathCondition.value = right;
-		_pathCondition.operationName = Sub;
-
-		state.itreeNode->pathCond.push_back(_pathCondition);
-		state.itreeNode->addedPathCond.push_back(_pathCondition);
-    }
     break;
   }
  
@@ -2278,16 +1819,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> left = eval(ki, 0, state).value;
     ref<Expr> right = eval(ki, 1, state).value;
     bindLocal(ki, state, MulExpr::create(left, right));
-
-    if(!latestBaseLeft.isNull()){
-		PathCondition _pathCondition;
-		_pathCondition.baseLoc = latestBaseLeft;
-		_pathCondition.value = right;
-		_pathCondition.operationName = Mul;
-
-		state.itreeNode->pathCond.push_back(_pathCondition);
-		state.itreeNode->addedPathCond.push_back(_pathCondition);
-    }
     break;
   }
 
@@ -2296,16 +1827,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = UDivExpr::create(left, right);
     bindLocal(ki, state, result);
-
-    if(!latestBaseLeft.isNull()){
-		PathCondition _pathCondition;
-		_pathCondition.baseLoc = latestBaseLeft;
-		_pathCondition.value = right;
-		_pathCondition.operationName = UDiv;
-
-		state.itreeNode->pathCond.push_back(_pathCondition);
-		state.itreeNode->addedPathCond.push_back(_pathCondition);
-    }
     break;
   }
 
@@ -2314,16 +1835,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = SDivExpr::create(left, right);
     bindLocal(ki, state, result);
-
-    if(!latestBaseLeft.isNull()){
-		PathCondition _pathCondition;
-		_pathCondition.baseLoc = latestBaseLeft;
-		_pathCondition.value = right;
-		_pathCondition.operationName = SDiv;
-
-		state.itreeNode->pathCond.push_back(_pathCondition);
-		state.itreeNode->addedPathCond.push_back(_pathCondition);
-    }
     break;
   }
 
@@ -2332,16 +1843,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = URemExpr::create(left, right);
     bindLocal(ki, state, result);
-
-    if(!latestBaseLeft.isNull()){
-		PathCondition _pathCondition;
-		_pathCondition.baseLoc = latestBaseLeft;
-		_pathCondition.value = right;
-		_pathCondition.operationName = URem;
-
-		state.itreeNode->pathCond.push_back(_pathCondition);
-		state.itreeNode->addedPathCond.push_back(_pathCondition);
-    }
     break;
   }
  
@@ -2350,16 +1851,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = SRemExpr::create(left, right);
     bindLocal(ki, state, result);
-
-    if(!latestBaseLeft.isNull()){
-		PathCondition _pathCondition;
-		_pathCondition.baseLoc = latestBaseLeft;
-		_pathCondition.value = right;
-		_pathCondition.operationName = SRem;
-
-		state.itreeNode->pathCond.push_back(_pathCondition);
-		state.itreeNode->addedPathCond.push_back(_pathCondition);
-    }
     break;
   }
 
@@ -2368,17 +1859,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = AndExpr::create(left, right);
     bindLocal(ki, state, result);
-
-    if(!latestBaseLeft.isNull()){
-		PathCondition _pathCondition;
-		_pathCondition.baseLoc = latestBaseLeft;
-		_pathCondition.value = right;
-		_pathCondition.operationName = And;
-
-		state.itreeNode->pathCond.push_back(_pathCondition);
-		state.itreeNode->addedPathCond.push_back(_pathCondition);
-    }
-	break;
+    break;
   }
 
   case Instruction::Or: {
@@ -2386,16 +1867,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = OrExpr::create(left, right);
     bindLocal(ki, state, result);
-
-    if(!latestBaseLeft.isNull()){
-		PathCondition _pathCondition;
-		_pathCondition.baseLoc = latestBaseLeft;
-		_pathCondition.value = right;
-		_pathCondition.operationName = Or;
-
-		state.itreeNode->pathCond.push_back(_pathCondition);
-		state.itreeNode->addedPathCond.push_back(_pathCondition);
-    }
     break;
   }
 
@@ -2404,16 +1875,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = XorExpr::create(left, right);
     bindLocal(ki, state, result);
-
-    if(!latestBaseLeft.isNull()){
-		PathCondition _pathCondition;
-		_pathCondition.baseLoc = latestBaseLeft;
-		_pathCondition.value = right;
-		_pathCondition.operationName = Xor;
-
-		state.itreeNode->pathCond.push_back(_pathCondition);
-		state.itreeNode->addedPathCond.push_back(_pathCondition);
-    }
     break;
   }
 
@@ -2422,16 +1883,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = ShlExpr::create(left, right);
     bindLocal(ki, state, result);
-
-    if(!latestBaseLeft.isNull()){
-		PathCondition _pathCondition;
-		_pathCondition.baseLoc = latestBaseLeft;
-		_pathCondition.value = right;
-		_pathCondition.operationName = Shl;
-
-		state.itreeNode->pathCond.push_back(_pathCondition);
-		state.itreeNode->addedPathCond.push_back(_pathCondition);
-    }
     break;
   }
 
@@ -2440,16 +1891,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = LShrExpr::create(left, right);
     bindLocal(ki, state, result);
-
-    if(!latestBaseLeft.isNull()){
-		PathCondition _pathCondition;
-		_pathCondition.baseLoc = latestBaseLeft;
-		_pathCondition.value = right;
-		_pathCondition.operationName = LShr;
-
-		state.itreeNode->pathCond.push_back(_pathCondition);
-		state.itreeNode->addedPathCond.push_back(_pathCondition);
-    }
     break;
   }
 
@@ -2458,16 +1899,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = AShrExpr::create(left, right);
     bindLocal(ki, state, result);
-
-    if(!latestBaseLeft.isNull()){
-		PathCondition _pathCondition;
-		_pathCondition.baseLoc = latestBaseLeft;
-		_pathCondition.value = right;
-		_pathCondition.operationName = AShr;
-
-		state.itreeNode->pathCond.push_back(_pathCondition);
-		state.itreeNode->addedPathCond.push_back(_pathCondition);
-    }
     break;
   }
 
@@ -2483,14 +1914,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       ref<Expr> right = eval(ki, 1, state).value;
       ref<Expr> result = EqExpr::create(left, right);
       bindLocal(ki, state, result);
-
-      if(!interpTree->currentINode->isSubsumed){
-    	  state.itreeNode->latestBranchCond.base = left;
-          state.itreeNode->latestBranchCond.value = right;
-          state.itreeNode->latestBranchCond.compareName = Eq;
-          interpTree->currentINode->conditions.push_back(result);
-      }
-
       break;
     }
 
@@ -2499,12 +1922,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       ref<Expr> right = eval(ki, 1, state).value;
       ref<Expr> result = NeExpr::create(left, right);
       bindLocal(ki, state, result);
-      if(!interpTree->currentINode->isSubsumed){
-    	  state.itreeNode->latestBranchCond.base = left;
-          state.itreeNode->latestBranchCond.value = right;
-          state.itreeNode->latestBranchCond.compareName = Ne;
-          interpTree->currentINode->conditions.push_back(result);
-      }
       break;
     }
 
@@ -2513,12 +1930,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       ref<Expr> right = eval(ki, 1, state).value;
       ref<Expr> result = UgtExpr::create(left, right);
       bindLocal(ki, state,result);
-      if(!interpTree->currentINode->isSubsumed){
-    	  state.itreeNode->latestBranchCond.base = left;
-          state.itreeNode->latestBranchCond.value = right;
-          state.itreeNode->latestBranchCond.compareName = Ugt;
-          interpTree->currentINode->conditions.push_back(result);
-      }
       break;
     }
 
@@ -2527,12 +1938,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       ref<Expr> right = eval(ki, 1, state).value;
       ref<Expr> result = UgeExpr::create(left, right);
       bindLocal(ki, state, result);
-      if(!interpTree->currentINode->isSubsumed){
-    	  state.itreeNode->latestBranchCond.base = left;
-          state.itreeNode->latestBranchCond.value = right;
-          state.itreeNode->latestBranchCond.compareName = Uge;
-          interpTree->currentINode->conditions.push_back(result);
-      }
       break;
     }
 
@@ -2541,12 +1946,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       ref<Expr> right = eval(ki, 1, state).value;
       ref<Expr> result = UltExpr::create(left, right);
       bindLocal(ki, state, result);
-      if(!interpTree->currentINode->isSubsumed){
-    	  state.itreeNode->latestBranchCond.base = left;
-          state.itreeNode->latestBranchCond.value = right;
-          state.itreeNode->latestBranchCond.compareName = Ult;
-          interpTree->currentINode->conditions.push_back(result);
-      }
       break;
     }
 
@@ -2555,12 +1954,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       ref<Expr> right = eval(ki, 1, state).value;
       ref<Expr> result = UleExpr::create(left, right);
       bindLocal(ki, state, result);
-      if(!interpTree->currentINode->isSubsumed){
-    	  state.itreeNode->latestBranchCond.base = left;
-          state.itreeNode->latestBranchCond.value = right;
-          state.itreeNode->latestBranchCond.compareName = Ule;
-          interpTree->currentINode->conditions.push_back(result);
-      }
       break;
     }
 
@@ -2568,13 +1961,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       ref<Expr> left = eval(ki, 0, state).value;
       ref<Expr> right = eval(ki, 1, state).value;
       ref<Expr> result = SgtExpr::create(left, right);
-
-      if(!interpTree->currentINode->isSubsumed){
-    	  state.itreeNode->latestBranchCond.base = left;
-    	  state.itreeNode->latestBranchCond.value = right;
-    	  state.itreeNode->latestBranchCond.compareName = Sgt;
-    	  interpTree->currentINode->conditions.push_back(result);
-      }
       bindLocal(ki, state, result);
       break;
     }
@@ -2584,12 +1970,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       ref<Expr> right = eval(ki, 1, state).value;
       ref<Expr> result = SgeExpr::create(left, right);
       bindLocal(ki, state, result);
-      if(!interpTree->currentINode->isSubsumed){
-    	  state.itreeNode->latestBranchCond.base = left;
-          state.itreeNode->latestBranchCond.value = right;
-          state.itreeNode->latestBranchCond.compareName = Sge;
-          interpTree->currentINode->conditions.push_back(result);
-      }
       break;
     }
 
@@ -2598,12 +1978,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       ref<Expr> right = eval(ki, 1, state).value;
       ref<Expr> result = SltExpr::create(left, right);
       bindLocal(ki, state, result);
-      if(!interpTree->currentINode->isSubsumed){
-    	  state.itreeNode->latestBranchCond.base = left;
-          state.itreeNode->latestBranchCond.value = right;
-          state.itreeNode->latestBranchCond.compareName = Slt;
-          interpTree->currentINode->conditions.push_back(result);
-      }
       break;
     }
 
@@ -2612,12 +1986,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       ref<Expr> right = eval(ki, 1, state).value;
       ref<Expr> result = SleExpr::create(left, right);
       bindLocal(ki, state, result);
-      if(!interpTree->currentINode->isSubsumed){
-    	  state.itreeNode->latestBranchCond.base = left;
-          state.itreeNode->latestBranchCond.value = right;
-          state.itreeNode->latestBranchCond.compareName = Sle;
-          interpTree->currentINode->conditions.push_back(result);
-      }
       break;
     }
 
@@ -2645,8 +2013,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
   case Instruction::Load: {
     ref<Expr> base = eval(ki, 0, state).value;
-    latestBaseLeft = base;
-    latestBaseRight = base;
     executeMemoryOperation(state, false, base, 0, ki);
     break;
   }
@@ -3108,6 +2474,7 @@ void Executor::updateStates(ExecutionState *current) {
     if (it3 != seedMap.end())
       seedMap.erase(it3);
     processTree->remove(es->ptreeNode);
+    interpTree->remove(es->itreeNode);
     delete es;
   }
   removedStates.clear();
@@ -3256,51 +2623,62 @@ void Executor::run(ExecutionState &initialState) {
   while (!states.empty() && !haltExecution) {
     ExecutionState &state = searcher->selectState();
 
-    interpTree->currentINode = state.itreeNode;
+    /// We synchronize the node id to that of the state
+    state.itreeNode->setNodeLocation(reinterpret_cast<uintptr_t>(state.pc->inst));
+    interpTree->setCurrentINode(state.itreeNode);
 
-    KInstruction *ki = state.pc;
-    stepInstruction(state);
+    /// Uncomment the following instructions to show the state
+    /// of the interpolation tree and the active node.
 
-    executeInstruction(state, ki);
-    if(state.itreeNode->isSubsumed){
-    	removedStates.insert(&state);
+    /// llvm::errs() << "Executing new instruction: ";
+    /// state.pc->inst->dump();
+    /// llvm::errs() << "Current state:\n";
+    /// interpTree->dump();
+    /// state.itreeNode->dump();
+
+    if (interpTree->checkCurrentStateSubsumption(solver, state, coreSolverTimeout)) {
+	terminateStateEarly(state, "Subsumed.");
+    } else {
+	KInstruction *ki = state.pc;
+	stepInstruction(state);
+
+	executeInstruction(state, ki);
+	processTimers(&state, MaxInstructionTime);
+
+	if (MaxMemory) {
+	    if ((stats::instructions & 0xFFFF) == 0) {
+		// We need to avoid calling GetMallocUsage() often because it
+		// is O(elts on freelist). This is really bad since we start
+		// to pummel the freelist once we hit the memory cap.
+		unsigned mbs = util::GetTotalMallocUsage() >> 20;
+		if (mbs > MaxMemory) {
+		    if (mbs > MaxMemory + 100) {
+			// just guess at how many to kill
+			unsigned numStates = states.size();
+			unsigned toKill = std::max(1U, numStates - numStates*MaxMemory/mbs);
+
+			klee_warning("killing %d states (over memory cap)", toKill);
+
+			std::vector<ExecutionState*> arr(states.begin(), states.end());
+			for (unsigned i=0,N=arr.size(); N && i<toKill; ++i,--N) {
+			    unsigned idx = rand() % N;
+
+			    // Make two pulls to try and not hit a state that
+			    // covered new code.
+			    if (arr[idx]->coveredNew)
+			      idx = rand() % N;
+
+			    std::swap(arr[idx], arr[N-1]);
+			    terminateStateEarly(*arr[N-1], "Memory limit exceeded.");
+			}
+		    }
+		    atMemoryLimit = true;
+		} else {
+		    atMemoryLimit = false;
+		}
+	    }
+	}
     }
-    processTimers(&state, MaxInstructionTime);
-
-    if (MaxMemory) {
-      if ((stats::instructions & 0xFFFF) == 0) {
-        // We need to avoid calling GetMallocUsage() often because it
-        // is O(elts on freelist). This is really bad since we start
-        // to pummel the freelist once we hit the memory cap.
-        unsigned mbs = util::GetTotalMallocUsage() >> 20;
-        if (mbs > MaxMemory) {
-          if (mbs > MaxMemory + 100) {
-            // just guess at how many to kill
-            unsigned numStates = states.size();
-            unsigned toKill = std::max(1U, numStates - numStates*MaxMemory/mbs);
-
-            klee_warning("killing %d states (over memory cap)", toKill);
-
-            std::vector<ExecutionState*> arr(states.begin(), states.end());
-            for (unsigned i=0,N=arr.size(); N && i<toKill; ++i,--N) {
-              unsigned idx = rand() % N;
-
-              // Make two pulls to try and not hit a state that
-              // covered new code.
-              if (arr[idx]->coveredNew)
-                idx = rand() % N;
-
-              std::swap(arr[idx], arr[N-1]);
-              terminateStateEarly(*arr[N-1], "Memory limit exceeded.");
-            }
-          }
-          atMemoryLimit = true;
-        } else {
-          atMemoryLimit = false;
-        }
-      }
-    }
-
     updateStates(&state);
   }
 
@@ -3392,6 +2770,7 @@ void Executor::terminateState(ExecutionState &state) {
       seedMap.erase(it3);
     addedStates.erase(it);
     processTree->remove(state.ptreeNode);
+    interpTree->remove(state.itreeNode);
     delete &state;
   }
 }
@@ -4103,7 +3482,7 @@ void Executor::runFunctionAsMain(Function *f,
 
   interpTree = new ITree(state);//added by Felicia
   state->itreeNode = interpTree->root;
-  interpTree->currentINode = interpTree->root;
+  interpTree->setCurrentINode(interpTree->root);
 
   run(*state);
   delete processTree;

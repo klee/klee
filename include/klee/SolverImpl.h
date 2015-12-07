@@ -111,7 +111,7 @@ namespace klee {
     /// IncompleteSolver (which may replace the core Z3 solver).
     ///
     /// \return Vector of ref<Expr>
-    virtual std::vector< std::pair<size_t, ref<Expr> > > getUnsatCore();
+    virtual std::vector< ref<Expr> > getUnsatCore();
 };
 
 }

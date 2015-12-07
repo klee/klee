@@ -6,172 +6,357 @@
  */
 
 #include "ITree.h"
+#include "TimingSolver.h"
 
 #include <klee/Expr.h>
+#include <klee/Solver.h>
+#include <klee/util/ExprPPrinter.h>
 #include <vector>
 
 using namespace klee;
 
+PathConditionMarker::PathConditionMarker(PathCondition *pathCondition) :
+  mayBeInInterpolant(false), pathCondition(pathCondition) {}
+
+PathConditionMarker::~PathConditionMarker() {}
+
+void PathConditionMarker::mayIncludeInInterpolant() {
+  mayBeInInterpolant = true;
+}
+
+void PathConditionMarker::includeInInterpolant() {
+  if (mayBeInInterpolant) {
+      pathCondition->includeInInterpolant();
+  }
+}
+
+PathCondition::PathCondition(ref<Expr>& constraint) :
+    constraint(constraint), inInterpolant(false), tail(0) {}
+
+PathCondition::PathCondition(ref<Expr>& constraint, PathCondition *prev) :
+    constraint(constraint), inInterpolant(false), tail(prev) {}
+
+PathCondition::~PathCondition() {}
+
+ref<Expr> PathCondition::car() const {
+  return constraint;
+}
+
+PathCondition *PathCondition::cdr() const {
+  return tail;
+}
+
+void PathCondition::includeInInterpolant() {
+  inInterpolant = true;
+}
+
+std::vector< ref<Expr> > PathCondition::packInterpolant() const {
+  std::vector< ref<Expr> > res;
+  for (const PathCondition *it = this; it != 0; it = it->tail) {
+      if (it->inInterpolant)
+	res.push_back(it->constraint);
+  }
+  return res;
+}
+
 void PathCondition::dump() {
-	this->print(llvm::errs());
+  this->print(llvm::errs());
+  llvm::errs() << "\n";
 }
 
-void PathCondition::print(llvm::raw_ostream & stream) {
-	stream << "baseLoc = ";
-	if (!baseLoc.isNull()) {
-		baseLoc->print(stream);
-	} else {
-		stream << "NULL";
-	}
-	stream << "\n";
-	stream << "value = ";
-	if (!value.isNull()) {
-		value->print(stream);
-	} else {
-		stream << "NULL";
-	}
-	stream << "\n";
-	stream << "valueLoc = ";
-	if (!valueLoc.isNull()) {
-		valueLoc->print(stream);
-	} else {
-		stream << "NULL";
-	}
-	stream << "\n";
-	stream << "operationName = " << operationName << "\n";
-	stream << "isRemoved = " << isRemoved << "\n";
+void PathCondition::print(llvm::raw_ostream& stream) {
+  stream << "[";
+  for (PathCondition *it = this; it != 0; it = it->tail) {
+      it->constraint->print(stream);
+      stream << ": " << (it->inInterpolant ? "interpolant constraint" : "non-interpolant constraint");
+      if (it->tail != 0) stream << ",";
+  }
+  stream << "]";
 }
 
-ITree::ITree(const data_type &_root) : root(new ITreeNode(0,_root)) {
+SubsumptionTableEntry::SubsumptionTableEntry(ITreeNode *node) :
+  nodeId(node->getNodeId()),
+  interpolant(node->getInterpolant()) {}
+
+SubsumptionTableEntry::~SubsumptionTableEntry() {}
+
+bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
+                                     ExecutionState& state,
+                                     double timeout) {
+  if (state.itreeNode == 0)
+    return false;
+
+  if (state.itreeNode->getNodeId() == nodeId) {
+      /// We create path condition needed constraints marking structure
+      std::map< ref<Expr>, PathConditionMarker *> markerMap =
+	  state.itreeNode->makeMarkerMap();
+      for (std::vector< ref<Expr> >::iterator it = interpolant.begin();
+	  it != interpolant.end(); it++) {
+	  ref<Expr> query = *it;
+	  Solver::Validity result;
+
+	  /// llvm::errs() << "Querying for subsumption check:\n";
+	  /// ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
+
+	  solver->setTimeout(timeout);
+	  bool success = solver->evaluate(state, query, result);
+	  solver->setTimeout(0);
+	  if (success && result == Solver::True) {
+	    std::vector< ref<Expr> > unsat_core = solver->getUnsatCore();
+
+	    for (std::vector< ref<Expr> >::iterator it = unsat_core.begin();
+		it != unsat_core.end(); it++) {
+		markerMap[*it]->mayIncludeInInterpolant();
+	    }
+
+	  } else {
+	    return false;
+	  }
+      }
+
+      /// State subsumed, we mark needed constraints on the
+      /// path condition.
+      for (std::map< ref<Expr>, PathConditionMarker *>::iterator it = markerMap.begin();
+	  it != markerMap.end(); it++) {
+	  it->second->includeInInterpolant();
+      }
+      markerMap.clear();
+      return true;
+  }
+  return false;
 }
+
+void SubsumptionTableEntry::dump() const {
+  this->print(llvm::errs());
+  llvm::errs() << "\n";
+}
+
+void SubsumptionTableEntry::print(llvm::raw_ostream &stream) const {
+  stream << "------------ Subsumption Table Entry ------------\n";
+  stream << "Program point = " << nodeId << "\n";
+  stream << "interpolant = [";
+  for (std::vector< ref<Expr> >::const_iterator it = interpolant.begin();
+      it != interpolant.end(); it++) {
+      it->get()->print(stream);
+      if (it + 1 != interpolant.end()) {
+	  stream << ",";
+      }
+  }
+  stream << "]\n";
+}
+
+ITree::ITree(ExecutionState* _root) :
+    currentINode(0),
+    root(new ITreeNode(0, _root)) {}
 
 ITree::~ITree() {}
 
-std::pair<ITreeNode*, ITreeNode*>
-ITree::split(ITreeNode *n,
-		 	 const data_type &leftData,
-		     const data_type &rightData) {
-  assert(n && !n->left && !n->right);
-  n->left = new ITreeNode(n, leftData);
-  n->right = new ITreeNode(n, rightData);
-  return std::make_pair(n->left, n->right);
+bool ITree::checkCurrentStateSubsumption(TimingSolver *solver,
+                                         ExecutionState& state,
+                                         double timeout) {
+  assert(state.itreeNode == currentINode);
+
+  for (std::vector<SubsumptionTableEntry>::iterator it = subsumptionTable.begin();
+      it != subsumptionTable.end(); it++) {
+      if (it->subsumed(solver, state, timeout)) {
+
+	  /// We mark as subsumed such that the node will not be
+	  /// stored into table (the table already contains a more
+	  /// general entry).
+	  currentINode->isSubsumed = true;
+
+	  return true;
+      }
+  }
+  return false;
 }
 
-void ITree::addCondition(INode *n, ref<Expr> cond) {
-  assert(!n->left && !n->right);
+std::vector<SubsumptionTableEntry> ITree::getStore() {
+  return subsumptionTable;
+}
+
+void ITree::store(SubsumptionTableEntry subItem) {
+  subsumptionTable.push_back(subItem);
+}
+
+void ITree::setCurrentINode(ITreeNode *node) {
+  currentINode = node;
+}
+
+void ITree::remove(ITreeNode *node) {
+  assert(!node->left && !node->right);
   do {
-	INode *p = n->parent;
+    ITreeNode *p = node->parent;
+
+    /// As the node is about to be deleted, it must have been completely
+    /// traversed, hence the correct time to table the interpolant.
+    if (!node->isSubsumed) {
+      SubsumptionTableEntry entry(node);
+      store(entry);
+    }
+
+    delete node;
     if (p) {
-      if (n == p->left) {
-        p->left->conditions.push_back(cond);
+      if (node == p->left) {
+        p->left = 0;
       } else {
-        assert(n == p->right);
-        p->right->conditions.push_back(cond);
+        assert(node == p->right);
+        p->right = 0;
       }
     }
-    n = p;
-  } while (n && !n->left && !n->right);
+    node = p;
+  } while (node && !node->left && !node->right);
 }
 
-ITreeNode::ITreeNode(ITreeNode *_parent,
-        				ExecutionState *_data)
-	: programPoint(0),
-    parent(_parent),
-    left(0),
-    right(0),
-    data(_data),
-    interpolant(NULL),
-    InterpolantStatus(NoInterpolant),
-    isSubsumed(false){
+void ITree::markPathCondition(std::vector< ref<Expr> > unsat_core) {
+  /// Simply return in case the unsatisfiability core is empty
+  if (unsat_core.size() == 0)
+      return;
 
-	for (ConstraintManager::constraints_ty::const_iterator it = _data->constraints.begin(),
-			ie = _data->constraints.end(); it != ie; ++it) {
-		//	conditions = _data->constraints.getConstraints();
-		conditions.push_back(*it);
-	}
+  /// Process the unsat core in case it was computed (non-empty)
+  PathCondition *pc = currentINode->pathCondition;
+
+  if (pc != 0) {
+      for (std::vector< ref<Expr> >::reverse_iterator it = unsat_core.rbegin();
+	  it != unsat_core.rend(); it++) {
+	  while (pc != 0) {
+	      if (pc->car().compare(it->get()) == 0) {
+		  pc->includeInInterpolant();
+		  pc = pc->cdr();
+		  break;
+	      }
+	      pc = pc->cdr();
+	  }
+	  if (pc == 0) break;
+      }
+  }
 }
 
-ITreeNode::~ITreeNode() {
+void ITree::printNode(llvm::raw_ostream& stream, ITreeNode *n, std::string edges) {
+  if (n->left != 0) {
+      stream << edges << "+-- L:" << n->left->nodeId;
+      if (this->currentINode == n->left) {
+	  stream << " (active)";
+      }
+      stream << "\n";
+      if (n->right != 0) {
+	  printNode(stream, n->left, edges + "|   ");
+      } else {
+	  printNode(stream, n->left, edges + "    ");
+      }
+  }
+  if (n->right != 0) {
+      stream << edges << "+-- R:" << n->right->nodeId;
+      if (this->currentINode == n->right) {
+	  stream << " (active)";
+      }
+      stream << "\n";
+      printNode(stream, n->right, edges + "    ");
+  }
 }
 
-void ITreeNode::dump() {
-  llvm::errs() << "\n------------------------- Root ITree --------------------------------\n";
+void ITree::print(llvm::raw_ostream& stream) {
+  llvm::errs() << "------------------------- ITree Structure ---------------------------\n";
+  stream << this->root->nodeId;
+  if (this->root == this->currentINode) {
+      stream << " (active)";
+  }
+  stream << "\n";
+  this->printNode(stream, this->root, "");
+}
+
+void ITree::dump() {
   this->print(llvm::errs());
 }
 
-void ITreeNode::print(llvm::raw_ostream &stream) {
-	ITreeNode::print(stream, 0);
+ITreeNode::ITreeNode(ITreeNode *_parent,
+                     ExecutionState *_data)
+: parent(_parent),
+  left(0),
+  right(0),
+  nodeId(0),
+  isSubsumed(false),
+  data(_data) {
+
+  pathCondition = (_parent != 0) ? _parent->pathCondition : 0;
+
+  if (!(_data->constraints.empty())) {
+      ref<Expr> lastConstraint = _data->constraints.back();
+      if (pathCondition == 0) {
+	  pathCondition = new PathCondition(lastConstraint);
+      } else if (pathCondition->car().compare(lastConstraint) != 0) {
+	  pathCondition = new PathCondition(lastConstraint, pathCondition);
+      }
+  }
 }
 
-void ITreeNode::print(llvm::raw_ostream &stream, const unsigned int tab_num) {
-	std::string tabs = make_tabs(tab_num);
-	std::string tabs_next = tabs + "\t";
+ITreeNode::~ITreeNode() {
+  delete pathCondition;
+}
 
-	stream << tabs << "ITreeNode\n";
-	stream << tabs_next << "programPoint = ";
-	if (!programPoint) {
-		stream << "NULL";
-	} else {
-		stream << (*programPoint);
-	}
-	stream << "\n";
-	stream << tabs_next << "conditions =";
-	for (std::vector< ref<Expr> >::iterator it = conditions.begin(); it != conditions.end(); (stream << ","), it++) {
-		if (!((*it).isNull())) {
-			(*it)->print(stream);
-		} else {
-			stream << "NULL";
-		}
-	}
-	stream << "\n";
+unsigned int ITreeNode::getNodeId() {
+  return nodeId;
+}
 
-	stream << tabs_next << "Left:\n";
-	if (!left) {
-		stream << tabs_next << "NULL\n";
-	} else {
-		left->print(stream, tab_num + 1);
-		stream << "\n";
-	}
-	stream << tabs_next << "Right:\n";
-	if (!right) {
-		stream << tabs_next << "NULL\n";
-	} else {
-		right->print(stream, tab_num + 1);
-		stream << "\n";
-	}
+std::vector< ref<Expr> > ITreeNode::getInterpolant() const {
+  return this->pathCondition->packInterpolant();
+}
 
-	stream << tabs_next << "addedPathCond =";
-	for (std::vector<PathCondition>::iterator it = addedPathCond.begin(); it != addedPathCond.end(); (stream << ","), it++) {
-		it->print(stream);
-	}
-	stream << "\n";
+void ITreeNode::setNodeLocation(unsigned int programPoint) {
+  this->nodeId = programPoint;
+}
 
-	stream << tabs_next << "pathCond =";
-	for (std::vector<PathCondition>::iterator it = pathCond.begin(); it != pathCond.end(); (stream << ","), it++) {
-		it->print(stream);
-	}
-	stream << "\n";
+void ITreeNode::split(ExecutionState *leftData, ExecutionState *rightData) {
+  assert (left == 0 && right == 0);
+  leftData->itreeNode = left = new ITreeNode(this, leftData);
+  rightData->itreeNode = right = new ITreeNode(this, rightData);
+}
 
-	stream << tabs_next << "dependenciesLoc =";
-	for (std::vector< ref<Expr> >::iterator it = dependenciesLoc.begin(); it != dependenciesLoc.end(); (stream << ","), it++) {
-		if (!((*it).isNull())) {
-			(*it)->print(stream);
-		} else {
-			stream << "NULL";
-		}
-	}
-	stream << "\n";
+std::map< ref<Expr>, PathConditionMarker *> ITreeNode::makeMarkerMap() {
+  std::map< ref<Expr>, PathConditionMarker *> result;
+  for (PathCondition *it = pathCondition; it != 0; it = it->cdr()) {
+      result.insert( std::pair< ref<Expr>, PathConditionMarker *>
+	(it->car(), new PathConditionMarker(it)) );
+  }
+  return result;
+}
 
-	stream << tabs_next << "interpolant =";
-	if (interpolant.isNull()) {
-		stream << "NULL\n";
-	} else {
-		interpolant->print(stream);
-		stream << "\n";
-	}
+void ITreeNode::dump() const {
+  llvm::errs() << "\n------------------------- ITree Node --------------------------------\n";
+  this->print(llvm::errs());
+}
 
-	stream << tabs_next << "InterpolantStatus =" << InterpolantStatus;
+void ITreeNode::print(llvm::raw_ostream &stream) const {
+  this->print(stream, 0);
+}
 
+void ITreeNode::print(llvm::raw_ostream &stream, const unsigned int tab_num) const {
+  std::string tabs = make_tabs(tab_num);
+  std::string tabs_next = tabs + "\t";
+
+  stream << tabs << "ITreeNode\n";
+  stream << tabs_next << "programPoint = " << nodeId << "\n";
+  stream << tabs_next << "pathCondition = ";
+  if (pathCondition == 0) {
+      stream << "NULL";
+  } else {
+      pathCondition->print(stream);
+  }
+  stream << "\n";
+  stream << tabs_next << "Left:\n";
+  if (!left) {
+      stream << tabs_next << "NULL\n";
+  } else {
+      left->print(stream, tab_num + 1);
+      stream << "\n";
+  }
+  stream << tabs_next << "Right:\n";
+  if (!right) {
+      stream << tabs_next << "NULL\n";
+  } else {
+      right->print(stream, tab_num + 1);
+      stream << "\n";
+  }
 }
 
 

@@ -114,7 +114,7 @@ bool QueryLoggingSolver::computeValidity(const Query& query,
     startQuery(query, "Validity");
     
     bool success = solver->impl->computeValidity(query, result);
-    
+
     finishQuery(success);
     
     if (success) {
@@ -154,7 +154,7 @@ bool QueryLoggingSolver::computeInitialValues(const Query& query,
 
     bool success = solver->impl->computeInitialValues(query, objects, 
                                                       values, hasSolution);
-    
+
     finishQuery(success);
     
     if (success) {

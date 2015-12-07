@@ -90,7 +90,7 @@ public:
   SolverRunStatus getOperationStatusCode();
   char *getConstraintLog(const Query& query);
   void setCoreSolverTimeout(double timeout);
-  std::vector< std::pair<size_t, ref<Expr> > > getUnsatCore() {
+  std::vector< ref<Expr> > getUnsatCore() {
 	  return solver->getUnsatCore();
   }
 };
@@ -267,20 +267,46 @@ bool CexCachingSolver::computeValidity(const Query& query,
                                        Solver::Validity &result) {
   TimerStatIncrementer t(stats::cexCacheTime);
   Assignment *a;
+
+  /// Given query of the form antecedent -> consequent, here we try to
+  /// decide if antecedent was satisfiable by attempting to get an
+  /// assignment from the validity proof of antecedent -> false.
   if (!getAssignment(query.withFalse(), a))
     return false;
+
+  /// Logically, antecedent must be satisfiable, as we eagerly terminate a
+  /// path upon the discovery of unsatisfiability.
   assert(a && "computeValidity() must have assignment");
   ref<Expr> q = a->evaluate(query.expr);
   assert(isa<ConstantExpr>(q) && 
          "assignment evaluation did not result in constant");
 
   if (cast<ConstantExpr>(q)->isTrue()) {
+    /// Antecedent is satisfiable, and its model is also a model of the
+    /// consequent, which means that the query: antecedent -> consequent
+    /// is potentially valid.
+    ///
+    /// We next try to establish the validity of the query
+    /// antecedent -> consequent itself, and when this was proven invalid,
+    /// gets the solution to "antecedent and not consequent", i.e.,
+    /// the counterexample, in a.
     if (!getAssignment(query, a))
-      return false;
+      return false;                  /// Return false in case of solver error
+
+    /// Return Solver::True in result in case validity is established:
+    /// Solver::Unknown otherwise.
     result = !a ? Solver::True : Solver::Unknown;
   } else {
+    /// The computed model of the antecedent is not a model of the consequent.
+    /// It is possible that the query is false under any interpretation. Here
+    /// we try to prove antecedent -> not consequent given the original
+    /// query antecedent -> consequent.
     if (!getAssignment(query.negateExpr(), a))
       return false;
+
+    /// If there was no solution, this means that antecedent -> not consequent
+    /// is valid, and therefore the original query antecedent -> consequent has
+    /// no model. Otherwise, we do not know.
     result = !a ? Solver::False : Solver::Unknown;
   }
   

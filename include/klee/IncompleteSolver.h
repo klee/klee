@@ -104,8 +104,8 @@ public:
   SolverRunStatus getOperationStatusCode();
   char *getConstraintLog(const Query&);
   void setCoreSolverTimeout(double timeout);
-  std::vector< std::pair<size_t, ref<Expr> > > getUnsatCore() {
-	  return secondary->impl->getUnsatCore();
+  std::vector< ref<Expr> > getUnsatCore() {
+    return secondary->impl->getUnsatCore();
   }
 };
 
