@@ -232,6 +232,14 @@ void ITree::markPathCondition(std::vector< ref<Expr> > unsat_core) {
   }
 }
 
+void ITree::recordBlock(Instruction *inst) {
+  blockTable.add(inst);
+}
+
+void ITree::dumpBlock() {
+  blockTable.dump();
+}
+
 void ITree::printNode(llvm::raw_ostream& stream, ITreeNode *n, std::string edges) {
   if (n->left != 0) {
       stream << edges << "+-- L:" << n->left->nodeId;

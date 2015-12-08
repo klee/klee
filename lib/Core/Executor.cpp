@@ -2639,6 +2639,8 @@ void Executor::run(ExecutionState &initialState) {
     if (interpTree->checkCurrentStateSubsumption(solver, state, coreSolverTimeout)) {
 	terminateStateEarly(state, "Subsumed.");
     } else {
+	interpTree->recordBlock(state.pc->inst);
+
 	KInstruction *ki = state.pc;
 	stepInstruction(state);
 
@@ -2697,6 +2699,8 @@ void Executor::run(ExecutionState &initialState) {
     }
     updateStates(0);
   }
+
+  interpTree->dumpBlock();
 }
 
 std::string Executor::getAddressInfo(ExecutionState &state, 
