@@ -14,17 +14,12 @@ void BlockTable::add(Instruction *inst) {
       /// We have found a basic block with empty name: We name all basic blocks
       /// in this function according to topological order.
       (inst->getParent()->getParent()->front()).getNextNode();
-
-      llvm::errs() << "EMPTY BB NAME\n";
-      llvm::errs() << "METHOD: " << inst->getParent()->getParent()->getName() << "\n";
   }
-  llvm::errs() << "STORING BB: " << inst->getParent()->getName() << "\n";
-  inst->dump();
   tableImpl.insert(inst->getParent()->getName());
 }
 
 void BlockTable::dump() {
-  this->print(llvm::errs());
+  /// this->print(llvm::errs());
 }
 
 void BlockTable::print(llvm::raw_ostream& stream) {
