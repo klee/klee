@@ -2637,7 +2637,7 @@ void Executor::run(ExecutionState &initialState) {
     /// state.itreeNode->dump();
 
     if (interpTree->checkCurrentStateSubsumption(solver, state, coreSolverTimeout)) {
-	terminateStateEarly(state, "Subsumed.");
+	terminateStateOnSubsumption(state);
     } else {
 	interpTree->recordBlock(state.pc->inst);
 
@@ -2779,19 +2779,38 @@ void Executor::terminateState(ExecutionState &state) {
   }
 }
 
-void Executor::terminateStateEarly(ExecutionState &state, 
-                                   const Twine &message) {
+void Executor::terminateStateOnSubsumption(ExecutionState &state) {
+  /// Implementationwise, basically the same as terminateStateEarly method,
+  /// but with different statistics functions called.
+  Twine message = "subsumed state";
+  interpreterHandler->incSubsumptionTermination();
   if (!OnlyOutputStatesCoveringNew || state.coveredNew ||
-      (AlwaysOutputSeeds && seedMap.count(&state)))
+      (AlwaysOutputSeeds && seedMap.count(&state))) {
+    interpreterHandler->incSubsumptionTerminationTest();
     interpreterHandler->processTestCase(state, (message + "\n").str().c_str(),
                                         "early");
+  }
+  terminateState(state);
+}
+void Executor::terminateStateEarly(ExecutionState &state, 
+                                   const Twine &message) {
+  interpreterHandler->incEarlyTermination();
+  if (!OnlyOutputStatesCoveringNew || state.coveredNew ||
+      (AlwaysOutputSeeds && seedMap.count(&state))) {
+    interpreterHandler->incEarlyTerminationTest();
+    interpreterHandler->processTestCase(state, (message + "\n").str().c_str(),
+                                        "early");
+  }
   terminateState(state);
 }
 
 void Executor::terminateStateOnExit(ExecutionState &state) {
+  interpreterHandler->incExitTermination();
   if (!OnlyOutputStatesCoveringNew || state.coveredNew || 
-      (AlwaysOutputSeeds && seedMap.count(&state)))
+      (AlwaysOutputSeeds && seedMap.count(&state))) {
+    interpreterHandler->incExitTerminationTest();
     interpreterHandler->processTestCase(state, 0, 0);
+  }
   terminateState(state);
 }
 
@@ -2841,6 +2860,8 @@ void Executor::terminateStateOnError(ExecutionState &state,
                                      const llvm::Twine &messaget,
                                      const char *suffix,
                                      const llvm::Twine &info) {
+  interpreterHandler->incErrorTermination();
+
   std::string message = messaget.str();
   static std::set< std::pair<Instruction*, std::string> > emittedErrors;
   Instruction * lastInst;
@@ -2871,6 +2892,7 @@ void Executor::terminateStateOnError(ExecutionState &state,
     if (info_str != "")
       msg << "Info: \n" << info_str;
 
+    interpreterHandler->incErrorTerminationTest();
     interpreterHandler->processTestCase(state, msg.str().c_str(), suffix);
   }
     
