@@ -50,6 +50,10 @@ void PathCondition::includeInInterpolant() {
   inInterpolant = true;
 }
 
+bool PathCondition::carInInterpolant() {
+  return inInterpolant;
+}
+
 std::vector< ref<Expr> > PathCondition::packInterpolant() const {
   std::vector< ref<Expr> > res;
   for (const PathCondition *it = this; it != 0; it = it->tail) {
@@ -90,9 +94,10 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
       /// We create path condition needed constraints marking structure
       std::map< ref<Expr>, PathConditionMarker *> markerMap =
 	  state.itreeNode->makeMarkerMap();
-      for (std::vector< ref<Expr> >::iterator it = interpolant.begin();
-	  it != interpolant.end(); it++) {
-	  ref<Expr> query = *it;
+
+      for (std::vector< ref<Expr> >::iterator it0 = interpolant.begin();
+	  it0 != interpolant.end(); it0++) {
+	  ref<Expr> query = *it0;
 	  Solver::Validity result;
 
 	  /// llvm::errs() << "Querying for subsumption check:\n";
@@ -104,9 +109,14 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
 	  if (success && result == Solver::True) {
 	    std::vector< ref<Expr> > unsat_core = solver->getUnsatCore();
 
-	    for (std::vector< ref<Expr> >::iterator it = unsat_core.begin();
-		it != unsat_core.end(); it++) {
-		markerMap[*it]->mayIncludeInInterpolant();
+	    for (std::vector< ref<Expr> >::iterator it1 = unsat_core.begin();
+		it1 != unsat_core.end(); it1++) {
+		PathConditionMarker *prefix = markerMap[*it1];
+		/// We test for nullity here as occasionally Z3 returns unsatisfiability
+		/// core containing strange constraints
+		if (prefix != 0) {
+		    prefix->mayIncludeInInterpolant();
+		}
 	    }
 
 	  } else {
@@ -118,7 +128,12 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
       /// path condition.
       for (std::map< ref<Expr>, PathConditionMarker *>::iterator it = markerMap.begin();
 	  it != markerMap.end(); it++) {
-	  it->second->includeInInterpolant();
+
+	  /// The nullity test here also becomes necessary due to Z3
+	  /// returning strange constraints occasionally.
+	  if (it->second != 0) {
+	      it->second->includeInInterpolant();
+	  }
       }
       markerMap.clear();
       return true;
@@ -190,7 +205,7 @@ void ITree::remove(ITreeNode *node) {
 
     /// As the node is about to be deleted, it must have been completely
     /// traversed, hence the correct time to table the interpolant.
-    if (!node->isSubsumed) {
+    if (!node->isSubsumed && node->introducesMarkedConstraint()) {
       SubsumptionTableEntry entry(node);
       store(entry);
     }
@@ -311,7 +326,9 @@ std::vector< ref<Expr> > ITreeNode::getInterpolant() const {
 }
 
 void ITreeNode::setNodeLocation(unsigned int programPoint) {
-  this->nodeId = programPoint;
+  if (this->nodeId == 0)  {
+    this->nodeId = programPoint;
+  }
 }
 
 void ITreeNode::split(ExecutionState *leftData, ExecutionState *rightData) {
@@ -329,6 +346,16 @@ std::map< ref<Expr>, PathConditionMarker *> ITreeNode::makeMarkerMap() {
   return result;
 }
 
+bool ITreeNode::introducesMarkedConstraint() {
+  if (parent != 0 &&
+      pathCondition != parent->pathCondition &&
+      pathCondition->carInInterpolant()) {
+      return true;
+  }
+  return false;
+}
+
+
 void ITreeNode::dump() const {
   llvm::errs() << "\n------------------------- ITree Node --------------------------------\n";
   this->print(llvm::errs());
@@ -343,7 +370,7 @@ void ITreeNode::print(llvm::raw_ostream &stream, const unsigned int tab_num) con
   std::string tabs_next = tabs + "\t";
 
   stream << tabs << "ITreeNode\n";
-  stream << tabs_next << "programPoint = " << nodeId << "\n";
+  stream << tabs_next << "node Id = " << nodeId << "\n";
   stream << tabs_next << "pathCondition = ";
   if (pathCondition == 0) {
       stream << "NULL";
