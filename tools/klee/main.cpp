@@ -225,6 +225,18 @@ private:
   unsigned m_testIndex;  // number of tests written so far
   unsigned m_pathsExplored; // number of paths explored so far
 
+  unsigned m_subsumptionTermination;     // number of termination by subsumption
+  unsigned m_subsumptionTerminationTest; // number of tests generated from
+                                         // termination by subsumption
+  unsigned m_earlyTermination;     // number of early termination
+  unsigned m_earlyTerminationTest; // number of tests generated from early termination
+  unsigned m_errorTermination;     // number of error termination
+  unsigned m_errorTerminationTest; // number of tests generated from error termination
+  unsigned m_exitTermination;      // number of exit termination
+  unsigned m_exitTerminationTest;  // number of tests generated from exit termination
+  unsigned m_otherTermination;     // number of other termination (strategy, state merging,
+                                   // not in seed, etc.
+
   // used for writing .ktest files
   int m_argc;
   char **m_argv;
@@ -237,6 +249,39 @@ public:
   unsigned getNumTestCases() { return m_testIndex; }
   unsigned getNumPathsExplored() { return m_pathsExplored; }
   void incPathsExplored() { m_pathsExplored++; }
+
+  unsigned getSubsumptionTermination() { return m_subsumptionTermination; }
+  void incSubsumptionTermination() { m_subsumptionTermination++; }
+  unsigned getSubsumptionTerminationTest() { return m_subsumptionTerminationTest; }
+  void incSubsumptionTerminationTest() {
+    if (!NoOutput) {
+      m_subsumptionTerminationTest++;
+    }
+  }
+  unsigned getEarlyTermination() { return m_earlyTermination; }
+  void incEarlyTermination() { m_earlyTermination++; }
+  unsigned getEarlyTerminationTest() { return m_earlyTerminationTest; }
+  void incEarlyTerminationTest() {
+    if (!NoOutput) {
+      m_earlyTerminationTest++;
+    }
+  }
+  unsigned getErrorTermination() { return m_errorTermination; }
+  void incErrorTermination() { m_errorTermination++; }
+  unsigned getErrorTerminationTest() { return m_errorTerminationTest; }
+  void incErrorTerminationTest() {
+    if (!NoOutput) {
+      m_errorTerminationTest++;
+    }
+  }
+  unsigned getExitTermination() { return m_exitTermination; }
+  void incExitTermination() { m_exitTermination++; }
+  unsigned getExitTerminationTest() { return m_exitTerminationTest; }
+  void incExitTerminationTest() {
+    if (!NoOutput) {
+      m_exitTerminationTest++;
+    }
+  }
 
   void setInterpreter(Interpreter *i);
 
@@ -271,6 +316,15 @@ KleeHandler::KleeHandler(int argc, char **argv)
     m_outputDirectory(),
     m_testIndex(0),
     m_pathsExplored(0),
+    m_subsumptionTermination(0),
+    m_subsumptionTerminationTest(0),
+    m_earlyTermination(0),
+    m_earlyTerminationTest(0),
+    m_errorTermination(0),
+    m_errorTerminationTest(0),
+    m_exitTermination(0),
+    m_exitTerminationTest(0),
+    m_otherTermination(0),
     m_argc(argc),
     m_argv(argv) {
 
@@ -1531,9 +1585,25 @@ int main(int argc, char **argv, char **envp) {
   stats << "KLEE: done: total instructions = "
         << instructions << "\n";
   stats << "KLEE: done: completed paths = "
-        << handler->getNumPathsExplored() << "\n";
+        << handler->getNumPathsExplored() << ", among which\n";
+  stats << "KLEE: done:     early-terminating paths (instruction time limit, solver timeout, max-depth reached) = "
+        << handler->getEarlyTermination() << "\n";
+  stats << "KLEE: done:     subsumed paths = "
+        << handler->getSubsumptionTermination() << "\n";
+  stats << "KLEE: done:     error paths = "
+        << handler->getErrorTermination() << "\n";
+  stats << "KLEE: done:     program exit paths = "
+        << handler->getExitTermination() << "\n";
   stats << "KLEE: done: generated tests = "
-        << handler->getNumTestCases() << "\n";
+        << handler->getNumTestCases() << ", among which\n";
+  stats << "KLEE: done:     early-terminating tests (instruction time limit, solver timeout, max-depth reached) = "
+        << handler->getEarlyTerminationTest() << "\n";
+  stats << "KLEE: done:     subsumed tests = "
+        << handler->getSubsumptionTerminationTest() << "\n";
+  stats << "KLEE: done:     error tests = "
+        << handler->getErrorTerminationTest() << "\n";
+  stats << "KLEE: done:     program exit tests = "
+        << handler->getExitTerminationTest() << "\n";
 
   bool useColors = llvm::errs().is_displayed();
   if (useColors)
