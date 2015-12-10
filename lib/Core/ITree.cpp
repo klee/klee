@@ -111,12 +111,7 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
 
 	    for (std::vector< ref<Expr> >::iterator it1 = unsat_core.begin();
 		it1 != unsat_core.end(); it1++) {
-		PathConditionMarker *prefix = markerMap[*it1];
-		/// We test for nullity here as occasionally Z3 returns unsatisfiability
-		/// core containing strange constraints
-		if (prefix != 0) {
-		    prefix->mayIncludeInInterpolant();
-		}
+		markerMap[*it1]->mayIncludeInInterpolant();
 	    }
 
 	  } else {
@@ -128,12 +123,7 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
       /// path condition.
       for (std::map< ref<Expr>, PathConditionMarker *>::iterator it = markerMap.begin();
 	  it != markerMap.end(); it++) {
-
-	  /// The nullity test here also becomes necessary due to Z3
-	  /// returning strange constraints occasionally.
-	  if (it->second != 0) {
-	      it->second->includeInInterpolant();
-	  }
+	  it->second->includeInInterpolant();
       }
       markerMap.clear();
       return true;
