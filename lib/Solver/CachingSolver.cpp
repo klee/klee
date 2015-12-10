@@ -34,7 +34,8 @@ private:
                               bool &negationUsed);
 
   void cacheInsert(const Query& query,
-                   IncompleteSolver::PartialValidity result);
+                   IncompleteSolver::PartialValidity result,
+                   std::vector< ref<Expr> > core);
 
   bool cacheLookup(const Query& query,
                    IncompleteSolver::PartialValidity &result);
@@ -69,13 +70,18 @@ private:
   typedef unordered_map<CacheEntry, 
                         IncompleteSolver::PartialValidity, 
                         CacheEntryHash> cache_map;
-  
+  typedef unordered_map<CacheEntry,
+	                std::vector< ref<Expr> >,
+                        CacheEntryHash> unsat_core_store_map;
+
   Solver *solver;
   cache_map cache;
+  unsat_core_store_map unsat_core_store;
+  std::vector< ref<Expr> > unsat_core_to_return;
 
 public:
   CachingSolver(Solver *s) : solver(s) {}
-  ~CachingSolver() { cache.clear(); delete solver; }
+  ~CachingSolver() { cache.clear(); unsat_core_store.clear(); delete solver; }
 
   bool computeValidity(const Query&, Solver::Validity &result);
   bool computeTruth(const Query&, bool &isValid);
@@ -88,14 +94,19 @@ public:
                             std::vector< std::vector<unsigned char> > &values,
                             bool &hasSolution) {
     ++stats::queryCacheMisses;
-    return solver->impl->computeInitialValues(query, objects, values, 
-                                              hasSolution);
+    unsat_core_to_return.clear();
+    bool res = solver->impl->computeInitialValues(query, objects, values,
+                                                  hasSolution);
+    if (!hasSolution) {
+	unsat_core_to_return = solver->impl->getUnsatCore();
+    }
+    return res;
   }
   SolverRunStatus getOperationStatusCode();
   char *getConstraintLog(const Query&);
   void setCoreSolverTimeout(double timeout);
   std::vector< ref<Expr> > getUnsatCore() {
-    return solver->getUnsatCore();
+    return unsat_core_to_return;
   }
 };
 
@@ -130,6 +141,7 @@ bool CachingSolver::cacheLookup(const Query& query,
     result = (negationUsed ?
               IncompleteSolver::negatePartialValidity(it->second) :
               it->second);
+    unsat_core_to_return = unsat_core_store[ce];
     return true;
   }
   
@@ -138,7 +150,8 @@ bool CachingSolver::cacheLookup(const Query& query,
 
 /// Inserts the given query, result pair into the cache.
 void CachingSolver::cacheInsert(const Query& query,
-                                IncompleteSolver::PartialValidity result) {
+                                IncompleteSolver::PartialValidity result,
+                                std::vector< ref<Expr> > core) {
   bool negationUsed;
   ref<Expr> canonicalQuery = canonicalizeQuery(query.expr, negationUsed);
 
@@ -147,6 +160,7 @@ void CachingSolver::cacheInsert(const Query& query,
     (negationUsed ? IncompleteSolver::negatePartialValidity(result) : result);
   
   cache.insert(std::make_pair(ce, cachedResult));
+  unsat_core_store.insert(std::make_pair(ce, core));
 }
 
 bool CachingSolver::computeValidity(const Query& query,
@@ -173,11 +187,13 @@ bool CachingSolver::computeValidity(const Query& query,
       if (!solver->impl->computeTruth(query, tmp))
         return false;
       if (tmp) {
-        cacheInsert(query, IncompleteSolver::MustBeTrue);
+	unsat_core_to_return = solver->impl->getUnsatCore();
+        cacheInsert(query, IncompleteSolver::MustBeTrue, unsat_core_to_return);
         result = Solver::True;
         return true;
       } else {
-        cacheInsert(query, IncompleteSolver::TrueOrFalse);
+	unsat_core_to_return.clear();
+        cacheInsert(query, IncompleteSolver::TrueOrFalse, unsat_core_to_return);
         result = Solver::Unknown;
         return true;
       }
@@ -187,11 +203,13 @@ bool CachingSolver::computeValidity(const Query& query,
       if (!solver->impl->computeTruth(query.negateExpr(), tmp))
         return false;
       if (tmp) {
-        cacheInsert(query, IncompleteSolver::MustBeFalse);
+	unsat_core_to_return = solver->impl->getUnsatCore();
+        cacheInsert(query, IncompleteSolver::MustBeFalse, unsat_core_to_return);
         result = Solver::False;
         return true;
       } else {
-        cacheInsert(query, IncompleteSolver::TrueOrFalse);
+	unsat_core_to_return.clear();
+        cacheInsert(query, IncompleteSolver::TrueOrFalse, unsat_core_to_return);
         result = Solver::Unknown;
         return true;
       }
@@ -205,16 +223,21 @@ bool CachingSolver::computeValidity(const Query& query,
   if (!solver->impl->computeValidity(query, result))
     return false;
 
+  unsat_core_to_return.clear();
   switch (result) {
   case Solver::True: 
-    cachedResult = IncompleteSolver::MustBeTrue; break;
+    cachedResult = IncompleteSolver::MustBeTrue;
+    unsat_core_to_return = solver->impl->getUnsatCore();
+    break;
   case Solver::False: 
-    cachedResult = IncompleteSolver::MustBeFalse; break;
+    cachedResult = IncompleteSolver::MustBeFalse;
+    unsat_core_to_return = solver->impl->getUnsatCore();
+    break;
   default: 
     cachedResult = IncompleteSolver::TrueOrFalse; break;
   }
   
-  cacheInsert(query, cachedResult);
+  cacheInsert(query, cachedResult, unsat_core_to_return);
   return true;
 }
 
@@ -237,8 +260,10 @@ bool CachingSolver::computeTruth(const Query& query,
   if (!solver->impl->computeTruth(query, isValid))
     return false;
 
+  unsat_core_to_return.clear();
   if (isValid) {
     cachedResult = IncompleteSolver::MustBeTrue;
+    unsat_core_to_return = solver->impl->getUnsatCore();
   } else if (cacheHit) {
     // We know a true assignment exists, and query isn't valid, so
     // must be TrueOrFalse.
@@ -248,7 +273,7 @@ bool CachingSolver::computeTruth(const Query& query,
     cachedResult = IncompleteSolver::MayBeFalse;
   }
   
-  cacheInsert(query, cachedResult);
+  cacheInsert(query, cachedResult, unsat_core_to_return);
   return true;
 }
 

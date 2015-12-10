@@ -85,6 +85,8 @@ namespace klee {
 
     void includeInInterpolant();
 
+    bool carInInterpolant();
+
     std::vector< ref<Expr> > packInterpolant() const;
 
     void dump();
@@ -190,6 +192,8 @@ namespace klee {
     void print(llvm::raw_ostream &stream) const;
 
     std::map< ref<Expr>, PathConditionMarker *> makeMarkerMap();
+
+    bool introducesMarkedConstraint();
 
   private:
     ITreeNode(ITreeNode *_parent, ExecutionState *_data);

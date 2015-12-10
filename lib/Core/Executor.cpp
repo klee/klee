@@ -2623,18 +2623,19 @@ void Executor::run(ExecutionState &initialState) {
   while (!states.empty() && !haltExecution) {
     ExecutionState &state = searcher->selectState();
 
-    /// We synchronize the node id to that of the state
+    /// We synchronize the node id to that of the state. The node id
+    /// is the address of the first instruction in the node.
     state.itreeNode->setNodeLocation(reinterpret_cast<uintptr_t>(state.pc->inst));
     interpTree->setCurrentINode(state.itreeNode);
 
     /// Uncomment the following instructions to show the state
     /// of the interpolation tree and the active node.
 
-    /// llvm::errs() << "Executing new instruction: ";
-    /// state.pc->inst->dump();
-    /// llvm::errs() << "Current state:\n";
-    /// interpTree->dump();
-    /// state.itreeNode->dump();
+///    llvm::errs() << "Executing new instruction: ";
+///    state.pc->inst->dump();
+///    llvm::errs() << "Current state:\n";
+///    interpTree->dump();
+///    state.itreeNode->dump();
 
     if (interpTree->checkCurrentStateSubsumption(solver, state, coreSolverTimeout)) {
 	terminateStateOnSubsumption(state);
