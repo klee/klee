@@ -340,8 +340,18 @@ Executor::Executor(const InterpreterOptions &opts,
                          interpreterHandler->getOutputFilename(SOLVER_QUERIES_SMT2_FILE_NAME),
                          interpreterHandler->getOutputFilename(ALL_QUERIES_PC_FILE_NAME),
                          interpreterHandler->getOutputFilename(SOLVER_QUERIES_PC_FILE_NAME));
-  
+
+  /// We assume that Z3 support means that we use interpolation.
+  /// In such case, we should not simplify the constraint before
+  /// submitting them to the solver.
+  ///
+  /// Perhaps extra options are needed to allow Z3 usage without
+  /// interpolation.
+#ifdef SUPPORT_Z3
+  this->solver = new TimingSolver(solver, false);
+#else
   this->solver = new TimingSolver(solver, EqualitySubstitution);
+#endif
 
   memory = new MemoryManager();
 }

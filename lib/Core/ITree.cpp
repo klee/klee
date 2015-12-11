@@ -71,6 +71,7 @@ void PathCondition::dump() {
 void PathCondition::print(llvm::raw_ostream& stream) {
   stream << "[";
   for (PathCondition *it = this; it != 0; it = it->tail) {
+      it->constraint->print(stream);
       stream << ": " << (it->inInterpolant ? "interpolant constraint" : "non-interpolant constraint");
       if (it->tail != 0) stream << ",";
   }
@@ -118,7 +119,6 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
 	  }
       }
 
-      llvm::errs() << "STATE SUBSUMED: " << (state.itreeNode->getNodeId()) << "\n";
       /// State subsumed, we mark needed constraints on the
       /// path condition.
       for (std::map< ref<Expr>, PathConditionMarker *>::iterator it = markerMap.begin();
