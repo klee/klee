@@ -71,7 +71,6 @@ void PathCondition::dump() {
 void PathCondition::print(llvm::raw_ostream& stream) {
   stream << "[";
   for (PathCondition *it = this; it != 0; it = it->tail) {
-      it->constraint->print(stream);
       stream << ": " << (it->inInterpolant ? "interpolant constraint" : "non-interpolant constraint");
       if (it->tail != 0) stream << ",";
   }
@@ -119,6 +118,7 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
 	  }
       }
 
+      llvm::errs() << "STATE SUBSUMED: " << (state.itreeNode->getNodeId()) << "\n";
       /// State subsumed, we mark needed constraints on the
       /// path condition.
       for (std::map< ref<Expr>, PathConditionMarker *>::iterator it = markerMap.begin();
@@ -213,6 +213,11 @@ void ITree::remove(ITreeNode *node) {
   } while (node && !node->left && !node->right);
 }
 
+std::pair<ITreeNode *, ITreeNode *> ITree::split(ITreeNode *parent, ExecutionState *left, ExecutionState *right) {
+  parent->split(left, right);
+  return std::pair<ITreeNode *, ITreeNode *> (parent->left, parent->right);
+}
+
 void ITree::markPathCondition(std::vector< ref<Expr> > unsat_core) {
   /// Simply return in case the unsatisfiability core is empty
   if (unsat_core.size() == 0)
@@ -304,7 +309,11 @@ ITreeNode::ITreeNode(ITreeNode *_parent,
 }
 
 ITreeNode::~ITreeNode() {
-  delete pathCondition;
+  /// Only delete the path condition if it's not
+  /// also the parent's path condition
+  if (parent != 0 &&
+      pathCondition != parent->pathCondition)
+    delete pathCondition;
 }
 
 unsigned int ITreeNode::getNodeId() {

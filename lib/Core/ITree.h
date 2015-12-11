@@ -158,6 +158,8 @@ namespace klee {
 
     void markPathCondition(std::vector< ref<Expr> > unsat_core);
 
+    std::pair<ITreeNode *, ITreeNode *> split(ITreeNode *parent, ExecutionState *left, ExecutionState *right);
+
     void print(llvm::raw_ostream &stream);
 
     void dump();

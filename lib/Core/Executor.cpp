@@ -650,6 +650,12 @@ void Executor::branch(ExecutionState &state,
         processTree->split(es->ptreeNode, ns, es);
       ns->ptreeNode = res.first;
       es->ptreeNode = res.second;
+
+      es->itreeNode->data = 0;
+      std::pair<ITreeNode *, ITreeNode *> ires =
+	  interpTree->split(es->itreeNode, ns, es);
+      ns->itreeNode = ires.first;
+      es->itreeNode = ires.second;
     }
   }
 
@@ -963,7 +969,10 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     addConstraint(*falseState, Expr::createIsZero(condition));
 
     current.itreeNode->data = 0;
-    current.itreeNode->split(falseState, trueState);
+    std::pair<ITreeNode *, ITreeNode *> ires =
+	interpTree->split(current.itreeNode, falseState, trueState);
+    falseState->itreeNode = ires.first;
+    trueState->itreeNode = ires.second;
 
     // Kinda gross, do we even really still want this option?
     if (MaxDepth && MaxDepth<=trueState->depth) {
@@ -2631,11 +2640,12 @@ void Executor::run(ExecutionState &initialState) {
     /// Uncomment the following instructions to show the state
     /// of the interpolation tree and the active node.
 
-///    llvm::errs() << "Executing new instruction: ";
-///    state.pc->inst->dump();
-///    llvm::errs() << "Current state:\n";
-///    interpTree->dump();
-///    state.itreeNode->dump();
+    /// llvm::errs() << "Executing new instruction: ";
+    /// state.pc->inst->dump();
+    /// llvm::errs() << "Current state:\n";
+    /// processTree->dump();
+    /// interpTree->dump();
+    /// state.itreeNode->dump();
 
     if (interpTree->checkCurrentStateSubsumption(solver, state, coreSolverTimeout)) {
 	terminateStateOnSubsumption(state);
