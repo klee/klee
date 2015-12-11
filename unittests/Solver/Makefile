@@ -9,4 +9,4 @@ LINK_COMPONENTS := support
 
 include $(LLVM_SRC_ROOT)/unittests/Makefile.unittest
 
-LIBS += $(STP_LDFLAGS)
+LIBS += $(STP_LDFLAGS) $(Z3_LDFLAGS)

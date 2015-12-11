@@ -626,6 +626,8 @@ ac_subst_vars='LTLIBOBJS
 LIBOBJS
 METASMT_ROOT
 ENABLE_METASMT
+Z3_LDFLAGS
+Z3_CFLAGS
 STP_LDFLAGS
 STP_CFLAGS
 CXXCPP
@@ -730,6 +732,7 @@ with_uclibc
 enable_posix_runtime
 with_runtime
 with_stp
+with_z3
 with_metasmt
 '
       ac_precious_vars='build_alias
@@ -1381,6 +1384,7 @@ Optional Packages:
   --with-runtime          Select build configuration for runtime libraries
                           (default [Release+Asserts])
   --with-stp              Location of STP installation directory
+  --with-z3               Location of Z3 installation directory
   --with-metasmt          Location of metaSMT installation directory
 
 Some influential environment variables:
@@ -4886,9 +4890,12 @@ if test "${with_stp+set}" = set; then :
 fi
 
 
-old_CPPFLAGS="$CPPFLAGS"
-CPPFLAGS="$CPPFLAGS $STP_CFLAGS"
-ac_fn_cxx_check_header_mongrel "$LINENO" "stp/c_interface.h" "ac_cv_header_stp_c_interface_h" "$ac_includes_default"
+# We worry about STP only when Z3 is undefined
+if test X$with_z3 = X ; then
+
+  old_CPPFLAGS="$CPPFLAGS"
+  CPPFLAGS="$CPPFLAGS $STP_CFLAGS"
+  ac_fn_cxx_check_header_mongrel "$LINENO" "stp/c_interface.h" "ac_cv_header_stp_c_interface_h" "$ac_includes_default"
 if test "x$ac_cv_header_stp_c_interface_h" = xyes; then :
 
 else
@@ -4898,10 +4905,10 @@ else
 fi
 
 
-CPPFLAGS="$old_CPPFLAGS"
+  CPPFLAGS="$old_CPPFLAGS"
 
-STP_NEEDS_MINISAT=0
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for vc_setInterfaceFlags in -lstp" >&5
+  STP_NEEDS_MINISAT=0
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for vc_setInterfaceFlags in -lstp" >&5
 $as_echo_n "checking for vc_setInterfaceFlags in -lstp... " >&6; }
 if ${ac_cv_lib_stp_vc_setInterfaceFlags+:} false; then :
   $as_echo_n "(cached) " >&6
@@ -4952,11 +4959,11 @@ $as_echo "Could not link with libstp" >&6; }
 fi
 
 
-if test "X$STP_NEEDS_MINISAT" != X0 ; then
-  # Need to clear cached result
-  unset ac_cv_lib_stp_vc_setInterfaceFlags
+    if test "X$STP_NEEDS_MINISAT" != X0 ; then
+    # Need to clear cached result
+    unset ac_cv_lib_stp_vc_setInterfaceFlags
 
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for vc_setInterfaceFlags in -lstp" >&5
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for vc_setInterfaceFlags in -lstp" >&5
 $as_echo_n "checking for vc_setInterfaceFlags in -lstp... " >&6; }
 if ${ac_cv_lib_stp_vc_setInterfaceFlags+:} false; then :
   $as_echo_n "(cached) " >&6
@@ -5006,14 +5013,61 @@ else
 fi
 
 
-  STP_LDFLAGS="${STP_LDFLAGS} -lstp -lminisat"
-else
-  STP_LDFLAGS="${STP_LDFLAGS} -lstp"
+    STP_LDFLAGS="${STP_LDFLAGS} -lstp -lminisat"
+  else
+    STP_LDFLAGS="${STP_LDFLAGS} -lstp"
+  fi
+
+
+
+
 fi
 
 
 
+# Check whether --with-z3 was given.
+if test "${with_z3+set}" = set; then :
+  withval=$with_z3;
+    # Check for empty argument
+    if test "X$withval" = X ; then
+      as_fn_error $? "<path> cannot be empty in --with-z3=<path>" "$LINENO" 5
+    fi
+    z3_root=`(cd $withval && pwd) 2> /dev/null`
 
+    #Check for bad path
+    if test "X$z3_root" = X ; then
+      as_fn_error $? "Cannot access path $with_z3 passed to --with-z3" "$LINENO" 5
+    fi
+
+    Z3_CFLAGS="-I$z3_root/include -fexceptions"
+    Z3_LDFLAGS="-L$z3_root/lib"
+
+fi
+
+
+if test X$with_z3 != X ; then
+  old_CPPFLAGS="$CPPFLAGS"
+  CPPFLAGS="$CPPFLAGS $Z3_CFLAGS"
+  ac_fn_cxx_check_header_mongrel "$LINENO" "z3.h" "ac_cv_header_z3_h" "$ac_includes_default"
+if test "x$ac_cv_header_z3_h" = xyes; then :
+
+else
+
+        as_fn_error $? "Unable to use z3.h header" "$LINENO" 5
+
+fi
+
+
+  CPPFLAGS="$old_CPPFLAGS"
+
+  Z3_LDFLAGS="${Z3_LDFLAGS} -lz3"
+
+
+$as_echo "#define SUPPORT_Z3 1" >>confdefs.h
+
+
+
+fi
 
 
 

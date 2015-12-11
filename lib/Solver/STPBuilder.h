@@ -14,6 +14,8 @@
 #include "klee/util/ArrayExprHash.h"
 #include "klee/Config/config.h"
 
+#ifndef SUPPORT_Z3
+
 #include <vector>
 
 #define Expr VCExpr
@@ -126,4 +128,6 @@ public:
 
 }
 
-#endif
+#endif /* SUPPORT_Z3 */
+
+#endif /* __UTIL_STPBUILDER_H__ */

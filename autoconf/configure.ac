@@ -571,37 +571,78 @@ AC_ARG_WITH(stp,
       STP_LDFLAGS="-L$stp_root/lib"
     ])
 
-old_CPPFLAGS="$CPPFLAGS"
-CPPFLAGS="$CPPFLAGS $STP_CFLAGS"
-AC_CHECK_HEADER(stp/c_interface.h,,
+# We worry about STP only when Z3 is undefined
+if test X$with_z3 = X ; then
+
+  old_CPPFLAGS="$CPPFLAGS"
+  CPPFLAGS="$CPPFLAGS $STP_CFLAGS"
+  AC_CHECK_HEADER(stp/c_interface.h,,
     [
         AC_MSG_ERROR([Unable to use stp/c_interface.h header])
     ])
-CPPFLAGS="$old_CPPFLAGS"
+  CPPFLAGS="$old_CPPFLAGS"
 
-STP_NEEDS_MINISAT=0
-AC_CHECK_LIB(stp, vc_setInterfaceFlags,, [
+  STP_NEEDS_MINISAT=0
+  AC_CHECK_LIB(stp, vc_setInterfaceFlags,, [
        STP_NEEDS_MINISAT=1; AC_MSG_RESULT([Could not link with libstp])
-], "$STP_LDFLAGS")
+  ], "$STP_LDFLAGS")
 
-dnl Try linking again with minisat if necessary
-if test "X$STP_NEEDS_MINISAT" != X0 ; then
-  # Need to clear cached result
-  unset ac_cv_lib_stp_vc_setInterfaceFlags
+  dnl Try linking again with minisat if necessary
+  if test "X$STP_NEEDS_MINISAT" != X0 ; then
+    # Need to clear cached result
+    unset ac_cv_lib_stp_vc_setInterfaceFlags
 
-  AC_CHECK_LIB(stp,
+    AC_CHECK_LIB(stp,
 	       vc_setInterfaceFlags,, [
 	       AC_MSG_ERROR([Unable to link with libstp. Check config.log to see what went wrong])
-  ], "$STP_LDFLAGS" "-lminisat" )
+    ], "$STP_LDFLAGS" "-lminisat" )
 
-  STP_LDFLAGS="${STP_LDFLAGS} -lstp -lminisat"
-else
-  STP_LDFLAGS="${STP_LDFLAGS} -lstp"
+    STP_LDFLAGS="${STP_LDFLAGS} -lstp -lminisat"
+  else
+    STP_LDFLAGS="${STP_LDFLAGS} -lstp"
+  fi
+
+  AC_SUBST(STP_CFLAGS)
+  AC_SUBST(STP_LDFLAGS)
+
 fi
 
+dnl **************************************************************************
+dnl Find and install Z3
+dnl **************************************************************************
 
-AC_SUBST(STP_CFLAGS)
-AC_SUBST(STP_LDFLAGS)
+AC_ARG_WITH(z3,
+  AS_HELP_STRING([--with-z3], [Location of Z3 installation directory]), [
+    # Check for empty argument
+    if test "X$withval" = X ; then
+      AC_MSG_ERROR([<path> cannot be empty in --with-z3=<path>])
+    fi
+    z3_root=`(cd $withval && pwd) 2> /dev/null`
+
+    #Check for bad path
+    if test "X$z3_root" = X ; then
+      AC_MSG_ERROR([Cannot access path $with_z3 passed to --with-z3])
+    fi
+
+    Z3_CFLAGS="-I$z3_root/include -fexceptions"
+    Z3_LDFLAGS="-L$z3_root/lib"
+  ])
+
+if test X$with_z3 != X ; then
+  old_CPPFLAGS="$CPPFLAGS"
+  CPPFLAGS="$CPPFLAGS $Z3_CFLAGS"
+  AC_CHECK_HEADER(z3.h,,
+    [
+        AC_MSG_ERROR([Unable to use z3.h header])
+    ])
+  CPPFLAGS="$old_CPPFLAGS"
+
+  Z3_LDFLAGS="${Z3_LDFLAGS} -lz3"
+
+  AC_DEFINE(SUPPORT_Z3, 1, [Supporting Z3 Backend])
+  AC_SUBST(Z3_CFLAGS)
+  AC_SUBST(Z3_LDFLAGS)
+fi
 
 dnl **************************************************************************
 dnl User option to enable metaSMT constraint solvers and to specify the 

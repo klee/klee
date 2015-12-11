@@ -20,7 +20,7 @@ LINK_COMPONENTS += irreader
 endif
 include $(LEVEL)/Makefile.common
 
-LIBS += $(STP_LDFLAGS)
+LIBS += $(STP_LDFLAGS) $(Z3_LDFLAGS)
 
 ifeq ($(ENABLE_METASMT),1)
   include $(METASMT_ROOT)/share/metaSMT/metaSMT.makefile
