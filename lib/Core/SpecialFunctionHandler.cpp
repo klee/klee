@@ -46,7 +46,9 @@ namespace {
   cl::opt<bool>
   SilentKleeAssume("silent-klee-assume",
                    cl::init(false),
-                   cl::desc("Do not treat infeasible assumption as error."));
+                   cl::desc("Silently terminate paths with an infeasible "
+                            "condition given to klee_assume() rather than "
+                            "emitting an error (default=false)"));
 }
 
 
