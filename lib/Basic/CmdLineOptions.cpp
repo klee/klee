@@ -73,7 +73,7 @@ llvm::cl::list<QueryLoggingSolverType> queryLoggingOptions(
     llvm::cl::CommaSeparated
 );
 
-#ifdef SUPPORT_METASMT
+#ifdef ENABLE_METASMT
 
 llvm::cl::opt<klee::MetaSMTBackendType> MetaSMTBackend(
     "metasmt-backend",
@@ -86,16 +86,31 @@ llvm::cl::opt<klee::MetaSMTBackendType> MetaSMTBackend(
         clEnumValEnd),
     llvm::cl::init(METASMT_BACKEND_STP));
 
-#endif /* SUPPORT_METASMT */
+#endif /* ENABLE_METASMT */
 
+// Pick the default core solver based on configuration
+#ifdef ENABLE_STP
+#define STP_IS_DEFAULT_STR " (default)"
+#define METASMT_IS_DEFAULT_STR ""
+#define DEFAULT_CORE_SOLVER STP_SOLVER
+#elif ENABLE_METASMT
+#define STP_IS_DEFAULT_STR ""
+#define METASMT_IS_DEFAULT_STR " (default)"
+#define DEFAULT_CORE_SOLVER METASMT_SOLVER
+#else
+#error "Unsupported solver configuration"
+#endif
 llvm::cl::opt<CoreSolverType> CoreSolverToUse(
     "solver-backend", llvm::cl::desc("Specifiy the core solver backend to use"),
-    llvm::cl::values(clEnumValN(STP_SOLVER, "stp", "stp (default)"),
-                     clEnumValN(METASMT_SOLVER, "metasmt", "metaSMT"),
+    llvm::cl::values(clEnumValN(STP_SOLVER, "stp", "stp" STP_IS_DEFAULT_STR),
+                     clEnumValN(METASMT_SOLVER, "metasmt", "metaSMT" METASMT_IS_DEFAULT_STR),
                      clEnumValN(DUMMY_SOLVER, "dummy", "Dummy solver"),
                      clEnumValEnd),
-    llvm::cl::init(STP_SOLVER));
+    llvm::cl::init(DEFAULT_CORE_SOLVER));
 }
+#undef STP_IS_DEFAULT_STR
+#undef METASMT_IS_DEFAULT_STR
+#undef DEFAULT_CORE_SOLVER
 
 
 

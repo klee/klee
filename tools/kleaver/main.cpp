@@ -36,7 +36,7 @@ using namespace llvm;
 using namespace klee;
 using namespace klee::expr;
 
-#ifdef SUPPORT_METASMT
+#ifdef ENABLE_METASMT
 
 #include <metaSMT/DirectSolver_Context.hpp>
 #include <metaSMT/backend/Z3_Backend.hpp>
@@ -53,7 +53,7 @@ using namespace klee::expr;
 using namespace metaSMT;
 using namespace metaSMT::solver;
 
-#endif /* SUPPORT_METASMT */
+#endif /* ENABLE_METASMT */
 
 
 

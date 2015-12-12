@@ -6,8 +6,8 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-
-#ifdef SUPPORT_METASMT
+#include "klee/Config/config.h"
+#ifdef ENABLE_METASMT
 
 #include "MetaSMTBuilder.h"
 #include "klee/Constraints.h"
@@ -463,4 +463,4 @@ void MetaSMTSolver<SolverContext>::setCoreSolverTimeout(double timeout) {
   impl->setCoreSolverTimeout(timeout);
 }
 }
-#endif // SUPPORT_METASMT
+#endif // ENABLE_METASMT

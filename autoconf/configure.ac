@@ -553,58 +553,70 @@ dnl **************************************************************************
 dnl Find an install of STP
 dnl **************************************************************************
 
+ENABLE_STP=0
 AC_ARG_WITH(stp,
   AS_HELP_STRING([--with-stp],
     [Location of STP installation directory]),[
       #Check for empty argument
       if test "X$withval" = X ; then
-	      AC_MSG_ERROR([<path> cannot be empty in --with-stp=<path>])
+        AC_MSG_ERROR([<path> cannot be empty in --with-stp=<path>])
       fi
       stp_root=`(cd $withval && pwd) 2> /dev/null`
 
       #Check for bad path
       if test "X$stp_root" = X ; then
-	    AC_MSG_ERROR([Cannot access path $with_stp passed to --with-stp])
+        AC_MSG_ERROR([Cannot access path $with_stp passed to --with-stp])
       fi
 
       STP_CFLAGS="-I$stp_root/include"
       STP_LDFLAGS="-L$stp_root/lib"
+      ENABLE_STP=1
     ])
 
-old_CPPFLAGS="$CPPFLAGS"
-CPPFLAGS="$CPPFLAGS $STP_CFLAGS"
-AC_CHECK_HEADER(stp/c_interface.h,,
-    [
-        AC_MSG_ERROR([Unable to use stp/c_interface.h header])
-    ])
-CPPFLAGS="$old_CPPFLAGS"
+if test "X$ENABLE_STP" != X0; then
+    old_CPPFLAGS="$CPPFLAGS"
+    CPPFLAGS="$CPPFLAGS $STP_CFLAGS"
+    AC_CHECK_HEADER(stp/c_interface.h,,
+        [
+            AC_MSG_ERROR([Unable to use stp/c_interface.h header])
+        ])
 
-STP_NEEDS_MINISAT=0
-AC_CHECK_LIB(stp, vc_setInterfaceFlags,, [
-       STP_NEEDS_MINISAT=1; AC_MSG_RESULT([Could not link with libstp])
-], "$STP_LDFLAGS")
+    dnl we use [:] as a no-op so that AC_CHECK_LIB doesn't append -lstp
+    dnl automatically which would break subsequent uses of AC_CHECK_LIB()
+    STP_NEEDS_MINISAT=0
+    AC_CHECK_LIB(stp, vc_setInterfaceFlags, [:], [
+           STP_NEEDS_MINISAT=1; AC_MSG_RESULT([Could not link with libstp])
+    ], "$STP_LDFLAGS")
+    CPPFLAGS="$old_CPPFLAGS"
 
-dnl Try linking again with minisat if necessary
-if test "X$STP_NEEDS_MINISAT" != X0 ; then
-  # Need to clear cached result
-  unset ac_cv_lib_stp_vc_setInterfaceFlags
+    dnl Try linking again with minisat if necessary
+    if test "X$STP_NEEDS_MINISAT" != X0 ; then
+      # Need to clear cached result
+      unset ac_cv_lib_stp_vc_setInterfaceFlags
 
-  AC_CHECK_LIB(stp,
-	       vc_setInterfaceFlags,, [
-	       AC_MSG_ERROR([Unable to link with libstp. Check config.log to see what went wrong])
-  ], "$STP_LDFLAGS" "-lminisat" )
+      AC_CHECK_LIB(stp,
+               vc_setInterfaceFlags,[:], [
+               AC_MSG_ERROR([Unable to link with libstp. Check config.log to see what went wrong])
+      ], "$STP_LDFLAGS" "-lminisat" )
 
-  STP_LDFLAGS="${STP_LDFLAGS} -lstp -lminisat"
+      STP_LDFLAGS="${STP_LDFLAGS} -lstp -lminisat"
+    else
+      STP_LDFLAGS="${STP_LDFLAGS} -lstp"
+    fi
+    AC_MSG_NOTICE([Using STP solver backend])
+    CPPFLAGS="$old_CPPFLAGS"
+    AC_DEFINE(ENABLE_STP, [1], [Using STP Solver backend])
 else
-  STP_LDFLAGS="${STP_LDFLAGS} -lstp"
+    AC_MSG_NOTICE([Not using STP solver backend])
 fi
 
-
+AC_SUBST(ENABLE_STP)
 AC_SUBST(STP_CFLAGS)
 AC_SUBST(STP_LDFLAGS)
 
+
 dnl **************************************************************************
-dnl User option to enable metaSMT constraint solvers and to specify the 
+dnl User option to enable metaSMT constraint solvers and to specify the
 dnl the location of the metaSMT root directory
 dnl **************************************************************************
 
@@ -613,13 +625,13 @@ AC_ARG_WITH(metasmt,
     [Location of metaSMT installation directory]),,)
 
 if test X$with_metasmt = X ; then
-  AC_SUBST(ENABLE_METASMT,[[0]])
+  ENABLE_METASMT=0
 else
   metasmt_root=`cd $with_metasmt 2> /dev/null; pwd`
 
   dnl AC_LANG(C++)
   old_CPPFLAGS="$CPPFLAGS"
-  old_LDFLAGS="$LDFLAGS"  
+  old_LDFLAGS="$LDFLAGS"
   CPPFLAGS="$CPPFLAGS -I$metasmt_root/include"
   LDFLAGS="$LDFLAGS -L$metasmt_root/lib -lmetaSMT"
   AC_CHECK_HEADERS([$metasmt_root/include/metaSMT/DirectSolver_Context.hpp $metasmt_root/include/metaSMT/frontend/QF_BV.hpp],, [
@@ -627,14 +639,24 @@ else
   ])
   AC_LINK_IFELSE(
       [AC_LANG_PROGRAM([#include $metasmt_root/include/metaSMT/frontend/QF_BV.hpp], [metaSMT::logic::QF_BV::new_bitvector(3)])],
-      [],[AC_MSG_CHECKING([for new_bitvector() in -lmetaSMT])],[AC_MSG_ERROR([Unable to link with libmetaSMT])])  
+      [],[AC_MSG_CHECKING([for new_bitvector() in -lmetaSMT])],[AC_MSG_ERROR([Unable to link with libmetaSMT])])
   CPPFLAGS="$old_CPPFLAGS"
   LDFLAGS="$old_LDFLAGS"
 
-  AC_DEFINE(SUPPORT_METASMT, 1, [Supporting metaSMT API])
-  AC_SUBST(ENABLE_METASMT,[[1]])
+  AC_DEFINE(ENABLE_METASMT, 1, [Enable metaSMT API])
   AC_SUBST(METASMT_ROOT,$metasmt_root)
   AC_SUBST(REQUIRES_RTTI,[[1]])
+  ENABLE_METASMT=1
+fi
+
+AC_SUBST(ENABLE_METASMT)
+
+dnl **************************************************************************
+dnl Check at least one solver backend is enabled
+dnl **************************************************************************
+
+if test "X$ENABLE_STP$ENABLE_METASMT" == X00 ; then
+    AC_MSG_ERROR([At least one solver backend must be enabled, try using --with-stp or --with-metasmt])
 fi
 
 

@@ -61,16 +61,17 @@ endif
 # This is filename that KLEE will look for when trying to load klee-uclibc
 KLEE_UCLIBC_BCA_NAME="klee-uclibc.bca"
 
-CXX.Flags += $(STP_CFLAGS)
+ifneq ($(ENABLE_STP),0)
+  CXX.Flags += $(STP_CFLAGS)
+  CXX.Flags += -DEXT_HASH_MAP
+endif
+
 CXX.Flags += -DKLEE_DIR=\"$(PROJ_OBJ_ROOT)\" -DKLEE_INSTALL_BIN_DIR=\"$(PROJ_bindir)\"
 CXX.Flags += -DKLEE_INSTALL_RUNTIME_DIR=\"$(BYTECODE_DESTINATION)\"
 
 ifeq ($(ENABLE_UCLIBC),1)
 	CXX.Flags += -DKLEE_UCLIBC_BCA_NAME=\"$(KLEE_UCLIBC_BCA_NAME)\"
 endif
-
-# For STP.
-CXX.Flags += -DEXT_HASH_MAP
 
 # For metaSMT
 ifeq ($(ENABLE_METASMT),1)

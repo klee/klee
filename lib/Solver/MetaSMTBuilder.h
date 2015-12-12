@@ -15,7 +15,7 @@
 #include "klee/util/ExprHashMap.h"
 #include "ConstantDivision.h"
 
-#ifdef SUPPORT_METASMT
+#ifdef ENABLE_METASMT
 
 #include "llvm/Support/CommandLine.h"
 
@@ -1177,6 +1177,6 @@ typename SolverContext::result_type MetaSMTBuilder<SolverContext>::constructActu
 
 }  /* end of namespace klee */
 
-#endif /* SUPPORT_METASMT */
+#endif /* ENABLE_METASMT */
 
 #endif /* METASMTBUILDER_H_ */

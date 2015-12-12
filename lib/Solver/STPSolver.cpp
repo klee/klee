@@ -6,7 +6,8 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-
+#include "klee/Config/config.h"
+#ifdef ENABLE_STP
 #include "STPBuilder.h"
 #include "klee/Solver.h"
 #include "klee/SolverImpl.h"
@@ -382,3 +383,4 @@ void STPSolver::setCoreSolverTimeout(double timeout) {
   impl->setCoreSolverTimeout(timeout);
 }
 }
+#endif // ENABLE_STP

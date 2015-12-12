@@ -203,6 +203,7 @@ namespace klee {
     virtual void setCoreSolverTimeout(double timeout);
   };
 
+#ifdef ENABLE_STP
   /// STPSolver - A complete solver based on STP.
   class STPSolver : public Solver {
   public:
@@ -222,9 +223,10 @@ namespace klee {
     /// is off.
     virtual void setCoreSolverTimeout(double timeout);
   };
+#endif // ENABLE_STP
 
   
-#ifdef SUPPORT_METASMT
+#ifdef ENABLE_METASMT
   
   template<typename SolverContext>
   class MetaSMTSolver : public Solver {
@@ -236,7 +238,7 @@ namespace klee {
     virtual void setCoreSolverTimeout(double timeout);
 };
 
-#endif /* SUPPORT_METASMT */
+#endif /* ENABLE_METASMT */
 
   /* *** */
 

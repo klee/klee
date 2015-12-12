@@ -624,10 +624,11 @@ ac_includes_default="\
 
 ac_subst_vars='LTLIBOBJS
 LIBOBJS
-METASMT_ROOT
 ENABLE_METASMT
+METASMT_ROOT
 STP_LDFLAGS
 STP_CFLAGS
+ENABLE_STP
 CXXCPP
 HAVE_SELINUX
 EGREP
@@ -4865,43 +4866,45 @@ fi
 
 
 
+ENABLE_STP=0
 
 # Check whether --with-stp was given.
 if test "${with_stp+set}" = set; then :
   withval=$with_stp;
       #Check for empty argument
       if test "X$withval" = X ; then
-	      as_fn_error $? "<path> cannot be empty in --with-stp=<path>" "$LINENO" 5
+        as_fn_error $? "<path> cannot be empty in --with-stp=<path>" "$LINENO" 5
       fi
       stp_root=`(cd $withval && pwd) 2> /dev/null`
 
       #Check for bad path
       if test "X$stp_root" = X ; then
-	    as_fn_error $? "Cannot access path $with_stp passed to --with-stp" "$LINENO" 5
+        as_fn_error $? "Cannot access path $with_stp passed to --with-stp" "$LINENO" 5
       fi
 
       STP_CFLAGS="-I$stp_root/include"
       STP_LDFLAGS="-L$stp_root/lib"
+      ENABLE_STP=1
 
 fi
 
 
-old_CPPFLAGS="$CPPFLAGS"
-CPPFLAGS="$CPPFLAGS $STP_CFLAGS"
-ac_fn_cxx_check_header_mongrel "$LINENO" "stp/c_interface.h" "ac_cv_header_stp_c_interface_h" "$ac_includes_default"
+if test "X$ENABLE_STP" != X0; then
+    old_CPPFLAGS="$CPPFLAGS"
+    CPPFLAGS="$CPPFLAGS $STP_CFLAGS"
+    ac_fn_cxx_check_header_mongrel "$LINENO" "stp/c_interface.h" "ac_cv_header_stp_c_interface_h" "$ac_includes_default"
 if test "x$ac_cv_header_stp_c_interface_h" = xyes; then :
 
 else
 
-        as_fn_error $? "Unable to use stp/c_interface.h header" "$LINENO" 5
+            as_fn_error $? "Unable to use stp/c_interface.h header" "$LINENO" 5
 
 fi
 
 
-CPPFLAGS="$old_CPPFLAGS"
 
-STP_NEEDS_MINISAT=0
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for vc_setInterfaceFlags in -lstp" >&5
+            STP_NEEDS_MINISAT=0
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for vc_setInterfaceFlags in -lstp" >&5
 $as_echo_n "checking for vc_setInterfaceFlags in -lstp... " >&6; }
 if ${ac_cv_lib_stp_vc_setInterfaceFlags+:} false; then :
   $as_echo_n "(cached) " >&6
@@ -4938,25 +4941,21 @@ fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_stp_vc_setInterfaceFlags" >&5
 $as_echo "$ac_cv_lib_stp_vc_setInterfaceFlags" >&6; }
 if test "x$ac_cv_lib_stp_vc_setInterfaceFlags" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_LIBSTP 1
-_ACEOF
-
-  LIBS="-lstp $LIBS"
-
+  :
 else
 
-       STP_NEEDS_MINISAT=1; { $as_echo "$as_me:${as_lineno-$LINENO}: result: Could not link with libstp" >&5
+           STP_NEEDS_MINISAT=1; { $as_echo "$as_me:${as_lineno-$LINENO}: result: Could not link with libstp" >&5
 $as_echo "Could not link with libstp" >&6; }
 
 fi
 
+    CPPFLAGS="$old_CPPFLAGS"
 
-if test "X$STP_NEEDS_MINISAT" != X0 ; then
-  # Need to clear cached result
-  unset ac_cv_lib_stp_vc_setInterfaceFlags
+        if test "X$STP_NEEDS_MINISAT" != X0 ; then
+      # Need to clear cached result
+      unset ac_cv_lib_stp_vc_setInterfaceFlags
 
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for vc_setInterfaceFlags in -lstp" >&5
+      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for vc_setInterfaceFlags in -lstp" >&5
 $as_echo_n "checking for vc_setInterfaceFlags in -lstp... " >&6; }
 if ${ac_cv_lib_stp_vc_setInterfaceFlags+:} false; then :
   $as_echo_n "(cached) " >&6
@@ -4993,23 +4992,29 @@ fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_stp_vc_setInterfaceFlags" >&5
 $as_echo "$ac_cv_lib_stp_vc_setInterfaceFlags" >&6; }
 if test "x$ac_cv_lib_stp_vc_setInterfaceFlags" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_LIBSTP 1
-_ACEOF
-
-  LIBS="-lstp $LIBS"
-
+  :
 else
 
-	       as_fn_error $? "Unable to link with libstp. Check config.log to see what went wrong" "$LINENO" 5
+               as_fn_error $? "Unable to link with libstp. Check config.log to see what went wrong" "$LINENO" 5
 
 fi
 
 
-  STP_LDFLAGS="${STP_LDFLAGS} -lstp -lminisat"
+      STP_LDFLAGS="${STP_LDFLAGS} -lstp -lminisat"
+    else
+      STP_LDFLAGS="${STP_LDFLAGS} -lstp"
+    fi
+    { $as_echo "$as_me:${as_lineno-$LINENO}: Using STP solver backend" >&5
+$as_echo "$as_me: Using STP solver backend" >&6;}
+    CPPFLAGS="$old_CPPFLAGS"
+
+$as_echo "#define ENABLE_STP 1" >>confdefs.h
+
 else
-  STP_LDFLAGS="${STP_LDFLAGS} -lstp"
+    { $as_echo "$as_me:${as_lineno-$LINENO}: Not using STP solver backend" >&5
+$as_echo "$as_me: Not using STP solver backend" >&6;}
 fi
+
 
 
 
@@ -5025,7 +5030,6 @@ fi
 
 if test X$with_metasmt = X ; then
   ENABLE_METASMT=0
-
 else
   metasmt_root=`cd $with_metasmt 2> /dev/null; pwd`
 
@@ -5073,14 +5077,20 @@ rm -f core conftest.err conftest.$ac_objext \
   LDFLAGS="$old_LDFLAGS"
 
 
-$as_echo "#define SUPPORT_METASMT 1" >>confdefs.h
-
-  ENABLE_METASMT=1
+$as_echo "#define ENABLE_METASMT 1" >>confdefs.h
 
   METASMT_ROOT=$metasmt_root
 
   REQUIRES_RTTI=1
 
+  ENABLE_METASMT=1
+fi
+
+
+
+
+if test "X$ENABLE_STP$ENABLE_METASMT" == X00 ; then
+    as_fn_error $? "At least one solver backend must be enabled, try using --with-stp or --with-metasmt" "$LINENO" 5
 fi
 
 

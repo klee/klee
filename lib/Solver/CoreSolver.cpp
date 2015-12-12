@@ -13,7 +13,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <string>
 
-#ifdef SUPPORT_METASMT
+#ifdef ENABLE_METASMT
 
 #include <metaSMT/frontend/Array.hpp>
 #include <metaSMT/backend/Z3_Backend.hpp>
@@ -61,17 +61,22 @@ static Solver *handleMetaSMT() {
   llvm::errs() << "Starting MetaSMTSolver(" << backend << ") ...\n";
   return coreSolver;
 }
-#endif /* SUPPORT_METASMT */
+#endif /* ENABLE_METASMT */
 
 namespace klee {
 
 Solver *createCoreSolver(CoreSolverType cst) {
   switch (cst) {
   case STP_SOLVER:
+#ifdef ENABLE_STP
     llvm::errs() << "Using STP solver backend\n";
     return new STPSolver(UseForkedCoreSolver, CoreSolverOptimizeDivides);
+#else
+    llvm::errs() << "Not compiled with STP support\n";
+    return NULL;
+#endif
   case METASMT_SOLVER:
-#ifdef SUPPORT_METASMT
+#ifdef ENABLE_METASMT
     llvm::errs() << "Using MetaSMT solver backend\n";
     return handleMetaSMT();
 #else

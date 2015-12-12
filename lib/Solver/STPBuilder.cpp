@@ -6,7 +6,8 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-
+#include "klee/Config/config.h"
+#ifdef ENABLE_STP
 #include "STPBuilder.h"
 
 #include "klee/Expr.h"
@@ -902,5 +903,5 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
     return vc_trueExpr(vc);
   }
 }
-
+#endif // ENABLE_STP
 

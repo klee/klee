@@ -47,7 +47,7 @@ extern llvm::cl::list<QueryLoggingSolverType> queryLoggingOptions;
 enum CoreSolverType { STP_SOLVER, METASMT_SOLVER, DUMMY_SOLVER };
 extern llvm::cl::opt<CoreSolverType> CoreSolverToUse;
 
-#ifdef SUPPORT_METASMT
+#ifdef ENABLE_METASMT
 
 enum MetaSMTBackendType
 {
@@ -58,7 +58,7 @@ enum MetaSMTBackendType
 
 extern llvm::cl::opt<klee::MetaSMTBackendType> MetaSMTBackend;
 
-#endif /* SUPPORT_METASMT */
+#endif /* ENABLE_METASMT */
 
 //A bit of ugliness so we can use cl::list<> like cl::bits<>, see queryLoggingOptions
 template <typename T>
