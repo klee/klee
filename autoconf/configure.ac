@@ -548,6 +548,8 @@ AC_CHECK_HEADERS([malloc/malloc.h])
 AC_CHECK_FUNCS([malloc_zone_statistics])
 AC_SEARCH_LIBS(mallinfo,malloc,
                AC_DEFINE([HAVE_MALLINFO],[1],[Define if mallinfo() is available on this platform.]))
+AC_SEARCH_LIBS(malloc_info,malloc,
+               AC_DEFINE([HAVE_MALLOC_INFO],[1],[Define if malloc_info() is available on this platform.]))
 
 dnl **************************************************************************
 dnl Find an install of STP
