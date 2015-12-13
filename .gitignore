@@ -19,3 +19,8 @@ site.exp
 
 # Site file for llvm-lit
 lit.site.cfg
+
+# Autoconf files
+autoconf/aclocal.m4
+autoconf/autom4te.cache/
+autom4te.cache/
