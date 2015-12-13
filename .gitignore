@@ -12,6 +12,9 @@ cscope.*
 *.out
 *.status
 
+# In source build files
+docs/doxygen.cfg
+include/klee/Config/CompileTimeInfo.h
 *.config
 
 config.h
