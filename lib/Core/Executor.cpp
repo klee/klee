@@ -2798,14 +2798,13 @@ void Executor::terminateState(ExecutionState &state) {
 
 void Executor::terminateStateOnSubsumption(ExecutionState &state) {
   /// Implementationwise, basically the same as terminateStateEarly method,
-  /// but with different statistics functions called.
-  Twine message = "subsumed state";
+  /// but with different statistics functions called, and empty error
+  /// message as this is not an error.
   interpreterHandler->incSubsumptionTermination();
   if (!OnlyOutputStatesCoveringNew || state.coveredNew ||
       (AlwaysOutputSeeds && seedMap.count(&state))) {
     interpreterHandler->incSubsumptionTerminationTest();
-    interpreterHandler->processTestCase(state, (message + "\n").str().c_str(),
-                                        "early");
+    interpreterHandler->processTestCase(state, 0, "early");
   }
   terminateState(state);
 }
