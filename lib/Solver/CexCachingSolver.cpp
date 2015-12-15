@@ -72,7 +72,6 @@ class CexCachingSolver : public SolverImpl {
 
   bool lookupAssignment(const Query& query, Assignment *&result) {
     KeyType key;
-    llvm::errs() << "CexCachingSolver::lookupAssignment/2: Calling lookupAssignment/3\n";
     return lookupAssignment(query, key, result);
   }
 
@@ -93,11 +92,6 @@ public:
   char *getConstraintLog(const Query& query);
   void setCoreSolverTimeout(double timeout);
   std::vector< ref<Expr> > getUnsatCore() {
-    llvm::errs() << "CexCachingSolver::getUnsatCore\n";
-    for (std::vector< ref<Expr> >::iterator it = unsat_core.begin(); it != unsat_core.end(); it++) {
-	it->get()->dump();
-    }
-    llvm::errs() << "Ok\n";
     return unsat_core;
   }
 };
@@ -139,12 +133,7 @@ bool CexCachingSolver::searchForAssignment(KeyType &key, Assignment *&result) {
 
   if (lookup) {
     result = (*lookup)->getAssignment();
-    llvm::errs() << "Storing unsat core 1\n";
     unsat_core = (*lookup)->getCore();
-    for (std::vector< ref<Expr> >::iterator core_it = unsat_core.begin(); core_it != unsat_core.end(); core_it++) {
-	  core_it->get()->dump();
-    }
-    llvm::errs() << "Ok\n";
     return true;
   }
 
@@ -162,12 +151,7 @@ bool CexCachingSolver::searchForAssignment(KeyType &key, Assignment *&result) {
     // If either lookup succeeded, then we have a cached solution.
     if (lookup) {
       result = (*lookup)->getAssignment();
-      llvm::errs() << "Storing unsat core 2\n";
       unsat_core = (*lookup)->getCore();
-      for (std::vector< ref<Expr> >::iterator core_it = unsat_core.begin(); core_it != unsat_core.end(); core_it++) {
-	  core_it->get()->dump();
-      }
-      llvm::errs() << "Ok\n";
       return true;
     }
 
@@ -178,12 +162,7 @@ bool CexCachingSolver::searchForAssignment(KeyType &key, Assignment *&result) {
       Assignment *a = *it;
       if (a->satisfies(key.begin(), key.end())) {
         result = a;
-        llvm::errs() << "Clearing unsat core 3\n";
         unsat_core.clear();
-        for (std::vector< ref<Expr> >::iterator core_it = unsat_core.begin(); core_it != unsat_core.end(); core_it++) {
-  	  core_it->get()->dump();
-        }
-        llvm::errs() << "Ok\n";
         return true;
       }
     }
@@ -206,26 +185,12 @@ bool CexCachingSolver::searchForAssignment(KeyType &key, Assignment *&result) {
 
     // If either lookup succeeded, then we have a cached solution.
     if (lookup) {
-      llvm::errs() << "KEY ELEMENTS:\n";
-      for (KeyType::iterator it0 = key.begin(); it0 != key.end(); it0++) {
-	  it0->get()->dump();
-      }
-      llvm::errs() << "Ok\n";
       result = (*lookup)->getAssignment();
-      if (result == 0) {
-        llvm::errs() << "NULL RESULT\n";
-      }
-      llvm::errs() << "Storing unsat core 4\n";
       unsat_core = (*lookup)->getCore();
-      for (std::vector< ref<Expr> >::iterator core_it = unsat_core.begin(); core_it != unsat_core.end(); core_it++) {
-	  core_it->get()->dump();
-      }
-      llvm::errs() << "Ok\n";
       return true;
     }
   }
   
-  llvm::errs() << "CexCachingSolver::searchForAssignment returning false\n";
   return false;
 }
 
@@ -250,13 +215,10 @@ bool CexCachingSolver::lookupAssignment(const Query &query,
       return true;
     }
   } else {
-    llvm::errs() << "   CexCachingSolver::lookupAssignment: Adding into key: ";
-    neg->dump();
     key.insert(neg);
     keyHasAddedConstraint = true;
   }
 
-  llvm::errs() << "Calling CexCachingSolver::searchForAssignment\n";
   bool found = searchForAssignment(key, result);
   if (found)
     ++stats::queryCexCacheHits;
@@ -272,29 +234,23 @@ bool CexCachingSolver::lookupAssignment(const Query &query,
 }
 
 bool CexCachingSolver::getAssignment(const Query& query, Assignment *&result) {
-  llvm::errs() << "CexCachingSolver::getAssignment\n";
   KeyType key;
 
-  llvm::errs() << "CexCachingSolver::getAssignment: Calling lookupAssignment\n";
   if (lookupAssignment(query, key, result))
     return true;
 
-  llvm::errs() << "CexCachingSolver::getAssignment: lookupAssignment did not find an assignment\n";
   std::vector<const Array*> objects;
   findSymbolicObjects(key.begin(), key.end(), objects);
 
   std::vector< std::vector<unsigned char> > values;
   bool hasSolution;
-  llvm::errs() << "CexCachingSolver::getAssignment: calling solver->impl->computeInitialValues\n";
   if (!solver->impl->computeInitialValues(query, objects, values, 
                                           hasSolution))
     return false;
-  llvm::errs() << "CexCachingSolver::getAssignment: call to solver->impl->computeInitialValues succeeded\n";
     
   AssignmentCacheWrapper *bindingWrapper;
   Assignment *binding;
   if (hasSolution) {
-      llvm::errs() << "CexCachingSolver::getAssignment: solution found\n";
     binding = new Assignment(objects, values);
 
     // Memoize the result.
@@ -310,7 +266,6 @@ bool CexCachingSolver::getAssignment(const Query& query, Assignment *&result) {
 
     bindingWrapper = new AssignmentCacheWrapper(binding);
   } else {
-    llvm::errs() << "CexCachingSolver::getAssignment: no solution found\n";
     unsat_core = solver->impl->getUnsatCore();
     binding = (Assignment *) 0;
     bindingWrapper = new AssignmentCacheWrapper(unsat_core);
@@ -334,20 +289,12 @@ CexCachingSolver::~CexCachingSolver() {
 
 bool CexCachingSolver::computeValidity(const Query& query,
                                        Solver::Validity &result) {
-  llvm::errs() << "CexCachingSolver::computeValidity\n";
   TimerStatIncrementer t(stats::cexCacheTime);
   Assignment *a;
-
-  llvm::errs() << "CexCachingSolver::computeValidity: CONSTRAINTS IN QUERY\n";
-  for (ConstraintManager::constraint_iterator it0 = query.constraints.begin(); it0 != query.constraints.end(); it0++) {
-      it0->get()->dump();
-  }
-  llvm::errs() << "Ok\n";
 
   /// Given query of the form antecedent -> consequent, here we try to
   /// decide if antecedent was satisfiable by attempting to get an
   /// assignment from the validity proof of antecedent -> false.
-  llvm::errs() << "CexCachingSolver::computeValidity: Calling getAssignment 1\n";
   if (!getAssignment(query.withFalse(), a))
     return false;
 
@@ -367,7 +314,6 @@ bool CexCachingSolver::computeValidity(const Query& query,
     /// antecedent -> consequent itself, and when this was proven invalid,
     /// gets the solution to "antecedent and not consequent", i.e.,
     /// the counterexample, in a.
-    llvm::errs() << "CexCachingSolver::computeValidity: Calling getAssignment 2\n";
     if (!getAssignment(query, a))
       return false;                  /// Return false in case of solver error
 
@@ -379,7 +325,6 @@ bool CexCachingSolver::computeValidity(const Query& query,
     /// It is possible that the query is false under any interpretation. Here
     /// we try to prove antecedent -> not consequent given the original
     /// query antecedent -> consequent.
-    llvm::errs() << "CexCachingSolver::computeValidity: Calling getAssignment 3\n";
     if (!getAssignment(query.negateExpr(), a))
       return false;
 
@@ -394,7 +339,6 @@ bool CexCachingSolver::computeValidity(const Query& query,
 
 bool CexCachingSolver::computeTruth(const Query& query,
                                     bool &isValid) {
-  llvm::errs() << "CexCachingSolver::computeTruth\n";
   TimerStatIncrementer t(stats::cexCacheTime);
 
   // There is a small amount of redundancy here. We only need to know
@@ -412,7 +356,6 @@ bool CexCachingSolver::computeTruth(const Query& query,
   }
 
   Assignment *a;
-  llvm::errs() << "CexCachingSolver::computeTruth: Calling getAssignment\n";
   if (!getAssignment(query, a))
     return false;
 
@@ -423,11 +366,9 @@ bool CexCachingSolver::computeTruth(const Query& query,
 
 bool CexCachingSolver::computeValue(const Query& query,
                                     ref<Expr> &result) {
-  llvm::errs() << "CexCachingSolver::computeValue\n";
   TimerStatIncrementer t(stats::cexCacheTime);
 
   Assignment *a;
-  llvm::errs() << "CexCahingSolver::computeValue: Calling getAssignment\n";
   if (!getAssignment(query.withFalse(), a))
     return false;
   assert(a && "computeValue() must have assignment");
@@ -444,10 +385,8 @@ CexCachingSolver::computeInitialValues(const Query& query,
                                        std::vector< std::vector<unsigned char> >
                                          &values,
                                        bool &hasSolution) {
-  llvm::errs() << "CexCachingSolver::computeInitialValues\n";
   TimerStatIncrementer t(stats::cexCacheTime);
   Assignment *a;
-  llvm::errs() << "CexCachingSolver::computeInitialValues: Calling CexCachingSolver::getAssignment\n";
   if (!getAssignment(query, a))
     return false;
   hasSolution = !!a;
