@@ -219,11 +219,9 @@ namespace {
   NamedSeedMatching("named-seed-matching",
                     cl::desc("Use names to match symbolic objects to inputs."));
 
-#ifdef SUPPORT_Z3
   cl::opt<bool>
   NoInterpolation("no-interpolation",
                   cl::desc("Disable interpolation for search space reduction"));
-#endif
 
   cl::opt<double>
   MaxStaticForkPct("max-static-fork-pct", cl::init(1.));
