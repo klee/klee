@@ -219,6 +219,12 @@ namespace {
   NamedSeedMatching("named-seed-matching",
                     cl::desc("Use names to match symbolic objects to inputs."));
 
+#ifdef SUPPORT_Z3
+  cl::opt<bool>
+  NoInterpolation("no-interpolation",
+                  cl::desc("Disable interpolation for search space reduction"));
+#endif
+
   cl::opt<double>
   MaxStaticForkPct("max-static-fork-pct", cl::init(1.));
   cl::opt<double>
@@ -341,14 +347,11 @@ Executor::Executor(const InterpreterOptions &opts,
                          interpreterHandler->getOutputFilename(ALL_QUERIES_PC_FILE_NAME),
                          interpreterHandler->getOutputFilename(SOLVER_QUERIES_PC_FILE_NAME));
 
-  /// We assume that Z3 support means that we use interpolation.
-  /// In such case, we should not simplify the constraint before
-  /// submitting them to the solver.
-  ///
-  /// Perhaps extra options are needed to allow Z3 usage without
-  /// interpolation.
 #ifdef SUPPORT_Z3
-  this->solver = new TimingSolver(solver, false);
+  /// In case interpolation is enabled with Z3 solver,
+  /// we should not simplify the constraints before
+  /// submitting them to the solver.
+  this->solver = new TimingSolver(solver, NoInterpolation? EqualitySubstitution : false);
 #else
   this->solver = new TimingSolver(solver, EqualitySubstitution);
 #endif
@@ -661,11 +664,15 @@ void Executor::branch(ExecutionState &state,
       ns->ptreeNode = res.first;
       es->ptreeNode = res.second;
 
-      es->itreeNode->data = 0;
-      std::pair<ITreeNode *, ITreeNode *> ires =
+#ifdef SUPPORT_Z3
+      if (!NoInterpolation) {
+        es->itreeNode->data = 0;
+        std::pair<ITreeNode *, ITreeNode *> ires =
 	  interpTree->split(es->itreeNode, ns, es);
-      ns->itreeNode = ires.first;
-      es->itreeNode = ires.second;
+        ns->itreeNode = ires.first;
+        es->itreeNode = ires.second;
+      }
+#endif
     }
   }
 
@@ -891,10 +898,14 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       }
     }
 
-    /// Validity proof succeeded of a query: antecedent -> consequent.
-    /// We then extract the unsatisfiability core of antecedent and not
-    /// consequent as the Craig interpolant.
-    interpTree->markPathCondition(solver->getUnsatCore());
+#ifdef SUPPORT_Z3
+    if (!NoInterpolation) {
+      /// Validity proof succeeded of a query: antecedent -> consequent.
+      /// We then extract the unsatisfiability core of antecedent and not
+      /// consequent as the Craig interpolant.
+      interpTree->markPathCondition(solver->getUnsatCore());
+    }
+#endif
 
     return StatePair(&current, 0);
   } else if (res==Solver::False) {
@@ -904,10 +915,14 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       }
     }
 
-    /// Falsity proof succeeded of a query: antecedent -> consequent,
-    /// which means that antecedent -> not(consequent) is valid. In this
-    /// case also we extract the unsat core of the proof
-    interpTree->markPathCondition(solver->getUnsatCore());
+#ifdef SUPPORT_Z3
+    if (!NoInterpolation) {
+      /// Falsity proof succeeded of a query: antecedent -> consequent,
+      /// which means that antecedent -> not(consequent) is valid. In this
+      /// case also we extract the unsat core of the proof
+      interpTree->markPathCondition(solver->getUnsatCore());
+    }
+#endif
 
     return StatePair(0, &current);
   } else {
@@ -978,11 +993,15 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     addConstraint(*trueState, condition);
     addConstraint(*falseState, Expr::createIsZero(condition));
 
-    current.itreeNode->data = 0;
-    std::pair<ITreeNode *, ITreeNode *> ires =
-	interpTree->split(current.itreeNode, falseState, trueState);
-    falseState->itreeNode = ires.first;
-    trueState->itreeNode = ires.second;
+#ifdef SUPPORT_Z3
+    if (!NoInterpolation) {
+      current.itreeNode->data = 0;
+      std::pair<ITreeNode *, ITreeNode *> ires =
+	  interpTree->split(current.itreeNode, falseState, trueState);
+      falseState->itreeNode = ires.first;
+      trueState->itreeNode = ires.second;
+    }
+#endif
 
     // Kinda gross, do we even really still want this option?
     if (MaxDepth && MaxDepth<=trueState->depth) {
@@ -2493,7 +2512,11 @@ void Executor::updateStates(ExecutionState *current) {
     if (it3 != seedMap.end())
       seedMap.erase(it3);
     processTree->remove(es->ptreeNode);
-    interpTree->remove(es->itreeNode);
+#ifdef SUPPORT_Z3
+    if (!NoInterpolation) {
+      interpTree->remove(es->itreeNode);
+    }
+#endif
     delete es;
   }
   removedStates.clear();
@@ -2642,24 +2665,30 @@ void Executor::run(ExecutionState &initialState) {
   while (!states.empty() && !haltExecution) {
     ExecutionState &state = searcher->selectState();
 
-    /// We synchronize the node id to that of the state. The node id
-    /// is the address of the first instruction in the node.
-    state.itreeNode->setNodeLocation(reinterpret_cast<uintptr_t>(state.pc->inst));
-    interpTree->setCurrentINode(state.itreeNode);
+#ifdef SUPPORT_Z3
+    if (!NoInterpolation) {
+      /// We synchronize the node id to that of the state. The node id
+      /// is the address of the first instruction in the node.
+      state.itreeNode->setNodeLocation(reinterpret_cast<uintptr_t>(state.pc->inst));
+      interpTree->setCurrentINode(state.itreeNode);
 
-    /// Uncomment the following instructions to show the state
-    /// of the interpolation tree and the active node.
+      /// Uncomment the following instructions to show the state
+      /// of the interpolation tree and the active node.
 
-    /// llvm::errs() << "Executing new instruction: ";
-    /// state.pc->inst->dump();
-    /// llvm::errs() << "Current state:\n";
-    /// processTree->dump();
-    /// interpTree->dump();
-    /// state.itreeNode->dump();
+      /// llvm::errs() << "Executing new instruction: ";
+      /// state.pc->inst->dump();
+      /// llvm::errs() << "Current state:\n";
+      /// processTree->dump();
+      /// interpTree->dump();
+      /// state.itreeNode->dump();
+    }
 
-    if (interpTree->checkCurrentStateSubsumption(solver, state, coreSolverTimeout)) {
+    if (!NoInterpolation &&
+	interpTree->checkCurrentStateSubsumption(solver, state, coreSolverTimeout)) {
 	terminateStateOnSubsumption(state);
-    } else {
+    } else
+#endif
+      {
 	KInstruction *ki = state.pc;
 	stepInstruction(state);
 
@@ -2699,7 +2728,7 @@ void Executor::run(ExecutionState &initialState) {
 		}
 	    }
 	}
-    }
+      }
     updateStates(&state);
   }
 
@@ -2791,12 +2820,19 @@ void Executor::terminateState(ExecutionState &state) {
       seedMap.erase(it3);
     addedStates.erase(it);
     processTree->remove(state.ptreeNode);
-    interpTree->remove(state.itreeNode);
+#ifdef SUPPORT_Z3
+    if (!NoInterpolation) {
+	interpTree->remove(state.itreeNode);
+    }
+#endif
     delete &state;
   }
 }
 
 void Executor::terminateStateOnSubsumption(ExecutionState &state) {
+#ifdef SUPPORT_Z3
+  assert (!NoInterpolation);
+#endif
   /// Implementationwise, basically the same as terminateStateEarly method,
   /// but with different statistics functions called, and empty error
   /// message as this is not an error.
@@ -3522,16 +3558,24 @@ void Executor::runFunctionAsMain(Function *f,
   processTree = new PTree(state);
   state->ptreeNode = processTree->root;
 
-  interpTree = new ITree(state);//added by Felicia
-  state->itreeNode = interpTree->root;
-  interpTree->setCurrentINode(interpTree->root);
+#ifdef SUPPORT_Z3
+  if (!NoInterpolation) {
+    interpTree = new ITree(state);//added by Felicia
+    state->itreeNode = interpTree->root;
+    interpTree->setCurrentINode(interpTree->root);
+  }
+#endif
 
   run(*state);
   delete processTree;
   processTree = 0;
 
-  delete interpTree;
-  interpTree = 0;
+#ifdef SUPPORT_Z3
+  if (!NoInterpolation) {
+    delete interpTree;
+    interpTree = 0;
+  }
+#endif
 
   // hack to clear memory objects
   delete memory;
