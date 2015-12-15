@@ -94,7 +94,7 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
       /// We create path condition needed constraints marking structure
       std::map< ref<Expr>, PathConditionMarker *> markerMap =
 	  state.itreeNode->makeMarkerMap();
-
+      llvm::errs() << "DONE MAKE MARKER MAP\n";
       for (std::vector< ref<Expr> >::iterator it0 = interpolant.begin();
 	  it0 != interpolant.end(); it0++) {
 	  ref<Expr> query = *it0;
@@ -104,6 +104,7 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
 	  /// ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
 
 	  solver->setTimeout(timeout);
+	  llvm::errs() << "CALLING SOLVER\n";
 	  bool success = solver->evaluate(state, query, result);
 	  solver->setTimeout(0);
 	  if (success && result == Solver::True) {
@@ -111,6 +112,9 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
 
 	    for (std::vector< ref<Expr> >::iterator it1 = unsat_core.begin();
 		it1 != unsat_core.end(); it1++) {
+		if (markerMap[*it1] == 0) {
+		    llvm::errs() << "NULL\n";
+		}
 		markerMap[*it1]->mayIncludeInInterpolant();
 	    }
 
@@ -330,10 +334,13 @@ void ITreeNode::split(ExecutionState *leftData, ExecutionState *rightData) {
 
 std::map< ref<Expr>, PathConditionMarker *> ITreeNode::makeMarkerMap() {
   std::map< ref<Expr>, PathConditionMarker *> result;
+  llvm::errs() << "PATH CONDITION:\n";
   for (PathCondition *it = pathCondition; it != 0; it = it->cdr()) {
       result.insert( std::pair< ref<Expr>, PathConditionMarker *>
 	(it->car(), new PathConditionMarker(it)) );
+      it->car()->dump();
   }
+  llvm::errs() << "Ok\n";
   return result;
 }
 

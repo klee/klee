@@ -1010,6 +1010,7 @@ Z3SolverImpl::computeInitialValues(const Query &query,
                                     std::vector< std::vector<unsigned char> >
                                       &values,
                                     bool &hasSolution) {
+  llvm::errs() << "Z3SolverImpl::computeInitialValues\n";
   Z3_solver the_solver = Z3_mk_simple_solver(builder->ctx);
   Z3_solver_inc_ref(builder->ctx, the_solver);
 
@@ -1048,6 +1049,11 @@ Z3SolverImpl::computeInitialValues(const Query &query,
   if (runStatusCode == SolverImpl::SOLVER_RUN_STATUS_SUCCESS_UNSOLVABLE){
       unsat_core.clear();
       unsat_core = getUnsatCoreVector(query, builder, the_solver);
+      llvm::errs() << "Z3SolverImpl::computeInitialValues: stored core\n";
+      for (std::vector< ref<Expr> >::iterator core_it = unsat_core.begin(); core_it != unsat_core.end(); core_it++) {
+	  core_it->get()->dump();
+      }
+      llvm::errs() << "Ok\n";
   }
   success = true;
 
@@ -1106,6 +1112,7 @@ SolverImpl::SolverRunStatus Z3SolverImpl::runAndGetCex(Z3Builder *builder, Z3_so
 std::vector< ref<Expr> > getUnsatCoreVector(const Query &query, const Z3Builder *builder, const Z3_solver solver) {
   std::vector< ref<Expr> > local_unsat_core;
   Z3_ast_vector r = Z3_solver_get_unsat_core(builder->ctx, solver);
+  llvm::errs() << "Z3 unsat core vector size is " << Z3_ast_vector_size(builder->ctx, r) << "\n";
   for(unsigned int i=0; i <  Z3_ast_vector_size(builder->ctx,r); i++){
       Z3_ast temp = Z3_ast_vector_get(builder->ctx, r,i);
       size_t constraint_index = 1;
