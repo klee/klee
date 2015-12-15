@@ -60,9 +60,10 @@ class CexCachingSolver : public SolverImpl {
 
   Solver *solver;
   
-  MapOfSets<ref<Expr>, Assignment*> cache;
+  MapOfSets<ref<Expr>, AssignmentCacheWrapper*> cache;
   // memo table
   assignmentsTable_ty assignmentsTable;
+  std::vector< ref<Expr> > unsat_core;
 
   bool searchForAssignment(KeyType &key, 
                            Assignment *&result);
@@ -91,18 +92,22 @@ public:
   char *getConstraintLog(const Query& query);
   void setCoreSolverTimeout(double timeout);
   std::vector< ref<Expr> > getUnsatCore() {
-	  return solver->getUnsatCore();
+    return unsat_core;
   }
 };
 
 ///
 
 struct NullAssignment {
-  bool operator()(Assignment *a) const { return !a; }
+  bool operator()(AssignmentCacheWrapper *a) const {
+    return !(a->getAssignment());
+  }
 };
 
 struct NonNullAssignment {
-  bool operator()(Assignment *a) const { return a!=0; }
+  bool operator()(AssignmentCacheWrapper *a) const {
+    return (a->getAssignment())!=0;
+  }
 };
 
 struct NullOrSatisfyingAssignment {
@@ -110,8 +115,9 @@ struct NullOrSatisfyingAssignment {
   
   NullOrSatisfyingAssignment(KeyType &_key) : key(_key) {}
 
-  bool operator()(Assignment *a) const { 
-    return !a || a->satisfies(key.begin(), key.end()); 
+  bool operator()(AssignmentCacheWrapper *a) const {
+    return !(a->getAssignment()) ||
+	a->getAssignment()->satisfies(key.begin(), key.end());
   }
 };
 
@@ -123,16 +129,18 @@ struct NullOrSatisfyingAssignment {
 /// unsatisfiable query).
 /// \return - True if a cached result was found.
 bool CexCachingSolver::searchForAssignment(KeyType &key, Assignment *&result) {
-  Assignment * const *lookup = cache.lookup(key);
+  AssignmentCacheWrapper * const *lookup = cache.lookup(key);
+
   if (lookup) {
-    result = *lookup;
+    result = (*lookup)->getAssignment();
+    unsat_core = (*lookup)->getCore();
     return true;
   }
 
   if (CexCacheTryAll) {
     // Look for a satisfying assignment for a superset, which is trivially an
     // assignment for any subset.
-    Assignment **lookup = 0;
+    AssignmentCacheWrapper **lookup = 0;
     if (CexCacheSuperSet)
       lookup = cache.findSuperset(key, NonNullAssignment());
 
@@ -142,7 +150,8 @@ bool CexCachingSolver::searchForAssignment(KeyType &key, Assignment *&result) {
 
     // If either lookup succeeded, then we have a cached solution.
     if (lookup) {
-      result = *lookup;
+      result = (*lookup)->getAssignment();
+      unsat_core = (*lookup)->getCore();
       return true;
     }
 
@@ -153,6 +162,7 @@ bool CexCachingSolver::searchForAssignment(KeyType &key, Assignment *&result) {
       Assignment *a = *it;
       if (a->satisfies(key.begin(), key.end())) {
         result = a;
+        unsat_core.clear();
         return true;
       }
     }
@@ -161,7 +171,7 @@ bool CexCachingSolver::searchForAssignment(KeyType &key, Assignment *&result) {
 
     // Look for a satisfying assignment for a superset, which is trivially an
     // assignment for any subset.
-    Assignment **lookup = 0;
+    AssignmentCacheWrapper **lookup = 0;
     if (CexCacheSuperSet)
       lookup = cache.findSuperset(key, NonNullAssignment());
 
@@ -175,7 +185,8 @@ bool CexCachingSolver::searchForAssignment(KeyType &key, Assignment *&result) {
 
     // If either lookup succeeded, then we have a cached solution.
     if (lookup) {
-      result = *lookup;
+      result = (*lookup)->getAssignment();
+      unsat_core = (*lookup)->getCore();
       return true;
     }
   }
@@ -196,6 +207,7 @@ bool CexCachingSolver::lookupAssignment(const Query &query,
                                         Assignment *&result) {
   key = KeyType(query.constraints.begin(), query.constraints.end());
   ref<Expr> neg = Expr::createIsZero(query.expr);
+  bool keyHasAddedConstraint = false;
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(neg)) {
     if (CE->isFalse()) {
       result = (Assignment*) 0;
@@ -204,12 +216,19 @@ bool CexCachingSolver::lookupAssignment(const Query &query,
     }
   } else {
     key.insert(neg);
+    keyHasAddedConstraint = true;
   }
 
   bool found = searchForAssignment(key, result);
   if (found)
     ++stats::queryCexCacheHits;
   else ++stats::queryCexCacheMisses;
+
+  if (keyHasAddedConstraint && !unsat_core.empty()) {
+      /// Here we remove the added component (neg)
+      /// from the unsatisfiability core.
+      unsat_core.erase(std::remove(unsat_core.begin(), unsat_core.end(), neg), unsat_core.end());
+  }
     
   return found;
 }
@@ -229,6 +248,7 @@ bool CexCachingSolver::getAssignment(const Query& query, Assignment *&result) {
                                           hasSolution))
     return false;
     
+  AssignmentCacheWrapper *bindingWrapper;
   Assignment *binding;
   if (hasSolution) {
     binding = new Assignment(objects, values);
@@ -243,12 +263,16 @@ bool CexCachingSolver::getAssignment(const Query& query, Assignment *&result) {
     
     if (DebugCexCacheCheckBinding)
       assert(binding->satisfies(key.begin(), key.end()));
+
+    bindingWrapper = new AssignmentCacheWrapper(binding);
   } else {
-    binding = (Assignment*) 0;
+    unsat_core = solver->impl->getUnsatCore();
+    binding = (Assignment *) 0;
+    bindingWrapper = new AssignmentCacheWrapper(unsat_core);
   }
   
   result = binding;
-  cache.insert(key, binding);
+  cache.insert(key, bindingWrapper);
 
   return true;
 }

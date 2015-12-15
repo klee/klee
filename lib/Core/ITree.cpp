@@ -94,7 +94,6 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
       /// We create path condition needed constraints marking structure
       std::map< ref<Expr>, PathConditionMarker *> markerMap =
 	  state.itreeNode->makeMarkerMap();
-
       for (std::vector< ref<Expr> >::iterator it0 = interpolant.begin();
 	  it0 != interpolant.end(); it0++) {
 	  ref<Expr> query = *it0;
@@ -213,6 +212,11 @@ void ITree::remove(ITreeNode *node) {
   } while (node && !node->left && !node->right);
 }
 
+std::pair<ITreeNode *, ITreeNode *> ITree::split(ITreeNode *parent, ExecutionState *left, ExecutionState *right) {
+  parent->split(left, right);
+  return std::pair<ITreeNode *, ITreeNode *> (parent->left, parent->right);
+}
+
 void ITree::markPathCondition(std::vector< ref<Expr> > unsat_core) {
   /// Simply return in case the unsatisfiability core is empty
   if (unsat_core.size() == 0)
@@ -235,14 +239,6 @@ void ITree::markPathCondition(std::vector< ref<Expr> > unsat_core) {
 	  if (pc == 0) break;
       }
   }
-}
-
-void ITree::recordBlock(Instruction *inst) {
-  blockTable.add(inst);
-}
-
-void ITree::dumpBlock() {
-  blockTable.dump();
 }
 
 void ITree::printNode(llvm::raw_ostream& stream, ITreeNode *n, std::string edges) {
@@ -297,14 +293,30 @@ ITreeNode::ITreeNode(ITreeNode *_parent,
       ref<Expr> lastConstraint = _data->constraints.back();
       if (pathCondition == 0) {
 	  pathCondition = new PathCondition(lastConstraint);
-      } else if (pathCondition->car().compare(lastConstraint) != 0) {
-	  pathCondition = new PathCondition(lastConstraint, pathCondition);
+      } else {
+	  /// FIXME: Would be good to have something better than
+	  /// quadratic complexity.
+	  std::vector< ref<Expr> > constraints = _data->constraints.getConstraints();
+	  for (PathCondition *it = pathCondition; it != 0; it = it->cdr()) {
+	      constraints.erase(std::remove(constraints.begin(), constraints.end(), it->car()), constraints.end());
+	  }
+
+	  for (std::vector< ref<Expr> >::iterator it = constraints.begin();
+	      it != constraints.end(); it++) {
+	      pathCondition = new PathCondition((*it), pathCondition);
+	  }
       }
   }
 }
 
 ITreeNode::~ITreeNode() {
-  delete pathCondition;
+  /// Only delete the path condition if it's not
+  /// also the parent's path condition
+  if (parent != 0) {
+      for (PathCondition *it = pathCondition; it != parent->pathCondition; it = it->cdr()) {
+      delete it;
+    }
+  }
 }
 
 unsigned int ITreeNode::getNodeId() {
