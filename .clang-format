@@ -1,4 +1,5 @@
 ---
 Language: Cpp
 BasedOnStyle:  LLVM
+Standard: Cpp03
 ...
