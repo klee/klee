@@ -27,6 +27,7 @@ namespace klee {
 class BitArray;
 class MemoryManager;
 class Solver;
+class ArrayCache;
 
 class MemoryObject {
   friend class STPBuilder;
@@ -234,6 +235,7 @@ private:
   void setKnownSymbolic(unsigned offset, Expr *value);
 
   void print();
+  ArrayCache *getArrayCache() const;
 };
   
 } // End klee namespace

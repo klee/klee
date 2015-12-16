@@ -16,6 +16,7 @@
 #include "klee/ExprBuilder.h"
 #include "klee/Solver.h"
 #include "klee/util/ExprPPrinter.h"
+#include "klee/util/ArrayCache.h"
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -109,6 +110,7 @@ namespace {
     const std::string Filename;
     const MemoryBuffer *TheMemoryBuffer;
     ExprBuilder *Builder;
+    ArrayCache TheArrayCache;
 
     Lexer TheLexer;
     unsigned MaxErrors;
@@ -521,10 +523,10 @@ DeclResult ParserImpl::ParseArrayDecl() {
   const Identifier *Label = GetOrCreateIdentifier(Name);
   const Array *Root;
   if (!Values.empty())
-    Root = Array::CreateArray(Label->Name, Size.get(),
-			      &Values[0], &Values[0] + Values.size());
+    Root = TheArrayCache.CreateArray(Label->Name, Size.get(), &Values[0],
+                                     &Values[0] + Values.size());
   else
-    Root = Array::CreateArray(Label->Name, Size.get());
+    Root = TheArrayCache.CreateArray(Label->Name, Size.get());
   ArrayDecl *AD = new ArrayDecl(Label, Size.get(), 
                                 DomainType.get(), RangeType.get(), Root);
 
@@ -1306,7 +1308,9 @@ VersionResult ParserImpl::ParseVersionSpecifier() {
   VersionResult Res = ParseVersion();
   // Define update list to avoid use-of-undef errors.
   if (!Res.isValid()) {
-    Res = VersionResult(true, UpdateList(Array::CreateArray("", 0), NULL));
+    // FIXME: I'm not sure if this is right. Do we need a unique array here?
+    Res =
+        VersionResult(true, UpdateList(TheArrayCache.CreateArray("", 0), NULL));
   }
   
   if (Label)
