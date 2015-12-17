@@ -12,7 +12,6 @@ leak:lib/Expr/Parser.cpp
 
 # These are bad, these definitely need fixing
 leak:klee::Array::CreateArray
-leak:klee::UpdateList::extend
 leak:klee::ConstantExpr::alloc
 leak:klee::ConcatExpr::alloc
 leak:klee::ReadExpr::alloc
