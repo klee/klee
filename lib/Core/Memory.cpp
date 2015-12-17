@@ -529,7 +529,10 @@ void ObjectState::write(unsigned offset, ref<Expr> value) {
   // Check for writes of constant values.
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(value)) {
     Expr::Width w = CE->getWidth();
-    if (w <= 64) {
+    //assuming width can't be 0 so I can miss half of power of two check
+    assert(w > 0);
+    //also checks that w is a power of two
+    if (w <= 64 && !(w & (w - 1))) {
       uint64_t val = CE->getZExtValue();
       switch (w) {
       default: assert(0 && "Invalid write size!");
