@@ -715,6 +715,8 @@ public:
 
   int compare(const UpdateList &b) const;
   unsigned hash() const;
+private:
+  void tryFreeNodes();
 };
 
 /// Class representing a one byte read from an array. 
