@@ -89,7 +89,20 @@ namespace klee {
   }
 
   void PointsToFrame::alloc_local(const MemCell& cell, const Location& location) {
-    points_to[cell].push_back(location);
+    llvm::errs() << "FRAME LOCAL ALLOCATION\n";
+    cell.dump();
+    location.dump();
+    vector<Location> x = points_to[cell];
+    if (x.size() == 0) {
+	llvm::errs() << "EMPTY\n";
+    }
+    x.push_back(location);
+    points_to[cell] = x;
+    vector<Location> y = points_to[cell];
+    if (y.size() == 0) {
+	llvm::errs() << "EMPTY\n";
+    }
+
   }
 
   void PointsToFrame::address_of_to_local(const MemCell& target, const MemCell& source) {
@@ -117,8 +130,13 @@ namespace klee {
 
   void PointsToFrame::print(llvm::raw_ostream& stream) const {
     unsigned i, j;
-    stream << "Frame[" << function->getName() << ":";
+    stream << "Frame[" << (function == 0? "MAIN" : function->getName()) << ":";
     i = 0;
+    vector<MemCell> v;
+    for (map< MemCell, vector<Location> >::const_iterator it0 = points_to.begin();
+	it0 != points_to.end(); it0++) {
+	v.push_back(it0->first);
+    }
     for (map< MemCell, vector<Location> >::const_iterator it0 = points_to.begin();
 	it0 != points_to.end(); it0++) {
       it0->first.print(stream);
@@ -131,7 +149,7 @@ namespace klee {
 	}
       }
       stream << "]";
-      if (i++ < points_to.size() - 1) {
+      if (i++ < v.size() - 1) {
 	  stream << ",";
       }
     }
@@ -244,9 +262,7 @@ namespace klee {
     i = 0;
     for (vector<PointsToFrame>::const_iterator it0 = points_to_stack.begin(); it0 != points_to_stack.end(); it0++) {
       it0->print(stream);
-      if (i++ < points_to_stack.size() - 1) {
-	stream << ",";
-      }
+      stream << "\n";
     }
     stream << "]\n";
   }

@@ -2058,7 +2058,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     // Memory instructions...
   case Instruction::Alloca: {
     /// We allocate pointer analysis object
-    pointsToState->alloc_local(i->getOperand(0));
+    pointsToState->alloc_local(i);
+    pointsToState->dump();
 
     AllocaInst *ai = cast<AllocaInst>(i);
     unsigned elementSize = 
