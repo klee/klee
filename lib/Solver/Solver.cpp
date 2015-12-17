@@ -117,8 +117,9 @@ const char* SolverImpl::getOperationStatusString(SolverRunStatus statusCode)
 }
 
 std::vector< ref<Expr> > SolverImpl::getUnsatCore() {
-	std::vector< ref<Expr> > local_unsat_core;
-	return local_unsat_core;
+  // By default, we return an empty core
+  std::vector< ref<Expr> > local_unsat_core;
+  return local_unsat_core;
 }
 
 const char *Solver::validity_to_str(Validity v) {
@@ -869,7 +870,6 @@ SolverImpl::SolverRunStatus STPSolverImpl::getOperationStatusCode() {
 
 #ifdef SUPPORT_Z3
 
-
 /// getUnsatCoreVector - Declare the routine to extract the unsatisfiability core vector
 ///
 /// \return - A ref<Expr> vector of unsatisfiability core: empty if there was no core.
@@ -1065,7 +1065,6 @@ SolverImpl::SolverRunStatus Z3SolverImpl::runAndGetCex(Z3Builder *builder, Z3_so
                                                        const std::vector<const Array*> &objects,
                                                        std::vector< std::vector<unsigned char> > &values,
                                                        bool &hasSolution) {
-
   Z3_solver_assert(builder->ctx, the_solver, Z3_mk_not(builder->ctx, q));
 
   switch (Z3_solver_check(builder->ctx, the_solver)) {

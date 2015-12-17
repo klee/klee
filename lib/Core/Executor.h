@@ -15,6 +15,7 @@
 #ifndef KLEE_EXECUTOR_H
 #define KLEE_EXECUTOR_H
 
+#include "PointsTo.h"
 #include "klee/ExecutionState.h"
 #include "klee/Interpreter.h"
 #include "klee/Internal/Module/Cell.h"
@@ -27,6 +28,16 @@
 #include <string>
 #include <map>
 #include <set>
+
+#define log_addConstraint(STATE, EXPR) { \
+  ref<Expr> tmp = (EXPR); \
+  llvm::errs() << "addConstraint " << __FUNCTION__ << ":" << __LINE__ << " " << tmp << "\nCause: "; \
+  ((STATE).prevPC)->inst->dump(); \
+  addConstraint((STATE), tmp); \
+  }
+
+#define log_prevPC(STATE) { \
+  }
 
 struct KTest;
 
@@ -103,6 +114,8 @@ public:
 
 private:
   class TimerInfo;
+
+  PointsToState *pointsToState;
 
   KModule *kmodule;
   InterpreterHandler *interpreterHandler;

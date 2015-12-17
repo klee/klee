@@ -112,7 +112,7 @@ namespace klee {
     ///
     /// \return Vector of ref<Expr>
     virtual std::vector< ref<Expr> > getUnsatCore();
-};
+  };
 
 }
 

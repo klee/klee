@@ -273,10 +273,10 @@ namespace klee {
   RNG theRNG;
 }
 
-
 Executor::Executor(const InterpreterOptions &opts,
                    InterpreterHandler *ih) 
   : Interpreter(opts),
+    pointsToState(new PointsToState()),
     kmodule(0),
     interpreterHandler(ih),
     searcher(0),
@@ -722,8 +722,9 @@ void Executor::branch(ExecutionState &state,
   }
 
   for (unsigned i=0; i<N; ++i)
-    if (result[i])
-      addConstraint(*result[i], conditions[i]);
+    if (result[i]) {
+	log_addConstraint(*result[i], conditions[i]);
+    }
 }
 
 ref<Expr> Executor::makeComparison(ref<Expr> exprWithKind, ref<Expr> leftValue, const ref<Expr>& rightValue) {
@@ -782,7 +783,8 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       bool success = solver->getValue(current, condition, value);
       assert(success && "FIXME: Unhandled solver failure");
       (void) success;
-      addConstraint(current, EqExpr::create(value, condition));
+      ref<Expr> tmp = EqExpr::create(value, condition);
+      log_addConstraint(current, tmp);
       condition = value;
     }
   }
@@ -797,6 +799,14 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
   solver->setTimeout(timeout);
   bool success = solver->evaluate(current, condition, res);
   solver->setTimeout(0);
+
+  std::vector< ref<Expr> > unsat_core;
+  if (res == Solver::False) {
+      /// We collect the core in case of unsatisfiability
+      unsat_core = solver->getUnsatCore();
+      unsat_core.push_back(condition);
+  }
+
   if (!success) {
     current.pc = current.prevPC;
     terminateStateEarly(current, "Query timed out (fork).");
@@ -817,10 +827,10 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
         // add constraints
         if(branch) {
           res = Solver::True;
-          addConstraint(current, condition);
+          log_addConstraint(current, condition);
         } else  {
           res = Solver::False;
-          addConstraint(current, Expr::createIsZero(condition));
+          log_addConstraint(current, Expr::createIsZero(condition));
         }
       }
     } else if (res==Solver::Unknown) {
@@ -842,10 +852,10 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
 
         TimerStatIncrementer timer(stats::forkTime);
         if (theRNG.getBool()) {
-          addConstraint(current, condition);
+          log_addConstraint(current, condition);
           res = Solver::True;        
         } else {
-          addConstraint(current, Expr::createIsZero(condition));
+          log_addConstraint(current, Expr::createIsZero(condition));
           res = Solver::False;
         }
       }
@@ -878,7 +888,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       assert(trueSeed || falseSeed);
       
       res = trueSeed ? Solver::True : Solver::False;
-      addConstraint(current, trueSeed ? condition : Expr::createIsZero(condition));
+      log_addConstraint(current, trueSeed ? condition : Expr::createIsZero(condition));
     }
   }
 
@@ -890,6 +900,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
   // hint to just use the single constraint instead of all the binary
   // search ones. If that makes sense.
   if (res==Solver::True) {
+
     if (!isInternal) {
       if (pathWriter) {
         current.pathOS << "1";
@@ -988,8 +999,8 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       }
     }
 
-    addConstraint(*trueState, condition);
-    addConstraint(*falseState, Expr::createIsZero(condition));
+    log_addConstraint(*trueState, condition);
+    log_addConstraint(*falseState, Expr::createIsZero(condition));
 
 #ifdef SUPPORT_Z3
     if (!NoInterpolation) {
@@ -1190,7 +1201,7 @@ Executor::toConstant(ExecutionState &state,
   else
     klee_warning_once(reason, "%s", os.str().c_str());
 
-  addConstraint(state, EqExpr::create(e, value));
+  log_addConstraint(state, EqExpr::create(e, value));
     
   return value;
 }
@@ -1323,6 +1334,9 @@ void Executor::executeCall(ExecutionState &state,
     if (InvokeInst *ii = dyn_cast<InvokeInst>(i))
       transferToBasicBlock(ii->getNormalDest(), i->getParent(), state);
   } else {
+    // Push callee into symbolic state
+    pointsToState->push_frame(f);
+
     // FIXME: I'm not really happy about this reliance on prevPC but it is ok, I
     // guess. This just done to avoid having to pass KInstIterator everywhere
     // instead of the actual instruction, since we can't make a KInstIterator
@@ -1528,6 +1542,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       assert(!caller && "caller set on initial stack frame");
       terminateStateOnExit(state);
     } else {
+      pointsToState->pop_frame();
+
       state.popFrame();
 
       if (statsTracker)
@@ -1610,7 +1626,14 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       // FIXME: Find a way that we don't have this hidden dependency.
       assert(bi->getCondition() == bi->getOperand(0) &&
              "Wrong operand index!");
+
+      llvm::errs() << "Branch with condition ";
+      bi->getCondition()->dump();
+
       ref<Expr> cond = eval(ki, 0, state).value;
+
+      llvm::errs() << "fork " << __FUNCTION__ << ":" << __LINE__ << " with condition: ";
+      cond->dump();
       Executor::StatePair branches = fork(state, cond, false);
 
       // NOTE: There is a hidden dependency here, markBranchVisited
@@ -1714,7 +1737,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   case Instruction::Invoke:
   case Instruction::Call: {
     CallSite cs(i);
-
     unsigned numArgs = cs.arg_size();
     Value *fp = cs.getCalledValue();
     Function *f = getTargetFunction(fp, state);
@@ -1777,6 +1799,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         }
       }
 
+      llvm::errs() << "CALLING EXECUTECALL\n";
       executeCall(state, ki, f, arguments);
     } else {
       ref<Expr> v = eval(ki, 0, state).value;
@@ -1792,6 +1815,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         bool success = solver->getValue(*free, v, value);
         assert(success && "FIXME: Unhandled solver failure");
         (void) success;
+        llvm::errs() << "fork " << __FUNCTION__ << ":" << __LINE__ << "\n";
         StatePair res = fork(*free, EqExpr::create(v, value), true);
         if (res.first) {
           uint64_t addr = value->getZExtValue();
@@ -2041,6 +2065,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
  
     // Memory instructions...
   case Instruction::Alloca: {
+    /// We allocate pointer analysis object
+    pointsToState->alloc_local(i->getOperand(0));
+
     AllocaInst *ai = cast<AllocaInst>(i);
     unsigned elementSize = 
       kmodule->targetData->getTypeStoreSize(ai->getAllocatedType());
@@ -2056,11 +2083,23 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::Load: {
+    llvm::errs() << "LOAD\n";
+    llvm::errs() << "OPERAND0: ";
+    i->getOperand(0)->dump();
+    pointsToState->load_to_local(i, i->getOperand(0));
+
     ref<Expr> base = eval(ki, 0, state).value;
     executeMemoryOperation(state, false, base, 0, ki);
     break;
   }
   case Instruction::Store: {
+    llvm::errs() << "STORE\n";
+    llvm::errs() << "OPERAND0: ";
+    i->getOperand(0)->dump();
+    llvm::errs() << "OPERAND1: ";
+    i->getOperand(1)->dump();
+    pointsToState->store_from_local(i->getOperand(0), i->getOperand(1));
+
     ref<Expr> base = eval(ki, 1, state).value;
     ref<Expr> value = eval(ki, 0, state).value;
     executeMemoryOperation(state, true, base, value, 0);
@@ -2068,6 +2107,13 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::GetElementPtr: {
+    llvm::errs() << "GETELEMENTPTR\n";
+    llvm::errs() << "OPERAND0: ";
+    i->getOperand(0)->dump();
+    llvm::errs() << "OPERAND1: ";
+    i->getOperand(1)->dump();
+    pointsToState->address_of_to_local(i->getOperand(0), i->getOperand(1));
+
     KGEPInstruction *kgepi = static_cast<KGEPInstruction*>(ki);
     ref<Expr> base = eval(ki, 0, state).value;
 
@@ -3160,6 +3206,7 @@ void Executor::executeAlloc(ExecutionState &state,
       example = tmp;
     }
 
+    llvm::errs() << "fork " << __FUNCTION__ << ":" << __LINE__ << "\n";
     StatePair fixedSize = fork(state, EqExpr::create(example, size), true);
     
     if (fixedSize.second) { 
@@ -3180,6 +3227,7 @@ void Executor::executeAlloc(ExecutionState &state,
       } else {
         // See if a *really* big value is possible. If so assume
         // malloc will fail for it, so lets fork and return 0.
+	llvm::errs() << "fork " << __FUNCTION__ << ":" << __LINE__ << "\n";
         StatePair hugeSize = 
           fork(*fixedSize.second, 
                UltExpr::create(ConstantExpr::alloc(1<<31, W), size), 
@@ -3214,6 +3262,7 @@ void Executor::executeAlloc(ExecutionState &state,
 void Executor::executeFree(ExecutionState &state,
                            ref<Expr> address,
                            KInstruction *target) {
+  llvm::errs() << "fork " << __FUNCTION__ << ":" << __LINE__ << "\n";
   StatePair zeroPointer = fork(state, Expr::createIsZero(address), true);
   if (zeroPointer.first) {
     if (target)
@@ -3258,6 +3307,7 @@ void Executor::resolveExact(ExecutionState &state,
        it != ie; ++it) {
     ref<Expr> inBounds = EqExpr::create(p, it->first->getBaseExpr());
     
+    llvm::errs() << "fork " << __FUNCTION__ << ":" << __LINE__ << "\n";
     StatePair branches = fork(*unbound, inBounds, true);
     
     if (branches.first)
@@ -3363,7 +3413,8 @@ void Executor::executeMemoryOperation(ExecutionState &state,
     const MemoryObject *mo = i->first;
     const ObjectState *os = i->second;
     ref<Expr> inBounds = mo->getBoundsCheckPointer(address, bytes);
-    
+
+    llvm::errs() << "fork " << __FUNCTION__ << ":" << __LINE__ << "\n";
     StatePair branches = fork(*unbound, inBounds, true);
     ExecutionState *bound = branches.first;
 
