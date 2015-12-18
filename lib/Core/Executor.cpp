@@ -337,7 +337,7 @@ Executor::Executor(const InterpreterOptions &opts,
   
   this->solver = new TimingSolver(solver, EqualitySubstitution);
 
-  memory = new MemoryManager();
+  memory = new MemoryManager(&arrayCache);
 }
 
 
@@ -2918,8 +2918,9 @@ ref<Expr> Executor::replaceReadWithSymbolic(ExecutionState &state,
   // and return it.
   
   static unsigned id;
-  const Array *array = Array::CreateArray("rrws_arr" + llvm::utostr(++id),
-					  Expr::getMinBytesForWidth(e->getWidth()));
+  const Array *array =
+      arrayCache.CreateArray("rrws_arr" + llvm::utostr(++id),
+                             Expr::getMinBytesForWidth(e->getWidth()));
   ref<Expr> res = Expr::createTempRead(array, e->getWidth());
   ref<Expr> eq = NotOptimizedExpr::create(EqExpr::create(e, res));
   llvm::errs() << "Making symbolic: " << eq << "\n";
@@ -3257,7 +3258,7 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
     while (!state.arrayNames.insert(uniqueName).second) {
       uniqueName = name + "_" + llvm::utostr(++id);
     }
-    const Array *array = Array::CreateArray(uniqueName, mo->size);
+    const Array *array = arrayCache.CreateArray(uniqueName, mo->size);
     bindObjectInState(state, mo, false, array);
     state.addSymbolic(mo, array);
     
@@ -3415,8 +3416,8 @@ void Executor::runFunctionAsMain(Function *f,
 
   // hack to clear memory objects
   delete memory;
-  memory = new MemoryManager();
-  
+  memory = new MemoryManager(NULL);
+
   globalObjects.clear();
   globalAddresses.clear();
 
