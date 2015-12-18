@@ -15,11 +15,8 @@ using namespace llvm;
 
 namespace klee {
 
-  MemCell::MemCell() :
-      llvm_value(0) {}
-
-  MemCell::MemCell(Value *cell) :
-      llvm_value(cell) {}
+  MemCell::MemCell(Value *_llvm_value) :
+      llvm_value(_llvm_value) {}
 
   MemCell::~MemCell() {}
 
@@ -37,42 +34,37 @@ namespace klee {
     stream << "]";
   }
 
-  bool operator==(const MemCell& lhs, const MemCell &rhs) {
-    /// FIXME Attempt to retrieve llvm_value from lhs segfaults
-    return lhs.llvm_value == rhs.llvm_value;
-  }
-
-  bool operator<(const MemCell& lhs, const MemCell& rhs) {
-    return !(lhs == rhs);
-  }
-
   Location::Location(unsigned long alloc_id) :
-      alloc_id(alloc_id) {}
+      content(0), alloc_id(alloc_id) {}
 
-  Location::Location(const MemCell& cell) :
-      content(cell), alloc_id(0) {}
+  Location::Location(Value *value, unsigned long alloc_id) :
+      content(value), alloc_id(alloc_id) {}
 
   Location::~Location() {}
 
-  void Location::set_content(const MemCell& cell) {
-    content = cell;
+  void Location::set_content(Value *value) {
+    content = value;
   }
 
-  MemCell Location::get_content() {
+  Value *Location::get_content() {
     return content;
   }
 
   void Location::print(llvm::raw_ostream& stream) const {
     stream << "Location[";
-    content.print(stream);
+    if (content != 0) {
+	content->print(stream);
+    } else {
+	stream << "NULL";
+    }
     stream << "]";
   }
 
-  bool operator==(Location& lhs, Location& rhs) {
-    if (lhs.alloc_id > 0 && rhs.alloc_id > 0) {
-	return lhs.alloc_id == rhs.alloc_id;
-    } else if (lhs.alloc_id == 0 && rhs.alloc_id == 0) {
-	return lhs.content == rhs.get_content();
+  bool Location::operator==(const Location& rhs) const {
+    if (alloc_id > 0 && rhs.alloc_id > 0) {
+	return alloc_id == rhs.alloc_id;
+    } else if (alloc_id == 0 && rhs.alloc_id == 0) {
+	return content == rhs.content;
     }
     return false;
   }
@@ -88,31 +80,17 @@ namespace klee {
     return function;
   }
 
-  void PointsToFrame::alloc_local(const MemCell& cell, const Location& location) {
-    llvm::errs() << "FRAME LOCAL ALLOCATION\n";
-    cell.dump();
-    location.dump();
-    vector<Location> x = points_to[cell];
-    if (x.size() == 0) {
-	llvm::errs() << "EMPTY\n";
-    }
-    x.push_back(location);
-    points_to[cell] = x;
-    vector<Location> y = points_to[cell];
-    if (y.size() == 0) {
-	llvm::errs() << "EMPTY\n";
-    }
-
+  void PointsToFrame::alloc_local(Value *llvm_value, unsigned alloc_id) {
+    MemCell mem_cell(llvm_value);
+    points_to[mem_cell] = new Location(llvm_value, alloc_id);
   }
 
-  void PointsToFrame::address_of_to_local(const MemCell& target, const MemCell& source) {
-    Location loc(source);
-    points_to[target].clear();
-    points_to[target].push_back(loc);
+  void PointsToFrame::address_of_to_local(Value *target, Value *source) {
+    MemCell mem_cell(target);
+    points_to[mem_cell] = new Location(source, 0);
   }
 
   void PointsToFrame::assign_to_local(const MemCell& target, const MemCell& source) {
-    points_to[target].clear();
     points_to[target] = points_to[source];
   }
 
@@ -129,27 +107,20 @@ namespace klee {
   }
 
   void PointsToFrame::print(llvm::raw_ostream& stream) const {
-    unsigned i, j;
+    unsigned i;
     stream << "Frame[" << (function == 0? "MAIN" : function->getName()) << ":";
+//    vector<MemCell> v;
+//    for (map< MemCell, Location >::const_iterator it0 = points_to.begin();
+//	it0 != points_to.end(); it0++) {
+//	v.push_back(it0->first);
+//    }
     i = 0;
-    vector<MemCell> v;
-    for (map< MemCell, vector<Location> >::const_iterator it0 = points_to.begin();
-	it0 != points_to.end(); it0++) {
-	v.push_back(it0->first);
-    }
-    for (map< MemCell, vector<Location> >::const_iterator it0 = points_to.begin();
+    for (map< MemCell, Location *>::const_iterator it0 = points_to.begin();
 	it0 != points_to.end(); it0++) {
       it0->first.print(stream);
-      stream << "->[";
-      j = 0;
-      for (vector<Location>::const_iterator it1 = it0->second.begin(); it1 != it0->second.end(); it1++) {
-	it1->print(stream);
-	if (j++ < it0->second.size() - 1) {
-	  stream << ",";
-	}
-      }
-      stream << "]";
-      if (i++ < v.size() - 1) {
+      stream << "->";
+      it0->second->print(stream);
+      if (i++ < points_to.size() - 1) {
 	  stream << ",";
       }
     }
@@ -169,38 +140,31 @@ namespace klee {
   }
 
   void PointsToState::alloc_local(Value *cell) {
-    MemCell mem_cell(cell);
-    Location loc(next_alloc_id++);
-    points_to_stack.back().alloc_local(mem_cell, loc);
+    points_to_stack.back().alloc_local(cell, next_alloc_id++);
   }
 
   void PointsToState::alloc_global(Value *cell) {
     MemCell mem_cell(cell);
-    Location loc(next_alloc_id++);
-    points_to[mem_cell].push_back(loc);
+    points_to[mem_cell] = new Location(cell, next_alloc_id++);
   }
 
   void PointsToState::assign_to_local(Value *target, Value *source) {
     MemCell target_cell(target), source_cell(source);
-    points_to_stack. back().assign_to_local(target_cell, source_cell);
+    points_to_stack.back().assign_to_local(target_cell, source_cell);
   }
 
   void PointsToState::assign_to_global(Value *target, Value *source) {
     MemCell target_cell(target), source_cell(source);
-    points_to[target_cell].clear();
     points_to[target_cell] = points_to[source_cell];
   }
 
   void PointsToState::address_of_to_local(Value *target, Value *source) {
-    MemCell target_cell(target), source_cell(source);
-    points_to_stack.back().address_of_to_local(target_cell, source_cell);
+    points_to_stack.back().address_of_to_local(target, source);
   }
 
   void PointsToState::address_of_to_global(Value *target, Value *source) {
-    MemCell target_cell(target), source_cell(source);
-    Location source_loc(source_cell);
-    points_to[target_cell].clear();
-    points_to[target_cell].push_back(source_loc);
+    MemCell target_cell(target);
+    points_to[target_cell] = new Location(source, 0);
   }
 
   void PointsToState::load_to_local(Value *target, Value *address) {
@@ -241,18 +205,11 @@ namespace klee {
   void PointsToState::print(llvm::raw_ostream& stream) const {
     unsigned i = 0;
     stream << "Globals[";
-    for (map< MemCell, vector<Location> >::const_iterator it0 = points_to.begin();
+    for (map< MemCell, Location*>::const_iterator it0 = points_to.begin();
 	it0 != points_to.end(); it0++) {
       it0->first.print(stream);
-      stream << "->[";
-      unsigned j = 0;
-      for (vector<Location>::const_iterator it1 = it0->second.begin(); it1 != it0->second.end(); it1++) {
-	it1->print(stream);
-	if (j++ < it0->second.size() - 1) {
-	  stream << ",";
-	}
-      }
-      stream << "]";
+      stream << "->";
+      it0->second->print(stream);
       if (i++ < points_to.size() - 1) {
 	stream << ",";
       }
@@ -269,26 +226,27 @@ namespace klee {
 
   /**/
 
-  void load_points_to(map<MemCell, vector<Location> >& points_to, const MemCell& target, const MemCell& address) {
-    /// FIXME This segfaults here: vector<Location> loc_vector = points_to[address];
-    for (vector<Location>::iterator pointed_to_location = points_to[address].begin();
-	pointed_to_location != points_to[address].end();
-	pointed_to_location++) {
-	MemCell content = pointed_to_location->get_content();
-	vector<Location> pointed_to_by_target = points_to[target];
-	vector<Location> pointed_to_by_content = points_to[content];
-	pointed_to_by_target.insert(pointed_to_by_target.end(), pointed_to_by_content.begin(), pointed_to_by_content.end());
-    }
+  void load_points_to(map<MemCell, Location *>& points_to, const MemCell& target, const MemCell& address) {
+    MemCell content(points_to[address]->get_content());
+    points_to[target] = points_to[content];
   }
 
-  void store_points_to(map<MemCell, vector<Location> >& points_to, const MemCell& source, const MemCell& address) {
-    for (vector<Location>::iterator pointed_to_location = points_to[address].begin();
-	pointed_to_location != points_to[address].end();
-	pointed_to_location++) {
-	MemCell content = pointed_to_location->get_content();
-	vector<Location> pointed_to_by_source = points_to[source];
-	vector<Location> pointed_to_by_content = points_to[content];
-	pointed_to_by_content.insert(pointed_to_by_content.end(), pointed_to_by_source.begin(), pointed_to_by_source.end());
+  void store_points_to(map<MemCell, Location *>& points_to, const MemCell& source, const MemCell& address) {
+    llvm::errs() << __FUNCTION__ << "\n";
+    llvm::errs() << "SOURCE\n";
+    source.dump();
+    llvm::errs() << "ADDRESS\n";
+    address.dump();
+
+
+    if (points_to.find(address) == points_to.end() ||
+	points_to.find(source) == points_to.end())
+      return;
+
+    llvm::errs() << "ADDRESS FOUND\n";
+    MemCell content(points_to[address]->get_content());
+    if (points_to.find(content) != points_to.end()) {
+	points_to[content] = points_to[source];
     }
   }
 

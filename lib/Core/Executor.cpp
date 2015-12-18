@@ -2092,6 +2092,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     llvm::errs() << "OPERAND1: ";
     i->getOperand(1)->dump();
     pointsToState->store_from_local(i->getOperand(0), i->getOperand(1));
+    pointsToState->dump();
 
     ref<Expr> base = eval(ki, 1, state).value;
     ref<Expr> value = eval(ki, 0, state).value;

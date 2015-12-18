@@ -26,18 +26,21 @@ namespace klee {
 
   class MemCell {
     Value *llvm_value;
-  public:
-    MemCell();
 
-    MemCell(Value *cell);
+  public:
+    MemCell(Value *_llvm_value);
 
     ~MemCell();
 
     Value *get_llvm() const;
 
-    friend bool operator==(const MemCell& lhs, const MemCell &rhs);
+    bool operator ==(const MemCell& rhs) const {
+      return llvm_value == rhs.llvm_value;
+    }
 
-    friend bool operator<(const MemCell& lhs, const MemCell& rhs);
+    bool operator <(const MemCell& rhs) const {
+      return llvm_value < rhs.llvm_value;
+    }
 
     void print(llvm::raw_ostream& stream) const;
 
@@ -48,20 +51,21 @@ namespace klee {
   };
 
   class Location {
-    MemCell content;
+    Value *content;
     unsigned long alloc_id;
+
   public:
     Location(unsigned long alloc_id);
 
-    Location(const MemCell& content);
+    Location(Value *content, unsigned long alloc_id);
 
     ~Location();
 
-    void set_content(const MemCell& content);
+    void set_content(Value *content);
 
-    MemCell get_content();
+    Value *get_content();
 
-    friend bool operator==(Location& lhs, Location& rhs);
+    bool operator==(const Location& rhs) const;
 
     void print(llvm::raw_ostream& stream) const;
 
@@ -73,7 +77,7 @@ namespace klee {
 
   class PointsToFrame {
     Function *function;
-    map< MemCell, vector<Location> > points_to;
+    map< MemCell, Location *> points_to;
 
   public:
     PointsToFrame(Function *function);
@@ -82,9 +86,9 @@ namespace klee {
 
     Function *getFunction();
 
-    void alloc_local(const MemCell& cell, const Location& location);
+    void alloc_local(Value *llvm_value, unsigned alloc_id);
 
-    void address_of_to_local(const MemCell& target, const MemCell& source);
+    void address_of_to_local(Value *target, Value *source);
 
     void assign_to_local(const MemCell& target, const MemCell& source);
 
@@ -104,7 +108,7 @@ namespace klee {
 
   class PointsToState {
     vector<PointsToFrame> points_to_stack;
-    map< MemCell, vector<Location> > points_to;
+    map< MemCell, Location *> points_to;
     unsigned long next_alloc_id;
 
   public:
@@ -146,9 +150,9 @@ namespace klee {
 
 
   /// Function declarations
-  void store_points_to(map<MemCell, vector<Location> >& points_to, const MemCell& source, const MemCell& address);
+  void store_points_to(map<MemCell, Location *>& points_to, const MemCell& source, const MemCell& address);
 
-  void load_points_to(map<MemCell, vector<Location> >& points_to, const MemCell& target, const MemCell& address);
+  void load_points_to(map<MemCell, Location *>& points_to, const MemCell& target, const MemCell& address);
 
 }
 
