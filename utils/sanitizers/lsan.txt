@@ -9,15 +9,3 @@
 # Low priority
 leak:tools/kleaver/main.cpp
 leak:lib/Expr/Parser.cpp
-
-# These are bad, these definitely need fixing
-leak:klee::ConstantExpr::alloc
-leak:klee::ConcatExpr::alloc
-leak:klee::ReadExpr::alloc
-leak:klee::ExtractExpr::alloc
-leak:klee::ExtractExpr::alloc
-leak:klee::AddExpr::alloc
-leak:klee::SubExpr::alloc
-leak:klee::SExtExpr::alloc
-leak:klee::MulExpr::alloc
-leak:klee::ZExtExpr::alloc
