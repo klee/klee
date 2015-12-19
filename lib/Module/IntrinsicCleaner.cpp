@@ -232,7 +232,30 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
         dirty = true;
         break;
       }
-                    
+      case Intrinsic::objectsize: {
+        // We don't know the size of an object in general so we replace
+        // with 0 or -1 depending on the second argument to the intrinsic.
+        assert(ii->getNumArgOperands() == 2 && "wrong number of arguments");
+        Value *minArg = ii->getArgOperand(1);
+        assert(minArg && "Failed to get second argument");
+        ConstantInt *minArgAsInt = dyn_cast<ConstantInt>(minArg);
+        assert(minArgAsInt && "Second arg is not a ConstantInt");
+        assert(minArgAsInt->getBitWidth() == 1 && "Second argument is not an i1");
+        Value *replacement = NULL;
+        LLVM_TYPE_Q IntegerType *intType = dyn_cast<IntegerType>(ii->getType());
+        assert(intType && "intrinsic does not have integer return type");
+        if (minArgAsInt->isZero()) {
+          // min=false
+          replacement = ConstantInt::get(intType, -1, /*isSigned=*/true);
+        } else {
+          // min=true
+          replacement = ConstantInt::get(intType, 0, /*isSigned=*/false);
+        }
+        ii->replaceAllUsesWith(replacement);
+        ii->eraseFromParent();
+        dirty = true;
+        break;
+      }
       default:
         if (LowerIntrinsics)
           IL->LowerIntrinsicCall(ii);
