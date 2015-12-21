@@ -11,16 +11,15 @@
 
 
 using namespace klee;
-using namespace llvm;
 
 namespace klee {
 
-  MemCell::MemCell(Value *_llvm_value) :
+  MemCell::MemCell(llvm::Value *_llvm_value) :
       llvm_value(_llvm_value) {}
 
   MemCell::~MemCell() {}
 
-  Value *MemCell::get_llvm() const {
+  llvm::Value *MemCell::get_llvm() const {
     return llvm_value;
   }
 
@@ -37,16 +36,16 @@ namespace klee {
   Location::Location(unsigned long alloc_id) :
       content(0), alloc_id(alloc_id) {}
 
-  Location::Location(Value *value, unsigned long alloc_id) :
+  Location::Location(llvm::Value *value, unsigned long alloc_id) :
       content(value), alloc_id(alloc_id) {}
 
   Location::~Location() {}
 
-  void Location::set_content(Value *value) {
+  void Location::set_content(llvm::Value *value) {
     content = value;
   }
 
-  Value *Location::get_content() {
+  llvm::Value *Location::get_content() {
     return content;
   }
 
@@ -69,23 +68,23 @@ namespace klee {
     return false;
   }
 
-  PointsToFrame::PointsToFrame(Function *function) :
+  PointsToFrame::PointsToFrame(llvm::Function *function) :
     function(function) {}
 
   PointsToFrame::~PointsToFrame()     {
     points_to.clear();
   }
 
-  Function *PointsToFrame::getFunction() {
+  llvm::Function *PointsToFrame::getFunction() {
     return function;
   }
 
-  void PointsToFrame::alloc_local(Value *llvm_value, unsigned alloc_id) {
+  void PointsToFrame::alloc_local(llvm::Value *llvm_value, unsigned alloc_id) {
     MemCell mem_cell(llvm_value);
     points_to[mem_cell] = new Location(llvm_value, alloc_id);
   }
 
-  void PointsToFrame::address_of_to_local(Value *target, Value *source) {
+  void PointsToFrame::address_of_to_local(llvm::Value *target, llvm::Value *source) {
     MemCell mem_cell(target);
     points_to[mem_cell] = new Location(source, 0);
   }
@@ -115,7 +114,7 @@ namespace klee {
 //	v.push_back(it0->first);
 //    }
     i = 0;
-    for (map< MemCell, Location *>::const_iterator it0 = points_to.begin();
+    for (std::map< MemCell, Location *>::const_iterator it0 = points_to.begin();
 	it0 != points_to.end(); it0++) {
       it0->first.print(stream);
       stream << "->";
@@ -139,62 +138,62 @@ namespace klee {
     points_to.clear();
   }
 
-  void PointsToState::alloc_local(Value *cell) {
+  void PointsToState::alloc_local(llvm::Value *cell) {
     points_to_stack.back().alloc_local(cell, next_alloc_id++);
   }
 
-  void PointsToState::alloc_global(Value *cell) {
+  void PointsToState::alloc_global(llvm::Value *cell) {
     MemCell mem_cell(cell);
     points_to[mem_cell] = new Location(cell, next_alloc_id++);
   }
 
-  void PointsToState::assign_to_local(Value *target, Value *source) {
+  void PointsToState::assign_to_local(llvm::Value *target, llvm::Value *source) {
     MemCell target_cell(target), source_cell(source);
     points_to_stack.back().assign_to_local(target_cell, source_cell);
   }
 
-  void PointsToState::assign_to_global(Value *target, Value *source) {
+  void PointsToState::assign_to_global(llvm::Value *target, llvm::Value *source) {
     MemCell target_cell(target), source_cell(source);
     points_to[target_cell] = points_to[source_cell];
   }
 
-  void PointsToState::address_of_to_local(Value *target, Value *source) {
+  void PointsToState::address_of_to_local(llvm::Value *target, llvm::Value *source) {
     points_to_stack.back().address_of_to_local(target, source);
   }
 
-  void PointsToState::address_of_to_global(Value *target, Value *source) {
+  void PointsToState::address_of_to_global(llvm::Value *target, llvm::Value *source) {
     MemCell target_cell(target);
     points_to[target_cell] = new Location(source, 0);
   }
 
-  void PointsToState::load_to_local(Value *target, Value *address) {
+  void PointsToState::load_to_local(llvm::Value *target, llvm::Value *address) {
     MemCell target_cell(target), address_cell(address);
     points_to_stack.back().load_to_local(target_cell, address_cell);
   }
 
-  void PointsToState::load_to_global(Value *target, Value *address) {
+  void PointsToState::load_to_global(llvm::Value *target, llvm::Value *address) {
     MemCell target_cell(target), address_cell(address);
     load_points_to(points_to, target_cell, address_cell);
   }
 
-  void PointsToState::store_from_local(Value *source, Value *address) {
+  void PointsToState::store_from_local(llvm::Value *source, llvm::Value *address) {
     MemCell source_cell(source), address_cell(address);
     points_to_stack.back().store_from_local(source_cell, address_cell);
   }
 
-  void PointsToState::store_from_global(Value *source, Value *address) {
+  void PointsToState::store_from_global(llvm::Value *source, llvm::Value *address) {
     MemCell source_cell(source), address_cell(address);
     store_points_to(points_to, source_cell, address_cell);
   }
 
-  void PointsToState::push_frame(Function *function) {
+  void PointsToState::push_frame(llvm::Function *function) {
     PointsToFrame points_to_frame(function);
     llvm::errs() << "PUSH FRAME " << function->getName() << "\n";
     points_to_stack.push_back(points_to_frame);
   }
 
-  Function *PointsToState::pop_frame() {
-    Function *ret = NULL;
+  llvm::Function *PointsToState::pop_frame() {
+    llvm::Function *ret = NULL;
     if (!points_to_stack.empty()) {
 	ret = points_to_stack.back().getFunction();
 	points_to_stack.pop_back();
@@ -205,7 +204,7 @@ namespace klee {
   void PointsToState::print(llvm::raw_ostream& stream) const {
     unsigned i = 0;
     stream << "Globals[";
-    for (map< MemCell, Location*>::const_iterator it0 = points_to.begin();
+    for (std::map< MemCell, Location*>::const_iterator it0 = points_to.begin();
 	it0 != points_to.end(); it0++) {
       it0->first.print(stream);
       stream << "->";
@@ -217,7 +216,7 @@ namespace klee {
     stream << "]\n";
     stream << "Stack[\n";
     i = 0;
-    for (vector<PointsToFrame>::const_iterator it0 = points_to_stack.begin(); it0 != points_to_stack.end(); it0++) {
+    for (std::vector<PointsToFrame>::const_iterator it0 = points_to_stack.begin(); it0 != points_to_stack.end(); it0++) {
       it0->print(stream);
       stream << "\n";
     }
@@ -226,12 +225,12 @@ namespace klee {
 
   /**/
 
-  void load_points_to(map<MemCell, Location *>& points_to, const MemCell& target, const MemCell& address) {
+  void load_points_to(std::map<MemCell, Location *>& points_to, const MemCell& target, const MemCell& address) {
     MemCell content(points_to[address]->get_content());
     points_to[target] = points_to[content];
   }
 
-  void store_points_to(map<MemCell, Location *>& points_to, const MemCell& source, const MemCell& address) {
+  void store_points_to(std::map<MemCell, Location *>& points_to, const MemCell& source, const MemCell& address) {
     llvm::errs() << __FUNCTION__ << "\n";
     llvm::errs() << "SOURCE\n";
     source.dump();

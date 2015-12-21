@@ -14,25 +14,39 @@
 #include <vector>
 #include <stack>
 
-using namespace std;
-using namespace llvm;
-
-namespace llvm {
-  class Function;
-  class Value;
-}
-
 namespace klee {
 
-  class MemCell {
-    Value *llvm_value;
+  class FlowsTo {
+    llvm::Value *source;
+    llvm::Value *target;
 
   public:
-    MemCell(Value *_llvm_value);
+    FlowsTo(llvm::Value *source, llvm::Value *target);
+
+    ~FlowsTo();
+
+    llvm::Value *getSouce() {
+      return source;
+    }
+
+    llvm::Value *getTarget() {
+      return target;
+    }
+  };
+
+  class Loc {
+
+  };
+
+  class MemCell {
+    llvm::Value *llvm_value;
+
+  public:
+    MemCell(llvm::Value *_llvm_value);
 
     ~MemCell();
 
-    Value *get_llvm() const;
+    llvm::Value *get_llvm() const;
 
     bool operator ==(const MemCell& rhs) const {
       return llvm_value == rhs.llvm_value;
@@ -51,19 +65,19 @@ namespace klee {
   };
 
   class Location {
-    Value *content;
+    llvm::Value *content;
     unsigned long alloc_id;
 
   public:
     Location(unsigned long alloc_id);
 
-    Location(Value *content, unsigned long alloc_id);
+    Location(llvm::Value *content, unsigned long alloc_id);
 
     ~Location();
 
-    void set_content(Value *content);
+    void set_content(llvm::Value *content);
 
-    Value *get_content();
+    llvm::Value *get_content();
 
     bool operator==(const Location& rhs) const;
 
@@ -76,19 +90,19 @@ namespace klee {
   };
 
   class PointsToFrame {
-    Function *function;
-    map< MemCell, Location *> points_to;
+    llvm::Function *function;
+    std::map< MemCell, Location *> points_to;
 
   public:
-    PointsToFrame(Function *function);
+    PointsToFrame(llvm::Function *function);
 
     ~PointsToFrame();
 
-    Function *getFunction();
+    llvm::Function *getFunction();
 
-    void alloc_local(Value *llvm_value, unsigned alloc_id);
+    void alloc_local(llvm::Value *llvm_value, unsigned alloc_id);
 
-    void address_of_to_local(Value *target, Value *source);
+    void address_of_to_local(llvm::Value *target, llvm::Value *source);
 
     void assign_to_local(const MemCell& target, const MemCell& source);
 
@@ -107,8 +121,8 @@ namespace klee {
   };
 
   class PointsToState {
-    vector<PointsToFrame> points_to_stack;
-    map< MemCell, Location *> points_to;
+    std::vector<PointsToFrame> points_to_stack;
+    std::map< MemCell, Location *> points_to;
     unsigned long next_alloc_id;
 
   public:
@@ -116,29 +130,29 @@ namespace klee {
 
     ~PointsToState();
 
-    void push_frame(Function *callee);
+    void push_frame(llvm::Function *callee);
 
-    Function *pop_frame();
+    llvm::Function *pop_frame();
 
-    void alloc_local(Value *cell);
+    void alloc_local(llvm::Value *cell);
 
-    void alloc_global(Value *cell);
+    void alloc_global(llvm::Value *cell);
 
-    void address_of_to_local(Value *target, Value *source);
+    void address_of_to_local(llvm::Value *target, llvm::Value *source);
 
-    void address_of_to_global(Value *target, Value *source);
+    void address_of_to_global(llvm::Value *target, llvm::Value *source);
 
-    void assign_to_local(Value *target, Value *source);
+    void assign_to_local(llvm::Value *target, llvm::Value *source);
 
-    void assign_to_global(Value *target, Value *source);
+    void assign_to_global(llvm::Value *target, llvm::Value *source);
 
-    void load_to_local(Value *target, Value *address);
+    void load_to_local(llvm::Value *target, llvm::Value *address);
 
-    void load_to_global(Value *target, Value *address);
+    void load_to_global(llvm::Value *target, llvm::Value *address);
 
-    void store_from_local(Value *source, Value *address);
+    void store_from_local(llvm::Value *source, llvm::Value *address);
 
-    void store_from_global(Value *source, Value *address);
+    void store_from_global(llvm::Value *source, llvm::Value *address);
 
     void print(llvm::raw_ostream& stream) const;
 
@@ -150,9 +164,9 @@ namespace klee {
 
 
   /// Function declarations
-  void store_points_to(map<MemCell, Location *>& points_to, const MemCell& source, const MemCell& address);
+  void store_points_to(std::map<MemCell, Location *>& points_to, const MemCell& source, const MemCell& address);
 
-  void load_points_to(map<MemCell, Location *>& points_to, const MemCell& target, const MemCell& address);
+  void load_points_to(std::map<MemCell, Location *>& points_to, const MemCell& target, const MemCell& address);
 
 }
 
