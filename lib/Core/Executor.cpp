@@ -276,7 +276,7 @@ namespace klee {
 Executor::Executor(const InterpreterOptions &opts,
                    InterpreterHandler *ih) 
   : Interpreter(opts),
-    dependencyState(),
+    dependencyState(new DependencyState()),
     kmodule(0),
     interpreterHandler(ih),
     searcher(0),
@@ -2068,6 +2068,13 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     }
     bool isLocal = i->getOpcode()==Instruction::Alloca;
     executeAlloc(state, size, isLocal, ki);
+
+    if (!dependencyState) {
+	llvm::errs() << "NULL\n";
+    }
+    dependencyState->addLocation(ai);
+    dependencyState->updateDependency(ai);
+
     break;
   }
 

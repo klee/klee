@@ -78,8 +78,26 @@ namespace klee {
   }
 
   void DependencyFrame::updateDependency(llvm::Value *instruction) {
-    valueDependencies.push_back(new ValueDependency(instruction));
+    llvm::Instruction *i = llvm::dyn_cast<llvm::Instruction>(instruction);
+    switch(i->getOpcode()) {
+      case llvm::Instruction::Alloca: {
+	LocationDependency *newLocationDependency =
+	    new LocationDependency(instruction);
+	ValueDependency *newValueDependency =
+	    new ValueDependency(instruction);
+	std::vector<LocationDependency *> locationDependencyVector;
+	locationDependencyVector.push_back(newLocationDependency);
+	newValueDependency->
+	initializeWithNonConstant(locationDependencyVector);
+	locationDependencies.push_back(newLocationDependency);
+	valueDependencies.push_back(newValueDependency);
+	break;
+      }
+      default:
+	break;
+    }
   }
+
 
   DependencyState::DependencyState() {
     dependencyStack.push_back(new DependencyFrame(0));
