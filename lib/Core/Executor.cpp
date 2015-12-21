@@ -276,7 +276,7 @@ namespace klee {
 Executor::Executor(const InterpreterOptions &opts,
                    InterpreterHandler *ih) 
   : Interpreter(opts),
-    pointsToState(new PointsToState()),
+    dependencyState(),
     kmodule(0),
     interpreterHandler(ih),
     searcher(0),
@@ -1327,7 +1327,7 @@ void Executor::executeCall(ExecutionState &state,
       transferToBasicBlock(ii->getNormalDest(), i->getParent(), state);
   } else {
     // Push callee into symbolic state
-    pointsToState->push_frame(f);
+    dependencyState->pushFrame(f);
 
     // FIXME: I'm not really happy about this reliance on prevPC but it is ok, I
     // guess. This just done to avoid having to pass KInstIterator everywhere
@@ -1534,7 +1534,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       assert(!caller && "caller set on initial stack frame");
       terminateStateOnExit(state);
     } else {
-      pointsToState->pop_frame();
+      dependencyState->popFrame();
 
       state.popFrame();
 
@@ -2057,10 +2057,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
  
     // Memory instructions...
   case Instruction::Alloca: {
-    /// We allocate pointer analysis object
-    pointsToState->alloc_local(i);
-    pointsToState->dump();
-
     AllocaInst *ai = cast<AllocaInst>(i);
     unsigned elementSize = 
       kmodule->targetData->getTypeStoreSize(ai->getAllocatedType());
@@ -2076,24 +2072,11 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::Load: {
-    llvm::errs() << "LOAD\n";
-    llvm::errs() << "OPERAND0: ";
-    i->getOperand(0)->dump();
-    pointsToState->load_to_local(i, i->getOperand(0));
-
     ref<Expr> base = eval(ki, 0, state).value;
     executeMemoryOperation(state, false, base, 0, ki);
     break;
   }
   case Instruction::Store: {
-    llvm::errs() << "STORE\n";
-    llvm::errs() << "OPERAND0: ";
-    i->getOperand(0)->dump();
-    llvm::errs() << "OPERAND1: ";
-    i->getOperand(1)->dump();
-    pointsToState->store_from_local(i->getOperand(0), i->getOperand(1));
-    pointsToState->dump();
-
     ref<Expr> base = eval(ki, 1, state).value;
     ref<Expr> value = eval(ki, 0, state).value;
     executeMemoryOperation(state, true, base, value, 0);
@@ -2101,13 +2084,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::GetElementPtr: {
-    llvm::errs() << "GETELEMENTPTR\n";
-    llvm::errs() << "OPERAND0: ";
-    i->getOperand(0)->dump();
-    llvm::errs() << "OPERAND1: ";
-    i->getOperand(1)->dump();
-    pointsToState->address_of_to_local(i->getOperand(0), i->getOperand(1));
-
     KGEPInstruction *kgepi = static_cast<KGEPInstruction*>(ki);
     ref<Expr> base = eval(ki, 0, state).value;
 

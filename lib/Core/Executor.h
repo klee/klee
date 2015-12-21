@@ -115,7 +115,7 @@ public:
 private:
   class TimerInfo;
 
-  PointsToState *pointsToState;
+  DependencyState *dependencyState;
 
   KModule *kmodule;
   InterpreterHandler *interpreterHandler;
