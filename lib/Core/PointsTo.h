@@ -15,27 +15,77 @@
 #include <stack>
 
 namespace klee {
+  class LocationDependency;
 
-  class Location {
-    std::vector< Location * > dependencies;
+  class Dependency {
+    std::vector< LocationDependency * > dependencies;
     llvm::Constant *constantDependency;
-    llvm::Value *allocationSite;
-  public:
-    Location(llvm::Value *allocationSite);
 
-    ~Location();
+  public:
+    Dependency();
+
+    ~Dependency();
 
     bool unInitialized();
 
     bool dependsOnConstant();
 
-    void initializeWithNonConstant(std::vector<Location *> _dependencies);
+    void initializeWithNonConstant(std::vector<LocationDependency *> _dependencies);
 
     void initializeWithConstant(llvm::Constant *constant);
 
-    std::vector<Location *> getDependencies();
+    std::vector<LocationDependency *> getDependencies();
 
-    void addDependency(Location *extraDependency);
+    void addDependency(LocationDependency *extraDependency);
+
+  };
+
+  class ValueDependency : public Dependency {
+    llvm::Value *value;
+
+    ValueDependency() : value(0) {}
+
+  public:
+    ValueDependency(llvm::Value *value);
+  };
+
+  class LocationDependency : public Dependency {
+    llvm::Value *allocationSite;
+
+    LocationDependency() : allocationSite(0) {}
+
+  public:
+    LocationDependency(llvm::Value *allocationSite);
+  };
+
+  class DependencyFrame {
+    llvm::Function *function;
+    std::vector< ValueDependency *> valueDependencies;
+    std::vector< LocationDependency *> locationDependencies;
+  public:
+    DependencyFrame(llvm::Function *function);
+
+    ~DependencyFrame();
+
+    void addLocation(llvm::Value *allocationSite);
+
+    void updateDependency(llvm::Value *instruction);
+  };
+
+  class DependencyState {
+    std::vector<DependencyFrame *> dependencyStack;
+  public:
+    DependencyState();
+
+    ~DependencyState();
+
+    void pushFrame(llvm::Function *function);
+
+    void popFrame();
+
+    void addLocation(llvm::Value *allocationSite);
+
+    void updateDependency(llvm::Value *instruction);
   };
 
   class MemCell {
@@ -64,22 +114,22 @@ namespace klee {
     }
   };
 
-  class _Location {
+  class Location {
     llvm::Value *content;
     unsigned long alloc_id;
 
   public:
-    _Location(unsigned long alloc_id);
+    Location(unsigned long alloc_id);
 
-    _Location(llvm::Value *content, unsigned long alloc_id);
+    Location(llvm::Value *content, unsigned long alloc_id);
 
-    ~_Location();
+    ~Location();
 
     void set_content(llvm::Value *content);
 
     llvm::Value *get_content();
 
-    bool operator==(const _Location& rhs) const;
+    bool operator==(const Location& rhs) const;
 
     void print(llvm::raw_ostream& stream) const;
 
@@ -91,7 +141,7 @@ namespace klee {
 
   class PointsToFrame {
     llvm::Function *function;
-    std::map< MemCell, _Location *> points_to;
+    std::map< MemCell, Location *> points_to;
 
   public:
     PointsToFrame(llvm::Function *function);
@@ -122,7 +172,7 @@ namespace klee {
 
   class PointsToState {
     std::vector<PointsToFrame> points_to_stack;
-    std::map< MemCell, _Location *> points_to;
+    std::map< MemCell, Location *> points_to;
     unsigned long next_alloc_id;
 
   public:
@@ -164,9 +214,9 @@ namespace klee {
 
 
   /// Function declarations
-  void store_points_to(std::map<MemCell, _Location *>& points_to, const MemCell& source, const MemCell& address);
+  void store_points_to(std::map<MemCell, Location *>& points_to, const MemCell& source, const MemCell& address);
 
-  void load_points_to(std::map<MemCell, _Location *>& points_to, const MemCell& target, const MemCell& address);
+  void load_points_to(std::map<MemCell, Location *>& points_to, const MemCell& target, const MemCell& address);
 
 }
 
