@@ -16,26 +16,26 @@
 
 namespace klee {
 
-  class FlowsTo {
-    llvm::Value *source;
-    llvm::Value *target;
-
+  class Location {
+    std::vector< Location * > dependencies;
+    llvm::Constant *constantDependency;
+    llvm::Value *allocationSite;
   public:
-    FlowsTo(llvm::Value *source, llvm::Value *target);
+    Location(llvm::Value *allocationSite);
 
-    ~FlowsTo();
+    ~Location();
 
-    llvm::Value *getSouce() {
-      return source;
-    }
+    bool unInitialized();
 
-    llvm::Value *getTarget() {
-      return target;
-    }
-  };
+    bool dependsOnConstant();
 
-  class Loc {
+    void initializeWithNonConstant(std::vector<Location *> _dependencies);
 
+    void initializeWithConstant(llvm::Constant *constant);
+
+    std::vector<Location *> getDependencies();
+
+    void addDependency(Location *extraDependency);
   };
 
   class MemCell {
@@ -64,22 +64,22 @@ namespace klee {
     }
   };
 
-  class Location {
+  class _Location {
     llvm::Value *content;
     unsigned long alloc_id;
 
   public:
-    Location(unsigned long alloc_id);
+    _Location(unsigned long alloc_id);
 
-    Location(llvm::Value *content, unsigned long alloc_id);
+    _Location(llvm::Value *content, unsigned long alloc_id);
 
-    ~Location();
+    ~_Location();
 
     void set_content(llvm::Value *content);
 
     llvm::Value *get_content();
 
-    bool operator==(const Location& rhs) const;
+    bool operator==(const _Location& rhs) const;
 
     void print(llvm::raw_ostream& stream) const;
 
@@ -91,7 +91,7 @@ namespace klee {
 
   class PointsToFrame {
     llvm::Function *function;
-    std::map< MemCell, Location *> points_to;
+    std::map< MemCell, _Location *> points_to;
 
   public:
     PointsToFrame(llvm::Function *function);
@@ -122,7 +122,7 @@ namespace klee {
 
   class PointsToState {
     std::vector<PointsToFrame> points_to_stack;
-    std::map< MemCell, Location *> points_to;
+    std::map< MemCell, _Location *> points_to;
     unsigned long next_alloc_id;
 
   public:
@@ -164,9 +164,9 @@ namespace klee {
 
 
   /// Function declarations
-  void store_points_to(std::map<MemCell, Location *>& points_to, const MemCell& source, const MemCell& address);
+  void store_points_to(std::map<MemCell, _Location *>& points_to, const MemCell& source, const MemCell& address);
 
-  void load_points_to(std::map<MemCell, Location *>& points_to, const MemCell& target, const MemCell& address);
+  void load_points_to(std::map<MemCell, _Location *>& points_to, const MemCell& target, const MemCell& address);
 
 }
 
