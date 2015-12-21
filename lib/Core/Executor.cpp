@@ -2069,18 +2069,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bool isLocal = i->getOpcode()==Instruction::Alloca;
     executeAlloc(state, size, isLocal, ki);
 
-    if (!dependencyState) {
-	llvm::errs() << "NULL\n";
-    }
-    dependencyState->addLocation(ai);
     dependencyState->updateDependency(ai);
-
     break;
   }
 
   case Instruction::Load: {
     ref<Expr> base = eval(ki, 0, state).value;
     executeMemoryOperation(state, false, base, 0, ki);
+
+    dependencyState->updateDependency(i);
     break;
   }
   case Instruction::Store: {

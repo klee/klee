@@ -27,7 +27,8 @@ namespace klee {
     return (dependencies.size() == 0 && constantDependency != 0);
   }
 
-  void Dependency::initializeWithNonConstant(std::vector<LocationDependency *> _dependencies) {
+  void Dependency::initializeWithNonConstant(
+      std::vector<LocationDependency *> _dependencies) {
     assert(_dependencies.size() != 0);
     constantDependency = 0;
     dependencies.clear();
@@ -87,17 +88,32 @@ namespace klee {
 	    new ValueDependency(instruction);
 	std::vector<LocationDependency *> locationDependencyVector;
 	locationDependencyVector.push_back(newLocationDependency);
-	newValueDependency->
-	initializeWithNonConstant(locationDependencyVector);
+	newValueDependency->initializeWithNonConstant(
+	    locationDependencyVector);
 	locationDependencies.push_back(newLocationDependency);
 	valueDependencies.push_back(newValueDependency);
+	break;
+      }
+      case llvm::Instruction::Load: {
+	llvm::Value *address = i->getOperand(0);
+	break;
+      }
+      case llvm::Instruction::Store: {
+	ValueDependency *addressDependency =
+	    new ValueDependency(i->getOperand(0));
+	ValueDependency *valueDependency =
+	    new ValueDependency(i->getOperand(1));
+	for (std::vector<ValueDependency *>::iterator
+	    it = valueDependencies.begin(),
+	    endIt = valueDependencies.end(); it != endIt; ++it) {
+
+	}
 	break;
       }
       default:
 	break;
     }
   }
-
 
   DependencyState::DependencyState() {
     dependencyStack.push_back(new DependencyFrame(0));
