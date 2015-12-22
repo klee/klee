@@ -1326,9 +1326,6 @@ void Executor::executeCall(ExecutionState &state,
     if (InvokeInst *ii = dyn_cast<InvokeInst>(i))
       transferToBasicBlock(ii->getNormalDest(), i->getParent(), state);
   } else {
-    // Push callee into symbolic state
-    dependencyState->pushFrame(f);
-
     // FIXME: I'm not really happy about this reliance on prevPC but it is ok, I
     // guess. This just done to avoid having to pass KInstIterator everywhere
     // instead of the actual instruction, since we can't make a KInstIterator
@@ -1534,8 +1531,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       assert(!caller && "caller set on initial stack frame");
       terminateStateOnExit(state);
     } else {
-      dependencyState->popFrame();
-
       state.popFrame();
 
       if (statsTracker)
@@ -1852,6 +1847,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> fExpr = eval(ki, 2, state).value;
     ref<Expr> result = SelectExpr::create(cond, tExpr, fExpr);
     bindLocal(ki, state, result);
+
+    // Update dependency
+    dependencyState->execute(i);
     break;
   }
 
@@ -1865,6 +1863,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> left = eval(ki, 0, state).value;
     ref<Expr> right = eval(ki, 1, state).value;
     bindLocal(ki, state, AddExpr::create(left, right));
+
+    // Update dependency
+    dependencyState->execute(i);
     break;
   }
 
@@ -1872,6 +1873,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> left = eval(ki, 0, state).value;
     ref<Expr> right = eval(ki, 1, state).value;
     bindLocal(ki, state, SubExpr::create(left, right));
+
+    // Update dependency
+    dependencyState->execute(i);
     break;
   }
  
@@ -1879,6 +1883,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> left = eval(ki, 0, state).value;
     ref<Expr> right = eval(ki, 1, state).value;
     bindLocal(ki, state, MulExpr::create(left, right));
+
+    // Update dependency
+    dependencyState->execute(i);
     break;
   }
 
@@ -1887,6 +1894,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = UDivExpr::create(left, right);
     bindLocal(ki, state, result);
+
+    // Update dependency
+    dependencyState->execute(i);
     break;
   }
 
@@ -1895,6 +1905,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = SDivExpr::create(left, right);
     bindLocal(ki, state, result);
+
+    // Update dependency
+    dependencyState->execute(i);
     break;
   }
 
@@ -1903,6 +1916,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = URemExpr::create(left, right);
     bindLocal(ki, state, result);
+
+    // Update dependency
+    dependencyState->execute(i);
     break;
   }
  
@@ -1911,6 +1927,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = SRemExpr::create(left, right);
     bindLocal(ki, state, result);
+
+    // Update dependency
+    dependencyState->execute(i);
     break;
   }
 
@@ -1919,6 +1938,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = AndExpr::create(left, right);
     bindLocal(ki, state, result);
+
+    // Update dependency
+    dependencyState->execute(i);
     break;
   }
 
@@ -1927,6 +1949,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = OrExpr::create(left, right);
     bindLocal(ki, state, result);
+
+    // Update dependency
+    dependencyState->execute(i);
     break;
   }
 
@@ -1935,6 +1960,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = XorExpr::create(left, right);
     bindLocal(ki, state, result);
+
+    // Update dependency
+    dependencyState->execute(i);
     break;
   }
 
@@ -1943,6 +1971,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = ShlExpr::create(left, right);
     bindLocal(ki, state, result);
+
+    // Update dependency
+    dependencyState->execute(i);
     break;
   }
 
@@ -1951,6 +1982,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = LShrExpr::create(left, right);
     bindLocal(ki, state, result);
+
+    // Update dependency
+    dependencyState->execute(i);
     break;
   }
 
@@ -1959,6 +1993,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = AShrExpr::create(left, right);
     bindLocal(ki, state, result);
+
+    // Update dependency
+    dependencyState->execute(i);
     break;
   }
 
@@ -2052,6 +2089,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     default:
       terminateStateOnExecError(state, "invalid ICmp predicate");
     }
+
+    // Update dependency
+    dependencyState->execute(i);
     break;
   }
  
@@ -2069,7 +2109,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bool isLocal = i->getOpcode()==Instruction::Alloca;
     executeAlloc(state, size, isLocal, ki);
 
-    dependencyState->updateDependency(ai);
+    // Update dependency
+    dependencyState->execute(i);
     break;
   }
 
@@ -2077,13 +2118,17 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> base = eval(ki, 0, state).value;
     executeMemoryOperation(state, false, base, 0, ki);
 
-    dependencyState->updateDependency(i);
+    // Update dependency
+    dependencyState->execute(i);
     break;
   }
   case Instruction::Store: {
     ref<Expr> base = eval(ki, 1, state).value;
     ref<Expr> value = eval(ki, 0, state).value;
     executeMemoryOperation(state, true, base, value, 0);
+
+    // Update dependency
+    dependencyState->execute(i);
     break;
   }
 
@@ -2104,6 +2149,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       base = AddExpr::create(base,
                              Expr::createPointer(kgepi->offset));
     bindLocal(ki, state, base);
+
+    // Update dependency
+    dependencyState->execute(i);
     break;
   }
 
@@ -2114,6 +2162,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
                                            0,
                                            getWidthForLLVMType(ci->getType()));
     bindLocal(ki, state, result);
+
+    // Update dependency
+    dependencyState->execute(i);
     break;
   }
   case Instruction::ZExt: {
@@ -2121,6 +2172,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = ZExtExpr::create(eval(ki, 0, state).value,
                                         getWidthForLLVMType(ci->getType()));
     bindLocal(ki, state, result);
+
+    // Update dependency
+    dependencyState->execute(i);
     break;
   }
   case Instruction::SExt: {
@@ -2128,6 +2182,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = SExtExpr::create(eval(ki, 0, state).value,
                                         getWidthForLLVMType(ci->getType()));
     bindLocal(ki, state, result);
+
+    // Update dependency
+    dependencyState->execute(i);
     break;
   }
 
@@ -2136,6 +2193,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     Expr::Width pType = getWidthForLLVMType(ci->getType());
     ref<Expr> arg = eval(ki, 0, state).value;
     bindLocal(ki, state, ZExtExpr::create(arg, pType));
+
+    // Update dependency
+    dependencyState->execute(i);
     break;
   } 
   case Instruction::PtrToInt: {
@@ -2143,12 +2203,18 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     Expr::Width iType = getWidthForLLVMType(ci->getType());
     ref<Expr> arg = eval(ki, 0, state).value;
     bindLocal(ki, state, ZExtExpr::create(arg, iType));
+
+    // Update dependency
+    dependencyState->execute(i);
     break;
   }
 
   case Instruction::BitCast: {
     ref<Expr> result = eval(ki, 0, state).value;
     bindLocal(ki, state, result);
+
+    // Update dependency
+    dependencyState->execute(i);
     break;
   }
 
@@ -2171,6 +2237,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     Res.add(APFloat(right->getAPValue()), APFloat::rmNearestTiesToEven);
 #endif
     bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
+
+    // Update dependency
+    dependencyState->execute(i);
     break;
   }
 
@@ -2190,6 +2259,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     Res.subtract(APFloat(right->getAPValue()), APFloat::rmNearestTiesToEven);
 #endif
     bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
+
+    // Update dependency
+    dependencyState->execute(i);
     break;
   }
  
@@ -2210,6 +2282,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     Res.multiply(APFloat(right->getAPValue()), APFloat::rmNearestTiesToEven);
 #endif
     bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
+
+    // Update dependency
+    dependencyState->execute(i);
     break;
   }
 
@@ -2230,6 +2305,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     Res.divide(APFloat(right->getAPValue()), APFloat::rmNearestTiesToEven);
 #endif
     bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
+
+    // Update dependency
+    dependencyState->execute(i);
     break;
   }
 
@@ -2250,6 +2328,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     Res.mod(APFloat(right->getAPValue()), APFloat::rmNearestTiesToEven);
 #endif
     bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
+
+    // Update dependency
+    dependencyState->execute(i);
     break;
   }
 
@@ -2271,6 +2352,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
                 llvm::APFloat::rmNearestTiesToEven,
                 &losesInfo);
     bindLocal(ki, state, ConstantExpr::alloc(Res));
+
+    // Update dependency
+    dependencyState->execute(i);
     break;
   }
 
@@ -2291,6 +2375,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
                 llvm::APFloat::rmNearestTiesToEven,
                 &losesInfo);
     bindLocal(ki, state, ConstantExpr::alloc(Res));
+
+    // Update dependency
+    dependencyState->execute(i);
     break;
   }
 
@@ -2312,6 +2399,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     Arg.convertToInteger(&value, resultType, false,
                          llvm::APFloat::rmTowardZero, &isExact);
     bindLocal(ki, state, ConstantExpr::alloc(value, resultType));
+
+    // Update dependency
+    dependencyState->execute(i);
     break;
   }
 
@@ -2333,6 +2423,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     Arg.convertToInteger(&value, resultType, true,
                          llvm::APFloat::rmTowardZero, &isExact);
     bindLocal(ki, state, ConstantExpr::alloc(value, resultType));
+
+    // Update dependency
+    dependencyState->execute(i);
     break;
   }
 
@@ -2349,6 +2442,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
                        llvm::APFloat::rmNearestTiesToEven);
 
     bindLocal(ki, state, ConstantExpr::alloc(f));
+
+    // Update dependency
+    dependencyState->execute(i);
     break;
   }
 
@@ -2365,6 +2461,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
                        llvm::APFloat::rmNearestTiesToEven);
 
     bindLocal(ki, state, ConstantExpr::alloc(f));
+
+    // Update dependency
+    dependencyState->execute(i);
     break;
   }
 
@@ -2463,6 +2562,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     }
 
     bindLocal(ki, state, ConstantExpr::alloc(Result, Expr::Bool));
+
+    // Update dependency
+    dependencyState->execute(i);
     break;
   }
   case Instruction::InsertValue: {
@@ -2490,6 +2592,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       result = val;
 
     bindLocal(ki, state, result);
+
+    // Update dependency
+    dependencyState->execute(i);
     break;
   }
   case Instruction::ExtractValue: {
@@ -2500,6 +2605,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = ExtractExpr::create(agg, kgepi->offset*8, getWidthForLLVMType(i->getType()));
 
     bindLocal(ki, state, result);
+
+    // Update dependency
+    dependencyState->execute(i);
     break;
   }
  
