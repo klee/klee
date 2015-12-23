@@ -11,6 +11,7 @@
 #define KLEE_ARRAY_CACHE_H
 
 #include "klee/Expr.h"
+#include "klee/util/ArrayExprHash.h" // For klee::ArrayHashFn
 
 // FIXME: Remove this hack when we switch to C++11
 #ifdef _LIBCPP_VERSION
@@ -25,15 +26,6 @@
 #include <vector>
 
 namespace klee {
-
-// FIXME: This is copied from ``klee/util/ArrayExprHash.h``.
-// We can't include it here becaues the includes are messed up
-// in that file.
-struct EquivArrayHashFn {
-  unsigned operator()(const Array *array) const {
-    return (array ? array->hash() : 0);
-  }
-};
 
 struct EquivArrayCmpFn {
   bool operator()(const Array *array1, const Array *array2) const {
@@ -76,7 +68,7 @@ public:
                            Expr::Width _range = Expr::Int8);
 
 private:
-  typedef unordered_set<const Array *, klee::EquivArrayHashFn,
+  typedef unordered_set<const Array *, klee::ArrayHashFn,
                         klee::EquivArrayCmpFn> ArrayHashMap;
   ArrayHashMap cachedSymbolicArrays;
   typedef std::vector<const Array *> ArrayPtrVec;

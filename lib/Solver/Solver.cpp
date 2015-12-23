@@ -10,7 +10,6 @@
 #include "klee/Solver.h"
 #include "klee/SolverImpl.h"
 
-#include "SolverStats.h"
 #include "STPBuilder.h"
 #include "MetaSMTBuilder.h"
 
@@ -23,6 +22,7 @@
 #include "klee/Internal/Support/Timer.h"
 #include "klee/Internal/Support/ErrorHandling.h"
 #include "klee/CommandLine.h"
+#include "klee/SolverStats.h"
 
 #define vc_bvBoolExtract IAMTHESPAWNOFSATAN
 

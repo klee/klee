@@ -23,7 +23,6 @@
 #include "UserSearcher.h"
 #include "ExecutorTimerInfo.h"
 
-#include "../Solver/SolverStats.h"
 
 #include "klee/ExecutionState.h"
 #include "klee/Expr.h"
@@ -47,6 +46,7 @@
 #include "klee/Internal/Support/FloatEvaluation.h"
 #include "klee/Internal/System/Time.h"
 #include "klee/Internal/System/MemoryUsage.h"
+#include "klee/SolverStats.h"
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
 #include "llvm/IR/Function.h"

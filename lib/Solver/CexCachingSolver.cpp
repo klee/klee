@@ -18,7 +18,7 @@
 #include "klee/util/ExprVisitor.h"
 #include "klee/Internal/ADT/MapOfSets.h"
 
-#include "SolverStats.h"
+#include "klee/SolverStats.h"
 
 #include "klee/Internal/Support/ErrorHandling.h"
 
