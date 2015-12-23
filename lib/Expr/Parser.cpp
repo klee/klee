@@ -331,6 +331,8 @@ namespace {
                                         MaxErrors(~0u),
                                         NumErrors(0) {}
 
+    virtual ~ParserImpl();
+
     /// Initialize - Initialize the parsing state. This must be called
     /// prior to the start of parsing.
     void Initialize() {
@@ -1559,6 +1561,36 @@ void ParserImpl::Error(const char *Message, const Token &At) {
   } else
     llvm::errs() << '^';
   llvm::errs() << '\n';
+}
+
+ParserImpl::~ParserImpl() {
+  // Free identifiers
+  //
+  // Note the Identifiers are not disjoint across the symbol
+  // tables so we need to keep track of what has freed to
+  // avoid doing a double free.
+  std::set<const Identifier*> freedNodes;
+  for (IdentifierTabTy::iterator pi = IdentifierTab.begin(),
+                                 pe = IdentifierTab.end();
+       pi != pe; ++pi) {
+    const Identifier* id = pi->second;
+    if (freedNodes.insert(id).second)
+      delete id;
+  }
+  for (ExprSymTabTy::iterator pi = ExprSymTab.begin(),
+                              pe = ExprSymTab.end();
+       pi != pe; ++pi) {
+    const Identifier* id = pi->first;
+    if (freedNodes.insert(id).second)
+      delete id;
+  }
+  for (VersionSymTabTy::iterator pi = VersionSymTab.begin(),
+                                 pe = VersionSymTab.end();
+       pi != pe; ++pi) {
+    const Identifier* id = pi->first;
+    if (freedNodes.insert(id).second)
+      delete id;
+  }
 }
 
 // AST API
