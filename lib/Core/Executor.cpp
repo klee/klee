@@ -276,7 +276,6 @@ namespace klee {
 Executor::Executor(const InterpreterOptions &opts,
                    InterpreterHandler *ih) 
   : Interpreter(opts),
-    dependencyState(new DependencyState()),
     kmodule(0),
     interpreterHandler(ih),
     searcher(0),
@@ -1532,7 +1531,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       terminateStateOnExit(state);
     } else {
       state.popFrame();
-      dependencyState->execute(i);
 
       if (statsTracker)
         statsTracker->framePopped(state);
@@ -1787,9 +1785,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         }
       }
       executeCall(state, ki, f, arguments);
-
-      // Update the dependency when executing the call
-      dependencyState->execute(i);
     } else {
       ref<Expr> v = eval(ki, 0, state).value;
 
@@ -1818,9 +1813,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
                                 f->getName().data());
 
             executeCall(*res.first, ki, f, arguments);
-
-            // Update the dependency when executing the call
-            dependencyState->execute(i);
           } else {
             if (!hasInvalid) {
               terminateStateOnExecError(state, "invalid function pointer");
@@ -1854,7 +1846,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, result);
 
     // Update dependency
-    dependencyState->execute(i);
+    interpTree->executeAbstractDependency(i);
     break;
   }
 
@@ -1870,7 +1862,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, AddExpr::create(left, right));
 
     // Update dependency
-    dependencyState->execute(i);
+    interpTree->executeAbstractDependency(i);
     break;
   }
 
@@ -1880,7 +1872,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, SubExpr::create(left, right));
 
     // Update dependency
-    dependencyState->execute(i);
+    interpTree->executeAbstractDependency(i);
     break;
   }
  
@@ -1890,7 +1882,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, MulExpr::create(left, right));
 
     // Update dependency
-    dependencyState->execute(i);
+    interpTree->executeAbstractDependency(i);
     break;
   }
 
@@ -1901,7 +1893,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, result);
 
     // Update dependency
-    dependencyState->execute(i);
+    interpTree->executeAbstractDependency(i);
     break;
   }
 
@@ -1912,7 +1904,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, result);
 
     // Update dependency
-    dependencyState->execute(i);
+    interpTree->executeAbstractDependency(i);
     break;
   }
 
@@ -1923,7 +1915,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, result);
 
     // Update dependency
-    dependencyState->execute(i);
+    interpTree->executeAbstractDependency(i);
     break;
   }
  
@@ -1934,7 +1926,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, result);
 
     // Update dependency
-    dependencyState->execute(i);
+    interpTree->executeAbstractDependency(i);
     break;
   }
 
@@ -1945,7 +1937,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, result);
 
     // Update dependency
-    dependencyState->execute(i);
+    interpTree->executeAbstractDependency(i);
     break;
   }
 
@@ -1956,7 +1948,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, result);
 
     // Update dependency
-    dependencyState->execute(i);
+    interpTree->executeAbstractDependency(i);
     break;
   }
 
@@ -1967,7 +1959,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, result);
 
     // Update dependency
-    dependencyState->execute(i);
+    interpTree->executeAbstractDependency(i);
     break;
   }
 
@@ -1978,7 +1970,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, result);
 
     // Update dependency
-    dependencyState->execute(i);
+    interpTree->executeAbstractDependency(i);
     break;
   }
 
@@ -1989,7 +1981,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, result);
 
     // Update dependency
-    dependencyState->execute(i);
+    interpTree->executeAbstractDependency(i);
     break;
   }
 
@@ -2000,7 +1992,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, result);
 
     // Update dependency
-    dependencyState->execute(i);
+    interpTree->executeAbstractDependency(i);
     break;
   }
 
@@ -2096,7 +2088,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     }
 
     // Update dependency
-    dependencyState->execute(i);
+    interpTree->executeAbstractDependency(i);
     break;
   }
  
@@ -2115,7 +2107,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     executeAlloc(state, size, isLocal, ki);
 
     // Update dependency
-    dependencyState->execute(i);
+    interpTree->executeAbstractDependency(i);
     break;
   }
 
@@ -2124,7 +2116,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     executeMemoryOperation(state, false, base, 0, ki);
 
     // Update dependency
-    dependencyState->execute(i);
+    interpTree->executeAbstractDependency(i);
     break;
   }
   case Instruction::Store: {
@@ -2133,7 +2125,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     executeMemoryOperation(state, true, base, value, 0);
 
     // Update dependency
-    dependencyState->execute(i);
+    interpTree->executeAbstractDependency(i);
     break;
   }
 
@@ -2156,7 +2148,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, base);
 
     // Update dependency
-    dependencyState->execute(i);
+    interpTree->executeAbstractDependency(i);
     break;
   }
 
@@ -2169,7 +2161,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, result);
 
     // Update dependency
-    dependencyState->execute(i);
+    interpTree->executeAbstractDependency(i);
     break;
   }
   case Instruction::ZExt: {
@@ -2179,7 +2171,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, result);
 
     // Update dependency
-    dependencyState->execute(i);
+    interpTree->executeAbstractDependency(i);
     break;
   }
   case Instruction::SExt: {
@@ -2189,7 +2181,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, result);
 
     // Update dependency
-    dependencyState->execute(i);
+    interpTree->executeAbstractDependency(i);
     break;
   }
 
@@ -2200,7 +2192,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, ZExtExpr::create(arg, pType));
 
     // Update dependency
-    dependencyState->execute(i);
+    interpTree->executeAbstractDependency(i);
     break;
   } 
   case Instruction::PtrToInt: {
@@ -2210,7 +2202,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, ZExtExpr::create(arg, iType));
 
     // Update dependency
-    dependencyState->execute(i);
+    interpTree->executeAbstractDependency(i);
     break;
   }
 
@@ -2219,7 +2211,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, result);
 
     // Update dependency
-    dependencyState->execute(i);
+    interpTree->executeAbstractDependency(i);
     break;
   }
 
@@ -2244,7 +2236,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
 
     // Update dependency
-    dependencyState->execute(i);
+    interpTree->executeAbstractDependency(i);
     break;
   }
 
@@ -2266,7 +2258,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
 
     // Update dependency
-    dependencyState->execute(i);
+    interpTree->executeAbstractDependency(i);
     break;
   }
  
@@ -2289,7 +2281,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
 
     // Update dependency
-    dependencyState->execute(i);
+    interpTree->executeAbstractDependency(i);
     break;
   }
 
@@ -2312,7 +2304,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
 
     // Update dependency
-    dependencyState->execute(i);
+    interpTree->executeAbstractDependency(i);
     break;
   }
 
@@ -2335,7 +2327,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
 
     // Update dependency
-    dependencyState->execute(i);
+    interpTree->executeAbstractDependency(i);
     break;
   }
 
@@ -2359,7 +2351,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, ConstantExpr::alloc(Res));
 
     // Update dependency
-    dependencyState->execute(i);
+    interpTree->executeAbstractDependency(i);
     break;
   }
 
@@ -2382,7 +2374,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, ConstantExpr::alloc(Res));
 
     // Update dependency
-    dependencyState->execute(i);
+    interpTree->executeAbstractDependency(i);
     break;
   }
 
@@ -2406,7 +2398,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, ConstantExpr::alloc(value, resultType));
 
     // Update dependency
-    dependencyState->execute(i);
+    interpTree->executeAbstractDependency(i);
     break;
   }
 
@@ -2430,7 +2422,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, ConstantExpr::alloc(value, resultType));
 
     // Update dependency
-    dependencyState->execute(i);
+    interpTree->executeAbstractDependency(i);
     break;
   }
 
@@ -2449,7 +2441,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, ConstantExpr::alloc(f));
 
     // Update dependency
-    dependencyState->execute(i);
+    interpTree->executeAbstractDependency(i);
     break;
   }
 
@@ -2468,7 +2460,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, ConstantExpr::alloc(f));
 
     // Update dependency
-    dependencyState->execute(i);
+    interpTree->executeAbstractDependency(i);
     break;
   }
 
@@ -2569,7 +2561,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, ConstantExpr::alloc(Result, Expr::Bool));
 
     // Update dependency
-    dependencyState->execute(i);
+    interpTree->executeAbstractDependency(i);
     break;
   }
   case Instruction::InsertValue: {
@@ -2599,7 +2591,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, result);
 
     // Update dependency
-    dependencyState->execute(i);
+    interpTree->executeAbstractDependency(i);
     break;
   }
   case Instruction::ExtractValue: {
@@ -2612,7 +2604,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, result);
 
     // Update dependency
-    dependencyState->execute(i);
+    interpTree->executeAbstractDependency(i);
     break;
   }
  
@@ -2822,8 +2814,7 @@ void Executor::run(ExecutionState &initialState) {
       llvm::errs() << "Current state:\n";
       /// processTree->dump();
       /// interpTree->dump();
-      /// state.itreeNode->dump();
-      dependencyState->dump();
+      state.itreeNode->dump();
     }
 
     if (!NoInterpolation &&
@@ -3709,8 +3700,6 @@ void Executor::runFunctionAsMain(Function *f,
 #ifdef SUPPORT_Z3
   if (!NoInterpolation) {
     interpTree = new ITree(state);//added by Felicia
-    state->itreeNode = interpTree->root;
-    interpTree->setCurrentINode(interpTree->root);
   }
 #endif
 

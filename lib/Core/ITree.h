@@ -12,19 +12,21 @@
 #include "klee/Config/Version.h"
 #include "klee/ExecutionState.h"
 
+#include "Dependency.h"
+
 using namespace llvm;
 
 namespace klee {
   class ExecutionState;
 
   class PathCondition {
-    /// KLEE expression
+    // KLEE expression
     ref<Expr> constraint;
 
-    /// Should this be included in an interpolant?
+    // Should this be included in an interpolant?
     bool inInterpolant;
 
-    /// Previous path condition
+    // Previous path condition
     PathCondition *tail;
 
   public:
@@ -113,6 +115,8 @@ namespace klee {
 
     std::pair<ITreeNode *, ITreeNode *> split(ITreeNode *parent, ExecutionState *left, ExecutionState *right);
 
+    void executeAbstractDependency(llvm::Instruction *instr);
+
     void print(llvm::raw_ostream &stream);
 
     void dump();
@@ -120,11 +124,23 @@ namespace klee {
 
   class ITreeNode{
     friend class ITree;
+
+    friend class ExecutionState;
+
     typedef ref<Expr> expression_type;
+
     typedef std::pair <expression_type, expression_type> pair_type;
+
+    /// @brief The path condition
     PathCondition *pathCondition;
+
+    /// @brief Abstract state for value dependencies
+    DependencyState *dependencyState;
+
     ITreeNode *parent, *left, *right;
+
     unsigned int nodeId;
+
     bool isSubsumed;
 
   public:
@@ -146,20 +162,18 @@ namespace klee {
 
     bool introducesMarkedConstraint();
 
+    void executeAbstractDependency(llvm::Instruction *instr);
+
+    void pushAbstractDependencyFrame(llvm::Function *function);
+
+    void popAbstractDependencyFrame();
+
   private:
     ITreeNode(ITreeNode *_parent, ExecutionState *_data);
 
     ~ITreeNode();
 
     void print(llvm::raw_ostream &stream, const unsigned int tab_num) const;
-
-    std::string make_tabs(const unsigned int tab_num) const {
-      std::string tabs_string;
-      for (unsigned int i = 0; i < tab_num; i++) {
-	  tabs_string += "\t";
-      }
-      return tabs_string;
-    }
 
   };
 

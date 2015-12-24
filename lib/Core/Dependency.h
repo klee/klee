@@ -5,9 +5,11 @@
 #include "klee/Config/Version.h"
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+#include <llvm/IR/Function.h>
 #include <llvm/IR/Instruction.h>
 #include <llvm/IR/Value.h>
 #else
+#include <llvm/Function.h>
 #include <llvm/Instruction.h>
 #include <llvm/Value.h>
 #endif
@@ -121,6 +123,7 @@ namespace klee {
 
 
   class DependencyFrame {
+    llvm::Function *function;
     std::vector< PointerEquality *> equalityList;
     std::vector< StorageCell *> storesList;
     std::vector<FlowsTo *> flowsToList;
@@ -150,13 +153,15 @@ namespace klee {
     bool depends(VersionedValue *source, VersionedValue *target);
 
   public:
-    DependencyFrame();
+    DependencyFrame(llvm::Function *function);
 
     ~DependencyFrame();
 
     void execute(llvm::Instruction *instr);
 
     void print(llvm::raw_ostream& stream) const;
+
+    void print(llvm::raw_ostream &stream, const unsigned int tab_num) const;
 
     void dump() const {
       print(llvm::errs());
@@ -174,7 +179,13 @@ namespace klee {
 
     void execute(llvm::Instruction *instr);
 
+    void pushFrame(llvm::Function *function);
+
+    void popFrame();
+
     void print(llvm::raw_ostream& stream) const;
+
+    void print(llvm::raw_ostream &stream, const unsigned int tab_num) const;
 
     void dump() const {
       print(llvm::errs());
@@ -186,6 +197,9 @@ namespace klee {
   template<typename T>
   void deletePointerVector(std::vector<T*>& list);
 
+  std::string makeTabs(const unsigned int tab_num);
+
+  std::string appendTab(const std::string &prefix);
 }
 
 #endif

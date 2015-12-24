@@ -16,6 +16,7 @@
 
 #include "klee/Expr.h"
 
+#include "ITree.h"
 #include "Memory.h"
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
 #include "llvm/IR/Function.h"
@@ -66,23 +67,15 @@ StackFrame::~StackFrame() {
 
 /***/
 
-ExecutionState::ExecutionState(KFunction *kf) :
-    pc(kf->instructions),
-    prevPC(pc),
-
-    queryCost(0.), 
-    weight(1),
-    depth(0),
-
-    instsSinceCovNew(0),
-    coveredNew(false),
-    forkDisabled(false),
-    ptreeNode(0) {
+ExecutionState::ExecutionState(KFunction *kf)
+    : pc(kf->instructions), prevPC(pc), queryCost(0.), weight(1), depth(0),
+      instsSinceCovNew(0), coveredNew(false), forkDisabled(false), ptreeNode(0),
+      itreeNode(new ITreeNode(0, this)) {
   pushFrame(0, kf);
 }
 
 ExecutionState::ExecutionState(const std::vector<ref<Expr> > &assumptions)
-    : constraints(assumptions), queryCost(0.), ptreeNode(0) {}
+    : constraints(assumptions), queryCost(0.), ptreeNode(0), itreeNode(0) {}
 
 ExecutionState::~ExecutionState() {
   for (unsigned int i=0; i<symbolics.size(); i++)
@@ -142,6 +135,8 @@ ExecutionState *ExecutionState::branch() {
 
 void ExecutionState::pushFrame(KInstIterator caller, KFunction *kf) {
   stack.push_back(StackFrame(caller,kf));
+
+  itreeNode->pushAbstractDependencyFrame(kf->function);
 }
 
 void ExecutionState::popFrame() {
@@ -150,6 +145,8 @@ void ExecutionState::popFrame() {
          ie = sf.allocas.end(); it != ie; ++it)
     addressSpace.unbindObject(*it);
   stack.pop_back();
+
+  itreeNode->popAbstractDependencyFrame();
 }
 
 void ExecutionState::addSymbolic(const MemoryObject *mo, const Array *array) { 

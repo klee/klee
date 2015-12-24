@@ -7,6 +7,7 @@
 
 #include "ITree.h"
 #include "TimingSolver.h"
+#include "Dependency.h"
 
 #include <klee/Expr.h>
 #include <klee/Solver.h>
@@ -149,9 +150,8 @@ void SubsumptionTableEntry::print(llvm::raw_ostream &stream) const {
   stream << "]\n";
 }
 
-ITree::ITree(ExecutionState* _root) :
-    currentINode(0),
-    root(new ITreeNode(0, _root)) {}
+ITree::ITree(ExecutionState *_root)
+    : currentINode(_root->itreeNode), root(_root->itreeNode) {}
 
 ITree::~ITree() {}
 
@@ -241,6 +241,10 @@ void ITree::markPathCondition(std::vector< ref<Expr> > unsat_core) {
   }
 }
 
+void ITree::executeAbstractDependency(llvm::Instruction *instr) {
+  currentINode->executeAbstractDependency(instr);
+}
+
 void ITree::printNode(llvm::raw_ostream& stream, ITreeNode *n, std::string edges) {
   if (n->left != 0) {
       stream << edges << "+-- L:" << n->left->nodeId;
@@ -294,26 +298,34 @@ ITreeNode::ITreeNode(ITreeNode *_parent,
       if (pathCondition == 0) {
 	  pathCondition = new PathCondition(lastConstraint);
       } else {
-	  /// FIXME: Would be good to have something better than
-	  /// quadratic complexity.
-	  std::vector< ref<Expr> > constraints = _data->constraints.getConstraints();
-	  for (PathCondition *it = pathCondition; it != 0; it = it->cdr()) {
-	      constraints.erase(std::remove(constraints.begin(), constraints.end(), it->car()), constraints.end());
-	  }
+        // FIXME: Would be good to have something better than
+        // quadratic complexity.
+        std::vector<ref<Expr> > constraints =
+            _data->constraints.getConstraints();
+        for (PathCondition *it = pathCondition; it != 0; it = it->cdr()) {
+          constraints.erase(
+              std::remove(constraints.begin(), constraints.end(), it->car()),
+              constraints.end());
+        }
 
-	  for (std::vector< ref<Expr> >::iterator it = constraints.begin();
-	      it != constraints.end(); it++) {
-	      pathCondition = new PathCondition((*it), pathCondition);
-	  }
+        for (std::vector<ref<Expr> >::iterator it = constraints.begin();
+             it != constraints.end(); it++) {
+          pathCondition = new PathCondition((*it), pathCondition);
+        }
       }
   }
+
+  // Inherit the abstract dependency state or create a new one
+  dependencyState =
+      (_parent ? _parent->dependencyState : new DependencyState());
 }
 
 ITreeNode::~ITreeNode() {
-  /// Only delete the path condition if it's not
-  /// also the parent's path condition
+  // Only delete the path condition if it's not
+  // also the parent's path condition
   if (parent != 0) {
-      for (PathCondition *it = pathCondition; it != parent->pathCondition; it = it->cdr()) {
+    for (PathCondition *it = pathCondition; it != parent->pathCondition;
+         it = it->cdr()) {
       delete it;
     }
   }
@@ -357,10 +369,20 @@ bool ITreeNode::introducesMarkedConstraint() {
   return false;
 }
 
+void ITreeNode::executeAbstractDependency(llvm::Instruction *instr) {
+  dependencyState->execute(instr);
+}
+
+void ITreeNode::pushAbstractDependencyFrame(llvm::Function *function) {
+  dependencyState->pushFrame(function);
+}
+
+void ITreeNode::popAbstractDependencyFrame() { dependencyState->popFrame(); }
 
 void ITreeNode::dump() const {
   llvm::errs() << "\n------------------------- ITree Node --------------------------------\n";
   this->print(llvm::errs());
+  llvm::errs() << "\n";
 }
 
 void ITreeNode::print(llvm::raw_ostream &stream) const {
@@ -368,8 +390,8 @@ void ITreeNode::print(llvm::raw_ostream &stream) const {
 }
 
 void ITreeNode::print(llvm::raw_ostream &stream, const unsigned int tab_num) const {
-  std::string tabs = make_tabs(tab_num);
-  std::string tabs_next = tabs + "\t";
+  std::string tabs = makeTabs(tab_num);
+  std::string tabs_next = appendTab(tabs);
 
   stream << tabs << "ITreeNode\n";
   stream << tabs_next << "node Id = " << nodeId << "\n";
@@ -394,7 +416,12 @@ void ITreeNode::print(llvm::raw_ostream &stream, const unsigned int tab_num) con
       right->print(stream, tab_num + 1);
       stream << "\n";
   }
+  stream << tabs_next << "dependencyState:\n";
+  dependencyState->print(stream, tab_num + 1);
 }
+
+
+
 
 
 

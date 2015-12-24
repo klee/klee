@@ -115,8 +115,6 @@ public:
 private:
   class TimerInfo;
 
-  DependencyState *dependencyState;
-
   KModule *kmodule;
   InterpreterHandler *interpreterHandler;
   Searcher *searcher;

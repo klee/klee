@@ -108,7 +108,8 @@ namespace klee {
 
   /**/
 
-  DependencyFrame::DependencyFrame() {}
+  DependencyFrame::DependencyFrame(llvm::Function *function)
+      : function(function) {}
 
   DependencyFrame::~DependencyFrame() {
     // Delete the locally-constructed relations
@@ -363,8 +364,11 @@ namespace klee {
 
   }
 
-  void DependencyFrame::print(llvm::raw_ostream& stream) const {
-    stream << "EQUALITIES:";
+  void DependencyFrame::print(llvm::raw_ostream &stream,
+                              const unsigned int tab_num) const {
+    std::string tabs = makeTabs(tab_num);
+    stream << tabs << (function ? function->getName() : "TOP") << " FRAME\n";
+    stream << tabs << "EQUALITIES:";
     std::vector<PointerEquality *>::const_iterator equalityListBegin =
 	equalityList.begin();
     std::vector<StorageCell *>::const_iterator storesListBegin =
@@ -378,7 +382,7 @@ namespace klee {
 	(*it)->print(stream);
     }
     stream << "\n";
-    stream << "STORAGE:";
+    stream << tabs << "STORAGE:";
     for (std::vector< StorageCell *>::const_iterator it = storesList.begin(),
 	itEnd = storesList.end(); it != itEnd; ++it) {
 	if (it != storesListBegin)
@@ -386,7 +390,7 @@ namespace klee {
 	(*it)->print(stream);
     }
     stream << "\n";
-    stream << "FLOWDEPENDENCY:";
+    stream << tabs << "FLOWDEPENDENCY:";
     for (std::vector<FlowsTo *>::const_iterator it = flowsToList.begin(),
                                                 itEnd = flowsToList.begin();
          it != itEnd; ++it) {
@@ -396,40 +400,40 @@ namespace klee {
     }
   }
 
-  DependencyState::DependencyState() {
-    stack.push_back(new DependencyFrame());
+  void DependencyFrame::print(llvm::raw_ostream &stream) const {
+    this->print(stream, 0);
   }
+
+  DependencyState::DependencyState() {}
 
   DependencyState::~DependencyState() {
     deletePointerVector(stack);
   }
 
   void DependencyState::execute(llvm::Instruction *instr) {
-    switch (instr->getOpcode()) {
-      case llvm::Instruction::Invoke:
-      case llvm::Instruction::Call:
-	{
-	  stack.push_back(new DependencyFrame());
-	  break;
-	}
-      case llvm::Instruction::Ret:
-	{
-	  delete stack.back();
-	  stack.pop_back();
-	  break;
-	}
-      default:
-	{
-	  stack.back()->execute(instr);
-	}
+    stack.back()->execute(instr);
+  }
+
+  void DependencyState::pushFrame(llvm::Function *function) {
+    stack.push_back(new DependencyFrame(function));
+  }
+
+  void DependencyState::popFrame() {
+    delete stack.back();
+    stack.pop_back();
+  }
+
+  void DependencyState::print(llvm::raw_ostream &stream,
+                              const unsigned int tab_num) const {
+    for (std::vector<DependencyFrame *>::const_iterator it = stack.begin(),
+	itEnd = stack.end(); it != itEnd; ++it) {
+      (*it)->print(stream, tab_num);
+      stream << "\n";
     }
   }
 
-  void DependencyState::print(llvm::raw_ostream& stream) const {
-    for (std::vector<DependencyFrame *>::const_iterator it = stack.begin(),
-	itEnd = stack.end(); it != itEnd; ++it) {
-	(*it)->print(stream);
-    }
+  void DependencyState::print(llvm::raw_ostream &stream) const {
+    this->print(stream, 0);
   }
 
   template<typename T>
@@ -443,4 +447,15 @@ namespace klee {
     list.clear();
   }
 
+  std::string makeTabs(const unsigned int tab_num) {
+    std::string tabs_string;
+    for (unsigned int i = 0; i < tab_num; i++) {
+      tabs_string += appendTab(tabs_string);
+    }
+    return tabs_string;
+  }
+
+  std::string appendTab(const std::string &prefix) {
+    return prefix + "        ";
+  }
 }
