@@ -4,11 +4,14 @@
 
 #include "klee/Config/Version.h"
 
-#if LLVM_VERSION_CODE > LLVM_VERSION(3, 2)
-#include "llvm/IR/Function.h"
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+#include <llvm/IR/Instruction.h>
+#include <llvm/IR/Value.h>
 #else
-#include "llvm/Function.h"
+#include <llvm/Instruction.h>
+#include <llvm/Value.h>
 #endif
+
 #include "llvm/Support/raw_ostream.h"
 
 #include <vector>
@@ -28,6 +31,13 @@ namespace klee {
     ~VersionedAllocation();
 
     bool hasAllocationSite(llvm::Value *site);
+
+    void print(llvm::raw_ostream& stream) const;
+
+    void dump() const {
+      print(llvm::errs());
+      llvm::errs() << "\n";
+    }
   };
 
   class VersionedValue {
@@ -41,6 +51,13 @@ namespace klee {
     ~VersionedValue();
 
     bool hasValue(llvm::Value *value);
+
+    void print(llvm::raw_ostream& stream) const;
+
+    void dump() const {
+      print(llvm::errs());
+      llvm::errs() << "\n";
+    }
   };
 
   class PointerEquality {
@@ -53,6 +70,13 @@ namespace klee {
     ~PointerEquality();
 
     VersionedAllocation *equals(VersionedValue *value);
+
+    void print(llvm::raw_ostream& stream) const;
+
+    void dump() const {
+      print(llvm::errs());
+      llvm::errs() << "\n";
+    }
   };
 
   class StorageCell {
@@ -67,25 +91,39 @@ namespace klee {
     VersionedValue *stores(VersionedAllocation *allocation);
 
     VersionedAllocation *storageOf(VersionedValue *value);
+
+    void print(llvm::raw_ostream& stream) const;
+
+    void dump() const {
+      print(llvm::errs());
+      llvm::errs() << "\n";
+    }
   };
 
-  class ValueValueDependency {
+  class FlowsTo {
     // target depends on source
     VersionedValue* source;
     VersionedValue* target;
   public:
-    ValueValueDependency(VersionedValue *source, VersionedValue *target);
+    FlowsTo(VersionedValue *source, VersionedValue *target);
 
-    ~ValueValueDependency();
+    ~FlowsTo();
 
     bool depends(VersionedValue *source, VersionedValue *target);
+
+    void print(llvm::raw_ostream& sream) const;
+
+    void dump() const {
+      print(llvm::errs());
+      llvm::errs() << "\n";
+    }
   };
 
 
-  class DependencyState {
+  class DependencyFrame {
     std::vector< PointerEquality *> equalityList;
     std::vector< StorageCell *> storesList;
-    std::vector< ValueValueDependency *> dependsList;
+    std::vector<FlowsTo *> flowsToList;
     std::vector< VersionedValue *> valuesList;
     std::vector< VersionedAllocation *> allocationsList;
 
@@ -112,12 +150,42 @@ namespace klee {
     bool depends(VersionedValue *source, VersionedValue *target);
 
   public:
+    DependencyFrame();
+
+    ~DependencyFrame();
+
+    void execute(llvm::Instruction *instr);
+
+    void print(llvm::raw_ostream& stream) const;
+
+    void dump() const {
+      print(llvm::errs());
+      llvm::errs() << "\n";
+    }
+  };
+
+  class DependencyState {
+    std::vector<DependencyFrame *> stack;
+
+  public:
     DependencyState();
 
     ~DependencyState();
 
     void execute(llvm::Instruction *instr);
+
+    void print(llvm::raw_ostream& stream) const;
+
+    void dump() const {
+      print(llvm::errs());
+      llvm::errs() << "\n";
+    }
   };
+
+
+  template<typename T>
+  void deletePointerVector(std::vector<T*>& list);
+
 }
 
 #endif

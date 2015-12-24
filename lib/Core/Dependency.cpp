@@ -1,14 +1,5 @@
 
 #include "Dependency.h"
-#include "klee/Config/Version.h"
-
-#if LLVM_VERSION_CODE > LLVM_VERSION(3, 2)
-#include "llvm/IR/Function.h"
-#else
-#include "llvm/Function.h"
-#endif
-#include "llvm/Support/raw_ostream.h"
-
 
 using namespace klee;
 
@@ -25,6 +16,13 @@ namespace klee {
     return this->site == site;
   }
 
+  void VersionedAllocation::print(llvm::raw_ostream& stream) const {
+    stream << "A[";
+    site->print(stream);
+    stream << "#" << version;
+    stream << "]";
+  }
+
   /**/
 
   unsigned long long VersionedValue::nextVersion = 0;
@@ -38,6 +36,13 @@ namespace klee {
     return this->value == value;
   }
 
+  void VersionedValue::print(llvm::raw_ostream& stream) const {
+    stream << "V[";
+    value->print(stream);
+    stream << "#" << version;
+    stream << "]";
+  }
+
   /**/
 
   PointerEquality::PointerEquality(VersionedValue *value,
@@ -49,6 +54,14 @@ namespace klee {
 
   VersionedAllocation *PointerEquality::equals(VersionedValue *value) {
     return this->value == value ? allocation : 0;
+  }
+
+  void PointerEquality::print(llvm::raw_ostream& stream) const {
+    stream << "(";
+    value->print(stream);
+    stream << "==";
+    allocation->print(stream);
+    stream << ")";
   }
 
   /**/
@@ -68,45 +81,59 @@ namespace klee {
     return this->value == value ? this->allocation : 0;
   }
 
+  void StorageCell::print(llvm::raw_ostream& stream) const {
+    stream << "[";
+    allocation->print(stream);
+    stream << ",";
+    value->print(stream);
+    stream << "]";
+  }
+
   /**/
 
-  ValueValueDependency::ValueValueDependency(VersionedValue *source,
-                                             VersionedValue *target) :
-                                        	 source(source), target(target)
-  {}
+  FlowsTo::FlowsTo(VersionedValue *source, VersionedValue *target)
+      : source(source), target(target) {}
 
-  ValueValueDependency::~ValueValueDependency() {}
+  FlowsTo::~FlowsTo() {}
 
-  bool ValueValueDependency::depends(VersionedValue *source,
-                                     VersionedValue *target) {
+  bool FlowsTo::depends(VersionedValue *source, VersionedValue *target) {
     return this->source == source && this->target == target;
   }
 
-  /**/
-
-  DependencyState::DependencyState() {}
-
-  DependencyState::~DependencyState() {
-    equalityList.clear();
-    dependsList.clear();
-    storesList.clear();
-    valuesList.clear();
-    allocationsList.clear();
+  void FlowsTo::print(llvm::raw_ostream &stream) const {
+    source->print(stream);
+    stream << "->";
+    target->print(stream);
   }
 
-  VersionedValue *DependencyState::getNewValue(llvm::Value *value) {
+  /**/
+
+  DependencyFrame::DependencyFrame() {}
+
+  DependencyFrame::~DependencyFrame() {
+    // Delete the locally-constructed relations
+    deletePointerVector(equalityList);
+    deletePointerVector(storesList);
+    deletePointerVector(flowsToList);
+
+    // Delete the locally-constructed objects
+    deletePointerVector(valuesList);
+    deletePointerVector(allocationsList);
+  }
+
+  VersionedValue *DependencyFrame::getNewValue(llvm::Value *value) {
     VersionedValue *ret = new VersionedValue(value);
     valuesList.push_back(ret);
     return ret;
   }
 
-  VersionedAllocation *DependencyState::getNewAllocation(llvm::Value *allocation) {
+  VersionedAllocation *DependencyFrame::getNewAllocation(llvm::Value *allocation) {
     VersionedAllocation *ret = new VersionedAllocation(allocation);
     allocationsList.push_back(ret);
     return ret;
   }
 
-  VersionedValue *DependencyState::getLatestValue(llvm::Value *value) {
+  VersionedValue *DependencyFrame::getLatestValue(llvm::Value *value) {
     for (std::vector< VersionedValue *>::reverse_iterator
 	it = valuesList.rbegin(),
 	itEnd = valuesList.rend(); it != itEnd; ++it) {
@@ -116,7 +143,7 @@ namespace klee {
     return 0;
   }
 
-  VersionedAllocation *DependencyState::getLatestAllocation(llvm::Value *allocation) {
+  VersionedAllocation *DependencyFrame::getLatestAllocation(llvm::Value *allocation) {
     for (std::vector< VersionedAllocation *>::reverse_iterator
 	it = allocationsList.rbegin(),
 	itEnd = allocationsList.rend(); it != itEnd; ++it) {
@@ -126,7 +153,7 @@ namespace klee {
     return 0;
   }
 
-  VersionedAllocation *DependencyState::resolveAllocation(VersionedValue *val) {
+  VersionedAllocation *DependencyFrame::resolveAllocation(VersionedValue *val) {
     if (!val) return 0;
     for (std::vector< PointerEquality *>::reverse_iterator
 	it = equalityList.rbegin(),
@@ -138,22 +165,22 @@ namespace klee {
     return 0;
   }
 
-  void DependencyState::addPointerEquality(VersionedValue *value,
+  void DependencyFrame::addPointerEquality(VersionedValue *value,
                                            VersionedAllocation *allocation) {
     equalityList.push_back(new PointerEquality(value, allocation));
   }
 
-  void DependencyState::updateStore(VersionedAllocation *allocation,
+  void DependencyFrame::updateStore(VersionedAllocation *allocation,
                                     VersionedValue *value) {
     storesList.push_back(new StorageCell(allocation, value));
   }
 
-  void DependencyState::addDependency(VersionedValue *source,
+  void DependencyFrame::addDependency(VersionedValue *source,
                                       VersionedValue *target) {
-    dependsList.push_back(new ValueValueDependency(source, target));
+    flowsToList.push_back(new FlowsTo(source, target));
   }
 
-  VersionedValue *DependencyState::stores(VersionedAllocation *allocation) {
+  VersionedValue *DependencyFrame::stores(VersionedAllocation *allocation) {
     for (std::vector< StorageCell *>::iterator it = storesList.begin(),
 	itEnd = storesList.end(); it != itEnd; ++it) {
 	VersionedValue *ret = (*it)->stores(allocation);
@@ -163,7 +190,7 @@ namespace klee {
     return 0;
   }
 
-  VersionedAllocation *DependencyState::storageOf(VersionedValue *value) {
+  VersionedAllocation *DependencyFrame::storageOf(VersionedValue *value) {
     for (std::vector< StorageCell *>::iterator it = storesList.begin(),
 	itEnd = storesList.end(); it != itEnd; ++it) {
 	VersionedAllocation *ret = (*it)->storageOf(value);
@@ -174,17 +201,18 @@ namespace klee {
 
   }
 
-  bool DependencyState::depends(VersionedValue *source,
+  bool DependencyFrame::depends(VersionedValue *source,
                                 VersionedValue *target) {
-    for (std::vector< ValueValueDependency *>::iterator it = dependsList.begin(),
-	itEnd = dependsList.end(); it != itEnd; ++it) {
-	if ((*it)->depends(source, target))
-	  return true;
+    for (std::vector<FlowsTo *>::iterator it = flowsToList.begin(),
+                                          itEnd = flowsToList.end();
+         it != itEnd; ++it) {
+      if ((*it)->depends(source, target))
+        return true;
     }
     return false;
   }
 
-  void DependencyState::execute(llvm::Instruction *i) {
+  void DependencyFrame::execute(llvm::Instruction *i) {
     switch(i->getOpcode()) {
       case llvm::Instruction::Alloca: {
 	addPointerEquality(getNewValue(i), getNewAllocation(i));
@@ -203,6 +231,10 @@ namespace klee {
 		    } else {
 			addDependency(val, getNewValue(i));
 		    }
+		} else {
+		    // We could not find the stored value, create
+		    // a new one.
+		    updateStore(alloc, getNewValue(i));
 		}
 	    }
 	}
@@ -210,13 +242,19 @@ namespace klee {
       }
       case llvm::Instruction::Store: {
 	VersionedValue *dataArg = getLatestValue(i->getOperand(0));
+	VersionedAllocation *address =
+	    resolveAllocation(getLatestValue(i->getOperand(1)));
+
 	if (dataArg) {
 	    // There is dependency to store (not a constant etc.)
-	    VersionedValue *addressArg = getLatestValue(i->getOperand(1));
-	    VersionedAllocation *address = resolveAllocation(addressArg);
-
 	    if (address) {
 		updateStore(address, dataArg);
+	    }
+	} else {
+	    // There is no dependency found, we should create
+	    // a new value
+	    if (address) {
+		updateStore(address, getNewValue(i->getOperand(0)));
 	    }
 	}
 	break;
@@ -310,10 +348,99 @@ namespace klee {
 	  }
 	  break;
 	}
+      case llvm::Instruction::Invoke:
+      case llvm::Instruction::Call:
+	{
+	  break;
+	}
+      case llvm::Instruction::Ret:
+	{
+	  break;
+	}
       default:
 	break;
     }
 
+  }
+
+  void DependencyFrame::print(llvm::raw_ostream& stream) const {
+    stream << "EQUALITIES:";
+    std::vector<PointerEquality *>::const_iterator equalityListBegin =
+	equalityList.begin();
+    std::vector<StorageCell *>::const_iterator storesListBegin =
+	storesList.begin();
+    std::vector<FlowsTo *>::const_iterator flowsToListBegin =
+	flowsToList.begin();
+    for (std::vector< PointerEquality *>::const_iterator it = equalityListBegin,
+	itEnd = equalityList.end(); it != itEnd; ++it) {
+	if (it != equalityListBegin)
+	  stream << ",";
+	(*it)->print(stream);
+    }
+    stream << "\n";
+    stream << "STORAGE:";
+    for (std::vector< StorageCell *>::const_iterator it = storesList.begin(),
+	itEnd = storesList.end(); it != itEnd; ++it) {
+	if (it != storesListBegin)
+	  stream << ",";
+	(*it)->print(stream);
+    }
+    stream << "\n";
+    stream << "FLOWDEPENDENCY:";
+    for (std::vector<FlowsTo *>::const_iterator it = flowsToList.begin(),
+                                                itEnd = flowsToList.begin();
+         it != itEnd; ++it) {
+	if (it != flowsToListBegin)
+	  stream << ",";
+	(*it)->print(stream);
+    }
+  }
+
+  DependencyState::DependencyState() {
+    stack.push_back(new DependencyFrame());
+  }
+
+  DependencyState::~DependencyState() {
+    deletePointerVector(stack);
+  }
+
+  void DependencyState::execute(llvm::Instruction *instr) {
+    switch (instr->getOpcode()) {
+      case llvm::Instruction::Invoke:
+      case llvm::Instruction::Call:
+	{
+	  stack.push_back(new DependencyFrame());
+	  break;
+	}
+      case llvm::Instruction::Ret:
+	{
+	  delete stack.back();
+	  stack.pop_back();
+	  break;
+	}
+      default:
+	{
+	  stack.back()->execute(instr);
+	}
+    }
+  }
+
+  void DependencyState::print(llvm::raw_ostream& stream) const {
+    for (std::vector<DependencyFrame *>::const_iterator it = stack.begin(),
+	itEnd = stack.end(); it != itEnd; ++it) {
+	(*it)->print(stream);
+    }
+  }
+
+  template<typename T>
+  void deletePointerVector(std::vector<T*>& list) {
+    typedef typename std::vector<T*>::iterator IteratorType;
+
+    for (IteratorType it = list.begin(),
+	itEnd = list.end(); it != itEnd; ++it) {
+	delete *it;
+    }
+    list.clear();
   }
 
 }

@@ -1532,6 +1532,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       terminateStateOnExit(state);
     } else {
       state.popFrame();
+      dependencyState->execute(i);
 
       if (statsTracker)
         statsTracker->framePopped(state);
@@ -1785,9 +1786,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
           i++;
         }
       }
-
-      llvm::errs() << "CALLING EXECUTECALL\n";
       executeCall(state, ki, f, arguments);
+
+      // Update the dependency when executing the call
+      dependencyState->execute(i);
     } else {
       ref<Expr> v = eval(ki, 0, state).value;
 
@@ -1816,6 +1818,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
                                 f->getName().data());
 
             executeCall(*res.first, ki, f, arguments);
+
+            // Update the dependency when executing the call
+            dependencyState->execute(i);
           } else {
             if (!hasInvalid) {
               terminateStateOnExecError(state, "invalid function pointer");
@@ -2814,10 +2819,11 @@ void Executor::run(ExecutionState &initialState) {
 
       llvm::errs() << "Executing new instruction: ";
       state.pc->inst->dump();
-      /// llvm::errs() << "Current state:\n";
+      llvm::errs() << "Current state:\n";
       /// processTree->dump();
       /// interpTree->dump();
       /// state.itreeNode->dump();
+      dependencyState->dump();
     }
 
     if (!NoInterpolation &&
