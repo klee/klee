@@ -315,9 +315,9 @@ ITreeNode::ITreeNode(ITreeNode *_parent,
       }
   }
 
-  // Inherit the abstract dependency state or create a new one
-  dependencyState =
-      (_parent ? _parent->dependencyState : new DependencyState());
+  // Inherit the abstract dependency stack or NULL
+  dependencyStack =
+      (_parent ? _parent->dependencyStack : 0);
 }
 
 ITreeNode::~ITreeNode() {
@@ -370,18 +370,16 @@ bool ITreeNode::introducesMarkedConstraint() {
 }
 
 void ITreeNode::executeAbstractDependency(llvm::Instruction *instr) {
-  dependencyState->execute(instr);
+  dependencyStack->execute(instr);
 }
 
 void ITreeNode::pushAbstractDependencyFrame(llvm::Function *function) {
-  dependencyState->pushFrame(function);
+  dependencyStack = new DependencyStack(function, dependencyStack);
 }
 
 void ITreeNode::popAbstractDependencyFrame() {
-  llvm::errs() << "Popping frame of ";
-  if (!dependencyState)
-    llvm::errs() << "NULL dependency frame\n";
-  dependencyState->popFrame(); }
+  dependencyStack = dependencyStack->cdr();
+}
 
 void ITreeNode::dump() const {
   llvm::errs() << "\n------------------------- ITree Node --------------------------------\n";
@@ -421,7 +419,7 @@ void ITreeNode::print(llvm::raw_ostream &stream, const unsigned int tab_num) con
       stream << "\n";
   }
   stream << tabs_next << "dependencyState:\n";
-  dependencyState->print(stream, tab_num + 1);
+  dependencyStack->print(stream, tab_num + 1);
 }
 
 

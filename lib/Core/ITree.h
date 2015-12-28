@@ -135,8 +135,8 @@ namespace klee {
     /// @brief The path condition
     PathCondition *pathCondition;
 
-    /// @brief Abstract state for value dependencies
-    DependencyState *dependencyState;
+    /// @brief Abstract stack for value dependencies
+    DependencyStack *dependencyStack;
 
     ITreeNode *parent, *left, *right;
 

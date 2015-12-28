@@ -185,38 +185,17 @@ namespace klee {
 
     DependencyStack *cdr() const;
 
+    void execute(llvm::Instruction *instr);
+
     void dump() const {
       this->print(llvm::errs());
       llvm::errs() << "\n";
     }
 
     void print(llvm::raw_ostream& stream) const;
+
+    void print(llvm::raw_ostream& stream, const unsigned int tab_num) const;
   };
-
-  class DependencyState {
-    std::vector<DependencyFrame *> stack;
-
-  public:
-    DependencyState();
-
-    ~DependencyState();
-
-    void execute(llvm::Instruction *instr);
-
-    void pushFrame(llvm::Function *function);
-
-    void popFrame();
-
-    void print(llvm::raw_ostream& stream) const;
-
-    void print(llvm::raw_ostream &stream, const unsigned int tab_num) const;
-
-    void dump() const {
-      print(llvm::errs());
-      llvm::errs() << "\n";
-    }
-  };
-
 
   template<typename T>
   void deletePointerVector(std::vector<T*>& list);

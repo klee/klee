@@ -438,49 +438,24 @@ namespace klee {
     return tail;
   }
 
+  void DependencyStack::execute(llvm::Instruction *instr) {
+    frame->execute(instr);
+  }
+
   void DependencyStack::print(llvm::raw_ostream& stream) const {
     frame->print(stream);
-    llvm::errs() << "\n----------------------------------------\n";
-    tail->print(stream);
+  }
+
+  void DependencyStack::print(llvm::raw_ostream& stream,
+                              const unsigned int tab_num) const {
+    std::string tabs = makeTabs(tab_num);
+    frame->print(stream, tab_num);
+    llvm::errs() << "\n" << tabs;
+    llvm::errs() << "----------------------------------------\n";
+    tail->print(stream, tab_num);
   }
 
   /**/
-
-  DependencyState::DependencyState() {
-    llvm::errs() << "MAKING A NEW DEPENDENCY STATE\n";
-  }
-
-  DependencyState::~DependencyState() {
-    deletePointerVector(stack);
-  }
-
-  void DependencyState::execute(llvm::Instruction *instr) {
-    stack.back()->execute(instr);
-  }
-
-  void DependencyState::pushFrame(llvm::Function *function) {
-    stack.push_back(new DependencyFrame(function));
-  }
-
-  void DependencyState::popFrame() {
-    delete stack.back();
-    llvm::errs() << "PopFrame\n";
-    stack.pop_back();
-    llvm::errs() << "Popped frame\n";
-  }
-
-  void DependencyState::print(llvm::raw_ostream &stream,
-                              const unsigned int tab_num) const {
-    for (std::vector<DependencyFrame *>::const_iterator it = stack.begin(),
-	itEnd = stack.end(); it != itEnd; ++it) {
-      (*it)->print(stream, tab_num);
-      stream << "\n";
-    }
-  }
-
-  void DependencyState::print(llvm::raw_ostream &stream) const {
-    this->print(stream, 0);
-  }
 
   template<typename T>
   void deletePointerVector(std::vector<T*>& list) {
