@@ -1111,7 +1111,6 @@ ref<klee::ConstantExpr> Executor::evalConstant(const Constant *c) {
 
 const Cell& Executor::eval(KInstruction *ki, unsigned index, 
                            ExecutionState &state) const {
-  llvm::errs() << "Executor::eval(_, " << index << ", _)\n";
   assert(index < ki->inst->getNumOperands());
   int vnumber = ki->operands[index];
 
@@ -1121,17 +1120,10 @@ const Cell& Executor::eval(KInstruction *ki, unsigned index,
   // Determine if this is a constant or not.
   if (vnumber < 0) {
     unsigned index = -vnumber - 2;
-    Cell c = kmodule->constantTable[index];
-    llvm::errs() << __FUNCTION__ << ": Retrieving element " << index << " from constant table: ";
-    c.value->dump();
     return kmodule->constantTable[index];
   } else {
     unsigned index = vnumber;
     StackFrame &sf = state.stack.back();
-    Cell c = sf.locals[index];
-    llvm::errs() << __FUNCTION__ << ": Retrieving element " << index << " from local stack of " <<
-	sf.kf->function->getName() << ": ";
-    c.value->dump();
     return sf.locals[index];
   }
 }
@@ -2708,13 +2700,10 @@ void Executor::bindModuleConstants() {
       bindInstructionConstants(kf->instructions[i]);
   }
 
-  llvm::errs() << __FUNCTION__ << ": Constructing constant table\n";
   kmodule->constantTable = new Cell[kmodule->constants.size()];
   for (unsigned i=0; i<kmodule->constants.size(); ++i) {
     Cell &c = kmodule->constantTable[i];
     c.value = evalConstant(kmodule->constants[i]);
-    llvm::errs() << "Evaluated constant #" << i << " to ";
-    c.value->dump();
   }
 }
 
