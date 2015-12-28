@@ -109,17 +109,32 @@ namespace klee {
   /**/
 
   DependencyFrame::DependencyFrame(llvm::Function *function)
-      : function(function) {}
+      : function(function) {
+    llvm::errs() << "Creating a frame of function " << function->getName() << "\n";
+    llvm::errs() << "Size of equalityList is " << equalityList.size() << "\n";
+  }
 
   DependencyFrame::~DependencyFrame() {
+    llvm::errs() << "Removing frame of function " << function->getName() << "\n";
+    llvm::errs() << "Size of equalityList is " << equalityList.size() << "\n";
+
     // Delete the locally-constructed relations
     deletePointerVector(equalityList);
+
+    llvm::errs() << "Size of storesList is " << storesList.size() << "\n";
     deletePointerVector(storesList);
+
+    llvm::errs() << "Size of flowsToList is " << flowsToList.size() << "\n";
     deletePointerVector(flowsToList);
 
     // Delete the locally-constructed objects
+    llvm::errs() << "Size of valuesList is " << valuesList.size() << "\n";
     deletePointerVector(valuesList);
+
+    llvm::errs() << "Size of allocationsToList is " << allocationsList.size() << "\n";
     deletePointerVector(allocationsList);
+
+    llvm::errs() << "Done removing all data\n";
   }
 
   VersionedValue *DependencyFrame::getNewValue(llvm::Value *value) {
@@ -420,7 +435,9 @@ namespace klee {
 
   void DependencyState::popFrame() {
     delete stack.back();
+    llvm::errs() << "PopFrame\n";
     stack.pop_back();
+    llvm::errs() << "Popped frame\n";
   }
 
   void DependencyState::print(llvm::raw_ostream &stream,

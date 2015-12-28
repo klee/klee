@@ -87,7 +87,12 @@ ExecutionState::~ExecutionState() {
       delete mo;
   }
 
-  while (!stack.empty()) popFrame();
+  while (!stack.empty()) {
+      llvm::errs() << "STACK SIZE = " << stack.size() << "\n";
+      llvm::errs() << "Nonempty stack: Popping\n";
+      llvm::errs() << stack.back().kf->function->getName();
+      popFrame();
+  }
 }
 
 ExecutionState::ExecutionState(const ExecutionState& state):
@@ -134,8 +139,10 @@ ExecutionState *ExecutionState::branch() {
 }
 
 void ExecutionState::pushFrame(KInstIterator caller, KFunction *kf) {
+  llvm::errs() << "Adding new frame\n";
   stack.push_back(StackFrame(caller,kf));
-
+  llvm::errs() << stack.back().kf->function->getName() << "\n";
+  llvm::errs() << "STACK SIZE NOW = " << stack.size() << "\n";
   itreeNode->pushAbstractDependencyFrame(kf->function);
 }
 

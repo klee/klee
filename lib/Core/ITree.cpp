@@ -318,6 +318,10 @@ ITreeNode::ITreeNode(ITreeNode *_parent,
   // Inherit the abstract dependency state or create a new one
   dependencyState =
       (_parent ? _parent->dependencyState : new DependencyState());
+
+  if (!dependencyState) {
+      llvm::errs() << "INITIALIZED ITREENODE WITH NULL DEPENDENCYSTATE\n";
+  }
 }
 
 ITreeNode::~ITreeNode() {
@@ -377,7 +381,11 @@ void ITreeNode::pushAbstractDependencyFrame(llvm::Function *function) {
   dependencyState->pushFrame(function);
 }
 
-void ITreeNode::popAbstractDependencyFrame() { dependencyState->popFrame(); }
+void ITreeNode::popAbstractDependencyFrame() {
+  llvm::errs() << "Popping frame of ";
+  if (!dependencyState)
+    llvm::errs() << "NULL dependency frame\n";
+  dependencyState->popFrame(); }
 
 void ITreeNode::dump() const {
   llvm::errs() << "\n------------------------- ITree Node --------------------------------\n";
