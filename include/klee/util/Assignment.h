@@ -65,17 +65,17 @@ namespace klee {
 
   class AssignmentCacheWrapper {
     Assignment *a;
-    std::vector< ref<Expr> > unsat_core;
+    std::vector< ref<Expr> > unsatCore;
 
   public:
     AssignmentCacheWrapper(Assignment *_a) : a(_a) {}
 
-    AssignmentCacheWrapper(std::vector< ref<Expr> > _unsat_core) :
-      a(0), unsat_core(_unsat_core) {}
+    AssignmentCacheWrapper(std::vector< ref<Expr> > _unsatCore) :
+      a(0), unsatCore(_unsatCore) {}
 
     ~AssignmentCacheWrapper() {
       delete a;
-      unsat_core.clear();
+      unsatCore.clear();
     }
 
     Assignment *getAssignment() const {
@@ -83,7 +83,7 @@ namespace klee {
     }
 
     std::vector< ref<Expr> > getCore() const {
-      return unsat_core;
+      return unsatCore;
     }
   };
 
