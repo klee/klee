@@ -450,9 +450,11 @@ namespace klee {
                               const unsigned int tab_num) const {
     std::string tabs = makeTabs(tab_num);
     frame->print(stream, tab_num);
-    llvm::errs() << "\n" << tabs;
-    llvm::errs() << "----------------------------------------\n";
-    tail->print(stream, tab_num);
+    if (tail) {
+	llvm::errs() << "\n" << tabs;
+	llvm::errs() << "----------------------------------------\n";
+	tail->print(stream, tab_num);
+    }
   }
 
   /**/

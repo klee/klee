@@ -329,6 +329,18 @@ ITreeNode::~ITreeNode() {
       delete it;
     }
   }
+
+  if (dependencyStack) {
+      for (std::vector<DependencyFrame *>::reverse_iterator
+	  it = localDependencyStackFrames.rbegin(),
+	  itEnd = localDependencyStackFrames.rend(); it != itEnd; ++it) {
+	  assert (dependencyStack->car() == *it);
+
+	  DependencyStack *previousStack = dependencyStack;
+	  dependencyStack = dependencyStack->cdr();
+	  delete previousStack;
+      }
+  }
 }
 
 unsigned int ITreeNode::getNodeId() {
@@ -375,10 +387,19 @@ void ITreeNode::executeAbstractDependency(llvm::Instruction *instr) {
 
 void ITreeNode::pushAbstractDependencyFrame(llvm::Function *function) {
   dependencyStack = new DependencyStack(function, dependencyStack);
+  localDependencyStackFrames.push_back(dependencyStack->car());
 }
 
 void ITreeNode::popAbstractDependencyFrame() {
-  dependencyStack = dependencyStack->cdr();
+  if (!dependencyStack)
+    return;
+
+  DependencyStack *tail = dependencyStack->cdr();
+  if (localDependencyStackFrames.back() == dependencyStack->car()) {
+      localDependencyStackFrames.pop_back();
+      delete dependencyStack;
+  }
+  dependencyStack = tail;
 }
 
 void ITreeNode::dump() const {
@@ -419,7 +440,9 @@ void ITreeNode::print(llvm::raw_ostream &stream, const unsigned int tab_num) con
       stream << "\n";
   }
   stream << tabs_next << "dependencyState:\n";
-  dependencyStack->print(stream, tab_num + 1);
+  if (dependencyStack) {
+      dependencyStack->print(stream, tab_num + 1);
+  }
 }
 
 
