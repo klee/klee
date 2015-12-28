@@ -20,13 +20,14 @@ namespace klee {
   class ExecutionState;
 
   class PathCondition {
-    // KLEE expression
+    /// @brief KLEE expression
     ref<Expr> constraint;
 
-    // Should this be included in an interpolant?
+    /// @brief When true, indicates that the constraint should be included
+    /// in the interpolant
     bool inInterpolant;
 
-    // Previous path condition
+    /// @brief Previous path condition
     PathCondition *tail;
 
   public:

@@ -345,9 +345,9 @@ Executor::Executor(const InterpreterOptions &opts,
                          interpreterHandler->getOutputFilename(SOLVER_QUERIES_PC_FILE_NAME));
 
 #ifdef SUPPORT_Z3
-  /// In case interpolation is enabled with Z3 solver,
-  /// we should not simplify the constraints before
-  /// submitting them to the solver.
+  // In case interpolation is enabled with Z3 solver,
+  // we should not simplify the constraints before
+  // submitting them to the solver.
   this->solver = new TimingSolver(solver, NoInterpolation? EqualitySubstitution : false);
 #else
   this->solver = new TimingSolver(solver, EqualitySubstitution);
@@ -792,8 +792,8 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
   if (isSeeding)
     timeout *= it->second.size();
 
-  /// llvm::errs() << "Calling solver->evaluate on query:\n";
-  /// ExprPPrinter::printQuery(llvm::errs(), current.constraints, condition);
+  // llvm::errs() << "Calling solver->evaluate on query:\n";
+  // ExprPPrinter::printQuery(llvm::errs(), current.constraints, condition);
 
   solver->setTimeout(timeout);
   bool success = solver->evaluate(current, condition, res);
@@ -900,9 +900,9 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
 
 #ifdef SUPPORT_Z3
     if (!NoInterpolation) {
-      /// Validity proof succeeded of a query: antecedent -> consequent.
-      /// We then extract the unsatisfiability core of antecedent and not
-      /// consequent as the Craig interpolant.
+      // Validity proof succeeded of a query: antecedent -> consequent.
+      // We then extract the unsatisfiability core of antecedent and not
+      // consequent as the Craig interpolant.
       interpTree->markPathCondition(solver->getUnsatCore());
     }
 #endif
@@ -917,9 +917,9 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
 
 #ifdef SUPPORT_Z3
     if (!NoInterpolation) {
-      /// Falsity proof succeeded of a query: antecedent -> consequent,
-      /// which means that antecedent -> not(consequent) is valid. In this
-      /// case also we extract the unsat core of the proof
+      // Falsity proof succeeded of a query: antecedent -> consequent,
+      // which means that antecedent -> not(consequent) is valid. In this
+      // case also we extract the unsat core of the proof
       interpTree->markPathCondition(solver->getUnsatCore());
     }
 #endif
@@ -1514,14 +1514,21 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bool isVoidReturn = (ri->getNumOperands() == 0);
     ref<Expr> result = ConstantExpr::alloc(0, Expr::Bool);
     
+    llvm::errs() << "111\n";
+
     if (!isVoidReturn) {
       result = eval(ki, 0, state).value;
     }
-    
+
+    llvm::errs() << "222\n";
+
     if (state.stack.size() <= 1) {
       assert(!caller && "caller set on initial stack frame");
+      llvm::errs() << "444\n";
       terminateStateOnExit(state);
     } else {
+      llvm::errs() << "333\n";
+
       state.popFrame();
 
       if (statsTracker)
@@ -2640,6 +2647,7 @@ void Executor::updateStates(ExecutionState *current) {
       interpTree->remove(es->itreeNode);
     }
 #endif
+    llvm::errs() << "DELETING STATE B: " << es->itreeNode->getNodeId() << "\n";
     delete es;
   }
   removedStates.clear();
@@ -2790,19 +2798,19 @@ void Executor::run(ExecutionState &initialState) {
 
 #ifdef SUPPORT_Z3
     if (!NoInterpolation) {
-      /// We synchronize the node id to that of the state. The node id
-      /// is the address of the first instruction in the node.
+      // We synchronize the node id to that of the state. The node id
+      // is the address of the first instruction in the node.
       state.itreeNode->setNodeLocation(reinterpret_cast<uintptr_t>(state.pc->inst));
       interpTree->setCurrentINode(state.itreeNode);
 
-      /// Uncomment the following instructions to show the state
-      /// of the interpolation tree and the active node.
+      // Uncomment the following instructions to show the state
+      // of the interpolation tree and the active node.
 
       llvm::errs() << "Executing new instruction: ";
       state.pc->inst->dump();
       llvm::errs() << "Current state:\n";
-      /// processTree->dump();
-      /// interpTree->dump();
+      processTree->dump();
+      interpTree->dump();
       state.itreeNode->dump();
     }
 
@@ -2923,24 +2931,31 @@ std::string Executor::getAddressInfo(ExecutionState &state,
 }
 
 void Executor::terminateState(ExecutionState &state) {
+  llvm::errs() << "ZZZ\n";
   if (replayOut && replayPosition!=replayOut->numObjects) {
     klee_warning_once(replayOut, 
                       "replay did not consume all objects in test input.");
   }
-
+  llvm::errs() << "Executor::terminateState\n";
   interpreterHandler->incPathsExplored();
 
   std::set<ExecutionState*>::iterator it = addedStates.find(&state);
   if (it==addedStates.end()) {
     state.pc = state.prevPC;
 
+    llvm::errs() << "ADDED FOR REMOVAL: " << state.itreeNode->getNodeId() << "\n";
     removedStates.insert(&state);
   } else {
+    llvm::errs() << "AAA\n";
     // never reached searcher, just delete immediately
     std::map< ExecutionState*, std::vector<SeedInfo> >::iterator it3 = 
       seedMap.find(&state);
+
+    llvm::errs() << "BBB\n";
     if (it3 != seedMap.end())
       seedMap.erase(it3);
+
+    llvm::errs() << "Executor::terminateState: Executing addedStates.erase(it)\n";
     addedStates.erase(it);
     processTree->remove(state.ptreeNode);
 #ifdef SUPPORT_Z3
@@ -2948,6 +2963,7 @@ void Executor::terminateState(ExecutionState &state) {
 	interpTree->remove(state.itreeNode);
     }
 #endif
+    llvm::errs() << "DELETING STATE A: " << state.itreeNode->getNodeId() << "\n";
     delete &state;
   }
 }
@@ -2956,9 +2972,9 @@ void Executor::terminateStateOnSubsumption(ExecutionState &state) {
 #ifdef SUPPORT_Z3
   assert (!NoInterpolation);
 #endif
-  /// Implementationwise, basically the same as terminateStateEarly method,
-  /// but with different statistics functions called, and empty error
-  /// message as this is not an error.
+  // Implementationwise, basically the same as terminateStateEarly method,
+  // but with different statistics functions called, and empty error
+  // message as this is not an error.
   interpreterHandler->incSubsumptionTermination();
   if (!OnlyOutputStatesCoveringNew || state.coveredNew ||
       (AlwaysOutputSeeds && seedMap.count(&state))) {
@@ -2980,12 +2996,17 @@ void Executor::terminateStateEarly(ExecutionState &state,
 }
 
 void Executor::terminateStateOnExit(ExecutionState &state) {
+  llvm::errs() << "Executor::terminateStateOnExit\n";
   interpreterHandler->incExitTermination();
   if (!OnlyOutputStatesCoveringNew || state.coveredNew || 
       (AlwaysOutputSeeds && seedMap.count(&state))) {
+    llvm::errs() << "YYY\n";
     interpreterHandler->incExitTerminationTest();
+    llvm::errs() << "III\n";
     interpreterHandler->processTestCase(state, 0, 0);
+    llvm::errs() << "LLL\n";
   }
+  llvm::errs() << "UUU\n";
   terminateState(state);
 }
 
@@ -3765,6 +3786,7 @@ bool Executor::getSymbolicSolution(const ExecutionState &state,
                                    std::pair<std::string,
                                    std::vector<unsigned char> > >
                                    &res) {
+  llvm::errs() << "Executor::getSymbolicSolution\n";
   solver->setTimeout(coreSolverTimeout);
 
   ExecutionState tmp(state);
@@ -3797,21 +3819,31 @@ bool Executor::getSymbolicSolution(const ExecutionState &state,
     if (pi!=pie) break;
   }
 
+  llvm::errs() << "Executor::getSymbolicSolution 1\n";
+
   std::vector< std::vector<unsigned char> > values;
   std::vector<const Array*> objects;
   for (unsigned i = 0; i != state.symbolics.size(); ++i)
     objects.push_back(state.symbolics[i].second);
   bool success = solver->getInitialValues(tmp, objects, values);
   solver->setTimeout(0);
+
+  llvm::errs() << "Executor::getSymbolicSolution 2\n";
+
   if (!success) {
     klee_warning("unable to compute initial values (invalid constraints?)!");
     ExprPPrinter::printQuery(llvm::errs(), state.constraints,
                              ConstantExpr::alloc(0, Expr::Bool));
     return false;
   }
-  
+
+  llvm::errs() << "Executor::getSymbolicSolution 3\n";
+
   for (unsigned i = 0; i != state.symbolics.size(); ++i)
     res.push_back(std::make_pair(state.symbolics[i].first->name, values[i]));
+
+  llvm::errs() << "Executor::getSymbolicSolution 4\n";
+
   return true;
 }
 

@@ -318,10 +318,6 @@ ITreeNode::ITreeNode(ITreeNode *_parent,
   // Inherit the abstract dependency state or create a new one
   dependencyState =
       (_parent ? _parent->dependencyState : new DependencyState());
-
-  if (!dependencyState) {
-      llvm::errs() << "INITIALIZED ITREENODE WITH NULL DEPENDENCYSTATE\n";
-  }
 }
 
 ITreeNode::~ITreeNode() {

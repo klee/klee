@@ -169,6 +169,30 @@ namespace klee {
     }
   };
 
+  class DependencyStack {
+    /// @brief The abstract dependency frame
+    DependencyFrame *frame;
+
+    /// @brief Previous path condition
+    DependencyStack *tail;
+
+  public:
+    DependencyStack(llvm::Function *function, DependencyStack *prev);
+
+    ~DependencyStack();
+
+    DependencyFrame *car() const;
+
+    DependencyStack *cdr() const;
+
+    void dump() const {
+      this->print(llvm::errs());
+      llvm::errs() << "\n";
+    }
+
+    void print(llvm::raw_ostream& stream) const;
+  };
+
   class DependencyState {
     std::vector<DependencyFrame *> stack;
 

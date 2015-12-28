@@ -419,7 +419,36 @@ namespace klee {
     this->print(stream, 0);
   }
 
-  DependencyState::DependencyState() {}
+  /**/
+
+  DependencyStack::DependencyStack(llvm::Function *function,
+                                   DependencyStack *prev) :
+                                       frame(new DependencyFrame(function)),
+                                       tail(prev) {}
+
+  DependencyStack::~DependencyStack() {
+    delete frame;
+  }
+
+  DependencyFrame *DependencyStack::car() const {
+    return frame;
+  }
+
+  DependencyStack* DependencyStack::cdr() const {
+    return tail;
+  }
+
+  void DependencyStack::print(llvm::raw_ostream& stream) const {
+    frame->print(stream);
+    llvm::errs() << "\n----------------------------------------\n";
+    tail->print(stream);
+  }
+
+  /**/
+
+  DependencyState::DependencyState() {
+    llvm::errs() << "MAKING A NEW DEPENDENCY STATE\n";
+  }
 
   DependencyState::~DependencyState() {
     deletePointerVector(stack);
