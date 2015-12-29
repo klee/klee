@@ -312,7 +312,30 @@ namespace klee {
 	} else {
 	    llvm::errs() << "Latest value not found\n";
 	    if (llvm::isa<llvm::GlobalValue>(i->getOperand(0))) {
-		llvm::errs() << "Global\n";
+		arg = global->getLatestValue(i->getOperand(0));
+		if (arg) {
+		    VersionedAllocation *alloc =
+			global->resolveAllocation(arg);
+		    if (alloc) {
+			VersionedValue *val = global->stores(alloc);
+			if (val) {
+			    VersionedAllocation *alloc2 =
+				global->resolveAllocation(val);
+			    if (alloc2) {
+				top->addPointerEquality(top->getNewValue(i),
+				                        alloc2);
+			    } else {
+				top->addDependency(val, top->getNewValue(i));
+			    }
+			}
+		    }
+		} else {
+		    arg = global->getNewValue(i->getOperand(0));
+		    VersionedAllocation *alloc =
+			global->getNewAllocation(i->getOperand(0));
+		    global->addPointerEquality(arg, alloc);
+		    top->updateStore(alloc, top->getNewValue(i));
+		}
 	    }
 	}
 	break;
@@ -441,16 +464,31 @@ namespace klee {
 
   }
 
-
   void DependencyStack::print(llvm::raw_ostream& stream) const {
-    top->print(stream);
+    this->print(stream, 0);
   }
 
   void DependencyStack::print(llvm::raw_ostream& stream,
                               const unsigned int tab_num) const {
     std::string tabs = makeTabs(tab_num);
+    printGlobalFrame(stream, tab_num);
+    stream << "\n";
+    stream << tabs << "----------------------------------------\n";
+    printStack(stream, tab_num);
+  }
+
+  void DependencyStack::printGlobalFrame(llvm::raw_ostream& stream,
+                                         const unsigned int tab_num) const {
+    std::string tabs = makeTabs(tab_num);
+    stream << tabs << "------------- Global Frame -------------\n";
+    global->print(stream, tab_num);
+  }
+
+  void DependencyStack::printStack(llvm::raw_ostream& stream,
+                                   const unsigned int tab_num) const {
+    std::string tabs = makeTabs(tab_num);
     if (tail) {
-	tail->print(stream, tab_num);
+	tail->printStack(stream, tab_num);
 	stream << "\n";
 	stream << tabs << "----------------------------------------\n";
     }

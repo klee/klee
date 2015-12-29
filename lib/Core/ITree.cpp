@@ -455,10 +455,14 @@ void ITreeNode::print(llvm::raw_ostream &stream, const unsigned int tab_num) con
 	  stackToPrint = stackToPrint->cdr();
       }
   }
+
   if (stackToPrint) {
       stream << tabs_next << "--- Non-Local Dependency Frames --------\n";
-      stackToPrint->print(stream, tab_num + 1);
-      stream << "\n";
+      stackToPrint->printStack(stream, tab_num + 1);
   }
 
+  if (dependencyStack) {
+      stream << "\n";
+      dependencyStack->printGlobalFrame(stream, tab_num + 1);
+  }
 }

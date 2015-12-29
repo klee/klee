@@ -199,6 +199,14 @@ namespace klee {
     void print(llvm::raw_ostream& stream) const;
 
     void print(llvm::raw_ostream& stream, const unsigned int tab_num) const;
+
+    /// @brief Print the content of the stack
+    void printStack(llvm::raw_ostream& stream,
+                    const unsigned int tab_num) const;
+
+    /// @brief Print the content of the global frame
+    void printGlobalFrame(llvm::raw_ostream& stream,
+                          const unsigned int tab_num) const;
   };
 
   template<typename T>
