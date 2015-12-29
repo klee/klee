@@ -126,6 +126,7 @@ namespace klee {
     friend class DependencyStack;
 
     llvm::Function *function;
+    llvm::Value **argumentsList;
     std::vector< PointerEquality *> equalityList;
     std::vector< StorageCell *> storesList;
     std::vector<FlowsTo *> flowsToList;
@@ -154,6 +155,11 @@ namespace klee {
 
     bool depends(VersionedValue *source, VersionedValue *target);
 
+    void bindArgument(const unsigned index, llvm::Value *value);
+
+    void populateArgumentValuesList(
+	VersionedValue **& argumentValuesList, llvm::CallInst *site) const;
+
     DependencyFrame(llvm::Function *function);
 
     ~DependencyFrame();
@@ -162,7 +168,7 @@ namespace klee {
 
     void print(llvm::raw_ostream& stream) const;
 
-    void print(llvm::raw_ostream &stream, const unsigned int tab_num) const;
+    void print(llvm::raw_ostream &stream, const unsigned tab_num) const;
 
     void dump() const {
       print(llvm::errs());
@@ -180,6 +186,9 @@ namespace klee {
     /// @brief Previous path condition
     DependencyStack *tail;
 
+    /// @brief Argument values to be passed onto callee
+    VersionedValue **argumentValuesList;
+
   public:
     DependencyStack(llvm::Function *function, DependencyStack *prev);
 
@@ -191,6 +200,10 @@ namespace klee {
 
     void execute(llvm::Instruction *instr);
 
+    void registerCallArguments(llvm::Instruction *instr);
+
+    void bindArgument(const unsigned index, llvm::Value *value);
+
     void dump() const {
       this->print(llvm::errs());
       llvm::errs() << "\n";
@@ -198,21 +211,21 @@ namespace klee {
 
     void print(llvm::raw_ostream& stream) const;
 
-    void print(llvm::raw_ostream& stream, const unsigned int tab_num) const;
+    void print(llvm::raw_ostream& stream, const unsigned tab_num) const;
 
     /// @brief Print the content of the stack
     void printStack(llvm::raw_ostream& stream,
-                    const unsigned int tab_num) const;
+                    const unsigned tab_num) const;
 
     /// @brief Print the content of the global frame
     void printGlobalFrame(llvm::raw_ostream& stream,
-                          const unsigned int tab_num) const;
+                          const unsigned tab_num) const;
   };
 
   template<typename T>
   void deletePointerVector(std::vector<T*>& list);
 
-  std::string makeTabs(const unsigned int tab_num);
+  std::string makeTabs(const unsigned tab_num);
 
   std::string appendTab(const std::string &prefix);
 }

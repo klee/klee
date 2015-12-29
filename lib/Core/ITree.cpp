@@ -385,6 +385,10 @@ void ITreeNode::executeAbstractDependency(llvm::Instruction *instr) {
   dependencyStack->execute(instr);
 }
 
+void ITreeNode::registerCallArguments(llvm::Instruction *instr) {
+  dependencyStack->registerCallArguments(instr);
+}
+
 void ITreeNode::pushAbstractDependencyFrame(llvm::Function *function) {
   dependencyStack = new DependencyStack(function, dependencyStack);
   localDependencyStackFrames.push_back(dependencyStack->car());

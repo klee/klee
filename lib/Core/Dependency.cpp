@@ -109,7 +109,8 @@ namespace klee {
   /**/
 
   DependencyFrame::DependencyFrame(llvm::Function *function)
-      : function(function) {}
+      : function(function),
+        argumentsList(new llvm::Value *[function->arg_size()]) {}
 
   DependencyFrame::~DependencyFrame() {
     // Delete the locally-constructed relations
@@ -213,8 +214,27 @@ namespace klee {
     return false;
   }
 
+  void DependencyFrame::bindArgument(const unsigned index,
+                                     llvm::Value *value) {
+    assert (index >= function->arg_size());
+    argumentsList[index] = value;
+  }
+
+  void DependencyFrame::populateArgumentValuesList(
+      VersionedValue **& argumentValuesList,
+      llvm::CallInst *site) const {
+    unsigned numArgs = site->getCalledFunction()->arg_size();
+    argumentValuesList = new VersionedValue * [numArgs];
+    for (unsigned i = 0; i < numArgs; ++i) {
+	VersionedValue *latestValue =
+	    getLatestValue(site->getArgOperand(i));
+	argumentValuesList[i] = (latestValue ? latestValue :
+	    getNewValue(site->getArgOperand(i)));
+    }
+  }
+
   void DependencyFrame::print(llvm::raw_ostream &stream,
-                              const unsigned int tab_num) const {
+                              const unsigned tab_num) const {
     std::string tabs = makeTabs(tab_num);
     stream << tabs << (function ? function->getName() : "TOP") << " FRAME\n";
     stream << tabs << "EQUALITIES:";
@@ -258,7 +278,8 @@ namespace klee {
   DependencyStack::DependencyStack(llvm::Function *function,
                                    DependencyStack *prev) :
                                        top(new DependencyFrame(function)),
-                                       tail(prev) {
+                                       tail(prev),
+                                       argumentValuesList(0) {
     // Whenever a stack was defined, it should have a global frame.
     assert (!prev || prev->global);
 
@@ -462,6 +483,25 @@ namespace klee {
 	break;
     }
 
+  }
+
+  void DependencyStack::registerCallArguments(llvm::Instruction *instr) {
+    llvm::CallInst *site = dyn_cast<llvm::CallInst>(instr);
+    assert (site);
+
+    if (argumentValuesList) {
+	delete argumentValuesList;
+	argumentValuesList = 0;
+    }
+
+    argumentValuesList = new VersionedValue *
+	[site->getCalledFunction()->arg_size()];
+    top->populateArgumentValuesList(argumentValuesList, site);
+  }
+
+  void DependencyStack::bindArgument(const unsigned index,
+                                     llvm::Value *value) {
+    top->bindArgument(index, value);
   }
 
   void DependencyStack::print(llvm::raw_ostream& stream) const {
