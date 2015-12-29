@@ -87,12 +87,7 @@ ExecutionState::~ExecutionState() {
       delete mo;
   }
 
-  while (!stack.empty()) {
-      llvm::errs() << __FUNCTION__ << ": STACK SIZE = " << stack.size() << "\n";
-      llvm::errs() << __FUNCTION__ << ": Nonempty stack: Popping\n";
-      llvm::errs() << __FUNCTION__ << ": " << stack.back().kf->function->getName() << "\n";
-      popFrame();
-  }
+  while (!stack.empty()) popFrame();
 }
 
 ExecutionState::ExecutionState(const ExecutionState& state):
@@ -139,22 +134,17 @@ ExecutionState *ExecutionState::branch() {
 }
 
 void ExecutionState::pushFrame(KInstIterator caller, KFunction *kf) {
-  llvm::errs() << "Adding new frame\n";
   stack.push_back(StackFrame(caller,kf));
-  llvm::errs() << stack.back().kf->function->getName() << "\n";
-  llvm::errs() << "STACK SIZE NOW = " << stack.size() << "\n";
   itreeNode->pushAbstractDependencyFrame(kf->function);
 }
 
 void ExecutionState::popFrame() {
-  llvm::errs() << "ExecutionStatr::popFrame()\n";
   StackFrame &sf = stack.back();
   for (std::vector<const MemoryObject*>::iterator it = sf.allocas.begin(), 
          ie = sf.allocas.end(); it != ie; ++it)
     addressSpace.unbindObject(*it);
   stack.pop_back();
 
-  llvm::errs() << "ExecutionState::popFrame: Calling ITreeNode::popAbstractDependencyFrame\n";
   itreeNode->popAbstractDependencyFrame();
 }
 

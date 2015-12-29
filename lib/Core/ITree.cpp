@@ -395,7 +395,8 @@ void ITreeNode::popAbstractDependencyFrame() {
     return;
 
   DependencyStack *tail = dependencyStack->cdr();
-  if (localDependencyStackFrames.back() == dependencyStack->car()) {
+  if (localDependencyStackFrames.size() > 0 &&
+      localDependencyStackFrames.back() == dependencyStack->car()) {
       localDependencyStackFrames.pop_back();
       delete dependencyStack;
   }
@@ -439,14 +440,25 @@ void ITreeNode::print(llvm::raw_ostream &stream, const unsigned int tab_num) con
       right->print(stream, tab_num + 1);
       stream << "\n";
   }
-  stream << tabs_next << "dependencyState:\n";
-  if (dependencyStack) {
-      dependencyStack->print(stream, tab_num + 1);
+  DependencyStack *stackToPrint = dependencyStack;
+  if (localDependencyStackFrames.size()) {
+      std::vector<DependencyFrame *> localStack(localDependencyStackFrames);
+
+      stream << tabs_next << "------ Local Dependency Frames ---------\n";
+      for (std::vector<DependencyFrame *>::reverse_iterator
+	  it = localStack.rbegin(),
+	  itEnd = localStack.rend(); it != itEnd; ++it) {
+	  (*it)->print(stream, tab_num + 1);
+	  stream << "\n";
+	  stream << tabs_next << "----------------------------------------\n";
+	  assert (stackToPrint && stackToPrint->car() == (*it));
+	  stackToPrint = stackToPrint->cdr();
+      }
   }
+  if (stackToPrint) {
+      stream << tabs_next << "--- Non-Local Dependency Frames --------\n";
+      stackToPrint->print(stream, tab_num + 1);
+      stream << "\n";
+  }
+
 }
-
-
-
-
-
-

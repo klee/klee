@@ -1514,21 +1514,14 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bool isVoidReturn = (ri->getNumOperands() == 0);
     ref<Expr> result = ConstantExpr::alloc(0, Expr::Bool);
     
-    llvm::errs() << "111\n";
-
     if (!isVoidReturn) {
       result = eval(ki, 0, state).value;
     }
 
-    llvm::errs() << "222\n";
-
     if (state.stack.size() <= 1) {
       assert(!caller && "caller set on initial stack frame");
-      llvm::errs() << "444\n";
       terminateStateOnExit(state);
     } else {
-      llvm::errs() << "333\n";
-
       state.popFrame();
 
       if (statsTracker)
@@ -1611,14 +1604,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       // FIXME: Find a way that we don't have this hidden dependency.
       assert(bi->getCondition() == bi->getOperand(0) &&
              "Wrong operand index!");
-
-      llvm::errs() << "Branch with condition ";
-      bi->getCondition()->dump();
-
       ref<Expr> cond = eval(ki, 0, state).value;
-
-      llvm::errs() << "fork " << __FUNCTION__ << ":" << __LINE__ << " with condition: ";
-      cond->dump();
       Executor::StatePair branches = fork(state, cond, false);
 
       // NOTE: There is a hidden dependency here, markBranchVisited
@@ -1798,7 +1784,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         bool success = solver->getValue(*free, v, value);
         assert(success && "FIXME: Unhandled solver failure");
         (void) success;
-        llvm::errs() << "fork " << __FUNCTION__ << ":" << __LINE__ << "\n";
         StatePair res = fork(*free, EqExpr::create(v, value), true);
         if (res.first) {
           uint64_t addr = value->getZExtValue();
@@ -2647,7 +2632,6 @@ void Executor::updateStates(ExecutionState *current) {
       interpTree->remove(es->itreeNode);
     }
 #endif
-    llvm::errs() << "DELETING STATE B: " << es->itreeNode->getNodeId() << "\n";
     delete es;
   }
   removedStates.clear();
@@ -2931,31 +2915,24 @@ std::string Executor::getAddressInfo(ExecutionState &state,
 }
 
 void Executor::terminateState(ExecutionState &state) {
-  llvm::errs() << "ZZZ\n";
   if (replayOut && replayPosition!=replayOut->numObjects) {
     klee_warning_once(replayOut, 
                       "replay did not consume all objects in test input.");
   }
-  llvm::errs() << "Executor::terminateState\n";
+
   interpreterHandler->incPathsExplored();
 
   std::set<ExecutionState*>::iterator it = addedStates.find(&state);
   if (it==addedStates.end()) {
     state.pc = state.prevPC;
 
-    llvm::errs() << "ADDED FOR REMOVAL: " << state.itreeNode->getNodeId() << "\n";
     removedStates.insert(&state);
   } else {
-    llvm::errs() << "AAA\n";
     // never reached searcher, just delete immediately
     std::map< ExecutionState*, std::vector<SeedInfo> >::iterator it3 = 
       seedMap.find(&state);
-
-    llvm::errs() << "BBB\n";
     if (it3 != seedMap.end())
       seedMap.erase(it3);
-
-    llvm::errs() << "Executor::terminateState: Executing addedStates.erase(it)\n";
     addedStates.erase(it);
     processTree->remove(state.ptreeNode);
 #ifdef SUPPORT_Z3
@@ -2963,7 +2940,6 @@ void Executor::terminateState(ExecutionState &state) {
 	interpTree->remove(state.itreeNode);
     }
 #endif
-    llvm::errs() << "DELETING STATE A: " << state.itreeNode->getNodeId() << "\n";
     delete &state;
   }
 }
@@ -2996,17 +2972,12 @@ void Executor::terminateStateEarly(ExecutionState &state,
 }
 
 void Executor::terminateStateOnExit(ExecutionState &state) {
-  llvm::errs() << "Executor::terminateStateOnExit\n";
   interpreterHandler->incExitTermination();
   if (!OnlyOutputStatesCoveringNew || state.coveredNew || 
       (AlwaysOutputSeeds && seedMap.count(&state))) {
-    llvm::errs() << "YYY\n";
     interpreterHandler->incExitTerminationTest();
-    llvm::errs() << "III\n";
     interpreterHandler->processTestCase(state, 0, 0);
-    llvm::errs() << "LLL\n";
   }
-  llvm::errs() << "UUU\n";
   terminateState(state);
 }
 
@@ -3295,7 +3266,6 @@ void Executor::executeAlloc(ExecutionState &state,
       example = tmp;
     }
 
-    llvm::errs() << "fork " << __FUNCTION__ << ":" << __LINE__ << "\n";
     StatePair fixedSize = fork(state, EqExpr::create(example, size), true);
     
     if (fixedSize.second) { 
@@ -3316,7 +3286,6 @@ void Executor::executeAlloc(ExecutionState &state,
       } else {
         // See if a *really* big value is possible. If so assume
         // malloc will fail for it, so lets fork and return 0.
-	llvm::errs() << "fork " << __FUNCTION__ << ":" << __LINE__ << "\n";
         StatePair hugeSize = 
           fork(*fixedSize.second, 
                UltExpr::create(ConstantExpr::alloc(1<<31, W), size), 
@@ -3351,7 +3320,6 @@ void Executor::executeAlloc(ExecutionState &state,
 void Executor::executeFree(ExecutionState &state,
                            ref<Expr> address,
                            KInstruction *target) {
-  llvm::errs() << "fork " << __FUNCTION__ << ":" << __LINE__ << "\n";
   StatePair zeroPointer = fork(state, Expr::createIsZero(address), true);
   if (zeroPointer.first) {
     if (target)
@@ -3396,7 +3364,6 @@ void Executor::resolveExact(ExecutionState &state,
        it != ie; ++it) {
     ref<Expr> inBounds = EqExpr::create(p, it->first->getBaseExpr());
     
-    llvm::errs() << "fork " << __FUNCTION__ << ":" << __LINE__ << "\n";
     StatePair branches = fork(*unbound, inBounds, true);
     
     if (branches.first)
@@ -3503,7 +3470,6 @@ void Executor::executeMemoryOperation(ExecutionState &state,
     const ObjectState *os = i->second;
     ref<Expr> inBounds = mo->getBoundsCheckPointer(address, bytes);
 
-    llvm::errs() << "fork " << __FUNCTION__ << ":" << __LINE__ << "\n";
     StatePair branches = fork(*unbound, inBounds, true);
     ExecutionState *bound = branches.first;
 
@@ -3786,7 +3752,6 @@ bool Executor::getSymbolicSolution(const ExecutionState &state,
                                    std::pair<std::string,
                                    std::vector<unsigned char> > >
                                    &res) {
-  llvm::errs() << "Executor::getSymbolicSolution\n";
   solver->setTimeout(coreSolverTimeout);
 
   ExecutionState tmp(state);
@@ -3819,17 +3784,12 @@ bool Executor::getSymbolicSolution(const ExecutionState &state,
     if (pi!=pie) break;
   }
 
-  llvm::errs() << "Executor::getSymbolicSolution 1\n";
-
   std::vector< std::vector<unsigned char> > values;
   std::vector<const Array*> objects;
   for (unsigned i = 0; i != state.symbolics.size(); ++i)
     objects.push_back(state.symbolics[i].second);
   bool success = solver->getInitialValues(tmp, objects, values);
   solver->setTimeout(0);
-
-  llvm::errs() << "Executor::getSymbolicSolution 2\n";
-
   if (!success) {
     klee_warning("unable to compute initial values (invalid constraints?)!");
     ExprPPrinter::printQuery(llvm::errs(), state.constraints,
@@ -3837,13 +3797,8 @@ bool Executor::getSymbolicSolution(const ExecutionState &state,
     return false;
   }
 
-  llvm::errs() << "Executor::getSymbolicSolution 3\n";
-
   for (unsigned i = 0; i != state.symbolics.size(); ++i)
     res.push_back(std::make_pair(state.symbolics[i].first->name, values[i]));
-
-  llvm::errs() << "Executor::getSymbolicSolution 4\n";
-
   return true;
 }
 

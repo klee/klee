@@ -470,15 +470,9 @@ void KleeHandler::processTestCase(const ExecutionState &state,
     exit(1);
   }
 
-  llvm::errs() << __FUNCTION__ << ": 1\n";
-
   if (!NoOutput) {
-    llvm::errs() << __FUNCTION__ << ": 2\n";
-
     std::vector< std::pair<std::string, std::vector<unsigned char> > > out;
     bool success = m_interpreter->getSymbolicSolution(state, out);
-
-    llvm::errs() << __FUNCTION__ << ": 3\n";
 
     if (!success)
       klee_warning("unable to get symbolic solution, losing test case");
@@ -594,7 +588,6 @@ void KleeHandler::processTestCase(const ExecutionState &state,
       delete f;
     }
   }
-  llvm::errs() << __FUNCTION__ << ": End\n";
 }
 
   // load a .path file

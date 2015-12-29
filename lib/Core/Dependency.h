@@ -123,6 +123,8 @@ namespace klee {
 
 
   class DependencyFrame {
+    friend class DependencyStack;
+
     llvm::Function *function;
     std::vector< PointerEquality *> equalityList;
     std::vector< StorageCell *> storesList;
@@ -152,12 +154,11 @@ namespace klee {
 
     bool depends(VersionedValue *source, VersionedValue *target);
 
-  public:
     DependencyFrame(llvm::Function *function);
 
     ~DependencyFrame();
 
-    void execute(llvm::Instruction *instr);
+  public:
 
     void print(llvm::raw_ostream& stream) const;
 
@@ -170,8 +171,11 @@ namespace klee {
   };
 
   class DependencyStack {
+    /// @brief The global frame shared by every stack element
+    DependencyFrame *global;
+
     /// @brief The abstract dependency frame
-    DependencyFrame *frame;
+    DependencyFrame *top;
 
     /// @brief Previous path condition
     DependencyStack *tail;
