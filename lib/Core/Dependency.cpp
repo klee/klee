@@ -12,7 +12,7 @@ namespace klee {
 
   VersionedAllocation::~VersionedAllocation() {}
 
-  bool VersionedAllocation::hasAllocationSite(llvm::Value *site) {
+  bool VersionedAllocation::hasAllocationSite(llvm::Value *site) const {
     return this->site == site;
   }
 
@@ -32,7 +32,7 @@ namespace klee {
 
   VersionedValue::~VersionedValue() {}
 
-  bool VersionedValue::hasValue(llvm::Value *value) {
+  bool VersionedValue::hasValue(llvm::Value *value) const {
     return this->value == value;
   }
 
@@ -109,8 +109,7 @@ namespace klee {
   /**/
 
   DependencyFrame::DependencyFrame(llvm::Function *function)
-      : function(function),
-        argumentsList(new llvm::Value *[function->arg_size()]) {}
+      : function(function), argumentsList(0) {}
 
   DependencyFrame::~DependencyFrame() {
     // Delete the locally-constructed relations
@@ -135,22 +134,25 @@ namespace klee {
     return ret;
   }
 
-  VersionedValue *DependencyFrame::getLatestValue(llvm::Value *value) {
-    for (std::vector< VersionedValue *>::reverse_iterator
-	it = valuesList.rbegin(),
-	itEnd = valuesList.rend(); it != itEnd; ++it) {
-	if ((*it)->hasValue(value))
-	  return *it;
+  VersionedValue *DependencyFrame::getLatestValue(llvm::Value *value) const {
+    for (std::vector<VersionedValue *>::const_reverse_iterator
+             it = valuesList.rbegin(),
+             itEnd = valuesList.rend();
+         it != itEnd; ++it) {
+      if ((*it)->hasValue(value))
+        return *it;
     }
     return 0;
   }
 
-  VersionedAllocation *DependencyFrame::getLatestAllocation(llvm::Value *allocation) {
-    for (std::vector< VersionedAllocation *>::reverse_iterator
-	it = allocationsList.rbegin(),
-	itEnd = allocationsList.rend(); it != itEnd; ++it) {
-	if ((*it)->hasAllocationSite(allocation))
-	  return *it;
+  VersionedAllocation *
+  DependencyFrame::getLatestAllocation(llvm::Value *allocation) const {
+    for (std::vector<VersionedAllocation *>::const_reverse_iterator
+             it = allocationsList.rbegin(),
+             itEnd = allocationsList.rend();
+         it != itEnd; ++it) {
+      if ((*it)->hasAllocationSite(allocation))
+        return *it;
     }
     return 0;
   }
@@ -220,16 +222,28 @@ namespace klee {
     argumentsList[index] = value;
   }
 
-  void DependencyFrame::populateArgumentValuesList(
-      VersionedValue **& argumentValuesList,
-      llvm::CallInst *site) const {
+  VersionedValue **
+  DependencyFrame::populateArgumentValuesList(llvm::CallInst *site) {
     unsigned numArgs = site->getCalledFunction()->arg_size();
-    argumentValuesList = new VersionedValue * [numArgs];
+    VersionedValue **argumentValuesList = new VersionedValue *[numArgs];
     for (unsigned i = 0; i < numArgs; ++i) {
 	VersionedValue *latestValue =
 	    getLatestValue(site->getArgOperand(i));
 	argumentValuesList[i] = (latestValue ? latestValue :
 	    getNewValue(site->getArgOperand(i)));
+    }
+    return argumentValuesList;
+  }
+
+  void
+  DependencyFrame::bindCallArguments(VersionedValue **&argumentValuesList) {
+    unsigned index = 0;
+    for (llvm::Function::ArgumentListType::iterator
+             it = function->getArgumentList().begin(),
+             itEnd = function->getArgumentList().end();
+         it != itEnd; ++it) {
+      addDependency(argumentValuesList[index], getNewValue(it));
+      ++index;
     }
   }
 
@@ -261,11 +275,11 @@ namespace klee {
     stream << "\n";
     stream << tabs << "FLOWDEPENDENCY:";
     for (std::vector<FlowsTo *>::const_iterator it = flowsToList.begin(),
-                                                itEnd = flowsToList.begin();
+                                                itEnd = flowsToList.end();
          it != itEnd; ++it) {
-	if (it != flowsToListBegin)
-	  stream << ",";
-	(*it)->print(stream);
+      if (it != flowsToListBegin)
+        stream << ",";
+      (*it)->print(stream);
     }
   }
 
@@ -276,18 +290,23 @@ namespace klee {
   /**/
 
   DependencyStack::DependencyStack(llvm::Function *function,
-                                   DependencyStack *prev) :
-                                       top(new DependencyFrame(function)),
-                                       tail(prev),
-                                       argumentValuesList(0) {
+                                   DependencyStack *prev)
+      : top(new DependencyFrame(function)), tail(prev) {
     // Whenever a stack was defined, it should have a global frame.
     assert (!prev || prev->global);
 
     // Inherit the global frame from the tail or create a new one.
     global = (prev ? prev->global : new DependencyFrame(0));
+
+    // Propagate argument values from the previous stack
+    argumentValuesList = (prev ? prev->argumentValuesList : 0);
   }
 
   DependencyStack::~DependencyStack() {
+    if (argumentValuesList) {
+      delete argumentValuesList;
+      argumentValuesList = 0;
+    }
     delete top;
   }
 
@@ -486,22 +505,21 @@ namespace klee {
   }
 
   void DependencyStack::registerCallArguments(llvm::Instruction *instr) {
-    llvm::CallInst *site = dyn_cast<llvm::CallInst>(instr);
-    assert (site);
+    llvm::CallInst *site = llvm::dyn_cast<llvm::CallInst>(instr);
+
+    if (!site)
+      return;
 
     if (argumentValuesList) {
 	delete argumentValuesList;
 	argumentValuesList = 0;
     }
 
-    argumentValuesList = new VersionedValue *
-	[site->getCalledFunction()->arg_size()];
-    top->populateArgumentValuesList(argumentValuesList, site);
+    argumentValuesList = top->populateArgumentValuesList(site);
   }
 
-  void DependencyStack::bindArgument(const unsigned index,
-                                     llvm::Value *value) {
-    top->bindArgument(index, value);
+  void DependencyStack::bindCallArguments() {
+    top->bindCallArguments(argumentValuesList);
   }
 
   void DependencyStack::print(llvm::raw_ostream& stream) const {

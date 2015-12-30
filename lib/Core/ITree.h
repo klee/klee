@@ -170,9 +170,8 @@ namespace klee {
 
     void executeAbstractDependency(llvm::Instruction *instr);
 
-    void registerCallArguments(llvm::Instruction *instr);
-
-    void pushAbstractDependencyFrame(llvm::Function *function);
+    void pushAbstractDependencyFrame(llvm::Function *function,
+                                     llvm::Instruction *site);
 
     void popAbstractDependencyFrame();
 

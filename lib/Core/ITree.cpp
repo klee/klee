@@ -385,12 +385,18 @@ void ITreeNode::executeAbstractDependency(llvm::Instruction *instr) {
   dependencyStack->execute(instr);
 }
 
-void ITreeNode::registerCallArguments(llvm::Instruction *instr) {
-  dependencyStack->registerCallArguments(instr);
-}
+void ITreeNode::pushAbstractDependencyFrame(llvm::Function *function,
+                                            llvm::Instruction *site) {
+  // We first evaluate the actual argument dependencies
+  dependencyStack->registerCallArguments(site);
 
-void ITreeNode::pushAbstractDependencyFrame(llvm::Function *function) {
+  // Create a new abstract dependency stack frame
   dependencyStack = new DependencyStack(function, dependencyStack);
+
+  // Transfer dependencies from caller to callee
+  dependencyStack->bindCallArguments();
+
+  // Register the new frame as local to the current interpolation tree node
   localDependencyStackFrames.push_back(dependencyStack->car());
 }
 

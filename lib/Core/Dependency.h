@@ -7,10 +7,12 @@
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
 #include <llvm/IR/Function.h>
 #include <llvm/IR/Instruction.h>
+#include <llvm/IR/Instructions.h>
 #include <llvm/IR/Value.h>
 #else
 #include <llvm/Function.h>
 #include <llvm/Instruction.h>
+#include <llvm/Instructions.h>
 #include <llvm/Value.h>
 #endif
 
@@ -32,7 +34,7 @@ namespace klee {
 
     ~VersionedAllocation();
 
-    bool hasAllocationSite(llvm::Value *site);
+    bool hasAllocationSite(llvm::Value *site) const;
 
     void print(llvm::raw_ostream& stream) const;
 
@@ -52,7 +54,7 @@ namespace klee {
 
     ~VersionedValue();
 
-    bool hasValue(llvm::Value *value);
+    bool hasValue(llvm::Value *value) const;
 
     void print(llvm::raw_ostream& stream) const;
 
@@ -137,11 +139,12 @@ namespace klee {
 
     VersionedAllocation *getNewAllocation(llvm::Value *allocation);
 
-    VersionedValue* getLatestValue(llvm::Value *value);
+    VersionedValue *getLatestValue(llvm::Value *value) const;
 
-    VersionedAllocation *getLatestAllocation(llvm::Value *allocation);
+    VersionedAllocation *getLatestAllocation(llvm::Value *allocation) const;
 
-    void addPointerEquality(VersionedValue *value, VersionedAllocation *allocation);
+    void addPointerEquality(VersionedValue *value,
+                            VersionedAllocation *allocation);
 
     void updateStore(VersionedAllocation *allocation, VersionedValue *value);
 
@@ -157,8 +160,9 @@ namespace klee {
 
     void bindArgument(const unsigned index, llvm::Value *value);
 
-    void populateArgumentValuesList(
-	VersionedValue **& argumentValuesList, llvm::CallInst *site) const;
+    VersionedValue **populateArgumentValuesList(llvm::CallInst *site);
+
+    void bindCallArguments(VersionedValue **&argumentValuesList);
 
     DependencyFrame(llvm::Function *function);
 
@@ -202,7 +206,7 @@ namespace klee {
 
     void registerCallArguments(llvm::Instruction *instr);
 
-    void bindArgument(const unsigned index, llvm::Value *value);
+    void bindCallArguments();
 
     void dump() const {
       this->print(llvm::errs());
