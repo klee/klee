@@ -222,27 +222,28 @@ namespace klee {
     argumentsList[index] = value;
   }
 
-  VersionedValue **
+  std::vector<VersionedValue *>
   DependencyFrame::populateArgumentValuesList(llvm::CallInst *site) {
     unsigned numArgs = site->getCalledFunction()->arg_size();
-    VersionedValue **argumentValuesList = new VersionedValue *[numArgs];
-    for (unsigned i = 0; i < numArgs; ++i) {
-	VersionedValue *latestValue =
-	    getLatestValue(site->getArgOperand(i));
-	argumentValuesList[i] = (latestValue ? latestValue :
-	    getNewValue(site->getArgOperand(i)));
+    std::vector<VersionedValue *> argumentValuesList;
+    for (unsigned i = numArgs; i > 0;) {
+      llvm::Value *argOperand = site->getArgOperand(--i);
+      VersionedValue *latestValue = getLatestValue(argOperand);
+      argumentValuesList.push_back(latestValue ? latestValue
+                                               : getNewValue(argOperand));
     }
     return argumentValuesList;
   }
 
-  void
-  DependencyFrame::bindCallArguments(VersionedValue **&argumentValuesList) {
+  void DependencyFrame::bindCallArguments(
+      std::vector<VersionedValue *> &argumentValuesList) {
     unsigned index = 0;
     for (llvm::Function::ArgumentListType::iterator
              it = function->getArgumentList().begin(),
              itEnd = function->getArgumentList().end();
          it != itEnd; ++it) {
-      addDependency(argumentValuesList[index], getNewValue(it));
+      addDependency(argumentValuesList.back(), getNewValue(it));
+      argumentValuesList.pop_back();
       ++index;
     }
   }
@@ -299,14 +300,12 @@ namespace klee {
     global = (prev ? prev->global : new DependencyFrame(0));
 
     // Propagate argument values from the previous stack
-    argumentValuesList = (prev ? prev->argumentValuesList : 0);
+    if (prev) {
+      argumentValuesList = prev->argumentValuesList;
+    }
   }
 
   DependencyStack::~DependencyStack() {
-    if (argumentValuesList) {
-      delete argumentValuesList;
-      argumentValuesList = 0;
-    }
     delete top;
   }
 
@@ -509,11 +508,6 @@ namespace klee {
 
     if (!site)
       return;
-
-    if (argumentValuesList) {
-	delete argumentValuesList;
-	argumentValuesList = 0;
-    }
 
     argumentValuesList = top->populateArgumentValuesList(site);
   }

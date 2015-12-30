@@ -160,9 +160,10 @@ namespace klee {
 
     void bindArgument(const unsigned index, llvm::Value *value);
 
-    VersionedValue **populateArgumentValuesList(llvm::CallInst *site);
+    std::vector<VersionedValue *>
+    populateArgumentValuesList(llvm::CallInst *site);
 
-    void bindCallArguments(VersionedValue **&argumentValuesList);
+    void bindCallArguments(std::vector<VersionedValue *> &argumentValuesList);
 
     DependencyFrame(llvm::Function *function);
 
@@ -191,7 +192,7 @@ namespace klee {
     DependencyStack *tail;
 
     /// @brief Argument values to be passed onto callee
-    VersionedValue **argumentValuesList;
+    std::vector<VersionedValue *> argumentValuesList;
 
   public:
     DependencyStack(llvm::Function *function, DependencyStack *prev);
