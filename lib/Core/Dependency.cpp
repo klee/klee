@@ -538,13 +538,13 @@ namespace klee {
 
   void DependencyStack::printStack(llvm::raw_ostream& stream,
                                    const unsigned int tab_num) const {
-    std::string tabs = makeTabs(tab_num);
-    if (tail) {
-	tail->printStack(stream, tab_num);
-	stream << "\n";
-	stream << tabs << "----------------------------------------\n";
-    }
     top->print(stream, tab_num);
+    if (tail) {
+	stream << "\n";
+        stream << makeTabs(tab_num)
+               << "----------------------------------------\n";
+        tail->printStack(stream, tab_num);
+    }
   }
 
   /**/
