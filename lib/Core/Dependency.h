@@ -36,6 +36,8 @@ namespace klee {
 
     bool hasAllocationSite(llvm::Value *site) const;
 
+    bool isComposite() const;
+
     void print(llvm::raw_ostream& stream) const;
 
     void dump() const {
@@ -92,7 +94,7 @@ namespace klee {
 
     ~StorageCell();
 
-    VersionedValue *stores(VersionedAllocation *allocation);
+    VersionedValue *stores(VersionedAllocation *allocation) const;
 
     VersionedAllocation *storageOf(VersionedValue *value);
 
@@ -152,7 +154,7 @@ namespace klee {
 
     VersionedAllocation *resolveAllocation(VersionedValue *value);
 
-    VersionedValue *stores(VersionedAllocation *allocation);
+    std::vector<VersionedValue *> stores(VersionedAllocation *allocation) const;
 
     VersionedAllocation *storageOf(VersionedValue *value);
 
