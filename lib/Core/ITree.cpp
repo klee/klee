@@ -315,7 +315,7 @@ ITreeNode::ITreeNode(ITreeNode *_parent,
   }
 
   // Inherit the abstract dependency stack or NULL
-  dependency = (_parent ? _parent->dependency : 0);
+  dependency = new Dependency(_parent ? _parent->dependency : 0);
 }
 
 ITreeNode::~ITreeNode() {
@@ -374,16 +374,8 @@ void ITreeNode::executeAbstractDependency(llvm::Instruction *instr) {
   dependency->execute(instr);
 }
 
-void ITreeNode::pushAbstractDependencyFrame(llvm::Function *function,
-                                            llvm::Instruction *site) {
-  // We first evaluate the actual argument dependencies
-  dependency->registerCallArguments(site);
-
-  // Create a new abstract dependency stack frame
-  dependency = new Dependency(dependency);
-
-  // Transfer dependencies from caller to callee
-  dependency->bindCallArguments();
+void ITreeNode::pushAbstractDependencyFrame(llvm::Instruction *site) {
+  dependency->bindCallArguments(site);
 }
 
 void ITreeNode::popAbstractDependencyFrame() {

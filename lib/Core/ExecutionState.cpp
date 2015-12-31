@@ -135,7 +135,7 @@ ExecutionState *ExecutionState::branch() {
 
 void ExecutionState::pushFrame(KInstIterator caller, KFunction *kf) {
   stack.push_back(StackFrame(caller,kf));
-  itreeNode->pushAbstractDependencyFrame(kf->function, prevPC->inst);
+  itreeNode->pushAbstractDependencyFrame(prevPC->inst);
 }
 
 void ExecutionState::popFrame() {

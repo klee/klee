@@ -133,9 +133,6 @@ namespace klee {
     /// @brief Argument values to be passed onto callee
     std::vector<VersionedValue *> argumentValuesList;
 
-    /// @brief the callee function in a call
-    llvm::Function *callee;
-
     std::vector< PointerEquality *> equalityList;
 
     std::vector< StorageCell *> storesList;
@@ -182,9 +179,7 @@ namespace klee {
 
     void execute(llvm::Instruction *instr);
 
-    void registerCallArguments(llvm::Instruction *instr);
-
-    void bindCallArguments();
+    void bindCallArguments(llvm::Instruction *instr);
 
     void dump() const {
       this->print(llvm::errs());

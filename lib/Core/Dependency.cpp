@@ -409,17 +409,14 @@ namespace klee {
 
   }
 
-  void Dependency::registerCallArguments(llvm::Instruction *instr) {
+  void Dependency::bindCallArguments(llvm::Instruction *instr) {
     llvm::CallInst *site = llvm::dyn_cast<llvm::CallInst>(instr);
 
     if (!site)
       return;
 
-    callee = site->getCalledFunction();
+    llvm::Function *callee = site->getCalledFunction();
     argumentValuesList = populateArgumentValuesList(site);
-  }
-
-  void Dependency::bindCallArguments() {
     unsigned index = 0;
     for (llvm::Function::ArgumentListType::iterator
              it = callee->getArgumentList().begin(),
