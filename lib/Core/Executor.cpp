@@ -2787,15 +2787,16 @@ void Executor::run(ExecutionState &initialState) {
       state.itreeNode->setNodeLocation(reinterpret_cast<uintptr_t>(state.pc->inst));
       interpTree->setCurrentINode(state.itreeNode);
 
-      // Uncomment the following instructions to show the state
+      // Uncomment the following statement to show the state
       // of the interpolation tree and the active node.
 
-      llvm::errs() << "Executing new instruction: ";
-      state.pc->inst->dump();
-      llvm::errs() << "Current state:\n";
+      llvm::errs() << "\nCurrent state:\n";
       processTree->dump();
       interpTree->dump();
       state.itreeNode->dump();
+      llvm::errs() << "------------------- Executing New Instruction "
+                      "-----------------------\n";
+      state.pc->inst->dump();
     }
 
     if (!NoInterpolation &&

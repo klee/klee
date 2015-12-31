@@ -274,7 +274,7 @@ namespace klee {
   void DependencyFrame::print(llvm::raw_ostream &stream,
                               const unsigned tab_num) const {
     std::string tabs = makeTabs(tab_num);
-    stream << tabs << (function ? function->getName() : "TOP") << " FRAME\n";
+    stream << tabs << (function ? function->getName() : "BOTTOM") << " FRAME\n";
     stream << tabs << "EQUALITIES:";
     std::vector<PointerEquality *>::const_iterator equalityListBegin =
 	equalityList.begin();
@@ -382,7 +382,7 @@ namespace klee {
       case llvm::Instruction::Load: {
         if (!buildLoadDependency(top, i->getOperand(0), top, i) &&
             llvm::isa<llvm::GlobalValue>(i->getOperand(0))) {
-          if (buildLoadDependency(global, i->getOperand(0), top, i)) {
+          if (!buildLoadDependency(global, i->getOperand(0), top, i)) {
             VersionedValue *arg = global->getNewValue(i->getOperand(0));
             VersionedAllocation *alloc =
                 global->getNewAllocation(i->getOperand(0));

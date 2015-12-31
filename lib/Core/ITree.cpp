@@ -247,11 +247,11 @@ void ITree::executeAbstractDependency(llvm::Instruction *instr) {
 
 void ITree::printNode(llvm::raw_ostream& stream, ITreeNode *n, std::string edges) {
   if (n->left != 0) {
+    stream << "\n";
       stream << edges << "+-- L:" << n->left->nodeId;
       if (this->currentINode == n->left) {
 	  stream << " (active)";
       }
-      stream << "\n";
       if (n->right != 0) {
 	  printNode(stream, n->left, edges + "|   ");
       } else {
@@ -259,11 +259,11 @@ void ITree::printNode(llvm::raw_ostream& stream, ITreeNode *n, std::string edges
       }
   }
   if (n->right != 0) {
+    stream << "\n";
       stream << edges << "+-- R:" << n->right->nodeId;
       if (this->currentINode == n->right) {
 	  stream << " (active)";
       }
-      stream << "\n";
       printNode(stream, n->right, edges + "    ");
   }
 }
@@ -274,7 +274,6 @@ void ITree::print(llvm::raw_ostream& stream) {
   if (this->root == this->currentINode) {
       stream << " (active)";
   }
-  stream << "\n";
   this->printNode(stream, this->root, "");
 }
 
