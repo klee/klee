@@ -12,9 +12,9 @@
 #include "klee/Expr.h"
 #include "klee/Solver.h"
 #include "klee/util/Bits.h"
+#include "klee/SolverStats.h"
 
 #include "ConstantDivision.h"
-#include "SolverStats.h"
 
 #ifndef SUPPORT_Z3
 

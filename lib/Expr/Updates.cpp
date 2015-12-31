@@ -38,7 +38,12 @@ UpdateNode::UpdateNode(const UpdateNode *_next,
 
 extern "C" void vc_DeleteExpr(void*);
 
+// This is deliberately empty to avoid recursively deleting UpdateNodes
+// (i.e. ``if (--next->refCount==0) delete next;``).
+// UpdateList manages the correct destruction of a chain UpdateNodes
+// non-recursively.
 UpdateNode::~UpdateNode() {
+    assert(refCount == 0 && "Deleted UpdateNode when a reference is still held");
 }
 
 int UpdateNode::compare(const UpdateNode &b) const {
@@ -69,9 +74,59 @@ UpdateList::UpdateList(const UpdateList &b)
 }
 
 UpdateList::~UpdateList() {
-  // We need to be careful and avoid recursion here. We do this in
-  // cooperation with the private dtor of UpdateNode which does not
-  // recursively free its tail.
+    tryFreeNodes();
+}
+
+void UpdateList::tryFreeNodes() {
+  // We need to be careful and avoid having the UpdateNodes recursively deleting
+  // themselves. This is done in cooperation with the private dtor of UpdateNode
+  // which does nothing.
+  //
+  // This method will free UpdateNodes that only this instance has references
+  // to, i.e. it will delete a continguous chain of UpdateNodes that all have
+  // a ``refCount`` of 1 starting at the head.
+  //
+  // In the following examples the Head0 is the head of this UpdateList instance
+  // and Head1 is the head of some other instance of UpdateList.
+  //
+  // [x] represents an UpdateNode where the reference count for that node is x.
+  //
+  // Example: Simple chain.
+  //
+  // [1] -> [1] -> [1] -> nullptr
+  //  ^Head0
+  //
+  // Result: The entire chain is freed
+  //
+  // nullptr
+  // ^Head0
+  //
+  // Example: A chain where two UpdateLists share some nodes
+  //
+  // [1] -> [1] -> [2] -> [1] -> nullptr
+  //  ^Head0        ^Head1
+  //
+  // Result: Part of the chain is freed and the UpdateList with head Head1
+  //         is now the exclusive owner of the UpdateNodes.
+  //
+  // nullptr       [1] -> [1] -> nullptr
+  //  ^Head0        ^Head1
+  //
+  // Example: A chain where two UpdateLists point at the same head
+  //
+  // [2] -> [1] -> [1] -> [1] -> nullptr
+  //  ^Head0
+  //   Head1
+  //
+  // Result: No UpdateNodes are freed but now the UpdateList with head Head1
+  //         is now the exclusive owner of the UpdateNodes.
+  //
+  // [1] -> [1] -> [1] -> [1] -> nullptr
+  //  ^Head1
+  //
+  //  nullptr
+  //  ^Head0
+  //
   while (head && --head->refCount==0) {
     const UpdateNode *n = head->next;
     delete head;
@@ -81,7 +136,9 @@ UpdateList::~UpdateList() {
 
 UpdateList &UpdateList::operator=(const UpdateList &b) {
   if (b.head) ++b.head->refCount;
-  if (head && --head->refCount==0) delete head;
+  // Drop reference to the current head and free a chain of nodes
+  // if we are the only UpdateList referencing them
+  tryFreeNodes();
   root = b.root;
   head = b.head;
   return *this;

@@ -494,41 +494,6 @@ unsigned Array::computeHash() {
   hashValue = res;
   return hashValue; 
 }
-
-std::map<unsigned, std::vector<const Array *> *> Array::symbolicArraySingletonMap;
-
-const Array * Array::CreateArray(const std::string &_name, uint64_t _size,
-                                 const ref<ConstantExpr> *constantValuesBegin,
-                                 const ref<ConstantExpr> *constantValuesEnd,
-                                 Expr::Width _domain,
-				 Expr::Width _range) {
-
-  const Array * array = new Array(_name, _size, constantValuesBegin, constantValuesEnd, _domain,_range);
-  if (array->constantValues.size() == 0) { // symbolic array
-    unsigned hash = array->hash();
-    std::vector<const Array *> * bucket = Array::symbolicArraySingletonMap[hash];
-    if (bucket){
-      for (std::vector<const Array*>::const_iterator it = bucket->begin();
-	   it != bucket->end(); it ++){
-        const Array* prospect = *it;
-	if (prospect->size == array->size && prospect->name == array->name){
-    	  delete array;
-    	  return prospect;
-    	}
-      }
-      bucket->push_back(array);
-      return array;
-    } else {
-      bucket = new std::vector<const Array *>();
-      bucket->push_back(array);
-      Array::symbolicArraySingletonMap[hash] = bucket;
-      return array;
-    }
-  } else { // concrete array
-    return array;
-  }
-}
-
 /***/
 
 ref<Expr> ReadExpr::create(const UpdateList &ul, ref<Expr> index) {

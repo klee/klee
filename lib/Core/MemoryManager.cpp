@@ -7,8 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Common.h"
-
 #include "CoreStats.h"
 #include "Memory.h"
 #include "MemoryManager.h"
@@ -16,6 +14,7 @@
 #include "klee/ExecutionState.h"
 #include "klee/Expr.h"
 #include "klee/Solver.h"
+#include "klee/Internal/Support/ErrorHandling.h"
 
 #include "llvm/Support/CommandLine.h"
 

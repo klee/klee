@@ -7,14 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Common.h"
-
 #include "Memory.h"
 
 #include "Context.h"
 #include "klee/Expr.h"
 #include "klee/Solver.h"
 #include "klee/util/BitArray.h"
+#include "klee/Internal/Support/ErrorHandling.h"
+#include "klee/util/ArrayCache.h"
 
 #include "ObjectHolder.h"
 #include "MemoryManager.h"
@@ -111,9 +111,9 @@ ObjectState::ObjectState(const MemoryObject *mo)
     readOnly(false) {
   mo->refCount++;
   if (!UseConstantArrays) {
-    // FIXME: Leaked.
     static unsigned id = 0;
-    const Array *array = Array::CreateArray("tmp_arr" + llvm::utostr(++id), size);
+    const Array *array =
+        getArrayCache()->CreateArray("tmp_arr" + llvm::utostr(++id), size);
     updates = UpdateList(array, 0);
   }
   memset(concreteStore, 0, size);
@@ -177,6 +177,11 @@ ObjectState::~ObjectState() {
   }
 }
 
+ArrayCache *ObjectState::getArrayCache() const {
+  assert(object && "object was NULL");
+  return object->parent->getArrayCache();
+}
+
 /***/
 
 const UpdateList &ObjectState::getUpdates() const {
@@ -216,15 +221,10 @@ const UpdateList &ObjectState::getUpdates() const {
       Contents[Index->getZExtValue()] = Value;
     }
 
-    // FIXME: We should unique these, there is no good reason to create multiple
-    // ones.
-
-    // Start a new update list.
-    // FIXME: Leaked.
     static unsigned id = 0;
-    const Array *array = Array::CreateArray("const_arr" + llvm::utostr(++id), size,
-					    &Contents[0],
-					    &Contents[0] + Contents.size());
+    const Array *array = getArrayCache()->CreateArray(
+        "const_arr" + llvm::utostr(++id), size, &Contents[0],
+        &Contents[0] + Contents.size());
     updates = UpdateList(array, 0);
 
     // Apply the remaining (non-constant) writes.
@@ -530,7 +530,7 @@ void ObjectState::write(unsigned offset, ref<Expr> value) {
   // Check for writes of constant values.
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(value)) {
     Expr::Width w = CE->getWidth();
-    if (w <= 64) {
+    if (w <= 64 && klee::bits64::isPowerOfTwo(w)) {
       uint64_t val = CE->getZExtValue();
       switch (w) {
       default: assert(0 && "Invalid write size!");

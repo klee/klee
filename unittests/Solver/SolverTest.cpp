@@ -13,6 +13,7 @@
 #include "klee/Constraints.h"
 #include "klee/Expr.h"
 #include "klee/Solver.h"
+#include "klee/util/ArrayCache.h"
 #include "llvm/ADT/StringExtras.h"
 
 using namespace klee;
@@ -32,6 +33,10 @@ ref<Expr> getConstant(int value, Expr::Width width) {
   return ConstantExpr::create(trunc, width);
 }
 
+// We have to have the cache globally scopped (and not in ``testOperation``)
+// because the Solver (i.e. in STP's case the STPBuilder) holds on to pointers
+// to allocated Arrays.
+ArrayCache ac;
 
 template<class T>
 void testOperation(Solver &solver,
@@ -46,7 +51,7 @@ void testOperation(Solver &solver,
 
     unsigned size = Expr::getMinBytesForWidth(operandWidth);
     static uint64_t id = 0;
-    const Array *array = Array::CreateArray("arr" + llvm::utostr(++id), size);
+    const Array *array = ac.CreateArray("arr" + llvm::utostr(++id), size);
     symbolicArgs.push_back(Expr::CreateArg(Expr::createTempRead(array, 
                                                                 operandWidth)));
   }
