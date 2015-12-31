@@ -201,6 +201,11 @@ namespace klee {
                                     llvm::Value *fromValue, DependencyFrame *to,
                                     llvm::Value *toValue);
 
+    /// @brief for testing if a frame was included in a vector of frames
+    static bool
+    isLocal(const std::vector<DependencyFrame *> &currentLocalFrames,
+            DependencyFrame *frame);
+
   public:
     DependencyStack(llvm::Function *function, DependencyStack *prev);
 
@@ -210,7 +215,8 @@ namespace klee {
 
     DependencyStack *cdr() const;
 
-    void execute(llvm::Instruction *instr);
+    void execute(const std::vector<DependencyFrame *> &currentLocalFrames,
+                 llvm::Instruction *instr);
 
     void registerCallArguments(llvm::Instruction *instr);
 

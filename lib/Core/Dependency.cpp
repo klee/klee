@@ -345,6 +345,13 @@ namespace klee {
     return true;
   }
 
+  bool DependencyStack::isLocal(
+      const std::vector<DependencyFrame *> &currentLocalFrames,
+      DependencyFrame *frame) {
+    return std::find(currentLocalFrames.begin(), currentLocalFrames.end(),
+                     frame) != currentLocalFrames.end();
+  }
+
   DependencyStack::DependencyStack(llvm::Function *function,
                                    DependencyStack *prev)
       : top(new DependencyFrame(function)), tail(prev) {
@@ -372,7 +379,9 @@ namespace klee {
     return tail;
   }
 
-  void DependencyStack::execute(llvm::Instruction *i) {
+  void DependencyStack::execute(
+      const std::vector<DependencyFrame *> &currentLocalFrames,
+      llvm::Instruction *i) {
     switch(i->getOpcode()) {
       case llvm::Instruction::Alloca: {
 	top->addPointerEquality(top->getNewValue(i),

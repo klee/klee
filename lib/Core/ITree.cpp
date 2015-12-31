@@ -381,7 +381,7 @@ bool ITreeNode::introducesMarkedConstraint() {
 }
 
 void ITreeNode::executeAbstractDependency(llvm::Instruction *instr) {
-  dependencyStack->execute(instr);
+  dependencyStack->execute(localDependencyStackFrames, instr);
 }
 
 void ITreeNode::pushAbstractDependencyFrame(llvm::Function *function,
