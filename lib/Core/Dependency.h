@@ -128,7 +128,7 @@ namespace klee {
   class Dependency {
 
     /// @brief Previous path condition
-    Dependency *tail;
+    Dependency *parentDependency;
 
     /// @brief Argument values to be passed onto callee
     std::vector<VersionedValue *> argumentValuesList;

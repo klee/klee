@@ -133,6 +133,10 @@ namespace klee {
       if ((*it)->hasValue(value))
         return *it;
     }
+
+    if (parentDependency)
+      return parentDependency->getLatestValue(value);
+
     return 0;
   }
 
@@ -145,6 +149,10 @@ namespace klee {
       if ((*it)->hasAllocationSite(allocation))
         return *it;
     }
+
+    if (parentDependency)
+      return parentDependency->getLatestAllocation(allocation);
+
     return 0;
   }
 
@@ -157,6 +165,10 @@ namespace klee {
 	if (alloc)
 	  return alloc;
     }
+
+    if (parentDependency)
+      return parentDependency->resolveAllocation(val);
+
     return 0;
   }
 
@@ -178,7 +190,10 @@ namespace klee {
   std::vector<VersionedValue *>
   Dependency::stores(VersionedAllocation *allocation) const {
     std::vector<VersionedValue *> ret;
+
     if (allocation->isComposite()) {
+      // In case of composite allocation, we return all possible stores
+      // due to field-insensitivity of the dependency relation
       for (std::vector<StorageCell *>::const_iterator it = storesList.begin(),
                                                       itEnd = storesList.end();
            it != itEnd; ++it) {
@@ -187,17 +202,27 @@ namespace klee {
           ret.push_back(value);
         }
       }
-    } else {
-      for (std::vector<StorageCell *>::const_iterator it = storesList.begin(),
-                                                      itEnd = storesList.end();
-           it != itEnd; ++it) {
+
+      if (parentDependency) {
+        std::vector<VersionedValue *> parentStoredValues =
+            parentDependency->stores(allocation);
+        ret.insert(ret.begin(), parentStoredValues.begin(),
+                   parentStoredValues.end());
+      }
+      return ret;
+    }
+
+    for (std::vector<StorageCell *>::const_iterator it = storesList.begin(),
+                                                    itEnd = storesList.end();
+         it != itEnd; ++it) {
         VersionedValue *value = (*it)->stores(allocation);
         if (value) {
           ret.push_back(value);
           return ret;
         }
       }
-    }
+      if (parentDependency)
+        return parentDependency->stores(allocation);
     return ret;
   }
 
@@ -208,6 +233,8 @@ namespace klee {
       if ((*it)->depends(source, target))
         return true;
     }
+    if (parentDependency)
+      return parentDependency->depends(source, target);
     return false;
   }
 
@@ -254,7 +281,7 @@ namespace klee {
     return true;
   }
 
-  Dependency::Dependency(Dependency *prev) : tail(prev), callee(0) {}
+  Dependency::Dependency(Dependency *prev) : parentDependency(prev) {}
 
   Dependency::~Dependency() {
     // Delete the locally-constructed relations
@@ -267,7 +294,7 @@ namespace klee {
     deletePointerVector(allocationsList);
   }
 
-  Dependency *Dependency::cdr() const { return tail; }
+  Dependency *Dependency::cdr() const { return parentDependency; }
 
   void Dependency::execute(llvm::Instruction *i) {
     switch(i->getOpcode()) {

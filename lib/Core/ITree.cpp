@@ -315,6 +315,9 @@ ITreeNode::ITreeNode(ITreeNode *_parent,
   }
 
   // Inherit the abstract dependency stack or NULL
+  if (_parent && !_parent->dependency) {
+    llvm::errs() << "PDEP IS NULL\n";
+  }
   dependency = new Dependency(_parent ? _parent->dependency : 0);
 }
 
