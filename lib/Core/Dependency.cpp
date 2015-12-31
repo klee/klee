@@ -313,6 +313,38 @@ namespace klee {
 
   /**/
 
+  bool DependencyStack::buildLoadDependency(DependencyFrame *from,
+                                            llvm::Value *fromValue,
+                                            DependencyFrame *to,
+                                            llvm::Value *toValue) {
+    VersionedValue *arg = from->getLatestValue(fromValue);
+    if (!arg)
+      return false;
+
+    VersionedAllocation *alloc = from->resolveAllocation(arg);
+    if (alloc) {
+      std::vector<VersionedValue *> valList = from->stores(alloc);
+      if (valList.size() > 0) {
+        for (std::vector<VersionedValue *>::iterator it = valList.begin(),
+                                                     itEnd = valList.end();
+             it != itEnd; ++it) {
+          VersionedAllocation *alloc2 = from->resolveAllocation(*it);
+          if (alloc2) {
+            to->addPointerEquality(to->getNewValue(toValue), alloc2);
+          } else {
+            to->addDependency(*it, to->getNewValue(toValue));
+          }
+        }
+      } else {
+        // We could not find the stored value, create
+        // a new one.
+        to->updateStore(alloc, to->getNewValue(toValue));
+      }
+    }
+
+    return true;
+  }
+
   DependencyStack::DependencyStack(llvm::Function *function,
                                    DependencyStack *prev)
       : top(new DependencyFrame(function)), tail(prev) {
@@ -348,58 +380,14 @@ namespace klee {
 	break;
       }
       case llvm::Instruction::Load: {
-	VersionedValue *arg = top->getLatestValue(i->getOperand(0));
-	if (arg) {
-	    VersionedAllocation *alloc = top->resolveAllocation(arg);
-	    if (alloc) {
-              std::vector<VersionedValue *> valList = top->stores(alloc);
-              if (valList.size() > 0) {
-                for (std::vector<VersionedValue *>::iterator
-                         it = valList.begin(),
-                         itEnd = valList.end();
-                     it != itEnd; ++it) {
-                  VersionedAllocation *alloc2 = top->resolveAllocation(*it);
-                  if (alloc2) {
-                    top->addPointerEquality(top->getNewValue(i), alloc2);
-                  } else {
-                    top->addDependency(*it, top->getNewValue(i));
-                  }
-                }
-              } else {
-                // We could not find the stored value, create
-                // a new one.
-                top->updateStore(alloc, top->getNewValue(i));
-              }
-            }
-        } else {
-          if (llvm::isa<llvm::GlobalValue>(i->getOperand(0))) {
-            arg = global->getLatestValue(i->getOperand(0));
-            if (arg) {
-              VersionedAllocation *alloc = global->resolveAllocation(arg);
-              if (alloc) {
-                std::vector<VersionedValue *> valList = global->stores(alloc);
-                if (valList.size() > 0) {
-                  for (std::vector<VersionedValue *>::iterator
-                           it = valList.begin(),
-                           itEnd = valList.end();
-                       it != itEnd; ++it) {
-                    VersionedAllocation *alloc2 =
-                        global->resolveAllocation(*it);
-                    if (alloc2) {
-                      top->addPointerEquality(top->getNewValue(i), alloc2);
-                    } else {
-                      top->addDependency(*it, top->getNewValue(i));
-                    }
-                  }
-                }
-              }
-            } else {
-              arg = global->getNewValue(i->getOperand(0));
-              VersionedAllocation *alloc =
-                  global->getNewAllocation(i->getOperand(0));
-              global->addPointerEquality(arg, alloc);
-              top->updateStore(alloc, top->getNewValue(i));
-            }
+        if (!buildLoadDependency(top, i->getOperand(0), top, i) &&
+            llvm::isa<llvm::GlobalValue>(i->getOperand(0))) {
+          if (buildLoadDependency(global, i->getOperand(0), top, i)) {
+            VersionedValue *arg = global->getNewValue(i->getOperand(0));
+            VersionedAllocation *alloc =
+                global->getNewAllocation(i->getOperand(0));
+            global->addPointerEquality(arg, alloc);
+            top->updateStore(alloc, top->getNewValue(i));
           }
         }
         break;

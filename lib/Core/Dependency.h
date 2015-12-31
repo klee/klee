@@ -196,6 +196,11 @@ namespace klee {
     /// @brief Argument values to be passed onto callee
     std::vector<VersionedValue *> argumentValuesList;
 
+    /// @brief Construct dependency due to load instruction
+    static bool buildLoadDependency(DependencyFrame *from,
+                                    llvm::Value *fromValue, DependencyFrame *to,
+                                    llvm::Value *toValue);
+
   public:
     DependencyStack(llvm::Function *function, DependencyStack *prev);
 
