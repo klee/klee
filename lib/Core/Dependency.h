@@ -181,6 +181,8 @@ namespace klee {
 
     void bindCallArguments(llvm::Instruction *instr);
 
+    void bindReturnValue(llvm::CallInst *site, llvm::Instruction *inst);
+
     void dump() const {
       this->print(llvm::errs());
       llvm::errs() << "\n";

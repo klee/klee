@@ -19,7 +19,7 @@ namespace klee {
   bool VersionedAllocation::isComposite() const {
     llvm::AllocaInst *inst = llvm::dyn_cast<llvm::AllocaInst>(site);
 
-    assert(inst != 0);
+    assert(inst != 0 && "wrong instruction type");
     return llvm::isa<llvm::CompositeType>(inst->getAllocatedType());
   }
 
@@ -297,7 +297,14 @@ namespace klee {
   Dependency *Dependency::cdr() const { return parentDependency; }
 
   void Dependency::execute(llvm::Instruction *i) {
-    switch(i->getOpcode()) {
+    unsigned opcode = i->getOpcode();
+
+    assert(opcode != llvm::Instruction::Invoke &&
+           opcode != llvm::Instruction::Call &&
+           opcode != llvm::Instruction::Ret &&
+           "should not execute instruction here");
+
+    switch (opcode) {
       case llvm::Instruction::Alloca: {
         addPointerEquality(getNewValue(i), getNewAllocation(i));
         break;
@@ -332,7 +339,7 @@ namespace klee {
       }
       case llvm::Instruction::GetElementPtr: {
         VersionedValue *arg = getLatestValue(i->getOperand(0));
-        assert(arg != 0);
+        assert(arg != 0 && "operand not found");
 
         VersionedAllocation *alloc = resolveAllocation(arg);
         if (alloc) {
@@ -421,15 +428,6 @@ namespace klee {
         }
         break;
       }
-      case llvm::Instruction::Invoke:
-      case llvm::Instruction::Call:
-	{
-	  break;
-	}
-      case llvm::Instruction::Ret:
-	{
-	  break;
-	}
       default:
 	break;
     }
@@ -452,6 +450,16 @@ namespace klee {
       addDependency(argumentValuesList.back(), getNewValue(it));
       argumentValuesList.pop_back();
       ++index;
+    }
+  }
+
+  void Dependency::bindReturnValue(llvm::CallInst *site,
+                                   llvm::Instruction *inst) {
+    llvm::ReturnInst *retInst = llvm::dyn_cast<llvm::ReturnInst>(inst);
+    if (site && retInst) {
+      VersionedValue *value = getLatestValue(retInst->getReturnValue());
+      if (value)
+        addDependency(value, getNewValue(site));
     }
   }
 

@@ -381,10 +381,12 @@ void ITreeNode::pushAbstractDependencyFrame(llvm::Instruction *site) {
   dependency->bindCallArguments(site);
 }
 
-void ITreeNode::popAbstractDependencyFrame() {
+void ITreeNode::popAbstractDependencyFrame(llvm::CallInst *site,
+                                           llvm::Instruction *inst) {
   // TODO: This is probably where we should simplify
-  // the dependency graph of the callee function to
-  // no longer mention callee values.
+  // the dependency graph by removing callee values.
+
+  dependency->bindReturnValue(site, inst);
 }
 
 void ITreeNode::dump() const {

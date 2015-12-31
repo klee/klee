@@ -1522,7 +1522,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       assert(!caller && "caller set on initial stack frame");
       terminateStateOnExit(state);
     } else {
-      state.popFrame();
+      state.popFrame(ki);
 
       if (statsTracker)
         statsTracker->framePopped(state);
@@ -2787,16 +2787,16 @@ void Executor::run(ExecutionState &initialState) {
       state.itreeNode->setNodeLocation(reinterpret_cast<uintptr_t>(state.pc->inst));
       interpTree->setCurrentINode(state.itreeNode);
 
-      // Uncomment the following statement to show the state
+      // Uncomment the following statements to show the state
       // of the interpolation tree and the active node.
 
-      llvm::errs() << "\nCurrent state:\n";
-      processTree->dump();
-      interpTree->dump();
-      state.itreeNode->dump();
-      llvm::errs() << "------------------- Executing New Instruction "
-                      "-----------------------\n";
-      state.pc->inst->dump();
+      // llvm::errs() << "\nCurrent state:\n";
+      // processTree->dump();
+      // interpTree->dump();
+      // state.itreeNode->dump();
+      // llvm::errs() << "------------------- Executing New Instruction "
+      //                 "-----------------------\n";
+      // state.pc->inst->dump();
     }
 
     if (!NoInterpolation &&
