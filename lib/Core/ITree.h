@@ -136,12 +136,7 @@ namespace klee {
     PathCondition *pathCondition;
 
     /// @brief Abstract stack for value dependencies
-    DependencyStack *dependencyStack;
-
-    /// @brief The abstract dependency frames that are local to
-    /// this interpolation tree node. They are to be deleted when this
-    /// node is deleted or the frame is locally popped.
-    std::vector<DependencyFrame *> localDependencyStackFrames;
+    Dependency *dependency;
 
     ITreeNode *parent, *left, *right;
 

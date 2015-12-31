@@ -125,16 +125,25 @@ namespace klee {
     }
   };
 
+  class Dependency {
 
-  class DependencyFrame {
-    friend class DependencyStack;
+    /// @brief Previous path condition
+    Dependency *tail;
 
-    llvm::Function *function;
-    llvm::Value **argumentsList;
+    /// @brief Argument values to be passed onto callee
+    std::vector<VersionedValue *> argumentValuesList;
+
+    /// @brief the callee function in a call
+    llvm::Function *callee;
+
     std::vector< PointerEquality *> equalityList;
+
     std::vector< StorageCell *> storesList;
+
     std::vector<FlowsTo *> flowsToList;
+
     std::vector< VersionedValue *> valuesList;
+
     std::vector< VersionedAllocation *> allocationsList;
 
     VersionedValue* getNewValue(llvm::Value *value);
@@ -156,67 +165,22 @@ namespace klee {
 
     std::vector<VersionedValue *> stores(VersionedAllocation *allocation) const;
 
-    VersionedAllocation *storageOf(VersionedValue *value);
-
     bool depends(VersionedValue *source, VersionedValue *target);
-
-    void bindArgument(const unsigned index, llvm::Value *value);
 
     std::vector<VersionedValue *>
     populateArgumentValuesList(llvm::CallInst *site);
 
-    void bindCallArguments(std::vector<VersionedValue *> &argumentValuesList);
-
-    DependencyFrame(llvm::Function *function);
-
-    ~DependencyFrame();
-
-  public:
-
-    void print(llvm::raw_ostream& stream) const;
-
-    void print(llvm::raw_ostream &stream, const unsigned tab_num) const;
-
-    void dump() const {
-      print(llvm::errs());
-      llvm::errs() << "\n";
-    }
-  };
-
-  class DependencyStack {
-    /// @brief The global frame shared by every stack element
-    DependencyFrame *global;
-
-    /// @brief The abstract dependency frame
-    DependencyFrame *top;
-
-    /// @brief Previous path condition
-    DependencyStack *tail;
-
-    /// @brief Argument values to be passed onto callee
-    std::vector<VersionedValue *> argumentValuesList;
-
     /// @brief Construct dependency due to load instruction
-    static bool buildLoadDependency(DependencyFrame *from,
-                                    llvm::Value *fromValue, DependencyFrame *to,
-                                    llvm::Value *toValue);
-
-    /// @brief for testing if a frame was included in a vector of frames
-    static bool
-    isLocal(const std::vector<DependencyFrame *> &currentLocalFrames,
-            DependencyFrame *frame);
+    bool buildLoadDependency(llvm::Value *fromValue, llvm::Value *toValue);
 
   public:
-    DependencyStack(llvm::Function *function, DependencyStack *prev);
+    Dependency(Dependency *prev);
 
-    ~DependencyStack();
+    ~Dependency();
 
-    DependencyFrame *car() const;
+    Dependency *cdr() const;
 
-    DependencyStack *cdr() const;
-
-    void execute(const std::vector<DependencyFrame *> &currentLocalFrames,
-                 llvm::Instruction *instr);
+    void execute(llvm::Instruction *instr);
 
     void registerCallArguments(llvm::Instruction *instr);
 
@@ -231,13 +195,6 @@ namespace klee {
 
     void print(llvm::raw_ostream& stream, const unsigned tab_num) const;
 
-    /// @brief Print the content of the stack
-    void printStack(llvm::raw_ostream& stream,
-                    const unsigned tab_num) const;
-
-    /// @brief Print the content of the global frame
-    void printGlobalFrame(llvm::raw_ostream& stream,
-                          const unsigned tab_num) const;
   };
 
   template<typename T>

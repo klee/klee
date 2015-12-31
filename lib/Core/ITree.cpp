@@ -315,8 +315,7 @@ ITreeNode::ITreeNode(ITreeNode *_parent,
   }
 
   // Inherit the abstract dependency stack or NULL
-  dependencyStack =
-      (_parent ? _parent->dependencyStack : 0);
+  dependency = (_parent ? _parent->dependency : 0);
 }
 
 ITreeNode::~ITreeNode() {
@@ -329,17 +328,8 @@ ITreeNode::~ITreeNode() {
     }
   }
 
-  if (dependencyStack) {
-      for (std::vector<DependencyFrame *>::reverse_iterator
-	  it = localDependencyStackFrames.rbegin(),
-	  itEnd = localDependencyStackFrames.rend(); it != itEnd; ++it) {
-	  assert (dependencyStack->car() == *it);
-
-	  DependencyStack *previousStack = dependencyStack;
-	  dependencyStack = dependencyStack->cdr();
-	  delete previousStack;
-      }
-  }
+  if (dependency)
+    delete dependency;
 }
 
 unsigned int ITreeNode::getNodeId() {
@@ -381,35 +371,25 @@ bool ITreeNode::introducesMarkedConstraint() {
 }
 
 void ITreeNode::executeAbstractDependency(llvm::Instruction *instr) {
-  dependencyStack->execute(localDependencyStackFrames, instr);
+  dependency->execute(instr);
 }
 
 void ITreeNode::pushAbstractDependencyFrame(llvm::Function *function,
                                             llvm::Instruction *site) {
   // We first evaluate the actual argument dependencies
-  dependencyStack->registerCallArguments(site);
+  dependency->registerCallArguments(site);
 
   // Create a new abstract dependency stack frame
-  dependencyStack = new DependencyStack(function, dependencyStack);
+  dependency = new Dependency(dependency);
 
   // Transfer dependencies from caller to callee
-  dependencyStack->bindCallArguments();
-
-  // Register the new frame as local to the current interpolation tree node
-  localDependencyStackFrames.push_back(dependencyStack->car());
+  dependency->bindCallArguments();
 }
 
 void ITreeNode::popAbstractDependencyFrame() {
-  if (!dependencyStack)
-    return;
-
-  DependencyStack *tail = dependencyStack->cdr();
-  if (localDependencyStackFrames.size() > 0 &&
-      localDependencyStackFrames.back() == dependencyStack->car()) {
-      localDependencyStackFrames.pop_back();
-      delete dependencyStack;
-  }
-  dependencyStack = tail;
+  // TODO: This is probably where we should simplify
+  // the dependency graph of the callee function to
+  // no longer mention callee values.
 }
 
 void ITreeNode::dump() const {
@@ -449,29 +429,8 @@ void ITreeNode::print(llvm::raw_ostream &stream, const unsigned int tab_num) con
       right->print(stream, tab_num + 1);
       stream << "\n";
   }
-  DependencyStack *stackToPrint = dependencyStack;
-  if (localDependencyStackFrames.size()) {
-      std::vector<DependencyFrame *> localStack(localDependencyStackFrames);
-
-      stream << tabs_next << "------ Local Dependency Frames ---------\n";
-      for (std::vector<DependencyFrame *>::reverse_iterator
-	  it = localStack.rbegin(),
-	  itEnd = localStack.rend(); it != itEnd; ++it) {
-	  (*it)->print(stream, tab_num + 1);
-	  stream << "\n";
-	  stream << tabs_next << "----------------------------------------\n";
-	  assert (stackToPrint && stackToPrint->car() == (*it));
-	  stackToPrint = stackToPrint->cdr();
-      }
-  }
-
-  if (stackToPrint) {
-      stream << tabs_next << "--- Non-Local Dependency Frames --------\n";
-      stackToPrint->printStack(stream, tab_num + 1);
-  }
-
-  if (dependencyStack) {
-      stream << "\n";
-      dependencyStack->printGlobalFrame(stream, tab_num + 1);
+  if (dependency) {
+    stream << tabs_next << "------- Abstract Dependencies ----------\n";
+    dependency->print(stream, tab_num + 1);
   }
 }
