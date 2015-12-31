@@ -29,16 +29,6 @@
 #include <map>
 #include <set>
 
-#define log_addConstraint(STATE, EXPR) { \
-  ref<Expr> tmp = (EXPR); \
-  llvm::errs() << "addConstraint " << __FUNCTION__ << ":" << __LINE__ << " " << tmp << "\nCause: "; \
-  ((STATE).prevPC)->inst->dump(); \
-  addConstraint((STATE), tmp); \
-  }
-
-#define log_prevPC(STATE) { \
-  }
-
 struct KTest;
 
 namespace llvm {
@@ -412,7 +402,6 @@ private:
   void initTimers();
   void processTimers(ExecutionState *current,
                      double maxInstTime);
- ref<Expr> makeComparison(ref<Expr> exprKind, ref<Expr> leftValue, const ref<Expr>& rightValue);
 
 public:
   Executor(const InterpreterOptions &opts, InterpreterHandler *ie);

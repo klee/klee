@@ -721,36 +721,8 @@ void Executor::branch(ExecutionState &state,
   }
 
   for (unsigned i=0; i<N; ++i)
-    if (result[i]) {
-	log_addConstraint(*result[i], conditions[i]);
-    }
-}
-
-ref<Expr> Executor::makeComparison(ref<Expr> exprWithKind, ref<Expr> leftValue, const ref<Expr>& rightValue) {
-  switch (exprWithKind->getKind()) {
-    case Expr::Eq:
-      return EqExpr::create(leftValue, rightValue);
-    case Expr::Ne:
-      return NeExpr::create(leftValue, rightValue);
-    case Expr::Ult:
-      return UltExpr::create(leftValue, rightValue);
-    case Expr::Ule:
-      return UleExpr::create(leftValue, rightValue);
-    case Expr::Ugt:
-      return UgtExpr::create(leftValue, rightValue);
-    case Expr::Uge:
-      return UgeExpr::create(leftValue, rightValue);
-    case Expr::Slt:
-      return SltExpr::create(leftValue, rightValue);
-    case Expr::Sle:
-      return SleExpr::create(leftValue, rightValue);
-    case Expr::Sgt:
-      return SgtExpr::create(leftValue, rightValue);
-    case Expr::Sge:
-      return SgeExpr::create(leftValue, rightValue);
-    default:
-      return exprWithKind;
-  }
+    if (result[i])
+      addConstraint(*result[i], conditions[i]);
 }
 
 Executor::StatePair 
@@ -782,8 +754,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       bool success = solver->getValue(current, condition, value);
       assert(success && "FIXME: Unhandled solver failure");
       (void) success;
-      ref<Expr> tmp = EqExpr::create(value, condition);
-      log_addConstraint(current, tmp);
+      addConstraint(current, EqExpr::create(value, condition));
       condition = value;
     }
   }
@@ -818,10 +789,10 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
         // add constraints
         if(branch) {
           res = Solver::True;
-          log_addConstraint(current, condition);
+          addConstraint(current, condition);
         } else  {
           res = Solver::False;
-          log_addConstraint(current, Expr::createIsZero(condition));
+          addConstraint(current, Expr::createIsZero(condition));
         }
       }
     } else if (res==Solver::Unknown) {
@@ -843,10 +814,10 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
 
         TimerStatIncrementer timer(stats::forkTime);
         if (theRNG.getBool()) {
-          log_addConstraint(current, condition);
+          addConstraint(current, condition);
           res = Solver::True;        
         } else {
-          log_addConstraint(current, Expr::createIsZero(condition));
+          addConstraint(current, Expr::createIsZero(condition));
           res = Solver::False;
         }
       }
@@ -879,7 +850,8 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       assert(trueSeed || falseSeed);
       
       res = trueSeed ? Solver::True : Solver::False;
-      log_addConstraint(current, trueSeed ? condition : Expr::createIsZero(condition));
+      addConstraint(current,
+                    trueSeed ? condition : Expr::createIsZero(condition));
     }
   }
 
@@ -990,8 +962,8 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       }
     }
 
-    log_addConstraint(*trueState, condition);
-    log_addConstraint(*falseState, Expr::createIsZero(condition));
+    addConstraint(*trueState, condition);
+    addConstraint(*falseState, Expr::createIsZero(condition));
 
 #ifdef SUPPORT_Z3
     if (!NoInterpolation) {
@@ -1184,8 +1156,8 @@ Executor::toConstant(ExecutionState &state,
   else
     klee_warning_once(reason, "%s", os.str().c_str());
 
-  log_addConstraint(state, EqExpr::create(e, value));
-    
+  addConstraint(state, EqExpr::create(e, value));
+
   return value;
 }
 
