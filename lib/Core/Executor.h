@@ -401,7 +401,6 @@ private:
   void initTimers();
   void processTimers(ExecutionState *current,
                      double maxInstTime);
- ref<Expr> makeComparison(ref<Expr> exprKind, ref<Expr> leftValue, const ref<Expr>& rightValue);
 
 public:
   Executor(const InterpreterOptions &opts, InterpreterHandler *ie);

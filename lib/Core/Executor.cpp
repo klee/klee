@@ -726,33 +726,6 @@ void Executor::branch(ExecutionState &state,
       addConstraint(*result[i], conditions[i]);
 }
 
-ref<Expr> Executor::makeComparison(ref<Expr> exprWithKind, ref<Expr> leftValue, const ref<Expr>& rightValue) {
-  switch (exprWithKind->getKind()) {
-    case Expr::Eq:
-      return EqExpr::create(leftValue, rightValue);
-    case Expr::Ne:
-      return NeExpr::create(leftValue, rightValue);
-    case Expr::Ult:
-      return UltExpr::create(leftValue, rightValue);
-    case Expr::Ule:
-      return UleExpr::create(leftValue, rightValue);
-    case Expr::Ugt:
-      return UgtExpr::create(leftValue, rightValue);
-    case Expr::Uge:
-      return UgeExpr::create(leftValue, rightValue);
-    case Expr::Slt:
-      return SltExpr::create(leftValue, rightValue);
-    case Expr::Sle:
-      return SleExpr::create(leftValue, rightValue);
-    case Expr::Sgt:
-      return SgtExpr::create(leftValue, rightValue);
-    case Expr::Sge:
-      return SgeExpr::create(leftValue, rightValue);
-    default:
-      return exprWithKind;
-  }
-}
-
 Executor::StatePair 
 Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
   Solver::Validity res;
