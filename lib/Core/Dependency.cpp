@@ -19,8 +19,20 @@ namespace klee {
   bool VersionedAllocation::isComposite() const {
     llvm::AllocaInst *inst = llvm::dyn_cast<llvm::AllocaInst>(site);
 
-    assert(inst != 0 && "wrong instruction type");
-    return llvm::isa<llvm::CompositeType>(inst->getAllocatedType());
+    if (inst != 0)
+      return llvm::isa<llvm::CompositeType>(inst->getAllocatedType());
+
+    switch (site->getType()->getTypeID()) {
+      case llvm::Type::ArrayTyID:
+	{
+	  return true;
+	}
+      default:
+	break;
+    }
+
+    assert (!"wrong instruction type");
+    return false;
   }
 
   void VersionedAllocation::print(llvm::raw_ostream& stream) const {
@@ -311,9 +323,7 @@ namespace klee {
       }
       case llvm::Instruction::Load: {
         if (!buildLoadDependency(i->getOperand(0), i)) {
-          VersionedValue *arg = getNewValue(i->getOperand(0));
           VersionedAllocation *alloc = getNewAllocation(i->getOperand(0));
-          addPointerEquality(arg, alloc);
           updateStore(alloc, getNewValue(i));
         }
         break;
@@ -441,6 +451,12 @@ namespace klee {
       return;
 
     llvm::Function *callee = site->getCalledFunction();
+
+    // Sometimes the callee information is missing, in which case
+    // the calle is not to be symbolically tracked.
+    if (!callee)
+      return;
+
     argumentValuesList = populateArgumentValuesList(site);
     unsigned index = 0;
     for (llvm::Function::ArgumentListType::iterator
