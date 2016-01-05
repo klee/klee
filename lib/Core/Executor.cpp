@@ -2769,9 +2769,9 @@ void Executor::run(ExecutionState &initialState) {
       // processTree->dump();
       // interpTree->dump();
       // state.itreeNode->dump();
-      llvm::errs() << "------------------- Executing New Instruction "
-                      "-----------------------\n";
-      state.pc->inst->dump();
+      // llvm::errs() << "------------------- Executing New Instruction "
+      //                 "-----------------------\n";
+      // state.pc->inst->dump();
     }
 
     if (!NoInterpolation &&

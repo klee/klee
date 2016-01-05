@@ -70,7 +70,7 @@ namespace klee {
 
   PointerEquality::~PointerEquality() {}
 
-  VersionedAllocation *PointerEquality::equals(VersionedValue *value) {
+  VersionedAllocation *PointerEquality::equals(VersionedValue *value) const {
     return this->value == value ? allocation : 0;
   }
 
@@ -94,7 +94,7 @@ namespace klee {
     return this->allocation == allocation ? this->value : 0;
   }
 
-  VersionedAllocation *StorageCell::storageOf(VersionedValue *value) {
+  VersionedAllocation *StorageCell::storageOf(VersionedValue *value) const {
     return this->value == value ? this->allocation : 0;
   }
 
@@ -113,8 +113,12 @@ namespace klee {
 
   FlowsTo::~FlowsTo() {}
 
-  bool FlowsTo::depends(VersionedValue *source, VersionedValue *target) {
-    return this->source == source && this->target == target;
+  VersionedValue *FlowsTo::getSource() const {
+    return this->source;
+  }
+
+  VersionedValue *FlowsTo::getTarget() const {
+    return this->target;
   }
 
   void FlowsTo::print(llvm::raw_ostream &stream) const {
@@ -168,9 +172,10 @@ namespace klee {
     return 0;
   }
 
-  VersionedAllocation *Dependency::resolveAllocation(VersionedValue *val) {
+  VersionedAllocation *
+  Dependency::resolveAllocation(VersionedValue *val) const {
     if (!val) return 0;
-    for (std::vector< PointerEquality *>::reverse_iterator
+    for (std::vector< PointerEquality *>::const_reverse_iterator
 	it = equalityList.rbegin(),
 	itEnd = equalityList.rend(); it != itEnd; ++it) {
 	VersionedAllocation *alloc = (*it)->equals(val);
@@ -182,6 +187,26 @@ namespace klee {
       return parentDependency->resolveAllocation(val);
 
     return 0;
+  }
+
+  std::vector<VersionedAllocation *>
+  Dependency::resolveAllocationTransitively(VersionedValue *value) const {
+    std::vector<VersionedAllocation *> ret;
+    VersionedAllocation *singleRet = resolveAllocation(value);
+    if (singleRet) {
+	ret.push_back(singleRet);
+	return ret;
+    }
+
+    std::vector<VersionedValue *> valueSources = flowsFrom(value);
+    for (std::vector<VersionedValue *>::const_iterator it = valueSources.begin(),
+	itEnd = valueSources.end(); it != itEnd; ++it) {
+	singleRet = resolveAllocation(*it);
+	if (singleRet) {
+	    ret.push_back(singleRet);
+	}
+    }
+    return ret;
   }
 
   void Dependency::addPointerEquality(VersionedValue *value,
@@ -238,16 +263,25 @@ namespace klee {
     return ret;
   }
 
-  bool Dependency::depends(VersionedValue *source, VersionedValue *target) {
-    for (std::vector<FlowsTo *>::iterator it = flowsToList.begin(),
+  std::vector<VersionedValue *>
+  Dependency::locallyFlowsFrom(VersionedValue *target) const {
+    std::vector<VersionedValue *> ret;
+    for (std::vector<FlowsTo *>::const_iterator it = flowsToList.begin(),
                                           itEnd = flowsToList.end();
          it != itEnd; ++it) {
-      if ((*it)->depends(source, target))
-        return true;
+      if ((*it)->getTarget() == target) {
+	ret.push_back((*it)->getSource());
+      }
     }
-    if (parentDependency)
-      return parentDependency->depends(source, target);
-    return false;
+    return ret;
+  }
+
+  std::vector<VersionedValue *>
+  Dependency::flowsFrom(VersionedValue *target) const {
+    std::vector<VersionedValue *> ret = locallyFlowsFrom(target);
+    if (ret.size() == 0 && parentDependency)
+      return parentDependency->flowsFrom(target);
+    return ret;
   }
 
   std::vector<VersionedValue *>
@@ -269,25 +303,31 @@ namespace klee {
     if (!arg)
       return false;
 
-    VersionedAllocation *alloc = resolveAllocation(arg);
-    if (alloc) {
-      std::vector<VersionedValue *> valList = stores(alloc);
-      if (valList.size() > 0) {
-        for (std::vector<VersionedValue *>::iterator it = valList.begin(),
-                                                     itEnd = valList.end();
-             it != itEnd; ++it) {
-          VersionedAllocation *alloc2 = resolveAllocation(*it);
-          if (alloc2) {
-            addPointerEquality(getNewValue(toValue), alloc2);
-          } else {
-            addDependency(*it, getNewValue(toValue));
-          }
-        }
-      } else {
-        // We could not find the stored value, create
-        // a new one.
-        updateStore(alloc, getNewValue(toValue));
-      }
+    std::vector<VersionedAllocation *> allocList = resolveAllocationTransitively(arg);
+    if (allocList.size() > 0) {
+	for (std::vector<VersionedAllocation *>::iterator it0 = allocList.begin(),
+	    it0End = allocList.end(); it0 != it0End; ++it0) {
+	    std::vector<VersionedValue *> valList = stores(*it0);
+	    if (valList.size() > 0) {
+		for (std::vector<VersionedValue *>::iterator it1 = valList.begin(),
+		    it1End = valList.end();
+		    it1 != it1End; ++it1) {
+		    std::vector<VersionedAllocation *> alloc2 = resolveAllocationTransitively(*it1);
+		    if (alloc2.size() > 0) {
+			for (std::vector<VersionedAllocation *>::iterator it2 = alloc2.begin(),
+			    it2End = alloc2.end(); it2 != it2End; ++it2) {
+			    addPointerEquality(getNewValue(toValue), *it2);
+			}
+		    } else {
+			addDependency(*it1, getNewValue(toValue));
+		    }
+		}
+	    } else {
+		// We could not find the stored value, create
+		// a new one.
+		updateStore(*it0, getNewValue(toValue));
+	    }
+	}
     }
 
     return true;
@@ -441,14 +481,13 @@ namespace klee {
       case llvm::Instruction::PHI:
 	{
 	  llvm::PHINode *phi = llvm::dyn_cast<llvm::PHINode>(i);
-	  VersionedValue *newValue = 0;
 	  for (unsigned idx = 0, b = phi->getNumIncomingValues(); idx < b; ++idx) {
 	      VersionedValue *val = getLatestValue(phi->getIncomingValue(idx));
 	      if (val) {
-		  if (!newValue) {
-		      newValue = getNewValue(i);
-		  }
-		  addDependency(val, newValue);
+		  // We only add dependency for a single value that we could
+		  // find, as this was a single execution path.
+		  addDependency(val, getNewValue(i));
+		  break;
 	      }
 	  }
 	  break;

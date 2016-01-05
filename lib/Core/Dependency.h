@@ -75,7 +75,7 @@ namespace klee {
 
     ~PointerEquality();
 
-    VersionedAllocation *equals(VersionedValue *value);
+    VersionedAllocation *equals(VersionedValue *value) const;
 
     void print(llvm::raw_ostream& stream) const;
 
@@ -96,7 +96,7 @@ namespace klee {
 
     VersionedValue *stores(VersionedAllocation *allocation) const;
 
-    VersionedAllocation *storageOf(VersionedValue *value);
+    VersionedAllocation *storageOf(VersionedValue *value) const;
 
     void print(llvm::raw_ostream& stream) const;
 
@@ -115,7 +115,9 @@ namespace klee {
 
     ~FlowsTo();
 
-    bool depends(VersionedValue *source, VersionedValue *target);
+    VersionedValue *getSource() const;
+
+    VersionedValue *getTarget() const;
 
     void print(llvm::raw_ostream& sream) const;
 
@@ -158,11 +160,15 @@ namespace klee {
 
     void addDependency(VersionedValue *source, VersionedValue *target);
 
-    VersionedAllocation *resolveAllocation(VersionedValue *value);
+    VersionedAllocation *resolveAllocation(VersionedValue *value) const;
+
+    std::vector<VersionedAllocation *> resolveAllocationTransitively(VersionedValue *value) const;
 
     std::vector<VersionedValue *> stores(VersionedAllocation *allocation) const;
 
-    bool depends(VersionedValue *source, VersionedValue *target);
+    std::vector<VersionedValue *> locallyFlowsFrom(VersionedValue *target) const;
+
+    std::vector<VersionedValue *> flowsFrom(VersionedValue *target) const;
 
     std::vector<VersionedValue *>
     populateArgumentValuesList(llvm::CallInst *site);
