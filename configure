@@ -647,7 +647,6 @@ clang
 llvm_gxx
 llvm_gcc
 LLVM_BUILD_MODE
-KLEE_USE_CXX11
 REQUIRES_RTTI
 LLVM_IS_RELEASE
 LLVM_VERSION_MINOR
@@ -722,7 +721,6 @@ enable_option_checking
 with_llvmsrc
 with_llvmobj
 with_llvm
-enable_cxx11
 with_llvm_build_mode
 with_llvmcc
 with_llvmcxx
@@ -1359,7 +1357,6 @@ Optional Features:
   --disable-option-checking  ignore unrecognized --enable/--with options
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
-  --enable-cxx11          Build using C++11
   --enable-posix-runtime  Enable the POSIX runtime
 
 Optional Packages:
@@ -3578,28 +3575,9 @@ fi
 REQUIRES_RTTI=$requires_rtti
 
 
-# Check whether --enable-cxx11 was given.
-if test "${enable_cxx11+set}" = set; then :
-  enableval=$enable_cxx11; klee_use_cxx11=1
-else
-  klee_use_cxx11=0
-fi
-
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking if LLVM needs C++11" >&5
-$as_echo_n "checking if LLVM needs C++11... " >&6; }
-if test '(' $llvm_version_major -eq 3 -a $llvm_version_minor -ge 5 ')' -o '(' $llvm_version_major -gt 3 ')' ; then
-  klee_use_cxx11=1
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-fi
-
-if test X${klee_use_cxx11} = X1; then
-  klee_old_cxxflags="$CXXFLAGS"
-  CXXFLAGS="$CXXFLAGS -std=c++11"
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking $CXX supports C++11" >&5
+$as_echo_n "checking $CXX supports C++11... " >&6; }
+CXXFLAGS="$CXXFLAGS -std=c++11"
 
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
@@ -3615,15 +3593,10 @@ $as_echo "yes" >&6; }
 else
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
-             as_fn_error $? "C++11 not supported" "$LINENO" 5
+         as_fn_error $? "C++11 not supported" "$LINENO" 5
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
-  CXXFLAGS="$klee_old_cxxflags"
-fi
-
-KLEE_USE_CXX11=$klee_use_cxx11
-
 
 
 
