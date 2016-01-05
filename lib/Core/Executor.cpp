@@ -1790,6 +1790,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = eval(ki, state.incomingBBIndex * 2, state).value;
 #endif
     bindLocal(ki, state, result);
+
+    // Update dependency
+    interpTree->executeAbstractDependency(i);
     break;
   }
 
@@ -2766,9 +2769,9 @@ void Executor::run(ExecutionState &initialState) {
       // processTree->dump();
       // interpTree->dump();
       // state.itreeNode->dump();
-      // llvm::errs() << "------------------- Executing New Instruction "
-      //                 "-----------------------\n";
-      // state.pc->inst->dump();
+      llvm::errs() << "------------------- Executing New Instruction "
+                      "-----------------------\n";
+      state.pc->inst->dump();
     }
 
     if (!NoInterpolation &&

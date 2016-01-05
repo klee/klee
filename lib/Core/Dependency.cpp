@@ -423,21 +423,36 @@ namespace klee {
       case llvm::Instruction::FCmp:
       case llvm::Instruction::InsertValue:
 	{
-        VersionedValue *lhs = getLatestValue(i->getOperand(0));
-        VersionedValue *rhs = getLatestValue(i->getOperand(1));
-        VersionedValue *newValue = 0;
-        if (lhs) {
-          newValue = getNewValue(i);
-          addDependency(lhs, newValue);
-        }
-        if (rhs) {
-          if (newValue)
-            addDependency(rhs, newValue);
-          else
-            addDependency(rhs, getNewValue(i));
-        }
-        break;
-      }
+	  VersionedValue *lhs = getLatestValue(i->getOperand(0));
+	  VersionedValue *rhs = getLatestValue(i->getOperand(1));
+	  VersionedValue *newValue = 0;
+	  if (lhs) {
+	      newValue = getNewValue(i);
+	      addDependency(lhs, newValue);
+	  }
+	  if (rhs) {
+	      if (newValue)
+		addDependency(rhs, newValue);
+	      else
+		addDependency(rhs, getNewValue(i));
+	  }
+	  break;
+	}
+      case llvm::Instruction::PHI:
+	{
+	  llvm::PHINode *phi = llvm::dyn_cast<llvm::PHINode>(i);
+	  VersionedValue *newValue = 0;
+	  for (unsigned idx = 0, b = phi->getNumIncomingValues(); idx < b; ++idx) {
+	      VersionedValue *val = getLatestValue(phi->getIncomingValue(idx));
+	      if (val) {
+		  if (!newValue) {
+		      newValue = getNewValue(i);
+		  }
+		  addDependency(val, newValue);
+	      }
+	  }
+	  break;
+	}
       default:
 	break;
     }
