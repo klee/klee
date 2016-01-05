@@ -388,14 +388,22 @@ namespace klee {
         break;
       }
       case llvm::Instruction::GetElementPtr: {
-        VersionedValue *arg = getLatestValue(i->getOperand(0));
-        assert(arg != 0 && "operand not found");
+	VersionedAllocation *a;
+	if (llvm::isa<llvm::Constant>(i->getOperand(0))) {
+	    a = getLatestAllocation(i->getOperand(0));
+	    if (!a)
+	      a = getNewAllocation(i->getOperand(0));
+	} else {
+	    VersionedValue *arg = getLatestValue(i->getOperand(0));
+	    assert(arg != 0 && "operand not found");
 
-        VersionedAllocation *alloc = resolveAllocation(arg);
-        if (alloc) {
+	    a = resolveAllocation(arg);
+	}
+
+        if (a) {
           // We simply propagate the pointer to the current
           // value field-insensitively.
-          addPointerEquality(getNewValue(i), alloc);
+          addPointerEquality(getNewValue(i), a);
         }
         break;
       }
