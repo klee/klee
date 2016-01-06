@@ -37,7 +37,6 @@ namespace klee {
 	break;
     }
 
-    assert (!"wrong instruction type");
     return false;
   }
 
@@ -362,7 +361,7 @@ namespace klee {
 	    }
 	}
     } else {
-	// assert (!"operand is not an allocation");
+	assert (!"operand is not an allocation");
     }
 
     return true;
@@ -384,6 +383,11 @@ namespace klee {
   Dependency *Dependency::cdr() const { return parentDependency; }
 
   void Dependency::execute(llvm::Instruction *i) {
+    // The basic design principle that we need to be careful here
+    // is that we should not store quadratic-sized structures in
+    // the database of computed relations, e.g., not storing the
+    // result of traversals of the graph. We keep the
+    // quadratic blow up for only when querying the database.
     unsigned opcode = i->getOpcode();
 
     assert(opcode != llvm::Instruction::Invoke &&
@@ -403,9 +407,8 @@ namespace klee {
 	    addPointerEquality(getNewValue(i), getNewAllocation(i));
 	    break;
 	}
-	llvm::Value *address = i->getOperand(0);
 
-        if (!buildLoadDependency(address, i)) {
+        if (!buildLoadDependency(i->getOperand(0), i)) {
           VersionedAllocation *alloc = getNewAllocation(i->getOperand(0));
           updateStore(alloc, getNewValue(i));
         }
@@ -479,16 +482,16 @@ namespace klee {
       case llvm::Instruction::SIToFP:
       case llvm::Instruction::ExtractValue:
 	{
-        VersionedValue *val = getLatestValue(i->getOperand(0));
-        if (val) {
-          VersionedAllocation *alloc = resolveAllocation(val);
-          if (alloc) {
-            addPointerEquality(getNewValue(i), alloc);
-          } else {
-            addDependency(val, getNewValue(i));
-          }
-        }
-        break;
+	  VersionedValue *val = getLatestValue(i->getOperand(0));
+	  if (val) {
+	      addDependency(getNewValue(i), val);
+	  } else if (!llvm::isa<llvm::Constant>(i->getOperand(0)))
+	    // Constants would kill dependencies, the remaining is for
+	    // cases that may actually require dependencies.
+	    {
+	      assert (!"operand not found");
+	    }
+	  break;
       }
       case llvm::Instruction::Select:
 	{
