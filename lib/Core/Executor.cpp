@@ -1231,9 +1231,7 @@ void Executor::executeCall(ExecutionState &state,
     switch(f->getIntrinsicID()) {
     case Intrinsic::not_intrinsic:
       // state may be destroyed by this call, cannot touch
-      llvm::errs() << "CALL EXTERNAL\n";
       callExternalFunction(state, ki, f, arguments);
-      llvm::errs() << "END EXTERNAL\n";
       break;
         
       // va_arg is handled by caller and intrinsic lowering, see comment for
@@ -1291,7 +1289,6 @@ void Executor::executeCall(ExecutionState &state,
     if (InvokeInst *ii = dyn_cast<InvokeInst>(i))
       transferToBasicBlock(ii->getNormalDest(), i->getParent(), state);
   } else {
-      llvm::errs() << "AAA\n";
     // FIXME: I'm not really happy about this reliance on prevPC but it is ok, I
     // guess. This just done to avoid having to pass KInstIterator everywhere
     // instead of the actual instruction, since we can't make a KInstIterator
@@ -1744,9 +1741,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
           i++;
         }
       }
-      llvm::errs() << "Calling executeCall\n";
       executeCall(state, ki, f, arguments);
-      llvm::errs() << "Finished executeCall\n";
     } else {
       ref<Expr> v = eval(ki, 0, state).value;
 
@@ -2648,11 +2643,8 @@ void Executor::updateStates(ExecutionState *current) {
       seedMap.erase(it3);
     processTree->remove(es->ptreeNode);
 #ifdef SUPPORT_Z3
-    if (!NoInterpolation) {
-	llvm::errs() << "REMOVING NODES FROM INTERP TREE\n";
+    if (!NoInterpolation)
       interpTree->remove(es->itreeNode);
-      llvm::errs() << "FINISHED REMOVING NODES\n";
-    }
 #endif
     delete es;
   }
@@ -2816,9 +2808,9 @@ void Executor::run(ExecutionState &initialState) {
       // processTree->dump();
       // interpTree->dump();
       // state.itreeNode->dump();
-      llvm::errs() << "------------------- Executing New Instruction "
-                      "-----------------------\n";
-      state.pc->inst->dump();
+      // llvm::errs() << "------------------- Executing New Instruction "
+      //                 "-----------------------\n";
+      // state.pc->inst->dump();
     }
 
     if (!NoInterpolation &&
@@ -2831,7 +2823,6 @@ void Executor::run(ExecutionState &initialState) {
 	stepInstruction(state);
 
 	executeInstruction(state, ki);
-	llvm::errs() << "Finished\n";
 	processTimers(&state, MaxInstructionTime);
 
 	if (MaxMemory) {
@@ -2868,9 +2859,7 @@ void Executor::run(ExecutionState &initialState) {
 	    }
 	}
       }
-    llvm::errs() << "Updating states\n";
     updateStates(&state);
-    llvm::errs() << "Finished updating states\n";
   }
 
   delete searcher;

@@ -194,16 +194,12 @@ void ITree::remove(ITreeNode *node) {
 
     // As the node is about to be deleted, it must have been completely
     // traversed, hence the correct time to table the interpolant.
-    llvm::errs() << "Subsumption store check\n";
     if (!node->isSubsumed && node->introducesMarkedConstraint()) {
       SubsumptionTableEntry entry(node);
       store(entry);
     }
-    llvm::errs() << "Stored\n";
 
-    llvm::errs() << "Deleting\n";
     delete node;
-    llvm::errs() << "Deletion ok\n";
     if (p) {
       if (node == p->left) {
         p->left = 0;
@@ -319,9 +315,6 @@ ITreeNode::ITreeNode(ITreeNode *_parent,
   }
 
   // Inherit the abstract dependency stack or NULL
-  if (_parent && !_parent->dependency) {
-    llvm::errs() << "PDEP IS NULL\n";
-  }
   dependency = new Dependency(_parent ? _parent->dependency : 0);
 }
 
@@ -335,11 +328,8 @@ ITreeNode::~ITreeNode() {
     }
   }
 
-  if (dependency) {
-      llvm::errs() << "Deleting dependency\n";
+  if (dependency)
     delete dependency;
-    llvm::errs() << "OK deleting dependency\n";
-  }
 }
 
 unsigned int ITreeNode::getNodeId() {

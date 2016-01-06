@@ -63,7 +63,7 @@ namespace klee {
   }
 
   void EnvironmentAllocation::print(llvm::raw_ostream& stream) const {
-    stream << "A[@__environ]";
+    stream << "A[@__environ]" << this;
   }
 
   /**/
@@ -163,12 +163,14 @@ namespace klee {
     VersionedAllocation *ret;
     if (isEnvironmentAllocation(allocation)) {
       ret = getLatestAllocation(allocation);
-      if (!ret)
+      if (!ret) {
 	ret = new EnvironmentAllocation();
+	allocationsList.push_back(ret);
+      }
     } else {
 	ret = new VersionedAllocation(allocation);
+	allocationsList.push_back(ret);
     }
-    allocationsList.push_back(ret);
     return ret;
   }
 
@@ -354,20 +356,13 @@ namespace klee {
 		    }
 		}
 	    } else {
-		llvm::errs() << "Could not find stored value\n";
 		// We could not find the stored value, create
 		// a new one.
 		updateStore(*it0, getNewValue(toValue));
 	    }
 	}
     } else {
-	llvm::errs() << "operand is not an allocation\n";
-	std::vector<VersionedValue *> sourceList = flowsFrom(arg);
-	for (std::vector<VersionedValue *>::iterator it = sourceList.begin(),
-	    itEnd = sourceList.end(); it != itEnd; ++it) {
-	    llvm::errs() << "Source value: ";
-	    (*it)->dump();
-	}
+	// assert (!"operand is not an allocation");
     }
 
     return true;
@@ -383,9 +378,7 @@ namespace klee {
 
     // Delete the locally-constructed objects
     deletePointerVector(valuesList);
-    llvm::errs() << "REMOVING ALLOCATIONS LIST\n";
     deletePointerVector(allocationsList);
-    llvm::errs() << "ALLOCATIONS LIST REMOVED\n";
   }
 
   Dependency *Dependency::cdr() const { return parentDependency; }
@@ -400,14 +393,10 @@ namespace klee {
 
     switch (opcode) {
       case llvm::Instruction::Alloca: {
-	llvm::errs() << "ADDING EQUALITY IN FUNCTION " << i->getParent()->getParent()->getName() << "\n";
-	i->dump();
         addPointerEquality(getNewValue(i), getNewAllocation(i));
         break;
       }
       case llvm::Instruction::Load: {
-	llvm::errs() << "EXECUTING LOAD ";
-	i->dump();
 	if (isEnvironmentAllocation(i)) {
 	    // The load corresponding to a load of the environment address
 	    // that was never allocated within this program.
@@ -423,8 +412,6 @@ namespace klee {
         break;
       }
       case llvm::Instruction::Store: {
-	llvm::errs() << "EXECUTING STORE IN FUNCTION " << i->getParent()->getParent()->getName() << "\n";
-	i->dump();
 	VersionedValue *dataArg = getLatestValue(i->getOperand(0));
 	std::vector<VersionedAllocation *> addressList =
 	    resolveAllocationTransitively(getLatestValue(i->getOperand(1)));
@@ -436,9 +423,6 @@ namespace klee {
 
 	for (std::vector<VersionedAllocation *>::iterator it = addressList.begin(),
 	    itEnd = addressList.end(); it != itEnd; ++it) {
-	    llvm::errs() << "STORING\n";
-	    (*it)->dump();
-	    dataArg->dump();
 	    updateStore((*it), dataArg);
 	}
 
@@ -455,10 +439,6 @@ namespace klee {
 	    break;
 	}
 
-	llvm::errs() << "NON-CONSTANT GETELEMENTPTR\n";
-	i->dump();
-	i->getOperand(0)->dump();
-	i->getParent()->getParent()->dump();
 	VersionedValue *arg = getLatestValue(i->getOperand(0));
 	assert(arg != 0 && "operand not found");
 
@@ -469,25 +449,18 @@ namespace klee {
 	    VersionedValue *newValue = getNewValue(i);
 	    for (std::vector<VersionedAllocation *>::iterator it = a.begin(),
 		itEnd = a.end(); it != itEnd; ++it) {
-		llvm::errs() << "ADDING EQUALITY TO ALLOCATION: ";
-		(*it)->dump();
 		addPointerEquality(newValue, *it);
 	    }
 	} else {
 	    // Could not resolve to argument to an address,
 	    // simply add flow dependency
-	    llvm::errs() << "Could not resolve argument to an address\n";
-	    llvm::errs() << "Argument is ";
-	    arg->dump();
 	    std::vector<VersionedValue *> vec = flowsFrom(arg);
 	    if (vec.size() > 0) {
-	    VersionedValue *newValue = getNewValue(i);
-	    for (std::vector<VersionedValue *>::iterator it = vec.begin(),
-		itEnd = vec.end(); it != itEnd; ++it) {
-		llvm::errs() << "COMING FROM: ";
-		(*it)->dump();
-		addDependency((*it), newValue);
-	    }
+		VersionedValue *newValue = getNewValue(i);
+		for (std::vector<VersionedValue *>::iterator it = vec.begin(),
+		    itEnd = vec.end(); it != itEnd; ++it) {
+		    addDependency((*it), newValue);
+		}
 	    }
 	}
 	break;
