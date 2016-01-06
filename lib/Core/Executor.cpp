@@ -2648,8 +2648,9 @@ void Executor::run(ExecutionState &initialState) {
 
 #ifdef SUPPORT_Z3
     if (!NoInterpolation) {
-      /// We synchronize the node id to that of the state. The node id
-      /// is the address of the first instruction in the node.
+      // We synchronize the node id to that of the state. The node id
+      // is set only when it was the address of the first instruction
+      // in the node.
       state.itreeNode->setNodeLocation(reinterpret_cast<uintptr_t>(state.pc->inst));
       interpTree->setCurrentINode(state.itreeNode);
 
