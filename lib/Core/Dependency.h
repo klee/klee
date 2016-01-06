@@ -25,25 +25,41 @@ namespace klee {
 
   class VersionedAllocation {
     static unsigned long long nextVersion;
-
-    llvm::Value *site;
     unsigned long long version;
+
+  protected:
+    llvm::Value *site;
+
+    VersionedAllocation();
 
   public:
     VersionedAllocation(llvm::Value *site);
 
-    ~VersionedAllocation();
+    virtual ~VersionedAllocation();
+
+    virtual bool hasAllocationSite(llvm::Value *site) const;
+
+    virtual bool isComposite() const;
+
+    virtual void print(llvm::raw_ostream& stream) const;
+
+    void dump() const {
+      print(llvm::errs());
+      llvm::errs() << "\n";
+    }
+  };
+
+  class EnvironmentAllocation : public VersionedAllocation {
+  public:
+    EnvironmentAllocation();
+
+    ~EnvironmentAllocation();
 
     bool hasAllocationSite(llvm::Value *site) const;
 
     bool isComposite() const;
 
     void print(llvm::raw_ostream& stream) const;
-
-    void dump() const {
-      print(llvm::errs());
-      llvm::errs() << "\n";
-    }
   };
 
   class VersionedValue {
@@ -206,6 +222,8 @@ namespace klee {
   std::string makeTabs(const unsigned tab_num);
 
   std::string appendTab(const std::string &prefix);
+
+  bool isEnvironmentAllocation(llvm::Value *site);
 }
 
 #endif

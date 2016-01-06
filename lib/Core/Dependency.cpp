@@ -7,8 +7,11 @@ namespace klee {
 
   unsigned long long VersionedAllocation::nextVersion = 0;
 
+  VersionedAllocation::VersionedAllocation()
+      : version(0), site(0) {}
+
   VersionedAllocation::VersionedAllocation(llvm::Value *site)
-      : site(site), version(nextVersion++) {}
+      : version(nextVersion++), site(site) {}
 
   VersionedAllocation::~VersionedAllocation() {}
 
@@ -24,6 +27,9 @@ namespace klee {
 
     switch (site->getType()->getTypeID()) {
       case llvm::Type::ArrayTyID:
+      case llvm::Type::PointerTyID:
+      case llvm::Type::StructTyID:
+      case llvm::Type::VectorTyID:
 	{
 	  return true;
 	}
@@ -40,6 +46,24 @@ namespace klee {
     site->print(stream);
     stream << "#" << version;
     stream << "]";
+  }
+
+  /**/
+
+  EnvironmentAllocation::EnvironmentAllocation() {}
+
+  EnvironmentAllocation::~EnvironmentAllocation() {}
+
+  bool EnvironmentAllocation::hasAllocationSite(llvm::Value *site) const {
+    return isEnvironmentAllocation(site);
+  }
+
+  bool EnvironmentAllocation::isComposite() const {
+    return true;
+  }
+
+  void EnvironmentAllocation::print(llvm::raw_ostream& stream) const {
+    stream << "A[@__environ]";
   }
 
   /**/
@@ -136,7 +160,14 @@ namespace klee {
   }
 
   VersionedAllocation *Dependency::getNewAllocation(llvm::Value *allocation) {
-    VersionedAllocation *ret = new VersionedAllocation(allocation);
+    VersionedAllocation *ret;
+    if (isEnvironmentAllocation(allocation)) {
+      ret = getLatestAllocation(allocation);
+      if (!ret)
+	ret = new EnvironmentAllocation();
+    } else {
+	ret = new VersionedAllocation(allocation);
+    }
     allocationsList.push_back(ret);
     return ret;
   }
@@ -323,10 +354,19 @@ namespace klee {
 		    }
 		}
 	    } else {
+		llvm::errs() << "Could not find stored value\n";
 		// We could not find the stored value, create
 		// a new one.
 		updateStore(*it0, getNewValue(toValue));
 	    }
+	}
+    } else {
+	llvm::errs() << "operand is not an allocation\n";
+	std::vector<VersionedValue *> sourceList = flowsFrom(arg);
+	for (std::vector<VersionedValue *>::iterator it = sourceList.begin(),
+	    itEnd = sourceList.end(); it != itEnd; ++it) {
+	    llvm::errs() << "Source value: ";
+	    (*it)->dump();
 	}
     }
 
@@ -343,7 +383,9 @@ namespace klee {
 
     // Delete the locally-constructed objects
     deletePointerVector(valuesList);
+    llvm::errs() << "REMOVING ALLOCATIONS LIST\n";
     deletePointerVector(allocationsList);
+    llvm::errs() << "ALLOCATIONS LIST REMOVED\n";
   }
 
   Dependency *Dependency::cdr() const { return parentDependency; }
@@ -358,54 +400,97 @@ namespace klee {
 
     switch (opcode) {
       case llvm::Instruction::Alloca: {
+	llvm::errs() << "ADDING EQUALITY IN FUNCTION " << i->getParent()->getParent()->getName() << "\n";
+	i->dump();
         addPointerEquality(getNewValue(i), getNewAllocation(i));
         break;
       }
       case llvm::Instruction::Load: {
-        if (!buildLoadDependency(i->getOperand(0), i)) {
+	llvm::errs() << "EXECUTING LOAD ";
+	i->dump();
+	if (isEnvironmentAllocation(i)) {
+	    // The load corresponding to a load of the environment address
+	    // that was never allocated within this program.
+	    addPointerEquality(getNewValue(i), getNewAllocation(i));
+	    break;
+	}
+	llvm::Value *address = i->getOperand(0);
+
+        if (!buildLoadDependency(address, i)) {
           VersionedAllocation *alloc = getNewAllocation(i->getOperand(0));
           updateStore(alloc, getNewValue(i));
         }
         break;
       }
       case llvm::Instruction::Store: {
-        VersionedValue *dataArg = getLatestValue(i->getOperand(0));
-        VersionedAllocation *address =
-            resolveAllocation(getLatestValue(i->getOperand(1)));
+	llvm::errs() << "EXECUTING STORE IN FUNCTION " << i->getParent()->getParent()->getName() << "\n";
+	i->dump();
+	VersionedValue *dataArg = getLatestValue(i->getOperand(0));
+	std::vector<VersionedAllocation *> addressList =
+	    resolveAllocationTransitively(getLatestValue(i->getOperand(1)));
 
-        if (dataArg) {
-          // There is dependency to store (not a constant etc.)
-          if (address) {
-            updateStore(address, dataArg);
-          }
-        } else {
-          // There is no dependency found, we should create
-          // a new value
-          if (address) {
-            updateStore(address, getNewValue(i->getOperand(0)));
-          }
-        }
-        break;
-      }
-      case llvm::Instruction::GetElementPtr: {
-	VersionedAllocation *a;
-	if (llvm::isa<llvm::Constant>(i->getOperand(0))) {
-	    a = getLatestAllocation(i->getOperand(0));
-	    if (!a)
-	      a = getNewAllocation(i->getOperand(0));
-	} else {
-	    VersionedValue *arg = getLatestValue(i->getOperand(0));
-	    assert(arg != 0 && "operand not found");
+	// If there was no dependency found, we should create
+	// a new value
+	if (!dataArg)
+	  dataArg = getNewValue(i->getOperand(0));
 
-	    a = resolveAllocation(arg);
+	for (std::vector<VersionedAllocation *>::iterator it = addressList.begin(),
+	    itEnd = addressList.end(); it != itEnd; ++it) {
+	    llvm::errs() << "STORING\n";
+	    (*it)->dump();
+	    dataArg->dump();
+	    updateStore((*it), dataArg);
 	}
 
-        if (a) {
-          // We simply propagate the pointer to the current
-          // value field-insensitively.
-          addPointerEquality(getNewValue(i), a);
-        }
-        break;
+	break;
+      }
+      case llvm::Instruction::GetElementPtr: {
+	if (llvm::isa<llvm::Constant>(i->getOperand(0))) {
+	    VersionedAllocation *a = getLatestAllocation(i->getOperand(0));
+	    if (!a)
+	      a = getNewAllocation(i->getOperand(0));
+	    // We simply propagate the pointer to the current
+	    // value field-insensitively.
+	    addPointerEquality(getNewValue(i), a);
+	    break;
+	}
+
+	llvm::errs() << "NON-CONSTANT GETELEMENTPTR\n";
+	i->dump();
+	i->getOperand(0)->dump();
+	i->getParent()->getParent()->dump();
+	VersionedValue *arg = getLatestValue(i->getOperand(0));
+	assert(arg != 0 && "operand not found");
+
+	std::vector<VersionedAllocation *> a =
+	    resolveAllocationTransitively(arg);
+
+	if (a.size() > 0) {
+	    VersionedValue *newValue = getNewValue(i);
+	    for (std::vector<VersionedAllocation *>::iterator it = a.begin(),
+		itEnd = a.end(); it != itEnd; ++it) {
+		llvm::errs() << "ADDING EQUALITY TO ALLOCATION: ";
+		(*it)->dump();
+		addPointerEquality(newValue, *it);
+	    }
+	} else {
+	    // Could not resolve to argument to an address,
+	    // simply add flow dependency
+	    llvm::errs() << "Could not resolve argument to an address\n";
+	    llvm::errs() << "Argument is ";
+	    arg->dump();
+	    std::vector<VersionedValue *> vec = flowsFrom(arg);
+	    if (vec.size() > 0) {
+	    VersionedValue *newValue = getNewValue(i);
+	    for (std::vector<VersionedValue *>::iterator it = vec.begin(),
+		itEnd = vec.end(); it != itEnd; ++it) {
+		llvm::errs() << "COMING FROM: ";
+		(*it)->dump();
+		addDependency((*it), newValue);
+	    }
+	    }
+	}
+	break;
       }
       case llvm::Instruction::Trunc:
       case llvm::Instruction::ZExt:
@@ -607,4 +692,19 @@ namespace klee {
   std::string appendTab(const std::string &prefix) {
     return prefix + "        ";
   }
+
+  bool isEnvironmentAllocation(llvm::Value *site) {
+    llvm::LoadInst *inst = llvm::dyn_cast<llvm::LoadInst>(site);
+
+    if (!inst)
+      return false;
+
+    llvm::Value *address = inst->getOperand(0);
+    if (llvm::isa<llvm::Constant>(address) &&
+	address->getName() == "__environ") {
+	return true;
+    }
+    return false;
+  }
+
 }

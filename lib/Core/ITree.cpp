@@ -192,14 +192,18 @@ void ITree::remove(ITreeNode *node) {
   do {
     ITreeNode *p = node->parent;
 
-    /// As the node is about to be deleted, it must have been completely
-    /// traversed, hence the correct time to table the interpolant.
+    // As the node is about to be deleted, it must have been completely
+    // traversed, hence the correct time to table the interpolant.
+    llvm::errs() << "Subsumption store check\n";
     if (!node->isSubsumed && node->introducesMarkedConstraint()) {
       SubsumptionTableEntry entry(node);
       store(entry);
     }
+    llvm::errs() << "Stored\n";
 
+    llvm::errs() << "Deleting\n";
     delete node;
+    llvm::errs() << "Deletion ok\n";
     if (p) {
       if (node == p->left) {
         p->left = 0;
@@ -331,8 +335,11 @@ ITreeNode::~ITreeNode() {
     }
   }
 
-  if (dependency)
+  if (dependency) {
+      llvm::errs() << "Deleting dependency\n";
     delete dependency;
+    llvm::errs() << "OK deleting dependency\n";
+  }
 }
 
 unsigned int ITreeNode::getNodeId() {
