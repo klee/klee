@@ -29,5 +29,5 @@ autoconf/autom4te.cache/
 autom4te.cache/
 
 # Eclipse configuration
+.project
 .cproject
-

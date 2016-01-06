@@ -44,6 +44,14 @@ enum QueryLoggingSolverType
  */
 extern llvm::cl::list<QueryLoggingSolverType> queryLoggingOptions;
 
+enum SolverType
+{
+	SOLVER_Z3,
+	SOLVER_STP
+};
+
+extern llvm::cl::opt<SolverType> selectSolver;
+
 #ifdef SUPPORT_METASMT
 
 enum MetaSMTBackendType
