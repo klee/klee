@@ -19,14 +19,16 @@ namespace llvm {
 
 namespace klee {
   class MemoryObject;
+  class ArrayCache;
 
   class MemoryManager {
   private:
     typedef std::set<MemoryObject*> objects_ty;
     objects_ty objects;
+    ArrayCache *const arrayCache;
 
   public:
-    MemoryManager() {}
+    MemoryManager(ArrayCache *arrayCache) : arrayCache(arrayCache) {}
     ~MemoryManager();
 
     MemoryObject *allocate(uint64_t size, bool isLocal, bool isGlobal,
@@ -35,6 +37,7 @@ namespace klee {
                                 const llvm::Value *allocSite);
     void deallocate(const MemoryObject *mo);
     void markFreed(MemoryObject *mo);
+    ArrayCache *getArrayCache() const { return arrayCache; }
   };
 
 } // End klee namespace

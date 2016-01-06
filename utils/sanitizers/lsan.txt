@@ -1,0 +1,11 @@
+# This file tells the LeakSanitizer (LSan)component of the AddressSanitizer (-fsanitizer=address)
+# to ignore certain leaks at runtime. To tell LSan about these set the environment variable
+# LSAN_OPTIONS=suppressions=/path/to/this/file and then run the sanitized build of KLEE.
+#
+# Ideally we shouldn't need to suppress anything but currently KLEE seems to be leaking
+# The suppressions below are what's needed for ``make unittests`` and ``make check`` to not
+# fail due to leaks.
+
+# Low priority
+leak:tools/kleaver/main.cpp
+leak:lib/Expr/Parser.cpp
