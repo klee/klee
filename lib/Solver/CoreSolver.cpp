@@ -1,0 +1,87 @@
+//===-- CoreSolver.cpp ------------------------------------------*- C++ -*-===//
+//
+//                     The KLEE Symbolic Virtual Machine
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
+#include "klee/CommandLine.h"
+#include "klee/Solver.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
+#include <string>
+
+#ifdef SUPPORT_METASMT
+
+#include <metaSMT/frontend/Array.hpp>
+#include <metaSMT/backend/Z3_Backend.hpp>
+#include <metaSMT/backend/Boolector.hpp>
+#include <metaSMT/backend/MiniSAT.hpp>
+#include <metaSMT/DirectSolver_Context.hpp>
+#include <metaSMT/support/run_algorithm.hpp>
+#include <metaSMT/API/Stack.hpp>
+#include <metaSMT/API/Group.hpp>
+
+#define Expr VCExpr
+#define Type VCType
+#define STP STP_Backend
+#include <metaSMT/backend/STP.hpp>
+#undef Expr
+#undef Type
+#undef STP
+
+using namespace metaSMT;
+using namespace metaSMT::solver;
+
+static Solver *handleMetaSMT() {
+  Solver *coreSolver = NULL;
+  std::string backend;
+  switch (MetaSMTBackend) {
+  case METASMT_BACKEND_STP:
+    backend = "STP";
+    coreSolver = new MetaSMTSolver<DirectSolver_Context<STP_Backend> >(
+        UseForkedCoreSolver, CoreSolverOptimizeDivides);
+    break;
+  case METASMT_BACKEND_Z3:
+    backend = "Z3";
+    coreSolver = new MetaSMTSolver<DirectSolver_Context<Z3_Backend> >(
+        UseForkedCoreSolver, CoreSolverOptimizeDivides);
+    break;
+  case METASMT_BACKEND_BOOLECTOR:
+    backend = "Boolector";
+    coreSolver = new MetaSMTSolver<DirectSolver_Context<Boolector> >(
+        UseForkedCoreSolver, CoreSolverOptimizeDivides);
+    break;
+  default:
+    llvm_unreachable("Unrecognised metasmt backend");
+    break;
+  };
+  llvm::errs() << "Starting MetaSMTSolver(" << backend << ") ...\n";
+  return coreSolver;
+}
+#endif /* SUPPORT_METASMT */
+
+namespace klee {
+
+Solver *createCoreSolver(CoreSolverType cst) {
+  switch (cst) {
+  case STP_SOLVER:
+    llvm::errs() << "Using STP solver backend\n";
+    return new STPSolver(UseForkedCoreSolver, CoreSolverOptimizeDivides);
+  case METASMT_SOLVER:
+#ifdef SUPPORT_METASMT
+    llvm::errs() << "Using MetaSMT solver backend\n";
+    return handleMetaSMT();
+#else
+    llvm::errs() << "Not compiled with MetaSMT support\n";
+    return NULL;
+#endif
+  case DUMMY_SOLVER:
+    return createDummySolver();
+  default:
+    llvm_unreachable("Unsupported CoreSolverType");
+  }
+}
+}

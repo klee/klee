@@ -44,17 +44,19 @@ enum QueryLoggingSolverType
  */
 extern llvm::cl::list<QueryLoggingSolverType> queryLoggingOptions;
 
+enum CoreSolverType { STP_SOLVER, METASMT_SOLVER, DUMMY_SOLVER };
+extern llvm::cl::opt<CoreSolverType> CoreSolverToUse;
+
 #ifdef SUPPORT_METASMT
 
 enum MetaSMTBackendType
 {
-    METASMT_BACKEND_NONE,
     METASMT_BACKEND_STP,
     METASMT_BACKEND_Z3,
     METASMT_BACKEND_BOOLECTOR
 };
 
-extern llvm::cl::opt<klee::MetaSMTBackendType> UseMetaSMT;
+extern llvm::cl::opt<klee::MetaSMTBackendType> MetaSMTBackend;
 
 #endif /* SUPPORT_METASMT */
 

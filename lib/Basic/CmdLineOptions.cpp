@@ -75,18 +75,26 @@ llvm::cl::list<QueryLoggingSolverType> queryLoggingOptions(
 
 #ifdef SUPPORT_METASMT
 
-llvm::cl::opt<klee::MetaSMTBackendType>
-UseMetaSMT("use-metasmt",
-           llvm::cl::desc("Use MetaSMT as an underlying SMT solver and specify the solver backend type."),
-           llvm::cl::values(clEnumValN(METASMT_BACKEND_NONE, "none", "Don't use metaSMT"),
-                      clEnumValN(METASMT_BACKEND_STP, "stp", "Use metaSMT with STP"),
-                      clEnumValN(METASMT_BACKEND_Z3, "z3", "Use metaSMT with Z3"),
-                      clEnumValN(METASMT_BACKEND_BOOLECTOR, "btor", "Use metaSMT with Boolector"),
-                      clEnumValEnd),  
-           llvm::cl::init(METASMT_BACKEND_NONE));
+llvm::cl::opt<klee::MetaSMTBackendType> MetaSMTBackend(
+    "metasmt-backend",
+    llvm::cl::desc("Specify the MetaSMT solver backend type."),
+    llvm::cl::values(
+        clEnumValN(METASMT_BACKEND_STP, "stp", "Use metaSMT with STP"),
+        clEnumValN(METASMT_BACKEND_Z3, "z3", "Use metaSMT with Z3"),
+        clEnumValN(METASMT_BACKEND_BOOLECTOR, "btor",
+                   "Use metaSMT with Boolector"),
+        clEnumValEnd),
+    llvm::cl::init(METASMT_BACKEND_STP));
 
 #endif /* SUPPORT_METASMT */
 
+llvm::cl::opt<CoreSolverType> CoreSolverToUse(
+    "solver-backend", llvm::cl::desc("Specifiy the core solver backend to use"),
+    llvm::cl::values(clEnumValN(STP_SOLVER, "stp", "stp (default)"),
+                     clEnumValN(METASMT_SOLVER, "metasmt", "metaSMT"),
+                     clEnumValN(DUMMY_SOLVER, "dummy", "Dummy solver"),
+                     clEnumValEnd),
+    llvm::cl::init(STP_SOLVER));
 }
 
 

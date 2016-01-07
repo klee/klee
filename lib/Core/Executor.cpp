@@ -107,29 +107,6 @@ using namespace llvm;
 using namespace klee;
 
 
-#ifdef SUPPORT_METASMT
-
-#include <metaSMT/frontend/Array.hpp>
-#include <metaSMT/backend/Z3_Backend.hpp>
-#include <metaSMT/backend/Boolector.hpp>
-#include <metaSMT/backend/MiniSAT.hpp>
-#include <metaSMT/DirectSolver_Context.hpp>
-#include <metaSMT/support/run_algorithm.hpp>
-#include <metaSMT/API/Stack.hpp>
-#include <metaSMT/API/Group.hpp>
-
-#define Expr VCExpr
-#define Type VCType
-#define STP STP_Backend
-#include <metaSMT/backend/STP.hpp>
-#undef Expr
-#undef Type
-#undef STP
-
-using namespace metaSMT;
-using namespace metaSMT::solver;
-
-#endif /* SUPPORT_METASMT */
 
 
 
@@ -293,50 +270,19 @@ Executor::Executor(const InterpreterOptions &opts,
       : std::max(MaxCoreSolverTime,MaxInstructionTime)) {
       
   if (coreSolverTimeout) UseForkedCoreSolver = true;
-  
-  Solver *coreSolver = NULL;
-  
-#ifdef SUPPORT_METASMT
-  if (UseMetaSMT != METASMT_BACKEND_NONE) {
-    
-    std::string backend;
-    
-    switch (UseMetaSMT) {
-          case METASMT_BACKEND_STP:
-              backend = "STP"; 
-              coreSolver = new MetaSMTSolver< DirectSolver_Context < STP_Backend > >(UseForkedCoreSolver, CoreSolverOptimizeDivides);
-              break;
-          case METASMT_BACKEND_Z3:
-              backend = "Z3";
-              coreSolver = new MetaSMTSolver< DirectSolver_Context < Z3_Backend > >(UseForkedCoreSolver, CoreSolverOptimizeDivides);
-              break;
-          case METASMT_BACKEND_BOOLECTOR:
-              backend = "Boolector";
-              coreSolver = new MetaSMTSolver< DirectSolver_Context < Boolector > >(UseForkedCoreSolver, CoreSolverOptimizeDivides);
-              break;
-          default:
-              assert(false);
-              break;
-    };
-    llvm::errs() << "Starting MetaSMTSolver(" << backend << ") ...\n";
+  Solver *coreSolver = klee::createCoreSolver(CoreSolverToUse);
+  if (!coreSolver) {
+    llvm::errs() << "Failed to create core solver\n";
+    exit(1);
   }
-  else {
-    coreSolver = new STPSolver(UseForkedCoreSolver, CoreSolverOptimizeDivides);
-  }
-#else
-  coreSolver = new STPSolver(UseForkedCoreSolver, CoreSolverOptimizeDivides);
-#endif /* SUPPORT_METASMT */
-  
-   
-  Solver *solver = 
-    constructSolverChain(coreSolver,
-                         interpreterHandler->getOutputFilename(ALL_QUERIES_SMT2_FILE_NAME),
-                         interpreterHandler->getOutputFilename(SOLVER_QUERIES_SMT2_FILE_NAME),
-                         interpreterHandler->getOutputFilename(ALL_QUERIES_PC_FILE_NAME),
-                         interpreterHandler->getOutputFilename(SOLVER_QUERIES_PC_FILE_NAME));
-  
-  this->solver = new TimingSolver(solver, EqualitySubstitution);
+  Solver *solver = constructSolverChain(
+      coreSolver,
+      interpreterHandler->getOutputFilename(ALL_QUERIES_SMT2_FILE_NAME),
+      interpreterHandler->getOutputFilename(SOLVER_QUERIES_SMT2_FILE_NAME),
+      interpreterHandler->getOutputFilename(ALL_QUERIES_PC_FILE_NAME),
+      interpreterHandler->getOutputFilename(SOLVER_QUERIES_PC_FILE_NAME));
 
+  this->solver = new TimingSolver(solver, EqualitySubstitution);
   memory = new MemoryManager(&arrayCache);
 }
 

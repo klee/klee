@@ -104,9 +104,6 @@ namespace {
                          "Fold constants and simplify expressions."),
               clEnumValEnd));
 
-  cl::opt<bool>
-  UseDummySolver("use-dummy-solver",
-		   cl::init(false));
 
   llvm::cl::opt<std::string> directoryToWriteQueryLogs("query-log-dir",llvm::cl::desc("The folder to write query logs to. Defaults is current working directory."),
 		                                               llvm::cl::init("."));
@@ -224,42 +221,9 @@ static bool EvaluateInputAST(const char *Filename,
   if (!success)
     return false;
 
-  // FIXME: Support choice of solver.
-  Solver *coreSolver = NULL; // 
-  
-#ifdef SUPPORT_METASMT
-  if (UseMetaSMT != METASMT_BACKEND_NONE) {
-    
-    std::string backend;
-    
-    switch (UseMetaSMT) {
-          case METASMT_BACKEND_STP:
-              backend = "STP"; 
-              coreSolver = new MetaSMTSolver< DirectSolver_Context < STP_Backend > >(UseForkedCoreSolver, CoreSolverOptimizeDivides);
-              break;
-          case METASMT_BACKEND_Z3:
-              backend = "Z3";
-              coreSolver = new MetaSMTSolver< DirectSolver_Context < Z3_Backend > >(UseForkedCoreSolver, CoreSolverOptimizeDivides);
-              break;
-          case METASMT_BACKEND_BOOLECTOR:
-              backend = "Boolector";
-              coreSolver = new MetaSMTSolver< DirectSolver_Context < Boolector > >(UseForkedCoreSolver, CoreSolverOptimizeDivides);
-              break;
-          default:
-              assert(false);
-              break;
-    };
-    llvm::errs() << "Starting MetaSMTSolver(" << backend << ") ...\n";
-  }
-  else {
-    coreSolver = UseDummySolver ? createDummySolver() : new STPSolver(UseForkedCoreSolver);
-  }
-#else
-  coreSolver = UseDummySolver ? createDummySolver() : new STPSolver(UseForkedCoreSolver);
-#endif /* SUPPORT_METASMT */
-  
-  
-  if (!UseDummySolver) {
+  Solver *coreSolver = klee::createCoreSolver(CoreSolverToUse);
+
+  if (CoreSolverToUse != DUMMY_SOLVER) {
     if (0 != MaxCoreSolverTime) {
       coreSolver->setCoreSolverTimeout(MaxCoreSolverTime);
     }

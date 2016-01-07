@@ -10,6 +10,7 @@
 #ifndef KLEE_SOLVER_H
 #define KLEE_SOLVER_H
 
+#include "klee/CommandLine.h" // FIXME: This is just for CoreSolverType
 #include "klee/Expr.h"
 
 #include <vector>
@@ -290,7 +291,9 @@ namespace klee {
   /// createDummySolver - Create a dummy solver implementation which always
   /// fails.
   Solver *createDummySolver();
-  
+
+  // Create a solver based on the supplied ``CoreSolverType``.
+  Solver *createCoreSolver(CoreSolverType cst);
 }
 
 #endif
