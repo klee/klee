@@ -9,27 +9,7 @@
 
 #include "klee/Solver.h"
 #include "klee/SolverImpl.h"
-
-
 #include "klee/Constraints.h"
-#include "klee/Expr.h"
-#include "klee/TimerStatIncrementer.h"
-#include "klee/util/Assignment.h"
-#include "klee/util/ExprPPrinter.h"
-#include "klee/util/ExprUtil.h"
-#include "klee/Internal/Support/Timer.h"
-#include "klee/Internal/Support/ErrorHandling.h"
-#include "klee/CommandLine.h"
-#include "klee/SolverStats.h"
-
-
-#include <cassert>
-#include <cstdio>
-#include <map>
-#include <vector>
-
-#include "llvm/Support/ErrorHandling.h"
-
 
 using namespace klee;
 
