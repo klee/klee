@@ -329,11 +329,21 @@ Executor::Executor(const InterpreterOptions &opts,
     coreSolver = new STPSolver(UseForkedCoreSolver, CoreSolverOptimizeDivides);
   }
 #else
-#ifdef SUPPORT_Z3
-  coreSolver = new Z3Solver();
-#else
-  coreSolver = new STPSolver(UseForkedCoreSolver, CoreSolverOptimizeDivides);
-#endif /* SUPPORT_Z3 */
+  switch (selectSolver) {
+  	  	case SOLVER_STP:
+			#ifndef SUPPORT_Z3
+  			coreSolver = new STPSolver(UseForkedCoreSolver, CoreSolverOptimizeDivides);
+  		    break;
+			#endif /* SUPPORT_Z3 */
+  		case SOLVER_Z3:
+			#ifdef SUPPORT_Z3
+  			coreSolver = new Z3Solver();
+  			break;
+			#endif /* SUPPORT_Z3 */
+  		default:
+  			assert(false);
+  			break;
+  	};
 #endif /* SUPPORT_METASMT */
   
    
@@ -1790,6 +1800,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = eval(ki, state.incomingBBIndex * 2, state).value;
 #endif
     bindLocal(ki, state, result);
+
+    // Update dependency
+    if (!NoInterpolation)
+      interpTree->executeAbstractDependency(i);
     break;
   }
 
@@ -1802,7 +1816,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, result);
 
     // Update dependency
-    interpTree->executeAbstractDependency(i);
+    if (!NoInterpolation)
+      interpTree->executeAbstractDependency(i);
     break;
   }
 
@@ -1818,7 +1833,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, AddExpr::create(left, right));
 
     // Update dependency
-    interpTree->executeAbstractDependency(i);
+    if (!NoInterpolation)
+      interpTree->executeAbstractDependency(i);
     break;
   }
 
@@ -1828,7 +1844,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, SubExpr::create(left, right));
 
     // Update dependency
-    interpTree->executeAbstractDependency(i);
+    if (!NoInterpolation)
+      interpTree->executeAbstractDependency(i);
     break;
   }
  
@@ -1838,7 +1855,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, MulExpr::create(left, right));
 
     // Update dependency
-    interpTree->executeAbstractDependency(i);
+    if (!NoInterpolation)
+      interpTree->executeAbstractDependency(i);
     break;
   }
 
@@ -1849,7 +1867,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, result);
 
     // Update dependency
-    interpTree->executeAbstractDependency(i);
+    if (!NoInterpolation)
+      interpTree->executeAbstractDependency(i);
     break;
   }
 
@@ -1860,7 +1879,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, result);
 
     // Update dependency
-    interpTree->executeAbstractDependency(i);
+    if (!NoInterpolation)
+      interpTree->executeAbstractDependency(i);
     break;
   }
 
@@ -1871,7 +1891,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, result);
 
     // Update dependency
-    interpTree->executeAbstractDependency(i);
+    if (!NoInterpolation)
+      interpTree->executeAbstractDependency(i);
     break;
   }
  
@@ -1882,7 +1903,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, result);
 
     // Update dependency
-    interpTree->executeAbstractDependency(i);
+    if (!NoInterpolation)
+      interpTree->executeAbstractDependency(i);
     break;
   }
 
@@ -1893,7 +1915,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, result);
 
     // Update dependency
-    interpTree->executeAbstractDependency(i);
+    if (!NoInterpolation)
+      interpTree->executeAbstractDependency(i);
     break;
   }
 
@@ -1904,7 +1927,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, result);
 
     // Update dependency
-    interpTree->executeAbstractDependency(i);
+    if (!NoInterpolation)
+      interpTree->executeAbstractDependency(i);
     break;
   }
 
@@ -1915,7 +1939,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, result);
 
     // Update dependency
-    interpTree->executeAbstractDependency(i);
+    if (!NoInterpolation)
+      interpTree->executeAbstractDependency(i);
     break;
   }
 
@@ -1926,7 +1951,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, result);
 
     // Update dependency
-    interpTree->executeAbstractDependency(i);
+    if (!NoInterpolation)
+      interpTree->executeAbstractDependency(i);
     break;
   }
 
@@ -1937,7 +1963,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, result);
 
     // Update dependency
-    interpTree->executeAbstractDependency(i);
+    if (!NoInterpolation)
+      interpTree->executeAbstractDependency(i);
     break;
   }
 
@@ -1948,7 +1975,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, result);
 
     // Update dependency
-    interpTree->executeAbstractDependency(i);
+    if (!NoInterpolation)
+      interpTree->executeAbstractDependency(i);
     break;
   }
 
@@ -2044,7 +2072,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     }
 
     // Update dependency
-    interpTree->executeAbstractDependency(i);
+    if (!NoInterpolation)
+      interpTree->executeAbstractDependency(i);
     break;
   }
  
@@ -2063,7 +2092,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     executeAlloc(state, size, isLocal, ki);
 
     // Update dependency
-    interpTree->executeAbstractDependency(i);
+    if (!NoInterpolation)
+      interpTree->executeAbstractDependency(i);
     break;
   }
 
@@ -2072,7 +2102,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     executeMemoryOperation(state, false, base, 0, ki);
 
     // Update dependency
-    interpTree->executeAbstractDependency(i);
+    if (!NoInterpolation)
+      interpTree->executeAbstractDependency(i);
     break;
   }
   case Instruction::Store: {
@@ -2081,7 +2112,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     executeMemoryOperation(state, true, base, value, 0);
 
     // Update dependency
-    interpTree->executeAbstractDependency(i);
+    if (!NoInterpolation)
+      interpTree->executeAbstractDependency(i);
     break;
   }
 
@@ -2104,7 +2136,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, base);
 
     // Update dependency
-    interpTree->executeAbstractDependency(i);
+    if (!NoInterpolation)
+      interpTree->executeAbstractDependency(i);
     break;
   }
 
@@ -2117,7 +2150,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, result);
 
     // Update dependency
-    interpTree->executeAbstractDependency(i);
+    if (!NoInterpolation)
+      interpTree->executeAbstractDependency(i);
     break;
   }
   case Instruction::ZExt: {
@@ -2127,7 +2161,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, result);
 
     // Update dependency
-    interpTree->executeAbstractDependency(i);
+    if (!NoInterpolation)
+      interpTree->executeAbstractDependency(i);
     break;
   }
   case Instruction::SExt: {
@@ -2137,7 +2172,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, result);
 
     // Update dependency
-    interpTree->executeAbstractDependency(i);
+    if (!NoInterpolation)
+      interpTree->executeAbstractDependency(i);
     break;
   }
 
@@ -2148,7 +2184,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, ZExtExpr::create(arg, pType));
 
     // Update dependency
-    interpTree->executeAbstractDependency(i);
+    if (!NoInterpolation)
+      interpTree->executeAbstractDependency(i);
     break;
   } 
   case Instruction::PtrToInt: {
@@ -2158,7 +2195,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, ZExtExpr::create(arg, iType));
 
     // Update dependency
-    interpTree->executeAbstractDependency(i);
+    if (!NoInterpolation)
+      interpTree->executeAbstractDependency(i);
     break;
   }
 
@@ -2167,7 +2205,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, result);
 
     // Update dependency
-    interpTree->executeAbstractDependency(i);
+    if (!NoInterpolation)
+      interpTree->executeAbstractDependency(i);
     break;
   }
 
@@ -2192,7 +2231,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
 
     // Update dependency
-    interpTree->executeAbstractDependency(i);
+    if (!NoInterpolation)
+      interpTree->executeAbstractDependency(i);
     break;
   }
 
@@ -2214,7 +2254,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
 
     // Update dependency
-    interpTree->executeAbstractDependency(i);
+    if (!NoInterpolation)
+      interpTree->executeAbstractDependency(i);
     break;
   }
  
@@ -2237,7 +2278,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
 
     // Update dependency
-    interpTree->executeAbstractDependency(i);
+    if (!NoInterpolation)
+      interpTree->executeAbstractDependency(i);
     break;
   }
 
@@ -2260,7 +2302,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
 
     // Update dependency
-    interpTree->executeAbstractDependency(i);
+    if (!NoInterpolation)
+      interpTree->executeAbstractDependency(i);
     break;
   }
 
@@ -2283,7 +2326,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
 
     // Update dependency
-    interpTree->executeAbstractDependency(i);
+    if (!NoInterpolation)
+      interpTree->executeAbstractDependency(i);
     break;
   }
 
@@ -2307,7 +2351,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, ConstantExpr::alloc(Res));
 
     // Update dependency
-    interpTree->executeAbstractDependency(i);
+    if (!NoInterpolation)
+      interpTree->executeAbstractDependency(i);
     break;
   }
 
@@ -2330,7 +2375,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, ConstantExpr::alloc(Res));
 
     // Update dependency
-    interpTree->executeAbstractDependency(i);
+    if (!NoInterpolation)
+      interpTree->executeAbstractDependency(i);
     break;
   }
 
@@ -2354,7 +2400,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, ConstantExpr::alloc(value, resultType));
 
     // Update dependency
-    interpTree->executeAbstractDependency(i);
+    if (!NoInterpolation)
+      interpTree->executeAbstractDependency(i);
     break;
   }
 
@@ -2378,7 +2425,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, ConstantExpr::alloc(value, resultType));
 
     // Update dependency
-    interpTree->executeAbstractDependency(i);
+    if (!NoInterpolation)
+      interpTree->executeAbstractDependency(i);
     break;
   }
 
@@ -2397,7 +2445,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, ConstantExpr::alloc(f));
 
     // Update dependency
-    interpTree->executeAbstractDependency(i);
+    if (!NoInterpolation)
+      interpTree->executeAbstractDependency(i);
     break;
   }
 
@@ -2416,7 +2465,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, ConstantExpr::alloc(f));
 
     // Update dependency
-    interpTree->executeAbstractDependency(i);
+    if (!NoInterpolation)
+      interpTree->executeAbstractDependency(i);
     break;
   }
 
@@ -2517,7 +2567,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, ConstantExpr::alloc(Result, Expr::Bool));
 
     // Update dependency
-    interpTree->executeAbstractDependency(i);
+    if (!NoInterpolation)
+      interpTree->executeAbstractDependency(i);
     break;
   }
   case Instruction::InsertValue: {
@@ -2547,7 +2598,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, result);
 
     // Update dependency
-    interpTree->executeAbstractDependency(i);
+    if (!NoInterpolation)
+      interpTree->executeAbstractDependency(i);
     break;
   }
   case Instruction::ExtractValue: {
@@ -2560,7 +2612,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, result);
 
     // Update dependency
-    interpTree->executeAbstractDependency(i);
+    if (!NoInterpolation)
+      interpTree->executeAbstractDependency(i);
     break;
   }
  
@@ -2600,9 +2653,8 @@ void Executor::updateStates(ExecutionState *current) {
       seedMap.erase(it3);
     processTree->remove(es->ptreeNode);
 #ifdef SUPPORT_Z3
-    if (!NoInterpolation) {
+    if (!NoInterpolation)
       interpTree->remove(es->itreeNode);
-    }
 #endif
     delete es;
   }
@@ -2755,7 +2807,8 @@ void Executor::run(ExecutionState &initialState) {
 #ifdef SUPPORT_Z3
     if (!NoInterpolation) {
       // We synchronize the node id to that of the state. The node id
-      // is the address of the first instruction in the node.
+      // is set only when it was the address of the first instruction
+      // in the node.
       state.itreeNode->setNodeLocation(reinterpret_cast<uintptr_t>(state.pc->inst));
       interpTree->setCurrentINode(state.itreeNode);
 

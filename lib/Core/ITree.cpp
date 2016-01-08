@@ -192,8 +192,8 @@ void ITree::remove(ITreeNode *node) {
   do {
     ITreeNode *p = node->parent;
 
-    /// As the node is about to be deleted, it must have been completely
-    /// traversed, hence the correct time to table the interpolant.
+    // As the node is about to be deleted, it must have been completely
+    // traversed, hence the correct time to table the interpolant.
     if (!node->isSubsumed && node->introducesMarkedConstraint()) {
       SubsumptionTableEntry entry(node);
       store(entry);
@@ -293,31 +293,28 @@ ITreeNode::ITreeNode(ITreeNode *_parent,
   pathCondition = (_parent != 0) ? _parent->pathCondition : 0;
 
   if (!(_data->constraints.empty())) {
-      ref<Expr> lastConstraint = _data->constraints.back();
-      if (pathCondition == 0) {
-	  pathCondition = new PathCondition(lastConstraint);
-      } else {
-        // FIXME: Would be good to have something better than
-        // quadratic complexity.
-        std::vector<ref<Expr> > constraints =
-            _data->constraints.getConstraints();
-        for (PathCondition *it = pathCondition; it != 0; it = it->cdr()) {
-          constraints.erase(
-              std::remove(constraints.begin(), constraints.end(), it->car()),
-              constraints.end());
-        }
+    // FIXME: Would be good to have something better than
+    // quadratic complexity.
 
-        for (std::vector<ref<Expr> >::iterator it = constraints.begin();
-             it != constraints.end(); it++) {
-          pathCondition = new PathCondition((*it), pathCondition);
-        }
+    std::vector<ref<Expr> > constraints = _data->constraints.getConstraints();
+
+    // We remove constraints that we already have
+    if (pathCondition) {
+      for (PathCondition *it = pathCondition; it != 0; it = it->cdr()) {
+        constraints.erase(
+            std::remove(constraints.begin(), constraints.end(), it->car()),
+            constraints.end());
       }
+    }
+
+    // We copy the remaining constraints
+    for (std::vector<ref<Expr> >::iterator it = constraints.begin();
+         it != constraints.end(); it++) {
+      pathCondition = new PathCondition((*it), pathCondition);
+    }
   }
 
   // Inherit the abstract dependency stack or NULL
-  if (_parent && !_parent->dependency) {
-    llvm::errs() << "PDEP IS NULL\n";
-  }
   dependency = new Dependency(_parent ? _parent->dependency : 0);
 }
 

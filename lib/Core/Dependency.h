@@ -25,25 +25,41 @@ namespace klee {
 
   class VersionedAllocation {
     static unsigned long long nextVersion;
-
-    llvm::Value *site;
     unsigned long long version;
+
+  protected:
+    llvm::Value *site;
+
+    VersionedAllocation();
 
   public:
     VersionedAllocation(llvm::Value *site);
 
-    ~VersionedAllocation();
+    virtual ~VersionedAllocation();
+
+    virtual bool hasAllocationSite(llvm::Value *site) const;
+
+    virtual bool isComposite() const;
+
+    virtual void print(llvm::raw_ostream& stream) const;
+
+    void dump() const {
+      print(llvm::errs());
+      llvm::errs() << "\n";
+    }
+  };
+
+  class EnvironmentAllocation : public VersionedAllocation {
+  public:
+    EnvironmentAllocation();
+
+    ~EnvironmentAllocation();
 
     bool hasAllocationSite(llvm::Value *site) const;
 
     bool isComposite() const;
 
     void print(llvm::raw_ostream& stream) const;
-
-    void dump() const {
-      print(llvm::errs());
-      llvm::errs() << "\n";
-    }
   };
 
   class VersionedValue {
@@ -75,7 +91,7 @@ namespace klee {
 
     ~PointerEquality();
 
-    VersionedAllocation *equals(VersionedValue *value);
+    VersionedAllocation *equals(VersionedValue *value) const;
 
     void print(llvm::raw_ostream& stream) const;
 
@@ -96,7 +112,7 @@ namespace klee {
 
     VersionedValue *stores(VersionedAllocation *allocation) const;
 
-    VersionedAllocation *storageOf(VersionedValue *value);
+    VersionedAllocation *storageOf(VersionedValue *value) const;
 
     void print(llvm::raw_ostream& stream) const;
 
@@ -115,7 +131,9 @@ namespace klee {
 
     ~FlowsTo();
 
-    bool depends(VersionedValue *source, VersionedValue *target);
+    VersionedValue *getSource() const;
+
+    VersionedValue *getTarget() const;
 
     void print(llvm::raw_ostream& sream) const;
 
@@ -158,11 +176,15 @@ namespace klee {
 
     void addDependency(VersionedValue *source, VersionedValue *target);
 
-    VersionedAllocation *resolveAllocation(VersionedValue *value);
+    VersionedAllocation *resolveAllocation(VersionedValue *value) const;
+
+    std::vector<VersionedAllocation *> resolveAllocationTransitively(VersionedValue *value) const;
 
     std::vector<VersionedValue *> stores(VersionedAllocation *allocation) const;
 
-    bool depends(VersionedValue *source, VersionedValue *target);
+    std::vector<VersionedValue *> locallyFlowsFrom(VersionedValue *target) const;
+
+    std::vector<VersionedValue *> flowsFrom(VersionedValue *target) const;
 
     std::vector<VersionedValue *>
     populateArgumentValuesList(llvm::CallInst *site);
@@ -200,6 +222,8 @@ namespace klee {
   std::string makeTabs(const unsigned tab_num);
 
   std::string appendTab(const std::string &prefix);
+
+  bool isEnvironmentAllocation(llvm::Value *site);
 }
 
 #endif

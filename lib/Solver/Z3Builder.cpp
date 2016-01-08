@@ -10,6 +10,7 @@
 
 #include "klee/Expr.h"
 #include "klee/Solver.h"
+#include "klee/SolverStats.h"
 #include "klee/util/Bits.h"
 #include "klee/SolverStats.h"
 
