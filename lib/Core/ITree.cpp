@@ -288,28 +288,6 @@ ITreeNode::ITreeNode(ITreeNode *_parent,
   data(_data) {
 
   pathCondition = (_parent != 0) ? _parent->pathCondition : 0;
-
-  if (!(_data->constraints.empty())) {
-    // FIXME: Would be good to have something better than
-    // quadratic complexity.
-
-    std::vector<ref<Expr> > constraints = _data->constraints.getConstraints();
-
-    // We remove constraints that we already have
-    if (pathCondition) {
-      for (PathCondition *it = pathCondition; it != 0; it = it->cdr()) {
-        constraints.erase(
-            std::remove(constraints.begin(), constraints.end(), it->car()),
-            constraints.end());
-      }
-    }
-
-    // We copy the remaining constraints
-    for (std::vector<ref<Expr> >::iterator it = constraints.begin();
-         it != constraints.end(); it++) {
-      pathCondition = new PathCondition((*it), pathCondition);
-    }
-  }
 }
 
 ITreeNode::~ITreeNode() {
@@ -334,6 +312,10 @@ void ITreeNode::setNodeLocation(unsigned int programPoint) {
   if (this->nodeId == 0)  {
     this->nodeId = programPoint;
   }
+}
+
+void ITreeNode::addConstraint(ref<Expr>& constraint) {
+  pathCondition = new PathCondition(constraint, pathCondition);
 }
 
 void ITreeNode::split(ExecutionState *leftData, ExecutionState *rightData) {

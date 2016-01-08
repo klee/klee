@@ -16,6 +16,7 @@
 
 #include "klee/Expr.h"
 
+#include "ITree.h"
 #include "Memory.h"
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
 #include "llvm/IR/Function.h"
@@ -125,6 +126,11 @@ ExecutionState::ExecutionState(const ExecutionState& state):
 {
   for (unsigned int i=0; i<symbolics.size(); i++)
     symbolics[i].first->refCount++;
+}
+
+void ExecutionState::addITreeConstraint(ref<Expr> e) {
+  if (itreeNode)
+    itreeNode->addConstraint(e);
 }
 
 ExecutionState *ExecutionState::branch() {

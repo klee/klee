@@ -971,9 +971,6 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       }
     }
 
-    addConstraint(*trueState, condition);
-    addConstraint(*falseState, Expr::createIsZero(condition));
-
 #ifdef SUPPORT_Z3
     if (!NoInterpolation) {
       current.itreeNode->data = 0;
@@ -983,6 +980,9 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       trueState->itreeNode = ires.second;
     }
 #endif
+
+    addConstraint(*trueState, condition);
+    addConstraint(*falseState, Expr::createIsZero(condition));
 
     // Kinda gross, do we even really still want this option?
     if (MaxDepth && MaxDepth<=trueState->depth) {
@@ -2654,15 +2654,15 @@ void Executor::run(ExecutionState &initialState) {
       state.itreeNode->setNodeLocation(reinterpret_cast<uintptr_t>(state.pc->inst));
       interpTree->setCurrentINode(state.itreeNode);
 
-      /// Uncomment the following instructions to show the state
-      /// of the interpolation tree and the active node.
+      // Uncomment the following instructions to show the state
+      // of the interpolation tree and the active node.
 
-      /// llvm::errs() << "Executing new instruction: ";
-      /// state.pc->inst->dump();
-      /// llvm::errs() << "Current state:\n";
-      /// processTree->dump();
-      /// interpTree->dump();
-      /// state.itreeNode->dump();
+      // llvm::errs() << "Executing new instruction: ";
+      // state.pc->inst->dump();
+      // llvm::errs() << "Current state:\n";
+      // processTree->dump();
+      // interpTree->dump();
+      // state.itreeNode->dump();
     }
 
     if (!NoInterpolation &&
