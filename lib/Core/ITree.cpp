@@ -293,25 +293,25 @@ ITreeNode::ITreeNode(ITreeNode *_parent,
   pathCondition = (_parent != 0) ? _parent->pathCondition : 0;
 
   if (!(_data->constraints.empty())) {
-      ref<Expr> lastConstraint = _data->constraints.back();
-      if (pathCondition == 0) {
-	  pathCondition = new PathCondition(lastConstraint);
-      } else {
-        // FIXME: Would be good to have something better than
-        // quadratic complexity.
-        std::vector<ref<Expr> > constraints =
-            _data->constraints.getConstraints();
-        for (PathCondition *it = pathCondition; it != 0; it = it->cdr()) {
-          constraints.erase(
-              std::remove(constraints.begin(), constraints.end(), it->car()),
-              constraints.end());
-        }
+    // FIXME: Would be good to have something better than
+    // quadratic complexity.
 
-        for (std::vector<ref<Expr> >::iterator it = constraints.begin();
-             it != constraints.end(); it++) {
-          pathCondition = new PathCondition((*it), pathCondition);
-        }
+    std::vector<ref<Expr> > constraints = _data->constraints.getConstraints();
+
+    // We remove constraints that we already have
+    if (pathCondition) {
+      for (PathCondition *it = pathCondition; it != 0; it = it->cdr()) {
+        constraints.erase(
+            std::remove(constraints.begin(), constraints.end(), it->car()),
+            constraints.end());
       }
+    }
+
+    // We copy the remaining constraints
+    for (std::vector<ref<Expr> >::iterator it = constraints.begin();
+         it != constraints.end(); it++) {
+      pathCondition = new PathCondition((*it), pathCondition);
+    }
   }
 
   // Inherit the abstract dependency stack or NULL
