@@ -321,11 +321,10 @@ ITreeNode::ITreeNode(ITreeNode *_parent,
 ITreeNode::~ITreeNode() {
   // Only delete the path condition if it's not
   // also the parent's path condition
-  if (parent != 0) {
-    for (PathCondition *it = pathCondition; it != parent->pathCondition;
-         it = it->cdr()) {
-      delete it;
-    }
+  PathCondition *itEnd = parent ? parent->pathCondition : 0;
+
+  for (PathCondition *it = pathCondition; it != itEnd; it = it->cdr()) {
+    delete it;
   }
 
   if (dependency)
