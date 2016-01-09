@@ -153,6 +153,8 @@ namespace klee {
 
     void setNodeLocation(unsigned int programPoint);
 
+    void addConstraint(ref<Expr> &constraint);
+
     void split(ExecutionState *leftData, ExecutionState *rightData);
 
     void dump() const;

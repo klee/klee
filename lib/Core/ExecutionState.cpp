@@ -121,6 +121,11 @@ ExecutionState::ExecutionState(const ExecutionState& state):
     symbolics[i].first->refCount++;
 }
 
+void ExecutionState::addITreeConstraint(ref<Expr> e) {
+  if (itreeNode)
+    itreeNode->addConstraint(e);
+}
+
 ExecutionState *ExecutionState::branch() {
   depth++;
 

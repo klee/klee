@@ -972,9 +972,6 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       }
     }
 
-    addConstraint(*trueState, condition);
-    addConstraint(*falseState, Expr::createIsZero(condition));
-
 #ifdef SUPPORT_Z3
     if (!NoInterpolation) {
       current.itreeNode->data = 0;
@@ -984,6 +981,9 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       trueState->itreeNode = ires.second;
     }
 #endif
+
+    addConstraint(*trueState, condition);
+    addConstraint(*falseState, Expr::createIsZero(condition));
 
     // Kinda gross, do we even really still want this option?
     if (MaxDepth && MaxDepth<=trueState->depth) {
