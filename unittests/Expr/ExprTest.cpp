@@ -11,6 +11,7 @@
 #include "gtest/gtest.h"
 
 #include "klee/Expr.h"
+#include "klee/util/ArrayCache.h"
 
 using namespace klee;
 
@@ -29,9 +30,10 @@ TEST(ExprTest, BasicConstruction) {
 }
 
 TEST(ExprTest, ConcatExtract) {
-  const Array *array = Array::CreateArray("arr0", 256);
+  ArrayCache ac;
+  const Array *array = ac.CreateArray("arr0", 256);
   ref<Expr> read8 = Expr::createTempRead(array, 8);
-  const Array *array2 = Array::CreateArray("arr1", 256);
+  const Array *array2 = ac.CreateArray("arr1", 256);
   ref<Expr> read8_2 = Expr::createTempRead(array2, 8);
   ref<Expr> c100 = getConstant(100, 8);
 
@@ -81,10 +83,11 @@ TEST(ExprTest, ConcatExtract) {
 }
 
 TEST(ExprTest, ExtractConcat) {
-  const Array *array = Array::CreateArray("arr2", 256);
+  ArrayCache ac;
+  const Array *array = ac.CreateArray("arr2", 256);
   ref<Expr> read64 = Expr::createTempRead(array, 64);
 
-  const Array *array2 = Array::CreateArray("arr3", 256);
+  const Array *array2 = ac.CreateArray("arr3", 256);
   ref<Expr> read8_2 = Expr::createTempRead(array2, 8);
   
   ref<Expr> extract1 = ExtractExpr::create(read64, 36, 4);

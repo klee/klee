@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Common.h"
 #include "Executor.h"
 #include "Context.h"
 #include "CoreStats.h"
@@ -25,7 +24,6 @@
 #include "UserSearcher.h"
 #include "ExecutorTimerInfo.h"
 
-#include "../Solver/SolverStats.h"
 
 #include "klee/ExecutionState.h"
 #include "klee/Expr.h"
@@ -45,9 +43,11 @@
 #include "klee/Internal/Module/InstructionInfoTable.h"
 #include "klee/Internal/Module/KInstruction.h"
 #include "klee/Internal/Module/KModule.h"
+#include "klee/Internal/Support/ErrorHandling.h"
 #include "klee/Internal/Support/FloatEvaluation.h"
 #include "klee/Internal/System/Time.h"
 #include "klee/Internal/System/MemoryUsage.h"
+#include "klee/SolverStats.h"
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
 #include "llvm/IR/Function.h"
@@ -364,7 +364,7 @@ Executor::Executor(const InterpreterOptions &opts,
   this->solver = new TimingSolver(solver, EqualitySubstitution);
 #endif
 
-  memory = new MemoryManager();
+  memory = new MemoryManager(&arrayCache);
 }
 
 
@@ -971,9 +971,6 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       }
     }
 
-    addConstraint(*trueState, condition);
-    addConstraint(*falseState, Expr::createIsZero(condition));
-
 #ifdef SUPPORT_Z3
     if (!NoInterpolation) {
       current.itreeNode->data = 0;
@@ -983,6 +980,9 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       trueState->itreeNode = ires.second;
     }
 #endif
+
+    addConstraint(*trueState, condition);
+    addConstraint(*falseState, Expr::createIsZero(condition));
 
     // Kinda gross, do we even really still want this option?
     if (MaxDepth && MaxDepth<=trueState->depth) {
@@ -2648,20 +2648,21 @@ void Executor::run(ExecutionState &initialState) {
 
 #ifdef SUPPORT_Z3
     if (!NoInterpolation) {
-      /// We synchronize the node id to that of the state. The node id
-      /// is the address of the first instruction in the node.
+      // We synchronize the node id to that of the state. The node id
+      // is set only when it was the address of the first instruction
+      // in the node.
       state.itreeNode->setNodeLocation(reinterpret_cast<uintptr_t>(state.pc->inst));
       interpTree->setCurrentINode(state.itreeNode);
 
-      /// Uncomment the following instructions to show the state
-      /// of the interpolation tree and the active node.
+      // Uncomment the following instructions to show the state
+      // of the interpolation tree and the active node.
 
-      /// llvm::errs() << "Executing new instruction: ";
-      /// state.pc->inst->dump();
-      /// llvm::errs() << "Current state:\n";
-      /// processTree->dump();
-      /// interpTree->dump();
-      /// state.itreeNode->dump();
+      // llvm::errs() << "Executing new instruction: ";
+      // state.pc->inst->dump();
+      // llvm::errs() << "Current state:\n";
+      // processTree->dump();
+      // interpTree->dump();
+      // state.itreeNode->dump();
     }
 
     if (!NoInterpolation &&
@@ -3047,8 +3048,9 @@ ref<Expr> Executor::replaceReadWithSymbolic(ExecutionState &state,
   // and return it.
   
   static unsigned id;
-  const Array *array = Array::CreateArray("rrws_arr" + llvm::utostr(++id),
-					  Expr::getMinBytesForWidth(e->getWidth()));
+  const Array *array =
+      arrayCache.CreateArray("rrws_arr" + llvm::utostr(++id),
+                             Expr::getMinBytesForWidth(e->getWidth()));
   ref<Expr> res = Expr::createTempRead(array, e->getWidth());
   ref<Expr> eq = NotOptimizedExpr::create(EqExpr::create(e, res));
   llvm::errs() << "Making symbolic: " << eq << "\n";
@@ -3386,7 +3388,7 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
     while (!state.arrayNames.insert(uniqueName).second) {
       uniqueName = name + "_" + llvm::utostr(++id);
     }
-    const Array *array = Array::CreateArray(uniqueName, mo->size);
+    const Array *array = arrayCache.CreateArray(uniqueName, mo->size);
     bindObjectInState(state, mo, false, array);
     state.addSymbolic(mo, array);
     
@@ -3560,8 +3562,8 @@ void Executor::runFunctionAsMain(Function *f,
 
   // hack to clear memory objects
   delete memory;
-  memory = new MemoryManager();
-  
+  memory = new MemoryManager(NULL);
+
   globalObjects.clear();
   globalAddresses.clear();
 

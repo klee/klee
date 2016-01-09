@@ -15,11 +15,13 @@
 #ifndef KLEE_EXECUTOR_H
 #define KLEE_EXECUTOR_H
 
+#include "ITree.h"
 #include "klee/ExecutionState.h"
 #include "klee/Interpreter.h"
 #include "klee/Internal/Module/Cell.h"
 #include "klee/Internal/Module/KInstruction.h"
 #include "klee/Internal/Module/KModule.h"
+#include "klee/util/ArrayCache.h"
 
 #include "llvm/ADT/Twine.h"
 
@@ -181,7 +183,10 @@ private:
 
   /// The maximum time to allow for a single core solver query.
   /// (e.g. for a single STP query)
-  double coreSolverTimeout; 
+  double coreSolverTimeout;
+
+  /// Assumes ownership of the created array objects
+  ArrayCache arrayCache;
 
   llvm::Function* getTargetFunction(llvm::Value *calledVal,
                                     ExecutionState &state);

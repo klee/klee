@@ -1,8 +1,5 @@
 /* -*- mode: c++; c-basic-offset: 2; -*- */
 
-// FIXME: This does not belong here.
-#include "../lib/Core/Common.h"
-
 #include "klee/ExecutionState.h"
 #include "klee/Expr.h"
 #include "klee/Interpreter.h"
@@ -14,6 +11,7 @@
 #include "klee/Internal/Support/ModuleUtil.h"
 #include "klee/Internal/System/Time.h"
 #include "klee/Internal/Support/PrintVersion.h"
+#include "klee/Internal/Support/ErrorHandling.h"
 
 #if LLVM_VERSION_CODE > LLVM_VERSION(3, 2)
 #include "llvm/IR/Constants.h"
