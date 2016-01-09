@@ -295,8 +295,11 @@ ITreeNode::~ITreeNode() {
   // also the parent's path condition
   PathCondition *itEnd = parent ? parent->pathCondition : 0;
 
-  for (PathCondition *it = pathCondition; it != itEnd; it = it->cdr()) {
-    delete it;
+  PathCondition *it = pathCondition;
+  while (it != itEnd) {
+    PathCondition *tmp = it;
+    it = it->cdr();
+    delete tmp;
   }
 }
 
