@@ -145,7 +145,6 @@ namespace klee {
     bool isSubsumed;
 
   public:
-    ExecutionState *data;
 
     unsigned int getNodeId();
 
@@ -173,7 +172,7 @@ namespace klee {
                                     llvm::Instruction *inst);
 
   private:
-    ITreeNode(ITreeNode *_parent, ExecutionState *_data);
+    ITreeNode(ITreeNode *_parent);
 
     ~ITreeNode();
 

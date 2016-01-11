@@ -70,7 +70,7 @@ StackFrame::~StackFrame() {
 ExecutionState::ExecutionState(KFunction *kf)
     : pc(kf->instructions), prevPC(pc), queryCost(0.), weight(1), depth(0),
       instsSinceCovNew(0), coveredNew(false), forkDisabled(false), ptreeNode(0),
-      itreeNode(new ITreeNode(0, this)) {
+      itreeNode(new ITreeNode(0)) {
   pushFrame(0, kf);
 }
 

@@ -281,16 +281,13 @@ void ITree::dump() {
   this->print(llvm::errs());
 }
 
-ITreeNode::ITreeNode(ITreeNode *_parent,
-                     ExecutionState *_data)
-: parent(_parent),
-  left(0),
-  right(0),
-  nodeId(0),
-  isSubsumed(false),
-  data(_data) {
+ITreeNode::ITreeNode(ITreeNode *_parent)
+    : parent(_parent), left(0), right(0), nodeId(0), isSubsumed(false) {
 
   pathCondition = (_parent != 0) ? _parent->pathCondition : 0;
+
+  // Inherit the abstract depdencency or NULL
+  dependency = new Dependency(_parent ? _parent->dependency : 0);
 }
 
 ITreeNode::~ITreeNode() {
@@ -329,8 +326,8 @@ void ITreeNode::addConstraint(ref<Expr> &constraint) {
 
 void ITreeNode::split(ExecutionState *leftData, ExecutionState *rightData) {
   assert (left == 0 && right == 0);
-  leftData->itreeNode = left = new ITreeNode(this, leftData);
-  rightData->itreeNode = right = new ITreeNode(this, rightData);
+  leftData->itreeNode = left = new ITreeNode(this);
+  rightData->itreeNode = right = new ITreeNode(this);
 }
 
 std::map< ref<Expr>, PathConditionMarker *> ITreeNode::makeMarkerMap() {

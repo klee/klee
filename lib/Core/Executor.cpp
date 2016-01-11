@@ -673,7 +673,6 @@ void Executor::branch(ExecutionState &state,
 
 #ifdef SUPPORT_Z3
       if (!NoInterpolation) {
-        es->itreeNode->data = 0;
         std::pair<ITreeNode *, ITreeNode *> ires =
 	  interpTree->split(es->itreeNode, ns, es);
         ns->itreeNode = ires.first;
@@ -974,7 +973,6 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
 
 #ifdef SUPPORT_Z3
     if (!NoInterpolation) {
-      current.itreeNode->data = 0;
       std::pair<ITreeNode *, ITreeNode *> ires =
 	  interpTree->split(current.itreeNode, falseState, trueState);
       falseState->itreeNode = ires.first;
