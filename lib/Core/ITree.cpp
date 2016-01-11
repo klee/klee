@@ -31,11 +31,10 @@ void PathConditionMarker::includeInInterpolant() {
   }
 }
 
-PathCondition::PathCondition(ref<Expr>& constraint) :
-    constraint(constraint), inInterpolant(false), tail(0) {}
-
-PathCondition::PathCondition(ref<Expr>& constraint, PathCondition *prev) :
-    constraint(constraint), inInterpolant(false), tail(prev) {}
+PathCondition::PathCondition(ref<Expr> &constraint, VersionedValue *condition,
+                             PathCondition *prev)
+    : constraint(constraint), condition(condition), inInterpolant(false),
+      tail(prev) {}
 
 PathCondition::~PathCondition() {}
 
@@ -320,8 +319,9 @@ void ITreeNode::setNodeLocation(unsigned int programPoint) {
   }
 }
 
-void ITreeNode::addConstraint(ref<Expr> &constraint) {
-  pathCondition = new PathCondition(constraint, pathCondition);
+void ITreeNode::addConstraint(ref<Expr> &constraint, llvm::Value *value) {
+  pathCondition = new PathCondition(
+      constraint, dependency->getLatestValue(value), pathCondition);
 }
 
 void ITreeNode::split(ExecutionState *leftData, ExecutionState *rightData) {

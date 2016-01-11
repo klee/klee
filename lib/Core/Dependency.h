@@ -165,8 +165,6 @@ namespace klee {
 
     VersionedAllocation *getNewAllocation(llvm::Value *allocation);
 
-    VersionedValue *getLatestValue(llvm::Value *value) const;
-
     VersionedAllocation *getLatestAllocation(llvm::Value *allocation) const;
 
     void addPointerEquality(VersionedValue *value,
@@ -200,6 +198,8 @@ namespace klee {
     Dependency *cdr() const;
 
     void execute(llvm::Instruction *instr);
+
+    VersionedValue *getLatestValue(llvm::Value *value) const;
 
     void bindCallArguments(llvm::Instruction *instr);
 

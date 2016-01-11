@@ -121,9 +121,11 @@ ExecutionState::ExecutionState(const ExecutionState& state):
     symbolics[i].first->refCount++;
 }
 
-void ExecutionState::addITreeConstraint(ref<Expr> e) {
-  if (itreeNode)
-    itreeNode->addConstraint(e);
+void ExecutionState::addITreeConstraint(ref<Expr> e, llvm::Instruction *instr) {
+  llvm::BranchInst *binstr = llvm::dyn_cast<llvm::BranchInst>(instr);
+  if (itreeNode && binstr && binstr->isConditional()) {
+    itreeNode->addConstraint(e, binstr->getCondition());
+  }
 }
 
 ExecutionState *ExecutionState::branch() {

@@ -17,6 +17,13 @@
 // FIXME: We do not want to be exposing these? :(
 #include "../../lib/Core/AddressSpace.h"
 #include "klee/Internal/Module/KInstIterator.h"
+#include "klee/Internal/Module/KInstruction.h"
+
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+#include "llvm/IR/Instructions.h"
+#else
+#include "llvm/Instructions.h"
+#endif
 
 #include <map>
 #include <set>
@@ -73,7 +80,7 @@ private:
 
   std::map<std::string, std::string> fnAliases;
 
-  void addITreeConstraint(ref<Expr> e);
+  void addITreeConstraint(ref<Expr> e, llvm::Instruction *instr);
 
 public:
   // Execution - Control Flow specific
@@ -172,7 +179,7 @@ public:
 
   void addSymbolic(const MemoryObject *mo, const Array *array);
   void addConstraint(ref<Expr> e) {
-    addITreeConstraint(e);
+    addITreeConstraint(e, prevPC->inst);
     constraints.addConstraint(e);
   }
 

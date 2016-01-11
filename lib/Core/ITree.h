@@ -23,6 +23,10 @@ namespace klee {
     /// @brief KLEE expression
     ref<Expr> constraint;
 
+    /// @brief the condition value from which the
+    /// constraint was generated
+    VersionedValue *condition;
+
     /// @brief When true, indicates that the constraint should be included
     /// in the interpolant
     bool inInterpolant;
@@ -31,9 +35,8 @@ namespace klee {
     PathCondition *tail;
 
   public:
-    PathCondition(ref<Expr>& constraint);
-
-    PathCondition(ref<Expr>& constraint, PathCondition *prev);
+    PathCondition(ref<Expr> &constraint, VersionedValue *condition,
+                  PathCondition *prev);
 
     ~PathCondition();
 
@@ -152,7 +155,7 @@ namespace klee {
 
     void setNodeLocation(unsigned int programPoint);
 
-    void addConstraint(ref<Expr> &constraint);
+    void addConstraint(ref<Expr> &constraint, llvm::Value *value);
 
     void split(ExecutionState *leftData, ExecutionState *rightData);
 
