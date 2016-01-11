@@ -188,9 +188,9 @@ namespace klee {
 
     std::vector<VersionedValue *> stores(VersionedAllocation *allocation) const;
 
-    std::vector<VersionedValue *> locallyFlowsFrom(VersionedValue *target) const;
+    std::vector<VersionedValue *> oneStepLocalFlowSources(VersionedValue *target) const;
 
-    std::vector<VersionedValue *> flowsFrom(VersionedValue *target) const;
+    std::vector<VersionedValue *> oneStepFlowSources(VersionedValue *target) const;
 
     std::vector<VersionedValue *>
     populateArgumentValuesList(llvm::CallInst *site);

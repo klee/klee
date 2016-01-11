@@ -238,7 +238,7 @@ namespace klee {
 	return ret;
     }
 
-    std::vector<VersionedValue *> valueSources = flowsFrom(value);
+    std::vector<VersionedValue *> valueSources = oneStepFlowSources(value);
     for (std::vector<VersionedValue *>::const_iterator it = valueSources.begin(),
 	itEnd = valueSources.end(); it != itEnd; ++it) {
 	singleRet = resolveAllocation(*it);
@@ -304,7 +304,7 @@ namespace klee {
   }
 
   std::vector<VersionedValue *>
-  Dependency::locallyFlowsFrom(VersionedValue *target) const {
+  Dependency::oneStepLocalFlowSources(VersionedValue *target) const {
     std::vector<VersionedValue *> ret;
     for (std::vector<FlowsTo *>::const_iterator it = flowsToList.begin(),
                                           itEnd = flowsToList.end();
@@ -317,10 +317,14 @@ namespace klee {
   }
 
   std::vector<VersionedValue *>
-  Dependency::flowsFrom(VersionedValue *target) const {
-    std::vector<VersionedValue *> ret = locallyFlowsFrom(target);
-    if (ret.size() == 0 && parentDependency)
-      return parentDependency->flowsFrom(target);
+  Dependency::oneStepFlowSources(VersionedValue *target) const {
+    std::vector<VersionedValue *> ret = oneStepLocalFlowSources(target);
+    if (parentDependency) {
+	std::vector<VersionedValue *> ancestralSources =
+	    parentDependency->oneStepFlowSources(target);
+	ret.insert(ret.begin(), ancestralSources.begin(),
+	           ancestralSources.end());
+    }
     return ret;
   }
 
@@ -465,7 +469,7 @@ namespace klee {
 	} else {
 	    // Could not resolve to argument to an address,
 	    // simply add flow dependency
-	    std::vector<VersionedValue *> vec = flowsFrom(arg);
+	    std::vector<VersionedValue *> vec = oneStepFlowSources(arg);
 	    if (vec.size() > 0) {
 		VersionedValue *newValue = getNewValue(i);
 		for (std::vector<VersionedValue *>::iterator it = vec.begin(),
