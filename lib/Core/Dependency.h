@@ -188,9 +188,19 @@ namespace klee {
 
     std::vector<VersionedValue *> stores(VersionedAllocation *allocation) const;
 
+    /// @brief All values that flows to the target in one step, local
+    /// to the current dependency / interpolation tree node
     std::vector<VersionedValue *> oneStepLocalFlowSources(VersionedValue *target) const;
 
+    /// @brief All values that flows to the target in one step
     std::vector<VersionedValue *> oneStepFlowSources(VersionedValue *target) const;
+
+    /// @brief All values that could flow to the target
+    std::vector<VersionedValue *> allFlowSources(VersionedValue *target) const;
+
+    /// @brief All the end sources that can flow to the target
+    std::vector<VersionedValue *>
+    allFlowSourcesEnds(VersionedValue *target) const;
 
     std::vector<VersionedValue *>
     populateArgumentValuesList(llvm::CallInst *site);

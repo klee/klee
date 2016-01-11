@@ -23,6 +23,10 @@ namespace klee {
     /// @brief KLEE expression
     ref<Expr> constraint;
 
+    /// @brief The dependency information for the current
+    /// interpolation tree node
+    Dependency *dependency;
+
     /// @brief the condition value from which the
     /// constraint was generated
     VersionedValue *condition;
@@ -35,8 +39,8 @@ namespace klee {
     PathCondition *tail;
 
   public:
-    PathCondition(ref<Expr> &constraint, VersionedValue *condition,
-                  PathCondition *prev);
+    PathCondition(ref<Expr> &constraint, Dependency *dependency,
+                  llvm::Value *condition, PathCondition *prev);
 
     ~PathCondition();
 

@@ -238,7 +238,7 @@ namespace klee {
 	return ret;
     }
 
-    std::vector<VersionedValue *> valueSources = oneStepFlowSources(value);
+    std::vector<VersionedValue *> valueSources = allFlowSourcesEnds(value);
     for (std::vector<VersionedValue *>::const_iterator it = valueSources.begin(),
 	itEnd = valueSources.end(); it != itEnd; ++it) {
 	singleRet = resolveAllocation(*it);
@@ -325,6 +325,52 @@ namespace klee {
 	ret.insert(ret.begin(), ancestralSources.begin(),
 	           ancestralSources.end());
     }
+    return ret;
+  }
+
+  std::vector<VersionedValue *>
+  Dependency::allFlowSources(VersionedValue *target) const {
+    std::vector<VersionedValue *> stepSources = oneStepFlowSources(target);
+    std::vector<VersionedValue *> ret = stepSources;
+
+    for (std::vector<VersionedValue *>::iterator it = stepSources.begin(),
+                                                 itEnd = stepSources.end();
+         it != itEnd; ++it) {
+      std::vector<VersionedValue *> src = allFlowSources(*it);
+      ret.insert(ret.begin(), src.begin(), src.end());
+    }
+
+    // We include the target as well
+    ret.push_back(target);
+
+    // Ensure there are no duplicates in the return
+    std::sort(ret.begin(), ret.end());
+    std::unique(ret.begin(), ret.end());
+    return ret;
+  }
+
+  std::vector<VersionedValue *>
+  Dependency::allFlowSourcesEnds(VersionedValue *target) const {
+    std::vector<VersionedValue *> stepSources = oneStepFlowSources(target);
+    std::vector<VersionedValue *> ret;
+    if (stepSources.size() == 0) {
+      ret.push_back(target);
+      return ret;
+    }
+    for (std::vector<VersionedValue *>::iterator it = stepSources.begin(),
+                                                 itEnd = stepSources.end();
+         it != itEnd; ++it) {
+      std::vector<VersionedValue *> src = allFlowSourcesEnds(*it);
+      if (src.size() == 0) {
+        ret.push_back(*it);
+      } else {
+        ret.insert(ret.begin(), src.begin(), src.end());
+      }
+    }
+
+    // Ensure there are no duplicates in the return
+    std::sort(ret.begin(), ret.end());
+    std::unique(ret.begin(), ret.end());
     return ret;
   }
 
@@ -615,11 +661,11 @@ namespace klee {
   }
 
   void Dependency::markAllValues(VersionedValue *value) {
-    value->includeInInterpolant();
-
-    for (std::vector<FlowsTo *>::iterator it = flowsToList.begin(),
-	itEnd = flowsToList.end(); it != itEnd; ++it) {
-
+    std::vector<VersionedValue *> allSources = allFlowSources(value);
+    for (std::vector<VersionedValue *>::iterator it = allSources.begin(),
+                                                 itEnd = allSources.end();
+         it != itEnd; ++it) {
+      (*it)->includeInInterpolant();
     }
   }
 

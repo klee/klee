@@ -31,10 +31,11 @@ void PathConditionMarker::includeInInterpolant() {
   }
 }
 
-PathCondition::PathCondition(ref<Expr> &constraint, VersionedValue *condition,
-                             PathCondition *prev)
-    : constraint(constraint), condition(condition), inInterpolant(false),
-      tail(prev) {}
+PathCondition::PathCondition(ref<Expr> &constraint, Dependency *dependency,
+                             llvm::Value *condition, PathCondition *prev)
+    : constraint(constraint), dependency(dependency),
+      condition(dependency ? dependency->getLatestValue(condition) : 0),
+      inInterpolant(false), tail(prev) {}
 
 PathCondition::~PathCondition() {}
 
@@ -47,6 +48,10 @@ PathCondition *PathCondition::cdr() const {
 }
 
 void PathCondition::includeInInterpolant() {
+  // We mark all values to which this constraint depends
+  dependency->markAllValues(condition);
+
+  // We mark this constraint itself as in the interpolant
   inInterpolant = true;
 }
 
@@ -99,27 +104,27 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
 	  ref<Expr> query = *it0;
 	  Solver::Validity result;
 
-	  /// llvm::errs() << "Querying for subsumption check:\n";
-	  /// ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
+          // llvm::errs() << "Querying for subsumption check:\n";
+          // ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
 
-	  solver->setTimeout(timeout);
-	  bool success = solver->evaluate(state, query, result);
-	  solver->setTimeout(0);
-	  if (success && result == Solver::True) {
-	    std::vector< ref<Expr> > unsat_core = solver->getUnsatCore();
+          solver->setTimeout(timeout);
+          bool success = solver->evaluate(state, query, result);
+          solver->setTimeout(0);
+          if (success && result == Solver::True) {
+            std::vector<ref<Expr> > unsat_core = solver->getUnsatCore();
 
-	    for (std::vector< ref<Expr> >::iterator it1 = unsat_core.begin();
-		it1 != unsat_core.end(); it1++) {
-		markerMap[*it1]->mayIncludeInInterpolant();
-	    }
+            for (std::vector<ref<Expr> >::iterator it1 = unsat_core.begin();
+                 it1 != unsat_core.end(); it1++) {
+              markerMap[*it1]->mayIncludeInInterpolant();
+            }
 
-	  } else {
-	    return false;
-	  }
+          } else {
+            return false;
+          }
       }
 
-      /// State subsumed, we mark needed constraints on the
-      /// path condition.
+      // State subsumed, we mark needed constraints on the
+      // path condition.
       for (std::map< ref<Expr>, PathConditionMarker *>::iterator it = markerMap.begin();
 	  it != markerMap.end(); it++) {
 	  it->second->includeInInterpolant();
@@ -163,12 +168,12 @@ bool ITree::checkCurrentStateSubsumption(TimingSolver *solver,
       it != subsumptionTable.end(); it++) {
       if (it->subsumed(solver, state, timeout)) {
 
-	  /// We mark as subsumed such that the node will not be
-	  /// stored into table (the table already contains a more
-	  /// general entry).
-	  currentINode->isSubsumed = true;
+        // We mark as subsumed such that the node will not be
+        // stored into table (the table already contains a more
+        // general entry).
+        currentINode->isSubsumed = true;
 
-	  return true;
+        return true;
       }
   }
   return false;
@@ -322,9 +327,9 @@ void ITreeNode::setNodeLocation(unsigned int programPoint) {
   }
 }
 
-void ITreeNode::addConstraint(ref<Expr> &constraint, llvm::Value *value) {
-  pathCondition = new PathCondition(
-      constraint, dependency->getLatestValue(value), pathCondition);
+void ITreeNode::addConstraint(ref<Expr> &constraint, llvm::Value *condition) {
+  pathCondition =
+      new PathCondition(constraint, dependency, condition, pathCondition);
 }
 
 void ITreeNode::split(ExecutionState *leftData, ExecutionState *rightData) {
