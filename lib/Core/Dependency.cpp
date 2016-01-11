@@ -70,12 +70,20 @@ namespace klee {
   unsigned long long VersionedValue::nextVersion = 0;
 
   VersionedValue::VersionedValue(llvm::Value *value)
-      : value(value), version(nextVersion++) {}
+      : value(value), version(nextVersion++), inInterpolant(false) {}
 
   VersionedValue::~VersionedValue() {}
 
   bool VersionedValue::hasValue(llvm::Value *value) const {
     return this->value == value;
+  }
+
+  void VersionedValue::includeInInterpolant() {
+    inInterpolant = true;
+  }
+
+  bool VersionedValue::valueInInterpolant() const {
+    return inInterpolant;
   }
 
   void VersionedValue::print(llvm::raw_ostream& stream) const {
@@ -599,6 +607,15 @@ namespace klee {
       VersionedValue *value = getLatestValue(retInst->getReturnValue());
       if (value)
         addDependency(value, getNewValue(site));
+    }
+  }
+
+  void Dependency::markAllValues(VersionedValue *value) {
+    value->includeInInterpolant();
+
+    for (std::vector<FlowsTo *>::iterator it = flowsToList.begin(),
+	itEnd = flowsToList.end(); it != itEnd; ++it) {
+
     }
   }
 

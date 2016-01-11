@@ -67,12 +67,20 @@ namespace klee {
 
     llvm::Value *value;
     unsigned long long version;
+
+    /// @brief to indicate if any unsatisfiability core
+    /// depends on this value
+    bool inInterpolant;
   public:
     VersionedValue(llvm::Value *value);
 
     ~VersionedValue();
 
     bool hasValue(llvm::Value *value) const;
+
+    void includeInInterpolant();
+
+    bool valueInInterpolant() const;
 
     void print(llvm::raw_ostream& stream) const;
 
@@ -204,6 +212,8 @@ namespace klee {
     void bindCallArguments(llvm::Instruction *instr);
 
     void bindReturnValue(llvm::CallInst *site, llvm::Instruction *inst);
+
+    void markAllValues(VersionedValue *value);
 
     void dump() const {
       this->print(llvm::errs());
