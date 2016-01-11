@@ -87,7 +87,10 @@ namespace klee {
   }
 
   void VersionedValue::print(llvm::raw_ostream& stream) const {
-    stream << "V[";
+    stream << "V";
+    if (inInterpolant)
+      stream << "(I)";
+    stream << "[";
     value->print(stream);
     stream << "#" << version;
     stream << "]";
@@ -542,14 +545,14 @@ namespace klee {
 	{
 	  VersionedValue *val = getLatestValue(i->getOperand(0));
 	  if (val) {
-	      addDependency(getNewValue(i), val);
-	  } else if (!llvm::isa<llvm::Constant>(i->getOperand(0)))
-	    // Constants would kill dependencies, the remaining is for
-	    // cases that may actually require dependencies.
-	    {
-	      assert (!"operand not found");
-	    }
-	  break;
+            addDependency(val, getNewValue(i));
+          } else if (!llvm::isa<llvm::Constant>(i->getOperand(0)))
+              // Constants would kill dependencies, the remaining is for
+              // cases that may actually require dependencies.
+          {
+            assert(!"operand not found");
+          }
+          break;
       }
       case llvm::Instruction::Select:
 	{
@@ -708,6 +711,11 @@ namespace klee {
       if (it != flowsToListBegin)
         stream << ",";
       (*it)->print(stream);
+    }
+
+    if (parentDependency) {
+      stream << "\n" << tabs << "--------- Parent Dependencies ----------\n";
+      parentDependency->print(stream, tab_num);
     }
   }
 

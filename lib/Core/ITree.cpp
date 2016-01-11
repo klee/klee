@@ -221,12 +221,19 @@ std::pair<ITreeNode *, ITreeNode *> ITree::split(ITreeNode *parent, ExecutionSta
   return std::pair<ITreeNode *, ITreeNode *> (parent->left, parent->right);
 }
 
-void ITree::markPathCondition(TimingSolver *solver) {
+void ITree::markPathCondition(ExecutionState &state, TimingSolver *solver) {
   std::vector<ref<Expr> > unsatCore = solver->getUnsatCore();
 
   // Simply return in case the unsatisfiability core is empty
   if (unsatCore.size() == 0)
       return;
+
+  llvm::BranchInst *binst =
+      llvm::dyn_cast<llvm::BranchInst>(state.prevPC->inst);
+  if (binst) {
+    currentINode->dependency->markAllValues(
+        currentINode->dependency->getLatestValue(binst->getCondition()));
+  }
 
   // Process the unsat core in case it was computed (non-empty)
   PathCondition *pc = currentINode->pathCondition;

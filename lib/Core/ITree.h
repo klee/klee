@@ -119,7 +119,7 @@ namespace klee {
 
     bool checkCurrentStateSubsumption(TimingSolver* solver, ExecutionState& state, double timeout);
 
-    void markPathCondition(TimingSolver *solver);
+    void markPathCondition(ExecutionState &state, TimingSolver *solver);
 
     std::pair<ITreeNode *, ITreeNode *> split(ITreeNode *parent, ExecutionState *left, ExecutionState *right);
 
