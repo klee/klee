@@ -514,7 +514,7 @@ Solver *klee::createDummySolver() {
 
 /***/
 
-#ifndef SUPPORT_Z3
+#ifdef SUPPORT_STP
 
 class STPSolverImpl : public SolverImpl {
 private:
@@ -868,7 +868,7 @@ STPSolverImpl::computeInitialValues(const Query &query,
 SolverImpl::SolverRunStatus STPSolverImpl::getOperationStatusCode() {
    return runStatusCode;
 }
-#endif /* SUPPORT_Z3 */
+#endif /* SUPPORT_STP */
 
 /***/
 

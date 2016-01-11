@@ -332,12 +332,14 @@ Executor::Executor(const InterpreterOptions &opts,
 #else
   switch (selectSolver) {
   	  	case SOLVER_STP:
-			#ifndef SUPPORT_Z3
+			#ifdef SUPPORT_STP
+            llvm::errs() << "Using STPsolver\n";
   			coreSolver = new STPSolver(UseForkedCoreSolver, CoreSolverOptimizeDivides);
   		    break;
-			#endif /* SUPPORT_Z3 */
+			#endif /* SUPPORT_STP */
   		case SOLVER_Z3:
 			#ifdef SUPPORT_Z3
+            llvm::errs() << "Using Z3solver\n";
   			coreSolver = new Z3Solver();
   			break;
 			#endif /* SUPPORT_Z3 */
