@@ -23,19 +23,15 @@
 
 namespace klee {
 
-  class VersionedAllocation {
-    static unsigned long long nextVersion;
-    unsigned long long version;
+class Allocation {
 
   protected:
     llvm::Value *site;
 
-    VersionedAllocation();
+    Allocation();
 
   public:
-    VersionedAllocation(llvm::Value *site);
-
-    virtual ~VersionedAllocation();
+    virtual ~Allocation();
 
     virtual bool hasAllocationSite(llvm::Value *site) const;
 
@@ -49,7 +45,26 @@ namespace klee {
     }
   };
 
-  class EnvironmentAllocation : public VersionedAllocation {
+  class VersionedAllocation : public Allocation {
+    static unsigned long long nextVersion;
+    unsigned long long version;
+
+  protected:
+    llvm::Value *site;
+
+  public:
+    VersionedAllocation(llvm::Value *site);
+
+    ~VersionedAllocation();
+
+    bool hasAllocationSite(llvm::Value *site) const;
+
+    bool isComposite() const;
+
+    void print(llvm::raw_ostream& stream) const;
+  };
+
+  class EnvironmentAllocation : public Allocation {
   public:
     EnvironmentAllocation();
 
@@ -57,9 +72,7 @@ namespace klee {
 
     bool hasAllocationSite(llvm::Value *site) const;
 
-    bool isComposite() const;
-
-    void print(llvm::raw_ostream& stream) const;
+    void print(llvm::raw_ostream &stream) const;
   };
 
   class VersionedValue {
@@ -93,13 +106,14 @@ namespace klee {
   class PointerEquality {
     // value equals allocation (pointer)
     VersionedValue* value;
-    VersionedAllocation* allocation;
+    Allocation *allocation;
+
   public:
-    PointerEquality(VersionedValue *value, VersionedAllocation *allocation);
+    PointerEquality(VersionedValue *value, Allocation *allocation);
 
     ~PointerEquality();
 
-    VersionedAllocation *equals(VersionedValue *value) const;
+    Allocation *equals(VersionedValue *value) const;
 
     void print(llvm::raw_ostream& stream) const;
 
@@ -111,16 +125,16 @@ namespace klee {
 
   class StorageCell {
     // allocation stores value
-    VersionedAllocation* allocation;
+    Allocation *allocation;
     VersionedValue* value;
   public:
-    StorageCell(VersionedAllocation *allocation, VersionedValue* value);
+    StorageCell(Allocation *allocation, VersionedValue *value);
 
     ~StorageCell();
 
-    VersionedValue *stores(VersionedAllocation *allocation) const;
+    VersionedValue *stores(Allocation *allocation) const;
 
-    VersionedAllocation *storageOf(VersionedValue *value) const;
+    Allocation *storageOf(VersionedValue *value) const;
 
     void print(llvm::raw_ostream& stream) const;
 
@@ -167,26 +181,26 @@ namespace klee {
 
     std::vector< VersionedValue *> valuesList;
 
-    std::vector< VersionedAllocation *> allocationsList;
+    std::vector<Allocation *> allocationsList;
 
     VersionedValue* getNewValue(llvm::Value *value);
 
-    VersionedAllocation *getNewAllocation(llvm::Value *allocation);
+    Allocation *getNewAllocation(llvm::Value *allocation);
 
-    VersionedAllocation *getLatestAllocation(llvm::Value *allocation) const;
+    Allocation *getLatestAllocation(llvm::Value *allocation) const;
 
-    void addPointerEquality(VersionedValue *value,
-                            VersionedAllocation *allocation);
+    void addPointerEquality(VersionedValue *value, Allocation *allocation);
 
-    void updateStore(VersionedAllocation *allocation, VersionedValue *value);
+    void updateStore(Allocation *allocation, VersionedValue *value);
 
     void addDependency(VersionedValue *source, VersionedValue *target);
 
-    VersionedAllocation *resolveAllocation(VersionedValue *value) const;
+    Allocation *resolveAllocation(VersionedValue *value) const;
 
-    std::vector<VersionedAllocation *> resolveAllocationTransitively(VersionedValue *value) const;
+    std::vector<Allocation *>
+    resolveAllocationTransitively(VersionedValue *value) const;
 
-    std::vector<VersionedValue *> stores(VersionedAllocation *allocation) const;
+    std::vector<VersionedValue *> stores(Allocation *allocation) const;
 
     /// @brief All values that flows to the target in one step, local
     /// to the current dependency / interpolation tree node
