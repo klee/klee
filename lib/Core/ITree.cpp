@@ -216,26 +216,29 @@ std::pair<ITreeNode *, ITreeNode *> ITree::split(ITreeNode *parent, ExecutionSta
   return std::pair<ITreeNode *, ITreeNode *> (parent->left, parent->right);
 }
 
-void ITree::markPathCondition(std::vector< ref<Expr> > unsat_core) {
-  /// Simply return in case the unsatisfiability core is empty
-  if (unsat_core.size() == 0)
+void ITree::markPathCondition(TimingSolver *solver) {
+  std::vector<ref<Expr> > unsatCore = solver->getUnsatCore();
+
+  // Simply return in case the unsatisfiability core is empty
+  if (unsatCore.size() == 0)
       return;
 
-  /// Process the unsat core in case it was computed (non-empty)
+  // Process the unsat core in case it was computed (non-empty)
   PathCondition *pc = currentINode->pathCondition;
 
   if (pc != 0) {
-      for (std::vector< ref<Expr> >::reverse_iterator it = unsat_core.rbegin();
-	  it != unsat_core.rend(); it++) {
-	  while (pc != 0) {
-	      if (pc->car().compare(it->get()) == 0) {
-		  pc->includeInInterpolant();
-		  pc = pc->cdr();
-		  break;
-	      }
-	      pc = pc->cdr();
-	  }
-	  if (pc == 0) break;
+    for (std::vector<ref<Expr> >::reverse_iterator it = unsatCore.rbegin();
+         it != unsatCore.rend(); it++) {
+      while (pc != 0) {
+        if (pc->car().compare(it->get()) == 0) {
+          pc->includeInInterpolant();
+          pc = pc->cdr();
+          break;
+        }
+        pc = pc->cdr();
+      }
+      if (pc == 0)
+        break;
       }
   }
 }
@@ -285,7 +288,7 @@ ITreeNode::ITreeNode(ITreeNode *_parent)
 
   pathCondition = (_parent != 0) ? _parent->pathCondition : 0;
 
-  // Inherit the abstract depdencency or NULL
+  // Inherit the abstract dependency or NULL
   dependency = new Dependency(_parent ? _parent->dependency : 0);
 }
 
