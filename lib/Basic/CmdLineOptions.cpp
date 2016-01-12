@@ -73,14 +73,14 @@ llvm::cl::list<QueryLoggingSolverType> queryLoggingOptions(
     llvm::cl::CommaSeparated
 );
 
+#if defined(SUPPORT_STP) && defined(SUPPORT_Z3)
 llvm::cl::opt<SolverType>
-selectSolver("select-solver",
-				llvm::cl::desc("Select solver type, Z3 is default solver."),
-		        llvm::cl::values(clEnumValN(SOLVER_STP, "stp", "Use STP solver"),
-		                      clEnumValN(SOLVER_Z3, "z3", "Use Z3 solver"),
-		                      clEnumValEnd)
-			);
-
+SelectSolver("select-solver",
+             llvm::cl::desc("Select solver to use with z3 as the default."),
+             llvm::cl::values(clEnumValN(SOLVER_STP, "stp", "Use STP solver"),
+                              clEnumValN(SOLVER_Z3, "z3", "Use Z3 solver"),
+                              clEnumValEnd));
+#endif
 
 #ifdef SUPPORT_METASMT
 
