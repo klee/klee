@@ -1838,9 +1838,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 #endif
     bindLocal(ki, state, result);
 
+#ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation)
+    if (!NoInterpolation
+#ifdef SUPPORT_STP
+	&& SelectSolver == SOLVER_Z3
+#endif
+	)
       interpTree->executeAbstractDependency(i);
+#endif
     break;
   }
 
@@ -1852,9 +1858,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = SelectExpr::create(cond, tExpr, fExpr);
     bindLocal(ki, state, result);
 
+#ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation)
+    if (!NoInterpolation
+#ifdef SUPPORT_STP
+	&& SelectSolver == SOLVER_Z3
+#endif
+	)
       interpTree->executeAbstractDependency(i);
+#endif
     break;
   }
 
@@ -1869,9 +1881,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> right = eval(ki, 1, state).value;
     bindLocal(ki, state, AddExpr::create(left, right));
 
+#ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation)
+    if (!NoInterpolation
+#ifdef SUPPORT_STP
+	&& SelectSolver == SOLVER_Z3
+#endif
+	)
       interpTree->executeAbstractDependency(i);
+#endif
     break;
   }
 
@@ -1880,9 +1898,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> right = eval(ki, 1, state).value;
     bindLocal(ki, state, SubExpr::create(left, right));
 
+#ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation)
+    if (!NoInterpolation
+#ifdef SUPPORT_STP
+	&& SelectSolver == SOLVER_Z3
+#endif
+	)
       interpTree->executeAbstractDependency(i);
+#endif
     break;
   }
  
@@ -1891,9 +1915,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> right = eval(ki, 1, state).value;
     bindLocal(ki, state, MulExpr::create(left, right));
 
+#ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation)
+    if (!NoInterpolation
+#ifdef SUPPORT_STP
+	&& SelectSolver == SOLVER_Z3
+#endif
+	)
       interpTree->executeAbstractDependency(i);
+#endif
     break;
   }
 
@@ -1903,9 +1933,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = UDivExpr::create(left, right);
     bindLocal(ki, state, result);
 
+#ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation)
+    if (!NoInterpolation
+#ifdef SUPPORT_STP
+	&& SelectSolver == SOLVER_Z3
+#endif
+	)
       interpTree->executeAbstractDependency(i);
+#endif
     break;
   }
 
@@ -1915,9 +1951,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = SDivExpr::create(left, right);
     bindLocal(ki, state, result);
 
+#ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation)
+    if (!NoInterpolation
+#ifdef SUPPORT_STP
+	&& SelectSolver == SOLVER_Z3
+#endif
+	)
       interpTree->executeAbstractDependency(i);
+#endif
     break;
   }
 
@@ -1927,9 +1969,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = URemExpr::create(left, right);
     bindLocal(ki, state, result);
 
+#ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation)
+    if (!NoInterpolation
+#ifdef SUPPORT_STP
+	&& SelectSolver == SOLVER_Z3
+#endif
+	)
       interpTree->executeAbstractDependency(i);
+#endif
     break;
   }
  
@@ -1939,9 +1987,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = SRemExpr::create(left, right);
     bindLocal(ki, state, result);
 
+#ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation)
+    if (!NoInterpolation
+#ifdef SUPPORT_STP
+	&& SelectSolver == SOLVER_Z3
+#endif
+	)
       interpTree->executeAbstractDependency(i);
+#endif
     break;
   }
 
@@ -1951,9 +2005,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = AndExpr::create(left, right);
     bindLocal(ki, state, result);
 
+#ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation)
+    if (!NoInterpolation
+#ifdef SUPPORT_STP
+	&& SelectSolver == SOLVER_Z3
+#endif
+	)
       interpTree->executeAbstractDependency(i);
+#endif
     break;
   }
 
@@ -1963,9 +2023,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = OrExpr::create(left, right);
     bindLocal(ki, state, result);
 
+#ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation)
+    if (!NoInterpolation
+#ifdef SUPPORT_STP
+	&& SelectSolver == SOLVER_Z3
+#endif
+	)
       interpTree->executeAbstractDependency(i);
+#endif
     break;
   }
 
@@ -1975,9 +2041,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = XorExpr::create(left, right);
     bindLocal(ki, state, result);
 
+#ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation)
+    if (!NoInterpolation
+#ifdef SUPPORT_STP
+	&& SelectSolver == SOLVER_Z3
+#endif
+	)
       interpTree->executeAbstractDependency(i);
+#endif
     break;
   }
 
@@ -1987,9 +2059,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = ShlExpr::create(left, right);
     bindLocal(ki, state, result);
 
+#ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation)
+    if (!NoInterpolation
+#ifdef SUPPORT_STP
+	&& SelectSolver == SOLVER_Z3
+#endif
+	)
       interpTree->executeAbstractDependency(i);
+#endif
     break;
   }
 
@@ -1999,9 +2077,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = LShrExpr::create(left, right);
     bindLocal(ki, state, result);
 
+#ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation)
+    if (!NoInterpolation
+#ifdef SUPPORT_STP
+	&& SelectSolver == SOLVER_Z3
+#endif
+	)
       interpTree->executeAbstractDependency(i);
+#endif
     break;
   }
 
@@ -2011,9 +2095,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = AShrExpr::create(left, right);
     bindLocal(ki, state, result);
 
+#ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation)
+    if (!NoInterpolation
+#ifdef SUPPORT_STP
+	&& SelectSolver == SOLVER_Z3
+#endif
+	)
       interpTree->executeAbstractDependency(i);
+#endif
     break;
   }
 
@@ -2108,9 +2198,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       terminateStateOnExecError(state, "invalid ICmp predicate");
     }
 
+#ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation)
+    if (!NoInterpolation
+#ifdef SUPPORT_STP
+	&& SelectSolver == SOLVER_Z3
+#endif
+	)
       interpTree->executeAbstractDependency(i);
+#endif
     break;
   }
  
@@ -2128,9 +2224,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bool isLocal = i->getOpcode()==Instruction::Alloca;
     executeAlloc(state, size, isLocal, ki);
 
+#ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation)
+    if (!NoInterpolation
+#ifdef SUPPORT_STP
+	&& SelectSolver == SOLVER_Z3
+#endif
+	)
       interpTree->executeAbstractDependency(i);
+#endif
     break;
   }
 
@@ -2138,9 +2240,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> base = eval(ki, 0, state).value;
     executeMemoryOperation(state, false, base, 0, ki);
 
+#ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation)
+    if (!NoInterpolation
+#ifdef SUPPORT_STP
+	&& SelectSolver == SOLVER_Z3
+#endif
+	)
       interpTree->executeAbstractDependency(i);
+#endif
     break;
   }
   case Instruction::Store: {
@@ -2148,9 +2256,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> value = eval(ki, 0, state).value;
     executeMemoryOperation(state, true, base, value, 0);
 
+#ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation)
+    if (!NoInterpolation
+#ifdef SUPPORT_STP
+	&& SelectSolver == SOLVER_Z3
+#endif
+	)
       interpTree->executeAbstractDependency(i);
+#endif
     break;
   }
 
@@ -2172,9 +2286,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
                              Expr::createPointer(kgepi->offset));
     bindLocal(ki, state, base);
 
+#ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation)
+    if (!NoInterpolation
+#ifdef SUPPORT_STP
+	&& SelectSolver == SOLVER_Z3
+#endif
+	)
       interpTree->executeAbstractDependency(i);
+#endif
     break;
   }
 
@@ -2186,9 +2306,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
                                            getWidthForLLVMType(ci->getType()));
     bindLocal(ki, state, result);
 
+#ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation)
+    if (!NoInterpolation
+#ifdef SUPPORT_STP
+	&& SelectSolver == SOLVER_Z3
+#endif
+	)
       interpTree->executeAbstractDependency(i);
+#endif
     break;
   }
   case Instruction::ZExt: {
@@ -2197,9 +2323,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
                                         getWidthForLLVMType(ci->getType()));
     bindLocal(ki, state, result);
 
+#ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation)
+    if (!NoInterpolation
+#ifdef SUPPORT_STP
+	&& SelectSolver == SOLVER_Z3
+#endif
+	)
       interpTree->executeAbstractDependency(i);
+#endif
     break;
   }
   case Instruction::SExt: {
@@ -2208,9 +2340,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
                                         getWidthForLLVMType(ci->getType()));
     bindLocal(ki, state, result);
 
+#ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation)
+    if (!NoInterpolation
+#ifdef SUPPORT_STP
+	&& SelectSolver == SOLVER_Z3
+#endif
+	)
       interpTree->executeAbstractDependency(i);
+#endif
     break;
   }
 
@@ -2220,9 +2358,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> arg = eval(ki, 0, state).value;
     bindLocal(ki, state, ZExtExpr::create(arg, pType));
 
+#ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation)
+    if (!NoInterpolation
+#ifdef SUPPORT_STP
+	&& SelectSolver == SOLVER_Z3
+#endif
+	)
       interpTree->executeAbstractDependency(i);
+#endif
     break;
   } 
   case Instruction::PtrToInt: {
@@ -2231,9 +2375,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> arg = eval(ki, 0, state).value;
     bindLocal(ki, state, ZExtExpr::create(arg, iType));
 
+#ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation)
+    if (!NoInterpolation
+#ifdef SUPPORT_STP
+	&& SelectSolver == SOLVER_Z3
+#endif
+	)
       interpTree->executeAbstractDependency(i);
+#endif
     break;
   }
 
@@ -2241,9 +2391,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = eval(ki, 0, state).value;
     bindLocal(ki, state, result);
 
+#ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation)
+    if (!NoInterpolation
+#ifdef SUPPORT_STP
+	&& SelectSolver == SOLVER_Z3
+#endif
+	)
       interpTree->executeAbstractDependency(i);
+#endif
     break;
   }
 
@@ -2267,9 +2423,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 #endif
     bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
 
+#ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation)
+    if (!NoInterpolation
+#ifdef SUPPORT_STP
+	&& SelectSolver == SOLVER_Z3
+#endif
+	)
       interpTree->executeAbstractDependency(i);
+#endif
     break;
   }
 
@@ -2290,9 +2452,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 #endif
     bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
 
+#ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation)
+    if (!NoInterpolation
+#ifdef SUPPORT_STP
+	&& SelectSolver == SOLVER_Z3
+#endif
+	)
       interpTree->executeAbstractDependency(i);
+#endif
     break;
   }
  
@@ -2314,9 +2482,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 #endif
     bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
 
+#ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation)
+    if (!NoInterpolation
+#ifdef SUPPORT_STP
+	&& SelectSolver == SOLVER_Z3
+#endif
+	)
       interpTree->executeAbstractDependency(i);
+#endif
     break;
   }
 
@@ -2338,9 +2512,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 #endif
     bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
 
+#ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation)
+    if (!NoInterpolation
+#ifdef SUPPORT_STP
+	&& SelectSolver == SOLVER_Z3
+#endif
+	)
       interpTree->executeAbstractDependency(i);
+#endif
     break;
   }
 
@@ -2362,9 +2542,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 #endif
     bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
 
+#ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation)
+    if (!NoInterpolation
+#ifdef SUPPORT_STP
+	&& SelectSolver == SOLVER_Z3
+#endif
+	)
       interpTree->executeAbstractDependency(i);
+#endif
     break;
   }
 
@@ -2387,9 +2573,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
                 &losesInfo);
     bindLocal(ki, state, ConstantExpr::alloc(Res));
 
+#ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation)
+    if (!NoInterpolation
+#ifdef SUPPORT_STP
+	&& SelectSolver == SOLVER_Z3
+#endif
+	)
       interpTree->executeAbstractDependency(i);
+#endif
     break;
   }
 
@@ -2411,9 +2603,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
                 &losesInfo);
     bindLocal(ki, state, ConstantExpr::alloc(Res));
 
+#ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation)
+    if (!NoInterpolation
+#ifdef SUPPORT_STP
+	&& SelectSolver == SOLVER_Z3
+#endif
+	)
       interpTree->executeAbstractDependency(i);
+#endif
     break;
   }
 
@@ -2436,9 +2634,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
                          llvm::APFloat::rmTowardZero, &isExact);
     bindLocal(ki, state, ConstantExpr::alloc(value, resultType));
 
+#ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation)
+    if (!NoInterpolation
+#ifdef SUPPORT_STP
+	&& SelectSolver == SOLVER_Z3
+#endif
+	)
       interpTree->executeAbstractDependency(i);
+#endif
     break;
   }
 
@@ -2461,9 +2665,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
                          llvm::APFloat::rmTowardZero, &isExact);
     bindLocal(ki, state, ConstantExpr::alloc(value, resultType));
 
+#ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation)
+    if (!NoInterpolation
+#ifdef SUPPORT_STP
+	&& SelectSolver == SOLVER_Z3
+#endif
+	)
       interpTree->executeAbstractDependency(i);
+#endif
     break;
   }
 
@@ -2481,9 +2691,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     bindLocal(ki, state, ConstantExpr::alloc(f));
 
+#ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation)
+    if (!NoInterpolation
+#ifdef SUPPORT_STP
+	&& SelectSolver == SOLVER_Z3
+#endif
+	)
       interpTree->executeAbstractDependency(i);
+#endif
     break;
   }
 
@@ -2501,9 +2717,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     bindLocal(ki, state, ConstantExpr::alloc(f));
 
+#ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation)
+    if (!NoInterpolation
+#ifdef SUPPORT_STP
+	&& SelectSolver == SOLVER_Z3
+#endif
+	)
       interpTree->executeAbstractDependency(i);
+#endif
     break;
   }
 
@@ -2603,9 +2825,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     bindLocal(ki, state, ConstantExpr::alloc(Result, Expr::Bool));
 
+#ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation)
+    if (!NoInterpolation
+#ifdef SUPPORT_STP
+	&& SelectSolver == SOLVER_Z3
+#endif
+	)
       interpTree->executeAbstractDependency(i);
+#endif
     break;
   }
   case Instruction::InsertValue: {
@@ -2634,9 +2862,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     bindLocal(ki, state, result);
 
+#ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation)
+    if (!NoInterpolation
+#ifdef SUPPORT_STP
+	&& SelectSolver == SOLVER_Z3
+#endif
+	)
       interpTree->executeAbstractDependency(i);
+#endif
     break;
   }
   case Instruction::ExtractValue: {
@@ -2648,9 +2882,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     bindLocal(ki, state, result);
 
+#ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation)
+    if (!NoInterpolation
+#ifdef SUPPORT_STP
+	&& SelectSolver == SOLVER_Z3
+#endif
+	)
       interpTree->executeAbstractDependency(i);
+#endif
     break;
   }
  
@@ -2861,13 +3101,13 @@ void Executor::run(ExecutionState &initialState) {
       // Uncomment the following statements to show the state
       // of the interpolation tree and the active node.
 
-      // llvm::errs() << "\nCurrent state:\n";
-      // processTree->dump();
-      // interpTree->dump();
-      // state.itreeNode->dump();
-      // llvm::errs() << "------------------- Executing New Instruction "
-      //                 "-----------------------\n";
-      // state.pc->inst->dump();
+      llvm::errs() << "\nCurrent state:\n";
+      processTree->dump();
+      interpTree->dump();
+      state.itreeNode->dump();
+      llvm::errs() << "------------------- Executing New Instruction "
+                      "-----------------------\n";
+      state.pc->inst->dump();
     }
 
     if (!NoInterpolation &&
