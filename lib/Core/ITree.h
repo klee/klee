@@ -54,6 +54,8 @@ namespace klee {
 
     std::vector< ref<Expr> > packInterpolant() const;
 
+    std::vector< ref<Expr> > pullInterpolant() const;
+
     void dump();
 
     void print(llvm::raw_ostream& stream);

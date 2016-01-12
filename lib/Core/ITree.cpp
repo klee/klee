@@ -68,6 +68,25 @@ std::vector< ref<Expr> > PathCondition::packInterpolant() const {
   return res;
 }
 
+std::vector< ref<Expr> > PathCondition::pullInterpolant() const {
+  std::vector<PathCondition *> pathConditions;
+  for (PathCondition *it = this; it != 0; it = it->tail) {
+      if (it->inInterpolant)
+	pathConditions.push_back(it);
+  }
+
+  std::vector< ref<Expr> > res;
+
+  while (pathConditions.size() > 0) {
+      // std::vector<Allocation *> locations = loadedFrom(res.back()->condition);
+      // get the expression of locations, apply each instruction along the way
+      // to the location of this branching point, and store it in res
+      pathConditions.pop_back();
+  }
+
+  return res;
+}
+
 void PathCondition::dump() {
   this->print(llvm::errs());
   llvm::errs() << "\n";
