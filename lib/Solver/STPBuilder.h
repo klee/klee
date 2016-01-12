@@ -14,7 +14,7 @@
 #include "klee/util/ArrayExprHash.h"
 #include "klee/Config/config.h"
 
-#ifndef SUPPORT_Z3
+#ifdef SUPPORT_STP
 
 #include <vector>
 
@@ -128,6 +128,6 @@ public:
 
 }
 
-#endif /* SUPPORT_Z3 */
+#endif /* SUPPORT_STP */
 
 #endif /* __UTIL_STPBUILDER_H__ */

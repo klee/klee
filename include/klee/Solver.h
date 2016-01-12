@@ -210,7 +210,7 @@ namespace klee {
     virtual std::vector< ref<Expr> > getUnsatCore();
   };
 
-#ifndef SUPPORT_Z3
+  #ifdef SUPPORT_STP
   /// STPSolver - A complete solver based on STP.
   class STPSolver : public Solver {
   public:
@@ -230,7 +230,7 @@ namespace klee {
 	/// is off.
 	virtual void setCoreSolverTimeout(double timeout);
   };
-#endif /* SUPPORT_Z3 */
+  #endif /*SUPPORT_STP */
 
 #ifdef SUPPORT_Z3
   /// Z3Solver - A solver complete solver based on Z3

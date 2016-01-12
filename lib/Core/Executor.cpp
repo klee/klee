@@ -219,9 +219,13 @@ namespace {
   NamedSeedMatching("named-seed-matching",
                     cl::desc("Use names to match symbolic objects to inputs."));
 
-  cl::opt<bool>
-  NoInterpolation("no-interpolation",
-                  cl::desc("Disable interpolation for search space reduction"));
+  // We should compile in this option even when SUPPORT_Z3
+  // was undefined to avoid regression test failure.
+  cl::opt<bool> NoInterpolation(
+      "no-interpolation",
+      cl::desc("Disable interpolation for search space reduction. "
+               "Interpolation is enabled by default when Z3 was the solver "
+               "used. This option has no effect when Z3 was not used."));
 
   cl::opt<double>
   MaxStaticForkPct("max-static-fork-pct", cl::init(1.));
@@ -327,23 +331,32 @@ Executor::Executor(const InterpreterOptions &opts,
   }
   else {
     coreSolver = new STPSolver(UseForkedCoreSolver, CoreSolverOptimizeDivides);
+    llvm::errs() << "Starting STPSolver ...\n";
   }
+#elif SUPPORT_STP
+
+#ifdef SUPPORT_Z3
+  switch (SelectSolver) {
+  case SOLVER_STP:
+    coreSolver = new STPSolver(UseForkedCoreSolver, CoreSolverOptimizeDivides);
+    llvm::errs() << "Starting STPSolver ...\n";
+    break;
+  case SOLVER_Z3:
+    coreSolver = new Z3Solver();
+    llvm::errs() << "Starting Z3Solver ...\n";
+    break;
+  default:
+    assert(false);
+    break;
+  };
 #else
-  switch (selectSolver) {
-  	  	case SOLVER_STP:
-			#ifndef SUPPORT_Z3
-  			coreSolver = new STPSolver(UseForkedCoreSolver, CoreSolverOptimizeDivides);
-  		    break;
-			#endif /* SUPPORT_Z3 */
-  		case SOLVER_Z3:
-			#ifdef SUPPORT_Z3
-  			coreSolver = new Z3Solver();
-  			break;
-			#endif /* SUPPORT_Z3 */
-  		default:
-  			assert(false);
-  			break;
-  	};
+  coreSolver = new STPSolver(UseForkedCoreSolver, CoreSolverOptimizeDivides);
+  llvm::errs() << "Starting STPSolver ...\n";
+#endif /* SUPPORT_Z3 */
+
+#elif SUPPORT_Z3
+  coreSolver = new Z3Solver();
+  llvm::errs() << "Starting Z3Solver ...\n";
 #endif /* SUPPORT_METASMT */
   
    
@@ -355,13 +368,23 @@ Executor::Executor(const InterpreterOptions &opts,
                          interpreterHandler->getOutputFilename(SOLVER_QUERIES_PC_FILE_NAME));
 
 #ifdef SUPPORT_Z3
-  // In case interpolation is enabled with Z3 solver,
-  // we should not simplify the constraints before
-  // submitting them to the solver.
+// In case interpolation is enabled with Z3 solver,
+// we should not simplify the constraints before
+// submitting them to the solver.
+#ifdef SUPPORT_STP
+  if (SelectSolver == SOLVER_Z3) {
+    this->solver = new TimingSolver(
+        solver, NoInterpolation ? EqualitySubstitution : false);
+  } else {
+    this->solver = new TimingSolver(solver, EqualitySubstitution);
+  }
+#else
   this->solver = new TimingSolver(solver, NoInterpolation? EqualitySubstitution : false);
+#endif /* SUPPORT_STP */
+
 #else
   this->solver = new TimingSolver(solver, EqualitySubstitution);
-#endif
+#endif /* SUPPORT_Z3 */
 
   memory = new MemoryManager(&arrayCache);
 }
@@ -672,7 +695,11 @@ void Executor::branch(ExecutionState &state,
       es->ptreeNode = res.second;
 
 #ifdef SUPPORT_Z3
-      if (!NoInterpolation) {
+      if (!NoInterpolation
+#ifdef SUPPORT_STP
+          && SelectSolver == SOLVER_Z3
+#endif
+          ) {
         std::pair<ITreeNode *, ITreeNode *> ires =
 	  interpTree->split(es->itreeNode, ns, es);
         ns->itreeNode = ires.first;
@@ -880,7 +907,11 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     }
 
 #ifdef SUPPORT_Z3
-    if (!NoInterpolation) {
+    if (!NoInterpolation
+#ifdef SUPPORT_STP
+        && SelectSolver == SOLVER_Z3
+#endif
+        ) {
       // Validity proof succeeded of a query: antecedent -> consequent.
       // We then extract the unsatisfiability core of antecedent and not
       // consequent as the Craig interpolant.
@@ -897,7 +928,11 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     }
 
 #ifdef SUPPORT_Z3
-    if (!NoInterpolation) {
+    if (!NoInterpolation
+#ifdef SUPPORT_STP
+        && SelectSolver == SOLVER_Z3
+#endif
+        ) {
       // Falsity proof succeeded of a query: antecedent -> consequent,
       // which means that antecedent -> not(consequent) is valid. In this
       // case also we extract the unsat core of the proof
@@ -972,7 +1007,11 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     }
 
 #ifdef SUPPORT_Z3
-    if (!NoInterpolation) {
+    if (!NoInterpolation
+#ifdef SUPPORT_STP
+        && SelectSolver == SOLVER_Z3
+#endif
+        ) {
       std::pair<ITreeNode *, ITreeNode *> ires =
 	  interpTree->split(current.itreeNode, falseState, trueState);
       falseState->itreeNode = ires.first;
@@ -2651,8 +2690,13 @@ void Executor::updateStates(ExecutionState *current) {
       seedMap.erase(it3);
     processTree->remove(es->ptreeNode);
 #ifdef SUPPORT_Z3
-    if (!NoInterpolation)
+    if (!NoInterpolation
+#ifdef SUPPORT_STP
+        && SelectSolver == SOLVER_Z3
+#endif
+        ) {
       interpTree->remove(es->itreeNode);
+    }
 #endif
     delete es;
   }
@@ -2803,7 +2847,11 @@ void Executor::run(ExecutionState &initialState) {
     ExecutionState &state = searcher->selectState();
 
 #ifdef SUPPORT_Z3
-    if (!NoInterpolation) {
+    if (!NoInterpolation
+#ifdef SUPPORT_STP
+        && SelectSolver == SOLVER_Z3
+#endif
+        ) {
       // We synchronize the node id to that of the state. The node id
       // is set only when it was the address of the first instruction
       // in the node.
@@ -2823,8 +2871,12 @@ void Executor::run(ExecutionState &initialState) {
     }
 
     if (!NoInterpolation &&
-	interpTree->checkCurrentStateSubsumption(solver, state, coreSolverTimeout)) {
-	terminateStateOnSubsumption(state);
+#ifdef SUPPORT_STP
+        SelectSolver == SOLVER_Z3 &&
+#endif
+        interpTree->checkCurrentStateSubsumption(solver, state,
+                                                 coreSolverTimeout)) {
+      terminateStateOnSubsumption(state);
     } else
 #endif
       {
@@ -2960,8 +3012,12 @@ void Executor::terminateState(ExecutionState &state) {
     addedStates.erase(it);
     processTree->remove(state.ptreeNode);
 #ifdef SUPPORT_Z3
-    if (!NoInterpolation) {
-	interpTree->remove(state.itreeNode);
+    if (!NoInterpolation
+#ifdef SUPPORT_STP
+        && SelectSolver == SOLVER_Z3
+#endif
+        ) {
+      interpTree->remove(state.itreeNode);
     }
 #endif
     delete &state;
@@ -2970,8 +3026,13 @@ void Executor::terminateState(ExecutionState &state) {
 
 void Executor::terminateStateOnSubsumption(ExecutionState &state) {
 #ifdef SUPPORT_Z3
+#ifndef SUPPORT_STP
   assert (!NoInterpolation);
-#endif
+#else
+  assert(!NoInterpolation && SelectSolver == SOLVER_Z3);
+#endif /* SUPPORT_STP */
+#endif /* SUPPORT_Z3 */
+
   // Implementationwise, basically the same as terminateStateEarly method,
   // but with different statistics functions called, and empty error
   // message as this is not an error.
@@ -3699,7 +3760,11 @@ void Executor::runFunctionAsMain(Function *f,
   state->ptreeNode = processTree->root;
 
 #ifdef SUPPORT_Z3
-  if (!NoInterpolation) {
+  if (!NoInterpolation
+#ifdef SUPPORT_STP
+      && SelectSolver == SOLVER_Z3
+#endif
+      ) {
     interpTree = new ITree(state);//added by Felicia
   }
 #endif
@@ -3709,7 +3774,11 @@ void Executor::runFunctionAsMain(Function *f,
   processTree = 0;
 
 #ifdef SUPPORT_Z3
-  if (!NoInterpolation) {
+  if (!NoInterpolation
+#ifdef SUPPORT_STP
+      && SelectSolver == SOLVER_Z3
+#endif
+      ) {
     delete interpTree;
     interpTree = 0;
   }

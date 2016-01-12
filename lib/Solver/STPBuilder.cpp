@@ -16,7 +16,7 @@
 
 #include "ConstantDivision.h"
 
-#ifndef SUPPORT_Z3
+#ifdef SUPPORT_STP
 
 #include "llvm/Support/CommandLine.h"
 
@@ -905,4 +905,4 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
   }
 }
 
-#endif /* SUPPORT_Z3 */
+#endif /* SUPPORT_STP */
