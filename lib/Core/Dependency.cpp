@@ -390,16 +390,22 @@ unsigned long long VersionedAllocation::nextVersion = 0;
   }
 
   std::vector<VersionedValue *>
-  Dependency::populateArgumentValuesList(llvm::CallInst *site) {
+  Dependency::populateArgumentValuesList(llvm::CallInst *site,
+                                         std::vector<ref<Expr> > &arguments) {
     unsigned numArgs = site->getCalledFunction()->arg_size();
     std::vector<VersionedValue *> argumentValuesList;
     for (unsigned i = numArgs; i > 0;) {
       llvm::Value *argOperand = site->getArgOperand(--i);
       VersionedValue *latestValue = getLatestValue(argOperand);
 
-      // Here latestValue can be NULL, which means there was no source
-      // dependency information for this node, e.g., a constant.
-      argumentValuesList.push_back(latestValue);
+      if (latestValue)
+        argumentValuesList.push_back(latestValue);
+      else {
+        // This is for the case when latestValue was NULL, which means there is
+        // no source dependency information for this node, e.g., a constant.
+        argumentValuesList.push_back(
+            new VersionedValue(argOperand, arguments[i]));
+      }
     }
     return argumentValuesList;
   }
@@ -651,7 +657,8 @@ unsigned long long VersionedAllocation::nextVersion = 0;
 
   }
 
-  void Dependency::bindCallArguments(llvm::Instruction *instr) {
+  void Dependency::bindCallArguments(llvm::Instruction *instr,
+                                     std::vector<ref<Expr> > &arguments) {
     llvm::CallInst *site = llvm::dyn_cast<llvm::CallInst>(instr);
 
     if (!site)
@@ -664,7 +671,7 @@ unsigned long long VersionedAllocation::nextVersion = 0;
     if (!callee)
       return;
 
-    argumentValuesList = populateArgumentValuesList(site);
+    argumentValuesList = populateArgumentValuesList(site, arguments);
     unsigned index = 0;
     for (llvm::Function::ArgumentListType::iterator
              it = callee->getArgumentList().begin(),

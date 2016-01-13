@@ -70,7 +70,7 @@ StackFrame::~StackFrame() {
 ExecutionState::ExecutionState(KFunction *kf)
     : pc(kf->instructions), prevPC(pc), queryCost(0.), weight(1), depth(0),
       instsSinceCovNew(0), coveredNew(false), forkDisabled(false), ptreeNode(0),
-      itreeNode(new ITreeNode(0)) {
+      itreeNode(0) {
   pushFrame(0, kf);
 }
 
@@ -143,7 +143,6 @@ ExecutionState *ExecutionState::branch() {
 
 void ExecutionState::pushFrame(KInstIterator caller, KFunction *kf) {
   stack.push_back(StackFrame(caller,kf));
-  itreeNode->pushAbstractDependencyFrame(prevPC->inst);
 }
 
 void ExecutionState::popFrame(KInstruction *ki, ref<Expr> returnValue) {

@@ -173,8 +173,13 @@ void SubsumptionTableEntry::print(llvm::raw_ostream &stream) const {
   stream << "]\n";
 }
 
-ITree::ITree(ExecutionState *_root)
-    : currentINode(_root->itreeNode), root(_root->itreeNode) {}
+ITree::ITree(ExecutionState *_root) {
+  currentINode = 0;
+  if (!_root->itreeNode) {
+    currentINode = new ITreeNode(0);
+  }
+  root = currentINode;
+}
 
 ITree::~ITree() {}
 
@@ -388,8 +393,9 @@ void ITreeNode::executeAbstractDependency(llvm::Instruction *instr,
   dependency->execute(instr, value);
 }
 
-void ITreeNode::pushAbstractDependencyFrame(llvm::Instruction *site) {
-  dependency->bindCallArguments(site);
+void ITreeNode::bindCallArguments(llvm::Instruction *site,
+                                  std::vector<ref<Expr> > &arguments) {
+  dependency->bindCallArguments(site, arguments);
 }
 
 void ITreeNode::popAbstractDependencyFrame(llvm::CallInst *site,

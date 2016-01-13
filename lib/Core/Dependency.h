@@ -224,7 +224,8 @@ class Allocation {
     allFlowSourcesEnds(VersionedValue *target) const;
 
     std::vector<VersionedValue *>
-    populateArgumentValuesList(llvm::CallInst *site);
+    populateArgumentValuesList(llvm::CallInst *site,
+                               std::vector<ref<Expr> > &arguments);
 
     /// @brief Construct dependency due to load instruction
     bool buildLoadDependency(llvm::Value *fromValue, llvm::Value *toValue,
@@ -241,7 +242,8 @@ class Allocation {
 
     VersionedValue *getLatestValue(llvm::Value *value) const;
 
-    void bindCallArguments(llvm::Instruction *instr);
+    void bindCallArguments(llvm::Instruction *instr,
+                           std::vector<ref<Expr> > &arguments);
 
     void bindReturnValue(llvm::CallInst *site, llvm::Instruction *inst,
                          ref<Expr> returnValue);

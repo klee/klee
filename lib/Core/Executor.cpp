@@ -1426,6 +1426,9 @@ void Executor::executeCall(ExecutionState &state,
     unsigned numFormals = f->arg_size();
     for (unsigned i=0; i<numFormals; ++i) 
       bindArgument(kf, i, state, arguments[i]);
+
+    // We bind the abstract dependency call arguments
+    state.itreeNode->bindCallArguments(state.prevPC->inst, arguments);
   }
 }
 
@@ -4035,6 +4038,7 @@ void Executor::runFunctionAsMain(Function *f,
 #endif
       ) {
     interpTree = new ITree(state);//added by Felicia
+    state->itreeNode = interpTree->root;
   }
 #endif
 
