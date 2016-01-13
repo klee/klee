@@ -68,7 +68,7 @@ std::vector< ref<Expr> > PathCondition::packInterpolant() const {
   return res;
 }
 
-std::vector< ref<Expr> > PathCondition::pullInterpolant() const {
+std::vector< ref<Expr> > PathCondition::pullInterpolant() {
   std::vector<PathCondition *> pathConditions;
   for (PathCondition *it = this; it != 0; it = it->tail) {
       if (it->inInterpolant)

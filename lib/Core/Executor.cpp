@@ -3264,14 +3264,13 @@ void Executor::terminateState(ExecutionState &state) {
   }
 }
 
-void Executor::terminateStateOnSubsumption(ExecutionState &state) {
 #ifdef SUPPORT_Z3
+void Executor::terminateStateOnSubsumption(ExecutionState &state) {
 #ifndef SUPPORT_STP
   assert (!NoInterpolation);
 #else
   assert(!NoInterpolation && SelectSolver == SOLVER_Z3);
 #endif /* SUPPORT_STP */
-#endif /* SUPPORT_Z3 */
 
   // Implementationwise, basically the same as terminateStateEarly method,
   // but with different statistics functions called, and empty error
@@ -3284,6 +3283,8 @@ void Executor::terminateStateOnSubsumption(ExecutionState &state) {
   }
   terminateState(state);
 }
+#endif /* SUPPORT_Z3 */
+
 void Executor::terminateStateEarly(ExecutionState &state, 
                                    const Twine &message) {
   interpreterHandler->incEarlyTermination();

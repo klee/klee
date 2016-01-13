@@ -54,7 +54,7 @@ namespace klee {
 
     std::vector< ref<Expr> > packInterpolant() const;
 
-    std::vector< ref<Expr> > pullInterpolant() const;
+    std::vector< ref<Expr> > pullInterpolant();
 
     void dump();
 
