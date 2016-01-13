@@ -88,7 +88,7 @@ ExecutionState::~ExecutionState() {
   }
 
   while (!stack.empty())
-    popFrame(0);
+    popFrame(0, ConstantExpr::alloc(0, Expr::Bool));
 }
 
 ExecutionState::ExecutionState(const ExecutionState& state):
@@ -146,7 +146,7 @@ void ExecutionState::pushFrame(KInstIterator caller, KFunction *kf) {
   itreeNode->pushAbstractDependencyFrame(prevPC->inst);
 }
 
-void ExecutionState::popFrame(KInstruction *ki) {
+void ExecutionState::popFrame(KInstruction *ki, ref<Expr> returnValue) {
   StackFrame &sf = stack.back();
   llvm::CallInst *site =
       (sf.caller ? llvm::dyn_cast<CallInst>(sf.caller->inst) : 0);
@@ -156,7 +156,7 @@ void ExecutionState::popFrame(KInstruction *ki) {
   stack.pop_back();
 
   if (site && ki)
-    itreeNode->popAbstractDependencyFrame(site, ki->inst);
+    itreeNode->popAbstractDependencyFrame(site, ki->inst, returnValue);
 }
 
 void ExecutionState::addSymbolic(const MemoryObject *mo, const Array *array) { 

@@ -385,7 +385,7 @@ bool ITreeNode::introducesMarkedConstraint() {
 
 void ITreeNode::executeAbstractDependency(llvm::Instruction *instr,
                                           ref<Expr> value) {
-  dependency->execute(instr);
+  dependency->execute(instr, value);
 }
 
 void ITreeNode::pushAbstractDependencyFrame(llvm::Instruction *site) {
@@ -393,11 +393,12 @@ void ITreeNode::pushAbstractDependencyFrame(llvm::Instruction *site) {
 }
 
 void ITreeNode::popAbstractDependencyFrame(llvm::CallInst *site,
-                                           llvm::Instruction *inst) {
+                                           llvm::Instruction *inst,
+                                           ref<Expr> returnValue) {
   // TODO: This is probably where we should simplify
   // the dependency graph by removing callee values.
 
-  dependency->bindReturnValue(site, inst);
+  dependency->bindReturnValue(site, inst, returnValue);
 }
 
 void ITreeNode::dump() const {

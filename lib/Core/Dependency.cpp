@@ -80,14 +80,17 @@ unsigned long long VersionedAllocation::nextVersion = 0;
 
   unsigned long long VersionedValue::nextVersion = 0;
 
-  VersionedValue::VersionedValue(llvm::Value *value)
-      : value(value), version(nextVersion++), inInterpolant(false) {}
+  VersionedValue::VersionedValue(llvm::Value *value, ref<Expr> valueExpr)
+      : value(value), valueExpr(valueExpr), version(nextVersion++),
+        inInterpolant(false) {}
 
   VersionedValue::~VersionedValue() {}
 
   bool VersionedValue::hasValue(llvm::Value *value) const {
     return this->value == value;
   }
+
+  ref<Expr> VersionedValue::getExpression() const { return valueExpr; }
 
   void VersionedValue::includeInInterpolant() {
     inInterpolant = true;
@@ -103,7 +106,8 @@ unsigned long long VersionedAllocation::nextVersion = 0;
       stream << "(I)";
     stream << "[";
     value->print(stream);
-    stream << "#" << version;
+    stream << "#" << version << ":";
+    valueExpr->print(stream);
     stream << "]";
   }
 
@@ -173,8 +177,9 @@ unsigned long long VersionedAllocation::nextVersion = 0;
 
   /**/
 
-  VersionedValue *Dependency::getNewValue(llvm::Value *value) {
-    VersionedValue *ret = new VersionedValue(value);
+  VersionedValue *Dependency::getNewVersionedValue(llvm::Value *value,
+                                                   ref<Expr> valueExpr) {
+    VersionedValue *ret = new VersionedValue(value, valueExpr);
     valuesList.push_back(ret);
     return ret;
   }
@@ -391,14 +396,17 @@ unsigned long long VersionedAllocation::nextVersion = 0;
     for (unsigned i = numArgs; i > 0;) {
       llvm::Value *argOperand = site->getArgOperand(--i);
       VersionedValue *latestValue = getLatestValue(argOperand);
-      argumentValuesList.push_back(latestValue ? latestValue
-                                               : getNewValue(argOperand));
+
+      // Here latestValue can be NULL, which means there was no source
+      // dependency information for this node, e.g., a constant.
+      argumentValuesList.push_back(latestValue);
     }
     return argumentValuesList;
   }
 
   bool Dependency::buildLoadDependency(llvm::Value *fromValue,
-                                       llvm::Value *toValue) {
+                                       llvm::Value *toValue,
+                                       ref<Expr> toValueExpr) {
     VersionedValue *arg = getLatestValue(fromValue);
     if (!arg)
       return false;
@@ -419,16 +427,17 @@ unsigned long long VersionedAllocation::nextVersion = 0;
               for (std::vector<Allocation *>::iterator it2 = alloc2.begin(),
                                                        it2End = alloc2.end();
                    it2 != it2End; ++it2) {
-                addPointerEquality(getNewValue(toValue), *it2);
+                addPointerEquality(getNewVersionedValue(toValue, toValueExpr),
+                                   *it2);
               }
             } else {
-              addDependency(*it1, getNewValue(toValue));
+              addDependency(*it1, getNewVersionedValue(toValue, toValueExpr));
             }
           }
         } else {
           // We could not find the stored value, create
           // a new one.
-          updateStore(*it0, getNewValue(toValue));
+          updateStore(*it0, getNewVersionedValue(toValue, toValueExpr));
         }
       }
     } else {
@@ -453,7 +462,7 @@ unsigned long long VersionedAllocation::nextVersion = 0;
 
   Dependency *Dependency::cdr() const { return parentDependency; }
 
-  void Dependency::execute(llvm::Instruction *i) {
+  void Dependency::execute(llvm::Instruction *i, ref<Expr> valueExpr) {
     // The basic design principle that we need to be careful here
     // is that we should not store quadratic-sized structures in
     // the database of computed relations, e.g., not storing the
@@ -468,20 +477,22 @@ unsigned long long VersionedAllocation::nextVersion = 0;
 
     switch (opcode) {
       case llvm::Instruction::Alloca: {
-        addPointerEquality(getNewValue(i), getNewAllocation(i));
+        addPointerEquality(getNewVersionedValue(i, valueExpr),
+                           getNewAllocation(i));
         break;
       }
       case llvm::Instruction::Load: {
 	if (isEnvironmentAllocation(i)) {
 	    // The load corresponding to a load of the environment address
 	    // that was never allocated within this program.
-	    addPointerEquality(getNewValue(i), getNewAllocation(i));
-	    break;
-	}
+          addPointerEquality(getNewVersionedValue(i, valueExpr),
+                             getNewAllocation(i));
+          break;
+        }
 
-        if (!buildLoadDependency(i->getOperand(0), i)) {
+        if (!buildLoadDependency(i->getOperand(0), i, valueExpr)) {
           Allocation *alloc = getNewAllocation(i->getOperand(0));
-          updateStore(alloc, getNewValue(i));
+          updateStore(alloc, getNewVersionedValue(i, valueExpr));
         }
         break;
       }
@@ -493,7 +504,7 @@ unsigned long long VersionedAllocation::nextVersion = 0;
         // If there was no dependency found, we should create
         // a new value
         if (!dataArg)
-          dataArg = getNewValue(i->getOperand(0));
+          dataArg = getNewVersionedValue(i->getOperand(0), valueExpr);
 
         for (std::vector<Allocation *>::iterator it = addressList.begin(),
                                                  itEnd = addressList.end();
@@ -510,7 +521,7 @@ unsigned long long VersionedAllocation::nextVersion = 0;
             a = getNewAllocation(i->getOperand(0));
           // We simply propagate the pointer to the current
           // value field-insensitively.
-          addPointerEquality(getNewValue(i), a);
+          addPointerEquality(getNewVersionedValue(i, valueExpr), a);
           break;
         }
 
@@ -520,7 +531,7 @@ unsigned long long VersionedAllocation::nextVersion = 0;
         std::vector<Allocation *> a = resolveAllocationTransitively(arg);
 
         if (a.size() > 0) {
-          VersionedValue *newValue = getNewValue(i);
+          VersionedValue *newValue = getNewVersionedValue(i, valueExpr);
           for (std::vector<Allocation *>::iterator it = a.begin(),
                                                    itEnd = a.end();
                it != itEnd; ++it) {
@@ -531,7 +542,7 @@ unsigned long long VersionedAllocation::nextVersion = 0;
           // simply add flow dependency
           std::vector<VersionedValue *> vec = oneStepFlowSources(arg);
           if (vec.size() > 0) {
-            VersionedValue *newValue = getNewValue(i);
+            VersionedValue *newValue = getNewVersionedValue(i, valueExpr);
             for (std::vector<VersionedValue *>::iterator it = vec.begin(),
                                                          itEnd = vec.end();
                  it != itEnd; ++it) {
@@ -557,7 +568,7 @@ unsigned long long VersionedAllocation::nextVersion = 0;
 	{
 	  VersionedValue *val = getLatestValue(i->getOperand(0));
 	  if (val) {
-            addDependency(val, getNewValue(i));
+            addDependency(val, getNewVersionedValue(i, valueExpr));
           } else if (!llvm::isa<llvm::Constant>(i->getOperand(0)))
               // Constants would kill dependencies, the remaining is for
               // cases that may actually require dependencies.
@@ -572,14 +583,14 @@ unsigned long long VersionedAllocation::nextVersion = 0;
         VersionedValue *rhs = getLatestValue(i->getOperand(2));
         VersionedValue *newValue = 0;
         if (lhs) {
-          newValue = getNewValue(i);
+          newValue = getNewVersionedValue(i, valueExpr);
           addDependency(lhs, newValue);
         }
         if (rhs) {
           if (newValue)
             addDependency(rhs, newValue);
           else
-            addDependency(rhs, getNewValue(i));
+            addDependency(rhs, getNewVersionedValue(i, valueExpr));
         }
         break;
       }
@@ -609,17 +620,17 @@ unsigned long long VersionedAllocation::nextVersion = 0;
 	  VersionedValue *rhs = getLatestValue(i->getOperand(1));
 	  VersionedValue *newValue = 0;
 	  if (lhs) {
-	      newValue = getNewValue(i);
-	      addDependency(lhs, newValue);
-	  }
-	  if (rhs) {
-	      if (newValue)
-		addDependency(rhs, newValue);
-	      else
-		addDependency(rhs, getNewValue(i));
-	  }
-	  break;
-	}
+            newValue = getNewVersionedValue(i, valueExpr);
+            addDependency(lhs, newValue);
+          }
+          if (rhs) {
+            if (newValue)
+              addDependency(rhs, newValue);
+            else
+              addDependency(rhs, getNewVersionedValue(i, valueExpr));
+          }
+          break;
+      }
       case llvm::Instruction::PHI:
 	{
 	  llvm::PHINode *phi = llvm::dyn_cast<llvm::PHINode>(i);
@@ -628,12 +639,12 @@ unsigned long long VersionedAllocation::nextVersion = 0;
 	      if (val) {
 		  // We only add dependency for a single value that we could
 		  // find, as this was a single execution path.
-		  addDependency(val, getNewValue(i));
-		  break;
-	      }
-	  }
-	  break;
-	}
+                addDependency(val, getNewVersionedValue(i, valueExpr));
+                break;
+              }
+          }
+          break;
+      }
       default:
 	break;
     }
@@ -659,19 +670,24 @@ unsigned long long VersionedAllocation::nextVersion = 0;
              it = callee->getArgumentList().begin(),
              itEnd = callee->getArgumentList().end();
          it != itEnd; ++it) {
-      addDependency(argumentValuesList.back(), getNewValue(it));
+      if (argumentValuesList.back()) {
+        addDependency(argumentValuesList.back(),
+                      getNewVersionedValue(
+                          it, argumentValuesList.back()->getExpression()));
+      }
       argumentValuesList.pop_back();
       ++index;
     }
   }
 
   void Dependency::bindReturnValue(llvm::CallInst *site,
-                                   llvm::Instruction *inst) {
+                                   llvm::Instruction *inst,
+                                   ref<Expr> returnValue) {
     llvm::ReturnInst *retInst = llvm::dyn_cast<llvm::ReturnInst>(inst);
     if (site && retInst) {
       VersionedValue *value = getLatestValue(retInst->getReturnValue());
       if (value)
-        addDependency(value, getNewValue(site));
+        addDependency(value, getNewVersionedValue(site, returnValue));
     }
   }
 

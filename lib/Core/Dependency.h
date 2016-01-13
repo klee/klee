@@ -2,6 +2,7 @@
 #ifndef KLEE_DEPENDENCY_H
 #define KLEE_DEPENDENCY_H
 
+#include "AddressSpace.h"
 #include "klee/Config/Version.h"
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
@@ -79,17 +80,22 @@ class Allocation {
     static unsigned long long nextVersion;
 
     llvm::Value *value;
+
+    ref<Expr> valueExpr;
+
     unsigned long long version;
 
     /// @brief to indicate if any unsatisfiability core
     /// depends on this value
     bool inInterpolant;
   public:
-    VersionedValue(llvm::Value *value);
+    VersionedValue(llvm::Value *value, ref<Expr> valueExpr);
 
     ~VersionedValue();
 
     bool hasValue(llvm::Value *value) const;
+
+    ref<Expr> getExpression() const;
 
     void includeInInterpolant();
 
@@ -183,7 +189,8 @@ class Allocation {
 
     std::vector<Allocation *> allocationsList;
 
-    VersionedValue* getNewValue(llvm::Value *value);
+    VersionedValue *getNewVersionedValue(llvm::Value *value,
+                                         ref<Expr> valueExpr);
 
     Allocation *getNewAllocation(llvm::Value *allocation);
 
@@ -220,7 +227,8 @@ class Allocation {
     populateArgumentValuesList(llvm::CallInst *site);
 
     /// @brief Construct dependency due to load instruction
-    bool buildLoadDependency(llvm::Value *fromValue, llvm::Value *toValue);
+    bool buildLoadDependency(llvm::Value *fromValue, llvm::Value *toValue,
+                             ref<Expr> toValueExpr);
 
   public:
     Dependency(Dependency *prev);
@@ -229,13 +237,14 @@ class Allocation {
 
     Dependency *cdr() const;
 
-    void execute(llvm::Instruction *instr);
+    void execute(llvm::Instruction *instr, ref<Expr> valueExpr);
 
     VersionedValue *getLatestValue(llvm::Value *value) const;
 
     void bindCallArguments(llvm::Instruction *instr);
 
-    void bindReturnValue(llvm::CallInst *site, llvm::Instruction *inst);
+    void bindReturnValue(llvm::CallInst *site, llvm::Instruction *inst,
+                         ref<Expr> returnValue);
 
     void markAllValues(VersionedValue *value);
 

@@ -178,7 +178,8 @@ namespace klee {
     void pushAbstractDependencyFrame(llvm::Instruction *site);
 
     void popAbstractDependencyFrame(llvm::CallInst *site,
-                                    llvm::Instruction *inst);
+                                    llvm::Instruction *inst,
+                                    ref<Expr> returnValue);
 
   private:
     ITreeNode(ITreeNode *_parent);

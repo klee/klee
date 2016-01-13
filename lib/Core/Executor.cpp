@@ -1541,7 +1541,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       assert(!caller && "caller set on initial stack frame");
       terminateStateOnExit(state);
     } else {
-      state.popFrame(ki);
+      state.popFrame(ki, result);
 
       if (statsTracker)
         statsTracker->framePopped(state);
@@ -1596,7 +1596,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   case Instruction::Unwind: {
     for (;;) {
       KInstruction *kcaller = state.stack.back().caller;
-      state.popFrame();
+      state.popFrame(ki, ConstantExpr::alloc(0, Expr::Bool));
 
       if (statsTracker)
         statsTracker->framePopped(state);
