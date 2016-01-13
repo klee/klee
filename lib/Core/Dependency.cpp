@@ -146,6 +146,10 @@ unsigned long long VersionedAllocation::nextVersion = 0;
     return this->value == value ? this->allocation : 0;
   }
 
+  Allocation *StorageCell::getAllocation() const {
+    return this->allocation;
+  }
+
   void StorageCell::print(llvm::raw_ostream& stream) const {
     stream << "[";
     allocation->print(stream);
@@ -194,9 +198,61 @@ unsigned long long VersionedAllocation::nextVersion = 0;
       }
     } else {
 	ret = new VersionedAllocation(allocation);
+	if (!ret->isComposite()) {
+	    // We register noncomposites in a special list,
+	    // as these are the ones that are truly versioned.
+	    // Composites are not truly versioned as destructive
+	    // updates don't apply to them.
+	    newVersionedAllocations.push_back(allocation);
+	}
 	allocationsList.push_back(ret);
     }
+
     return ret;
+  }
+
+  std::vector<llvm::Value *> Dependency::getAllVersionedAllocations() const {
+    std::vector<llvm::Value *> allAlloc = newVersionedAllocations;
+    if (parentDependency) {
+	       std::vector<llvm::Value *> parentVersionedAllocations =
+		   parentDependency->getAllVersionedAllocations();
+	       allAlloc.insert(allAlloc.begin(), parentVersionedAllocations.begin(),
+	                  parentVersionedAllocations.end());
+    }
+    return allAlloc;
+  }
+
+  std::vector< std::pair<llvm::Value *, ref<Expr> > > Dependency::getLatestCoreExpressions() const {
+    std::vector<llvm::Value *> allAlloc = getAllVersionedAllocations();
+    std::vector< std::pair<llvm::Value *, ref<Expr> > > ret;
+
+    for (std::vector<llvm::Value *>::iterator it0 = allAlloc.begin(),
+	it0End = allAlloc.end(); it0 != it0End; ++it0) {
+	std::vector<VersionedValue *> stored = stores(getLatestAllocation(*it0));
+
+	for (std::vector<VersionedValue *>::iterator it1 = stored.begin(),
+	    it1End = stored.end(); it1 != it1End; ++it1) {
+	    if ((*it1)->valueInInterpolant()) {
+		std::pair<llvm::Value *, ref<Expr> > newPair((*it0), (*it1)->getExpression());
+		ret.push_back(newPair);
+	    }
+	}
+
+    }
+    return ret;
+  }
+
+  std::vector< std::pair<llvm::Value *, std::vector<ref<Expr> > > >
+  Dependency::getCompositeCoreExpressions() const {
+    std::vector<VersionedValue *> values;
+
+    for (std::vector<StorageCell *>::const_iterator it = storesList.begin(),
+	itEnd = storesList.end(); it != itEnd; ++it) {
+	Allocation *alloc = (*it)->getAllocation();
+	if (alloc->isComposite()) {
+	    // stores(alloc);
+	}
+    }
   }
 
   VersionedValue *Dependency::getLatestValue(llvm::Value *value) const {

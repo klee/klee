@@ -142,6 +142,8 @@ class Allocation {
 
     Allocation *storageOf(VersionedValue *value) const;
 
+    Allocation *getAllocation() const;
+
     void print(llvm::raw_ostream& stream) const;
 
     void dump() const {
@@ -189,10 +191,18 @@ class Allocation {
 
     std::vector<Allocation *> allocationsList;
 
+    std::vector<llvm::Value *> newVersionedAllocations;
+
     VersionedValue *getNewVersionedValue(llvm::Value *value,
                                          ref<Expr> valueExpr);
 
     Allocation *getNewAllocation(llvm::Value *allocation);
+
+    std::vector<llvm::Value *> getAllVersionedAllocations() const;
+
+    std::vector< std::pair<llvm::Value *, ref<Expr> > > getLatestCoreExpressions() const;
+
+    std::vector< std::pair<llvm::Value *, std::vector<ref<Expr> > > > getCompositeCoreExpressions() const;
 
     Allocation *getLatestAllocation(llvm::Value *allocation) const;
 
