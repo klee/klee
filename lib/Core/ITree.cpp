@@ -274,8 +274,9 @@ void ITree::markPathCondition(ExecutionState &state, TimingSolver *solver) {
   }
 }
 
-void ITree::executeAbstractDependency(llvm::Instruction *instr) {
-  currentINode->executeAbstractDependency(instr);
+void ITree::executeAbstractDependency(llvm::Instruction *instr,
+                                      ref<Expr> value) {
+  currentINode->executeAbstractDependency(instr, value);
 }
 
 void ITree::printNode(llvm::raw_ostream& stream, ITreeNode *n, std::string edges) {
@@ -382,7 +383,8 @@ bool ITreeNode::introducesMarkedConstraint() {
   return false;
 }
 
-void ITreeNode::executeAbstractDependency(llvm::Instruction *instr) {
+void ITreeNode::executeAbstractDependency(llvm::Instruction *instr,
+                                          ref<Expr> value) {
   dependency->execute(instr);
 }
 

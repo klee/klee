@@ -125,7 +125,7 @@ namespace klee {
 
     std::pair<ITreeNode *, ITreeNode *> split(ITreeNode *parent, ExecutionState *left, ExecutionState *right);
 
-    void executeAbstractDependency(llvm::Instruction *instr);
+    void executeAbstractDependency(llvm::Instruction *instr, ref<Expr> value);
 
     void print(llvm::raw_ostream &stream);
 
@@ -173,7 +173,7 @@ namespace klee {
 
     bool introducesMarkedConstraint();
 
-    void executeAbstractDependency(llvm::Instruction *instr);
+    void executeAbstractDependency(llvm::Instruction *instr, ref<Expr> value);
 
     void pushAbstractDependencyFrame(llvm::Instruction *site);
 
