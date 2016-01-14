@@ -240,18 +240,21 @@ unsigned long long VersionedAllocation::nextVersion = 0;
     std::vector<llvm::Value *> allAlloc = getAllVersionedAllocations();
     std::vector< std::pair<llvm::Value *, ref<Expr> > > ret;
 
-    for (std::vector<llvm::Value *>::iterator it0 = allAlloc.begin(),
-	it0End = allAlloc.end(); it0 != it0End; ++it0) {
-	std::vector<VersionedValue *> stored = stores(getLatestAllocation(*it0));
+    for (std::vector<llvm::Value *>::iterator allocIter = allAlloc.begin(),
+                                              allocIterEnd = allAlloc.end();
+         allocIter != allocIterEnd; ++allocIter) {
+      std::vector<VersionedValue *> stored =
+          stores(getLatestAllocation(*allocIter));
 
-	for (std::vector<VersionedValue *>::iterator it1 = stored.begin(),
-	    it1End = stored.end(); it1 != it1End; ++it1) {
-	    if ((*it1)->valueInInterpolant()) {
-		std::pair<llvm::Value *, ref<Expr> > newPair((*it0), (*it1)->getExpression());
-		ret.push_back(newPair);
-	    }
-	}
-
+      for (std::vector<VersionedValue *>::iterator valueIter = stored.begin(),
+                                                   valueIterEnd = stored.end();
+           valueIter != valueIterEnd; ++valueIter) {
+        if ((*valueIter)->valueInInterpolant()) {
+          std::pair<llvm::Value *, ref<Expr> > newPair(
+              (*allocIter), (*valueIter)->getExpression());
+          ret.push_back(newPair);
+        }
+      }
     }
     return ret;
   }
@@ -267,27 +270,26 @@ unsigned long long VersionedAllocation::nextVersion = 0;
     return allAlloc;
   }
 
-  std::vector< std::pair<llvm::Value *, std::vector<ref<Expr> > > >
+  std::map<llvm::Value *, std::vector<ref<Expr> > >
   Dependency::getCompositeCoreExpressions() const {
     std::vector<llvm::Value *> allAlloc = getAllCompositeAllocations();
-    std::vector<std::pair<llvm::Value *, std::vector<ref<Expr> > > > ret;
+    std::map<llvm::Value *, std::vector<ref<Expr> > > ret;
 
-    for (std::vector<llvm::Value *>::iterator it0 = allAlloc.begin(),
-                                              it0End = allAlloc.end();
-         it0 != it0End; ++it0) {
-      std::vector<VersionedValue *> stored = stores(getLatestAllocation(*it0));
-      /// XXX
-      for (std::vector<VersionedValue *>::iterator it1 = stored.begin(),
-                                                   it1End = stored.end();
-           it1 != it1End; ++it1) {
-        if ((*it1)->valueInInterpolant()) {
-          std::pair<llvm::Value *, ref<Expr> > newPair((*it0),
-                                                       (*it1)->getExpression());
-          ret.push_back(newPair);
+    for (std::vector<llvm::Value *>::iterator allocIter = allAlloc.begin(),
+                                              allocIterEnd = allAlloc.end();
+         allocIter != allocIterEnd; ++allocIter) {
+      std::vector<VersionedValue *> stored =
+          stores(getLatestAllocation(*allocIter));
+
+      for (std::vector<VersionedValue *>::iterator valueIter = stored.begin(),
+                                                   valueIterEnd = stored.end();
+           valueIter != valueIterEnd; ++valueIter) {
+        if ((*valueIter)->valueInInterpolant()) {
+          std::vector<ref<Expr> > &elemList = ret[*allocIter];
+          elemList.push_back((*valueIter)->getExpression());
         }
       }
     }
-
     return ret;
   }
 

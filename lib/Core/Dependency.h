@@ -221,7 +221,8 @@ class Allocation {
 
     std::vector< std::pair<llvm::Value *, ref<Expr> > > getLatestCoreExpressions() const;
 
-    std::vector< std::pair<llvm::Value *, std::vector<ref<Expr> > > > getCompositeCoreExpressions() const;
+    std::map<llvm::Value *, std::vector<ref<Expr> > >
+    getCompositeCoreExpressions() const;
 
     /// @brief Gets the latest version of the allocation. For unversioned
     /// allocations (e.g., composite and environment), this should return
