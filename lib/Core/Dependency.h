@@ -216,7 +216,7 @@ class Allocation {
 
     std::vector<llvm::Value *> getAllCompositeAllocations() const;
 
-    std::vector< std::pair<llvm::Value *, ref<Expr> > > getLatestCoreExpressions() const;
+    std::map<llvm::Value *, ref<Expr> > getLatestCoreExpressions() const;
 
     std::map<llvm::Value *, std::vector<ref<Expr> > >
     getCompositeCoreExpressions() const;

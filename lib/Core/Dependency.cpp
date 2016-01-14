@@ -238,9 +238,10 @@ VersionedAllocation::VersionedAllocation(llvm::Value *site)
     return allAlloc;
   }
 
-  std::vector< std::pair<llvm::Value *, ref<Expr> > > Dependency::getLatestCoreExpressions() const {
+  std::map<llvm::Value *, ref<Expr> >
+  Dependency::getLatestCoreExpressions() const {
     std::vector<llvm::Value *> allAlloc = getAllVersionedAllocations();
-    std::vector< std::pair<llvm::Value *, ref<Expr> > > ret;
+    std::map<llvm::Value *, ref<Expr> > ret;
 
     for (std::vector<llvm::Value *>::iterator allocIter = allAlloc.begin(),
                                               allocIterEnd = allAlloc.end();
@@ -248,13 +249,14 @@ VersionedAllocation::VersionedAllocation(llvm::Value *site)
       std::vector<VersionedValue *> stored =
           stores(getLatestAllocation(*allocIter));
 
+      // We should only get the latest value and no other
+      assert(stored.size() <= 1);
+
       for (std::vector<VersionedValue *>::iterator valueIter = stored.begin(),
                                                    valueIterEnd = stored.end();
            valueIter != valueIterEnd; ++valueIter) {
         if ((*valueIter)->valueInInterpolant()) {
-          std::pair<llvm::Value *, ref<Expr> > newPair(
-              (*allocIter), (*valueIter)->getExpression());
-          ret.push_back(newPair);
+          ret[*allocIter] = (*valueIter)->getExpression();
         }
       }
     }
