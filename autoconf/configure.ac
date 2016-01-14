@@ -627,7 +627,11 @@ AC_ARG_WITH(metasmt,
 if test X$with_metasmt = X ; then
   ENABLE_METASMT=0
 else
-  metasmt_root=`cd $with_metasmt 2> /dev/null; pwd`
+  metasmt_root=`(cd $with_metasmt && pwd) 2> /dev/null`
+  #Check for bad path
+  if test "X$metasmt_root" = X ; then
+    AC_MSG_ERROR([Cannot access path $with_metasmt passed to --with-metasmt])
+  fi
 
   dnl AC_LANG(C++)
   old_CPPFLAGS="$CPPFLAGS"

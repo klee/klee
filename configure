@@ -5031,7 +5031,11 @@ fi
 if test X$with_metasmt = X ; then
   ENABLE_METASMT=0
 else
-  metasmt_root=`cd $with_metasmt 2> /dev/null; pwd`
+  metasmt_root=`(cd $with_metasmt && pwd) 2> /dev/null`
+  #Check for bad path
+  if test "X$metasmt_root" = X ; then
+    as_fn_error $? "Cannot access path $with_metasmt passed to --with-metasmt" "$LINENO" 5
+  fi
 
     old_CPPFLAGS="$CPPFLAGS"
   old_LDFLAGS="$LDFLAGS"
