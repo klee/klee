@@ -36,28 +36,6 @@ using namespace llvm;
 using namespace klee;
 using namespace klee::expr;
 
-#ifdef ENABLE_METASMT
-
-#include <metaSMT/DirectSolver_Context.hpp>
-#include <metaSMT/backend/Z3_Backend.hpp>
-#include <metaSMT/backend/Boolector.hpp>
-
-#define Expr VCExpr
-#define Type VCType
-#define STP STP_Backend
-#include <metaSMT/backend/STP.hpp>
-#undef Expr
-#undef Type
-#undef STP
-
-using namespace metaSMT;
-using namespace metaSMT::solver;
-
-#endif /* ENABLE_METASMT */
-
-
-
-
 namespace {
   llvm::cl::opt<std::string>
   InputFile(llvm::cl::desc("<input query log>"), llvm::cl::Positional,
