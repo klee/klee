@@ -58,6 +58,7 @@ ADD configure \
     Makefile \
     Makefile.* \
     README.md \
+    MetaSMT.mk \
     TODO.txt \
     ${KLEE_SRC}/
 ADD .travis ${KLEE_SRC}/.travis/
