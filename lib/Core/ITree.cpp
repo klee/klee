@@ -31,6 +31,8 @@ void PathConditionMarker::includeInInterpolant() {
   }
 }
 
+/**/
+
 PathCondition::PathCondition(ref<Expr> &constraint, Dependency *dependency,
                              llvm::Value *condition, PathCondition *prev)
     : constraint(constraint), dependency(dependency),
@@ -68,25 +70,6 @@ std::vector< ref<Expr> > PathCondition::packInterpolant() const {
   return res;
 }
 
-std::vector< ref<Expr> > PathCondition::pullInterpolant() {
-  std::vector<PathCondition *> pathConditions;
-  for (PathCondition *it = this; it != 0; it = it->tail) {
-      if (it->inInterpolant)
-	pathConditions.push_back(it);
-  }
-
-  std::vector< ref<Expr> > res;
-
-  while (pathConditions.size() > 0) {
-      // std::vector<Allocation *> locations = loadedFrom(res.back()->condition);
-      // get the expression of locations, apply each instruction along the way
-      // to the location of this branching point, and store it in res
-      pathConditions.pop_back();
-  }
-
-  return res;
-}
-
 void PathCondition::dump() {
   this->print(llvm::errs());
   llvm::errs() << "\n";
@@ -101,6 +84,8 @@ void PathCondition::print(llvm::raw_ostream& stream) {
   }
   stream << "]";
 }
+
+/**/
 
 SubsumptionTableEntry::SubsumptionTableEntry(ITreeNode *node) :
   nodeId(node->getNodeId()),
@@ -172,6 +157,8 @@ void SubsumptionTableEntry::print(llvm::raw_ostream &stream) const {
   }
   stream << "]\n";
 }
+
+/**/
 
 ITree::ITree(ExecutionState *_root) {
   currentINode = 0;
@@ -319,6 +306,8 @@ void ITree::print(llvm::raw_ostream& stream) {
 void ITree::dump() {
   this->print(llvm::errs());
 }
+
+/**/
 
 ITreeNode::ITreeNode(ITreeNode *_parent)
     : parent(_parent), left(0), right(0), nodeId(0), isSubsumed(false) {
