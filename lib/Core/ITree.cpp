@@ -117,9 +117,9 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
   if (state.itreeNode->getNodeId() == nodeId) {
 
     // TODO: Existential variables not taken into account!
-    std::map<llvm::Value *, std::vector<ref<Expr> > > stateSingletonStore =
+    std::map<llvm::Value *, ref<Expr> > stateSingletonStore =
         state.itreeNode->getLatestCoreExpressions();
-    std::map<llvm::Value *, ref<Expr> > stateCompositeStore =
+    std::map<llvm::Value *, std::vector< ref<Expr> > > stateCompositeStore =
         state.itreeNode->getCompositeCoreExpressions();
 
     ref<Expr> stateEqualityConstraints = ConstantExpr::alloc(1, Expr::Bool);
