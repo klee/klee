@@ -191,24 +191,36 @@ unsigned long long VersionedAllocation::nextVersion = 0;
     return ret;
   }
 
-  Allocation *Dependency::getNewAllocation(llvm::Value *allocation) {
+  Allocation *Dependency::getInitialAllocation(llvm::Value *allocation) {
     Allocation *ret;
     if (isEnvironmentAllocation(allocation)) {
-      ret = getLatestAllocation(allocation);
-      if (!ret) {
 	ret = new EnvironmentAllocation();
 	allocationsList.push_back(ret);
-      }
+        return ret;
     } else if (isCompositeAllocation(allocation)) {
       ret = new CompositeAllocation(allocation);
       allocationsList.push_back(ret);
-    } else {
-	ret = new VersionedAllocation(allocation);
-	allocationsList.push_back(ret);
 
-        // We register noncomposites in a special list,
-        newVersionedAllocations.push_back(allocation);
+      // We register composites in a special list
+      newCompositeAllocations.push_back(allocation);
+      return ret;
     }
+
+    ret = new VersionedAllocation(allocation);
+    allocationsList.push_back(ret);
+
+    // We register noncomposites in a special list,
+    newVersionedAllocations.push_back(allocation);
+    return ret;
+  }
+
+  Allocation *Dependency::getNewAllocationVersion(llvm::Value *allocation) {
+    Allocation *ret = getLatestAllocation(allocation);
+    if (ret && ret->isComposite())
+      return ret;
+
+    if (!ret)
+      return getInitialAllocation(allocation);
 
     return ret;
   }
@@ -244,17 +256,39 @@ unsigned long long VersionedAllocation::nextVersion = 0;
     return ret;
   }
 
+  std::vector<llvm::Value *> Dependency::getAllCompositeAllocations() const {
+    std::vector<llvm::Value *> allAlloc = newCompositeAllocations;
+    if (parentDependency) {
+      std::vector<llvm::Value *> parentVersionedAllocations =
+          parentDependency->getAllVersionedAllocations();
+      allAlloc.insert(allAlloc.begin(), parentVersionedAllocations.begin(),
+                      parentVersionedAllocations.end());
+    }
+    return allAlloc;
+  }
+
   std::vector< std::pair<llvm::Value *, std::vector<ref<Expr> > > >
   Dependency::getCompositeCoreExpressions() const {
-    std::vector<VersionedValue *> values;
+    std::vector<llvm::Value *> allAlloc = getAllCompositeAllocations();
+    std::vector<std::pair<llvm::Value *, std::vector<ref<Expr> > > > ret;
 
-    for (std::vector<StorageCell *>::const_iterator it = storesList.begin(),
-	itEnd = storesList.end(); it != itEnd; ++it) {
-	Allocation *alloc = (*it)->getAllocation();
-	if (alloc->isComposite()) {
-	    // stores(alloc);
-	}
+    for (std::vector<llvm::Value *>::iterator it0 = allAlloc.begin(),
+                                              it0End = allAlloc.end();
+         it0 != it0End; ++it0) {
+      std::vector<VersionedValue *> stored = stores(getLatestAllocation(*it0));
+      /// XXX
+      for (std::vector<VersionedValue *>::iterator it1 = stored.begin(),
+                                                   it1End = stored.end();
+           it1 != it1End; ++it1) {
+        if ((*it1)->valueInInterpolant()) {
+          std::pair<llvm::Value *, ref<Expr> > newPair((*it0),
+                                                       (*it1)->getExpression());
+          ret.push_back(newPair);
+        }
+      }
     }
+
+    return ret;
   }
 
   VersionedValue *Dependency::getLatestValue(llvm::Value *value) const {
@@ -542,7 +576,7 @@ unsigned long long VersionedAllocation::nextVersion = 0;
     switch (opcode) {
       case llvm::Instruction::Alloca: {
         addPointerEquality(getNewVersionedValue(i, valueExpr),
-                           getNewAllocation(i));
+                           getInitialAllocation(i));
         break;
       }
       case llvm::Instruction::Load: {
@@ -550,12 +584,12 @@ unsigned long long VersionedAllocation::nextVersion = 0;
 	    // The load corresponding to a load of the environment address
 	    // that was never allocated within this program.
           addPointerEquality(getNewVersionedValue(i, valueExpr),
-                             getNewAllocation(i));
+                             getNewAllocationVersion(i));
           break;
         }
 
         if (!buildLoadDependency(i->getOperand(0), i, valueExpr)) {
-          Allocation *alloc = getNewAllocation(i->getOperand(0));
+          Allocation *alloc = getInitialAllocation(i->getOperand(0));
           updateStore(alloc, getNewVersionedValue(i, valueExpr));
         }
         break;
@@ -573,7 +607,7 @@ unsigned long long VersionedAllocation::nextVersion = 0;
         for (std::vector<Allocation *>::iterator it = addressList.begin(),
                                                  itEnd = addressList.end();
              it != itEnd; ++it) {
-          updateStore((*it), dataArg);
+          updateStore(getNewAllocationVersion((*it)->getSite()), dataArg);
         }
 
         break;
@@ -582,7 +616,7 @@ unsigned long long VersionedAllocation::nextVersion = 0;
 	if (llvm::isa<llvm::Constant>(i->getOperand(0))) {
           Allocation *a = getLatestAllocation(i->getOperand(0));
           if (!a)
-            a = getNewAllocation(i->getOperand(0));
+            a = getInitialAllocation(i->getOperand(0));
           // We simply propagate the pointer to the current
           // value field-insensitively.
           addPointerEquality(getNewVersionedValue(i, valueExpr), a);

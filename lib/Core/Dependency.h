@@ -40,6 +40,8 @@ class Allocation {
 
     virtual void print(llvm::raw_ostream& stream) const;
 
+    llvm::Value *getSite() const { return site; }
+
     void dump() const {
       print(llvm::errs());
       llvm::errs() << "\n";
@@ -204,17 +206,26 @@ class Allocation {
 
     std::vector<llvm::Value *> newVersionedAllocations;
 
+    std::vector<llvm::Value *> newCompositeAllocations;
+
     VersionedValue *getNewVersionedValue(llvm::Value *value,
                                          ref<Expr> valueExpr);
 
-    Allocation *getNewAllocation(llvm::Value *allocation);
+    Allocation *getInitialAllocation(llvm::Value *allocation);
+
+    Allocation *getNewAllocationVersion(llvm::Value *allocation);
 
     std::vector<llvm::Value *> getAllVersionedAllocations() const;
+
+    std::vector<llvm::Value *> getAllCompositeAllocations() const;
 
     std::vector< std::pair<llvm::Value *, ref<Expr> > > getLatestCoreExpressions() const;
 
     std::vector< std::pair<llvm::Value *, std::vector<ref<Expr> > > > getCompositeCoreExpressions() const;
 
+    /// @brief Gets the latest version of the allocation. For unversioned
+    /// allocations (e.g., composite and environment), this should return
+    /// the only allocation.
     Allocation *getLatestAllocation(llvm::Value *allocation) const;
 
     void addPointerEquality(VersionedValue *value, Allocation *allocation);
