@@ -12,6 +12,9 @@
 /* Using STP Solver backend */
 #undef ENABLE_STP
 
+/* Using Z3 Solver backend */
+#undef ENABLE_Z3
+
 /* Does the platform use __ctype_b_loc, etc. */
 #undef HAVE_CTYPE_EXTERNALS
 

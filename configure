@@ -626,6 +626,9 @@ ac_subst_vars='LTLIBOBJS
 LIBOBJS
 ENABLE_METASMT
 METASMT_ROOT
+Z3_LDFLAGS
+Z3_CFLAGS
+ENABLE_Z3
 STP_LDFLAGS
 STP_CFLAGS
 ENABLE_STP
@@ -731,6 +734,7 @@ with_uclibc
 enable_posix_runtime
 with_runtime
 with_stp
+with_z3
 with_metasmt
 '
       ac_precious_vars='build_alias
@@ -1382,6 +1386,7 @@ Optional Packages:
   --with-runtime          Select build configuration for runtime libraries
                           (default [Release+Asserts])
   --with-stp              Location of STP installation directory
+  --with-z3               Location of Z3 installation directory
   --with-metasmt          Location of metaSMT installation directory
 
 Some influential environment variables:
@@ -5020,6 +5025,107 @@ fi
 
 
 
+ENABLE_Z3=0
+
+# Check whether --with-z3 was given.
+if test "${with_z3+set}" = set; then :
+  withval=$with_z3;
+    # Check for empty argument
+    if test "X$withval" = X ; then
+      as_fn_error $? "<path> cannot be empty in --with-z3=<path>" "$LINENO" 5
+    fi
+    z3_root=`(cd $withval && pwd) 2> /dev/null`
+
+    #Check for bad path
+    if test "X$z3_root" = X ; then
+      as_fn_error $? "Cannot access path $with_z3 passed to --with-z3" "$LINENO" 5
+    fi
+
+    Z3_CFLAGS="-I$z3_root/include"
+    Z3_LDFLAGS="-L$z3_root/lib"
+    ENABLE_Z3=1
+
+fi
+
+
+if test "X$ENABLE_Z3" != X0 ; then
+    old_CPPFLAGS="$CPPFLAGS"
+    CPPFLAGS="$CPPFLAGS $Z3_CFLAGS"
+    old_CPPFLAGS="$CPPFLAGS"
+    ac_fn_cxx_check_header_mongrel "$LINENO" "z3.h" "ac_cv_header_z3_h" "$ac_includes_default"
+if test "x$ac_cv_header_z3_h" = xyes; then :
+
+else
+
+            as_fn_error $? "Unable to use z3.h header" "$LINENO" 5
+
+fi
+
+
+    CPPFLAGS="$old_CPPFLAGS"
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for Z3_mk_context in -lz3" >&5
+$as_echo_n "checking for Z3_mk_context in -lz3... " >&6; }
+if ${ac_cv_lib_z3_Z3_mk_context+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lz3 "$Z3_LDFLAGS" $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char Z3_mk_context ();
+int
+main ()
+{
+return Z3_mk_context ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  ac_cv_lib_z3_Z3_mk_context=yes
+else
+  ac_cv_lib_z3_Z3_mk_context=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_z3_Z3_mk_context" >&5
+$as_echo "$ac_cv_lib_z3_Z3_mk_context" >&6; }
+if test "x$ac_cv_lib_z3_Z3_mk_context" = xyes; then :
+  :
+else
+
+           as_fn_error $? "Unable to link against z3" "$LINENO" 5
+
+fi
+
+
+    Z3_LDFLAGS="${Z3_LDFLAGS} -lz3"
+    { $as_echo "$as_me:${as_lineno-$LINENO}: Using Z3 solver backend" >&5
+$as_echo "$as_me: Using Z3 solver backend" >&6;}
+    CPPFLAGS="$old_CPPFLAGS"
+
+$as_echo "#define ENABLE_Z3 1" >>confdefs.h
+
+else
+    { $as_echo "$as_me:${as_lineno-$LINENO}: Not using Z3 solver backend" >&5
+$as_echo "$as_me: Not using Z3 solver backend" >&6;}
+fi
+
+
+
+
+
+
 
 
 # Check whether --with-metasmt was given.
@@ -5097,8 +5203,8 @@ fi
 
 
 
-if test "X$ENABLE_STP$ENABLE_METASMT" == X00 ; then
-    as_fn_error $? "At least one solver backend must be enabled, try using --with-stp or --with-metasmt" "$LINENO" 5
+if test "X$ENABLE_STP$ENABLE_Z3$ENABLE_METASMT" == X000 ; then
+    as_fn_error $? "At least one solver backend must be enabled, try using --with-stp, --with-z3 or --with-metasmt" "$LINENO" 5
 fi
 
 
