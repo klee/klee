@@ -12,3 +12,5 @@ include $(LLVM_SRC_ROOT)/unittests/Makefile.unittest
 ifneq ($(ENABLE_STP),0)
   LIBS += $(STP_LDFLAGS)
 endif
+
+include $(PROJ_SRC_ROOT)/MetaSMT.mk
