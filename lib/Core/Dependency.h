@@ -46,6 +46,17 @@ class Allocation {
     }
   };
 
+  class CompositeAllocation : public Allocation {
+  public:
+    CompositeAllocation(llvm::Value *site);
+
+    ~CompositeAllocation();
+
+    bool hasAllocationSite(llvm::Value *site) const;
+
+    void print(llvm::raw_ostream &stream) const;
+  };
+
   class VersionedAllocation : public Allocation {
     static unsigned long long nextVersion;
     unsigned long long version;
@@ -279,6 +290,8 @@ class Allocation {
   std::string appendTab(const std::string &prefix);
 
   bool isEnvironmentAllocation(llvm::Value *site);
+
+  bool isCompositeAllocation(llvm::Value *site);
 }
 
 #endif

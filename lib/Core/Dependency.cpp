@@ -23,6 +23,24 @@ void Allocation::print(llvm::raw_ostream &stream) const {
 
 /**/
 
+CompositeAllocation::CompositeAllocation(llvm::Value *site) {
+  this->site = site;
+}
+
+CompositeAllocation::~CompositeAllocation() {}
+
+bool CompositeAllocation::hasAllocationSite(llvm::Value *site) const {
+  return this->site == site;
+}
+
+void CompositeAllocation::print(llvm::raw_ostream &stream) const {
+  stream << "A[";
+  site->print(stream);
+  stream << "]";
+}
+
+/**/
+
 unsigned long long VersionedAllocation::nextVersion = 0;
 
   VersionedAllocation::VersionedAllocation(llvm::Value *site)
@@ -35,23 +53,8 @@ unsigned long long VersionedAllocation::nextVersion = 0;
   }
 
   bool VersionedAllocation::isComposite() const {
-    llvm::AllocaInst *inst = llvm::dyn_cast<llvm::AllocaInst>(site);
-
-    if (inst != 0)
-      return llvm::isa<llvm::CompositeType>(inst->getAllocatedType());
-
-    switch (site->getType()->getTypeID()) {
-      case llvm::Type::ArrayTyID:
-      case llvm::Type::PointerTyID:
-      case llvm::Type::StructTyID:
-      case llvm::Type::VectorTyID:
-	{
-	  return true;
-	}
-      default:
-	break;
-    }
-
+    // Only non-composite allocations can be versioned
+    // and desctructively updated
     return false;
   }
 
@@ -196,16 +199,15 @@ unsigned long long VersionedAllocation::nextVersion = 0;
 	ret = new EnvironmentAllocation();
 	allocationsList.push_back(ret);
       }
+    } else if (isCompositeAllocation(allocation)) {
+      ret = new CompositeAllocation(allocation);
+      allocationsList.push_back(ret);
     } else {
 	ret = new VersionedAllocation(allocation);
-	if (!ret->isComposite()) {
-	    // We register noncomposites in a special list,
-	    // as these are the ones that are truly versioned.
-	    // Composites are not truly versioned as destructive
-	    // updates don't apply to them.
-	    newVersionedAllocations.push_back(allocation);
-	}
 	allocationsList.push_back(ret);
+
+        // We register noncomposites in a special list,
+        newVersionedAllocations.push_back(allocation);
     }
 
     return ret;
@@ -849,4 +851,25 @@ unsigned long long VersionedAllocation::nextVersion = 0;
     return false;
   }
 
+  bool isCompositeAllocation(llvm::Value *site) {
+    // We define composite allocation to be non-environment
+    if (isEnvironmentAllocation(site))
+      return false;
+
+    llvm::AllocaInst *inst = llvm::dyn_cast<llvm::AllocaInst>(site);
+
+    if (inst != 0)
+      return llvm::isa<llvm::CompositeType>(inst->getAllocatedType());
+
+    switch (site->getType()->getTypeID()) {
+    case llvm::Type::ArrayTyID:
+    case llvm::Type::PointerTyID:
+    case llvm::Type::StructTyID:
+    case llvm::Type::VectorTyID: { return true; }
+    default:
+      break;
+    }
+
+    return false;
+  }
 }
