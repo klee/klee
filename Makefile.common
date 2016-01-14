@@ -66,6 +66,10 @@ ifneq ($(ENABLE_STP),0)
   CXX.Flags += -DEXT_HASH_MAP
 endif
 
+ifneq ($(ENABLE_Z3),0)
+  CXX.Flags += $(Z3_CFLAGS)
+endif
+
 CXX.Flags += -DKLEE_DIR=\"$(PROJ_OBJ_ROOT)\" -DKLEE_INSTALL_BIN_DIR=\"$(PROJ_bindir)\"
 CXX.Flags += -DKLEE_INSTALL_RUNTIME_DIR=\"$(BYTECODE_DESTINATION)\"
 
