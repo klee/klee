@@ -32,10 +32,11 @@
 #undef Type
 #undef STP
 
+using namespace klee;
 using namespace metaSMT;
 using namespace metaSMT::solver;
 
-static Solver *handleMetaSMT() {
+static klee::Solver *handleMetaSMT() {
   Solver *coreSolver = NULL;
   std::string backend;
   switch (MetaSMTBackend) {

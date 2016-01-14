@@ -297,7 +297,7 @@ MetaSMTSolverImpl<SolverContext>::runAndGetCexForked(
 
     std::vector<std::vector<typename SolverContext::result_type> >
         aux_arr_exprs;
-    if (UseMetaSMT == METASMT_BACKEND_BOOLECTOR) {
+    if (MetaSMTBackend == METASMT_BACKEND_BOOLECTOR) {
       for (std::vector<const Array *>::const_iterator it = objects.begin(),
                                                       ie = objects.end();
            it != ie; ++it) {
@@ -327,7 +327,7 @@ MetaSMTSolverImpl<SolverContext>::runAndGetCexForked(
 
     if (res) {
 
-      if (UseMetaSMT != METASMT_BACKEND_BOOLECTOR) {
+      if (MetaSMTBackend != METASMT_BACKEND_BOOLECTOR) {
 
         for (std::vector<const Array *>::const_iterator it = objects.begin(),
                                                         ie = objects.end();
@@ -440,9 +440,6 @@ MetaSMTSolverImpl<SolverContext>::getOperationStatusCode() {
   return _runStatusCode;
 }
 
-template class MetaSMTSolver<DirectSolver_Context<Boolector> >;
-template class MetaSMTSolver<DirectSolver_Context<Z3_Backend> >;
-template class MetaSMTSolver<DirectSolver_Context<STP_Backend> >;
 
 template <typename SolverContext>
 MetaSMTSolver<SolverContext>::MetaSMTSolver(bool useForked,
@@ -462,5 +459,9 @@ template <typename SolverContext>
 void MetaSMTSolver<SolverContext>::setCoreSolverTimeout(double timeout) {
   impl->setCoreSolverTimeout(timeout);
 }
+
+template class MetaSMTSolver<DirectSolver_Context<metaSMT::solver::Boolector> >;
+template class MetaSMTSolver<DirectSolver_Context<metaSMT::solver::Z3_Backend> >;
+template class MetaSMTSolver<DirectSolver_Context<metaSMT::solver::STP_Backend> >;
 }
 #endif // ENABLE_METASMT
