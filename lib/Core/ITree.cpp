@@ -115,9 +115,52 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
     return false;
 
   if (state.itreeNode->getNodeId() == nodeId) {
-      /// We create path condition needed constraints marking structure
+
+    // TODO: Existential variables not taken into account!
+    std::map<llvm::Value *, std::vector<ref<Expr> > > stateSingletonStore =
+        state.itreeNode->getLatestCoreExpressions();
+    std::map<llvm::Value *, ref<Expr> > stateCompositeStore =
+        state.itreeNode->getCompositeCoreExpressions();
+
+    ref<Expr> stateEqualityConstraints = ConstantExpr::alloc(1, Expr::Bool);
+    for (std::vector<llvm::Value *>::iterator it = singletonStoreKeys.begin(),
+                                              itEnd = singletonStoreKeys.end();
+         it != itEnd; ++it) {
+      const ref<Expr> lhs = singletonStore[*it];
+      const ref<Expr> rhs = stateSingletonStore[*it];
+      stateEqualityConstraints =
+          AndExpr::create(EqExpr::create(lhs, rhs), stateEqualityConstraints);
+    }
+
+    ref<Expr> auxDisjuncts = ConstantExpr::alloc(0, Expr::Bool);
+    bool auxDisjunctsEmpty = true;
+    for (std::vector<llvm::Value *>::iterator it = compositeStoreKeys.begin(),
+                                              itEnd = compositeStoreKeys.end();
+         it != itEnd; ++it) {
+      std::vector<ref<Expr> > lhsList = compositeStore[*it];
+      std::vector<ref<Expr> > rhsList = stateCompositeStore[*it];
+      for (std::vector<ref<Expr> >::iterator lhsIter = lhsList.begin(),
+                                             lhsIterEnd = lhsList.end();
+           lhsIter != lhsIterEnd; ++lhsIter) {
+        for (std::vector<ref<Expr> >::iterator rhsIter = rhsList.begin(),
+                                               rhsIterEnd = rhsList.end();
+             rhsIter != rhsIterEnd; ++rhsIter) {
+          const ref<Expr> lhs = *lhsIter;
+          const ref<Expr> rhs = *rhsIter;
+          auxDisjuncts = OrExpr::create(EqExpr::create(lhs, rhs), auxDisjuncts);
+          auxDisjunctsEmpty = false;
+        }
+      }
+    }
+
+    if (!auxDisjunctsEmpty)
+      stateEqualityConstraints =
+          AndExpr::create(auxDisjuncts, stateEqualityConstraints);
+
+    // We create path condition needed constraints marking structure
       std::map< ref<Expr>, PathConditionMarker *> markerMap =
 	  state.itreeNode->makeMarkerMap();
+
       for (std::vector< ref<Expr> >::iterator it0 = interpolant.begin();
 	  it0 != interpolant.end(); it0++) {
 	  ref<Expr> query = *it0;
