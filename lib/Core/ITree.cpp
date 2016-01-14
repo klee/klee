@@ -87,9 +87,24 @@ void PathCondition::print(llvm::raw_ostream& stream) {
 
 /**/
 
-SubsumptionTableEntry::SubsumptionTableEntry(ITreeNode *node) :
-  nodeId(node->getNodeId()),
-  interpolant(node->getInterpolant()) {}
+SubsumptionTableEntry::SubsumptionTableEntry(ITreeNode *node)
+    : nodeId(node->getNodeId()), interpolant(node->getInterpolant()),
+      singletonStore(node->getLatestCoreExpressions(true)),
+      compositeStore(node->getCompositeCoreExpressions(true)) {
+  for (std::map<llvm::Value *, ref<Expr> >::iterator
+           it = singletonStore.begin(),
+           itEnd = singletonStore.end();
+       it != itEnd; ++it) {
+    singletonStoreKeys.push_back(it->first);
+  }
+
+  for (std::map<llvm::Value *, std::vector<ref<Expr> > >::iterator
+           it = compositeStore.begin(),
+           itEnd = compositeStore.end();
+       it != itEnd; ++it) {
+    compositeStoreKeys.push_back(it->first);
+  }
+}
 
 SubsumptionTableEntry::~SubsumptionTableEntry() {}
 
@@ -394,6 +409,16 @@ void ITreeNode::popAbstractDependencyFrame(llvm::CallInst *site,
   // the dependency graph by removing callee values.
 
   dependency->bindReturnValue(site, inst, returnValue);
+}
+
+std::map<llvm::Value *, ref<Expr> >
+ITreeNode::getLatestCoreExpressions(bool interpolantValueOnly) const {
+  return dependency->getLatestCoreExpressions(interpolantValueOnly);
+}
+
+std::map<llvm::Value *, std::vector<ref<Expr> > >
+ITreeNode::getCompositeCoreExpressions(bool interpolantValueOnly) const {
+  return dependency->getCompositeCoreExpressions(interpolantValueOnly);
 }
 
 void ITreeNode::dump() const {

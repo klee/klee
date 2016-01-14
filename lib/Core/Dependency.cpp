@@ -239,7 +239,7 @@ VersionedAllocation::VersionedAllocation(llvm::Value *site)
   }
 
   std::map<llvm::Value *, ref<Expr> >
-  Dependency::getLatestCoreExpressions() const {
+  Dependency::getLatestCoreExpressions(bool interpolantValueOnly) const {
     std::vector<llvm::Value *> allAlloc = getAllVersionedAllocations();
     std::map<llvm::Value *, ref<Expr> > ret;
 
@@ -255,7 +255,7 @@ VersionedAllocation::VersionedAllocation(llvm::Value *site)
       for (std::vector<VersionedValue *>::iterator valueIter = stored.begin(),
                                                    valueIterEnd = stored.end();
            valueIter != valueIterEnd; ++valueIter) {
-        if ((*valueIter)->valueInInterpolant()) {
+        if (!interpolantValueOnly || (*valueIter)->valueInInterpolant()) {
           ret[*allocIter] = (*valueIter)->getExpression();
         }
       }
@@ -275,7 +275,7 @@ VersionedAllocation::VersionedAllocation(llvm::Value *site)
   }
 
   std::map<llvm::Value *, std::vector<ref<Expr> > >
-  Dependency::getCompositeCoreExpressions() const {
+  Dependency::getCompositeCoreExpressions(bool interpolantValueOnly) const {
     std::vector<llvm::Value *> allAlloc = getAllCompositeAllocations();
     std::map<llvm::Value *, std::vector<ref<Expr> > > ret;
 
@@ -288,7 +288,7 @@ VersionedAllocation::VersionedAllocation(llvm::Value *site)
       for (std::vector<VersionedValue *>::iterator valueIter = stored.begin(),
                                                    valueIterEnd = stored.end();
            valueIter != valueIterEnd; ++valueIter) {
-        if ((*valueIter)->valueInInterpolant()) {
+        if (!interpolantValueOnly || (*valueIter)->valueInInterpolant()) {
           std::vector<ref<Expr> > &elemList = ret[*allocIter];
           elemList.push_back((*valueIter)->getExpression());
         }

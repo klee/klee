@@ -216,11 +216,6 @@ class Allocation {
 
     std::vector<llvm::Value *> getAllCompositeAllocations() const;
 
-    std::map<llvm::Value *, ref<Expr> > getLatestCoreExpressions() const;
-
-    std::map<llvm::Value *, std::vector<ref<Expr> > >
-    getCompositeCoreExpressions() const;
-
     /// @brief Gets the latest version of the allocation. For unversioned
     /// allocations (e.g., composite and environment), this should return
     /// the only allocation.
@@ -271,6 +266,12 @@ class Allocation {
     void execute(llvm::Instruction *instr, ref<Expr> valueExpr);
 
     VersionedValue *getLatestValue(llvm::Value *value) const;
+
+    std::map<llvm::Value *, ref<Expr> >
+    getLatestCoreExpressions(bool interpolantValueOnly) const;
+
+    std::map<llvm::Value *, std::vector<ref<Expr> > >
+    getCompositeCoreExpressions(bool interpolantValueOnly) const;
 
     void bindCallArguments(llvm::Instruction *instr,
                            std::vector<ref<Expr> > &arguments);

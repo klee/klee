@@ -79,6 +79,14 @@ namespace klee {
 
     std::vector< ref<Expr> > interpolant;
 
+    std::map<llvm::Value *, ref<Expr> > singletonStore;
+
+    std::vector<llvm::Value *> singletonStoreKeys;
+
+    std::map<llvm::Value *, std::vector<ref<Expr> > > compositeStore;
+
+    std::vector<llvm::Value *> compositeStoreKeys;
+
   public:
     SubsumptionTableEntry(ITreeNode *node);
 
@@ -179,6 +187,12 @@ namespace klee {
     void popAbstractDependencyFrame(llvm::CallInst *site,
                                     llvm::Instruction *inst,
                                     ref<Expr> returnValue);
+
+    std::map<llvm::Value *, ref<Expr> >
+    getLatestCoreExpressions(bool interpolantValueOnly = false) const;
+
+    std::map<llvm::Value *, std::vector<ref<Expr> > >
+    getCompositeCoreExpressions(bool interpolantValueOnly = false) const;
 
   private:
     ITreeNode(ITreeNode *_parent);
