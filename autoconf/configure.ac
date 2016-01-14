@@ -626,6 +626,7 @@ AC_ARG_WITH(metasmt,
 
 if test X$with_metasmt = X ; then
   ENABLE_METASMT=0
+  AC_MSG_NOTICE([Not using MetaSMT solver backend])
 else
   metasmt_root=`(cd $with_metasmt && pwd) 2> /dev/null`
   #Check for bad path
@@ -651,6 +652,7 @@ else
   AC_SUBST(METASMT_ROOT,$metasmt_root)
   AC_SUBST(REQUIRES_RTTI,[[1]])
   ENABLE_METASMT=1
+  AC_MSG_NOTICE([Using MetaSMT solver backend])
 fi
 
 AC_SUBST(ENABLE_METASMT)

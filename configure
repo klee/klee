@@ -5030,6 +5030,8 @@ fi
 
 if test X$with_metasmt = X ; then
   ENABLE_METASMT=0
+  { $as_echo "$as_me:${as_lineno-$LINENO}: Not using MetaSMT solver backend" >&5
+$as_echo "$as_me: Not using MetaSMT solver backend" >&6;}
 else
   metasmt_root=`(cd $with_metasmt && pwd) 2> /dev/null`
   #Check for bad path
@@ -5088,6 +5090,8 @@ $as_echo "#define ENABLE_METASMT 1" >>confdefs.h
   REQUIRES_RTTI=1
 
   ENABLE_METASMT=1
+  { $as_echo "$as_me:${as_lineno-$LINENO}: Using MetaSMT solver backend" >&5
+$as_echo "$as_me: Using MetaSMT solver backend" >&6;}
 fi
 
 
