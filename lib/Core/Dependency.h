@@ -63,9 +63,6 @@ class Allocation {
     static unsigned long long nextVersion;
     unsigned long long version;
 
-  protected:
-    llvm::Value *site;
-
   public:
     VersionedAllocation(llvm::Value *site);
 

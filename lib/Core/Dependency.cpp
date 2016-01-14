@@ -43,8 +43,10 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
 
 unsigned long long VersionedAllocation::nextVersion = 0;
 
-  VersionedAllocation::VersionedAllocation(llvm::Value *site)
-      : version(nextVersion++), site(site) {}
+VersionedAllocation::VersionedAllocation(llvm::Value *site)
+    : version(nextVersion++) {
+  this->site = site;
+}
 
   VersionedAllocation::~VersionedAllocation() {}
 
@@ -619,6 +621,7 @@ unsigned long long VersionedAllocation::nextVersion = 0;
           Allocation *a = getLatestAllocation(i->getOperand(0));
           if (!a)
             a = getInitialAllocation(i->getOperand(0));
+
           // We simply propagate the pointer to the current
           // value field-insensitively.
           addPointerEquality(getNewVersionedValue(i, valueExpr), a);
