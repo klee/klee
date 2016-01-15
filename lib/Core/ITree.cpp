@@ -16,6 +16,18 @@
 
 using namespace klee;
 
+std::map<const Array *, const Array *> ShadowArray::shadowArray;
+
+void ShadowArray::addShadowArrayMap(const Array *source, const Array *target) {
+  shadowArray[source] = target;
+}
+
+ref<Expr> ShadowArray::getShadowExpression(ref<Expr> expr) {
+  // ReadExpr would have an updates which refer to an array:
+  // change that array.
+  return expr;
+}
+
 PathConditionMarker::PathConditionMarker(PathCondition *pathCondition) :
   mayBeInInterpolant(false), pathCondition(pathCondition) {}
 
@@ -35,7 +47,8 @@ void PathConditionMarker::includeInInterpolant() {
 
 PathCondition::PathCondition(ref<Expr> &constraint, Dependency *dependency,
                              llvm::Value *condition, PathCondition *prev)
-    : constraint(constraint), dependency(dependency),
+    : constraint(constraint), shadowConstraint(constraint), shadowed(false),
+      dependency(dependency),
       condition(dependency ? dependency->getLatestValue(condition) : 0),
       inInterpolant(false), tail(prev) {}
 

@@ -3769,7 +3769,6 @@ void Executor::executeMemoryOperation(ExecutionState &state, bool isWrite,
     if (inBounds) {
       const ObjectState *os = op.second;
       if (isWrite) {
-
         if (os->readOnly) {
           terminateStateOnError(state,
                                 "memory error: object read only",
@@ -3793,7 +3792,7 @@ void Executor::executeMemoryOperation(ExecutionState &state, bool isWrite,
         
         if (interpreterOpts.MakeConcreteSymbolic)
           result = replaceReadWithSymbolic(state, result);
-        
+
         bindLocal(target, state, result);
 
 #ifdef SUPPORT_Z3
@@ -3822,7 +3821,7 @@ void Executor::executeMemoryOperation(ExecutionState &state, bool isWrite,
   
   // XXX there is some query wasteage here. who cares?
   ExecutionState *unbound = &state;
-  
+
   for (ResolutionList::iterator i = rl.begin(), ie = rl.end(); i != ie; ++i) {
     const MemoryObject *mo = i->first;
     const ObjectState *os = i->second;
@@ -3852,7 +3851,7 @@ void Executor::executeMemoryOperation(ExecutionState &state, bool isWrite,
     if (!unbound)
       break;
   }
-  
+
   // XXX should we distinguish out of bounds and overlapped cases?
   if (unbound) {
     if (incomplete) {
@@ -3879,6 +3878,16 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
       uniqueName = name + "_" + llvm::utostr(++id);
     }
     const Array *array = arrayCache.CreateArray(uniqueName, mo->size);
+#ifdef SUPPORT_Z3
+    if (!NoInterpolation) {
+      // We create shadow array as existentially-quantified
+      // variables for subsumption checking
+      const Array *shadow =
+          arrayCache.CreateArray("__shadow__" + uniqueName, mo->size);
+      ShadowArray::addShadowArrayMap(array, shadow);
+    }
+#endif
+
     bindObjectInState(state, mo, false, array);
     state.addSymbolic(mo, array);
     

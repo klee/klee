@@ -19,9 +19,26 @@ using namespace llvm;
 namespace klee {
   class ExecutionState;
 
+  class ShadowArray {
+    static std::map<const Array *, const Array *> shadowArray;
+
+  public:
+    static void addShadowArrayMap(const Array *source, const Array *target);
+
+    static ref<Expr> getShadowExpression(ref<Expr> expr);
+  };
+
   class PathCondition {
     /// @brief KLEE expression
     ref<Expr> constraint;
+
+    /// @brief KLEE expression with variables (arrays) replaced by their shadows
+    ref<Expr> shadowConstraint;
+
+    /// @brief If shadow consraint had been generated: We generate shadow
+    /// constraint
+    /// on demand only when the constraint is required in an interpolant
+    bool shadowed;
 
     /// @brief The dependency information for the current
     /// interpolation tree node
