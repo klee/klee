@@ -132,13 +132,15 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
           AndExpr::create(EqExpr::create(lhs, rhs), stateEqualityConstraints);
     }
 
-    ref<Expr> auxDisjuncts = ConstantExpr::alloc(0, Expr::Bool);
-    bool auxDisjunctsEmpty = true;
     for (std::vector<llvm::Value *>::iterator it = compositeStoreKeys.begin(),
                                               itEnd = compositeStoreKeys.end();
          it != itEnd; ++it) {
       std::vector<ref<Expr> > lhsList = compositeStore[*it];
       std::vector<ref<Expr> > rhsList = stateCompositeStore[*it];
+
+      ref<Expr> auxDisjuncts = ConstantExpr::alloc(0, Expr::Bool);
+      bool auxDisjunctsEmpty = true;
+
       for (std::vector<ref<Expr> >::iterator lhsIter = lhsList.begin(),
                                              lhsIterEnd = lhsList.end();
            lhsIter != lhsIterEnd; ++lhsIter) {
@@ -151,11 +153,12 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
           auxDisjunctsEmpty = false;
         }
       }
+
+      if (!auxDisjunctsEmpty)
+        stateEqualityConstraints =
+            AndExpr::create(auxDisjuncts, stateEqualityConstraints);
     }
 
-    if (!auxDisjunctsEmpty)
-      stateEqualityConstraints =
-          AndExpr::create(auxDisjuncts, stateEqualityConstraints);
 
     // We create path condition needed constraints marking structure
       std::map< ref<Expr>, PathConditionMarker *> markerMap =
