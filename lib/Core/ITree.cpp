@@ -28,6 +28,8 @@ ref<Expr> ShadowArray::getShadowExpression(ref<Expr> expr) {
   return expr;
 }
 
+/**/
+
 PathConditionMarker::PathConditionMarker(PathCondition *pathCondition) :
   mayBeInInterpolant(false), pathCondition(pathCondition) {}
 
@@ -70,15 +72,20 @@ void PathCondition::includeInInterpolant() {
   inInterpolant = true;
 }
 
-bool PathCondition::carInInterpolant() {
+bool PathCondition::carInInterpolant() const {
   return inInterpolant;
 }
 
-std::vector< ref<Expr> > PathCondition::packInterpolant() const {
+std::vector< ref<Expr> > PathCondition::packInterpolant() {
   std::vector< ref<Expr> > res;
-  for (const PathCondition *it = this; it != 0; it = it->tail) {
-      if (it->inInterpolant)
-	res.push_back(it->constraint);
+  for (PathCondition *it = this; it != 0; it = it->tail) {
+      if (it->inInterpolant) {
+	  if (!it->shadowed) {
+	      it->shadowConstraint = ShadowArray::getShadowExpression(it->constraint);
+	      it->shadowed = true;
+	  }
+	  res.push_back(it->shadowConstraint);
+      }
   }
   return res;
 }
@@ -189,10 +196,10 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
           bool success = solver->evaluate(state, query, result);
           solver->setTimeout(0);
           if (success && result == Solver::True) {
-            std::vector<ref<Expr> > unsat_core = solver->getUnsatCore();
+            std::vector<ref<Expr> > unsatCore = solver->getUnsatCore();
 
-            for (std::vector<ref<Expr> >::iterator it1 = unsat_core.begin();
-                 it1 != unsat_core.end(); it1++) {
+            for (std::vector<ref<Expr> >::iterator it1 = unsatCore.begin();
+                 it1 != unsatCore.end(); it1++) {
               markerMap[*it1]->mayIncludeInInterpolant();
             }
 

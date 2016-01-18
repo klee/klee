@@ -67,9 +67,9 @@ namespace klee {
 
     void includeInInterpolant();
 
-    bool carInInterpolant();
+    bool carInInterpolant() const;
 
-    std::vector< ref<Expr> > packInterpolant() const;
+    std::vector< ref<Expr> > packInterpolant();
 
     void dump();
 
