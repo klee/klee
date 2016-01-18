@@ -16,6 +16,11 @@
 
 using namespace klee;
 
+// Interpolation is enabled by default
+bool InterpolationOption::interpolation = true;
+
+/**/
+
 PathConditionMarker::PathConditionMarker(PathCondition *pathCondition) :
   mayBeInInterpolant(false), pathCondition(pathCondition) {}
 
@@ -67,6 +72,7 @@ std::vector< ref<Expr> > PathCondition::packInterpolant() {
   for (PathCondition *it = this; it != 0; it = it->tail) {
       if (it->inInterpolant) {
 	  if (!it->shadowed) {
+	      it->constraint->dump();
 	      it->shadowConstraint = ShadowArray::getShadowExpression(it->constraint);
 	      it->shadowed = true;
 	  }

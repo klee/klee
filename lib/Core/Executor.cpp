@@ -695,7 +695,7 @@ void Executor::branch(ExecutionState &state,
       es->ptreeNode = res.second;
 
 #ifdef SUPPORT_Z3
-      if (!NoInterpolation
+      if (InterpolationOption::interpolation
 #ifdef SUPPORT_STP
           && SelectSolver == SOLVER_Z3
 #endif
@@ -907,7 +907,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     }
 
 #ifdef SUPPORT_Z3
-    if (!NoInterpolation
+    if (InterpolationOption::interpolation
 #ifdef SUPPORT_STP
         && SelectSolver == SOLVER_Z3
 #endif
@@ -928,7 +928,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     }
 
 #ifdef SUPPORT_Z3
-    if (!NoInterpolation
+    if (InterpolationOption::interpolation
 #ifdef SUPPORT_STP
         && SelectSolver == SOLVER_Z3
 #endif
@@ -1007,7 +1007,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     }
 
 #ifdef SUPPORT_Z3
-    if (!NoInterpolation
+    if (InterpolationOption::interpolation
 #ifdef SUPPORT_STP
         && SelectSolver == SOLVER_Z3
 #endif
@@ -1843,7 +1843,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
 #ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation
+    if (InterpolationOption::interpolation
 #ifdef SUPPORT_STP
 	&& SelectSolver == SOLVER_Z3
 #endif
@@ -1863,7 +1863,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
 #ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation
+    if (InterpolationOption::interpolation
 #ifdef SUPPORT_STP
 	&& SelectSolver == SOLVER_Z3
 #endif
@@ -1887,7 +1887,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
 #ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation
+    if (InterpolationOption::interpolation
 #ifdef SUPPORT_STP
 	&& SelectSolver == SOLVER_Z3
 #endif
@@ -1905,7 +1905,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
 #ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation
+    if (InterpolationOption::interpolation
 #ifdef SUPPORT_STP
 	&& SelectSolver == SOLVER_Z3
 #endif
@@ -1923,7 +1923,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
 #ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation
+    if (InterpolationOption::interpolation
 #ifdef SUPPORT_STP
 	&& SelectSolver == SOLVER_Z3
 #endif
@@ -1941,7 +1941,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
 #ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation
+    if (InterpolationOption::interpolation
 #ifdef SUPPORT_STP
 	&& SelectSolver == SOLVER_Z3
 #endif
@@ -1959,7 +1959,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
 #ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation
+    if (InterpolationOption::interpolation
 #ifdef SUPPORT_STP
 	&& SelectSolver == SOLVER_Z3
 #endif
@@ -1977,7 +1977,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
 #ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation
+    if (InterpolationOption::interpolation
 #ifdef SUPPORT_STP
 	&& SelectSolver == SOLVER_Z3
 #endif
@@ -1995,7 +1995,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
 #ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation
+    if (InterpolationOption::interpolation
 #ifdef SUPPORT_STP
 	&& SelectSolver == SOLVER_Z3
 #endif
@@ -2013,7 +2013,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
 #ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation
+    if (InterpolationOption::interpolation
 #ifdef SUPPORT_STP
 	&& SelectSolver == SOLVER_Z3
 #endif
@@ -2031,7 +2031,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
 #ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation
+    if (InterpolationOption::interpolation
 #ifdef SUPPORT_STP
 	&& SelectSolver == SOLVER_Z3
 #endif
@@ -2049,7 +2049,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
 #ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation
+    if (InterpolationOption::interpolation
 #ifdef SUPPORT_STP
 	&& SelectSolver == SOLVER_Z3
 #endif
@@ -2067,7 +2067,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
 #ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation
+    if (InterpolationOption::interpolation
 #ifdef SUPPORT_STP
 	&& SelectSolver == SOLVER_Z3
 #endif
@@ -2085,7 +2085,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
 #ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation
+    if (InterpolationOption::interpolation
 #ifdef SUPPORT_STP
 	&& SelectSolver == SOLVER_Z3
 #endif
@@ -2103,7 +2103,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
 #ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation
+    if (InterpolationOption::interpolation
 #ifdef SUPPORT_STP
 	&& SelectSolver == SOLVER_Z3
 #endif
@@ -2207,7 +2207,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
 #ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation
+    if (InterpolationOption::interpolation
 #ifdef SUPPORT_STP
 	&& SelectSolver == SOLVER_Z3
 #endif
@@ -2265,7 +2265,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
 #ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation
+    if (InterpolationOption::interpolation
 #ifdef SUPPORT_STP
 	&& SelectSolver == SOLVER_Z3
 #endif
@@ -2285,7 +2285,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
 #ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation
+    if (InterpolationOption::interpolation
 #ifdef SUPPORT_STP
 	&& SelectSolver == SOLVER_Z3
 #endif
@@ -2302,7 +2302,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
 #ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation
+    if (InterpolationOption::interpolation
 #ifdef SUPPORT_STP
 	&& SelectSolver == SOLVER_Z3
 #endif
@@ -2319,7 +2319,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
 #ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation
+    if (InterpolationOption::interpolation
 #ifdef SUPPORT_STP
 	&& SelectSolver == SOLVER_Z3
 #endif
@@ -2338,7 +2338,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
 #ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation
+    if (InterpolationOption::interpolation
 #ifdef SUPPORT_STP
 	&& SelectSolver == SOLVER_Z3
 #endif
@@ -2356,7 +2356,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
 #ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation
+    if (InterpolationOption::interpolation
 #ifdef SUPPORT_STP
 	&& SelectSolver == SOLVER_Z3
 #endif
@@ -2372,7 +2372,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
 #ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation
+    if (InterpolationOption::interpolation
 #ifdef SUPPORT_STP
 	&& SelectSolver == SOLVER_Z3
 #endif
@@ -2405,7 +2405,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
 #ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation
+    if (InterpolationOption::interpolation
 #ifdef SUPPORT_STP
 	&& SelectSolver == SOLVER_Z3
 #endif
@@ -2435,7 +2435,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
 #ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation
+    if (InterpolationOption::interpolation
 #ifdef SUPPORT_STP
 	&& SelectSolver == SOLVER_Z3
 #endif
@@ -2466,7 +2466,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
 #ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation
+    if (InterpolationOption::interpolation
 #ifdef SUPPORT_STP
 	&& SelectSolver == SOLVER_Z3
 #endif
@@ -2497,7 +2497,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
 #ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation
+    if (InterpolationOption::interpolation
 #ifdef SUPPORT_STP
 	&& SelectSolver == SOLVER_Z3
 #endif
@@ -2528,7 +2528,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
 #ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation
+    if (InterpolationOption::interpolation
 #ifdef SUPPORT_STP
 	&& SelectSolver == SOLVER_Z3
 #endif
@@ -2560,7 +2560,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
 #ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation
+    if (InterpolationOption::interpolation
 #ifdef SUPPORT_STP
 	&& SelectSolver == SOLVER_Z3
 #endif
@@ -2591,7 +2591,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
 #ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation
+    if (InterpolationOption::interpolation
 #ifdef SUPPORT_STP
 	&& SelectSolver == SOLVER_Z3
 #endif
@@ -2623,7 +2623,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
 #ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation
+    if (InterpolationOption::interpolation
 #ifdef SUPPORT_STP
 	&& SelectSolver == SOLVER_Z3
 #endif
@@ -2655,7 +2655,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
 #ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation
+    if (InterpolationOption::interpolation
 #ifdef SUPPORT_STP
 	&& SelectSolver == SOLVER_Z3
 #endif
@@ -2682,7 +2682,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
 #ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation
+    if (InterpolationOption::interpolation
 #ifdef SUPPORT_STP
 	&& SelectSolver == SOLVER_Z3
 #endif
@@ -2709,7 +2709,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
 #ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation
+    if (InterpolationOption::interpolation
 #ifdef SUPPORT_STP
 	&& SelectSolver == SOLVER_Z3
 #endif
@@ -2818,7 +2818,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
 #ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation
+    if (InterpolationOption::interpolation
 #ifdef SUPPORT_STP
 	&& SelectSolver == SOLVER_Z3
 #endif
@@ -2855,7 +2855,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
 #ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation
+    if (InterpolationOption::interpolation
 #ifdef SUPPORT_STP
 	&& SelectSolver == SOLVER_Z3
 #endif
@@ -2875,7 +2875,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
 #ifdef SUPPORT_Z3
     // Update dependency
-    if (!NoInterpolation
+    if (InterpolationOption::interpolation
 #ifdef SUPPORT_STP
 	&& SelectSolver == SOLVER_Z3
 #endif
@@ -2921,7 +2921,7 @@ void Executor::updateStates(ExecutionState *current) {
       seedMap.erase(it3);
     processTree->remove(es->ptreeNode);
 #ifdef SUPPORT_Z3
-    if (!NoInterpolation
+    if (InterpolationOption::interpolation
 #ifdef SUPPORT_STP
         && SelectSolver == SOLVER_Z3
 #endif
@@ -3078,7 +3078,7 @@ void Executor::run(ExecutionState &initialState) {
     ExecutionState &state = searcher->selectState();
 
 #ifdef SUPPORT_Z3
-    if (!NoInterpolation
+    if (InterpolationOption::interpolation
 #ifdef SUPPORT_STP
         && SelectSolver == SOLVER_Z3
 #endif
@@ -3101,7 +3101,7 @@ void Executor::run(ExecutionState &initialState) {
       state.pc->inst->dump();
     }
 
-    if (!NoInterpolation &&
+    if (InterpolationOption::interpolation &&
 #ifdef SUPPORT_STP
         SelectSolver == SOLVER_Z3 &&
 #endif
@@ -3243,7 +3243,7 @@ void Executor::terminateState(ExecutionState &state) {
     addedStates.erase(it);
     processTree->remove(state.ptreeNode);
 #ifdef SUPPORT_Z3
-    if (!NoInterpolation
+    if (InterpolationOption::interpolation
 #ifdef SUPPORT_STP
         && SelectSolver == SOLVER_Z3
 #endif
@@ -3258,9 +3258,9 @@ void Executor::terminateState(ExecutionState &state) {
 #ifdef SUPPORT_Z3
 void Executor::terminateStateOnSubsumption(ExecutionState &state) {
 #ifndef SUPPORT_STP
-  assert (!NoInterpolation);
+  assert (InterpolationOption::interpolation);
 #else
-  assert(!NoInterpolation && SelectSolver == SOLVER_Z3);
+  assert (InterpolationOption::interpolation && SelectSolver == SOLVER_Z3);
 #endif /* SUPPORT_STP */
 
   // Implementationwise, basically the same as terminateStateEarly method,
@@ -3498,13 +3498,23 @@ ref<Expr> Executor::replaceReadWithSymbolic(ExecutionState &state,
   // and return it.
   
   static unsigned id;
-  const Array *array =
-      arrayCache.CreateArray("rrws_arr" + llvm::utostr(++id),
-                             Expr::getMinBytesForWidth(e->getWidth()));
+  const std::string arrayName("rrws_arr" + llvm::utostr(++id));
+  const unsigned arrayWidth(Expr::getMinBytesForWidth(e->getWidth()));
+  const Array *array = arrayCache.CreateArray(arrayName, arrayWidth);
   ref<Expr> res = Expr::createTempRead(array, e->getWidth());
   ref<Expr> eq = NotOptimizedExpr::create(EqExpr::create(e, res));
   llvm::errs() << "Making symbolic: " << eq << "\n";
   state.addConstraint(eq);
+
+#ifdef SUPPORT_Z3
+    if (InterpolationOption::interpolation) {
+      // We create shadow array as existentially-quantified
+      // variables for subsumption checking
+      const Array *shadow = arrayCache.CreateArray(ShadowArray::getShadowName(arrayName), arrayWidth);
+      ShadowArray::addShadowArrayMap(array, shadow);
+    }
+#endif
+
   return res;
 }
 
@@ -3549,7 +3559,7 @@ void Executor::executeAlloc(ExecutionState &state,
 
 #ifdef SUPPORT_Z3
       // Update dependency
-      if (!NoInterpolation
+      if (InterpolationOption::interpolation
 #ifdef SUPPORT_STP
           && SelectSolver == SOLVER_Z3
 #endif
@@ -3625,7 +3635,7 @@ void Executor::executeAlloc(ExecutionState &state,
           bindLocal(target, *hugeSize.first, result);
 #ifdef SUPPORT_Z3
           // Update dependency
-          if (!NoInterpolation
+          if (InterpolationOption::interpolation
 #ifdef SUPPORT_STP
               && SelectSolver == SOLVER_Z3
 #endif
@@ -3779,7 +3789,7 @@ void Executor::executeMemoryOperation(ExecutionState &state, bool isWrite,
 
 #ifdef SUPPORT_Z3
           // Update dependency
-          if (!NoInterpolation
+          if (InterpolationOption::interpolation
 #ifdef SUPPORT_STP
               && SelectSolver == SOLVER_Z3
 #endif
@@ -3797,7 +3807,7 @@ void Executor::executeMemoryOperation(ExecutionState &state, bool isWrite,
 
 #ifdef SUPPORT_Z3
         // Update dependency
-        if (!NoInterpolation
+        if (InterpolationOption::interpolation
 #ifdef SUPPORT_STP
             && SelectSolver == SOLVER_Z3
 #endif
@@ -3879,11 +3889,11 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
     }
     const Array *array = arrayCache.CreateArray(uniqueName, mo->size);
 #ifdef SUPPORT_Z3
-    if (!NoInterpolation) {
+    if (InterpolationOption::interpolation) {
       // We create shadow array as existentially-quantified
       // variables for subsumption checking
       const Array *shadow =
-          arrayCache.CreateArray("__shadow__" + uniqueName, mo->size);
+          arrayCache.CreateArray(ShadowArray::getShadowName(uniqueName), mo->size);
       ShadowArray::addShadowArrayMap(array, shadow);
     }
 #endif
@@ -3959,6 +3969,13 @@ void Executor::runFunctionAsMain(Function *f,
 				 int argc,
 				 char **argv,
 				 char **envp) {
+
+#ifdef SUPPORT_Z3
+  if (NoInterpolation)
+    // We globally declare that we don't do interpolation
+    InterpolationOption::interpolation = false;
+#endif /* SUPPORT_Z3 */
+
   std::vector<ref<Expr> > arguments;
 
   // force deterministic initialization of memory objects
@@ -4041,7 +4058,7 @@ void Executor::runFunctionAsMain(Function *f,
   state->ptreeNode = processTree->root;
 
 #ifdef SUPPORT_Z3
-  if (!NoInterpolation
+  if (InterpolationOption::interpolation
 #ifdef SUPPORT_STP
       && SelectSolver == SOLVER_Z3
 #endif
@@ -4056,7 +4073,7 @@ void Executor::runFunctionAsMain(Function *f,
   processTree = 0;
 
 #ifdef SUPPORT_Z3
-  if (!NoInterpolation
+  if (InterpolationOption::interpolation
 #ifdef SUPPORT_STP
       && SelectSolver == SOLVER_Z3
 #endif

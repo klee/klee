@@ -19,6 +19,12 @@ using namespace llvm;
 namespace klee {
   class ExecutionState;
 
+  /// Global variable denoting whether interpolation is enabled or otherwise
+  struct InterpolationOption
+  {
+    static bool interpolation;
+  };
+
   class PathCondition {
     /// @brief KLEE expression
     ref<Expr> constraint;

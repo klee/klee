@@ -31,6 +31,10 @@ public:
   static void addShadowArrayMap(const Array *source, const Array *target);
 
   static ref<Expr> getShadowExpression(ref<Expr> expr);
+
+  static std::string getShadowName(std::string name) {
+    return "__shadow__" + name;
+  }
 };
 
 class Allocation {
