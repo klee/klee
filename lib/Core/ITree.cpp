@@ -16,20 +16,6 @@
 
 using namespace klee;
 
-std::map<const Array *, const Array *> ShadowArray::shadowArray;
-
-void ShadowArray::addShadowArrayMap(const Array *source, const Array *target) {
-  shadowArray[source] = target;
-}
-
-ref<Expr> ShadowArray::getShadowExpression(ref<Expr> expr) {
-  // ReadExpr would have an updates which refer to an array:
-  // change that array.
-  return expr;
-}
-
-/**/
-
 PathConditionMarker::PathConditionMarker(PathCondition *pathCondition) :
   mayBeInInterpolant(false), pathCondition(pathCondition) {}
 
@@ -179,6 +165,8 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
             AndExpr::create(auxDisjuncts, stateEqualityConstraints);
     }
 
+    // FIXME: To be removed later.
+    return false;
 
     // We create path condition needed constraints marking structure
       std::map< ref<Expr>, PathConditionMarker *> markerMap =

@@ -19,15 +19,6 @@ using namespace llvm;
 namespace klee {
   class ExecutionState;
 
-  class ShadowArray {
-    static std::map<const Array *, const Array *> shadowArray;
-
-  public:
-    static void addShadowArrayMap(const Array *source, const Array *target);
-
-    static ref<Expr> getShadowExpression(ref<Expr> expr);
-  };
-
   class PathCondition {
     /// @brief KLEE expression
     ref<Expr> constraint;
