@@ -7,6 +7,14 @@ namespace klee {
 
 std::map<const Array *, const Array *> ShadowArray::shadowArray;
 
+UpdateNode *ShadowArray::getShadowUpdate(const UpdateNode *source) {
+  if (!source) return 0;
+
+  return  new UpdateNode(ShadowArray::getShadowUpdate(source->next),
+                         ShadowArray::getShadowExpression(source->index),
+                         ShadowArray::getShadowExpression(source->value));
+}
+
 void ShadowArray::addShadowArrayMap(const Array *source, const Array *target) {
   shadowArray[source] = target;
 }
@@ -18,8 +26,9 @@ ref<Expr> ShadowArray::getShadowExpression(ref<Expr> expr) {
   case Expr::Read: {
     ReadExpr *readExpr = static_cast<ReadExpr *>(expr.get());
     UpdateList newUpdates(ShadowArray::shadowArray[readExpr->updates.root],
-                          readExpr->updates.head);
-    ret = ReadExpr::alloc(newUpdates, readExpr->index);
+                          ShadowArray::getShadowUpdate(readExpr->updates.head));
+    ret = ReadExpr::alloc(newUpdates,
+                          ShadowArray::getShadowExpression(readExpr->index));
     break;
   }
   case Expr::Constant: {

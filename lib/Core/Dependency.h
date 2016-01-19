@@ -27,6 +27,8 @@ namespace klee {
 class ShadowArray {
   static std::map<const Array *, const Array *> shadowArray;
 
+  static UpdateNode *getShadowUpdate(const UpdateNode *chain);
+
 public:
   static void addShadowArrayMap(const Array *source, const Array *target);
 
