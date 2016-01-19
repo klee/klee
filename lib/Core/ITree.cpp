@@ -72,7 +72,6 @@ std::vector< ref<Expr> > PathCondition::packInterpolant() {
   for (PathCondition *it = this; it != 0; it = it->tail) {
       if (it->inInterpolant) {
 	  if (!it->shadowed) {
-	      it->constraint->dump();
 	      it->shadowConstraint = ShadowArray::getShadowExpression(it->constraint);
 	      it->shadowed = true;
 	  }
@@ -123,10 +122,16 @@ SubsumptionTableEntry::~SubsumptionTableEntry() {}
 bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
                                      ExecutionState& state,
                                      double timeout) {
+  llvm::errs() << "SUBSUBMPTION CHECK\n";
   if (state.itreeNode == 0)
     return false;
+  llvm::errs() << "SUBSUMPTION CHECK 1\n";
+
+  llvm::errs() << "ENTRY NODEID = " << nodeId << "\n";
+  llvm::errs() << "ITREENODE NODEID = " << state.itreeNode->getNodeId() << "\n";
 
   if (state.itreeNode->getNodeId() == nodeId) {
+      llvm::errs() << "SUBSUMPTION CHECK 2\n";
 
     // TODO: Existential variables not taken into account!
     std::map<llvm::Value *, ref<Expr> > stateSingletonStore =
@@ -171,24 +176,26 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
             AndExpr::create(auxDisjuncts, stateEqualityConstraints);
     }
 
-    // FIXME: To be removed later.
-    return false;
-
     // We create path condition needed constraints marking structure
       std::map< ref<Expr>, PathConditionMarker *> markerMap =
 	  state.itreeNode->makeMarkerMap();
 
-      for (std::vector< ref<Expr> >::iterator it0 = interpolant.begin();
-	  it0 != interpolant.end(); it0++) {
+      llvm::errs() << "INTERPOLANT SIZE = " << interpolant.size() << "\n";
+      for (std::vector< ref<Expr> >::iterator it0 = interpolant.begin(),
+	  it0End = interpolant.end(); it0 != it0End; ++it0) {
 	  ref<Expr> query = *it0;
 	  Solver::Validity result;
 
-          // llvm::errs() << "Querying for subsumption check:\n";
-          // ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
+          llvm::errs() << "Querying for subsumption check:\n";
+          ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
 
           solver->setTimeout(timeout);
           bool success = solver->evaluate(state, query, result);
           solver->setTimeout(0);
+
+          // FIXME: To be removed later.
+          return false;
+
           if (success && result == Solver::True) {
             std::vector<ref<Expr> > unsatCore = solver->getUnsatCore();
 
@@ -252,6 +259,7 @@ bool ITree::checkCurrentStateSubsumption(TimingSolver *solver,
 
   for (std::vector<SubsumptionTableEntry>::iterator it = subsumptionTable.begin();
       it != subsumptionTable.end(); it++) {
+
       if (it->subsumed(solver, state, timeout)) {
 
         // We mark as subsumed such that the node will not be

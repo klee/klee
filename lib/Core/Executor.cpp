@@ -763,6 +763,7 @@ void Executor::branch(ExecutionState &state,
 
 Executor::StatePair 
 Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
+  llvm::errs() << "EXECUTING FORK\n";
   Solver::Validity res;
   std::map< ExecutionState*, std::vector<SeedInfo> >::iterator it = 
     seedMap.find(&current);
@@ -942,6 +943,8 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
 
     return StatePair(0, &current);
   } else {
+    llvm::errs() << "NEITHER TRUE NOR FALSE\n";
+
     TimerStatIncrementer timer(stats::forkTime);
     ExecutionState *falseState, *trueState = &current;
 

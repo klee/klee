@@ -885,7 +885,7 @@ private:
   Z3Builder *builder;
   double timeout;
   SolverRunStatus runStatusCode;
-  std::vector< ref<Expr> > unsat_core;
+  std::vector< ref<Expr> > unsatCore;
 
 public:
   Z3SolverImpl();
@@ -1045,14 +1045,16 @@ Z3SolverImpl::computeInitialValues(const Query &query,
   ++stats::queries;
   ++stats::queryCounterexamples;
 
-  Z3_ast stp_e = builder->construct(query.expr);
+  Z3_ast z3_e = builder->construct(query.expr);
+  llvm::errs() << "Z3 SOLVER: " << Z3_solver_to_string(builder->ctx, the_solver) << "\n";
+  llvm::errs() << "Z3 QUERY: " << Z3_ast_to_string(builder->ctx, z3_e) << "\n";
 
   bool success;
-  runStatusCode = runAndGetCex(builder, the_solver, stp_e, objects, values, hasSolution);
+  runStatusCode = runAndGetCex(builder, the_solver, z3_e, objects, values, hasSolution);
 
   if (runStatusCode == SolverImpl::SOLVER_RUN_STATUS_SUCCESS_UNSOLVABLE){
-      unsat_core.clear();
-      unsat_core = getUnsatCoreVector(query, builder, the_solver);
+      unsatCore.clear();
+      unsatCore = getUnsatCoreVector(query, builder, the_solver);
   }
   success = true;
 
@@ -1133,7 +1135,7 @@ SolverImpl::SolverRunStatus Z3SolverImpl::getOperationStatusCode() {
 }
 
 std::vector< ref<Expr> > Z3SolverImpl::getUnsatCore() {
-  return unsat_core;
+  return unsatCore;
 }
 
 #endif /* SUPPORT_Z3 */
