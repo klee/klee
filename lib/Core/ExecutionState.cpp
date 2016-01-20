@@ -121,12 +121,14 @@ ExecutionState::ExecutionState(const ExecutionState& state):
     symbolics[i].first->refCount++;
 }
 
+#ifdef SUPPORT_Z3
 void ExecutionState::addITreeConstraint(ref<Expr> e, llvm::Instruction *instr) {
   llvm::BranchInst *binstr = llvm::dyn_cast<llvm::BranchInst>(instr);
   if (itreeNode && binstr && binstr->isConditional()) {
     itreeNode->addConstraint(e, binstr->getCondition());
   }
 }
+#endif
 
 ExecutionState *ExecutionState::branch() {
   depth++;
@@ -154,8 +156,10 @@ void ExecutionState::popFrame(KInstruction *ki, ref<Expr> returnValue) {
     addressSpace.unbindObject(*it);
   stack.pop_back();
 
-  if (site && ki)
+#ifdef SUPPORT_Z3
+  if (InterpolationOption::interpolation && site && ki)
     itreeNode->popAbstractDependencyFrame(site, ki->inst, returnValue);
+#endif
 }
 
 void ExecutionState::addSymbolic(const MemoryObject *mo, const Array *array) { 

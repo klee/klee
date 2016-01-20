@@ -80,7 +80,9 @@ private:
 
   std::map<std::string, std::string> fnAliases;
 
+#ifdef SUPPORT_Z3
   void addITreeConstraint(ref<Expr> e, llvm::Instruction *instr);
+#endif
 
 public:
   // Execution - Control Flow specific
@@ -179,7 +181,9 @@ public:
 
   void addSymbolic(const MemoryObject *mo, const Array *array);
   void addConstraint(ref<Expr> e) {
+#ifdef SUPPORT_Z3
     addITreeConstraint(e, prevPC->inst);
+#endif
     constraints.addConstraint(e);
   }
 
