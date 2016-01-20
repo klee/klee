@@ -1046,8 +1046,6 @@ Z3SolverImpl::computeInitialValues(const Query &query,
   ++stats::queryCounterexamples;
 
   Z3_ast z3_e = builder->construct(query.expr);
-  llvm::errs() << "Z3 SOLVER: " << Z3_solver_to_string(builder->ctx, the_solver) << "\n";
-  llvm::errs() << "Z3 QUERY: " << Z3_ast_to_string(builder->ctx, z3_e) << "\n";
 
   bool success;
   runStatusCode = runAndGetCex(builder, the_solver, z3_e, objects, values, hasSolution);

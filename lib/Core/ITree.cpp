@@ -122,18 +122,11 @@ SubsumptionTableEntry::~SubsumptionTableEntry() {}
 bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
                                      ExecutionState& state,
                                      double timeout) {
-  llvm::errs() << "SUBSUBMPTION CHECK\n";
   if (state.itreeNode == 0)
     return false;
-  llvm::errs() << "SUBSUMPTION CHECK 1\n";
-
-  llvm::errs() << "ENTRY NODEID = " << nodeId << "\n";
-  llvm::errs() << "ITREENODE NODEID = " << state.itreeNode->getNodeId() << "\n";
 
   if (state.itreeNode->getNodeId() == nodeId) {
-      llvm::errs() << "SUBSUMPTION CHECK 2\n";
 
-    // TODO: Existential variables not taken into account!
     std::map<llvm::Value *, ref<Expr> > stateSingletonStore =
         state.itreeNode->getLatestCoreExpressions();
     std::map<llvm::Value *, std::vector< ref<Expr> > > stateCompositeStore =
@@ -146,7 +139,7 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
       const ref<Expr> lhs = singletonStore[*it];
       const ref<Expr> rhs = stateSingletonStore[*it];
       stateEqualityConstraints =
-          AndExpr::create(EqExpr::create(lhs, rhs), stateEqualityConstraints);
+          AndExpr::alloc(EqExpr::alloc(lhs, rhs), stateEqualityConstraints);
     }
 
     for (std::vector<llvm::Value *>::iterator it = compositeStoreKeys.begin(),
@@ -166,25 +159,24 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
              rhsIter != rhsIterEnd; ++rhsIter) {
           const ref<Expr> lhs = *lhsIter;
           const ref<Expr> rhs = *rhsIter;
-          auxDisjuncts = OrExpr::create(EqExpr::create(lhs, rhs), auxDisjuncts);
+          auxDisjuncts = OrExpr::alloc(EqExpr::alloc(lhs, rhs), auxDisjuncts);
           auxDisjunctsEmpty = false;
         }
       }
 
       if (!auxDisjunctsEmpty)
         stateEqualityConstraints =
-            AndExpr::create(auxDisjuncts, stateEqualityConstraints);
+            AndExpr::alloc(auxDisjuncts, stateEqualityConstraints);
     }
 
     // We create path condition needed constraints marking structure
       std::map< ref<Expr>, PathConditionMarker *> markerMap =
 	  state.itreeNode->makeMarkerMap();
 
-      llvm::errs() << "INTERPOLANT SIZE = " << interpolant.size() << "\n";
       for (std::vector< ref<Expr> >::iterator it0 = interpolant.begin(),
 	  it0End = interpolant.end(); it0 != it0End; ++it0) {
-	  ref<Expr> query = *it0;
-	  Solver::Validity result;
+        ref<Expr> query = AndExpr::alloc(*it0, stateEqualityConstraints);
+        Solver::Validity result;
 
           llvm::errs() << "Querying for subsumption check:\n";
           ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
