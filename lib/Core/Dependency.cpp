@@ -184,8 +184,7 @@ ref<Expr> ShadowArray::getShadowExpression(ref<Expr> expr) {
     break;
   }
   default: {
-    llvm::errs() << "Unsupported expression: ";
-    expr->dump();
+    assert(0 && "unhandled Expr type");
     ret = expr;
     break;
   }
