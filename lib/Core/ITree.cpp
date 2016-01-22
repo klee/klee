@@ -132,14 +132,17 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
     std::map<llvm::Value *, std::vector< ref<Expr> > > stateCompositeStore =
         state.itreeNode->getCompositeCoreExpressions();
 
-    ref<Expr> stateEqualityConstraints = ConstantExpr::alloc(1, Expr::Bool);
-    for (std::vector<llvm::Value *>::iterator it = singletonStoreKeys.begin(),
-                                              itEnd = singletonStoreKeys.end();
+    ref<Expr> stateEqualityConstraints;
+    for (std::vector<llvm::Value *>::iterator
+             itBegin = singletonStoreKeys.begin(),
+             itEnd = singletonStoreKeys.end(), it = itBegin;
          it != itEnd; ++it) {
       const ref<Expr> lhs = singletonStore[*it];
       const ref<Expr> rhs = stateSingletonStore[*it];
       stateEqualityConstraints =
-          AndExpr::alloc(EqExpr::alloc(lhs, rhs), stateEqualityConstraints);
+          (it == itBegin ? EqExpr::alloc(lhs, rhs)
+                         : AndExpr::alloc(EqExpr::alloc(lhs, rhs),
+                                          stateEqualityConstraints));
     }
 
     for (std::vector<llvm::Value *>::iterator it = compositeStoreKeys.begin(),
@@ -148,7 +151,7 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
       std::vector<ref<Expr> > lhsList = compositeStore[*it];
       std::vector<ref<Expr> > rhsList = stateCompositeStore[*it];
 
-      ref<Expr> auxDisjuncts = ConstantExpr::alloc(0, Expr::Bool);
+      ref<Expr> auxDisjuncts;
       bool auxDisjunctsEmpty = true;
 
       for (std::vector<ref<Expr> >::iterator lhsIter = lhsList.begin(),
@@ -159,8 +162,13 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
              rhsIter != rhsIterEnd; ++rhsIter) {
           const ref<Expr> lhs = *lhsIter;
           const ref<Expr> rhs = *rhsIter;
-          auxDisjuncts = OrExpr::alloc(EqExpr::alloc(lhs, rhs), auxDisjuncts);
-          auxDisjunctsEmpty = false;
+
+          if (auxDisjunctsEmpty) {
+            auxDisjuncts = EqExpr::alloc(lhs, rhs);
+            auxDisjunctsEmpty = false;
+          } else {
+            auxDisjuncts = OrExpr::alloc(EqExpr::alloc(lhs, rhs), auxDisjuncts);
+          }
         }
       }
 
@@ -170,19 +178,26 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
     }
 
     // We create path condition needed constraints marking structure
-      std::map< ref<Expr>, PathConditionMarker *> markerMap =
-	  state.itreeNode->makeMarkerMap();
+    std::map<ref<Expr>, PathConditionMarker *> markerMap =
+        state.itreeNode->makeMarkerMap();
 
       for (std::vector< ref<Expr> >::iterator it0 = interpolant.begin(),
 	  it0End = interpolant.end(); it0 != it0End; ++it0) {
-        ref<Expr> query = AndExpr::alloc(*it0, stateEqualityConstraints);
+
+        ExecutionState tmpState(state);
         Solver::Validity result;
 
+        ref<Expr> query = ConstantExpr::alloc(0, Expr::Bool); // false
+
+        ref<Expr> negatedQuery =
+            NotExpr::create(AndExpr::create(*it0, stateEqualityConstraints));
+        tmpState.addConstraint(negatedQuery);
+
           llvm::errs() << "Querying for subsumption check:\n";
-          ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
+          ExprPPrinter::printQuery(llvm::errs(), tmpState.constraints, query);
 
           solver->setTimeout(timeout);
-          bool success = solver->evaluate(state, query, result);
+          bool success = solver->evaluate(tmpState, query, result);
           solver->setTimeout(0);
 
           // FIXME: To be removed later.
@@ -193,7 +208,9 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
 
             for (std::vector<ref<Expr> >::iterator it1 = unsatCore.begin();
                  it1 != unsatCore.end(); it1++) {
-              markerMap[*it1]->mayIncludeInInterpolant();
+              // Skip the additional negated query when marking
+              if (it1->get() != negatedQuery.get())
+                markerMap[*it1]->mayIncludeInInterpolant();
             }
 
           } else {

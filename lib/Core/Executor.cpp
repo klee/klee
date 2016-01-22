@@ -930,8 +930,6 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
 
     return StatePair(0, &current);
   } else {
-    llvm::errs() << "NEITHER TRUE NOR FALSE\n";
-
     TimerStatIncrementer timer(stats::forkTime);
     ExecutionState *falseState, *trueState = &current;
 
