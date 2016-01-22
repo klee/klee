@@ -264,7 +264,7 @@ VersionedAllocation::VersionedAllocation(llvm::Value *site)
   EnvironmentAllocation::~EnvironmentAllocation() {}
 
   bool EnvironmentAllocation::hasAllocationSite(llvm::Value *site) const {
-    return isEnvironmentAllocation(site);
+    return Dependency::Util::isEnvironmentAllocation(site);
   }
 
   void EnvironmentAllocation::print(llvm::raw_ostream& stream) const {
@@ -385,11 +385,11 @@ VersionedAllocation::VersionedAllocation(llvm::Value *site)
 
   Allocation *Dependency::getInitialAllocation(llvm::Value *allocation) {
     Allocation *ret;
-    if (isEnvironmentAllocation(allocation)) {
-	ret = new EnvironmentAllocation();
-	allocationsList.push_back(ret);
+    if (Util::isEnvironmentAllocation(allocation)) {
+      ret = new EnvironmentAllocation();
+      allocationsList.push_back(ret);
         return ret;
-    } else if (isCompositeAllocation(allocation)) {
+    } else if (Util::isCompositeAllocation(allocation)) {
       ret = new CompositeAllocation(allocation);
       allocationsList.push_back(ret);
 
@@ -433,6 +433,8 @@ VersionedAllocation::VersionedAllocation(llvm::Value *site)
     std::vector<llvm::Value *> allAlloc = getAllVersionedAllocations();
     std::map<llvm::Value *, ref<Expr> > ret;
 
+    std::vector<ref<Expr> > visitedExpressionsList;
+
     for (std::vector<llvm::Value *>::iterator allocIter = allAlloc.begin(),
                                               allocIterEnd = allAlloc.end();
          allocIter != allocIterEnd; ++allocIter) {
@@ -446,10 +448,17 @@ VersionedAllocation::VersionedAllocation(llvm::Value *site)
         VersionedValue *v = stored.at(0);
 
         if (!interpolantValueOnly) {
-          ret[*allocIter] = v->getExpression();
+          ref<Expr> expr = v->getExpression();
+          if (!Util::isSubExpressionInList(expr, visitedExpressionsList)) {
+            ret[*allocIter] = expr;
+            visitedExpressionsList.push_back(expr);
+          }
         } else if (v->valueInInterpolant()) {
-          ret[*allocIter] =
-              ShadowArray::getShadowExpression(v->getExpression());
+          ref<Expr> expr = v->getExpression();
+          if (!Util::isSubExpressionInList(expr, visitedExpressionsList)) {
+            ret[*allocIter] = ShadowArray::getShadowExpression(expr);
+            visitedExpressionsList.push_back(expr);
+          }
         }
       }
     }
@@ -752,13 +761,13 @@ VersionedAllocation::VersionedAllocation(llvm::Value *site)
 
   Dependency::~Dependency() {
     // Delete the locally-constructed relations
-    deletePointerVector(equalityList);
-    deletePointerVector(storesList);
-    deletePointerVector(flowsToList);
+    Util::deletePointerVector(equalityList);
+    Util::deletePointerVector(storesList);
+    Util::deletePointerVector(flowsToList);
 
     // Delete the locally-constructed objects
-    deletePointerVector(valuesList);
-    deletePointerVector(allocationsList);
+    Util::deletePointerVector(valuesList);
+    Util::deletePointerVector(allocationsList);
   }
 
   Dependency *Dependency::cdr() const { return parentDependency; }
@@ -783,9 +792,9 @@ VersionedAllocation::VersionedAllocation(llvm::Value *site)
         break;
       }
       case llvm::Instruction::Load: {
-	if (isEnvironmentAllocation(i)) {
-	    // The load corresponding to a load of the environment address
-	    // that was never allocated within this program.
+        if (Util::isEnvironmentAllocation(i)) {
+          // The load corresponding to a load of the environment address
+          // that was never allocated within this program.
           addPointerEquality(getNewVersionedValue(i, valueExpr),
                              getNewAllocationVersion(i));
           break;
@@ -1052,30 +1061,41 @@ VersionedAllocation::VersionedAllocation(llvm::Value *site)
 
   /**/
 
-  template<typename T>
-  void deletePointerVector(std::vector<T*>& list) {
-    typedef typename std::vector<T*>::iterator IteratorType;
+  bool Dependency::Util::isSubExpressionOf(ref<Expr> subExpr, ref<Expr> expr) {
+    if (subExpr.get() == expr.get())
+      return true;
 
-    for (IteratorType it = list.begin(),
-	itEnd = list.end(); it != itEnd; ++it) {
-	delete *it;
+    for (unsigned i = 0, n = expr->getNumKids(); i < n; ++i) {
+      if (isSubExpressionOf(subExpr, expr->getKid(i)))
+        return true;
+    }
+    return false;
+  }
+
+  bool
+  Dependency::Util::isSubExpressionInList(ref<Expr> subExpr,
+                                          std::vector<ref<Expr> > exprList) {
+    for (std::vector<ref<Expr> >::iterator it = exprList.begin(),
+                                           itEnd = exprList.end();
+         it != itEnd; ++it) {
+      if (isSubExpressionOf(subExpr, *it))
+        return true;
+    }
+    return false;
+  }
+
+  template <typename T>
+  void Dependency::Util::deletePointerVector(std::vector<T *> &list) {
+    typedef typename std::vector<T *>::iterator IteratorType;
+
+    for (IteratorType it = list.begin(), itEnd = list.end(); it != itEnd;
+         ++it) {
+      delete *it;
     }
     list.clear();
   }
 
-  std::string makeTabs(const unsigned int tab_num) {
-    std::string tabs_string;
-    for (unsigned int i = 0; i < tab_num; i++) {
-      tabs_string += appendTab(tabs_string);
-    }
-    return tabs_string;
-  }
-
-  std::string appendTab(const std::string &prefix) {
-    return prefix + "        ";
-  }
-
-  bool isEnvironmentAllocation(llvm::Value *site) {
+  bool Dependency::Util::isEnvironmentAllocation(llvm::Value *site) {
     llvm::LoadInst *inst = llvm::dyn_cast<llvm::LoadInst>(site);
 
     if (!inst)
@@ -1089,7 +1109,7 @@ VersionedAllocation::VersionedAllocation(llvm::Value *site)
     return false;
   }
 
-  bool isCompositeAllocation(llvm::Value *site) {
+  bool Dependency::Util::isCompositeAllocation(llvm::Value *site) {
     // We define composite allocation to be non-environment
     if (isEnvironmentAllocation(site))
       return false;
@@ -1109,5 +1129,19 @@ VersionedAllocation::VersionedAllocation(llvm::Value *site)
     }
 
     return false;
+  }
+
+  /**/
+
+  std::string makeTabs(const unsigned int tab_num) {
+    std::string tabs_string;
+    for (unsigned int i = 0; i < tab_num; i++) {
+      tabs_string += appendTab(tabs_string);
+    }
+    return tabs_string;
+  }
+
+  std::string appendTab(const std::string &prefix) {
+    return prefix + "        ";
   }
 }

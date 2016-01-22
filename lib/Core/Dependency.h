@@ -200,6 +200,23 @@ class Allocation {
 
   class Dependency {
 
+  public:
+    class Util {
+      static bool isSubExpressionOf(ref<Expr> subExpr, ref<Expr> expr);
+
+    public:
+      template <typename T>
+      static void deletePointerVector(std::vector<T *> &list);
+
+      static bool isSubExpressionInList(ref<Expr> subExpr,
+                                        std::vector<ref<Expr> > exprList);
+
+      static bool isCompositeAllocation(llvm::Value *site);
+
+      static bool isEnvironmentAllocation(llvm::Value *site);
+    };
+
+  private:
     /// @brief Previous path condition
     Dependency *parentDependency;
 
@@ -307,16 +324,11 @@ class Allocation {
 
   };
 
-  template<typename T>
-  void deletePointerVector(std::vector<T*>& list);
 
   std::string makeTabs(const unsigned tab_num);
 
   std::string appendTab(const std::string &prefix);
 
-  bool isEnvironmentAllocation(llvm::Value *site);
-
-  bool isCompositeAllocation(llvm::Value *site);
 }
 
 #endif

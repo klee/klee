@@ -126,7 +126,6 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
     return false;
 
   if (state.itreeNode->getNodeId() == nodeId) {
-
     std::map<llvm::Value *, ref<Expr> > stateSingletonStore =
         state.itreeNode->getLatestCoreExpressions();
     std::map<llvm::Value *, std::vector< ref<Expr> > > stateCompositeStore =
@@ -139,10 +138,29 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
          it != itEnd; ++it) {
       const ref<Expr> lhs = singletonStore[*it];
       const ref<Expr> rhs = stateSingletonStore[*it];
-      stateEqualityConstraints =
-          (it == itBegin ? EqExpr::alloc(lhs, rhs)
-                         : AndExpr::alloc(EqExpr::alloc(lhs, rhs),
-                                          stateEqualityConstraints));
+      if (it == itBegin) {
+        stateEqualityConstraints = EqExpr::alloc(lhs, rhs);
+      } else {
+        (*it)->dump();
+        if (llvm::Instruction *instr = llvm::dyn_cast<llvm::Instruction>(*it)) {
+          llvm::errs() << " FUNCTION: "
+                       << instr->getParent()->getParent()->getName() << "\n";
+        }
+        llvm::errs() << "LHS=";
+        lhs->dump();
+        llvm::errs() << "RHS=";
+        if (!rhs.get()) {
+          llvm::errs() << "NULL\n";
+        } else {
+          rhs->dump();
+        }
+        stateEqualityConstraints =
+            AndExpr::alloc(EqExpr::alloc(lhs, rhs), stateEqualityConstraints);
+      }
+      //      stateEqualityConstraints =
+      //          (it == itBegin ? EqExpr::alloc(lhs, rhs)
+      //                         : AndExpr::alloc(EqExpr::alloc(lhs, rhs),
+      //                                          stateEqualityConstraints));
     }
 
     for (std::vector<llvm::Value *>::iterator it = compositeStoreKeys.begin(),
