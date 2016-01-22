@@ -442,14 +442,14 @@ VersionedAllocation::VersionedAllocation(llvm::Value *site)
       // We should only get the latest value and no other
       assert(stored.size() <= 1);
 
-      for (std::vector<VersionedValue *>::iterator valueIter = stored.begin(),
-                                                   valueIterEnd = stored.end();
-           valueIter != valueIterEnd; ++valueIter) {
+      if (stored.size()) {
+        VersionedValue *v = stored.at(0);
+
         if (!interpolantValueOnly) {
-          ret[*allocIter] = (*valueIter)->getExpression();
-        } else if ((*valueIter)->valueInInterpolant()) {
+          ret[*allocIter] = v->getExpression();
+        } else if (v->valueInInterpolant()) {
           ret[*allocIter] =
-              ShadowArray::getShadowExpression((*valueIter)->getExpression());
+              ShadowArray::getShadowExpression(v->getExpression());
         }
       }
     }
