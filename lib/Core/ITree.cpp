@@ -265,6 +265,47 @@ void SubsumptionTableEntry::print(llvm::raw_ostream &stream) const {
       }
   }
   stream << "]\n";
+
+  if (singletonStore.size()) {
+    stream << "singleton allocations = [";
+    for (std::map<llvm::Value *, ref<Expr> >::const_iterator
+             itBegin = singletonStore.begin(),
+             itEnd = singletonStore.end(), it = itBegin;
+         it != itEnd; ++it) {
+      if (it != itBegin)
+        stream << ",";
+      stream << "(";
+      it->first->print(stream);
+      stream << ",";
+      it->second->print(stream);
+      stream << ")";
+    }
+    stream << "]\n";
+  }
+
+  if (compositeStore.size()) {
+    stream << "composite allocations = [";
+    for (std::map<llvm::Value *, std::vector<ref<Expr> > >::const_iterator
+             it0Begin = compositeStore.begin(),
+             it0End = compositeStore.end(), it0 = it0Begin;
+         it0 != it0End; ++it0) {
+      if (it0 != it0Begin)
+        stream << ",";
+      stream << "(";
+      it0->first->print(stream);
+      stream << ",[";
+      for (std::vector<ref<Expr> >::const_iterator
+               it1Begin = it0->second.begin(),
+               it1End = it0->second.end(), it1 = it1Begin;
+           it1 != it1End; ++it1) {
+        if (it1 != it1Begin)
+          stream << ",";
+        (*it1)->print(stream);
+      }
+      stream << "])";
+    }
+    stream << "]\n";
+  }
 }
 
 /**/
@@ -405,12 +446,21 @@ void ITree::printNode(llvm::raw_ostream& stream, ITreeNode *n, std::string edges
 }
 
 void ITree::print(llvm::raw_ostream& stream) {
-  llvm::errs() << "------------------------- ITree Structure ---------------------------\n";
+  stream << "------------------------- ITree Structure "
+            "---------------------------\n";
   stream << this->root->nodeId;
   if (this->root == this->currentINode) {
       stream << " (active)";
   }
   this->printNode(stream, this->root, "");
+  stream << "\n------------------------- Subsumption Table "
+            "-------------------------\n";
+  for (std::vector<SubsumptionTableEntry>::iterator
+           it = subsumptionTable.begin(),
+           itEnd = subsumptionTable.end();
+       it != itEnd; ++it) {
+    (*it).print(stream);
+  }
 }
 
 void ITree::dump() {
@@ -517,7 +567,8 @@ ITreeNode::getCompositeCoreExpressions(bool interpolantValueOnly) const {
 }
 
 void ITreeNode::dump() const {
-  llvm::errs() << "\n------------------------- ITree Node --------------------------------\n";
+  llvm::errs() << "------------------------- ITree Node "
+                  "--------------------------------\n";
   this->print(llvm::errs());
   llvm::errs() << "\n";
 }
