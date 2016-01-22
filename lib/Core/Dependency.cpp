@@ -468,10 +468,10 @@ VersionedAllocation::VersionedAllocation(llvm::Value *site)
   std::vector<llvm::Value *> Dependency::getAllCompositeAllocations() const {
     std::vector<llvm::Value *> allAlloc = newCompositeAllocations;
     if (parentDependency) {
-      std::vector<llvm::Value *> parentVersionedAllocations =
-          parentDependency->getAllVersionedAllocations();
-      allAlloc.insert(allAlloc.begin(), parentVersionedAllocations.begin(),
-                      parentVersionedAllocations.end());
+      std::vector<llvm::Value *> parentCompositeAllocations =
+          parentDependency->getAllCompositeAllocations();
+      allAlloc.insert(allAlloc.begin(), parentCompositeAllocations.begin(),
+                      parentCompositeAllocations.end());
     }
     return allAlloc;
   }
