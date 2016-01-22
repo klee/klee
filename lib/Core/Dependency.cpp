@@ -195,12 +195,6 @@ ref<Expr> ShadowArray::getShadowExpression(ref<Expr> expr) {
 
 /**/
 
-Allocation::Allocation() : site(0) {}
-
-Allocation::~Allocation() {}
-
-bool Allocation::hasAllocationSite(llvm::Value *site) const { return false; }
-
 bool Allocation::isComposite() const {
   // We return true by default as composites are
   // more generally handled.
@@ -213,55 +207,27 @@ void Allocation::print(llvm::raw_ostream &stream) const {
 
 /**/
 
-CompositeAllocation::CompositeAllocation(llvm::Value *site) {
-  this->site = site;
-}
-
-CompositeAllocation::~CompositeAllocation() {}
-
-bool CompositeAllocation::hasAllocationSite(llvm::Value *site) const {
-  return this->site == site;
-}
-
 void CompositeAllocation::print(llvm::raw_ostream &stream) const {
-  stream << "A[";
+  stream << "A(composite)[";
   site->print(stream);
-  stream << "]";
+  stream << "] ";
 }
 
 /**/
 
-unsigned long long VersionedAllocation::nextVersion = 0;
-
-VersionedAllocation::VersionedAllocation(llvm::Value *site)
-    : version(nextVersion++) {
-  this->site = site;
-}
-
-  VersionedAllocation::~VersionedAllocation() {}
-
-  bool VersionedAllocation::hasAllocationSite(llvm::Value *site) const {
-    return this->site == site;
-  }
-
   bool VersionedAllocation::isComposite() const {
     // Only non-composite allocations can be versioned
-    // and desctructively updated
+    // and destructively updated
     return false;
   }
 
   void VersionedAllocation::print(llvm::raw_ostream& stream) const {
-    stream << "A[";
+    stream << "A(singleton)[";
     site->print(stream);
-    stream << "#" << version;
     stream << "]";
   }
 
   /**/
-
-  EnvironmentAllocation::EnvironmentAllocation() {}
-
-  EnvironmentAllocation::~EnvironmentAllocation() {}
 
   bool EnvironmentAllocation::hasAllocationSite(llvm::Value *site) const {
     return Dependency::Util::isEnvironmentAllocation(site);
@@ -273,50 +239,18 @@ VersionedAllocation::VersionedAllocation(llvm::Value *site)
 
   /**/
 
-  unsigned long long VersionedValue::nextVersion = 0;
-
-  VersionedValue::VersionedValue(llvm::Value *value, ref<Expr> valueExpr)
-      : value(value), valueExpr(valueExpr), version(nextVersion++),
-        inInterpolant(false) {}
-
-  VersionedValue::~VersionedValue() {}
-
-  bool VersionedValue::hasValue(llvm::Value *value) const {
-    return this->value == value;
-  }
-
-  ref<Expr> VersionedValue::getExpression() const { return valueExpr; }
-
-  void VersionedValue::includeInInterpolant() {
-    inInterpolant = true;
-  }
-
-  bool VersionedValue::valueInInterpolant() const {
-    return inInterpolant;
-  }
-
   void VersionedValue::print(llvm::raw_ostream& stream) const {
     stream << "V";
     if (inInterpolant)
       stream << "(I)";
     stream << "[";
     value->print(stream);
-    stream << "#" << version << ":";
+    stream << ":";
     valueExpr->print(stream);
     stream << "]";
   }
 
   /**/
-
-  PointerEquality::PointerEquality(VersionedValue *value,
-                                   Allocation *allocation)
-      : value(value), allocation(allocation) {}
-
-  PointerEquality::~PointerEquality() {}
-
-  Allocation *PointerEquality::equals(VersionedValue *value) const {
-    return this->value == value ? allocation : 0;
-  }
 
   void PointerEquality::print(llvm::raw_ostream& stream) const {
     stream << "(";
@@ -328,23 +262,6 @@ VersionedAllocation::VersionedAllocation(llvm::Value *site)
 
   /**/
 
-  StorageCell::StorageCell(Allocation *allocation, VersionedValue *value)
-      : allocation(allocation), value(value) {}
-
-  StorageCell::~StorageCell() {}
-
-  VersionedValue *StorageCell::stores(Allocation *allocation) const {
-    return this->allocation == allocation ? this->value : 0;
-  }
-
-  Allocation *StorageCell::storageOf(VersionedValue *value) const {
-    return this->value == value ? this->allocation : 0;
-  }
-
-  Allocation *StorageCell::getAllocation() const {
-    return this->allocation;
-  }
-
   void StorageCell::print(llvm::raw_ostream& stream) const {
     stream << "[";
     allocation->print(stream);
@@ -355,23 +272,14 @@ VersionedAllocation::VersionedAllocation(llvm::Value *site)
 
   /**/
 
-  FlowsTo::FlowsTo(VersionedValue *source, VersionedValue *target)
-      : source(source), target(target) {}
-
-  FlowsTo::~FlowsTo() {}
-
-  VersionedValue *FlowsTo::getSource() const {
-    return this->source;
-  }
-
-  VersionedValue *FlowsTo::getTarget() const {
-    return this->target;
-  }
-
   void FlowsTo::print(llvm::raw_ostream &stream) const {
     source->print(stream);
     stream << "->";
     target->print(stream);
+    if (via) {
+      stream << " via ";
+      via->print(stream);
+    }
   }
 
   /**/
@@ -449,16 +357,12 @@ VersionedAllocation::VersionedAllocation(llvm::Value *site)
 
         if (!interpolantValueOnly) {
           ref<Expr> expr = v->getExpression();
-          if (!Util::isSubExpressionInList(expr, visitedExpressionsList)) {
-            ret[*allocIter] = expr;
-            visitedExpressionsList.push_back(expr);
-          }
+          ret[*allocIter] = expr;
+          visitedExpressionsList.push_back(expr);
         } else if (v->valueInInterpolant()) {
           ref<Expr> expr = v->getExpression();
-          if (!Util::isSubExpressionInList(expr, visitedExpressionsList)) {
-            ret[*allocIter] = ShadowArray::getShadowExpression(expr);
-            visitedExpressionsList.push_back(expr);
-          }
+          ret[*allocIter] = ShadowArray::getShadowExpression(expr);
+          visitedExpressionsList.push_back(expr);
         }
       }
     }
@@ -533,12 +437,12 @@ VersionedAllocation::VersionedAllocation(llvm::Value *site)
     return 0;
   }
 
-  Allocation *Dependency::resolveAllocation(VersionedValue *val) const {
+  const Allocation *Dependency::resolveAllocation(VersionedValue *val) const {
     if (!val) return 0;
     for (std::vector< PointerEquality *>::const_reverse_iterator
 	it = equalityList.rbegin(),
 	itEnd = equalityList.rend(); it != itEnd; ++it) {
-      Allocation *alloc = (*it)->equals(val);
+      const Allocation *alloc = (*it)->equals(val);
       if (alloc)
         return alloc;
     }
@@ -549,10 +453,10 @@ VersionedAllocation::VersionedAllocation(llvm::Value *site)
     return 0;
   }
 
-  std::vector<Allocation *>
+  std::vector<const Allocation *>
   Dependency::resolveAllocationTransitively(VersionedValue *value) const {
-    std::vector<Allocation *> ret;
-    Allocation *singleRet = resolveAllocation(value);
+    std::vector<const Allocation *> ret;
+    const Allocation *singleRet = resolveAllocation(value);
     if (singleRet) {
 	ret.push_back(singleRet);
 	return ret;
@@ -569,12 +473,13 @@ VersionedAllocation::VersionedAllocation(llvm::Value *site)
     return ret;
   }
 
-  void Dependency::addPointerEquality(VersionedValue *value,
-                                      Allocation *allocation) {
+  void Dependency::addPointerEquality(const VersionedValue *value,
+                                      const Allocation *allocation) {
     equalityList.push_back(new PointerEquality(value, allocation));
   }
 
-  void Dependency::updateStore(Allocation *allocation, VersionedValue *value) {
+  void Dependency::updateStore(const Allocation *allocation,
+                               VersionedValue *value) {
     storesList.push_back(new StorageCell(allocation, value));
   }
 
@@ -583,8 +488,14 @@ VersionedAllocation::VersionedAllocation(llvm::Value *site)
     flowsToList.push_back(new FlowsTo(source, target));
   }
 
+  void Dependency::addDependencyViaAllocation(VersionedValue *source,
+                                              VersionedValue *target,
+                                              const Allocation *via) {
+    flowsToList.push_back(new FlowsTo(source, target, via));
+  }
+
   std::vector<VersionedValue *>
-  Dependency::stores(Allocation *allocation) const {
+  Dependency::stores(const Allocation *allocation) const {
     std::vector<VersionedValue *> ret;
 
     if (allocation->isComposite()) {
@@ -721,27 +632,30 @@ VersionedAllocation::VersionedAllocation(llvm::Value *site)
     if (!arg)
       return false;
 
-    std::vector<Allocation *> allocList = resolveAllocationTransitively(arg);
+    std::vector<const Allocation *> allocList =
+        resolveAllocationTransitively(arg);
     if (allocList.size() > 0) {
-      for (std::vector<Allocation *>::iterator it0 = allocList.begin(),
-                                               it0End = allocList.end();
+      for (std::vector<const Allocation *>::iterator it0 = allocList.begin(),
+                                                     it0End = allocList.end();
            it0 != it0End; ++it0) {
         std::vector<VersionedValue *> valList = stores(*it0);
         if (valList.size() > 0) {
           for (std::vector<VersionedValue *>::iterator it1 = valList.begin(),
                                                        it1End = valList.end();
                it1 != it1End; ++it1) {
-            std::vector<Allocation *> alloc2 =
+            std::vector<const Allocation *> alloc2 =
                 resolveAllocationTransitively(*it1);
             if (alloc2.size() > 0) {
-              for (std::vector<Allocation *>::iterator it2 = alloc2.begin(),
-                                                       it2End = alloc2.end();
+              for (std::vector<const Allocation *>::iterator
+                       it2 = alloc2.begin(),
+                       it2End = alloc2.end();
                    it2 != it2End; ++it2) {
                 addPointerEquality(getNewVersionedValue(toValue, toValueExpr),
                                    *it2);
               }
             } else {
-              addDependency(*it1, getNewVersionedValue(toValue, toValueExpr));
+              addDependencyViaAllocation(
+                  *it1, getNewVersionedValue(toValue, toValueExpr), *it0);
             }
           }
         } else {
@@ -808,7 +722,7 @@ VersionedAllocation::VersionedAllocation(llvm::Value *site)
       }
       case llvm::Instruction::Store: {
 	VersionedValue *dataArg = getLatestValue(i->getOperand(0));
-        std::vector<Allocation *> addressList =
+        std::vector<const Allocation *> addressList =
             resolveAllocationTransitively(getLatestValue(i->getOperand(1)));
 
         // If there was no dependency found, we should create
@@ -816,8 +730,9 @@ VersionedAllocation::VersionedAllocation(llvm::Value *site)
         if (!dataArg)
           dataArg = getNewVersionedValue(i->getOperand(0), valueExpr);
 
-        for (std::vector<Allocation *>::iterator it = addressList.begin(),
-                                                 itEnd = addressList.end();
+        for (std::vector<const Allocation *>::iterator
+                 it = addressList.begin(),
+                 itEnd = addressList.end();
              it != itEnd; ++it) {
           updateStore(getNewAllocationVersion((*it)->getSite()), dataArg);
         }
@@ -839,12 +754,12 @@ VersionedAllocation::VersionedAllocation(llvm::Value *site)
         VersionedValue *arg = getLatestValue(i->getOperand(0));
         assert(arg != 0 && "operand not found");
 
-        std::vector<Allocation *> a = resolveAllocationTransitively(arg);
+        std::vector<const Allocation *> a = resolveAllocationTransitively(arg);
 
         if (a.size() > 0) {
           VersionedValue *newValue = getNewVersionedValue(i, valueExpr);
-          for (std::vector<Allocation *>::iterator it = a.begin(),
-                                                   itEnd = a.end();
+          for (std::vector<const Allocation *>::iterator it = a.begin(),
+                                                         itEnd = a.end();
                it != itEnd; ++it) {
             addPointerEquality(newValue, *it);
           }
@@ -1060,29 +975,6 @@ VersionedAllocation::VersionedAllocation(llvm::Value *site)
   }
 
   /**/
-
-  bool Dependency::Util::isSubExpressionOf(ref<Expr> subExpr, ref<Expr> expr) {
-    if (subExpr.get() == expr.get())
-      return true;
-
-    for (unsigned i = 0, n = expr->getNumKids(); i < n; ++i) {
-      if (isSubExpressionOf(subExpr, expr->getKid(i)))
-        return true;
-    }
-    return false;
-  }
-
-  bool
-  Dependency::Util::isSubExpressionInList(ref<Expr> subExpr,
-                                          std::vector<ref<Expr> > exprList) {
-    for (std::vector<ref<Expr> >::iterator it = exprList.begin(),
-                                           itEnd = exprList.end();
-         it != itEnd; ++it) {
-      if (isSubExpressionOf(subExpr, *it))
-        return true;
-    }
-    return false;
-  }
 
   template <typename T>
   void Dependency::Util::deletePointerVector(std::vector<T *> &list) {

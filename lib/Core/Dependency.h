@@ -23,6 +23,7 @@
 #include <stack>
 
 namespace klee {
+class Dependency;
 
 class ShadowArray {
   static std::map<const Array *, const Array *> shadowArray;
@@ -44,12 +45,14 @@ class Allocation {
   protected:
     llvm::Value *site;
 
-    Allocation();
+    Allocation() : site(0) {}
+
+    Allocation(llvm::Value *site) : site(site) {}
 
   public:
-    virtual ~Allocation();
+    virtual ~Allocation() {}
 
-    virtual bool hasAllocationSite(llvm::Value *site) const;
+    virtual bool hasAllocationSite(llvm::Value *site) const { return false; }
 
     virtual bool isComposite() const;
 
@@ -65,25 +68,27 @@ class Allocation {
 
   class CompositeAllocation : public Allocation {
   public:
-    CompositeAllocation(llvm::Value *site);
+    CompositeAllocation(llvm::Value *site) : Allocation(site) {}
 
-    ~CompositeAllocation();
+    ~CompositeAllocation() {}
 
-    bool hasAllocationSite(llvm::Value *site) const;
+    bool hasAllocationSite(llvm::Value *site) const {
+      return this->site == site;
+    }
 
     void print(llvm::raw_ostream &stream) const;
   };
 
   class VersionedAllocation : public Allocation {
-    static unsigned long long nextVersion;
-    unsigned long long version;
 
   public:
-    VersionedAllocation(llvm::Value *site);
+    VersionedAllocation(llvm::Value *site) : Allocation(site) {}
 
-    ~VersionedAllocation();
+    ~VersionedAllocation() {}
 
-    bool hasAllocationSite(llvm::Value *site) const;
+    bool hasAllocationSite(llvm::Value *site) const {
+      return this->site == site;
+    }
 
     bool isComposite() const;
 
@@ -92,9 +97,9 @@ class Allocation {
 
   class EnvironmentAllocation : public Allocation {
   public:
-    EnvironmentAllocation();
+    EnvironmentAllocation() {}
 
-    ~EnvironmentAllocation();
+    ~EnvironmentAllocation() {}
 
     bool hasAllocationSite(llvm::Value *site) const;
 
@@ -102,29 +107,27 @@ class Allocation {
   };
 
   class VersionedValue {
-    static unsigned long long nextVersion;
 
-    llvm::Value *value;
+    const llvm::Value *value;
 
-    ref<Expr> valueExpr;
-
-    unsigned long long version;
+    const ref<Expr> valueExpr;
 
     /// @brief to indicate if any unsatisfiability core
     /// depends on this value
     bool inInterpolant;
   public:
-    VersionedValue(llvm::Value *value, ref<Expr> valueExpr);
+    VersionedValue(llvm::Value *value, ref<Expr> valueExpr)
+        : value(value), valueExpr(valueExpr), inInterpolant(false) {}
 
-    ~VersionedValue();
+    ~VersionedValue() {}
 
-    bool hasValue(llvm::Value *value) const;
+    bool hasValue(llvm::Value *value) const { return this->value == value; }
 
-    ref<Expr> getExpression() const;
+    ref<Expr> getExpression() const { return valueExpr; }
 
-    void includeInInterpolant();
+    void includeInInterpolant() { inInterpolant = true; }
 
-    bool valueInInterpolant() const;
+    bool valueInInterpolant() const { return inInterpolant; }
 
     void print(llvm::raw_ostream& stream) const;
 
@@ -136,15 +139,18 @@ class Allocation {
 
   class PointerEquality {
     // value equals allocation (pointer)
-    VersionedValue* value;
-    Allocation *allocation;
+    const VersionedValue *value;
+    const Allocation *allocation;
 
   public:
-    PointerEquality(VersionedValue *value, Allocation *allocation);
+    PointerEquality(const VersionedValue *value, const Allocation *allocation)
+        : value(value), allocation(allocation) {}
 
-    ~PointerEquality();
+    ~PointerEquality() {}
 
-    Allocation *equals(VersionedValue *value) const;
+    const Allocation *equals(const VersionedValue *value) const {
+      return this->value == value ? allocation : 0;
+    }
 
     void print(llvm::raw_ostream& stream) const;
 
@@ -156,18 +162,24 @@ class Allocation {
 
   class StorageCell {
     // allocation stores value
-    Allocation *allocation;
+    const Allocation *allocation;
     VersionedValue* value;
+
   public:
-    StorageCell(Allocation *allocation, VersionedValue *value);
+    StorageCell(const Allocation *allocation, VersionedValue *value)
+        : allocation(allocation), value(value) {}
 
-    ~StorageCell();
+    ~StorageCell() {}
 
-    VersionedValue *stores(Allocation *allocation) const;
+    VersionedValue *stores(const Allocation *allocation) const {
+      return this->allocation == allocation ? this->value : 0;
+    }
 
-    Allocation *storageOf(VersionedValue *value) const;
+    const Allocation *storageOf(const VersionedValue *value) const {
+      return this->value == value ? this->allocation : 0;
+    }
 
-    Allocation *getAllocation() const;
+    const Allocation *getAllocation() const { return this->allocation; }
 
     void print(llvm::raw_ostream& stream) const;
 
@@ -181,14 +193,23 @@ class Allocation {
     // target depends on source
     VersionedValue* source;
     VersionedValue* target;
+
+    // Store-load via allocation site
+    const Allocation *via;
+
   public:
-    FlowsTo(VersionedValue *source, VersionedValue *target);
+    FlowsTo(VersionedValue *source, VersionedValue *target)
+        : source(source), target(target), via(0) {}
 
-    ~FlowsTo();
+    FlowsTo(VersionedValue *source, VersionedValue *target,
+            const Allocation *via)
+        : source(source), target(target), via(via) {}
 
-    VersionedValue *getSource() const;
+    ~FlowsTo() {}
 
-    VersionedValue *getTarget() const;
+    VersionedValue *getSource() const { return this->source; }
+
+    VersionedValue *getTarget() const { return this->target; }
 
     void print(llvm::raw_ostream& sream) const;
 
@@ -202,14 +223,10 @@ class Allocation {
 
   public:
     class Util {
-      static bool isSubExpressionOf(ref<Expr> subExpr, ref<Expr> expr);
 
     public:
       template <typename T>
       static void deletePointerVector(std::vector<T *> &list);
-
-      static bool isSubExpressionInList(ref<Expr> subExpr,
-                                        std::vector<ref<Expr> > exprList);
 
       static bool isCompositeAllocation(llvm::Value *site);
 
@@ -253,18 +270,23 @@ class Allocation {
     /// the only allocation.
     Allocation *getLatestAllocation(llvm::Value *allocation) const;
 
-    void addPointerEquality(VersionedValue *value, Allocation *allocation);
+    void addPointerEquality(const VersionedValue *value,
+                            const Allocation *allocation);
 
-    void updateStore(Allocation *allocation, VersionedValue *value);
+    void updateStore(const Allocation *allocation, VersionedValue *value);
 
     void addDependency(VersionedValue *source, VersionedValue *target);
 
-    Allocation *resolveAllocation(VersionedValue *value) const;
+    void addDependencyViaAllocation(VersionedValue *source,
+                                    VersionedValue *target,
+                                    const Allocation *via);
 
-    std::vector<Allocation *>
+    const Allocation *resolveAllocation(VersionedValue *value) const;
+
+    std::vector<const Allocation *>
     resolveAllocationTransitively(VersionedValue *value) const;
 
-    std::vector<VersionedValue *> stores(Allocation *allocation) const;
+    std::vector<VersionedValue *> stores(const Allocation *allocation) const;
 
     /// @brief All values that flows to the target in one step, local
     /// to the current dependency / interpolation tree node
