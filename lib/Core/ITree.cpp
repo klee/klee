@@ -362,6 +362,8 @@ void ITree::remove(ITreeNode *node) {
     // traversed, hence the correct time to table the interpolant.
     if (!node->isSubsumed && node->introducesMarkedConstraint()) {
       SubsumptionTableEntry entry(node);
+      llvm::errs() << "STORING ENTRY\n";
+      entry.dump();
       store(entry);
     }
 
@@ -558,12 +560,26 @@ void ITreeNode::popAbstractDependencyFrame(llvm::CallInst *site,
 
 std::map<llvm::Value *, ref<Expr> >
 ITreeNode::getLatestCoreExpressions(bool interpolantValueOnly) const {
-  return dependency->getLatestCoreExpressions(interpolantValueOnly);
+  std::map<llvm::Value *, ref<Expr> > ret;
+
+  // Since a program point index is a first statement in a basic block,
+  // the allocations to be stored in subsumption table should be obtained
+  // from the parent node.
+  if (parent)
+    ret = parent->dependency->getLatestCoreExpressions(interpolantValueOnly);
+  return ret;
 }
 
 std::map<llvm::Value *, std::vector<ref<Expr> > >
 ITreeNode::getCompositeCoreExpressions(bool interpolantValueOnly) const {
-  return dependency->getCompositeCoreExpressions(interpolantValueOnly);
+  std::map<llvm::Value *, std::vector<ref<Expr> > > ret;
+
+  // Since a program point index is a first statement in a basic block,
+  // the allocations to be stored in subsumption table should be obtained
+  // from the parent node.
+  if (parent)
+    ret = parent->dependency->getCompositeCoreExpressions(interpolantValueOnly);
+  return ret;
 }
 
 void ITreeNode::dump() const {
