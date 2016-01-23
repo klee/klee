@@ -211,12 +211,62 @@ class Allocation {
 
     VersionedValue *getTarget() const { return this->target; }
 
+    const Allocation *getAllocation() const { return this->via; }
+
     void print(llvm::raw_ostream& sream) const;
 
     void dump() const {
       print(llvm::errs());
       llvm::errs() << "\n";
     }
+  };
+
+  class AllocationGraph {
+
+    class AllocationNode {
+      const Allocation *allocation;
+      std::vector<AllocationNode *> ancestors;
+
+    public:
+      AllocationNode(const Allocation *allocation) : allocation(allocation) {}
+
+      ~AllocationNode() { ancestors.clear(); }
+
+      const Allocation *getAllocation() const { return allocation; }
+
+      void addParent(AllocationNode *node) {
+        // The user should ensure that we don't store a duplicate
+        ancestors.push_back(node);
+      }
+
+      bool isCurrentParent(AllocationNode *node) {
+        if (std::find(ancestors.begin(), ancestors.end(), node) ==
+            ancestors.end())
+          return false;
+        return true;
+      }
+
+      std::vector<AllocationNode *> getParents() const { return ancestors; }
+    };
+
+    std::vector<AllocationNode *> sinks;
+    std::vector<AllocationNode *> allNodes;
+
+  public:
+    AllocationGraph() {}
+
+    ~AllocationGraph() {
+      for (std::vector<AllocationNode *>::iterator it = allNodes.begin(),
+                                                   itEnd = allNodes.end();
+           it != itEnd; ++it) {
+        delete *it;
+      }
+      allNodes.clear();
+    }
+
+    bool addNewSource(const Allocation *source, const Allocation *target);
+
+    void consumeSinkNode(Allocation *allocation);
   };
 
   class Dependency {
@@ -290,10 +340,10 @@ class Allocation {
 
     /// @brief All values that flows to the target in one step, local
     /// to the current dependency / interpolation tree node
-    std::vector<VersionedValue *> oneStepLocalFlowSources(VersionedValue *target) const;
+    std::vector<VersionedValue *> directLocalFlowSources(VersionedValue *target) const;
 
     /// @brief All values that flows to the target in one step
-    std::vector<VersionedValue *> oneStepFlowSources(VersionedValue *target) const;
+    std::vector<VersionedValue *> directFlowSources(VersionedValue *target) const;
 
     /// @brief All values that could flow to the target
     std::vector<VersionedValue *> allFlowSources(VersionedValue *target) const;
@@ -309,6 +359,14 @@ class Allocation {
     /// @brief Construct dependency due to load instruction
     bool buildLoadDependency(llvm::Value *fromValue, llvm::Value *toValue,
                              ref<Expr> toValueExpr);
+
+    /// @brief Direct allocation dependency local to an interpolation tree node
+    std::map<VersionedValue *, const Allocation *>
+    directLocalAllocationSources(VersionedValue *target) const;
+
+    /// @brief Direct allocation dependency
+    std::map<VersionedValue *, const Allocation *>
+    directAllocationSources(VersionedValue *target) const;
 
   public:
     Dependency(Dependency *prev);
@@ -334,6 +392,10 @@ class Allocation {
                          ref<Expr> returnValue);
 
     void markAllValues(VersionedValue *value);
+
+    /// @brief Builds dependency graph between memory allocations
+    std::vector<const Allocation *>
+    buildAllocationGraph(AllocationGraph *g, VersionedValue *value) const;
 
     void dump() const {
       this->print(llvm::errs());
