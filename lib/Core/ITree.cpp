@@ -242,7 +242,8 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
 	  it != markerMap.end(); it++) {
 	  it->second->includeInInterpolant();
       }
-      markerMap.clear();
+      ITreeNode::deleteMarkerMap(markerMap);
+
       return true;
   }
   return false;
@@ -362,8 +363,6 @@ void ITree::remove(ITreeNode *node) {
     // traversed, hence the correct time to table the interpolant.
     if (!node->isSubsumed && node->introducesMarkedConstraint()) {
       SubsumptionTableEntry entry(node);
-      llvm::errs() << "STORING ENTRY\n";
-      entry.dump();
       store(entry);
     }
 
@@ -521,13 +520,21 @@ void ITreeNode::split(ExecutionState *leftData, ExecutionState *rightData) {
   rightData->itreeNode = right = new ITreeNode(this);
 }
 
-std::map< ref<Expr>, PathConditionMarker *> ITreeNode::makeMarkerMap() {
+std::map< ref<Expr>, PathConditionMarker *> ITreeNode::makeMarkerMap() const {
   std::map< ref<Expr>, PathConditionMarker *> result;
   for (PathCondition *it = pathCondition; it != 0; it = it->cdr()) {
       result.insert( std::pair< ref<Expr>, PathConditionMarker *>
 	(it->car(), new PathConditionMarker(it)) );
   }
   return result;
+}
+
+void ITreeNode::deleteMarkerMap(std::map<ref<Expr>, PathConditionMarker *>& markerMap) {
+  for (std::map<ref<Expr>, PathConditionMarker *>::iterator it = markerMap.begin(),
+      itEnd = markerMap.end(); it != itEnd; ++it) {
+      delete it->second;
+  }
+  markerMap.clear();
 }
 
 bool ITreeNode::introducesMarkedConstraint() {

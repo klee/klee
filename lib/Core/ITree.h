@@ -189,7 +189,9 @@ namespace klee {
 
     void print(llvm::raw_ostream &stream) const;
 
-    std::map< ref<Expr>, PathConditionMarker *> makeMarkerMap();
+    std::map< ref<Expr>, PathConditionMarker *> makeMarkerMap() const;
+
+    static void deleteMarkerMap(std::map<ref<Expr>, PathConditionMarker *>& markerMap);
 
     bool introducesMarkedConstraint();
 
