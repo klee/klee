@@ -30,9 +30,9 @@ void PathConditionMarker::mayIncludeInInterpolant() {
   mayBeInInterpolant = true;
 }
 
-void PathConditionMarker::includeInInterpolant() {
+void PathConditionMarker::includeInInterpolant(AllocationGraph *g) {
   if (mayBeInInterpolant) {
-      pathCondition->includeInInterpolant();
+    pathCondition->includeInInterpolant(g);
   }
 }
 
@@ -55,9 +55,9 @@ PathCondition *PathCondition::cdr() const {
   return tail;
 }
 
-void PathCondition::includeInInterpolant() {
+void PathCondition::includeInInterpolant(AllocationGraph *g) {
   // We mark all values to which this constraint depends
-  dependency->markAllValues(condition);
+  dependency->markAllValues(g, condition);
 
   // We mark this constraint itself as in the interpolant
   inInterpolant = true;
@@ -238,12 +238,14 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
 
       // State subsumed, we mark needed constraints on the
       // path condition.
+      AllocationGraph *g = new AllocationGraph();
       for (std::map< ref<Expr>, PathConditionMarker *>::iterator it = markerMap.begin();
 	  it != markerMap.end(); it++) {
-	  it->second->includeInInterpolant();
+        it->second->includeInInterpolant(g);
       }
       ITreeNode::deleteMarkerMap(markerMap);
 
+      delete g; // Delete the AllocationGraph object
       return true;
   }
   return false;
@@ -391,11 +393,12 @@ void ITree::markPathCondition(ExecutionState &state, TimingSolver *solver) {
   if (unsatCore.size() == 0)
       return;
 
+  AllocationGraph *g = new AllocationGraph();
   llvm::BranchInst *binst =
       llvm::dyn_cast<llvm::BranchInst>(state.prevPC->inst);
   if (binst) {
     currentINode->dependency->markAllValues(
-        currentINode->dependency->getLatestValue(binst->getCondition()));
+        g, currentINode->dependency->getLatestValue(binst->getCondition()));
   }
 
   // Process the unsat core in case it was computed (non-empty)
@@ -406,7 +409,7 @@ void ITree::markPathCondition(ExecutionState &state, TimingSolver *solver) {
          it != unsatCore.rend(); it++) {
       while (pc != 0) {
         if (pc->car().compare(it->get()) == 0) {
-          pc->includeInInterpolant();
+          pc->includeInInterpolant(g);
           pc = pc->cdr();
           break;
         }
@@ -416,6 +419,8 @@ void ITree::markPathCondition(ExecutionState &state, TimingSolver *solver) {
         break;
       }
   }
+
+  delete g; // Delete the AllocationGraph object
 }
 
 void ITree::executeAbstractDependency(llvm::Instruction *instr,

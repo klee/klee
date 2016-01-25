@@ -368,6 +368,10 @@ class Allocation {
     std::map<VersionedValue *, const Allocation *>
     directAllocationSources(VersionedValue *target) const;
 
+    /// @brief Builds dependency graph between memory allocations
+    std::vector<const Allocation *>
+    buildAllocationGraph(AllocationGraph *g, VersionedValue *value) const;
+
   public:
     Dependency(Dependency *prev);
 
@@ -391,11 +395,7 @@ class Allocation {
     void bindReturnValue(llvm::CallInst *site, llvm::Instruction *inst,
                          ref<Expr> returnValue);
 
-    void markAllValues(VersionedValue *value);
-
-    /// @brief Builds dependency graph between memory allocations
-    std::vector<const Allocation *>
-    buildAllocationGraph(AllocationGraph *g, VersionedValue *value) const;
+    void markAllValues(AllocationGraph *g, VersionedValue *value);
 
     void dump() const {
       this->print(llvm::errs());

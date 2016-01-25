@@ -62,7 +62,7 @@ namespace klee {
 
     PathCondition* cdr() const;
 
-    void includeInInterpolant();
+    void includeInInterpolant(AllocationGraph *g);
 
     bool carInInterpolant() const;
 
@@ -83,7 +83,7 @@ namespace klee {
 
     ~PathConditionMarker();
 
-    void includeInInterpolant();
+    void includeInInterpolant(AllocationGraph *g);
 
     void mayIncludeInInterpolant();
   };

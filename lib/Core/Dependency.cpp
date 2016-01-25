@@ -983,7 +983,8 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
     }
   }
 
-  void Dependency::markAllValues(VersionedValue *value) {
+  void Dependency::markAllValues(AllocationGraph *g, VersionedValue *value) {
+    buildAllocationGraph(g, value);
     std::vector<VersionedValue *> allSources = allFlowSources(value);
     for (std::vector<VersionedValue *>::iterator it = allSources.begin(),
                                                  itEnd = allSources.end();
