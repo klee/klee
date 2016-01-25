@@ -411,6 +411,8 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
     }
 
     ret = new VersionedAllocation(allocation);
+    llvm::errs() << "NEW VERSIONED ALLOCATION ";
+    ret->dump();
     allocationsList.push_back(ret);
 
     // We register noncomposites in a special list,
@@ -423,10 +425,7 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
     if (ret && ret->isComposite())
       return ret;
 
-    if (!ret)
-      return getInitialAllocation(allocation);
-
-    return ret;
+    return getInitialAllocation(allocation);
   }
 
   std::vector<llvm::Value *> Dependency::getAllVersionedAllocations() const {
@@ -825,19 +824,27 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
         break;
       }
       case llvm::Instruction::Store: {
+	llvm::errs() << "Executing store\n";
+	i->getOperand(0)->dump();
+	i->getOperand(1)->dump();
+
 	VersionedValue *dataArg = getLatestValue(i->getOperand(0));
         std::vector<const Allocation *> addressList =
             resolveAllocationTransitively(getLatestValue(i->getOperand(1)));
 
         // If there was no dependency found, we should create
         // a new value
-        if (!dataArg)
+        if (!dataArg) {
+            llvm::errs() << "Data arg not found\n";
           dataArg = getNewVersionedValue(i->getOperand(0), valueExpr);
+        }
 
         for (std::vector<const Allocation *>::iterator
                  it = addressList.begin(),
                  itEnd = addressList.end();
              it != itEnd; ++it) {
+            llvm::errs() << "Storing into allocation ";
+            (*it)->dump();
           updateStore(getNewAllocationVersion((*it)->getSite()), dataArg);
         }
 
