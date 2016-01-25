@@ -500,15 +500,13 @@ ITreeNode::~ITreeNode() {
     delete dependency;
 }
 
-unsigned int ITreeNode::getNodeId() {
-  return nodeId;
-}
+unsigned ITreeNode::getNodeId() { return nodeId; }
 
 std::vector< ref<Expr> > ITreeNode::getInterpolant() const {
   return this->pathCondition->packInterpolant();
 }
 
-void ITreeNode::setNodeLocation(unsigned int programPoint) {
+void ITreeNode::setNodeLocation(unsigned programPoint) {
   if (this->nodeId == 0)  {
     this->nodeId = programPoint;
   }
@@ -605,8 +603,8 @@ void ITreeNode::print(llvm::raw_ostream &stream) const {
   this->print(stream, 0);
 }
 
-void ITreeNode::print(llvm::raw_ostream &stream, const unsigned int tab_num) const {
-  std::string tabs = makeTabs(tab_num);
+void ITreeNode::print(llvm::raw_ostream &stream, const unsigned tabNum) const {
+  std::string tabs = makeTabs(tabNum);
   std::string tabs_next = appendTab(tabs);
 
   stream << tabs << "ITreeNode\n";
@@ -622,18 +620,18 @@ void ITreeNode::print(llvm::raw_ostream &stream, const unsigned int tab_num) con
   if (!left) {
       stream << tabs_next << "NULL\n";
   } else {
-      left->print(stream, tab_num + 1);
+    left->print(stream, tabNum + 1);
       stream << "\n";
   }
   stream << tabs_next << "Right:\n";
   if (!right) {
       stream << tabs_next << "NULL\n";
   } else {
-      right->print(stream, tab_num + 1);
+    right->print(stream, tabNum + 1);
       stream << "\n";
   }
   if (dependency) {
     stream << tabs_next << "------- Abstract Dependencies ----------\n";
-    dependency->print(stream, tab_num + 1);
+    dependency->print(stream, tabNum + 1);
   }
 }

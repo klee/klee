@@ -89,7 +89,7 @@ namespace klee {
   };
 
   class SubsumptionTableEntry {
-    unsigned int nodeId;
+    unsigned nodeId;
 
     std::vector< ref<Expr> > interpolant;
 
@@ -169,17 +169,16 @@ namespace klee {
 
     ITreeNode *parent, *left, *right;
 
-    unsigned int nodeId;
+    unsigned nodeId;
 
     bool isSubsumed;
 
   public:
-
-    unsigned int getNodeId();
+    unsigned getNodeId();
 
     std::vector< ref<Expr> > getInterpolant() const;
 
-    void setNodeLocation(unsigned int programPoint);
+    void setNodeLocation(unsigned programPoint);
 
     void addConstraint(ref<Expr> &constraint, llvm::Value *value);
 
@@ -215,8 +214,7 @@ namespace klee {
 
     ~ITreeNode();
 
-    void print(llvm::raw_ostream &stream, const unsigned int tab_num) const;
-
+    void print(llvm::raw_ostream &stream, const unsigned tabNum) const;
   };
 
 }

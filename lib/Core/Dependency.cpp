@@ -347,6 +347,36 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
     sinks.erase(pos);
   }
 
+  void AllocationGraph::print(llvm::raw_ostream &stream) const {
+    std::vector<AllocationNode *> printed;
+    print(stream, sinks, printed, 0);
+  }
+
+  void AllocationGraph::print(llvm::raw_ostream &stream,
+                              std::vector<AllocationNode *> nodes,
+                              std::vector<AllocationNode *> &printed,
+                              const unsigned tabNum) const {
+    if (nodes.size() == 0)
+      return;
+
+    std::string tabs = makeTabs(tabNum);
+
+    for (std::vector<AllocationNode *>::iterator it = nodes.begin(),
+                                                 itEnd = nodes.end();
+         it != itEnd; ++it) {
+      const Allocation *alloc = (*it)->getAllocation();
+      stream << tabs;
+      alloc->print(stream);
+      if (std::find(printed.begin(), printed.end(), (*it)) != printed.end()) {
+        stream << " (printed)\n";
+      } else {
+        stream << " depends on\n";
+        printed.push_back((*it));
+        print(stream, (*it)->getParents(), printed, tabNum + 1);
+      }
+    }
+  }
+
   /**/
 
   VersionedValue *Dependency::getNewVersionedValue(llvm::Value *value,
@@ -1053,8 +1083,8 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
   }
 
   void Dependency::print(llvm::raw_ostream &stream,
-                         const unsigned int tab_num) const {
-    std::string tabs = makeTabs(tab_num);
+                         const unsigned tabNum) const {
+    std::string tabs = makeTabs(tabNum);
     stream << tabs << "EQUALITIES:";
     std::vector<PointerEquality *>::const_iterator equalityListBegin =
         equalityList.begin();
@@ -1091,7 +1121,7 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
 
     if (parentDependency) {
       stream << "\n" << tabs << "--------- Parent Dependencies ----------\n";
-      parentDependency->print(stream, tab_num);
+      parentDependency->print(stream, tabNum);
     }
   }
 
@@ -1146,12 +1176,12 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
 
   /**/
 
-  std::string makeTabs(const unsigned int tab_num) {
-    std::string tabs_string;
-    for (unsigned int i = 0; i < tab_num; i++) {
-      tabs_string += appendTab(tabs_string);
+  std::string makeTabs(const unsigned tabNum) {
+    std::string tabsString;
+    for (unsigned i = 0; i < tabNum; i++) {
+      tabsString += appendTab(tabsString);
     }
-    return tabs_string;
+    return tabsString;
   }
 
   std::string appendTab(const std::string &prefix) {

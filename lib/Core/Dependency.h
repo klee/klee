@@ -252,6 +252,10 @@ class Allocation {
     std::vector<AllocationNode *> sinks;
     std::vector<AllocationNode *> allNodes;
 
+    void print(llvm::raw_ostream &stream, std::vector<AllocationNode *> nodes,
+               std::vector<AllocationNode *> &printed,
+               const unsigned tabNum) const;
+
   public:
     AllocationGraph() {}
 
@@ -267,6 +271,13 @@ class Allocation {
     bool addNewSource(const Allocation *source, const Allocation *target);
 
     void consumeSinkNode(Allocation *allocation);
+
+    void dump() const {
+      this->print(llvm::errs());
+      llvm::errs() << "\n";
+    }
+
+    void print(llvm::raw_ostream &stream) const;
   };
 
   class Dependency {
@@ -404,8 +415,7 @@ class Allocation {
 
     void print(llvm::raw_ostream& stream) const;
 
-    void print(llvm::raw_ostream& stream, const unsigned tab_num) const;
-
+    void print(llvm::raw_ostream &stream, const unsigned tabNum) const;
   };
 
 
