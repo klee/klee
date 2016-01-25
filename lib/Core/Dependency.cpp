@@ -284,8 +284,8 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
 
   /**/
 
-  bool AllocationGraph::addNewSource(const Allocation *source,
-                                     const Allocation *target) {
+  bool AllocationGraph::addNewEdge(const Allocation *source,
+                                   const Allocation *target) {
     bool ret = false; // indicates whether an edge is actually added
 
     AllocationNode *sourceNode = 0;
@@ -294,7 +294,6 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
     for (std::vector<AllocationNode *>::iterator it = allNodes.begin(),
                                                  itEnd = allNodes.end();
          it != itEnd; ++it) {
-      AllocationNode *sourceNode = new AllocationNode(source);
       if (!targetNode && (*it)->getAllocation() == target) {
         targetNode = (*it);
         if (sourceNode)
@@ -316,6 +315,13 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
       targetNode = new AllocationNode(target);
       allNodes.push_back(targetNode);
       sinks.push_back(targetNode);
+
+      // Delete the source from the set of sinks
+      std::vector<AllocationNode *>::iterator pos =
+          std::find(sinks.begin(), sinks.end(), sourceNode);
+      if (pos != sinks.end())
+        sinks.erase(pos);
+
       ret = true; // An edge actually added, return true
     }
 
@@ -369,10 +375,12 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
       alloc->print(stream);
       if (std::find(printed.begin(), printed.end(), (*it)) != printed.end()) {
         stream << " (printed)\n";
-      } else {
+      } else if ((*it)->getParents().size()) {
         stream << " depends on\n";
         printed.push_back((*it));
         print(stream, (*it)->getParents(), printed, tabNum + 1);
+      } else {
+        stream << "\n";
       }
     }
   }
@@ -1030,7 +1038,13 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
                                                 itEnd = flowsToList.end();
          it != itEnd; ++it) {
       if ((*it)->getTarget() == target) {
-        ret[(*it)->getSource()] = (*it)->getAllocation();
+        if (!(*it)->getAllocation()) {
+          std::map<VersionedValue *, const Allocation *> extra(
+              directLocalAllocationSources((*it)->getSource()));
+          ret.insert(extra.begin(), extra.end());
+        } else {
+          ret[(*it)->getSource()] = (*it)->getAllocation();
+        }
       }
     }
     return ret;
@@ -1059,14 +1073,20 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
              it0 = sourceEdges.begin(),
              it0End = sourceEdges.end();
          it0 != it0End; ++it0) {
+
       std::vector<const Allocation *> sourceAllocations =
           buildAllocationGraph(g, it0->first);
+
+      if (sourceAllocations.size() == 0) {
+        ret.push_back(it0->second);
+      } else {
+
       bool newSourceAdded = false;
       for (std::vector<const Allocation *>::iterator
                it1 = sourceAllocations.begin(),
                it1End = sourceAllocations.end();
            it1 != it1End; ++it1) {
-        if (g->addNewSource((*it1), it0->second))
+        if (g->addNewEdge((*it1), it0->second))
           newSourceAdded = true;
       }
 
@@ -1074,6 +1094,7 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
       // allocation node only when new dependency edge is created for it.
       if (newSourceAdded)
         ret.push_back(it0->second);
+    }
     }
     return ret;
   }

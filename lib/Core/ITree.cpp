@@ -245,6 +245,8 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
       }
       ITreeNode::deleteMarkerMap(markerMap);
 
+      llvm::errs() << "Deleting AllocationGraph\n";
+      g->dump();
       delete g; // Delete the AllocationGraph object
       return true;
   }
@@ -365,6 +367,10 @@ void ITree::remove(ITreeNode *node) {
     // traversed, hence the correct time to table the interpolant.
     if (!node->isSubsumed && node->introducesMarkedConstraint()) {
       SubsumptionTableEntry entry(node);
+
+      llvm::errs() << "STORING ENTRY\n";
+      entry.dump();
+
       store(entry);
     }
 
@@ -420,6 +426,8 @@ void ITree::markPathCondition(ExecutionState &state, TimingSolver *solver) {
       }
   }
 
+  llvm::errs() << "Deleting AllocationGraph\n";
+  g->dump();
   delete g; // Delete the AllocationGraph object
 }
 

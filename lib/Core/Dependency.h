@@ -268,7 +268,7 @@ class Allocation {
       allNodes.clear();
     }
 
-    bool addNewSource(const Allocation *source, const Allocation *target);
+    bool addNewEdge(const Allocation *source, const Allocation *target);
 
     void consumeSinkNode(Allocation *allocation);
 
