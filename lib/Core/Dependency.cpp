@@ -224,7 +224,7 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
   void VersionedAllocation::print(llvm::raw_ostream& stream) const {
     stream << "A(singleton)[";
     site->print(stream);
-    stream << "]";
+    stream << "]#" << reinterpret_cast<uintptr_t>(this);
   }
 
   /**/
@@ -247,7 +247,8 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
     value->print(stream);
     stream << ":";
     valueExpr->print(stream);
-    stream << "]";
+    stream << "]#" << reinterpret_cast<uintptr_t>(this);
+    ;
   }
 
   /**/
@@ -1033,38 +1034,78 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
 
   std::map<VersionedValue *, const Allocation *>
   Dependency::directLocalAllocationSources(VersionedValue *target) const {
+    llvm::errs() << "directLocalAllocationSources\n";
     std::map<VersionedValue *, const Allocation *> ret;
     for (std::vector<FlowsTo *>::const_iterator it = flowsToList.begin(),
                                                 itEnd = flowsToList.end();
          it != itEnd; ++it) {
       if ((*it)->getTarget() == target) {
+        std::map<VersionedValue *, const Allocation *> extra;
+
         if (!(*it)->getAllocation()) {
-          std::map<VersionedValue *, const Allocation *> extra(
-              directLocalAllocationSources((*it)->getSource()));
-          ret.insert(extra.begin(), extra.end());
+          extra = directLocalAllocationSources((*it)->getSource());
+          if (extra.size()) {
+            ret.insert(extra.begin(), extra.end());
+          } else {
+            ret[(*it)->getSource()] = 0;
+          }
         } else {
           ret[(*it)->getSource()] = (*it)->getAllocation();
         }
       }
     }
+    llvm::errs() << "directLocalAllocationSources end\n";
     return ret;
   }
 
   std::map<VersionedValue *, const Allocation *>
   Dependency::directAllocationSources(VersionedValue *target) const {
+    llvm::errs() << "directAllocationSources\n";
     std::map<VersionedValue *, const Allocation *> ret =
         directLocalAllocationSources(target);
-    if (parentDependency) {
-      std::map<VersionedValue *, const Allocation *> ancestralSources =
-          parentDependency->directAllocationSources(target);
-      ret.insert(ancestralSources.begin(), ancestralSources.end());
+
+    llvm::errs() << "back to directAllocationSources\n";
+
+    std::map<VersionedValue *, const Allocation *> tmp;
+    std::map<VersionedValue *, const Allocation *>::iterator nextPos =
+                                                                 ret.begin(),
+                                                             itEnd = ret.end();
+
+    bool elementErased = true;
+    while (elementErased) {
+      elementErased = false;
+      for (std::map<VersionedValue *, const Allocation *>::iterator it =
+               nextPos;
+           it != itEnd; ++it) {
+        if (!it->second) {
+          std::map<VersionedValue *, const Allocation *>::iterator deletionPos =
+              it;
+
+          if (parentDependency) {
+            std::map<VersionedValue *, const Allocation *> ancestralSources =
+                parentDependency->directAllocationSources(it->first);
+            tmp.insert(ancestralSources.begin(), ancestralSources.end());
+          }
+
+          nextPos = ++it;
+          ret.erase(deletionPos);
+          elementErased = true;
+          break;
+        }
+      }
     }
+
+    ret.insert(tmp.begin(), tmp.end());
+    llvm::errs() << "directAllocationSources end\n";
     return ret;
   }
 
   std::vector<const Allocation *>
   Dependency::buildAllocationGraph(AllocationGraph *g,
                                    VersionedValue *target) const {
+    llvm::errs() << "Build allocation graph of ";
+    target->dump();
+
     std::vector<const Allocation *> ret;
     std::map<VersionedValue *, const Allocation *> sourceEdges =
         directAllocationSources(target);
@@ -1081,20 +1122,20 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
         ret.push_back(it0->second);
       } else {
 
-      bool newSourceAdded = false;
-      for (std::vector<const Allocation *>::iterator
-               it1 = sourceAllocations.begin(),
-               it1End = sourceAllocations.end();
-           it1 != it1End; ++it1) {
-        if (g->addNewEdge((*it1), it0->second))
-          newSourceAdded = true;
-      }
+        bool newSourceAdded = false;
+        for (std::vector<const Allocation *>::iterator
+                 it1 = sourceAllocations.begin(),
+                 it1End = sourceAllocations.end();
+             it1 != it1End; ++it1) {
+          if (g->addNewEdge((*it1), it0->second))
+            newSourceAdded = true;
+        }
 
-      // The following is to avoid exponential blowup: we return an
-      // allocation node only when new dependency edge is created for it.
-      if (newSourceAdded)
-        ret.push_back(it0->second);
-    }
+        // The following is to avoid exponential blowup: we return an
+        // allocation node only when new dependency edge is created for it.
+        if (newSourceAdded)
+          ret.push_back(it0->second);
+      }
     }
     return ret;
   }
