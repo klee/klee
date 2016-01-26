@@ -331,9 +331,9 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
     // We mark the source and target allocations as core,
     // meaning that they are needed by interpolants.
     if (source)
-      source->isCore();
+      source->setAsCore();
     if (target)
-      target->isCore();
+      target->setAsCore();
 
     return ret;
   }
