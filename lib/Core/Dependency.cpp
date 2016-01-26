@@ -285,8 +285,7 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
 
   /**/
 
-  bool AllocationGraph::addNewEdge(const Allocation *source,
-                                   const Allocation *target) {
+  bool AllocationGraph::addNewEdge(Allocation *source, Allocation *target) {
     bool ret = false; // indicates whether an edge is actually added
 
     AllocationNode *sourceNode = 0;
@@ -328,6 +327,13 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
 
     if (ret || !targetNode->isCurrentParent(sourceNode))
       targetNode->addParent(sourceNode);
+
+    // We mark the source and target allocations as core,
+    // meaning that they are needed by interpolants.
+    if (source)
+      source->isCore();
+    if (target)
+      target->isCore();
 
     return ret;
   }
@@ -371,7 +377,7 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
     for (std::vector<AllocationNode *>::iterator it = nodes.begin(),
                                                  itEnd = nodes.end();
          it != itEnd; ++it) {
-      const Allocation *alloc = (*it)->getAllocation();
+      Allocation *alloc = (*it)->getAllocation();
       stream << tabs;
       alloc->print(stream);
       if (std::find(printed.begin(), printed.end(), (*it)) != printed.end()) {
@@ -543,12 +549,12 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
     return 0;
   }
 
-  const Allocation *Dependency::resolveAllocation(VersionedValue *val) const {
+  Allocation *Dependency::resolveAllocation(VersionedValue *val) const {
     if (!val) return 0;
     for (std::vector< PointerEquality *>::const_reverse_iterator
 	it = equalityList.rbegin(),
 	itEnd = equalityList.rend(); it != itEnd; ++it) {
-      const Allocation *alloc = (*it)->equals(val);
+      Allocation *alloc = (*it)->equals(val);
       if (alloc)
         return alloc;
     }
@@ -559,10 +565,10 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
     return 0;
   }
 
-  std::vector<const Allocation *>
+  std::vector<Allocation *>
   Dependency::resolveAllocationTransitively(VersionedValue *value) const {
-    std::vector<const Allocation *> ret;
-    const Allocation *singleRet = resolveAllocation(value);
+    std::vector<Allocation *> ret;
+    Allocation *singleRet = resolveAllocation(value);
     if (singleRet) {
 	ret.push_back(singleRet);
 	return ret;
@@ -580,12 +586,11 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
   }
 
   void Dependency::addPointerEquality(const VersionedValue *value,
-                                      const Allocation *allocation) {
+                                      Allocation *allocation) {
     equalityList.push_back(new PointerEquality(value, allocation));
   }
 
-  void Dependency::updateStore(const Allocation *allocation,
-                               VersionedValue *value) {
+  void Dependency::updateStore(Allocation *allocation, VersionedValue *value) {
     storesList.push_back(new StorageCell(allocation, value));
   }
 
@@ -596,12 +601,12 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
 
   void Dependency::addDependencyViaAllocation(VersionedValue *source,
                                               VersionedValue *target,
-                                              const Allocation *via) {
+                                              Allocation *via) {
     flowsToList.push_back(new FlowsTo(source, target, via));
   }
 
   std::vector<VersionedValue *>
-  Dependency::stores(const Allocation *allocation) const {
+  Dependency::stores(Allocation *allocation) const {
     std::vector<VersionedValue *> ret;
 
     if (allocation->isComposite()) {
@@ -738,23 +743,21 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
     if (!arg)
       return false;
 
-    std::vector<const Allocation *> allocList =
-        resolveAllocationTransitively(arg);
+    std::vector<Allocation *> allocList = resolveAllocationTransitively(arg);
     if (allocList.size() > 0) {
-      for (std::vector<const Allocation *>::iterator it0 = allocList.begin(),
-                                                     it0End = allocList.end();
+      for (std::vector<Allocation *>::iterator it0 = allocList.begin(),
+                                               it0End = allocList.end();
            it0 != it0End; ++it0) {
         std::vector<VersionedValue *> valList = stores(*it0);
         if (valList.size() > 0) {
           for (std::vector<VersionedValue *>::iterator it1 = valList.begin(),
                                                        it1End = valList.end();
                it1 != it1End; ++it1) {
-            std::vector<const Allocation *> alloc2 =
+            std::vector<Allocation *> alloc2 =
                 resolveAllocationTransitively(*it1);
             if (alloc2.size() > 0) {
-              for (std::vector<const Allocation *>::iterator
-                       it2 = alloc2.begin(),
-                       it2End = alloc2.end();
+              for (std::vector<Allocation *>::iterator it2 = alloc2.begin(),
+                                                       it2End = alloc2.end();
                    it2 != it2End; ++it2) {
                 addPointerEquality(getNewVersionedValue(toValue, toValueExpr),
                                    *it2);
@@ -828,7 +831,7 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
       }
       case llvm::Instruction::Store: {
 	VersionedValue *dataArg = getLatestValue(i->getOperand(0));
-        std::vector<const Allocation *> addressList =
+        std::vector<Allocation *> addressList =
             resolveAllocationTransitively(getLatestValue(i->getOperand(1)));
 
         // If there was no dependency found, we should create
@@ -836,9 +839,8 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
         if (!dataArg)
           dataArg = getNewVersionedValue(i->getOperand(0), valueExpr);
 
-        for (std::vector<const Allocation *>::iterator
-                 it = addressList.begin(),
-                 itEnd = addressList.end();
+        for (std::vector<Allocation *>::iterator it = addressList.begin(),
+                                                 itEnd = addressList.end();
              it != itEnd; ++it) {
             Allocation *allocation = getLatestAllocation((*it)->getSite());
             if (!allocation || !allocation->isComposite()) {
@@ -867,12 +869,12 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
         VersionedValue *arg = getLatestValue(i->getOperand(0));
         assert(arg != 0 && "operand not found");
 
-        std::vector<const Allocation *> a = resolveAllocationTransitively(arg);
+        std::vector<Allocation *> a = resolveAllocationTransitively(arg);
 
         if (a.size() > 0) {
           VersionedValue *newValue = getNewVersionedValue(i, valueExpr);
-          for (std::vector<const Allocation *>::iterator it = a.begin(),
-                                                         itEnd = a.end();
+          for (std::vector<Allocation *>::iterator it = a.begin(),
+                                                   itEnd = a.end();
                it != itEnd; ++it) {
             addPointerEquality(newValue, *it);
           }
@@ -1045,15 +1047,15 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
     }
   }
 
-  std::map<VersionedValue *, const Allocation *>
+  std::map<VersionedValue *, Allocation *>
   Dependency::directLocalAllocationSources(VersionedValue *target) const {
-    std::map<VersionedValue *, const Allocation *> ret;
+    std::map<VersionedValue *, Allocation *> ret;
 
     for (std::vector<FlowsTo *>::const_iterator it = flowsToList.begin(),
                                                 itEnd = flowsToList.end();
          it != itEnd; ++it) {
       if ((*it)->getTarget() == target) {
-        std::map<VersionedValue *, const Allocation *> extra;
+        std::map<VersionedValue *, Allocation *> extra;
 
         if (!(*it)->getAllocation()) {
           // Transitively get the source
@@ -1074,7 +1076,7 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
       for (std::vector<StorageCell *>::const_iterator it = storesList.begin(),
                                                       itEnd = storesList.end();
            it != itEnd; ++it) {
-        if (const Allocation *alloc = (*it)->storageOf(target)) {
+        if (Allocation *alloc = (*it)->storageOf(target)) {
           // It is possible that the first component was nil, as
           // in this case there was no source value
           ret[0] = alloc;
@@ -1086,32 +1088,29 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
     return ret;
   }
 
-  std::map<VersionedValue *, const Allocation *>
+  std::map<VersionedValue *, Allocation *>
   Dependency::directAllocationSources(VersionedValue *target) const {
-    std::map<VersionedValue *, const Allocation *> ret =
+    std::map<VersionedValue *, Allocation *> ret =
         directLocalAllocationSources(target);
 
     if (ret.empty() && parentDependency)
       return parentDependency->directAllocationSources(target);
 
-    std::map<VersionedValue *, const Allocation *> tmp;
-    std::map<VersionedValue *, const Allocation *>::iterator nextPos =
-                                                                 ret.begin(),
-                                                             itEnd = ret.end();
+    std::map<VersionedValue *, Allocation *> tmp;
+    std::map<VersionedValue *, Allocation *>::iterator nextPos = ret.begin(),
+                                                       itEnd = ret.end();
 
     bool elementErased = true;
     while (elementErased) {
       elementErased = false;
-      for (std::map<VersionedValue *, const Allocation *>::iterator it =
-               nextPos;
+      for (std::map<VersionedValue *, Allocation *>::iterator it = nextPos;
            it != itEnd; ++it) {
         if (!it->second) {
-          std::map<VersionedValue *, const Allocation *>::iterator deletionPos =
-              it;
+          std::map<VersionedValue *, Allocation *>::iterator deletionPos = it;
 
           // Here we check that it->first was non-nil, as it is possibly so.
           if (parentDependency && it->first) {
-            std::map<VersionedValue *, const Allocation *> ancestralSources =
+            std::map<VersionedValue *, Allocation *> ancestralSources =
                 parentDependency->directAllocationSources(it->first);
             tmp.insert(ancestralSources.begin(), ancestralSources.end());
           }
@@ -1128,14 +1127,14 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
     return ret;
   }
 
-  std::vector<const Allocation *>
+  std::vector<Allocation *>
   Dependency::buildAllocationGraph(AllocationGraph *g,
                                    VersionedValue *target) const {
-    std::vector<const Allocation *> ret;
-    std::map<VersionedValue *, const Allocation *> sourceEdges =
+    std::vector<Allocation *> ret;
+    std::map<VersionedValue *, Allocation *> sourceEdges =
         directAllocationSources(target);
 
-    for (std::map<VersionedValue *, const Allocation *>::iterator
+    for (std::map<VersionedValue *, Allocation *>::iterator
              it0 = sourceEdges.begin(),
              it0End = sourceEdges.end();
          it0 != it0End; ++it0) {
@@ -1146,7 +1145,7 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
         continue;
       }
 
-      std::vector<const Allocation *> sourceAllocations =
+      std::vector<Allocation *> sourceAllocations =
           buildAllocationGraph(g, it0->first);
 
       if (sourceAllocations.empty()) {
@@ -1154,7 +1153,7 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
           ret.push_back(it0->second);
       } else {
         bool newSourceAdded = false;
-        for (std::vector<const Allocation *>::iterator
+        for (std::vector<Allocation *>::iterator
                  it1 = sourceAllocations.begin(),
                  it1End = sourceAllocations.end();
              it1 != it1End; ++it1) {

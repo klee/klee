@@ -41,13 +41,14 @@ public:
 };
 
 class Allocation {
+  bool core;
 
   protected:
     llvm::Value *site;
 
-    Allocation() : site(0) {}
+    Allocation() : core(false), site(0) {}
 
-    Allocation(llvm::Value *site) : site(site) {}
+    Allocation(llvm::Value *site) : core(false), site(site) {}
 
   public:
     virtual ~Allocation() {}
@@ -59,6 +60,10 @@ class Allocation {
     virtual void print(llvm::raw_ostream& stream) const;
 
     llvm::Value *getSite() const { return site; }
+
+    void setAsCore() { core = true; }
+
+    bool isCore() { return core; }
 
     void dump() const {
       print(llvm::errs());
@@ -140,15 +145,15 @@ class Allocation {
   class PointerEquality {
     // value equals allocation (pointer)
     const VersionedValue *value;
-    const Allocation *allocation;
+    Allocation *allocation;
 
   public:
-    PointerEquality(const VersionedValue *value, const Allocation *allocation)
+    PointerEquality(const VersionedValue *value, Allocation *allocation)
         : value(value), allocation(allocation) {}
 
     ~PointerEquality() {}
 
-    const Allocation *equals(const VersionedValue *value) const {
+    Allocation *equals(const VersionedValue *value) const {
       return this->value == value ? allocation : 0;
     }
 
@@ -162,24 +167,24 @@ class Allocation {
 
   class StorageCell {
     // allocation stores value
-    const Allocation *allocation;
+    Allocation *allocation;
     VersionedValue* value;
 
   public:
-    StorageCell(const Allocation *allocation, VersionedValue *value)
+    StorageCell(Allocation *allocation, VersionedValue *value)
         : allocation(allocation), value(value) {}
 
     ~StorageCell() {}
 
-    VersionedValue *stores(const Allocation *allocation) const {
+    VersionedValue *stores(Allocation *allocation) const {
       return this->allocation == allocation ? this->value : 0;
     }
 
-    const Allocation *storageOf(const VersionedValue *value) const {
+    Allocation *storageOf(const VersionedValue *value) const {
       return this->value == value ? this->allocation : 0;
     }
 
-    const Allocation *getAllocation() const { return this->allocation; }
+    Allocation *getAllocation() const { return this->allocation; }
 
     void print(llvm::raw_ostream& stream) const;
 
@@ -195,14 +200,13 @@ class Allocation {
     VersionedValue* target;
 
     // Store-load via allocation site
-    const Allocation *via;
+    Allocation *via;
 
   public:
     FlowsTo(VersionedValue *source, VersionedValue *target)
         : source(source), target(target), via(0) {}
 
-    FlowsTo(VersionedValue *source, VersionedValue *target,
-            const Allocation *via)
+    FlowsTo(VersionedValue *source, VersionedValue *target, Allocation *via)
         : source(source), target(target), via(via) {}
 
     ~FlowsTo() {}
@@ -211,7 +215,7 @@ class Allocation {
 
     VersionedValue *getTarget() const { return this->target; }
 
-    const Allocation *getAllocation() const { return this->via; }
+    Allocation *getAllocation() const { return this->via; }
 
     void print(llvm::raw_ostream& sream) const;
 
@@ -224,15 +228,15 @@ class Allocation {
   class AllocationGraph {
 
     class AllocationNode {
-      const Allocation *allocation;
+      Allocation *allocation;
       std::vector<AllocationNode *> ancestors;
 
     public:
-      AllocationNode(const Allocation *allocation) : allocation(allocation) {}
+      AllocationNode(Allocation *allocation) : allocation(allocation) {}
 
       ~AllocationNode() { ancestors.clear(); }
 
-      const Allocation *getAllocation() const { return allocation; }
+      Allocation *getAllocation() const { return allocation; }
 
       void addParent(AllocationNode *node) {
         // The user should ensure that we don't store a duplicate
@@ -268,7 +272,7 @@ class Allocation {
       allNodes.clear();
     }
 
-    bool addNewEdge(const Allocation *source, const Allocation *target);
+    bool addNewEdge(Allocation *source, Allocation *target);
 
     void consumeSinkNode(Allocation *allocation);
 
@@ -332,22 +336,21 @@ class Allocation {
     Allocation *getLatestAllocation(llvm::Value *allocation) const;
 
     void addPointerEquality(const VersionedValue *value,
-                            const Allocation *allocation);
+                            Allocation *allocation);
 
-    void updateStore(const Allocation *allocation, VersionedValue *value);
+    void updateStore(Allocation *allocation, VersionedValue *value);
 
     void addDependency(VersionedValue *source, VersionedValue *target);
 
     void addDependencyViaAllocation(VersionedValue *source,
-                                    VersionedValue *target,
-                                    const Allocation *via);
+                                    VersionedValue *target, Allocation *via);
 
-    const Allocation *resolveAllocation(VersionedValue *value) const;
+    Allocation *resolveAllocation(VersionedValue *value) const;
 
-    std::vector<const Allocation *>
+    std::vector<Allocation *>
     resolveAllocationTransitively(VersionedValue *value) const;
 
-    std::vector<VersionedValue *> stores(const Allocation *allocation) const;
+    std::vector<VersionedValue *> stores(Allocation *allocation) const;
 
     /// @brief All values that flows to the target in one step, local
     /// to the current dependency / interpolation tree node
@@ -372,16 +375,16 @@ class Allocation {
                              ref<Expr> toValueExpr);
 
     /// @brief Direct allocation dependency local to an interpolation tree node
-    std::map<VersionedValue *, const Allocation *>
+    std::map<VersionedValue *, Allocation *>
     directLocalAllocationSources(VersionedValue *target) const;
 
     /// @brief Direct allocation dependency
-    std::map<VersionedValue *, const Allocation *>
+    std::map<VersionedValue *, Allocation *>
     directAllocationSources(VersionedValue *target) const;
 
     /// @brief Builds dependency graph between memory allocations
-    std::vector<const Allocation *>
-    buildAllocationGraph(AllocationGraph *g, VersionedValue *value) const;
+    std::vector<Allocation *> buildAllocationGraph(AllocationGraph *g,
+                                                   VersionedValue *value) const;
 
   public:
     Dependency(Dependency *prev);
