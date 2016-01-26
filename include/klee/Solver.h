@@ -225,7 +225,24 @@ namespace klee {
   };
 #endif // ENABLE_STP
 
-  
+#ifdef ENABLE_Z3
+  /// Z3Solver - A solver complete solver based on Z3
+  class Z3Solver : public Solver {
+  public:
+    /// Z3Solver - Construct a new Z3Solver.
+    Z3Solver();
+
+    /// Get the query in SMT-LIBv2 format.
+    /// \return A C-style string. The caller is responsible for freeing this.
+    virtual char *getConstraintLog(const Query &);
+
+    /// setCoreSolverTimeout - Set constraint solver timeout delay to the given
+    /// value; 0
+    /// is off.
+    virtual void setCoreSolverTimeout(double timeout);
+  };
+#endif // ENABLE_Z3
+
 #ifdef ENABLE_METASMT
   
   template<typename SolverContext>

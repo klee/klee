@@ -88,9 +88,7 @@ Solver *createCoreSolver(CoreSolverType cst) {
     return createDummySolver();
   case Z3_SOLVER:
 #ifdef ENABLE_Z3
-    // TODO
-    llvm::report_fatal_error("Z3 support not implemented");
-    return NULL;
+    return new Z3Solver();
 #else
     llvm::errs() << "Not compiled with Z3 support\n";
     return NULL;

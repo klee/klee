@@ -480,6 +480,8 @@ void KleeHandler::processTestCase(const ExecutionState &state,
     }
 
     if (WriteCVCs) {
+      // FIXME: If using Z3 as the core solver the emitted file is actually
+      // SMT-LIBv2 not CVC which is a bit confusing
       std::string constraints;
       m_interpreter->getConstraintLog(state, constraints, Interpreter::STP);
       llvm::raw_ostream *f = openTestFile("cvc", id);
