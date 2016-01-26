@@ -1068,6 +1068,7 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
   Dependency::directLocalAllocationSources(VersionedValue *target) const {
     llvm::errs() << "directLocalAllocationSources\n";
     std::map<VersionedValue *, const Allocation *> ret;
+
     for (std::vector<FlowsTo *>::const_iterator it = flowsToList.begin(),
                                                 itEnd = flowsToList.end();
          it != itEnd; ++it) {
@@ -1075,6 +1076,7 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
         std::map<VersionedValue *, const Allocation *> extra;
 
         if (!(*it)->getAllocation()) {
+          // Transitively get the source
           extra = directLocalAllocationSources((*it)->getSource());
           if (extra.size()) {
             ret.insert(extra.begin(), extra.end());
@@ -1086,6 +1088,21 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
         }
       }
     }
+
+    if (ret.empty()) {
+      // We try to find allocation in the local store instead
+      for (std::vector<StorageCell *>::const_iterator it = storesList.begin(),
+                                                      itEnd = storesList.end();
+           it != itEnd; ++it) {
+        if (const Allocation *alloc = (*it)->storageOf(target)) {
+          // It is possible that the first component was nil, as
+          // in this case there was no source value
+          ret[0] = alloc;
+          break;
+        }
+      }
+    }
+
     llvm::errs() << "directLocalAllocationSources end\n";
     return ret;
   }
@@ -1097,6 +1114,10 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
         directLocalAllocationSources(target);
 
     llvm::errs() << "back to directAllocationSources\n";
+
+    if (ret.empty() && parentDependency) {
+      return parentDependency->directAllocationSources(target);
+    }
 
     std::map<VersionedValue *, const Allocation *> tmp;
     std::map<VersionedValue *, const Allocation *>::iterator nextPos =
@@ -1113,7 +1134,8 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
           std::map<VersionedValue *, const Allocation *>::iterator deletionPos =
               it;
 
-          if (parentDependency) {
+          // Here we check that it->first was non-nil, as it is possibly so.
+          if (parentDependency && it->first) {
             std::map<VersionedValue *, const Allocation *> ancestralSources =
                 parentDependency->directAllocationSources(it->first);
             tmp.insert(ancestralSources.begin(), ancestralSources.end());
@@ -1142,25 +1164,65 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
     std::map<VersionedValue *, const Allocation *> sourceEdges =
         directAllocationSources(target);
 
+    llvm::errs() << "ITS DIRECT SOURCES:\n";
+    for (std::map<VersionedValue *, const Allocation *>::iterator
+             it = sourceEdges.begin(),
+             itEnd = sourceEdges.end();
+         it != itEnd; ++it) {
+      llvm::errs() << "(";
+      if (it->first)
+        it->first->print(llvm::errs());
+      else
+        llvm::errs() << "NULL";
+      llvm::errs() << ",";
+      if (it->second)
+        it->second->print(llvm::errs());
+      else
+        llvm::errs() << "NULL";
+      llvm::errs() << ")\n";
+    }
+
+    llvm::errs() << "GATHERING MORE SOURCE EDGES\n";
     for (std::map<VersionedValue *, const Allocation *>::iterator
              it0 = sourceEdges.begin(),
              it0End = sourceEdges.end();
          it0 != it0End; ++it0) {
 
+      // It is possible that the first component was nil.
+      if (!it0->first) {
+        ret.push_back(it0->second);
+        continue;
+      }
+
       std::vector<const Allocation *> sourceAllocations =
           buildAllocationGraph(g, it0->first);
 
       if (sourceAllocations.size() == 0) {
-        ret.push_back(it0->second);
+        llvm::errs() << "Could not find source allocations for ";
+        it0->first->dump();
+        if (it0->second)
+          ret.push_back(it0->second);
       } else {
+        llvm::errs() << "Found source allocations for ";
+        it0->first->dump();
 
         bool newSourceAdded = false;
         for (std::vector<const Allocation *>::iterator
                  it1 = sourceAllocations.begin(),
                  it1End = sourceAllocations.end();
              it1 != it1End; ++it1) {
-          if (g->addNewEdge((*it1), it0->second))
+          if (g->addNewEdge((*it1), it0->second)) {
+            llvm::errs() << "Added new edge: (";
+            (*it1)->print(llvm::errs());
+            llvm::errs() << ",";
+            if (it0->second)
+              it0->second->print(llvm::errs());
+            else
+              llvm::errs() << "NULL";
+            llvm::errs() << ")\n";
+
             newSourceAdded = true;
+        }
         }
 
         // The following is to avoid exponential blowup: we return an
@@ -1169,6 +1231,8 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
           ret.push_back(it0->second);
       }
     }
+    llvm::errs() << "Done building graph for ";
+    target->dump();
     return ret;
   }
 
