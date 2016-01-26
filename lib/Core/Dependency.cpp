@@ -511,6 +511,13 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
   }
 
   VersionedValue *Dependency::getLatestValue(llvm::Value *value) const {
+    llvm::errs() << "VALUES LIST\n";
+    for (std::vector<VersionedValue *>::const_iterator it = valuesList.begin(),
+                                                       itEnd = valuesList.end();
+         it != itEnd; ++it) {
+      (*it)->dump();
+    }
+    llvm::errs() << "-------------\n";
     for (std::vector<VersionedValue *>::const_reverse_iterator
              it = valuesList.rbegin(),
              itEnd = valuesList.rend();
@@ -735,12 +742,18 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
     if (!arg)
       return false;
 
+    llvm::errs() << "FOUND LATEST VALUE ";
+    arg->dump();
+
     std::vector<const Allocation *> allocList =
         resolveAllocationTransitively(arg);
     if (allocList.size() > 0) {
+      llvm::errs() << "VALUE RESOLVED TO ALLOCATIONS\n";
       for (std::vector<const Allocation *>::iterator it0 = allocList.begin(),
                                                      it0End = allocList.end();
            it0 != it0End; ++it0) {
+        llvm::errs() << "ALLOCATION: ";
+        (*it0)->dump();
         std::vector<VersionedValue *> valList = stores(*it0);
         if (valList.size() > 0) {
           for (std::vector<VersionedValue *>::iterator it1 = valList.begin(),
@@ -762,6 +775,7 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
             }
           }
         } else {
+          llvm::errs() << "FOUND NOTHING STORED\n";
           // We could not find the stored value, create
           // a new one.
           updateStore(*it0, getNewVersionedValue(toValue, toValueExpr));
@@ -818,6 +832,7 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
         }
 
         if (!buildLoadDependency(i->getOperand(0), i, valueExpr)) {
+          llvm::errs() << "BLD IS FALSE\n";
           Allocation *alloc = getInitialAllocation(i->getOperand(0));
           updateStore(alloc, getNewVersionedValue(i, valueExpr));
         }
@@ -845,7 +860,17 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
              it != itEnd; ++it) {
             llvm::errs() << "Storing into allocation ";
             (*it)->dump();
-          updateStore(getNewAllocationVersion((*it)->getSite()), dataArg);
+
+            Allocation *allocation = getLatestAllocation((*it)->getSite());
+            if (!allocation || !allocation->isComposite()) {
+              allocation = getInitialAllocation((*it)->getSite());
+              llvm::errs() << "NEW VERSION ALLOC ";
+              allocation->dump();
+              VersionedValue *allocationValue =
+                  getNewVersionedValue((*it)->getSite(), valueExpr);
+              addPointerEquality(allocationValue, allocation);
+            }
+            updateStore(allocation, dataArg);
         }
 
         break;
