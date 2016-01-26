@@ -1211,7 +1211,7 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
                  it1 = sourceAllocations.begin(),
                  it1End = sourceAllocations.end();
              it1 != it1End; ++it1) {
-          if (g->addNewEdge((*it1), it0->second)) {
+          if ((*it1) != it0->second && g->addNewEdge((*it1), it0->second)) {
             llvm::errs() << "Added new edge: (";
             (*it1)->print(llvm::errs());
             llvm::errs() << ",";
