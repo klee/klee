@@ -434,7 +434,7 @@ void ITree::markPathCondition(ExecutionState &state, TimingSolver *solver) {
   g->dump();
 
   // Compute memory allocations needed by the unsatisfiability core
-  currentINode->dependency->computeInterpolantAllocations(g);
+  currentINode->computeInterpolantAllocations(g);
 
   delete g; // Delete the AllocationGraph object
 }

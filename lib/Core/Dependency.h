@@ -289,14 +289,13 @@ class Allocation {
 
     void consumeSinkNode(Allocation *allocation);
 
-    std::vector<llvm::Value *> getSinkValues() const;
+    std::vector<Allocation *> getSinkAllocations() const;
 
     std::vector<Allocation *>
-    getSinksWithValues(std::vector<llvm::Value *> valuesList) const;
+    getSinksWithValues(std::vector<Allocation *> valuesList) const;
 
-    void
-    consumeNodesWithValues(std::vector<llvm::Value *> versionedAllocations,
-                           std::vector<llvm::Value *> compositeAllocations);
+    void consumeNodesWithValues(std::vector<Allocation *> versionedAllocations,
+                                std::vector<Allocation *> compositeAllocations);
 
     void dump() const {
       this->print(llvm::errs());
@@ -337,13 +336,13 @@ class Allocation {
 
     std::vector<Allocation *> allocationsList;
 
-    std::vector<llvm::Value *> newVersionedAllocations;
+    std::vector<Allocation *> newVersionedAllocations;
 
-    std::vector<llvm::Value *> newCompositeAllocations;
+    std::vector<Allocation *> newCompositeAllocations;
 
     /// @brief allocations of this node and its ancestors
     /// that are needed for the core and dominates other allocations.
-    std::vector<llvm::Value *> interpolantAllocations;
+    std::vector<Allocation *> interpolantAllocations;
 
     VersionedValue *getNewVersionedValue(llvm::Value *value,
                                          ref<Expr> valueExpr);
@@ -352,9 +351,9 @@ class Allocation {
 
     Allocation *getNewAllocationVersion(llvm::Value *allocation);
 
-    std::vector<llvm::Value *> getAllVersionedAllocations() const;
+    std::vector<Allocation *> getAllVersionedAllocations() const;
 
-    std::vector<llvm::Value *> getAllCompositeAllocations() const;
+    std::vector<Allocation *> getAllCompositeAllocations() const;
 
     /// @brief Gets the latest version of the allocation. For unversioned
     /// allocations (e.g., composite and environment), this should return
