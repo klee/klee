@@ -335,6 +335,10 @@ class Allocation {
     /// the only allocation.
     Allocation *getLatestAllocation(llvm::Value *allocation) const;
 
+    /// @brief similar to getLatestValue, but we don't check for whether
+    /// the value is constant or not
+    VersionedValue *getLatestValueNoConstantCheck(llvm::Value *value) const;
+
     void addPointerEquality(const VersionedValue *value,
                             Allocation *allocation);
 
@@ -371,8 +375,8 @@ class Allocation {
                                std::vector<ref<Expr> > &arguments);
 
     /// @brief Construct dependency due to load instruction
-    bool buildLoadDependency(llvm::Value *fromValue, llvm::Value *toValue,
-                             ref<Expr> toValueExpr);
+    bool buildLoadDependency(llvm::Value *fromValue, ref<Expr> fromValueExpr,
+                             llvm::Value *toValue, ref<Expr> toValueExpr);
 
     /// @brief Direct allocation dependency local to an interpolation tree node
     std::map<VersionedValue *, Allocation *>
@@ -395,7 +399,13 @@ class Allocation {
 
     void execute(llvm::Instruction *instr, ref<Expr> valueExpr);
 
-    VersionedValue *getLatestValue(llvm::Value *value) const;
+    void executeMemoryOperation(llvm::Instruction *i, ref<Expr> valueExpr,
+                                ref<Expr> address);
+
+    void executeBinary(llvm::Instruction *i, ref<Expr> valueExpr,
+                       ref<Expr> tExpr, ref<Expr> fExpr);
+
+    VersionedValue *getLatestValue(llvm::Value *value, ref<Expr> valueExpr);
 
     std::map<llvm::Value *, ref<Expr> >
     getLatestCoreExpressions(bool interpolantValueOnly) const;
@@ -410,6 +420,8 @@ class Allocation {
                          ref<Expr> returnValue);
 
     void markAllValues(AllocationGraph *g, VersionedValue *value);
+
+    void markAllValues(AllocationGraph *g, llvm::Value *value);
 
     void dump() const {
       this->print(llvm::errs());

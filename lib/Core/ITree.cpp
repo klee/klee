@@ -42,7 +42,8 @@ PathCondition::PathCondition(ref<Expr> &constraint, Dependency *dependency,
                              llvm::Value *condition, PathCondition *prev)
     : constraint(constraint), shadowConstraint(constraint), shadowed(false),
       dependency(dependency),
-      condition(dependency ? dependency->getLatestValue(condition) : 0),
+      condition(dependency ? dependency->getLatestValue(condition, constraint)
+                           : 0),
       inInterpolant(false), tail(prev) {}
 
 PathCondition::~PathCondition() {}
@@ -396,18 +397,17 @@ void ITree::markPathCondition(ExecutionState &state, TimingSolver *solver) {
   std::vector<ref<Expr> > unsatCore = solver->getUnsatCore();
 
   // Simply return in case the unsatisfiability core is empty
-  if (unsatCore.size() == 0)
+  if (unsatCore.empty())
       return;
 
   AllocationGraph *g = new AllocationGraph();
+
   llvm::BranchInst *binst =
       llvm::dyn_cast<llvm::BranchInst>(state.prevPC->inst);
   if (binst) {
-    currentINode->dependency->markAllValues(
-        g, currentINode->dependency->getLatestValue(binst->getCondition()));
+    currentINode->dependency->markAllValues(g, binst->getCondition());
   }
 
-  // Process the unsat core in case it was computed (non-empty)
   PathCondition *pc = currentINode->pathCondition;
 
   if (pc != 0) {
@@ -429,6 +429,18 @@ void ITree::markPathCondition(ExecutionState &state, TimingSolver *solver) {
   llvm::errs() << "Deleting AllocationGraph\n";
   g->dump();
   delete g; // Delete the AllocationGraph object
+}
+
+void ITree::executeAbstractBinaryDependency(llvm::Instruction *instr,
+                                            ref<Expr> valueExpr,
+                                            ref<Expr> tExpr, ref<Expr> fExpr) {
+  currentINode->executeBinaryDependency(instr, valueExpr, tExpr, fExpr);
+}
+
+void ITree::executeAbstractMemoryDependency(llvm::Instruction *instr,
+                                            ref<Expr> value,
+                                            ref<Expr> address) {
+  currentINode->executeAbstractMemoryDependency(instr, value, address);
 }
 
 void ITree::executeAbstractDependency(llvm::Instruction *instr,
@@ -555,6 +567,18 @@ bool ITreeNode::introducesMarkedConstraint() {
       return true;
   }
   return false;
+}
+
+void ITreeNode::executeBinaryDependency(llvm::Instruction *i,
+                                        ref<Expr> valueExpr, ref<Expr> tExpr,
+                                        ref<Expr> fExpr) {
+  dependency->executeBinary(i, valueExpr, tExpr, fExpr);
+}
+
+void ITreeNode::executeAbstractMemoryDependency(llvm::Instruction *instr,
+                                                ref<Expr> value,
+                                                ref<Expr> address) {
+  dependency->executeMemoryOperation(instr, value, address);
 }
 
 void ITreeNode::executeAbstractDependency(llvm::Instruction *instr,

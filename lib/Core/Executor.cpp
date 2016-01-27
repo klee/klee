@@ -1827,12 +1827,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = eval(ki, state.incomingBBIndex * 2, state).value;
 #endif
     bindLocal(ki, state, result);
-
-#ifdef SUPPORT_Z3
-    // Update dependency
-    if (InterpolationOption::interpolation)
-      interpTree->executeAbstractDependency(i, result);
-#endif
     break;
   }
 
@@ -1847,7 +1841,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 #ifdef SUPPORT_Z3
     // Update dependency
     if (InterpolationOption::interpolation)
-      interpTree->executeAbstractDependency(i, result);
+      interpTree->executeAbstractBinaryDependency(i, result, tExpr, fExpr);
 #endif
     break;
   }
@@ -1867,7 +1861,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 #ifdef SUPPORT_Z3
     // Update dependency
     if (InterpolationOption::interpolation)
-      interpTree->executeAbstractDependency(i, result);
+      interpTree->executeAbstractBinaryDependency(i, result, left, right);
 #endif
     break;
   }
@@ -1881,7 +1875,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 #ifdef SUPPORT_Z3
     // Update dependency
     if (InterpolationOption::interpolation)
-      interpTree->executeAbstractDependency(i, result);
+      interpTree->executeAbstractBinaryDependency(i, result, left, right);
 #endif
     break;
   }
@@ -1895,7 +1889,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 #ifdef SUPPORT_Z3
     // Update dependency
     if (InterpolationOption::interpolation)
-      interpTree->executeAbstractDependency(i, result);
+      interpTree->executeAbstractBinaryDependency(i, result, left, right);
 #endif
     break;
   }
@@ -1909,7 +1903,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 #ifdef SUPPORT_Z3
     // Update dependency
     if (InterpolationOption::interpolation)
-      interpTree->executeAbstractDependency(i, result);
+      interpTree->executeAbstractBinaryDependency(i, result, left, right);
 #endif
     break;
   }
@@ -1923,7 +1917,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 #ifdef SUPPORT_Z3
     // Update dependency
     if (InterpolationOption::interpolation)
-      interpTree->executeAbstractDependency(i, result);
+      interpTree->executeAbstractBinaryDependency(i, result, left, right);
 #endif
     break;
   }
@@ -1937,7 +1931,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 #ifdef SUPPORT_Z3
     // Update dependency
     if (InterpolationOption::interpolation)
-      interpTree->executeAbstractDependency(i, result);
+      interpTree->executeAbstractBinaryDependency(i, result, left, right);
 #endif
     break;
   }
@@ -1951,7 +1945,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 #ifdef SUPPORT_Z3
     // Update dependency
     if (InterpolationOption::interpolation)
-      interpTree->executeAbstractDependency(i, result);
+      interpTree->executeAbstractBinaryDependency(i, result, left, right);
 #endif
     break;
   }
@@ -1965,7 +1959,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 #ifdef SUPPORT_Z3
     // Update dependency
     if (InterpolationOption::interpolation)
-      interpTree->executeAbstractDependency(i, result);
+      interpTree->executeAbstractBinaryDependency(i, result, left, right);
 #endif
     break;
   }
@@ -1979,7 +1973,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 #ifdef SUPPORT_Z3
     // Update dependency
     if (InterpolationOption::interpolation)
-      interpTree->executeAbstractDependency(i, result);
+      interpTree->executeAbstractBinaryDependency(i, result, left, right);
 #endif
     break;
   }
@@ -1993,7 +1987,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 #ifdef SUPPORT_Z3
     // Update dependency
     if (InterpolationOption::interpolation)
-      interpTree->executeAbstractDependency(i, result);
+      interpTree->executeAbstractBinaryDependency(i, result, left, right);
 #endif
     break;
   }
@@ -2007,7 +2001,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 #ifdef SUPPORT_Z3
     // Update dependency
     if (InterpolationOption::interpolation)
-      interpTree->executeAbstractDependency(i, result);
+      interpTree->executeAbstractBinaryDependency(i, result, left, right);
 #endif
     break;
   }
@@ -2021,7 +2015,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 #ifdef SUPPORT_Z3
     // Update dependency
     if (InterpolationOption::interpolation)
-      interpTree->executeAbstractDependency(i, result);
+      interpTree->executeAbstractBinaryDependency(i, result, left, right);
 #endif
     break;
   }
@@ -2035,7 +2029,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 #ifdef SUPPORT_Z3
     // Update dependency
     if (InterpolationOption::interpolation)
-      interpTree->executeAbstractDependency(i, result);
+      interpTree->executeAbstractBinaryDependency(i, result, left, right);
 #endif
     break;
   }
@@ -2045,84 +2039,84 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   case Instruction::ICmp: {
     CmpInst *ci = cast<CmpInst>(i);
     ICmpInst *ii = cast<ICmpInst>(ci);
-    ref<Expr> result;
+    ref<Expr> result, left, right;
 
     switch(ii->getPredicate()) {
     case ICmpInst::ICMP_EQ: {
-      ref<Expr> left = eval(ki, 0, state).value;
-      ref<Expr> right = eval(ki, 1, state).value;
+      left = eval(ki, 0, state).value;
+      right = eval(ki, 1, state).value;
       result = EqExpr::create(left, right);
       bindLocal(ki, state, result);
       break;
     }
 
     case ICmpInst::ICMP_NE: {
-      ref<Expr> left = eval(ki, 0, state).value;
-      ref<Expr> right = eval(ki, 1, state).value;
+      left = eval(ki, 0, state).value;
+      right = eval(ki, 1, state).value;
       result = NeExpr::create(left, right);
       bindLocal(ki, state, result);
       break;
     }
 
     case ICmpInst::ICMP_UGT: {
-      ref<Expr> left = eval(ki, 0, state).value;
-      ref<Expr> right = eval(ki, 1, state).value;
+      left = eval(ki, 0, state).value;
+      right = eval(ki, 1, state).value;
       result = UgtExpr::create(left, right);
       bindLocal(ki, state,result);
       break;
     }
 
     case ICmpInst::ICMP_UGE: {
-      ref<Expr> left = eval(ki, 0, state).value;
-      ref<Expr> right = eval(ki, 1, state).value;
+      left = eval(ki, 0, state).value;
+      right = eval(ki, 1, state).value;
       result = UgeExpr::create(left, right);
       bindLocal(ki, state, result);
       break;
     }
 
     case ICmpInst::ICMP_ULT: {
-      ref<Expr> left = eval(ki, 0, state).value;
-      ref<Expr> right = eval(ki, 1, state).value;
+      left = eval(ki, 0, state).value;
+      right = eval(ki, 1, state).value;
       result = UltExpr::create(left, right);
       bindLocal(ki, state, result);
       break;
     }
 
     case ICmpInst::ICMP_ULE: {
-      ref<Expr> left = eval(ki, 0, state).value;
-      ref<Expr> right = eval(ki, 1, state).value;
+      left = eval(ki, 0, state).value;
+      right = eval(ki, 1, state).value;
       result = UleExpr::create(left, right);
       bindLocal(ki, state, result);
       break;
     }
 
     case ICmpInst::ICMP_SGT: {
-      ref<Expr> left = eval(ki, 0, state).value;
-      ref<Expr> right = eval(ki, 1, state).value;
+      left = eval(ki, 0, state).value;
+      right = eval(ki, 1, state).value;
       result = SgtExpr::create(left, right);
       bindLocal(ki, state, result);
       break;
     }
 
     case ICmpInst::ICMP_SGE: {
-      ref<Expr> left = eval(ki, 0, state).value;
-      ref<Expr> right = eval(ki, 1, state).value;
+      left = eval(ki, 0, state).value;
+      right = eval(ki, 1, state).value;
       result = SgeExpr::create(left, right);
       bindLocal(ki, state, result);
       break;
     }
 
     case ICmpInst::ICMP_SLT: {
-      ref<Expr> left = eval(ki, 0, state).value;
-      ref<Expr> right = eval(ki, 1, state).value;
+      left = eval(ki, 0, state).value;
+      right = eval(ki, 1, state).value;
       result = SltExpr::create(left, right);
       bindLocal(ki, state, result);
       break;
     }
 
     case ICmpInst::ICMP_SLE: {
-      ref<Expr> left = eval(ki, 0, state).value;
-      ref<Expr> right = eval(ki, 1, state).value;
+      left = eval(ki, 0, state).value;
+      right = eval(ki, 1, state).value;
       result = SleExpr::create(left, right);
       bindLocal(ki, state, result);
       break;
@@ -2135,7 +2129,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 #ifdef SUPPORT_Z3
     // Update dependency
     if (InterpolationOption::interpolation)
-      interpTree->executeAbstractDependency(i, result);
+      interpTree->executeAbstractBinaryDependency(i, result, left, right);
 #endif
     break;
   }
@@ -2301,7 +2295,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 #ifdef SUPPORT_Z3
     // Update dependency
     if (InterpolationOption::interpolation)
-      interpTree->executeAbstractDependency(i, result);
+      interpTree->executeAbstractBinaryDependency(i, result, left, right);
 #endif
     break;
   }
@@ -2327,7 +2321,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 #ifdef SUPPORT_Z3
     // Update dependency
     if (InterpolationOption::interpolation)
-      interpTree->executeAbstractDependency(i, result);
+      interpTree->executeAbstractBinaryDependency(i, result, left, right);
 #endif
     break;
   }
@@ -2354,7 +2348,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 #ifdef SUPPORT_Z3
     // Update dependency
     if (InterpolationOption::interpolation)
-      interpTree->executeAbstractDependency(i, result);
+      interpTree->executeAbstractBinaryDependency(i, result, left, right);
 #endif
     break;
   }
@@ -2381,7 +2375,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 #ifdef SUPPORT_Z3
     // Update dependency
     if (InterpolationOption::interpolation)
-      interpTree->executeAbstractDependency(i, result);
+      interpTree->executeAbstractBinaryDependency(i, result, left, right);
 #endif
     break;
   }
@@ -2408,7 +2402,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 #ifdef SUPPORT_Z3
     // Update dependency
     if (InterpolationOption::interpolation)
-      interpTree->executeAbstractDependency(i, result);
+      interpTree->executeAbstractBinaryDependency(i, result, left, right);
 #endif
     break;
   }
@@ -2670,7 +2664,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 #ifdef SUPPORT_Z3
     // Update dependency
     if (InterpolationOption::interpolation)
-      interpTree->executeAbstractDependency(i, result);
+      interpTree->executeAbstractBinaryDependency(i, result, left, right);
 #endif
     break;
   }
@@ -2703,7 +2697,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 #ifdef SUPPORT_Z3
     // Update dependency
     if (InterpolationOption::interpolation)
-      interpTree->executeAbstractDependency(i, result);
+      interpTree->executeAbstractBinaryDependency(i, result, agg, val);
 #endif
     break;
   }
@@ -3600,7 +3594,8 @@ void Executor::executeMemoryOperation(ExecutionState &state, bool isWrite,
 #ifdef SUPPORT_Z3
           // Update dependency
           if (InterpolationOption::interpolation && target)
-            interpTree->executeAbstractDependency(target->inst, value);
+            interpTree->executeAbstractMemoryDependency(target->inst, value,
+                                                        address);
 #endif
         }          
       } else {
@@ -3614,7 +3609,8 @@ void Executor::executeMemoryOperation(ExecutionState &state, bool isWrite,
 #ifdef SUPPORT_Z3
         // Update dependency
         if (InterpolationOption::interpolation && target)
-          interpTree->executeAbstractDependency(target->inst, result);
+          interpTree->executeAbstractMemoryDependency(target->inst, result,
+                                                      address);
 #endif
       }
 

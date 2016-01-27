@@ -514,11 +514,13 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
     return ret;
   }
 
-  VersionedValue *Dependency::getLatestValue(llvm::Value *value) const {
+  VersionedValue *Dependency::getLatestValue(llvm::Value *value,
+                                             ref<Expr> valueExpr) {
     assert(value && "value cannot be null");
 
-    if (llvm::isa<llvm::Constant>(value))
-      return 0;
+    if (llvm::isa<llvm::Constant>(value) &&
+        !llvm::isa<llvm::PointerType>(value->getType()))
+      return getNewVersionedValue(value, valueExpr);
 
     for (std::vector<VersionedValue *>::const_reverse_iterator
              it = valuesList.rbegin(),
@@ -529,7 +531,25 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
     }
 
     if (parentDependency)
-      return parentDependency->getLatestValue(value);
+      return parentDependency->getLatestValue(value, valueExpr);
+
+    return 0;
+  }
+
+  VersionedValue *
+  Dependency::getLatestValueNoConstantCheck(llvm::Value *value) const {
+    assert(value && "value cannot be null");
+
+    for (std::vector<VersionedValue *>::const_reverse_iterator
+             it = valuesList.rbegin(),
+             itEnd = valuesList.rend();
+         it != itEnd; ++it) {
+      if ((*it)->hasValue(value))
+        return *it;
+    }
+
+    if (parentDependency)
+      return parentDependency->getLatestValueNoConstantCheck(value);
 
     return 0;
   }
@@ -722,7 +742,7 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
     std::vector<VersionedValue *> argumentValuesList;
     for (unsigned i = numArgs; i > 0;) {
       llvm::Value *argOperand = site->getArgOperand(--i);
-      VersionedValue *latestValue = getLatestValue(argOperand);
+      VersionedValue *latestValue = getLatestValue(argOperand, arguments.at(i));
 
       if (latestValue)
         argumentValuesList.push_back(latestValue);
@@ -737,9 +757,10 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
   }
 
   bool Dependency::buildLoadDependency(llvm::Value *fromValue,
+                                       ref<Expr> fromValueExpr,
                                        llvm::Value *toValue,
                                        ref<Expr> toValueExpr) {
-    VersionedValue *arg = getLatestValue(fromValue);
+    VersionedValue *arg = getLatestValue(fromValue, fromValueExpr);
     if (!arg)
       return false;
 
@@ -795,25 +816,16 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
 
   Dependency *Dependency::cdr() const { return parentDependency; }
 
-  void Dependency::execute(llvm::Instruction *i, ref<Expr> valueExpr) {
+  void Dependency::executeMemoryOperation(llvm::Instruction *i,
+                                          ref<Expr> valueExpr,
+                                          ref<Expr> address) {
     // The basic design principle that we need to be careful here
     // is that we should not store quadratic-sized structures in
     // the database of computed relations, e.g., not storing the
     // result of traversals of the graph. We keep the
     // quadratic blow up for only when querying the database.
-    unsigned opcode = i->getOpcode();
 
-    assert(opcode != llvm::Instruction::Invoke &&
-           opcode != llvm::Instruction::Call &&
-           opcode != llvm::Instruction::Ret &&
-           "should not execute instruction here");
-
-    switch (opcode) {
-      case llvm::Instruction::Alloca: {
-        addPointerEquality(getNewVersionedValue(i, valueExpr),
-                           getInitialAllocation(i));
-        break;
-      }
+    switch (i->getOpcode()) {
       case llvm::Instruction::Load: {
         if (Util::isEnvironmentAllocation(i)) {
           // The load corresponding to a load of the environment address
@@ -823,16 +835,16 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
           break;
         }
 
-        if (!buildLoadDependency(i->getOperand(0), i, valueExpr)) {
+        if (!buildLoadDependency(i->getOperand(0), address, i, valueExpr)) {
           Allocation *alloc = getInitialAllocation(i->getOperand(0));
           updateStore(alloc, getNewVersionedValue(i, valueExpr));
         }
         break;
       }
       case llvm::Instruction::Store: {
-	VersionedValue *dataArg = getLatestValue(i->getOperand(0));
-        std::vector<Allocation *> addressList =
-            resolveAllocationTransitively(getLatestValue(i->getOperand(1)));
+        VersionedValue *dataArg = getLatestValue(i->getOperand(0), valueExpr);
+        std::vector<Allocation *> addressList = resolveAllocationTransitively(
+            getLatestValue(i->getOperand(1), address));
 
         // If there was no dependency found, we should create
         // a new value
@@ -854,6 +866,92 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
 
         break;
       }
+      default: {
+        assert(0 && "should not execute instruction here");
+        break;
+      }
+      }
+  }
+
+  void Dependency::executeBinary(llvm::Instruction *i, ref<Expr> result,
+                                 ref<Expr> op1Expr, ref<Expr> op2Expr) {
+
+    switch (i->getOpcode()) {
+    case llvm::Instruction::Select: {
+
+      VersionedValue *op1 = getLatestValue(i->getOperand(1), op1Expr);
+      VersionedValue *op2 = getLatestValue(i->getOperand(2), op2Expr);
+      VersionedValue *newValue = 0;
+      if (op1) {
+        newValue = getNewVersionedValue(i, result);
+        addDependency(op1, newValue);
+      }
+      if (op2) {
+        if (newValue)
+          addDependency(op2, newValue);
+        else
+          addDependency(op2, getNewVersionedValue(i, result));
+      }
+      break;
+    }
+
+    case llvm::Instruction::Add:
+    case llvm::Instruction::Sub:
+    case llvm::Instruction::Mul:
+    case llvm::Instruction::UDiv:
+    case llvm::Instruction::SDiv:
+    case llvm::Instruction::URem:
+    case llvm::Instruction::SRem:
+    case llvm::Instruction::And:
+    case llvm::Instruction::Or:
+    case llvm::Instruction::Xor:
+    case llvm::Instruction::Shl:
+    case llvm::Instruction::LShr:
+    case llvm::Instruction::AShr:
+    case llvm::Instruction::ICmp:
+    case llvm::Instruction::FAdd:
+    case llvm::Instruction::FSub:
+    case llvm::Instruction::FMul:
+    case llvm::Instruction::FDiv:
+    case llvm::Instruction::FRem:
+    case llvm::Instruction::FCmp:
+    case llvm::Instruction::InsertValue: {
+      VersionedValue *op1 = getLatestValue(i->getOperand(0), op1Expr);
+      VersionedValue *op2 = getLatestValue(i->getOperand(1), op2Expr);
+
+      VersionedValue *newValue = 0;
+      if (op1) {
+        newValue = getNewVersionedValue(i, result);
+        addDependency(op1, newValue);
+      }
+      if (op2) {
+        if (newValue)
+          addDependency(op2, newValue);
+        else
+          addDependency(op2, getNewVersionedValue(i, result));
+      }
+      break;
+    }
+    default: {
+      assert(0 && "should not execute instruction here");
+      break;
+    }
+    }
+  }
+
+  void Dependency::execute(llvm::Instruction *i, ref<Expr> valueExpr) {
+    // The basic design principle that we need to be careful here
+    // is that we should not store quadratic-sized structures in
+    // the database of computed relations, e.g., not storing the
+    // result of traversals of the graph. We keep the
+    // quadratic blow up for only when querying the database.
+
+    switch (i->getOpcode()) {
+    case llvm::Instruction::Alloca: {
+      addPointerEquality(getNewVersionedValue(i, valueExpr),
+                         getInitialAllocation(i));
+      break;
+    }
       case llvm::Instruction::GetElementPtr: {
 	if (llvm::isa<llvm::Constant>(i->getOperand(0))) {
           Allocation *a = getLatestAllocation(i->getOperand(0));
@@ -866,7 +964,7 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
           break;
         }
 
-        VersionedValue *arg = getLatestValue(i->getOperand(0));
+        VersionedValue *arg = getLatestValue(i->getOperand(0), valueExpr);
         assert(arg != 0 && "operand not found");
 
         std::vector<Allocation *> a = resolveAllocationTransitively(arg);
@@ -907,7 +1005,7 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
       case llvm::Instruction::SIToFP:
       case llvm::Instruction::ExtractValue:
 	{
-	  VersionedValue *val = getLatestValue(i->getOperand(0));
+        VersionedValue *val = getLatestValue(i->getOperand(0), valueExpr);
 
           if (val) {
             addDependency(val, getNewVersionedValue(i, valueExpr));
@@ -919,77 +1017,10 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
           }
           break;
       }
-      case llvm::Instruction::Select:
-	{
-        VersionedValue *lhs = getLatestValue(i->getOperand(1));
-        VersionedValue *rhs = getLatestValue(i->getOperand(2));
-        VersionedValue *newValue = 0;
-        if (lhs) {
-          newValue = getNewVersionedValue(i, valueExpr);
-          addDependency(lhs, newValue);
-        }
-        if (rhs) {
-          if (newValue)
-            addDependency(rhs, newValue);
-          else
-            addDependency(rhs, getNewVersionedValue(i, valueExpr));
-        }
+      default: {
+        assert(0 && "should not execute instruction here");
         break;
       }
-      case llvm::Instruction::Add:
-      case llvm::Instruction::Sub:
-      case llvm::Instruction::Mul:
-      case llvm::Instruction::UDiv:
-      case llvm::Instruction::SDiv:
-      case llvm::Instruction::URem:
-      case llvm::Instruction::SRem:
-      case llvm::Instruction::And:
-      case llvm::Instruction::Or:
-      case llvm::Instruction::Xor:
-      case llvm::Instruction::Shl:
-      case llvm::Instruction::LShr:
-      case llvm::Instruction::AShr:
-      case llvm::Instruction::ICmp:
-      case llvm::Instruction::FAdd:
-      case llvm::Instruction::FSub:
-      case llvm::Instruction::FMul:
-      case llvm::Instruction::FDiv:
-      case llvm::Instruction::FRem:
-      case llvm::Instruction::FCmp:
-      case llvm::Instruction::InsertValue:
-	{
-	  VersionedValue *lhs = getLatestValue(i->getOperand(0));
-	  VersionedValue *rhs = getLatestValue(i->getOperand(1));
-
-          VersionedValue *newValue = 0;
-          if (lhs) {
-            newValue = getNewVersionedValue(i, valueExpr);
-            addDependency(lhs, newValue);
-          }
-          if (rhs) {
-            if (newValue)
-              addDependency(rhs, newValue);
-            else
-              addDependency(rhs, getNewVersionedValue(i, valueExpr));
-          }
-          break;
-      }
-      case llvm::Instruction::PHI:
-	{
-	  llvm::PHINode *phi = llvm::dyn_cast<llvm::PHINode>(i);
-	  for (unsigned idx = 0, b = phi->getNumIncomingValues(); idx < b; ++idx) {
-	      VersionedValue *val = getLatestValue(phi->getIncomingValue(idx));
-	      if (val) {
-		  // We only add dependency for a single value that we could
-		  // find, as this was a single execution path.
-                addDependency(val, getNewVersionedValue(i, valueExpr));
-                break;
-              }
-          }
-          break;
-      }
-      default:
-	break;
     }
 
   }
@@ -1031,13 +1062,26 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
     if (site && retInst &&
         retInst->getReturnValue() // For functions returning void
         ) {
-      VersionedValue *value = getLatestValue(retInst->getReturnValue());
+      VersionedValue *value =
+          getLatestValue(retInst->getReturnValue(), returnValue);
       if (value)
         addDependency(value, getNewVersionedValue(site, returnValue));
     }
   }
 
   void Dependency::markAllValues(AllocationGraph *g, VersionedValue *value) {
+    buildAllocationGraph(g, value);
+    std::vector<VersionedValue *> allSources = allFlowSources(value);
+    for (std::vector<VersionedValue *>::iterator it = allSources.begin(),
+                                                 itEnd = allSources.end();
+         it != itEnd; ++it) {
+      (*it)->includeInInterpolant();
+    }
+  }
+
+  void Dependency::markAllValues(AllocationGraph *g, llvm::Value *val) {
+    VersionedValue *value = getLatestValueNoConstantCheck(val);
+
     buildAllocationGraph(g, value);
     std::vector<VersionedValue *> allSources = allFlowSources(value);
     for (std::vector<VersionedValue *>::iterator it = allSources.begin(),

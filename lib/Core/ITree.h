@@ -145,6 +145,13 @@ namespace klee {
 
     std::pair<ITreeNode *, ITreeNode *> split(ITreeNode *parent, ExecutionState *left, ExecutionState *right);
 
+    void executeAbstractBinaryDependency(llvm::Instruction *i,
+                                         ref<Expr> valueExpr, ref<Expr> tExpr,
+                                         ref<Expr> fExpr);
+
+    void executeAbstractMemoryDependency(llvm::Instruction *instr,
+                                         ref<Expr> value, ref<Expr> address);
+
     void executeAbstractDependency(llvm::Instruction *instr, ref<Expr> value);
 
     void print(llvm::raw_ostream &stream);
@@ -193,6 +200,12 @@ namespace klee {
     static void deleteMarkerMap(std::map<ref<Expr>, PathConditionMarker *>& markerMap);
 
     bool introducesMarkedConstraint();
+
+    void executeBinaryDependency(llvm::Instruction *i, ref<Expr> valueExpr,
+                                 ref<Expr> tExpr, ref<Expr> fExpr);
+
+    void executeAbstractMemoryDependency(llvm::Instruction *instr,
+                                         ref<Expr> value, ref<Expr> address);
 
     void executeAbstractDependency(llvm::Instruction *instr, ref<Expr> value);
 
