@@ -232,7 +232,9 @@ class Allocation {
       std::vector<AllocationNode *> ancestors;
 
     public:
-      AllocationNode(Allocation *allocation) : allocation(allocation) {}
+      AllocationNode(Allocation *allocation) : allocation(allocation) {
+        allocation->setAsCore();
+      }
 
       ~AllocationNode() { ancestors.clear(); }
 
@@ -272,7 +274,11 @@ class Allocation {
       allNodes.clear();
     }
 
-    bool addNewEdge(Allocation *source, Allocation *target);
+    bool isVisited(Allocation *alloc);
+
+    void addNewSink(Allocation *candidateSink);
+
+    void addNewEdge(Allocation *source, Allocation *target);
 
     void consumeSinkNode(Allocation *allocation);
 
@@ -387,8 +393,12 @@ class Allocation {
     directAllocationSources(VersionedValue *target) const;
 
     /// @brief Builds dependency graph between memory allocations
-    std::vector<Allocation *> buildAllocationGraph(AllocationGraph *g,
-                                                   VersionedValue *value) const;
+    void recursivelyBuildAllocationGraph(AllocationGraph *g,
+                                         VersionedValue *value,
+                                         Allocation *alloc) const;
+
+    /// @brief Builds dependency graph between memory allocations
+    void buildAllocationGraph(AllocationGraph *g, VersionedValue *value) const;
 
   public:
     Dependency(Dependency *prev);

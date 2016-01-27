@@ -285,9 +285,27 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
 
   /**/
 
-  bool AllocationGraph::addNewEdge(Allocation *source, Allocation *target) {
-    bool ret = false; // indicates whether an edge is actually added
+  bool AllocationGraph::isVisited(Allocation *alloc) {
+    for (std::vector<AllocationNode *>::iterator it = allNodes.begin(),
+                                                 itEnd = allNodes.end();
+         it != itEnd; ++it) {
+      if ((*it)->getAllocation() == alloc) {
+        return true;
+      }
+    }
+    return false;
+  }
 
+  void AllocationGraph::addNewSink(Allocation *candidateSink) {
+    if (isVisited(candidateSink))
+      return;
+
+    AllocationNode *newNode = new AllocationNode(candidateSink);
+    allNodes.push_back(newNode);
+    sinks.push_back(newNode);
+  }
+
+  void AllocationGraph::addNewEdge(Allocation *source, Allocation *target) {
     AllocationNode *sourceNode = 0;
     AllocationNode *targetNode = 0;
 
@@ -298,17 +316,27 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
         targetNode = (*it);
         if (sourceNode)
           break;
-      } else if (!sourceNode && (*it)->getAllocation() == source) {
+      }
+
+      if (!sourceNode && (*it)->getAllocation() == source) {
         sourceNode = (*it);
         if (targetNode)
           break;
       }
     }
 
+    bool newNode = false; // indicates whether a new node is created
+
     if (!sourceNode) {
       sourceNode = new AllocationNode(source);
       allNodes.push_back(sourceNode);
-      ret = true; // An edge actually added, return true
+      newNode = true; // An edge actually added, return true
+    } else {
+      // Delete the source from the set of sinks
+      std::vector<AllocationNode *>::iterator pos =
+          std::find(sinks.begin(), sinks.end(), sourceNode);
+      if (pos != sinks.end())
+        sinks.erase(pos);
     }
 
     if (!targetNode) {
@@ -316,26 +344,12 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
       allNodes.push_back(targetNode);
       sinks.push_back(targetNode);
 
-      // Delete the source from the set of sinks
-      std::vector<AllocationNode *>::iterator pos =
-          std::find(sinks.begin(), sinks.end(), sourceNode);
-      if (pos != sinks.end())
-        sinks.erase(pos);
-
-      ret = true; // An edge actually added, return true
+      newNode = true; // An edge actually added, return true
     }
 
-    if (ret || !targetNode->isCurrentParent(sourceNode))
+    if (newNode || !targetNode->isCurrentParent(sourceNode)) {
       targetNode->addParent(sourceNode);
-
-    // We mark the source and target allocations as core,
-    // meaning that they are needed by interpolants.
-    if (source)
-      source->setAsCore();
-    if (target)
-      target->setAsCore();
-
-    return ret;
+    }
   }
 
   void AllocationGraph::consumeSinkNode(Allocation *allocation) {
@@ -1171,9 +1185,12 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
     return ret;
   }
 
-  std::vector<Allocation *>
-  Dependency::buildAllocationGraph(AllocationGraph *g,
-                                   VersionedValue *target) const {
+  void Dependency::recursivelyBuildAllocationGraph(AllocationGraph *g,
+                                                   VersionedValue *target,
+                                                   Allocation *alloc) const {
+    if (!target)
+      return;
+
     std::vector<Allocation *> ret;
     std::map<VersionedValue *, Allocation *> sourceEdges =
         directAllocationSources(target);
@@ -1182,37 +1199,26 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
              it0 = sourceEdges.begin(),
              it0End = sourceEdges.end();
          it0 != it0End; ++it0) {
-
-      // It is possible that the first component was nil.
-      if (!it0->first) {
-        ret.push_back(it0->second);
-        continue;
-      }
-
-      std::vector<Allocation *> sourceAllocations =
-          buildAllocationGraph(g, it0->first);
-
-      if (sourceAllocations.empty()) {
-        if (it0->second)
-          ret.push_back(it0->second);
-      } else {
-        bool newSourceAdded = false;
-        for (std::vector<Allocation *>::iterator
-                 it1 = sourceAllocations.begin(),
-                 it1End = sourceAllocations.end();
-             it1 != it1End; ++it1) {
-          if ((*it1) != it0->second && g->addNewEdge((*it1), it0->second))
-            newSourceAdded = true;
-        }
-
-        // The following is to avoid exponential blowup: we return an
-        // allocation node only when new dependency edge is created for it.
-        if (newSourceAdded)
-          ret.push_back(it0->second);
+      if (it0->second != alloc) {
+        g->addNewEdge(it0->second, alloc);
+        recursivelyBuildAllocationGraph(g, it0->first, it0->second);
       }
     }
+  }
 
-    return ret;
+  void Dependency::buildAllocationGraph(AllocationGraph *g,
+                                        VersionedValue *target) const {
+    std::vector<Allocation *> ret;
+    std::map<VersionedValue *, Allocation *> sourceEdges =
+        directAllocationSources(target);
+
+    for (std::map<VersionedValue *, Allocation *>::iterator
+             it0 = sourceEdges.begin(),
+             it0End = sourceEdges.end();
+         it0 != it0End; ++it0) {
+      g->addNewSink(it0->second);
+      recursivelyBuildAllocationGraph(g, it0->first, it0->second);
+    }
   }
 
   void Dependency::print(llvm::raw_ostream &stream) const {
