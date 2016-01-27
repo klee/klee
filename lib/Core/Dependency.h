@@ -41,9 +41,10 @@ public:
 };
 
 class Allocation {
-  bool core;
 
   protected:
+    bool core;
+
     llvm::Value *site;
 
     Allocation() : core(false), site(0) {}
@@ -288,6 +289,15 @@ class Allocation {
 
     void consumeSinkNode(Allocation *allocation);
 
+    std::vector<llvm::Value *> getSinkValues() const;
+
+    std::vector<Allocation *>
+    getSinksWithValues(std::vector<llvm::Value *> valuesList) const;
+
+    void
+    consumeNodesWithValues(std::vector<llvm::Value *> versionedAllocations,
+                           std::vector<llvm::Value *> compositeAllocations);
+
     void dump() const {
       this->print(llvm::errs());
       llvm::errs() << "\n";
@@ -330,6 +340,10 @@ class Allocation {
     std::vector<llvm::Value *> newVersionedAllocations;
 
     std::vector<llvm::Value *> newCompositeAllocations;
+
+    /// @brief allocations of this node and its ancestors
+    /// that are needed for the core and dominates other allocations.
+    std::vector<llvm::Value *> interpolantAllocations;
 
     VersionedValue *getNewVersionedValue(llvm::Value *value,
                                          ref<Expr> valueExpr);
@@ -439,7 +453,7 @@ class Allocation {
 
     void markAllValues(AllocationGraph *g, llvm::Value *value);
 
-    void markInterpolantAllocations(AllocationGraph *g);
+    void computeInterpolantAllocations(AllocationGraph *g);
 
     void dump() const {
       this->print(llvm::errs());

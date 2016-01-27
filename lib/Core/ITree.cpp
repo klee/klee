@@ -246,8 +246,12 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
       }
       ITreeNode::deleteMarkerMap(markerMap);
 
-      llvm::errs() << "Deleting AllocationGraph\n";
+      llvm::errs() << "AllocationGraph\n";
       g->dump();
+
+      // We mark memory allocations needed for the unsatisfiabilty core
+      state.itreeNode->computeInterpolantAllocations(g);
+
       delete g; // Delete the AllocationGraph object
       return true;
   }
@@ -426,8 +430,12 @@ void ITree::markPathCondition(ExecutionState &state, TimingSolver *solver) {
       }
   }
 
-  llvm::errs() << "Deleting AllocationGraph\n";
+  llvm::errs() << "AllocationGraph\n";
   g->dump();
+
+  // Compute memory allocations needed by the unsatisfiability core
+  currentINode->dependency->computeInterpolantAllocations(g);
+
   delete g; // Delete the AllocationGraph object
 }
 
@@ -622,6 +630,10 @@ ITreeNode::getCompositeCoreExpressions(bool interpolantValueOnly) const {
   if (parent)
     ret = parent->dependency->getCompositeCoreExpressions(interpolantValueOnly);
   return ret;
+}
+
+void ITreeNode::computeInterpolantAllocations(AllocationGraph *g) {
+  dependency->computeInterpolantAllocations(g);
 }
 
 void ITreeNode::dump() const {

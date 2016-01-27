@@ -222,6 +222,8 @@ namespace klee {
     std::map<llvm::Value *, std::vector<ref<Expr> > >
     getCompositeCoreExpressions(bool interpolantValueOnly = false) const;
 
+    void computeInterpolantAllocations(AllocationGraph *g);
+
   private:
     ITreeNode(ITreeNode *_parent);
 

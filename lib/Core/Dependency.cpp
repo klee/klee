@@ -208,7 +208,10 @@ void Allocation::print(llvm::raw_ostream &stream) const {
 /**/
 
 void CompositeAllocation::print(llvm::raw_ostream &stream) const {
-  stream << "A(composite)[";
+  stream << "A(composite)";
+  if (core)
+    stream << "(I)";
+  stream << "[";
   site->print(stream);
   stream << "] ";
 }
@@ -222,7 +225,10 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
   }
 
   void VersionedAllocation::print(llvm::raw_ostream& stream) const {
-    stream << "A(singleton)[";
+    stream << "A(singleton)";
+    if (core)
+      stream << "(I)";
+    stream << "[";
     site->print(stream);
     stream << "]#" << reinterpret_cast<uintptr_t>(this);
   }
@@ -236,7 +242,10 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
   }
 
   void EnvironmentAllocation::print(llvm::raw_ostream& stream) const {
-    stream << "A[@__environ]" << this;
+    stream << "A";
+    if (this->Allocation::core)
+      stream << "(I)";
+    stream << "[@__environ]" << reinterpret_cast<uintptr_t>(this);
   }
 
   /**/
@@ -355,7 +364,7 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
   }
 
   void AllocationGraph::consumeSinkNode(Allocation *allocation) {
-    std::vector<AllocationNode *>::iterator pos;
+    std::vector<AllocationNode *>::iterator pos = sinks.end();
     for (std::vector<AllocationNode *>::iterator it = sinks.begin(),
                                                  itEnd = sinks.end();
          it != itEnd; ++it) {
@@ -365,7 +374,13 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
       }
     }
 
+    if (pos == sinks.end())
+      return;
+
     std::vector<AllocationNode *> parents = (*pos)->getParents();
+
+    sinks.erase(pos);
+
     for (std::vector<AllocationNode *>::iterator it = parents.begin(),
                                                  itEnd = parents.end();
          it != itEnd; ++it) {
@@ -373,7 +388,54 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
         sinks.push_back(*it);
       }
     }
-    sinks.erase(pos);
+  }
+
+  std::vector<llvm::Value *> AllocationGraph::getSinkValues() const {
+    std::vector<llvm::Value *> sinkAllocations;
+
+    for (std::vector<AllocationNode *>::const_iterator it = sinks.begin(),
+                                                       itEnd = sinks.end();
+         it != itEnd; ++it) {
+      sinkAllocations.push_back((*it)->getAllocation()->getSite());
+    }
+
+    return sinkAllocations;
+  }
+
+  std::vector<Allocation *> AllocationGraph::getSinksWithValues(
+      std::vector<llvm::Value *> valuesList) const {
+    std::vector<Allocation *> sinkAllocations;
+
+    for (std::vector<AllocationNode *>::const_iterator it = sinks.begin(),
+                                                       itEnd = sinks.end();
+         it != itEnd; ++it) {
+      if (std::find(valuesList.begin(), valuesList.end(),
+                    (*it)->getAllocation()->getSite()) != valuesList.end())
+        sinkAllocations.push_back((*it)->getAllocation());
+    }
+
+    return sinkAllocations;
+  }
+
+  void AllocationGraph::consumeNodesWithValues(
+      std::vector<llvm::Value *> versionedAllocations,
+      std::vector<llvm::Value *> compositeAllocations) {
+    std::vector<Allocation *> sinkAllocs(
+        getSinksWithValues(versionedAllocations));
+    std::vector<Allocation *> tmp(getSinksWithValues(compositeAllocations));
+    sinkAllocs.insert(sinkAllocs.begin(), tmp.begin(), tmp.end());
+
+    if (sinkAllocs.empty())
+      return;
+
+    for (std::vector<Allocation *>::iterator it = sinkAllocs.begin(),
+                                             itEnd = sinkAllocs.end();
+         it != itEnd; ++it) {
+      consumeSinkNode((*it));
+    }
+
+    // Recurse until fixpoint
+    consumeNodesWithValues(versionedAllocations, compositeAllocations);
   }
 
   void AllocationGraph::print(llvm::raw_ostream &stream) const {
@@ -468,11 +530,16 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
     std::vector<llvm::Value *> allAlloc = getAllVersionedAllocations();
     std::map<llvm::Value *, ref<Expr> > ret;
 
-    std::vector<ref<Expr> > visitedExpressionsList;
-
     for (std::vector<llvm::Value *>::iterator allocIter = allAlloc.begin(),
                                               allocIterEnd = allAlloc.end();
          allocIter != allocIterEnd; ++allocIter) {
+
+      if (interpolantValueOnly &&
+          std::find(interpolantAllocations.begin(),
+                    interpolantAllocations.end(),
+                    *allocIter) == interpolantAllocations.end())
+        continue;
+
       std::vector<VersionedValue *> stored =
           stores(getLatestAllocation(*allocIter));
 
@@ -485,11 +552,9 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
         if (!interpolantValueOnly) {
           ref<Expr> expr = v->getExpression();
           ret[*allocIter] = expr;
-          visitedExpressionsList.push_back(expr);
         } else if (v->valueInInterpolant()) {
           ref<Expr> expr = v->getExpression();
           ret[*allocIter] = ShadowArray::getShadowExpression(expr);
-          visitedExpressionsList.push_back(expr);
         }
       }
     }
@@ -515,6 +580,13 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
     for (std::vector<llvm::Value *>::iterator allocIter = allAlloc.begin(),
                                               allocIterEnd = allAlloc.end();
          allocIter != allocIterEnd; ++allocIter) {
+
+      if (interpolantValueOnly &&
+          std::find(interpolantAllocations.begin(),
+                    interpolantAllocations.end(),
+                    *allocIter) == interpolantAllocations.end())
+        continue;
+
       std::vector<VersionedValue *> stored =
           stores(getLatestAllocation(*allocIter));
 
@@ -1108,6 +1180,16 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
                                                  itEnd = allSources.end();
          it != itEnd; ++it) {
       (*it)->includeInInterpolant();
+    }
+  }
+
+  void Dependency::computeInterpolantAllocations(AllocationGraph *g) {
+    interpolantAllocations = g->getSinkValues();
+
+    if (parentDependency) {
+      g->consumeNodesWithValues(newVersionedAllocations,
+                                newCompositeAllocations);
+      parentDependency->computeInterpolantAllocations(g);
     }
   }
 
