@@ -101,8 +101,14 @@ class Allocation {
   };
 
   class EnvironmentAllocation : public Allocation {
+    // We use the first site as the canonical allocation
+    // for all environment allocations
+    static llvm::Value *canonicalAllocation;
+
   public:
-    EnvironmentAllocation() {}
+    EnvironmentAllocation(llvm::Value *site)
+        : Allocation(!canonicalAllocation ? (canonicalAllocation = site)
+                                          : canonicalAllocation) {}
 
     ~EnvironmentAllocation() {}
 
@@ -432,6 +438,8 @@ class Allocation {
     void markAllValues(AllocationGraph *g, VersionedValue *value);
 
     void markAllValues(AllocationGraph *g, llvm::Value *value);
+
+    void markInterpolantAllocations(AllocationGraph *g);
 
     void dump() const {
       this->print(llvm::errs());

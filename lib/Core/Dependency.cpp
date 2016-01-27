@@ -229,6 +229,8 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
 
   /**/
 
+  llvm::Value *EnvironmentAllocation::canonicalAllocation = 0;
+
   bool EnvironmentAllocation::hasAllocationSite(llvm::Value *site) const {
     return Dependency::Util::isEnvironmentAllocation(site);
   }
@@ -418,8 +420,12 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
   Allocation *Dependency::getInitialAllocation(llvm::Value *allocation) {
     Allocation *ret;
     if (Util::isEnvironmentAllocation(allocation)) {
-      ret = new EnvironmentAllocation();
+      ret = new EnvironmentAllocation(allocation);
       allocationsList.push_back(ret);
+
+      // An environment allocation is a special kind of composite allocation
+      // ret->getSite() will give us the right canonical allocation
+      newCompositeAllocations.push_back(ret->getSite());
         return ret;
     } else if (Util::isCompositeAllocation(allocation)) {
       ret = new CompositeAllocation(allocation);
