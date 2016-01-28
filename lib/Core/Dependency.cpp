@@ -1216,17 +1216,7 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
   void Dependency::computeInterpolantAllocations(AllocationGraph *g) {
     interpolantAllocations = g->getSinkAllocations();
 
-    llvm::errs() << "INTERPOLANT ALLOCATIONS FOR TREE:";
-    g->dump();
-    for (std::vector<Allocation *>::iterator
-             it = interpolantAllocations.begin(),
-             itEnd = interpolantAllocations.end();
-         it != itEnd; ++it) {
-      (*it)->dump();
-    }
-
     if (parentDependency) {
-      llvm::errs() << "CONSUMING SINKS ...\n";
       g->consumeNodesWithValues(versionedAllocationsList,
                                 compositeAllocationsList);
       parentDependency->computeInterpolantAllocations(g);

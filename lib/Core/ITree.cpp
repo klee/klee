@@ -123,50 +123,32 @@ SubsumptionTableEntry::~SubsumptionTableEntry() {}
 bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
                                      ExecutionState& state,
                                      double timeout) {
-  if (state.itreeNode == 0)
+  if (state.itreeNode == 0 || reinterpret_cast<uintptr_t>(state.pc->inst) !=
+                                  state.itreeNode->getNodeId() ||
+      state.itreeNode->getNodeId() != nodeId)
     return false;
 
-  if (state.itreeNode->getNodeId() == nodeId) {
-    std::map<llvm::Value *, ref<Expr> > stateSingletonStore =
-        state.itreeNode->getLatestCoreExpressions();
-    std::map<llvm::Value *, std::vector< ref<Expr> > > stateCompositeStore =
-        state.itreeNode->getCompositeCoreExpressions();
+  std::map<llvm::Value *, ref<Expr> > stateSingletonStore =
+      state.itreeNode->getLatestCoreExpressions();
+  std::map<llvm::Value *, std::vector<ref<Expr> > > stateCompositeStore =
+      state.itreeNode->getCompositeCoreExpressions();
 
-    ref<Expr> stateEqualityConstraints;
-    for (std::vector<llvm::Value *>::iterator
-             itBegin = singletonStoreKeys.begin(),
-             itEnd = singletonStoreKeys.end(), it = itBegin;
-         it != itEnd; ++it) {
+  ref<Expr> stateEqualityConstraints;
+  for (std::vector<llvm::Value *>::iterator
+           itBegin = singletonStoreKeys.begin(),
+           itEnd = singletonStoreKeys.end(), it = itBegin;
+       it != itEnd; ++it) {
       const ref<Expr> lhs = singletonStore[*it];
       const ref<Expr> rhs = stateSingletonStore[*it];
-      if (it == itBegin) {
-        stateEqualityConstraints = EqExpr::alloc(lhs, rhs);
-      } else {
-        (*it)->dump();
-        if (llvm::Instruction *instr = llvm::dyn_cast<llvm::Instruction>(*it)) {
-          llvm::errs() << " FUNCTION: "
-                       << instr->getParent()->getParent()->getName() << "\n";
-        }
-        llvm::errs() << "LHS=";
-        lhs->dump();
-        llvm::errs() << "RHS=";
-        if (!rhs.get()) {
-          llvm::errs() << "NULL\n";
-        } else {
-          rhs->dump();
-        }
-        stateEqualityConstraints =
-            AndExpr::alloc(EqExpr::alloc(lhs, rhs), stateEqualityConstraints);
-      }
-      //      stateEqualityConstraints =
-      //          (it == itBegin ? EqExpr::alloc(lhs, rhs)
-      //                         : AndExpr::alloc(EqExpr::alloc(lhs, rhs),
-      //                                          stateEqualityConstraints));
-    }
+      stateEqualityConstraints =
+          (it == itBegin ? EqExpr::alloc(lhs, rhs)
+                         : AndExpr::alloc(EqExpr::alloc(lhs, rhs),
+                                          stateEqualityConstraints));
+  }
 
-    for (std::vector<llvm::Value *>::iterator it = compositeStoreKeys.begin(),
-                                              itEnd = compositeStoreKeys.end();
-         it != itEnd; ++it) {
+  for (std::vector<llvm::Value *>::iterator it = compositeStoreKeys.begin(),
+                                            itEnd = compositeStoreKeys.end();
+       it != itEnd; ++it) {
       std::vector<ref<Expr> > lhsList = compositeStore[*it];
       std::vector<ref<Expr> > rhsList = stateCompositeStore[*it];
 
@@ -194,68 +176,67 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
       if (!auxDisjunctsEmpty)
         stateEqualityConstraints =
             AndExpr::alloc(auxDisjuncts, stateEqualityConstraints);
-    }
-
-    // We create path condition needed constraints marking structure
-    std::map<ref<Expr>, PathConditionMarker *> markerMap =
-        state.itreeNode->makeMarkerMap();
-
-      for (std::vector< ref<Expr> >::iterator it0 = interpolant.begin(),
-	  it0End = interpolant.end(); it0 != it0End; ++it0) {
-
-        ExecutionState tmpState(state);
-        Solver::Validity result;
-
-        ref<Expr> query = ConstantExpr::alloc(0, Expr::Bool); // false
-
-        ref<Expr> negatedQuery =
-            NotExpr::create(AndExpr::create(*it0, stateEqualityConstraints));
-        tmpState.addConstraint(negatedQuery);
-
-          llvm::errs() << "Querying for subsumption check:\n";
-          ExprPPrinter::printQuery(llvm::errs(), tmpState.constraints, query);
-
-          solver->setTimeout(timeout);
-          bool success = solver->evaluate(tmpState, query, result);
-          solver->setTimeout(0);
-
-          // FIXME: To be removed later.
-          return false;
-
-          if (success && result == Solver::True) {
-            std::vector<ref<Expr> > unsatCore = solver->getUnsatCore();
-
-            for (std::vector<ref<Expr> >::iterator it1 = unsatCore.begin();
-                 it1 != unsatCore.end(); it1++) {
-              // Skip the additional negated query when marking
-              if (it1->get() != negatedQuery.get())
-                markerMap[*it1]->mayIncludeInInterpolant();
-            }
-
-          } else {
-            return false;
-          }
-      }
-
-      // State subsumed, we mark needed constraints on the
-      // path condition.
-      AllocationGraph *g = new AllocationGraph();
-      for (std::map< ref<Expr>, PathConditionMarker *>::iterator it = markerMap.begin();
-	  it != markerMap.end(); it++) {
-        it->second->includeInInterpolant(g);
-      }
-      ITreeNode::deleteMarkerMap(markerMap);
-
-      llvm::errs() << "AllocationGraph\n";
-      g->dump();
-
-      // We mark memory allocations needed for the unsatisfiabilty core
-      state.itreeNode->computeInterpolantAllocations(g);
-
-      delete g; // Delete the AllocationGraph object
-      return true;
   }
-  return false;
+
+  // We create path condition needed constraints marking structure
+  std::map<ref<Expr>, PathConditionMarker *> markerMap =
+      state.itreeNode->makeMarkerMap();
+
+  for (std::vector<ref<Expr> >::iterator it0 = interpolant.begin(),
+                                         it0End = interpolant.end();
+       it0 != it0End; ++it0) {
+
+    ExecutionState tmpState(state);
+    Solver::Validity result;
+
+    ref<Expr> query = ConstantExpr::alloc(0, Expr::Bool); // false
+
+    ref<Expr> negatedQuery =
+        (!stateEqualityConstraints.get()
+             ? NotExpr::alloc(*it0)
+             : NotExpr::alloc(AndExpr::alloc(*it0, stateEqualityConstraints)));
+    tmpState.addConstraint(negatedQuery);
+
+    // llvm::errs() << "Querying for subsumption check:\n";
+    // ExprPPrinter::printQuery(llvm::errs(), tmpState.constraints, query);
+
+    solver->setTimeout(timeout);
+    bool success = solver->evaluate(tmpState, query, result);
+    solver->setTimeout(0);
+
+    if (success && result == Solver::True) {
+      std::vector<ref<Expr> > unsatCore = solver->getUnsatCore();
+
+      for (std::vector<ref<Expr> >::iterator it1 = unsatCore.begin();
+           it1 != unsatCore.end(); it1++) {
+        // Skip the additional negated query when marking
+        if (it1->get() != negatedQuery.get())
+          markerMap[*it1]->mayIncludeInInterpolant();
+      }
+
+    } else {
+      return false;
+    }
+  }
+
+  // State subsumed, we mark needed constraints on the
+  // path condition.
+  AllocationGraph *g = new AllocationGraph();
+  for (std::map<ref<Expr>, PathConditionMarker *>::iterator it =
+           markerMap.begin();
+       it != markerMap.end(); it++) {
+    it->second->includeInInterpolant(g);
+  }
+  ITreeNode::deleteMarkerMap(markerMap);
+
+  // llvm::errs() << "AllocationGraph\n";
+  // g->dump();
+
+  // We mark memory allocations needed for the unsatisfiabilty core
+  state.itreeNode->computeInterpolantAllocations(g);
+
+  delete g; // Delete the AllocationGraph object
+  return true;
 }
 
 void SubsumptionTableEntry::dump() const {
@@ -370,12 +351,8 @@ void ITree::remove(ITreeNode *node) {
 
     // As the node is about to be deleted, it must have been completely
     // traversed, hence the correct time to table the interpolant.
-    if (!node->isSubsumed && node->introducesMarkedConstraint()) {
+    if (!node->isSubsumed) {
       SubsumptionTableEntry entry(node);
-
-      llvm::errs() << "STORING ENTRY\n";
-      entry.dump();
-
       store(entry);
     }
 
@@ -430,8 +407,8 @@ void ITree::markPathCondition(ExecutionState &state, TimingSolver *solver) {
       }
   }
 
-  llvm::errs() << "AllocationGraph\n";
-  g->dump();
+  // llvm::errs() << "AllocationGraph\n";
+  // g->dump();
 
   // Compute memory allocations needed by the unsatisfiability core
   currentINode->computeInterpolantAllocations(g);
@@ -528,16 +505,15 @@ ITreeNode::~ITreeNode() {
     delete dependency;
 }
 
-unsigned ITreeNode::getNodeId() { return nodeId; }
+uintptr_t ITreeNode::getNodeId() { return nodeId; }
 
 std::vector< ref<Expr> > ITreeNode::getInterpolant() const {
   return this->pathCondition->packInterpolant();
 }
 
-void ITreeNode::setNodeLocation(unsigned programPoint) {
-  if (this->nodeId == 0)  {
-    this->nodeId = programPoint;
-  }
+void ITreeNode::setNodeLocation(uintptr_t programPoint) {
+  if (!nodeId)
+    nodeId = programPoint;
 }
 
 void ITreeNode::addConstraint(ref<Expr> &constraint, llvm::Value *condition) {
@@ -566,15 +542,6 @@ void ITreeNode::deleteMarkerMap(std::map<ref<Expr>, PathConditionMarker *>& mark
       delete it->second;
   }
   markerMap.clear();
-}
-
-bool ITreeNode::introducesMarkedConstraint() {
-  if (parent != 0 &&
-      pathCondition != parent->pathCondition &&
-      pathCondition->carInInterpolant()) {
-      return true;
-  }
-  return false;
 }
 
 void ITreeNode::executeBinaryDependency(llvm::Instruction *i,
