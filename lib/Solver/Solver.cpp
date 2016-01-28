@@ -122,8 +122,9 @@ const char* SolverImpl::getOperationStatusString(SolverRunStatus statusCode)
 }
 
 std::vector< ref<Expr> > SolverImpl::getUnsatCore() {
-	std::vector< ref<Expr> > local_unsat_core;
-	return local_unsat_core;
+  // By default, we return an empty core
+  std::vector< ref<Expr> > local_unsat_core;
+  return local_unsat_core;
 }
 
 const char *Solver::validity_to_str(Validity v) {
@@ -874,7 +875,6 @@ SolverImpl::SolverRunStatus STPSolverImpl::getOperationStatusCode() {
 
 #ifdef SUPPORT_Z3
 
-
 /// getUnsatCoreVector - Declare the routine to extract the unsatisfiability core vector
 ///
 /// \return - A ref<Expr> vector of unsatisfiability core: empty if there was no core.
@@ -885,7 +885,7 @@ private:
   Z3Builder *builder;
   double timeout;
   SolverRunStatus runStatusCode;
-  std::vector< ref<Expr> > unsat_core;
+  std::vector< ref<Expr> > unsatCore;
 
 public:
   Z3SolverImpl();
@@ -1045,14 +1045,14 @@ Z3SolverImpl::computeInitialValues(const Query &query,
   ++stats::queries;
   ++stats::queryCounterexamples;
 
-  Z3_ast stp_e = builder->construct(query.expr);
+  Z3_ast z3_e = builder->construct(query.expr);
 
   bool success;
-  runStatusCode = runAndGetCex(builder, the_solver, stp_e, objects, values, hasSolution);
+  runStatusCode = runAndGetCex(builder, the_solver, z3_e, objects, values, hasSolution);
 
   if (runStatusCode == SolverImpl::SOLVER_RUN_STATUS_SUCCESS_UNSOLVABLE){
-      unsat_core.clear();
-      unsat_core = getUnsatCoreVector(query, builder, the_solver);
+      unsatCore.clear();
+      unsatCore = getUnsatCoreVector(query, builder, the_solver);
   }
   success = true;
 
@@ -1070,7 +1070,6 @@ SolverImpl::SolverRunStatus Z3SolverImpl::runAndGetCex(Z3Builder *builder, Z3_so
                                                        const std::vector<const Array*> &objects,
                                                        std::vector< std::vector<unsigned char> > &values,
                                                        bool &hasSolution) {
-
   Z3_solver_assert(builder->ctx, the_solver, Z3_mk_not(builder->ctx, q));
 
   switch (Z3_solver_check(builder->ctx, the_solver)) {
@@ -1134,7 +1133,7 @@ SolverImpl::SolverRunStatus Z3SolverImpl::getOperationStatusCode() {
 }
 
 std::vector< ref<Expr> > Z3SolverImpl::getUnsatCore() {
-  return unsat_core;
+  return unsatCore;
 }
 
 #endif /* SUPPORT_Z3 */

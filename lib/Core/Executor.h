@@ -15,7 +15,6 @@
 #ifndef KLEE_EXECUTOR_H
 #define KLEE_EXECUTOR_H
 
-#include "ITree.h"
 #include "klee/ExecutionState.h"
 #include "klee/Interpreter.h"
 #include "klee/Internal/Module/Cell.h"
@@ -358,8 +357,10 @@ private:
 
   // remove state from queue and delete
   void terminateState(ExecutionState &state);
+#ifdef SUPPORT_Z3
   // call subsumption handler and terminate state
   void terminateStateOnSubsumption(ExecutionState &state);
+#endif
   // call exit handler and terminate state
   void terminateStateEarly(ExecutionState &state, const llvm::Twine &message);
   // call exit handler and terminate state

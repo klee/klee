@@ -67,19 +67,10 @@ StackFrame::~StackFrame() {
 
 /***/
 
-ExecutionState::ExecutionState(KFunction *kf) :
-    pc(kf->instructions),
-    prevPC(pc),
-
-    queryCost(0.), 
-    weight(1),
-    depth(0),
-
-    instsSinceCovNew(0),
-    coveredNew(false),
-    forkDisabled(false),
-    ptreeNode(0),
-    itreeNode(0) {
+ExecutionState::ExecutionState(KFunction *kf)
+    : pc(kf->instructions), prevPC(pc), queryCost(0.), weight(1), depth(0),
+      instsSinceCovNew(0), coveredNew(false), forkDisabled(false), ptreeNode(0),
+      itreeNode(0) {
   pushFrame(0, kf);
 }
 
@@ -96,7 +87,8 @@ ExecutionState::~ExecutionState() {
       delete mo;
   }
 
-  while (!stack.empty()) popFrame();
+  while (!stack.empty())
+    popFrame(0, ConstantExpr::alloc(0, Expr::Bool));
 }
 
 ExecutionState::ExecutionState(const ExecutionState& state):
@@ -129,10 +121,14 @@ ExecutionState::ExecutionState(const ExecutionState& state):
     symbolics[i].first->refCount++;
 }
 
-void ExecutionState::addITreeConstraint(ref<Expr> e) {
-  if (itreeNode)
-    itreeNode->addConstraint(e);
+#ifdef SUPPORT_Z3
+void ExecutionState::addITreeConstraint(ref<Expr> e, llvm::Instruction *instr) {
+  llvm::BranchInst *binstr = llvm::dyn_cast<llvm::BranchInst>(instr);
+  if (itreeNode && binstr && binstr->isConditional()) {
+    itreeNode->addConstraint(e, binstr->getCondition());
+  }
 }
+#endif
 
 ExecutionState *ExecutionState::branch() {
   depth++;
@@ -151,12 +147,19 @@ void ExecutionState::pushFrame(KInstIterator caller, KFunction *kf) {
   stack.push_back(StackFrame(caller,kf));
 }
 
-void ExecutionState::popFrame() {
+void ExecutionState::popFrame(KInstruction *ki, ref<Expr> returnValue) {
   StackFrame &sf = stack.back();
+  llvm::CallInst *site =
+      (sf.caller ? llvm::dyn_cast<CallInst>(sf.caller->inst) : 0);
   for (std::vector<const MemoryObject*>::iterator it = sf.allocas.begin(), 
          ie = sf.allocas.end(); it != ie; ++it)
     addressSpace.unbindObject(*it);
   stack.pop_back();
+
+#ifdef SUPPORT_Z3
+  if (InterpolationOption::interpolation && site && ki)
+    itreeNode->popAbstractDependencyFrame(site, ki->inst, returnValue);
+#endif
 }
 
 void ExecutionState::addSymbolic(const MemoryObject *mo, const Array *array) { 

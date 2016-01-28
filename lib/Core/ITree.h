@@ -12,25 +12,49 @@
 #include "klee/Config/Version.h"
 #include "klee/ExecutionState.h"
 
+#include "Dependency.h"
+
 using namespace llvm;
 
 namespace klee {
   class ExecutionState;
 
+  /// Global variable denoting whether interpolation is enabled or otherwise
+  struct InterpolationOption
+  {
+    static bool interpolation;
+  };
+
   class PathCondition {
-    /// KLEE expression
+    /// @brief KLEE expression
     ref<Expr> constraint;
 
-    /// Should this be included in an interpolant?
+    /// @brief KLEE expression with variables (arrays) replaced by their shadows
+    ref<Expr> shadowConstraint;
+
+    /// @brief If shadow consraint had been generated: We generate shadow
+    /// constraint
+    /// on demand only when the constraint is required in an interpolant
+    bool shadowed;
+
+    /// @brief The dependency information for the current
+    /// interpolation tree node
+    Dependency *dependency;
+
+    /// @brief the condition value from which the
+    /// constraint was generated
+    VersionedValue *condition;
+
+    /// @brief When true, indicates that the constraint should be included
+    /// in the interpolant
     bool inInterpolant;
 
-    /// Previous path condition
+    /// @brief Previous path condition
     PathCondition *tail;
 
   public:
-    PathCondition(ref<Expr>& constraint);
-
-    PathCondition(ref<Expr>& constraint, PathCondition *prev);
+    PathCondition(ref<Expr> &constraint, Dependency *dependency,
+                  llvm::Value *condition, PathCondition *prev);
 
     ~PathCondition();
 
@@ -38,11 +62,11 @@ namespace klee {
 
     PathCondition* cdr() const;
 
-    void includeInInterpolant();
+    void includeInInterpolant(AllocationGraph *g);
 
-    bool carInInterpolant();
+    bool carInInterpolant() const;
 
-    std::vector< ref<Expr> > packInterpolant() const;
+    std::vector< ref<Expr> > packInterpolant();
 
     void dump();
 
@@ -59,15 +83,23 @@ namespace klee {
 
     ~PathConditionMarker();
 
-    void includeInInterpolant();
+    void includeInInterpolant(AllocationGraph *g);
 
     void mayIncludeInInterpolant();
   };
 
   class SubsumptionTableEntry {
-    unsigned int nodeId;
+    uintptr_t nodeId;
 
     std::vector< ref<Expr> > interpolant;
+
+    std::map<llvm::Value *, ref<Expr> > singletonStore;
+
+    std::vector<llvm::Value *> singletonStoreKeys;
+
+    std::map<llvm::Value *, std::vector<ref<Expr> > > compositeStore;
+
+    std::vector<llvm::Value *> compositeStoreKeys;
 
   public:
     SubsumptionTableEntry(ITreeNode *node);
@@ -109,9 +141,18 @@ namespace klee {
 
     bool checkCurrentStateSubsumption(TimingSolver* solver, ExecutionState& state, double timeout);
 
-    void markPathCondition(std::vector< ref<Expr> > unsat_core);
+    void markPathCondition(ExecutionState &state, TimingSolver *solver);
 
     std::pair<ITreeNode *, ITreeNode *> split(ITreeNode *parent, ExecutionState *left, ExecutionState *right);
+
+    void executeAbstractBinaryDependency(llvm::Instruction *i,
+                                         ref<Expr> valueExpr, ref<Expr> tExpr,
+                                         ref<Expr> fExpr);
+
+    void executeAbstractMemoryDependency(llvm::Instruction *instr,
+                                         ref<Expr> value, ref<Expr> address);
+
+    void executeAbstractDependency(llvm::Instruction *instr, ref<Expr> value);
 
     void print(llvm::raw_ostream &stream);
 
@@ -120,23 +161,33 @@ namespace klee {
 
   class ITreeNode{
     friend class ITree;
+
+    friend class ExecutionState;
+
     typedef ref<Expr> expression_type;
+
     typedef std::pair <expression_type, expression_type> pair_type;
+
+    /// @brief The path condition
     PathCondition *pathCondition;
+
+    /// @brief Abstract stack for value dependencies
+    Dependency *dependency;
+
     ITreeNode *parent, *left, *right;
-    unsigned int nodeId;
+
+    uintptr_t nodeId;
+
     bool isSubsumed;
 
   public:
-    ExecutionState *data;
-
-    unsigned int getNodeId();
+    uintptr_t getNodeId();
 
     std::vector< ref<Expr> > getInterpolant() const;
 
-    void setNodeLocation(unsigned int programPoint);
+    void setNodeLocation(uintptr_t programPoint);
 
-    void addConstraint(ref<Expr>& constraint);
+    void addConstraint(ref<Expr> &constraint, llvm::Value *value);
 
     void split(ExecutionState *leftData, ExecutionState *rightData);
 
@@ -144,25 +195,39 @@ namespace klee {
 
     void print(llvm::raw_ostream &stream) const;
 
-    std::map< ref<Expr>, PathConditionMarker *> makeMarkerMap();
+    std::map< ref<Expr>, PathConditionMarker *> makeMarkerMap() const;
 
-    bool introducesMarkedConstraint();
+    static void deleteMarkerMap(std::map<ref<Expr>, PathConditionMarker *>& markerMap);
+
+    void executeBinaryDependency(llvm::Instruction *i, ref<Expr> valueExpr,
+                                 ref<Expr> tExpr, ref<Expr> fExpr);
+
+    void executeAbstractMemoryDependency(llvm::Instruction *instr,
+                                         ref<Expr> value, ref<Expr> address);
+
+    void executeAbstractDependency(llvm::Instruction *instr, ref<Expr> value);
+
+    void bindCallArguments(llvm::Instruction *site,
+                           std::vector<ref<Expr> > &arguments);
+
+    void popAbstractDependencyFrame(llvm::CallInst *site,
+                                    llvm::Instruction *inst,
+                                    ref<Expr> returnValue);
+
+    std::map<llvm::Value *, ref<Expr> >
+    getLatestCoreExpressions(bool interpolantValueOnly = false) const;
+
+    std::map<llvm::Value *, std::vector<ref<Expr> > >
+    getCompositeCoreExpressions(bool interpolantValueOnly = false) const;
+
+    void computeInterpolantAllocations(AllocationGraph *g);
 
   private:
-    ITreeNode(ITreeNode *_parent, ExecutionState *_data);
+    ITreeNode(ITreeNode *_parent);
 
     ~ITreeNode();
 
-    void print(llvm::raw_ostream &stream, const unsigned int tab_num) const;
-
-    std::string make_tabs(const unsigned int tab_num) const {
-      std::string tabs_string;
-      for (unsigned int i = 0; i < tab_num; i++) {
-	  tabs_string += "\t";
-      }
-      return tabs_string;
-    }
-
+    void print(llvm::raw_ostream &stream, const unsigned tabNum) const;
   };
 
 }

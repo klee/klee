@@ -17,6 +17,13 @@
 // FIXME: We do not want to be exposing these? :(
 #include "../../lib/Core/AddressSpace.h"
 #include "klee/Internal/Module/KInstIterator.h"
+#include "klee/Internal/Module/KInstruction.h"
+
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+#include "llvm/IR/Instructions.h"
+#else
+#include "llvm/Instructions.h"
+#endif
 
 #include <map>
 #include <set>
@@ -73,7 +80,9 @@ private:
 
   std::map<std::string, std::string> fnAliases;
 
-  void addITreeConstraint(ref<Expr> e);
+#ifdef SUPPORT_Z3
+  void addITreeConstraint(ref<Expr> e, llvm::Instruction *instr);
+#endif
 
 public:
   // Execution - Control Flow specific
@@ -168,12 +177,15 @@ public:
   ExecutionState *branch();
 
   void pushFrame(KInstIterator caller, KFunction *kf);
-  void popFrame();
+  void popFrame(KInstruction *ki, ref<Expr> returnValue);
 
   void addSymbolic(const MemoryObject *mo, const Array *array);
   void addConstraint(ref<Expr> e) {
-    addITreeConstraint(e);
-    constraints.addConstraint(e); }
+#ifdef SUPPORT_Z3
+    addITreeConstraint(e, prevPC->inst);
+#endif
+    constraints.addConstraint(e);
+  }
 
   bool merge(const ExecutionState &b);
   void dumpStack(llvm::raw_ostream &out) const;
