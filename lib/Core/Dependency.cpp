@@ -483,25 +483,21 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
     Allocation *ret;
     if (Util::isEnvironmentAllocation(allocation)) {
       ret = new EnvironmentAllocation(allocation);
-      allocationsList.push_back(ret);
 
       // An environment allocation is a special kind of composite allocation
       // ret->getSite() will give us the right canonical allocation
-      newCompositeAllocations.push_back(ret);
+      compositeAllocationsList.push_back(ret);
         return ret;
     } else if (Util::isCompositeAllocation(allocation)) {
       ret = new CompositeAllocation(allocation);
-      allocationsList.push_back(ret);
 
       // We register composites in a special list
-      newCompositeAllocations.push_back(ret);
+      compositeAllocationsList.push_back(ret);
       return ret;
     }
 
     ret = new VersionedAllocation(allocation);
-    allocationsList.push_back(ret);
-
-    newVersionedAllocations.push_back(ret);
+    versionedAllocationsList.push_back(ret);
     return ret;
   }
 
@@ -514,7 +510,7 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
   }
 
   std::vector<Allocation *> Dependency::getAllVersionedAllocations() const {
-    std::vector<Allocation *> allAlloc = newVersionedAllocations;
+    std::vector<Allocation *> allAlloc = versionedAllocationsList;
     if (parentDependency) {
       std::vector<Allocation *> parentVersionedAllocations =
           parentDependency->getAllVersionedAllocations();
@@ -561,7 +557,7 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
   }
 
   std::vector<Allocation *> Dependency::getAllCompositeAllocations() const {
-    std::vector<Allocation *> allAlloc = newCompositeAllocations;
+    std::vector<Allocation *> allAlloc = compositeAllocationsList;
     if (parentDependency) {
       std::vector<Allocation *> parentCompositeAllocations =
           parentDependency->getAllCompositeAllocations();
@@ -646,9 +642,43 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
   }
 
   Allocation *Dependency::getLatestAllocation(llvm::Value *allocation) const {
+
+    if (Util::isEnvironmentAllocation(allocation)) {
+      // Search for existing environment allocation
+      for (std::vector<Allocation *>::const_reverse_iterator
+               it = compositeAllocationsList.rbegin(),
+               itEnd = compositeAllocationsList.rend();
+           it != itEnd; ++it) {
+        if (llvm::isa<EnvironmentAllocation>(*it))
+          return *it;
+      }
+
+      if (parentDependency)
+        return parentDependency->getLatestAllocation(allocation);
+
+      return 0;
+    } else if (Util::isCompositeAllocation(allocation)) {
+
+      // Search for existing composite non-environment allocation
+      for (std::vector<Allocation *>::const_reverse_iterator
+               it = compositeAllocationsList.rbegin(),
+               itEnd = compositeAllocationsList.rend();
+           it != itEnd; ++it) {
+        if (!llvm::isa<EnvironmentAllocation>(*it) &&
+            (*it)->hasAllocationSite(allocation))
+          return *it;
+      }
+
+      if (parentDependency)
+        return parentDependency->getLatestAllocation(allocation);
+
+      return 0;
+    }
+
+    // The case for versioned allocation
     for (std::vector<Allocation *>::const_reverse_iterator
-             it = allocationsList.rbegin(),
-             itEnd = allocationsList.rend();
+             it = versionedAllocationsList.rbegin(),
+             itEnd = versionedAllocationsList.rend();
          it != itEnd; ++it) {
       if ((*it)->hasAllocationSite(allocation))
         return *it;
@@ -902,7 +932,8 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
 
     // Delete the locally-constructed objects
     Util::deletePointerVector(valuesList);
-    Util::deletePointerVector(allocationsList);
+    Util::deletePointerVector(compositeAllocationsList);
+    Util::deletePointerVector(versionedAllocationsList);
   }
 
   Dependency *Dependency::cdr() const { return parentDependency; }
@@ -1196,8 +1227,8 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
 
     if (parentDependency) {
       llvm::errs() << "CONSUMING SINKS ...\n";
-      g->consumeNodesWithValues(newVersionedAllocations,
-                                newCompositeAllocations);
+      g->consumeNodesWithValues(versionedAllocationsList,
+                                compositeAllocationsList);
       parentDependency->computeInterpolantAllocations(g);
     }
   }

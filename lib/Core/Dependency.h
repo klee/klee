@@ -52,6 +52,15 @@ class Allocation {
     Allocation(llvm::Value *site) : core(false), site(site) {}
 
   public:
+    enum Kind {
+      Unknown,
+      Environment,
+      Composite,
+      Versioned
+    };
+
+    virtual Kind getKind() const { return Unknown; }
+
     virtual ~Allocation() {}
 
     virtual bool hasAllocationSite(llvm::Value *site) const { return false; }
@@ -59,6 +68,8 @@ class Allocation {
     virtual bool isComposite() const;
 
     virtual void print(llvm::raw_ostream& stream) const;
+
+    static bool classof(const Allocation *allocation) { return true; }
 
     llvm::Value *getSite() const { return site; }
 
@@ -78,23 +89,38 @@ class Allocation {
 
     ~CompositeAllocation() {}
 
+    Kind getKind() const { return Composite; }
+
     bool hasAllocationSite(llvm::Value *site) const {
       return this->site == site;
     }
+
+    static bool classof(const Allocation *allocation) {
+      return allocation->getKind() == Composite;
+    }
+
+    static bool classof(const CompositeAllocation *allocation) { return true; }
 
     void print(llvm::raw_ostream &stream) const;
   };
 
   class VersionedAllocation : public Allocation {
-
   public:
     VersionedAllocation(llvm::Value *site) : Allocation(site) {}
 
     ~VersionedAllocation() {}
 
+    Kind getKind() const { return Versioned; }
+
     bool hasAllocationSite(llvm::Value *site) const {
       return this->site == site;
     }
+
+    static bool classof(const Allocation *allocation) {
+      return allocation->getKind() == Versioned;
+    }
+
+    static bool classof(const VersionedAllocation *allocation) { return true; }
 
     bool isComposite() const;
 
@@ -105,7 +131,6 @@ class Allocation {
     // We use the first site as the canonical allocation
     // for all environment allocations
     static llvm::Value *canonicalAllocation;
-
   public:
     EnvironmentAllocation(llvm::Value *site)
         : Allocation(!canonicalAllocation ? (canonicalAllocation = site)
@@ -113,7 +138,17 @@ class Allocation {
 
     ~EnvironmentAllocation() {}
 
+    Kind getKind() const { return Environment; }
+
     bool hasAllocationSite(llvm::Value *site) const;
+
+    static bool classof(const Allocation *allocation) {
+      return allocation->getKind() == Environment;
+    }
+
+    static bool classof(const EnvironmentAllocation *allocation) {
+      return true;
+    }
 
     void print(llvm::raw_ostream &stream) const;
   };
@@ -334,11 +369,9 @@ class Allocation {
 
     std::vector< VersionedValue *> valuesList;
 
-    std::vector<Allocation *> allocationsList;
+    std::vector<Allocation *> versionedAllocationsList;
 
-    std::vector<Allocation *> newVersionedAllocations;
-
-    std::vector<Allocation *> newCompositeAllocations;
+    std::vector<Allocation *> compositeAllocationsList;
 
     /// @brief allocations of this node and its ancestors
     /// that are needed for the core and dominates other allocations.
