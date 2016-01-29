@@ -402,7 +402,7 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
     return sinkAllocations;
   }
 
-  std::vector<Allocation *> AllocationGraph::getSinksWithValues(
+  std::vector<Allocation *> AllocationGraph::getSinksWithAllocations(
       std::vector<Allocation *> valuesList) const {
     std::vector<Allocation *> sinkAllocations;
 
@@ -417,12 +417,13 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
     return sinkAllocations;
   }
 
-  void AllocationGraph::consumeNodesWithValues(
+  void AllocationGraph::consumeNodesWithAllocations(
       std::vector<Allocation *> versionedAllocations,
       std::vector<Allocation *> compositeAllocations) {
     std::vector<Allocation *> sinkAllocs(
-        getSinksWithValues(versionedAllocations));
-    std::vector<Allocation *> tmp(getSinksWithValues(compositeAllocations));
+        getSinksWithAllocations(versionedAllocations));
+    std::vector<Allocation *> tmp(
+        getSinksWithAllocations(compositeAllocations));
     sinkAllocs.insert(sinkAllocs.begin(), tmp.begin(), tmp.end());
 
     if (sinkAllocs.empty())
@@ -435,7 +436,7 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
     }
 
     // Recurse until fixpoint
-    consumeNodesWithValues(versionedAllocations, compositeAllocations);
+    consumeNodesWithAllocations(versionedAllocations, compositeAllocations);
   }
 
   void AllocationGraph::print(llvm::raw_ostream &stream) const {
@@ -1217,8 +1218,8 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
     interpolantAllocations = g->getSinkAllocations();
 
     if (parentDependency) {
-      g->consumeNodesWithValues(versionedAllocationsList,
-                                compositeAllocationsList);
+      g->consumeNodesWithAllocations(versionedAllocationsList,
+                                     compositeAllocationsList);
       parentDependency->computeInterpolantAllocations(g);
     }
   }

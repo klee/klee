@@ -327,9 +327,10 @@ class Allocation {
     std::vector<Allocation *> getSinkAllocations() const;
 
     std::vector<Allocation *>
-    getSinksWithValues(std::vector<Allocation *> valuesList) const;
+    getSinksWithAllocations(std::vector<Allocation *> valuesList) const;
 
-    void consumeNodesWithValues(std::vector<Allocation *> versionedAllocations,
+    void
+    consumeNodesWithAllocations(std::vector<Allocation *> versionedAllocations,
                                 std::vector<Allocation *> compositeAllocations);
 
     void dump() const {
