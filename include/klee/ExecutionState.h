@@ -17,6 +17,13 @@
 // FIXME: We do not want to be exposing these? :(
 #include "../../lib/Core/AddressSpace.h"
 #include "klee/Internal/Module/KInstIterator.h"
+#include "klee/Internal/Module/KInstruction.h"
+
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+#include "llvm/IR/Instructions.h"
+#else
+#include "llvm/Instructions.h"
+#endif
 
 #include <map>
 #include <set>
@@ -30,6 +37,7 @@ struct KFunction;
 struct KInstruction;
 class MemoryObject;
 class PTreeNode;
+class ITreeNode;
 struct InstructionInfo;
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const MemoryMap &mm);
@@ -71,6 +79,10 @@ private:
   ExecutionState &operator=(const ExecutionState &);
 
   std::map<std::string, std::string> fnAliases;
+
+#ifdef SUPPORT_Z3
+  void addITreeConstraint(ref<Expr> e, llvm::Instruction *instr);
+#endif
 
 public:
   // Execution - Control Flow specific
@@ -133,6 +145,9 @@ public:
   /// @brief Pointer to the process tree of the current state
   PTreeNode *ptreeNode;
 
+  /// @brief Pointer to the interpolation tree of the current state
+  ITreeNode *itreeNode;
+
   /// @brief Ordered list of symbolics: used to generate test cases.
   //
   // FIXME: Move to a shared list structure (not critical).
@@ -146,7 +161,7 @@ public:
   void removeFnAlias(std::string fn);
 
 private:
-  ExecutionState() : ptreeNode(0) {}
+  ExecutionState() : ptreeNode(0), itreeNode(0){}
 
 public:
   ExecutionState(KFunction *kf);
@@ -162,10 +177,15 @@ public:
   ExecutionState *branch();
 
   void pushFrame(KInstIterator caller, KFunction *kf);
-  void popFrame();
+  void popFrame(KInstruction *ki, ref<Expr> returnValue);
 
   void addSymbolic(const MemoryObject *mo, const Array *array);
-  void addConstraint(ref<Expr> e) { constraints.addConstraint(e); }
+  void addConstraint(ref<Expr> e) {
+#ifdef SUPPORT_Z3
+    addITreeConstraint(e, prevPC->inst);
+#endif
+    constraints.addConstraint(e);
+  }
 
   bool merge(const ExecutionState &b);
   void dumpStack(llvm::raw_ostream &out) const;

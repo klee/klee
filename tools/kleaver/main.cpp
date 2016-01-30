@@ -208,6 +208,7 @@ static bool PrintInputAST(const char *Filename,
 static bool EvaluateInputAST(const char *Filename,
                              const MemoryBuffer *MB,
                              ExprBuilder *Builder) {
+	llvm::outs() << "EvaluateInputAST\n";
   std::vector<Decl*> Decls;
   Parser *P = Parser::Create(Filename, MB, Builder);
   P->SetMaxErrors(20);
@@ -252,14 +253,82 @@ static bool EvaluateInputAST(const char *Filename,
     llvm::errs() << "Starting MetaSMTSolver(" << backend << ") ...\n";
   }
   else {
-    coreSolver = UseDummySolver ? createDummySolver() : new STPSolver(UseForkedCoreSolver);
+    if (UseDummySover) {
+      coreSolver = createDummySolver();
+      llvm::errs() << "Starting DummySolver ...\n";
+    } else {
+#ifdef SUPPORT_Z3
+#ifdef SUPPORT_STP
+      switch (SelectSolver) {
+      case SOLVER_STP: {
+        coreSolver = new STPSolver(UseForkedCoreSolver);
+        llvm::errs() << "Starting STPSolver ...\n";
+        break;
+      }
+      default: {
+        coreSolver = new Z3Solver();
+        llvm::errs() << "Starting Z3Solver ...\n";
+        break;
+      }
+      }
+#else
+      coreSolver = new Z3Solver();
+      llvm::errs() << "Starting Z3Solver ...\n";
+#endif /* SUPPORT_STP */
+#elif SUPPORT_STP
+      coreSolver = new STPSolver(UseForkedCoreSolver);
+      llvm::errs() << "Starting STPSolver ...\n";
+#else
+      coreSolver = createDummySolver();
+      llvm::errs() << "Starting DummySolver ...\n";
+#endif /* SUPPORT_Z3 */
+    }
   }
 #else
 #ifdef SUPPORT_Z3
-  coreSolver = UseDummySolver ? createDummySolver() : new Z3Solver();
+#ifdef SUPPORT_STP
+  switch (SelectSolver) {
+  case SOLVER_STP: {
+    if (UseDummySolver) {
+      coreSolver = createDummySolver();
+      llvm::errs() << "Starting DummySolver ...\n";
+    } else {
+      coreSolver = new STPSolver(UseForkedCoreSolver);
+      llvm::errs() << "Starting STPSolver ...\n";
+    }
+    break;
+  }
+  default: {
+    if (UseDummySolver) {
+      coreSolver = createDummySolver();
+      llvm::errs() << "Starting DummySolver ...\n";
+    } else {
+      coreSolver = new Z3Solver();
+      llvm::errs() << "Starting Z3Solver ...\n";
+    }
+    break;
+  }
+  }
 #else
-  coreSolver = UseDummySolver ? createDummySolver() : new STPSolver(UseForkedCoreSolver);
-#endif
+  if (UseDummySolver) {
+    coreSolver = createDummySolver();
+    llvm::errs() << "Starting DummySolver ...\n";
+  } else {
+    coreSolver = new Z3Solver();
+    llvm::errs() << "Starting Z3Solver ...\n";
+  }
+#endif /* SUPPORT_STP */
+#elif SUPPORT_STP
+  if (UseDummySolver) {
+    coreSolver = createDummySolver();
+    llvm::errs() << "Starting DummySolver ...\n";
+  } else {
+    coreSolver = new STPSolver(UseForkedCoreSolver);
+    llvm::errs() << "Starting STPSolver ...\n";
+  }
+#else
+  coreSolver = createDummySolver();
+#endif /* SUPPORT_Z3 */
 #endif /* SUPPORT_METASMT */
   
   
@@ -496,6 +565,7 @@ int main(int argc, char **argv) {
                             Builder);
     break;
   case Evaluate:
+	  llvm::outs() << "EVALUATEINPUTAST\n";
     success = EvaluateInputAST(InputFile=="-" ? "<stdin>" : InputFile.c_str(),
                                MB.get(), Builder);
     break;

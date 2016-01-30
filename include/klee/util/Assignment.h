@@ -49,6 +49,15 @@ namespace klee {
 
     template<typename InputIterator>
     bool satisfies(InputIterator begin, InputIterator end);
+
+    void dump() {
+      for (bindings_ty::iterator i = bindings.begin(), e = bindings.end(); i != e; ++i) {
+        llvm::errs() << (*i).first->name << "\n[";
+        for (int j = 0, k =(*i).second.size(); j<k; ++j )
+          llvm::errs() << (int)(*i).second[j] << ",";
+        llvm::errs() << "]\n";
+      }
+    }
   };
   
   class AssignmentEvaluator : public ExprEvaluator {
@@ -61,6 +70,30 @@ namespace klee {
     
   public:
     AssignmentEvaluator(const Assignment &_a) : a(_a) {}    
+  };
+
+  class AssignmentCacheWrapper {
+    Assignment *a;
+    std::vector< ref<Expr> > unsatCore;
+
+  public:
+    AssignmentCacheWrapper(Assignment *_a) : a(_a) {}
+
+    AssignmentCacheWrapper(std::vector< ref<Expr> > _unsatCore) :
+      a(0), unsatCore(_unsatCore) {}
+
+    ~AssignmentCacheWrapper() {
+      delete a;
+      unsatCore.clear();
+    }
+
+    Assignment *getAssignment() const {
+      return a;
+    }
+
+    std::vector< ref<Expr> > getCore() const {
+      return unsatCore;
+    }
   };
 
   /***/

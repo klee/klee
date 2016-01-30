@@ -32,6 +32,7 @@ namespace llvm {
 namespace klee {
 
 class Array;
+class ArrayCache;
 class ConstantExpr;
 class ObjectState;
 
@@ -619,21 +620,10 @@ public:
 private:
   unsigned hashValue;
 
-
-  /// The symbolic array singleton map is necessary to allow sharing
-  /// of Arrays across states, essentially performing a (limited) form
-  /// of alpha renaming.  Some Solvers use maps such as < const *Array,
-  /// std::vector<unsigned> >.  This causes problems because stored
-  /// answers can't be easily recovered.  Even worse, in read
-  /// expressions, such as (read array 32), array is a pointer, and
-  /// cached solutions are missed because the two Array instances
-  /// aren't recognized as the same.
-  static std::map < unsigned, std::vector < const Array * > * > symbolicArraySingletonMap;
-
-  // This shouldn't be allowed since it is a singleton class
+  // FIXME: Make =delete when we switch to C++11
   Array(const Array& array);
 
-  // This shouldn't be allowed since it is a singleton class
+  // FIXME: Make =delete when we switch to C++11
   Array& operator =(const Array& array);
 
   ~Array();
@@ -675,20 +665,7 @@ public:
   /// ComputeHash must take into account the name, the size, the domain, and the range
   unsigned computeHash();
   unsigned hash() const { return hashValue; }
-
-  /*
-   * Fairly simple idea.  Symbolic arrays have constant values of size
-   * 0, while concrete arrays have constant values of size > 0.
-   * Therefore, on each call, an array is created and, if it is
-   * concrete, it is simply returned.  If instead it is symbolic, then
-   * a map is checked to see if it was created before, so there is
-   * only a single instance floating out there.
-   */
-  static const Array * CreateArray(const std::string &_name, uint64_t _size,
-				   const ref<ConstantExpr> *constantValuesBegin = 0,
-				   const ref<ConstantExpr> *constantValuesEnd = 0,
-				   Expr::Width _domain = Expr::Int32,
-				   Expr::Width _range = Expr::Int8);
+  friend class ArrayCache;
 };
 
 /// Class representing a complete list of updates into an array.
@@ -715,6 +692,8 @@ public:
 
   int compare(const UpdateList &b) const;
   unsigned hash() const;
+private:
+  void tryFreeNodes();
 };
 
 /// Class representing a one byte read from an array. 

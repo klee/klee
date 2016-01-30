@@ -25,5 +25,9 @@ lit.site.cfg
 
 # Autoconf files
 autoconf/aclocal.m4
-autoconf/autom4te.cache
-autom4te.cache
+autoconf/autom4te.cache/
+autom4te.cache/
+
+# Eclipse configuration
+.project
+.cproject

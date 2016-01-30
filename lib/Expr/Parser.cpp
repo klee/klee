@@ -16,6 +16,7 @@
 #include "klee/ExprBuilder.h"
 #include "klee/Solver.h"
 #include "klee/util/ExprPPrinter.h"
+#include "klee/util/ArrayCache.h"
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -109,6 +110,7 @@ namespace {
     const std::string Filename;
     const MemoryBuffer *TheMemoryBuffer;
     ExprBuilder *Builder;
+    ArrayCache TheArrayCache;
 
     Lexer TheLexer;
     unsigned MaxErrors;
@@ -329,6 +331,8 @@ namespace {
                                         MaxErrors(~0u),
                                         NumErrors(0) {}
 
+    virtual ~ParserImpl();
+
     /// Initialize - Initialize the parsing state. This must be called
     /// prior to the start of parsing.
     void Initialize() {
@@ -521,10 +525,10 @@ DeclResult ParserImpl::ParseArrayDecl() {
   const Identifier *Label = GetOrCreateIdentifier(Name);
   const Array *Root;
   if (!Values.empty())
-    Root = Array::CreateArray(Label->Name, Size.get(),
-			      &Values[0], &Values[0] + Values.size());
+    Root = TheArrayCache.CreateArray(Label->Name, Size.get(), &Values[0],
+                                     &Values[0] + Values.size());
   else
-    Root = Array::CreateArray(Label->Name, Size.get());
+    Root = TheArrayCache.CreateArray(Label->Name, Size.get());
   ArrayDecl *AD = new ArrayDecl(Label, Size.get(), 
                                 DomainType.get(), RangeType.get(), Root);
 
@@ -1306,7 +1310,9 @@ VersionResult ParserImpl::ParseVersionSpecifier() {
   VersionResult Res = ParseVersion();
   // Define update list to avoid use-of-undef errors.
   if (!Res.isValid()) {
-    Res = VersionResult(true, UpdateList(Array::CreateArray("", 0), NULL));
+    // FIXME: I'm not sure if this is right. Do we need a unique array here?
+    Res =
+        VersionResult(true, UpdateList(TheArrayCache.CreateArray("", 0), NULL));
   }
   
   if (Label)
@@ -1555,6 +1561,36 @@ void ParserImpl::Error(const char *Message, const Token &At) {
   } else
     llvm::errs() << '^';
   llvm::errs() << '\n';
+}
+
+ParserImpl::~ParserImpl() {
+  // Free identifiers
+  //
+  // Note the Identifiers are not disjoint across the symbol
+  // tables so we need to keep track of what has freed to
+  // avoid doing a double free.
+  std::set<const Identifier*> freedNodes;
+  for (IdentifierTabTy::iterator pi = IdentifierTab.begin(),
+                                 pe = IdentifierTab.end();
+       pi != pe; ++pi) {
+    const Identifier* id = pi->second;
+    if (freedNodes.insert(id).second)
+      delete id;
+  }
+  for (ExprSymTabTy::iterator pi = ExprSymTab.begin(),
+                              pe = ExprSymTab.end();
+       pi != pe; ++pi) {
+    const Identifier* id = pi->first;
+    if (freedNodes.insert(id).second)
+      delete id;
+  }
+  for (VersionSymTabTy::iterator pi = VersionSymTab.begin(),
+                                 pe = VersionSymTab.end();
+       pi != pe; ++pi) {
+    const Identifier* id = pi->first;
+    if (freedNodes.insert(id).second)
+      delete id;
+  }
 }
 
 // AST API

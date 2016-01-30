@@ -20,6 +20,7 @@
 #include "klee/Internal/Module/Cell.h"
 #include "klee/Internal/Module/KInstruction.h"
 #include "klee/Internal/Module/KModule.h"
+#include "klee/util/ArrayCache.h"
 
 #include "llvm/ADT/Twine.h"
 
@@ -63,6 +64,8 @@ namespace klee {
   class MemoryObject;
   class ObjectState;
   class PTree;
+  class ITree; 
+  class ITreeNode;
   class Searcher;
   class SeedInfo;
   class SpecialFunctionHandler;
@@ -115,7 +118,9 @@ private:
   SpecialFunctionHandler *specialFunctionHandler;
   std::vector<TimerInfo*> timers;
   PTree *processTree;
-
+  ITree *interpTree; 
+  ref<Expr> latestBaseLeft;
+  ref<Expr> latestBaseRight;
   /// Used to track states that have been added during the current
   /// instructions step. 
   /// \invariant \ref addedStates is a subset of \ref states. 
@@ -177,7 +182,10 @@ private:
 
   /// The maximum time to allow for a single core solver query.
   /// (e.g. for a single STP query)
-  double coreSolverTimeout; 
+  double coreSolverTimeout;
+
+  /// Assumes ownership of the created array objects
+  ArrayCache arrayCache;
 
   llvm::Function* getTargetFunction(llvm::Value *calledVal,
                                     ExecutionState &state);
@@ -349,6 +357,10 @@ private:
 
   // remove state from queue and delete
   void terminateState(ExecutionState &state);
+#ifdef SUPPORT_Z3
+  // call subsumption handler and terminate state
+  void terminateStateOnSubsumption(ExecutionState &state);
+#endif
   // call exit handler and terminate state
   void terminateStateEarly(ExecutionState &state, const llvm::Twine &message);
   // call exit handler and terminate state
@@ -395,7 +407,7 @@ private:
   void initTimers();
   void processTimers(ExecutionState *current,
                      double maxInstTime);
-                
+
 public:
   Executor(const InterpreterOptions &opts, InterpreterHandler *ie);
   virtual ~Executor();

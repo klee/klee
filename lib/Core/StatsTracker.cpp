@@ -7,8 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Common.h"
-
 #include "StatsTracker.h"
 
 #include "klee/ExecutionState.h"
@@ -19,13 +17,14 @@
 #include "klee/Internal/Module/KInstruction.h"
 #include "klee/Internal/Support/ModuleUtil.h"
 #include "klee/Internal/System/Time.h"
+#include "klee/Internal/Support/ErrorHandling.h"
+#include "klee/SolverStats.h"
 
 #include "CallPathManager.h"
 #include "CoreStats.h"
 #include "Executor.h"
 #include "MemoryManager.h"
 #include "UserSearcher.h"
-#include "../Solver/SolverStats.h"
 
 #if LLVM_VERSION_CODE > LLVM_VERSION(3, 2)
 #include "llvm/IR/BasicBlock.h"

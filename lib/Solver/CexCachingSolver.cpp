@@ -18,7 +18,9 @@
 #include "klee/util/ExprVisitor.h"
 #include "klee/Internal/ADT/MapOfSets.h"
 
-#include "SolverStats.h"
+#include "klee/SolverStats.h"
+
+#include "klee/Internal/Support/ErrorHandling.h"
 
 #include "llvm/Support/CommandLine.h"
 
@@ -60,9 +62,10 @@ class CexCachingSolver : public SolverImpl {
 
   Solver *solver;
   
-  MapOfSets<ref<Expr>, Assignment*> cache;
+  MapOfSets<ref<Expr>, AssignmentCacheWrapper*> cache;
   // memo table
   assignmentsTable_ty assignmentsTable;
+  std::vector< ref<Expr> > unsat_core;
 
   bool searchForAssignment(KeyType &key, 
                            Assignment *&result);
@@ -90,16 +93,23 @@ public:
   SolverRunStatus getOperationStatusCode();
   char *getConstraintLog(const Query& query);
   void setCoreSolverTimeout(double timeout);
+  std::vector< ref<Expr> > getUnsatCore() {
+    return unsat_core;
+  }
 };
 
 ///
 
 struct NullAssignment {
-  bool operator()(Assignment *a) const { return !a; }
+  bool operator()(AssignmentCacheWrapper *a) const {
+    return !(a->getAssignment());
+  }
 };
 
 struct NonNullAssignment {
-  bool operator()(Assignment *a) const { return a!=0; }
+  bool operator()(AssignmentCacheWrapper *a) const {
+    return (a->getAssignment())!=0;
+  }
 };
 
 struct NullOrSatisfyingAssignment {
@@ -107,8 +117,9 @@ struct NullOrSatisfyingAssignment {
   
   NullOrSatisfyingAssignment(KeyType &_key) : key(_key) {}
 
-  bool operator()(Assignment *a) const { 
-    return !a || a->satisfies(key.begin(), key.end()); 
+  bool operator()(AssignmentCacheWrapper *a) const {
+    return !(a->getAssignment()) ||
+	a->getAssignment()->satisfies(key.begin(), key.end());
   }
 };
 
@@ -120,16 +131,18 @@ struct NullOrSatisfyingAssignment {
 /// unsatisfiable query).
 /// \return - True if a cached result was found.
 bool CexCachingSolver::searchForAssignment(KeyType &key, Assignment *&result) {
-  Assignment * const *lookup = cache.lookup(key);
+  AssignmentCacheWrapper * const *lookup = cache.lookup(key);
+
   if (lookup) {
-    result = *lookup;
+    result = (*lookup)->getAssignment();
+    unsat_core = (*lookup)->getCore();
     return true;
   }
 
   if (CexCacheTryAll) {
     // Look for a satisfying assignment for a superset, which is trivially an
     // assignment for any subset.
-    Assignment **lookup = 0;
+    AssignmentCacheWrapper **lookup = 0;
     if (CexCacheSuperSet)
       lookup = cache.findSuperset(key, NonNullAssignment());
 
@@ -139,7 +152,8 @@ bool CexCachingSolver::searchForAssignment(KeyType &key, Assignment *&result) {
 
     // If either lookup succeeded, then we have a cached solution.
     if (lookup) {
-      result = *lookup;
+      result = (*lookup)->getAssignment();
+      unsat_core = (*lookup)->getCore();
       return true;
     }
 
@@ -150,6 +164,7 @@ bool CexCachingSolver::searchForAssignment(KeyType &key, Assignment *&result) {
       Assignment *a = *it;
       if (a->satisfies(key.begin(), key.end())) {
         result = a;
+        unsat_core.clear();
         return true;
       }
     }
@@ -158,7 +173,7 @@ bool CexCachingSolver::searchForAssignment(KeyType &key, Assignment *&result) {
 
     // Look for a satisfying assignment for a superset, which is trivially an
     // assignment for any subset.
-    Assignment **lookup = 0;
+    AssignmentCacheWrapper **lookup = 0;
     if (CexCacheSuperSet)
       lookup = cache.findSuperset(key, NonNullAssignment());
 
@@ -172,7 +187,8 @@ bool CexCachingSolver::searchForAssignment(KeyType &key, Assignment *&result) {
 
     // If either lookup succeeded, then we have a cached solution.
     if (lookup) {
-      result = *lookup;
+      result = (*lookup)->getAssignment();
+      unsat_core = (*lookup)->getCore();
       return true;
     }
   }
@@ -193,6 +209,7 @@ bool CexCachingSolver::lookupAssignment(const Query &query,
                                         Assignment *&result) {
   key = KeyType(query.constraints.begin(), query.constraints.end());
   ref<Expr> neg = Expr::createIsZero(query.expr);
+  bool keyHasAddedConstraint = false;
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(neg)) {
     if (CE->isFalse()) {
       result = (Assignment*) 0;
@@ -201,18 +218,26 @@ bool CexCachingSolver::lookupAssignment(const Query &query,
     }
   } else {
     key.insert(neg);
+    keyHasAddedConstraint = true;
   }
 
   bool found = searchForAssignment(key, result);
   if (found)
     ++stats::queryCexCacheHits;
   else ++stats::queryCexCacheMisses;
+
+  if (keyHasAddedConstraint && !unsat_core.empty()) {
+      /// Here we remove the added component (neg)
+      /// from the unsatisfiability core.
+      unsat_core.erase(std::remove(unsat_core.begin(), unsat_core.end(), neg), unsat_core.end());
+  }
     
   return found;
 }
 
 bool CexCachingSolver::getAssignment(const Query& query, Assignment *&result) {
   KeyType key;
+
   if (lookupAssignment(query, key, result))
     return true;
 
@@ -225,6 +250,7 @@ bool CexCachingSolver::getAssignment(const Query& query, Assignment *&result) {
                                           hasSolution))
     return false;
     
+  AssignmentCacheWrapper *bindingWrapper;
   Assignment *binding;
   if (hasSolution) {
     binding = new Assignment(objects, values);
@@ -238,13 +264,21 @@ bool CexCachingSolver::getAssignment(const Query& query, Assignment *&result) {
     }
     
     if (DebugCexCacheCheckBinding)
-      assert(binding->satisfies(key.begin(), key.end()));
+      if (!binding->satisfies(key.begin(), key.end())) {
+        query.dump();
+        binding->dump();
+        klee_error("Generated assignment doesn't match query");
+      }
+
+    bindingWrapper = new AssignmentCacheWrapper(binding);
   } else {
-    binding = (Assignment*) 0;
+    unsat_core = solver->impl->getUnsatCore();
+    binding = (Assignment *) 0;
+    bindingWrapper = new AssignmentCacheWrapper(unsat_core);
   }
   
   result = binding;
-  cache.insert(key, binding);
+  cache.insert(key, bindingWrapper);
 
   return true;
 }
@@ -263,20 +297,46 @@ bool CexCachingSolver::computeValidity(const Query& query,
                                        Solver::Validity &result) {
   TimerStatIncrementer t(stats::cexCacheTime);
   Assignment *a;
+
+  /// Given query of the form antecedent -> consequent, here we try to
+  /// decide if antecedent was satisfiable by attempting to get an
+  /// assignment from the validity proof of antecedent -> false.
   if (!getAssignment(query.withFalse(), a))
     return false;
+
+  /// Logically, antecedent must be satisfiable, as we eagerly terminate a
+  /// path upon the discovery of unsatisfiability.
   assert(a && "computeValidity() must have assignment");
   ref<Expr> q = a->evaluate(query.expr);
   assert(isa<ConstantExpr>(q) && 
          "assignment evaluation did not result in constant");
 
   if (cast<ConstantExpr>(q)->isTrue()) {
+    /// Antecedent is satisfiable, and its model is also a model of the
+    /// consequent, which means that the query: antecedent -> consequent
+    /// is potentially valid.
+    ///
+    /// We next try to establish the validity of the query
+    /// antecedent -> consequent itself, and when this was proven invalid,
+    /// gets the solution to "antecedent and not consequent", i.e.,
+    /// the counterexample, in a.
     if (!getAssignment(query, a))
-      return false;
+      return false;                  /// Return false in case of solver error
+
+    /// Return Solver::True in result in case validity is established:
+    /// Solver::Unknown otherwise.
     result = !a ? Solver::True : Solver::Unknown;
   } else {
+    /// The computed model of the antecedent is not a model of the consequent.
+    /// It is possible that the query is false under any interpretation. Here
+    /// we try to prove antecedent -> not consequent given the original
+    /// query antecedent -> consequent.
     if (!getAssignment(query.negateExpr(), a))
       return false;
+
+    /// If there was no solution, this means that antecedent -> not consequent
+    /// is valid, and therefore the original query antecedent -> consequent has
+    /// no model. Otherwise, we do not know.
     result = !a ? Solver::False : Solver::Unknown;
   }
   

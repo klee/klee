@@ -11,6 +11,7 @@
 #define KLEE_MEMORY_H
 
 #include "Context.h"
+#include "ITree.h"
 #include "klee/Expr.h"
 
 #include "llvm/ADT/StringExtras.h"
@@ -27,6 +28,7 @@ namespace klee {
 class BitArray;
 class MemoryManager;
 class Solver;
+class ArrayCache;
 
 class MemoryObject {
   friend class STPBuilder;
@@ -234,6 +236,7 @@ private:
   void setKnownSymbolic(unsigned offset, Expr *value);
 
   void print();
+  ArrayCache *getArrayCache() const;
 };
   
 } // End klee namespace

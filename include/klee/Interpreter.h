@@ -39,6 +39,14 @@ public:
   virtual llvm::raw_fd_ostream *openOutputFile(const std::string &filename) = 0;
 
   virtual void incPathsExplored() = 0;
+  virtual void incSubsumptionTermination() = 0;
+  virtual void incSubsumptionTerminationTest() = 0;
+  virtual void incEarlyTermination() = 0;
+  virtual void incEarlyTerminationTest() = 0;
+  virtual void incErrorTermination() = 0;
+  virtual void incErrorTerminationTest() = 0;
+  virtual void incExitTermination() = 0;
+  virtual void incExitTerminationTest() = 0;
 
   virtual void processTestCase(const ExecutionState &state,
                                const char *err, 

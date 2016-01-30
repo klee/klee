@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Common.h"
 #include "Executor.h"
 #include "Context.h"
 #include "CoreStats.h"
@@ -16,6 +15,7 @@
 #include "Memory.h"
 #include "MemoryManager.h"
 #include "PTree.h"
+#include "ITree.h"
 #include "Searcher.h"
 #include "SeedInfo.h"
 #include "SpecialFunctionHandler.h"
@@ -24,7 +24,6 @@
 #include "UserSearcher.h"
 #include "ExecutorTimerInfo.h"
 
-#include "../Solver/SolverStats.h"
 
 #include "klee/ExecutionState.h"
 #include "klee/Expr.h"
@@ -44,9 +43,11 @@
 #include "klee/Internal/Module/InstructionInfoTable.h"
 #include "klee/Internal/Module/KInstruction.h"
 #include "klee/Internal/Module/KModule.h"
+#include "klee/Internal/Support/ErrorHandling.h"
 #include "klee/Internal/Support/FloatEvaluation.h"
 #include "klee/Internal/System/Time.h"
 #include "klee/Internal/System/MemoryUsage.h"
+#include "klee/SolverStats.h"
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
 #include "llvm/IR/Function.h"
@@ -69,6 +70,7 @@
 #include "llvm/IntrinsicInst.h"
 #include "llvm/LLVMContext.h"
 #include "llvm/Module.h"
+
 #if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
 #include "llvm/Target/TargetData.h"
 #else
@@ -82,6 +84,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Analysis/MemoryDependenceAnalysis.h"
 
 #if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
 #include "llvm/Support/CallSite.h"
@@ -130,8 +133,6 @@ using namespace metaSMT;
 using namespace metaSMT::solver;
 
 #endif /* SUPPORT_METASMT */
-
-
 
 namespace {
   cl::opt<bool>
@@ -218,6 +219,14 @@ namespace {
   NamedSeedMatching("named-seed-matching",
                     cl::desc("Use names to match symbolic objects to inputs."));
 
+  // We should compile in this option even when SUPPORT_Z3
+  // was undefined to avoid regression test failure.
+  cl::opt<bool> NoInterpolation(
+      "no-interpolation",
+      cl::desc("Disable interpolation for search space reduction. "
+               "Interpolation is enabled by default when Z3 was the solver "
+               "used. This option has no effect when Z3 was not used."));
+
   cl::opt<double>
   MaxStaticForkPct("max-static-fork-pct", cl::init(1.));
   cl::opt<double>
@@ -268,7 +277,6 @@ namespace klee {
   RNG theRNG;
 }
 
-
 Executor::Executor(const InterpreterOptions &opts,
                    InterpreterHandler *ih) 
   : Interpreter(opts),
@@ -281,6 +289,7 @@ Executor::Executor(const InterpreterOptions &opts,
     symPathWriter(0),
     specialFunctionHandler(0),
     processTree(0),
+    interpTree(0), 
     replayOut(0),
     replayPath(0),    
     usingSeeds(0),
@@ -322,13 +331,32 @@ Executor::Executor(const InterpreterOptions &opts,
   }
   else {
     coreSolver = new STPSolver(UseForkedCoreSolver, CoreSolverOptimizeDivides);
+    llvm::errs() << "Starting STPSolver ...\n";
   }
-#else
+#elif SUPPORT_STP
+
 #ifdef SUPPORT_Z3
-  coreSolver = new Z3Solver();
+  switch (SelectSolver) {
+  case SOLVER_STP:
+    coreSolver = new STPSolver(UseForkedCoreSolver, CoreSolverOptimizeDivides);
+    llvm::errs() << "Starting STPSolver ...\n";
+    break;
+  case SOLVER_Z3:
+    coreSolver = new Z3Solver();
+    llvm::errs() << "Starting Z3Solver ...\n";
+    break;
+  default:
+    assert(false);
+    break;
+  };
 #else
   coreSolver = new STPSolver(UseForkedCoreSolver, CoreSolverOptimizeDivides);
+  llvm::errs() << "Starting STPSolver ...\n";
 #endif /* SUPPORT_Z3 */
+
+#elif SUPPORT_Z3
+  coreSolver = new Z3Solver();
+  llvm::errs() << "Starting Z3Solver ...\n";
 #endif /* SUPPORT_METASMT */
   
    
@@ -338,10 +366,27 @@ Executor::Executor(const InterpreterOptions &opts,
                          interpreterHandler->getOutputFilename(SOLVER_QUERIES_SMT2_FILE_NAME),
                          interpreterHandler->getOutputFilename(ALL_QUERIES_PC_FILE_NAME),
                          interpreterHandler->getOutputFilename(SOLVER_QUERIES_PC_FILE_NAME));
-  
-  this->solver = new TimingSolver(solver, EqualitySubstitution);
 
-  memory = new MemoryManager();
+#ifdef SUPPORT_Z3
+// In case interpolation is enabled with Z3 solver,
+// we should not simplify the constraints before
+// submitting them to the solver.
+#ifdef SUPPORT_STP
+  if (SelectSolver == SOLVER_Z3) {
+    this->solver = new TimingSolver(
+        solver, NoInterpolation ? EqualitySubstitution : false);
+  } else {
+    this->solver = new TimingSolver(solver, EqualitySubstitution);
+  }
+#else
+  this->solver = new TimingSolver(solver, NoInterpolation? EqualitySubstitution : false);
+#endif /* SUPPORT_STP */
+
+#else
+  this->solver = new TimingSolver(solver, EqualitySubstitution);
+#endif /* SUPPORT_Z3 */
+
+  memory = new MemoryManager(&arrayCache);
 }
 
 
@@ -648,6 +693,15 @@ void Executor::branch(ExecutionState &state,
         processTree->split(es->ptreeNode, ns, es);
       ns->ptreeNode = res.first;
       es->ptreeNode = res.second;
+
+#ifdef SUPPORT_Z3
+      if (InterpolationOption::interpolation) {
+        std::pair<ITreeNode *, ITreeNode *> ires =
+	  interpTree->split(es->itreeNode, ns, es);
+        ns->itreeNode = ires.first;
+        es->itreeNode = ires.second;
+      }
+#endif
     }
   }
 
@@ -740,6 +794,10 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
   double timeout = coreSolverTimeout;
   if (isSeeding)
     timeout *= it->second.size();
+
+  // llvm::errs() << "Calling solver->evaluate on query:\n";
+  // ExprPPrinter::printQuery(llvm::errs(), current.constraints, condition);
+
   solver->setTimeout(timeout);
   bool success = solver->evaluate(current, condition, res);
   solver->setTimeout(0);
@@ -824,10 +882,10 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       assert(trueSeed || falseSeed);
       
       res = trueSeed ? Solver::True : Solver::False;
-      addConstraint(current, trueSeed ? condition : Expr::createIsZero(condition));
+      addConstraint(current,
+                    trueSeed ? condition : Expr::createIsZero(condition));
     }
   }
-
 
   // XXX - even if the constraint is provable one way or the other we
   // can probably benefit by adding this constraint and allowing it to
@@ -837,11 +895,21 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
   // hint to just use the single constraint instead of all the binary
   // search ones. If that makes sense.
   if (res==Solver::True) {
+
     if (!isInternal) {
       if (pathWriter) {
         current.pathOS << "1";
       }
     }
+
+#ifdef SUPPORT_Z3
+    if (InterpolationOption::interpolation) {
+      // Validity proof succeeded of a query: antecedent -> consequent.
+      // We then extract the unsatisfiability core of antecedent and not
+      // consequent as the Craig interpolant.
+      interpTree->markPathCondition(current, solver);
+    }
+#endif
 
     return StatePair(&current, 0);
   } else if (res==Solver::False) {
@@ -850,6 +918,15 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
         current.pathOS << "0";
       }
     }
+
+#ifdef SUPPORT_Z3
+    if (InterpolationOption::interpolation) {
+      // Falsity proof succeeded of a query: antecedent -> consequent,
+      // which means that antecedent -> not(consequent) is valid. In this
+      // case also we extract the unsat core of the proof
+      interpTree->markPathCondition(current, solver);
+    }
+#endif
 
     return StatePair(0, &current);
   } else {
@@ -872,7 +949,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       for (std::vector<SeedInfo>::iterator siit = seeds.begin(), 
              siie = seeds.end(); siit != siie; ++siit) {
         ref<ConstantExpr> res;
-        bool success = 
+        bool success =
           solver->getValue(current, siit->assignment.evaluate(condition), res);
         assert(success && "FIXME: Unhandled solver failure");
         (void) success;
@@ -916,6 +993,15 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
         falseState->symPathOS << "0";
       }
     }
+
+#ifdef SUPPORT_Z3
+    if (InterpolationOption::interpolation) {
+      std::pair<ITreeNode *, ITreeNode *> ires =
+	  interpTree->split(current.itreeNode, falseState, trueState);
+      falseState->itreeNode = ires.first;
+      trueState->itreeNode = ires.second;
+    }
+#endif
 
     addConstraint(*trueState, condition);
     addConstraint(*falseState, Expr::createIsZero(condition));
@@ -1102,7 +1188,7 @@ Executor::toConstant(ExecutionState &state,
     klee_warning_once(reason, "%s", os.str().c_str());
 
   addConstraint(state, EqExpr::create(e, value));
-    
+
   return value;
 }
 
@@ -1324,6 +1410,12 @@ void Executor::executeCall(ExecutionState &state,
     unsigned numFormals = f->arg_size();
     for (unsigned i=0; i<numFormals; ++i) 
       bindArgument(kf, i, state, arguments[i]);
+
+#ifdef SUPPORT_Z3
+    if (InterpolationOption::interpolation)
+      // We bind the abstract dependency call arguments
+      state.itreeNode->bindCallArguments(state.prevPC->inst, arguments);
+#endif
   }
 }
 
@@ -1421,6 +1513,7 @@ static inline const llvm::fltSemantics * fpWidthToSemantics(unsigned width) {
 
 void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   Instruction *i = ki->inst;
+
   switch (i->getOpcode()) {
     // Control flow
   case Instruction::Ret: {
@@ -1433,12 +1526,12 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     if (!isVoidReturn) {
       result = eval(ki, 0, state).value;
     }
-    
+
     if (state.stack.size() <= 1) {
       assert(!caller && "caller set on initial stack frame");
       terminateStateOnExit(state);
     } else {
-      state.popFrame();
+      state.popFrame(ki, result);
 
       if (statsTracker)
         statsTracker->framePopped(state);
@@ -1493,7 +1586,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   case Instruction::Unwind: {
     for (;;) {
       KInstruction *kcaller = state.stack.back().caller;
-      state.popFrame();
+      state.popFrame(ki, ConstantExpr::alloc(0, Expr::Bool));
 
       if (statsTracker)
         statsTracker->framePopped(state);
@@ -1502,7 +1595,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         terminateStateOnExecError(state, "unwind from initial stack frame");
         break;
       } else {
-        Instruction *caller = kcaller->inst;
+        Instruction *caller = kcaller->programPoint;
         if (InvokeInst *ii = dyn_cast<InvokeInst>(caller)) {
           transferToBasicBlock(ii->getUnwindDest(), caller->getParent(), state);
           break;
@@ -1600,7 +1693,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       
       std::vector<ExecutionState*> branches;
       branch(state, conditions, branches);
-        
+
       std::vector<ExecutionState*>::iterator bit = branches.begin();
       for (std::map<BasicBlock*, ref<Expr> >::iterator it = 
              targets.begin(), ie = targets.end();
@@ -1624,7 +1717,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   case Instruction::Invoke:
   case Instruction::Call: {
     CallSite cs(i);
-
     unsigned numArgs = cs.arg_size();
     Value *fp = cs.getCalledValue();
     Function *f = getTargetFunction(fp, state);
@@ -1686,7 +1778,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
           i++;
         }
       }
-
       executeCall(state, ki, f, arguments);
     } else {
       ref<Expr> v = eval(ki, 0, state).value;
@@ -1746,6 +1837,12 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> fExpr = eval(ki, 2, state).value;
     ref<Expr> result = SelectExpr::create(cond, tExpr, fExpr);
     bindLocal(ki, state, result);
+
+#ifdef SUPPORT_Z3
+    // Update dependency
+    if (InterpolationOption::interpolation)
+      interpTree->executeAbstractBinaryDependency(i, result, tExpr, fExpr);
+#endif
     break;
   }
 
@@ -1758,21 +1855,42 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   case Instruction::Add: {
     ref<Expr> left = eval(ki, 0, state).value;
     ref<Expr> right = eval(ki, 1, state).value;
-    bindLocal(ki, state, AddExpr::create(left, right));
+    ref<Expr> result = AddExpr::create(left, right);
+    bindLocal(ki, state, result);
+
+#ifdef SUPPORT_Z3
+    // Update dependency
+    if (InterpolationOption::interpolation)
+      interpTree->executeAbstractBinaryDependency(i, result, left, right);
+#endif
     break;
   }
 
   case Instruction::Sub: {
     ref<Expr> left = eval(ki, 0, state).value;
     ref<Expr> right = eval(ki, 1, state).value;
-    bindLocal(ki, state, SubExpr::create(left, right));
+    ref<Expr> result = SubExpr::create(left, right);
+    bindLocal(ki, state, result);
+
+#ifdef SUPPORT_Z3
+    // Update dependency
+    if (InterpolationOption::interpolation)
+      interpTree->executeAbstractBinaryDependency(i, result, left, right);
+#endif
     break;
   }
  
   case Instruction::Mul: {
     ref<Expr> left = eval(ki, 0, state).value;
     ref<Expr> right = eval(ki, 1, state).value;
-    bindLocal(ki, state, MulExpr::create(left, right));
+    ref<Expr> result = MulExpr::create(left, right);
+    bindLocal(ki, state, result);
+
+#ifdef SUPPORT_Z3
+    // Update dependency
+    if (InterpolationOption::interpolation)
+      interpTree->executeAbstractBinaryDependency(i, result, left, right);
+#endif
     break;
   }
 
@@ -1781,6 +1899,12 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = UDivExpr::create(left, right);
     bindLocal(ki, state, result);
+
+#ifdef SUPPORT_Z3
+    // Update dependency
+    if (InterpolationOption::interpolation)
+      interpTree->executeAbstractBinaryDependency(i, result, left, right);
+#endif
     break;
   }
 
@@ -1789,6 +1913,12 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = SDivExpr::create(left, right);
     bindLocal(ki, state, result);
+
+#ifdef SUPPORT_Z3
+    // Update dependency
+    if (InterpolationOption::interpolation)
+      interpTree->executeAbstractBinaryDependency(i, result, left, right);
+#endif
     break;
   }
 
@@ -1797,6 +1927,12 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = URemExpr::create(left, right);
     bindLocal(ki, state, result);
+
+#ifdef SUPPORT_Z3
+    // Update dependency
+    if (InterpolationOption::interpolation)
+      interpTree->executeAbstractBinaryDependency(i, result, left, right);
+#endif
     break;
   }
  
@@ -1805,6 +1941,12 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = SRemExpr::create(left, right);
     bindLocal(ki, state, result);
+
+#ifdef SUPPORT_Z3
+    // Update dependency
+    if (InterpolationOption::interpolation)
+      interpTree->executeAbstractBinaryDependency(i, result, left, right);
+#endif
     break;
   }
 
@@ -1813,6 +1955,12 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = AndExpr::create(left, right);
     bindLocal(ki, state, result);
+
+#ifdef SUPPORT_Z3
+    // Update dependency
+    if (InterpolationOption::interpolation)
+      interpTree->executeAbstractBinaryDependency(i, result, left, right);
+#endif
     break;
   }
 
@@ -1821,6 +1969,12 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = OrExpr::create(left, right);
     bindLocal(ki, state, result);
+
+#ifdef SUPPORT_Z3
+    // Update dependency
+    if (InterpolationOption::interpolation)
+      interpTree->executeAbstractBinaryDependency(i, result, left, right);
+#endif
     break;
   }
 
@@ -1829,6 +1983,12 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = XorExpr::create(left, right);
     bindLocal(ki, state, result);
+
+#ifdef SUPPORT_Z3
+    // Update dependency
+    if (InterpolationOption::interpolation)
+      interpTree->executeAbstractBinaryDependency(i, result, left, right);
+#endif
     break;
   }
 
@@ -1837,6 +1997,12 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = ShlExpr::create(left, right);
     bindLocal(ki, state, result);
+
+#ifdef SUPPORT_Z3
+    // Update dependency
+    if (InterpolationOption::interpolation)
+      interpTree->executeAbstractBinaryDependency(i, result, left, right);
+#endif
     break;
   }
 
@@ -1845,6 +2011,12 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = LShrExpr::create(left, right);
     bindLocal(ki, state, result);
+
+#ifdef SUPPORT_Z3
+    // Update dependency
+    if (InterpolationOption::interpolation)
+      interpTree->executeAbstractBinaryDependency(i, result, left, right);
+#endif
     break;
   }
 
@@ -1853,6 +2025,12 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = AShrExpr::create(left, right);
     bindLocal(ki, state, result);
+
+#ifdef SUPPORT_Z3
+    // Update dependency
+    if (InterpolationOption::interpolation)
+      interpTree->executeAbstractBinaryDependency(i, result, left, right);
+#endif
     break;
   }
 
@@ -1861,84 +2039,85 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   case Instruction::ICmp: {
     CmpInst *ci = cast<CmpInst>(i);
     ICmpInst *ii = cast<ICmpInst>(ci);
- 
+    ref<Expr> result, left, right;
+
     switch(ii->getPredicate()) {
     case ICmpInst::ICMP_EQ: {
-      ref<Expr> left = eval(ki, 0, state).value;
-      ref<Expr> right = eval(ki, 1, state).value;
-      ref<Expr> result = EqExpr::create(left, right);
+      left = eval(ki, 0, state).value;
+      right = eval(ki, 1, state).value;
+      result = EqExpr::create(left, right);
       bindLocal(ki, state, result);
       break;
     }
 
     case ICmpInst::ICMP_NE: {
-      ref<Expr> left = eval(ki, 0, state).value;
-      ref<Expr> right = eval(ki, 1, state).value;
-      ref<Expr> result = NeExpr::create(left, right);
+      left = eval(ki, 0, state).value;
+      right = eval(ki, 1, state).value;
+      result = NeExpr::create(left, right);
       bindLocal(ki, state, result);
       break;
     }
 
     case ICmpInst::ICMP_UGT: {
-      ref<Expr> left = eval(ki, 0, state).value;
-      ref<Expr> right = eval(ki, 1, state).value;
-      ref<Expr> result = UgtExpr::create(left, right);
+      left = eval(ki, 0, state).value;
+      right = eval(ki, 1, state).value;
+      result = UgtExpr::create(left, right);
       bindLocal(ki, state,result);
       break;
     }
 
     case ICmpInst::ICMP_UGE: {
-      ref<Expr> left = eval(ki, 0, state).value;
-      ref<Expr> right = eval(ki, 1, state).value;
-      ref<Expr> result = UgeExpr::create(left, right);
+      left = eval(ki, 0, state).value;
+      right = eval(ki, 1, state).value;
+      result = UgeExpr::create(left, right);
       bindLocal(ki, state, result);
       break;
     }
 
     case ICmpInst::ICMP_ULT: {
-      ref<Expr> left = eval(ki, 0, state).value;
-      ref<Expr> right = eval(ki, 1, state).value;
-      ref<Expr> result = UltExpr::create(left, right);
+      left = eval(ki, 0, state).value;
+      right = eval(ki, 1, state).value;
+      result = UltExpr::create(left, right);
       bindLocal(ki, state, result);
       break;
     }
 
     case ICmpInst::ICMP_ULE: {
-      ref<Expr> left = eval(ki, 0, state).value;
-      ref<Expr> right = eval(ki, 1, state).value;
-      ref<Expr> result = UleExpr::create(left, right);
+      left = eval(ki, 0, state).value;
+      right = eval(ki, 1, state).value;
+      result = UleExpr::create(left, right);
       bindLocal(ki, state, result);
       break;
     }
 
     case ICmpInst::ICMP_SGT: {
-      ref<Expr> left = eval(ki, 0, state).value;
-      ref<Expr> right = eval(ki, 1, state).value;
-      ref<Expr> result = SgtExpr::create(left, right);
+      left = eval(ki, 0, state).value;
+      right = eval(ki, 1, state).value;
+      result = SgtExpr::create(left, right);
       bindLocal(ki, state, result);
       break;
     }
 
     case ICmpInst::ICMP_SGE: {
-      ref<Expr> left = eval(ki, 0, state).value;
-      ref<Expr> right = eval(ki, 1, state).value;
-      ref<Expr> result = SgeExpr::create(left, right);
+      left = eval(ki, 0, state).value;
+      right = eval(ki, 1, state).value;
+      result = SgeExpr::create(left, right);
       bindLocal(ki, state, result);
       break;
     }
 
     case ICmpInst::ICMP_SLT: {
-      ref<Expr> left = eval(ki, 0, state).value;
-      ref<Expr> right = eval(ki, 1, state).value;
-      ref<Expr> result = SltExpr::create(left, right);
+      left = eval(ki, 0, state).value;
+      right = eval(ki, 1, state).value;
+      result = SltExpr::create(left, right);
       bindLocal(ki, state, result);
       break;
     }
 
     case ICmpInst::ICMP_SLE: {
-      ref<Expr> left = eval(ki, 0, state).value;
-      ref<Expr> right = eval(ki, 1, state).value;
-      ref<Expr> result = SleExpr::create(left, right);
+      left = eval(ki, 0, state).value;
+      right = eval(ki, 1, state).value;
+      result = SleExpr::create(left, right);
       bindLocal(ki, state, result);
       break;
     }
@@ -1946,6 +2125,12 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     default:
       terminateStateOnExecError(state, "invalid ICmp predicate");
     }
+
+#ifdef SUPPORT_Z3
+    // Update dependency
+    if (InterpolationOption::interpolation)
+      interpTree->executeAbstractBinaryDependency(i, result, left, right);
+#endif
     break;
   }
  
@@ -1973,7 +2158,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   case Instruction::Store: {
     ref<Expr> base = eval(ki, 1, state).value;
     ref<Expr> value = eval(ki, 0, state).value;
-    executeMemoryOperation(state, true, base, value, 0);
+    executeMemoryOperation(state, true, base, value, ki);
     break;
   }
 
@@ -1994,6 +2179,12 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       base = AddExpr::create(base,
                              Expr::createPointer(kgepi->offset));
     bindLocal(ki, state, base);
+
+#ifdef SUPPORT_Z3
+    // Update dependency
+    if (InterpolationOption::interpolation)
+      interpTree->executeAbstractDependency(i, base);
+#endif
     break;
   }
 
@@ -2004,6 +2195,12 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
                                            0,
                                            getWidthForLLVMType(ci->getType()));
     bindLocal(ki, state, result);
+
+#ifdef SUPPORT_Z3
+    // Update dependency
+    if (InterpolationOption::interpolation)
+      interpTree->executeAbstractDependency(i, result);
+#endif
     break;
   }
   case Instruction::ZExt: {
@@ -2011,6 +2208,12 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = ZExtExpr::create(eval(ki, 0, state).value,
                                         getWidthForLLVMType(ci->getType()));
     bindLocal(ki, state, result);
+
+#ifdef SUPPORT_Z3
+    // Update dependency
+    if (InterpolationOption::interpolation)
+      interpTree->executeAbstractDependency(i, result);
+#endif
     break;
   }
   case Instruction::SExt: {
@@ -2018,6 +2221,12 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = SExtExpr::create(eval(ki, 0, state).value,
                                         getWidthForLLVMType(ci->getType()));
     bindLocal(ki, state, result);
+
+#ifdef SUPPORT_Z3
+    // Update dependency
+    if (InterpolationOption::interpolation)
+      interpTree->executeAbstractDependency(i, result);
+#endif
     break;
   }
 
@@ -2025,20 +2234,40 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     CastInst *ci = cast<CastInst>(i);
     Expr::Width pType = getWidthForLLVMType(ci->getType());
     ref<Expr> arg = eval(ki, 0, state).value;
-    bindLocal(ki, state, ZExtExpr::create(arg, pType));
+    ref<Expr> result = ZExtExpr::create(arg, pType);
+    bindLocal(ki, state, result);
+
+#ifdef SUPPORT_Z3
+    // Update dependency
+    if (InterpolationOption::interpolation)
+      interpTree->executeAbstractDependency(i, result);
+#endif
     break;
   } 
   case Instruction::PtrToInt: {
     CastInst *ci = cast<CastInst>(i);
     Expr::Width iType = getWidthForLLVMType(ci->getType());
     ref<Expr> arg = eval(ki, 0, state).value;
-    bindLocal(ki, state, ZExtExpr::create(arg, iType));
+    ref<Expr> result = ZExtExpr::create(arg, iType);
+    bindLocal(ki, state, result);
+
+#ifdef SUPPORT_Z3
+    // Update dependency
+    if (InterpolationOption::interpolation)
+      interpTree->executeAbstractDependency(i, result);
+#endif
     break;
   }
 
   case Instruction::BitCast: {
     ref<Expr> result = eval(ki, 0, state).value;
     bindLocal(ki, state, result);
+
+#ifdef SUPPORT_Z3
+    // Update dependency
+    if (InterpolationOption::interpolation)
+      interpTree->executeAbstractDependency(i, result);
+#endif
     break;
   }
 
@@ -2060,7 +2289,14 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     llvm::APFloat Res(left->getAPValue());
     Res.add(APFloat(right->getAPValue()), APFloat::rmNearestTiesToEven);
 #endif
-    bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
+    ref<Expr> result = ConstantExpr::alloc(Res.bitcastToAPInt());
+    bindLocal(ki, state, result);
+
+#ifdef SUPPORT_Z3
+    // Update dependency
+    if (InterpolationOption::interpolation)
+      interpTree->executeAbstractBinaryDependency(i, result, left, right);
+#endif
     break;
   }
 
@@ -2079,7 +2315,14 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     llvm::APFloat Res(left->getAPValue());
     Res.subtract(APFloat(right->getAPValue()), APFloat::rmNearestTiesToEven);
 #endif
-    bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
+    ref<Expr> result = ConstantExpr::alloc(Res.bitcastToAPInt());
+    bindLocal(ki, state, result);
+
+#ifdef SUPPORT_Z3
+    // Update dependency
+    if (InterpolationOption::interpolation)
+      interpTree->executeAbstractBinaryDependency(i, result, left, right);
+#endif
     break;
   }
  
@@ -2099,7 +2342,14 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     llvm::APFloat Res(left->getAPValue());
     Res.multiply(APFloat(right->getAPValue()), APFloat::rmNearestTiesToEven);
 #endif
-    bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
+    ref<Expr> result = ConstantExpr::alloc(Res.bitcastToAPInt());
+    bindLocal(ki, state, result);
+
+#ifdef SUPPORT_Z3
+    // Update dependency
+    if (InterpolationOption::interpolation)
+      interpTree->executeAbstractBinaryDependency(i, result, left, right);
+#endif
     break;
   }
 
@@ -2119,7 +2369,14 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     llvm::APFloat Res(left->getAPValue());
     Res.divide(APFloat(right->getAPValue()), APFloat::rmNearestTiesToEven);
 #endif
-    bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
+    ref<Expr> result = ConstantExpr::alloc(Res.bitcastToAPInt());
+    bindLocal(ki, state, result);
+
+#ifdef SUPPORT_Z3
+    // Update dependency
+    if (InterpolationOption::interpolation)
+      interpTree->executeAbstractBinaryDependency(i, result, left, right);
+#endif
     break;
   }
 
@@ -2139,7 +2396,14 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     llvm::APFloat Res(left->getAPValue());
     Res.mod(APFloat(right->getAPValue()), APFloat::rmNearestTiesToEven);
 #endif
-    bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
+    ref<Expr> result = ConstantExpr::alloc(Res.bitcastToAPInt());
+    bindLocal(ki, state, result);
+
+#ifdef SUPPORT_Z3
+    // Update dependency
+    if (InterpolationOption::interpolation)
+      interpTree->executeAbstractBinaryDependency(i, result, left, right);
+#endif
     break;
   }
 
@@ -2160,7 +2424,14 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     Res.convert(*fpWidthToSemantics(resultType),
                 llvm::APFloat::rmNearestTiesToEven,
                 &losesInfo);
-    bindLocal(ki, state, ConstantExpr::alloc(Res));
+    ref<Expr> result = ConstantExpr::alloc(Res);
+    bindLocal(ki, state, result);
+
+#ifdef SUPPORT_Z3
+    // Update dependency
+    if (InterpolationOption::interpolation)
+      interpTree->executeAbstractDependency(i, result);
+#endif
     break;
   }
 
@@ -2180,7 +2451,14 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     Res.convert(*fpWidthToSemantics(resultType),
                 llvm::APFloat::rmNearestTiesToEven,
                 &losesInfo);
-    bindLocal(ki, state, ConstantExpr::alloc(Res));
+    ref<Expr> result = ConstantExpr::alloc(Res);
+    bindLocal(ki, state, result);
+
+#ifdef SUPPORT_Z3
+    // Update dependency
+    if (InterpolationOption::interpolation)
+      interpTree->executeAbstractDependency(i, result);
+#endif
     break;
   }
 
@@ -2201,7 +2479,14 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bool isExact = true;
     Arg.convertToInteger(&value, resultType, false,
                          llvm::APFloat::rmTowardZero, &isExact);
-    bindLocal(ki, state, ConstantExpr::alloc(value, resultType));
+    ref<Expr> result = ConstantExpr::alloc(value, resultType);
+    bindLocal(ki, state, result);
+
+#ifdef SUPPORT_Z3
+    // Update dependency
+    if (InterpolationOption::interpolation)
+      interpTree->executeAbstractDependency(i, result);
+#endif
     break;
   }
 
@@ -2222,7 +2507,14 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bool isExact = true;
     Arg.convertToInteger(&value, resultType, true,
                          llvm::APFloat::rmTowardZero, &isExact);
-    bindLocal(ki, state, ConstantExpr::alloc(value, resultType));
+    ref<Expr> result = ConstantExpr::alloc(value, resultType);
+    bindLocal(ki, state, result);
+
+#ifdef SUPPORT_Z3
+    // Update dependency
+    if (InterpolationOption::interpolation)
+      interpTree->executeAbstractDependency(i, result);
+#endif
     break;
   }
 
@@ -2238,7 +2530,14 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     f.convertFromAPInt(arg->getAPValue(), false,
                        llvm::APFloat::rmNearestTiesToEven);
 
-    bindLocal(ki, state, ConstantExpr::alloc(f));
+    ref<Expr> result = ConstantExpr::alloc(f);
+    bindLocal(ki, state, result);
+
+#ifdef SUPPORT_Z3
+    // Update dependency
+    if (InterpolationOption::interpolation)
+      interpTree->executeAbstractDependency(i, result);
+#endif
     break;
   }
 
@@ -2254,7 +2553,14 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     f.convertFromAPInt(arg->getAPValue(), true,
                        llvm::APFloat::rmNearestTiesToEven);
 
-    bindLocal(ki, state, ConstantExpr::alloc(f));
+    ref<Expr> result = ConstantExpr::alloc(f);
+    bindLocal(ki, state, result);
+
+#ifdef SUPPORT_Z3
+    // Update dependency
+    if (InterpolationOption::interpolation)
+      interpTree->executeAbstractDependency(i, result);
+#endif
     break;
   }
 
@@ -2352,7 +2658,14 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       break;
     }
 
-    bindLocal(ki, state, ConstantExpr::alloc(Result, Expr::Bool));
+    ref<Expr> result = ConstantExpr::alloc(Result, Expr::Bool);
+    bindLocal(ki, state, result);
+
+#ifdef SUPPORT_Z3
+    // Update dependency
+    if (InterpolationOption::interpolation)
+      interpTree->executeAbstractBinaryDependency(i, result, left, right);
+#endif
     break;
   }
   case Instruction::InsertValue: {
@@ -2380,6 +2693,12 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       result = val;
 
     bindLocal(ki, state, result);
+
+#ifdef SUPPORT_Z3
+    // Update dependency
+    if (InterpolationOption::interpolation)
+      interpTree->executeAbstractBinaryDependency(i, result, agg, val);
+#endif
     break;
   }
   case Instruction::ExtractValue: {
@@ -2390,6 +2709,12 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = ExtractExpr::create(agg, kgepi->offset*8, getWidthForLLVMType(i->getType()));
 
     bindLocal(ki, state, result);
+
+#ifdef SUPPORT_Z3
+    // Update dependency
+    if (InterpolationOption::interpolation)
+      interpTree->executeAbstractDependency(i, result);
+#endif
     break;
   }
  
@@ -2428,6 +2753,10 @@ void Executor::updateStates(ExecutionState *current) {
     if (it3 != seedMap.end())
       seedMap.erase(it3);
     processTree->remove(es->ptreeNode);
+#ifdef SUPPORT_Z3
+    if (InterpolationOption::interpolation)
+      interpTree->remove(es->itreeNode);
+#endif
     delete es;
   }
   removedStates.clear();
@@ -2496,6 +2825,7 @@ void Executor::bindModuleConstants() {
 }
 
 void Executor::run(ExecutionState &initialState) {
+
   bindModuleConstants();
 
   // Delay init till now so that ticks don't accrue during
@@ -2574,46 +2904,74 @@ void Executor::run(ExecutionState &initialState) {
 
   while (!states.empty() && !haltExecution) {
     ExecutionState &state = searcher->selectState();
-    KInstruction *ki = state.pc;
-    stepInstruction(state);
 
-    executeInstruction(state, ki);
-    processTimers(&state, MaxInstructionTime);
+#ifdef SUPPORT_Z3
+    if (InterpolationOption::interpolation) {
+      // We synchronize the node id to that of the state. The node id
+      // is set only when it was the address of the first instruction
+      // in the node.
+      state.itreeNode->setNodeLocation(reinterpret_cast<uintptr_t>(state.pc->inst));
+      interpTree->setCurrentINode(state.itreeNode);
 
-    if (MaxMemory) {
-      if ((stats::instructions & 0xFFFF) == 0) {
-        // We need to avoid calling GetMallocUsage() often because it
-        // is O(elts on freelist). This is really bad since we start
-        // to pummel the freelist once we hit the memory cap.
-        unsigned mbs = util::GetTotalMallocUsage() >> 20;
-        if (mbs > MaxMemory) {
-          if (mbs > MaxMemory + 100) {
-            // just guess at how many to kill
-            unsigned numStates = states.size();
-            unsigned toKill = std::max(1U, numStates - numStates*MaxMemory/mbs);
+      // Uncomment the following statements to show the state
+      // of the interpolation tree and the active node.
 
-            klee_warning("killing %d states (over memory cap)", toKill);
-
-            std::vector<ExecutionState*> arr(states.begin(), states.end());
-            for (unsigned i=0,N=arr.size(); N && i<toKill; ++i,--N) {
-              unsigned idx = rand() % N;
-
-              // Make two pulls to try and not hit a state that
-              // covered new code.
-              if (arr[idx]->coveredNew)
-                idx = rand() % N;
-
-              std::swap(arr[idx], arr[N-1]);
-              terminateStateEarly(*arr[N-1], "Memory limit exceeded.");
-            }
-          }
-          atMemoryLimit = true;
-        } else {
-          atMemoryLimit = false;
-        }
-      }
+      // llvm::errs() << "\nCurrent state:\n";
+      // processTree->dump();
+      // interpTree->dump();
+      // state.itreeNode->dump();
+      // llvm::errs() << "------------------- Executing New Instruction "
+      //                 "-----------------------\n";
+      // state.pc->inst->dump();
     }
 
+    if (InterpolationOption::interpolation &&
+        interpTree->checkCurrentStateSubsumption(solver, state,
+                                                 coreSolverTimeout)) {
+      terminateStateOnSubsumption(state);
+    } else
+#endif
+      {
+	KInstruction *ki = state.pc;
+	stepInstruction(state);
+
+	executeInstruction(state, ki);
+	processTimers(&state, MaxInstructionTime);
+
+	if (MaxMemory) {
+	    if ((stats::instructions & 0xFFFF) == 0) {
+		// We need to avoid calling GetMallocUsage() often because it
+		// is O(elts on freelist). This is really bad since we start
+		// to pummel the freelist once we hit the memory cap.
+		unsigned mbs = util::GetTotalMallocUsage() >> 20;
+		if (mbs > MaxMemory) {
+		    if (mbs > MaxMemory + 100) {
+			// just guess at how many to kill
+			unsigned numStates = states.size();
+			unsigned toKill = std::max(1U, numStates - numStates*MaxMemory/mbs);
+
+			klee_warning("killing %d states (over memory cap)", toKill);
+
+			std::vector<ExecutionState*> arr(states.begin(), states.end());
+			for (unsigned i=0,N=arr.size(); N && i<toKill; ++i,--N) {
+			    unsigned idx = rand() % N;
+
+			    // Make two pulls to try and not hit a state that
+			    // covered new code.
+			    if (arr[idx]->coveredNew)
+			      idx = rand() % N;
+
+			    std::swap(arr[idx], arr[N-1]);
+			    terminateStateEarly(*arr[N-1], "Memory limit exceeded.");
+			}
+		    }
+		    atMemoryLimit = true;
+		} else {
+		    atMemoryLimit = false;
+		}
+	    }
+	}
+      }
     updateStates(&state);
   }
 
@@ -2705,23 +3063,50 @@ void Executor::terminateState(ExecutionState &state) {
       seedMap.erase(it3);
     addedStates.erase(it);
     processTree->remove(state.ptreeNode);
+#ifdef SUPPORT_Z3
+    if (InterpolationOption::interpolation)
+      interpTree->remove(state.itreeNode);
+#endif
     delete &state;
   }
 }
 
+#ifdef SUPPORT_Z3
+void Executor::terminateStateOnSubsumption(ExecutionState &state) {
+  assert (InterpolationOption::interpolation);
+
+  // Implementationwise, basically the same as terminateStateEarly method,
+  // but with different statistics functions called, and empty error
+  // message as this is not an error.
+  interpreterHandler->incSubsumptionTermination();
+  if (!OnlyOutputStatesCoveringNew || state.coveredNew ||
+      (AlwaysOutputSeeds && seedMap.count(&state))) {
+    interpreterHandler->incSubsumptionTerminationTest();
+    interpreterHandler->processTestCase(state, 0, "early");
+  }
+  terminateState(state);
+}
+#endif /* SUPPORT_Z3 */
+
 void Executor::terminateStateEarly(ExecutionState &state, 
                                    const Twine &message) {
+  interpreterHandler->incEarlyTermination();
   if (!OnlyOutputStatesCoveringNew || state.coveredNew ||
-      (AlwaysOutputSeeds && seedMap.count(&state)))
+      (AlwaysOutputSeeds && seedMap.count(&state))) {
+    interpreterHandler->incEarlyTerminationTest();
     interpreterHandler->processTestCase(state, (message + "\n").str().c_str(),
                                         "early");
+  }
   terminateState(state);
 }
 
 void Executor::terminateStateOnExit(ExecutionState &state) {
+  interpreterHandler->incExitTermination();
   if (!OnlyOutputStatesCoveringNew || state.coveredNew || 
-      (AlwaysOutputSeeds && seedMap.count(&state)))
+      (AlwaysOutputSeeds && seedMap.count(&state))) {
+    interpreterHandler->incExitTerminationTest();
     interpreterHandler->processTestCase(state, 0, 0);
+  }
   terminateState(state);
 }
 
@@ -2771,6 +3156,8 @@ void Executor::terminateStateOnError(ExecutionState &state,
                                      const llvm::Twine &messaget,
                                      const char *suffix,
                                      const llvm::Twine &info) {
+  interpreterHandler->incErrorTermination();
+
   std::string message = messaget.str();
   static std::set< std::pair<Instruction*, std::string> > emittedErrors;
   Instruction * lastInst;
@@ -2801,6 +3188,7 @@ void Executor::terminateStateOnError(ExecutionState &state,
     if (info_str != "")
       msg << "Info: \n" << info_str;
 
+    interpreterHandler->incErrorTerminationTest();
     interpreterHandler->processTestCase(state, msg.str().c_str(), suffix);
   }
     
@@ -2922,12 +3310,23 @@ ref<Expr> Executor::replaceReadWithSymbolic(ExecutionState &state,
   // and return it.
   
   static unsigned id;
-  const Array *array = Array::CreateArray("rrws_arr" + llvm::utostr(++id),
-					  Expr::getMinBytesForWidth(e->getWidth()));
+  const std::string arrayName("rrws_arr" + llvm::utostr(++id));
+  const unsigned arrayWidth(Expr::getMinBytesForWidth(e->getWidth()));
+  const Array *array = arrayCache.CreateArray(arrayName, arrayWidth);
   ref<Expr> res = Expr::createTempRead(array, e->getWidth());
   ref<Expr> eq = NotOptimizedExpr::create(EqExpr::create(e, res));
   llvm::errs() << "Making symbolic: " << eq << "\n";
   state.addConstraint(eq);
+
+#ifdef SUPPORT_Z3
+    if (InterpolationOption::interpolation) {
+      // We create shadow array as existentially-quantified
+      // variables for subsumption checking
+      const Array *shadow = arrayCache.CreateArray(ShadowArray::getShadowName(arrayName), arrayWidth);
+      ShadowArray::addShadowArrayMap(array, shadow);
+    }
+#endif
+
   return res;
 }
 
@@ -2969,7 +3368,13 @@ void Executor::executeAlloc(ExecutionState &state,
         os->initializeToRandom();
       }
       bindLocal(target, state, mo->getBaseExpr());
-      
+
+#ifdef SUPPORT_Z3
+      // Update dependency
+      if (InterpolationOption::interpolation)
+        interpTree->executeAbstractDependency(target->inst, mo->getBaseExpr());
+#endif
+
       if (reallocFrom) {
         unsigned count = std::min(reallocFrom->size, os->size);
         for (unsigned i=0; i<count; i++)
@@ -3033,8 +3438,14 @@ void Executor::executeAlloc(ExecutionState &state,
                true);
         if (hugeSize.first) {
           klee_message("NOTE: found huge malloc, returning 0");
-          bindLocal(target, *hugeSize.first, 
-                    ConstantExpr::alloc(0, Context::get().getPointerWidth()));
+          ref<Expr> result =
+              ConstantExpr::alloc(0, Context::get().getPointerWidth());
+          bindLocal(target, *hugeSize.first, result);
+#ifdef SUPPORT_Z3
+          // Update dependency
+          if (InterpolationOption::interpolation)
+            interpTree->executeAbstractDependency(target->inst, result);
+#endif
         }
         
         if (hugeSize.second) {
@@ -3123,11 +3534,10 @@ void Executor::resolveExact(ExecutionState &state,
   }
 }
 
-void Executor::executeMemoryOperation(ExecutionState &state,
-                                      bool isWrite,
+void Executor::executeMemoryOperation(ExecutionState &state, bool isWrite,
                                       ref<Expr> address,
                                       ref<Expr> value /* undef if read */,
-                                      KInstruction *target /* undef if write */) {
+                                      KInstruction *target) {
   Expr::Width type = (isWrite ? value->getWidth() : 
                      getWidthForLLVMType(target->inst->getType()));
   unsigned bytes = Expr::getMinBytesForWidth(type);
@@ -3180,14 +3590,28 @@ void Executor::executeMemoryOperation(ExecutionState &state,
         } else {
           ObjectState *wos = state.addressSpace.getWriteable(mo, os);
           wos->write(offset, value);
+
+#ifdef SUPPORT_Z3
+          // Update dependency
+          if (InterpolationOption::interpolation && target)
+            interpTree->executeAbstractMemoryDependency(target->inst, value,
+                                                        address);
+#endif
         }          
       } else {
         ref<Expr> result = os->read(offset, type);
         
         if (interpreterOpts.MakeConcreteSymbolic)
           result = replaceReadWithSymbolic(state, result);
-        
+
         bindLocal(target, state, result);
+
+#ifdef SUPPORT_Z3
+        // Update dependency
+        if (InterpolationOption::interpolation && target)
+          interpTree->executeAbstractMemoryDependency(target->inst, result,
+                                                      address);
+#endif
       }
 
       return;
@@ -3205,12 +3629,12 @@ void Executor::executeMemoryOperation(ExecutionState &state,
   
   // XXX there is some query wasteage here. who cares?
   ExecutionState *unbound = &state;
-  
+
   for (ResolutionList::iterator i = rl.begin(), ie = rl.end(); i != ie; ++i) {
     const MemoryObject *mo = i->first;
     const ObjectState *os = i->second;
     ref<Expr> inBounds = mo->getBoundsCheckPointer(address, bytes);
-    
+
     StatePair branches = fork(*unbound, inBounds, true);
     ExecutionState *bound = branches.first;
 
@@ -3235,7 +3659,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
     if (!unbound)
       break;
   }
-  
+
   // XXX should we distinguish out of bounds and overlapped cases?
   if (unbound) {
     if (incomplete) {
@@ -3261,7 +3685,17 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
     while (!state.arrayNames.insert(uniqueName).second) {
       uniqueName = name + "_" + llvm::utostr(++id);
     }
-    const Array *array = Array::CreateArray(uniqueName, mo->size);
+    const Array *array = arrayCache.CreateArray(uniqueName, mo->size);
+#ifdef SUPPORT_Z3
+    if (InterpolationOption::interpolation) {
+      // We create shadow array as existentially-quantified
+      // variables for subsumption checking
+      const Array *shadow =
+          arrayCache.CreateArray(ShadowArray::getShadowName(uniqueName), mo->size);
+      ShadowArray::addShadowArrayMap(array, shadow);
+    }
+#endif
+
     bindObjectInState(state, mo, false, array);
     state.addSymbolic(mo, array);
     
@@ -3333,6 +3767,17 @@ void Executor::runFunctionAsMain(Function *f,
 				 int argc,
 				 char **argv,
 				 char **envp) {
+
+#ifdef SUPPORT_Z3
+  if (NoInterpolation ||
+#ifdef SUPPORT_STP
+      SelectSolver != SOLVER_Z3
+#endif
+      )
+    // We globally declare that we don't do interpolation
+    InterpolationOption::interpolation = false;
+#endif /* SUPPORT_Z3 */
+
   std::vector<ref<Expr> > arguments;
 
   // force deterministic initialization of memory objects
@@ -3413,14 +3858,29 @@ void Executor::runFunctionAsMain(Function *f,
 
   processTree = new PTree(state);
   state->ptreeNode = processTree->root;
+
+#ifdef SUPPORT_Z3
+  if (InterpolationOption::interpolation) {
+    interpTree = new ITree(state);//added by Felicia
+    state->itreeNode = interpTree->root;
+  }
+#endif
+
   run(*state);
   delete processTree;
   processTree = 0;
 
+#ifdef SUPPORT_Z3
+  if (InterpolationOption::interpolation) {
+    delete interpTree;
+    interpTree = 0;
+  }
+#endif
+
   // hack to clear memory objects
   delete memory;
-  memory = new MemoryManager();
-  
+  memory = new MemoryManager(NULL);
+
   globalObjects.clear();
   globalAddresses.clear();
 
@@ -3523,7 +3983,7 @@ bool Executor::getSymbolicSolution(const ExecutionState &state,
                              ConstantExpr::alloc(0, Expr::Bool));
     return false;
   }
-  
+
   for (unsigned i = 0; i != state.symbolics.size(); ++i)
     res.push_back(std::make_pair(state.symbolics[i].first->name, values[i]));
   return true;
@@ -3537,6 +3997,7 @@ void Executor::getCoveredLines(const ExecutionState &state,
 void Executor::doImpliedValueConcretization(ExecutionState &state,
                                             ref<Expr> e,
                                             ref<ConstantExpr> value) {
+
   abort(); // FIXME: Broken until we sort out how to do the write back.
 
   if (DebugCheckForImpliedValues)

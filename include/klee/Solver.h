@@ -42,6 +42,9 @@ namespace klee {
     Query negateExpr() const {
       return withExpr(Expr::createIsZero(expr));
     }
+
+    /// Dump query
+    void dump() const ;
   };
 
   class Solver {
@@ -197,9 +200,17 @@ namespace klee {
     
     virtual char *getConstraintLog(const Query& query);
     virtual void setCoreSolverTimeout(double timeout);
+
+    /// getUnsatCore - get the unsatisfiability core. Beware that the unsat core
+    /// is only available with certain solvers, e.g., Z3, and even so, may not
+    /// be always available in unsatisfiability cases when wrapped in e.g.,
+    /// IncompleteSolver (which may replace the core Z3 solver).
+    ///
+    /// \return Vector of ref<Expr>
+    virtual std::vector< ref<Expr> > getUnsatCore();
   };
 
-#ifndef SUPPORT_Z3
+  #ifdef SUPPORT_STP
   /// STPSolver - A complete solver based on STP.
   class STPSolver : public Solver {
   public:
@@ -219,7 +230,7 @@ namespace klee {
 	/// is off.
 	virtual void setCoreSolverTimeout(double timeout);
   };
-#endif /* SUPPORT_Z3 */
+  #endif /*SUPPORT_STP */
 
 #ifdef SUPPORT_Z3
   /// Z3Solver - A solver complete solver based on Z3
@@ -235,6 +246,7 @@ namespace klee {
 	/// setCoreSolverTimeout - Set constraint solver timeout delay to the given value; 0
 	/// is off.
 	virtual void setCoreSolverTimeout(double timeout);
+
   };
 #endif /* SUPPORT_Z3 */
   

@@ -12,7 +12,7 @@
 
 #include "klee/Expr.h"
 #include "klee/TimerStatIncrementer.h"
-#include "SolverStats.h"
+#include "klee/SolverStats.h"
 
 #include <map>
 
