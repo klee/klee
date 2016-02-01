@@ -1072,6 +1072,8 @@ SolverImpl::SolverRunStatus Z3SolverImpl::runAndGetCex(Z3Builder *builder, Z3_so
                                                        bool &hasSolution) {
   Z3_solver_assert(builder->ctx, the_solver, Z3_mk_not(builder->ctx, q));
 
+  llvm::errs() << "Solving: " << Z3_solver_to_string(builder->ctx, the_solver) << "\n";
+
   switch (Z3_solver_check(builder->ctx, the_solver)) {
     case Z3_L_TRUE: {
       /// The assertion is satisfiable (see Z3 API manual)
