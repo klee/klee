@@ -68,15 +68,17 @@ bool PathCondition::carInInterpolant() const {
   return inInterpolant;
 }
 
-std::vector< ref<Expr> > PathCondition::packInterpolant() {
+std::vector<ref<Expr> >
+PathCondition::packInterpolant(std::vector<const Array *> &replacements) {
   std::vector< ref<Expr> > res;
   for (PathCondition *it = this; it != 0; it = it->tail) {
       if (it->inInterpolant) {
 	  if (!it->shadowed) {
-	      it->shadowConstraint = ShadowArray::getShadowExpression(it->constraint);
-	      it->shadowed = true;
-	  }
-	  res.push_back(it->shadowConstraint);
+            it->shadowConstraint =
+                ShadowArray::getShadowExpression(it->constraint, replacements);
+            it->shadowed = true;
+          }
+          res.push_back(it->shadowConstraint);
       }
   }
   return res;
@@ -100,9 +102,12 @@ void PathCondition::print(llvm::raw_ostream& stream) {
 /**/
 
 SubsumptionTableEntry::SubsumptionTableEntry(ITreeNode *node)
-    : nodeId(node->getNodeId()), interpolant(node->getInterpolant()),
-      singletonStore(node->getLatestCoreExpressions(true)),
-      compositeStore(node->getCompositeCoreExpressions(true)) {
+    : nodeId(node->getNodeId()) {
+  std::vector<const Array *> replacements;
+
+  interpolant = node->getInterpolant(replacements);
+
+  singletonStore = node->getLatestInterpolantCoreExpressions(replacements);
   for (std::map<llvm::Value *, ref<Expr> >::iterator
            it = singletonStore.begin(),
            itEnd = singletonStore.end();
@@ -110,12 +115,15 @@ SubsumptionTableEntry::SubsumptionTableEntry(ITreeNode *node)
     singletonStoreKeys.push_back(it->first);
   }
 
+  compositeStore = node->getCompositeInterpolantCoreExpressions(replacements);
   for (std::map<llvm::Value *, std::vector<ref<Expr> > >::iterator
            it = compositeStore.begin(),
            itEnd = compositeStore.end();
        it != itEnd; ++it) {
     compositeStoreKeys.push_back(it->first);
   }
+
+  existentials = replacements;
 }
 
 SubsumptionTableEntry::~SubsumptionTableEntry() {}
@@ -502,8 +510,9 @@ ITreeNode::~ITreeNode() {
 
 uintptr_t ITreeNode::getNodeId() { return nodeId; }
 
-std::vector< ref<Expr> > ITreeNode::getInterpolant() const {
-  return this->pathCondition->packInterpolant();
+std::vector<ref<Expr> >
+ITreeNode::getInterpolant(std::vector<const Array *> &replacements) const {
+  return this->pathCondition->packInterpolant(replacements);
 }
 
 void ITreeNode::setNodeLocation(uintptr_t programPoint) {
@@ -571,26 +580,56 @@ void ITreeNode::popAbstractDependencyFrame(llvm::CallInst *site,
 }
 
 std::map<llvm::Value *, ref<Expr> >
-ITreeNode::getLatestCoreExpressions(bool interpolantValueOnly) const {
+ITreeNode::getLatestCoreExpressions() const {
+  std::map<llvm::Value *, ref<Expr> > ret;
+  std::vector<const Array *> dummyReplacements;
+
+  // Since a program point index is a first statement in a basic block,
+  // the allocations to be stored in subsumption table should be obtained
+  // from the parent node.
+  if (parent)
+    ret =
+        parent->dependency->getLatestCoreExpressions(dummyReplacements, false);
+  return ret;
+}
+
+std::map<llvm::Value *, std::vector<ref<Expr> > >
+ITreeNode::getCompositeCoreExpressions() const {
+  std::map<llvm::Value *, std::vector<ref<Expr> > > ret;
+  std::vector<const Array *> dummyReplacements;
+
+  // Since a program point index is a first statement in a basic block,
+  // the allocations to be stored in subsumption table should be obtained
+  // from the parent node.
+  if (parent)
+    ret = parent->dependency->getCompositeCoreExpressions(dummyReplacements,
+                                                          false);
+  return ret;
+}
+
+std::map<llvm::Value *, ref<Expr> >
+ITreeNode::getLatestInterpolantCoreExpressions(
+    std::vector<const Array *> &replacements) const {
   std::map<llvm::Value *, ref<Expr> > ret;
 
   // Since a program point index is a first statement in a basic block,
   // the allocations to be stored in subsumption table should be obtained
   // from the parent node.
   if (parent)
-    ret = parent->dependency->getLatestCoreExpressions(interpolantValueOnly);
+    ret = parent->dependency->getLatestCoreExpressions(replacements, true);
   return ret;
 }
 
 std::map<llvm::Value *, std::vector<ref<Expr> > >
-ITreeNode::getCompositeCoreExpressions(bool interpolantValueOnly) const {
+ITreeNode::getCompositeInterpolantCoreExpressions(
+    std::vector<const Array *> &replacements) const {
   std::map<llvm::Value *, std::vector<ref<Expr> > > ret;
 
   // Since a program point index is a first statement in a basic block,
   // the allocations to be stored in subsumption table should be obtained
   // from the parent node.
   if (parent)
-    ret = parent->dependency->getCompositeCoreExpressions(interpolantValueOnly);
+    ret = parent->dependency->getCompositeCoreExpressions(replacements, true);
   return ret;
 }
 

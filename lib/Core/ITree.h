@@ -66,7 +66,8 @@ namespace klee {
 
     bool carInInterpolant() const;
 
-    std::vector< ref<Expr> > packInterpolant();
+    std::vector<ref<Expr> >
+    packInterpolant(std::vector<const Array *> &replacements);
 
     void dump();
 
@@ -100,6 +101,8 @@ namespace klee {
     std::map<llvm::Value *, std::vector<ref<Expr> > > compositeStore;
 
     std::vector<llvm::Value *> compositeStoreKeys;
+
+    std::vector<const Array *> existentials;
 
   public:
     SubsumptionTableEntry(ITreeNode *node);
@@ -183,7 +186,8 @@ namespace klee {
   public:
     uintptr_t getNodeId();
 
-    std::vector< ref<Expr> > getInterpolant() const;
+    std::vector<ref<Expr> >
+    getInterpolant(std::vector<const Array *> &replacements) const;
 
     void setNodeLocation(uintptr_t programPoint);
 
@@ -214,11 +218,17 @@ namespace klee {
                                     llvm::Instruction *inst,
                                     ref<Expr> returnValue);
 
-    std::map<llvm::Value *, ref<Expr> >
-    getLatestCoreExpressions(bool interpolantValueOnly = false) const;
+    std::map<llvm::Value *, ref<Expr> > getLatestCoreExpressions() const;
 
     std::map<llvm::Value *, std::vector<ref<Expr> > >
-    getCompositeCoreExpressions(bool interpolantValueOnly = false) const;
+    getCompositeCoreExpressions() const;
+
+    std::map<llvm::Value *, ref<Expr> > getLatestInterpolantCoreExpressions(
+        std::vector<const Array *> &replacements) const;
+
+    std::map<llvm::Value *, std::vector<ref<Expr> > >
+    getCompositeInterpolantCoreExpressions(
+        std::vector<const Array *> &replacements) const;
 
     void computeInterpolantAllocations(AllocationGraph *g);
 
