@@ -123,6 +123,9 @@ ExecutionState::ExecutionState(const ExecutionState& state):
 
 #ifdef SUPPORT_Z3
 void ExecutionState::addITreeConstraint(ref<Expr> e, llvm::Instruction *instr) {
+  if (!InterpolationOption::interpolation)
+    return;
+
   llvm::BranchInst *binstr = llvm::dyn_cast<llvm::BranchInst>(instr);
   if (itreeNode && binstr && binstr->isConditional()) {
     itreeNode->addConstraint(e, binstr->getCondition());
