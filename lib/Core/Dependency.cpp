@@ -33,7 +33,7 @@ ShadowArray::getShadowExpression(ref<Expr> expr,
     const Array *replacementArray =
         ShadowArray::shadowArray[readExpr->updates.root];
 
-    if (std::find(replacements.begin(), replacements.end(), replacementArray) !=
+    if (std::find(replacements.begin(), replacements.end(), replacementArray) ==
         replacements.end())
       replacements.push_back(replacementArray);
 

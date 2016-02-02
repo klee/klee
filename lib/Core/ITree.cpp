@@ -258,7 +258,7 @@ void SubsumptionTableEntry::print(llvm::raw_ostream &stream) const {
   }
   stream << "]\n";
 
-  if (singletonStore.size()) {
+  if (!singletonStore.empty()) {
     stream << "singleton allocations = [";
     for (std::map<llvm::Value *, ref<Expr> >::const_iterator
              itBegin = singletonStore.begin(),
@@ -275,7 +275,7 @@ void SubsumptionTableEntry::print(llvm::raw_ostream &stream) const {
     stream << "]\n";
   }
 
-  if (compositeStore.size()) {
+  if (!compositeStore.empty()) {
     stream << "composite allocations = [";
     for (std::map<llvm::Value *, std::vector<ref<Expr> > >::const_iterator
              it0Begin = compositeStore.begin(),
@@ -295,6 +295,19 @@ void SubsumptionTableEntry::print(llvm::raw_ostream &stream) const {
         (*it1)->print(stream);
       }
       stream << "])";
+    }
+    stream << "]\n";
+  }
+
+  if (!existentials.empty()) {
+    stream << "existentials = [";
+    for (std::vector<const Array *>::const_iterator
+             itBegin = existentials.begin(),
+             itEnd = existentials.end(), it = itBegin;
+         it != itEnd; ++it) {
+      if (it != itBegin)
+        stream << ", ";
+      stream << (*it)->name;
     }
     stream << "]\n";
   }

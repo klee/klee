@@ -287,6 +287,28 @@ private:
     print(ee->expr, PC);
   }
 
+  void printExists(const ExistsExpr *xe, PrintContext &PC, unsigned indent) {
+    PC << "(";
+    for (std::vector<const Array *>::const_iterator
+             itBegin = xe->variables.begin(),
+             itEnd = xe->variables.end(), it = itBegin;
+         it != itEnd; ++it) {
+      if (it != itBegin)
+        printSeparator(PC, false, indent);
+      PC << "(w" << (*it)->range;
+      printSeparator(PC, true, indent);
+      PC << "x";
+      printSeparator(PC, true, indent);
+      PC << (*it)->size;
+      printSeparator(PC, true, indent);
+      PC << (*it)->name;
+      PC << ")";
+    }
+    PC << ")";
+    printSeparator(PC, false, indent);
+    print(xe->getKid(0), PC);
+  }
+
   void printExpr(const Expr *ep, PrintContext &PC, unsigned indent, bool printConstWidth=false) {
     bool simple = hasSimpleKids(ep);
     
@@ -404,9 +426,11 @@ public:
           printRead(re, PC, indent);
         } else if (const ExtractExpr *ee = dyn_cast<ExtractExpr>(e)) {
           printExtract(ee, PC, indent);
-        } else if (e->getKind() == Expr::Concat || e->getKind() == Expr::SExt)
-	  printExpr(e.get(), PC, indent, true);
-	else
+        } else if (e->getKind() == Expr::Concat || e->getKind() == Expr::SExt) {
+          printExpr(e.get(), PC, indent, true);
+        } else if (const ExistsExpr *xe = dyn_cast<ExistsExpr>(e)) {
+          printExists(xe, PC, indent);
+        } else
           printExpr(e.get(), PC, indent);	
         PC << ")";
       }
