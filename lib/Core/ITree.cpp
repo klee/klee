@@ -195,8 +195,10 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
        it0 != it0End; ++it0) {
     Solver::Validity result;
 
-    ref<Expr> query = (stateEqualityConstraints.get() ?
-      AndExpr::alloc(*it0, stateEqualityConstraints) : (*it0));
+    ref<Expr> query = ExistsExpr::create(
+        existentials, (stateEqualityConstraints.get()
+                           ? AndExpr::alloc(*it0, stateEqualityConstraints)
+                           : (*it0)));
 
     llvm::errs() << "Querying for subsumption check:\n";
     ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
