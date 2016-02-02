@@ -193,18 +193,24 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
   for (std::vector<ref<Expr> >::iterator it0 = interpolant.begin(),
                                          it0End = interpolant.end();
        it0 != it0End; ++it0) {
+    ExecutionState tmpState(state);
     Solver::Validity result;
 
-    ref<Expr> query = ExistsExpr::create(
-        existentials, (stateEqualityConstraints.get()
-                           ? AndExpr::alloc(*it0, stateEqualityConstraints)
-                           : (*it0)));
+    ref<Expr> query = ConstantExpr::alloc(0, Expr::Bool); // false
+
+    ref<Expr> negatedQuery = NotExpr::create(ExistsExpr::create(
+	existentials,
+	(stateEqualityConstraints.get() ?
+	    AndExpr::alloc(*it0, stateEqualityConstraints) :
+	    (*it0))));
+
+    tmpState.addConstraint(negatedQuery);
 
     llvm::errs() << "Querying for subsumption check:\n";
-    ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
+    ExprPPrinter::printQuery(llvm::errs(), tmpState.constraints, query);
 
     solver->setTimeout(timeout);
-    bool success = solver->evaluate(state, query, result);
+    bool success = solver->evaluate(tmpState, query, result);
     solver->setTimeout(0);
 
     if (success && result == Solver::True) {
@@ -212,7 +218,9 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
 
       for (std::vector<ref<Expr> >::iterator it1 = unsatCore.begin();
            it1 != unsatCore.end(); it1++) {
-        markerMap[*it1]->mayIncludeInInterpolant();
+	// Skip the additional negated query when marking
+	if (it1->get() != negatedQuery.get())
+	  markerMap[*it1]->mayIncludeInInterpolant();
       }
 
     } else {
