@@ -193,37 +193,61 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
   for (std::vector<ref<Expr> >::iterator it0 = interpolant.begin(),
                                          it0End = interpolant.end();
        it0 != it0End; ++it0) {
-    ExecutionState tmpState(state);
     Solver::Validity result;
 
-    ref<Expr> query = ConstantExpr::alloc(0, Expr::Bool); // false
+    ref<Expr> query = stateEqualityConstraints.get()
+                          ? AndExpr::alloc(*it0, stateEqualityConstraints)
+                          : (*it0);
 
-    ref<Expr> negatedQuery = NotExpr::create(ExistsExpr::create(
-	existentials,
-	(stateEqualityConstraints.get() ?
-	    AndExpr::alloc(*it0, stateEqualityConstraints) :
-	    (*it0))));
-
-    tmpState.addConstraint(negatedQuery);
+    if (!existentials.empty()) {
+      query = ExistsExpr::create(existentials, query);
+    }
 
     llvm::errs() << "Querying for subsumption check:\n";
-    ExprPPrinter::printQuery(llvm::errs(), tmpState.constraints, query);
+    ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
 
-    solver->setTimeout(timeout);
-    bool success = solver->evaluate(tmpState, query, result);
-    solver->setTimeout(0);
+    bool success = false;
+
+    Z3Solver *z3solver = 0;
+
+    if (!existentials.empty()) {
+      // Instantiate a new Z3 solver to make sure we use Z3
+      // without pre-solving optimizations. It would be nice
+      // in the future to just run solver->evaluate so that
+      // the optimizations can be used, but this requires
+      // handling of quantified expressions by KLEE's pre-solving
+      // procedure, which does not exist currently.
+      z3solver = new Z3Solver();
+
+      z3solver->setCoreSolverTimeout(timeout);
+      success = z3solver->directComputeValidity(Query(state.constraints, query),
+                                                result);
+      z3solver->setCoreSolverTimeout(0);
+    } else {
+      // We call the solver in the standard way if the
+      // formula is unquantified.
+      solver->setTimeout(timeout);
+      success = solver->evaluate(state, query, result);
+      solver->setTimeout(0);
+    }
 
     if (success && result == Solver::True) {
-      std::vector<ref<Expr> > unsatCore = solver->getUnsatCore();
+      std::vector<ref<Expr> > unsatCore;
+      if (z3solver) {
+        unsatCore = z3solver->getUnsatCore();
+        delete z3solver;
+      } else {
+        unsatCore = solver->getUnsatCore();
+      }
 
       for (std::vector<ref<Expr> >::iterator it1 = unsatCore.begin();
            it1 != unsatCore.end(); it1++) {
-	// Skip the additional negated query when marking
-	if (it1->get() != negatedQuery.get())
-	  markerMap[*it1]->mayIncludeInInterpolant();
+        markerMap[*it1]->mayIncludeInInterpolant();
       }
 
     } else {
+      if (z3solver)
+        delete z3solver;
       return false;
     }
   }

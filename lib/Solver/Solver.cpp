@@ -951,7 +951,12 @@ char *Z3Solver::getConstraintLog(const Query &query) {
 }
 
 void Z3Solver::setCoreSolverTimeout(double timeout) {
-    impl->setCoreSolverTimeout(timeout);
+  impl->setCoreSolverTimeout(timeout);
+}
+
+bool Z3Solver::directComputeValidity(const Query &query,
+                                     Solver::Validity &result) {
+  return impl->computeValidity(query, result);
 }
 
 /***/

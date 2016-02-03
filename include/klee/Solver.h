@@ -247,6 +247,10 @@ namespace klee {
 	/// is off.
 	virtual void setCoreSolverTimeout(double timeout);
 
+        /// directComputeValidity - Compute validity directly without other
+        /// layers of solving
+        bool directComputeValidity(const Query &query,
+                                   Solver::Validity &result);
   };
 #endif /* SUPPORT_Z3 */
   
