@@ -962,32 +962,32 @@ bool Z3Solver::directComputeValidity(const Query &query,
 /***/
 
 char *Z3SolverImpl::getConstraintLog(const Query &query) {
-	Z3_solver the_solver = Z3_mk_simple_solver(builder->ctx);
-	Z3_solver_inc_ref(builder->ctx, the_solver);
+  // Use quantified bit-vector array solver
+  Z3_solver the_solver = Z3_mk_solver_for_logic(
+      builder->ctx, Z3_mk_string_symbol(builder->ctx, "ABV"));
+  Z3_solver_inc_ref(builder->ctx, the_solver);
 
-	Z3_params params = Z3_mk_params(builder->ctx);
-	Z3_params_inc_ref(builder->ctx, params);
+  Z3_params params = Z3_mk_params(builder->ctx);
+  Z3_params_inc_ref(builder->ctx, params);
 
-        // Set solver timeout
-        Z3_symbol r = Z3_mk_string_symbol(builder->ctx, ":timeout");
-        Z3_params_set_uint(
-            builder->ctx, params, r,
-            (timeout > 0 ? (uint64_t)(timeout * 1000) : UINT_MAX));
-        Z3_solver_set_params(builder->ctx, the_solver, params);
+  // Set solver timeout
+  Z3_symbol r = Z3_mk_string_symbol(builder->ctx, ":timeout");
+  Z3_params_set_uint(builder->ctx, params, r,
+                     (timeout > 0 ? (uint64_t)(timeout * 1000) : UINT_MAX));
+  Z3_solver_set_params(builder->ctx, the_solver, params);
 
-        for (std::vector<ref<Expr> >::const_iterator
-                 it = query.constraints.begin(),
-                 ie = query.constraints.end();
-             it != ie; ++it) {
-          Z3_solver_assert(builder->ctx, the_solver, builder->construct(*it));
-        }
-        Z3_string ret = Z3_solver_to_string(builder->ctx, the_solver);
+  for (std::vector<ref<Expr> >::const_iterator it = query.constraints.begin(),
+                                               ie = query.constraints.end();
+       it != ie; ++it) {
+    Z3_solver_assert(builder->ctx, the_solver, builder->construct(*it));
+  }
+  Z3_string ret = Z3_solver_to_string(builder->ctx, the_solver);
 
-        // Decrement references
-        Z3_solver_dec_ref(builder->ctx, the_solver);
-        Z3_params_dec_ref(builder->ctx, params);
+  // Decrement references
+  Z3_solver_dec_ref(builder->ctx, the_solver);
+  Z3_params_dec_ref(builder->ctx, params);
 
-        return strdup(ret);
+  return strdup(ret);
 }
 
 bool Z3SolverImpl::computeTruth(const Query& query,
@@ -1031,8 +1031,9 @@ Z3SolverImpl::computeInitialValues(const Query &query,
                                       &values,
                                     bool &hasSolution) {
 
-  // Create the solver
-  Z3_solver the_solver = Z3_mk_simple_solver(builder->ctx);
+  // Use quantified bit-vector array solver
+  Z3_solver the_solver = Z3_mk_solver_for_logic(
+      builder->ctx, Z3_mk_string_symbol(builder->ctx, "ABV"));
   Z3_solver_inc_ref(builder->ctx, the_solver);
 
   // Create solver parameter
@@ -1101,6 +1102,7 @@ SolverImpl::SolverRunStatus Z3SolverImpl::runAndGetCex(Z3Builder *builder, Z3_so
 
   switch (Z3_solver_check(builder->ctx, the_solver)) {
     case Z3_L_TRUE: {
+      llvm::errs() << "Z3: SATISFIABLE\n";
       /// The assertion is satisfiable (see Z3 API manual)
       hasSolution = true;
       Z3_model m = Z3_solver_get_model(builder->ctx, the_solver);
