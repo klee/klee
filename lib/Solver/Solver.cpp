@@ -967,17 +967,27 @@ char *Z3SolverImpl::getConstraintLog(const Query &query) {
 
 	Z3_params params = Z3_mk_params(builder->ctx);
 	Z3_params_inc_ref(builder->ctx, params);
-	Z3_symbol r = Z3_mk_string_symbol(builder->ctx, ":timeout");
-	Z3_params_set_uint(builder->ctx, params, r, (timeout > 0 ? (uint64_t) (timeout * 1000) : UINT_MAX));
-	Z3_solver_set_params(builder->ctx, the_solver, params);
-	Z3_params_dec_ref(builder->ctx, params);
 
-	for (std::vector< ref<Expr> >::const_iterator it = query.constraints.begin(),
-	         ie = query.constraints.end(); it != ie; ++it) {
-	    Z3_solver_assert(builder->ctx, the_solver, builder->construct(*it));
-	}
+        // Set solver timeout
+        Z3_symbol r = Z3_mk_string_symbol(builder->ctx, ":timeout");
+        Z3_params_set_uint(
+            builder->ctx, params, r,
+            (timeout > 0 ? (uint64_t)(timeout * 1000) : UINT_MAX));
+        Z3_solver_set_params(builder->ctx, the_solver, params);
 
-	return strdup(Z3_solver_to_string(builder->ctx, the_solver));
+        for (std::vector<ref<Expr> >::const_iterator
+                 it = query.constraints.begin(),
+                 ie = query.constraints.end();
+             it != ie; ++it) {
+          Z3_solver_assert(builder->ctx, the_solver, builder->construct(*it));
+        }
+        Z3_string ret = Z3_solver_to_string(builder->ctx, the_solver);
+
+        // Decrement references
+        Z3_solver_dec_ref(builder->ctx, the_solver);
+        Z3_params_dec_ref(builder->ctx, params);
+
+        return strdup(ret);
 }
 
 bool Z3SolverImpl::computeTruth(const Query& query,
@@ -1020,17 +1030,21 @@ Z3SolverImpl::computeInitialValues(const Query &query,
                                     std::vector< std::vector<unsigned char> >
                                       &values,
                                     bool &hasSolution) {
+
+  // Create the solver
   Z3_solver the_solver = Z3_mk_simple_solver(builder->ctx);
   Z3_solver_inc_ref(builder->ctx, the_solver);
 
+  // Create solver parameter
   Z3_params params = Z3_mk_params(builder->ctx);
   Z3_params_inc_ref(builder->ctx, params);
+
+  // Set solver timeout parameter
   Z3_symbol r = Z3_mk_string_symbol(builder->ctx, ":timeout");
   Z3_params_set_uint(builder->ctx, params, r, (timeout > 0 ? (uint64_t) (timeout * 1000) : UINT_MAX));
   Z3_solver_set_params(builder->ctx, the_solver, params);
-  Z3_params_dec_ref(builder->ctx, params);
 
-  runStatusCode =  SOLVER_RUN_STATUS_FAILURE;
+  runStatusCode = SOLVER_RUN_STATUS_FAILURE;
 
   TimerStatIncrementer t(stats::queryTime);
 
@@ -1055,11 +1069,17 @@ Z3SolverImpl::computeInitialValues(const Query &query,
   bool success;
   runStatusCode = runAndGetCex(builder, the_solver, z3_e, objects, values, hasSolution);
 
-  if (runStatusCode == SolverImpl::SOLVER_RUN_STATUS_SUCCESS_UNSOLVABLE){
+  if (runStatusCode == SOLVER_RUN_STATUS_SUCCESS_UNSOLVABLE) {
       unsatCore.clear();
       unsatCore = getUnsatCoreVector(query, builder, the_solver);
   }
-  success = true;
+
+  success = (runStatusCode == SOLVER_RUN_STATUS_SUCCESS_SOLVABLE ||
+             runStatusCode == SOLVER_RUN_STATUS_SUCCESS_UNSOLVABLE);
+
+  // We no longer use the solver and the parameters further
+  Z3_solver_dec_ref(builder->ctx, the_solver);
+  Z3_params_dec_ref(builder->ctx, params);
 
   if (success) {
 	  if (hasSolution)
@@ -1106,6 +1126,9 @@ SolverImpl::SolverRunStatus Z3SolverImpl::runAndGetCex(Z3Builder *builder, Z3_so
 
       return SolverImpl::SOLVER_RUN_STATUS_SUCCESS_SOLVABLE;
     }
+    case Z3_L_UNDEF:
+      hasSolution = false;
+      return SolverImpl::SOLVER_RUN_STATUS_FAILURE;
     default:
       hasSolution = false;
       break;

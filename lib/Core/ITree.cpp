@@ -232,6 +232,7 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
     }
 
     if (success && result == Solver::True) {
+      llvm::errs() << "Solver decided validity\n";
       std::vector<ref<Expr> > unsatCore;
       if (z3solver) {
         unsatCore = z3solver->getUnsatCore();
@@ -255,9 +256,10 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
   // State subsumed, we mark needed constraints on the
   // path condition.
   AllocationGraph *g = new AllocationGraph();
-  for (std::map<ref<Expr>, PathConditionMarker *>::iterator it =
-           markerMap.begin();
-       it != markerMap.end(); it++) {
+  for (std::map<ref<Expr>, PathConditionMarker *>::iterator
+           it = markerMap.begin(),
+           itEnd = markerMap.end();
+       it != itEnd; it++) {
     it->second->includeInInterpolant(g);
   }
   ITreeNode::deleteMarkerMap(markerMap);
