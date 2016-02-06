@@ -875,17 +875,44 @@ SolverImpl::SolverRunStatus STPSolverImpl::getOperationStatusCode() {
 
 #ifdef SUPPORT_Z3
 
-/// getUnsatCoreVector - Declare the routine to extract the unsatisfiability core vector
-///
-/// \return - A ref<Expr> vector of unsatisfiability core: empty if there was no core.
-std::vector< ref<Expr> > getUnsatCoreVector(const Query &query, const Z3Builder *builder, const Z3_solver solver);
-
 class Z3SolverImpl : public SolverImpl {
 private:
   Z3Builder *builder;
   double timeout;
   SolverRunStatus runStatusCode;
   std::vector< ref<Expr> > unsatCore;
+
+  static void getModel(Z3Builder *builder, Z3_solver solver,
+                       const std::vector<const Array *> &objects,
+                       std::vector<std::vector<unsigned char> > &values);
+
+  /// getUnsatCoreVector - Declare the routine to extract the unsatisfiability
+  /// core vector
+  ///
+  /// \return - A ref<Expr> vector of unsatisfiability core: empty if there was
+  /// no core.
+  static std::vector<ref<Expr> > getUnsatCoreVector(const Query &query,
+                                                    const Z3Builder *builder,
+                                                    const Z3_solver solver);
+
+  /// runAndGetCex - Determine the satisfiability of a query, given assertions
+  /// that already included in the Z3 solver.
+  ///
+  /// \param [out] hasSolution - On success, a boolean indicating the
+  /// satisfiability
+  /// of the formula.
+  /// \param [out] values - On success and satisfiable, a vector containing the
+  /// solution.
+  /// \return A value of SolverRunStatus: SOLVER_RUN_STATUS_SUCCESS_SOLVABLE
+  /// (satisfiable)
+  /// or SOLVER_RUN_STATUS_SUCCESS_UNSOLVABLE (unsatisfiable) indicates success,
+  /// others
+  /// indicate solver failure.
+  SolverRunStatus runAndGetCex(const Query &query, Z3Builder *builder,
+                               Z3_solver the_solver, Z3_ast q,
+                               const std::vector<const Array *> &objects,
+                               std::vector<std::vector<unsigned char> > &values,
+                               bool &hasSolution);
 
 public:
   Z3SolverImpl();
@@ -911,19 +938,6 @@ public:
                             const std::vector<const Array*> &objects,
                             std::vector< std::vector<unsigned char> > &values,
                             bool &hasSolution);
-  /// runAndGetCex - Determine the satisfiability of a query, given assertions
-  /// that already included in the Z3 solver.
-  ///
-  /// \param [out] hasSolution - On success, a boolean indicating the satisfiability
-  /// of the formula.
-  /// \param [out] values - On success and satisfiable, a vector containing the solution.
-  /// \return A value of SolverRunStatus: SOLVER_RUN_STATUS_SUCCESS_SOLVABLE (satisfiable)
-  /// or SOLVER_RUN_STATUS_SUCCESS_UNSOLVABLE (unsatisfiable) indicates success, others
-  /// indicate solver failure.
-  SolverRunStatus runAndGetCex(Z3Builder *builder, Z3_solver the_solver, Z3_ast q,
-                               const std::vector<const Array*> &objects,
-                               std::vector< std::vector<unsigned char> > &values,
-                               bool &hasSolution);
   SolverRunStatus getOperationStatusCode();
   std::vector< ref<Expr> > getUnsatCore();
 };
@@ -1068,12 +1082,8 @@ Z3SolverImpl::computeInitialValues(const Query &query,
   Z3_ast z3_e = builder->construct(query.expr);
 
   bool success;
-  runStatusCode = runAndGetCex(builder, the_solver, z3_e, objects, values, hasSolution);
-
-  if (runStatusCode == SOLVER_RUN_STATUS_SUCCESS_UNSOLVABLE) {
-      unsatCore.clear();
-      unsatCore = getUnsatCoreVector(query, builder, the_solver);
-  }
+  runStatusCode = runAndGetCex(query, builder, the_solver, z3_e, objects,
+                               values, hasSolution);
 
   success = (runStatusCode == SOLVER_RUN_STATUS_SUCCESS_SOLVABLE ||
              runStatusCode == SOLVER_RUN_STATUS_SUCCESS_UNSOLVABLE);
@@ -1092,54 +1102,120 @@ Z3SolverImpl::computeInitialValues(const Query &query,
   return success;
 }
 
-SolverImpl::SolverRunStatus Z3SolverImpl::runAndGetCex(Z3Builder *builder, Z3_solver the_solver, Z3_ast q,
-                                                       const std::vector<const Array*> &objects,
-                                                       std::vector< std::vector<unsigned char> > &values,
-                                                       bool &hasSolution) {
+void Z3SolverImpl::getModel(Z3Builder *builder, Z3_solver solver,
+                            const std::vector<const Array *> &objects,
+                            std::vector<std::vector<unsigned char> > &values) {
+  Z3_model m = Z3_solver_get_model(builder->ctx, solver);
+
+  values.reserve(objects.size());
+  for (std::vector<const Array *>::const_iterator it = objects.begin(),
+                                                  ie = objects.end();
+       it != ie; ++it) {
+    const Array *array = *it;
+    std::vector<unsigned char> data;
+
+    data.reserve(array->size);
+    for (unsigned offset = 0; offset < array->size; offset++) {
+      Z3_ast counter;
+      Z3_ast initial_read =
+          Z3_mk_bv2int(builder->ctx, builder->getInitialRead(array, offset), 0);
+      Z3_model_eval(builder->ctx, m, initial_read, Z3_TRUE, &counter);
+      int val = 0;
+      Z3_get_numeral_int(builder->ctx, counter, &val);
+      data.push_back(val);
+    }
+
+    values.push_back(data);
+  }
+}
+
+SolverImpl::SolverRunStatus Z3SolverImpl::runAndGetCex(
+    const Query &query, Z3Builder *builder, Z3_solver the_solver, Z3_ast q,
+    const std::vector<const Array *> &objects,
+    std::vector<std::vector<unsigned char> > &values, bool &hasSolution) {
+  SolverRunStatus ret = SOLVER_RUN_STATUS_FAILURE;
+  hasSolution = false;
+
   Z3_solver_assert(builder->ctx, the_solver, Z3_mk_not(builder->ctx, q));
 
-  llvm::errs() << "Solving: " << Z3_solver_to_string(builder->ctx, the_solver) << "\n";
+  char *problem = strdup(Z3_solver_to_string(builder->ctx, the_solver));
+  llvm::errs() << "Solving: " << problem << "\n";
 
   switch (Z3_solver_check(builder->ctx, the_solver)) {
     case Z3_L_TRUE: {
       llvm::errs() << "Z3: SATISFIABLE\n";
-      /// The assertion is satisfiable (see Z3 API manual)
+      // The assertion is satisfiable (see Z3 API manual)
+      getModel(builder, the_solver, objects, values);
       hasSolution = true;
-      Z3_model m = Z3_solver_get_model(builder->ctx, the_solver);
-
-      values.reserve(objects.size());
-      for (std::vector<const Array*>::const_iterator
-	  it = objects.begin(), ie = objects.end(); it != ie; ++it) {
-	  const Array *array = *it;
-	  std::vector<unsigned char> data;
-
-	  data.reserve(array->size);
-	  for (unsigned offset = 0; offset < array->size; offset++) {
-	      Z3_ast counter;
-	      Z3_ast initial_read = Z3_mk_bv2int(builder->ctx, builder->getInitialRead(array, offset), 0);
-	      Z3_model_eval(builder->ctx, m, initial_read, Z3_TRUE, &counter);
-	      int val = 0;
-	      Z3_get_numeral_int(builder->ctx, counter, &val);
-	      data.push_back(val);
-	  }
-
-	  values.push_back(data);
-      }
-
-      return SolverImpl::SOLVER_RUN_STATUS_SUCCESS_SOLVABLE;
-    }
-    case Z3_L_UNDEF:
-      hasSolution = false;
-      return SolverImpl::SOLVER_RUN_STATUS_FAILURE;
-    default:
-      hasSolution = false;
+      ret = SOLVER_RUN_STATUS_SUCCESS_SOLVABLE;
       break;
-  }
+    }
+    case Z3_L_FALSE: {
+      unsatCore.clear();
+      unsatCore = getUnsatCoreVector(query, builder, the_solver);
+      ret = SOLVER_RUN_STATUS_SUCCESS_UNSOLVABLE;
+      break;
+    }
+    default: {
+      llvm::errs() << "Z3: UNDEFINED\n";
+      // This is an uber-dirty hack to do reformulation
+      // by getting Z3 to output its own store, re-submit and
+      // re-solve it, as sometimes Z3 seems to behave
+      // inconsistently.
 
-  return SolverImpl::SOLVER_RUN_STATUS_SUCCESS_UNSOLVABLE;
+      // TODO: It would be more efficient to immediately
+      // perform the two-stage reformulation whenever
+      // the query contains quantification, such that the
+      // first solving can be skipped.
+      std::string cause(Z3_solver_get_reason_unknown(builder->ctx, the_solver));
+      if (cause.compare("(incomplete (theory array))") == 0) {
+
+        Z3_solver tmpSolver = Z3_mk_solver_for_logic(
+            builder->ctx, Z3_mk_string_symbol(builder->ctx, "ABV"));
+        Z3_solver_inc_ref(builder->ctx, tmpSolver);
+
+        Z3_ast file =
+            Z3_parse_smtlib2_string(builder->ctx, problem, 0, 0, 0, 0, 0, 0);
+
+        Z3_solver_assert(builder->ctx, tmpSolver, file);
+
+        llvm::errs() << "Second solving attempt of: ";
+        llvm::errs() << Z3_solver_to_string(builder->ctx, tmpSolver);
+        llvm::errs() << "\n";
+
+        switch (Z3_solver_check(builder->ctx, tmpSolver)) {
+        case Z3_L_TRUE: {
+          llvm::errs() << "Z3: SECOND CHECK SATISFIABLE\n";
+          getModel(builder, tmpSolver, objects, values);
+
+          hasSolution = true;
+          ret = SOLVER_RUN_STATUS_SUCCESS_SOLVABLE;
+          break;
+        }
+        case Z3_L_FALSE: {
+          llvm::errs() << "Z3: SECOND CHECK UNSATISFIABLE\n";
+          unsatCore.clear();
+          unsatCore = getUnsatCoreVector(query, builder, tmpSolver);
+          ret = SOLVER_RUN_STATUS_SUCCESS_UNSOLVABLE;
+          break;
+        }
+        default: {
+          llvm::errs() << "Z3: SECOND CHECK UNDEFINED\n";
+          break;
+        }
+        }
+
+        Z3_solver_dec_ref(builder->ctx, tmpSolver);
+        break;
+      }
+    }
+  }
+  return ret;
 }
 
-std::vector< ref<Expr> > getUnsatCoreVector(const Query &query, const Z3Builder *builder, const Z3_solver solver) {
+std::vector<ref<Expr> >
+Z3SolverImpl::getUnsatCoreVector(const Query &query, const Z3Builder *builder,
+                                 const Z3_solver solver) {
   std::vector< ref<Expr> > local_unsat_core;
   Z3_ast_vector r = Z3_solver_get_unsat_core(builder->ctx, solver);
   for(unsigned int i=0; i <  Z3_ast_vector_size(builder->ctx,r); i++){
