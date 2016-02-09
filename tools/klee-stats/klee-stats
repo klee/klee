@@ -277,7 +277,7 @@ def main():
                         dest='drawLineChart', metavar='header-list',
                         help='Draw line chart for a list of columns. '
                         'Columns must be chosen from the headers of the '
-                        'table outputted and seperated by comma (e.g., '
+                        'table outputted and separated by comma (e.g., '
                         '--draw-line-chart=Instrs,Time). Data points '
                         'on x-axis correspond to lines in run.stats.')
     parser.add_argument('--sample-interval', dest='sampleInterv',
