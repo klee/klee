@@ -62,7 +62,7 @@ CoreSolverOptimizeDivides("solver-optimize-divides",
  */
 llvm::cl::list<QueryLoggingSolverType> queryLoggingOptions(
     "use-query-log",
-    llvm::cl::desc("Log queries to a file. Multiple options can be specified seperate by a comma. By default nothing is logged."),
+    llvm::cl::desc("Log queries to a file. Multiple options can be specified separated by a comma. By default nothing is logged."),
     llvm::cl::values(
         clEnumValN(ALL_PC,"all:pc","All queries in .pc (KQuery) format"),
         clEnumValN(ALL_SMTLIB,"all:smt2","All queries in .smt2 (SMT-LIBv2) format"),
