@@ -232,7 +232,6 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
     }
 
     if (success && result == Solver::True) {
-      llvm::errs() << "Solver decided validity\n";
       std::vector<ref<Expr> > unsatCore;
       if (z3solver) {
         unsatCore = z3solver->getUnsatCore();

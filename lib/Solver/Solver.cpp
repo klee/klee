@@ -981,15 +981,6 @@ char *Z3SolverImpl::getConstraintLog(const Query &query) {
       builder->ctx, Z3_mk_string_symbol(builder->ctx, "ABV"));
   Z3_solver_inc_ref(builder->ctx, the_solver);
 
-  Z3_params params = Z3_mk_params(builder->ctx);
-  Z3_params_inc_ref(builder->ctx, params);
-
-  // Set solver timeout
-  Z3_symbol r = Z3_mk_string_symbol(builder->ctx, ":timeout");
-  Z3_params_set_uint(builder->ctx, params, r,
-                     (timeout > 0 ? (uint64_t)(timeout * 1000) : UINT_MAX));
-  Z3_solver_set_params(builder->ctx, the_solver, params);
-
   for (std::vector<ref<Expr> >::const_iterator it = query.constraints.begin(),
                                                ie = query.constraints.end();
        it != ie; ++it) {
@@ -999,7 +990,6 @@ char *Z3SolverImpl::getConstraintLog(const Query &query) {
 
   // Decrement references
   Z3_solver_dec_ref(builder->ctx, the_solver);
-  Z3_params_dec_ref(builder->ctx, params);
 
   return strdup(ret);
 }
@@ -1058,6 +1048,7 @@ Z3SolverImpl::computeInitialValues(const Query &query,
   Z3_symbol r = Z3_mk_string_symbol(builder->ctx, ":timeout");
   Z3_params_set_uint(builder->ctx, params, r, (timeout > 0 ? (uint64_t) (timeout * 1000) : UINT_MAX));
   Z3_solver_set_params(builder->ctx, the_solver, params);
+  Z3_params_dec_ref(builder->ctx, params);
 
   runStatusCode = SOLVER_RUN_STATUS_FAILURE;
 
@@ -1088,9 +1079,8 @@ Z3SolverImpl::computeInitialValues(const Query &query,
   success = (runStatusCode == SOLVER_RUN_STATUS_SUCCESS_SOLVABLE ||
              runStatusCode == SOLVER_RUN_STATUS_SUCCESS_UNSOLVABLE);
 
-  // We no longer use the solver and the parameters further
+  // We no longer use the solver further
   Z3_solver_dec_ref(builder->ctx, the_solver);
-  Z3_params_dec_ref(builder->ctx, params);
 
   if (success) {
 	  if (hasSolution)
@@ -1138,12 +1128,11 @@ SolverImpl::SolverRunStatus Z3SolverImpl::runAndGetCex(
 
   Z3_solver_assert(builder->ctx, the_solver, Z3_mk_not(builder->ctx, q));
 
-  char *problem = strdup(Z3_solver_to_string(builder->ctx, the_solver));
-  llvm::errs() << "Solving: " << problem << "\n";
+  llvm::errs() << "Solving: " << Z3_solver_to_string(builder->ctx, the_solver)
+               << "\n";
 
   switch (Z3_solver_check(builder->ctx, the_solver)) {
     case Z3_L_TRUE: {
-      llvm::errs() << "Z3: SATISFIABLE\n";
       // The assertion is satisfiable (see Z3 API manual)
       getModel(builder, the_solver, objects, values);
       hasSolution = true;
@@ -1156,60 +1145,9 @@ SolverImpl::SolverRunStatus Z3SolverImpl::runAndGetCex(
       ret = SOLVER_RUN_STATUS_SUCCESS_UNSOLVABLE;
       break;
     }
-    default: {
-      llvm::errs() << "Z3: UNDEFINED\n";
-      // This is an uber-dirty hack to do reformulation
-      // by getting Z3 to output its own store, re-submit and
-      // re-solve it, as sometimes Z3 seems to behave
-      // inconsistently.
-
-      // TODO: It would be more efficient to immediately
-      // perform the two-stage reformulation whenever
-      // the query contains quantification, such that the
-      // first solving can be skipped.
-      std::string cause(Z3_solver_get_reason_unknown(builder->ctx, the_solver));
-      if (cause.compare("(incomplete (theory array))") == 0) {
-
-        Z3_solver tmpSolver = Z3_mk_solver_for_logic(
-            builder->ctx, Z3_mk_string_symbol(builder->ctx, "ABV"));
-        Z3_solver_inc_ref(builder->ctx, tmpSolver);
-
-        Z3_ast file =
-            Z3_parse_smtlib2_string(builder->ctx, problem, 0, 0, 0, 0, 0, 0);
-
-        Z3_solver_assert(builder->ctx, tmpSolver, file);
-
-        llvm::errs() << "Second solving attempt of: ";
-        llvm::errs() << Z3_solver_to_string(builder->ctx, tmpSolver);
-        llvm::errs() << "\n";
-
-        switch (Z3_solver_check(builder->ctx, tmpSolver)) {
-        case Z3_L_TRUE: {
-          llvm::errs() << "Z3: SECOND CHECK SATISFIABLE\n";
-          getModel(builder, tmpSolver, objects, values);
-
-          hasSolution = true;
-          ret = SOLVER_RUN_STATUS_SUCCESS_SOLVABLE;
-          break;
-        }
-        case Z3_L_FALSE: {
-          llvm::errs() << "Z3: SECOND CHECK UNSATISFIABLE\n";
-          unsatCore.clear();
-          unsatCore = getUnsatCoreVector(query, builder, tmpSolver);
-          ret = SOLVER_RUN_STATUS_SUCCESS_UNSOLVABLE;
-          break;
-        }
-        default: {
-          llvm::errs() << "Z3: SECOND CHECK UNDEFINED\n";
-          break;
-        }
-        }
-
-        Z3_solver_dec_ref(builder->ctx, tmpSolver);
-        break;
-      }
-    }
+    default: { break; }
   }
+
   return ret;
 }
 

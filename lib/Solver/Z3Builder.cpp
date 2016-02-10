@@ -60,10 +60,17 @@ Z3ArrayExprHash::~Z3ArrayExprHash() {
 }
 
 /***/
+void customZ3ErrorHandler(Z3_context c, Z3_error_code e) {
+  llvm::errs() << "Incorrect use of Z3: " << Z3_get_error_msg_ex(c, e) << "\n";
+  // TODO: Think of a better way to terminate
+  exit(1);
+}
 
 Z3Builder::Z3Builder() : quantificationContext(0) {
   Z3_config cfg = Z3_mk_config();
+  Z3_set_param_value(cfg, "unsat-core", "true");
   ctx = Z3_mk_context(cfg);
+  Z3_set_error_handler(ctx, customZ3ErrorHandler);
   Z3_del_config(cfg);
 
   tempVars[0] = buildVar("__tmpInt8", 8);
