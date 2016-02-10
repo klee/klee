@@ -66,8 +66,7 @@ namespace klee {
 
     bool carInInterpolant() const;
 
-    std::vector<ref<Expr> >
-    packInterpolant(std::vector<const Array *> &replacements);
+    ref<Expr> packInterpolant(std::vector<const Array *> &replacements);
 
     void dump();
 
@@ -92,7 +91,7 @@ namespace klee {
   class SubsumptionTableEntry {
     uintptr_t nodeId;
 
-    std::vector< ref<Expr> > interpolant;
+    ref<Expr> interpolant;
 
     std::map<llvm::Value *, ref<Expr> > singletonStore;
 
@@ -186,8 +185,7 @@ namespace klee {
   public:
     uintptr_t getNodeId();
 
-    std::vector<ref<Expr> >
-    getInterpolant(std::vector<const Array *> &replacements) const;
+    ref<Expr> getInterpolant(std::vector<const Array *> &replacements) const;
 
     void setNodeLocation(uintptr_t programPoint);
 
