@@ -103,6 +103,10 @@ namespace klee {
 
     std::vector<const Array *> existentials;
 
+    static ref<Expr> simplifyExistsExpr(ref<Expr> existsExpr);
+
+    static ref<Expr> simplifyArithmeticBody(ref<Expr> existsExpr);
+
   public:
     SubsumptionTableEntry(ITreeNode *node);
 

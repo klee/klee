@@ -132,6 +132,31 @@ SubsumptionTableEntry::SubsumptionTableEntry(ITreeNode *node)
 
 SubsumptionTableEntry::~SubsumptionTableEntry() {}
 
+ref<Expr> SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr) {
+  assert(ExistsExpr::classof(existsExpr.get()));
+  ExistsExpr *expr = static_cast<ExistsExpr *>(existsExpr.get());
+  ref<Expr> ret;
+
+  std::vector<const Array *> boundVariables = expr->variables;
+  ref<Expr> body = expr->body;
+
+  // Do something with body and boundVariables
+  // Currently the return values is just the argument itself.
+  ret = existsExpr;
+
+  return ret;
+}
+
+ref<Expr> SubsumptionTableEntry::simplifyExistsExpr(ref<Expr> existsExpr) {
+  assert(ExistsExpr::classof(existsExpr.get()));
+
+  ref<Expr> ret = simplifyArithmeticBody(existsExpr);
+  if (!ExistsExpr::classof(ret.get()))
+    return ret;
+
+  return ret;
+}
+
 bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
                                      ExecutionState& state,
                                      double timeout) {
@@ -205,7 +230,7 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
                         : interpolant;
 
   if (!existentials.empty()) {
-      query = ExistsExpr::create(existentials, query);
+    query = simplifyExistsExpr(ExistsExpr::create(existentials, query));
   }
 
   llvm::errs() << "Querying for subsumption check:\n";
