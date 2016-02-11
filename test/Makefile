@@ -82,4 +82,6 @@ lit.site.cfg: lit.site.cfg.in
 	     -e "s#@ENABLE_POSIX_RUNTIME@#$(ENABLE_POSIX_RUNTIME)#g" \
 	     -e "s#@TARGET_TRIPLE@#$(TARGET_TRIPLE)#g" \
 	     -e "s#@HAVE_SELINUX@#$(HAVE_SELINUX)#g" \
+	     -e "s#@ENABLE_STP@#$(ENABLE_STP)#g" \
+	     -e "s#@ENABLE_Z3@#$(ENABLE_Z3)#g" \
 	     $(PROJ_SRC_DIR)/lit.site.cfg.in > $@
