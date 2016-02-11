@@ -1,6 +1,7 @@
 #!/bin/bash -x
 # Make sure we exit if there is a failure
 set -e
+: ${SOLVERS?"Solvers must be specified"}
 
 # Calculate LLVM branch name to retrieve missing files from
 SVN_BRANCH="release_$( echo ${LLVM_VERSION} | sed 's/\.//g')"
@@ -43,6 +44,30 @@ COVERAGE_FLAGS=""
 if [ ${COVERAGE} -eq 1 ]; then
     COVERAGE_FLAGS='-fprofile-arcs -ftest-coverage'
 fi
+
+
+###############################################################################
+# Handle setting up solver configure flags for KLEE
+###############################################################################
+KLEE_Z3_CONFIGURE_OPTION=""
+KLEE_STP_CONFIGURE_OPTION=""
+SOLVER_LIST=$(echo "${SOLVERS}" | sed 's/:/ /')
+
+for solver in ${SOLVER_LIST}; do
+  echo "Setting configuration option for ${solver}"
+  case ${solver} in
+  STP)
+    KLEE_STP_CONFIGURE_OPTION="--with-stp=${BUILD_DIR}/stp/build"
+    ;;
+  Z3)
+    echo "Z3"
+    KLEE_Z3_CONFIGURE_OPTION="--with-z3=/usr"
+    ;;
+  *)
+    echo "Unknown solver ${solver}"
+    exit 1
+  esac
+done
 ###############################################################################
 # KLEE
 ###############################################################################
@@ -57,7 +82,8 @@ ${KLEE_SRC}/configure --with-llvmsrc=/usr/lib/llvm-${LLVM_VERSION}/build \
             --with-llvmobj=/usr/lib/llvm-${LLVM_VERSION}/build \
             --with-llvmcc=${KLEE_CC} \
             --with-llvmcxx=${KLEE_CXX} \
-            --with-stp="${BUILD_DIR}/stp/build" \
+            ${KLEE_STP_CONFIGURE_OPTION} \
+            ${KLEE_Z3_CONFIGURE_OPTION} \
             ${KLEE_UCLIBC_CONFIGURE_OPTION} \
             CXXFLAGS="${COVERAGE_FLAGS}" \
             && make DISABLE_ASSERTIONS=${DISABLE_ASSERTIONS} \
