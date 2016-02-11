@@ -795,8 +795,8 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
   if (isSeeding)
     timeout *= it->second.size();
 
-  // llvm::errs() << "Calling solver->evaluate on query:\n";
-  // ExprPPrinter::printQuery(llvm::errs(), current.constraints, condition);
+  llvm::errs() << "Calling solver->evaluate on query:\n";
+  ExprPPrinter::printQuery(llvm::errs(), current.constraints, condition);
 
   solver->setTimeout(timeout);
   bool success = solver->evaluate(current, condition, res);
@@ -2916,13 +2916,13 @@ void Executor::run(ExecutionState &initialState) {
       // Uncomment the following statements to show the state
       // of the interpolation tree and the active node.
 
-      // llvm::errs() << "\nCurrent state:\n";
-      // processTree->dump();
-      // interpTree->dump();
-      // state.itreeNode->dump();
-      // llvm::errs() << "------------------- Executing New Instruction "
-      //                 "-----------------------\n";
-      // state.pc->inst->dump();
+      llvm::errs() << "\nCurrent state:\n";
+      processTree->dump();
+      interpTree->dump();
+      state.itreeNode->dump();
+      llvm::errs() << "------------------- Executing New Instruction "
+                      "-----------------------\n";
+      state.pc->inst->dump();
     }
 
     if (InterpolationOption::interpolation &&

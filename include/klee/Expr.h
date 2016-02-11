@@ -102,13 +102,11 @@ public:
   static const Width Int32 = 32;
   static const Width Int64 = 64;
   static const Width Fl80 = 80;
-  
 
   enum Kind {
     InvalidKind = -1,
 
     // Primitive
-
     Constant = 0,
 
     // Special
@@ -119,7 +117,7 @@ public:
     NotOptimized,
 
     //// Skip old varexpr, just for deserialization, purge at some point
-    Read=NotOptimized+2, 
+    Read = NotOptimized + 2,
     Select,
     Concat,
     Extract,
@@ -147,10 +145,10 @@ public:
     Shl,
     LShr,
     AShr,
-    
+
     // Compare
     Eq,
-    Ne,  ///< Not used in canonical form
+    Ne, ///< Not used in canonical form
     Ult,
     Ule,
     Ugt, ///< Not used in canonical form
@@ -159,15 +157,14 @@ public:
     Sle,
     Sgt, ///< Not used in canonical form
     Sge, ///< Not used in canonical form
-
-    LastKind=Sge,
-
-    CastKindFirst=ZExt,
-    CastKindLast=SExt,
-    BinaryKindFirst=Add,
-    BinaryKindLast=Sge,
-    CmpKindFirst=Eq,
-    CmpKindLast=Sge
+    Exists,
+    LastKind = Exists,
+    CastKindFirst = ZExt,
+    CastKindLast = SExt,
+    BinaryKindFirst = Add,
+    BinaryKindLast = Sge,
+    CmpKindFirst = Eq,
+    CmpKindLast = Sge
   };
 
   unsigned refCount;
@@ -530,6 +527,45 @@ public:
     return Expr::CmpKindFirst <= k && k <= Expr::CmpKindLast;
   }
   static bool classof(const CmpExpr *) { return true; }
+};
+
+class ExistsExpr : public NonConstantExpr {
+public:
+  std::vector<const Array *> variables;
+  ref<Expr> body;
+
+  static ref<Expr> alloc(std::vector<const Array *> variables, ref<Expr> body) {
+    ref<Expr> r(new ExistsExpr(variables, body));
+    r->computeHash();
+    return r;
+  }
+
+  static ref<Expr> create(std::vector<const Array *> variables, ref<Expr> body);
+
+  Width getWidth() const { return Bool; }
+
+  Kind getKind() const { return Exists; }
+
+  unsigned getNumKids() const { return 1; }
+
+  ref<Expr> getKid(unsigned i) const {
+    assert(i == 0);
+    return body;
+  }
+
+  ref<Expr> rebuild(ref<Expr> kids[]) const {
+    return create(variables, kids[0]);
+  }
+
+  unsigned computeHash();
+
+  static bool classof(const Expr *E) { return E->getKind() == Expr::Exists; }
+
+  static bool classof(const ExistsExpr *E) { return true; }
+
+private:
+  ExistsExpr(std::vector<const Array *> variables, ref<Expr> body)
+      : variables(variables), body(body) {}
 };
 
 // Special

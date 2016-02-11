@@ -17,7 +17,7 @@
 
 namespace klee {
   class ExecutionState;
-  class Solver;  
+  class Solver;
 
   /// TimingSolver - A simple class which wraps a solver and handles
   /// tracking the statistics that we care about.

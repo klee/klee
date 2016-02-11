@@ -32,6 +32,35 @@ namespace klee {
   };
 
 class Z3Builder {
+
+  class QuantificationContext {
+
+    std::map<std::string, Z3_ast> existentials;
+    std::vector<Z3_sort> sorts;
+    std::vector<Z3_symbol> symbols;
+
+    QuantificationContext *parent;
+
+    Z3_ast getBoundVarQuick(std::string name);
+
+  public:
+    QuantificationContext(Z3_context _ctx,
+                          std::vector<const Array *> _existentials,
+                          QuantificationContext *_parent);
+
+    ~QuantificationContext();
+
+    unsigned size() { return symbols.size(); }
+
+    Z3_symbol *getSymbols() { return &symbols[0]; }
+
+    Z3_sort *getSorts() { return &sorts[0]; }
+
+    Z3_ast getBoundVar(std::string name);
+
+    QuantificationContext *getParent() { return parent; }
+  };
+
   Z3_ast tempVars[4];
   ExprHashMap< std::pair<Z3_ast, unsigned> > constructed;
 
@@ -97,6 +126,8 @@ private:
   Z3_ast sbvLtExpr(Z3_ast lhs, Z3_ast rhs);
   Z3_ast sbvLeExpr(Z3_ast lhs, Z3_ast rhs);
 
+  Z3_ast existsExpr(Z3_ast body);
+
   Z3_ast constructAShrByConstant(Z3_ast expr, unsigned shift,
                                        Z3_ast isSigned);
   Z3_ast constructMulByConstant(Z3_ast expr, unsigned width, uint64_t x);
@@ -111,7 +142,24 @@ private:
   
   Z3_ast buildVar(const char *name, unsigned width);
   Z3_ast buildArray(const char *name, unsigned indexWidth, unsigned valueWidth);
- 
+
+  // Handling of quantification contexts
+  QuantificationContext *quantificationContext;
+
+  void pushQuantificationContext(std::vector<const Array *> existentials);
+
+  void popQuantificationContext();
+
+  unsigned getQuantificationSize() { return quantificationContext->size(); }
+
+  Z3_symbol *getQuantificationSymbols() {
+    return quantificationContext->getSymbols();
+  }
+
+  Z3_sort *getQuantificationSorts() {
+    return quantificationContext->getSorts();
+  }
+
 public:
   Z3_context ctx;
 

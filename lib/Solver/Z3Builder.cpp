@@ -60,16 +60,23 @@ Z3ArrayExprHash::~Z3ArrayExprHash() {
 }
 
 /***/
+void customZ3ErrorHandler(Z3_context c, Z3_error_code e) {
+  llvm::errs() << "Incorrect use of Z3: " << Z3_get_error_msg_ex(c, e) << "\n";
+  // TODO: Think of a better way to terminate
+  exit(1);
+}
 
-Z3Builder::Z3Builder() {
-	Z3_config cfg = Z3_mk_config();
-	ctx = Z3_mk_context(cfg);
-	Z3_del_config(cfg);
+Z3Builder::Z3Builder() : quantificationContext(0) {
+  Z3_config cfg = Z3_mk_config();
+  Z3_set_param_value(cfg, "unsat-core", "true");
+  ctx = Z3_mk_context(cfg);
+  Z3_set_error_handler(ctx, customZ3ErrorHandler);
+  Z3_del_config(cfg);
 
-	tempVars[0] = buildVar("__tmpInt8", 8);
-	tempVars[1] = buildVar("__tmpInt16", 16);
-	tempVars[2] = buildVar("__tmpInt32", 32);
-	tempVars[3] = buildVar("__tmpInt64", 64);
+  tempVars[0] = buildVar("__tmpInt8", 8);
+  tempVars[1] = buildVar("__tmpInt16", 16);
+  tempVars[2] = buildVar("__tmpInt32", 32);
+  tempVars[3] = buildVar("__tmpInt64", 64);
 }
 
 Z3Builder::~Z3Builder() {
@@ -365,6 +372,12 @@ Z3_ast Z3Builder::sbvLeExpr(Z3_ast lhs, Z3_ast rhs) {
 	return Z3_mk_bvsle(ctx, lhs, rhs);
 }
 
+Z3_ast Z3Builder::existsExpr(Z3_ast body) {
+  return Z3_mk_exists(ctx, 0, 0, 0, getQuantificationSize(),
+                      getQuantificationSorts(), getQuantificationSymbols(),
+                      body);
+}
+
 Z3_ast Z3Builder::constructAShrByConstant(Z3_ast expr,
                                                unsigned shift,
                                                Z3_ast isSigned) {
@@ -517,6 +530,13 @@ Z3_ast Z3Builder::getInitialArray(const Array *root) {
   bool hashed = _arr_hash.lookupArrayExpr(root, array_expr);
   
   if (!hashed) {
+    // In case this array is bound
+    Z3_ast boundVar =
+        (quantificationContext ? quantificationContext->getBoundVar(root->name)
+                               : 0);
+    if (boundVar)
+      return boundVar;
+
     // STP uniques arrays by name, so we make sure the name is unique by
     // including the address.
     char buf[32];
@@ -569,6 +589,18 @@ Z3_ast Z3Builder::getArrayForUpdate(const Array *root,
 
 	  return(un_expr);
   }
+}
+
+void
+Z3Builder::pushQuantificationContext(std::vector<const Array *> existentials) {
+  quantificationContext =
+      new QuantificationContext(ctx, existentials, quantificationContext);
+}
+
+void Z3Builder::popQuantificationContext() {
+  QuantificationContext *tmp = quantificationContext;
+  quantificationContext = tmp->getParent();
+  delete tmp;
 }
 
 /** if *width_out!=1 then result is a bitvector,
@@ -997,10 +1029,62 @@ Z3_ast Z3Builder::constructActual(ref<Expr> e, int *width_out) {
   case Expr::Sge:
 #endif
 
+  case Expr::Exists: {
+    ExistsExpr *xe = cast<ExistsExpr>(e);
+    pushQuantificationContext(xe->variables);
+    Z3_ast ret = existsExpr(construct(xe->body, width_out));
+    popQuantificationContext();
+    *width_out = 1;
+    return ret;
+  }
+
   default: 
     assert(0 && "unhandled Expr type");
     return getTrue();
   }
+}
+
+/***/
+
+Z3Builder::QuantificationContext::QuantificationContext(
+    Z3_context _ctx, std::vector<const Array *> _existentials,
+    QuantificationContext *_parent)
+    : parent(_parent) {
+  unsigned index = _existentials.size();
+  for (std::vector<const Array *>::iterator it = _existentials.begin(),
+                                            itEnd = _existentials.end();
+       it != itEnd; ++it) {
+    --index;
+    Z3_symbol symb = Z3_mk_string_symbol(_ctx, (*it)->name.c_str());
+    Z3_sort sort = Z3_mk_array_sort(_ctx, Z3_mk_bv_sort(_ctx, (*it)->domain),
+                                    Z3_mk_bv_sort(_ctx, (*it)->range));
+    existentials[(*it)->name] = Z3_mk_bound(_ctx, index, sort);
+    sorts.push_back(sort);
+    symbols.push_back(symb);
+  }
+}
+
+Z3Builder::QuantificationContext::~QuantificationContext() {
+  existentials.clear();
+  sorts.clear();
+  symbols.clear();
+}
+
+Z3_ast Z3Builder::QuantificationContext::getBoundVarQuick(std::string name) {
+  Z3_ast ret = existentials[name];
+  if (ret)
+    return ret;
+
+  if (parent)
+    return parent->getBoundVarQuick(name);
+
+  return 0;
+}
+
+Z3_ast Z3Builder::QuantificationContext::getBoundVar(std::string name) {
+  if (name.find("__shadow__") != 0)
+    return 0;
+  return getBoundVarQuick(name);
 }
 
 #endif /* SUPPORT_Z3 */

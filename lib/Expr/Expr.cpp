@@ -151,6 +151,7 @@ void Expr::printKind(llvm::raw_ostream &os, Kind k) {
     X(Sle);
     X(Sgt);
     X(Sge);
+    X(Exists);
 #undef X
   default:
     assert(0 && "invalid kind");
@@ -183,6 +184,17 @@ unsigned ConstantExpr::computeHash() {
   hashValue = value.getHashValue() ^ (getWidth() * MAGIC_HASH_CONSTANT);
 #endif
   return hashValue;
+}
+
+unsigned ExistsExpr::computeHash() {
+  unsigned res = body->hash() * Expr::MAGIC_HASH_CONSTANT;
+  for (std::vector<const Array *>::iterator it = variables.begin(),
+                                            itEnd = variables.end();
+       it != itEnd; ++it) {
+    res <<= 1;
+    res ^= (*it)->hash() * Expr::MAGIC_HASH_CONSTANT;
+  }
+  return res;
 }
 
 unsigned CastExpr::computeHash() {
@@ -471,6 +483,13 @@ ref<ConstantExpr> ConstantExpr::Sgt(const ref<ConstantExpr> &RHS) {
 
 ref<ConstantExpr> ConstantExpr::Sge(const ref<ConstantExpr> &RHS) {
   return ConstantExpr::alloc(value.sge(RHS->value), Expr::Bool);
+}
+
+/***/
+
+ref<Expr> ExistsExpr::create(std::vector<const Array *> variables,
+                             ref<Expr> body) {
+  return alloc(variables, body);
 }
 
 /***/

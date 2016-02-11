@@ -68,15 +68,21 @@ bool PathCondition::carInInterpolant() const {
   return inInterpolant;
 }
 
-std::vector< ref<Expr> > PathCondition::packInterpolant() {
-  std::vector< ref<Expr> > res;
+ref<Expr>
+PathCondition::packInterpolant(std::vector<const Array *> &replacements) {
+  ref<Expr> res;
   for (PathCondition *it = this; it != 0; it = it->tail) {
       if (it->inInterpolant) {
 	  if (!it->shadowed) {
-	      it->shadowConstraint = ShadowArray::getShadowExpression(it->constraint);
-	      it->shadowed = true;
-	  }
-	  res.push_back(it->shadowConstraint);
+            it->shadowConstraint =
+                ShadowArray::getShadowExpression(it->constraint, replacements);
+            it->shadowed = true;
+          }
+          if (res.get()) {
+            res = AndExpr::alloc(res, it->shadowConstraint);
+          } else {
+            res = it->shadowConstraint;
+          }
       }
   }
   return res;
@@ -100,9 +106,12 @@ void PathCondition::print(llvm::raw_ostream& stream) {
 /**/
 
 SubsumptionTableEntry::SubsumptionTableEntry(ITreeNode *node)
-    : nodeId(node->getNodeId()), interpolant(node->getInterpolant()),
-      singletonStore(node->getLatestCoreExpressions(true)),
-      compositeStore(node->getCompositeCoreExpressions(true)) {
+    : nodeId(node->getNodeId()) {
+  std::vector<const Array *> replacements;
+
+  interpolant = node->getInterpolant(replacements);
+
+  singletonStore = node->getLatestInterpolantCoreExpressions(replacements);
   for (std::map<llvm::Value *, ref<Expr> >::iterator
            it = singletonStore.begin(),
            itEnd = singletonStore.end();
@@ -110,23 +119,56 @@ SubsumptionTableEntry::SubsumptionTableEntry(ITreeNode *node)
     singletonStoreKeys.push_back(it->first);
   }
 
+  compositeStore = node->getCompositeInterpolantCoreExpressions(replacements);
   for (std::map<llvm::Value *, std::vector<ref<Expr> > >::iterator
            it = compositeStore.begin(),
            itEnd = compositeStore.end();
        it != itEnd; ++it) {
     compositeStoreKeys.push_back(it->first);
   }
+
+  existentials = replacements;
 }
 
 SubsumptionTableEntry::~SubsumptionTableEntry() {}
 
+ref<Expr> SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr) {
+  assert(ExistsExpr::classof(existsExpr.get()));
+  ExistsExpr *expr = static_cast<ExistsExpr *>(existsExpr.get());
+  ref<Expr> ret;
+
+  std::vector<const Array *> boundVariables = expr->variables;
+  ref<Expr> body = expr->body;
+
+  // Do something with body and boundVariables
+  // Currently the return values is just the argument itself.
+  ret = existsExpr;
+
+  return ret;
+}
+
+ref<Expr> SubsumptionTableEntry::simplifyExistsExpr(ref<Expr> existsExpr) {
+  assert(ExistsExpr::classof(existsExpr.get()));
+
+  ref<Expr> ret = simplifyArithmeticBody(existsExpr);
+  if (!ExistsExpr::classof(ret.get()))
+    return ret;
+
+  return ret;
+}
+
 bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
                                      ExecutionState& state,
                                      double timeout) {
+  // Check if we are at the right program point
   if (state.itreeNode == 0 || reinterpret_cast<uintptr_t>(state.pc->inst) !=
                                   state.itreeNode->getNodeId() ||
       state.itreeNode->getNodeId() != nodeId)
     return false;
+
+  // Quick check for subsumption in case the interpolant is empty
+  if (!interpolant.get())
+    return true;
 
   std::map<llvm::Value *, ref<Expr> > stateSingletonStore =
       state.itreeNode->getLatestCoreExpressions();
@@ -182,49 +224,71 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
   std::map<ref<Expr>, PathConditionMarker *> markerMap =
       state.itreeNode->makeMarkerMap();
 
-  for (std::vector<ref<Expr> >::iterator it0 = interpolant.begin(),
-                                         it0End = interpolant.end();
-       it0 != it0End; ++it0) {
+  Solver::Validity result;
+  ref<Expr> query = stateEqualityConstraints.get()
+                        ? AndExpr::alloc(interpolant, stateEqualityConstraints)
+                        : interpolant;
 
-    ExecutionState tmpState(state);
-    Solver::Validity result;
+  if (!existentials.empty()) {
+    query = simplifyExistsExpr(ExistsExpr::create(existentials, query));
+  }
 
-    ref<Expr> query = ConstantExpr::alloc(0, Expr::Bool); // false
+  llvm::errs() << "Querying for subsumption check:\n";
+  ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
 
-    ref<Expr> negatedQuery =
-        (!stateEqualityConstraints.get()
-             ? NotExpr::alloc(*it0)
-             : NotExpr::alloc(AndExpr::alloc(*it0, stateEqualityConstraints)));
-    tmpState.addConstraint(negatedQuery);
+  bool success = false;
 
-    // llvm::errs() << "Querying for subsumption check:\n";
-    // ExprPPrinter::printQuery(llvm::errs(), tmpState.constraints, query);
+  Z3Solver *z3solver = 0;
 
-    solver->setTimeout(timeout);
-    bool success = solver->evaluate(tmpState, query, result);
-    solver->setTimeout(0);
+  if (!existentials.empty()) {
+      // Instantiate a new Z3 solver to make sure we use Z3
+      // without pre-solving optimizations. It would be nice
+      // in the future to just run solver->evaluate so that
+      // the optimizations can be used, but this requires
+      // handling of quantified expressions by KLEE's pre-solving
+      // procedure, which does not exist currently.
+      z3solver = new Z3Solver();
 
-    if (success && result == Solver::True) {
-      std::vector<ref<Expr> > unsatCore = solver->getUnsatCore();
+      z3solver->setCoreSolverTimeout(timeout);
+      success = z3solver->directComputeValidity(Query(state.constraints, query),
+                                                result);
+      z3solver->setCoreSolverTimeout(0);
+  } else {
+      // We call the solver in the standard way if the
+      // formula is unquantified.
+      solver->setTimeout(timeout);
+      success = solver->evaluate(state, query, result);
+      solver->setTimeout(0);
+  }
+
+  if (success && result == Solver::True) {
+    llvm::errs() << "Solver decided validity\n";
+      std::vector<ref<Expr> > unsatCore;
+      if (z3solver) {
+        unsatCore = z3solver->getUnsatCore();
+        delete z3solver;
+      } else {
+        unsatCore = solver->getUnsatCore();
+      }
 
       for (std::vector<ref<Expr> >::iterator it1 = unsatCore.begin();
            it1 != unsatCore.end(); it1++) {
-        // Skip the additional negated query when marking
-        if (it1->get() != negatedQuery.get())
-          markerMap[*it1]->mayIncludeInInterpolant();
+        markerMap[*it1]->mayIncludeInInterpolant();
       }
 
-    } else {
+  } else {
+      if (z3solver)
+        delete z3solver;
       return false;
-    }
   }
 
   // State subsumed, we mark needed constraints on the
   // path condition.
   AllocationGraph *g = new AllocationGraph();
-  for (std::map<ref<Expr>, PathConditionMarker *>::iterator it =
-           markerMap.begin();
-       it != markerMap.end(); it++) {
+  for (std::map<ref<Expr>, PathConditionMarker *>::iterator
+           it = markerMap.begin(),
+           itEnd = markerMap.end();
+       it != itEnd; it++) {
     it->second->includeInInterpolant(g);
   }
   ITreeNode::deleteMarkerMap(markerMap);
@@ -247,17 +311,14 @@ void SubsumptionTableEntry::dump() const {
 void SubsumptionTableEntry::print(llvm::raw_ostream &stream) const {
   stream << "------------ Subsumption Table Entry ------------\n";
   stream << "Program point = " << nodeId << "\n";
-  stream << "interpolant = [";
-  for (std::vector< ref<Expr> >::const_iterator it = interpolant.begin();
-      it != interpolant.end(); it++) {
-      it->get()->print(stream);
-      if (it + 1 != interpolant.end()) {
-	  stream << ",";
-      }
-  }
-  stream << "]\n";
+  stream << "interpolant = ";
+  if (interpolant.get())
+    interpolant->print(stream);
+  else
+    stream << "(empty)";
+  stream << "\n";
 
-  if (singletonStore.size()) {
+  if (!singletonStore.empty()) {
     stream << "singleton allocations = [";
     for (std::map<llvm::Value *, ref<Expr> >::const_iterator
              itBegin = singletonStore.begin(),
@@ -274,7 +335,7 @@ void SubsumptionTableEntry::print(llvm::raw_ostream &stream) const {
     stream << "]\n";
   }
 
-  if (compositeStore.size()) {
+  if (!compositeStore.empty()) {
     stream << "composite allocations = [";
     for (std::map<llvm::Value *, std::vector<ref<Expr> > >::const_iterator
              it0Begin = compositeStore.begin(),
@@ -294,6 +355,19 @@ void SubsumptionTableEntry::print(llvm::raw_ostream &stream) const {
         (*it1)->print(stream);
       }
       stream << "])";
+    }
+    stream << "]\n";
+  }
+
+  if (!existentials.empty()) {
+    stream << "existentials = [";
+    for (std::vector<const Array *>::const_iterator
+             itBegin = existentials.begin(),
+             itEnd = existentials.end(), it = itBegin;
+         it != itEnd; ++it) {
+      if (it != itBegin)
+        stream << ", ";
+      stream << (*it)->name;
     }
     stream << "]\n";
   }
@@ -353,6 +427,10 @@ void ITree::remove(ITreeNode *node) {
     // traversed, hence the correct time to table the interpolant.
     if (!node->isSubsumed) {
       SubsumptionTableEntry entry(node);
+
+      llvm::errs() << "TABLING\n";
+      entry.dump();
+
       store(entry);
     }
 
@@ -507,8 +585,9 @@ ITreeNode::~ITreeNode() {
 
 uintptr_t ITreeNode::getNodeId() { return nodeId; }
 
-std::vector< ref<Expr> > ITreeNode::getInterpolant() const {
-  return this->pathCondition->packInterpolant();
+ref<Expr>
+ITreeNode::getInterpolant(std::vector<const Array *> &replacements) const {
+  return this->pathCondition->packInterpolant(replacements);
 }
 
 void ITreeNode::setNodeLocation(uintptr_t programPoint) {
@@ -576,26 +655,56 @@ void ITreeNode::popAbstractDependencyFrame(llvm::CallInst *site,
 }
 
 std::map<llvm::Value *, ref<Expr> >
-ITreeNode::getLatestCoreExpressions(bool interpolantValueOnly) const {
+ITreeNode::getLatestCoreExpressions() const {
+  std::map<llvm::Value *, ref<Expr> > ret;
+  std::vector<const Array *> dummyReplacements;
+
+  // Since a program point index is a first statement in a basic block,
+  // the allocations to be stored in subsumption table should be obtained
+  // from the parent node.
+  if (parent)
+    ret =
+        parent->dependency->getLatestCoreExpressions(dummyReplacements, false);
+  return ret;
+}
+
+std::map<llvm::Value *, std::vector<ref<Expr> > >
+ITreeNode::getCompositeCoreExpressions() const {
+  std::map<llvm::Value *, std::vector<ref<Expr> > > ret;
+  std::vector<const Array *> dummyReplacements;
+
+  // Since a program point index is a first statement in a basic block,
+  // the allocations to be stored in subsumption table should be obtained
+  // from the parent node.
+  if (parent)
+    ret = parent->dependency->getCompositeCoreExpressions(dummyReplacements,
+                                                          false);
+  return ret;
+}
+
+std::map<llvm::Value *, ref<Expr> >
+ITreeNode::getLatestInterpolantCoreExpressions(
+    std::vector<const Array *> &replacements) const {
   std::map<llvm::Value *, ref<Expr> > ret;
 
   // Since a program point index is a first statement in a basic block,
   // the allocations to be stored in subsumption table should be obtained
   // from the parent node.
   if (parent)
-    ret = parent->dependency->getLatestCoreExpressions(interpolantValueOnly);
+    ret = parent->dependency->getLatestCoreExpressions(replacements, true);
   return ret;
 }
 
 std::map<llvm::Value *, std::vector<ref<Expr> > >
-ITreeNode::getCompositeCoreExpressions(bool interpolantValueOnly) const {
+ITreeNode::getCompositeInterpolantCoreExpressions(
+    std::vector<const Array *> &replacements) const {
   std::map<llvm::Value *, std::vector<ref<Expr> > > ret;
 
   // Since a program point index is a first statement in a basic block,
   // the allocations to be stored in subsumption table should be obtained
   // from the parent node.
   if (parent)
-    ret = parent->dependency->getCompositeCoreExpressions(interpolantValueOnly);
+    ret = parent->dependency->getCompositeCoreExpressions(replacements, true);
   return ret;
 }
 

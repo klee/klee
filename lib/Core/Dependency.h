@@ -28,12 +28,14 @@ class Dependency;
 class ShadowArray {
   static std::map<const Array *, const Array *> shadowArray;
 
-  static UpdateNode *getShadowUpdate(const UpdateNode *chain);
+  static UpdateNode *getShadowUpdate(const UpdateNode *chain,
+                                     std::vector<const Array *> &replacements);
 
 public:
   static void addShadowArrayMap(const Array *source, const Array *target);
 
-  static ref<Expr> getShadowExpression(ref<Expr> expr);
+  static ref<Expr>
+  getShadowExpression(ref<Expr> expr, std::vector<const Array *> &replacements);
 
   static std::string getShadowName(std::string name) {
     return "__shadow__" + name;
@@ -327,9 +329,10 @@ class Allocation {
     std::vector<Allocation *> getSinkAllocations() const;
 
     std::vector<Allocation *>
-    getSinksWithValues(std::vector<Allocation *> valuesList) const;
+    getSinksWithAllocations(std::vector<Allocation *> valuesList) const;
 
-    void consumeNodesWithValues(std::vector<Allocation *> versionedAllocations,
+    void
+    consumeNodesWithAllocations(std::vector<Allocation *> versionedAllocations,
                                 std::vector<Allocation *> compositeAllocations);
 
     void dump() const {
@@ -470,10 +473,12 @@ class Allocation {
     VersionedValue *getLatestValue(llvm::Value *value, ref<Expr> valueExpr);
 
     std::map<llvm::Value *, ref<Expr> >
-    getLatestCoreExpressions(bool interpolantValueOnly) const;
+    getLatestCoreExpressions(std::vector<const Array *> &replacements,
+                             bool interpolantValueOnly) const;
 
     std::map<llvm::Value *, std::vector<ref<Expr> > >
-    getCompositeCoreExpressions(bool interpolantValueOnly) const;
+    getCompositeCoreExpressions(std::vector<const Array *> &replacements,
+                                bool interpolantValueOnly) const;
 
     void bindCallArguments(llvm::Instruction *instr,
                            std::vector<ref<Expr> > &arguments);
