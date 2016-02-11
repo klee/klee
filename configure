@@ -5109,6 +5109,39 @@ else
 fi
 
 
+    # Test which function signature of ``Z3_get_error_msg()`` we need to use.
+    # There's an API break between Z3 4.4.1 and the master branch
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking if Z3_get_error_msg() requires Z3_context" >&5
+$as_echo_n "checking if Z3_get_error_msg() requires Z3_context... " >&6; }
+    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include "z3.h"
+int
+main ()
+{
+Z3_context c = Z3_mk_context(0); Z3_get_error_msg(c, Z3_OK);
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_compile "$LINENO"; then :
+  Z3_HAS_ERROR_MSG_CONTEXT=1
+else
+  Z3_HAS_ERROR_MSG_CONTEXT=0
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+
+    if test "X$Z3_HAS_ERROR_MSG_CONTEXT" == X1; then
+
+$as_echo "#define HAVE_Z3_GET_ERROR_MSG_NEEDS_CONTEXT 1" >>confdefs.h
+
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+    else
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+    fi
+
     Z3_LDFLAGS="${Z3_LDFLAGS} -lz3"
     { $as_echo "$as_me:${as_lineno-$LINENO}: Using Z3 solver backend" >&5
 $as_echo "$as_me: Using Z3 solver backend" >&6;}

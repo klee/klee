@@ -651,6 +651,22 @@ if test "X$ENABLE_Z3" != X0 ; then
            AC_MSG_ERROR([Unable to link against z3])
     ], "$Z3_LDFLAGS")
 
+    # Test which function signature of ``Z3_get_error_msg()`` we need to use.
+    # There's an API break between Z3 4.4.1 and the master branch
+    AC_MSG_CHECKING([if Z3_get_error_msg() requires Z3_context])
+    AC_COMPILE_IFELSE(
+      [AC_LANG_PROGRAM([[#include "z3.h"]],
+                       [[Z3_context c = Z3_mk_context(0); Z3_get_error_msg(c, Z3_OK);]])],
+      [Z3_HAS_ERROR_MSG_CONTEXT=1],
+      [Z3_HAS_ERROR_MSG_CONTEXT=0])
+
+    if test "X$Z3_HAS_ERROR_MSG_CONTEXT" == X1; then
+      AC_DEFINE(HAVE_Z3_GET_ERROR_MSG_NEEDS_CONTEXT, [1], [Z3 needs a Z3_context passed to Z3_get_error_msg()])
+      AC_MSG_RESULT([yes])
+    else
+      AC_MSG_RESULT([no])
+    fi
+
     Z3_LDFLAGS="${Z3_LDFLAGS} -lz3"
     AC_MSG_NOTICE([Using Z3 solver backend])
     CPPFLAGS="$old_CPPFLAGS"
