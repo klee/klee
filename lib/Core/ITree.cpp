@@ -167,8 +167,7 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
     return false;
 
   // Quick check for subsumption in case the interpolant is empty
-  if (!interpolant.get())
-    return true;
+  if (empty()) return true;
 
   std::map<llvm::Value *, ref<Expr> > stateSingletonStore =
       state.itreeNode->getLatestCoreExpressions();

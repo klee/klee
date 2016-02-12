@@ -107,6 +107,11 @@ namespace klee {
 
     static ref<Expr> simplifyArithmeticBody(ref<Expr> existsExpr);
 
+    bool empty() {
+      return !interpolant.get() && singletonStoreKeys.empty() &&
+	  compositeStoreKeys.empty();
+    }
+
   public:
     SubsumptionTableEntry(ITreeNode *node);
 
