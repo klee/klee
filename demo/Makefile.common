@@ -1,0 +1,41 @@
+# Makefile to build and run the examples using KLEE.
+#
+# Copyright 2015 National University of Singapore
+
+CC=clang
+AS=${CC} -S -emit-llvm
+CFLAGS=-emit-llvm -g -I${HOME}/software/klee
+KLEE_FLAGS=-write-pcs -use-query-log=all:pc,all:smt2 -search=dfs
+
+INPUT_TARGETS=$(subst .klee,.inputs,${TARGETS})
+IR_TARGETS=$(subst .klee,.s,${TARGETS})
+
+all: all-ir ${INPUT_TARGETS}
+
+all-ir: ${IR_TARGETS}
+
+clean:
+	rm -f klee-last *.o *.s *.ll *~ *.inputs core 
+	rm -rf ${TARGETS}
+
+# To prevent the removal of *.klee subdirectories
+.PRECIOUS: %.klee
+
+.SUFFIXES: .klee .inputs
+
+.o.klee:
+	time klee ${KLEE_FLAGS} -output-dir=$@ $<
+	opt -analyze -dot-cfg $<
+	mv *.dot $@
+
+.klee.inputs:
+	for KTEST in $</*.ktest ; do \
+		( ( ktest-tool --write-ints $$KTEST ) >> $@ ) ; \
+	done
+
+.c.s:
+	${AS} $<
+	if [ -e $(subst .s,.ll,$@) ] ; then \
+		mv $(subst .s,.ll,$@) $@ ; \
+	fi
+
