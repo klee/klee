@@ -2,10 +2,14 @@
 #
 # Copyright 2015 National University of Singapore
 
+TARGETS=addition_safe1.klee \
+	addition_safe2.klee \
+	addition_unsafe.klee
+
 CC=clang
 AS=${CC} -S -emit-llvm
 CFLAGS=-emit-llvm -g -I${HOME}/software/klee
-KLEE_FLAGS=-write-pcs -use-query-log=all:pc,all:smt2 -search=dfs
+KLEE_FLAGS=-no-interpolation -write-pcs -use-query-log=all:pc,all:smt2 -search=dfs
 
 INPUT_TARGETS=$(subst .klee,.inputs,${TARGETS})
 IR_TARGETS=$(subst .klee,.s,${TARGETS})
@@ -38,4 +42,8 @@ clean:
 	if [ -e $(subst .s,.ll,$@) ] ; then \
 		mv $(subst .s,.ll,$@) $@ ; \
 	fi
+
+
+
+
 

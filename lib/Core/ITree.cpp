@@ -233,8 +233,8 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
     query = simplifyExistsExpr(ExistsExpr::create(existentials, query));
   }
 
-  llvm::errs() << "Querying for subsumption check:\n";
-  ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
+  // llvm::errs() << "Querying for subsumption check:\n";
+  // ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
 
   bool success = false;
 
@@ -262,7 +262,7 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
   }
 
   if (success && result == Solver::True) {
-    llvm::errs() << "Solver decided validity\n";
+      // llvm::errs() << "Solver decided validity\n";
       std::vector<ref<Expr> > unsatCore;
       if (z3solver) {
         unsatCore = z3solver->getUnsatCore();
@@ -427,10 +427,6 @@ void ITree::remove(ITreeNode *node) {
     // traversed, hence the correct time to table the interpolant.
     if (!node->isSubsumed) {
       SubsumptionTableEntry entry(node);
-
-      llvm::errs() << "TABLING\n";
-      entry.dump();
-
       store(entry);
     }
 
