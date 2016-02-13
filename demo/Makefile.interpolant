@@ -1,26 +1,17 @@
 # Makefile to build and run the examples using KLEE.
 #
-# Copyright 2015 National University of Singapore
-
-TARGETS=addition_safe1.klee \
-	addition_safe2.klee \
-	addition_unsafe.klee
+# Copyright 2016 National University of Singapore
 
 CC=clang
 AS=${CC} -S -emit-llvm
 CFLAGS=-emit-llvm -g -I${HOME}/software/klee
 KLEE_FLAGS=-write-pcs -use-query-log=all:pc,all:smt2 -search=dfs
 
-INPUT_TARGETS=$(subst .klee,.inputs,${TARGETS})
-IR_TARGETS=$(subst .klee,.s,${TARGETS})
-
-all: all-ir ${INPUT_TARGETS}
-
-all-ir: ${IR_TARGETS}
+all:
 
 clean:
 	rm -f klee-last *.o *.s *.ll *~ *.inputs core 
-	rm -rf ${TARGETS}
+	rm -rf *.klee
 
 # To prevent the removal of *.klee subdirectories
 .PRECIOUS: %.klee

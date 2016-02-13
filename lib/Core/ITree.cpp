@@ -214,9 +214,12 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
         }
       }
 
-      if (!auxDisjunctsEmpty)
-        stateEqualityConstraints =
-            AndExpr::alloc(auxDisjuncts, stateEqualityConstraints);
+      if (!auxDisjunctsEmpty) {
+	  stateEqualityConstraints =
+	      stateEqualityConstraints.get() ?
+		  AndExpr::alloc(auxDisjuncts, stateEqualityConstraints) :
+		  auxDisjuncts;
+      }
   }
 
   // We create path condition needed constraints marking structure
