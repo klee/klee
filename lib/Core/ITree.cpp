@@ -167,8 +167,7 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
     return false;
 
   // Quick check for subsumption in case the interpolant is empty
-  if (!interpolant.get())
-    return true;
+  if (empty()) return true;
 
   std::map<llvm::Value *, ref<Expr> > stateSingletonStore =
       state.itreeNode->getLatestCoreExpressions();
@@ -215,9 +214,12 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
         }
       }
 
-      if (!auxDisjunctsEmpty)
-        stateEqualityConstraints =
-            AndExpr::alloc(auxDisjuncts, stateEqualityConstraints);
+      if (!auxDisjunctsEmpty) {
+	  stateEqualityConstraints =
+	      stateEqualityConstraints.get() ?
+		  AndExpr::alloc(auxDisjuncts, stateEqualityConstraints) :
+		  auxDisjuncts;
+      }
   }
 
   // We create path condition needed constraints marking structure
@@ -233,8 +235,8 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
     query = simplifyExistsExpr(ExistsExpr::create(existentials, query));
   }
 
-  llvm::errs() << "Querying for subsumption check:\n";
-  ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
+  // llvm::errs() << "Querying for subsumption check:\n";
+  // ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
 
   bool success = false;
 
@@ -262,7 +264,7 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
   }
 
   if (success && result == Solver::True) {
-    llvm::errs() << "Solver decided validity\n";
+      // llvm::errs() << "Solver decided validity\n";
       std::vector<ref<Expr> > unsatCore;
       if (z3solver) {
         unsatCore = z3solver->getUnsatCore();
@@ -427,10 +429,6 @@ void ITree::remove(ITreeNode *node) {
     // traversed, hence the correct time to table the interpolant.
     if (!node->isSubsumed) {
       SubsumptionTableEntry entry(node);
-
-      llvm::errs() << "TABLING\n";
-      entry.dump();
-
       store(entry);
     }
 
