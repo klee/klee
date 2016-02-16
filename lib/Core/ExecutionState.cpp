@@ -127,9 +127,14 @@ void ExecutionState::addITreeConstraint(ref<Expr> e, llvm::Instruction *instr) {
     return;
 
   llvm::BranchInst *binstr = llvm::dyn_cast<llvm::BranchInst>(instr);
+
   if (itreeNode && binstr && binstr->isConditional()) {
     itreeNode->addConstraint(e, binstr->getCondition());
   }
+  else if(itreeNode && !binstr){
+	itreeNode->addConstraint(e, instr->getOperand(0));
+  }
+
 }
 #endif
 
