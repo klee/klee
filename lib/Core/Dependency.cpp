@@ -932,39 +932,40 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
       return false;
 
     std::vector<Allocation *> allocList = resolveAllocationTransitively(arg);
-    if (allocList.size() > 0) {
-      for (std::vector<Allocation *>::iterator it0 = allocList.begin(),
-                                               it0End = allocList.end();
-           it0 != it0End; ++it0) {
-        std::vector<VersionedValue *> valList = stores(*it0);
-        if (valList.size() > 0) {
-          for (std::vector<VersionedValue *>::iterator it1 = valList.begin(),
-                                                       it1End = valList.end();
-               it1 != it1End; ++it1) {
-            std::vector<Allocation *> alloc2 =
-                resolveAllocationTransitively(*it1);
-            if (alloc2.size() > 0) {
-              for (std::vector<Allocation *>::iterator it2 = alloc2.begin(),
-                                                       it2End = alloc2.end();
-                   it2 != it2End; ++it2) {
-                addPointerEquality(getNewVersionedValue(toValue, toValueExpr),
-                                   *it2);
-              }
-            } else {
-              addDependencyViaAllocation(
-                  *it1, getNewVersionedValue(toValue, toValueExpr), *it0);
+
+    if (allocList.empty())
+      assert(!"operand is not an allocation");
+
+    for (std::vector<Allocation *>::iterator it0 = allocList.begin(),
+                                             it0End = allocList.end();
+         it0 != it0End; ++it0) {
+      std::vector<VersionedValue *> valList = stores(*it0);
+
+      if (valList.empty())
+        // We could not find the stored value, create
+        // a new one.
+        updateStore(*it0, getNewVersionedValue(toValue, toValueExpr));
+      else {
+        for (std::vector<VersionedValue *>::iterator it1 = valList.begin(),
+                                                     it1End = valList.end();
+             it1 != it1End; ++it1) {
+          std::vector<Allocation *> alloc2 =
+              resolveAllocationTransitively(*it1);
+
+          if (alloc2.empty())
+            addDependencyViaAllocation(
+                *it1, getNewVersionedValue(toValue, toValueExpr), *it0);
+          else {
+            for (std::vector<Allocation *>::iterator it2 = alloc2.begin(),
+                                                     it2End = alloc2.end();
+                 it2 != it2End; ++it2) {
+              addPointerEquality(getNewVersionedValue(toValue, toValueExpr),
+                                 *it2);
             }
           }
-        } else {
-          // We could not find the stored value, create
-          // a new one.
-          updateStore(*it0, getNewVersionedValue(toValue, toValueExpr));
         }
       }
-    } else {
-	assert (!"operand is not an allocation");
     }
-
     return true;
   }
 
