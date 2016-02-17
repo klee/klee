@@ -387,7 +387,6 @@ void SpecialFunctionHandler::handleAssume(ExecutionState &state,
                             KInstruction *target,
                             std::vector<ref<Expr> > &arguments) {
   assert(arguments.size()==1 && "invalid number of arguments to klee_assume");
-  
   ref<Expr> e = arguments[0];
   
   if (e->getWidth() != Expr::Bool)
