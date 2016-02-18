@@ -297,6 +297,79 @@ ref<Expr> Expr::createFromKind(Kind k, std::vector<CreateArg> args) {
   }
 }
 
+ref<Expr> Expr::createFromKindVer2(Kind k, std::vector<ref<Expr> > args) {
+  unsigned numArgs = args.size();
+  (void) numArgs;
+
+  switch(k) {
+    case Constant:
+    case Extract:
+    case Read:
+    default:
+      assert(0 && "invalid kind");
+
+    case NotOptimized:
+         assert(numArgs == 1 && !args[0].isNull() &&
+                "invalid args array for given opcode");
+         return NotOptimizedExpr::alloc(args[0]);
+
+       case Select:
+         assert(numArgs == 3 && !args[0].isNull()  &&
+                !args[1].isNull() && !args[2].isNull() &&
+                "invalid args array for Select opcode");
+         return SelectExpr::alloc(args[0],
+                                   args[1],
+                                   args[2]);
+
+       case Concat: {
+         assert(numArgs == 2 && !args[0].isNull() && !args[1].isNull() &&
+                "invalid args array for Concat opcode");
+
+         return ConcatExpr::alloc(args[0], args[1]);
+       }
+#define CAST_EXPR_CASE2(T)                                    \
+      case T:                                                \
+        assert(numArgs == 2 &&				     \
+        	   !args[0].isNull() && args[1]->getWidth() != 0 &&      \
+               "invalid args array for given opcode");       \
+      return T ## Expr::alloc(args[0], args[1]->getWidth()); \
+
+#define BINARY_EXPR_CASE2(T)                                 \
+      case T:                                               \
+        assert(numArgs == 2 &&                              \
+        		!args[0].isNull() && !args[1].isNull() &&   \
+               "invalid args array for given opcode");      \
+      return T ## Expr::alloc(args[0], args[1]); \
+
+      CAST_EXPR_CASE2(ZExt);
+      CAST_EXPR_CASE2(SExt);
+
+      BINARY_EXPR_CASE2(Add);
+      BINARY_EXPR_CASE2(Sub);
+      BINARY_EXPR_CASE2(Mul);
+      BINARY_EXPR_CASE2(UDiv);
+      BINARY_EXPR_CASE2(SDiv);
+      BINARY_EXPR_CASE2(URem);
+      BINARY_EXPR_CASE2(SRem);
+      BINARY_EXPR_CASE2(And);
+      BINARY_EXPR_CASE2(Or);
+      BINARY_EXPR_CASE2(Xor);
+      BINARY_EXPR_CASE2(Shl);
+      BINARY_EXPR_CASE2(LShr);
+      BINARY_EXPR_CASE2(AShr);
+
+      BINARY_EXPR_CASE2(Eq);
+      BINARY_EXPR_CASE2(Ne);
+      BINARY_EXPR_CASE2(Ult);
+      BINARY_EXPR_CASE2(Ule);
+      BINARY_EXPR_CASE2(Ugt);
+      BINARY_EXPR_CASE2(Uge);
+      BINARY_EXPR_CASE2(Slt);
+      BINARY_EXPR_CASE2(Sle);
+      BINARY_EXPR_CASE2(Sgt);
+      BINARY_EXPR_CASE2(Sge);
+  }
+}
 
 void Expr::printWidth(llvm::raw_ostream &os, Width width) {
   switch(width) {

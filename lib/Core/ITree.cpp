@@ -138,34 +138,30 @@ ref<Expr> SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr) {
   ref<Expr> ret;
 
   std::vector<const Array *> boundVariables = expr->variables;
+
   ref<Expr> body = expr->body;
-
-  ref<Expr> shadow_full = body->getKid(0); // formula that contains shadow expression
-  ref<Expr> equation_full = body->getKid(1); // Equality formula
-
-  ref<Expr> equation_full_left = equation_full->getKid(0); // left side of the equality formula where it contains the shadow expression
+  ref<Expr> shadowFull = body->getKid(0); // formula that contains shadow expression
+  ref<Expr> equationFull = body->getKid(1); // Equality formula
+  ref<Expr> equationFullLeft = equationFull->getKid(0); // left side of the equality formula where it contains the shadow expression
   	  	  	  	  	  	  	  	  	  	  	  	  	  	   // (assume: shadow_y always on the left side)
-  ref<Expr> equation_full_right = equation_full->getKid(1); // right side of the equality formula where it contains non shadow expression
+  ref<Expr> equationFullRight = equationFull->getKid(1); // right side of the equality formula where it contains non shadow expression
 
-  if(equation_full_left->getKid(1).operator ==(shadow_full->getKid(0))){ // make sure the assumption shadow expression on the left side holds
+  if(equationFullLeft->getKid(1).operator ==(shadowFull->getKid(0))){ // make sure the assumption shadow expression on the left side holds
 
-	  // rewrite the shadow expression, currently supported only for less or equal expression
-	  if(shadow_full->getKind() == Expr::Sle){
+	  ref<Expr> newBodyLeft = equationFullRight;
 
-		  // if the shadow expression was added
-		  if(equation_full_left->getKind() == Expr::Add){
-			   ref<Expr> new_body = SleExpr::create(equation_full_right, AddExpr::create(shadow_full->getKid(1), equation_full_left->getKid(0)));
+	  std::vector<ref<Expr> > exprs;
+	  exprs.push_back(shadowFull->getKid(1)); exprs.push_back(equationFullLeft->getKid(0));
+	  ref<Expr> newBodyRight = Expr::createFromKindVer2(equationFullLeft->getKind(), exprs);
 
-			   expr->body = new_body;
-			   existsExpr->dump();
-			   return existsExpr;
-		  }
+	  std::vector<ref<Expr> > newBodyConstraintPack;
+	  newBodyConstraintPack.push_back(newBodyLeft);
+	  newBodyConstraintPack.push_back(newBodyRight);
 
-	  }
+	  return Expr::createFromKindVer2(shadowFull->getKind(), newBodyConstraintPack);
+
   }
 
-  // Do something with body and boundVariables
-  // Currently the return values is just the argument itself.
   ret = existsExpr;
 
   return ret;
