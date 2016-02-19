@@ -150,15 +150,16 @@ ref<Expr> SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr) {
 
 	  ref<Expr> newBodyLeft = equationFullRight;
 
-	  std::vector<ref<Expr> > exprs;
-	  exprs.push_back(shadowFull->getKid(1)); exprs.push_back(equationFullLeft->getKid(0));
-	  ref<Expr> newBodyRight = Expr::createFromKindVer2(equationFullLeft->getKind(), exprs);
+	  std::vector<Expr::CreateArg > exprs;
+	  Expr::CreateArg arg1(shadowFull->getKid(1)); Expr::CreateArg arg2(equationFullLeft->getKid(0));
+	  exprs.push_back(arg1); exprs.push_back(arg2);
+	  ref<Expr> newBodyRight = Expr::createFromKind(equationFullLeft->getKind(), exprs);
 
-	  std::vector<ref<Expr> > newBodyConstraintPack;
-	  newBodyConstraintPack.push_back(newBodyLeft);
-	  newBodyConstraintPack.push_back(newBodyRight);
+	  std::vector<Expr::CreateArg > newBodyConstraintPack;
+	  Expr::CreateArg left(newBodyLeft); Expr::CreateArg right(newBodyRight);
+	  newBodyConstraintPack.push_back(left); newBodyConstraintPack.push_back(right);
 
-	  return Expr::createFromKindVer2(shadowFull->getKind(), newBodyConstraintPack);
+	  return Expr::createFromKind(shadowFull->getKind(), newBodyConstraintPack);
 
   }
 
