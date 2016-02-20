@@ -460,13 +460,15 @@ static bool valueIsOnlyCalled(const Value *v) {
        it != ie; ++it) {
     if (const Instruction *instr = dyn_cast<Instruction>(*it)) {
       if (instr->getOpcode()==0) continue; // XXX function numbering inst
-      if (!isa<CallInst>(instr) && !isa<InvokeInst>(instr)) return false;
+
+      // Make sure the instruction is a call or invoke.
+      CallSite cs(const_cast<Instruction *>(instr));
+      if (!cs) return false;
       
       // Make sure that the value is only the target of this call and
       // not an argument.
-      for (unsigned i=1,e=instr->getNumOperands(); i!=e; ++i)
-        if (instr->getOperand(i)==v)
-          return false;
+      if (cs.hasArgument(v))
+        return false;
     } else if (const llvm::ConstantExpr *ce = 
                dyn_cast<llvm::ConstantExpr>(*it)) {
       if (ce->getOpcode()==Instruction::BitCast)
