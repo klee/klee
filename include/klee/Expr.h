@@ -324,163 +324,6 @@ inline std::stringstream &operator<<(std::stringstream &os, const Expr::Kind kin
   return os;
 }
 
-// Terminal Exprs
-
-class ConstantExpr : public Expr {
-public:
-  static const Kind kind = Constant;
-  static const unsigned numKids = 0;
-
-private:
-  llvm::APInt value;
-
-  ConstantExpr(const llvm::APInt &v) : value(v) {}
-
-public:
-  ~ConstantExpr() {}
-  
-  Width getWidth() const { return value.getBitWidth(); }
-  Kind getKind() const { return Constant; }
-
-  unsigned getNumKids() const { return 0; }
-  ref<Expr> getKid(unsigned i) const { return 0; }
-
-  /// getAPValue - Return the arbitrary precision value directly.
-  ///
-  /// Clients should generally not use the APInt value directly and instead use
-  /// native ConstantExpr APIs.
-  const llvm::APInt &getAPValue() const { return value; }
-
-  /// getZExtValue - Returns the constant value zero extended to the
-  /// return type of this method.
-  ///
-  ///\param bits - optional parameter that can be used to check that the
-  ///number of bits used by this constant is <= to the parameter
-  ///value. This is useful for checking that type casts won't truncate
-  ///useful bits.
-  ///
-  /// Example: unit8_t byte= (unit8_t) constant->getZExtValue(8);
-  uint64_t getZExtValue(unsigned bits = 64) const {
-    assert(getWidth() <= bits && "Value may be out of range!");
-    return value.getZExtValue();
-  }
-
-  /// getLimitedValue - If this value is smaller than the specified limit,
-  /// return it, otherwise return the limit value.
-  uint64_t getLimitedValue(uint64_t Limit = ~0ULL) const {
-    return value.getLimitedValue(Limit);
-  }
-
-  /// toString - Return the constant value as a string
-  /// \param Res specifies the string for the result to be placed in
-  /// \param radix specifies the base (e.g. 2,10,16). The default is base 10
-  void toString(std::string &Res, unsigned radix=10) const;
-
-
- 
-  int compareContents(const Expr &b) const { 
-    const ConstantExpr &cb = static_cast<const ConstantExpr&>(b);
-    if (getWidth() != cb.getWidth()) 
-      return getWidth() < cb.getWidth() ? -1 : 1;
-    if (value == cb.value)
-      return 0;
-    return value.ult(cb.value) ? -1 : 1;
-  }
-
-  virtual ref<Expr> rebuild(ref<Expr> kids[]) const { 
-    assert(0 && "rebuild() on ConstantExpr"); 
-    return const_cast<ConstantExpr*>(this);
-  }
-
-  virtual unsigned computeHash();
-  
-  static ref<Expr> fromMemory(void *address, Width w);
-  void toMemory(void *address);
-
-  static ref<ConstantExpr> alloc(const llvm::APInt &v) {
-    ref<ConstantExpr> r(new ConstantExpr(v));
-    r->computeHash();
-    return r;
-  }
-
-  static ref<ConstantExpr> alloc(const llvm::APFloat &f) {
-    return alloc(f.bitcastToAPInt());
-  }
-
-  static ref<ConstantExpr> alloc(uint64_t v, Width w) {
-    return alloc(llvm::APInt(w, v));
-  }
-  
-  static ref<ConstantExpr> create(uint64_t v, Width w) {
-    assert(v == bits64::truncateToNBits(v, w) &&
-           "invalid constant");
-    return alloc(v, w);
-  }
-
-  static bool classof(const Expr *E) {
-    return E->getKind() == Expr::Constant;
-  }
-  static bool classof(const ConstantExpr *) { return true; }
-
-  /* Utility Functions */
-
-  /// isZero - Is this a constant zero.
-  bool isZero() const { return getAPValue().isMinValue(); }
-
-  /// isOne - Is this a constant one.
-  bool isOne() const { return getLimitedValue() == 1; }
-  
-  /// isTrue - Is this the true expression.
-  bool isTrue() const { 
-    return (getWidth() == Expr::Bool && value.getBoolValue()==true);
-  }
-
-  /// isFalse - Is this the false expression.
-  bool isFalse() const {
-    return (getWidth() == Expr::Bool && value.getBoolValue()==false);
-  }
-
-  /// isAllOnes - Is this constant all ones.
-  bool isAllOnes() const { return getAPValue().isAllOnesValue(); }
-
-  /* Constant Operations */
-
-  ref<ConstantExpr> Concat(const ref<ConstantExpr> &RHS);
-  ref<ConstantExpr> Extract(unsigned offset, Width W);
-  ref<ConstantExpr> ZExt(Width W);
-  ref<ConstantExpr> SExt(Width W);
-  ref<ConstantExpr> Add(const ref<ConstantExpr> &RHS);
-  ref<ConstantExpr> Sub(const ref<ConstantExpr> &RHS);
-  ref<ConstantExpr> Mul(const ref<ConstantExpr> &RHS);
-  ref<ConstantExpr> UDiv(const ref<ConstantExpr> &RHS);
-  ref<ConstantExpr> SDiv(const ref<ConstantExpr> &RHS);
-  ref<ConstantExpr> URem(const ref<ConstantExpr> &RHS);
-  ref<ConstantExpr> SRem(const ref<ConstantExpr> &RHS);
-  ref<ConstantExpr> And(const ref<ConstantExpr> &RHS);
-  ref<ConstantExpr> Or(const ref<ConstantExpr> &RHS);
-  ref<ConstantExpr> Xor(const ref<ConstantExpr> &RHS);
-  ref<ConstantExpr> Shl(const ref<ConstantExpr> &RHS);
-  ref<ConstantExpr> LShr(const ref<ConstantExpr> &RHS);
-  ref<ConstantExpr> AShr(const ref<ConstantExpr> &RHS);
-
-  // Comparisons return a constant expression of width 1.
-
-  ref<ConstantExpr> Eq(const ref<ConstantExpr> &RHS);
-  ref<ConstantExpr> Ne(const ref<ConstantExpr> &RHS);
-  ref<ConstantExpr> Ult(const ref<ConstantExpr> &RHS);
-  ref<ConstantExpr> Ule(const ref<ConstantExpr> &RHS);
-  ref<ConstantExpr> Ugt(const ref<ConstantExpr> &RHS);
-  ref<ConstantExpr> Uge(const ref<ConstantExpr> &RHS);
-  ref<ConstantExpr> Slt(const ref<ConstantExpr> &RHS);
-  ref<ConstantExpr> Sle(const ref<ConstantExpr> &RHS);
-  ref<ConstantExpr> Sgt(const ref<ConstantExpr> &RHS);
-  ref<ConstantExpr> Sge(const ref<ConstantExpr> &RHS);
-
-  ref<ConstantExpr> Neg();
-  ref<ConstantExpr> Not();
-};
-
-  
 // Utility classes
 
 class NonConstantExpr : public Expr {
@@ -1088,6 +931,157 @@ COMPARISON_EXPR_CLASS(Slt)
 COMPARISON_EXPR_CLASS(Sle)
 COMPARISON_EXPR_CLASS(Sgt)
 COMPARISON_EXPR_CLASS(Sge)
+
+// Terminal Exprs
+
+class ConstantExpr : public Expr {
+public:
+  static const Kind kind = Constant;
+  static const unsigned numKids = 0;
+
+private:
+  llvm::APInt value;
+
+  ConstantExpr(const llvm::APInt &v) : value(v) {}
+
+public:
+  ~ConstantExpr() {}
+
+  Width getWidth() const { return value.getBitWidth(); }
+  Kind getKind() const { return Constant; }
+
+  unsigned getNumKids() const { return 0; }
+  ref<Expr> getKid(unsigned i) const { return 0; }
+
+  /// getAPValue - Return the arbitrary precision value directly.
+  ///
+  /// Clients should generally not use the APInt value directly and instead use
+  /// native ConstantExpr APIs.
+  const llvm::APInt &getAPValue() const { return value; }
+
+  /// getZExtValue - Returns the constant value zero extended to the
+  /// return type of this method.
+  ///
+  ///\param bits - optional parameter that can be used to check that the
+  /// number of bits used by this constant is <= to the parameter
+  /// value. This is useful for checking that type casts won't truncate
+  /// useful bits.
+  ///
+  /// Example: unit8_t byte= (unit8_t) constant->getZExtValue(8);
+  uint64_t getZExtValue(unsigned bits = 64) const {
+    assert(getWidth() <= bits && "Value may be out of range!");
+    return value.getZExtValue();
+  }
+
+  /// getLimitedValue - If this value is smaller than the specified limit,
+  /// return it, otherwise return the limit value.
+  uint64_t getLimitedValue(uint64_t Limit = ~0ULL) const {
+    return value.getLimitedValue(Limit);
+  }
+
+  /// toString - Return the constant value as a string
+  /// \param Res specifies the string for the result to be placed in
+  /// \param radix specifies the base (e.g. 2,10,16). The default is base 10
+  void toString(std::string &Res, unsigned radix = 10) const;
+
+  int compareContents(const Expr &b) const {
+    const ConstantExpr &cb = static_cast<const ConstantExpr &>(b);
+    if (getWidth() != cb.getWidth())
+      return getWidth() < cb.getWidth() ? -1 : 1;
+    if (value == cb.value)
+      return 0;
+    return value.ult(cb.value) ? -1 : 1;
+  }
+
+  virtual ref<Expr> rebuild(ref<Expr> kids[]) const {
+    assert(0 && "rebuild() on ConstantExpr");
+    return const_cast<ConstantExpr *>(this);
+  }
+
+  virtual unsigned computeHash();
+
+  static ref<Expr> fromMemory(void *address, Width w);
+  void toMemory(void *address);
+
+  static ref<ConstantExpr> alloc(const llvm::APInt &v) {
+    ref<ConstantExpr> r(new ConstantExpr(v));
+    r->computeHash();
+    return r;
+  }
+
+  static ref<ConstantExpr> alloc(const llvm::APFloat &f) {
+    return alloc(f.bitcastToAPInt());
+  }
+
+  static ref<ConstantExpr> alloc(uint64_t v, Width w) {
+    return alloc(llvm::APInt(w, v));
+  }
+
+  static ref<ConstantExpr> create(uint64_t v, Width w) {
+    assert(v == bits64::truncateToNBits(v, w) && "invalid constant");
+    return alloc(v, w);
+  }
+
+  static bool classof(const Expr *E) { return E->getKind() == Expr::Constant; }
+  static bool classof(const ConstantExpr *) { return true; }
+
+  /* Utility Functions */
+
+  /// isZero - Is this a constant zero.
+  bool isZero() const { return getAPValue().isMinValue(); }
+
+  /// isOne - Is this a constant one.
+  bool isOne() const { return getLimitedValue() == 1; }
+
+  /// isTrue - Is this the true expression.
+  bool isTrue() const {
+    return (getWidth() == Expr::Bool && value.getBoolValue() == true);
+  }
+
+  /// isFalse - Is this the false expression.
+  bool isFalse() const {
+    return (getWidth() == Expr::Bool && value.getBoolValue() == false);
+  }
+
+  /// isAllOnes - Is this constant all ones.
+  bool isAllOnes() const { return getAPValue().isAllOnesValue(); }
+
+  /* Constant Operations */
+
+  ref<ConstantExpr> Concat(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> Extract(unsigned offset, Width W);
+  ref<ConstantExpr> ZExt(Width W);
+  ref<ConstantExpr> SExt(Width W);
+  ref<ConstantExpr> Add(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> Sub(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> Mul(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> UDiv(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> SDiv(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> URem(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> SRem(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> And(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> Or(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> Xor(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> Shl(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> LShr(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> AShr(const ref<ConstantExpr> &RHS);
+
+  // Comparisons return a constant expression of width 1.
+
+  ref<ConstantExpr> Eq(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> Ne(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> Ult(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> Ule(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> Ugt(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> Uge(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> Slt(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> Sle(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> Sgt(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> Sge(const ref<ConstantExpr> &RHS);
+
+  ref<ConstantExpr> Neg();
+  ref<ConstantExpr> Not();
+};
 
 // Implementations
 
