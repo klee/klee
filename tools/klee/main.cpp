@@ -190,6 +190,11 @@ namespace {
   cl::list<std::string>
   SeedOutDir("seed-out-dir");
 
+  cl::list<std::string>
+  LinkLibraries("link-libraries",
+		cl::desc("Link the give libraries before execution"),
+		cl::value_desc("library file"));
+
   cl::opt<unsigned>
   MakeConcreteSymbolic("make-concrete-symbolic",
                        cl::desc("Probabilistic rate at which to make concrete reads symbolic, "
@@ -1303,6 +1308,14 @@ int main(int argc, char **argv, char **envp) {
     assert(mainModule && "unable to link with simple model");
   }
 
+  // TODO(omeranson) I think it should go here.
+  std::vector<std::string>::iterator libs_it;
+  std::vector<std::string>::iterator libs_ie;
+  for (libs_it = LinkLibraries.begin(), libs_ie = LinkLibraries.end();
+          libs_it != libs_ie; ++libs_it) {
+    llvm::errs() << "Linking in library: " << *libs_it << ".\n";
+    mainModule = klee::linkWithLibrary(mainModule, libs_it->c_str());
+  }
   // Get the desired main function.  klee_main initializes uClibc
   // locale and other data and then calls main.
   Function *mainFn = mainModule->getFunction(EntryPoint);
