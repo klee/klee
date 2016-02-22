@@ -483,6 +483,24 @@ ref<Expr>  NotOptimizedExpr::create(ref<Expr> src) {
 
 extern "C" void vc_DeleteExpr(void*);
 
+Array::Array(const std::string &_name, uint64_t _size,
+             const ref<ConstantExpr> *constantValuesBegin,
+             const ref<ConstantExpr> *constantValuesEnd, Expr::Width _domain,
+             Expr::Width _range)
+    : name(_name), size(_size), domain(_domain), range(_range),
+      constantValues(constantValuesBegin, constantValuesEnd) {
+
+  assert((isSymbolicArray() || constantValues.size() == size) &&
+         "Invalid size for constant array!");
+  computeHash();
+#ifndef NDEBUG
+  for (const ref<ConstantExpr> *it = constantValuesBegin;
+       it != constantValuesEnd; ++it)
+    assert((*it)->getWidth() == getRange() &&
+           "Invalid initial constant value!");
+#endif // NDEBUG
+}
+
 Array::~Array() {
 }
 

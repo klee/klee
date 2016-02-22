@@ -636,22 +636,9 @@ private:
   /// not parse correctly since two arrays with the same name cannot be
   /// distinguished once printed.
   Array(const std::string &_name, uint64_t _size,
-	const ref<ConstantExpr> *constantValuesBegin = 0,
-	const ref<ConstantExpr> *constantValuesEnd = 0,
-	Expr::Width _domain = Expr::Int32, Expr::Width _range = Expr::Int8)
-    : name(_name), size(_size), domain(_domain), range(_range),
-      constantValues(constantValuesBegin, constantValuesEnd) {
-    
-    assert((isSymbolicArray() || constantValues.size() == size) &&
-           "Invalid size for constant array!");
-    computeHash();
-#ifndef NDEBUG
-    for (const ref<ConstantExpr> *it = constantValuesBegin;
-         it != constantValuesEnd; ++it)
-      assert((*it)->getWidth() == getRange() &&
-             "Invalid initial constant value!");
-#endif //NDEBUG
-  }
+        const ref<ConstantExpr> *constantValuesBegin = 0,
+        const ref<ConstantExpr> *constantValuesEnd = 0,
+        Expr::Width _domain = Expr::Int32, Expr::Width _range = Expr::Int8);
 
 public:
   bool isSymbolicArray() const { return constantValues.empty(); }
