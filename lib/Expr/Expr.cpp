@@ -481,8 +481,6 @@ ref<Expr>  NotOptimizedExpr::create(ref<Expr> src) {
 
 /***/
 
-extern "C" void vc_DeleteExpr(void*);
-
 Array::Array(const std::string &_name, uint64_t _size,
              const ref<ConstantExpr> *constantValuesBegin,
              const ref<ConstantExpr> *constantValuesEnd, Expr::Width _domain,
