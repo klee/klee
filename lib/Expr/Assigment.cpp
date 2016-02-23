@@ -10,6 +10,10 @@
 namespace klee {
 
 void Assignment::dump() {
+  if (bindings.size() == 0) {
+    llvm::errs() << "No bindings\n";
+    return;
+  }
   for (bindings_ty::iterator i = bindings.begin(), e = bindings.end(); i != e;
        ++i) {
     llvm::errs() << (*i).first->name << "\n[";
