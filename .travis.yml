@@ -92,6 +92,7 @@ before_install:
     - sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-3.4 20
     # Install LLVM and the LLVM bitcode compiler we require to build KLEE
     - ${KLEE_SRC}/.travis/install-llvm-and-runtime-compiler.sh
+    - ${KLEE_SRC}/.travis/install-tcmalloc.sh
     # Install lit (llvm-lit is not available)
     - sudo pip install lit
     # Get SMT solvers

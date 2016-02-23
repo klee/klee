@@ -141,11 +141,11 @@ if [ ${COVERAGE} -eq 1 ]; then
     sudo cp style.css /usr/local/lib/python2.7/dist-packages/zcov-0.3.0.dev0-py2.7.egg/zcov/style.css
 
 #install zcov dependency
-    sudo apt-get install enscript
+    sudo apt-get install -y enscript
 
 #update gcov from v4.6 to v4.8. This is becauase gcda files are made for v4.8 and cause 
 #a segmentation fault in v4.6
-    sudo apt-get install ggcov
+    sudo apt-get install -y ggcov
     sudo rm /usr/bin/gcov
     sudo ln -s /usr/bin/gcov-4.8 /usr/bin/gcov
 
