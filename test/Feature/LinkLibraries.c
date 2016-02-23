@@ -1,6 +1,8 @@
 // RUN: %llvmgcc %s -g -emit-llvm -O0 -c -o %t2.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --link-libraries %S/Inputs/libprintint.a --output-dir=%t.klee-out --emit-all-errors %t2.bc 2>&1 | FileCheck %s
+// Test fails under llvm-2.9. I suspect due to the structure of the archive
+// XFAIL: llvm-2.9
 extern void printint(int d);
 
 int main(int argc, char * argv[]) {
