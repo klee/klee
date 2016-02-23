@@ -11,6 +11,10 @@
 
 #include "klee/Config/config.h"
 
+#ifdef HAVE_GPERFTOOLS_MALLOC_EXTENSION_H
+#include "gperftools/malloc_extension.h"
+#endif
+
 #ifdef HAVE_MALLINFO
 #include <malloc.h>
 #endif
@@ -21,7 +25,12 @@
 using namespace klee;
 
 size_t util::GetTotalMallocUsage() {
-#ifdef HAVE_MALLINFO
+#ifdef HAVE_GPERFTOOLS_MALLOC_EXTENSION_H
+  uint64_t value;
+  MallocExtension::instance()->GetNumericProperty(
+      "generic.current_allocated_bytes", &value);
+  return value;
+#elif HAVE_MALLINFO
   struct mallinfo mi = ::mallinfo();
   // The malloc implementation in glibc (pmalloc2)
   // does not include mmap()'ed memory in mi.uordblks

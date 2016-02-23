@@ -18,6 +18,9 @@
 /* Does the platform use __ctype_b_loc, etc. */
 #undef HAVE_CTYPE_EXTERNALS
 
+/* Define to 1 if you have the <gperftools/malloc_extension.h> header file. */
+#undef HAVE_GPERFTOOLS_MALLOC_EXTENSION_H
+
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 

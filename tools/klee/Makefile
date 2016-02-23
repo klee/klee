@@ -29,3 +29,7 @@ ifneq ($(ENABLE_Z3),0)
 endif
 
 include $(PROJ_SRC_ROOT)/MetaSMT.mk
+
+ifeq ($(HAVE_TCMALLOC),1)
+  LIBS += $(TCMALLOC_LIB)
+endif
