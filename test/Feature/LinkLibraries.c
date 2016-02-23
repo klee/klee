@@ -1,6 +1,6 @@
 // RUN: %llvmgcc %s -g -emit-llvm -O0 -c -o %t2.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --link-libraries libprintint.a --output-dir=%t.klee-out --emit-all-errors %t2.bc 2>&1 | FileCheck %s
+// RUN: %klee --link-libraries %S/Inputs/libprintint.a --output-dir=%t.klee-out --emit-all-errors %t2.bc 2>&1 | FileCheck %s
 extern void printint(int d);
 
 int main(int argc, char * argv[]) {
