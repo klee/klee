@@ -1,5 +1,14 @@
 #!/bin/bash
 
+# ===-- genTempFiles.sh ---------------------------------------------------===##
+# 
+#                      The KLEE Symbolic Virtual Machine
+# 
+#  This file is distributed under the University of Illinois Open Source
+#  License. See LICENSE.TXT for details.
+# 
+# ===----------------------------------------------------------------------===##
+
 if [ -z "$1" ] ; then
 	echo "No directory given"
 	exit 1
