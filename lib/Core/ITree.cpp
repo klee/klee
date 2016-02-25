@@ -248,9 +248,17 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
       state.itreeNode->makeMarkerMap();
 
   Solver::Validity result;
-  ref<Expr> query = stateEqualityConstraints.get()
-                        ? AndExpr::alloc(interpolant, stateEqualityConstraints)
-                        : interpolant;
+  ref<Expr> query;
+
+  if (interpolant.get()) {
+    query = stateEqualityConstraints.get()
+                ? AndExpr::alloc(interpolant, stateEqualityConstraints)
+                : interpolant;
+  } else if (stateEqualityConstraints.get()) {
+    query = stateEqualityConstraints;
+  } else {
+    query = ConstantExpr::create(0, Expr::Bool); // false
+  }
 
   if (!existentials.empty()) {
     query = simplifyExistsExpr(ExistsExpr::create(existentials, query));
@@ -473,10 +481,6 @@ std::pair<ITreeNode *, ITreeNode *> ITree::split(ITreeNode *parent, ExecutionSta
 
 void ITree::markPathCondition(ExecutionState &state, TimingSolver *solver) {
   std::vector<ref<Expr> > unsatCore = solver->getUnsatCore();
-
-  // Simply return in case the unsatisfiability core is empty
-  if (unsatCore.empty())
-      return;
 
   AllocationGraph *g = new AllocationGraph();
 
