@@ -380,6 +380,9 @@ class Allocation {
     /// that are needed for the core and dominates other allocations.
     std::vector<Allocation *> interpolantAllocations;
 
+    /// @brief the basic block of the last-executed instruction
+    llvm::BasicBlock *lastBasicBlock;
+
     VersionedValue *getNewVersionedValue(llvm::Value *value,
                                          ref<Expr> valueExpr);
 

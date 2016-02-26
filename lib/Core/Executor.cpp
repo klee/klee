@@ -801,6 +801,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
   solver->setTimeout(timeout);
   bool success = solver->evaluate(current, condition, res);
   solver->setTimeout(0);
+
   if (!success) {
     current.pc = current.prevPC;
     terminateStateEarly(current, "Query timed out (fork).");
@@ -1827,6 +1828,11 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = eval(ki, state.incomingBBIndex * 2, state).value;
 #endif
     bindLocal(ki, state, result);
+#ifdef SUPPORT_Z3
+    // Update dependency
+    if (InterpolationOption::interpolation)
+      interpTree->executeAbstractDependency(i, result);
+#endif
     break;
   }
 
@@ -2916,13 +2922,13 @@ void Executor::run(ExecutionState &initialState) {
       // Uncomment the following statements to show the state
       // of the interpolation tree and the active node.
 
-//       llvm::errs() << "\nCurrent state:\n";
-//       processTree->dump();
-//       interpTree->dump();
-//       state.itreeNode->dump();
-//       llvm::errs() << "------------------- Executing New Instruction "
-//                       "-----------------------\n";
-//       state.pc->inst->dump();
+      // llvm::errs() << "\nCurrent state:\n";
+      // processTree->dump();
+      // interpTree->dump();
+      // state.itreeNode->dump();
+      // llvm::errs() << "------------------- Executing New Instruction "
+      //                 "-----------------------\n";
+      // state.pc->inst->dump();
     }
 
     if (InterpolationOption::interpolation &&
@@ -3772,6 +3778,8 @@ void Executor::runFunctionAsMain(Function *f,
   if (NoInterpolation ||
 #ifdef SUPPORT_STP
       SelectSolver != SOLVER_Z3
+#else
+      0
 #endif
       )
     // We globally declare that we don't do interpolation

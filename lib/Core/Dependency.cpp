@@ -932,43 +932,46 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
       return false;
 
     std::vector<Allocation *> allocList = resolveAllocationTransitively(arg);
-    if (allocList.size() > 0) {
-      for (std::vector<Allocation *>::iterator it0 = allocList.begin(),
-                                               it0End = allocList.end();
-           it0 != it0End; ++it0) {
-        std::vector<VersionedValue *> valList = stores(*it0);
-        if (valList.size() > 0) {
-          for (std::vector<VersionedValue *>::iterator it1 = valList.begin(),
-                                                       it1End = valList.end();
-               it1 != it1End; ++it1) {
-            std::vector<Allocation *> alloc2 =
-                resolveAllocationTransitively(*it1);
-            if (alloc2.size() > 0) {
-              for (std::vector<Allocation *>::iterator it2 = alloc2.begin(),
-                                                       it2End = alloc2.end();
-                   it2 != it2End; ++it2) {
-                addPointerEquality(getNewVersionedValue(toValue, toValueExpr),
-                                   *it2);
-              }
-            } else {
-              addDependencyViaAllocation(
-                  *it1, getNewVersionedValue(toValue, toValueExpr), *it0);
+
+    if (allocList.empty())
+      assert(!"operand is not an allocation");
+
+    for (std::vector<Allocation *>::iterator it0 = allocList.begin(),
+                                             it0End = allocList.end();
+         it0 != it0End; ++it0) {
+      std::vector<VersionedValue *> valList = stores(*it0);
+
+      if (valList.empty())
+        // We could not find the stored value, create
+        // a new one.
+        updateStore(*it0, getNewVersionedValue(toValue, toValueExpr));
+      else {
+        for (std::vector<VersionedValue *>::iterator it1 = valList.begin(),
+                                                     it1End = valList.end();
+             it1 != it1End; ++it1) {
+          std::vector<Allocation *> alloc2 =
+              resolveAllocationTransitively(*it1);
+
+          if (alloc2.empty())
+            addDependencyViaAllocation(
+                *it1, getNewVersionedValue(toValue, toValueExpr), *it0);
+          else {
+            for (std::vector<Allocation *>::iterator it2 = alloc2.begin(),
+                                                     it2End = alloc2.end();
+                 it2 != it2End; ++it2) {
+              addPointerEquality(getNewVersionedValue(toValue, toValueExpr),
+                                 *it2);
             }
           }
-        } else {
-          // We could not find the stored value, create
-          // a new one.
-          updateStore(*it0, getNewVersionedValue(toValue, toValueExpr));
         }
       }
-    } else {
-	assert (!"operand is not an allocation");
     }
-
     return true;
   }
 
-  Dependency::Dependency(Dependency *prev) : parentDependency(prev) {}
+  Dependency::Dependency(Dependency *prev)
+      : parentDependency(prev),
+        lastBasicBlock(prev ? prev->lastBasicBlock : 0) {}
 
   Dependency::~Dependency() {
     // Delete the locally-constructed relations
@@ -1035,10 +1038,11 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
         break;
       }
       default: {
-        assert(0 && "should not execute instruction here");
+        assert(0 && "wrong instruction type");
         break;
       }
       }
+      lastBasicBlock = i->getParent();
   }
 
   void Dependency::executeBinary(llvm::Instruction *i, ref<Expr> result,
@@ -1101,10 +1105,11 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
       break;
     }
     default: {
-      assert(0 && "should not execute instruction here");
+      assert(0 && "wrong instruction type");
       break;
     }
     }
+    lastBasicBlock = i->getParent();
   }
 
   void Dependency::execute(llvm::Instruction *i, ref<Expr> valueExpr) {
@@ -1185,17 +1190,29 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
           }
           break;
       }
+      case llvm::Instruction::PHI: {
+        llvm::PHINode *node = llvm::dyn_cast<llvm::PHINode>(i);
+        llvm::Value *llvmArgValue =
+            node->getIncomingValueForBlock(lastBasicBlock);
+        VersionedValue *val = getLatestValue(llvmArgValue, valueExpr);
+        if (val) {
+          addDependency(val, getNewVersionedValue(i, valueExpr));
+        } else if (!llvm::isa<llvm::Constant>(llvmArgValue)) {
+          assert(!"operand not found");
+        }
+        break;
+      }
       default: {
-        assert(0 && "should not execute instruction here");
+        assert(0 && "wrong instruction type");
         break;
       }
     }
-
+    lastBasicBlock = i->getParent();
   }
 
-  void Dependency::bindCallArguments(llvm::Instruction *instr,
+  void Dependency::bindCallArguments(llvm::Instruction *i,
                                      std::vector<ref<Expr> > &arguments) {
-    llvm::CallInst *site = llvm::dyn_cast<llvm::CallInst>(instr);
+    llvm::CallInst *site = llvm::dyn_cast<llvm::CallInst>(i);
 
     if (!site)
       return;
@@ -1221,12 +1238,12 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
       argumentValuesList.pop_back();
       ++index;
     }
+    lastBasicBlock = i->getParent();
   }
 
-  void Dependency::bindReturnValue(llvm::CallInst *site,
-                                   llvm::Instruction *inst,
+  void Dependency::bindReturnValue(llvm::CallInst *site, llvm::Instruction *i,
                                    ref<Expr> returnValue) {
-    llvm::ReturnInst *retInst = llvm::dyn_cast<llvm::ReturnInst>(inst);
+    llvm::ReturnInst *retInst = llvm::dyn_cast<llvm::ReturnInst>(i);
     if (site && retInst &&
         retInst->getReturnValue() // For functions returning void
         ) {
@@ -1235,6 +1252,7 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
       if (value)
         addDependency(value, getNewVersionedValue(site, returnValue));
     }
+    lastBasicBlock = i->getParent();
   }
 
   void Dependency::markAllValues(AllocationGraph *g, VersionedValue *value) {
