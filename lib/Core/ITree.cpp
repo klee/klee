@@ -135,43 +135,61 @@ SubsumptionTableEntry::~SubsumptionTableEntry() {}
 ref<Expr> SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr) {
   assert(ExistsExpr::classof(existsExpr.get()));
   ExistsExpr *expr = static_cast<ExistsExpr *>(existsExpr.get());
-  ref<Expr> ret;
 
   std::vector<const Array *> boundVariables = expr->variables;
 
+  // We assume that the body is always a conjunction of interpolant in terms of
+  // shadow (existentially-quantified) variables and state equality constraints,
+  // which may contain both normal and shadow variables.
   ref<Expr> body = expr->body;
-  ref<Expr> shadowFull = body->getKid(0); // formula that contains shadow expression
-  ref<Expr> equationFull = body->getKid(1); // Equality formula
-  ref<Expr> equationFullLeft = equationFull->getKid(0); // left side of the equality formula where it contains the shadow expression
+
+  // We only simplify a conjunction of
+  if (!llvm::isa<AndExpr>(body))
+    return existsExpr;
+
+  ref<Expr> interpolant = body->getKid(0);        // Formula that contains shadow expression (interpolant)
+  ref<Expr> equalityConstraint = body->getKid(1); // Equality formula of shadow and normal variables
+
+  // If the interpolant was a constant (true), then the equality
+  // constraints would contain equality with constants only and no
+  // equality with shadow (existential) variables, hence it should
+  // be safe to simply return the equality constraint.
+  if (llvm::isa<ConstantExpr>(interpolant))
+    return equalityConstraint;
+
+  // We only handle single equality
+  if (!llvm::isa<EqExpr>(body->getKid(1).get()))
+    return existsExpr;
+
+  ref<Expr> equalityConstraintLeft = equalityConstraint->getKid(0); // left side of the equality formula where it contains the shadow expression
   	  	  	  	  	  	  	  	  	  	  	  	  	  	   // (assume: shadow_y always on the left side)
-  ref<Expr> equationFullRight = equationFull->getKid(1); // right side of the equality formula where it contains non shadow expression
+  ref<Expr> equalityConstraintRight = equalityConstraint->getKid(1); // right side of the equality formula where it contains non shadow expression
 
-  if(equationFullLeft->getKid(1).operator ==(shadowFull->getKid(0))){ // make sure the assumption shadow expression on the left side holds
+  if (equalityConstraintLeft->getKid(1).operator ==(interpolant->getKid(0))) { // make sure the assumption shadow expression on the left side holds
 
-	  ref<Expr> newBodyLeft = equationFullRight;
+	  ref<Expr> newBodyLeft = equalityConstraintRight;
 
 	  std::vector<Expr::CreateArg > exprs;
-	  Expr::CreateArg arg1(shadowFull->getKid(1)); Expr::CreateArg arg2(equationFullLeft->getKid(0));
+	  Expr::CreateArg arg1(interpolant->getKid(1)); Expr::CreateArg arg2(equalityConstraintLeft->getKid(0));
 	  exprs.push_back(arg1); exprs.push_back(arg2);
-	  ref<Expr> newBodyRight = Expr::createFromKind(equationFullLeft->getKind(), exprs);
+	  ref<Expr> newBodyRight = Expr::createFromKind(equalityConstraintLeft->getKind(), exprs);
 
 	  std::vector<Expr::CreateArg > newBodyConstraintPack;
 	  Expr::CreateArg left(newBodyLeft); Expr::CreateArg right(newBodyRight);
 	  newBodyConstraintPack.push_back(left); newBodyConstraintPack.push_back(right);
 
-	  return Expr::createFromKind(shadowFull->getKind(), newBodyConstraintPack);
+	  return Expr::createFromKind(interpolant->getKind(), newBodyConstraintPack);
 
   }
 
-  ret = existsExpr;
-
-  return ret;
+  return existsExpr;
 }
 
 ref<Expr> SubsumptionTableEntry::simplifyExistsExpr(ref<Expr> existsExpr) {
   assert(ExistsExpr::classof(existsExpr.get()));
 
   ref<Expr> ret = simplifyArithmeticBody(existsExpr);
+  ret->dump();
   if (!ExistsExpr::classof(ret.get()))
     return ret;
 
@@ -181,6 +199,7 @@ ref<Expr> SubsumptionTableEntry::simplifyExistsExpr(ref<Expr> existsExpr) {
 bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
                                      ExecutionState& state,
                                      double timeout) {
+  llvm::errs() << "SUBSUMPTION CHECK\n";
   // Check if we are at the right program point
   if (state.itreeNode == 0 || reinterpret_cast<uintptr_t>(state.pc->inst) !=
                                   state.itreeNode->getNodeId() ||
@@ -250,17 +269,24 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
   Solver::Validity result;
   ref<Expr> query;
 
+  llvm::errs() << "S1\n";
+  // Here we build the query, after which it is always a conjunction of
+  // the interpolant and the state equality constraints.
   if (interpolant.get()) {
     query = stateEqualityConstraints.get()
                 ? AndExpr::alloc(interpolant, stateEqualityConstraints)
-                : interpolant;
+                : AndExpr::alloc(interpolant, ConstantExpr::create(1, Expr::Bool));
   } else if (stateEqualityConstraints.get()) {
-    query = stateEqualityConstraints;
+    query = AndExpr::alloc(ConstantExpr::create(1, Expr::Bool), stateEqualityConstraints);
   } else {
-    query = ConstantExpr::create(0, Expr::Bool); // false
+    // Here both the interpolant constraints and state equality
+    // constraints are empty, therefore everything gets subsumed
+    return true;
   }
 
+  llvm::errs() << "S2\n";
   if (!existentials.empty()) {
+      llvm::errs() << "S3\n";
     query = simplifyExistsExpr(ExistsExpr::create(existentials, query));
   }
 

@@ -795,17 +795,22 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
   if (isSeeding)
     timeout *= it->second.size();
 
-  // llvm::errs() << "Calling solver->evaluate on query:\n";
-  // ExprPPrinter::printQuery(llvm::errs(), current.constraints, condition);
+  llvm::errs() << "X0\n";
+  llvm::errs() << "Calling solver->evaluate on query:\n";
+  ExprPPrinter::printQuery(llvm::errs(), current.constraints, condition);
 
   solver->setTimeout(timeout);
   bool success = solver->evaluate(current, condition, res);
   solver->setTimeout(0);
+
+  llvm::errs() << "X1\n";
   if (!success) {
     current.pc = current.prevPC;
     terminateStateEarly(current, "Query timed out (fork).");
     return StatePair(0, 0);
   }
+
+  llvm::errs() << "X2\n";
 
   if (!isSeeding) {
     if (replayPath && !isInternal) {
@@ -856,6 +861,8 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     }
   }
 
+  llvm::errs() << "X3\n";
+
   // Fix branch in only-replay-seed mode, if we don't have both true
   // and false seeds.
   if (isSeeding && 
@@ -886,6 +893,8 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
                     trueSeed ? condition : Expr::createIsZero(condition));
     }
   }
+
+  llvm::errs() << "X4\n";
 
   // XXX - even if the constraint is provable one way or the other we
   // can probably benefit by adding this constraint and allowing it to
@@ -2921,13 +2930,13 @@ void Executor::run(ExecutionState &initialState) {
       // Uncomment the following statements to show the state
       // of the interpolation tree and the active node.
 
-      // llvm::errs() << "\nCurrent state:\n";
-      // processTree->dump();
-      // interpTree->dump();
-      // state.itreeNode->dump();
-      // llvm::errs() << "------------------- Executing New Instruction "
-      //                 "-----------------------\n";
-      // state.pc->inst->dump();
+      llvm::errs() << "\nCurrent state:\n";
+      processTree->dump();
+      interpTree->dump();
+      state.itreeNode->dump();
+      llvm::errs() << "------------------- Executing New Instruction "
+                      "-----------------------\n";
+      state.pc->inst->dump();
     }
 
     if (InterpolationOption::interpolation &&

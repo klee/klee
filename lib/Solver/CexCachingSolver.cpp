@@ -295,8 +295,11 @@ CexCachingSolver::~CexCachingSolver() {
 
 bool CexCachingSolver::computeValidity(const Query& query,
                                        Solver::Validity &result) {
+  llvm::errs() << "Y0\n";
   TimerStatIncrementer t(stats::cexCacheTime);
   Assignment *a;
+
+  llvm::errs() << "Y1\n";
 
   // Given query of the form antecedent -> consequent, here we try to
   // decide if antecedent was satisfiable by attempting to get an
@@ -304,12 +307,17 @@ bool CexCachingSolver::computeValidity(const Query& query,
   if (!getAssignment(query.withFalse(), a))
     return false;
 
+  llvm::errs() << "Y2\n";
+
   // Logically, antecedent must be satisfiable, as we eagerly terminate a
   // path upon the discovery of unsatisfiability.
   assert(a && "computeValidity() must have assignment");
+  query.expr->dump();
   ref<Expr> q = a->evaluate(query.expr);
   assert(isa<ConstantExpr>(q) && 
          "assignment evaluation did not result in constant");
+
+  llvm::errs() << "Y3\n";
 
   if (cast<ConstantExpr>(q)->isTrue()) {
     // Antecedent is satisfiable, and its model is also a model of the
