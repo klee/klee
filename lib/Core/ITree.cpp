@@ -189,7 +189,6 @@ ref<Expr> SubsumptionTableEntry::simplifyExistsExpr(ref<Expr> existsExpr) {
   assert(ExistsExpr::classof(existsExpr.get()));
 
   ref<Expr> ret = simplifyArithmeticBody(existsExpr);
-  ret->dump();
   if (!ExistsExpr::classof(ret.get()))
     return ret;
 
@@ -199,7 +198,6 @@ ref<Expr> SubsumptionTableEntry::simplifyExistsExpr(ref<Expr> existsExpr) {
 bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
                                      ExecutionState& state,
                                      double timeout) {
-  llvm::errs() << "SUBSUMPTION CHECK\n";
   // Check if we are at the right program point
   if (state.itreeNode == 0 || reinterpret_cast<uintptr_t>(state.pc->inst) !=
                                   state.itreeNode->getNodeId() ||
@@ -269,7 +267,6 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
   Solver::Validity result;
   ref<Expr> query;
 
-  llvm::errs() << "S1\n";
   // Here we build the query, after which it is always a conjunction of
   // the interpolant and the state equality constraints.
   if (interpolant.get()) {
@@ -284,14 +281,12 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
     return true;
   }
 
-  llvm::errs() << "S2\n";
   if (!existentials.empty()) {
-      llvm::errs() << "S3\n";
     query = simplifyExistsExpr(ExistsExpr::create(existentials, query));
   }
 
-   llvm::errs() << "Querying for subsumption check:\n";
-   ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
+  // llvm::errs() << "Querying for subsumption check:\n";
+  // ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
 
   bool success = false;
 
@@ -319,7 +314,7 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
   }
 
   if (success && result == Solver::True) {
-       llvm::errs() << "Solver decided validity\n";
+      // llvm::errs() << "Solver decided validity\n";
       std::vector<ref<Expr> > unsatCore;
       if (z3solver) {
         unsatCore = z3solver->getUnsatCore();
