@@ -3786,6 +3786,8 @@ void Executor::runFunctionAsMain(Function *f,
   if (NoInterpolation ||
 #ifdef SUPPORT_STP
       SelectSolver != SOLVER_Z3
+#else
+      0
 #endif
       )
     // We globally declare that we don't do interpolation
