@@ -1,5 +1,15 @@
 #!/usr/bin/env python
 # -*- encoding: utf-8 -*-
+
+# ===-- klee-stats --------------------------------------------------------===##
+# 
+#                      The KLEE Symbolic Virtual Machine
+# 
+#  This file is distributed under the University of Illinois Open Source
+#  License. See LICENSE.TXT for details.
+# 
+# ===----------------------------------------------------------------------===##
+
 """Output statistics logged by Klee."""
 
 # use '/' to mean true division and '//' to mean floor division
