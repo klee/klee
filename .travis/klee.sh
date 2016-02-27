@@ -68,6 +68,9 @@ for solver in ${SOLVER_LIST}; do
     exit 1
   esac
 done
+
+
+TCMALLOC_OPTION=$([ "${USE_TCMALLOC:-0}" == 1 ] && echo "--with-tcmalloc" || echo "--without-tcmalloc")
 ###############################################################################
 # KLEE
 ###############################################################################
@@ -85,6 +88,7 @@ ${KLEE_SRC}/configure --with-llvmsrc=/usr/lib/llvm-${LLVM_VERSION}/build \
             ${KLEE_STP_CONFIGURE_OPTION} \
             ${KLEE_Z3_CONFIGURE_OPTION} \
             ${KLEE_UCLIBC_CONFIGURE_OPTION} \
+            ${TCMALLOC_OPTION} \
             CXXFLAGS="${COVERAGE_FLAGS}" \
             && make DISABLE_ASSERTIONS=${DISABLE_ASSERTIONS} \
                     ENABLE_OPTIMIZED=${ENABLE_OPTIMIZED} \
