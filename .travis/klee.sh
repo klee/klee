@@ -68,6 +68,9 @@ for solver in ${SOLVER_LIST}; do
     exit 1
   esac
 done
+
+
+TCMALLOC_OPTION=$([ "${USE_TCMALLOC:-0}" == 1 ] && echo "--with-tcmalloc" || echo "--without-tcmalloc")
 ###############################################################################
 # KLEE
 ###############################################################################
@@ -85,6 +88,7 @@ ${KLEE_SRC}/configure --with-llvmsrc=/usr/lib/llvm-${LLVM_VERSION}/build \
             ${KLEE_STP_CONFIGURE_OPTION} \
             ${KLEE_Z3_CONFIGURE_OPTION} \
             ${KLEE_UCLIBC_CONFIGURE_OPTION} \
+            ${TCMALLOC_OPTION} \
             CXXFLAGS="${COVERAGE_FLAGS}" \
             && make DISABLE_ASSERTIONS=${DISABLE_ASSERTIONS} \
                     ENABLE_OPTIMIZED=${ENABLE_OPTIMIZED} \
@@ -141,11 +145,11 @@ if [ ${COVERAGE} -eq 1 ]; then
     sudo cp style.css /usr/local/lib/python2.7/dist-packages/zcov-0.3.0.dev0-py2.7.egg/zcov/style.css
 
 #install zcov dependency
-    sudo apt-get install enscript
+    sudo apt-get install -y enscript
 
 #update gcov from v4.6 to v4.8. This is becauase gcda files are made for v4.8 and cause 
 #a segmentation fault in v4.6
-    sudo apt-get install ggcov
+    sudo apt-get install -y ggcov
     sudo rm /usr/bin/gcov
     sudo ln -s /usr/bin/gcov-4.8 /usr/bin/gcov
 

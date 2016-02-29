@@ -632,6 +632,8 @@ ENABLE_Z3
 STP_LDFLAGS
 STP_CFLAGS
 ENABLE_STP
+TCMALLOC_LIB
+HAVE_TCMALLOC
 CXXCPP
 HAVE_SELINUX
 EGREP
@@ -733,6 +735,7 @@ with_llvmcxx
 with_uclibc
 enable_posix_runtime
 with_runtime
+with_tcmalloc
 with_stp
 with_z3
 with_metasmt
@@ -1385,6 +1388,8 @@ Optional Packages:
                           (klee-uclibc root directory or libc.a file
   --with-runtime          Select build configuration for runtime libraries
                           (default [Release+Asserts])
+  --without-tcmalloc      Ignore presence of tcmalloc and disable it
+                          (default=detect)
   --with-stp              Location of STP installation directory
   --with-z3               Location of Z3 installation directory
   --with-metasmt          Location of metaSMT installation directory
@@ -4869,6 +4874,119 @@ $as_echo "#define HAVE_MALLINFO 1" >>confdefs.h
 
 fi
 
+
+
+
+# Check whether --with-tcmalloc was given.
+if test "${with_tcmalloc+set}" = set; then :
+  withval=$with_tcmalloc;
+fi
+
+
+if test "x$with_tcmalloc" != "xno"; then :
+  for ac_header in gperftools/malloc_extension.h
+do :
+  ac_fn_cxx_check_header_mongrel "$LINENO" "gperftools/malloc_extension.h" "ac_cv_header_gperftools_malloc_extension_h" "$ac_includes_default"
+if test "x$ac_cv_header_gperftools_malloc_extension_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_GPERFTOOLS_MALLOC_EXTENSION_H 1
+_ACEOF
+ have_tcmalloc=yes
+else
+  have_tcmalloc=no
+fi
+
+done
+
+else
+  have_tcmalloc=no
+fi
+
+if test "x$have_tcmalloc" = "xyes"; then :
+
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing tc_malloc" >&5
+$as_echo_n "checking for library containing tc_malloc... " >&6; }
+if ${ac_cv_search_tc_malloc+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_func_search_save_LIBS=$LIBS
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char tc_malloc ();
+int
+main ()
+{
+return tc_malloc ();
+  ;
+  return 0;
+}
+_ACEOF
+for ac_lib in '' tcmalloc_minimal; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+  fi
+  if ac_fn_cxx_try_link "$LINENO"; then :
+  ac_cv_search_tc_malloc=$ac_res
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext
+  if ${ac_cv_search_tc_malloc+:} false; then :
+  break
+fi
+done
+if ${ac_cv_search_tc_malloc+:} false; then :
+
+else
+  ac_cv_search_tc_malloc=no
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_tc_malloc" >&5
+$as_echo "$ac_cv_search_tc_malloc" >&6; }
+ac_res=$ac_cv_search_tc_malloc
+if test "$ac_res" != no; then :
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+
+		      HAVE_TCMALLOC=1
+
+		      if test "${ac_cv_search_tc_malloc}" != "none required"; then
+			 TCMALLOC_LIB=${ac_cv_search_tc_malloc}
+
+		      fi
+
+else
+
+		      { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: Could not link with tcmalloc" >&5
+$as_echo "$as_me: WARNING: Could not link with tcmalloc" >&2;}
+		      HAVE_TCMALLOC=0
+
+
+fi
+
+
+
+else
+  if test "x$with_tcmalloc" = "xyes"; then :
+  as_fn_error $? "tcmalloc requested but not found" "$LINENO" 5
+else
+
+	      HAVE_TCMALLOC=0
+
+
+fi
+
+fi
 
 
 ENABLE_STP=0

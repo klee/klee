@@ -550,6 +550,41 @@ AC_SEARCH_LIBS(mallinfo,malloc,
                AC_DEFINE([HAVE_MALLINFO],[1],[Define if mallinfo() is available on this platform.]))
 
 dnl **************************************************************************
+dnl Test for tcmalloc
+dnl **************************************************************************
+
+AC_ARG_WITH([tcmalloc],
+	    AS_HELP_STRING([--without-tcmalloc], [Ignore presence of tcmalloc and disable it (default=detect)]))
+
+AS_IF([test "x$with_tcmalloc" != "xno"],
+      AC_CHECK_HEADERS([gperftools/malloc_extension.h],
+		       [have_tcmalloc=yes], [have_tcmalloc=no]),
+      [have_tcmalloc=no])
+
+AS_IF([test "x$have_tcmalloc" = "xyes"],
+      [
+	AC_SEARCH_LIBS(tc_malloc,tcmalloc_minimal,
+		     [
+		      AC_SUBST(HAVE_TCMALLOC, 1)
+		      if test "${ac_cv_search_tc_malloc}" != "none required"; then
+			 TCMALLOC_LIB=${ac_cv_search_tc_malloc}
+			 AC_SUBST(TCMALLOC_LIB)
+		      fi
+		     ],
+		     [
+		      AC_MSG_WARN([Could not link with tcmalloc])
+		      AC_SUBST(HAVE_TCMALLOC, 0)
+		     ],)
+
+       ],
+      [AS_IF([test "x$with_tcmalloc" = "xyes"],
+	     [AC_MSG_ERROR([tcmalloc requested but not found])],
+	     [
+	      AC_SUBST(HAVE_TCMALLOC, 0)
+	      ])
+])
+
+dnl **************************************************************************
 dnl Find an install of STP
 dnl **************************************************************************
 
