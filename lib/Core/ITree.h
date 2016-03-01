@@ -103,6 +103,8 @@ namespace klee {
 
     std::vector<const Array *> existentials;
 
+    static ref<Expr> simplifyEqualityExpr(ref<Expr> expr);
+
     static ref<Expr> simplifyExistsExpr(ref<Expr> existsExpr);
 
     static ref<Expr> simplifyArithmeticBody(ref<Expr> existsExpr);
