@@ -405,7 +405,7 @@ void StatsTracker::writeStatsLine() {
              << "," << numBranches
              << "," << util::getUserTime()
              << "," << executor.states.size()
-             << "," << util::GetTotalMallocUsage()
+             << "," << util::GetTotalMallocUsage() + executor.memory->getUsedDeterministicSize()
              << "," << stats::queries
              << "," << stats::queryConstructs
              << "," << 0 // was numObjects

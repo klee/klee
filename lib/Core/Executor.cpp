@@ -1125,8 +1125,10 @@ void Executor::executeCall(ExecutionState &state,
       // ExecutionState::varargs
     case Intrinsic::vastart:  {
       StackFrame &sf = state.stack.back();
-      assert(sf.varargs && 
-             "vastart called in function with no vararg object");
+
+      // varargs can be zero if no varargs were provided
+      if (!sf.varargs)
+        return;
 
       // FIXME: This is really specific to the architecture, not the pointer
       // size. This happens to work fir x86-32 and x86-64, however.
@@ -1209,9 +1211,10 @@ void Executor::executeCall(ExecutionState &state,
                               "user.err");
         return;
       }
-            
+
       StackFrame &sf = state.stack.back();
       unsigned size = 0;
+      bool requires16ByteAlignment = false;
       for (unsigned i = funcArgs; i < callingArgs; i++) {
         // FIXME: This is really specific to the architecture, not the pointer
         // size. This happens to work fir x86-32 and x86-64, however.
@@ -1225,40 +1228,46 @@ void Executor::executeCall(ExecutionState &state,
           // Alignment requirements for scalar types is the same as their size
           if (argWidth > Expr::Int64) {
              size = llvm::RoundUpToAlignment(size, 16);
+             requires16ByteAlignment = true;
           }
           size += llvm::RoundUpToAlignment(argWidth, WordSize) / 8;
         }
       }
 
-      MemoryObject *mo = sf.varargs = memory->allocate(size, true, false, 
-                                                       state.prevPC->inst);
-      if (!mo) {
+      MemoryObject *mo = sf.varargs =
+          memory->allocate(size, true, false, state.prevPC->inst,
+                           (requires16ByteAlignment ? 16 : 8));
+      if (!mo && size) {
         terminateStateOnExecError(state, "out of memory (varargs)");
         return;
       }
 
-      if ((WordSize == Expr::Int64) && (mo->address & 15)) {
-        // Both 64bit Linux/Glibc and 64bit MacOSX should align to 16 bytes.
-        klee_warning_once(0, "While allocating varargs: malloc did not align to 16 bytes.");
-      }
+      if (mo) {
+        if ((WordSize == Expr::Int64) && (mo->address & 15) &&
+            requires16ByteAlignment) {
+          // Both 64bit Linux/Glibc and 64bit MacOSX should align to 16 bytes.
+          klee_warning_once(
+              0, "While allocating varargs: malloc did not align to 16 bytes.");
+        }
 
-      ObjectState *os = bindObjectInState(state, mo, true);
-      unsigned offset = 0;
-      for (unsigned i = funcArgs; i < callingArgs; i++) {
-        // FIXME: This is really specific to the architecture, not the pointer
-        // size. This happens to work fir x86-32 and x86-64, however.
-        if (WordSize == Expr::Int32) {
-          os->write(offset, arguments[i]);
-          offset += Expr::getMinBytesForWidth(arguments[i]->getWidth());
-        } else {
-          assert(WordSize == Expr::Int64 && "Unknown word size!");
+        ObjectState *os = bindObjectInState(state, mo, true);
+        unsigned offset = 0;
+        for (unsigned i = funcArgs; i < callingArgs; i++) {
+          // FIXME: This is really specific to the architecture, not the pointer
+          // size. This happens to work fir x86-32 and x86-64, however.
+          if (WordSize == Expr::Int32) {
+            os->write(offset, arguments[i]);
+            offset += Expr::getMinBytesForWidth(arguments[i]->getWidth());
+          } else {
+            assert(WordSize == Expr::Int64 && "Unknown word size!");
 
-          Expr::Width argWidth = arguments[i]->getWidth();
-          if (argWidth > Expr::Int64) {
-             offset = llvm::RoundUpToAlignment(offset, 16);
+            Expr::Width argWidth = arguments[i]->getWidth();
+            if (argWidth > Expr::Int64) {
+              offset = llvm::RoundUpToAlignment(offset, 16);
+            }
+            os->write(offset, arguments[i]);
+            offset += llvm::RoundUpToAlignment(argWidth, WordSize) / 8;
           }
-          os->write(offset, arguments[i]);
-          offset += llvm::RoundUpToAlignment(argWidth, WordSize) / 8;
         }
       }
     }
@@ -2444,7 +2453,9 @@ void Executor::checkMemoryUsage() {
     // We need to avoid calling GetTotalMallocUsage() often because it
     // is O(elts on freelist). This is really bad since we start
     // to pummel the freelist once we hit the memory cap.
-    unsigned mbs = util::GetTotalMallocUsage() >> 20;
+    unsigned mbs = (util::GetTotalMallocUsage() >> 20) +
+                   (memory->getUsedDeterministicSize() >> 20);
+
     if (mbs > MaxMemory) {
       if (mbs > MaxMemory + 100) {
         // just guess at how many to kill
@@ -3303,7 +3314,10 @@ void Executor::runFunctionAsMain(Function *f,
     if (++ai!=ae) {
       argvMO = memory->allocate((argc+1+envc+1+1) * NumPtrBytes, false, true,
                                 f->begin()->begin());
-      
+
+      if (!argvMO)
+        klee_error("Could not allocate memory for function arguments");
+
       arguments.push_back(argvMO->getBaseExpr());
 
       if (++ai!=ae) {
@@ -3343,6 +3357,8 @@ void Executor::runFunctionAsMain(Function *f,
         int j, len = strlen(s);
         
         MemoryObject *arg = memory->allocate(len+1, false, true, state->pc->inst);
+        if (!arg)
+          klee_error("Could not allocate memory for function arguments");
         ObjectState *os = bindObjectInState(*state, arg, false);
         for (j=0; j<len+1; j++)
           os->write8(j, s[j]);
