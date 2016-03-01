@@ -136,27 +136,33 @@ namespace {
 
   cl::opt<bool>
   SimplifySymIndices("simplify-sym-indices",
-                     cl::init(false));
+                     cl::init(false),
+		     cl::desc("Simplify symbolic accesses using equalities from other constraints (default=off)"));
 
   cl::opt<bool>
   EqualitySubstitution("equality-substitution",
-                     cl::init(true),
-                     cl::desc("Simplify equality expressions before querying the solver (default=on)."));
+		       cl::init(true),
+		       cl::desc("Simplify equality expressions before querying the solver (default=on)."));
 
   cl::opt<unsigned>
   MaxSymArraySize("max-sym-array-size",
                   cl::init(0));
 
   cl::opt<bool>
-  SuppressExternalWarnings("suppress-external-warnings");
+  SuppressExternalWarnings("suppress-external-warnings",
+			   cl::init(false),
+			   cl::desc("Supress warnings about calling external functions."));
 
   cl::opt<bool>
-  AllExternalWarnings("all-external-warnings");
+  AllExternalWarnings("all-external-warnings",
+		      cl::init(false),
+		      cl::desc("Issue an warning everytime an external call is made," 
+			       "as opposed to once per function (default=off)"));
 
   cl::opt<bool>
   OnlyOutputStatesCoveringNew("only-output-states-covering-new",
                               cl::init(false),
-			      cl::desc("Only output test cases covering new code."));
+			      cl::desc("Only output test cases covering new code (default=off)."));
 
   cl::opt<bool>
   EmitAllErrors("emit-all-errors",
@@ -173,36 +179,54 @@ namespace {
 		    cl::init(true));
 
   cl::opt<bool>
-  OnlyReplaySeeds("only-replay-seeds", 
-                  cl::desc("Discard states that do not have a seed."));
+  OnlyReplaySeeds("only-replay-seeds",
+		  cl::init(false),
+                  cl::desc("Discard states that do not have a seed (default=off)."));
  
   cl::opt<bool>
-  OnlySeed("only-seed", 
-           cl::desc("Stop execution after seeding is done without doing regular search."));
+  OnlySeed("only-seed",
+	   cl::init(false),
+           cl::desc("Stop execution after seeding is done without doing regular search (default=off)."));
  
   cl::opt<bool>
-  AllowSeedExtension("allow-seed-extension", 
-                     cl::desc("Allow extra (unbound) values to become symbolic during seeding."));
+  AllowSeedExtension("allow-seed-extension",
+		     cl::init(false),
+                     cl::desc("Allow extra (unbound) values to become symbolic during seeding (default=false)."));
  
   cl::opt<bool>
-  ZeroSeedExtension("zero-seed-extension");
+  ZeroSeedExtension("zero-seed-extension",
+		    cl::init(false),
+		    cl::desc("(default=off)"));
  
   cl::opt<bool>
-  AllowSeedTruncation("allow-seed-truncation", 
-                      cl::desc("Allow smaller buffers than in seeds."));
+  AllowSeedTruncation("allow-seed-truncation",
+		      cl::init(false),
+                      cl::desc("Allow smaller buffers than in seeds (default=off)."));
  
   cl::opt<bool>
   NamedSeedMatching("named-seed-matching",
-                    cl::desc("Use names to match symbolic objects to inputs."));
+		    cl::init(false),
+                    cl::desc("Use names to match symbolic objects to inputs (default=off)."));
 
   cl::opt<double>
-  MaxStaticForkPct("max-static-fork-pct", cl::init(1.));
+  MaxStaticForkPct("max-static-fork-pct", 
+		   cl::init(1.),
+		   cl::desc("(default=1.0)"));
+
   cl::opt<double>
-  MaxStaticSolvePct("max-static-solve-pct", cl::init(1.));
+  MaxStaticSolvePct("max-static-solve-pct",
+		    cl::init(1.),
+		    cl::desc("(default=1.0)"));
+
   cl::opt<double>
-  MaxStaticCPForkPct("max-static-cpfork-pct", cl::init(1.));
+  MaxStaticCPForkPct("max-static-cpfork-pct", 
+		     cl::init(1.),
+		     cl::desc("(default=1.0)"));
+
   cl::opt<double>
-  MaxStaticCPSolvePct("max-static-cpsolve-pct", cl::init(1.));
+  MaxStaticCPSolvePct("max-static-cpsolve-pct",
+		      cl::init(1.),
+		      cl::desc("(default=1.0)"));
 
   cl::opt<double>
   MaxInstructionTime("max-instruction-time",

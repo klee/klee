@@ -86,7 +86,7 @@ llvm::cl::list<QueryLoggingSolverType> queryLoggingOptions(
 
 llvm::cl::opt<klee::MetaSMTBackendType> MetaSMTBackend(
     "metasmt-backend",
-    llvm::cl::desc("Specify the MetaSMT solver backend type."),
+    llvm::cl::desc("Specify the MetaSMT solver backend type (default=STP)."),
     llvm::cl::values(
         clEnumValN(METASMT_BACKEND_STP, "stp", "Use metaSMT with STP"),
         clEnumValN(METASMT_BACKEND_Z3, "z3", "Use metaSMT with Z3"),
