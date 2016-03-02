@@ -1,3 +1,6 @@
+// The order cases are generated in LLVM 2.9 is different: tab first then space
+// as one can see in assembly.ll, skip this test for older versions
+// REQUIRES: not-llvm-2.9
 // RUN: %llvmgcc %s -emit-llvm -g -c -o %t.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee -debug-print-instructions --output-dir=%t.klee-out --allow-external-sym-calls --switch-type=internal --search=dfs %t.bc >%t.switch.log 2>&1
