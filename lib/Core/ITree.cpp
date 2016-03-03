@@ -165,7 +165,7 @@ ref<Expr> SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr) {
   // which may contain both normal and shadow variables.
   ref<Expr> body = expr->body;
 
-  // We only simplify a conjunction of
+  // We only simplify a conjunction of interpolant and equalities
   if (!llvm::isa<AndExpr>(body))
     return existsExpr;
 
