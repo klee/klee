@@ -222,6 +222,15 @@ unsigned NotExpr::computeHash() {
   return hashValue;
 }
 
+ref<Expr> Expr::createFromKind(Kind k, ref<Expr> lhs, ref<Expr> rhs) {
+  std::vector<Expr::CreateArg> exprs;
+  Expr::CreateArg arg1(lhs);
+  Expr::CreateArg arg2(rhs);
+  exprs.push_back(arg1);
+  exprs.push_back(arg2);
+  return Expr::createFromKind(k, exprs);
+}
+
 ref<Expr> Expr::createFromKind(Kind k, std::vector<CreateArg> args) {
   unsigned numArgs = args.size();
   (void) numArgs;

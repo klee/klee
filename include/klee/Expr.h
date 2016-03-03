@@ -246,6 +246,7 @@ public:
 
   struct CreateArg;
   static ref<Expr> createFromKind(Kind k, std::vector<CreateArg> args);
+  static ref<Expr> createFromKind(Kind k, ref<Expr> lhs, ref<Expr> rhs);
 
   static bool isValidKidWidth(unsigned kid, Width w) { return true; }
   static bool needsResultType() { return false; }

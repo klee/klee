@@ -232,29 +232,22 @@ ref<Expr> SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr) {
                equalityConstraintLeft->getKid(1)
                    .operator==(interpolantAtom->getKid(0))) {
       newIntpLeft = equalityConstraintRight;
-      std::vector<Expr::CreateArg> exprs;
-      Expr::CreateArg arg1(interpolantAtom->getKid(1));
-      Expr::CreateArg arg2(equalityConstraintLeft->getKid(0));
-      exprs.push_back(arg1);
-      exprs.push_back(arg2);
       newIntpRight =
-          Expr::createFromKind(equalityConstraintLeft->getKind(), exprs);
+          Expr::createFromKind(equalityConstraintLeft->getKind(),
+        		  	  	  	   interpolantAtom->getKid(1),
+							   equalityConstraintLeft->getKid(0));
     }
 
     if (newIntpLeft.get() && newIntpRight.get()) {
-      std::vector<Expr::CreateArg> newBodyConstraintPack;
-      Expr::CreateArg left(newIntpLeft);
-      Expr::CreateArg right(newIntpRight);
-      newBodyConstraintPack.push_back(left);
-      newBodyConstraintPack.push_back(right);
-
       if (!conjunction.get())
         conjunction = Expr::createFromKind(interpolantAtom->getKind(),
-                                           newBodyConstraintPack);
+        								   newIntpLeft,
+										   newIntpRight);
       else
         conjunction = AndExpr::create(
             conjunction, Expr::createFromKind(interpolantAtom->getKind(),
-                                              newBodyConstraintPack));
+            								  newIntpLeft,
+											  newIntpRight));
     }
   }
 
@@ -342,7 +335,8 @@ ref<Expr> SubsumptionTableEntry::simplifyEqualityExpr(
     return expr;
   }
 
-  assert(llvm::isa<AndExpr>(expr));
+  //allow conjunction and disjunction
+  assert(llvm::isa<AndExpr>(expr) || llvm::isa<OrExpr>(expr));
 
   ref<Expr> lhs = simplifyEqualityExpr(equalityPack, expr->getKid(0));
   if (lhs->isFalse())
@@ -352,7 +346,7 @@ ref<Expr> SubsumptionTableEntry::simplifyEqualityExpr(
   if (lhs->isTrue())
     return rhs;
 
-  return AndExpr::alloc(lhs, rhs);
+  return Expr::createFromKind(expr->getKind(), lhs, rhs);
 }
 
 ref<Expr> SubsumptionTableEntry::simplifyExistsExpr(ref<Expr> existsExpr) {
@@ -453,8 +447,8 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
 
 
   if (!existentials.empty()) {
-    // llvm::errs() << "Before simplification:\n";
-    // ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
+//     llvm::errs() << "Before simplification:\n";
+//     ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
 
     query = simplifyExistsExpr(ExistsExpr::create(existentials, query));
   }
@@ -466,8 +460,8 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
   // We call the solver only when the simplified query is
   // not a constant.
   if (!llvm::isa<ConstantExpr>(query)) {
-    // llvm::errs() << "Querying for subsumption check:\n";
-    // ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
+//     llvm::errs() << "Querying for subsumption check:\n";
+//     ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
 
     if (!existentials.empty() && llvm::isa<ExistsExpr>(query)) {
       // llvm::errs() << "Existentials not empty\n";
