@@ -18,8 +18,6 @@ using namespace klee;
 
 // Interpolation is enabled by default
 bool InterpolationOption::interpolation = true;
-std::vector<ref<Expr> > interpolantPack;
-std::vector<ref<Expr> > equalityPack;
 
 /**/
 
@@ -134,10 +132,31 @@ SubsumptionTableEntry::SubsumptionTableEntry(ITreeNode *node)
 
 SubsumptionTableEntry::~SubsumptionTableEntry() {}
 
+bool
+SubsumptionTableEntry::hasExistentials(std::vector<const Array *> &existentials,
+                                       ref<Expr> expr) {
+  for (int i = 0, numKids = expr->getNumKids(); i < numKids; ++i) {
+    if (llvm::isa<ReadExpr>(expr)) {
+      ReadExpr *readExpr = llvm::dyn_cast<ReadExpr>(expr.get());
+      const Array *array = (readExpr->updates).root;
+      for (std::vector<const Array *>::iterator it = existentials.begin(),
+                                                itEnd = existentials.end();
+           it != itEnd; ++it) {
+        if ((*it) == array)
+          return true;
+      }
+    } else if (hasExistentials(existentials, expr->getKid(i)))
+      return true;
+  }
+  return false;
+}
+
 ref<Expr> SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr) {
-  assert(ExistsExpr::classof(existsExpr.get()));
-  interpolantPack.clear(); // interpolantPack is a global variable, therefore we need to clear it before use
-  equalityPack.clear(); // equalityPack is a global variable, therefore we need to clear it before use
+  assert(llvm::isa<ExistsExpr>(existsExpr));
+
+  std::vector<ref<Expr> > interpolantPack;
+  std::vector<ref<Expr> > equalityPack;
+
   ExistsExpr *expr = static_cast<ExistsExpr *>(existsExpr.get());
 
   std::vector<const Array *> boundVariables = expr->variables;
@@ -146,140 +165,201 @@ ref<Expr> SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr) {
   // which may contain both normal and shadow variables.
   ref<Expr> body = expr->body;
 
-  // We only simplify a conjunction of
+  // We only simplify a conjunction of interpolant and equalities
   if (!llvm::isa<AndExpr>(body))
     return existsExpr;
 
-  // It returns simplified version of the expression
+  // If the post-simplified body was a constant, simply return the body;
+  if (llvm::isa<ConstantExpr>(body))
+    return body;
+
+  // Here we process equality constraints of shadow and normal variables.
+  // The following procedure returns simplified version of the expression
   // by reducing any equality expression into constant (TRUE/FALSE).
   // if body is A and (Eq 2 4), body can be simplified into false.
   // if body is A and (Eq 2 2), body can be simplified into A.
-  // Along the way, It also collects suitable expression in the interpolantPack and equalityPack.
-  body = simplifyEqualityExpr(body);
-
-  // If the post-simplified body was a constant, simply return the body;
-  if (llvm::isa<ConstantExpr>(body)){
-	  return body;
+  // Along the way, It also collects the remaining equalities in equalityPack.
+  ref<Expr> equalityConstraint =
+      simplifyEqualityExpr(equalityPack, body->getKid(1));
+  if (equalityConstraint->isFalse()) {
+    return ConstantExpr::alloc(0, Expr::Bool);
+  } else if (equalityConstraint->isTrue()) {
+    return ConstantExpr::alloc(1, Expr::Bool);
   }
 
-  ref<Expr> interpolant = body->getKid(0);        // Formula that contains shadow expression (interpolant)
-  ref<Expr> equalityConstraint = body->getKid(1); // Equality formula of shadow and normal variables
+  // FIXME: We only perform substution using a single equality and
+  // one or many interpolants. We should instead use all equalities.
+  if (equalityPack.size() > 1) {
+    return existsExpr;
+  }
 
-  // If the interpolant was a constant (true), then the equality
-  // constraints would contain equality with constants only and no
-  // equality with shadow (existential) variables, hence it should
-  // be safe to simply return the equality constraint.
-  if (llvm::isa<ConstantExpr>(interpolant))
+  // Try to simplify the interpolant. If the resulting simplification
+  // was a constant (true), then the equality constraints would contain
+  // equality with constants only and no equality with shadow (existential)
+  // variables, hence it should be safe to simply return the equality
+  // constraint.
+  ref<Expr> simplifiedInterpolant =
+      simplifyInterpolantExpr(interpolantPack, body->getKid(0));
+  if (llvm::isa<ConstantExpr>(simplifiedInterpolant))
     return equalityConstraint;
 
-  // We only handle single equality and one or many interpolants
-  if (equalityPack.size() > 1)
-     return existsExpr;
+  // Left-hand side of the equality formula that contains the shadow expression
+  // (we assume that shadow_y is always on the left side).
+  ref<Expr> equalityConstraintLeft = equalityConstraint->getKid(0);
 
-  ref<Expr> equalityConstraintLeft = equalityConstraint->getKid(0); // left side of the equality formula where it contains the shadow expression
-  	  	  	  	  	  	  	  	  	  	  	  	  	  	   // (assume: shadow_y always on the left side)
-  ref<Expr> equalityConstraintRight = equalityConstraint->getKid(1); // right side of the equality formula where it contains non shadow expression
+  // Right-hand side of the equality formula that contains non-shadow
+  // expression.
+  ref<Expr> equalityConstraintRight = equalityConstraint->getKid(1);
 
-  ref<Expr> conjunction = NULL;
+  ref<Expr> conjunction;
 
-  // Do iteration for each interpolant
+  // Do iteration for each atomic interpolant
   for (std::vector<ref<Expr> >::iterator it = interpolantPack.begin(),
-                                            itEnd = interpolantPack.end();
+                                         itEnd = interpolantPack.end();
        it != itEnd; ++it) {
 
-	  interpolant = *it;
+    ref<Expr> interpolantAtom = *it;
+    ref<Expr> newIntpLeft;
+    ref<Expr> newIntpRight;
 
-	  ref<Expr> newIntpLeft = NULL;
-	  ref<Expr> newIntpRight = NULL;
+    if (equalityConstraintLeft.operator==(interpolantAtom->getKid(0))) {
+      newIntpLeft = equalityConstraintRight;
+      newIntpRight = interpolantAtom->getKid(1);
+    } else if (equalityConstraintLeft.operator==(interpolantAtom->getKid(1))) {
+      newIntpLeft = interpolantAtom->getKid(0);
+      newIntpRight = equalityConstraintRight;
+    } else if (equalityConstraintLeft->getKid(1).get() &&
+               equalityConstraintLeft->getKid(1)
+                   .operator==(interpolantAtom->getKid(0))) {
+      newIntpLeft = equalityConstraintRight;
+      std::vector<Expr::CreateArg> exprs;
+      Expr::CreateArg arg1(interpolantAtom->getKid(1));
+      Expr::CreateArg arg2(equalityConstraintLeft->getKid(0));
+      exprs.push_back(arg1);
+      exprs.push_back(arg2);
+      newIntpRight =
+          Expr::createFromKind(equalityConstraintLeft->getKind(), exprs);
+    }
 
-	  if(equalityConstraintLeft.operator ==(interpolant->getKid(0))){
-		newIntpLeft = equalityConstraintRight;
-		newIntpRight = interpolant->getKid(1);
-	  }
-	  else if(equalityConstraintLeft.operator ==(interpolant->getKid(1))){
-		newIntpLeft = interpolant->getKid(0);
-		newIntpRight = equalityConstraintRight;
-	  }
-	  else if (equalityConstraintLeft->getKid(1).operator ==(interpolant->getKid(0))) {
-		newIntpLeft = equalityConstraintRight;
-	  	std::vector<Expr::CreateArg > exprs;
-	  	Expr::CreateArg arg1(interpolant->getKid(1));
-	  	Expr::CreateArg arg2(equalityConstraintLeft->getKid(0));
-	  	exprs.push_back(arg1);
-	  	exprs.push_back(arg2);
-	  	newIntpRight = Expr::createFromKind(equalityConstraintLeft->getKind(), exprs);
-	  }
+    if (newIntpLeft.get() && newIntpRight.get()) {
+      std::vector<Expr::CreateArg> newBodyConstraintPack;
+      Expr::CreateArg left(newIntpLeft);
+      Expr::CreateArg right(newIntpRight);
+      newBodyConstraintPack.push_back(left);
+      newBodyConstraintPack.push_back(right);
 
-	  if(!newIntpLeft.isNull() && !newIntpRight.isNull()){
-	    std::vector<Expr::CreateArg > newBodyConstraintPack;
-	  	Expr::CreateArg left(newIntpLeft);
-	  	Expr::CreateArg right(newIntpRight);
-	  	newBodyConstraintPack.push_back(left);
-	  	newBodyConstraintPack.push_back(right);
-
-	  	if(conjunction.isNull())
-	  	  conjunction = Expr::createFromKind(interpolant->getKind(), newBodyConstraintPack);
-	  	else
-	      conjunction = AndExpr::create(conjunction, Expr::createFromKind(interpolant->getKind(), newBodyConstraintPack));
-	  }
+      if (!conjunction.get())
+        conjunction = Expr::createFromKind(interpolantAtom->getKind(),
+                                           newBodyConstraintPack);
+      else
+        conjunction = AndExpr::create(
+            conjunction, Expr::createFromKind(interpolantAtom->getKind(),
+                                              newBodyConstraintPack));
+    }
   }
 
-  if(!conjunction.isNull()){
-    return conjunction;
+  ref<Expr> newBody;
+
+  if (conjunction.get()) {
+    if (!hasExistentials(expr->variables, conjunction))
+      return conjunction;
+
+    newBody = AndExpr::alloc(conjunction, equalityConstraint);
+  } else {
+    newBody = AndExpr::alloc(simplifiedInterpolant, equalityConstraint);
   }
 
-  return existsExpr;
+  return existsExpr->rebuild(&newBody);
 }
 
-ref<Expr> SubsumptionTableEntry::simplifyEqualityExpr(ref<Expr> expr){
+ref<Expr> SubsumptionTableEntry::simplifyInterpolantExpr(
+    std::vector<ref<Expr> > &interpolantPack, ref<Expr> expr) {
   if (expr->getNumKids() < 2)
     return expr;
 
-  if (llvm::isa<EqExpr>(expr) && llvm::isa<ConstantExpr>(expr->getKid(0)) && llvm::isa<ConstantExpr>(expr->getKid(1))){
-    return (expr->getKid(0).operator == (expr->getKid(1))) ?  ConstantExpr::alloc(1, Expr::Bool) : ConstantExpr::alloc(0, Expr::Bool);
+  if (llvm::isa<EqExpr>(expr) && llvm::isa<ConstantExpr>(expr->getKid(0)) &&
+      llvm::isa<ConstantExpr>(expr->getKid(1))) {
+    return (expr->getKid(0).operator==(expr->getKid(1)))
+               ? ConstantExpr::alloc(1, Expr::Bool)
+               : ConstantExpr::alloc(0, Expr::Bool);
+  } else if (llvm::isa<NeExpr>(expr) &&
+             llvm::isa<ConstantExpr>(expr->getKid(0)) &&
+             llvm::isa<ConstantExpr>(expr->getKid(1))) {
+    return (expr->getKid(0).operator!=(expr->getKid(1)))
+               ? ConstantExpr::alloc(1, Expr::Bool)
+               : ConstantExpr::alloc(0, Expr::Bool);
   }
-  else if (llvm::isa<NeExpr>(expr) && llvm::isa<ConstantExpr>(expr->getKid(0)) && llvm::isa<ConstantExpr>(expr->getKid(1))){
-    return (expr->getKid(0).operator != (expr->getKid(1))) ?  ConstantExpr::alloc(1, Expr::Bool) : ConstantExpr::alloc(0, Expr::Bool);
-  }
 
-  if (!llvm::isa<AndExpr>(expr)){
+  ref<Expr> lhs = expr->getKid(0);
+  ref<Expr> rhs = expr->getKid(1);
 
-	// if current expression has a form like (Eq false P), where P is any comparison expression
-	// then, we need to change it into (Negation of P)
-	if (llvm::isa<EqExpr>(expr)
-	      		&& expr->getKid(0).operator ==(ConstantExpr::alloc(0, Expr::Bool))) {
+  if (!llvm::isa<AndExpr>(expr)) {
 
-	  if (llvm::isa<SltExpr>(expr->getKid(1)))
-	    expr = SgeExpr::create(expr->getKid(1)->getKid(0),expr->getKid(1)->getKid(1));
-	  if (llvm::isa<SgeExpr>(expr->getKid(1)))
-	    expr = SltExpr::create(expr->getKid(1)->getKid(0),expr->getKid(1)->getKid(1));
-	  if (llvm::isa<SleExpr>(expr->getKid(1)))
-	  	expr = SgtExpr::create(expr->getKid(1)->getKid(0),expr->getKid(1)->getKid(1));
-	  if (llvm::isa<SgtExpr>(expr->getKid(1)))
-	    expr = SleExpr::create(expr->getKid(1)->getKid(0),expr->getKid(1)->getKid(1));
-	}
-
-    if (llvm::isa<EqExpr>(expr) || llvm::isa<NeExpr>(expr)) {
-      // collect unique equality and in-equality expressions in one vector
-	  if(std::find(equalityPack.begin(), equalityPack.end(), expr) == equalityPack.end())
-	    equalityPack.push_back(expr);
+    // If the current expression has a form like (Eq false P), where P is some
+    // comparison, we change it into the negation of P.
+    if (llvm::isa<EqExpr>(expr) && expr->getKid(0)->isFalse()) {
+      if (llvm::isa<SltExpr>(rhs)) {
+        expr = SgeExpr::create(rhs->getKid(0), rhs->getKid(1));
+      } else if (llvm::isa<SgeExpr>(rhs)) {
+        expr = SltExpr::create(rhs->getKid(0), rhs->getKid(1));
+      } else if (llvm::isa<SleExpr>(rhs)) {
+        expr = SgtExpr::create(rhs->getKid(0), rhs->getKid(1));
+      } else if (llvm::isa<SgtExpr>(rhs)) {
+        expr = SleExpr::create(rhs->getKid(0), rhs->getKid(1));
+      }
     }
-    else {
-      // collect unique interpolant expressions in one vector
-      if(std::find(interpolantPack.begin(), interpolantPack.end(), expr) == interpolantPack.end())
-        interpolantPack.push_back(expr);
-    }
-	return expr;
+
+    // Collect unique interpolant expressions in one vector
+    if (std::find(interpolantPack.begin(), interpolantPack.end(), expr) ==
+        interpolantPack.end())
+      interpolantPack.push_back(expr);
+
+    return expr;
   }
 
-  return AndExpr::create(simplifyEqualityExpr(expr->getKid(0)), simplifyEqualityExpr(expr->getKid(1)));
+  return AndExpr::alloc(simplifyInterpolantExpr(interpolantPack, lhs),
+                        simplifyInterpolantExpr(interpolantPack, rhs));
+}
+
+ref<Expr> SubsumptionTableEntry::simplifyEqualityExpr(
+    std::vector<ref<Expr> > &equalityPack, ref<Expr> expr) {
+  if (expr->getNumKids() < 2)
+    return expr;
+
+  if (llvm::isa<EqExpr>(expr)) {
+    if (llvm::isa<ConstantExpr>(expr->getKid(0)) &&
+        llvm::isa<ConstantExpr>(expr->getKid(1))) {
+      return (expr->getKid(0).operator==(expr->getKid(1)))
+                 ? ConstantExpr::alloc(1, Expr::Bool)
+                 : ConstantExpr::alloc(0, Expr::Bool);
+    }
+
+    // Collect unique equality and in-equality expressions in one vector
+    if (std::find(equalityPack.begin(), equalityPack.end(), expr) ==
+        equalityPack.end())
+      equalityPack.push_back(expr);
+
+    return expr;
+  }
+
+  assert(llvm::isa<AndExpr>(expr));
+
+  ref<Expr> lhs = simplifyEqualityExpr(equalityPack, expr->getKid(0));
+  if (lhs->isFalse())
+    return lhs;
+
+  ref<Expr> rhs = simplifyEqualityExpr(equalityPack, expr->getKid(1));
+  if (lhs->isTrue())
+    return rhs;
+
+  return AndExpr::alloc(lhs, rhs);
 }
 
 ref<Expr> SubsumptionTableEntry::simplifyExistsExpr(ref<Expr> existsExpr) {
-  assert(ExistsExpr::classof(existsExpr.get()));
+  assert(llvm::isa<ExistsExpr>(existsExpr));
 
   ref<Expr> ret = simplifyArithmeticBody(existsExpr);
-  if (!ExistsExpr::classof(ret.get()))
+  if (llvm::isa<ExistsExpr>(ret))
     return ret;
 
   return ret;
@@ -371,19 +451,27 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
     return true;
   }
 
+
   if (!existentials.empty()) {
+    // llvm::errs() << "Before simplification:\n";
+    // ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
+
     query = simplifyExistsExpr(ExistsExpr::create(existentials, query));
   }
-
-   llvm::errs() << "Querying for subsumption check:\n";
-   ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
 
   bool success = false;
 
   Z3Solver *z3solver = 0;
 
-  if (!existentials.empty()) {
-	  llvm::errs() << "existentials not empty())\n";
+  // We call the solver only when the simplified query is
+  // not a constant.
+  if (!llvm::isa<ConstantExpr>(query)) {
+    // llvm::errs() << "Querying for subsumption check:\n";
+    // ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
+
+    if (!existentials.empty() && llvm::isa<ExistsExpr>(query)) {
+      // llvm::errs() << "Existentials not empty\n";
+
       // Instantiate a new Z3 solver to make sure we use Z3
       // without pre-solving optimizations. It would be nice
       // in the future to just run solver->evaluate so that
@@ -397,22 +485,23 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
       success = z3solver->directComputeValidity(Query(state.constraints, query),
                                                 result);
       z3solver->setCoreSolverTimeout(0);
-  } else {
-	  llvm::errs() << "no existential\n";
+    } else {
+      // llvm::errs() << "No existential\n";
 
       // We call the solver in the standard way if the
       // formula is unquantified.
       solver->setTimeout(timeout);
       success = solver->evaluate(state, query, result);
       solver->setTimeout(0);
-      llvm::errs() << "formula is unquantified.\n";
-
+    }
+  } else {
+    if (query->isTrue())
+      return true;
+    return false;
   }
 
   if (success && result == Solver::True) {
-	   llvm::errs() << "Querying for subsumption check:\n";
-	   ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
-       llvm::errs() << "Solver decided validity\n";
+    // llvm::errs() << "Solver decided validity\n";
       std::vector<ref<Expr> > unsatCore;
       if (z3solver) {
         unsatCore = z3solver->getUnsatCore();
@@ -427,14 +516,13 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
       }
 
   } else {
-	   llvm::errs() << "Querying for subsumption check:\n";
-	   ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
-	   if (result != Solver::False)
-	     llvm::errs() << "Solver cannot decided (in-)validity\n";
+    // if (result != Solver::False)
+    // llvm::errs() << "Solver could not decide (in-)validity\n";
 
-      if (z3solver)
-        delete z3solver;
-      return false;
+    if (z3solver)
+      delete z3solver;
+
+    return false;
   }
 
   // State subsumed, we mark needed constraints on the
