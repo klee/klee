@@ -173,6 +173,11 @@ ref<Expr> SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr) {
   if (llvm::isa<ConstantExpr>(body))
     return body;
 
+  // FIXME: Currently we handle only single clause. We should
+  // handle general DNF in the future.
+  if (llvm::isa<OrExpr>(body->getKid(1)))
+    return existsExpr;
+
   // Here we process equality constraints of shadow and normal variables.
   // The following procedure returns simplified version of the expression
   // by reducing any equality expression into constant (TRUE/FALSE).
