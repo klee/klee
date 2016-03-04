@@ -931,6 +931,9 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
     if (!arg)
       return false;
 
+    llvm::errs() << "VERSIONED VALUE: ";
+    arg->dump();
+
     std::vector<Allocation *> allocList = resolveAllocationTransitively(arg);
 
     if (allocList.empty())
