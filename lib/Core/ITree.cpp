@@ -173,8 +173,8 @@ ref<Expr> SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr) {
   if (llvm::isa<ConstantExpr>(body))
     return body;
 
-  // FIXME: Currently we handle only single clause. We should
-  // handle general DNF in the future.
+  // The equality constraint is only a single disjunctive clause
+  // of a CNF formula. In this case we simplify nothing.
   if (llvm::isa<OrExpr>(body->getKid(1)))
     return existsExpr;
 
@@ -183,7 +183,12 @@ ref<Expr> SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr) {
   // by reducing any equality expression into constant (TRUE/FALSE).
   // if body is A and (Eq 2 4), body can be simplified into false.
   // if body is A and (Eq 2 2), body can be simplified into A.
+  //
   // Along the way, It also collects the remaining equalities in equalityPack.
+  // The equality constraints (body->getKid(1)) is a CNF of the form
+  // c1 /\ ... /\ cn. This procedure collects into equalityPack all ci for
+  // 1<=i<=n which are atomic equalities, to be used in simplifying the
+  // interpolant.
   ref<Expr> equalityConstraint =
       simplifyEqualityExpr(equalityPack, body->getKid(1));
   if (equalityConstraint->isFalse()) {
@@ -192,8 +197,9 @@ ref<Expr> SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr) {
     return ConstantExpr::alloc(1, Expr::Bool);
   }
 
-  // FIXME: We only perform substution using a single equality and
-  // one or many interpolants. We should instead use all equalities.
+  // FIXME: We only perform substution using a single atomic equality
+  // one or many interpolants. We should instead use all equalities in
+  // equalityPack.
   if (equalityPack.size() > 1) {
     return existsExpr;
   }
@@ -348,18 +354,44 @@ ref<Expr> SubsumptionTableEntry::simplifyEqualityExpr(
     return expr;
   }
 
-  // At this point the expression should only be a conjunction
-  assert(llvm::isa<AndExpr>(expr));
+  if (llvm::isa<AndExpr>(expr)) {
+    ref<Expr> lhs = simplifyEqualityExpr(equalityPack, expr->getKid(0));
+    if (lhs->isFalse())
+      return lhs;
 
-  ref<Expr> lhs = simplifyEqualityExpr(equalityPack, expr->getKid(0));
-  if (lhs->isFalse())
-    return lhs;
+    ref<Expr> rhs = simplifyEqualityExpr(equalityPack, expr->getKid(1));
+    if (rhs->isFalse())
+      return rhs;
 
-  ref<Expr> rhs = simplifyEqualityExpr(equalityPack, expr->getKid(1));
-  if (lhs->isTrue())
-    return rhs;
+    if (lhs->isTrue())
+      return rhs;
 
-  return AndExpr::alloc(lhs, rhs);
+    if (rhs->isTrue())
+      return lhs;
+
+    return AndExpr::alloc(lhs, rhs);
+  } else if (llvm::isa<OrExpr>(expr)) {
+    // We provide throw-away dummy equalityPack, as we do not use the atomic
+    // equalities within disjunctive clause to simplify the interpolant.
+    std::vector<ref<Expr> > dummy;
+    ref<Expr> lhs = simplifyEqualityExpr(dummy, expr->getKid(0));
+    if (lhs->isTrue())
+      return lhs;
+
+    ref<Expr> rhs = simplifyEqualityExpr(dummy, expr->getKid(1));
+    if (rhs->isTrue())
+      return rhs;
+
+    if (lhs->isFalse())
+      return rhs;
+
+    if (rhs->isFalse())
+      return lhs;
+
+    return OrExpr::alloc(lhs, rhs);
+  }
+
+  assert(!"Invalid expression type.");
 }
 
 ref<Expr> SubsumptionTableEntry::simplifyExistsExpr(ref<Expr> existsExpr) {
