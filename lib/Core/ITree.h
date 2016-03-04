@@ -106,8 +106,8 @@ namespace klee {
     static bool hasExistentials(std::vector<const Array *> &existentials,
                                 ref<Expr> expr);
 
-    static ref<Expr>
-    createBinaryOfSameKind(ref<Expr> originalExpr, ref<Expr> newLhs, ref<Expr> newRhs);
+    static ref<Expr> createBinaryOfSameKind(ref<Expr> originalExpr,
+                                            ref<Expr> newLhs, ref<Expr> newRhs);
 
     static ref<Expr>
     simplifyInterpolantExpr(std::vector<ref<Expr> > &interpolantPack,

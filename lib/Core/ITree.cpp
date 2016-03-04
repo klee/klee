@@ -237,22 +237,19 @@ ref<Expr> SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr) {
                equalityConstraintLeft->getKid(1)
                    .operator==(interpolantAtom->getKid(0))) {
       newIntpLeft = equalityConstraintRight;
-      newIntpRight =
-          createBinaryOfSameKind(equalityConstraintLeft,
-                               interpolantAtom->getKid(1),
-                               equalityConstraintLeft->getKid(0));
+      newIntpRight = createBinaryOfSameKind(equalityConstraintLeft,
+                                            interpolantAtom->getKid(1),
+                                            equalityConstraintLeft->getKid(0));
     }
 
     if (newIntpLeft.get() && newIntpRight.get()) {
       if (!conjunction.get())
-        conjunction = createBinaryOfSameKind(interpolantAtom,
-                                           newIntpLeft,
-                                           newIntpRight);
+        conjunction =
+            createBinaryOfSameKind(interpolantAtom, newIntpLeft, newIntpRight);
       else
         conjunction = AndExpr::create(
-            conjunction, createBinaryOfSameKind(interpolantAtom,
-                                              newIntpLeft,
-                                              newIntpRight));
+            conjunction,
+            createBinaryOfSameKind(interpolantAtom, newIntpLeft, newIntpRight));
     }
   }
 
@@ -270,8 +267,9 @@ ref<Expr> SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr) {
   return existsExpr->rebuild(&newBody);
 }
 
-ref<Expr> SubsumptionTableEntry::createBinaryOfSameKind(
-    ref<Expr> originalExpr, ref<Expr> newLhs, ref<Expr> newRhs) {
+ref<Expr> SubsumptionTableEntry::createBinaryOfSameKind(ref<Expr> originalExpr,
+                                                        ref<Expr> newLhs,
+                                                        ref<Expr> newRhs) {
   std::vector<Expr::CreateArg> exprs;
   Expr::CreateArg arg1(newLhs);
   Expr::CreateArg arg2(newRhs);
