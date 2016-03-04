@@ -238,21 +238,21 @@ ref<Expr> SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr) {
                    .operator==(interpolantAtom->getKid(0))) {
       newIntpLeft = equalityConstraintRight;
       newIntpRight =
-          Expr::createFromKind(equalityConstraintLeft->getKind(),
-        		  	  	  	   interpolantAtom->getKid(1),
-							   equalityConstraintLeft->getKid(0));
+          createBinaryOfSameKind(equalityConstraintLeft,
+                               interpolantAtom->getKid(1),
+                               equalityConstraintLeft->getKid(0));
     }
 
     if (newIntpLeft.get() && newIntpRight.get()) {
       if (!conjunction.get())
-        conjunction = Expr::createFromKind(interpolantAtom->getKind(),
-        								   newIntpLeft,
-										   newIntpRight);
+        conjunction = createBinaryOfSameKind(interpolantAtom,
+                                           newIntpLeft,
+                                           newIntpRight);
       else
         conjunction = AndExpr::create(
-            conjunction, Expr::createFromKind(interpolantAtom->getKind(),
-            								  newIntpLeft,
-											  newIntpRight));
+            conjunction, createBinaryOfSameKind(interpolantAtom,
+                                              newIntpLeft,
+                                              newIntpRight));
     }
   }
 
@@ -268,6 +268,16 @@ ref<Expr> SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr) {
   }
 
   return existsExpr->rebuild(&newBody);
+}
+
+ref<Expr> SubsumptionTableEntry::createBinaryOfSameKind(
+    ref<Expr> originalExpr, ref<Expr> newLhs, ref<Expr> newRhs) {
+  std::vector<Expr::CreateArg> exprs;
+  Expr::CreateArg arg1(newLhs);
+  Expr::CreateArg arg2(newRhs);
+  exprs.push_back(arg1);
+  exprs.push_back(arg2);
+  return Expr::createFromKind(originalExpr->getKind(), exprs);
 }
 
 ref<Expr> SubsumptionTableEntry::simplifyInterpolantExpr(
@@ -340,8 +350,8 @@ ref<Expr> SubsumptionTableEntry::simplifyEqualityExpr(
     return expr;
   }
 
-  //allow conjunction and disjunction
-  assert(llvm::isa<AndExpr>(expr) || llvm::isa<OrExpr>(expr));
+  // At this point the expression should only be a conjunction
+  assert(llvm::isa<AndExpr>(expr));
 
   ref<Expr> lhs = simplifyEqualityExpr(equalityPack, expr->getKid(0));
   if (lhs->isFalse())
@@ -351,7 +361,7 @@ ref<Expr> SubsumptionTableEntry::simplifyEqualityExpr(
   if (lhs->isTrue())
     return rhs;
 
-  return Expr::createFromKind(expr->getKind(), lhs, rhs);
+  return AndExpr::alloc(lhs, rhs);
 }
 
 ref<Expr> SubsumptionTableEntry::simplifyExistsExpr(ref<Expr> existsExpr) {
