@@ -4634,11 +4634,69 @@ $as_echo "$as_me: WARNING: Library cap and its header file sys/capability.h not 
 capability checking support for klee-replay." >&2;}
 fi
 
+for ac_header in selinux/selinux.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "selinux/selinux.h" "ac_cv_header_selinux_selinux_h" "$ac_includes_default"
+if test "x$ac_cv_header_selinux_selinux_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_SELINUX_SELINUX_H 1
+_ACEOF
+ HAVE_SELINUX=1
+
+else
+  HAVE_SELINUX=0
+
+fi
+
+done
+
+
+if test "$HAVE_SELINUX" = "1"; then
+   # Test what function signature we need to use for SELinux. The signatures
+   # have changed between 2.2 and 2.3. In particular, the type of the "security
+   # context" parameter was changed from char * to const char *, with this
+   # patch: [PATCH] Get rid of security_context_t and fix const declarations.
+   # [http://www.spinics.net/lists/selinux/msg14827.html]
+   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for selinux security context type constness" >&5
+$as_echo_n "checking for selinux security context type constness... " >&6; }
+if ${klee_cv_sel_ctx_const+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+#include <selinux/selinux.h>
+int setcon(char *context);
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  klee_cv_sel_ctx_const=''
+else
+  klee_cv_sel_ctx_const='const'
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $klee_cv_sel_ctx_const" >&5
+$as_echo "$klee_cv_sel_ctx_const" >&6; }
+
+cat >>confdefs.h <<_ACEOF
+#define KLEE_SELINUX_CTX_CONST $klee_cv_sel_ctx_const
+_ACEOF
+
+fi
+
 ac_ext=cpp
 ac_cpp='$CXXCPP $CPPFLAGS'
 ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
 ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
 ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
+
 
 
 ac_ext=cpp
@@ -4773,24 +4831,6 @@ ac_cpp='$CXXCPP $CPPFLAGS'
 ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
 ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
 ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
-
-
-for ac_header in selinux/selinux.h
-do :
-  ac_fn_cxx_check_header_mongrel "$LINENO" "selinux/selinux.h" "ac_cv_header_selinux_selinux_h" "$ac_includes_default"
-if test "x$ac_cv_header_selinux_selinux_h" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_SELINUX_SELINUX_H 1
-_ACEOF
- HAVE_SELINUX=1
-
-else
-  HAVE_SELINUX=0
-
-fi
-
-done
-
 
 
 for ac_header in malloc/malloc.h
