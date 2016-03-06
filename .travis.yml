@@ -87,7 +87,7 @@ before_install:
     ###########################################################################
     # Install stuff
     ###########################################################################
-    - sudo apt-get install gcc-4.8 g++-4.8 libcap-dev cmake
+    - sudo apt-get install gcc-4.8 g++-4.8 libcap-dev libselinux1-dev cmake
     # Make gcc4.8 the default gcc version
     - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.8 20
     - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.8 20

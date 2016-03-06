@@ -534,11 +534,30 @@ if test "x${have_cap}" = xno; then
 capability checking support for klee-replay.])
 fi
 
-AC_LANG_POP([C])
-
 AC_CHECK_HEADERS([selinux/selinux.h],
         AC_SUBST(HAVE_SELINUX, 1),
         AC_SUBST(HAVE_SELINUX, 0))
+
+if test "$HAVE_SELINUX" = "1"; then
+   # Test what function signature we need to use for SELinux. The signatures
+   # have changed between 2.2 and 2.3. In particular, the type of the "security
+   # context" parameter was changed from char * to const char *, with this
+   # patch: [PATCH] Get rid of security_context_t and fix const declarations.
+   # [http://www.spinics.net/lists/selinux/msg14827.html]
+   AC_CACHE_CHECK([for selinux security context type constness],
+                  [klee_cv_sel_ctx_const],
+   [AC_COMPILE_IFELSE(
+     [AC_LANG_PROGRAM([[
+#include <selinux/selinux.h>
+int setcon(char *context);]])],
+     [klee_cv_sel_ctx_const=''],
+     [klee_cv_sel_ctx_const='const'])])
+   AC_DEFINE_UNQUOTED([KLEE_SELINUX_CTX_CONST], [$klee_cv_sel_ctx_const],
+     [Define to empty or 'const' depending on how SELinux qualifies its
+      security context parameters.])
+fi
+
+AC_LANG_POP([C])
 
 dnl **************************************************************************
 dnl Test for features
