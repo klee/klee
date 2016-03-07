@@ -1,6 +1,12 @@
 
 #include "Dependency.h"
 
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+#include <llvm/IR/Constants.h>
+#else
+#include <llvm/Constants.h>
+#endif
+
 using namespace klee;
 
 namespace klee {
@@ -651,6 +657,16 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
                                              ref<Expr> valueExpr) {
     assert(value && "value cannot be null");
 
+    if (llvm::isa<llvm::ConstantExpr>(value)) {
+      llvm::Instruction *asInstruction =
+          llvm::dyn_cast<llvm::ConstantExpr>(value)->getAsInstruction();
+      if (llvm::isa<llvm::GetElementPtrInst>(asInstruction)) {
+        VersionedValue *ret = getNewVersionedValue(value, valueExpr);
+        addPointerEquality(ret, getInitialAllocation(value));
+        return ret;
+      }
+    }
+
     if (llvm::isa<llvm::Constant>(value) &&
         !llvm::isa<llvm::PointerType>(value->getType()))
       return getNewVersionedValue(value, valueExpr);
@@ -930,9 +946,6 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
     VersionedValue *arg = getLatestValue(fromValue, fromValueExpr);
     if (!arg)
       return false;
-
-    llvm::errs() << "VERSIONED VALUE: ";
-    arg->dump();
 
     std::vector<Allocation *> allocList = resolveAllocationTransitively(arg);
 
@@ -1485,10 +1498,20 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
     if (isEnvironmentAllocation(site))
       return false;
 
+    // Test if alloca instruction is composite
     llvm::AllocaInst *inst = llvm::dyn_cast<llvm::AllocaInst>(site);
-
     if (inst != 0)
       return llvm::isa<llvm::CompositeType>(inst->getAllocatedType());
+
+    // Test if constant getelementptr expression is composite
+    if (llvm::isa<llvm::ConstantExpr>(site)) {
+      llvm::Instruction *asInstruction =
+          llvm::dyn_cast<llvm::ConstantExpr>(site)->getAsInstruction();
+      return llvm::isa<llvm::GetElementPtrInst>(asInstruction) &&
+             llvm::isa<llvm::CompositeType>(
+                 llvm::dyn_cast<llvm::GetElementPtrInst>(asInstruction)
+                     ->getPointerOperandType());
+    }
 
     switch (site->getType()->getTypeID()) {
     case llvm::Type::ArrayTyID:
