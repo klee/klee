@@ -189,20 +189,8 @@ ref<Expr> SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr) {
   // c1 /\ ... /\ cn. This procedure collects into equalityPack all ci for
   // 1<=i<=n which are atomic equalities, to be used in simplifying the
   // interpolant.
-  ref<Expr> equalityConstraint =
-      simplifyEqualityExpr(equalityPack, body->getKid(1));
-  if (equalityConstraint->isFalse()) {
-    return ConstantExpr::alloc(0, Expr::Bool);
-  } else if (equalityConstraint->isTrue()) {
-    return ConstantExpr::alloc(1, Expr::Bool);
-  }
-
-  // FIXME: We only perform substution using a single atomic equality
-  // one or many interpolants. We should instead use all equalities in
-  // equalityPack.
-  if (equalityPack.size() > 1) {
-    return existsExpr;
-  }
+  // ref<Expr> equalityConstraint =
+  ref<Expr> fullEqualityConstraint = simplifyEqualityExpr(equalityPack, body->getKid(1));
 
   // Try to simplify the interpolant. If the resulting simplification
   // was a constant (true), then the equality constraints would contain
@@ -212,51 +200,63 @@ ref<Expr> SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr) {
   ref<Expr> simplifiedInterpolant =
       simplifyInterpolantExpr(interpolantPack, body->getKid(0));
   if (llvm::isa<ConstantExpr>(simplifiedInterpolant))
-    return equalityConstraint;
-
-  // Left-hand side of the equality formula that contains the shadow expression
-  // (we assume that shadow_y is always on the left side).
-  ref<Expr> equalityConstraintLeft = equalityConstraint->getKid(0);
-
-  // Right-hand side of the equality formula that contains non-shadow
-  // expression.
-  ref<Expr> equalityConstraintRight = equalityConstraint->getKid(1);
+    return fullEqualityConstraint;
 
   ref<Expr> conjunction;
 
-  // Do iteration for each atomic interpolant
   for (std::vector<ref<Expr> >::iterator it = interpolantPack.begin(),
                                          itEnd = interpolantPack.end();
        it != itEnd; ++it) {
 
-    ref<Expr> interpolantAtom = *it;
-    ref<Expr> newIntpLeft;
-    ref<Expr> newIntpRight;
+    for(std::vector<ref<Expr> >::iterator itEq = equalityPack.begin(),
+    									  itEqEnd = equalityPack.end();
+    	itEq != itEqEnd; ++itEq){
 
-    if (equalityConstraintLeft.operator==(interpolantAtom->getKid(0))) {
-      newIntpLeft = equalityConstraintRight;
-      newIntpRight = interpolantAtom->getKid(1);
-    } else if (equalityConstraintLeft.operator==(interpolantAtom->getKid(1))) {
-      newIntpLeft = interpolantAtom->getKid(0);
-      newIntpRight = equalityConstraintRight;
-    } else if (equalityConstraintLeft->getKid(1).get() &&
-               equalityConstraintLeft->getKid(1)
-                   .operator==(interpolantAtom->getKid(0))) {
-      newIntpLeft = equalityConstraintRight;
-      newIntpRight = createBinaryOfSameKind(equalityConstraintLeft,
-                                            interpolantAtom->getKid(1),
-                                            equalityConstraintLeft->getKid(0));
-    }
+      ref<Expr> equalityConstraint = *itEq;
+      if (equalityConstraint->isFalse()) {
+        return ConstantExpr::alloc(0, Expr::Bool);
+      } else if (equalityConstraint->isTrue()) {
+    	return ConstantExpr::alloc(1, Expr::Bool);
+      }
+      // Left-hand side of the equality formula that contains the shadow expression
+      // (we assume that shadow_y is always on the left side).
+      ref<Expr> equalityConstraintLeft = equalityConstraint->getKid(0);
 
-    if (newIntpLeft.get() && newIntpRight.get()) {
-      if (!conjunction.get())
-        conjunction =
-            createBinaryOfSameKind(interpolantAtom, newIntpLeft, newIntpRight);
-      else
-        conjunction = AndExpr::create(
-            conjunction,
-            createBinaryOfSameKind(interpolantAtom, newIntpLeft, newIntpRight));
-    }
+      // Right-hand side of the equality formula that contains non-shadow
+      // expression.
+      ref<Expr> equalityConstraintRight = equalityConstraint->getKid(1);
+
+      ref<Expr> interpolantAtom = *it;
+	  ref<Expr> newIntpLeft;
+	  ref<Expr> newIntpRight;
+
+	  if(containShadowExpr(equalityConstraint->getKid(0), interpolantAtom->getKid(0))){
+	    newIntpLeft = equalityConstraint->getKid(1);
+		newIntpRight = interpolantAtom->getKid(1);
+
+	    ref<Expr> temp = equalityConstraint->getKid(0);
+	    while(temp->getNumKids() == 2 &&
+	    		temp.operator !=(interpolantAtom->getKid(0))){
+	      if (temp->getKid(0).operator ==(interpolantAtom->getKid(0))){
+	        newIntpRight = createBinaryOfSameKind(temp, newIntpRight, temp->getKid(1));
+	        break;
+	      }
+	      newIntpRight = createBinaryOfSameKind(temp, newIntpRight, temp->getKid(0));
+	      temp = temp->getKid(1);
+
+	    }
+	  }
+
+	  if (newIntpLeft.get() && newIntpRight.get()) {
+		if (!conjunction.get())
+		  conjunction =
+				createBinaryOfSameKind(interpolantAtom, newIntpLeft, newIntpRight);
+		  else
+			conjunction = AndExpr::create(
+				conjunction,
+				createBinaryOfSameKind(interpolantAtom, newIntpLeft, newIntpRight));
+		}
+      }
   }
 
   ref<Expr> newBody;
@@ -265,12 +265,23 @@ ref<Expr> SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr) {
     if (!hasExistentials(expr->variables, conjunction))
       return conjunction;
 
-    newBody = AndExpr::alloc(conjunction, equalityConstraint);
+    newBody = AndExpr::alloc(conjunction, fullEqualityConstraint);
   } else {
-    newBody = AndExpr::alloc(simplifiedInterpolant, equalityConstraint);
+    newBody = AndExpr::alloc(simplifiedInterpolant, fullEqualityConstraint);
   }
 
   return existsExpr->rebuild(&newBody);
+}
+
+bool SubsumptionTableEntry::containShadowExpr(ref<Expr> expr,
+		                                      ref<Expr> shadowExpr){
+  if(expr.operator ==(shadowExpr))
+	  return true;
+  if(expr->getNumKids() < 2 && expr.operator !=(shadowExpr))
+  	  return false;
+
+  return containShadowExpr(expr->getKid(0), shadowExpr) ||
+		   containShadowExpr(expr->getKid(1), shadowExpr);
 }
 
 ref<Expr> SubsumptionTableEntry::createBinaryOfSameKind(ref<Expr> originalExpr,

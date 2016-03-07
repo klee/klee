@@ -109,6 +109,8 @@ namespace klee {
     static ref<Expr> createBinaryOfSameKind(ref<Expr> originalExpr,
                                             ref<Expr> newLhs, ref<Expr> newRhs);
 
+    static bool containShadowExpr(ref<Expr> expr, ref<Expr> shadowExpr);
+
     static ref<Expr>
     simplifyInterpolantExpr(std::vector<ref<Expr> > &interpolantPack,
                             ref<Expr> expr);
