@@ -303,7 +303,8 @@ ref<Expr> SubsumptionTableEntry::simplifyInterpolantExpr(
 
     // If the current expression has a form like (Eq false P), where P is some
     // comparison, we change it into the negation of P.
-    if (llvm::isa<EqExpr>(expr) && expr->getKid(0)->isFalse()) {
+    if (llvm::isa<EqExpr>(expr) && expr->getKid(0)->getWidth() == Expr::Bool &&
+        expr->getKid(0)->isFalse()) {
       if (llvm::isa<SltExpr>(rhs)) {
         expr = SgeExpr::create(rhs->getKid(0), rhs->getKid(1));
       } else if (llvm::isa<SgeExpr>(rhs)) {
@@ -390,16 +391,22 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
       state.itreeNode->getCompositeCoreExpressions();
 
   ref<Expr> stateEqualityConstraints;
-  for (std::vector<llvm::Value *>::iterator
-           itBegin = singletonStoreKeys.begin(),
-           itEnd = singletonStoreKeys.end(), it = itBegin;
+  for (std::vector<llvm::Value *>::iterator it = singletonStoreKeys.begin(),
+                                            itEnd = singletonStoreKeys.end();
        it != itEnd; ++it) {
       const ref<Expr> lhs = singletonStore[*it];
       const ref<Expr> rhs = stateSingletonStore[*it];
+      (*it)->dump();
+      llvm::errs() << reinterpret_cast<uint64_t>(*it) << "\n";
+      llvm::errs() << "LHS ";
+      lhs->dump();
+      llvm::errs() << "RHS ";
+      rhs->dump();
       stateEqualityConstraints =
-          (it == itBegin ? EqExpr::alloc(lhs, rhs)
-                         : AndExpr::alloc(EqExpr::alloc(lhs, rhs),
-                                          stateEqualityConstraints));
+          (!stateEqualityConstraints.get()
+               ? EqExpr::alloc(lhs, rhs)
+               : AndExpr::alloc(EqExpr::alloc(lhs, rhs),
+                                stateEqualityConstraints));
   }
 
   for (std::vector<llvm::Value *>::iterator it = compositeStoreKeys.begin(),
