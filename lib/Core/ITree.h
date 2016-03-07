@@ -17,250 +17,250 @@
 using namespace llvm;
 
 namespace klee {
-  class ExecutionState;
+class ExecutionState;
 
-  /// Global variable denoting whether interpolation is enabled or otherwise
-  struct InterpolationOption
-  {
-    static bool interpolation;
-  };
+/// Global variable denoting whether interpolation is enabled or otherwise
+struct InterpolationOption {
+  static bool interpolation;
+};
 
-  class PathCondition {
-    /// @brief KLEE expression
-    ref<Expr> constraint;
+class PathCondition {
+  /// @brief KLEE expression
+  ref<Expr> constraint;
 
-    /// @brief KLEE expression with variables (arrays) replaced by their shadows
-    ref<Expr> shadowConstraint;
+  /// @brief KLEE expression with variables (arrays) replaced by their shadows
+  ref<Expr> shadowConstraint;
 
-    /// @brief If shadow consraint had been generated: We generate shadow
-    /// constraint
-    /// on demand only when the constraint is required in an interpolant
-    bool shadowed;
+  /// @brief If shadow consraint had been generated: We generate shadow
+  /// constraint
+  /// on demand only when the constraint is required in an interpolant
+  bool shadowed;
 
-    /// @brief The dependency information for the current
-    /// interpolation tree node
-    Dependency *dependency;
+  /// @brief The dependency information for the current
+  /// interpolation tree node
+  Dependency *dependency;
 
-    /// @brief the condition value from which the
-    /// constraint was generated
-    VersionedValue *condition;
+  /// @brief the condition value from which the
+  /// constraint was generated
+  VersionedValue *condition;
 
-    /// @brief When true, indicates that the constraint should be included
-    /// in the interpolant
-    bool inInterpolant;
+  /// @brief When true, indicates that the constraint should be included
+  /// in the interpolant
+  bool inInterpolant;
 
-    /// @brief Previous path condition
-    PathCondition *tail;
+  /// @brief Previous path condition
+  PathCondition *tail;
 
-  public:
-    PathCondition(ref<Expr> &constraint, Dependency *dependency,
-                  llvm::Value *condition, PathCondition *prev);
+public:
+  PathCondition(ref<Expr> &constraint, Dependency *dependency,
+                llvm::Value *condition, PathCondition *prev);
 
-    ~PathCondition();
+  ~PathCondition();
 
-    ref<Expr> car() const;
+  ref<Expr> car() const;
 
-    PathCondition* cdr() const;
+  PathCondition *cdr() const;
 
-    void includeInInterpolant(AllocationGraph *g);
+  void includeInInterpolant(AllocationGraph *g);
 
-    bool carInInterpolant() const;
+  bool carInInterpolant() const;
 
-    ref<Expr> packInterpolant(std::vector<const Array *> &replacements);
+  ref<Expr> packInterpolant(std::vector<const Array *> &replacements);
 
-    void dump();
+  void dump();
 
-    void print(llvm::raw_ostream& stream);
-  };
+  void print(llvm::raw_ostream &stream);
+};
 
-  class PathConditionMarker {
-    bool mayBeInInterpolant;
+class PathConditionMarker {
+  bool mayBeInInterpolant;
 
-    PathCondition *pathCondition;
+  PathCondition *pathCondition;
 
-  public:
-    PathConditionMarker(PathCondition *pathCondition);
+public:
+  PathConditionMarker(PathCondition *pathCondition);
 
-    ~PathConditionMarker();
+  ~PathConditionMarker();
 
-    void includeInInterpolant(AllocationGraph *g);
+  void includeInInterpolant(AllocationGraph *g);
 
-    void mayIncludeInInterpolant();
-  };
+  void mayIncludeInInterpolant();
+};
 
-  class SubsumptionTableEntry {
-    uintptr_t nodeId;
+class SubsumptionTableEntry {
+  uintptr_t nodeId;
 
-    ref<Expr> interpolant;
+  ref<Expr> interpolant;
 
-    std::map<llvm::Value *, ref<Expr> > singletonStore;
+  std::map<llvm::Value *, ref<Expr> > singletonStore;
 
-    std::vector<llvm::Value *> singletonStoreKeys;
+  std::vector<llvm::Value *> singletonStoreKeys;
 
-    std::map<llvm::Value *, std::vector<ref<Expr> > > compositeStore;
+  std::map<llvm::Value *, std::vector<ref<Expr> > > compositeStore;
 
-    std::vector<llvm::Value *> compositeStoreKeys;
+  std::vector<llvm::Value *> compositeStoreKeys;
 
-    std::vector<const Array *> existentials;
+  std::vector<const Array *> existentials;
 
-    static bool hasExistentials(std::vector<const Array *> &existentials,
-                                ref<Expr> expr);
+  static bool hasExistentials(std::vector<const Array *> &existentials,
+                              ref<Expr> expr);
 
-    static ref<Expr> createBinaryOfSameKind(ref<Expr> originalExpr,
-                                            ref<Expr> newLhs, ref<Expr> newRhs);
+  static ref<Expr> createBinaryOfSameKind(ref<Expr> originalExpr,
+                                          ref<Expr> newLhs, ref<Expr> newRhs);
 
-    static bool containShadowExpr(ref<Expr> expr, ref<Expr> shadowExpr);
+  static bool containShadowExpr(ref<Expr> expr, ref<Expr> shadowExpr);
 
-    static ref<Expr>
-    simplifyInterpolantExpr(std::vector<ref<Expr> > &interpolantPack,
-                            ref<Expr> expr);
+  static ref<Expr>
+  simplifyInterpolantExpr(std::vector<ref<Expr> > &interpolantPack,
+                          ref<Expr> expr);
 
-    static ref<Expr> simplifyEqualityExpr(std::vector<ref<Expr> > &equalityPack,
-                                          ref<Expr> expr);
+  static ref<Expr> simplifyEqualityExpr(std::vector<ref<Expr> > &equalityPack,
+                                        ref<Expr> expr);
 
-    static ref<Expr> simplifyExistsExpr(ref<Expr> existsExpr);
+  static ref<Expr> simplifyExistsExpr(ref<Expr> existsExpr);
 
-    static ref<Expr> simplifyArithmeticBody(ref<Expr> existsExpr);
+  static ref<Expr> simplifyArithmeticBody(ref<Expr> existsExpr);
 
-    bool empty() {
-      return !interpolant.get() && singletonStoreKeys.empty() &&
-	  compositeStoreKeys.empty();
-    }
+  bool empty() {
+    return !interpolant.get() && singletonStoreKeys.empty() &&
+           compositeStoreKeys.empty();
+  }
 
-  public:
-    SubsumptionTableEntry(ITreeNode *node);
+public:
+  SubsumptionTableEntry(ITreeNode *node);
 
-    ~SubsumptionTableEntry();
+  ~SubsumptionTableEntry();
 
-    bool subsumed(TimingSolver *solver, ExecutionState& state, double timeout);
+  bool subsumed(TimingSolver *solver, ExecutionState &state, double timeout);
 
-    void dump() const;
+  void dump() const;
 
-    void print(llvm::raw_ostream &stream) const;
-  };
+  void print(llvm::raw_ostream &stream) const;
+};
 
-  class ITree{
-    typedef std::vector< ref<Expr> > ExprList;
-    typedef ExprList::iterator iterator;
-    typedef ExprList::const_iterator const_iterator;
+class ITree {
+  typedef std::vector<ref<Expr> > ExprList;
+  typedef ExprList::iterator iterator;
+  typedef ExprList::const_iterator const_iterator;
 
-    ITreeNode *currentINode;
+  ITreeNode *currentINode;
 
-    std::vector<SubsumptionTableEntry> subsumptionTable;
+  std::vector<SubsumptionTableEntry> subsumptionTable;
 
-    void printNode(llvm::raw_ostream& stream, ITreeNode *n, std::string edges);
+  void printNode(llvm::raw_ostream &stream, ITreeNode *n, std::string edges);
 
-  public:
-    ITreeNode *root;
+public:
+  ITreeNode *root;
 
-    ITree(ExecutionState* _root);
+  ITree(ExecutionState *_root);
 
-    ~ITree();
+  ~ITree();
 
-    std::vector<SubsumptionTableEntry> getStore();
+  std::vector<SubsumptionTableEntry> getStore();
 
-    void store(SubsumptionTableEntry subItem);
+  void store(SubsumptionTableEntry subItem);
 
-    void setCurrentINode(ITreeNode *node);
+  void setCurrentINode(ITreeNode *node);
 
-    void remove(ITreeNode *node);
+  void remove(ITreeNode *node);
 
-    bool checkCurrentStateSubsumption(TimingSolver* solver, ExecutionState& state, double timeout);
+  bool checkCurrentStateSubsumption(TimingSolver *solver, ExecutionState &state,
+                                    double timeout);
 
-    void markPathCondition(ExecutionState &state, TimingSolver *solver);
+  void markPathCondition(ExecutionState &state, TimingSolver *solver);
 
-    std::pair<ITreeNode *, ITreeNode *> split(ITreeNode *parent, ExecutionState *left, ExecutionState *right);
+  std::pair<ITreeNode *, ITreeNode *>
+  split(ITreeNode *parent, ExecutionState *left, ExecutionState *right);
 
-    void executeAbstractBinaryDependency(llvm::Instruction *i,
-                                         ref<Expr> valueExpr, ref<Expr> tExpr,
-                                         ref<Expr> fExpr);
+  void executeAbstractBinaryDependency(llvm::Instruction *i,
+                                       ref<Expr> valueExpr, ref<Expr> tExpr,
+                                       ref<Expr> fExpr);
 
-    void executeAbstractMemoryDependency(llvm::Instruction *instr,
-                                         ref<Expr> value, ref<Expr> address);
+  void executeAbstractMemoryDependency(llvm::Instruction *instr,
+                                       ref<Expr> value, ref<Expr> address);
 
-    void executeAbstractDependency(llvm::Instruction *instr, ref<Expr> value);
+  void executeAbstractDependency(llvm::Instruction *instr, ref<Expr> value);
 
-    void print(llvm::raw_ostream &stream);
+  void print(llvm::raw_ostream &stream);
 
-    void dump();
-  };
+  void dump();
+};
 
-  class ITreeNode{
-    friend class ITree;
+class ITreeNode {
+  friend class ITree;
 
-    friend class ExecutionState;
+  friend class ExecutionState;
 
-    typedef ref<Expr> expression_type;
+  typedef ref<Expr> expression_type;
 
-    typedef std::pair <expression_type, expression_type> pair_type;
+  typedef std::pair<expression_type, expression_type> pair_type;
 
-    /// @brief The path condition
-    PathCondition *pathCondition;
+  /// @brief The path condition
+  PathCondition *pathCondition;
 
-    /// @brief Abstract stack for value dependencies
-    Dependency *dependency;
+  /// @brief Abstract stack for value dependencies
+  Dependency *dependency;
 
-    ITreeNode *parent, *left, *right;
+  ITreeNode *parent, *left, *right;
 
-    uintptr_t nodeId;
+  uintptr_t nodeId;
 
-    bool isSubsumed;
+  bool isSubsumed;
 
-  public:
-    uintptr_t getNodeId();
+public:
+  uintptr_t getNodeId();
 
-    ref<Expr> getInterpolant(std::vector<const Array *> &replacements) const;
+  ref<Expr> getInterpolant(std::vector<const Array *> &replacements) const;
 
-    void setNodeLocation(uintptr_t programPoint);
+  void setNodeLocation(uintptr_t programPoint);
 
-    void addConstraint(ref<Expr> &constraint, llvm::Value *value);
+  void addConstraint(ref<Expr> &constraint, llvm::Value *value);
 
-    void split(ExecutionState *leftData, ExecutionState *rightData);
+  void split(ExecutionState *leftData, ExecutionState *rightData);
 
-    void dump() const;
+  void dump() const;
 
-    void print(llvm::raw_ostream &stream) const;
+  void print(llvm::raw_ostream &stream) const;
 
-    std::map< ref<Expr>, PathConditionMarker *> makeMarkerMap() const;
+  std::map<ref<Expr>, PathConditionMarker *> makeMarkerMap() const;
 
-    static void deleteMarkerMap(std::map<ref<Expr>, PathConditionMarker *>& markerMap);
+  static void
+  deleteMarkerMap(std::map<ref<Expr>, PathConditionMarker *> &markerMap);
 
-    void executeBinaryDependency(llvm::Instruction *i, ref<Expr> valueExpr,
-                                 ref<Expr> tExpr, ref<Expr> fExpr);
+  void executeBinaryDependency(llvm::Instruction *i, ref<Expr> valueExpr,
+                               ref<Expr> tExpr, ref<Expr> fExpr);
 
-    void executeAbstractMemoryDependency(llvm::Instruction *instr,
-                                         ref<Expr> value, ref<Expr> address);
+  void executeAbstractMemoryDependency(llvm::Instruction *instr,
+                                       ref<Expr> value, ref<Expr> address);
 
-    void executeAbstractDependency(llvm::Instruction *instr, ref<Expr> value);
+  void executeAbstractDependency(llvm::Instruction *instr, ref<Expr> value);
 
-    void bindCallArguments(llvm::Instruction *site,
-                           std::vector<ref<Expr> > &arguments);
+  void bindCallArguments(llvm::Instruction *site,
+                         std::vector<ref<Expr> > &arguments);
 
-    void popAbstractDependencyFrame(llvm::CallInst *site,
-                                    llvm::Instruction *inst,
-                                    ref<Expr> returnValue);
+  void popAbstractDependencyFrame(llvm::CallInst *site, llvm::Instruction *inst,
+                                  ref<Expr> returnValue);
 
-    std::map<llvm::Value *, ref<Expr> > getLatestCoreExpressions() const;
+  std::map<llvm::Value *, ref<Expr> > getLatestCoreExpressions() const;
 
-    std::map<llvm::Value *, std::vector<ref<Expr> > >
-    getCompositeCoreExpressions() const;
+  std::map<llvm::Value *, std::vector<ref<Expr> > >
+  getCompositeCoreExpressions() const;
 
-    std::map<llvm::Value *, ref<Expr> > getLatestInterpolantCoreExpressions(
-        std::vector<const Array *> &replacements) const;
+  std::map<llvm::Value *, ref<Expr> > getLatestInterpolantCoreExpressions(
+      std::vector<const Array *> &replacements) const;
 
-    std::map<llvm::Value *, std::vector<ref<Expr> > >
-    getCompositeInterpolantCoreExpressions(
-        std::vector<const Array *> &replacements) const;
+  std::map<llvm::Value *, std::vector<ref<Expr> > >
+  getCompositeInterpolantCoreExpressions(
+      std::vector<const Array *> &replacements) const;
 
-    void computeInterpolantAllocations(AllocationGraph *g);
+  void computeInterpolantAllocations(AllocationGraph *g);
 
-  private:
-    ITreeNode(ITreeNode *_parent);
+private:
+  ITreeNode(ITreeNode *_parent);
 
-    ~ITreeNode();
+  ~ITreeNode();
 
-    void print(llvm::raw_ostream &stream, const unsigned tabNum) const;
-  };
-
+  void print(llvm::raw_ostream &stream, const unsigned tabNum) const;
+};
 }
 #endif /* ITREE_H_ */
