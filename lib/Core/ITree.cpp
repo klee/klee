@@ -21,8 +21,8 @@ bool InterpolationOption::interpolation = true;
 
 /**/
 
-PathConditionMarker::PathConditionMarker(PathCondition *pathCondition) :
-  mayBeInInterpolant(false), pathCondition(pathCondition) {}
+PathConditionMarker::PathConditionMarker(PathCondition *pathCondition)
+    : mayBeInInterpolant(false), pathCondition(pathCondition) {}
 
 PathConditionMarker::~PathConditionMarker() {}
 
@@ -48,13 +48,9 @@ PathCondition::PathCondition(ref<Expr> &constraint, Dependency *dependency,
 
 PathCondition::~PathCondition() {}
 
-ref<Expr> PathCondition::car() const {
-  return constraint;
-}
+ref<Expr> PathCondition::car() const { return constraint; }
 
-PathCondition *PathCondition::cdr() const {
-  return tail;
-}
+PathCondition *PathCondition::cdr() const { return tail; }
 
 void PathCondition::includeInInterpolant(AllocationGraph *g) {
   // We mark all values to which this constraint depends
@@ -64,26 +60,24 @@ void PathCondition::includeInInterpolant(AllocationGraph *g) {
   inInterpolant = true;
 }
 
-bool PathCondition::carInInterpolant() const {
-  return inInterpolant;
-}
+bool PathCondition::carInInterpolant() const { return inInterpolant; }
 
 ref<Expr>
 PathCondition::packInterpolant(std::vector<const Array *> &replacements) {
   ref<Expr> res;
   for (PathCondition *it = this; it != 0; it = it->tail) {
-      if (it->inInterpolant) {
-	  if (!it->shadowed) {
-            it->shadowConstraint =
-                ShadowArray::getShadowExpression(it->constraint, replacements);
-            it->shadowed = true;
-          }
-          if (res.get()) {
-            res = AndExpr::alloc(res, it->shadowConstraint);
-          } else {
-            res = it->shadowConstraint;
-          }
+    if (it->inInterpolant) {
+      if (!it->shadowed) {
+        it->shadowConstraint =
+            ShadowArray::getShadowExpression(it->constraint, replacements);
+        it->shadowed = true;
       }
+      if (res.get()) {
+        res = AndExpr::alloc(res, it->shadowConstraint);
+      } else {
+        res = it->shadowConstraint;
+      }
+    }
   }
   return res;
 }
@@ -93,12 +87,14 @@ void PathCondition::dump() {
   llvm::errs() << "\n";
 }
 
-void PathCondition::print(llvm::raw_ostream& stream) {
+void PathCondition::print(llvm::raw_ostream &stream) {
   stream << "[";
   for (PathCondition *it = this; it != 0; it = it->tail) {
-      it->constraint->print(stream);
-      stream << ": " << (it->inInterpolant ? "interpolant constraint" : "non-interpolant constraint");
-      if (it->tail != 0) stream << ",";
+    it->constraint->print(stream);
+    stream << ": " << (it->inInterpolant ? "interpolant constraint"
+                                         : "non-interpolant constraint");
+    if (it->tail != 0)
+      stream << ",";
   }
   stream << "]";
 }
@@ -173,8 +169,8 @@ ref<Expr> SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr) {
   if (llvm::isa<ConstantExpr>(body))
     return body;
 
-  // FIXME: Currently we handle only single clause. We should
-  // handle general DNF in the future.
+  // The equality constraint is only a single disjunctive clause
+  // of a CNF formula. In this case we simplify nothing.
   if (llvm::isa<OrExpr>(body->getKid(1)))
     return existsExpr;
 
@@ -183,88 +179,142 @@ ref<Expr> SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr) {
   // by reducing any equality expression into constant (TRUE/FALSE).
   // if body is A and (Eq 2 4), body can be simplified into false.
   // if body is A and (Eq 2 2), body can be simplified into A.
+  //
   // Along the way, It also collects the remaining equalities in equalityPack.
-  ref<Expr> equalityConstraint =
+  // The equality constraints (body->getKid(1)) is a CNF of the form
+  // c1 /\ ... /\ cn. This procedure collects into equalityPack all ci for
+  // 1<=i<=n which are atomic equalities, to be used in simplifying the
+  // interpolant.
+  // ref<Expr> equalityConstraint =
+  ref<Expr> fullEqualityConstraint =
       simplifyEqualityExpr(equalityPack, body->getKid(1));
-  if (equalityConstraint->isFalse()) {
-    return ConstantExpr::alloc(0, Expr::Bool);
-  } else if (equalityConstraint->isTrue()) {
-    return ConstantExpr::alloc(1, Expr::Bool);
-  }
-
-  // FIXME: We only perform substution using a single equality and
-  // one or many interpolants. We should instead use all equalities.
-  if (equalityPack.size() > 1) {
-    return existsExpr;
-  }
 
   // Try to simplify the interpolant. If the resulting simplification
   // was a constant (true), then the equality constraints would contain
   // equality with constants only and no equality with shadow (existential)
   // variables, hence it should be safe to simply return the equality
   // constraint.
+  interpolantPack.clear();
   ref<Expr> simplifiedInterpolant =
       simplifyInterpolantExpr(interpolantPack, body->getKid(0));
   if (llvm::isa<ConstantExpr>(simplifiedInterpolant))
-    return equalityConstraint;
+    return fullEqualityConstraint;
 
-  // Left-hand side of the equality formula that contains the shadow expression
-  // (we assume that shadow_y is always on the left side).
-  ref<Expr> equalityConstraintLeft = equalityConstraint->getKid(0);
+  ref<Expr> newInterpolant;
 
-  // Right-hand side of the equality formula that contains non-shadow
-  // expression.
-  ref<Expr> equalityConstraintRight = equalityConstraint->getKid(1);
-
-  ref<Expr> conjunction;
-
-  // Do iteration for each atomic interpolant
   for (std::vector<ref<Expr> >::iterator it = interpolantPack.begin(),
                                          itEnd = interpolantPack.end();
        it != itEnd; ++it) {
 
-    ref<Expr> interpolantAtom = *it;
-    ref<Expr> newIntpLeft;
-    ref<Expr> newIntpRight;
+    ref<Expr> interpolantAtom = (*it); // For example C cmp D
 
-    if (equalityConstraintLeft.operator==(interpolantAtom->getKid(0))) {
-      newIntpLeft = equalityConstraintRight;
-      newIntpRight = interpolantAtom->getKid(1);
-    } else if (equalityConstraintLeft.operator==(interpolantAtom->getKid(1))) {
-      newIntpLeft = interpolantAtom->getKid(0);
-      newIntpRight = equalityConstraintRight;
-    } else if (equalityConstraintLeft->getKid(1).get() &&
-               equalityConstraintLeft->getKid(1)
-                   .operator==(interpolantAtom->getKid(0))) {
-      newIntpLeft = equalityConstraintRight;
-      newIntpRight = createBinaryOfSameKind(equalityConstraintLeft,
-                                            interpolantAtom->getKid(1),
-                                            equalityConstraintLeft->getKid(0));
+    for (std::vector<ref<Expr> >::iterator itEq = equalityPack.begin(),
+                                           itEqEnd = equalityPack.end();
+         itEq != itEqEnd; ++itEq) {
+
+      ref<Expr> equalityConstraint =
+          *itEq; // For example, say this constraint is A == B
+      if (equalityConstraint->isFalse()) {
+        return ConstantExpr::alloc(0, Expr::Bool);
+      } else if (equalityConstraint->isTrue()) {
+        return ConstantExpr::alloc(1, Expr::Bool);
+      }
+      // Left-hand side of the equality formula (A in our example) that contains
+      // the shadow expression (we assume that the existentially-quantified
+      // shadow variable is always on the left side).
+      ref<Expr> equalityConstraintLeft = equalityConstraint->getKid(0);
+
+      // Right-hand side of the equality formula (B in our example) that does
+      // not contain existentially-quantified shadow variables.
+      ref<Expr> equalityConstraintRight = equalityConstraint->getKid(1);
+
+      ref<Expr> newIntpLeft;
+      ref<Expr> newIntpRight;
+
+      // When the if condition holds, we perform substitution
+      if (containShadowExpr(equalityConstraintLeft,
+                            interpolantAtom->getKid(0))) {
+
+        // Here we perform substitution, where given
+        // an interpolant atom and an equality constraint,
+        // we try to find a subexpression in the lhs of
+        // the equality constraint that matches the lhs expression of the
+        // interpolant atom.
+
+        // Here we assume that the equality constraint is A == B and the
+        // interpolant atom is C cmp D.
+
+        // newIntpLeft == B
+        newIntpLeft = equalityConstraintRight;
+
+        // newIntpRight == D, originally, the rhs of the modified interpolant is
+        // just assumed to be the rhs of the original interpolant atom.
+        newIntpRight = interpolantAtom->getKid(1);
+
+        ref<Expr> temp = equalityConstraintLeft; // temp == A
+
+        // We try to find the position for substitution within subformula of A.
+        // Loop while A == A1 op A2 and A != C.
+        while (temp->getNumKids() == 2 &&
+               temp.operator!=(interpolantAtom->getKid(0))) {
+          // Check if A1 == C, if so, apply op A2 to newIntpRight, the rhs of
+          // the modified interpolant, resulting in newIntpRight := newInptRight
+          // op A2.
+          // For example, as initially newIntpRight == D, the first time this is
+          // executed results in newIntpRight := D op A2
+          if (temp->getKid(0).operator==(interpolantAtom->getKid(0))) {
+            newIntpRight =
+                createBinaryOfSameKind(temp, newIntpRight, temp->getKid(1));
+            break;
+          }
+
+          // Here A1 != C, we assume that A1 does not contain expression for
+          // matching and we recursively try to find that expression in A2. So
+          // here, newIntpRight := A1 op newIntpRight.
+          newIntpRight =
+              createBinaryOfSameKind(temp, temp->getKid(0), newIntpRight);
+
+          // A := A2
+          temp = temp->getKid(1);
+        }
+
+        interpolantAtom =
+            createBinaryOfSameKind(interpolantAtom, newIntpLeft, newIntpRight);
+      }
     }
 
-    if (newIntpLeft.get() && newIntpRight.get()) {
-      if (!conjunction.get())
-        conjunction =
-            createBinaryOfSameKind(interpolantAtom, newIntpLeft, newIntpRight);
-      else
-        conjunction = AndExpr::create(
-            conjunction,
-            createBinaryOfSameKind(interpolantAtom, newIntpLeft, newIntpRight));
+    // We add the modified interpolant conjunct into a conjunction of
+    // new interpolants.
+    if (newInterpolant.get()) {
+      newInterpolant = AndExpr::alloc(newInterpolant, interpolantAtom);
+    } else {
+      newInterpolant = interpolantAtom;
     }
   }
 
   ref<Expr> newBody;
 
-  if (conjunction.get()) {
-    if (!hasExistentials(expr->variables, conjunction))
-      return conjunction;
+  if (newInterpolant.get()) {
+    if (!hasExistentials(expr->variables, newInterpolant))
+      return newInterpolant;
 
-    newBody = AndExpr::alloc(conjunction, equalityConstraint);
+    newBody = AndExpr::alloc(newInterpolant, fullEqualityConstraint);
   } else {
-    newBody = AndExpr::alloc(simplifiedInterpolant, equalityConstraint);
+    newBody = AndExpr::alloc(simplifiedInterpolant, fullEqualityConstraint);
   }
 
   return existsExpr->rebuild(&newBody);
+}
+
+bool SubsumptionTableEntry::containShadowExpr(ref<Expr> expr,
+                                              ref<Expr> shadowExpr) {
+  if (expr.operator==(shadowExpr))
+    return true;
+  if (expr->getNumKids() < 2 && expr.operator!=(shadowExpr))
+    return false;
+
+  return containShadowExpr(expr->getKid(0), shadowExpr) ||
+         containShadowExpr(expr->getKid(1), shadowExpr);
 }
 
 ref<Expr> SubsumptionTableEntry::createBinaryOfSameKind(ref<Expr> originalExpr,
@@ -349,18 +399,44 @@ ref<Expr> SubsumptionTableEntry::simplifyEqualityExpr(
     return expr;
   }
 
-  // At this point the expression should only be a conjunction
-  assert(llvm::isa<AndExpr>(expr));
+  if (llvm::isa<AndExpr>(expr)) {
+    ref<Expr> lhs = simplifyEqualityExpr(equalityPack, expr->getKid(0));
+    if (lhs->isFalse())
+      return lhs;
 
-  ref<Expr> lhs = simplifyEqualityExpr(equalityPack, expr->getKid(0));
-  if (lhs->isFalse())
-    return lhs;
+    ref<Expr> rhs = simplifyEqualityExpr(equalityPack, expr->getKid(1));
+    if (rhs->isFalse())
+      return rhs;
 
-  ref<Expr> rhs = simplifyEqualityExpr(equalityPack, expr->getKid(1));
-  if (lhs->isTrue())
-    return rhs;
+    if (lhs->isTrue())
+      return rhs;
 
-  return AndExpr::alloc(lhs, rhs);
+    if (rhs->isTrue())
+      return lhs;
+
+    return AndExpr::alloc(lhs, rhs);
+  } else if (llvm::isa<OrExpr>(expr)) {
+    // We provide throw-away dummy equalityPack, as we do not use the atomic
+    // equalities within disjunctive clause to simplify the interpolant.
+    std::vector<ref<Expr> > dummy;
+    ref<Expr> lhs = simplifyEqualityExpr(dummy, expr->getKid(0));
+    if (lhs->isTrue())
+      return lhs;
+
+    ref<Expr> rhs = simplifyEqualityExpr(dummy, expr->getKid(1));
+    if (rhs->isTrue())
+      return rhs;
+
+    if (lhs->isFalse())
+      return rhs;
+
+    if (rhs->isFalse())
+      return lhs;
+
+    return OrExpr::alloc(lhs, rhs);
+  }
+
+  assert(!"Invalid expression type.");
 }
 
 ref<Expr> SubsumptionTableEntry::simplifyExistsExpr(ref<Expr> existsExpr) {
@@ -374,8 +450,7 @@ ref<Expr> SubsumptionTableEntry::simplifyExistsExpr(ref<Expr> existsExpr) {
 }
 
 bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
-                                     ExecutionState& state,
-                                     double timeout) {
+                                     ExecutionState &state, double timeout) {
   // Check if we are at the right program point
   if (state.itreeNode == 0 || reinterpret_cast<uintptr_t>(state.pc->inst) !=
                                   state.itreeNode->getNodeId() ||
@@ -383,7 +458,8 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
     return false;
 
   // Quick check for subsumption in case the interpolant is empty
-  if (empty()) return true;
+  if (empty())
+    return true;
 
   std::map<llvm::Value *, ref<Expr> > stateSingletonStore =
       state.itreeNode->getLatestCoreExpressions();
@@ -412,36 +488,36 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
   for (std::vector<llvm::Value *>::iterator it = compositeStoreKeys.begin(),
                                             itEnd = compositeStoreKeys.end();
        it != itEnd; ++it) {
-      std::vector<ref<Expr> > lhsList = compositeStore[*it];
-      std::vector<ref<Expr> > rhsList = stateCompositeStore[*it];
+    std::vector<ref<Expr> > lhsList = compositeStore[*it];
+    std::vector<ref<Expr> > rhsList = stateCompositeStore[*it];
 
-      ref<Expr> auxDisjuncts;
-      bool auxDisjunctsEmpty = true;
+    ref<Expr> auxDisjuncts;
+    bool auxDisjunctsEmpty = true;
 
-      for (std::vector<ref<Expr> >::iterator lhsIter = lhsList.begin(),
-                                             lhsIterEnd = lhsList.end();
-           lhsIter != lhsIterEnd; ++lhsIter) {
-        for (std::vector<ref<Expr> >::iterator rhsIter = rhsList.begin(),
-                                               rhsIterEnd = rhsList.end();
-             rhsIter != rhsIterEnd; ++rhsIter) {
-          const ref<Expr> lhs = *lhsIter;
-          const ref<Expr> rhs = *rhsIter;
+    for (std::vector<ref<Expr> >::iterator lhsIter = lhsList.begin(),
+                                           lhsIterEnd = lhsList.end();
+         lhsIter != lhsIterEnd; ++lhsIter) {
+      for (std::vector<ref<Expr> >::iterator rhsIter = rhsList.begin(),
+                                             rhsIterEnd = rhsList.end();
+           rhsIter != rhsIterEnd; ++rhsIter) {
+        const ref<Expr> lhs = *lhsIter;
+        const ref<Expr> rhs = *rhsIter;
 
-          if (auxDisjunctsEmpty) {
-            auxDisjuncts = EqExpr::alloc(lhs, rhs);
-            auxDisjunctsEmpty = false;
-          } else {
-            auxDisjuncts = OrExpr::alloc(EqExpr::alloc(lhs, rhs), auxDisjuncts);
-          }
+        if (auxDisjunctsEmpty) {
+          auxDisjuncts = EqExpr::alloc(lhs, rhs);
+          auxDisjunctsEmpty = false;
+        } else {
+          auxDisjuncts = OrExpr::alloc(EqExpr::alloc(lhs, rhs), auxDisjuncts);
         }
       }
+    }
 
-      if (!auxDisjunctsEmpty) {
-	  stateEqualityConstraints =
-	      stateEqualityConstraints.get() ?
-		  AndExpr::alloc(auxDisjuncts, stateEqualityConstraints) :
-		  auxDisjuncts;
-      }
+    if (!auxDisjunctsEmpty) {
+      stateEqualityConstraints =
+          stateEqualityConstraints.get()
+              ? AndExpr::alloc(auxDisjuncts, stateEqualityConstraints)
+              : auxDisjuncts;
+    }
   }
 
   // We create path condition needed constraints marking structure
@@ -454,23 +530,24 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
   // Here we build the query, after which it is always a conjunction of
   // the interpolant and the state equality constraints.
   if (interpolant.get()) {
-    query = stateEqualityConstraints.get()
-                ? AndExpr::alloc(interpolant, stateEqualityConstraints)
-                : AndExpr::alloc(interpolant, ConstantExpr::create(1, Expr::Bool));
+    query =
+        stateEqualityConstraints.get()
+            ? AndExpr::alloc(interpolant, stateEqualityConstraints)
+            : AndExpr::alloc(interpolant, ConstantExpr::create(1, Expr::Bool));
   } else if (stateEqualityConstraints.get()) {
-    query = AndExpr::alloc(ConstantExpr::create(1, Expr::Bool), stateEqualityConstraints);
+    query = AndExpr::alloc(ConstantExpr::create(1, Expr::Bool),
+                           stateEqualityConstraints);
   } else {
     // Here both the interpolant constraints and state equality
     // constraints are empty, therefore everything gets subsumed
     return true;
   }
 
-
   if (!existentials.empty()) {
-//     llvm::errs() << "Before simplification:\n";
-//     ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
-
-    query = simplifyExistsExpr(ExistsExpr::create(existentials, query));
+    ref<Expr> existsExpr = ExistsExpr::create(existentials, query);
+    llvm::errs() << "Before simplification:\n";
+    ExprPPrinter::printQuery(llvm::errs(), state.constraints, existsExpr);
+    query = simplifyExistsExpr(existsExpr);
   }
 
   bool success = false;
@@ -480,8 +557,8 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
   // We call the solver only when the simplified query is
   // not a constant.
   if (!llvm::isa<ConstantExpr>(query)) {
-//     llvm::errs() << "Querying for subsumption check:\n";
-//     ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
+    llvm::errs() << "Querying for subsumption check:\n";
+    ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
 
     if (!existentials.empty() && llvm::isa<ExistsExpr>(query)) {
       // llvm::errs() << "Existentials not empty\n";
@@ -516,22 +593,22 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
 
   if (success && result == Solver::True) {
     // llvm::errs() << "Solver decided validity\n";
-      std::vector<ref<Expr> > unsatCore;
-      if (z3solver) {
-        unsatCore = z3solver->getUnsatCore();
-        delete z3solver;
-      } else {
-        unsatCore = solver->getUnsatCore();
-      }
+    std::vector<ref<Expr> > unsatCore;
+    if (z3solver) {
+      unsatCore = z3solver->getUnsatCore();
+      delete z3solver;
+    } else {
+      unsatCore = solver->getUnsatCore();
+    }
 
-      for (std::vector<ref<Expr> >::iterator it1 = unsatCore.begin();
-           it1 != unsatCore.end(); it1++) {
-        markerMap[*it1]->mayIncludeInInterpolant();
-      }
+    for (std::vector<ref<Expr> >::iterator it1 = unsatCore.begin();
+         it1 != unsatCore.end(); it1++) {
+      markerMap[*it1]->mayIncludeInInterpolant();
+    }
 
   } else {
-    // if (result != Solver::False)
-    // llvm::errs() << "Solver could not decide (in-)validity\n";
+    if (result != Solver::False)
+      llvm::errs() << "Solver could not decide (in-)validity\n";
 
     if (z3solver)
       delete z3solver;
@@ -643,22 +720,23 @@ ITree::ITree(ExecutionState *_root) {
 ITree::~ITree() {}
 
 bool ITree::checkCurrentStateSubsumption(TimingSolver *solver,
-                                         ExecutionState& state,
+                                         ExecutionState &state,
                                          double timeout) {
   assert(state.itreeNode == currentINode);
 
-  for (std::vector<SubsumptionTableEntry>::iterator it = subsumptionTable.begin();
-      it != subsumptionTable.end(); it++) {
+  for (std::vector<SubsumptionTableEntry>::iterator it =
+           subsumptionTable.begin();
+       it != subsumptionTable.end(); it++) {
 
-      if (it->subsumed(solver, state, timeout)) {
+    if (it->subsumed(solver, state, timeout)) {
 
-        // We mark as subsumed such that the node will not be
-        // stored into table (the table already contains a more
-        // general entry).
-        currentINode->isSubsumed = true;
+      // We mark as subsumed such that the node will not be
+      // stored into table (the table already contains a more
+      // general entry).
+      currentINode->isSubsumed = true;
 
-        return true;
-      }
+      return true;
+    }
   }
   return false;
 }
@@ -671,9 +749,7 @@ void ITree::store(SubsumptionTableEntry subItem) {
   subsumptionTable.push_back(subItem);
 }
 
-void ITree::setCurrentINode(ITreeNode *node) {
-  currentINode = node;
-}
+void ITree::setCurrentINode(ITreeNode *node) { currentINode = node; }
 
 void ITree::remove(ITreeNode *node) {
   assert(!node->left && !node->right);
@@ -700,9 +776,10 @@ void ITree::remove(ITreeNode *node) {
   } while (node && !node->left && !node->right);
 }
 
-std::pair<ITreeNode *, ITreeNode *> ITree::split(ITreeNode *parent, ExecutionState *left, ExecutionState *right) {
+std::pair<ITreeNode *, ITreeNode *>
+ITree::split(ITreeNode *parent, ExecutionState *left, ExecutionState *right) {
   parent->split(left, right);
-  return std::pair<ITreeNode *, ITreeNode *> (parent->left, parent->right);
+  return std::pair<ITreeNode *, ITreeNode *>(parent->left, parent->right);
 }
 
 void ITree::markPathCondition(ExecutionState &state, TimingSolver *solver) {
@@ -731,7 +808,7 @@ void ITree::markPathCondition(ExecutionState &state, TimingSolver *solver) {
       }
       if (pc == 0)
         break;
-      }
+    }
   }
 
   // llvm::errs() << "AllocationGraph\n";
@@ -760,35 +837,36 @@ void ITree::executeAbstractDependency(llvm::Instruction *instr,
   currentINode->executeAbstractDependency(instr, value);
 }
 
-void ITree::printNode(llvm::raw_ostream& stream, ITreeNode *n, std::string edges) {
+void ITree::printNode(llvm::raw_ostream &stream, ITreeNode *n,
+                      std::string edges) {
   if (n->left != 0) {
     stream << "\n";
-      stream << edges << "+-- L:" << n->left->nodeId;
-      if (this->currentINode == n->left) {
-	  stream << " (active)";
-      }
-      if (n->right != 0) {
-	  printNode(stream, n->left, edges + "|   ");
-      } else {
-	  printNode(stream, n->left, edges + "    ");
-      }
+    stream << edges << "+-- L:" << n->left->nodeId;
+    if (this->currentINode == n->left) {
+      stream << " (active)";
+    }
+    if (n->right != 0) {
+      printNode(stream, n->left, edges + "|   ");
+    } else {
+      printNode(stream, n->left, edges + "    ");
+    }
   }
   if (n->right != 0) {
     stream << "\n";
-      stream << edges << "+-- R:" << n->right->nodeId;
-      if (this->currentINode == n->right) {
-	  stream << " (active)";
-      }
-      printNode(stream, n->right, edges + "    ");
+    stream << edges << "+-- R:" << n->right->nodeId;
+    if (this->currentINode == n->right) {
+      stream << " (active)";
+    }
+    printNode(stream, n->right, edges + "    ");
   }
 }
 
-void ITree::print(llvm::raw_ostream& stream) {
+void ITree::print(llvm::raw_ostream &stream) {
   stream << "------------------------- ITree Structure "
             "---------------------------\n";
   stream << this->root->nodeId;
   if (this->root == this->currentINode) {
-      stream << " (active)";
+    stream << " (active)";
   }
   this->printNode(stream, this->root, "");
   stream << "\n------------------------- Subsumption Table "
@@ -801,9 +879,7 @@ void ITree::print(llvm::raw_ostream& stream) {
   }
 }
 
-void ITree::dump() {
-  this->print(llvm::errs());
-}
+void ITree::dump() { this->print(llvm::errs()); }
 
 /**/
 
@@ -850,24 +926,27 @@ void ITreeNode::addConstraint(ref<Expr> &constraint, llvm::Value *condition) {
 }
 
 void ITreeNode::split(ExecutionState *leftData, ExecutionState *rightData) {
-  assert (left == 0 && right == 0);
+  assert(left == 0 && right == 0);
   leftData->itreeNode = left = new ITreeNode(this);
   rightData->itreeNode = right = new ITreeNode(this);
 }
 
-std::map< ref<Expr>, PathConditionMarker *> ITreeNode::makeMarkerMap() const {
-  std::map< ref<Expr>, PathConditionMarker *> result;
+std::map<ref<Expr>, PathConditionMarker *> ITreeNode::makeMarkerMap() const {
+  std::map<ref<Expr>, PathConditionMarker *> result;
   for (PathCondition *it = pathCondition; it != 0; it = it->cdr()) {
-      result.insert( std::pair< ref<Expr>, PathConditionMarker *>
-	(it->car(), new PathConditionMarker(it)) );
+    result.insert(std::pair<ref<Expr>, PathConditionMarker *>(
+        it->car(), new PathConditionMarker(it)));
   }
   return result;
 }
 
-void ITreeNode::deleteMarkerMap(std::map<ref<Expr>, PathConditionMarker *>& markerMap) {
-  for (std::map<ref<Expr>, PathConditionMarker *>::iterator it = markerMap.begin(),
-      itEnd = markerMap.end(); it != itEnd; ++it) {
-      delete it->second;
+void ITreeNode::deleteMarkerMap(
+    std::map<ref<Expr>, PathConditionMarker *> &markerMap) {
+  for (std::map<ref<Expr>, PathConditionMarker *>::iterator
+           it = markerMap.begin(),
+           itEnd = markerMap.end();
+       it != itEnd; ++it) {
+    delete it->second;
   }
   markerMap.clear();
 }
@@ -980,24 +1059,24 @@ void ITreeNode::print(llvm::raw_ostream &stream, const unsigned tabNum) const {
   stream << tabs_next << "node Id = " << nodeId << "\n";
   stream << tabs_next << "pathCondition = ";
   if (pathCondition == 0) {
-      stream << "NULL";
+    stream << "NULL";
   } else {
-      pathCondition->print(stream);
+    pathCondition->print(stream);
   }
   stream << "\n";
   stream << tabs_next << "Left:\n";
   if (!left) {
-      stream << tabs_next << "NULL\n";
+    stream << tabs_next << "NULL\n";
   } else {
     left->print(stream, tabNum + 1);
-      stream << "\n";
+    stream << "\n";
   }
   stream << tabs_next << "Right:\n";
   if (!right) {
-      stream << tabs_next << "NULL\n";
+    stream << tabs_next << "NULL\n";
   } else {
     right->print(stream, tabNum + 1);
-      stream << "\n";
+    stream << "\n";
   }
   if (dependency) {
     stream << tabs_next << "------- Abstract Dependencies ----------\n";
