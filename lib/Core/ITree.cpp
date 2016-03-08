@@ -472,12 +472,12 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
        it != itEnd; ++it) {
       const ref<Expr> lhs = singletonStore[*it];
       const ref<Expr> rhs = stateSingletonStore[*it];
-      (*it)->dump();
-      llvm::errs() << reinterpret_cast<uint64_t>(*it) << "\n";
-      llvm::errs() << "LHS ";
-      lhs->dump();
-      llvm::errs() << "RHS ";
-      rhs->dump();
+
+      // If the current state does not constrain the same
+      // allocation, subsumption fails.
+      if (!rhs.get())
+        return false;
+
       stateEqualityConstraints =
           (!stateEqualityConstraints.get()
                ? EqExpr::alloc(lhs, rhs)
@@ -490,6 +490,11 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
        it != itEnd; ++it) {
     std::vector<ref<Expr> > lhsList = compositeStore[*it];
     std::vector<ref<Expr> > rhsList = stateCompositeStore[*it];
+
+    // If the current state does not constrain the same
+    // allocation, subsumption fails.
+    if (rhsList.empty())
+      return false;
 
     ref<Expr> auxDisjuncts;
     bool auxDisjunctsEmpty = true;
@@ -545,8 +550,8 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
 
   if (!existentials.empty()) {
     ref<Expr> existsExpr = ExistsExpr::create(existentials, query);
-    llvm::errs() << "Before simplification:\n";
-    ExprPPrinter::printQuery(llvm::errs(), state.constraints, existsExpr);
+    // llvm::errs() << "Before simplification:\n";
+    // ExprPPrinter::printQuery(llvm::errs(), state.constraints, existsExpr);
     query = simplifyExistsExpr(existsExpr);
   }
 
@@ -557,8 +562,8 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
   // We call the solver only when the simplified query is
   // not a constant.
   if (!llvm::isa<ConstantExpr>(query)) {
-    llvm::errs() << "Querying for subsumption check:\n";
-    ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
+    // llvm::errs() << "Querying for subsumption check:\n";
+    // ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
 
     if (!existentials.empty() && llvm::isa<ExistsExpr>(query)) {
       // llvm::errs() << "Existentials not empty\n";
@@ -607,8 +612,8 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
     }
 
   } else {
-    if (result != Solver::False)
-      llvm::errs() << "Solver could not decide (in-)validity\n";
+    // if (result != Solver::False)
+    //   llvm::errs() << "Solver could not decide (in-)validity\n";
 
     if (z3solver)
       delete z3solver;
