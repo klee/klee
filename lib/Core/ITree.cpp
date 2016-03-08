@@ -194,78 +194,111 @@ ref<Expr> SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr) {
   // equality with constants only and no equality with shadow (existential)
   // variables, hence it should be safe to simply return the equality
   // constraint.
+  interpolantPack.clear();
   ref<Expr> simplifiedInterpolant =
       simplifyInterpolantExpr(interpolantPack, body->getKid(0));
   if (llvm::isa<ConstantExpr>(simplifiedInterpolant))
     return fullEqualityConstraint;
 
-  ref<Expr> conjunction;
+  ref<Expr> newInterpolant;
 
   for (std::vector<ref<Expr> >::iterator it = interpolantPack.begin(),
                                          itEnd = interpolantPack.end();
        it != itEnd; ++it) {
 
+    ref<Expr> interpolantAtom = (*it); // For example C cmp D
+
     for (std::vector<ref<Expr> >::iterator itEq = equalityPack.begin(),
                                            itEqEnd = equalityPack.end();
          itEq != itEqEnd; ++itEq) {
 
-      ref<Expr> equalityConstraint = *itEq;
+      ref<Expr> equalityConstraint =
+          *itEq; // For example, say this constraint is A == B
       if (equalityConstraint->isFalse()) {
         return ConstantExpr::alloc(0, Expr::Bool);
       } else if (equalityConstraint->isTrue()) {
         return ConstantExpr::alloc(1, Expr::Bool);
       }
-      // Left-hand side of the equality formula that contains the shadow
-      // expression
-      // (we assume that shadow_y is always on the left side).
+      // Left-hand side of the equality formula (A in our example) that contains
+      // the shadow expression (we assume that the existentially-quantified
+      // shadow variable is always on the left side).
       ref<Expr> equalityConstraintLeft = equalityConstraint->getKid(0);
 
-      // Right-hand side of the equality formula that contains non-shadow
-      // expression.
+      // Right-hand side of the equality formula (B in our example) that does
+      // not contain existentially-quantified shadow variables.
       ref<Expr> equalityConstraintRight = equalityConstraint->getKid(1);
 
-      ref<Expr> interpolantAtom = *it;
       ref<Expr> newIntpLeft;
       ref<Expr> newIntpRight;
 
-      if (containShadowExpr(equalityConstraint->getKid(0),
+      // When the if condition holds, we perform substitution
+      if (containShadowExpr(equalityConstraintLeft,
                             interpolantAtom->getKid(0))) {
-        newIntpLeft = equalityConstraint->getKid(1);
+
+        // Here we perform substitution, where given
+        // an interpolant atom and an equality constraint,
+        // we try to find a subexpression in the lhs of
+        // the equality constraint that matches the lhs expression of the
+        // interpolant atom.
+
+        // Here we assume that the equality constraint is A == B and the
+        // interpolant atom is C cmp D.
+
+        // newIntpLeft == B
+        newIntpLeft = equalityConstraintRight;
+
+        // newIntpRight == D, originally, the rhs of the modified interpolant is
+        // just assumed to be the rhs of the original interpolant atom.
         newIntpRight = interpolantAtom->getKid(1);
 
-        ref<Expr> temp = equalityConstraint->getKid(0);
+        ref<Expr> temp = equalityConstraintLeft; // temp == A
+
+        // We try to find the position for substitution within subformula of A.
+        // Loop while A == A1 op A2 and A != C.
         while (temp->getNumKids() == 2 &&
                temp.operator!=(interpolantAtom->getKid(0))) {
+          // Check if A1 == C, if so, apply op A2 to newIntpRight, the rhs of
+          // the modified interpolant, resulting in newIntpRight := newInptRight
+          // op A2.
+          // For example, as initially newIntpRight == D, the first time this is
+          // executed results in newIntpRight := D op A2
           if (temp->getKid(0).operator==(interpolantAtom->getKid(0))) {
             newIntpRight =
                 createBinaryOfSameKind(temp, newIntpRight, temp->getKid(1));
             break;
           }
+
+          // Here A1 != C, we assume that A1 does not contain expression for
+          // matching and we recursively try to find that expression in A2. So
+          // here, newIntpRight := A1 op newIntpRight.
           newIntpRight =
-              createBinaryOfSameKind(temp, newIntpRight, temp->getKid(0));
+              createBinaryOfSameKind(temp, temp->getKid(0), newIntpRight);
+
+          // A := A2
           temp = temp->getKid(1);
         }
-      }
 
-      if (newIntpLeft.get() && newIntpRight.get()) {
-        if (!conjunction.get())
-          conjunction = createBinaryOfSameKind(interpolantAtom, newIntpLeft,
-                                               newIntpRight);
-        else
-          conjunction = AndExpr::create(
-              conjunction, createBinaryOfSameKind(interpolantAtom, newIntpLeft,
-                                                  newIntpRight));
+        interpolantAtom =
+            createBinaryOfSameKind(interpolantAtom, newIntpLeft, newIntpRight);
       }
+    }
+
+    // We add the modified interpolant conjunct into a conjunction of
+    // new interpolants.
+    if (newInterpolant.get()) {
+      newInterpolant = AndExpr::alloc(newInterpolant, interpolantAtom);
+    } else {
+      newInterpolant = interpolantAtom;
     }
   }
 
   ref<Expr> newBody;
 
-  if (conjunction.get()) {
-    if (!hasExistentials(expr->variables, conjunction))
-      return conjunction;
+  if (newInterpolant.get()) {
+    if (!hasExistentials(expr->variables, newInterpolant))
+      return newInterpolant;
 
-    newBody = AndExpr::alloc(conjunction, fullEqualityConstraint);
+    newBody = AndExpr::alloc(newInterpolant, fullEqualityConstraint);
   } else {
     newBody = AndExpr::alloc(simplifiedInterpolant, fullEqualityConstraint);
   }
@@ -504,10 +537,10 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
   }
 
   if (!existentials.empty()) {
-    //     llvm::errs() << "Before simplification:\n";
-    //     ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
-
-    query = simplifyExistsExpr(ExistsExpr::create(existentials, query));
+    ref<Expr> existsExpr = ExistsExpr::create(existentials, query);
+    llvm::errs() << "Before simplification:\n";
+    ExprPPrinter::printQuery(llvm::errs(), state.constraints, existsExpr);
+    query = simplifyExistsExpr(existsExpr);
   }
 
   bool success = false;
@@ -517,8 +550,8 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
   // We call the solver only when the simplified query is
   // not a constant.
   if (!llvm::isa<ConstantExpr>(query)) {
-    //     llvm::errs() << "Querying for subsumption check:\n";
-    //     ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
+    llvm::errs() << "Querying for subsumption check:\n";
+    ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
 
     if (!existentials.empty() && llvm::isa<ExistsExpr>(query)) {
       // llvm::errs() << "Existentials not empty\n";
@@ -567,8 +600,8 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
     }
 
   } else {
-    // if (result != Solver::False)
-    // llvm::errs() << "Solver could not decide (in-)validity\n";
+    if (result != Solver::False)
+      llvm::errs() << "Solver could not decide (in-)validity\n";
 
     if (z3solver)
       delete z3solver;
