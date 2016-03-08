@@ -110,6 +110,8 @@ class SubsumptionTableEntry {
 
   static bool containShadowExpr(ref<Expr> expr, ref<Expr> shadowExpr);
 
+  static ref<Expr> replaceExpr(ref<Expr> originalExpr, ref<Expr> replacedExpr, ref<Expr> withExpr);
+
   static ref<Expr>
   simplifyInterpolantExpr(std::vector<ref<Expr> > &interpolantPack,
                           ref<Expr> expr);

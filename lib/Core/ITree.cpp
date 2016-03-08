@@ -234,12 +234,10 @@ ref<Expr> SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr) {
       // When the if condition holds, we perform substitution
       if (containShadowExpr(equalityConstraintLeft,
                             interpolantAtom->getKid(0))) {
-
         // Here we perform substitution, where given
         // an interpolant atom and an equality constraint,
-        // we try to find a subexpression in the lhs of
-        // the equality constraint that matches the lhs expression of the
-        // interpolant atom.
+        // we try to find a subexpression in the equality constraint
+    	// that matches the lhs expression of the interpolant atom.
 
         // Here we assume that the equality constraint is A == B and the
         // interpolant atom is C cmp D.
@@ -247,36 +245,16 @@ ref<Expr> SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr) {
         // newIntpLeft == B
         newIntpLeft = equalityConstraintRight;
 
-        // newIntpRight == D, originally, the rhs of the modified interpolant is
-        // just assumed to be the rhs of the original interpolant atom.
-        newIntpRight = interpolantAtom->getKid(1);
+        // newIntpRight == modified A, where C is being removed
+        // from A and include D in the expression
 
-        ref<Expr> temp = equalityConstraintLeft; // temp == A
-
-        // We try to find the position for substitution within subformula of A.
-        // Loop while A == A1 op A2 and A != C.
-        while (temp->getNumKids() == 2 &&
-               temp.operator!=(interpolantAtom->getKid(0))) {
-          // Check if A1 == C, if so, apply op A2 to newIntpRight, the rhs of
-          // the modified interpolant, resulting in newIntpRight := newInptRight
-          // op A2.
-          // For example, as initially newIntpRight == D, the first time this is
-          // executed results in newIntpRight := D op A2
-          if (temp->getKid(0).operator==(interpolantAtom->getKid(0))) {
-            newIntpRight =
-                createBinaryOfSameKind(temp, newIntpRight, temp->getKid(1));
-            break;
-          }
-
-          // Here A1 != C, we assume that A1 does not contain expression for
-          // matching and we recursively try to find that expression in A2. So
-          // here, newIntpRight := A1 op newIntpRight.
-          newIntpRight =
-              createBinaryOfSameKind(temp, temp->getKid(0), newIntpRight);
-
-          // A := A2
-          temp = temp->getKid(1);
-        }
+        // if equalityConstraintLeft does not have any arithmetic operation
+        // we could directly assign newIntpRight = D
+        // otherwise, newIntpRight == modified A, where its sub expression equal to C is being replaced with D
+        if(!llvm::isa<AddExpr>(equalityConstraintLeft))
+          newIntpRight = interpolantAtom->getKid(1);
+        else
+          newIntpRight = replaceExpr(equalityConstraintLeft, interpolantAtom->getKid(0), interpolantAtom->getKid(1));
 
         interpolantAtom =
             createBinaryOfSameKind(interpolantAtom, newIntpLeft, newIntpRight);
@@ -304,6 +282,20 @@ ref<Expr> SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr) {
   }
 
   return existsExpr->rebuild(&newBody);
+}
+
+ref<Expr> SubsumptionTableEntry::replaceExpr(ref<Expr> originalExpr, ref<Expr> replacedExpr, ref<Expr> withExpr){
+
+   if(originalExpr->getNumKids() == 2 && originalExpr->getKid(0) == replacedExpr)
+	 return createBinaryOfSameKind(originalExpr, withExpr, originalExpr->getKid(1));
+
+   if(originalExpr->getNumKids() == 2 && originalExpr->getKid(1) == replacedExpr)
+	 return createBinaryOfSameKind(originalExpr, originalExpr->getKid(0), withExpr);
+
+   if(originalExpr->getNumKids() == 2 && originalExpr->getKid(0)->getNumKids() < 2)
+     return createBinaryOfSameKind(originalExpr, originalExpr->getKid(0), replaceExpr(originalExpr->getKid(1), replacedExpr, withExpr));
+   else
+	 return createBinaryOfSameKind(originalExpr, originalExpr->getKid(1), replaceExpr(originalExpr->getKid(0), replacedExpr, withExpr));
 }
 
 bool SubsumptionTableEntry::containShadowExpr(ref<Expr> expr,
@@ -538,8 +530,8 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
 
   if (!existentials.empty()) {
     ref<Expr> existsExpr = ExistsExpr::create(existentials, query);
-    llvm::errs() << "Before simplification:\n";
-    ExprPPrinter::printQuery(llvm::errs(), state.constraints, existsExpr);
+//    llvm::errs() << "Before simplification:\n";
+//    ExprPPrinter::printQuery(llvm::errs(), state.constraints, existsExpr);
     query = simplifyExistsExpr(existsExpr);
   }
 
@@ -550,8 +542,8 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
   // We call the solver only when the simplified query is
   // not a constant.
   if (!llvm::isa<ConstantExpr>(query)) {
-    llvm::errs() << "Querying for subsumption check:\n";
-    ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
+//    llvm::errs() << "Querying for subsumption check:\n";
+//    ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
 
     if (!existentials.empty() && llvm::isa<ExistsExpr>(query)) {
       // llvm::errs() << "Existentials not empty\n";
@@ -601,7 +593,7 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
 
   } else {
     if (result != Solver::False)
-      llvm::errs() << "Solver could not decide (in-)validity\n";
+//      llvm::errs() << "Solver could not decide (in-)validity\n";
 
     if (z3solver)
       delete z3solver;
