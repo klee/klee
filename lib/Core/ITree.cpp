@@ -245,16 +245,16 @@ ref<Expr> SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr) {
         // newIntpLeft == B
         newIntpLeft = equalityConstraintRight;
 
-        // newIntpRight == modified A, where C is being removed
-        // from A and include D in the expression
-
-        // if equalityConstraintLeft does not have any arithmetic operation
-        // we could directly assign newIntpRight = D
-        // otherwise, newIntpRight == modified A, where its sub expression equal to C is being replaced with D
-        if(!llvm::isa<AddExpr>(equalityConstraintLeft))
+        // If equalityConstraintLeft does not have any arithmetic operation
+        // we could directly assign newIntpRight = D, otherwise,
+        // newIntpRight == A[D/C]
+        if (!llvm::isa<BinaryExpr>(equalityConstraintLeft))
           newIntpRight = interpolantAtom->getKid(1);
-        else
+        else {
+          // newIntpRight is A, but with every occurrence of C replaced with D
+          // i.e., newIntpRight == A[D/C]
           newIntpRight = replaceExpr(equalityConstraintLeft, interpolantAtom->getKid(0), interpolantAtom->getKid(1));
+        }
 
         interpolantAtom =
             createBinaryOfSameKind(interpolantAtom, newIntpLeft, newIntpRight);
@@ -284,18 +284,25 @@ ref<Expr> SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr) {
   return existsExpr->rebuild(&newBody);
 }
 
-ref<Expr> SubsumptionTableEntry::replaceExpr(ref<Expr> originalExpr, ref<Expr> replacedExpr, ref<Expr> withExpr){
+ref<Expr> SubsumptionTableEntry::replaceExpr(ref<Expr> originalExpr,
+                                             ref<Expr> replacedExpr,
+                                             ref<Expr> substituteExpr) {
+  // We only handle binary expressions
+  if (!llvm::isa<BinaryExpr>(originalExpr))
+    return originalExpr;
 
-   if(originalExpr->getNumKids() == 2 && originalExpr->getKid(0) == replacedExpr)
-	 return createBinaryOfSameKind(originalExpr, withExpr, originalExpr->getKid(1));
+  if (originalExpr->getKid(0) == replacedExpr)
+    return createBinaryOfSameKind(originalExpr, substituteExpr,
+                                  originalExpr->getKid(1));
 
-   if(originalExpr->getNumKids() == 2 && originalExpr->getKid(1) == replacedExpr)
-	 return createBinaryOfSameKind(originalExpr, originalExpr->getKid(0), withExpr);
+  if (originalExpr->getKid(1) == replacedExpr)
+    return createBinaryOfSameKind(originalExpr, originalExpr->getKid(0),
+                                  substituteExpr);
 
-   if(originalExpr->getNumKids() == 2 && originalExpr->getKid(0)->getNumKids() < 2)
-     return createBinaryOfSameKind(originalExpr, originalExpr->getKid(0), replaceExpr(originalExpr->getKid(1), replacedExpr, withExpr));
-   else
-	 return createBinaryOfSameKind(originalExpr, originalExpr->getKid(1), replaceExpr(originalExpr->getKid(0), replacedExpr, withExpr));
+  return createBinaryOfSameKind(
+      originalExpr,
+      replaceExpr(originalExpr->getKid(0), replacedExpr, substituteExpr),
+      replaceExpr(originalExpr->getKid(1), replacedExpr, substituteExpr));
 }
 
 bool SubsumptionTableEntry::containShadowExpr(ref<Expr> expr,
@@ -530,8 +537,8 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
 
   if (!existentials.empty()) {
     ref<Expr> existsExpr = ExistsExpr::create(existentials, query);
-//    llvm::errs() << "Before simplification:\n";
-//    ExprPPrinter::printQuery(llvm::errs(), state.constraints, existsExpr);
+    // llvm::errs() << "Before simplification:\n";
+    // ExprPPrinter::printQuery(llvm::errs(), state.constraints, existsExpr);
     query = simplifyExistsExpr(existsExpr);
   }
 
@@ -542,8 +549,8 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
   // We call the solver only when the simplified query is
   // not a constant.
   if (!llvm::isa<ConstantExpr>(query)) {
-//    llvm::errs() << "Querying for subsumption check:\n";
-//    ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
+    // llvm::errs() << "Querying for subsumption check:\n";
+    // ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
 
     if (!existentials.empty() && llvm::isa<ExistsExpr>(query)) {
       // llvm::errs() << "Existentials not empty\n";
