@@ -801,6 +801,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
   solver->setTimeout(timeout);
   bool success = solver->evaluate(current, condition, res);
   solver->setTimeout(0);
+
   if (!success) {
     current.pc = current.prevPC;
     terminateStateEarly(current, "Query timed out (fork).");

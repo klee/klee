@@ -297,7 +297,6 @@ ref<Expr> Expr::createFromKind(Kind k, std::vector<CreateArg> args) {
   }
 }
 
-
 void Expr::printWidth(llvm::raw_ostream &os, Width width) {
   switch(width) {
   case Expr::Bool: os << "Expr::Bool"; break;
