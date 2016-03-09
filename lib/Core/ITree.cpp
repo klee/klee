@@ -288,7 +288,7 @@ ref<Expr> SubsumptionTableEntry::replaceExpr(ref<Expr> originalExpr,
                                              ref<Expr> replacedExpr,
                                              ref<Expr> substituteExpr) {
   // We only handle binary expressions
-  if (!llvm::isa<BinaryExpr>(originalExpr))
+  if (!llvm::isa<BinaryExpr>(originalExpr) || llvm::isa<ConcatExpr>(originalExpr))
     return originalExpr;
 
   if (originalExpr->getKid(0) == replacedExpr)
