@@ -234,12 +234,10 @@ ref<Expr> SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr) {
       // When the if condition holds, we perform substitution
       if (containShadowExpr(equalityConstraintLeft,
                             interpolantAtom->getKid(0))) {
-
         // Here we perform substitution, where given
         // an interpolant atom and an equality constraint,
-        // we try to find a subexpression in the lhs of
-        // the equality constraint that matches the lhs expression of the
-        // interpolant atom.
+        // we try to find a subexpression in the equality constraint
+        // that matches the lhs expression of the interpolant atom.
 
         // Here we assume that the equality constraint is A == B and the
         // interpolant atom is C cmp D.
@@ -247,35 +245,17 @@ ref<Expr> SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr) {
         // newIntpLeft == B
         newIntpLeft = equalityConstraintRight;
 
-        // newIntpRight == D, originally, the rhs of the modified interpolant is
-        // just assumed to be the rhs of the original interpolant atom.
-        newIntpRight = interpolantAtom->getKid(1);
-
-        ref<Expr> temp = equalityConstraintLeft; // temp == A
-
-        // We try to find the position for substitution within subformula of A.
-        // Loop while A == A1 op A2 and A != C.
-        while (temp->getNumKids() == 2 &&
-               temp.operator!=(interpolantAtom->getKid(0))) {
-          // Check if A1 == C, if so, apply op A2 to newIntpRight, the rhs of
-          // the modified interpolant, resulting in newIntpRight := newInptRight
-          // op A2.
-          // For example, as initially newIntpRight == D, the first time this is
-          // executed results in newIntpRight := D op A2
-          if (temp->getKid(0).operator==(interpolantAtom->getKid(0))) {
-            newIntpRight =
-                createBinaryOfSameKind(temp, newIntpRight, temp->getKid(1));
-            break;
-          }
-
-          // Here A1 != C, we assume that A1 does not contain expression for
-          // matching and we recursively try to find that expression in A2. So
-          // here, newIntpRight := A1 op newIntpRight.
+        // If equalityConstraintLeft does not have any arithmetic operation
+        // we could directly assign newIntpRight = D, otherwise,
+        // newIntpRight == A[D/C]
+        if (!llvm::isa<BinaryExpr>(equalityConstraintLeft))
+          newIntpRight = interpolantAtom->getKid(1);
+        else {
+          // newIntpRight is A, but with every occurrence of C replaced with D
+          // i.e., newIntpRight == A[D/C]
           newIntpRight =
-              createBinaryOfSameKind(temp, temp->getKid(0), newIntpRight);
-
-          // A := A2
-          temp = temp->getKid(1);
+              replaceExpr(equalityConstraintLeft, interpolantAtom->getKid(0),
+                          interpolantAtom->getKid(1));
         }
 
         interpolantAtom =
@@ -304,6 +284,28 @@ ref<Expr> SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr) {
   }
 
   return existsExpr->rebuild(&newBody);
+}
+
+ref<Expr> SubsumptionTableEntry::replaceExpr(ref<Expr> originalExpr,
+                                             ref<Expr> replacedExpr,
+                                             ref<Expr> substituteExpr) {
+  // We only handle binary expressions
+  if (!llvm::isa<BinaryExpr>(originalExpr) ||
+      llvm::isa<ConcatExpr>(originalExpr))
+    return originalExpr;
+
+  if (originalExpr->getKid(0) == replacedExpr)
+    return createBinaryOfSameKind(originalExpr, substituteExpr,
+                                  originalExpr->getKid(1));
+
+  if (originalExpr->getKid(1) == replacedExpr)
+    return createBinaryOfSameKind(originalExpr, originalExpr->getKid(0),
+                                  substituteExpr);
+
+  return createBinaryOfSameKind(
+      originalExpr,
+      replaceExpr(originalExpr->getKid(0), replacedExpr, substituteExpr),
+      replaceExpr(originalExpr->getKid(1), replacedExpr, substituteExpr));
 }
 
 bool SubsumptionTableEntry::containShadowExpr(ref<Expr> expr,
