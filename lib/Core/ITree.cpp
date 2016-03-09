@@ -941,8 +941,17 @@ void ITreeNode::split(ExecutionState *leftData, ExecutionState *rightData) {
 std::map<ref<Expr>, PathConditionMarker *> ITreeNode::makeMarkerMap() const {
   std::map<ref<Expr>, PathConditionMarker *> result;
   for (PathCondition *it = pathCondition; it != 0; it = it->cdr()) {
-    result.insert(std::pair<ref<Expr>, PathConditionMarker *>(
-        it->car(), new PathConditionMarker(it)));
+    PathConditionMarker *marker = new PathConditionMarker(it);
+    if (llvm::isa<OrExpr>(it->car().get())) {
+      // Break up disjunction into its components, because each disjunct
+      // is solved separately
+      result.insert(std::pair<ref<Expr>, PathConditionMarker *>(
+          it->car()->getKid(0), marker));
+      result.insert(std::pair<ref<Expr>, PathConditionMarker *>(
+          it->car()->getKid(1), marker));
+    }
+    result.insert(
+        std::pair<ref<Expr>, PathConditionMarker *>(it->car(), marker));
   }
   return result;
 }
