@@ -324,7 +324,8 @@ bool CexCachingSolver::computeValidity(const Query& query,
       return false;                  // Return false in case of solver error
 
     // Return Solver::True in result in case validity is established:
-    // Solver::Unknown otherwise.
+    // Solver::Unknown otherwise. Solver::Unknown is actually conservative,
+    // as the solver by returning a solution may have decided invalidity.
     result = !a ? Solver::True : Solver::Unknown;
   } else {
     // The computed model of the antecedent is not a model of the consequent.
