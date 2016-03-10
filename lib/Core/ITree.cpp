@@ -614,8 +614,13 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
     }
 
   } else {
-    // if (result != Solver::False)
-    //   llvm::errs() << "Solver could not decide (in-)validity\n";
+    // Here the solver could not decide that the subsumption is valid.
+    // It may have decided invalidity, however,
+    // CexCachingSolver::computeValidity,
+    // which was eventually called from solver->evaluate
+    // is conservative, where it returns Solver::Unknown even in case when
+    // invalidity is established by the solver.
+    // llvm::errs() << "Solver could not decide validity\n";
 
     if (z3solver)
       delete z3solver;

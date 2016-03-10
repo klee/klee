@@ -420,8 +420,7 @@ bool IndependentSolver::computeValidity(const Query& query,
   IndependentElementSet eltsClosure =
     getIndependentConstraints(query, required);
   ConstraintManager tmp(required);
-  return solver->impl->computeValidity(Query(tmp, query.expr), 
-                                       result);
+  return solver->impl->computeValidity(Query(tmp, query.expr), result);
 }
 
 bool IndependentSolver::computeTruth(const Query& query, bool &isValid) {
