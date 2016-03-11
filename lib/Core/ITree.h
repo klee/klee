@@ -14,6 +14,8 @@
 
 #include "Dependency.h"
 
+#include "llvm/Support/raw_ostream.h"
+
 using namespace llvm;
 
 namespace klee {
@@ -27,12 +29,18 @@ struct InterpolationOption {
 /// Storage of search tree for displaying
 class SearchTree {
 
+  /// @brief counter for the next visited node id
+  static unsigned long nextNodeId;
+
   /// Node information
   class Node {
     friend class SearchTree;
 
     /// @brief Interpolation tree node id
-    uintptr_t nodeId;
+    uintptr_t iTreeNodeId;
+
+    /// @brief The node id, also the order in which it is traversed
+    unsigned long nodeId;
 
     /// @brief False and true children of this node
     SearchTree::Node *falseTarget, *trueTarget;
@@ -40,8 +48,12 @@ class SearchTree {
     /// @brief Indicates that node is subsumed
     bool subsumed;
 
+    /// @brief Conditions under which this node is visited from its parent
+    std::vector<std::string> constraints;
+
     Node(uintptr_t nodeId)
-        : nodeId(nodeId), falseTarget(0), trueTarget(0), subsumed(false) {}
+        : iTreeNodeId(nodeId), nodeId(0), falseTarget(0), trueTarget(0),
+          subsumed(false) {}
 
     ~Node() {
       if (falseTarget)
@@ -49,6 +61,8 @@ class SearchTree {
 
       if (trueTarget)
         delete trueTarget;
+
+      constraints.clear();
     }
 
     static SearchTree::Node *createNode(uintptr_t id) {
@@ -64,9 +78,6 @@ class SearchTree {
 
   std::string render();
 
-  static SearchTree::Node *findNode(SearchTree::Node *current,
-                                    const uintptr_t nodeId);
-
 public:
   SearchTree(ITreeNode *_root);
 
@@ -74,9 +85,11 @@ public:
 
   void addChildren(ITreeNode *falseChild, ITreeNode *trueChild);
 
-  void setActiveNode(ITreeNode *iTreeNode);
+  void setCurrentNode(ITreeNode *iTreeNode, const uintptr_t programPoint);
 
   void markAsSubsumed();
+
+  void addPathCondition(ITreeNode *iTreeNode, ref<Expr> condition);
 
   /// @brief Save the graph
   void save(std::string dotFileName);
@@ -226,7 +239,7 @@ public:
 
   void store(SubsumptionTableEntry subItem);
 
-  void setCurrentINode(ITreeNode *node);
+  void setCurrentINode(ITreeNode *node, uintptr_t programPoint);
 
   void remove(ITreeNode *node);
 
@@ -275,12 +288,18 @@ class ITreeNode {
 
   bool isSubsumed;
 
+  /// @brief Graph for displaying as .dot file
+  SearchTree *graph;
+
+  void setNodeLocation(uintptr_t programPoint) {
+    if (!nodeId)
+      nodeId = programPoint;
+  }
+
 public:
   uintptr_t getNodeId();
 
   ref<Expr> getInterpolant(std::vector<const Array *> &replacements) const;
-
-  void setNodeLocation(uintptr_t programPoint);
 
   void addConstraint(ref<Expr> &constraint, llvm::Value *value);
 

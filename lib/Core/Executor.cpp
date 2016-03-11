@@ -2916,8 +2916,8 @@ void Executor::run(ExecutionState &initialState) {
       // We synchronize the node id to that of the state. The node id
       // is set only when it was the address of the first instruction
       // in the node.
-      state.itreeNode->setNodeLocation(reinterpret_cast<uintptr_t>(state.pc->inst));
-      interpTree->setCurrentINode(state.itreeNode);
+      interpTree->setCurrentINode(state.itreeNode,
+                                  reinterpret_cast<uintptr_t>(state.pc->inst));
 
       // Uncomment the following statements to show the state
       // of the interpolation tree and the active node.
@@ -3880,7 +3880,7 @@ void Executor::runFunctionAsMain(Function *f,
 
 #ifdef SUPPORT_Z3
   if (InterpolationOption::interpolation) {
-    interpTree->saveGraph("/tmp/graph.dot");
+    interpTree->saveGraph(interpreterHandler->getOutputFilename("tree.dot"));
     delete interpTree;
     interpTree = 0;
   }

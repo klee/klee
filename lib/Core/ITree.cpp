@@ -22,19 +22,26 @@ bool InterpolationOption::interpolation = true;
 
 /**/
 
+unsigned long SearchTree::nextNodeId = 1;
+
 std::string SearchTree::recurseRender(const SearchTree::Node *node) {
   std::ostringstream stream;
 
   stream << "Node" << node->nodeId;
   std::string sourceNodeName = stream.str();
 
-  stream << " [shape=record,label=\"{" << node->nodeId;
+  stream << " [shape=record,label=\"{" << node->nodeId << ": "
+         << node->iTreeNodeId << "\\l";
   if (node->subsumed) {
-    stream << " (subsumed)";
+    stream << "(subsumed)\\l";
   }
-  stream << "\\l";
+  for (std::vector<std::string>::const_iterator it = node->constraints.begin(),
+                                                itEnd = node->constraints.end();
+       it != itEnd; ++it) {
+    stream << (*it) << "\\l";
+  }
   if (node->falseTarget || node->trueTarget)
-    stream << "|{<s0>T|<s1>F}";
+    stream << "|{<s0>F|<s1>T}";
   stream << "}\"];\n";
 
   if (node->falseTarget) {
@@ -67,27 +74,6 @@ std::string SearchTree::render() {
   return res;
 }
 
-SearchTree::Node *SearchTree::findNode(SearchTree::Node *current,
-                                       const uintptr_t nodeId) {
-  // FIXME: This procedure is currently horribly inefficient
-  // as it tries to find the active node by search the whole tree
-  if (current->nodeId == nodeId)
-    return current;
-
-  if (current->falseTarget) {
-    SearchTree::Node *next = findNode(current->falseTarget, nodeId);
-    if (next)
-      return next;
-  }
-
-  if (current->trueTarget) {
-    SearchTree::Node *next = findNode(current->trueTarget, nodeId);
-    if (next)
-      return next;
-  }
-  return 0;
-}
-
 SearchTree::SearchTree(ITreeNode *_root) {
   root = SearchTree::Node::createNode(_root->getNodeId());
   activeNode = root;
@@ -109,13 +95,29 @@ void SearchTree::addChildren(ITreeNode *falseChild, ITreeNode *trueChild) {
   itreeNodeMap[trueChild] = activeNode->trueTarget;
 }
 
-void SearchTree::setActiveNode(ITreeNode *iTreeNode) {
+void SearchTree::setCurrentNode(ITreeNode *iTreeNode,
+                                const uintptr_t programPoint) {
   SearchTree::Node *node = itreeNodeMap[iTreeNode];
-  if (node)
+  node->iTreeNodeId = programPoint;
+  if (node) {
     activeNode = node;
+    if (!activeNode->nodeId)
+      activeNode->nodeId = nextNodeId++;
+  }
 }
 
 void SearchTree::markAsSubsumed() { activeNode->subsumed = true; }
+
+void SearchTree::addPathCondition(ITreeNode *iTreeNode, ref<Expr> condition) {
+  SearchTree::Node *node = itreeNodeMap[iTreeNode];
+
+  std::string &buffer(10000, 0);
+  llvm::raw_string_ostream stream(buffer);
+  condition->print(stream);
+  std::string s = stream.str();
+  s.erase(std::remove(s.begin(), s.end(), '\n'), s.end());
+  node->constraints.push_back(s);
+}
 
 /// @brief Save the graph
 void SearchTree::save(std::string dotFileName) {
@@ -836,6 +838,7 @@ ITree::ITree(ExecutionState *_root) {
   }
   root = currentINode;
   graph = new SearchTree(currentINode);
+  currentINode->graph = graph;
 }
 
 ITree::~ITree() { delete graph; }
@@ -872,9 +875,10 @@ void ITree::store(SubsumptionTableEntry subItem) {
   subsumptionTable.push_back(subItem);
 }
 
-void ITree::setCurrentINode(ITreeNode *node) {
+void ITree::setCurrentINode(ITreeNode *node, uintptr_t programPoint) {
   currentINode = node;
-  graph->setActiveNode(node);
+  currentINode->setNodeLocation(programPoint);
+  graph->setCurrentNode(node, programPoint);
 }
 
 void ITree::remove(ITreeNode *node) {
@@ -1011,7 +1015,8 @@ void ITree::dump() { this->print(llvm::errs()); }
 /**/
 
 ITreeNode::ITreeNode(ITreeNode *_parent)
-    : parent(_parent), left(0), right(0), nodeId(0), isSubsumed(false) {
+    : parent(_parent), left(0), right(0), nodeId(0), isSubsumed(false),
+      graph(_parent ? _parent->graph : 0) {
 
   pathCondition = (_parent != 0) ? _parent->pathCondition : 0;
 
@@ -1042,14 +1047,10 @@ ITreeNode::getInterpolant(std::vector<const Array *> &replacements) const {
   return this->pathCondition->packInterpolant(replacements);
 }
 
-void ITreeNode::setNodeLocation(uintptr_t programPoint) {
-  if (!nodeId)
-    nodeId = programPoint;
-}
-
 void ITreeNode::addConstraint(ref<Expr> &constraint, llvm::Value *condition) {
   pathCondition =
       new PathCondition(constraint, dependency, condition, pathCondition);
+  graph->addPathCondition(this, constraint);
 }
 
 void ITreeNode::split(ExecutionState *leftData, ExecutionState *rightData) {
