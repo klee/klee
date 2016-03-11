@@ -111,8 +111,8 @@ void SearchTree::markAsSubsumed() { activeNode->subsumed = true; }
 void SearchTree::addPathCondition(ITreeNode *iTreeNode, ref<Expr> condition) {
   SearchTree::Node *node = itreeNodeMap[iTreeNode];
 
-  std::string &buffer(10000, 0);
-  llvm::raw_string_ostream stream(buffer);
+  std::string constraintStr;
+  llvm::raw_string_ostream stream(constraintStr);
   condition->print(stream);
   std::string s = stream.str();
   s.erase(std::remove(s.begin(), s.end(), '\n'), s.end());
