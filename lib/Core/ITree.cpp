@@ -32,13 +32,13 @@ std::string SearchTree::recurseRender(const SearchTree::Node *node) {
 
   stream << " [shape=record,label=\"{" << node->nodeId << ": "
          << node->iTreeNodeId << "\\l";
-  if (node->subsumed) {
-    stream << "(subsumed)\\l";
-  }
   for (std::vector<std::string>::const_iterator it = node->constraints.begin(),
                                                 itEnd = node->constraints.end();
        it != itEnd; ++it) {
     stream << (*it) << "\\l";
+  }
+  if (node->subsumed) {
+    stream << "(subsumed)\\l";
   }
   if (node->falseTarget || node->trueTarget)
     stream << "|{<s0>F|<s1>T}";
@@ -68,8 +68,18 @@ std::string SearchTree::render() {
   if (!root)
     return res;
 
+  std::ostringstream stream;
+  for (std::map<SearchTree::Node *, SearchTree::Node *>::iterator
+           it = subsumptionEdges.begin(),
+           itEnd = subsumptionEdges.end();
+       it != itEnd; ++it) {
+    stream << "Node" << it->first->nodeId << " -> Node" << it->second->nodeId
+           << " [style=dashed];\n";
+  }
+
   res = "digraph search_tree {\n";
   res += recurseRender(root);
+  res += stream.str();
   res += "}\n";
   return res;
 }
@@ -106,7 +116,17 @@ void SearchTree::setCurrentNode(ITreeNode *iTreeNode,
   }
 }
 
-void SearchTree::markAsSubsumed() { activeNode->subsumed = true; }
+void SearchTree::markAsSubsumed(ITreeNode *iTreeNode,
+                                SubsumptionTableEntry *entry) {
+  SearchTree::Node *node = itreeNodeMap[iTreeNode];
+  node->subsumed = true;
+  SearchTree::Node *subsuming = tableEntryMap[entry];
+  if (!subsuming)
+    llvm::errs() << "NULL TABLE ENTRY NODE\n";
+  if (!node)
+    llvm::errs() << "NULL ACTIVE NODE\n";
+  subsumptionEdges[node] = subsuming;
+}
 
 void SearchTree::addPathCondition(ITreeNode *iTreeNode, ref<Expr> condition) {
   SearchTree::Node *node = itreeNodeMap[iTreeNode];
@@ -117,6 +137,14 @@ void SearchTree::addPathCondition(ITreeNode *iTreeNode, ref<Expr> condition) {
   std::string s = stream.str();
   s.erase(std::remove(s.begin(), s.end(), '\n'), s.end());
   node->constraints.push_back(s);
+}
+
+void SearchTree::addTableEntryMapping(ITreeNode *iTreeNode,
+                                      SubsumptionTableEntry *entry) {
+  SearchTree::Node *node = itreeNodeMap[iTreeNode];
+  if (!node)
+    llvm::errs() << "NULL ITREENODEMAP\n";
+  tableEntryMap[entry] = node;
 }
 
 /// @brief Save the graph
@@ -841,37 +869,46 @@ ITree::ITree(ExecutionState *_root) {
   currentINode->graph = graph;
 }
 
-ITree::~ITree() { delete graph; }
+ITree::~ITree() {
+  delete graph;
+  for (std::vector<SubsumptionTableEntry *>::iterator
+           it = subsumptionTable.begin(),
+           itEnd = subsumptionTable.end();
+       it != itEnd; ++it) {
+    delete (*it);
+  }
+  subsumptionTable.clear();
+}
 
 bool ITree::checkCurrentStateSubsumption(TimingSolver *solver,
                                          ExecutionState &state,
                                          double timeout) {
   assert(state.itreeNode == currentINode);
 
-  for (std::vector<SubsumptionTableEntry>::iterator it =
+  for (std::vector<SubsumptionTableEntry *>::iterator it =
            subsumptionTable.begin();
        it != subsumptionTable.end(); it++) {
 
-    if (it->subsumed(solver, state, timeout)) {
+    if ((*it)->subsumed(solver, state, timeout)) {
 
       // We mark as subsumed such that the node will not be
       // stored into table (the table already contains a more
       // general entry).
       currentINode->isSubsumed = true;
 
-      // We mark node in the graph as subsumed
-      graph->markAsSubsumed();
+      // Mark the node as subsumed, and create a subsumption edge
+      graph->markAsSubsumed(currentINode, (*it));
       return true;
     }
   }
   return false;
 }
 
-std::vector<SubsumptionTableEntry> ITree::getStore() {
+std::vector<SubsumptionTableEntry *> ITree::getStore() {
   return subsumptionTable;
 }
 
-void ITree::store(SubsumptionTableEntry subItem) {
+void ITree::store(SubsumptionTableEntry *subItem) {
   subsumptionTable.push_back(subItem);
 }
 
@@ -889,8 +926,9 @@ void ITree::remove(ITreeNode *node) {
     // As the node is about to be deleted, it must have been completely
     // traversed, hence the correct time to table the interpolant.
     if (!node->isSubsumed) {
-      SubsumptionTableEntry entry(node);
+      SubsumptionTableEntry *entry = new SubsumptionTableEntry(node);
       store(entry);
+      graph->addTableEntryMapping(node, entry);
     }
 
     delete node;
@@ -1002,11 +1040,11 @@ void ITree::print(llvm::raw_ostream &stream) {
   this->printNode(stream, this->root, "");
   stream << "\n------------------------- Subsumption Table "
             "-------------------------\n";
-  for (std::vector<SubsumptionTableEntry>::iterator
+  for (std::vector<SubsumptionTableEntry *>::iterator
            it = subsumptionTable.begin(),
            itEnd = subsumptionTable.end();
        it != itEnd; ++it) {
-    (*it).print(stream);
+    (*it)->print(stream);
   }
 }
 

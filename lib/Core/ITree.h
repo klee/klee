@@ -21,6 +21,8 @@ using namespace llvm;
 namespace klee {
 class ExecutionState;
 
+class SubsumptionTableEntry;
+
 /// Global variable denoting whether interpolation is enabled or otherwise
 struct InterpolationOption {
   static bool interpolation;
@@ -73,6 +75,8 @@ class SearchTree {
   SearchTree::Node *root;
   SearchTree::Node *activeNode;
   std::map<ITreeNode *, SearchTree::Node *> itreeNodeMap;
+  std::map<SubsumptionTableEntry *, SearchTree::Node *> tableEntryMap;
+  std::map<SearchTree::Node *, SearchTree::Node *> subsumptionEdges;
 
   static std::string recurseRender(const SearchTree::Node *node);
 
@@ -87,9 +91,11 @@ public:
 
   void setCurrentNode(ITreeNode *iTreeNode, const uintptr_t programPoint);
 
-  void markAsSubsumed();
+  void markAsSubsumed(ITreeNode *iTreeNode, SubsumptionTableEntry *entry);
 
   void addPathCondition(ITreeNode *iTreeNode, ref<Expr> condition);
+
+  void addTableEntryMapping(ITreeNode *iTreeNode, SubsumptionTableEntry *entry);
 
   /// @brief Save the graph
   void save(std::string dotFileName);
@@ -221,7 +227,7 @@ class ITree {
 
   ITreeNode *currentINode;
 
-  std::vector<SubsumptionTableEntry> subsumptionTable;
+  std::vector<SubsumptionTableEntry *> subsumptionTable;
 
   /// @brief Graph for displaying as .dot file
   SearchTree *graph;
@@ -235,9 +241,9 @@ public:
 
   ~ITree();
 
-  std::vector<SubsumptionTableEntry> getStore();
+  std::vector<SubsumptionTableEntry *> getStore();
 
-  void store(SubsumptionTableEntry subItem);
+  void store(SubsumptionTableEntry *subItem);
 
   void setCurrentINode(ITreeNode *node, uintptr_t programPoint);
 
