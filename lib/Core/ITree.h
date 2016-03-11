@@ -24,6 +24,66 @@ struct InterpolationOption {
   static bool interpolation;
 };
 
+/// Storage of search tree for displaying
+class SearchTree {
+
+  /// Node information
+  class Node {
+    friend class SearchTree;
+
+    /// @brief Interpolation tree node id
+    uintptr_t nodeId;
+
+    /// @brief False and true children of this node
+    SearchTree::Node *falseTarget, *trueTarget;
+
+    /// @brief Indicates that node is subsumed
+    bool subsumed;
+
+    Node(uintptr_t nodeId)
+        : nodeId(nodeId), falseTarget(0), trueTarget(0), subsumed(false) {}
+
+    ~Node() {
+      if (falseTarget)
+        delete falseTarget;
+
+      if (trueTarget)
+        delete trueTarget;
+    }
+
+    static SearchTree::Node *createNode(uintptr_t id) {
+      return new SearchTree::Node(id);
+    }
+  };
+
+  SearchTree::Node *root;
+  SearchTree::Node *activeNode;
+  std::map<ITreeNode *, SearchTree::Node *> itreeNodeMap;
+
+  static std::string recurseRender(const SearchTree::Node *node);
+
+  std::string render();
+
+  static SearchTree::Node *findNode(SearchTree::Node *current,
+                                    const uintptr_t nodeId);
+
+public:
+  SearchTree(ITreeNode *_root);
+
+  ~SearchTree();
+
+  void addChildren(ITreeNode *falseChild, ITreeNode *trueChild);
+
+  void setActiveNode(ITreeNode *iTreeNode);
+
+  void markAsSubsumed();
+
+  /// @brief Save the graph
+  void save(std::string dotFileName);
+};
+
+/**/
+
 class PathCondition {
   /// @brief KLEE expression
   ref<Expr> constraint;
@@ -150,6 +210,9 @@ class ITree {
 
   std::vector<SubsumptionTableEntry> subsumptionTable;
 
+  /// @brief Graph for displaying as .dot file
+  SearchTree *graph;
+
   void printNode(llvm::raw_ostream &stream, ITreeNode *n, std::string edges);
 
 public:
@@ -183,6 +246,8 @@ public:
                                        ref<Expr> value, ref<Expr> address);
 
   void executeAbstractDependency(llvm::Instruction *instr, ref<Expr> value);
+
+  void saveGraph(std::string dotFileName) { graph->save(dotFileName); }
 
   void print(llvm::raw_ostream &stream);
 

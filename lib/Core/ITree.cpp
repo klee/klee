@@ -12,12 +12,120 @@
 #include <klee/Expr.h>
 #include <klee/Solver.h>
 #include <klee/util/ExprPPrinter.h>
+#include <fstream>
 #include <vector>
 
 using namespace klee;
 
 // Interpolation is enabled by default
 bool InterpolationOption::interpolation = true;
+
+/**/
+
+std::string SearchTree::recurseRender(const SearchTree::Node *node) {
+  std::ostringstream stream;
+
+  stream << "Node" << node->nodeId;
+  std::string sourceNodeName = stream.str();
+
+  stream << " [shape=record,label=\"{" << node->nodeId;
+  if (node->subsumed) {
+    stream << " (subsumed)";
+  }
+  stream << "\\l";
+  if (node->falseTarget || node->trueTarget)
+    stream << "|{<s0>T|<s1>F}";
+  stream << "}\"];\n";
+
+  if (node->falseTarget) {
+    stream << sourceNodeName << ":s0 -> Node" << node->falseTarget->nodeId
+           << ";\n";
+  }
+  if (node->trueTarget) {
+    stream << sourceNodeName + ":s1 -> Node" << node->trueTarget->nodeId
+           << ";\n";
+  }
+  if (node->falseTarget) {
+    stream << recurseRender(node->falseTarget);
+  }
+  if (node->trueTarget) {
+    stream << recurseRender(node->trueTarget);
+  }
+  return stream.str();
+}
+
+std::string SearchTree::render() {
+  std::string res("");
+
+  // Simply return empty string when root is undefined
+  if (!root)
+    return res;
+
+  res = "digraph search_tree {\n";
+  res += recurseRender(root);
+  res += "}\n";
+  return res;
+}
+
+SearchTree::Node *SearchTree::findNode(SearchTree::Node *current,
+                                       const uintptr_t nodeId) {
+  // FIXME: This procedure is currently horribly inefficient
+  // as it tries to find the active node by search the whole tree
+  if (current->nodeId == nodeId)
+    return current;
+
+  if (current->falseTarget) {
+    SearchTree::Node *next = findNode(current->falseTarget, nodeId);
+    if (next)
+      return next;
+  }
+
+  if (current->trueTarget) {
+    SearchTree::Node *next = findNode(current->trueTarget, nodeId);
+    if (next)
+      return next;
+  }
+  return 0;
+}
+
+SearchTree::SearchTree(ITreeNode *_root) {
+  root = SearchTree::Node::createNode(_root->getNodeId());
+  activeNode = root;
+  itreeNodeMap[_root] = root;
+}
+
+SearchTree::~SearchTree() {
+  if (root)
+    delete root;
+
+  itreeNodeMap.clear();
+}
+
+void SearchTree::addChildren(ITreeNode *falseChild, ITreeNode *trueChild) {
+  activeNode->falseTarget =
+      SearchTree::Node::createNode(falseChild->getNodeId());
+  activeNode->trueTarget = SearchTree::Node::createNode(trueChild->getNodeId());
+  itreeNodeMap[falseChild] = activeNode->falseTarget;
+  itreeNodeMap[trueChild] = activeNode->trueTarget;
+}
+
+void SearchTree::setActiveNode(ITreeNode *iTreeNode) {
+  SearchTree::Node *node = itreeNodeMap[iTreeNode];
+  if (node)
+    activeNode = node;
+}
+
+void SearchTree::markAsSubsumed() { activeNode->subsumed = true; }
+
+/// @brief Save the graph
+void SearchTree::save(std::string dotFileName) {
+  std::string g(render());
+  std::ofstream out(dotFileName.c_str());
+  if (!out.fail()) {
+    out << g;
+    out.close();
+  }
+}
 
 /**/
 
@@ -727,9 +835,10 @@ ITree::ITree(ExecutionState *_root) {
     currentINode = new ITreeNode(0);
   }
   root = currentINode;
+  graph = new SearchTree(currentINode);
 }
 
-ITree::~ITree() {}
+ITree::~ITree() { delete graph; }
 
 bool ITree::checkCurrentStateSubsumption(TimingSolver *solver,
                                          ExecutionState &state,
@@ -747,6 +856,8 @@ bool ITree::checkCurrentStateSubsumption(TimingSolver *solver,
       // general entry).
       currentINode->isSubsumed = true;
 
+      // We mark node in the graph as subsumed
+      graph->markAsSubsumed();
       return true;
     }
   }
@@ -761,7 +872,10 @@ void ITree::store(SubsumptionTableEntry subItem) {
   subsumptionTable.push_back(subItem);
 }
 
-void ITree::setCurrentINode(ITreeNode *node) { currentINode = node; }
+void ITree::setCurrentINode(ITreeNode *node) {
+  currentINode = node;
+  graph->setActiveNode(node);
+}
 
 void ITree::remove(ITreeNode *node) {
   assert(!node->left && !node->right);
@@ -791,6 +905,7 @@ void ITree::remove(ITreeNode *node) {
 std::pair<ITreeNode *, ITreeNode *>
 ITree::split(ITreeNode *parent, ExecutionState *left, ExecutionState *right) {
   parent->split(left, right);
+  graph->addChildren(parent->left, parent->right);
   return std::pair<ITreeNode *, ITreeNode *>(parent->left, parent->right);
 }
 

@@ -3880,6 +3880,7 @@ void Executor::runFunctionAsMain(Function *f,
 
 #ifdef SUPPORT_Z3
   if (InterpolationOption::interpolation) {
+    interpTree->saveGraph("/tmp/graph.dot");
     delete interpTree;
     interpTree = 0;
   }
