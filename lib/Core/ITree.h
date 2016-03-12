@@ -119,6 +119,8 @@ class SubsumptionTableEntry {
   static ref<Expr> simplifyEqualityExpr(std::vector<ref<Expr> > &equalityPack,
                                         ref<Expr> expr);
 
+  static ref<Expr> simplifyWithFourierMotzkin(ref<Expr> existsExpr);
+
   static ref<Expr> simplifyExistsExpr(ref<Expr> existsExpr);
 
   static ref<Expr> simplifyArithmeticBody(ref<Expr> existsExpr);
