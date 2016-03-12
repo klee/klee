@@ -39,6 +39,105 @@ class SearchTree {
   /// @brief Global search tree instance
   static SearchTree *instance;
 
+  /// Encapsulates functionality of expression builder
+  class PrettyExpressionBuilder {
+
+    std::string bvOne(unsigned width);
+    std::string bvZero(unsigned width);
+    std::string bvMinusOne(unsigned width);
+    std::string bvConst32(unsigned width, uint32_t value);
+    std::string bvConst64(unsigned width, uint64_t value);
+    std::string bvZExtConst(unsigned width, uint64_t value);
+    std::string bvSExtConst(unsigned width, uint64_t value);
+
+    std::string bvBoolExtract(std::string expr, int bit);
+    std::string bvExtract(std::string expr, unsigned top, unsigned bottom);
+    std::string eqExpr(std::string a, std::string b);
+
+    // logical left and right shift (not arithmetic)
+    std::string bvLeftShift(std::string expr, unsigned shift);
+    std::string bvRightShift(std::string expr, unsigned shift);
+    std::string bvVarLeftShift(std::string expr, std::string shift);
+    std::string bvVarRightShift(std::string expr, std::string shift);
+    std::string bvVarArithRightShift(std::string expr, std::string shift);
+
+    // Some STP-style bitvector arithmetic
+    std::string bvMinusExpr(unsigned width, std::string minuend,
+                            std::string subtrahend);
+    std::string bvPlusExpr(unsigned width, std::string augend,
+                           std::string addend);
+    std::string bvMultExpr(unsigned width, std::string multiplacand,
+                           std::string multiplier);
+    std::string bvDivExpr(unsigned width, std::string dividend,
+                          std::string divisor);
+    std::string sbvDivExpr(unsigned width, std::string dividend,
+                           std::string divisor);
+    std::string bvModExpr(unsigned width, std::string dividend,
+                          std::string divisor);
+    std::string sbvModExpr(unsigned width, std::string dividend,
+                           std::string divisor);
+    std::string notExpr(std::string expr);
+    std::string bvNotExpr(std::string expr);
+    std::string andExpr(std::string lhs, std::string rhs);
+    std::string bvAndExpr(std::string lhs, std::string rhs);
+    std::string orExpr(std::string lhs, std::string rhs);
+    std::string bvOrExpr(std::string lhs, std::string rhs);
+    std::string iffExpr(std::string lhs, std::string rhs);
+    std::string bvXorExpr(std::string lhs, std::string rhs);
+    std::string bvSignExtend(std::string src, unsigned width);
+
+    // Some STP-style array domain interface
+    std::string writeExpr(std::string array, std::string index,
+                          std::string value);
+    std::string readExpr(std::string array, std::string index);
+
+    // ITE-expression constructor
+    std::string iteExpr(std::string condition, std::string whenTrue,
+                        std::string whenFalse);
+
+    // Bitvector length
+    int getBVLength(std::string expr);
+
+    // Bitvector comparison
+    std::string bvLtExpr(std::string lhs, std::string rhs);
+    std::string bvLeExpr(std::string lhs, std::string rhs);
+    std::string sbvLtExpr(std::string lhs, std::string rhs);
+    std::string sbvLeExpr(std::string lhs, std::string rhs);
+
+    std::string existsExpr(std::string body);
+
+    std::string constructAShrByConstant(std::string expr, unsigned shift,
+                                        std::string isSigned);
+    std::string constructMulByConstant(std::string expr, unsigned width,
+                                       uint64_t x);
+    std::string constructUDivByConstant(std::string expr_n, unsigned width,
+                                        uint64_t d);
+    std::string constructSDivByConstant(std::string expr_n, unsigned width,
+                                        uint64_t d);
+
+    std::string getInitialArray(const Array *os);
+    std::string getArrayForUpdate(const Array *root, const UpdateNode *un);
+
+    std::string constructActual(ref<Expr> e, int *width_out);
+    std::string construct(ref<Expr> e, int *width_out);
+
+    std::string buildVar(const char *name, unsigned width);
+    std::string buildArray(const char *name, unsigned indexWidth,
+                           unsigned valueWidth);
+
+    std::string getTrue();
+    std::string getFalse();
+    std::string getTempVar(Expr::Width w);
+    std::string getInitialRead(const Array *os, unsigned index);
+
+  public:
+    PrettyExpressionBuilder();
+
+    ~PrettyExpressionBuilder();
+
+    std::string construct(ref<Expr> e);
+  };
+
   /// Node information
   class Node {
     friend class SearchTree;

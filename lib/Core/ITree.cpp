@@ -26,6 +26,138 @@ unsigned long SearchTree::nextNodeId = 1;
 
 SearchTree *SearchTree::instance = 0;
 
+std::string SearchTree::PrettyExpressionBuilder::bvOne(unsigned width) {}
+std::string SearchTree::PrettyExpressionBuilder::bvZero(unsigned width) {}
+std::string SearchTree::PrettyExpressionBuilder::bvMinusOne(unsigned width) {}
+std::string SearchTree::PrettyExpressionBuilder::bvConst32(unsigned width,
+                                                           uint32_t value) {}
+std::string SearchTree::PrettyExpressionBuilder::bvConst64(unsigned width,
+                                                           uint64_t value) {}
+std::string SearchTree::PrettyExpressionBuilder::bvZExtConst(unsigned width,
+                                                             uint64_t value) {}
+std::string SearchTree::PrettyExpressionBuilder::bvSExtConst(unsigned width,
+                                                             uint64_t value) {}
+
+std::string SearchTree::PrettyExpressionBuilder::bvBoolExtract(std::string expr,
+                                                               int bit) {}
+std::string SearchTree::PrettyExpressionBuilder::bvExtract(std::string expr,
+                                                           unsigned top,
+                                                           unsigned bottom) {}
+std::string SearchTree::PrettyExpressionBuilder::eqExpr(std::string a,
+                                                        std::string b) {}
+
+// logical left and right shift (not arithmetic)
+std::string SearchTree::PrettyExpressionBuilder::bvLeftShift(std::string expr,
+                                                             unsigned shift) {}
+std::string SearchTree::PrettyExpressionBuilder::bvRightShift(std::string expr,
+                                                              unsigned shift) {}
+std::string
+SearchTree::PrettyExpressionBuilder::bvVarLeftShift(std::string expr,
+                                                    std::string shift) {}
+std::string
+SearchTree::PrettyExpressionBuilder::bvVarRightShift(std::string expr,
+                                                     std::string shift) {}
+std::string
+SearchTree::PrettyExpressionBuilder::bvVarArithRightShift(std::string expr,
+                                                          std::string shift) {}
+
+// Some STP-style bitvector arithmetic
+std::string SearchTree::PrettyExpressionBuilder::bvMinusExpr(
+    unsigned width, std::string minuend, std::string subtrahend) {}
+std::string SearchTree::PrettyExpressionBuilder::bvPlusExpr(
+    unsigned width, std::string augend, std::string addend) {}
+std::string SearchTree::PrettyExpressionBuilder::bvMultExpr(
+    unsigned width, std::string multiplacand, std::string multiplier) {}
+std::string SearchTree::PrettyExpressionBuilder::bvDivExpr(
+    unsigned width, std::string dividend, std::string divisor) {}
+std::string SearchTree::PrettyExpressionBuilder::sbvDivExpr(
+    unsigned width, std::string dividend, std::string divisor) {}
+std::string SearchTree::PrettyExpressionBuilder::bvModExpr(
+    unsigned width, std::string dividend, std::string divisor) {}
+std::string SearchTree::PrettyExpressionBuilder::sbvModExpr(
+    unsigned width, std::string dividend, std::string divisor) {}
+std::string SearchTree::PrettyExpressionBuilder::notExpr(std::string expr) {}
+std::string SearchTree::PrettyExpressionBuilder::bvNotExpr(std::string expr) {}
+std::string SearchTree::PrettyExpressionBuilder::andExpr(std::string lhs,
+                                                         std::string rhs) {}
+std::string SearchTree::PrettyExpressionBuilder::bvAndExpr(std::string lhs,
+                                                           std::string rhs) {}
+std::string SearchTree::PrettyExpressionBuilder::orExpr(std::string lhs,
+                                                        std::string rhs) {}
+std::string SearchTree::PrettyExpressionBuilder::bvOrExpr(std::string lhs,
+                                                          std::string rhs) {}
+std::string SearchTree::PrettyExpressionBuilder::iffExpr(std::string lhs,
+                                                         std::string rhs) {}
+std::string SearchTree::PrettyExpressionBuilder::bvXorExpr(std::string lhs,
+                                                           std::string rhs) {}
+std::string SearchTree::PrettyExpressionBuilder::bvSignExtend(std::string src,
+                                                              unsigned width) {}
+
+// Some STP-style array domain interface
+std::string SearchTree::PrettyExpressionBuilder::writeExpr(std::string array,
+                                                           std::string index,
+                                                           std::string value) {}
+std::string SearchTree::PrettyExpressionBuilder::readExpr(std::string array,
+                                                          std::string index) {}
+
+// ITE-expression constructor
+std::string SearchTree::PrettyExpressionBuilder::iteExpr(
+    std::string condition, std::string whenTrue, std::string whenFalse) {}
+
+// Bitvector length
+int SearchTree::PrettyExpressionBuilder::getBVLength(std::string expr) {}
+
+// Bitvector comparison
+std::string SearchTree::PrettyExpressionBuilder::bvLtExpr(std::string lhs,
+                                                          std::string rhs) {}
+std::string SearchTree::PrettyExpressionBuilder::bvLeExpr(std::string lhs,
+                                                          std::string rhs) {}
+std::string SearchTree::PrettyExpressionBuilder::sbvLtExpr(std::string lhs,
+                                                           std::string rhs) {}
+std::string SearchTree::PrettyExpressionBuilder::sbvLeExpr(std::string lhs,
+                                                           std::string rhs) {}
+
+std::string SearchTree::PrettyExpressionBuilder::existsExpr(std::string body) {}
+
+std::string SearchTree::PrettyExpressionBuilder::constructAShrByConstant(
+    std::string expr, unsigned shift, std::string isSigned) {}
+std::string SearchTree::PrettyExpressionBuilder::constructMulByConstant(
+    std::string expr, unsigned width, uint64_t x) {}
+std::string SearchTree::PrettyExpressionBuilder::constructUDivByConstant(
+    std::string expr_n, unsigned width, uint64_t d) {}
+std::string SearchTree::PrettyExpressionBuilder::constructSDivByConstant(
+    std::string expr_n, unsigned width, uint64_t d) {}
+
+std::string
+SearchTree::PrettyExpressionBuilder::getInitialArray(const Array *os) {}
+std::string
+SearchTree::PrettyExpressionBuilder::getArrayForUpdate(const Array *root,
+                                                       const UpdateNode *un) {}
+
+std::string
+SearchTree::PrettyExpressionBuilder::constructActual(ref<Expr> e,
+                                                     int *width_out) {}
+std::string SearchTree::PrettyExpressionBuilder::construct(ref<Expr> e,
+                                                           int *width_out) {}
+
+std::string SearchTree::PrettyExpressionBuilder::buildVar(const char *name,
+                                                          unsigned width) {}
+std::string SearchTree::PrettyExpressionBuilder::buildArray(
+    const char *name, unsigned indexWidth, unsigned valueWidth) {}
+
+std::string SearchTree::PrettyExpressionBuilder::getTrue() {}
+std::string SearchTree::PrettyExpressionBuilder::getFalse() {}
+std::string SearchTree::PrettyExpressionBuilder::getTempVar(Expr::Width w) {}
+std::string
+SearchTree::PrettyExpressionBuilder::getInitialRead(const Array *os,
+                                                    unsigned index) {}
+
+SearchTree::PrettyExpressionBuilder::PrettyExpressionBuilder() {}
+
+SearchTree::PrettyExpressionBuilder::~PrettyExpressionBuilder() {}
+
+std::string SearchTree::PrettyExpressionBuilder::construct(ref<Expr> e) {}
+
 std::string SearchTree::recurseRender(const SearchTree::Node *node) {
   std::ostringstream stream;
 
