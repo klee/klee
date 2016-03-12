@@ -22,141 +22,557 @@ bool InterpolationOption::interpolation = true;
 
 /**/
 
-unsigned long SearchTree::nextNodeId = 1;
+SearchTree::PrettyExpressionBuilder::QuantificationContext::
+    QuantificationContext(std::vector<const Array *> _existentials,
+                          QuantificationContext *_parent)
+    : parent(_parent) {
+  for (std::vector<const Array *>::iterator it = _existentials.begin(),
+                                            itEnd = _existentials.end();
+       it != itEnd; ++it) {
+    existentials += (*it)->name;
+    if (it != itEnd)
+      existentials += ",";
+  }
+}
 
-SearchTree *SearchTree::instance = 0;
+SearchTree::PrettyExpressionBuilder::QuantificationContext::
+    ~QuantificationContext() {
+  existentials.clear();
+}
 
-std::string SearchTree::PrettyExpressionBuilder::bvOne(unsigned width) {}
-std::string SearchTree::PrettyExpressionBuilder::bvZero(unsigned width) {}
-std::string SearchTree::PrettyExpressionBuilder::bvMinusOne(unsigned width) {}
-std::string SearchTree::PrettyExpressionBuilder::bvConst32(unsigned width,
-                                                           uint32_t value) {}
-std::string SearchTree::PrettyExpressionBuilder::bvConst64(unsigned width,
-                                                           uint64_t value) {}
-std::string SearchTree::PrettyExpressionBuilder::bvZExtConst(unsigned width,
-                                                             uint64_t value) {}
-std::string SearchTree::PrettyExpressionBuilder::bvSExtConst(unsigned width,
-                                                             uint64_t value) {}
+/**/
 
+void SearchTree::PrettyExpressionBuilder::pushQuantificationContext(
+    std::vector<const Array *> existentials) {
+  quantificationContext =
+      new QuantificationContext(existentials, quantificationContext);
+}
+
+void SearchTree::PrettyExpressionBuilder::popQuantificationContext() {
+  QuantificationContext *tmp = quantificationContext;
+  quantificationContext = tmp->getParent();
+  delete tmp;
+}
+
+std::string SearchTree::PrettyExpressionBuilder::bvConst32(uint32_t value) {
+  std::ostringstream stream;
+  stream << value;
+  return stream.str();
+}
+std::string SearchTree::PrettyExpressionBuilder::bvConst64(uint64_t value) {
+  std::ostringstream stream;
+  stream << value;
+  return stream.str();
+}
+std::string SearchTree::PrettyExpressionBuilder::bvZExtConst(uint64_t value) {
+  return bvConst64(value);
+}
+std::string SearchTree::PrettyExpressionBuilder::bvSExtConst(uint64_t value) {
+  return bvConst64(value);
+}
 std::string SearchTree::PrettyExpressionBuilder::bvBoolExtract(std::string expr,
-                                                               int bit) {}
+                                                               int bit) {
+  std::ostringstream stream;
+  stream << expr << "[" << bit << "]";
+  return stream.str();
+}
 std::string SearchTree::PrettyExpressionBuilder::bvExtract(std::string expr,
                                                            unsigned top,
-                                                           unsigned bottom) {}
+                                                           unsigned bottom) {
+  std::ostringstream stream;
+  stream << expr << "[" << top << "," << bottom << "]";
+  return stream.str();
+}
 std::string SearchTree::PrettyExpressionBuilder::eqExpr(std::string a,
-                                                        std::string b) {}
+                                                        std::string b) {
+  return "(" + a + " == " + b + ")";
+}
 
 // logical left and right shift (not arithmetic)
 std::string SearchTree::PrettyExpressionBuilder::bvLeftShift(std::string expr,
-                                                             unsigned shift) {}
+                                                             unsigned shift) {
+  std::ostringstream stream;
+  stream << "(" << expr << " << " << shift << ")";
+  return stream.str();
+}
 std::string SearchTree::PrettyExpressionBuilder::bvRightShift(std::string expr,
-                                                              unsigned shift) {}
+                                                              unsigned shift) {
+  std::ostringstream stream;
+  stream << "(" << expr << " >> " << shift << ")";
+  return stream.str();
+}
 std::string
 SearchTree::PrettyExpressionBuilder::bvVarLeftShift(std::string expr,
-                                                    std::string shift) {}
+                                                    std::string shift) {
+  return "(" + expr + " << " + shift + ")";
+}
 std::string
 SearchTree::PrettyExpressionBuilder::bvVarRightShift(std::string expr,
-                                                     std::string shift) {}
+                                                     std::string shift) {
+  return "(" + expr + " >> " + shift + ")";
+}
 std::string
 SearchTree::PrettyExpressionBuilder::bvVarArithRightShift(std::string expr,
-                                                          std::string shift) {}
+                                                          std::string shift) {
+  return bvVarRightShift(expr, shift);
+}
 
 // Some STP-style bitvector arithmetic
-std::string SearchTree::PrettyExpressionBuilder::bvMinusExpr(
-    unsigned width, std::string minuend, std::string subtrahend) {}
-std::string SearchTree::PrettyExpressionBuilder::bvPlusExpr(
-    unsigned width, std::string augend, std::string addend) {}
-std::string SearchTree::PrettyExpressionBuilder::bvMultExpr(
-    unsigned width, std::string multiplacand, std::string multiplier) {}
-std::string SearchTree::PrettyExpressionBuilder::bvDivExpr(
-    unsigned width, std::string dividend, std::string divisor) {}
-std::string SearchTree::PrettyExpressionBuilder::sbvDivExpr(
-    unsigned width, std::string dividend, std::string divisor) {}
-std::string SearchTree::PrettyExpressionBuilder::bvModExpr(
-    unsigned width, std::string dividend, std::string divisor) {}
-std::string SearchTree::PrettyExpressionBuilder::sbvModExpr(
-    unsigned width, std::string dividend, std::string divisor) {}
-std::string SearchTree::PrettyExpressionBuilder::notExpr(std::string expr) {}
-std::string SearchTree::PrettyExpressionBuilder::bvNotExpr(std::string expr) {}
-std::string SearchTree::PrettyExpressionBuilder::andExpr(std::string lhs,
-                                                         std::string rhs) {}
+std::string
+SearchTree::PrettyExpressionBuilder::bvMinusExpr(std::string minuend,
+                                                 std::string subtrahend) {
+  return "(" + minuend + " - " + subtrahend + ")";
+}
+std::string
+SearchTree::PrettyExpressionBuilder::bvPlusExpr(std::string augend,
+                                                std::string addend) {
+  return "(" + augend + " + " + addend + ")";
+}
+std::string
+SearchTree::PrettyExpressionBuilder::bvMultExpr(std::string multiplacand,
+                                                std::string multiplier) {
+  return "(" + multiplacand + " * " + multiplier + ")";
+}
+std::string
+SearchTree::PrettyExpressionBuilder::bvDivExpr(std::string dividend,
+                                               std::string divisor) {
+  return "(" + dividend + " / " + divisor + ")";
+}
+std::string
+SearchTree::PrettyExpressionBuilder::sbvDivExpr(std::string dividend,
+                                                std::string divisor) {
+  return "(" + dividend + " / " + divisor + ")";
+}
+std::string
+SearchTree::PrettyExpressionBuilder::bvModExpr(std::string dividend,
+                                               std::string divisor) {
+  return "(" + dividend + " % " + divisor + ")";
+}
+std::string
+SearchTree::PrettyExpressionBuilder::sbvModExpr(std::string dividend,
+                                                std::string divisor) {
+  return "(" + dividend + " % " + divisor + ")";
+}
+std::string SearchTree::PrettyExpressionBuilder::notExpr(std::string expr) {
+  return "!(" + expr + ")";
+}
 std::string SearchTree::PrettyExpressionBuilder::bvAndExpr(std::string lhs,
-                                                           std::string rhs) {}
-std::string SearchTree::PrettyExpressionBuilder::orExpr(std::string lhs,
-                                                        std::string rhs) {}
+                                                           std::string rhs) {
+  return "(" + lhs + " & " + rhs + ")";
+}
 std::string SearchTree::PrettyExpressionBuilder::bvOrExpr(std::string lhs,
-                                                          std::string rhs) {}
+                                                          std::string rhs) {
+  return "(" + lhs + " | " + rhs + ")";
+}
 std::string SearchTree::PrettyExpressionBuilder::iffExpr(std::string lhs,
-                                                         std::string rhs) {}
+                                                         std::string rhs) {
+  return "(" + lhs + " <=> " + rhs + ")";
+}
 std::string SearchTree::PrettyExpressionBuilder::bvXorExpr(std::string lhs,
-                                                           std::string rhs) {}
-std::string SearchTree::PrettyExpressionBuilder::bvSignExtend(std::string src,
-                                                              unsigned width) {}
+                                                           std::string rhs) {
+  return "(" + lhs + " xor " + rhs + ")";
+}
+std::string SearchTree::PrettyExpressionBuilder::bvSignExtend(std::string src) {
+  return src;
+}
 
 // Some STP-style array domain interface
 std::string SearchTree::PrettyExpressionBuilder::writeExpr(std::string array,
                                                            std::string index,
-                                                           std::string value) {}
+                                                           std::string value) {
+  return "update(" + array + "," + index + "," + value + ")";
+}
 std::string SearchTree::PrettyExpressionBuilder::readExpr(std::string array,
-                                                          std::string index) {}
+                                                          std::string index) {
+  return array + "[" + index + "]";
+}
 
 // ITE-expression constructor
 std::string SearchTree::PrettyExpressionBuilder::iteExpr(
-    std::string condition, std::string whenTrue, std::string whenFalse) {}
-
-// Bitvector length
-int SearchTree::PrettyExpressionBuilder::getBVLength(std::string expr) {}
+    std::string condition, std::string whenTrue, std::string whenFalse) {
+  return "ite(" + condition + "," + whenTrue + "," + whenFalse + ")";
+}
 
 // Bitvector comparison
 std::string SearchTree::PrettyExpressionBuilder::bvLtExpr(std::string lhs,
-                                                          std::string rhs) {}
+                                                          std::string rhs) {
+  return "(" + lhs + " < " + rhs + ")";
+}
 std::string SearchTree::PrettyExpressionBuilder::bvLeExpr(std::string lhs,
-                                                          std::string rhs) {}
+                                                          std::string rhs) {
+  return "(" + lhs + " <= " + rhs + ")";
+}
 std::string SearchTree::PrettyExpressionBuilder::sbvLtExpr(std::string lhs,
-                                                           std::string rhs) {}
+                                                           std::string rhs) {
+  return "(" + lhs + " < " + rhs + ")";
+}
 std::string SearchTree::PrettyExpressionBuilder::sbvLeExpr(std::string lhs,
-                                                           std::string rhs) {}
+                                                           std::string rhs) {
+  return "(" + lhs + " <= " + rhs + ")";
+}
 
-std::string SearchTree::PrettyExpressionBuilder::existsExpr(std::string body) {}
-
+std::string SearchTree::PrettyExpressionBuilder::existsExpr(std::string body) {
+  return "(exists (" + quantificationContext->getExistentials() + ") " + body +
+         ")";
+}
 std::string SearchTree::PrettyExpressionBuilder::constructAShrByConstant(
-    std::string expr, unsigned shift, std::string isSigned) {}
-std::string SearchTree::PrettyExpressionBuilder::constructMulByConstant(
-    std::string expr, unsigned width, uint64_t x) {}
-std::string SearchTree::PrettyExpressionBuilder::constructUDivByConstant(
-    std::string expr_n, unsigned width, uint64_t d) {}
-std::string SearchTree::PrettyExpressionBuilder::constructSDivByConstant(
-    std::string expr_n, unsigned width, uint64_t d) {}
+    std::string expr, unsigned shift, std::string isSigned) {
+  return bvRightShift(expr, shift);
+}
+std::string
+SearchTree::PrettyExpressionBuilder::constructMulByConstant(std::string expr,
+                                                            uint64_t x) {
+  std::ostringstream stream;
+  stream << "(" << expr << " * " << x << ")";
+  return stream.str();
+}
+std::string
+SearchTree::PrettyExpressionBuilder::constructUDivByConstant(std::string expr_n,
+                                                             uint64_t d) {
+  std::ostringstream stream;
+  stream << "(" << expr_n << " / " << d << ")";
+  return stream.str();
+}
+std::string
+SearchTree::PrettyExpressionBuilder::constructSDivByConstant(std::string expr_n,
+                                                             uint64_t d) {
+  std::ostringstream stream;
+  stream << "(" << expr_n << " / " << d << ")";
+  return stream.str();
+}
 
 std::string
-SearchTree::PrettyExpressionBuilder::getInitialArray(const Array *os) {}
+SearchTree::PrettyExpressionBuilder::getInitialArray(const Array *root) {
+  char buf[32];
+  unsigned const addrlen =
+      sprintf(buf, "_%p", (const void *)root) + 1; // +1 for null-termination
+  unsigned const space = (root->name.length() > 32 - addrlen)
+                             ? (32 - addrlen)
+                             : root->name.length();
+  memmove(buf + space, buf, addrlen);     // moving the address part to the end
+  memcpy(buf, root->name.c_str(), space); // filling out the name part
+
+  std::string array_expr = buildArray(buf, root->getDomain(), root->getRange());
+
+  if (root->isConstantArray()) {
+    for (unsigned i = 0, e = root->size; i != e; ++i) {
+      std::string prev = array_expr;
+      array_expr = writeExpr(
+          prev, constructActual(ConstantExpr::alloc(i, root->getDomain())),
+          constructActual(root->constantValues[i]));
+    }
+  }
+  return array_expr;
+}
 std::string
 SearchTree::PrettyExpressionBuilder::getArrayForUpdate(const Array *root,
-                                                       const UpdateNode *un) {}
+                                                       const UpdateNode *un) {
+  if (!un) {
+    return (getInitialArray(root));
+  }
+  return writeExpr(getArrayForUpdate(root, un->next),
+                   constructActual(un->index), constructActual(un->value));
+}
 
-std::string
-SearchTree::PrettyExpressionBuilder::constructActual(ref<Expr> e,
-                                                     int *width_out) {}
-std::string SearchTree::PrettyExpressionBuilder::construct(ref<Expr> e,
-                                                           int *width_out) {}
+std::string SearchTree::PrettyExpressionBuilder::constructActual(ref<Expr> e) {
+  switch (e->getKind()) {
+  case Expr::Constant: {
+    ConstantExpr *CE = cast<ConstantExpr>(e);
+    int width = CE->getWidth();
 
-std::string SearchTree::PrettyExpressionBuilder::buildVar(const char *name,
-                                                          unsigned width) {}
+    // Coerce to bool if necessary.
+    if (width == 1)
+      return CE->isTrue() ? getTrue() : getFalse();
+
+    // Fast path.
+    if (width <= 32)
+      return bvConst32(CE->getZExtValue(32));
+    if (width <= 64)
+      return bvConst64(CE->getZExtValue());
+
+    ref<ConstantExpr> Tmp = CE;
+    return bvConst64(Tmp->Extract(0, 64)->getZExtValue());
+  }
+
+  // Special
+  case Expr::NotOptimized: {
+    NotOptimizedExpr *noe = cast<NotOptimizedExpr>(e);
+    return constructActual(noe->src);
+  }
+
+  case Expr::Read: {
+    ReadExpr *re = cast<ReadExpr>(e);
+    assert(re && re->updates.root);
+    return readExpr(getArrayForUpdate(re->updates.root, re->updates.head),
+                    constructActual(re->index));
+  }
+
+  case Expr::Select: {
+    SelectExpr *se = cast<SelectExpr>(e);
+    std::string cond = constructActual(se->cond);
+    std::string tExpr = constructActual(se->trueExpr);
+    std::string fExpr = constructActual(se->falseExpr);
+    return iteExpr(cond, tExpr, fExpr);
+  }
+
+  case Expr::Concat: {
+    ConcatExpr *ce = cast<ConcatExpr>(e);
+    unsigned numKids = ce->getNumKids();
+    std::string res = constructActual(ce->getKid(numKids - 1));
+    for (int i = numKids - 2; i >= 0; i--) {
+      res = "concat(" + constructActual(ce->getKid(i)) + "," + res + ")";
+    }
+    return res;
+  }
+
+  case Expr::Extract: {
+    ExtractExpr *ee = cast<ExtractExpr>(e);
+    std::string src = constructActual(ee->expr);
+    int width = ee->getWidth();
+    if (width == 1) {
+      return bvBoolExtract(src, ee->offset);
+    } else {
+      return bvExtract(src, ee->offset + width - 1, ee->offset);
+    }
+  }
+
+  // Casting
+  case Expr::ZExt: {
+    CastExpr *ce = cast<CastExpr>(e);
+    std::string src = constructActual(ce->src);
+    int width = ce->getWidth();
+    if (width == 1) {
+      return iteExpr(src, bvOne(), bvZero());
+    } else {
+      return src;
+    }
+  }
+
+  case Expr::SExt: {
+    CastExpr *ce = cast<CastExpr>(e);
+    std::string src = constructActual(ce->src);
+    return bvSignExtend(src);
+  }
+
+  // Arithmetic
+  case Expr::Add: {
+    AddExpr *ae = cast<AddExpr>(e);
+    std::string left = constructActual(ae->left);
+    std::string right = constructActual(ae->right);
+    return bvPlusExpr(left, right);
+  }
+
+  case Expr::Sub: {
+    SubExpr *se = cast<SubExpr>(e);
+    std::string left = constructActual(se->left);
+    std::string right = constructActual(se->right);
+    return bvMinusExpr(left, right);
+  }
+
+  case Expr::Mul: {
+    MulExpr *me = cast<MulExpr>(e);
+    std::string right = constructActual(me->right);
+    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(me->left))
+      if (CE->getWidth() <= 64)
+        return constructMulByConstant(right, CE->getZExtValue());
+
+    std::string left = constructActual(me->left);
+    return bvMultExpr(left, right);
+  }
+
+  case Expr::UDiv: {
+    UDivExpr *de = cast<UDivExpr>(e);
+    std::string left = constructActual(de->left);
+
+    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(de->right)) {
+      if (CE->getWidth() <= 64) {
+        uint64_t divisor = CE->getZExtValue();
+
+        if (bits64::isPowerOfTwo(divisor)) {
+          return bvRightShift(left, bits64::indexOfSingleBit(divisor));
+        }
+      }
+    }
+
+    std::string right = constructActual(de->right);
+    return bvDivExpr(left, right);
+  }
+
+  case Expr::SDiv: {
+    SDivExpr *de = cast<SDivExpr>(e);
+    std::string left = constructActual(de->left);
+    std::string right = constructActual(de->right);
+    return sbvDivExpr(left, right);
+  }
+
+  case Expr::URem: {
+    URemExpr *de = cast<URemExpr>(e);
+    std::string left = constructActual(de->left);
+
+    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(de->right)) {
+      if (CE->getWidth() <= 64) {
+        uint64_t divisor = CE->getZExtValue();
+
+        if (bits64::isPowerOfTwo(divisor)) {
+          unsigned bits = bits64::indexOfSingleBit(divisor);
+
+          // special case for modding by 1 or else we bvExtract -1:0
+          if (bits == 0) {
+            return bvZero();
+          } else {
+            return bvExtract(left, bits - 1, 0);
+          }
+        }
+      }
+    }
+
+    std::string right = constructActual(de->right);
+    return bvModExpr(left, right);
+  }
+
+  case Expr::SRem: {
+    SRemExpr *de = cast<SRemExpr>(e);
+    std::string left = constructActual(de->left);
+    std::string right = constructActual(de->right);
+    return sbvModExpr(left, right);
+  }
+
+  // Bitwise
+  case Expr::Not: {
+    NotExpr *ne = cast<NotExpr>(e);
+    std::string expr = constructActual(ne->expr);
+    return notExpr(expr);
+  }
+
+  case Expr::And: {
+    AndExpr *ae = cast<AndExpr>(e);
+    std::string left = constructActual(ae->left);
+    std::string right = constructActual(ae->right);
+    return bvAndExpr(left, right);
+  }
+
+  case Expr::Or: {
+    OrExpr *oe = cast<OrExpr>(e);
+    std::string left = constructActual(oe->left);
+    std::string right = constructActual(oe->right);
+    return bvOrExpr(left, right);
+  }
+
+  case Expr::Xor: {
+    XorExpr *xe = cast<XorExpr>(e);
+    std::string left = constructActual(xe->left);
+    std::string right = constructActual(xe->right);
+    return bvXorExpr(left, right);
+  }
+
+  case Expr::Shl: {
+    ShlExpr *se = cast<ShlExpr>(e);
+    std::string left = constructActual(se->left);
+    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(se->right)) {
+      return bvLeftShift(left, (unsigned)CE->getLimitedValue());
+    } else {
+      std::string amount = constructActual(se->right);
+      return bvVarLeftShift(left, amount);
+    }
+  }
+
+  case Expr::LShr: {
+    LShrExpr *lse = cast<LShrExpr>(e);
+    std::string left = constructActual(lse->left);
+    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(lse->right)) {
+      return bvRightShift(left, (unsigned)CE->getLimitedValue());
+    } else {
+      std::string amount = constructActual(lse->right);
+      return bvVarRightShift(left, amount);
+    }
+  }
+
+  case Expr::AShr: {
+    AShrExpr *ase = cast<AShrExpr>(e);
+    std::string left = constructActual(ase->left);
+    std::string amount = constructActual(ase->right);
+    return bvVarArithRightShift(left, amount);
+  }
+
+  // Comparison
+  case Expr::Eq: {
+    EqExpr *ee = cast<EqExpr>(e);
+    std::string left = constructActual(ee->left);
+    std::string right = constructActual(ee->right);
+    return eqExpr(left, right);
+  }
+
+  case Expr::Ult: {
+    UltExpr *ue = cast<UltExpr>(e);
+    std::string left = constructActual(ue->left);
+    std::string right = constructActual(ue->right);
+    return bvLtExpr(left, right);
+  }
+
+  case Expr::Ule: {
+    UleExpr *ue = cast<UleExpr>(e);
+    std::string left = constructActual(ue->left);
+    std::string right = constructActual(ue->right);
+    return bvLeExpr(left, right);
+  }
+
+  case Expr::Slt: {
+    SltExpr *se = cast<SltExpr>(e);
+    std::string left = constructActual(se->left);
+    std::string right = constructActual(se->right);
+    return sbvLtExpr(left, right);
+  }
+
+  case Expr::Sle: {
+    SleExpr *se = cast<SleExpr>(e);
+    std::string left = constructActual(se->left);
+    std::string right = constructActual(se->right);
+    return sbvLeExpr(left, right);
+  }
+
+  case Expr::Exists: {
+    ExistsExpr *xe = cast<ExistsExpr>(e);
+    pushQuantificationContext(xe->variables);
+    std::string ret = existsExpr(constructActual(xe->body));
+    popQuantificationContext();
+    return ret;
+  }
+
+  default:
+    assert(0 && "unhandled Expr type");
+    return getTrue();
+  }
+}
+std::string SearchTree::PrettyExpressionBuilder::construct(ref<Expr> e) {
+  PrettyExpressionBuilder *instance = new PrettyExpressionBuilder();
+  std::string ret = instance->constructActual(e);
+  delete instance;
+  return ret;
+}
+
 std::string SearchTree::PrettyExpressionBuilder::buildArray(
-    const char *name, unsigned indexWidth, unsigned valueWidth) {}
+    const char *name, unsigned indexWidth, unsigned valueWidth) {
+  return name;
+}
 
-std::string SearchTree::PrettyExpressionBuilder::getTrue() {}
-std::string SearchTree::PrettyExpressionBuilder::getFalse() {}
-std::string SearchTree::PrettyExpressionBuilder::getTempVar(Expr::Width w) {}
+std::string SearchTree::PrettyExpressionBuilder::getTrue() { return "true"; }
+std::string SearchTree::PrettyExpressionBuilder::getFalse() { return "false"; }
 std::string
-SearchTree::PrettyExpressionBuilder::getInitialRead(const Array *os,
-                                                    unsigned index) {}
+SearchTree::PrettyExpressionBuilder::getInitialRead(const Array *root,
+                                                    unsigned index) {
+  return readExpr(getInitialArray(root), bvConst32(index));
+}
 
-SearchTree::PrettyExpressionBuilder::PrettyExpressionBuilder() {}
+SearchTree::PrettyExpressionBuilder::PrettyExpressionBuilder()
+    : quantificationContext(0) {}
 
 SearchTree::PrettyExpressionBuilder::~PrettyExpressionBuilder() {}
 
-std::string SearchTree::PrettyExpressionBuilder::construct(ref<Expr> e) {}
+/**/
+
+unsigned long SearchTree::nextNodeId = 1;
+
+SearchTree *SearchTree::instance = 0;
 
 std::string SearchTree::recurseRender(const SearchTree::Node *node) {
   std::ostringstream stream;
@@ -272,11 +688,8 @@ void SearchTree::addPathCondition(ITreeNode *iTreeNode,
 
   SearchTree::Node *node = instance->itreeNodeMap[iTreeNode];
 
-  std::string constraintStr;
-  llvm::raw_string_ostream stream(constraintStr);
-  condition->print(stream);
-  std::string s = stream.str();
-  s.erase(std::remove(s.begin(), s.end(), '\n'), s.end());
+  std::string s = PrettyExpressionBuilder::construct(condition);
+
   std::pair<std::string, bool> p(s, false);
   node->pathConditionTable[pathCondition] = p;
   instance->pathConditionMap[pathCondition] = node;

@@ -42,13 +42,34 @@ class SearchTree {
   /// Encapsulates functionality of expression builder
   class PrettyExpressionBuilder {
 
-    std::string bvOne(unsigned width);
-    std::string bvZero(unsigned width);
-    std::string bvMinusOne(unsigned width);
-    std::string bvConst32(unsigned width, uint32_t value);
-    std::string bvConst64(unsigned width, uint64_t value);
-    std::string bvZExtConst(unsigned width, uint64_t value);
-    std::string bvSExtConst(unsigned width, uint64_t value);
+    class QuantificationContext {
+
+      std::string existentials;
+
+      QuantificationContext *parent;
+
+    public:
+      QuantificationContext(std::vector<const Array *> _existentials,
+                            QuantificationContext *_parent);
+
+      ~QuantificationContext();
+
+      QuantificationContext *getParent() { return parent; }
+
+      std::string getExistentials() { return existentials; }
+    };
+
+    std::string bvOne() {
+      return "1";
+    };
+    std::string bvZero() {
+      return "0";
+    };
+    std::string bvMinusOne() { return "-1"; }
+    std::string bvConst32(uint32_t value);
+    std::string bvConst64(uint64_t value);
+    std::string bvZExtConst(uint64_t value);
+    std::string bvSExtConst(uint64_t value);
 
     std::string bvBoolExtract(std::string expr, int bit);
     std::string bvExtract(std::string expr, unsigned top, unsigned bottom);
@@ -62,29 +83,19 @@ class SearchTree {
     std::string bvVarArithRightShift(std::string expr, std::string shift);
 
     // Some STP-style bitvector arithmetic
-    std::string bvMinusExpr(unsigned width, std::string minuend,
-                            std::string subtrahend);
-    std::string bvPlusExpr(unsigned width, std::string augend,
-                           std::string addend);
-    std::string bvMultExpr(unsigned width, std::string multiplacand,
-                           std::string multiplier);
-    std::string bvDivExpr(unsigned width, std::string dividend,
-                          std::string divisor);
-    std::string sbvDivExpr(unsigned width, std::string dividend,
-                           std::string divisor);
-    std::string bvModExpr(unsigned width, std::string dividend,
-                          std::string divisor);
-    std::string sbvModExpr(unsigned width, std::string dividend,
-                           std::string divisor);
+    std::string bvMinusExpr(std::string minuend, std::string subtrahend);
+    std::string bvPlusExpr(std::string augend, std::string addend);
+    std::string bvMultExpr(std::string multiplacand, std::string multiplier);
+    std::string bvDivExpr(std::string dividend, std::string divisor);
+    std::string sbvDivExpr(std::string dividend, std::string divisor);
+    std::string bvModExpr(std::string dividend, std::string divisor);
+    std::string sbvModExpr(std::string dividend, std::string divisor);
     std::string notExpr(std::string expr);
-    std::string bvNotExpr(std::string expr);
-    std::string andExpr(std::string lhs, std::string rhs);
     std::string bvAndExpr(std::string lhs, std::string rhs);
-    std::string orExpr(std::string lhs, std::string rhs);
     std::string bvOrExpr(std::string lhs, std::string rhs);
     std::string iffExpr(std::string lhs, std::string rhs);
     std::string bvXorExpr(std::string lhs, std::string rhs);
-    std::string bvSignExtend(std::string src, unsigned width);
+    std::string bvSignExtend(std::string src);
 
     // Some STP-style array domain interface
     std::string writeExpr(std::string array, std::string index,
@@ -94,9 +105,6 @@ class SearchTree {
     // ITE-expression constructor
     std::string iteExpr(std::string condition, std::string whenTrue,
                         std::string whenFalse);
-
-    // Bitvector length
-    int getBVLength(std::string expr);
 
     // Bitvector comparison
     std::string bvLtExpr(std::string lhs, std::string rhs);
@@ -108,34 +116,35 @@ class SearchTree {
 
     std::string constructAShrByConstant(std::string expr, unsigned shift,
                                         std::string isSigned);
-    std::string constructMulByConstant(std::string expr, unsigned width,
-                                       uint64_t x);
-    std::string constructUDivByConstant(std::string expr_n, unsigned width,
-                                        uint64_t d);
-    std::string constructSDivByConstant(std::string expr_n, unsigned width,
-                                        uint64_t d);
+    std::string constructMulByConstant(std::string expr, uint64_t x);
+    std::string constructUDivByConstant(std::string expr_n, uint64_t d);
+    std::string constructSDivByConstant(std::string expr_n, uint64_t d);
 
-    std::string getInitialArray(const Array *os);
+    std::string getInitialArray(const Array *root);
     std::string getArrayForUpdate(const Array *root, const UpdateNode *un);
 
-    std::string constructActual(ref<Expr> e, int *width_out);
-    std::string construct(ref<Expr> e, int *width_out);
+    std::string constructActual(ref<Expr> e);
 
-    std::string buildVar(const char *name, unsigned width);
     std::string buildArray(const char *name, unsigned indexWidth,
                            unsigned valueWidth);
 
     std::string getTrue();
     std::string getFalse();
-    std::string getTempVar(Expr::Width w);
-    std::string getInitialRead(const Array *os, unsigned index);
+    std::string getInitialRead(const Array *root, unsigned index);
 
-  public:
+    // Handling of quantification contexts
+    QuantificationContext *quantificationContext;
+
+    void pushQuantificationContext(std::vector<const Array *> existentials);
+
+    void popQuantificationContext();
+
     PrettyExpressionBuilder();
 
     ~PrettyExpressionBuilder();
 
-    std::string construct(ref<Expr> e);
+  public:
+    static std::string construct(ref<Expr> e);
   };
 
   /// Node information
