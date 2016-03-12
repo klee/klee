@@ -24,6 +24,8 @@ bool InterpolationOption::interpolation = true;
 
 unsigned long SearchTree::nextNodeId = 1;
 
+SearchTree *SearchTree::instance = 0;
+
 std::string SearchTree::recurseRender(const SearchTree::Node *node) {
   std::ostringstream stream;
 
@@ -32,10 +34,14 @@ std::string SearchTree::recurseRender(const SearchTree::Node *node) {
 
   stream << " [shape=record,label=\"{" << node->nodeId << ": "
          << node->iTreeNodeId << "\\l";
-  for (std::vector<std::string>::const_iterator it = node->constraints.begin(),
-                                                itEnd = node->constraints.end();
+  for (std::map<PathCondition *, std::pair<std::string, bool> >::const_iterator
+           it = node->pathConditionTable.begin(),
+           itEnd = node->pathConditionTable.end();
        it != itEnd; ++it) {
-    stream << (*it) << "\\l";
+    stream << (it->second.first);
+    if (it->second.second)
+      stream << " (I)";
+    stream << "\\l";
   }
   if (node->subsumed) {
     stream << "(subsumed)\\l";
@@ -86,7 +92,6 @@ std::string SearchTree::render() {
 
 SearchTree::SearchTree(ITreeNode *_root) {
   root = SearchTree::Node::createNode(_root->getNodeId());
-  activeNode = root;
   itreeNodeMap[_root] = root;
 }
 
@@ -97,59 +102,73 @@ SearchTree::~SearchTree() {
   itreeNodeMap.clear();
 }
 
-void SearchTree::addChildren(ITreeNode *falseChild, ITreeNode *trueChild) {
-  activeNode->falseTarget =
+void SearchTree::addChildren(ITreeNode *parent, ITreeNode *falseChild,
+                             ITreeNode *trueChild) {
+  assert(SearchTree::instance && "Search tree graph not initialized");
+
+  SearchTree::Node *parentNode = instance->itreeNodeMap[parent];
+  parentNode->falseTarget =
       SearchTree::Node::createNode(falseChild->getNodeId());
-  activeNode->trueTarget = SearchTree::Node::createNode(trueChild->getNodeId());
-  itreeNodeMap[falseChild] = activeNode->falseTarget;
-  itreeNodeMap[trueChild] = activeNode->trueTarget;
+  parentNode->trueTarget = SearchTree::Node::createNode(trueChild->getNodeId());
+  instance->itreeNodeMap[falseChild] = parentNode->falseTarget;
+  instance->itreeNodeMap[trueChild] = parentNode->trueTarget;
 }
 
 void SearchTree::setCurrentNode(ITreeNode *iTreeNode,
                                 const uintptr_t programPoint) {
-  SearchTree::Node *node = itreeNodeMap[iTreeNode];
+  assert(SearchTree::instance && "Search tree graph not initialized");
+
+  SearchTree::Node *node = instance->itreeNodeMap[iTreeNode];
   node->iTreeNodeId = programPoint;
-  if (node) {
-    activeNode = node;
-    if (!activeNode->nodeId)
-      activeNode->nodeId = nextNodeId++;
-  }
+  node->nodeId = nextNodeId++;
 }
 
 void SearchTree::markAsSubsumed(ITreeNode *iTreeNode,
                                 SubsumptionTableEntry *entry) {
-  SearchTree::Node *node = itreeNodeMap[iTreeNode];
+  assert(SearchTree::instance && "Search tree graph not initialized");
+
+  SearchTree::Node *node = instance->itreeNodeMap[iTreeNode];
   node->subsumed = true;
-  SearchTree::Node *subsuming = tableEntryMap[entry];
-  if (!subsuming)
-    llvm::errs() << "NULL TABLE ENTRY NODE\n";
-  if (!node)
-    llvm::errs() << "NULL ACTIVE NODE\n";
-  subsumptionEdges[node] = subsuming;
+  SearchTree::Node *subsuming = instance->tableEntryMap[entry];
+  instance->subsumptionEdges[node] = subsuming;
 }
 
-void SearchTree::addPathCondition(ITreeNode *iTreeNode, ref<Expr> condition) {
-  SearchTree::Node *node = itreeNodeMap[iTreeNode];
+void SearchTree::addPathCondition(ITreeNode *iTreeNode,
+                                  PathCondition *pathCondition,
+                                  ref<Expr> condition) {
+  assert(SearchTree::instance && "Search tree graph not initialized");
+
+  SearchTree::Node *node = instance->itreeNodeMap[iTreeNode];
 
   std::string constraintStr;
   llvm::raw_string_ostream stream(constraintStr);
   condition->print(stream);
   std::string s = stream.str();
   s.erase(std::remove(s.begin(), s.end(), '\n'), s.end());
-  node->constraints.push_back(s);
+  std::pair<std::string, bool> p(s, false);
+  node->pathConditionTable[pathCondition] = p;
+  instance->pathConditionMap[pathCondition] = node;
 }
 
 void SearchTree::addTableEntryMapping(ITreeNode *iTreeNode,
                                       SubsumptionTableEntry *entry) {
-  SearchTree::Node *node = itreeNodeMap[iTreeNode];
-  if (!node)
-    llvm::errs() << "NULL ITREENODEMAP\n";
-  tableEntryMap[entry] = node;
+  assert(SearchTree::instance && "Search tree graph not initialized");
+
+  SearchTree::Node *node = instance->itreeNodeMap[iTreeNode];
+  instance->tableEntryMap[entry] = node;
+}
+
+void SearchTree::includeInInterpolant(PathCondition *pathCondition) {
+  assert(SearchTree::instance && "Search tree graph not initialized");
+
+  instance->pathConditionMap[pathCondition]->pathConditionTable[pathCondition].second = true;
 }
 
 /// @brief Save the graph
 void SearchTree::save(std::string dotFileName) {
-  std::string g(render());
+  assert(SearchTree::instance && "Search tree graph not initialized");
+
+  std::string g(instance->render());
   std::ofstream out(dotFileName.c_str());
   if (!out.fail()) {
     out << g;
@@ -196,6 +215,9 @@ void PathCondition::includeInInterpolant(AllocationGraph *g) {
 
   // We mark this constraint itself as in the interpolant
   inInterpolant = true;
+
+  // We mark constraint as in interpolant in the search tree graph as well.
+  SearchTree::includeInInterpolant(this);
 }
 
 bool PathCondition::carInInterpolant() const { return inInterpolant; }
@@ -865,12 +887,9 @@ ITree::ITree(ExecutionState *_root) {
     currentINode = new ITreeNode(0);
   }
   root = currentINode;
-  graph = new SearchTree(currentINode);
-  currentINode->graph = graph;
 }
 
 ITree::~ITree() {
-  delete graph;
   for (std::vector<SubsumptionTableEntry *>::iterator
            it = subsumptionTable.begin(),
            itEnd = subsumptionTable.end();
@@ -897,7 +916,7 @@ bool ITree::checkCurrentStateSubsumption(TimingSolver *solver,
       currentINode->isSubsumed = true;
 
       // Mark the node as subsumed, and create a subsumption edge
-      graph->markAsSubsumed(currentINode, (*it));
+      SearchTree::markAsSubsumed(currentINode, (*it));
       return true;
     }
   }
@@ -915,7 +934,7 @@ void ITree::store(SubsumptionTableEntry *subItem) {
 void ITree::setCurrentINode(ITreeNode *node, uintptr_t programPoint) {
   currentINode = node;
   currentINode->setNodeLocation(programPoint);
-  graph->setCurrentNode(node, programPoint);
+  SearchTree::setCurrentNode(node, programPoint);
 }
 
 void ITree::remove(ITreeNode *node) {
@@ -928,7 +947,7 @@ void ITree::remove(ITreeNode *node) {
     if (!node->isSubsumed) {
       SubsumptionTableEntry *entry = new SubsumptionTableEntry(node);
       store(entry);
-      graph->addTableEntryMapping(node, entry);
+      SearchTree::addTableEntryMapping(node, entry);
     }
 
     delete node;
@@ -947,7 +966,7 @@ void ITree::remove(ITreeNode *node) {
 std::pair<ITreeNode *, ITreeNode *>
 ITree::split(ITreeNode *parent, ExecutionState *left, ExecutionState *right) {
   parent->split(left, right);
-  graph->addChildren(parent->left, parent->right);
+  SearchTree::addChildren(parent, parent->left, parent->right);
   return std::pair<ITreeNode *, ITreeNode *>(parent->left, parent->right);
 }
 
@@ -1088,7 +1107,7 @@ ITreeNode::getInterpolant(std::vector<const Array *> &replacements) const {
 void ITreeNode::addConstraint(ref<Expr> &constraint, llvm::Value *condition) {
   pathCondition =
       new PathCondition(constraint, dependency, condition, pathCondition);
-  graph->addPathCondition(this, constraint);
+  graph->addPathCondition(this, pathCondition, constraint);
 }
 
 void ITreeNode::split(ExecutionState *leftData, ExecutionState *rightData) {

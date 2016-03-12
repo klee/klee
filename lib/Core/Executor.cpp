@@ -3871,6 +3871,7 @@ void Executor::runFunctionAsMain(Function *f,
   if (InterpolationOption::interpolation) {
     interpTree = new ITree(state);//added by Felicia
     state->itreeNode = interpTree->root;
+    SearchTree::initialize(interpTree->root);
   }
 #endif
 
@@ -3880,7 +3881,8 @@ void Executor::runFunctionAsMain(Function *f,
 
 #ifdef SUPPORT_Z3
   if (InterpolationOption::interpolation) {
-    interpTree->saveGraph(interpreterHandler->getOutputFilename("tree.dot"));
+    SearchTree::save(interpreterHandler->getOutputFilename("tree.dot"));
+    SearchTree::deallocate();
     delete interpTree;
     interpTree = 0;
   }

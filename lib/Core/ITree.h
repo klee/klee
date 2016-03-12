@@ -21,6 +21,8 @@ using namespace llvm;
 namespace klee {
 class ExecutionState;
 
+class PathCondition;
+
 class SubsumptionTableEntry;
 
 /// Global variable denoting whether interpolation is enabled or otherwise
@@ -33,6 +35,9 @@ class SearchTree {
 
   /// @brief counter for the next visited node id
   static unsigned long nextNodeId;
+
+  /// @brief Global search tree instance
+  static SearchTree *instance;
 
   /// Node information
   class Node {
@@ -51,7 +56,7 @@ class SearchTree {
     bool subsumed;
 
     /// @brief Conditions under which this node is visited from its parent
-    std::vector<std::string> constraints;
+    std::map<PathCondition *, std::pair<std::string, bool> > pathConditionTable;
 
     Node(uintptr_t nodeId)
         : iTreeNodeId(nodeId), nodeId(0), falseTarget(0), trueTarget(0),
@@ -64,7 +69,7 @@ class SearchTree {
       if (trueTarget)
         delete trueTarget;
 
-      constraints.clear();
+      pathConditionTable.clear();
     }
 
     static SearchTree::Node *createNode(uintptr_t id) {
@@ -73,32 +78,52 @@ class SearchTree {
   };
 
   SearchTree::Node *root;
-  SearchTree::Node *activeNode;
   std::map<ITreeNode *, SearchTree::Node *> itreeNodeMap;
   std::map<SubsumptionTableEntry *, SearchTree::Node *> tableEntryMap;
   std::map<SearchTree::Node *, SearchTree::Node *> subsumptionEdges;
+  std::map<PathCondition *, SearchTree::Node *> pathConditionMap;
 
   static std::string recurseRender(const SearchTree::Node *node);
 
   std::string render();
 
-public:
   SearchTree(ITreeNode *_root);
 
   ~SearchTree();
 
-  void addChildren(ITreeNode *falseChild, ITreeNode *trueChild);
+public:
+  static void initialize(ITreeNode *root) {
+    if (!instance)
+      delete instance;
+    instance = new SearchTree(root);
+  }
 
-  void setCurrentNode(ITreeNode *iTreeNode, const uintptr_t programPoint);
+  static void deallocate() {
+    if (!instance)
+      delete instance;
+    instance = 0;
+  }
 
-  void markAsSubsumed(ITreeNode *iTreeNode, SubsumptionTableEntry *entry);
+  static void addChildren(ITreeNode *parent, ITreeNode *falseChild,
+                          ITreeNode *trueChild);
 
-  void addPathCondition(ITreeNode *iTreeNode, ref<Expr> condition);
+  static void setCurrentNode(ITreeNode *iTreeNode,
+                             const uintptr_t programPoint);
 
-  void addTableEntryMapping(ITreeNode *iTreeNode, SubsumptionTableEntry *entry);
+  static void markAsSubsumed(ITreeNode *iTreeNode,
+                             SubsumptionTableEntry *entry);
+
+  static void addPathCondition(ITreeNode *iTreeNode,
+                               PathCondition *pathCondition,
+                               ref<Expr> condition);
+
+  static void addTableEntryMapping(ITreeNode *iTreeNode,
+                                   SubsumptionTableEntry *entry);
+
+  static void includeInInterpolant(PathCondition *pathCondition);
 
   /// @brief Save the graph
-  void save(std::string dotFileName);
+  static void save(std::string dotFileName);
 };
 
 /**/
@@ -229,9 +254,6 @@ class ITree {
 
   std::vector<SubsumptionTableEntry *> subsumptionTable;
 
-  /// @brief Graph for displaying as .dot file
-  SearchTree *graph;
-
   void printNode(llvm::raw_ostream &stream, ITreeNode *n, std::string edges);
 
 public:
@@ -265,8 +287,6 @@ public:
                                        ref<Expr> value, ref<Expr> address);
 
   void executeAbstractDependency(llvm::Instruction *instr, ref<Expr> value);
-
-  void saveGraph(std::string dotFileName) { graph->save(dotFileName); }
 
   void print(llvm::raw_ostream &stream);
 
