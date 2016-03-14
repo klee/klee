@@ -1326,7 +1326,10 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
 
     for (std::vector<ref<Expr> >::iterator it1 = unsatCore.begin();
          it1 != unsatCore.end(); it1++) {
-      markerMap[*it1]->mayIncludeInInterpolant();
+      // FIXME: Sometimes some constraints are not in the PC. This is
+      // because constraints are not properly added at state merge.
+      if (markerMap[*it1])
+        markerMap[*it1]->mayIncludeInInterpolant();
     }
 
   } else {
@@ -1677,8 +1680,10 @@ std::map<ref<Expr>, PathConditionMarker *> ITreeNode::makeMarkerMap() const {
   for (PathCondition *it = pathCondition; it != 0; it = it->cdr()) {
     PathConditionMarker *marker = new PathConditionMarker(it);
     if (llvm::isa<OrExpr>(it->car().get())) {
-      // Break up disjunction into its components, because each disjunct
-      // is solved separately
+      // FIXME: Break up disjunction into its components, because each disjunct
+      // is solved separately. The or constraint was due to state merge.
+      // Hence, the following is just a makeshift for when state merge is
+      // properly implemented.
       result.insert(std::pair<ref<Expr>, PathConditionMarker *>(
           it->car()->getKid(0), marker));
       result.insert(std::pair<ref<Expr>, PathConditionMarker *>(
