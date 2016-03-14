@@ -94,24 +94,24 @@ std::string SearchTree::PrettyExpressionBuilder::eqExpr(std::string a,
 std::string SearchTree::PrettyExpressionBuilder::bvLeftShift(std::string expr,
                                                              unsigned shift) {
   std::ostringstream stream;
-  stream << "(" << expr << " << " << shift << ")";
+  stream << "(" << expr << " \\<\\< " << shift << ")";
   return stream.str();
 }
 std::string SearchTree::PrettyExpressionBuilder::bvRightShift(std::string expr,
                                                               unsigned shift) {
   std::ostringstream stream;
-  stream << "(" << expr << " >> " << shift << ")";
+  stream << "(" << expr << " \\>\\> " << shift << ")";
   return stream.str();
 }
 std::string
 SearchTree::PrettyExpressionBuilder::bvVarLeftShift(std::string expr,
                                                     std::string shift) {
-  return "(" + expr + " << " + shift + ")";
+  return "(" + expr + " \\<\\< " + shift + ")";
 }
 std::string
 SearchTree::PrettyExpressionBuilder::bvVarRightShift(std::string expr,
                                                      std::string shift) {
-  return "(" + expr + " >> " + shift + ")";
+  return "(" + expr + " \\>\\> " + shift + ")";
 }
 std::string
 SearchTree::PrettyExpressionBuilder::bvVarArithRightShift(std::string expr,
@@ -168,7 +168,7 @@ std::string SearchTree::PrettyExpressionBuilder::bvOrExpr(std::string lhs,
 }
 std::string SearchTree::PrettyExpressionBuilder::iffExpr(std::string lhs,
                                                          std::string rhs) {
-  return "(" + lhs + " <=> " + rhs + ")";
+  return "(" + lhs + " \\<=\\> " + rhs + ")";
 }
 std::string SearchTree::PrettyExpressionBuilder::bvXorExpr(std::string lhs,
                                                            std::string rhs) {
@@ -198,19 +198,19 @@ std::string SearchTree::PrettyExpressionBuilder::iteExpr(
 // Bitvector comparison
 std::string SearchTree::PrettyExpressionBuilder::bvLtExpr(std::string lhs,
                                                           std::string rhs) {
-  return "(" + lhs + " < " + rhs + ")";
+  return "(" + lhs + " \\< " + rhs + ")";
 }
 std::string SearchTree::PrettyExpressionBuilder::bvLeExpr(std::string lhs,
                                                           std::string rhs) {
-  return "(" + lhs + " <= " + rhs + ")";
+  return "(" + lhs + " \\<= " + rhs + ")";
 }
 std::string SearchTree::PrettyExpressionBuilder::sbvLtExpr(std::string lhs,
                                                            std::string rhs) {
-  return "(" + lhs + " < " + rhs + ")";
+  return "(" + lhs + " \\< " + rhs + ")";
 }
 std::string SearchTree::PrettyExpressionBuilder::sbvLeExpr(std::string lhs,
                                                            std::string rhs) {
-  return "(" + lhs + " <= " + rhs + ")";
+  return "(" + lhs + " \\<= " + rhs + ")";
 }
 
 std::string SearchTree::PrettyExpressionBuilder::existsExpr(std::string body) {
@@ -1354,7 +1354,10 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
            it = markerMap.begin(),
            itEnd = markerMap.end();
        it != itEnd; it++) {
-    it->second->includeInInterpolant(g);
+    // FIXME: Sometimes some constraints are not in the PC. This is
+    // because constraints are not properly added at state merge.
+    if (it->second)
+      it->second->includeInInterpolant(g);
   }
   ITreeNode::deleteMarkerMap(markerMap);
 
