@@ -227,6 +227,12 @@ namespace {
                "Interpolation is enabled by default when Z3 was the solver "
                "used. This option has no effect when Z3 was not used."));
 
+  cl::opt<bool>
+  OutputTree("output-tree",
+             cl::desc("Outputs tree.dot: the execution tree in .dot file "
+                      "format. At present, this feature is only available when "
+                      "Z3 is compiled in and interpolation is enabled."));
+
   cl::opt<double>
   MaxStaticForkPct("max-static-fork-pct", cl::init(1.));
   cl::opt<double>
@@ -3784,6 +3790,9 @@ void Executor::runFunctionAsMain(Function *f,
       )
     // We globally declare that we don't do interpolation
     InterpolationOption::interpolation = false;
+  else if (OutputTree)
+    // We globally declare that we output the tree
+    InterpolationOption::outputTree = true;
 #endif /* SUPPORT_Z3 */
 
   std::vector<ref<Expr> > arguments;

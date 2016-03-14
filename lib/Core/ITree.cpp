@@ -20,6 +20,9 @@ using namespace klee;
 // Interpolation is enabled by default
 bool InterpolationOption::interpolation = true;
 
+// We don't output the three by default
+bool InterpolationOption::outputTree = false;
+
 /**/
 
 SearchTree::PrettyExpressionBuilder::QuantificationContext::
@@ -646,6 +649,9 @@ SearchTree::~SearchTree() {
 
 void SearchTree::addChildren(ITreeNode *parent, ITreeNode *falseChild,
                              ITreeNode *trueChild) {
+  if (!InterpolationOption::outputTree)
+    return;
+
   assert(SearchTree::instance && "Search tree graph not initialized");
 
   SearchTree::Node *parentNode = instance->itreeNodeMap[parent];
@@ -658,6 +664,9 @@ void SearchTree::addChildren(ITreeNode *parent, ITreeNode *falseChild,
 
 void SearchTree::setCurrentNode(ExecutionState &state,
                                 const uintptr_t programPoint) {
+  if (!InterpolationOption::outputTree)
+    return;
+
   assert(SearchTree::instance && "Search tree graph not initialized");
 
   ITreeNode *iTreeNode = state.itreeNode;
@@ -677,6 +686,9 @@ void SearchTree::setCurrentNode(ExecutionState &state,
 
 void SearchTree::markAsSubsumed(ITreeNode *iTreeNode,
                                 SubsumptionTableEntry *entry) {
+  if (!InterpolationOption::outputTree)
+    return;
+
   assert(SearchTree::instance && "Search tree graph not initialized");
 
   SearchTree::Node *node = instance->itreeNodeMap[iTreeNode];
@@ -688,6 +700,9 @@ void SearchTree::markAsSubsumed(ITreeNode *iTreeNode,
 void SearchTree::addPathCondition(ITreeNode *iTreeNode,
                                   PathCondition *pathCondition,
                                   ref<Expr> condition) {
+  if (!InterpolationOption::outputTree)
+    return;
+
   assert(SearchTree::instance && "Search tree graph not initialized");
 
   SearchTree::Node *node = instance->itreeNodeMap[iTreeNode];
@@ -701,6 +716,9 @@ void SearchTree::addPathCondition(ITreeNode *iTreeNode,
 
 void SearchTree::addTableEntryMapping(ITreeNode *iTreeNode,
                                       SubsumptionTableEntry *entry) {
+  if (!InterpolationOption::outputTree)
+    return;
+
   assert(SearchTree::instance && "Search tree graph not initialized");
 
   SearchTree::Node *node = instance->itreeNodeMap[iTreeNode];
@@ -708,6 +726,9 @@ void SearchTree::addTableEntryMapping(ITreeNode *iTreeNode,
 }
 
 void SearchTree::includeInInterpolant(PathCondition *pathCondition) {
+  if (!InterpolationOption::outputTree)
+    return;
+
   assert(SearchTree::instance && "Search tree graph not initialized");
 
   instance->pathConditionMap[pathCondition]->pathConditionTable[pathCondition].second = true;
@@ -715,6 +736,9 @@ void SearchTree::includeInInterpolant(PathCondition *pathCondition) {
 
 /// @brief Save the graph
 void SearchTree::save(std::string dotFileName) {
+  if (!InterpolationOption::outputTree)
+    return;
+
   assert(SearchTree::instance && "Search tree graph not initialized");
 
   std::string g(instance->render());

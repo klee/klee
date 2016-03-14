@@ -25,9 +25,15 @@ class PathCondition;
 
 class SubsumptionTableEntry;
 
-/// Global variable denoting whether interpolation is enabled or otherwise
+/// Options for global interpolation mechanism
 struct InterpolationOption {
+
+  /// @brief Global variable denoting whether interpolation is enabled or
+  /// otherwise
   static bool interpolation;
+
+  /// @brief Output the tree tree.dot in .dot file format
+  static bool outputTree;
 };
 
 /// Storage of search tree for displaying
@@ -204,12 +210,18 @@ class SearchTree {
 
 public:
   static void initialize(ITreeNode *root) {
+    if (!InterpolationOption::outputTree)
+      return;
+
     if (!instance)
       delete instance;
     instance = new SearchTree(root);
   }
 
   static void deallocate() {
+    if (!InterpolationOption::outputTree)
+      return;
+
     if (!instance)
       delete instance;
     instance = 0;
