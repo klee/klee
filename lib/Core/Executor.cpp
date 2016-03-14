@@ -227,6 +227,12 @@ namespace {
                "Interpolation is enabled by default when Z3 was the solver "
                "used. This option has no effect when Z3 was not used."));
 
+  cl::opt<bool>
+  OutputTree("output-tree",
+             cl::desc("Outputs tree.dot: the execution tree in .dot file "
+                      "format. At present, this feature is only available when "
+                      "Z3 is compiled in and interpolation is enabled."));
+
   cl::opt<double>
   MaxStaticForkPct("max-static-fork-pct", cl::init(1.));
   cl::opt<double>
@@ -2916,8 +2922,8 @@ void Executor::run(ExecutionState &initialState) {
       // We synchronize the node id to that of the state. The node id
       // is set only when it was the address of the first instruction
       // in the node.
-      state.itreeNode->setNodeLocation(reinterpret_cast<uintptr_t>(state.pc->inst));
-      interpTree->setCurrentINode(state.itreeNode);
+      interpTree->setCurrentINode(state,
+                                  reinterpret_cast<uintptr_t>(state.pc->inst));
 
       // Uncomment the following statements to show the state
       // of the interpolation tree and the active node.
@@ -3784,6 +3790,9 @@ void Executor::runFunctionAsMain(Function *f,
       )
     // We globally declare that we don't do interpolation
     InterpolationOption::interpolation = false;
+  else if (OutputTree)
+    // We globally declare that we output the tree
+    InterpolationOption::outputTree = true;
 #endif /* SUPPORT_Z3 */
 
   std::vector<ref<Expr> > arguments;
@@ -3871,6 +3880,7 @@ void Executor::runFunctionAsMain(Function *f,
   if (InterpolationOption::interpolation) {
     interpTree = new ITree(state);//added by Felicia
     state->itreeNode = interpTree->root;
+    SearchTree::initialize(interpTree->root);
   }
 #endif
 
@@ -3880,6 +3890,8 @@ void Executor::runFunctionAsMain(Function *f,
 
 #ifdef SUPPORT_Z3
   if (InterpolationOption::interpolation) {
+    SearchTree::save(interpreterHandler->getOutputFilename("tree.dot"));
+    SearchTree::deallocate();
     delete interpTree;
     interpTree = 0;
   }

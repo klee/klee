@@ -14,15 +14,242 @@
 
 #include "Dependency.h"
 
+#include "llvm/Support/raw_ostream.h"
+
 using namespace llvm;
 
 namespace klee {
 class ExecutionState;
 
-/// Global variable denoting whether interpolation is enabled or otherwise
+class PathCondition;
+
+class SubsumptionTableEntry;
+
+/// Options for global interpolation mechanism
 struct InterpolationOption {
+
+  /// @brief Global variable denoting whether interpolation is enabled or
+  /// otherwise
   static bool interpolation;
+
+  /// @brief Output the tree tree.dot in .dot file format
+  static bool outputTree;
 };
+
+/// Storage of search tree for displaying
+class SearchTree {
+
+  /// @brief counter for the next visited node id
+  static unsigned long nextNodeId;
+
+  /// @brief Global search tree instance
+  static SearchTree *instance;
+
+  /// Encapsulates functionality of expression builder
+  class PrettyExpressionBuilder {
+
+    class QuantificationContext {
+
+      std::string existentials;
+
+      QuantificationContext *parent;
+
+    public:
+      QuantificationContext(std::vector<const Array *> _existentials,
+                            QuantificationContext *_parent);
+
+      ~QuantificationContext();
+
+      QuantificationContext *getParent() { return parent; }
+
+      std::string getExistentials() { return existentials; }
+    };
+
+    std::string bvOne() {
+      return "1";
+    };
+    std::string bvZero() {
+      return "0";
+    };
+    std::string bvMinusOne() { return "-1"; }
+    std::string bvConst32(uint32_t value);
+    std::string bvConst64(uint64_t value);
+    std::string bvZExtConst(uint64_t value);
+    std::string bvSExtConst(uint64_t value);
+
+    std::string bvBoolExtract(std::string expr, int bit);
+    std::string bvExtract(std::string expr, unsigned top, unsigned bottom);
+    std::string eqExpr(std::string a, std::string b);
+
+    // logical left and right shift (not arithmetic)
+    std::string bvLeftShift(std::string expr, unsigned shift);
+    std::string bvRightShift(std::string expr, unsigned shift);
+    std::string bvVarLeftShift(std::string expr, std::string shift);
+    std::string bvVarRightShift(std::string expr, std::string shift);
+    std::string bvVarArithRightShift(std::string expr, std::string shift);
+
+    // Some STP-style bitvector arithmetic
+    std::string bvMinusExpr(std::string minuend, std::string subtrahend);
+    std::string bvPlusExpr(std::string augend, std::string addend);
+    std::string bvMultExpr(std::string multiplacand, std::string multiplier);
+    std::string bvDivExpr(std::string dividend, std::string divisor);
+    std::string sbvDivExpr(std::string dividend, std::string divisor);
+    std::string bvModExpr(std::string dividend, std::string divisor);
+    std::string sbvModExpr(std::string dividend, std::string divisor);
+    std::string notExpr(std::string expr);
+    std::string bvAndExpr(std::string lhs, std::string rhs);
+    std::string bvOrExpr(std::string lhs, std::string rhs);
+    std::string iffExpr(std::string lhs, std::string rhs);
+    std::string bvXorExpr(std::string lhs, std::string rhs);
+    std::string bvSignExtend(std::string src);
+
+    // Some STP-style array domain interface
+    std::string writeExpr(std::string array, std::string index,
+                          std::string value);
+    std::string readExpr(std::string array, std::string index);
+
+    // ITE-expression constructor
+    std::string iteExpr(std::string condition, std::string whenTrue,
+                        std::string whenFalse);
+
+    // Bitvector comparison
+    std::string bvLtExpr(std::string lhs, std::string rhs);
+    std::string bvLeExpr(std::string lhs, std::string rhs);
+    std::string sbvLtExpr(std::string lhs, std::string rhs);
+    std::string sbvLeExpr(std::string lhs, std::string rhs);
+
+    std::string existsExpr(std::string body);
+
+    std::string constructAShrByConstant(std::string expr, unsigned shift,
+                                        std::string isSigned);
+    std::string constructMulByConstant(std::string expr, uint64_t x);
+    std::string constructUDivByConstant(std::string expr_n, uint64_t d);
+    std::string constructSDivByConstant(std::string expr_n, uint64_t d);
+
+    std::string getInitialArray(const Array *root);
+    std::string getArrayForUpdate(const Array *root, const UpdateNode *un);
+
+    std::string constructActual(ref<Expr> e);
+
+    std::string buildArray(const char *name, unsigned indexWidth,
+                           unsigned valueWidth);
+
+    std::string getTrue();
+    std::string getFalse();
+    std::string getInitialRead(const Array *root, unsigned index);
+
+    // Handling of quantification contexts
+    QuantificationContext *quantificationContext;
+
+    void pushQuantificationContext(std::vector<const Array *> existentials);
+
+    void popQuantificationContext();
+
+    PrettyExpressionBuilder();
+
+    ~PrettyExpressionBuilder();
+
+  public:
+    static std::string construct(ref<Expr> e);
+  };
+
+  /// Node information
+  class Node {
+    friend class SearchTree;
+
+    /// @brief Interpolation tree node id
+    uintptr_t iTreeNodeId;
+
+    /// @brief The node id, also the order in which it is traversed
+    unsigned long nodeId;
+
+    /// @brief False and true children of this node
+    SearchTree::Node *falseTarget, *trueTarget;
+
+    /// @brief Indicates that node is subsumed
+    bool subsumed;
+
+    /// @brief Conditions under which this node is visited from its parent
+    std::map<PathCondition *, std::pair<std::string, bool> > pathConditionTable;
+
+    /// @brief Human-readable identifier of this node
+    std::string name;
+
+    Node(uintptr_t nodeId)
+        : iTreeNodeId(nodeId), nodeId(0), falseTarget(0), trueTarget(0),
+          subsumed(false) {}
+
+    ~Node() {
+      if (falseTarget)
+        delete falseTarget;
+
+      if (trueTarget)
+        delete trueTarget;
+
+      pathConditionTable.clear();
+    }
+
+    static SearchTree::Node *createNode(uintptr_t id) {
+      return new SearchTree::Node(id);
+    }
+  };
+
+  SearchTree::Node *root;
+  std::map<ITreeNode *, SearchTree::Node *> itreeNodeMap;
+  std::map<SubsumptionTableEntry *, SearchTree::Node *> tableEntryMap;
+  std::map<SearchTree::Node *, SearchTree::Node *> subsumptionEdges;
+  std::map<PathCondition *, SearchTree::Node *> pathConditionMap;
+
+  static std::string recurseRender(const SearchTree::Node *node);
+
+  std::string render();
+
+  SearchTree(ITreeNode *_root);
+
+  ~SearchTree();
+
+public:
+  static void initialize(ITreeNode *root) {
+    if (!InterpolationOption::outputTree)
+      return;
+
+    if (!instance)
+      delete instance;
+    instance = new SearchTree(root);
+  }
+
+  static void deallocate() {
+    if (!InterpolationOption::outputTree)
+      return;
+
+    if (!instance)
+      delete instance;
+    instance = 0;
+  }
+
+  static void addChildren(ITreeNode *parent, ITreeNode *falseChild,
+                          ITreeNode *trueChild);
+
+  static void setCurrentNode(ExecutionState &state,
+                             const uintptr_t programPoint);
+
+  static void markAsSubsumed(ITreeNode *iTreeNode,
+                             SubsumptionTableEntry *entry);
+
+  static void addPathCondition(ITreeNode *iTreeNode,
+                               PathCondition *pathCondition,
+                               ref<Expr> condition);
+
+  static void addTableEntryMapping(ITreeNode *iTreeNode,
+                                   SubsumptionTableEntry *entry);
+
+  static void includeInInterpolant(PathCondition *pathCondition);
+
+  /// @brief Save the graph
+  static void save(std::string dotFileName);
+};
+
+/**/
 
 class PathCondition {
   /// @brief KLEE expression
@@ -150,7 +377,7 @@ class ITree {
 
   ITreeNode *currentINode;
 
-  std::vector<SubsumptionTableEntry> subsumptionTable;
+  std::vector<SubsumptionTableEntry *> subsumptionTable;
 
   void printNode(llvm::raw_ostream &stream, ITreeNode *n, std::string edges);
 
@@ -161,11 +388,11 @@ public:
 
   ~ITree();
 
-  std::vector<SubsumptionTableEntry> getStore();
+  std::vector<SubsumptionTableEntry *> getStore();
 
-  void store(SubsumptionTableEntry subItem);
+  void store(SubsumptionTableEntry *subItem);
 
-  void setCurrentINode(ITreeNode *node);
+  void setCurrentINode(ExecutionState &state, uintptr_t programPoint);
 
   void remove(ITreeNode *node);
 
@@ -212,12 +439,18 @@ class ITreeNode {
 
   bool isSubsumed;
 
+  /// @brief Graph for displaying as .dot file
+  SearchTree *graph;
+
+  void setNodeLocation(uintptr_t programPoint) {
+    if (!nodeId)
+      nodeId = programPoint;
+  }
+
 public:
   uintptr_t getNodeId();
 
   ref<Expr> getInterpolant(std::vector<const Array *> &replacements) const;
-
-  void setNodeLocation(uintptr_t programPoint);
 
   void addConstraint(ref<Expr> &constraint, llvm::Value *value);
 
