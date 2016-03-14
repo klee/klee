@@ -166,6 +166,9 @@ class SearchTree {
     /// @brief Conditions under which this node is visited from its parent
     std::map<PathCondition *, std::pair<std::string, bool> > pathConditionTable;
 
+    /// @brief Human-readable identifier of this node
+    std::string name;
+
     Node(uintptr_t nodeId)
         : iTreeNodeId(nodeId), nodeId(0), falseTarget(0), trueTarget(0),
           subsumed(false) {}
@@ -215,7 +218,7 @@ public:
   static void addChildren(ITreeNode *parent, ITreeNode *falseChild,
                           ITreeNode *trueChild);
 
-  static void setCurrentNode(ITreeNode *iTreeNode,
+  static void setCurrentNode(ExecutionState &state,
                              const uintptr_t programPoint);
 
   static void markAsSubsumed(ITreeNode *iTreeNode,
@@ -377,7 +380,7 @@ public:
 
   void store(SubsumptionTableEntry *subItem);
 
-  void setCurrentINode(ITreeNode *node, uintptr_t programPoint);
+  void setCurrentINode(ExecutionState &state, uintptr_t programPoint);
 
   void remove(ITreeNode *node);
 

@@ -85,7 +85,9 @@ std::string SearchTree::PrettyExpressionBuilder::bvExtract(std::string expr,
 }
 std::string SearchTree::PrettyExpressionBuilder::eqExpr(std::string a,
                                                         std::string b) {
-  return "(" + a + " == " + b + ")";
+  if (a == "false")
+    return "!" + b;
+  return "(" + a + " = " + b + ")";
 }
 
 // logical left and right shift (not arithmetic)
@@ -243,16 +245,8 @@ SearchTree::PrettyExpressionBuilder::constructSDivByConstant(std::string expr_n,
 
 std::string
 SearchTree::PrettyExpressionBuilder::getInitialArray(const Array *root) {
-  char buf[32];
-  unsigned const addrlen =
-      sprintf(buf, "_%p", (const void *)root) + 1; // +1 for null-termination
-  unsigned const space = (root->name.length() > 32 - addrlen)
-                             ? (32 - addrlen)
-                             : root->name.length();
-  memmove(buf + space, buf, addrlen);     // moving the address part to the end
-  memcpy(buf, root->name.c_str(), space); // filling out the name part
-
-  std::string array_expr = buildArray(buf, root->getDomain(), root->getRange());
+  std::string array_expr =
+      buildArray(root->name.c_str(), root->getDomain(), root->getRange());
 
   if (root->isConstantArray()) {
     for (unsigned i = 0, e = root->size; i != e; ++i) {
@@ -580,15 +574,15 @@ std::string SearchTree::recurseRender(const SearchTree::Node *node) {
   stream << "Node" << node->nodeId;
   std::string sourceNodeName = stream.str();
 
-  stream << " [shape=record,label=\"{" << node->nodeId << ": "
-         << node->iTreeNodeId << "\\l";
+  stream << " [shape=record,label=\"{" << node->nodeId << ": " << node->name
+         << "\\l";
   for (std::map<PathCondition *, std::pair<std::string, bool> >::const_iterator
            it = node->pathConditionTable.begin(),
            itEnd = node->pathConditionTable.end();
        it != itEnd; ++it) {
     stream << (it->second.first);
     if (it->second.second)
-      stream << " (I)";
+      stream << " ITP";
     stream << "\\l";
   }
   if (node->subsumed) {
@@ -662,13 +656,23 @@ void SearchTree::addChildren(ITreeNode *parent, ITreeNode *falseChild,
   instance->itreeNodeMap[trueChild] = parentNode->trueTarget;
 }
 
-void SearchTree::setCurrentNode(ITreeNode *iTreeNode,
+void SearchTree::setCurrentNode(ExecutionState &state,
                                 const uintptr_t programPoint) {
   assert(SearchTree::instance && "Search tree graph not initialized");
 
+  ITreeNode *iTreeNode = state.itreeNode;
   SearchTree::Node *node = instance->itreeNodeMap[iTreeNode];
-  node->iTreeNodeId = programPoint;
-  node->nodeId = nextNodeId++;
+  if (!node->nodeId) {
+    std::string functionName(
+        state.pc->inst->getParent()->getParent()->getName().str());
+    node->name = functionName + "\\l";
+    llvm::raw_string_ostream out(node->name);
+    state.pc->inst->print(out);
+    node->name = out.str();
+
+    node->iTreeNodeId = programPoint;
+    node->nodeId = nextNodeId++;
+  }
 }
 
 void SearchTree::markAsSubsumed(ITreeNode *iTreeNode,
@@ -1483,10 +1487,10 @@ void ITree::store(SubsumptionTableEntry *subItem) {
   subsumptionTable.push_back(subItem);
 }
 
-void ITree::setCurrentINode(ITreeNode *node, uintptr_t programPoint) {
-  currentINode = node;
+void ITree::setCurrentINode(ExecutionState &state, uintptr_t programPoint) {
+  currentINode = state.itreeNode;
   currentINode->setNodeLocation(programPoint);
-  SearchTree::setCurrentNode(node, programPoint);
+  SearchTree::setCurrentNode(state, programPoint);
 }
 
 void ITree::remove(ITreeNode *node) {
