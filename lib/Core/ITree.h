@@ -48,23 +48,6 @@ class SearchTree {
   /// Encapsulates functionality of expression builder
   class PrettyExpressionBuilder {
 
-    class QuantificationContext {
-
-      std::string existentials;
-
-      QuantificationContext *parent;
-
-    public:
-      QuantificationContext(std::vector<const Array *> _existentials,
-                            QuantificationContext *_parent);
-
-      ~QuantificationContext();
-
-      QuantificationContext *getParent() { return parent; }
-
-      std::string getExistentials() { return existentials; }
-    };
-
     std::string bvOne() {
       return "1";
     };
@@ -137,13 +120,6 @@ class SearchTree {
     std::string getTrue();
     std::string getFalse();
     std::string getInitialRead(const Array *root, unsigned index);
-
-    // Handling of quantification contexts
-    QuantificationContext *quantificationContext;
-
-    void pushQuantificationContext(std::vector<const Array *> existentials);
-
-    void popQuantificationContext();
 
     PrettyExpressionBuilder();
 

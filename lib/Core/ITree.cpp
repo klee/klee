@@ -25,38 +25,6 @@ bool InterpolationOption::outputTree = false;
 
 /**/
 
-SearchTree::PrettyExpressionBuilder::QuantificationContext::
-    QuantificationContext(std::vector<const Array *> _existentials,
-                          QuantificationContext *_parent)
-    : parent(_parent) {
-  for (std::vector<const Array *>::iterator it = _existentials.begin(),
-                                            itEnd = _existentials.end();
-       it != itEnd; ++it) {
-    existentials += (*it)->name;
-    if (it != itEnd)
-      existentials += ",";
-  }
-}
-
-SearchTree::PrettyExpressionBuilder::QuantificationContext::
-    ~QuantificationContext() {
-  existentials.clear();
-}
-
-/**/
-
-void SearchTree::PrettyExpressionBuilder::pushQuantificationContext(
-    std::vector<const Array *> existentials) {
-  quantificationContext =
-      new QuantificationContext(existentials, quantificationContext);
-}
-
-void SearchTree::PrettyExpressionBuilder::popQuantificationContext() {
-  QuantificationContext *tmp = quantificationContext;
-  quantificationContext = tmp->getParent();
-  delete tmp;
-}
-
 std::string SearchTree::PrettyExpressionBuilder::bvConst32(uint32_t value) {
   std::ostringstream stream;
   stream << value;
@@ -216,10 +184,6 @@ std::string SearchTree::PrettyExpressionBuilder::sbvLeExpr(std::string lhs,
   return "(" + lhs + " \\<= " + rhs + ")";
 }
 
-std::string SearchTree::PrettyExpressionBuilder::existsExpr(std::string body) {
-  return "(exists (" + quantificationContext->getExistentials() + ") " + body +
-         ")";
-}
 std::string SearchTree::PrettyExpressionBuilder::constructAShrByConstant(
     std::string expr, unsigned shift, std::string isSigned) {
   return bvRightShift(expr, shift);
@@ -529,10 +493,17 @@ std::string SearchTree::PrettyExpressionBuilder::constructActual(ref<Expr> e) {
 
   case Expr::Exists: {
     ExistsExpr *xe = cast<ExistsExpr>(e);
-    pushQuantificationContext(xe->variables);
-    std::string ret = existsExpr(constructActual(xe->body));
-    popQuantificationContext();
-    return ret;
+    std::string existentials;
+
+    for (std::vector<const Array *>::iterator it = xe->variables.begin(),
+                                              itEnd = xe->variables.end();
+         it != itEnd; ++it) {
+      existentials += (*it)->name;
+      if (it != itEnd)
+        existentials += ",";
+    }
+
+    return "(exists (" + existentials + ") " + constructActual(xe->body) + ")";
   }
 
   default:
@@ -560,8 +531,7 @@ SearchTree::PrettyExpressionBuilder::getInitialRead(const Array *root,
   return readExpr(getInitialArray(root), bvConst32(index));
 }
 
-SearchTree::PrettyExpressionBuilder::PrettyExpressionBuilder()
-    : quantificationContext(0) {}
+SearchTree::PrettyExpressionBuilder::PrettyExpressionBuilder() {}
 
 SearchTree::PrettyExpressionBuilder::~PrettyExpressionBuilder() {}
 
