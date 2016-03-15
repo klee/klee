@@ -12,12 +12,742 @@
 #include <klee/Expr.h>
 #include <klee/Solver.h>
 #include <klee/util/ExprPPrinter.h>
+#include <fstream>
 #include <vector>
 
 using namespace klee;
 
 // Interpolation is enabled by default
 bool InterpolationOption::interpolation = true;
+
+// We don't output the three by default
+bool InterpolationOption::outputTree = false;
+
+/**/
+
+SearchTree::PrettyExpressionBuilder::QuantificationContext::
+    QuantificationContext(std::vector<const Array *> _existentials,
+                          QuantificationContext *_parent)
+    : parent(_parent) {
+  for (std::vector<const Array *>::iterator it = _existentials.begin(),
+                                            itEnd = _existentials.end();
+       it != itEnd; ++it) {
+    existentials += (*it)->name;
+    if (it != itEnd)
+      existentials += ",";
+  }
+}
+
+SearchTree::PrettyExpressionBuilder::QuantificationContext::
+    ~QuantificationContext() {
+  existentials.clear();
+}
+
+/**/
+
+void SearchTree::PrettyExpressionBuilder::pushQuantificationContext(
+    std::vector<const Array *> existentials) {
+  quantificationContext =
+      new QuantificationContext(existentials, quantificationContext);
+}
+
+void SearchTree::PrettyExpressionBuilder::popQuantificationContext() {
+  QuantificationContext *tmp = quantificationContext;
+  quantificationContext = tmp->getParent();
+  delete tmp;
+}
+
+std::string SearchTree::PrettyExpressionBuilder::bvConst32(uint32_t value) {
+  std::ostringstream stream;
+  stream << value;
+  return stream.str();
+}
+std::string SearchTree::PrettyExpressionBuilder::bvConst64(uint64_t value) {
+  std::ostringstream stream;
+  stream << value;
+  return stream.str();
+}
+std::string SearchTree::PrettyExpressionBuilder::bvZExtConst(uint64_t value) {
+  return bvConst64(value);
+}
+std::string SearchTree::PrettyExpressionBuilder::bvSExtConst(uint64_t value) {
+  return bvConst64(value);
+}
+std::string SearchTree::PrettyExpressionBuilder::bvBoolExtract(std::string expr,
+                                                               int bit) {
+  std::ostringstream stream;
+  stream << expr << "[" << bit << "]";
+  return stream.str();
+}
+std::string SearchTree::PrettyExpressionBuilder::bvExtract(std::string expr,
+                                                           unsigned top,
+                                                           unsigned bottom) {
+  std::ostringstream stream;
+  stream << expr << "[" << top << "," << bottom << "]";
+  return stream.str();
+}
+std::string SearchTree::PrettyExpressionBuilder::eqExpr(std::string a,
+                                                        std::string b) {
+  if (a == "false")
+    return "!" + b;
+  return "(" + a + " = " + b + ")";
+}
+
+// logical left and right shift (not arithmetic)
+std::string SearchTree::PrettyExpressionBuilder::bvLeftShift(std::string expr,
+                                                             unsigned shift) {
+  std::ostringstream stream;
+  stream << "(" << expr << " \\<\\< " << shift << ")";
+  return stream.str();
+}
+std::string SearchTree::PrettyExpressionBuilder::bvRightShift(std::string expr,
+                                                              unsigned shift) {
+  std::ostringstream stream;
+  stream << "(" << expr << " \\>\\> " << shift << ")";
+  return stream.str();
+}
+std::string
+SearchTree::PrettyExpressionBuilder::bvVarLeftShift(std::string expr,
+                                                    std::string shift) {
+  return "(" + expr + " \\<\\< " + shift + ")";
+}
+std::string
+SearchTree::PrettyExpressionBuilder::bvVarRightShift(std::string expr,
+                                                     std::string shift) {
+  return "(" + expr + " \\>\\> " + shift + ")";
+}
+std::string
+SearchTree::PrettyExpressionBuilder::bvVarArithRightShift(std::string expr,
+                                                          std::string shift) {
+  return bvVarRightShift(expr, shift);
+}
+
+// Some STP-style bitvector arithmetic
+std::string
+SearchTree::PrettyExpressionBuilder::bvMinusExpr(std::string minuend,
+                                                 std::string subtrahend) {
+  return "(" + minuend + " - " + subtrahend + ")";
+}
+std::string
+SearchTree::PrettyExpressionBuilder::bvPlusExpr(std::string augend,
+                                                std::string addend) {
+  return "(" + augend + " + " + addend + ")";
+}
+std::string
+SearchTree::PrettyExpressionBuilder::bvMultExpr(std::string multiplacand,
+                                                std::string multiplier) {
+  return "(" + multiplacand + " * " + multiplier + ")";
+}
+std::string
+SearchTree::PrettyExpressionBuilder::bvDivExpr(std::string dividend,
+                                               std::string divisor) {
+  return "(" + dividend + " / " + divisor + ")";
+}
+std::string
+SearchTree::PrettyExpressionBuilder::sbvDivExpr(std::string dividend,
+                                                std::string divisor) {
+  return "(" + dividend + " / " + divisor + ")";
+}
+std::string
+SearchTree::PrettyExpressionBuilder::bvModExpr(std::string dividend,
+                                               std::string divisor) {
+  return "(" + dividend + " % " + divisor + ")";
+}
+std::string
+SearchTree::PrettyExpressionBuilder::sbvModExpr(std::string dividend,
+                                                std::string divisor) {
+  return "(" + dividend + " % " + divisor + ")";
+}
+std::string SearchTree::PrettyExpressionBuilder::notExpr(std::string expr) {
+  return "!(" + expr + ")";
+}
+std::string SearchTree::PrettyExpressionBuilder::bvAndExpr(std::string lhs,
+                                                           std::string rhs) {
+  return "(" + lhs + " & " + rhs + ")";
+}
+std::string SearchTree::PrettyExpressionBuilder::bvOrExpr(std::string lhs,
+                                                          std::string rhs) {
+  return "(" + lhs + " | " + rhs + ")";
+}
+std::string SearchTree::PrettyExpressionBuilder::iffExpr(std::string lhs,
+                                                         std::string rhs) {
+  return "(" + lhs + " \\<=\\> " + rhs + ")";
+}
+std::string SearchTree::PrettyExpressionBuilder::bvXorExpr(std::string lhs,
+                                                           std::string rhs) {
+  return "(" + lhs + " xor " + rhs + ")";
+}
+std::string SearchTree::PrettyExpressionBuilder::bvSignExtend(std::string src) {
+  return src;
+}
+
+// Some STP-style array domain interface
+std::string SearchTree::PrettyExpressionBuilder::writeExpr(std::string array,
+                                                           std::string index,
+                                                           std::string value) {
+  return "update(" + array + "," + index + "," + value + ")";
+}
+std::string SearchTree::PrettyExpressionBuilder::readExpr(std::string array,
+                                                          std::string index) {
+  return array + "[" + index + "]";
+}
+
+// ITE-expression constructor
+std::string SearchTree::PrettyExpressionBuilder::iteExpr(
+    std::string condition, std::string whenTrue, std::string whenFalse) {
+  return "ite(" + condition + "," + whenTrue + "," + whenFalse + ")";
+}
+
+// Bitvector comparison
+std::string SearchTree::PrettyExpressionBuilder::bvLtExpr(std::string lhs,
+                                                          std::string rhs) {
+  return "(" + lhs + " \\< " + rhs + ")";
+}
+std::string SearchTree::PrettyExpressionBuilder::bvLeExpr(std::string lhs,
+                                                          std::string rhs) {
+  return "(" + lhs + " \\<= " + rhs + ")";
+}
+std::string SearchTree::PrettyExpressionBuilder::sbvLtExpr(std::string lhs,
+                                                           std::string rhs) {
+  return "(" + lhs + " \\< " + rhs + ")";
+}
+std::string SearchTree::PrettyExpressionBuilder::sbvLeExpr(std::string lhs,
+                                                           std::string rhs) {
+  return "(" + lhs + " \\<= " + rhs + ")";
+}
+
+std::string SearchTree::PrettyExpressionBuilder::existsExpr(std::string body) {
+  return "(exists (" + quantificationContext->getExistentials() + ") " + body +
+         ")";
+}
+std::string SearchTree::PrettyExpressionBuilder::constructAShrByConstant(
+    std::string expr, unsigned shift, std::string isSigned) {
+  return bvRightShift(expr, shift);
+}
+std::string
+SearchTree::PrettyExpressionBuilder::constructMulByConstant(std::string expr,
+                                                            uint64_t x) {
+  std::ostringstream stream;
+  stream << "(" << expr << " * " << x << ")";
+  return stream.str();
+}
+std::string
+SearchTree::PrettyExpressionBuilder::constructUDivByConstant(std::string expr_n,
+                                                             uint64_t d) {
+  std::ostringstream stream;
+  stream << "(" << expr_n << " / " << d << ")";
+  return stream.str();
+}
+std::string
+SearchTree::PrettyExpressionBuilder::constructSDivByConstant(std::string expr_n,
+                                                             uint64_t d) {
+  std::ostringstream stream;
+  stream << "(" << expr_n << " / " << d << ")";
+  return stream.str();
+}
+
+std::string
+SearchTree::PrettyExpressionBuilder::getInitialArray(const Array *root) {
+  std::string array_expr =
+      buildArray(root->name.c_str(), root->getDomain(), root->getRange());
+
+  if (root->isConstantArray()) {
+    for (unsigned i = 0, e = root->size; i != e; ++i) {
+      std::string prev = array_expr;
+      array_expr = writeExpr(
+          prev, constructActual(ConstantExpr::alloc(i, root->getDomain())),
+          constructActual(root->constantValues[i]));
+    }
+  }
+  return array_expr;
+}
+std::string
+SearchTree::PrettyExpressionBuilder::getArrayForUpdate(const Array *root,
+                                                       const UpdateNode *un) {
+  if (!un) {
+    return (getInitialArray(root));
+  }
+  return writeExpr(getArrayForUpdate(root, un->next),
+                   constructActual(un->index), constructActual(un->value));
+}
+
+std::string SearchTree::PrettyExpressionBuilder::constructActual(ref<Expr> e) {
+  switch (e->getKind()) {
+  case Expr::Constant: {
+    ConstantExpr *CE = cast<ConstantExpr>(e);
+    int width = CE->getWidth();
+
+    // Coerce to bool if necessary.
+    if (width == 1)
+      return CE->isTrue() ? getTrue() : getFalse();
+
+    // Fast path.
+    if (width <= 32)
+      return bvConst32(CE->getZExtValue(32));
+    if (width <= 64)
+      return bvConst64(CE->getZExtValue());
+
+    ref<ConstantExpr> Tmp = CE;
+    return bvConst64(Tmp->Extract(0, 64)->getZExtValue());
+  }
+
+  // Special
+  case Expr::NotOptimized: {
+    NotOptimizedExpr *noe = cast<NotOptimizedExpr>(e);
+    return constructActual(noe->src);
+  }
+
+  case Expr::Read: {
+    ReadExpr *re = cast<ReadExpr>(e);
+    assert(re && re->updates.root);
+    return readExpr(getArrayForUpdate(re->updates.root, re->updates.head),
+                    constructActual(re->index));
+  }
+
+  case Expr::Select: {
+    SelectExpr *se = cast<SelectExpr>(e);
+    std::string cond = constructActual(se->cond);
+    std::string tExpr = constructActual(se->trueExpr);
+    std::string fExpr = constructActual(se->falseExpr);
+    return iteExpr(cond, tExpr, fExpr);
+  }
+
+  case Expr::Concat: {
+    ConcatExpr *ce = cast<ConcatExpr>(e);
+    unsigned numKids = ce->getNumKids();
+    std::string res = constructActual(ce->getKid(numKids - 1));
+    for (int i = numKids - 2; i >= 0; i--) {
+      res = "concat(" + constructActual(ce->getKid(i)) + "," + res + ")";
+    }
+    return res;
+  }
+
+  case Expr::Extract: {
+    ExtractExpr *ee = cast<ExtractExpr>(e);
+    std::string src = constructActual(ee->expr);
+    int width = ee->getWidth();
+    if (width == 1) {
+      return bvBoolExtract(src, ee->offset);
+    } else {
+      return bvExtract(src, ee->offset + width - 1, ee->offset);
+    }
+  }
+
+  // Casting
+  case Expr::ZExt: {
+    CastExpr *ce = cast<CastExpr>(e);
+    std::string src = constructActual(ce->src);
+    int width = ce->getWidth();
+    if (width == 1) {
+      return iteExpr(src, bvOne(), bvZero());
+    } else {
+      return src;
+    }
+  }
+
+  case Expr::SExt: {
+    CastExpr *ce = cast<CastExpr>(e);
+    std::string src = constructActual(ce->src);
+    return bvSignExtend(src);
+  }
+
+  // Arithmetic
+  case Expr::Add: {
+    AddExpr *ae = cast<AddExpr>(e);
+    std::string left = constructActual(ae->left);
+    std::string right = constructActual(ae->right);
+    return bvPlusExpr(left, right);
+  }
+
+  case Expr::Sub: {
+    SubExpr *se = cast<SubExpr>(e);
+    std::string left = constructActual(se->left);
+    std::string right = constructActual(se->right);
+    return bvMinusExpr(left, right);
+  }
+
+  case Expr::Mul: {
+    MulExpr *me = cast<MulExpr>(e);
+    std::string right = constructActual(me->right);
+    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(me->left))
+      if (CE->getWidth() <= 64)
+        return constructMulByConstant(right, CE->getZExtValue());
+
+    std::string left = constructActual(me->left);
+    return bvMultExpr(left, right);
+  }
+
+  case Expr::UDiv: {
+    UDivExpr *de = cast<UDivExpr>(e);
+    std::string left = constructActual(de->left);
+
+    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(de->right)) {
+      if (CE->getWidth() <= 64) {
+        uint64_t divisor = CE->getZExtValue();
+
+        if (bits64::isPowerOfTwo(divisor)) {
+          return bvRightShift(left, bits64::indexOfSingleBit(divisor));
+        }
+      }
+    }
+
+    std::string right = constructActual(de->right);
+    return bvDivExpr(left, right);
+  }
+
+  case Expr::SDiv: {
+    SDivExpr *de = cast<SDivExpr>(e);
+    std::string left = constructActual(de->left);
+    std::string right = constructActual(de->right);
+    return sbvDivExpr(left, right);
+  }
+
+  case Expr::URem: {
+    URemExpr *de = cast<URemExpr>(e);
+    std::string left = constructActual(de->left);
+
+    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(de->right)) {
+      if (CE->getWidth() <= 64) {
+        uint64_t divisor = CE->getZExtValue();
+
+        if (bits64::isPowerOfTwo(divisor)) {
+          unsigned bits = bits64::indexOfSingleBit(divisor);
+
+          // special case for modding by 1 or else we bvExtract -1:0
+          if (bits == 0) {
+            return bvZero();
+          } else {
+            return bvExtract(left, bits - 1, 0);
+          }
+        }
+      }
+    }
+
+    std::string right = constructActual(de->right);
+    return bvModExpr(left, right);
+  }
+
+  case Expr::SRem: {
+    SRemExpr *de = cast<SRemExpr>(e);
+    std::string left = constructActual(de->left);
+    std::string right = constructActual(de->right);
+    return sbvModExpr(left, right);
+  }
+
+  // Bitwise
+  case Expr::Not: {
+    NotExpr *ne = cast<NotExpr>(e);
+    std::string expr = constructActual(ne->expr);
+    return notExpr(expr);
+  }
+
+  case Expr::And: {
+    AndExpr *ae = cast<AndExpr>(e);
+    std::string left = constructActual(ae->left);
+    std::string right = constructActual(ae->right);
+    return bvAndExpr(left, right);
+  }
+
+  case Expr::Or: {
+    OrExpr *oe = cast<OrExpr>(e);
+    std::string left = constructActual(oe->left);
+    std::string right = constructActual(oe->right);
+    return bvOrExpr(left, right);
+  }
+
+  case Expr::Xor: {
+    XorExpr *xe = cast<XorExpr>(e);
+    std::string left = constructActual(xe->left);
+    std::string right = constructActual(xe->right);
+    return bvXorExpr(left, right);
+  }
+
+  case Expr::Shl: {
+    ShlExpr *se = cast<ShlExpr>(e);
+    std::string left = constructActual(se->left);
+    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(se->right)) {
+      return bvLeftShift(left, (unsigned)CE->getLimitedValue());
+    } else {
+      std::string amount = constructActual(se->right);
+      return bvVarLeftShift(left, amount);
+    }
+  }
+
+  case Expr::LShr: {
+    LShrExpr *lse = cast<LShrExpr>(e);
+    std::string left = constructActual(lse->left);
+    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(lse->right)) {
+      return bvRightShift(left, (unsigned)CE->getLimitedValue());
+    } else {
+      std::string amount = constructActual(lse->right);
+      return bvVarRightShift(left, amount);
+    }
+  }
+
+  case Expr::AShr: {
+    AShrExpr *ase = cast<AShrExpr>(e);
+    std::string left = constructActual(ase->left);
+    std::string amount = constructActual(ase->right);
+    return bvVarArithRightShift(left, amount);
+  }
+
+  // Comparison
+  case Expr::Eq: {
+    EqExpr *ee = cast<EqExpr>(e);
+    std::string left = constructActual(ee->left);
+    std::string right = constructActual(ee->right);
+    return eqExpr(left, right);
+  }
+
+  case Expr::Ult: {
+    UltExpr *ue = cast<UltExpr>(e);
+    std::string left = constructActual(ue->left);
+    std::string right = constructActual(ue->right);
+    return bvLtExpr(left, right);
+  }
+
+  case Expr::Ule: {
+    UleExpr *ue = cast<UleExpr>(e);
+    std::string left = constructActual(ue->left);
+    std::string right = constructActual(ue->right);
+    return bvLeExpr(left, right);
+  }
+
+  case Expr::Slt: {
+    SltExpr *se = cast<SltExpr>(e);
+    std::string left = constructActual(se->left);
+    std::string right = constructActual(se->right);
+    return sbvLtExpr(left, right);
+  }
+
+  case Expr::Sle: {
+    SleExpr *se = cast<SleExpr>(e);
+    std::string left = constructActual(se->left);
+    std::string right = constructActual(se->right);
+    return sbvLeExpr(left, right);
+  }
+
+  case Expr::Exists: {
+    ExistsExpr *xe = cast<ExistsExpr>(e);
+    pushQuantificationContext(xe->variables);
+    std::string ret = existsExpr(constructActual(xe->body));
+    popQuantificationContext();
+    return ret;
+  }
+
+  default:
+    assert(0 && "unhandled Expr type");
+    return getTrue();
+  }
+}
+std::string SearchTree::PrettyExpressionBuilder::construct(ref<Expr> e) {
+  PrettyExpressionBuilder *instance = new PrettyExpressionBuilder();
+  std::string ret = instance->constructActual(e);
+  delete instance;
+  return ret;
+}
+
+std::string SearchTree::PrettyExpressionBuilder::buildArray(
+    const char *name, unsigned indexWidth, unsigned valueWidth) {
+  return name;
+}
+
+std::string SearchTree::PrettyExpressionBuilder::getTrue() { return "true"; }
+std::string SearchTree::PrettyExpressionBuilder::getFalse() { return "false"; }
+std::string
+SearchTree::PrettyExpressionBuilder::getInitialRead(const Array *root,
+                                                    unsigned index) {
+  return readExpr(getInitialArray(root), bvConst32(index));
+}
+
+SearchTree::PrettyExpressionBuilder::PrettyExpressionBuilder()
+    : quantificationContext(0) {}
+
+SearchTree::PrettyExpressionBuilder::~PrettyExpressionBuilder() {}
+
+/**/
+
+unsigned long SearchTree::nextNodeId = 1;
+
+SearchTree *SearchTree::instance = 0;
+
+std::string SearchTree::recurseRender(const SearchTree::Node *node) {
+  std::ostringstream stream;
+
+  stream << "Node" << node->nodeId;
+  std::string sourceNodeName = stream.str();
+
+  stream << " [shape=record,label=\"{" << node->nodeId << ": " << node->name
+         << "\\l";
+  for (std::map<PathCondition *, std::pair<std::string, bool> >::const_iterator
+           it = node->pathConditionTable.begin(),
+           itEnd = node->pathConditionTable.end();
+       it != itEnd; ++it) {
+    stream << (it->second.first);
+    if (it->second.second)
+      stream << " ITP";
+    stream << "\\l";
+  }
+  if (node->subsumed) {
+    stream << "(subsumed)\\l";
+  }
+  if (node->falseTarget || node->trueTarget)
+    stream << "|{<s0>F|<s1>T}";
+  stream << "}\"];\n";
+
+  if (node->falseTarget) {
+    stream << sourceNodeName << ":s0 -> Node" << node->falseTarget->nodeId
+           << ";\n";
+  }
+  if (node->trueTarget) {
+    stream << sourceNodeName + ":s1 -> Node" << node->trueTarget->nodeId
+           << ";\n";
+  }
+  if (node->falseTarget) {
+    stream << recurseRender(node->falseTarget);
+  }
+  if (node->trueTarget) {
+    stream << recurseRender(node->trueTarget);
+  }
+  return stream.str();
+}
+
+std::string SearchTree::render() {
+  std::string res("");
+
+  // Simply return empty string when root is undefined
+  if (!root)
+    return res;
+
+  std::ostringstream stream;
+  for (std::map<SearchTree::Node *, SearchTree::Node *>::iterator
+           it = subsumptionEdges.begin(),
+           itEnd = subsumptionEdges.end();
+       it != itEnd; ++it) {
+    stream << "Node" << it->first->nodeId << " -> Node" << it->second->nodeId
+           << " [style=dashed];\n";
+  }
+
+  res = "digraph search_tree {\n";
+  res += recurseRender(root);
+  res += stream.str();
+  res += "}\n";
+  return res;
+}
+
+SearchTree::SearchTree(ITreeNode *_root) {
+  root = SearchTree::Node::createNode(_root->getNodeId());
+  itreeNodeMap[_root] = root;
+}
+
+SearchTree::~SearchTree() {
+  if (root)
+    delete root;
+
+  itreeNodeMap.clear();
+}
+
+void SearchTree::addChildren(ITreeNode *parent, ITreeNode *falseChild,
+                             ITreeNode *trueChild) {
+  if (!InterpolationOption::outputTree)
+    return;
+
+  assert(SearchTree::instance && "Search tree graph not initialized");
+
+  SearchTree::Node *parentNode = instance->itreeNodeMap[parent];
+  parentNode->falseTarget =
+      SearchTree::Node::createNode(falseChild->getNodeId());
+  parentNode->trueTarget = SearchTree::Node::createNode(trueChild->getNodeId());
+  instance->itreeNodeMap[falseChild] = parentNode->falseTarget;
+  instance->itreeNodeMap[trueChild] = parentNode->trueTarget;
+}
+
+void SearchTree::setCurrentNode(ExecutionState &state,
+                                const uintptr_t programPoint) {
+  if (!InterpolationOption::outputTree)
+    return;
+
+  assert(SearchTree::instance && "Search tree graph not initialized");
+
+  ITreeNode *iTreeNode = state.itreeNode;
+  SearchTree::Node *node = instance->itreeNodeMap[iTreeNode];
+  if (!node->nodeId) {
+    std::string functionName(
+        state.pc->inst->getParent()->getParent()->getName().str());
+    node->name = functionName + "\\l";
+    llvm::raw_string_ostream out(node->name);
+    state.pc->inst->print(out);
+    node->name = out.str();
+
+    node->iTreeNodeId = programPoint;
+    node->nodeId = nextNodeId++;
+  }
+}
+
+void SearchTree::markAsSubsumed(ITreeNode *iTreeNode,
+                                SubsumptionTableEntry *entry) {
+  if (!InterpolationOption::outputTree)
+    return;
+
+  assert(SearchTree::instance && "Search tree graph not initialized");
+
+  SearchTree::Node *node = instance->itreeNodeMap[iTreeNode];
+  node->subsumed = true;
+  SearchTree::Node *subsuming = instance->tableEntryMap[entry];
+  instance->subsumptionEdges[node] = subsuming;
+}
+
+void SearchTree::addPathCondition(ITreeNode *iTreeNode,
+                                  PathCondition *pathCondition,
+                                  ref<Expr> condition) {
+  if (!InterpolationOption::outputTree)
+    return;
+
+  assert(SearchTree::instance && "Search tree graph not initialized");
+
+  SearchTree::Node *node = instance->itreeNodeMap[iTreeNode];
+
+  std::string s = PrettyExpressionBuilder::construct(condition);
+
+  std::pair<std::string, bool> p(s, false);
+  node->pathConditionTable[pathCondition] = p;
+  instance->pathConditionMap[pathCondition] = node;
+}
+
+void SearchTree::addTableEntryMapping(ITreeNode *iTreeNode,
+                                      SubsumptionTableEntry *entry) {
+  if (!InterpolationOption::outputTree)
+    return;
+
+  assert(SearchTree::instance && "Search tree graph not initialized");
+
+  SearchTree::Node *node = instance->itreeNodeMap[iTreeNode];
+  instance->tableEntryMap[entry] = node;
+}
+
+void SearchTree::includeInInterpolant(PathCondition *pathCondition) {
+  if (!InterpolationOption::outputTree)
+    return;
+
+  assert(SearchTree::instance && "Search tree graph not initialized");
+
+  instance->pathConditionMap[pathCondition]->pathConditionTable[pathCondition].second = true;
+}
+
+/// @brief Save the graph
+void SearchTree::save(std::string dotFileName) {
+  if (!InterpolationOption::outputTree)
+    return;
+
+  assert(SearchTree::instance && "Search tree graph not initialized");
+
+  std::string g(instance->render());
+  std::ofstream out(dotFileName.c_str());
+  if (!out.fail()) {
+    out << g;
+    out.close();
+  }
+}
 
 /**/
 
@@ -58,6 +788,9 @@ void PathCondition::includeInInterpolant(AllocationGraph *g) {
 
   // We mark this constraint itself as in the interpolant
   inInterpolant = true;
+
+  // We mark constraint as in interpolant in the search tree graph as well.
+  SearchTree::includeInInterpolant(this);
 }
 
 bool PathCondition::carInInterpolant() const { return inInterpolant; }
@@ -617,7 +1350,10 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
 
     for (std::vector<ref<Expr> >::iterator it1 = unsatCore.begin();
          it1 != unsatCore.end(); it1++) {
-      markerMap[*it1]->mayIncludeInInterpolant();
+      // FIXME: Sometimes some constraints are not in the PC. This is
+      // because constraints are not properly added at state merge.
+      if (markerMap[*it1])
+        markerMap[*it1]->mayIncludeInInterpolant();
     }
 
   } else {
@@ -642,7 +1378,10 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
            it = markerMap.begin(),
            itEnd = markerMap.end();
        it != itEnd; it++) {
-    it->second->includeInInterpolant(g);
+    // FIXME: Sometimes some constraints are not in the PC. This is
+    // because constraints are not properly added at state merge.
+    if (it->second)
+      it->second->includeInInterpolant(g);
   }
   ITreeNode::deleteMarkerMap(markerMap);
 
@@ -736,39 +1475,53 @@ ITree::ITree(ExecutionState *_root) {
   root = currentINode;
 }
 
-ITree::~ITree() {}
+ITree::~ITree() {
+  for (std::vector<SubsumptionTableEntry *>::iterator
+           it = subsumptionTable.begin(),
+           itEnd = subsumptionTable.end();
+       it != itEnd; ++it) {
+    delete (*it);
+  }
+  subsumptionTable.clear();
+}
 
 bool ITree::checkCurrentStateSubsumption(TimingSolver *solver,
                                          ExecutionState &state,
                                          double timeout) {
   assert(state.itreeNode == currentINode);
 
-  for (std::vector<SubsumptionTableEntry>::iterator it =
+  for (std::vector<SubsumptionTableEntry *>::iterator it =
            subsumptionTable.begin();
        it != subsumptionTable.end(); it++) {
 
-    if (it->subsumed(solver, state, timeout)) {
+    if ((*it)->subsumed(solver, state, timeout)) {
 
       // We mark as subsumed such that the node will not be
       // stored into table (the table already contains a more
       // general entry).
       currentINode->isSubsumed = true;
 
+      // Mark the node as subsumed, and create a subsumption edge
+      SearchTree::markAsSubsumed(currentINode, (*it));
       return true;
     }
   }
   return false;
 }
 
-std::vector<SubsumptionTableEntry> ITree::getStore() {
+std::vector<SubsumptionTableEntry *> ITree::getStore() {
   return subsumptionTable;
 }
 
-void ITree::store(SubsumptionTableEntry subItem) {
+void ITree::store(SubsumptionTableEntry *subItem) {
   subsumptionTable.push_back(subItem);
 }
 
-void ITree::setCurrentINode(ITreeNode *node) { currentINode = node; }
+void ITree::setCurrentINode(ExecutionState &state, uintptr_t programPoint) {
+  currentINode = state.itreeNode;
+  currentINode->setNodeLocation(programPoint);
+  SearchTree::setCurrentNode(state, programPoint);
+}
 
 void ITree::remove(ITreeNode *node) {
   assert(!node->left && !node->right);
@@ -778,8 +1531,9 @@ void ITree::remove(ITreeNode *node) {
     // As the node is about to be deleted, it must have been completely
     // traversed, hence the correct time to table the interpolant.
     if (!node->isSubsumed) {
-      SubsumptionTableEntry entry(node);
+      SubsumptionTableEntry *entry = new SubsumptionTableEntry(node);
       store(entry);
+      SearchTree::addTableEntryMapping(node, entry);
     }
 
     delete node;
@@ -798,6 +1552,7 @@ void ITree::remove(ITreeNode *node) {
 std::pair<ITreeNode *, ITreeNode *>
 ITree::split(ITreeNode *parent, ExecutionState *left, ExecutionState *right) {
   parent->split(left, right);
+  SearchTree::addChildren(parent, parent->left, parent->right);
   return std::pair<ITreeNode *, ITreeNode *>(parent->left, parent->right);
 }
 
@@ -890,11 +1645,11 @@ void ITree::print(llvm::raw_ostream &stream) {
   this->printNode(stream, this->root, "");
   stream << "\n------------------------- Subsumption Table "
             "-------------------------\n";
-  for (std::vector<SubsumptionTableEntry>::iterator
+  for (std::vector<SubsumptionTableEntry *>::iterator
            it = subsumptionTable.begin(),
            itEnd = subsumptionTable.end();
        it != itEnd; ++it) {
-    (*it).print(stream);
+    (*it)->print(stream);
   }
 }
 
@@ -903,7 +1658,8 @@ void ITree::dump() { this->print(llvm::errs()); }
 /**/
 
 ITreeNode::ITreeNode(ITreeNode *_parent)
-    : parent(_parent), left(0), right(0), nodeId(0), isSubsumed(false) {
+    : parent(_parent), left(0), right(0), nodeId(0), isSubsumed(false),
+      graph(_parent ? _parent->graph : 0) {
 
   pathCondition = (_parent != 0) ? _parent->pathCondition : 0;
 
@@ -934,14 +1690,10 @@ ITreeNode::getInterpolant(std::vector<const Array *> &replacements) const {
   return this->pathCondition->packInterpolant(replacements);
 }
 
-void ITreeNode::setNodeLocation(uintptr_t programPoint) {
-  if (!nodeId)
-    nodeId = programPoint;
-}
-
 void ITreeNode::addConstraint(ref<Expr> &constraint, llvm::Value *condition) {
   pathCondition =
       new PathCondition(constraint, dependency, condition, pathCondition);
+  graph->addPathCondition(this, pathCondition, constraint);
 }
 
 void ITreeNode::split(ExecutionState *leftData, ExecutionState *rightData) {
@@ -955,8 +1707,10 @@ std::map<ref<Expr>, PathConditionMarker *> ITreeNode::makeMarkerMap() const {
   for (PathCondition *it = pathCondition; it != 0; it = it->cdr()) {
     PathConditionMarker *marker = new PathConditionMarker(it);
     if (llvm::isa<OrExpr>(it->car().get())) {
-      // Break up disjunction into its components, because each disjunct
-      // is solved separately
+      // FIXME: Break up disjunction into its components, because each disjunct
+      // is solved separately. The or constraint was due to state merge.
+      // Hence, the following is just a makeshift for when state merge is
+      // properly implemented.
       result.insert(std::pair<ref<Expr>, PathConditionMarker *>(
           it->car()->getKid(0), marker));
       result.insert(std::pair<ref<Expr>, PathConditionMarker *>(
