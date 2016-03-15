@@ -804,6 +804,8 @@ void PathCondition::print(llvm::raw_ostream &stream) {
 
 /**/
 
+TimeStat SubsumptionTableEntry::actualSolverCallTime;
+
 SubsumptionTableEntry::SubsumptionTableEntry(ITreeNode *node)
     : nodeId(node->getNodeId()) {
   std::vector<const Array *> replacements;
@@ -1290,8 +1292,11 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
 
       z3solver->setCoreSolverTimeout(timeout);
 
+      actualSolverCallTime.start();
       success = z3solver->directComputeValidity(Query(state.constraints, query),
                                                 result);
+      actualSolverCallTime.end();
+
       z3solver->setCoreSolverTimeout(0);
     } else {
       // llvm::errs() << "No existential\n";
@@ -1299,7 +1304,9 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
       // We call the solver in the standard way if the
       // formula is unquantified.
       solver->setTimeout(timeout);
+      actualSolverCallTime.start();
       success = solver->evaluate(state, query, result);
+      actualSolverCallTime.end();
       solver->setTimeout(0);
     }
   } else {
@@ -1435,7 +1442,38 @@ void SubsumptionTableEntry::print(llvm::raw_ostream &stream) const {
   }
 }
 
+void SubsumptionTableEntry::printTimeStat(llvm::raw_ostream &stream) {
+  stream << "\nSubsumptionTableEntry timings (ms):\n";
+  stream << "Time for actual solver calls in subsumption check: "
+         << actualSolverCallTime.get() * 1000 << "\n";
+}
+
 /**/
+
+TimeStat ITree::setCurrentINodeTime;
+TimeStat ITree::removeTime;
+TimeStat ITree::checkCurrentStateSubsumptionTime;
+TimeStat ITree::markPathConditionTime;
+TimeStat ITree::splitTime;
+TimeStat ITree::executeAbstractBinaryDependencyTime;
+TimeStat ITree::executeAbstractMemoryDependencyTime;
+TimeStat ITree::executeAbstractDependencyTime;
+
+void ITree::printTimeStat(llvm::raw_ostream &stream) {
+  stream << "\nITree method execution times (ms):\n";
+  stream << "setCurrentINode: " << setCurrentINodeTime.get() * 1000 << "\n";
+  stream << "remove: " << removeTime.get() * 1000 << "\n";
+  stream << "checkCurrentStateSubsumption: "
+         << checkCurrentStateSubsumptionTime.get() * 1000 << "\n";
+  stream << "markPathCondition: " << markPathConditionTime.get() * 1000 << "\n";
+  stream << "split: " << splitTime.get() * 1000 << "\n";
+  stream << "executeAbstractBinaryDependency: "
+         << executeAbstractBinaryDependencyTime.get() * 1000 << "\n";
+  stream << "executeAbstractMemoryDependency: "
+         << executeAbstractMemoryDependencyTime.get() * 1000 << "\n";
+  stream << "executeAbstractDependency: "
+         << executeAbstractDependencyTime.get() * 1000 << "\n";
+}
 
 ITree::ITree(ExecutionState *_root) {
   currentINode = 0;
@@ -1458,6 +1496,7 @@ ITree::~ITree() {
 bool ITree::checkCurrentStateSubsumption(TimingSolver *solver,
                                          ExecutionState &state,
                                          double timeout) {
+  checkCurrentStateSubsumptionTime.start();
   assert(state.itreeNode == currentINode);
 
   for (std::vector<SubsumptionTableEntry *>::iterator it =
@@ -1473,9 +1512,11 @@ bool ITree::checkCurrentStateSubsumption(TimingSolver *solver,
 
       // Mark the node as subsumed, and create a subsumption edge
       SearchTree::markAsSubsumed(currentINode, (*it));
+      checkCurrentStateSubsumptionTime.end();
       return true;
     }
   }
+  checkCurrentStateSubsumptionTime.end();
   return false;
 }
 
@@ -1488,12 +1529,15 @@ void ITree::store(SubsumptionTableEntry *subItem) {
 }
 
 void ITree::setCurrentINode(ExecutionState &state, uintptr_t programPoint) {
+  setCurrentINodeTime.start();
   currentINode = state.itreeNode;
   currentINode->setNodeLocation(programPoint);
   SearchTree::setCurrentNode(state, programPoint);
+  setCurrentINodeTime.end();
 }
 
 void ITree::remove(ITreeNode *node) {
+  removeTime.start();
   assert(!node->left && !node->right);
   do {
     ITreeNode *p = node->parent;
@@ -1517,16 +1561,21 @@ void ITree::remove(ITreeNode *node) {
     }
     node = p;
   } while (node && !node->left && !node->right);
+  removeTime.end();
 }
 
 std::pair<ITreeNode *, ITreeNode *>
 ITree::split(ITreeNode *parent, ExecutionState *left, ExecutionState *right) {
+  splitTime.start();
   parent->split(left, right);
   SearchTree::addChildren(parent, parent->left, parent->right);
-  return std::pair<ITreeNode *, ITreeNode *>(parent->left, parent->right);
+  std::pair<ITreeNode *, ITreeNode *> ret(parent->left, parent->right);
+  splitTime.end();
+  return ret;
 }
 
 void ITree::markPathCondition(ExecutionState &state, TimingSolver *solver) {
+  markPathConditionTime.start();
   std::vector<ref<Expr> > unsatCore = solver->getUnsatCore();
 
   AllocationGraph *g = new AllocationGraph();
@@ -1562,23 +1611,30 @@ void ITree::markPathCondition(ExecutionState &state, TimingSolver *solver) {
   currentINode->computeInterpolantAllocations(g);
 
   delete g; // Delete the AllocationGraph object
+  markPathConditionTime.end();
 }
 
 void ITree::executeAbstractBinaryDependency(llvm::Instruction *instr,
                                             ref<Expr> valueExpr,
                                             ref<Expr> tExpr, ref<Expr> fExpr) {
+  executeAbstractBinaryDependencyTime.start();
   currentINode->executeBinaryDependency(instr, valueExpr, tExpr, fExpr);
+  executeAbstractBinaryDependencyTime.end();
 }
 
 void ITree::executeAbstractMemoryDependency(llvm::Instruction *instr,
                                             ref<Expr> value,
                                             ref<Expr> address) {
+  executeAbstractMemoryDependencyTime.start();
   currentINode->executeAbstractMemoryDependency(instr, value, address);
+  executeAbstractMemoryDependencyTime.end();
 }
 
 void ITree::executeAbstractDependency(llvm::Instruction *instr,
                                       ref<Expr> value) {
+  executeAbstractDependencyTime.start();
   currentINode->executeAbstractDependency(instr, value);
+  executeAbstractDependencyTime.end();
 }
 
 void ITree::printNode(llvm::raw_ostream &stream, ITreeNode *n,
@@ -1627,6 +1683,51 @@ void ITree::dump() { this->print(llvm::errs()); }
 
 /**/
 
+// Statistics
+TimeStat ITreeNode::getInterpolantTime;
+TimeStat ITreeNode::addConstraintTime;
+TimeStat ITreeNode::splitTime;
+TimeStat ITreeNode::makeMarkerMapTime;
+TimeStat ITreeNode::deleteMarkerMapTime;
+TimeStat ITreeNode::executeBinaryDependencyTime;
+TimeStat ITreeNode::executeAbstractMemoryDependencyTime;
+TimeStat ITreeNode::executeAbstractDependencyTime;
+TimeStat ITreeNode::bindCallArgumentsTime;
+TimeStat ITreeNode::popAbstractDependencyFrameTime;
+TimeStat ITreeNode::getLatestCoreExpressionsTime;
+TimeStat ITreeNode::getCompositeCoreExpressionsTime;
+TimeStat ITreeNode::getLatestInterpolantCoreExpressionsTime;
+TimeStat ITreeNode::getCompositeInterpolantCoreExpressionsTime;
+TimeStat ITreeNode::computeInterpolantAllocationsTime;
+
+void ITreeNode::printTimeStat(llvm::raw_ostream &stream) {
+  stream << "\nITreeNode method execution times (ms):\n";
+  stream << "getInterpolant: " << getInterpolantTime.get() * 1000 << "\n";
+  stream << "addConstraintTime: " << addConstraintTime.get() * 1000 << "\n";
+  stream << "splitTime: " << splitTime.get() * 1000 << "\n";
+  stream << "makeMarkerMap: " << makeMarkerMapTime.get() * 1000 << "\n";
+  stream << "deleteMarkerMap: " << deleteMarkerMapTime.get() * 1000 << "\n";
+  stream << "executeBinaryDependency: " << executeBinaryDependencyTime.get() *
+                                               1000 << "\n";
+  stream << "executeAbstractMemoryDependency: "
+         << executeAbstractMemoryDependencyTime.get() * 1000 << "\n";
+  stream << "executeAbstractDependency: "
+         << executeAbstractDependencyTime.get() * 1000 << "\n";
+  stream << "bindCallArguments: " << bindCallArgumentsTime.get() * 1000 << "\n";
+  stream << "popAbstractDependencyFrame: "
+         << popAbstractDependencyFrameTime.get() * 1000 << "\n";
+  stream << "getLatestCoreExpressions: " << getLatestCoreExpressionsTime.get() *
+                                                1000 << "\n";
+  stream << "getCompositeCoreExpressions: "
+         << getCompositeCoreExpressionsTime.get() * 1000 << "\n";
+  stream << "getLatestInterpolantCoreExpressions: "
+         << getLatestCoreExpressionsTime.get() << "\n";
+  stream << "getCompositeInterpolantCoreExpressions: "
+         << getCompositeInterpolantCoreExpressionsTime.get() * 1000 << "\n";
+  stream << "computeInterpolantAllocations: "
+         << computeInterpolantAllocationsTime.get() * 1000 << "\n";
+}
+
 ITreeNode::ITreeNode(ITreeNode *_parent)
     : parent(_parent), left(0), right(0), nodeId(0), isSubsumed(false),
       graph(_parent ? _parent->graph : 0) {
@@ -1657,22 +1758,30 @@ uintptr_t ITreeNode::getNodeId() { return nodeId; }
 
 ref<Expr>
 ITreeNode::getInterpolant(std::vector<const Array *> &replacements) const {
-  return this->pathCondition->packInterpolant(replacements);
+  ITreeNode::getInterpolantTime.start();
+  ref<Expr> expr = this->pathCondition->packInterpolant(replacements);
+  ITreeNode::getInterpolantTime.end();
+  return expr;
 }
 
 void ITreeNode::addConstraint(ref<Expr> &constraint, llvm::Value *condition) {
+  ITreeNode::getInterpolantTime.start();
   pathCondition =
       new PathCondition(constraint, dependency, condition, pathCondition);
   graph->addPathCondition(this, pathCondition, constraint);
+  ITreeNode::getInterpolantTime.end();
 }
 
 void ITreeNode::split(ExecutionState *leftData, ExecutionState *rightData) {
+  ITreeNode::splitTime.start();
   assert(left == 0 && right == 0);
   leftData->itreeNode = left = new ITreeNode(this);
   rightData->itreeNode = right = new ITreeNode(this);
+  ITreeNode::splitTime.end();
 }
 
 std::map<ref<Expr>, PathConditionMarker *> ITreeNode::makeMarkerMap() const {
+  ITreeNode::makeMarkerMapTime.start();
   std::map<ref<Expr>, PathConditionMarker *> result;
   for (PathCondition *it = pathCondition; it != 0; it = it->cdr()) {
     PathConditionMarker *marker = new PathConditionMarker(it);
@@ -1689,11 +1798,13 @@ std::map<ref<Expr>, PathConditionMarker *> ITreeNode::makeMarkerMap() const {
     result.insert(
         std::pair<ref<Expr>, PathConditionMarker *>(it->car(), marker));
   }
+  ITreeNode::makeMarkerMapTime.end();
   return result;
 }
 
 void ITreeNode::deleteMarkerMap(
     std::map<ref<Expr>, PathConditionMarker *> &markerMap) {
+  ITreeNode::deleteMarkerMapTime.start();
   for (std::map<ref<Expr>, PathConditionMarker *>::iterator
            it = markerMap.begin(),
            itEnd = markerMap.end();
@@ -1701,28 +1812,37 @@ void ITreeNode::deleteMarkerMap(
     delete it->second;
   }
   markerMap.clear();
+  ITreeNode::deleteMarkerMapTime.end();
 }
 
 void ITreeNode::executeBinaryDependency(llvm::Instruction *i,
                                         ref<Expr> valueExpr, ref<Expr> tExpr,
                                         ref<Expr> fExpr) {
+  ITreeNode::executeBinaryDependencyTime.start();
   dependency->executeBinary(i, valueExpr, tExpr, fExpr);
+  ITreeNode::executeBinaryDependencyTime.end();
 }
 
 void ITreeNode::executeAbstractMemoryDependency(llvm::Instruction *instr,
                                                 ref<Expr> value,
                                                 ref<Expr> address) {
+  ITreeNode::executeAbstractMemoryDependencyTime.start();
   dependency->executeMemoryOperation(instr, value, address);
+  ITreeNode::executeAbstractMemoryDependencyTime.end();
 }
 
 void ITreeNode::executeAbstractDependency(llvm::Instruction *instr,
                                           ref<Expr> value) {
+  ITreeNode::executeAbstractDependencyTime.start();
   dependency->execute(instr, value);
+  ITreeNode::executeAbstractDependencyTime.end();
 }
 
 void ITreeNode::bindCallArguments(llvm::Instruction *site,
                                   std::vector<ref<Expr> > &arguments) {
+  ITreeNode::bindCallArgumentsTime.start();
   dependency->bindCallArguments(site, arguments);
+  ITreeNode::bindCallArgumentsTime.end();
 }
 
 void ITreeNode::popAbstractDependencyFrame(llvm::CallInst *site,
@@ -1730,12 +1850,14 @@ void ITreeNode::popAbstractDependencyFrame(llvm::CallInst *site,
                                            ref<Expr> returnValue) {
   // TODO: This is probably where we should simplify
   // the dependency graph by removing callee values.
-
+  ITreeNode::popAbstractDependencyFrameTime.start();
   dependency->bindReturnValue(site, inst, returnValue);
+  ITreeNode::popAbstractDependencyFrameTime.end();
 }
 
 std::map<llvm::Value *, ref<Expr> >
 ITreeNode::getLatestCoreExpressions() const {
+  ITreeNode::getLatestCoreExpressionsTime.start();
   std::map<llvm::Value *, ref<Expr> > ret;
   std::vector<const Array *> dummyReplacements;
 
@@ -1745,11 +1867,13 @@ ITreeNode::getLatestCoreExpressions() const {
   if (parent)
     ret =
         parent->dependency->getLatestCoreExpressions(dummyReplacements, false);
+  ITreeNode::getLatestCoreExpressionsTime.end();
   return ret;
 }
 
 std::map<llvm::Value *, std::vector<ref<Expr> > >
 ITreeNode::getCompositeCoreExpressions() const {
+  ITreeNode::getCompositeCoreExpressionsTime.start();
   std::map<llvm::Value *, std::vector<ref<Expr> > > ret;
   std::vector<const Array *> dummyReplacements;
 
@@ -1759,12 +1883,14 @@ ITreeNode::getCompositeCoreExpressions() const {
   if (parent)
     ret = parent->dependency->getCompositeCoreExpressions(dummyReplacements,
                                                           false);
+  ITreeNode::getCompositeCoreExpressionsTime.end();
   return ret;
 }
 
 std::map<llvm::Value *, ref<Expr> >
 ITreeNode::getLatestInterpolantCoreExpressions(
     std::vector<const Array *> &replacements) const {
+  ITreeNode::getLatestInterpolantCoreExpressionsTime.start();
   std::map<llvm::Value *, ref<Expr> > ret;
 
   // Since a program point index is a first statement in a basic block,
@@ -1772,12 +1898,14 @@ ITreeNode::getLatestInterpolantCoreExpressions(
   // from the parent node.
   if (parent)
     ret = parent->dependency->getLatestCoreExpressions(replacements, true);
+  ITreeNode::getLatestInterpolantCoreExpressionsTime.end();
   return ret;
 }
 
 std::map<llvm::Value *, std::vector<ref<Expr> > >
 ITreeNode::getCompositeInterpolantCoreExpressions(
     std::vector<const Array *> &replacements) const {
+  ITreeNode::getCompositeInterpolantCoreExpressionsTime.start();
   std::map<llvm::Value *, std::vector<ref<Expr> > > ret;
 
   // Since a program point index is a first statement in a basic block,
@@ -1785,11 +1913,14 @@ ITreeNode::getCompositeInterpolantCoreExpressions(
   // from the parent node.
   if (parent)
     ret = parent->dependency->getCompositeCoreExpressions(replacements, true);
+  ITreeNode::getCompositeInterpolantCoreExpressionsTime.end();
   return ret;
 }
 
 void ITreeNode::computeInterpolantAllocations(AllocationGraph *g) {
+  ITreeNode::computeInterpolantAllocationsTime.start();
   dependency->computeInterpolantAllocations(g);
+  ITreeNode::computeInterpolantAllocationsTime.end();
 }
 
 void ITreeNode::dump() const {

@@ -3892,6 +3892,12 @@ void Executor::runFunctionAsMain(Function *f,
   if (InterpolationOption::interpolation) {
     SearchTree::save(interpreterHandler->getOutputFilename("tree.dot"));
     SearchTree::deallocate();
+
+    // Print time statistics
+    SubsumptionTableEntry::dumpTimeStat();
+    ITree::dumpTimeStat();
+    ITreeNode::dumpTimeStat();
+
     delete interpTree;
     interpTree = 0;
   }

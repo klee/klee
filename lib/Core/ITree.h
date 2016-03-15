@@ -25,6 +25,29 @@ class PathCondition;
 
 class SubsumptionTableEntry;
 
+/// Time records for method running time statistics
+class TimeStat {
+  double amount;
+  double lastRecorded;
+
+public:
+  TimeStat() : amount(0.0), lastRecorded(0.0) {}
+
+  ~TimeStat() {}
+
+  void start() {
+    if (lastRecorded == 0.0)
+      lastRecorded = clock();
+  }
+
+  void end() {
+    amount += (clock() - lastRecorded);
+    lastRecorded = 0.0;
+  }
+
+  double get() { return (amount / (double)CLOCKS_PER_SEC); }
+};
+
 /// Options for global interpolation mechanism
 struct InterpolationOption {
 
@@ -291,6 +314,9 @@ public:
 };
 
 class SubsumptionTableEntry {
+  ///@brief Statistics for actual solver call time in subsumption check
+  static TimeStat actualSolverCallTime;
+
   uintptr_t nodeId;
 
   ref<Expr> interpolant;
@@ -334,6 +360,9 @@ class SubsumptionTableEntry {
            compositeStoreKeys.empty();
   }
 
+  /// @brief for printing method running time statistics
+  static void printTimeStat(llvm::raw_ostream &stream);
+
 public:
   SubsumptionTableEntry(ITreeNode *node);
 
@@ -344,6 +373,8 @@ public:
   void dump() const;
 
   void print(llvm::raw_ostream &stream) const;
+
+  static void dumpTimeStat() { printTimeStat(llvm::errs()); }
 };
 
 class ITree {
@@ -351,11 +382,23 @@ class ITree {
   typedef ExprList::iterator iterator;
   typedef ExprList::const_iterator const_iterator;
 
+  static TimeStat setCurrentINodeTime;
+  static TimeStat removeTime;
+  static TimeStat checkCurrentStateSubsumptionTime;
+  static TimeStat markPathConditionTime;
+  static TimeStat splitTime;
+  static TimeStat executeAbstractBinaryDependencyTime;
+  static TimeStat executeAbstractMemoryDependencyTime;
+  static TimeStat executeAbstractDependencyTime;
+
   ITreeNode *currentINode;
 
   std::vector<SubsumptionTableEntry *> subsumptionTable;
 
   void printNode(llvm::raw_ostream &stream, ITreeNode *n, std::string edges);
+
+  /// @brief for printing method running time statistics
+  static void printTimeStat(llvm::raw_ostream &stream);
 
 public:
   ITreeNode *root;
@@ -392,6 +435,8 @@ public:
   void print(llvm::raw_ostream &stream);
 
   void dump();
+
+  static void dumpTimeStat() { printTimeStat(llvm::errs()); }
 };
 
 class ITreeNode {
@@ -399,6 +444,23 @@ class ITreeNode {
 
   friend class ExecutionState;
 
+  static TimeStat getInterpolantTime;
+  static TimeStat addConstraintTime;
+  static TimeStat splitTime;
+  static TimeStat makeMarkerMapTime;
+  static TimeStat deleteMarkerMapTime;
+  static TimeStat executeBinaryDependencyTime;
+  static TimeStat executeAbstractMemoryDependencyTime;
+  static TimeStat executeAbstractDependencyTime;
+  static TimeStat bindCallArgumentsTime;
+  static TimeStat popAbstractDependencyFrameTime;
+  static TimeStat getLatestCoreExpressionsTime;
+  static TimeStat getCompositeCoreExpressionsTime;
+  static TimeStat getLatestInterpolantCoreExpressionsTime;
+  static TimeStat getCompositeInterpolantCoreExpressionsTime;
+  static TimeStat computeInterpolantAllocationsTime;
+
+private:
   typedef ref<Expr> expression_type;
 
   typedef std::pair<expression_type, expression_type> pair_type;
@@ -423,6 +485,9 @@ class ITreeNode {
       nodeId = programPoint;
   }
 
+  /// @brief for printing method running time statistics
+  static void printTimeStat(llvm::raw_ostream &stream);
+
 public:
   uintptr_t getNodeId();
 
@@ -431,10 +496,6 @@ public:
   void addConstraint(ref<Expr> &constraint, llvm::Value *value);
 
   void split(ExecutionState *leftData, ExecutionState *rightData);
-
-  void dump() const;
-
-  void print(llvm::raw_ostream &stream) const;
 
   std::map<ref<Expr>, PathConditionMarker *> makeMarkerMap() const;
 
@@ -468,6 +529,12 @@ public:
       std::vector<const Array *> &replacements) const;
 
   void computeInterpolantAllocations(AllocationGraph *g);
+
+  void dump() const;
+
+  void print(llvm::raw_ostream &stream) const;
+
+  static void dumpTimeStat() { printTimeStat(llvm::errs()); }
 
 private:
   ITreeNode(ITreeNode *_parent);
