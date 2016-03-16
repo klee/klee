@@ -23,6 +23,9 @@ bool InterpolationOption::interpolation = true;
 // We don't output the three by default
 bool InterpolationOption::outputTree = false;
 
+// We don't display interpolation methods running times by default
+bool InterpolationOption::timeStat = false;
+
 /**/
 
 std::string SearchTree::PrettyExpressionBuilder::bvConst32(uint32_t value) {
@@ -1443,9 +1446,21 @@ void SubsumptionTableEntry::print(llvm::raw_ostream &stream) const {
 }
 
 void SubsumptionTableEntry::printTimeStat(llvm::raw_ostream &stream) {
-  stream << "\nSubsumptionTableEntry timings (ms):\n";
-  stream << "Time for actual solver calls in subsumption check: "
-         << actualSolverCallTime.get() * 1000 << "\n";
+  stream << "\nKLEE: done: SubsumptionTableEntry timings (ms):\n";
+  stream
+      << "KLEE: done:     Time for actual solver calls in subsumption check: "
+      << actualSolverCallTime.get() * 1000 << "\n";
+}
+
+void SubsumptionTableEntry::dumpTimeStat() {
+  bool useColors = llvm::errs().is_displayed();
+  if (useColors)
+    llvm::errs().changeColor(llvm::raw_ostream::GREEN,
+                             /*bold=*/true,
+                             /*bg=*/false);
+  printTimeStat(llvm::errs());
+  if (useColors)
+    llvm::errs().resetColor();
 }
 
 /**/
@@ -1460,19 +1475,32 @@ TimeStat ITree::executeAbstractMemoryDependencyTime;
 TimeStat ITree::executeAbstractDependencyTime;
 
 void ITree::printTimeStat(llvm::raw_ostream &stream) {
-  stream << "\nITree method execution times (ms):\n";
-  stream << "setCurrentINode: " << setCurrentINodeTime.get() * 1000 << "\n";
-  stream << "remove: " << removeTime.get() * 1000 << "\n";
-  stream << "checkCurrentStateSubsumption: "
+  stream << "\nKLEE: done: ITree method execution times (ms):\n";
+  stream << "KLEE: done:     setCurrentINode: " << setCurrentINodeTime.get() *
+                                                       1000 << "\n";
+  stream << "KLEE: done:     remove: " << removeTime.get() * 1000 << "\n";
+  stream << "KLEE: done:     checkCurrentStateSubsumption: "
          << checkCurrentStateSubsumptionTime.get() * 1000 << "\n";
-  stream << "markPathCondition: " << markPathConditionTime.get() * 1000 << "\n";
-  stream << "split: " << splitTime.get() * 1000 << "\n";
-  stream << "executeAbstractBinaryDependency: "
+  stream << "KLEE: done:     markPathCondition: "
+         << markPathConditionTime.get() * 1000 << "\n";
+  stream << "KLEE: done:     split: " << splitTime.get() * 1000 << "\n";
+  stream << "KLEE: done:     executeAbstractBinaryDependency: "
          << executeAbstractBinaryDependencyTime.get() * 1000 << "\n";
-  stream << "executeAbstractMemoryDependency: "
+  stream << "KLEE: done:     executeAbstractMemoryDependency: "
          << executeAbstractMemoryDependencyTime.get() * 1000 << "\n";
-  stream << "executeAbstractDependency: "
+  stream << "KLEE: done:     executeAbstractDependency: "
          << executeAbstractDependencyTime.get() * 1000 << "\n";
+}
+
+void ITree::dumpTimeStat() {
+  bool useColors = llvm::errs().is_displayed();
+  if (useColors)
+    llvm::errs().changeColor(llvm::raw_ostream::GREEN,
+                             /*bold=*/true,
+                             /*bg=*/false);
+  printTimeStat(llvm::errs());
+  if (useColors)
+    llvm::errs().resetColor();
 }
 
 ITree::ITree(ExecutionState *_root) {
@@ -1701,31 +1729,47 @@ TimeStat ITreeNode::getCompositeInterpolantCoreExpressionsTime;
 TimeStat ITreeNode::computeInterpolantAllocationsTime;
 
 void ITreeNode::printTimeStat(llvm::raw_ostream &stream) {
-  stream << "\nITreeNode method execution times (ms):\n";
-  stream << "getInterpolant: " << getInterpolantTime.get() * 1000 << "\n";
-  stream << "addConstraintTime: " << addConstraintTime.get() * 1000 << "\n";
-  stream << "splitTime: " << splitTime.get() * 1000 << "\n";
-  stream << "makeMarkerMap: " << makeMarkerMapTime.get() * 1000 << "\n";
-  stream << "deleteMarkerMap: " << deleteMarkerMapTime.get() * 1000 << "\n";
-  stream << "executeBinaryDependency: " << executeBinaryDependencyTime.get() *
-                                               1000 << "\n";
-  stream << "executeAbstractMemoryDependency: "
+  stream << "\nKLEE: done: ITreeNode method execution times (ms):\n";
+  stream << "KLEE: done:     getInterpolant: " << getInterpolantTime.get() *
+                                                      1000 << "\n";
+  stream << "KLEE: done:     addConstraintTime: " << addConstraintTime.get() *
+                                                         1000 << "\n";
+  stream << "KLEE: done:     splitTime: " << splitTime.get() * 1000 << "\n";
+  stream << "KLEE: done:     makeMarkerMap: " << makeMarkerMapTime.get() * 1000
+         << "\n";
+  stream << "KLEE: done:     deleteMarkerMap: " << deleteMarkerMapTime.get() *
+                                                       1000 << "\n";
+  stream << "KLEE: done:     executeBinaryDependency: "
+         << executeBinaryDependencyTime.get() * 1000 << "\n";
+  stream << "KLEE: done:     executeAbstractMemoryDependency: "
          << executeAbstractMemoryDependencyTime.get() * 1000 << "\n";
-  stream << "executeAbstractDependency: "
+  stream << "KLEE: done:     executeAbstractDependency: "
          << executeAbstractDependencyTime.get() * 1000 << "\n";
-  stream << "bindCallArguments: " << bindCallArgumentsTime.get() * 1000 << "\n";
-  stream << "popAbstractDependencyFrame: "
+  stream << "KLEE: done:     bindCallArguments: "
+         << bindCallArgumentsTime.get() * 1000 << "\n";
+  stream << "KLEE: done:     popAbstractDependencyFrame: "
          << popAbstractDependencyFrameTime.get() * 1000 << "\n";
-  stream << "getLatestCoreExpressions: " << getLatestCoreExpressionsTime.get() *
-                                                1000 << "\n";
-  stream << "getCompositeCoreExpressions: "
+  stream << "KLEE: done:     getLatestCoreExpressions: "
+         << getLatestCoreExpressionsTime.get() * 1000 << "\n";
+  stream << "KLEE: done:     getCompositeCoreExpressions: "
          << getCompositeCoreExpressionsTime.get() * 1000 << "\n";
-  stream << "getLatestInterpolantCoreExpressions: "
+  stream << "KLEE: done:     getLatestInterpolantCoreExpressions: "
          << getLatestCoreExpressionsTime.get() << "\n";
-  stream << "getCompositeInterpolantCoreExpressions: "
+  stream << "KLEE: done:     getCompositeInterpolantCoreExpressions: "
          << getCompositeInterpolantCoreExpressionsTime.get() * 1000 << "\n";
-  stream << "computeInterpolantAllocations: "
+  stream << "KLEE: done:     computeInterpolantAllocations: "
          << computeInterpolantAllocationsTime.get() * 1000 << "\n";
+}
+
+void ITreeNode::dumpTimeStat() {
+  bool useColors = llvm::errs().is_displayed();
+  if (useColors)
+    llvm::errs().changeColor(llvm::raw_ostream::GREEN,
+                             /*bold=*/true,
+                             /*bg=*/false);
+  printTimeStat(llvm::errs());
+  if (useColors)
+    llvm::errs().resetColor();
 }
 
 ITreeNode::ITreeNode(ITreeNode *_parent)
