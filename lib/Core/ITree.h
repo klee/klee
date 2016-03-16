@@ -317,8 +317,14 @@ public:
 };
 
 class SubsumptionTableEntry {
-  ///@brief Statistics for actual solver call time in subsumption check
+  /// @brief Statistics for actual solver call time in subsumption check
   static TimeStat actualSolverCallTime;
+
+  /// @brief The number of solver calls for subsumption checks
+  static unsigned long checkSolverCount;
+
+  /// @brief The number of failed solver calls for subsumption checks
+  static unsigned long checkSolverFailureCount;
 
   uintptr_t nodeId;
 

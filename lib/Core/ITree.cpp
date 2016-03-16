@@ -809,6 +809,10 @@ void PathCondition::print(llvm::raw_ostream &stream) {
 
 TimeStat SubsumptionTableEntry::actualSolverCallTime;
 
+unsigned long SubsumptionTableEntry::checkSolverCount = 0;
+
+unsigned long SubsumptionTableEntry::checkSolverFailureCount = 0;
+
 SubsumptionTableEntry::SubsumptionTableEntry(ITreeNode *node)
     : nodeId(node->getNodeId()) {
   std::vector<const Array *> replacements;
@@ -1282,6 +1286,8 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
     // llvm::errs() << "Querying for subsumption check:\n";
     // ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
 
+    ++checkSolverCount;
+
     if (!existentials.empty() && llvm::isa<ExistsExpr>(query)) {
       // llvm::errs() << "Existentials not empty\n";
 
@@ -1345,6 +1351,7 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
     // invalidity is established by the solver.
     // llvm::errs() << "Solver could not decide validity\n";
 
+    ++checkSolverFailureCount;
     if (z3solver)
       delete z3solver;
 
@@ -1450,6 +1457,9 @@ void SubsumptionTableEntry::printTimeStat(llvm::raw_ostream &stream) {
   stream
       << "KLEE: done:     Time for actual solver calls in subsumption check: "
       << actualSolverCallTime.get() * 1000 << "\n";
+  stream << "KLEE: done:     Number of solver calls for subsumption check "
+            "(failed): " << checkSolverCount << " (" << checkSolverFailureCount
+         << ")\n";
 }
 
 void SubsumptionTableEntry::dumpTimeStat() {
