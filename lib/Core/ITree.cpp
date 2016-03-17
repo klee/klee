@@ -820,6 +820,7 @@ SubsumptionTableEntry::SubsumptionTableEntry(ITreeNode *node)
   interpolant = node->getInterpolant(replacements);
 
   singletonStore = node->getLatestInterpolantCoreExpressions(replacements);
+
   for (std::map<llvm::Value *, ref<Expr> >::iterator
            it = singletonStore.begin(),
            itEnd = singletonStore.end();
@@ -1379,8 +1380,7 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
          it1 != unsatCore.end(); it1++) {
       // FIXME: Sometimes some constraints are not in the PC. This is
       // because constraints are not properly added at state merge.
-      if (markerMap[*it1])
-        markerMap[*it1]->mayIncludeInInterpolant();
+      markerMap[*it1]->mayIncludeInInterpolant();
     }
 
   } else {
@@ -1408,8 +1408,7 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
        it != itEnd; it++) {
     // FIXME: Sometimes some constraints are not in the PC. This is
     // because constraints are not properly added at state merge.
-    if (it->second)
-      it->second->includeInInterpolant(g);
+    it->second->includeInInterpolant(g);
   }
   ITreeNode::deleteMarkerMap(markerMap);
 
@@ -1668,18 +1667,18 @@ void ITree::markPathCondition(ExecutionState &state, TimingSolver *solver) {
   PathCondition *pc = currentINode->pathCondition;
 
   if (pc != 0) {
-    for (std::vector<ref<Expr> >::reverse_iterator it = unsatCore.rbegin();
-         it != unsatCore.rend(); it++) {
-      while (pc != 0) {
+    // FIXME: The following is a quadratic operation, need
+    // fixing for sure.
+    for (std::vector<ref<Expr> >::reverse_iterator it = unsatCore.rbegin(),
+                                                   itEnd = unsatCore.rend();
+         it != itEnd; ++it) {
+      for (pc = currentINode->pathCondition; pc != 0; pc = pc->cdr()) {
         if (pc->car().compare(it->get()) == 0) {
           pc->includeInInterpolant(g);
           pc = pc->cdr();
           break;
         }
-        pc = pc->cdr();
       }
-      if (pc == 0)
-        break;
     }
   }
 
