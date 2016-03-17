@@ -1455,10 +1455,10 @@ void SubsumptionTableEntry::print(llvm::raw_ostream &stream) const {
 void SubsumptionTableEntry::printTimeStat(llvm::raw_ostream &stream) {
   stream << "\nKLEE: done: SubsumptionTableEntry timings (ms):\n";
   stream
-      << "KLEE: done:     Time for actual solver calls in subsumption check: "
+      << "KLEE: done:     Time for actual solver calls in subsumption check = "
       << actualSolverCallTime.get() * 1000 << "\n";
   stream << "KLEE: done:     Number of solver calls for subsumption check "
-            "(failed): " << checkSolverCount << " (" << checkSolverFailureCount
+            "(failed) = " << checkSolverCount << " (" << checkSolverFailureCount
          << ")\n";
 }
 
@@ -1486,19 +1486,19 @@ TimeStat ITree::executeAbstractDependencyTime;
 
 void ITree::printTimeStat(llvm::raw_ostream &stream) {
   stream << "\nKLEE: done: ITree method execution times (ms):\n";
-  stream << "KLEE: done:     setCurrentINode: " << setCurrentINodeTime.get() *
-                                                       1000 << "\n";
-  stream << "KLEE: done:     remove: " << removeTime.get() * 1000 << "\n";
-  stream << "KLEE: done:     checkCurrentStateSubsumption: "
+  stream << "KLEE: done:     setCurrentINode = " << setCurrentINodeTime.get() *
+                                                        1000 << "\n";
+  stream << "KLEE: done:     remove = " << removeTime.get() * 1000 << "\n";
+  stream << "KLEE: done:     checkCurrentStateSubsumption = "
          << checkCurrentStateSubsumptionTime.get() * 1000 << "\n";
-  stream << "KLEE: done:     markPathCondition: "
+  stream << "KLEE: done:     markPathCondition = "
          << markPathConditionTime.get() * 1000 << "\n";
-  stream << "KLEE: done:     split: " << splitTime.get() * 1000 << "\n";
-  stream << "KLEE: done:     executeAbstractBinaryDependency: "
+  stream << "KLEE: done:     split = " << splitTime.get() * 1000 << "\n";
+  stream << "KLEE: done:     executeAbstractBinaryDependency = "
          << executeAbstractBinaryDependencyTime.get() * 1000 << "\n";
-  stream << "KLEE: done:     executeAbstractMemoryDependency: "
+  stream << "KLEE: done:     executeAbstractMemoryDependency = "
          << executeAbstractMemoryDependencyTime.get() * 1000 << "\n";
-  stream << "KLEE: done:     executeAbstractDependency: "
+  stream << "KLEE: done:     executeAbstractDependency = "
          << executeAbstractDependencyTime.get() * 1000 << "\n";
 }
 
@@ -1740,34 +1740,34 @@ TimeStat ITreeNode::computeInterpolantAllocationsTime;
 
 void ITreeNode::printTimeStat(llvm::raw_ostream &stream) {
   stream << "\nKLEE: done: ITreeNode method execution times (ms):\n";
-  stream << "KLEE: done:     getInterpolant: " << getInterpolantTime.get() *
-                                                      1000 << "\n";
-  stream << "KLEE: done:     addConstraintTime: " << addConstraintTime.get() *
-                                                         1000 << "\n";
-  stream << "KLEE: done:     splitTime: " << splitTime.get() * 1000 << "\n";
-  stream << "KLEE: done:     makeMarkerMap: " << makeMarkerMapTime.get() * 1000
-         << "\n";
-  stream << "KLEE: done:     deleteMarkerMap: " << deleteMarkerMapTime.get() *
+  stream << "KLEE: done:     getInterpolant = " << getInterpolantTime.get() *
                                                        1000 << "\n";
-  stream << "KLEE: done:     executeBinaryDependency: "
+  stream << "KLEE: done:     addConstraintTime = " << addConstraintTime.get() *
+                                                          1000 << "\n";
+  stream << "KLEE: done:     splitTime = " << splitTime.get() * 1000 << "\n";
+  stream << "KLEE: done:     makeMarkerMap = " << makeMarkerMapTime.get() * 1000
+         << "\n";
+  stream << "KLEE: done:     deleteMarkerMap = " << deleteMarkerMapTime.get() *
+                                                        1000 << "\n";
+  stream << "KLEE: done:     executeBinaryDependency = "
          << executeBinaryDependencyTime.get() * 1000 << "\n";
-  stream << "KLEE: done:     executeAbstractMemoryDependency: "
+  stream << "KLEE: done:     executeAbstractMemoryDependency = "
          << executeAbstractMemoryDependencyTime.get() * 1000 << "\n";
-  stream << "KLEE: done:     executeAbstractDependency: "
+  stream << "KLEE: done:     executeAbstractDependency = "
          << executeAbstractDependencyTime.get() * 1000 << "\n";
-  stream << "KLEE: done:     bindCallArguments: "
+  stream << "KLEE: done:     bindCallArguments = "
          << bindCallArgumentsTime.get() * 1000 << "\n";
-  stream << "KLEE: done:     popAbstractDependencyFrame: "
+  stream << "KLEE: done:     popAbstractDependencyFrame = "
          << popAbstractDependencyFrameTime.get() * 1000 << "\n";
-  stream << "KLEE: done:     getLatestCoreExpressions: "
+  stream << "KLEE: done:     getLatestCoreExpressions = "
          << getLatestCoreExpressionsTime.get() * 1000 << "\n";
-  stream << "KLEE: done:     getCompositeCoreExpressions: "
+  stream << "KLEE: done:     getCompositeCoreExpressions = "
          << getCompositeCoreExpressionsTime.get() * 1000 << "\n";
-  stream << "KLEE: done:     getLatestInterpolantCoreExpressions: "
+  stream << "KLEE: done:     getLatestInterpolantCoreExpressions = "
          << getLatestCoreExpressionsTime.get() << "\n";
-  stream << "KLEE: done:     getCompositeInterpolantCoreExpressions: "
+  stream << "KLEE: done:     getCompositeInterpolantCoreExpressions = "
          << getCompositeInterpolantCoreExpressionsTime.get() * 1000 << "\n";
-  stream << "KLEE: done:     computeInterpolantAllocations: "
+  stream << "KLEE: done:     computeInterpolantAllocations = "
          << computeInterpolantAllocationsTime.get() * 1000 << "\n";
 }
 
