@@ -18,10 +18,20 @@ ShadowArray::getShadowUpdate(const UpdateNode *source,
                              std::vector<const Array *> &replacements) {
   if (!source) return 0;
 
-  return new UpdateNode(
-      ShadowArray::getShadowUpdate(source->next, replacements),
-      ShadowArray::getShadowExpression(source->index, replacements),
-      ShadowArray::getShadowExpression(source->value, replacements));
+  return new UpdateNode(getShadowUpdate(source->next, replacements),
+                        getShadowExpression(source->index, replacements),
+                        getShadowExpression(source->value, replacements));
+}
+
+ref<Expr> ShadowArray::createBinaryOfSameKind(ref<Expr> originalExpr,
+                                              ref<Expr> newLhs,
+                                              ref<Expr> newRhs) {
+  std::vector<Expr::CreateArg> exprs;
+  Expr::CreateArg arg1(newLhs);
+  Expr::CreateArg arg2(newRhs);
+  exprs.push_back(arg1);
+  exprs.push_back(arg2);
+  return Expr::createFromKind(originalExpr->getKind(), exprs);
 }
 
 void ShadowArray::addShadowArrayMap(const Array *source, const Array *target) {
@@ -36,8 +46,7 @@ ShadowArray::getShadowExpression(ref<Expr> expr,
   switch (expr->getKind()) {
   case Expr::Read: {
     ReadExpr *readExpr = static_cast<ReadExpr *>(expr.get());
-    const Array *replacementArray =
-        ShadowArray::shadowArray[readExpr->updates.root];
+    const Array *replacementArray = shadowArray[readExpr->updates.root];
 
     if (std::find(replacements.begin(), replacements.end(), replacementArray) ==
         replacements.end())
@@ -45,190 +54,67 @@ ShadowArray::getShadowExpression(ref<Expr> expr,
 
     UpdateList newUpdates(
         replacementArray,
-        ShadowArray::getShadowUpdate(readExpr->updates.head, replacements));
-    ret = ReadExpr::alloc(newUpdates, ShadowArray::getShadowExpression(
-                                          readExpr->index, replacements));
+        getShadowUpdate(readExpr->updates.head, replacements));
+    ret = ReadExpr::alloc(newUpdates,
+                          getShadowExpression(readExpr->index, replacements));
     break;
   }
   case Expr::Constant: {
     ret = expr;
     break;
   }
-  case Expr::Concat: {
-    ret = ConcatExpr::alloc(
-        ShadowArray::getShadowExpression(expr->getKid(0), replacements),
-        ShadowArray::getShadowExpression(expr->getKid(1), replacements));
-    break;
-  }
   case Expr::Select: {
-    ret = SelectExpr::alloc(
-        ShadowArray::getShadowExpression(expr->getKid(0), replacements),
-        ShadowArray::getShadowExpression(expr->getKid(1), replacements),
-        ShadowArray::getShadowExpression(expr->getKid(2), replacements));
+    ret = SelectExpr::alloc(getShadowExpression(expr->getKid(0), replacements),
+                            getShadowExpression(expr->getKid(1), replacements),
+                            getShadowExpression(expr->getKid(2), replacements));
     break;
   }
   case Expr::Extract: {
     ExtractExpr *extractExpr = static_cast<ExtractExpr *>(expr.get());
-    ret = ExtractExpr::alloc(
-        ShadowArray::getShadowExpression(expr->getKid(0), replacements),
-        extractExpr->offset, extractExpr->width);
+    ret = ExtractExpr::alloc(getShadowExpression(expr->getKid(0), replacements),
+                             extractExpr->offset, extractExpr->width);
     break;
   }
   case Expr::ZExt: {
     CastExpr *castExpr = static_cast<CastExpr *>(expr.get());
-    ret = ZExtExpr::alloc(
-        ShadowArray::getShadowExpression(expr->getKid(0), replacements),
-        castExpr->getWidth());
+    ret = ZExtExpr::alloc(getShadowExpression(expr->getKid(0), replacements),
+                          castExpr->getWidth());
     break;
   }
   case Expr::SExt: {
     CastExpr *castExpr = static_cast<CastExpr *>(expr.get());
-    ret = SExtExpr::alloc(
-        ShadowArray::getShadowExpression(expr->getKid(0), replacements),
-        castExpr->getWidth());
+    ret = SExtExpr::alloc(getShadowExpression(expr->getKid(0), replacements),
+                          castExpr->getWidth());
     break;
   }
-  case Expr::Add: {
-    ret = AddExpr::alloc(
-        ShadowArray::getShadowExpression(expr->getKid(0), replacements),
-        ShadowArray::getShadowExpression(expr->getKid(1), replacements));
-    break;
-  }
-  case Expr::Sub: {
-    ret = SubExpr::alloc(
-        ShadowArray::getShadowExpression(expr->getKid(0), replacements),
-        ShadowArray::getShadowExpression(expr->getKid(1), replacements));
-    break;
-  }
-  case Expr::Mul: {
-    ret = MulExpr::alloc(
-        ShadowArray::getShadowExpression(expr->getKid(0), replacements),
-        ShadowArray::getShadowExpression(expr->getKid(1), replacements));
-    break;
-  }
-  case Expr::UDiv: {
-    ret = UDivExpr::alloc(
-        ShadowArray::getShadowExpression(expr->getKid(0), replacements),
-        ShadowArray::getShadowExpression(expr->getKid(1), replacements));
-    break;
-  }
-  case Expr::SDiv: {
-    ret = SDivExpr::alloc(
-        ShadowArray::getShadowExpression(expr->getKid(0), replacements),
-        ShadowArray::getShadowExpression(expr->getKid(1), replacements));
-    break;
-  }
-  case Expr::URem: {
-    ret = URemExpr::alloc(
-        ShadowArray::getShadowExpression(expr->getKid(0), replacements),
-        ShadowArray::getShadowExpression(expr->getKid(1), replacements));
-    break;
-  }
-  case Expr::SRem: {
-    ret = SRemExpr::alloc(
-        ShadowArray::getShadowExpression(expr->getKid(0), replacements),
-        ShadowArray::getShadowExpression(expr->getKid(1), replacements));
-    break;
-  }
-  case Expr::Not: {
-    ret = NotExpr::alloc(
-        ShadowArray::getShadowExpression(expr->getKid(0), replacements));
-    break;
-  }
-  case Expr::And: {
-    ret = AndExpr::alloc(
-        ShadowArray::getShadowExpression(expr->getKid(0), replacements),
-        ShadowArray::getShadowExpression(expr->getKid(1), replacements));
-    break;
-  }
-  case Expr::Or: {
-    ret = OrExpr::alloc(
-        ShadowArray::getShadowExpression(expr->getKid(0), replacements),
-        ShadowArray::getShadowExpression(expr->getKid(1), replacements));
-    break;
-  }
-  case Expr::Xor: {
-    ret = XorExpr::alloc(
-        ShadowArray::getShadowExpression(expr->getKid(0), replacements),
-        ShadowArray::getShadowExpression(expr->getKid(1), replacements));
-    break;
-  }
-  case Expr::Shl: {
-    ret = ShlExpr::alloc(
-        ShadowArray::getShadowExpression(expr->getKid(0), replacements),
-        ShadowArray::getShadowExpression(expr->getKid(1), replacements));
-    break;
-  }
-  case Expr::LShr: {
-    ret = LShrExpr::alloc(
-        ShadowArray::getShadowExpression(expr->getKid(0), replacements),
-        ShadowArray::getShadowExpression(expr->getKid(1), replacements));
-    break;
-  }
-  case Expr::AShr: {
-    ret = AShrExpr::alloc(
-        ShadowArray::getShadowExpression(expr->getKid(0), replacements),
-        ShadowArray::getShadowExpression(expr->getKid(1), replacements));
-    break;
-  }
-  case Expr::Eq: {
-    ret = EqExpr::alloc(
-        ShadowArray::getShadowExpression(expr->getKid(0), replacements),
-        ShadowArray::getShadowExpression(expr->getKid(1), replacements));
-    break;
-  }
-  case Expr::Ne: {
-    ret = NeExpr::alloc(
-        ShadowArray::getShadowExpression(expr->getKid(0), replacements),
-        ShadowArray::getShadowExpression(expr->getKid(1), replacements));
-    break;
-  }
-  case Expr::Ult: {
-    ret = UltExpr::alloc(
-        ShadowArray::getShadowExpression(expr->getKid(0), replacements),
-        ShadowArray::getShadowExpression(expr->getKid(1), replacements));
-    break;
-  }
-  case Expr::Ule: {
-    ret = UleExpr::alloc(
-        ShadowArray::getShadowExpression(expr->getKid(0), replacements),
-        ShadowArray::getShadowExpression(expr->getKid(1), replacements));
-    break;
-  }
-  case Expr::Ugt: {
-    ret = UgtExpr::alloc(
-        ShadowArray::getShadowExpression(expr->getKid(0), replacements),
-        ShadowArray::getShadowExpression(expr->getKid(1), replacements));
-    break;
-  }
-  case Expr::Uge: {
-    ret = UgeExpr::alloc(
-        ShadowArray::getShadowExpression(expr->getKid(0), replacements),
-        ShadowArray::getShadowExpression(expr->getKid(1), replacements));
-    break;
-  }
-  case Expr::Slt: {
-    ret = SltExpr::alloc(
-        ShadowArray::getShadowExpression(expr->getKid(0), replacements),
-        ShadowArray::getShadowExpression(expr->getKid(1), replacements));
-    break;
-  }
-  case Expr::Sle: {
-    ret = SleExpr::alloc(
-        ShadowArray::getShadowExpression(expr->getKid(0), replacements),
-        ShadowArray::getShadowExpression(expr->getKid(1), replacements));
-    break;
-  }
-  case Expr::Sgt: {
-    ret = SgtExpr::alloc(
-        ShadowArray::getShadowExpression(expr->getKid(0), replacements),
-        ShadowArray::getShadowExpression(expr->getKid(1), replacements));
-    break;
-  }
+  case Expr::Concat:
+  case Expr::Add:
+  case Expr::Sub:
+  case Expr::Mul:
+  case Expr::UDiv:
+  case Expr::SDiv:
+  case Expr::URem:
+  case Expr::SRem:
+  case Expr::Not:
+  case Expr::And:
+  case Expr::Or:
+  case Expr::Xor:
+  case Expr::Shl:
+  case Expr::LShr:
+  case Expr::AShr:
+  case Expr::Eq:
+  case Expr::Ne:
+  case Expr::Ult:
+  case Expr::Ule:
+  case Expr::Ugt:
+  case Expr::Uge:
+  case Expr::Slt:
+  case Expr::Sle:
+  case Expr::Sgt:
   case Expr::Sge: {
-    ret = SgeExpr::alloc(
-        ShadowArray::getShadowExpression(expr->getKid(0), replacements),
-        ShadowArray::getShadowExpression(expr->getKid(1), replacements));
+    ret = createBinaryOfSameKind(
+        expr, getShadowExpression(expr->getKid(0), replacements),
+        getShadowExpression(expr->getKid(1), replacements));
     break;
   }
   default: {

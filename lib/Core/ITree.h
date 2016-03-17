@@ -343,9 +343,6 @@ class SubsumptionTableEntry {
   static bool hasExistentials(std::vector<const Array *> &existentials,
                               ref<Expr> expr);
 
-  static ref<Expr> createBinaryOfSameKind(ref<Expr> originalExpr,
-                                          ref<Expr> newLhs, ref<Expr> newRhs);
-
   static bool containShadowExpr(ref<Expr> expr, ref<Expr> shadowExpr);
 
   static ref<Expr> replaceExpr(ref<Expr> originalExpr, ref<Expr> replacedExpr,

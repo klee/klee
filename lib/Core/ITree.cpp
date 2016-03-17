@@ -990,8 +990,8 @@ SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr,
                           interpolantAtom->getKid(1));
         }
 
-        interpolantAtom =
-            createBinaryOfSameKind(interpolantAtom, newIntpLeft, newIntpRight);
+        interpolantAtom = ShadowArray::createBinaryOfSameKind(
+            interpolantAtom, newIntpLeft, newIntpRight);
       }
     }
 
@@ -1027,14 +1027,14 @@ ref<Expr> SubsumptionTableEntry::replaceExpr(ref<Expr> originalExpr,
     return originalExpr;
 
   if (originalExpr->getKid(0) == replacedExpr)
-    return createBinaryOfSameKind(originalExpr, substituteExpr,
-                                  originalExpr->getKid(1));
+    return ShadowArray::createBinaryOfSameKind(originalExpr, substituteExpr,
+                                               originalExpr->getKid(1));
 
   if (originalExpr->getKid(1) == replacedExpr)
-    return createBinaryOfSameKind(originalExpr, originalExpr->getKid(0),
-                                  substituteExpr);
+    return ShadowArray::createBinaryOfSameKind(
+        originalExpr, originalExpr->getKid(0), substituteExpr);
 
-  return createBinaryOfSameKind(
+  return ShadowArray::createBinaryOfSameKind(
       originalExpr,
       replaceExpr(originalExpr->getKid(0), replacedExpr, substituteExpr),
       replaceExpr(originalExpr->getKid(1), replacedExpr, substituteExpr));
@@ -1049,17 +1049,6 @@ bool SubsumptionTableEntry::containShadowExpr(ref<Expr> expr,
 
   return containShadowExpr(expr->getKid(0), shadowExpr) ||
          containShadowExpr(expr->getKid(1), shadowExpr);
-}
-
-ref<Expr> SubsumptionTableEntry::createBinaryOfSameKind(ref<Expr> originalExpr,
-                                                        ref<Expr> newLhs,
-                                                        ref<Expr> newRhs) {
-  std::vector<Expr::CreateArg> exprs;
-  Expr::CreateArg arg1(newLhs);
-  Expr::CreateArg arg2(newRhs);
-  exprs.push_back(arg1);
-  exprs.push_back(arg2);
-  return Expr::createFromKind(originalExpr->getKind(), exprs);
 }
 
 ref<Expr> SubsumptionTableEntry::simplifyInterpolantExpr(
