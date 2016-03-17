@@ -360,9 +360,11 @@ class SubsumptionTableEntry {
 
   static ref<Expr> simplifyWithFourierMotzkin(ref<Expr> existsExpr);
 
-  static ref<Expr> simplifyExistsExpr(ref<Expr> existsExpr);
+  static ref<Expr> simplifyExistsExpr(ref<Expr> existsExpr,
+                                      bool &hasExistentialsOnly);
 
-  static ref<Expr> simplifyArithmeticBody(ref<Expr> existsExpr);
+  static ref<Expr> simplifyArithmeticBody(ref<Expr> existsExpr,
+                                          bool &hasExistentialsOnly);
 
   bool empty() {
     return !interpolant.get() && singletonStoreKeys.empty() &&

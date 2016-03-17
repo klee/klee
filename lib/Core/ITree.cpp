@@ -866,13 +866,19 @@ SubsumptionTableEntry::simplifyWithFourierMotzkin(ref<Expr> existsExpr) {
   return existsExpr;
 }
 
-ref<Expr> SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr) {
+ref<Expr>
+SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr,
+                                              bool &hasExistentialsOnly) {
   assert(llvm::isa<ExistsExpr>(existsExpr));
 
   std::vector<ref<Expr> > interpolantPack;
   std::vector<ref<Expr> > equalityPack;
 
   ExistsExpr *expr = static_cast<ExistsExpr *>(existsExpr.get());
+
+  // Assume the we shall return general ExistsExpr that does not contain
+  // only existential variables.
+  hasExistentialsOnly = false;
 
   std::vector<const Array *> boundVariables = expr->variables;
   // We assume that the body is always a conjunction of interpolant in terms of
@@ -909,15 +915,22 @@ ref<Expr> SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr) {
       simplifyEqualityExpr(equalityPack, body->getKid(1));
 
   // Try to simplify the interpolant. If the resulting simplification
-  // was a constant (true), then the equality constraints would contain
+  // was the constant true, then the equality constraints would contain
   // equality with constants only and no equality with shadow (existential)
   // variables, hence it should be safe to simply return the equality
   // constraint.
   interpolantPack.clear();
   ref<Expr> simplifiedInterpolant =
       simplifyInterpolantExpr(interpolantPack, body->getKid(0));
-  if (llvm::isa<ConstantExpr>(simplifiedInterpolant))
+  if (simplifiedInterpolant->isTrue())
     return fullEqualityConstraint;
+
+  if (fullEqualityConstraint->isTrue()) {
+    // This is the case when the result is still an existentially-quantified
+    // formula, but one that does not contain free variables.
+    hasExistentialsOnly = true;
+    return existsExpr->rebuild(&simplifiedInterpolant);
+  }
 
   ref<Expr> newInterpolant;
 
@@ -1095,8 +1108,21 @@ ref<Expr> SubsumptionTableEntry::simplifyInterpolantExpr(
     return expr;
   }
 
-  return AndExpr::alloc(simplifyInterpolantExpr(interpolantPack, lhs),
-                        simplifyInterpolantExpr(interpolantPack, rhs));
+  ref<Expr> simplifiedLhs = simplifyInterpolantExpr(interpolantPack, lhs);
+  if (simplifiedLhs->isFalse())
+    return simplifiedLhs;
+
+  ref<Expr> simplifiedRhs = simplifyInterpolantExpr(interpolantPack, rhs);
+  if (simplifiedRhs->isFalse())
+    return simplifiedRhs;
+
+  if (simplifiedLhs->isTrue())
+    return simplifiedRhs;
+
+  if (simplifiedRhs->isTrue())
+    return simplifiedLhs;
+
+  return AndExpr::alloc(simplifiedLhs, simplifiedRhs);
 }
 
 ref<Expr> SubsumptionTableEntry::simplifyEqualityExpr(
@@ -1160,12 +1186,11 @@ ref<Expr> SubsumptionTableEntry::simplifyEqualityExpr(
   assert(!"Invalid expression type.");
 }
 
-ref<Expr> SubsumptionTableEntry::simplifyExistsExpr(ref<Expr> existsExpr) {
+ref<Expr> SubsumptionTableEntry::simplifyExistsExpr(ref<Expr> existsExpr,
+                                                    bool &hasExistentialsOnly) {
   assert(llvm::isa<ExistsExpr>(existsExpr));
 
-  ref<Expr> ret = simplifyArithmeticBody(existsExpr);
-  if (llvm::isa<ExistsExpr>(ret))
-    return ret;
+  ref<Expr> ret = simplifyArithmeticBody(existsExpr, hasExistentialsOnly);
 
   return ret;
 }
@@ -1269,11 +1294,13 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
     return true;
   }
 
+  bool queryHasNoFreeVariables = false;
+
   if (!existentials.empty()) {
     ref<Expr> existsExpr = ExistsExpr::create(existentials, query);
     // llvm::errs() << "Before simplification:\n";
     // ExprPPrinter::printQuery(llvm::errs(), state.constraints, existsExpr);
-    query = simplifyExistsExpr(existsExpr);
+    query = simplifyExistsExpr(existsExpr, queryHasNoFreeVariables);
   }
 
   bool success = false;
@@ -1283,9 +1310,6 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
   // We call the solver only when the simplified query is
   // not a constant.
   if (!llvm::isa<ConstantExpr>(query)) {
-    // llvm::errs() << "Querying for subsumption check:\n";
-    // ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
-
     ++checkSolverCount;
 
     if (!existentials.empty() && llvm::isa<ExistsExpr>(query)) {
@@ -1301,14 +1325,42 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
 
       z3solver->setCoreSolverTimeout(timeout);
 
-      actualSolverCallTime.start();
-      success = z3solver->directComputeValidity(Query(state.constraints, query),
-                                                result);
-      actualSolverCallTime.end();
+      if (queryHasNoFreeVariables) {
+        // In case the query has no free variables, we reformulate
+        // the solver call as satisfiability check of the body of
+        // the query.
+        ConstraintManager constraints;
+        ref<ConstantExpr> tmpExpr;
+
+        ref<Expr> falseExpr = ConstantExpr::alloc(0, Expr::Bool);
+        constraints.addConstraint(EqExpr::alloc(falseExpr, query->getKid(0)));
+
+        // llvm::errs() << "Querying for satisfiability check:\n";
+        // ExprPPrinter::printQuery(llvm::errs(), constraints, falseExpr);
+
+        actualSolverCallTime.start();
+        success = z3solver->getValue(Query(constraints, falseExpr), tmpExpr);
+        actualSolverCallTime.end();
+
+        result = success ? Solver::True : Solver::Unknown;
+
+      } else {
+        // llvm::errs() << "Querying for subsumption check:\n";
+        // ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
+
+        actualSolverCallTime.start();
+        success = z3solver->directComputeValidity(
+            Query(state.constraints, query), result);
+        actualSolverCallTime.end();
+      }
 
       z3solver->setCoreSolverTimeout(0);
+
     } else {
       // llvm::errs() << "No existential\n";
+
+      // llvm::errs() << "Querying for subsumption check:\n";
+      // ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
 
       // We call the solver in the standard way if the
       // formula is unquantified.
@@ -1349,7 +1401,7 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
     // which was eventually called from solver->evaluate
     // is conservative, where it returns Solver::Unknown even in case when
     // invalidity is established by the solver.
-    // llvm::errs() << "Solver could not decide validity\n";
+    // llvm::errs() << "Solver did not decide validity\n";
 
     ++checkSolverFailureCount;
     if (z3solver)
