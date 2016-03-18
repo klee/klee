@@ -57,6 +57,9 @@ struct InterpolationOption {
 
   /// @brief Output the tree tree.dot in .dot file format
   static bool outputTree;
+
+  /// @brief To display running time statistics of interpolation methods
+  static bool timeStat;
 };
 
 /// Storage of search tree for displaying
@@ -314,8 +317,14 @@ public:
 };
 
 class SubsumptionTableEntry {
-  ///@brief Statistics for actual solver call time in subsumption check
+  /// @brief Statistics for actual solver call time in subsumption check
   static TimeStat actualSolverCallTime;
+
+  /// @brief The number of solver calls for subsumption checks
+  static unsigned long checkSolverCount;
+
+  /// @brief The number of failed solver calls for subsumption checks
+  static unsigned long checkSolverFailureCount;
 
   uintptr_t nodeId;
 
@@ -334,9 +343,6 @@ class SubsumptionTableEntry {
   static bool hasExistentials(std::vector<const Array *> &existentials,
                               ref<Expr> expr);
 
-  static ref<Expr> createBinaryOfSameKind(ref<Expr> originalExpr,
-                                          ref<Expr> newLhs, ref<Expr> newRhs);
-
   static bool containShadowExpr(ref<Expr> expr, ref<Expr> shadowExpr);
 
   static ref<Expr> replaceExpr(ref<Expr> originalExpr, ref<Expr> replacedExpr,
@@ -351,9 +357,11 @@ class SubsumptionTableEntry {
 
   static ref<Expr> simplifyWithFourierMotzkin(ref<Expr> existsExpr);
 
-  static ref<Expr> simplifyExistsExpr(ref<Expr> existsExpr);
+  static ref<Expr> simplifyExistsExpr(ref<Expr> existsExpr,
+                                      bool &hasExistentialsOnly);
 
-  static ref<Expr> simplifyArithmeticBody(ref<Expr> existsExpr);
+  static ref<Expr> simplifyArithmeticBody(ref<Expr> existsExpr,
+                                          bool &hasExistentialsOnly);
 
   bool empty() {
     return !interpolant.get() && singletonStoreKeys.empty() &&
@@ -374,7 +382,7 @@ public:
 
   void print(llvm::raw_ostream &stream) const;
 
-  static void dumpTimeStat() { printTimeStat(llvm::errs()); }
+  static void dumpTimeStat();
 };
 
 class ITree {
@@ -436,7 +444,7 @@ public:
 
   void dump();
 
-  static void dumpTimeStat() { printTimeStat(llvm::errs()); }
+  static void dumpTimeStat();
 };
 
 class ITreeNode {
@@ -534,7 +542,7 @@ public:
 
   void print(llvm::raw_ostream &stream) const;
 
-  static void dumpTimeStat() { printTimeStat(llvm::errs()); }
+  static void dumpTimeStat();
 
 private:
   ITreeNode(ITreeNode *_parent);

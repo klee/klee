@@ -32,6 +32,9 @@ class ShadowArray {
                                      std::vector<const Array *> &replacements);
 
 public:
+  static ref<Expr> createBinaryOfSameKind(ref<Expr> originalExpr,
+                                          ref<Expr> newLhs, ref<Expr> newRhs);
+
   static void addShadowArrayMap(const Array *source, const Array *target);
 
   static ref<Expr>

@@ -233,6 +233,11 @@ namespace {
                       "format. At present, this feature is only available when "
                       "Z3 is compiled in and interpolation is enabled."));
 
+  cl::opt<bool> InterpolationTimeStat(
+      "interpolation-time-stat",
+      cl::desc(
+          "Displays a summary of execution times of interpolation methods."));
+
   cl::opt<double>
   MaxStaticForkPct("max-static-fork-pct", cl::init(1.));
   cl::opt<double>
@@ -3790,9 +3795,14 @@ void Executor::runFunctionAsMain(Function *f,
       )
     // We globally declare that we don't do interpolation
     InterpolationOption::interpolation = false;
-  else if (OutputTree)
-    // We globally declare that we output the tree
-    InterpolationOption::outputTree = true;
+  else {
+    if (OutputTree)
+      // We globally declare that we output the tree
+      InterpolationOption::outputTree = true;
+    if (InterpolationTimeStat)
+      // To display execution times of interpolation methods
+      InterpolationOption::timeStat = true;
+  }
 #endif /* SUPPORT_Z3 */
 
   std::vector<ref<Expr> > arguments;
@@ -3893,10 +3903,12 @@ void Executor::runFunctionAsMain(Function *f,
     SearchTree::save(interpreterHandler->getOutputFilename("tree.dot"));
     SearchTree::deallocate();
 
-    // Print time statistics
-    SubsumptionTableEntry::dumpTimeStat();
-    ITree::dumpTimeStat();
-    ITreeNode::dumpTimeStat();
+    // Print interpolation time statistics
+    if (InterpolationOption::timeStat) {
+      SubsumptionTableEntry::dumpTimeStat();
+      ITree::dumpTimeStat();
+      ITreeNode::dumpTimeStat();
+    }
 
     delete interpTree;
     interpTree = 0;

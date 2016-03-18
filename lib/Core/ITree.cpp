@@ -23,6 +23,9 @@ bool InterpolationOption::interpolation = true;
 // We don't output the three by default
 bool InterpolationOption::outputTree = false;
 
+// We don't display interpolation methods running times by default
+bool InterpolationOption::timeStat = false;
+
 /**/
 
 std::string SearchTree::PrettyExpressionBuilder::bvConst32(uint32_t value) {
@@ -806,6 +809,10 @@ void PathCondition::print(llvm::raw_ostream &stream) {
 
 TimeStat SubsumptionTableEntry::actualSolverCallTime;
 
+unsigned long SubsumptionTableEntry::checkSolverCount = 0;
+
+unsigned long SubsumptionTableEntry::checkSolverFailureCount = 0;
+
 SubsumptionTableEntry::SubsumptionTableEntry(ITreeNode *node)
     : nodeId(node->getNodeId()) {
   std::vector<const Array *> replacements;
@@ -813,6 +820,7 @@ SubsumptionTableEntry::SubsumptionTableEntry(ITreeNode *node)
   interpolant = node->getInterpolant(replacements);
 
   singletonStore = node->getLatestInterpolantCoreExpressions(replacements);
+
   for (std::map<llvm::Value *, ref<Expr> >::iterator
            it = singletonStore.begin(),
            itEnd = singletonStore.end();
@@ -859,13 +867,19 @@ SubsumptionTableEntry::simplifyWithFourierMotzkin(ref<Expr> existsExpr) {
   return existsExpr;
 }
 
-ref<Expr> SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr) {
+ref<Expr>
+SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr,
+                                              bool &hasExistentialsOnly) {
   assert(llvm::isa<ExistsExpr>(existsExpr));
 
   std::vector<ref<Expr> > interpolantPack;
   std::vector<ref<Expr> > equalityPack;
 
   ExistsExpr *expr = static_cast<ExistsExpr *>(existsExpr.get());
+
+  // Assume the we shall return general ExistsExpr that does not contain
+  // only existential variables.
+  hasExistentialsOnly = false;
 
   std::vector<const Array *> boundVariables = expr->variables;
   // We assume that the body is always a conjunction of interpolant in terms of
@@ -902,15 +916,22 @@ ref<Expr> SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr) {
       simplifyEqualityExpr(equalityPack, body->getKid(1));
 
   // Try to simplify the interpolant. If the resulting simplification
-  // was a constant (true), then the equality constraints would contain
+  // was the constant true, then the equality constraints would contain
   // equality with constants only and no equality with shadow (existential)
   // variables, hence it should be safe to simply return the equality
   // constraint.
   interpolantPack.clear();
   ref<Expr> simplifiedInterpolant =
       simplifyInterpolantExpr(interpolantPack, body->getKid(0));
-  if (llvm::isa<ConstantExpr>(simplifiedInterpolant))
+  if (simplifiedInterpolant->isTrue())
     return fullEqualityConstraint;
+
+  if (fullEqualityConstraint->isTrue()) {
+    // This is the case when the result is still an existentially-quantified
+    // formula, but one that does not contain free variables.
+    hasExistentialsOnly = true;
+    return existsExpr->rebuild(&simplifiedInterpolant);
+  }
 
   ref<Expr> newInterpolant;
 
@@ -970,8 +991,8 @@ ref<Expr> SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr) {
                           interpolantAtom->getKid(1));
         }
 
-        interpolantAtom =
-            createBinaryOfSameKind(interpolantAtom, newIntpLeft, newIntpRight);
+        interpolantAtom = ShadowArray::createBinaryOfSameKind(
+            interpolantAtom, newIntpLeft, newIntpRight);
       }
     }
 
@@ -1007,14 +1028,14 @@ ref<Expr> SubsumptionTableEntry::replaceExpr(ref<Expr> originalExpr,
     return originalExpr;
 
   if (originalExpr->getKid(0) == replacedExpr)
-    return createBinaryOfSameKind(originalExpr, substituteExpr,
-                                  originalExpr->getKid(1));
+    return ShadowArray::createBinaryOfSameKind(originalExpr, substituteExpr,
+                                               originalExpr->getKid(1));
 
   if (originalExpr->getKid(1) == replacedExpr)
-    return createBinaryOfSameKind(originalExpr, originalExpr->getKid(0),
-                                  substituteExpr);
+    return ShadowArray::createBinaryOfSameKind(
+        originalExpr, originalExpr->getKid(0), substituteExpr);
 
-  return createBinaryOfSameKind(
+  return ShadowArray::createBinaryOfSameKind(
       originalExpr,
       replaceExpr(originalExpr->getKid(0), replacedExpr, substituteExpr),
       replaceExpr(originalExpr->getKid(1), replacedExpr, substituteExpr));
@@ -1029,17 +1050,6 @@ bool SubsumptionTableEntry::containShadowExpr(ref<Expr> expr,
 
   return containShadowExpr(expr->getKid(0), shadowExpr) ||
          containShadowExpr(expr->getKid(1), shadowExpr);
-}
-
-ref<Expr> SubsumptionTableEntry::createBinaryOfSameKind(ref<Expr> originalExpr,
-                                                        ref<Expr> newLhs,
-                                                        ref<Expr> newRhs) {
-  std::vector<Expr::CreateArg> exprs;
-  Expr::CreateArg arg1(newLhs);
-  Expr::CreateArg arg2(newRhs);
-  exprs.push_back(arg1);
-  exprs.push_back(arg2);
-  return Expr::createFromKind(originalExpr->getKind(), exprs);
 }
 
 ref<Expr> SubsumptionTableEntry::simplifyInterpolantExpr(
@@ -1088,8 +1098,21 @@ ref<Expr> SubsumptionTableEntry::simplifyInterpolantExpr(
     return expr;
   }
 
-  return AndExpr::alloc(simplifyInterpolantExpr(interpolantPack, lhs),
-                        simplifyInterpolantExpr(interpolantPack, rhs));
+  ref<Expr> simplifiedLhs = simplifyInterpolantExpr(interpolantPack, lhs);
+  if (simplifiedLhs->isFalse())
+    return simplifiedLhs;
+
+  ref<Expr> simplifiedRhs = simplifyInterpolantExpr(interpolantPack, rhs);
+  if (simplifiedRhs->isFalse())
+    return simplifiedRhs;
+
+  if (simplifiedLhs->isTrue())
+    return simplifiedRhs;
+
+  if (simplifiedRhs->isTrue())
+    return simplifiedLhs;
+
+  return AndExpr::alloc(simplifiedLhs, simplifiedRhs);
 }
 
 ref<Expr> SubsumptionTableEntry::simplifyEqualityExpr(
@@ -1153,12 +1176,11 @@ ref<Expr> SubsumptionTableEntry::simplifyEqualityExpr(
   assert(!"Invalid expression type.");
 }
 
-ref<Expr> SubsumptionTableEntry::simplifyExistsExpr(ref<Expr> existsExpr) {
+ref<Expr> SubsumptionTableEntry::simplifyExistsExpr(ref<Expr> existsExpr,
+                                                    bool &hasExistentialsOnly) {
   assert(llvm::isa<ExistsExpr>(existsExpr));
 
-  ref<Expr> ret = simplifyArithmeticBody(existsExpr);
-  if (llvm::isa<ExistsExpr>(ret))
-    return ret;
+  ref<Expr> ret = simplifyArithmeticBody(existsExpr, hasExistentialsOnly);
 
   return ret;
 }
@@ -1262,11 +1284,13 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
     return true;
   }
 
+  bool queryHasNoFreeVariables = false;
+
   if (!existentials.empty()) {
     ref<Expr> existsExpr = ExistsExpr::create(existentials, query);
     // llvm::errs() << "Before simplification:\n";
     // ExprPPrinter::printQuery(llvm::errs(), state.constraints, existsExpr);
-    query = simplifyExistsExpr(existsExpr);
+    query = simplifyExistsExpr(existsExpr, queryHasNoFreeVariables);
   }
 
   bool success = false;
@@ -1276,8 +1300,7 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
   // We call the solver only when the simplified query is
   // not a constant.
   if (!llvm::isa<ConstantExpr>(query)) {
-    // llvm::errs() << "Querying for subsumption check:\n";
-    // ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
+    ++checkSolverCount;
 
     if (!existentials.empty() && llvm::isa<ExistsExpr>(query)) {
       // llvm::errs() << "Existentials not empty\n";
@@ -1292,14 +1315,42 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
 
       z3solver->setCoreSolverTimeout(timeout);
 
-      actualSolverCallTime.start();
-      success = z3solver->directComputeValidity(Query(state.constraints, query),
-                                                result);
-      actualSolverCallTime.end();
+      if (queryHasNoFreeVariables) {
+        // In case the query has no free variables, we reformulate
+        // the solver call as satisfiability check of the body of
+        // the query.
+        ConstraintManager constraints;
+        ref<ConstantExpr> tmpExpr;
+
+        ref<Expr> falseExpr = ConstantExpr::alloc(0, Expr::Bool);
+        constraints.addConstraint(EqExpr::alloc(falseExpr, query->getKid(0)));
+
+        // llvm::errs() << "Querying for satisfiability check:\n";
+        // ExprPPrinter::printQuery(llvm::errs(), constraints, falseExpr);
+
+        actualSolverCallTime.start();
+        success = z3solver->getValue(Query(constraints, falseExpr), tmpExpr);
+        actualSolverCallTime.end();
+
+        result = success ? Solver::True : Solver::Unknown;
+
+      } else {
+        // llvm::errs() << "Querying for subsumption check:\n";
+        // ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
+
+        actualSolverCallTime.start();
+        success = z3solver->directComputeValidity(
+            Query(state.constraints, query), result);
+        actualSolverCallTime.end();
+      }
 
       z3solver->setCoreSolverTimeout(0);
+
     } else {
       // llvm::errs() << "No existential\n";
+
+      // llvm::errs() << "Querying for subsumption check:\n";
+      // ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
 
       // We call the solver in the standard way if the
       // formula is unquantified.
@@ -1329,8 +1380,7 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
          it1 != unsatCore.end(); it1++) {
       // FIXME: Sometimes some constraints are not in the PC. This is
       // because constraints are not properly added at state merge.
-      if (markerMap[*it1])
-        markerMap[*it1]->mayIncludeInInterpolant();
+      markerMap[*it1]->mayIncludeInInterpolant();
     }
 
   } else {
@@ -1340,8 +1390,9 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
     // which was eventually called from solver->evaluate
     // is conservative, where it returns Solver::Unknown even in case when
     // invalidity is established by the solver.
-    // llvm::errs() << "Solver could not decide validity\n";
+    // llvm::errs() << "Solver did not decide validity\n";
 
+    ++checkSolverFailureCount;
     if (z3solver)
       delete z3solver;
 
@@ -1357,8 +1408,7 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
        it != itEnd; it++) {
     // FIXME: Sometimes some constraints are not in the PC. This is
     // because constraints are not properly added at state merge.
-    if (it->second)
-      it->second->includeInInterpolant(g);
+    it->second->includeInInterpolant(g);
   }
   ITreeNode::deleteMarkerMap(markerMap);
 
@@ -1443,9 +1493,24 @@ void SubsumptionTableEntry::print(llvm::raw_ostream &stream) const {
 }
 
 void SubsumptionTableEntry::printTimeStat(llvm::raw_ostream &stream) {
-  stream << "\nSubsumptionTableEntry timings (ms):\n";
-  stream << "Time for actual solver calls in subsumption check: "
-         << actualSolverCallTime.get() * 1000 << "\n";
+  stream << "\nKLEE: done: SubsumptionTableEntry timings (ms):\n";
+  stream
+      << "KLEE: done:     Time for actual solver calls in subsumption check = "
+      << actualSolverCallTime.get() * 1000 << "\n";
+  stream << "KLEE: done:     Number of solver calls for subsumption check "
+            "(failed) = " << checkSolverCount << " (" << checkSolverFailureCount
+         << ")\n";
+}
+
+void SubsumptionTableEntry::dumpTimeStat() {
+  bool useColors = llvm::errs().is_displayed();
+  if (useColors)
+    llvm::errs().changeColor(llvm::raw_ostream::GREEN,
+                             /*bold=*/true,
+                             /*bg=*/false);
+  printTimeStat(llvm::errs());
+  if (useColors)
+    llvm::errs().resetColor();
 }
 
 /**/
@@ -1460,19 +1525,32 @@ TimeStat ITree::executeAbstractMemoryDependencyTime;
 TimeStat ITree::executeAbstractDependencyTime;
 
 void ITree::printTimeStat(llvm::raw_ostream &stream) {
-  stream << "\nITree method execution times (ms):\n";
-  stream << "setCurrentINode: " << setCurrentINodeTime.get() * 1000 << "\n";
-  stream << "remove: " << removeTime.get() * 1000 << "\n";
-  stream << "checkCurrentStateSubsumption: "
+  stream << "\nKLEE: done: ITree method execution times (ms):\n";
+  stream << "KLEE: done:     setCurrentINode = " << setCurrentINodeTime.get() *
+                                                        1000 << "\n";
+  stream << "KLEE: done:     remove = " << removeTime.get() * 1000 << "\n";
+  stream << "KLEE: done:     checkCurrentStateSubsumption = "
          << checkCurrentStateSubsumptionTime.get() * 1000 << "\n";
-  stream << "markPathCondition: " << markPathConditionTime.get() * 1000 << "\n";
-  stream << "split: " << splitTime.get() * 1000 << "\n";
-  stream << "executeAbstractBinaryDependency: "
+  stream << "KLEE: done:     markPathCondition = "
+         << markPathConditionTime.get() * 1000 << "\n";
+  stream << "KLEE: done:     split = " << splitTime.get() * 1000 << "\n";
+  stream << "KLEE: done:     executeAbstractBinaryDependency = "
          << executeAbstractBinaryDependencyTime.get() * 1000 << "\n";
-  stream << "executeAbstractMemoryDependency: "
+  stream << "KLEE: done:     executeAbstractMemoryDependency = "
          << executeAbstractMemoryDependencyTime.get() * 1000 << "\n";
-  stream << "executeAbstractDependency: "
+  stream << "KLEE: done:     executeAbstractDependency = "
          << executeAbstractDependencyTime.get() * 1000 << "\n";
+}
+
+void ITree::dumpTimeStat() {
+  bool useColors = llvm::errs().is_displayed();
+  if (useColors)
+    llvm::errs().changeColor(llvm::raw_ostream::GREEN,
+                             /*bold=*/true,
+                             /*bg=*/false);
+  printTimeStat(llvm::errs());
+  if (useColors)
+    llvm::errs().resetColor();
 }
 
 ITree::ITree(ExecutionState *_root) {
@@ -1589,18 +1667,16 @@ void ITree::markPathCondition(ExecutionState &state, TimingSolver *solver) {
   PathCondition *pc = currentINode->pathCondition;
 
   if (pc != 0) {
-    for (std::vector<ref<Expr> >::reverse_iterator it = unsatCore.rbegin();
-         it != unsatCore.rend(); it++) {
-      while (pc != 0) {
+    for (std::vector<ref<Expr> >::iterator it = unsatCore.begin(),
+                                           itEnd = unsatCore.end();
+         it != itEnd; ++it) {
+      for (; pc != 0; pc = pc->cdr()) {
         if (pc->car().compare(it->get()) == 0) {
           pc->includeInInterpolant(g);
           pc = pc->cdr();
           break;
         }
-        pc = pc->cdr();
       }
-      if (pc == 0)
-        break;
     }
   }
 
@@ -1701,31 +1777,47 @@ TimeStat ITreeNode::getCompositeInterpolantCoreExpressionsTime;
 TimeStat ITreeNode::computeInterpolantAllocationsTime;
 
 void ITreeNode::printTimeStat(llvm::raw_ostream &stream) {
-  stream << "\nITreeNode method execution times (ms):\n";
-  stream << "getInterpolant: " << getInterpolantTime.get() * 1000 << "\n";
-  stream << "addConstraintTime: " << addConstraintTime.get() * 1000 << "\n";
-  stream << "splitTime: " << splitTime.get() * 1000 << "\n";
-  stream << "makeMarkerMap: " << makeMarkerMapTime.get() * 1000 << "\n";
-  stream << "deleteMarkerMap: " << deleteMarkerMapTime.get() * 1000 << "\n";
-  stream << "executeBinaryDependency: " << executeBinaryDependencyTime.get() *
-                                               1000 << "\n";
-  stream << "executeAbstractMemoryDependency: "
+  stream << "\nKLEE: done: ITreeNode method execution times (ms):\n";
+  stream << "KLEE: done:     getInterpolant = " << getInterpolantTime.get() *
+                                                       1000 << "\n";
+  stream << "KLEE: done:     addConstraintTime = " << addConstraintTime.get() *
+                                                          1000 << "\n";
+  stream << "KLEE: done:     splitTime = " << splitTime.get() * 1000 << "\n";
+  stream << "KLEE: done:     makeMarkerMap = " << makeMarkerMapTime.get() * 1000
+         << "\n";
+  stream << "KLEE: done:     deleteMarkerMap = " << deleteMarkerMapTime.get() *
+                                                        1000 << "\n";
+  stream << "KLEE: done:     executeBinaryDependency = "
+         << executeBinaryDependencyTime.get() * 1000 << "\n";
+  stream << "KLEE: done:     executeAbstractMemoryDependency = "
          << executeAbstractMemoryDependencyTime.get() * 1000 << "\n";
-  stream << "executeAbstractDependency: "
+  stream << "KLEE: done:     executeAbstractDependency = "
          << executeAbstractDependencyTime.get() * 1000 << "\n";
-  stream << "bindCallArguments: " << bindCallArgumentsTime.get() * 1000 << "\n";
-  stream << "popAbstractDependencyFrame: "
+  stream << "KLEE: done:     bindCallArguments = "
+         << bindCallArgumentsTime.get() * 1000 << "\n";
+  stream << "KLEE: done:     popAbstractDependencyFrame = "
          << popAbstractDependencyFrameTime.get() * 1000 << "\n";
-  stream << "getLatestCoreExpressions: " << getLatestCoreExpressionsTime.get() *
-                                                1000 << "\n";
-  stream << "getCompositeCoreExpressions: "
+  stream << "KLEE: done:     getLatestCoreExpressions = "
+         << getLatestCoreExpressionsTime.get() * 1000 << "\n";
+  stream << "KLEE: done:     getCompositeCoreExpressions = "
          << getCompositeCoreExpressionsTime.get() * 1000 << "\n";
-  stream << "getLatestInterpolantCoreExpressions: "
+  stream << "KLEE: done:     getLatestInterpolantCoreExpressions = "
          << getLatestCoreExpressionsTime.get() << "\n";
-  stream << "getCompositeInterpolantCoreExpressions: "
+  stream << "KLEE: done:     getCompositeInterpolantCoreExpressions = "
          << getCompositeInterpolantCoreExpressionsTime.get() * 1000 << "\n";
-  stream << "computeInterpolantAllocations: "
+  stream << "KLEE: done:     computeInterpolantAllocations = "
          << computeInterpolantAllocationsTime.get() * 1000 << "\n";
+}
+
+void ITreeNode::dumpTimeStat() {
+  bool useColors = llvm::errs().is_displayed();
+  if (useColors)
+    llvm::errs().changeColor(llvm::raw_ostream::GREEN,
+                             /*bold=*/true,
+                             /*bg=*/false);
+  printTimeStat(llvm::errs());
+  if (useColors)
+    llvm::errs().resetColor();
 }
 
 ITreeNode::ITreeNode(ITreeNode *_parent)
