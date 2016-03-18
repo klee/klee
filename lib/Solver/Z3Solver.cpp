@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 #include "klee/Config/config.h"
 #include "klee/Internal/Support/ErrorHandling.h"
+#include "klee/Internal/Support/FileHandling.h"
 #ifdef ENABLE_Z3
 #include "Z3Builder.h"
 #include "klee/Constraints.h"
@@ -15,6 +16,14 @@
 #include "klee/SolverImpl.h"
 #include "klee/util/Assignment.h"
 #include "klee/util/ExprUtil.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/raw_ostream.h"
+
+namespace {
+llvm::cl::opt<std::string> Z3QueryDumpFile(
+    "debug-z3-dump-queries", llvm::cl::init(""),
+    llvm::cl::desc("Dump Z3's representation of the query to the specified path"));
+}
 
 #include "llvm/Support/ErrorHandling.h"
 
@@ -25,6 +34,7 @@ private:
   Z3Builder *builder;
   double timeout;
   SolverRunStatus runStatusCode;
+  llvm::raw_fd_ostream* dumpedQueriesFile;
   ::Z3_params solverParameters;
   // Parameter symbols
   ::Z3_symbol timeoutParamStrSymbol;
@@ -66,17 +76,32 @@ public:
 
 Z3SolverImpl::Z3SolverImpl()
     : builder(new Z3Builder(/*autoClearConstructCache=*/false)), timeout(0.0),
-      runStatusCode(SOLVER_RUN_STATUS_FAILURE) {
+      runStatusCode(SOLVER_RUN_STATUS_FAILURE), dumpedQueriesFile(0) {
   assert(builder && "unable to create Z3Builder");
   solverParameters = Z3_mk_params(builder->ctx);
   Z3_params_inc_ref(builder->ctx, solverParameters);
   timeoutParamStrSymbol = Z3_mk_string_symbol(builder->ctx, "timeout");
   setCoreSolverTimeout(timeout);
+
+  if (!Z3QueryDumpFile.empty()) {
+    std::string error;
+    dumpedQueriesFile = klee_open_output_file(Z3QueryDumpFile, error);
+    if (!error.empty()) {
+      klee_error("Error creating file for dumping Z3 queries: %s",
+                 error.c_str());
+    }
+    klee_message("Dumping Z3 queries to \"%s\"", Z3QueryDumpFile.c_str());
+  }
 }
 
 Z3SolverImpl::~Z3SolverImpl() {
   Z3_params_dec_ref(builder->ctx, solverParameters);
   delete builder;
+
+  if (dumpedQueriesFile) {
+    dumpedQueriesFile->close();
+    delete dumpedQueriesFile;
+  }
 }
 
 Z3Solver::Z3Solver() : Solver(new Z3SolverImpl()) {}
@@ -165,6 +190,7 @@ bool Z3SolverImpl::computeInitialValues(
 bool Z3SolverImpl::internalRunSolver(
     const Query &query, const std::vector<const Array *> *objects,
     std::vector<std::vector<unsigned char> > *values, bool &hasSolution) {
+
   TimerStatIncrementer t(stats::queryTime);
   // TODO: Does making a new solver for each query have a performance
   // impact vs making one global solver and using push and pop?
@@ -196,6 +222,15 @@ bool Z3SolverImpl::internalRunSolver(
   Z3_solver_assert(
       builder->ctx, theSolver,
       Z3ASTHandle(Z3_mk_not(builder->ctx, z3QueryExpr), builder->ctx));
+
+  if (dumpedQueriesFile) {
+    *dumpedQueriesFile << "; start Z3 query\n";
+    *dumpedQueriesFile << Z3_solver_to_string(builder->ctx, theSolver);
+    *dumpedQueriesFile << "(check-sat)\n";
+    *dumpedQueriesFile << "(reset)\n";
+    *dumpedQueriesFile << "; end Z3 query\n\n";
+    dumpedQueriesFile->flush();
+  }
 
   ::Z3_lbool satisfiable = Z3_solver_check(builder->ctx, theSolver);
   runStatusCode = handleSolverResponse(theSolver, satisfiable, objects, values,
