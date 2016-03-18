@@ -1667,12 +1667,10 @@ void ITree::markPathCondition(ExecutionState &state, TimingSolver *solver) {
   PathCondition *pc = currentINode->pathCondition;
 
   if (pc != 0) {
-    // FIXME: The following is a quadratic operation, need
-    // fixing for sure.
-    for (std::vector<ref<Expr> >::reverse_iterator it = unsatCore.rbegin(),
-                                                   itEnd = unsatCore.rend();
+    for (std::vector<ref<Expr> >::iterator it = unsatCore.begin(),
+                                           itEnd = unsatCore.end();
          it != itEnd; ++it) {
-      for (pc = currentINode->pathCondition; pc != 0; pc = pc->cdr()) {
+      for (; pc != 0; pc = pc->cdr()) {
         if (pc->car().compare(it->get()) == 0) {
           pc->includeInInterpolant(g);
           pc = pc->cdr();
