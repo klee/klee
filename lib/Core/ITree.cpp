@@ -1262,7 +1262,7 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
   }
 
   // We create path condition needed constraints marking structure
-  std::map<ref<Expr>, PathConditionMarker *> markerMap =
+  std::map<Expr *, PathConditionMarker *> markerMap =
       state.itreeNode->makeMarkerMap();
 
   Solver::Validity result;
@@ -1380,7 +1380,9 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
          it1 != unsatCore.end(); it1++) {
       // FIXME: Sometimes some constraints are not in the PC. This is
       // because constraints are not properly added at state merge.
-      markerMap[*it1]->mayIncludeInInterpolant();
+      PathConditionMarker *marker = markerMap[it1->get()];
+      if (marker)
+        marker->mayIncludeInInterpolant();
     }
 
   } else {
@@ -1402,16 +1404,16 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
   // State subsumed, we mark needed constraints on the
   // path condition.
   AllocationGraph *g = new AllocationGraph();
-  for (std::map<ref<Expr>, PathConditionMarker *>::iterator
+  for (std::map<Expr *, PathConditionMarker *>::iterator
            it = markerMap.begin(),
            itEnd = markerMap.end();
        it != itEnd; it++) {
     // FIXME: Sometimes some constraints are not in the PC. This is
     // because constraints are not properly added at state merge.
-    it->second->includeInInterpolant(g);
+    if (it->second)
+      it->second->includeInInterpolant(g);
   }
   ITreeNode::deleteMarkerMap(markerMap);
-
   // llvm::errs() << "AllocationGraph\n";
   // g->dump();
 
@@ -1582,7 +1584,6 @@ bool ITree::checkCurrentStateSubsumption(TimingSolver *solver,
        it != subsumptionTable.end(); it++) {
 
     if ((*it)->subsumed(solver, state, timeout)) {
-
       // We mark as subsumed such that the node will not be
       // stored into table (the table already contains a more
       // general entry).
@@ -1872,9 +1873,9 @@ void ITreeNode::split(ExecutionState *leftData, ExecutionState *rightData) {
   ITreeNode::splitTime.end();
 }
 
-std::map<ref<Expr>, PathConditionMarker *> ITreeNode::makeMarkerMap() const {
+std::map<Expr *, PathConditionMarker *> ITreeNode::makeMarkerMap() const {
   ITreeNode::makeMarkerMapTime.start();
-  std::map<ref<Expr>, PathConditionMarker *> result;
+  std::map<Expr *, PathConditionMarker *> result;
   for (PathCondition *it = pathCondition; it != 0; it = it->cdr()) {
     PathConditionMarker *marker = new PathConditionMarker(it);
     if (llvm::isa<OrExpr>(it->car().get())) {
@@ -1882,26 +1883,24 @@ std::map<ref<Expr>, PathConditionMarker *> ITreeNode::makeMarkerMap() const {
       // is solved separately. The or constraint was due to state merge.
       // Hence, the following is just a makeshift for when state merge is
       // properly implemented.
-      result.insert(std::pair<ref<Expr>, PathConditionMarker *>(
-          it->car()->getKid(0), marker));
-      result.insert(std::pair<ref<Expr>, PathConditionMarker *>(
-          it->car()->getKid(1), marker));
+      result[it->car()->getKid(0).get()] = new PathConditionMarker(it);
+      result[it->car()->getKid(1).get()] = new PathConditionMarker(it);
     }
-    result.insert(
-        std::pair<ref<Expr>, PathConditionMarker *>(it->car(), marker));
+    result[it->car().get()] = marker;
   }
   ITreeNode::makeMarkerMapTime.end();
   return result;
 }
 
-void ITreeNode::deleteMarkerMap(
-    std::map<ref<Expr>, PathConditionMarker *> &markerMap) {
+void
+ITreeNode::deleteMarkerMap(std::map<Expr *, PathConditionMarker *> &markerMap) {
   ITreeNode::deleteMarkerMapTime.start();
-  for (std::map<ref<Expr>, PathConditionMarker *>::iterator
+  for (std::map<Expr *, PathConditionMarker *>::iterator
            it = markerMap.begin(),
            itEnd = markerMap.end();
        it != itEnd; ++it) {
-    delete it->second;
+    if (it->second)
+      delete it->second;
   }
   markerMap.clear();
   ITreeNode::deleteMarkerMapTime.end();
