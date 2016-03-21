@@ -1179,11 +1179,6 @@ ref<Expr> SubsumptionTableEntry::simplifyExistsExpr(ref<Expr> existsExpr,
 
 bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
                                      ExecutionState &state, double timeout) {
-  // Check if we are at the right program point
-  if (state.itreeNode == 0 || reinterpret_cast<uintptr_t>(state.pc->inst) !=
-                                  state.itreeNode->getNodeId() ||
-      state.itreeNode->getNodeId() != nodeId)
-    return false;
 
   // Quick check for subsumption in case the interpolant is empty
   if (empty())
@@ -1327,8 +1322,8 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
         result = success ? Solver::True : Solver::Unknown;
 
       } else {
-        llvm::errs() << "Querying for subsumption check:\n";
-        ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
+        // llvm::errs() << "Querying for subsumption check:\n";
+        // ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
 
         actualSolverCallTimer.start();
         success = z3solver->directComputeValidity(
@@ -1556,11 +1551,17 @@ ITree::ITree(ExecutionState *_root) {
 }
 
 ITree::~ITree() {
-  for (std::vector<SubsumptionTableEntry *>::iterator
+  for (std::map<uintptr_t, std::vector<SubsumptionTableEntry *> >::iterator
            it = subsumptionTable.begin(),
            itEnd = subsumptionTable.end();
        it != itEnd; ++it) {
-    delete (*it);
+    for (std::vector<SubsumptionTableEntry *>::iterator
+             it1 = it->second.begin(),
+             it1End = it->second.end();
+         it1 != it1End; ++it1) {
+      delete *it1;
+    }
+    it->second.clear();
   }
   subsumptionTable.clear();
 }
@@ -1568,13 +1569,27 @@ ITree::~ITree() {
 bool ITree::checkCurrentStateSubsumption(TimingSolver *solver,
                                          ExecutionState &state,
                                          double timeout) {
-  checkCurrentStateSubsumptionTimer.start();
   assert(state.itreeNode == currentINode);
 
-  for (std::vector<SubsumptionTableEntry *>::iterator it =
-           subsumptionTable.begin();
-       it != subsumptionTable.end(); it++) {
+  // Immediately return if the state's instruction is not the
+  // the interpolation node id. The interpolation node id is the
+  // first instruction executed of the sequence executed for a state
+  // node, typically this the first instruction of a basic block.
+  // Subsumption check only matches against this first instruction.
+  if (!state.itreeNode || reinterpret_cast<uintptr_t>(state.pc->inst) !=
+                              state.itreeNode->getNodeId())
+    return false;
 
+  checkCurrentStateSubsumptionTimer.start();
+  std::vector<SubsumptionTableEntry *> entryList =
+      subsumptionTable[state.itreeNode->getNodeId()];
+
+  if (entryList.empty())
+    return false;
+
+  for (std::vector<SubsumptionTableEntry *>::iterator it = entryList.begin(),
+                                                      itEnd = entryList.end();
+       it != itEnd; ++it) {
     if ((*it)->subsumed(solver, state, timeout)) {
       // We mark as subsumed such that the node will not be
       // stored into table (the table already contains a more
@@ -1591,12 +1606,8 @@ bool ITree::checkCurrentStateSubsumption(TimingSolver *solver,
   return false;
 }
 
-std::vector<SubsumptionTableEntry *> ITree::getStore() {
-  return subsumptionTable;
-}
-
 void ITree::store(SubsumptionTableEntry *subItem) {
-  subsumptionTable.push_back(subItem);
+  subsumptionTable[subItem->nodeId].push_back(subItem);
 }
 
 void ITree::setCurrentINode(ExecutionState &state, uintptr_t programPoint) {
@@ -1740,11 +1751,16 @@ void ITree::print(llvm::raw_ostream &stream) {
   this->printNode(stream, this->root, "");
   stream << "\n------------------------- Subsumption Table "
             "-------------------------\n";
-  for (std::vector<SubsumptionTableEntry *>::iterator
+  for (std::map<uintptr_t, std::vector<SubsumptionTableEntry *> >::iterator
            it = subsumptionTable.begin(),
            itEnd = subsumptionTable.end();
        it != itEnd; ++it) {
-    (*it)->print(stream);
+    for (std::vector<SubsumptionTableEntry *>::iterator
+             it1 = it->second.begin(),
+             it1End = it->second.end();
+         it1 != it1End; ++it1) {
+      (*it1)->print(stream);
+    }
   }
 }
 

@@ -314,8 +314,6 @@ class SubsumptionTableEntry {
   /// @brief The number of failed solver calls for subsumption checks
   static unsigned long checkSolverFailureCount;
 
-  uintptr_t nodeId;
-
   ref<Expr> interpolant;
 
   std::map<llvm::Value *, ref<Expr> > singletonStore;
@@ -360,6 +358,8 @@ class SubsumptionTableEntry {
   static void printTimeStat(llvm::raw_ostream &stream);
 
 public:
+  const uintptr_t nodeId;
+
   SubsumptionTableEntry(ITreeNode *node);
 
   ~SubsumptionTableEntry();
@@ -389,7 +389,7 @@ class ITree {
 
   ITreeNode *currentINode;
 
-  std::vector<SubsumptionTableEntry *> subsumptionTable;
+  std::map<uintptr_t, std::vector<SubsumptionTableEntry *> > subsumptionTable;
 
   void printNode(llvm::raw_ostream &stream, ITreeNode *n, std::string edges);
 
@@ -402,8 +402,6 @@ public:
   ITree(ExecutionState *_root);
 
   ~ITree();
-
-  std::vector<SubsumptionTableEntry *> getStore();
 
   void store(SubsumptionTableEntry *subItem);
 
