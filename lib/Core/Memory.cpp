@@ -10,6 +10,7 @@
 #include "Memory.h"
 
 #include "Context.h"
+#include "klee/CommandLine.h"
 #include "klee/Expr.h"
 #include "klee/Solver.h"
 #include "klee/util/BitArray.h"
@@ -118,15 +119,12 @@ ObjectState::ObjectState(const MemoryObject *mo)
         getArrayCache()->CreateArray(arrayName, arrayWidth);
     updates = UpdateList(array, 0);
 
-#ifdef SUPPORT_Z3
-    if (InterpolationOption::interpolation) {
+    if (INTERPOLATION_ENABLED) {
       // We create shadow array as existentially-quantified
       // variables for subsumption checking
       const Array *shadow = getArrayCache()->CreateArray(ShadowArray::getShadowName(arrayName), arrayWidth);
       ShadowArray::addShadowArrayMap(array, shadow);
     }
-#endif
-
   }
   memset(concreteStore, 0, size);
 }
@@ -245,14 +243,12 @@ const UpdateList &ObjectState::getUpdates() const {
     for (; Begin != End; ++Begin)
       updates.extend(Writes[Begin].first, Writes[Begin].second);
 
-#ifdef SUPPORT_Z3
-    if (InterpolationOption::interpolation) {
+    if (INTERPOLATION_ENABLED) {
       // We create shadow array as existentially-quantified
       // variables for subsumption checking
       const Array *shadow = getArrayCache()->CreateArray(ShadowArray::getShadowName(arrayName), arrayWidth);
       ShadowArray::addShadowArrayMap(array, shadow);
     }
-#endif
   }
 
   return updates;

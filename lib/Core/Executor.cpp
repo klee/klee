@@ -219,25 +219,6 @@ namespace {
   NamedSeedMatching("named-seed-matching",
                     cl::desc("Use names to match symbolic objects to inputs."));
 
-  // We should compile in this option even when SUPPORT_Z3
-  // was undefined to avoid regression test failure.
-  cl::opt<bool> NoInterpolation(
-      "no-interpolation",
-      cl::desc("Disable interpolation for search space reduction. "
-               "Interpolation is enabled by default when Z3 was the solver "
-               "used. This option has no effect when Z3 was not used."));
-
-  cl::opt<bool>
-  OutputTree("output-tree",
-             cl::desc("Outputs tree.dot: the execution tree in .dot file "
-                      "format. At present, this feature is only available when "
-                      "Z3 is compiled in and interpolation is enabled."));
-
-  cl::opt<bool> InterpolationTimeStat(
-      "interpolation-time-stat",
-      cl::desc(
-          "Displays a summary of execution times of interpolation methods."));
-
   cl::opt<double>
   MaxStaticForkPct("max-static-fork-pct", cl::init(1.));
   cl::opt<double>
@@ -705,14 +686,12 @@ void Executor::branch(ExecutionState &state,
       ns->ptreeNode = res.first;
       es->ptreeNode = res.second;
 
-#ifdef SUPPORT_Z3
-      if (InterpolationOption::interpolation) {
+      if (INTERPOLATION_ENABLED) {
         std::pair<ITreeNode *, ITreeNode *> ires =
 	  interpTree->split(es->itreeNode, ns, es);
         ns->itreeNode = ires.first;
         es->itreeNode = ires.second;
       }
-#endif
     }
   }
 
@@ -914,14 +893,12 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       }
     }
 
-#ifdef SUPPORT_Z3
-    if (InterpolationOption::interpolation) {
+    if (INTERPOLATION_ENABLED) {
       // Validity proof succeeded of a query: antecedent -> consequent.
       // We then extract the unsatisfiability core of antecedent and not
       // consequent as the Craig interpolant.
       interpTree->markPathCondition(current, solver);
     }
-#endif
 
     return StatePair(&current, 0);
   } else if (res==Solver::False) {
@@ -931,14 +908,12 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       }
     }
 
-#ifdef SUPPORT_Z3
-    if (InterpolationOption::interpolation) {
+    if (INTERPOLATION_ENABLED) {
       // Falsity proof succeeded of a query: antecedent -> consequent,
       // which means that antecedent -> not(consequent) is valid. In this
       // case also we extract the unsat core of the proof
       interpTree->markPathCondition(current, solver);
     }
-#endif
 
     return StatePair(0, &current);
   } else {
@@ -1006,14 +981,12 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       }
     }
 
-#ifdef SUPPORT_Z3
-    if (InterpolationOption::interpolation) {
+    if (INTERPOLATION_ENABLED) {
       std::pair<ITreeNode *, ITreeNode *> ires =
 	  interpTree->split(current.itreeNode, falseState, trueState);
       falseState->itreeNode = ires.first;
       trueState->itreeNode = ires.second;
     }
-#endif
 
     addConstraint(*trueState, condition);
     addConstraint(*falseState, Expr::createIsZero(condition));
@@ -1423,11 +1396,9 @@ void Executor::executeCall(ExecutionState &state,
     for (unsigned i=0; i<numFormals; ++i) 
       bindArgument(kf, i, state, arguments[i]);
 
-#ifdef SUPPORT_Z3
-    if (InterpolationOption::interpolation)
+    if (INTERPOLATION_ENABLED)
       // We bind the abstract dependency call arguments
       state.itreeNode->bindCallArguments(state.prevPC->inst, arguments);
-#endif
   }
 }
 
@@ -1839,11 +1810,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = eval(ki, state.incomingBBIndex * 2, state).value;
 #endif
     bindLocal(ki, state, result);
-#ifdef SUPPORT_Z3
+
     // Update dependency
-    if (InterpolationOption::interpolation)
+    if (INTERPOLATION_ENABLED)
       interpTree->executeAbstractDependency(i, result);
-#endif
     break;
   }
 
@@ -1855,11 +1825,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = SelectExpr::create(cond, tExpr, fExpr);
     bindLocal(ki, state, result);
 
-#ifdef SUPPORT_Z3
     // Update dependency
-    if (InterpolationOption::interpolation)
+    if (INTERPOLATION_ENABLED)
       interpTree->executeAbstractBinaryDependency(i, result, tExpr, fExpr);
-#endif
     break;
   }
 
@@ -1875,11 +1843,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = AddExpr::create(left, right);
     bindLocal(ki, state, result);
 
-#ifdef SUPPORT_Z3
     // Update dependency
-    if (InterpolationOption::interpolation)
+    if (INTERPOLATION_ENABLED)
       interpTree->executeAbstractBinaryDependency(i, result, left, right);
-#endif
     break;
   }
 
@@ -1889,11 +1855,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = SubExpr::create(left, right);
     bindLocal(ki, state, result);
 
-#ifdef SUPPORT_Z3
     // Update dependency
-    if (InterpolationOption::interpolation)
+    if (INTERPOLATION_ENABLED)
       interpTree->executeAbstractBinaryDependency(i, result, left, right);
-#endif
     break;
   }
  
@@ -1903,11 +1867,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = MulExpr::create(left, right);
     bindLocal(ki, state, result);
 
-#ifdef SUPPORT_Z3
     // Update dependency
-    if (InterpolationOption::interpolation)
+    if (INTERPOLATION_ENABLED)
       interpTree->executeAbstractBinaryDependency(i, result, left, right);
-#endif
     break;
   }
 
@@ -1917,11 +1879,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = UDivExpr::create(left, right);
     bindLocal(ki, state, result);
 
-#ifdef SUPPORT_Z3
     // Update dependency
-    if (InterpolationOption::interpolation)
+    if (INTERPOLATION_ENABLED)
       interpTree->executeAbstractBinaryDependency(i, result, left, right);
-#endif
     break;
   }
 
@@ -1931,11 +1891,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = SDivExpr::create(left, right);
     bindLocal(ki, state, result);
 
-#ifdef SUPPORT_Z3
     // Update dependency
-    if (InterpolationOption::interpolation)
+    if (INTERPOLATION_ENABLED)
       interpTree->executeAbstractBinaryDependency(i, result, left, right);
-#endif
     break;
   }
 
@@ -1945,11 +1903,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = URemExpr::create(left, right);
     bindLocal(ki, state, result);
 
-#ifdef SUPPORT_Z3
     // Update dependency
-    if (InterpolationOption::interpolation)
+    if (INTERPOLATION_ENABLED)
       interpTree->executeAbstractBinaryDependency(i, result, left, right);
-#endif
     break;
   }
  
@@ -1959,11 +1915,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = SRemExpr::create(left, right);
     bindLocal(ki, state, result);
 
-#ifdef SUPPORT_Z3
     // Update dependency
-    if (InterpolationOption::interpolation)
+    if (INTERPOLATION_ENABLED)
       interpTree->executeAbstractBinaryDependency(i, result, left, right);
-#endif
     break;
   }
 
@@ -1973,11 +1927,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = AndExpr::create(left, right);
     bindLocal(ki, state, result);
 
-#ifdef SUPPORT_Z3
     // Update dependency
-    if (InterpolationOption::interpolation)
+    if (INTERPOLATION_ENABLED)
       interpTree->executeAbstractBinaryDependency(i, result, left, right);
-#endif
     break;
   }
 
@@ -1987,11 +1939,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = OrExpr::create(left, right);
     bindLocal(ki, state, result);
 
-#ifdef SUPPORT_Z3
     // Update dependency
-    if (InterpolationOption::interpolation)
+    if (INTERPOLATION_ENABLED)
       interpTree->executeAbstractBinaryDependency(i, result, left, right);
-#endif
     break;
   }
 
@@ -2001,11 +1951,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = XorExpr::create(left, right);
     bindLocal(ki, state, result);
 
-#ifdef SUPPORT_Z3
     // Update dependency
-    if (InterpolationOption::interpolation)
+    if (INTERPOLATION_ENABLED)
       interpTree->executeAbstractBinaryDependency(i, result, left, right);
-#endif
     break;
   }
 
@@ -2015,11 +1963,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = ShlExpr::create(left, right);
     bindLocal(ki, state, result);
 
-#ifdef SUPPORT_Z3
     // Update dependency
-    if (InterpolationOption::interpolation)
+    if (INTERPOLATION_ENABLED)
       interpTree->executeAbstractBinaryDependency(i, result, left, right);
-#endif
     break;
   }
 
@@ -2029,11 +1975,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = LShrExpr::create(left, right);
     bindLocal(ki, state, result);
 
-#ifdef SUPPORT_Z3
     // Update dependency
-    if (InterpolationOption::interpolation)
+    if (INTERPOLATION_ENABLED)
       interpTree->executeAbstractBinaryDependency(i, result, left, right);
-#endif
     break;
   }
 
@@ -2043,11 +1987,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = AShrExpr::create(left, right);
     bindLocal(ki, state, result);
 
-#ifdef SUPPORT_Z3
     // Update dependency
-    if (InterpolationOption::interpolation)
+    if (INTERPOLATION_ENABLED)
       interpTree->executeAbstractBinaryDependency(i, result, left, right);
-#endif
     break;
   }
 
@@ -2143,11 +2085,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       terminateStateOnExecError(state, "invalid ICmp predicate");
     }
 
-#ifdef SUPPORT_Z3
     // Update dependency
-    if (InterpolationOption::interpolation)
+    if (INTERPOLATION_ENABLED)
       interpTree->executeAbstractBinaryDependency(i, result, left, right);
-#endif
     break;
   }
  
@@ -2197,11 +2137,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
                              Expr::createPointer(kgepi->offset));
     bindLocal(ki, state, base);
 
-#ifdef SUPPORT_Z3
     // Update dependency
-    if (InterpolationOption::interpolation)
+    if (INTERPOLATION_ENABLED)
       interpTree->executeAbstractDependency(i, base);
-#endif
     break;
   }
 
@@ -2213,11 +2151,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
                                            getWidthForLLVMType(ci->getType()));
     bindLocal(ki, state, result);
 
-#ifdef SUPPORT_Z3
     // Update dependency
-    if (InterpolationOption::interpolation)
+    if (INTERPOLATION_ENABLED)
       interpTree->executeAbstractDependency(i, result);
-#endif
     break;
   }
   case Instruction::ZExt: {
@@ -2226,11 +2162,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
                                         getWidthForLLVMType(ci->getType()));
     bindLocal(ki, state, result);
 
-#ifdef SUPPORT_Z3
     // Update dependency
-    if (InterpolationOption::interpolation)
+    if (INTERPOLATION_ENABLED)
       interpTree->executeAbstractDependency(i, result);
-#endif
     break;
   }
   case Instruction::SExt: {
@@ -2239,11 +2173,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
                                         getWidthForLLVMType(ci->getType()));
     bindLocal(ki, state, result);
 
-#ifdef SUPPORT_Z3
     // Update dependency
-    if (InterpolationOption::interpolation)
+    if (INTERPOLATION_ENABLED)
       interpTree->executeAbstractDependency(i, result);
-#endif
     break;
   }
 
@@ -2254,11 +2186,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = ZExtExpr::create(arg, pType);
     bindLocal(ki, state, result);
 
-#ifdef SUPPORT_Z3
     // Update dependency
-    if (InterpolationOption::interpolation)
+    if (INTERPOLATION_ENABLED)
       interpTree->executeAbstractDependency(i, result);
-#endif
     break;
   } 
   case Instruction::PtrToInt: {
@@ -2268,11 +2198,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = ZExtExpr::create(arg, iType);
     bindLocal(ki, state, result);
 
-#ifdef SUPPORT_Z3
     // Update dependency
-    if (InterpolationOption::interpolation)
+    if (INTERPOLATION_ENABLED)
       interpTree->executeAbstractDependency(i, result);
-#endif
     break;
   }
 
@@ -2280,11 +2208,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = eval(ki, 0, state).value;
     bindLocal(ki, state, result);
 
-#ifdef SUPPORT_Z3
     // Update dependency
-    if (InterpolationOption::interpolation)
+    if (INTERPOLATION_ENABLED)
       interpTree->executeAbstractDependency(i, result);
-#endif
     break;
   }
 
@@ -2309,11 +2235,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = ConstantExpr::alloc(Res.bitcastToAPInt());
     bindLocal(ki, state, result);
 
-#ifdef SUPPORT_Z3
     // Update dependency
-    if (InterpolationOption::interpolation)
+    if (INTERPOLATION_ENABLED)
       interpTree->executeAbstractBinaryDependency(i, result, left, right);
-#endif
     break;
   }
 
@@ -2335,11 +2259,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = ConstantExpr::alloc(Res.bitcastToAPInt());
     bindLocal(ki, state, result);
 
-#ifdef SUPPORT_Z3
     // Update dependency
-    if (InterpolationOption::interpolation)
+    if (INTERPOLATION_ENABLED)
       interpTree->executeAbstractBinaryDependency(i, result, left, right);
-#endif
     break;
   }
  
@@ -2362,11 +2284,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = ConstantExpr::alloc(Res.bitcastToAPInt());
     bindLocal(ki, state, result);
 
-#ifdef SUPPORT_Z3
     // Update dependency
-    if (InterpolationOption::interpolation)
+    if (INTERPOLATION_ENABLED)
       interpTree->executeAbstractBinaryDependency(i, result, left, right);
-#endif
     break;
   }
 
@@ -2389,11 +2309,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = ConstantExpr::alloc(Res.bitcastToAPInt());
     bindLocal(ki, state, result);
 
-#ifdef SUPPORT_Z3
     // Update dependency
-    if (InterpolationOption::interpolation)
+    if (INTERPOLATION_ENABLED)
       interpTree->executeAbstractBinaryDependency(i, result, left, right);
-#endif
     break;
   }
 
@@ -2416,11 +2334,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = ConstantExpr::alloc(Res.bitcastToAPInt());
     bindLocal(ki, state, result);
 
-#ifdef SUPPORT_Z3
     // Update dependency
-    if (InterpolationOption::interpolation)
+    if (INTERPOLATION_ENABLED)
       interpTree->executeAbstractBinaryDependency(i, result, left, right);
-#endif
     break;
   }
 
@@ -2444,11 +2360,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = ConstantExpr::alloc(Res);
     bindLocal(ki, state, result);
 
-#ifdef SUPPORT_Z3
     // Update dependency
-    if (InterpolationOption::interpolation)
+    if (INTERPOLATION_ENABLED)
       interpTree->executeAbstractDependency(i, result);
-#endif
     break;
   }
 
@@ -2471,11 +2385,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = ConstantExpr::alloc(Res);
     bindLocal(ki, state, result);
 
-#ifdef SUPPORT_Z3
     // Update dependency
-    if (InterpolationOption::interpolation)
+    if (INTERPOLATION_ENABLED)
       interpTree->executeAbstractDependency(i, result);
-#endif
     break;
   }
 
@@ -2499,11 +2411,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = ConstantExpr::alloc(value, resultType);
     bindLocal(ki, state, result);
 
-#ifdef SUPPORT_Z3
     // Update dependency
-    if (InterpolationOption::interpolation)
+    if (INTERPOLATION_ENABLED)
       interpTree->executeAbstractDependency(i, result);
-#endif
     break;
   }
 
@@ -2527,11 +2437,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = ConstantExpr::alloc(value, resultType);
     bindLocal(ki, state, result);
 
-#ifdef SUPPORT_Z3
     // Update dependency
-    if (InterpolationOption::interpolation)
+    if (INTERPOLATION_ENABLED)
       interpTree->executeAbstractDependency(i, result);
-#endif
     break;
   }
 
@@ -2550,11 +2458,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = ConstantExpr::alloc(f);
     bindLocal(ki, state, result);
 
-#ifdef SUPPORT_Z3
     // Update dependency
-    if (InterpolationOption::interpolation)
+    if (INTERPOLATION_ENABLED)
       interpTree->executeAbstractDependency(i, result);
-#endif
     break;
   }
 
@@ -2573,11 +2479,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = ConstantExpr::alloc(f);
     bindLocal(ki, state, result);
 
-#ifdef SUPPORT_Z3
     // Update dependency
-    if (InterpolationOption::interpolation)
+    if (INTERPOLATION_ENABLED)
       interpTree->executeAbstractDependency(i, result);
-#endif
     break;
   }
 
@@ -2678,11 +2582,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = ConstantExpr::alloc(Result, Expr::Bool);
     bindLocal(ki, state, result);
 
-#ifdef SUPPORT_Z3
     // Update dependency
-    if (InterpolationOption::interpolation)
+    if (INTERPOLATION_ENABLED)
       interpTree->executeAbstractBinaryDependency(i, result, left, right);
-#endif
     break;
   }
   case Instruction::InsertValue: {
@@ -2711,11 +2613,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     bindLocal(ki, state, result);
 
-#ifdef SUPPORT_Z3
     // Update dependency
-    if (InterpolationOption::interpolation)
+    if (INTERPOLATION_ENABLED)
       interpTree->executeAbstractBinaryDependency(i, result, agg, val);
-#endif
     break;
   }
   case Instruction::ExtractValue: {
@@ -2727,11 +2627,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     bindLocal(ki, state, result);
 
-#ifdef SUPPORT_Z3
     // Update dependency
-    if (InterpolationOption::interpolation)
+    if (INTERPOLATION_ENABLED)
       interpTree->executeAbstractDependency(i, result);
-#endif
     break;
   }
  
@@ -2770,10 +2668,8 @@ void Executor::updateStates(ExecutionState *current) {
     if (it3 != seedMap.end())
       seedMap.erase(it3);
     processTree->remove(es->ptreeNode);
-#ifdef SUPPORT_Z3
-    if (InterpolationOption::interpolation)
+    if (INTERPOLATION_ENABLED)
       interpTree->remove(es->itreeNode);
-#endif
     delete es;
   }
   removedStates.clear();
@@ -2922,8 +2818,7 @@ void Executor::run(ExecutionState &initialState) {
   while (!states.empty() && !haltExecution) {
     ExecutionState &state = searcher->selectState();
 
-#ifdef SUPPORT_Z3
-    if (InterpolationOption::interpolation) {
+    if (INTERPOLATION_ENABLED) {
       // We synchronize the node id to that of the state. The node id
       // is set only when it was the address of the first instruction
       // in the node.
@@ -2942,12 +2837,10 @@ void Executor::run(ExecutionState &initialState) {
       // state.pc->inst->dump();
     }
 
-    if (InterpolationOption::interpolation &&
-        interpTree->checkCurrentStateSubsumption(solver, state,
-                                                 coreSolverTimeout)) {
+    if (INTERPOLATION_ENABLED && interpTree->checkCurrentStateSubsumption(
+                                     solver, state, coreSolverTimeout)) {
       terminateStateOnSubsumption(state);
     } else
-#endif
       {
 	KInstruction *ki = state.pc;
 	stepInstruction(state);
@@ -3080,17 +2973,15 @@ void Executor::terminateState(ExecutionState &state) {
       seedMap.erase(it3);
     addedStates.erase(it);
     processTree->remove(state.ptreeNode);
-#ifdef SUPPORT_Z3
-    if (InterpolationOption::interpolation)
+
+    if (INTERPOLATION_ENABLED)
       interpTree->remove(state.itreeNode);
-#endif
     delete &state;
   }
 }
 
-#ifdef SUPPORT_Z3
 void Executor::terminateStateOnSubsumption(ExecutionState &state) {
-  assert (InterpolationOption::interpolation);
+  assert(INTERPOLATION_ENABLED);
 
   // Implementationwise, basically the same as terminateStateEarly method,
   // but with different statistics functions called, and empty error
@@ -3103,7 +2994,6 @@ void Executor::terminateStateOnSubsumption(ExecutionState &state) {
   }
   terminateState(state);
 }
-#endif /* SUPPORT_Z3 */
 
 void Executor::terminateStateEarly(ExecutionState &state, 
                                    const Twine &message) {
@@ -3335,14 +3225,13 @@ ref<Expr> Executor::replaceReadWithSymbolic(ExecutionState &state,
   llvm::errs() << "Making symbolic: " << eq << "\n";
   state.addConstraint(eq);
 
-#ifdef SUPPORT_Z3
-    if (InterpolationOption::interpolation) {
-      // We create shadow array as existentially-quantified
-      // variables for subsumption checking
-      const Array *shadow = arrayCache.CreateArray(ShadowArray::getShadowName(arrayName), arrayWidth);
-      ShadowArray::addShadowArrayMap(array, shadow);
-    }
-#endif
+  if (INTERPOLATION_ENABLED) {
+    // We create shadow array as existentially-quantified
+    // variables for subsumption checking
+    const Array *shadow = arrayCache.CreateArray(
+        ShadowArray::getShadowName(arrayName), arrayWidth);
+    ShadowArray::addShadowArrayMap(array, shadow);
+  }
 
   return res;
 }
@@ -3386,11 +3275,9 @@ void Executor::executeAlloc(ExecutionState &state,
       }
       bindLocal(target, state, mo->getBaseExpr());
 
-#ifdef SUPPORT_Z3
       // Update dependency
-      if (InterpolationOption::interpolation)
+      if (INTERPOLATION_ENABLED)
         interpTree->executeAbstractDependency(target->inst, mo->getBaseExpr());
-#endif
 
       if (reallocFrom) {
         unsigned count = std::min(reallocFrom->size, os->size);
@@ -3458,11 +3345,10 @@ void Executor::executeAlloc(ExecutionState &state,
           ref<Expr> result =
               ConstantExpr::alloc(0, Context::get().getPointerWidth());
           bindLocal(target, *hugeSize.first, result);
-#ifdef SUPPORT_Z3
+
           // Update dependency
-          if (InterpolationOption::interpolation)
+          if (INTERPOLATION_ENABLED)
             interpTree->executeAbstractDependency(target->inst, result);
-#endif
         }
         
         if (hugeSize.second) {
@@ -3608,12 +3494,10 @@ void Executor::executeMemoryOperation(ExecutionState &state, bool isWrite,
           ObjectState *wos = state.addressSpace.getWriteable(mo, os);
           wos->write(offset, value);
 
-#ifdef SUPPORT_Z3
           // Update dependency
-          if (InterpolationOption::interpolation && target)
+          if (INTERPOLATION_ENABLED && target)
             interpTree->executeAbstractMemoryDependency(target->inst, value,
                                                         address);
-#endif
         }          
       } else {
         ref<Expr> result = os->read(offset, type);
@@ -3623,12 +3507,10 @@ void Executor::executeMemoryOperation(ExecutionState &state, bool isWrite,
 
         bindLocal(target, state, result);
 
-#ifdef SUPPORT_Z3
         // Update dependency
-        if (InterpolationOption::interpolation && target)
+        if (INTERPOLATION_ENABLED && target)
           interpTree->executeAbstractMemoryDependency(target->inst, result,
                                                       address);
-#endif
       }
 
       return;
@@ -3703,15 +3585,13 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
       uniqueName = name + "_" + llvm::utostr(++id);
     }
     const Array *array = arrayCache.CreateArray(uniqueName, mo->size);
-#ifdef SUPPORT_Z3
-    if (InterpolationOption::interpolation) {
+    if (INTERPOLATION_ENABLED) {
       // We create shadow array as existentially-quantified
       // variables for subsumption checking
       const Array *shadow =
           arrayCache.CreateArray(ShadowArray::getShadowName(uniqueName), mo->size);
       ShadowArray::addShadowArrayMap(array, shadow);
     }
-#endif
 
     bindObjectInState(state, mo, false, array);
     state.addSymbolic(mo, array);
@@ -3784,26 +3664,6 @@ void Executor::runFunctionAsMain(Function *f,
 				 int argc,
 				 char **argv,
 				 char **envp) {
-
-#ifdef SUPPORT_Z3
-  if (NoInterpolation ||
-#ifdef SUPPORT_STP
-      SelectSolver != SOLVER_Z3
-#else
-      0
-#endif
-      )
-    // We globally declare that we don't do interpolation
-    InterpolationOption::interpolation = false;
-  else {
-    if (OutputTree)
-      // We globally declare that we output the tree
-      InterpolationOption::outputTree = true;
-    if (InterpolationTimeStat)
-      // To display execution times of interpolation methods
-      InterpolationOption::timeStat = true;
-  }
-#endif /* SUPPORT_Z3 */
 
   std::vector<ref<Expr> > arguments;
 
@@ -3886,25 +3746,22 @@ void Executor::runFunctionAsMain(Function *f,
   processTree = new PTree(state);
   state->ptreeNode = processTree->root;
 
-#ifdef SUPPORT_Z3
-  if (InterpolationOption::interpolation) {
+  if (INTERPOLATION_ENABLED) {
     interpTree = new ITree(state);//added by Felicia
     state->itreeNode = interpTree->root;
     SearchTree::initialize(interpTree->root);
   }
-#endif
 
   run(*state);
   delete processTree;
   processTree = 0;
 
-#ifdef SUPPORT_Z3
-  if (InterpolationOption::interpolation) {
+  if (INTERPOLATION_ENABLED) {
     SearchTree::save(interpreterHandler->getOutputFilename("tree.dot"));
     SearchTree::deallocate();
 
     // Print interpolation time statistics
-    if (InterpolationOption::timeStat) {
+    if (InterpolationTimeStat) {
       SubsumptionTableEntry::dumpTimeStat();
       ITree::dumpTimeStat();
       ITreeNode::dumpTimeStat();
@@ -3913,7 +3770,6 @@ void Executor::runFunctionAsMain(Function *f,
     delete interpTree;
     interpTree = 0;
   }
-#endif
 
   // hack to clear memory objects
   delete memory;

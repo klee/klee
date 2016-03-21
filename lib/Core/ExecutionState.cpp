@@ -14,6 +14,7 @@
 #include "klee/Internal/Module/KInstruction.h"
 #include "klee/Internal/Module/KModule.h"
 
+#include "klee/CommandLine.h"
 #include "klee/Expr.h"
 
 #include "ITree.h"
@@ -123,7 +124,7 @@ ExecutionState::ExecutionState(const ExecutionState& state):
 
 #ifdef SUPPORT_Z3
 void ExecutionState::addITreeConstraint(ref<Expr> e, llvm::Instruction *instr) {
-  if (!InterpolationOption::interpolation)
+  if (!INTERPOLATION_ENABLED)
     return;
 
   llvm::BranchInst *binstr = llvm::dyn_cast<llvm::BranchInst>(instr);
@@ -164,10 +165,8 @@ void ExecutionState::popFrame(KInstruction *ki, ref<Expr> returnValue) {
     addressSpace.unbindObject(*it);
   stack.pop_back();
 
-#ifdef SUPPORT_Z3
-  if (InterpolationOption::interpolation && site && ki)
+  if (INTERPOLATION_ENABLED && site && ki)
     itreeNode->popAbstractDependencyFrame(site, ki->inst, returnValue);
-#endif
 }
 
 void ExecutionState::addSymbolic(const MemoryObject *mo, const Array *array) { 
