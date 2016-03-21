@@ -6,9 +6,10 @@
  */
 
 #include "ITree.h"
-#include "TimingSolver.h"
 #include "Dependency.h"
+#include "TimingSolver.h"
 
+#include <klee/CommandLine.h>
 #include <klee/Expr.h>
 #include <klee/Solver.h>
 #include <klee/util/ExprPPrinter.h>
@@ -16,15 +17,6 @@
 #include <vector>
 
 using namespace klee;
-
-// Interpolation is enabled by default
-bool InterpolationOption::interpolation = true;
-
-// We don't output the three by default
-bool InterpolationOption::outputTree = false;
-
-// We don't display interpolation methods running times by default
-bool InterpolationOption::timeStat = false;
 
 /**/
 
@@ -622,7 +614,7 @@ SearchTree::~SearchTree() {
 
 void SearchTree::addChildren(ITreeNode *parent, ITreeNode *falseChild,
                              ITreeNode *trueChild) {
-  if (!InterpolationOption::outputTree)
+  if (!OUTPUT_INTERPOLATION_TREE)
     return;
 
   assert(SearchTree::instance && "Search tree graph not initialized");
@@ -637,7 +629,7 @@ void SearchTree::addChildren(ITreeNode *parent, ITreeNode *falseChild,
 
 void SearchTree::setCurrentNode(ExecutionState &state,
                                 const uintptr_t programPoint) {
-  if (!InterpolationOption::outputTree)
+  if (!OUTPUT_INTERPOLATION_TREE)
     return;
 
   assert(SearchTree::instance && "Search tree graph not initialized");
@@ -659,7 +651,7 @@ void SearchTree::setCurrentNode(ExecutionState &state,
 
 void SearchTree::markAsSubsumed(ITreeNode *iTreeNode,
                                 SubsumptionTableEntry *entry) {
-  if (!InterpolationOption::outputTree)
+  if (!OUTPUT_INTERPOLATION_TREE)
     return;
 
   assert(SearchTree::instance && "Search tree graph not initialized");
@@ -673,7 +665,7 @@ void SearchTree::markAsSubsumed(ITreeNode *iTreeNode,
 void SearchTree::addPathCondition(ITreeNode *iTreeNode,
                                   PathCondition *pathCondition,
                                   ref<Expr> condition) {
-  if (!InterpolationOption::outputTree)
+  if (!OUTPUT_INTERPOLATION_TREE)
     return;
 
   assert(SearchTree::instance && "Search tree graph not initialized");
@@ -689,7 +681,7 @@ void SearchTree::addPathCondition(ITreeNode *iTreeNode,
 
 void SearchTree::addTableEntryMapping(ITreeNode *iTreeNode,
                                       SubsumptionTableEntry *entry) {
-  if (!InterpolationOption::outputTree)
+  if (!OUTPUT_INTERPOLATION_TREE)
     return;
 
   assert(SearchTree::instance && "Search tree graph not initialized");
@@ -699,7 +691,7 @@ void SearchTree::addTableEntryMapping(ITreeNode *iTreeNode,
 }
 
 void SearchTree::includeInInterpolant(PathCondition *pathCondition) {
-  if (!InterpolationOption::outputTree)
+  if (!OUTPUT_INTERPOLATION_TREE)
     return;
 
   assert(SearchTree::instance && "Search tree graph not initialized");
@@ -709,7 +701,7 @@ void SearchTree::includeInInterpolant(PathCondition *pathCondition) {
 
 /// @brief Save the graph
 void SearchTree::save(std::string dotFileName) {
-  if (!InterpolationOption::outputTree)
+  if (!OUTPUT_INTERPOLATION_TREE)
     return;
 
   assert(SearchTree::instance && "Search tree graph not initialized");

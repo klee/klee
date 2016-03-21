@@ -9,6 +9,7 @@
 #define ITREE_H_
 
 #include <klee/Expr.h>
+#include "klee/CommandLine.h"
 #include "klee/Config/Version.h"
 #include "klee/ExecutionState.h"
 
@@ -48,19 +49,6 @@ public:
   double get() { return (amount / (double)CLOCKS_PER_SEC); }
 };
 
-/// Options for global interpolation mechanism
-struct InterpolationOption {
-
-  /// @brief Global variable denoting whether interpolation is enabled or
-  /// otherwise
-  static bool interpolation;
-
-  /// @brief Output the tree tree.dot in .dot file format
-  static bool outputTree;
-
-  /// @brief To display running time statistics of interpolation methods
-  static bool timeStat;
-};
 
 /// Storage of search tree for displaying
 class SearchTree {
@@ -212,7 +200,7 @@ class SearchTree {
 
 public:
   static void initialize(ITreeNode *root) {
-    if (!InterpolationOption::outputTree)
+    if (!OUTPUT_INTERPOLATION_TREE)
       return;
 
     if (!instance)
@@ -221,7 +209,7 @@ public:
   }
 
   static void deallocate() {
-    if (!InterpolationOption::outputTree)
+    if (!OUTPUT_INTERPOLATION_TREE)
       return;
 
     if (!instance)

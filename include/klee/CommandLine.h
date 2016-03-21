@@ -9,6 +9,18 @@
 #include "llvm/Support/CommandLine.h"
 #include "klee/Config/config.h"
 
+#ifdef SUPPORT_Z3
+#ifdef SUPPORT_STP
+#define INTERPOLATION_ENABLED (SelectSolver == SOLVER_Z3 && !NoInterpolation)
+#else
+#define INTERPOLATION_ENABLED (!NoInterpolation)
+#endif
+#define OUTPUT_INTERPOLATION_TREE (INTERPOLATION_ENABLED &&OutputTree)
+#else
+#define INTERPOLATION_ENABLED false
+#define OUTPUT_INTERPOLATION_TREE false
+#endif
+
 namespace klee {
 
 extern llvm::cl::opt<bool> UseFastCexSolver;
@@ -52,6 +64,16 @@ enum SolverType
 };
 
 extern llvm::cl::opt<SolverType> SelectSolver;
+#endif
+
+// We should compile in this option even when SUPPORT_Z3
+// was undefined to avoid regression test failure.
+extern llvm::cl::opt<bool> NoInterpolation;
+
+#ifdef SUPPORT_Z3
+extern llvm::cl::opt<bool> OutputTree;
+
+extern llvm::cl::opt<bool> InterpolationTimeStat;
 #endif
 
 #ifdef SUPPORT_METASMT
