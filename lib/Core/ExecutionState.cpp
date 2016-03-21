@@ -122,7 +122,6 @@ ExecutionState::ExecutionState(const ExecutionState& state):
     symbolics[i].first->refCount++;
 }
 
-#ifdef SUPPORT_Z3
 void ExecutionState::addITreeConstraint(ref<Expr> e, llvm::Instruction *instr) {
   if (!INTERPOLATION_ENABLED)
     return;
@@ -137,7 +136,6 @@ void ExecutionState::addITreeConstraint(ref<Expr> e, llvm::Instruction *instr) {
   }
 
 }
-#endif
 
 ExecutionState *ExecutionState::branch() {
   depth++;
