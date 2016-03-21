@@ -505,10 +505,10 @@ public:
 
   void split(ExecutionState *leftData, ExecutionState *rightData);
 
-  std::map<ref<Expr>, PathConditionMarker *> makeMarkerMap() const;
+  std::map<Expr *, PathConditionMarker *> makeMarkerMap() const;
 
   static void
-  deleteMarkerMap(std::map<ref<Expr>, PathConditionMarker *> &markerMap);
+  deleteMarkerMap(std::map<Expr *, PathConditionMarker *> &markerMap);
 
   void executeBinaryDependency(llvm::Instruction *i, ref<Expr> valueExpr,
                                ref<Expr> tExpr, ref<Expr> fExpr);
