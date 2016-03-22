@@ -438,25 +438,65 @@ bool IndependentSolver::computeValue(const Query& query, ref<Expr> &result) {
   return solver->impl->computeValue(Query(tmp, query.expr), result);
 }
 
+bool canPerformConcreteAssignment(const std::vector<const Array*> &objects, const ref<Expr> e) {
+  // Get the arrays used in the constraint. If an array isn't in objects we
+  // don't have an assignment for it so skip it because can't evaluate to a
+  // constant. This means we might not be checking every constraint which is
+  // not ideal but the alternative would require getting an assignment for
+  // all arrays which is wasteful given that the client didn't ask for them
+  IndependentElementSet ieSet(e);
+  for (std::vector<const Array *>::const_iterator ai = objects.begin(),
+                                                  ae = objects.end();
+       ai != ae; ++ai) {
+    ieSet.wholeObjects.erase(*ai);
+    ieSet.elements.erase(*ai);
+  }
+
+  if (ieSet.wholeObjects.size() > 0 || ieSet.elements.size() > 0) {
+    // There are arrays used in ``e`` that aren't in objects,
+    // therefore we can't perform a complete assignment
+    return false;
+  }
+  return true;
+}
 
 // Helper function used only for assertions to make sure point created
-// during computeInitialValues is in fact correct.
+// during computeInitialValues is in fact correct. This function is
+// a "best effort" check because if the query uses an Array that an
+// assignment is not given for then that Query cannot be fully evaluated so
+// this function only checks that all expressions that can be fully
+// assigned to evaluate to true.
 bool assertCreatedPointEvaluatesToTrue(const Query &query,
                                        const std::vector<const Array*> &objects,
                                        std::vector< std::vector<unsigned char> > &values){
-  Assignment assign = Assignment(objects, values);
+  // _allowFreeValues is set to true so that if there are missing bytes in the assigment
+  // we will end up with a non ConstantExpr after evaluating the assignment and fail
+  Assignment assign = Assignment(objects, values, /*_allowFreeValues=*/true);
   for(ConstraintManager::constraint_iterator it = query.constraints.begin();
       it != query.constraints.end(); ++it){
+    ref<Expr> constraint = *it;
+
+    if (!canPerformConcreteAssignment(objects, constraint)) {
+      // We have to skip checking assigning to this constraint
+      continue;
+    }
+
     ref<Expr> ret = assign.evaluate(*it);
-    if(! isa<ConstantExpr>(ret) || ! cast<ConstantExpr>(ret)->isTrue()){
+
+    assert(isa<ConstantExpr>(ret) && "Could not use assignment to evaluate constraint");
+    ref<ConstantExpr> evaluatedConstraint = dyn_cast<ConstantExpr>(ret);
+    if(evaluatedConstraint->isFalse()){
       return false;
     }
   }
   ref<Expr> neg = Expr::createIsZero(query.expr);
-  ref<Expr> q = assign.evaluate(neg);
-
-  assert(isa<ConstantExpr>(q) && "assignment evaluation did not result in constant");
-  return cast<ConstantExpr>(q)->isTrue();
+  if (canPerformConcreteAssignment(objects, neg)) {
+    ref<Expr> q = assign.evaluate(neg);
+    assert(isa<ConstantExpr>(q) && "assignment evaluation did not result in constant");
+    return cast<ConstantExpr>(q)->isTrue();
+  }
+  // Can't assign to query expression
+  return true;
 }
 
 bool IndependentSolver::computeInitialValues(const Query& query,
