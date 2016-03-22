@@ -1609,58 +1609,108 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 #endif
       transferToBasicBlock(si->getSuccessor(index), si->getParent(), state);
     } else {
-      std::map<BasicBlock*, ref<Expr> > targets;
-      ref<Expr> isDefault = ConstantExpr::alloc(1, Expr::Bool);
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 1)      
-      for (SwitchInst::CaseIt i = si->case_begin(), e = si->case_end();
-           i != e; ++i) {
+      // Handle possible different branch targets
+
+      // We have the following assumptions:
+      // - each case value is mutual exclusive to all other values including the
+      //   default value
+      // - order of case branches is based on the order of the expressions of
+      //   the scase values, still default is handled last
+      std::vector<BasicBlock *> bbOrder;
+      std::map<BasicBlock *, ref<Expr> > branchTargets;
+
+      std::map<ref<Expr>, BasicBlock *> expressionOrder;
+
+      // Iterate through all non-default cases and order them by expressions
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 1)
+      for (SwitchInst::CaseIt i = si->case_begin(), e = si->case_end(); i != e;
+           ++i) {
         ref<Expr> value = evalConstant(i.getCaseValue());
 #else
-      for (unsigned i=1, cases = si->getNumCases(); i<cases; ++i) {
+      for (unsigned i = 1, cases = si->getNumCases(); i < cases; ++i) {
         ref<Expr> value = evalConstant(si->getCaseValue(i));
 #endif
-        ref<Expr> match = EqExpr::create(cond, value);
-        isDefault = AndExpr::create(isDefault, Expr::createIsZero(match));
+
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 1)
+        BasicBlock *caseSuccessor = i.getCaseSuccessor();
+#else
+        BasicBlock *caseSuccessor = si->getSuccessor(i);
+#endif
+        expressionOrder.insert(std::make_pair(value, caseSuccessor));
+      }
+
+      // Track default branch values
+      ref<Expr> defaultValue = ConstantExpr::alloc(1, Expr::Bool);
+
+      // iterate through all non-default cases but in order of the expressions
+      for (std::map<ref<Expr>, BasicBlock *>::iterator
+               it = expressionOrder.begin(),
+               itE = expressionOrder.end();
+           it != itE; ++it) {
+        ref<Expr> match = EqExpr::create(cond, it->first);
+
+        // Make sure that the default value does not contain this target's value
+        defaultValue = AndExpr::create(defaultValue, Expr::createIsZero(match));
+
+        // Check if control flow could take this case
         bool result;
         bool success = solver->mayBeTrue(state, match, result);
         assert(success && "FIXME: Unhandled solver failure");
         (void) success;
         if (result) {
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 1)
-          BasicBlock *caseSuccessor = i.getCaseSuccessor();
-#else
-          BasicBlock *caseSuccessor = si->getSuccessor(i);
-#endif
-          std::map<BasicBlock*, ref<Expr> >::iterator it =
-            targets.insert(std::make_pair(caseSuccessor,
-                           ConstantExpr::alloc(0, Expr::Bool))).first;
+          BasicBlock *caseSuccessor = it->second;
 
-          it->second = OrExpr::create(match, it->second);
+          // Handle the case that a basic block might be the target of multiple
+          // switch cases.
+          // Currently we generate an expression containing all switch-case
+          // values for the same target basic block. We spare us forking too
+          // many times but we generate more complex condition expressions
+          // TODO Add option to allow to choose between those behaviors
+          std::pair<std::map<BasicBlock *, ref<Expr> >::iterator, bool> res =
+              branchTargets.insert(std::make_pair(
+                  caseSuccessor, ConstantExpr::alloc(0, Expr::Bool)));
+
+          res.first->second = OrExpr::create(match, res.first->second);
+
+          // Only add basic blocks which have not been target of a branch yet
+          if (res.second) {
+            bbOrder.push_back(caseSuccessor);
+          }
         }
       }
+
+      // Check if control could take the default case
       bool res;
-      bool success = solver->mayBeTrue(state, isDefault, res);
+      bool success = solver->mayBeTrue(state, defaultValue, res);
       assert(success && "FIXME: Unhandled solver failure");
       (void) success;
-      if (res)
-        targets.insert(std::make_pair(si->getDefaultDest(), isDefault));
-      
+      if (res) {
+        std::pair<std::map<BasicBlock *, ref<Expr> >::iterator, bool> ret =
+            branchTargets.insert(
+                std::make_pair(si->getDefaultDest(), defaultValue));
+        if (ret.second) {
+          bbOrder.push_back(si->getDefaultDest());
+        }
+      }
+
+      // Fork the current state with each state having one of the possible
+      // successors of this switch
       std::vector< ref<Expr> > conditions;
-      for (std::map<BasicBlock*, ref<Expr> >::iterator it = 
-             targets.begin(), ie = targets.end();
-           it != ie; ++it)
-        conditions.push_back(it->second);
-      
+      for (std::vector<BasicBlock *>::iterator it = bbOrder.begin(),
+                                               ie = bbOrder.end();
+           it != ie; ++it) {
+        conditions.push_back(branchTargets[*it]);
+      }
       std::vector<ExecutionState*> branches;
       branch(state, conditions, branches);
-        
+
       std::vector<ExecutionState*>::iterator bit = branches.begin();
-      for (std::map<BasicBlock*, ref<Expr> >::iterator it = 
-             targets.begin(), ie = targets.end();
+      for (std::vector<BasicBlock *>::iterator it = bbOrder.begin(),
+                                               ie = bbOrder.end();
            it != ie; ++it) {
         ExecutionState *es = *bit;
         if (es)
-          transferToBasicBlock(it->first, bb, *es);
+          transferToBasicBlock(*it, bb, *es);
         ++bit;
       }
     }
