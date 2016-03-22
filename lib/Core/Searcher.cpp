@@ -566,7 +566,7 @@ void IterativeDeepeningTimeSearcher::update(ExecutionState *current,
       ExecutionState *es = *it;
       std::set<ExecutionState*>::const_iterator it2 = pausedStates.find(es);
       if (it2 != pausedStates.end()) {
-        pausedStates.erase(it);
+        pausedStates.erase(it2);
         alt.erase(alt.find(es));
       }
     }    
