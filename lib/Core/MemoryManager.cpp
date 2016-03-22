@@ -32,13 +32,25 @@ MemoryManager::~MemoryManager() {
   }
 }
 
-MemoryObject *MemoryManager::allocate(uint64_t size, bool isLocal, 
+MemoryObject *MemoryManager::allocate(uint64_t size, bool isLocal,
                                       bool isGlobal,
-                                      const llvm::Value *allocSite) {
+                                      const llvm::Value *allocSite,
+                                      size_t alignment) {
   if (size>10*1024*1024)
-    klee_warning_once(0, "Large alloc: %u bytes.  KLEE may run out of memory.", (unsigned) size);
-  
-  uint64_t address = (uint64_t) (unsigned long) malloc((unsigned) size);
+    klee_warning_once(0, "Large alloc: %lu bytes.  KLEE may run out of memory.",
+                      size);
+
+  uint64_t address = 0;
+    // Use malloc for the standard case
+    if (alignment <= 8)
+      address = (uint64_t)malloc(size);
+    else {
+      int res = posix_memalign((void **)&address, alignment, size);
+      if (res < 0) {
+        klee_warning("Allocating aligned memory failed.");
+        address = 0;
+      }
+    }
   if (!address)
     return 0;
   

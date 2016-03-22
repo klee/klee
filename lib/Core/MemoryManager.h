@@ -31,8 +31,12 @@ namespace klee {
     MemoryManager(ArrayCache *arrayCache) : arrayCache(arrayCache) {}
     ~MemoryManager();
 
+    /**
+     * Returns memory object which contains a handle to real virtual process
+     * memory.
+     */
     MemoryObject *allocate(uint64_t size, bool isLocal, bool isGlobal,
-                           const llvm::Value *allocSite);
+                           const llvm::Value *allocSite, size_t alignment = 8);
     MemoryObject *allocateFixed(uint64_t address, uint64_t size,
                                 const llvm::Value *allocSite);
     void deallocate(const MemoryObject *mo);
