@@ -27,8 +27,12 @@ namespace klee {
     objects_ty objects;
     ArrayCache *const arrayCache;
 
+    char *deterministicSpace;
+    char *nextFreeSlot;
+    size_t spaceSize;
+
   public:
-    MemoryManager(ArrayCache *arrayCache) : arrayCache(arrayCache) {}
+    MemoryManager(ArrayCache *arrayCache);
     ~MemoryManager();
 
     /**
@@ -42,6 +46,11 @@ namespace klee {
     void deallocate(const MemoryObject *mo);
     void markFreed(MemoryObject *mo);
     ArrayCache *getArrayCache() const { return arrayCache; }
+
+    /*
+     * Returns the size used by deterministic allocation in bytes
+     */
+    size_t getUsedDeterministicSize();
   };
 
 } // End klee namespace
