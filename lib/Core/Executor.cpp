@@ -607,7 +607,7 @@ void Executor::branch(ExecutionState &state,
     for (unsigned i=1; i<N; ++i) {
       ExecutionState *es = result[theRNG.getInt32() % i];
       ExecutionState *ns = es->branch();
-      addedStates.insert(ns);
+      addedStates.push_back(ns);
       result.push_back(ns);
       es->ptreeNode->data = 0;
       std::pair<PTree::Node*,PTree::Node*> res = 
@@ -825,7 +825,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     ++stats::forks;
 
     falseState = trueState->branch();
-    addedStates.insert(falseState);
+    addedStates.push_back(falseState);
 
     if (RandomizeFork && theRNG.getBool())
       std::swap(trueState, falseState);
@@ -1149,8 +1149,10 @@ void Executor::executeCall(ExecutionState &state,
       // ExecutionState::varargs
     case Intrinsic::vastart:  {
       StackFrame &sf = state.stack.back();
-      assert(sf.varargs && 
-             "vastart called in function with no vararg object");
+
+      // varargs can be zero if no varargs were provided
+      if (!sf.varargs)
+        return;
 
       // FIXME: This is really specific to the architecture, not the pointer
       // size. This happens to work fir x86-32 and x86-64, however.
@@ -1233,9 +1235,10 @@ void Executor::executeCall(ExecutionState &state,
                               "user.err");
         return;
       }
-            
+
       StackFrame &sf = state.stack.back();
       unsigned size = 0;
+      bool requires16ByteAlignment = false;
       for (unsigned i = funcArgs; i < callingArgs; i++) {
         // FIXME: This is really specific to the architecture, not the pointer
         // size. This happens to work fir x86-32 and x86-64, however.
@@ -1249,40 +1252,46 @@ void Executor::executeCall(ExecutionState &state,
           // Alignment requirements for scalar types is the same as their size
           if (argWidth > Expr::Int64) {
              size = llvm::RoundUpToAlignment(size, 16);
+             requires16ByteAlignment = true;
           }
           size += llvm::RoundUpToAlignment(argWidth, WordSize) / 8;
         }
       }
 
-      MemoryObject *mo = sf.varargs = memory->allocate(size, true, false, 
-                                                       state.prevPC->inst);
-      if (!mo) {
+      MemoryObject *mo = sf.varargs =
+          memory->allocate(size, true, false, state.prevPC->inst,
+                           (requires16ByteAlignment ? 16 : 8));
+      if (!mo && size) {
         terminateStateOnExecError(state, "out of memory (varargs)");
         return;
       }
 
-      if ((WordSize == Expr::Int64) && (mo->address & 15)) {
-        // Both 64bit Linux/Glibc and 64bit MacOSX should align to 16 bytes.
-        klee_warning_once(0, "While allocating varargs: malloc did not align to 16 bytes.");
-      }
+      if (mo) {
+        if ((WordSize == Expr::Int64) && (mo->address & 15) &&
+            requires16ByteAlignment) {
+          // Both 64bit Linux/Glibc and 64bit MacOSX should align to 16 bytes.
+          klee_warning_once(
+              0, "While allocating varargs: malloc did not align to 16 bytes.");
+        }
 
-      ObjectState *os = bindObjectInState(state, mo, true);
-      unsigned offset = 0;
-      for (unsigned i = funcArgs; i < callingArgs; i++) {
-        // FIXME: This is really specific to the architecture, not the pointer
-        // size. This happens to work fir x86-32 and x86-64, however.
-        if (WordSize == Expr::Int32) {
-          os->write(offset, arguments[i]);
-          offset += Expr::getMinBytesForWidth(arguments[i]->getWidth());
-        } else {
-          assert(WordSize == Expr::Int64 && "Unknown word size!");
+        ObjectState *os = bindObjectInState(state, mo, true);
+        unsigned offset = 0;
+        for (unsigned i = funcArgs; i < callingArgs; i++) {
+          // FIXME: This is really specific to the architecture, not the pointer
+          // size. This happens to work fir x86-32 and x86-64, however.
+          if (WordSize == Expr::Int32) {
+            os->write(offset, arguments[i]);
+            offset += Expr::getMinBytesForWidth(arguments[i]->getWidth());
+          } else {
+            assert(WordSize == Expr::Int64 && "Unknown word size!");
 
-          Expr::Width argWidth = arguments[i]->getWidth();
-          if (argWidth > Expr::Int64) {
-             offset = llvm::RoundUpToAlignment(offset, 16);
+            Expr::Width argWidth = arguments[i]->getWidth();
+            if (argWidth > Expr::Int64) {
+              offset = llvm::RoundUpToAlignment(offset, 16);
+            }
+            os->write(offset, arguments[i]);
+            offset += llvm::RoundUpToAlignment(argWidth, WordSize) / 8;
           }
-          os->write(offset, arguments[i]);
-          offset += llvm::RoundUpToAlignment(argWidth, WordSize) / 8;
         }
       }
     }
@@ -1522,7 +1531,18 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 #endif
       transferToBasicBlock(si->getSuccessor(index), si->getParent(), state);
     } else {
+      // Handle possible different branch targets
+
+      // We have following assumptions:
+      // - each value is mutual exclusive to all other values including the
+      // default
+      // - those values are ordered by the switch case order, default comes last
+      std::vector<BasicBlock *> bbOrder;
       std::map<BasicBlock*, ref<Expr> > targets;
+
+      ref<Expr> defaultValue = ConstantExpr::alloc(1, Expr::Bool);
+
+      // iterate through all non-default cases
       ref<Expr> isDefault = ConstantExpr::alloc(1, Expr::Bool);
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 1)      
       for (SwitchInst::CaseIt i = si->case_begin(), e = si->case_end();
@@ -1533,7 +1553,11 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         ref<Expr> value = evalConstant(si->getCaseValue(i));
 #endif
         ref<Expr> match = EqExpr::create(cond, value);
-        isDefault = AndExpr::create(isDefault, Expr::createIsZero(match));
+
+        // default value cannot contain this target
+        defaultValue = AndExpr::create(defaultValue, Expr::createIsZero(match));
+
+        // check if we could reach this value
         bool result;
         bool success = solver->mayBeTrue(state, match, result);
         assert(success && "FIXME: Unhandled solver failure");
@@ -1544,36 +1568,48 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 #else
           BasicBlock *caseSuccessor = si->getSuccessor(i);
 #endif
-          std::map<BasicBlock*, ref<Expr> >::iterator it =
-            targets.insert(std::make_pair(caseSuccessor,
-                           ConstantExpr::alloc(0, Expr::Bool))).first;
 
-          it->second = OrExpr::create(match, it->second);
+          // TODO add conditional
+          std::pair<std::map<BasicBlock *, ref<Expr> >::iterator, bool> res =
+              targets.insert(std::make_pair(
+                  caseSuccessor, ConstantExpr::alloc(0, Expr::Bool)));
+
+          res.first->second = OrExpr::create(match, res.first->second);
+          if (res.second) {
+            bbOrder.push_back(caseSuccessor);
+          }
         }
       }
+
+      // Check the default value
       bool res;
-      bool success = solver->mayBeTrue(state, isDefault, res);
+      bool success = solver->mayBeTrue(state, defaultValue, res);
       assert(success && "FIXME: Unhandled solver failure");
       (void) success;
-      if (res)
-        targets.insert(std::make_pair(si->getDefaultDest(), isDefault));
-      
+      if (res) {
+        std::pair<std::map<BasicBlock *, ref<Expr> >::iterator, bool> ret =
+            targets.insert(std::make_pair(si->getDefaultDest(), defaultValue));
+        if (ret.second) {
+          bbOrder.push_back(si->getDefaultDest());
+        }
+      }
+
       std::vector< ref<Expr> > conditions;
-      for (std::map<BasicBlock*, ref<Expr> >::iterator it = 
-             targets.begin(), ie = targets.end();
-           it != ie; ++it)
-        conditions.push_back(it->second);
-      
+      for (std::vector<BasicBlock *>::iterator it = bbOrder.begin(),
+                                               ie = bbOrder.end();
+           it != ie; ++it) {
+        conditions.push_back(targets[*it]);
+      }
       std::vector<ExecutionState*> branches;
       branch(state, conditions, branches);
         
       std::vector<ExecutionState*>::iterator bit = branches.begin();
-      for (std::map<BasicBlock*, ref<Expr> >::iterator it = 
-             targets.begin(), ie = targets.end();
+      for (std::vector<BasicBlock *>::iterator it = bbOrder.begin(),
+                                               ie = bbOrder.end();
            it != ie; ++it) {
         ExecutionState *es = *bit;
         if (es)
-          transferToBasicBlock(it->first, bb, *es);
+          transferToBasicBlock(*it, bb, *es);
         ++bit;
       }
     }
@@ -2381,9 +2417,9 @@ void Executor::updateStates(ExecutionState *current) {
   
   states.insert(addedStates.begin(), addedStates.end());
   addedStates.clear();
-  
-  for (std::set<ExecutionState*>::iterator
-         it = removedStates.begin(), ie = removedStates.end();
+
+  for (std::vector<ExecutionState *>::iterator it = removedStates.begin(),
+                                               ie = removedStates.end();
        it != ie; ++it) {
     ExecutionState *es = *it;
     std::set<ExecutionState*>::iterator it2 = states.find(es);
@@ -2468,7 +2504,9 @@ void Executor::checkMemoryUsage() {
     // We need to avoid calling GetTotalMallocUsage() often because it
     // is O(elts on freelist). This is really bad since we start
     // to pummel the freelist once we hit the memory cap.
-    unsigned mbs = util::GetTotalMallocUsage() >> 20;
+    unsigned mbs = (util::GetTotalMallocUsage() >> 20) +
+                   (memory->getUsedDeterministicSize() >> 20);
+
     if (mbs > MaxMemory) {
       if (mbs > MaxMemory + 100) {
         // just guess at how many to kill
@@ -2494,6 +2532,20 @@ void Executor::checkMemoryUsage() {
   }
 }
 
+void Executor::doDumpStates() {
+  if (DumpStatesOnHalt && !states.empty()) {
+    llvm::errs() << "KLEE: halting execution, dumping remaining states\n";
+    for (std::set<ExecutionState *>::iterator it = states.begin(),
+                                              ie = states.end();
+         it != ie; ++it) {
+      ExecutionState &state = **it;
+      stepInstruction(state); // keep stats rolling
+      terminateStateEarly(state, "Execution halting.");
+    }
+    updateStates(0);
+  }
+}
+
 void Executor::run(ExecutionState &initialState) {
   bindModuleConstants();
 
@@ -2514,7 +2566,10 @@ void Executor::run(ExecutionState &initialState) {
     double lastTime, startTime = lastTime = util::getWallTime();
     ExecutionState *lastState = 0;
     while (!seedMap.empty()) {
-      if (haltExecution) goto dump;
+      if (haltExecution) {
+        doDumpStates();
+        return;
+      }
 
       std::map<ExecutionState*, std::vector<SeedInfo> >::iterator it = 
         seedMap.upper_bound(lastState);
@@ -2563,13 +2618,16 @@ void Executor::run(ExecutionState &initialState) {
       (*it)->weight = 1.;
     }
 
-    if (OnlySeed)
-      goto dump;
+    if (OnlySeed) {
+      doDumpStates();
+      return;
+    }
   }
 
   searcher = constructUserSearcher(*this);
 
-  searcher->update(0, states, std::set<ExecutionState*>());
+  std::vector<ExecutionState *> newStates(states.begin(), states.end());
+  searcher->update(0, newStates, std::vector<ExecutionState *>());
 
   while (!states.empty() && !haltExecution) {
     ExecutionState &state = searcher->selectState();
@@ -2586,19 +2644,8 @@ void Executor::run(ExecutionState &initialState) {
 
   delete searcher;
   searcher = 0;
-  
- dump:
-  if (DumpStatesOnHalt && !states.empty()) {
-    llvm::errs() << "KLEE: halting execution, dumping remaining states\n";
-    for (std::set<ExecutionState*>::iterator
-           it = states.begin(), ie = states.end();
-         it != ie; ++it) {
-      ExecutionState &state = **it;
-      stepInstruction(state); // keep stats rolling
-      terminateStateEarly(state, "Execution halting.");
-    }
-    updateStates(0);
-  }
+
+  doDumpStates();
 }
 
 std::string Executor::getAddressInfo(ExecutionState &state, 
@@ -2659,11 +2706,12 @@ void Executor::terminateState(ExecutionState &state) {
 
   interpreterHandler->incPathsExplored();
 
-  std::set<ExecutionState*>::iterator it = addedStates.find(&state);
+  std::vector<ExecutionState *>::iterator it =
+      std::find(addedStates.begin(), addedStates.end(), &state);
   if (it==addedStates.end()) {
     state.pc = state.prevPC;
 
-    removedStates.insert(&state);
+    removedStates.push_back(&state);
   } else {
     // never reached searcher, just delete immediately
     std::map< ExecutionState*, std::vector<SeedInfo> >::iterator it3 = 
@@ -3327,7 +3375,10 @@ void Executor::runFunctionAsMain(Function *f,
     if (++ai!=ae) {
       argvMO = memory->allocate((argc+1+envc+1+1) * NumPtrBytes, false, true,
                                 f->begin()->begin());
-      
+
+      if (!argvMO)
+        klee_error("Could not allocate memory for function arguments");
+
       arguments.push_back(argvMO->getBaseExpr());
 
       if (++ai!=ae) {
@@ -3367,6 +3418,8 @@ void Executor::runFunctionAsMain(Function *f,
         int j, len = strlen(s);
         
         MemoryObject *arg = memory->allocate(len+1, false, true, state->pc->inst);
+        if (!arg)
+          klee_error("Could not allocate memory for function arguments");
         ObjectState *os = bindObjectInState(*state, arg, false);
         for (j=0; j<len+1; j++)
           os->write8(j, s[j]);

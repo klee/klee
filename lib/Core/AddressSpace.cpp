@@ -58,6 +58,8 @@ bool AddressSpace::resolveOne(const ref<ConstantExpr> &addr,
 
   if (const MemoryMap::value_type *res = objects.lookup_previous(&hack)) {
     const MemoryObject *mo = res->first;
+    // malloc(0) can return NULL or another valid address, we have to check for
+    // that
     if ((mo->size==0 && address==mo->address) ||
         (address - mo->address < mo->size)) {
       result = *res;

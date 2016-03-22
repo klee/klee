@@ -121,12 +121,12 @@ private:
   /// instructions step. 
   /// \invariant \ref addedStates is a subset of \ref states. 
   /// \invariant \ref addedStates and \ref removedStates are disjoint.
-  std::set<ExecutionState*> addedStates;
+  std::vector<ExecutionState *> addedStates;
   /// Used to track states that have been removed during the current
   /// instructions step. 
   /// \invariant \ref removedStates is a subset of \ref states. 
   /// \invariant \ref addedStates and \ref removedStates are disjoint.
-  std::set<ExecutionState*> removedStates;
+  std::vector<ExecutionState *> removedStates;
 
   /// When non-empty the Executor is running in "seed" mode. The
   /// states in this map will be executed in an arbitrary order
@@ -400,6 +400,7 @@ private:
   void processTimers(ExecutionState *current,
                      double maxInstTime);
   void checkMemoryUsage();
+  void doDumpStates();
 
 public:
   Executor(const InterpreterOptions &opts, InterpreterHandler *ie);

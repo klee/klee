@@ -457,6 +457,14 @@ void ExprPPrinter::printConstraints(llvm::raw_ostream &os,
   printQuery(os, constraints, ConstantExpr::alloc(false, Expr::Bool));
 }
 
+namespace {
+
+struct ArrayPtrsByName {
+  bool operator()(const Array *a1, const Array *a2) const {
+    return a1->name < a2->name;
+  }
+};
+}
 
 void ExprPPrinter::printQuery(llvm::raw_ostream &os,
                               const ConstraintManager &constraints,
@@ -482,13 +490,15 @@ void ExprPPrinter::printQuery(llvm::raw_ostream &os,
   if (printArrayDecls) {
     for (const Array * const* it = evalArraysBegin; it != evalArraysEnd; ++it)
       p.usedArrays.insert(*it);
-    for (std::set<const Array*>::iterator it = p.usedArrays.begin(), 
-           ie = p.usedArrays.end(); it != ie; ++it) {
+    std::vector<const Array *> sortedArray(p.usedArrays.begin(),
+                                           p.usedArrays.end());
+    std::sort(sortedArray.begin(), sortedArray.end(), ArrayPtrsByName());
+    for (std::vector<const Array *>::iterator it = sortedArray.begin(),
+                                              ie = sortedArray.end();
+         it != ie; ++it) {
       const Array *A = *it;
-      // FIXME: Print correct name, domain, and range.
-      PC << "array " << A->name
-         << "[" << A->size << "]"
-         << " : " << "w32" << " -> " << "w8" << " = ";
+      PC << "array " << A->name << "[" << A->size << "]"
+         << " : w" << A->domain << " -> w" << A->range << " = ";
       if (A->isSymbolicArray()) {
         PC << "symbolic";
       } else {
