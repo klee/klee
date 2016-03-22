@@ -1,5 +1,6 @@
 /* -*- mode: c++; c-basic-offset: 2; -*- */
 
+#include "klee/CommandLine.h"
 #include "klee/ExecutionState.h"
 #include "klee/Expr.h"
 #include "klee/Interpreter.h"
@@ -1586,8 +1587,9 @@ int main(int argc, char **argv, char **envp) {
         << handler->getNumPathsExplored() << ", among which\n";
   stats << "KLEE: done:     early-terminating paths (instruction time limit, solver timeout, max-depth reached) = "
         << handler->getEarlyTermination() << "\n";
-  stats << "KLEE: done:     subsumed paths = "
-        << handler->getSubsumptionTermination() << "\n";
+  if (INTERPOLATION_ENABLED)
+    stats << "KLEE: done:     subsumed paths = "
+          << handler->getSubsumptionTermination() << "\n";
   stats << "KLEE: done:     error paths = "
         << handler->getErrorTermination() << "\n";
   stats << "KLEE: done:     program exit paths = "
@@ -1596,8 +1598,9 @@ int main(int argc, char **argv, char **envp) {
         << handler->getNumTestCases() << ", among which\n";
   stats << "KLEE: done:     early-terminating tests (instruction time limit, solver timeout, max-depth reached) = "
         << handler->getEarlyTerminationTest() << "\n";
-  stats << "KLEE: done:     subsumed tests = "
-        << handler->getSubsumptionTerminationTest() << "\n";
+  if (INTERPOLATION_ENABLED)
+    stats << "KLEE: done:     subsumed tests = "
+          << handler->getSubsumptionTerminationTest() << "\n";
   stats << "KLEE: done:     error tests = "
         << handler->getErrorTerminationTest() << "\n";
   stats << "KLEE: done:     program exit tests = "

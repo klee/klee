@@ -1481,25 +1481,12 @@ void SubsumptionTableEntry::print(llvm::raw_ostream &stream) const {
   }
 }
 
-void SubsumptionTableEntry::printTimeStat(llvm::raw_ostream &stream) {
-  stream << "\nKLEE: done: SubsumptionTableEntry timings (ms):\n";
-  stream
-      << "KLEE: done:     Time for actual solver calls in subsumption check = "
-      << actualSolverCallTimer.get() * 1000 << "\n";
+void SubsumptionTableEntry::printStat(llvm::raw_ostream &stream) {
+  stream << "KLEE: done:     Time for actual solver calls in subsumption check "
+            "(ms) = " << actualSolverCallTimer.get() * 1000 << "\n";
   stream << "KLEE: done:     Number of solver calls for subsumption check "
             "(failed) = " << checkSolverCount << " (" << checkSolverFailureCount
          << ")\n";
-}
-
-void SubsumptionTableEntry::dumpTimeStat() {
-  bool useColors = llvm::errs().is_displayed();
-  if (useColors)
-    llvm::errs().changeColor(llvm::raw_ostream::GREEN,
-                             /*bold=*/true,
-                             /*bg=*/false);
-  printTimeStat(llvm::errs());
-  if (useColors)
-    llvm::errs().resetColor();
 }
 
 /**/
@@ -1514,7 +1501,6 @@ StatTimer ITree::executeAbstractMemoryDependencyTimer;
 StatTimer ITree::executeAbstractDependencyTimer;
 
 void ITree::printTimeStat(llvm::raw_ostream &stream) {
-  stream << "\nKLEE: done: ITree method execution times (ms):\n";
   stream << "KLEE: done:     setCurrentINode = " << setCurrentINodeTimer.get() *
                                                         1000 << "\n";
   stream << "KLEE: done:     remove = " << removeTimer.get() * 1000 << "\n";
@@ -1531,13 +1517,34 @@ void ITree::printTimeStat(llvm::raw_ostream &stream) {
          << executeAbstractDependencyTimer.get() * 1000 << "\n";
 }
 
-void ITree::dumpTimeStat() {
+void ITree::printTableStat(llvm::raw_ostream &stream) {
+  double programPointNumber = 0.0, entryNumber = 0.0;
+  for (std::map<uintptr_t, std::vector<SubsumptionTableEntry *> >::iterator
+           it = subsumptionTable.begin(),
+           itEnd = subsumptionTable.end();
+       it != itEnd; ++it) {
+    if (!it->second.empty()) {
+      entryNumber += it->second.size();
+      ++programPointNumber;
+    }
+  }
+  stream << "KLEE: done:     Table entry per checkpoint instruction = "
+         << (entryNumber / programPointNumber) << "\n";
+  SubsumptionTableEntry::printStat(stream);
+}
+
+void ITree::dumpInterpolationStat() {
   bool useColors = llvm::errs().is_displayed();
   if (useColors)
     llvm::errs().changeColor(llvm::raw_ostream::GREEN,
                              /*bold=*/true,
                              /*bg=*/false);
+  llvm::errs() << "\nKLEE: done: Subsumption statistics\n";
+  printTableStat(llvm::errs());
+  llvm::errs() << "KLEE: done: ITree method execution times (ms):\n";
   printTimeStat(llvm::errs());
+  llvm::errs() << "KLEE: done: ITreeNode method execution times (ms):\n";
+  ITreeNode::printTimeStat(llvm::errs());
   if (useColors)
     llvm::errs().resetColor();
 }
@@ -1786,7 +1793,6 @@ StatTimer ITreeNode::getCompositeInterpolantCoreExpressionsTimer;
 StatTimer ITreeNode::computeInterpolantAllocationsTimer;
 
 void ITreeNode::printTimeStat(llvm::raw_ostream &stream) {
-  stream << "\nKLEE: done: ITreeNode method execution times (ms):\n";
   stream << "KLEE: done:     getInterpolant = " << getInterpolantTimer.get() *
                                                        1000 << "\n";
   stream << "KLEE: done:     addConstraintTime = " << addConstraintTimer.get() *
@@ -1816,17 +1822,6 @@ void ITreeNode::printTimeStat(llvm::raw_ostream &stream) {
          << getCompositeInterpolantCoreExpressionsTimer.get() * 1000 << "\n";
   stream << "KLEE: done:     computeInterpolantAllocations = "
          << computeInterpolantAllocationsTimer.get() * 1000 << "\n";
-}
-
-void ITreeNode::dumpTimeStat() {
-  bool useColors = llvm::errs().is_displayed();
-  if (useColors)
-    llvm::errs().changeColor(llvm::raw_ostream::GREEN,
-                             /*bold=*/true,
-                             /*bg=*/false);
-  printTimeStat(llvm::errs());
-  if (useColors)
-    llvm::errs().resetColor();
 }
 
 ITreeNode::ITreeNode(ITreeNode *_parent)

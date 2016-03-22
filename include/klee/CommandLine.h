@@ -73,7 +73,7 @@ extern llvm::cl::opt<bool> NoInterpolation;
 #ifdef SUPPORT_Z3
 extern llvm::cl::opt<bool> OutputTree;
 
-extern llvm::cl::opt<bool> InterpolationTimeStat;
+extern llvm::cl::opt<bool> InterpolationStat;
 #endif
 
 #ifdef SUPPORT_METASMT

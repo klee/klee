@@ -305,6 +305,8 @@ public:
 };
 
 class SubsumptionTableEntry {
+  friend class ITree;
+
   /// @brief Statistics for actual solver call time in subsumption check
   static StatTimer actualSolverCallTimer;
 
@@ -355,7 +357,7 @@ class SubsumptionTableEntry {
   }
 
   /// @brief for printing method running time statistics
-  static void printTimeStat(llvm::raw_ostream &stream);
+  static void printStat(llvm::raw_ostream &stream);
 
 public:
   const uintptr_t nodeId;
@@ -370,7 +372,6 @@ public:
 
   void print(llvm::raw_ostream &stream) const;
 
-  static void dumpTimeStat();
 };
 
 class ITree {
@@ -393,8 +394,11 @@ class ITree {
 
   void printNode(llvm::raw_ostream &stream, ITreeNode *n, std::string edges);
 
-  /// @brief for printing method running time statistics
+  /// @brief Displays method running time statistics
   static void printTimeStat(llvm::raw_ostream &stream);
+
+  /// @brief Displays subsumption table statistics
+  void printTableStat(llvm::raw_ostream &stream);
 
 public:
   ITreeNode *root;
@@ -430,7 +434,8 @@ public:
 
   void dump();
 
-  static void dumpTimeStat();
+  /// @brief Outputs interpolation statistics to standard error.
+  void dumpInterpolationStat();
 };
 
 class ITreeNode {
@@ -527,8 +532,6 @@ public:
   void dump() const;
 
   void print(llvm::raw_ostream &stream) const;
-
-  static void dumpTimeStat();
 
 private:
   ITreeNode(ITreeNode *_parent);
