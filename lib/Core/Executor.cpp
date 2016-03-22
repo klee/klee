@@ -665,7 +665,7 @@ void Executor::branch(ExecutionState &state,
     for (unsigned i=1; i<N; ++i) {
       ExecutionState *es = result[theRNG.getInt32() % i];
       ExecutionState *ns = es->branch();
-      addedStates.insert(ns);
+      addedStates.push_back(ns);
       result.push_back(ns);
       es->ptreeNode->data = 0;
       std::pair<PTree::Node*,PTree::Node*> res = 
@@ -883,7 +883,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     ++stats::forks;
 
     falseState = trueState->branch();
-    addedStates.insert(falseState);
+    addedStates.push_back(falseState);
 
     if (RandomizeFork && theRNG.getBool())
       std::swap(trueState, falseState);
@@ -2467,9 +2467,9 @@ void Executor::updateStates(ExecutionState *current) {
   
   states.insert(addedStates.begin(), addedStates.end());
   addedStates.clear();
-  
-  for (std::set<ExecutionState*>::iterator
-         it = removedStates.begin(), ie = removedStates.end();
+
+  for (std::vector<ExecutionState *>::iterator it = removedStates.begin(),
+                                               ie = removedStates.end();
        it != ie; ++it) {
     ExecutionState *es = *it;
     std::set<ExecutionState*>::iterator it2 = states.find(es);
@@ -2674,7 +2674,8 @@ void Executor::run(ExecutionState &initialState) {
 
   searcher = constructUserSearcher(*this);
 
-  searcher->update(0, states, std::set<ExecutionState*>());
+  std::vector<ExecutionState *> newStates(states.begin(), states.end());
+  searcher->update(0, newStates, std::vector<ExecutionState *>());
 
   while (!states.empty() && !haltExecution) {
     ExecutionState &state = searcher->selectState();
@@ -2753,11 +2754,12 @@ void Executor::terminateState(ExecutionState &state) {
 
   interpreterHandler->incPathsExplored();
 
-  std::set<ExecutionState*>::iterator it = addedStates.find(&state);
+  std::vector<ExecutionState *>::iterator it =
+      std::find(addedStates.begin(), addedStates.end(), &state);
   if (it==addedStates.end()) {
     state.pc = state.prevPC;
 
-    removedStates.insert(&state);
+    removedStates.push_back(&state);
   } else {
     // never reached searcher, just delete immediately
     std::map< ExecutionState*, std::vector<SeedInfo> >::iterator it3 = 
