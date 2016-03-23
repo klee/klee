@@ -55,6 +55,7 @@ protected:
 
   virtual void printQuery(const Query &query, const Query *falseQuery = 0,
                           const std::vector<const Array *> *objects = 0) = 0;
+  void flushBufferConditionally(bool writeToFile);
 
 public:
   QueryLoggingSolver(Solver *_solver, std::string path,

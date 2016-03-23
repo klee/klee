@@ -39,6 +39,16 @@ QueryLoggingSolver::QueryLoggingSolver(Solver *_solver, std::string path,
 
 QueryLoggingSolver::~QueryLoggingSolver() { delete solver; }
 
+void QueryLoggingSolver::flushBufferConditionally(bool writeToFile) {
+  logBuffer.flush();
+  if (writeToFile) {
+    os << logBuffer.str();
+    os.flush();
+  }
+  // prepare the buffer for reuse
+  BufferString = "";
+}
+
 void QueryLoggingSolver::startQuery(const Query &query, const char *typeName,
                                     const Query *falseQuery,
                                     const std::vector<const Array *> *objects) {
@@ -52,11 +62,7 @@ void QueryLoggingSolver::startQuery(const Query &query, const char *typeName,
   printQuery(query, falseQuery, objects);
 
   if (DumpPartialQueryiesEarly) {
-    logBuffer.flush();
-    os << logBuffer.str();
-    os.flush();
-    // prepare the buffer for reuse
-    BufferString = "";
+    flushBufferConditionally(true);
   }
   startTime = getWallTime();
 }
@@ -74,7 +80,7 @@ void QueryLoggingSolver::finishQuery(bool success) {
 }
 
 void QueryLoggingSolver::flushBuffer() {
-  logBuffer.flush();
+  bool writeToFile = false;
 
   if ((0 == minQueryTimeToLog) ||
       (static_cast<int>(lastQueryTime * 1000) > minQueryTimeToLog)) {
@@ -86,13 +92,11 @@ void QueryLoggingSolver::flushBuffer() {
          (solver->impl->getOperationStatusCode()))) {
       // we do additional check here to log only timeouts in case
       // user specified negative value for minQueryTimeToLog param
-      os << logBuffer.str();
-      os.flush();
+      writeToFile = true;
     }
   }
 
-  // prepare the buffer for reuse
-  BufferString = "";
+  flushBufferConditionally(writeToFile);
 }
 
 bool QueryLoggingSolver::computeTruth(const Query &query, bool &isValid) {
