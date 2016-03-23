@@ -1,3 +1,18 @@
+//===-- Dependency.h - Field-insensitive dependency -------------*- C++ -*-===//
+//
+//               The Tracer-X KLEE Symbolic Virtual Machine
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the declarations for the flow-insensitive dependency
+/// analysis to compute the allocations upon which the unsatisfiability core
+/// depends, which is used in computing the interpolant.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef KLEE_DEPENDENCY_H
 #define KLEE_DEPENDENCY_H
@@ -346,6 +361,174 @@ class Allocation {
     void print(llvm::raw_ostream &stream) const;
   };
 
+  /// \brief Dependency - implementation of field-insensitive value
+  ///        dependency for computing allocations the unsatisfiability core
+  ///        depends upon, which is used to compute the interpolant.
+  ///
+  /// Following is the analysis rules to compute value dependency relations
+  /// useful for computing the interpolant. Given a finite symbolic execution
+  /// path, the computation of the relations terminates. The analysis rules
+  /// serve as a guide to the implementation.
+  ///
+  /// Problems solved:
+  /// 1. Components of program states upon which the unsatisfiability core
+  ///    depends need to be computed. These components may not be represented
+  ///    in the constraints.
+  /// 2. To gain more subsumption, we need to store interpolation at more
+  ///    program points. More specifically, here we would like to compute the
+  ///    instructions that are related to the unsatisfiability core in order
+  ///    to compute the right interpolant. That is, given a constraint c(x0)
+  ///    in the core, we want to compute the set of state update statements S
+  ///    from which we compose the state update function f_S where the next
+  ///    state x' = f_S(x0), such that the interpolant after the state update
+  ///    is exists x0 . c(x0) /\ x' = f_S(x0)
+  ///
+  /// Solution:
+  /// The dependency computation is based on shadow data structure
+  /// representing the following:
+  ///
+  /// Domains:
+  /// VersionedValue -> LLVM values (i.e., variables) with versioning index
+  /// VersionedAllocation -> Memory allocations with versioning index
+  ///
+  /// Basic Relations:
+  /// stores(VersionedAlllocation, VersionedValue) - Memory state
+  /// depends(VersionedValue, VersionedValue) - Value dependency: The output
+  ///    of the analysis.
+  /// equals(VersionedValue, VersionedAllocation) - Pointer value equality
+  ///
+  /// Derived Relations:
+  /// Transitive Closure of depends
+  ///
+  /// depends*(v, v)
+  /// depends*(v, v') /\ v != v' iff depends(v, v') /\ depends*(v', v'')
+  ///
+  /// Indirection Relation
+  ///
+  /// ind(v, m, 0) iff depends*(v, v') /\ equals(v', m)
+  /// ind(v, m, i) /\ i>=1 iff
+  ///    depends*(v, v') /\ stores(v'', v') /\ ind(v'', m, i-1)
+  ///
+  /// In the following abstract operational semantics of LLVM instructions,
+  /// R and R' represent the abstract states before and after the execution.
+  /// An abstract state is a set having as elements ground substitutions of
+  /// the above relations. Below, v and its primed versions represent
+  /// VersionedValue elements whereas m and its primed versions represent
+  /// VersionedAllocation elements.
+  ///
+  /// Allocation: v = alloca
+  ///
+  /// ---------------------------------------------------
+  /// R --> R U {equals(succ(v), m) | R |/- equals(_, m)}
+  ///
+  /// Here succ(v) denotes the next (new) version of v.
+  ///
+  /// Store: store v', v
+  ///
+  /// not composite(m)
+  /// ----------------------------------------------------
+  /// R --> R U { stores(succ(m),v) | R |- ind(v', m, 0) }
+  ///
+  /// Here we use succ(m) to denote the next version of m as this was a
+  /// destructive update.
+  ///
+  /// composite(m)
+  /// ----------------------------------------------
+  /// R --> R U { stores(m,v) | R |- ind(v', m, 0) }
+  ///
+  /// Note that a composite memory location cannot be versioned in our
+  /// abstract semantics. This is because our analysis is field-insensitive
+  /// such that any update to a composite memory location using abstracted-
+  /// away field specifier may leave existing stored values intact. That is,
+  /// an update to a composite store is non-destructive.
+  ///
+  /// -------------------------------------------------------------
+  /// R --> R U { stores(ind(m,i), v) | R |- ind(v', m, i), i > 0 }
+  ///
+  /// Here ind(m,i) is an abstract composite memory location representing any
+  /// memory location that is i-step-reachable via indirection from m. Since
+  /// ind(m,i) is a composite memory location, composite(ind(m,i)) holds, and
+  /// it cannot be versioned.
+  ///
+  /// R |/- ind(v, _, _)
+  /// --------------------------
+  /// R --> R U {stores(UNK, v)}
+  ///
+  /// Here UNK represents an unknown memory location. Also, composite(UNK)
+  /// holds and therefore UNK cannot be versioned.
+  ///
+  /// R |- ind(v, UNK_ENV_PTR, _)
+  /// ---------------------------
+  /// R --> {}
+  ///
+  /// Storing into the environment results in an error, as the environment
+  /// should only be read. Here, composite(UNK_ENV_PTR) holds.
+  ///
+  /// Environment Load: v = load @_environ
+  ///
+  /// ----------------------------------------
+  /// R --> R U {equals(succ(v), UNK_ENV_PTR)}
+  ///
+  /// Load: v = load v'
+  ///
+  /// Here the rules are not mutually exclusive such that we avoid using set
+  /// union to denote abstract states after the execution.
+  ///
+  /// not composite(m)
+  /// R |- ind(v', latest(m), 0) /\ stores(latest(m), v''')
+  /// R' |- depends(succ(v), v''')
+  /// -----------------------------------------------------
+  /// R --> R'
+  ///
+  /// Here latest(m) is only the latest version of allocation m.
+  ///
+  /// composite(m)
+  /// R |- ind(v', m, 0) /\ stores(m, v''')
+  /// R' |- depends(succ(v), v''')
+  /// -------------------------------------
+  /// R --> R'
+  ///
+  /// R |- ind(v', m, i) /\ i > 0 /\ stores(m, v''')
+  /// R' |- depends(succ(v), v''')
+  /// ----------------------------------------------
+  /// R --> R'
+  ///
+  /// R |- ind(v', UNK_ENV_PTR, _)
+  /// R' |- depends(succ(v), UNK_ENV)
+  /// -------------------------------
+  /// R --> R'
+  ///
+  /// R |/- ind(v', _, _)          R' |- stores(UNK, succ(v))
+  /// -------------------------------------------------------
+  /// R --> R'
+  ///
+  /// R |- stores(UNK, v'')                R' |- depends(v, v'')
+  /// ----------------------------------------------------------
+  /// R --> R'
+  ///
+  /// Here, any stores to an unknown address would be loaded.
+  ///
+  /// Getelementptr: v = getelementptr v', idx
+  ///
+  /// --------------------------------
+  /// R --> R U {depends(succ(v), v')}
+  ///
+  /// Unary Operation: v = UNARY_OP(v') (including binary operation with 1
+  /// constant argument)
+  ///
+  /// --------------------------------
+  /// R --> R U {depends(succ(v), v')}
+  ///
+  /// Binary Operation: v = BINARY_OP(v', v'')
+  ///
+  /// -------------------------------------------------------
+  /// R --> R U {depends(succ(v), v'), depends(succ(v), v'')}
+  ///
+  /// Phi Node: v = PHI(v'1, ..., v'n)
+  ///
+  /// -------------------------------------------------------------
+  /// R --> R U {depends(succ(v), v'1), ..., depends(succ(v), v'n)}
+  ///
   class Dependency {
 
   public:
