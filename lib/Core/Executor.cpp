@@ -3761,11 +3761,8 @@ void Executor::runFunctionAsMain(Function *f,
     SearchTree::deallocate();
 
     // Print interpolation time statistics
-    if (InterpolationTimeStat) {
-      SubsumptionTableEntry::dumpTimeStat();
-      ITree::dumpTimeStat();
-      ITreeNode::dumpTimeStat();
-    }
+    if (InterpolationStat)
+      interpTree->dumpInterpolationStat();
 
     delete interpTree;
     interpTree = 0;

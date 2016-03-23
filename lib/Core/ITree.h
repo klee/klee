@@ -35,21 +35,21 @@ class PathCondition;
 class SubsumptionTableEntry;
 
 /// Time records for method running time statistics
-class TimeStat {
+class StatTimer {
   double amount;
   double lastRecorded;
 
 public:
-  TimeStat() : amount(0.0), lastRecorded(0.0) {}
+  StatTimer() : amount(0.0), lastRecorded(0.0) {}
 
-  ~TimeStat() {}
+  ~StatTimer() {}
 
   void start() {
     if (lastRecorded == 0.0)
       lastRecorded = clock();
   }
 
-  void end() {
+  void stop() {
     amount += (clock() - lastRecorded);
     lastRecorded = 0.0;
   }
@@ -313,16 +313,16 @@ public:
 };
 
 class SubsumptionTableEntry {
+  friend class ITree;
+
   /// @brief Statistics for actual solver call time in subsumption check
-  static TimeStat actualSolverCallTime;
+  static StatTimer actualSolverCallTimer;
 
   /// @brief The number of solver calls for subsumption checks
   static unsigned long checkSolverCount;
 
   /// @brief The number of failed solver calls for subsumption checks
   static unsigned long checkSolverFailureCount;
-
-  uintptr_t nodeId;
 
   ref<Expr> interpolant;
 
@@ -365,9 +365,11 @@ class SubsumptionTableEntry {
   }
 
   /// @brief for printing method running time statistics
-  static void printTimeStat(llvm::raw_ostream &stream);
+  static void printStat(llvm::raw_ostream &stream);
 
 public:
+  const uintptr_t nodeId;
+
   SubsumptionTableEntry(ITreeNode *node);
 
   ~SubsumptionTableEntry();
@@ -378,7 +380,6 @@ public:
 
   void print(llvm::raw_ostream &stream) const;
 
-  static void dumpTimeStat();
 };
 
 class ITree {
@@ -386,23 +387,26 @@ class ITree {
   typedef ExprList::iterator iterator;
   typedef ExprList::const_iterator const_iterator;
 
-  static TimeStat setCurrentINodeTime;
-  static TimeStat removeTime;
-  static TimeStat checkCurrentStateSubsumptionTime;
-  static TimeStat markPathConditionTime;
-  static TimeStat splitTime;
-  static TimeStat executeAbstractBinaryDependencyTime;
-  static TimeStat executeAbstractMemoryDependencyTime;
-  static TimeStat executeAbstractDependencyTime;
+  static StatTimer setCurrentINodeTimer;
+  static StatTimer removeTimer;
+  static StatTimer checkCurrentStateSubsumptionTimer;
+  static StatTimer markPathConditionTimer;
+  static StatTimer splitTimer;
+  static StatTimer executeAbstractBinaryDependencyTimer;
+  static StatTimer executeAbstractMemoryDependencyTimer;
+  static StatTimer executeAbstractDependencyTimer;
 
   ITreeNode *currentINode;
 
-  std::vector<SubsumptionTableEntry *> subsumptionTable;
+  std::map<uintptr_t, std::vector<SubsumptionTableEntry *> > subsumptionTable;
 
   void printNode(llvm::raw_ostream &stream, ITreeNode *n, std::string edges);
 
-  /// @brief for printing method running time statistics
+  /// @brief Displays method running time statistics
   static void printTimeStat(llvm::raw_ostream &stream);
+
+  /// @brief Displays subsumption table statistics
+  void printTableStat(llvm::raw_ostream &stream);
 
 public:
   ITreeNode *root;
@@ -410,8 +414,6 @@ public:
   ITree(ExecutionState *_root);
 
   ~ITree();
-
-  std::vector<SubsumptionTableEntry *> getStore();
 
   void store(SubsumptionTableEntry *subItem);
 
@@ -440,7 +442,8 @@ public:
 
   void dump();
 
-  static void dumpTimeStat();
+  /// @brief Outputs interpolation statistics to standard error.
+  void dumpInterpolationStat();
 };
 
 class ITreeNode {
@@ -448,21 +451,21 @@ class ITreeNode {
 
   friend class ExecutionState;
 
-  static TimeStat getInterpolantTime;
-  static TimeStat addConstraintTime;
-  static TimeStat splitTime;
-  static TimeStat makeMarkerMapTime;
-  static TimeStat deleteMarkerMapTime;
-  static TimeStat executeBinaryDependencyTime;
-  static TimeStat executeAbstractMemoryDependencyTime;
-  static TimeStat executeAbstractDependencyTime;
-  static TimeStat bindCallArgumentsTime;
-  static TimeStat popAbstractDependencyFrameTime;
-  static TimeStat getLatestCoreExpressionsTime;
-  static TimeStat getCompositeCoreExpressionsTime;
-  static TimeStat getLatestInterpolantCoreExpressionsTime;
-  static TimeStat getCompositeInterpolantCoreExpressionsTime;
-  static TimeStat computeInterpolantAllocationsTime;
+  static StatTimer getInterpolantTimer;
+  static StatTimer addConstraintTimer;
+  static StatTimer splitTimer;
+  static StatTimer makeMarkerMapTimer;
+  static StatTimer deleteMarkerMapTimer;
+  static StatTimer executeBinaryDependencyTimer;
+  static StatTimer executeAbstractMemoryDependencyTimer;
+  static StatTimer executeAbstractDependencyTimer;
+  static StatTimer bindCallArgumentsTimer;
+  static StatTimer popAbstractDependencyFrameTimer;
+  static StatTimer getLatestCoreExpressionsTimer;
+  static StatTimer getCompositeCoreExpressionsTimer;
+  static StatTimer getLatestInterpolantCoreExpressionsTimer;
+  static StatTimer getCompositeInterpolantCoreExpressionsTimer;
+  static StatTimer computeInterpolantAllocationsTimer;
 
 private:
   typedef ref<Expr> expression_type;
@@ -537,8 +540,6 @@ public:
   void dump() const;
 
   void print(llvm::raw_ostream &stream) const;
-
-  static void dumpTimeStat();
 
 private:
   ITreeNode(ITreeNode *_parent);

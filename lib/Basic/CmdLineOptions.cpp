@@ -97,10 +97,10 @@ llvm::cl::opt<bool> OutputTree(
                    "format. At present, this feature is only available when "
                    "Z3 is compiled in and interpolation is enabled."));
 
-llvm::cl::opt<bool> InterpolationTimeStat(
-    "interpolation-time-stat",
+llvm::cl::opt<bool> InterpolationStat(
+    "interpolation-stat",
     llvm::cl::desc(
-        "Displays a summary of execution times of interpolation methods."));
+        "Displays an execution profile of the interpolation routines."));
 #endif
 
 #ifdef SUPPORT_METASMT
