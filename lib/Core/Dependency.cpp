@@ -1,3 +1,18 @@
+//===-- Dependency.cpp - Field-insensitive dependency -----------*- C++ -*-===//
+//
+//               The Tracer-X KLEE Symbolic Virtual Machine
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the implementation of the flow-insensitive dependency
+/// analysis to compute the allocations upon which the unsatisfiability core
+/// depends, which is used in computing the interpolant.
+///
+//===----------------------------------------------------------------------===//
 
 #include "Dependency.h"
 
