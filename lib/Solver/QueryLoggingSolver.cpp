@@ -18,6 +18,12 @@
 
 using namespace klee::util;
 
+namespace {
+llvm::cl::opt<bool> DumpPartialQueryiesEarly(
+    "log-partial-queries-early", llvm::cl::init(false),
+    llvm::cl::desc("Log queries before calling the solver (default=off)"));
+}
+
 QueryLoggingSolver::QueryLoggingSolver(Solver *_solver,
                                        std::string path,
                                        const std::string& commentSign,
@@ -53,9 +59,15 @@ void QueryLoggingSolver::startQuery(const Query& query, const char* typeName,
               << "Instructions: " << instructions << "\n";
     
     printQuery(query, falseQuery, objects);
-    
+
+    if (DumpPartialQueryiesEarly) {
+      logBuffer.flush();
+      os << logBuffer.str();
+      os.flush();
+      // prepare the buffer for reuse
+      BufferString = "";
+    }
     startTime = getWallTime();
-    
 }
 
 void QueryLoggingSolver::finishQuery(bool success) {
@@ -199,4 +211,3 @@ char *QueryLoggingSolver::getConstraintLog(const Query& query) {
 void QueryLoggingSolver::setCoreSolverTimeout(double timeout) {
   solver->impl->setCoreSolverTimeout(timeout);
 }
-
