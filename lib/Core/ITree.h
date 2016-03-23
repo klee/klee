@@ -1,9 +1,17 @@
-/*
- * ITree.h
- *
- *  Created on: Oct 15, 2015
- *      Author: felicia
- */
+//===-- ITree.h - Interpolation tree ----------------------------*- C++ -*-===//
+//
+//               The Tracer-X KLEE Symbolic Virtual Machine
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains declarations of the classes that implements the
+/// interpolation and subsumption checks for search-space reduction.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef ITREE_H_
 #define ITREE_H_
