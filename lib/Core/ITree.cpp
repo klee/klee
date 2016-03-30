@@ -284,7 +284,7 @@ std::string SearchTree::PrettyExpressionBuilder::constructActual(ref<Expr> e) {
     unsigned numKids = ce->getNumKids();
     std::string res = constructActual(ce->getKid(numKids - 1));
     for (int i = numKids - 2; i >= 0; i--) {
-      res = "concat(" + constructActual(ce->getKid(i)) + "," + res + ")";
+      res = constructActual(ce->getKid(i)) + "." + res;
     }
     return res;
   }
