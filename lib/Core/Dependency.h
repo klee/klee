@@ -175,7 +175,7 @@ class Allocation {
 
   class VersionedValue {
 
-    const llvm::Value *value;
+    llvm::Value *value;
 
     const ref<Expr> valueExpr;
 
@@ -195,6 +195,8 @@ class Allocation {
     void includeInInterpolant() { inInterpolant = true; }
 
     bool valueInInterpolant() const { return inInterpolant; }
+
+    llvm::Value *getValue() const { return value; }
 
     void print(llvm::raw_ostream& stream) const;
 
@@ -550,10 +552,13 @@ class Allocation {
     /// @brief Argument values to be passed onto callee
     std::vector<VersionedValue *> argumentValuesList;
 
+    /// @brief Equality of value to address
     std::vector< PointerEquality *> equalityList;
 
+    /// @brief The mapping of allocations/addresses to stored value
     std::vector< StorageCell *> storesList;
 
+    /// @brief Flow relations from one value to another
     std::vector<FlowsTo *> flowsToList;
 
     std::vector< VersionedValue *> valuesList;
@@ -599,10 +604,10 @@ class Allocation {
     void addDependencyViaAllocation(VersionedValue *source,
                                     VersionedValue *target, Allocation *via);
 
-    Allocation *resolveAllocation(VersionedValue *value) const;
+    Allocation *resolveAllocation(VersionedValue *value);
 
     std::vector<Allocation *>
-    resolveAllocationTransitively(VersionedValue *value) const;
+    resolveAllocationTransitively(VersionedValue *value);
 
     std::vector<VersionedValue *> stores(Allocation *allocation) const;
 

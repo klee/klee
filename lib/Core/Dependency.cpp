@@ -653,7 +653,7 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
     return 0;
   }
 
-  Allocation *Dependency::resolveAllocation(VersionedValue *val) const {
+  Allocation *Dependency::resolveAllocation(VersionedValue *val) {
     if (!val) return 0;
     for (std::vector< PointerEquality *>::const_reverse_iterator
 	it = equalityList.rbegin(),
@@ -666,18 +666,35 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
     if (parentDependency)
       return parentDependency->resolveAllocation(val);
 
+    // This handles the case when we tried to resolve the allocation
+    // yet we could not find the allocation due to it being an argument of main.
+    llvm::Argument *v = llvm::dyn_cast<llvm::Argument>(val->getValue());
+    if (v) {
+      llvm::Function *f = v->getParent();
+      if (f->getName().equals("main")) {
+        // We have either argc / argv
+        Allocation *alloc = getInitialAllocation(v);
+        addPointerEquality(getNewVersionedValue(v, val->getExpression()),
+                           alloc);
+        return alloc;
+      }
+    }
     return 0;
   }
 
   std::vector<Allocation *>
-  Dependency::resolveAllocationTransitively(VersionedValue *value) const {
+  Dependency::resolveAllocationTransitively(VersionedValue *value) {
     std::vector<Allocation *> ret;
+
+    // Lookup address among pointer equalities first
     Allocation *singleRet = resolveAllocation(value);
     if (singleRet) {
 	ret.push_back(singleRet);
 	return ret;
     }
 
+    // Lookup address by first traversing the flow and then
+    // looking up the pointer equalities.
     std::vector<VersionedValue *> valueSources = allFlowSourcesEnds(value);
     for (std::vector<VersionedValue *>::const_iterator it = valueSources.begin(),
 	itEnd = valueSources.end(); it != itEnd; ++it) {
