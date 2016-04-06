@@ -904,8 +904,7 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
   }
 
   Dependency::Dependency(Dependency *prev)
-      : parentDependency(prev),
-        lastBasicBlock(prev ? prev->lastBasicBlock : 0) {}
+      : parentDependency(prev), incomingBlock(prev ? prev->incomingBlock : 0) {}
 
   Dependency::~Dependency() {
     // Delete the locally-constructed relations
@@ -921,163 +920,46 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
 
   Dependency *Dependency::cdr() const { return parentDependency; }
 
-  void Dependency::executeMemoryOperation(llvm::Instruction *i,
-                                          ref<Expr> valueExpr,
-                                          ref<Expr> address) {
-    // The basic design principle that we need to be careful here
-    // is that we should not store quadratic-sized structures in
-    // the database of computed relations, e.g., not storing the
-    // result of traversals of the graph. We keep the
-    // quadratic blow up for only when querying the database.
+  void Dependency::execute(llvm::Instruction *instr,
+                           std::vector<ref<Expr> > &args) {
+    switch (args.size()) {
+    case 0:
+      updateIncomingBlock(instr);
+      return;
+    case 1: {
+      ref<Expr> argExpr = args.at(0);
 
-    switch (i->getOpcode()) {
-      case llvm::Instruction::Load: {
-        if (Util::isEnvironmentAllocation(i)) {
-          // The load corresponding to a load of the environment address
-          // that was never allocated within this program.
-          addPointerEquality(getNewVersionedValue(i, valueExpr),
-                             getNewAllocationVersion(i));
-          break;
-        }
+      // The basic design principle that we need to be careful here
+      // is that we should not store quadratic-sized structures in
+      // the database of computed relations, e.g., not storing the
+      // result of traversals of the graph. We keep the
+      // quadratic blow up for only when querying the database.
 
-        if (!buildLoadDependency(i->getOperand(0), address, i, valueExpr)) {
-          Allocation *alloc = getInitialAllocation(i->getOperand(0));
-          updateStore(alloc, getNewVersionedValue(i, valueExpr));
-        }
+      switch (instr->getOpcode()) {
+      case llvm::Instruction::Alloca: {
+        addPointerEquality(getNewVersionedValue(instr, argExpr),
+                           getInitialAllocation(instr));
         break;
       }
-      case llvm::Instruction::Store: {
-        VersionedValue *dataArg = getLatestValue(i->getOperand(0), valueExpr);
-        std::vector<Allocation *> addressList = resolveAllocationTransitively(
-            getLatestValue(i->getOperand(1), address));
-
-        // If there was no dependency found, we should create
-        // a new value
-        if (!dataArg)
-          dataArg = getNewVersionedValue(i->getOperand(0), valueExpr);
-
-        for (std::vector<Allocation *>::iterator it = addressList.begin(),
-                                                 itEnd = addressList.end();
-             it != itEnd; ++it) {
-            Allocation *allocation = getLatestAllocation((*it)->getSite());
-            if (!allocation || !allocation->isComposite()) {
-              allocation = getInitialAllocation((*it)->getSite());
-              VersionedValue *allocationValue =
-                  getNewVersionedValue((*it)->getSite(), valueExpr);
-              addPointerEquality(allocationValue, allocation);
-            }
-            updateStore(allocation, dataArg);
-        }
-
-        break;
-      }
-      default: {
-        assert(0 && "wrong instruction type");
-        break;
-      }
-      }
-      lastBasicBlock = i->getParent();
-  }
-
-  void Dependency::executeBinary(llvm::Instruction *i, ref<Expr> result,
-                                 ref<Expr> op1Expr, ref<Expr> op2Expr) {
-
-    switch (i->getOpcode()) {
-    case llvm::Instruction::Select: {
-
-      VersionedValue *op1 = getLatestValue(i->getOperand(1), op1Expr);
-      VersionedValue *op2 = getLatestValue(i->getOperand(2), op2Expr);
-      VersionedValue *newValue = 0;
-      if (op1) {
-        newValue = getNewVersionedValue(i, result);
-        addDependency(op1, newValue);
-      }
-      if (op2) {
-        if (newValue)
-          addDependency(op2, newValue);
-        else
-          addDependency(op2, getNewVersionedValue(i, result));
-      }
-      break;
-    }
-
-    case llvm::Instruction::Add:
-    case llvm::Instruction::Sub:
-    case llvm::Instruction::Mul:
-    case llvm::Instruction::UDiv:
-    case llvm::Instruction::SDiv:
-    case llvm::Instruction::URem:
-    case llvm::Instruction::SRem:
-    case llvm::Instruction::And:
-    case llvm::Instruction::Or:
-    case llvm::Instruction::Xor:
-    case llvm::Instruction::Shl:
-    case llvm::Instruction::LShr:
-    case llvm::Instruction::AShr:
-    case llvm::Instruction::ICmp:
-    case llvm::Instruction::FAdd:
-    case llvm::Instruction::FSub:
-    case llvm::Instruction::FMul:
-    case llvm::Instruction::FDiv:
-    case llvm::Instruction::FRem:
-    case llvm::Instruction::FCmp:
-    case llvm::Instruction::InsertValue: {
-      VersionedValue *op1 = getLatestValue(i->getOperand(0), op1Expr);
-      VersionedValue *op2 = getLatestValue(i->getOperand(1), op2Expr);
-
-      VersionedValue *newValue = 0;
-      if (op1) {
-        newValue = getNewVersionedValue(i, result);
-        addDependency(op1, newValue);
-      }
-      if (op2) {
-        if (newValue)
-          addDependency(op2, newValue);
-        else
-          addDependency(op2, getNewVersionedValue(i, result));
-      }
-      break;
-    }
-    default: {
-      assert(0 && "wrong instruction type");
-      break;
-    }
-    }
-    lastBasicBlock = i->getParent();
-  }
-
-  void Dependency::execute(llvm::Instruction *i, ref<Expr> valueExpr) {
-    // The basic design principle that we need to be careful here
-    // is that we should not store quadratic-sized structures in
-    // the database of computed relations, e.g., not storing the
-    // result of traversals of the graph. We keep the
-    // quadratic blow up for only when querying the database.
-
-    switch (i->getOpcode()) {
-    case llvm::Instruction::Alloca: {
-      addPointerEquality(getNewVersionedValue(i, valueExpr),
-                         getInitialAllocation(i));
-      break;
-    }
       case llvm::Instruction::GetElementPtr: {
-	if (llvm::isa<llvm::Constant>(i->getOperand(0))) {
-          Allocation *a = getLatestAllocation(i->getOperand(0));
+        if (llvm::isa<llvm::Constant>(instr->getOperand(0))) {
+          Allocation *a = getLatestAllocation(instr->getOperand(0));
           if (!a)
-            a = getInitialAllocation(i->getOperand(0));
+            a = getInitialAllocation(instr->getOperand(0));
 
           // We simply propagate the pointer to the current
           // value field-insensitively.
-          addPointerEquality(getNewVersionedValue(i, valueExpr), a);
+          addPointerEquality(getNewVersionedValue(instr, argExpr), a);
           break;
         }
 
-        VersionedValue *arg = getLatestValue(i->getOperand(0), valueExpr);
+        VersionedValue *arg = getLatestValue(instr->getOperand(0), argExpr);
         assert(arg != 0 && "operand not found");
 
         std::vector<Allocation *> a = resolveAllocationTransitively(arg);
 
         if (a.size() > 0) {
-          VersionedValue *newValue = getNewVersionedValue(i, valueExpr);
+          VersionedValue *newValue = getNewVersionedValue(instr, argExpr);
           for (std::vector<Allocation *>::iterator it = a.begin(),
                                                    itEnd = a.end();
                it != itEnd; ++it) {
@@ -1088,7 +970,7 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
           // simply add flow dependency
           std::vector<VersionedValue *> vec = directFlowSources(arg);
           if (vec.size() > 0) {
-            VersionedValue *newValue = getNewVersionedValue(i, valueExpr);
+            VersionedValue *newValue = getNewVersionedValue(instr, argExpr);
             for (std::vector<VersionedValue *>::iterator it = vec.begin(),
                                                          itEnd = vec.end();
                  it != itEnd; ++it) {
@@ -1110,38 +992,164 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
       case llvm::Instruction::FPToSI:
       case llvm::Instruction::UIToFP:
       case llvm::Instruction::SIToFP:
-      case llvm::Instruction::ExtractValue:
-	{
-        VersionedValue *val = getLatestValue(i->getOperand(0), valueExpr);
+      case llvm::Instruction::ExtractValue: {
+        VersionedValue *val = getLatestValue(instr->getOperand(0), argExpr);
 
-          if (val) {
-            addDependency(val, getNewVersionedValue(i, valueExpr));
-          } else if (!llvm::isa<llvm::Constant>(i->getOperand(0)))
-              // Constants would kill dependencies, the remaining is for
-              // cases that may actually require dependencies.
-          {
-            assert(!"operand not found");
-          }
-          break;
+        if (val) {
+          addDependency(val, getNewVersionedValue(instr, argExpr));
+        } else if (!llvm::isa<llvm::Constant>(instr->getOperand(0)))
+            // Constants would kill dependencies, the remaining is for
+            // cases that may actually require dependencies.
+        {
+          assert(!"operand not found");
+        }
+        break;
       }
       case llvm::Instruction::PHI: {
-        llvm::PHINode *node = llvm::dyn_cast<llvm::PHINode>(i);
+        llvm::PHINode *node = llvm::dyn_cast<llvm::PHINode>(instr);
         llvm::Value *llvmArgValue =
-            node->getIncomingValueForBlock(lastBasicBlock);
-        VersionedValue *val = getLatestValue(llvmArgValue, valueExpr);
+            node->getIncomingValueForBlock(incomingBlock);
+        VersionedValue *val = getLatestValue(llvmArgValue, argExpr);
         if (val) {
-          addDependency(val, getNewVersionedValue(i, valueExpr));
+          addDependency(val, getNewVersionedValue(instr, argExpr));
         } else if (!llvm::isa<llvm::Constant>(llvmArgValue)) {
           assert(!"operand not found");
         }
         break;
       }
-      default: {
-        assert(0 && "wrong instruction type");
+      default: { assert(!"unhandled unary instruction"); }
+      }
+      updateIncomingBlock(instr);
+      return;
+    }
+    case 2: {
+      ref<Expr> valueExpr = args.at(0);
+      ref<Expr> address = args.at(1);
+      // The basic design principle that we need to be careful here
+      // is that we should not store quadratic-sized structures in
+      // the database of computed relations, e.g., not storing the
+      // result of traversals of the graph. We keep the
+      // quadratic blow up for only when querying the database.
+
+      switch (instr->getOpcode()) {
+      case llvm::Instruction::Load: {
+        if (Util::isEnvironmentAllocation(instr)) {
+          // The load corresponding to a load of the environment address
+          // that was never allocated within this program.
+          addPointerEquality(getNewVersionedValue(instr, valueExpr),
+                             getNewAllocationVersion(instr));
+          break;
+        }
+
+        if (!buildLoadDependency(instr->getOperand(0), address, instr,
+                                 valueExpr)) {
+          Allocation *alloc = getInitialAllocation(instr->getOperand(0));
+          updateStore(alloc, getNewVersionedValue(instr, valueExpr));
+        }
         break;
       }
+      case llvm::Instruction::Store: {
+        VersionedValue *dataArg =
+            getLatestValue(instr->getOperand(0), valueExpr);
+        std::vector<Allocation *> addressList = resolveAllocationTransitively(
+            getLatestValue(instr->getOperand(1), address));
+
+        // If there was no dependency found, we should create
+        // a new value
+        if (!dataArg)
+          dataArg = getNewVersionedValue(instr->getOperand(0), valueExpr);
+
+        for (std::vector<Allocation *>::iterator it = addressList.begin(),
+                                                 itEnd = addressList.end();
+             it != itEnd; ++it) {
+          Allocation *allocation = getLatestAllocation((*it)->getSite());
+          if (!allocation || !allocation->isComposite()) {
+            allocation = getInitialAllocation((*it)->getSite());
+            VersionedValue *allocationValue =
+                getNewVersionedValue((*it)->getSite(), valueExpr);
+            addPointerEquality(allocationValue, allocation);
+          }
+          updateStore(allocation, dataArg);
+        }
+
+        break;
+      }
+      default: { assert(!"unhandled binary instruction"); }
+      }
+      updateIncomingBlock(instr);
+      return;
     }
-    lastBasicBlock = i->getParent();
+    case 3: {
+      ref<Expr> result = args.at(0);
+      ref<Expr> op1Expr = args.at(1);
+      ref<Expr> op2Expr = args.at(2);
+
+      switch (instr->getOpcode()) {
+      case llvm::Instruction::Select: {
+
+        VersionedValue *op1 = getLatestValue(instr->getOperand(1), op1Expr);
+        VersionedValue *op2 = getLatestValue(instr->getOperand(2), op2Expr);
+        VersionedValue *newValue = 0;
+        if (op1) {
+          newValue = getNewVersionedValue(instr, result);
+          addDependency(op1, newValue);
+        }
+        if (op2) {
+          if (newValue)
+            addDependency(op2, newValue);
+          else
+            addDependency(op2, getNewVersionedValue(instr, result));
+        }
+        break;
+      }
+
+      case llvm::Instruction::Add:
+      case llvm::Instruction::Sub:
+      case llvm::Instruction::Mul:
+      case llvm::Instruction::UDiv:
+      case llvm::Instruction::SDiv:
+      case llvm::Instruction::URem:
+      case llvm::Instruction::SRem:
+      case llvm::Instruction::And:
+      case llvm::Instruction::Or:
+      case llvm::Instruction::Xor:
+      case llvm::Instruction::Shl:
+      case llvm::Instruction::LShr:
+      case llvm::Instruction::AShr:
+      case llvm::Instruction::ICmp:
+      case llvm::Instruction::FAdd:
+      case llvm::Instruction::FSub:
+      case llvm::Instruction::FMul:
+      case llvm::Instruction::FDiv:
+      case llvm::Instruction::FRem:
+      case llvm::Instruction::FCmp:
+      case llvm::Instruction::InsertValue: {
+        VersionedValue *op1 = getLatestValue(instr->getOperand(0), op1Expr);
+        VersionedValue *op2 = getLatestValue(instr->getOperand(1), op2Expr);
+
+        VersionedValue *newValue = 0;
+        if (op1) {
+          newValue = getNewVersionedValue(instr, result);
+          addDependency(op1, newValue);
+        }
+        if (op2) {
+          if (newValue)
+            addDependency(op2, newValue);
+          else
+            addDependency(op2, getNewVersionedValue(instr, result));
+        }
+        break;
+      }
+      default:
+        assert(!"unhandled ternary instruction");
+      }
+      updateIncomingBlock(instr);
+      return;
+    }
+    default:
+      break;
+    }
+    assert(!"unhandled instruction arguments number");
   }
 
   void Dependency::bindCallArguments(llvm::Instruction *i,
@@ -1172,7 +1180,7 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
       argumentValuesList.pop_back();
       ++index;
     }
-    lastBasicBlock = i->getParent();
+    updateIncomingBlock(i);
   }
 
   void Dependency::bindReturnValue(llvm::CallInst *site, llvm::Instruction *i,
@@ -1186,7 +1194,7 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
       if (value)
         addDependency(value, getNewVersionedValue(site, returnValue));
     }
-    lastBasicBlock = i->getParent();
+    updateIncomingBlock(i);
   }
 
   void Dependency::markAllValues(AllocationGraph *g, VersionedValue *value) {
@@ -1335,6 +1343,12 @@ void CompositeAllocation::print(llvm::raw_ostream &stream) const {
       g->addNewSink(it0->second);
       recursivelyBuildAllocationGraph(g, it0->first, it0->second);
     }
+  }
+
+  void Dependency::updateIncomingBlock(llvm::Instruction *inst) {
+    llvm::BasicBlock::iterator endInstIter = inst->getParent()->end();
+    if (endInstIter->getPrevNode() == inst)
+      incomingBlock = inst->getParent();
   }
 
   void Dependency::print(llvm::raw_ostream &stream) const {

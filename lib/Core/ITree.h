@@ -392,9 +392,7 @@ class ITree {
   static StatTimer checkCurrentStateSubsumptionTimer;
   static StatTimer markPathConditionTimer;
   static StatTimer splitTimer;
-  static StatTimer executeAbstractBinaryDependencyTimer;
-  static StatTimer executeAbstractMemoryDependencyTimer;
-  static StatTimer executeAbstractDependencyTimer;
+  static StatTimer executeTimer;
 
   ITreeNode *currentINode;
 
@@ -429,14 +427,14 @@ public:
   std::pair<ITreeNode *, ITreeNode *>
   split(ITreeNode *parent, ExecutionState *left, ExecutionState *right);
 
-  void executeAbstractBinaryDependency(llvm::Instruction *i,
-                                       ref<Expr> valueExpr, ref<Expr> tExpr,
-                                       ref<Expr> fExpr);
+  void execute(llvm::Instruction *instr);
 
-  void executeAbstractMemoryDependency(llvm::Instruction *instr,
-                                       ref<Expr> value, ref<Expr> address);
+  void execute(llvm::Instruction *instr, ref<Expr> arg1);
 
-  void executeAbstractDependency(llvm::Instruction *instr, ref<Expr> value);
+  void execute(llvm::Instruction *instr, ref<Expr> arg1, ref<Expr> arg2);
+
+  void execute(llvm::Instruction *instr, ref<Expr> arg1, ref<Expr> arg2,
+               ref<Expr> arg3);
 
   void print(llvm::raw_ostream &stream);
 
@@ -456,9 +454,7 @@ class ITreeNode {
   static StatTimer splitTimer;
   static StatTimer makeMarkerMapTimer;
   static StatTimer deleteMarkerMapTimer;
-  static StatTimer executeBinaryDependencyTimer;
-  static StatTimer executeAbstractMemoryDependencyTimer;
-  static StatTimer executeAbstractDependencyTimer;
+  static StatTimer executeTimer;
   static StatTimer bindCallArgumentsTimer;
   static StatTimer popAbstractDependencyFrameTimer;
   static StatTimer getLatestCoreExpressionsTimer;
@@ -495,6 +491,8 @@ private:
   /// @brief for printing method running time statistics
   static void printTimeStat(llvm::raw_ostream &stream);
 
+  void execute(llvm::Instruction *instr, std::vector<ref<Expr> > &args);
+
 public:
   uintptr_t getNodeId();
 
@@ -508,14 +506,6 @@ public:
 
   static void
   deleteMarkerMap(std::map<Expr *, PathConditionMarker *> &markerMap);
-
-  void executeBinaryDependency(llvm::Instruction *i, ref<Expr> valueExpr,
-                               ref<Expr> tExpr, ref<Expr> fExpr);
-
-  void executeAbstractMemoryDependency(llvm::Instruction *instr,
-                                       ref<Expr> value, ref<Expr> address);
-
-  void executeAbstractDependency(llvm::Instruction *instr, ref<Expr> value);
 
   void bindCallArguments(llvm::Instruction *site,
                          std::vector<ref<Expr> > &arguments);
