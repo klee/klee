@@ -572,7 +572,7 @@ class Allocation {
     std::vector<Allocation *> interpolantAllocations;
 
     /// @brief the basic block of the last-executed instruction
-    llvm::BasicBlock *lastBasicBlock;
+    llvm::BasicBlock *incomingBlock;
 
     VersionedValue *getNewVersionedValue(llvm::Value *value,
                                          ref<Expr> valueExpr);
@@ -649,6 +649,10 @@ class Allocation {
     /// @brief Builds dependency graph between memory allocations
     void buildAllocationGraph(AllocationGraph *g, VersionedValue *value) const;
 
+    /// @brief Implements the condition to update incoming basic block for phi
+    /// nodes
+    void updateIncomingBlock(llvm::Instruction *inst);
+
   public:
     Dependency(Dependency *prev);
 
@@ -656,15 +660,10 @@ class Allocation {
 
     Dependency *cdr() const;
 
-    void execute(llvm::Instruction *instr, ref<Expr> valueExpr);
-
-    void executeMemoryOperation(llvm::Instruction *i, ref<Expr> valueExpr,
-                                ref<Expr> address);
-
-    void executeBinary(llvm::Instruction *i, ref<Expr> valueExpr,
-                       ref<Expr> tExpr, ref<Expr> fExpr);
-
     VersionedValue *getLatestValue(llvm::Value *value, ref<Expr> valueExpr);
+
+    /// @brief Abstract dependency state transition with argument(s)
+    void execute(llvm::Instruction *instr, std::vector<ref<Expr> > &args);
 
     std::map<llvm::Value *, ref<Expr> >
     getLatestCoreExpressions(std::vector<const Array *> &replacements,

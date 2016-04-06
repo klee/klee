@@ -1504,9 +1504,7 @@ StatTimer ITree::removeTimer;
 StatTimer ITree::checkCurrentStateSubsumptionTimer;
 StatTimer ITree::markPathConditionTimer;
 StatTimer ITree::splitTimer;
-StatTimer ITree::executeAbstractBinaryDependencyTimer;
-StatTimer ITree::executeAbstractMemoryDependencyTimer;
-StatTimer ITree::executeAbstractDependencyTimer;
+StatTimer ITree::executeTimer;
 
 void ITree::printTimeStat(llvm::raw_ostream &stream) {
   stream << "KLEE: done:     setCurrentINode = " << setCurrentINodeTimer.get() *
@@ -1517,12 +1515,7 @@ void ITree::printTimeStat(llvm::raw_ostream &stream) {
   stream << "KLEE: done:     markPathCondition = "
          << markPathConditionTimer.get() * 1000 << "\n";
   stream << "KLEE: done:     split = " << splitTimer.get() * 1000 << "\n";
-  stream << "KLEE: done:     executeAbstractBinaryDependency = "
-         << executeAbstractBinaryDependencyTimer.get() * 1000 << "\n";
-  stream << "KLEE: done:     executeAbstractMemoryDependency = "
-         << executeAbstractMemoryDependencyTimer.get() * 1000 << "\n";
-  stream << "KLEE: done:     executeAbstractDependency = "
-         << executeAbstractDependencyTimer.get() * 1000 << "\n";
+  stream << "KLEE: done:     execute = " << executeTimer.get() * 1000 << "\n";
 }
 
 void ITree::printTableStat(llvm::raw_ostream &stream) {
@@ -1709,27 +1702,39 @@ void ITree::markPathCondition(ExecutionState &state, TimingSolver *solver) {
   markPathConditionTimer.stop();
 }
 
-void ITree::executeAbstractBinaryDependency(llvm::Instruction *instr,
-                                            ref<Expr> valueExpr,
-                                            ref<Expr> tExpr, ref<Expr> fExpr) {
-  executeAbstractBinaryDependencyTimer.start();
-  currentINode->executeBinaryDependency(instr, valueExpr, tExpr, fExpr);
-  executeAbstractBinaryDependencyTimer.stop();
+void ITree::execute(llvm::Instruction *instr) {
+  executeTimer.start();
+  std::vector<ref<Expr> > dummyArgs;
+  currentINode->execute(instr, dummyArgs);
+  executeTimer.stop();
 }
 
-void ITree::executeAbstractMemoryDependency(llvm::Instruction *instr,
-                                            ref<Expr> value,
-                                            ref<Expr> address) {
-  executeAbstractMemoryDependencyTimer.start();
-  currentINode->executeAbstractMemoryDependency(instr, value, address);
-  executeAbstractMemoryDependencyTimer.stop();
+void ITree::execute(llvm::Instruction *instr, ref<Expr> arg1) {
+  executeTimer.start();
+  std::vector<ref<Expr> > args;
+  args.push_back(arg1);
+  currentINode->execute(instr, args);
+  executeTimer.stop();
 }
 
-void ITree::executeAbstractDependency(llvm::Instruction *instr,
-                                      ref<Expr> value) {
-  executeAbstractDependencyTimer.start();
-  currentINode->executeAbstractDependency(instr, value);
-  executeAbstractDependencyTimer.stop();
+void ITree::execute(llvm::Instruction *instr, ref<Expr> arg1, ref<Expr> arg2) {
+  executeTimer.start();
+  std::vector<ref<Expr> > args;
+  args.push_back(arg1);
+  args.push_back(arg2);
+  currentINode->execute(instr, args);
+  executeTimer.stop();
+}
+
+void ITree::execute(llvm::Instruction *instr, ref<Expr> arg1, ref<Expr> arg2,
+                    ref<Expr> arg3) {
+  executeTimer.start();
+  std::vector<ref<Expr> > args;
+  args.push_back(arg1);
+  args.push_back(arg2);
+  args.push_back(arg3);
+  currentINode->execute(instr, args);
+  executeTimer.stop();
 }
 
 void ITree::printNode(llvm::raw_ostream &stream, ITreeNode *n,
@@ -1789,9 +1794,7 @@ StatTimer ITreeNode::addConstraintTimer;
 StatTimer ITreeNode::splitTimer;
 StatTimer ITreeNode::makeMarkerMapTimer;
 StatTimer ITreeNode::deleteMarkerMapTimer;
-StatTimer ITreeNode::executeBinaryDependencyTimer;
-StatTimer ITreeNode::executeAbstractMemoryDependencyTimer;
-StatTimer ITreeNode::executeAbstractDependencyTimer;
+StatTimer ITreeNode::executeTimer;
 StatTimer ITreeNode::bindCallArgumentsTimer;
 StatTimer ITreeNode::popAbstractDependencyFrameTimer;
 StatTimer ITreeNode::getLatestCoreExpressionsTimer;
@@ -1810,12 +1813,7 @@ void ITreeNode::printTimeStat(llvm::raw_ostream &stream) {
                                                       1000 << "\n";
   stream << "KLEE: done:     deleteMarkerMap = " << deleteMarkerMapTimer.get() *
                                                         1000 << "\n";
-  stream << "KLEE: done:     executeBinaryDependency = "
-         << executeBinaryDependencyTimer.get() * 1000 << "\n";
-  stream << "KLEE: done:     executeAbstractMemoryDependency = "
-         << executeAbstractMemoryDependencyTimer.get() * 1000 << "\n";
-  stream << "KLEE: done:     executeAbstractDependency = "
-         << executeAbstractDependencyTimer.get() * 1000 << "\n";
+  stream << "KLEE: done:     execute = " << executeTimer.get() * 1000 << "\n";
   stream << "KLEE: done:     bindCallArguments = "
          << bindCallArgumentsTimer.get() * 1000 << "\n";
   stream << "KLEE: done:     popAbstractDependencyFrame = "
@@ -1917,27 +1915,11 @@ ITreeNode::deleteMarkerMap(std::map<Expr *, PathConditionMarker *> &markerMap) {
   ITreeNode::deleteMarkerMapTimer.stop();
 }
 
-void ITreeNode::executeBinaryDependency(llvm::Instruction *i,
-                                        ref<Expr> valueExpr, ref<Expr> tExpr,
-                                        ref<Expr> fExpr) {
-  ITreeNode::executeBinaryDependencyTimer.start();
-  dependency->executeBinary(i, valueExpr, tExpr, fExpr);
-  ITreeNode::executeBinaryDependencyTimer.stop();
-}
-
-void ITreeNode::executeAbstractMemoryDependency(llvm::Instruction *instr,
-                                                ref<Expr> value,
-                                                ref<Expr> address) {
-  ITreeNode::executeAbstractMemoryDependencyTimer.start();
-  dependency->executeMemoryOperation(instr, value, address);
-  ITreeNode::executeAbstractMemoryDependencyTimer.stop();
-}
-
-void ITreeNode::executeAbstractDependency(llvm::Instruction *instr,
-                                          ref<Expr> value) {
-  ITreeNode::executeAbstractDependencyTimer.start();
-  dependency->execute(instr, value);
-  ITreeNode::executeAbstractDependencyTimer.stop();
+void ITreeNode::execute(llvm::Instruction *instr,
+                        std::vector<ref<Expr> > &args) {
+  executeTimer.start();
+  dependency->execute(instr, args);
+  executeTimer.stop();
 }
 
 void ITreeNode::bindCallArguments(llvm::Instruction *site,

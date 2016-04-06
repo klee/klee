@@ -1611,6 +1611,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       if (branches.second)
         transferToBasicBlock(bi->getSuccessor(1), bi->getParent(), *branches.second);
     }
+    if (INTERPOLATION_ENABLED)
+      interpTree->execute(i);
     break;
   }
   case Instruction::Switch: {
@@ -1687,6 +1689,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         ++bit;
       }
     }
+    if (INTERPOLATION_ENABLED)
+      interpTree->execute(i);
     break;
  }
   case Instruction::Unreachable:
@@ -1703,6 +1707,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     unsigned numArgs = cs.arg_size();
     Value *fp = cs.getCalledValue();
     Function *f = getTargetFunction(fp, state);
+
+    if (INTERPOLATION_ENABLED)
+      interpTree->execute(i);
 
     // Skip debug intrinsics, we can't evaluate their metadata arguments.
     if (f && isDebugIntrinsic(f, kmodule))
@@ -1813,7 +1820,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->executeAbstractDependency(i, result);
+      interpTree->execute(i, result);
     break;
   }
 
@@ -1827,7 +1834,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->executeAbstractBinaryDependency(i, result, tExpr, fExpr);
+      interpTree->execute(i, result, tExpr, fExpr);
     break;
   }
 
@@ -1845,7 +1852,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->executeAbstractBinaryDependency(i, result, left, right);
+      interpTree->execute(i, result, left, right);
     break;
   }
 
@@ -1857,7 +1864,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->executeAbstractBinaryDependency(i, result, left, right);
+      interpTree->execute(i, result, left, right);
     break;
   }
  
@@ -1869,7 +1876,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->executeAbstractBinaryDependency(i, result, left, right);
+      interpTree->execute(i, result, left, right);
     break;
   }
 
@@ -1881,7 +1888,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->executeAbstractBinaryDependency(i, result, left, right);
+      interpTree->execute(i, result, left, right);
     break;
   }
 
@@ -1893,7 +1900,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->executeAbstractBinaryDependency(i, result, left, right);
+      interpTree->execute(i, result, left, right);
     break;
   }
 
@@ -1905,7 +1912,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->executeAbstractBinaryDependency(i, result, left, right);
+      interpTree->execute(i, result, left, right);
     break;
   }
  
@@ -1917,7 +1924,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->executeAbstractBinaryDependency(i, result, left, right);
+      interpTree->execute(i, result, left, right);
     break;
   }
 
@@ -1929,7 +1936,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->executeAbstractBinaryDependency(i, result, left, right);
+      interpTree->execute(i, result, left, right);
     break;
   }
 
@@ -1941,7 +1948,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->executeAbstractBinaryDependency(i, result, left, right);
+      interpTree->execute(i, result, left, right);
     break;
   }
 
@@ -1953,7 +1960,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->executeAbstractBinaryDependency(i, result, left, right);
+      interpTree->execute(i, result, left, right);
     break;
   }
 
@@ -1965,7 +1972,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->executeAbstractBinaryDependency(i, result, left, right);
+      interpTree->execute(i, result, left, right);
     break;
   }
 
@@ -1977,7 +1984,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->executeAbstractBinaryDependency(i, result, left, right);
+      interpTree->execute(i, result, left, right);
     break;
   }
 
@@ -1989,7 +1996,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->executeAbstractBinaryDependency(i, result, left, right);
+      interpTree->execute(i, result, left, right);
     break;
   }
 
@@ -2087,7 +2094,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->executeAbstractBinaryDependency(i, result, left, right);
+      interpTree->execute(i, result, left, right);
     break;
   }
  
@@ -2139,7 +2146,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->executeAbstractDependency(i, base);
+      interpTree->execute(i, base);
     break;
   }
 
@@ -2153,7 +2160,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->executeAbstractDependency(i, result);
+      interpTree->execute(i, result);
     break;
   }
   case Instruction::ZExt: {
@@ -2164,7 +2171,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->executeAbstractDependency(i, result);
+      interpTree->execute(i, result);
     break;
   }
   case Instruction::SExt: {
@@ -2175,7 +2182,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->executeAbstractDependency(i, result);
+      interpTree->execute(i, result);
     break;
   }
 
@@ -2188,7 +2195,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->executeAbstractDependency(i, result);
+      interpTree->execute(i, result);
     break;
   } 
   case Instruction::PtrToInt: {
@@ -2200,7 +2207,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->executeAbstractDependency(i, result);
+      interpTree->execute(i, result);
     break;
   }
 
@@ -2210,7 +2217,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->executeAbstractDependency(i, result);
+      interpTree->execute(i, result);
     break;
   }
 
@@ -2237,7 +2244,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->executeAbstractBinaryDependency(i, result, left, right);
+      interpTree->execute(i, result, left, right);
     break;
   }
 
@@ -2261,7 +2268,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->executeAbstractBinaryDependency(i, result, left, right);
+      interpTree->execute(i, result, left, right);
     break;
   }
  
@@ -2286,7 +2293,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->executeAbstractBinaryDependency(i, result, left, right);
+      interpTree->execute(i, result, left, right);
     break;
   }
 
@@ -2311,7 +2318,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->executeAbstractBinaryDependency(i, result, left, right);
+      interpTree->execute(i, result, left, right);
     break;
   }
 
@@ -2336,7 +2343,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->executeAbstractBinaryDependency(i, result, left, right);
+      interpTree->execute(i, result, left, right);
     break;
   }
 
@@ -2362,7 +2369,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->executeAbstractDependency(i, result);
+      interpTree->execute(i, result);
     break;
   }
 
@@ -2387,7 +2394,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->executeAbstractDependency(i, result);
+      interpTree->execute(i, result);
     break;
   }
 
@@ -2413,7 +2420,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->executeAbstractDependency(i, result);
+      interpTree->execute(i, result);
     break;
   }
 
@@ -2439,7 +2446,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->executeAbstractDependency(i, result);
+      interpTree->execute(i, result);
     break;
   }
 
@@ -2460,7 +2467,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->executeAbstractDependency(i, result);
+      interpTree->execute(i, result);
     break;
   }
 
@@ -2481,7 +2488,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->executeAbstractDependency(i, result);
+      interpTree->execute(i, result);
     break;
   }
 
@@ -2584,7 +2591,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->executeAbstractBinaryDependency(i, result, left, right);
+      interpTree->execute(i, result, left, right);
     break;
   }
   case Instruction::InsertValue: {
@@ -2615,7 +2622,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->executeAbstractBinaryDependency(i, result, agg, val);
+      interpTree->execute(i, result, agg, val);
     break;
   }
   case Instruction::ExtractValue: {
@@ -2629,7 +2636,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->executeAbstractDependency(i, result);
+      interpTree->execute(i, result);
     break;
   }
  
@@ -3277,7 +3284,7 @@ void Executor::executeAlloc(ExecutionState &state,
 
       // Update dependency
       if (INTERPOLATION_ENABLED)
-        interpTree->executeAbstractDependency(target->inst, mo->getBaseExpr());
+        interpTree->execute(target->inst, mo->getBaseExpr());
 
       if (reallocFrom) {
         unsigned count = std::min(reallocFrom->size, os->size);
@@ -3348,7 +3355,7 @@ void Executor::executeAlloc(ExecutionState &state,
 
           // Update dependency
           if (INTERPOLATION_ENABLED)
-            interpTree->executeAbstractDependency(target->inst, result);
+            interpTree->execute(target->inst, result);
         }
         
         if (hugeSize.second) {
@@ -3496,8 +3503,7 @@ void Executor::executeMemoryOperation(ExecutionState &state, bool isWrite,
 
           // Update dependency
           if (INTERPOLATION_ENABLED && target)
-            interpTree->executeAbstractMemoryDependency(target->inst, value,
-                                                        address);
+            interpTree->execute(target->inst, value, address);
         }          
       } else {
         ref<Expr> result = os->read(offset, type);
@@ -3509,8 +3515,7 @@ void Executor::executeMemoryOperation(ExecutionState &state, bool isWrite,
 
         // Update dependency
         if (INTERPOLATION_ENABLED && target)
-          interpTree->executeAbstractMemoryDependency(target->inst, result,
-                                                      address);
+          interpTree->execute(target->inst, result, address);
       }
 
       return;
