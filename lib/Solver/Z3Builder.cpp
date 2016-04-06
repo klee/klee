@@ -61,7 +61,7 @@ Z3ArrayExprHash::~Z3ArrayExprHash() {
 
 /***/
 void customZ3ErrorHandler(Z3_context c, Z3_error_code e) {
-  llvm::errs() << "Incorrect use of Z3: " << Z3_get_error_msg_ex(c, e) << "\n";
+  llvm::errs() << "Incorrect use of Z3: " << Z3_get_error_msg(c, e) << "\n";
   // TODO: Think of a better way to terminate
   exit(1);
 }
