@@ -667,26 +667,11 @@ Allocation *Dependency::resolveAllocation(VersionedValue *val) {
 
   // This handles the case when we tried to resolve the allocation
   // yet we could not find the allocation due to it being an argument of main.
-  llvm::Argument *vArg = llvm::dyn_cast<llvm::Argument>(val->getValue());
-  if (vArg) {
-    llvm::Function *f = vArg->getParent();
-    if (f->getName().equals("main")) {
-      // We have either argc / argv
-      Allocation *alloc = getInitialAllocation(vArg);
-      addPointerEquality(getNewVersionedValue(vArg, val->getExpression()),
-                         alloc);
-      return alloc;
-    }
-  }
-
-  // This handles the case when we tried to resolve the allocation
-  // yet we could not find the allocation from load instruction (in some special
-  // cases)
-  llvm::LoadInst *vLoad = llvm::dyn_cast<llvm::LoadInst>(val->getValue());
-  if (vLoad) {
-    Allocation *alloc = getInitialAllocation(vLoad);
-    addPointerEquality(getNewVersionedValue(vLoad, val->getExpression()),
-                       alloc);
+  if (Util::isMainArgument(val->getValue())) {
+    // We have either argc / argv
+    llvm::Argument *vArg = llvm::dyn_cast<llvm::Argument>(val->getValue());
+    Allocation *alloc = getInitialAllocation(vArg);
+    addPointerEquality(getNewVersionedValue(vArg, val->getExpression()), alloc);
     return alloc;
   }
 
@@ -1046,6 +1031,21 @@ void Dependency::execute(llvm::Instruction *instr,
         addPointerEquality(getNewVersionedValue(instr, valueExpr),
                            getNewAllocationVersion(instr));
         break;
+      }
+
+      VersionedValue *addressValue =
+          getLatestValue(instr->getOperand(0), address);
+      if (addressValue) {
+        std::vector<Allocation *> allocations =
+            resolveAllocationTransitively(addressValue);
+        if (allocations.size() == 1 &&
+            Util::isMainArgument(allocations.at(0)->getSite())) {
+          // The load corresponding to a load of the main function's
+          // argument that was never allocated within this program.
+          addPointerEquality(getNewVersionedValue(instr, valueExpr),
+                             getNewAllocationVersion(instr));
+          break;
+        }
       }
 
       if (!buildLoadDependency(instr->getOperand(0), address, instr,
@@ -1424,6 +1424,7 @@ bool Dependency::Util::isEnvironmentAllocation(llvm::Value *site) {
   if (llvm::isa<llvm::Constant>(address) && address->getName() == "__environ") {
     return true;
   }
+
   return false;
 }
 
@@ -1456,6 +1457,15 @@ bool Dependency::Util::isCompositeAllocation(llvm::Value *site) {
     break;
   }
 
+  return false;
+}
+
+bool Dependency::Util::isMainArgument(llvm::Value *site) {
+  llvm::Argument *vArg = llvm::dyn_cast<llvm::Argument>(site);
+  if (vArg && vArg->getParent() &&
+      vArg->getParent()->getName().equals("main")) {
+    return true;
+  }
   return false;
 }
 
