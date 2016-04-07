@@ -543,6 +543,9 @@ class Allocation {
       static bool isCompositeAllocation(llvm::Value *site);
 
       static bool isEnvironmentAllocation(llvm::Value *site);
+
+      /// @brief Tests if an allocation site is main function's argument
+      static bool isMainArgument(llvm::Value *site);
     };
 
   private:
