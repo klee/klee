@@ -691,6 +691,9 @@ std::vector<Allocation *>
 Dependency::resolveAllocationTransitively(VersionedValue *value) {
   std::vector<Allocation *> ret;
 
+  if (!value)
+    return ret;
+
   // Lookup address among pointer equalities first
   Allocation *singleRet = resolveAllocation(value);
   if (singleRet) {
@@ -1490,8 +1493,11 @@ bool Dependency::Util::isCompositeAllocation(llvm::Value *site) {
 
 bool Dependency::Util::isMainArgument(llvm::Value *site) {
   llvm::Argument *vArg = llvm::dyn_cast<llvm::Argument>(site);
+
+  // FIXME: We need a more precise way to detect main argument
   if (vArg && vArg->getParent() &&
-      vArg->getParent()->getName().equals("main")) {
+      (vArg->getParent()->getName().equals("main") ||
+       vArg->getParent()->getName().equals("__user_main"))) {
     return true;
   }
   return false;
