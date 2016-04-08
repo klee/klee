@@ -261,10 +261,6 @@ public:
   std::string getTestFilename(const std::string &suffix, unsigned id);
   llvm::raw_fd_ostream *openTestFile(const std::string &suffix, unsigned id);
 
-  // load a .out file
-  static void loadOutFile(std::string name,
-                          std::vector<unsigned char> &buffer);
-
   // load a .path file
   static void loadPathFile(std::string name,
                            std::vector<bool> &buffer);
