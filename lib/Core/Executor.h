@@ -150,10 +150,10 @@ private:
 
   /// When non-null the bindings that will be used for calls to
   /// klee_make_symbolic in order replay.
-  const struct KTest *replayOut;
+  const struct KTest *replayKTest;
   /// When non-null a list of branch decisions to be used for replay.
   const std::vector<bool> *replayPath;
-  /// The index into the current \ref replayOut or \ref replayPath
+  /// The index into the current \ref replayKTest or \ref replayPath
   /// object.
   unsigned replayPosition;
 
@@ -417,16 +417,16 @@ public:
   }
   virtual void setSymbolicPathWriter(TreeStreamWriter *tsw) {
     symPathWriter = tsw;
-  }      
+  }
 
-  virtual void setReplayOut(const struct KTest *out) {
+  virtual void setReplayKTest(const struct KTest *out) {
     assert(!replayPath && "cannot replay both buffer and path");
-    replayOut = out;
+    replayKTest = out;
     replayPosition = 0;
   }
 
   virtual void setReplayPath(const std::vector<bool> *path) {
-    assert(!replayOut && "cannot replay both buffer and path");
+    assert(!replayKTest && "cannot replay both buffer and path");
     replayPath = path;
     replayPosition = 0;
   }
