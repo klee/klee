@@ -436,6 +436,8 @@ public:
   void execute(llvm::Instruction *instr, ref<Expr> arg1, ref<Expr> arg2,
                ref<Expr> arg3);
 
+  void execute(llvm::Instruction *instr, std::vector<ref<Expr> > &args);
+
   void print(llvm::raw_ostream &stream);
 
   void dump();

@@ -1737,6 +1737,12 @@ void ITree::execute(llvm::Instruction *instr, ref<Expr> arg1, ref<Expr> arg2,
   executeTimer.stop();
 }
 
+void ITree::execute(llvm::Instruction *instr, std::vector<ref<Expr> > &args) {
+  executeTimer.start();
+  currentINode->execute(instr, args);
+  executeTimer.stop();
+}
+
 void ITree::printNode(llvm::raw_ostream &stream, ITreeNode *n,
                       std::string edges) {
   if (n->left != 0) {

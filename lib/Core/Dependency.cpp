@@ -18,8 +18,10 @@
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
 #include <llvm/IR/Constants.h>
+#include <llvm/IR/Intrinsics.h>
 #else
 #include <llvm/Constants.h>
+#include <llvm/Intrinsics.h>
 #endif
 
 using namespace klee;
@@ -675,6 +677,13 @@ Allocation *Dependency::resolveAllocation(VersionedValue *val) {
     return alloc;
   }
 
+  llvm::LoadInst *vLoad = llvm::dyn_cast<llvm::LoadInst>(val->getValue());
+  if (vLoad) {
+    Allocation *alloc = getInitialAllocation(vLoad);
+    addPointerEquality(getNewVersionedValue(vLoad, val->getExpression()),
+                       alloc);
+  }
+
   return 0;
 }
 
@@ -921,6 +930,30 @@ void Dependency::execute(llvm::Instruction *instr,
   // result of traversals of the graph. We keep the
   // quadratic blow up for only when querying the database.
 
+  if (llvm::isa<llvm::CallInst>(instr)) {
+    llvm::CallInst *callInst = llvm::dyn_cast<llvm::CallInst>(instr);
+    llvm::Function *f = callInst->getCalledFunction();
+    if (f && f->getIntrinsicID() == llvm::Intrinsic::not_intrinsic) {
+      llvm::StringRef calleeName = callInst->getCalledFunction()->getName();
+
+      // FIXME: We need a more precise way to determine invoked method.
+      if (calleeName.equals("malloc") && args.size() == 1) {
+        addPointerEquality(getNewVersionedValue(instr, args.at(0)),
+                           getInitialAllocation(instr));
+      } else if (calleeName.equals("syscall") && args.size() == 5) {
+        VersionedValue *returnValue = getNewVersionedValue(instr, args.at(0));
+        for (unsigned i = 0; i < args.size(); ++i) {
+          VersionedValue *arg =
+              getLatestValue(instr->getOperand(i), args.at(i + 1));
+          addDependency(arg, returnValue);
+        }
+      }
+    }
+    updateIncomingBlock(instr);
+
+    return;
+  }
+
   switch (args.size()) {
   case 0:
     updateIncomingBlock(instr);
@@ -932,15 +965,6 @@ void Dependency::execute(llvm::Instruction *instr,
     case llvm::Instruction::Alloca: {
       addPointerEquality(getNewVersionedValue(instr, argExpr),
                          getInitialAllocation(instr));
-      break;
-    }
-    case llvm::Instruction::Call: {
-      llvm::CallInst *callInst = llvm::dyn_cast<llvm::CallInst>(instr);
-      if (callInst &&
-          callInst->getCalledFunction()->getName().equals("malloc")) {
-        addPointerEquality(getNewVersionedValue(instr, argExpr),
-                           getInitialAllocation(instr));
-      }
       break;
     }
     case llvm::Instruction::GetElementPtr: {

@@ -2835,13 +2835,14 @@ void Executor::run(ExecutionState &initialState) {
       // Uncomment the following statements to show the state
       // of the interpolation tree and the active node.
 
-      // llvm::errs() << "\nCurrent state:\n";
-      // processTree->dump();
-      // interpTree->dump();
-      // state.itreeNode->dump();
-      // llvm::errs() << "------------------- Executing New Instruction "
-      //                 "-----------------------\n";
-      // state.pc->inst->dump();
+      //		  llvm::errs() << "\nCurrent state:\n";
+      //		   processTree->dump();
+      //		   interpTree->dump();
+      //		   state.itreeNode->dump();
+      //		   llvm::errs() << "------------------- Executing New
+      // Instruction "
+      //						   "-----------------------\n";
+      state.pc->inst->dump();
     }
 
     if (INTERPOLATION_ENABLED && interpTree->checkCurrentStateSubsumption(
@@ -3125,7 +3126,7 @@ void Executor::callExternalFunction(ExecutionState &state,
   // check if specialFunctionHandler wants it
   if (specialFunctionHandler->handle(state, function, target, arguments))
     return;
-  
+
   if (NoExternals && !okExternals.count(function->getName())) {
     llvm::errs() << "KLEE:ERROR: Calling not-OK external function : "
                  << function->getName().str() << "\n";
@@ -3202,6 +3203,15 @@ void Executor::callExternalFunction(ExecutionState &state,
     ref<Expr> e = ConstantExpr::fromMemory((void*) args, 
                                            getWidthForLLVMType(resultType));
     bindLocal(target, state, e);
+
+    if (INTERPOLATION_ENABLED) {
+      std::vector<ref<Expr> > tmpArgs;
+      tmpArgs.push_back(e);
+      for (unsigned i = 0; i < arguments.size(); ++i) {
+        tmpArgs.push_back(arguments.at(i));
+      }
+      interpTree->execute(target->inst, tmpArgs);
+    }
   }
 }
 
