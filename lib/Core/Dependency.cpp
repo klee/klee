@@ -922,9 +922,23 @@ void Dependency::execute(llvm::Instruction *instr,
   // quadratic blow up for only when querying the database.
 
   switch (args.size()) {
-  case 0:
+  case 0: {
+    switch (instr->getOpcode()) {
+    case llvm::Instruction::Br: {
+      llvm::BranchInst *binst = llvm::dyn_cast<llvm::BranchInst>(instr);
+      if (binst && binst->isConditional()) {
+        AllocationGraph *g = new AllocationGraph();
+        markAllValues(g, binst->getCondition());
+        delete g;
+      }
+      break;
+    }
+    default:
+      break;
+    }
     updateIncomingBlock(instr);
     return;
+  }
   case 1: {
     ref<Expr> argExpr = args.at(0);
 
