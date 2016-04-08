@@ -1189,6 +1189,11 @@ void Executor::executeGetValue(ExecutionState &state,
     assert(success && "FIXME: Unhandled solver failure");
     (void) success;
     bindLocal(target, state, value);
+
+    if (INTERPOLATION_ENABLED) {
+      llvm::errs() << "a1\n";
+      interpTree->execute(target->inst, value);
+    }
   } else {
     std::set< ref<Expr> > values;
     for (std::vector<SeedInfo>::iterator siit = it->second.begin(), 
@@ -1216,6 +1221,13 @@ void Executor::executeGetValue(ExecutionState &state,
       if (es)
         bindLocal(target, *es, *vit);
       ++bit;
+    }
+
+    if (INTERPOLATION_ENABLED) {
+      llvm::errs() << "a2\n";
+      std::vector<ref<Expr> > args;
+      std::copy(values.begin(), values.end(), std::back_inserter(args));
+      interpTree->execute(target->inst, args);
     }
   }
 }
@@ -3123,10 +3135,13 @@ void Executor::callExternalFunction(ExecutionState &state,
                                     KInstruction *target,
                                     Function *function,
                                     std::vector< ref<Expr> > &arguments) {
+
+  llvm::errs() << "y0\n";
   // check if specialFunctionHandler wants it
   if (specialFunctionHandler->handle(state, function, target, arguments))
     return;
 
+  llvm::errs() << "y0b\n";
   if (NoExternals && !okExternals.count(function->getName())) {
     llvm::errs() << "KLEE:ERROR: Calling not-OK external function : "
                  << function->getName().str() << "\n";
@@ -3184,8 +3199,10 @@ void Executor::callExternalFunction(ExecutionState &state,
     else
       klee_warning_once(function, "%s", os.str().c_str());
   }
-  
+
+  llvm::errs() << "y1\n";
   bool success = externalDispatcher->executeCall(function, target->inst, args);
+  llvm::errs() << "y2\n";
   if (!success) {
     terminateStateOnError(state, "failed external call: " + function->getName(),
                           "external.err");

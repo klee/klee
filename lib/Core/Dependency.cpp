@@ -600,6 +600,7 @@ Dependency::getLatestValueNoConstantCheck(llvm::Value *value) const {
   if (parentDependency)
     return parentDependency->getLatestValueNoConstantCheck(value);
 
+  llvm::errs() << "getLatestValueNoConstantCheck returns null\n";
   return 0;
 }
 
@@ -934,10 +935,12 @@ void Dependency::execute(llvm::Instruction *instr,
   // quadratic blow up for only when querying the database.
 
   if (llvm::isa<llvm::CallInst>(instr)) {
+    llvm::errs() << "A call instruction\n";
     llvm::CallInst *callInst = llvm::dyn_cast<llvm::CallInst>(instr);
     llvm::Function *f = callInst->getCalledFunction();
     if (f && f->getIntrinsicID() == llvm::Intrinsic::not_intrinsic) {
       llvm::StringRef calleeName = callInst->getCalledFunction()->getName();
+      llvm::errs() << "No body of " << calleeName << "\n";
 
       // FIXME: We need a more precise way to determine invoked method.
       if (calleeName.equals("malloc") && args.size() == 1) {
@@ -945,10 +948,16 @@ void Dependency::execute(llvm::Instruction *instr,
                            getInitialAllocation(instr));
       } else if (calleeName.equals("syscall") && args.size() == 5) {
         VersionedValue *returnValue = getNewVersionedValue(instr, args.at(0));
-        for (unsigned i = 0; i < args.size(); ++i) {
+        for (unsigned i = 0; i + 1 < args.size(); ++i) {
           VersionedValue *arg =
               getLatestValue(instr->getOperand(i), args.at(i + 1));
           addDependency(arg, returnValue);
+        }
+      } else if (calleeName.equals("klee_get_valuel") && args.size()) {
+        for (std::vector<ref<Expr> >::iterator it = args.begin(),
+                                               itEnd = args.end();
+             it != itEnd; ++it) {
+          getNewVersionedValue(instr, (*it));
         }
       }
     }
@@ -1030,7 +1039,12 @@ void Dependency::execute(llvm::Instruction *instr,
           // Constants would kill dependencies, the remaining is for
           // cases that may actually require dependencies.
       {
-        assert(!"operand not found");
+        if (instr->getOperand(0)->getType()->isPointerTy()) {
+          addPointerEquality(getNewVersionedValue(instr, argExpr),
+                             getInitialAllocation(instr->getOperand(0)));
+        } else {
+          assert(!"operand not found");
+        }
       }
       break;
     }
@@ -1069,12 +1083,23 @@ void Dependency::execute(llvm::Instruction *instr,
       if (addressValue) {
         std::vector<Allocation *> allocations =
             resolveAllocationTransitively(addressValue);
-        if (allocations.size() == 1 &&
-            Util::isMainArgument(allocations.at(0)->getSite())) {
-          // The load corresponding to a load of the main function's
-          // argument that was never allocated within this program.
-          addPointerEquality(getNewVersionedValue(instr, valueExpr),
-                             getNewAllocationVersion(instr));
+        switch (allocations.size()) {
+        case 0: {
+          Allocation *alloc = getInitialAllocation(instr->getOperand(0));
+          addPointerEquality(addressValue, alloc);
+          updateStore(alloc, getNewVersionedValue(instr, valueExpr));
+          break;
+        }
+        case 1: {
+          if (Util::isMainArgument(allocations.at(0)->getSite())) {
+            // The load corresponding to a load of the main function's
+            // argument that was never allocated within this program.
+            addPointerEquality(getNewVersionedValue(instr, valueExpr),
+                               getNewAllocationVersion(instr));
+          }
+          break;
+        }
+        default:
           break;
         }
       }
@@ -1246,7 +1271,6 @@ void Dependency::markAllValues(AllocationGraph *g, VersionedValue *value) {
 
 void Dependency::markAllValues(AllocationGraph *g, llvm::Value *val) {
   VersionedValue *value = getLatestValueNoConstantCheck(val);
-
   buildAllocationGraph(g, value);
   std::vector<VersionedValue *> allSources = allFlowSources(value);
   for (std::vector<VersionedValue *>::iterator it = allSources.begin(),
