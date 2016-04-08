@@ -915,6 +915,12 @@ Dependency *Dependency::cdr() const { return parentDependency; }
 
 void Dependency::execute(llvm::Instruction *instr,
                          std::vector<ref<Expr> > &args) {
+  // The basic design principle that we need to be careful here
+  // is that we should not store quadratic-sized structures in
+  // the database of computed relations, e.g., not storing the
+  // result of traversals of the graph. We keep the
+  // quadratic blow up for only when querying the database.
+
   switch (args.size()) {
   case 0:
     updateIncomingBlock(instr);
@@ -922,16 +928,19 @@ void Dependency::execute(llvm::Instruction *instr,
   case 1: {
     ref<Expr> argExpr = args.at(0);
 
-    // The basic design principle that we need to be careful here
-    // is that we should not store quadratic-sized structures in
-    // the database of computed relations, e.g., not storing the
-    // result of traversals of the graph. We keep the
-    // quadratic blow up for only when querying the database.
-
     switch (instr->getOpcode()) {
     case llvm::Instruction::Alloca: {
       addPointerEquality(getNewVersionedValue(instr, argExpr),
                          getInitialAllocation(instr));
+      break;
+    }
+    case llvm::Instruction::Call: {
+      llvm::CallInst *callInst = llvm::dyn_cast<llvm::CallInst>(instr);
+      if (callInst &&
+          callInst->getCalledFunction()->getName().equals("malloc")) {
+        addPointerEquality(getNewVersionedValue(instr, argExpr),
+                           getInitialAllocation(instr));
+      }
       break;
     }
     case llvm::Instruction::GetElementPtr: {
@@ -1017,11 +1026,6 @@ void Dependency::execute(llvm::Instruction *instr,
   case 2: {
     ref<Expr> valueExpr = args.at(0);
     ref<Expr> address = args.at(1);
-    // The basic design principle that we need to be careful here
-    // is that we should not store quadratic-sized structures in
-    // the database of computed relations, e.g., not storing the
-    // result of traversals of the graph. We keep the
-    // quadratic blow up for only when querying the database.
 
     switch (instr->getOpcode()) {
     case llvm::Instruction::Load: {
