@@ -929,6 +929,7 @@ void Dependency::execute(llvm::Instruction *instr,
       if (binst && binst->isConditional()) {
         AllocationGraph *g = new AllocationGraph();
         markAllValues(g, binst->getCondition());
+        computeInterpolantAllocations(g);
         delete g;
       }
       break;
