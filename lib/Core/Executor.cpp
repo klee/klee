@@ -282,7 +282,7 @@ Executor::Executor(const InterpreterOptions &opts,
     symPathWriter(0),
     specialFunctionHandler(0),
     processTree(0),
-    replayOut(0),
+    replayKTest(0),
     replayPath(0),    
     usingSeeds(0),
     atMemoryLimit(false),
@@ -736,7 +736,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
         }
       }
     } else if (res==Solver::Unknown) {
-      assert(!replayOut && "in replay mode, only one branch can be true.");
+      assert(!replayKTest && "in replay mode, only one branch can be true.");
       
       if ((MaxMemoryInhibit && atMemoryLimit) || 
           current.forkDisabled ||
@@ -2652,8 +2652,8 @@ std::string Executor::getAddressInfo(ExecutionState &state,
 }
 
 void Executor::terminateState(ExecutionState &state) {
-  if (replayOut && replayPosition!=replayOut->numObjects) {
-    klee_warning_once(replayOut, 
+  if (replayKTest && replayPosition!=replayKTest->numObjects) {
+    klee_warning_once(replayKTest,
                       "replay did not consume all objects in test input.");
   }
 
@@ -2875,7 +2875,7 @@ void Executor::callExternalFunction(ExecutionState &state,
 ref<Expr> Executor::replaceReadWithSymbolic(ExecutionState &state, 
                                             ref<Expr> e) {
   unsigned n = interpreterOpts.MakeConcreteSymbolic;
-  if (!n || replayOut || replayPath)
+  if (!n || replayKTest || replayPath)
     return e;
 
   // right now, we don't replace symbolics (is there any reason to?)
@@ -3221,7 +3221,7 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
                                    const MemoryObject *mo,
                                    const std::string &name) {
   // Create a new object state for the memory object (instead of a copy).
-  if (!replayOut) {
+  if (!replayKTest) {
     // Find a unique name for this array.  First try the original name,
     // or if that fails try adding a unique identifier.
     unsigned id = 0;
@@ -3281,10 +3281,10 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
     }
   } else {
     ObjectState *os = bindObjectInState(state, mo, false);
-    if (replayPosition >= replayOut->numObjects) {
+    if (replayPosition >= replayKTest->numObjects) {
       terminateStateOnError(state, "replay count mismatch", "user.err");
     } else {
-      KTestObject *obj = &replayOut->objects[replayPosition++];
+      KTestObject *obj = &replayKTest->objects[replayPosition++];
       if (obj->numBytes != mo->size) {
         terminateStateOnError(state, "replay size mismatch", "user.err");
       } else {

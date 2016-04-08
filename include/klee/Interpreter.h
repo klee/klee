@@ -113,7 +113,7 @@ public:
 
   // supply a test case to replay from. this can be used to drive the
   // interpretation down a user specified path. use null to reset.
-  virtual void setReplayOut(const struct KTest *out) = 0;
+  virtual void setReplayKTest(const struct KTest *out) = 0;
 
   // supply a list of branch decisions specifying which direction to
   // take on forks. this can be used to drive the interpretation down
