@@ -202,7 +202,7 @@ void EnvironmentAllocation::print(llvm::raw_ostream &stream) const {
 
 void VersionedValue::print(llvm::raw_ostream &stream) const {
   stream << "V";
-  if (inInterpolant)
+  if (core)
     stream << "(I)";
   stream << "[";
   value->print(stream);
@@ -471,8 +471,8 @@ std::vector<Allocation *> Dependency::getAllVersionedAllocations() const {
 }
 
 std::map<llvm::Value *, ref<Expr> >
-Dependency::getLatestCoreExpressions(std::vector<const Array *> &replacements,
-                                     bool interpolantValueOnly) const {
+Dependency::getSingletonExpressions(std::vector<const Array *> &replacements,
+                                    bool coreOnly) const {
   std::vector<Allocation *> allAlloc = getAllVersionedAllocations();
   std::map<llvm::Value *, ref<Expr> > ret;
 
@@ -480,9 +480,8 @@ Dependency::getLatestCoreExpressions(std::vector<const Array *> &replacements,
                                            allocIterEnd = allAlloc.end();
        allocIter != allocIterEnd; ++allocIter) {
 
-    if (interpolantValueOnly &&
-        std::find(interpolantAllocations.begin(), interpolantAllocations.end(),
-                  *allocIter) == interpolantAllocations.end())
+    if (coreOnly && std::find(coreAllocations.begin(), coreAllocations.end(),
+                              *allocIter) == coreAllocations.end())
       continue;
 
     std::vector<VersionedValue *> stored = stores(*allocIter);
@@ -494,10 +493,10 @@ Dependency::getLatestCoreExpressions(std::vector<const Array *> &replacements,
       VersionedValue *v = stored.at(0);
       llvm::Value *site = (*allocIter)->getSite();
 
-      if (!interpolantValueOnly) {
+      if (!coreOnly) {
         ref<Expr> expr = v->getExpression();
         ret[site] = expr;
-      } else if (v->valueInInterpolant()) {
+      } else if (v->isCore()) {
         ref<Expr> expr = v->getExpression();
         ret[site] = ShadowArray::getShadowExpression(expr, replacements);
       }
@@ -518,8 +517,8 @@ std::vector<Allocation *> Dependency::getAllCompositeAllocations() const {
 }
 
 std::map<llvm::Value *, std::vector<ref<Expr> > >
-Dependency::getCompositeCoreExpressions(
-    std::vector<const Array *> &replacements, bool interpolantValueOnly) const {
+Dependency::getCompositeExpressions(std::vector<const Array *> &replacements,
+                                    bool coreOnly) const {
   std::vector<Allocation *> allAlloc = getAllCompositeAllocations();
   std::map<llvm::Value *, std::vector<ref<Expr> > > ret;
 
@@ -527,9 +526,8 @@ Dependency::getCompositeCoreExpressions(
                                            allocIterEnd = allAlloc.end();
        allocIter != allocIterEnd; ++allocIter) {
 
-    if (interpolantValueOnly &&
-        std::find(interpolantAllocations.begin(), interpolantAllocations.end(),
-                  *allocIter) == interpolantAllocations.end())
+    if (coreOnly && std::find(coreAllocations.begin(), coreAllocations.end(),
+                              *allocIter) == coreAllocations.end())
       continue;
 
     std::vector<VersionedValue *> stored = stores(*allocIter);
@@ -538,10 +536,10 @@ Dependency::getCompositeCoreExpressions(
     for (std::vector<VersionedValue *>::iterator valueIter = stored.begin(),
                                                  valueIterEnd = stored.end();
          valueIter != valueIterEnd; ++valueIter) {
-      if (!interpolantValueOnly) {
+      if (!coreOnly) {
         std::vector<ref<Expr> > &elemList = ret[site];
         elemList.push_back((*valueIter)->getExpression());
-      } else if ((*valueIter)->valueInInterpolant()) {
+      } else if ((*valueIter)->isCore()) {
         std::vector<ref<Expr> > &elemList = ret[site];
         elemList.push_back(ShadowArray::getShadowExpression(
             (*valueIter)->getExpression(), replacements));
@@ -922,9 +920,24 @@ void Dependency::execute(llvm::Instruction *instr,
   // quadratic blow up for only when querying the database.
 
   switch (args.size()) {
-  case 0:
+  case 0: {
+    switch (instr->getOpcode()) {
+    case llvm::Instruction::Br: {
+      llvm::BranchInst *binst = llvm::dyn_cast<llvm::BranchInst>(instr);
+      if (binst && binst->isConditional()) {
+        AllocationGraph *g = new AllocationGraph();
+        markAllValues(g, binst->getCondition());
+        computeCoreAllocations(g);
+        delete g;
+      }
+      break;
+    }
+    default:
+      break;
+    }
     updateIncomingBlock(instr);
     return;
+  }
   case 1: {
     ref<Expr> argExpr = args.at(0);
 
@@ -1213,7 +1226,7 @@ void Dependency::markAllValues(AllocationGraph *g, VersionedValue *value) {
   for (std::vector<VersionedValue *>::iterator it = allSources.begin(),
                                                itEnd = allSources.end();
        it != itEnd; ++it) {
-    (*it)->includeInInterpolant();
+    (*it)->setAsCore();
   }
 }
 
@@ -1225,17 +1238,19 @@ void Dependency::markAllValues(AllocationGraph *g, llvm::Value *val) {
   for (std::vector<VersionedValue *>::iterator it = allSources.begin(),
                                                itEnd = allSources.end();
        it != itEnd; ++it) {
-    (*it)->includeInInterpolant();
+    (*it)->setAsCore();
   }
 }
 
-void Dependency::computeInterpolantAllocations(AllocationGraph *g) {
-  interpolantAllocations = g->getSinkAllocations();
+void Dependency::computeCoreAllocations(AllocationGraph *g) {
+  std::vector<Allocation *> sinkAllocations(g->getSinkAllocations());
+  coreAllocations.insert(coreAllocations.begin(), sinkAllocations.begin(),
+                         sinkAllocations.end());
 
   if (parentDependency) {
     g->consumeNodesWithAllocations(versionedAllocationsList,
                                    compositeAllocationsList);
-    parentDependency->computeInterpolantAllocations(g);
+    parentDependency->computeCoreAllocations(g);
   }
 }
 
