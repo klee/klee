@@ -1245,7 +1245,9 @@ void Dependency::markAllValues(AllocationGraph *g, llvm::Value *val) {
 }
 
 void Dependency::computeInterpolantAllocations(AllocationGraph *g) {
-  interpolantAllocations = g->getSinkAllocations();
+  std::vector<Allocation *> sinkAllocations(g->getSinkAllocations());
+  interpolantAllocations.insert(interpolantAllocations.begin(),
+                                sinkAllocations.begin(), sinkAllocations.end());
 
   if (parentDependency) {
     g->consumeNodesWithAllocations(versionedAllocationsList,

@@ -1610,9 +1610,11 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         transferToBasicBlock(bi->getSuccessor(0), bi->getParent(), *branches.first);
       if (branches.second)
         transferToBasicBlock(bi->getSuccessor(1), bi->getParent(), *branches.second);
+
+      if (INTERPOLATION_ENABLED &&
+	  (!branches.first || !branches.second))
+        interpTree->execute(i);
     }
-    if (INTERPOLATION_ENABLED)
-      interpTree->execute(i);
     break;
   }
   case Instruction::Switch: {
