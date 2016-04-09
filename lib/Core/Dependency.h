@@ -181,10 +181,11 @@ class Allocation {
 
     /// @brief to indicate if any unsatisfiability core
     /// depends on this value
-    bool inInterpolant;
+    bool core;
+
   public:
     VersionedValue(llvm::Value *value, ref<Expr> valueExpr)
-        : value(value), valueExpr(valueExpr), inInterpolant(false) {}
+        : value(value), valueExpr(valueExpr), core(false) {}
 
     ~VersionedValue() {}
 
@@ -192,9 +193,9 @@ class Allocation {
 
     ref<Expr> getExpression() const { return valueExpr; }
 
-    void includeInInterpolant() { inInterpolant = true; }
+    void setAsCore() { core = true; }
 
-    bool valueInInterpolant() const { return inInterpolant; }
+    bool isCore() const { return core; }
 
     llvm::Value *getValue() const { return value; }
 
@@ -572,7 +573,7 @@ class Allocation {
 
     /// @brief allocations of this node and its ancestors
     /// that are needed for the core and dominates other allocations.
-    std::vector<Allocation *> interpolantAllocations;
+    std::vector<Allocation *> coreAllocations;
 
     /// @brief the basic block of the last-executed instruction
     llvm::BasicBlock *incomingBlock;
@@ -669,12 +670,12 @@ class Allocation {
     void execute(llvm::Instruction *instr, std::vector<ref<Expr> > &args);
 
     std::map<llvm::Value *, ref<Expr> >
-    getLatestCoreExpressions(std::vector<const Array *> &replacements,
-                             bool interpolantValueOnly) const;
+    getSingletonExpressions(std::vector<const Array *> &replacements,
+                            bool coreOnly) const;
 
     std::map<llvm::Value *, std::vector<ref<Expr> > >
-    getCompositeCoreExpressions(std::vector<const Array *> &replacements,
-                                bool interpolantValueOnly) const;
+    getCompositeExpressions(std::vector<const Array *> &replacements,
+                            bool coreOnly) const;
 
     void bindCallArguments(llvm::Instruction *instr,
                            std::vector<ref<Expr> > &arguments);
@@ -686,7 +687,7 @@ class Allocation {
 
     void markAllValues(AllocationGraph *g, llvm::Value *value);
 
-    void computeInterpolantAllocations(AllocationGraph *g);
+    void computeCoreAllocations(AllocationGraph *g);
 
     void dump() const {
       this->print(llvm::errs());

@@ -241,7 +241,7 @@ public:
   static void addTableEntryMapping(ITreeNode *iTreeNode,
                                    SubsumptionTableEntry *entry);
 
-  static void includeInInterpolant(PathCondition *pathCondition);
+  static void setAsCore(PathCondition *pathCondition);
 
   /// @brief Save the graph
   static void save(std::string dotFileName);
@@ -271,7 +271,7 @@ class PathCondition {
 
   /// @brief When true, indicates that the constraint should be included
   /// in the interpolant
-  bool inInterpolant;
+  bool core;
 
   /// @brief Previous path condition
   PathCondition *tail;
@@ -286,9 +286,9 @@ public:
 
   PathCondition *cdr() const;
 
-  void includeInInterpolant(AllocationGraph *g);
+  void setAsCore(AllocationGraph *g);
 
-  bool carInInterpolant() const;
+  bool isCore() const;
 
   ref<Expr> packInterpolant(std::vector<const Array *> &replacements);
 
@@ -298,7 +298,7 @@ public:
 };
 
 class PathConditionMarker {
-  bool mayBeInInterpolant;
+  bool maybeCore;
 
   PathCondition *pathCondition;
 
@@ -307,9 +307,9 @@ public:
 
   ~PathConditionMarker();
 
-  void includeInInterpolant(AllocationGraph *g);
+  void setAsCore(AllocationGraph *g);
 
-  void mayIncludeInInterpolant();
+  void setAsMaybeCore();
 };
 
 class SubsumptionTableEntry {
@@ -459,11 +459,11 @@ class ITreeNode {
   static StatTimer executeTimer;
   static StatTimer bindCallArgumentsTimer;
   static StatTimer popAbstractDependencyFrameTimer;
-  static StatTimer getLatestCoreExpressionsTimer;
+  static StatTimer getSingletonExpressionsTimer;
+  static StatTimer getCompositeExpressionsTimer;
+  static StatTimer getSingletonCoreExpressionsTimer;
   static StatTimer getCompositeCoreExpressionsTimer;
-  static StatTimer getLatestInterpolantCoreExpressionsTimer;
-  static StatTimer getCompositeInterpolantCoreExpressionsTimer;
-  static StatTimer computeInterpolantAllocationsTimer;
+  static StatTimer computeCoreAllocationsTimer;
 
 private:
   typedef ref<Expr> expression_type;
@@ -515,19 +515,18 @@ public:
   void popAbstractDependencyFrame(llvm::CallInst *site, llvm::Instruction *inst,
                                   ref<Expr> returnValue);
 
-  std::map<llvm::Value *, ref<Expr> > getLatestCoreExpressions() const;
+  std::map<llvm::Value *, ref<Expr> > getSingletonExpressions() const;
 
   std::map<llvm::Value *, std::vector<ref<Expr> > >
-  getCompositeCoreExpressions() const;
+  getCompositeExpressions() const;
 
-  std::map<llvm::Value *, ref<Expr> > getLatestInterpolantCoreExpressions(
-      std::vector<const Array *> &replacements) const;
+  std::map<llvm::Value *, ref<Expr> >
+  getSingletonCoreExpressions(std::vector<const Array *> &replacements) const;
 
   std::map<llvm::Value *, std::vector<ref<Expr> > >
-  getCompositeInterpolantCoreExpressions(
-      std::vector<const Array *> &replacements) const;
+  getCompositeCoreExpressions(std::vector<const Array *> &replacements) const;
 
-  void computeInterpolantAllocations(AllocationGraph *g);
+  void computeCoreAllocations(AllocationGraph *g);
 
   void dump() const;
 

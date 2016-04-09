@@ -1622,9 +1622,20 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         transferToBasicBlock(bi->getSuccessor(0), bi->getParent(), *branches.first);
       if (branches.second)
         transferToBasicBlock(bi->getSuccessor(1), bi->getParent(), *branches.second);
+
+      // Below we test if some of the branches are not available for
+      // exploration, which means that there is a dependency of the program
+      // state on the control variables in the conditional. Such variables
+      // (allocations) need to be marked as belonging to the core.
+      // This is mainly to take care of the case when the conditional
+      // variables are not marked using unsatisfiability core as the
+      // conditional is concrete and therefore there has been no invocation
+      // of the solver to decide its satisfiability, and no generation
+      // of the unsatisfiability core.
+      if (INTERPOLATION_ENABLED &&
+	  (!branches.first || !branches.second))
+        interpTree->execute(i);
     }
-    if (INTERPOLATION_ENABLED)
-      interpTree->execute(i);
     break;
   }
   case Instruction::Switch: {
