@@ -139,6 +139,19 @@ llvm::cl::opt<CoreSolverType> CoreSolverToUse(
                      clEnumValN(Z3_SOLVER, "z3", "Z3" Z3_IS_DEFAULT_STR),
                      clEnumValEnd),
     llvm::cl::init(DEFAULT_CORE_SOLVER));
+
+llvm::cl::opt<CoreSolverType> DebugCrossCheckCoreSolverWith(
+    "debug-cross-check-core-solver",
+    llvm::cl::desc(
+        "Specifiy a solver to use for cross checking with the core solver"),
+    llvm::cl::values(clEnumValN(STP_SOLVER, "stp", "stp"),
+                     clEnumValN(METASMT_SOLVER, "metasmt", "metaSMT"),
+                     clEnumValN(DUMMY_SOLVER, "dummy", "Dummy solver"),
+                     clEnumValN(Z3_SOLVER, "z3", "Z3"),
+                     clEnumValN(NO_SOLVER, "none",
+                                "Do not cross check (default)"),
+                     clEnumValEnd),
+    llvm::cl::init(NO_SOLVER));
 }
 #undef STP_IS_DEFAULT_STR
 #undef METASMT_IS_DEFAULT_STR

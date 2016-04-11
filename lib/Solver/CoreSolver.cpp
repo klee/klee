@@ -83,11 +83,15 @@ Solver *createCoreSolver(CoreSolverType cst) {
     return createDummySolver();
   case Z3_SOLVER:
 #ifdef ENABLE_Z3
+    llvm::errs() << "Using Z3 solver backend\n";
     return new Z3Solver();
 #else
     llvm::errs() << "Not compiled with Z3 support\n";
     return NULL;
 #endif
+  case NO_SOLVER:
+    llvm::errs() << "Invalid solver\n";
+    return NULL;
   default:
     llvm_unreachable("Unsupported CoreSolverType");
   }

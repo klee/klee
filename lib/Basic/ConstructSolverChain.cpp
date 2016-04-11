@@ -62,6 +62,10 @@ Solver *constructSolverChain(Solver *coreSolver, std::string querySMT2LogPath,
     llvm::errs() << "Logging all queries in .smt2 format to "
                  << querySMT2LogPath.c_str() << "\n";
   }
+  if (DebugCrossCheckCoreSolverWith != NO_SOLVER) {
+    Solver *oracleSolver = createCoreSolver(DebugCrossCheckCoreSolverWith);
+    solver = createValidatingSolver(/*s=*/solver, /*oracle=*/oracleSolver);
+  }
 
   return solver;
 }
