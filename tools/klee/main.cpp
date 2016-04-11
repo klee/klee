@@ -1382,11 +1382,10 @@ int main(int argc, char **argv, char **envp) {
     theInterpreter = Interpreter::create(IOpts, handler);
   handler->setInterpreter(interpreter);
 
-  llvm::raw_ostream &infoFile = handler->getInfoStream();
   for (int i=0; i<argc; i++) {
-    infoFile << argv[i] << (i+1<argc ? " ":"\n");
+    handler->getInfoStream() << argv[i] << (i+1<argc ? " ":"\n");
   }
-  infoFile << "PID: " << getpid() << "\n";
+  handler->getInfoStream() << "PID: " << getpid() << "\n";
 
   const Module *finalModule =
     interpreter->setModule(mainModule, Opts);
@@ -1400,8 +1399,8 @@ int main(int argc, char **argv, char **envp) {
   time_t t[2];
   t[0] = time(NULL);
   strftime(buf, sizeof(buf), "Started: %Y-%m-%d %H:%M:%S\n", localtime(&t[0]));
-  infoFile << buf;
-  infoFile.flush();
+  handler->getInfoStream() << buf;
+  handler->getInfoStream().flush();
 
   if (!ReplayKTestDir.empty() || !ReplayKTestFile.empty()) {
     assert(SeedOutFile.empty());
@@ -1502,11 +1501,11 @@ int main(int argc, char **argv, char **envp) {
 
   t[1] = time(NULL);
   strftime(buf, sizeof(buf), "Finished: %Y-%m-%d %H:%M:%S\n", localtime(&t[1]));
-  infoFile << buf;
+  handler->getInfoStream() << buf;
 
   strcpy(buf, "Elapsed: ");
   strcpy(format_tdiff(buf, t[1] - t[0]), "\n");
-  infoFile << buf;
+  handler->getInfoStream() << buf;
 
   // Free all the args.
   for (unsigned i=0; i<InputArgv.size()+1; i++)
