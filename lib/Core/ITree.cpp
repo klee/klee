@@ -1702,7 +1702,7 @@ void ITree::markPathCondition(ExecutionState &state, TimingSolver *solver) {
 void ITree::execute(llvm::Instruction *instr) {
   executeTimer.start();
   std::vector<ref<Expr> > dummyArgs;
-  currentINode->execute(instr, dummyArgs);
+  executeOnNode(currentINode, instr, dummyArgs);
   executeTimer.stop();
 }
 
@@ -1710,7 +1710,7 @@ void ITree::execute(llvm::Instruction *instr, ref<Expr> arg1) {
   executeTimer.start();
   std::vector<ref<Expr> > args;
   args.push_back(arg1);
-  currentINode->execute(instr, args);
+  executeOnNode(currentINode, instr, args);
   executeTimer.stop();
 }
 
@@ -1719,7 +1719,7 @@ void ITree::execute(llvm::Instruction *instr, ref<Expr> arg1, ref<Expr> arg2) {
   std::vector<ref<Expr> > args;
   args.push_back(arg1);
   args.push_back(arg2);
-  currentINode->execute(instr, args);
+  executeOnNode(currentINode, instr, args);
   executeTimer.stop();
 }
 
@@ -1730,13 +1730,20 @@ void ITree::execute(llvm::Instruction *instr, ref<Expr> arg1, ref<Expr> arg2,
   args.push_back(arg1);
   args.push_back(arg2);
   args.push_back(arg3);
-  currentINode->execute(instr, args);
+  executeOnNode(currentINode, instr, args);
   executeTimer.stop();
 }
 
 void ITree::execute(llvm::Instruction *instr, std::vector<ref<Expr> > &args) {
   executeTimer.start();
-  currentINode->execute(instr, args);
+  executeOnNode(currentINode, instr, args);
+  executeTimer.stop();
+}
+
+void ITree::executeOnNode(ITreeNode *node, llvm::Instruction *instr,
+                          std::vector<ref<Expr> > &args) {
+  executeTimer.start();
+  node->execute(instr, args);
   executeTimer.stop();
 }
 

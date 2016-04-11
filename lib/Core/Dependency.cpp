@@ -940,7 +940,10 @@ void Dependency::execute(llvm::Instruction *instr,
       llvm::StringRef calleeName = callInst->getCalledFunction()->getName();
       llvm::errs() << "No body of " << calleeName << "\n";
 
-      // FIXME: We need a more precise way to determine invoked method.
+      // FIXME: We need a more precise way to determine invoked method
+      // rather than just using the name.
+      std::string getValuePrefix("klee_get_value");
+
       if (calleeName.equals("malloc") && args.size() == 1) {
         addPointerEquality(getNewVersionedValue(instr, args.at(0)),
                            getInitialAllocation(instr));
@@ -951,12 +954,14 @@ void Dependency::execute(llvm::Instruction *instr,
               getLatestValue(instr->getOperand(i), args.at(i + 1));
           addDependency(arg, returnValue);
         }
-      } else if (calleeName.equals("klee_get_valuel") && args.size()) {
-        for (std::vector<ref<Expr> >::iterator it = args.begin(),
-                                               itEnd = args.end();
-             it != itEnd; ++it) {
-          getNewVersionedValue(instr, (*it));
-        }
+      } else if (std::mismatch(getValuePrefix.begin(), getValuePrefix.end(),
+                               calleeName.begin()).first ==
+                     getValuePrefix.end() &&
+                 args.size() == 2) {
+        VersionedValue *returnValue = getNewVersionedValue(instr, args.at(0));
+        VersionedValue *arg =
+            getNewVersionedValue(instr->getOperand(0), args.at(1));
+        addDependency(arg, returnValue);
       }
     }
     updateIncomingBlock(instr);

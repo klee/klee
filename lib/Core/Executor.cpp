@@ -1191,8 +1191,7 @@ void Executor::executeGetValue(ExecutionState &state,
     bindLocal(target, state, value);
 
     if (INTERPOLATION_ENABLED) {
-      llvm::errs() << "a1\n";
-      interpTree->execute(target->inst, value);
+      interpTree->execute(target->inst, e, value);
     }
   } else {
     std::set< ref<Expr> > values;
@@ -1220,14 +1219,13 @@ void Executor::executeGetValue(ExecutionState &state,
       ExecutionState *es = *bit;
       if (es)
         bindLocal(target, *es, *vit);
+      if (INTERPOLATION_ENABLED) {
+        std::vector<ref<Expr> > args;
+        args.push_back(e);
+        args.push_back(*vit);
+        ITree::executeOnNode(es->itreeNode, target->inst, args);
+      }
       ++bit;
-    }
-
-    if (INTERPOLATION_ENABLED) {
-      llvm::errs() << "a2\n";
-      std::vector<ref<Expr> > args;
-      std::copy(values.begin(), values.end(), std::back_inserter(args));
-      interpTree->execute(target->inst, args);
     }
   }
 }

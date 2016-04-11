@@ -438,6 +438,9 @@ public:
 
   void execute(llvm::Instruction *instr, std::vector<ref<Expr> > &args);
 
+  static void executeOnNode(ITreeNode *node, llvm::Instruction *instr,
+                            std::vector<ref<Expr> > &args);
+
   void print(llvm::raw_ostream &stream);
 
   void dump();
