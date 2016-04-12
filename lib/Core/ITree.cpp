@@ -1191,11 +1191,14 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
   // Quick check for subsumption in case the interpolant is empty
   if (empty())
     return true;
+  llvm::errs() << "1\n";
 
   std::map<llvm::Value *, ref<Expr> > stateSingletonStore =
       state.itreeNode->getSingletonExpressions();
   std::map<llvm::Value *, std::vector<ref<Expr> > > stateCompositeStore =
       state.itreeNode->getCompositeExpressions();
+
+  llvm::errs() << "1a\n";
 
   ref<Expr> stateEqualityConstraints;
   for (std::vector<llvm::Value *>::iterator it = singletonStoreKeys.begin(),
@@ -1234,11 +1237,26 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
                                            lhsIterEnd = lhsList.end();
          lhsIter != lhsIterEnd; ++lhsIter) {
 
+      // FIXME: How could this have happened?
+      if (!(*lhsIter).get())
+	continue;
+
       for (std::vector<ref<Expr> >::iterator rhsIter = rhsList.begin(),
                                              rhsIterEnd = rhsList.end();
            rhsIter != rhsIterEnd; ++rhsIter) {
+	  llvm::errs() << "a\n";
+	  if (!rhsIter->get())
+	    llvm::errs() << "NULL RHSITER\n";
+	  if (!lhsIter->get())
+	    llvm::errs() << "NULL LHSITER\n";
         ref<Expr> lhs = *lhsIter;
+        llvm::errs() << "a1\n";
         ref<Expr> rhs = *rhsIter;
+
+        llvm::errs() << "LHS: ";
+        lhs->dump();
+        llvm::errs() << "RHS: ";
+        rhs->dump();
 
         // FIXME: This is a quick hack that was temporarily required due
         // to field insensitivity of the dependency analysis, such that
@@ -1249,16 +1267,19 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
         } else if (lhs->getWidth() < rhs->getWidth()) {
           lhs = ZExtExpr::alloc(lhs, rhs->getWidth());
         }
+        llvm::errs() << "c\n";
 
         if(llvm::isa<ConstantExpr>(lhs) && llvm::isa<ConstantExpr>(rhs)){
             if(lhs.operator ==(rhs)){
-        	// Because if the disjunct is TRUE, then the disjunction is true.
+        	llvm::errs() << "d\n";
+        	// Because if the disjunct is TRUE, then the disjunction is true
         	auxDisjuncts = ConstantExpr::alloc(1, Expr::Bool);
-        	// To break from outer loop as well.
+        	// To break from outer loop as well
         	lhsIter = lhsIterEnd;
         	break;
             }
         }
+        llvm::errs() << "e\n";
 
         if (auxDisjunctsEmpty) {
           auxDisjuncts = EqExpr::alloc(lhs, rhs);
@@ -1266,8 +1287,12 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
         } else {
           auxDisjuncts = OrExpr::alloc(EqExpr::alloc(lhs, rhs), auxDisjuncts);
         }
+
+        llvm::errs() << "b\n";
       }
     }
+
+    llvm::errs() << "w\n";
 
     if (!auxDisjunctsEmpty) {
       stateEqualityConstraints =
@@ -1276,6 +1301,8 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
               : auxDisjuncts;
     }
   }
+
+  llvm::errs() << "2\n";
 
   // We create path condition needed constraints marking structure
   std::map<Expr *, PathConditionMarker *> markerMap =
@@ -1300,6 +1327,8 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
     return true;
   }
 
+  llvm::errs() << "3\n";
+
   bool queryHasNoFreeVariables = false;
 
   if (!existentials.empty()) {
@@ -1315,6 +1344,8 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
     return false;
 
   bool success = false;
+
+  llvm::errs() << "4\n";
 
   Z3Solver *z3solver = 0;
 
@@ -1351,12 +1382,11 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
 
         actualSolverCallTimer.start();
         success = z3solver->getValue(Query(constraints, falseExpr), tmpExpr);
-        // double elapsedTime =
-            actualSolverCallTimer.stop();
-//        if(elapsedTime > 0.01){
-//            llvm::errs() << "LONG QUERY 1:" << "\n";
-//            Query(constraints, falseExpr).dump();
-//        }
+        double elapsedTime = actualSolverCallTimer.stop();
+        if(elapsedTime > 0.01){
+            llvm::errs() << "LONG QUERY 1:" << "\n";
+            Query(constraints, falseExpr).dump();
+        }
         result = success ? Solver::True : Solver::Unknown;
 
       } else {
@@ -1366,13 +1396,12 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
         actualSolverCallTimer.start();
         success = z3solver->directComputeValidity(
             Query(state.constraints, query), result);
-//        double elapsedTime =
-            actualSolverCallTimer.stop();
+        double elapsedTime = actualSolverCallTimer.stop();
 
-//        if(elapsedTime > 0.01){
-//            llvm::errs() << "LONG QUERY 2:" << "\n";
-//            Query(state.constraints, query).dump();
-//        }
+        if(elapsedTime > 0.01){
+            llvm::errs() << "LONG QUERY 2:" << "\n";
+            Query(state.constraints, query).dump();
+        }
       }
 
       z3solver->setCoreSolverTimeout(0);
@@ -1388,13 +1417,12 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
       solver->setTimeout(timeout);
       actualSolverCallTimer.start();
       success = solver->evaluate(state, query, result);
-//      double elapsedTime =
-	  actualSolverCallTimer.stop();
+      double elapsedTime = actualSolverCallTimer.stop();
 
-//      if(elapsedTime > 0.01){
-//          llvm::errs() << "LONG QUERY 3:" << "\n";
-//          Query(state.constraints, query).dump();
-//      }
+      if(elapsedTime > 0.01){
+          llvm::errs() << "LONG QUERY 3:" << "\n";
+          Query(state.constraints, query).dump();
+      }
 
       solver->setTimeout(0);
     }
@@ -1439,6 +1467,7 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
     return false;
   }
 
+  llvm::errs() << "5\n";
   // State subsumed, we mark needed constraints on the
   // path condition.
   AllocationGraph *g = new AllocationGraph();
@@ -1458,6 +1487,7 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
   // We mark memory allocations needed for the unsatisfiabilty core
   state.itreeNode->computeCoreAllocations(g);
 
+  llvm::errs() << "6\n";
   delete g; // Delete the AllocationGraph object
   return true;
 }
