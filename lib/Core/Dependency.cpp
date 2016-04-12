@@ -598,7 +598,6 @@ Dependency::getLatestValueNoConstantCheck(llvm::Value *value) const {
   if (parentDependency)
     return parentDependency->getLatestValueNoConstantCheck(value);
 
-  llvm::errs() << "getLatestValueNoConstantCheck returns null\n";
   return 0;
 }
 
@@ -933,12 +932,10 @@ void Dependency::execute(llvm::Instruction *instr,
   // quadratic blow up for only when querying the database.
 
   if (llvm::isa<llvm::CallInst>(instr)) {
-    llvm::errs() << "A call instruction\n";
     llvm::CallInst *callInst = llvm::dyn_cast<llvm::CallInst>(instr);
     llvm::Function *f = callInst->getCalledFunction();
     if (f && f->getIntrinsicID() == llvm::Intrinsic::not_intrinsic) {
       llvm::StringRef calleeName = callInst->getCalledFunction()->getName();
-      llvm::errs() << "No body of " << calleeName << "\n";
 
       // FIXME: We need a more precise way to determine invoked method
       // rather than just using the name.

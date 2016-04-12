@@ -3147,12 +3147,10 @@ void Executor::callExternalFunction(ExecutionState &state,
                                     Function *function,
                                     std::vector< ref<Expr> > &arguments) {
 
-  llvm::errs() << "y0\n";
   // check if specialFunctionHandler wants it
   if (specialFunctionHandler->handle(state, function, target, arguments))
     return;
 
-  llvm::errs() << "y0b\n";
   if (NoExternals && !okExternals.count(function->getName())) {
     llvm::errs() << "KLEE:ERROR: Calling not-OK external function : "
                  << function->getName().str() << "\n";
@@ -3211,9 +3209,7 @@ void Executor::callExternalFunction(ExecutionState &state,
       klee_warning_once(function, "%s", os.str().c_str());
   }
 
-  llvm::errs() << "y1\n";
   bool success = externalDispatcher->executeCall(function, target->inst, args);
-  llvm::errs() << "y2\n";
   if (!success) {
     terminateStateOnError(state, "failed external call: " + function->getName(),
                           "external.err");
