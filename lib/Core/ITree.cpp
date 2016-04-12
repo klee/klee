@@ -1233,6 +1233,7 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
     for (std::vector<ref<Expr> >::iterator lhsIter = lhsList.begin(),
                                            lhsIterEnd = lhsList.end();
          lhsIter != lhsIterEnd; ++lhsIter) {
+
       for (std::vector<ref<Expr> >::iterator rhsIter = rhsList.begin(),
                                              rhsIterEnd = rhsList.end();
            rhsIter != rhsIterEnd; ++rhsIter) {
@@ -1247,6 +1248,16 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
           rhs = ZExtExpr::alloc(rhs, lhs->getWidth());
         } else if (lhs->getWidth() < rhs->getWidth()) {
           lhs = ZExtExpr::alloc(lhs, rhs->getWidth());
+        }
+
+        if(llvm::isa<ConstantExpr>(lhs) && llvm::isa<ConstantExpr>(rhs)){
+            if(lhs.operator ==(rhs)){
+        	// Because if the disjunct is TRUE, then the disjunction is true.
+        	auxDisjuncts = ConstantExpr::alloc(1, Expr::Bool);
+        	// To break from outer loop as well.
+        	lhsIter = lhsIterEnd;
+        	break;
+            }
         }
 
         if (auxDisjunctsEmpty) {
@@ -1340,8 +1351,12 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
 
         actualSolverCallTimer.start();
         success = z3solver->getValue(Query(constraints, falseExpr), tmpExpr);
-        actualSolverCallTimer.stop();
-
+        // double elapsedTime =
+            actualSolverCallTimer.stop();
+//        if(elapsedTime > 0.01){
+//            llvm::errs() << "LONG QUERY 1:" << "\n";
+//            Query(constraints, falseExpr).dump();
+//        }
         result = success ? Solver::True : Solver::Unknown;
 
       } else {
@@ -1351,7 +1366,13 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
         actualSolverCallTimer.start();
         success = z3solver->directComputeValidity(
             Query(state.constraints, query), result);
-        actualSolverCallTimer.stop();
+//        double elapsedTime =
+            actualSolverCallTimer.stop();
+
+//        if(elapsedTime > 0.01){
+//            llvm::errs() << "LONG QUERY 2:" << "\n";
+//            Query(state.constraints, query).dump();
+//        }
       }
 
       z3solver->setCoreSolverTimeout(0);
@@ -1367,7 +1388,14 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
       solver->setTimeout(timeout);
       actualSolverCallTimer.start();
       success = solver->evaluate(state, query, result);
-      actualSolverCallTimer.stop();
+//      double elapsedTime =
+	  actualSolverCallTimer.stop();
+
+//      if(elapsedTime > 0.01){
+//          llvm::errs() << "LONG QUERY 3:" << "\n";
+//          Query(state.constraints, query).dump();
+//      }
+
       solver->setTimeout(0);
     }
   } else {

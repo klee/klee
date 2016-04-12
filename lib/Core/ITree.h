@@ -49,9 +49,11 @@ public:
       lastRecorded = clock();
   }
 
-  void stop() {
-    amount += (clock() - lastRecorded);
+  double stop() {
+    double elapsed = clock() - lastRecorded;
+    amount += elapsed;
     lastRecorded = 0.0;
+    return elapsed;
   }
 
   double get() { return (amount / (double)CLOCKS_PER_SEC); }
