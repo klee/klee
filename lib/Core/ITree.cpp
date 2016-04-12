@@ -1233,8 +1233,18 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
       for (std::vector<ref<Expr> >::iterator rhsIter = rhsList.begin(),
                                              rhsIterEnd = rhsList.end();
            rhsIter != rhsIterEnd; ++rhsIter) {
-        const ref<Expr> lhs = *lhsIter;
-        const ref<Expr> rhs = *rhsIter;
+        ref<Expr> lhs = *lhsIter;
+        ref<Expr> rhs = *rhsIter;
+
+        // FIXME: This is a quick hack that was temporarily required due
+        // to field insensitivity of the dependency analysis, such that
+        // allocations are matched if they had the same base address even
+        // though they point to different locations in the composite.
+        if (lhs->getWidth() > rhs->getWidth()) {
+          rhs = ZExtExpr::alloc(rhs, lhs->getWidth());
+        } else if (lhs->getWidth() < rhs->getWidth()) {
+          lhs = ZExtExpr::alloc(lhs, rhs->getWidth());
+        }
 
         if (auxDisjunctsEmpty) {
           auxDisjuncts = EqExpr::alloc(lhs, rhs);

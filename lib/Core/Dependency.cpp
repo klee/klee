@@ -947,7 +947,7 @@ void Dependency::execute(llvm::Instruction *instr,
       if (calleeName.equals("malloc") && args.size() == 1) {
         addPointerEquality(getNewVersionedValue(instr, args.at(0)),
                            getInitialAllocation(instr));
-      } else if (calleeName.equals("syscall") && args.size() == 5) {
+      } else if (calleeName.equals("syscall") && args.size() >= 2) {
         VersionedValue *returnValue = getNewVersionedValue(instr, args.at(0));
         for (unsigned i = 0; i + 1 < args.size(); ++i) {
           VersionedValue *arg =
