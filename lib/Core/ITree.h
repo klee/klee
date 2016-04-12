@@ -392,7 +392,7 @@ class ITree {
   static StatTimer checkCurrentStateSubsumptionTimer;
   static StatTimer markPathConditionTimer;
   static StatTimer splitTimer;
-  static StatTimer executeTimer;
+  static StatTimer executeOnNodeTimer;
 
   ITreeNode *currentINode;
 

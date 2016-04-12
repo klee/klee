@@ -1501,7 +1501,7 @@ StatTimer ITree::removeTimer;
 StatTimer ITree::checkCurrentStateSubsumptionTimer;
 StatTimer ITree::markPathConditionTimer;
 StatTimer ITree::splitTimer;
-StatTimer ITree::executeTimer;
+StatTimer ITree::executeOnNodeTimer;
 
 void ITree::printTimeStat(llvm::raw_ostream &stream) {
   stream << "KLEE: done:     setCurrentINode = " << setCurrentINodeTimer.get() *
@@ -1512,7 +1512,8 @@ void ITree::printTimeStat(llvm::raw_ostream &stream) {
   stream << "KLEE: done:     markPathCondition = "
          << markPathConditionTimer.get() * 1000 << "\n";
   stream << "KLEE: done:     split = " << splitTimer.get() * 1000 << "\n";
-  stream << "KLEE: done:     execute = " << executeTimer.get() * 1000 << "\n";
+  stream << "KLEE: done:     executeOnNode = " << executeOnNodeTimer.get() *
+                                                      1000 << "\n";
 }
 
 void ITree::printTableStat(llvm::raw_ostream &stream) {
@@ -1700,51 +1701,41 @@ void ITree::markPathCondition(ExecutionState &state, TimingSolver *solver) {
 }
 
 void ITree::execute(llvm::Instruction *instr) {
-  executeTimer.start();
   std::vector<ref<Expr> > dummyArgs;
   executeOnNode(currentINode, instr, dummyArgs);
-  executeTimer.stop();
 }
 
 void ITree::execute(llvm::Instruction *instr, ref<Expr> arg1) {
-  executeTimer.start();
   std::vector<ref<Expr> > args;
   args.push_back(arg1);
   executeOnNode(currentINode, instr, args);
-  executeTimer.stop();
 }
 
 void ITree::execute(llvm::Instruction *instr, ref<Expr> arg1, ref<Expr> arg2) {
-  executeTimer.start();
   std::vector<ref<Expr> > args;
   args.push_back(arg1);
   args.push_back(arg2);
   executeOnNode(currentINode, instr, args);
-  executeTimer.stop();
 }
 
 void ITree::execute(llvm::Instruction *instr, ref<Expr> arg1, ref<Expr> arg2,
                     ref<Expr> arg3) {
-  executeTimer.start();
   std::vector<ref<Expr> > args;
   args.push_back(arg1);
   args.push_back(arg2);
   args.push_back(arg3);
   executeOnNode(currentINode, instr, args);
-  executeTimer.stop();
 }
 
 void ITree::execute(llvm::Instruction *instr, std::vector<ref<Expr> > &args) {
-  executeTimer.start();
   executeOnNode(currentINode, instr, args);
-  executeTimer.stop();
 }
 
 void ITree::executeOnNode(ITreeNode *node, llvm::Instruction *instr,
                           std::vector<ref<Expr> > &args) {
-  executeTimer.start();
+  executeOnNodeTimer.start();
   node->execute(instr, args);
-  executeTimer.stop();
+  executeOnNodeTimer.stop();
 }
 
 void ITree::printNode(llvm::raw_ostream &stream, ITreeNode *n,
