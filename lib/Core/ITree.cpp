@@ -912,6 +912,9 @@ SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr,
   ref<Expr> fullEqualityConstraint =
       simplifyEqualityExpr(equalityPack, body->getKid(1));
 
+  if (fullEqualityConstraint->isFalse())
+    return fullEqualityConstraint;
+
   // Try to simplify the interpolant. If the resulting simplification
   // was the constant true, then the equality constraints would contain
   // equality with constants only and no equality with shadow (existential)
@@ -1294,6 +1297,11 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
     // ExprPPrinter::printQuery(llvm::errs(), state.constraints, existsExpr);
     query = simplifyExistsExpr(existsExpr, queryHasNoFreeVariables);
   }
+
+  // If query simplification result was false, we quickly fail without calling
+  // the solver
+  if (query->isFalse())
+    return false;
 
   bool success = false;
 
