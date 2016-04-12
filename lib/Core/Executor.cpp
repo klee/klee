@@ -1602,6 +1602,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     BranchInst *bi = cast<BranchInst>(i);
     if (bi->isUnconditional()) {
       transferToBasicBlock(bi->getSuccessor(0), bi->getParent(), state);
+      if (INTERPOLATION_ENABLED)
+        interpTree->execute(i);
     } else {
       // FIXME: Find a way that we don't have this hidden dependency.
       assert(bi->getCondition() == bi->getOperand(0) &&

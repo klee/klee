@@ -1428,8 +1428,9 @@ void Dependency::buildAllocationGraph(AllocationGraph *g,
 
 void Dependency::updateIncomingBlock(llvm::Instruction *inst) {
   llvm::BasicBlock::iterator endInstIter = inst->getParent()->end();
-  if (endInstIter->getPrevNode() == inst)
+  if (endInstIter->getPrevNode() == inst) {
     incomingBlock = inst->getParent();
+  }
 }
 
 void Dependency::print(llvm::raw_ostream &stream) const {
