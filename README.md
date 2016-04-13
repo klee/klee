@@ -1,19 +1,34 @@
-Tracer-X Next-Generation Symbolic Execution
-===========================================
+Tracer-X for KLEE
+=================
 
-Introduction
-------------
-Symbolic execution is a technique for finding software defects automatically. It is effective in generating traceable defect reports. In this project we build upon our experience with TRACER symbolic execution tool to advance further by combining the technologies we have developed with advanced symbolic execution approaches.
+In this project we build upon experience with [TRACER](http://paella.ddns.comp.nus.edu.sg/tracer) symbolic execution tool to advance further by combining the technology with advanced symbolic execution approaches. Visit the [TRACER-X Homepage](http://paella.ddns.comp.nus.edu.sg/tracerx/).
 
-The Team
---------
-The project is led by [Joxan Jaffar](http://www.comp.nus.edu.sg/~joxan/). Other team members (in alphabetical order) are: [Chu Duc Hiep](http://www.comp.nus.edu.sg/~chuduchi/), [Felicia Halim](https://github.com/feliciahalim), [Rasool Maghareh](http://www.comp.nus.edu.sg/~rasool/), [Nguyen Duc Than](http://www.comp.nus.edu.sg/~nguyendt/), [guyen Quoc Binh](http://www.comp.nus.edu.sg/~nqbinh/), [Andrew Santosa](http://www.comp.nus.edu.sg/~andrews/), and [Minh-Thai Trinh](http://www.comp.nus.edu.sg/~trinhmt/).
+This early prototype is based on [KLEE](https://github.com/klee/klee): Below we provide its original README. It is still being actively developed by the team and not yet ready for release. Needless to say, we do not have resources to provide technical support. There are several [example programs](https://github.com/feliciahalim/klee-examples) that we use for testing it.
 
-Resources
----------
-- The [Tracer-X](https://github.com/feliciahalim/klee) early prototype is based on [KLEE](https://github.com/klee/klee). It is still being actively developed by the team and not yet ready for release. Needless to say, we do not have resources to provide technical support. There are several [example programs](https://github.com/feliciahalim/klee-examples) that we use for testing it.
-- An [internal project wiki](http://paella.ddns.comp.nus.edu.sg/trac) is available for team members.
+KLEE Symbolic Virtual Machine README
+------------------------------------
 
-Links
------
-- visit [TRACER-X Homepage](http://paella.ddns.comp.nus.edu.sg/tracerx/)
+[![Build Status](https://travis-ci.org/klee/klee.svg?branch=master)](https://travis-ci.org/klee/klee)
+
+`KLEE` is a symbolic virtual machine built on top of the LLVM compiler
+infrastructure. Currently, there are two primary components:
+
+  1. The core symbolic virtual machine engine; this is responsible for
+     executing LLVM bitcode modules with support for symbolic
+     values. This is comprised of the code in lib/.
+
+  2. A POSIX/Linux emulation layer oriented towards supporting uClibc,
+     with additional support for making parts of the operating system
+     environment symbolic.
+
+Additionally, there is a simple library for replaying computed inputs
+on native code (for closed programs). There is also a more complicated
+infrastructure for replaying the inputs generated for the POSIX/Linux
+emulation layer, which handles running native programs in an
+environment that matches a computed test input, including setting up
+files, pipes, environment variables, and passing command line
+arguments.
+
+Coverage information can be found [here](http://vm-klee.doc.ic.ac.uk:55555/index.html).
+
+For further information, see the [webpage](http://klee.github.io/).
