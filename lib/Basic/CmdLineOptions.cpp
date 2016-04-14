@@ -61,8 +61,8 @@ UseForkedCoreSolver("use-forked-solver",
 
 llvm::cl::opt<bool>
 CoreSolverOptimizeDivides("solver-optimize-divides", 
-                 llvm::cl::desc("Optimize constant divides into add/shift/multiplies before passing to core SMT solver (default=on)"),
-                 llvm::cl::init(true));
+                 llvm::cl::desc("Optimize constant divides into add/shift/multiplies before passing to core SMT solver (default=off)"),
+                 llvm::cl::init(false));
 
 
 /* Using cl::list<> instead of cl::bits<> results in quite a bit of ugliness when it comes to checking
