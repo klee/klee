@@ -230,7 +230,8 @@ namespace expr {
     /// expressions.
     static Parser *Create(const std::string Name,
                           const llvm::MemoryBuffer *MB,
-                          ExprBuilder *Builder);
+                          ExprBuilder *Builder,
+			  bool QueryIndependence);
   };
 }
 }
