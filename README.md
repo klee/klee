@@ -1,7 +1,12 @@
-KLEE Symbolic Virtual Machine
-=============================
+Tracer-X KLEE Symbolic Virtual Machine
+======================================
 
-[![Build Status](https://travis-ci.org/klee/klee.svg?branch=master)](https://travis-ci.org/klee/klee)
+In this project we build upon experience with [TRACER](http://paella.ddns.comp.nus.edu.sg/tracer) symbolic execution tool to advance further by combining the technology with advanced symbolic execution approaches. Visit the [TRACER-X Homepage](http://paella.ddns.comp.nus.edu.sg/tracerx/).
+
+This early prototype is based on [KLEE](https://github.com/klee/klee): Below we provide its original README. It is still being actively developed by the team and not yet ready for release. Needless to say, we do not have resources to provide technical support. There are several [example programs](https://github.com/feliciahalim/klee-examples) that we use for testing it.
+
+KLEE Symbolic Virtual Machine README
+------------------------------------
 
 `KLEE` is a symbolic virtual machine built on top of the LLVM compiler
 infrastructure. Currently, there are two primary components:
