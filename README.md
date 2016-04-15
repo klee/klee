@@ -8,8 +8,6 @@ This early prototype is based on [KLEE](https://github.com/klee/klee): Below we 
 KLEE Symbolic Virtual Machine README
 ------------------------------------
 
-[![Build Status](https://travis-ci.org/klee/klee.svg?branch=master)](https://travis-ci.org/klee/klee)
-
 `KLEE` is a symbolic virtual machine built on top of the LLVM compiler
 infrastructure. Currently, there are two primary components:
 
