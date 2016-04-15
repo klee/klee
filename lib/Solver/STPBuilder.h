@@ -93,6 +93,8 @@ private:
   ExprHandle bvVarLeftShift(ExprHandle expr, ExprHandle shift);
   ExprHandle bvVarRightShift(ExprHandle expr, ExprHandle shift);
   ExprHandle bvVarArithRightShift(ExprHandle expr, ExprHandle shift);
+  ExprHandle extractPartialShiftValue(ExprHandle shift, unsigned width,
+                                      unsigned &shiftBits);
 
   ExprHandle constructAShrByConstant(ExprHandle expr, unsigned shift, 
                                      ExprHandle isSigned);
