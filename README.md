@@ -1,5 +1,5 @@
-Tracer-X for KLEE
-=================
+Tracer-X KLEE Symbolic Virtual Machine
+======================================
 
 In this project we build upon experience with [TRACER](http://paella.ddns.comp.nus.edu.sg/tracer) symbolic execution tool to advance further by combining the technology with advanced symbolic execution approaches. Visit the [TRACER-X Homepage](http://paella.ddns.comp.nus.edu.sg/tracerx/).
 
