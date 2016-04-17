@@ -20,6 +20,7 @@ namespace klee {
 class Z3SolverImpl : public SolverImpl {
 private:
   Z3Builder *builder;
+  ::Z3_solver theSolver;
   double timeout;
   SolverRunStatus runStatusCode;
   ::Z3_params solverParameters;
@@ -69,9 +70,15 @@ Z3SolverImpl::Z3SolverImpl()
   Z3_params_inc_ref(builder->ctx, solverParameters);
   timeoutParamStrSymbol = Z3_mk_string_symbol(builder->ctx, "timeout");
   setCoreSolverTimeout(timeout);
+  ::Z3_tactic qf_aufbv_tactic = Z3_mk_tactic(builder->ctx, "qfaufbv");
+  theSolver = Z3_mk_solver_from_tactic(builder->ctx, qf_aufbv_tactic);
+  Z3_solver_inc_ref(builder->ctx, theSolver);
+  Z3_solver_set_params(builder->ctx, theSolver, solverParameters);
+
 }
 
 Z3SolverImpl::~Z3SolverImpl() {
+  Z3_solver_dec_ref(builder->ctx, theSolver);
   Z3_params_dec_ref(builder->ctx, solverParameters);
   delete builder;
 }
@@ -167,9 +174,7 @@ bool Z3SolverImpl::internalRunSolver(
   // impact vs making one global solver and using push and pop?
   // TODO: is the "simple_solver" the right solver to use for
   // best performance?
-  Z3_solver theSolver = Z3_mk_simple_solver(builder->ctx);
-  Z3_solver_inc_ref(builder->ctx, theSolver);
-  Z3_solver_set_params(builder->ctx, theSolver, solverParameters);
+  Z3_solver_reset(builder->ctx, theSolver);
 
   runStatusCode = SOLVER_RUN_STATUS_FAILURE;
 
@@ -198,9 +203,8 @@ bool Z3SolverImpl::internalRunSolver(
   runStatusCode = handleSolverResponse(theSolver, satisfiable, objects, values,
                                        hasSolution);
 
-  Z3_solver_dec_ref(builder->ctx, theSolver);
   // Clear the builder's cache to prevent memory usage exploding.
-  // By using ``autoClearConstructCache=false`` and clearning now
+  // By using ``autoClearConstructCache=false`` and clearing now
   // we allow Z3_ast expressions to be shared from an entire
   // ``Query`` rather than only sharing within a single call to
   // ``builder->construct()``.
