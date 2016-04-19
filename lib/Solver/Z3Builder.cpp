@@ -15,6 +15,8 @@
 #include "klee/util/Bits.h"
 #include "ConstantDivision.h"
 #include "klee/SolverStats.h"
+
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/CommandLine.h"
 
 using namespace klee;
@@ -356,17 +358,16 @@ Z3ASTHandle Z3Builder::getInitialArray(const Array *root) {
 
   if (!hashed) {
     // Unique arrays by name, so we make sure the name is unique by
-    // including the address.
-    char buf[32];
-    unsigned const addrlen =
-        sprintf(buf, "_%p", (const void *)root) + 1; // +1 for null-termination
-    unsigned const space = (root->name.length() > 32 - addrlen)
-                               ? (32 - addrlen)
+    // using the size of the array hash as a counter.
+    std::string unique_id = llvm::itostr(_arr_hash._array_hash.size());
+    unsigned const uid_length = unique_id.length();
+    unsigned const space = (root->name.length() > 32 - uid_length)
+                               ? (32 - uid_length)
                                : root->name.length();
-    memmove(buf + space, buf, addrlen); // moving the address part to the end
-    memcpy(buf, root->name.c_str(), space); // filling out the name part
+    std::string unique_name = root->name.substr(0, space) + unique_id;
 
-    array_expr = buildArray(buf, root->getDomain(), root->getRange());
+    array_expr = buildArray(unique_name.c_str(), root->getDomain(),
+                            root->getRange());
 
     if (root->isConstantArray()) {
       // FIXME: Flush the concrete values into Z3. Ideally we would do this

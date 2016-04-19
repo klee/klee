@@ -17,6 +17,7 @@
 
 #include "ConstantDivision.h"
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/CommandLine.h"
 
 #include <cstdio>
@@ -415,15 +416,17 @@ ExprHandle STPBuilder::constructSDivByConstant(ExprHandle expr_n, unsigned width
   
   if (!hashed) {
     // STP uniques arrays by name, so we make sure the name is unique by
-    // including the address.
-    char buf[32];
-    unsigned const addrlen = sprintf(buf, "_%p", (const void*)root) + 1; // +1 for null-termination
-    unsigned const space = (root->name.length() > 32 - addrlen)?(32 - addrlen):root->name.length();
-    memmove(buf + space, buf, addrlen); // moving the address part to the end
-    memcpy(buf, root->name.c_str(), space); // filling out the name part
-    
-    array_expr = buildArray(buf, root->getDomain(), root->getRange());
-    
+    // using the size of the array hash as a counter.
+    std::string unique_id = llvm::itostr(_arr_hash._array_hash.size());
+    unsigned const uid_length = unique_id.length();
+    unsigned const space = (root->name.length() > 32 - uid_length)
+                               ? (32 - uid_length)
+                               : root->name.length();
+    std::string unique_name = root->name.substr(0, space) + unique_id;
+
+    array_expr = buildArray(unique_name.c_str(), root->getDomain(),
+                            root->getRange());
+
     if (root->isConstantArray()) {
       // FIXME: Flush the concrete values into STP. Ideally we would do this
       // using assertions, which is much faster, but we need to fix the caching
@@ -904,4 +907,3 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
   }
 }
 #endif // ENABLE_STP
-
