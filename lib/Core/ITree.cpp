@@ -772,12 +772,10 @@ PathCondition::packInterpolant(std::vector<const Array *> &replacements) {
   for (PathCondition *it = this; it != 0; it = it->tail) {
     if (it->core) {
       if (!it->shadowed) {
-#if 0
         it->shadowConstraint =
-            ShadowArray::getShadowExpression(it->constraint, replacements);
-#else
-        it->shadowConstraint = it->constraint;
-#endif
+            (NoExistential ? it->constraint
+                           : ShadowArray::getShadowExpression(it->constraint,
+                                                              replacements));
         it->shadowed = true;
       }
       if (res.get()) {
