@@ -772,8 +772,12 @@ PathCondition::packInterpolant(std::vector<const Array *> &replacements) {
   for (PathCondition *it = this; it != 0; it = it->tail) {
     if (it->core) {
       if (!it->shadowed) {
+#if 0
         it->shadowConstraint =
             ShadowArray::getShadowExpression(it->constraint, replacements);
+#else
+        it->shadowConstraint = it->constraint;
+#endif
         it->shadowed = true;
       }
       if (res.get()) {
@@ -1359,8 +1363,8 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
         result = success ? Solver::True : Solver::Unknown;
 
       } else {
-        // llvm::errs() << "Querying for subsumption check:\n";
-        // ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
+        llvm::errs() << "Querying for subsumption check:\n";
+        ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
 
         actualSolverCallTimer.start();
         success = z3solver->directComputeValidity(
