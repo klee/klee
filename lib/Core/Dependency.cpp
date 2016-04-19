@@ -580,6 +580,10 @@ VersionedValue *Dependency::getLatestValue(llvm::Value *value,
   if (parentDependency)
     return parentDependency->getLatestValue(value, valueExpr);
 
+  if(llvm::isa<llvm::PointerType>(value->getType())){
+  	 return getNewVersionedValue(value, valueExpr);
+  }
+
   return 0;
 }
 
