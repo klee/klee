@@ -1361,8 +1361,8 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
         result = success ? Solver::True : Solver::Unknown;
 
       } else {
-        llvm::errs() << "Querying for subsumption check:\n";
-        ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
+        // llvm::errs() << "Querying for subsumption check:\n";
+        // ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
 
         actualSolverCallTimer.start();
         success = z3solver->directComputeValidity(
