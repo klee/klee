@@ -859,6 +859,25 @@ SubsumptionTableEntry::hasExistentials(std::vector<const Array *> &existentials,
   return false;
 }
 
+bool SubsumptionTableEntry::hasFree(std::vector<const Array *> &existentials,
+                                    ref<Expr> expr) {
+  for (int i = 0, numKids = expr->getNumKids(); i < numKids; ++i) {
+    if (llvm::isa<ReadExpr>(expr)) {
+      ReadExpr *readExpr = llvm::dyn_cast<ReadExpr>(expr.get());
+      const Array *array = (readExpr->updates).root;
+      for (std::vector<const Array *>::iterator it = existentials.begin(),
+                                                itEnd = existentials.end();
+           it != itEnd; ++it) {
+        if ((*it) == array)
+          return false;
+      }
+      return true;
+    } else if (hasFree(existentials, expr->getKid(i)))
+      return true;
+  }
+  return false;
+}
+
 ref<Expr>
 SubsumptionTableEntry::simplifyWithFourierMotzkin(ref<Expr> existsExpr) {
   // This is a template for Fourier-Motzkin elimination. For now,
@@ -931,8 +950,10 @@ SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr,
   if (fullEqualityConstraint->isTrue()) {
     // This is the case when the result is still an existentially-quantified
     // formula, but one that does not contain free variables.
-    hasExistentialsOnly = true;
-    return existsExpr->rebuild(&simplifiedInterpolant);
+    hasExistentialsOnly = !hasFree(expr->variables, simplifiedInterpolant);
+    if (hasExistentialsOnly) {
+      return existsExpr->rebuild(&simplifiedInterpolant);
+    }
   }
 
   ref<Expr> newInterpolant;
@@ -1178,12 +1199,50 @@ ref<Expr> SubsumptionTableEntry::simplifyEqualityExpr(
   assert(!"Invalid expression type.");
 }
 
+ref<Expr>
+SubsumptionTableEntry::getSubstitution(ref<Expr> equalities,
+                                       std::map<ref<Expr>, ref<Expr> > &map) {
+  if (llvm::isa<EqExpr>(equalities.get())) {
+    ref<Expr> lhs = equalities->getKid(0);
+    if (llvm::isa<ReadExpr>(lhs.get()) || llvm::isa<ConcatExpr>(lhs.get())) {
+      map[lhs] = equalities->getKid(1);
+      return ConstantExpr::alloc(1, Expr::Bool);
+    }
+    return equalities;
+  }
+
+  if (llvm::isa<AndExpr>(equalities.get())) {
+    ref<Expr> lhs = getSubstitution(equalities->getKid(0), map);
+    ref<Expr> rhs = getSubstitution(equalities->getKid(1), map);
+    if (lhs->isTrue()) {
+      if (rhs->isTrue()) {
+        return ConstantExpr::alloc(1, Expr::Bool);
+      }
+      return rhs;
+    } else {
+      if (rhs->isTrue()) {
+        return lhs;
+      }
+      return AndExpr::alloc(lhs, rhs);
+    }
+  }
+  return equalities;
+}
+
 ref<Expr> SubsumptionTableEntry::simplifyExistsExpr(ref<Expr> existsExpr,
                                                     bool &hasExistentialsOnly) {
-  assert(llvm::isa<ExistsExpr>(existsExpr));
+  assert(llvm::isa<ExistsExpr>(existsExpr.get()));
 
-  ref<Expr> ret = simplifyArithmeticBody(existsExpr, hasExistentialsOnly);
+  ref<Expr> body = llvm::dyn_cast<ExistsExpr>(existsExpr.get())->body;
+  assert(llvm::isa<AndExpr>(body.get()));
 
+  std::map<ref<Expr>, ref<Expr> > substitution;
+  ref<Expr> equalities = getSubstitution(body->getKid(1), substitution);
+  ref<Expr> interpolant =
+      ApplySubstitutionVisitor(substitution).visit(body->getKid(0));
+  ref<Expr> newBody = AndExpr::alloc(interpolant, equalities);
+  ref<Expr> ret = simplifyArithmeticBody(existsExpr->rebuild(&newBody),
+                                         hasExistentialsOnly);
   return ret;
 }
 

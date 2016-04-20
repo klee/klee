@@ -20,6 +20,7 @@
 #include "klee/CommandLine.h"
 #include "klee/Config/Version.h"
 #include "klee/ExecutionState.h"
+#include "klee/util/ExprVisitor.h"
 
 #include "Dependency.h"
 
@@ -317,6 +318,26 @@ public:
 class SubsumptionTableEntry {
   friend class ITree;
 
+  class ApplySubstitutionVisitor : public ExprVisitor {
+  private:
+    const std::map<ref<Expr>, ref<Expr> > &replacements;
+
+  public:
+    ApplySubstitutionVisitor(
+        const std::map<ref<Expr>, ref<Expr> > &_replacements)
+        : ExprVisitor(true), replacements(_replacements) {}
+
+    Action visitExprPost(const Expr &e) {
+      std::map<ref<Expr>, ref<Expr> >::const_iterator it =
+          replacements.find(ref<Expr>(const_cast<Expr *>(&e)));
+      if (it != replacements.end()) {
+        return Action::changeTo(it->second);
+      } else {
+        return Action::doChildren();
+      }
+    }
+  };
+
   /// @brief Statistics for actual solver call time in subsumption check
   static StatTimer actualSolverCallTimer;
 
@@ -341,15 +362,21 @@ class SubsumptionTableEntry {
   static bool hasExistentials(std::vector<const Array *> &existentials,
                               ref<Expr> expr);
 
+  static bool hasFree(std::vector<const Array *> &existentials, ref<Expr> expr);
+
   static bool containShadowExpr(ref<Expr> expr, ref<Expr> shadowExpr);
 
   static ref<Expr> replaceExpr(ref<Expr> originalExpr, ref<Expr> replacedExpr,
                                ref<Expr> withExpr);
 
+  /// @brief Simplifies the interpolant condition in subsumption check
+  /// whenever it contains constant equalities or disequalities.
   static ref<Expr>
   simplifyInterpolantExpr(std::vector<ref<Expr> > &interpolantPack,
                           ref<Expr> expr);
 
+  /// @brief Simplifies the equality conditions in subsumption check
+  /// whenever it contains constant equalities.
   static ref<Expr> simplifyEqualityExpr(std::vector<ref<Expr> > &equalityPack,
                                         ref<Expr> expr);
 
@@ -360,6 +387,9 @@ class SubsumptionTableEntry {
 
   static ref<Expr> simplifyArithmeticBody(ref<Expr> existsExpr,
                                           bool &hasExistentialsOnly);
+
+  static ref<Expr> getSubstitution(ref<Expr> equalities,
+                                   std::map<ref<Expr>, ref<Expr> > &map);
 
   bool empty() {
     return !interpolant.get() && singletonStoreKeys.empty() &&
