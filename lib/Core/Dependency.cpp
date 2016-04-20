@@ -727,20 +727,21 @@ void Dependency::addPointerEquality(const VersionedValue *value,
 
 void Dependency::updateStore(Allocation *allocation, VersionedValue *value) {
   if (allocation->isComposite()) {
-    if (storesList[allocation].size() == 0) {
-      std::vector<VersionedValue *> newList;
-      newList.push_back(value);
-      storesList[allocation] = newList;
-    } else {
-      storesList[allocation].push_back(value);
-    }
+    storesList.insert(
+        std::pair<Allocation *, VersionedValue *>(allocation, value));
   } else {
-    std::vector<VersionedValue *> newList;
-    newList.push_back(value);
-    storesList[allocation] = newList;
+    std::pair<std::multimap<Allocation *, VersionedValue *>::iterator,
+              std::multimap<Allocation *, VersionedValue *>::iterator> iterPair;
+    iterPair = storesList.equal_range(allocation);
+
+    std::multimap<Allocation *, VersionedValue *>::iterator it = iterPair.first;
+    for (; it != iterPair.second; ++it) {
+      storesList.erase(it);
+    }
+    storesList.insert(
+        std::pair<Allocation *, VersionedValue *>(allocation, value));
   }
 
-  storageOfAlloc[value] = allocation;
 }
 
 void Dependency::addDependency(VersionedValue *source, VersionedValue *target) {
@@ -759,8 +760,13 @@ std::vector<VersionedValue *> Dependency::stores(Allocation *allocation) {
   if (allocation->isComposite()) {
     // In case of composite allocation, we return all possible stores
     // due to field-insensitivity of the dependency relation
-    if (storesList[allocation].size() > 0) {
-      ret = storesList[allocation];
+    std::pair<std::multimap<Allocation *, VersionedValue *>::iterator,
+              std::multimap<Allocation *, VersionedValue *>::iterator> iterPair;
+    iterPair = storesList.equal_range(allocation);
+
+    std::multimap<Allocation *, VersionedValue *>::iterator it = iterPair.first;
+    for (; it != iterPair.second; ++it) {
+      ret.push_back(it->second);
     }
 
     if (parentDependency) {
@@ -772,11 +778,16 @@ std::vector<VersionedValue *> Dependency::stores(Allocation *allocation) {
     return ret;
   }
 
-  if (storesList[allocation].size() > 0) {
-    std::vector<VersionedValue *> list = storesList[allocation];
-    ret.push_back(list.at(list.size() - 1));
+  std::pair<std::multimap<Allocation *, VersionedValue *>::iterator,
+            std::multimap<Allocation *, VersionedValue *>::iterator> iterPair2;
+  iterPair2 = storesList.equal_range(allocation);
+
+  std::multimap<Allocation *, VersionedValue *>::iterator it2 = iterPair2.first;
+  for (; it2 != iterPair2.second; ++it2) {
+    ret.push_back(it2->second);
     return ret;
   }
+
   if (parentDependency)
     return parentDependency->stores(allocation);
   return ret;
@@ -1345,11 +1356,13 @@ Dependency::directLocalAllocationSources(VersionedValue *target) const {
 
   if (ret.empty()) {
     // We try to find allocation in the local store instead
-    unordered_map<VersionedValue *, Allocation *>::const_iterator it =
-        storageOfAlloc.find(target);
-
-    if (it != storageOfAlloc.end()) {
-      ret[0] = (*it).second;
+    for (std::multimap<Allocation *, VersionedValue *>::const_iterator it =
+             storesList.begin();
+         it != storesList.end(); ++it) {
+      if ((*it).second == target) {
+        ret[0] = (*it).first;
+        break;
+      }
     }
   }
 
