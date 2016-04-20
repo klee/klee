@@ -23,7 +23,14 @@
 #include <llvm/Constants.h>
 #include <llvm/Intrinsics.h>
 #endif
-
+#include <ciso646>
+#ifdef _LIBCPP_VERSION
+#include <unordered_map>
+#define unordered_map std::unordered_map
+#else
+#include <tr1/unordered_map>
+#define unordered_map std::tr1::unordered_map
+#endif
 using namespace klee;
 
 namespace klee {
@@ -474,7 +481,7 @@ std::vector<Allocation *> Dependency::getAllVersionedAllocations() const {
 
 std::map<llvm::Value *, ref<Expr> >
 Dependency::getSingletonExpressions(std::vector<const Array *> &replacements,
-                                    bool coreOnly) const {
+                                    bool coreOnly) {
   std::vector<Allocation *> allAlloc = getAllVersionedAllocations();
   std::map<llvm::Value *, ref<Expr> > ret;
 
@@ -520,7 +527,7 @@ std::vector<Allocation *> Dependency::getAllCompositeAllocations() const {
 
 std::map<llvm::Value *, std::vector<ref<Expr> > >
 Dependency::getCompositeExpressions(std::vector<const Array *> &replacements,
-                                    bool coreOnly) const {
+                                    bool coreOnly) {
   std::vector<Allocation *> allAlloc = getAllCompositeAllocations();
   std::map<llvm::Value *, std::vector<ref<Expr> > > ret;
 
@@ -719,7 +726,10 @@ void Dependency::addPointerEquality(const VersionedValue *value,
 }
 
 void Dependency::updateStore(Allocation *allocation, VersionedValue *value) {
-  storesList.push_back(new StorageCell(allocation, value));
+
+  std::pair<Allocation *, VersionedValue *> pair;
+  pair = std::make_pair(allocation, value);
+  storesList.insert(pair);
 }
 
 void Dependency::addDependency(VersionedValue *source, VersionedValue *target) {
@@ -732,19 +742,14 @@ void Dependency::addDependencyViaAllocation(VersionedValue *source,
   flowsToList.push_back(new FlowsTo(source, target, via));
 }
 
-std::vector<VersionedValue *> Dependency::stores(Allocation *allocation) const {
+std::vector<VersionedValue *> Dependency::stores(Allocation *allocation) {
   std::vector<VersionedValue *> ret;
 
   if (allocation->isComposite()) {
     // In case of composite allocation, we return all possible stores
     // due to field-insensitivity of the dependency relation
-    for (std::vector<StorageCell *>::const_iterator it = storesList.begin(),
-                                                    itEnd = storesList.end();
-         it != itEnd; ++it) {
-      VersionedValue *value = (*it)->stores(allocation);
-      if (value) {
-        ret.push_back(value);
-      }
+    if (storesList[allocation]) {
+      ret.push_back(storesList[allocation]);
     }
 
     if (parentDependency) {
@@ -756,14 +761,9 @@ std::vector<VersionedValue *> Dependency::stores(Allocation *allocation) const {
     return ret;
   }
 
-  for (std::vector<StorageCell *>::const_iterator it = storesList.begin(),
-                                                  itEnd = storesList.end();
-       it != itEnd; ++it) {
-    VersionedValue *value = (*it)->stores(allocation);
-    if (value) {
-      ret.push_back(value);
-      return ret;
-    }
+  if (storesList[allocation]) {
+    ret.push_back(storesList[allocation]);
+    return ret;
   }
   if (parentDependency)
     return parentDependency->stores(allocation);
@@ -912,7 +912,7 @@ Dependency::Dependency(Dependency *prev)
 Dependency::~Dependency() {
   // Delete the locally-constructed relations
   Util::deletePointerVector(equalityList);
-  Util::deletePointerVector(storesList);
+  // Util::deletePointerVector(storesList);
   Util::deletePointerVector(flowsToList);
 
   // Delete the locally-constructed objects
@@ -1333,13 +1333,13 @@ Dependency::directLocalAllocationSources(VersionedValue *target) const {
 
   if (ret.empty()) {
     // We try to find allocation in the local store instead
-    for (std::vector<StorageCell *>::const_iterator it = storesList.begin(),
-                                                    itEnd = storesList.end();
+    for (unordered_map<Allocation *, VersionedValue *>::const_iterator
+             it = storesList.begin(),
+             itEnd = storesList.end();
          it != itEnd; ++it) {
-      if (Allocation *alloc = (*it)->storageOf(target)) {
-        // It is possible that the first component was nil, as
-        // in this case there was no source value
-        ret[0] = alloc;
+
+      if (it->second == target) {
+        ret[0] = it->first;
         break;
       }
     }
@@ -1439,8 +1439,8 @@ void Dependency::print(llvm::raw_ostream &stream, const unsigned tabNum) const {
   stream << tabs << "EQUALITIES:";
   std::vector<PointerEquality *>::const_iterator equalityListBegin =
       equalityList.begin();
-  std::vector<StorageCell *>::const_iterator storesListBegin =
-      storesList.begin();
+  // std::vector<StorageCell *>::const_iterator storesListBegin =
+  // storesList.begin();
   std::vector<FlowsTo *>::const_iterator flowsToListBegin = flowsToList.begin();
   for (std::vector<PointerEquality *>::const_iterator
            it = equalityListBegin,
@@ -1451,15 +1451,15 @@ void Dependency::print(llvm::raw_ostream &stream, const unsigned tabNum) const {
     (*it)->print(stream);
   }
   stream << "\n";
-  stream << tabs << "STORAGE:";
-  for (std::vector<StorageCell *>::const_iterator it = storesList.begin(),
-                                                  itEnd = storesList.end();
-       it != itEnd; ++it) {
-    if (it != storesListBegin)
-      stream << ",";
-    (*it)->print(stream);
-  }
-  stream << "\n";
+  // stream << tabs << "STORAGE:";
+  // for (std::vector<StorageCell *>::const_iterator it = storesList.begin(),
+  //                                                itEnd = storesList.end();
+  //      it != itEnd; ++it) {
+  //  if (it != storesListBegin)
+  //     stream << ",";
+  //   (*it)->print(stream);
+  // }
+  //  stream << "\n";
   stream << tabs << "FLOWDEPENDENCY:";
   for (std::vector<FlowsTo *>::const_iterator it = flowsToList.begin(),
                                               itEnd = flowsToList.end();

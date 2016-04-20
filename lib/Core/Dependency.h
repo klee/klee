@@ -31,7 +31,14 @@
 #include <llvm/Instructions.h>
 #include <llvm/Value.h>
 #endif
-
+#include <ciso646>
+#ifdef _LIBCPP_VERSION
+#include <unordered_map>
+#define unordered_map std::unordered_map
+#else
+#include <tr1/unordered_map>
+#define unordered_map std::tr1::unordered_map
+#endif
 #include "llvm/Support/raw_ostream.h"
 
 #include <vector>
@@ -560,7 +567,7 @@ class Allocation {
     std::vector< PointerEquality *> equalityList;
 
     /// @brief The mapping of allocations/addresses to stored value
-    std::vector< StorageCell *> storesList;
+    unordered_map<Allocation *, VersionedValue *> storesList;
 
     /// @brief Flow relations from one value to another
     std::vector<FlowsTo *> flowsToList;
@@ -613,7 +620,7 @@ class Allocation {
     std::vector<Allocation *>
     resolveAllocationTransitively(VersionedValue *value);
 
-    std::vector<VersionedValue *> stores(Allocation *allocation) const;
+    std::vector<VersionedValue *> stores(Allocation *allocation);
 
     /// @brief All values that flows to the target in one step, local
     /// to the current dependency / interpolation tree node
@@ -671,11 +678,11 @@ class Allocation {
 
     std::map<llvm::Value *, ref<Expr> >
     getSingletonExpressions(std::vector<const Array *> &replacements,
-                            bool coreOnly) const;
+                            bool coreOnly);
 
     std::map<llvm::Value *, std::vector<ref<Expr> > >
     getCompositeExpressions(std::vector<const Array *> &replacements,
-                            bool coreOnly) const;
+                            bool coreOnly);
 
     void bindCallArguments(llvm::Instruction *instr,
                            std::vector<ref<Expr> > &arguments);
