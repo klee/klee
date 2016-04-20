@@ -726,10 +726,21 @@ void Dependency::addPointerEquality(const VersionedValue *value,
 }
 
 void Dependency::updateStore(Allocation *allocation, VersionedValue *value) {
+  if (allocation->isComposite()) {
+    if (storesList[allocation].size() == 0) {
+      std::vector<VersionedValue *> newList;
+      newList.push_back(value);
+      storesList[allocation] = newList;
+    } else {
+      storesList[allocation].push_back(value);
+    }
+  } else {
+    std::vector<VersionedValue *> newList;
+    newList.push_back(value);
+    storesList[allocation] = newList;
+  }
 
-  std::pair<Allocation *, VersionedValue *> pair;
-  pair = std::make_pair(allocation, value);
-  storesList.insert(pair);
+  storageOfAlloc[value] = allocation;
 }
 
 void Dependency::addDependency(VersionedValue *source, VersionedValue *target) {
@@ -748,8 +759,8 @@ std::vector<VersionedValue *> Dependency::stores(Allocation *allocation) {
   if (allocation->isComposite()) {
     // In case of composite allocation, we return all possible stores
     // due to field-insensitivity of the dependency relation
-    if (storesList[allocation]) {
-      ret.push_back(storesList[allocation]);
+    if (storesList[allocation].size() > 0) {
+      ret = storesList[allocation];
     }
 
     if (parentDependency) {
@@ -761,8 +772,9 @@ std::vector<VersionedValue *> Dependency::stores(Allocation *allocation) {
     return ret;
   }
 
-  if (storesList[allocation]) {
-    ret.push_back(storesList[allocation]);
+  if (storesList[allocation].size() > 0) {
+    std::vector<VersionedValue *> list = storesList[allocation];
+    ret.push_back(list.at(list.size() - 1));
     return ret;
   }
   if (parentDependency)
@@ -1333,15 +1345,11 @@ Dependency::directLocalAllocationSources(VersionedValue *target) const {
 
   if (ret.empty()) {
     // We try to find allocation in the local store instead
-    for (unordered_map<Allocation *, VersionedValue *>::const_iterator
-             it = storesList.begin(),
-             itEnd = storesList.end();
-         it != itEnd; ++it) {
+    unordered_map<VersionedValue *, Allocation *>::const_iterator it =
+        storageOfAlloc.find(target);
 
-      if (it->second == target) {
-        ret[0] = it->first;
-        break;
-      }
+    if (it != storageOfAlloc.end()) {
+      ret[0] = (*it).second;
     }
   }
 

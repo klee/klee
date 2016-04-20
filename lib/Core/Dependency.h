@@ -567,7 +567,9 @@ class Allocation {
     std::vector< PointerEquality *> equalityList;
 
     /// @brief The mapping of allocations/addresses to stored value
-    unordered_map<Allocation *, VersionedValue *> storesList;
+    unordered_map<Allocation *, std::vector<VersionedValue *> > storesList;
+
+    unordered_map<VersionedValue *, Allocation *> storageOfAlloc;
 
     /// @brief Flow relations from one value to another
     std::vector<FlowsTo *> flowsToList;
