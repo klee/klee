@@ -16,6 +16,8 @@
 
 #include "Dependency.h"
 
+#include "klee/CommandLine.h"
+
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/Intrinsics.h>
@@ -500,7 +502,11 @@ Dependency::getSingletonExpressions(std::vector<const Array *> &replacements,
         ret[site] = expr;
       } else if (v->isCore()) {
         ref<Expr> expr = v->getExpression();
-        ret[site] = ShadowArray::getShadowExpression(expr, replacements);
+        if (NoExistential) {
+          ret[site] = expr;
+        } else {
+          ret[site] = ShadowArray::getShadowExpression(expr, replacements);
+        }
       }
     }
   }
@@ -543,8 +549,12 @@ Dependency::getCompositeExpressions(std::vector<const Array *> &replacements,
         elemList.push_back((*valueIter)->getExpression());
       } else if ((*valueIter)->isCore()) {
         std::vector<ref<Expr> > &elemList = ret[site];
-        elemList.push_back(ShadowArray::getShadowExpression(
-            (*valueIter)->getExpression(), replacements));
+        if (NoExistential) {
+          elemList.push_back((*valueIter)->getExpression());
+        } else {
+          elemList.push_back(ShadowArray::getShadowExpression(
+              (*valueIter)->getExpression(), replacements));
+        }
       }
     }
   }
