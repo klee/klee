@@ -101,6 +101,19 @@ llvm::cl::opt<bool> InterpolationStat(
     "interpolation-stat",
     llvm::cl::desc(
         "Displays an execution profile of the interpolation routines."));
+
+llvm::cl::opt<bool> NoExistential(
+    "no-existential",
+    llvm::cl::desc(
+        "This option avoids existential quantification in subsumption "
+        "check by equating each existential variable with its corresponding "
+        "free variable. For example, when checking if x < 10 is subsumed by "
+        "another state where there is x' s.t., x' <= 0 && x = x' + 20 (here "
+        "the existential variable x' represents the value of x before adding "
+        "20), we strengthen the query by adding the constraint x' = x. This "
+        "has an effect of removing all existentially-quantified variables "
+        "most solvers are not very powerful at solving, however, at likely "
+        "less number of subsumptions due to the strengthening of the query."));
 #endif
 
 #ifdef SUPPORT_METASMT
