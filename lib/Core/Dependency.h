@@ -548,6 +548,9 @@ class Allocation {
       template <typename T>
       static void deletePointerVector(std::vector<T *> &list);
 
+      template <typename Key, typename T>
+      static void deletePointerMultiMap(std::multimap<Key *, T *> &map);
+
       static bool isCompositeAllocation(llvm::Value *site);
 
       static bool isEnvironmentAllocation(llvm::Value *site);

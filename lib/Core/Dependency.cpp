@@ -935,7 +935,7 @@ Dependency::Dependency(Dependency *prev)
 Dependency::~Dependency() {
   // Delete the locally-constructed relations
   Util::deletePointerVector(equalityList);
-  // Util::deletePointerVector(storesList);
+  Util::deletePointerMultiMap(storesList);
   Util::deletePointerVector(flowsToList);
 
   // Delete the locally-constructed objects
@@ -1506,6 +1506,16 @@ void Dependency::Util::deletePointerVector(std::vector<T *> &list) {
     delete *it;
   }
   list.clear();
+}
+
+template <typename Key, typename T>
+void Dependency::Util::deletePointerMultiMap(std::multimap<Key *, T *> &map) {
+  typedef typename std::multimap<Key *, T *>::iterator IteratorType;
+
+  for (IteratorType it = map.begin(), itEnd = map.end(); it != itEnd; ++it) {
+    map.erase(it);
+  }
+  map.clear();
 }
 
 bool Dependency::Util::isEnvironmentAllocation(llvm::Value *site) {
