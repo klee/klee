@@ -31,14 +31,7 @@
 #include <llvm/Instructions.h>
 #include <llvm/Value.h>
 #endif
-#include <ciso646>
-#ifdef _LIBCPP_VERSION
-#include <unordered_map>
-#define unordered_map std::unordered_map
-#else
-#include <tr1/unordered_map>
-#define unordered_map std::tr1::unordered_map
-#endif
+
 #include "llvm/Support/raw_ostream.h"
 
 #include <vector>
@@ -549,7 +542,11 @@ class Allocation {
       static void deletePointerVector(std::vector<T *> &list);
 
       template <typename Key, typename T>
-      static void deletePointerMultiMap(std::multimap<Key *, T *> &map);
+      static void deletePointerMap(std::map<Key *, T *> &map);
+
+      template <typename Key, typename T>
+      static void
+      deletePointerMapWithVectorValue(std::map<Key *, std::vector<T *> > &map);
 
       static bool isCompositeAllocation(llvm::Value *site);
 
@@ -569,10 +566,11 @@ class Allocation {
     /// @brief Equality of value to address
     std::vector< PointerEquality *> equalityList;
 
-    /// @brief The mapping of allocations/addresses to stored value
-    std::multimap<Allocation *, VersionedValue *> storesList;
+    /// @brief The mapping of allocations/addresses to stored singleton value
+    std::map<Allocation *, VersionedValue *> storesSingletonList;
 
-    // unordered_map<VersionedValue *, Allocation *> storageOfAlloc;
+    /// @brief The mapping of allocations/addresses to stored singleton value
+    std::map<Allocation *, std::vector<VersionedValue *> > storesCompositeList;
 
     /// @brief Flow relations from one value to another
     std::vector<FlowsTo *> flowsToList;
@@ -625,7 +623,7 @@ class Allocation {
     std::vector<Allocation *>
     resolveAllocationTransitively(VersionedValue *value);
 
-    std::vector<VersionedValue *> stores(Allocation *allocation);
+    std::vector<VersionedValue *> stores(Allocation *allocation) const;
 
     /// @brief All values that flows to the target in one step, local
     /// to the current dependency / interpolation tree node
@@ -683,11 +681,11 @@ class Allocation {
 
     std::map<llvm::Value *, ref<Expr> >
     getSingletonExpressions(std::vector<const Array *> &replacements,
-                            bool coreOnly);
+                            bool coreOnly) const;
 
     std::map<llvm::Value *, std::vector<ref<Expr> > >
     getCompositeExpressions(std::vector<const Array *> &replacements,
-                            bool coreOnly);
+                            bool coreOnly) const;
 
     void bindCallArguments(llvm::Instruction *instr,
                            std::vector<ref<Expr> > &arguments);
