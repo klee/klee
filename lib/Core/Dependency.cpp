@@ -1355,6 +1355,8 @@ Dependency::directLocalAllocationSources(VersionedValue *target) const {
              storesSingletonList.begin();
          it != storesSingletonList.end(); ++it) {
       if ((*it).second == target) {
+        // It is possible that the first component was nil, as
+        // in this case there was no source value
         ret[0] = (*it).first;
         break;
       }
@@ -1369,6 +1371,8 @@ Dependency::directLocalAllocationSources(VersionedValue *target) const {
            it2 != it->second.end(); ++it2) {
 
         if ((*it2) == target) {
+          // It is possible that the first component was nil, as
+          // in this case there was no source value
           ret[0] = (*it).first;
           break;
         }
