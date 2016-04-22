@@ -1497,20 +1497,20 @@ void Dependency::print(llvm::raw_ostream &stream, const unsigned tabNum) const {
   stream << "\n";
   stream << tabs << "STORAGE COMPOSITE:";
   for (std::map<Allocation *, std::vector<VersionedValue *> >::const_iterator
-           it = storesCompositeMap.begin(),
-           itEnd = storesCompositeMap.end();
-       it != itEnd; ++it) {
-    if (it != storesCompositeListBegin)
+           it1 = storesCompositeMap.begin(),
+           it1End = storesCompositeMap.end();
+       it1 != it1End; ++it1) {
+    if (it1 != storesCompositeListBegin)
       stream << ",";
     stream << "[";
-    (*it->first).print(stream);
+    (*it1->first).print(stream);
     stream << ",";
 
     std::vector<VersionedValue *>::const_iterator versionedValueListBegin =
-        it->second.begin();
+        it1->second.begin();
     for (std::vector<VersionedValue *>::const_iterator
-             it2 = it->second.begin(),
-             it2End = it->second.end();
+             it2 = it1->second.begin(),
+             it2End = it1->second.end();
          it2 != it2End; ++it2) {
       if (it2 != versionedValueListBegin)
         stream << ",";
