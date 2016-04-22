@@ -538,10 +538,10 @@ class Allocation {
     std::vector< PointerEquality *> equalityList;
 
     /// @brief The mapping of allocations/addresses to stored singleton value
-    std::map<Allocation *, VersionedValue *> storesSingletonList;
+    std::map<Allocation *, VersionedValue *> storesSingletonMap;
 
     /// @brief The mapping of allocations/addresses to stored singleton value
-    std::map<Allocation *, std::vector<VersionedValue *> > storesCompositeList;
+    std::map<Allocation *, std::vector<VersionedValue *> > storesCompositeMap;
 
     /// @brief Flow relations from one value to another
     std::vector<FlowsTo *> flowsToList;

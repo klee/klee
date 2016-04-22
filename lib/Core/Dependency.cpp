@@ -721,24 +721,24 @@ void Dependency::addPointerEquality(const VersionedValue *value,
 void Dependency::updateStore(Allocation *allocation, VersionedValue *value) {
   if (allocation->isComposite()) {
     std::map<Allocation *, std::vector<VersionedValue *> >::iterator it;
-    it = storesCompositeList.find(allocation);
-    if (it != storesCompositeList.end()) {
-      storesCompositeList.at(allocation).push_back(value);
+    it = storesCompositeMap.find(allocation);
+    if (it != storesCompositeMap.end()) {
+      storesCompositeMap.at(allocation).push_back(value);
     } else {
       std::vector<VersionedValue *> newList;
       newList.push_back(value);
-      storesCompositeList.insert(
+      storesCompositeMap.insert(
           std::pair<Allocation *, std::vector<VersionedValue *> >(allocation,
                                                                   newList));
     }
 
   } else {
     std::map<Allocation *, VersionedValue *>::iterator it;
-    it = storesSingletonList.find(allocation);
-    if (it != storesSingletonList.end()) {
-      storesSingletonList.at(allocation) = value;
+    it = storesSingletonMap.find(allocation);
+    if (it != storesSingletonMap.end()) {
+      storesSingletonMap.at(allocation) = value;
     } else {
-      storesSingletonList.insert(
+      storesSingletonMap.insert(
           std::pair<Allocation *, VersionedValue *>(allocation, value));
     }
   }
@@ -761,9 +761,9 @@ std::vector<VersionedValue *> Dependency::stores(Allocation *allocation) const {
     // In case of composite allocation, we return all possible stores
     // due to field-insensitivity of the dependency relation
     std::map<Allocation *, std::vector<VersionedValue *> >::const_iterator it;
-    it = storesCompositeList.find(allocation);
-    if (it != storesCompositeList.end()) {
-      ret = storesCompositeList.at(allocation);
+    it = storesCompositeMap.find(allocation);
+    if (it != storesCompositeMap.end()) {
+      ret = storesCompositeMap.at(allocation);
     }
 
     if (parentDependency) {
@@ -776,9 +776,9 @@ std::vector<VersionedValue *> Dependency::stores(Allocation *allocation) const {
   }
 
   std::map<Allocation *, VersionedValue *>::const_iterator it;
-  it = storesSingletonList.find(allocation);
-  if (it != storesSingletonList.end()) {
-    ret.push_back(storesSingletonList.at(allocation));
+  it = storesSingletonMap.find(allocation);
+  if (it != storesSingletonMap.end()) {
+    ret.push_back(storesSingletonMap.at(allocation));
     return ret;
   }
 
@@ -929,8 +929,8 @@ Dependency::Dependency(Dependency *prev)
 Dependency::~Dependency() {
   // Delete the locally-constructed relations
   Util::deletePointerVector(equalityList);
-  Util::deletePointerMap(storesSingletonList);
-  Util::deletePointerMapWithVectorValue(storesCompositeList);
+  Util::deletePointerMap(storesSingletonMap);
+  Util::deletePointerMapWithVectorValue(storesCompositeMap);
   Util::deletePointerVector(flowsToList);
 
   // Delete the locally-constructed objects
@@ -1352,8 +1352,8 @@ Dependency::directLocalAllocationSources(VersionedValue *target) const {
   if (ret.empty()) {
     // We try to find allocation in the local store instead
     for (std::map<Allocation *, VersionedValue *>::const_iterator it =
-             storesSingletonList.begin();
-         it != storesSingletonList.end(); ++it) {
+             storesSingletonMap.begin();
+         it != storesSingletonMap.end(); ++it) {
       if ((*it).second == target) {
         // It is possible that the first component was nil, as
         // in this case there was no source value
@@ -1363,8 +1363,8 @@ Dependency::directLocalAllocationSources(VersionedValue *target) const {
     }
 
     for (std::map<Allocation *, std::vector<VersionedValue *> >::const_iterator
-             it1 = storesCompositeList.begin();
-         it1 != storesCompositeList.end(); ++it1) {
+             it1 = storesCompositeMap.begin();
+         it1 != storesCompositeMap.end(); ++it1) {
 
       for (std::vector<VersionedValue *>::const_iterator it2 =
                it1->second.begin();
@@ -1475,9 +1475,9 @@ void Dependency::print(llvm::raw_ostream &stream, const unsigned tabNum) const {
   std::vector<PointerEquality *>::const_iterator equalityListBegin =
       equalityList.begin();
   std::map<Allocation *, VersionedValue *>::const_iterator
-  storesSingletonListBegin = storesSingletonList.begin();
+  storesSingletonListBegin = storesSingletonMap.begin();
   std::map<Allocation *, std::vector<VersionedValue *> >::const_iterator
-  storesCompositeListBegin = storesCompositeList.begin();
+  storesCompositeListBegin = storesCompositeMap.begin();
   std::vector<FlowsTo *>::const_iterator flowsToListBegin = flowsToList.begin();
   for (std::vector<PointerEquality *>::const_iterator
            it = equalityListBegin,
@@ -1490,8 +1490,8 @@ void Dependency::print(llvm::raw_ostream &stream, const unsigned tabNum) const {
   stream << "\n";
   stream << tabs << "STORAGE SINGLETON:";
   for (std::map<Allocation *, VersionedValue *>::const_iterator
-           it = storesSingletonList.begin(),
-           itEnd = storesSingletonList.end();
+           it = storesSingletonMap.begin(),
+           itEnd = storesSingletonMap.end();
        it != itEnd; ++it) {
     if (it != storesSingletonListBegin)
       stream << ",";
@@ -1504,8 +1504,8 @@ void Dependency::print(llvm::raw_ostream &stream, const unsigned tabNum) const {
   stream << "\n";
   stream << tabs << "STORAGE COMPOSITE:";
   for (std::map<Allocation *, std::vector<VersionedValue *> >::const_iterator
-           it = storesCompositeList.begin(),
-           itEnd = storesCompositeList.end();
+           it = storesCompositeMap.begin(),
+           itEnd = storesCompositeMap.end();
        it != itEnd; ++it) {
     if (it != storesCompositeListBegin)
       stream << ",";
