@@ -742,6 +742,18 @@ void Dependency::updateStore(Allocation *allocation, VersionedValue *value) {
           std::pair<Allocation *, VersionedValue *>(allocation, value));
     }
   }
+
+  // update storageOfMap
+  std::map<VersionedValue *, std::vector<Allocation *> >::iterator it;
+  it = storageOfMap.find(value);
+  if (it != storageOfMap.end()) {
+    storageOfMap.at(value).push_back(allocation);
+  } else {
+    std::vector<Allocation *> newList;
+    newList.push_back(allocation);
+    storageOfMap.insert(std::pair<VersionedValue *, std::vector<Allocation *> >(
+        value, newList));
+  }
 }
 
 void Dependency::addDependency(VersionedValue *source, VersionedValue *target) {
@@ -931,6 +943,7 @@ Dependency::~Dependency() {
   Util::deletePointerVector(equalityList);
   Util::deletePointerMap(storesSingletonMap);
   Util::deletePointerMapWithVectorValue(storesCompositeMap);
+  Util::deletePointerMapWithVectorValue(storageOfMap);
   Util::deletePointerVector(flowsToList);
 
   // Delete the locally-constructed objects
@@ -1351,32 +1364,12 @@ Dependency::directLocalAllocationSources(VersionedValue *target) const {
 
   if (ret.empty()) {
     // We try to find allocation in the local store instead
-    for (std::map<Allocation *, VersionedValue *>::const_iterator it =
-             storesSingletonMap.begin();
-         it != storesSingletonMap.end(); ++it) {
-      if ((*it).second == target) {
-        // It is possible that the first component was nil, as
-        // in this case there was no source value
-        ret[0] = (*it).first;
-        break;
-      }
-    }
-
-    for (std::map<Allocation *, std::vector<VersionedValue *> >::const_iterator
-             it1 = storesCompositeMap.begin();
-         it1 != storesCompositeMap.end(); ++it1) {
-
-      for (std::vector<VersionedValue *>::const_iterator it2 =
-               it1->second.begin();
-           it2 != it1->second.end(); ++it2) {
-
-        if ((*it2) == target) {
-          // It is possible that the first component was nil, as
-          // in this case there was no source value
-          ret[0] = (*it1).first;
-          break;
-        }
-      }
+    std::map<VersionedValue *, std::vector<Allocation *> >::const_iterator it;
+    it = storageOfMap.find(target);
+    if (it != storageOfMap.end()) {
+      std::vector<Allocation *> allocList = it->second;
+      int size = allocList.size();
+      ret[0] = allocList.at(size - 1);
     }
   }
 

@@ -543,6 +543,10 @@ class Allocation {
     /// @brief The mapping of allocations/addresses to stored singleton value
     std::map<Allocation *, std::vector<VersionedValue *> > storesCompositeMap;
 
+    /// @brief Store the inverse map of both storesSingletonMap and
+    /// storesCompositeMap
+    std::map<VersionedValue *, std::vector<Allocation *> > storageOfMap;
+
     /// @brief Flow relations from one value to another
     std::vector<FlowsTo *> flowsToList;
 
