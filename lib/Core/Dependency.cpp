@@ -1363,17 +1363,17 @@ Dependency::directLocalAllocationSources(VersionedValue *target) const {
     }
 
     for (std::map<Allocation *, std::vector<VersionedValue *> >::const_iterator
-             it = storesCompositeList.begin();
-         it != storesCompositeList.end(); ++it) {
+             it1 = storesCompositeList.begin();
+         it1 != storesCompositeList.end(); ++it1) {
 
       for (std::vector<VersionedValue *>::const_iterator it2 =
-               it->second.begin();
-           it2 != it->second.end(); ++it2) {
+               it1->second.begin();
+           it2 != it1->second.end(); ++it2) {
 
         if ((*it2) == target) {
           // It is possible that the first component was nil, as
           // in this case there was no source value
-          ret[0] = (*it).first;
+          ret[0] = (*it1).first;
           break;
         }
       }
