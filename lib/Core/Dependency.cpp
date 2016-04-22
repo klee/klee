@@ -775,9 +775,9 @@ std::vector<VersionedValue *> Dependency::stores(Allocation *allocation) const {
     return ret;
   }
 
-  std::map<Allocation *, VersionedValue *>::const_iterator it2;
-  it2 = storesSingletonList.find(allocation);
-  if (it2 != storesSingletonList.end()) {
+  std::map<Allocation *, VersionedValue *>::const_iterator it;
+  it = storesSingletonList.find(allocation);
+  if (it != storesSingletonList.end()) {
     ret.push_back(storesSingletonList.at(allocation));
     return ret;
   }
