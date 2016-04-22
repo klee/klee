@@ -1552,9 +1552,9 @@ void Dependency::Util::deletePointerVector(std::vector<T *> &list) {
   list.clear();
 }
 
-template <typename Key, typename T>
-void Dependency::Util::deletePointerMap(std::map<Key *, T *> &map) {
-  typedef typename std::map<Key *, T *>::iterator IteratorType;
+template <typename K, typename T>
+void Dependency::Util::deletePointerMap(std::map<K *, T *> &map) {
+  typedef typename std::map<K *, T *>::iterator IteratorType;
 
   for (IteratorType it = map.begin(), itEnd = map.end(); it != itEnd; ++it) {
     map.erase(it);
@@ -1562,10 +1562,10 @@ void Dependency::Util::deletePointerMap(std::map<Key *, T *> &map) {
   map.clear();
 }
 
-template <typename Key, typename T>
+template <typename K, typename T>
 void Dependency::Util::deletePointerMapWithVectorValue(
-    std::map<Key *, std::vector<T *> > &map) {
-  typedef typename std::map<Key *, std::vector<T *> >::iterator IteratorType;
+    std::map<K *, std::vector<T *> > &map) {
+  typedef typename std::map<K *, std::vector<T *> >::iterator IteratorType;
 
   for (IteratorType it = map.begin(), itEnd = map.end(); it != itEnd; ++it) {
     map.erase(it);
