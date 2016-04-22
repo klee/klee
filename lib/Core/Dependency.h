@@ -230,35 +230,6 @@ class Allocation {
     }
   };
 
-  class StorageCell {
-    // allocation stores value
-    Allocation *allocation;
-    VersionedValue* value;
-
-  public:
-    StorageCell(Allocation *allocation, VersionedValue *value)
-        : allocation(allocation), value(value) {}
-
-    ~StorageCell() {}
-
-    VersionedValue *stores(Allocation *allocation) const {
-      return this->allocation == allocation ? this->value : 0;
-    }
-
-    Allocation *storageOf(const VersionedValue *value) const {
-      return this->value == value ? this->allocation : 0;
-    }
-
-    Allocation *getAllocation() const { return this->allocation; }
-
-    void print(llvm::raw_ostream& stream) const;
-
-    void dump() const {
-      print(llvm::errs());
-      llvm::errs() << "\n";
-    }
-  };
-
   class FlowsTo {
     // target depends on source
     VersionedValue* source;
