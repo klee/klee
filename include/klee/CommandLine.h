@@ -74,6 +74,8 @@ extern llvm::cl::opt<bool> NoInterpolation;
 extern llvm::cl::opt<bool> OutputTree;
 
 extern llvm::cl::opt<bool> InterpolationStat;
+
+extern llvm::cl::opt<bool> NoExistential;
 #endif
 
 #ifdef SUPPORT_METASMT
