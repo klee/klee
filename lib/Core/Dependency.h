@@ -230,35 +230,6 @@ class Allocation {
     }
   };
 
-  class StorageCell {
-    // allocation stores value
-    Allocation *allocation;
-    VersionedValue* value;
-
-  public:
-    StorageCell(Allocation *allocation, VersionedValue *value)
-        : allocation(allocation), value(value) {}
-
-    ~StorageCell() {}
-
-    VersionedValue *stores(Allocation *allocation) const {
-      return this->allocation == allocation ? this->value : 0;
-    }
-
-    Allocation *storageOf(const VersionedValue *value) const {
-      return this->value == value ? this->allocation : 0;
-    }
-
-    Allocation *getAllocation() const { return this->allocation; }
-
-    void print(llvm::raw_ostream& stream) const;
-
-    void dump() const {
-      print(llvm::errs());
-      llvm::errs() << "\n";
-    }
-  };
-
   class FlowsTo {
     // target depends on source
     VersionedValue* source;
@@ -541,6 +512,13 @@ class Allocation {
       template <typename T>
       static void deletePointerVector(std::vector<T *> &list);
 
+      template <typename Key, typename T>
+      static void deletePointerMap(std::map<Key *, T *> &map);
+
+      template <typename Key, typename T>
+      static void
+      deletePointerMapWithVectorValue(std::map<Key *, std::vector<T *> > &map);
+
       static bool isCompositeAllocation(llvm::Value *site);
 
       static bool isEnvironmentAllocation(llvm::Value *site);
@@ -559,8 +537,15 @@ class Allocation {
     /// @brief Equality of value to address
     std::vector< PointerEquality *> equalityList;
 
-    /// @brief The mapping of allocations/addresses to stored value
-    std::vector< StorageCell *> storesList;
+    /// @brief The mapping of allocations/addresses to stored singleton value
+    std::map<Allocation *, VersionedValue *> storesSingletonMap;
+
+    /// @brief The mapping of allocations/addresses to stored singleton value
+    std::map<Allocation *, std::vector<VersionedValue *> > storesCompositeMap;
+
+    /// @brief Store the inverse map of both storesSingletonMap and
+    /// storesCompositeMap
+    std::map<VersionedValue *, std::vector<Allocation *> > storageOfMap;
 
     /// @brief Flow relations from one value to another
     std::vector<FlowsTo *> flowsToList;

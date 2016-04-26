@@ -773,7 +773,9 @@ PathCondition::packInterpolant(std::vector<const Array *> &replacements) {
     if (it->core) {
       if (!it->shadowed) {
         it->shadowConstraint =
-            ShadowArray::getShadowExpression(it->constraint, replacements);
+            (NoExistential ? it->constraint
+                           : ShadowArray::getShadowExpression(it->constraint,
+                                                              replacements));
         it->shadowed = true;
       }
       if (res.get()) {
@@ -962,58 +964,62 @@ SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr,
 
     ref<Expr> interpolantAtom = (*it); // For example C cmp D
 
-    for (std::vector<ref<Expr> >::iterator itEq = equalityPack.begin(),
-                                           itEqEnd = equalityPack.end();
-         itEq != itEqEnd; ++itEq) {
+    // only process the interpolant that still has existential variables in it.
+    if (hasExistentials(boundVariables, interpolantAtom)) {
+      for (std::vector<ref<Expr> >::iterator itEq = equalityPack.begin(),
+                                             itEqEnd = equalityPack.end();
+           itEq != itEqEnd; ++itEq) {
 
-      ref<Expr> equalityConstraint =
-          *itEq; // For example, say this constraint is A == B
-      if (equalityConstraint->isFalse()) {
-        return ConstantExpr::alloc(0, Expr::Bool);
-      } else if (equalityConstraint->isTrue()) {
-        return ConstantExpr::alloc(1, Expr::Bool);
-      }
-      // Left-hand side of the equality formula (A in our example) that contains
-      // the shadow expression (we assume that the existentially-quantified
-      // shadow variable is always on the left side).
-      ref<Expr> equalityConstraintLeft = equalityConstraint->getKid(0);
-
-      // Right-hand side of the equality formula (B in our example) that does
-      // not contain existentially-quantified shadow variables.
-      ref<Expr> equalityConstraintRight = equalityConstraint->getKid(1);
-
-      ref<Expr> newIntpLeft;
-      ref<Expr> newIntpRight;
-
-      // When the if condition holds, we perform substitution
-      if (containShadowExpr(equalityConstraintLeft,
-                            interpolantAtom->getKid(0))) {
-        // Here we perform substitution, where given
-        // an interpolant atom and an equality constraint,
-        // we try to find a subexpression in the equality constraint
-        // that matches the lhs expression of the interpolant atom.
-
-        // Here we assume that the equality constraint is A == B and the
-        // interpolant atom is C cmp D.
-
-        // newIntpLeft == B
-        newIntpLeft = equalityConstraintRight;
-
-        // If equalityConstraintLeft does not have any arithmetic operation
-        // we could directly assign newIntpRight = D, otherwise,
-        // newIntpRight == A[D/C]
-        if (!llvm::isa<BinaryExpr>(equalityConstraintLeft))
-          newIntpRight = interpolantAtom->getKid(1);
-        else {
-          // newIntpRight is A, but with every occurrence of C replaced with D
-          // i.e., newIntpRight == A[D/C]
-          newIntpRight =
-              replaceExpr(equalityConstraintLeft, interpolantAtom->getKid(0),
-                          interpolantAtom->getKid(1));
+        ref<Expr> equalityConstraint =
+            *itEq; // For example, say this constraint is A == B
+        if (equalityConstraint->isFalse()) {
+          return ConstantExpr::alloc(0, Expr::Bool);
+        } else if (equalityConstraint->isTrue()) {
+          return ConstantExpr::alloc(1, Expr::Bool);
         }
+        // Left-hand side of the equality formula (A in our example) that
+        // contains
+        // the shadow expression (we assume that the existentially-quantified
+        // shadow variable is always on the left side).
+        ref<Expr> equalityConstraintLeft = equalityConstraint->getKid(0);
 
-        interpolantAtom = ShadowArray::createBinaryOfSameKind(
-            interpolantAtom, newIntpLeft, newIntpRight);
+        // Right-hand side of the equality formula (B in our example) that does
+        // not contain existentially-quantified shadow variables.
+        ref<Expr> equalityConstraintRight = equalityConstraint->getKid(1);
+
+        ref<Expr> newIntpLeft;
+        ref<Expr> newIntpRight;
+
+        // When the if condition holds, we perform substitution
+        if (containShadowExpr(equalityConstraintLeft,
+                              interpolantAtom->getKid(0))) {
+          // Here we perform substitution, where given
+          // an interpolant atom and an equality constraint,
+          // we try to find a subexpression in the equality constraint
+          // that matches the lhs expression of the interpolant atom.
+
+          // Here we assume that the equality constraint is A == B and the
+          // interpolant atom is C cmp D.
+
+          // newIntpLeft == B
+          newIntpLeft = equalityConstraintRight;
+
+          // If equalityConstraintLeft does not have any arithmetic operation
+          // we could directly assign newIntpRight = D, otherwise,
+          // newIntpRight == A[D/C]
+          if (!llvm::isa<BinaryExpr>(equalityConstraintLeft))
+            newIntpRight = interpolantAtom->getKid(1);
+          else {
+            // newIntpRight is A, but with every occurrence of C replaced with D
+            // i.e., newIntpRight == A[D/C]
+            newIntpRight =
+                replaceExpr(equalityConstraintLeft, interpolantAtom->getKid(0),
+                            interpolantAtom->getKid(1));
+          }
+
+          interpolantAtom = ShadowArray::createBinaryOfSameKind(
+              interpolantAtom, newIntpLeft, newIntpRight);
+        }
       }
     }
 
@@ -1200,6 +1206,9 @@ ref<Expr> SubsumptionTableEntry::simplifyEqualityExpr(
 ref<Expr>
 SubsumptionTableEntry::getSubstitution(ref<Expr> equalities,
                                        std::map<ref<Expr>, ref<Expr> > &map) {
+  // It is assumed the lhs is an expression on the existentially-quantified
+  // variable whereas
+  // the rhs is an expression on the free variables.
   if (llvm::isa<EqExpr>(equalities.get())) {
     ref<Expr> lhs = equalities->getKid(0);
     if (llvm::isa<ReadExpr>(lhs.get()) || llvm::isa<ConcatExpr>(lhs.get())) {
@@ -1238,6 +1247,15 @@ ref<Expr> SubsumptionTableEntry::simplifyExistsExpr(ref<Expr> existsExpr,
   ref<Expr> equalities = getSubstitution(body->getKid(1), substitution);
   ref<Expr> interpolant =
       ApplySubstitutionVisitor(substitution).visit(body->getKid(0));
+
+  ExistsExpr *expr = static_cast<ExistsExpr *>(existsExpr.get());
+  if (hasExistentials(expr->variables, equalities)) {
+    // we could also replace the occurrence of some variables with its
+    // correspond
+    // substitution mapping.
+    equalities = ApplySubstitutionVisitor(substitution).visit(equalities);
+  }
+
   ref<Expr> newBody = AndExpr::alloc(interpolant, equalities);
   ref<Expr> ret = simplifyArithmeticBody(existsExpr->rebuild(&newBody),
                                          hasExistentialsOnly);
