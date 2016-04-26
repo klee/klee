@@ -349,13 +349,9 @@ class SubsumptionTableEntry {
 
   ref<Expr> interpolant;
 
-  std::map<llvm::Value *, ref<Expr> > singletonStore;
+  std::map<uint64_t, ref<Expr> > singletonStore;
 
-  std::vector<llvm::Value *> singletonStoreKeys;
-
-  std::map<llvm::Value *, std::vector<ref<Expr> > > compositeStore;
-
-  std::vector<llvm::Value *> compositeStoreKeys;
+  std::vector<uint64_t> singletonStoreKeys;
 
   std::vector<const Array *> existentials;
 
@@ -391,10 +387,7 @@ class SubsumptionTableEntry {
   static ref<Expr> getSubstitution(ref<Expr> equalities,
                                    std::map<ref<Expr>, ref<Expr> > &map);
 
-  bool empty() {
-    return !interpolant.get() && singletonStoreKeys.empty() &&
-           compositeStoreKeys.empty();
-  }
+  bool empty() { return !interpolant.get() && singletonStoreKeys.empty(); }
 
   /// @brief for printing method running time statistics
   static void printStat(llvm::raw_ostream &stream);
@@ -495,9 +488,7 @@ class ITreeNode {
   static StatTimer bindCallArgumentsTimer;
   static StatTimer popAbstractDependencyFrameTimer;
   static StatTimer getSingletonExpressionsTimer;
-  static StatTimer getCompositeExpressionsTimer;
   static StatTimer getSingletonCoreExpressionsTimer;
-  static StatTimer getCompositeCoreExpressionsTimer;
   static StatTimer computeCoreAllocationsTimer;
 
 private:
@@ -550,16 +541,10 @@ public:
   void popAbstractDependencyFrame(llvm::CallInst *site, llvm::Instruction *inst,
                                   ref<Expr> returnValue);
 
-  std::map<llvm::Value *, ref<Expr> > getSingletonExpressions() const;
+  std::map<uint64_t, ref<Expr> > getSingletonExpressions() const;
 
-  std::map<llvm::Value *, std::vector<ref<Expr> > >
-  getCompositeExpressions() const;
-
-  std::map<llvm::Value *, ref<Expr> >
+  std::map<uint64_t, ref<Expr> >
   getSingletonCoreExpressions(std::vector<const Array *> &replacements) const;
-
-  std::map<llvm::Value *, std::vector<ref<Expr> > >
-  getCompositeCoreExpressions(std::vector<const Array *> &replacements) const;
 
   void computeCoreAllocations(AllocationGraph *g);
 

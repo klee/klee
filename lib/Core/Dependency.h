@@ -67,15 +67,15 @@ class Allocation {
 
     llvm::Value *site;
 
-    Allocation() : core(false), site(0) {}
+    ref<Expr> address;
 
-    Allocation(llvm::Value *site) : core(false), site(site) {}
+    Allocation(llvm::Value *_site, ref<Expr> &_address)
+        : core(false), site(_site), address(_address) {}
 
   public:
     enum Kind {
       Unknown,
       Environment,
-      Composite,
       Versioned
     };
 
@@ -83,15 +83,22 @@ class Allocation {
 
     virtual ~Allocation() {}
 
-    virtual bool hasAllocationSite(llvm::Value *site) const { return false; }
-
-    virtual bool isComposite() const;
+    virtual bool hasAllocationSite(llvm::Value *_site,
+                                   ref<Expr> &_address) const {
+      return site == _site && address == _address;
+    }
 
     virtual void print(llvm::raw_ostream& stream) const;
+
+    uint64_t getUIntAddress() {
+      return llvm::dyn_cast<ConstantExpr>(address.get())->getZExtValue();
+    }
 
     static bool classof(const Allocation *allocation) { return true; }
 
     llvm::Value *getSite() const { return site; }
+
+    ref<Expr> getAddress() const { return address; }
 
     void setAsCore() { core = true; }
 
@@ -103,46 +110,20 @@ class Allocation {
     }
   };
 
-  class CompositeAllocation : public Allocation {
-  public:
-    CompositeAllocation(llvm::Value *site) : Allocation(site) {}
-
-    ~CompositeAllocation() {}
-
-    Kind getKind() const { return Composite; }
-
-    bool hasAllocationSite(llvm::Value *site) const {
-      return this->site == site;
-    }
-
-    static bool classof(const Allocation *allocation) {
-      return allocation->getKind() == Composite;
-    }
-
-    static bool classof(const CompositeAllocation *allocation) { return true; }
-
-    void print(llvm::raw_ostream &stream) const;
-  };
-
   class VersionedAllocation : public Allocation {
   public:
-    VersionedAllocation(llvm::Value *site) : Allocation(site) {}
+    VersionedAllocation(llvm::Value *_site, ref<Expr> &_address)
+        : Allocation(_site, _address) {}
 
     ~VersionedAllocation() {}
 
     Kind getKind() const { return Versioned; }
-
-    bool hasAllocationSite(llvm::Value *site) const {
-      return this->site == site;
-    }
 
     static bool classof(const Allocation *allocation) {
       return allocation->getKind() == Versioned;
     }
 
     static bool classof(const VersionedAllocation *allocation) { return true; }
-
-    bool isComposite() const;
 
     void print(llvm::raw_ostream& stream) const;
   };
@@ -152,15 +133,16 @@ class Allocation {
     // for all environment allocations
     static llvm::Value *canonicalAllocation;
   public:
-    EnvironmentAllocation(llvm::Value *site)
-        : Allocation(!canonicalAllocation ? (canonicalAllocation = site)
-                                          : canonicalAllocation) {}
+    EnvironmentAllocation(llvm::Value *_site, ref<Expr> &_address)
+        : Allocation(!canonicalAllocation ? (canonicalAllocation = _site)
+                                          : canonicalAllocation,
+                     _address) {}
 
     ~EnvironmentAllocation() {}
 
     Kind getKind() const { return Environment; }
 
-    bool hasAllocationSite(llvm::Value *site) const;
+    bool hasAllocationSite(llvm::Value *site, ref<Expr> &_address) const;
 
     static bool classof(const Allocation *allocation) {
       return allocation->getKind() == Environment;
@@ -324,8 +306,7 @@ class Allocation {
     getSinksWithAllocations(std::vector<Allocation *> valuesList) const;
 
     void
-    consumeNodesWithAllocations(std::vector<Allocation *> versionedAllocations,
-                                std::vector<Allocation *> compositeAllocations);
+    consumeNodesWithAllocations(std::vector<Allocation *> versionedAllocations);
 
     void dump() const {
       this->print(llvm::errs());
@@ -399,44 +380,31 @@ class Allocation {
   ///
   /// Store: store v', v
   ///
-  /// not composite(m)
   /// ----------------------------------------------------
   /// R --> R U { stores(succ(m),v) | R |- ind(v', m, 0) }
   ///
   /// Here we use succ(m) to denote the next version of m as this was a
   /// destructive update.
   ///
-  /// composite(m)
-  /// ----------------------------------------------
-  /// R --> R U { stores(m,v) | R |- ind(v', m, 0) }
-  ///
-  /// Note that a composite memory location cannot be versioned in our
-  /// abstract semantics. This is because our analysis is field-insensitive
-  /// such that any update to a composite memory location using abstracted-
-  /// away field specifier may leave existing stored values intact. That is,
-  /// an update to a composite store is non-destructive.
-  ///
   /// -------------------------------------------------------------
-  /// R --> R U { stores(ind(m,i), v) | R |- ind(v', m, i), i > 0 }
+  /// R --> R U { stores(succ(ind(m,i)), v) | R |- ind(v', m, i), i > 0 }
   ///
-  /// Here ind(m,i) is an abstract composite memory location representing any
-  /// memory location that is i-step-reachable via indirection from m. Since
-  /// ind(m,i) is a composite memory location, composite(ind(m,i)) holds, and
-  /// it cannot be versioned.
+  /// Here ind(m,i) is an abstract memory location representing any
+  /// memory location that is i-step-reachable via indirection from m.
   ///
   /// R |/- ind(v, _, _)
   /// --------------------------
   /// R --> R U {stores(UNK, v)}
   ///
-  /// Here UNK represents an unknown memory location. Also, composite(UNK)
-  /// holds and therefore UNK cannot be versioned.
+  /// Here UNK represents an unknown memory location. We assume that
+  /// UNK cannot be versioned (non-destructive update applies to it).
   ///
   /// R |- ind(v, UNK_ENV_PTR, _)
   /// ---------------------------
   /// R --> {}
   ///
   /// Storing into the environment results in an error, as the environment
-  /// should only be read. Here, composite(UNK_ENV_PTR) holds.
+  /// should only be read. Here, we also assume that UNK_ENV_PTR holds.
   ///
   /// Environment Load: v = load @_environ
   ///
@@ -448,19 +416,12 @@ class Allocation {
   /// Here the rules are not mutually exclusive such that we avoid using set
   /// union to denote abstract states after the execution.
   ///
-  /// not composite(m)
   /// R |- ind(v', latest(m), 0) /\ stores(latest(m), v''')
   /// R' |- depends(succ(v), v''')
   /// -----------------------------------------------------
   /// R --> R'
   ///
   /// Here latest(m) is only the latest version of allocation m.
-  ///
-  /// composite(m)
-  /// R |- ind(v', m, 0) /\ stores(m, v''')
-  /// R' |- depends(succ(v), v''')
-  /// -------------------------------------
-  /// R --> R'
   ///
   /// R |- ind(v', m, i) /\ i > 0 /\ stores(m, v''')
   /// R' |- depends(succ(v), v''')
@@ -519,8 +480,6 @@ class Allocation {
       static void
       deletePointerMapWithVectorValue(std::map<Key *, std::vector<T *> > &map);
 
-      static bool isCompositeAllocation(llvm::Value *site);
-
       static bool isEnvironmentAllocation(llvm::Value *site);
 
       /// @brief Tests if an allocation site is main function's argument
@@ -540,11 +499,7 @@ class Allocation {
     /// @brief The mapping of allocations/addresses to stored singleton value
     std::map<Allocation *, VersionedValue *> storesSingletonMap;
 
-    /// @brief The mapping of allocations/addresses to stored singleton value
-    std::map<Allocation *, std::vector<VersionedValue *> > storesCompositeMap;
-
-    /// @brief Store the inverse map of both storesSingletonMap and
-    /// storesCompositeMap
+    /// @brief Store the inverse map of both storesSingletonMap
     std::map<VersionedValue *, std::vector<Allocation *> > storageOfMap;
 
     /// @brief Flow relations from one value to another
@@ -553,8 +508,6 @@ class Allocation {
     std::vector< VersionedValue *> valuesList;
 
     std::vector<Allocation *> versionedAllocationsList;
-
-    std::vector<Allocation *> compositeAllocationsList;
 
     /// @brief allocations of this node and its ancestors
     /// that are needed for the core and dominates other allocations.
@@ -566,18 +519,17 @@ class Allocation {
     VersionedValue *getNewVersionedValue(llvm::Value *value,
                                          ref<Expr> valueExpr);
 
-    Allocation *getInitialAllocation(llvm::Value *allocation);
+    Allocation *getInitialAllocation(llvm::Value *allocation,
+                                     ref<Expr> &address);
 
-    Allocation *getNewAllocationVersion(llvm::Value *allocation);
+    Allocation *getNewAllocationVersion(llvm::Value *allocation,
+                                        ref<Expr> &address);
 
     std::vector<Allocation *> getAllVersionedAllocations() const;
 
-    std::vector<Allocation *> getAllCompositeAllocations() const;
-
-    /// @brief Gets the latest version of the allocation. For unversioned
-    /// allocations (e.g., composite and environment), this should return
-    /// the only allocation.
-    Allocation *getLatestAllocation(llvm::Value *allocation) const;
+    /// @brief Gets the latest version of the allocation.
+    Allocation *getLatestAllocation(llvm::Value *allocation,
+                                    ref<Expr> address) const;
 
     /// @brief similar to getLatestValue, but we don't check for whether
     /// the value is constant or not
@@ -654,12 +606,8 @@ class Allocation {
     /// @brief Abstract dependency state transition with argument(s)
     void execute(llvm::Instruction *instr, std::vector<ref<Expr> > &args);
 
-    std::map<llvm::Value *, ref<Expr> >
+    std::map<uint64_t, ref<Expr> >
     getSingletonExpressions(std::vector<const Array *> &replacements,
-                            bool coreOnly) const;
-
-    std::map<llvm::Value *, std::vector<ref<Expr> > >
-    getCompositeExpressions(std::vector<const Array *> &replacements,
                             bool coreOnly) const;
 
     void bindCallArguments(llvm::Instruction *instr,

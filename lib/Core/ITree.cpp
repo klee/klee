@@ -820,19 +820,10 @@ SubsumptionTableEntry::SubsumptionTableEntry(ITreeNode *node)
 
   singletonStore = node->getSingletonCoreExpressions(replacements);
 
-  for (std::map<llvm::Value *, ref<Expr> >::iterator
-           it = singletonStore.begin(),
-           itEnd = singletonStore.end();
+  for (std::map<uint64_t, ref<Expr> >::iterator it = singletonStore.begin(),
+                                                itEnd = singletonStore.end();
        it != itEnd; ++it) {
     singletonStoreKeys.push_back(it->first);
-  }
-
-  compositeStore = node->getCompositeCoreExpressions(replacements);
-  for (std::map<llvm::Value *, std::vector<ref<Expr> > >::iterator
-           it = compositeStore.begin(),
-           itEnd = compositeStore.end();
-       it != itEnd; ++it) {
-    compositeStoreKeys.push_back(it->first);
   }
 
   existentials = replacements;
@@ -888,10 +879,7 @@ SubsumptionTableEntry::simplifyWithFourierMotzkin(ref<Expr> existsExpr) {
 ref<Expr>
 SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr,
                                               bool &hasExistentialsOnly) {
-  assert(llvm::isa<ExistsExpr>(existsExpr));
-
-  std::vector<ref<Expr> > interpolantPack;
-  std::vector<ref<Expr> > equalityPack;
+  assert(llvm::isa<ExistsExpr>(existsExpr.get()));
 
   ExistsExpr *expr = static_cast<ExistsExpr *>(existsExpr.get());
 
@@ -929,7 +917,8 @@ SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr,
   // c1 /\ ... /\ cn. This procedure collects into equalityPack all ci for
   // 1<=i<=n which are atomic equalities, to be used in simplifying the
   // interpolant.
-  // ref<Expr> equalityConstraint =
+  std::vector<ref<Expr> > equalityPack;
+
   ref<Expr> fullEqualityConstraint =
       simplifyEqualityExpr(equalityPack, body->getKid(1));
 
@@ -941,7 +930,8 @@ SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr,
   // equality with constants only and no equality with shadow (existential)
   // variables, hence it should be safe to simply return the equality
   // constraint.
-  interpolantPack.clear();
+  std::vector<ref<Expr> > interpolantPack;
+
   ref<Expr> simplifiedInterpolant =
       simplifyInterpolantExpr(interpolantPack, body->getKid(0));
   if (simplifiedInterpolant->isTrue())
@@ -1251,12 +1241,16 @@ ref<Expr> SubsumptionTableEntry::simplifyExistsExpr(ref<Expr> existsExpr,
   ExistsExpr *expr = static_cast<ExistsExpr *>(existsExpr.get());
   if (hasExistentials(expr->variables, equalities)) {
     // we could also replace the occurrence of some variables with its
-    // correspond
-    // substitution mapping.
+    // corresponding substitution mapping.
     equalities = ApplySubstitutionVisitor(substitution).visit(equalities);
   }
 
   ref<Expr> newBody = AndExpr::alloc(interpolant, equalities);
+
+  // FIXME: Need to test the performance of the following.
+  if (!hasExistentials(expr->variables, newBody))
+    return newBody;
+
   ref<Expr> ret = simplifyArithmeticBody(existsExpr->rebuild(&newBody),
                                          hasExistentialsOnly);
   return ret;
@@ -1269,14 +1263,12 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
   if (empty())
     return true;
 
-  std::map<llvm::Value *, ref<Expr> > stateSingletonStore =
+  std::map<uint64_t, ref<Expr> > stateSingletonStore =
       state.itreeNode->getSingletonExpressions();
-  std::map<llvm::Value *, std::vector<ref<Expr> > > stateCompositeStore =
-      state.itreeNode->getCompositeExpressions();
 
   ref<Expr> stateEqualityConstraints;
-  for (std::vector<llvm::Value *>::iterator it = singletonStoreKeys.begin(),
-                                            itEnd = singletonStoreKeys.end();
+  for (std::vector<uint64_t>::iterator it = singletonStoreKeys.begin(),
+                                       itEnd = singletonStoreKeys.end();
        it != itEnd; ++it) {
       const ref<Expr> lhs = singletonStore[*it];
       const ref<Expr> rhs = stateSingletonStore[*it];
@@ -1293,68 +1285,11 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
                                 stateEqualityConstraints));
   }
 
-  for (std::vector<llvm::Value *>::iterator it = compositeStoreKeys.begin(),
-                                            itEnd = compositeStoreKeys.end();
-       it != itEnd; ++it) {
-    std::vector<ref<Expr> > lhsList = compositeStore[*it];
-    std::vector<ref<Expr> > rhsList = stateCompositeStore[*it];
-
-    // If the current state does not constrain the same
-    // allocation, subsumption fails.
-    if (rhsList.empty())
-      return false;
-
-    ref<Expr> auxDisjuncts;
-    bool auxDisjunctsEmpty = true;
-
-    for (std::vector<ref<Expr> >::iterator lhsIter = lhsList.begin(),
-                                           lhsIterEnd = lhsList.end();
-         lhsIter != lhsIterEnd; ++lhsIter) {
-
-      for (std::vector<ref<Expr> >::iterator rhsIter = rhsList.begin(),
-                                             rhsIterEnd = rhsList.end();
-           rhsIter != rhsIterEnd; ++rhsIter) {
-
-        ref<Expr> lhs = *lhsIter;
-        ref<Expr> rhs = *rhsIter;
-
-        // FIXME: This is a quick hack that was temporarily required due
-        // to field insensitivity of the dependency analysis, such that
-        // allocations are matched if they had the same base address even
-        // though they point to different locations in the composite.
-        if (lhs->getWidth() > rhs->getWidth()) {
-          rhs = ZExtExpr::alloc(rhs, lhs->getWidth());
-        } else if (lhs->getWidth() < rhs->getWidth()) {
-          lhs = ZExtExpr::alloc(lhs, rhs->getWidth());
-        }
-
-        if(llvm::isa<ConstantExpr>(lhs) && llvm::isa<ConstantExpr>(rhs)){
-            if(lhs.operator ==(rhs)){
-        	// Because if the disjunct is TRUE, then the disjunction is true
-        	auxDisjuncts = ConstantExpr::alloc(1, Expr::Bool);
-        	// To break from outer loop as well
-                goto end_loop;
-            }
-        }
-
-        if (auxDisjunctsEmpty) {
-          auxDisjuncts = EqExpr::alloc(lhs, rhs);
-          auxDisjunctsEmpty = false;
-        } else {
-          auxDisjuncts = OrExpr::alloc(EqExpr::alloc(lhs, rhs), auxDisjuncts);
-        }
-
-      }
-    }
-  end_loop:
-
-    if (!auxDisjunctsEmpty) {
-      stateEqualityConstraints =
-          stateEqualityConstraints.get()
-              ? AndExpr::alloc(auxDisjuncts, stateEqualityConstraints)
-              : auxDisjuncts;
-    }
-  }
+  llvm::errs() << "State equality constraints from matching singleton store: ";
+  if (stateEqualityConstraints.get())
+    stateEqualityConstraints->dump();
+  else
+    llvm::errs() << "None\n";
 
   // We create path condition needed constraints marking structure
   std::map<Expr *, PathConditionMarker *> markerMap =
@@ -1555,41 +1490,15 @@ void SubsumptionTableEntry::print(llvm::raw_ostream &stream) const {
 
   if (!singletonStore.empty()) {
     stream << "singleton allocations = [";
-    for (std::map<llvm::Value *, ref<Expr> >::const_iterator
+    for (std::map<uint64_t, ref<Expr> >::const_iterator
              itBegin = singletonStore.begin(),
              itEnd = singletonStore.end(), it = itBegin;
          it != itEnd; ++it) {
       if (it != itBegin)
         stream << ",";
-      stream << "(";
-      it->first->print(stream);
-      stream << ",";
+      stream << "(" << it->first << ",";
       it->second->print(stream);
       stream << ")";
-    }
-    stream << "]\n";
-  }
-
-  if (!compositeStore.empty()) {
-    stream << "composite allocations = [";
-    for (std::map<llvm::Value *, std::vector<ref<Expr> > >::const_iterator
-             it0Begin = compositeStore.begin(),
-             it0End = compositeStore.end(), it0 = it0Begin;
-         it0 != it0End; ++it0) {
-      if (it0 != it0Begin)
-        stream << ",";
-      stream << "(";
-      it0->first->print(stream);
-      stream << ",[";
-      for (std::vector<ref<Expr> >::const_iterator
-               it1Begin = it0->second.begin(),
-               it1End = it0->second.end(), it1 = it1Begin;
-           it1 != it1End; ++it1) {
-        if (it1 != it1Begin)
-          stream << ",";
-        (*it1)->print(stream);
-      }
-      stream << "])";
     }
     stream << "]\n";
   }
@@ -1921,9 +1830,7 @@ StatTimer ITreeNode::executeTimer;
 StatTimer ITreeNode::bindCallArgumentsTimer;
 StatTimer ITreeNode::popAbstractDependencyFrameTimer;
 StatTimer ITreeNode::getSingletonExpressionsTimer;
-StatTimer ITreeNode::getCompositeExpressionsTimer;
 StatTimer ITreeNode::getSingletonCoreExpressionsTimer;
-StatTimer ITreeNode::getCompositeCoreExpressionsTimer;
 StatTimer ITreeNode::computeCoreAllocationsTimer;
 
 void ITreeNode::printTimeStat(llvm::raw_ostream &stream) {
@@ -1943,12 +1850,8 @@ void ITreeNode::printTimeStat(llvm::raw_ostream &stream) {
          << popAbstractDependencyFrameTimer.get() * 1000 << "\n";
   stream << "KLEE: done:     getSingletonExpressions = "
          << getSingletonExpressionsTimer.get() * 1000 << "\n";
-  stream << "KLEE: done:     getCompositeExpressions = "
-         << getCompositeExpressionsTimer.get() * 1000 << "\n";
   stream << "KLEE: done:     getSingletonCoreCoreExpressions = "
          << getSingletonCoreExpressionsTimer.get() << "\n";
-  stream << "KLEE: done:     getCompositeCoreExpressions = "
-         << getCompositeCoreExpressionsTimer.get() * 1000 << "\n";
   stream << "KLEE: done:     computeCoreAllocations = "
          << computeCoreAllocationsTimer.get() * 1000 << "\n";
 }
@@ -2062,9 +1965,9 @@ void ITreeNode::popAbstractDependencyFrame(llvm::CallInst *site,
   ITreeNode::popAbstractDependencyFrameTimer.stop();
 }
 
-std::map<llvm::Value *, ref<Expr> > ITreeNode::getSingletonExpressions() const {
+std::map<uint64_t, ref<Expr> > ITreeNode::getSingletonExpressions() const {
   ITreeNode::getSingletonExpressionsTimer.start();
-  std::map<llvm::Value *, ref<Expr> > ret;
+  std::map<uint64_t, ref<Expr> > ret;
   std::vector<const Array *> dummyReplacements;
 
   // Since a program point index is a first statement in a basic block,
@@ -2076,25 +1979,10 @@ std::map<llvm::Value *, ref<Expr> > ITreeNode::getSingletonExpressions() const {
   return ret;
 }
 
-std::map<llvm::Value *, std::vector<ref<Expr> > >
-ITreeNode::getCompositeExpressions() const {
-  ITreeNode::getCompositeExpressionsTimer.start();
-  std::map<llvm::Value *, std::vector<ref<Expr> > > ret;
-  std::vector<const Array *> dummyReplacements;
-
-  // Since a program point index is a first statement in a basic block,
-  // the allocations to be stored in subsumption table should be obtained
-  // from the parent node.
-  if (parent)
-    ret = parent->dependency->getCompositeExpressions(dummyReplacements, false);
-  ITreeNode::getCompositeExpressionsTimer.stop();
-  return ret;
-}
-
-std::map<llvm::Value *, ref<Expr> > ITreeNode::getSingletonCoreExpressions(
+std::map<uint64_t, ref<Expr> > ITreeNode::getSingletonCoreExpressions(
     std::vector<const Array *> &replacements) const {
   ITreeNode::getSingletonCoreExpressionsTimer.start();
-  std::map<llvm::Value *, ref<Expr> > ret;
+  std::map<uint64_t, ref<Expr> > ret;
 
   // Since a program point index is a first statement in a basic block,
   // the allocations to be stored in subsumption table should be obtained
@@ -2102,21 +1990,6 @@ std::map<llvm::Value *, ref<Expr> > ITreeNode::getSingletonCoreExpressions(
   if (parent)
     ret = parent->dependency->getSingletonExpressions(replacements, true);
   ITreeNode::getSingletonCoreExpressionsTimer.stop();
-  return ret;
-}
-
-std::map<llvm::Value *, std::vector<ref<Expr> > >
-ITreeNode::getCompositeCoreExpressions(std::vector<const Array *> &replacements)
-    const {
-  ITreeNode::getCompositeCoreExpressionsTimer.start();
-  std::map<llvm::Value *, std::vector<ref<Expr> > > ret;
-
-  // Since a program point index is a first statement in a basic block,
-  // the allocations to be stored in subsumption table should be obtained
-  // from the parent node.
-  if (parent)
-    ret = parent->dependency->getCompositeExpressions(replacements, true);
-  ITreeNode::getCompositeCoreExpressionsTimer.stop();
   return ret;
 }
 
