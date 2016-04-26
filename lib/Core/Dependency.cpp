@@ -473,7 +473,6 @@ Dependency::getSingletonExpressions(std::vector<const Array *> &replacements,
   for (std::vector<Allocation *>::iterator allocIter = allAlloc.begin(),
                                            allocIterEnd = allAlloc.end();
        allocIter != allocIterEnd; ++allocIter) {
-
     if (coreOnly && std::find(coreAllocations.begin(), coreAllocations.end(),
                               *allocIter) == coreAllocations.end())
       continue;
@@ -554,7 +553,6 @@ Dependency::getCompositeExpressions(std::vector<const Array *> &replacements,
 VersionedValue *Dependency::getLatestValue(llvm::Value *value,
                                            ref<Expr> valueExpr) {
   assert(value && "value cannot be null");
-
   if (llvm::isa<llvm::ConstantExpr>(value)) {
     llvm::Instruction *asInstruction =
         llvm::dyn_cast<llvm::ConstantExpr>(value)->getAsInstruction();
@@ -675,12 +673,13 @@ Allocation *Dependency::resolveAllocation(VersionedValue *val) {
     return alloc;
   }
 
-  llvm::LoadInst *vLoad = llvm::dyn_cast<llvm::LoadInst>(val->getValue());
-  if (vLoad) {
-    Allocation *alloc = getInitialAllocation(vLoad);
-    addPointerEquality(getNewVersionedValue(vLoad, val->getExpression()),
-                       alloc);
-  }
+  //  llvm::LoadInst *vLoad = llvm::dyn_cast<llvm::LoadInst>(val->getValue());
+  //  if (vLoad) {
+  //      llvm::errs() << "X4\n";
+  //    Allocation *alloc = getInitialAllocation(vLoad);
+  //    addPointerEquality(getNewVersionedValue(vLoad, val->getExpression()),
+  //                       alloc);
+  //  }
 
   return 0;
 }
@@ -710,6 +709,7 @@ Dependency::resolveAllocationTransitively(VersionedValue *value) {
       ret.push_back(singleRet);
     }
   }
+
   return ret;
 }
 
@@ -1126,27 +1126,31 @@ void Dependency::execute(llvm::Instruction *instr,
 
       VersionedValue *addressValue =
           getLatestValue(instr->getOperand(0), address);
+
       if (addressValue) {
         std::vector<Allocation *> allocations =
             resolveAllocationTransitively(addressValue);
-        switch (allocations.size()) {
-        case 0: {
+        if (allocations.empty()) {
           Allocation *alloc = getInitialAllocation(instr->getOperand(0));
           addPointerEquality(addressValue, alloc);
           updateStore(alloc, getNewVersionedValue(instr, valueExpr));
-          break;
-        }
-        case 1: {
+            break;
+        } else if (allocations.size() == 1) {
           if (Util::isMainArgument(allocations.at(0)->getSite())) {
             // The load corresponding to a load of the main function's
             // argument that was never allocated within this program.
             addPointerEquality(getNewVersionedValue(instr, valueExpr),
                                getNewAllocationVersion(instr));
+            break;
           }
-          break;
         }
-        default:
-          break;
+      } else {
+        // The value not found was a global variable,
+        // record it here.
+        if (llvm::isa<llvm::GlobalVariable>(instr->getOperand(0))) {
+          addressValue = getNewVersionedValue(instr->getOperand(0), address);
+          Allocation *alloc = getInitialAllocation(instr->getOperand(0));
+          addPointerEquality(addressValue, alloc);
         }
       }
 
@@ -1606,9 +1610,17 @@ bool Dependency::Util::isCompositeAllocation(llvm::Value *site) {
 
   switch (site->getType()->getTypeID()) {
   case llvm::Type::ArrayTyID:
+    return true;
   case llvm::Type::PointerTyID:
+    if (!llvm::isa<llvm::CompositeType>(
+             site->getType()->getPointerElementType()))
+      return false;
+    return true;
   case llvm::Type::StructTyID:
-  case llvm::Type::VectorTyID: { return true; }
+    return true;
+  case llvm::Type::VectorTyID: {
+    return true;
+  }
   default:
     break;
   }
