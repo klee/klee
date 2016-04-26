@@ -1206,6 +1206,9 @@ ref<Expr> SubsumptionTableEntry::simplifyEqualityExpr(
 ref<Expr>
 SubsumptionTableEntry::getSubstitution(ref<Expr> equalities,
                                        std::map<ref<Expr>, ref<Expr> > &map) {
+  // It is assumed the lhs is an expression on the existentially-quantified
+  // variable whereas
+  // the rhs is an expression on the free variables.
   if (llvm::isa<EqExpr>(equalities.get())) {
     ref<Expr> lhs = equalities->getKid(0);
     if (llvm::isa<ReadExpr>(lhs.get()) || llvm::isa<ConcatExpr>(lhs.get())) {
