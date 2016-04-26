@@ -1245,9 +1245,13 @@ ref<Expr> SubsumptionTableEntry::simplifyExistsExpr(ref<Expr> existsExpr,
   ref<Expr> interpolant =
       ApplySubstitutionVisitor(substitution).visit(body->getKid(0));
 
-  // we could also replace the occurrence of some variables with its correspond
-  // substitution mapping.
-  equalities = ApplySubstitutionVisitor(substitution).visit(equalities);
+  ExistsExpr *expr = static_cast<ExistsExpr *>(existsExpr.get());
+  if (hasExistentials(expr->variables, equalities)) {
+    // we could also replace the occurrence of some variables with its
+    // correspond
+    // substitution mapping.
+    equalities = ApplySubstitutionVisitor(substitution).visit(equalities);
+  }
 
   ref<Expr> newBody = AndExpr::alloc(interpolant, equalities);
   ref<Expr> ret = simplifyArithmeticBody(existsExpr->rebuild(&newBody),
