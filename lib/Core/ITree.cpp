@@ -818,12 +818,24 @@ SubsumptionTableEntry::SubsumptionTableEntry(ITreeNode *node)
 
   interpolant = node->getInterpolant(replacements);
 
-  singletonStore = node->getSingletonCoreExpressions(replacements);
+  std::pair<std::map<uint64_t, ref<Expr> >,
+            std::map<llvm::Value *, std::pair<ref<Expr>, ref<Expr> > > >
+  storedExpressions = node->getStoredCoreExpressions(replacements);
 
-  for (std::map<uint64_t, ref<Expr> >::iterator it = singletonStore.begin(),
-                                                itEnd = singletonStore.end();
+  concreteAddressStore = storedExpressions.first;
+  for (std::map<uint64_t, ref<Expr> >::iterator
+           it = concreteAddressStore.begin(),
+           itEnd = concreteAddressStore.end();
        it != itEnd; ++it) {
-    singletonStoreKeys.push_back(it->first);
+    concreteAddressStoreKeys.push_back(it->first);
+  }
+
+  symbolicAddressStore = storedExpressions.second;
+  for (std::map<llvm::Value *, std::pair<ref<Expr>, ref<Expr> > >::iterator
+           it = symbolicAddressStore.begin(),
+           itEnd = symbolicAddressStore.end();
+       it != itEnd; ++it) {
+    symbolicAddressStoreKeys.push_back(it->first);
   }
 
   existentials = replacements;
@@ -1263,15 +1275,19 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
   if (empty())
     return true;
 
-  std::map<uint64_t, ref<Expr> > stateSingletonStore =
-      state.itreeNode->getSingletonExpressions();
+  std::pair<std::map<uint64_t, ref<Expr> >,
+            std::map<llvm::Value *, std::pair<ref<Expr>, ref<Expr> > > >
+  storedExpressions = state.itreeNode->getStoredExpressions();
+
+  std::map<uint64_t, ref<Expr> > stateConcreteAddressStore =
+      storedExpressions.first;
 
   ref<Expr> stateEqualityConstraints;
-  for (std::vector<uint64_t>::iterator it = singletonStoreKeys.begin(),
-                                       itEnd = singletonStoreKeys.end();
+  for (std::vector<uint64_t>::iterator it = concreteAddressStoreKeys.begin(),
+                                       itEnd = concreteAddressStoreKeys.end();
        it != itEnd; ++it) {
-      const ref<Expr> lhs = singletonStore[*it];
-      const ref<Expr> rhs = stateSingletonStore[*it];
+    const ref<Expr> lhs = concreteAddressStore[*it];
+    const ref<Expr> rhs = stateConcreteAddressStore[*it];
 
       // If the current state does not constrain the same
       // allocation, subsumption fails.
@@ -1285,7 +1301,10 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
                                 stateEqualityConstraints));
   }
 
-  llvm::errs() << "State equality constraints from matching singleton store: ";
+  std::map<llvm::Value *, std::pair<ref<Expr>, ref<Expr> > >
+  stateSymbolicAddressStore = storedExpressions.second;
+
+  llvm::errs() << "State equality constraints from matching store: ";
   if (stateEqualityConstraints.get())
     stateEqualityConstraints->dump();
   else
@@ -1488,11 +1507,11 @@ void SubsumptionTableEntry::print(llvm::raw_ostream &stream) const {
     stream << "(empty)";
   stream << "\n";
 
-  if (!singletonStore.empty()) {
-    stream << "singleton allocations = [";
+  if (!concreteAddressStore.empty()) {
+    stream << "allocations = [";
     for (std::map<uint64_t, ref<Expr> >::const_iterator
-             itBegin = singletonStore.begin(),
-             itEnd = singletonStore.end(), it = itBegin;
+             itBegin = concreteAddressStore.begin(),
+             itEnd = concreteAddressStore.end(), it = itBegin;
          it != itEnd; ++it) {
       if (it != itBegin)
         stream << ",";
@@ -1829,8 +1848,8 @@ StatTimer ITreeNode::deleteMarkerMapTimer;
 StatTimer ITreeNode::executeTimer;
 StatTimer ITreeNode::bindCallArgumentsTimer;
 StatTimer ITreeNode::popAbstractDependencyFrameTimer;
-StatTimer ITreeNode::getSingletonExpressionsTimer;
-StatTimer ITreeNode::getSingletonCoreExpressionsTimer;
+StatTimer ITreeNode::getConcreteAddressExpressionsTimer;
+StatTimer ITreeNode::getConcreteAddressCoreExpressionsTimer;
 StatTimer ITreeNode::computeCoreAllocationsTimer;
 
 void ITreeNode::printTimeStat(llvm::raw_ostream &stream) {
@@ -1848,10 +1867,10 @@ void ITreeNode::printTimeStat(llvm::raw_ostream &stream) {
          << bindCallArgumentsTimer.get() * 1000 << "\n";
   stream << "KLEE: done:     popAbstractDependencyFrame = "
          << popAbstractDependencyFrameTimer.get() * 1000 << "\n";
-  stream << "KLEE: done:     getSingletonExpressions = "
-         << getSingletonExpressionsTimer.get() * 1000 << "\n";
-  stream << "KLEE: done:     getSingletonCoreCoreExpressions = "
-         << getSingletonCoreExpressionsTimer.get() << "\n";
+  stream << "KLEE: done:     getConcreteAddressExpressions = "
+         << getConcreteAddressExpressionsTimer.get() * 1000 << "\n";
+  stream << "KLEE: done:     getConcreteAddressCoreExpressions = "
+         << getConcreteAddressCoreExpressionsTimer.get() << "\n";
   stream << "KLEE: done:     computeCoreAllocations = "
          << computeCoreAllocationsTimer.get() * 1000 << "\n";
 }
@@ -1965,31 +1984,37 @@ void ITreeNode::popAbstractDependencyFrame(llvm::CallInst *site,
   ITreeNode::popAbstractDependencyFrameTimer.stop();
 }
 
-std::map<uint64_t, ref<Expr> > ITreeNode::getSingletonExpressions() const {
-  ITreeNode::getSingletonExpressionsTimer.start();
-  std::map<uint64_t, ref<Expr> > ret;
+std::pair<std::map<uint64_t, ref<Expr> >,
+          std::map<llvm::Value *, std::pair<ref<Expr>, ref<Expr> > > >
+ITreeNode::getStoredExpressions() const {
+  ITreeNode::getConcreteAddressExpressionsTimer.start();
+  std::pair<std::map<uint64_t, ref<Expr> >,
+            std::map<llvm::Value *, std::pair<ref<Expr>, ref<Expr> > > > ret;
   std::vector<const Array *> dummyReplacements;
 
   // Since a program point index is a first statement in a basic block,
   // the allocations to be stored in subsumption table should be obtained
   // from the parent node.
   if (parent)
-    ret = parent->dependency->getSingletonExpressions(dummyReplacements, false);
-  ITreeNode::getSingletonExpressionsTimer.stop();
+    ret = parent->dependency->getStoredExpressions(dummyReplacements, false);
+  ITreeNode::getConcreteAddressExpressionsTimer.stop();
   return ret;
 }
 
-std::map<uint64_t, ref<Expr> > ITreeNode::getSingletonCoreExpressions(
-    std::vector<const Array *> &replacements) const {
-  ITreeNode::getSingletonCoreExpressionsTimer.start();
-  std::map<uint64_t, ref<Expr> > ret;
+std::pair<std::map<uint64_t, ref<Expr> >,
+          std::map<llvm::Value *, std::pair<ref<Expr>, ref<Expr> > > >
+ITreeNode::getStoredCoreExpressions(std::vector<const Array *> &replacements)
+    const {
+  ITreeNode::getConcreteAddressCoreExpressionsTimer.start();
+  std::pair<std::map<uint64_t, ref<Expr> >,
+            std::map<llvm::Value *, std::pair<ref<Expr>, ref<Expr> > > > ret;
 
   // Since a program point index is a first statement in a basic block,
   // the allocations to be stored in subsumption table should be obtained
   // from the parent node.
   if (parent)
-    ret = parent->dependency->getSingletonExpressions(replacements, true);
-  ITreeNode::getSingletonCoreExpressionsTimer.stop();
+    ret = parent->dependency->getStoredExpressions(replacements, true);
+  ITreeNode::getConcreteAddressCoreExpressionsTimer.stop();
   return ret;
 }
 

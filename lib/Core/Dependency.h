@@ -90,7 +90,11 @@ class Allocation {
 
     virtual void print(llvm::raw_ostream& stream) const;
 
+    bool hasConstantAddress() { return llvm::isa<ConstantExpr>(address.get()); }
+
     uint64_t getUIntAddress() {
+      llvm::errs() << "ADDRESS: ";
+      address->dump();
       return llvm::dyn_cast<ConstantExpr>(address.get())->getZExtValue();
     }
 
@@ -496,10 +500,10 @@ class Allocation {
     /// @brief Equality of value to address
     std::vector< PointerEquality *> equalityList;
 
-    /// @brief The mapping of allocations/addresses to stored singleton value
-    std::map<Allocation *, VersionedValue *> storesSingletonMap;
+    /// @brief The mapping of allocations/addresses to stored value
+    std::map<Allocation *, VersionedValue *> storesMap;
 
-    /// @brief Store the inverse map of both storesSingletonMap
+    /// @brief Store the inverse map of both storesMap
     std::map<VersionedValue *, std::vector<Allocation *> > storageOfMap;
 
     /// @brief Flow relations from one value to another
@@ -606,9 +610,10 @@ class Allocation {
     /// @brief Abstract dependency state transition with argument(s)
     void execute(llvm::Instruction *instr, std::vector<ref<Expr> > &args);
 
-    std::map<uint64_t, ref<Expr> >
-    getSingletonExpressions(std::vector<const Array *> &replacements,
-                            bool coreOnly) const;
+    std::pair<std::map<uint64_t, ref<Expr> >,
+              std::map<llvm::Value *, std::pair<ref<Expr>, ref<Expr> > > >
+    getStoredExpressions(std::vector<const Array *> &replacements,
+                         bool coreOnly) const;
 
     void bindCallArguments(llvm::Instruction *instr,
                            std::vector<ref<Expr> > &arguments);

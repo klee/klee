@@ -349,9 +349,14 @@ class SubsumptionTableEntry {
 
   ref<Expr> interpolant;
 
-  std::map<uint64_t, ref<Expr> > singletonStore;
+  std::map<uint64_t, ref<Expr> > concreteAddressStore;
 
-  std::vector<uint64_t> singletonStoreKeys;
+  std::vector<uint64_t> concreteAddressStoreKeys;
+
+  std::map<llvm::Value *, std::pair<ref<Expr>, ref<Expr> > >
+  symbolicAddressStore;
+
+  std::vector<llvm::Value *> symbolicAddressStoreKeys;
 
   std::vector<const Array *> existentials;
 
@@ -387,7 +392,9 @@ class SubsumptionTableEntry {
   static ref<Expr> getSubstitution(ref<Expr> equalities,
                                    std::map<ref<Expr>, ref<Expr> > &map);
 
-  bool empty() { return !interpolant.get() && singletonStoreKeys.empty(); }
+  bool empty() {
+    return !interpolant.get() && concreteAddressStoreKeys.empty();
+  }
 
   /// @brief for printing method running time statistics
   static void printStat(llvm::raw_ostream &stream);
@@ -487,8 +494,8 @@ class ITreeNode {
   static StatTimer executeTimer;
   static StatTimer bindCallArgumentsTimer;
   static StatTimer popAbstractDependencyFrameTimer;
-  static StatTimer getSingletonExpressionsTimer;
-  static StatTimer getSingletonCoreExpressionsTimer;
+  static StatTimer getConcreteAddressExpressionsTimer;
+  static StatTimer getConcreteAddressCoreExpressionsTimer;
   static StatTimer computeCoreAllocationsTimer;
 
 private:
@@ -541,10 +548,13 @@ public:
   void popAbstractDependencyFrame(llvm::CallInst *site, llvm::Instruction *inst,
                                   ref<Expr> returnValue);
 
-  std::map<uint64_t, ref<Expr> > getSingletonExpressions() const;
+  std::pair<std::map<uint64_t, ref<Expr> >,
+            std::map<llvm::Value *, std::pair<ref<Expr>, ref<Expr> > > >
+  getStoredExpressions() const;
 
-  std::map<uint64_t, ref<Expr> >
-  getSingletonCoreExpressions(std::vector<const Array *> &replacements) const;
+  std::pair<std::map<uint64_t, ref<Expr> >,
+            std::map<llvm::Value *, std::pair<ref<Expr>, ref<Expr> > > >
+  getStoredCoreExpressions(std::vector<const Array *> &replacements) const;
 
   void computeCoreAllocations(AllocationGraph *g);
 

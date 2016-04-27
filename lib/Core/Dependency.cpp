@@ -156,7 +156,9 @@ void Allocation::print(llvm::raw_ostream &stream) const {
 /**/
 
 void VersionedAllocation::print(llvm::raw_ostream &stream) const {
-  stream << "A(singleton)";
+  stream << "A";
+  if (!llvm::isa<ConstantExpr>(this->address.get()))
+    stream << "(symbolic)";
   if (core)
     stream << "(I)";
   stream << "[";
@@ -438,11 +440,14 @@ std::vector<Allocation *> Dependency::getAllVersionedAllocations() const {
   return allAlloc;
 }
 
-std::map<uint64_t, ref<Expr> >
-Dependency::getSingletonExpressions(std::vector<const Array *> &replacements,
-                                    bool coreOnly) const {
+std::pair<std::map<uint64_t, ref<Expr> >,
+          std::map<llvm::Value *, std::pair<ref<Expr>, ref<Expr> > > >
+Dependency::getStoredExpressions(std::vector<const Array *> &replacements,
+                                 bool coreOnly) const {
   std::vector<Allocation *> allAlloc = getAllVersionedAllocations();
-  std::map<uint64_t, ref<Expr> > ret;
+  std::map<uint64_t, ref<Expr> > concreteAddressExpressions;
+  std::map<llvm::Value *, std::pair<ref<Expr>, ref<Expr> > >
+  symbolicAddressExpressions;
 
   for (std::vector<Allocation *>::iterator allocIter = allAlloc.begin(),
                                            allocIterEnd = allAlloc.end();
@@ -458,22 +463,47 @@ Dependency::getSingletonExpressions(std::vector<const Array *> &replacements,
 
     if (stored.size()) {
       VersionedValue *v = stored.at(0);
-      uint64_t address = (*allocIter)->getUIntAddress();
 
-      if (!coreOnly) {
-        ref<Expr> expr = v->getExpression();
-        ret[address] = expr;
-      } else if (v->isCore()) {
-        ref<Expr> expr = v->getExpression();
-        if (NoExistential) {
-          ret[address] = expr;
-        } else {
-          ret[address] = ShadowArray::getShadowExpression(expr, replacements);
+      if ((*allocIter)->hasConstantAddress()) {
+        uint64_t address = (*allocIter)->getUIntAddress();
+        if (!coreOnly) {
+          ref<Expr> expr = v->getExpression();
+          concreteAddressExpressions[address] = expr;
+        } else if (v->isCore()) {
+          ref<Expr> expr = v->getExpression();
+          if (NoExistential) {
+            concreteAddressExpressions[address] = expr;
+          } else {
+            concreteAddressExpressions[address] =
+                ShadowArray::getShadowExpression(expr, replacements);
+          }
+        }
+      } else {
+        ref<Expr> address = (*allocIter)->getAddress();
+        if (!coreOnly) {
+          ref<Expr> expr = v->getExpression();
+          llvm::Value *llvmAlloc = v->getValue();
+          symbolicAddressExpressions[llvmAlloc] =
+              std::pair<ref<Expr>, ref<Expr> >(address, expr);
+        } else if (v->isCore()) {
+          ref<Expr> expr = v->getExpression();
+          llvm::Value *llvmAlloc = v->getValue();
+          if (NoExistential) {
+            symbolicAddressExpressions[llvmAlloc] =
+                std::pair<ref<Expr>, ref<Expr> >(address, expr);
+          } else {
+            symbolicAddressExpressions[llvmAlloc] =
+                std::pair<ref<Expr>, ref<Expr> >(
+                    ShadowArray::getShadowExpression(address, replacements),
+                    ShadowArray::getShadowExpression(expr, replacements));
+          }
         }
       }
     }
   }
-  return ret;
+  return std::pair<std::map<uint64_t, ref<Expr> >,
+                   std::map<llvm::Value *, std::pair<ref<Expr>, ref<Expr> > > >(
+      concreteAddressExpressions, symbolicAddressExpressions);
 }
 
 VersionedValue *Dependency::getLatestValue(llvm::Value *value,
@@ -624,11 +654,11 @@ void Dependency::addPointerEquality(const VersionedValue *value,
 
 void Dependency::updateStore(Allocation *allocation, VersionedValue *value) {
   std::map<Allocation *, VersionedValue *>::iterator storesIter =
-      storesSingletonMap.find(allocation);
-  if (storesIter != storesSingletonMap.end()) {
-      storesSingletonMap.at(allocation) = value;
+      storesMap.find(allocation);
+  if (storesIter != storesMap.end()) {
+    storesMap.at(allocation) = value;
     } else {
-      storesSingletonMap.insert(
+      storesMap.insert(
           std::pair<Allocation *, VersionedValue *>(allocation, value));
     }
 
@@ -660,9 +690,9 @@ std::vector<VersionedValue *> Dependency::stores(Allocation *allocation) const {
   std::vector<VersionedValue *> ret;
 
   std::map<Allocation *, VersionedValue *>::const_iterator it;
-  it = storesSingletonMap.find(allocation);
-  if (it != storesSingletonMap.end()) {
-    ret.push_back(storesSingletonMap.at(allocation));
+  it = storesMap.find(allocation);
+  if (it != storesMap.end()) {
+    ret.push_back(storesMap.at(allocation));
     return ret;
   }
 
@@ -813,7 +843,7 @@ Dependency::Dependency(Dependency *prev)
 Dependency::~Dependency() {
   // Delete the locally-constructed relations
   Util::deletePointerVector(equalityList);
-  Util::deletePointerMap(storesSingletonMap);
+  Util::deletePointerMap(storesMap);
   Util::deletePointerMapWithVectorValue(storageOfMap);
   Util::deletePointerVector(flowsToList);
 
@@ -1355,8 +1385,8 @@ void Dependency::print(llvm::raw_ostream &stream, const unsigned tabNum) const {
   stream << tabs << "EQUALITIES:";
   std::vector<PointerEquality *>::const_iterator equalityListBegin =
       equalityList.begin();
-  std::map<Allocation *, VersionedValue *>::const_iterator
-  storesSingletonListBegin = storesSingletonMap.begin();
+  std::map<Allocation *, VersionedValue *>::const_iterator storesMapBegin =
+      storesMap.begin();
   std::vector<FlowsTo *>::const_iterator flowsToListBegin = flowsToList.begin();
   for (std::vector<PointerEquality *>::const_iterator
            it = equalityListBegin,
@@ -1369,10 +1399,10 @@ void Dependency::print(llvm::raw_ostream &stream, const unsigned tabNum) const {
   stream << "\n";
   stream << tabs << "STORAGE:";
   for (std::map<Allocation *, VersionedValue *>::const_iterator
-           it = storesSingletonMap.begin(),
-           itEnd = storesSingletonMap.end();
+           it = storesMap.begin(),
+           itEnd = storesMap.end();
        it != itEnd; ++it) {
-    if (it != storesSingletonListBegin)
+    if (it != storesMapBegin)
       stream << ",";
     stream << "[";
     (*it->first).print(stream);
