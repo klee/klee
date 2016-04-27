@@ -818,22 +818,19 @@ SubsumptionTableEntry::SubsumptionTableEntry(ITreeNode *node)
 
   interpolant = node->getInterpolant(replacements);
 
-  std::pair<std::map<uint64_t, ref<Expr> >,
-            std::map<llvm::Value *, std::pair<ref<Expr>, ref<Expr> > > >
+  std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
   storedExpressions = node->getStoredCoreExpressions(replacements);
 
   concreteAddressStore = storedExpressions.first;
-  for (std::map<uint64_t, ref<Expr> >::iterator
-           it = concreteAddressStore.begin(),
-           itEnd = concreteAddressStore.end();
+  for (Dependency::ConcreteStore::iterator it = concreteAddressStore.begin(),
+                                           itEnd = concreteAddressStore.end();
        it != itEnd; ++it) {
     concreteAddressStoreKeys.push_back(it->first);
   }
 
   symbolicAddressStore = storedExpressions.second;
-  for (std::map<llvm::Value *, std::pair<ref<Expr>, ref<Expr> > >::iterator
-           it = symbolicAddressStore.begin(),
-           itEnd = symbolicAddressStore.end();
+  for (Dependency::SymbolicStore::iterator it = symbolicAddressStore.begin(),
+                                           itEnd = symbolicAddressStore.end();
        it != itEnd; ++it) {
     symbolicAddressStoreKeys.push_back(it->first);
   }
@@ -1275,40 +1272,141 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
   if (empty())
     return true;
 
-  std::pair<std::map<uint64_t, ref<Expr> >,
-            std::map<llvm::Value *, std::pair<ref<Expr>, ref<Expr> > > >
+  std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
   storedExpressions = state.itreeNode->getStoredExpressions();
 
-  std::map<uint64_t, ref<Expr> > stateConcreteAddressStore =
-      storedExpressions.first;
+  Dependency::ConcreteStore stateConcreteAddressStore = storedExpressions.first;
+
+  Dependency::SymbolicStore stateSymbolicAddressStore =
+      storedExpressions.second;
 
   ref<Expr> stateEqualityConstraints;
-  for (std::vector<uint64_t>::iterator it = concreteAddressStoreKeys.begin(),
-                                       itEnd = concreteAddressStoreKeys.end();
-       it != itEnd; ++it) {
-    const ref<Expr> lhs = concreteAddressStore[*it];
-    const ref<Expr> rhs = stateConcreteAddressStore[*it];
 
-      // If the current state does not constrain the same
-      // allocation, subsumption fails.
-      if (!rhs.get())
+  // Build constraints from concrete-address interpolant store
+  for (std::vector<llvm::Value *>::iterator
+           it1 = concreteAddressStoreKeys.begin(),
+           it1End = concreteAddressStoreKeys.end();
+       it1 != it1End; ++it1) {
+    const Dependency::ConcreteStoreMap lhsConcreteMap =
+        concreteAddressStore[*it1];
+    const Dependency::ConcreteStoreMap rhsConcreteMap =
+        stateConcreteAddressStore[*it1];
+    const Dependency::SymbolicStoreMap rhsSymbolicMap =
+        stateSymbolicAddressStore[*it1];
+
+    // If the current state does not constrain the same base, subsumption fails.
+    if (rhsConcreteMap.empty() && rhsSymbolicMap.empty())
+      return false;
+
+    for (Dependency::ConcreteStoreMap::const_iterator
+             it2 = lhsConcreteMap.begin(),
+             it2End = lhsConcreteMap.end();
+         it2 != it2End; ++it2) {
+
+      // The address is not constrained by the current state, therefore
+      // the current state is incomparable to the stored interpolant,
+      // and we therefore fail the subsumption.
+      if (!rhsConcreteMap.count(it2->first))
         return false;
 
-      stateEqualityConstraints =
-          (!stateEqualityConstraints.get()
-               ? EqExpr::alloc(lhs, rhs)
-               : AndExpr::alloc(EqExpr::alloc(lhs, rhs),
-                                stateEqualityConstraints));
+      const Dependency::AddressValuePair rhsConcrete =
+          rhsConcreteMap.at(it2->first);
+      const ref<Expr> lhsValue = it2->second.second;
+      ref<Expr> res;
+
+      if (rhsConcrete.second.get()) {
+        res = EqExpr::alloc(lhsValue, rhsConcrete.second);
+      }
+
+      if (!rhsSymbolicMap.empty()) {
+        const ref<Expr> lhsConcreteAddress = it2->second.first;
+        ref<Expr> conjunction;
+
+        for (Dependency::SymbolicStoreMap::const_iterator
+                 it3 = rhsSymbolicMap.begin(),
+                 it3End = rhsSymbolicMap.end();
+             it3 != it3End; ++it3) {
+          ref<Expr> newTerm =
+              OrExpr::alloc(NeExpr::alloc(lhsConcreteAddress, it3->first),
+                            EqExpr::alloc(lhsValue, it3->second));
+          if (conjunction.get()) {
+            conjunction = AndExpr::alloc(newTerm, conjunction);
+          } else {
+            conjunction = newTerm;
+          }
+        }
+        res = OrExpr::alloc(res, conjunction);
+      }
+
+      if (res.get()) {
+        stateEqualityConstraints =
+            (!stateEqualityConstraints.get()
+                 ? res
+                 : AndExpr::alloc(res, stateEqualityConstraints));
+      }
+    }
   }
 
-  std::map<llvm::Value *, std::pair<ref<Expr>, ref<Expr> > >
-  stateSymbolicAddressStore = storedExpressions.second;
+  // Build constraints from symbolic-address interpolant store
+  for (std::vector<llvm::Value *>::iterator
+           it1 = symbolicAddressStoreKeys.begin(),
+           it1End = symbolicAddressStoreKeys.end();
+       it1 != it1End; ++it1) {
+    const Dependency::SymbolicStoreMap lhsSymbolicMap =
+        symbolicAddressStore[*it1];
+    const Dependency::ConcreteStoreMap rhsConcreteMap =
+        stateConcreteAddressStore[*it1];
+    const Dependency::SymbolicStoreMap rhsSymbolicMap =
+        stateSymbolicAddressStore[*it1];
 
-  llvm::errs() << "State equality constraints from matching store: ";
-  if (stateEqualityConstraints.get())
-    stateEqualityConstraints->dump();
-  else
-    llvm::errs() << "None\n";
+    ref<Expr> conjunction;
+
+    for (Dependency::SymbolicStoreMap::const_iterator
+             it2 = lhsSymbolicMap.begin(),
+             it2End = lhsSymbolicMap.end();
+         it2 != it2End; ++it2) {
+      ref<Expr> lhsSymbolicAddress = it2->first;
+      ref<Expr> lhsValue = it2->second;
+
+      for (Dependency::ConcreteStoreMap::const_iterator
+               it3 = rhsConcreteMap.begin(),
+               it3End = rhsConcreteMap.end();
+           it3 != it3End; ++it3) {
+        ref<Expr> rhsConcreteAddress = it3->second.first;
+        ref<Expr> rhsValue = it3->second.second;
+        ref<Expr> newTerm =
+            OrExpr::alloc(NeExpr::alloc(lhsSymbolicAddress, rhsConcreteAddress),
+                          EqExpr::alloc(lhsValue, rhsValue));
+        if (conjunction.get()) {
+          conjunction = AndExpr::alloc(newTerm, conjunction);
+        } else {
+          conjunction = newTerm;
+        }
+      }
+
+      for (Dependency::SymbolicStoreMap::const_iterator
+               it3 = rhsSymbolicMap.begin(),
+               it3End = rhsSymbolicMap.end();
+           it3 != it3End; ++it3) {
+        ref<Expr> rhsSymbolicAddress = it3->first;
+        ref<Expr> rhsValue = it3->second;
+        ref<Expr> newTerm =
+            OrExpr::alloc(NeExpr::alloc(lhsSymbolicAddress, rhsSymbolicAddress),
+                          EqExpr::alloc(lhsValue, rhsValue));
+        if (conjunction.get()) {
+          conjunction = AndExpr::alloc(newTerm, conjunction);
+        } else {
+          conjunction = newTerm;
+        }
+      }
+    }
+    if (conjunction.get()) {
+      stateEqualityConstraints =
+          (!stateEqualityConstraints.get()
+               ? conjunction
+               : AndExpr::alloc(conjunction, stateEqualityConstraints));
+    }
+  }
 
   // We create path condition needed constraints marking structure
   std::map<Expr *, PathConditionMarker *> markerMap =
@@ -1509,15 +1607,22 @@ void SubsumptionTableEntry::print(llvm::raw_ostream &stream) const {
 
   if (!concreteAddressStore.empty()) {
     stream << "allocations = [";
-    for (std::map<uint64_t, ref<Expr> >::const_iterator
-             itBegin = concreteAddressStore.begin(),
-             itEnd = concreteAddressStore.end(), it = itBegin;
-         it != itEnd; ++it) {
-      if (it != itBegin)
+    for (Dependency::ConcreteStore::const_iterator
+             it1Begin = concreteAddressStore.begin(),
+             it1End = concreteAddressStore.end(), it1 = it1Begin;
+         it1 != it1End; ++it1) {
+      for (Dependency::ConcreteStoreMap::const_iterator
+               it2Begin = it1->second.begin(),
+               it2End = it1->second.end(), it2 = it2Begin;
+           it2 != it2End; ++it2) {
+        if (it1 != it1Begin || it2 != it2Begin)
+          stream << ",";
+        stream << "(";
+        it2->second.first->print(stream);
         stream << ",";
-      stream << "(" << it->first << ",";
-      it->second->print(stream);
-      stream << ")";
+        it2->second.second->print(stream);
+        stream << ")";
+      }
     }
     stream << "]\n";
   }
@@ -1984,12 +2089,10 @@ void ITreeNode::popAbstractDependencyFrame(llvm::CallInst *site,
   ITreeNode::popAbstractDependencyFrameTimer.stop();
 }
 
-std::pair<std::map<uint64_t, ref<Expr> >,
-          std::map<llvm::Value *, std::pair<ref<Expr>, ref<Expr> > > >
+std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
 ITreeNode::getStoredExpressions() const {
   ITreeNode::getConcreteAddressExpressionsTimer.start();
-  std::pair<std::map<uint64_t, ref<Expr> >,
-            std::map<llvm::Value *, std::pair<ref<Expr>, ref<Expr> > > > ret;
+  std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore> ret;
   std::vector<const Array *> dummyReplacements;
 
   // Since a program point index is a first statement in a basic block,
@@ -2001,13 +2104,11 @@ ITreeNode::getStoredExpressions() const {
   return ret;
 }
 
-std::pair<std::map<uint64_t, ref<Expr> >,
-          std::map<llvm::Value *, std::pair<ref<Expr>, ref<Expr> > > >
+std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
 ITreeNode::getStoredCoreExpressions(std::vector<const Array *> &replacements)
     const {
   ITreeNode::getConcreteAddressCoreExpressionsTimer.start();
-  std::pair<std::map<uint64_t, ref<Expr> >,
-            std::map<llvm::Value *, std::pair<ref<Expr>, ref<Expr> > > > ret;
+  std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore> ret;
 
   // Since a program point index is a first statement in a basic block,
   // the allocations to be stored in subsumption table should be obtained

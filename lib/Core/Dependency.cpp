@@ -440,14 +440,12 @@ std::vector<Allocation *> Dependency::getAllVersionedAllocations() const {
   return allAlloc;
 }
 
-std::pair<std::map<uint64_t, ref<Expr> >,
-          std::map<llvm::Value *, std::pair<ref<Expr>, ref<Expr> > > >
+std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
 Dependency::getStoredExpressions(std::vector<const Array *> &replacements,
                                  bool coreOnly) const {
   std::vector<Allocation *> allAlloc = getAllVersionedAllocations();
-  std::map<uint64_t, ref<Expr> > concreteAddressExpressions;
-  std::map<llvm::Value *, std::pair<ref<Expr>, ref<Expr> > >
-  symbolicAddressExpressions;
+  ConcreteStore concreteStore;
+  SymbolicStore symbolicStore;
 
   for (std::vector<Allocation *>::iterator allocIter = allAlloc.begin(),
                                            allocIterEnd = allAlloc.end();
@@ -465,45 +463,48 @@ Dependency::getStoredExpressions(std::vector<const Array *> &replacements,
       VersionedValue *v = stored.at(0);
 
       if ((*allocIter)->hasConstantAddress()) {
-        uint64_t address = (*allocIter)->getUIntAddress();
         if (!coreOnly) {
           ref<Expr> expr = v->getExpression();
-          concreteAddressExpressions[address] = expr;
+          llvm::Value *llvmAlloc = (*allocIter)->getSite();
+          uint64_t uintAddress = (*allocIter)->getUIntAddress();
+          ref<Expr> address = (*allocIter)->getAddress();
+          concreteStore[llvmAlloc][uintAddress] =
+              AddressValuePair(address, expr);
         } else if (v->isCore()) {
           ref<Expr> expr = v->getExpression();
+          llvm::Value *base = (*allocIter)->getSite();
+          uint64_t uintAddress = (*allocIter)->getUIntAddress();
+          ref<Expr> address = (*allocIter)->getAddress();
           if (NoExistential) {
-            concreteAddressExpressions[address] = expr;
+            concreteStore[base][uintAddress] = AddressValuePair(address, expr);
           } else {
-            concreteAddressExpressions[address] =
-                ShadowArray::getShadowExpression(expr, replacements);
+            concreteStore[base][uintAddress] = AddressValuePair(
+                ShadowArray::getShadowExpression(address, replacements),
+                ShadowArray::getShadowExpression(expr, replacements));
           }
         }
       } else {
         ref<Expr> address = (*allocIter)->getAddress();
         if (!coreOnly) {
           ref<Expr> expr = v->getExpression();
-          llvm::Value *llvmAlloc = v->getValue();
-          symbolicAddressExpressions[llvmAlloc] =
-              std::pair<ref<Expr>, ref<Expr> >(address, expr);
+          llvm::Value *base = (*allocIter)->getSite();
+          symbolicStore[base].push_back(AddressValuePair(address, expr));
         } else if (v->isCore()) {
           ref<Expr> expr = v->getExpression();
-          llvm::Value *llvmAlloc = v->getValue();
+          llvm::Value *base = v->getValue();
           if (NoExistential) {
-            symbolicAddressExpressions[llvmAlloc] =
-                std::pair<ref<Expr>, ref<Expr> >(address, expr);
+            symbolicStore[base].push_back(AddressValuePair(address, expr));
           } else {
-            symbolicAddressExpressions[llvmAlloc] =
-                std::pair<ref<Expr>, ref<Expr> >(
-                    ShadowArray::getShadowExpression(address, replacements),
-                    ShadowArray::getShadowExpression(expr, replacements));
+            symbolicStore[base].push_back(AddressValuePair(
+                ShadowArray::getShadowExpression(address, replacements),
+                ShadowArray::getShadowExpression(expr, replacements)));
           }
         }
       }
     }
   }
-  return std::pair<std::map<uint64_t, ref<Expr> >,
-                   std::map<llvm::Value *, std::pair<ref<Expr>, ref<Expr> > > >(
-      concreteAddressExpressions, symbolicAddressExpressions);
+
+  return std::pair<ConcreteStore, SymbolicStore>(concreteStore, symbolicStore);
 }
 
 VersionedValue *Dependency::getLatestValue(llvm::Value *value,

@@ -349,12 +349,11 @@ class SubsumptionTableEntry {
 
   ref<Expr> interpolant;
 
-  std::map<uint64_t, ref<Expr> > concreteAddressStore;
+  Dependency::ConcreteStore concreteAddressStore;
 
-  std::vector<uint64_t> concreteAddressStoreKeys;
+  std::vector<llvm::Value *> concreteAddressStoreKeys;
 
-  std::map<llvm::Value *, std::pair<ref<Expr>, ref<Expr> > >
-  symbolicAddressStore;
+  Dependency::SymbolicStore symbolicAddressStore;
 
   std::vector<llvm::Value *> symbolicAddressStoreKeys;
 
@@ -548,12 +547,10 @@ public:
   void popAbstractDependencyFrame(llvm::CallInst *site, llvm::Instruction *inst,
                                   ref<Expr> returnValue);
 
-  std::pair<std::map<uint64_t, ref<Expr> >,
-            std::map<llvm::Value *, std::pair<ref<Expr>, ref<Expr> > > >
+  std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
   getStoredExpressions() const;
 
-  std::pair<std::map<uint64_t, ref<Expr> >,
-            std::map<llvm::Value *, std::pair<ref<Expr>, ref<Expr> > > >
+  std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
   getStoredCoreExpressions(std::vector<const Array *> &replacements) const;
 
   void computeCoreAllocations(AllocationGraph *g);

@@ -1,4 +1,4 @@
-//===-- Dependency.h - Field-insensitive dependency -------------*- C++ -*-===//
+//===-- Dependency.h - Memory allocation dependency -------------*- C++ -*-===//
 //
 //               The Tracer-X KLEE Symbolic Virtual Machine
 //
@@ -93,8 +93,6 @@ class Allocation {
     bool hasConstantAddress() { return llvm::isa<ConstantExpr>(address.get()); }
 
     uint64_t getUIntAddress() {
-      llvm::errs() << "ADDRESS: ";
-      address->dump();
       return llvm::dyn_cast<ConstantExpr>(address.get())->getZExtValue();
     }
 
@@ -471,6 +469,12 @@ class Allocation {
   class Dependency {
 
   public:
+    typedef std::pair<ref<Expr>, ref<Expr> > AddressValuePair;
+    typedef std::map<uint64_t, AddressValuePair> ConcreteStoreMap;
+    typedef std::vector<AddressValuePair> SymbolicStoreMap;
+    typedef std::map<llvm::Value *, ConcreteStoreMap> ConcreteStore;
+    typedef std::map<llvm::Value *, SymbolicStoreMap> SymbolicStore;
+
     class Util {
 
     public:
@@ -610,8 +614,7 @@ class Allocation {
     /// @brief Abstract dependency state transition with argument(s)
     void execute(llvm::Instruction *instr, std::vector<ref<Expr> > &args);
 
-    std::pair<std::map<uint64_t, ref<Expr> >,
-              std::map<llvm::Value *, std::pair<ref<Expr>, ref<Expr> > > >
+    std::pair<ConcreteStore, SymbolicStore>
     getStoredExpressions(std::vector<const Array *> &replacements,
                          bool coreOnly) const;
 
