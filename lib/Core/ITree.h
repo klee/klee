@@ -493,8 +493,8 @@ class ITreeNode {
   static StatTimer executeTimer;
   static StatTimer bindCallArgumentsTimer;
   static StatTimer popAbstractDependencyFrameTimer;
-  static StatTimer getConcreteAddressExpressionsTimer;
-  static StatTimer getConcreteAddressCoreExpressionsTimer;
+  static StatTimer getStoredExpressionsTimer;
+  static StatTimer getStoredCoreExpressionsTimer;
   static StatTimer computeCoreAllocationsTimer;
 
 private:

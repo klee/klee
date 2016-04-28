@@ -1268,6 +1268,9 @@ ref<Expr> SubsumptionTableEntry::simplifyExistsExpr(ref<Expr> existsExpr,
 bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
                                      ExecutionState &state, double timeout) {
 
+  llvm::errs() << "CHECK SUBSUMPTION WITH TABLE ENTRY: ";
+  this->dump();
+
   // Quick check for subsumption in case the interpolant is empty
   if (empty())
     return true;
@@ -1295,8 +1298,10 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
         stateSymbolicAddressStore[*it1];
 
     // If the current state does not constrain the same base, subsumption fails.
-    if (rhsConcreteMap.empty() && rhsSymbolicMap.empty())
+    if (rhsConcreteMap.empty() && rhsSymbolicMap.empty()) {
+      llvm::errs() << "SUBSUMPTION NOT HOLDING 1\n";
       return false;
+    }
 
     for (Dependency::ConcreteStoreMap::const_iterator
              it2 = lhsConcreteMap.begin(),
@@ -1306,8 +1311,10 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
       // The address is not constrained by the current state, therefore
       // the current state is incomparable to the stored interpolant,
       // and we therefore fail the subsumption.
-      if (!rhsConcreteMap.count(it2->first))
+      if (!rhsConcreteMap.count(it2->first)) {
+        llvm::errs() << "SUBSUMPTION NOT HOLDING 2\n";
         return false;
+      }
 
       const Dependency::AddressValuePair rhsConcrete =
           rhsConcreteMap.at(it2->first);
@@ -1435,15 +1442,17 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
 
   if (!existentials.empty()) {
     ref<Expr> existsExpr = ExistsExpr::create(existentials, query);
-    // llvm::errs() << "Before simplification:\n";
-    // ExprPPrinter::printQuery(llvm::errs(), state.constraints, existsExpr);
+    llvm::errs() << "Before simplification:\n";
+    ExprPPrinter::printQuery(llvm::errs(), state.constraints, existsExpr);
     query = simplifyExistsExpr(existsExpr, queryHasNoFreeVariables);
   }
 
   // If query simplification result was false, we quickly fail without calling
   // the solver
-  if (query->isFalse())
+  if (query->isFalse()) {
+    llvm::errs() << "SUBSUMPTION NOT HOLDING 3\n";
     return false;
+  }
 
   bool success = false;
 
@@ -1477,8 +1486,8 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
         ref<Expr> falseExpr = ConstantExpr::alloc(0, Expr::Bool);
         constraints.addConstraint(EqExpr::alloc(falseExpr, query->getKid(0)));
 
-        // llvm::errs() << "Querying for satisfiability check:\n";
-        // ExprPPrinter::printQuery(llvm::errs(), constraints, falseExpr);
+        llvm::errs() << "Querying for satisfiability check:\n";
+        ExprPPrinter::printQuery(llvm::errs(), constraints, falseExpr);
 
         actualSolverCallTimer.start();
         success = z3solver->getValue(Query(constraints, falseExpr), tmpExpr);
@@ -1488,8 +1497,8 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
         result = success ? Solver::True : Solver::Unknown;
 
       } else {
-        // llvm::errs() << "Querying for subsumption check:\n";
-        // ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
+        llvm::errs() << "Querying for subsumption check:\n";
+        ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
 
         actualSolverCallTimer.start();
         success = z3solver->directComputeValidity(
@@ -1529,6 +1538,7 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
   } else {
     if (query->isTrue())
       return true;
+    llvm::errs() << "SUBSUMPTION NOT HOLDING 4\n";
     return false;
   }
 
@@ -1564,6 +1574,7 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
     if (z3solver)
       delete z3solver;
 
+    llvm::errs() << "SUBSUMPTION NOT HOLDING 5\n";
     return false;
   }
 
@@ -1953,8 +1964,8 @@ StatTimer ITreeNode::deleteMarkerMapTimer;
 StatTimer ITreeNode::executeTimer;
 StatTimer ITreeNode::bindCallArgumentsTimer;
 StatTimer ITreeNode::popAbstractDependencyFrameTimer;
-StatTimer ITreeNode::getConcreteAddressExpressionsTimer;
-StatTimer ITreeNode::getConcreteAddressCoreExpressionsTimer;
+StatTimer ITreeNode::getStoredExpressionsTimer;
+StatTimer ITreeNode::getStoredCoreExpressionsTimer;
 StatTimer ITreeNode::computeCoreAllocationsTimer;
 
 void ITreeNode::printTimeStat(llvm::raw_ostream &stream) {
@@ -1972,10 +1983,10 @@ void ITreeNode::printTimeStat(llvm::raw_ostream &stream) {
          << bindCallArgumentsTimer.get() * 1000 << "\n";
   stream << "KLEE: done:     popAbstractDependencyFrame = "
          << popAbstractDependencyFrameTimer.get() * 1000 << "\n";
-  stream << "KLEE: done:     getConcreteAddressExpressions = "
-         << getConcreteAddressExpressionsTimer.get() * 1000 << "\n";
-  stream << "KLEE: done:     getConcreteAddressCoreExpressions = "
-         << getConcreteAddressCoreExpressionsTimer.get() << "\n";
+  stream << "KLEE: done:     getStoredExpressions = "
+         << getStoredExpressionsTimer.get() * 1000 << "\n";
+  stream << "KLEE: done:     getStoredCoreExpressions = "
+         << getStoredCoreExpressionsTimer.get() << "\n";
   stream << "KLEE: done:     computeCoreAllocations = "
          << computeCoreAllocationsTimer.get() * 1000 << "\n";
 }
@@ -2091,7 +2102,7 @@ void ITreeNode::popAbstractDependencyFrame(llvm::CallInst *site,
 
 std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
 ITreeNode::getStoredExpressions() const {
-  ITreeNode::getConcreteAddressExpressionsTimer.start();
+  ITreeNode::getStoredExpressionsTimer.start();
   std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore> ret;
   std::vector<const Array *> dummyReplacements;
 
@@ -2100,14 +2111,14 @@ ITreeNode::getStoredExpressions() const {
   // from the parent node.
   if (parent)
     ret = parent->dependency->getStoredExpressions(dummyReplacements, false);
-  ITreeNode::getConcreteAddressExpressionsTimer.stop();
+  ITreeNode::getStoredExpressionsTimer.stop();
   return ret;
 }
 
 std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
 ITreeNode::getStoredCoreExpressions(std::vector<const Array *> &replacements)
     const {
-  ITreeNode::getConcreteAddressCoreExpressionsTimer.start();
+  ITreeNode::getStoredCoreExpressionsTimer.start();
   std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore> ret;
 
   // Since a program point index is a first statement in a basic block,
@@ -2115,7 +2126,7 @@ ITreeNode::getStoredCoreExpressions(std::vector<const Array *> &replacements)
   // from the parent node.
   if (parent)
     ret = parent->dependency->getStoredExpressions(replacements, true);
-  ITreeNode::getConcreteAddressCoreExpressionsTimer.stop();
+  ITreeNode::getStoredCoreExpressionsTimer.stop();
   return ret;
 }
 

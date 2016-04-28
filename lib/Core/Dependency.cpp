@@ -443,6 +443,7 @@ std::vector<Allocation *> Dependency::getAllVersionedAllocations() const {
 std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
 Dependency::getStoredExpressions(std::vector<const Array *> &replacements,
                                  bool coreOnly) const {
+  llvm::errs() << "RETRIEVING ALLOCATIONS:\n";
   std::vector<Allocation *> allAlloc = getAllVersionedAllocations();
   ConcreteStore concreteStore;
   SymbolicStore symbolicStore;
@@ -463,6 +464,8 @@ Dependency::getStoredExpressions(std::vector<const Array *> &replacements,
       VersionedValue *v = stored.at(0);
 
       if ((*allocIter)->hasConstantAddress()) {
+        llvm::errs() << "ALLOCATION HAS CONSTANT ADDRESS\n";
+        (*allocIter)->dump();
         if (!coreOnly) {
           ref<Expr> expr = v->getExpression();
           llvm::Value *llvmAlloc = (*allocIter)->getSite();
@@ -484,6 +487,8 @@ Dependency::getStoredExpressions(std::vector<const Array *> &replacements,
           }
         }
       } else {
+        llvm::errs() << "ALLOCATION HAS SYMBOLIC ADDRESS\n";
+        (*allocIter)->dump();
         ref<Expr> address = (*allocIter)->getAddress();
         if (!coreOnly) {
           ref<Expr> expr = v->getExpression();
