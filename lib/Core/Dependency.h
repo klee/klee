@@ -282,6 +282,12 @@ class Allocation {
                std::vector<AllocationNode *> &printed,
                const unsigned tabNum) const;
 
+    /// consumeSinkNode - Given an allocation, delete all sinks having such
+    /// allocation, and replace them as sinks with their parents.
+    ///
+    /// \param The allocation to match a sink node with.
+    void consumeSinkNode(Allocation *allocation);
+
   public:
     AllocationGraph() {}
 
@@ -300,15 +306,17 @@ class Allocation {
 
     void addNewEdge(Allocation *source, Allocation *target);
 
-    void consumeSinkNode(Allocation *allocation);
+    std::set<Allocation *> getSinkAllocations() const;
 
-    std::vector<Allocation *> getSinkAllocations() const;
-
-    std::vector<Allocation *>
+    std::set<Allocation *>
     getSinksWithAllocations(std::vector<Allocation *> valuesList) const;
 
-    void
-    consumeNodesWithAllocations(std::vector<Allocation *> versionedAllocations);
+    /// consumeNodesWithAllocations - Given a set of allocations, delete all
+    /// sinks having an allocation in the set, and replace them as sinks with
+    /// their parents.
+    ///
+    /// \param The allocation to match the sink nodes with.
+    void consumeSinksWithAllocations(std::vector<Allocation *> allocationsList);
 
     void dump() const {
       this->print(llvm::errs());
@@ -519,7 +527,7 @@ class Allocation {
 
     /// @brief allocations of this node and its ancestors
     /// that are needed for the core and dominates other allocations.
-    std::vector<Allocation *> coreAllocations;
+    std::set<Allocation *> coreAllocations;
 
     /// @brief the basic block of the last-executed instruction
     llvm::BasicBlock *incomingBlock;

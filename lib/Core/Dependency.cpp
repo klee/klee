@@ -236,19 +236,15 @@ bool AllocationGraph::isVisited(Allocation *alloc) {
 }
 
 void AllocationGraph::addNewSink(Allocation *candidateSink) {
-  llvm::errs() << "AllocationGraph::addNewSink\n";
   if (isVisited(candidateSink))
     return;
 
   AllocationNode *newNode = new AllocationNode(candidateSink);
   allNodes.push_back(newNode);
-  llvm::errs() << "ADDING TO SINK 3: ";
-  newNode->getAllocation()->dump();
   sinks.push_back(newNode);
 }
 
 void AllocationGraph::addNewEdge(Allocation *source, Allocation *target) {
-  llvm::errs() << "AllocationGraph::addNewEdge\n";
   AllocationNode *sourceNode = 0;
   AllocationNode *targetNode = 0;
 
@@ -283,19 +279,13 @@ void AllocationGraph::addNewEdge(Allocation *source, Allocation *target) {
       sourceNode = new AllocationNode(source);
       allNodes.push_back(sourceNode);
       newNode = true;
-      //      llvm::errs() << "ERASING FROM SINK 1: ";
-      //      (*pos)->getAllocation()->dump();
-      //      sinks.erase(pos);
     }
   }
 
   if (!targetNode) {
     targetNode = new AllocationNode(target);
     allNodes.push_back(targetNode);
-    llvm::errs() << "ADDING TO SINK 1: ";
-    targetNode->getAllocation()->dump();
     sinks.push_back(targetNode);
-
     newNode = true; // An edge actually added, return true
   }
 
@@ -305,7 +295,6 @@ void AllocationGraph::addNewEdge(Allocation *source, Allocation *target) {
 }
 
 void AllocationGraph::consumeSinkNode(Allocation *allocation) {
-  llvm::errs() << "AllocationGraph::consumeSinkNode\n";
   std::vector<AllocationNode *>::iterator pos = sinks.end();
   for (std::vector<AllocationNode *>::iterator it = sinks.begin(),
                                                itEnd = sinks.end();
@@ -320,65 +309,58 @@ void AllocationGraph::consumeSinkNode(Allocation *allocation) {
     return;
 
   std::vector<AllocationNode *> parents = (*pos)->getParents();
-
-  llvm::errs() << "ERASING FROM SINK 2: ";
-  (*pos)->getAllocation()->dump();
   sinks.erase(pos);
 
   for (std::vector<AllocationNode *>::iterator it = parents.begin(),
                                                itEnd = parents.end();
        it != itEnd; ++it) {
-    if (std::find(sinks.begin(), sinks.end(), (*it)) == sinks.end()) {
-      llvm::errs() << "ADDING TO SINK 2: ";
-      (*it)->getAllocation()->dump();
+    if (std::find(sinks.begin(), sinks.end(), (*it)) == sinks.end())
       sinks.push_back(*it);
-    }
   }
 }
 
-std::vector<Allocation *> AllocationGraph::getSinkAllocations() const {
-  std::vector<Allocation *> sinkAllocations;
+std::set<Allocation *> AllocationGraph::getSinkAllocations() const {
+  std::set<Allocation *> sinkAllocations;
 
   for (std::vector<AllocationNode *>::const_iterator it = sinks.begin(),
                                                      itEnd = sinks.end();
        it != itEnd; ++it) {
-    sinkAllocations.push_back((*it)->getAllocation());
+    sinkAllocations.insert((*it)->getAllocation());
   }
 
   return sinkAllocations;
 }
 
-std::vector<Allocation *> AllocationGraph::getSinksWithAllocations(
+std::set<Allocation *> AllocationGraph::getSinksWithAllocations(
     std::vector<Allocation *> valuesList) const {
-  std::vector<Allocation *> sinkAllocations;
+  std::set<Allocation *> sinkAllocations;
 
   for (std::vector<AllocationNode *>::const_iterator it = sinks.begin(),
                                                      itEnd = sinks.end();
        it != itEnd; ++it) {
     if (std::find(valuesList.begin(), valuesList.end(),
                   (*it)->getAllocation()) != valuesList.end())
-      sinkAllocations.push_back((*it)->getAllocation());
+      sinkAllocations.insert((*it)->getAllocation());
   }
 
   return sinkAllocations;
 }
 
-void AllocationGraph::consumeNodesWithAllocations(
-    std::vector<Allocation *> versionedAllocations) {
-  std::vector<Allocation *> sinkAllocs(
-      getSinksWithAllocations(versionedAllocations));
+void AllocationGraph::consumeSinksWithAllocations(
+    std::vector<Allocation *> allocationsList) {
+  std::set<Allocation *> sinkAllocs(getSinksWithAllocations(allocationsList));
 
   if (sinkAllocs.empty())
     return;
 
-  for (std::vector<Allocation *>::iterator it = sinkAllocs.begin(),
-                                           itEnd = sinkAllocs.end();
+  for (std::set<Allocation *>::iterator it = sinkAllocs.begin(),
+                                        itEnd = sinkAllocs.end();
        it != itEnd; ++it) {
     consumeSinkNode((*it));
   }
 
   // Recurse until fixpoint
-  consumeNodesWithAllocations(versionedAllocations);
+  consumeSinksWithAllocations(allocationsList);
 }
 
 void AllocationGraph::print(llvm::raw_ostream &stream) const {
@@ -463,7 +445,6 @@ std::vector<Allocation *> Dependency::getAllVersionedAllocations() const {
 std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
 Dependency::getStoredExpressions(std::vector<const Array *> &replacements,
                                  bool coreOnly) const {
-  llvm::errs() << "RETRIEVING ALLOCATIONS:\n";
   std::vector<Allocation *> allAlloc = getAllVersionedAllocations();
   ConcreteStore concreteStore;
   SymbolicStore symbolicStore;
@@ -471,15 +452,9 @@ Dependency::getStoredExpressions(std::vector<const Array *> &replacements,
   for (std::vector<Allocation *>::iterator allocIter = allAlloc.begin(),
                                            allocIterEnd = allAlloc.end();
        allocIter != allocIterEnd; ++allocIter) {
-    llvm::errs() << "CHECKING  1 ";
-    (*allocIter)->dump();
-
     if (coreOnly && std::find(coreAllocations.begin(), coreAllocations.end(),
                               *allocIter) == coreAllocations.end())
       continue;
-
-    llvm::errs() << "CHECKING 2 ";
-    (*allocIter)->dump();
 
     std::vector<VersionedValue *> stored = stores(*allocIter);
 
@@ -490,8 +465,6 @@ Dependency::getStoredExpressions(std::vector<const Array *> &replacements,
       VersionedValue *v = stored.at(0);
 
       if ((*allocIter)->hasConstantAddress()) {
-        llvm::errs() << "ALLOCATION HAS CONSTANT ADDRESS\n";
-        (*allocIter)->dump();
         if (!coreOnly) {
           ref<Expr> expr = v->getExpression();
           llvm::Value *llvmAlloc = (*allocIter)->getSite();
@@ -513,8 +486,6 @@ Dependency::getStoredExpressions(std::vector<const Array *> &replacements,
           }
         }
       } else {
-        llvm::errs() << "ALLOCATION HAS SYMBOLIC ADDRESS\n";
-        (*allocIter)->dump();
         ref<Expr> address = (*allocIter)->getAddress();
         if (!coreOnly) {
           ref<Expr> expr = v->getExpression();
@@ -937,7 +908,6 @@ void Dependency::execute(llvm::Instruction *instr,
       if (binst && binst->isConditional()) {
         AllocationGraph *g = new AllocationGraph();
         markAllValues(g, binst->getCondition());
-        llvm::errs() << "Dependency::execute: CALLING computeCoreAllocations\n";
         computeCoreAllocations(g);
         delete g;
       }
@@ -1279,19 +1249,16 @@ void Dependency::markAllValues(AllocationGraph *g, llvm::Value *val) {
 }
 
 void Dependency::computeCoreAllocations(AllocationGraph *g) {
-  std::vector<Allocation *> sinkAllocations(g->getSinkAllocations());
-  coreAllocations.insert(coreAllocations.begin(), sinkAllocations.begin(),
-                         sinkAllocations.end());
+  std::set<Allocation *> sinkAllocations(g->getSinkAllocations());
+  coreAllocations.insert(sinkAllocations.begin(), sinkAllocations.end());
 
-  llvm::errs() << "Dependency::computeCoreAllocations: coreAllocations IS:\n";
-  for (std::vector<Allocation *>::iterator it = coreAllocations.begin(),
-                                           itEnd = coreAllocations.end();
-       it != itEnd; ++it) {
-    (*it)->dump();
-  }
-  llvm::errs() << "END\n";
   if (parentDependency) {
-    g->consumeNodesWithAllocations(versionedAllocationsList);
+    // Here we remove sink nodes with allocations that belong to
+    // this dependency node. As a result, the sinks in the graph g
+    // should just contain the allocations that belong to the ancestor
+    // dependency nodes, and we then recursively compute the
+    // core allocations for the parent.
+    g->consumeSinksWithAllocations(versionedAllocationsList);
     parentDependency->computeCoreAllocations(g);
   }
 }
@@ -1376,7 +1343,6 @@ Dependency::directAllocationSources(VersionedValue *target) const {
 void Dependency::recursivelyBuildAllocationGraph(AllocationGraph *g,
                                                  VersionedValue *target,
                                                  Allocation *alloc) const {
-  llvm::errs() << "Dependency::recursivelyBuildAllocationGraph\n";
   if (!target)
     return;
 
@@ -1389,10 +1355,6 @@ void Dependency::recursivelyBuildAllocationGraph(AllocationGraph *g,
            itEnd = sourceEdges.end();
        it != itEnd; ++it) {
     if (it->second != alloc) {
-      llvm::errs() << "ADDING NEW EDGE FROM ";
-      it->second->dump();
-      llvm::errs() << "TO ";
-      alloc->dump();
       g->addNewEdge(it->second, alloc);
       recursivelyBuildAllocationGraph(g, it->first, it->second);
     }
@@ -1401,7 +1363,6 @@ void Dependency::recursivelyBuildAllocationGraph(AllocationGraph *g,
 
 void Dependency::buildAllocationGraph(AllocationGraph *g,
                                       VersionedValue *target) const {
-  llvm::errs() << "Dependency::buildAllocationGraph\n";
   std::vector<Allocation *> ret;
   std::map<VersionedValue *, Allocation *> sourceEdges =
       directAllocationSources(target);

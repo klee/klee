@@ -1267,10 +1267,6 @@ ref<Expr> SubsumptionTableEntry::simplifyExistsExpr(ref<Expr> existsExpr,
 
 bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
                                      ExecutionState &state, double timeout) {
-
-  llvm::errs() << "CHECK SUBSUMPTION WITH TABLE ENTRY: ";
-  this->dump();
-
   // Quick check for subsumption in case the interpolant is empty
   if (empty())
     return true;
@@ -1298,10 +1294,8 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
         stateSymbolicAddressStore[*it1];
 
     // If the current state does not constrain the same base, subsumption fails.
-    if (rhsConcreteMap.empty() && rhsSymbolicMap.empty()) {
-      llvm::errs() << "SUBSUMPTION NOT HOLDING 1\n";
+    if (rhsConcreteMap.empty() && rhsSymbolicMap.empty())
       return false;
-    }
 
     for (Dependency::ConcreteStoreMap::const_iterator
              it2 = lhsConcreteMap.begin(),
@@ -1311,10 +1305,8 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
       // The address is not constrained by the current state, therefore
       // the current state is incomparable to the stored interpolant,
       // and we therefore fail the subsumption.
-      if (!rhsConcreteMap.count(it2->first)) {
-        llvm::errs() << "SUBSUMPTION NOT HOLDING 2\n";
+      if (!rhsConcreteMap.count(it2->first))
         return false;
-      }
 
       const Dependency::AddressValuePair rhsConcrete =
           rhsConcreteMap.at(it2->first);
@@ -1442,17 +1434,15 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
 
   if (!existentials.empty()) {
     ref<Expr> existsExpr = ExistsExpr::create(existentials, query);
-    llvm::errs() << "Before simplification:\n";
-    ExprPPrinter::printQuery(llvm::errs(), state.constraints, existsExpr);
+    // llvm::errs() << "Before simplification:\n";
+    // ExprPPrinter::printQuery(llvm::errs(), state.constraints, existsExpr);
     query = simplifyExistsExpr(existsExpr, queryHasNoFreeVariables);
   }
 
   // If query simplification result was false, we quickly fail without calling
   // the solver
-  if (query->isFalse()) {
-    llvm::errs() << "SUBSUMPTION NOT HOLDING 3\n";
+  if (query->isFalse())
     return false;
-  }
 
   bool success = false;
 
@@ -1486,8 +1476,8 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
         ref<Expr> falseExpr = ConstantExpr::alloc(0, Expr::Bool);
         constraints.addConstraint(EqExpr::alloc(falseExpr, query->getKid(0)));
 
-        llvm::errs() << "Querying for satisfiability check:\n";
-        ExprPPrinter::printQuery(llvm::errs(), constraints, falseExpr);
+        // llvm::errs() << "Querying for satisfiability check:\n";
+        // ExprPPrinter::printQuery(llvm::errs(), constraints, falseExpr);
 
         actualSolverCallTimer.start();
         success = z3solver->getValue(Query(constraints, falseExpr), tmpExpr);
@@ -1497,8 +1487,8 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
         result = success ? Solver::True : Solver::Unknown;
 
       } else {
-        llvm::errs() << "Querying for subsumption check:\n";
-        ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
+        // llvm::errs() << "Querying for subsumption check:\n";
+        // ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
 
         actualSolverCallTimer.start();
         success = z3solver->directComputeValidity(
@@ -1538,7 +1528,6 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
   } else {
     if (query->isTrue())
       return true;
-    llvm::errs() << "SUBSUMPTION NOT HOLDING 4\n";
     return false;
   }
 
@@ -1574,7 +1563,6 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
     if (z3solver)
       delete z3solver;
 
-    llvm::errs() << "SUBSUMPTION NOT HOLDING 5\n";
     return false;
   }
 
@@ -1595,8 +1583,6 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
   // g->dump();
 
   // We mark memory allocations needed for the unsatisfiabilty core
-  llvm::errs()
-      << "SubsumptionTableEntry::subsumed: CALLING computeCoreAllocations\n";
   state.itreeNode->computeCoreAllocations(g);
 
   delete g; // Delete the AllocationGraph object
@@ -1862,7 +1848,6 @@ void ITree::markPathCondition(ExecutionState &state, TimingSolver *solver) {
   // g->dump();
 
   // Compute memory allocations needed by the unsatisfiability core
-  llvm::errs() << "ITree::markPathCondition: CALLING computeCoreAllocations\n";
   currentINode->computeCoreAllocations(g);
 
   delete g; // Delete the AllocationGraph object
