@@ -81,7 +81,10 @@ bool RaiseAsmPass::runOnModule(Module &M) {
     klee_warning("Warning: unable to select native target: %s", Err.c_str());
     TLI = 0;
   } else {
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 7)
+    TM = NativeTarget->createTargetMachine(HostTriple, "", "", TargetOptions());
+    TLI = TM->getSubtargetImpl(*(M.begin()))->getTargetLowering();
+#elif LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
     TM = NativeTarget->createTargetMachine(HostTriple, "", "", TargetOptions());
     TLI = TM->getSubtargetImpl()->getTargetLowering();
 #else

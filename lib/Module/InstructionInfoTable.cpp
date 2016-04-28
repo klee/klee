@@ -94,9 +94,15 @@ bool InstructionInfoTable::getInstructionDebugInfo(const llvm::Instruction *I,
                                                    const std::string *&File,
                                                    unsigned &Line) {
   if (MDNode *N = I->getMetadata("dbg")) {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 7)
+    DILocation *Loc = cast<DILocation>(N);
+    File = internString(getDSPIPath(*Loc));
+    Line = Loc->getLine();
+#else
     DILocation Loc(N);
     File = internString(getDSPIPath(Loc));
     Line = Loc.getLineNumber();
+#endif
     return true;
   }
 
