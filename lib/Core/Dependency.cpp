@@ -163,6 +163,8 @@ void VersionedAllocation::print(llvm::raw_ostream &stream) const {
     stream << "(I)";
   stream << "[";
   site->print(stream);
+  stream << ":";
+  address->print(stream);
   stream << "]#" << reinterpret_cast<uintptr_t>(this);
 }
 
