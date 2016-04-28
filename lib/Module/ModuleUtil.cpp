@@ -272,14 +272,22 @@ static bool linkBCA(object::Archive* archive, Module* composite, std::string& er
 // FIXME: Maybe load bitcode file lazily? Then if we need to link, materialise
 // the module
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 5)
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 7)
+        ErrorOr<std::unique_ptr<Module> > Result_error =
+#else
         ErrorOr<Module *> Result_error =
+#endif
             parseBitcodeFile(buff.get(), getGlobalContext());
         ec = Result_error.getError();
         if (ec)
           errorMessage = ec.message();
         else
-          Result = Result_error.get();
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 7)
+          Result = Result_error->release();
 #else
+          Result = Result_error.get();
+#endif
+#else // LLVM 3.3, 3.4
         Result =
             ParseBitcodeFile(buff.get(), getGlobalContext(), &errorMessage);
 #endif
@@ -416,8 +424,15 @@ Module *klee::linkWithLibrary(Module *module,
 
   if (magic == sys::fs::file_magic::bitcode) {
 
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 7)
+    ErrorOr<std::unique_ptr<Module> > Result = parseBitcodeFile(buff, Context);
+
+    if ((ec = Buffer.getError()) || Linker::LinkModules(module, Result->get()))
+      klee_error("Link with library %s failed: %s", libraryName.c_str(),
+                 ec.message().c_str());
+#else // LLVM 3.5, 3.6
     ErrorOr<Module *> Result = parseBitcodeFile(buff, Context);
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
+#if LLVM_VERSION_CODE == LLVM_VERSION(3, 6)
     if ((ec = Buffer.getError()) || Linker::LinkModules(module, Result.get()))
 #else // LLVM 3.5
     if ((ec = Buffer.getError()) ||
@@ -426,8 +441,11 @@ Module *klee::linkWithLibrary(Module *module,
 #endif
       klee_error("Link with library %s failed: %s", libraryName.c_str(),
                  ec.message().c_str());
-
+// unique_ptr owns the Module, we don't have to delete it
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 7)
     delete Result.get();
+#endif
+#endif
 
   } else if (magic == sys::fs::file_magic::archive) {
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)

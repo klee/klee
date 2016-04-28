@@ -253,11 +253,16 @@ Function *ExternalDispatcher::createDispatcher(Function *target, Instruction *in
     // functions.
     LLVM_TYPE_Q Type *argTy = (i < FTy->getNumParams() ? FTy->getParamType(i) : 
                                (*ai)->getType());
-    Instruction *argI64p = 
-      GetElementPtrInst::Create(argI64s, 
-                                ConstantInt::get(Type::getInt32Ty(getGlobalContext()), 
-                                                 idx), 
-                                "", dBB);
+    Instruction *argI64p =
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 7)
+        GetElementPtrInst::Create(
+            nullptr, argI64s,
+#else
+        GetElementPtrInst::Create(
+            argI64s,
+#endif
+            ConstantInt::get(Type::getInt32Ty(getGlobalContext()), idx), "",
+            dBB);
 
     Instruction *argp = new BitCastInst(argI64p, PointerType::getUnqual(argTy),
                                         "", dBB);

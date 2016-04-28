@@ -46,8 +46,11 @@
 #else
 #include "llvm/IR/CallSite.h"
 #endif
-
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 7)
+#include "llvm/IR/LegacyPassManager.h"
+#else
 #include "llvm/PassManager.h"
+#endif
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/raw_os_ostream.h"
@@ -301,7 +304,11 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   // invariant transformations that we will end up doing later so that
   // optimize is seeing what is as close as possible to the final
   // module.
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 7)
+  legacy::PassManager pm;
+#else
   PassManager pm;
+#endif
   pm.add(new RaiseAsmPass());
   if (opts.CheckDivZero) pm.add(new DivCheckPass());
   if (opts.CheckOvershift) pm.add(new OvershiftCheckPass());
@@ -369,7 +376,11 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   // linked in something with intrinsics but any external calls are
   // going to be unresolved. We really need to handle the intrinsics
   // directly I think?
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 7)
+  legacy::PassManager pm3;
+#else
   PassManager pm3;
+#endif
   pm3.add(createCFGSimplificationPass());
   switch(SwitchType) {
   case eSwitchTypeInternal: break;

@@ -106,11 +106,25 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
           Value *pSrc = CastInst::CreatePointerCast(src, i64p, "vacopy.cast.src", ii);
           Value *val = new LoadInst(pSrc, std::string(), ii); new StoreInst(val, pDst, ii);
           Value *off = ConstantInt::get(Type::getInt64Ty(getGlobalContext()), 1);
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 7)
+          pDst =
+              GetElementPtrInst::Create(nullptr, pDst, off, std::string(), ii);
+          pSrc =
+              GetElementPtrInst::Create(nullptr, pSrc, off, std::string(), ii);
+#else
           pDst = GetElementPtrInst::Create(pDst, off, std::string(), ii);
           pSrc = GetElementPtrInst::Create(pSrc, off, std::string(), ii);
+#endif
           val = new LoadInst(pSrc, std::string(), ii); new StoreInst(val, pDst, ii);
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 7)
+          pDst =
+              GetElementPtrInst::Create(nullptr, pDst, off, std::string(), ii);
+          pSrc =
+              GetElementPtrInst::Create(nullptr, pSrc, off, std::string(), ii);
+#else
           pDst = GetElementPtrInst::Create(pDst, off, std::string(), ii);
           pSrc = GetElementPtrInst::Create(pSrc, off, std::string(), ii);
+#endif
           val = new LoadInst(pSrc, std::string(), ii); new StoreInst(val, pDst, ii);
         }
         ii->removeFromParent();
