@@ -154,7 +154,9 @@ void Optimize(Module *M, const std::string &EntryPoint) {
     Passes.add(createVerifierPass());
 
   // Add an appropriate DataLayout instance for this module...
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 7)
+  // LLVM 3.7+ doesn't have DataLayoutPass anymore.
+#elif LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
   DataLayoutPass *dlpass = new DataLayoutPass();
   dlpass->doInitialization(*M);
   addPass(Passes, dlpass);
