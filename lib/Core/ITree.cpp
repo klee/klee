@@ -1595,6 +1595,8 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
   // g->dump();
 
   // We mark memory allocations needed for the unsatisfiabilty core
+  llvm::errs()
+      << "SubsumptionTableEntry::subsumed: CALLING computeCoreAllocations\n";
   state.itreeNode->computeCoreAllocations(g);
 
   delete g; // Delete the AllocationGraph object
@@ -1860,6 +1862,7 @@ void ITree::markPathCondition(ExecutionState &state, TimingSolver *solver) {
   // g->dump();
 
   // Compute memory allocations needed by the unsatisfiability core
+  llvm::errs() << "ITree::markPathCondition: CALLING computeCoreAllocations\n";
   currentINode->computeCoreAllocations(g);
 
   delete g; // Delete the AllocationGraph object
