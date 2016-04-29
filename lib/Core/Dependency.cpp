@@ -239,7 +239,7 @@ void AllocationGraph::addNewSink(Allocation *candidateSink) {
   if (isVisited(candidateSink))
     return;
 
-  AllocationNode *newNode = new AllocationNode(candidateSink);
+  AllocationNode *newNode = new AllocationNode(candidateSink, 0);
   allNodes.push_back(newNode);
   sinks.push_back(newNode);
 }
@@ -266,30 +266,33 @@ void AllocationGraph::addNewEdge(Allocation *source, Allocation *target) {
 
   bool newNode = false; // indicates whether a new node is created
 
+  uint64_t targetNodeLevel = (targetNode ? targetNode->getLevel() : 0);
+
   if (!sourceNode) {
-    sourceNode = new AllocationNode(source);
+    sourceNode = new AllocationNode(source, targetNodeLevel + 1);
     allNodes.push_back(sourceNode);
     newNode = true; // An edge actually added, return true
   } else {
-    // Delete the source from the set of sinks
     std::vector<AllocationNode *>::iterator pos =
         std::find(sinks.begin(), sinks.end(), sourceNode);
     if (pos == sinks.end()) {
       // Add new node if it's not in the sink
-      sourceNode = new AllocationNode(source);
+      sourceNode = new AllocationNode(source, targetNodeLevel + 1);
       allNodes.push_back(sourceNode);
       newNode = true;
     }
   }
 
   if (!targetNode) {
-    targetNode = new AllocationNode(target);
+    targetNode = new AllocationNode(target, targetNodeLevel);
     allNodes.push_back(targetNode);
     sinks.push_back(targetNode);
     newNode = true; // An edge actually added, return true
   }
 
-  if (newNode || !targetNode->isCurrentParent(sourceNode)) {
+  // The purpose of the second condition is to prevent cycles
+  // in the graph.
+  if (newNode || !(targetNode->getLevel() < sourceNode->getLevel())) {
     targetNode->addParent(sourceNode);
   }
 }

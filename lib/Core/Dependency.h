@@ -250,9 +250,11 @@ class Allocation {
     class AllocationNode {
       Allocation *allocation;
       std::vector<AllocationNode *> ancestors;
+      uint64_t level;
 
     public:
-      AllocationNode(Allocation *allocation) : allocation(allocation) {
+      AllocationNode(Allocation *allocation, uint64_t _level)
+          : allocation(allocation), level(_level) {
         allocation->setAsCore();
       }
 
@@ -265,14 +267,9 @@ class Allocation {
         ancestors.push_back(node);
       }
 
-      bool isCurrentParent(AllocationNode *node) {
-        if (std::find(ancestors.begin(), ancestors.end(), node) ==
-            ancestors.end())
-          return false;
-        return true;
-      }
-
       std::vector<AllocationNode *> getParents() const { return ancestors; }
+
+      uint64_t getLevel() const { return level; }
     };
 
     std::vector<AllocationNode *> sinks;
