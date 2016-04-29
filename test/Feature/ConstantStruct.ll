@@ -1,3 +1,5 @@
+; LLVM 3.7 requires a type as the first argument to 'getelementptr'
+; REQUIRES: geq-llvm-3.7
 ; RUN: llvm-as %s -f -o %t1.bc
 ; RUN: rm -rf %t.klee-out
 ; RUN: %klee --output-dir=%t.klee-out -disable-opt %t1.bc > %t2
@@ -24,10 +26,10 @@ entry:
   br i1 %r, label %bbtrue, label %bbfalse
 
 bbtrue:
-  %0 = call i32 @puts(i8* getelementptr inbounds ([5 x i8]* @.passstr, i64 0, i64 0)) nounwind
+  %0 = call i32 @puts(i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.passstr, i64 0, i64 0)) nounwind
   ret i32 0
 
 bbfalse:
-  %1 = call i32 @puts(i8* getelementptr inbounds ([5 x i8]* @.failstr, i64 0, i64 0)) nounwind
+  %1 = call i32 @puts(i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.failstr, i64 0, i64 0)) nounwind
   ret i32 0
 }
