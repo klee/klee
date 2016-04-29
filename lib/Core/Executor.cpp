@@ -54,6 +54,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
@@ -65,6 +66,7 @@
 #include "llvm/BasicBlock.h"
 #include "llvm/Constants.h"
 #include "llvm/Function.h"
+#include "llvm/InlineAsm.h"
 #include "llvm/Instructions.h"
 #include "llvm/IntrinsicInst.h"
 #include "llvm/LLVMContext.h"
@@ -1785,8 +1787,13 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     if (f && isDebugIntrinsic(f, kmodule))
       break;
 
-    if (isa<InlineAsm>(fp)) {
-      terminateStateOnExecError(state, "inline assembly is unsupported");
+    if (const InlineAsm *iAsm = dyn_cast<InlineAsm>(fp)) {
+      // no code => compiler barriers
+      if (iAsm->getAsmString().empty())
+        klee_warning("skipping empty assembly in %s",
+			i->getParent()->getParent()->getName().str().c_str());
+      else
+	terminateStateOnExecError(state, "inline assembly is unsupported");
       break;
     }
     // evaluate arguments
