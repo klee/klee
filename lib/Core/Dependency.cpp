@@ -971,7 +971,6 @@ void Dependency::execute(llvm::Instruction *instr,
     llvm::Function *f = callInst->getCalledFunction();
     if (f && f->getIntrinsicID() == llvm::Intrinsic::not_intrinsic) {
       llvm::StringRef calleeName = callInst->getCalledFunction()->getName();
-
       // FIXME: We need a more precise way to determine invoked method
       // rather than just using the name.
       std::string getValuePrefix("klee_get_value");
@@ -1014,8 +1013,8 @@ void Dependency::execute(llvm::Instruction *instr,
       }
       break;
     }
-    default:
-      break;
+    case llvm::Instruction::Ret: { break; }
+    default: { break; }
     }
     updateIncomingBlock(instr);
     return;
@@ -1100,12 +1099,17 @@ void Dependency::execute(llvm::Instruction *instr,
     }
     case llvm::Instruction::PHI: {
       llvm::PHINode *node = llvm::dyn_cast<llvm::PHINode>(instr);
-      llvm::Value *llvmArgValue = node->getIncomingValueForBlock(incomingBlock);
-      VersionedValue *val = getLatestValue(llvmArgValue, argExpr);
-      if (val) {
-        addDependency(val, getNewVersionedValue(instr, argExpr));
-      } else if (!llvm::isa<llvm::Constant>(llvmArgValue)) {
-        assert(!"operand not found");
+      int Idx = node->getBasicBlockIndex(incomingBlock);
+      if (Idx >= 0) {
+        // llvm::Value *llvmArgValue =
+        // node->getIncomingValueForBlock(incomingBlock);
+        llvm::Value *llvmArgValue = node->getIncomingValue(Idx);
+        VersionedValue *val = getLatestValue(llvmArgValue, argExpr);
+        if (val) {
+          addDependency(val, getNewVersionedValue(instr, argExpr));
+        } else if (!llvm::isa<llvm::Constant>(llvmArgValue)) {
+          assert(!"operand not found");
+        }
       }
       break;
     }
@@ -1327,10 +1331,14 @@ void Dependency::markAllValues(AllocationGraph *g, llvm::Value *val) {
   VersionedValue *value = getLatestValueNoConstantCheck(val);
   buildAllocationGraph(g, value);
   std::vector<VersionedValue *> allSources = allFlowSources(value);
+
   for (std::vector<VersionedValue *>::iterator it = allSources.begin(),
                                                itEnd = allSources.end();
        it != itEnd; ++it) {
-    (*it)->setAsCore();
+    // FIXME: Check why it can be NULL
+    if (*it) {
+      (*it)->setAsCore();
+    }
   }
 }
 

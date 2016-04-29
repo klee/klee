@@ -1278,13 +1278,23 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
   for (std::vector<llvm::Value *>::iterator it = singletonStoreKeys.begin(),
                                             itEnd = singletonStoreKeys.end();
        it != itEnd; ++it) {
-      const ref<Expr> lhs = singletonStore[*it];
-      const ref<Expr> rhs = stateSingletonStore[*it];
+    ref<Expr> lhs = singletonStore[*it];
+    ref<Expr> rhs = stateSingletonStore[*it];
 
       // If the current state does not constrain the same
       // allocation, subsumption fails.
       if (!rhs.get())
         return false;
+
+      // FIXME: This is a quick hack that was temporarily required due
+      // to field insensitivity of the dependency analysis, such that
+      // allocations are matched if they had the same base address even
+      // though they point to different locations in the singleton.
+      if (lhs->getWidth() > rhs->getWidth()) {
+        rhs = ZExtExpr::alloc(rhs, lhs->getWidth());
+      } else if (lhs->getWidth() < rhs->getWidth()) {
+        lhs = ZExtExpr::alloc(lhs, rhs->getWidth());
+      }
 
       stateEqualityConstraints =
           (!stateEqualityConstraints.get()
