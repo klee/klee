@@ -1,3 +1,6 @@
+; LLVM 3.7 requires a type as the first argument to 'getelementptr'
+; LLVM 3.7 requires a type as the first argument to 'load'
+; REQUIRES: geq-llvm-3.7
 ; RUN: %S/ConcreteTest.py --klee='%klee' --lli=%lli %s
 
 declare void @print_i32(i32)
@@ -10,25 +13,25 @@ declare void @print_i32(i32)
 
 define i32 @main() {
 entry:
-	%addr0 = getelementptr i32* @gInt, i32 0
-	%addr1 = getelementptr [2 x i32]* @gInts, i32 0, i32 0
-	%addr2 = getelementptr [2 x i32]* @gInts, i32 0, i32 1
-	%addr3 = getelementptr %simple* @gStruct, i32 0, i32 0
-	%addr4 = getelementptr %simple* @gStruct, i32 0, i32 1
-	%addr5 = getelementptr %simple* @gStruct, i32 0, i32 2
-	%addr6 = getelementptr %simple* @gStruct, i32 0, i32 3
-	%addr7 = getelementptr %simple* @gZero, i32 0, i32 2
-	%contents0 = load i32* %addr0
-	%contents1 = load i32* %addr1
-	%contents2 = load i32* %addr2
-	%contents3tmp = load i8* %addr3
+	%addr0 = getelementptr i32, i32* @gInt, i32 0
+	%addr1 = getelementptr [2 x i32], [2 x i32]* @gInts, i32 0, i32 0
+	%addr2 = getelementptr [2 x i32], [2 x i32]* @gInts, i32 0, i32 1
+	%addr3 = getelementptr %simple, %simple* @gStruct, i32 0, i32 0
+	%addr4 = getelementptr %simple, %simple* @gStruct, i32 0, i32 1
+	%addr5 = getelementptr %simple, %simple* @gStruct, i32 0, i32 2
+	%addr6 = getelementptr %simple, %simple* @gStruct, i32 0, i32 3
+	%addr7 = getelementptr %simple, %simple* @gZero, i32 0, i32 2
+	%contents0 = load i32, i32* %addr0
+	%contents1 = load i32, i32* %addr1
+	%contents2 = load i32, i32* %addr2
+	%contents3tmp = load i8, i8* %addr3
 	%contents3 = zext i8 %contents3tmp to i32
-	%contents4tmp = load i16* %addr4
+	%contents4tmp = load i16, i16* %addr4
 	%contents4 = zext i16 %contents4tmp to i32
-	%contents5 = load i32* %addr5
-	%contents6tmp = load i64* %addr6
+	%contents5 = load i32, i32* %addr5
+	%contents6tmp = load i64, i64* %addr6
 	%contents6 = trunc i64 %contents6tmp to i32
-	%contents7 = load i32* %addr7
+	%contents7 = load i32, i32* %addr7
 	%tmp0 = mul i32 %contents0, %contents1
 	%tmp1 = mul i32 %tmp0, %contents2
 	%tmp2 = mul i32 %tmp1, %contents3
