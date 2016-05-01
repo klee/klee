@@ -158,8 +158,14 @@ static Function *getStubFunctionForCtorList(Module *m,
   if (arr) {
     for (unsigned i=0; i<arr->getNumOperands(); i++) {
       ConstantStruct *cs = cast<ConstantStruct>(arr->getOperand(i));
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 5)
+      // There is a third *optional* element in global_ctor elements (``i8
+      // @data``).
+      assert((cs->getNumOperands() == 2 || cs->getNumOperands() == 3) &&
+             "unexpected element in ctor initializer list");
+#else
       assert(cs->getNumOperands()==2 && "unexpected element in ctor initializer list");
-      
+#endif
       Constant *fp = cs->getOperand(1);      
       if (!fp->isNullValue()) {
         if (llvm::ConstantExpr *ce = dyn_cast<llvm::ConstantExpr>(fp))
@@ -513,8 +519,13 @@ static int getOperandNum(Value *v,
     return registerMap[inst];
   } else if (Argument *a = dyn_cast<Argument>(v)) {
     return a->getArgNo();
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
+    // Metadata is no longer a Value
+  } else if (isa<BasicBlock>(v) || isa<InlineAsm>(v)) {
+#else
   } else if (isa<BasicBlock>(v) || isa<InlineAsm>(v) ||
              isa<MDNode>(v)) {
+#endif
     return -1;
   } else {
     assert(isa<Constant>(v));

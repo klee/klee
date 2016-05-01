@@ -81,6 +81,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -383,7 +384,13 @@ Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
     if (!DebugCompressInstructions) {
 #endif
 
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 5)
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
+    std::error_code ec;
+    debugInstFile = new llvm::raw_fd_ostream(debug_file_name.c_str(), ec,
+                                             llvm::sys::fs::OpenFlags::F_Text);
+    if (ec)
+	    ErrorInfo = ec.message();
+#elif LLVM_VERSION_CODE >= LLVM_VERSION(3, 5)
     debugInstFile = new llvm::raw_fd_ostream(debug_file_name.c_str(), ErrorInfo,
                                              llvm::sys::fs::OpenFlags::F_Text);
 #else
@@ -1479,9 +1486,13 @@ Function* Executor::getTargetFunction(Value *calledVal, ExecutionState &state) {
 
   while (true) {
     if (GlobalValue *gv = dyn_cast<GlobalValue>(c)) {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
+      if (!Visited.insert(gv).second)
+        return 0;
+#else
       if (!Visited.insert(gv))
         return 0;
-
+#endif
       std::string alias = state.getFnAlias(gv->getName());
       if (alias != "") {
         llvm::Module* currModule = kmodule->module;
@@ -3080,8 +3091,16 @@ void Executor::callExternalFunction(ExecutionState &state,
     else
       klee_warning_once(function, "%s", os.str().c_str());
   }
-  
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
+  // MCJIT needs unique module, so we create quick external dispatcher for call.
+  // reference:
+  // http://blog.llvm.org/2013/07/using-mcjit-with-kaleidoscope-tutorial.html
+  ExternalDispatcher *e = new ExternalDispatcher(function->getContext());
+  bool success = e->executeCall(function, target->inst, args);
+  delete e;
+#else
   bool success = externalDispatcher->executeCall(function, target->inst, args);
+#endif
   if (!success) {
     terminateStateOnError(state, "failed external call: " + function->getName(),
                           External);

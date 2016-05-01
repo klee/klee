@@ -172,15 +172,17 @@ void Optimize(Module *M, const std::string &EntryPoint) {
   if (VerifyEach)
     Passes.add(createVerifierPass());
 
-#if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
-  // Add an appropriate TargetData instance for this module...
-  addPass(Passes, new TargetData(M));
-#elif LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
   // Add an appropriate DataLayout instance for this module...
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
+  DataLayoutPass *dlpass = new DataLayoutPass();
+  dlpass->doInitialization(*M);
+  addPass(Passes, dlpass);
+#elif LLVM_VERSION_CODE >= LLVM_VERSION(3, 5)
+  addPass(Passes, new DataLayoutPass(M));
+#elif LLVM_VERSION_CODE >= LLVM_VERSION(3, 2)
   addPass(Passes, new DataLayout(M));
 #else
-  // Add an appropriate DataLayout instance for this module...
-  addPass(Passes, new DataLayoutPass(M));
+  addPass(Passes, new TargetData(M));
 #endif
 
   // DWD - Run the opt standard pass list as well.

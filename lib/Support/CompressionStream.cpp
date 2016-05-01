@@ -10,9 +10,11 @@
 #include "klee/Config/Version.h"
 #ifdef HAVE_ZLIB_H
 #include "klee/Internal/Support/CompressionStream.h"
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+#if (LLVM_VERSION_CODE >= LLVM_VERSION(3, 3) \
+    && LLVM_VERSION_CODE <= LLVM_VERSION(3, 4))
 #include "llvm/Support/system_error.h"
 #else
+#include "llvm/Support/FileSystem.h"
 #include <fcntl.h>
 #include <errno.h>
 #include <sys/types.h>
@@ -27,9 +29,13 @@ compressed_fd_ostream::compressed_fd_ostream(const char *Filename,
   ErrorInfo = "";
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
   // Open file in binary mode
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 5)
+  std::error_code EC =
+      llvm::sys::fs::openFileForWrite(Filename, FD, llvm::sys::fs::F_None);
+#elif LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
   llvm::error_code EC =
       llvm::sys::fs::openFileForWrite(Filename, FD, llvm::sys::fs::F_Binary);
-
+#endif
   if (EC) {
     ErrorInfo = EC.message();
     FD = -1;
