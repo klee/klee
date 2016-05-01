@@ -385,7 +385,12 @@ llvm::raw_fd_ostream *KleeHandler::openOutputFile(const std::string &filename) {
   llvm::raw_fd_ostream *f;
   std::string Error;
   std::string path = getOutputFilename(filename);
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3,5)
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
+  std::error_code ec;
+  f = new llvm::raw_fd_ostream(path.c_str(), ec, llvm::sys::fs::F_None);
+  if (ec)
+    Error = ec.message();
+#elif LLVM_VERSION_CODE >= LLVM_VERSION(3, 5)
   f = new llvm::raw_fd_ostream(path.c_str(), Error, llvm::sys::fs::F_None);
 #elif LLVM_VERSION_CODE >= LLVM_VERSION(3,4)
   f = new llvm::raw_fd_ostream(path.c_str(), Error, llvm::sys::fs::F_Binary);
@@ -1038,9 +1043,14 @@ static llvm::Module *linkWithUclibc(llvm::Module *mainModule, StringRef libDir) 
   SmallString<128> uclibcBCA(libDir);
   llvm::sys::path::append(uclibcBCA, KLEE_UCLIBC_BCA_NAME);
 
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
+  Twine uclibcBCA_twine(uclibcBCA.c_str());
+  if (!llvm::sys::fs::exists(uclibcBCA_twine))
+#else
   bool uclibcExists=false;
   llvm::sys::fs::exists(uclibcBCA.c_str(), uclibcExists);
   if (!uclibcExists)
+#endif
     klee_error("Cannot find klee-uclibc : %s", uclibcBCA.c_str());
 
   Function *f;
@@ -1265,7 +1275,11 @@ int main(int argc, char **argv, char **envp) {
     klee_error("error loading program '%s': %s", InputFile.c_str(),
                Buffer.getError().message().c_str());
 
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
+  auto mainModuleOrError = getLazyBitcodeModule(std::move(Buffer.get()), ctx);
+#else
   auto mainModuleOrError = getLazyBitcodeModule(Buffer->get(), ctx);
+#endif
 
   if (!mainModuleOrError) {
     klee_error("error loading program '%s': %s", InputFile.c_str(),
