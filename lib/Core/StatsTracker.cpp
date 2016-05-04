@@ -636,7 +636,11 @@ static std::vector<Instruction*> getSuccs(Instruction *i) {
     for (succ_iterator it = succ_begin(bb), ie = succ_end(bb); it != ie; ++it)
       res.push_back(&*(it->begin()));
   } else {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
+    res.push_back(&*(++(i->getIterator())));
+#else
     res.push_back(&*(++BasicBlock::iterator(i)));
+#endif
   }
 
   return res;
