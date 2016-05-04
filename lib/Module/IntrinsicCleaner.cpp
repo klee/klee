@@ -76,8 +76,12 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
   for (BasicBlock::iterator i = b.begin(), ie = b.end();
        (i != ie) && (block_split == false);) {
     IntrinsicInst *ii = dyn_cast<IntrinsicInst>(&*i);
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
+    // create a copy of iterator to pass to IRBuilder ctor later
+    BasicBlock::iterator i_ = i;
+#endif
     // increment now since LowerIntrinsic deletion makes iterator invalid.
-    ++i;  
+    ++i;
     if(ii) {
       switch (ii->getIntrinsicID()) {
       case Intrinsic::vastart:
@@ -138,8 +142,12 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
       case Intrinsic::uadd_with_overflow:
       case Intrinsic::usub_with_overflow:
       case Intrinsic::umul_with_overflow: {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
+        // ctor needs the iterator, but we already increased our one
+        IRBuilder<> builder(ii->getParent(), i_);
+#else
         IRBuilder<> builder(ii->getParent(), ii);
-
+#endif
         Value *op1 = ii->getArgOperand(0);
         Value *op2 = ii->getArgOperand(1);
         

@@ -96,7 +96,11 @@ bool RaiseAsmPass::runOnModule(Module &M) {
   for (Module::iterator fi = M.begin(), fe = M.end(); fi != fe; ++fi) {
     for (Function::iterator bi = fi->begin(), be = fi->end(); bi != be; ++bi) {
       for (BasicBlock::iterator ii = bi->begin(), ie = bi->end(); ii != ie;) {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
+        auto i = static_cast<Instruction *>(ii);
+#else
         Instruction *i = ii;
+#endif
         ++ii;  
         changed |= runOnInstruction(M, i);
       }

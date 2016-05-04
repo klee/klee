@@ -126,7 +126,12 @@ static void AddStandardCompilePasses(PassManager &PM) {
   addPass(PM, createCFGSimplificationPass());    // Clean up after IPCP & DAE
 
   addPass(PM, createPruneEHPass());              // Remove dead EH info
-  addPass(PM, createFunctionAttrsPass());        // Deduce function attrs
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
+  addPass(PM, createPostOrderFunctionAttrsPass());
+  addPass(PM, createReversePostOrderFunctionAttrsPass());
+#else
+  addPass(PM, createFunctionAttrsPass()); // Deduce function attrs
+#endif
 
   if (!DisableInline)
     addPass(PM, createFunctionInliningPass());   // Inline small functions
@@ -257,8 +262,14 @@ void Optimize(Module* M) {
     addPass(Passes, createScalarReplAggregatesPass()); // Break up allocas
 
     // Run a few AA driven optimizations here and now, to cleanup the code.
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
+    addPass(Passes, createPostOrderFunctionAttrsPass());
+    addPass(Passes, createReversePostOrderFunctionAttrsPass());
+    // addPass(Passes, createGlobalsAAWrapperPass());
+#else
     addPass(Passes, createFunctionAttrsPass());      // Add nocapture
     addPass(Passes, createGlobalsModRefPass());      // IP alias analysis
+#endif
 
     addPass(Passes, createLICMPass());               // Hoist loop invariants
     addPass(Passes, createGVNPass());                // Remove redundancies

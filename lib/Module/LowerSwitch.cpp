@@ -44,7 +44,12 @@ bool LowerSwitchPass::runOnFunction(Function &F) {
   bool changed = false;
 
   for (Function::iterator I = F.begin(), E = F.end(); I != E; ) {
-    BasicBlock *cur = I++; // Advance over block so we don't traverse new blocks
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
+    auto *cur = static_cast<BasicBlock *>(I);
+#else
+    BasicBlock *cur = I;
+#endif
+    I++; // Advance over block so we don't traverse new blocks
 
     if (SwitchInst *SI = dyn_cast<SwitchInst>(cur->getTerminator())) {
       changed = true;
@@ -67,7 +72,11 @@ void LowerSwitchPass::switchConvert(CaseItr begin, CaseItr end,
   // iterate through all the cases, creating a new BasicBlock for each
   for (CaseItr it = begin; it < end; ++it) {
     BasicBlock *newBlock = BasicBlock::Create(getGlobalContext(), "NodeBlock");
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
+    Function::iterator FI = origBlock->getIterator();
+#else
     Function::iterator FI = origBlock;
+#endif
     F->getBasicBlockList().insert(++FI, newBlock);
     
     ICmpInst *cmpInst = 
@@ -104,7 +113,11 @@ void LowerSwitchPass::processSwitchInst(SwitchInst *SI) {
   // if-then statements go to this and the PHI nodes are happy.
   BasicBlock* newDefault = BasicBlock::Create(getGlobalContext(), "newDefault");
 
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
+  F->getBasicBlockList().insert(defaultBlock->getIterator(), newDefault);
+#else
   F->getBasicBlockList().insert(defaultBlock, newDefault);
+#endif
   BranchInst::Create(defaultBlock, newDefault);
 
   // If there is an entry in any PHI nodes for the default edge, make sure

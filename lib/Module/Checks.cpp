@@ -64,14 +64,17 @@ bool DivCheckPass::runOnModule(Module &M) {
           Instruction::BinaryOps opcode = binOp->getOpcode();
           if (opcode == Instruction::SDiv || opcode == Instruction::UDiv ||
               opcode == Instruction::SRem || opcode == Instruction::URem) {
-            
-            CastInst *denominator =
-              CastInst::CreateIntegerCast(i->getOperand(1),
-                                          Type::getInt64Ty(getGlobalContext()),
-                                          false,  /* sign doesn't matter */
-                                          "int_cast_to_i64",
-                                          i);
-            
+
+            CastInst *denominator = CastInst::CreateIntegerCast(
+                i->getOperand(1), Type::getInt64Ty(getGlobalContext()),
+                false, /* sign doesn't matter */
+                "int_cast_to_i64",
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
+                static_cast<Instruction *>(i));
+#else
+                i);
+#endif
+
             // Lazily bind the function to avoid always importing it.
             if (!divZeroCheckFunction) {
               Constant *fc = M.getOrInsertFunction("klee_div_zero_check", 
@@ -121,12 +124,15 @@ bool OvershiftCheckPass::runOnModule(Module &M) {
             ConstantInt *bitWidthC = ConstantInt::get(Type::getInt64Ty(getGlobalContext()),bitWidth,false);
             args.push_back(bitWidthC);
 
-            CastInst *shift =
-              CastInst::CreateIntegerCast(i->getOperand(1),
-                                          Type::getInt64Ty(getGlobalContext()),
-                                          false,  /* sign doesn't matter */
-                                          "int_cast_to_i64",
-                                          i);
+            CastInst *shift = CastInst::CreateIntegerCast(
+                i->getOperand(1), Type::getInt64Ty(getGlobalContext()),
+                false, /* sign doesn't matter */
+                "int_cast_to_i64",
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
+                static_cast<Instruction *>(i));
+#else
+                i);
+#endif
             args.push_back(shift);
 
 

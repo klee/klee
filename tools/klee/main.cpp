@@ -312,7 +312,12 @@ KleeHandler::KleeHandler(int argc, char **argv)
     for (; i <= INT_MAX; ++i) {
       SmallString<128> d(directory);
       llvm::sys::path::append(d, "klee-out-");
-      raw_svector_ostream ds(d); ds << i; ds.flush();
+      raw_svector_ostream ds(d);
+      ds << i;
+// SmallString is always up-to-date, no need to flush. See Support/raw_ostream.h
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 8)
+      ds.flush();
+#endif
 
       // create directory and try to link klee-last
       if (mkdir(d.c_str(), 0775) == 0) {
@@ -682,11 +687,17 @@ static int initEnv(Module *mainModule) {
   if (mainFn->arg_size() < 2) {
     klee_error("Cannot handle ""--posix-runtime"" when main() has less than two arguments.\n");
   }
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
+  auto firstInst = static_cast<Instruction *>(mainFn->begin()->begin());
 
-  Instruction* firstInst = mainFn->begin()->begin();
+  auto oldArgc = static_cast<Argument *>(mainFn->arg_begin());
+  auto oldArgv = static_cast<Argument *>(++mainFn->arg_begin());
+#else
+  Instruction *firstInst = mainFn->begin()->begin();
 
-  Value* oldArgc = mainFn->arg_begin();
-  Value* oldArgv = ++mainFn->arg_begin();
+  Value *oldArgc = mainFn->arg_begin();
+  Value *oldArgv = ++mainFn->arg_begin();
+#endif
 
   AllocaInst* argcPtr =
     new AllocaInst(oldArgc->getType(), "argcPtr", firstInst);
@@ -1092,7 +1103,11 @@ static llvm::Module *linkWithUclibc(llvm::Module *mainModule, StringRef libDir) 
   // naming conflict.
   for (Module::iterator fi = mainModule->begin(), fe = mainModule->end();
        fi != fe; ++fi) {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
+    auto f = static_cast<Function *>(fi);
+#else
     Function *f = fi;
+#endif
     const std::string &name = f->getName();
     if (name[0]=='\01') {
       unsigned size = name.size();
@@ -1151,8 +1166,13 @@ static llvm::Module *linkWithUclibc(llvm::Module *mainModule, StringRef libDir) 
   std::vector<llvm::Value*> args;
   args.push_back(llvm::ConstantExpr::getBitCast(userMainFn,
                                                 ft->getParamType(0)));
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
+  args.push_back(static_cast<Argument *>(stub->arg_begin()));   // argc
+  args.push_back(static_cast<Argument *>(++stub->arg_begin())); // argv
+#else
   args.push_back(stub->arg_begin()); // argc
   args.push_back(++stub->arg_begin()); // argv
+#endif
   args.push_back(Constant::getNullValue(ft->getParamType(3))); // app_init
   args.push_back(Constant::getNullValue(ft->getParamType(4))); // app_fini
   args.push_back(Constant::getNullValue(ft->getParamType(5))); // rtld_fini
@@ -1291,7 +1311,11 @@ int main(int argc, char **argv, char **envp) {
 #else
   mainModule = *mainModuleOrError;
 #endif
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
+  if (auto ec = mainModule->materializeAll()) {
+#else
   if (auto ec = mainModule->materializeAllPermanently()) {
+#endif
     klee_error("error loading program '%s': %s", InputFile.c_str(),
                ec.message().c_str());
   }

@@ -443,7 +443,11 @@ void Executor::initializeGlobals(ExecutionState &state) {
   // ensures that we won't conflict. we don't need to allocate a memory object
   // since reading/writing via a function pointer is unsupported anyway.
   for (Module::iterator i = m->begin(), ie = m->end(); i != ie; ++i) {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
+    auto f = static_cast<Function *>(i);
+#else
     Function *f = i;
+#endif
     ref<ConstantExpr> addr(0);
 
     // If the symbol has external weak linkage then it is implicitly
@@ -497,6 +501,11 @@ void Executor::initializeGlobals(ExecutionState &state) {
   for (Module::const_global_iterator i = m->global_begin(),
          e = m->global_end();
        i != e; ++i) {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
+    auto v = static_cast<const GlobalVariable *>(i);
+#else
+    const GlobalVariable *v = i;
+#endif
     if (i->isDeclaration()) {
       // FIXME: We have no general way of handling unknown external
       // symbols. If we really cared about making external stuff work
@@ -522,11 +531,10 @@ void Executor::initializeGlobals(ExecutionState &state) {
                      << i->getName() 
                      << " (use will result in out of bounds access)\n";
       }
-
-      MemoryObject *mo = memory->allocate(size, false, true, i);
+      MemoryObject *mo = memory->allocate(size, false, true, v);
       ObjectState *os = bindObjectInState(state, mo, false);
-      globalObjects.insert(std::make_pair(i, mo));
-      globalAddresses.insert(std::make_pair(i, mo->getBaseExpr()));
+      globalObjects.insert(std::make_pair(v, mo));
+      globalAddresses.insert(std::make_pair(v, mo->getBaseExpr()));
 
       // Program already running = object already initialized.  Read
       // concrete value and write it to our copy.
@@ -551,8 +559,8 @@ void Executor::initializeGlobals(ExecutionState &state) {
       if (!mo)
         llvm::report_fatal_error("out of memory");
       ObjectState *os = bindObjectInState(state, mo, false);
-      globalObjects.insert(std::make_pair(i, mo));
-      globalAddresses.insert(std::make_pair(i, mo->getBaseExpr()));
+      globalObjects.insert(std::make_pair(v, mo));
+      globalAddresses.insert(std::make_pair(v, mo->getBaseExpr()));
 
       if (!i->hasInitializer())
           os->initializeToRandom();
@@ -563,8 +571,13 @@ void Executor::initializeGlobals(ExecutionState &state) {
   for (Module::alias_iterator i = m->alias_begin(), ie = m->alias_end(); 
        i != ie; ++i) {
     // Map the alias to its aliasee's address. This works because we have
-    // addresses for everything, even undefined functions. 
+    // addresses for everything, even undefined functions.
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
+    globalAddresses.insert(std::make_pair(static_cast<GlobalAlias *>(i),
+                                          evalConstant(i->getAliasee())));
+#else
     globalAddresses.insert(std::make_pair(i, evalConstant(i->getAliasee())));
+#endif
   }
 
   // once all objects are allocated, do the actual initialization
@@ -572,7 +585,12 @@ void Executor::initializeGlobals(ExecutionState &state) {
          e = m->global_end();
        i != e; ++i) {
     if (i->hasInitializer()) {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
+      MemoryObject *mo =
+          globalObjects.find(static_cast<const GlobalVariable *>(i))->second;
+#else
       MemoryObject *mo = globalObjects.find(i)->second;
+#endif
       const ObjectState *os = state.addressSpace.findObject(mo);
       assert(os);
       ObjectState *wos = state.addressSpace.getWriteable(mo, os);
@@ -2103,8 +2121,13 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       return terminateStateOnExecError(state, "Unsupported FRem operation");
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
     llvm::APFloat Res(*fpWidthToSemantics(left->getWidth()), left->getAPValue());
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
+    Res.mod(
+        APFloat(*fpWidthToSemantics(right->getWidth()), right->getAPValue()));
+#else
     Res.mod(APFloat(*fpWidthToSemantics(right->getWidth()),right->getAPValue()),
             APFloat::rmNearestTiesToEven);
+#endif
 #else
     llvm::APFloat Res(left->getAPValue());
     Res.mod(APFloat(right->getAPValue()), APFloat::rmNearestTiesToEven);
@@ -3337,9 +3360,14 @@ void Executor::runFunctionAsMain(Function *f,
     arguments.push_back(ConstantExpr::alloc(argc, Expr::Int32));
 
     if (++ai!=ae) {
-      argvMO = memory->allocate((argc+1+envc+1+1) * NumPtrBytes, false, true,
-                                f->begin()->begin());
-      
+      argvMO =
+          memory->allocate((argc + 1 + envc + 1 + 1) * NumPtrBytes, false, true,
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
+                           static_cast<Instruction *>(f->begin()->begin()));
+#else
+                           f->begin()->begin());
+#endif
+
       arguments.push_back(argvMO->getBaseExpr());
 
       if (++ai!=ae) {

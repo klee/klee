@@ -120,12 +120,15 @@ KModule::~KModule() {
   delete[] constantTable;
   delete infos;
 
-  for (std::vector<KFunction*>::iterator it = functions.begin(), 
-         ie = functions.end(); it != ie; ++it)
+  for (std::vector<KFunction *>::iterator it = functions.begin(),
+                                          ie = functions.end();
+       it != ie; ++it)
     delete *it;
 
-  for (std::map<llvm::Constant*, KConstant*>::iterator it=constantMap.begin(),
-      itE=constantMap.end(); it!=itE;++it)
+  for (std::map<llvm::Constant *, KConstant *>::iterator
+           it = constantMap.begin(),
+           itE = constantMap.end();
+       it != itE; ++it)
     delete it->second;
 
   delete targetData;
@@ -197,8 +200,14 @@ static void injectStaticConstructorsAndDestructors(Module *m) {
       klee_error("Could not find main() function.");
 
     if (ctors)
-    CallInst::Create(getStubFunctionForCtorList(m, ctors, "klee.ctor_stub"),
-		     "", mainFn->begin()->begin());
+      CallInst::Create(getStubFunctionForCtorList(m, ctors, "klee.ctor_stub"),
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
+                       "",
+                       static_cast<Instruction *>(mainFn->begin()->begin()));
+#else
+                       "", mainFn->begin()->begin());
+#endif
+
     if (dtors) {
       Function *dtorStub = getStubFunctionForCtorList(m, dtors, "klee.dtor_stub");
       for (Function::iterator it = mainFn->begin(), ie = mainFn->end();
@@ -278,22 +287,27 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 0)
         result = PHINode::Create(f->getReturnType(), 0, "retval", exit);
 #else
-		result = PHINode::Create(f->getReturnType(), "retval", exit);
+        result = PHINode::Create(f->getReturnType(), "retval", exit);
 #endif
       CallInst::Create(mergeFn, "", exit);
       ReturnInst::Create(getGlobalContext(), result, exit);
 
       llvm::errs() << "KLEE: adding klee_merge at exit of: " << name << "\n";
-      for (llvm::Function::iterator bbit = f->begin(), bbie = f->end(); 
+      for (llvm::Function::iterator bbit = f->begin(), bbie = f->end();
            bbit != bbie; ++bbit) {
-        if (&*bbit != exit) {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
+        auto bb = static_cast<BasicBlock *>(bbit);
+#else
+        BasicBlock *bb = bbit;
+#endif
+        if (bb != exit) {
           Instruction *i = bbit->getTerminator();
           if (i->getOpcode()==Instruction::Ret) {
             if (result) {
-              result->addIncoming(i->getOperand(0), bbit);
+              result->addIncoming(i->getOperand(0), bb);
             }
             i->eraseFromParent();
-	    BranchInst::Create(exit, bbit);
+            BranchInst::Create(exit, bb);
           }
         }
       }
@@ -458,15 +472,20 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
     if (it->isDeclaration())
       continue;
 
-    KFunction *kf = new KFunction(it, this);
-    
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
+    auto fn = static_cast<Function *>(it);
+#else
+    Function *fn = it;
+#endif
+    KFunction *kf = new KFunction(fn, this);
+
     for (unsigned i=0; i<kf->numInstructions; ++i) {
       KInstruction *ki = kf->instructions[i];
       ki->info = &infos->getInfo(ki->inst);
     }
 
     functions.push_back(kf);
-    functionMap.insert(std::make_pair(it, kf));
+    functionMap.insert(std::make_pair(fn, kf));
   }
 
   /* Compute various interesting properties */
@@ -547,7 +566,11 @@ KFunction::KFunction(llvm::Function *_function,
     trackCoverage(true) {
   for (llvm::Function::iterator bbit = function->begin(), 
          bbie = function->end(); bbit != bbie; ++bbit) {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
+    auto bb = static_cast<BasicBlock *>(bbit);
+#else
     BasicBlock *bb = bbit;
+#endif
     basicBlockEntry[bb] = numInstructions;
     numInstructions += bb->size();
   }
@@ -562,7 +585,11 @@ KFunction::KFunction(llvm::Function *_function,
          bbie = function->end(); bbit != bbie; ++bbit) {
     for (llvm::BasicBlock::iterator it = bbit->begin(), ie = bbit->end();
          it != ie; ++it)
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
+      registerMap[static_cast<Instruction *>(it)] = rnum++;
+#else
       registerMap[it] = rnum++;
+#endif
   }
   numRegisters = rnum;
   
@@ -581,12 +608,16 @@ KFunction::KFunction(llvm::Function *_function,
       default:
         ki = new KInstruction(); break;
       }
-
-      ki->inst = it;      
-      ki->dest = registerMap[it];
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
+      auto inst = static_cast<Instruction *>(it);
+#else
+      Instruction *inst = it;
+#endif
+      ki->inst = inst;
+      ki->dest = registerMap[inst];
 
       if (isa<CallInst>(it) || isa<InvokeInst>(it)) {
-        CallSite cs(it);
+        CallSite cs(inst);
         unsigned numArgs = cs.arg_size();
         ki->operands = new int[numArgs+1];
         ki->operands[0] = getOperandNum(cs.getCalledValue(), registerMap, km,
