@@ -1572,7 +1572,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
           terminateStateOnExecError(state, "return void when caller expected a result");
         }
       }
-    }      
+    }
+    if (INTERPOLATION_ENABLED)
+      interpTree->execute(i);
     break;
   }
 #if LLVM_VERSION_CODE < LLVM_VERSION(3, 1)
@@ -1595,6 +1597,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         }
       }
     }
+    if (INTERPOLATION_ENABLED)
+      interpTree->execute(i);
     break;
   }
 #endif
@@ -1632,9 +1636,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       // conditional is concrete and therefore there has been no invocation
       // of the solver to decide its satisfiability, and no generation
       // of the unsatisfiability core.
-      if (INTERPOLATION_ENABLED &&
-    		  ((!branches.first && branches.second) || (branches.first && !branches.second)))
-    	  interpTree->execute(i);
+      if (INTERPOLATION_ENABLED && ((!branches.first && branches.second) ||
+                                    (branches.first && !branches.second))) {
+        interpTree->execute(i);
+      }
     }
     break;
   }
