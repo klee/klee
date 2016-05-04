@@ -110,7 +110,11 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
       case Intrinsic::uadd_with_overflow:
       case Intrinsic::usub_with_overflow:
       case Intrinsic::umul_with_overflow: {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
+        IRBuilder<> builder(ii->getParent(), ii->getIterator());
+#else
         IRBuilder<> builder(ii->getParent(), ii);
+#endif
 
         Value *op1 = ii->getArgOperand(0);
         Value *op2 = ii->getArgOperand(1);
