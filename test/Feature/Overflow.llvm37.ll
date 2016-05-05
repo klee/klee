@@ -1,4 +1,4 @@
-; REQUIRES: llvm-3.7
+; REQUIRES: not-llvm-2.9, not-llvm-3.4, not-llvm-3.5, not-llvm-3.6
 ; RUN: llvm-as %s -f -o %t1.bc
 ; RUN: rm -rf %t.klee-out
 ; RUN: %klee --output-dir=%t.klee-out -disable-opt %t1.bc > %t2

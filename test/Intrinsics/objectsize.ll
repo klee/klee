@@ -1,7 +1,7 @@
 ; Unfortunately LLVM 2.9 has a different suffix for the ``llvm.objectsize`` instrinsic
 ; so this LLVM IR fails to verify for that version.
 ;
-; REQUIRES: not-llvm-2.9, not-llvm-3.7
+; REQUIRES: not-llvm-2.9, not-llvm-3.7, not-llvm-3.8
 ; RUN: %llvmas %s -o=%t.bc
 ; RUN: rm -rf %t.klee-out
 ; RUN: %klee -exit-on-error --output-dir=%t.klee-out -disable-opt %t.bc

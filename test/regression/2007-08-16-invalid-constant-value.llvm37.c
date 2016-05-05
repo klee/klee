@@ -1,4 +1,4 @@
-// REQUIRES: llvm-3.7
+// REQUIRES: not-llvm-2.9, not-llvm-3.4, not-llvm-3.5, not-llvm-3.6
 // RUN: rm -f %t4.out %t4.err %t4.log
 // RUN: %llvmgcc %s -emit-llvm -O2 -c -o %t1.bc
 // RUN: llvm-as -f %p/../Feature/_utils.llvm37._ll -o %t2.bc

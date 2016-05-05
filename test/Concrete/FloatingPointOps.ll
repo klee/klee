@@ -1,4 +1,4 @@
-; REQUIRES: not-llvm-3.7
+; REQUIRES: not-llvm-3.7, not-llvm-3.8
 ; RUN: %S/ConcreteTest.py --klee='%klee' --lli=%lli %s
 
 ; casting error messages

@@ -1,4 +1,4 @@
-; REQUIRES: llvm-3.7
+; REQUIRES: not-llvm-2.9, not-llvm-3.4, not-llvm-3.5, not-llvm-3.6
 ; RUN: %S/ConcreteTest.py --klee='%klee' --lli=%lli %s
 
 declare void @print_i1(i1)
