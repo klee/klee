@@ -1331,6 +1331,7 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
       ref<Expr> res;
 
       if (rhsConcrete.second.get()) {
+        // There is a corresponding concrete allocation
         res = EqExpr::alloc(lhsValue, rhsConcrete.second);
       }
 
@@ -1342,16 +1343,21 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
                  it3 = rhsSymbolicMap.begin(),
                  it3End = rhsSymbolicMap.end();
              it3 != it3End; ++it3) {
-          ref<Expr> newTerm =
-              OrExpr::alloc(NeExpr::alloc(lhsConcreteAddress, it3->first),
-                            EqExpr::alloc(lhsValue, it3->second));
+          // Implication: if lhsConcreteAddress == it3->first, then lhsValue ==
+          // it3->second
+          ref<Expr> newTerm = OrExpr::alloc(
+              EqExpr::alloc(ConstantExpr::alloc(0, Expr::Bool),
+                            EqExpr::alloc(lhsConcreteAddress, it3->first)),
+              EqExpr::alloc(lhsValue, it3->second));
           if (conjunction.get()) {
             conjunction = AndExpr::alloc(newTerm, conjunction);
           } else {
             conjunction = newTerm;
           }
         }
-        res = OrExpr::alloc(res, conjunction);
+        // If there were corresponding concrete as well as symbolic allocations
+        // in the current state, conjunct them
+        res = (res.get() ? AndExpr::alloc(res, conjunction) : conjunction);
       }
 
       if (res.get()) {
@@ -1390,8 +1396,12 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
            it3 != it3End; ++it3) {
         ref<Expr> rhsConcreteAddress = it3->second.first;
         ref<Expr> rhsValue = it3->second.second;
+        // Implication: if lhsSymbolicAddress == rhsConcreteAddress, then
+        // lhsValue == rhsValue
         ref<Expr> newTerm =
-            OrExpr::alloc(NeExpr::alloc(lhsSymbolicAddress, rhsConcreteAddress),
+            OrExpr::alloc(EqExpr::alloc(ConstantExpr::alloc(0, Expr::Bool),
+                                        EqExpr::alloc(lhsSymbolicAddress,
+                                                      rhsConcreteAddress)),
                           EqExpr::alloc(lhsValue, rhsValue));
         if (conjunction.get()) {
           conjunction = AndExpr::alloc(newTerm, conjunction);
@@ -1406,8 +1416,12 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
            it3 != it3End; ++it3) {
         ref<Expr> rhsSymbolicAddress = it3->first;
         ref<Expr> rhsValue = it3->second;
+        // Implication: if lhsSymbolicAddress == rhsSymbolicAddress then
+        // lhsValue == rhsValue
         ref<Expr> newTerm =
-            OrExpr::alloc(NeExpr::alloc(lhsSymbolicAddress, rhsSymbolicAddress),
+            OrExpr::alloc(EqExpr::alloc(ConstantExpr::alloc(0, Expr::Bool),
+                                        EqExpr::alloc(lhsSymbolicAddress,
+                                                      rhsSymbolicAddress)),
                           EqExpr::alloc(lhsValue, rhsValue));
         if (conjunction.get()) {
           conjunction = AndExpr::alloc(newTerm, conjunction);
@@ -1416,6 +1430,7 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
         }
       }
     }
+
     if (conjunction.get()) {
       stateEqualityConstraints =
           (!stateEqualityConstraints.get()
@@ -1424,7 +1439,7 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
     }
   }
 
-  // We create path condition needed constraints marking structure
+  // We create path condition marking structure to mark core constraints
   std::map<Expr *, PathConditionMarker *> markerMap =
       state.itreeNode->makeMarkerMap();
 
