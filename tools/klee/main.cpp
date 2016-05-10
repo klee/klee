@@ -606,11 +606,15 @@ std::string KleeHandler::getRunTimeLibraryPath(const char *argv0) {
 
   SmallString<128> libDir;
 
-  if ( strcmp(toolRoot.c_str(), KLEE_INSTALL_BIN_DIR ) == 0)
+  if (strlen( KLEE_INSTALL_BIN_DIR ) != 0 &&
+      strlen( KLEE_INSTALL_RUNTIME_DIR ) != 0 &&
+      toolRoot.str().endswith( KLEE_INSTALL_BIN_DIR ))
   {
     KLEE_DEBUG_WITH_TYPE("klee_runtime", llvm::dbgs() <<
                          "Using installed KLEE library runtime: ");
-    libDir = KLEE_INSTALL_RUNTIME_DIR ;
+    libDir = toolRoot.str().substr(0, 
+               toolRoot.str().size() - strlen( KLEE_INSTALL_BIN_DIR ));
+    llvm::sys::path::append(libDir, KLEE_INSTALL_RUNTIME_DIR);
   }
   else
   {
