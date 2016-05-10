@@ -195,11 +195,31 @@ class SearchTree {
     }
   };
 
+  class NumberedEdge {
+    SearchTree::Node *source;
+    SearchTree::Node *destination;
+    unsigned long number;
+
+  public:
+    NumberedEdge(SearchTree::Node *_source, SearchTree::Node *_destination,
+                 unsigned long _number)
+        : source(_source), destination(_destination), number(_number) {}
+
+    ~NumberedEdge() {
+      delete source;
+      delete destination;
+    }
+
+    std::string render() const;
+  };
+
   SearchTree::Node *root;
   std::map<ITreeNode *, SearchTree::Node *> itreeNodeMap;
   std::map<SubsumptionTableEntry *, SearchTree::Node *> tableEntryMap;
-  std::map<SearchTree::Node *, SearchTree::Node *> subsumptionEdges;
+  std::vector<SearchTree::NumberedEdge *> subsumptionEdges;
   std::map<PathCondition *, SearchTree::Node *> pathConditionMap;
+
+  unsigned long subsumptionEdgeNumber;
 
   static std::string recurseRender(const SearchTree::Node *node);
 
