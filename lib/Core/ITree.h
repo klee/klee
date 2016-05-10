@@ -369,13 +369,13 @@ class SubsumptionTableEntry {
 
   ref<Expr> interpolant;
 
-  std::map<llvm::Value *, ref<Expr> > singletonStore;
+  Dependency::ConcreteStore concreteAddressStore;
 
-  std::vector<llvm::Value *> singletonStoreKeys;
+  std::vector<llvm::Value *> concreteAddressStoreKeys;
 
-  std::map<llvm::Value *, std::vector<ref<Expr> > > compositeStore;
+  Dependency::SymbolicStore symbolicAddressStore;
 
-  std::vector<llvm::Value *> compositeStoreKeys;
+  std::vector<llvm::Value *> symbolicAddressStoreKeys;
 
   std::vector<const Array *> existentials;
 
@@ -412,8 +412,7 @@ class SubsumptionTableEntry {
                                    std::map<ref<Expr>, ref<Expr> > &map);
 
   bool empty() {
-    return !interpolant.get() && singletonStoreKeys.empty() &&
-           compositeStoreKeys.empty();
+    return !interpolant.get() && concreteAddressStoreKeys.empty();
   }
 
   /// @brief for printing method running time statistics
@@ -514,10 +513,8 @@ class ITreeNode {
   static StatTimer executeTimer;
   static StatTimer bindCallArgumentsTimer;
   static StatTimer popAbstractDependencyFrameTimer;
-  static StatTimer getSingletonExpressionsTimer;
-  static StatTimer getCompositeExpressionsTimer;
-  static StatTimer getSingletonCoreExpressionsTimer;
-  static StatTimer getCompositeCoreExpressionsTimer;
+  static StatTimer getStoredExpressionsTimer;
+  static StatTimer getStoredCoreExpressionsTimer;
   static StatTimer computeCoreAllocationsTimer;
 
 private:
@@ -570,16 +567,11 @@ public:
   void popAbstractDependencyFrame(llvm::CallInst *site, llvm::Instruction *inst,
                                   ref<Expr> returnValue);
 
-  std::map<llvm::Value *, ref<Expr> > getSingletonExpressions() const;
+  std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
+  getStoredExpressions() const;
 
-  std::map<llvm::Value *, std::vector<ref<Expr> > >
-  getCompositeExpressions() const;
-
-  std::map<llvm::Value *, ref<Expr> >
-  getSingletonCoreExpressions(std::vector<const Array *> &replacements) const;
-
-  std::map<llvm::Value *, std::vector<ref<Expr> > >
-  getCompositeCoreExpressions(std::vector<const Array *> &replacements) const;
+  std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
+  getStoredCoreExpressions(std::vector<const Array *> &replacements) const;
 
   void computeCoreAllocations(AllocationGraph *g);
 
