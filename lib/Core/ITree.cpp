@@ -540,6 +540,15 @@ SearchTree::PrettyExpressionBuilder::~PrettyExpressionBuilder() {}
 
 /**/
 
+std::string SearchTree::NumberedEdge::render() const {
+  std::ostringstream stream;
+  stream << "Node" << source->nodeId << " -> Node" << destination->nodeId
+         << " [style=dashed,label=\"" << number << "\"];";
+  return stream.str();
+}
+
+/**/
+
 unsigned long SearchTree::nextNodeId = 1;
 
 SearchTree *SearchTree::instance = 0;
@@ -593,12 +602,11 @@ std::string SearchTree::render() {
     return res;
 
   std::ostringstream stream;
-  for (std::map<SearchTree::Node *, SearchTree::Node *>::iterator
+  for (std::vector<SearchTree::NumberedEdge *>::iterator
            it = subsumptionEdges.begin(),
            itEnd = subsumptionEdges.end();
        it != itEnd; ++it) {
-    stream << "Node" << it->first->nodeId << " -> Node" << it->second->nodeId
-           << " [style=dashed];\n";
+    stream << (*it)->render() << "\n";
   }
 
   res = "digraph search_tree {\n";
@@ -608,7 +616,7 @@ std::string SearchTree::render() {
   return res;
 }
 
-SearchTree::SearchTree(ITreeNode *_root) {
+SearchTree::SearchTree(ITreeNode *_root) : subsumptionEdgeNumber(0) {
   root = SearchTree::Node::createNode(_root->getNodeId());
   itreeNodeMap[_root] = root;
 }
@@ -618,6 +626,14 @@ SearchTree::~SearchTree() {
     delete root;
 
   itreeNodeMap.clear();
+
+  for (std::vector<SearchTree::NumberedEdge *>::iterator
+           it = subsumptionEdges.begin(),
+           itEnd = subsumptionEdges.end();
+       it != itEnd; ++it) {
+    delete *it;
+  }
+  subsumptionEdges.clear();
 }
 
 void SearchTree::addChildren(ITreeNode *parent, ITreeNode *falseChild,
@@ -667,7 +683,8 @@ void SearchTree::markAsSubsumed(ITreeNode *iTreeNode,
   SearchTree::Node *node = instance->itreeNodeMap[iTreeNode];
   node->subsumed = true;
   SearchTree::Node *subsuming = instance->tableEntryMap[entry];
-  instance->subsumptionEdges[node] = subsuming;
+  instance->subsumptionEdges.push_back(new SearchTree::NumberedEdge(
+      node, subsuming, ++(instance->subsumptionEdgeNumber)));
 }
 
 void SearchTree::addPathCondition(ITreeNode *iTreeNode,
