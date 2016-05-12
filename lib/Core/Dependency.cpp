@@ -1244,23 +1244,16 @@ void Dependency::markAllValues(AllocationGraph *g, VersionedValue *value) {
   for (std::vector<VersionedValue *>::iterator it = allSources.begin(),
                                                itEnd = allSources.end();
        it != itEnd; ++it) {
-    (*it)->setAsCore();
-  }
-}
-
-void Dependency::markAllValues(AllocationGraph *g, llvm::Value *val) {
-  VersionedValue *value = getLatestValueNoConstantCheck(val);
-  buildAllocationGraph(g, value);
-  std::vector<VersionedValue *> allSources = allFlowSources(value);
-
-  for (std::vector<VersionedValue *>::iterator it = allSources.begin(),
-                                               itEnd = allSources.end();
-       it != itEnd; ++it) {
     // FIXME: Check why it can be NULL
     if (*it) {
       (*it)->setAsCore();
     }
   }
+}
+
+void Dependency::markAllValues(AllocationGraph *g, llvm::Value *val) {
+  VersionedValue *value = getLatestValueNoConstantCheck(val);
+  markAllValues(g, value);
 }
 
 void Dependency::computeCoreAllocations(AllocationGraph *g) {
