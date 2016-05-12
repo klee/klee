@@ -498,8 +498,8 @@ std::string SearchTree::PrettyExpressionBuilder::constructActual(ref<Expr> e) {
     ExistsExpr *xe = cast<ExistsExpr>(e);
     std::string existentials;
 
-    for (std::vector<const Array *>::iterator it = xe->variables.begin(),
-                                              itEnd = xe->variables.end();
+    for (std::set<const Array *>::iterator it = xe->variables.begin(),
+                                           itEnd = xe->variables.end();
          it != itEnd; ++it) {
       existentials += (*it)->name;
       if (it != itEnd)
@@ -784,7 +784,7 @@ void PathCondition::setAsCore(AllocationGraph *g) {
 bool PathCondition::isCore() const { return core; }
 
 ref<Expr>
-PathCondition::packInterpolant(std::vector<const Array *> &replacements) {
+PathCondition::packInterpolant(std::set<const Array *> &replacements) {
   ref<Expr> res;
   for (PathCondition *it = this; it != 0; it = it->tail) {
     if (it->core) {
@@ -794,6 +794,11 @@ PathCondition::packInterpolant(std::vector<const Array *> &replacements) {
                            : ShadowArray::getShadowExpression(it->constraint,
                                                               replacements));
         it->shadowed = true;
+        it->boundVariables.insert(replacements.begin(), replacements.end());
+      } else {
+        // Already shadowed, we add the bound variables
+        replacements.insert(it->boundVariables.begin(),
+                            it->boundVariables.end());
       }
       if (res.get()) {
         res = AndExpr::alloc(res, it->shadowConstraint);
@@ -831,7 +836,7 @@ unsigned long SubsumptionTableEntry::checkSolverFailureCount = 0;
 
 SubsumptionTableEntry::SubsumptionTableEntry(ITreeNode *node)
     : nodeId(node->getNodeId()) {
-  std::vector<const Array *> replacements;
+  std::set<const Array *> replacements;
 
   interpolant = node->getInterpolant(replacements);
 
@@ -842,6 +847,15 @@ SubsumptionTableEntry::SubsumptionTableEntry(ITreeNode *node)
   for (Dependency::ConcreteStore::iterator it = concreteAddressStore.begin(),
                                            itEnd = concreteAddressStore.end();
        it != itEnd; ++it) {
+
+    llvm::errs() << "  FOUND CONCRETE: ";
+    it->first->dump();
+    for (std::map<uint64_t, Dependency::AddressValuePair>::iterator it1 = it->second.begin(),
+	it1End = it->second.end(); it1 != it1End; ++it1) {
+	llvm::errs() << "    MAPPING:\n";
+	it1->second.first->dump();
+	it1->second.second->dump();
+    }
     concreteAddressStoreKeys.push_back(it->first);
   }
 
@@ -849,23 +863,28 @@ SubsumptionTableEntry::SubsumptionTableEntry(ITreeNode *node)
   for (Dependency::SymbolicStore::iterator it = symbolicAddressStore.begin(),
                                            itEnd = symbolicAddressStore.end();
        it != itEnd; ++it) {
+    llvm::errs() << "  FOUND SYMBOLIC: ";
+    it->first->dump();
     symbolicAddressStoreKeys.push_back(it->first);
   }
 
   existentials = replacements;
+
+  llvm::errs() << "STORED INTERPOLANT: ";
+  this->dump();
 }
 
 SubsumptionTableEntry::~SubsumptionTableEntry() {}
 
 bool
-SubsumptionTableEntry::hasExistentials(std::vector<const Array *> &existentials,
+SubsumptionTableEntry::hasExistentials(std::set<const Array *> &existentials,
                                        ref<Expr> expr) {
   for (int i = 0, numKids = expr->getNumKids(); i < numKids; ++i) {
     if (llvm::isa<ReadExpr>(expr)) {
       ReadExpr *readExpr = llvm::dyn_cast<ReadExpr>(expr.get());
       const Array *array = (readExpr->updates).root;
-      for (std::vector<const Array *>::iterator it = existentials.begin(),
-                                                itEnd = existentials.end();
+      for (std::set<const Array *>::iterator it = existentials.begin(),
+                                             itEnd = existentials.end();
            it != itEnd; ++it) {
         if ((*it) == array)
           return true;
@@ -876,14 +895,14 @@ SubsumptionTableEntry::hasExistentials(std::vector<const Array *> &existentials,
   return false;
 }
 
-bool SubsumptionTableEntry::hasFree(std::vector<const Array *> &existentials,
+bool SubsumptionTableEntry::hasFree(std::set<const Array *> &existentials,
                                     ref<Expr> expr) {
   for (int i = 0, numKids = expr->getNumKids(); i < numKids; ++i) {
     if (llvm::isa<ReadExpr>(expr)) {
       ReadExpr *readExpr = llvm::dyn_cast<ReadExpr>(expr.get());
       const Array *array = (readExpr->updates).root;
-      for (std::vector<const Array *>::iterator it = existentials.begin(),
-                                                itEnd = existentials.end();
+      for (std::set<const Array *>::iterator it = existentials.begin(),
+                                             itEnd = existentials.end();
            it != itEnd; ++it) {
         if ((*it) == array)
           return false;
@@ -913,7 +932,7 @@ SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr,
   // only existential variables.
   hasExistentialsOnly = false;
 
-  std::vector<const Array *> boundVariables = expr->variables;
+  std::set<const Array *> boundVariables = expr->variables;
   // We assume that the body is always a conjunction of interpolant in terms of
   // shadow (existentially-quantified) variables and state equality constraints,
   // which may contain both normal and shadow variables.
@@ -1466,8 +1485,8 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
 
   if (!existentials.empty()) {
     ref<Expr> existsExpr = ExistsExpr::create(existentials, query);
-    // llvm::errs() << "Before simplification:\n";
-    // ExprPPrinter::printQuery(llvm::errs(), state.constraints, existsExpr);
+    llvm::errs() << "Before simplification:\n";
+    ExprPPrinter::printQuery(llvm::errs(), state.constraints, existsExpr);
     query = simplifyExistsExpr(existsExpr, queryHasNoFreeVariables);
   }
 
@@ -1486,7 +1505,7 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
     ++checkSolverCount;
 
     if (!existentials.empty() && llvm::isa<ExistsExpr>(query)) {
-      // llvm::errs() << "Existentials not empty\n";
+      llvm::errs() << "Existentials not empty\n";
 
       // Instantiate a new Z3 solver to make sure we use Z3
       // without pre-solving optimizations. It would be nice
@@ -1508,8 +1527,8 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
         ref<Expr> falseExpr = ConstantExpr::alloc(0, Expr::Bool);
         constraints.addConstraint(EqExpr::alloc(falseExpr, query->getKid(0)));
 
-        // llvm::errs() << "Querying for satisfiability check:\n";
-        // ExprPPrinter::printQuery(llvm::errs(), constraints, falseExpr);
+        llvm::errs() << "Querying for satisfiability check:\n";
+        ExprPPrinter::printQuery(llvm::errs(), constraints, falseExpr);
 
         actualSolverCallTimer.start();
         success = z3solver->getValue(Query(constraints, falseExpr), tmpExpr);
@@ -1519,8 +1538,8 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
         result = success ? Solver::True : Solver::Unknown;
 
       } else {
-        // llvm::errs() << "Querying for subsumption check:\n";
-        // ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
+        llvm::errs() << "Querying for subsumption check:\n";
+        ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
 
         actualSolverCallTimer.start();
         success = z3solver->directComputeValidity(
@@ -1537,10 +1556,10 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
       z3solver->setCoreSolverTimeout(0);
 
     } else {
-      // llvm::errs() << "No existential\n";
+      llvm::errs() << "No existential\n";
 
-      // llvm::errs() << "Querying for subsumption check:\n";
-      // ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
+      llvm::errs() << "Querying for subsumption check:\n";
+      ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
 
       // We call the solver in the standard way if the
       // formula is unquantified.
@@ -1564,7 +1583,7 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
   }
 
   if (success && result == Solver::True) {
-    // llvm::errs() << "Solver decided validity\n";
+    llvm::errs() << "Solver decided validity\n";
     std::vector<ref<Expr> > unsatCore;
     if (z3solver) {
       unsatCore = z3solver->getUnsatCore();
@@ -1589,7 +1608,7 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
     // which was eventually called from solver->evaluate
     // is conservative, where it returns Solver::Unknown even in case when
     // invalidity is established by the solver.
-    // llvm::errs() << "Solver did not decide validity\n";
+    llvm::errs() << "Solver did not decide validity\n";
 
     ++checkSolverFailureCount;
     if (z3solver)
@@ -1660,9 +1679,9 @@ void SubsumptionTableEntry::print(llvm::raw_ostream &stream) const {
 
   if (!existentials.empty()) {
     stream << "existentials = [";
-    for (std::vector<const Array *>::const_iterator
-             itBegin = existentials.begin(),
-             itEnd = existentials.end(), it = itBegin;
+    for (std::set<const Array *>::const_iterator itBegin = existentials.begin(),
+                                                 itEnd = existentials.end(),
+                                                 it = itBegin;
          it != itEnd; ++it) {
       if (it != itBegin)
         stream << ", ";
@@ -2053,7 +2072,7 @@ ITreeNode::~ITreeNode() {
 uintptr_t ITreeNode::getNodeId() { return nodeId; }
 
 ref<Expr>
-ITreeNode::getInterpolant(std::vector<const Array *> &replacements) const {
+ITreeNode::getInterpolant(std::set<const Array *> &replacements) const {
   ITreeNode::getInterpolantTimer.start();
   ref<Expr> expr = this->pathCondition->packInterpolant(replacements);
   ITreeNode::getInterpolantTimer.stop();
@@ -2137,7 +2156,7 @@ std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
 ITreeNode::getStoredExpressions() const {
   ITreeNode::getStoredExpressionsTimer.start();
   std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore> ret;
-  std::vector<const Array *> dummyReplacements;
+  std::set<const Array *> dummyReplacements;
 
   // Since a program point index is a first statement in a basic block,
   // the allocations to be stored in subsumption table should be obtained
@@ -2149,7 +2168,7 @@ ITreeNode::getStoredExpressions() const {
 }
 
 std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
-ITreeNode::getStoredCoreExpressions(std::vector<const Array *> &replacements)
+ITreeNode::getStoredCoreExpressions(std::set<const Array *> &replacements)
     const {
   ITreeNode::getStoredCoreExpressionsTimer.start();
   std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore> ret;

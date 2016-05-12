@@ -44,7 +44,7 @@ class ShadowArray {
   static std::map<const Array *, const Array *> shadowArray;
 
   static UpdateNode *getShadowUpdate(const UpdateNode *chain,
-                                     std::vector<const Array *> &replacements);
+                                     std::set<const Array *> &replacements);
 
 public:
   static ref<Expr> createBinaryOfSameKind(ref<Expr> originalExpr,
@@ -52,8 +52,8 @@ public:
 
   static void addShadowArrayMap(const Array *source, const Array *target);
 
-  static ref<Expr>
-  getShadowExpression(ref<Expr> expr, std::vector<const Array *> &replacements);
+  static ref<Expr> getShadowExpression(ref<Expr> expr,
+                                       std::set<const Array *> &replacements);
 
   static std::string getShadowName(std::string name) {
     return "__shadow__" + name;
@@ -620,7 +620,7 @@ class Allocation {
     void execute(llvm::Instruction *instr, std::vector<ref<Expr> > &args);
 
     std::pair<ConcreteStore, SymbolicStore>
-    getStoredExpressions(std::vector<const Array *> &replacements,
+    getStoredExpressions(std::set<const Array *> &replacements,
                          bool coreOnly) const;
 
     void bindCallArguments(llvm::Instruction *instr,

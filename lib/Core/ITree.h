@@ -295,10 +295,13 @@ class PathCondition {
   /// @brief KLEE expression with variables (arrays) replaced by their shadows
   ref<Expr> shadowConstraint;
 
-  /// @brief If shadow consraint had been generated: We generate shadow
-  /// constraint
-  /// on demand only when the constraint is required in an interpolant
+  /// @brief If shadow constraint had been generated: We generate shadow
+  /// constraint on demand only when the constraint is required in an
+  /// interpolant.
   bool shadowed;
+
+  /// @brief The set of bound variables
+  std::set<const Array *> boundVariables;
 
   /// @brief The dependency information for the current
   /// interpolation tree node
@@ -329,7 +332,7 @@ public:
 
   bool isCore() const;
 
-  ref<Expr> packInterpolant(std::vector<const Array *> &replacements);
+  ref<Expr> packInterpolant(std::set<const Array *> &replacements);
 
   void dump();
 
@@ -393,12 +396,12 @@ class SubsumptionTableEntry {
 
   std::vector<llvm::Value *> symbolicAddressStoreKeys;
 
-  std::vector<const Array *> existentials;
+  std::set<const Array *> existentials;
 
-  static bool hasExistentials(std::vector<const Array *> &existentials,
+  static bool hasExistentials(std::set<const Array *> &existentials,
                               ref<Expr> expr);
 
-  static bool hasFree(std::vector<const Array *> &existentials, ref<Expr> expr);
+  static bool hasFree(std::set<const Array *> &existentials, ref<Expr> expr);
 
   static bool containShadowExpr(ref<Expr> expr, ref<Expr> shadowExpr);
 
@@ -570,7 +573,7 @@ private:
 public:
   uintptr_t getNodeId();
 
-  ref<Expr> getInterpolant(std::vector<const Array *> &replacements) const;
+  ref<Expr> getInterpolant(std::set<const Array *> &replacements) const;
 
   void addConstraint(ref<Expr> &constraint, llvm::Value *value);
 
@@ -591,7 +594,7 @@ public:
   getStoredExpressions() const;
 
   std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
-  getStoredCoreExpressions(std::vector<const Array *> &replacements) const;
+  getStoredCoreExpressions(std::set<const Array *> &replacements) const;
 
   void computeCoreAllocations(AllocationGraph *g);
 

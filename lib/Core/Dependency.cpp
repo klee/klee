@@ -34,7 +34,7 @@ std::map<const Array *, const Array *> ShadowArray::shadowArray;
 
 UpdateNode *
 ShadowArray::getShadowUpdate(const UpdateNode *source,
-                             std::vector<const Array *> &replacements) {
+                             std::set<const Array *> &replacements) {
   if (!source)
     return 0;
 
@@ -60,7 +60,7 @@ void ShadowArray::addShadowArrayMap(const Array *source, const Array *target) {
 
 ref<Expr>
 ShadowArray::getShadowExpression(ref<Expr> expr,
-                                 std::vector<const Array *> &replacements) {
+                                 std::set<const Array *> &replacements) {
   ref<Expr> ret;
 
   switch (expr->getKind()) {
@@ -69,8 +69,9 @@ ShadowArray::getShadowExpression(ref<Expr> expr,
     const Array *replacementArray = shadowArray[readExpr->updates.root];
 
     if (std::find(replacements.begin(), replacements.end(), replacementArray) ==
-        replacements.end())
-      replacements.push_back(replacementArray);
+        replacements.end()) {
+      replacements.insert(replacementArray);
+    }
 
     UpdateList newUpdates(
         replacementArray,
@@ -446,7 +447,7 @@ std::vector<Allocation *> Dependency::getAllVersionedAllocations() const {
 }
 
 std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
-Dependency::getStoredExpressions(std::vector<const Array *> &replacements,
+Dependency::getStoredExpressions(std::set<const Array *> &replacements,
                                  bool coreOnly) const {
   std::vector<Allocation *> allAlloc = getAllVersionedAllocations();
   ConcreteStore concreteStore;
@@ -461,6 +462,15 @@ Dependency::getStoredExpressions(std::vector<const Array *> &replacements,
 
     std::vector<VersionedValue *> stored = stores(*allocIter);
 
+    llvm::errs() << "ALLOCATION: ";
+    (*allocIter)->dump();
+
+    llvm::errs() << "STORED VALUES:\n";
+    for (std::vector<VersionedValue *>::iterator itx = stored.begin(), itxEnd = stored.end(); itx != itxEnd; ++itx) {
+	(*itx)->dump();
+    }
+    llvm::errs() << "END OF STORED VALUES\n";
+
     // We should only get the latest value and no other
     assert(stored.size() <= 1);
 
@@ -468,8 +478,11 @@ Dependency::getStoredExpressions(std::vector<const Array *> &replacements,
       VersionedValue *v = stored.at(0);
 
       if ((*allocIter)->hasConstantAddress()) {
+	llvm::errs() << "HAS CONSTANT ADDRESS\n";
         if (!coreOnly) {
           ref<Expr> expr = v->getExpression();
+          llvm::errs() << "VALUE IS: ";
+          expr->dump();
           llvm::Value *llvmAlloc = (*allocIter)->getSite();
           uint64_t uintAddress = (*allocIter)->getUIntAddress();
           ref<Expr> address = (*allocIter)->getAddress();
@@ -477,6 +490,8 @@ Dependency::getStoredExpressions(std::vector<const Array *> &replacements,
               AddressValuePair(address, expr);
         } else if (v->isCore()) {
           ref<Expr> expr = v->getExpression();
+          llvm::errs() << "VALUE IS: ";
+          expr->dump();
           llvm::Value *base = (*allocIter)->getSite();
           uint64_t uintAddress = (*allocIter)->getUIntAddress();
           ref<Expr> address = (*allocIter)->getAddress();
@@ -489,6 +504,7 @@ Dependency::getStoredExpressions(std::vector<const Array *> &replacements,
           }
         }
       } else {
+	llvm::errs() << "HAS NON-CONSTANT ADDRESS\n";
         ref<Expr> address = (*allocIter)->getAddress();
         if (!coreOnly) {
           ref<Expr> expr = v->getExpression();

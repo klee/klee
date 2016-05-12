@@ -45,7 +45,7 @@ class Z3Builder {
 
   public:
     QuantificationContext(Z3_context _ctx,
-                          std::vector<const Array *> _existentials,
+                          std::set<const Array *> _existentials,
                           QuantificationContext *_parent);
 
     ~QuantificationContext();
@@ -146,7 +146,7 @@ private:
   // Handling of quantification contexts
   QuantificationContext *quantificationContext;
 
-  void pushQuantificationContext(std::vector<const Array *> existentials);
+  void pushQuantificationContext(std::set<const Array *> existentials);
 
   void popQuantificationContext();
 
