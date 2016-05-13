@@ -1669,17 +1669,19 @@ void SubsumptionTableEntry::printStat(llvm::raw_ostream &stream) {
 
 StatTimer ITree::setCurrentINodeTimer;
 StatTimer ITree::removeTimer;
-StatTimer ITree::checkCurrentStateSubsumptionTimer;
+StatTimer ITree::subsumptionCheckTimer;
 StatTimer ITree::markPathConditionTimer;
 StatTimer ITree::splitTimer;
 StatTimer ITree::executeOnNodeTimer;
+
+unsigned long ITree::subsumptionCheckCount = 0;
 
 void ITree::printTimeStat(llvm::raw_ostream &stream) {
   stream << "KLEE: done:     setCurrentINode = " << setCurrentINodeTimer.get() *
                                                         1000 << "\n";
   stream << "KLEE: done:     remove = " << removeTimer.get() * 1000 << "\n";
-  stream << "KLEE: done:     checkCurrentStateSubsumption = "
-         << checkCurrentStateSubsumptionTimer.get() * 1000 << "\n";
+  stream << "KLEE: done:     subsumptionCheckTimer = "
+         << subsumptionCheckTimer.get() * 1000 << "\n";
   stream << "KLEE: done:     markPathCondition = "
          << markPathConditionTimer.get() * 1000 << "\n";
   stream << "KLEE: done:     split = " << splitTimer.get() * 1000 << "\n";
@@ -1687,9 +1689,10 @@ void ITree::printTimeStat(llvm::raw_ostream &stream) {
                                                       1000 << "\n";
 }
 
-void ITree::printTableStat(llvm::raw_ostream &stream) {
+void ITree::printTableStat(llvm::raw_ostream &stream) const {
   double programPointNumber = 0.0, entryNumber = 0.0;
-  for (std::map<uintptr_t, std::vector<SubsumptionTableEntry *> >::iterator
+  for (std::map<uintptr_t,
+                std::vector<SubsumptionTableEntry *> >::const_iterator
            it = subsumptionTable.begin(),
            itEnd = subsumptionTable.end();
        it != itEnd; ++it) {
@@ -1698,9 +1701,15 @@ void ITree::printTableStat(llvm::raw_ostream &stream) {
       ++programPointNumber;
     }
   }
-  stream << "KLEE: done:     Table entry per checkpoint instruction = "
+
+  stream << "KLEE: done:     Table entries per subsumption checkpoint = "
          << (entryNumber / programPointNumber) << "\n";
+
   SubsumptionTableEntry::printStat(stream);
+
+  stream << "KLEE: done:     Average solver calls per subsumption check = "
+         << ((float)SubsumptionTableEntry::checkSolverCount /
+             (float)subsumptionCheckCount) << "\n";
 }
 
 void ITree::dumpInterpolationStat() {
@@ -1743,9 +1752,10 @@ ITree::~ITree() {
   subsumptionTable.clear();
 }
 
-bool ITree::checkCurrentStateSubsumption(TimingSolver *solver,
-                                         ExecutionState &state,
-                                         double timeout) {
+bool ITree::subsumptionCheck(TimingSolver *solver, ExecutionState &state,
+                             double timeout) {
+  subsumptionCheckCount++; // For profiling
+
   assert(state.itreeNode == currentINode);
 
   // Immediately return if the state's instruction is not the
@@ -1757,7 +1767,7 @@ bool ITree::checkCurrentStateSubsumption(TimingSolver *solver,
                               state.itreeNode->getNodeId())
     return false;
 
-  checkCurrentStateSubsumptionTimer.start();
+  subsumptionCheckTimer.start();
   std::vector<SubsumptionTableEntry *> entryList =
       subsumptionTable[state.itreeNode->getNodeId()];
 
@@ -1775,11 +1785,11 @@ bool ITree::checkCurrentStateSubsumption(TimingSolver *solver,
 
       // Mark the node as subsumed, and create a subsumption edge
       SearchTree::markAsSubsumed(currentINode, (*it));
-      checkCurrentStateSubsumptionTimer.stop();
+      subsumptionCheckTimer.stop();
       return true;
     }
   }
-  checkCurrentStateSubsumptionTimer.stop();
+  subsumptionCheckTimer.stop();
   return false;
 }
 
@@ -1910,7 +1920,7 @@ void ITree::executeOnNode(ITreeNode *node, llvm::Instruction *instr,
 }
 
 void ITree::printNode(llvm::raw_ostream &stream, ITreeNode *n,
-                      std::string edges) {
+                      std::string edges) const {
   if (n->left != 0) {
     stream << "\n";
     stream << edges << "+-- L:" << n->left->nodeId;
