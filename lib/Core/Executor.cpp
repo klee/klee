@@ -2867,8 +2867,8 @@ void Executor::run(ExecutionState &initialState) {
       // state.pc->inst->dump();
     }
 
-    if (INTERPOLATION_ENABLED && interpTree->checkCurrentStateSubsumption(
-                                     solver, state, coreSolverTimeout)) {
+    if (INTERPOLATION_ENABLED &&
+        interpTree->subsumptionCheck(solver, state, coreSolverTimeout)) {
       terminateStateOnSubsumption(state);
     } else
       {

@@ -440,22 +440,26 @@ class ITree {
 
   static StatTimer setCurrentINodeTimer;
   static StatTimer removeTimer;
-  static StatTimer checkCurrentStateSubsumptionTimer;
+  static StatTimer subsumptionCheckTimer;
   static StatTimer markPathConditionTimer;
   static StatTimer splitTimer;
   static StatTimer executeOnNodeTimer;
+
+  // @brief Number of subsumption checks for statistical purposes
+  static unsigned long subsumptionCheckCount;
 
   ITreeNode *currentINode;
 
   std::map<uintptr_t, std::vector<SubsumptionTableEntry *> > subsumptionTable;
 
-  void printNode(llvm::raw_ostream &stream, ITreeNode *n, std::string edges);
+  void printNode(llvm::raw_ostream &stream, ITreeNode *n,
+                 std::string edges) const;
 
   /// @brief Displays method running time statistics
   static void printTimeStat(llvm::raw_ostream &stream);
 
   /// @brief Displays subsumption table statistics
-  void printTableStat(llvm::raw_ostream &stream);
+  void printTableStat(llvm::raw_ostream &stream) const;
 
 public:
   ITreeNode *root;
@@ -470,8 +474,8 @@ public:
 
   void remove(ITreeNode *node);
 
-  bool checkCurrentStateSubsumption(TimingSolver *solver, ExecutionState &state,
-                                    double timeout);
+  bool subsumptionCheck(TimingSolver *solver, ExecutionState &state,
+                        double timeout);
 
   void markPathCondition(ExecutionState &state, TimingSolver *solver);
 
