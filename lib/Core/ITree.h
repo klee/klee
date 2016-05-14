@@ -63,7 +63,7 @@ public:
   /// two decimal points.
   static std::string inTwoDecimalPoints(double n) {
     std::ostringstream stream;
-    unsigned x = (unsigned)((n - ((unsigned)n)) * 100);
+    unsigned long x = (unsigned)((n - ((unsigned)n)) * 100);
     unsigned y = (unsigned)n;
     stream << y << ".";
     if (x > 9)
