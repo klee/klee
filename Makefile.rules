@@ -919,14 +919,14 @@ $(LLVM_CONFIG):
 $(ToolDir)/$(strip $(TOOLNAME))$(EXEEXT): $(LLVM_CONFIG)
 
 ifeq ($(ENABLE_SHARED), 1)
+LLVMLibsOptions += -L $(LLVMSharedLibDir)
+
 # We can take the "auto-import" feature to get rid of using dllimport.
 ifeq ($(HOST_OS), $(filter $(HOST_OS), Cygwin MingW))
 LLVMLibsOptions += -Wl,--enable-auto-import,--enable-runtime-pseudo-reloc \
                    -L $(SharedLibDir)
 endif
-LLVMLibsOptions += -lLLVM-$(LLVMVersion)
-LLVMLibsPaths += $(LLVMSharedLibDir)/$(SharedPrefix)LLVM-$(LLVMVersion)$(SHLIBEXT)
-else
+endif
 
 ifndef NO_LLVM_CONFIG
 LLVMConfigLibs := $(shell $(LLVM_CONFIG) --libs $(LINK_COMPONENTS) || echo Error)
@@ -941,7 +941,6 @@ endif
 LLVMLibsPaths += $(LLVM_CONFIG) $(LLVMConfigLibfiles)
 endif
 
-endif
 endif
 endif
 
