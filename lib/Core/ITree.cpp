@@ -1702,14 +1702,17 @@ void ITree::printTableStat(llvm::raw_ostream &stream) const {
     }
   }
 
-  stream << "KLEE: done:     Table entries per subsumption checkpoint = "
-         << (entryNumber / programPointNumber) << "\n";
-
   SubsumptionTableEntry::printStat(stream);
 
+  stream
+      << "KLEE: done:     Average table entries per subsumption checkpoint = "
+      << StatTimer::inTwoDecimalPoints(entryNumber / programPointNumber)
+      << "\n";
+
   stream << "KLEE: done:     Average solver calls per subsumption check = "
-         << ((float)SubsumptionTableEntry::checkSolverCount /
-             (float)subsumptionCheckCount) << "\n";
+         << StatTimer::inTwoDecimalPoints(
+                (double)SubsumptionTableEntry::checkSolverCount /
+                (double)subsumptionCheckCount) << "\n";
 }
 
 void ITree::dumpInterpolationStat() {
