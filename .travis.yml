@@ -71,6 +71,7 @@ before_install:
     - sudo sh -c "echo 'deb http://download.opensuse.org/repositories/home:/delcypher:/z3/xUbuntu_12.04/ /' >> /etc/apt/sources.list.d/z3.list"
     # Needed for CMake
     - sudo add-apt-repository -y ppa:ubuntu-sdk-team/ppa
+    - sudo add-apt-repository -y ppa:kalakris/cmake
     # Needed for new libstdc++ and gcc4.8
     - sudo add-apt-repository --yes ppa:ubuntu-toolchain-r/test/
     - wget -O - http://llvm.org/apt/llvm-snapshot.gpg.key|sudo apt-key add -
