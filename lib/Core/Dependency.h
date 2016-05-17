@@ -538,7 +538,8 @@ class Allocation {
     Allocation *getNewAllocationVersion(llvm::Value *allocation,
                                         ref<Expr> &address);
 
-    std::vector<Allocation *> getAllVersionedAllocations() const;
+    std::vector<Allocation *> getAllVersionedAllocations(bool coreOnly =
+                                                             false) const;
 
     /// @brief Gets the latest version of the allocation.
     Allocation *getLatestAllocation(llvm::Value *allocation,

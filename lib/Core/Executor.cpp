@@ -2858,18 +2858,17 @@ void Executor::run(ExecutionState &initialState) {
       // Uncomment the following statements to show the state
       // of the interpolation tree and the active node.
 
-      llvm::errs() << "\nCurrent state:\n";
-      processTree->dump();
-      interpTree->dump();
-      state.itreeNode->dump();
-      llvm::errs() << "------------------- Executing New Instruction "
-                      "-----------------------\n";
-      state.pc->inst->dump();
+      // llvm::errs() << "\nCurrent state:\n";
+      // processTree->dump();
+      // interpTree->dump();
+      // state.itreeNode->dump();
+      // llvm::errs() << "------------------- Executing New Instruction "
+      //                 "-----------------------\n";
+      // state.pc->inst->dump();
     }
 
     if (INTERPOLATION_ENABLED &&
         interpTree->subsumptionCheck(solver, state, coreSolverTimeout)) {
-      llvm::errs() << "STATE SUBSUMED\n";
       terminateStateOnSubsumption(state);
     } else
       {

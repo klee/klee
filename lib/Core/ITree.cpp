@@ -847,15 +847,6 @@ SubsumptionTableEntry::SubsumptionTableEntry(ITreeNode *node)
   for (Dependency::ConcreteStore::iterator it = concreteAddressStore.begin(),
                                            itEnd = concreteAddressStore.end();
        it != itEnd; ++it) {
-
-    llvm::errs() << "  FOUND CONCRETE: ";
-    it->first->dump();
-    for (std::map<uint64_t, Dependency::AddressValuePair>::iterator it1 = it->second.begin(),
-	it1End = it->second.end(); it1 != it1End; ++it1) {
-	llvm::errs() << "    MAPPING:\n";
-	it1->second.first->dump();
-	it1->second.second->dump();
-    }
     concreteAddressStoreKeys.push_back(it->first);
   }
 
@@ -863,15 +854,10 @@ SubsumptionTableEntry::SubsumptionTableEntry(ITreeNode *node)
   for (Dependency::SymbolicStore::iterator it = symbolicAddressStore.begin(),
                                            itEnd = symbolicAddressStore.end();
        it != itEnd; ++it) {
-    llvm::errs() << "  FOUND SYMBOLIC: ";
-    it->first->dump();
     symbolicAddressStoreKeys.push_back(it->first);
   }
 
   existentials = replacements;
-
-  llvm::errs() << "STORED INTERPOLANT: ";
-  this->dump();
 }
 
 SubsumptionTableEntry::~SubsumptionTableEntry() {}
@@ -1485,8 +1471,8 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
 
   if (!existentials.empty()) {
     ref<Expr> existsExpr = ExistsExpr::create(existentials, query);
-    llvm::errs() << "Before simplification:\n";
-    ExprPPrinter::printQuery(llvm::errs(), state.constraints, existsExpr);
+    // llvm::errs() << "Before simplification:\n";
+    // ExprPPrinter::printQuery(llvm::errs(), state.constraints, existsExpr);
     query = simplifyExistsExpr(existsExpr, queryHasNoFreeVariables);
   }
 
@@ -1505,7 +1491,7 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
     ++checkSolverCount;
 
     if (!existentials.empty() && llvm::isa<ExistsExpr>(query)) {
-      llvm::errs() << "Existentials not empty\n";
+      // llvm::errs() << "Existentials not empty\n";
 
       // Instantiate a new Z3 solver to make sure we use Z3
       // without pre-solving optimizations. It would be nice
@@ -1527,8 +1513,8 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
         ref<Expr> falseExpr = ConstantExpr::alloc(0, Expr::Bool);
         constraints.addConstraint(EqExpr::alloc(falseExpr, query->getKid(0)));
 
-        llvm::errs() << "Querying for satisfiability check:\n";
-        ExprPPrinter::printQuery(llvm::errs(), constraints, falseExpr);
+        // llvm::errs() << "Querying for satisfiability check:\n";
+        // ExprPPrinter::printQuery(llvm::errs(), constraints, falseExpr);
 
         actualSolverCallTimer.start();
         success = z3solver->getValue(Query(constraints, falseExpr), tmpExpr);
@@ -1538,8 +1524,8 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
         result = success ? Solver::True : Solver::Unknown;
 
       } else {
-        llvm::errs() << "Querying for subsumption check:\n";
-        ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
+        // llvm::errs() << "Querying for subsumption check:\n";
+        // ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
 
         actualSolverCallTimer.start();
         success = z3solver->directComputeValidity(
@@ -1556,10 +1542,10 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
       z3solver->setCoreSolverTimeout(0);
 
     } else {
-      llvm::errs() << "No existential\n";
+      // llvm::errs() << "No existential\n";
 
-      llvm::errs() << "Querying for subsumption check:\n";
-      ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
+      // llvm::errs() << "Querying for subsumption check:\n";
+      // ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
 
       // We call the solver in the standard way if the
       // formula is unquantified.
@@ -1583,7 +1569,7 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
   }
 
   if (success && result == Solver::True) {
-    llvm::errs() << "Solver decided validity\n";
+    // llvm::errs() << "Solver decided validity\n";
     std::vector<ref<Expr> > unsatCore;
     if (z3solver) {
       unsatCore = z3solver->getUnsatCore();
@@ -1608,7 +1594,7 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
     // which was eventually called from solver->evaluate
     // is conservative, where it returns Solver::Unknown even in case when
     // invalidity is established by the solver.
-    llvm::errs() << "Solver did not decide validity\n";
+    // llvm::errs() << "Solver did not decide validity\n";
 
     ++checkSolverFailureCount;
     if (z3solver)
