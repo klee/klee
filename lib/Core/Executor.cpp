@@ -126,9 +126,38 @@ namespace {
                         cl::init(false),
 			cl::desc("Allow calls with symbolic arguments to external functions.  This concretizes the symbolic arguments.  (default=off)"));
 
-  cl::opt<bool>
-  DebugPrintInstructions("debug-print-instructions", 
-                         cl::desc("Print instructions during execution."));
+  /// The different query logging solvers that can switched on/off
+  enum PrintDebugInstructionsType {
+    STDERR_ALL, ///
+    STDERR_SRC,
+    STDERR_COMPACT,
+    FILE_ALL,    ///
+    FILE_SRC,    ///
+    FILE_COMPACT ///
+  };
+
+  llvm::cl::list<PrintDebugInstructionsType> DebugPrintInstructions(
+      "debug-print-instructions",
+      llvm::cl::desc("Log instructions during execution."),
+      llvm::cl::values(
+          clEnumValN(STDERR_ALL, "all:stderr", "Log all instructions to stderr "
+                                               "in format [src, inst_id, "
+                                               "llvm_inst]"),
+          clEnumValN(STDERR_SRC, "src:stderr",
+                     "Log all instructions to stderr in format [src, inst_id]"),
+          clEnumValN(STDERR_COMPACT, "compact:stderr",
+                     "Log all instructions to stderr in format [inst_id]"),
+          clEnumValN(FILE_ALL, "all:file", "Log all instructions to file "
+                                           "instructions.txt in format [src, "
+                                           "inst_id, llvm_inst]"),
+          clEnumValN(FILE_SRC, "src:file", "Log all instructions to file "
+                                           "instructions.txt in format [src, "
+                                           "inst_id]"),
+          clEnumValN(FILE_COMPACT, "compact:file",
+                     "Log all instructions to file instructions.txt in format "
+                     "[inst_id]"),
+          clEnumValEnd),
+      llvm::cl::CommaSeparated);
 
   cl::opt<bool>
   DebugCheckForImpliedValues("debug-check-for-implied-values");
@@ -269,30 +298,18 @@ namespace klee {
   RNG theRNG;
 }
 
+Executor::Executor(const InterpreterOptions &opts, InterpreterHandler *ih)
+    : Interpreter(opts), kmodule(0), interpreterHandler(ih), searcher(0),
+      externalDispatcher(new ExternalDispatcher()), statsTracker(0),
+      pathWriter(0), symPathWriter(0), specialFunctionHandler(0),
+      processTree(0), replayKTest(0), replayPath(0), usingSeeds(0),
+      atMemoryLimit(false), inhibitForking(false), haltExecution(false),
+      ivcEnabled(false),
+      coreSolverTimeout(MaxCoreSolverTime != 0 && MaxInstructionTime != 0
+                            ? std::min(MaxCoreSolverTime, MaxInstructionTime)
+                            : std::max(MaxCoreSolverTime, MaxInstructionTime)),
+      debugInstFile(0), debugLogBuffer(debugBufferString) {
 
-Executor::Executor(const InterpreterOptions &opts,
-                   InterpreterHandler *ih) 
-  : Interpreter(opts),
-    kmodule(0),
-    interpreterHandler(ih),
-    searcher(0),
-    externalDispatcher(new ExternalDispatcher()),
-    statsTracker(0),
-    pathWriter(0),
-    symPathWriter(0),
-    specialFunctionHandler(0),
-    processTree(0),
-    replayKTest(0),
-    replayPath(0),    
-    usingSeeds(0),
-    atMemoryLimit(false),
-    inhibitForking(false),
-    haltExecution(false),
-    ivcEnabled(false),
-    coreSolverTimeout(MaxCoreSolverTime != 0 && MaxInstructionTime != 0
-      ? std::min(MaxCoreSolverTime,MaxInstructionTime)
-      : std::max(MaxCoreSolverTime,MaxInstructionTime)) {
-      
   if (coreSolverTimeout) UseForkedCoreSolver = true;
   Solver *coreSolver = klee::createCoreSolver(CoreSolverToUse);
   if (!coreSolver) {
@@ -308,6 +325,21 @@ Executor::Executor(const InterpreterOptions &opts,
 
   this->solver = new TimingSolver(solver, EqualitySubstitution);
   memory = new MemoryManager(&arrayCache);
+
+  if (optionIsSet(DebugPrintInstructions, FILE_ALL) ||
+      optionIsSet(DebugPrintInstructions, FILE_COMPACT) ||
+      optionIsSet(DebugPrintInstructions, FILE_SRC)) {
+    std::string debug_file_name =
+        interpreterHandler->getOutputFilename("instructions.txt");
+    std::string ErrorInfo;
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 5)
+    debugInstFile = new llvm::raw_fd_ostream(debug_file_name.c_str(), ErrorInfo,
+                                             llvm::sys::fs::OpenFlags::F_Text),
+#else
+    debugInstFile =
+        new llvm::raw_fd_ostream(debug_file_name.c_str(), ErrorInfo);
+#endif
+  }
 }
 
 
@@ -356,6 +388,9 @@ Executor::~Executor() {
   while(!timers.empty()) {
     delete timers.back();
     timers.pop_back();
+  }
+  if (debugInstFile) {
+    delete debugInstFile;
   }
 }
 
@@ -1115,13 +1150,41 @@ void Executor::executeGetValue(ExecutionState &state,
   }
 }
 
-void Executor::stepInstruction(ExecutionState &state) {
-  if (DebugPrintInstructions) {
-    printFileLine(state, state.pc);
-    llvm::errs().indent(10) << stats::instructions << " ";
-    llvm::errs() << *(state.pc->inst) << '\n';
-  }
+void Executor::printDebugInstructions(ExecutionState &state) {
+  // check do not print
+  if (DebugPrintInstructions.size() == 0)
+	  return;
 
+  llvm::raw_ostream *stream = 0;
+  if (optionIsSet(DebugPrintInstructions, STDERR_ALL) ||
+      optionIsSet(DebugPrintInstructions, STDERR_SRC) ||
+      optionIsSet(DebugPrintInstructions, STDERR_COMPACT))
+    stream = &llvm::errs();
+  else
+    stream = &debugLogBuffer;
+
+  if (!optionIsSet(DebugPrintInstructions, STDERR_COMPACT) &&
+      !optionIsSet(DebugPrintInstructions, FILE_COMPACT))
+    printFileLine(state, state.pc, *stream);
+
+  (*stream) << state.pc->info->id;
+
+  if (optionIsSet(DebugPrintInstructions, STDERR_ALL) ||
+      optionIsSet(DebugPrintInstructions, FILE_ALL))
+    (*stream) << ":" << *(state.pc->inst);
+  (*stream) << "\n";
+
+  if (optionIsSet(DebugPrintInstructions, FILE_ALL) ||
+      optionIsSet(DebugPrintInstructions, FILE_COMPACT) ||
+      optionIsSet(DebugPrintInstructions, FILE_SRC)) {
+    debugLogBuffer.flush();
+    (*debugInstFile) << debugLogBuffer.str();
+    debugBufferString = "";
+  }
+}
+
+void Executor::stepInstruction(ExecutionState &state) {
+  printDebugInstructions(state);
   if (statsTracker)
     statsTracker->stepInstruction(state);
 
@@ -1317,12 +1380,13 @@ void Executor::transferToBasicBlock(BasicBlock *dst, BasicBlock *src,
   }
 }
 
-void Executor::printFileLine(ExecutionState &state, KInstruction *ki) {
+void Executor::printFileLine(ExecutionState &state, KInstruction *ki,
+                             llvm::raw_ostream &debugFile) {
   const InstructionInfo &ii = *ki->info;
   if (ii.file != "")
-    llvm::errs() << "     " << ii.file << ":" << ii.line << ":";
+    debugFile << "     " << ii.file << ":" << ii.line << ":";
   else
-    llvm::errs() << "     [no debug info]:";
+    debugFile << "     [no debug info]:";
 }
 
 /// Compute the true target of a function call, resolving LLVM and KLEE aliases

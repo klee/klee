@@ -21,6 +21,7 @@
 #include "klee/Internal/Module/KInstruction.h"
 #include "klee/Internal/Module/KModule.h"
 #include "klee/util/ArrayCache.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include "llvm/ADT/Twine.h"
 
@@ -183,12 +184,22 @@ private:
   /// Assumes ownership of the created array objects
   ArrayCache arrayCache;
 
+  /// File to print executed instructions to
+  llvm::raw_ostream *debugInstFile;
+
+  // @brief Buffer used by logBuffer
+  std::string debugBufferString;
+
+  // @brief buffer to store logs before flushing to file
+  llvm::raw_string_ostream debugLogBuffer;
+
   llvm::Function* getTargetFunction(llvm::Value *calledVal,
                                     ExecutionState &state);
   
   void executeInstruction(ExecutionState &state, KInstruction *ki);
 
-  void printFileLine(ExecutionState &state, KInstruction *ki);
+  void printFileLine(ExecutionState &state, KInstruction *ki,
+                     llvm::raw_ostream &file);
 
   void run(ExecutionState &initialState);
 
@@ -400,6 +411,7 @@ private:
   void processTimers(ExecutionState *current,
                      double maxInstTime);
   void checkMemoryUsage();
+  void printDebugInstructions(ExecutionState &state);
 
 public:
   Executor(const InterpreterOptions &opts, InterpreterHandler *ie);
