@@ -188,8 +188,8 @@ unsigned ConstantExpr::computeHash() {
 
 unsigned ExistsExpr::computeHash() {
   unsigned res = body->hash() * Expr::MAGIC_HASH_CONSTANT;
-  for (std::vector<const Array *>::iterator it = variables.begin(),
-                                            itEnd = variables.end();
+  for (std::set<const Array *>::iterator it = variables.begin(),
+                                         itEnd = variables.end();
        it != itEnd; ++it) {
     res <<= 1;
     res ^= (*it)->hash() * Expr::MAGIC_HASH_CONSTANT;
@@ -486,7 +486,7 @@ ref<ConstantExpr> ConstantExpr::Sge(const ref<ConstantExpr> &RHS) {
 
 /***/
 
-ref<Expr> ExistsExpr::create(std::vector<const Array *> variables,
+ref<Expr> ExistsExpr::create(std::set<const Array *> variables,
                              ref<Expr> body) {
   return alloc(variables, body);
 }

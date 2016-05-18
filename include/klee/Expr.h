@@ -531,16 +531,16 @@ public:
 
 class ExistsExpr : public NonConstantExpr {
 public:
-  std::vector<const Array *> variables;
+  std::set<const Array *> variables;
   ref<Expr> body;
 
-  static ref<Expr> alloc(std::vector<const Array *> variables, ref<Expr> body) {
+  static ref<Expr> alloc(std::set<const Array *> variables, ref<Expr> body) {
     ref<Expr> r(new ExistsExpr(variables, body));
     r->computeHash();
     return r;
   }
 
-  static ref<Expr> create(std::vector<const Array *> variables, ref<Expr> body);
+  static ref<Expr> create(std::set<const Array *> variables, ref<Expr> body);
 
   Width getWidth() const { return Bool; }
 
@@ -564,7 +564,7 @@ public:
   static bool classof(const ExistsExpr *E) { return true; }
 
 private:
-  ExistsExpr(std::vector<const Array *> variables, ref<Expr> body)
+  ExistsExpr(std::set<const Array *> variables, ref<Expr> body)
       : variables(variables), body(body) {}
 };
 

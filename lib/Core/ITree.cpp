@@ -498,8 +498,8 @@ std::string SearchTree::PrettyExpressionBuilder::constructActual(ref<Expr> e) {
     ExistsExpr *xe = cast<ExistsExpr>(e);
     std::string existentials;
 
-    for (std::vector<const Array *>::iterator it = xe->variables.begin(),
-                                              itEnd = xe->variables.end();
+    for (std::set<const Array *>::iterator it = xe->variables.begin(),
+                                           itEnd = xe->variables.end();
          it != itEnd; ++it) {
       existentials += (*it)->name;
       if (it != itEnd)
@@ -537,6 +537,15 @@ SearchTree::PrettyExpressionBuilder::getInitialRead(const Array *root,
 SearchTree::PrettyExpressionBuilder::PrettyExpressionBuilder() {}
 
 SearchTree::PrettyExpressionBuilder::~PrettyExpressionBuilder() {}
+
+/**/
+
+std::string SearchTree::NumberedEdge::render() const {
+  std::ostringstream stream;
+  stream << "Node" << source->nodeId << " -> Node" << destination->nodeId
+         << " [style=dashed,label=\"" << number << "\"];";
+  return stream.str();
+}
 
 /**/
 
@@ -593,12 +602,11 @@ std::string SearchTree::render() {
     return res;
 
   std::ostringstream stream;
-  for (std::map<SearchTree::Node *, SearchTree::Node *>::iterator
+  for (std::vector<SearchTree::NumberedEdge *>::iterator
            it = subsumptionEdges.begin(),
            itEnd = subsumptionEdges.end();
        it != itEnd; ++it) {
-    stream << "Node" << it->first->nodeId << " -> Node" << it->second->nodeId
-           << " [style=dashed];\n";
+    stream << (*it)->render() << "\n";
   }
 
   res = "digraph search_tree {\n";
@@ -608,7 +616,7 @@ std::string SearchTree::render() {
   return res;
 }
 
-SearchTree::SearchTree(ITreeNode *_root) {
+SearchTree::SearchTree(ITreeNode *_root) : subsumptionEdgeNumber(0) {
   root = SearchTree::Node::createNode(_root->getNodeId());
   itreeNodeMap[_root] = root;
 }
@@ -618,6 +626,14 @@ SearchTree::~SearchTree() {
     delete root;
 
   itreeNodeMap.clear();
+
+  for (std::vector<SearchTree::NumberedEdge *>::iterator
+           it = subsumptionEdges.begin(),
+           itEnd = subsumptionEdges.end();
+       it != itEnd; ++it) {
+    delete *it;
+  }
+  subsumptionEdges.clear();
 }
 
 void SearchTree::addChildren(ITreeNode *parent, ITreeNode *falseChild,
@@ -667,7 +683,8 @@ void SearchTree::markAsSubsumed(ITreeNode *iTreeNode,
   SearchTree::Node *node = instance->itreeNodeMap[iTreeNode];
   node->subsumed = true;
   SearchTree::Node *subsuming = instance->tableEntryMap[entry];
-  instance->subsumptionEdges[node] = subsuming;
+  instance->subsumptionEdges.push_back(new SearchTree::NumberedEdge(
+      node, subsuming, ++(instance->subsumptionEdgeNumber)));
 }
 
 void SearchTree::addPathCondition(ITreeNode *iTreeNode,
@@ -767,7 +784,7 @@ void PathCondition::setAsCore(AllocationGraph *g) {
 bool PathCondition::isCore() const { return core; }
 
 ref<Expr>
-PathCondition::packInterpolant(std::vector<const Array *> &replacements) {
+PathCondition::packInterpolant(std::set<const Array *> &replacements) {
   ref<Expr> res;
   for (PathCondition *it = this; it != 0; it = it->tail) {
     if (it->core) {
@@ -777,6 +794,11 @@ PathCondition::packInterpolant(std::vector<const Array *> &replacements) {
                            : ShadowArray::getShadowExpression(it->constraint,
                                                               replacements));
         it->shadowed = true;
+        it->boundVariables.insert(replacements.begin(), replacements.end());
+      } else {
+        // Already shadowed, we add the bound variables
+        replacements.insert(it->boundVariables.begin(),
+                            it->boundVariables.end());
       }
       if (res.get()) {
         res = AndExpr::alloc(res, it->shadowConstraint);
@@ -814,7 +836,7 @@ unsigned long SubsumptionTableEntry::checkSolverFailureCount = 0;
 
 SubsumptionTableEntry::SubsumptionTableEntry(ITreeNode *node)
     : nodeId(node->getNodeId()) {
-  std::vector<const Array *> replacements;
+  std::set<const Array *> replacements;
 
   interpolant = node->getInterpolant(replacements);
 
@@ -841,14 +863,14 @@ SubsumptionTableEntry::SubsumptionTableEntry(ITreeNode *node)
 SubsumptionTableEntry::~SubsumptionTableEntry() {}
 
 bool
-SubsumptionTableEntry::hasExistentials(std::vector<const Array *> &existentials,
+SubsumptionTableEntry::hasExistentials(std::set<const Array *> &existentials,
                                        ref<Expr> expr) {
   for (int i = 0, numKids = expr->getNumKids(); i < numKids; ++i) {
     if (llvm::isa<ReadExpr>(expr)) {
       ReadExpr *readExpr = llvm::dyn_cast<ReadExpr>(expr.get());
       const Array *array = (readExpr->updates).root;
-      for (std::vector<const Array *>::iterator it = existentials.begin(),
-                                                itEnd = existentials.end();
+      for (std::set<const Array *>::iterator it = existentials.begin(),
+                                             itEnd = existentials.end();
            it != itEnd; ++it) {
         if ((*it) == array)
           return true;
@@ -859,14 +881,14 @@ SubsumptionTableEntry::hasExistentials(std::vector<const Array *> &existentials,
   return false;
 }
 
-bool SubsumptionTableEntry::hasFree(std::vector<const Array *> &existentials,
+bool SubsumptionTableEntry::hasFree(std::set<const Array *> &existentials,
                                     ref<Expr> expr) {
   for (int i = 0, numKids = expr->getNumKids(); i < numKids; ++i) {
     if (llvm::isa<ReadExpr>(expr)) {
       ReadExpr *readExpr = llvm::dyn_cast<ReadExpr>(expr.get());
       const Array *array = (readExpr->updates).root;
-      for (std::vector<const Array *>::iterator it = existentials.begin(),
-                                                itEnd = existentials.end();
+      for (std::set<const Array *>::iterator it = existentials.begin(),
+                                             itEnd = existentials.end();
            it != itEnd; ++it) {
         if ((*it) == array)
           return false;
@@ -896,7 +918,7 @@ SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr,
   // only existential variables.
   hasExistentialsOnly = false;
 
-  std::vector<const Array *> boundVariables = expr->variables;
+  std::set<const Array *> boundVariables = expr->variables;
   // We assume that the body is always a conjunction of interpolant in terms of
   // shadow (existentially-quantified) variables and state equality constraints,
   // which may contain both normal and shadow variables.
@@ -1314,6 +1336,7 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
       ref<Expr> res;
 
       if (rhsConcrete.second.get()) {
+        // There is a corresponding concrete allocation
         res = EqExpr::alloc(lhsValue, rhsConcrete.second);
       }
 
@@ -1325,16 +1348,21 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
                  it3 = rhsSymbolicMap.begin(),
                  it3End = rhsSymbolicMap.end();
              it3 != it3End; ++it3) {
-          ref<Expr> newTerm =
-              OrExpr::alloc(NeExpr::alloc(lhsConcreteAddress, it3->first),
-                            EqExpr::alloc(lhsValue, it3->second));
+          // Implication: if lhsConcreteAddress == it3->first, then lhsValue ==
+          // it3->second
+          ref<Expr> newTerm = OrExpr::alloc(
+              EqExpr::alloc(ConstantExpr::alloc(0, Expr::Bool),
+                            EqExpr::alloc(lhsConcreteAddress, it3->first)),
+              EqExpr::alloc(lhsValue, it3->second));
           if (conjunction.get()) {
             conjunction = AndExpr::alloc(newTerm, conjunction);
           } else {
             conjunction = newTerm;
           }
         }
-        res = OrExpr::alloc(res, conjunction);
+        // If there were corresponding concrete as well as symbolic allocations
+        // in the current state, conjunct them
+        res = (res.get() ? AndExpr::alloc(res, conjunction) : conjunction);
       }
 
       if (res.get()) {
@@ -1373,8 +1401,12 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
            it3 != it3End; ++it3) {
         ref<Expr> rhsConcreteAddress = it3->second.first;
         ref<Expr> rhsValue = it3->second.second;
+        // Implication: if lhsSymbolicAddress == rhsConcreteAddress, then
+        // lhsValue == rhsValue
         ref<Expr> newTerm =
-            OrExpr::alloc(NeExpr::alloc(lhsSymbolicAddress, rhsConcreteAddress),
+            OrExpr::alloc(EqExpr::alloc(ConstantExpr::alloc(0, Expr::Bool),
+                                        EqExpr::alloc(lhsSymbolicAddress,
+                                                      rhsConcreteAddress)),
                           EqExpr::alloc(lhsValue, rhsValue));
         if (conjunction.get()) {
           conjunction = AndExpr::alloc(newTerm, conjunction);
@@ -1389,8 +1421,12 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
            it3 != it3End; ++it3) {
         ref<Expr> rhsSymbolicAddress = it3->first;
         ref<Expr> rhsValue = it3->second;
+        // Implication: if lhsSymbolicAddress == rhsSymbolicAddress then
+        // lhsValue == rhsValue
         ref<Expr> newTerm =
-            OrExpr::alloc(NeExpr::alloc(lhsSymbolicAddress, rhsSymbolicAddress),
+            OrExpr::alloc(EqExpr::alloc(ConstantExpr::alloc(0, Expr::Bool),
+                                        EqExpr::alloc(lhsSymbolicAddress,
+                                                      rhsSymbolicAddress)),
                           EqExpr::alloc(lhsValue, rhsValue));
         if (conjunction.get()) {
           conjunction = AndExpr::alloc(newTerm, conjunction);
@@ -1399,6 +1435,7 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
         }
       }
     }
+
     if (conjunction.get()) {
       stateEqualityConstraints =
           (!stateEqualityConstraints.get()
@@ -1407,7 +1444,7 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
     }
   }
 
-  // We create path condition needed constraints marking structure
+  // We create path condition marking structure to mark core constraints
   std::map<Expr *, PathConditionMarker *> markerMap =
       state.itreeNode->makeMarkerMap();
 
@@ -1628,9 +1665,9 @@ void SubsumptionTableEntry::print(llvm::raw_ostream &stream) const {
 
   if (!existentials.empty()) {
     stream << "existentials = [";
-    for (std::vector<const Array *>::const_iterator
-             itBegin = existentials.begin(),
-             itEnd = existentials.end(), it = itBegin;
+    for (std::set<const Array *>::const_iterator itBegin = existentials.begin(),
+                                                 itEnd = existentials.end(),
+                                                 it = itBegin;
          it != itEnd; ++it) {
       if (it != itBegin)
         stream << ", ";
@@ -1652,17 +1689,19 @@ void SubsumptionTableEntry::printStat(llvm::raw_ostream &stream) {
 
 StatTimer ITree::setCurrentINodeTimer;
 StatTimer ITree::removeTimer;
-StatTimer ITree::checkCurrentStateSubsumptionTimer;
+StatTimer ITree::subsumptionCheckTimer;
 StatTimer ITree::markPathConditionTimer;
 StatTimer ITree::splitTimer;
 StatTimer ITree::executeOnNodeTimer;
+
+unsigned long ITree::subsumptionCheckCount = 0;
 
 void ITree::printTimeStat(llvm::raw_ostream &stream) {
   stream << "KLEE: done:     setCurrentINode = " << setCurrentINodeTimer.get() *
                                                         1000 << "\n";
   stream << "KLEE: done:     remove = " << removeTimer.get() * 1000 << "\n";
-  stream << "KLEE: done:     checkCurrentStateSubsumption = "
-         << checkCurrentStateSubsumptionTimer.get() * 1000 << "\n";
+  stream << "KLEE: done:     subsumptionCheckTimer = "
+         << subsumptionCheckTimer.get() * 1000 << "\n";
   stream << "KLEE: done:     markPathCondition = "
          << markPathConditionTimer.get() * 1000 << "\n";
   stream << "KLEE: done:     split = " << splitTimer.get() * 1000 << "\n";
@@ -1670,9 +1709,10 @@ void ITree::printTimeStat(llvm::raw_ostream &stream) {
                                                       1000 << "\n";
 }
 
-void ITree::printTableStat(llvm::raw_ostream &stream) {
+void ITree::printTableStat(llvm::raw_ostream &stream) const {
   double programPointNumber = 0.0, entryNumber = 0.0;
-  for (std::map<uintptr_t, std::vector<SubsumptionTableEntry *> >::iterator
+  for (std::map<uintptr_t,
+                std::vector<SubsumptionTableEntry *> >::const_iterator
            it = subsumptionTable.begin(),
            itEnd = subsumptionTable.end();
        it != itEnd; ++it) {
@@ -1681,9 +1721,18 @@ void ITree::printTableStat(llvm::raw_ostream &stream) {
       ++programPointNumber;
     }
   }
-  stream << "KLEE: done:     Table entry per checkpoint instruction = "
-         << (entryNumber / programPointNumber) << "\n";
+
   SubsumptionTableEntry::printStat(stream);
+
+  stream
+      << "KLEE: done:     Average table entries per subsumption checkpoint = "
+      << StatTimer::inTwoDecimalPoints(entryNumber / programPointNumber)
+      << "\n";
+
+  stream << "KLEE: done:     Average solver calls per subsumption check = "
+         << StatTimer::inTwoDecimalPoints(
+                (double)SubsumptionTableEntry::checkSolverCount /
+                (double)subsumptionCheckCount) << "\n";
 }
 
 void ITree::dumpInterpolationStat() {
@@ -1726,9 +1775,10 @@ ITree::~ITree() {
   subsumptionTable.clear();
 }
 
-bool ITree::checkCurrentStateSubsumption(TimingSolver *solver,
-                                         ExecutionState &state,
-                                         double timeout) {
+bool ITree::subsumptionCheck(TimingSolver *solver, ExecutionState &state,
+                             double timeout) {
+  subsumptionCheckCount++; // For profiling
+
   assert(state.itreeNode == currentINode);
 
   // Immediately return if the state's instruction is not the
@@ -1740,7 +1790,7 @@ bool ITree::checkCurrentStateSubsumption(TimingSolver *solver,
                               state.itreeNode->getNodeId())
     return false;
 
-  checkCurrentStateSubsumptionTimer.start();
+  subsumptionCheckTimer.start();
   std::vector<SubsumptionTableEntry *> entryList =
       subsumptionTable[state.itreeNode->getNodeId()];
 
@@ -1758,11 +1808,11 @@ bool ITree::checkCurrentStateSubsumption(TimingSolver *solver,
 
       // Mark the node as subsumed, and create a subsumption edge
       SearchTree::markAsSubsumed(currentINode, (*it));
-      checkCurrentStateSubsumptionTimer.stop();
+      subsumptionCheckTimer.stop();
       return true;
     }
   }
-  checkCurrentStateSubsumptionTimer.stop();
+  subsumptionCheckTimer.stop();
   return false;
 }
 
@@ -1893,7 +1943,7 @@ void ITree::executeOnNode(ITreeNode *node, llvm::Instruction *instr,
 }
 
 void ITree::printNode(llvm::raw_ostream &stream, ITreeNode *n,
-                      std::string edges) {
+                      std::string edges) const {
   if (n->left != 0) {
     stream << "\n";
     stream << edges << "+-- L:" << n->left->nodeId;
@@ -2008,7 +2058,7 @@ ITreeNode::~ITreeNode() {
 uintptr_t ITreeNode::getNodeId() { return nodeId; }
 
 ref<Expr>
-ITreeNode::getInterpolant(std::vector<const Array *> &replacements) const {
+ITreeNode::getInterpolant(std::set<const Array *> &replacements) const {
   ITreeNode::getInterpolantTimer.start();
   ref<Expr> expr = this->pathCondition->packInterpolant(replacements);
   ITreeNode::getInterpolantTimer.stop();
@@ -2092,7 +2142,7 @@ std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
 ITreeNode::getStoredExpressions() const {
   ITreeNode::getStoredExpressionsTimer.start();
   std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore> ret;
-  std::vector<const Array *> dummyReplacements;
+  std::set<const Array *> dummyReplacements;
 
   // Since a program point index is a first statement in a basic block,
   // the allocations to be stored in subsumption table should be obtained
@@ -2104,7 +2154,7 @@ ITreeNode::getStoredExpressions() const {
 }
 
 std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
-ITreeNode::getStoredCoreExpressions(std::vector<const Array *> &replacements)
+ITreeNode::getStoredCoreExpressions(std::set<const Array *> &replacements)
     const {
   ITreeNode::getStoredCoreExpressionsTimer.start();
   std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore> ret;

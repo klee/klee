@@ -58,6 +58,22 @@ public:
   }
 
   double get() { return (amount / (double)CLOCKS_PER_SEC); }
+
+  /// @brief Utility function to represent double-precision floating point in
+  /// two decimal points.
+  static std::string inTwoDecimalPoints(double n) {
+    std::ostringstream stream;
+    unsigned long x = (unsigned)((n - ((unsigned)n)) * 100);
+    unsigned y = (unsigned)n;
+    stream << y << ".";
+    if (x > 9)
+      stream << x;
+    else if (x > 0)
+      stream << "0" << x;
+    else
+      stream << "00";
+    return stream.str();
+  }
 };
 
 
@@ -195,11 +211,31 @@ class SearchTree {
     }
   };
 
+  class NumberedEdge {
+    SearchTree::Node *source;
+    SearchTree::Node *destination;
+    unsigned long number;
+
+  public:
+    NumberedEdge(SearchTree::Node *_source, SearchTree::Node *_destination,
+                 unsigned long _number)
+        : source(_source), destination(_destination), number(_number) {}
+
+    ~NumberedEdge() {
+      delete source;
+      delete destination;
+    }
+
+    std::string render() const;
+  };
+
   SearchTree::Node *root;
   std::map<ITreeNode *, SearchTree::Node *> itreeNodeMap;
   std::map<SubsumptionTableEntry *, SearchTree::Node *> tableEntryMap;
-  std::map<SearchTree::Node *, SearchTree::Node *> subsumptionEdges;
+  std::vector<SearchTree::NumberedEdge *> subsumptionEdges;
   std::map<PathCondition *, SearchTree::Node *> pathConditionMap;
+
+  unsigned long subsumptionEdgeNumber;
 
   static std::string recurseRender(const SearchTree::Node *node);
 
@@ -259,10 +295,13 @@ class PathCondition {
   /// @brief KLEE expression with variables (arrays) replaced by their shadows
   ref<Expr> shadowConstraint;
 
-  /// @brief If shadow consraint had been generated: We generate shadow
-  /// constraint
-  /// on demand only when the constraint is required in an interpolant
+  /// @brief If shadow constraint had been generated: We generate shadow
+  /// constraint on demand only when the constraint is required in an
+  /// interpolant.
   bool shadowed;
+
+  /// @brief The set of bound variables
+  std::set<const Array *> boundVariables;
 
   /// @brief The dependency information for the current
   /// interpolation tree node
@@ -293,7 +332,7 @@ public:
 
   bool isCore() const;
 
-  ref<Expr> packInterpolant(std::vector<const Array *> &replacements);
+  ref<Expr> packInterpolant(std::set<const Array *> &replacements);
 
   void dump();
 
@@ -357,12 +396,12 @@ class SubsumptionTableEntry {
 
   std::vector<llvm::Value *> symbolicAddressStoreKeys;
 
-  std::vector<const Array *> existentials;
+  std::set<const Array *> existentials;
 
-  static bool hasExistentials(std::vector<const Array *> &existentials,
+  static bool hasExistentials(std::set<const Array *> &existentials,
                               ref<Expr> expr);
 
-  static bool hasFree(std::vector<const Array *> &existentials, ref<Expr> expr);
+  static bool hasFree(std::set<const Array *> &existentials, ref<Expr> expr);
 
   static bool containShadowExpr(ref<Expr> expr, ref<Expr> shadowExpr);
 
@@ -420,22 +459,26 @@ class ITree {
 
   static StatTimer setCurrentINodeTimer;
   static StatTimer removeTimer;
-  static StatTimer checkCurrentStateSubsumptionTimer;
+  static StatTimer subsumptionCheckTimer;
   static StatTimer markPathConditionTimer;
   static StatTimer splitTimer;
   static StatTimer executeOnNodeTimer;
+
+  // @brief Number of subsumption checks for statistical purposes
+  static unsigned long subsumptionCheckCount;
 
   ITreeNode *currentINode;
 
   std::map<uintptr_t, std::vector<SubsumptionTableEntry *> > subsumptionTable;
 
-  void printNode(llvm::raw_ostream &stream, ITreeNode *n, std::string edges);
+  void printNode(llvm::raw_ostream &stream, ITreeNode *n,
+                 std::string edges) const;
 
   /// @brief Displays method running time statistics
   static void printTimeStat(llvm::raw_ostream &stream);
 
   /// @brief Displays subsumption table statistics
-  void printTableStat(llvm::raw_ostream &stream);
+  void printTableStat(llvm::raw_ostream &stream) const;
 
 public:
   ITreeNode *root;
@@ -450,8 +493,8 @@ public:
 
   void remove(ITreeNode *node);
 
-  bool checkCurrentStateSubsumption(TimingSolver *solver, ExecutionState &state,
-                                    double timeout);
+  bool subsumptionCheck(TimingSolver *solver, ExecutionState &state,
+                        double timeout);
 
   void markPathCondition(ExecutionState &state, TimingSolver *solver);
 
@@ -530,7 +573,7 @@ private:
 public:
   uintptr_t getNodeId();
 
-  ref<Expr> getInterpolant(std::vector<const Array *> &replacements) const;
+  ref<Expr> getInterpolant(std::set<const Array *> &replacements) const;
 
   void addConstraint(ref<Expr> &constraint, llvm::Value *value);
 
@@ -551,7 +594,7 @@ public:
   getStoredExpressions() const;
 
   std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
-  getStoredCoreExpressions(std::vector<const Array *> &replacements) const;
+  getStoredCoreExpressions(std::set<const Array *> &replacements) const;
 
   void computeCoreAllocations(AllocationGraph *g);
 

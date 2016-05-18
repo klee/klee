@@ -289,7 +289,7 @@ private:
 
   void printExists(const ExistsExpr *xe, PrintContext &PC, unsigned indent) {
     PC << "(";
-    for (std::vector<const Array *>::const_iterator
+    for (std::set<const Array *>::const_iterator
              itBegin = xe->variables.begin(),
              itEnd = xe->variables.end(), it = itBegin;
          it != itEnd; ++it) {
