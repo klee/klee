@@ -592,7 +592,7 @@ Z3_ast Z3Builder::getArrayForUpdate(const Array *root,
 }
 
 void
-Z3Builder::pushQuantificationContext(std::vector<const Array *> existentials) {
+Z3Builder::pushQuantificationContext(std::set<const Array *> existentials) {
   quantificationContext =
       new QuantificationContext(ctx, existentials, quantificationContext);
 }
@@ -1047,12 +1047,12 @@ Z3_ast Z3Builder::constructActual(ref<Expr> e, int *width_out) {
 /***/
 
 Z3Builder::QuantificationContext::QuantificationContext(
-    Z3_context _ctx, std::vector<const Array *> _existentials,
+    Z3_context _ctx, std::set<const Array *> _existentials,
     QuantificationContext *_parent)
     : parent(_parent) {
   unsigned index = _existentials.size();
-  for (std::vector<const Array *>::iterator it = _existentials.begin(),
-                                            itEnd = _existentials.end();
+  for (std::set<const Array *>::iterator it = _existentials.begin(),
+                                         itEnd = _existentials.end();
        it != itEnd; ++it) {
     --index;
     Z3_symbol symb = Z3_mk_string_symbol(_ctx, (*it)->name.c_str());

@@ -413,8 +413,8 @@ void ExprSMTLIBPrinter::printExistsExpr(const ref<ExistsExpr> &e) {
   p->pushIndent();
   printSeperator();
   *p << "(";
-  for (std::vector<const Array *>::iterator it = e->variables.begin(),
-                                            itEnd = e->variables.end();
+  for (std::set<const Array *>::iterator it = e->variables.begin(),
+                                         itEnd = e->variables.end();
        it != itEnd; ++it) {
     *p << (*it)->name;
     printSeperator();
