@@ -53,8 +53,7 @@ llvm::cl::opt<uint64_t> DeterministicStartAddress(
 
 /***/
 MemoryManager::MemoryManager(ArrayCache *_arrayCache)
-    : arrayCache(_arrayCache), deterministicSpace(0),
-      nextFreeSlot(0),
+    : arrayCache(_arrayCache), deterministicSpace(0), nextFreeSlot(0),
       spaceSize(DeterministicAllocationSize.getValue() * 1024 * 1024) {
   if (DeterministicAllocation) {
     // Page boundary
@@ -78,7 +77,7 @@ MemoryManager::MemoryManager(ArrayCache *_arrayCache)
   }
 }
 
-MemoryManager::~MemoryManager() { 
+MemoryManager::~MemoryManager() {
   while (!objects.empty()) {
     MemoryObject *mo = *objects.begin();
     if (!mo->isFixed && !DeterministicAllocation)
@@ -95,7 +94,7 @@ MemoryObject *MemoryManager::allocate(uint64_t size, bool isLocal,
                                       bool isGlobal,
                                       const llvm::Value *allocSite,
                                       size_t alignment) {
-  if (size>10*1024*1024)
+  if (size > 10 * 1024 * 1024)
     klee_warning_once(0, "Large alloc: %lu bytes.  KLEE may run out of memory.",
                       size);
 
@@ -141,7 +140,7 @@ MemoryObject *MemoryManager::allocate(uint64_t size, bool isLocal,
 
   if (!address)
     return 0;
-  
+
   ++stats::allocations;
   MemoryObject *res = new MemoryObject(address, size, isLocal, isGlobal, false,
                                        allocSite, this);
@@ -152,28 +151,25 @@ MemoryObject *MemoryManager::allocate(uint64_t size, bool isLocal,
 MemoryObject *MemoryManager::allocateFixed(uint64_t address, uint64_t size,
                                            const llvm::Value *allocSite) {
 #ifndef NDEBUG
-  for (objects_ty::iterator it = objects.begin(), ie = objects.end();
-       it != ie; ++it) {
+  for (objects_ty::iterator it = objects.begin(), ie = objects.end(); it != ie;
+       ++it) {
     MemoryObject *mo = *it;
-    if (address+size > mo->address && address < mo->address+mo->size)
+    if (address + size > mo->address && address < mo->address + mo->size)
       klee_error("Trying to allocate an overlapping object");
   }
 #endif
 
   ++stats::allocations;
-  MemoryObject *res = new MemoryObject(address, size, false, true, true,
-                                       allocSite, this);
+  MemoryObject *res =
+      new MemoryObject(address, size, false, true, true, allocSite, this);
   objects.insert(res);
   return res;
 }
 
-void MemoryManager::deallocate(const MemoryObject *mo) {
-  assert(0);
-}
+void MemoryManager::deallocate(const MemoryObject *mo) { assert(0); }
 
 void MemoryManager::markFreed(MemoryObject *mo) {
-  if (objects.find(mo) != objects.end())
-  {
+  if (objects.find(mo) != objects.end()) {
     if (!mo->isFixed && !DeterministicAllocation)
       free((void *)mo->address);
     objects.erase(mo);
