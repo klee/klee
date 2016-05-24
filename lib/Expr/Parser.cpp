@@ -110,6 +110,7 @@ namespace {
     const std::string Filename;
     const MemoryBuffer *TheMemoryBuffer;
     ExprBuilder *Builder;
+    bool QueryIndependence;
     ArrayCache TheArrayCache;
 
     Lexer TheLexer;
@@ -324,12 +325,14 @@ namespace {
   public:
     ParserImpl(const std::string _Filename,
                const MemoryBuffer *MB,
-               ExprBuilder *_Builder) : Filename(_Filename),
-                                        TheMemoryBuffer(MB),
-                                        Builder(_Builder),
-                                        TheLexer(MB),
-                                        MaxErrors(~0u),
-                                        NumErrors(0) {}
+               ExprBuilder *_Builder,
+	       bool _QueryIndependence) : Filename(_Filename),
+					  TheMemoryBuffer(MB),
+					  Builder(_Builder),
+					  QueryIndependence(_QueryIndependence),
+					  TheLexer(MB),
+					  MaxErrors(~0u),
+					  NumErrors(0) {}
 
     virtual ~ParserImpl();
 
@@ -491,10 +494,6 @@ DeclResult ParserImpl::ParseArrayDecl() {
       Error("constant arrays must be completely specified.");
       Values.clear();
     }
-
-    for (unsigned i = 0; i != Size.get(); ++i) {
-      // FIXME: Must be constant expression.
-    }
   }
 
   // FIXME: Validate that size makes sense for domain type.
@@ -532,8 +531,9 @@ DeclResult ParserImpl::ParseArrayDecl() {
   ArrayDecl *AD = new ArrayDecl(Label, Size.get(), 
                                 DomainType.get(), RangeType.get(), Root);
 
-  ArraySymTab.insert(std::make_pair(Label, AD));
-
+  // This allows us to update the values to new declarations
+  ArraySymTab[Label] = AD;
+ 
   // Create the initial version reference.
   VersionSymTab.insert(std::make_pair(Label,
                                       UpdateList(Root, NULL)));
@@ -681,7 +681,13 @@ DeclResult ParserImpl::ParseQueryCommand() {
 
  exit:
   if (Tok.kind != Token::EndOfFile)
-    ExpectRParen("unexpected argument to 'query'.");  
+    ExpectRParen("unexpected argument to 'query'.");
+
+  // If we assume that the queries are independent, we clear the array
+  // table from the previous declarations
+  if (QueryIndependence)
+    ArraySymTab.clear();
+  
   return new QueryCommand(Constraints, Res.get(), Values, Objects);
 }
 
@@ -1643,8 +1649,9 @@ Parser::~Parser() {
 
 Parser *Parser::Create(const std::string Filename,
                        const MemoryBuffer *MB,
-                       ExprBuilder *Builder) {
-  ParserImpl *P = new ParserImpl(Filename, MB, Builder);
+                       ExprBuilder *Builder,
+		       bool QueryIndependence) {
+  ParserImpl *P = new ParserImpl(Filename, MB, Builder, QueryIndependence);
   P->Initialize();
   return P;
 }

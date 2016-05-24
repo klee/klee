@@ -95,6 +95,11 @@ namespace {
   llvm::cl::opt<std::string> directoryToWriteQueryLogs("query-log-dir",llvm::cl::desc("The folder to write query logs to. Defaults is current working directory."),
 		                                               llvm::cl::init("."));
 
+  llvm::cl::opt<bool>
+  QueryIndependence("assume-query-independence",
+		    llvm::cl::desc("We assume independence among the queries, that is the array declarations belong only to the subsequent query declaration. Default: false"),
+		    llvm::cl::init(false));
+
 }
 
 static std::string getQueryLogPath(const char filename[])
@@ -160,7 +165,7 @@ static bool PrintInputAST(const char *Filename,
                           const MemoryBuffer *MB,
                           ExprBuilder *Builder) {
   std::vector<Decl*> Decls;
-  Parser *P = Parser::Create(Filename, MB, Builder);
+  Parser *P = Parser::Create(Filename, MB, Builder, QueryIndependence);
   P->SetMaxErrors(20);
 
   unsigned NumQueries = 0;
@@ -193,7 +198,7 @@ static bool EvaluateInputAST(const char *Filename,
                              const MemoryBuffer *MB,
                              ExprBuilder *Builder) {
   std::vector<Decl*> Decls;
-  Parser *P = Parser::Create(Filename, MB, Builder);
+  Parser *P = Parser::Create(Filename, MB, Builder, QueryIndependence);
   P->SetMaxErrors(20);
   while (Decl *D = P->ParseTopLevelDecl()) {
     Decls.push_back(D);
@@ -327,7 +332,7 @@ static bool printInputAsSMTLIBv2(const char *Filename,
 {
 	//Parse the input file
 	std::vector<Decl*> Decls;
-	Parser *P = Parser::Create(Filename, MB, Builder);
+	Parser *P = Parser::Create(Filename, MB, Builder, QueryIndependence);
 	P->SetMaxErrors(20);
 	while (Decl *D = P->ParseTopLevelDecl())
 	{
