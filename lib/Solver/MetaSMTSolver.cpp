@@ -19,11 +19,15 @@
 #include <metaSMT/DirectSolver_Context.hpp>
 #include <metaSMT/backend/Z3_Backend.hpp>
 #include <metaSMT/backend/Boolector.hpp>
-#include <metaSMT/backend/MiniSAT.hpp>
-#include <metaSMT/support/run_algorithm.hpp>
-#include <metaSMT/API/Stack.hpp>
-#include <metaSMT/API/Group.hpp>
 
+#define Expr VCExpr
+#define Type VCType
+#define STP STP_Backend
+#include <metaSMT/backend/STP.hpp>
+#undef Expr
+#undef Type
+#undef STP
+  
 #include <errno.h>
 #include <unistd.h>
 #include <signal.h>

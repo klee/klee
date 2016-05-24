@@ -32,17 +32,6 @@
 #include <metaSMT/frontend/Logic.hpp>
 #include <metaSMT/frontend/QF_BV.hpp>
 #include <metaSMT/frontend/Array.hpp>
-#include <metaSMT/support/default_visitation_unrolling_limit.hpp>
-#include <metaSMT/support/run_algorithm.hpp>
-
-#define Expr VCExpr
-#define STP STP_Backend
-#include <metaSMT/backend/STP.hpp>
-#undef Expr
-#undef STP
- 
-#include <boost/mpl/vector.hpp>
-#include <boost/format.hpp>
 
 using namespace metaSMT;
 using namespace metaSMT::logic::QF_BV;
