@@ -90,6 +90,7 @@ void klee_init_env(int* argcPtr, char*** argvPtr) {
   char* new_argv[1024];
   unsigned max_len, min_argvs, max_argvs;
   unsigned sym_files = 0, sym_file_len = 0;
+  unsigned sym_stdin_len = 0;
   int sym_stdout_flag = 0;
   int save_all_writes_flag = 0;
   int fd_fail = 0;
@@ -107,8 +108,9 @@ usage: (klee_init_env) [options] [program arguments]\n\
   -sym-arg <N>              - Replace by a symbolic argument with length N\n\
   -sym-args <MIN> <MAX> <N> - Replace by at least MIN arguments and at most\n\
                               MAX arguments, each with maximum length N\n\
-  -sym-files <NUM> <N>      - Make stdin and up to NUM symbolic files, each\n\
+  -sym-files <NUM> <N>      - Make up to NUM symbolic files, each\n\
                               with maximum size N.\n\
+  -sym-stdin <N>            - Make stdin symbolic with maximum size N.\n\
   -sym-stdout               - Make stdout symbolic.\n\
   -max-fail <N>             - Allow up to <N> injected failures\n\
   -fd-fail                  - Shortcut for '-max-fail 1'\n\n");
@@ -157,6 +159,14 @@ usage: (klee_init_env) [options] [program arguments]\n\
       sym_file_len = __str_to_int(argv[k++], msg);
 
     }
+    else if (__streq(argv[k], "--sym-stdin") || __streq(argv[k], "-sym-stdin")) {
+      const char* msg = "--sym-stdin expects one integer argument <sym-stdin-len>";
+
+      if (++k == argc)
+	__emit_error(msg);
+
+      sym_stdin_len = __str_to_int(argv[k++], msg);
+    }
     else if (__streq(argv[k], "--sym-stdout") || __streq(argv[k], "-sym-stdout")) {
       sym_stdout_flag = 1;
       k++;
@@ -190,7 +200,7 @@ usage: (klee_init_env) [options] [program arguments]\n\
   *argcPtr = new_argc;
   *argvPtr = final_argv;
 
-  klee_init_fds(sym_files, sym_file_len, 
+  klee_init_fds(sym_files, sym_file_len, sym_stdin_len,
 		sym_stdout_flag, save_all_writes_flag, 
 		fd_fail);
 }
