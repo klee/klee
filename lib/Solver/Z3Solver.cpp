@@ -15,6 +15,8 @@
 #include "klee/util/Assignment.h"
 #include "klee/util/ExprUtil.h"
 
+#include "llvm/Support/ErrorHandling.h"
+
 namespace klee {
 
 class Z3SolverImpl : public SolverImpl {
