@@ -769,7 +769,6 @@ else
 
   AC_DEFINE(ENABLE_METASMT, 1, [Enable metaSMT API])
   AC_SUBST(METASMT_ROOT,$metasmt_root)
-  AC_SUBST(REQUIRES_RTTI,[[1]])
   ENABLE_METASMT=1
   AC_MSG_NOTICE([Using MetaSMT solver backend])
 fi

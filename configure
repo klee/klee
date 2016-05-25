@@ -5384,8 +5384,6 @@ $as_echo "#define ENABLE_METASMT 1" >>confdefs.h
 
   METASMT_ROOT=$metasmt_root
 
-  REQUIRES_RTTI=1
-
   ENABLE_METASMT=1
   { $as_echo "$as_me:${as_lineno-$LINENO}: Using MetaSMT solver backend" >&5
 $as_echo "$as_me: Using MetaSMT solver backend" >&6;}
