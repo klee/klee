@@ -339,21 +339,6 @@ public:
   void print(llvm::raw_ostream &stream);
 };
 
-class PathConditionMarker {
-  bool maybeCore;
-
-  PathCondition *pathCondition;
-
-public:
-  PathConditionMarker(PathCondition *pathCondition);
-
-  ~PathConditionMarker();
-
-  void setAsCore(AllocationGraph *g);
-
-  void setAsMaybeCore();
-};
-
 class SubsumptionTableEntry {
   friend class ITree;
 
@@ -579,10 +564,7 @@ public:
 
   void split(ExecutionState *leftData, ExecutionState *rightData);
 
-  std::map<Expr *, PathConditionMarker *> makeMarkerMap() const;
-
-  static void
-  deleteMarkerMap(std::map<Expr *, PathConditionMarker *> &markerMap);
+  std::map<Expr *, PathCondition *> makeMarkerMap() const;
 
   void bindCallArguments(llvm::Instruction *site,
                          std::vector<ref<Expr> > &arguments);

@@ -741,21 +741,6 @@ void SearchTree::save(std::string dotFileName) {
 
 /**/
 
-PathConditionMarker::PathConditionMarker(PathCondition *pathCondition)
-    : maybeCore(false), pathCondition(pathCondition) {}
-
-PathConditionMarker::~PathConditionMarker() {}
-
-void PathConditionMarker::setAsMaybeCore() { maybeCore = true; }
-
-void PathConditionMarker::setAsCore(AllocationGraph *g) {
-  if (maybeCore) {
-    pathCondition->setAsCore(g);
-  }
-}
-
-/**/
-
 PathCondition::PathCondition(ref<Expr> &constraint, Dependency *dependency,
                              llvm::Value *condition, PathCondition *prev)
     : constraint(constraint), shadowConstraint(constraint), shadowed(false),
@@ -1444,10 +1429,6 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
     }
   }
 
-  // We create path condition marking structure to mark core constraints
-  std::map<Expr *, PathConditionMarker *> markerMap =
-      state.itreeNode->makeMarkerMap();
-
   Solver::Validity result;
   ref<Expr> query;
 
@@ -1549,6 +1530,7 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
 
       // We call the solver in the standard way if the
       // formula is unquantified.
+
       solver->setTimeout(timeout);
       actualSolverCallTimer.start();
       success = solver->evaluate(state, query, result);
@@ -1578,16 +1560,32 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
       unsatCore = solver->getUnsatCore();
     }
 
+    // State subsumed, we mark needed constraints on the
+    // path condition.
+
+    // We create path condition marking structure to mark core constraints
+    std::map<Expr *, PathCondition *> markerMap =
+        state.itreeNode->makeMarkerMap();
+
+    AllocationGraph *g = new AllocationGraph();
     for (std::vector<ref<Expr> >::iterator it1 = unsatCore.begin();
          it1 != unsatCore.end(); it1++) {
       // FIXME: Sometimes some constraints are not in the PC. This is
       // because constraints are not properly added at state merge.
-      PathConditionMarker *marker = markerMap[it1->get()];
-      if (marker)
-        marker->setAsMaybeCore();
+      PathCondition *cond = markerMap[it1->get()];
+      if (cond)
+        cond->setAsCore(g);
     }
 
-  } else {
+    // llvm::errs() << "AllocationGraph\n";
+    // g->dump();
+
+    // We mark memory allocations needed for the unsatisfiabilty core
+    state.itreeNode->computeCoreAllocations(g);
+
+    delete g; // Delete the AllocationGraph object
+    return true;
+  }
     // Here the solver could not decide that the subsumption is valid.
     // It may have decided invalidity, however,
     // CexCachingSolver::computeValidity,
@@ -1601,29 +1599,6 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
       delete z3solver;
 
     return false;
-  }
-
-  // State subsumed, we mark needed constraints on the
-  // path condition.
-  AllocationGraph *g = new AllocationGraph();
-  for (std::map<Expr *, PathConditionMarker *>::iterator
-           it = markerMap.begin(),
-           itEnd = markerMap.end();
-       it != itEnd; it++) {
-    // FIXME: Sometimes some constraints are not in the PC. This is
-    // because constraints are not properly added at state merge.
-    if (it->second)
-      it->second->setAsCore(g);
-  }
-  ITreeNode::deleteMarkerMap(markerMap);
-  // llvm::errs() << "AllocationGraph\n";
-  // g->dump();
-
-  // We mark memory allocations needed for the unsatisfiabilty core
-  state.itreeNode->computeCoreAllocations(g);
-
-  delete g; // Delete the AllocationGraph object
-  return true;
 }
 
 void SubsumptionTableEntry::dump() const {
@@ -2081,37 +2056,22 @@ void ITreeNode::split(ExecutionState *leftData, ExecutionState *rightData) {
   ITreeNode::splitTimer.stop();
 }
 
-std::map<Expr *, PathConditionMarker *> ITreeNode::makeMarkerMap() const {
+std::map<Expr *, PathCondition *> ITreeNode::makeMarkerMap() const {
   ITreeNode::makeMarkerMapTimer.start();
-  std::map<Expr *, PathConditionMarker *> result;
+  std::map<Expr *, PathCondition *> result;
   for (PathCondition *it = pathCondition; it != 0; it = it->cdr()) {
-    PathConditionMarker *marker = new PathConditionMarker(it);
     if (llvm::isa<OrExpr>(it->car().get())) {
       // FIXME: Break up disjunction into its components, because each disjunct
       // is solved separately. The or constraint was due to state merge.
       // Hence, the following is just a makeshift for when state merge is
       // properly implemented.
-      result[it->car()->getKid(0).get()] = new PathConditionMarker(it);
-      result[it->car()->getKid(1).get()] = new PathConditionMarker(it);
+      result[it->car()->getKid(0).get()] = it;
+      result[it->car()->getKid(1).get()] = it;
     }
-    result[it->car().get()] = marker;
+    result[it->car().get()] = it;
   }
   ITreeNode::makeMarkerMapTimer.stop();
   return result;
-}
-
-void
-ITreeNode::deleteMarkerMap(std::map<Expr *, PathConditionMarker *> &markerMap) {
-  ITreeNode::deleteMarkerMapTimer.start();
-  for (std::map<Expr *, PathConditionMarker *>::iterator
-           it = markerMap.begin(),
-           itEnd = markerMap.end();
-       it != itEnd; ++it) {
-    if (it->second)
-      delete it->second;
-  }
-  markerMap.clear();
-  ITreeNode::deleteMarkerMapTimer.stop();
 }
 
 void ITreeNode::execute(llvm::Instruction *instr,
