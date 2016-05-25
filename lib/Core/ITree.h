@@ -421,6 +421,8 @@ class SubsumptionTableEntry {
 
   /// @brief for printing method running time statistics
   static void printStat(llvm::raw_ostream &stream);
+  void unsatCoreMarking(std::vector<ref<Expr> > unsatCore,
+                        ExecutionState &state);
 
 public:
   const uintptr_t nodeId;
