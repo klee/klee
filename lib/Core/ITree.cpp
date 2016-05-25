@@ -1272,14 +1272,13 @@ ref<Expr> SubsumptionTableEntry::simplifyExistsExpr(ref<Expr> existsExpr,
   return ret;
 }
 
-bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
-                                     ExecutionState &state, double timeout) {
+bool SubsumptionTableEntry::subsumed(
+    TimingSolver *solver, ExecutionState &state, double timeout,
+    const std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
+        storedExpressions) {
   // Quick check for subsumption in case the interpolant is empty
   if (empty())
     return true;
-
-  std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
-  storedExpressions = state.itreeNode->getStoredExpressions();
 
   Dependency::ConcreteStore stateConcreteAddressStore = storedExpressions.first;
 
@@ -1772,10 +1771,14 @@ bool ITree::subsumptionCheck(TimingSolver *solver, ExecutionState &state,
   if (entryList.empty())
     return false;
 
+  std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
+  storedExpressions = state.itreeNode->getStoredExpressions();
+
   for (std::vector<SubsumptionTableEntry *>::iterator it = entryList.begin(),
                                                       itEnd = entryList.end();
        it != itEnd; ++it) {
-    if ((*it)->subsumed(solver, state, timeout)) {
+
+    if ((*it)->subsumed(solver, state, timeout, storedExpressions)) {
       // We mark as subsumed such that the node will not be
       // stored into table (the table already contains a more
       // general entry).

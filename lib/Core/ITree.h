@@ -429,7 +429,9 @@ public:
 
   ~SubsumptionTableEntry();
 
-  bool subsumed(TimingSolver *solver, ExecutionState &state, double timeout);
+  bool subsumed(
+      TimingSolver *solver, ExecutionState &state, double timeout,
+      std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore> const);
 
   void dump() const;
 
