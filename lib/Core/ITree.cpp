@@ -1270,23 +1270,13 @@ bool SubsumptionTableEntry::preSolving(ExecutionState &state, ref<Expr> query) {
 
       ref<Expr> constraintExpr = it1->get();
       ref<Expr> queryExpr = it2->get();
-      // llvm::errs() << "constraint : \n";
-      // constraintExpr->dump();
-      // llvm::errs() << "query : \n";
-      // queryExpr->dump();
+
       if (!constraintExpr.operator==(queryExpr)) {
         ref<Expr> negateQueryExpr =
             EqExpr::alloc(ConstantExpr::alloc(0, Expr::Bool), queryExpr);
         ref<Expr> negateConstraint =
             EqExpr::alloc(ConstantExpr::alloc(0, Expr::Bool), constraintExpr);
-        //					llvm::errs() << "negate query
-        // expr
-        //\n";
-        //					negateQueryExpr->dump();
-        //					llvm::errs() << "negate
-        // constraint
-        //\n";
-        //					negateConstraint->dump();
+
         if (constraintExpr.operator==(negateQueryExpr)) {
           return false;
         }
@@ -1366,9 +1356,6 @@ SubsumptionTableEntry::getSimplifiableConjuncts(ref<Expr> conjunction) {
 
   return std::pair<std::vector<ref<Expr> >, ref<Expr> >(conjunctsList, retExpr);
 }
-
-void SubsumptionTableEntry::getQueryList(ref<Expr> query,
-                                         std::vector<ref<Expr> > &queryList) {}
 
 ref<Expr> SubsumptionTableEntry::simplifyExistsExpr(ref<Expr> existsExpr,
                                                     bool &hasExistentialsOnly) {
@@ -1628,8 +1615,8 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
         ref<Expr> falseExpr = ConstantExpr::alloc(0, Expr::Bool);
         constraints.addConstraint(EqExpr::alloc(falseExpr, query->getKid(0)));
 
-        //         llvm::errs() << "Querying for satisfiability check:\n";
-        //         ExprPPrinter::printQuery(llvm::errs(), constraints,
+        // llvm::errs() << "Querying for satisfiability check:\n";
+        // ExprPPrinter::printQuery(llvm::errs(), constraints,
         // falseExpr);
 
         actualSolverCallTimer.start();
@@ -1640,8 +1627,8 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
         result = success ? Solver::True : Solver::Unknown;
 
       } else {
-        //         llvm::errs() << "Querying for subsumption check:\n";
-        //         ExprPPrinter::printQuery(llvm::errs(), state.constraints,
+        // llvm::errs() << "Querying for subsumption check:\n";
+        // ExprPPrinter::printQuery(llvm::errs(), state.constraints,
         // query);
 
         actualSolverCallTimer.start();
@@ -1659,10 +1646,10 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
       z3solver->setCoreSolverTimeout(0);
 
     } else {
-      //       llvm::errs() << "No existential\n";
+      // llvm::errs() << "No existential\n";
 
-      //       llvm::errs() << "Querying for subsumption check:\n";
-      //       ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
+      // llvm::errs() << "Querying for subsumption check:\n";
+      // ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
 
       // We call the solver in the standard way if the
       // formula is unquantified.
@@ -1690,7 +1677,7 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
   }
 
   if (success && result == Solver::True) {
-    //     llvm::errs() << "Solver decided validity\n";
+    // llvm::errs() << "Solver decided validity\n";
     std::vector<ref<Expr> > unsatCore;
     if (z3solver) {
       unsatCore = z3solver->getUnsatCore();
