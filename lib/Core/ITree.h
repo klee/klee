@@ -424,6 +424,13 @@ class SubsumptionTableEntry {
   static ref<Expr> simplifyExistsExpr(ref<Expr> existsExpr,
                                       bool &hasExistentialsOnly);
 
+  static bool preSolving(ExecutionState &state, ref<Expr> query);
+
+  static std::pair<std::vector<ref<Expr> >, ref<Expr> >
+  getSimplifiableConjuncts(ref<Expr> conjunction);
+
+  static void getQueryList(ref<Expr> query, std::vector<ref<Expr> > &queryList);
+
   static ref<Expr> simplifyArithmeticBody(ref<Expr> existsExpr,
                                           bool &hasExistentialsOnly);
 
