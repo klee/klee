@@ -51,6 +51,7 @@ fi
 ###############################################################################
 KLEE_Z3_CONFIGURE_OPTION=""
 KLEE_STP_CONFIGURE_OPTION=""
+KLEE_METASMT_CONFIGURE_OPTION=""
 SOLVER_LIST=$(echo "${SOLVERS}" | sed 's/:/ /')
 
 for solver in ${SOLVER_LIST}; do
@@ -62,6 +63,10 @@ for solver in ${SOLVER_LIST}; do
   Z3)
     echo "Z3"
     KLEE_Z3_CONFIGURE_OPTION="--with-z3=/usr"
+    ;;
+  metaSMT)
+    echo "metaSMT"
+    KLEE_METASMT_CONFIGURE_OPTION="--with-metasmt=${BUILD_DIR}/metaSMT/build/root"
     ;;
   *)
     echo "Unknown solver ${solver}"
@@ -87,6 +92,7 @@ ${KLEE_SRC}/configure --with-llvmsrc=/usr/lib/llvm-${LLVM_VERSION}/build \
             --with-llvmcxx=${KLEE_CXX} \
             ${KLEE_STP_CONFIGURE_OPTION} \
             ${KLEE_Z3_CONFIGURE_OPTION} \
+            ${KLEE_METASMT_CONFIGURE_OPTION} \
             ${KLEE_UCLIBC_CONFIGURE_OPTION} \
             ${TCMALLOC_OPTION} \
             CXXFLAGS="${COVERAGE_FLAGS}" \

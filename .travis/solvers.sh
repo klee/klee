@@ -20,6 +20,10 @@ for solver in ${SOLVER_LIST}; do
     # Should we install libz3-dbg too?
     sudo apt-get -y install libz3 libz3-dev
     ;;
+  metaSMT)
+    echo "metaSMT"
+    ${KLEE_SRC}/.travis/metaSMT.sh
+    ;;
   *)
     echo "Unknown solver ${solver}"
     exit 1

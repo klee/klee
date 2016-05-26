@@ -19,7 +19,7 @@ env:
 
     # Check the matrix of:
     #   LLVM  : {2.9, 3.4}
-    #   SOLVERS : {Z3, STP, STP:Z3}
+    #   SOLVERS : {Z3, STP, STP:Z3, metaSMT}
     #   STP_VERSION   : {2.1.0, master}
     #   UCLIBC: {0, klee_uclibc_v1.0.0, klee_0_9_29} // Note ``0`` means disabled
     # with Asserts enabled.
@@ -27,6 +27,9 @@ env:
     # COVERAGE set indicated that coverage data should be uplaoded to the server, only ONE job should have COVERAGE set
 
     matrix:
+    # Test experimental metaSMT support
+    - LLVM_VERSION=3.4 SOLVERS=metaSMT KLEE_UCLIBC=klee_uclibc_v1.0.0 DISABLE_ASSERTIONS=0 ENABLE_OPTIMIZED=1 COVERAGE=0
+    - LLVM_VERSION=2.9 SOLVERS=metaSMT KLEE_UCLIBC=klee_uclibc_v1.0.0 DISABLE_ASSERTIONS=0 ENABLE_OPTIMIZED=1 COVERAGE=0
     # Test experimental Z3 support
     - LLVM_VERSION=3.4 SOLVERS=Z3 KLEE_UCLIBC=klee_uclibc_v1.0.0 DISABLE_ASSERTIONS=0 ENABLE_OPTIMIZED=1 COVERAGE=0
     - LLVM_VERSION=2.9 SOLVERS=Z3 KLEE_UCLIBC=klee_uclibc_v1.0.0 DISABLE_ASSERTIONS=0 ENABLE_OPTIMIZED=1 COVERAGE=0
@@ -65,6 +68,8 @@ before_install:
     # Set up the locations to get various packages from
     # We assume the Travis image uses Ubuntu 12.04 LTS
     ###########################################################################
+    # Needed for Boost
+    - sudo add-apt-repository -y ppa:boost-latest
     # Needed for CMake
     - sudo add-apt-repository -y ppa:kalakris/cmake
     # Needed for LLVM

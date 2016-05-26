@@ -7,5 +7,6 @@ ifeq ($(ENABLE_METASMT),1)
   CXX.Flags += $(metaSMT_CXXFLAGS)
   CXX.Flags += $(metaSMT_INCLUDES)
   CXX.Flags := $(filter-out -fno-exceptions,$(CXX.Flags))
+  CXX.Flags := $(filter-out -fno-rtti,$(CXX.Flags))
   LIBS += $(metaSMT_LDLIBS)
 endif
