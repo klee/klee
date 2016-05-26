@@ -78,11 +78,5 @@ ifeq ($(ENABLE_UCLIBC),1)
 endif
 
 # For metaSMT
-ifeq ($(ENABLE_METASMT),1)
-  include $(METASMT_ROOT)/share/metaSMT/metaSMT.makefile
-  LD.Flags += -L$(METASMT_ROOT)/lib
-  CXX.Flags += -DBOOST_HAS_GCC_TR1 -D __STDC_LIMIT_MACROS -D __STDC_FORMAT_MACROS
-  CXX.Flags := $(filter-out -fno-exceptions,$(CXX.Flags))
-  CXX.Flags += $(metaSMT_INCLUDES)
-endif
+include $(PROJ_SRC_ROOT)/MetaSMT.mk
 
