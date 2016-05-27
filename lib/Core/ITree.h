@@ -339,21 +339,6 @@ public:
   void print(llvm::raw_ostream &stream);
 };
 
-class PathConditionMarker {
-  bool maybeCore;
-
-  PathCondition *pathCondition;
-
-public:
-  PathConditionMarker(PathCondition *pathCondition);
-
-  ~PathConditionMarker();
-
-  void setAsCore(AllocationGraph *g);
-
-  void setAsMaybeCore();
-};
-
 class SubsumptionTableEntry {
   friend class ITree;
 
@@ -457,7 +442,9 @@ public:
 
   ~SubsumptionTableEntry();
 
-  bool subsumed(TimingSolver *solver, ExecutionState &state, double timeout);
+  bool subsumed(
+      TimingSolver *solver, ExecutionState &state, double timeout,
+      std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore> const);
 
   void dump() const;
 
@@ -544,8 +531,6 @@ class ITreeNode {
   static StatTimer getInterpolantTimer;
   static StatTimer addConstraintTimer;
   static StatTimer splitTimer;
-  static StatTimer makeMarkerMapTimer;
-  static StatTimer deleteMarkerMapTimer;
   static StatTimer executeTimer;
   static StatTimer bindCallArgumentsTimer;
   static StatTimer popAbstractDependencyFrameTimer;
@@ -592,11 +577,6 @@ public:
 
   void split(ExecutionState *leftData, ExecutionState *rightData);
 
-  std::map<Expr *, PathConditionMarker *> makeMarkerMap() const;
-
-  static void
-  deleteMarkerMap(std::map<Expr *, PathConditionMarker *> &markerMap);
-
   void bindCallArguments(llvm::Instruction *site,
                          std::vector<ref<Expr> > &arguments);
 
@@ -608,6 +588,9 @@ public:
 
   std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
   getStoredCoreExpressions(std::set<const Array *> &replacements) const;
+
+  void unsatCoreMarking(std::vector<ref<Expr> > unsatCore,
+                        ExecutionState &state);
 
   void computeCoreAllocations(AllocationGraph *g);
 
