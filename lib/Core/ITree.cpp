@@ -1260,6 +1260,11 @@ SubsumptionTableEntry::getSubstitution(ref<Expr> equalities,
 bool SubsumptionTableEntry::preSolving(ExecutionState &state, ref<Expr> query) {
   std::pair<std::vector<ref<Expr> >, ref<Expr> > pair =
       getSimplifiableConjuncts(query);
+
+  if (pair.second->isFalse()) {
+    return false;
+  }
+
   for (std::vector<ref<Expr> >::const_iterator it1 = state.constraints.begin(),
                                                ie1 = state.constraints.end();
        it1 != ie1; ++it1) {
@@ -1271,7 +1276,9 @@ bool SubsumptionTableEntry::preSolving(ExecutionState &state, ref<Expr> query) {
       ref<Expr> constraintExpr = it1->get();
       ref<Expr> queryExpr = it2->get();
 
-      if (!constraintExpr.operator==(queryExpr)) {
+      if (constraintExpr.operator!=(queryExpr) &&
+          (llvm::isa<EqExpr>(constraintExpr) || llvm::isa<EqExpr>(queryExpr))) {
+
         ref<Expr> negateQueryExpr =
             EqExpr::alloc(ConstantExpr::alloc(0, Expr::Bool), queryExpr);
         ref<Expr> negateConstraint =
@@ -1296,43 +1303,19 @@ SubsumptionTableEntry::getSimplifiableConjuncts(ref<Expr> conjunction) {
 
   if (!llvm::isa<AndExpr>(conjunction.get())) {
     if (llvm::isa<EqExpr>(conjunction.get())) {
+
       EqExpr *equality = llvm::dyn_cast<EqExpr>(conjunction.get());
-      if (equality->getKid(0)->getWidth() == Expr::Bool &&
-          equality->getKid(0)->isFalse()) {
-        if (llvm::isa<SleExpr>(equality->getKid(1).get())) {
-          SleExpr *expr = llvm::dyn_cast<SleExpr>(equality->getKid(1).get());
-          conjunctsList.push_back(
-              SltExpr::alloc(expr->getKid(1), expr->getKid(0)));
-          conjunction = ConstantExpr::alloc(1, Expr::Bool);
-        } else if (llvm::isa<SltExpr>(equality->getKid(1))) {
-          SltExpr *expr = llvm::dyn_cast<SltExpr>(equality->getKid(1).get());
-          conjunctsList.push_back(
-              SleExpr::alloc(expr->getKid(1), expr->getKid(0)));
-          conjunction = ConstantExpr::alloc(1, Expr::Bool);
-        } else if (llvm::isa<SgeExpr>(equality->getKid(1))) {
-          SgeExpr *expr = llvm::dyn_cast<SgeExpr>(equality->getKid(1).get());
-          conjunctsList.push_back(
-              SltExpr::alloc(expr->getKid(0), expr->getKid(1)));
-          conjunction = ConstantExpr::alloc(1, Expr::Bool);
-        } else if (llvm::isa<SgtExpr>(equality->getKid(1))) {
-          SgtExpr *expr = llvm::dyn_cast<SgtExpr>(equality->getKid(1).get());
-          conjunctsList.push_back(
-              SleExpr::alloc(expr->getKid(0), expr->getKid(1)));
-          conjunction = ConstantExpr::alloc(1, Expr::Bool);
-        } else if (llvm::isa<NeExpr>(equality->getKid(1))) {
-          // Disequality is converted to equality, which in turn is
-          // converted to a pair of inequalities.
-          NeExpr *expr = llvm::dyn_cast<NeExpr>(equality->getKid(1).get());
-          conjunctsList.push_back(
-              SleExpr::alloc(expr->getKid(0), expr->getKid(1)));
-          conjunctsList.push_back(
-              SleExpr::alloc(expr->getKid(1), expr->getKid(0)));
+      conjunctsList.push_back(conjunction);
+
+      if (llvm::isa<ConstantExpr>(equality->getKid(0)) &&
+          llvm::isa<ConstantExpr>(equality->getKid(1)) &&
+          equality->getKid(0).operator!=(equality->getKid(1))) {
+        conjunction = ConstantExpr::alloc(0, Expr::Bool);
+
+      } else {
           conjunction = ConstantExpr::alloc(1, Expr::Bool);
         }
-      } else {
-        conjunctsList.push_back(conjunction);
-        conjunction = ConstantExpr::alloc(1, Expr::Bool);
-      }
+
     } else if (llvm::isa<SleExpr>(conjunction.get()) ||
                llvm::isa<SltExpr>(conjunction.get()) ||
                llvm::isa<SgeExpr>(conjunction.get()) ||
