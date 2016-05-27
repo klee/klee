@@ -108,11 +108,11 @@ usage: (klee_init_env) [options] [program arguments]\n\
   -sym-arg <N>              - Replace by a symbolic argument with length N\n\
   -sym-args <MIN> <MAX> <N> - Replace by at least MIN arguments and at most\n\
                               MAX arguments, each with maximum length N\n\
-  -sym-files <NUM> <N>      - Make up to NUM symbolic files, each\n\
-                                with maximum size N.\n\
-  -sym-stdin <N>            - Make stdin symbolic with maximum size N.\n\
+  -sym-files <NUM> <N>      - Make NUM symbolic files ('A', 'B', 'C', etc.),\n\
+                              each with size N\n\
+  -sym-stdin <N>            - Make stdin symbolic with size N.\n\
   -sym-stdout               - Make stdout symbolic.\n\
-  -max-fail <N>             - Allow up to <N> injected failures\n\
+  -max-fail <N>             - Allow up to N injected failures\n\
   -fd-fail                  - Shortcut for '-max-fail 1'\n\n");
   }
 
