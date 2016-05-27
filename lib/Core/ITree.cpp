@@ -1321,7 +1321,12 @@ SubsumptionTableEntry::getSimplifiableConjuncts(ref<Expr> conjunction) {
     } else if (llvm::isa<SleExpr>(conjunction.get()) ||
                llvm::isa<SltExpr>(conjunction.get()) ||
                llvm::isa<SgeExpr>(conjunction.get()) ||
-               llvm::isa<SgtExpr>(conjunction.get())) {
+               llvm::isa<SgtExpr>(conjunction.get()) ||
+               llvm::isa<UleExpr>(conjunction.get()) ||
+               llvm::isa<UltExpr>(conjunction.get()) ||
+               llvm::isa<UgeExpr>(conjunction.get()) ||
+               llvm::isa<UgtExpr>(conjunction.get()) ||
+               llvm::isa<NeExpr>(conjunction.get())) {
       conjunctsList.push_back(conjunction);
       conjunction = ConstantExpr::alloc(1, Expr::Bool);
     }
