@@ -426,6 +426,10 @@ class SubsumptionTableEntry {
 
   /// @brief Detect contradictory unary constraints in subsumption check
   /// beforehand to reduce the expensive call to the actual solver.
+  ///
+  /// \return true if there is contradictory unary constraints between state
+  /// constraints and query expression,
+  ///         otherwise, return false.
   static bool solvingUnaryConstraints(ExecutionState &state, ref<Expr> query);
 
   /// @brief Get a pair of a list of simplifiable conjuncts and the new
