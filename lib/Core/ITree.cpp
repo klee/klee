@@ -1242,6 +1242,96 @@ SubsumptionTableEntry::getSubstitution(ref<Expr> equalities,
   return equalities;
 }
 
+bool SubsumptionTableEntry::solvingUnaryConstraints(ExecutionState &state,
+                                                    ref<Expr> query) {
+  std::pair<std::vector<ref<Expr> >, ref<Expr> > pair =
+      getSimplifiableConjuncts(query);
+
+  if (pair.second->isFalse()) {
+    return false;
+  }
+
+  for (std::vector<ref<Expr> >::const_iterator it1 = state.constraints.begin(),
+                                               ie1 = state.constraints.end();
+       it1 != ie1; ++it1) {
+
+    for (std::vector<ref<Expr> >::const_iterator it2 = pair.first.begin(),
+                                                 ie2 = pair.first.end();
+         it2 != ie2; ++it2) {
+
+      ref<Expr> stateConstraintExpr = it1->get();
+      ref<Expr> queryExpr = it2->get();
+
+      if (stateConstraintExpr.operator!=(queryExpr) &&
+          (llvm::isa<EqExpr>(stateConstraintExpr) ||
+           llvm::isa<EqExpr>(queryExpr))) {
+
+        ref<Expr> negatedQueryExpr =
+            EqExpr::alloc(ConstantExpr::alloc(0, Expr::Bool), queryExpr);
+        ref<Expr> negatedStateConstraintExpr = EqExpr::alloc(
+            ConstantExpr::alloc(0, Expr::Bool), stateConstraintExpr);
+
+        if (stateConstraintExpr.operator==(negatedQueryExpr)) {
+          return false;
+        }
+        if (negatedStateConstraintExpr.operator==(queryExpr)) {
+          return false;
+        }
+      }
+    }
+  }
+
+  return true;
+}
+
+std::pair<std::vector<ref<Expr> >, ref<Expr> >
+SubsumptionTableEntry::getSimplifiableConjuncts(ref<Expr> conjunction) {
+  std::vector<ref<Expr> > conjunctsList;
+
+  if (!llvm::isa<AndExpr>(conjunction.get())) {
+    if (llvm::isa<EqExpr>(conjunction.get())) {
+
+      EqExpr *equality = llvm::dyn_cast<EqExpr>(conjunction.get());
+      conjunctsList.push_back(conjunction);
+
+      if (llvm::isa<ConstantExpr>(equality->getKid(0)) &&
+          llvm::isa<ConstantExpr>(equality->getKid(1)) &&
+          equality->getKid(0).operator!=(equality->getKid(1))) {
+        conjunction = ConstantExpr::alloc(0, Expr::Bool);
+
+      } else {
+          conjunction = ConstantExpr::alloc(1, Expr::Bool);
+      }
+
+    } else if (llvm::isa<SleExpr>(conjunction.get()) ||
+               llvm::isa<SltExpr>(conjunction.get()) ||
+               llvm::isa<SgeExpr>(conjunction.get()) ||
+               llvm::isa<SgtExpr>(conjunction.get()) ||
+               llvm::isa<UleExpr>(conjunction.get()) ||
+               llvm::isa<UltExpr>(conjunction.get()) ||
+               llvm::isa<UgeExpr>(conjunction.get()) ||
+               llvm::isa<UgtExpr>(conjunction.get()) ||
+               llvm::isa<NeExpr>(conjunction.get())) {
+      conjunctsList.push_back(conjunction);
+      conjunction = ConstantExpr::alloc(1, Expr::Bool);
+    }
+
+    return std::pair<std::vector<ref<Expr> >, ref<Expr> >(conjunctsList,
+                                                          conjunction);
+  }
+
+  std::pair<std::vector<ref<Expr> >, ref<Expr> > ret =
+      getSimplifiableConjuncts(conjunction->getKid(0));
+  conjunctsList = ret.first;
+  ref<Expr> retExpr = ret.second;
+
+  ret = getSimplifiableConjuncts(conjunction->getKid(1));
+  conjunctsList.insert(conjunctsList.end(), ret.first.begin(), ret.first.end());
+  retExpr = AndExpr::alloc(retExpr, ret.second);
+
+  return std::pair<std::vector<ref<Expr> >, ref<Expr> >(conjunctsList, retExpr);
+}
+
 ref<Expr> SubsumptionTableEntry::simplifyExistsExpr(ref<Expr> existsExpr,
                                                     bool &hasExistentialsOnly) {
   assert(llvm::isa<ExistsExpr>(existsExpr.get()));
@@ -1465,9 +1555,12 @@ bool SubsumptionTableEntry::subsumed(
 
   Z3Solver *z3solver = 0;
 
+  bool resultPreSolving = solvingUnaryConstraints(state, query);
+
   // We call the solver only when the simplified query is
-  // not a constant.
-  if (!llvm::isa<ConstantExpr>(query)) {
+  // not a constant and no contradictory unary constraints found from
+  // solvingUnaryConstraints method.
+  if (!llvm::isa<ConstantExpr>(query) && resultPreSolving) {
     ++checkSolverCount;
 
     if (!existentials.empty() && llvm::isa<ExistsExpr>(query)) {
@@ -1494,7 +1587,8 @@ bool SubsumptionTableEntry::subsumed(
         constraints.addConstraint(EqExpr::alloc(falseExpr, query->getKid(0)));
 
         // llvm::errs() << "Querying for satisfiability check:\n";
-        // ExprPPrinter::printQuery(llvm::errs(), constraints, falseExpr);
+        // ExprPPrinter::printQuery(llvm::errs(), constraints,
+        // falseExpr);
 
         actualSolverCallTimer.start();
         success = z3solver->getValue(Query(constraints, falseExpr), tmpExpr);
@@ -1505,7 +1599,8 @@ bool SubsumptionTableEntry::subsumed(
 
       } else {
         // llvm::errs() << "Querying for subsumption check:\n";
-        // ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
+        // ExprPPrinter::printQuery(llvm::errs(), state.constraints,
+        // query);
 
         actualSolverCallTimer.start();
         success = z3solver->directComputeValidity(
@@ -1544,6 +1639,10 @@ bool SubsumptionTableEntry::subsumed(
       solver->setTimeout(0);
     }
   } else {
+
+    if (!resultPreSolving)
+      return false;
+
     if (query->isTrue())
       return true;
     return false;
