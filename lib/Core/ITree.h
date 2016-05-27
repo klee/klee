@@ -424,8 +424,12 @@ class SubsumptionTableEntry {
   static ref<Expr> simplifyExistsExpr(ref<Expr> existsExpr,
                                       bool &hasExistentialsOnly);
 
-  static bool preSolving(ExecutionState &state, ref<Expr> query);
+  /// @brief Detect contradictory unary constraints in subsumption check
+  /// beforehand to reduce the expensive call to the actual solver.
+  static bool solvingUnaryConstraints(ExecutionState &state, ref<Expr> query);
 
+  /// @brief Get a pair of a list of simplifiable conjuncts and the new
+  /// expression from which the simplifiable conjuncts have been removed.
   static std::pair<std::vector<ref<Expr> >, ref<Expr> >
   getSimplifiableConjuncts(ref<Expr> conjunction);
 
