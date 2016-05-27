@@ -136,7 +136,7 @@ namespace {
 
 
   enum LibcType {
-    NoLibc, KleeLibc, UcLibc
+    NoLibc, KleeLibc, UcLibc, MuslLibc
   };
 
   cl::opt<LibcType>
@@ -145,6 +145,7 @@ namespace {
        cl::values(clEnumValN(NoLibc, "none", "Don't link in a libc"),
                   clEnumValN(KleeLibc, "klee", "Link in klee libc"),
 		  clEnumValN(UcLibc, "uclibc", "Link in uclibc (adapted for klee)"),
+		  clEnumValN(MuslLibc, "musllibc", "Link in musl libc"),
 		  clEnumValEnd),
        cl::init(NoLibc));
 
@@ -879,6 +880,8 @@ void externalsAndGlobalsCheck(const Module *m) {
     dontCare.insert(dontCareUclibc,
                     dontCareUclibc+NELEMS(dontCareUclibc));
     break;
+  case MuslLibc:
+    break;
   case NoLibc: /* silence compiler warning */
     break;
   }
@@ -1157,6 +1160,79 @@ static llvm::Module *linkWithUclibc(llvm::Module *mainModule, StringRef libDir) 
 }
 #endif
 
+
+static llvm::Module *linkWithMusllibc(llvm::Module *mainModule, StringRef libDir){
+  // Ensure that klee-uclibc exists
+  SmallString<128> musllibcBCA(libDir);
+  llvm::sys::path::append(musllibcBCA, "musllibc.bca");
+
+  bool musllibcExists=false;
+  llvm::sys::fs::exists(musllibcBCA.c_str(), musllibcExists);
+  if (!musllibcExists)
+    klee_error("Cannot find klee-musllibc : %s", musllibcBCA.c_str());
+
+  // force import of __uClibc_main
+  mainModule->getOrInsertFunction("__libc_start_main",
+                                   FunctionType::get(Type::getVoidTy(getGlobalContext()),
+                                                std::vector<LLVM_TYPE_Q Type*>(),
+                                                     true));
+
+  mainModule = klee::linkWithLibrary(mainModule, musllibcBCA.c_str());
+  assert(mainModule && "unable to link with musllibc");
+
+  replaceOrRenameFunction(mainModule, "__libc_open", "open");
+  replaceOrRenameFunction(mainModule, "__libc_fcntl", "fcntl");
+
+
+  // Take care of syscalls
+  replaceOrRenameFunction(mainModule, "__syscall", "syscall");
+
+  // XXX we need to rearchitect so this can also be used with
+  // programs externally linked with uclibc.
+
+  // We now need to swap things so that __uClibc_main is the entry
+  // point, in such a way that the arguments are passed to
+  // __uClibc_main correctly. We do this by renaming the user main
+  // and generating a stub function to call __uClibc_main. There is
+  // also an implicit cooperation in that runFunctionAsMain sets up
+  // the environment arguments to what uclibc expects (following
+  // argv), since it does not explicitly take an envp argument.
+  Function *userMainFn = mainModule->getFunction(EntryPoint);
+  assert(userMainFn && "unable to get user main");
+  userMainFn->setName("__user_main");
+
+  Function *libcMainFn = mainModule->getFunction("__libc_start_main");
+  assert(libcMainFn && "unable to get uclibc main");
+  const FunctionType *ft = libcMainFn->getFunctionType();
+  assert(ft->getNumParams() == 3);
+
+  std::vector<LLVM_TYPE_Q Type*> fArgs;
+  fArgs.push_back(ft->getParamType(1)); // argc
+  fArgs.push_back(ft->getParamType(2)); // argv
+  Function *stub = Function::Create(FunctionType::get(Type::getInt32Ty(getGlobalContext()), fArgs, false),
+                                    GlobalVariable::ExternalLinkage,
+                                    EntryPoint,
+                                    mainModule);
+  BasicBlock *bb = BasicBlock::Create(getGlobalContext(), "entry", stub);
+
+  std::vector<llvm::Value*> args;
+  args.push_back(llvm::ConstantExpr::getBitCast(userMainFn,
+                                                ft->getParamType(0)));
+  args.push_back(stub->arg_begin()); // argc
+  args.push_back(++stub->arg_begin()); // argv
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 0)
+  CallInst::Create(libcMainFn, args, "", bb);
+#else
+  CallInst::Create(libcMainFn, args.begin(), args.end(), "", bb);
+#endif
+
+  new UnreachableInst(getGlobalContext(), bb);
+
+  klee_message("NOTE: Using klee-musllibc : %s", musllibcBCA.c_str());
+  return mainModule;
+}
+
+
 int main(int argc, char **argv, char **envp) {
   atexit(llvm_shutdown);  // Call llvm_shutdown() on exit.
 
@@ -1312,6 +1388,8 @@ int main(int argc, char **argv, char **envp) {
   case UcLibc:
     mainModule = linkWithUclibc(mainModule, LibraryDir);
     break;
+  case MuslLibc:
+    mainModule = linkWithMusllibc(mainModule, LibraryDir);
   }
 
   if (WithPOSIXRuntime) {
