@@ -174,10 +174,15 @@ time_t time(time_t *t) {
 
 clock_t times(struct tms *buf) {
   /* Fake */
-  buf->tms_utime = 0;
-  buf->tms_stime = 0;
-  buf->tms_cutime = 0;
-  buf->tms_cstime = 0;
+  if (!buf)
+    klee_warning("returning 0\n");
+  else {
+    klee_warning("setting all times to 0 and returning 0\n");
+    buf->tms_utime = 0;
+    buf->tms_stime = 0;
+    buf->tms_cutime = 0;
+    buf->tms_cstime = 0;
+  }
   return 0;
 }
 
