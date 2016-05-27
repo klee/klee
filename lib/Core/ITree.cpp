@@ -1272,29 +1272,6 @@ ref<Expr> SubsumptionTableEntry::simplifyExistsExpr(ref<Expr> existsExpr,
   return ret;
 }
 
-void SubsumptionTableEntry::unsatCoreMarking(std::vector<ref<Expr> > unsatCore,
-                                             ExecutionState &state) {
-  // State subsumed, we mark needed constraints on the
-  // path condition.
-  // We create path condition marking structure to mark core constraints
-  std::map<Expr *, PathCondition *> markerMap =
-      state.itreeNode->makeMarkerMap();
-  AllocationGraph *g = new AllocationGraph();
-  for (std::vector<ref<Expr> >::iterator it1 = unsatCore.begin();
-       it1 != unsatCore.end(); it1++) {
-    // FIXME: Sometimes some constraints are not in the PC. This is
-    // because constraints are not properly added at state merge.
-    PathCondition *cond = markerMap[it1->get()];
-    if (cond)
-      cond->setAsCore(g);
-  }
-  // llvm::errs() << "AllocationGraph\n";
-  // g->dump();
-  // We mark memory allocations needed for the unsatisfiabilty core
-  state.itreeNode->computeCoreAllocations(g);
-  delete g; // Delete the AllocationGraph object
-}
-
 bool SubsumptionTableEntry::subsumed(
     TimingSolver *solver, ExecutionState &state, double timeout,
     const std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
@@ -1586,7 +1563,7 @@ bool SubsumptionTableEntry::subsumed(
     // path condition.
 
     // We create path condition marking structure to mark core constraints
-    unsatCoreMarking(unsatCore, state);
+    state.itreeNode->unsatCoreMarking(unsatCore, state);
     return true;
   }
     // Here the solver could not decide that the subsumption is valid.
@@ -2133,6 +2110,29 @@ ITreeNode::getStoredCoreExpressions(std::set<const Array *> &replacements)
     ret = parent->dependency->getStoredExpressions(replacements, true);
   ITreeNode::getStoredCoreExpressionsTimer.stop();
   return ret;
+}
+
+void ITreeNode::unsatCoreMarking(std::vector<ref<Expr> > unsatCore,
+                                 ExecutionState &state) {
+  // State subsumed, we mark needed constraints on the
+  // path condition.
+  // We create path condition marking structure to mark core constraints
+  std::map<Expr *, PathCondition *> markerMap =
+      state.itreeNode->makeMarkerMap();
+  AllocationGraph *g = new AllocationGraph();
+  for (std::vector<ref<Expr> >::iterator it1 = unsatCore.begin();
+       it1 != unsatCore.end(); it1++) {
+    // FIXME: Sometimes some constraints are not in the PC. This is
+    // because constraints are not properly added at state merge.
+    PathCondition *cond = markerMap[it1->get()];
+    if (cond)
+      cond->setAsCore(g);
+  }
+  // llvm::errs() << "AllocationGraph\n";
+  // g->dump();
+  // We mark memory allocations needed for the unsatisfiabilty core
+  state.itreeNode->computeCoreAllocations(g);
+  delete g; // Delete the AllocationGraph object
 }
 
 void ITreeNode::computeCoreAllocations(AllocationGraph *g) {

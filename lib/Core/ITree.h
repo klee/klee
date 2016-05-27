@@ -421,8 +421,6 @@ class SubsumptionTableEntry {
 
   /// @brief for printing method running time statistics
   static void printStat(llvm::raw_ostream &stream);
-  void unsatCoreMarking(std::vector<ref<Expr> > unsatCore,
-                        ExecutionState &state);
 
 public:
   const uintptr_t nodeId;
@@ -581,6 +579,9 @@ public:
 
   std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
   getStoredCoreExpressions(std::set<const Array *> &replacements) const;
+
+  void unsatCoreMarking(std::vector<ref<Expr> > unsatCore,
+                        ExecutionState &state);
 
   void computeCoreAllocations(AllocationGraph *g);
 
