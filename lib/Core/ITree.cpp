@@ -2040,24 +2040,6 @@ void ITreeNode::split(ExecutionState *leftData, ExecutionState *rightData) {
   ITreeNode::splitTimer.stop();
 }
 
-std::map<Expr *, PathCondition *> ITreeNode::makeMarkerMap() const {
-  ITreeNode::makeMarkerMapTimer.start();
-  std::map<Expr *, PathCondition *> result;
-  for (PathCondition *it = pathCondition; it != 0; it = it->cdr()) {
-    if (llvm::isa<OrExpr>(it->car().get())) {
-      // FIXME: Break up disjunction into its components, because each disjunct
-      // is solved separately. The or constraint was due to state merge.
-      // Hence, the following is just a makeshift for when state merge is
-      // properly implemented.
-      result[it->car()->getKid(0).get()] = it;
-      result[it->car()->getKid(1).get()] = it;
-    }
-    result[it->car().get()] = it;
-  }
-  ITreeNode::makeMarkerMapTimer.stop();
-  return result;
-}
-
 void ITreeNode::execute(llvm::Instruction *instr,
                         std::vector<ref<Expr> > &args) {
   executeTimer.start();
@@ -2117,8 +2099,21 @@ void ITreeNode::unsatCoreMarking(std::vector<ref<Expr> > unsatCore,
   // State subsumed, we mark needed constraints on the
   // path condition.
   // We create path condition marking structure to mark core constraints
-  std::map<Expr *, PathCondition *> markerMap =
-      state.itreeNode->makeMarkerMap();
+  ITreeNode::makeMarkerMapTimer.start();
+  std::map<Expr *, PathCondition *> markerMap;
+  for (PathCondition *it = pathCondition; it != 0; it = it->cdr()) {
+    if (llvm::isa<OrExpr>(it->car().get())) {
+      // FIXME: Break up disjunction into its components, because each disjunct
+      // is solved separately. The or constraint was due to state merge.
+      // Hence, the following is just a makeshift for when state merge is
+      // properly implemented.
+      markerMap[it->car()->getKid(0).get()] = it;
+      markerMap[it->car()->getKid(1).get()] = it;
+    }
+    markerMap[it->car().get()] = it;
+  }
+  ITreeNode::makeMarkerMapTimer.stop();
+
   AllocationGraph *g = new AllocationGraph();
   for (std::vector<ref<Expr> >::iterator it1 = unsatCore.begin();
        it1 != unsatCore.end(); it1++) {
@@ -2131,7 +2126,7 @@ void ITreeNode::unsatCoreMarking(std::vector<ref<Expr> > unsatCore,
   // llvm::errs() << "AllocationGraph\n";
   // g->dump();
   // We mark memory allocations needed for the unsatisfiabilty core
-  state.itreeNode->computeCoreAllocations(g);
+  computeCoreAllocations(g);
   delete g; // Delete the AllocationGraph object
 }
 

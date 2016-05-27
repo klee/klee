@@ -566,8 +566,6 @@ public:
 
   void split(ExecutionState *leftData, ExecutionState *rightData);
 
-  std::map<Expr *, PathCondition *> makeMarkerMap() const;
-
   void bindCallArguments(llvm::Instruction *site,
                          std::vector<ref<Expr> > &arguments);
 
