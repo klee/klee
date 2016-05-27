@@ -901,6 +901,9 @@ void Dependency::execute(llvm::Instruction *instr,
         VersionedValue *arg =
             getNewVersionedValue(instr->getOperand(0), args.at(1));
         addDependency(arg, returnValue);
+      } else if (calleeName.equals("getenv") && args.size() == 2) {
+        addPointerEquality(getNewVersionedValue(instr, args.at(0)),
+                           getInitialAllocation(instr, args.at(0)));
       }
     }
     updateIncomingBlock(instr);
