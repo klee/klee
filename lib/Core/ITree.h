@@ -518,8 +518,6 @@ class ITreeNode {
   static StatTimer getInterpolantTimer;
   static StatTimer addConstraintTimer;
   static StatTimer splitTimer;
-  static StatTimer makeMarkerMapTimer;
-  static StatTimer deleteMarkerMapTimer;
   static StatTimer executeTimer;
   static StatTimer bindCallArgumentsTimer;
   static StatTimer popAbstractDependencyFrameTimer;

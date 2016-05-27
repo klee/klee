@@ -1956,8 +1956,6 @@ void ITree::dump() { this->print(llvm::errs()); }
 StatTimer ITreeNode::getInterpolantTimer;
 StatTimer ITreeNode::addConstraintTimer;
 StatTimer ITreeNode::splitTimer;
-StatTimer ITreeNode::makeMarkerMapTimer;
-StatTimer ITreeNode::deleteMarkerMapTimer;
 StatTimer ITreeNode::executeTimer;
 StatTimer ITreeNode::bindCallArgumentsTimer;
 StatTimer ITreeNode::popAbstractDependencyFrameTimer;
@@ -1971,10 +1969,6 @@ void ITreeNode::printTimeStat(llvm::raw_ostream &stream) {
   stream << "KLEE: done:     addConstraintTime = " << addConstraintTimer.get() *
                                                           1000 << "\n";
   stream << "KLEE: done:     splitTime = " << splitTimer.get() * 1000 << "\n";
-  stream << "KLEE: done:     makeMarkerMap = " << makeMarkerMapTimer.get() *
-                                                      1000 << "\n";
-  stream << "KLEE: done:     deleteMarkerMap = " << deleteMarkerMapTimer.get() *
-                                                        1000 << "\n";
   stream << "KLEE: done:     execute = " << executeTimer.get() * 1000 << "\n";
   stream << "KLEE: done:     bindCallArguments = "
          << bindCallArgumentsTimer.get() * 1000 << "\n";
@@ -2099,7 +2093,6 @@ void ITreeNode::unsatCoreMarking(std::vector<ref<Expr> > unsatCore,
   // State subsumed, we mark needed constraints on the
   // path condition.
   // We create path condition marking structure to mark core constraints
-  ITreeNode::makeMarkerMapTimer.start();
   std::map<Expr *, PathCondition *> markerMap;
   for (PathCondition *it = pathCondition; it != 0; it = it->cdr()) {
     if (llvm::isa<OrExpr>(it->car().get())) {
@@ -2112,7 +2105,6 @@ void ITreeNode::unsatCoreMarking(std::vector<ref<Expr> > unsatCore,
     }
     markerMap[it->car().get()] = it;
   }
-  ITreeNode::makeMarkerMapTimer.stop();
 
   AllocationGraph *g = new AllocationGraph();
   for (std::vector<ref<Expr> >::iterator it1 = unsatCore.begin();
