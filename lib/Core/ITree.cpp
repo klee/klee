@@ -741,21 +741,6 @@ void SearchTree::save(std::string dotFileName) {
 
 /**/
 
-PathConditionMarker::PathConditionMarker(PathCondition *pathCondition)
-    : maybeCore(false), pathCondition(pathCondition) {}
-
-PathConditionMarker::~PathConditionMarker() {}
-
-void PathConditionMarker::setAsMaybeCore() { maybeCore = true; }
-
-void PathConditionMarker::setAsCore(AllocationGraph *g) {
-  if (maybeCore) {
-    pathCondition->setAsCore(g);
-  }
-}
-
-/**/
-
 PathCondition::PathCondition(ref<Expr> &constraint, Dependency *dependency,
                              llvm::Value *condition, PathCondition *prev)
     : constraint(constraint), shadowConstraint(constraint), shadowed(false),
@@ -1257,6 +1242,96 @@ SubsumptionTableEntry::getSubstitution(ref<Expr> equalities,
   return equalities;
 }
 
+bool SubsumptionTableEntry::solvingUnaryConstraints(ExecutionState &state,
+                                                    ref<Expr> query) {
+  std::pair<std::vector<ref<Expr> >, ref<Expr> > pair =
+      getSimplifiableConjuncts(query);
+
+  if (pair.second->isFalse()) {
+    return false;
+  }
+
+  for (std::vector<ref<Expr> >::const_iterator it1 = state.constraints.begin(),
+                                               ie1 = state.constraints.end();
+       it1 != ie1; ++it1) {
+
+    for (std::vector<ref<Expr> >::const_iterator it2 = pair.first.begin(),
+                                                 ie2 = pair.first.end();
+         it2 != ie2; ++it2) {
+
+      ref<Expr> stateConstraintExpr = it1->get();
+      ref<Expr> queryExpr = it2->get();
+
+      if (stateConstraintExpr.operator!=(queryExpr) &&
+          (llvm::isa<EqExpr>(stateConstraintExpr) ||
+           llvm::isa<EqExpr>(queryExpr))) {
+
+        ref<Expr> negatedQueryExpr =
+            EqExpr::alloc(ConstantExpr::alloc(0, Expr::Bool), queryExpr);
+        ref<Expr> negatedStateConstraintExpr = EqExpr::alloc(
+            ConstantExpr::alloc(0, Expr::Bool), stateConstraintExpr);
+
+        if (stateConstraintExpr.operator==(negatedQueryExpr)) {
+          return false;
+        }
+        if (negatedStateConstraintExpr.operator==(queryExpr)) {
+          return false;
+        }
+      }
+    }
+  }
+
+  return true;
+}
+
+std::pair<std::vector<ref<Expr> >, ref<Expr> >
+SubsumptionTableEntry::getSimplifiableConjuncts(ref<Expr> conjunction) {
+  std::vector<ref<Expr> > conjunctsList;
+
+  if (!llvm::isa<AndExpr>(conjunction.get())) {
+    if (llvm::isa<EqExpr>(conjunction.get())) {
+
+      EqExpr *equality = llvm::dyn_cast<EqExpr>(conjunction.get());
+      conjunctsList.push_back(conjunction);
+
+      if (llvm::isa<ConstantExpr>(equality->getKid(0)) &&
+          llvm::isa<ConstantExpr>(equality->getKid(1)) &&
+          equality->getKid(0).operator!=(equality->getKid(1))) {
+        conjunction = ConstantExpr::alloc(0, Expr::Bool);
+
+      } else {
+          conjunction = ConstantExpr::alloc(1, Expr::Bool);
+      }
+
+    } else if (llvm::isa<SleExpr>(conjunction.get()) ||
+               llvm::isa<SltExpr>(conjunction.get()) ||
+               llvm::isa<SgeExpr>(conjunction.get()) ||
+               llvm::isa<SgtExpr>(conjunction.get()) ||
+               llvm::isa<UleExpr>(conjunction.get()) ||
+               llvm::isa<UltExpr>(conjunction.get()) ||
+               llvm::isa<UgeExpr>(conjunction.get()) ||
+               llvm::isa<UgtExpr>(conjunction.get()) ||
+               llvm::isa<NeExpr>(conjunction.get())) {
+      conjunctsList.push_back(conjunction);
+      conjunction = ConstantExpr::alloc(1, Expr::Bool);
+    }
+
+    return std::pair<std::vector<ref<Expr> >, ref<Expr> >(conjunctsList,
+                                                          conjunction);
+  }
+
+  std::pair<std::vector<ref<Expr> >, ref<Expr> > ret =
+      getSimplifiableConjuncts(conjunction->getKid(0));
+  conjunctsList = ret.first;
+  ref<Expr> retExpr = ret.second;
+
+  ret = getSimplifiableConjuncts(conjunction->getKid(1));
+  conjunctsList.insert(conjunctsList.end(), ret.first.begin(), ret.first.end());
+  retExpr = AndExpr::alloc(retExpr, ret.second);
+
+  return std::pair<std::vector<ref<Expr> >, ref<Expr> >(conjunctsList, retExpr);
+}
+
 ref<Expr> SubsumptionTableEntry::simplifyExistsExpr(ref<Expr> existsExpr,
                                                     bool &hasExistentialsOnly) {
   assert(llvm::isa<ExistsExpr>(existsExpr.get()));
@@ -1287,14 +1362,13 @@ ref<Expr> SubsumptionTableEntry::simplifyExistsExpr(ref<Expr> existsExpr,
   return ret;
 }
 
-bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
-                                     ExecutionState &state, double timeout) {
+bool SubsumptionTableEntry::subsumed(
+    TimingSolver *solver, ExecutionState &state, double timeout,
+    const std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
+        storedExpressions) {
   // Quick check for subsumption in case the interpolant is empty
   if (empty())
     return true;
-
-  std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
-  storedExpressions = state.itreeNode->getStoredExpressions();
 
   Dependency::ConcreteStore stateConcreteAddressStore = storedExpressions.first;
 
@@ -1444,10 +1518,6 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
     }
   }
 
-  // We create path condition marking structure to mark core constraints
-  std::map<Expr *, PathConditionMarker *> markerMap =
-      state.itreeNode->makeMarkerMap();
-
   Solver::Validity result;
   ref<Expr> query;
 
@@ -1485,9 +1555,12 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
 
   Z3Solver *z3solver = 0;
 
+  bool resultPreSolving = solvingUnaryConstraints(state, query);
+
   // We call the solver only when the simplified query is
-  // not a constant.
-  if (!llvm::isa<ConstantExpr>(query)) {
+  // not a constant and no contradictory unary constraints found from
+  // solvingUnaryConstraints method.
+  if (!llvm::isa<ConstantExpr>(query) && resultPreSolving) {
     ++checkSolverCount;
 
     if (!existentials.empty() && llvm::isa<ExistsExpr>(query)) {
@@ -1514,7 +1587,8 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
         constraints.addConstraint(EqExpr::alloc(falseExpr, query->getKid(0)));
 
         // llvm::errs() << "Querying for satisfiability check:\n";
-        // ExprPPrinter::printQuery(llvm::errs(), constraints, falseExpr);
+        // ExprPPrinter::printQuery(llvm::errs(), constraints,
+        // falseExpr);
 
         actualSolverCallTimer.start();
         success = z3solver->getValue(Query(constraints, falseExpr), tmpExpr);
@@ -1525,7 +1599,8 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
 
       } else {
         // llvm::errs() << "Querying for subsumption check:\n";
-        // ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
+        // ExprPPrinter::printQuery(llvm::errs(), state.constraints,
+        // query);
 
         actualSolverCallTimer.start();
         success = z3solver->directComputeValidity(
@@ -1549,6 +1624,7 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
 
       // We call the solver in the standard way if the
       // formula is unquantified.
+
       solver->setTimeout(timeout);
       actualSolverCallTimer.start();
       success = solver->evaluate(state, query, result);
@@ -1563,6 +1639,10 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
       solver->setTimeout(0);
     }
   } else {
+
+    if (!resultPreSolving)
+      return false;
+
     if (query->isTrue())
       return true;
     return false;
@@ -1578,16 +1658,13 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
       unsatCore = solver->getUnsatCore();
     }
 
-    for (std::vector<ref<Expr> >::iterator it1 = unsatCore.begin();
-         it1 != unsatCore.end(); it1++) {
-      // FIXME: Sometimes some constraints are not in the PC. This is
-      // because constraints are not properly added at state merge.
-      PathConditionMarker *marker = markerMap[it1->get()];
-      if (marker)
-        marker->setAsMaybeCore();
-    }
+    // State subsumed, we mark needed constraints on the
+    // path condition.
 
-  } else {
+    // We create path condition marking structure to mark core constraints
+    state.itreeNode->unsatCoreMarking(unsatCore, state);
+    return true;
+  }
     // Here the solver could not decide that the subsumption is valid.
     // It may have decided invalidity, however,
     // CexCachingSolver::computeValidity,
@@ -1601,29 +1678,6 @@ bool SubsumptionTableEntry::subsumed(TimingSolver *solver,
       delete z3solver;
 
     return false;
-  }
-
-  // State subsumed, we mark needed constraints on the
-  // path condition.
-  AllocationGraph *g = new AllocationGraph();
-  for (std::map<Expr *, PathConditionMarker *>::iterator
-           it = markerMap.begin(),
-           itEnd = markerMap.end();
-       it != itEnd; it++) {
-    // FIXME: Sometimes some constraints are not in the PC. This is
-    // because constraints are not properly added at state merge.
-    if (it->second)
-      it->second->setAsCore(g);
-  }
-  ITreeNode::deleteMarkerMap(markerMap);
-  // llvm::errs() << "AllocationGraph\n";
-  // g->dump();
-
-  // We mark memory allocations needed for the unsatisfiabilty core
-  state.itreeNode->computeCoreAllocations(g);
-
-  delete g; // Delete the AllocationGraph object
-  return true;
 }
 
 void SubsumptionTableEntry::dump() const {
@@ -1797,10 +1851,14 @@ bool ITree::subsumptionCheck(TimingSolver *solver, ExecutionState &state,
   if (entryList.empty())
     return false;
 
+  std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
+  storedExpressions = state.itreeNode->getStoredExpressions();
+
   for (std::vector<SubsumptionTableEntry *>::iterator it = entryList.begin(),
                                                       itEnd = entryList.end();
        it != itEnd; ++it) {
-    if ((*it)->subsumed(solver, state, timeout)) {
+
+    if ((*it)->subsumed(solver, state, timeout, storedExpressions)) {
       // We mark as subsumed such that the node will not be
       // stored into table (the table already contains a more
       // general entry).
@@ -1997,8 +2055,6 @@ void ITree::dump() { this->print(llvm::errs()); }
 StatTimer ITreeNode::getInterpolantTimer;
 StatTimer ITreeNode::addConstraintTimer;
 StatTimer ITreeNode::splitTimer;
-StatTimer ITreeNode::makeMarkerMapTimer;
-StatTimer ITreeNode::deleteMarkerMapTimer;
 StatTimer ITreeNode::executeTimer;
 StatTimer ITreeNode::bindCallArgumentsTimer;
 StatTimer ITreeNode::popAbstractDependencyFrameTimer;
@@ -2012,10 +2068,6 @@ void ITreeNode::printTimeStat(llvm::raw_ostream &stream) {
   stream << "KLEE: done:     addConstraintTime = " << addConstraintTimer.get() *
                                                           1000 << "\n";
   stream << "KLEE: done:     splitTime = " << splitTimer.get() * 1000 << "\n";
-  stream << "KLEE: done:     makeMarkerMap = " << makeMarkerMapTimer.get() *
-                                                      1000 << "\n";
-  stream << "KLEE: done:     deleteMarkerMap = " << deleteMarkerMapTimer.get() *
-                                                        1000 << "\n";
   stream << "KLEE: done:     execute = " << executeTimer.get() * 1000 << "\n";
   stream << "KLEE: done:     bindCallArguments = "
          << bindCallArgumentsTimer.get() * 1000 << "\n";
@@ -2081,39 +2133,6 @@ void ITreeNode::split(ExecutionState *leftData, ExecutionState *rightData) {
   ITreeNode::splitTimer.stop();
 }
 
-std::map<Expr *, PathConditionMarker *> ITreeNode::makeMarkerMap() const {
-  ITreeNode::makeMarkerMapTimer.start();
-  std::map<Expr *, PathConditionMarker *> result;
-  for (PathCondition *it = pathCondition; it != 0; it = it->cdr()) {
-    PathConditionMarker *marker = new PathConditionMarker(it);
-    if (llvm::isa<OrExpr>(it->car().get())) {
-      // FIXME: Break up disjunction into its components, because each disjunct
-      // is solved separately. The or constraint was due to state merge.
-      // Hence, the following is just a makeshift for when state merge is
-      // properly implemented.
-      result[it->car()->getKid(0).get()] = new PathConditionMarker(it);
-      result[it->car()->getKid(1).get()] = new PathConditionMarker(it);
-    }
-    result[it->car().get()] = marker;
-  }
-  ITreeNode::makeMarkerMapTimer.stop();
-  return result;
-}
-
-void
-ITreeNode::deleteMarkerMap(std::map<Expr *, PathConditionMarker *> &markerMap) {
-  ITreeNode::deleteMarkerMapTimer.start();
-  for (std::map<Expr *, PathConditionMarker *>::iterator
-           it = markerMap.begin(),
-           itEnd = markerMap.end();
-       it != itEnd; ++it) {
-    if (it->second)
-      delete it->second;
-  }
-  markerMap.clear();
-  ITreeNode::deleteMarkerMapTimer.stop();
-}
-
 void ITreeNode::execute(llvm::Instruction *instr,
                         std::vector<ref<Expr> > &args) {
   executeTimer.start();
@@ -2166,6 +2185,40 @@ ITreeNode::getStoredCoreExpressions(std::set<const Array *> &replacements)
     ret = parent->dependency->getStoredExpressions(replacements, true);
   ITreeNode::getStoredCoreExpressionsTimer.stop();
   return ret;
+}
+
+void ITreeNode::unsatCoreMarking(std::vector<ref<Expr> > unsatCore,
+                                 ExecutionState &state) {
+  // State subsumed, we mark needed constraints on the
+  // path condition.
+  // We create path condition marking structure to mark core constraints
+  std::map<Expr *, PathCondition *> markerMap;
+  for (PathCondition *it = pathCondition; it != 0; it = it->cdr()) {
+    if (llvm::isa<OrExpr>(it->car().get())) {
+      // FIXME: Break up disjunction into its components, because each disjunct
+      // is solved separately. The or constraint was due to state merge.
+      // Hence, the following is just a makeshift for when state merge is
+      // properly implemented.
+      markerMap[it->car()->getKid(0).get()] = it;
+      markerMap[it->car()->getKid(1).get()] = it;
+    }
+    markerMap[it->car().get()] = it;
+  }
+
+  AllocationGraph *g = new AllocationGraph();
+  for (std::vector<ref<Expr> >::iterator it1 = unsatCore.begin();
+       it1 != unsatCore.end(); it1++) {
+    // FIXME: Sometimes some constraints are not in the PC. This is
+    // because constraints are not properly added at state merge.
+    PathCondition *cond = markerMap[it1->get()];
+    if (cond)
+      cond->setAsCore(g);
+  }
+  // llvm::errs() << "AllocationGraph\n";
+  // g->dump();
+  // We mark memory allocations needed for the unsatisfiabilty core
+  computeCoreAllocations(g);
+  delete g; // Delete the AllocationGraph object
 }
 
 void ITreeNode::computeCoreAllocations(AllocationGraph *g) {
