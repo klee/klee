@@ -27,13 +27,17 @@ namespace klee {
     KTest *input;
     unsigned inputPosition;
     std::set<struct KTestObject*> used;
-    
+    /* occasionally, in seed/zest mode, we might want to interleave
+ *     execution of states which are not on the concrete path with
+ *     the concrete path state (rather than execute them at the end).
+ *     Because the Executor logic considers in first instance only
+ *     states with attached seeds, we create fake seeds */
+    bool fakeSeed;
+
   public:
-    explicit
-    SeedInfo(KTest *_input) : assignment(true),
-                             input(_input),
-                             inputPosition(0) {}
-    
+    explicit SeedInfo(KTest *_input, bool fake = false)
+        : assignment(true), input(_input), inputPosition(0), fakeSeed(fake) {}
+
     KTestObject *getNextInput(const MemoryObject *mo,
                              bool byName);
     

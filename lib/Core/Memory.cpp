@@ -269,6 +269,14 @@ void ObjectState::initializeToRandom() {
   }
 }
 
+void ObjectState::initializeToValue(const std::vector<unsigned char> &value) {
+  assert(value.size() == size &&
+         "Wrong size vector given to ObjectState::initializaToValue");
+  for (unsigned i = 0; i < size; i++) {
+    concreteStore[i] = value[i];
+  }
+}
+
 /*
 Cache Invariants
 --

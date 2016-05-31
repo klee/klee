@@ -56,6 +56,12 @@ static cl::opt<bool>
 DisableOptimizations("disable-opt",
   cl::desc("Do not run any optimization passes"));
 
+static cl::opt<bool>
+    EnableAllOptimizations("enable-all-optimizations",
+                           cl::desc("Also enable optimizations that may create "
+                                    "intrinsics not handled by KLEE"),
+                           cl::init(false));
+
 static cl::opt<bool> DisableInternalize("disable-internalize",
   cl::desc("Do not mark all symbols as internal"));
 
@@ -111,7 +117,8 @@ static void AddStandardCompilePasses(PassManager &PM) {
   addPass(PM, createGlobalDCEPass());            // Remove unused fns and globs
   addPass(PM, createIPConstantPropagationPass());// IP Constant Propagation
   addPass(PM, createDeadArgEliminationPass());   // Dead argument elimination
-  addPass(PM, createInstructionCombiningPass()); // Clean up after IPCP & DAE
+  if (EnableAllOptimizations)
+    addPass(PM, createInstructionCombiningPass()); // Clean up after IPCP & DAE
   addPass(PM, createCFGSimplificationPass());    // Clean up after IPCP & DAE
 
   addPass(PM, createPruneEHPass());              // Remove dead EH info
@@ -124,7 +131,9 @@ static void AddStandardCompilePasses(PassManager &PM) {
 #if LLVM_VERSION_CODE < LLVM_VERSION(3, 4)
   addPass(PM, createSimplifyLibCallsPass());     // Library Call Optimizations
 #endif
-  addPass(PM, createInstructionCombiningPass()); // Cleanup for scalarrepl.
+
+  if (EnableAllOptimizations)
+    addPass(PM, createInstructionCombiningPass()); // Cleanup for scalarrepl.
   addPass(PM, createJumpThreadingPass());        // Thread jumps.
   addPass(PM, createCFGSimplificationPass());    // Merge & remove BBs
   addPass(PM, createScalarReplAggregatesPass()); // Break up aggregate allocas
@@ -137,11 +146,14 @@ static void AddStandardCompilePasses(PassManager &PM) {
   addPass(PM, createLICMPass());                 // Hoist loop invariants
   addPass(PM, createLoopUnswitchPass());         // Unswitch loops.
   // FIXME : Removing instcombine causes nestedloop regression.
-  addPass(PM, createInstructionCombiningPass());
+  if (EnableAllOptimizations)
+    addPass(PM, createInstructionCombiningPass());
   addPass(PM, createIndVarSimplifyPass());       // Canonicalize indvars
   addPass(PM, createLoopDeletionPass());         // Delete dead loops
   addPass(PM, createLoopUnrollPass());           // Unroll small loops
-  addPass(PM, createInstructionCombiningPass()); // Clean up after the unroller
+  if (EnableAllOptimizations)
+    addPass(PM,
+            createInstructionCombiningPass());   // Clean up after the unroller
   addPass(PM, createGVNPass());                  // Remove redundancies
   addPass(PM, createMemCpyOptPass());            // Remove memcpy / form memset
   addPass(PM, createSCCPPass());                 // Constant prop with SCCP
@@ -218,7 +230,8 @@ void Optimize(Module* M) {
     // simplification opportunities, and both can propagate functions through
     // function pointers.  When this happens, we often have to resolve varargs
     // calls, etc, so let instcombine do this.
-    addPass(Passes, createInstructionCombiningPass());
+    if (EnableAllOptimizations)
+      addPass(Passes, createInstructionCombiningPass());
 
     if (!DisableInline)
       addPass(Passes, createFunctionInliningPass()); // Inline small functions
@@ -232,7 +245,8 @@ void Optimize(Module* M) {
     addPass(Passes, createArgumentPromotionPass());
 
     // The IPO passes may leave cruft around.  Clean up after them.
-    addPass(Passes, createInstructionCombiningPass());
+    if (EnableAllOptimizations)
+      addPass(Passes, createInstructionCombiningPass());
     addPass(Passes, createJumpThreadingPass());        // Thread jumps.
     addPass(Passes, createScalarReplAggregatesPass()); // Break up allocas
 
@@ -246,7 +260,8 @@ void Optimize(Module* M) {
     addPass(Passes, createDeadStoreEliminationPass()); // Nuke dead stores
 
     // Cleanup and simplify the code after the scalar optimizations.
-    addPass(Passes, createInstructionCombiningPass());
+    if (EnableAllOptimizations)
+      addPass(Passes, createInstructionCombiningPass());
 
     addPass(Passes, createJumpThreadingPass());        // Thread jumps.
     addPass(Passes, createPromoteMemoryToRegisterPass()); // Cleanup jumpthread.
@@ -280,7 +295,8 @@ void Optimize(Module* M) {
   // The user's passes may leave cruft around. Clean up after them them but
   // only if we haven't got DisableOptimizations set
   if (!DisableOptimizations) {
-    addPass(Passes, createInstructionCombiningPass());
+    if (EnableAllOptimizations)
+      addPass(Passes, createInstructionCombiningPass());
     addPass(Passes, createCFGSimplificationPass());
     addPass(Passes, createAggressiveDCEPass());
     addPass(Passes, createGlobalDCEPass());

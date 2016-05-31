@@ -13,6 +13,8 @@
 #include "klee/util/ExprPPrinter.h"
 #include "klee/Internal/Support/QueryLog.h"
 
+#include "klee/Internal/Module/InstructionInfoTable.h"
+
 using namespace klee;
 
 ///
@@ -21,7 +23,8 @@ class PCLoggingSolver : public QueryLoggingSolver {
 
 private :
     ExprPPrinter *printer;
-        
+    const InstructionInfoProvider *iip;
+
     virtual void printQuery(const Query& query,
                             const Query* falseQuery = 0,
                             const std::vector<const Array*>* objects = 0) {
@@ -43,26 +46,40 @@ private :
         }
         
         const Query* q = (0 == falseQuery) ? &query : falseQuery;
-        
+
+        if (iip) {
+          const InstructionInfo *ii = iip->GetCurrentInstruction();
+          if (ii && ii->file != "")
+            logBuffer << "# Code location: " << ii->file << ":" << ii->line
+                      << "\n";
+          else if (ii)
+            logBuffer << "# Code location: [no debug info]\n";
+          else
+            logBuffer << "# Code location: [unknown location]\n";
+        } else {
+          logBuffer << "# Code location: [unknown location]\n";
+        }
+
         printer->printQuery(logBuffer, q->constraints, q->expr,
                             evalExprsBegin, evalExprsEnd,
                             evalArraysBegin, evalArraysEnd);
     }
   
 public:
-    PCLoggingSolver(Solver *_solver, std::string path, int queryTimeToLog) 
-    : QueryLoggingSolver(_solver, path, "#", queryTimeToLog),    
-    printer(ExprPPrinter::create(logBuffer)) {
-    }                                                      
-    
+  PCLoggingSolver(Solver *_solver, std::string path, int queryTimeToLog,
+                  const InstructionInfoProvider *_iip)
+      : QueryLoggingSolver(_solver, path, "#", queryTimeToLog),
+        printer(ExprPPrinter::create(logBuffer)), iip(_iip) {}
+
     virtual ~PCLoggingSolver() {    
         delete printer;
-    }    
+    }
 };
 
 ///
 
 Solver *klee::createPCLoggingSolver(Solver *_solver, std::string path,
-                                    int minQueryTimeToLog) {
-  return new Solver(new PCLoggingSolver(_solver, path, minQueryTimeToLog));
+                                    int minQueryTimeToLog,
+                                    const InstructionInfoProvider *iip) {
+  return new Solver(new PCLoggingSolver(_solver, path, minQueryTimeToLog, iip));
 }

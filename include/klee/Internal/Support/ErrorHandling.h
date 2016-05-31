@@ -18,6 +18,10 @@
 
 #include <stdio.h>
 
+// Should be larger than the number of (log) files opened by KLEE before
+// starting to execute the user program
+#define N_RESERVED_FDS 30
+
 namespace klee {
 
 extern FILE *klee_warning_file;

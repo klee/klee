@@ -19,6 +19,7 @@ namespace klee {
   class ConstraintManager;
   class Expr;
   class SolverImpl;
+  struct InstructionInfo;
 
   struct Query {
   public:
@@ -257,6 +258,11 @@ namespace klee {
 
 #endif /* ENABLE_METASMT */
 
+class InstructionInfoProvider {
+public:
+  virtual const InstructionInfo *GetCurrentInstruction() const = 0;
+  virtual ~InstructionInfoProvider(){};
+};
   /* *** */
 
   /// createValidatingSolver - Create a solver which will validate all query
@@ -299,7 +305,8 @@ namespace klee {
   /// createPCLoggingSolver - Create a solver which will forward all queries
   /// after writing them to the given path in .pc format.
   Solver *createPCLoggingSolver(Solver *s, std::string path,
-                                int minQueryTimeToLog);
+                                int minQueryTimeToLog,
+                                const InstructionInfoProvider *iip = NULL);
 
   /// createSMTLIBLoggingSolver - Create a solver which will forward all queries
   /// after writing them to the given path in .smt2 format.

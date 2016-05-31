@@ -96,12 +96,12 @@ void SeedInfo::patchSeed(const ExecutionState &state,
                                         ConstantExpr::alloc(it2->second[i], 
                                                             Expr::Int8));
       bool res;
-      bool success = solver->mustBeFalse(tmp, isSeed, res);
+      bool success = solver->mustBeFalse(tmp, isSeed, res, false);
       assert(success && "FIXME: Unhandled solver failure");
       (void) success;
       if (res) {
         ref<ConstantExpr> value;
-        bool success = solver->getValue(tmp, read, value);
+        bool success = solver->getValue(tmp, read, value, false);
         assert(success && "FIXME: Unhandled solver failure");            
         (void) success;
         it2->second[i] = value->getZExtValue(8);
@@ -115,7 +115,8 @@ void SeedInfo::patchSeed(const ExecutionState &state,
   }
 
   bool res;
-  bool success = solver->mayBeTrue(state, assignment.evaluate(condition), res);
+  bool success =
+      solver->mayBeTrue(state, assignment.evaluate(condition), res, false);
   assert(success && "FIXME: Unhandled solver failure");
   (void) success;
   if (res)
@@ -133,12 +134,12 @@ void SeedInfo::patchSeed(const ExecutionState &state,
                                         ConstantExpr::alloc(it->second[i], 
                                                             Expr::Int8));
       bool res;
-      bool success = solver->mustBeFalse(tmp, isSeed, res);
+      bool success = solver->mustBeFalse(tmp, isSeed, res, false);
       assert(success && "FIXME: Unhandled solver failure");
       (void) success;
       if (res) {
         ref<ConstantExpr> value;
-        bool success = solver->getValue(tmp, read, value);
+        bool success = solver->getValue(tmp, read, value, false);
         assert(success && "FIXME: Unhandled solver failure");            
         (void) success;
         it->second[i] = value->getZExtValue(8);
@@ -154,8 +155,8 @@ void SeedInfo::patchSeed(const ExecutionState &state,
 #ifndef NDEBUG
   {
     bool res;
-    bool success = 
-      solver->mayBeTrue(state, assignment.evaluate(condition), res);
+    bool success =
+        solver->mayBeTrue(state, assignment.evaluate(condition), res, false);
     assert(success && "FIXME: Unhandled solver failure");            
     (void) success;
     assert(res && "seed patching failed");

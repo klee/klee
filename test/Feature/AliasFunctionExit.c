@@ -11,7 +11,7 @@
 void start(int x) {
   printf("START\n");
   if (x == 53)
-    exit(1);
+    exit(0);
 }
 
 void __attribute__ ((noinline)) end(int status) {

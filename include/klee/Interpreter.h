@@ -54,12 +54,13 @@ public:
     bool Optimize;
     bool CheckDivZero;
     bool CheckOvershift;
+    bool CheckAsserts;
 
-    ModuleOptions(const std::string& _LibraryDir, 
-                  bool _Optimize, bool _CheckDivZero,
-                  bool _CheckOvershift)
-      : LibraryDir(_LibraryDir), Optimize(_Optimize), 
-        CheckDivZero(_CheckDivZero), CheckOvershift(_CheckOvershift) {}
+    ModuleOptions(const std::string &_LibraryDir, bool _Optimize,
+                  bool _CheckDivZero, bool _CheckOvershift, bool _CheckAsserts)
+        : LibraryDir(_LibraryDir), Optimize(_Optimize),
+          CheckDivZero(_CheckDivZero), CheckOvershift(_CheckOvershift),
+          CheckAsserts(_CheckAsserts) {}
   };
 
   enum LogType
@@ -124,10 +125,8 @@ public:
   // for the search. use null to reset.
   virtual void useSeeds(const std::vector<struct KTest *> *seeds) = 0;
 
-  virtual void runFunctionAsMain(llvm::Function *f,
-                                 int argc,
-                                 char **argv,
-                                 char **envp) = 0;
+  virtual int runFunctionAsMain(llvm::Function *f, int argc, char **argv,
+                                char **envp) = 0;
 
   /*** Runtime options ***/
 

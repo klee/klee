@@ -72,6 +72,20 @@ int fsetfilecon(int fd, KLEE_SELINUX_CTX_CONST char *con) {
   return setfilecon("", con);
 }
 
+int getfilecon(const char *path, security_context_t *con) {
+  errno = ENODATA;
+  return -1;
+}
+
+int lgetfilecon(const char *path, security_context_t *con) {
+  return getfilecon(path, con);
+}
+
+int fgetfilecon(int fd, security_context_t *con) {
+  errno = ENODATA;
+  return -1;
+}
+
 /***/
 
 void freecon(char *con) {}

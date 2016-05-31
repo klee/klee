@@ -16,20 +16,18 @@
 
 namespace klee
 {
-        Solver *constructSolverChain(Solver *coreSolver,
-                                     std::string querySMT2LogPath,
-                                     std::string baseSolverQuerySMT2LogPath,
-                                     std::string queryPCLogPath,
-                                     std::string baseSolverQueryPCLogPath)
-	{
-	  Solver *solver = coreSolver;
+Solver *constructSolverChain(Solver *coreSolver, std::string querySMT2LogPath,
+                             std::string baseSolverQuerySMT2LogPath,
+                             std::string queryPCLogPath,
+                             std::string baseSolverQueryPCLogPath,
+                             const InstructionInfoProvider *iip) {
+          Solver *solver = coreSolver;
 
 	  if (optionIsSet(queryLoggingOptions, SOLVER_PC))
 	  {
-		solver = createPCLoggingSolver(solver,
-					       baseSolverQueryPCLogPath,
-					       MinQueryTimeToLog);
-		llvm::errs() << "Logging queries that reach solver in .pc format to "
+            solver = createPCLoggingSolver(solver, baseSolverQueryPCLogPath,
+                                           MinQueryTimeToLog, iip);
+                llvm::errs() << "Logging queries that reach solver in .pc format to "
 			  << baseSolverQueryPCLogPath.c_str() << "\n";
 	  }
 
@@ -59,10 +57,10 @@ namespace klee
 
 	  if (optionIsSet(queryLoggingOptions, ALL_PC))
 	  {
-		solver = createPCLoggingSolver(solver,
-					       queryPCLogPath,
-					       MinQueryTimeToLog);
-		llvm::errs() << "Logging all queries in .pc format to "
+            solver = createPCLoggingSolver(solver, queryPCLogPath,
+                                           MinQueryTimeToLog, iip);
+
+                llvm::errs() << "Logging all queries in .pc format to "
 			  << queryPCLogPath.c_str() << "\n";
 	  }
 

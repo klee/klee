@@ -194,6 +194,8 @@ public:
   void initializeToZero();
   // make contents all concrete and random
   void initializeToRandom();
+  // set contents to given (used in ZEST mode)
+  void initializeToValue(const std::vector<unsigned char> &value);
 
   ref<Expr> read(ref<Expr> offset, Expr::Width width) const;
   ref<Expr> read(unsigned offset, Expr::Width width) const;
@@ -207,6 +209,8 @@ public:
   void write16(unsigned offset, uint16_t value);
   void write32(unsigned offset, uint32_t value);
   void write64(unsigned offset, uint64_t value);
+
+  bool isConcrete() const { return concreteMask == NULL; }
 
 private:
   const UpdateList &getUpdates() const;

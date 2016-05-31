@@ -91,7 +91,7 @@ namespace klee {
     /* Convenience routines */
 
     std::string readStringAtAddress(ExecutionState &state, ref<Expr> address);
-    
+
     /* Handlers */
 
 #define HANDLER(name) void name(ExecutionState &state, \
@@ -137,6 +137,13 @@ namespace klee {
     HANDLER(handleMulOverflow);
     HANDLER(handleSubOverflow);
     HANDLER(handleDivRemOverflow);
+    HANDLER(handleEnableSeeding);
+    HANDLER(handleDisableSeeding);
+    HANDLER(handleZestEnabled);
+    HANDLER(handleSkipChecks);
+    HANDLER(handleDoChecks);
+    HANDLER(handlePatchBegin);
+    HANDLER(handlePatchEnd);
 #undef HANDLER
   };
 } // End klee namespace

@@ -141,6 +141,31 @@ public:
   /// @brief Set of used array names for this state.  Used to avoid collisions.
   std::set<std::string> arrayNames;
 
+  /// ZESTI
+  bool fakeState;
+  // Are we currently underconstrained?  Hack: value is size to make fake
+  // objects.
+  unsigned underConstrained;
+  // Used by the checkpoint/rollback methods for fake objects.
+  // FIXME: not freeing things on branch deletion.
+  MemoryMap shadowObjects;
+
+  // Used in ZEST mode via enable/disable_seeding intrinsics.
+  // XXX not completely orthogonal with forkDisabled?
+  bool symbexEnabled;
+  unsigned seedingTTL;
+  unsigned seedingInstExecuted;
+
+  bool lastInstructionGEP;
+  bool markForDeletion;
+  double *branchTime;
+  // Set via klee_enable_symbex to interleave the execution of the
+  // next forked path with the concrete path
+  bool nextForkInterleaved;
+  // Used in ZEST patch mode. When set all instructions are
+  // sensitive
+  bool inPatch;
+
   std::string getFnAlias(std::string fn);
   void addFnAlias(std::string old_fn, std::string new_fn);
   void removeFnAlias(std::string fn);
@@ -165,7 +190,11 @@ public:
   void popFrame();
 
   void addSymbolic(const MemoryObject *mo, const Array *array);
+
   void addConstraint(ref<Expr> e) { constraints.addConstraint(e); }
+  void addConstraint(ref<Expr> e, bool simplify) {
+    constraints.addConstraint(e, simplify);
+  }
 
   bool merge(const ExecutionState &b);
   void dumpStack(llvm::raw_ostream &out) const;

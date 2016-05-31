@@ -484,6 +484,12 @@ void klee_mark_global(void *object) {
   ;
 }
 
+int klee_zest_enabled(void) { return 0; }
+
+void zest_skip_checks(void) {}
+
+void zest_do_check(void) {}
+
 /*** HELPER FUNCTIONS ***/
 
 static void __emit_error(const char *msg) {

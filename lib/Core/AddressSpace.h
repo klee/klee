@@ -82,12 +82,9 @@ namespace klee {
     ///
     /// \return true iff the resolution is incomplete (maxResolutions
     /// is non-zero and the search terminated early, or a query timed out).
-    bool resolve(ExecutionState &state,
-                 TimingSolver *solver,
-                 ref<Expr> address, 
-                 ResolutionList &rl, 
-                 unsigned maxResolutions=0,
-                 double timeout=0.);
+    bool resolve(ExecutionState &state, TimingSolver *solver, ref<Expr> address,
+                 ResolutionList &rl, unsigned maxResolutions = 0,
+                 double timeout = 0., bool useSeeds = true);
 
     /***/
 

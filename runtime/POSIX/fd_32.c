@@ -57,7 +57,6 @@ static void __stat64_to_stat(struct stat64 *a, struct stat *b) {
   b->st_mtim.tv_nsec = a->st_mtim.tv_nsec;
   b->st_ctim.tv_nsec = a->st_ctim.tv_nsec;
 #endif
-
 }
 
 /***/

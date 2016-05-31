@@ -70,70 +70,78 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
 #define addDNR(name, handler) { name, \
                                 &SpecialFunctionHandler::handler, \
                                 true, false, false }
-  addDNR("__assert_rtn", handleAssertFail),
-  addDNR("__assert_fail", handleAssertFail),
-  addDNR("_assert", handleAssert),
-  addDNR("abort", handleAbort),
-  addDNR("_exit", handleExit),
-  { "exit", &SpecialFunctionHandler::handleExit, true, false, true },
-  addDNR("klee_abort", handleAbort),
-  addDNR("klee_silent_exit", handleSilentExit),  
-  addDNR("klee_report_error", handleReportError),
+    addDNR("__assert_rtn", handleAssertFail),
+    addDNR("__assert_fail", handleAssertFail),
+    addDNR("_assert", handleAssert),
+    addDNR("abort", handleAbort),
+    addDNR("_exit", handleExit),
+    {"exit", &SpecialFunctionHandler::handleExit, true, false, true},
+    addDNR("klee_abort", handleAbort),
+    addDNR("klee_silent_exit", handleSilentExit),
+    addDNR("klee_report_error", handleReportError),
 
-  add("calloc", handleCalloc, true),
-  add("free", handleFree, false),
-  add("klee_assume", handleAssume, false),
-  add("klee_check_memory_access", handleCheckMemoryAccess, false),
-  add("klee_get_valuef", handleGetValue, true),
-  add("klee_get_valued", handleGetValue, true),
-  add("klee_get_valuel", handleGetValue, true),
-  add("klee_get_valuell", handleGetValue, true),
-  add("klee_get_value_i32", handleGetValue, true),
-  add("klee_get_value_i64", handleGetValue, true),
-  add("klee_define_fixed_object", handleDefineFixedObject, false),
-  add("klee_get_obj_size", handleGetObjSize, true),
-  add("klee_get_errno", handleGetErrno, true),
-  add("klee_is_symbolic", handleIsSymbolic, true),
-  add("klee_make_symbolic", handleMakeSymbolic, false),
-  add("klee_mark_global", handleMarkGlobal, false),
-  add("klee_merge", handleMerge, false),
-  add("klee_prefer_cex", handlePreferCex, false),
-  add("klee_posix_prefer_cex", handlePosixPreferCex, false),
-  add("klee_print_expr", handlePrintExpr, false),
-  add("klee_print_range", handlePrintRange, false),
-  add("klee_set_forking", handleSetForking, false),
-  add("klee_stack_trace", handleStackTrace, false),
-  add("klee_warning", handleWarning, false),
-  add("klee_warning_once", handleWarningOnce, false),
-  add("klee_alias_function", handleAliasFunction, false),
-  add("malloc", handleMalloc, true),
-  add("realloc", handleRealloc, true),
+    add("calloc", handleCalloc, true),
+    add("free", handleFree, false),
+    add("klee_assume", handleAssume, false),
+    add("klee_check_memory_access", handleCheckMemoryAccess, false),
+    add("klee_get_valuef", handleGetValue, true),
+    add("klee_get_valued", handleGetValue, true),
+    add("klee_get_valuel", handleGetValue, true),
+    add("klee_get_valuell", handleGetValue, true),
+    add("klee_get_value_i32", handleGetValue, true),
+    add("klee_get_value_i64", handleGetValue, true),
+    add("klee_define_fixed_object", handleDefineFixedObject, false),
+    add("klee_get_obj_size", handleGetObjSize, true),
+    add("klee_get_errno", handleGetErrno, true),
+    add("klee_is_symbolic", handleIsSymbolic, true),
+    add("klee_make_symbolic", handleMakeSymbolic, false),
+    add("klee_mark_global", handleMarkGlobal, false),
+    add("klee_merge", handleMerge, false),
+    add("klee_prefer_cex", handlePreferCex, false),
+    add("klee_posix_prefer_cex", handlePosixPreferCex, false),
+    add("klee_print_expr", handlePrintExpr, false),
+    add("klee_print_range", handlePrintRange, false),
+    add("klee_set_forking", handleSetForking, false),
+    add("klee_stack_trace", handleStackTrace, false),
+    add("klee_warning", handleWarning, false),
+    add("klee_warning_once", handleWarningOnce, false),
+    add("klee_alias_function", handleAliasFunction, false),
+    add("malloc", handleMalloc, true),
+    add("realloc", handleRealloc, true),
 
-  // operator delete[](void*)
-  add("_ZdaPv", handleDeleteArray, false),
-  // operator delete(void*)
-  add("_ZdlPv", handleDelete, false),
+    add("klee_enable_symbex", handleEnableSeeding, false),
+    add("klee_disable_symbex", handleDisableSeeding, false),
+    add("klee_patch_begin", handlePatchBegin, false),
+    add("klee_patch_end", handlePatchEnd, false),
+    add("klee_zest_enabled", handleZestEnabled, true),
+    add("zest_skip_checks", handleSkipChecks, false),
+    add("zest_do_checks", handleDoChecks, false),
 
-  // operator new[](unsigned int)
-  add("_Znaj", handleNewArray, true),
-  // operator new(unsigned int)
-  add("_Znwj", handleNew, true),
+    // operator delete[](void*)
+    add("_ZdaPv", handleDeleteArray, false),
+    // operator delete(void*)
+    add("_ZdlPv", handleDelete, false),
 
-  // FIXME-64: This is wrong for 64-bit long...
+    // operator new[](unsigned int)
+    add("_Znaj", handleNewArray, true),
+    // operator new(unsigned int)
+    add("_Znwj", handleNew, true),
 
-  // operator new[](unsigned long)
-  add("_Znam", handleNewArray, true),
-  // operator new(unsigned long)
-  add("_Znwm", handleNew, true),
+    // FIXME-64: This is wrong for 64-bit long...
 
-  // clang -fsanitize=unsigned-integer-overflow
-  add("__ubsan_handle_add_overflow", handleAddOverflow, false),
-  add("__ubsan_handle_sub_overflow", handleSubOverflow, false),
-  add("__ubsan_handle_mul_overflow", handleMulOverflow, false),
-  add("__ubsan_handle_divrem_overflow", handleDivRemOverflow, false),
+    // operator new[](unsigned long)
+    add("_Znam", handleNewArray, true),
+    // operator new(unsigned long)
+    add("_Znwm", handleNew, true),
+
+    // clang -fsanitize=unsigned-integer-overflow
+    add("__ubsan_handle_add_overflow", handleAddOverflow, false),
+    add("__ubsan_handle_sub_overflow", handleSubOverflow, false),
+    add("__ubsan_handle_mul_overflow", handleMulOverflow, false),
+    add("__ubsan_handle_divrem_overflow", handleDivRemOverflow, false),
 
 #undef addDNR
-#undef add  
+#undef add
 };
 
 SpecialFunctionHandler::const_iterator SpecialFunctionHandler::begin() {
@@ -394,7 +402,8 @@ void SpecialFunctionHandler::handleAssume(ExecutionState &state,
     e = NeExpr::create(e, ConstantExpr::create(0, e->getWidth()));
   
   bool res;
-  bool success __attribute__ ((unused)) = executor.solver->mustBeFalse(state, e, res);
+  bool success __attribute__((unused)) =
+      executor.solver->mustBeFalse(state, e, res, false);
   assert(success && "FIXME: Unhandled solver failure");
   if (res) {
     if (SilentKleeAssume) {
@@ -695,7 +704,7 @@ void SpecialFunctionHandler::handleMakeSymbolic(ExecutionState &state,
          ie = rl.end(); it != ie; ++it) {
     const MemoryObject *mo = it->first.first;
     mo->setName(name);
-    
+
     const ObjectState *old = it->first.second;
     ExecutionState *s = it->second;
     
@@ -715,10 +724,12 @@ void SpecialFunctionHandler::handleMakeSymbolic(ExecutionState &state,
                                                  mo->getSizeExpr()),
                                   res);
     assert(success && "FIXME: Unhandled solver failure");
-    
     if (res) {
       executor.executeMakeSymbolic(*s, mo, name);
-    } else {      
+    } else {
+      llvm::errs() << "wrong size given to klee_make_symbolic: " << arguments[1]
+                   << " (given), " << mo->getSizeExpr() << " (expected)"
+                   << "\n";
       executor.terminateStateOnError(*s, 
                                      "wrong size given to klee_make_symbolic[_name]", 
                                      "user.err");
@@ -773,4 +784,85 @@ void SpecialFunctionHandler::handleDivRemOverflow(ExecutionState &state,
   executor.terminateStateOnError(state,
                                  "overflow on division or remainder",
                                  "overflow.err");
+}
+
+void SpecialFunctionHandler::handleEnableSeeding(
+    ExecutionState &state, KInstruction *target,
+    std::vector<ref<Expr> > &arguments) {
+  unsigned TTL = 2;
+  bool interleave = 0;
+  if (arguments.size() > 0) {
+    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(arguments[0])) {
+      TTL = CE->getZExtValue();
+    }
+    if (arguments.size() > 1) {
+      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(arguments[1])) {
+        interleave = CE->getZExtValue();
+      }
+    }
+  }
+  executor.enableSeeding(state, TTL, interleave);
+}
+
+void SpecialFunctionHandler::handleDisableSeeding(
+    ExecutionState &state, KInstruction *target,
+    std::vector<ref<Expr> > &arguments) {
+  executor.disableSeeding(state);
+}
+
+extern bool ZestSkipChecks;
+
+void
+SpecialFunctionHandler::handleSkipChecks(ExecutionState &state,
+                                         KInstruction *target,
+                                         std::vector<ref<Expr> > &arguments) {
+  ZestSkipChecks = true;
+}
+
+void
+SpecialFunctionHandler::handleDoChecks(ExecutionState &state,
+                                       KInstruction *target,
+                                       std::vector<ref<Expr> > &arguments) {
+  ZestSkipChecks = false;
+}
+
+extern bool UseConcretePath;
+
+void
+SpecialFunctionHandler::handleZestEnabled(ExecutionState &state,
+                                          KInstruction *target,
+                                          std::vector<ref<Expr> > &arguments) {
+  // XXX should type check args
+  assert(arguments.size() == 0 &&
+         "invalid number of arguments to klee_zest_enabled");
+  executor.bindLocal(target, state,
+                     ConstantExpr::create(UseConcretePath, Expr::Int32));
+}
+
+void
+SpecialFunctionHandler::handlePatchBegin(ExecutionState &state,
+                                         KInstruction *target,
+                                         std::vector<ref<Expr> > &arguments) {
+  assert(arguments.size() == 0 &&
+         "invalid number of arguments to klee_patch_begin");
+  state.inPatch = true;
+  executor.addSensitiveInstruction(state);
+}
+
+void
+SpecialFunctionHandler::handlePatchEnd(ExecutionState &state,
+                                       KInstruction *target,
+                                       std::vector<ref<Expr> > &arguments) {
+  // 2 means execute until the next sym fork (due the ZEST searcher internals)
+  int TTL = 2;
+  if (arguments.size() == 1) {
+    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(arguments[0])) {
+      TTL = CE->getZExtValue() + 1;
+    }
+  }
+  state.inPatch = false;
+  state.seedingTTL = TTL;
+  if (0 == TTL) {
+    executor.disableSeeding(state);
+  }
 }

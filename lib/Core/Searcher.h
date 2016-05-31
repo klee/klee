@@ -15,6 +15,7 @@
 #include <set>
 #include <map>
 #include <queue>
+#include <list>
 
 namespace llvm {
   class BasicBlock;
@@ -72,6 +73,7 @@ namespace klee {
       RandomState,
       RandomPath,
       NURS_CovNew,
+      ZEST,
       NURS_MD2U,
       NURS_Depth,
       NURS_ICnt,
@@ -299,6 +301,25 @@ namespace klee {
     }
   };
 
+  class ZESTSearcher : public Searcher {
+    std::list<ExecutionState *> states;
+    int distance;
+    int baseInstruction;
+    bool dfsStage;
+    // pointers to Executor data structures
+    std::multimap<int, ExecutionState *> *itos;
+    std::vector<int> *sensitiveInst;
+    static int seBound(int distance);
+
+  public:
+    ZESTSearcher(std::multimap<int, ExecutionState *> *, std::vector<int> *);
+    ExecutionState &selectState();
+    void update(ExecutionState *current,
+                const std::set<ExecutionState *> &addedStates,
+                const std::set<ExecutionState *> &removedStates);
+    bool empty() { return states.empty(); }
+    void printName(llvm::raw_ostream &os) { os << "ZESTSearcher\n"; }
+  };
 }
 
 #endif

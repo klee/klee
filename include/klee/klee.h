@@ -154,6 +154,15 @@ extern "C" {
 
   /* Merge current states together if possible */
   void klee_merge();
+
+  /* enable and disable symbex. default TTL is 100 */
+  // void klee_enable_symbex(void);
+  // void klee_enable_symbex(int TTL);
+  void klee_disable_symbex(void);
+
+  /* get zest status */
+  int klee_zest_enabled(void);
+
 #ifdef __cplusplus
 }
 #endif

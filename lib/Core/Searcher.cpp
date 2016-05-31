@@ -51,11 +51,29 @@ using namespace llvm;
 namespace {
   cl::opt<bool>
   DebugLogMerge("debug-log-merge");
+  cl::opt<unsigned>
+      SymbexBefore("symbex-before-by", cl::init(0),
+                   cl::desc("start symbolic execution n instructions before \
+sensitive operations (default 0). use with \
+--symbex-every in zest mode"));
+
+  cl::opt<unsigned>
+      SearchUntil("zest-search-until", cl::init(500),
+                  cl::desc("maximum distance to search for states before a \
+sensitive operation (default 500)"));
+
+  cl::opt<bool> DiscardFarStates(
+      "zest-discard-far-states", cl::init(true),
+      cl::desc("discard states farther than zest-search-until from \
+sensitive operation (default true)"));
 }
 
 namespace klee {
   extern RNG theRNG;
 }
+
+/* defined in lib/Core/Executor.cpp */
+extern unsigned PatchCheckBefore;
 
 Searcher::~Searcher() {
 }
@@ -613,4 +631,208 @@ void InterleavedSearcher::update(ExecutionState *current,
   for (std::vector<Searcher*>::const_iterator it = searchers.begin(),
          ie = searchers.end(); it != ie; ++it)
     (*it)->update(current, addedStates, removedStates);
+}
+
+///
+ZESTSearcher::ZESTSearcher(std::multimap<int, ExecutionState *> *_itos,
+                           std::vector<int> *s)
+    : distance(SymbexBefore), baseInstruction(-1), dfsStage(false), itos(_itos),
+      sensitiveInst(s) {
+  // set the PatchCheckBefore defaults for the searcher paramenters
+  // unless they're explicitly defined
+  if (PatchCheckBefore) {
+    if (0 == distance)
+      distance = PatchCheckBefore - 1;
+    if (500 == SearchUntil)
+      SearchUntil = PatchCheckBefore - 1;
+  }
+}
+/*
+void dumpx(std::multimap<int, ExecutionState*>& x)
+{
+  std::cerr << "dumping itos\n";
+  for (std::multimap<int, ExecutionState*>::iterator it = x.begin(),
+       ie = x.end(); it != ie; ++it) {
+    std::cerr << it->first << " " << it->second << std::endl;
+  }
+}
+*/
+int currentDistance;
+int _baseInstruction;
+
+int ZESTSearcher::seBound(int d) {
+  // these are supposed to be terminated via a klee_patch_end intrinsic
+  // but that may not happen. set a reasonable value
+  if (PatchCheckBefore)
+    return 10;
+
+  // if (!d) return 1;
+  return d + 1;
+}
+
+#define REVERSE_SEARCH 1
+
+ExecutionState &ZESTSearcher::selectState() {
+  ExecutionState *state = NULL;
+  int i = 0, ls = (int)states.size();
+  do {
+    state = states.back();
+    if (state) {
+      // avoid executing it again because it will be destroyed and
+      // might be needed later
+      if (1 == state->seedingTTL && !dfsStage) {
+        states.pop_back();
+        states.push_front(state);
+        // std::cerr << "Suspending state " << state << std::endl;
+      } else {
+        if (dfsStage && DiscardFarStates)
+          state->markForDeletion = 1;
+        return *state;
+      }
+    } else // reached the sentinel
+      break;
+    ++i;
+  } while (state && i < ls);
+  // find the next closest state to a sensitive operation
+  while (distance <= (int)SearchUntil) {
+    unsigned bound = (unsigned)seBound(distance);
+#if REVERSE_SEARCH
+    for (std::vector<int>::reverse_iterator it = sensitiveInst->rbegin(),
+                                            ite = sensitiveInst->rend();
+         it != ite; ++it)
+#else
+    for (std::vector<int>::iterator it = sensitiveInst->begin(),
+                                    ite = sensitiveInst->end();
+         it != ite; ++it)
+#endif
+    {
+      std::pair<std::multimap<int, ExecutionState *>::iterator,
+                std::multimap<int, ExecutionState *>::iterator> range;
+      for (range = itos->equal_range(*it - distance);
+           range.first != range.second; ++range.first) {
+        if (range.first->second->seedingInstExecuted < bound) {
+          state = range.first->second;
+          _baseInstruction = baseInstruction = range.first->first;
+          // std::cerr << "found state (" << range.first->first << ", "
+          //          << range.first->second << ")" << std::endl;
+          break;
+        }
+      }
+      if (state)
+        break;
+    }
+    if (state)
+      break;
+    ++distance;
+  }
+  currentDistance = distance;
+#define DEBUG_ZEST_SEARCHER
+  if (state) {
+#ifdef DEBUG_ZEST_SEARCHER
+    llvm::errs() << "State " << state << "\n";
+    llvm::errs() << "Distance: " << distance << "\nDepth: " << state->depth
+                 << " originating from depth " << baseInstruction
+                 << "\nInstructions: " << stats::instructions
+                 << "\nStates: " << itos->size() << "\n";
+#endif
+    bool ok = false;
+    for (std::list<ExecutionState *>::iterator it2 = states.begin(),
+                                               ie = states.end();
+         it2 != ie; ++it2) {
+      if (state == *it2) {
+        states.erase(it2);
+        ok = true;
+        break;
+      }
+    }
+
+    assert(ok && "invalid state selected");
+    states.push_back(state);
+    state->seedingTTL = seBound(distance) - state->seedingInstExecuted + 1;
+    state->seedingInstExecuted = seBound(distance);
+  } else {
+    // if no state is found consume the rest of the states directly
+    states.pop_back();
+    state = states.back();
+    if (DiscardFarStates)
+      state->markForDeletion = 1;
+    dfsStage = true;
+    // llvm::errs() << "entering dfs stage" << std::endl;
+  }
+  return *state;
+}
+
+void ZESTSearcher::update(ExecutionState *current,
+                          const std::set<ExecutionState *> &addedStates,
+                          const std::set<ExecutionState *> &removedStates) {
+  std::set<ExecutionState *>::const_iterator it, ie;
+  states.insert(states.end(), addedStates.begin(), addedStates.end());
+  // initial seeds are already in the mapping
+  if (current) {
+    for (it = addedStates.begin(), ie = addedStates.end(); it != ie; ++it) {
+      // llvm::errs() << "inserting new state " << baseInstruction << "\n";
+      assert((*it)->depth >= baseInstruction &&
+             "state depth must be greater than originating instruction depth");
+      itos->insert(std::pair<int, ExecutionState *>(baseInstruction, *it));
+    }
+  } else {
+    // XXX Executor should do the cleanup but it's more efficient to do it only
+    // once here
+    bool found;
+    std::vector<std::map<int, ExecutionState *>::iterator> todel;
+    for (std::map<int, ExecutionState *>::iterator itm = itos->begin(),
+                                                   iem = itos->end();
+         itm != iem; ++itm) {
+      found = false;
+      for (it = addedStates.begin(), ie = addedStates.end(); it != ie; ++it) {
+        if (itm->second == *it)
+          found = true;
+      }
+      if (!found)
+        todel.push_back(itm);
+    }
+    klee_message("Deleting %d stale mappings", (int)todel.size());
+    for (std::vector<std::map<int, ExecutionState *>::iterator>::iterator
+             itd = todel.begin(),
+             ited = todel.end();
+         itd != ited; ++itd)
+      itos->erase(*itd);
+  }
+  for (it = removedStates.begin(), ie = removedStates.end(); it != ie; ++it) {
+    ExecutionState *es = *it;
+    // std::cerr << "removing state " << es << std::endl;
+    if (es == states.back()) {
+      states.pop_back();
+    } else {
+      bool ok = false;
+
+      for (std::list<ExecutionState *>::iterator it = states.begin(),
+                                                 ie = states.end();
+           it != ie; ++it) {
+        if (es == *it) {
+          states.erase(it);
+          ok = true;
+          break;
+        }
+      }
+
+      assert(ok && "invalid state removed");
+    }
+    // need to remove the state from the instruction->state mapping
+    bool ok = false;
+    for (std::map<int, ExecutionState *>::iterator it = itos->begin(),
+                                                   ie = itos->end();
+         it != ie; ++it) {
+      if (it->second == es) {
+        itos->erase(it);
+        ok = true;
+        break;
+      }
+    }
+    assert(ok && "invalid state removed");
+  }
+  if (!current) {
+    // push a sentinel
+    states.push_back(NULL);
+  }
 }

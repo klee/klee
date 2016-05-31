@@ -9,6 +9,7 @@
 
 #include "klee/Internal/Support/ErrorHandling.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <stdlib.h>
@@ -19,7 +20,18 @@
 
 #include <set>
 
+using namespace llvm;
 using namespace klee;
+/* also used by the driver (tools/klee/main.cpp) */
+bool NoStdOutput;
+
+namespace {
+static cl::opt<bool, true>
+    _NoStdOutput("no-std-out",
+                 cl::desc("do not output to standard output or standard error "
+                          "(only to messages and warnings file)"),
+                 cl::location(NoStdOutput), cl::init(false));
+}
 
 FILE *klee::klee_warning_file = NULL;
 FILE *klee::klee_message_file = NULL;
@@ -103,7 +115,7 @@ static void klee_vfmessage(FILE *fp, const char *pfx, const char *msg,
 */
 static void klee_vmessage(const char *pfx, bool onlyToFile, const char *msg,
                           va_list ap) {
-  if (!onlyToFile) {
+  if (!onlyToFile && !NoStdOutput) {
     va_list ap2;
     va_copy(ap2, ap);
     klee_vfmessage(stderr, pfx, msg, ap2);

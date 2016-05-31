@@ -97,6 +97,19 @@ namespace {
   NoOutput("no-output",
            cl::desc("Don't generate test files"));
 
+  enum TestOutputLevel { OutputAll, OutputErrors, OutputNone };
+
+  cl::opt<TestOutputLevel> OutputLevel(
+      "output-level",
+      cl::desc("Chose the output level for test cases (all by default)."),
+      cl::values(clEnumValN(OutputAll, "all",
+                            "Create ktest files for all paths"),
+                 clEnumValN(OutputErrors, "error",
+                            "Create ktest files only for errors"),
+                 clEnumValN(OutputNone, "none", "Don't create ktest files"),
+                 clEnumValEnd),
+      cl::init(OutputAll));
+
   cl::opt<bool>
   WarnAllExternals("warn-all-externals",
                    cl::desc("Give initial warning for all externals."));
@@ -223,6 +236,15 @@ namespace {
 }
 
 extern cl::opt<double> MaxTime;
+
+/* defined in lib/Core/Common.cpp */
+extern bool NoStdOutput;
+
+/* defined in lib/Core/Executor.cpp */
+extern bool UseConcretePath;
+
+/* defined in lib/Core/Executor.cpp */
+extern bool ReserveFds;
 
 /***/
 
@@ -424,7 +446,8 @@ void KleeHandler::processTestCase(const ExecutionState &state,
     exit(1);
   }
 
-  if (!NoOutput) {
+  if ((!NoOutput && OutputLevel == OutputAll) ||
+      (OutputLevel == OutputErrors && errorMessage)) {
     std::vector< std::pair<std::string, std::vector<unsigned char> > > out;
     bool success = m_interpreter->getSymbolicSolution(state, out);
 
@@ -472,6 +495,7 @@ void KleeHandler::processTestCase(const ExecutionState &state,
       std::vector<unsigned char> concreteBranches;
       m_pathWriter->readStream(m_interpreter->getPathStreamID(state),
                                concreteBranches);
+
       llvm::raw_fd_ostream *f = openTestFile("path", id);
       for (std::vector<unsigned char>::iterator I = concreteBranches.begin(),
                                                 E = concreteBranches.end();
@@ -558,7 +582,14 @@ void KleeHandler::loadPathFile(std::string name,
     unsigned value;
     f >> value;
     buffer.push_back(!!value);
-    f.get();
+    // skip the rest of the line
+    int next_char = f.peek();
+    if ('\n' != next_char) {
+      // this is the case where there are more characters in the line
+      // than '0' or '1' at the beginning
+      std::stringbuf tmpBuf(std::ios_base::in | std::ios_base::out);
+      f.get(tmpBuf);
+    }
   }
 }
 
@@ -780,6 +811,11 @@ static const char *modelledExternals[] = {
   "__ubsan_handle_sub_overflow",
   "__ubsan_handle_mul_overflow",
   "__ubsan_handle_divrem_overflow",
+  "klee_enable_seeding", // obsolete
+  "klee_disable_seeding", // obsolete
+  "klee_enable_symbex",
+  "klee_disable_symbex",
+  "klee_zest_enabled",
 };
 // Symbols we aren't going to warn about
 static const char *dontCareExternals[] = {
@@ -1155,7 +1191,109 @@ static llvm::Module *linkWithUclibc(llvm::Module *mainModule, StringRef libDir) 
 }
 #endif
 
+static llvm::Module *MakeArgsSymbolic(llvm::Module *mainModule) {
+  llvm::Function *userMain = mainModule->getFunction("__user_main");
+  if (!userMain)
+    userMain = mainModule->getFunction("main");
+
+  if (userMain && userMain->arg_size() >= 2) {
+    llvm::Constant *fc = mainModule->getOrInsertFunction(
+        "klee_mark_arg_symbolic", Type::getVoidTy(getGlobalContext()),
+        Type::getInt32Ty(getGlobalContext()),
+        userMain->getFunctionType()->getParamType(1), NULL);
+    llvm::Function *makeSymbolic = cast<Function>(fc);
+    if (makeSymbolic) {
+      std::vector<llvm::Value *> args;
+      args.push_back(userMain->arg_begin());
+      args.push_back(++userMain->arg_begin());
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 0)
+      CallInst::Create(makeSymbolic, args, "", userMain->begin()->begin());
+#else
+      CallInst::Create(makeSymbolic, args.begin(), args.end(), "",
+                       userMain->begin()->begin());
+#endif
+    } else {
+      klee_error("klee_mark_arg_symbolic not found");
+    }
+  }
+  return mainModule;
+}
+
+static const char *conflictingUclibc[] = {
+    "socket",      "bind",        "connect",    "listen",  "accept",
+    "getsockname", "getpeername", "socketpair", "send",    "recv",
+    "sendto",
+    //"recvfrom",
+    "shutdown",    "setsockopt",  "getsockopt", "sendmsg", "recvmsg",
+    //"select"
+};
+
+static llvm::Module *RenameUclibcFunctions(llvm::Module *m) {
+  Function *f;
+  GlobalAlias *ga;
+  std::vector<std::string> conflicting(
+      conflictingUclibc, conflictingUclibc + NELEMS(conflictingUclibc));
+
+  std::vector<std::string>::const_iterator it, ite;
+  for (it = conflicting.begin(), ite = conflicting.end(); it != ite; ++it) {
+    f = m->getFunction(*it);
+    if (!f)
+      f = m->getFunction((std::string) "__libc_" + *it);
+    if (f) {
+      f->setName(*it + "_uclibc");
+      klee_message("renamed function %s", it->c_str());
+    }
+    ga = m->getNamedAlias(*it);
+    if (ga) {
+      ga->setName(*it + "_uclibc_alias");
+      klee_message("renamed alias %s", it->c_str());
+    }
+  }
+  return m;
+}
+
+static llvm::Module *SwitchUclibcFunctions(llvm::Module *m) {
+  Function *f, *f2;
+  std::vector<std::string> conflicting(
+      conflictingUclibc, conflictingUclibc + NELEMS(conflictingUclibc));
+
+  std::vector<std::string>::const_iterator it, ite;
+  for (it = conflicting.begin(), ite = conflicting.end(); it != ite; ++it) {
+    f = m->getFunction(*it);
+
+    if (f) {
+      f2 = m->getFunction(*it + "_uclibc");
+      if (f2) {
+        f2->replaceAllUsesWith(f);
+        // don't erase f2. the model might want to use it
+        klee_message("model replacement for %s installed", it->c_str());
+      }
+    } else {
+      klee_warning("Unable to find model for %s", it->c_str());
+    }
+  }
+  return m;
+}
+
+// This is a hack to make the first open() call in a user program return 3 (see
+// test/Feature/FDNumbers.c).  Should call closeFirstFDs() afterwards.
+void reserveFirstFds() {
+  if (!ReserveFds)
+    return;
+
+  for (int i = 3; i < 3 + N_RESERVED_FDS; i++) {
+    int fd = dup(1);
+    assert(fd == i);
+  }
+}
+
 int main(int argc, char **argv, char **envp) {
+  reserveFirstFds();
+
+#if ENABLE_STPLOG == 1
+  STPLOG_init("stplog.c");
+#endif
+
   atexit(llvm_shutdown);  // Call llvm_shutdown() on exit.
 
   llvm::InitializeNativeTarget();
@@ -1172,7 +1310,7 @@ int main(int argc, char **argv, char **envp) {
     if (pid<0) {
       klee_error("unable to fork watchdog");
     } else if (pid) {
-      fprintf(stderr, "KLEE: WATCHDOG: watching %d\n", pid);
+      // fprintf(stderr, "KLEE: WATCHDOG: watching %d\n", pid);
       fflush(stderr);
       sys::SetInterruptFunction(interrupt_handle_watchdog);
 
@@ -1219,6 +1357,10 @@ int main(int argc, char **argv, char **envp) {
             // so try and give the process extra time to clean up.
             nextStep = util::getWallTime() + std::max(15., MaxTime*.1);
           }
+        }
+        if (getppid() == 1) {
+          // out parent died. take it as a hint to shutdown
+          kill(pid, SIGINT);
         }
       }
 
@@ -1275,7 +1417,9 @@ int main(int argc, char **argv, char **envp) {
   }
 #endif
 
-
+  if (UseConcretePath) {
+    MakeArgsSymbolic(mainModule);
+  }
   if (WithPOSIXRuntime) {
     int r = initEnv(mainModule);
     if (r != 0)
@@ -1286,7 +1430,8 @@ int main(int argc, char **argv, char **envp) {
   Interpreter::ModuleOptions Opts(LibraryDir.c_str(),
                                   /*Optimize=*/OptimizeModule,
                                   /*CheckDivZero=*/CheckDivZero,
-                                  /*CheckOvershift=*/CheckOvershift);
+                                  /*CheckOvershift=*/CheckOvershift,
+                                  /*CheckAsserts=*/UseConcretePath);
 
   switch (Libc) {
   case NoLibc: /* silence compiler warning */
@@ -1314,8 +1459,12 @@ int main(int argc, char **argv, char **envp) {
     SmallString<128> Path(Opts.LibraryDir);
     llvm::sys::path::append(Path, "libkleeRuntimePOSIX.bca");
     klee_message("NOTE: Using model: %s", Path.c_str());
+    if (Libc == UcLibc)
+      mainModule = RenameUclibcFunctions(mainModule);
     mainModule = klee::linkWithLibrary(mainModule, Path.c_str());
     assert(mainModule && "unable to link with simple model");
+    if (Libc == UcLibc)
+      mainModule = SwitchUclibcFunctions(mainModule);
   }
 
   std::vector<std::string>::iterator libs_it;
@@ -1398,7 +1547,7 @@ int main(int argc, char **argv, char **envp) {
   if (ReplayPathFile != "") {
     interpreter->setReplayPath(&replayPath);
   }
-
+  int programExitCode = 0;
   char buf[256];
   time_t t[2];
   t[0] = time(NULL);
@@ -1495,7 +1644,8 @@ int main(int argc, char **argv, char **envp) {
         klee_error("Unable to change directory to: %s", RunInDir.c_str());
       }
     }
-    interpreter->runFunctionAsMain(mainFn, pArgc, pArgv, pEnvp);
+    programExitCode =
+        interpreter->runFunctionAsMain(mainFn, pArgc, pArgv, pEnvp);
 
     while (!seeds.empty()) {
       kTest_free(seeds.back());
@@ -1578,5 +1728,5 @@ int main(int argc, char **argv, char **envp) {
 #endif
   delete handler;
 
-  return 0;
+  return programExitCode;
 }

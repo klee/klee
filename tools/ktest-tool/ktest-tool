@@ -91,6 +91,7 @@ def main(args):
     op.add_option('','--write-ints', dest='writeInts', action='store_true',
                   default=False,
                   help='convert 4-byte sequences to integers')
+    op.add_option('','--extract-file', dest='files', action='append', type="string")
     
     opts,args = op.parse_args()
     if not args:
@@ -114,6 +115,10 @@ def main(args):
                 print('object %4d: data: %r' % (i, struct.unpack('i',str)[0]))
             else:
                 print('object %4d: data: %r' % (i, str))
+            if opts.files and name in opts.files:
+                of = open(name + ".test", 'wb')
+                of.write(data)
+                of.close
         if file != args[-1]:
             print()
 

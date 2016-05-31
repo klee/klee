@@ -44,7 +44,8 @@ public:
   ref<Expr> simplifyExpr(ref<Expr> e) const;
 
   void addConstraint(ref<Expr> e);
-  
+  void addConstraint(ref<Expr> e, bool simplify);
+
   bool empty() const {
     return constraints.empty();
   }
@@ -71,7 +72,7 @@ private:
   // returns true iff the constraints were modified
   bool rewriteConstraints(ExprVisitor &visitor);
 
-  void addConstraintInternal(ref<Expr> e);
+  void addConstraintInternal(ref<Expr> e, bool simplify);
 };
 
 }

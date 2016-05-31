@@ -25,11 +25,14 @@
 #include <sys/times.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-
+#include <sys/syscall.h>
+#include <sys/socket.h>
+#include <klee/klee.h>
 #include "klee/Config/config.h"
 
 void klee_warning(const char*);
 void klee_warning_once(const char*);
+int klee_get_errno(void);
 
 /* Silent ignore */
 
@@ -42,7 +45,7 @@ int __syscall_rt_sigaction(int signum, const struct sigaction *act,
   klee_warning_once("silently ignoring");
   return 0;
 }
-
+/*
 int sigaction(int signum, const struct sigaction *act,
               struct sigaction *oldact) __attribute__((weak));
 
@@ -58,30 +61,32 @@ int sigprocmask(int how, const sigset_t *set, sigset_t *oldset) {
   klee_warning_once("silently ignoring");
   return 0;
 }
-
+*/
 /* Not even worth warning about these */
+/*
 int fdatasync(int fd) __attribute__((weak));
 int fdatasync(int fd) {
   return 0;
 }
-
+*/
 /* Not even worth warning about this */
+/*
 void sync(void) __attribute__((weak));
 void sync(void) {
 }
-
+*/
 /* Error ignore */
 
 extern int __fgetc_unlocked(FILE *f);
 extern int __fputc_unlocked(int c, FILE *f);
-
+/*
 int __socketcall(int type, int *args) __attribute__((weak));
 int __socketcall(int type, int *args) {
   klee_warning("ignoring (EAFNOSUPPORT)");
   errno = EAFNOSUPPORT;
   return -1;
 }
-
+*/
 int _IO_getc(FILE *f) __attribute__((weak));
 int _IO_getc(FILE *f) {
   return __fgetc_unlocked(f);
@@ -91,7 +96,7 @@ int _IO_putc(int c, FILE *f) __attribute__((weak));
 int _IO_putc(int c, FILE *f) {
   return __fputc_unlocked(c, f);
 }
-
+/*
 int mkdir(const char *pathname, mode_t mode) __attribute__((weak));
 int mkdir(const char *pathname, mode_t mode) {
   klee_warning("ignoring (EIO)");
@@ -133,23 +138,25 @@ int symlink(const char *oldpath, const char *newpath) {
   errno = EPERM;
   return -1;
 }
-
+*/
+typedef int original_rename_t(const char *, const char *);
 int rename(const char *oldpath, const char *newpath) __attribute__((weak));
 int rename(const char *oldpath, const char *newpath) {
   klee_warning("ignoring (EPERM)");
   errno = EPERM;
   return -1;
 }
-
-int nanosleep(const struct timespec *req, struct timespec *rem) __attribute__((weak));
+/*
+int nanosleep(const struct timespec *req, struct timespec *rem)
+__attribute__((weak));
 int nanosleep(const struct timespec *req, struct timespec *rem) {
   return 0;
 }
-
+*/
 /* XXX why can't I call this internally? */
+
 int clock_gettime(clockid_t clk_id, struct timespec *res) __attribute__((weak));
 int clock_gettime(clockid_t clk_id, struct timespec *res) {
-  /* Fake */
   struct timeval tv;
   gettimeofday(&tv, NULL);
   res->tv_sec = tv.tv_sec;
@@ -163,7 +170,7 @@ int clock_settime(clockid_t clk_id, const struct timespec *res) {
   errno = EPERM;
   return -1;
 }
-
+/*
 time_t time(time_t *t) {
   struct timeval tv;
   gettimeofday(&tv, NULL);
@@ -173,7 +180,6 @@ time_t time(time_t *t) {
 }
 
 clock_t times(struct tms *buf) {
-  /* Fake */
   buf->tms_utime = 0;
   buf->tms_stime = 0;
   buf->tms_cutime = 0;
@@ -217,7 +223,8 @@ int group_member (gid_t __gid) {
   return ((__gid == getgid ()) || (__gid == getegid ()));
 }
 
-int utime(const char *filename, const struct utimbuf *buf) __attribute__((weak));
+int utime(const char *filename, const struct utimbuf *buf)
+__attribute__((weak));
 int utime(const char *filename, const struct utimbuf *buf) {
   klee_warning("ignoring (EPERM)");
   errno = EPERM;
@@ -230,7 +237,7 @@ int futimes(int fd, const struct timeval times[2]) {
   errno = EBADF;
   return -1;
 }
-
+*/
 int strverscmp (__const char *__s1, __const char *__s2) {
   return strcmp(__s1, __s2); /* XXX no doubt this is bad */
 }
@@ -256,7 +263,7 @@ char *canonicalize_file_name (const char *name) __attribute__((weak));
 char *canonicalize_file_name (const char *name) {
   return realpath(name, NULL);
 }
-
+/*
 int getloadavg(double loadavg[], int nelem) __attribute__((weak));
 int getloadavg(double loadavg[], int nelem) {
   klee_warning("ignoring (-1 result)");
@@ -270,14 +277,16 @@ pid_t wait(int *status) {
   return -1;
 }
 
-pid_t wait3(int *status, int options, struct rusage *rusage) __attribute__((weak));
+pid_t wait3(int *status, int options, struct rusage *rusage)
+__attribute__((weak));
 pid_t wait3(int *status, int options, struct rusage *rusage) {
   klee_warning("ignoring (ECHILD)");
   errno = ECHILD;
   return -1;
 }
 
-pid_t wait4(pid_t pid, int *status, int options, struct rusage *rusage) __attribute__((weak));
+pid_t wait4(pid_t pid, int *status, int options, struct rusage *rusage)
+__attribute__((weak));
 pid_t wait4(pid_t pid, int *status, int options, struct rusage *rusage) {
   klee_warning("ignoring (ECHILD)");
   errno = ECHILD;
@@ -291,17 +300,18 @@ pid_t waitpid(pid_t pid, int *status, int options) {
   return -1;
 }
 
-pid_t waitid(idtype_t idtype, id_t id, siginfo_t *infop, int options) __attribute__((weak));
+pid_t waitid(idtype_t idtype, id_t id, siginfo_t *infop, int options)
+__attribute__((weak));
 pid_t waitid(idtype_t idtype, id_t id, siginfo_t *infop, int options) {
   klee_warning("ignoring (ECHILD)");
   errno = ECHILD;
   return -1;
 }
-
+*/
 /* ACL */
 
 /* FIXME: We need autoconf magic for this. */
-
+/*
 #ifdef HAVE_SYS_ACL_H
 
 #include <sys/acl.h>
@@ -355,7 +365,8 @@ int acl_set_fd(int fd, acl_t acl) {
   return -1;
 }
 
-int acl_set_file(const char *path_p, acl_type_t type, acl_t acl) __attribute__((weak));
+int acl_set_file(const char *path_p, acl_type_t type, acl_t acl)
+__attribute__((weak));
 int acl_set_file(const char *path_p, acl_type_t type, acl_t acl) {
   klee_warning("ignoring (EPERM)");
   errno = EPERM;
@@ -371,8 +382,10 @@ int acl_free(void *obj_p) {
 
 #endif
 
-int mount(const char *source, const char *target, const char *filesystemtype, unsigned long mountflags, const void *data) __attribute__((weak));
-int mount(const char *source, const char *target, const char *filesystemtype, unsigned long mountflags, const void *data) {
+int mount(const char *source, const char *target, const char *filesystemtype,
+unsigned long mountflags, const void *data) __attribute__((weak));
+int mount(const char *source, const char *target, const char *filesystemtype,
+unsigned long mountflags, const void *data) {
   klee_warning("ignoring (EPERM)");
   errno = EPERM;
   return -1;
@@ -440,7 +453,8 @@ int setpgrp(void) {
   return -1;
 }
 
-int setpriority(__priority_which_t which, id_t who, int prio) __attribute__((weak));
+int setpriority(__priority_which_t which, id_t who, int prio)
+__attribute__((weak));
 int setpriority(__priority_which_t which, id_t who, int prio) {
   klee_warning("ignoring (EPERM)");
   errno = EPERM;
@@ -461,14 +475,16 @@ int setresuid(uid_t ruid, uid_t euid, uid_t suid) {
   return -1;
 }
 
-int setrlimit(__rlimit_resource_t resource, const struct rlimit *rlim) __attribute__((weak));
+int setrlimit(__rlimit_resource_t resource, const struct rlimit *rlim)
+__attribute__((weak));
 int setrlimit(__rlimit_resource_t resource, const struct rlimit *rlim) {
   klee_warning("ignoring (EPERM)");
   errno = EPERM;
   return -1;
 }
 
-int setrlimit64(__rlimit_resource_t resource, const struct rlimit64 *rlim) __attribute__((weak));
+int setrlimit64(__rlimit_resource_t resource, const struct rlimit64 *rlim)
+__attribute__((weak));
 int setrlimit64(__rlimit_resource_t resource, const struct rlimit64 *rlim) {
   klee_warning("ignoring (EPERM)");
   errno = EPERM;
@@ -482,7 +498,8 @@ pid_t setsid(void) {
   return -1;
 }
 
-int settimeofday(const struct timeval *tv, const struct timezone *tz) __attribute__((weak));
+int settimeofday(const struct timeval *tv, const struct timezone *tz)
+__attribute__((weak));
 int settimeofday(const struct timeval *tv, const struct timezone *tz) {
   klee_warning("ignoring (EPERM)");
   errno = EPERM;
@@ -530,15 +547,19 @@ ssize_t readahead(int fd, off64_t *offset, size_t count) {
   return -1;
 }
 
-void *mmap(void *start, size_t length, int prot, int flags, int fd, off_t offset) __attribute__((weak));
-void *mmap(void *start, size_t length, int prot, int flags, int fd, off_t offset) {
+void *mmap(void *start, size_t length, int prot, int flags, int fd, off_t
+offset) __attribute__((weak));
+void *mmap(void *start, size_t length, int prot, int flags, int fd, off_t
+offset) {
   klee_warning("ignoring (EPERM)");
   errno = EPERM;
   return (void*) -1;
 }
 
-void *mmap64(void *start, size_t length, int prot, int flags, int fd, off64_t offset) __attribute__((weak));
-void *mmap64(void *start, size_t length, int prot, int flags, int fd, off64_t offset) {
+void *mmap64(void *start, size_t length, int prot, int flags, int fd, off64_t
+offset) __attribute__((weak));
+void *mmap64(void *start, size_t length, int prot, int flags, int fd, off64_t
+offset) {
   klee_warning("ignoring (EPERM)");
   errno = EPERM;
   return (void*) -1;
@@ -550,3 +571,18 @@ int munmap(void*start, size_t length) {
   errno = EPERM;
   return -1;
 }
+*/
+char *setlocale(int a, char *b) __attribute__((weak));
+char *setlocale(int a, char *b) {
+  klee_warning("ignoring (EPERM)");
+  return 0;
+}
+
+char *getenv(const char *b) __attribute__((weak));
+char *getenv(const char *b) {
+  klee_warning("ignoring (EPERM)");
+  return 0;
+}
+
+// why is this needed? I don't know
+#include "sockets.c.inc"

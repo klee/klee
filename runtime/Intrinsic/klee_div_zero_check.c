@@ -10,6 +10,9 @@
 #include <klee/klee.h>
 
 void klee_div_zero_check(long long z) {
+  /* klee_enable_symbex(int TTL, bool DoInterleave) */
+  klee_enable_symbex(2, 1);
   if (z == 0)
     klee_report_error(__FILE__, __LINE__, "divide by zero", "div.err");
+  klee_disable_symbex();
 }

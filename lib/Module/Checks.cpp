@@ -46,6 +46,8 @@
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
+#include "llvm/Support/CallSite.h"
+#include <iostream>
 using namespace llvm;
 using namespace klee;
 
@@ -151,9 +153,72 @@ bool OvershiftCheckPass::runOnModule(Module &M) {
             ci->setDebugLoc(binOp->getDebugLoc());
             moduleChanged = true;
           }
+          }
+      }
+    }
+  }
+  return moduleChanged;
+}
+
+char AssertCheckPass::ID = 0;
+
+bool AssertCheckPass::runOnModule(Module &M) {
+  Function *enableSymbexFunction = 0;
+  Function *disableSymbexFunction = 0;
+  bool moduleChanged = false;
+  /*
+  for (Module::iterator f = M.begin(), fe = M.end(); f != fe; ++f) {
+    for (Function::iterator b = f->begin(), be = f->end(); b != be; ++b) {
+      BasicBlock::iterator it = b->begin();
+      Instruction *i = it;
+      if (i->getOpcode() == Instruction::Call) {
+        CallSite cs(i);
+        Function *f = cs.getCalledFunction();
+        if (f && (f->getNameStr() == "__assert_fail")) {
+          std::vector<BasicBlock*> Preds(pred_begin(b), pred_end(b));
+          for (std::vector<BasicBlock*>::iterator it = Preds.begin(), ite =
+  Preds.end();
+              it != ite; ++it) {
+            // need to get to the branch instruction and add a call to
+  klee_enable_symbex
+            // also need to disable symbex in the target bb
+            BranchInst *bi = dyn_cast<BranchInst>((*it)->getTerminator());
+            if(bi && bi->isConditional()) { // what about assert(false) ?
+               // Lazily bind the function to avoid always importing it.
+              if (!enableSymbexFunction) {
+                Constant *fc = M.getOrInsertFunction("klee_enable_symbex",
+                                                     Type::getVoidTy(getGlobalContext()),
+                                                     NULL);
+                if (NULL == fc) {
+                  std::cerr << "got null fc" << std::endl;
+                }
+                std::cerr << "ooo " << fc << std::endl;
+                enableSymbexFunction = cast<Function>(fc);
+              }
+
+              CallInst::Create(enableSymbexFunction, "", bi);
+              moduleChanged = true;
+
+              // not interested in the __assert_fail bb
+              BasicBlock *bb = bi->getSuccessor(0);
+              if (bb == &*b)
+                bb = bi->getSuccessor(1);
+               if (!disableSymbexFunction) {
+                Constant *fc = M.getOrInsertFunction("klee_disable_symbex",
+                                                     Type::getVoidTy(getGlobalContext()),
+                                                     NULL);
+                disableSymbexFunction = cast<Function>(fc);
+              }
+              CallInst::Create(disableSymbexFunction, "", bb->begin());
+              moduleChanged = true;
+
+            }
+          }
         }
       }
     }
   }
+  */
+
   return moduleChanged;
 }
