@@ -843,12 +843,18 @@ typename SolverContext::result_type MetaSMTBuilder<SolverContext>::constructActu
             typename SolverContext::result_type left_expr = construct(de->left, width_out);
             assert(*width_out != 1 && "uncanonicalized sdiv");
 
+            bool optimized = false;
             ConstantExpr *CE = dyn_cast<ConstantExpr>(de->right);
             if (CE && _optimizeDivides && (*width_out == 32)) {
-                res = constructSDivByConstant(left_expr, *width_out, CE->getZExtValue(32));
+                llvm::APInt divisor = CE->getAPValue();
+                if (divisor != llvm::APInt(CE->getWidth(),  1, false /*unsigned*/) &&
+                    divisor != llvm::APInt(CE->getWidth(), -1, true /*signed*/)) {
+                  res = constructSDivByConstant(left_expr, *width_out, CE->getZExtValue(32));
+                  optimized = true;
+                }
             }
-            else {
-                res = evaluate(_solver, bvsdiv(left_expr, construct(de->right, width_out))); 
+            if (!optimized) {
+                res = evaluate(_solver, bvsdiv(left_expr, construct(de->right, width_out)));
             }
             break;
         }
