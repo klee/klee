@@ -28,8 +28,9 @@ def main():
     args = sys.argv[1:]
     linkArgs = []
     for a in args:
-        if a in ('-g', '-W', '-O', '-D', '-f',
-                 '-fnested-functions', '-pthread'):
+        if a in ('-g', '-W', '-O', '-D', '-f', '-O2',
+                 '-fnested-functions', '-pthread',
+                 '-pipe', '-shared'):
             continue
         elif a.startswith('-Wl,'):
             continue
