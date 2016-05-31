@@ -409,18 +409,23 @@ class SubsumptionTableEntry {
   static ref<Expr> simplifyExistsExpr(ref<Expr> existsExpr,
                                       bool &hasExistentialsOnly);
 
-  /// @brief Detect contradictory unary constraints in subsumption check
-  /// beforehand to reduce the expensive call to the actual solver.
+  /// @brief Detect contradictory equalities in subsumption check beforehand to
+  /// reduce the expensive call to the actual solver.
   ///
-  /// \return true if there is contradictory unary constraints between state
-  /// constraints and query expression,
-  ///         otherwise, return false.
-  static bool solvingUnaryConstraints(ExecutionState &state, ref<Expr> query);
+  /// \return true if there is contradictory equality constraints between state
+  /// constraints and query expression, otherwise, return false.
+  static bool detectConflictPrimitives(ExecutionState &state, ref<Expr> query);
 
-  /// @brief Get a pair of a list of simplifiable conjuncts and the new
-  /// expression from which the simplifiable conjuncts have been removed.
-  static std::pair<std::vector<ref<Expr> >, ref<Expr> >
-  getSimplifiableConjuncts(ref<Expr> conjunction);
+  /// @brief Get a conjunction of equalities that are top-level conjuncts in the
+  /// query.
+  ///
+  /// \param conjunction - The output conjunction of top-level conjuncts in the
+  /// query expression.
+  /// \param query - The query expression.
+  /// \return false if there is an equality conjunct that is simplifiable to
+  /// false, true otherwise.
+  static bool fetchQueryEqualityConjuncts(std::vector<ref<Expr> > &conjunction,
+                                          ref<Expr> query);
 
   static ref<Expr> simplifyArithmeticBody(ref<Expr> existsExpr,
                                           bool &hasExistentialsOnly);
