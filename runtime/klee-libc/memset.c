@@ -10,7 +10,9 @@
 #include <stdlib.h>
 
 void *memset(void * dst, int s, size_t count) {
-    char * a = dst;
+    // TODO: Remove following: make a volatile to avoid LLVM generating vector
+    //       instructions
+    volatile char * a = dst;
     while (count-- > 0)
       *a++ = s;
     return dst;
