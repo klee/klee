@@ -906,8 +906,6 @@ void Dependency::execute(llvm::Instruction *instr,
                            getInitialAllocation(instr, args.at(0)));
       }
     }
-    updateIncomingBlock(instr);
-
     return;
   }
 
@@ -927,7 +925,6 @@ void Dependency::execute(llvm::Instruction *instr,
     default:
       break;
     }
-    updateIncomingBlock(instr);
     return;
   }
   case 1: {
@@ -1033,7 +1030,6 @@ void Dependency::execute(llvm::Instruction *instr,
     }
     default: { assert(!"unhandled unary instruction"); }
     }
-    updateIncomingBlock(instr);
     return;
   }
   case 2: {
@@ -1117,7 +1113,6 @@ void Dependency::execute(llvm::Instruction *instr,
     }
     default: { assert(!"unhandled binary instruction"); }
     }
-    updateIncomingBlock(instr);
     return;
   }
   case 3: {
@@ -1184,7 +1179,6 @@ void Dependency::execute(llvm::Instruction *instr,
     default:
       assert(!"unhandled ternary instruction");
     }
-    updateIncomingBlock(instr);
     return;
   }
   default:
@@ -1221,7 +1215,6 @@ void Dependency::bindCallArguments(llvm::Instruction *i,
     argumentValuesList.pop_back();
     ++index;
   }
-  updateIncomingBlock(i);
 }
 
 void Dependency::bindReturnValue(llvm::CallInst *site, llvm::Instruction *i,
@@ -1235,7 +1228,6 @@ void Dependency::bindReturnValue(llvm::CallInst *site, llvm::Instruction *i,
     if (value)
       addDependency(value, getNewVersionedValue(site, returnValue));
   }
-  updateIncomingBlock(i);
 }
 
 void Dependency::markAllValues(AllocationGraph *g, VersionedValue *value) {
@@ -1384,13 +1376,6 @@ void Dependency::buildAllocationGraph(AllocationGraph *g,
        it != itEnd; ++it) {
     g->addNewSink(it->second);
     recursivelyBuildAllocationGraph(g, it->first, it->second);
-  }
-}
-
-void Dependency::updateIncomingBlock(llvm::Instruction *inst) {
-  llvm::BasicBlock::iterator endInstIter = inst->getParent()->end();
-  if (endInstIter->getPrevNode() == inst) {
-    incomingBlock = inst->getParent();
   }
 }
 

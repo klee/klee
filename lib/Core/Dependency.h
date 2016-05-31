@@ -604,10 +604,6 @@ class Allocation {
     /// @brief Builds dependency graph between memory allocations
     void buildAllocationGraph(AllocationGraph *g, VersionedValue *value) const;
 
-    /// @brief Implements the condition to update incoming basic block for phi
-    /// nodes
-    void updateIncomingBlock(llvm::Instruction *inst);
-
   public:
     Dependency(Dependency *prev);
 
@@ -633,6 +629,9 @@ class Allocation {
     void markAllValues(AllocationGraph *g, VersionedValue *value);
 
     void markAllValues(AllocationGraph *g, llvm::Value *value);
+
+    /// @brief Set the incoming basic block
+    void setIncomingBlock(llvm::BasicBlock *blk) { incomingBlock = blk; }
 
     void computeCoreAllocations(AllocationGraph *g);
 

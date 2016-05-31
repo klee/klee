@@ -1434,6 +1434,9 @@ void Executor::transferToBasicBlock(BasicBlock *dst, BasicBlock *src,
     PHINode *first = static_cast<PHINode*>(state.pc->inst);
     state.incomingBBIndex = first->getBasicBlockIndex(src);
   }
+
+  if (INTERPOLATION_ENABLED)
+    interpTree->setIncomingBlock(src);
 }
 
 void Executor::printFileLine(ExecutionState &state, KInstruction *ki) {
@@ -1730,9 +1733,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     unsigned numArgs = cs.arg_size();
     Value *fp = cs.getCalledValue();
     Function *f = getTargetFunction(fp, state);
-
-    if (INTERPOLATION_ENABLED)
-      interpTree->execute(i);
 
     // Skip debug intrinsics, we can't evaluate their metadata arguments.
     if (f && isDebugIntrinsic(f, kmodule))
