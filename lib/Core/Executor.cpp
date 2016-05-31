@@ -1434,9 +1434,6 @@ void Executor::transferToBasicBlock(BasicBlock *dst, BasicBlock *src,
     PHINode *first = static_cast<PHINode*>(state.pc->inst);
     state.incomingBBIndex = first->getBasicBlockIndex(src);
   }
-
-  if (INTERPOLATION_ENABLED)
-    interpTree->setIncomingBlock(src);
 }
 
 void Executor::printFileLine(ExecutionState &state, KInstruction *ki) {
@@ -1842,8 +1839,14 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, result);
 
     // Update dependency
-    if (INTERPOLATION_ENABLED)
-      interpTree->execute(i, result);
+    if (INTERPOLATION_ENABLED) {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 0)
+      interpTree->executePHI(i, state.incomingBBIndex, result);
+#else
+      interpTree->executePHI(i, state.incomingBBIndex * 2, result);
+#endif
+    }
+
     break;
   }
 

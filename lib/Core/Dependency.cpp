@@ -848,8 +848,7 @@ bool Dependency::buildLoadDependency(llvm::Value *fromValue,
   return true;
 }
 
-Dependency::Dependency(Dependency *prev)
-    : parentDependency(prev), incomingBlock(prev ? prev->incomingBlock : 0) {}
+Dependency::Dependency(Dependency *prev) : parentDependency(prev) {}
 
 Dependency::~Dependency() {
   // Delete the locally-constructed relations
@@ -1017,17 +1016,6 @@ void Dependency::execute(llvm::Instruction *instr,
       }
       break;
     }
-    case llvm::Instruction::PHI: {
-      llvm::PHINode *node = llvm::dyn_cast<llvm::PHINode>(instr);
-      llvm::Value *llvmArgValue = node->getIncomingValueForBlock(incomingBlock);
-      VersionedValue *val = getLatestValue(llvmArgValue, argExpr);
-      if (val) {
-        addDependency(val, getNewVersionedValue(instr, argExpr));
-      } else if (!llvm::isa<llvm::Constant>(llvmArgValue)) {
-        assert(!"operand not found");
-      }
-      break;
-    }
     default: { assert(!"unhandled unary instruction"); }
     }
     return;
@@ -1185,6 +1173,18 @@ void Dependency::execute(llvm::Instruction *instr,
     break;
   }
   assert(!"unhandled instruction arguments number");
+}
+
+void Dependency::executePHI(llvm::Instruction *instr,
+                            unsigned int incomingBlock, ref<Expr> valueExpr) {
+  llvm::PHINode *node = llvm::dyn_cast<llvm::PHINode>(instr);
+  llvm::Value *llvmArgValue = node->getIncomingValue(incomingBlock);
+  VersionedValue *val = getLatestValue(llvmArgValue, valueExpr);
+  if (val) {
+    addDependency(val, getNewVersionedValue(instr, valueExpr));
+  } else if (!llvm::isa<llvm::Constant>(llvmArgValue)) {
+    assert(!"operand not found");
+  }
 }
 
 void Dependency::bindCallArguments(llvm::Instruction *i,

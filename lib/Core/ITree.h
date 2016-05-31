@@ -600,10 +600,8 @@ public:
 
   void execute(llvm::Instruction *instr, std::vector<ref<Expr> > &args);
 
-  /// @brief Set incoming block for basic block transfer
-  void setIncomingBlock(llvm::BasicBlock *blk) {
-    currentINode->dependency->setIncomingBlock(blk);
-  }
+  void executePHI(llvm::Instruction *instr, unsigned int incomingBlock,
+                  ref<Expr> valueExpr);
 
   static void executeOnNode(ITreeNode *node, llvm::Instruction *instr,
                             std::vector<ref<Expr> > &args);
