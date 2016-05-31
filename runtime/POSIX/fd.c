@@ -466,8 +466,8 @@ ssize_t write(int fd, const void *buf, size_t count) {
     if (f->dfile == __exe_fs.sym_stdout)
       __exe_fs.stdout_writes += actual_count;
 
-    f->off += count;
-    return count;
+    f->off += actual_count;
+    return actual_count;
   }
 }
 
