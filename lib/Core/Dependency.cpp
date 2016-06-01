@@ -1239,10 +1239,7 @@ void Dependency::markAllValues(AllocationGraph *g, VersionedValue *value) {
   for (std::vector<VersionedValue *>::iterator it = allSources.begin(),
                                                itEnd = allSources.end();
        it != itEnd; ++it) {
-    // FIXME: Check why it can be NULL
-    if (*it) {
-      (*it)->setAsCore();
-    }
+    (*it)->setAsCore();
   }
 }
 
