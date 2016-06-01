@@ -526,9 +526,6 @@ class Allocation {
     /// that are needed for the core and dominates other allocations.
     std::set<Allocation *> coreAllocations;
 
-    /// @brief the basic block of the last-executed instruction
-    llvm::BasicBlock *incomingBlock;
-
     VersionedValue *getNewVersionedValue(llvm::Value *value,
                                          ref<Expr> valueExpr);
 
@@ -604,10 +601,6 @@ class Allocation {
     /// @brief Builds dependency graph between memory allocations
     void buildAllocationGraph(AllocationGraph *g, VersionedValue *value) const;
 
-    /// @brief Implements the condition to update incoming basic block for phi
-    /// nodes
-    void updateIncomingBlock(llvm::Instruction *inst);
-
   public:
     Dependency(Dependency *prev);
 
@@ -619,6 +612,10 @@ class Allocation {
 
     /// @brief Abstract dependency state transition with argument(s)
     void execute(llvm::Instruction *instr, std::vector<ref<Expr> > &args);
+
+    /// @brief Build dependencies from PHI node
+    void executePHI(llvm::Instruction *instr, unsigned int incomingBlock,
+                    ref<Expr> valueExpr);
 
     std::pair<ConcreteStore, SymbolicStore>
     getStoredExpressions(std::set<const Array *> &replacements,

@@ -852,8 +852,7 @@ bool Dependency::buildLoadDependency(llvm::Value *fromValue,
   return true;
 }
 
-Dependency::Dependency(Dependency *prev)
-    : parentDependency(prev), incomingBlock(prev ? prev->incomingBlock : 0) {}
+Dependency::Dependency(Dependency *prev) : parentDependency(prev) {}
 
 Dependency::~Dependency() {
   // Delete the locally-constructed relations
@@ -904,10 +903,11 @@ void Dependency::execute(llvm::Instruction *instr,
         VersionedValue *arg =
             getNewVersionedValue(instr->getOperand(0), args.at(1));
         addDependency(arg, returnValue);
+      } else if (calleeName.equals("getenv") && args.size() == 2) {
+        addPointerEquality(getNewVersionedValue(instr, args.at(0)),
+                           getInitialAllocation(instr, args.at(0)));
       }
     }
-    updateIncomingBlock(instr);
-
     return;
   }
 
@@ -927,7 +927,6 @@ void Dependency::execute(llvm::Instruction *instr,
     case llvm::Instruction::Ret: { break; }
     default: { break; }
     }
-    updateIncomingBlock(instr);
     return;
   }
   case 1: {
@@ -1020,25 +1019,8 @@ void Dependency::execute(llvm::Instruction *instr,
       }
       break;
     }
-    case llvm::Instruction::PHI: {
-      llvm::PHINode *node = llvm::dyn_cast<llvm::PHINode>(instr);
-      int Idx = node->getBasicBlockIndex(incomingBlock);
-      if (Idx >= 0) {
-        // llvm::Value *llvmArgValue =
-        // node->getIncomingValueForBlock(incomingBlock);
-        llvm::Value *llvmArgValue = node->getIncomingValue(Idx);
-        VersionedValue *val = getLatestValue(llvmArgValue, argExpr);
-        if (val) {
-          addDependency(val, getNewVersionedValue(instr, argExpr));
-        } else if (!llvm::isa<llvm::Constant>(llvmArgValue)) {
-          assert(!"operand not found");
-        }
-      }
-      break;
-    }
     default: { assert(!"unhandled unary instruction"); }
     }
-    updateIncomingBlock(instr);
     return;
   }
   case 2: {
@@ -1122,7 +1104,6 @@ void Dependency::execute(llvm::Instruction *instr,
     }
     default: { assert(!"unhandled binary instruction"); }
     }
-    updateIncomingBlock(instr);
     return;
   }
   case 3: {
@@ -1189,13 +1170,24 @@ void Dependency::execute(llvm::Instruction *instr,
     default:
       assert(!"unhandled ternary instruction");
     }
-    updateIncomingBlock(instr);
     return;
   }
   default:
     break;
   }
   assert(!"unhandled instruction arguments number");
+}
+
+void Dependency::executePHI(llvm::Instruction *instr,
+                            unsigned int incomingBlock, ref<Expr> valueExpr) {
+  llvm::PHINode *node = llvm::dyn_cast<llvm::PHINode>(instr);
+  llvm::Value *llvmArgValue = node->getIncomingValue(incomingBlock);
+  VersionedValue *val = getLatestValue(llvmArgValue, valueExpr);
+  if (val) {
+    addDependency(val, getNewVersionedValue(instr, valueExpr));
+  } else if (!llvm::isa<llvm::Constant>(llvmArgValue)) {
+    assert(!"operand not found");
+  }
 }
 
 void Dependency::bindCallArguments(llvm::Instruction *i,
@@ -1226,7 +1218,6 @@ void Dependency::bindCallArguments(llvm::Instruction *i,
     argumentValuesList.pop_back();
     ++index;
   }
-  updateIncomingBlock(i);
 }
 
 void Dependency::bindReturnValue(llvm::CallInst *site, llvm::Instruction *i,
@@ -1240,7 +1231,6 @@ void Dependency::bindReturnValue(llvm::CallInst *site, llvm::Instruction *i,
     if (value)
       addDependency(value, getNewVersionedValue(site, returnValue));
   }
-  updateIncomingBlock(i);
 }
 
 void Dependency::markAllValues(AllocationGraph *g, VersionedValue *value) {
@@ -1258,6 +1248,21 @@ void Dependency::markAllValues(AllocationGraph *g, VersionedValue *value) {
 
 void Dependency::markAllValues(AllocationGraph *g, llvm::Value *val) {
   VersionedValue *value = getLatestValueNoConstantCheck(val);
+
+  // Right now we simply ignore the __dso_handle values. They are due
+  // to library / linking errors caused by missing options (-shared) in the
+  // compilation involving shared library.
+  if (!value) {
+    if (llvm::ConstantExpr *cVal = llvm::dyn_cast<llvm::ConstantExpr>(val)) {
+      for (unsigned i = 0; i < cVal->getNumOperands(); ++i) {
+        if (cVal->getOperand(i)->getName().equals("__dso_handle")) {
+          return;
+        }
+      }
+    }
+    assert(!"unknown value");
+  }
+
   markAllValues(g, value);
 }
 
@@ -1386,13 +1391,6 @@ void Dependency::buildAllocationGraph(AllocationGraph *g,
        it != itEnd; ++it) {
     g->addNewSink(it->second);
     recursivelyBuildAllocationGraph(g, it->first, it->second);
-  }
-}
-
-void Dependency::updateIncomingBlock(llvm::Instruction *inst) {
-  llvm::BasicBlock::iterator endInstIter = inst->getParent()->end();
-  if (endInstIter->getPrevNode() == inst) {
-    incomingBlock = inst->getParent();
   }
 }
 

@@ -1736,9 +1736,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     Value *fp = cs.getCalledValue();
     Function *f = getTargetFunction(fp, state);
 
-    if (INTERPOLATION_ENABLED)
-      interpTree->execute(i);
-
     // Skip debug intrinsics, we can't evaluate their metadata arguments.
     if (f && isDebugIntrinsic(f, kmodule))
       break;
@@ -1847,8 +1844,14 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, result);
 
     // Update dependency
-    if (INTERPOLATION_ENABLED)
-      interpTree->execute(i, result);
+    if (INTERPOLATION_ENABLED) {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 0)
+      interpTree->executePHI(i, state.incomingBBIndex, result);
+#else
+      interpTree->executePHI(i, state.incomingBBIndex * 2, result);
+#endif
+    }
+
     break;
   }
 
