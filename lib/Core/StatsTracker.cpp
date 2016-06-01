@@ -190,13 +190,16 @@ StatsTracker::StatsTracker(Executor &_executor, std::string _objectFilename,
   if (!sys::path::is_absolute(objectFilename)) {
     SmallString<128> current(objectFilename);
     if(sys::fs::make_absolute(current)) {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
+      Twine current_twine(current.str()); // requires a twine for this. so silly
+      if (!sys::fs::exists(current_twine)) {
+#elif LLVM_VERSION_CODE == LLVM_VERSION(3, 5)
       bool exists = false;
-
-#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
+      if (!sys::fs::exists(current.str(), exists)) {
+#elif LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
+      bool exists = false;
       error_code ec = sys::fs::exists(current.str(), exists);
       if (ec == errc::success && exists) {
-#else
-      if (!sys::fs::exists(current.str(), exists)) {
 #endif
         objectFilename = current.c_str();
       }
