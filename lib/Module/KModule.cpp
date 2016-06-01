@@ -46,8 +46,11 @@
 #else
 #include "llvm/IR/CallSite.h"
 #endif
-
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 7)
+#include "llvm/IR/LegacyPassManager.h"
+#else
 #include "llvm/PassManager.h"
+#endif
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/raw_os_ostream.h"
@@ -117,12 +120,15 @@ KModule::~KModule() {
   delete[] constantTable;
   delete infos;
 
-  for (std::vector<KFunction*>::iterator it = functions.begin(), 
-         ie = functions.end(); it != ie; ++it)
+  for (std::vector<KFunction *>::iterator it = functions.begin(),
+                                          ie = functions.end();
+       it != ie; ++it)
     delete *it;
 
-  for (std::map<llvm::Constant*, KConstant*>::iterator it=constantMap.begin(),
-      itE=constantMap.end(); it!=itE;++it)
+  for (std::map<llvm::Constant *, KConstant *>::iterator
+           it = constantMap.begin(),
+           itE = constantMap.end();
+       it != itE; ++it)
     delete it->second;
 
   delete targetData;
@@ -144,11 +150,9 @@ static Function *getStubFunctionForCtorList(Module *m,
   
   std::vector<LLVM_TYPE_Q Type*> nullary;
 
-  Function *fn = Function::Create(FunctionType::get(Type::getVoidTy(getGlobalContext()), 
-						    nullary, false),
-				  GlobalVariable::InternalLinkage, 
-				  name,
-                              m);
+  Function *fn = Function::Create(
+      FunctionType::get(Type::getVoidTy(getGlobalContext()), nullary, false),
+      GlobalVariable::InternalLinkage, name, m);
   BasicBlock *bb = BasicBlock::Create(getGlobalContext(), "entry", fn);
   
   // From lli:
@@ -158,8 +162,15 @@ static Function *getStubFunctionForCtorList(Module *m,
   if (arr) {
     for (unsigned i=0; i<arr->getNumOperands(); i++) {
       ConstantStruct *cs = cast<ConstantStruct>(arr->getOperand(i));
-      assert(cs->getNumOperands()==2 && "unexpected element in ctor initializer list");
-      
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
+      assert(cs->getNumOperands() == 2 &&
+             "unexpected element in ctor initializer list");
+#else
+      // There is a third *optional* element in global_ctor elements (``i8
+      // @data``).
+      assert((cs->getNumOperands() == 2 || cs->getNumOperands() == 3) &&
+             "unexpected element in ctor initializer list");
+#endif
       Constant *fp = cs->getOperand(1);      
       if (!fp->isNullValue()) {
         if (llvm::ConstantExpr *ce = dyn_cast<llvm::ConstantExpr>(fp))
@@ -189,8 +200,14 @@ static void injectStaticConstructorsAndDestructors(Module *m) {
       klee_error("Could not find main() function.");
 
     if (ctors)
-    CallInst::Create(getStubFunctionForCtorList(m, ctors, "klee.ctor_stub"),
-		     "", mainFn->begin()->begin());
+      CallInst::Create(getStubFunctionForCtorList(m, ctors, "klee.ctor_stub"),
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
+                       "",
+                       static_cast<Instruction *>(mainFn->begin()->begin()));
+#else
+                       "", mainFn->begin()->begin());
+#endif
+
     if (dtors) {
       Function *dtorStub = getStubFunctionForCtorList(m, dtors, "klee.dtor_stub");
       for (Function::iterator it = mainFn->begin(), ie = mainFn->end();
@@ -270,22 +287,27 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 0)
         result = PHINode::Create(f->getReturnType(), 0, "retval", exit);
 #else
-		result = PHINode::Create(f->getReturnType(), "retval", exit);
+        result = PHINode::Create(f->getReturnType(), "retval", exit);
 #endif
       CallInst::Create(mergeFn, "", exit);
       ReturnInst::Create(getGlobalContext(), result, exit);
 
       llvm::errs() << "KLEE: adding klee_merge at exit of: " << name << "\n";
-      for (llvm::Function::iterator bbit = f->begin(), bbie = f->end(); 
+      for (llvm::Function::iterator bbit = f->begin(), bbie = f->end();
            bbit != bbie; ++bbit) {
-        if (&*bbit != exit) {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
+        auto bb = static_cast<BasicBlock *>(bbit);
+#else
+        BasicBlock *bb = bbit;
+#endif
+        if (bb != exit) {
           Instruction *i = bbit->getTerminator();
           if (i->getOpcode()==Instruction::Ret) {
             if (result) {
-              result->addIncoming(i->getOperand(0), bbit);
+              result->addIncoming(i->getOperand(0), bb);
             }
             i->eraseFromParent();
-	    BranchInst::Create(exit, bbit);
+            BranchInst::Create(exit, bb);
           }
         }
       }
@@ -296,7 +318,11 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   // invariant transformations that we will end up doing later so that
   // optimize is seeing what is as close as possible to the final
   // module.
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 7)
+  legacy::PassManager pm;
+#else
   PassManager pm;
+#endif
   pm.add(new RaiseAsmPass());
   if (opts.CheckDivZero) pm.add(new DivCheckPass());
   if (opts.CheckOvershift) pm.add(new OvershiftCheckPass());
@@ -364,7 +390,11 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   // linked in something with intrinsics but any external calls are
   // going to be unresolved. We really need to handle the intrinsics
   // directly I think?
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 7)
+  legacy::PassManager pm3;
+#else
   PassManager pm3;
+#endif
   pm3.add(createCFGSimplificationPass());
   switch(SwitchType) {
   case eSwitchTypeInternal: break;
@@ -442,15 +472,20 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
     if (it->isDeclaration())
       continue;
 
-    KFunction *kf = new KFunction(it, this);
-    
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
+    auto fn = static_cast<Function *>(it);
+#else
+    Function *fn = it;
+#endif
+    KFunction *kf = new KFunction(fn, this);
+
     for (unsigned i=0; i<kf->numInstructions; ++i) {
       KInstruction *ki = kf->instructions[i];
       ki->info = &infos->getInfo(ki->inst);
     }
 
     functions.push_back(kf);
-    functionMap.insert(std::make_pair(it, kf));
+    functionMap.insert(std::make_pair(fn, kf));
   }
 
   /* Compute various interesting properties */
@@ -509,8 +544,12 @@ static int getOperandNum(Value *v,
     return registerMap[inst];
   } else if (Argument *a = dyn_cast<Argument>(v)) {
     return a->getArgNo();
-  } else if (isa<BasicBlock>(v) || isa<InlineAsm>(v) ||
-             isa<MDNode>(v)) {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
+    // Metadata is no longer a Value
+  } else if (isa<BasicBlock>(v) || isa<InlineAsm>(v)) {
+#else
+  } else if (isa<BasicBlock>(v) || isa<InlineAsm>(v) || isa<MDNode>(v)) {
+#endif
     return -1;
   } else {
     assert(isa<Constant>(v));
@@ -527,7 +566,11 @@ KFunction::KFunction(llvm::Function *_function,
     trackCoverage(true) {
   for (llvm::Function::iterator bbit = function->begin(), 
          bbie = function->end(); bbit != bbie; ++bbit) {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
+    auto bb = static_cast<BasicBlock *>(bbit);
+#else
     BasicBlock *bb = bbit;
+#endif
     basicBlockEntry[bb] = numInstructions;
     numInstructions += bb->size();
   }
@@ -542,7 +585,11 @@ KFunction::KFunction(llvm::Function *_function,
          bbie = function->end(); bbit != bbie; ++bbit) {
     for (llvm::BasicBlock::iterator it = bbit->begin(), ie = bbit->end();
          it != ie; ++it)
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
+      registerMap[static_cast<Instruction *>(it)] = rnum++;
+#else
       registerMap[it] = rnum++;
+#endif
   }
   numRegisters = rnum;
   
@@ -561,12 +608,16 @@ KFunction::KFunction(llvm::Function *_function,
       default:
         ki = new KInstruction(); break;
       }
-
-      ki->inst = it;      
-      ki->dest = registerMap[it];
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
+      auto inst = static_cast<Instruction *>(it);
+#else
+      Instruction *inst = it;
+#endif
+      ki->inst = inst;
+      ki->dest = registerMap[inst];
 
       if (isa<CallInst>(it) || isa<InvokeInst>(it)) {
-        CallSite cs(it);
+        CallSite cs(inst);
         unsigned numArgs = cs.arg_size();
         ki->operands = new int[numArgs+1];
         ki->operands[0] = getOperandNum(cs.getCalledValue(), registerMap, km,

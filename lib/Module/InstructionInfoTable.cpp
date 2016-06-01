@@ -87,7 +87,7 @@ static void buildInstructionToLineMap(Module *m,
   }
 }
 
-static std::string getDSPIPath(DILocation Loc) {
+static std::string getDSPIPath(const DILocation &Loc) {
   std::string dir = Loc.getDirectory();
   std::string file = Loc.getFilename();
   if (dir.empty() || file[0] == '/') {
@@ -103,9 +103,15 @@ bool InstructionInfoTable::getInstructionDebugInfo(const llvm::Instruction *I,
                                                    const std::string *&File,
                                                    unsigned &Line) {
   if (MDNode *N = I->getMetadata("dbg")) {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 7)
+    DILocation *Loc = cast<DILocation>(N);
+    File = internString(getDSPIPath(*Loc));
+    Line = Loc->getLine();
+#else
     DILocation Loc(N);
     File = internString(getDSPIPath(Loc));
     Line = Loc.getLineNumber();
+#endif
     return true;
   }
 
@@ -128,7 +134,12 @@ InstructionInfoTable::InstructionInfoTable(Module *m)
     // if any.
     const std::string *initialFile = &dummyString;
     unsigned initialLine = 0;
-    for (inst_iterator it = inst_begin(fnIt), ie = inst_end(fnIt); it != ie;
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
+    auto fn = static_cast<Function *>(fnIt);
+#else
+    Function *fn = fnIt;
+#endif
+    for (inst_iterator it = inst_begin(fn), ie = inst_end(fn); it != ie;
          ++it) {
       if (getInstructionDebugInfo(&*it, initialFile, initialLine))
         break;
@@ -136,8 +147,8 @@ InstructionInfoTable::InstructionInfoTable(Module *m)
 
     const std::string *file = initialFile;
     unsigned line = initialLine;
-    for (inst_iterator it = inst_begin(fnIt), ie = inst_end(fnIt); it != ie;
-        ++it) {
+    for (inst_iterator it = inst_begin(fn), ie = inst_end(fn); it != ie;
+         ++it) {
       Instruction *instr = &*it;
       unsigned assemblyLine = lineTable[instr];
 
@@ -193,6 +204,10 @@ InstructionInfoTable::getFunctionInfo(const Function *f) const {
     // and construct a test case for it if it does, though.
     return dummyInfo;
   } else {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
+    return getInfo(static_cast<const Instruction *>(f->begin()->begin()));
+#else
     return getInfo(f->begin()->begin());
+#endif
   }
 }

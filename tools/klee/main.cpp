@@ -58,6 +58,10 @@
 #include "llvm/Support/system_error.h"
 #endif
 
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 7)
+#include "llvm/Support/Path.h"
+#endif
+
 #include <dirent.h>
 #include <signal.h>
 #include <unistd.h>
@@ -308,7 +312,12 @@ KleeHandler::KleeHandler(int argc, char **argv)
     for (; i <= INT_MAX; ++i) {
       SmallString<128> d(directory);
       llvm::sys::path::append(d, "klee-out-");
-      raw_svector_ostream ds(d); ds << i; ds.flush();
+      raw_svector_ostream ds(d);
+      ds << i;
+// SmallString is always up-to-date, no need to flush. See Support/raw_ostream.h
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 8)
+      ds.flush();
+#endif
 
       // create directory and try to link klee-last
       if (mkdir(d.c_str(), 0775) == 0) {
@@ -384,7 +393,12 @@ llvm::raw_fd_ostream *KleeHandler::openOutputFile(const std::string &filename) {
   llvm::raw_fd_ostream *f;
   std::string Error;
   std::string path = getOutputFilename(filename);
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3,5)
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
+  std::error_code ec;
+  f = new llvm::raw_fd_ostream(path.c_str(), ec, llvm::sys::fs::F_None);
+  if (ec)
+    Error = ec.message();
+#elif LLVM_VERSION_CODE >= LLVM_VERSION(3, 5)
   f = new llvm::raw_fd_ostream(path.c_str(), Error, llvm::sys::fs::F_None);
 #elif LLVM_VERSION_CODE >= LLVM_VERSION(3,4)
   f = new llvm::raw_fd_ostream(path.c_str(), Error, llvm::sys::fs::F_Binary);
@@ -644,8 +658,13 @@ static std::string strip(std::string &in) {
 }
 
 static void parseArguments(int argc, char **argv) {
+
   cl::SetVersionPrinter(klee::printVersion);
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 2)
+
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
+  cl::ParseCommandLineOptions(argc, (char **)argv, " klee\n"); // removes
+                                                               // warning
+#elif LLVM_VERSION_CODE >= LLVM_VERSION(3, 2)
   // This version always reads response files
   cl::ParseCommandLineOptions(argc, argv, " klee\n");
 #else
@@ -672,11 +691,17 @@ static int initEnv(Module *mainModule) {
   if (mainFn->arg_size() < 2) {
     klee_error("Cannot handle ""--posix-runtime"" when main() has less than two arguments.\n");
   }
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
+  auto firstInst = static_cast<Instruction *>(mainFn->begin()->begin());
 
-  Instruction* firstInst = mainFn->begin()->begin();
+  auto oldArgc = static_cast<Argument *>(mainFn->arg_begin());
+  auto oldArgv = static_cast<Argument *>(++mainFn->arg_begin());
+#else
+  Instruction *firstInst = mainFn->begin()->begin();
 
-  Value* oldArgc = mainFn->arg_begin();
-  Value* oldArgv = ++mainFn->arg_begin();
+  Value *oldArgc = mainFn->arg_begin();
+  Value *oldArgv = ++mainFn->arg_begin();
+#endif
 
   AllocaInst* argcPtr =
     new AllocaInst(oldArgc->getType(), "argcPtr", firstInst);
@@ -1033,9 +1058,14 @@ static llvm::Module *linkWithUclibc(llvm::Module *mainModule, StringRef libDir) 
   SmallString<128> uclibcBCA(libDir);
   llvm::sys::path::append(uclibcBCA, KLEE_UCLIBC_BCA_NAME);
 
-  bool uclibcExists=false;
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
+  Twine uclibcBCA_twine(uclibcBCA.c_str());
+  if (!llvm::sys::fs::exists(uclibcBCA_twine))
+#else
+  bool uclibcExists = false;
   llvm::sys::fs::exists(uclibcBCA.c_str(), uclibcExists);
   if (!uclibcExists)
+#endif
     klee_error("Cannot find klee-uclibc : %s", uclibcBCA.c_str());
 
   Function *f;
@@ -1077,7 +1107,11 @@ static llvm::Module *linkWithUclibc(llvm::Module *mainModule, StringRef libDir) 
   // naming conflict.
   for (Module::iterator fi = mainModule->begin(), fe = mainModule->end();
        fi != fe; ++fi) {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
+    auto f = static_cast<Function *>(fi);
+#else
     Function *f = fi;
+#endif
     const std::string &name = f->getName();
     if (name[0]=='\01') {
       unsigned size = name.size();
@@ -1136,8 +1170,13 @@ static llvm::Module *linkWithUclibc(llvm::Module *mainModule, StringRef libDir) 
   std::vector<llvm::Value*> args;
   args.push_back(llvm::ConstantExpr::getBitCast(userMainFn,
                                                 ft->getParamType(0)));
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
+  args.push_back(static_cast<Argument *>(stub->arg_begin()));   // argc
+  args.push_back(static_cast<Argument *>(++stub->arg_begin())); // argv
+#else
   args.push_back(stub->arg_begin()); // argc
   args.push_back(++stub->arg_begin()); // argv
+#endif
   args.push_back(Constant::getNullValue(ft->getParamType(3))); // app_init
   args.push_back(Constant::getNullValue(ft->getParamType(4))); // app_fini
   args.push_back(Constant::getNullValue(ft->getParamType(5))); // rtld_fini
@@ -1255,9 +1294,13 @@ int main(int argc, char **argv, char **envp) {
   if (!Buffer)
     klee_error("error loading program '%s': %s", InputFile.c_str(),
                Buffer.getError().message().c_str());
-
-  auto mainModuleOrError = getLazyBitcodeModule(Buffer->get(), getGlobalContext());
-
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
+  auto mainModuleOrError =
+      getLazyBitcodeModule(std::move(Buffer.get()), getGlobalContext());
+#else
+  auto mainModuleOrError =
+      getLazyBitcodeModule(Buffer->get(), getGlobalContext());
+#endif
   if (!mainModuleOrError) {
     klee_error("error loading program '%s': %s", InputFile.c_str(),
                mainModuleOrError.getError().message().c_str());
@@ -1267,9 +1310,16 @@ int main(int argc, char **argv, char **envp) {
     // from the std::unique_ptr
     Buffer->release();
   }
-
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 7)
+  mainModule = mainModuleOrError->release();
+#else
   mainModule = *mainModuleOrError;
+#endif
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
+  if (auto ec = mainModule->materializeAll()) {
+#else
   if (auto ec = mainModule->materializeAllPermanently()) {
+#endif
     klee_error("error loading program '%s': %s", InputFile.c_str(),
                ec.message().c_str());
   }

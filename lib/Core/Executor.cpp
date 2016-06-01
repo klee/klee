@@ -478,7 +478,11 @@ void Executor::initializeGlobals(ExecutionState &state) {
   // ensures that we won't conflict. we don't need to allocate a memory object
   // since reading/writing via a function pointer is unsupported anyway.
   for (Module::iterator i = m->begin(), ie = m->end(); i != ie; ++i) {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
+    auto f = static_cast<Function *>(i);
+#else
     Function *f = i;
+#endif
     ref<ConstantExpr> addr(0);
 
     // If the symbol has external weak linkage then it is implicitly
@@ -532,6 +536,11 @@ void Executor::initializeGlobals(ExecutionState &state) {
   for (Module::const_global_iterator i = m->global_begin(),
          e = m->global_end();
        i != e; ++i) {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
+    auto v = static_cast<const GlobalVariable *>(i);
+#else
+    const GlobalVariable *v = i;
+#endif
     if (i->isDeclaration()) {
       // FIXME: We have no general way of handling unknown external
       // symbols. If we really cared about making external stuff work
@@ -557,11 +566,10 @@ void Executor::initializeGlobals(ExecutionState &state) {
                      << i->getName() 
                      << " (use will result in out of bounds access)\n";
       }
-
-      MemoryObject *mo = memory->allocate(size, false, true, i);
+      MemoryObject *mo = memory->allocate(size, false, true, v);
       ObjectState *os = bindObjectInState(state, mo, false);
-      globalObjects.insert(std::make_pair(i, mo));
-      globalAddresses.insert(std::make_pair(i, mo->getBaseExpr()));
+      globalObjects.insert(std::make_pair(v, mo));
+      globalAddresses.insert(std::make_pair(v, mo->getBaseExpr()));
 
       // Program already running = object already initialized.  Read
       // concrete value and write it to our copy.
@@ -586,8 +594,8 @@ void Executor::initializeGlobals(ExecutionState &state) {
       if (!mo)
         llvm::report_fatal_error("out of memory");
       ObjectState *os = bindObjectInState(state, mo, false);
-      globalObjects.insert(std::make_pair(i, mo));
-      globalAddresses.insert(std::make_pair(i, mo->getBaseExpr()));
+      globalObjects.insert(std::make_pair(v, mo));
+      globalAddresses.insert(std::make_pair(v, mo->getBaseExpr()));
 
       if (!i->hasInitializer())
           os->initializeToRandom();
@@ -598,8 +606,13 @@ void Executor::initializeGlobals(ExecutionState &state) {
   for (Module::alias_iterator i = m->alias_begin(), ie = m->alias_end(); 
        i != ie; ++i) {
     // Map the alias to its aliasee's address. This works because we have
-    // addresses for everything, even undefined functions. 
+    // addresses for everything, even undefined functions.
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
+    globalAddresses.insert(std::make_pair(static_cast<GlobalAlias *>(i),
+                                          evalConstant(i->getAliasee())));
+#else
     globalAddresses.insert(std::make_pair(i, evalConstant(i->getAliasee())));
+#endif
   }
 
   // once all objects are allocated, do the actual initialization
@@ -607,7 +620,12 @@ void Executor::initializeGlobals(ExecutionState &state) {
          e = m->global_end();
        i != e; ++i) {
     if (i->hasInitializer()) {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
+      MemoryObject *mo =
+          globalObjects.find(static_cast<const GlobalVariable *>(i))->second;
+#else
       MemoryObject *mo = globalObjects.find(i)->second;
+#endif
       const ObjectState *os = state.addressSpace.findObject(mo);
       assert(os);
       ObjectState *wos = state.addressSpace.getWriteable(mo, os);
@@ -1400,9 +1418,13 @@ Function* Executor::getTargetFunction(Value *calledVal, ExecutionState &state) {
 
   while (true) {
     if (GlobalValue *gv = dyn_cast<GlobalValue>(c)) {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
+      if (!Visited.insert(gv).second)
+        return 0;
+#else
       if (!Visited.insert(gv))
         return 0;
-
+#endif
       std::string alias = state.getFnAlias(gv->getName());
       if (alias != "") {
         llvm::Module* currModule = kmodule->module;
@@ -1414,7 +1436,7 @@ Function* Executor::getTargetFunction(Value *calledVal, ExecutionState &state) {
           assert(0 && "function alias not found");
         }
       }
-     
+
       if (Function *f = dyn_cast<Function>(gv))
         return f;
       else if (GlobalAlias *ga = dyn_cast<GlobalAlias>(gv))
@@ -1576,8 +1598,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(cond)) {
       // Somewhat gross to create these all the time, but fine till we
       // switch to an internal rep.
-      LLVM_TYPE_Q llvm::IntegerType *Ty = 
-        cast<IntegerType>(si->getCondition()->getType());
+      LLVM_TYPE_Q llvm::IntegerType *Ty =
+          cast<IntegerType>(si->getCondition()->getType());
       ConstantInt *ci = ConstantInt::get(Ty, CE->getZExtValue());
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 1)
       unsigned index = si->findCaseValue(ci).getSuccessorIndex();
@@ -1586,14 +1608,14 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 #endif
       transferToBasicBlock(si->getSuccessor(index), si->getParent(), state);
     } else {
-      std::map<BasicBlock*, ref<Expr> > targets;
+      std::map<BasicBlock *, ref<Expr> > targets;
       ref<Expr> isDefault = ConstantExpr::alloc(1, Expr::Bool);
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 1)      
-      for (SwitchInst::CaseIt i = si->case_begin(), e = si->case_end();
-           i != e; ++i) {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 1)
+      for (SwitchInst::CaseIt i = si->case_begin(), e = si->case_end(); i != e;
+           ++i) {
         ref<Expr> value = evalConstant(i.getCaseValue());
 #else
-      for (unsigned i=1, cases = si->getNumCases(); i<cases; ++i) {
+      for (unsigned i = 1, cases = si->getNumCases(); i < cases; ++i) {
         ref<Expr> value = evalConstant(si->getCaseValue(i));
 #endif
         ref<Expr> match = EqExpr::create(cond, value);
@@ -1601,16 +1623,17 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         bool result;
         bool success = solver->mayBeTrue(state, match, result);
         assert(success && "FIXME: Unhandled solver failure");
-        (void) success;
+        (void)success;
         if (result) {
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 1)
           BasicBlock *caseSuccessor = i.getCaseSuccessor();
 #else
           BasicBlock *caseSuccessor = si->getSuccessor(i);
 #endif
-          std::map<BasicBlock*, ref<Expr> >::iterator it =
-            targets.insert(std::make_pair(caseSuccessor,
-                           ConstantExpr::alloc(0, Expr::Bool))).first;
+          std::map<BasicBlock *, ref<Expr> >::iterator it =
+              targets.insert(std::make_pair(caseSuccessor,
+                                            ConstantExpr::alloc(0, Expr::Bool)))
+                  .first;
 
           it->second = OrExpr::create(match, it->second);
         }
@@ -1618,22 +1641,22 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       bool res;
       bool success = solver->mayBeTrue(state, isDefault, res);
       assert(success && "FIXME: Unhandled solver failure");
-      (void) success;
+      (void)success;
       if (res)
         targets.insert(std::make_pair(si->getDefaultDest(), isDefault));
-      
-      std::vector< ref<Expr> > conditions;
-      for (std::map<BasicBlock*, ref<Expr> >::iterator it = 
-             targets.begin(), ie = targets.end();
+
+      std::vector<ref<Expr> > conditions;
+      for (std::map<BasicBlock *, ref<Expr> >::iterator it = targets.begin(),
+                                                        ie = targets.end();
            it != ie; ++it)
         conditions.push_back(it->second);
-      
-      std::vector<ExecutionState*> branches;
+
+      std::vector<ExecutionState *> branches;
       branch(state, conditions, branches);
-        
-      std::vector<ExecutionState*>::iterator bit = branches.begin();
-      for (std::map<BasicBlock*, ref<Expr> >::iterator it = 
-             targets.begin(), ie = targets.end();
+
+      std::vector<ExecutionState *>::iterator bit = branches.begin();
+      for (std::map<BasicBlock *, ref<Expr> >::iterator it = targets.begin(),
+                                                        ie = targets.end();
            it != ie; ++it) {
         ExecutionState *es = *bit;
         if (es)
@@ -2162,8 +2185,13 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       return terminateStateOnExecError(state, "Unsupported FRem operation");
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
     llvm::APFloat Res(*fpWidthToSemantics(left->getWidth()), left->getAPValue());
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
+    Res.mod(
+        APFloat(*fpWidthToSemantics(right->getWidth()), right->getAPValue()));
+#else
     Res.mod(APFloat(*fpWidthToSemantics(right->getWidth()),right->getAPValue()),
             APFloat::rmNearestTiesToEven);
+#endif
 #else
     llvm::APFloat Res(left->getAPValue());
     Res.mod(APFloat(right->getAPValue()), APFloat::rmNearestTiesToEven);
@@ -2911,8 +2939,16 @@ void Executor::callExternalFunction(ExecutionState &state,
     else
       klee_warning_once(function, "%s", os.str().c_str());
   }
-  
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
+  // MCJIT needs unique module, so we create quick external dispatcher for call.
+  // reference:
+  // http://blog.llvm.org/2013/07/using-mcjit-with-kaleidoscope-tutorial.html
+  ExternalDispatcher *e = new ExternalDispatcher();
+  bool success = e->executeCall(function, target->inst, args);
+  delete e;
+#else
   bool success = externalDispatcher->executeCall(function, target->inst, args);
+#endif
   if (!success) {
     terminateStateOnError(state, "failed external call: " + function->getName(),
                           "external.err");
@@ -3388,9 +3424,14 @@ void Executor::runFunctionAsMain(Function *f,
     arguments.push_back(ConstantExpr::alloc(argc, Expr::Int32));
 
     if (++ai!=ae) {
-      argvMO = memory->allocate((argc+1+envc+1+1) * NumPtrBytes, false, true,
-                                f->begin()->begin());
-      
+      argvMO =
+          memory->allocate((argc + 1 + envc + 1 + 1) * NumPtrBytes, false, true,
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
+                           static_cast<Instruction *>(f->begin()->begin()));
+#else
+                           f->begin()->begin());
+#endif
+
       arguments.push_back(argvMO->getBaseExpr());
 
       if (++ai!=ae) {
