@@ -1242,6 +1242,21 @@ void Dependency::markAllValues(AllocationGraph *g, VersionedValue *value) {
 
 void Dependency::markAllValues(AllocationGraph *g, llvm::Value *val) {
   VersionedValue *value = getLatestValueNoConstantCheck(val);
+
+  // Right now we simply ignore the __dso_handle values. They are due
+  // to library / linking errors caused by missing options (-shared) in the
+  // compilation involving shared library.
+  if (!value) {
+    if (llvm::ConstantExpr *cVal = llvm::dyn_cast<llvm::ConstantExpr>(val)) {
+      for (unsigned i = 0; i < cVal->getNumOperands(); ++i) {
+        if (cVal->getOperand(i)->getName().equals("__dso_handle")) {
+          return;
+        }
+      }
+    }
+    assert(!"unknown value");
+  }
+
   buildAllocationGraph(g, value);
   std::vector<VersionedValue *> allSources = allFlowSources(value);
   for (std::vector<VersionedValue *>::iterator it = allSources.begin(),
