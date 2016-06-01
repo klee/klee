@@ -920,8 +920,8 @@ void Dependency::execute(llvm::Instruction *instr,
       }
       break;
     }
-    case llvm::Instruction::Ret: { break; }
-    default: { break; }
+    default:
+      break;
     }
     return;
   }

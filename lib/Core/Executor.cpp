@@ -1573,8 +1573,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         }
       }
     }
-    if (INTERPOLATION_ENABLED)
-      interpTree->execute(i);
     break;
   }
 #if LLVM_VERSION_CODE < LLVM_VERSION(3, 1)
