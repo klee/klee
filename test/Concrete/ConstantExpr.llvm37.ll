@@ -1,4 +1,4 @@
-; REQUIRES: not-llvm-3.7
+; REQUIRES: llvm-3.7
 ; RUN: %S/ConcreteTest.py --klee='%klee' --lli=%lli %s
 
 ; Most of the test below use the *address* of gInt as part of their computation,
@@ -71,7 +71,7 @@ define void @"test_misc"() {
   %t1 = add i32 select(i1 icmp eq (i32* @gInt, i32* inttoptr(i32 100 to i32*)), i32 10, i32 0), 0
   call void @print_i32(i32 %t1)
 
-  %t2 = load i32* getelementptr(%test.struct.type* @test_struct, i32 0, i32 1)
+  %t2 = load i32, i32* getelementptr(%test.struct.type, %test.struct.type* @test_struct, i32 0, i32 1)
   call void @print_i32(i32 %t2)                             
         
   ret void

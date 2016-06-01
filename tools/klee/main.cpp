@@ -58,6 +58,10 @@
 #include "llvm/Support/system_error.h"
 #endif
 
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 7)
+#include "llvm/Support/Path.h"
+#endif
+
 #include <dirent.h>
 #include <signal.h>
 #include <unistd.h>
@@ -384,7 +388,12 @@ llvm::raw_fd_ostream *KleeHandler::openOutputFile(const std::string &filename) {
   llvm::raw_fd_ostream *f;
   std::string Error;
   std::string path = getOutputFilename(filename);
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3,5)
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
+  std::error_code ec;
+  f = new llvm::raw_fd_ostream(path.c_str(), ec, llvm::sys::fs::F_None);
+  if (ec)
+    Error = ec.message();
+#elif LLVM_VERSION_CODE >= LLVM_VERSION(3, 5)
   f = new llvm::raw_fd_ostream(path.c_str(), Error, llvm::sys::fs::F_None);
 #elif LLVM_VERSION_CODE >= LLVM_VERSION(3,4)
   f = new llvm::raw_fd_ostream(path.c_str(), Error, llvm::sys::fs::F_Binary);
@@ -644,8 +653,13 @@ static std::string strip(std::string &in) {
 }
 
 static void parseArguments(int argc, char **argv) {
+
   cl::SetVersionPrinter(klee::printVersion);
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 2)
+
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
+  cl::ParseCommandLineOptions(argc, (char **)argv, " klee\n"); // removes
+                                                               // warning
+#elif LLVM_VERSION_CODE >= LLVM_VERSION(3, 2)
   // This version always reads response files
   cl::ParseCommandLineOptions(argc, argv, " klee\n");
 #else
@@ -1033,9 +1047,14 @@ static llvm::Module *linkWithUclibc(llvm::Module *mainModule, StringRef libDir) 
   SmallString<128> uclibcBCA(libDir);
   llvm::sys::path::append(uclibcBCA, KLEE_UCLIBC_BCA_NAME);
 
-  bool uclibcExists=false;
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
+  Twine uclibcBCA_twine(uclibcBCA.c_str());
+  if (!llvm::sys::fs::exists(uclibcBCA_twine))
+#else
+  bool uclibcExists = false;
   llvm::sys::fs::exists(uclibcBCA.c_str(), uclibcExists);
   if (!uclibcExists)
+#endif
     klee_error("Cannot find klee-uclibc : %s", uclibcBCA.c_str());
 
   Function *f;
@@ -1255,9 +1274,13 @@ int main(int argc, char **argv, char **envp) {
   if (!Buffer)
     klee_error("error loading program '%s': %s", InputFile.c_str(),
                Buffer.getError().message().c_str());
-
-  auto mainModuleOrError = getLazyBitcodeModule(Buffer->get(), getGlobalContext());
-
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
+  auto mainModuleOrError =
+      getLazyBitcodeModule(std::move(Buffer.get()), getGlobalContext());
+#else
+  auto mainModuleOrError =
+      getLazyBitcodeModule(Buffer->get(), getGlobalContext());
+#endif
   if (!mainModuleOrError) {
     klee_error("error loading program '%s': %s", InputFile.c_str(),
                mainModuleOrError.getError().message().c_str());
@@ -1267,8 +1290,11 @@ int main(int argc, char **argv, char **envp) {
     // from the std::unique_ptr
     Buffer->release();
   }
-
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 7)
+  mainModule = mainModuleOrError->release();
+#else
   mainModule = *mainModuleOrError;
+#endif
   if (auto ec = mainModule->materializeAllPermanently()) {
     klee_error("error loading program '%s': %s", InputFile.c_str(),
                ec.message().c_str());

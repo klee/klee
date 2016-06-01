@@ -1,4 +1,4 @@
-; REQUIRES: not-llvm-3.7
+; REQUIRES: llvm-3.7
 ; RUN: %S/ConcreteTest.py --klee='%klee' --lli=%lli %s
 
 ; casting error messages
@@ -76,11 +76,11 @@ entry:
 
 failed:
   ; print the error msg
-  %ret = call i32 (i8*, ...)* @printf( i8* %errMsg )
+  %ret = call i32 (i8*, ...) @printf( i8* %errMsg )
 
   ; add a newline to the ostream
-  %nl = getelementptr [3 x i8]* @.strNL, i32 0, i32 0
-  %ret2 = call i32 (i8*, ...)* @printf( i8* %nl )
+  %nl = getelementptr [3 x i8], [3 x i8]* @.strNL, i32 0, i32 0
+  %ret2 = call i32 (i8*, ...) @printf( i8* %nl )
 
   ; exit with return value 1 to denote that an error occurred
   call void @exit( i32 1 )
@@ -95,10 +95,10 @@ define void @testFPTrunc() {
 entry:
   %d_addr = alloca double, align 8
   store double 8.000000e+00, double* %d_addr
-  %d = load double* %d_addr
+  %d = load double, double* %d_addr
   %f = fptrunc double %d to float
   %matches = fcmp oeq float %f, 8.000000e+00
-  %err_msg = getelementptr [15 x i8]* @.strTrunc, i32 0, i32 0
+  %err_msg = getelementptr [15 x i8], [15 x i8]* @.strTrunc, i32 0, i32 0
   call void @failCheck( i1 %matches, i8* %err_msg )
   ret void
 }
@@ -108,10 +108,10 @@ define void @testFPExt() {
 entry:
   %f_addr = alloca float, align 4
   store float 8.000000e+00, float* %f_addr
-  %f = load float* %f_addr
+  %f = load float, float* %f_addr
   %d = fpext float %f to double
   %matches = fcmp oeq double %d, 8.000000e+00
-  %err_msg = getelementptr [13 x i8]* @.strExt, i32 0, i32 0
+  %err_msg = getelementptr [13 x i8], [13 x i8]* @.strExt, i32 0, i32 0
   call void @failCheck( i1 %matches, i8* %err_msg )
   ret void
 }
@@ -124,18 +124,18 @@ entry:
 
   ; test float to UI
   store float 0x4020333340000000, float* %f_addr; %f = 8.1
-  %f = load float* %f_addr
+  %f = load float, float* %f_addr
   %uf = fptoui float %f to i32
   %matchesf = icmp eq i32 %uf, 8
-  %err_msgf = getelementptr [20 x i8]* @.strFPToUIFlt, i32 0, i32 0
+  %err_msgf = getelementptr [20 x i8], [20 x i8]* @.strFPToUIFlt, i32 0, i32 0
   call void @failCheck( i1 %matchesf, i8* %err_msgf )
 
   ; test double to UI
   store double 8.100000e+00, double* %d_addr
-  %d = load double* %d_addr
+  %d = load double, double* %d_addr
   %ud = fptoui double %d to i32
   %matchesd = icmp eq i32 %ud, 8
-  %err_msgd = getelementptr [21 x i8]* @.strFPToUIDbl, i32 0, i32 0
+  %err_msgd = getelementptr [21 x i8], [21 x i8]* @.strFPToUIDbl, i32 0, i32 0
   call void @failCheck( i1 %matchesd, i8* %err_msgd )
 
   ret void
@@ -149,18 +149,18 @@ entry:
 
   ; test float 8.1 to signed int
   store float 0x4020333340000000, float* %f_addr
-  %f = load float* %f_addr
+  %f = load float, float* %f_addr
   %sf = fptosi float %f to i32
   %matchesf = icmp eq i32 %sf, 8
-  %err_msgf = getelementptr [20 x i8]* @.strFPToSIFlt, i32 0, i32 0
+  %err_msgf = getelementptr [20 x i8], [20 x i8]* @.strFPToSIFlt, i32 0, i32 0
   call void @failCheck( i1 %matchesf, i8* %err_msgf )
 
   ; test double -8.1 to signed int
   store double -8.100000e+00, double* %d_addr
-  %d = load double* %d_addr
+  %d = load double, double* %d_addr
   %sd = fptosi double %d to i32
   %matchesd = icmp eq i32 %sd, -8
-  %err_msgd = getelementptr [21 x i8]* @.strFPToSIDbl, i32 0, i32 0
+  %err_msgd = getelementptr [21 x i8], [21 x i8]* @.strFPToSIDbl, i32 0, i32 0
   call void @failCheck( i1 %matchesd, i8* %err_msgd )
 
   ret void
@@ -172,13 +172,13 @@ entry:
   ; unsigned int to float
   %f = uitofp i32 7 to float
   %matchesf = fcmp oeq float %f, 7.000000e+00
-  %err_msgf = getelementptr [20 x i8]* @.strUIToFPFlt, i32 0, i32 0
+  %err_msgf = getelementptr [20 x i8], [20 x i8]* @.strUIToFPFlt, i32 0, i32 0
   call void @failCheck( i1 %matchesf, i8* %err_msgf )
 
   ; unsigned int to double
   %d = uitofp i32 7 to double
   %matchesd = fcmp oeq double %d, 7.000000e+00
-  %err_msgd = getelementptr [21 x i8]* @.strUIToFPDbl, i32 0, i32 0
+  %err_msgd = getelementptr [21 x i8], [21 x i8]* @.strUIToFPDbl, i32 0, i32 0
   call void @failCheck( i1 %matchesd, i8* %err_msgd )
 
   ret void
@@ -190,13 +190,13 @@ entry:
   ; signed int to float
   %f = sitofp i32 -7 to float
   %matchesf = fcmp oeq float %f, -7.000000e+00
-  %err_msgf = getelementptr [20 x i8]* @.strSIToFPFlt, i32 0, i32 0
+  %err_msgf = getelementptr [20 x i8], [20 x i8]* @.strSIToFPFlt, i32 0, i32 0
   call void @failCheck( i1 %matchesf, i8* %err_msgf )
 
   ; signed int to double
   %d = sitofp i32 -7 to double
   %matchesd = fcmp oeq double %d, -7.000000e+00
-  %err_msgd = getelementptr [21 x i8]* @.strSIToFPDbl, i32 0, i32 0
+  %err_msgd = getelementptr [21 x i8], [21 x i8]* @.strSIToFPDbl, i32 0, i32 0
   call void @failCheck( i1 %matchesd, i8* %err_msgd )
 
   ret void
@@ -213,21 +213,21 @@ entry:
   ; float division
   store float 2.200000e+01, float* %fN_addr
   store float 4.000000e+00, float* %fD_addr
-  %fN = load float* %fN_addr
-  %fD = load float* %fD_addr
+  %fN = load float, float* %fN_addr
+  %fD = load float, float* %fD_addr
   %f = fdiv float %fN, %fD
   %matchesf = fcmp oeq float %f, 5.500000e+00
-  %err_msgf = getelementptr [18 x i8]* @.strDivFlt, i32 0, i32 0
+  %err_msgf = getelementptr [18 x i8], [18 x i8]* @.strDivFlt, i32 0, i32 0
   call void @failCheck( i1 %matchesf, i8* %err_msgf )
 
   ; double division
   store double 2.200000e+01, double* %dN_addr
   store double -4.000000e+00, double* %dD_addr
-  %dN = load double* %dN_addr
-  %dD = load double* %dD_addr
+  %dN = load double, double* %dN_addr
+  %dD = load double, double* %dD_addr
   %d = fdiv double %dN, %dD
   %matchesd = fcmp oeq double %d, -5.500000e+00
-  %err_msgd = getelementptr [19 x i8]* @.strDivDbl, i32 0, i32 0
+  %err_msgd = getelementptr [19 x i8], [19 x i8]* @.strDivDbl, i32 0, i32 0
   call void @failCheck( i1 %matchesd, i8* %err_msgd )
 
   ret void
@@ -244,21 +244,21 @@ entry:
   ; float modoulo
   store float 2.200000e+01, float* %fN_addr
   store float 4.000000e+00, float* %fD_addr
-  %fN = load float* %fN_addr
-  %fD = load float* %fD_addr
+  %fN = load float, float* %fN_addr
+  %fD = load float, float* %fD_addr
   %f = frem float %fN, %fD
   %matchesf = fcmp oeq float %f, 2.000000e+00
-  %err_msgf = getelementptr [18 x i8]* @.strRemFlt, i32 0, i32 0
+  %err_msgf = getelementptr [18 x i8], [18 x i8]* @.strRemFlt, i32 0, i32 0
   call void @failCheck( i1 %matchesf, i8* %err_msgf )
 
   ; double modulo
   store double -2.200000e+01, double* %dN_addr
   store double 4.000000e+00, double* %dD_addr
-  %dN = load double* %dN_addr
-  %dD = load double* %dD_addr
+  %dN = load double, double* %dN_addr
+  %dD = load double, double* %dD_addr
   %d = frem double %dN, %dD
   %matchesd = fcmp oeq double %d, -2.000000e+00
-  %err_msgd = getelementptr [19 x i8]* @.strRemDbl, i32 0, i32 0
+  %err_msgd = getelementptr [19 x i8], [19 x i8]* @.strRemDbl, i32 0, i32 0
   call void @failCheck( i1 %matchesd, i8* %err_msgd )
 
   ret void
@@ -275,27 +275,27 @@ entry:
   ; test integer addition (3 + 4)
   %sumi = add i32 3, 4
   %matchesi = icmp eq i32 %sumi, 7
-  %err_msgi = getelementptr [16 x i8]* @.strAddInt, i32 0, i32 0
+  %err_msgi = getelementptr [16 x i8], [16 x i8]* @.strAddInt, i32 0, i32 0
   call void @failCheck( i1 %matchesi, i8* %err_msgi )
 
   ; test float addition (3.5 + 4.2)
   store float 3.500000e+00, float* %f1_addr
   store float 0x4010CCCCC0000000, float* %f2_addr
-  %f1 = load float* %f1_addr
-  %f2 = load float* %f2_addr
+  %f1 = load float, float* %f1_addr
+  %f2 = load float, float* %f2_addr
   %sumf = fadd float %f1, %f2
   %matchesf = fcmp oeq float %sumf, 0x401ECCCCC0000000
-  %err_msgf = getelementptr [18 x i8]* @.strAddFlt, i32 0, i32 0
+  %err_msgf = getelementptr [18 x i8], [18 x i8]* @.strAddFlt, i32 0, i32 0
   call void @failCheck( i1 %matchesf, i8* %err_msgf )
 
   ; test double addition (3.5 + -4.2)
   store double 3.500000e+00, double* %d1_addr
   store double -4.200000e+00, double* %d2_addr
-  %d1 = load double* %d1_addr
-  %d2 = load double* %d2_addr
+  %d1 = load double, double* %d1_addr
+  %d2 = load double, double* %d2_addr
   %sumd = fadd double %d1, %d2
   %matchesd = fcmp oeq double %sumd, 0xBFE6666666666668
-  %err_msgd = getelementptr [19 x i8]* @.strAddDbl, i32 0, i32 0
+  %err_msgd = getelementptr [19 x i8], [19 x i8]* @.strAddDbl, i32 0, i32 0
   call void @failCheck( i1 %matchesd, i8* %err_msgd )
 
   ret void
@@ -312,27 +312,27 @@ entry:
   ; test integer subtraction (3 - 4)
   %subi = sub i32 3, 4
   %matchesi = icmp eq i32 %subi, -1
-  %err_msgi = getelementptr [16 x i8]* @.strSubInt, i32 0, i32 0
+  %err_msgi = getelementptr [16 x i8], [16 x i8]* @.strSubInt, i32 0, i32 0
   call void @failCheck( i1 %matchesi, i8* %err_msgi )
 
   ; test float subtraction (3.5 - 4.2)
   store float 3.500000e+00, float* %f1_addr
   store float 0x4010CCCCC0000000, float* %f2_addr
-  %f1 = load float* %f1_addr
-  %f2 = load float* %f2_addr
+  %f1 = load float, float* %f1_addr
+  %f2 = load float, float* %f2_addr
   %subf = fsub float %f1, %f2
   %matchesf = fcmp oeq float %subf, 0xBFE6666600000000
-  %err_msgf = getelementptr [18 x i8]* @.strSubFlt, i32 0, i32 0
+  %err_msgf = getelementptr [18 x i8], [18 x i8]* @.strSubFlt, i32 0, i32 0
   call void @failCheck( i1 %matchesf, i8* %err_msgf )
 
   ; test double subtraction (3.5 - -4.2)
   store double 3.500000e+00, double* %d1_addr
   store double -4.200000e+00, double* %d2_addr
-  %d1 = load double* %d1_addr
-  %d2 = load double* %d2_addr
+  %d1 = load double, double* %d1_addr
+  %d2 = load double, double* %d2_addr
   %subd = fsub double %d1, %d2
   %matchesd = fcmp oeq double %subd, 7.700000e+00
-  %err_msgd = getelementptr [19 x i8]* @.strSubDbl, i32 0, i32 0
+  %err_msgd = getelementptr [19 x i8], [19 x i8]* @.strSubDbl, i32 0, i32 0
   call void @failCheck( i1 %matchesd, i8* %err_msgd )
 
   ret void
@@ -349,27 +349,27 @@ entry:
   ; test integer multiplication (3 * 4)
   %muli = mul i32 3, 4
   %matchesi = icmp eq i32 %muli, 12
-  %err_msgi = getelementptr [16 x i8]* @.strMulInt, i32 0, i32 0
+  %err_msgi = getelementptr [16 x i8], [16 x i8]* @.strMulInt, i32 0, i32 0
   call void @failCheck( i1 %matchesi, i8* %err_msgi )
 
   ; test float multiplication (3.5 * 4.2)
   store float 3.500000e+00, float* %f1_addr
   store float 0x4010CCCCC0000000, float* %f2_addr
-  %f1 = load float* %f1_addr
-  %f2 = load float* %f2_addr
+  %f1 = load float, float* %f1_addr
+  %f2 = load float, float* %f2_addr
   %mulf = fmul float %f1, %f2
   %matchesf = fcmp oeq float %mulf, 0x402D666640000000
-  %err_msgf = getelementptr [18 x i8]* @.strMulFlt, i32 0, i32 0
+  %err_msgf = getelementptr [18 x i8], [18 x i8]* @.strMulFlt, i32 0, i32 0
   call void @failCheck( i1 %matchesf, i8* %err_msgf )
 
   ; test double multiplication (3.5 * -4.2)
   store double 3.500000e+00, double* %d1_addr
   store double -4.200000e+00, double* %d2_addr
-  %d1 = load double* %d1_addr
-  %d2 = load double* %d2_addr
+  %d1 = load double, double* %d1_addr
+  %d2 = load double, double* %d2_addr
   %muld = fmul double %d1, %d2
   %matchesd = fcmp oeq double %muld, 0xC02D666666666667
-  %err_msgd = getelementptr [19 x i8]* @.strMulDbl, i32 0, i32 0
+  %err_msgd = getelementptr [19 x i8], [19 x i8]* @.strMulDbl, i32 0, i32 0
   call void @failCheck( i1 %matchesd, i8* %err_msgd )
 
   ret void
@@ -381,55 +381,55 @@ entry:
   ; test fcmp::true -- should always return true
   %cmp_t    = fcmp true float %f1, %f2
   %cmp_t_ok = icmp eq i1 %cmp_t, 1
-  %cmp_t_em = getelementptr [19 x i8]* @.strCmpTrFlt, i32 0, i32 0
+  %cmp_t_em = getelementptr [19 x i8], [19 x i8]* @.strCmpTrFlt, i32 0, i32 0
   call void @failCheck( i1 %cmp_t_ok, i8* %cmp_t_em )
 
   ; test fcmp::false -- should always return false
   %cmp_f    = fcmp false float %f1, %f2
   %cmp_f_ok = icmp eq i1 %cmp_f, 0
-  %cmp_f_em = getelementptr [20 x i8]* @.strCmpFaFlt, i32 0, i32 0
+  %cmp_f_em = getelementptr [20 x i8], [20 x i8]* @.strCmpFaFlt, i32 0, i32 0
   call void @failCheck( i1 %cmp_f_ok, i8* %cmp_f_em )
 
   ; test fcmp::ord -- should return true if neither operand is NaN
   %cmp_o    = fcmp ord float %f1, %f2
   %cmp_o_ok = icmp eq i1 %cmp_o, %ord
-  %cmp_o_em = getelementptr [18 x i8]* @.strCmpOrdFlt, i32 0, i32 0
+  %cmp_o_em = getelementptr [18 x i8], [18 x i8]* @.strCmpOrdFlt, i32 0, i32 0
   call void @failCheck( i1 %cmp_o_ok, i8* %cmp_o_em )
 
   ; test fcmp::oeq -- should return true if neither operand is a NaN and they are equal
   %cmp_eq    = fcmp oeq float %f1, %f2
   %cmp_eq_ok = icmp eq i1 %cmp_eq, %eq
-  %cmp_eq_em = getelementptr [17 x i8]* @.strCmpEqFlt, i32 0, i32 0
+  %cmp_eq_em = getelementptr [17 x i8], [17 x i8]* @.strCmpEqFlt, i32 0, i32 0
   call void @failCheck( i1 %cmp_eq_ok, i8* %cmp_eq_em )
 
   ; test fcmp::oge -- should return true if neither operand is a NaN and the first is greater or equal
   %cmp_ge    = fcmp oge float %f1, %f2
   %cmp_ge_ok = icmp eq i1 %cmp_ge, %ge
-  %cmp_ge_em = getelementptr [17 x i8]* @.strCmpGeFlt, i32 0, i32 0
+  %cmp_ge_em = getelementptr [17 x i8], [17 x i8]* @.strCmpGeFlt, i32 0, i32 0
   call void @failCheck( i1 %cmp_ge_ok, i8* %cmp_ge_em )
 
   ; test fcmp::ogt -- should return true if neither operand is a NaN and the first is greater
   %cmp_gt    = fcmp ogt float %f1, %f2
   %cmp_gt_ok = icmp eq i1 %cmp_gt, %gt
-  %cmp_gt_em = getelementptr [17 x i8]* @.strCmpGtFlt, i32 0, i32 0
+  %cmp_gt_em = getelementptr [17 x i8], [17 x i8]* @.strCmpGtFlt, i32 0, i32 0
   call void @failCheck( i1 %cmp_gt_ok, i8* %cmp_gt_em )
 
   ; test fcmp::ole -- should return true if neither operand is a NaN and the first is less or equal
   %cmp_le    = fcmp ole float %f1, %f2
   %cmp_le_ok = icmp eq i1 %cmp_le, %le
-  %cmp_le_em = getelementptr [17 x i8]* @.strCmpLeFlt, i32 0, i32 0
+  %cmp_le_em = getelementptr [17 x i8], [17 x i8]* @.strCmpLeFlt, i32 0, i32 0
   call void @failCheck( i1 %cmp_le_ok, i8* %cmp_le_em )
 
   ; test fcmp::olt -- should return true if neither operand is a NaN and the first is less
   %cmp_lt    = fcmp olt float %f1, %f2
   %cmp_lt_ok = icmp eq i1 %cmp_lt, %lt
-  %cmp_lt_em = getelementptr [17 x i8]* @.strCmpLtFlt, i32 0, i32 0
+  %cmp_lt_em = getelementptr [17 x i8], [17 x i8]* @.strCmpLtFlt, i32 0, i32 0
   call void @failCheck( i1 %cmp_lt_ok, i8* %cmp_lt_em )
 
   ; test fcmp::one -- should return true if neither operand is a NaN and they are not equal
   %cmp_ne    = fcmp one float %f1, %f2
   %cmp_ne_ok = icmp eq i1 %cmp_ne, %ne
-  %cmp_ne_em = getelementptr [17 x i8]* @.strCmpNeFlt, i32 0, i32 0
+  %cmp_ne_em = getelementptr [17 x i8], [17 x i8]* @.strCmpNeFlt, i32 0, i32 0
   call void @failCheck( i1 %cmp_ne_ok, i8* %cmp_ne_em )
 
   ret void
@@ -441,55 +441,55 @@ entry:
   ; test fcmp::true -- should always return true
   %cmp_t    = fcmp true double %d1, %d2
   %cmp_t_ok = icmp eq i1 %cmp_t, 1
-  %cmp_t_em = getelementptr [19 x i8]* @.strCmpTrDbl, i32 0, i32 0
+  %cmp_t_em = getelementptr [19 x i8], [19 x i8]* @.strCmpTrDbl, i32 0, i32 0
   call void @failCheck( i1 %cmp_t_ok, i8* %cmp_t_em )
 
   ; test fcmp::false -- should always return false
   %cmp_f    = fcmp false double %d1, %d2
   %cmp_f_ok = icmp eq i1 %cmp_f, 0
-  %cmp_f_em = getelementptr [20 x i8]* @.strCmpFaDbl, i32 0, i32 0
+  %cmp_f_em = getelementptr [20 x i8], [20 x i8]* @.strCmpFaDbl, i32 0, i32 0
   call void @failCheck( i1 %cmp_f_ok, i8* %cmp_f_em )
 
   ; test fcmp::ord -- should return true if neither operand is NaN
   %cmp_o    = fcmp ord double %d1, %d2
   %cmp_o_ok = icmp eq i1 %cmp_o, %ord
-  %cmp_o_em = getelementptr [19 x i8]* @.strCmpOrdDbl, i32 0, i32 0
+  %cmp_o_em = getelementptr [19 x i8], [19 x i8]* @.strCmpOrdDbl, i32 0, i32 0
   call void @failCheck( i1 %cmp_o_ok, i8* %cmp_o_em )
 
   ; test fcmp::oeq -- should return true if neither operand is a NaN and they are equal
   %cmp_eq    = fcmp oeq double %d1, %d2
   %cmp_eq_ok = icmp eq i1 %cmp_eq, %eq
-  %cmp_eq_em = getelementptr [18 x i8]* @.strCmpEqDbl, i32 0, i32 0
+  %cmp_eq_em = getelementptr [18 x i8], [18 x i8]* @.strCmpEqDbl, i32 0, i32 0
   call void @failCheck( i1 %cmp_eq_ok, i8* %cmp_eq_em )
 
   ; test fcmp::oge -- should return true if neither operand is a NaN and the first is greater or equal
   %cmp_ge    = fcmp oge double %d1, %d2
   %cmp_ge_ok = icmp eq i1 %cmp_ge, %ge
-  %cmp_ge_em = getelementptr [18 x i8]* @.strCmpGeDbl, i32 0, i32 0
+  %cmp_ge_em = getelementptr [18 x i8], [18 x i8]* @.strCmpGeDbl, i32 0, i32 0
   call void @failCheck( i1 %cmp_ge_ok, i8* %cmp_ge_em )
 
   ; test fcmp::ogt -- should return true if neither operand is a NaN and the first is greater
   %cmp_gt    = fcmp ogt double %d1, %d2
   %cmp_gt_ok = icmp eq i1 %cmp_gt, %gt
-  %cmp_gt_em = getelementptr [18 x i8]* @.strCmpGtDbl, i32 0, i32 0
+  %cmp_gt_em = getelementptr [18 x i8], [18 x i8]* @.strCmpGtDbl, i32 0, i32 0
   call void @failCheck( i1 %cmp_gt_ok, i8* %cmp_gt_em )
 
   ; test fcmp::ole -- should return true if neither operand is a NaN and the first is less or equal
   %cmp_le    = fcmp ole double %d1, %d2
   %cmp_le_ok = icmp eq i1 %cmp_le, %le
-  %cmp_le_em = getelementptr [18 x i8]* @.strCmpLeDbl, i32 0, i32 0
+  %cmp_le_em = getelementptr [18 x i8], [18 x i8]* @.strCmpLeDbl, i32 0, i32 0
   call void @failCheck( i1 %cmp_le_ok, i8* %cmp_le_em )
 
   ; test fcmp::olt -- should return true if neither operand is a NaN and the first is less
   %cmp_lt    = fcmp olt double %d1, %d2
   %cmp_lt_ok = icmp eq i1 %cmp_lt, %lt
-  %cmp_lt_em = getelementptr [18 x i8]* @.strCmpLtDbl, i32 0, i32 0
+  %cmp_lt_em = getelementptr [18 x i8], [18 x i8]* @.strCmpLtDbl, i32 0, i32 0
   call void @failCheck( i1 %cmp_lt_ok, i8* %cmp_lt_em )
 
   ; test fcmp::one -- should return true if neither operand is a NaN and they are not equal
   %cmp_ne    = fcmp one double %d1, %d2
   %cmp_ne_ok = icmp eq i1 %cmp_ne, %ne
-  %cmp_ne_em = getelementptr [18 x i8]* @.strCmpNeDbl, i32 0, i32 0
+  %cmp_ne_em = getelementptr [18 x i8], [18 x i8]* @.strCmpNeDbl, i32 0, i32 0
   call void @failCheck( i1 %cmp_ne_ok, i8* %cmp_ne_em )
 
   ret void
@@ -513,43 +513,43 @@ entry:
   ; test fcmp::uno -- should return true if either operand is NaN
   %cmp_o    = fcmp uno float %f1, %f2
   %cmp_o_ok = icmp eq i1 %cmp_o, %uno
-  %cmp_o_em = getelementptr [20 x i8]* @.strCmpUnoFlt, i32 0, i32 0
+  %cmp_o_em = getelementptr [20 x i8], [20 x i8]* @.strCmpUnoFlt, i32 0, i32 0
   call void @failCheck( i1 %cmp_o_ok, i8* %cmp_o_em )
 
   ; test fcmp::oeq -- should return true if either operand is a NaN and they are equal
   %cmp_eq    = fcmp ueq float %f1, %f2
   %cmp_eq_ok = icmp eq i1 %cmp_eq, %eq
-  %cmp_eq_em = getelementptr [17 x i8]* @.strCmpEqFltU, i32 0, i32 0
+  %cmp_eq_em = getelementptr [17 x i8], [17 x i8]* @.strCmpEqFltU, i32 0, i32 0
   call void @failCheck( i1 %cmp_eq_ok, i8* %cmp_eq_em )
 
   ; test fcmp::oge -- should return true if either operand is a NaN and the first is greater or equal
   %cmp_ge    = fcmp uge float %f1, %f2
   %cmp_ge_ok = icmp eq i1 %cmp_ge, %ge
-  %cmp_ge_em = getelementptr [17 x i8]* @.strCmpGeFltU, i32 0, i32 0
+  %cmp_ge_em = getelementptr [17 x i8], [17 x i8]* @.strCmpGeFltU, i32 0, i32 0
   call void @failCheck( i1 %cmp_ge_ok, i8* %cmp_ge_em )
 
   ; test fcmp::ogt -- should return true if either operand is a NaN and the first is greater
   %cmp_gt    = fcmp ugt float %f1, %f2
   %cmp_gt_ok = icmp eq i1 %cmp_gt, %gt
-  %cmp_gt_em = getelementptr [17 x i8]* @.strCmpGtFltU, i32 0, i32 0
+  %cmp_gt_em = getelementptr [17 x i8], [17 x i8]* @.strCmpGtFltU, i32 0, i32 0
   call void @failCheck( i1 %cmp_gt_ok, i8* %cmp_gt_em )
 
   ; test fcmp::ole -- should return true if either operand is a NaN and the first is less or equal
   %cmp_le    = fcmp ule float %f1, %f2
   %cmp_le_ok = icmp eq i1 %cmp_le, %le
-  %cmp_le_em = getelementptr [17 x i8]* @.strCmpLeFltU, i32 0, i32 0
+  %cmp_le_em = getelementptr [17 x i8], [17 x i8]* @.strCmpLeFltU, i32 0, i32 0
   call void @failCheck( i1 %cmp_le_ok, i8* %cmp_le_em )
 
   ; test fcmp::olt -- should return true if either operand is a NaN and the first is less
   %cmp_lt    = fcmp ult float %f1, %f2
   %cmp_lt_ok = icmp eq i1 %cmp_lt, %lt
-  %cmp_lt_em = getelementptr [17 x i8]* @.strCmpLtFltU, i32 0, i32 0
+  %cmp_lt_em = getelementptr [17 x i8], [17 x i8]* @.strCmpLtFltU, i32 0, i32 0
   call void @failCheck( i1 %cmp_lt_ok, i8* %cmp_lt_em )
 
   ; test fcmp::one -- should return true if either operand is a NaN and they are not equal
   %cmp_ne    = fcmp une float %f1, %f2
   %cmp_ne_ok = icmp eq i1 %cmp_ne, %ne
-  %cmp_ne_em = getelementptr [17 x i8]* @.strCmpNeFltU, i32 0, i32 0
+  %cmp_ne_em = getelementptr [17 x i8], [17 x i8]* @.strCmpNeFltU, i32 0, i32 0
   call void @failCheck( i1 %cmp_ne_ok, i8* %cmp_ne_em )
 
   ret void
@@ -561,43 +561,43 @@ entry:
   ; test fcmp::uno -- should return true if either operand is NaN
   %cmp_o    = fcmp uno double %d1, %d2
   %cmp_o_ok = icmp eq i1 %cmp_o, %uno
-  %cmp_o_em = getelementptr [21 x i8]* @.strCmpUnoDbl, i32 0, i32 0
+  %cmp_o_em = getelementptr [21 x i8], [21 x i8]* @.strCmpUnoDbl, i32 0, i32 0
   call void @failCheck( i1 %cmp_o_ok, i8* %cmp_o_em )
 
   ; test fcmp::ueq -- should return true if either operand is a NaN and they are equal
   %cmp_eq    = fcmp ueq double %d1, %d2
   %cmp_eq_ok = icmp eq i1 %cmp_eq, %eq
-  %cmp_eq_em = getelementptr [18 x i8]* @.strCmpEqDblU, i32 0, i32 0
+  %cmp_eq_em = getelementptr [18 x i8], [18 x i8]* @.strCmpEqDblU, i32 0, i32 0
   call void @failCheck( i1 %cmp_eq_ok, i8* %cmp_eq_em )
 
   ; test fcmp::uge -- should return true if either operand is a NaN and the first is greater or equal
   %cmp_ge    = fcmp uge double %d1, %d2
   %cmp_ge_ok = icmp eq i1 %cmp_ge, %ge
-  %cmp_ge_em = getelementptr [18 x i8]* @.strCmpGeDblU, i32 0, i32 0
+  %cmp_ge_em = getelementptr [18 x i8], [18 x i8]* @.strCmpGeDblU, i32 0, i32 0
   call void @failCheck( i1 %cmp_ge_ok, i8* %cmp_ge_em )
 
   ; test fcmp::ugt -- should return true if either operand is a NaN and the first is greater
   %cmp_gt    = fcmp ugt double %d1, %d2
   %cmp_gt_ok = icmp eq i1 %cmp_gt, %gt
-  %cmp_gt_em = getelementptr [18 x i8]* @.strCmpGtDblU, i32 0, i32 0
+  %cmp_gt_em = getelementptr [18 x i8], [18 x i8]* @.strCmpGtDblU, i32 0, i32 0
   call void @failCheck( i1 %cmp_gt_ok, i8* %cmp_gt_em )
 
   ; test fcmp::ule -- should return true if either operand is a NaN and the first is less or equal
   %cmp_le    = fcmp ule double %d1, %d2
   %cmp_le_ok = icmp eq i1 %cmp_le, %le
-  %cmp_le_em = getelementptr [18 x i8]* @.strCmpLeDblU, i32 0, i32 0
+  %cmp_le_em = getelementptr [18 x i8], [18 x i8]* @.strCmpLeDblU, i32 0, i32 0
   call void @failCheck( i1 %cmp_le_ok, i8* %cmp_le_em )
 
   ; test fcmp::ult -- should return true if either operand is a NaN and the first is less
   %cmp_lt    = fcmp ult double %d1, %d2
   %cmp_lt_ok = icmp eq i1 %cmp_lt, %lt
-  %cmp_lt_em = getelementptr [18 x i8]* @.strCmpLtDblU, i32 0, i32 0
+  %cmp_lt_em = getelementptr [18 x i8], [18 x i8]* @.strCmpLtDblU, i32 0, i32 0
   call void @failCheck( i1 %cmp_lt_ok, i8* %cmp_lt_em )
 
   ; test fcmp::une -- should return true if either operand is a NaN and they are not equal
   %cmp_ne    = fcmp une double %d1, %d2
   %cmp_ne_ok = icmp eq i1 %cmp_ne, %ne
-  %cmp_ne_em = getelementptr [18 x i8]* @.strCmpNeDblU, i32 0, i32 0
+  %cmp_ne_em = getelementptr [18 x i8], [18 x i8]* @.strCmpNeDblU, i32 0, i32 0
   call void @failCheck( i1 %cmp_ne_ok, i8* %cmp_ne_em )
 
   ret void
@@ -640,8 +640,8 @@ entry:
   store i64 -1, i64* %nan_as_i64
 
   ; load two copies of our NaN
-  %nan1 = load double* %nan
-  %nan2 = load double* %nan
+  %nan1 = load double, double* %nan
+  %nan2 = load double, double* %nan
 
   ; Warning: NaN comparisons with normal operators is BROKEN in LLVM JIT v2.0.  Fixed in v2.1.
   ; FIXME: Just check against 2.9 and the Unordered checks work, but the ordered ones do not. Should be investigated.
@@ -673,8 +673,8 @@ entry:
   call void @testFCmp( )
 
   ; everything worked -- print a message saying so
-  %works_msg = getelementptr [20 x i8]* @.strWorks, i32 0, i32 0
-  %ret = call i32 (i8*, ...)* @printf( i8* %works_msg )
+  %works_msg = getelementptr [20 x i8], [20 x i8]* @.strWorks, i32 0, i32 0
+  %ret = call i32 (i8*, ...) @printf( i8* %works_msg )
 
   ret i32 0
 }

@@ -46,8 +46,11 @@
 #else
 #include "llvm/IR/CallSite.h"
 #endif
-
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 7)
+#include "llvm/IR/LegacyPassManager.h"
+#else
 #include "llvm/PassManager.h"
+#endif
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/raw_os_ostream.h"
@@ -144,11 +147,9 @@ static Function *getStubFunctionForCtorList(Module *m,
   
   std::vector<LLVM_TYPE_Q Type*> nullary;
 
-  Function *fn = Function::Create(FunctionType::get(Type::getVoidTy(getGlobalContext()), 
-						    nullary, false),
-				  GlobalVariable::InternalLinkage, 
-				  name,
-                              m);
+  Function *fn = Function::Create(
+      FunctionType::get(Type::getVoidTy(getGlobalContext()), nullary, false),
+      GlobalVariable::InternalLinkage, name, m);
   BasicBlock *bb = BasicBlock::Create(getGlobalContext(), "entry", fn);
   
   // From lli:
@@ -158,8 +159,15 @@ static Function *getStubFunctionForCtorList(Module *m,
   if (arr) {
     for (unsigned i=0; i<arr->getNumOperands(); i++) {
       ConstantStruct *cs = cast<ConstantStruct>(arr->getOperand(i));
-      assert(cs->getNumOperands()==2 && "unexpected element in ctor initializer list");
-      
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
+      assert(cs->getNumOperands() == 2 &&
+             "unexpected element in ctor initializer list");
+#else
+      // There is a third *optional* element in global_ctor elements (``i8
+      // @data``).
+      assert((cs->getNumOperands() == 2 || cs->getNumOperands() == 3) &&
+             "unexpected element in ctor initializer list");
+#endif
       Constant *fp = cs->getOperand(1);      
       if (!fp->isNullValue()) {
         if (llvm::ConstantExpr *ce = dyn_cast<llvm::ConstantExpr>(fp))
@@ -296,7 +304,11 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   // invariant transformations that we will end up doing later so that
   // optimize is seeing what is as close as possible to the final
   // module.
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 7)
+  legacy::PassManager pm;
+#else
   PassManager pm;
+#endif
   pm.add(new RaiseAsmPass());
   if (opts.CheckDivZero) pm.add(new DivCheckPass());
   if (opts.CheckOvershift) pm.add(new OvershiftCheckPass());
@@ -364,7 +376,11 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   // linked in something with intrinsics but any external calls are
   // going to be unresolved. We really need to handle the intrinsics
   // directly I think?
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 7)
+  legacy::PassManager pm3;
+#else
   PassManager pm3;
+#endif
   pm3.add(createCFGSimplificationPass());
   switch(SwitchType) {
   case eSwitchTypeInternal: break;
@@ -509,8 +525,12 @@ static int getOperandNum(Value *v,
     return registerMap[inst];
   } else if (Argument *a = dyn_cast<Argument>(v)) {
     return a->getArgNo();
-  } else if (isa<BasicBlock>(v) || isa<InlineAsm>(v) ||
-             isa<MDNode>(v)) {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
+    // Metadata is no longer a Value
+  } else if (isa<BasicBlock>(v) || isa<InlineAsm>(v)) {
+#else
+  } else if (isa<BasicBlock>(v) || isa<InlineAsm>(v) || isa<MDNode>(v)) {
+#endif
     return -1;
   } else {
     assert(isa<Constant>(v));
