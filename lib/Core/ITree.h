@@ -457,77 +457,6 @@ public:
 
 };
 
-class ITree {
-  typedef std::vector<ref<Expr> > ExprList;
-  typedef ExprList::iterator iterator;
-  typedef ExprList::const_iterator const_iterator;
-
-  static StatTimer setCurrentINodeTimer;
-  static StatTimer removeTimer;
-  static StatTimer subsumptionCheckTimer;
-  static StatTimer markPathConditionTimer;
-  static StatTimer splitTimer;
-  static StatTimer executeOnNodeTimer;
-
-  // @brief Number of subsumption checks for statistical purposes
-  static unsigned long subsumptionCheckCount;
-
-  ITreeNode *currentINode;
-
-  std::map<uintptr_t, std::vector<SubsumptionTableEntry *> > subsumptionTable;
-
-  void printNode(llvm::raw_ostream &stream, ITreeNode *n,
-                 std::string edges) const;
-
-  /// @brief Displays method running time statistics
-  static void printTimeStat(llvm::raw_ostream &stream);
-
-  /// @brief Displays subsumption table statistics
-  void printTableStat(llvm::raw_ostream &stream) const;
-
-public:
-  ITreeNode *root;
-
-  ITree(ExecutionState *_root);
-
-  ~ITree();
-
-  void store(SubsumptionTableEntry *subItem);
-
-  void setCurrentINode(ExecutionState &state, uintptr_t programPoint);
-
-  void remove(ITreeNode *node);
-
-  bool subsumptionCheck(TimingSolver *solver, ExecutionState &state,
-                        double timeout);
-
-  void markPathCondition(ExecutionState &state, TimingSolver *solver);
-
-  std::pair<ITreeNode *, ITreeNode *>
-  split(ITreeNode *parent, ExecutionState *left, ExecutionState *right);
-
-  void execute(llvm::Instruction *instr);
-
-  void execute(llvm::Instruction *instr, ref<Expr> arg1);
-
-  void execute(llvm::Instruction *instr, ref<Expr> arg1, ref<Expr> arg2);
-
-  void execute(llvm::Instruction *instr, ref<Expr> arg1, ref<Expr> arg2,
-               ref<Expr> arg3);
-
-  void execute(llvm::Instruction *instr, std::vector<ref<Expr> > &args);
-
-  static void executeOnNode(ITreeNode *node, llvm::Instruction *instr,
-                            std::vector<ref<Expr> > &args);
-
-  void print(llvm::raw_ostream &stream);
-
-  void dump();
-
-  /// @brief Outputs interpolation statistics to standard error.
-  void dumpInterpolationStat();
-};
-
 class ITreeNode {
   friend class ITree;
 
@@ -609,6 +538,80 @@ private:
   ~ITreeNode();
 
   void print(llvm::raw_ostream &stream, const unsigned tabNum) const;
+};
+
+class ITree {
+  typedef std::vector<ref<Expr> > ExprList;
+  typedef ExprList::iterator iterator;
+  typedef ExprList::const_iterator const_iterator;
+
+  static StatTimer setCurrentINodeTimer;
+  static StatTimer removeTimer;
+  static StatTimer subsumptionCheckTimer;
+  static StatTimer markPathConditionTimer;
+  static StatTimer splitTimer;
+  static StatTimer executeOnNodeTimer;
+
+  // @brief Number of subsumption checks for statistical purposes
+  static unsigned long subsumptionCheckCount;
+
+  ITreeNode *currentINode;
+
+  std::map<uintptr_t, std::vector<SubsumptionTableEntry *> > subsumptionTable;
+
+  void printNode(llvm::raw_ostream &stream, ITreeNode *n,
+                 std::string edges) const;
+
+  /// @brief Displays method running time statistics
+  static void printTimeStat(llvm::raw_ostream &stream);
+
+  /// @brief Displays subsumption table statistics
+  void printTableStat(llvm::raw_ostream &stream) const;
+
+public:
+  ITreeNode *root;
+
+  ITree(ExecutionState *_root);
+
+  ~ITree();
+
+  void store(SubsumptionTableEntry *subItem);
+
+  void setCurrentINode(ExecutionState &state, uintptr_t programPoint);
+
+  void remove(ITreeNode *node);
+
+  bool subsumptionCheck(TimingSolver *solver, ExecutionState &state,
+                        double timeout);
+
+  void markPathCondition(ExecutionState &state, TimingSolver *solver);
+
+  std::pair<ITreeNode *, ITreeNode *>
+  split(ITreeNode *parent, ExecutionState *left, ExecutionState *right);
+
+  void execute(llvm::Instruction *instr);
+
+  void execute(llvm::Instruction *instr, ref<Expr> arg1);
+
+  void execute(llvm::Instruction *instr, ref<Expr> arg1, ref<Expr> arg2);
+
+  void execute(llvm::Instruction *instr, ref<Expr> arg1, ref<Expr> arg2,
+               ref<Expr> arg3);
+
+  void execute(llvm::Instruction *instr, std::vector<ref<Expr> > &args);
+
+  void executePHI(llvm::Instruction *instr, unsigned int incomingBlock,
+                  ref<Expr> valueExpr);
+
+  static void executeOnNode(ITreeNode *node, llvm::Instruction *instr,
+                            std::vector<ref<Expr> > &args);
+
+  void print(llvm::raw_ostream &stream);
+
+  void dump();
+
+  /// @brief Outputs interpolation statistics to standard error.
+  void dumpInterpolationStat();
 };
 }
 #endif /* ITREE_H_ */

@@ -1967,6 +1967,11 @@ void ITree::execute(llvm::Instruction *instr, std::vector<ref<Expr> > &args) {
   executeOnNode(currentINode, instr, args);
 }
 
+void ITree::executePHI(llvm::Instruction *instr, unsigned int incomingBlock,
+                       ref<Expr> valueExpr) {
+  currentINode->dependency->executePHI(instr, incomingBlock, valueExpr);
+}
+
 void ITree::executeOnNode(ITreeNode *node, llvm::Instruction *instr,
                           std::vector<ref<Expr> > &args) {
   executeOnNodeTimer.start();

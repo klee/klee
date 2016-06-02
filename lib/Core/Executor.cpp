@@ -1572,7 +1572,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
           terminateStateOnExecError(state, "return void when caller expected a result");
         }
       }
-    }      
+    }
     break;
   }
 #if LLVM_VERSION_CODE < LLVM_VERSION(3, 1)
@@ -1595,6 +1595,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         }
       }
     }
+    if (INTERPOLATION_ENABLED)
+      interpTree->execute(i);
     break;
   }
 #endif
@@ -1632,9 +1634,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       // conditional is concrete and therefore there has been no invocation
       // of the solver to decide its satisfiability, and no generation
       // of the unsatisfiability core.
-      if (INTERPOLATION_ENABLED &&
-    		  ((!branches.first && branches.second) || (branches.first && !branches.second)))
-    	  interpTree->execute(i);
+      if (INTERPOLATION_ENABLED && ((!branches.first && branches.second) ||
+                                    (branches.first && !branches.second))) {
+        interpTree->execute(i);
+      }
     }
     break;
   }
@@ -1730,9 +1733,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     unsigned numArgs = cs.arg_size();
     Value *fp = cs.getCalledValue();
     Function *f = getTargetFunction(fp, state);
-
-    if (INTERPOLATION_ENABLED)
-      interpTree->execute(i);
 
     // Skip debug intrinsics, we can't evaluate their metadata arguments.
     if (f && isDebugIntrinsic(f, kmodule))
@@ -1842,8 +1842,14 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, result);
 
     // Update dependency
-    if (INTERPOLATION_ENABLED)
-      interpTree->execute(i, result);
+    if (INTERPOLATION_ENABLED) {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 0)
+      interpTree->executePHI(i, state.incomingBBIndex, result);
+#else
+      interpTree->executePHI(i, state.incomingBBIndex * 2, result);
+#endif
+    }
+
     break;
   }
 
