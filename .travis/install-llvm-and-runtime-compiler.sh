@@ -5,6 +5,8 @@ sudo apt-get install -y llvm-${LLVM_VERSION} llvm-${LLVM_VERSION}-dev
 
 if [ "${LLVM_VERSION}" != "2.9" ]; then
     sudo apt-get install -y llvm-${LLVM_VERSION}-tools clang-${LLVM_VERSION}
+    sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-${LLVM_VERSION} 20
+    sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-${LLVM_VERSION} 20
 else
     # Get llvm-gcc. We don't bother installing it
     wget http://llvm.org/releases/2.9/llvm-gcc4.2-2.9-x86_64-linux.tar.bz2
