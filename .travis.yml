@@ -65,18 +65,16 @@ before_install:
     # Set up the locations to get various packages from
     # We assume the Travis image uses Ubuntu 12.04 LTS
     ###########################################################################
-    - sudo sh -c 'echo "deb http://llvm.org/apt/precise/ llvm-toolchain-precise-3.4 main" >> /etc/apt/sources.list.d/llvm.list'
-    - sudo sh -c 'echo "deb-src http://llvm.org/apt/precise/ llvm-toolchain-precise-3.4 main" >> /etc/apt/sources.list.d/llvm.list'
-    - sudo sh -c 'echo "deb http://llvm.org/apt/precise/ llvm-toolchain-precise-3.5 main" >> /etc/apt/sources.list.d/llvm.list'
-    - sudo sh -c 'echo "deb-src http://llvm.org/apt/precise/ llvm-toolchain-precise-3.5 main" >> /etc/apt/sources.list.d/llvm.list'
-    - sudo sh -c "echo 'deb http://download.opensuse.org/repositories/home:/delcypher:/z3/xUbuntu_12.04/ /' >> /etc/apt/sources.list.d/z3.list"
     # Needed for CMake
-    - sudo add-apt-repository -y ppa:ubuntu-sdk-team/ppa
     - sudo add-apt-repository -y ppa:kalakris/cmake
+    # Needed for LLVM
+    - sudo add-apt-repository -y ppa:h-rayflood/llvm
     # Needed for new libstdc++ and gcc4.8
     - sudo add-apt-repository --yes ppa:ubuntu-toolchain-r/test/
-    - wget -O - http://llvm.org/apt/llvm-snapshot.gpg.key|sudo apt-key add -
+    # Needed for Z3
+    - sudo sh -c "echo 'deb http://download.opensuse.org/repositories/home:/delcypher:/z3/xUbuntu_12.04/ /' >> /etc/apt/sources.list.d/z3.list"
     - wget -O - http://download.opensuse.org/repositories/home:delcypher:z3/xUbuntu_12.04/Release.key | sudo apt-key add -
+    # Update package information
     - sudo apt-get update
     ###########################################################################
     # Set up out of source build directory
