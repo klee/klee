@@ -93,10 +93,6 @@ before_install:
     # Make gcc4.8 the default gcc version
     - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.8 20
     - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.8 20
-    # Make Clang3.4 the default clang version
-    - sudo apt-get install clang-3.4
-    - sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-3.4 20
-    - sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-3.4 20
     # Install LLVM and the LLVM bitcode compiler we require to build KLEE
     - ${KLEE_SRC}/.travis/install-llvm-and-runtime-compiler.sh
     - ${KLEE_SRC}/.travis/install-tcmalloc.sh
