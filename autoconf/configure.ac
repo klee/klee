@@ -742,7 +742,6 @@ dnl **************************************************************************
 AC_ARG_WITH(metasmt,
   AS_HELP_STRING([--with-metasmt],
     [Location of metaSMT installation directory]),,)
-
 if test X$with_metasmt = X ; then
   ENABLE_METASMT=0
   AC_MSG_NOTICE([Not using MetaSMT solver backend])
@@ -774,6 +773,45 @@ else
 fi
 
 AC_SUBST(ENABLE_METASMT)
+
+
+dnl **************************************************************************
+dnl User option to specify the default solver of metaSMT
+dnl **************************************************************************
+
+AC_ARG_WITH(metasmt-default-solver,
+  AS_HELP_STRING([--with-metasmt-default-solver],
+    [Default solver of metaSMT (btor|stp|z3, stp if unspecified)]),,)
+
+if test "X$with_metasmt_default_solver" != X ; then
+  if test "X$ENABLE_METASMT" != X1 ; then
+    AC_MSG_ERROR([--with-metasmt-default-solver requires metaSMT to be enabled])
+  fi
+  if test "$with_metasmt_default_solver" == "btor" ; then
+    METASMT_DEFAULT_SOLVER=BTOR
+    AC_MSG_NOTICE([metaSMT uses Boolector as default solver])
+  fi
+  if test "$with_metasmt_default_solver" == "z3" ; then
+    METASMT_DEFAULT_SOLVER=Z3
+    AC_MSG_NOTICE([metaSMT uses Z3 as default solver])
+  fi
+  if test "$with_metasmt_default_solver" == "stp" ; then
+    METASMT_DEFAULT_SOLVER=STP
+    AC_MSG_NOTICE([metaSMT uses STP as default solver])
+  fi
+  if test "X$METASMT_DEFAULT_SOLVER" == X ; then
+    METASMT_DEFAULT_SOLVER=STP
+    AC_MSG_NOTICE([$with_metasmt_default_solver unsupported, metaSMT uses STP as default solver])
+  fi
+else
+  if test "X$ENABLE_METASMT" == X1 ; then
+    METASMT_DEFAULT_SOLVER=STP
+    AC_MSG_NOTICE([No solver specified, metaSMT uses STP as default solver])
+  fi  
+fi
+
+AC_SUBST(METASMT_DEFAULT_SOLVER)
+
 
 dnl **************************************************************************
 dnl Check at least one solver backend is enabled

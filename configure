@@ -624,6 +624,7 @@ ac_includes_default="\
 
 ac_subst_vars='LTLIBOBJS
 LIBOBJS
+METASMT_DEFAULT_SOLVER
 ENABLE_METASMT
 METASMT_ROOT
 Z3_LDFLAGS
@@ -739,6 +740,7 @@ with_tcmalloc
 with_stp
 with_z3
 with_metasmt
+with_metasmt_default_solver
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1393,6 +1395,9 @@ Optional Packages:
   --with-stp              Location of STP installation directory
   --with-z3               Location of Z3 installation directory
   --with-metasmt          Location of metaSMT installation directory
+  --with-metasmt-default-solver
+                          Default solver of metaSMT (btor|stp|z3, stp if
+                          unspecified)
 
 Some influential environment variables:
   CC          C compiler command
@@ -5324,7 +5329,6 @@ if test "${with_metasmt+set}" = set; then :
   withval=$with_metasmt;
 fi
 
-
 if test X$with_metasmt = X ; then
   ENABLE_METASMT=0
   { $as_echo "$as_me:${as_lineno-$LINENO}: Not using MetaSMT solver backend" >&5
@@ -5388,6 +5392,50 @@ $as_echo "#define ENABLE_METASMT 1" >>confdefs.h
   { $as_echo "$as_me:${as_lineno-$LINENO}: Using MetaSMT solver backend" >&5
 $as_echo "$as_me: Using MetaSMT solver backend" >&6;}
 fi
+
+
+
+
+
+
+# Check whether --with-metasmt-default-solver was given.
+if test "${with_metasmt_default_solver+set}" = set; then :
+  withval=$with_metasmt_default_solver;
+fi
+
+
+if test "X$with_metasmt_default_solver" != X ; then
+  if test "X$ENABLE_METASMT" != X1 ; then
+    as_fn_error $? "--with-metasmt-default-solver requires metaSMT to be enabled" "$LINENO" 5
+  fi
+  if test "$with_metasmt_default_solver" == "btor" ; then
+    METASMT_DEFAULT_SOLVER=BTOR
+    { $as_echo "$as_me:${as_lineno-$LINENO}: metaSMT uses Boolector as default solver" >&5
+$as_echo "$as_me: metaSMT uses Boolector as default solver" >&6;}
+  fi
+  if test "$with_metasmt_default_solver" == "z3" ; then
+    METASMT_DEFAULT_SOLVER=Z3
+    { $as_echo "$as_me:${as_lineno-$LINENO}: metaSMT uses Z3 as default solver" >&5
+$as_echo "$as_me: metaSMT uses Z3 as default solver" >&6;}
+  fi
+  if test "$with_metasmt_default_solver" == "stp" ; then
+    METASMT_DEFAULT_SOLVER=STP
+    { $as_echo "$as_me:${as_lineno-$LINENO}: metaSMT uses STP as default solver" >&5
+$as_echo "$as_me: metaSMT uses STP as default solver" >&6;}
+  fi
+  if test "X$METASMT_DEFAULT_SOLVER" == X ; then
+    METASMT_DEFAULT_SOLVER=STP
+    { $as_echo "$as_me:${as_lineno-$LINENO}: $with_metasmt_default_solver unsupported, metaSMT uses STP as default solver" >&5
+$as_echo "$as_me: $with_metasmt_default_solver unsupported, metaSMT uses STP as default solver" >&6;}
+  fi
+else
+  if test "X$ENABLE_METASMT" == X1 ; then
+    METASMT_DEFAULT_SOLVER=STP
+    { $as_echo "$as_me:${as_lineno-$LINENO}: No solver specified, metaSMT uses STP as default solver" >&5
+$as_echo "$as_me: No solver specified, metaSMT uses STP as default solver" >&6;}
+  fi
+fi
+
 
 
 
