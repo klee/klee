@@ -4,6 +4,7 @@
 ifeq ($(ENABLE_METASMT),1)
   include $(METASMT_ROOT)/share/metaSMT/metaSMT.makefile
   LD.Flags += $(metaSMT_LDFLAGS)
+  CXX.Flags += -DMETASMT_DEFAULT_SOLVER_$(METASMT_DEFAULT_SOLVER)
   CXX.Flags += $(metaSMT_CXXFLAGS)
   CXX.Flags += $(metaSMT_INCLUDES)
   CXX.Flags := $(filter-out -fno-exceptions,$(CXX.Flags))
