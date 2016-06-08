@@ -115,4 +115,4 @@ script:
     - ${KLEE_SRC}/.travis/testing-utils.sh
     - cd ../
     # Build KLEE
-    - ${KLEE_SRC}/.travis/klee.sh
+    - travis_wait 30 ${KLEE_SRC}/.travis/klee.sh
