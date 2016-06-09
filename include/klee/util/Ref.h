@@ -117,7 +117,7 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const ref<T> &e) {
 }
 
 template<class T>
-inline std::stringstream &operator<<(std::stringstream &os, const ref<T> &e) {
+inline std::ostream &operator<<(std::ostream &os, const ref<T> &e) {
   os << *e;
   return os;
 }

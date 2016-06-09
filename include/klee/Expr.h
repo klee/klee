@@ -310,7 +310,7 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Expr::Kind kin
 }
 #endif
 
-inline std::stringstream &operator<<(std::stringstream &os, const Expr &e) {
+inline std::ostream &operator<<(std::ostream &os, const Expr &e) {
   std::string str;
   llvm::raw_string_ostream TmpStr(str);
   e.print(TmpStr);
@@ -318,7 +318,7 @@ inline std::stringstream &operator<<(std::stringstream &os, const Expr &e) {
   return os;
 }
 
-inline std::stringstream &operator<<(std::stringstream &os, const Expr::Kind kind) {
+inline std::ostream &operator<<(std::ostream &os, const Expr::Kind kind) {
   std::string str;
   llvm::raw_string_ostream TmpStr(str);
   Expr::printKind(TmpStr, kind);
