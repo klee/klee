@@ -114,7 +114,7 @@ public:
     //logical left and right shift (not arithmetic)
     typename SolverContext::result_type bvLeftShift(typename SolverContext::result_type expr, unsigned width, unsigned shift);
     typename SolverContext::result_type bvRightShift(typename SolverContext::result_type expr, unsigned width, unsigned shift);
-    typename SolverContext::result_type bvVarLeftShift(typename SolverContext::result_type expr, typename SolverContext::result_type amount, unsigned width);
+    typename SolverContext::result_type bvVarLeftShift(typename SolverContext::result_type expr, typename SolverContext::result_type shift, unsigned width);
     typename SolverContext::result_type bvVarRightShift(typename SolverContext::result_type expr, typename SolverContext::result_type amount, unsigned width);
     typename SolverContext::result_type bvVarArithRightShift(typename SolverContext::result_type expr, typename SolverContext::result_type amount, unsigned width);
     
@@ -480,24 +480,19 @@ typename SolverContext::result_type MetaSMTBuilder<SolverContext>::bvRightShift(
 
 // left shift by a variable amount on an expression of the specified width
 template<typename SolverContext>
-typename SolverContext::result_type MetaSMTBuilder<SolverContext>::bvVarLeftShift(typename SolverContext::result_type expr, typename SolverContext::result_type amount, unsigned width) {
+typename SolverContext::result_type MetaSMTBuilder<SolverContext>::bvVarLeftShift(typename SolverContext::result_type expr, typename SolverContext::result_type shift, unsigned width) {
     
     typename SolverContext::result_type res =  bvZero(width);
-    
-    int shiftBits = getShiftBits(width);
-
-    //get the shift amount (looking only at the bits appropriate for the given width)
-    typename SolverContext::result_type shift = evaluate(_solver, extract(shiftBits - 1, 0, amount));    
 
     //construct a big if-then-elif-elif-... with one case per possible shift amount
     for(int i = width - 1; i >= 0; i--) {
-        res = evaluate(_solver, metaSMT::logic::Ite(eqExpr(shift, bvConst32(shiftBits, i)),
+        res = evaluate(_solver, metaSMT::logic::Ite(eqExpr(shift, bvConst32(width, i)),
                                                     bvLeftShift(expr, width, i),
                                                     res));
     }
     
     // If overshifting, shift to zero    
-    res = evaluate(_solver, metaSMT::logic::Ite(bvult(shift, bvConst32(shiftBits, width)),
+    res = evaluate(_solver, metaSMT::logic::Ite(bvult(shift, bvConst32(width, width)),
                                                 res,
                                                 bvZero(width)));                                                
 
