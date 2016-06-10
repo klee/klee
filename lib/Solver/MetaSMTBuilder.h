@@ -145,15 +145,6 @@ private:
     typename SolverContext::result_type constructMulByConstant(typename SolverContext::result_type expr, unsigned width, uint64_t x);
     typename SolverContext::result_type constructUDivByConstant(typename SolverContext::result_type expr_n, unsigned width, uint64_t d);
     typename SolverContext::result_type constructSDivByConstant(typename SolverContext::result_type expr_n, unsigned width, uint64_t d);
-    
-    unsigned getShiftBits(unsigned amount) {
-        unsigned bits = 1;
-        amount--;
-        while (amount >>= 1) {
-            bits++;
-        }
-        return(bits);
-    }
 };
 
 template<typename SolverContext>
@@ -298,7 +289,6 @@ typename SolverContext::result_type MetaSMTBuilder<SolverContext>::constructAShr
 template<typename SolverContext>
 typename SolverContext::result_type MetaSMTBuilder<SolverContext>::constructMulByConstant(typename SolverContext::result_type expr, unsigned width, uint64_t x) {
     
-    unsigned shiftBits = getShiftBits(width);
     uint64_t add, sub;
     typename SolverContext::result_type res;
     bool first = true;
