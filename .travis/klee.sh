@@ -66,7 +66,7 @@ for solver in ${SOLVER_LIST}; do
     ;;
   metaSMT)
     echo "metaSMT"
-    KLEE_METASMT_CONFIGURE_OPTION="--with-metasmt=${BUILD_DIR}/metaSMT/build/root --with-metasmt-default-solver=${METASMT_DEFAULT}"
+    KLEE_METASMT_CONFIGURE_OPTION="--with-metasmt=${BUILD_DIR}/metaSMT/build/root --with-metasmt-default-backend=${METASMT_DEFAULT}"
     ;;
   *)
     echo "Unknown solver ${solver}"

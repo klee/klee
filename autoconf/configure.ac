@@ -776,41 +776,41 @@ AC_SUBST(ENABLE_METASMT)
 
 
 dnl **************************************************************************
-dnl User option to specify the default solver of metaSMT
+dnl User option to specify the default backend of metaSMT
 dnl **************************************************************************
 
-AC_ARG_WITH(metasmt-default-solver,
-  AS_HELP_STRING([--with-metasmt-default-solver],
-    [Default solver of metaSMT (btor|stp|z3, stp if unspecified)]),,)
+AC_ARG_WITH(metasmt-default-backend,
+  AS_HELP_STRING([--with-metasmt-default-backend],
+    [Default backend of metaSMT (btor|stp|z3, stp if unspecified)]),,)
 
-if test "X$with_metasmt_default_solver" != X ; then
+if test "X$with_metasmt_default_backend" != X ; then
   if test "X$ENABLE_METASMT" != X1 ; then
-    AC_MSG_ERROR([--with-metasmt-default-solver requires metaSMT to be enabled])
+    AC_MSG_ERROR([--with-metasmt-default-backend requires metaSMT to be enabled])
   fi
-  if test "$with_metasmt_default_solver" == "btor" ; then
-    METASMT_DEFAULT_SOLVER=BTOR
-    AC_MSG_NOTICE([metaSMT uses Boolector as default solver])
+  if test "$with_metasmt_default_backend" == "btor" ; then
+    METASMT_DEFAULT_BACKEND=BTOR
+    AC_MSG_NOTICE([metaSMT uses Boolector as default backend])
   fi
-  if test "$with_metasmt_default_solver" == "z3" ; then
-    METASMT_DEFAULT_SOLVER=Z3
-    AC_MSG_NOTICE([metaSMT uses Z3 as default solver])
+  if test "$with_metasmt_default_backend" == "z3" ; then
+    METASMT_DEFAULT_BACKEND=Z3
+    AC_MSG_NOTICE([metaSMT uses Z3 as default backend])
   fi
-  if test "$with_metasmt_default_solver" == "stp" ; then
-    METASMT_DEFAULT_SOLVER=STP
-    AC_MSG_NOTICE([metaSMT uses STP as default solver])
+  if test "$with_metasmt_default_backend" == "stp" ; then
+    METASMT_DEFAULT_BACKEND=STP
+    AC_MSG_NOTICE([metaSMT uses STP as default backend])
   fi
-  if test "X$METASMT_DEFAULT_SOLVER" == X ; then
-    METASMT_DEFAULT_SOLVER=STP
-    AC_MSG_NOTICE([$with_metasmt_default_solver unsupported, metaSMT uses STP as default solver])
+  if test "X$METASMT_DEFAULT_BACKEND" == X ; then
+    METASMT_DEFAULT_BACKEND=STP
+    AC_MSG_NOTICE([$with_metasmt_default_backend unsupported, metaSMT uses STP as default backend])
   fi
 else
   if test "X$ENABLE_METASMT" == X1 ; then
-    METASMT_DEFAULT_SOLVER=STP
-    AC_MSG_NOTICE([No solver specified, metaSMT uses STP as default solver])
+    METASMT_DEFAULT_BACKEND=STP
+    AC_MSG_NOTICE([No solver specified, metaSMT uses STP as default backend])
   fi  
 fi
 
-AC_SUBST(METASMT_DEFAULT_SOLVER)
+AC_SUBST(METASMT_DEFAULT_BACKEND)
 
 
 dnl **************************************************************************
