@@ -141,7 +141,7 @@ private:
     typename SolverContext::result_type eqExpr(typename SolverContext::result_type a, typename SolverContext::result_type b);
     
     typename SolverContext::result_type constructAShrByConstant(typename SolverContext::result_type expr, unsigned width, unsigned shift, 
-                                                                typename SolverContext::result_type isSigned, unsigned shiftBits);
+                                                                typename SolverContext::result_type isSigned);
     typename SolverContext::result_type constructMulByConstant(typename SolverContext::result_type expr, unsigned width, uint64_t x);
     typename SolverContext::result_type constructUDivByConstant(typename SolverContext::result_type expr_n, unsigned width, uint64_t d);
     typename SolverContext::result_type constructSDivByConstant(typename SolverContext::result_type expr_n, unsigned width, uint64_t d);
@@ -275,16 +275,15 @@ typename SolverContext::result_type MetaSMTBuilder<SolverContext>::eqExpr(typena
 }
 
 template<typename SolverContext>
-typename SolverContext::result_type MetaSMTBuilder<SolverContext>::constructAShrByConstant(typename SolverContext::result_type expr, unsigned width, unsigned amount,
-                                                                                           typename SolverContext::result_type isSigned, unsigned shiftBits) {
-    unsigned shift = amount & ((1 << shiftBits) - 1);
+typename SolverContext::result_type MetaSMTBuilder<SolverContext>::constructAShrByConstant(typename SolverContext::result_type expr, unsigned width, unsigned shift,
+                                                                                           typename SolverContext::result_type isSigned) {
     typename SolverContext::result_type res;
     
     if (shift == 0) {
         res = expr;
     }
     else if (shift >= width) {
-        res = evaluate(_solver, metaSMT::logic::Ite(isSigned, bvMinusOne(width), bvZero(width)));
+        res = bvZero(width);
     }
     else {
         res = evaluate(_solver, metaSMT::logic::Ite(isSigned,
@@ -545,14 +544,14 @@ typename SolverContext::result_type MetaSMTBuilder<SolverContext>::bvVarArithRig
     typename SolverContext::result_type signedBool = bvBoolExtract(expr, width - 1);
 
     //start with the result if shifting by width-1
-    typename SolverContext::result_type res =  constructAShrByConstant(expr, width, width - 1, signedBool, shiftBits);
+    typename SolverContext::result_type res =  constructAShrByConstant(expr, width, width - 1, signedBool);
 
     // construct a big if-then-elif-elif-... with one case per possible shift amount
     // XXX more efficient to move the ite on the sign outside all exprs?
     // XXX more efficient to sign extend, right shift, then extract lower bits?
     for (int i = width - 2; i >= 0; i--) {
         res = evaluate(_solver, metaSMT::logic::Ite(eqExpr(shift, bvConst32(shiftBits,i)),
-                                                    constructAShrByConstant(expr, width, i, signedBool, shiftBits),
+                                                    constructAShrByConstant(expr, width, i, signedBool),
                                                     res));
     }
     
@@ -1059,7 +1058,7 @@ typename SolverContext::result_type MetaSMTBuilder<SolverContext>::constructActu
 	    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(ase->right)) {
 	        unsigned shift = (unsigned) CE->getLimitedValue();
                 typename SolverContext::result_type signedBool = bvBoolExtract(left_expr, *width_out - 1);
-		res = constructAShrByConstant(left_expr, *width_out, shift, signedBool, getShiftBits(*width_out));	      
+        res = constructAShrByConstant(left_expr, *width_out, shift, signedBool);
 	    }
 	    else {
                 int shiftWidth = 0;
