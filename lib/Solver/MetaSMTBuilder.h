@@ -113,7 +113,7 @@ public:
     
     //logical left and right shift (not arithmetic)
     typename SolverContext::result_type bvLeftShift(typename SolverContext::result_type expr, unsigned width, unsigned shift);
-    typename SolverContext::result_type bvRightShift(typename SolverContext::result_type expr, unsigned width, unsigned amount, unsigned shiftBits);
+    typename SolverContext::result_type bvRightShift(typename SolverContext::result_type expr, unsigned width, unsigned shift);
     typename SolverContext::result_type bvVarLeftShift(typename SolverContext::result_type expr, typename SolverContext::result_type amount, unsigned width);
     typename SolverContext::result_type bvVarRightShift(typename SolverContext::result_type expr, typename SolverContext::result_type amount, unsigned width);
     typename SolverContext::result_type bvVarArithRightShift(typename SolverContext::result_type expr, typename SolverContext::result_type amount, unsigned width);
@@ -289,7 +289,7 @@ typename SolverContext::result_type MetaSMTBuilder<SolverContext>::constructAShr
     else {
         res = evaluate(_solver, metaSMT::logic::Ite(isSigned,
                                                     concat(bvMinusOne(shift), bvExtract(expr, width - 1, shift)),
-                                                    bvRightShift(expr, width, shift, shiftBits)));
+                                                    bvRightShift(expr, width, shift)));
     }
     
     return(res);
@@ -461,10 +461,9 @@ typename SolverContext::result_type MetaSMTBuilder<SolverContext>::bvLeftShift(t
 }
 
 template<typename SolverContext>
-typename SolverContext::result_type MetaSMTBuilder<SolverContext>::bvRightShift(typename SolverContext::result_type expr, unsigned width, unsigned amount, unsigned shiftBits) {
+typename SolverContext::result_type MetaSMTBuilder<SolverContext>::bvRightShift(typename SolverContext::result_type expr, unsigned width, unsigned shift) {
   
     typename SolverContext::result_type res;    
-    unsigned shift = amount & ((1 << shiftBits) - 1);
 
     if (shift == 0) {
         res = expr;
@@ -520,7 +519,7 @@ typename SolverContext::result_type MetaSMTBuilder<SolverContext>::bvVarRightShi
     //construct a big if-then-elif-elif-... with one case per possible shift amount
     for (int i = width - 1; i >= 0; i--) {
         res = evaluate(_solver, metaSMT::logic::Ite(eqExpr(shift, bvConst32(shiftBits, i)),
-                                                    bvRightShift(expr, width, i, shiftBits),
+                                                    bvRightShift(expr, width, i),
                                                     res));
          // ToDo Reconsider widht to provide to bvRightShift
     }
@@ -817,7 +816,7 @@ typename SolverContext::result_type MetaSMTBuilder<SolverContext>::constructActu
             if (CE && (CE->getWidth() <= 64)) {
                 uint64_t divisor = CE->getZExtValue();
                 if (bits64::isPowerOfTwo(divisor)) {
-                    res = bvRightShift(left_expr, *width_out, bits64::indexOfSingleBit(divisor), getShiftBits(*width_out));
+                    res = bvRightShift(left_expr, *width_out, bits64::indexOfSingleBit(divisor));
                     construct_both = false;
                 }
                 else if (_optimizeDivides) {
@@ -1037,7 +1036,7 @@ typename SolverContext::result_type MetaSMTBuilder<SolverContext>::constructActu
 	    assert(*width_out != 1 && "uncanonicalized lshr");
 	    
 	    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(lse->right)) {
-	        res =  bvRightShift(left_expr, *width_out, (unsigned) CE->getLimitedValue(), getShiftBits(*width_out));
+            res =  bvRightShift(left_expr, *width_out, (unsigned) CE->getLimitedValue());
 	    }
 	    else {
                 int shiftWidth = 0;
