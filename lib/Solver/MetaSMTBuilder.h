@@ -116,7 +116,7 @@ public:
     typename SolverContext::result_type bvRightShift(typename SolverContext::result_type expr, unsigned width, unsigned shift);
     typename SolverContext::result_type bvVarLeftShift(typename SolverContext::result_type expr, typename SolverContext::result_type shift, unsigned width);
     typename SolverContext::result_type bvVarRightShift(typename SolverContext::result_type expr, typename SolverContext::result_type shift, unsigned width);
-    typename SolverContext::result_type bvVarArithRightShift(typename SolverContext::result_type expr, typename SolverContext::result_type amount, unsigned width);
+    typename SolverContext::result_type bvVarArithRightShift(typename SolverContext::result_type expr, typename SolverContext::result_type shift, unsigned width);
     
     
     typename SolverContext::result_type getArrayForUpdate(const Array *root, const UpdateNode *un);
@@ -523,13 +523,8 @@ typename SolverContext::result_type MetaSMTBuilder<SolverContext>::bvVarRightShi
 
 // arithmetic right shift by a variable amount on an expression of the specified width
 template<typename SolverContext>
-typename SolverContext::result_type MetaSMTBuilder<SolverContext>::bvVarArithRightShift(typename SolverContext::result_type expr, typename SolverContext::result_type amount, unsigned width) {
-  
-    int shiftBits = getShiftBits(width);
+typename SolverContext::result_type MetaSMTBuilder<SolverContext>::bvVarArithRightShift(typename SolverContext::result_type expr, typename SolverContext::result_type shift, unsigned width) {
 
-    //get the shift amount (looking only at the bits appropriate for the given width)
-    typename SolverContext::result_type shift = bvExtract(amount, shiftBits - 1, 0);
-    
     //get the sign bit to fill with
     typename SolverContext::result_type signedBool = bvBoolExtract(expr, width - 1);
 
@@ -540,13 +535,13 @@ typename SolverContext::result_type MetaSMTBuilder<SolverContext>::bvVarArithRig
     // XXX more efficient to move the ite on the sign outside all exprs?
     // XXX more efficient to sign extend, right shift, then extract lower bits?
     for (int i = width - 2; i >= 0; i--) {
-        res = evaluate(_solver, metaSMT::logic::Ite(eqExpr(shift, bvConst32(shiftBits,i)),
+        res = evaluate(_solver, metaSMT::logic::Ite(eqExpr(shift, bvConst32(width,i)),
                                                     constructAShrByConstant(expr, width, i, signedBool),
                                                     res));
     }
     
     // If overshifting, shift to zero
-    res = evaluate(_solver, metaSMT::logic::Ite(bvult(shift, bvConst32(shiftBits, width)),
+    res = evaluate(_solver, metaSMT::logic::Ite(bvult(shift, bvConst32(width, width)),
                                                 res,
                                                 bvZero(width)));      
 
