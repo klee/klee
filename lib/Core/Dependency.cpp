@@ -542,6 +542,12 @@ VersionedValue *Dependency::getLatestValue(llvm::Value *value,
       return *it;
   }
 
+  if (llvm::isa<llvm::PointerType>(value->getType())) {
+    VersionedValue *ret = getNewVersionedValue(value, valueExpr);
+    addPointerEquality(ret, getInitialAllocation(value, valueExpr));
+    return ret;
+  }
+
   if (parentDependency)
     return parentDependency->getLatestValue(value, valueExpr);
 
