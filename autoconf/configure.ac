@@ -606,7 +606,7 @@ AC_SUBST(STP_CFLAGS)
 AC_SUBST(STP_LDFLAGS)
 
 dnl **************************************************************************
-dnl Find and install Z3
+dnl Find an install of Z3
 dnl **************************************************************************
 
 AC_ARG_WITH(z3,
