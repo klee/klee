@@ -233,7 +233,7 @@ namespace klee {
   #endif /*SUPPORT_STP */
 
 #ifdef SUPPORT_Z3
-  /// Z3Solver - A solver complete solver based on Z3
+  /// Z3Solver - A complete solver based on Z3
   class Z3Solver : public Solver {
   public:
 	/// Z3Solver - Construct a new Z3Solver.
