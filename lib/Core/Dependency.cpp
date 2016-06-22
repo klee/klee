@@ -881,7 +881,9 @@ void Dependency::execute(llvm::Instruction *instr,
       // rather than just using the name.
       std::string getValuePrefix("klee_get_value");
 
-      if (calleeName.equals("malloc") && args.size() == 1) {
+      if (calleeName.equals("getpagesize") && args.size() == 1) {
+        getNewVersionedValue(instr, args.at(0));
+      } else if (calleeName.equals("malloc") && args.size() == 1) {
         addPointerEquality(getNewVersionedValue(instr, args.at(0)),
                            getInitialAllocation(instr, args.at(0)));
       } else if (calleeName.equals("syscall") && args.size() >= 2) {
