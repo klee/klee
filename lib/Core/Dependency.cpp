@@ -949,7 +949,16 @@ void Dependency::execute(llvm::Instruction *instr,
       }
 
       VersionedValue *base = getLatestValue(instr->getOperand(0), argExpr);
-      assert(base != 0 && "operand not found");
+
+      if (!base) {
+        // We define a new base anyway in case the operand was not found and was
+        // an inbound.
+        llvm::GetElementPtrInst *gepInst =
+            llvm::dyn_cast<llvm::GetElementPtrInst>(instr);
+        assert(gepInst->isInBounds() && "operand not found");
+
+        base = getNewVersionedValue(instr->getOperand(0), argExpr);
+      }
 
       std::vector<Allocation *> baseAllocations =
           resolveAllocationTransitively(base);
