@@ -2652,7 +2652,7 @@ void Executor::run(ExecutionState &initialState) {
   
  dump:
   if (DumpStatesOnHalt && !states.empty()) {
-    llvm::errs() << "KLEE: halting execution, dumping remaining states\n";
+    klee_message("halting execution, dumping remaining states");
     for (std::set<ExecutionState*>::iterator
            it = states.begin(), ie = states.end();
          it != ie; ++it) {

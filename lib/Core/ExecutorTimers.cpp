@@ -52,7 +52,7 @@ public:
   ~HaltTimer() {}
 
   void run() {
-    llvm::errs() << "KLEE: HaltTimer invoked\n";
+    klee_message("HaltTimer invoked");
     executor->setHaltExecution(true);
   }
 };
