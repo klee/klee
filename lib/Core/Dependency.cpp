@@ -912,6 +912,12 @@ void Dependency::execute(llvm::Instruction *instr,
       } else if (calleeName.equals("getenv") && args.size() == 2) {
         addPointerEquality(getNewVersionedValue(instr, args.at(0)),
                            getInitialAllocation(instr, args.at(0)));
+      } else if (calleeName.equals("vprintf") && args.size() == 3) {
+        VersionedValue *returnValue = getNewVersionedValue(instr, args.at(0));
+        VersionedValue *arg0 = getLatestValue(instr->getOperand(0), args.at(1));
+        VersionedValue *arg1 = getLatestValue(instr->getOperand(1), args.at(2));
+        addDependency(arg0, returnValue);
+        addDependency(arg1, returnValue);
       } else {
         assert(!"unhandled external function");
       }
@@ -1202,7 +1208,9 @@ void Dependency::executePHI(llvm::Instruction *instr,
   VersionedValue *val = getLatestValue(llvmArgValue, valueExpr);
   if (val) {
     addDependency(val, getNewVersionedValue(instr, valueExpr));
-  } else if (!llvm::isa<llvm::Constant>(llvmArgValue)) {
+  } else if (llvm::isa<llvm::Constant>(llvmArgValue)) {
+    getNewVersionedValue(instr, valueExpr);
+  } else {
     assert(!"operand not found");
   }
 }
