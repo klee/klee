@@ -904,6 +904,8 @@ void Dependency::execute(llvm::Instruction *instr,
       } else if (calleeName.equals("getenv") && args.size() == 2) {
         addPointerEquality(getNewVersionedValue(instr, args.at(0)),
                            getInitialAllocation(instr, args.at(0)));
+      } else {
+        assert(!"unhandled external function");
       }
     }
     return;
