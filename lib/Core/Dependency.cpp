@@ -884,8 +884,16 @@ void Dependency::execute(llvm::Instruction *instr,
       if (calleeName.equals("getpagesize") && args.size() == 1) {
         getNewVersionedValue(instr, args.at(0));
       } else if (calleeName.equals("malloc") && args.size() == 1) {
+        // malloc is an allocation-type instruction: its single argument is the
+        // return address.
         addPointerEquality(getNewVersionedValue(instr, args.at(0)),
                            getInitialAllocation(instr, args.at(0)));
+      } else if (calleeName.equals("realloc") && args.size() == 1) {
+        // realloc is an allocation-type instruction: its single argument is the
+        // return address.
+        VersionedValue *returnValue = getNewVersionedValue(instr, args.at(0));
+        VersionedValue *arg = getLatestValue(instr->getOperand(0), args.at(0));
+        addDependency(arg, returnValue);
       } else if (calleeName.equals("syscall") && args.size() >= 2) {
         VersionedValue *returnValue = getNewVersionedValue(instr, args.at(0));
         for (unsigned i = 0; i + 1 < args.size(); ++i) {
