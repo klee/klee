@@ -912,6 +912,16 @@ void Dependency::execute(llvm::Instruction *instr,
       } else if (calleeName.equals("getenv") && args.size() == 2) {
         addPointerEquality(getNewVersionedValue(instr, args.at(0)),
                            getInitialAllocation(instr, args.at(0)));
+      } else if (calleeName.equals("printf") && args.size() >= 2) {
+        VersionedValue *returnValue = getNewVersionedValue(instr, args.at(0));
+        VersionedValue *formatArg =
+            getLatestValue(instr->getOperand(0), args.at(1));
+        addDependency(formatArg, returnValue);
+        for (unsigned i = 2, argsNum = args.size(); i < argsNum; ++i) {
+          VersionedValue *arg =
+              getLatestValue(instr->getOperand(0), args.at(i));
+          addDependency(arg, returnValue);
+        }
       } else if (calleeName.equals("vprintf") && args.size() == 3) {
         VersionedValue *returnValue = getNewVersionedValue(instr, args.at(0));
         VersionedValue *arg0 = getLatestValue(instr->getOperand(0), args.at(1));
