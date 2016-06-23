@@ -84,16 +84,30 @@ llvm::cl::list<QueryLoggingSolverType> queryLoggingOptions(
 
 #ifdef ENABLE_METASMT
 
+#ifdef METASMT_DEFAULT_BACKEND_IS_BTOR
+#define METASMT_DEFAULT_BACKEND_STR "(default = btor)."
+#define METASMT_DEFAULT_BACKEND METASMT_BACKEND_BOOLECTOR
+#elif METASMT_DEFAULT_BACKEND_IS_Z3
+#define METASMT_DEFAULT_BACKEND_STR "(default = z3)."
+#define METASMT_DEFAULT_BACKEND METASMT_BACKEND_Z3
+#else
+#define METASMT_DEFAULT_BACKEND_STR "(default = stp)."
+#define METASMT_DEFAULT_BACKEND METASMT_BACKEND_STP
+#endif
+
 llvm::cl::opt<klee::MetaSMTBackendType> MetaSMTBackend(
     "metasmt-backend",
-    llvm::cl::desc("Specify the MetaSMT solver backend type (default=STP)."),
+    llvm::cl::desc("Specify the MetaSMT solver backend type " METASMT_DEFAULT_BACKEND_STR),
     llvm::cl::values(
         clEnumValN(METASMT_BACKEND_STP, "stp", "Use metaSMT with STP"),
         clEnumValN(METASMT_BACKEND_Z3, "z3", "Use metaSMT with Z3"),
         clEnumValN(METASMT_BACKEND_BOOLECTOR, "btor",
                    "Use metaSMT with Boolector"),
         clEnumValEnd),
-    llvm::cl::init(METASMT_BACKEND_STP));
+    llvm::cl::init(METASMT_DEFAULT_BACKEND));
+
+#undef METASMT_DEFAULT_BACKEND
+#undef METASMT_DEFAULT_BACKEND_STR
 
 #endif /* ENABLE_METASMT */
 
