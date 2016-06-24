@@ -824,7 +824,10 @@ int __fd_getdents(unsigned int fd, struct dirent64 *dirp, unsigned int count) {
     errno = EINVAL;
     return -1;
   } else {
-    if ((unsigned long) f->off < 4096u) {
+    // Calculate the maximum size of symbolic entries we need to pad
+    // in between
+    uint64_t sfiles_entry_size = __exe_fs.n_sym_files * sizeof(*dirp);
+    if ((unsigned long) f->off < sfiles_entry_size) {
       /* Return our dirents */
       off64_t i, pad, bytes=0;
 
@@ -848,18 +851,18 @@ int __fd_getdents(unsigned int fd, struct dirent64 *dirp, unsigned int count) {
       }
       
       /* Fake jump to OS records by a "deleted" file. */
-      pad = count>=4096 ? 4096 : count;
+      pad = count>=sfiles_entry_size ? sfiles_entry_size : count;
       dirp->d_ino = 0;
       dirp->d_reclen = pad - bytes;
       dirp->d_type = DT_UNKNOWN;
       dirp->d_name[0] = '\0';
-      dirp->d_off = 4096;
+      dirp->d_off = sfiles_entry_size;
       bytes += dirp->d_reclen;
       f->off = pad;
 
       return bytes;
     } else {
-      off64_t os_pos = f->off - 4096;
+      off64_t os_pos = f->off - sfiles_entry_size;
       int res;
       off64_t s = 0;
 
@@ -878,13 +881,13 @@ int __fd_getdents(unsigned int fd, struct dirent64 *dirp, unsigned int count) {
         errno = klee_get_errno();
       } else {
         int pos = 0;
-        f->off = syscall(__NR_lseek, f->fd, 0, SEEK_CUR) + 4096;
+        f->off = syscall(__NR_lseek, f->fd, 0, SEEK_CUR) + sfiles_entry_size;
 
         /* Patch offsets */
         
         while (pos < res) {
           struct dirent64 *dp = (struct dirent64*) ((char*) dirp + pos);
-          dp->d_off += 4096;
+          dp->d_off += sfiles_entry_size;
           pos += dp->d_reclen;
 
         }
