@@ -881,9 +881,19 @@ void Dependency::execute(llvm::Instruction *instr,
       // rather than just using the name.
       std::string getValuePrefix("klee_get_value");
 
-      if (calleeName.equals("malloc") && args.size() == 1) {
+      if (calleeName.equals("getpagesize") && args.size() == 1) {
+        getNewVersionedValue(instr, args.at(0));
+      } else if (calleeName.equals("malloc") && args.size() == 1) {
+        // malloc is an allocation-type instruction: its single argument is the
+        // return address.
         addPointerEquality(getNewVersionedValue(instr, args.at(0)),
                            getInitialAllocation(instr, args.at(0)));
+      } else if (calleeName.equals("realloc") && args.size() == 1) {
+        // realloc is an allocation-type instruction: its single argument is the
+        // return address.
+        VersionedValue *returnValue = getNewVersionedValue(instr, args.at(0));
+        VersionedValue *arg = getLatestValue(instr->getOperand(0), args.at(0));
+        addDependency(arg, returnValue);
       } else if (calleeName.equals("syscall") && args.size() >= 2) {
         VersionedValue *returnValue = getNewVersionedValue(instr, args.at(0));
         for (unsigned i = 0; i + 1 < args.size(); ++i) {
@@ -902,6 +912,24 @@ void Dependency::execute(llvm::Instruction *instr,
       } else if (calleeName.equals("getenv") && args.size() == 2) {
         addPointerEquality(getNewVersionedValue(instr, args.at(0)),
                            getInitialAllocation(instr, args.at(0)));
+      } else if (calleeName.equals("printf") && args.size() >= 2) {
+        VersionedValue *returnValue = getNewVersionedValue(instr, args.at(0));
+        VersionedValue *formatArg =
+            getLatestValue(instr->getOperand(0), args.at(1));
+        addDependency(formatArg, returnValue);
+        for (unsigned i = 2, argsNum = args.size(); i < argsNum; ++i) {
+          VersionedValue *arg =
+              getLatestValue(instr->getOperand(0), args.at(i));
+          addDependency(arg, returnValue);
+        }
+      } else if (calleeName.equals("vprintf") && args.size() == 3) {
+        VersionedValue *returnValue = getNewVersionedValue(instr, args.at(0));
+        VersionedValue *arg0 = getLatestValue(instr->getOperand(0), args.at(1));
+        VersionedValue *arg1 = getLatestValue(instr->getOperand(1), args.at(2));
+        addDependency(arg0, returnValue);
+        addDependency(arg1, returnValue);
+      } else {
+        assert(!"unhandled external function");
       }
     }
     return;
@@ -949,7 +977,16 @@ void Dependency::execute(llvm::Instruction *instr,
       }
 
       VersionedValue *base = getLatestValue(instr->getOperand(0), argExpr);
-      assert(base != 0 && "operand not found");
+
+      if (!base) {
+        // We define a new base anyway in case the operand was not found and was
+        // an inbound.
+        llvm::GetElementPtrInst *gepInst =
+            llvm::dyn_cast<llvm::GetElementPtrInst>(instr);
+        assert(gepInst->isInBounds() && "operand not found");
+
+        base = getNewVersionedValue(instr->getOperand(0), argExpr);
+      }
 
       std::vector<Allocation *> baseAllocations =
           resolveAllocationTransitively(base);
@@ -1181,7 +1218,9 @@ void Dependency::executePHI(llvm::Instruction *instr,
   VersionedValue *val = getLatestValue(llvmArgValue, valueExpr);
   if (val) {
     addDependency(val, getNewVersionedValue(instr, valueExpr));
-  } else if (!llvm::isa<llvm::Constant>(llvmArgValue)) {
+  } else if (llvm::isa<llvm::Constant>(llvmArgValue)) {
+    getNewVersionedValue(instr, valueExpr);
+  } else {
     assert(!"operand not found");
   }
 }
