@@ -824,9 +824,14 @@ int __fd_getdents(unsigned int fd, struct dirent64 *dirp, unsigned int count) {
     errno = EINVAL;
     return -1;
   } else {
-    // Calculate the maximum size of symbolic entries we need to pad
-    // in between
-    uint64_t sfiles_entry_size = __exe_fs.n_sym_files * sizeof(*dirp);
+    /* Check if the result buffer is too small */
+    if (count < sizeof(*dirp)) {
+      errno = EINVAL;
+      return -1;
+    }
+    /* Calculate the maximum size of symbolic entries we need to pad
+       in between */
+    uint64_t sfiles_entry_size = (__exe_fs.n_sym_files + 1) * sizeof(*dirp);
     if ((unsigned long) f->off < sfiles_entry_size) {
       /* Return our dirents */
       off64_t i, pad, bytes=0;
