@@ -844,6 +844,10 @@ int __fd_getdents(unsigned int fd, struct dirent64 *dirp, unsigned int count) {
         return -1;
       } 
       for (; i<__exe_fs.n_sym_files; ++i) {
+        /* Check if we still have space for that entry in the buffer */
+        if (bytes + sizeof(*dirp) > count)
+          return bytes;
+
         exe_disk_file_t *df = &__exe_fs.sym_files[i];
         dirp->d_ino = df->stat->st_ino;
         dirp->d_reclen = sizeof(*dirp);
@@ -854,7 +858,10 @@ int __fd_getdents(unsigned int fd, struct dirent64 *dirp, unsigned int count) {
         bytes += dirp->d_reclen;
         ++dirp;
       }
-      
+      /* Check if we still have space for that entry in the buffer */
+      if (bytes + sizeof(*dirp) > count)
+        return bytes;
+
       /* Fake jump to OS records by a "deleted" file. */
       pad = count>=sfiles_entry_size ? sfiles_entry_size : count;
       dirp->d_ino = 0;
