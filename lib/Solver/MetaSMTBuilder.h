@@ -450,7 +450,7 @@ MetaSMTBuilder<SolverContext>::constructSDivByConstant(
   int32_t mprime, dsign, shpost;
   ComputeSDivConstants32(d, mprime, dsign, shpost);
   typename SolverContext::result_type expr_dsign = bvConst32(32, dsign);
-  typename SolverContext::result_type expr_shpost = bvConst32(32, shpost);
+  typename SolverContext::result_type expr_shpost = bvConst32(64, shpost);
 
   // q0 = n + MULSH( mprime, n ) = n + (( (int64_t)mprime * (int64_t)n ) >> 32)
   int64_t mprime_64 = (int64_t)mprime;
