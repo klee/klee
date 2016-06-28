@@ -65,8 +65,6 @@ public:
   virtual ~MetaSMTArrayExprHash(){};
 };
 
-static const bool mimic_stp = true;
-
 template <typename SolverContext> class MetaSMTBuilder {
 public:
   MetaSMTBuilder(SolverContext &solver, bool optimizeDivides)
@@ -543,22 +541,10 @@ MetaSMTBuilder<SolverContext>::bvVarLeftShift(
   assert(_solver.get_bv_width(expr) == width);
   assert(_solver.get_bv_width(shift) == width);
 
-  typename SolverContext::result_type res = bvZero(width);
-
-  // construct a big if-then-elif-elif-... with one case per possible shift
-  // amount
-  for (int i = width - 1; i >= 0; i--) {
-    res = evaluate(_solver,
-                   metaSMT::logic::Ite(eqExpr(shift, bvConst32(width, i)),
-                                       bvLeftShift(expr, width, i), res));
-  }
-
   // If overshifting, shift to zero
-  res = evaluate(_solver,
-                 metaSMT::logic::Ite(bvult(shift, bvConst32(width, width)), res,
-                                     bvZero(width)));
-
-  return (res);
+  return evaluate(_solver,
+                  metaSMT::logic::Ite(bvult(shift, bvConst32(width, width)),
+                                      bvshl(expr, shift), bvZero(width)));
 }
 
 // logical right shift by a variable amount on an expression of the specified
@@ -572,23 +558,10 @@ MetaSMTBuilder<SolverContext>::bvVarRightShift(
   assert(_solver.get_bv_width(expr) == width);
   assert(_solver.get_bv_width(shift) == width);
 
-  typename SolverContext::result_type res = bvZero(width);
-
-  // construct a big if-then-elif-elif-... with one case per possible shift
-  // amount
-  for (int i = width - 1; i >= 0; i--) {
-    res = evaluate(_solver,
-                   metaSMT::logic::Ite(eqExpr(shift, bvConst32(width, i)),
-                                       bvRightShift(expr, width, i), res));
-    // ToDo Reconsider widht to provide to bvRightShift
-  }
-
   // If overshifting, shift to zero
-  res = evaluate(_solver,
-                 metaSMT::logic::Ite(bvult(shift, bvConst32(width, width)), res,
-                                     bvZero(width)));
-
-  return (res);
+  return evaluate(_solver,
+                  metaSMT::logic::Ite(bvult(shift, bvConst32(width, width)),
+                                      bvshr(expr, shift), bvZero(width)));
 }
 
 // arithmetic right shift by a variable amount on an expression of the specified
@@ -602,31 +575,10 @@ MetaSMTBuilder<SolverContext>::bvVarArithRightShift(
   assert(_solver.get_bv_width(expr) == width);
   assert(_solver.get_bv_width(shift) == width);
 
-  // get the sign bit to fill with
-  typename SolverContext::result_type signedBool =
-      bvBoolExtract(expr, width - 1);
-
-  // start with the result if shifting by width-1
-  typename SolverContext::result_type res =
-      constructAShrByConstant(expr, width, width - 1, signedBool);
-
-  // construct a big if-then-elif-elif-... with one case per possible shift
-  // amount
-  // XXX more efficient to move the ite on the sign outside all exprs?
-  // XXX more efficient to sign extend, right shift, then extract lower bits?
-  for (int i = width - 2; i >= 0; i--) {
-    res = evaluate(
-        _solver, metaSMT::logic::Ite(
-                     eqExpr(shift, bvConst32(width, i)),
-                     constructAShrByConstant(expr, width, i, signedBool), res));
-  }
-
   // If overshifting, shift to zero
-  res = evaluate(_solver,
-                 metaSMT::logic::Ite(bvult(shift, bvConst32(width, width)), res,
-                                     bvZero(width)));
-
-  return (res);
+  return evaluate(_solver,
+                  metaSMT::logic::Ite(bvult(shift, bvConst32(width, width)),
+                                      bvashr(expr, shift), bvZero(width)));
 }
 
 template <typename SolverContext>
@@ -1086,8 +1038,7 @@ MetaSMTBuilder<SolverContext>::constructActual(ref<Expr> e, int *width_out) {
       int shiftWidth = 0;
       typename SolverContext::result_type right_expr =
           evaluate(_solver, construct(se->right, &shiftWidth));
-      res = mimic_stp ? bvVarLeftShift(left_expr, right_expr, *width_out)
-                      : evaluate(_solver, bvshl(left_expr, right_expr));
+      res = bvVarLeftShift(left_expr, right_expr, *width_out);
     }
 
     break;
@@ -1108,8 +1059,7 @@ MetaSMTBuilder<SolverContext>::constructActual(ref<Expr> e, int *width_out) {
       int shiftWidth = 0;
       typename SolverContext::result_type right_expr =
           evaluate(_solver, construct(lse->right, &shiftWidth));
-      res = mimic_stp ? bvVarRightShift(left_expr, right_expr, *width_out)
-                      : evaluate(_solver, bvshr(left_expr, right_expr));
+      res = bvVarRightShift(left_expr, right_expr, *width_out);
     }
 
     break;
@@ -1132,8 +1082,7 @@ MetaSMTBuilder<SolverContext>::constructActual(ref<Expr> e, int *width_out) {
       int shiftWidth = 0;
       typename SolverContext::result_type right_expr =
           evaluate(_solver, construct(ase->right, &shiftWidth));
-      res = mimic_stp ? bvVarArithRightShift(left_expr, right_expr, *width_out)
-                      : evaluate(_solver, bvashr(left_expr, right_expr));
+      res = bvVarArithRightShift(left_expr, right_expr, *width_out);
     }
 
     break;
