@@ -540,6 +540,9 @@ MetaSMTBuilder<SolverContext>::bvVarLeftShift(
     typename SolverContext::result_type expr,
     typename SolverContext::result_type shift, unsigned width) {
 
+  assert(_solver.get_bv_width(expr) == width);
+  assert(_solver.get_bv_width(shift) == width);
+
   typename SolverContext::result_type res = bvZero(width);
 
   // construct a big if-then-elif-elif-... with one case per possible shift
@@ -565,6 +568,9 @@ typename SolverContext::result_type
 MetaSMTBuilder<SolverContext>::bvVarRightShift(
     typename SolverContext::result_type expr,
     typename SolverContext::result_type shift, unsigned width) {
+
+  assert(_solver.get_bv_width(expr) == width);
+  assert(_solver.get_bv_width(shift) == width);
 
   typename SolverContext::result_type res = bvZero(width);
 
@@ -592,6 +598,9 @@ typename SolverContext::result_type
 MetaSMTBuilder<SolverContext>::bvVarArithRightShift(
     typename SolverContext::result_type expr,
     typename SolverContext::result_type shift, unsigned width) {
+
+  assert(_solver.get_bv_width(expr) == width);
+  assert(_solver.get_bv_width(shift) == width);
 
   // get the sign bit to fill with
   typename SolverContext::result_type signedBool =
