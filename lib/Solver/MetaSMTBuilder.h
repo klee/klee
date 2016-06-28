@@ -450,7 +450,7 @@ MetaSMTBuilder<SolverContext>::constructSDivByConstant(
   int32_t mprime, dsign, shpost;
   ComputeSDivConstants32(d, mprime, dsign, shpost);
   typename SolverContext::result_type expr_dsign = bvConst32(32, dsign);
-  typename SolverContext::result_type expr_shpost = bvConst32(32, shpost);
+  typename SolverContext::result_type expr_shpost = bvConst32(64, shpost);
 
   // q0 = n + MULSH( mprime, n ) = n + (( (int64_t)mprime * (int64_t)n ) >> 32)
   int64_t mprime_64 = (int64_t)mprime;
@@ -540,6 +540,9 @@ MetaSMTBuilder<SolverContext>::bvVarLeftShift(
     typename SolverContext::result_type expr,
     typename SolverContext::result_type shift, unsigned width) {
 
+  assert(_solver.get_bv_width(expr) == width);
+  assert(_solver.get_bv_width(shift) == width);
+
   typename SolverContext::result_type res = bvZero(width);
 
   // construct a big if-then-elif-elif-... with one case per possible shift
@@ -565,6 +568,9 @@ typename SolverContext::result_type
 MetaSMTBuilder<SolverContext>::bvVarRightShift(
     typename SolverContext::result_type expr,
     typename SolverContext::result_type shift, unsigned width) {
+
+  assert(_solver.get_bv_width(expr) == width);
+  assert(_solver.get_bv_width(shift) == width);
 
   typename SolverContext::result_type res = bvZero(width);
 
@@ -592,6 +598,9 @@ typename SolverContext::result_type
 MetaSMTBuilder<SolverContext>::bvVarArithRightShift(
     typename SolverContext::result_type expr,
     typename SolverContext::result_type shift, unsigned width) {
+
+  assert(_solver.get_bv_width(expr) == width);
+  assert(_solver.get_bv_width(shift) == width);
 
   // get the sign bit to fill with
   typename SolverContext::result_type signedBool =
