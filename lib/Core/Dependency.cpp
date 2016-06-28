@@ -894,6 +894,12 @@ void Dependency::execute(llvm::Instruction *instr,
         VersionedValue *returnValue = getNewVersionedValue(instr, args.at(0));
         VersionedValue *arg = getLatestValue(instr->getOperand(0), args.at(0));
         addDependency(arg, returnValue);
+      } else if (calleeName.equals("calloc") && args.size() == 1) {
+        // calloc is an allocation-type instruction: its single argument is the
+        // return address.
+        VersionedValue *returnValue = getNewVersionedValue(instr, args.at(0));
+        VersionedValue *arg = getLatestValue(instr->getOperand(0), args.at(0));
+        addDependency(arg, returnValue);
       } else if (calleeName.equals("syscall") && args.size() >= 2) {
         VersionedValue *returnValue = getNewVersionedValue(instr, args.at(0));
         for (unsigned i = 0; i + 1 < args.size(); ++i) {
@@ -928,16 +934,16 @@ void Dependency::execute(llvm::Instruction *instr,
         VersionedValue *arg1 = getLatestValue(instr->getOperand(1), args.at(2));
         addDependency(arg0, returnValue);
         addDependency(arg1, returnValue);
-      } else if(calleeName.equals("__ctype_b_loc") && args.size() == 1){
+      } else if (calleeName.equals("__ctype_b_loc") && args.size() == 1) {
+        getNewVersionedValue(instr, args.at(0));
+      } else if (calleeName.equals("__ctype_b_locargs") && args.size() == 1) {
+        getNewVersionedValue(instr, args.at(0));
+      } else if (calleeName.equals("geteuid") && args.size() == 1) {
         VersionedValue *returnValue = getNewVersionedValue(instr, args.at(0));
         VersionedValue *arg = getLatestValue(instr->getOperand(0), args.at(0));
         addDependency(arg, returnValue);
-      }else if(calleeName.equals("__ctype_b_locargs") && args.size() == 1){
-    	VersionedValue *returnValue = getNewVersionedValue(instr, args.at(0));
-    	VersionedValue *arg = getLatestValue(instr->getOperand(0), args.at(0));
-    	addDependency(arg, returnValue);
-      }else{
-    	  assert(!"unhandled external function");
+      } else {
+        assert(!"unhandled external function");
       }
     }
     return;
