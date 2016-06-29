@@ -596,7 +596,8 @@ class Allocation {
     /// @brief Builds dependency graph between memory allocations
     void recursivelyBuildAllocationGraph(AllocationGraph *g,
                                          VersionedValue *value,
-                                         Allocation *alloc) const;
+                                         Allocation *alloc,
+                                         Allocation *parentAllocation) const;
 
     /// @brief Builds dependency graph between memory allocations
     void buildAllocationGraph(AllocationGraph *g, VersionedValue *value) const;
