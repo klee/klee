@@ -1404,9 +1404,9 @@ Dependency::directAllocationSources(VersionedValue *target) const {
   return ret;
 }
 
-void Dependency::recursivelyBuildAllocationGraph(AllocationGraph *g,
-                                                 VersionedValue *target,
-                                                 Allocation *alloc) const {
+void Dependency::recursivelyBuildAllocationGraph(
+    AllocationGraph *g, VersionedValue *target, Allocation *alloc,
+    Allocation *parentAlloc) const {
   if (!target)
     return;
 
@@ -1418,9 +1418,11 @@ void Dependency::recursivelyBuildAllocationGraph(AllocationGraph *g,
            it = sourceEdges.begin(),
            itEnd = sourceEdges.end();
        it != itEnd; ++it) {
-    if (it->second != alloc) {
+    // FIXME: Cheap detection of direct and 2-nodes cycles. In general, any
+    // cycle should not be allowed.
+    if (it->second != alloc && it->second != parentAlloc) {
       g->addNewEdge(it->second, alloc);
-      recursivelyBuildAllocationGraph(g, it->first, it->second);
+      recursivelyBuildAllocationGraph(g, it->first, it->second, alloc);
     }
   }
 }
@@ -1436,7 +1438,7 @@ void Dependency::buildAllocationGraph(AllocationGraph *g,
            itEnd = sourceEdges.end();
        it != itEnd; ++it) {
     g->addNewSink(it->second);
-    recursivelyBuildAllocationGraph(g, it->first, it->second);
+    recursivelyBuildAllocationGraph(g, it->first, it->second, 0);
   }
 }
 
