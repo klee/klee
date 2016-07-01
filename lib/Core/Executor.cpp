@@ -2157,25 +2157,26 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
   case Instruction::GetElementPtr: {
     KGEPInstruction *kgepi = static_cast<KGEPInstruction*>(ki);
-    ref<Expr> base = eval(ki, 0, state).value;
+    ref<Expr> oldBase = eval(ki, 0, state).value;
+    ref<Expr> base = oldBase;
 
     for (std::vector< std::pair<unsigned, uint64_t> >::iterator 
            it = kgepi->indices.begin(), ie = kgepi->indices.end(); 
          it != ie; ++it) {
       uint64_t elementSize = it->second;
       ref<Expr> index = eval(ki, it->first, state).value;
-      base = AddExpr::create(base,
+      base = AddExpr::create(oldBase,
                              MulExpr::create(Expr::createSExtToPointerWidth(index),
                                              Expr::createPointer(elementSize)));
     }
     if (kgepi->offset)
-      base = AddExpr::create(base,
+      base = AddExpr::create(oldBase,
                              Expr::createPointer(kgepi->offset));
     bindLocal(ki, state, base);
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->execute(i, base);
+      interpTree->execute(i, base, oldBase);
     break;
   }
 

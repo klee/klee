@@ -976,65 +976,6 @@ void Dependency::execute(llvm::Instruction *instr,
                          getInitialAllocation(instr, argExpr));
       break;
     }
-    case llvm::Instruction::GetElementPtr: {
-      if (llvm::isa<llvm::Constant>(instr->getOperand(0))) {
-        Allocation *actualAllocation =
-            getLatestAllocation(instr->getOperand(0), argExpr);
-        if (!actualAllocation)
-          actualAllocation =
-              getInitialAllocation(instr->getOperand(0), argExpr);
-
-        // We simply propagate the pointer to the current
-        addPointerEquality(getNewVersionedValue(instr, argExpr),
-                           actualAllocation);
-        break;
-      }
-
-      VersionedValue *base = getLatestValue(instr->getOperand(0), argExpr);
-
-      if (!base) {
-        // We define a new base anyway in case the operand was not found and was
-        // an inbound.
-        llvm::GetElementPtrInst *gepInst =
-            llvm::dyn_cast<llvm::GetElementPtrInst>(instr);
-        assert(gepInst->isInBounds() && "operand not found");
-
-        base = getNewVersionedValue(instr->getOperand(0), argExpr);
-      }
-
-      std::vector<Allocation *> baseAllocations =
-          resolveAllocationTransitively(base);
-
-      // Allocations
-      if (baseAllocations.size() > 0) {
-        VersionedValue *newValue = getNewVersionedValue(instr, argExpr);
-        for (std::vector<Allocation *>::iterator it = baseAllocations.begin(),
-                                                 itEnd = baseAllocations.end();
-             it != itEnd; ++it) {
-          // We check existing allocations with the same site as the base,
-          // but with the address given as argExpr
-          Allocation *actualAllocation =
-              getLatestAllocation((*it)->getSite(), argExpr);
-          if (!actualAllocation) {
-            actualAllocation = getInitialAllocation((*it)->getSite(), argExpr);
-          }
-          addPointerEquality(newValue, actualAllocation);
-        }
-      } else {
-        // Could not resolve to argument to an address,
-        // simply add flow dependency
-        std::vector<VersionedValue *> vec = directFlowSources(base);
-        if (vec.size() > 0) {
-          VersionedValue *newValue = getNewVersionedValue(instr, argExpr);
-          for (std::vector<VersionedValue *>::iterator it = vec.begin(),
-                                                       itEnd = vec.end();
-               it != itEnd; ++it) {
-            addDependency((*it), newValue);
-          }
-        }
-      }
-      break;
-    }
     case llvm::Instruction::Trunc:
     case llvm::Instruction::ZExt:
     case llvm::Instruction::SExt:
@@ -1147,6 +1088,55 @@ void Dependency::execute(llvm::Instruction *instr,
         updateStore(allocation, dataArg);
       }
 
+      break;
+    }
+    case llvm::Instruction::GetElementPtr: {
+      if (llvm::isa<llvm::Constant>(instr->getOperand(0)) ||
+	  llvm::dyn_cast<llvm::GetElementPtrInst>(instr)->isInBounds()) {
+        Allocation *actualAllocation =
+            getLatestAllocation(instr->getOperand(0), address);
+        if (!actualAllocation)
+          actualAllocation =
+              getInitialAllocation(instr->getOperand(0), address);
+
+        // We simply propagate the pointer to the current
+        addPointerEquality(getNewVersionedValue(instr, valueExpr),
+                           actualAllocation);
+        break;
+      }
+
+      VersionedValue *base = getLatestValue(instr->getOperand(0), address);
+
+      std::vector<Allocation *> baseAllocations =
+          resolveAllocationTransitively(base);
+
+      // Allocations
+      if (baseAllocations.size() > 0) {
+        VersionedValue *newValue = getNewVersionedValue(instr, valueExpr);
+        for (std::vector<Allocation *>::iterator it = baseAllocations.begin(),
+                                                 itEnd = baseAllocations.end();
+             it != itEnd; ++it) {
+          // We check existing allocations with the same site as the base,
+          // but with the address given as argExpr
+          Allocation *actualAllocation =
+              getLatestAllocation((*it)->getSite(), address);
+          if (!actualAllocation)
+            actualAllocation = getInitialAllocation((*it)->getSite(), address);
+          addPointerEquality(newValue, actualAllocation);
+        }
+      } else {
+        // Could not resolve to argument to an address,
+        // simply add flow dependency
+        std::vector<VersionedValue *> vec = directFlowSources(base);
+        if (vec.size() > 0) {
+          VersionedValue *newValue = getNewVersionedValue(instr, valueExpr);
+          for (std::vector<VersionedValue *>::iterator it = vec.begin(),
+                                                       itEnd = vec.end();
+               it != itEnd; ++it) {
+            addDependency((*it), newValue);
+          }
+        }
+      }
       break;
     }
     default: { assert(!"unhandled binary instruction"); }
