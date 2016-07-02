@@ -803,43 +803,50 @@ Dependency::populateArgumentValuesList(llvm::CallInst *site,
   return argumentValuesList;
 }
 
-bool Dependency::buildLoadDependency(llvm::Value *fromValue,
-                                     ref<Expr> fromValueExpr,
-                                     llvm::Value *toValue,
-                                     ref<Expr> toValueExpr) {
-  VersionedValue *arg = getLatestValue(fromValue, fromValueExpr);
-  if (!arg)
+bool Dependency::buildLoadDependency(llvm::Value *address,
+                                     ref<Expr> addressExpr, llvm::Value *value,
+                                     ref<Expr> valueExpr) {
+  VersionedValue *addressValue = getLatestValue(address, addressExpr);
+  if (!addressValue)
     return false;
 
-  std::vector<Allocation *> allocList = resolveAllocationTransitively(arg);
+  std::vector<Allocation *> addressAllocList =
+      resolveAllocationTransitively(addressValue);
 
-  if (allocList.empty())
+  if (addressAllocList.empty())
     assert(!"operand is not an allocation");
 
-  for (std::vector<Allocation *>::iterator it0 = allocList.begin(),
-                                           it0End = allocList.end();
-       it0 != it0End; ++it0) {
-    std::vector<VersionedValue *> valList = stores(*it0);
+  for (std::vector<Allocation *>::iterator
+           allocIter = addressAllocList.begin(),
+           allocIterEnd = addressAllocList.end();
+       allocIter != allocIterEnd; ++allocIter) {
+    std::vector<VersionedValue *> storedValue = stores(*allocIter);
 
-    if (valList.empty())
+    if (storedValue.empty())
       // We could not find the stored value, create
       // a new one.
-      updateStore(*it0, getNewVersionedValue(toValue, toValueExpr));
+      updateStore(*allocIter, getNewVersionedValue(value, valueExpr));
     else {
-      for (std::vector<VersionedValue *>::iterator it1 = valList.begin(),
-                                                   it1End = valList.end();
-           it1 != it1End; ++it1) {
-        std::vector<Allocation *> alloc2 = resolveAllocationTransitively(*it1);
+      for (std::vector<VersionedValue *>::iterator
+               storedValueIter = storedValue.begin(),
+               storedValueIterEnd = storedValue.end();
+           storedValueIter != storedValueIterEnd; ++storedValueIter) {
+        // Here we check if the stored value was an address, in
+        // which case we add pointer equality. Otherwise, we build
+        // value dependency between the return value and the stored value.
+        std::vector<Allocation *> storedValueAddressViews =
+            resolveAllocationTransitively(*storedValueIter);
 
-        if (alloc2.empty())
-          addDependencyViaAllocation(
-              *it1, getNewVersionedValue(toValue, toValueExpr), *it0);
+        if (storedValueAddressViews.empty())
+          addDependencyViaAllocation(*storedValueIter,
+                                     getNewVersionedValue(value, valueExpr),
+                                     *allocIter);
         else {
-          for (std::vector<Allocation *>::iterator it2 = alloc2.begin(),
-                                                   it2End = alloc2.end();
+          for (std::vector<Allocation *>::iterator
+                   it2 = storedValueAddressViews.begin(),
+                   it2End = storedValueAddressViews.end();
                it2 != it2End; ++it2) {
-            addPointerEquality(getNewVersionedValue(toValue, toValueExpr),
-                               *it2);
+            addPointerEquality(getNewVersionedValue(value, valueExpr), *it2);
           }
         }
       }
@@ -1125,17 +1132,19 @@ void Dependency::execute(llvm::Instruction *instr,
           addPointerEquality(newValue, actualAllocation);
         }
       } else {
-        // Could not resolve to argument to an address,
-        // simply add flow dependency
-        std::vector<VersionedValue *> vec = directFlowSources(base);
-        if (vec.size() > 0) {
+        // Here the base is not found as an address,
+        // try to add flow dependency between values
+        std::vector<VersionedValue *> sourcesIter = directFlowSources(base);
+        if (sourcesIter.size() > 0) {
           VersionedValue *newValue = getNewVersionedValue(instr, valueExpr);
-          for (std::vector<VersionedValue *>::iterator it = vec.begin(),
-                                                       itEnd = vec.end();
+          for (std::vector<VersionedValue *>::iterator
+                   it = sourcesIter.begin(),
+                   itEnd = sourcesIter.end();
                it != itEnd; ++it) {
             addDependency((*it), newValue);
           }
-        }
+        } else
+          assert(!"missing base parameter");
       }
       break;
     }
