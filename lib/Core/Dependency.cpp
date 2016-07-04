@@ -1100,11 +1100,14 @@ void Dependency::execute(llvm::Instruction *instr,
     case llvm::Instruction::GetElementPtr: {
       if (llvm::isa<llvm::Constant>(instr->getOperand(0)) ||
 	  llvm::dyn_cast<llvm::GetElementPtrInst>(instr)->isInBounds()) {
+        // We look up existing allocations with the same site as the argument,
+        // but with the address given as valueExpr (the value of the
+        // getelementptr instruction itself).
         Allocation *actualAllocation =
-            getLatestAllocation(instr->getOperand(0), address);
+            getLatestAllocation(instr->getOperand(0), valueExpr);
         if (!actualAllocation)
           actualAllocation =
-              getInitialAllocation(instr->getOperand(0), address);
+              getInitialAllocation(instr->getOperand(0), valueExpr);
 
         // We simply propagate the pointer to the current
         addPointerEquality(getNewVersionedValue(instr, valueExpr),
@@ -1112,34 +1115,39 @@ void Dependency::execute(llvm::Instruction *instr,
         break;
       }
 
-      VersionedValue *base = getLatestValue(instr->getOperand(0), address);
+      VersionedValue *addressValue =
+          getLatestValue(instr->getOperand(0), address);
 
-      std::vector<Allocation *> baseAllocations =
-          resolveAllocationTransitively(base);
+      std::vector<Allocation *> addressAllocations =
+          resolveAllocationTransitively(addressValue);
 
       // Allocations
-      if (baseAllocations.size() > 0) {
+      if (addressAllocations.size() > 0) {
         VersionedValue *newValue = getNewVersionedValue(instr, valueExpr);
-        for (std::vector<Allocation *>::iterator it = baseAllocations.begin(),
-                                                 itEnd = baseAllocations.end();
+        for (std::vector<Allocation *>::iterator
+                 it = addressAllocations.begin(),
+                 itEnd = addressAllocations.end();
              it != itEnd; ++it) {
-          // We check existing allocations with the same site as the base,
-          // but with the address given as argExpr
+          // We check existing allocations with the same site as the allocation,
+          // but with the address given as valueExpr (the value of the
+          // getelementptr instruction itself).
           Allocation *actualAllocation =
-              getLatestAllocation((*it)->getSite(), address);
+              getLatestAllocation((*it)->getSite(), valueExpr);
           if (!actualAllocation)
-            actualAllocation = getInitialAllocation((*it)->getSite(), address);
+            actualAllocation =
+                getInitialAllocation((*it)->getSite(), valueExpr);
           addPointerEquality(newValue, actualAllocation);
         }
       } else {
         // Here the base is not found as an address,
         // try to add flow dependency between values
-        std::vector<VersionedValue *> sourcesIter = directFlowSources(base);
-        if (sourcesIter.size() > 0) {
+        std::vector<VersionedValue *> directSources =
+            directFlowSources(addressValue);
+        if (directSources.size() > 0) {
           VersionedValue *newValue = getNewVersionedValue(instr, valueExpr);
           for (std::vector<VersionedValue *>::iterator
-                   it = sourcesIter.begin(),
-                   itEnd = sourcesIter.end();
+                   it = directSources.begin(),
+                   itEnd = directSources.end();
                it != itEnd; ++it) {
             addDependency((*it), newValue);
           }
