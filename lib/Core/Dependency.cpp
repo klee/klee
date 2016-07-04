@@ -1151,8 +1151,14 @@ void Dependency::execute(llvm::Instruction *instr,
                it != itEnd; ++it) {
             addDependency((*it), newValue);
           }
-        } else
-          assert(!"missing base parameter");
+        } else {
+          // Here getelementptr forcibly uses a value not known to be an
+          // address, e.g., a loaded value, as an address. In this case, we then
+          // assume that the argument is a base allocation.
+          addPointerEquality(
+              getNewVersionedValue(instr, valueExpr),
+              getInitialAllocation(addressValue->getValue(), valueExpr));
+        }
       }
       break;
     }
