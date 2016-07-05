@@ -1098,8 +1098,7 @@ void Dependency::execute(llvm::Instruction *instr,
       break;
     }
     case llvm::Instruction::GetElementPtr: {
-      if (llvm::isa<llvm::Constant>(instr->getOperand(0)) ||
-	  llvm::dyn_cast<llvm::GetElementPtrInst>(instr)->isInBounds()) {
+      if (llvm::isa<llvm::Constant>(instr->getOperand(0))) {
         // We look up existing allocations with the same site as the argument,
         // but with the address given as valueExpr (the value of the
         // getelementptr instruction itself).
@@ -1117,6 +1116,15 @@ void Dependency::execute(llvm::Instruction *instr,
 
       VersionedValue *addressValue =
           getLatestValue(instr->getOperand(0), address);
+
+      if (!addressValue) {
+        // We define a new base anyway in case the operand was not found and was
+        // an inbound.
+        llvm::GetElementPtrInst *gepInst =
+            llvm::dyn_cast<llvm::GetElementPtrInst>(instr);
+        assert(gepInst->isInBounds() && "operand not found");
+        addressValue = getNewVersionedValue(instr->getOperand(0), address);
+      }
 
       std::vector<Allocation *> addressAllocations =
           resolveAllocationTransitively(addressValue);
