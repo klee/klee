@@ -2175,8 +2175,9 @@ void ITreeNode::unsatCoreMarking(std::vector<ref<Expr> > unsatCore) {
   }
 
   AllocationGraph *g = new AllocationGraph();
-  for (std::vector<ref<Expr> >::iterator it1 = unsatCore.begin();
-       it1 != unsatCore.end(); ++it1) {
+  for (std::vector<ref<Expr> >::iterator it1 = unsatCore.begin(),
+                                         it1End = unsatCore.end();
+       it1 != it1End; ++it1) {
     // FIXME: Sometimes some constraints are not in the PC. This is
     // because constraints are not properly added at state merge.
     PathCondition *cond = markerMap[it1->get()];
