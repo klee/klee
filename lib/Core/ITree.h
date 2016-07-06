@@ -709,7 +709,7 @@ public:
   /// \param The stream to print the data to.
   void print(llvm::raw_ostream &stream);
 
-  /// \brief Print the content of the tree node object to the LLVM error stream
+  /// \brief Print the content of the tree object to the LLVM error stream
   void dump();
 
   /// \brief Outputs interpolation statistics to LLVM error stream.

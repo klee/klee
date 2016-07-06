@@ -1446,8 +1446,9 @@ void Dependency::print(llvm::raw_ostream &stream) const {
   this->print(stream, 0);
 }
 
-void Dependency::print(llvm::raw_ostream &stream, const unsigned tabNum) const {
-  std::string tabs = makeTabs(tabNum);
+void Dependency::print(llvm::raw_ostream &stream,
+                       const unsigned paddingAmount) const {
+  std::string tabs = makeTabs(paddingAmount);
   stream << tabs << "EQUALITIES:";
   std::vector<PointerEquality *>::const_iterator equalityListBegin =
       equalityList.begin();
@@ -1488,7 +1489,7 @@ void Dependency::print(llvm::raw_ostream &stream, const unsigned tabNum) const {
 
   if (parentDependency) {
     stream << "\n" << tabs << "--------- Parent Dependencies ----------\n";
-    parentDependency->print(stream, tabNum);
+    parentDependency->print(stream, paddingAmount);
   }
 }
 
