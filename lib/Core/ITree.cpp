@@ -724,7 +724,6 @@ void SearchTree::setAsCore(PathCondition *pathCondition) {
   instance->pathConditionMap[pathCondition]->pathConditionTable[pathCondition].second = true;
 }
 
-/// @brief Save the graph
 void SearchTree::save(std::string dotFileName) {
   if (!OUTPUT_INTERPOLATION_TREE)
     return;
@@ -1054,24 +1053,24 @@ SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr,
 
 ref<Expr> SubsumptionTableEntry::replaceExpr(ref<Expr> originalExpr,
                                              ref<Expr> replacedExpr,
-                                             ref<Expr> substituteExpr) {
+                                             ref<Expr> replacementExpr) {
   // We only handle binary expressions
   if (!llvm::isa<BinaryExpr>(originalExpr) ||
       llvm::isa<ConcatExpr>(originalExpr))
     return originalExpr;
 
   if (originalExpr->getKid(0) == replacedExpr)
-    return ShadowArray::createBinaryOfSameKind(originalExpr, substituteExpr,
+    return ShadowArray::createBinaryOfSameKind(originalExpr, replacementExpr,
                                                originalExpr->getKid(1));
 
   if (originalExpr->getKid(1) == replacedExpr)
     return ShadowArray::createBinaryOfSameKind(
-        originalExpr, originalExpr->getKid(0), substituteExpr);
+        originalExpr, originalExpr->getKid(0), replacementExpr);
 
   return ShadowArray::createBinaryOfSameKind(
       originalExpr,
-      replaceExpr(originalExpr->getKid(0), replacedExpr, substituteExpr),
-      replaceExpr(originalExpr->getKid(1), replacedExpr, substituteExpr));
+      replaceExpr(originalExpr->getKid(0), replacedExpr, replacementExpr),
+      replaceExpr(originalExpr->getKid(1), replacedExpr, replacementExpr));
 }
 
 bool SubsumptionTableEntry::containShadowExpr(ref<Expr> expr,

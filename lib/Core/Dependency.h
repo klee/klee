@@ -163,8 +163,8 @@ class Allocation {
 
     const ref<Expr> valueExpr;
 
-    /// @brief to indicate if any unsatisfiability core
-    /// depends on this value
+    /// \brief Field to indicate if any unsatisfiability core depends on this
+    /// value.
     bool core;
 
   public:
@@ -279,8 +279,8 @@ class Allocation {
                std::vector<AllocationNode *> &printed,
                const unsigned tabNum) const;
 
-    /// consumeSinkNode - Given an allocation, delete all sinks having such
-    /// allocation, and replace them as sinks with their parents.
+    /// \brief Given an allocation, delete all sinks having such allocation, and
+    /// replace them as sinks with their parents.
     ///
     /// \param The allocation to match a sink node with.
     void consumeSinkNode(Allocation *allocation);
@@ -308,9 +308,8 @@ class Allocation {
     std::set<Allocation *>
     getSinksWithAllocations(std::vector<Allocation *> valuesList) const;
 
-    /// consumeNodesWithAllocations - Given a set of allocations, delete all
-    /// sinks having an allocation in the set, and replace them as sinks with
-    /// their parents.
+    /// Given a set of allocations, delete all sinks having an allocation in the
+    /// set, and replace them as sinks with their parents.
     ///
     /// \param The allocation to match the sink nodes with.
     void consumeSinksWithAllocations(std::vector<Allocation *> allocationsList);
@@ -323,9 +322,9 @@ class Allocation {
     void print(llvm::raw_ostream &stream) const;
   };
 
-  /// \brief Dependency - implementation of field-insensitive value
-  ///        dependency for computing allocations the unsatisfiability core
-  ///        depends upon, which is used to compute the interpolant.
+  /// \brief Implementation of value dependency for computing allocations the
+  /// unsatisfiability core depends upon, which is used to compute the
+  /// interpolant.
   ///
   /// Following is the analysis rules to compute value dependency relations
   /// useful for computing the interpolant. Given a finite symbolic execution
@@ -495,35 +494,35 @@ class Allocation {
 
       static bool isEnvironmentAllocation(llvm::Value *site);
 
-      /// @brief Tests if an allocation site is main function's argument
+      /// \brief Tests if an allocation site is main function's argument
       static bool isMainArgument(llvm::Value *site);
     };
 
   private:
-    /// @brief Previous path condition
+    /// \brief Previous path condition
     Dependency *parentDependency;
 
-    /// @brief Argument values to be passed onto callee
+    /// \brief Argument values to be passed onto callee
     std::vector<VersionedValue *> argumentValuesList;
 
-    /// @brief Equality of value to address
+    /// \brief Equality of value to address
     std::vector< PointerEquality *> equalityList;
 
-    /// @brief The mapping of allocations/addresses to stored value
+    /// \brief The mapping of allocations/addresses to stored value
     std::map<Allocation *, VersionedValue *> storesMap;
 
-    /// @brief Store the inverse map of both storesMap
+    /// \brief Store the inverse map of both storesMap
     std::map<VersionedValue *, std::vector<Allocation *> > storageOfMap;
 
-    /// @brief Flow relations from one value to another
+    /// \brief Flow relations from one value to another
     std::vector<FlowsTo *> flowsToList;
 
     std::vector< VersionedValue *> valuesList;
 
     std::vector<Allocation *> versionedAllocationsList;
 
-    /// @brief allocations of this node and its ancestors
-    /// that are needed for the core and dominates other allocations.
+    /// \brief allocations of this node and its ancestors that are needed for
+    /// the core and dominates other allocations.
     std::set<Allocation *> coreAllocations;
 
     VersionedValue *getNewVersionedValue(llvm::Value *value,
@@ -538,12 +537,12 @@ class Allocation {
     std::vector<Allocation *> getAllVersionedAllocations(bool coreOnly =
                                                              false) const;
 
-    /// @brief Gets the latest version of the allocation.
+    /// \brief Gets the latest version of the allocation.
     Allocation *getLatestAllocation(llvm::Value *allocation,
                                     ref<Expr> address) const;
 
-    /// @brief similar to getLatestValue, but we don't check for whether
-    /// the value is constant or not
+    /// \brief Gets the latest version of the allocation, but without checking
+    /// for whether the value is constant or not
     VersionedValue *getLatestValueNoConstantCheck(llvm::Value *value) const;
 
     void addPointerEquality(const VersionedValue *value,
@@ -563,17 +562,17 @@ class Allocation {
 
     std::vector<VersionedValue *> stores(Allocation *allocation) const;
 
-    /// @brief All values that flows to the target in one step, local
-    /// to the current dependency / interpolation tree node
+    /// \brief All values that flows to the target in one step, local to the
+    /// current dependency / interpolation tree node
     std::vector<VersionedValue *> directLocalFlowSources(VersionedValue *target) const;
 
-    /// @brief All values that flows to the target in one step
+    /// \brief All values that flows to the target in one step
     std::vector<VersionedValue *> directFlowSources(VersionedValue *target) const;
 
-    /// @brief All values that could flow to the target
+    /// \brief All values that could flow to the target
     std::vector<VersionedValue *> allFlowSources(VersionedValue *target) const;
 
-    /// @brief All the end sources that can flow to the target
+    /// \brief All the end sources that can flow to the target
     std::vector<VersionedValue *>
     allFlowSourcesEnds(VersionedValue *target) const;
 
@@ -581,25 +580,25 @@ class Allocation {
     populateArgumentValuesList(llvm::CallInst *site,
                                std::vector<ref<Expr> > &arguments);
 
-    /// @brief Construct dependency due to load instruction
+    /// \brief Construct dependency due to load instruction
     bool buildLoadDependency(llvm::Value *fromValue, ref<Expr> fromValueExpr,
                              llvm::Value *toValue, ref<Expr> toValueExpr);
 
-    /// @brief Direct allocation dependency local to an interpolation tree node
+    /// \brief Direct allocation dependency local to an interpolation tree node
     std::map<VersionedValue *, Allocation *>
     directLocalAllocationSources(VersionedValue *target) const;
 
-    /// @brief Direct allocation dependency
+    /// \brief Direct allocation dependency
     std::map<VersionedValue *, Allocation *>
     directAllocationSources(VersionedValue *target) const;
 
-    /// @brief Builds dependency graph between memory allocations
+    /// \brief Builds dependency graph between memory allocations
     void recursivelyBuildAllocationGraph(AllocationGraph *g,
                                          VersionedValue *value,
                                          Allocation *alloc,
                                          Allocation *parentAllocation) const;
 
-    /// @brief Builds dependency graph between memory allocations
+    /// \brief Builds dependency graph between memory allocations
     void buildAllocationGraph(AllocationGraph *g, VersionedValue *value) const;
 
   public:
@@ -611,10 +610,10 @@ class Allocation {
 
     VersionedValue *getLatestValue(llvm::Value *value, ref<Expr> valueExpr);
 
-    /// @brief Abstract dependency state transition with argument(s)
+    /// \brief Abstract dependency state transition with argument(s)
     void execute(llvm::Instruction *instr, std::vector<ref<Expr> > &args);
 
-    /// @brief Build dependencies from PHI node
+    /// \brief Build dependencies from PHI node
     void executePHI(llvm::Instruction *instr, unsigned int incomingBlock,
                     ref<Expr> valueExpr);
 

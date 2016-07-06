@@ -8,9 +8,9 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains the implementation of the flow-insensitive dependency
-/// analysis to compute the allocations upon which the unsatisfiability core
-/// depends, which is used in computing the interpolant.
+/// This file contains the implementation of the dependency analysis to
+/// compute the allocations upon which the unsatisfiability core depends,
+/// which is used in computing the interpolant.
 ///
 //===----------------------------------------------------------------------===//
 
