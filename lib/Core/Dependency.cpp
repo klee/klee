@@ -1554,9 +1554,9 @@ bool Dependency::Util::isMainArgument(llvm::Value *site) {
 
 /**/
 
-std::string makeTabs(const unsigned tabNum) {
+std::string makeTabs(const unsigned paddingAmount) {
   std::string tabsString;
-  for (unsigned i = 0; i < tabNum; ++i) {
+  for (unsigned i = 0; i < paddingAmount; ++i) {
     tabsString += appendTab(tabsString);
   }
   return tabsString;

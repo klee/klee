@@ -736,8 +736,7 @@ class Allocation {
     void print(llvm::raw_ostream &stream, const unsigned paddingAmount) const;
   };
 
-
-  std::string makeTabs(const unsigned tab_num);
+  std::string makeTabs(const unsigned paddingAmount);
 
   std::string appendTab(const std::string &prefix);
 

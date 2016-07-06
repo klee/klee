@@ -199,34 +199,34 @@ SearchTree::PrettyExpressionBuilder::constructMulByConstant(std::string expr,
   return stream.str();
 }
 std::string
-SearchTree::PrettyExpressionBuilder::constructUDivByConstant(std::string expr_n,
+SearchTree::PrettyExpressionBuilder::constructUDivByConstant(std::string expr,
                                                              uint64_t d) {
   std::ostringstream stream;
-  stream << "(" << expr_n << " / " << d << ")";
+  stream << "(" << expr << " / " << d << ")";
   return stream.str();
 }
 std::string
-SearchTree::PrettyExpressionBuilder::constructSDivByConstant(std::string expr_n,
+SearchTree::PrettyExpressionBuilder::constructSDivByConstant(std::string expr,
                                                              uint64_t d) {
   std::ostringstream stream;
-  stream << "(" << expr_n << " / " << d << ")";
+  stream << "(" << expr << " / " << d << ")";
   return stream.str();
 }
 
 std::string
 SearchTree::PrettyExpressionBuilder::getInitialArray(const Array *root) {
-  std::string array_expr =
+  std::string arrayExpr =
       buildArray(root->name.c_str(), root->getDomain(), root->getRange());
 
   if (root->isConstantArray()) {
     for (unsigned i = 0, e = root->size; i != e; ++i) {
-      std::string prev = array_expr;
-      array_expr = writeExpr(
+      std::string prev = arrayExpr;
+      arrayExpr = writeExpr(
           prev, constructActual(ConstantExpr::alloc(i, root->getDomain())),
           constructActual(root->constantValues[i]));
     }
   }
-  return array_expr;
+  return arrayExpr;
 }
 std::string
 SearchTree::PrettyExpressionBuilder::getArrayForUpdate(const Array *root,
@@ -2207,35 +2207,36 @@ void ITreeNode::print(llvm::raw_ostream &stream) const {
   this->print(stream, 0);
 }
 
-void ITreeNode::print(llvm::raw_ostream &stream, const unsigned tabNum) const {
-  std::string tabs = makeTabs(tabNum);
-  std::string tabs_next = appendTab(tabs);
+void ITreeNode::print(llvm::raw_ostream &stream,
+                      const unsigned paddingAmount) const {
+  std::string tabs = makeTabs(paddingAmount);
+  std::string tabsNext = appendTab(tabs);
 
   stream << tabs << "ITreeNode\n";
-  stream << tabs_next << "node Id = " << nodeId << "\n";
-  stream << tabs_next << "pathCondition = ";
+  stream << tabsNext << "node Id = " << nodeId << "\n";
+  stream << tabsNext << "pathCondition = ";
   if (pathCondition == 0) {
     stream << "NULL";
   } else {
     pathCondition->print(stream);
   }
   stream << "\n";
-  stream << tabs_next << "Left:\n";
+  stream << tabsNext << "Left:\n";
   if (!left) {
-    stream << tabs_next << "NULL\n";
+    stream << tabsNext << "NULL\n";
   } else {
-    left->print(stream, tabNum + 1);
+    left->print(stream, paddingAmount + 1);
     stream << "\n";
   }
-  stream << tabs_next << "Right:\n";
+  stream << tabsNext << "Right:\n";
   if (!right) {
-    stream << tabs_next << "NULL\n";
+    stream << tabsNext << "NULL\n";
   } else {
-    right->print(stream, tabNum + 1);
+    right->print(stream, paddingAmount + 1);
     stream << "\n";
   }
   if (dependency) {
-    stream << tabs_next << "------- Abstract Dependencies ----------\n";
-    dependency->print(stream, tabNum + 1);
+    stream << tabsNext << "------- Abstract Dependencies ----------\n";
+    dependency->print(stream, paddingAmount + 1);
   }
 }
