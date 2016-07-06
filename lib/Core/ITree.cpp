@@ -1068,9 +1068,9 @@ ref<Expr> SubsumptionTableEntry::replaceExpr(ref<Expr> originalExpr,
 
 bool SubsumptionTableEntry::findSubExpression(ref<Expr> expr,
                                               ref<Expr> subExpr) {
-  if (expr.operator==(subExpr))
+  if (expr == subExpr)
     return true;
-  if (expr->getNumKids() < 2 && expr.operator!=(subExpr))
+  if (expr->getNumKids() < 2 && expr != subExpr)
     return false;
 
   return findSubExpression(expr->getKid(0), subExpr) ||
@@ -1084,13 +1084,13 @@ ref<Expr> SubsumptionTableEntry::simplifyInterpolantExpr(
 
   if (llvm::isa<EqExpr>(expr) && llvm::isa<ConstantExpr>(expr->getKid(0)) &&
       llvm::isa<ConstantExpr>(expr->getKid(1))) {
-    return (expr->getKid(0).operator==(expr->getKid(1)))
+    return (expr->getKid(0) == expr->getKid(1))
                ? ConstantExpr::alloc(1, Expr::Bool)
                : ConstantExpr::alloc(0, Expr::Bool);
   } else if (llvm::isa<NeExpr>(expr) &&
              llvm::isa<ConstantExpr>(expr->getKid(0)) &&
              llvm::isa<ConstantExpr>(expr->getKid(1))) {
-    return (expr->getKid(0).operator!=(expr->getKid(1)))
+    return (expr->getKid(0) != expr->getKid(1))
                ? ConstantExpr::alloc(1, Expr::Bool)
                : ConstantExpr::alloc(0, Expr::Bool);
   }
@@ -1148,7 +1148,7 @@ ref<Expr> SubsumptionTableEntry::simplifyEqualityExpr(
   if (llvm::isa<EqExpr>(expr)) {
     if (llvm::isa<ConstantExpr>(expr->getKid(0)) &&
         llvm::isa<ConstantExpr>(expr->getKid(1))) {
-      return (expr->getKid(0).operator==(expr->getKid(1)))
+      return (expr->getKid(0) == expr->getKid(1))
                  ? ConstantExpr::alloc(1, Expr::Bool)
                  : ConstantExpr::alloc(0, Expr::Bool);
     }
