@@ -1634,7 +1634,7 @@ bool SubsumptionTableEntry::subsumed(
     // path condition.
 
     // We create path condition marking structure to mark core constraints
-    state.itreeNode->unsatCoreMarking(unsatCore, state);
+    state.itreeNode->unsatCoreMarking(unsatCore);
     return true;
   }
 
@@ -2165,11 +2165,9 @@ ITreeNode::getStoredCoreExpressions(std::set<const Array *> &replacements)
   return ret;
 }
 
-void ITreeNode::unsatCoreMarking(std::vector<ref<Expr> > unsatCore,
-                                 ExecutionState &state) {
-  // State subsumed, we mark needed constraints on the
-  // path condition.
-  // We create path condition marking structure to mark core constraints
+void ITreeNode::unsatCoreMarking(std::vector<ref<Expr> > unsatCore) {
+  // State subsumed, we mark needed constraints on the path condition. We create
+  // path condition marking structure to mark core constraints
   std::map<Expr *, PathCondition *> markerMap;
   for (PathCondition *it = pathCondition; it != 0; it = it->cdr()) {
     if (llvm::isa<OrExpr>(it->car().get())) {

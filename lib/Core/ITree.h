@@ -582,8 +582,7 @@ public:
 
   /// \brief Marking the core constraints on the path condition, and all the
   /// relevant values on the dependency graph, given an unsatistiability core.
-  void unsatCoreMarking(std::vector<ref<Expr> > unsatCore,
-                        ExecutionState &state);
+  void unsatCoreMarking(std::vector<ref<Expr> > unsatCore);
 
   /// \brief Compute the allocations that are relevant for the interpolant.
   void computeCoreAllocations(AllocationGraph *g);
