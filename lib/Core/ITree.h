@@ -491,7 +491,7 @@ class ITreeNode {
   static StatTimer splitTimer;
   static StatTimer executeTimer;
   static StatTimer bindCallArgumentsTimer;
-  static StatTimer popAbstractDependencyFrameTimer;
+  static StatTimer bindReturnValueTimer;
   static StatTimer getStoredExpressionsTimer;
   static StatTimer getStoredCoreExpressionsTimer;
   static StatTimer computeCoreAllocationsTimer;
@@ -556,8 +556,8 @@ public:
                          std::vector<ref<Expr> > &arguments);
 
   /// \brief This propagates the dependency due to the return value of a call
-  void popAbstractDependencyFrame(llvm::CallInst *site, llvm::Instruction *inst,
-                                  ref<Expr> returnValue);
+  void bindReturnValue(llvm::CallInst *site, llvm::Instruction *inst,
+                       ref<Expr> returnValue);
 
   /// \brief This retrieves the allocations known at this state, and the
   /// expressions stored in the allocations.

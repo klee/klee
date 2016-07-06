@@ -2035,7 +2035,7 @@ StatTimer ITreeNode::addConstraintTimer;
 StatTimer ITreeNode::splitTimer;
 StatTimer ITreeNode::executeTimer;
 StatTimer ITreeNode::bindCallArgumentsTimer;
-StatTimer ITreeNode::popAbstractDependencyFrameTimer;
+StatTimer ITreeNode::bindReturnValueTimer;
 StatTimer ITreeNode::getStoredExpressionsTimer;
 StatTimer ITreeNode::getStoredCoreExpressionsTimer;
 StatTimer ITreeNode::computeCoreAllocationsTimer;
@@ -2049,8 +2049,8 @@ void ITreeNode::printTimeStat(llvm::raw_ostream &stream) {
   stream << "KLEE: done:     execute = " << executeTimer.get() * 1000 << "\n";
   stream << "KLEE: done:     bindCallArguments = "
          << bindCallArgumentsTimer.get() * 1000 << "\n";
-  stream << "KLEE: done:     popAbstractDependencyFrame = "
-         << popAbstractDependencyFrameTimer.get() * 1000 << "\n";
+  stream << "KLEE: done:     bindReturnValue = " << bindReturnValueTimer.get() *
+                                                        1000 << "\n";
   stream << "KLEE: done:     getStoredExpressions = "
          << getStoredExpressionsTimer.get() * 1000 << "\n";
   stream << "KLEE: done:     getStoredCoreExpressions = "
@@ -2125,14 +2125,13 @@ void ITreeNode::bindCallArguments(llvm::Instruction *site,
   ITreeNode::bindCallArgumentsTimer.stop();
 }
 
-void ITreeNode::popAbstractDependencyFrame(llvm::CallInst *site,
-                                           llvm::Instruction *inst,
-                                           ref<Expr> returnValue) {
+void ITreeNode::bindReturnValue(llvm::CallInst *site, llvm::Instruction *inst,
+                                ref<Expr> returnValue) {
   // TODO: This is probably where we should simplify
   // the dependency graph by removing callee values.
-  ITreeNode::popAbstractDependencyFrameTimer.start();
+  ITreeNode::bindReturnValueTimer.start();
   dependency->bindReturnValue(site, inst, returnValue);
-  ITreeNode::popAbstractDependencyFrameTimer.stop();
+  ITreeNode::bindReturnValueTimer.stop();
 }
 
 std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
