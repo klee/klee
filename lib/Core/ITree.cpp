@@ -885,13 +885,6 @@ bool SubsumptionTableEntry::hasFree(std::set<const Array *> &existentials,
 }
 
 ref<Expr>
-SubsumptionTableEntry::simplifyWithFourierMotzkin(ref<Expr> existsExpr) {
-  // This is a template for Fourier-Motzkin elimination. For now,
-  // we simply return the input argument.
-  return existsExpr;
-}
-
-ref<Expr>
 SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr,
                                               bool &hasExistentialsOnly) {
   assert(llvm::isa<ExistsExpr>(existsExpr.get()));
@@ -1048,7 +1041,7 @@ SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr,
     newBody = AndExpr::alloc(simplifiedInterpolant, fullEqualityConstraint);
   }
 
-  return simplifyWithFourierMotzkin(existsExpr->rebuild(&newBody));
+  return existsExpr->rebuild(&newBody);
 }
 
 ref<Expr> SubsumptionTableEntry::replaceExpr(ref<Expr> originalExpr,

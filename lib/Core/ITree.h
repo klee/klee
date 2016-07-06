@@ -420,10 +420,6 @@ class SubsumptionTableEntry {
   static ref<Expr> simplifyEqualityExpr(std::vector<ref<Expr> > &equalityPack,
                                         ref<Expr> expr);
 
-  /// \brief Fourier-Motzkin elimination to approximately simplify
-  /// existentially-quantified expression.
-  static ref<Expr> simplifyWithFourierMotzkin(ref<Expr> existsExpr);
-
   /// \brief Simplify if possible an existentially-quantified expression,
   /// possibly removing the quantification.
   static ref<Expr> simplifyExistsExpr(ref<Expr> existsExpr,
