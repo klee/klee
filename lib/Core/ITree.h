@@ -391,8 +391,8 @@ class SubsumptionTableEntry {
   /// set.
   /// \return true if a variable in the set is found in the expression, false
   /// otherwise.
-  static bool hasExistentials(std::set<const Array *> &existentials,
-                              ref<Expr> expr);
+  static bool hasVariableInSet(std::set<const Array *> &existentials,
+                               ref<Expr> expr);
 
   /// \brief Test for the non-existence of a variable in a set in an expression.
   ///
@@ -401,7 +401,8 @@ class SubsumptionTableEntry {
   /// the set.
   /// \return true if none of the variable in the set is found in the
   /// expression, false otherwise.
-  static bool hasFree(std::set<const Array *> &existentials, ref<Expr> expr);
+  static bool hasVariableNotInSet(std::set<const Array *> &existentials,
+                                  ref<Expr> expr);
 
   /// \brief Determines if a subexpression is in an expression
   static bool hasSubExpression(ref<Expr> expr, ref<Expr> subExpr);

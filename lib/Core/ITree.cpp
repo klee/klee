@@ -847,8 +847,8 @@ SubsumptionTableEntry::SubsumptionTableEntry(ITreeNode *node)
 SubsumptionTableEntry::~SubsumptionTableEntry() {}
 
 bool
-SubsumptionTableEntry::hasExistentials(std::set<const Array *> &existentials,
-                                       ref<Expr> expr) {
+SubsumptionTableEntry::hasVariableInSet(std::set<const Array *> &existentials,
+                                        ref<Expr> expr) {
   for (int i = 0, numKids = expr->getNumKids(); i < numKids; ++i) {
     if (llvm::isa<ReadExpr>(expr)) {
       ReadExpr *readExpr = llvm::dyn_cast<ReadExpr>(expr.get());
@@ -859,14 +859,14 @@ SubsumptionTableEntry::hasExistentials(std::set<const Array *> &existentials,
         if ((*it) == array)
           return true;
       }
-    } else if (hasExistentials(existentials, expr->getKid(i)))
+    } else if (hasVariableInSet(existentials, expr->getKid(i)))
       return true;
   }
   return false;
 }
 
-bool SubsumptionTableEntry::hasFree(std::set<const Array *> &existentials,
-                                    ref<Expr> expr) {
+bool SubsumptionTableEntry::hasVariableNotInSet(
+    std::set<const Array *> &existentials, ref<Expr> expr) {
   for (int i = 0, numKids = expr->getNumKids(); i < numKids; ++i) {
     if (llvm::isa<ReadExpr>(expr)) {
       ReadExpr *readExpr = llvm::dyn_cast<ReadExpr>(expr.get());
@@ -878,7 +878,7 @@ bool SubsumptionTableEntry::hasFree(std::set<const Array *> &existentials,
           return false;
       }
       return true;
-    } else if (hasFree(existentials, expr->getKid(i)))
+    } else if (hasVariableNotInSet(existentials, expr->getKid(i)))
       return true;
   }
   return false;
@@ -948,7 +948,8 @@ SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr,
   if (fullEqualityConstraint->isTrue()) {
     // This is the case when the result is still an existentially-quantified
     // formula, but one that does not contain free variables.
-    hasExistentialsOnly = !hasFree(expr->variables, simplifiedInterpolant);
+    hasExistentialsOnly =
+        !hasVariableNotInSet(expr->variables, simplifiedInterpolant);
     if (hasExistentialsOnly) {
       return existsExpr->rebuild(&simplifiedInterpolant);
     }
@@ -963,7 +964,7 @@ SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr,
     ref<Expr> interpolantAtom = (*it); // For example C cmp D
 
     // only process the interpolant that still has existential variables in it.
-    if (hasExistentials(boundVariables, interpolantAtom)) {
+    if (hasVariableInSet(boundVariables, interpolantAtom)) {
       for (std::vector<ref<Expr> >::iterator itEq = equalityPack.begin(),
                                              itEqEnd = equalityPack.end();
            itEq != itEqEnd; ++itEq) {
@@ -1033,7 +1034,7 @@ SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr,
   ref<Expr> newBody;
 
   if (newInterpolant.get()) {
-    if (!hasExistentials(expr->variables, newInterpolant))
+    if (!hasVariableInSet(expr->variables, newInterpolant))
       return newInterpolant;
 
     newBody = AndExpr::alloc(newInterpolant, fullEqualityConstraint);
@@ -1312,7 +1313,7 @@ ref<Expr> SubsumptionTableEntry::simplifyExistsExpr(ref<Expr> existsExpr,
       ApplySubstitutionVisitor(substitution).visit(body->getKid(0));
 
   ExistsExpr *expr = static_cast<ExistsExpr *>(existsExpr.get());
-  if (hasExistentials(expr->variables, equalities)) {
+  if (hasVariableInSet(expr->variables, equalities)) {
     // we could also replace the occurrence of some variables with its
     // corresponding substitution mapping.
     equalities = ApplySubstitutionVisitor(substitution).visit(equalities);
@@ -1321,7 +1322,7 @@ ref<Expr> SubsumptionTableEntry::simplifyExistsExpr(ref<Expr> existsExpr,
   ref<Expr> newBody = AndExpr::alloc(interpolant, equalities);
 
   // FIXME: Need to test the performance of the following.
-  if (!hasExistentials(expr->variables, newBody))
+  if (!hasVariableInSet(expr->variables, newBody))
     return newBody;
 
   ref<Expr> ret = simplifyArithmeticBody(existsExpr->rebuild(&newBody),
@@ -1797,7 +1798,7 @@ ITree::~ITree() {
 
 bool ITree::subsumptionCheck(TimingSolver *solver, ExecutionState &state,
                              double timeout) {
-  subsumptionCheckCount++; // For profiling
+  ++subsumptionCheckCount; // For profiling
 
   assert(state.itreeNode == currentINode);
 
@@ -2175,7 +2176,7 @@ void ITreeNode::unsatCoreMarking(std::vector<ref<Expr> > unsatCore) {
 
   AllocationGraph *g = new AllocationGraph();
   for (std::vector<ref<Expr> >::iterator it1 = unsatCore.begin();
-       it1 != unsatCore.end(); it1++) {
+       it1 != unsatCore.end(); ++it1) {
     // FIXME: Sometimes some constraints are not in the PC. This is
     // because constraints are not properly added at state merge.
     PathCondition *cond = markerMap[it1->get()];
