@@ -404,7 +404,7 @@ class SubsumptionTableEntry {
   static bool hasFree(std::set<const Array *> &existentials, ref<Expr> expr);
 
   /// \brief Determines if a subexpression is in an expression
-  static bool findSubExpression(ref<Expr> expr, ref<Expr> subExpr);
+  static bool hasSubExpression(ref<Expr> expr, ref<Expr> subExpr);
 
   /// \brief Replace a sub-expression with another within an original expression
   static ref<Expr> replaceExpr(ref<Expr> originalExpr, ref<Expr> replacedExpr,

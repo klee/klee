@@ -989,8 +989,8 @@ SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr,
         ref<Expr> newIntpRight;
 
         // When the if condition holds, we perform substitution
-        if (findSubExpression(equalityConstraintLeft,
-                              interpolantAtom->getKid(0))) {
+        if (hasSubExpression(equalityConstraintLeft,
+                             interpolantAtom->getKid(0))) {
           // Here we perform substitution, where given
           // an interpolant atom and an equality constraint,
           // we try to find a subexpression in the equality constraint
@@ -1066,15 +1066,15 @@ ref<Expr> SubsumptionTableEntry::replaceExpr(ref<Expr> originalExpr,
       replaceExpr(originalExpr->getKid(1), replacedExpr, replacementExpr));
 }
 
-bool SubsumptionTableEntry::findSubExpression(ref<Expr> expr,
-                                              ref<Expr> subExpr) {
+bool SubsumptionTableEntry::hasSubExpression(ref<Expr> expr,
+                                             ref<Expr> subExpr) {
   if (expr == subExpr)
     return true;
   if (expr->getNumKids() < 2 && expr != subExpr)
     return false;
 
-  return findSubExpression(expr->getKid(0), subExpr) ||
-         findSubExpression(expr->getKid(1), subExpr);
+  return hasSubExpression(expr->getKid(0), subExpr) ||
+         hasSubExpression(expr->getKid(1), subExpr);
 }
 
 ref<Expr> SubsumptionTableEntry::simplifyInterpolantExpr(
