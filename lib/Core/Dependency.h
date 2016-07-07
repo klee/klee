@@ -646,8 +646,8 @@ class Allocation {
                                std::vector<ref<Expr> > &arguments);
 
     /// \brief Construct dependency due to load instruction
-    bool buildLoadDependency(llvm::Value *fromValue, ref<Expr> fromValueExpr,
-                             llvm::Value *toValue, ref<Expr> toValueExpr);
+    bool buildLoadDependency(llvm::Value *address, ref<Expr> addressExpr,
+                             llvm::Value *value, ref<Expr> valueExpr);
 
     /// \brief Direct allocation dependency local to an interpolation tree node
     std::map<VersionedValue *, Allocation *>
