@@ -333,9 +333,9 @@ public:
 
   ref<Expr> packInterpolant(std::set<const Array *> &replacements);
 
-  void dump();
+  void dump() const;
 
-  void print(llvm::raw_ostream &stream);
+  void print(llvm::raw_ostream &stream) const;
 };
 
 /// \brief The class that implements an entry (record) in the subsumption table.
@@ -469,7 +469,22 @@ public:
       TimingSolver *solver, ExecutionState &state, double timeout,
       std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore> const);
 
-  void dump() const;
+  /// Tests if the argument is a variable. A variable here is defined to be
+  /// either a symbolic concatenation or a symbolic read. A concatenation in
+  /// KLEE concatenates reads, and hence can be considered to be a symbolic
+  /// read.
+  ///
+  /// \param A KLEE expression.
+  /// \return true if the parameter is either a concatenation or a read,
+  ///         otherwise, return false.
+  static bool isVariable(ref<Expr> expr) {
+    return llvm::isa<ConcatExpr>(expr.get()) || llvm::isa<ReadExpr>(expr.get());
+  }
+
+  void dump() const {
+    this->print(llvm::errs());
+    llvm::errs() << "\n";
+  }
 
   void print(llvm::raw_ostream &stream) const;
 
@@ -704,10 +719,10 @@ public:
   /// \brief Print the content of the tree node object into a stream.
   ///
   /// \param The stream to print the data to.
-  void print(llvm::raw_ostream &stream);
+  void print(llvm::raw_ostream &stream) const;
 
   /// \brief Print the content of the tree object to the LLVM error stream
-  void dump();
+  void dump() const;
 
   /// \brief Outputs interpolation statistics to LLVM error stream.
   void dumpInterpolationStat();
