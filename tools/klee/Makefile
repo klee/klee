@@ -33,3 +33,7 @@ include $(PROJ_SRC_ROOT)/MetaSMT.mk
 ifeq ($(HAVE_TCMALLOC),1)
   LIBS += $(TCMALLOC_LIB)
 endif
+
+ifeq ($(HAVE_ZLIB),1)
+  LIBS += -lz
+endif
