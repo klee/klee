@@ -86,17 +86,20 @@ namespace {
                      cl::init(1.),
 		     cl::desc("Approximate number of seconds between stats writes (default=1.0s)"));
 
+  cl::opt<unsigned> StatsWriteAfterInstructions(
+      "stats-write-after-instructions", cl::init(0),
+      cl::desc("Write statistics after each n instructions, 0 to disable "
+               "(default=0)"));
+
   cl::opt<double>
   IStatsWriteInterval("istats-write-interval",
 		      cl::init(10.),
                       cl::desc("Approximate number of seconds between istats writes (default: 10.0s)"));
 
-  /*
-  cl::opt<double>
-  BranchCovCountsWriteInterval("branch-cov-counts-write-interval",
-                     cl::desc("Approximate number of seconds between run.branches writes (default: 5.0s)"),
-                     cl::init(5.));
-  */
+  cl::opt<unsigned> IStatsWriteAfterInstructions(
+      "istats-write-after-instructions", cl::init(0),
+      cl::desc("Write istats after each n instructions, 0 to disable "
+               "(default=0)"));
 
   // XXX I really would like to have dynamic rate control for something like this.
   cl::opt<double>
@@ -185,6 +188,18 @@ StatsTracker::StatsTracker(Executor &_executor, std::string _objectFilename,
     fullBranches(0),
     partialBranches(0),
     updateMinDistToUncovered(_updateMinDistToUncovered) {
+
+  if (StatsWriteAfterInstructions > 0 && StatsWriteInterval > 0)
+    klee_error("Both options --stats-write-interval and "
+               "--stats-write-after-instructions cannot be enabled at the same "
+               "time.");
+
+  if (IStatsWriteAfterInstructions > 0 && IStatsWriteInterval > 0)
+    klee_error(
+        "Both options --istats-write-interval and "
+        "--istats-write-after-instructions cannot be enabled at the same "
+        "time.");
+
   KModule *km = executor.kmodule;
 
   if (!sys::path::is_absolute(objectFilename)) {
@@ -235,19 +250,22 @@ StatsTracker::StatsTracker(Executor &_executor, std::string _objectFilename,
     writeStatsHeader();
     writeStatsLine();
 
-    executor.addTimer(new WriteStatsTimer(this), StatsWriteInterval);
+    if (StatsWriteInterval > 0)
+      executor.addTimer(new WriteStatsTimer(this), StatsWriteInterval);
+  }
 
-    if (updateMinDistToUncovered) {
-      computeReachableUncovered();
-      executor.addTimer(new UpdateReachableTimer(this), UncoveredUpdateInterval);
-    }
+  // Add timer to calculate uncovered instructions if needed by the solver
+  if (updateMinDistToUncovered) {
+    computeReachableUncovered();
+    executor.addTimer(new UpdateReachableTimer(this), UncoveredUpdateInterval);
   }
 
   if (OutputIStats) {
     istatsFile = executor.interpreterHandler->openOutputFile("run.istats");
     assert(istatsFile && "unable to open istats file");
 
-    executor.addTimer(new WriteIStatsTimer(this), IStatsWriteInterval);
+    if (IStatsWriteInterval > 0)
+      executor.addTimer(new WriteIStatsTimer(this), IStatsWriteInterval);
   }
 }
 
@@ -261,8 +279,12 @@ StatsTracker::~StatsTracker() {
 void StatsTracker::done() {
   if (statsFile)
     writeStatsLine();
-  if (OutputIStats)
+
+  if (OutputIStats) {
+    if (updateMinDistToUncovered)
+      computeReachableUncovered();
     writeIStats();
+  }
 }
 
 void StatsTracker::stepInstruction(ExecutionState &es) {
@@ -310,6 +332,14 @@ void StatsTracker::stepInstruction(ExecutionState &es) {
       }
     }
   }
+
+  if (statsFile && StatsWriteAfterInstructions &&
+      stats::instructions % StatsWriteAfterInstructions.getValue() == 0)
+    writeStatsLine();
+
+  if (istatsFile && IStatsWriteAfterInstructions &&
+      stats::instructions % IStatsWriteAfterInstructions.getValue() == 0)
+    writeIStats();
 }
 
 ///
@@ -327,15 +357,17 @@ void StatsTracker::framePushed(ExecutionState &es, StackFrame *parentFrame) {
       sf.callPathNode = cp;
       cp->count++;
     }
+  }
 
-    if (updateMinDistToUncovered) {
-      uint64_t minDistAtRA = 0;
-      if (parentFrame)
-        minDistAtRA = parentFrame->minDistToUncoveredOnReturn;
-      
-      sf.minDistToUncoveredOnReturn = sf.caller ?
-        computeMinDistToUncovered(sf.caller, minDistAtRA) : 0;
-    }
+  if (updateMinDistToUncovered) {
+    StackFrame &sf = es.stack.back();
+
+    uint64_t minDistAtRA = 0;
+    if (parentFrame)
+      minDistAtRA = parentFrame->minDistToUncoveredOnReturn;
+
+    sf.minDistToUncoveredOnReturn =
+        sf.caller ? computeMinDistToUncovered(sf.caller, minDistAtRA) : 0;
   }
 }
 
