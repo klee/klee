@@ -604,6 +604,41 @@ AS_IF([test "x$have_tcmalloc" = "xyes"],
 ])
 
 dnl **************************************************************************
+dnl Test for zlib
+dnl **************************************************************************
+
+AC_ARG_WITH([zlib],
+        AS_HELP_STRING([--without-zlib], [Ignore presence of zlib and disable it (default=detect)]))
+
+AS_IF([test "x$with_zlib" != "xno"],
+      AC_CHECK_HEADERS([zlib.h],
+               [have_zlib=yes], [have_zlib=no]),
+      [have_zlib=no])
+
+AS_IF([test "x$have_zlib" = "xyes"],
+      [
+    AC_SEARCH_LIBS(deflateEnd, z,
+             [
+              AC_SUBST(HAVE_ZLIB, 1)
+              if test "${ac_cv_search_zlib}" != "none required"; then
+             ZLIB_LIB=${ac_cv_search_zlib}
+             AC_SUBST(ZLIB_LIB)
+              fi
+             ],
+             [
+              AC_MSG_WARN([Could not link with zlib])
+              AC_SUBST(HAVE_ZLIB, 0)
+             ],)
+
+       ],
+      [AS_IF([test "x$with_zlib" = "xyes"],
+         [AC_MSG_ERROR([zlib requested but not found])],
+         [
+          AC_SUBST(HAVE_ZLIB, 0)
+          ])
+])
+
+dnl **************************************************************************
 dnl Find an install of STP
 dnl **************************************************************************
 

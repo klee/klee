@@ -89,6 +89,10 @@
 #include "llvm/IR/CallSite.h"
 #endif
 
+#ifdef HAVE_ZLIB_H
+#include "klee/Internal/Support/CompressionStream.h"
+#endif
+
 #include <cassert>
 #include <algorithm>
 #include <iomanip>
@@ -158,6 +162,11 @@ namespace {
                      "[inst_id]"),
           clEnumValEnd),
       llvm::cl::CommaSeparated);
+#ifdef HAVE_ZLIB_H
+  cl::opt<bool> DebugCompressInstructions(
+      "debug-compress-instructions", cl::init(false),
+      cl::desc("Compress the logged instructions in gzip format."));
+#endif
 
   cl::opt<bool>
   DebugCheckForImpliedValues("debug-check-for-implied-values");
@@ -332,6 +341,10 @@ Executor::Executor(const InterpreterOptions &opts, InterpreterHandler *ih)
     std::string debug_file_name =
         interpreterHandler->getOutputFilename("instructions.txt");
     std::string ErrorInfo;
+#ifdef HAVE_ZLIB_H
+    if (!DebugCompressInstructions) {
+#endif
+
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 5)
     debugInstFile = new llvm::raw_fd_ostream(debug_file_name.c_str(), ErrorInfo,
                                              llvm::sys::fs::OpenFlags::F_Text),
@@ -339,6 +352,16 @@ Executor::Executor(const InterpreterOptions &opts, InterpreterHandler *ih)
     debugInstFile =
         new llvm::raw_fd_ostream(debug_file_name.c_str(), ErrorInfo);
 #endif
+#ifdef HAVE_ZLIB_H
+    } else {
+      debugInstFile = new compressed_fd_ostream(
+          (debug_file_name + ".gz").c_str(), ErrorInfo);
+    }
+#endif
+    if (ErrorInfo != "") {
+      klee_error("Could not open file %s : %s", debug_file_name.c_str(),
+                 ErrorInfo.c_str());
+    }
   }
 }
 
