@@ -412,6 +412,7 @@ private:
                      double maxInstTime);
   void checkMemoryUsage();
   void printDebugInstructions(ExecutionState &state);
+  void doDumpStates();
 
 public:
   Executor(const InterpreterOptions &opts, InterpreterHandler *ie);

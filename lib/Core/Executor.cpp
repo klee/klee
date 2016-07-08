@@ -2580,6 +2580,20 @@ void Executor::checkMemoryUsage() {
   }
 }
 
+void Executor::doDumpStates() {
+  if (!DumpStatesOnHalt || states.empty())
+    return;
+  klee_message("halting execution, dumping remaining states");
+  for (std::set<ExecutionState *>::iterator it = states.begin(),
+                                            ie = states.end();
+       it != ie; ++it) {
+    ExecutionState &state = **it;
+    stepInstruction(state); // keep stats rolling
+    terminateStateEarly(state, "Execution halting.");
+  }
+  updateStates(0);
+}
+
 void Executor::run(ExecutionState &initialState) {
   bindModuleConstants();
 
@@ -2600,7 +2614,10 @@ void Executor::run(ExecutionState &initialState) {
     double lastTime, startTime = lastTime = util::getWallTime();
     ExecutionState *lastState = 0;
     while (!seedMap.empty()) {
-      if (haltExecution) goto dump;
+      if (haltExecution) {
+        doDumpStates();
+        return;
+      }
 
       std::map<ExecutionState*, std::vector<SeedInfo> >::iterator it = 
         seedMap.upper_bound(lastState);
@@ -2649,8 +2666,10 @@ void Executor::run(ExecutionState &initialState) {
       (*it)->weight = 1.;
     }
 
-    if (OnlySeed)
-      goto dump;
+    if (OnlySeed) {
+      doDumpStates();
+      return;
+    }
   }
 
   searcher = constructUserSearcher(*this);
@@ -2672,19 +2691,8 @@ void Executor::run(ExecutionState &initialState) {
 
   delete searcher;
   searcher = 0;
-  
- dump:
-  if (DumpStatesOnHalt && !states.empty()) {
-    klee_message("halting execution, dumping remaining states");
-    for (std::set<ExecutionState*>::iterator
-           it = states.begin(), ie = states.end();
-         it != ie; ++it) {
-      ExecutionState &state = **it;
-      stepInstruction(state); // keep stats rolling
-      terminateStateEarly(state, "Execution halting.");
-    }
-    updateStates(0);
-  }
+
+  doDumpStates();
 }
 
 std::string Executor::getAddressInfo(ExecutionState &state, 
