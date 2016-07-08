@@ -40,6 +40,8 @@
 namespace klee {
 class Dependency;
 
+/// \brief Implements the replacement mechanism for replacing variables, used in
+/// replacing free with bound variables.
 class ShadowArray {
   static std::map<const Array *, const Array *> shadowArray;
 
@@ -60,6 +62,7 @@ public:
   }
 };
 
+/// \brief A class to represent memory allocation objects (cells).
 class Allocation {
 
   protected:
@@ -88,6 +91,9 @@ class Allocation {
       return site == _site && address == _address;
     }
 
+    /// \brief Print the content of the object into a stream.
+    ///
+    /// \param The stream to print the data to.
     virtual void print(llvm::raw_ostream& stream) const;
 
     bool hasConstantAddress() { return llvm::isa<ConstantExpr>(address.get()); }
@@ -106,12 +112,15 @@ class Allocation {
 
     bool isCore() { return core; }
 
+    /// \brief Print the content of the object to the LLVM error stream
     void dump() const {
       print(llvm::errs());
       llvm::errs() << "\n";
     }
-  };
+};
 
+/// \brief A class that represents allocations that can be destructively updated
+/// (versioned)
   class VersionedAllocation : public Allocation {
   public:
     VersionedAllocation(llvm::Value *_site, ref<Expr> &_address)
@@ -127,9 +136,13 @@ class Allocation {
 
     static bool classof(const VersionedAllocation *allocation) { return true; }
 
+    /// \brief Print the content of the object into a stream.
+    ///
+    /// \param The stream to print the data to.
     void print(llvm::raw_ostream& stream) const;
   };
 
+  /// \brief A class that represents the allocations of the environment
   class EnvironmentAllocation : public Allocation {
     // We use the first site as the canonical allocation
     // for all environment allocations
@@ -154,17 +167,22 @@ class Allocation {
       return true;
     }
 
+    /// \brief Print the content of the object into a stream.
+    ///
+    /// \param The stream to print the data to.
     void print(llvm::raw_ostream &stream) const;
   };
 
+  /// \brief A class that represents LLVM value that can be destructively
+  /// updated (versioned).
   class VersionedValue {
 
     llvm::Value *value;
 
     const ref<Expr> valueExpr;
 
-    /// @brief to indicate if any unsatisfiability core
-    /// depends on this value
+    /// \brief Field to indicate if any unsatisfiability core depends on this
+    /// value.
     bool core;
 
   public:
@@ -183,14 +201,20 @@ class Allocation {
 
     llvm::Value *getValue() const { return value; }
 
+    /// \brief Print the content of the object into a stream.
+    ///
+    /// \param The stream to print the data to.
     void print(llvm::raw_ostream& stream) const;
 
+    /// \brief Print the content of the object to the LLVM error stream
     void dump() const {
       print(llvm::errs());
       llvm::errs() << "\n";
     }
   };
 
+  /// \brief A class for representing the relation between an LLVM value with an
+  /// allocation/pointer or other values assumed to be allocation/pointer.
   class PointerEquality {
     // value equals allocation (pointer)
     const VersionedValue *value;
@@ -206,14 +230,19 @@ class Allocation {
       return this->value == value ? allocation : 0;
     }
 
+    /// \brief Print the content of the object into a stream.
+    ///
+    /// \param The stream to print the data to.
     void print(llvm::raw_ostream& stream) const;
 
+    /// \brief Print the content of the object to the LLVM error stream
     void dump() const {
       print(llvm::errs());
       llvm::errs() << "\n";
     }
   };
 
+  /// A class for representing the flow of values from a source to a target
   class FlowsTo {
     // target depends on source
     VersionedValue* source;
@@ -237,16 +266,25 @@ class Allocation {
 
     Allocation *getAllocation() const { return this->via; }
 
+    /// \brief Print the content of the object into a stream.
+    ///
+    /// \param The stream to print the data to.
     void print(llvm::raw_ostream& sream) const;
 
+    /// \brief Print the content of the object to the LLVM error stream
     void dump() const {
       print(llvm::errs());
       llvm::errs() << "\n";
     }
   };
 
+  /// \brief The allocation graph: A graph to directly represent the dependency
+  /// between allocations, instead of using intermediate values. This graph is
+  /// computed from the relations between values in particular the FlowsTo
+  /// relation.
   class AllocationGraph {
 
+    /// \brief Implements a node of the allocation graph.
     class AllocationNode {
       Allocation *allocation;
       std::vector<AllocationNode *> ancestors;
@@ -275,12 +313,13 @@ class Allocation {
     std::vector<AllocationNode *> sinks;
     std::vector<AllocationNode *> allNodes;
 
+    /// \brief Prints the content of the allocation graph
     void print(llvm::raw_ostream &stream, std::vector<AllocationNode *> nodes,
                std::vector<AllocationNode *> &printed,
                const unsigned tabNum) const;
 
-    /// consumeSinkNode - Given an allocation, delete all sinks having such
-    /// allocation, and replace them as sinks with their parents.
+    /// \brief Given an allocation, delete all sinks having such allocation, and
+    /// replace them as sinks with their parents.
     ///
     /// \param The allocation to match a sink node with.
     void consumeSinkNode(Allocation *allocation);
@@ -308,24 +347,27 @@ class Allocation {
     std::set<Allocation *>
     getSinksWithAllocations(std::vector<Allocation *> valuesList) const;
 
-    /// consumeNodesWithAllocations - Given a set of allocations, delete all
-    /// sinks having an allocation in the set, and replace them as sinks with
-    /// their parents.
+    /// Given a set of allocations, delete all sinks having an allocation in the
+    /// set, and replace them as sinks with their parents.
     ///
     /// \param The allocation to match the sink nodes with.
     void consumeSinksWithAllocations(std::vector<Allocation *> allocationsList);
 
+    /// \brief Print the content of the object to the LLVM error stream
     void dump() const {
       this->print(llvm::errs());
       llvm::errs() << "\n";
     }
 
+    /// \brief Print the content of the object into a stream.
+    ///
+    /// \param The stream to print the data to.
     void print(llvm::raw_ostream &stream) const;
   };
 
-  /// \brief Dependency - implementation of field-insensitive value
-  ///        dependency for computing allocations the unsatisfiability core
-  ///        depends upon, which is used to compute the interpolant.
+  /// \brief Implementation of value dependency for computing allocations the
+  /// unsatisfiability core depends upon, which is used to compute the
+  /// interpolant.
   ///
   /// Following is the analysis rules to compute value dependency relations
   /// useful for computing the interpolant. Given a finite symbolic execution
@@ -495,111 +537,133 @@ class Allocation {
 
       static bool isEnvironmentAllocation(llvm::Value *site);
 
-      /// @brief Tests if an allocation site is main function's argument
+      /// \brief Tests if an allocation site is main function's argument
       static bool isMainArgument(llvm::Value *site);
     };
 
   private:
-    /// @brief Previous path condition
+    /// \brief Previous path condition
     Dependency *parentDependency;
 
-    /// @brief Argument values to be passed onto callee
+    /// \brief Argument values to be passed onto callee
     std::vector<VersionedValue *> argumentValuesList;
 
-    /// @brief Equality of value to address
+    /// \brief Equality of value to address
     std::vector< PointerEquality *> equalityList;
 
-    /// @brief The mapping of allocations/addresses to stored value
+    /// \brief The mapping of allocations/addresses to stored value
     std::map<Allocation *, VersionedValue *> storesMap;
 
-    /// @brief Store the inverse map of both storesMap
+    /// \brief Store the inverse map of both storesMap
     std::map<VersionedValue *, std::vector<Allocation *> > storageOfMap;
 
-    /// @brief Flow relations from one value to another
+    /// \brief Flow relations from one value to another
     std::vector<FlowsTo *> flowsToList;
 
+    /// \brief The store of the versioned values
     std::vector< VersionedValue *> valuesList;
 
+    /// \brief The store of the versioned allocations
     std::vector<Allocation *> versionedAllocationsList;
 
-    /// @brief allocations of this node and its ancestors
-    /// that are needed for the core and dominates other allocations.
+    /// \brief Allocations of this node and its ancestors that are needed for
+    /// the core and dominates other allocations.
     std::set<Allocation *> coreAllocations;
 
+    /// \brief Create a new versioned value object, typically when executing a
+    /// new instruction, as a value for the instruction.
     VersionedValue *getNewVersionedValue(llvm::Value *value,
                                          ref<Expr> valueExpr);
 
+    /// \brief Create a fresh allocation object.
     Allocation *getInitialAllocation(llvm::Value *allocation,
                                      ref<Expr> &address);
 
+    /// \brief Create a new allocation object to represent a new version of a
+    /// known allocation.
     Allocation *getNewAllocationVersion(llvm::Value *allocation,
                                         ref<Expr> &address);
 
+    /// \brief Get all versioned allocations for the current node an all of its
+    /// parents
     std::vector<Allocation *> getAllVersionedAllocations(bool coreOnly =
                                                              false) const;
 
-    /// @brief Gets the latest version of the allocation.
+    /// \brief Gets the latest version of the allocation.
     Allocation *getLatestAllocation(llvm::Value *allocation,
                                     ref<Expr> address) const;
 
-    /// @brief similar to getLatestValue, but we don't check for whether
-    /// the value is constant or not
+    /// \brief Gets the latest version of the allocation, but without checking
+    /// for whether the value is constant or not
     VersionedValue *getLatestValueNoConstantCheck(llvm::Value *value) const;
 
+    /// \brief Newly relate an LLVM value with destructive update to an
+    /// allocation
     void addPointerEquality(const VersionedValue *value,
                             Allocation *allocation);
 
+    /// \brief Newly relate an alllocation with its stored value
     void updateStore(Allocation *allocation, VersionedValue *value);
 
+    /// \brief Add flow dependency between source and target value
     void addDependency(VersionedValue *source, VersionedValue *target);
 
+    /// \brief Add flow dependency between source and target value, as the
+    /// result of store/load via an allocated memory.
     void addDependencyViaAllocation(VersionedValue *source,
                                     VersionedValue *target, Allocation *via);
 
+    /// \brief Given a versioned value, retrieve the equality it is associated
+    /// with
     Allocation *resolveAllocation(VersionedValue *value);
 
+    /// \brief Given a versioned value, retrieve the equality it is associated
+    /// with, in this object or otherwise in its ancestors.
     std::vector<Allocation *>
     resolveAllocationTransitively(VersionedValue *value);
 
+    /// \brief Retrieve the versioned values that are stored in a particular
+    /// allocation.
     std::vector<VersionedValue *> stores(Allocation *allocation) const;
 
-    /// @brief All values that flows to the target in one step, local
-    /// to the current dependency / interpolation tree node
+    /// \brief All values that flows to the target in one step, local to the
+    /// current dependency / interpolation tree node
     std::vector<VersionedValue *> directLocalFlowSources(VersionedValue *target) const;
 
-    /// @brief All values that flows to the target in one step
+    /// \brief All values that flows to the target in one step
     std::vector<VersionedValue *> directFlowSources(VersionedValue *target) const;
 
-    /// @brief All values that could flow to the target
+    /// \brief All values that could flow to the target
     std::vector<VersionedValue *> allFlowSources(VersionedValue *target) const;
 
-    /// @brief All the end sources that can flow to the target
+    /// \brief All the end sources that can flow to the target
     std::vector<VersionedValue *>
     allFlowSourcesEnds(VersionedValue *target) const;
 
+    /// \brief Record the expressions of a call's arguments
     std::vector<VersionedValue *>
     populateArgumentValuesList(llvm::CallInst *site,
                                std::vector<ref<Expr> > &arguments);
 
-    /// @brief Construct dependency due to load instruction
+    /// \brief Construct dependency due to load instruction
     bool buildLoadDependency(llvm::Value *address, ref<Expr> addressExpr,
                              llvm::Value *value, ref<Expr> valueExpr);
 
-    /// @brief Direct allocation dependency local to an interpolation tree node
+    /// \brief Direct allocation dependency local to an interpolation tree node
     std::map<VersionedValue *, Allocation *>
     directLocalAllocationSources(VersionedValue *target) const;
 
-    /// @brief Direct allocation dependency
+    /// \brief Direct allocation dependency
     std::map<VersionedValue *, Allocation *>
     directAllocationSources(VersionedValue *target) const;
 
-    /// @brief Builds dependency graph between memory allocations
+    /// \brief Builds dependency graph between memory allocations
     void recursivelyBuildAllocationGraph(AllocationGraph *g,
                                          VersionedValue *value,
                                          Allocation *alloc,
                                          Allocation *parentAllocation) const;
 
-    /// @brief Builds dependency graph between memory allocations
+    /// \brief Builds dependency graph between memory allocations
     void buildAllocationGraph(AllocationGraph *g, VersionedValue *value) const;
 
   public:
@@ -611,41 +675,68 @@ class Allocation {
 
     VersionedValue *getLatestValue(llvm::Value *value, ref<Expr> valueExpr);
 
-    /// @brief Abstract dependency state transition with argument(s)
+    /// \brief Abstract dependency state transition with argument(s)
     void execute(llvm::Instruction *instr, std::vector<ref<Expr> > &args);
 
-    /// @brief Build dependencies from PHI node
+    /// \brief Build dependencies from PHI node
     void executePHI(llvm::Instruction *instr, unsigned int incomingBlock,
                     ref<Expr> valueExpr);
 
+    /// \brief This retrieves the allocations known at this state, and the
+    /// expressions stored in the allocations.
+    ///
+    /// \param The replacement bound variables when retrieving state for
+    /// creating subsumption table entry: As the resulting expression will
+    /// be used for storing in the subsumption table, the variables need to be
+    /// replaced with the bound ones.
+    /// \param Indicate whether we are retrieving only data for allocations
+    /// relevant to an unsatisfiability core.
+    /// \return A pair of the store part indexed by constants, and the store
+    /// part
+    /// indexed by symbolic expressions.
     std::pair<ConcreteStore, SymbolicStore>
     getStoredExpressions(std::set<const Array *> &replacements,
                          bool coreOnly) const;
 
+    /// \brief Record call arguments in a function call
     void bindCallArguments(llvm::Instruction *instr,
                            std::vector<ref<Expr> > &arguments);
 
+    /// \brief This propagates the dependency due to the return value of a call
     void bindReturnValue(llvm::CallInst *site, llvm::Instruction *inst,
                          ref<Expr> returnValue);
 
+    /// \brief Given a versioned value, retrieve all its sources and mark them
+    /// as in the core.
     void markAllValues(AllocationGraph *g, VersionedValue *value);
 
+    /// \brief Given an LLVM value, retrieve all its sources and mark them as in
+    /// the core.
     void markAllValues(AllocationGraph *g, llvm::Value *value);
 
+    /// \brief Compute the allocations that are relevant for the interpolant
+    /// (core).
     void computeCoreAllocations(AllocationGraph *g);
 
+    /// \brief Print the content of the object to the LLVM error stream
     void dump() const {
       this->print(llvm::errs());
       llvm::errs() << "\n";
     }
 
+    /// \brief Print the content of the object into a stream.
+    ///
+    /// \param The stream to print the data to.
     void print(llvm::raw_ostream& stream) const;
 
-    void print(llvm::raw_ostream &stream, const unsigned tabNum) const;
+    /// \brief Print the content of the object into a stream.
+    ///
+    /// \param The stream to print the data to.
+    /// \param The number of whitespaces to be printed before each line.
+    void print(llvm::raw_ostream &stream, const unsigned paddingAmount) const;
   };
 
-
-  std::string makeTabs(const unsigned tab_num);
+  std::string makeTabs(const unsigned paddingAmount);
 
   std::string appendTab(const std::string &prefix);
 

@@ -8,9 +8,9 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains the implementation of the flow-insensitive dependency
-/// analysis to compute the allocations upon which the unsatisfiability core
-/// depends, which is used in computing the interpolant.
+/// This file contains the implementation of the dependency analysis to
+/// compute the allocations upon which the unsatisfiability core depends,
+/// which is used in computing the interpolant.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -1467,8 +1467,9 @@ void Dependency::print(llvm::raw_ostream &stream) const {
   this->print(stream, 0);
 }
 
-void Dependency::print(llvm::raw_ostream &stream, const unsigned tabNum) const {
-  std::string tabs = makeTabs(tabNum);
+void Dependency::print(llvm::raw_ostream &stream,
+                       const unsigned paddingAmount) const {
+  std::string tabs = makeTabs(paddingAmount);
   stream << tabs << "EQUALITIES:";
   std::vector<PointerEquality *>::const_iterator equalityListBegin =
       equalityList.begin();
@@ -1509,7 +1510,7 @@ void Dependency::print(llvm::raw_ostream &stream, const unsigned tabNum) const {
 
   if (parentDependency) {
     stream << "\n" << tabs << "--------- Parent Dependencies ----------\n";
-    parentDependency->print(stream, tabNum);
+    parentDependency->print(stream, paddingAmount);
   }
 }
 
@@ -1569,9 +1570,9 @@ bool Dependency::Util::isMainArgument(llvm::Value *site) {
 
 /**/
 
-std::string makeTabs(const unsigned tabNum) {
+std::string makeTabs(const unsigned paddingAmount) {
   std::string tabsString;
-  for (unsigned i = 0; i < tabNum; i++) {
+  for (unsigned i = 0; i < paddingAmount; ++i) {
     tabsString += appendTab(tabsString);
   }
   return tabsString;
