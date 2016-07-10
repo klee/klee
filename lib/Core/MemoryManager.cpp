@@ -44,7 +44,7 @@ llvm::cl::opt<unsigned> RedZoneSpace(
                    "important to detect out-of-bound accesses (default=10)."),
     llvm::cl::init(10));
 
-llvm::cl::opt<uint64_t> DeterministicStartAddress(
+llvm::cl::opt<unsigned long long> DeterministicStartAddress(
     "allocate-determ-start-address",
     llvm::cl::desc("Start address for deterministic allocation. Has to be page "
                    "aligned (default=0x7ff30000000)."),
@@ -66,12 +66,11 @@ MemoryManager::MemoryManager(ArrayCache *_arrayCache)
     if (newSpace == MAP_FAILED) {
       klee_error("Couldn't mmap() memory for deterministic allocations");
     }
-    if (expectedAddress != newSpace) {
+    if (expectedAddress != newSpace && expectedAddress != 0) {
       klee_error("Could not allocate memory deterministically");
     }
 
-    klee_message("Deterministic memory allocation starting from %p",
-                 expectedAddress);
+    klee_message("Deterministic memory allocation starting from %p", newSpace);
     deterministicSpace = newSpace;
     nextFreeSlot = newSpace;
   }
