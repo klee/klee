@@ -171,24 +171,6 @@ void VersionedAllocation::print(llvm::raw_ostream &stream) const {
 
 /**/
 
-llvm::Value *EnvironmentAllocation::canonicalAllocation = 0;
-
-bool EnvironmentAllocation::hasAllocationSite(llvm::Value *site,
-                                              ref<Expr> &_address) const {
-  return Dependency::Util::isEnvironmentAllocation(site) && address == _address;
-}
-
-void EnvironmentAllocation::print(llvm::raw_ostream &stream) const {
-  stream << "A";
-  if (this->Allocation::core)
-    stream << "(I)";
-  stream << "[@__environ:";
-  address->print(stream);
-  stream << "]" << reinterpret_cast<uintptr_t>(this);
-}
-
-/**/
-
 void VersionedValue::print(llvm::raw_ostream &stream) const {
   stream << "V";
   if (core)
@@ -410,18 +392,7 @@ VersionedValue *Dependency::getNewVersionedValue(llvm::Value *value,
 
 Allocation *Dependency::getInitialAllocation(llvm::Value *allocation,
                                              ref<Expr> &address) {
-  Allocation *ret;
-  if (Util::isEnvironmentAllocation(allocation)) {
-    ret = new EnvironmentAllocation(allocation, address);
-
-    // An environment allocation is a special kind of composite allocation
-    // ret->getSite() will give us the right canonical allocation
-    // for environment allocations.
-    versionedAllocationsList.push_back(ret);
-    return ret;
-  }
-
-  ret = new VersionedAllocation(allocation, address);
+  Allocation *ret = new VersionedAllocation(allocation, address);
   versionedAllocationsList.push_back(ret);
   return ret;
 }
@@ -568,24 +539,6 @@ Dependency::getLatestValueNoConstantCheck(llvm::Value *value) const {
 
 Allocation *Dependency::getLatestAllocation(llvm::Value *allocation,
                                             ref<Expr> address) const {
-
-  if (Util::isEnvironmentAllocation(allocation)) {
-    // Search for existing environment allocation
-    for (std::vector<Allocation *>::const_reverse_iterator
-             it = versionedAllocationsList.rbegin(),
-             itEnd = versionedAllocationsList.rend();
-         it != itEnd; ++it) {
-      if (llvm::isa<EnvironmentAllocation>(*it))
-        return *it;
-    }
-
-    if (parentDependency)
-      return parentDependency->getLatestAllocation(allocation, address);
-
-    return 0;
-  }
-
-  // The case for versioned allocation
   for (std::vector<Allocation *>::const_reverse_iterator
            it = versionedAllocationsList.rbegin(),
            itEnd = versionedAllocationsList.rend();
@@ -1024,14 +977,6 @@ void Dependency::execute(llvm::Instruction *instr,
 
     switch (instr->getOpcode()) {
     case llvm::Instruction::Load: {
-      if (Util::isEnvironmentAllocation(instr)) {
-        // The load corresponding to a load of the environment address
-        // that was never allocated within this program.
-        addPointerEquality(getNewVersionedValue(instr, valueExpr),
-                           getNewAllocationVersion(instr, address));
-        break;
-      }
-
       VersionedValue *addressValue =
           getLatestValue(instr->getOperand(0), address);
 
@@ -1540,20 +1485,6 @@ void Dependency::Util::deletePointerMapWithVectorValue(
     it->second.clear();
   }
   map.clear();
-}
-
-bool Dependency::Util::isEnvironmentAllocation(llvm::Value *site) {
-  llvm::LoadInst *inst = llvm::dyn_cast<llvm::LoadInst>(site);
-
-  if (!inst)
-    return false;
-
-  llvm::Value *address = inst->getOperand(0);
-  if (llvm::isa<llvm::Constant>(address) && address->getName() == "__environ") {
-    return true;
-  }
-
-  return false;
 }
 
 bool Dependency::Util::isMainArgument(llvm::Value *site) {
