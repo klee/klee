@@ -1181,11 +1181,18 @@ void Dependency::execute(llvm::Instruction *instr,
       VersionedValue *op1 = getLatestValue(instr->getOperand(0), op1Expr);
       VersionedValue *op2 = getLatestValue(instr->getOperand(1), op2Expr);
 
-      VersionedValue *newValue = 0;
-      if (op1) {
-        newValue = getNewVersionedValue(instr, result);
-        addDependency(op1, newValue);
+      if (!op1 &&
+          (instr->getParent()->getParent()->getName().equals("klee_range") &&
+           instr->getOperand(0)->getName().equals("start"))) {
+        op1 = getNewVersionedValue(instr->getOperand(0), op1Expr);
       }
+      if (!op2 &&
+          (instr->getParent()->getParent()->getName().equals("klee_range") &&
+           instr->getOperand(1)->getName().equals("end"))) {
+        op2 = getNewVersionedValue(instr->getOperand(1), op2Expr);
+      }
+
+      VersionedValue *newValue = 0;
       if (op2) {
         if (newValue)
           addDependency(op2, newValue);
