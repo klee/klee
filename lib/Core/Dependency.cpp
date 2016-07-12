@@ -853,7 +853,13 @@ void Dependency::execute(llvm::Instruction *instr,
       if ((calleeName.equals("getpagesize") && args.size() == 1) ||
 	  (calleeName.equals("ioctl") && args.size() == 4) ||
 	  (calleeName.equals("__ctype_b_loc") && args.size() == 1) ||
-	  (calleeName.equals("__ctype_b_locargs") && args.size() == 1)) {
+	  (calleeName.equals("__ctype_b_locargs") && args.size() == 1) ||
+	  calleeName.equals("puts") ||
+	  calleeName.equals("fflush") ||
+	  calleeName.equals("_Znwm") ||
+	  calleeName.equals("_Znam") ||
+	  calleeName.equals("strcmp") ||
+	  calleeName.equals("strncmp")) {
         getNewVersionedValue(instr, args.at(0));
       } else if (calleeName.equals("malloc") && args.size() == 1) {
         // malloc is an allocation-type instruction: its single argument is the
