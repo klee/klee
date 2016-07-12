@@ -1003,6 +1003,11 @@ void Dependency::execute(llvm::Instruction *instr,
           addPointerEquality(
               getNewVersionedValue(instr, argExpr),
               getInitialAllocation(instr->getOperand(0), argExpr));
+        } else if (llvm::isa<llvm::Argument>(instr->getOperand(0))) {
+          VersionedValue *arg =
+              getNewVersionedValue(instr->getOperand(0), argExpr);
+          VersionedValue *returnValue = getNewVersionedValue(instr, argExpr);
+          addDependency(arg, returnValue);
         } else {
           assert(!"operand not found");
         }
