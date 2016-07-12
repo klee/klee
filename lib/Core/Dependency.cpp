@@ -857,10 +857,37 @@ void Dependency::execute(llvm::Instruction *instr,
           (calleeName.equals("__ctype_b_locargs") && args.size() == 1) ||
           calleeName.equals("puts") || calleeName.equals("fflush") ||
           calleeName.equals("_Znwm") || calleeName.equals("_Znam") ||
-          calleeName.equals("strcmp") || calleeName.equals("strncmp") ||
-          calleeName.equals(
-              "_ZNSt13basic_fstreamIcSt11char_traitsIcEE7is_openEv")) {
+          calleeName.equals("strcmp") || calleeName.equals("strncmp")) {
         getNewVersionedValue(instr, args.at(0));
+      } else if (calleeName.equals("_ZNSi5seekgElSt12_Ios_Seekdir") &&
+                 args.size() == 4) {
+        VersionedValue *returnValue = getNewVersionedValue(instr, args.at(0));
+        for (unsigned i = 0; i < 3; ++i) {
+          VersionedValue *arg =
+              getLatestValue(instr->getOperand(i), args.at(i + 1));
+          if (arg)
+            addDependency(arg, returnValue);
+        }
+      } else if (calleeName.equals(
+                     "_ZNSt13basic_fstreamIcSt11char_traitsIcEE7is_openEv") &&
+                 args.size() == 2) {
+        VersionedValue *returnValue = getNewVersionedValue(instr, args.at(0));
+        VersionedValue *arg = getLatestValue(instr->getOperand(0), args.at(1));
+        if (arg)
+          addDependency(arg, returnValue);
+      } else if (calleeName.equals("_ZNSi5tellgEv") && args.size() == 2) {
+        VersionedValue *returnValue = getNewVersionedValue(instr, args.at(0));
+        VersionedValue *arg = getLatestValue(instr->getOperand(0), args.at(1));
+        if (arg)
+          addDependency(arg, returnValue);
+      } else if (calleeName.equals("powl") && args.size() == 3) {
+        VersionedValue *returnValue = getNewVersionedValue(instr, args.at(0));
+        for (unsigned i = 0; i < 2; ++i) {
+          VersionedValue *arg =
+              getLatestValue(instr->getOperand(i), args.at(i + 1));
+          if (arg)
+            addDependency(arg, returnValue);
+        }
       } else if (calleeName.equals("malloc") && args.size() == 1) {
         // malloc is an allocation-type instruction: its single argument is the
         // return address.
