@@ -835,13 +835,25 @@ void Dependency::execute(llvm::Instruction *instr,
   if (llvm::isa<llvm::CallInst>(instr)) {
     llvm::CallInst *callInst = llvm::dyn_cast<llvm::CallInst>(instr);
     llvm::Function *f = callInst->getCalledFunction();
+
+    if (!f) {
+	// Handles the case when the callee is wrapped within another expression
+	llvm::ConstantExpr *calledValue = llvm::dyn_cast<llvm::ConstantExpr>(callInst->getCalledValue());
+	if (calledValue && calledValue->getOperand(0)) {
+	    f = llvm::dyn_cast<llvm::Function>(calledValue->getOperand(0));
+	}
+    }
+
     if (f && f->getIntrinsicID() == llvm::Intrinsic::not_intrinsic) {
-      llvm::StringRef calleeName = callInst->getCalledFunction()->getName();
+      llvm::StringRef calleeName = f->getName();
       // FIXME: We need a more precise way to determine invoked method
       // rather than just using the name.
       std::string getValuePrefix("klee_get_value");
 
-      if (calleeName.equals("getpagesize") && args.size() == 1) {
+      if ((calleeName.equals("getpagesize") && args.size() == 1) ||
+	  (calleeName.equals("ioctl") && args.size() == 4) ||
+	  (calleeName.equals("__ctype_b_loc") && args.size() == 1) ||
+	  (calleeName.equals("__ctype_b_locargs") && args.size() == 1)) {
         getNewVersionedValue(instr, args.at(0));
       } else if (calleeName.equals("malloc") && args.size() == 1) {
         // malloc is an allocation-type instruction: its single argument is the
@@ -894,10 +906,6 @@ void Dependency::execute(llvm::Instruction *instr,
         VersionedValue *arg1 = getLatestValue(instr->getOperand(1), args.at(2));
         addDependency(arg0, returnValue);
         addDependency(arg1, returnValue);
-      } else if (calleeName.equals("__ctype_b_loc") && args.size() == 1) {
-        getNewVersionedValue(instr, args.at(0));
-      } else if (calleeName.equals("__ctype_b_locargs") && args.size() == 1) {
-        getNewVersionedValue(instr, args.at(0));
       } else if (calleeName.equals("geteuid") && args.size() == 1) {
         VersionedValue *returnValue = getNewVersionedValue(instr, args.at(0));
         VersionedValue *arg = getLatestValue(instr->getOperand(0), args.at(0));
