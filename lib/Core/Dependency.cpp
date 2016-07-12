@@ -138,11 +138,12 @@ ShadowArray::getShadowExpression(ref<Expr> expr,
         getShadowExpression(expr->getKid(1), replacements));
     break;
   }
-  default: {
-    assert(0 && "unhandled Expr type");
-    ret = expr;
+  case Expr::NotOptimized: {
+    ret = NotOptimizedExpr::create(getShadowExpression(expr->getKid(0), replacements));
     break;
   }
+  default:
+    assert(!"unhandled Expr type");
   }
 
   return ret;
