@@ -882,7 +882,8 @@ void Dependency::execute(llvm::Instruction *instr,
         VersionedValue *arg = getLatestValue(instr->getOperand(0), args.at(1));
         if (arg)
           addDependency(arg, returnValue);
-      } else if (calleeName.equals("powl") && args.size() == 3) {
+      } else if ((calleeName.equals("powl") && args.size() == 3) ||
+                 (calleeName.equals("gettimeofday") && args.size() == 3)) {
         VersionedValue *returnValue = getNewVersionedValue(instr, args.at(0));
         for (unsigned i = 0; i < 2; ++i) {
           VersionedValue *arg =
