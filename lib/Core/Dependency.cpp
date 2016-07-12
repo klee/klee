@@ -858,7 +858,8 @@ void Dependency::execute(llvm::Instruction *instr,
           (calleeName.equals("__ctype_b_locargs") && args.size() == 1) ||
           calleeName.equals("puts") || calleeName.equals("fflush") ||
           calleeName.equals("_Znwm") || calleeName.equals("_Znam") ||
-          calleeName.equals("strcmp") || calleeName.equals("strncmp")) {
+          calleeName.equals("strcmp") || calleeName.equals("strncmp") ||
+          (calleeName.equals("__errno_location") && args.size() == 1)) {
         getNewVersionedValue(instr, args.at(0));
       } else if (calleeName.equals("_ZNSi5seekgElSt12_Ios_Seekdir") &&
                  args.size() == 4) {
