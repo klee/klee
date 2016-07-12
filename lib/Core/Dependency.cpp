@@ -1296,6 +1296,10 @@ void Dependency::markAllValues(AllocationGraph *g, llvm::Value *val) {
         }
       }
     }
+
+    if (llvm::isa<llvm::Constant>(val))
+      return;
+
     assert(!"unknown value");
   }
 
