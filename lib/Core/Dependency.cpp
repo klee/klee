@@ -851,15 +851,14 @@ void Dependency::execute(llvm::Instruction *instr,
       std::string getValuePrefix("klee_get_value");
 
       if ((calleeName.equals("getpagesize") && args.size() == 1) ||
-	  (calleeName.equals("ioctl") && args.size() == 4) ||
-	  (calleeName.equals("__ctype_b_loc") && args.size() == 1) ||
-	  (calleeName.equals("__ctype_b_locargs") && args.size() == 1) ||
-	  calleeName.equals("puts") ||
-	  calleeName.equals("fflush") ||
-	  calleeName.equals("_Znwm") ||
-	  calleeName.equals("_Znam") ||
-	  calleeName.equals("strcmp") ||
-	  calleeName.equals("strncmp")) {
+          (calleeName.equals("ioctl") && args.size() == 4) ||
+          (calleeName.equals("__ctype_b_loc") && args.size() == 1) ||
+          (calleeName.equals("__ctype_b_locargs") && args.size() == 1) ||
+          calleeName.equals("puts") || calleeName.equals("fflush") ||
+          calleeName.equals("_Znwm") || calleeName.equals("_Znam") ||
+          calleeName.equals("strcmp") || calleeName.equals("strncmp") ||
+          calleeName.equals(
+              "_ZNSt13basic_fstreamIcSt11char_traitsIcEE7is_openEv")) {
         getNewVersionedValue(instr, args.at(0));
       } else if (calleeName.equals("malloc") && args.size() == 1) {
         // malloc is an allocation-type instruction: its single argument is the
