@@ -773,6 +773,7 @@ bool Dependency::buildLoadDependency(llvm::Value *address,
            allocIter = addressAllocList.begin(),
            allocIterEnd = addressAllocList.end();
        allocIter != allocIterEnd; ++allocIter) {
+
     std::vector<VersionedValue *> storedValue = stores(*allocIter);
 
     if (storedValue.empty())
@@ -992,7 +993,6 @@ void Dependency::execute(llvm::Instruction *instr,
     case llvm::Instruction::Load: {
       VersionedValue *addressValue =
           getLatestValue(instr->getOperand(0), address);
-
       if (addressValue) {
         std::vector<Allocation *> allocations =
             resolveAllocationTransitively(addressValue);
@@ -1192,6 +1192,10 @@ void Dependency::execute(llvm::Instruction *instr,
       }
 
       VersionedValue *newValue = 0;
+      if (op1) {
+        newValue = getNewVersionedValue(instr, result);
+        addDependency(op1, newValue);
+      }
       if (op2) {
         if (newValue)
           addDependency(op2, newValue);
