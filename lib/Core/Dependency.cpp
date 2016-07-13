@@ -946,7 +946,8 @@ void Dependency::execute(llvm::Instruction *instr,
         VersionedValue *returnValue = getNewVersionedValue(instr, args.at(0));
         VersionedValue *arg = getLatestValue(instr->getOperand(0), args.at(0));
         addDependency(arg, returnValue);
-      } else if ((calleeName.equals("fchmodat") && args.size() == 5)) {
+      } else if (((calleeName.equals("fchmodat") && args.size() == 5)) ||
+                 (calleeName.equals("fchownat") && args.size() == 6)) {
         VersionedValue *returnValue = getNewVersionedValue(instr, args.at(0));
         for (unsigned i = 0; i < 2; ++i) {
           VersionedValue *arg =
@@ -955,6 +956,7 @@ void Dependency::execute(llvm::Instruction *instr,
             addDependency(arg, returnValue);
         }
       } else {
+        llvm::errs() << calleeName << " argument size: " << args.size();
         assert(!"unhandled external function");
       }
     }
