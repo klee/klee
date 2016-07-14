@@ -946,6 +946,14 @@ void Dependency::execute(llvm::Instruction *instr,
         VersionedValue *returnValue = getNewVersionedValue(instr, args.at(0));
         VersionedValue *arg = getLatestValue(instr->getOperand(0), args.at(0));
         addDependency(arg, returnValue);
+      } else if ((calleeName.equals("fchmodat") && args.size() == 5)) {
+        VersionedValue *returnValue = getNewVersionedValue(instr, args.at(0));
+        for (unsigned i = 0; i < 2; ++i) {
+          VersionedValue *arg =
+              getLatestValue(instr->getOperand(i), args.at(i + 1));
+          if (arg)
+            addDependency(arg, returnValue);
+        }
       } else {
         assert(!"unhandled external function");
       }
