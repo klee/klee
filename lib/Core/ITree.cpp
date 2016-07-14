@@ -721,7 +721,9 @@ void SearchTree::setAsCore(PathCondition *pathCondition) {
 
   assert(SearchTree::instance && "Search tree graph not initialized");
 
-  instance->pathConditionMap[pathCondition]->pathConditionTable[pathCondition].second = true;
+  instance->pathConditionMap[pathCondition]
+      ->pathConditionTable[pathCondition]
+      .second = true;
 }
 
 void SearchTree::save(std::string dotFileName) {
@@ -794,14 +796,14 @@ PathCondition::packInterpolant(std::set<const Array *> &replacements) {
   return res;
 }
 
-void PathCondition::dump() {
+void PathCondition::dump() const {
   this->print(llvm::errs());
   llvm::errs() << "\n";
 }
 
-void PathCondition::print(llvm::raw_ostream &stream) {
+void PathCondition::print(llvm::raw_ostream &stream) const {
   stream << "[";
-  for (PathCondition *it = this; it != 0; it = it->tail) {
+  for (const PathCondition *it = this; it != 0; it = it->tail) {
     it->constraint->print(stream);
     stream << ": " << (it->core ? "core" : "non-core");
     if (it->tail != 0)
@@ -1209,7 +1211,7 @@ SubsumptionTableEntry::getSubstitution(ref<Expr> equalities,
   // variable whereas the rhs is an expression on the free variables.
   if (llvm::isa<EqExpr>(equalities.get())) {
     ref<Expr> lhs = equalities->getKid(0);
-    if (llvm::isa<ReadExpr>(lhs.get()) || llvm::isa<ConcatExpr>(lhs.get())) {
+    if (isVariable(lhs)) {
       map[lhs] = equalities->getKid(1);
       return ConstantExpr::alloc(1, Expr::Bool);
     }
@@ -1646,11 +1648,6 @@ bool SubsumptionTableEntry::subsumed(
   return false;
 }
 
-void SubsumptionTableEntry::dump() const {
-  this->print(llvm::errs());
-  llvm::errs() << "\n";
-}
-
 void SubsumptionTableEntry::print(llvm::raw_ostream &stream) const {
   stream << "------------ Subsumption Table Entry ------------\n";
   stream << "Program point = " << nodeId << "\n";
@@ -1995,7 +1992,7 @@ void ITree::printNode(llvm::raw_ostream &stream, ITreeNode *n,
   }
 }
 
-void ITree::print(llvm::raw_ostream &stream) {
+void ITree::print(llvm::raw_ostream &stream) const {
   stream << "------------------------- ITree Structure "
             "---------------------------\n";
   stream << this->root->nodeId;
@@ -2005,11 +2002,12 @@ void ITree::print(llvm::raw_ostream &stream) {
   this->printNode(stream, this->root, "");
   stream << "\n------------------------- Subsumption Table "
             "-------------------------\n";
-  for (std::map<uintptr_t, std::vector<SubsumptionTableEntry *> >::iterator
+  for (std::map<uintptr_t,
+                std::vector<SubsumptionTableEntry *> >::const_iterator
            it = subsumptionTable.begin(),
            itEnd = subsumptionTable.end();
        it != itEnd; ++it) {
-    for (std::vector<SubsumptionTableEntry *>::iterator
+    for (std::vector<SubsumptionTableEntry *>::const_iterator
              it1 = it->second.begin(),
              it1End = it->second.end();
          it1 != it1End; ++it1) {
@@ -2018,7 +2016,7 @@ void ITree::print(llvm::raw_ostream &stream) {
   }
 }
 
-void ITree::dump() { this->print(llvm::errs()); }
+void ITree::dump() const { this->print(llvm::errs()); }
 
 /**/
 
