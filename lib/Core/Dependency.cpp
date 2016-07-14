@@ -138,11 +138,12 @@ ShadowArray::getShadowExpression(ref<Expr> expr,
         getShadowExpression(expr->getKid(1), replacements));
     break;
   }
-  default: {
-    assert(0 && "unhandled Expr type");
-    ret = expr;
+  case Expr::NotOptimized: {
+    ret = NotOptimizedExpr::create(getShadowExpression(expr->getKid(0), replacements));
     break;
   }
+  default:
+    assert(!"unhandled Expr type");
   }
 
   return ret;
@@ -167,24 +168,6 @@ void VersionedAllocation::print(llvm::raw_ostream &stream) const {
   stream << ":";
   address->print(stream);
   stream << "]#" << reinterpret_cast<uintptr_t>(this);
-}
-
-/**/
-
-llvm::Value *EnvironmentAllocation::canonicalAllocation = 0;
-
-bool EnvironmentAllocation::hasAllocationSite(llvm::Value *site,
-                                              ref<Expr> &_address) const {
-  return Dependency::Util::isEnvironmentAllocation(site) && address == _address;
-}
-
-void EnvironmentAllocation::print(llvm::raw_ostream &stream) const {
-  stream << "A";
-  if (this->Allocation::core)
-    stream << "(I)";
-  stream << "[@__environ:";
-  address->print(stream);
-  stream << "]" << reinterpret_cast<uintptr_t>(this);
 }
 
 /**/
@@ -410,18 +393,7 @@ VersionedValue *Dependency::getNewVersionedValue(llvm::Value *value,
 
 Allocation *Dependency::getInitialAllocation(llvm::Value *allocation,
                                              ref<Expr> &address) {
-  Allocation *ret;
-  if (Util::isEnvironmentAllocation(allocation)) {
-    ret = new EnvironmentAllocation(allocation, address);
-
-    // An environment allocation is a special kind of composite allocation
-    // ret->getSite() will give us the right canonical allocation
-    // for environment allocations.
-    versionedAllocationsList.push_back(ret);
-    return ret;
-  }
-
-  ret = new VersionedAllocation(allocation, address);
+  Allocation *ret = new VersionedAllocation(allocation, address);
   versionedAllocationsList.push_back(ret);
   return ret;
 }
@@ -568,24 +540,6 @@ Dependency::getLatestValueNoConstantCheck(llvm::Value *value) const {
 
 Allocation *Dependency::getLatestAllocation(llvm::Value *allocation,
                                             ref<Expr> address) const {
-
-  if (Util::isEnvironmentAllocation(allocation)) {
-    // Search for existing environment allocation
-    for (std::vector<Allocation *>::const_reverse_iterator
-             it = versionedAllocationsList.rbegin(),
-             itEnd = versionedAllocationsList.rend();
-         it != itEnd; ++it) {
-      if (llvm::isa<EnvironmentAllocation>(*it))
-        return *it;
-    }
-
-    if (parentDependency)
-      return parentDependency->getLatestAllocation(allocation, address);
-
-    return 0;
-  }
-
-  // The case for versioned allocation
   for (std::vector<Allocation *>::const_reverse_iterator
            it = versionedAllocationsList.rbegin(),
            itEnd = versionedAllocationsList.rend();
@@ -820,6 +774,7 @@ bool Dependency::buildLoadDependency(llvm::Value *address,
            allocIter = addressAllocList.begin(),
            allocIterEnd = addressAllocList.end();
        allocIter != allocIterEnd; ++allocIter) {
+
     std::vector<VersionedValue *> storedValue = stores(*allocIter);
 
     if (storedValue.empty())
@@ -882,14 +837,60 @@ void Dependency::execute(llvm::Instruction *instr,
   if (llvm::isa<llvm::CallInst>(instr)) {
     llvm::CallInst *callInst = llvm::dyn_cast<llvm::CallInst>(instr);
     llvm::Function *f = callInst->getCalledFunction();
+
+    if (!f) {
+	// Handles the case when the callee is wrapped within another expression
+	llvm::ConstantExpr *calledValue = llvm::dyn_cast<llvm::ConstantExpr>(callInst->getCalledValue());
+	if (calledValue && calledValue->getOperand(0)) {
+	    f = llvm::dyn_cast<llvm::Function>(calledValue->getOperand(0));
+	}
+    }
+
     if (f && f->getIntrinsicID() == llvm::Intrinsic::not_intrinsic) {
-      llvm::StringRef calleeName = callInst->getCalledFunction()->getName();
+      llvm::StringRef calleeName = f->getName();
       // FIXME: We need a more precise way to determine invoked method
       // rather than just using the name.
       std::string getValuePrefix("klee_get_value");
 
-      if (calleeName.equals("getpagesize") && args.size() == 1) {
+      if ((calleeName.equals("getpagesize") && args.size() == 1) ||
+          (calleeName.equals("ioctl") && args.size() == 4) ||
+          (calleeName.equals("__ctype_b_loc") && args.size() == 1) ||
+          (calleeName.equals("__ctype_b_locargs") && args.size() == 1) ||
+          calleeName.equals("puts") || calleeName.equals("fflush") ||
+          calleeName.equals("_Znwm") || calleeName.equals("_Znam") ||
+          calleeName.equals("strcmp") || calleeName.equals("strncmp") ||
+          (calleeName.equals("__errno_location") && args.size() == 1)) {
         getNewVersionedValue(instr, args.at(0));
+      } else if (calleeName.equals("_ZNSi5seekgElSt12_Ios_Seekdir") &&
+                 args.size() == 4) {
+        VersionedValue *returnValue = getNewVersionedValue(instr, args.at(0));
+        for (unsigned i = 0; i < 3; ++i) {
+          VersionedValue *arg =
+              getLatestValue(instr->getOperand(i), args.at(i + 1));
+          if (arg)
+            addDependency(arg, returnValue);
+        }
+      } else if (calleeName.equals(
+                     "_ZNSt13basic_fstreamIcSt11char_traitsIcEE7is_openEv") &&
+                 args.size() == 2) {
+        VersionedValue *returnValue = getNewVersionedValue(instr, args.at(0));
+        VersionedValue *arg = getLatestValue(instr->getOperand(0), args.at(1));
+        if (arg)
+          addDependency(arg, returnValue);
+      } else if (calleeName.equals("_ZNSi5tellgEv") && args.size() == 2) {
+        VersionedValue *returnValue = getNewVersionedValue(instr, args.at(0));
+        VersionedValue *arg = getLatestValue(instr->getOperand(0), args.at(1));
+        if (arg)
+          addDependency(arg, returnValue);
+      } else if ((calleeName.equals("powl") && args.size() == 3) ||
+                 (calleeName.equals("gettimeofday") && args.size() == 3)) {
+        VersionedValue *returnValue = getNewVersionedValue(instr, args.at(0));
+        for (unsigned i = 0; i < 2; ++i) {
+          VersionedValue *arg =
+              getLatestValue(instr->getOperand(i), args.at(i + 1));
+          if (arg)
+            addDependency(arg, returnValue);
+        }
       } else if (calleeName.equals("malloc") && args.size() == 1) {
         // malloc is an allocation-type instruction: its single argument is the
         // return address.
@@ -941,10 +942,6 @@ void Dependency::execute(llvm::Instruction *instr,
         VersionedValue *arg1 = getLatestValue(instr->getOperand(1), args.at(2));
         addDependency(arg0, returnValue);
         addDependency(arg1, returnValue);
-      } else if (calleeName.equals("__ctype_b_loc") && args.size() == 1) {
-        getNewVersionedValue(instr, args.at(0));
-      } else if (calleeName.equals("__ctype_b_locargs") && args.size() == 1) {
-        getNewVersionedValue(instr, args.at(0));
       } else if (calleeName.equals("geteuid") && args.size() == 1) {
         VersionedValue *returnValue = getNewVersionedValue(instr, args.at(0));
         VersionedValue *arg = getLatestValue(instr->getOperand(0), args.at(0));
@@ -1008,6 +1005,11 @@ void Dependency::execute(llvm::Instruction *instr,
           addPointerEquality(
               getNewVersionedValue(instr, argExpr),
               getInitialAllocation(instr->getOperand(0), argExpr));
+        } else if (llvm::isa<llvm::Argument>(instr->getOperand(0))) {
+          VersionedValue *arg =
+              getNewVersionedValue(instr->getOperand(0), argExpr);
+          VersionedValue *returnValue = getNewVersionedValue(instr, argExpr);
+          addDependency(arg, returnValue);
         } else {
           assert(!"operand not found");
         }
@@ -1024,17 +1026,8 @@ void Dependency::execute(llvm::Instruction *instr,
 
     switch (instr->getOpcode()) {
     case llvm::Instruction::Load: {
-      if (Util::isEnvironmentAllocation(instr)) {
-        // The load corresponding to a load of the environment address
-        // that was never allocated within this program.
-        addPointerEquality(getNewVersionedValue(instr, valueExpr),
-                           getNewAllocationVersion(instr, address));
-        break;
-      }
-
       VersionedValue *addressValue =
           getLatestValue(instr->getOperand(0), address);
-
       if (addressValue) {
         std::vector<Allocation *> allocations =
             resolveAllocationTransitively(addressValue);
@@ -1222,6 +1215,17 @@ void Dependency::execute(llvm::Instruction *instr,
       VersionedValue *op1 = getLatestValue(instr->getOperand(0), op1Expr);
       VersionedValue *op2 = getLatestValue(instr->getOperand(1), op2Expr);
 
+      if (!op1 &&
+          (instr->getParent()->getParent()->getName().equals("klee_range") &&
+           instr->getOperand(0)->getName().equals("start"))) {
+        op1 = getNewVersionedValue(instr->getOperand(0), op1Expr);
+      }
+      if (!op2 &&
+          (instr->getParent()->getParent()->getName().equals("klee_range") &&
+           instr->getOperand(1)->getName().equals("end"))) {
+        op2 = getNewVersionedValue(instr->getOperand(1), op2Expr);
+      }
+
       VersionedValue *newValue = 0;
       if (op1) {
         newValue = getNewVersionedValue(instr, result);
@@ -1327,6 +1331,10 @@ void Dependency::markAllValues(AllocationGraph *g, llvm::Value *val) {
         }
       }
     }
+
+    if (llvm::isa<llvm::Constant>(val))
+      return;
+
     assert(!"unknown value");
   }
 
@@ -1540,20 +1548,6 @@ void Dependency::Util::deletePointerMapWithVectorValue(
     it->second.clear();
   }
   map.clear();
-}
-
-bool Dependency::Util::isEnvironmentAllocation(llvm::Value *site) {
-  llvm::LoadInst *inst = llvm::dyn_cast<llvm::LoadInst>(site);
-
-  if (!inst)
-    return false;
-
-  llvm::Value *address = inst->getOperand(0);
-  if (llvm::isa<llvm::Constant>(address) && address->getName() == "__environ") {
-    return true;
-  }
-
-  return false;
 }
 
 bool Dependency::Util::isMainArgument(llvm::Value *site) {

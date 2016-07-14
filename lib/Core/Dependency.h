@@ -78,7 +78,6 @@ class Allocation {
   public:
     enum Kind {
       Unknown,
-      Environment,
       Versioned
     };
 
@@ -140,37 +139,6 @@ class Allocation {
     ///
     /// \param The stream to print the data to.
     void print(llvm::raw_ostream& stream) const;
-  };
-
-  /// \brief A class that represents the allocations of the environment
-  class EnvironmentAllocation : public Allocation {
-    // We use the first site as the canonical allocation
-    // for all environment allocations
-    static llvm::Value *canonicalAllocation;
-  public:
-    EnvironmentAllocation(llvm::Value *_site, ref<Expr> &_address)
-        : Allocation(!canonicalAllocation ? (canonicalAllocation = _site)
-                                          : canonicalAllocation,
-                     _address) {}
-
-    ~EnvironmentAllocation() {}
-
-    Kind getKind() const { return Environment; }
-
-    bool hasAllocationSite(llvm::Value *site, ref<Expr> &_address) const;
-
-    static bool classof(const Allocation *allocation) {
-      return allocation->getKind() == Environment;
-    }
-
-    static bool classof(const EnvironmentAllocation *allocation) {
-      return true;
-    }
-
-    /// \brief Print the content of the object into a stream.
-    ///
-    /// \param The stream to print the data to.
-    void print(llvm::raw_ostream &stream) const;
   };
 
   /// \brief A class that represents LLVM value that can be destructively
@@ -448,18 +416,6 @@ class Allocation {
   /// Here UNK represents an unknown memory location. We assume that
   /// UNK cannot be versioned (non-destructive update applies to it).
   ///
-  /// R |- ind(v, UNK_ENV_PTR, _)
-  /// ---------------------------
-  /// R --> {}
-  ///
-  /// Storing into the environment results in an error, as the environment
-  /// should only be read. Here, we also assume that UNK_ENV_PTR holds.
-  ///
-  /// Environment Load: v = load @_environ
-  ///
-  /// ----------------------------------------
-  /// R --> R U {equals(succ(v), UNK_ENV_PTR)}
-  ///
   /// Load: v = load v'
   ///
   /// Here the rules are not mutually exclusive such that we avoid using set
@@ -475,11 +431,6 @@ class Allocation {
   /// R |- ind(v', m, i) /\ i > 0 /\ stores(m, v''')
   /// R' |- depends(succ(v), v''')
   /// ----------------------------------------------
-  /// R --> R'
-  ///
-  /// R |- ind(v', UNK_ENV_PTR, _)
-  /// R' |- depends(succ(v), UNK_ENV)
-  /// -------------------------------
   /// R --> R'
   ///
   /// R |/- ind(v', _, _)          R' |- stores(UNK, succ(v))
@@ -534,8 +485,6 @@ class Allocation {
       template <typename Key, typename T>
       static void
       deletePointerMapWithVectorValue(std::map<Key *, std::vector<T *> > &map);
-
-      static bool isEnvironmentAllocation(llvm::Value *site);
 
       /// \brief Tests if an allocation site is main function's argument
       static bool isMainArgument(llvm::Value *site);
