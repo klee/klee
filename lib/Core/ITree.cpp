@@ -1752,7 +1752,7 @@ void ITree::printTableStat(llvm::raw_ostream &stream) const {
                 (double)subsumptionCheckCount) << "\n";
 }
 
-void ITree::dumpInterpolationStat() {
+void ITree::dumpInterpolationStat() const {
   bool useColors = llvm::errs().is_displayed();
   if (useColors)
     llvm::errs().changeColor(llvm::raw_ostream::GREEN,

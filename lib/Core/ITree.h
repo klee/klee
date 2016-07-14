@@ -725,7 +725,7 @@ public:
   void dump() const;
 
   /// \brief Outputs interpolation statistics to LLVM error stream.
-  void dumpInterpolationStat();
+  void dumpInterpolationStat() const;
 };
 }
 #endif /* ITREE_H_ */
