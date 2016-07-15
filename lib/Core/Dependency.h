@@ -310,6 +310,12 @@ class Allocation {
 
     void addNewEdge(Allocation *source, Allocation *target);
 
+    /// \brief Detect if there is a path from one allocation node to another
+    /// allocation node in the allocation graph.
+    ///
+    /// \param The allocation to match with its allocation node.
+    bool isReachable(Allocation *from, Allocation *to);
+
     std::set<Allocation *> getSinkAllocations() const;
 
     std::set<Allocation *>

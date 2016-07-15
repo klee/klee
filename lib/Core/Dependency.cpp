@@ -17,6 +17,7 @@
 #include "Dependency.h"
 
 #include "klee/CommandLine.h"
+#include <queue>
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
 #include <llvm/IR/Constants.h>
@@ -226,6 +227,53 @@ void AllocationGraph::addNewSink(Allocation *candidateSink) {
   AllocationNode *newNode = new AllocationNode(candidateSink, 0);
   allNodes.push_back(newNode);
   sinks.push_back(newNode);
+}
+
+bool AllocationGraph::isReachable(Allocation *source, Allocation *target) {
+  AllocationNode *sourceNode = 0;
+  AllocationNode *targetNode = 0;
+
+  for (std::vector<AllocationNode *>::iterator it = allNodes.begin(),
+                                               itEnd = allNodes.end();
+       it != itEnd; ++it) {
+    if (!targetNode && (*it)->getAllocation() == target) {
+      targetNode = (*it);
+      if (sourceNode)
+        break;
+    }
+
+    if (!sourceNode && (*it)->getAllocation() == source) {
+      sourceNode = (*it);
+      if (targetNode)
+        break;
+    }
+  }
+
+  if (!sourceNode || !targetNode) {
+    return false;
+  } else {
+    // Using BFS to check path between source to target
+    std::queue<AllocationNode *> queue;
+    queue.push(sourceNode);
+
+    while (!queue.empty()) {
+      AllocationNode *currNode = queue.front();
+      queue.pop();
+
+      for (std::vector<AllocationNode *>::const_iterator
+               it = currNode->getParents().begin(),
+               itEnd = currNode->getParents().end();
+           it != itEnd; ++it) {
+
+        if (*it == targetNode) {
+          return true;
+        } else {
+          queue.push(*it);
+        }
+      }
+    }
+  }
+  return false;
 }
 
 void AllocationGraph::addNewEdge(Allocation *source, Allocation *target) {
@@ -1457,9 +1505,9 @@ void Dependency::recursivelyBuildAllocationGraph(
            it = sourceEdges.begin(),
            itEnd = sourceEdges.end();
        it != itEnd; ++it) {
-    // FIXME: Cheap detection of direct and 2-nodes cycles. In general, any
-    // cycle should not be allowed.
-    if (it->second != alloc && it->second != parentAlloc) {
+    // Prevent graph cycle: a new edge(u,v) is only inserted if there is no path
+    // from v to u.
+    if (!g->isReachable(alloc, it->second)) {
       g->addNewEdge(it->second, alloc);
       recursivelyBuildAllocationGraph(g, it->first, it->second, alloc);
     }
