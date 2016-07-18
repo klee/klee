@@ -946,7 +946,17 @@ void Dependency::execute(llvm::Instruction *instr,
         VersionedValue *returnValue = getNewVersionedValue(instr, args.at(0));
         VersionedValue *arg = getLatestValue(instr->getOperand(0), args.at(0));
         addDependency(arg, returnValue);
+      } else if (((calleeName.equals("fchmodat") && args.size() == 5)) ||
+                 (calleeName.equals("fchownat") && args.size() == 6)) {
+        VersionedValue *returnValue = getNewVersionedValue(instr, args.at(0));
+        for (unsigned i = 0; i < 2; ++i) {
+          VersionedValue *arg =
+              getLatestValue(instr->getOperand(i), args.at(i + 1));
+          if (arg)
+            addDependency(arg, returnValue);
+        }
       } else {
+        llvm::errs() << calleeName << " argument size: " << args.size();
         assert(!"unhandled external function");
       }
     }
@@ -1434,24 +1444,26 @@ Dependency::directAllocationSources(VersionedValue *target) const {
 }
 
 void Dependency::recursivelyBuildAllocationGraph(
-    AllocationGraph *g, VersionedValue *target, Allocation *alloc,
-    Allocation *parentAlloc) const {
-  if (!target)
+    AllocationGraph *g, VersionedValue *source, Allocation *target,
+    std::set<Allocation *> parentTargets) const {
+  if (!source)
     return;
 
   std::vector<Allocation *> ret;
   std::map<VersionedValue *, Allocation *> sourceEdges =
-      directAllocationSources(target);
+      directAllocationSources(source);
 
   for (std::map<VersionedValue *, Allocation *>::iterator
            it = sourceEdges.begin(),
            itEnd = sourceEdges.end();
        it != itEnd; ++it) {
-    // FIXME: Cheap detection of direct and 2-nodes cycles. In general, any
-    // cycle should not be allowed.
-    if (it->second != alloc && it->second != parentAlloc) {
-      g->addNewEdge(it->second, alloc);
-      recursivelyBuildAllocationGraph(g, it->first, it->second, alloc);
+    // Here we prevent construction of cycle in the graph by checking if the
+    // source equals target or included as an ancestor.
+    if (it->second != target &&
+        parentTargets.find(it->second) == parentTargets.end()) {
+      g->addNewEdge(it->second, target);
+      parentTargets.insert(target);
+      recursivelyBuildAllocationGraph(g, it->first, it->second, parentTargets);
     }
   }
 }
@@ -1467,7 +1479,8 @@ void Dependency::buildAllocationGraph(AllocationGraph *g,
            itEnd = sourceEdges.end();
        it != itEnd; ++it) {
     g->addNewSink(it->second);
-    recursivelyBuildAllocationGraph(g, it->first, it->second, 0);
+    recursivelyBuildAllocationGraph(g, it->first, it->second,
+                                    std::set<Allocation *>());
   }
 }
 
