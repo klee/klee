@@ -607,10 +607,10 @@ class Allocation {
     directAllocationSources(VersionedValue *target) const;
 
     /// \brief Builds dependency graph between memory allocations
-    void recursivelyBuildAllocationGraph(AllocationGraph *g,
-                                         VersionedValue *value,
-                                         Allocation *alloc,
-                                         Allocation *parentAllocation) const;
+    void
+    recursivelyBuildAllocationGraph(AllocationGraph *g, VersionedValue *source,
+                                    Allocation *target,
+                                    std::set<Allocation *> parentTargets) const;
 
     /// \brief Builds dependency graph between memory allocations
     void buildAllocationGraph(AllocationGraph *g, VersionedValue *value) const;
