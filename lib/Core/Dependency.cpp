@@ -17,6 +17,7 @@
 #include "Dependency.h"
 
 #include "klee/CommandLine.h"
+#include "klee/Internal/Support/ErrorHandling.h"
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
 #include <llvm/IR/Constants.h>
@@ -956,8 +957,15 @@ void Dependency::execute(llvm::Instruction *instr,
             addDependency(arg, returnValue);
         }
       } else {
-        llvm::errs() << calleeName << " argument size: " << args.size();
-        assert(!"unhandled external function");
+        // Default external function handler: We ignore functions that return
+        // void, and we DO NOT build dependency of return value to the
+        // arguments.
+        if (!instr->getType()->isVoidTy()) {
+          assert(args.size() && "non-void call missing return expression");
+          klee_warning("using default handler for external function %s",
+                       calleeName.str().c_str());
+          getNewVersionedValue(instr, args.at(0));
+        }
       }
     }
     return;
