@@ -101,7 +101,24 @@ public:
 
   typedef std::pair<ExecutionState*,ExecutionState*> StatePair;
 
+  enum TerminateReason {
+    Abort,
+    Assert,
+    Exec,
+    External,
+    Free,
+    Model,
+    Overflow,
+    Ptr,
+    ReadOnly,
+    ReportError,
+    User,
+    Unhandled,
+  };
+
 private:
+  static const char *TerminateReasonNames[];
+
   class TimerInfo;
 
   KModule *kmodule;
@@ -362,6 +379,8 @@ private:
   const InstructionInfo & getLastNonKleeInternalInstruction(const ExecutionState &state,
       llvm::Instruction** lastInstruction);
 
+  bool shouldExitOn(TerminateReason r);
+
   // remove state from queue and delete
   void terminateState(ExecutionState &state);
   // call exit handler and terminate state
@@ -371,7 +390,8 @@ private:
   // call error handler and terminate state
   void terminateStateOnError(ExecutionState &state, 
                              const llvm::Twine &message,
-                             const char *suffix,
+			     enum TerminateReason r,
+                             const char *suffix = NULL,
                              const llvm::Twine &longMessage="");
 
   // call error handler and terminate state, for execution errors
@@ -380,7 +400,7 @@ private:
   void terminateStateOnExecError(ExecutionState &state, 
                                  const llvm::Twine &message,
                                  const llvm::Twine &info="") {
-    terminateStateOnError(state, message, "exec.err", info);
+    terminateStateOnError(state, message, Exec, NULL, info);
   }
 
   /// bindModuleConstants - Initialize the module constant table.
