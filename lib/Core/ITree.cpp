@@ -775,10 +775,14 @@ PathCondition::packInterpolant(std::set<const Array *> &replacements) {
   for (PathCondition *it = this; it != 0; it = it->tail) {
     if (it->core) {
       if (!it->shadowed) {
+#ifdef SUPPORT_Z3
         it->shadowConstraint =
             (NoExistential ? it->constraint
                            : ShadowArray::getShadowExpression(it->constraint,
                                                               replacements));
+#else
+	it->shadowConstraint = it->constraint;
+#endif
         it->shadowed = true;
         it->boundVariables.insert(replacements.begin(), replacements.end());
       } else {
@@ -1522,7 +1526,9 @@ bool SubsumptionTableEntry::subsumed(
 
   bool success = false;
 
+#ifdef SUPPORT_Z3
   Z3Solver *z3solver = 0;
+#endif /* SUPPORT_Z3 */
 
   if (!detectConflictPrimitives(state, query))
     return false;
@@ -1533,6 +1539,7 @@ bool SubsumptionTableEntry::subsumed(
   if (!llvm::isa<ConstantExpr>(query)) {
     ++checkSolverCount;
 
+#ifdef SUPPORT_Z3
     if (!existentials.empty() && llvm::isa<ExistsExpr>(query)) {
       // llvm::errs() << "Existentials not empty\n";
 
@@ -1586,7 +1593,9 @@ bool SubsumptionTableEntry::subsumed(
 
       z3solver->setCoreSolverTimeout(0);
 
-    } else {
+    } else
+#endif /* SUPPORT_Z3 */
+    {
       // llvm::errs() << "No existential\n";
 
       // llvm::errs() << "Querying for subsumption check:\n";
@@ -1618,12 +1627,13 @@ bool SubsumptionTableEntry::subsumed(
   if (success && result == Solver::True) {
     // llvm::errs() << "Solver decided validity\n";
     std::vector<ref<Expr> > unsatCore;
+#ifdef SUPPORT_Z3
     if (z3solver) {
       unsatCore = z3solver->getUnsatCore();
       delete z3solver;
-    } else {
+    } else
+#endif /* SUPPORT_Z3 */
       unsatCore = solver->getUnsatCore();
-    }
 
     // State subsumed, we mark needed constraints on the
     // path condition.
@@ -1642,8 +1652,10 @@ bool SubsumptionTableEntry::subsumed(
   // llvm::errs() << "Solver did not decide validity\n";
 
   ++checkSolverFailureCount;
+#ifdef SUPPORT_Z3
   if (z3solver)
     delete z3solver;
+#endif /* SUPPORT_Z3 */
 
   return false;
 }

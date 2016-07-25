@@ -458,13 +458,14 @@ Dependency::getStoredExpressions(std::set<const Array *> &replacements,
           llvm::Value *base = (*allocIter)->getSite();
           uint64_t uintAddress = (*allocIter)->getUIntAddress();
           ref<Expr> address = (*allocIter)->getAddress();
-          if (NoExistential) {
-            concreteStore[base][uintAddress] = AddressValuePair(address, expr);
-          } else {
+#ifdef SUPPORT_Z3
+	  if (!NoExistential) {
             concreteStore[base][uintAddress] = AddressValuePair(
                 ShadowArray::getShadowExpression(address, replacements),
                 ShadowArray::getShadowExpression(expr, replacements));
-          }
+	  } else
+#endif
+            concreteStore[base][uintAddress] = AddressValuePair(address, expr);
         }
       } else {
         ref<Expr> address = (*allocIter)->getAddress();
@@ -475,13 +476,14 @@ Dependency::getStoredExpressions(std::set<const Array *> &replacements,
         } else if (v->isCore()) {
           ref<Expr> expr = v->getExpression();
           llvm::Value *base = v->getValue();
-          if (NoExistential) {
-            symbolicStore[base].push_back(AddressValuePair(address, expr));
-          } else {
+#ifdef SUPPORT_Z3
+          if (!NoExistential) {
             symbolicStore[base].push_back(AddressValuePair(
                 ShadowArray::getShadowExpression(address, replacements),
                 ShadowArray::getShadowExpression(expr, replacements)));
-          }
+          } else
+#endif
+            symbolicStore[base].push_back(AddressValuePair(address, expr));
         }
       }
     }
