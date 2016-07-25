@@ -1278,7 +1278,12 @@ void Dependency::executePHI(llvm::Instruction *instr,
   } else if (llvm::isa<llvm::Constant>(llvmArgValue)) {
     getNewVersionedValue(instr, valueExpr);
   } else {
-    assert(!"operand not found");
+    if (llvmArgValue->getType()->isPointerTy()) {
+      addPointerEquality(getNewVersionedValue(llvmArgValue, valueExpr),
+                         getInitialAllocation(llvmArgValue, valueExpr));
+    } else {
+      assert(!"operand not found");
+    }
   }
 }
 
