@@ -3803,9 +3803,11 @@ void Executor::runFunctionAsMain(Function *f,
     SearchTree::save(interpreterHandler->getOutputFilename("tree.dot"));
     SearchTree::deallocate();
 
+#ifdef SUPPORT_Z3
     // Print interpolation time statistics
     if (InterpolationStat)
       interpTree->dumpInterpolationStat();
+#endif
 
     delete interpTree;
     interpTree = 0;
