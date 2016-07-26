@@ -1277,13 +1277,11 @@ void Dependency::executePHI(llvm::Instruction *instr,
     addDependency(val, getNewVersionedValue(instr, valueExpr));
   } else if (llvm::isa<llvm::Constant>(llvmArgValue)) {
     getNewVersionedValue(instr, valueExpr);
-  } else {
-    if (llvmArgValue->getType()->isPointerTy()) {
+  } else if (llvmArgValue->getType()->isPointerTy()) {
       addPointerEquality(getNewVersionedValue(llvmArgValue, valueExpr),
                          getInitialAllocation(llvmArgValue, valueExpr));
-    } else {
+  } else {
       assert(!"operand not found");
-    }
   }
 }
 
