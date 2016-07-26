@@ -503,8 +503,13 @@ VersionedValue *Dependency::getLatestValue(llvm::Value *value,
     }
   }
 
-  if (llvm::isa<llvm::Constant>(value) &&
-      !llvm::isa<llvm::PointerType>(value->getType()))
+  // A global value is a constant: Its value is constant throughout execution,
+  // but
+  // indeterministic. In case this was a non-global-value (normal) constant, we
+  // immediately return with a versioned value, as dependencies are not
+  // important. However, the dependencies of global values should be searched
+  // for in the ancestors (later) as they need to be consistent in an execution.
+  if (llvm::isa<llvm::Constant>(value) && !llvm::isa<llvm::GlobalValue>(value))
     return getNewVersionedValue(value, valueExpr);
 
   for (std::vector<VersionedValue *>::const_reverse_iterator
@@ -515,10 +520,17 @@ VersionedValue *Dependency::getLatestValue(llvm::Value *value,
       return *it;
   }
 
+  VersionedValue *ret = 0;
   if (parentDependency)
-    return parentDependency->getLatestValue(value, valueExpr);
+    ret = parentDependency->getLatestValue(value, valueExpr);
 
-  return 0;
+  if (!ret && llvm::isa<llvm::GlobalValue>(value)) {
+    // We could not find the global value: we register it anew.
+    ret = getNewVersionedValue(value, valueExpr);
+    if (value->getType()->isPointerTy())
+      addPointerEquality(ret, getInitialAllocation(value, valueExpr));
+  }
+  return ret;
 }
 
 VersionedValue *
