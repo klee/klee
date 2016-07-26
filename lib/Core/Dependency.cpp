@@ -687,7 +687,7 @@ Dependency::directLocalFlowSources(VersionedValue *target) const {
   for (std::vector<FlowsTo *>::const_iterator it = flowsToList.begin(),
                                               itEnd = flowsToList.end();
        it != itEnd; ++it) {
-    if ((*it)->getTarget() == target) {
+    if ((*it)->getTarget() == target && (*it)->getSource()) {
       ret.push_back((*it)->getSource());
     }
   }
@@ -916,19 +916,22 @@ void Dependency::execute(llvm::Instruction *instr,
         // return address.
         VersionedValue *returnValue = getNewVersionedValue(instr, args.at(0));
         VersionedValue *arg = getLatestValue(instr->getOperand(0), args.at(0));
-        addDependency(arg, returnValue);
+        if (arg)
+          addDependency(arg, returnValue);
       } else if (calleeName.equals("calloc") && args.size() == 1) {
         // calloc is an allocation-type instruction: its single argument is the
         // return address.
         VersionedValue *returnValue = getNewVersionedValue(instr, args.at(0));
         VersionedValue *arg = getLatestValue(instr->getOperand(0), args.at(0));
-        addDependency(arg, returnValue);
+        if (arg)
+          addDependency(arg, returnValue);
       } else if (calleeName.equals("syscall") && args.size() >= 2) {
         VersionedValue *returnValue = getNewVersionedValue(instr, args.at(0));
         for (unsigned i = 0; i + 1 < args.size(); ++i) {
           VersionedValue *arg =
               getLatestValue(instr->getOperand(i), args.at(i + 1));
-          addDependency(arg, returnValue);
+          if (arg)
+            addDependency(arg, returnValue);
         }
       } else if (std::mismatch(getValuePrefix.begin(), getValuePrefix.end(),
                                calleeName.begin()).first ==
@@ -937,7 +940,8 @@ void Dependency::execute(llvm::Instruction *instr,
         VersionedValue *returnValue = getNewVersionedValue(instr, args.at(0));
         VersionedValue *arg =
             getNewVersionedValue(instr->getOperand(0), args.at(1));
-        addDependency(arg, returnValue);
+        if (arg)
+          addDependency(arg, returnValue);
       } else if (calleeName.equals("getenv") && args.size() == 2) {
         addPointerEquality(getNewVersionedValue(instr, args.at(0)),
                            getInitialAllocation(instr, args.at(0)));
@@ -945,22 +949,27 @@ void Dependency::execute(llvm::Instruction *instr,
         VersionedValue *returnValue = getNewVersionedValue(instr, args.at(0));
         VersionedValue *formatArg =
             getLatestValue(instr->getOperand(0), args.at(1));
-        addDependency(formatArg, returnValue);
+        if (formatArg)
+          addDependency(formatArg, returnValue);
         for (unsigned i = 2, argsNum = args.size(); i < argsNum; ++i) {
           VersionedValue *arg =
               getLatestValue(instr->getOperand(0), args.at(i));
-          addDependency(arg, returnValue);
+          if (arg)
+            addDependency(arg, returnValue);
         }
       } else if (calleeName.equals("vprintf") && args.size() == 3) {
         VersionedValue *returnValue = getNewVersionedValue(instr, args.at(0));
         VersionedValue *arg0 = getLatestValue(instr->getOperand(0), args.at(1));
         VersionedValue *arg1 = getLatestValue(instr->getOperand(1), args.at(2));
-        addDependency(arg0, returnValue);
-        addDependency(arg1, returnValue);
+        if (arg0)
+          addDependency(arg0, returnValue);
+        if (arg1)
+          addDependency(arg1, returnValue);
       } else if (calleeName.equals("geteuid") && args.size() == 1) {
         VersionedValue *returnValue = getNewVersionedValue(instr, args.at(0));
         VersionedValue *arg = getLatestValue(instr->getOperand(0), args.at(0));
-        addDependency(arg, returnValue);
+        if (arg)
+          addDependency(arg, returnValue);
       } else if (((calleeName.equals("fchmodat") && args.size() == 5)) ||
                  (calleeName.equals("fchownat") && args.size() == 6)) {
         VersionedValue *returnValue = getNewVersionedValue(instr, args.at(0));
@@ -1041,7 +1050,8 @@ void Dependency::execute(llvm::Instruction *instr,
           VersionedValue *arg =
               getNewVersionedValue(instr->getOperand(0), argExpr);
           VersionedValue *returnValue = getNewVersionedValue(instr, argExpr);
-          addDependency(arg, returnValue);
+          if (arg)
+            addDependency(arg, returnValue);
         } else {
           assert(!"operand not found");
         }
@@ -1182,7 +1192,8 @@ void Dependency::execute(llvm::Instruction *instr,
                    it = directSources.begin(),
                    itEnd = directSources.end();
                it != itEnd; ++it) {
-            addDependency((*it), newValue);
+            if (*it)
+              addDependency((*it), newValue);
           }
         } else {
           // Here getelementptr forcibly uses a value not known to be an
