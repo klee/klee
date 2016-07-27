@@ -1873,9 +1873,10 @@ void ITree::remove(ITreeNode *node) {
     // traversed, hence the correct time to table the interpolant.
     if (!node->isSubsumed) {
       SubsumptionTableEntry *entry = new SubsumptionTableEntry(node);
-      if (entry->getInterpolant().get())
+      if (entry->getInterpolant().get()){
         store(entry);
-      SearchTree::addTableEntryMapping(node, entry);
+      	SearchTree::addTableEntryMapping(node, entry);
+      }
     }
 
     delete node;
