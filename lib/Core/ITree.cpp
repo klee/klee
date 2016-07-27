@@ -1660,6 +1660,8 @@ bool SubsumptionTableEntry::subsumed(
   return false;
 }
 
+ref<Expr> SubsumptionTableEntry::getInterpolant() const { return interpolant; }
+
 void SubsumptionTableEntry::print(llvm::raw_ostream &stream) const {
   stream << "------------ Subsumption Table Entry ------------\n";
   stream << "Program point = " << nodeId << "\n";
@@ -1871,7 +1873,8 @@ void ITree::remove(ITreeNode *node) {
     // traversed, hence the correct time to table the interpolant.
     if (!node->isSubsumed) {
       SubsumptionTableEntry *entry = new SubsumptionTableEntry(node);
-      store(entry);
+      if (entry->getInterpolant().get())
+        store(entry);
       SearchTree::addTableEntryMapping(node, entry);
     }
 

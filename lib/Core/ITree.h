@@ -481,6 +481,8 @@ public:
     return llvm::isa<ConcatExpr>(expr.get()) || llvm::isa<ReadExpr>(expr.get());
   }
 
+  ref<Expr> getInterpolant() const;
+
   void dump() const {
     this->print(llvm::errs());
     llvm::errs() << "\n";
