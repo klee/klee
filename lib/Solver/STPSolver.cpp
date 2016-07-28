@@ -232,8 +232,8 @@ runAndGetCexForked(::VC vc, STPBuilder *builder, ::VCExpr q,
     fprintf(stderr, "ERROR: fork failed (for STP)");
     switch(errno) {
         case EAGAIN: fprintf(stderr, "ERROR: EAGAIN, RLIMIT_NPROC encountered or not enough memory for page tables and task structure."); break;
-        case ENOMEM: fprintf(stderr, "ERROR: ENOMEM, Can not allocate memory.");
-        case ENOSYS: fprintf(stderr, "ERROR: ENOSYS, fork() is not supported on this platform.");
+        case ENOMEM: fprintf(stderr, "ERROR: ENOMEM, Can not allocate memory."); break;
+        case ENOSYS: fprintf(stderr, "ERROR: ENOSYS, fork() is not supported on this platform."); break;
     }
     if (!IgnoreSolverFailures)
       exit(1);
