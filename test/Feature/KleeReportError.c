@@ -1,6 +1,7 @@
 // RUN: %llvmgcc %s -g -emit-llvm -O0 -c -o %t2.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --emit-all-errors %t2.bc 2>&1 | FileCheck %s
+// RUN: %klee -no-interpolation --output-dir=%t.klee-out --emit-all-errors
+// %t2.bc 2>&1 | FileCheck %s
 // RUN: ls %t.klee-out/ | grep .my.err | wc -l | grep 2
 #include <stdio.h>
 #include <assert.h>
