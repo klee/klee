@@ -670,7 +670,7 @@ public:
   void setCurrentINode(ExecutionState &state, uintptr_t programPoint);
 
   /// \brief Deletes the interpolation tree node
-  void remove(ITreeNode *node);
+  void remove(ITreeNode *node, llvm::Instruction *instr);
 
   /// \brief Invokes the subsumption check
   bool subsumptionCheck(TimingSolver *solver, ExecutionState &state,

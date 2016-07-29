@@ -1863,20 +1863,28 @@ void ITree::setCurrentINode(ExecutionState &state, uintptr_t programPoint) {
   setCurrentINodeTimer.stop();
 }
 
-void ITree::remove(ITreeNode *node) {
+void ITree::remove(ITreeNode *node, llvm::Instruction *instr) {
   removeTimer.start();
   assert(!node->left && !node->right);
   do {
     ITreeNode *p = node->parent;
 
+    // Disabling the subsumption check within KLEE's own API by
+    // never store a table entry for KLEE's own API.
+    bool kleeAPI = false;
+    if (llvm::isa<llvm::CallInst>(instr)) {
+      llvm::CallInst *callInst = llvm::dyn_cast<llvm::CallInst>(instr);
+      llvm::Function *f = callInst->getCalledFunction();
+      if (f && f->getName().substr(0, 5).equals("klee_")) {
+        kleeAPI = true;
+      }
+    }
     // As the node is about to be deleted, it must have been completely
     // traversed, hence the correct time to table the interpolant.
-    if (!node->isSubsumed) {
+    if (!node->isSubsumed && !kleeAPI) {
       SubsumptionTableEntry *entry = new SubsumptionTableEntry(node);
-      if (entry->getInterpolant().get()){
-        store(entry);
-      	SearchTree::addTableEntryMapping(node, entry);
-      }
+      store(entry);
+      SearchTree::addTableEntryMapping(node, entry);
     }
 
     delete node;

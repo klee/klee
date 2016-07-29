@@ -2705,7 +2705,7 @@ void Executor::updateStates(ExecutionState *current) {
       seedMap.erase(it3);
     processTree->remove(es->ptreeNode);
     if (INTERPOLATION_ENABLED)
-      interpTree->remove(es->itreeNode);
+      interpTree->remove(es->itreeNode, es->prevPC->inst);
     delete es;
   }
   removedStates.clear();
@@ -3011,7 +3011,7 @@ void Executor::terminateState(ExecutionState &state) {
     processTree->remove(state.ptreeNode);
 
     if (INTERPOLATION_ENABLED)
-      interpTree->remove(state.itreeNode);
+      interpTree->remove(state.itreeNode, state.prevPC->inst);
     delete &state;
   }
 }
