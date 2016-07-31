@@ -98,6 +98,8 @@ STPSolverImpl::STPSolverImpl(bool _useForkedSTP, bool _optimizeDivides)
   // we restore the old behaviour.
   vc_setInterfaceFlags(vc, EXPRDELETE, 0);
 
+  make_division_total(vc);
+
   vc_registerErrorHandler(::stp_error_handler);
 
   if (useForkedSTP) {
