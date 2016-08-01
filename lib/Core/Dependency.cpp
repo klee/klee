@@ -874,7 +874,8 @@ void Dependency::execute(llvm::Instruction *instr,
           calleeName.equals("puts") || calleeName.equals("fflush") ||
           calleeName.equals("_Znwm") || calleeName.equals("_Znam") ||
           calleeName.equals("strcmp") || calleeName.equals("strncmp") ||
-          (calleeName.equals("__errno_location") && args.size() == 1)) {
+          (calleeName.equals("__errno_location") && args.size() == 1) ||
+          (calleeName.equals("geteuid") && args.size() == 1)) {
         getNewVersionedValue(instr, args.at(0));
       } else if (calleeName.equals("_ZNSi5seekgElSt12_Ios_Seekdir") &&
                  args.size() == 4) {
@@ -921,10 +922,8 @@ void Dependency::execute(llvm::Instruction *instr,
       } else if (calleeName.equals("calloc") && args.size() == 1) {
         // calloc is an allocation-type instruction: its single argument is the
         // return address.
-        VersionedValue *returnValue = getNewVersionedValue(instr, args.at(0));
-        VersionedValue *arg = getLatestValue(instr->getOperand(0), args.at(0));
-        if (arg)
-          addDependency(arg, returnValue);
+        addPointerEquality(getNewVersionedValue(instr, args.at(0)),
+                           getInitialAllocation(instr, args.at(0)));
       } else if (calleeName.equals("syscall") && args.size() >= 2) {
         VersionedValue *returnValue = getNewVersionedValue(instr, args.at(0));
         for (unsigned i = 0; i + 1 < args.size(); ++i) {
@@ -938,8 +937,7 @@ void Dependency::execute(llvm::Instruction *instr,
                      getValuePrefix.end() &&
                  args.size() == 2) {
         VersionedValue *returnValue = getNewVersionedValue(instr, args.at(0));
-        VersionedValue *arg =
-            getNewVersionedValue(instr->getOperand(0), args.at(1));
+        VersionedValue *arg = getLatestValue(instr->getOperand(0), args.at(1));
         if (arg)
           addDependency(arg, returnValue);
       } else if (calleeName.equals("getenv") && args.size() == 2) {
@@ -953,7 +951,7 @@ void Dependency::execute(llvm::Instruction *instr,
           addDependency(formatArg, returnValue);
         for (unsigned i = 2, argsNum = args.size(); i < argsNum; ++i) {
           VersionedValue *arg =
-              getLatestValue(instr->getOperand(0), args.at(i));
+              getLatestValue(instr->getOperand(i - 1), args.at(i));
           if (arg)
             addDependency(arg, returnValue);
         }
@@ -965,11 +963,6 @@ void Dependency::execute(llvm::Instruction *instr,
           addDependency(arg0, returnValue);
         if (arg1)
           addDependency(arg1, returnValue);
-      } else if (calleeName.equals("geteuid") && args.size() == 1) {
-        VersionedValue *returnValue = getNewVersionedValue(instr, args.at(0));
-        VersionedValue *arg = getLatestValue(instr->getOperand(0), args.at(0));
-        if (arg)
-          addDependency(arg, returnValue);
       } else if (((calleeName.equals("fchmodat") && args.size() == 5)) ||
                  (calleeName.equals("fchownat") && args.size() == 6)) {
         VersionedValue *returnValue = getNewVersionedValue(instr, args.at(0));
