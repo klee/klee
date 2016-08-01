@@ -687,7 +687,7 @@ Dependency::directLocalFlowSources(VersionedValue *target) const {
   for (std::vector<FlowsTo *>::const_iterator it = flowsToList.begin(),
                                               itEnd = flowsToList.end();
        it != itEnd; ++it) {
-    if ((*it)->getTarget() == target && (*it)->getSource()) {
+    if ((*it)->getTarget() == target) {
       ret.push_back((*it)->getSource());
     }
   }
