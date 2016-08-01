@@ -1863,7 +1863,7 @@ void ITree::setCurrentINode(ExecutionState &state) {
   setCurrentINodeTimer.stop();
 }
 
-void ITree::remove(ITreeNode *node, llvm::Instruction *instr) {
+void ITree::remove(ITreeNode *node) {
   removeTimer.start();
   assert(!node->left && !node->right);
   do {
