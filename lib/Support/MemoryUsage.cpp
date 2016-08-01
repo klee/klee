@@ -26,7 +26,7 @@ using namespace klee;
 
 size_t util::GetTotalMallocUsage() {
 #ifdef HAVE_GPERFTOOLS_MALLOC_EXTENSION_H
-  uint64_t value;
+  size_t value = 0;
   MallocExtension::instance()->GetNumericProperty(
       "generic.current_allocated_bytes", &value);
   return value;
@@ -36,9 +36,9 @@ size_t util::GetTotalMallocUsage() {
   // does not include mmap()'ed memory in mi.uordblks
   // but other implementations (e.g. tcmalloc) do.
 #if defined(__GLIBC__)
-  return mi.uordblks + mi.hblkhd;
+  return (size_t)(unsigned)mi.uordblks + (unsigned)mi.hblkhd;
 #else
-  return mi.uordblks;
+  return (unsigned)mi.uordblks;
 #endif
 
 #elif defined(HAVE_MALLOC_ZONE_STATISTICS) && defined(HAVE_MALLOC_MALLOC_H)
