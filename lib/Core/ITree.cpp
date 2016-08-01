@@ -1660,6 +1660,8 @@ bool SubsumptionTableEntry::subsumed(
   return false;
 }
 
+ref<Expr> SubsumptionTableEntry::getInterpolant() const { return interpolant; }
+
 void SubsumptionTableEntry::print(llvm::raw_ostream &stream) const {
   stream << "------------ Subsumption Table Entry ------------\n";
   stream << "Program point = " << nodeId << "\n";
@@ -1853,11 +1855,11 @@ void ITree::store(SubsumptionTableEntry *subItem) {
   subsumptionTable[subItem->nodeId].push_back(subItem);
 }
 
-void ITree::setCurrentINode(ExecutionState &state, uintptr_t programPoint) {
+void ITree::setCurrentINode(ExecutionState &state) {
   setCurrentINodeTimer.start();
   currentINode = state.itreeNode;
-  currentINode->setNodeLocation(programPoint);
-  SearchTree::setCurrentNode(state, programPoint);
+  currentINode->setNodeLocation(state.pc->inst);
+  SearchTree::setCurrentNode(state, currentINode->getNodeId());
   setCurrentINodeTimer.stop();
 }
 
@@ -1869,7 +1871,7 @@ void ITree::remove(ITreeNode *node) {
 
     // As the node is about to be deleted, it must have been completely
     // traversed, hence the correct time to table the interpolant.
-    if (!node->isSubsumed) {
+    if (!node->isSubsumed && node->storable) {
       SubsumptionTableEntry *entry = new SubsumptionTableEntry(node);
       store(entry);
       SearchTree::addTableEntryMapping(node, entry);

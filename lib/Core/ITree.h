@@ -481,6 +481,8 @@ public:
     return llvm::isa<ConcatExpr>(expr.get()) || llvm::isa<ReadExpr>(expr.get());
   }
 
+  ref<Expr> getInterpolant() const;
+
   void dump() const {
     this->print(llvm::errs());
     llvm::errs() << "\n";
@@ -526,12 +528,19 @@ private:
 
   bool isSubsumed;
 
+  bool storable;
+
   /// \brief Graph for displaying as .dot file
   SearchTree *graph;
 
-  void setNodeLocation(uintptr_t programPoint) {
+  void setNodeLocation(llvm::Instruction *instr) {
     if (!nodeId)
-      nodeId = programPoint;
+      nodeId = reinterpret_cast<uintptr_t>(instr);
+
+    // Disabling the subsumption check within KLEE's own API
+    // (callsites of klee_ and at any location within the klee_ function)
+    // by never store a table entry for KLEE's own API, marked with flag storable.
+    storable = !(instr->getParent()->getParent()->getName().substr(0, 5).equals("klee_"));
   }
 
   /// \brief for printing method running time statistics
@@ -664,8 +673,7 @@ public:
   /// pointer value.
   ///
   /// \param The KLEE execution state to associate the current node with.
-  /// \param The id to be set for the current node.
-  void setCurrentINode(ExecutionState &state, uintptr_t programPoint);
+  void setCurrentINode(ExecutionState &state);
 
   /// \brief Deletes the interpolation tree node
   void remove(ITreeNode *node);
