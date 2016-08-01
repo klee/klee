@@ -539,18 +539,8 @@ private:
 
     // Disabling the subsumption check within KLEE's own API
     // (callsites of klee_ and at any location within the klee_ function)
-    // by never store a table entry for KLEE's own API.
-    storable = true;
-    if (llvm::isa<llvm::CallInst>(instr)) {
-      llvm::CallInst *callInst = llvm::dyn_cast<llvm::CallInst>(instr);
-      llvm::Function *f = callInst->getCalledFunction();
-      if (f && f->getName().substr(0, 5).equals("klee_")) {
-        storable = false;
-      }
-    } else if (instr->getParent()->getParent()->getName().substr(0, 5).equals(
-                   "klee_")) {
-      storable = false;
-    }
+    // by never store a table entry for KLEE's own API, marked with flag storable.
+    storable = !(instr->getParent()->getParent()->getName().substr(0, 5).equals("klee_"));
   }
 
   /// \brief for printing method running time statistics
@@ -686,7 +676,7 @@ public:
   void setCurrentINode(ExecutionState &state);
 
   /// \brief Deletes the interpolation tree node
-  void remove(ITreeNode *node, llvm::Instruction *instr);
+  void remove(ITreeNode *node);
 
   /// \brief Invokes the subsumption check
   bool subsumptionCheck(TimingSolver *solver, ExecutionState &state,
