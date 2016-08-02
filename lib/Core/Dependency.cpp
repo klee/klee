@@ -532,6 +532,7 @@ VersionedValue *Dependency::getLatestValue(llvm::Value *value,
     if (value->getType()->isPointerTy())
       addPointerEquality(ret, getInitialAllocation(value, valueExpr));
   }
+
   return ret;
 }
 

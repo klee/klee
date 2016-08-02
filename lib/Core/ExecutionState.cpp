@@ -78,6 +78,9 @@ ExecutionState::ExecutionState(KFunction *kf)
 ExecutionState::ExecutionState(const std::vector<ref<Expr> > &assumptions)
     : constraints(assumptions), queryCost(0.), ptreeNode(0), itreeNode(0) {}
 
+ExecutionState::ExecutionState(const KInstIterator &copyPrevPC, const std::vector<ref<Expr> > &assumptions)
+    : prevPC(copyPrevPC), constraints(assumptions), queryCost(0.), ptreeNode(0), itreeNode(0) {}
+
 ExecutionState::~ExecutionState() {
   for (unsigned int i=0; i<symbolics.size(); i++)
   {

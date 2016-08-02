@@ -168,6 +168,8 @@ public:
   // use on structure
   ExecutionState(const std::vector<ref<Expr> > &assumptions);
 
+  ExecutionState(const KInstIterator &copyPrevPC, const std::vector<ref<Expr> > &assumptions);
+
   ExecutionState(const ExecutionState &state);
 
   ~ExecutionState();
