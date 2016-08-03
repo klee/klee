@@ -11,6 +11,7 @@
 
 #include "MetaSMTBuilder.h"
 #include "klee/Constraints.h"
+#include "klee/Internal/Support/ErrorHandling.h"
 #include "klee/Solver.h"
 #include "klee/SolverImpl.h"
 #include "klee/util/Assignment.h"
@@ -281,7 +282,7 @@ MetaSMTSolverImpl<SolverContext>::runAndGetCexForked(
   fflush(stderr);
   int pid = fork();
   if (pid == -1) {
-    fprintf(stderr, "error: fork failed (for metaSMT)");
+    klee_warning("fork failed (for metaSMT)");
     return (SolverImpl::SOLVER_RUN_STATUS_FORK_FAILED);
   }
 
@@ -388,7 +389,7 @@ MetaSMTSolverImpl<SolverContext>::runAndGetCexForked(
     } while (res < 0 && errno == EINTR);
 
     if (res < 0) {
-      fprintf(stderr, "error: waitpid() for metaSMT failed");
+      klee_warning("waitpid() for metaSMT failed");
       return (SolverImpl::SOLVER_RUN_STATUS_WAITPID_FAILED);
     }
 
@@ -408,10 +409,10 @@ MetaSMTSolverImpl<SolverContext>::runAndGetCexForked(
     } else if (exitcode == 1) {
       hasSolution = false;
     } else if (exitcode == 52) {
-      fprintf(stderr, "error: metaSMT timed out");
+      klee_warning("metaSMT timed out");
       return (SolverImpl::SOLVER_RUN_STATUS_TIMEOUT);
     } else {
-      fprintf(stderr, "error: metaSMT did not return a recognized code");
+      klee_warning("metaSMT did not return a recognized code");
       return (SolverImpl::SOLVER_RUN_STATUS_UNEXPECTED_EXIT_CODE);
     }
 
