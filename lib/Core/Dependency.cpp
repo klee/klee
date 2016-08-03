@@ -1047,7 +1047,7 @@ void Dependency::execute(llvm::Instruction *instr,
           if (arg)
             addDependency(arg, returnValue);
         } else if (llvm::isa<llvm::CallInst>(instr->getOperand(0))) {
-        	getNewVersionedValue(instr->getOperand(0), argExpr);
+          getNewVersionedValue(instr->getOperand(0), argExpr);
         } else {
           assert(!"operand not found");
         }
