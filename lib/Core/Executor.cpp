@@ -2955,8 +2955,8 @@ void Executor::callExternalFunction(ExecutionState &state,
     return;
   
   if (NoExternals && !okExternals.count(function->getName())) {
-    llvm::errs() << "KLEE:ERROR: Calling not-OK external function : "
-                 << function->getName().str() << "\n";
+    klee_message("Disallowed external call of function %s",
+                 function->getName().str().c_str());
     terminateStateOnError(state, "externals disallowed", "user.err");
     return;
   }
@@ -2995,7 +2995,6 @@ void Executor::callExternalFunction(ExecutionState &state,
   state.addressSpace.copyOutConcretes();
 
   if (!SuppressExternalWarnings) {
-
     std::string TmpStr;
     llvm::raw_string_ostream os(TmpStr);
     os << "calling external: " << function->getName().str() << "(";
@@ -3004,7 +3003,7 @@ void Executor::callExternalFunction(ExecutionState &state,
       if (i != arguments.size()-1)
 	os << ", ";
     }
-    os << ")";
+    os << ") at " << target->info->file << ":" << target->info->line;
     
     if (AllExternalWarnings)
       klee_warning("%s", os.str().c_str());
