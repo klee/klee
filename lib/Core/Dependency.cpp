@@ -1047,17 +1047,7 @@ void Dependency::execute(llvm::Instruction *instr,
           if (arg)
             addDependency(arg, returnValue);
         } else if (llvm::isa<llvm::CallInst>(instr->getOperand(0))) {
-          llvm::CallInst *callInst =
-              llvm::dyn_cast<llvm::CallInst>(instr->getOperand(0));
-          llvm::Function *f = callInst->getCalledFunction();
-          llvm::StringRef calleeName = f->getName();
-          if (calleeName.equals("write") && args.size() == 1) {
-            getNewVersionedValue(instr->getOperand(0), argExpr);
-          } else if (calleeName.equals("read") && args.size() == 1) {
-            getNewVersionedValue(instr->getOperand(0), argExpr);
-          } else {
-            assert(!"calleeName is not defined");
-          }
+        	getNewVersionedValue(instr->getOperand(0), argExpr);
         } else {
           assert(!"operand not found");
         }
