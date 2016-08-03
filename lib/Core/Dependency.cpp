@@ -531,10 +531,9 @@ VersionedValue *Dependency::getLatestValue(llvm::Value *value,
     ret = getNewVersionedValue(value, valueExpr);
     if (value->getType()->isPointerTy())
       addPointerEquality(ret, getInitialAllocation(value, valueExpr));
-    return ret;
   }
 
-  return getNewVersionedValue(value, valueExpr);
+  return ret;
 }
 
 VersionedValue *
@@ -1047,6 +1046,18 @@ void Dependency::execute(llvm::Instruction *instr,
           VersionedValue *returnValue = getNewVersionedValue(instr, argExpr);
           if (arg)
             addDependency(arg, returnValue);
+        } else if (llvm::isa<llvm::CallInst>(instr->getOperand(0))) {
+          llvm::CallInst *callInst =
+              llvm::dyn_cast<llvm::CallInst>(instr->getOperand(0));
+          llvm::Function *f = callInst->getCalledFunction();
+          llvm::StringRef calleeName = f->getName();
+          if (calleeName.equals("write") && args.size() == 1) {
+            getNewVersionedValue(instr->getOperand(0), argExpr);
+          } else if (calleeName.equals("read") && args.size() == 1) {
+            getNewVersionedValue(instr->getOperand(0), argExpr);
+          } else {
+            assert(!"calleeName is not defined");
+          }
         } else {
           assert(!"operand not found");
         }
@@ -1295,7 +1306,8 @@ void Dependency::executePHI(llvm::Instruction *instr,
   VersionedValue *val = getLatestValue(llvmArgValue, valueExpr);
   if (val) {
     addDependency(val, getNewVersionedValue(instr, valueExpr));
-  } else if (llvm::isa<llvm::Constant>(llvmArgValue)) {
+  } else if (llvm::isa<llvm::Constant>(llvmArgValue) ||
+             llvm::isa<llvm::Argument>(llvmArgValue)) {
     getNewVersionedValue(instr, valueExpr);
   } else {
     assert(!"operand not found");
