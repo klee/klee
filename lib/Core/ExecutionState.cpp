@@ -76,8 +76,10 @@ ExecutionState::ExecutionState(KFunction *kf)
 }
 
 #ifdef SUPPORT_Z3
-ExecutionState::ExecutionState(const KInstIterator &copyPrevPC, const std::vector<ref<Expr> > &assumptions)
-    : prevPC(copyPrevPC), constraints(assumptions), queryCost(0.), ptreeNode(0), itreeNode(0) {}
+ExecutionState::ExecutionState(const KInstIterator &srcPrevPC,
+                               const std::vector<ref<Expr> > &assumptions)
+    : prevPC(srcPrevPC), constraints(assumptions), queryCost(0.), ptreeNode(0),
+      itreeNode(0) {}
 #else
 ExecutionState::ExecutionState(const std::vector<ref<Expr> > &assumptions)
     : constraints(assumptions), queryCost(0.), ptreeNode(0), itreeNode(0) {}

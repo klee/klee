@@ -167,7 +167,7 @@ public:
 // XXX total hack, just used to make a state so solver can
 // use on structure
 #ifdef SUPPORT_Z3
-  ExecutionState(const KInstIterator &copyPrevPC,
+  ExecutionState(const KInstIterator &srcPrevPC,
                  const std::vector<ref<Expr> > &assumptions);
 #else
   ExecutionState(const std::vector<ref<Expr> > &assumptions);
