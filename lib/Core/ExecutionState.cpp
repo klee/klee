@@ -75,11 +75,13 @@ ExecutionState::ExecutionState(KFunction *kf)
   pushFrame(0, kf);
 }
 
-ExecutionState::ExecutionState(const std::vector<ref<Expr> > &assumptions)
-    : constraints(assumptions), queryCost(0.), ptreeNode(0), itreeNode(0) {}
-
+#ifdef SUPPORT_Z3
 ExecutionState::ExecutionState(const KInstIterator &copyPrevPC, const std::vector<ref<Expr> > &assumptions)
     : prevPC(copyPrevPC), constraints(assumptions), queryCost(0.), ptreeNode(0), itreeNode(0) {}
+#else
+ExecutionState::ExecutionState(const std::vector<ref<Expr> > &assumptions)
+    : constraints(assumptions), queryCost(0.), ptreeNode(0), itreeNode(0) {}
+#endif
 
 ExecutionState::~ExecutionState() {
   for (unsigned int i=0; i<symbolics.size(); i++)
