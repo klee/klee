@@ -393,7 +393,7 @@ llvm::raw_fd_ostream *KleeHandler::openOutputFile(const std::string &filename) {
   f = new llvm::raw_fd_ostream(path.c_str(), Error, llvm::raw_fd_ostream::F_Binary);
 #endif
   if (!Error.empty()) {
-    klee_error("error opening file \"%s\".  KLEE may have run out of file "
+    klee_warning("error opening file \"%s\".  KLEE may have run out of file "
                "descriptors: try to increase the maximum number of open file "
                "descriptors by using ulimit (%s).",
                filename.c_str(), Error.c_str());
@@ -1011,9 +1011,7 @@ static char *format_tdiff(char *buf, long seconds)
 
 #ifndef SUPPORT_KLEE_UCLIBC
 static llvm::Module *linkWithUclibc(llvm::Module *mainModule, StringRef libDir) {
-  fprintf(stderr, "error: invalid libc, no uclibc support!\n");
-  exit(1);
-  return 0;
+  klee_error("invalid libc, no uclibc support!\n");
 }
 #else
 static void replaceOrRenameFunction(llvm::Module *module,
@@ -1176,7 +1174,7 @@ int main(int argc, char **argv, char **envp) {
     if (pid<0) {
       klee_error("unable to fork watchdog");
     } else if (pid) {
-      fprintf(stderr, "KLEE: WATCHDOG: watching %d\n", pid);
+      klee_message("KLEE: WATCHDOG: watching %d\n", pid);
       fflush(stderr);
       sys::SetInterruptFunction(interrupt_handle_watchdog);
 
@@ -1193,7 +1191,7 @@ int main(int argc, char **argv, char **envp) {
           if (errno==ECHILD) { // No child, no need to watch but
                                // return error since we didn't catch
                                // the exit.
-            fprintf(stderr, "KLEE: watchdog exiting (no child)\n");
+            klee_warning("KLEE: watchdog exiting (no child)\n");
             return 1;
           } else if (errno!=EINTR) {
             perror("watchdog waitpid");
@@ -1208,13 +1206,16 @@ int main(int argc, char **argv, char **envp) {
             ++level;
 
             if (level==1) {
-              fprintf(stderr, "KLEE: WATCHDOG: time expired, attempting halt via INT\n");
+              klee_warning(
+                  "KLEE: WATCHDOG: time expired, attempting halt via INT\n");
               kill(pid, SIGINT);
             } else if (level==2) {
-              fprintf(stderr, "KLEE: WATCHDOG: time expired, attempting halt via gdb\n");
+              klee_warning(
+                  "KLEE: WATCHDOG: time expired, attempting halt via gdb\n");
               halt_via_gdb(pid);
             } else {
-              fprintf(stderr, "KLEE: WATCHDOG: kill(9)ing child (I tried to be nice)\n");
+              klee_warning(
+                  "KLEE: WATCHDOG: kill(9)ing child (I tried to be nice)\n");
               kill(pid, SIGKILL);
               return 1; // what more can we do
             }
@@ -1425,7 +1426,7 @@ int main(int argc, char **argv, char **envp) {
       if (out) {
         kTests.push_back(out);
       } else {
-        llvm::errs() << "KLEE: unable to open: " << *it << "\n";
+        klee_warning("unable to open: %s\n", (*it).c_str());
       }
     }
 
@@ -1462,8 +1463,7 @@ int main(int argc, char **argv, char **envp) {
          it != ie; ++it) {
       KTest *out = kTest_fromFile(it->c_str());
       if (!out) {
-        llvm::errs() << "KLEE: unable to open: " << *it << "\n";
-        exit(1);
+        klee_error("unable to open: %s\n", (*it).c_str());
       }
       seeds.push_back(out);
     }
@@ -1477,19 +1477,17 @@ int main(int argc, char **argv, char **envp) {
            it2 != ie; ++it2) {
         KTest *out = kTest_fromFile(it2->c_str());
         if (!out) {
-          llvm::errs() << "KLEE: unable to open: " << *it2 << "\n";
-          exit(1);
+          klee_error("unable to open: %s\n", (*it2).c_str());
         }
         seeds.push_back(out);
       }
       if (kTestFiles.empty()) {
-        llvm::errs() << "KLEE: seeds directory is empty: " << *it << "\n";
-        exit(1);
+        klee_error("seeds directory is empty: %s\n", (*it).c_str());
       }
     }
 
     if (!seeds.empty()) {
-      llvm::errs() << "KLEE: using " << seeds.size() << " seeds\n";
+      klee_message("KLEE: using %lu seeds\n", seeds.size());
       interpreter->useSeeds(&seeds);
     }
     if (RunInDir != "") {
