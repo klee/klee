@@ -2543,9 +2543,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, result);
     break;
   }
- 
-    // Other instructions...
-    // Unhandled
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+  case Instruction::Fence: {
+    // Ignore for now
+    break;
+  }
+#endif
+
+  // Other instructions...
+  // Unhandled
   case Instruction::ExtractElement:
   case Instruction::InsertElement:
   case Instruction::ShuffleVector:
