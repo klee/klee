@@ -62,7 +62,11 @@ void SeedInfo::patchSeed(const ExecutionState &state,
                          TimingSolver *solver) {
   std::vector< ref<Expr> > required(state.constraints.begin(),
                                     state.constraints.end());
+#ifdef SUPPORT_Z3
+  ExecutionState tmp(state.prevPC, required);
+#else
   ExecutionState tmp(required);
+#endif
   tmp.addConstraint(condition);
 
   // Try and patch direct reads first, this is likely to resolve the

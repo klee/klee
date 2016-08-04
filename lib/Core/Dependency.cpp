@@ -532,6 +532,7 @@ VersionedValue *Dependency::getLatestValue(llvm::Value *value,
     if (value->getType()->isPointerTy())
       addPointerEquality(ret, getInitialAllocation(value, valueExpr));
   }
+
   return ret;
 }
 
@@ -1045,6 +1046,8 @@ void Dependency::execute(llvm::Instruction *instr,
           VersionedValue *returnValue = getNewVersionedValue(instr, argExpr);
           if (arg)
             addDependency(arg, returnValue);
+        } else if (llvm::isa<llvm::CallInst>(instr->getOperand(0))) {
+          getNewVersionedValue(instr->getOperand(0), argExpr);
         } else {
           assert(!"operand not found");
         }
@@ -1293,7 +1296,8 @@ void Dependency::executePHI(llvm::Instruction *instr,
   VersionedValue *val = getLatestValue(llvmArgValue, valueExpr);
   if (val) {
     addDependency(val, getNewVersionedValue(instr, valueExpr));
-  } else if (llvm::isa<llvm::Constant>(llvmArgValue)) {
+  } else if (llvm::isa<llvm::Constant>(llvmArgValue) ||
+             llvm::isa<llvm::Argument>(llvmArgValue)) {
     getNewVersionedValue(instr, valueExpr);
   } else {
     assert(!"operand not found");
