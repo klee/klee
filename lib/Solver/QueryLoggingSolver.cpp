@@ -39,16 +39,17 @@ QueryLoggingSolver::QueryLoggingSolver(Solver *_solver, std::string path,
     : solver(_solver), os(0), BufferString(""), logBuffer(BufferString),
       queryCount(0), minQueryTimeToLog(queryTimeToLog), startTime(0.0f),
       lastQueryTime(0.0f), queryCommentSign(commentSign) {
+#ifdef HAVE_ZLIB_H
   if (!CreateCompressedQueryLog) {
+#endif
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 5)
     os = new llvm::raw_fd_ostream(path.c_str(), ErrorInfo,
                                   llvm::sys::fs::OpenFlags::F_Text);
 #else
     os = new llvm::raw_fd_ostream(path.c_str(), ErrorInfo);
 #endif
-  }
 #ifdef HAVE_ZLIB_H
-  else {
+  } else {
     os = new compressed_fd_ostream((path + ".gz").c_str(), ErrorInfo);
   }
   if (ErrorInfo != "") {
