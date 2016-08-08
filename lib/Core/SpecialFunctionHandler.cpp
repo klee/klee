@@ -30,6 +30,14 @@
 #endif
 #include "llvm/ADT/Twine.h"
 
+#if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
+#include "llvm/Target/TargetData.h"
+#elif LLVM_VERSION_CODE <= LLVM_VERSION(3, 2)
+#include "llvm/DataLayout.h"
+#else
+#include "llvm/IR/DataLayout.h"
+#endif
+
 #include <errno.h>
 
 using namespace llvm;
@@ -539,8 +547,11 @@ void SpecialFunctionHandler::handleGetObjSize(ExecutionState &state,
   executor.resolveExact(state, arguments[0], rl, "klee_get_obj_size");
   for (Executor::ExactResolutionList::iterator it = rl.begin(), 
          ie = rl.end(); it != ie; ++it) {
-    executor.bindLocal(target, *it->second, 
-                       ConstantExpr::create(it->first.first->size, Expr::Int32));
+    executor.bindLocal(
+        target, *it->second,
+        ConstantExpr::create(it->first.first->size,
+                             executor.kmodule->targetData->getTypeSizeInBits(
+                                 target->inst->getType())));
   }
 }
 
