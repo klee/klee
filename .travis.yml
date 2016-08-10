@@ -1,3 +1,5 @@
+sudo: required
+dist: trusty
 language: cpp
 compiler:
     # FIXME: For now, building with Clang is disabled because the STP built with
@@ -67,23 +69,26 @@ env:
     - secure: Hrp1MRSxDUH2GTQg3QR/yUttY/3KmgbFb5e+zyy551dKpHjxJdsNe8bquY9oFoT7KmPQYl0HNNjEv4qWW8RK+HWHOCB55nL1KlGpOG7vAJcUEZg7ScbliGgiovMB6jIQVfeP9FhYngfc13vNZQ5PGlqzfSsHSAbvkwEogBToHVw=
     - secure: DQAEQWJblXvIztN/sgH63OtFncI+Qju6wRy1zIV/iLf5KbAmLs1h3itU7EsE/+3+LgV1MVQ5QNJDBUj17A6VHRKNaQ5qnIllTAcC3o0nPDohQkQoCgDG8HZ+M4wtVfr7q2K6byEPB2UbSH+mEjSMTihJufgBBVfKyyozAfYycjg=
 
+addons:
+  apt:
+    sources:
+    - sourceline: 'ppa:ubuntu-toolchain-r/test'
+    - sourceline: 'ppa:h-rayflood/llvm'
+    - sourceline: 'deb http://download.opensuse.org/repositories/home:/delcypher:/z3/xUbuntu_14.04/ /'
+      key_url: 'http://download.opensuse.org/repositories/home:delcypher:z3/xUbuntu_14.04/Release.key'
+    packages:
+    - gcc-4.8
+    - g++-4.8
+    - libcap-dev
+    - libselinux1-dev
+    - cmake
+
 cache: apt
 before_install:
     ###########################################################################
     # Set up the locations to get various packages from
-    # We assume the Travis image uses Ubuntu 12.04 LTS
+    # We assume the Travis image uses Ubuntu 14.04 LTS
     ###########################################################################
-    # Needed for Boost
-    - sudo add-apt-repository -y ppa:boost-latest
-    # Needed for CMake
-    - sudo add-apt-repository -y ppa:kalakris/cmake
-    # Needed for LLVM
-    - sudo add-apt-repository -y ppa:h-rayflood/llvm
-    # Needed for new libstdc++ and gcc4.8
-    - sudo add-apt-repository --yes ppa:ubuntu-toolchain-r/test/
-    # Needed for Z3
-    - sudo sh -c "echo 'deb http://download.opensuse.org/repositories/home:/delcypher:/z3/xUbuntu_12.04/ /' >> /etc/apt/sources.list.d/z3.list"
-    - wget -O - http://download.opensuse.org/repositories/home:delcypher:z3/xUbuntu_12.04/Release.key | sudo apt-key add -
     # Update package information
     - sudo apt-get update
     ###########################################################################
@@ -97,10 +102,6 @@ before_install:
     ###########################################################################
     # Install stuff
     ###########################################################################
-    - sudo apt-get install gcc-4.8 g++-4.8 libcap-dev libselinux1-dev cmake
-    # Make gcc4.8 the default gcc version
-    - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.8 20
-    - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.8 20
     # Install LLVM and the LLVM bitcode compiler we require to build KLEE
     - ${KLEE_SRC}/.travis/install-llvm-and-runtime-compiler.sh
     - ${KLEE_SRC}/.travis/install-tcmalloc.sh
@@ -108,11 +109,11 @@ before_install:
     - sudo pip install lit
     # Get SMT solvers
     - ${KLEE_SRC}/.travis/solvers.sh
-script:
     # Get needed utlities/libraries for testing KLEE
     - mkdir test-utils/
     - cd test-utils/
     - ${KLEE_SRC}/.travis/testing-utils.sh
     - cd ../
-    # Build KLEE
-    - travis_wait 30 ${KLEE_SRC}/.travis/klee.sh
+script:
+    # Build KLEE and run tests
+    - ${KLEE_SRC}/.travis/klee.sh
