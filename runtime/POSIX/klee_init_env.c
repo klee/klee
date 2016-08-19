@@ -112,6 +112,10 @@ usage: (klee_init_env) [options] [program arguments]\n\
                               each with size N\n\
   -sym-stdin <N>            - Make stdin symbolic with size N.\n\
   -sym-stdout               - Make stdout symbolic.\n\
+  -save-all-writes          - Allow write operations to execute as expected\n\
+                              even if they exceed the file size. If set to 0, all\n\
+                              writes exceeding the initial file size are discarded.\n\
+                              Note: file offset is always incremented.\n\
   -max-fail <N>             - Allow up to N injected failures\n\
   -fd-fail                  - Shortcut for '-max-fail 1'\n\n");
   }
