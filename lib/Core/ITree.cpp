@@ -1831,8 +1831,11 @@ bool ITree::subsumptionCheck(TimingSolver *solver, ExecutionState &state,
   std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
   storedExpressions = state.itreeNode->getStoredExpressions();
 
-  for (std::vector<SubsumptionTableEntry *>::iterator it = entryList.begin(),
-                                                      itEnd = entryList.end();
+  // Iterate the subsumption table entry with reverse iterator because
+  // the successful subsumption mostly happen in the newest entry.
+  for (std::vector<SubsumptionTableEntry *>::reverse_iterator
+           it = entryList.rbegin(),
+           itEnd = entryList.rend();
        it != itEnd; ++it) {
 
     if ((*it)->subsumed(solver, state, timeout, storedExpressions)) {
