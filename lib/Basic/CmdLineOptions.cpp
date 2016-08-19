@@ -114,6 +114,13 @@ llvm::cl::opt<bool> NoExistential(
         "has an effect of removing all existentially-quantified variables "
         "most solvers are not very powerful at solving, however, at likely "
         "less number of subsumptions due to the strengthening of the query."));
+
+llvm::cl::opt<int> MaxFailSubsumption(
+    "max-fail-subsume",
+    llvm::cl::desc("This option gives the user flexibility to set the maximum "
+                   "number of fail subsumption check (default=0)"),
+    llvm::cl::init(0));
+
 #endif
 
 #ifdef SUPPORT_METASMT
