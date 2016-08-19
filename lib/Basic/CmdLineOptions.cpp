@@ -121,6 +121,15 @@ llvm::cl::opt<int> MaxFailSubsumption(
                    "number of fail subsumption check (default=0)"),
     llvm::cl::init(0));
 
+llvm::cl::opt<int> SubsumptionTableSize(
+    "subsumption-table-size",
+    llvm::cl::desc("This option gives the user flexibility to set the size of "
+                   "subsumption table for each particular node id such that "
+                   "when the number of entries are more than its specified "
+                   "size, the new entry will overwrite the oldest entry "
+                   "(default=0)"),
+    llvm::cl::init(0));
+
 #endif
 
 #ifdef SUPPORT_METASMT
