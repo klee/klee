@@ -118,16 +118,11 @@ llvm::cl::opt<bool> NoExistential(
 llvm::cl::opt<int> MaxFailSubsumption(
     "max-fail-subsume",
     llvm::cl::desc("This option gives the user flexibility to set the maximum "
-                   "number of fail subsumption check (default=0)"),
-    llvm::cl::init(0));
-
-llvm::cl::opt<int> SubsumptionTableSize(
-    "subsumption-table-size",
-    llvm::cl::desc("This option gives the user flexibility to set the size of "
-                   "subsumption table for each particular node id such that "
-                   "when the number of entries are more than its specified "
-                   "size, the new entry will overwrite the oldest entry "
-                   "(default=0)"),
+                   "number of fail subsumption check. When this options is "
+                   "selected, the number of subsumption table size is equal to "
+                   "the number of max-fail-subsume. When the number of entries "
+                   "are more than specified max-fail-subsume, the oldest entry "
+                   "will be deleted  (default=0)"),
     llvm::cl::init(0));
 
 #endif

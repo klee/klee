@@ -79,7 +79,6 @@ extern llvm::cl::opt<bool> NoExistential;
 
 extern llvm::cl::opt<int> MaxFailSubsumption;
 
-extern llvm::cl::opt<int> SubsumptionTableSize;
 #endif
 
 #ifdef SUPPORT_METASMT

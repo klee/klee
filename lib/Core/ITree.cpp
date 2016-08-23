@@ -1861,15 +1861,7 @@ bool ITree::subsumptionCheck(TimingSolver *solver, ExecutionState &state,
 }
 
 void ITree::store(SubsumptionTableEntry *subItem) {
-  if (SubsumptionTableSize == 0 ||
-      subsumptionTable[subItem->nodeId].size() == 0) {
     subsumptionTable[subItem->nodeId].push_back(subItem);
-  } else {
-    int index =
-        (subsumptionTable[subItem->nodeId].size() % SubsumptionTableSize) - 1;
-    assert(index >= 0 && "invalid index on subsumption table entry");
-    subsumptionTable[subItem->nodeId].at(index) = subItem;
-  }
 }
 
 void ITree::setCurrentINode(ExecutionState &state) {
