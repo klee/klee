@@ -646,7 +646,7 @@ class ITree {
 
   ITreeNode *currentINode;
 
-  std::map<uintptr_t, std::vector<SubsumptionTableEntry *> > subsumptionTable;
+  std::map<uintptr_t, std::deque<SubsumptionTableEntry *> > subsumptionTable;
 
   void printNode(llvm::raw_ostream &stream, ITreeNode *n,
                  std::string edges) const;
