@@ -1742,8 +1742,7 @@ void ITree::printTimeStat(llvm::raw_ostream &stream) {
 
 void ITree::printTableStat(llvm::raw_ostream &stream) const {
   double programPointNumber = 0.0, entryNumber = 0.0;
-  for (std::map<uintptr_t,
-                std::vector<SubsumptionTableEntry *> >::const_iterator
+  for (std::map<uintptr_t, std::deque<SubsumptionTableEntry *> >::const_iterator
            it = subsumptionTable.begin(),
            itEnd = subsumptionTable.end();
        it != itEnd; ++it) {
@@ -1791,11 +1790,11 @@ ITree::ITree(ExecutionState *_root) {
 }
 
 ITree::~ITree() {
-  for (std::map<uintptr_t, std::vector<SubsumptionTableEntry *> >::iterator
+  for (std::map<uintptr_t, std::deque<SubsumptionTableEntry *> >::iterator
            it = subsumptionTable.begin(),
            itEnd = subsumptionTable.end();
        it != itEnd; ++it) {
-    for (std::vector<SubsumptionTableEntry *>::iterator
+    for (std::deque<SubsumptionTableEntry *>::iterator
              it1 = it->second.begin(),
              it1End = it->second.end();
          it1 != it1End; ++it1) {
@@ -1822,7 +1821,7 @@ bool ITree::subsumptionCheck(TimingSolver *solver, ExecutionState &state,
     return false;
 
   subsumptionCheckTimer.start();
-  std::vector<SubsumptionTableEntry *> entryList =
+  std::deque<SubsumptionTableEntry *> entryList =
       subsumptionTable[state.itreeNode->getNodeId()];
 
   if (entryList.empty())
@@ -1831,8 +1830,11 @@ bool ITree::subsumptionCheck(TimingSolver *solver, ExecutionState &state,
   std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
   storedExpressions = state.itreeNode->getStoredExpressions();
 
-  for (std::vector<SubsumptionTableEntry *>::iterator it = entryList.begin(),
-                                                      itEnd = entryList.end();
+  // Iterate the subsumption table entry with reverse iterator because
+  // the successful subsumption mostly happen in the newest entry.
+  for (std::deque<SubsumptionTableEntry *>::reverse_iterator
+           it = entryList.rbegin(),
+           itEnd = entryList.rend();
        it != itEnd; ++it) {
 
     if ((*it)->subsumed(solver, state, timeout, storedExpressions)) {
@@ -1852,7 +1854,12 @@ bool ITree::subsumptionCheck(TimingSolver *solver, ExecutionState &state,
 }
 
 void ITree::store(SubsumptionTableEntry *subItem) {
-  subsumptionTable[subItem->nodeId].push_back(subItem);
+    subsumptionTable[subItem->nodeId].push_back(subItem);
+    if (MaxFailSubsumption > 0 &&
+        (unsigned)MaxFailSubsumption <
+            subsumptionTable[subItem->nodeId].size()) {
+      subsumptionTable[subItem->nodeId].pop_front();
+    }
 }
 
 void ITree::setCurrentINode(ExecutionState &state) {
@@ -2016,12 +2023,11 @@ void ITree::print(llvm::raw_ostream &stream) const {
   this->printNode(stream, this->root, "");
   stream << "\n------------------------- Subsumption Table "
             "-------------------------\n";
-  for (std::map<uintptr_t,
-                std::vector<SubsumptionTableEntry *> >::const_iterator
+  for (std::map<uintptr_t, std::deque<SubsumptionTableEntry *> >::const_iterator
            it = subsumptionTable.begin(),
            itEnd = subsumptionTable.end();
        it != itEnd; ++it) {
-    for (std::vector<SubsumptionTableEntry *>::const_iterator
+    for (std::deque<SubsumptionTableEntry *>::const_iterator
              it1 = it->second.begin(),
              it1End = it->second.end();
          it1 != it1End; ++it1) {
