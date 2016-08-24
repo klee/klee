@@ -117,13 +117,12 @@ llvm::cl::opt<bool> NoExistential(
 
 llvm::cl::opt<int> MaxFailSubsumption(
     "max-fail-subsume",
-    llvm::cl::desc(
-        "To set the maximum "
-        "number of fail subsumption check. When this options is "
-        "selected, the number of subsumption table entries is equal to "
-        "the number of max-fail-subsume. When the number of entries "
-        "are more than specified max-fail-subsume, the oldest entry "
-        "will be deleted (default=0 (off))"),
+    llvm::cl::desc("To set the maximum number of fail subsumption check. When "
+                   "this options is selected, the number of subsumption table "
+                   "entries is equal to the number of max-fail-subsume. When "
+                   "the number of entries are more than specified "
+                   "max-fail-subsume, the oldest entry will be deleted "
+                   "(default=0 (off))"),
     llvm::cl::init(0));
 
 #endif
