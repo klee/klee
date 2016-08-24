@@ -187,16 +187,6 @@ void VersionedValue::print(llvm::raw_ostream &stream) const {
 
 /**/
 
-void PointerEquality::print(llvm::raw_ostream &stream) const {
-  stream << "(";
-  value->print(stream);
-  stream << "==";
-  allocation->print(stream);
-  stream << ")";
-}
-
-/**/
-
 void FlowsTo::print(llvm::raw_ostream &stream) const {
   source->print(stream);
   stream << "->";

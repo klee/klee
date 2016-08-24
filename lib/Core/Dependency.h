@@ -181,35 +181,6 @@ class Allocation {
     }
   };
 
-  /// \brief A class for representing the relation between an LLVM value with an
-  /// allocation/pointer or other values assumed to be allocation/pointer.
-  class PointerEquality {
-    // value equals allocation (pointer)
-    const VersionedValue *value;
-    Allocation *allocation;
-
-  public:
-    PointerEquality(const VersionedValue *value, Allocation *allocation)
-        : value(value), allocation(allocation) {}
-
-    ~PointerEquality() {}
-
-    Allocation *equals(const VersionedValue *value) const {
-      return this->value == value ? allocation : 0;
-    }
-
-    /// \brief Print the content of the object into a stream.
-    ///
-    /// \param The stream to print the data to.
-    void print(llvm::raw_ostream& stream) const;
-
-    /// \brief Print the content of the object to the LLVM error stream
-    void dump() const {
-      print(llvm::errs());
-      llvm::errs() << "\n";
-    }
-  };
-
   /// A class for representing the flow of values from a source to a target
   class FlowsTo {
     // target depends on source
