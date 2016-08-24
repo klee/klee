@@ -473,7 +473,7 @@ class Allocation {
     std::vector<VersionedValue *> argumentValuesList;
 
     /// \brief Equality of value to address
-    std::map<const VersionedValue *, std::vector<Allocation *> > equalityList;
+    std::map<const VersionedValue *, std::vector<Allocation *> > equalityMap;
 
     /// \brief The mapping of allocations/addresses to stored value
     std::map<Allocation *, VersionedValue *> storesMap;

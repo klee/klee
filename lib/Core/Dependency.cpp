@@ -564,8 +564,8 @@ Allocation *Dependency::resolveAllocation(VersionedValue *val) {
   if (!val)
     return 0;
 
-  if (equalityList.find(val) != equalityList.end()) {
-    return equalityList[val].back();
+  if (equalityMap.find(val) != equalityMap.end()) {
+    return equalityMap[val].back();
   }
 
   if (parentDependency)
@@ -616,12 +616,12 @@ Dependency::resolveAllocationTransitively(VersionedValue *value) {
 
 void Dependency::addPointerEquality(const VersionedValue *value,
                                     Allocation *allocation) {
-  if (equalityList.find(value) != equalityList.end()) {
-    equalityList[value].push_back(allocation);
+  if (equalityMap.find(value) != equalityMap.end()) {
+    equalityMap[value].push_back(allocation);
   } else {
     std::vector<Allocation *> newList;
     newList.push_back(allocation);
-    equalityList.insert(
+    equalityMap.insert(
         std::make_pair<const VersionedValue *, std::vector<Allocation *> >(
             value, newList));
   }
@@ -840,7 +840,7 @@ Dependency::Dependency(Dependency *prev) : parentDependency(prev) {}
 
 Dependency::~Dependency() {
   // Delete the locally-constructed relations
-  Util::deletePointerMapWithVectorValue(equalityList);
+  Util::deletePointerMapWithVectorValue(equalityMap);
   Util::deletePointerMap(storesMap);
   Util::deletePointerMapWithVectorValue(storageOfMap);
   Util::deletePointerMapWithMapValue(flowsToMap);
@@ -1534,7 +1534,7 @@ void Dependency::print(llvm::raw_ostream &stream,
   std::string tabs = makeTabs(paddingAmount);
   stream << tabs << "EQUALITIES:";
   std::map<const VersionedValue *, std::vector<Allocation *> >::const_iterator
-  equalityListBegin = equalityList.begin();
+  equalityListBegin = equalityMap.begin();
   std::map<Allocation *, VersionedValue *>::const_iterator storesMapBegin =
       storesMap.begin();
   std::map<VersionedValue *,
@@ -1542,8 +1542,8 @@ void Dependency::print(llvm::raw_ostream &stream,
   flowsToListBegin = flowsToMap.begin();
   for (std::map<const VersionedValue *,
                 std::vector<Allocation *> >::const_iterator
-           it = equalityList.begin(),
-           itEnd = equalityList.end();
+           it = equalityMap.begin(),
+           itEnd = equalityMap.end();
        it != itEnd; ++it) {
     if (it != equalityListBegin)
       stream << ",";
