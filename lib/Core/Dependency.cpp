@@ -573,13 +573,9 @@ Allocation *Dependency::getLatestAllocation(llvm::Value *allocation,
 Allocation *Dependency::resolveAllocation(VersionedValue *val) {
   if (!val)
     return 0;
-  for (std::vector<PointerEquality *>::const_reverse_iterator
-           it = equalityList.rbegin(),
-           itEnd = equalityList.rend();
-       it != itEnd; ++it) {
-    Allocation *alloc = (*it)->equals(val);
-    if (alloc)
-      return alloc;
+
+  if (equalityList.find(val) != equalityList.end()) {
+    return equalityList[val].back();
   }
 
   if (parentDependency)
@@ -630,7 +626,15 @@ Dependency::resolveAllocationTransitively(VersionedValue *value) {
 
 void Dependency::addPointerEquality(const VersionedValue *value,
                                     Allocation *allocation) {
-  equalityList.push_back(new PointerEquality(value, allocation));
+  if (equalityList.find(value) != equalityList.end()) {
+    equalityList[value].push_back(allocation);
+  } else {
+    std::vector<Allocation *> newList;
+    newList.push_back(allocation);
+    equalityList.insert(
+        std::make_pair<const VersionedValue *, std::vector<Allocation *> >(
+            value, newList));
+  }
 }
 
 void Dependency::updateStore(Allocation *allocation, VersionedValue *value) {
@@ -830,7 +834,7 @@ Dependency::Dependency(Dependency *prev) : parentDependency(prev) {}
 
 Dependency::~Dependency() {
   // Delete the locally-constructed relations
-  Util::deletePointerVector(equalityList);
+  Util::deletePointerMapWithVectorValue(equalityList);
   Util::deletePointerMap(storesMap);
   Util::deletePointerMapWithVectorValue(storageOfMap);
   Util::deletePointerVector(flowsToList);
@@ -1522,18 +1526,31 @@ void Dependency::print(llvm::raw_ostream &stream,
                        const unsigned paddingAmount) const {
   std::string tabs = makeTabs(paddingAmount);
   stream << tabs << "EQUALITIES:";
-  std::vector<PointerEquality *>::const_iterator equalityListBegin =
-      equalityList.begin();
+  std::map<const VersionedValue *, std::vector<Allocation *> >::const_iterator
+  equalityListBegin = equalityList.begin();
   std::map<Allocation *, VersionedValue *>::const_iterator storesMapBegin =
       storesMap.begin();
   std::vector<FlowsTo *>::const_iterator flowsToListBegin = flowsToList.begin();
-  for (std::vector<PointerEquality *>::const_iterator
-           it = equalityListBegin,
+  for (std::map<const VersionedValue *,
+                std::vector<Allocation *> >::const_iterator
+           it = equalityList.begin(),
            itEnd = equalityList.end();
        it != itEnd; ++it) {
     if (it != equalityListBegin)
       stream << ",";
-    (*it)->print(stream);
+    stream << "[";
+    (*it->first).print(stream);
+    stream << ",";
+    std::vector<Allocation *> allocList = (*it).second;
+    std::vector<Allocation *>::iterator allocListBegin = allocList.begin();
+    for (std::vector<Allocation *>::iterator it2 = allocList.begin(),
+                                             itEnd2 = allocList.end();
+         it2 != itEnd2; ++it2) {
+      if (it2 != allocListBegin)
+        stream << ",";
+      (*it2)->print(stream);
+    }
+    stream << "]";
   }
   stream << "\n";
   stream << tabs << "STORAGE:";
