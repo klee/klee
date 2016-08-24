@@ -457,6 +457,10 @@ class Allocation {
       static void
       deletePointerMapWithVectorValue(std::map<Key *, std::vector<T *> > &map);
 
+      template <typename Key, typename T>
+      static void
+      deletePointerMapWithMapValue(std::map<Key *, std::map<Key *, T *> > &map);
+
       /// \brief Tests if an allocation site is main function's argument
       static bool isMainArgument(llvm::Value *site);
     };
@@ -477,8 +481,9 @@ class Allocation {
     /// \brief Store the inverse map of both storesMap
     std::map<VersionedValue *, std::vector<Allocation *> > storageOfMap;
 
-    /// \brief Flow relations from one value to another
-    std::vector<FlowsTo *> flowsToList;
+    /// \brief Flow relations of target and its sources with allocation
+    std::map<VersionedValue *, std::map<VersionedValue *, Allocation *> >
+    flowsToMap;
 
     /// \brief The store of the versioned values
     std::vector< VersionedValue *> valuesList;
