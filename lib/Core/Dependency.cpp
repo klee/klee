@@ -1534,18 +1534,18 @@ void Dependency::print(llvm::raw_ostream &stream,
   std::string tabs = makeTabs(paddingAmount);
   stream << tabs << "EQUALITIES:";
   std::map<const VersionedValue *, std::vector<Allocation *> >::const_iterator
-  equalityListBegin = equalityMap.begin();
+  equalityMapBegin = equalityMap.begin();
   std::map<Allocation *, VersionedValue *>::const_iterator storesMapBegin =
       storesMap.begin();
   std::map<VersionedValue *,
            std::map<VersionedValue *, Allocation *> >::const_iterator
-  flowsToListBegin = flowsToMap.begin();
+  flowsToMapBegin = flowsToMap.begin();
   for (std::map<const VersionedValue *,
                 std::vector<Allocation *> >::const_iterator
            it = equalityMap.begin(),
            itEnd = equalityMap.end();
        it != itEnd; ++it) {
-    if (it != equalityListBegin)
+    if (it != equalityMapBegin)
       stream << ",";
     stream << "[";
     (*it->first).print(stream);
@@ -1582,7 +1582,7 @@ void Dependency::print(llvm::raw_ostream &stream,
            it = flowsToMap.begin(),
            itEnd = flowsToMap.end();
        it != itEnd; ++it) {
-    if (it != flowsToListBegin)
+    if (it != flowsToMapBegin)
       stream << ",";
     stream << "[";
     (*it->first).print(stream);
