@@ -187,18 +187,6 @@ void VersionedValue::print(llvm::raw_ostream &stream) const {
 
 /**/
 
-void FlowsTo::print(llvm::raw_ostream &stream) const {
-  source->print(stream);
-  stream << "->";
-  target->print(stream);
-  if (via) {
-    stream << " via ";
-    via->print(stream);
-  }
-}
-
-/**/
-
 bool AllocationGraph::isVisited(Allocation *alloc) {
   for (std::vector<AllocationNode *>::iterator it = allNodes.begin(),
                                                itEnd = allNodes.end();

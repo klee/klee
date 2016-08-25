@@ -181,42 +181,6 @@ class Allocation {
     }
   };
 
-  /// A class for representing the flow of values from a source to a target
-  class FlowsTo {
-    // target depends on source
-    VersionedValue* source;
-    VersionedValue* target;
-
-    // Store-load via allocation site
-    Allocation *via;
-
-  public:
-    FlowsTo(VersionedValue *source, VersionedValue *target)
-        : source(source), target(target), via(0) {}
-
-    FlowsTo(VersionedValue *source, VersionedValue *target, Allocation *via)
-        : source(source), target(target), via(via) {}
-
-    ~FlowsTo() {}
-
-    VersionedValue *getSource() const { return this->source; }
-
-    VersionedValue *getTarget() const { return this->target; }
-
-    Allocation *getAllocation() const { return this->via; }
-
-    /// \brief Print the content of the object into a stream.
-    ///
-    /// \param The stream to print the data to.
-    void print(llvm::raw_ostream& sream) const;
-
-    /// \brief Print the content of the object to the LLVM error stream
-    void dump() const {
-      print(llvm::errs());
-      llvm::errs() << "\n";
-    }
-  };
-
   /// \brief The allocation graph: A graph to directly represent the dependency
   /// between allocations, instead of using intermediate values. This graph is
   /// computed from the relations between values in particular the FlowsTo
