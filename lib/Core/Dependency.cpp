@@ -649,14 +649,7 @@ void Dependency::updateStore(Allocation *allocation, VersionedValue *value) {
 }
 
 void Dependency::addDependency(VersionedValue *source, VersionedValue *target) {
-  if (flowsToMap.find(target) != flowsToMap.end()) {
-    flowsToMap[target]
-        .insert(std::make_pair<VersionedValue *, Allocation *>(source, NULL));
-  } else {
-    std::map<VersionedValue *, Allocation *> newMap;
-    newMap.insert(std::make_pair<VersionedValue *, Allocation *>(source, NULL));
-    flowsToMap[target] = newMap;
-  }
+  addDependencyViaAllocation(source, target, 0);
 }
 
 void Dependency::addDependencyViaAllocation(VersionedValue *source,
