@@ -378,7 +378,13 @@ void AllocationGraph::print(llvm::raw_ostream &stream,
 VersionedValue *Dependency::getNewVersionedValue(llvm::Value *value,
                                                  ref<Expr> valueExpr) {
   VersionedValue *ret = new VersionedValue(value, valueExpr);
-  valuesList.push_back(ret);
+  if (valuesMap.find(value) != valuesMap.end()) {
+    valuesMap[value].push_back(ret);
+  } else {
+    std::vector<VersionedValue *> newValueList;
+    newValueList.push_back(ret);
+    valuesMap[value] = newValueList;
+  }
   return ret;
 }
 
@@ -504,12 +510,8 @@ VersionedValue *Dependency::getLatestValue(llvm::Value *value,
   if (llvm::isa<llvm::Constant>(value) && !llvm::isa<llvm::GlobalValue>(value))
     return getNewVersionedValue(value, valueExpr);
 
-  for (std::vector<VersionedValue *>::const_reverse_iterator
-           it = valuesList.rbegin(),
-           itEnd = valuesList.rend();
-       it != itEnd; ++it) {
-    if ((*it)->hasValue(value))
-      return *it;
+  if (valuesMap.find(value) != valuesMap.end()) {
+    return valuesMap[value].back();
   }
 
   VersionedValue *ret = 0;
@@ -526,16 +528,11 @@ VersionedValue *Dependency::getLatestValue(llvm::Value *value,
   return ret;
 }
 
-VersionedValue *
-Dependency::getLatestValueNoConstantCheck(llvm::Value *value) const {
+VersionedValue *Dependency::getLatestValueNoConstantCheck(llvm::Value *value) {
   assert(value && "value cannot be null");
 
-  for (std::vector<VersionedValue *>::const_reverse_iterator
-           it = valuesList.rbegin(),
-           itEnd = valuesList.rend();
-       it != itEnd; ++it) {
-    if ((*it)->hasValue(value))
-      return *it;
+  if (valuesMap.find(value) != valuesMap.end()) {
+    return valuesMap[value].back();
   }
 
   if (parentDependency)
@@ -846,7 +843,7 @@ Dependency::~Dependency() {
   Util::deletePointerMapWithMapValue(flowsToMap);
 
   // Delete the locally-constructed objects
-  Util::deletePointerVector(valuesList);
+  Util::deletePointerMapWithVectorValue(valuesMap);
   Util::deletePointerVector(versionedAllocationsList);
 }
 

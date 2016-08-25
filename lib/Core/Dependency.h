@@ -486,7 +486,7 @@ class Allocation {
     flowsToMap;
 
     /// \brief The store of the versioned values
-    std::vector< VersionedValue *> valuesList;
+    std::map<llvm::Value *, std::vector<VersionedValue *> > valuesMap;
 
     /// \brief The store of the versioned allocations
     std::vector<Allocation *> versionedAllocationsList;
@@ -520,7 +520,7 @@ class Allocation {
 
     /// \brief Gets the latest version of the allocation, but without checking
     /// for whether the value is constant or not
-    VersionedValue *getLatestValueNoConstantCheck(llvm::Value *value) const;
+    VersionedValue *getLatestValueNoConstantCheck(llvm::Value *value);
 
     /// \brief Newly relate an LLVM value with destructive update to an
     /// allocation
