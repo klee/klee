@@ -1570,7 +1570,7 @@ void Dependency::print(llvm::raw_ostream &stream,
         sources.begin();
     for (std::map<VersionedValue *, Allocation *>::iterator it2 =
              sources.begin();
-         it2 != sources.end(); ++it) {
+         it2 != sources.end(); ++it2) {
       if (it2 != sourcesMapBegin)
         stream << ",";
       stream << "{";
