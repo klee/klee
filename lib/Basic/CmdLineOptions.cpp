@@ -116,7 +116,7 @@ llvm::cl::opt<bool> NoExistential(
         "less number of subsumptions due to the strengthening of the query."));
 
 llvm::cl::opt<int> MaxFailSubsumption(
-    "max-fail-subsume",
+    "max-subsumption-failure",
     llvm::cl::desc("To set the maximum number of failed subsumption check. "
                    "When this options is specified and the number of "
                    "subsumption table entries is more than the specified "
