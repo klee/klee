@@ -1576,7 +1576,8 @@ void Dependency::print(llvm::raw_ostream &stream,
       stream << "[";
       (*it2->first).print(stream);
       stream << ",";
-      (*it2->second).print(stream);
+      if(it2->second != NULL)
+    	  (*it2->second).print(stream);
       stream << "]";
     }
     stream << "]";
