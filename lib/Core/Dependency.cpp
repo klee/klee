@@ -1562,9 +1562,6 @@ void Dependency::print(llvm::raw_ostream &stream,
        it != itEnd; ++it) {
     if (it != flowsToMapBegin)
       stream << ",";
-    stream << "[";
-    (*it->first).print(stream);
-    stream << ",";
     std::map<VersionedValue *, Allocation *> sources = (*it).second;
     std::map<VersionedValue *, Allocation *>::iterator sourcesMapBegin =
         sources.begin();
@@ -1573,16 +1570,16 @@ void Dependency::print(llvm::raw_ostream &stream,
          it2 != sources.end(); ++it2) {
       if (it2 != sourcesMapBegin)
         stream << ",";
-      stream << "{";
+      stream << "[";
+      (*it->first).print(stream);
+      stream << "<-";
       (*it2->first).print(stream);
-      stream << ",";
-      if(it2->second != NULL)
-    	  (*it2->second).print(stream);
-      else
-        stream << "NULL";
-      stream << "}";
+      stream << "]";
+      if (it2->second != NULL) {
+        stream << "via";
+        (*it2->second).print(stream);
+      }
     }
-    stream << "]";
   }
 
   if (parentDependency) {
