@@ -1527,7 +1527,7 @@ void Dependency::print(llvm::raw_ostream &stream,
       stream << ",";
     stream << "[";
     (*it->first).print(stream);
-    stream << ",";
+    stream << "=={";
     std::vector<Allocation *> allocList = (*it).second;
     std::vector<Allocation *>::iterator allocListBegin = allocList.begin();
     for (std::vector<Allocation *>::iterator it2 = allocList.begin(),
@@ -1537,7 +1537,7 @@ void Dependency::print(llvm::raw_ostream &stream,
         stream << ",";
       (*it2)->print(stream);
     }
-    stream << "]";
+    stream << "}]";
   }
   stream << "\n";
   stream << tabs << "STORAGE:";
