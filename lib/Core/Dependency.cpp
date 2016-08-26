@@ -1573,12 +1573,12 @@ void Dependency::print(llvm::raw_ostream &stream,
          it2 != sources.end(); ++it) {
       if (it2 != sourcesMapBegin)
         stream << ",";
-      stream << "[";
+      stream << "{";
       (*it2->first).print(stream);
       stream << ",";
       if(it2->second != NULL)
     	  (*it2->second).print(stream);
-      stream << "]";
+      stream << "}";
     }
     stream << "]";
   }
