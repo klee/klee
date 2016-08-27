@@ -181,71 +181,6 @@ class Allocation {
     }
   };
 
-  /// \brief A class for representing the relation between an LLVM value with an
-  /// allocation/pointer or other values assumed to be allocation/pointer.
-  class PointerEquality {
-    // value equals allocation (pointer)
-    const VersionedValue *value;
-    Allocation *allocation;
-
-  public:
-    PointerEquality(const VersionedValue *value, Allocation *allocation)
-        : value(value), allocation(allocation) {}
-
-    ~PointerEquality() {}
-
-    Allocation *equals(const VersionedValue *value) const {
-      return this->value == value ? allocation : 0;
-    }
-
-    /// \brief Print the content of the object into a stream.
-    ///
-    /// \param The stream to print the data to.
-    void print(llvm::raw_ostream& stream) const;
-
-    /// \brief Print the content of the object to the LLVM error stream
-    void dump() const {
-      print(llvm::errs());
-      llvm::errs() << "\n";
-    }
-  };
-
-  /// A class for representing the flow of values from a source to a target
-  class FlowsTo {
-    // target depends on source
-    VersionedValue* source;
-    VersionedValue* target;
-
-    // Store-load via allocation site
-    Allocation *via;
-
-  public:
-    FlowsTo(VersionedValue *source, VersionedValue *target)
-        : source(source), target(target), via(0) {}
-
-    FlowsTo(VersionedValue *source, VersionedValue *target, Allocation *via)
-        : source(source), target(target), via(via) {}
-
-    ~FlowsTo() {}
-
-    VersionedValue *getSource() const { return this->source; }
-
-    VersionedValue *getTarget() const { return this->target; }
-
-    Allocation *getAllocation() const { return this->via; }
-
-    /// \brief Print the content of the object into a stream.
-    ///
-    /// \param The stream to print the data to.
-    void print(llvm::raw_ostream& sream) const;
-
-    /// \brief Print the content of the object to the LLVM error stream
-    void dump() const {
-      print(llvm::errs());
-      llvm::errs() << "\n";
-    }
-  };
-
   /// \brief The allocation graph: A graph to directly represent the dependency
   /// between allocations, instead of using intermediate values. This graph is
   /// computed from the relations between values in particular the FlowsTo
@@ -486,6 +421,10 @@ class Allocation {
       static void
       deletePointerMapWithVectorValue(std::map<Key *, std::vector<T *> > &map);
 
+      template <typename Key, typename T>
+      static void
+      deletePointerMapWithMapValue(std::map<Key *, std::map<Key *, T *> > &map);
+
       /// \brief Tests if an allocation site is main function's argument
       static bool isMainArgument(llvm::Value *site);
     };
@@ -498,7 +437,7 @@ class Allocation {
     std::vector<VersionedValue *> argumentValuesList;
 
     /// \brief Equality of value to address
-    std::vector< PointerEquality *> equalityList;
+    std::map<const VersionedValue *, std::vector<Allocation *> > equalityMap;
 
     /// \brief The mapping of allocations/addresses to stored value
     std::map<Allocation *, VersionedValue *> storesMap;
@@ -506,11 +445,12 @@ class Allocation {
     /// \brief Store the inverse map of both storesMap
     std::map<VersionedValue *, std::vector<Allocation *> > storageOfMap;
 
-    /// \brief Flow relations from one value to another
-    std::vector<FlowsTo *> flowsToList;
+    /// \brief Flow relations of target and its sources with allocation
+    std::map<VersionedValue *, std::map<VersionedValue *, Allocation *> >
+    flowsToMap;
 
     /// \brief The store of the versioned values
-    std::vector< VersionedValue *> valuesList;
+    std::map<llvm::Value *, std::vector<VersionedValue *> > valuesMap;
 
     /// \brief The store of the versioned allocations
     std::vector<Allocation *> versionedAllocationsList;
@@ -544,7 +484,7 @@ class Allocation {
 
     /// \brief Gets the latest version of the allocation, but without checking
     /// for whether the value is constant or not
-    VersionedValue *getLatestValueNoConstantCheck(llvm::Value *value) const;
+    VersionedValue *getLatestValueNoConstantCheck(llvm::Value *value);
 
     /// \brief Newly relate an LLVM value with destructive update to an
     /// allocation

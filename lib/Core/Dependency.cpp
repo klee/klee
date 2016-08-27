@@ -187,28 +187,6 @@ void VersionedValue::print(llvm::raw_ostream &stream) const {
 
 /**/
 
-void PointerEquality::print(llvm::raw_ostream &stream) const {
-  stream << "(";
-  value->print(stream);
-  stream << "==";
-  allocation->print(stream);
-  stream << ")";
-}
-
-/**/
-
-void FlowsTo::print(llvm::raw_ostream &stream) const {
-  source->print(stream);
-  stream << "->";
-  target->print(stream);
-  if (via) {
-    stream << " via ";
-    via->print(stream);
-  }
-}
-
-/**/
-
 bool AllocationGraph::isVisited(Allocation *alloc) {
   for (std::vector<AllocationNode *>::iterator it = allNodes.begin(),
                                                itEnd = allNodes.end();
@@ -388,7 +366,13 @@ void AllocationGraph::print(llvm::raw_ostream &stream,
 VersionedValue *Dependency::getNewVersionedValue(llvm::Value *value,
                                                  ref<Expr> valueExpr) {
   VersionedValue *ret = new VersionedValue(value, valueExpr);
-  valuesList.push_back(ret);
+  if (valuesMap.find(value) != valuesMap.end()) {
+    valuesMap[value].push_back(ret);
+  } else {
+    std::vector<VersionedValue *> newValueList;
+    newValueList.push_back(ret);
+    valuesMap[value] = newValueList;
+  }
   return ret;
 }
 
@@ -514,12 +498,8 @@ VersionedValue *Dependency::getLatestValue(llvm::Value *value,
   if (llvm::isa<llvm::Constant>(value) && !llvm::isa<llvm::GlobalValue>(value))
     return getNewVersionedValue(value, valueExpr);
 
-  for (std::vector<VersionedValue *>::const_reverse_iterator
-           it = valuesList.rbegin(),
-           itEnd = valuesList.rend();
-       it != itEnd; ++it) {
-    if ((*it)->hasValue(value))
-      return *it;
+  if (valuesMap.find(value) != valuesMap.end()) {
+    return valuesMap[value].back();
   }
 
   VersionedValue *ret = 0;
@@ -536,16 +516,11 @@ VersionedValue *Dependency::getLatestValue(llvm::Value *value,
   return ret;
 }
 
-VersionedValue *
-Dependency::getLatestValueNoConstantCheck(llvm::Value *value) const {
+VersionedValue *Dependency::getLatestValueNoConstantCheck(llvm::Value *value) {
   assert(value && "value cannot be null");
 
-  for (std::vector<VersionedValue *>::const_reverse_iterator
-           it = valuesList.rbegin(),
-           itEnd = valuesList.rend();
-       it != itEnd; ++it) {
-    if ((*it)->hasValue(value))
-      return *it;
+  if (valuesMap.find(value) != valuesMap.end()) {
+    return valuesMap[value].back();
   }
 
   if (parentDependency)
@@ -573,13 +548,9 @@ Allocation *Dependency::getLatestAllocation(llvm::Value *allocation,
 Allocation *Dependency::resolveAllocation(VersionedValue *val) {
   if (!val)
     return 0;
-  for (std::vector<PointerEquality *>::const_reverse_iterator
-           it = equalityList.rbegin(),
-           itEnd = equalityList.rend();
-       it != itEnd; ++it) {
-    Allocation *alloc = (*it)->equals(val);
-    if (alloc)
-      return alloc;
+
+  if (equalityMap.find(val) != equalityMap.end()) {
+    return equalityMap[val].back();
   }
 
   if (parentDependency)
@@ -630,7 +601,15 @@ Dependency::resolveAllocationTransitively(VersionedValue *value) {
 
 void Dependency::addPointerEquality(const VersionedValue *value,
                                     Allocation *allocation) {
-  equalityList.push_back(new PointerEquality(value, allocation));
+  if (equalityMap.find(value) != equalityMap.end()) {
+    equalityMap[value].push_back(allocation);
+  } else {
+    std::vector<Allocation *> newList;
+    newList.push_back(allocation);
+    equalityMap.insert(
+        std::make_pair<const VersionedValue *, std::vector<Allocation *> >(
+            value, newList));
+  }
 }
 
 void Dependency::updateStore(Allocation *allocation, VersionedValue *value) {
@@ -658,13 +637,20 @@ void Dependency::updateStore(Allocation *allocation, VersionedValue *value) {
 }
 
 void Dependency::addDependency(VersionedValue *source, VersionedValue *target) {
-  flowsToList.push_back(new FlowsTo(source, target));
+  addDependencyViaAllocation(source, target, 0);
 }
 
 void Dependency::addDependencyViaAllocation(VersionedValue *source,
                                             VersionedValue *target,
                                             Allocation *via) {
-  flowsToList.push_back(new FlowsTo(source, target, via));
+  if (flowsToMap.find(target) != flowsToMap.end()) {
+    flowsToMap[target]
+        .insert(std::make_pair<VersionedValue *, Allocation *>(source, via));
+  } else {
+    std::map<VersionedValue *, Allocation *> newMap;
+    newMap.insert(std::make_pair<VersionedValue *, Allocation *>(source, via));
+    flowsToMap[target] = newMap;
+  }
 }
 
 std::vector<VersionedValue *> Dependency::stores(Allocation *allocation) const {
@@ -685,11 +671,13 @@ std::vector<VersionedValue *> Dependency::stores(Allocation *allocation) const {
 std::vector<VersionedValue *>
 Dependency::directLocalFlowSources(VersionedValue *target) const {
   std::vector<VersionedValue *> ret;
-  for (std::vector<FlowsTo *>::const_iterator it = flowsToList.begin(),
-                                              itEnd = flowsToList.end();
-       it != itEnd; ++it) {
-    if ((*it)->getTarget() == target) {
-      ret.push_back((*it)->getSource());
+  if (flowsToMap.find(target) != flowsToMap.end()) {
+    std::map<VersionedValue *, Allocation *> sources =
+        flowsToMap.find(target)->second;
+    for (std::map<VersionedValue *, Allocation *>::iterator it =
+             sources.begin();
+         it != sources.end(); ++it) {
+      ret.push_back(it->first);
     }
   }
   return ret;
@@ -830,13 +818,13 @@ Dependency::Dependency(Dependency *prev) : parentDependency(prev) {}
 
 Dependency::~Dependency() {
   // Delete the locally-constructed relations
-  Util::deletePointerVector(equalityList);
+  Util::deletePointerMapWithVectorValue(equalityMap);
   Util::deletePointerMap(storesMap);
   Util::deletePointerMapWithVectorValue(storageOfMap);
-  Util::deletePointerVector(flowsToList);
+  Util::deletePointerMapWithMapValue(flowsToMap);
 
   // Delete the locally-constructed objects
-  Util::deletePointerVector(valuesList);
+  Util::deletePointerMapWithVectorValue(valuesMap);
   Util::deletePointerVector(versionedAllocationsList);
 }
 
@@ -1400,22 +1388,23 @@ std::map<VersionedValue *, Allocation *>
 Dependency::directLocalAllocationSources(VersionedValue *target) const {
   std::map<VersionedValue *, Allocation *> ret;
 
-  for (std::vector<FlowsTo *>::const_iterator it = flowsToList.begin(),
-                                              itEnd = flowsToList.end();
-       it != itEnd; ++it) {
-    if ((*it)->getTarget() == target) {
+  if (flowsToMap.find(target) != flowsToMap.end()) {
+    std::map<VersionedValue *, Allocation *> sources =
+        flowsToMap.find(target)->second;
+    for (std::map<VersionedValue *, Allocation *>::iterator it =
+             sources.begin();
+         it != sources.end(); ++it) {
       std::map<VersionedValue *, Allocation *> extra;
-
-      if (!(*it)->getAllocation()) {
+      if (!it->second) {
         // Transitively get the source
-        extra = directLocalAllocationSources((*it)->getSource());
+        extra = directLocalAllocationSources(it->first);
         if (extra.size()) {
           ret.insert(extra.begin(), extra.end());
         } else {
-          ret[(*it)->getSource()] = 0;
+          ret[it->first] = 0;
         }
       } else {
-        ret[(*it)->getSource()] = (*it)->getAllocation();
+        ret[it->first] = it->second;
       }
     }
   }
@@ -1522,18 +1511,33 @@ void Dependency::print(llvm::raw_ostream &stream,
                        const unsigned paddingAmount) const {
   std::string tabs = makeTabs(paddingAmount);
   stream << tabs << "EQUALITIES:";
-  std::vector<PointerEquality *>::const_iterator equalityListBegin =
-      equalityList.begin();
+  std::map<const VersionedValue *, std::vector<Allocation *> >::const_iterator
+  equalityMapBegin = equalityMap.begin();
   std::map<Allocation *, VersionedValue *>::const_iterator storesMapBegin =
       storesMap.begin();
-  std::vector<FlowsTo *>::const_iterator flowsToListBegin = flowsToList.begin();
-  for (std::vector<PointerEquality *>::const_iterator
-           it = equalityListBegin,
-           itEnd = equalityList.end();
+  std::map<VersionedValue *,
+           std::map<VersionedValue *, Allocation *> >::const_iterator
+  flowsToMapBegin = flowsToMap.begin();
+  for (std::map<const VersionedValue *,
+                std::vector<Allocation *> >::const_iterator
+           it = equalityMap.begin(),
+           itEnd = equalityMap.end();
        it != itEnd; ++it) {
-    if (it != equalityListBegin)
+    if (it != equalityMapBegin)
       stream << ",";
-    (*it)->print(stream);
+    stream << "[";
+    (*it->first).print(stream);
+    stream << "=={";
+    std::vector<Allocation *> allocList = (*it).second;
+    std::vector<Allocation *>::iterator allocListBegin = allocList.begin();
+    for (std::vector<Allocation *>::iterator it2 = allocList.begin(),
+                                             itEnd2 = allocList.end();
+         it2 != itEnd2; ++it2) {
+      if (it2 != allocListBegin)
+        stream << ",";
+      (*it2)->print(stream);
+    }
+    stream << "}]";
   }
   stream << "\n";
   stream << tabs << "STORAGE:";
@@ -1551,12 +1555,31 @@ void Dependency::print(llvm::raw_ostream &stream,
   }
   stream << "\n";
   stream << tabs << "FLOWDEPENDENCY:";
-  for (std::vector<FlowsTo *>::const_iterator it = flowsToList.begin(),
-                                              itEnd = flowsToList.end();
+  for (std::map<VersionedValue *,
+                std::map<VersionedValue *, Allocation *> >::const_iterator
+           it = flowsToMap.begin(),
+           itEnd = flowsToMap.end();
        it != itEnd; ++it) {
-    if (it != flowsToListBegin)
+    if (it != flowsToMapBegin)
       stream << ",";
-    (*it)->print(stream);
+    std::map<VersionedValue *, Allocation *> sources = (*it).second;
+    std::map<VersionedValue *, Allocation *>::iterator sourcesMapBegin =
+        sources.begin();
+    for (std::map<VersionedValue *, Allocation *>::iterator it2 =
+             sources.begin();
+         it2 != sources.end(); ++it2) {
+      if (it2 != sourcesMapBegin)
+        stream << ",";
+      stream << "[";
+      (*it->first).print(stream);
+      stream << " <- ";
+      (*it2->first).print(stream);
+      stream << "]";
+      if (it2->second != NULL) {
+        stream << " via ";
+        (*it2->second).print(stream);
+      }
+    }
   }
 
   if (parentDependency) {
@@ -1586,6 +1609,17 @@ template <typename K, typename T>
 void Dependency::Util::deletePointerMapWithVectorValue(
     std::map<K *, std::vector<T *> > &map) {
   typedef typename std::map<K *, std::vector<T *> >::iterator IteratorType;
+
+  for (IteratorType it = map.begin(), itEnd = map.end(); it != itEnd; ++it) {
+    it->second.clear();
+  }
+  map.clear();
+}
+
+template <typename K, typename T>
+void Dependency::Util::deletePointerMapWithMapValue(
+    std::map<K *, std::map<K *, T *> > &map) {
+  typedef typename std::map<K *, std::map<K *, T *> >::iterator IteratorType;
 
   for (IteratorType it = map.begin(), itEnd = map.end(); it != itEnd; ++it) {
     it->second.clear();
