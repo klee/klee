@@ -48,6 +48,6 @@ $ klee --help |grep taint
 ```
 (The "regions" mode uses LLVM SESE region analysis to turn off the
 PC taint when the control flow converges to a common point after a
-conditional branch.) 
+conditional branch.)
 
 
