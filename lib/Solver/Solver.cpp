@@ -1035,9 +1035,7 @@ Z3SolverImpl::computeInitialValues(const Query &query,
                                       &values,
                                     bool &hasSolution) {
 
-  // Use quantified bit-vector array solver
-  Z3_solver the_solver = Z3_mk_solver_for_logic(
-      builder->ctx, Z3_mk_string_symbol(builder->ctx, "ABV"));
+  Z3_solver the_solver = Z3_mk_simple_solver(builder->ctx);
   Z3_solver_inc_ref(builder->ctx, the_solver);
 
   // Create solver parameter
