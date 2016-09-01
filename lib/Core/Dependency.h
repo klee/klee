@@ -571,6 +571,11 @@ class Allocation {
     void executePHI(llvm::Instruction *instr, unsigned int incomingBlock,
                     ref<Expr> valueExpr);
 
+    /// \brief Execute memory operation (load/store)
+    void executeMemoryOperation(llvm::Instruction *instr,
+                                std::vector<ref<Expr> > &args,
+                                bool boundsCheck);
+
     /// \brief This retrieves the allocations known at this state, and the
     /// expressions stored in the allocations.
     ///

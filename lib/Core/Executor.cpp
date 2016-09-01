@@ -3514,12 +3514,11 @@ void Executor::executeMemoryOperation(ExecutionState &state, bool isWrite,
     }
     
     ref<Expr> offset = mo->getOffsetExpr(address);
+    ref<Expr> boundsCheck = mo->getBoundsCheckOffset(offset, bytes);
 
     bool inBounds;
     solver->setTimeout(coreSolverTimeout);
-    bool success = solver->mustBeTrue(state, 
-                                      mo->getBoundsCheckOffset(offset, bytes),
-                                      inBounds);
+    bool success = solver->mustBeTrue(state, boundsCheck, inBounds);
     solver->setTimeout(0);
     if (!success) {
       state.pc = state.prevPC;
@@ -3540,7 +3539,8 @@ void Executor::executeMemoryOperation(ExecutionState &state, bool isWrite,
 
           // Update dependency
           if (INTERPOLATION_ENABLED && target)
-            interpTree->execute(target->inst, value, address);
+            interpTree->executeMemoryOperation(target->inst, value, address,
+                                               boundsCheck->isTrue());
         }          
       } else {
         ref<Expr> result = os->read(offset, type);
@@ -3552,7 +3552,8 @@ void Executor::executeMemoryOperation(ExecutionState &state, bool isWrite,
 
         // Update dependency
         if (INTERPOLATION_ENABLED && target)
-          interpTree->execute(target->inst, result, address);
+          interpTree->executeMemoryOperation(target->inst, result, address,
+                                             boundsCheck->isTrue());
       }
 
       return;

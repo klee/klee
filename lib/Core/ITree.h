@@ -719,6 +719,16 @@ public:
   void executePHI(llvm::Instruction *instr, unsigned int incomingBlock,
                   ref<Expr> valueExpr);
 
+  /// \brief For executing memory operations, called by
+  /// Executor::executeMemoryOperation
+  void executeMemoryOperation(llvm::Instruction *instr, ref<Expr> value,
+                              ref<Expr> address, bool boundsCheck) {
+    std::vector<ref<Expr> > args;
+    args.push_back(value);
+    args.push_back(address);
+    currentINode->dependency->executeMemoryOperation(instr, args, boundsCheck);
+  }
+
   /// \brief General method for executing an instruction for building dependency
   /// information, given a particular interpolation tree node.
   static void executeOnNode(ITreeNode *node, llvm::Instruction *instr,

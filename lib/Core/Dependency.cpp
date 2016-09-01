@@ -790,24 +790,9 @@ bool Dependency::buildLoadDependency(llvm::Value *address,
                storedValueIter = storedValue.begin(),
                storedValueIterEnd = storedValue.end();
            storedValueIter != storedValueIterEnd; ++storedValueIter) {
-        // Here we check if the stored value was an address, in
-        // which case we add pointer equality. Otherwise, we build
-        // value dependency between the return value and the stored value.
-        std::vector<Allocation *> storedValueAddressViews =
-            resolveAllocationTransitively(*storedValueIter);
-
-        if (storedValueAddressViews.empty())
           addDependencyViaAllocation(*storedValueIter,
                                      getNewVersionedValue(value, valueExpr),
                                      *allocIter);
-        else {
-          for (std::vector<Allocation *>::iterator
-                   it2 = storedValueAddressViews.begin(),
-                   it2End = storedValueAddressViews.end();
-               it2 != it2End; ++it2) {
-            addPointerEquality(getNewVersionedValue(value, valueExpr), *it2);
-          }
-        }
       }
     }
   }
@@ -1289,6 +1274,36 @@ void Dependency::executePHI(llvm::Instruction *instr,
     getNewVersionedValue(instr, valueExpr);
   } else {
     assert(!"operand not found");
+  }
+}
+
+void Dependency::executeMemoryOperation(llvm::Instruction *instr,
+                                        std::vector<ref<Expr> > &args,
+                                        bool boundsCheck) {
+  execute(instr, args);
+  if (boundsCheck) {
+    // The bounds check has been proven valid, we keep the dependency on the
+    // address. Here we mark the stored/loaded values instead such that the
+    // actual allocation target/source is marked as core.
+    llvm::Value *addressOperand;
+    switch (instr->getOpcode()) {
+    case llvm::Instruction::Load: {
+      addressOperand = instr->getOperand(0);
+      break;
+    }
+    case llvm::Instruction::Store: {
+      addressOperand = instr->getOperand(1);
+      break;
+    }
+    default: {
+      assert(!"unknown memory operation");
+      break;
+    }
+    }
+    AllocationGraph *g = new AllocationGraph();
+    markAllValues(g, addressOperand);
+    computeCoreAllocations(g);
+    delete g;
   }
 }
 
