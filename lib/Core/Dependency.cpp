@@ -1283,8 +1283,9 @@ void Dependency::executeMemoryOperation(llvm::Instruction *instr,
   execute(instr, args);
   if (boundsCheck) {
     // The bounds check has been proven valid, we keep the dependency on the
-    // address. Here we mark the stored/loaded values instead such that the
-    // actual allocation target/source is marked as core.
+    // address. Calling va_start within a variadic function also triggers memory
+    // operation, but we ignored it here as this method is only called when load
+    // / store instruction is processed.
     llvm::Value *addressOperand;
     switch (instr->getOpcode()) {
     case llvm::Instruction::Load: {
