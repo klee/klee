@@ -327,7 +327,7 @@ public:
 
   PathCondition *cdr() const;
 
-  void setAsCore(AllocationGraph *g);
+  void setAsCore(LocationGraph *g);
 
   bool isCore() const;
 
@@ -607,7 +607,7 @@ public:
   void unsatCoreMarking(std::vector<ref<Expr> > unsatCore);
 
   /// \brief Compute the allocations that are relevant for the interpolant.
-  void computeCoreAllocations(AllocationGraph *g);
+  void computeCoreAllocations(LocationGraph *g);
 
   /// \brief Print the content of the tree node object to the LLVM error stream.
   void dump() const;

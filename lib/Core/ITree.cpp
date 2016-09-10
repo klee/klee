@@ -756,7 +756,7 @@ ref<Expr> PathCondition::car() const { return constraint; }
 
 PathCondition *PathCondition::cdr() const { return tail; }
 
-void PathCondition::setAsCore(AllocationGraph *g) {
+void PathCondition::setAsCore(LocationGraph *g) {
   // We mark all values to which this constraint depends
   dependency->markAllValues(g, condition);
 
@@ -1912,7 +1912,7 @@ void ITree::markPathCondition(ExecutionState &state, TimingSolver *solver) {
   markPathConditionTimer.start();
   std::vector<ref<Expr> > unsatCore = solver->getUnsatCore();
 
-  AllocationGraph *g = new AllocationGraph();
+  LocationGraph *g = new LocationGraph();
 
   llvm::BranchInst *binst =
       llvm::dyn_cast<llvm::BranchInst>(state.prevPC->inst);
@@ -2191,7 +2191,7 @@ void ITreeNode::unsatCoreMarking(std::vector<ref<Expr> > unsatCore) {
     markerMap[it->car().get()] = it;
   }
 
-  AllocationGraph *g = new AllocationGraph();
+  LocationGraph *g = new LocationGraph();
   for (std::vector<ref<Expr> >::iterator it1 = unsatCore.begin(),
                                          it1End = unsatCore.end();
        it1 != it1End; ++it1) {
@@ -2208,9 +2208,9 @@ void ITreeNode::unsatCoreMarking(std::vector<ref<Expr> > unsatCore) {
   delete g; // Delete the AllocationGraph object
 }
 
-void ITreeNode::computeCoreAllocations(AllocationGraph *g) {
+void ITreeNode::computeCoreAllocations(LocationGraph *g) {
   ITreeNode::computeCoreAllocationsTimer.start();
-  dependency->computeCoreAllocations(g);
+  dependency->computeCoreLocations(g);
   ITreeNode::computeCoreAllocationsTimer.stop();
 }
 
