@@ -512,10 +512,6 @@ class ITreeNode {
   static StatTimer computeCoreAllocationsTimer;
 
 private:
-  typedef ref<Expr> expression_type;
-
-  typedef std::pair<expression_type, expression_type> pair_type;
-
   /// \brief The path condition
   PathCondition *pathCondition;
 
