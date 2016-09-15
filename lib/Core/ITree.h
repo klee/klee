@@ -510,6 +510,7 @@ class ITreeNode {
   static StatTimer getStoredExpressionsTimer;
   static StatTimer getStoredCoreExpressionsTimer;
   static StatTimer computeCoreAllocationsTimer;
+  static unsigned depthWhenSubsumed;
 
 private:
   /// \brief The path condition
@@ -639,6 +640,8 @@ class ITree {
 
   /// \brief Number of subsumption checks for statistical purposes
   static unsigned long subsumptionCheckCount;
+  static unsigned long subsumptionSuccessCount;
+  static unsigned totalDepthWhenSubsumed;
 
   ITreeNode *currentINode;
 

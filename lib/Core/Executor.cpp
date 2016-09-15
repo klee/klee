@@ -2994,6 +2994,7 @@ void Executor::terminateState(ExecutionState &state) {
   }
 
   interpreterHandler->incPathsExplored();
+  interpreterHandler->incTotalDepthPathsExplored(state.depth++);
 
   std::set<ExecutionState*>::iterator it = addedStates.find(&state);
   if (it==addedStates.end()) {

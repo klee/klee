@@ -224,6 +224,7 @@ private:
   unsigned m_testIndex;  // number of tests written so far
   unsigned m_pathsExplored; // number of paths explored so far
 
+  unsigned m_totalDepthPathsExplored;    // total depth paths explored so far
   unsigned m_subsumptionTermination;     // number of termination by subsumption
   unsigned m_subsumptionTerminationTest; // number of tests generated from
                                          // termination by subsumption
@@ -249,6 +250,10 @@ public:
   unsigned getNumPathsExplored() { return m_pathsExplored; }
   void incPathsExplored() { m_pathsExplored++; }
 
+  void incTotalDepthPathsExplored(unsigned int currentDepth) {
+    m_totalDepthPathsExplored += currentDepth;
+  }
+  unsigned getTotalDepthPathsExplored() { return m_totalDepthPathsExplored; }
   unsigned getSubsumptionTermination() { return m_subsumptionTermination; }
   void incSubsumptionTermination() { m_subsumptionTermination++; }
   unsigned getSubsumptionTerminationTest() { return m_subsumptionTerminationTest; }
@@ -1587,6 +1592,9 @@ int main(int argc, char **argv, char **envp) {
         << handler->getNumPathsExplored() << ", among which\n";
   stats << "KLEE: done:     early-terminating paths (instruction time limit, solver timeout, max-depth reached) = "
         << handler->getEarlyTermination() << "\n";
+  stats << "KLEE: done:     average depth of completed paths = "
+        << (double)handler->getTotalDepthPathsExplored() /
+               (double)handler->getNumPathsExplored() << "\n";
   if (INTERPOLATION_ENABLED)
     stats << "KLEE: done:     subsumed paths = "
           << handler->getSubsumptionTermination() << "\n";

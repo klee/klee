@@ -1726,6 +1726,8 @@ StatTimer ITree::splitTimer;
 StatTimer ITree::executeOnNodeTimer;
 
 unsigned long ITree::subsumptionCheckCount = 0;
+unsigned long ITree::subsumptionSuccessCount = 0;
+unsigned ITree::totalDepthWhenSubsumed = 0;
 
 void ITree::printTimeStat(llvm::raw_ostream &stream) {
   stream << "KLEE: done:     setCurrentINode = " << setCurrentINodeTimer.get() *
@@ -1753,6 +1755,11 @@ void ITree::printTableStat(llvm::raw_ostream &stream) const {
   }
 
   SubsumptionTableEntry::printStat(stream);
+
+  stream << "KLEE: done:     Average depth of subsumption = "
+         << StatTimer::inTwoDecimalPoints((double)totalDepthWhenSubsumed /
+                                          (double)subsumptionSuccessCount)
+         << "\n";
 
   stream
       << "KLEE: done:     Average table entries per subsumption checkpoint = "
@@ -1839,12 +1846,14 @@ bool ITree::subsumptionCheck(TimingSolver *solver, ExecutionState &state,
 
     if ((*it)->subsumed(solver, state, timeout, storedExpressions)) {
       // We mark as subsumed such that the node will not be
-      // stored into table (the table already contains a more
       // general entry).
+      // stored into table (the table already contains a more
       currentINode->isSubsumed = true;
 
       // Mark the node as subsumed, and create a subsumption edge
       SearchTree::markAsSubsumed(currentINode, (*it));
+      subsumptionSuccessCount++;
+      totalDepthWhenSubsumed += state.depth;
       subsumptionCheckTimer.stop();
       return true;
     }
