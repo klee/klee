@@ -669,6 +669,9 @@ static int initEnv(Module *mainModule) {
   */
 
   Function *mainFn = mainModule->getFunction(EntryPoint);
+  if (!mainFn) {
+    klee_error("'%s' function not found in module.", EntryPoint.c_str());
+  }
 
   if (mainFn->arg_size() < 2) {
     klee_error("Cannot handle ""--posix-runtime"" when main() has less than two arguments.\n");
@@ -1276,7 +1279,6 @@ int main(int argc, char **argv, char **envp) {
   }
 #endif
 
-
   if (WithPOSIXRuntime) {
     int r = initEnv(mainModule);
     if (r != 0)
@@ -1331,8 +1333,7 @@ int main(int argc, char **argv, char **envp) {
   // locale and other data and then calls main.
   Function *mainFn = mainModule->getFunction(EntryPoint);
   if (!mainFn) {
-    llvm::errs() << "'" << EntryPoint << "' function not found in module.\n";
-    return -1;
+    klee_error("'%s' function not found in module.", EntryPoint.c_str());
   }
 
   // FIXME: Change me to std types.
