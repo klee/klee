@@ -268,6 +268,12 @@ namespace klee {
   /// \param oracle - The solver to check query results against.
   Solver *createValidatingSolver(Solver *s, Solver *oracle);
 
+  /// createAssignmentValidatingSolver - Create a solver that when requested
+  /// for an assignment will check that the computed assignment satisfies
+  /// the Query.
+  /// \param s - The underlying solver to use.
+  Solver *createAssignmentValidatingSolver(Solver *s);
+
   /// createCachingSolver - Create a solver which will cache the queries in
   /// memory (without eviction).
   ///

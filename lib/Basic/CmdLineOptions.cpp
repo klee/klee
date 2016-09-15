@@ -82,6 +82,10 @@ llvm::cl::list<QueryLoggingSolverType> queryLoggingOptions(
     llvm::cl::CommaSeparated
 );
 
+llvm::cl::opt<bool>
+    UseAssignmentValidatingSolver("debug-assignment-validating-solver",
+                                  llvm::cl::init(false));
+
 #ifdef ENABLE_METASMT
 
 #ifdef METASMT_DEFAULT_BACKEND_IS_BTOR

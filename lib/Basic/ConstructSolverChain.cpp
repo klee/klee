@@ -35,6 +35,9 @@ Solver *constructSolverChain(Solver *coreSolver, std::string querySMT2LogPath,
                  << baseSolverQuerySMT2LogPath.c_str() << "\n";
   }
 
+  if (UseAssignmentValidatingSolver)
+    solver = createAssignmentValidatingSolver(solver);
+
   if (UseFastCexSolver)
     solver = createFastCexSolver(solver);
 
