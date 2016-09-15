@@ -141,7 +141,7 @@ llvm::cl::opt<CoreSolverType> CoreSolverToUse(
     llvm::cl::init(DEFAULT_CORE_SOLVER));
 
 llvm::cl::opt<CoreSolverType> DebugCrossCheckCoreSolverWith(
-    "debug-cross-check-core-solver",
+    "debug-crosscheck-core-solver",
     llvm::cl::desc(
         "Specifiy a solver to use for cross checking with the core solver"),
     llvm::cl::values(clEnumValN(STP_SOLVER, "stp", "stp"),
