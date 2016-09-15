@@ -510,7 +510,7 @@ class ITreeNode {
   static StatTimer getStoredExpressionsTimer;
   static StatTimer getStoredCoreExpressionsTimer;
   static StatTimer computeCoreAllocationsTimer;
-  static unsigned depthWhenSubsumed;
+  static unsigned totalInstructions;
 
 private:
   /// \brief The path condition
@@ -524,7 +524,6 @@ private:
   uintptr_t nodeId;
 
   bool isSubsumed;
-
   bool storable;
 
   /// \brief Graph for displaying as .dot file
@@ -599,6 +598,10 @@ public:
   std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
   getStoredCoreExpressions(std::set<const Array *> &replacements) const;
 
+  void incTotalInstructions();
+
+  unsigned getTotalInstructions();
+
   /// \brief Marking the core constraints on the path condition, and all the
   /// relevant values on the dependency graph, given an unsatistiability core.
   void unsatCoreMarking(std::vector<ref<Expr> > unsatCore);
@@ -640,8 +643,6 @@ class ITree {
 
   /// \brief Number of subsumption checks for statistical purposes
   static unsigned long subsumptionCheckCount;
-  static unsigned long subsumptionSuccessCount;
-  static unsigned totalDepthWhenSubsumed;
 
   ITreeNode *currentINode;
 

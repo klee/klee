@@ -1726,8 +1726,6 @@ StatTimer ITree::splitTimer;
 StatTimer ITree::executeOnNodeTimer;
 
 unsigned long ITree::subsumptionCheckCount = 0;
-unsigned long ITree::subsumptionSuccessCount = 0;
-unsigned ITree::totalDepthWhenSubsumed = 0;
 
 void ITree::printTimeStat(llvm::raw_ostream &stream) {
   stream << "KLEE: done:     setCurrentINode = " << setCurrentINodeTimer.get() *
@@ -1755,11 +1753,6 @@ void ITree::printTableStat(llvm::raw_ostream &stream) const {
   }
 
   SubsumptionTableEntry::printStat(stream);
-
-  stream << "KLEE: done:     Average depth of subsumption = "
-         << StatTimer::inTwoDecimalPoints((double)totalDepthWhenSubsumed /
-                                          (double)subsumptionSuccessCount)
-         << "\n";
 
   stream
       << "KLEE: done:     Average table entries per subsumption checkpoint = "
@@ -1852,8 +1845,6 @@ bool ITree::subsumptionCheck(TimingSolver *solver, ExecutionState &state,
 
       // Mark the node as subsumed, and create a subsumption edge
       SearchTree::markAsSubsumed(currentINode, (*it));
-      subsumptionSuccessCount++;
-      totalDepthWhenSubsumed += state.depth;
       subsumptionCheckTimer.stop();
       return true;
     }
@@ -2059,6 +2050,7 @@ StatTimer ITreeNode::bindReturnValueTimer;
 StatTimer ITreeNode::getStoredExpressionsTimer;
 StatTimer ITreeNode::getStoredCoreExpressionsTimer;
 StatTimer ITreeNode::computeCoreAllocationsTimer;
+unsigned ITreeNode::totalInstructions;
 
 void ITreeNode::printTimeStat(llvm::raw_ostream &stream) {
   stream << "KLEE: done:     getInterpolant = " << getInterpolantTimer.get() *
@@ -2183,6 +2175,10 @@ ITreeNode::getStoredCoreExpressions(std::set<const Array *> &replacements)
   ITreeNode::getStoredCoreExpressionsTimer.stop();
   return ret;
 }
+
+unsigned ITreeNode::getTotalInstructions() { return totalInstructions; }
+
+void ITreeNode::incTotalInstructions() { ++totalInstructions; }
 
 void ITreeNode::unsatCoreMarking(std::vector<ref<Expr> > unsatCore) {
   // State subsumed, we mark needed constraints on the path condition. We create

@@ -39,7 +39,16 @@ public:
   virtual llvm::raw_fd_ostream *openOutputFile(const std::string &filename) = 0;
 
   virtual void incPathsExplored() = 0;
-  virtual void incTotalDepthPathsExplored(unsigned int currentDepth) = 0;
+  virtual void incTotalDepthPathsExploredOnExit(unsigned currentDepth) = 0;
+  virtual void incTotalInstructionsOnExit(unsigned currentInstruction) = 0;
+  virtual void incTotalDepthPathsExploredOnEarly(unsigned currentDepth) = 0;
+  virtual void incTotalInstructionsOnEarly(unsigned currentInstruction) = 0;
+  virtual void incTotalDepthPathsExploredOnError(unsigned currentDepth) = 0;
+  virtual void incTotalInstructionsOnError(unsigned currentInstruction) = 0;
+  virtual void
+  incTotalDepthPathsExploredOnSubsumption(unsigned currentDepth) = 0;
+  virtual void
+  incTotalInstructionsOnSubsumption(unsigned currentInstruction) = 0;
   virtual void incSubsumptionTermination() = 0;
   virtual void incSubsumptionTerminationTest() = 0;
   virtual void incEarlyTermination() = 0;

@@ -2881,19 +2881,20 @@ void Executor::run(ExecutionState &initialState) {
 	stepInstruction(state);
 
 	executeInstruction(state, ki);
-	processTimers(&state, MaxInstructionTime);
+        state.itreeNode->incTotalInstructions();
+        processTimers(&state, MaxInstructionTime);
 
-	if (MaxMemory) {
-	    if ((stats::instructions & 0xFFFF) == 0) {
-		// We need to avoid calling GetMallocUsage() often because it
-		// is O(elts on freelist). This is really bad since we start
-		// to pummel the freelist once we hit the memory cap.
-		unsigned mbs = util::GetTotalMallocUsage() >> 20;
-		if (mbs > MaxMemory) {
-		    if (mbs > MaxMemory + 100) {
-			// just guess at how many to kill
-			unsigned numStates = states.size();
-			unsigned toKill = std::max(1U, numStates - numStates*MaxMemory/mbs);
+        if (MaxMemory) {
+          if ((stats::instructions & 0xFFFF) == 0) {
+            // We need to avoid calling GetMallocUsage() often because it
+            // is O(elts on freelist). This is really bad since we start
+            // to pummel the freelist once we hit the memory cap.
+            unsigned mbs = util::GetTotalMallocUsage() >> 20;
+            if (mbs > MaxMemory) {
+              if (mbs > MaxMemory + 100) {
+                // just guess at how many to kill
+                unsigned numStates = states.size();
+                        unsigned toKill = std::max(1U, numStates - numStates*MaxMemory/mbs);
 
 			klee_warning("killing %d states (over memory cap)", toKill);
 
@@ -2994,7 +2995,6 @@ void Executor::terminateState(ExecutionState &state) {
   }
 
   interpreterHandler->incPathsExplored();
-  interpreterHandler->incTotalDepthPathsExplored(state.depth++);
 
   std::set<ExecutionState*>::iterator it = addedStates.find(&state);
   if (it==addedStates.end()) {
@@ -3023,6 +3023,10 @@ void Executor::terminateStateOnSubsumption(ExecutionState &state) {
   // but with different statistics functions called, and empty error
   // message as this is not an error.
   interpreterHandler->incSubsumptionTermination();
+  interpreterHandler->incTotalDepthPathsExploredOnSubsumption(state.depth);
+  interpreterHandler->incTotalInstructionsOnSubsumption(
+      state.itreeNode->getTotalInstructions());
+
   if (!OnlyOutputStatesCoveringNew || state.coveredNew ||
       (AlwaysOutputSeeds && seedMap.count(&state))) {
     interpreterHandler->incSubsumptionTerminationTest();
@@ -3034,6 +3038,10 @@ void Executor::terminateStateOnSubsumption(ExecutionState &state) {
 void Executor::terminateStateEarly(ExecutionState &state, 
                                    const Twine &message) {
   interpreterHandler->incEarlyTermination();
+  interpreterHandler->incTotalDepthPathsExploredOnEarly(state.depth);
+  interpreterHandler->incTotalInstructionsOnEarly(
+      state.itreeNode->getTotalInstructions());
+
   if (!OnlyOutputStatesCoveringNew || state.coveredNew ||
       (AlwaysOutputSeeds && seedMap.count(&state))) {
     interpreterHandler->incEarlyTerminationTest();
@@ -3045,6 +3053,10 @@ void Executor::terminateStateEarly(ExecutionState &state,
 
 void Executor::terminateStateOnExit(ExecutionState &state) {
   interpreterHandler->incExitTermination();
+  interpreterHandler->incTotalDepthPathsExploredOnExit(state.depth);
+  interpreterHandler->incTotalInstructionsOnExit(
+      state.itreeNode->getTotalInstructions());
+
   if (!OnlyOutputStatesCoveringNew || state.coveredNew || 
       (AlwaysOutputSeeds && seedMap.count(&state))) {
     interpreterHandler->incExitTerminationTest();
@@ -3100,6 +3112,9 @@ void Executor::terminateStateOnError(ExecutionState &state,
                                      const char *suffix,
                                      const llvm::Twine &info) {
   interpreterHandler->incErrorTermination();
+  interpreterHandler->incTotalDepthPathsExploredOnError(state.depth);
+  interpreterHandler->incTotalInstructionsOnError(
+      state.itreeNode->getTotalInstructions());
 
   std::string message = messaget.str();
   static std::set< std::pair<Instruction*, std::string> > emittedErrors;
