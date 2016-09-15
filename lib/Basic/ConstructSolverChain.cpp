@@ -37,6 +37,9 @@ Solver *constructSolverChain(Solver *coreSolver,
                  baseSolverQuerySMT2LogPath.c_str());
   }
 
+  if (UseAssignmentValidatingSolver)
+    solver = createAssignmentValidatingSolver(solver);
+
   if (UseFastCexSolver)
     solver = createFastCexSolver(solver);
 
