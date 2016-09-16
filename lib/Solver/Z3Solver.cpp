@@ -382,6 +382,12 @@ bool Z3SolverImpl::validateZ3Model(::Z3_solver &theSolver, ::Z3_model &theModel)
       success = false;
     }
   }
+
+  if (!success) {
+    llvm::errs() << "Solver state:\n" << Z3_solver_to_string(builder->ctx, theSolver) << "\n";
+    llvm::errs() << "Model:\n" << Z3_model_to_string(builder->ctx, theModel) << "\n";
+  }
+
   Z3_ast_vector_dec_ref(builder->ctx, constraints);
   return success;
 }
