@@ -28,6 +28,18 @@ llvm::cl::opt<bool> UseConstructHashZ3(
     llvm::cl::init(true));
 }
 
+namespace klee {
+
+// Declared here rather than `Z3Builder.h` so they can be called in gdb.
+template <> void Z3NodeHandle<Z3_sort>::dump() {
+  llvm::errs() << "Z3SortHandle:\n" << ::Z3_sort_to_string(context, node)
+               << "\n";
+}
+template <> void Z3NodeHandle<Z3_ast>::dump() {
+  llvm::errs() << "Z3ASTHandle:\n" << ::Z3_ast_to_string(context, as_ast())
+               << "\n";
+}
+
 void custom_z3_error_handler(Z3_context ctx, Z3_error_code ec) {
   ::Z3_string errorMsg =
 #ifdef HAVE_Z3_GET_ERROR_MSG_NEEDS_CONTEXT
@@ -819,5 +831,6 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     assert(0 && "unhandled Expr type");
     return getTrue();
   }
+}
 }
 #endif // ENABLE_Z3
