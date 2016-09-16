@@ -184,6 +184,7 @@ public:
   }
 
   void clearConstructCache() { constructed.clear(); }
+  void closeInteractionLog(); // Should be called before aborting
 };
 }
 

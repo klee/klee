@@ -25,6 +25,7 @@ llvm::cl::opt<std::string> Z3QueryDumpFile(
 llvm::cl::opt<bool> Z3ValidateModels(
     "z3-validate-models", llvm::cl::init(false),
     llvm::cl::desc("When generating Z3 models validate these against the query"));
+
 }
 
 #include "llvm/Support/ErrorHandling.h"
@@ -316,8 +317,10 @@ SolverImpl::SolverRunStatus Z3SolverImpl::handleSolverResponse(
     // Validate the model if requested
     if (Z3ValidateModels) {
       bool success = validateZ3Model(theSolver, theModel);
-      if (!success)
+      if (!success) {
+        builder->closeInteractionLog();
         abort();
+      }
     }
 
     Z3_model_dec_ref(builder->ctx, theModel);
@@ -337,6 +340,7 @@ SolverImpl::SolverRunStatus Z3SolverImpl::handleSolverResponse(
     }
     llvm::errs() << "Unexpected solver failure. Reason is \"" << reason
                  << "\"\n";
+    builder->closeInteractionLog();
     abort();
   }
   default:

@@ -26,6 +26,10 @@ llvm::cl::opt<bool> UseConstructHashZ3(
     "use-construct-hash-z3",
     llvm::cl::desc("Use hash-consing during Z3 query construction."),
     llvm::cl::init(true));
+
+llvm::cl::opt<std::string> Z3LogInteractionFile(
+    "z3-log-interaction", llvm::cl::init(""),
+    llvm::cl::desc("Log interaction with Z3 to the specified path"));
 }
 
 namespace klee {
@@ -57,6 +61,9 @@ void custom_z3_error_handler(Z3_context ctx, Z3_error_code ec) {
   }
   llvm::errs() << "Error: Incorrect use of Z3. [" << ec << "] " << errorMsg
                << "\n";
+  if (Z3LogInteractionFile.length() > 0) {
+    Z3_close_log();
+  }
   abort();
 }
 
@@ -69,6 +76,11 @@ void Z3ArrayExprHash::clear() {
 
 Z3Builder::Z3Builder(bool autoClearConstructCache)
     : autoClearConstructCache(autoClearConstructCache) {
+  if (Z3LogInteractionFile.length() > 0) {
+    llvm::errs() << "Logging Z3 interaction to \"" << Z3LogInteractionFile << "\"\n";
+    Z3_open_log(Z3LogInteractionFile.c_str());
+  }
+
   // FIXME: Should probably let the client pass in a Z3_config instead
   Z3_config cfg = Z3_mk_config();
   // It is very important that we ask Z3 to let us manage memory so that
@@ -87,6 +99,13 @@ Z3Builder::~Z3Builder() {
   clearConstructCache();
   _arr_hash.clear();
   Z3_del_context(ctx);
+  closeInteractionLog();
+}
+
+void Z3Builder::closeInteractionLog() {
+  if (Z3LogInteractionFile.length() > 0) {
+    Z3_close_log();
+  }
 }
 
 Z3SortHandle Z3Builder::getBvSort(unsigned width) {
