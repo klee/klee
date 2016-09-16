@@ -23,6 +23,10 @@ namespace {
 llvm::cl::opt<std::string> Z3QueryDumpFile(
     "debug-z3-dump-queries", llvm::cl::init(""),
     llvm::cl::desc("Dump Z3's representation of the query to the specified path"));
+
+llvm::cl::opt<bool> Z3ValidateModels(
+    "debug-z3-validate-models", llvm::cl::init(false),
+    llvm::cl::desc("When generating Z3 models validate these against the query"));
 }
 
 #include "llvm/Support/ErrorHandling.h"
@@ -43,6 +47,7 @@ private:
                          const std::vector<const Array *> *objects,
                          std::vector<std::vector<unsigned char> > *values,
                          bool &hasSolution);
+bool validateZ3Model(::Z3_solver &theSolver, ::Z3_model &theModel);
 
 public:
   Z3SolverImpl();
@@ -306,6 +311,13 @@ SolverImpl::SolverRunStatus Z3SolverImpl::handleSolverResponse(
       values->push_back(data);
     }
 
+    // Validate the model if requested
+    if (Z3ValidateModels) {
+      bool success = validateZ3Model(theSolver, theModel);
+      if (!success)
+        abort();
+    }
+
     Z3_model_dec_ref(builder->ctx, theModel);
     return SolverImpl::SOLVER_RUN_STATUS_SUCCESS_SOLVABLE;
   }
@@ -328,6 +340,54 @@ SolverImpl::SolverRunStatus Z3SolverImpl::handleSolverResponse(
   default:
     llvm_unreachable("unhandled Z3 result");
   }
+}
+
+bool Z3SolverImpl::validateZ3Model(::Z3_solver &theSolver, ::Z3_model &theModel) {
+  bool success = true;
+  ::Z3_ast_vector constraints =
+      Z3_solver_get_assertions(builder->ctx, theSolver);
+  Z3_ast_vector_inc_ref(builder->ctx, constraints);
+
+  unsigned size = Z3_ast_vector_size(builder->ctx, constraints);
+
+  for (unsigned index = 0; index < size; ++index) {
+    Z3ASTHandle constraint = Z3ASTHandle(
+        Z3_ast_vector_get(builder->ctx, constraints, index), builder->ctx);
+
+    ::Z3_ast rawEvaluatedExpr;
+    bool successfulEval =
+        Z3_model_eval(builder->ctx, theModel, constraint,
+                      /*model_completion=*/Z3_TRUE, &rawEvaluatedExpr);
+    assert(successfulEval && "Failed to evaluate model");
+
+    // Use handle to do ref-counting.
+    Z3ASTHandle evaluatedExpr(rawEvaluatedExpr, builder->ctx);
+
+    Z3SortHandle sort =
+        Z3SortHandle(Z3_get_sort(builder->ctx, evaluatedExpr), builder->ctx);
+    assert(Z3_get_sort_kind(builder->ctx, sort) == Z3_BOOL_SORT &&
+           "Evaluated expression has wrong sort");
+
+    Z3_lbool evaluatedValue =
+        Z3_get_bool_value(builder->ctx, evaluatedExpr);
+    if (evaluatedValue != Z3_L_TRUE) {
+      llvm::errs() << "Validating model failed:\n"
+                   << "The expression:\n";
+      constraint.dump();
+      llvm::errs() << "evaluated to \n";
+      evaluatedExpr.dump();
+      llvm::errs() << "But should be true\n";
+      success = false;
+    }
+  }
+
+  if (!success) {
+    llvm::errs() << "Solver state:\n" << Z3_solver_to_string(builder->ctx, theSolver) << "\n";
+    llvm::errs() << "Model:\n" << Z3_model_to_string(builder->ctx, theModel) << "\n";
+  }
+
+  Z3_ast_vector_dec_ref(builder->ctx, constraints);
+  return success;
 }
 
 SolverImpl::SolverRunStatus Z3SolverImpl::getOperationStatusCode() {
