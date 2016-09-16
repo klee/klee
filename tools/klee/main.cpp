@@ -1286,7 +1286,7 @@ int main(int argc, char **argv, char **envp) {
   }
 
   std::string LibraryDir = KleeHandler::getRunTimeLibraryPath(argv[0]);
-  Interpreter::ModuleOptions Opts(LibraryDir.c_str(),
+  Interpreter::ModuleOptions Opts(LibraryDir.c_str(), EntryPoint,
                                   /*Optimize=*/OptimizeModule,
                                   /*CheckDivZero=*/CheckDivZero,
                                   /*CheckOvershift=*/CheckOvershift);
