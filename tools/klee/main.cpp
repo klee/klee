@@ -1662,7 +1662,7 @@ int main(int argc, char **argv, char **envp) {
                     handler->getTotalBranchingDepthOnErrorTermination()) /
                (double)(handler->getExitTermination() +
                         handler->getEarlyTermination() +
-                        handler->getErrorTerminationTest()) << "\n";
+                        handler->getErrorTermination()) << "\n";
   if (INTERPOLATION_ENABLED) {
     if (handler->getSubsumedTermination() == 0.0) {
       stats << "KLEE: done:     average depth of subsumption paths = " << 0
@@ -1680,7 +1680,7 @@ int main(int argc, char **argv, char **envp) {
                     handler->getTotalInstructionsDepthOnErrorTermination()) /
                (double)(handler->getExitTermination() +
                         handler->getEarlyTermination() +
-                        handler->getErrorTerminationTest()) << "\n";
+                        handler->getErrorTermination()) << "\n";
 
   if (INTERPOLATION_ENABLED) {
     if (handler->getSubsumedTermination() == 0.0) {
