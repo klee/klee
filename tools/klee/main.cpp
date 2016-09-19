@@ -241,7 +241,7 @@ private:
   unsigned m_totalInstructionsDepthOnSubsumption; // total instruction explored so
                                              // far on subsumption
 
-  unsigned m_subsumedTermination;     // number of termination by subsumption
+  unsigned m_subsumptionTermination;     // number of termination by subsumption
   unsigned m_subsumptionTerminationTest; // number of tests generated from
                                          // termination by subsumption
   unsigned m_earlyTermination;     // number of early termination
@@ -318,8 +318,8 @@ public:
   unsigned getTotalBranchingDepthOnSubsumption() {
     return m_totalBranchingDepthOnSubsumption;
   }
-  unsigned getSubsumedTermination() { return m_subsumedTermination; }
-  void incSubsumptionTermination() { m_subsumedTermination++; }
+  unsigned getSubsumptionTermination() { return m_subsumptionTermination; }
+  void incSubsumptionTermination() { m_subsumptionTermination++; }
   unsigned getSubsumptionTerminationTest() { return m_subsumptionTerminationTest; }
   void incSubsumptionTerminationTest() {
     if (!NoOutput) {
@@ -386,7 +386,7 @@ KleeHandler::KleeHandler(int argc, char **argv)
       m_totalBranchingDepthOnErrorTermination(0),
       m_totalInstructionsDepthOnErrorTermination(0),
       m_totalBranchingDepthOnSubsumption(0),
-      m_totalInstructionsDepthOnSubsumption(0), m_subsumedTermination(0),
+      m_totalInstructionsDepthOnSubsumption(0), m_subsumptionTermination(0),
       m_subsumptionTerminationTest(0), m_earlyTermination(0),
       m_earlyTerminationTest(0), m_errorTermination(0),
       m_errorTerminationTest(0), m_exitTermination(0), m_exitTerminationTest(0),
@@ -1654,20 +1654,20 @@ int main(int argc, char **argv, char **envp) {
         << handler->getEarlyTermination() << "\n";
 
   if (INTERPOLATION_ENABLED) {
-    stats << "KLEE: done:     average depth of completed paths = "
+    stats << "KLEE: done:     average branching depth of completed paths = "
           << (double)(handler->getTotalBranchingDepthOnExitTermination() +
                       handler->getTotalBranchingDepthOnEarlyTermination() +
                       handler->getTotalBranchingDepthOnErrorTermination()) /
                  (double)(handler->getExitTermination() +
                           handler->getEarlyTermination() +
                           handler->getErrorTermination()) << "\n";
-    if (handler->getSubsumedTermination() == 0.0) {
-      stats << "KLEE: done:     average depth of subsumption paths = " << 0
-            << "\n";
+    if (handler->getSubsumptionTermination() == 0.0) {
+      stats << "KLEE: done:     average branching depth of subsumption paths = "
+            << 0 << "\n";
     } else {
-      stats << "KLEE: done:     average depth of subsumption paths = "
+      stats << "KLEE: done:     average branching depth of subsumption paths = "
             << (double)handler->getTotalBranchingDepthOnSubsumption() /
-                   (double)handler->getSubsumedTermination() << "\n";
+                   (double)handler->getSubsumptionTermination() << "\n";
     }
   }
 
@@ -1679,20 +1679,20 @@ int main(int argc, char **argv, char **envp) {
                  (double)(handler->getExitTermination() +
                           handler->getEarlyTermination() +
                           handler->getErrorTermination()) << "\n";
-    if (handler->getSubsumedTermination() == 0.0) {
-      stats << "KLEE: done:     average instructions of subsumption paths = "
-            << 0 << "\n";
+    if (handler->getSubsumptionTermination() == 0.0) {
+      stats << "KLEE: done:     average instructions of subsumed paths = " << 0
+            << "\n";
     } else {
-      stats << "KLEE: done:     average instructions of subsumption paths = "
+      stats << "KLEE: done:     average instructions of subsumed paths = "
             << (double)
                    handler->getTotalInstructionPathsExploredOnSubsumption() /
-                   (double)handler->getSubsumedTermination() << "\n";
+                   (double)handler->getSubsumptionTermination() << "\n";
     }
   }
 
   if (INTERPOLATION_ENABLED)
     stats << "KLEE: done:     subsumed paths = "
-          << handler->getSubsumedTermination() << "\n";
+          << handler->getSubsumptionTermination() << "\n";
   stats << "KLEE: done:     error paths = "
         << handler->getErrorTermination() << "\n";
   stats << "KLEE: done:     program exit paths = "
