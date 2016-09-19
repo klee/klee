@@ -273,10 +273,10 @@ public:
   void incTotalInstructionsOnExit(unsigned instructionsDepth) {
     m_totalInstructionsDepthOnExitTermination += instructionsDepth;
   }
-  unsigned getTotalDepthPathsExploredOnExit() {
+  unsigned getTotalBranchingDepthOnExitTermination() {
     return m_totalBranchingDepthOnExitTermination;
   }
-  unsigned getTotalInstructionPathsExploredOnExit() {
+  unsigned getTotalInstructionsDepthOnExitTermination() {
     return m_totalInstructionsDepthOnExitTermination;
   }
   void incBranchingDepthOnEarlyTermination(unsigned branchingDepth) {
@@ -289,7 +289,7 @@ public:
   unsigned getTotalBranchingDepthOnEarlyTermination() {
     return m_totalBranchingDepthOnEarlyTermination;
   }
-  unsigned getTotalInstructionPathsExploredOnEarly() {
+  unsigned getTotalInstructionsDepthOnEarlyTermination() {
     return m_totalInstructionsDepthOnEarlyTermination;
   }
   void incBranchingDepthOnErrorTermination(unsigned branchingDepth) {
@@ -299,10 +299,10 @@ public:
   void incInstructionsDepthOnErrorTermination(unsigned instructionsDepth) {
     m_totalInstructionsDepthOnErrorTermination += instructionsDepth;
   }
-  unsigned getTotalDepthPathsExploredOnError() {
+  unsigned getTotalBranchingDepthOnErrorTermination() {
     return m_totalBranchingDepthOnErrorTermination;
   }
-  unsigned getTotalInstructionPathsExploredOnError() {
+  unsigned getTotalInstructionsDepthOnErrorTermination() {
     return m_totalInstructionsDepthOnErrorTermination;
   }
   unsigned getTotalInstructionPathsExploredOnSubsumption() {
@@ -1657,9 +1657,9 @@ int main(int argc, char **argv, char **envp) {
   stats << "KLEE: done:     early-terminating paths (instruction time limit, solver timeout, max-depth reached) = "
         << handler->getEarlyTermination() << "\n";
   stats << "KLEE: done:     average depth of completed paths = "
-        << (double)(handler->getTotalDepthPathsExploredOnExit() +
+        << (double)(handler->getTotalBranchingDepthOnExitTermination() +
                     handler->getTotalBranchingDepthOnEarlyTermination() +
-                    handler->getTotalInstructionPathsExploredOnError()) /
+                    handler->getTotalBranchingDepthOnErrorTermination()) /
                (double)(handler->getExitTermination() +
                         handler->getEarlyTermination() +
                         handler->getErrorTerminationTest()) << "\n";
@@ -1675,9 +1675,9 @@ int main(int argc, char **argv, char **envp) {
   }
 
   stats << "KLEE: done:     average instructions of completed paths = "
-        << (double)(handler->getTotalInstructionPathsExploredOnExit() +
-                    handler->getTotalInstructionPathsExploredOnEarly() +
-                    handler->getTotalInstructionPathsExploredOnError()) /
+        << (double)(handler->getTotalInstructionsDepthOnExitTermination() +
+                    handler->getTotalInstructionsDepthOnEarlyTermination() +
+                    handler->getTotalInstructionsDepthOnErrorTermination()) /
                (double)(handler->getExitTermination() +
                         handler->getEarlyTermination() +
                         handler->getErrorTerminationTest()) << "\n";
