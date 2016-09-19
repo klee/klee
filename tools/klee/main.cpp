@@ -224,24 +224,24 @@ private:
   unsigned m_testIndex;  // number of tests written so far
   unsigned m_pathsExplored; // number of paths explored so far
 
-  unsigned m_totalDepthPathsExploredOnExit; // total depth paths explored so far
+  unsigned m_totalBranchingDepthOnExitTermination; // total depth paths explored so far
                                             // on exit
-  unsigned m_totalInstructionsOnExit; // total instructions explored so far on
+  unsigned m_totalInstructionsDepthOnExitTermination; // total instructions explored so far on
                                       // exit
-  unsigned m_totalDepthPathsExploredOnEarly; // total depth paths explored so
+  unsigned m_totalBranchingDepthOnEarlyTermination; // total depth paths explored so
                                              // far on early
-  unsigned m_totalInstructionsOnEarly; // total instructions explored so far on
+  unsigned m_totalInstructionsDepthOnEarlyTermination; // total instructions explored so far on
                                        // early
-  unsigned m_totalDepthPathsExploredOnError; // total depth paths explored so
+  unsigned m_totalBranchingDepthOnErrorTermination; // total depth paths explored so
                                              // far on error
-  unsigned m_totalInstructionsOnError; // total instructions explored so far on
+  unsigned m_totalInstructionsDepthOnErrorTermination; // total instructions explored so far on
                                        // error
-  unsigned m_totalDepthPathsExploredOnSubsumption; // total depth explored so
+  unsigned m_totalBranchingDepthOnSubsumption; // total depth explored so
                                                    // far on subsumption
-  unsigned m_totalInstructionsOnSubsumption; // total instruction explored so
+  unsigned m_totalInstructionsDepthOnSubsumption; // total instruction explored so
                                              // far on subsumption
 
-  unsigned m_subsumptionTermination;     // number of termination by subsumption
+  unsigned m_subsumedTermination;     // number of termination by subsumption
   unsigned m_subsumptionTerminationTest; // number of tests generated from
                                          // termination by subsumption
   unsigned m_earlyTermination;     // number of early termination
@@ -266,60 +266,60 @@ public:
   unsigned getNumPathsExplored() { return m_pathsExplored; }
   void incPathsExplored() { m_pathsExplored++; }
 
-  void incTotalDepthPathsExploredOnExit(unsigned currentDepth) {
-    m_totalDepthPathsExploredOnExit += currentDepth;
+  void incBranchingDepthOnExitTermination(unsigned branchingDepth) {
+    m_totalBranchingDepthOnExitTermination += branchingDepth;
   }
 
-  void incTotalInstructionsOnExit(unsigned totalInstruction) {
-    m_totalInstructionsOnExit += totalInstruction;
+  void incTotalInstructionsOnExit(unsigned instructionsDepth) {
+    m_totalInstructionsDepthOnExitTermination += instructionsDepth;
   }
   unsigned getTotalDepthPathsExploredOnExit() {
-    return m_totalDepthPathsExploredOnExit;
+    return m_totalBranchingDepthOnExitTermination;
   }
   unsigned getTotalInstructionPathsExploredOnExit() {
-    return m_totalInstructionsOnExit;
+    return m_totalInstructionsDepthOnExitTermination;
   }
-  void incTotalDepthPathsExploredOnEarly(unsigned currentDepth) {
-    m_totalDepthPathsExploredOnEarly += currentDepth;
+  void incBranchingDepthOnEarlyTermination(unsigned branchingDepth) {
+    m_totalBranchingDepthOnEarlyTermination += branchingDepth;
   }
 
-  void incTotalInstructionsOnEarly(unsigned totalInstruction) {
-    m_totalInstructionsOnEarly += totalInstruction;
+  void incInstructionsDepthOnEarlyTermination(unsigned instructionsDepth) {
+    m_totalInstructionsDepthOnEarlyTermination += instructionsDepth;
   }
-  unsigned getTotalDepthPathsExploredOnEarly() {
-    return m_totalDepthPathsExploredOnEarly;
+  unsigned getTotalBranchingDepthOnEarlyTermination() {
+    return m_totalBranchingDepthOnEarlyTermination;
   }
   unsigned getTotalInstructionPathsExploredOnEarly() {
-    return m_totalInstructionsOnEarly;
+    return m_totalInstructionsDepthOnEarlyTermination;
   }
-  void incTotalDepthPathsExploredOnError(unsigned currentDepth) {
-    m_totalDepthPathsExploredOnError += currentDepth;
+  void incBranchingDepthOnErrorTermination(unsigned branchingDepth) {
+    m_totalBranchingDepthOnErrorTermination += branchingDepth;
   }
 
-  void incTotalInstructionsOnError(unsigned totalInstruction) {
-    m_totalInstructionsOnError += totalInstruction;
+  void incInstructionsDepthOnErrorTermination(unsigned instructionsDepth) {
+    m_totalInstructionsDepthOnErrorTermination += instructionsDepth;
   }
   unsigned getTotalDepthPathsExploredOnError() {
-    return m_totalDepthPathsExploredOnError;
+    return m_totalBranchingDepthOnErrorTermination;
   }
   unsigned getTotalInstructionPathsExploredOnError() {
-    return m_totalInstructionsOnError;
+    return m_totalInstructionsDepthOnErrorTermination;
   }
   unsigned getTotalInstructionPathsExploredOnSubsumption() {
-    return m_totalInstructionsOnSubsumption;
+    return m_totalInstructionsDepthOnSubsumption;
   }
-  void incTotalDepthPathsExploredOnSubsumption(unsigned currentDepth) {
-    m_totalDepthPathsExploredOnSubsumption += currentDepth;
+  void incInstructionsDepthOnSubsumption(unsigned branchingDepth) {
+    m_totalBranchingDepthOnSubsumption += branchingDepth;
   }
 
-  void incTotalInstructionsOnSubsumption(unsigned totalInstruction) {
-    m_totalInstructionsOnSubsumption += totalInstruction;
+  void incTotalInstructionsOnSubsumption(unsigned instructionsDepth) {
+    m_totalInstructionsDepthOnSubsumption += instructionsDepth;
   }
   unsigned getTotalDepthPathsExploredOnSubsumption() {
-    return m_totalDepthPathsExploredOnSubsumption;
+    return m_totalBranchingDepthOnSubsumption;
   }
-  unsigned getSubsumptionTermination() { return m_subsumptionTermination; }
-  void incSubsumptionTermination() { m_subsumptionTermination++; }
+  unsigned getSubsumedTermination() { return m_subsumedTermination; }
+  void incSubsumptionTermination() { m_subsumedTermination++; }
   unsigned getSubsumptionTerminationTest() { return m_subsumptionTerminationTest; }
   void incSubsumptionTerminationTest() {
     if (!NoOutput) {
@@ -384,7 +384,7 @@ KleeHandler::KleeHandler(int argc, char **argv)
     m_outputDirectory(),
     m_testIndex(0),
     m_pathsExplored(0),
-    m_subsumptionTermination(0),
+    m_subsumedTermination(0),
     m_subsumptionTerminationTest(0),
     m_earlyTermination(0),
     m_earlyTerminationTest(0),
@@ -1658,19 +1658,19 @@ int main(int argc, char **argv, char **envp) {
         << handler->getEarlyTermination() << "\n";
   stats << "KLEE: done:     average depth of completed paths = "
         << (double)(handler->getTotalDepthPathsExploredOnExit() +
-                    handler->getTotalDepthPathsExploredOnEarly() +
+                    handler->getTotalBranchingDepthOnEarlyTermination() +
                     handler->getTotalInstructionPathsExploredOnError()) /
                (double)(handler->getExitTermination() +
                         handler->getEarlyTermination() +
                         handler->getErrorTerminationTest()) << "\n";
   if (INTERPOLATION_ENABLED) {
-    if (handler->getSubsumptionTermination() == 0.0) {
+    if (handler->getSubsumedTermination() == 0.0) {
       stats << "KLEE: done:     average depth of subsumption paths = " << 0
             << "\n";
     } else {
       stats << "KLEE: done:     average depth of subsumption paths = "
             << (double)handler->getTotalDepthPathsExploredOnSubsumption() /
-                   (double)handler->getSubsumptionTermination() << "\n";
+                   (double)handler->getSubsumedTermination() << "\n";
     }
   }
 
@@ -1683,20 +1683,20 @@ int main(int argc, char **argv, char **envp) {
                         handler->getErrorTerminationTest()) << "\n";
 
   if (INTERPOLATION_ENABLED) {
-    if (handler->getSubsumptionTermination() == 0.0) {
+    if (handler->getSubsumedTermination() == 0.0) {
       stats << "KLEE: done:     average instructions of subsumption paths = "
             << 0 << "\n";
     } else {
       stats << "KLEE: done:     average instructions of subsumption paths = "
             << (double)
                    handler->getTotalInstructionPathsExploredOnSubsumption() /
-                   (double)handler->getSubsumptionTermination() << "\n";
+                   (double)handler->getSubsumedTermination() << "\n";
     }
   }
 
   if (INTERPOLATION_ENABLED)
     stats << "KLEE: done:     subsumed paths = "
-          << handler->getSubsumptionTermination() << "\n";
+          << handler->getSubsumedTermination() << "\n";
   stats << "KLEE: done:     error paths = "
         << handler->getErrorTermination() << "\n";
   stats << "KLEE: done:     program exit paths = "
