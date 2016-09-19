@@ -2050,7 +2050,6 @@ StatTimer ITreeNode::bindReturnValueTimer;
 StatTimer ITreeNode::getStoredExpressionsTimer;
 StatTimer ITreeNode::getStoredCoreExpressionsTimer;
 StatTimer ITreeNode::computeCoreAllocationsTimer;
-unsigned ITreeNode::totalInstructions;
 
 void ITreeNode::printTimeStat(llvm::raw_ostream &stream) {
   stream << "KLEE: done:     getInterpolant = " << getInterpolantTimer.get() *
@@ -2176,9 +2175,9 @@ ITreeNode::getStoredCoreExpressions(std::set<const Array *> &replacements)
   return ret;
 }
 
-unsigned ITreeNode::getTotalInstructions() { return totalInstructions; }
+unsigned ITreeNode::getInstructionsDepth() { return instructionsDepth; }
 
-void ITreeNode::incTotalInstructions() { ++totalInstructions; }
+void ITreeNode::incInstructionsDepth() { ++instructionsDepth; }
 
 void ITreeNode::unsatCoreMarking(std::vector<ref<Expr> > unsatCore) {
   // State subsumed, we mark needed constraints on the path condition. We create

@@ -2881,7 +2881,7 @@ void Executor::run(ExecutionState &initialState) {
 	stepInstruction(state);
 
 	executeInstruction(state, ki);
-        state.itreeNode->incTotalInstructions();
+        state.itreeNode->incInstructionsDepth();
         processTimers(&state, MaxInstructionTime);
 
         if (MaxMemory) {
@@ -2894,9 +2894,10 @@ void Executor::run(ExecutionState &initialState) {
               if (mbs > MaxMemory + 100) {
                 // just guess at how many to kill
                 unsigned numStates = states.size();
-                        unsigned toKill = std::max(1U, numStates - numStates*MaxMemory/mbs);
+                unsigned toKill =
+                    std::max(1U, numStates - numStates * MaxMemory / mbs);
 
-			klee_warning("killing %d states (over memory cap)", toKill);
+                        klee_warning("killing %d states (over memory cap)", toKill);
 
 			std::vector<ExecutionState*> arr(states.begin(), states.end());
 			for (unsigned i=0,N=arr.size(); N && i<toKill; ++i,--N) {
@@ -3025,7 +3026,7 @@ void Executor::terminateStateOnSubsumption(ExecutionState &state) {
   interpreterHandler->incSubsumptionTermination();
   interpreterHandler->incTotalDepthPathsExploredOnSubsumption(state.depth);
   interpreterHandler->incTotalInstructionsOnSubsumption(
-      state.itreeNode->getTotalInstructions());
+      state.itreeNode->getInstructionsDepth());
 
   if (!OnlyOutputStatesCoveringNew || state.coveredNew ||
       (AlwaysOutputSeeds && seedMap.count(&state))) {
@@ -3040,7 +3041,7 @@ void Executor::terminateStateEarly(ExecutionState &state,
   interpreterHandler->incEarlyTermination();
   interpreterHandler->incTotalDepthPathsExploredOnEarly(state.depth);
   interpreterHandler->incTotalInstructionsOnEarly(
-      state.itreeNode->getTotalInstructions());
+      state.itreeNode->getInstructionsDepth());
 
   if (!OnlyOutputStatesCoveringNew || state.coveredNew ||
       (AlwaysOutputSeeds && seedMap.count(&state))) {
@@ -3055,7 +3056,7 @@ void Executor::terminateStateOnExit(ExecutionState &state) {
   interpreterHandler->incExitTermination();
   interpreterHandler->incTotalDepthPathsExploredOnExit(state.depth);
   interpreterHandler->incTotalInstructionsOnExit(
-      state.itreeNode->getTotalInstructions());
+      state.itreeNode->getInstructionsDepth());
 
   if (!OnlyOutputStatesCoveringNew || state.coveredNew || 
       (AlwaysOutputSeeds && seedMap.count(&state))) {
@@ -3114,7 +3115,7 @@ void Executor::terminateStateOnError(ExecutionState &state,
   interpreterHandler->incErrorTermination();
   interpreterHandler->incTotalDepthPathsExploredOnError(state.depth);
   interpreterHandler->incTotalInstructionsOnError(
-      state.itreeNode->getTotalInstructions());
+      state.itreeNode->getInstructionsDepth());
 
   std::string message = messaget.str();
   static std::set< std::pair<Instruction*, std::string> > emittedErrors;
