@@ -315,7 +315,7 @@ public:
   void incTotalInstructionsOnSubsumption(unsigned instructionsDepth) {
     m_totalInstructionsDepthOnSubsumption += instructionsDepth;
   }
-  unsigned getTotalDepthPathsExploredOnSubsumption() {
+  unsigned getTotalBranchingDepthOnSubsumption() {
     return m_totalBranchingDepthOnSubsumption;
   }
   unsigned getSubsumedTermination() { return m_subsumedTermination; }
@@ -377,24 +377,20 @@ public:
 };
 
 KleeHandler::KleeHandler(int argc, char **argv)
-  : m_interpreter(0),
-    m_pathWriter(0),
-    m_symPathWriter(0),
-    m_infoFile(0),
-    m_outputDirectory(),
-    m_testIndex(0),
-    m_pathsExplored(0),
-    m_subsumedTermination(0),
-    m_subsumptionTerminationTest(0),
-    m_earlyTermination(0),
-    m_earlyTerminationTest(0),
-    m_errorTermination(0),
-    m_errorTerminationTest(0),
-    m_exitTermination(0),
-    m_exitTerminationTest(0),
-    m_otherTermination(0),
-    m_argc(argc),
-    m_argv(argv) {
+    : m_interpreter(0), m_pathWriter(0), m_symPathWriter(0), m_infoFile(0),
+      m_outputDirectory(), m_testIndex(0), m_pathsExplored(0),
+      m_totalBranchingDepthOnExitTermination(0),
+      m_totalInstructionsDepthOnExitTermination(0),
+      m_totalBranchingDepthOnEarlyTermination(0),
+      m_totalInstructionsDepthOnEarlyTermination(0),
+      m_totalBranchingDepthOnErrorTermination(0),
+      m_totalInstructionsDepthOnErrorTermination(0),
+      m_totalBranchingDepthOnSubsumption(0),
+      m_totalInstructionsDepthOnSubsumption(0), m_subsumedTermination(0),
+      m_subsumptionTerminationTest(0), m_earlyTermination(0),
+      m_earlyTerminationTest(0), m_errorTermination(0),
+      m_errorTerminationTest(0), m_exitTermination(0), m_exitTerminationTest(0),
+      m_otherTermination(0), m_argc(argc), m_argv(argv) {
 
   // create output directory (OutputDir or "klee-out-<i>")
   bool dir_given = OutputDir != "";
@@ -1656,6 +1652,7 @@ int main(int argc, char **argv, char **envp) {
         << handler->getNumPathsExplored() << ", among which\n";
   stats << "KLEE: done:     early-terminating paths (instruction time limit, solver timeout, max-depth reached) = "
         << handler->getEarlyTermination() << "\n";
+
   stats << "KLEE: done:     average depth of completed paths = "
         << (double)(handler->getTotalBranchingDepthOnExitTermination() +
                     handler->getTotalBranchingDepthOnEarlyTermination() +
@@ -1669,7 +1666,7 @@ int main(int argc, char **argv, char **envp) {
             << "\n";
     } else {
       stats << "KLEE: done:     average depth of subsumption paths = "
-            << (double)handler->getTotalDepthPathsExploredOnSubsumption() /
+            << (double)handler->getTotalBranchingDepthOnSubsumption() /
                    (double)handler->getSubsumedTermination() << "\n";
     }
   }
