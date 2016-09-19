@@ -1839,8 +1839,8 @@ bool ITree::subsumptionCheck(TimingSolver *solver, ExecutionState &state,
 
     if ((*it)->subsumed(solver, state, timeout, storedExpressions)) {
       // We mark as subsumed such that the node will not be
-      // general entry).
       // stored into table (the table already contains a more
+      // general entry).
       currentINode->isSubsumed = true;
 
       // Mark the node as subsumed, and create a subsumption edge

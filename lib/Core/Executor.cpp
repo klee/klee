@@ -2881,23 +2881,22 @@ void Executor::run(ExecutionState &initialState) {
 	stepInstruction(state);
 
 	executeInstruction(state, ki);
-        state.itreeNode->incInstructionsDepth();
-        processTimers(&state, MaxInstructionTime);
+    state.itreeNode->incInstructionsDepth();
+	processTimers(&state, MaxInstructionTime);
 
-        if (MaxMemory) {
-          if ((stats::instructions & 0xFFFF) == 0) {
-            // We need to avoid calling GetMallocUsage() often because it
-            // is O(elts on freelist). This is really bad since we start
-            // to pummel the freelist once we hit the memory cap.
-            unsigned mbs = util::GetTotalMallocUsage() >> 20;
-            if (mbs > MaxMemory) {
-              if (mbs > MaxMemory + 100) {
-                // just guess at how many to kill
-                unsigned numStates = states.size();
-                unsigned toKill =
-                    std::max(1U, numStates - numStates * MaxMemory / mbs);
+	if (MaxMemory) {
+	    if ((stats::instructions & 0xFFFF) == 0) {
+		// We need to avoid calling GetMallocUsage() often because it
+		// is O(elts on freelist). This is really bad since we start
+		// to pummel the freelist once we hit the memory cap.
+		unsigned mbs = util::GetTotalMallocUsage() >> 20;
+		if (mbs > MaxMemory) {
+		    if (mbs > MaxMemory + 100) {
+			// just guess at how many to kill
+			unsigned numStates = states.size();
+			unsigned toKill = std::max(1U, numStates - numStates*MaxMemory/mbs);
 
-                        klee_warning("killing %d states (over memory cap)", toKill);
+			klee_warning("killing %d states (over memory cap)", toKill);
 
 			std::vector<ExecutionState*> arr(states.begin(), states.end());
 			for (unsigned i=0,N=arr.size(); N && i<toKill; ++i,--N) {
