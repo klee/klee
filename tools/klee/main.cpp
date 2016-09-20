@@ -1662,10 +1662,10 @@ int main(int argc, char **argv, char **envp) {
                           handler->getEarlyTermination() +
                           handler->getErrorTermination()) << "\n";
     if (handler->getSubsumptionTermination() == 0.0) {
-      stats << "KLEE: done:     average branching depth of subsumption paths = "
+      stats << "KLEE: done:     average branching depth of subsumed paths = "
             << 0 << "\n";
     } else {
-      stats << "KLEE: done:     average branching depth of subsumption paths = "
+      stats << "KLEE: done:     average branching depth of subsumed paths = "
             << (double)handler->getTotalBranchingDepthOnSubsumption() /
                    (double)handler->getSubsumptionTermination() << "\n";
     }
