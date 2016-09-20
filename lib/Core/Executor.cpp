@@ -2881,6 +2881,9 @@ void Executor::run(ExecutionState &initialState) {
 	stepInstruction(state);
 
 	executeInstruction(state, ki);
+    if (INTERPOLATION_ENABLED) {
+      state.itreeNode->incInstructionsDepth();
+    }
 	processTimers(&state, MaxInstructionTime);
 
 	if (MaxMemory) {
@@ -3022,6 +3025,10 @@ void Executor::terminateStateOnSubsumption(ExecutionState &state) {
   // but with different statistics functions called, and empty error
   // message as this is not an error.
   interpreterHandler->incSubsumptionTermination();
+  interpreterHandler->incInstructionsDepthOnSubsumption(state.depth);
+  interpreterHandler->incTotalInstructionsOnSubsumption(
+      state.itreeNode->getInstructionsDepth());
+
   if (!OnlyOutputStatesCoveringNew || state.coveredNew ||
       (AlwaysOutputSeeds && seedMap.count(&state))) {
     interpreterHandler->incSubsumptionTerminationTest();
@@ -3033,6 +3040,12 @@ void Executor::terminateStateOnSubsumption(ExecutionState &state) {
 void Executor::terminateStateEarly(ExecutionState &state, 
                                    const Twine &message) {
   interpreterHandler->incEarlyTermination();
+  if (INTERPOLATION_ENABLED) {
+    interpreterHandler->incBranchingDepthOnEarlyTermination(state.depth);
+    interpreterHandler->incInstructionsDepthOnEarlyTermination(
+        state.itreeNode->getInstructionsDepth());
+  }
+
   if (!OnlyOutputStatesCoveringNew || state.coveredNew ||
       (AlwaysOutputSeeds && seedMap.count(&state))) {
     interpreterHandler->incEarlyTerminationTest();
@@ -3044,6 +3057,12 @@ void Executor::terminateStateEarly(ExecutionState &state,
 
 void Executor::terminateStateOnExit(ExecutionState &state) {
   interpreterHandler->incExitTermination();
+  if (INTERPOLATION_ENABLED) {
+    interpreterHandler->incBranchingDepthOnExitTermination(state.depth);
+    interpreterHandler->incTotalInstructionsOnExit(
+        state.itreeNode->getInstructionsDepth());
+  }
+
   if (!OnlyOutputStatesCoveringNew || state.coveredNew || 
       (AlwaysOutputSeeds && seedMap.count(&state))) {
     interpreterHandler->incExitTerminationTest();
@@ -3099,6 +3118,11 @@ void Executor::terminateStateOnError(ExecutionState &state,
                                      const char *suffix,
                                      const llvm::Twine &info) {
   interpreterHandler->incErrorTermination();
+  if (INTERPOLATION_ENABLED) {
+    interpreterHandler->incBranchingDepthOnErrorTermination(state.depth);
+    interpreterHandler->incInstructionsDepthOnErrorTermination(
+        state.itreeNode->getInstructionsDepth());
+  }
 
   std::string message = messaget.str();
   static std::set< std::pair<Instruction*, std::string> > emittedErrors;

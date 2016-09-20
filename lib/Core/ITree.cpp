@@ -2071,7 +2071,7 @@ void ITreeNode::printTimeStat(llvm::raw_ostream &stream) {
 }
 
 ITreeNode::ITreeNode(ITreeNode *_parent)
-    : parent(_parent), left(0), right(0), nodeId(0), isSubsumed(false),
+    : parent(_parent), left(0), right(0), nodeId(0), isSubsumed(false), instructionsDepth(0),
       storable(true), graph(_parent ? _parent->graph : 0) {
 
   pathCondition = (_parent != 0) ? _parent->pathCondition : 0;
@@ -2174,6 +2174,10 @@ ITreeNode::getStoredCoreExpressions(std::set<const Array *> &replacements)
   ITreeNode::getStoredCoreExpressionsTimer.stop();
   return ret;
 }
+
+unsigned ITreeNode::getInstructionsDepth() { return instructionsDepth; }
+
+void ITreeNode::incInstructionsDepth() { ++instructionsDepth; }
 
 void ITreeNode::unsatCoreMarking(std::vector<ref<Expr> > unsatCore) {
   // State subsumed, we mark needed constraints on the path condition. We create
