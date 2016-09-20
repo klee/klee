@@ -21,8 +21,9 @@
 #include "llvm/Instructions.h"
 #include "llvm/Module.h"
 #endif
-#include "llvm/Pass.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/CodeGen/IntrinsicLowering.h"
+#include "llvm/Pass.h"
 
 namespace llvm {
   class Function;
@@ -45,6 +46,8 @@ class RaiseAsmPass : public llvm::ModulePass {
   static char ID;
 
   const llvm::TargetLowering *TLI;
+
+  llvm::Triple triple;
 
   llvm::Function *getIntrinsic(llvm::Module &M,
                                unsigned IID,
