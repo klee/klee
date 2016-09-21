@@ -81,19 +81,13 @@ template <> inline ::Z3_ast Z3NodeHandle<Z3_sort>::as_ast() {
   // instead to simplify our implementation but this seems cleaner.
   return ::Z3_sort_to_ast(context, node);
 }
-template <> inline void Z3NodeHandle<Z3_sort>::dump() {
-  llvm::errs() << "Z3SortHandle:\n" << ::Z3_sort_to_string(context, node)
-               << "\n";
-}
 typedef Z3NodeHandle<Z3_sort> Z3SortHandle;
+template <> void Z3NodeHandle<Z3_sort>::dump() __attribute__((used));
 
 // Specialise for Z3_ast
 template <> inline ::Z3_ast Z3NodeHandle<Z3_ast>::as_ast() { return node; }
-template <> inline void Z3NodeHandle<Z3_ast>::dump() {
-  llvm::errs() << "Z3ASTHandle:\n" << ::Z3_ast_to_string(context, as_ast())
-               << "\n";
-}
 typedef Z3NodeHandle<Z3_ast> Z3ASTHandle;
+template <> void Z3NodeHandle<Z3_ast>::dump() __attribute__((used));
 
 class Z3ArrayExprHash : public ArrayExprHash<Z3ASTHandle> {
 
@@ -190,6 +184,7 @@ public:
   }
 
   void clearConstructCache() { constructed.clear(); }
+  void closeInteractionLog(); // Should be called before aborting
 };
 }
 
