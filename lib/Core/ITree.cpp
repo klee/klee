@@ -1708,7 +1708,7 @@ void SubsumptionTableEntry::print(llvm::raw_ostream &stream) const {
   }
 }
 
-void SubsumptionTableEntry::printStat(llvm::raw_ostream &stream) {
+void SubsumptionTableEntry::printStat(std::stringstream &stream) {
   stream << "KLEE: done:     Time for actual solver calls in subsumption check "
             "(ms) = " << actualSolverCallTimer.get() * 1000 << "\n";
   stream << "KLEE: done:     Number of solver calls for subsumption check "
@@ -1724,10 +1724,12 @@ StatTimer ITree::subsumptionCheckTimer;
 StatTimer ITree::markPathConditionTimer;
 StatTimer ITree::splitTimer;
 StatTimer ITree::executeOnNodeTimer;
+double ITree::entryNumber;
+double ITree::programPointNumber;
 
 unsigned long ITree::subsumptionCheckCount = 0;
 
-void ITree::printTimeStat(llvm::raw_ostream &stream) {
+void ITree::printTimeStat(std::stringstream &stream) {
   stream << "KLEE: done:     setCurrentINode = " << setCurrentINodeTimer.get() *
                                                         1000 << "\n";
   stream << "KLEE: done:     remove = " << removeTimer.get() * 1000 << "\n";
@@ -1740,18 +1742,7 @@ void ITree::printTimeStat(llvm::raw_ostream &stream) {
                                                       1000 << "\n";
 }
 
-void ITree::printTableStat(llvm::raw_ostream &stream) const {
-  double programPointNumber = 0.0, entryNumber = 0.0;
-  for (std::map<uintptr_t, std::deque<SubsumptionTableEntry *> >::const_iterator
-           it = subsumptionTable.begin(),
-           itEnd = subsumptionTable.end();
-       it != itEnd; ++it) {
-    if (!it->second.empty()) {
-      entryNumber += it->second.size();
-      ++programPointNumber;
-    }
-  }
-
+void ITree::printTableStat(std::stringstream &stream) {
   SubsumptionTableEntry::printStat(stream);
 
   stream
@@ -1765,20 +1756,15 @@ void ITree::printTableStat(llvm::raw_ostream &stream) const {
                 (double)subsumptionCheckCount) << "\n";
 }
 
-void ITree::dumpInterpolationStat() const {
-  bool useColors = llvm::errs().is_displayed();
-  if (useColors)
-    llvm::errs().changeColor(llvm::raw_ostream::GREEN,
-                             /*bold=*/true,
-                             /*bg=*/false);
-  llvm::errs() << "\nKLEE: done: Subsumption statistics\n";
-  printTableStat(llvm::errs());
-  llvm::errs() << "KLEE: done: ITree method execution times (ms):\n";
-  printTimeStat(llvm::errs());
-  llvm::errs() << "KLEE: done: ITreeNode method execution times (ms):\n";
-  ITreeNode::printTimeStat(llvm::errs());
-  if (useColors)
-    llvm::errs().resetColor();
+std::string ITree::getInterpolationStat() {
+  std::stringstream stream;
+  stream << "\nKLEE: done: Subsumption statistics\n";
+  printTableStat(stream);
+  stream << "KLEE: done: ITree method execution times (ms):\n";
+  printTimeStat(stream);
+  stream << "KLEE: done: ITreeNode method execution times (ms):\n";
+  ITreeNode::printTimeStat(stream);
+  return stream.str();
 }
 
 ITree::ITree(ExecutionState *_root) {
@@ -1790,6 +1776,16 @@ ITree::ITree(ExecutionState *_root) {
 }
 
 ITree::~ITree() {
+  for (std::map<uintptr_t, std::deque<SubsumptionTableEntry *> >::const_iterator
+           it = subsumptionTable.begin(),
+           itEnd = subsumptionTable.end();
+       it != itEnd; ++it) {
+    if (!it->second.empty()) {
+      entryNumber += it->second.size();
+      ++programPointNumber;
+    }
+  }
+
   for (std::map<uintptr_t, std::deque<SubsumptionTableEntry *> >::iterator
            it = subsumptionTable.begin(),
            itEnd = subsumptionTable.end();
@@ -1802,6 +1798,7 @@ ITree::~ITree() {
     }
     it->second.clear();
   }
+
   subsumptionTable.clear();
 }
 
@@ -2051,7 +2048,7 @@ StatTimer ITreeNode::getStoredExpressionsTimer;
 StatTimer ITreeNode::getStoredCoreExpressionsTimer;
 StatTimer ITreeNode::computeCoreAllocationsTimer;
 
-void ITreeNode::printTimeStat(llvm::raw_ostream &stream) {
+void ITreeNode::printTimeStat(std::stringstream &stream) {
   stream << "KLEE: done:     getInterpolant = " << getInterpolantTimer.get() *
                                                        1000 << "\n";
   stream << "KLEE: done:     addConstraintTime = " << addConstraintTimer.get() *
