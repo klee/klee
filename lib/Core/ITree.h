@@ -523,12 +523,14 @@ private:
   uintptr_t nodeId;
 
   bool isSubsumed;
-  bool storable;
-  unsigned instructionsDepth;
 
+  bool storable;
 
   /// \brief Graph for displaying as .dot file
   SearchTree *graph;
+
+  /// \brief For statistics on the number of instructions executed along a path.
+  unsigned instructionsDepth;
 
   void setNodeLocation(llvm::Instruction *instr) {
     if (!nodeId)

@@ -2072,8 +2072,8 @@ void ITreeNode::printTimeStat(llvm::raw_ostream &stream) {
 
 ITreeNode::ITreeNode(ITreeNode *_parent)
     : parent(_parent), left(0), right(0), nodeId(0), isSubsumed(false),
-      instructionsDepth(_parent ? _parent->instructionsDepth : 0),
-      storable(true), graph(_parent ? _parent->graph : 0) {
+      storable(true), graph(_parent ? _parent->graph : 0),
+      instructionsDepth(_parent ? _parent->instructionsDepth : 0) {
 
   pathCondition = (_parent != 0) ? _parent->pathCondition : 0;
 
