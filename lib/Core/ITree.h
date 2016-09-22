@@ -737,6 +737,7 @@ public:
   /// \brief Print the content of the tree object to the LLVM error stream
   void dump() const;
 
+  /// \brief Retrieve subsumption statistics result in std::string format
   static std::string getInterpolationStat();
 };
 }

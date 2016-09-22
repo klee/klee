@@ -253,7 +253,7 @@ private:
   unsigned m_otherTermination;     // number of other termination (strategy, state merging,
                                    // not in seed, etc.
 
-  std::string m_subsumptionStats;
+  std::string m_subsumptionStats; // subsumption statistics result
 
   // used for writing .ktest files
   int m_argc;
