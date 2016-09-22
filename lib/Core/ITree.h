@@ -456,7 +456,7 @@ class SubsumptionTableEntry {
   }
 
   /// \brief For printing method running time statistics
-  static void printStat(llvm::raw_ostream &stream);
+  static void printStat(std::stringstream &stream);
 
 public:
   const uintptr_t nodeId;
@@ -543,7 +543,7 @@ private:
   }
 
   /// \brief for printing method running time statistics
-  static void printTimeStat(llvm::raw_ostream &stream);
+  static void printTimeStat(std::stringstream &stream);
 
   void execute(llvm::Instruction *instr, std::vector<ref<Expr> > &args);
 
@@ -643,6 +643,8 @@ class ITree {
   static StatTimer markPathConditionTimer;
   static StatTimer splitTimer;
   static StatTimer executeOnNodeTimer;
+  static double entryNumber;
+  static double programPointNumber;
 
   /// \brief Number of subsumption checks for statistical purposes
   static unsigned long subsumptionCheckCount;
@@ -655,10 +657,10 @@ class ITree {
                  std::string edges) const;
 
   /// \brief Displays method running time statistics
-  static void printTimeStat(llvm::raw_ostream &stream);
+  static void printTimeStat(std::stringstream &stream);
 
   /// \brief Displays subsumption table statistics
-  void printTableStat(llvm::raw_ostream &stream) const;
+  static void printTableStat(std::stringstream &stream);
 
 public:
   ITreeNode *root;
@@ -735,8 +737,8 @@ public:
   /// \brief Print the content of the tree object to the LLVM error stream
   void dump() const;
 
-  /// \brief Outputs interpolation statistics to LLVM error stream.
-  void dumpInterpolationStat() const;
+  /// \brief Retrieve subsumption statistics result in std::string format
+  static std::string getInterpolationStat();
 };
 }
 #endif /* ITREE_H_ */

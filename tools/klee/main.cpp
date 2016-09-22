@@ -253,6 +253,8 @@ private:
   unsigned m_otherTermination;     // number of other termination (strategy, state merging,
                                    // not in seed, etc.
 
+  std::string m_subsumptionStats; // subsumption statistics result
+
   // used for writing .ktest files
   int m_argc;
   char **m_argv;
@@ -350,6 +352,12 @@ public:
       m_exitTerminationTest++;
     }
   }
+
+  void assignSubsumptionStats(std::string currentStats) {
+    m_subsumptionStats = currentStats;
+  }
+
+  std::string getSubsumptionStats() { return m_subsumptionStats; }
 
   void setInterpreter(Interpreter *i);
 
@@ -1645,6 +1653,10 @@ int main(int argc, char **argv, char **envp) {
     << "KLEE: done: query cex = " << queryCounterexamples << "\n";
 
   std::stringstream stats;
+  if (INTERPOLATION_ENABLED) {
+    stats << handler->getSubsumptionStats();
+  }
+
   stats << "\n";
   stats << "KLEE: done: total instructions = "
         << instructions << "\n";

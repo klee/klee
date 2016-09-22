@@ -57,6 +57,7 @@ public:
   virtual void incErrorTerminationTest() = 0;
   virtual void incExitTermination() = 0;
   virtual void incExitTerminationTest() = 0;
+  virtual void assignSubsumptionStats(std::string currentStats) = 0;
 
   virtual void processTestCase(const ExecutionState &state,
                                const char *err, 
