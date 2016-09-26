@@ -356,8 +356,7 @@ Executor::Executor(const InterpreterOptions &opts, InterpreterHandler *ih)
   if (coreSolverTimeout) UseForkedCoreSolver = true;
   Solver *coreSolver = klee::createCoreSolver(CoreSolverToUse);
   if (!coreSolver) {
-    llvm::errs() << "Failed to create core solver\n";
-    exit(1);
+    klee_error("Failed to create core solver\n");
   }
   Solver *solver = constructSolverChain(
       coreSolver,
@@ -1481,9 +1480,8 @@ Function* Executor::getTargetFunction(Value *calledVal, ExecutionState &state) {
         GlobalValue *old_gv = gv;
         gv = currModule->getNamedValue(alias);
         if (!gv) {
-          llvm::errs() << "Function " << alias << "(), alias for " 
-                       << old_gv->getName() << " not found!\n";
-          assert(0 && "function alias not found");
+          klee_error("Function %s(), alias for %s not found!\n", alias.c_str(),
+                     old_gv->getName().str().c_str());
         }
       }
      
@@ -3018,8 +3016,8 @@ void Executor::callExternalFunction(ExecutionState &state,
     return;
   
   if (NoExternals && !okExternals.count(function->getName())) {
-    llvm::errs() << "KLEE:ERROR: Calling not-OK external function : "
-                 << function->getName().str() << "\n";
+    klee_warning("Calling not-OK external function : %s\n",
+               function->getName().str().c_str());
     terminateStateOnError(state, "externals disallowed", User);
     return;
   }

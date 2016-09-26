@@ -397,9 +397,9 @@ MetaSMTSolverImpl<SolverContext>::runAndGetCexForked(
     // "occasion" return a status when the process was terminated by a
     // signal, so test signal first.
     if (WIFSIGNALED(status) || !WIFEXITED(status)) {
-      fprintf(stderr,
-              "error: metaSMT did not return successfully (status = %d) \n",
-              WTERMSIG(status));
+      klee_warning(
+          "error: metaSMT did not return successfully (status = %d) \n",
+          WTERMSIG(status));
       return (SolverImpl::SOLVER_RUN_STATUS_INTERRUPTED);
     }
 

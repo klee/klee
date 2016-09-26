@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "klee/Config/config.h"
+#include "klee/Internal/Support/ErrorHandling.h"
 #ifdef ENABLE_Z3
 #include "Z3Builder.h"
 #include "klee/Constraints.h"
@@ -285,8 +286,7 @@ SolverImpl::SolverRunStatus Z3SolverImpl::handleSolverResponse(
     if (strcmp(reason, "unknown") == 0) {
       return SolverImpl::SOLVER_RUN_STATUS_FAILURE;
     }
-    llvm::errs() << "Unexpected solver failure. Reason is \"" << reason
-                 << "\"\n";
+    klee_warning("Unexpected solver failure. Reason is \"%s,\"\n", reason);
     abort();
   }
   default:
