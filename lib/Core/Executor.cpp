@@ -3830,10 +3830,9 @@ void Executor::runFunctionAsMain(Function *f,
     interpTree = 0;
 
 #ifdef SUPPORT_Z3
-		// Print interpolation time statistics
-		if (InterpolationStat)
-                  interpreterHandler->assignSubsumptionStats(
-                      ITree::getInterpolationStat());
+    // Print interpolation time statistics
+    if (InterpolationStat)
+      interpreterHandler->assignSubsumptionStats(ITree::getInterpolationStat());
 #endif
   }
 
