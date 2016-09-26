@@ -3829,12 +3829,12 @@ void Executor::runFunctionAsMain(Function *f,
     delete interpTree;
     interpTree = 0;
 
-	#ifdef SUPPORT_Z3
+#ifdef SUPPORT_Z3
 		// Print interpolation time statistics
 		if (InterpolationStat)
                   interpreterHandler->assignSubsumptionStats(
                       ITree::getInterpolationStat());
-        #endif
+#endif
   }
 
   // hack to clear memory objects

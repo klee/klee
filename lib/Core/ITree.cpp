@@ -1753,7 +1753,7 @@ void ITree::printTableStat(std::stringstream &stream) {
   stream << "KLEE: done:     Number of solver calls = "
          << SubsumptionTableEntry::checkSolverCount << "\n";
 
-  stream << "KLEE: done:     Number of subsumption check = "
+  stream << "KLEE: done:     Number of subsumption checks = "
          << subsumptionCheckCount << "\n";
 
   stream << "KLEE: done:     Average solver calls per subsumption check = "
