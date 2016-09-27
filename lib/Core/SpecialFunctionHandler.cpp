@@ -541,17 +541,29 @@ void SpecialFunctionHandler::handleGetObjSize(ExecutionState &state,
                                   KInstruction *target,
                                   std::vector<ref<Expr> > &arguments) {
   // XXX should type check args
-  assert(arguments.size()==1 &&
+  assert(arguments.size() == 1 &&
          "invalid number of arguments to klee_get_obj_size");
-  Executor::ExactResolutionList rl;
-  executor.resolveExact(state, arguments[0], rl, "klee_get_obj_size");
-  for (Executor::ExactResolutionList::iterator it = rl.begin(), 
-         ie = rl.end(); it != ie; ++it) {
-    executor.bindLocal(
-        target, *it->second,
-        ConstantExpr::create(it->first.first->size,
-                             executor.kmodule->targetData->getTypeSizeInBits(
-                                 target->inst->getType())));
+  Executor::StatePair zeroPointer =
+      executor.fork(state, Expr::createIsZero(arguments[0]), true);
+  if (zeroPointer.first) {
+    if (target)
+      executor.bindLocal(target, *zeroPointer.first,
+                         ConstantExpr::create(
+                             0, executor.kmodule->targetData->getTypeSizeInBits(
+                                    target->inst->getType())));
+  }
+  if (zeroPointer.second) { // address != 0
+    Executor::ExactResolutionList rl;
+    executor.resolveExact(*zeroPointer.second, arguments[0], rl,
+                          "klee_get_obj_size");
+    for (Executor::ExactResolutionList::iterator it = rl.begin(), ie = rl.end();
+         it != ie; ++it) {
+      executor.bindLocal(
+          target, *it->second,
+          ConstantExpr::create(it->first.first->size,
+                               executor.kmodule->targetData->getTypeSizeInBits(
+                                   target->inst->getType())));
+    }
   }
 }
 

@@ -54,6 +54,7 @@ ObjectState *AddressSpace::getWriteable(const MemoryObject *mo,
 bool AddressSpace::resolveOne(const ref<ConstantExpr> &addr, 
                               ObjectPair &result) {
   uint64_t address = addr->getZExtValue();
+  assert(address && "Cannot resolve null address to object.");
   MemoryObject hack(address);
 
   if (const MemoryMap::value_type *res = objects.lookup_previous(&hack)) {
