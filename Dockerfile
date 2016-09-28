@@ -6,6 +6,7 @@ MAINTAINER Dan Liew <daniel.liew@imperial.ac.uk>
 # the resulting image is unnecessarily large!
 
 ENV LLVM_VERSION=3.4 \
+    SOLVERS=STP:Z3 \
     STP_VERSION=master \
     DISABLE_ASSERTIONS=0 \
     ENABLE_OPTIMIZED=1 \
@@ -40,7 +41,10 @@ RUN apt-get update && \
         unzip \
         binutils && \
     pip3 install -U lit tabulate && \
-    update-alternatives --install /usr/bin/python python /usr/bin/python3 50
+    update-alternatives --install /usr/bin/python python /usr/bin/python3 50 && \
+    ( wget -O - http://download.opensuse.org/repositories/home:delcypher:z3/xUbuntu_14.04/Release.key | apt-key add - ) && \
+    echo 'deb http://download.opensuse.org/repositories/home:/delcypher:/z3/xUbuntu_14.04/ /' >> /etc/apt/sources.list.d/z3.list && \
+    apt-get update
 
 # Create ``klee`` user for container with password ``klee``.
 # and give it password-less sudo access (temporarily so we can use the TravisCI scripts)
@@ -58,6 +62,7 @@ ADD configure \
     Makefile \
     Makefile.* \
     README.md \
+    MetaSMT.mk \
     TODO.txt \
     ${KLEE_SRC}/
 ADD .travis ${KLEE_SRC}/.travis/
@@ -78,8 +83,8 @@ RUN sudo chown --recursive klee: ${KLEE_SRC}
 # Create build directory
 RUN mkdir -p ${BUILD_DIR}
 
-# Build STP (use TravisCI script)
-RUN cd ${BUILD_DIR} && mkdir stp && cd stp && ${KLEE_SRC}/.travis/stp.sh
+# Build/Install SMT solvers (use TravisCI script)
+RUN cd ${BUILD_DIR} && ${KLEE_SRC}/.travis/solvers.sh
 
 # Install testing utils (use TravisCI script)
 RUN cd ${BUILD_DIR} && mkdir testing-utils && cd testing-utils && \
@@ -127,3 +132,11 @@ USER klee
 
 # Add KLEE binary directory to PATH
 RUN echo 'export PATH=$PATH:'${BUILD_DIR}'/klee/Release+Asserts/bin' >> /home/klee/.bashrc
+
+# Link klee to /usr/bin so that it can be used by docker run
+USER root
+RUN for exec in ${BUILD_DIR}/klee/Release+Asserts/bin/* ; do ln -s ${exec} /usr/bin/`basename ${exec}`; done
+
+# Link klee to the libkleeRuntest library needed by docker run
+RUN ln -s ${BUILD_DIR}/klee/Release+Asserts/lib/libkleeRuntest.so /usr/lib/libkleeRuntest.so.1.0
+USER klee

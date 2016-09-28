@@ -58,6 +58,8 @@ bool AddressSpace::resolveOne(const ref<ConstantExpr> &addr,
 
   if (const MemoryMap::value_type *res = objects.lookup_previous(&hack)) {
     const MemoryObject *mo = res->first;
+    // Check if the provided address is between start and end of the object
+    // [mo->address, mo->address + mo->size) or the object is a 0-sized object.
     if ((mo->size==0 && address==mo->address) ||
         (address - mo->address < mo->size)) {
       result = *res;

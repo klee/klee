@@ -75,7 +75,7 @@ ExecutionState::ExecutionState(KFunction *kf)
   pushFrame(0, kf);
 }
 
-#ifdef SUPPORT_Z3
+#ifdef ENABLE_Z3
 ExecutionState::ExecutionState(const KInstIterator &srcPrevPC,
                                const std::vector<ref<Expr> > &assumptions)
     : prevPC(srcPrevPC), constraints(assumptions), queryCost(0.), ptreeNode(0),
@@ -393,8 +393,8 @@ void ExecutionState::dumpStack(llvm::raw_ostream &out) const {
 
       out << ai->getName().str();
       // XXX should go through function
-      ref<Expr> value = sf.locals[sf.kf->getArgRegister(index++)].value; 
-      if (isa<ConstantExpr>(value))
+      ref<Expr> value = sf.locals[sf.kf->getArgRegister(index++)].value;
+      if (value.get() && isa<ConstantExpr>(value))
         out << "=" << value;
     }
     out << ")";

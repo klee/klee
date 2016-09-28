@@ -1,0 +1,15 @@
+# RUN: %kleaver %s 2>&1 | FileCheck %s
+array n_args[4] : w32 -> w8 = symbolic
+array n_args_1[4] : w32 -> w8 = symbolic
+array A-data-stat[144] : w32 -> w8 = symbolic
+array stdin-stat[144] : w32 -> w8 = symbolic
+(query [(Ult N0:(ReadLSB w32 0 n_args) 2)
+(Slt 0 N0)
+(Ult N1:(ReadLSB w32 0 n_args_1) 3)
+(Slt 0 N1)
+(Slt 1 N1)
+(Eq false (Eq 0 (And w64 (ReadLSB w64 8 A-data-stat) 2147483647)))
+(Ult (ReadLSB w64 56 A-data-stat) 65536)
+(Eq false (Eq 0 (And w64 (ReadLSB w64 8 stdin-stat) 2147483647)))]
+(Eq false (Ult (ReadLSB w64 56 stdin-stat) 65536)) [] [n_args])
+# CHECK: INVALID

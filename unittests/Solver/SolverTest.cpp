@@ -10,6 +10,7 @@
 #include <iostream>
 #include "gtest/gtest.h"
 
+#include "klee/CommandLine.h"
 #include "klee/Constraints.h"
 #include "klee/Expr.h"
 #include "klee/Solver.h"
@@ -127,12 +128,7 @@ void testOpcode(Solver &solver, bool tryBool = true, bool tryZero = true,
 }
 
 TEST(SolverTest, Evaluation) {
-#ifdef SUPPORT_Z3
-  Z3Solver *stpSolver = new Z3Solver(true);
-#else
-  STPSolver *stpSolver = new STPSolver(true);
-#endif
-  Solver *solver = stpSolver;
+  Solver *solver = klee::createCoreSolver(CoreSolverToUse);
 
   solver = createCexCachingSolver(solver);
   solver = createCachingSolver(solver);

@@ -61,8 +61,15 @@ endif
 # This is filename that KLEE will look for when trying to load klee-uclibc
 KLEE_UCLIBC_BCA_NAME="klee-uclibc.bca"
 
-CXX.Flags += $(Z3_CFLAGS)
-CXX.Flags += $(STP_CFLAGS)
+ifneq ($(ENABLE_STP),0)
+  CXX.Flags += $(STP_CFLAGS)
+  CXX.Flags += -DEXT_HASH_MAP
+endif
+
+ifneq ($(ENABLE_Z3),0)
+  CXX.Flags += $(Z3_CFLAGS)
+endif
+
 CXX.Flags += -DKLEE_DIR=\"$(PROJ_OBJ_ROOT)\" -DKLEE_INSTALL_BIN_DIR=\"$(PROJ_bindir)\"
 CXX.Flags += -DKLEE_INSTALL_RUNTIME_DIR=\"$(BYTECODE_DESTINATION)\"
 
@@ -70,15 +77,6 @@ ifeq ($(ENABLE_UCLIBC),1)
 	CXX.Flags += -DKLEE_UCLIBC_BCA_NAME=\"$(KLEE_UCLIBC_BCA_NAME)\"
 endif
 
-# For STP.
-CXX.Flags += -DEXT_HASH_MAP
-
 # For metaSMT
-ifeq ($(ENABLE_METASMT),1)
-  include $(METASMT_ROOT)/share/metaSMT/metaSMT.makefile
-  LD.Flags += -L$(METASMT_ROOT)/lib
-  CXX.Flags += -DBOOST_HAS_GCC_TR1 -D __STDC_LIMIT_MACROS -D __STDC_FORMAT_MACROS
-  CXX.Flags := $(filter-out -fno-exceptions,$(CXX.Flags))
-  CXX.Flags += $(metaSMT_INCLUDES)
-endif
+include $(PROJ_SRC_ROOT)/MetaSMT.mk
 

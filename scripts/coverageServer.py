@@ -1,4 +1,14 @@
 #!/usr/bin/python
+
+# ===-- coverageServer.py -------------------------------------------------===##
+# 
+#                      The KLEE Symbolic Virtual Machine
+# 
+#  This file is distributed under the University of Illinois Open Source
+#  License. See LICENSE.TXT for details.
+# 
+# ===----------------------------------------------------------------------===##
+
 from flask import *
 from functools import wraps
 from subprocess import call
