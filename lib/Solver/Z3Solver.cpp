@@ -35,10 +35,6 @@ private:
                          std::vector<std::vector<unsigned char> > *values,
                          bool &hasSolution);
 
-  static void getModel(Z3Builder *builder, Z3_solver solver,
-                       const std::vector<const Array *> &objects,
-                       std::vector<std::vector<unsigned char> > &values);
-
   /// getUnsatCoreVector - Declare the routine to extract the unsatisfiability
   /// core vector
   ///
@@ -47,25 +43,6 @@ private:
   static std::vector<ref<Expr> > getUnsatCoreVector(const Query &query,
                                                     const Z3Builder *builder,
                                                     const Z3_solver solver);
-
-  /// runAndGetCex - Determine the satisfiability of a query, given assertions
-  /// that already included in the Z3 solver.
-  ///
-  /// \param [out] hasSolution - On success, a boolean indicating the
-  /// satisfiability
-  /// of the formula.
-  /// \param [out] values - On success and satisfiable, a vector containing the
-  /// solution.
-  /// \return A value of SolverRunStatus: SOLVER_RUN_STATUS_SUCCESS_SOLVABLE
-  /// (satisfiable)
-  /// or SOLVER_RUN_STATUS_SUCCESS_UNSOLVABLE (unsatisfiable) indicates success,
-  /// others
-  /// indicate solver failure.
-  SolverRunStatus runAndGetCex(const Query &query, Z3Builder *builder,
-                               Z3_solver the_solver, Z3_ast q,
-                               const std::vector<const Array *> &objects,
-                               std::vector<std::vector<unsigned char> > &values,
-                               bool &hasSolution);
 
 public:
   Z3SolverImpl();
@@ -219,10 +196,23 @@ bool Z3SolverImpl::internalRunSolver(
 
   runStatusCode = SOLVER_RUN_STATUS_FAILURE;
 
+  Z3_sort sort = Z3_mk_bool_sort(builder->ctx);
+  unsigned constraintIdCtr = 1;
   for (ConstraintManager::const_iterator it = query.constraints.begin(),
                                          ie = query.constraints.end();
        it != ie; ++it) {
-    Z3_solver_assert(builder->ctx, theSolver, builder->construct(*it));
+    std::ostringstream stringStream;
+    stringStream << constraintIdCtr;
+
+    Z3_symbol symbol =
+        Z3_mk_string_symbol(builder->ctx, stringStream.str().c_str());
+    Z3ASTHandle constraintId(Z3_mk_const(builder->ctx, symbol, sort),
+                             builder->ctx);
+
+    Z3_solver_assert_and_track(builder->ctx, theSolver, builder->construct(*it),
+                               constraintId);
+
+    constraintIdCtr++;
   }
   ++stats::queries;
   if (objects)
@@ -243,6 +233,11 @@ bool Z3SolverImpl::internalRunSolver(
   ::Z3_lbool satisfiable = Z3_solver_check(builder->ctx, theSolver);
   runStatusCode = handleSolverResponse(theSolver, satisfiable, objects, values,
                                        hasSolution);
+
+  if (runStatusCode == SolverImpl::SOLVER_RUN_STATUS_SUCCESS_UNSOLVABLE) {
+    unsatCore.clear();
+    unsatCore = getUnsatCoreVector(query, builder, theSolver);
+  }
 
   Z3_solver_dec_ref(builder->ctx, theSolver);
   // Clear the builder's cache to prevent memory usage exploding.
@@ -341,66 +336,6 @@ SolverImpl::SolverRunStatus Z3SolverImpl::getOperationStatusCode() {
   return runStatusCode;
 }
 
-void Z3SolverImpl::getModel(Z3Builder *builder, Z3_solver solver,
-                            const std::vector<const Array *> &objects,
-                            std::vector<std::vector<unsigned char> > &values) {
-  Z3_model m = Z3_solver_get_model(builder->ctx, solver);
-
-  values.reserve(objects.size());
-  for (std::vector<const Array *>::const_iterator it = objects.begin(),
-                                                  ie = objects.end();
-       it != ie; ++it) {
-    const Array *array = *it;
-    std::vector<unsigned char> data;
-
-    data.reserve(array->size);
-    for (unsigned offset = 0; offset < array->size; offset++) {
-      Z3_ast counter;
-      Z3_ast initial_read =
-          Z3_mk_bv2int(builder->ctx, builder->getInitialRead(array, offset), 0);
-      Z3_model_eval(builder->ctx, m, initial_read, Z3_TRUE, &counter);
-      int val = 0;
-      Z3_get_numeral_int(builder->ctx, counter, &val);
-      data.push_back(val);
-    }
-
-    values.push_back(data);
-  }
-}
-
-SolverImpl::SolverRunStatus Z3SolverImpl::runAndGetCex(
-    const Query &query, Z3Builder *builder, Z3_solver the_solver, Z3_ast q,
-    const std::vector<const Array *> &objects,
-    std::vector<std::vector<unsigned char> > &values, bool &hasSolution) {
-  SolverRunStatus ret = SOLVER_RUN_STATUS_FAILURE;
-  hasSolution = false;
-
-  Z3_solver_assert(builder->ctx, the_solver, Z3_mk_not(builder->ctx, q));
-
-  // llvm::errs() << "Solving: " << Z3_solver_to_string(builder->ctx,
-  // the_solver)
-  //              << "\n";
-
-  switch (Z3_solver_check(builder->ctx, the_solver)) {
-  case Z3_L_TRUE: {
-    // The assertion is satisfiable (see Z3 API manual)
-    getModel(builder, the_solver, objects, values);
-    hasSolution = true;
-    ret = SOLVER_RUN_STATUS_SUCCESS_SOLVABLE;
-    break;
-  }
-  case Z3_L_FALSE: {
-    unsatCore.clear();
-    unsatCore = getUnsatCoreVector(query, builder, the_solver);
-    ret = SOLVER_RUN_STATUS_SUCCESS_UNSOLVABLE;
-    break;
-  }
-  default: { break; }
-  }
-
-  return ret;
-}
-
 std::vector<ref<Expr> >
 Z3SolverImpl::getUnsatCoreVector(const Query &query, const Z3Builder *builder,
                                  const Z3_solver solver) {
@@ -408,18 +343,18 @@ Z3SolverImpl::getUnsatCoreVector(const Query &query, const Z3Builder *builder,
   Z3_ast_vector r = Z3_solver_get_unsat_core(builder->ctx, solver);
   for (unsigned int i = 0; i < Z3_ast_vector_size(builder->ctx, r); i++) {
     Z3_ast temp = Z3_ast_vector_get(builder->ctx, r, i);
-    size_t constraint_index = 1;
+    size_t constraintIdCtr = 1;
     for (ConstraintManager::const_iterator it = query.constraints.begin(),
                                            ie = query.constraints.end();
          it != ie; ++it) {
-      std::ostringstream convert;
-      convert << constraint_index;
-      std::string compare = "|" + convert.str() + "|";
-      if (Z3_ast_to_string(builder->ctx, temp) == compare) {
+      std::ostringstream stringStream;
+      stringStream << constraintIdCtr;
+      std::string comparisonString = "|" + stringStream.str() + "|";
+      if (Z3_ast_to_string(builder->ctx, temp) == comparisonString) {
         localUnsatCore.push_back(*it);
         break;
       }
-      constraint_index++;
+      constraintIdCtr++;
     }
   }
   return localUnsatCore;
