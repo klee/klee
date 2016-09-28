@@ -366,11 +366,17 @@ Z3ASTHandle Z3Builder::getInitialArray(const Array *root) {
 
   if (!hashed) {
     // In case this array is bound
-    Z3_ast boundVar =
-        (quantificationContext ? quantificationContext->getBoundVar(root->name)
-                               : 0);
-    if (boundVar)
-      return Z3ASTHandle(boundVar, ctx);
+    if (!(root->name.find("__shadow__")) && quantificationContext) {
+      QuantificationContext *qc = quantificationContext;
+
+      while (qc) {
+        std::map<std::string, Z3ASTHandle>::iterator it =
+            qc->existentials.find(root->name);
+        if (it != qc->existentials.end())
+          return it->second;
+        qc = qc->parent;
+      }
+    }
 
     // Unique arrays by name, so we make sure the name is unique by
     // using the size of the array hash as a counter.
@@ -844,7 +850,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
 /***/
 
 Z3Builder::QuantificationContext::QuantificationContext(
-    Z3_context _ctx, std::set<const Array *> _existentials,
+    Z3Builder *builder, Z3_context _ctx, std::set<const Array *> _existentials,
     QuantificationContext *_parent)
     : ctx(_ctx), parent(_parent) {
   unsigned index = _existentials.size();
@@ -852,12 +858,11 @@ Z3Builder::QuantificationContext::QuantificationContext(
                                          itEnd = _existentials.end();
        it != itEnd; ++it) {
     --index;
-    Z3_symbol symb = Z3_mk_string_symbol(_ctx, (*it)->name.c_str());
-    Z3_sort sort = Z3_mk_array_sort(_ctx, Z3_mk_bv_sort(_ctx, (*it)->domain),
-                                    Z3_mk_bv_sort(_ctx, (*it)->range));
-    existentials[(*it)->name] = Z3_mk_bound(_ctx, index, sort);
-    sorts.push_back(sort);
-    symbols.push_back(symb);
+    existentials[(*it)->name] =
+        builder->buildArray((*it)->name.c_str(), (*it)->domain, (*it)->range);
+    sorts.push_back(Z3_mk_array_sort(_ctx, Z3_mk_bv_sort(_ctx, (*it)->domain),
+                                     Z3_mk_bv_sort(_ctx, (*it)->range)));
+    symbols.push_back(Z3_mk_string_symbol(_ctx, (*it)->name.c_str()));
   }
 }
 
@@ -867,27 +872,10 @@ Z3Builder::QuantificationContext::~QuantificationContext() {
   symbols.clear();
 }
 
-Z3_ast Z3Builder::QuantificationContext::getBoundVarQuick(std::string name) {
-  Z3_ast ret = existentials[name];
-  if (ret)
-    return ret;
-
-  if (parent)
-    return parent->getBoundVarQuick(name);
-
-  return 0;
-}
-
-Z3_ast Z3Builder::QuantificationContext::getBoundVar(std::string name) {
-  if (name.find("__shadow__") != 0)
-    return 0;
-  return getBoundVarQuick(name);
-}
-
 void
 Z3Builder::pushQuantificationContext(std::set<const Array *> existentials) {
   quantificationContext =
-      new QuantificationContext(ctx, existentials, quantificationContext);
+      new QuantificationContext(this, ctx, existentials, quantificationContext);
 }
 
 void Z3Builder::popQuantificationContext() {

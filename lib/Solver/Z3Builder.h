@@ -109,19 +109,18 @@ public:
 
 class Z3Builder {
 
-  class QuantificationContext {
+  struct QuantificationContext {
 
-    std::map<std::string, Z3_ast> existentials;
+    std::map<std::string, Z3ASTHandle> existentials;
     std::vector<Z3_sort> sorts;
     std::vector<Z3_symbol> symbols;
     Z3_context ctx;
 
     QuantificationContext *parent;
 
-    Z3_ast getBoundVarQuick(std::string name);
+    Z3ASTHandle getBoundVarQuick(std::string name);
 
-  public:
-    QuantificationContext(Z3_context _ctx,
+    QuantificationContext(Z3Builder *builder, Z3_context _ctx,
                           std::set<const Array *> _existentials,
                           QuantificationContext *_parent);
 
@@ -133,7 +132,7 @@ class Z3Builder {
 
     Z3_sort *getSorts() { return &sorts[0]; }
 
-    Z3_ast getBoundVar(std::string name);
+    Z3ASTHandle getBoundVar(std::string name);
 
     QuantificationContext *getParent() { return parent; }
   };
