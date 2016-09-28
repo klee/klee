@@ -3954,14 +3954,12 @@ void Executor::runFunctionAsMain(Function *f,
     SearchTree::save(interpreterHandler->getOutputFilename("tree.dot"));
     SearchTree::deallocate();
 
-#ifdef ENABLE_Z3
+    delete interpTree;
+    interpTree = 0;
+
     // Print interpolation time statistics
     if (InterpolationStat)
       interpreterHandler->assignSubsumptionStats(ITree::getInterpolationStat());
-#endif
-
-    delete interpTree;
-    interpTree = 0;
   }
 
   // hack to clear memory objects

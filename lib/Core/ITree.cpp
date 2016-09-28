@@ -1750,6 +1750,9 @@ void ITree::printTableStat(std::stringstream &stream) {
       << StatTimer::inTwoDecimalPoints(entryNumber / programPointNumber)
       << "\n";
 
+  stream << "KLEE: done:     Number of subsumption checks = "
+         << subsumptionCheckCount << "\n";
+
   stream << "KLEE: done:     Average solver calls per subsumption check = "
          << StatTimer::inTwoDecimalPoints(
                 (double)SubsumptionTableEntry::checkSolverCount /
