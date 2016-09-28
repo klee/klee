@@ -53,6 +53,6 @@ const char *SolverImpl::getOperationStatusString(SolverRunStatus statusCode) {
 
 std::vector<ref<Expr> > SolverImpl::getUnsatCore() {
   // By default, we return an empty core
-  std::vector<ref<Expr> > local_unsat_core;
-  return local_unsat_core;
+  std::vector<ref<Expr> > localUnsatCore;
+  return localUnsatCore;
 }

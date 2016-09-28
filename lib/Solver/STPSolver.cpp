@@ -377,8 +377,8 @@ SolverImpl::SolverRunStatus STPSolverImpl::getOperationStatusCode() {
 
 std::vector<ref<Expr> > STPSolverImpl::getUnsatCore() {
   // By default, we return an empty core
-  std::vector<ref<Expr> > local_unsat_core;
-  return local_unsat_core;
+  std::vector<ref<Expr> > localUnsatCore;
+  return localUnsatCore;
 }
 
 STPSolver::STPSolver(bool useForkedSTP, bool optimizeDivides)

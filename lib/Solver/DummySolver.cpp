@@ -62,8 +62,8 @@ SolverImpl::SolverRunStatus DummySolverImpl::getOperationStatusCode() {
 
 std::vector<ref<Expr> > DummySolverImpl::getUnsatCore() {
   // By default, we return an empty core
-  std::vector<ref<Expr> > local_unsat_core;
-  return local_unsat_core;
+  std::vector<ref<Expr> > localUnsatCore;
+  return localUnsatCore;
 }
 
 Solver *createDummySolver() { return new Solver(new DummySolverImpl()); }

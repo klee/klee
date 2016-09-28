@@ -404,7 +404,7 @@ SolverImpl::SolverRunStatus Z3SolverImpl::runAndGetCex(
 std::vector<ref<Expr> >
 Z3SolverImpl::getUnsatCoreVector(const Query &query, const Z3Builder *builder,
                                  const Z3_solver solver) {
-  std::vector<ref<Expr> > local_unsat_core;
+  std::vector<ref<Expr> > localUnsatCore;
   Z3_ast_vector r = Z3_solver_get_unsat_core(builder->ctx, solver);
   for (unsigned int i = 0; i < Z3_ast_vector_size(builder->ctx, r); i++) {
     Z3_ast temp = Z3_ast_vector_get(builder->ctx, r, i);
@@ -416,13 +416,13 @@ Z3SolverImpl::getUnsatCoreVector(const Query &query, const Z3Builder *builder,
       convert << constraint_index;
       std::string compare = "|" + convert.str() + "|";
       if (Z3_ast_to_string(builder->ctx, temp) == compare) {
-        local_unsat_core.push_back(*it);
+        localUnsatCore.push_back(*it);
         break;
       }
       constraint_index++;
     }
   }
-  return local_unsat_core;
+  return localUnsatCore;
 }
 
 std::vector<ref<Expr> > Z3SolverImpl::getUnsatCore() { return unsatCore; }
