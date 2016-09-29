@@ -72,6 +72,9 @@
 /* Define to 1 if you have the <zlib.h> header file. */
 #undef HAVE_ZLIB_H
 
+/* Enable time stamping the sources */
+#undef KLEE_ENABLE_TIMESTAMP
+
 /* Define to empty or 'const' depending on how SELinux qualifies its security
    context parameters. */
 #undef KLEE_SELINUX_CTX_CONST

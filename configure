@@ -735,6 +735,7 @@ enable_cxx11
 with_llvm_build_mode
 with_llvmcc
 with_llvmcxx
+enable_timestamp
 with_uclibc
 enable_posix_runtime
 with_runtime
@@ -1373,6 +1374,8 @@ Optional Features:
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
   --enable-cxx11          Build using C++11
+  --enable-timestamp      Enable timestamping the source code while building.
+                          (default=disabled)
   --enable-posix-runtime  Enable the POSIX runtime
 
 Optional Packages:
@@ -3994,6 +3997,24 @@ KLEE_BITCODE_C_COMPILER=$klee_llvm_bc_c_compiler
 
 KLEE_BITCODE_CXX_COMPILER=$klee_llvm_bc_cxx_compiler
 
+
+
+# Check whether --enable-timestamp was given.
+if test "${enable_timestamp+set}" = set; then :
+  enableval=$enable_timestamp;
+fi
+
+
+if test "x${enable_timestamp}" = "xyes" ; then
+
+$as_echo "#define KLEE_ENABLE_TIMESTAMP 1" >>confdefs.h
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: Source timestamping enabled." >&5
+$as_echo "$as_me: Source timestamping enabled." >&6;}
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: Source timestamping disabled." >&5
+$as_echo "$as_me: Source timestamping disabled." >&6;}
+fi
 
 
 
