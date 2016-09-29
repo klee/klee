@@ -382,6 +382,19 @@ AC_SUBST(KLEE_BITCODE_C_COMPILER,$klee_llvm_bc_c_compiler)
 AC_SUBST(KLEE_BITCODE_CXX_COMPILER,$klee_llvm_bc_cxx_compiler)
 
 dnl **************************************************************************
+dnl User option to disable timestamping.
+
+AC_ARG_ENABLE([timestamp],AS_HELP_STRING([--enable-timestamp],
+	[Enable timestamping the source code while building. (default=disabled)]))
+
+if test "x${enable_timestamp}" = "xyes" ; then
+  AC_DEFINE(KLEE_ENABLE_TIMESTAMP,[1],[Enable time stamping the sources])
+  AC_MSG_NOTICE([Source timestamping enabled.])
+else
+  AC_MSG_NOTICE([Source timestamping disabled.])
+fi
+
+dnl **************************************************************************
 dnl User option to enable uClibc support.
 
 AC_ARG_WITH(uclibc,
