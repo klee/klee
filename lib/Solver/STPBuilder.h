@@ -14,8 +14,6 @@
 #include "klee/util/ArrayExprHash.h"
 #include "klee/Config/config.h"
 
-#ifdef SUPPORT_STP
-
 #include <vector>
 
 #define Expr VCExpr
@@ -95,6 +93,8 @@ private:
   ExprHandle bvVarLeftShift(ExprHandle expr, ExprHandle shift);
   ExprHandle bvVarRightShift(ExprHandle expr, ExprHandle shift);
   ExprHandle bvVarArithRightShift(ExprHandle expr, ExprHandle shift);
+  ExprHandle extractPartialShiftValue(ExprHandle shift, unsigned width,
+                                      unsigned &shiftBits);
 
   ExprHandle constructAShrByConstant(ExprHandle expr, unsigned shift, 
                                      ExprHandle isSigned);
@@ -128,6 +128,4 @@ public:
 
 }
 
-#endif /* SUPPORT_STP */
-
-#endif /* __UTIL_STPBUILDER_H__ */
+#endif

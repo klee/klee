@@ -70,15 +70,16 @@ public:
   /// registering a module with the interpreter.
   struct ModuleOptions {
     std::string LibraryDir;
+    std::string EntryPoint;
     bool Optimize;
     bool CheckDivZero;
     bool CheckOvershift;
 
-    ModuleOptions(const std::string& _LibraryDir, 
-                  bool _Optimize, bool _CheckDivZero,
-                  bool _CheckOvershift)
-      : LibraryDir(_LibraryDir), Optimize(_Optimize), 
-        CheckDivZero(_CheckDivZero), CheckOvershift(_CheckOvershift) {}
+    ModuleOptions(const std::string &_LibraryDir,
+                  const std::string &_EntryPoint, bool _Optimize,
+                  bool _CheckDivZero, bool _CheckOvershift)
+        : LibraryDir(_LibraryDir), EntryPoint(_EntryPoint), Optimize(_Optimize),
+          CheckDivZero(_CheckDivZero), CheckOvershift(_CheckOvershift) {}
   };
 
   enum LogType
@@ -132,7 +133,7 @@ public:
 
   // supply a test case to replay from. this can be used to drive the
   // interpretation down a user specified path. use null to reset.
-  virtual void setReplayOut(const struct KTest *out) = 0;
+  virtual void setReplayKTest(const struct KTest *out) = 0;
 
   // supply a list of branch decisions specifying which direction to
   // take on forks. this can be used to drive the interpretation down

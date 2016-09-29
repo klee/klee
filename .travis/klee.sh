@@ -1,6 +1,7 @@
 #!/bin/bash -x
 # Make sure we exit if there is a failure
 set -e
+: ${SOLVERS?"Solvers must be specified"}
 
 # Calculate LLVM branch name to retrieve missing files from
 SVN_BRANCH="release_$( echo ${LLVM_VERSION} | sed 's/\.//g')"
@@ -43,6 +44,38 @@ COVERAGE_FLAGS=""
 if [ ${COVERAGE} -eq 1 ]; then
     COVERAGE_FLAGS='-fprofile-arcs -ftest-coverage'
 fi
+
+
+###############################################################################
+# Handle setting up solver configure flags for KLEE
+###############################################################################
+KLEE_Z3_CONFIGURE_OPTION=""
+KLEE_STP_CONFIGURE_OPTION=""
+KLEE_METASMT_CONFIGURE_OPTION=""
+SOLVER_LIST=$(echo "${SOLVERS}" | sed 's/:/ /')
+
+for solver in ${SOLVER_LIST}; do
+  echo "Setting configuration option for ${solver}"
+  case ${solver} in
+  STP)
+    KLEE_STP_CONFIGURE_OPTION="--with-stp=${BUILD_DIR}/stp/build"
+    ;;
+  Z3)
+    echo "Z3"
+    KLEE_Z3_CONFIGURE_OPTION="--with-z3=/usr"
+    ;;
+  metaSMT)
+    echo "metaSMT"
+    KLEE_METASMT_CONFIGURE_OPTION="--with-metasmt=${BUILD_DIR}/metaSMT/build/root --with-metasmt-default-backend=${METASMT_DEFAULT}"
+    ;;
+  *)
+    echo "Unknown solver ${solver}"
+    exit 1
+  esac
+done
+
+
+TCMALLOC_OPTION=$([ "${USE_TCMALLOC:-0}" == 1 ] && echo "--with-tcmalloc" || echo "--without-tcmalloc")
 ###############################################################################
 # KLEE
 ###############################################################################
@@ -57,8 +90,11 @@ ${KLEE_SRC}/configure --with-llvmsrc=/usr/lib/llvm-${LLVM_VERSION}/build \
             --with-llvmobj=/usr/lib/llvm-${LLVM_VERSION}/build \
             --with-llvmcc=${KLEE_CC} \
             --with-llvmcxx=${KLEE_CXX} \
-            --with-stp="${BUILD_DIR}/stp/build" \
+            ${KLEE_STP_CONFIGURE_OPTION} \
+            ${KLEE_Z3_CONFIGURE_OPTION} \
+            ${KLEE_METASMT_CONFIGURE_OPTION} \
             ${KLEE_UCLIBC_CONFIGURE_OPTION} \
+            ${TCMALLOC_OPTION} \
             CXXFLAGS="${COVERAGE_FLAGS}" \
             && make DISABLE_ASSERTIONS=${DISABLE_ASSERTIONS} \
                     ENABLE_OPTIMIZED=${ENABLE_OPTIMIZED} \
@@ -115,11 +151,11 @@ if [ ${COVERAGE} -eq 1 ]; then
     sudo cp style.css /usr/local/lib/python2.7/dist-packages/zcov-0.3.0.dev0-py2.7.egg/zcov/style.css
 
 #install zcov dependency
-    sudo apt-get install enscript
+    sudo apt-get install -y enscript
 
 #update gcov from v4.6 to v4.8. This is becauase gcda files are made for v4.8 and cause 
 #a segmentation fault in v4.6
-    sudo apt-get install ggcov
+    sudo apt-get install -y ggcov
     sudo rm /usr/bin/gcov
     sudo ln -s /usr/bin/gcov-4.8 /usr/bin/gcov
 

@@ -1,3 +1,12 @@
+//===-- RefTest.cpp ---------------------------------------------*- C++ -*-===//
+//
+//                     The KLEE Symbolic Virtual Machine
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
 /* Regression test for a bug caused by assigning a ref to itself.
    More details at http://keeda.stanford.edu/pipermail/klee-commits/2012-February/000904.html */
 

@@ -1,4 +1,4 @@
-# RUN: %kleaver --use-fast-cex-solver --use-dummy-solver %s > %t
+# RUN: %kleaver --use-fast-cex-solver --solver-backend=dummy %s > %t
 # RUN: not grep FAIL %t
 
 array arr1[4] : w32 -> w8 = symbolic
