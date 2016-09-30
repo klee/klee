@@ -11,7 +11,7 @@
 #ifndef SMT_PARSER_H
 #define SMT_PARSER_H
 
-#include "expr/Parser.h"
+#include "klee/Expr/Parser/Parser.h"
 
 #include <map>
 #include <stack>

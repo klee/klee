@@ -6,11 +6,11 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+#include "klee/Expr/ExprSMTLIBPrinter.h"
+
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "klee/util/ExprSMTLIBPrinter.h"
-
 #include <stack>
 
 namespace ExprSMTLIBOptions {

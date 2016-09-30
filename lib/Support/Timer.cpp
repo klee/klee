@@ -7,10 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "klee/Config/Version.h"
-#include "klee/Internal/Support/Timer.h"
+#include "klee/Support/Timer.h"
 
-#include "klee/Internal/System/Time.h"
+#include "klee/Config/Version.h"
+#include "klee/Support/Time.h"
 
 using namespace klee;
 using namespace llvm;

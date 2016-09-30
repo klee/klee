@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "klee/Internal/ADT/KTest.h"
+#include "klee/Basic/KTest.h"
 
 #include <stdlib.h>
 #include <string.h>

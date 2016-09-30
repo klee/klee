@@ -7,21 +7,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Memory.h"
 #include "SpecialFunctionHandler.h"
-#include "TimingSolver.h"
-
-#include "klee/ExecutionState.h"
-
-#include "klee/Internal/Module/KInstruction.h"
-#include "klee/Internal/Module/KModule.h"
-#include "klee/Internal/Support/Debug.h"
-#include "klee/Internal/Support/ErrorHandling.h"
 
 #include "Executor.h"
+#include "Memory.h"
 #include "MemoryManager.h"
+#include "TimingSolver.h"
 
-#include "klee/CommandLine.h"
+#include "klee/Basic/CommandLine.h"
+#include "klee/Core/ExecutionState.h"
+#include "klee/Module/KInstruction.h"
+#include "klee/Module/KModule.h"
+#include "klee/Support/Debug.h"
+#include "klee/Support/ErrorHandling.h"
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
 #include "llvm/IR/Module.h"

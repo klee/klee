@@ -7,9 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "klee/Solver.h"
-#include "klee/SolverImpl.h"
-#include "klee/Constraints.h"
+#include "klee/Solver/Solver.h"
+
+#include "klee/Expr/Constraints.h"
+#include "klee/Solver/SolverImpl.h"
 
 using namespace klee;
 

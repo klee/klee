@@ -12,8 +12,8 @@
 
 #include "ObjectHolder.h"
 
-#include "klee/Expr.h"
-#include "klee/Internal/ADT/ImmutableMap.h"
+#include "klee/Expr/Expr.h"
+#include "klee/Support/ADT/ImmutableMap.h"
 
 namespace klee {
   class ExecutionState;

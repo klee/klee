@@ -9,7 +9,7 @@
 
 #include "ConstantDivision.h"
 
-#include "klee/util/Bits.h"
+#include "klee/Support/Bits.h"
 
 #include <algorithm>
 #include <cassert>

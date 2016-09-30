@@ -9,16 +9,16 @@
 
 #include "CoreStats.h"
 #include "Executor.h"
+#include "ExecutorTimerInfo.h"
 #include "PTree.h"
 #include "StatsTracker.h"
-#include "ExecutorTimerInfo.h"
 
-#include "klee/ExecutionState.h"
-#include "klee/Internal/Module/InstructionInfoTable.h"
-#include "klee/Internal/Module/KInstruction.h"
-#include "klee/Internal/Module/KModule.h"
-#include "klee/Internal/System/Time.h"
-#include "klee/Internal/Support/ErrorHandling.h"
+#include "klee/Core/ExecutionState.h"
+#include "klee/Module/InstructionInfoTable.h"
+#include "klee/Module/KInstruction.h"
+#include "klee/Module/KModule.h"
+#include "klee/Support/ErrorHandling.h"
+#include "klee/Support/Time.h"
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
 #include "llvm/IR/Function.h"

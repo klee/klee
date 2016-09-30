@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "klee/Statistics.h"
+#include "klee/Basic/Statistics.h"
 
 #include <vector>
 

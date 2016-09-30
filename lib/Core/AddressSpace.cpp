@@ -8,12 +8,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "AddressSpace.h"
+
 #include "CoreStats.h"
 #include "Memory.h"
 #include "TimingSolver.h"
 
-#include "klee/Expr.h"
-#include "klee/TimerStatIncrementer.h"
+#include "klee/Expr/Expr.h"
+#include "klee/Support/TimerStatIncrementer.h"
 
 using namespace klee;
 

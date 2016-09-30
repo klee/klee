@@ -9,10 +9,8 @@
 
 #include "CallPathManager.h"
 
-#include "klee/Statistics.h"
+#include "klee/Basic/Statistics.h"
 
-#include <map>
-#include <vector>
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
 #include "llvm/IR/Function.h"
 #else
@@ -20,6 +18,9 @@
 #endif
 
 #include "llvm/Support/raw_ostream.h"
+
+#include <map>
+#include <vector>
 
 using namespace llvm;
 using namespace klee;

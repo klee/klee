@@ -10,14 +10,14 @@
 #include "Memory.h"
 
 #include "Context.h"
-#include "klee/Expr.h"
-#include "klee/Solver.h"
-#include "klee/util/BitArray.h"
-#include "klee/Internal/Support/ErrorHandling.h"
-#include "klee/util/ArrayCache.h"
-
 #include "ObjectHolder.h"
 #include "MemoryManager.h"
+
+#include "klee/Core/BitArray.h"
+#include "klee/Expr/ArrayCache.h"
+#include "klee/Expr/Expr.h"
+#include "klee/Solver/Solver.h"
+#include "klee/Support/ErrorHandling.h"
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
 #include <llvm/IR/Function.h>

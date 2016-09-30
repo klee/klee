@@ -9,13 +9,15 @@
 #include "klee/Config/config.h"
 #ifdef ENABLE_METASMT
 
+#include "klee/Solver/SolverImpl.h"
+
 #include "MetaSMTBuilder.h"
-#include "klee/Constraints.h"
-#include "klee/Internal/Support/ErrorHandling.h"
-#include "klee/Solver.h"
-#include "klee/SolverImpl.h"
-#include "klee/util/Assignment.h"
-#include "klee/util/ExprUtil.h"
+
+#include "klee/Expr/Assignment.h"
+#include "klee/Expr/Constraints.h"
+#include "klee/Expr/ExprUtil.h"
+#include "klee/Solver/Solver.h"
+#include "klee/Support/ErrorHandling.h"
 
 #include <metaSMT/DirectSolver_Context.hpp>
 #include <metaSMT/backend/Z3_Backend.hpp>

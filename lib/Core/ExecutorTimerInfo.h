@@ -14,7 +14,7 @@
 #ifndef EXECUTORTIMERINFO_H_
 #define EXECUTORTIMERINFO_H_
 
-#include "klee/Internal/System/Time.h"
+#include "klee/Support/Time.h"
 
 namespace klee {
 

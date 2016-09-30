@@ -10,13 +10,13 @@
 #include "ImpliedValue.h"
 
 #include "Context.h"
-#include "klee/Constraints.h"
-#include "klee/Expr.h"
-#include "klee/Solver.h"
-// FIXME: Use APInt.
-#include "klee/Internal/Support/IntEvaluation.h"
 
-#include "klee/util/ExprUtil.h"
+#include "klee/Expr/Constraints.h"
+#include "klee/Expr/Expr.h"
+#include "klee/Expr/ExprUtil.h"
+#include "klee/Solver/Solver.h"
+// FIXME: Use APInt.
+#include "klee/Support/IntEvaluation.h"
 
 #include <map>
 #include <set>

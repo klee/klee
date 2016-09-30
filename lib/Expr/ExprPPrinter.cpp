@@ -7,11 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "klee/util/PrintContext.h"
-#include "klee/util/ExprPPrinter.h"
+#include "klee/Expr/ExprPPrinter.h"
 
-#include "klee/Constraints.h"
-
+#include "klee/Expr/Constraints.h"
+#include "klee/Support/PrintContext.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 

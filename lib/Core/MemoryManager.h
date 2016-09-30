@@ -12,6 +12,7 @@
 
 #include <set>
 #include <stdint.h>
+#include <stddef.h>
 
 namespace llvm {
 class Value;

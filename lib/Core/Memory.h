@@ -11,8 +11,8 @@
 #define KLEE_MEMORY_H
 
 #include "Context.h"
-#include "klee/Expr.h"
 
+#include "klee/Expr/Expr.h"
 #include "llvm/ADT/StringExtras.h"
 
 #include <vector>

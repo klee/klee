@@ -10,8 +10,8 @@
 #ifndef KLEE_TIMINGSOLVER_H
 #define KLEE_TIMINGSOLVER_H
 
-#include "klee/Expr.h"
-#include "klee/Solver.h"
+#include "klee/Expr/Expr.h"
+#include "klee/Solver/Solver.h"
 
 #include <vector>
 

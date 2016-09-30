@@ -7,10 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "klee/CommandLine.h"
-#include "klee/Solver.h"
+#include "klee/Basic/CommandLine.h"
+#include "klee/Solver/Solver.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+
 #include <string>
 
 #ifdef ENABLE_METASMT

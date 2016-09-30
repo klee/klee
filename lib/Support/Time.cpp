@@ -7,11 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "klee/Config/Version.h"
-#include "klee/Internal/System/Time.h"
+#include "klee/Support/Time.h"
 
-#include "llvm/Support/TimeValue.h"
+#include "klee/Config/Version.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/TimeValue.h"
 
 using namespace llvm;
 using namespace klee;

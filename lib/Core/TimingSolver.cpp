@@ -9,14 +9,13 @@
 
 #include "TimingSolver.h"
 
-#include "klee/Config/Version.h"
-#include "klee/ExecutionState.h"
-#include "klee/Solver.h"
-#include "klee/Statistics.h"
-#include "klee/Internal/System/Time.h"
-
 #include "CoreStats.h"
 
+#include "klee/Basic/Statistics.h"
+#include "klee/Config/Version.h"
+#include "klee/Core/ExecutionState.h"
+#include "klee/Solver/Solver.h"
+#include "klee/Support/Time.h"
 #include "llvm/Support/TimeValue.h"
 
 using namespace klee;

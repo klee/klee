@@ -7,12 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 #include "QueryLoggingSolver.h"
+
+#include "klee/Basic/Statistics.h"
 #include "klee/Config/config.h"
-#include "klee/Internal/System/Time.h"
-#include "klee/Statistics.h"
+#include "klee/Support/Time.h"
 #ifdef HAVE_ZLIB_H
-#include "klee/Internal/Support/CompressionStream.h"
-#include "klee/Internal/Support/ErrorHandling.h"
+#include "klee/Support/CompressionStream.h"
+#include "klee/Support/ErrorHandling.h"
 #endif
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 5)

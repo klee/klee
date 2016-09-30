@@ -15,12 +15,13 @@
 #ifndef KLEE_EXECUTOR_H
 #define KLEE_EXECUTOR_H
 
-#include "klee/ExecutionState.h"
-#include "klee/Interpreter.h"
-#include "klee/Internal/Module/Cell.h"
-#include "klee/Internal/Module/KInstruction.h"
-#include "klee/Internal/Module/KModule.h"
-#include "klee/util/ArrayCache.h"
+#include "klee/Core/ExecutionState.h"
+#include "klee/Core/Interpreter.h"
+#include "klee/Expr/ArrayCache.h"
+#include "klee/Module/Cell.h"
+#include "klee/Module/KInstruction.h"
+#include "klee/Module/KModule.h"
+
 #include "llvm/Support/raw_ostream.h"
 
 #include "llvm/ADT/Twine.h"

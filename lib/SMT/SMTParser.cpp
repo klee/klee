@@ -9,10 +9,10 @@
 
 #include "SMTParser.h"
 
-#include "klee/ExprBuilder.h"
-#include "klee/Solver.h"
-#include "klee/Constraints.h"
-#include "expr/Parser.h"
+#include "klee/Expr/Constraints.h"
+#include "klee/Expr/ExprBuilder.h"
+#include "klee/Expr/Parser/Parser.h"
+#include "klee/Solver/Solver.h"
 
 #include <fstream>
 #include <string>

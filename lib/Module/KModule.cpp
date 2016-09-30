@@ -8,18 +8,19 @@
 //===----------------------------------------------------------------------===//
 
 #define DEBUG_TYPE "KModule"
-#include "klee/Internal/Module/KModule.h"
-#include "klee/Internal/Support/ErrorHandling.h"
+
+#include "klee/Module/KModule.h"
 
 #include "Passes.h"
 
 #include "klee/Config/Version.h"
-#include "klee/Interpreter.h"
-#include "klee/Internal/Module/Cell.h"
-#include "klee/Internal/Module/KInstruction.h"
-#include "klee/Internal/Module/InstructionInfoTable.h"
-#include "klee/Internal/Support/Debug.h"
-#include "klee/Internal/Support/ModuleUtil.h"
+#include "klee/Core/Interpreter.h"
+#include "klee/Module/Cell.h"
+#include "klee/Module/InstructionInfoTable.h"
+#include "klee/Module/KInstruction.h"
+#include "klee/Support/Debug.h"
+#include "klee/Support/ErrorHandling.h"
+#include "klee/Support/ModuleUtil.h"
 
 #include "llvm/Bitcode/ReaderWriter.h"
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)

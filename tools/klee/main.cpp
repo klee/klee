@@ -9,18 +9,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "klee/ExecutionState.h"
-#include "klee/Expr.h"
-#include "klee/Interpreter.h"
-#include "klee/Statistics.h"
+#include "klee/Basic/KTest.h"
+#include "klee/Basic/Statistics.h"
 #include "klee/Config/Version.h"
-#include "klee/Internal/ADT/KTest.h"
-#include "klee/Internal/ADT/TreeStream.h"
-#include "klee/Internal/Support/Debug.h"
-#include "klee/Internal/Support/ModuleUtil.h"
-#include "klee/Internal/System/Time.h"
-#include "klee/Internal/Support/PrintVersion.h"
-#include "klee/Internal/Support/ErrorHandling.h"
+#include "klee/Core/ExecutionState.h"
+#include "klee/Core/Interpreter.h"
+#include "klee/Expr/Expr.h"
+#include "klee/Support/ADT/TreeStream.h"
+#include "klee/Support/Debug.h"
+#include "klee/Support/ErrorHandling.h"
+#include "klee/Support/ModuleUtil.h"
+#include "klee/Support/PrintVersion.h"
+#include "klee/Support/Time.h"
 
 #if LLVM_VERSION_CODE > LLVM_VERSION(3, 2)
 #include "llvm/IR/Constants.h"

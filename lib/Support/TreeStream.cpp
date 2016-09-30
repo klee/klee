@@ -8,17 +8,17 @@
 //===----------------------------------------------------------------------===//
 
 #define DEBUG_TYPE "TreeStreamWriter"
-#include "klee/Internal/ADT/TreeStream.h"
 
-#include "klee/Internal/Support/Debug.h"
+#include "klee/Support/ADT/TreeStream.h"
+
+#include "klee/Support/Debug.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include <cassert>
 #include <iomanip>
 #include <fstream>
 #include <iterator>
 #include <map>
-
-#include "llvm/Support/raw_ostream.h"
 #include <string.h>
 
 using namespace klee;

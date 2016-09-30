@@ -17,12 +17,13 @@
 #ifndef METASMTBUILDER_H_
 #define METASMTBUILDER_H_
 
-#include "klee/Config/config.h"
-#include "klee/Expr.h"
-#include "klee/util/ExprPPrinter.h"
-#include "klee/util/ArrayExprHash.h"
-#include "klee/util/ExprHashMap.h"
 #include "ConstantDivision.h"
+
+#include "klee/Config/config.h"
+#include "klee/Expr/ArrayExprHash.h"
+#include "klee/Expr/Expr.h"
+#include "klee/Expr/ExprHashMap.h"
+#include "klee/Expr/ExprPPrinter.h"
 
 #ifdef ENABLE_METASMT
 

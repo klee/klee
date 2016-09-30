@@ -9,10 +9,10 @@
 
 #include "UserSearcher.h"
 
-#include "Searcher.h"
 #include "Executor.h"
+#include "Searcher.h"
 
-#include "klee/Internal/Support/ErrorHandling.h"
+#include "klee/Support/ErrorHandling.h"
 #include "llvm/Support/CommandLine.h"
 
 using namespace llvm;

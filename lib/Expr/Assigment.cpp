@@ -6,7 +6,9 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-#include "klee/util/Assignment.h"
+
+#include "klee/Expr/Assignment.h"
+
 namespace klee {
 
 void Assignment::dump() {

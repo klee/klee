@@ -7,16 +7,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "klee/ExecutionState.h"
-
-#include "klee/Internal/Module/Cell.h"
-#include "klee/Internal/Module/InstructionInfoTable.h"
-#include "klee/Internal/Module/KInstruction.h"
-#include "klee/Internal/Module/KModule.h"
-
-#include "klee/Expr.h"
+#include "klee/Core/ExecutionState.h"
 
 #include "Memory.h"
+
+#include "klee/Expr/Expr.h"
+#include "klee/Module/Cell.h"
+#include "klee/Module/InstructionInfoTable.h"
+#include "klee/Module/KInstruction.h"
+#include "klee/Module/KModule.h"
+
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
 #include "llvm/IR/Function.h"
 #else

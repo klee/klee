@@ -7,17 +7,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "klee/Solver/SolverImpl.h"
 
-#include "klee/Solver.h"
-
-#include "klee/Constraints.h"
-#include "klee/Expr.h"
-#include "klee/IncompleteSolver.h"
-#include "klee/SolverImpl.h"
-
-#include "klee/SolverStats.h"
+#include "klee/Expr/Constraints.h"
+#include "klee/Expr/Expr.h"
+#include "klee/Solver/IncompleteSolver.h"
+#include "klee/Solver/Solver.h"
+#include "klee/Solver/SolverStats.h"
 
 #include <ciso646>
+
 #ifdef _LIBCPP_VERSION
 #include <unordered_map>
 #define unordered_map std::unordered_map

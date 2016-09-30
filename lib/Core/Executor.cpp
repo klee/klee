@@ -8,8 +8,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "Executor.h"
+
 #include "Context.h"
 #include "CoreStats.h"
+#include "ExecutorTimerInfo.h"
 #include "ExternalDispatcher.h"
 #include "ImpliedValue.h"
 #include "Memory.h"
@@ -21,32 +23,30 @@
 #include "StatsTracker.h"
 #include "TimingSolver.h"
 #include "UserSearcher.h"
-#include "ExecutorTimerInfo.h"
 
-
-#include "klee/ExecutionState.h"
-#include "klee/Expr.h"
-#include "klee/Interpreter.h"
-#include "klee/TimerStatIncrementer.h"
-#include "klee/CommandLine.h"
-#include "klee/Common.h"
-#include "klee/util/Assignment.h"
-#include "klee/util/ExprPPrinter.h"
-#include "klee/util/ExprSMTLIBPrinter.h"
-#include "klee/util/ExprUtil.h"
-#include "klee/util/GetElementPtrTypeIterator.h"
+#include "klee/Basic/CommandLine.h"
+#include "klee/Basic/Common.h"
+#include "klee/Basic/KTest.h"
 #include "klee/Config/Version.h"
-#include "klee/Internal/ADT/KTest.h"
-#include "klee/Internal/ADT/RNG.h"
-#include "klee/Internal/Module/Cell.h"
-#include "klee/Internal/Module/InstructionInfoTable.h"
-#include "klee/Internal/Module/KInstruction.h"
-#include "klee/Internal/Module/KModule.h"
-#include "klee/Internal/Support/ErrorHandling.h"
-#include "klee/Internal/Support/FloatEvaluation.h"
-#include "klee/Internal/System/Time.h"
-#include "klee/Internal/System/MemoryUsage.h"
-#include "klee/SolverStats.h"
+#include "klee/Core/ExecutionState.h"
+#include "klee/Core/Interpreter.h"
+#include "klee/Expr/Assignment.h"
+#include "klee/Expr/Expr.h"
+#include "klee/Expr/ExprPPrinter.h"
+#include "klee/Expr/ExprSMTLIBPrinter.h"
+#include "klee/Expr/ExprUtil.h"
+#include "klee/Module/Cell.h"
+#include "klee/Module/InstructionInfoTable.h"
+#include "klee/Module/KInstruction.h"
+#include "klee/Module/KModule.h"
+#include "klee/Solver/SolverStats.h"
+#include "klee/Support/ErrorHandling.h"
+#include "klee/Support/FloatEvaluation.h"
+#include "klee/Support/GetElementPtrTypeIterator.h"
+#include "klee/Support/MemoryUsage.h"
+#include "klee/Support/RNG.h"
+#include "klee/Support/Time.h"
+#include "klee/Support/TimerStatIncrementer.h"
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
 #include "llvm/IR/Function.h"
@@ -90,7 +90,7 @@
 #endif
 
 #ifdef HAVE_ZLIB_H
-#include "klee/Internal/Support/CompressionStream.h"
+#include "klee/Support/CompressionStream.h"
 #endif
 
 #include <cassert>

@@ -7,9 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "klee/IncompleteSolver.h"
+#include "klee/Solver/IncompleteSolver.h"
 
-#include "klee/Constraints.h"
+#include "klee/Expr/Constraints.h"
 
 using namespace klee;
 using namespace llvm;

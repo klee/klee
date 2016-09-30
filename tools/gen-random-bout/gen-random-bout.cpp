@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "klee/Basic/KTest.h"
+
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,8 +17,6 @@
 #include <sys/stat.h>
 #include <time.h>
 #include <unistd.h>
-
-#include "klee/Internal/ADT/KTest.h"
 
 #if defined(__FreeBSD__) || defined(__minix)
 #define stat64 stat

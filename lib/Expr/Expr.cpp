@@ -7,19 +7,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "klee/Expr.h"
+#include "klee/Expr/Expr.h"
+
 #include "klee/Config/Version.h"
+#include "klee/Expr/ExprPPrinter.h"
+// FIXME: We shouldn't need this once fast constant support moves into
+// Core. If we need to do arithmetic, we probably want to use APInt.
+#include "klee/Support/IntEvaluation.h"
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 1)
 #include "llvm/ADT/Hashing.h"
 #endif
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
-// FIXME: We shouldn't need this once fast constant support moves into
-// Core. If we need to do arithmetic, we probably want to use APInt.
-#include "klee/Internal/Support/IntEvaluation.h"
-
-#include "klee/util/ExprPPrinter.h"
 
 #include <sstream>
 

@@ -7,12 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "klee/Internal/Support/ModuleUtil.h"
+#include "klee/Support/ModuleUtil.h"
+
+#include "../Core/SpecialFunctionHandler.h"
 
 #include "klee/Config/Version.h"
-#include "klee/Internal/Support/Debug.h"
-#include "klee/Internal/Support/ErrorHandling.h"
-#include "../Core/SpecialFunctionHandler.h"
+#include "klee/Support/Debug.h"
+#include "klee/Support/ErrorHandling.h"
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 4)
 #include "llvm/IR/LLVMContext.h"

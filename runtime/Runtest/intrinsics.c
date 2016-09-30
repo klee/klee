@@ -9,6 +9,9 @@
 
 /* Straight C for linking simplicity */
 
+#include "klee/klee.h"
+#include "klee/Basic/KTest.h"
+
 #include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -16,10 +19,6 @@
 #include <sys/mman.h>
 #include <sys/time.h>
 #include <time.h>
-
-#include "klee/klee.h"
-
-#include "klee/Internal/ADT/KTest.h"
 
 static KTest *testData = 0;
 static unsigned testPosition = 0;

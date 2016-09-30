@@ -7,17 +7,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CoreStats.h"
-#include "Memory.h"
 #include "MemoryManager.h"
 
-#include "klee/Expr.h"
-#include "klee/Internal/Support/ErrorHandling.h"
+#include "CoreStats.h"
+#include "Memory.h"
 
+#include "klee/Expr/Expr.h"
+#include "klee/Support/ErrorHandling.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MathExtras.h"
 
 #include <sys/mman.h>
+
 using namespace klee;
 
 namespace {

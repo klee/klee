@@ -10,9 +10,12 @@
 /* Regression test for a bug caused by assigning a ref to itself.
    More details at http://keeda.stanford.edu/pipermail/klee-commits/2012-February/000904.html */
 
+#include "klee/Support/Ref.h"
+
 #include "gtest/gtest.h"
+
 #include <iostream>
-#include "klee/util/Ref.h"
+
 using klee::ref;
 
 int finished = 0;

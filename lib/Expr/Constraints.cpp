@@ -7,17 +7,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "klee/Constraints.h"
+#include "klee/Expr/Constraints.h"
 
-#include "klee/util/ExprPPrinter.h"
-#include "klee/util/ExprVisitor.h"
+#include "klee/Expr/ExprPPrinter.h"
+#include "klee/Expr/ExprVisitor.h"
+#include "klee/Module/KModule.h"
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
 #include "llvm/IR/Function.h"
 #else
 #include "llvm/Function.h"
 #endif
 #include "llvm/Support/CommandLine.h"
-#include "klee/Internal/Module/KModule.h"
 
 #include <map>
 

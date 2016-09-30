@@ -9,7 +9,7 @@
 #include "klee/Config/config.h"
 #include "klee/Config/Version.h"
 #ifdef HAVE_ZLIB_H
-#include "klee/Internal/Support/CompressionStream.h"
+#include "klee/Support/CompressionStream.h"
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
 #include "llvm/Support/system_error.h"
 #else

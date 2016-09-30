@@ -7,18 +7,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Context.h"
 #include "Executor.h"
 
-#include "Context.h"
-
-#include "klee/Expr.h"
-#include "klee/Interpreter.h"
-#include "klee/Solver.h"
-
 #include "klee/Config/Version.h"
-#include "klee/Internal/Module/KModule.h"
-
-#include "klee/util/GetElementPtrTypeIterator.h"
+#include "klee/Core/Interpreter.h"
+#include "klee/Expr/Expr.h"
+#include "klee/Module/KModule.h"
+#include "klee/Solver/Solver.h"
+#include "klee/Support/GetElementPtrTypeIterator.h"
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
 #include "llvm/IR/Function.h"
