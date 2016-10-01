@@ -109,6 +109,8 @@ public:
   char *getConstraintLog(const Query&);
   void setCoreSolverTimeout(double timeout);
   std::vector<ref<Expr> > getUnsatCore() { return unsatCoreToReturn; }
+  void enableConstraintsCaching() { solver->enableConstraintsCaching(); }
+  void disableConstraintsCaching() { solver->disableConstraintsCaching(); }
 };
 
 /** @returns the canonical version of the given query.  The reference

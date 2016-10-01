@@ -29,6 +29,9 @@ private:
   ::Z3_params solverParameters;
   // Parameter symbols
   ::Z3_symbol timeoutParamStrSymbol;
+  bool constraintsCaching;
+  bool constraintsCached;
+  ::Z3_solver theSolver;
 
   bool internalRunSolver(const Query &,
                          const std::vector<const Array *> *objects,
@@ -73,11 +76,14 @@ public:
                        bool &hasSolution);
   SolverRunStatus getOperationStatusCode();
   std::vector<ref<Expr> > getUnsatCore();
+  void enableConstraintsCaching();
+  void disableConstraintsCaching();
 };
 
 Z3SolverImpl::Z3SolverImpl()
     : builder(new Z3Builder(/*autoClearConstructCache=*/false)), timeout(0.0),
-      runStatusCode(SOLVER_RUN_STATUS_FAILURE) {
+      runStatusCode(SOLVER_RUN_STATUS_FAILURE), constraintsCaching(false),
+      constraintsCached(false) {
   assert(builder && "unable to create Z3Builder");
   solverParameters = Z3_mk_params(builder->ctx);
   Z3_params_inc_ref(builder->ctx, solverParameters);
@@ -188,32 +194,40 @@ bool Z3SolverImpl::internalRunSolver(
   TimerStatIncrementer t(stats::queryTime);
   // TODO: Does making a new solver for each query have a performance
   // impact vs making one global solver and using push and pop?
-  // TODO: is the "simple_solver" the right solver to use for
-  // best performance?
-  Z3_solver theSolver = Z3_mk_simple_solver(builder->ctx);
-  Z3_solver_inc_ref(builder->ctx, theSolver);
-  Z3_solver_set_params(builder->ctx, theSolver, solverParameters);
+  if (constraintsCaching && constraintsCached) {
+    Z3_solver_pop(builder->ctx, theSolver, 1);
+  } else {
+    // TODO: is the "simple_solver" the right solver to use for
+    // best performance?
+    theSolver = Z3_mk_simple_solver(builder->ctx);
+    Z3_solver_inc_ref(builder->ctx, theSolver);
+    Z3_solver_set_params(builder->ctx, theSolver, solverParameters);
+
+    Z3_sort sort = Z3_mk_bool_sort(builder->ctx);
+    unsigned constraintIdCtr = 1;
+    for (ConstraintManager::const_iterator it = query.constraints.begin(),
+                                           ie = query.constraints.end();
+         it != ie; ++it) {
+      std::ostringstream stringStream;
+      stringStream << constraintIdCtr;
+
+      Z3_symbol symbol =
+          Z3_mk_string_symbol(builder->ctx, stringStream.str().c_str());
+      Z3ASTHandle constraintId(Z3_mk_const(builder->ctx, symbol, sort),
+                               builder->ctx);
+
+      Z3_solver_assert_and_track(builder->ctx, theSolver,
+                                 builder->construct(*it), constraintId);
+      constraintIdCtr++;
+    }
+    if (constraintsCaching) {
+      Z3_solver_push(builder->ctx, theSolver);
+      constraintsCached = true;
+    }
+  }
 
   runStatusCode = SOLVER_RUN_STATUS_FAILURE;
 
-  Z3_sort sort = Z3_mk_bool_sort(builder->ctx);
-  unsigned constraintIdCtr = 1;
-  for (ConstraintManager::const_iterator it = query.constraints.begin(),
-                                         ie = query.constraints.end();
-       it != ie; ++it) {
-    std::ostringstream stringStream;
-    stringStream << constraintIdCtr;
-
-    Z3_symbol symbol =
-        Z3_mk_string_symbol(builder->ctx, stringStream.str().c_str());
-    Z3ASTHandle constraintId(Z3_mk_const(builder->ctx, symbol, sort),
-                             builder->ctx);
-
-    Z3_solver_assert_and_track(builder->ctx, theSolver, builder->construct(*it),
-                               constraintId);
-
-    constraintIdCtr++;
-  }
   ++stats::queries;
   if (objects)
     ++stats::queryCounterexamples;
@@ -361,5 +375,15 @@ Z3SolverImpl::getUnsatCoreVector(const Query &query, const Z3Builder *builder,
 }
 
 std::vector<ref<Expr> > Z3SolverImpl::getUnsatCore() { return unsatCore; }
+
+void Z3SolverImpl::enableConstraintsCaching() {
+  constraintsCaching = true;
+  constraintsCached = false;
+}
+
+void Z3SolverImpl::disableConstraintsCaching() {
+  constraintsCaching = false;
+  constraintsCached = false;
+}
 }
 #endif // ENABLE_Z3

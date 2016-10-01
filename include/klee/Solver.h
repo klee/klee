@@ -209,6 +209,18 @@ namespace klee {
     ///
     /// \return Vector of ref<Expr>
     virtual std::vector< ref<Expr> > getUnsatCore();
+
+    /// enableConstraintsCaching - when solving a query defined using a Query
+    /// object, cache the constraints list within the core solver. This is for
+    /// submission of queries with multiple consequents. This API enables the
+    /// feature for the series of queries to be submitted to the solver.
+    virtual void enableConstraintsCaching();
+
+    /// disableConstraintsCaching - when solving a query defined using a Query
+    /// object, cache the constraints list within the core solver. This is for
+    /// submission of queries with multiple consequents. This API disables this
+    /// feature.
+    virtual void disableConstraintsCaching();
   };
 
   #ifdef ENABLE_STP

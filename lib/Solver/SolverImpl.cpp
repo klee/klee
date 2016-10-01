@@ -56,3 +56,7 @@ std::vector<ref<Expr> > SolverImpl::getUnsatCore() {
   std::vector<ref<Expr> > localUnsatCore;
   return localUnsatCore;
 }
+
+void SolverImpl::enableConstraintsCaching() {}
+
+void SolverImpl::disableConstraintsCaching() {}

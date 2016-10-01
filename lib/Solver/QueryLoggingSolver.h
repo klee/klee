@@ -75,6 +75,8 @@ public:
   char *getConstraintLog(const Query &);
   void setCoreSolverTimeout(double timeout);
   std::vector<ref<Expr> > getUnsatCore() { return solver->getUnsatCore(); }
+  void enableConstraintsCaching() { solver->enableConstraintsCaching(); }
+  void disableConstraintsCaching() { solver->disableConstraintsCaching(); }
 };
 
 #endif /* KLEE_QUERYLOGGINGSOLVER_H */

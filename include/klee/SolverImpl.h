@@ -112,8 +112,17 @@ namespace klee {
     ///
     /// \return Vector of ref<Expr>
     virtual std::vector< ref<Expr> > getUnsatCore();
-  };
 
+    /// enableConstraintsCaching - when solving a query defined using a Query
+    /// object, cache the constraints list within the core solver. This is for
+    /// submission of queries with multiple consequents.
+    virtual void enableConstraintsCaching();
+
+    /// disableConstraintsCaching - when solving a query defined using a Query
+    /// object, cache the constraints list within the core solver. This is for
+    /// submission of queries with multiple consequents.
+    virtual void disableConstraintsCaching();
+  };
 }
 
 #endif

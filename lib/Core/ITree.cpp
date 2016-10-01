@@ -1830,6 +1830,7 @@ bool ITree::subsumptionCheck(TimingSolver *solver, ExecutionState &state,
   std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
   storedExpressions = state.itreeNode->getStoredExpressions();
 
+  solver->enableConstraintsCaching();
   // Iterate the subsumption table entry with reverse iterator because
   // the successful subsumption mostly happen in the newest entry.
   for (std::deque<SubsumptionTableEntry *>::reverse_iterator
@@ -1846,10 +1847,12 @@ bool ITree::subsumptionCheck(TimingSolver *solver, ExecutionState &state,
       // Mark the node as subsumed, and create a subsumption edge
       SearchTree::markAsSubsumed(currentINode, (*it));
       subsumptionCheckTimer.stop();
+      solver->disableConstraintsCaching();
       return true;
     }
   }
   subsumptionCheckTimer.stop();
+  solver->disableConstraintsCaching();
   return false;
 }
 
