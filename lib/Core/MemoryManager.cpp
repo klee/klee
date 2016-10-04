@@ -33,10 +33,10 @@ llvm::cl::opt<unsigned> DeterministicAllocationSize(
     llvm::cl::init(100));
 
 llvm::cl::opt<bool>
-    NullOnZeroMalloc("return-null-on-zero-malloc",
-                     llvm::cl::desc("Returns NULL in case malloc(size) was "
-                                    "called with size 0 (default=off)."),
-                     llvm::cl::init(false));
+NullOnZeroMalloc("return-null-on-zero-malloc",
+                 llvm::cl::desc("Returns NULL in case malloc(size) was "
+                                "called with size 0 (default=off)."),
+                 llvm::cl::init(false));
 
 llvm::cl::opt<unsigned> RedZoneSpace(
     "red-zone-space",

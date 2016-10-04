@@ -32,6 +32,9 @@ public:
   SolverRunStatus getOperationStatusCode();
   char *getConstraintLog(const Query &);
   void setCoreSolverTimeout(double timeout);
+  std::vector<ref<Expr> > getUnsatCore() { return solver->getUnsatCore(); }
+  void enableConstraintsCaching() { solver->enableConstraintsCaching(); }
+  void disableConstraintsCaching() { solver->disableConstraintsCaching(); }
 };
 
 bool ValidatingSolver::computeTruth(const Query &query, bool &isValid) {
@@ -71,7 +74,7 @@ bool ValidatingSolver::computeValue(const Query &query, ref<Expr> &result) {
   // We don't want to compare, but just make sure this is a legal
   // solution.
   if (!oracle->impl->computeTruth(
-          query.withExpr(NeExpr::create(query.expr, result)), answer))
+           query.withExpr(NeExpr::create(query.expr, result)), answer))
     return false;
 
   if (answer)

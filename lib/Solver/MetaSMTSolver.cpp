@@ -28,14 +28,13 @@
 #undef Expr
 #undef Type
 #undef STP
-  
+
 #include <errno.h>
 #include <unistd.h>
 #include <signal.h>
 #include <sys/wait.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
-
 
 static unsigned char *shared_memory_ptr;
 static int shared_memory_id = 0;
@@ -90,7 +89,9 @@ public:
 
   SolverRunStatus getOperationStatusCode();
 
-  SolverContext &get_meta_solver() { return (_meta_solver); };
+  SolverContext &get_meta_solver() {
+    return (_meta_solver);
+  };
 };
 
 template <typename SolverContext>
@@ -301,7 +302,7 @@ MetaSMTSolverImpl<SolverContext>::runAndGetCexForked(
     }
 
     std::vector<std::vector<typename SolverContext::result_type> >
-        aux_arr_exprs;
+    aux_arr_exprs;
     if (MetaSMTBackend == METASMT_BACKEND_BOOLECTOR) {
       for (std::vector<const Array *>::const_iterator it = objects.begin(),
                                                       ie = objects.end();
@@ -357,8 +358,8 @@ MetaSMTSolverImpl<SolverContext>::runAndGetCexForked(
       } else {
         typename std::vector<
             std::vector<typename SolverContext::result_type> >::const_iterator
-            eit = aux_arr_exprs.begin(),
-            eie = aux_arr_exprs.end();
+        eit = aux_arr_exprs.begin(),
+        eie = aux_arr_exprs.end();
         for (std::vector<const Array *>::const_iterator it = objects.begin(),
                                                         ie = objects.end();
              it != ie, eit != eie; ++it, ++eit) {
@@ -445,7 +446,6 @@ MetaSMTSolverImpl<SolverContext>::getOperationStatusCode() {
   return _runStatusCode;
 }
 
-
 template <typename SolverContext>
 MetaSMTSolver<SolverContext>::MetaSMTSolver(bool useForked,
                                             bool optimizeDivides)
@@ -466,7 +466,9 @@ void MetaSMTSolver<SolverContext>::setCoreSolverTimeout(double timeout) {
 }
 
 template class MetaSMTSolver<DirectSolver_Context<metaSMT::solver::Boolector> >;
-template class MetaSMTSolver<DirectSolver_Context<metaSMT::solver::Z3_Backend> >;
-template class MetaSMTSolver<DirectSolver_Context<metaSMT::solver::STP_Backend> >;
+template class MetaSMTSolver<
+    DirectSolver_Context<metaSMT::solver::Z3_Backend> >;
+template class MetaSMTSolver<
+    DirectSolver_Context<metaSMT::solver::STP_Backend> >;
 }
 #endif // ENABLE_METASMT

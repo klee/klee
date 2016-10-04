@@ -17,7 +17,7 @@
 
 namespace klee {
   class ExecutionState;
-  class Solver;  
+  class Solver;
 
   /// TimingSolver - A simple class which wraps a solver and handles
   /// tracking the statistics that we care about.
@@ -65,6 +65,9 @@ namespace klee {
 
     std::pair< ref<Expr>, ref<Expr> >
     getRange(const ExecutionState&, ref<Expr> query);
+    std::vector< ref<Expr> > getUnsatCore();
+    void enableConstraintsCaching() { solver->enableConstraintsCaching(); }
+    void disableConstraintsCaching() { solver->disableConstraintsCaching(); }
   };
 
 }

@@ -1,9 +1,13 @@
 // RUN: %llvmgcc %s -emit-llvm -g -c -o %t.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee -debug-print-instructions=all:stderr --output-dir=%t.klee-out --allow-external-sym-calls --switch-type=internal --search=dfs %t.bc >%t.switch.log 2>&1
+// RUN: %klee -debug-print-instructions=all:stderr --output-dir=%t.klee-out
+// --allow-external-sym-calls --switch-type=internal --search=dfs %t.bc
+// >%t.switch.log 2>&1
 // RUN: FileCheck %s -input-file=%t.switch.log -check-prefix=CHECK-DFS
 // RUN: rm -rf %t.klee-out
-// RUN: %klee -debug-print-instructions=all:stderr --output-dir=%t.klee-out --allow-external-sym-calls --switch-type=internal --search=bfs %t.bc >%t.switch.log 2>&1
+// RUN: %klee -debug-print-instructions=all:stderr --output-dir=%t.klee-out
+// --allow-external-sym-calls --switch-type=internal --search=bfs %t.bc
+// >%t.switch.log 2>&1
 // RUN: FileCheck %s -input-file=%t.switch.log -check-prefix=CHECK-BFS
 
 #include "klee/klee.h"

@@ -61,15 +61,15 @@ class MetaSMTArrayExprHash
   friend class MetaSMTBuilder<SolverContext>;
 
 public:
-  MetaSMTArrayExprHash(){};
-  virtual ~MetaSMTArrayExprHash(){};
+  MetaSMTArrayExprHash() {};
+  virtual ~MetaSMTArrayExprHash() {};
 };
 
 template <typename SolverContext> class MetaSMTBuilder {
 public:
   MetaSMTBuilder(SolverContext &solver, bool optimizeDivides)
-      : _solver(solver), _optimizeDivides(optimizeDivides){};
-  virtual ~MetaSMTBuilder(){};
+      : _solver(solver), _optimizeDivides(optimizeDivides) {};
+  virtual ~MetaSMTBuilder() {};
 
   typename SolverContext::result_type construct(ref<Expr> e);
 
@@ -93,7 +93,7 @@ public:
   }
 
   typename SolverContext::result_type bvMinusOne(unsigned width) {
-    return bvSExtConst(width, (int64_t)-1);
+    return bvSExtConst(width, (int64_t) - 1);
   }
 
   typename SolverContext::result_type bvConst32(unsigned width,
@@ -136,10 +136,10 @@ public:
 
 private:
   typedef ExprHashMap<std::pair<typename SolverContext::result_type, unsigned> >
-      MetaSMTExprHashMap;
+  MetaSMTExprHashMap;
   typedef typename MetaSMTExprHashMap::iterator MetaSMTExprHashMapIter;
   typedef typename MetaSMTExprHashMap::const_iterator
-      MetaSMTExprHashMapConstIter;
+  MetaSMTExprHashMapConstIter;
 
   SolverContext &_solver;
   bool _optimizeDivides;

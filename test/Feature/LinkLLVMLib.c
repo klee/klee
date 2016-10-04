@@ -3,22 +3,21 @@
 //
 // RUN: %llvmgcc %s -g -emit-llvm -O0 -c -o %t2.bc -DLINK_LLVM_LIB_TEST_EXEC
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --link-llvm-lib %t1.a --output-dir=%t.klee-out --emit-all-errors %t2.bc 2>&1 | FileCheck %s
+// RUN: %klee --link-llvm-lib %t1.a --output-dir=%t.klee-out --emit-all-errors
+// %t2.bc 2>&1 | FileCheck %s
 
 #ifdef LINK_LLVM_LIB_TEST_EXEC
 extern void printint(int d);
 
-int main(int argc, char * argv[]) {
-	printint(5);
-	// CHECK: KLEE: WARNING ONCE: calling external: printf
-	return 0;
+int main(int argc, char *argv[]) {
+  printint(5);
+  // CHECK: KLEE: WARNING ONCE: calling external: printf
+  return 0;
 }
 #endif
 
 #ifdef LINK_LLVM_LIB_TEST_LIB
 #include <stdio.h>
 
-void printint(int d) {
-	printf("%d\n", d);
-}
+void printint(int d) { printf("%d\n", d); }
 #endif

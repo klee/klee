@@ -143,3 +143,7 @@ std::pair< ref<Expr>, ref<Expr> >
 TimingSolver::getRange(const ExecutionState& state, ref<Expr> expr) {
   return solver->getRange(Query(state.constraints, expr));
 }
+
+std::vector< ref<Expr> > TimingSolver::getUnsatCore() {
+  return solver->getUnsatCore();
+}

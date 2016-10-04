@@ -591,9 +591,8 @@ void IterativeDeepeningTimeSearcher::update(
     baseSearcher->update(current, addedStates, removedStates);
   }
 
-  if (current &&
-      std::find(removedStates.begin(), removedStates.end(), current) ==
-          removedStates.end() &&
+  if (current && std::find(removedStates.begin(), removedStates.end(),
+                           current) == removedStates.end() &&
       elapsed > time) {
     pausedStates.insert(current);
     baseSearcher->removeState(current);

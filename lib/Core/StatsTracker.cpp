@@ -65,53 +65,49 @@ using namespace llvm;
 
 ///
 
-namespace {  
-  cl::opt<bool>
-  TrackInstructionTime("track-instruction-time",
-                       cl::init(false),
-		       cl::desc("Enable tracking of time for individual instructions (default=off)"));
+namespace {
+cl::opt<bool> TrackInstructionTime(
+    "track-instruction-time", cl::init(false),
+    cl::desc(
+        "Enable tracking of time for individual instructions (default=off)"));
 
-  cl::opt<bool>
-  OutputStats("output-stats",
-              cl::init(true),
-	      cl::desc("Write running stats trace file (default=on)"));
+cl::opt<bool>
+OutputStats("output-stats", cl::init(true),
+            cl::desc("Write running stats trace file (default=on)"));
 
-  cl::opt<bool>
-  OutputIStats("output-istats",
-	       cl::init(true),
-               cl::desc("Write instruction level statistics in callgrind format (default=on)"));
+cl::opt<bool> OutputIStats(
+    "output-istats", cl::init(true),
+    cl::desc(
+        "Write instruction level statistics in callgrind format (default=on)"));
 
-  cl::opt<double>
-  StatsWriteInterval("stats-write-interval",
-                     cl::init(1.),
-		     cl::desc("Approximate number of seconds between stats writes (default=1.0s)"));
+cl::opt<double> StatsWriteInterval(
+    "stats-write-interval", cl::init(1.),
+    cl::desc(
+        "Approximate number of seconds between stats writes (default=1.0s)"));
 
-  cl::opt<unsigned> StatsWriteAfterInstructions(
-      "stats-write-after-instructions", cl::init(0),
-      cl::desc("Write statistics after each n instructions, 0 to disable "
-               "(default=0)"));
+cl::opt<unsigned> StatsWriteAfterInstructions(
+    "stats-write-after-instructions", cl::init(0),
+    cl::desc("Write statistics after each n instructions, 0 to disable "
+             "(default=0)"));
 
-  cl::opt<double>
-  IStatsWriteInterval("istats-write-interval",
-		      cl::init(10.),
-                      cl::desc("Approximate number of seconds between istats writes (default: 10.0s)"));
+cl::opt<double>
+IStatsWriteInterval("istats-write-interval", cl::init(10.),
+                    cl::desc("Approximate number of seconds between istats "
+                             "writes (default: 10.0s)"));
 
-  cl::opt<unsigned> IStatsWriteAfterInstructions(
-      "istats-write-after-instructions", cl::init(0),
-      cl::desc("Write istats after each n instructions, 0 to disable "
-               "(default=0)"));
+cl::opt<unsigned> IStatsWriteAfterInstructions(
+    "istats-write-after-instructions", cl::init(0),
+    cl::desc("Write istats after each n instructions, 0 to disable "
+             "(default=0)"));
 
   // XXX I really would like to have dynamic rate control for something like this.
-  cl::opt<double>
-  UncoveredUpdateInterval("uncovered-update-interval",
-                          cl::init(30.),
-			  cl::desc("(default=30.0s)"));
-  
-  cl::opt<bool>
-  UseCallPaths("use-call-paths",
-	       cl::init(true),
-               cl::desc("Enable calltree tracking for instruction level statistics (default=on)"));
-  
+cl::opt<double> UncoveredUpdateInterval("uncovered-update-interval",
+                                        cl::init(30.),
+                                        cl::desc("(default=30.0s)"));
+
+cl::opt<bool> UseCallPaths("use-call-paths", cl::init(true),
+                           cl::desc("Enable calltree tracking for instruction "
+                                    "level statistics (default=on)"));
 }
 
 ///
@@ -432,24 +428,20 @@ double StatsTracker::elapsed() {
 }
 
 void StatsTracker::writeStatsLine() {
-  *statsFile << "(" << stats::instructions
-             << "," << fullBranches
-             << "," << partialBranches
-             << "," << numBranches
-             << "," << util::getUserTime()
-             << "," << executor.states.size()
-             << "," << util::GetTotalMallocUsage() + executor.memory->getUsedDeterministicSize()
-             << "," << stats::queries
-             << "," << stats::queryConstructs
-             << "," << 0 // was numObjects
-             << "," << elapsed()
-             << "," << stats::coveredInstructions
-             << "," << stats::uncoveredInstructions
-             << "," << stats::queryTime / 1000000.
-             << "," << stats::solverTime / 1000000.
-             << "," << stats::cexCacheTime / 1000000.
-             << "," << stats::forkTime / 1000000.
-             << "," << stats::resolveTime / 1000000.
+  *statsFile << "(" << stats::instructions << "," << fullBranches << ","
+             << partialBranches << "," << numBranches << ","
+             << util::getUserTime() << "," << executor.states.size() << ","
+             << util::GetTotalMallocUsage() +
+                    executor.memory->getUsedDeterministicSize() << ","
+             << stats::queries << "," << stats::queryConstructs << ","
+             << 0 // was numObjects
+             << "," << elapsed() << "," << stats::coveredInstructions << ","
+             << stats::uncoveredInstructions << ","
+             << stats::queryTime / 1000000. << ","
+             << stats::solverTime / 1000000. << ","
+             << stats::cexCacheTime / 1000000. << ","
+             << stats::forkTime / 1000000. << ","
+             << stats::resolveTime / 1000000.
 #ifdef DEBUG
              << "," << stats::arrayHashTime / 1000000.
 #endif

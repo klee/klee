@@ -15,6 +15,7 @@
 #include "Memory.h"
 #include "MemoryManager.h"
 #include "PTree.h"
+#include "ITree.h"
 #include "Searcher.h"
 #include "SeedInfo.h"
 #include "SpecialFunctionHandler.h"
@@ -69,6 +70,7 @@
 #include "llvm/IntrinsicInst.h"
 #include "llvm/LLVMContext.h"
 #include "llvm/Module.h"
+
 #if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
 #include "llvm/Target/TargetData.h"
 #else
@@ -82,6 +84,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Analysis/MemoryDependenceAnalysis.h"
 
 #if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
 #include "llvm/Support/CallSite.h"
@@ -109,8 +112,6 @@
 
 using namespace llvm;
 using namespace klee;
-
-
 
 
 
@@ -162,45 +163,41 @@ namespace {
                      "[inst_id]"),
           clEnumValEnd),
       llvm::cl::CommaSeparated);
-#ifdef HAVE_ZLIB_H
+  #ifdef HAVE_ZLIB_H
   cl::opt<bool> DebugCompressInstructions(
       "debug-compress-instructions", cl::init(false),
       cl::desc("Compress the logged instructions in gzip format."));
-#endif
+  #endif
 
   cl::opt<bool>
   DebugCheckForImpliedValues("debug-check-for-implied-values");
 
+  cl::opt<bool>
+  SimplifySymIndices("simplify-sym-indices", cl::init(false),
+                     cl::desc("Simplify symbolic accesses using equalities "
+                              "from other constraints (default=off)"));
 
   cl::opt<bool>
-  SimplifySymIndices("simplify-sym-indices",
-                     cl::init(false),
-		     cl::desc("Simplify symbolic accesses using equalities from other constraints (default=off)"));
-
-  cl::opt<bool>
-  EqualitySubstitution("equality-substitution",
-		       cl::init(true),
-		       cl::desc("Simplify equality expressions before querying the solver (default=on)."));
+  EqualitySubstitution("equality-substitution", cl::init(true),
+                       cl::desc("Simplify equality expressions before querying "
+                                "the solver (default=on)."));
 
   cl::opt<unsigned>
   MaxSymArraySize("max-sym-array-size",
                   cl::init(0));
 
-  cl::opt<bool>
-  SuppressExternalWarnings("suppress-external-warnings",
-			   cl::init(false),
-			   cl::desc("Supress warnings about calling external functions."));
+  cl::opt<bool> SuppressExternalWarnings(
+      "suppress-external-warnings", cl::init(false),
+      cl::desc("Supress warnings about calling external functions."));
 
-  cl::opt<bool>
-  AllExternalWarnings("all-external-warnings",
-		      cl::init(false),
-		      cl::desc("Issue an warning everytime an external call is made," 
-			       "as opposed to once per function (default=off)"));
+  cl::opt<bool> AllExternalWarnings(
+      "all-external-warnings", cl::init(false),
+      cl::desc("Issue an warning everytime an external call is made,"
+               "as opposed to once per function (default=off)"));
 
-  cl::opt<bool>
-  OnlyOutputStatesCoveringNew("only-output-states-covering-new",
-                              cl::init(false),
-			      cl::desc("Only output test cases covering new code (default=off)."));
+  cl::opt<bool> OnlyOutputStatesCoveringNew(
+      "only-output-states-covering-new", cl::init(false),
+      cl::desc("Only output test cases covering new code (default=off)."));
 
   cl::opt<bool>
   EmitAllErrors("emit-all-errors",
@@ -216,55 +213,42 @@ namespace {
   AlwaysOutputSeeds("always-output-seeds",
 		    cl::init(true));
 
-  cl::opt<bool>
-  OnlyReplaySeeds("only-replay-seeds",
-		  cl::init(false),
-                  cl::desc("Discard states that do not have a seed (default=off)."));
- 
-  cl::opt<bool>
-  OnlySeed("only-seed",
-	   cl::init(false),
-           cl::desc("Stop execution after seeding is done without doing regular search (default=off)."));
- 
-  cl::opt<bool>
-  AllowSeedExtension("allow-seed-extension",
-		     cl::init(false),
-                     cl::desc("Allow extra (unbound) values to become symbolic during seeding (default=false)."));
- 
-  cl::opt<bool>
-  ZeroSeedExtension("zero-seed-extension",
-		    cl::init(false),
-		    cl::desc("(default=off)"));
- 
-  cl::opt<bool>
-  AllowSeedTruncation("allow-seed-truncation",
-		      cl::init(false),
-                      cl::desc("Allow smaller buffers than in seeds (default=off)."));
- 
-  cl::opt<bool>
-  NamedSeedMatching("named-seed-matching",
-		    cl::init(false),
-                    cl::desc("Use names to match symbolic objects to inputs (default=off)."));
+  cl::opt<bool> OnlyReplaySeeds(
+      "only-replay-seeds", cl::init(false),
+      cl::desc("Discard states that do not have a seed (default=off)."));
 
-  cl::opt<double>
-  MaxStaticForkPct("max-static-fork-pct", 
-		   cl::init(1.),
-		   cl::desc("(default=1.0)"));
+  cl::opt<bool>
+  OnlySeed("only-seed", cl::init(false),
+           cl::desc("Stop execution after seeding is done without doing "
+                    "regular search (default=off)."));
 
-  cl::opt<double>
-  MaxStaticSolvePct("max-static-solve-pct",
-		    cl::init(1.),
-		    cl::desc("(default=1.0)"));
+  cl::opt<bool>
+  AllowSeedExtension("allow-seed-extension", cl::init(false),
+                     cl::desc("Allow extra (unbound) values to become symbolic "
+                              "during seeding (default=false)."));
 
-  cl::opt<double>
-  MaxStaticCPForkPct("max-static-cpfork-pct", 
-		     cl::init(1.),
-		     cl::desc("(default=1.0)"));
+  cl::opt<bool> ZeroSeedExtension("zero-seed-extension", cl::init(false),
+                                  cl::desc("(default=off)"));
 
-  cl::opt<double>
-  MaxStaticCPSolvePct("max-static-cpsolve-pct",
-		      cl::init(1.),
-		      cl::desc("(default=1.0)"));
+  cl::opt<bool> AllowSeedTruncation(
+      "allow-seed-truncation", cl::init(false),
+      cl::desc("Allow smaller buffers than in seeds (default=off)."));
+
+  cl::opt<bool> NamedSeedMatching(
+      "named-seed-matching", cl::init(false),
+      cl::desc("Use names to match symbolic objects to inputs (default=off)."));
+
+  cl::opt<double> MaxStaticForkPct("max-static-fork-pct", cl::init(1.),
+                                   cl::desc("(default=1.0)"));
+
+  cl::opt<double> MaxStaticSolvePct("max-static-solve-pct", cl::init(1.),
+                                    cl::desc("(default=1.0)"));
+
+  cl::opt<double> MaxStaticCPForkPct("max-static-cpfork-pct", cl::init(1.),
+                                     cl::desc("(default=1.0)"));
+
+  cl::opt<double> MaxStaticCPSolvePct("max-static-cpsolve-pct", cl::init(1.),
+                                      cl::desc("(default=1.0)"));
 
   cl::opt<double>
   MaxInstructionTime("max-instruction-time",
@@ -275,25 +259,31 @@ namespace {
   SeedTime("seed-time",
            cl::desc("Amount of time to dedicate to seeds, before normal search (default=0 (off))"),
            cl::init(0));
-  
-  cl::list<Executor::TerminateReason>
-  ExitOnErrorType("exit-on-error-type",
-		  cl::desc("Stop execution after reaching a specified condition.  (default=off)"),
-		  cl::values(
-		    clEnumValN(Executor::Abort, "Abort", "The program crashed"),
-		    clEnumValN(Executor::Assert, "Assert", "An assertion was hit"),
-		    clEnumValN(Executor::Exec, "Exec", "Trying to execute an unexpected instruction"),
-		    clEnumValN(Executor::External, "External", "External objects referenced"),
-		    clEnumValN(Executor::Free, "Free", "Freeing invalid memory"),
-		    clEnumValN(Executor::Model, "Model", "Memory model limit hit"),
-		    clEnumValN(Executor::Overflow, "Overflow", "An overflow occurred"),
-		    clEnumValN(Executor::Ptr, "Ptr", "Pointer error"),
-		    clEnumValN(Executor::ReadOnly, "ReadOnly", "Write to read-only memory"),
-		    clEnumValN(Executor::ReportError, "ReportError", "klee_report_error called"),
-		    clEnumValN(Executor::User, "User", "Wrong klee_* functions invocation"),
-		    clEnumValN(Executor::Unhandled, "Unhandled", "Unhandled instruction hit"),
-		    clEnumValEnd),
-		  cl::ZeroOrMore);
+
+  cl::list<Executor::TerminateReason> ExitOnErrorType(
+      "exit-on-error-type", cl::desc("Stop execution after reaching a "
+                                     "specified condition.  (default=off)"),
+      cl::values(clEnumValN(Executor::Abort, "Abort", "The program crashed"),
+                 clEnumValN(Executor::Assert, "Assert", "An assertion was hit"),
+                 clEnumValN(Executor::Exec, "Exec",
+                            "Trying to execute an unexpected instruction"),
+                 clEnumValN(Executor::External, "External",
+                            "External objects referenced"),
+                 clEnumValN(Executor::Free, "Free", "Freeing invalid memory"),
+                 clEnumValN(Executor::Model, "Model", "Memory model limit hit"),
+                 clEnumValN(Executor::Overflow, "Overflow",
+                            "An overflow occurred"),
+                 clEnumValN(Executor::Ptr, "Ptr", "Pointer error"),
+                 clEnumValN(Executor::ReadOnly, "ReadOnly",
+                            "Write to read-only memory"),
+                 clEnumValN(Executor::ReportError, "ReportError",
+                            "klee_report_error called"),
+                 clEnumValN(Executor::User, "User",
+                            "Wrong klee_* functions invocation"),
+                 clEnumValN(Executor::Unhandled, "Unhandled",
+                            "Unhandled instruction hit"),
+                 clEnumValEnd),
+      cl::ZeroOrMore);
 
   cl::opt<unsigned int>
   StopAfterNInstructions("stop-after-n-instructions",
@@ -326,28 +316,21 @@ namespace klee {
   RNG theRNG;
 }
 
-const char *Executor::TerminateReasonNames[] = {
-  [ Abort ] = "abort",
-  [ Assert ] = "assert",
-  [ Exec ] = "exec",
-  [ External ] = "external",
-  [ Free ] = "free",
-  [ Model ] = "model",
-  [ Overflow ] = "overflow",
-  [ Ptr ] = "ptr",
-  [ ReadOnly ] = "readonly",
-  [ ReportError ] = "reporterror",
-  [ User ] = "user",
-  [ Unhandled ] = "xxx",
-};
+const char *Executor::TerminateReasonNames[] =
+    {[Abort] = "abort",       [Assert] = "assert",
+     [Exec] = "exec",         [External] = "external",
+     [Free] = "free",         [Model] = "model",
+     [Overflow] = "overflow", [Ptr] = "ptr",
+     [ReadOnly] = "readonly", [ReportError] = "reporterror",
+     [User] = "user",         [Unhandled] = "xxx", };
 
 Executor::Executor(const InterpreterOptions &opts, InterpreterHandler *ih)
     : Interpreter(opts), kmodule(0), interpreterHandler(ih), searcher(0),
       externalDispatcher(new ExternalDispatcher()), statsTracker(0),
       pathWriter(0), symPathWriter(0), specialFunctionHandler(0),
-      processTree(0), replayKTest(0), replayPath(0), usingSeeds(0),
-      atMemoryLimit(false), inhibitForking(false), haltExecution(false),
-      ivcEnabled(false),
+      processTree(0), interpTree(0), replayKTest(0), replayPath(0),
+      usingSeeds(0), atMemoryLimit(false), inhibitForking(false),
+      haltExecution(false), ivcEnabled(false),
       coreSolverTimeout(MaxCoreSolverTime != 0 && MaxInstructionTime != 0
                             ? std::min(MaxCoreSolverTime, MaxInstructionTime)
                             : std::max(MaxCoreSolverTime, MaxInstructionTime)),
@@ -379,8 +362,8 @@ Executor::Executor(const InterpreterOptions &opts, InterpreterHandler *ih)
 #endif
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 5)
-    debugInstFile = new llvm::raw_fd_ostream(debug_file_name.c_str(), ErrorInfo,
-                                             llvm::sys::fs::OpenFlags::F_Text),
+      debugInstFile = new llvm::raw_fd_ostream(
+          debug_file_name.c_str(), ErrorInfo, llvm::sys::fs::OpenFlags::F_Text),
 #else
     debugInstFile =
         new llvm::raw_fd_ostream(debug_file_name.c_str(), ErrorInfo);
@@ -597,10 +580,10 @@ void Executor::initializeGlobals(ExecutionState &state) {
       LLVM_TYPE_Q Type *ty = i->getType()->getElementType();
       uint64_t size = 0;
       if (ty->isSized()) {
-	size = kmodule->targetData->getTypeStoreSize(ty);
+        size = kmodule->targetData->getTypeStoreSize(ty);
       } else {
         klee_warning("Type for %.*s is not sized", (int)i->getName().size(),
-			i->getName().data());
+                     i->getName().data());
       }
 
       // XXX - DWD - hardcode some things until we decide how to fix.
@@ -615,8 +598,9 @@ void Executor::initializeGlobals(ExecutionState &state) {
 #endif
 
       if (size == 0) {
-        klee_warning("Unable to find size for global variable: %.*s (use will result in out of bounds access)",
-			(int)i->getName().size(), i->getName().data());
+        klee_warning("Unable to find size for global variable: %.*s (use will "
+                     "result in out of bounds access)",
+                     (int)i->getName().size(), i->getName().data());
       }
 
       MemoryObject *mo = memory->allocate(size, false, true, i);
@@ -710,6 +694,13 @@ void Executor::branch(ExecutionState &state,
         processTree->split(es->ptreeNode, ns, es);
       ns->ptreeNode = res.first;
       es->ptreeNode = res.second;
+
+      if (INTERPOLATION_ENABLED) {
+        std::pair<ITreeNode *, ITreeNode *> ires =
+	  interpTree->split(es->itreeNode, ns, es);
+        ns->itreeNode = ires.first;
+        es->itreeNode = ires.second;
+      }
     }
   }
 
@@ -802,9 +793,14 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
   double timeout = coreSolverTimeout;
   if (isSeeding)
     timeout *= it->second.size();
+
+  // llvm::errs() << "Calling solver->evaluate on query:\n";
+  // ExprPPrinter::printQuery(llvm::errs(), current.constraints, condition);
+
   solver->setTimeout(timeout);
   bool success = solver->evaluate(current, condition, res);
   solver->setTimeout(0);
+
   if (!success) {
     current.pc = current.prevPC;
     terminateStateEarly(current, "Query timed out (fork).");
@@ -833,7 +829,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       }
     } else if (res==Solver::Unknown) {
       assert(!replayKTest && "in replay mode, only one branch can be true.");
-      
+
       if ((MaxMemoryInhibit && atMemoryLimit) || 
           current.forkDisabled ||
           inhibitForking || 
@@ -886,10 +882,10 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       assert(trueSeed || falseSeed);
       
       res = trueSeed ? Solver::True : Solver::False;
-      addConstraint(current, trueSeed ? condition : Expr::createIsZero(condition));
+      addConstraint(current,
+                    trueSeed ? condition : Expr::createIsZero(condition));
     }
   }
-
 
   // XXX - even if the constraint is provable one way or the other we
   // can probably benefit by adding this constraint and allowing it to
@@ -899,10 +895,18 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
   // hint to just use the single constraint instead of all the binary
   // search ones. If that makes sense.
   if (res==Solver::True) {
+
     if (!isInternal) {
       if (pathWriter) {
         current.pathOS << "1";
       }
+    }
+
+    if (INTERPOLATION_ENABLED) {
+      // Validity proof succeeded of a query: antecedent -> consequent.
+      // We then extract the unsatisfiability core of antecedent and not
+      // consequent as the Craig interpolant.
+      interpTree->markPathCondition(current, solver);
     }
 
     return StatePair(&current, 0);
@@ -911,6 +915,13 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       if (pathWriter) {
         current.pathOS << "0";
       }
+    }
+
+    if (INTERPOLATION_ENABLED) {
+      // Falsity proof succeeded of a query: antecedent -> consequent,
+      // which means that antecedent -> not(consequent) is valid. In this
+      // case also we extract the unsat core of the proof
+      interpTree->markPathCondition(current, solver);
     }
 
     return StatePair(0, &current);
@@ -934,7 +945,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       for (std::vector<SeedInfo>::iterator siit = seeds.begin(), 
              siie = seeds.end(); siit != siie; ++siit) {
         ref<ConstantExpr> res;
-        bool success = 
+        bool success =
           solver->getValue(current, siit->assignment.evaluate(condition), res);
         assert(success && "FIXME: Unhandled solver failure");
         (void) success;
@@ -977,6 +988,13 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
         trueState->symPathOS << "1";
         falseState->symPathOS << "0";
       }
+    }
+
+    if (INTERPOLATION_ENABLED) {
+      std::pair<ITreeNode *, ITreeNode *> ires =
+	  interpTree->split(current.itreeNode, falseState, trueState);
+      falseState->itreeNode = ires.first;
+      trueState->itreeNode = ires.second;
     }
 
     addConstraint(*trueState, condition);
@@ -1164,7 +1182,7 @@ Executor::toConstant(ExecutionState &state,
     klee_warning_once(reason, "%s", os.str().c_str());
 
   addConstraint(state, EqExpr::create(e, value));
-    
+
   return value;
 }
 
@@ -1180,6 +1198,10 @@ void Executor::executeGetValue(ExecutionState &state,
     assert(success && "FIXME: Unhandled solver failure");
     (void) success;
     bindLocal(target, state, value);
+
+    if (INTERPOLATION_ENABLED) {
+      interpTree->execute(target->inst, e, value);
+    }
   } else {
     std::set< ref<Expr> > values;
     for (std::vector<SeedInfo>::iterator siit = it->second.begin(), 
@@ -1206,6 +1228,12 @@ void Executor::executeGetValue(ExecutionState &state,
       ExecutionState *es = *bit;
       if (es)
         bindLocal(target, *es, *vit);
+      if (INTERPOLATION_ENABLED) {
+        std::vector<ref<Expr> > args;
+        args.push_back(e);
+        args.push_back(*vit);
+        ITree::executeOnNode(es->itreeNode, target->inst, args);
+      }
       ++bit;
     }
   }
@@ -1214,7 +1242,7 @@ void Executor::executeGetValue(ExecutionState &state,
 void Executor::printDebugInstructions(ExecutionState &state) {
   // check do not print
   if (DebugPrintInstructions.size() == 0)
-	  return;
+    return;
 
   llvm::raw_ostream *stream = 0;
   if (optionIsSet(DebugPrintInstructions, STDERR_ALL) ||
@@ -1424,6 +1452,10 @@ void Executor::executeCall(ExecutionState &state,
     unsigned numFormals = f->arg_size();
     for (unsigned i=0; i<numFormals; ++i) 
       bindArgument(kf, i, state, arguments[i]);
+
+    if (INTERPOLATION_ENABLED)
+      // We bind the abstract dependency call arguments
+      state.itreeNode->bindCallArguments(state.prevPC->inst, arguments);
   }
 }
 
@@ -1521,6 +1553,7 @@ static inline const llvm::fltSemantics * fpWidthToSemantics(unsigned width) {
 
 void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   Instruction *i = ki->inst;
+
   switch (i->getOpcode()) {
     // Control flow
   case Instruction::Ret: {
@@ -1533,12 +1566,12 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     if (!isVoidReturn) {
       result = eval(ki, 0, state).value;
     }
-    
+
     if (state.stack.size() <= 1) {
       assert(!caller && "caller set on initial stack frame");
       terminateStateOnExit(state);
     } else {
-      state.popFrame();
+      state.popFrame(ki, result);
 
       if (statsTracker)
         statsTracker->framePopped(state);
@@ -1586,14 +1619,14 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
           terminateStateOnExecError(state, "return void when caller expected a result");
         }
       }
-    }      
+    }
     break;
   }
 #if LLVM_VERSION_CODE < LLVM_VERSION(3, 1)
   case Instruction::Unwind: {
     for (;;) {
       KInstruction *kcaller = state.stack.back().caller;
-      state.popFrame();
+      state.popFrame(ki, ConstantExpr::alloc(0, Expr::Bool));
 
       if (statsTracker)
         statsTracker->framePopped(state);
@@ -1602,13 +1635,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         terminateStateOnExecError(state, "unwind from initial stack frame");
         break;
       } else {
-        Instruction *caller = kcaller->inst;
+        Instruction *caller = kcaller->programPoint;
         if (InvokeInst *ii = dyn_cast<InvokeInst>(caller)) {
           transferToBasicBlock(ii->getUnwindDest(), caller->getParent(), state);
           break;
         }
       }
     }
+    if (INTERPOLATION_ENABLED)
+      interpTree->execute(i);
     break;
   }
 #endif
@@ -1616,6 +1651,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     BranchInst *bi = cast<BranchInst>(i);
     if (bi->isUnconditional()) {
       transferToBasicBlock(bi->getSuccessor(0), bi->getParent(), state);
+      if (INTERPOLATION_ENABLED)
+        interpTree->execute(i);
     } else {
       // FIXME: Find a way that we don't have this hidden dependency.
       assert(bi->getCondition() == bi->getOperand(0) &&
@@ -1634,6 +1671,19 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         transferToBasicBlock(bi->getSuccessor(0), bi->getParent(), *branches.first);
       if (branches.second)
         transferToBasicBlock(bi->getSuccessor(1), bi->getParent(), *branches.second);
+
+      // Below we test if some of the branches are not available for
+      // exploration, which means that there is a dependency of the program
+      // state on the control variables in the conditional. Such variables
+      // (allocations) need to be marked as belonging to the core.
+      // This is mainly to take care of the case when the conditional
+      // variables are not marked using unsatisfiability core as the
+      // conditional is concrete and therefore there has been no invocation
+      // of the solver to decide its satisfiability, and no generation
+      // of the unsatisfiability core.
+      if (INTERPOLATION_ENABLED && ((!branches.first && branches.second) ||
+                                    (branches.first && !branches.second)))
+        interpTree->execute(i);
     }
     break;
   }
@@ -1668,7 +1718,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
       std::map<ref<Expr>, BasicBlock *> expressionOrder;
 
-      // Iterate through all non-default cases and order them by expressions
+// Iterate through all non-default cases and order them by expressions
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 1)
       for (SwitchInst::CaseIt i = si->case_begin(), e = si->case_end(); i != e;
            ++i) {
@@ -1761,6 +1811,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         ++bit;
       }
     }
+    if (INTERPOLATION_ENABLED)
+      interpTree->execute(i);
     break;
  }
   case Instruction::Unreachable:
@@ -1774,7 +1826,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   case Instruction::Invoke:
   case Instruction::Call: {
     CallSite cs(i);
-
     unsigned numArgs = cs.arg_size();
     Value *fp = cs.getCalledValue();
     Function *f = getTargetFunction(fp, state);
@@ -1836,7 +1887,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
           i++;
         }
       }
-
       executeCall(state, ki, f, arguments);
     } else {
       ref<Expr> v = eval(ki, 0, state).value;
@@ -1886,6 +1936,16 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = eval(ki, state.incomingBBIndex * 2, state).value;
 #endif
     bindLocal(ki, state, result);
+
+    // Update dependency
+    if (INTERPOLATION_ENABLED) {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 0)
+      interpTree->executePHI(i, state.incomingBBIndex, result);
+#else
+      interpTree->executePHI(i, state.incomingBBIndex * 2, result);
+#endif
+    }
+
     break;
   }
 
@@ -1896,6 +1956,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> fExpr = eval(ki, 2, state).value;
     ref<Expr> result = SelectExpr::create(cond, tExpr, fExpr);
     bindLocal(ki, state, result);
+
+    // Update dependency
+    if (INTERPOLATION_ENABLED)
+      interpTree->execute(i, result, tExpr, fExpr);
     break;
   }
 
@@ -1908,21 +1972,36 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   case Instruction::Add: {
     ref<Expr> left = eval(ki, 0, state).value;
     ref<Expr> right = eval(ki, 1, state).value;
-    bindLocal(ki, state, AddExpr::create(left, right));
+    ref<Expr> result = AddExpr::create(left, right);
+    bindLocal(ki, state, result);
+
+    // Update dependency
+    if (INTERPOLATION_ENABLED)
+      interpTree->execute(i, result, left, right);
     break;
   }
 
   case Instruction::Sub: {
     ref<Expr> left = eval(ki, 0, state).value;
     ref<Expr> right = eval(ki, 1, state).value;
-    bindLocal(ki, state, SubExpr::create(left, right));
+    ref<Expr> result = SubExpr::create(left, right);
+    bindLocal(ki, state, result);
+
+    // Update dependency
+    if (INTERPOLATION_ENABLED)
+      interpTree->execute(i, result, left, right);
     break;
   }
  
   case Instruction::Mul: {
     ref<Expr> left = eval(ki, 0, state).value;
     ref<Expr> right = eval(ki, 1, state).value;
-    bindLocal(ki, state, MulExpr::create(left, right));
+    ref<Expr> result = MulExpr::create(left, right);
+    bindLocal(ki, state, result);
+
+    // Update dependency
+    if (INTERPOLATION_ENABLED)
+      interpTree->execute(i, result, left, right);
     break;
   }
 
@@ -1931,6 +2010,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = UDivExpr::create(left, right);
     bindLocal(ki, state, result);
+
+    // Update dependency
+    if (INTERPOLATION_ENABLED)
+      interpTree->execute(i, result, left, right);
     break;
   }
 
@@ -1939,6 +2022,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = SDivExpr::create(left, right);
     bindLocal(ki, state, result);
+
+    // Update dependency
+    if (INTERPOLATION_ENABLED)
+      interpTree->execute(i, result, left, right);
     break;
   }
 
@@ -1947,6 +2034,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = URemExpr::create(left, right);
     bindLocal(ki, state, result);
+
+    // Update dependency
+    if (INTERPOLATION_ENABLED)
+      interpTree->execute(i, result, left, right);
     break;
   }
  
@@ -1955,6 +2046,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = SRemExpr::create(left, right);
     bindLocal(ki, state, result);
+
+    // Update dependency
+    if (INTERPOLATION_ENABLED)
+      interpTree->execute(i, result, left, right);
     break;
   }
 
@@ -1963,6 +2058,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = AndExpr::create(left, right);
     bindLocal(ki, state, result);
+
+    // Update dependency
+    if (INTERPOLATION_ENABLED)
+      interpTree->execute(i, result, left, right);
     break;
   }
 
@@ -1971,6 +2070,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = OrExpr::create(left, right);
     bindLocal(ki, state, result);
+
+    // Update dependency
+    if (INTERPOLATION_ENABLED)
+      interpTree->execute(i, result, left, right);
     break;
   }
 
@@ -1979,6 +2082,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = XorExpr::create(left, right);
     bindLocal(ki, state, result);
+
+    // Update dependency
+    if (INTERPOLATION_ENABLED)
+      interpTree->execute(i, result, left, right);
     break;
   }
 
@@ -1987,6 +2094,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = ShlExpr::create(left, right);
     bindLocal(ki, state, result);
+
+    // Update dependency
+    if (INTERPOLATION_ENABLED)
+      interpTree->execute(i, result, left, right);
     break;
   }
 
@@ -1995,6 +2106,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = LShrExpr::create(left, right);
     bindLocal(ki, state, result);
+
+    // Update dependency
+    if (INTERPOLATION_ENABLED)
+      interpTree->execute(i, result, left, right);
     break;
   }
 
@@ -2003,6 +2118,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = AShrExpr::create(left, right);
     bindLocal(ki, state, result);
+
+    // Update dependency
+    if (INTERPOLATION_ENABLED)
+      interpTree->execute(i, result, left, right);
     break;
   }
 
@@ -2011,84 +2130,85 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   case Instruction::ICmp: {
     CmpInst *ci = cast<CmpInst>(i);
     ICmpInst *ii = cast<ICmpInst>(ci);
- 
+    ref<Expr> result, left, right;
+
     switch(ii->getPredicate()) {
     case ICmpInst::ICMP_EQ: {
-      ref<Expr> left = eval(ki, 0, state).value;
-      ref<Expr> right = eval(ki, 1, state).value;
-      ref<Expr> result = EqExpr::create(left, right);
+      left = eval(ki, 0, state).value;
+      right = eval(ki, 1, state).value;
+      result = EqExpr::create(left, right);
       bindLocal(ki, state, result);
       break;
     }
 
     case ICmpInst::ICMP_NE: {
-      ref<Expr> left = eval(ki, 0, state).value;
-      ref<Expr> right = eval(ki, 1, state).value;
-      ref<Expr> result = NeExpr::create(left, right);
+      left = eval(ki, 0, state).value;
+      right = eval(ki, 1, state).value;
+      result = NeExpr::create(left, right);
       bindLocal(ki, state, result);
       break;
     }
 
     case ICmpInst::ICMP_UGT: {
-      ref<Expr> left = eval(ki, 0, state).value;
-      ref<Expr> right = eval(ki, 1, state).value;
-      ref<Expr> result = UgtExpr::create(left, right);
+      left = eval(ki, 0, state).value;
+      right = eval(ki, 1, state).value;
+      result = UgtExpr::create(left, right);
       bindLocal(ki, state,result);
       break;
     }
 
     case ICmpInst::ICMP_UGE: {
-      ref<Expr> left = eval(ki, 0, state).value;
-      ref<Expr> right = eval(ki, 1, state).value;
-      ref<Expr> result = UgeExpr::create(left, right);
+      left = eval(ki, 0, state).value;
+      right = eval(ki, 1, state).value;
+      result = UgeExpr::create(left, right);
       bindLocal(ki, state, result);
       break;
     }
 
     case ICmpInst::ICMP_ULT: {
-      ref<Expr> left = eval(ki, 0, state).value;
-      ref<Expr> right = eval(ki, 1, state).value;
-      ref<Expr> result = UltExpr::create(left, right);
+      left = eval(ki, 0, state).value;
+      right = eval(ki, 1, state).value;
+      result = UltExpr::create(left, right);
       bindLocal(ki, state, result);
       break;
     }
 
     case ICmpInst::ICMP_ULE: {
-      ref<Expr> left = eval(ki, 0, state).value;
-      ref<Expr> right = eval(ki, 1, state).value;
-      ref<Expr> result = UleExpr::create(left, right);
+      left = eval(ki, 0, state).value;
+      right = eval(ki, 1, state).value;
+      result = UleExpr::create(left, right);
       bindLocal(ki, state, result);
       break;
     }
 
     case ICmpInst::ICMP_SGT: {
-      ref<Expr> left = eval(ki, 0, state).value;
-      ref<Expr> right = eval(ki, 1, state).value;
-      ref<Expr> result = SgtExpr::create(left, right);
+      left = eval(ki, 0, state).value;
+      right = eval(ki, 1, state).value;
+      result = SgtExpr::create(left, right);
       bindLocal(ki, state, result);
       break;
     }
 
     case ICmpInst::ICMP_SGE: {
-      ref<Expr> left = eval(ki, 0, state).value;
-      ref<Expr> right = eval(ki, 1, state).value;
-      ref<Expr> result = SgeExpr::create(left, right);
+      left = eval(ki, 0, state).value;
+      right = eval(ki, 1, state).value;
+      result = SgeExpr::create(left, right);
       bindLocal(ki, state, result);
       break;
     }
 
     case ICmpInst::ICMP_SLT: {
-      ref<Expr> left = eval(ki, 0, state).value;
-      ref<Expr> right = eval(ki, 1, state).value;
-      ref<Expr> result = SltExpr::create(left, right);
+      left = eval(ki, 0, state).value;
+      right = eval(ki, 1, state).value;
+      result = SltExpr::create(left, right);
       bindLocal(ki, state, result);
       break;
     }
 
     case ICmpInst::ICMP_SLE: {
-      ref<Expr> left = eval(ki, 0, state).value;
-      ref<Expr> right = eval(ki, 1, state).value;
-      ref<Expr> result = SleExpr::create(left, right);
+      left = eval(ki, 0, state).value;
+      right = eval(ki, 1, state).value;
+      result = SleExpr::create(left, right);
       bindLocal(ki, state, result);
       break;
     }
@@ -2096,6 +2216,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     default:
       terminateStateOnExecError(state, "invalid ICmp predicate");
     }
+
+    // Update dependency
+    if (INTERPOLATION_ENABLED)
+      interpTree->execute(i, result, left, right);
     break;
   }
  
@@ -2122,13 +2246,14 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   case Instruction::Store: {
     ref<Expr> base = eval(ki, 1, state).value;
     ref<Expr> value = eval(ki, 0, state).value;
-    executeMemoryOperation(state, true, base, value, 0);
+    executeMemoryOperation(state, true, base, value, ki);
     break;
   }
 
   case Instruction::GetElementPtr: {
     KGEPInstruction *kgepi = static_cast<KGEPInstruction*>(ki);
     ref<Expr> base = eval(ki, 0, state).value;
+    ref<Expr> oldBase = base;
 
     for (std::vector< std::pair<unsigned, uint64_t> >::iterator 
            it = kgepi->indices.begin(), ie = kgepi->indices.end(); 
@@ -2143,6 +2268,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       base = AddExpr::create(base,
                              Expr::createPointer(kgepi->offset));
     bindLocal(ki, state, base);
+
+    // Update dependency
+    if (INTERPOLATION_ENABLED)
+      interpTree->execute(i, base, oldBase);
     break;
   }
 
@@ -2153,6 +2282,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
                                            0,
                                            getWidthForLLVMType(ci->getType()));
     bindLocal(ki, state, result);
+
+    // Update dependency
+    if (INTERPOLATION_ENABLED)
+      interpTree->execute(i, result);
     break;
   }
   case Instruction::ZExt: {
@@ -2160,6 +2293,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = ZExtExpr::create(eval(ki, 0, state).value,
                                         getWidthForLLVMType(ci->getType()));
     bindLocal(ki, state, result);
+
+    // Update dependency
+    if (INTERPOLATION_ENABLED)
+      interpTree->execute(i, result);
     break;
   }
   case Instruction::SExt: {
@@ -2167,6 +2304,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = SExtExpr::create(eval(ki, 0, state).value,
                                         getWidthForLLVMType(ci->getType()));
     bindLocal(ki, state, result);
+
+    // Update dependency
+    if (INTERPOLATION_ENABLED)
+      interpTree->execute(i, result);
     break;
   }
 
@@ -2174,20 +2315,34 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     CastInst *ci = cast<CastInst>(i);
     Expr::Width pType = getWidthForLLVMType(ci->getType());
     ref<Expr> arg = eval(ki, 0, state).value;
-    bindLocal(ki, state, ZExtExpr::create(arg, pType));
+    ref<Expr> result = ZExtExpr::create(arg, pType);
+    bindLocal(ki, state, result);
+
+    // Update dependency
+    if (INTERPOLATION_ENABLED)
+      interpTree->execute(i, result);
     break;
   } 
   case Instruction::PtrToInt: {
     CastInst *ci = cast<CastInst>(i);
     Expr::Width iType = getWidthForLLVMType(ci->getType());
     ref<Expr> arg = eval(ki, 0, state).value;
-    bindLocal(ki, state, ZExtExpr::create(arg, iType));
+    ref<Expr> result = ZExtExpr::create(arg, iType);
+    bindLocal(ki, state, result);
+
+    // Update dependency
+    if (INTERPOLATION_ENABLED)
+      interpTree->execute(i, result);
     break;
   }
 
   case Instruction::BitCast: {
     ref<Expr> result = eval(ki, 0, state).value;
     bindLocal(ki, state, result);
+
+    // Update dependency
+    if (INTERPOLATION_ENABLED)
+      interpTree->execute(i, result);
     break;
   }
 
@@ -2209,7 +2364,12 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     llvm::APFloat Res(left->getAPValue());
     Res.add(APFloat(right->getAPValue()), APFloat::rmNearestTiesToEven);
 #endif
-    bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
+    ref<Expr> result = ConstantExpr::alloc(Res.bitcastToAPInt());
+    bindLocal(ki, state, result);
+
+    // Update dependency
+    if (INTERPOLATION_ENABLED)
+      interpTree->execute(i, result, left, right);
     break;
   }
 
@@ -2228,7 +2388,12 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     llvm::APFloat Res(left->getAPValue());
     Res.subtract(APFloat(right->getAPValue()), APFloat::rmNearestTiesToEven);
 #endif
-    bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
+    ref<Expr> result = ConstantExpr::alloc(Res.bitcastToAPInt());
+    bindLocal(ki, state, result);
+
+    // Update dependency
+    if (INTERPOLATION_ENABLED)
+      interpTree->execute(i, result, left, right);
     break;
   }
  
@@ -2248,7 +2413,12 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     llvm::APFloat Res(left->getAPValue());
     Res.multiply(APFloat(right->getAPValue()), APFloat::rmNearestTiesToEven);
 #endif
-    bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
+    ref<Expr> result = ConstantExpr::alloc(Res.bitcastToAPInt());
+    bindLocal(ki, state, result);
+
+    // Update dependency
+    if (INTERPOLATION_ENABLED)
+      interpTree->execute(i, result, left, right);
     break;
   }
 
@@ -2268,7 +2438,12 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     llvm::APFloat Res(left->getAPValue());
     Res.divide(APFloat(right->getAPValue()), APFloat::rmNearestTiesToEven);
 #endif
-    bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
+    ref<Expr> result = ConstantExpr::alloc(Res.bitcastToAPInt());
+    bindLocal(ki, state, result);
+
+    // Update dependency
+    if (INTERPOLATION_ENABLED)
+      interpTree->execute(i, result, left, right);
     break;
   }
 
@@ -2288,7 +2463,12 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     llvm::APFloat Res(left->getAPValue());
     Res.mod(APFloat(right->getAPValue()), APFloat::rmNearestTiesToEven);
 #endif
-    bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
+    ref<Expr> result = ConstantExpr::alloc(Res.bitcastToAPInt());
+    bindLocal(ki, state, result);
+
+    // Update dependency
+    if (INTERPOLATION_ENABLED)
+      interpTree->execute(i, result, left, right);
     break;
   }
 
@@ -2309,7 +2489,12 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     Res.convert(*fpWidthToSemantics(resultType),
                 llvm::APFloat::rmNearestTiesToEven,
                 &losesInfo);
-    bindLocal(ki, state, ConstantExpr::alloc(Res));
+    ref<Expr> result = ConstantExpr::alloc(Res);
+    bindLocal(ki, state, result);
+
+    // Update dependency
+    if (INTERPOLATION_ENABLED)
+      interpTree->execute(i, result);
     break;
   }
 
@@ -2329,7 +2514,12 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     Res.convert(*fpWidthToSemantics(resultType),
                 llvm::APFloat::rmNearestTiesToEven,
                 &losesInfo);
-    bindLocal(ki, state, ConstantExpr::alloc(Res));
+    ref<Expr> result = ConstantExpr::alloc(Res);
+    bindLocal(ki, state, result);
+
+    // Update dependency
+    if (INTERPOLATION_ENABLED)
+      interpTree->execute(i, result);
     break;
   }
 
@@ -2350,7 +2540,12 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bool isExact = true;
     Arg.convertToInteger(&value, resultType, false,
                          llvm::APFloat::rmTowardZero, &isExact);
-    bindLocal(ki, state, ConstantExpr::alloc(value, resultType));
+    ref<Expr> result = ConstantExpr::alloc(value, resultType);
+    bindLocal(ki, state, result);
+
+    // Update dependency
+    if (INTERPOLATION_ENABLED)
+      interpTree->execute(i, result);
     break;
   }
 
@@ -2371,7 +2566,12 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bool isExact = true;
     Arg.convertToInteger(&value, resultType, true,
                          llvm::APFloat::rmTowardZero, &isExact);
-    bindLocal(ki, state, ConstantExpr::alloc(value, resultType));
+    ref<Expr> result = ConstantExpr::alloc(value, resultType);
+    bindLocal(ki, state, result);
+
+    // Update dependency
+    if (INTERPOLATION_ENABLED)
+      interpTree->execute(i, result);
     break;
   }
 
@@ -2387,7 +2587,12 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     f.convertFromAPInt(arg->getAPValue(), false,
                        llvm::APFloat::rmNearestTiesToEven);
 
-    bindLocal(ki, state, ConstantExpr::alloc(f));
+    ref<Expr> result = ConstantExpr::alloc(f);
+    bindLocal(ki, state, result);
+
+    // Update dependency
+    if (INTERPOLATION_ENABLED)
+      interpTree->execute(i, result);
     break;
   }
 
@@ -2403,7 +2608,12 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     f.convertFromAPInt(arg->getAPValue(), true,
                        llvm::APFloat::rmNearestTiesToEven);
 
-    bindLocal(ki, state, ConstantExpr::alloc(f));
+    ref<Expr> result = ConstantExpr::alloc(f);
+    bindLocal(ki, state, result);
+
+    // Update dependency
+    if (INTERPOLATION_ENABLED)
+      interpTree->execute(i, result);
     break;
   }
 
@@ -2501,7 +2711,12 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       break;
     }
 
-    bindLocal(ki, state, ConstantExpr::alloc(Result, Expr::Bool));
+    ref<Expr> result = ConstantExpr::alloc(Result, Expr::Bool);
+    bindLocal(ki, state, result);
+
+    // Update dependency
+    if (INTERPOLATION_ENABLED)
+      interpTree->execute(i, result, left, right);
     break;
   }
   case Instruction::InsertValue: {
@@ -2529,6 +2744,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       result = val;
 
     bindLocal(ki, state, result);
+
+    // Update dependency
+    if (INTERPOLATION_ENABLED)
+      interpTree->execute(i, result, agg, val);
     break;
   }
   case Instruction::ExtractValue: {
@@ -2539,6 +2758,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = ExtractExpr::create(agg, kgepi->offset*8, getWidthForLLVMType(i->getType()));
 
     bindLocal(ki, state, result);
+
+    // Update dependency
+    if (INTERPOLATION_ENABLED)
+      interpTree->execute(i, result);
     break;
   }
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
@@ -2583,6 +2806,8 @@ void Executor::updateStates(ExecutionState *current) {
     if (it3 != seedMap.end())
       seedMap.erase(it3);
     processTree->remove(es->ptreeNode);
+    if (INTERPOLATION_ENABLED)
+      interpTree->remove(es->itreeNode);
     delete es;
   }
   removedStates.clear();
@@ -2700,6 +2925,7 @@ void Executor::doDumpStates() {
 }
 
 void Executor::run(ExecutionState &initialState) {
+
   bindModuleConstants();
 
   // Delay init till now so that ticks don't accrue during
@@ -2784,14 +3010,41 @@ void Executor::run(ExecutionState &initialState) {
 
   while (!states.empty() && !haltExecution) {
     ExecutionState &state = searcher->selectState();
-    KInstruction *ki = state.pc;
-    stepInstruction(state);
 
-    executeInstruction(state, ki);
-    processTimers(&state, MaxInstructionTime);
+    if (INTERPOLATION_ENABLED) {
+      // We synchronize the node id to that of the state. The node id
+      // is set only when it was the address of the first instruction
+      // in the node.
+      interpTree->setCurrentINode(state);
 
-    checkMemoryUsage();
+      // Uncomment the following statements to show the state
+      // of the interpolation tree and the active node.
 
+      //      llvm::errs() << "\nCurrent state:\n";
+      //      processTree->dump();
+      //      interpTree->dump();
+      //      state.itreeNode->dump();
+      //      llvm::errs() << "------------------- Executing New Instruction "
+      //                      "-----------------------\n";
+      //      state.pc->inst->dump();
+    }
+
+    if (INTERPOLATION_ENABLED &&
+        interpTree->subsumptionCheck(solver, state, coreSolverTimeout)) {
+      terminateStateOnSubsumption(state);
+    } else
+      {
+	KInstruction *ki = state.pc;
+	stepInstruction(state);
+
+	executeInstruction(state, ki);
+        if (INTERPOLATION_ENABLED) {
+          state.itreeNode->incInstructionsDepth();
+        }
+        processTimers(&state, MaxInstructionTime);
+
+        checkMemoryUsage();
+      }
     updateStates(&state);
   }
 
@@ -2852,7 +3105,7 @@ std::string Executor::getAddressInfo(ExecutionState &state,
 }
 
 void Executor::terminateState(ExecutionState &state) {
-  if (replayKTest && replayPosition!=replayKTest->numObjects) {
+  if (replayKTest && replayPosition != replayKTest->numObjects) {
     klee_warning_once(replayKTest,
                       "replay did not consume all objects in test input.");
   }
@@ -2873,23 +3126,63 @@ void Executor::terminateState(ExecutionState &state) {
       seedMap.erase(it3);
     addedStates.erase(it);
     processTree->remove(state.ptreeNode);
+
+    if (INTERPOLATION_ENABLED)
+      interpTree->remove(state.itreeNode);
     delete &state;
   }
 }
 
+void Executor::terminateStateOnSubsumption(ExecutionState &state) {
+  assert(INTERPOLATION_ENABLED);
+
+  // Implementationwise, basically the same as terminateStateEarly method,
+  // but with different statistics functions called, and empty error
+  // message as this is not an error.
+  interpreterHandler->incSubsumptionTermination();
+  interpreterHandler->incInstructionsDepthOnSubsumption(state.depth);
+  interpreterHandler->incTotalInstructionsOnSubsumption(
+      state.itreeNode->getInstructionsDepth());
+
+  if (!OnlyOutputStatesCoveringNew || state.coveredNew ||
+      (AlwaysOutputSeeds && seedMap.count(&state))) {
+    interpreterHandler->incSubsumptionTerminationTest();
+    interpreterHandler->processTestCase(state, 0, "early");
+  }
+  terminateState(state);
+}
+
 void Executor::terminateStateEarly(ExecutionState &state, 
                                    const Twine &message) {
+  interpreterHandler->incEarlyTermination();
+  if (INTERPOLATION_ENABLED) {
+    interpreterHandler->incBranchingDepthOnEarlyTermination(state.depth);
+    interpreterHandler->incInstructionsDepthOnEarlyTermination(
+        state.itreeNode->getInstructionsDepth());
+  }
+
   if (!OnlyOutputStatesCoveringNew || state.coveredNew ||
-      (AlwaysOutputSeeds && seedMap.count(&state)))
+      (AlwaysOutputSeeds && seedMap.count(&state))) {
+    interpreterHandler->incEarlyTerminationTest();
     interpreterHandler->processTestCase(state, (message + "\n").str().c_str(),
                                         "early");
+  }
   terminateState(state);
 }
 
 void Executor::terminateStateOnExit(ExecutionState &state) {
+  interpreterHandler->incExitTermination();
+  if (INTERPOLATION_ENABLED) {
+    interpreterHandler->incBranchingDepthOnExitTermination(state.depth);
+    interpreterHandler->incTotalInstructionsOnExit(
+        state.itreeNode->getInstructionsDepth());
+  }
+
   if (!OnlyOutputStatesCoveringNew || state.coveredNew || 
-      (AlwaysOutputSeeds && seedMap.count(&state)))
+      (AlwaysOutputSeeds && seedMap.count(&state))) {
+    interpreterHandler->incExitTerminationTest();
     interpreterHandler->processTestCase(state, 0, 0);
+  }
   terminateState(state);
 }
 
@@ -2952,6 +3245,13 @@ void Executor::terminateStateOnError(ExecutionState &state,
                                      enum TerminateReason termReason,
                                      const char *suffix,
                                      const llvm::Twine &info) {
+  interpreterHandler->incErrorTermination();
+  if (INTERPOLATION_ENABLED) {
+    interpreterHandler->incBranchingDepthOnErrorTermination(state.depth);
+    interpreterHandler->incInstructionsDepthOnErrorTermination(
+        state.itreeNode->getInstructionsDepth());
+  }
+
   std::string message = messaget.str();
   static std::set< std::pair<Instruction*, std::string> > emittedErrors;
   Instruction * lastInst;
@@ -2989,6 +3289,7 @@ void Executor::terminateStateOnError(ExecutionState &state,
       suffix = suffix_buf.c_str();
     }
 
+    interpreterHandler->incErrorTerminationTest();
     interpreterHandler->processTestCase(state, msg.str().c_str(), suffix);
   }
     
@@ -3014,10 +3315,10 @@ void Executor::callExternalFunction(ExecutionState &state,
   // check if specialFunctionHandler wants it
   if (specialFunctionHandler->handle(state, function, target, arguments))
     return;
-  
+
   if (NoExternals && !okExternals.count(function->getName())) {
     klee_warning("Calling not-OK external function : %s\n",
-               function->getName().str().c_str());
+                 function->getName().str().c_str());
     terminateStateOnError(state, "externals disallowed", User);
     return;
   }
@@ -3072,7 +3373,7 @@ void Executor::callExternalFunction(ExecutionState &state,
     else
       klee_warning_once(function, "%s", os.str().c_str());
   }
-  
+
   bool success = externalDispatcher->executeCall(function, target->inst, args);
   if (!success) {
     terminateStateOnError(state, "failed external call: " + function->getName(),
@@ -3091,6 +3392,15 @@ void Executor::callExternalFunction(ExecutionState &state,
     ref<Expr> e = ConstantExpr::fromMemory((void*) args, 
                                            getWidthForLLVMType(resultType));
     bindLocal(target, state, e);
+
+    if (INTERPOLATION_ENABLED) {
+      std::vector<ref<Expr> > tmpArgs;
+      tmpArgs.push_back(e);
+      for (unsigned i = 0; i < arguments.size(); ++i) {
+        tmpArgs.push_back(arguments.at(i));
+      }
+      interpTree->execute(target->inst, tmpArgs);
+    }
   }
 }
 
@@ -3113,13 +3423,22 @@ ref<Expr> Executor::replaceReadWithSymbolic(ExecutionState &state,
   // and return it.
   
   static unsigned id;
-  const Array *array =
-      arrayCache.CreateArray("rrws_arr" + llvm::utostr(++id),
-                             Expr::getMinBytesForWidth(e->getWidth()));
+  const std::string arrayName("rrws_arr" + llvm::utostr(++id));
+  const unsigned arrayWidth(Expr::getMinBytesForWidth(e->getWidth()));
+  const Array *array = arrayCache.CreateArray(arrayName, arrayWidth);
   ref<Expr> res = Expr::createTempRead(array, e->getWidth());
   ref<Expr> eq = NotOptimizedExpr::create(EqExpr::create(e, res));
   llvm::errs() << "Making symbolic: " << eq << "\n";
   state.addConstraint(eq);
+
+  if (INTERPOLATION_ENABLED) {
+    // We create shadow array as existentially-quantified
+    // variables for subsumption checking
+    const Array *shadow = arrayCache.CreateArray(
+        ShadowArray::getShadowName(arrayName), arrayWidth);
+    ShadowArray::addShadowArrayMap(array, shadow);
+  }
+
   return res;
 }
 
@@ -3161,7 +3480,11 @@ void Executor::executeAlloc(ExecutionState &state,
         os->initializeToRandom();
       }
       bindLocal(target, state, mo->getBaseExpr());
-      
+
+      // Update dependency
+      if (INTERPOLATION_ENABLED)
+        interpTree->execute(target->inst, mo->getBaseExpr());
+
       if (reallocFrom) {
         unsigned count = std::min(reallocFrom->size, os->size);
         for (unsigned i=0; i<count; i++)
@@ -3225,8 +3548,13 @@ void Executor::executeAlloc(ExecutionState &state,
                true);
         if (hugeSize.first) {
           klee_message("NOTE: found huge malloc, returning 0");
-          bindLocal(target, *hugeSize.first, 
-                    ConstantExpr::alloc(0, Context::get().getPointerWidth()));
+          ref<Expr> result =
+              ConstantExpr::alloc(0, Context::get().getPointerWidth());
+          bindLocal(target, *hugeSize.first, result);
+
+          // Update dependency
+          if (INTERPOLATION_ENABLED)
+            interpTree->execute(target->inst, result);
         }
         
         if (hugeSize.second) {
@@ -3307,11 +3635,10 @@ void Executor::resolveExact(ExecutionState &state,
   }
 }
 
-void Executor::executeMemoryOperation(ExecutionState &state,
-                                      bool isWrite,
+void Executor::executeMemoryOperation(ExecutionState &state, bool isWrite,
                                       ref<Expr> address,
                                       ref<Expr> value /* undef if read */,
-                                      KInstruction *target /* undef if write */) {
+                                      KInstruction *target) {
   Expr::Width type = (isWrite ? value->getWidth() : 
                      getWidthForLLVMType(target->inst->getType()));
   unsigned bytes = Expr::getMinBytesForWidth(type);
@@ -3363,14 +3690,22 @@ void Executor::executeMemoryOperation(ExecutionState &state,
         } else {
           ObjectState *wos = state.addressSpace.getWriteable(mo, os);
           wos->write(offset, value);
+
+          // Update dependency
+          if (INTERPOLATION_ENABLED && target)
+            interpTree->execute(target->inst, value, address);
         }          
       } else {
         ref<Expr> result = os->read(offset, type);
         
         if (interpreterOpts.MakeConcreteSymbolic)
           result = replaceReadWithSymbolic(state, result);
-        
+
         bindLocal(target, state, result);
+
+        // Update dependency
+        if (INTERPOLATION_ENABLED && target)
+          interpTree->execute(target->inst, result, address);
       }
 
       return;
@@ -3388,12 +3723,12 @@ void Executor::executeMemoryOperation(ExecutionState &state,
   
   // XXX there is some query wasteage here. who cares?
   ExecutionState *unbound = &state;
-  
+
   for (ResolutionList::iterator i = rl.begin(), ie = rl.end(); i != ie; ++i) {
     const MemoryObject *mo = i->first;
     const ObjectState *os = i->second;
     ref<Expr> inBounds = mo->getBoundsCheckPointer(address, bytes);
-    
+
     StatePair branches = fork(*unbound, inBounds, true);
     ExecutionState *bound = branches.first;
 
@@ -3417,7 +3752,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
     if (!unbound)
       break;
   }
-  
+
   // XXX should we distinguish out of bounds and overlapped cases?
   if (unbound) {
     if (incomplete) {
@@ -3442,6 +3777,14 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
       uniqueName = name + "_" + llvm::utostr(++id);
     }
     const Array *array = arrayCache.CreateArray(uniqueName, mo->size);
+    if (INTERPOLATION_ENABLED) {
+      // We create shadow array as existentially-quantified
+      // variables for subsumption checking
+      const Array *shadow =
+          arrayCache.CreateArray(ShadowArray::getShadowName(uniqueName), mo->size);
+      ShadowArray::addShadowArrayMap(array, shadow);
+    }
+
     bindObjectInState(state, mo, false, array);
     state.addSymbolic(mo, array);
     
@@ -3510,6 +3853,7 @@ void Executor::runFunctionAsMain(Function *f,
 				 int argc,
 				 char **argv,
 				 char **envp) {
+
   std::vector<ref<Expr> > arguments;
 
   // force deterministic initialization of memory objects
@@ -3595,9 +3939,28 @@ void Executor::runFunctionAsMain(Function *f,
 
   processTree = new PTree(state);
   state->ptreeNode = processTree->root;
+
+  if (INTERPOLATION_ENABLED) {
+    interpTree = new ITree(state);//added by Felicia
+    state->itreeNode = interpTree->root;
+    SearchTree::initialize(interpTree->root);
+  }
+
   run(*state);
   delete processTree;
   processTree = 0;
+
+  if (INTERPOLATION_ENABLED) {
+    SearchTree::save(interpreterHandler->getOutputFilename("tree.dot"));
+    SearchTree::deallocate();
+
+    delete interpTree;
+    interpTree = 0;
+
+    // Print interpolation time statistics
+    if (InterpolationStat)
+      interpreterHandler->assignSubsumptionStats(ITree::getInterpolationStat());
+  }
 
   // hack to clear memory objects
   delete memory;
@@ -3705,7 +4068,7 @@ bool Executor::getSymbolicSolution(const ExecutionState &state,
                              ConstantExpr::alloc(0, Expr::Bool));
     return false;
   }
-  
+
   for (unsigned i = 0; i != state.symbolics.size(); ++i)
     res.push_back(std::make_pair(state.symbolics[i].first->name, values[i]));
   return true;
@@ -3719,6 +4082,7 @@ void Executor::getCoveredLines(const ExecutionState &state,
 void Executor::doImpliedValueConcretization(ExecutionState &state,
                                             ref<Expr> e,
                                             ref<ConstantExpr> value) {
+
   abort(); // FIXME: Broken until we sort out how to do the write back.
 
   if (DebugCheckForImpliedValues)

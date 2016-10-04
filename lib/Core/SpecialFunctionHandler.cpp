@@ -315,19 +315,19 @@ void SpecialFunctionHandler::handleAliasFunction(ExecutionState &state,
 void SpecialFunctionHandler::handleAssert(ExecutionState &state,
                                           KInstruction *target,
                                           std::vector<ref<Expr> > &arguments) {
-  assert(arguments.size()==3 && "invalid number of arguments to _assert");  
-  executor.terminateStateOnError(state,
-				 "ASSERTION FAIL: " + readStringAtAddress(state, arguments[0]),
-				 Executor::Assert);
+  assert(arguments.size() == 3 && "invalid number of arguments to _assert");
+  executor.terminateStateOnError(
+      state, "ASSERTION FAIL: " + readStringAtAddress(state, arguments[0]),
+      Executor::Assert);
 }
 
 void SpecialFunctionHandler::handleAssertFail(ExecutionState &state,
                                               KInstruction *target,
                                               std::vector<ref<Expr> > &arguments) {
   assert(arguments.size()==4 && "invalid number of arguments to __assert_fail");
-  executor.terminateStateOnError(state,
-				 "ASSERTION FAIL: " + readStringAtAddress(state, arguments[0]),
-				 Executor::Assert);
+  executor.terminateStateOnError(
+      state, "ASSERTION FAIL: " + readStringAtAddress(state, arguments[0]),
+      Executor::Assert);
 }
 
 void SpecialFunctionHandler::handleReportError(ExecutionState &state,
@@ -336,10 +336,9 @@ void SpecialFunctionHandler::handleReportError(ExecutionState &state,
   assert(arguments.size()==4 && "invalid number of arguments to klee_report_error");
   
   // arguments[0], arguments[1] are file, line
-  executor.terminateStateOnError(state,
-				 readStringAtAddress(state, arguments[2]),
-				 Executor::ReportError,
-				 readStringAtAddress(state, arguments[3]).c_str());
+  executor.terminateStateOnError(
+      state, readStringAtAddress(state, arguments[2]), Executor::ReportError,
+      readStringAtAddress(state, arguments[3]).c_str());
 }
 
 void SpecialFunctionHandler::handleMerge(ExecutionState &state,
@@ -396,7 +395,6 @@ void SpecialFunctionHandler::handleAssume(ExecutionState &state,
                             KInstruction *target,
                             std::vector<ref<Expr> > &arguments) {
   assert(arguments.size()==1 && "invalid number of arguments to klee_assume");
-  
   ref<Expr> e = arguments[0];
   
   if (e->getWidth() != Expr::Bool)
@@ -409,9 +407,8 @@ void SpecialFunctionHandler::handleAssume(ExecutionState &state,
     if (SilentKleeAssume) {
       executor.terminateState(state);
     } else {
-      executor.terminateStateOnError(state,
-                                     "invalid klee_assume call (provably false)",
-                                     Executor::User);
+      executor.terminateStateOnError(
+          state, "invalid klee_assume call (provably false)", Executor::User);
     }
   } else {
     executor.addConstraint(state, e);
@@ -474,9 +471,8 @@ void SpecialFunctionHandler::handleSetForking(ExecutionState &state,
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(value)) {
     state.forkDisabled = CE->isZero();
   } else {
-    executor.terminateStateOnError(state, 
-                                   "klee_set_forking requires a constant arg",
-                                   Executor::User);
+    executor.terminateStateOnError(
+        state, "klee_set_forking requires a constant arg", Executor::User);
   }
 }
 
@@ -633,26 +629,23 @@ void SpecialFunctionHandler::handleCheckMemoryAccess(ExecutionState &state,
   ref<Expr> address = executor.toUnique(state, arguments[0]);
   ref<Expr> size = executor.toUnique(state, arguments[1]);
   if (!isa<ConstantExpr>(address) || !isa<ConstantExpr>(size)) {
-    executor.terminateStateOnError(state, 
-                                   "check_memory_access requires constant args",
-				   Executor::User);
+    executor.terminateStateOnError(
+        state, "check_memory_access requires constant args", Executor::User);
   } else {
     ObjectPair op;
 
     if (!state.addressSpace.resolveOne(cast<ConstantExpr>(address), op)) {
-      executor.terminateStateOnError(state,
-                                     "check_memory_access: memory error",
-				     Executor::Ptr, NULL,
+      executor.terminateStateOnError(state, "check_memory_access: memory error",
+                                     Executor::Ptr, NULL,
                                      executor.getAddressInfo(state, address));
     } else {
       ref<Expr> chk = 
         op.first->getBoundsCheckPointer(address, 
                                         cast<ConstantExpr>(size)->getZExtValue());
       if (!chk->isTrue()) {
-        executor.terminateStateOnError(state,
-                                       "check_memory_access: memory error",
-				       Executor::Ptr, NULL,
-                                       executor.getAddressInfo(state, address));
+        executor.terminateStateOnError(
+            state, "check_memory_access: memory error", Executor::Ptr, NULL,
+            executor.getAddressInfo(state, address));
       }
     }
   }
@@ -729,10 +722,9 @@ void SpecialFunctionHandler::handleMakeSymbolic(ExecutionState &state,
     
     if (res) {
       executor.executeMakeSymbolic(*s, mo, name);
-    } else {      
-      executor.terminateStateOnError(*s, 
-                                     "wrong size given to klee_make_symbolic[_name]", 
-                                     Executor::User);
+    } else {
+      executor.terminateStateOnError(
+          *s, "wrong size given to klee_make_symbolic[_name]", Executor::User);
     }
   }
 }

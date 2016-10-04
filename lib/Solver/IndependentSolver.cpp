@@ -409,6 +409,9 @@ public:
   SolverRunStatus getOperationStatusCode();
   char *getConstraintLog(const Query&);
   void setCoreSolverTimeout(double timeout);
+  std::vector<ref<Expr> > getUnsatCore() { return solver->getUnsatCore(); }
+  void enableConstraintsCaching() { solver->enableConstraintsCaching(); }
+  void disableConstraintsCaching() { solver->disableConstraintsCaching(); }
 };
   
 bool IndependentSolver::computeValidity(const Query& query,
@@ -417,8 +420,7 @@ bool IndependentSolver::computeValidity(const Query& query,
   IndependentElementSet eltsClosure =
     getIndependentConstraints(query, required);
   ConstraintManager tmp(required);
-  return solver->impl->computeValidity(Query(tmp, query.expr), 
-                                       result);
+  return solver->impl->computeValidity(Query(tmp, query.expr), result);
 }
 
 bool IndependentSolver::computeTruth(const Query& query, bool &isValid) {
@@ -441,12 +443,14 @@ bool IndependentSolver::computeValue(const Query& query, ref<Expr> &result) {
 // Helper function used only for assertions to make sure point created
 // during computeInitialValues is in fact correct. The ``retMap`` is used
 // in the case ``objects`` doesn't contain all the assignments needed.
-bool assertCreatedPointEvaluatesToTrue(const Query &query,
-                                       const std::vector<const Array*> &objects,
-                                       std::vector< std::vector<unsigned char> > &values,
-                                       std::map<const Array*, std::vector<unsigned char> > &retMap){
-  // _allowFreeValues is set to true so that if there are missing bytes in the assigment
-  // we will end up with a non ConstantExpr after evaluating the assignment and fail
+bool assertCreatedPointEvaluatesToTrue(
+    const Query &query, const std::vector<const Array *> &objects,
+    std::vector<std::vector<unsigned char> > &values,
+    std::map<const Array *, std::vector<unsigned char> > &retMap) {
+  // _allowFreeValues is set to true so that if there are missing bytes in the
+  // assigment
+  // we will end up with a non ConstantExpr after evaluating the assignment and
+  // fail
   Assignment assign = Assignment(objects, values, /*_allowFreeValues=*/true);
 
   // Add any additional bindings.
@@ -460,9 +464,10 @@ bool assertCreatedPointEvaluatesToTrue(const Query &query,
       it != query.constraints.end(); ++it){
     ref<Expr> ret = assign.evaluate(*it);
 
-    assert(isa<ConstantExpr>(ret) && "assignment evaluation did not result in constant");
+    assert(isa<ConstantExpr>(ret) &&
+           "assignment evaluation did not result in constant");
     ref<ConstantExpr> evaluatedConstraint = dyn_cast<ConstantExpr>(ret);
-    if(evaluatedConstraint->isFalse()){
+    if (evaluatedConstraint->isFalse()) {
       return false;
     }
   }
@@ -542,7 +547,8 @@ bool IndependentSolver::computeInitialValues(const Query& query,
       values.push_back(retMap[arr]);
     }
   }
-  assert(assertCreatedPointEvaluatesToTrue(query, objects, values, retMap) && "should satisfy the equation");
+  assert(assertCreatedPointEvaluatesToTrue(query, objects, values, retMap) &&
+         "should satisfy the equation");
   delete factors;
   return true;
 }

@@ -25,7 +25,6 @@ int exe_selinux = 1;
 /* NULL is the default policy behavior */
 KLEE_SELINUX_CTX_CONST char *create_con = NULL;
 
-
 int is_selinux_enabled() {
   return exe_selinux;
 }
@@ -37,7 +36,6 @@ int getfscreatecon(char **context) {
   *context = (char *)create_con;
   return 0;
 }
-
 
 int setfscreatecon(KLEE_SELINUX_CTX_CONST char *context) {
   if (context == NULL) {

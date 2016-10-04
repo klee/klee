@@ -50,3 +50,13 @@ const char *SolverImpl::getOperationStatusString(SolverRunStatus statusCode) {
     return "UNRECOGNIZED OPERATION STATUS";
   }
 }
+
+std::vector<ref<Expr> > SolverImpl::getUnsatCore() {
+  // By default, we return an empty core
+  std::vector<ref<Expr> > localUnsatCore;
+  return localUnsatCore;
+}
+
+void SolverImpl::enableConstraintsCaching() {}
+
+void SolverImpl::disableConstraintsCaching() {}

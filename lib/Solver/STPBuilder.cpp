@@ -152,7 +152,8 @@ ExprHandle STPBuilder::bvExtract(ExprHandle expr, unsigned top, unsigned bottom)
   return vc_bvExtract(vc, expr, top, bottom);
 }
 ExprHandle STPBuilder::eqExpr(ExprHandle a, ExprHandle b) {
-  assert((vc_getBVLength(vc, a) == vc_getBVLength(vc, b)) && "a and b should be same type");
+  assert((vc_getBVLength(vc, a) == vc_getBVLength(vc, b)) &&
+         "a and b should be same type");
   return vc_eqExpr(vc, a, b);
 }
 
@@ -442,8 +443,8 @@ ExprHandle STPBuilder::constructSDivByConstant(ExprHandle expr_n, unsigned width
                                : root->name.length();
     std::string unique_name = root->name.substr(0, space) + unique_id;
 
-    array_expr = buildArray(unique_name.c_str(), root->getDomain(),
-                            root->getRange());
+    array_expr =
+        buildArray(unique_name.c_str(), root->getDomain(), root->getRange());
 
     if (root->isConstantArray()) {
       // FIXME: Flush the concrete values into STP. Ideally we would do this

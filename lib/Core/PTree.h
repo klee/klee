@@ -14,9 +14,12 @@
 
 namespace klee {
   class ExecutionState;
+  class PTreeNode;
 
   class PTree { 
     typedef ExecutionState* data_type;
+
+    void printNode(llvm::raw_ostream& stream, PTreeNode *n, std::string edges);
 
   public:
     typedef class PTreeNode Node;
@@ -31,6 +34,10 @@ namespace klee {
     void remove(Node *n);
 
     void dump(llvm::raw_ostream &os);
+
+    void dump();
+
+    void print(llvm::raw_ostream &os);
   };
 
   class PTreeNode {

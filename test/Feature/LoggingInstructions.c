@@ -1,19 +1,27 @@
 // RUN: %llvmgcc %s -emit-llvm -g -c -o %t2.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --exit-on-error --debug-print-instructions=all:stderr %t2.bc 2>%t3.txt
+// RUN: %klee --output-dir=%t.klee-out --exit-on-error
+// --debug-print-instructions=all:stderr %t2.bc 2>%t3.txt
 // RUN: FileCheck -input-file=%t3.txt -check-prefix=CHECK-FILE-SRC %s
 // RUN: FileCheck -input-file=%t3.txt -check-prefix=CHECK-FILE-DBG %s
 // RUN: not test -f %t.klee-out/instructions.txt
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --exit-on-error --debug-print-instructions=all:file %t2.bc
-// RUN: FileCheck -input-file=%t.klee-out/instructions.txt -check-prefix=CHECK-FILE-DBG %s
-// RUN: FileCheck -input-file=%t.klee-out/instructions.txt -check-prefix=CHECK-FILE-SRC %s
+// RUN: %klee --output-dir=%t.klee-out --exit-on-error
+// --debug-print-instructions=all:file %t2.bc
+// RUN: FileCheck -input-file=%t.klee-out/instructions.txt
+// -check-prefix=CHECK-FILE-DBG %s
+// RUN: FileCheck -input-file=%t.klee-out/instructions.txt
+// -check-prefix=CHECK-FILE-SRC %s
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --exit-on-error --debug-print-instructions=src:file %t2.bc
-// RUN: FileCheck -input-file=%t.klee-out/instructions.txt -check-prefix=CHECK-FILE-SRC %s
+// RUN: %klee --output-dir=%t.klee-out --exit-on-error
+// --debug-print-instructions=src:file %t2.bc
+// RUN: FileCheck -input-file=%t.klee-out/instructions.txt
+// -check-prefix=CHECK-FILE-SRC %s
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --exit-on-error --debug-print-instructions=compact:file %t2.bc
-// RUN: FileCheck -input-file=%t.klee-out/instructions.txt -check-prefix=CHECK-FILE-COMPACT %s
+// RUN: %klee --output-dir=%t.klee-out --exit-on-error
+// --debug-print-instructions=compact:file %t2.bc
+// RUN: FileCheck -input-file=%t.klee-out/instructions.txt
+// -check-prefix=CHECK-FILE-COMPACT %s
 //
 #include "klee/klee.h"
 #include <assert.h>

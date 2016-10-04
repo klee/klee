@@ -59,11 +59,11 @@ UseForkedCoreSolver("use-forked-solver",
              llvm::cl::desc("Run the core SMT solver in a forked process (default=on)"),
              llvm::cl::init(true));
 
-llvm::cl::opt<bool>
-CoreSolverOptimizeDivides("solver-optimize-divides", 
-                 llvm::cl::desc("Optimize constant divides into add/shift/multiplies before passing to core SMT solver (default=off)"),
-                 llvm::cl::init(false));
-
+llvm::cl::opt<bool> CoreSolverOptimizeDivides(
+    "solver-optimize-divides",
+    llvm::cl::desc("Optimize constant divides into add/shift/multiplies before "
+                   "passing to core SMT solver (default=off)"),
+    llvm::cl::init(false));
 
 /* Using cl::list<> instead of cl::bits<> results in quite a bit of ugliness when it comes to checking
  * if an option is set. Unfortunately with gcc4.7 cl::bits<> is broken with LLVM2.9 and I doubt everyone
@@ -71,16 +71,62 @@ CoreSolverOptimizeDivides("solver-optimize-divides",
  */
 llvm::cl::list<QueryLoggingSolverType> queryLoggingOptions(
     "use-query-log",
-    llvm::cl::desc("Log queries to a file. Multiple options can be specified separated by a comma. By default nothing is logged."),
+    llvm::cl::desc("Log queries to a file. Multiple options can be specified "
+                   "separated by a comma. By default nothing is logged."),
     llvm::cl::values(
-        clEnumValN(ALL_PC,"all:pc","All queries in .pc (KQuery) format"),
-        clEnumValN(ALL_SMTLIB,"all:smt2","All queries in .smt2 (SMT-LIBv2) format"),
-        clEnumValN(SOLVER_PC,"solver:pc","All queries reaching the solver in .pc (KQuery) format"),
-        clEnumValN(SOLVER_SMTLIB,"solver:smt2","All queries reaching the solver in .smt2 (SMT-LIBv2) format"),
-        clEnumValEnd
-	),
-    llvm::cl::CommaSeparated
-);
+        clEnumValN(ALL_PC, "all:pc", "All queries in .pc (KQuery) format"),
+        clEnumValN(ALL_SMTLIB, "all:smt2",
+                   "All queries in .smt2 (SMT-LIBv2) format"),
+        clEnumValN(SOLVER_PC, "solver:pc",
+                   "All queries reaching the solver in .pc (KQuery) format"),
+        clEnumValN(
+            SOLVER_SMTLIB, "solver:smt2",
+            "All queries reaching the solver in .smt2 (SMT-LIBv2) format"),
+        clEnumValEnd),
+    llvm::cl::CommaSeparated);
+
+// We should compile in this option even when ENABLE_Z3
+// was undefined to avoid regression test failure.
+llvm::cl::opt<bool> NoInterpolation(
+    "no-interpolation",
+    llvm::cl::desc("Disable interpolation for search space reduction. "
+                   "Interpolation is enabled by default when Z3 was the solver "
+                   "used. This option has no effect when Z3 was not used."));
+
+#ifdef ENABLE_Z3
+llvm::cl::opt<bool> OutputTree(
+    "output-tree",
+    llvm::cl::desc("Outputs tree.dot: the execution tree in .dot file "
+                   "format. At present, this feature is only available when "
+                   "Z3 is compiled in and interpolation is enabled."));
+
+llvm::cl::opt<bool> InterpolationStat(
+    "interpolation-stat",
+    llvm::cl::desc(
+        "Displays an execution profile of the interpolation routines."));
+
+llvm::cl::opt<bool> NoExistential(
+    "no-existential",
+    llvm::cl::desc(
+        "This option avoids existential quantification in subsumption "
+        "check by equating each existential variable with its corresponding "
+        "free variable. For example, when checking if x < 10 is subsumed by "
+        "another state where there is x' s.t., x' <= 0 && x = x' + 20 (here "
+        "the existential variable x' represents the value of x before adding "
+        "20), we strengthen the query by adding the constraint x' = x. This "
+        "has an effect of removing all existentially-quantified variables "
+        "most solvers are not very powerful at solving, however, at likely "
+        "less number of subsumptions due to the strengthening of the query."));
+
+llvm::cl::opt<int> MaxFailSubsumption(
+    "max-subsumption-failure",
+    llvm::cl::desc("To set the maximum number of failed subsumption check. "
+                   "When this options is specified and the number of "
+                   "subsumption table entries is more than the specified "
+                   "value, the oldest entry will be deleted (default=0 (off))"),
+    llvm::cl::init(0));
+
+#endif // ENABLE_Z3
 
 #ifdef ENABLE_METASMT
 
@@ -97,7 +143,8 @@ llvm::cl::list<QueryLoggingSolverType> queryLoggingOptions(
 
 llvm::cl::opt<klee::MetaSMTBackendType> MetaSMTBackend(
     "metasmt-backend",
-    llvm::cl::desc("Specify the MetaSMT solver backend type " METASMT_DEFAULT_BACKEND_STR),
+    llvm::cl::desc(
+        "Specify the MetaSMT solver backend type " METASMT_DEFAULT_BACKEND_STR),
     llvm::cl::values(
         clEnumValN(METASMT_BACKEND_STP, "stp", "Use metaSMT with STP"),
         clEnumValN(METASMT_BACKEND_Z3, "z3", "Use metaSMT with Z3"),
@@ -134,7 +181,8 @@ llvm::cl::opt<klee::MetaSMTBackendType> MetaSMTBackend(
 llvm::cl::opt<CoreSolverType> CoreSolverToUse(
     "solver-backend", llvm::cl::desc("Specifiy the core solver backend to use"),
     llvm::cl::values(clEnumValN(STP_SOLVER, "stp", "stp" STP_IS_DEFAULT_STR),
-                     clEnumValN(METASMT_SOLVER, "metasmt", "metaSMT" METASMT_IS_DEFAULT_STR),
+                     clEnumValN(METASMT_SOLVER, "metasmt",
+                                "metaSMT" METASMT_IS_DEFAULT_STR),
                      clEnumValN(DUMMY_SOLVER, "dummy", "Dummy solver"),
                      clEnumValN(Z3_SOLVER, "z3", "Z3" Z3_IS_DEFAULT_STR),
                      clEnumValEnd),
@@ -157,7 +205,3 @@ llvm::cl::opt<CoreSolverType> DebugCrossCheckCoreSolverWith(
 #undef METASMT_IS_DEFAULT_STR
 #undef Z3_IS_DEFAULT_STR
 #undef DEFAULT_CORE_SOLVER
-
-
-
-

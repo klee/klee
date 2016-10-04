@@ -261,6 +261,10 @@ void ExprSMTLIBPrinter::printFullExpression(
     printAShrExpr(cast<AShrExpr>(e));
     return;
 
+  case Expr::Exists:
+    printExistsExpr(cast<ExistsExpr>(e));
+    return;
+
   default:
     /* The remaining operators (Add,Sub...,Ult,Ule,..)
      * Expect SORT_BITVECTOR arguments
@@ -404,6 +408,34 @@ void ExprSMTLIBPrinter::printAShrExpr(const ref<AShrExpr> &e) {
   *p << ")";
 }
 
+void ExprSMTLIBPrinter::printExistsExpr(const ref<ExistsExpr> &e) {
+  *p << "(exists";
+  p->pushIndent();
+  printSeperator();
+  *p << "(";
+  for (std::set<const Array *>::iterator it = e->variables.begin(),
+                                         itEnd = e->variables.end();
+       it != itEnd; ++it) {
+    *p << (*it)->name;
+    printSeperator();
+    if ((*it)->size > 1) {
+      *p << "(array";
+      printSeperator();
+      *p << "(_ BitVec " << (*it)->domain << ")";
+      printSeperator();
+      *p << "(_ BitVec " << (*it)->range << ")";
+      *p << ")";
+    } else {
+      *p << "(_ BitVec " << (*it)->range << ")";
+    }
+  }
+  *p << ")";
+  printSeperator();
+  printExpression(e->getKid(0), SORT_BOOL);
+  p->popIndent();
+  *p << ")";
+}
+
 const char *ExprSMTLIBPrinter::getSMTLIBKeyword(const ref<Expr> &e) {
 
   switch (e->getKind()) {
@@ -532,7 +564,6 @@ void ExprSMTLIBPrinter::generateOutput() {
     printHumanReadableQuery();
   else
     printMachineReadableQuery();
-
   printAction();
   printExit();
 }

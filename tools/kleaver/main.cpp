@@ -197,6 +197,7 @@ static bool PrintInputAST(const char *Filename,
 static bool EvaluateInputAST(const char *Filename,
                              const MemoryBuffer *MB,
                              ExprBuilder *Builder) {
+	llvm::outs() << "EvaluateInputAST\n";
   std::vector<Decl*> Decls;
   Parser *P = Parser::Create(Filename, MB, Builder, ClearArrayAfterQuery);
   P->SetMaxErrors(20);
@@ -334,47 +335,44 @@ static bool printInputAsSMTLIBv2(const char *Filename,
 	std::vector<Decl*> Decls;
         Parser *P = Parser::Create(Filename, MB, Builder, ClearArrayAfterQuery);
         P->SetMaxErrors(20);
-	while (Decl *D = P->ParseTopLevelDecl())
-	{
-		Decls.push_back(D);
-	}
+        while (Decl *D = P->ParseTopLevelDecl()) {
+          Decls.push_back(D);
+        }
 
-	bool success = true;
-	if (unsigned N = P->GetNumErrors())
-	{
-		llvm::errs() << Filename << ": parse failure: "
-				   << N << " errors.\n";
-		success = false;
-	}
+        bool success = true;
+        if (unsigned N = P->GetNumErrors()) {
+          llvm::errs() << Filename << ": parse failure: " << N << " errors.\n";
+          success = false;
+        }
 
-	if (!success)
-	return false;
+        if (!success)
+          return false;
 
-	ExprSMTLIBPrinter printer;
-	printer.setOutput(llvm::outs());
+        ExprSMTLIBPrinter printer;
+        printer.setOutput(llvm::outs());
 
-	unsigned int queryNumber = 0;
-	//Loop over the declarations
-	for (std::vector<Decl*>::iterator it = Decls.begin(), ie = Decls.end(); it != ie; ++it)
-	{
-		Decl *D = *it;
-		if (QueryCommand *QC = dyn_cast<QueryCommand>(D))
-		{
-			//print line break to separate from previous query
-			if(queryNumber!=0) 	llvm::outs() << "\n";
+        unsigned int queryNumber = 0;
+        // Loop over the declarations
+        for (std::vector<Decl *>::iterator it = Decls.begin(), ie = Decls.end();
+             it != ie; ++it) {
+          Decl *D = *it;
+          if (QueryCommand *QC = dyn_cast<QueryCommand>(D)) {
+            // print line break to separate from previous query
+            if (queryNumber != 0)
+              llvm::outs() << "\n";
 
-			//Output header for this query as a SMT-LIBv2 comment
-			llvm::outs() << ";SMTLIBv2 Query " << queryNumber << "\n";
+            // Output header for this query as a SMT-LIBv2 comment
+            llvm::outs() << ";SMTLIBv2 Query " << queryNumber << "\n";
 
-			/* Can't pass ConstraintManager constructor directly
-			 * as argument to Query object. Like...
-			 * query(ConstraintManager(QC->Constraints),QC->Query);
-			 *
-			 * For some reason if constructed this way the first
-			 * constraint in the constraint set is set to NULL and
-			 * will later cause a NULL pointer dereference.
-			 */
-			ConstraintManager constraintM(QC->Constraints);
+            /* Can't pass ConstraintManager constructor directly
+             * as argument to Query object. Like...
+             * query(ConstraintManager(QC->Constraints),QC->Query);
+             *
+             * For some reason if constructed this way the first
+             * constraint in the constraint set is set to NULL and
+             * will later cause a NULL pointer dereference.
+             */
+                        ConstraintManager constraintM(QC->Constraints);
 			Query query(constraintM,QC->Query);
 			printer.setQuery(query);
 
@@ -448,6 +446,7 @@ int main(int argc, char **argv) {
                             Builder);
     break;
   case Evaluate:
+	  llvm::outs() << "EVALUATEINPUTAST\n";
     success = EvaluateInputAST(InputFile=="-" ? "<stdin>" : InputFile.c_str(),
                                MB.get(), Builder);
     break;

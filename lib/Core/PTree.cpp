@@ -88,6 +88,33 @@ void PTree::dump(llvm::raw_ostream &os) {
   delete pp;
 }
 
+void PTree::dump() {
+  this->print(llvm::errs());
+}
+
+void PTree::printNode(llvm::raw_ostream& stream, PTreeNode *n, std::string edges) {
+  if (n->left != 0) {
+      stream << edges << "+-- L:" << n->left << "\n";
+      if (n->right != 0) {
+	  printNode(stream, n->left, edges + "|   ");
+      } else {
+	  printNode(stream, n->left, edges + "    ");
+      }
+  }
+  if (n->right != 0) {
+      stream << edges << "+-- R:" << n->right << "\n";
+      printNode(stream, n->right, edges + "    ");
+  }
+}
+
+void PTree::print(llvm::raw_ostream& stream) {
+  llvm::errs() << "------------------------- PTree Structure ---------------------------\n";
+  stream << this->root;
+  stream << "\n";
+  this->printNode(stream, this->root, "");
+}
+
+
 PTreeNode::PTreeNode(PTreeNode *_parent, 
                      ExecutionState *_data) 
   : parent(_parent),

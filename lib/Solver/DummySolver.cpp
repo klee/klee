@@ -25,6 +25,9 @@ public:
                             std::vector<std::vector<unsigned char> > &values,
                             bool &hasSolution);
   SolverRunStatus getOperationStatusCode();
+  std::vector<ref<Expr> > getUnsatCore();
+  void enableConstraintsCaching() {}
+  void disableConstraintsCaching() {}
 };
 
 DummySolverImpl::DummySolverImpl() {}
@@ -57,6 +60,12 @@ bool DummySolverImpl::computeInitialValues(
 
 SolverImpl::SolverRunStatus DummySolverImpl::getOperationStatusCode() {
   return SOLVER_RUN_STATUS_FAILURE;
+}
+
+std::vector<ref<Expr> > DummySolverImpl::getUnsatCore() {
+  // By default, we return an empty core
+  std::vector<ref<Expr> > localUnsatCore;
+  return localUnsatCore;
 }
 
 Solver *createDummySolver() { return new Solver(new DummySolverImpl()); }

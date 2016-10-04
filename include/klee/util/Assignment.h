@@ -64,6 +64,30 @@ namespace klee {
     AssignmentEvaluator(const Assignment &_a) : a(_a) {}    
   };
 
+  class AssignmentCacheWrapper {
+    Assignment *a;
+    std::vector< ref<Expr> > unsatCore;
+
+  public:
+    AssignmentCacheWrapper(Assignment *_a) : a(_a) {}
+
+    AssignmentCacheWrapper(std::vector< ref<Expr> > _unsatCore) :
+      a(0), unsatCore(_unsatCore) {}
+
+    ~AssignmentCacheWrapper() {
+      delete a;
+      unsatCore.clear();
+    }
+
+    Assignment *getAssignment() const {
+      return a;
+    }
+
+    std::vector< ref<Expr> > getCore() const {
+      return unsatCore;
+    }
+  };
+
   /***/
 
   inline ref<Expr> Assignment::evaluate(const Array *array, 

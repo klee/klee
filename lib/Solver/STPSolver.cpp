@@ -81,6 +81,9 @@ public:
                             std::vector<std::vector<unsigned char> > &values,
                             bool &hasSolution);
   SolverRunStatus getOperationStatusCode();
+  std::vector<ref<Expr> > getUnsatCore();
+  void enableConstraintsCaching() {}
+  void disableConstraintsCaching() {}
 };
 
 STPSolverImpl::STPSolverImpl(bool _useForkedSTP, bool _optimizeDivides)
@@ -372,6 +375,12 @@ bool STPSolverImpl::computeInitialValues(
 
 SolverImpl::SolverRunStatus STPSolverImpl::getOperationStatusCode() {
   return runStatusCode;
+}
+
+std::vector<ref<Expr> > STPSolverImpl::getUnsatCore() {
+  // By default, we return an empty core
+  std::vector<ref<Expr> > localUnsatCore;
+  return localUnsatCore;
 }
 
 STPSolver::STPSolver(bool useForkedSTP, bool optimizeDivides)

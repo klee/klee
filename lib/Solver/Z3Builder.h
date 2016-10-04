@@ -13,6 +13,8 @@
 #include "klee/util/ExprHashMap.h"
 #include "klee/util/ArrayExprHash.h"
 #include "klee/Config/config.h"
+
+#include <vector>
 #include <z3.h>
 
 namespace klee {
@@ -100,12 +102,41 @@ class Z3ArrayExprHash : public ArrayExprHash<Z3ASTHandle> {
   friend class Z3Builder;
 
 public:
-  Z3ArrayExprHash(){};
+  Z3ArrayExprHash() {};
   virtual ~Z3ArrayExprHash();
   void clear();
 };
 
 class Z3Builder {
+
+  struct QuantificationContext {
+
+    std::map<std::string, Z3ASTHandle> existentials;
+    std::vector<Z3_sort> sorts;
+    std::vector<Z3_symbol> symbols;
+    Z3_context ctx;
+
+    QuantificationContext *parent;
+
+    Z3ASTHandle getBoundVarQuick(std::string name);
+
+    QuantificationContext(Z3Builder *builder, Z3_context _ctx,
+                          std::set<const Array *> _existentials,
+                          QuantificationContext *_parent);
+
+    ~QuantificationContext();
+
+    unsigned size() { return symbols.size(); }
+
+    Z3_symbol *getSymbols() { return &symbols[0]; }
+
+    Z3_sort *getSorts() { return &sorts[0]; }
+
+    Z3ASTHandle getBoundVar(std::string name);
+
+    QuantificationContext *getParent() { return parent; }
+  };
+
   ExprHashMap<std::pair<Z3ASTHandle, unsigned> > constructed;
   Z3ArrayExprHash _arr_hash;
 
@@ -156,6 +187,8 @@ private:
   Z3ASTHandle sbvLtExpr(Z3ASTHandle lhs, Z3ASTHandle rhs);
   Z3ASTHandle sbvLeExpr(Z3ASTHandle lhs, Z3ASTHandle rhs);
 
+  Z3ASTHandle existsExpr(Z3ASTHandle body);
+
   Z3ASTHandle constructAShrByConstant(Z3ASTHandle expr, unsigned shift,
                                       Z3ASTHandle isSigned);
 
@@ -171,6 +204,23 @@ private:
   Z3SortHandle getBvSort(unsigned width);
   Z3SortHandle getArraySort(Z3SortHandle domainSort, Z3SortHandle rangeSort);
   bool autoClearConstructCache;
+
+  // Handling of quantification contexts
+  QuantificationContext *quantificationContext;
+
+  void pushQuantificationContext(std::set<const Array *> existentials);
+
+  void popQuantificationContext();
+
+  unsigned getQuantificationSize() { return quantificationContext->size(); }
+
+  Z3_symbol *getQuantificationSymbols() {
+    return quantificationContext->getSymbols();
+  }
+
+  Z3_sort *getQuantificationSorts() {
+    return quantificationContext->getSorts();
+  }
 
 public:
   Z3_context ctx;

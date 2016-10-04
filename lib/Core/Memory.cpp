@@ -10,6 +10,7 @@
 #include "Memory.h"
 
 #include "Context.h"
+#include "klee/CommandLine.h"
 #include "klee/Expr.h"
 #include "klee/Solver.h"
 #include "klee/util/BitArray.h"
@@ -112,9 +113,18 @@ ObjectState::ObjectState(const MemoryObject *mo)
   mo->refCount++;
   if (!UseConstantArrays) {
     static unsigned id = 0;
+    const std::string arrayName = "tmp_arr" + llvm::utostr(++id);
+    const unsigned arrayWidth = size;
     const Array *array =
-        getArrayCache()->CreateArray("tmp_arr" + llvm::utostr(++id), size);
+        getArrayCache()->CreateArray(arrayName, arrayWidth);
     updates = UpdateList(array, 0);
+
+    if (INTERPOLATION_ENABLED) {
+      // We create shadow array as existentially-quantified
+      // variables for subsumption checking
+      const Array *shadow = getArrayCache()->CreateArray(ShadowArray::getShadowName(arrayName), arrayWidth);
+      ShadowArray::addShadowArrayMap(array, shadow);
+    }
   }
   memset(concreteStore, 0, size);
 }
@@ -222,14 +232,23 @@ const UpdateList &ObjectState::getUpdates() const {
     }
 
     static unsigned id = 0;
+    const std::string arrayName = "const_arr" + llvm::utostr(++id);
+    const unsigned arrayWidth = size;
     const Array *array = getArrayCache()->CreateArray(
-        "const_arr" + llvm::utostr(++id), size, &Contents[0],
+        arrayName, arrayWidth, &Contents[0],
         &Contents[0] + Contents.size());
     updates = UpdateList(array, 0);
 
     // Apply the remaining (non-constant) writes.
     for (; Begin != End; ++Begin)
       updates.extend(Writes[Begin].first, Writes[Begin].second);
+
+    if (INTERPOLATION_ENABLED) {
+      // We create shadow array as existentially-quantified
+      // variables for subsumption checking
+      const Array *shadow = getArrayCache()->CreateArray(ShadowArray::getShadowName(arrayName), arrayWidth);
+      ShadowArray::addShadowArrayMap(array, shadow);
+    }
   }
 
   return updates;

@@ -106,7 +106,7 @@ Z3ASTHandle Z3Builder::bvOne(unsigned width) { return bvZExtConst(width, 1); }
 Z3ASTHandle Z3Builder::bvZero(unsigned width) { return bvZExtConst(width, 0); }
 
 Z3ASTHandle Z3Builder::bvMinusOne(unsigned width) {
-  return bvSExtConst(width, (int64_t)-1);
+  return bvSExtConst(width, (int64_t) - 1);
 }
 
 Z3ASTHandle Z3Builder::bvConst32(unsigned width, uint32_t value) {
@@ -260,7 +260,7 @@ Z3ASTHandle Z3Builder::bvNotExpr(Z3ASTHandle expr) {
 }
 
 Z3ASTHandle Z3Builder::andExpr(Z3ASTHandle lhs, Z3ASTHandle rhs) {
-  ::Z3_ast args[2] = {lhs, rhs};
+  ::Z3_ast args[2] = { lhs, rhs };
   return Z3ASTHandle(Z3_mk_and(ctx, 2, args), ctx);
 }
 
@@ -269,7 +269,7 @@ Z3ASTHandle Z3Builder::bvAndExpr(Z3ASTHandle lhs, Z3ASTHandle rhs) {
 }
 
 Z3ASTHandle Z3Builder::orExpr(Z3ASTHandle lhs, Z3ASTHandle rhs) {
-  ::Z3_ast args[2] = {lhs, rhs};
+  ::Z3_ast args[2] = { lhs, rhs };
   return Z3ASTHandle(Z3_mk_or(ctx, 2, args), ctx);
 }
 
@@ -282,7 +282,8 @@ Z3ASTHandle Z3Builder::iffExpr(Z3ASTHandle lhs, Z3ASTHandle rhs) {
   Z3SortHandle rhsSort = Z3SortHandle(Z3_get_sort(ctx, rhs), ctx);
   assert(Z3_get_sort_kind(ctx, lhsSort) == Z3_get_sort_kind(ctx, rhsSort) &&
          "lhs and rhs sorts must match");
-  assert(Z3_get_sort_kind(ctx, lhsSort) == Z3_BOOL_SORT && "args must have BOOL sort");
+  assert(Z3_get_sort_kind(ctx, lhsSort) == Z3_BOOL_SORT &&
+         "args must have BOOL sort");
   return Z3ASTHandle(Z3_mk_iff(ctx, lhs, rhs), ctx);
 }
 
@@ -332,6 +333,13 @@ Z3ASTHandle Z3Builder::sbvLeExpr(Z3ASTHandle lhs, Z3ASTHandle rhs) {
   return Z3ASTHandle(Z3_mk_bvsle(ctx, lhs, rhs), ctx);
 }
 
+Z3ASTHandle Z3Builder::existsExpr(Z3ASTHandle body) {
+  return Z3ASTHandle(Z3_mk_exists(ctx, 0, 0, 0, getQuantificationSize(),
+                                  getQuantificationSorts(),
+                                  getQuantificationSymbols(), body),
+                     ctx);
+}
+
 Z3ASTHandle Z3Builder::constructAShrByConstant(Z3ASTHandle expr, unsigned shift,
                                                Z3ASTHandle isSigned) {
   unsigned width = getBVLength(expr);
@@ -357,6 +365,19 @@ Z3ASTHandle Z3Builder::getInitialArray(const Array *root) {
   bool hashed = _arr_hash.lookupArrayExpr(root, array_expr);
 
   if (!hashed) {
+    // In case this array is bound
+    if (!(root->name.find("__shadow__")) && quantificationContext) {
+      QuantificationContext *qc = quantificationContext;
+
+      while (qc) {
+        std::map<std::string, Z3ASTHandle>::iterator it =
+            qc->existentials.find(root->name);
+        if (it != qc->existentials.end())
+          return it->second;
+        qc = qc->parent;
+      }
+    }
+
     // Unique arrays by name, so we make sure the name is unique by
     // using the size of the array hash as a counter.
     std::string unique_id = llvm::itostr(_arr_hash._array_hash.size());
@@ -366,8 +387,8 @@ Z3ASTHandle Z3Builder::getInitialArray(const Array *root) {
                                : root->name.length();
     std::string unique_name = root->name.substr(0, space) + unique_id;
 
-    array_expr = buildArray(unique_name.c_str(), root->getDomain(),
-                            root->getRange());
+    array_expr =
+        buildArray(unique_name.c_str(), root->getDomain(), root->getRange());
 
     if (root->isConstantArray()) {
       // FIXME: Flush the concrete values into Z3. Ideally we would do this
@@ -811,9 +832,55 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
   case Expr::Sge:
 #endif
 
+  case Expr::Exists: {
+    ExistsExpr *xe = cast<ExistsExpr>(e);
+    pushQuantificationContext(xe->variables);
+    Z3_ast ret = existsExpr(construct(xe->body, width_out));
+    popQuantificationContext();
+    *width_out = 1;
+    return Z3ASTHandle(ret, ctx);
+  }
+
   default:
     assert(0 && "unhandled Expr type");
     return getTrue();
   }
+}
+
+/***/
+
+Z3Builder::QuantificationContext::QuantificationContext(
+    Z3Builder *builder, Z3_context _ctx, std::set<const Array *> _existentials,
+    QuantificationContext *_parent)
+    : ctx(_ctx), parent(_parent) {
+  unsigned index = _existentials.size();
+  for (std::set<const Array *>::iterator it = _existentials.begin(),
+                                         itEnd = _existentials.end();
+       it != itEnd; ++it) {
+    --index;
+    existentials[(*it)->name] =
+        builder->buildArray((*it)->name.c_str(), (*it)->domain, (*it)->range);
+    sorts.push_back(Z3_mk_array_sort(_ctx, Z3_mk_bv_sort(_ctx, (*it)->domain),
+                                     Z3_mk_bv_sort(_ctx, (*it)->range)));
+    symbols.push_back(Z3_mk_string_symbol(_ctx, (*it)->name.c_str()));
+  }
+}
+
+Z3Builder::QuantificationContext::~QuantificationContext() {
+  existentials.clear();
+  sorts.clear();
+  symbols.clear();
+}
+
+void
+Z3Builder::pushQuantificationContext(std::set<const Array *> existentials) {
+  quantificationContext =
+      new QuantificationContext(this, ctx, existentials, quantificationContext);
+}
+
+void Z3Builder::popQuantificationContext() {
+  QuantificationContext *tmp = quantificationContext;
+  quantificationContext = tmp->getParent();
+  delete tmp;
 }
 #endif // ENABLE_Z3

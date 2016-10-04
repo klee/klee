@@ -46,7 +46,7 @@ QueryLoggingSolver::QueryLoggingSolver(Solver *_solver, std::string path,
     os = new llvm::raw_fd_ostream(path.c_str(), ErrorInfo,
                                   llvm::sys::fs::OpenFlags::F_Text);
 #else
-    os = new llvm::raw_fd_ostream(path.c_str(), ErrorInfo);
+  os = new llvm::raw_fd_ostream(path.c_str(), ErrorInfo);
 #endif
 #ifdef HAVE_ZLIB_H
   } else {

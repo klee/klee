@@ -201,31 +201,52 @@ namespace klee {
     
     virtual char *getConstraintLog(const Query& query);
     virtual void setCoreSolverTimeout(double timeout);
+
+    /// getUnsatCore - get the unsatisfiability core. Beware that the unsat core
+    /// is only available with certain solvers, e.g., Z3, and even so, may not
+    /// be always available in unsatisfiability cases when wrapped in e.g.,
+    /// IncompleteSolver (which may replace the core Z3 solver).
+    ///
+    /// \return Vector of ref<Expr>
+    virtual std::vector< ref<Expr> > getUnsatCore();
+
+    /// enableConstraintsCaching - when solving a query defined using a Query
+    /// object, cache the constraints list within the core solver. This is for
+    /// submission of queries with multiple consequents. This API enables the
+    /// feature for the series of queries to be submitted to the solver.
+    virtual void enableConstraintsCaching();
+
+    /// disableConstraintsCaching - when solving a query defined using a Query
+    /// object, cache the constraints list within the core solver. This is for
+    /// submission of queries with multiple consequents. This API disables this
+    /// feature.
+    virtual void disableConstraintsCaching();
   };
 
-#ifdef ENABLE_STP
+  #ifdef ENABLE_STP
   /// STPSolver - A complete solver based on STP.
   class STPSolver : public Solver {
   public:
-    /// STPSolver - Construct a new STPSolver.
-    ///
-    /// \param useForkedSTP - Whether STP should be run in a separate process
-    /// (required for using timeouts).
-    /// \param optimizeDivides - Whether constant division operations should
-    /// be optimized into add/shift/multiply operations.
-    STPSolver(bool useForkedSTP, bool optimizeDivides = true);
+	/// STPSolver - Construct a new STPSolver.
+	///
+	/// \param useForkedSTP - Whether STP should be run in a separate process
+	/// (required for using timeouts).
+	/// \param optimizeDivides - Whether constant division operations should
+	/// be optimized into add/shift/multiply operations.
+	STPSolver(bool useForkedSTP, bool optimizeDivides = true);
 
-    /// getConstraintLog - Return the constraint log for the given state in CVC
-    /// format.
-    virtual char *getConstraintLog(const Query&);
+	/// getConstraintLog - Return the constraint log for the given state in CVC
+	/// format.
+	virtual char *getConstraintLog(const Query&);
 
-    /// setCoreSolverTimeout - Set constraint solver timeout delay to the given value; 0
-    /// is off.
-    virtual void setCoreSolverTimeout(double timeout);
+        /// setCoreSolverTimeout - Set constraint solver timeout delay to the
+        /// given value; 0
+        /// is off.
+        virtual void setCoreSolverTimeout(double timeout);
   };
-#endif // ENABLE_STP
+  #endif // ENABLE_STP
 
-#ifdef ENABLE_Z3
+  #ifdef ENABLE_Z3
   /// Z3Solver - A solver complete solver based on Z3
   class Z3Solver : public Solver {
   public:
@@ -240,11 +261,15 @@ namespace klee {
     /// value; 0
     /// is off.
     virtual void setCoreSolverTimeout(double timeout);
-  };
-#endif // ENABLE_Z3
 
-#ifdef ENABLE_METASMT
-  
+    /// directComputeValidity - Compute validity directly without other
+    /// layers of solving
+    bool directComputeValidity(const Query &query, Solver::Validity &result);
+  };
+  #endif // ENABLE_Z3
+
+  #ifdef ENABLE_METASMT
+
   template<typename SolverContext>
   class MetaSMTSolver : public Solver {
   public:

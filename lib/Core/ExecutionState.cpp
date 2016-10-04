@@ -14,8 +14,10 @@
 #include "klee/Internal/Module/KInstruction.h"
 #include "klee/Internal/Module/KModule.h"
 
+#include "klee/CommandLine.h"
 #include "klee/Expr.h"
 
+#include "ITree.h"
 #include "Memory.h"
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
 #include "llvm/IR/Function.h"
@@ -66,23 +68,22 @@ StackFrame::~StackFrame() {
 
 /***/
 
-ExecutionState::ExecutionState(KFunction *kf) :
-    pc(kf->instructions),
-    prevPC(pc),
-
-    queryCost(0.), 
-    weight(1),
-    depth(0),
-
-    instsSinceCovNew(0),
-    coveredNew(false),
-    forkDisabled(false),
-    ptreeNode(0) {
+ExecutionState::ExecutionState(KFunction *kf)
+    : pc(kf->instructions), prevPC(pc), queryCost(0.), weight(1), depth(0),
+      instsSinceCovNew(0), coveredNew(false), forkDisabled(false), ptreeNode(0),
+      itreeNode(0) {
   pushFrame(0, kf);
 }
 
+#ifdef ENABLE_Z3
+ExecutionState::ExecutionState(const KInstIterator &srcPrevPC,
+                               const std::vector<ref<Expr> > &assumptions)
+    : prevPC(srcPrevPC), constraints(assumptions), queryCost(0.), ptreeNode(0),
+      itreeNode(0) {}
+#else
 ExecutionState::ExecutionState(const std::vector<ref<Expr> > &assumptions)
-    : constraints(assumptions), queryCost(0.), ptreeNode(0) {}
+    : constraints(assumptions), queryCost(0.), ptreeNode(0), itreeNode(0) {}
+#endif
 
 ExecutionState::~ExecutionState() {
   for (unsigned int i=0; i<symbolics.size(); i++)
@@ -94,7 +95,8 @@ ExecutionState::~ExecutionState() {
       delete mo;
   }
 
-  while (!stack.empty()) popFrame();
+  while (!stack.empty())
+    popFrame(0, ConstantExpr::alloc(0, Expr::Bool));
 }
 
 ExecutionState::ExecutionState(const ExecutionState& state):
@@ -119,11 +121,27 @@ ExecutionState::ExecutionState(const ExecutionState& state):
     forkDisabled(state.forkDisabled),
     coveredLines(state.coveredLines),
     ptreeNode(state.ptreeNode),
+    itreeNode(state.itreeNode),
     symbolics(state.symbolics),
     arrayNames(state.arrayNames)
 {
   for (unsigned int i=0; i<symbolics.size(); i++)
     symbolics[i].first->refCount++;
+}
+
+void ExecutionState::addITreeConstraint(ref<Expr> e, llvm::Instruction *instr) {
+  if (!INTERPOLATION_ENABLED)
+    return;
+
+  llvm::BranchInst *binstr = llvm::dyn_cast<llvm::BranchInst>(instr);
+
+  if (itreeNode && binstr && binstr->isConditional()) {
+    itreeNode->addConstraint(e, binstr->getCondition());
+  }
+  else if(itreeNode && !binstr){
+	itreeNode->addConstraint(e, instr->getOperand(0));
+  }
+
 }
 
 ExecutionState *ExecutionState::branch() {
@@ -143,12 +161,17 @@ void ExecutionState::pushFrame(KInstIterator caller, KFunction *kf) {
   stack.push_back(StackFrame(caller,kf));
 }
 
-void ExecutionState::popFrame() {
+void ExecutionState::popFrame(KInstruction *ki, ref<Expr> returnValue) {
   StackFrame &sf = stack.back();
+  llvm::CallInst *site =
+      (sf.caller ? llvm::dyn_cast<CallInst>(sf.caller->inst) : 0);
   for (std::vector<const MemoryObject*>::iterator it = sf.allocas.begin(), 
          ie = sf.allocas.end(); it != ie; ++it)
     addressSpace.unbindObject(*it);
   stack.pop_back();
+
+  if (INTERPOLATION_ENABLED && site && ki)
+    itreeNode->bindReturnValue(site, ki->inst, returnValue);
 }
 
 void ExecutionState::addSymbolic(const MemoryObject *mo, const Array *array) { 

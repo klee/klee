@@ -220,6 +220,14 @@ std::pair< ref<Expr>, ref<Expr> > Solver::getRange(const Query& query) {
                         ConstantExpr::create(max, width));
 }
 
+std::vector< ref<Expr> > Solver::getUnsatCore() {
+  return impl->getUnsatCore();
+}
+
+void Solver::enableConstraintsCaching() { impl->enableConstraintsCaching(); }
+
+void Solver::disableConstraintsCaching() { impl->disableConstraintsCaching(); }
+
 void Query::dump() const {
   llvm::errs() << "Constraints [\n";
   for (ConstraintManager::const_iterator i = constraints.begin();

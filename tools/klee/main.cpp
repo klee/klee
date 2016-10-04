@@ -9,6 +9,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "klee/CommandLine.h"
 #include "klee/ExecutionState.h"
 #include "klee/Expr.h"
 #include "klee/Interpreter.h"
@@ -180,14 +181,14 @@ namespace {
                               "the bytes, not necessarily making them concrete."));
 
   cl::list<std::string>
-      ReplayKTestFile("replay-ktest-file",
-                      cl::desc("Specify a ktest file to use for replay"),
-                      cl::value_desc("ktest file"));
+  ReplayKTestFile("replay-ktest-file",
+                  cl::desc("Specify a ktest file to use for replay"),
+                  cl::value_desc("ktest file"));
 
   cl::list<std::string>
-      ReplayKTestDir("replay-ktest-dir",
-                   cl::desc("Specify a directory to replay ktest files from"),
-                   cl::value_desc("output directory"));
+  ReplayKTestDir("replay-ktest-dir",
+                 cl::desc("Specify a directory to replay ktest files from"),
+                 cl::value_desc("output directory"));
 
   cl::opt<std::string>
   ReplayPathFile("replay-path",
@@ -202,8 +203,8 @@ namespace {
 
   cl::list<std::string>
   LinkLibraries("link-llvm-lib",
-		cl::desc("Link the given libraries before execution"),
-		cl::value_desc("library file"));
+                cl::desc("Link the given libraries before execution"),
+                cl::value_desc("library file"));
 
   cl::opt<unsigned>
   MakeConcreteSymbolic("make-concrete-symbolic",
@@ -238,6 +239,37 @@ private:
   unsigned m_testIndex;  // number of tests written so far
   unsigned m_pathsExplored; // number of paths explored so far
 
+  unsigned m_totalBranchingDepthOnExitTermination; // total depth paths explored so far
+                                            // on exit
+  unsigned m_totalInstructionsDepthOnExitTermination; // total instructions explored so far on
+                                      // exit
+  unsigned m_totalBranchingDepthOnEarlyTermination; // total depth paths explored so
+                                             // far on early
+  unsigned m_totalInstructionsDepthOnEarlyTermination; // total instructions explored so far on
+                                       // early
+  unsigned m_totalBranchingDepthOnErrorTermination; // total depth paths explored so
+                                             // far on error
+  unsigned m_totalInstructionsDepthOnErrorTermination; // total instructions explored so far on
+                                       // error
+  unsigned m_totalBranchingDepthOnSubsumption; // total depth explored so
+                                                   // far on subsumption
+  unsigned m_totalInstructionsDepthOnSubsumption; // total instruction explored so
+                                             // far on subsumption
+
+  unsigned m_subsumptionTermination;     // number of termination by subsumption
+  unsigned m_subsumptionTerminationTest; // number of tests generated from
+                                         // termination by subsumption
+  unsigned m_earlyTermination;     // number of early termination
+  unsigned m_earlyTerminationTest; // number of tests generated from early termination
+  unsigned m_errorTermination;     // number of error termination
+  unsigned m_errorTerminationTest; // number of tests generated from error termination
+  unsigned m_exitTermination;      // number of exit termination
+  unsigned m_exitTerminationTest;  // number of tests generated from exit termination
+  unsigned m_otherTermination;     // number of other termination (strategy, state merging,
+                                   // not in seed, etc.
+
+  std::string m_subsumptionStats; // subsumption statistics result
+
   // used for writing .ktest files
   int m_argc;
   char **m_argv;
@@ -250,6 +282,97 @@ public:
   unsigned getNumTestCases() { return m_testIndex; }
   unsigned getNumPathsExplored() { return m_pathsExplored; }
   void incPathsExplored() { m_pathsExplored++; }
+
+  void incBranchingDepthOnExitTermination(unsigned branchingDepth) {
+    m_totalBranchingDepthOnExitTermination += branchingDepth;
+  }
+
+  void incTotalInstructionsOnExit(unsigned instructionsDepth) {
+    m_totalInstructionsDepthOnExitTermination += instructionsDepth;
+  }
+  unsigned getTotalBranchingDepthOnExitTermination() {
+    return m_totalBranchingDepthOnExitTermination;
+  }
+  unsigned getTotalInstructionsDepthOnExitTermination() {
+    return m_totalInstructionsDepthOnExitTermination;
+  }
+  void incBranchingDepthOnEarlyTermination(unsigned branchingDepth) {
+    m_totalBranchingDepthOnEarlyTermination += branchingDepth;
+  }
+
+  void incInstructionsDepthOnEarlyTermination(unsigned instructionsDepth) {
+    m_totalInstructionsDepthOnEarlyTermination += instructionsDepth;
+  }
+  unsigned getTotalBranchingDepthOnEarlyTermination() {
+    return m_totalBranchingDepthOnEarlyTermination;
+  }
+  unsigned getTotalInstructionsDepthOnEarlyTermination() {
+    return m_totalInstructionsDepthOnEarlyTermination;
+  }
+  void incBranchingDepthOnErrorTermination(unsigned branchingDepth) {
+    m_totalBranchingDepthOnErrorTermination += branchingDepth;
+  }
+
+  void incInstructionsDepthOnErrorTermination(unsigned instructionsDepth) {
+    m_totalInstructionsDepthOnErrorTermination += instructionsDepth;
+  }
+  unsigned getTotalBranchingDepthOnErrorTermination() {
+    return m_totalBranchingDepthOnErrorTermination;
+  }
+  unsigned getTotalInstructionsDepthOnErrorTermination() {
+    return m_totalInstructionsDepthOnErrorTermination;
+  }
+  unsigned getTotalInstructionPathsExploredOnSubsumption() {
+    return m_totalInstructionsDepthOnSubsumption;
+  }
+  void incInstructionsDepthOnSubsumption(unsigned branchingDepth) {
+    m_totalBranchingDepthOnSubsumption += branchingDepth;
+  }
+
+  void incTotalInstructionsOnSubsumption(unsigned instructionsDepth) {
+    m_totalInstructionsDepthOnSubsumption += instructionsDepth;
+  }
+  unsigned getTotalBranchingDepthOnSubsumption() {
+    return m_totalBranchingDepthOnSubsumption;
+  }
+  unsigned getSubsumptionTermination() { return m_subsumptionTermination; }
+  void incSubsumptionTermination() { m_subsumptionTermination++; }
+  unsigned getSubsumptionTerminationTest() { return m_subsumptionTerminationTest; }
+  void incSubsumptionTerminationTest() {
+    if (!NoOutput) {
+      m_subsumptionTerminationTest++;
+    }
+  }
+  unsigned getEarlyTermination() { return m_earlyTermination; }
+  void incEarlyTermination() { m_earlyTermination++; }
+  unsigned getEarlyTerminationTest() { return m_earlyTerminationTest; }
+  void incEarlyTerminationTest() {
+    if (!NoOutput) {
+      m_earlyTerminationTest++;
+    }
+  }
+  unsigned getErrorTermination() { return m_errorTermination; }
+  void incErrorTermination() { m_errorTermination++; }
+  unsigned getErrorTerminationTest() { return m_errorTerminationTest; }
+  void incErrorTerminationTest() {
+    if (!NoOutput) {
+      m_errorTerminationTest++;
+    }
+  }
+  unsigned getExitTermination() { return m_exitTermination; }
+  void incExitTermination() { m_exitTermination++; }
+  unsigned getExitTerminationTest() { return m_exitTerminationTest; }
+  void incExitTerminationTest() {
+    if (!NoOutput) {
+      m_exitTerminationTest++;
+    }
+  }
+
+  void assignSubsumptionStats(std::string currentStats) {
+    m_subsumptionStats = currentStats;
+  }
+
+  std::string getSubsumptionStats() { return m_subsumptionStats; }
 
   void setInterpreter(Interpreter *i);
 
@@ -273,15 +396,20 @@ public:
 };
 
 KleeHandler::KleeHandler(int argc, char **argv)
-  : m_interpreter(0),
-    m_pathWriter(0),
-    m_symPathWriter(0),
-    m_infoFile(0),
-    m_outputDirectory(),
-    m_testIndex(0),
-    m_pathsExplored(0),
-    m_argc(argc),
-    m_argv(argv) {
+    : m_interpreter(0), m_pathWriter(0), m_symPathWriter(0), m_infoFile(0),
+      m_outputDirectory(), m_testIndex(0), m_pathsExplored(0),
+      m_totalBranchingDepthOnExitTermination(0),
+      m_totalInstructionsDepthOnExitTermination(0),
+      m_totalBranchingDepthOnEarlyTermination(0),
+      m_totalInstructionsDepthOnEarlyTermination(0),
+      m_totalBranchingDepthOnErrorTermination(0),
+      m_totalInstructionsDepthOnErrorTermination(0),
+      m_totalBranchingDepthOnSubsumption(0),
+      m_totalInstructionsDepthOnSubsumption(0), m_subsumptionTermination(0),
+      m_subsumptionTerminationTest(0), m_earlyTermination(0),
+      m_earlyTerminationTest(0), m_errorTermination(0),
+      m_errorTerminationTest(0), m_exitTermination(0), m_exitTerminationTest(0),
+      m_otherTermination(0), m_argc(argc), m_argv(argv) {
 
   // create output directory (OutputDir or "klee-out-<i>")
   bool dir_given = OutputDir != "";
@@ -394,9 +522,9 @@ llvm::raw_fd_ostream *KleeHandler::openOutputFile(const std::string &filename) {
 #endif
   if (!Error.empty()) {
     klee_warning("error opening file \"%s\".  KLEE may have run out of file "
-               "descriptors: try to increase the maximum number of open file "
-               "descriptors by using ulimit (%s).",
-               filename.c_str(), Error.c_str());
+                 "descriptors: try to increase the maximum number of open file "
+                 "descriptors by using ulimit (%s).",
+                 filename.c_str(), Error.c_str());
     delete f;
     f = NULL;
   }
@@ -607,14 +735,13 @@ std::string KleeHandler::getRunTimeLibraryPath(const char *argv0) {
 
   SmallString<128> libDir;
 
-  if (strlen( KLEE_INSTALL_BIN_DIR ) != 0 &&
-      strlen( KLEE_INSTALL_RUNTIME_DIR ) != 0 &&
-      toolRoot.str().endswith( KLEE_INSTALL_BIN_DIR ))
-  {
+  if (strlen(KLEE_INSTALL_BIN_DIR) != 0 &&
+      strlen(KLEE_INSTALL_RUNTIME_DIR) != 0 &&
+      toolRoot.str().endswith(KLEE_INSTALL_BIN_DIR)) {
     KLEE_DEBUG_WITH_TYPE("klee_runtime", llvm::dbgs() <<
                          "Using installed KLEE library runtime: ");
-    libDir = toolRoot.str().substr(0, 
-               toolRoot.str().size() - strlen( KLEE_INSTALL_BIN_DIR ));
+    libDir = toolRoot.str().substr(0, toolRoot.str().size() -
+                                          strlen(KLEE_INSTALL_BIN_DIR));
     llvm::sys::path::append(libDir, KLEE_INSTALL_RUNTIME_DIR);
   }
   else
@@ -1325,8 +1452,8 @@ int main(int argc, char **argv, char **envp) {
   std::vector<std::string>::iterator libs_it;
   std::vector<std::string>::iterator libs_ie;
   for (libs_it = LinkLibraries.begin(), libs_ie = LinkLibraries.end();
-          libs_it != libs_ie; ++libs_it) {
-    const char * libFilename = libs_it->c_str();
+       libs_it != libs_ie; ++libs_it) {
+    const char *libFilename = libs_it->c_str();
     klee_message("Linking in library: %s.\n", libFilename);
     mainModule = klee::linkWithLibrary(mainModule, libFilename);
   }
@@ -1390,7 +1517,7 @@ int main(int argc, char **argv, char **envp) {
   handler->setInterpreter(interpreter);
 
   for (int i=0; i<argc; i++) {
-    handler->getInfoStream() << argv[i] << (i+1<argc ? " ":"\n");
+    handler->getInfoStream() << argv[i] << (i + 1 < argc ? " " : "\n");
   }
   handler->getInfoStream() << "PID: " << getpid() << "\n";
 
@@ -1414,13 +1541,13 @@ int main(int argc, char **argv, char **envp) {
     assert(SeedOutDir.empty());
 
     std::vector<std::string> kTestFiles = ReplayKTestFile;
-    for (std::vector<std::string>::iterator
-           it = ReplayKTestDir.begin(), ie = ReplayKTestDir.end();
+    for (std::vector<std::string>::iterator it = ReplayKTestDir.begin(),
+                                            ie = ReplayKTestDir.end();
          it != ie; ++it)
       KleeHandler::getKTestFilesInDir(*it, kTestFiles);
     std::vector<KTest*> kTests;
-    for (std::vector<std::string>::iterator
-           it = kTestFiles.begin(), ie = kTestFiles.end();
+    for (std::vector<std::string>::iterator it = kTestFiles.begin(),
+                                            ie = kTestFiles.end();
          it != ie; ++it) {
       KTest *out = kTest_fromFile(it->c_str());
       if (out) {
@@ -1472,8 +1599,8 @@ int main(int argc, char **argv, char **envp) {
          it != ie; ++it) {
       std::vector<std::string> kTestFiles;
       KleeHandler::getKTestFilesInDir(*it, kTestFiles);
-      for (std::vector<std::string>::iterator
-             it2 = kTestFiles.begin(), ie = kTestFiles.end();
+      for (std::vector<std::string>::iterator it2 = kTestFiles.begin(),
+                                              ie = kTestFiles.end();
            it2 != ie; ++it2) {
         KTest *out = kTest_fromFile(it2->c_str());
         if (!out) {
@@ -1551,13 +1678,73 @@ int main(int argc, char **argv, char **envp) {
     << "KLEE: done: query cex = " << queryCounterexamples << "\n";
 
   std::stringstream stats;
+  if (INTERPOLATION_ENABLED) {
+    stats << handler->getSubsumptionStats();
+  }
+
   stats << "\n";
   stats << "KLEE: done: total instructions = "
         << instructions << "\n";
   stats << "KLEE: done: completed paths = "
-        << handler->getNumPathsExplored() << "\n";
+        << handler->getNumPathsExplored() << ", among which\n";
+  stats << "KLEE: done:     early-terminating paths (instruction time limit, solver timeout, max-depth reached) = "
+        << handler->getEarlyTermination() << "\n";
+
+  if (INTERPOLATION_ENABLED) {
+    stats << "KLEE: done:     average branching depth of completed paths = "
+          << (double)(handler->getTotalBranchingDepthOnExitTermination() +
+                      handler->getTotalBranchingDepthOnEarlyTermination() +
+                      handler->getTotalBranchingDepthOnErrorTermination()) /
+                 (double)(handler->getExitTermination() +
+                          handler->getEarlyTermination() +
+                          handler->getErrorTermination()) << "\n";
+    if (handler->getSubsumptionTermination() == 0.0) {
+      stats << "KLEE: done:     average branching depth of subsumed paths = "
+            << 0 << "\n";
+    } else {
+      stats << "KLEE: done:     average branching depth of subsumed paths = "
+            << (double)handler->getTotalBranchingDepthOnSubsumption() /
+                   (double)handler->getSubsumptionTermination() << "\n";
+    }
+  }
+
+  if (INTERPOLATION_ENABLED) {
+    stats << "KLEE: done:     average instructions of completed paths = "
+          << (double)(handler->getTotalInstructionsDepthOnExitTermination() +
+                      handler->getTotalInstructionsDepthOnEarlyTermination() +
+                      handler->getTotalInstructionsDepthOnErrorTermination()) /
+                 (double)(handler->getExitTermination() +
+                          handler->getEarlyTermination() +
+                          handler->getErrorTermination()) << "\n";
+    if (handler->getSubsumptionTermination() == 0.0) {
+      stats << "KLEE: done:     average instructions of subsumed paths = " << 0
+            << "\n";
+    } else {
+      stats << "KLEE: done:     average instructions of subsumed paths = "
+            << (double)
+                   handler->getTotalInstructionPathsExploredOnSubsumption() /
+                   (double)handler->getSubsumptionTermination() << "\n";
+    }
+  }
+
+  if (INTERPOLATION_ENABLED)
+    stats << "KLEE: done:     subsumed paths = "
+          << handler->getSubsumptionTermination() << "\n";
+  stats << "KLEE: done:     error paths = "
+        << handler->getErrorTermination() << "\n";
+  stats << "KLEE: done:     program exit paths = "
+        << handler->getExitTermination() << "\n";
   stats << "KLEE: done: generated tests = "
-        << handler->getNumTestCases() << "\n";
+        << handler->getNumTestCases() << ", among which\n";
+  stats << "KLEE: done:     early-terminating tests (instruction time limit, solver timeout, max-depth reached) = "
+        << handler->getEarlyTerminationTest() << "\n";
+  if (INTERPOLATION_ENABLED)
+    stats << "KLEE: done:     subsumed tests = "
+          << handler->getSubsumptionTerminationTest() << "\n";
+  stats << "KLEE: done:     error tests = "
+        << handler->getErrorTerminationTest() << "\n";
+  stats << "KLEE: done:     program exit tests = "
+        << handler->getExitTerminationTest() << "\n";
 
   bool useColors = llvm::errs().is_displayed();
   if (useColors)

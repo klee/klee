@@ -2,6 +2,4 @@
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --entry-point=entry %t.bc
 
-int entry() {
-  return 0;
-}
+int entry() { return 0; }

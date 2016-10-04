@@ -463,8 +463,9 @@ static bool valueIsOnlyCalled(const Value *v) {
 
       // Make sure the instruction is a call or invoke.
       CallSite cs(const_cast<Instruction *>(instr));
-      if (!cs) return false;
-      
+      if (!cs)
+        return false;
+
       // Make sure that the value is only the target of this call and
       // not an argument.
       if (cs.hasArgument(v))

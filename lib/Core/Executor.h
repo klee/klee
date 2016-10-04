@@ -65,6 +65,8 @@ namespace klee {
   class MemoryObject;
   class ObjectState;
   class PTree;
+  class ITree; 
+  class ITreeNode;
   class Searcher;
   class SeedInfo;
   class SpecialFunctionHandler;
@@ -134,7 +136,9 @@ private:
   SpecialFunctionHandler *specialFunctionHandler;
   std::vector<TimerInfo*> timers;
   PTree *processTree;
-
+  ITree *interpTree; 
+  ref<Expr> latestBaseLeft;
+  ref<Expr> latestBaseRight;
   /// Used to track states that have been added during the current
   /// instructions step. 
   /// \invariant \ref addedStates is a subset of \ref states. 
@@ -383,6 +387,8 @@ private:
 
   // remove state from queue and delete
   void terminateState(ExecutionState &state);
+  // call subsumption handler and terminate state
+  void terminateStateOnSubsumption(ExecutionState &state);
   // call exit handler and terminate state
   void terminateStateEarly(ExecutionState &state, const llvm::Twine &message);
   // call exit handler and terminate state
