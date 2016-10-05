@@ -23,6 +23,10 @@ Statistic stats::queryConstructTime("QueryConstructTime", "QBtime") ;
 Statistic stats::queryConstructs("QueriesConstructs", "QB");
 Statistic stats::queryCounterexamples("QueriesCEX", "Qcex");
 Statistic stats::queryTime("QueryTime", "Qtime");
+Statistic stats::subsumptionQueryTime("SubsumptionQueryTime", "SQtime");
+Statistic stats::subsumptionQueryCount("SubsumptionQueryCount", "SCcount");
+Statistic stats::subsumptionQueryFailureCount("SubsumptionQueryFailureCount",
+                                              "SFcount");
 
 #ifdef DEBUG
 Statistic stats::arrayHashTime("ArrayHashTime", "AHtime");

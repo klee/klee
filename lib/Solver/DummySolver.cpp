@@ -26,6 +26,8 @@ public:
                             bool &hasSolution);
   SolverRunStatus getOperationStatusCode();
   std::vector<ref<Expr> > getUnsatCore();
+  void startSubsumptionCheck() {}
+  void endSubsumptionCheck() {}
 };
 
 DummySolverImpl::DummySolverImpl() {}

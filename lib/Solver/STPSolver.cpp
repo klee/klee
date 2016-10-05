@@ -82,6 +82,8 @@ public:
                             bool &hasSolution);
   SolverRunStatus getOperationStatusCode();
   std::vector<ref<Expr> > getUnsatCore();
+  void startSubsumptionCheck() {};
+  void endSubsubmptionCheck() {};
 };
 
 STPSolverImpl::STPSolverImpl(bool _useForkedSTP, bool _optimizeDivides)
