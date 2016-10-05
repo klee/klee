@@ -20,6 +20,7 @@
 #include <klee/CommandLine.h>
 #include <klee/Expr.h>
 #include <klee/Solver.h>
+#include <klee/SolverStats.h>
 #include <klee/util/ExprPPrinter.h>
 #include <fstream>
 #include <vector>
@@ -818,12 +819,6 @@ void PathCondition::print(llvm::raw_ostream &stream) const {
 
 /**/
 
-StatTimer SubsumptionTableEntry::actualSolverCallTimer;
-
-unsigned long SubsumptionTableEntry::checkSolverCount = 0;
-
-unsigned long SubsumptionTableEntry::checkSolverFailureCount = 0;
-
 SubsumptionTableEntry::SubsumptionTableEntry(ITreeNode *node)
     : nodeId(node->getNodeId()) {
   std::set<const Array *> replacements;
@@ -1537,7 +1532,6 @@ bool SubsumptionTableEntry::subsumed(
   // not a constant and no contradictory unary constraints found from
   // solvingUnaryConstraints method.
   if (!llvm::isa<ConstantExpr>(query)) {
-    ++checkSolverCount;
 
 #ifdef ENABLE_Z3
     if (!existentials.empty() && llvm::isa<ExistsExpr>(query)) {
@@ -1567,10 +1561,9 @@ bool SubsumptionTableEntry::subsumed(
         // ExprPPrinter::printQuery(llvm::errs(), constraints,
         // falseExpr);
 
-        actualSolverCallTimer.start();
+        z3solver->startSubsumptionCheck();
         success = z3solver->getValue(Query(constraints, falseExpr), tmpExpr);
-        // double elapsedTime =
-        actualSolverCallTimer.stop();
+        z3solver->endSubsumptionCheck();
 
         result = success ? Solver::True : Solver::Unknown;
 
@@ -1579,16 +1572,10 @@ bool SubsumptionTableEntry::subsumed(
         // ExprPPrinter::printQuery(llvm::errs(), state.constraints,
         // query);
 
-        actualSolverCallTimer.start();
+        z3solver->startSubsumptionCheck();
         success = z3solver->directComputeValidity(
             Query(state.constraints, query), result);
-        // double elapsedTime =
-        actualSolverCallTimer.stop();
-
-        //        if (elapsedTime > expectedMaxElapsedTime) {
-        //            llvm::errs() << "LONG QUERY 2:" << "\n";
-        //            Query(state.constraints, query).dump();
-        //        }
+        z3solver->endSubsumptionCheck();
       }
 
       z3solver->setCoreSolverTimeout(0);
@@ -1605,16 +1592,9 @@ bool SubsumptionTableEntry::subsumed(
       // formula is unquantified.
 
       solver->setTimeout(timeout);
-      actualSolverCallTimer.start();
+      solver->startSubsumptionCheck();
       success = solver->evaluate(state, query, result);
-      // double elapsedTime =
-      actualSolverCallTimer.stop();
-
-      //      if (elapsedTime > expectedMaxElapsedTime) {
-      //          llvm::errs() << "LONG QUERY 3:" << "\n";
-      //          Query(state.constraints, query).dump();
-      //      }
-
+      solver->endSubsumptionCheck();
       solver->setTimeout(0);
     }
   } else {
@@ -1651,7 +1631,6 @@ bool SubsumptionTableEntry::subsumed(
   // invalidity is established by the solver.
   // llvm::errs() << "Solver did not decide validity\n";
 
-  ++checkSolverFailureCount;
 #ifdef ENABLE_Z3
   if (z3solver)
     delete z3solver;
@@ -1710,10 +1689,11 @@ void SubsumptionTableEntry::print(llvm::raw_ostream &stream) const {
 
 void SubsumptionTableEntry::printStat(std::stringstream &stream) {
   stream << "KLEE: done:     Time for actual solver calls in subsumption check "
-            "(ms) = " << actualSolverCallTimer.get() * 1000 << "\n";
+            "(ms) = " << ((double)stats::subsumptionQueryTime.getValue()) / 1000
+         << "\n";
   stream << "KLEE: done:     Number of solver calls for subsumption check "
-            "(failed) = " << checkSolverCount << " (" << checkSolverFailureCount
-         << ")\n";
+            "(failed) = " << stats::subsumptionQueryCount.getValue() << " ("
+         << stats::subsumptionQueryFailureCount.getValue() << ")\n";
 }
 
 /**/
@@ -1733,7 +1713,7 @@ void ITree::printTimeStat(std::stringstream &stream) {
   stream << "KLEE: done:     setCurrentINode = " << setCurrentINodeTimer.get() *
                                                         1000 << "\n";
   stream << "KLEE: done:     remove = " << removeTimer.get() * 1000 << "\n";
-  stream << "KLEE: done:     subsumptionCheckTimer = "
+  stream << "KLEE: done:     subsumptionCheck = "
          << subsumptionCheckTimer.get() * 1000 << "\n";
   stream << "KLEE: done:     markPathCondition = "
          << markPathConditionTimer.get() * 1000 << "\n";
@@ -1754,9 +1734,9 @@ void ITree::printTableStat(std::stringstream &stream) {
          << subsumptionCheckCount << "\n";
 
   stream << "KLEE: done:     Average solver calls per subsumption check = "
-         << StatTimer::inTwoDecimalPoints(
-                (double)SubsumptionTableEntry::checkSolverCount /
-                (double)subsumptionCheckCount) << "\n";
+         << StatTimer::inTwoDecimalPoints((double)stats::subsumptionQueryCount /
+                                          (double)subsumptionCheckCount)
+         << "\n";
 }
 
 std::string ITree::getInterpolationStat() {

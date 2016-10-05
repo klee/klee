@@ -29,6 +29,7 @@ private:
   ::Z3_params solverParameters;
   // Parameter symbols
   ::Z3_symbol timeoutParamStrSymbol;
+  bool subsumptionCheck;
 
   bool internalRunSolver(const Query &,
                          const std::vector<const Array *> *objects,
@@ -73,11 +74,13 @@ public:
                        bool &hasSolution);
   SolverRunStatus getOperationStatusCode();
   std::vector<ref<Expr> > getUnsatCore();
+  void startSubsumptionCheck() { subsumptionCheck = true; }
+  void endSubsumptionCheck() { subsumptionCheck = false; }
 };
 
 Z3SolverImpl::Z3SolverImpl()
     : builder(new Z3Builder(/*autoClearConstructCache=*/false)), timeout(0.0),
-      runStatusCode(SOLVER_RUN_STATUS_FAILURE) {
+      runStatusCode(SOLVER_RUN_STATUS_FAILURE), subsumptionCheck(false) {
   assert(builder && "unable to create Z3Builder");
   solverParameters = Z3_mk_params(builder->ctx);
   Z3_params_inc_ref(builder->ctx, solverParameters);
@@ -185,6 +188,17 @@ bool Z3SolverImpl::computeInitialValues(
 bool Z3SolverImpl::internalRunSolver(
     const Query &query, const std::vector<const Array *> *objects,
     std::vector<std::vector<unsigned char> > *values, bool &hasSolution) {
+  if (subsumptionCheck) {
+    TimerStatIncrementer t(stats::subsumptionQueryTime);
+    ++stats::subsumptionQueryCount;
+    subsumptionCheck = false;
+    bool result = internalRunSolver(query, objects, values, hasSolution);
+    if (!result || hasSolution) {
+      ++stats::subsumptionQueryFailureCount;
+    }
+    subsumptionCheck = true;
+    return result;
+  }
   TimerStatIncrementer t(stats::queryTime);
   // TODO: Does making a new solver for each query have a performance
   // impact vs making one global solver and using push and pop?

@@ -112,6 +112,14 @@ namespace klee {
     ///
     /// \return Vector of ref<Expr>
     virtual std::vector< ref<Expr> > getUnsatCore();
+
+    /// startSubsumptionCheck - Mark the usage of the solver as for subsumption
+    /// check.
+    virtual void startSubsumptionCheck();
+
+    /// endSubsumptionCheck - Mark the usage of the solver as not belonging to
+    /// subsumption check.
+    virtual void endSubsumptionCheck();
   };
 
 }
