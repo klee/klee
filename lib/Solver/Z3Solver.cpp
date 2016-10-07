@@ -280,7 +280,8 @@ SolverImpl::SolverRunStatus Z3SolverImpl::handleSolverResponse(
   case Z3_L_UNDEF: {
     ::Z3_string reason =
         ::Z3_solver_get_reason_unknown(builder->ctx, theSolver);
-    if (strcmp(reason, "timeout") == 0 || strcmp(reason, "canceled") == 0) {
+    if (strcmp(reason, "timeout") == 0 || strcmp(reason, "canceled") == 0 ||
+        strcmp(reason, "(resource limits reached)") == 0) {
       return SolverImpl::SOLVER_RUN_STATUS_TIMEOUT;
     }
     if (strcmp(reason, "unknown") == 0) {
