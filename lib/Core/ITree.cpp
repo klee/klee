@@ -1835,11 +1835,13 @@ bool ITree::subsumptionCheck(TimingSolver *solver, ExecutionState &state,
 
 void ITree::store(SubsumptionTableEntry *subItem) {
     subsumptionTable[subItem->nodeId].push_back(subItem);
+#ifdef ENABLE_Z3
     if (MaxFailSubsumption > 0 &&
         (unsigned)MaxFailSubsumption <
             subsumptionTable[subItem->nodeId].size()) {
       subsumptionTable[subItem->nodeId].pop_front();
     }
+#endif
 }
 
 void ITree::setCurrentINode(ExecutionState &state) {
