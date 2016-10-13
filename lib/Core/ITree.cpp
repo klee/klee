@@ -560,13 +560,34 @@ std::string SearchTree::recurseRender(const SearchTree::Node *node) {
   stream << "Node" << node->nodeId;
   std::string sourceNodeName = stream.str();
 
-  stream << " [shape=record,label=\"{" << node->nodeId << ": " << node->name
-         << "\\l";
+  size_t pos = 0;
+  std::string replacementName(node->name);
+  std::stringstream repStream1;
+  while ((pos = replacementName.find("{")) != std::string::npos) {
+    if (pos != std::string::npos) {
+      repStream1 << replacementName.substr(0, pos) << "\\{";
+      replacementName = replacementName.substr(pos + 2);
+    }
+  }
+  repStream1 << replacementName;
+  replacementName = repStream1.str();
+  std::stringstream repStream2;
+  while ((pos = replacementName.find("}")) != std::string::npos) {
+    if (pos != std::string::npos) {
+      repStream2 << replacementName.substr(0, pos) << "\\}";
+      replacementName = replacementName.substr(pos + 2);
+    }
+  }
+  repStream2 << replacementName;
+  replacementName = repStream2.str();
+
+  stream << " [shape=record,label=\"{" << node->nodeId << ": "
+         << replacementName << "\\l";
   for (std::map<PathCondition *, std::pair<std::string, bool> >::const_iterator
            it = node->pathConditionTable.begin(),
            itEnd = node->pathConditionTable.end();
        it != itEnd; ++it) {
-    stream << (it->second.first);
+    stream << it->second.first;
     if (it->second.second)
       stream << " ITP";
     stream << "\\l";
