@@ -1,0 +1,10 @@
+add_library(kleeSupport
+	CompressionStream.cpp
+	ErrorHandling.cpp
+	MemoryUsage.cpp
+	PrintVersion.cpp
+	RNG.cpp
+	Time.cpp
+	Timer.cpp
+	TreeStream.cpp
+)
