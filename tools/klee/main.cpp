@@ -622,8 +622,12 @@ std::string KleeHandler::getRunTimeLibraryPath(const char *argv0) {
     KLEE_DEBUG_WITH_TYPE("klee_runtime", llvm::dbgs() <<
                          "Using build directory KLEE library runtime :");
     libDir = KLEE_DIR;
+#ifdef KLEE_CMAKE_BUILD
+    llvm::sys::path::append(libDir,"runtime/Intrinsic");
+#else
     llvm::sys::path::append(libDir,RUNTIME_CONFIGURATION);
     llvm::sys::path::append(libDir,"lib");
+#endif
   }
 
   KLEE_DEBUG_WITH_TYPE("klee_runtime", llvm::dbgs() <<

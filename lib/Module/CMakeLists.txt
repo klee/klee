@@ -1,0 +1,12 @@
+add_library(kleeModule
+	Checks.cpp
+	InstructionInfoTable.cpp
+	IntrinsicCleaner.cpp
+	KInstruction.cpp
+	KModule.cpp
+	LowerSwitch.cpp
+	ModuleUtil.cpp
+	Optimize.cpp
+	PhiCleaner.cpp
+	RaiseAsm.cpp
+)
