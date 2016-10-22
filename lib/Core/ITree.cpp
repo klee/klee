@@ -21,6 +21,7 @@
 #include <klee/Expr.h>
 #include <klee/Solver.h>
 #include <klee/SolverStats.h>
+#include <klee/TimerStatIncrementer.h>
 #include <klee/util/ExprPPrinter.h>
 #include <fstream>
 #include <vector>
@@ -1719,28 +1720,32 @@ void SubsumptionTableEntry::printStat(std::stringstream &stream) {
 
 /**/
 
-StatTimer ITree::setCurrentINodeTimer;
-StatTimer ITree::removeTimer;
-StatTimer ITree::subsumptionCheckTimer;
-StatTimer ITree::markPathConditionTimer;
-StatTimer ITree::splitTimer;
-StatTimer ITree::executeOnNodeTimer;
+Statistic ITree::setCurrentINodeTime("SetCurrentINodeTime",
+                                     "SetCurrentINodeTime");
+Statistic ITree::removeTime("RemoveTime", "RemoveTime");
+Statistic ITree::subsumptionCheckTime("SubsumptionCheckTime",
+                                      "SubsubmptionCheckTime");
+Statistic ITree::markPathConditionTime("MarkPathConditionTime", "MarkPCTime");
+Statistic ITree::splitTime("SplitTime", "SplitTime");
+Statistic ITree::executeOnNodeTime("ExecuteOnNodeTime", "ExecuteOnNodeTime");
 double ITree::entryNumber;
 double ITree::programPointNumber;
 
 unsigned long ITree::subsumptionCheckCount = 0;
 
 void ITree::printTimeStat(std::stringstream &stream) {
-  stream << "KLEE: done:     setCurrentINode = " << setCurrentINodeTimer.get() *
-                                                        1000 << "\n";
-  stream << "KLEE: done:     remove = " << removeTimer.get() * 1000 << "\n";
+  stream << "KLEE: done:     setCurrentINode = "
+         << ((double)setCurrentINodeTime.getValue()) / 1000 << "\n";
+  stream << "KLEE: done:     remove = " << ((double)removeTime.getValue()) /
+                                               1000 << "\n";
   stream << "KLEE: done:     subsumptionCheck = "
-         << subsumptionCheckTimer.get() * 1000 << "\n";
+         << ((double)subsumptionCheckTime.getValue()) / 1000 << "\n";
   stream << "KLEE: done:     markPathCondition = "
-         << markPathConditionTimer.get() * 1000 << "\n";
-  stream << "KLEE: done:     split = " << splitTimer.get() * 1000 << "\n";
-  stream << "KLEE: done:     executeOnNode = " << executeOnNodeTimer.get() *
-                                                      1000 << "\n";
+         << ((double)markPathConditionTime.getValue()) / 1000 << "\n";
+  stream << "KLEE: done:     split = " << ((double)splitTime.getValue()) / 1000
+         << "\n";
+  stream << "KLEE: done:     executeOnNode = "
+         << ((double)executeOnNodeTime.getValue()) / 1000 << "\n";
 }
 
 void ITree::printTableStat(std::stringstream &stream) {
@@ -1748,16 +1753,28 @@ void ITree::printTableStat(std::stringstream &stream) {
 
   stream
       << "KLEE: done:     Average table entries per subsumption checkpoint = "
-      << StatTimer::inTwoDecimalPoints(entryNumber / programPointNumber)
-      << "\n";
+      << inTwoDecimalPoints(entryNumber / programPointNumber) << "\n";
 
   stream << "KLEE: done:     Number of subsumption checks = "
          << subsumptionCheckCount << "\n";
 
   stream << "KLEE: done:     Average solver calls per subsumption check = "
-         << StatTimer::inTwoDecimalPoints((double)stats::subsumptionQueryCount /
-                                          (double)subsumptionCheckCount)
-         << "\n";
+         << inTwoDecimalPoints((double)stats::subsumptionQueryCount /
+                               (double)subsumptionCheckCount) << "\n";
+}
+
+std::string ITree::inTwoDecimalPoints(const double n) {
+  std::ostringstream stream;
+  unsigned long x = (unsigned)((n - ((unsigned)n)) * 100);
+  unsigned y = (unsigned)n;
+  stream << y << ".";
+  if (x > 9)
+    stream << x;
+  else if (x > 0)
+    stream << "0" << x;
+  else
+    stream << "00";
+  return stream.str();
 }
 
 std::string ITree::getInterpolationStat() {
@@ -1821,7 +1838,7 @@ bool ITree::subsumptionCheck(TimingSolver *solver, ExecutionState &state,
                               state.itreeNode->getNodeId())
     return false;
 
-  subsumptionCheckTimer.start();
+  TimerStatIncrementer t(subsumptionCheckTime);
   std::deque<SubsumptionTableEntry *> entryList =
       subsumptionTable[state.itreeNode->getNodeId()];
 
@@ -1846,11 +1863,9 @@ bool ITree::subsumptionCheck(TimingSolver *solver, ExecutionState &state,
 
       // Mark the node as subsumed, and create a subsumption edge
       SearchTree::markAsSubsumed(currentINode, (*it));
-      subsumptionCheckTimer.stop();
       return true;
     }
   }
-  subsumptionCheckTimer.stop();
   return false;
 }
 
@@ -1866,15 +1881,14 @@ void ITree::store(SubsumptionTableEntry *subItem) {
 }
 
 void ITree::setCurrentINode(ExecutionState &state) {
-  setCurrentINodeTimer.start();
+  TimerStatIncrementer t(setCurrentINodeTime);
   currentINode = state.itreeNode;
   currentINode->setNodeLocation(state.pc->inst);
   SearchTree::setCurrentNode(state, currentINode->getNodeId());
-  setCurrentINodeTimer.stop();
 }
 
 void ITree::remove(ITreeNode *node) {
-  removeTimer.start();
+  TimerStatIncrementer t(removeTime);
   assert(!node->left && !node->right);
   do {
     ITreeNode *p = node->parent;
@@ -1898,21 +1912,19 @@ void ITree::remove(ITreeNode *node) {
     }
     node = p;
   } while (node && !node->left && !node->right);
-  removeTimer.stop();
 }
 
 std::pair<ITreeNode *, ITreeNode *>
 ITree::split(ITreeNode *parent, ExecutionState *left, ExecutionState *right) {
-  splitTimer.start();
+  TimerStatIncrementer t(splitTime);
   parent->split(left, right);
   SearchTree::addChildren(parent, parent->left, parent->right);
   std::pair<ITreeNode *, ITreeNode *> ret(parent->left, parent->right);
-  splitTimer.stop();
   return ret;
 }
 
 void ITree::markPathCondition(ExecutionState &state, TimingSolver *solver) {
-  markPathConditionTimer.start();
+  TimerStatIncrementer t(markPathConditionTime);
   std::vector<ref<Expr> > unsatCore = solver->getUnsatCore();
 
   AllocationGraph *g = new AllocationGraph();
@@ -1946,7 +1958,6 @@ void ITree::markPathCondition(ExecutionState &state, TimingSolver *solver) {
   currentINode->computeCoreAllocations(g);
 
   delete g; // Delete the AllocationGraph object
-  markPathConditionTimer.stop();
 }
 
 void ITree::execute(llvm::Instruction *instr) {
@@ -1987,9 +1998,8 @@ void ITree::executePHI(llvm::Instruction *instr, unsigned int incomingBlock,
 
 void ITree::executeOnNode(ITreeNode *node, llvm::Instruction *instr,
                           std::vector<ref<Expr> > &args) {
-  executeOnNodeTimer.start();
+  TimerStatIncrementer t(executeOnNodeTime);
   node->execute(instr, args);
-  executeOnNodeTimer.stop();
 }
 
 void ITree::printNode(llvm::raw_ostream &stream, ITreeNode *n,
@@ -2044,33 +2054,43 @@ void ITree::dump() const { this->print(llvm::errs()); }
 /**/
 
 // Statistics
-StatTimer ITreeNode::getInterpolantTimer;
-StatTimer ITreeNode::addConstraintTimer;
-StatTimer ITreeNode::splitTimer;
-StatTimer ITreeNode::executeTimer;
-StatTimer ITreeNode::bindCallArgumentsTimer;
-StatTimer ITreeNode::bindReturnValueTimer;
-StatTimer ITreeNode::getStoredExpressionsTimer;
-StatTimer ITreeNode::getStoredCoreExpressionsTimer;
-StatTimer ITreeNode::computeCoreAllocationsTimer;
+Statistic ITreeNode::getInterpolantTime("GetInterpolantTime",
+                                        "GetInterpolantTime");
+Statistic ITreeNode::addConstraintTime("AddConstraintTime",
+                                       "AddConstraintTime");
+Statistic ITreeNode::splitTime("SplitTime", "SplitTime");
+Statistic ITreeNode::executeTime("ExecuteTime", "ExecuteTime");
+Statistic ITreeNode::bindCallArgumentsTime("BindCallArgumentsTime",
+                                           "BindCallArgumentsTime");
+Statistic ITreeNode::bindReturnValueTime("BindReturnValueTime",
+                                         "BindReturnValueTime");
+Statistic ITreeNode::getStoredExpressionsTime("GetStoredExpressionsTime",
+                                              "GetStoredExpressionsTime");
+Statistic
+ITreeNode::getStoredCoreExpressionsTime("GetStoredCoreExpressionsTime",
+                                        "GetStoredCoreExpressionsTime");
+Statistic ITreeNode::computeCoreAllocationsTime("ComputeCoreAllocationsTime",
+                                                "ComputeCoreAllocationsTime");
 
 void ITreeNode::printTimeStat(std::stringstream &stream) {
-  stream << "KLEE: done:     getInterpolant = " << getInterpolantTimer.get() *
-                                                       1000 << "\n";
-  stream << "KLEE: done:     addConstraintTime = " << addConstraintTimer.get() *
-                                                          1000 << "\n";
-  stream << "KLEE: done:     splitTime = " << splitTimer.get() * 1000 << "\n";
-  stream << "KLEE: done:     execute = " << executeTimer.get() * 1000 << "\n";
+  stream << "KLEE: done:     getInterpolant = "
+         << ((double)getInterpolantTime.getValue()) / 1000 << "\n";
+  stream << "KLEE: done:     addConstraintTime = "
+         << ((double)addConstraintTime.getValue()) / 1000 << "\n";
+  stream << "KLEE: done:     splitTime = " << ((double)splitTime.getValue()) /
+                                                  1000 << "\n";
+  stream << "KLEE: done:     execute = " << ((double)executeTime.getValue()) /
+                                                1000 << "\n";
   stream << "KLEE: done:     bindCallArguments = "
-         << bindCallArgumentsTimer.get() * 1000 << "\n";
-  stream << "KLEE: done:     bindReturnValue = " << bindReturnValueTimer.get() *
-                                                        1000 << "\n";
+         << ((double)bindCallArgumentsTime.getValue()) / 1000 << "\n";
+  stream << "KLEE: done:     bindReturnValue = "
+         << ((double)bindReturnValueTime.getValue()) / 1000 << "\n";
   stream << "KLEE: done:     getStoredExpressions = "
-         << getStoredExpressionsTimer.get() * 1000 << "\n";
+         << ((double)getStoredExpressionsTime.getValue()) / 1000 << "\n";
   stream << "KLEE: done:     getStoredCoreExpressions = "
-         << getStoredCoreExpressionsTimer.get() << "\n";
+         << ((double)getStoredCoreExpressionsTime.getValue()) / 1000 << "\n";
   stream << "KLEE: done:     computeCoreAllocations = "
-         << computeCoreAllocationsTimer.get() * 1000 << "\n";
+         << ((double)computeCoreAllocationsTime.getValue()) / 1000 << "\n";
 }
 
 ITreeNode::ITreeNode(ITreeNode *_parent)
@@ -2104,54 +2124,48 @@ uintptr_t ITreeNode::getNodeId() { return nodeId; }
 
 ref<Expr>
 ITreeNode::getInterpolant(std::set<const Array *> &replacements) const {
-  ITreeNode::getInterpolantTimer.start();
+  TimerStatIncrementer t(getInterpolantTime);
   ref<Expr> expr = this->pathCondition->packInterpolant(replacements);
-  ITreeNode::getInterpolantTimer.stop();
   return expr;
 }
 
 void ITreeNode::addConstraint(ref<Expr> &constraint, llvm::Value *condition) {
-  ITreeNode::addConstraintTimer.start();
+  TimerStatIncrementer t(addConstraintTime);
   pathCondition =
       new PathCondition(constraint, dependency, condition, pathCondition);
   graph->addPathCondition(this, pathCondition, constraint);
-  ITreeNode::addConstraintTimer.stop();
 }
 
 void ITreeNode::split(ExecutionState *leftData, ExecutionState *rightData) {
-  ITreeNode::splitTimer.start();
+  TimerStatIncrementer t(splitTime);
   assert(left == 0 && right == 0);
   leftData->itreeNode = left = new ITreeNode(this);
   rightData->itreeNode = right = new ITreeNode(this);
-  ITreeNode::splitTimer.stop();
 }
 
 void ITreeNode::execute(llvm::Instruction *instr,
                         std::vector<ref<Expr> > &args) {
-  executeTimer.start();
+  TimerStatIncrementer t(executeTime);
   dependency->execute(instr, args);
-  executeTimer.stop();
 }
 
 void ITreeNode::bindCallArguments(llvm::Instruction *site,
                                   std::vector<ref<Expr> > &arguments) {
-  ITreeNode::bindCallArgumentsTimer.start();
+  TimerStatIncrementer t(bindCallArgumentsTime);
   dependency->bindCallArguments(site, arguments);
-  ITreeNode::bindCallArgumentsTimer.stop();
 }
 
 void ITreeNode::bindReturnValue(llvm::CallInst *site, llvm::Instruction *inst,
                                 ref<Expr> returnValue) {
   // TODO: This is probably where we should simplify
   // the dependency graph by removing callee values.
-  ITreeNode::bindReturnValueTimer.start();
+  TimerStatIncrementer t(bindReturnValueTime);
   dependency->bindReturnValue(site, inst, returnValue);
-  ITreeNode::bindReturnValueTimer.stop();
 }
 
 std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
 ITreeNode::getStoredExpressions() const {
-  ITreeNode::getStoredExpressionsTimer.start();
+  TimerStatIncrementer t(getStoredExpressionsTime);
   std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore> ret;
   std::set<const Array *> dummyReplacements;
 
@@ -2160,14 +2174,13 @@ ITreeNode::getStoredExpressions() const {
   // from the parent node.
   if (parent)
     ret = parent->dependency->getStoredExpressions(dummyReplacements, false);
-  ITreeNode::getStoredExpressionsTimer.stop();
   return ret;
 }
 
 std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
 ITreeNode::getStoredCoreExpressions(std::set<const Array *> &replacements)
     const {
-  ITreeNode::getStoredCoreExpressionsTimer.start();
+  TimerStatIncrementer t(getStoredCoreExpressionsTime);
   std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore> ret;
 
   // Since a program point index is a first statement in a basic block,
@@ -2175,7 +2188,6 @@ ITreeNode::getStoredCoreExpressions(std::set<const Array *> &replacements)
   // from the parent node.
   if (parent)
     ret = parent->dependency->getStoredExpressions(replacements, true);
-  ITreeNode::getStoredCoreExpressionsTimer.stop();
   return ret;
 }
 
@@ -2217,9 +2229,8 @@ void ITreeNode::unsatCoreMarking(std::vector<ref<Expr> > unsatCore) {
 }
 
 void ITreeNode::computeCoreAllocations(AllocationGraph *g) {
-  ITreeNode::computeCoreAllocationsTimer.start();
+  TimerStatIncrementer t(computeCoreAllocationsTime);
   dependency->computeCoreAllocations(g);
-  ITreeNode::computeCoreAllocationsTimer.stop();
 }
 
 void ITreeNode::dump() const {
