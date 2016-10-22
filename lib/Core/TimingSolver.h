@@ -66,8 +66,6 @@ namespace klee {
     std::pair< ref<Expr>, ref<Expr> >
     getRange(const ExecutionState&, ref<Expr> query);
     std::vector< ref<Expr> > getUnsatCore();
-    void startSubsumptionCheck();
-    void endSubsumptionCheck();
   };
 
 }

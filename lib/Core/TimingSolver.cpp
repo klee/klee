@@ -147,11 +147,3 @@ TimingSolver::getRange(const ExecutionState& state, ref<Expr> expr) {
 std::vector< ref<Expr> > TimingSolver::getUnsatCore() {
   return solver->getUnsatCore();
 }
-
-void TimingSolver::startSubsumptionCheck() {
-  return solver->startSubsumptionCheck();
-}
-
-void TimingSolver::endSubsumptionCheck() {
-  return solver->endSubsumptionCheck();
-}

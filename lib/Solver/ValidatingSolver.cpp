@@ -33,8 +33,6 @@ public:
   char *getConstraintLog(const Query &);
   void setCoreSolverTimeout(double timeout);
   std::vector<ref<Expr> > getUnsatCore() { return solver->getUnsatCore(); }
-  void startSubSumptionCheck() { solver->startSubsumptionCheck(); }
-  void endSubsumptionCheck() { solver->endSubsumptionCheck(); }
 };
 
 bool ValidatingSolver::computeTruth(const Query &query, bool &isValid) {

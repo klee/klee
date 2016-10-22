@@ -20,6 +20,7 @@
 #include "klee/CommandLine.h"
 #include "klee/Config/Version.h"
 #include "klee/ExecutionState.h"
+#include "klee/Solver.h"
 #include "klee/Statistic.h"
 #include "klee/util/ExprVisitor.h"
 
@@ -321,6 +322,12 @@ class SubsumptionTableEntry {
         return Action::doChildren();
       }
     }
+  };
+
+  /// \brief Mark begin and end of subsumption check for use within a scope
+  struct SubsumptionCheckMarker {
+    SubsumptionCheckMarker() { Z3Solver::subsumptionCheck = true; }
+    ~SubsumptionCheckMarker() { Z3Solver::subsumptionCheck = false; }
   };
 
   ref<Expr> interpolant;

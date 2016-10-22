@@ -109,8 +109,6 @@ public:
   char *getConstraintLog(const Query&);
   void setCoreSolverTimeout(double timeout);
   std::vector<ref<Expr> > getUnsatCore() { return unsatCoreToReturn; }
-  void startSubsumptionCheck() { solver->impl->startSubsumptionCheck(); }
-  void endSubsumptionCheck() { solver->impl->endSubsumptionCheck(); }
 };
 
 /** @returns the canonical version of the given query.  The reference

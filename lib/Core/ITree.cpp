@@ -1356,6 +1356,12 @@ bool SubsumptionTableEntry::subsumed(
     TimingSolver *solver, ExecutionState &state, double timeout,
     const std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
         storedExpressions) {
+#ifdef ENABLE_Z3
+  // Tell the solver implementation that we are checking for subsumption, for it
+  // to collect statistics of solver calls.
+  SubsumptionCheckMarker subsumptionCheckMarker;
+#endif
+
   // Quick check for subsumption in case the interpolant is empty
   if (empty())
     return true;
@@ -1543,12 +1549,12 @@ bool SubsumptionTableEntry::subsumed(
 
   bool success = false;
 
+  if (!detectConflictPrimitives(state, query))
+    return false;
+
 #ifdef ENABLE_Z3
   Z3Solver *z3solver = 0;
 #endif /* ENABLE_Z3 */
-
-  if (!detectConflictPrimitives(state, query))
-    return false;
 
   // We call the solver only when the simplified query is
   // not a constant and no contradictory unary constraints found from
@@ -1583,21 +1589,15 @@ bool SubsumptionTableEntry::subsumed(
         // ExprPPrinter::printQuery(llvm::errs(), constraints,
         // falseExpr);
 
-        z3solver->startSubsumptionCheck();
         success = z3solver->getValue(Query(constraints, falseExpr), tmpExpr);
-        z3solver->endSubsumptionCheck();
-
         result = success ? Solver::True : Solver::Unknown;
-
       } else {
         // llvm::errs() << "Querying for subsumption check:\n";
         // ExprPPrinter::printQuery(llvm::errs(), state.constraints,
         // query);
 
-        z3solver->startSubsumptionCheck();
         success = z3solver->directComputeValidity(
             Query(state.constraints, query), result);
-        z3solver->endSubsumptionCheck();
       }
 
       z3solver->setCoreSolverTimeout(0);
@@ -1614,9 +1614,7 @@ bool SubsumptionTableEntry::subsumed(
       // formula is unquantified.
 
       solver->setTimeout(timeout);
-      solver->startSubsumptionCheck();
       success = solver->evaluate(state, query, result);
-      solver->endSubsumptionCheck();
       solver->setTimeout(0);
     }
   } else {

@@ -75,8 +75,6 @@ public:
   char *getConstraintLog(const Query &);
   void setCoreSolverTimeout(double timeout);
   std::vector<ref<Expr> > getUnsatCore() { return solver->getUnsatCore(); }
-  void startSubsumptionCheck() { return solver->startSubsumptionCheck(); }
-  void endSubsumptionCheck() { return solver->endSubsumptionCheck(); }
 };
 
 #endif /* KLEE_QUERYLOGGINGSOLVER_H */

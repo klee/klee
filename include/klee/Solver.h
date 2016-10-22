@@ -209,14 +209,6 @@ namespace klee {
     ///
     /// \return Vector of ref<Expr>
     virtual std::vector< ref<Expr> > getUnsatCore();
-
-    /// startSubsumptionCheck - Mark the usage of the solver as for subsumption
-    /// check.
-    virtual void startSubsumptionCheck();
-
-    /// endSubsumptionCheck - Mark the usage of the solver as not belonging to
-    /// subsumption check.
-    virtual void endSubsumptionCheck();
   };
 
   #ifdef ENABLE_STP
@@ -246,6 +238,9 @@ namespace klee {
   /// Z3Solver - A solver complete solver based on Z3
   class Z3Solver : public Solver {
   public:
+    /// Subsumption check indicator
+    static bool subsumptionCheck;
+
     /// Z3Solver - Construct a new Z3Solver.
     Z3Solver();
 

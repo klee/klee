@@ -56,7 +56,3 @@ std::vector<ref<Expr> > SolverImpl::getUnsatCore() {
   std::vector<ref<Expr> > localUnsatCore;
   return localUnsatCore;
 }
-
-void SolverImpl::startSubsumptionCheck() {}
-
-void SolverImpl::endSubsumptionCheck() {}

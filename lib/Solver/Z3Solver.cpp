@@ -29,7 +29,6 @@ private:
   ::Z3_params solverParameters;
   // Parameter symbols
   ::Z3_symbol timeoutParamStrSymbol;
-  bool subsumptionCheck;
 
   bool internalRunSolver(const Query &,
                          const std::vector<const Array *> *objects,
@@ -74,13 +73,11 @@ public:
                        bool &hasSolution);
   SolverRunStatus getOperationStatusCode();
   std::vector<ref<Expr> > getUnsatCore();
-  void startSubsumptionCheck() { subsumptionCheck = true; }
-  void endSubsumptionCheck() { subsumptionCheck = false; }
 };
 
 Z3SolverImpl::Z3SolverImpl()
     : builder(new Z3Builder(/*autoClearConstructCache=*/false)), timeout(0.0),
-      runStatusCode(SOLVER_RUN_STATUS_FAILURE), subsumptionCheck(false) {
+      runStatusCode(SOLVER_RUN_STATUS_FAILURE) {
   assert(builder && "unable to create Z3Builder");
   solverParameters = Z3_mk_params(builder->ctx);
   Z3_params_inc_ref(builder->ctx, solverParameters);
@@ -94,6 +91,8 @@ Z3SolverImpl::~Z3SolverImpl() {
 }
 
 /**/
+
+bool Z3Solver::subsumptionCheck = false;
 
 Z3Solver::Z3Solver() : Solver(new Z3SolverImpl()) {}
 
@@ -188,15 +187,15 @@ bool Z3SolverImpl::computeInitialValues(
 bool Z3SolverImpl::internalRunSolver(
     const Query &query, const std::vector<const Array *> *objects,
     std::vector<std::vector<unsigned char> > *values, bool &hasSolution) {
-  if (subsumptionCheck) {
+  if (Z3Solver::subsumptionCheck) {
     TimerStatIncrementer t(stats::subsumptionQueryTime);
     ++stats::subsumptionQueryCount;
-    subsumptionCheck = false;
+    Z3Solver::subsumptionCheck = false;
     bool result = internalRunSolver(query, objects, values, hasSolution);
     if (!result || hasSolution) {
       ++stats::subsumptionQueryFailureCount;
     }
-    subsumptionCheck = true;
+    Z3Solver::subsumptionCheck = true;
     return result;
   }
   TimerStatIncrementer t(stats::queryTime);
