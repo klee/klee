@@ -80,3 +80,8 @@ endif
 # For metaSMT
 include $(PROJ_SRC_ROOT)/MetaSMT.mk
 
+# If building KLEE with the Sanitizers don't build the runtime with it
+# because KLEE doesn't know how to handle it.
+ifneq ("X$(MODULE_NAME)$(BYTECODE_LIBRARY)X","XX")
+  CFLAGS := $(filter-out -fsanitize=%,$(CFLAGS))
+endif

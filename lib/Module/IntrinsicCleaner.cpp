@@ -59,8 +59,11 @@ bool IntrinsicCleanerPass::runOnModule(Module &M) {
   for (Module::iterator f = M.begin(), fe = M.end(); f != fe; ++f)
     for (Function::iterator b = f->begin(), be = f->end(); b != be; ++b)
       dirty |= runOnBasicBlock(*b, M);
-    if (Function *Declare = M.getFunction("llvm.trap"))
-      Declare->eraseFromParent();
+
+  if (Function *Declare = M.getFunction("llvm.trap")) {
+    Declare->eraseFromParent();
+    dirty = true;
+  }
   return dirty;
 }
 
