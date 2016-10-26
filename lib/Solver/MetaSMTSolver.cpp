@@ -78,7 +78,7 @@ public:
                             bool &hasSolution);
 
   SolverImpl::SolverRunStatus
-  runAndGetCex(ref<Expr> query_expr, const std::vector<const Array *> &objects,
+  runAndGetCex(const Query &query, const std::vector<const Array *> &objects,
                std::vector<std::vector<unsigned char> > &values,
                bool &hasSolution);
 
@@ -192,7 +192,7 @@ bool MetaSMTSolverImpl<SolverContext>::computeInitialValues(
     success = ((SOLVER_RUN_STATUS_SUCCESS_SOLVABLE == _runStatusCode) ||
                (SOLVER_RUN_STATUS_SUCCESS_UNSOLVABLE == _runStatusCode));
   } else {
-    _runStatusCode = runAndGetCex(query.expr, objects, values, hasSolution);
+    _runStatusCode = runAndGetCex(query, objects, values, hasSolution);
     success = true;
   }
 
@@ -209,11 +209,11 @@ bool MetaSMTSolverImpl<SolverContext>::computeInitialValues(
 
 template <typename SolverContext>
 SolverImpl::SolverRunStatus MetaSMTSolverImpl<SolverContext>::runAndGetCex(
-    ref<Expr> query_expr, const std::vector<const Array *> &objects,
+    const Query &query, const std::vector<const Array *> &objects,
     std::vector<std::vector<unsigned char> > &values, bool &hasSolution) {
 
   // assume the negation of the query
-  assumption(_meta_solver, _builder->construct(Expr::createIsZero(query_expr)));
+  assumption(_meta_solver, _builder->construct(Expr::createIsZero(query.expr)));
   hasSolution = solve(_meta_solver);
 
   if (hasSolution) {
