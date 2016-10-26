@@ -173,13 +173,6 @@ bool MetaSMTSolverImpl<SolverContext>::computeInitialValues(
   TimerStatIncrementer t(stats::queryTime);
   assert(_builder);
 
-  /*
-   * FIXME push() and pop() work for Z3 but not for Boolector.
-   * If using Z3, use push() and pop() and assert constraints.
-   * If using Boolector, assume constrainsts instead of asserting them.
-   */
-  // push(_meta_solver);
-
   if (!_useForked) {
     for (ConstraintManager::const_iterator it = query.constraints.begin(),
                                            ie = query.constraints.end();
@@ -210,8 +203,6 @@ bool MetaSMTSolverImpl<SolverContext>::computeInitialValues(
       ++stats::queriesValid;
     }
   }
-
-  // pop(_meta_solver);
 
   return (success);
 }
