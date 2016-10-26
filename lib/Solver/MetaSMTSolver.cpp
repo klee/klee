@@ -173,15 +173,6 @@ bool MetaSMTSolverImpl<SolverContext>::computeInitialValues(
   TimerStatIncrementer t(stats::queryTime);
   assert(_builder);
 
-  if (!_useForked) {
-    for (ConstraintManager::const_iterator it = query.constraints.begin(),
-                                           ie = query.constraints.end();
-         it != ie; ++it) {
-      // assertion(_meta_solver, _builder->construct(*it));
-      assumption(_meta_solver, _builder->construct(*it));
-    }
-  }
-
   ++stats::queries;
   ++stats::queryCounterexamples;
 
@@ -212,6 +203,12 @@ SolverImpl::SolverRunStatus MetaSMTSolverImpl<SolverContext>::runAndGetCex(
     const Query &query, const std::vector<const Array *> &objects,
     std::vector<std::vector<unsigned char> > &values, bool &hasSolution) {
 
+  // assume the constraints of the query
+  for (ConstraintManager::const_iterator it = query.constraints.begin(),
+                                           ie = query.constraints.end();
+       it != ie; ++it) {
+    assumption(_meta_solver, _builder->construct(*it));
+  }
   // assume the negation of the query
   assumption(_meta_solver, _builder->construct(Expr::createIsZero(query.expr)));
   hasSolution = solve(_meta_solver);
