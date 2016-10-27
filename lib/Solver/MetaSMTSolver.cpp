@@ -28,14 +28,13 @@
 #undef Expr
 #undef Type
 #undef STP
-  
+
 #include <errno.h>
 #include <unistd.h>
 #include <signal.h>
 #include <sys/wait.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
-
 
 static unsigned char *shared_memory_ptr;
 static int shared_memory_id = 0;
@@ -205,7 +204,7 @@ SolverImpl::SolverRunStatus MetaSMTSolverImpl<SolverContext>::runAndGetCex(
 
   // assume the constraints of the query
   for (ConstraintManager::const_iterator it = query.constraints.begin(),
-                                           ie = query.constraints.end();
+                                         ie = query.constraints.end();
        it != ie; ++it) {
     assumption(_meta_solver, _builder->construct(*it));
   }
@@ -291,30 +290,29 @@ MetaSMTSolverImpl<SolverContext>::runAndGetCexForked(
 
     // asssert the negation of the query as we are in a child process
     assertion(_meta_solver,
-               _builder->construct(Expr::createIsZero(query.expr)));
+              _builder->construct(Expr::createIsZero(query.expr)));
     unsigned res = solve(_meta_solver);
 
     if (res) {
-        for (std::vector<const Array *>::const_iterator it = objects.begin(),
-                                                        ie = objects.end();
-             it != ie; ++it) {
+      for (std::vector<const Array *>::const_iterator it = objects.begin(),
+                                                      ie = objects.end();
+           it != ie; ++it) {
 
-          const Array *array = *it;
-          assert(array);
-          typename SolverContext::result_type array_exp =
-              _builder->getInitialArray(array);
+        const Array *array = *it;
+        assert(array);
+        typename SolverContext::result_type array_exp =
+            _builder->getInitialArray(array);
 
-          for (unsigned offset = 0; offset < array->size; offset++) {
+        for (unsigned offset = 0; offset < array->size; offset++) {
 
-            typename SolverContext::result_type elem_exp =
-                evaluate(_meta_solver,
-                         metaSMT::logic::Array::select(
-                             array_exp, bvuint(offset, array->getDomain())));
-            unsigned char elem_value =
-                metaSMT::read_value(_meta_solver, elem_exp);
-            *pos++ = elem_value;
-          }
+          typename SolverContext::result_type elem_exp = evaluate(
+              _meta_solver, metaSMT::logic::Array::select(
+                                array_exp, bvuint(offset, array->getDomain())));
+          unsigned char elem_value =
+              metaSMT::read_value(_meta_solver, elem_exp);
+          *pos++ = elem_value;
         }
+      }
     }
     assert((uint64_t *)pos);
     *((uint64_t *)pos) = stats::queryConstructs;
@@ -384,7 +382,6 @@ SolverImpl::SolverRunStatus
 MetaSMTSolverImpl<SolverContext>::getOperationStatusCode() {
   return _runStatusCode;
 }
-
 
 template <typename SolverContext>
 MetaSMTSolver<SolverContext>::MetaSMTSolver(bool useForked,
