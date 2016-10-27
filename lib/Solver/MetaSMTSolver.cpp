@@ -288,30 +288,6 @@ MetaSMTSolverImpl<SolverContext>::runAndGetCexForked(
       // assumption(_meta_solver, _builder->construct(*it));
     }
 
-    std::vector<std::vector<typename SolverContext::result_type> >
-        aux_arr_exprs;
-    if (MetaSMTBackend == METASMT_BACKEND_BOOLECTOR) {
-      for (std::vector<const Array *>::const_iterator it = objects.begin(),
-                                                      ie = objects.end();
-           it != ie; ++it) {
-
-        std::vector<typename SolverContext::result_type> aux_arr;
-        const Array *array = *it;
-        assert(array);
-        typename SolverContext::result_type array_exp =
-            _builder->getInitialArray(array);
-
-        for (unsigned offset = 0; offset < array->size; offset++) {
-          typename SolverContext::result_type elem_exp = evaluate(
-              _meta_solver, metaSMT::logic::Array::select(
-                                array_exp, bvuint(offset, array->getDomain())));
-          aux_arr.push_back(elem_exp);
-        }
-        aux_arr_exprs.push_back(aux_arr);
-      }
-      assert(aux_arr_exprs.size() == objects.size());
-    }
-
     // assume the negation of the query
     // can be also asserted instead of assumed as we are in a child process
     assumption(_meta_solver,
@@ -319,9 +295,6 @@ MetaSMTSolverImpl<SolverContext>::runAndGetCexForked(
     unsigned res = solve(_meta_solver);
 
     if (res) {
-
-      if (MetaSMTBackend != METASMT_BACKEND_BOOLECTOR) {
-
         for (std::vector<const Array *>::const_iterator it = objects.begin(),
                                                         ie = objects.end();
              it != ie; ++it) {
@@ -342,27 +315,6 @@ MetaSMTSolverImpl<SolverContext>::runAndGetCexForked(
             *pos++ = elem_value;
           }
         }
-      } else {
-        typename std::vector<
-            std::vector<typename SolverContext::result_type> >::const_iterator
-            eit = aux_arr_exprs.begin(),
-            eie = aux_arr_exprs.end();
-        for (std::vector<const Array *>::const_iterator it = objects.begin(),
-                                                        ie = objects.end();
-             it != ie, eit != eie; ++it, ++eit) {
-          const Array *array = *it;
-          const std::vector<typename SolverContext::result_type> &arr_exp =
-              *eit;
-          assert(array);
-          assert(array->size == arr_exp.size());
-
-          for (unsigned offset = 0; offset < array->size; offset++) {
-            unsigned char elem_value =
-                metaSMT::read_value(_meta_solver, arr_exp[offset]);
-            *pos++ = elem_value;
-          }
-        }
-      }
     }
     assert((uint64_t *)pos);
     *((uint64_t *)pos) = stats::queryConstructs;
