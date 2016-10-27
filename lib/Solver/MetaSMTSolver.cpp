@@ -281,6 +281,7 @@ MetaSMTSolverImpl<SolverContext>::runAndGetCexForked(
       ::alarm(std::max(1, (int)timeout));
     }
 
+    // assert constraints as we are in a child process
     for (ConstraintManager::const_iterator it = query.constraints.begin(),
                                            ie = query.constraints.end();
          it != ie; ++it) {
@@ -288,9 +289,8 @@ MetaSMTSolverImpl<SolverContext>::runAndGetCexForked(
       // assumption(_meta_solver, _builder->construct(*it));
     }
 
-    // assume the negation of the query
-    // can be also asserted instead of assumed as we are in a child process
-    assumption(_meta_solver,
+    // asssert the negation of the query as we are in a child process
+    assertion(_meta_solver,
                _builder->construct(Expr::createIsZero(query.expr)));
     unsigned res = solve(_meta_solver);
 
