@@ -65,7 +65,7 @@ class CexCachingSolver : public SolverImpl {
   MapOfSets<ref<Expr>, AssignmentCacheWrapper*> cache;
   // memo table
   assignmentsTable_ty assignmentsTable;
-  std::vector< ref<Expr> > unsat_core;
+  std::vector<ref<Expr> > unsatCore;
 
   bool searchForAssignment(KeyType &key, 
                            Assignment *&result);
@@ -93,9 +93,7 @@ public:
   SolverRunStatus getOperationStatusCode();
   char *getConstraintLog(const Query& query);
   void setCoreSolverTimeout(double timeout);
-  std::vector< ref<Expr> > getUnsatCore() {
-    return unsat_core;
-  }
+  std::vector<ref<Expr> > getUnsatCore() { return unsatCore; }
 };
 
 ///
@@ -135,7 +133,7 @@ bool CexCachingSolver::searchForAssignment(KeyType &key, Assignment *&result) {
 
   if (lookup) {
     result = (*lookup)->getAssignment();
-    unsat_core = (*lookup)->getCore();
+    unsatCore = (*lookup)->getCore();
     return true;
   }
 
@@ -153,7 +151,7 @@ bool CexCachingSolver::searchForAssignment(KeyType &key, Assignment *&result) {
     // If either lookup succeeded, then we have a cached solution.
     if (lookup) {
       result = (*lookup)->getAssignment();
-      unsat_core = (*lookup)->getCore();
+      unsatCore = (*lookup)->getCore();
       return true;
     }
 
@@ -164,7 +162,7 @@ bool CexCachingSolver::searchForAssignment(KeyType &key, Assignment *&result) {
       Assignment *a = *it;
       if (a->satisfies(key.begin(), key.end())) {
         result = a;
-        unsat_core.clear();
+        unsatCore.clear();
         return true;
       }
     }
@@ -188,7 +186,7 @@ bool CexCachingSolver::searchForAssignment(KeyType &key, Assignment *&result) {
     // If either lookup succeeded, then we have a cached solution.
     if (lookup) {
       result = (*lookup)->getAssignment();
-      unsat_core = (*lookup)->getCore();
+      unsatCore = (*lookup)->getCore();
       return true;
     }
   }
@@ -226,10 +224,11 @@ bool CexCachingSolver::lookupAssignment(const Query &query,
     ++stats::queryCexCacheHits;
   else ++stats::queryCexCacheMisses;
 
-  if (keyHasAddedConstraint && !unsat_core.empty()) {
+  if (keyHasAddedConstraint && !unsatCore.empty()) {
       /// Here we remove the added component (neg)
       /// from the unsatisfiability core.
-      unsat_core.erase(std::remove(unsat_core.begin(), unsat_core.end(), neg), unsat_core.end());
+    unsatCore.erase(std::remove(unsatCore.begin(), unsatCore.end(), neg),
+                    unsatCore.end());
   }
     
   return found;
@@ -272,9 +271,9 @@ bool CexCachingSolver::getAssignment(const Query& query, Assignment *&result) {
 
     bindingWrapper = new AssignmentCacheWrapper(binding);
   } else {
-    unsat_core = solver->impl->getUnsatCore();
+    unsatCore = solver->impl->getUnsatCore();
     binding = (Assignment *) 0;
-    bindingWrapper = new AssignmentCacheWrapper(unsat_core);
+    bindingWrapper = new AssignmentCacheWrapper(unsatCore);
   }
   
   result = binding;

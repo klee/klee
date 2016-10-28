@@ -20,6 +20,8 @@
 #include "klee/CommandLine.h"
 #include "klee/Config/Version.h"
 #include "klee/ExecutionState.h"
+#include "klee/Solver.h"
+#include "klee/Statistic.h"
 #include "klee/util/ExprVisitor.h"
 
 #include "Dependency.h"
@@ -34,47 +36,6 @@ class ExecutionState;
 class PathCondition;
 
 class SubsumptionTableEntry;
-
-/// \brief Time records for method running time statistics
-class StatTimer {
-  double amount;
-  double lastRecorded;
-
-public:
-  StatTimer() : amount(0.0), lastRecorded(0.0) {}
-
-  ~StatTimer() {}
-
-  void start() {
-    if (lastRecorded == 0.0)
-      lastRecorded = clock();
-  }
-
-  double stop() {
-    double elapsed = clock() - lastRecorded;
-    amount += elapsed;
-    lastRecorded = 0.0;
-    return elapsed;
-  }
-
-  double get() { return (amount / (double)CLOCKS_PER_SEC); }
-
-  /// \brief Utility function to represent double-precision floating point in
-  /// two decimal points.
-  static std::string inTwoDecimalPoints(double n) {
-    std::ostringstream stream;
-    unsigned long x = (unsigned)((n - ((unsigned)n)) * 100);
-    unsigned y = (unsigned)n;
-    stream << y << ".";
-    if (x > 9)
-      stream << x;
-    else if (x > 0)
-      stream << "0" << x;
-    else
-      stream << "00";
-    return stream.str();
-  }
-};
 
 /// \brief The implementation of the search tree for outputting to .dot file.
 class SearchTree {
@@ -363,14 +324,11 @@ class SubsumptionTableEntry {
     }
   };
 
-  /// \brief Statistics for actual solver call time in subsumption check
-  static StatTimer actualSolverCallTimer;
-
-  /// \brief The number of solver calls for subsumption checks
-  static unsigned long checkSolverCount;
-
-  /// \brief The number of failed solver calls for subsumption checks
-  static unsigned long checkSolverFailureCount;
+  /// \brief Mark begin and end of subsumption check for use within a scope
+  struct SubsumptionCheckMarker {
+    SubsumptionCheckMarker() { Z3Solver::subsumptionCheck = true; }
+    ~SubsumptionCheckMarker() { Z3Solver::subsumptionCheck = false; }
+  };
 
   ref<Expr> interpolant;
 
@@ -456,7 +414,7 @@ class SubsumptionTableEntry {
   }
 
   /// \brief For printing method running time statistics
-  static void printStat(llvm::raw_ostream &stream);
+  static void printStat(std::stringstream &stream);
 
 public:
   const uintptr_t nodeId;
@@ -500,16 +458,17 @@ class ITreeNode {
 
   friend class ExecutionState;
 
-  // Timers for profiling the execution times of the methods of this class.
-  static StatTimer getInterpolantTimer;
-  static StatTimer addConstraintTimer;
-  static StatTimer splitTimer;
-  static StatTimer executeTimer;
-  static StatTimer bindCallArgumentsTimer;
-  static StatTimer bindReturnValueTimer;
-  static StatTimer getStoredExpressionsTimer;
-  static StatTimer getStoredCoreExpressionsTimer;
-  static StatTimer computeCoreAllocationsTimer;
+  // Timers for profiling the execution times of the methods of this class
+
+  static Statistic getInterpolantTime;
+  static Statistic addConstraintTime;
+  static Statistic splitTime;
+  static Statistic executeTime;
+  static Statistic bindCallArgumentsTime;
+  static Statistic bindReturnValueTime;
+  static Statistic getStoredExpressionsTime;
+  static Statistic getStoredCoreExpressionsTime;
+  static Statistic computeCoreAllocationsTime;
 
 private:
   /// \brief The path condition
@@ -529,6 +488,9 @@ private:
   /// \brief Graph for displaying as .dot file
   SearchTree *graph;
 
+  /// \brief For statistics on the number of instructions executed along a path.
+  unsigned instructionsDepth;
+
   void setNodeLocation(llvm::Instruction *instr) {
     if (!nodeId)
       nodeId = reinterpret_cast<uintptr_t>(instr);
@@ -540,7 +502,7 @@ private:
   }
 
   /// \brief for printing method running time statistics
-  static void printTimeStat(llvm::raw_ostream &stream);
+  static void printTimeStat(std::stringstream &stream);
 
   void execute(llvm::Instruction *instr, std::vector<ref<Expr> > &args);
 
@@ -598,6 +560,10 @@ public:
   std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
   getStoredCoreExpressions(std::set<const Array *> &replacements) const;
 
+  void incInstructionsDepth();
+
+  unsigned getInstructionsDepth();
+
   /// \brief Marking the core constraints on the path condition, and all the
   /// relevant values on the dependency graph, given an unsatistiability core.
   void unsatCoreMarking(std::vector<ref<Expr> > unsatCore);
@@ -630,12 +596,14 @@ class ITree {
 
   // Several static fields for profiling the execution time of this class's
   // methods.
-  static StatTimer setCurrentINodeTimer;
-  static StatTimer removeTimer;
-  static StatTimer subsumptionCheckTimer;
-  static StatTimer markPathConditionTimer;
-  static StatTimer splitTimer;
-  static StatTimer executeOnNodeTimer;
+  static Statistic setCurrentINodeTime;
+  static Statistic removeTime;
+  static Statistic subsumptionCheckTime;
+  static Statistic markPathConditionTime;
+  static Statistic splitTime;
+  static Statistic executeOnNodeTime;
+  static double entryNumber;
+  static double programPointNumber;
 
   /// \brief Number of subsumption checks for statistical purposes
   static unsigned long subsumptionCheckCount;
@@ -648,10 +616,14 @@ class ITree {
                  std::string edges) const;
 
   /// \brief Displays method running time statistics
-  static void printTimeStat(llvm::raw_ostream &stream);
+  static void printTimeStat(std::stringstream &stream);
 
   /// \brief Displays subsumption table statistics
-  void printTableStat(llvm::raw_ostream &stream) const;
+  static void printTableStat(std::stringstream &stream);
+
+  /// \brief Utility function to represent double-precision floating point in
+  /// two decimal points.
+  static std::string inTwoDecimalPoints(const double n);
 
 public:
   ITreeNode *root;
@@ -738,8 +710,8 @@ public:
   /// \brief Print the content of the tree object to the LLVM error stream
   void dump() const;
 
-  /// \brief Outputs interpolation statistics to LLVM error stream.
-  void dumpInterpolationStat() const;
+  /// \brief Retrieve subsumption statistics result in std::string format
+  static std::string getInterpolationStat();
 };
 }
 #endif /* ITREE_H_ */

@@ -17,7 +17,9 @@
 void klee::printVersion()
 {
   llvm::outs() << PACKAGE_STRING " (" PACKAGE_URL ")\n";
+#ifdef KLEE_ENABLE_TIMESTAMP
   llvm::outs() << "  Built " __DATE__ " (" __TIME__ ")\n";
+#endif
   llvm::outs() << "  Build mode: " << KLEE_BUILD_MODE "\n";
   llvm::outs() << "  Build revision: ";
 #ifdef KLEE_BUILD_REVISION

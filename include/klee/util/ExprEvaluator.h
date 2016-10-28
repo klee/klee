@@ -25,6 +25,7 @@ namespace klee {
     Action visitSDiv(const SDivExpr &e);
     Action visitURem(const URemExpr &e);
     Action visitSRem(const SRemExpr &e);
+    Action visitExprPost(const Expr& e);
       
   public:
     ExprEvaluator() {}

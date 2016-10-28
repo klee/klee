@@ -1,0 +1,227 @@
+# RUN: %kleaver %s > %t
+# RUN: %kleaver --clear-array-decls-after-query %s > %t
+
+array A-data[8] : w32 -> w8 = symbolic
+array A-data-stat[144] : w32 -> w8 = symbolic
+array arg0[3] : w32 -> w8 = symbolic
+array arg1[3] : w32 -> w8 = symbolic
+array const_arr1[768] : w32 -> w8 = [0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 3 32 2 32 2 32 2 32 2 32 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 1 96 4 192 4 192 4 192 4 192 4 192 4 192 4 192 4 192 4 192 4 192 4 192 4 192 4 192 4 192 4 192 8 216 8 216 8 216 8 216 8 216 8 216 8 216 8 216 8 216 8 216 4 192 4 192 4 192 4 192 4 192 4 192 4 192 8 213 8 213 8 213 8 213 8 213 8 213 8 197 8 197 8 197 8 197 8 197 8 197 8 197 8 197 8 197 8 197 8 197 8 197 8 197 8 197 8 197 8 197 8 197 8 197 8 197 8 197 4 192 4 192 4 192 4 192 4 192 4 192 8 214 8 214 8 214 8 214 8 214 8 214 8 198 8 198 8 198 8 198 8 198 8 198 8 198 8 198 8 198 8 198 8 198 8 198 8 198 8 198 8 198 8 198 8 198 8 198 8 198 8 198 4 192 4 192 4 192 4 192 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0]
+array const_arr8[277] : w32 -> w8 = [0 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 24 2 2 25 2 2 2 2 2 2 2 2 2 2 23 2 2 2 2 2 22 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21]
+array model_version[4] : w32 -> w8 = symbolic
+array n_args[4] : w32 -> w8 = symbolic
+array n_args_1[4] : w32 -> w8 = symbolic
+array stdin[8] : w32 -> w8 = symbolic
+array stdin-stat[144] : w32 -> w8 = symbolic
+array stdout[1024] : w32 -> w8 = symbolic
+array stdout-stat[144] : w32 -> w8 = symbolic
+(query [(Ult N0:(ReadLSB w32 0 n_args)
+              2)
+         (Eq false (Slt 0 N0))
+         (Ult N1:(ReadLSB w32 0 n_args_1)
+              3)
+         (Slt 0 N1)
+         (Slt 1 N1)
+         (Eq false
+             (Eq 0
+                 (And w64 (ReadLSB w64 8 A-data-stat)
+                          2147483647)))
+         (Ult (ReadLSB w64 56 A-data-stat)
+              65536)
+         (Eq false
+             (Eq 0
+                 (And w64 (ReadLSB w64 8 stdin-stat)
+                          2147483647)))
+         (Ult (ReadLSB w64 56 stdin-stat)
+              65536)
+         (Eq false
+             (Eq 0
+                 (And w64 (ReadLSB w64 8 stdout-stat)
+                          2147483647)))
+         (Ult (ReadLSB w64 56 stdout-stat)
+              65536)
+         (Eq 1
+             (ReadLSB w32 0 model_version))
+         (Eq 45 (Read w8 0 arg0))
+         (Eq false
+             (Eq 0 N2:(Read w8 1 arg0)))
+         (Eq false (Eq 45 N2))
+         (Eq 100
+             (AShr w32 (Shl w32 (SExt w32 N2) 24)
+                       24))
+         (Eq 0
+             (And w16 (ReadLSB w16 N3:(Extract w32 0 (Add w64 256
+                                                              (Mul w64 2
+                                                                       (ZExt w64 N4:(Read w8 0 arg1))))) const_arr1)
+                      8192))
+         (Eq false (Eq 84 N4))
+         (Eq false
+             (Ult (Add w64 18446744073664565360
+                           N5:(Select w64 (Eq 0 N4) 44986256 51741584))
+                  2))
+         (Eq false
+             (Ult (Add w32 4294967248
+                           (ZExt w32 N6:(Read w8 (Extract w32 0 (Add w64 18446744073657810032 N5))
+                                                 U0:[2=0] @ arg1)))
+                  10))
+         (Eq false (Eq 45 N6))
+         (Eq false (Eq 43 N6))
+         (Eq 0
+             (And w16 (ReadLSB w16 N7:(Extract w32 0 (Add w64 256
+                                                              (Mul w64 2 (ZExt w64 N6)))) const_arr1)
+                      1024))
+         (Eq false (Eq 40 N6))
+         (Eq false
+             (Slt N8:(SExt w32 N6) 1))
+         (Ult 96
+              (Add w32 4294967286
+                       (ZExt w32 (Read w8 (Extract w32 0 (SExt w64 N8))
+                                          const_arr8))))
+         (Eq 7 (Read w8 0 U0))
+         (Eq 13 (Read w8 1 U0))]
+        false []
+        [n_args
+         n_args_1
+         arg0
+         arg1
+         A-data
+         A-data-stat
+         stdin
+         stdin-stat
+         stdout
+         stdout-stat
+         model_version])
+
+array A-data[8] : w32 -> w8 = symbolic
+array A-data-stat[144] : w32 -> w8 = symbolic
+array arg0[11] : w32 -> w8 = symbolic
+array arg1[3] : w32 -> w8 = symbolic
+array model_version[4] : w32 -> w8 = symbolic
+array n_args[4] : w32 -> w8 = symbolic
+array n_args_1[4] : w32 -> w8 = symbolic
+array stdin[8] : w32 -> w8 = symbolic
+array stdin-stat[144] : w32 -> w8 = symbolic
+array stdout[1024] : w32 -> w8 = symbolic
+array stdout-stat[144] : w32 -> w8 = symbolic
+(query [(Ult N0:(ReadLSB w32 0 n_args)
+              2)
+         (Slt 0 N0)
+         (Ult N1:(ReadLSB w32 0 n_args_1)
+              3)
+         (Slt 0 N1)
+         (Eq false (Slt 1 N1))
+         (Eq false
+             (Eq 0
+                 (And w64 (ReadLSB w64 8 A-data-stat)
+                          2147483647)))
+         (Ult (ReadLSB w64 56 A-data-stat)
+              65536)
+         (Eq false
+             (Eq 0
+                 (And w64 (ReadLSB w64 8 stdin-stat)
+                          2147483647)))
+         (Ult (ReadLSB w64 56 stdin-stat)
+              65536)
+         (Eq false
+             (Eq 0
+                 (And w64 (ReadLSB w64 8 stdout-stat)
+                          2147483647)))
+         (Ult (ReadLSB w64 56 stdout-stat)
+              65536)
+         (Eq 1
+             (ReadLSB w32 0 model_version))
+         (Eq 45 (Read w8 0 arg0))
+         (Eq 45 (Read w8 1 arg0))
+         (Eq 61 (Read w8 3 arg0))
+         (Eq 116 (Read w8 2 arg0))
+         (Eq false
+             (Eq 0 (Read w8 4 arg0)))
+         (Eq false
+             (Eq 0
+                 N2:(Read w8 7 U0:[10=0] @ arg0)))
+         (Eq 0 (Read w8 8 U0))
+         (Eq 11 (Read w8 4 U0))
+         (Eq 63 (Read w8 5 U0))
+         (Eq 8 (Read w8 6 U0))
+         (Eq false (Eq 39 N2))
+         (Or (Eq 122 N2)
+             (Or (Eq 121 N2)
+                 (Or (Eq 120 N2)
+                     (Or (Eq 119 N2)
+                         (Or (Eq 118 N2)
+                             (Or (Eq 117 N2)
+                                 (Or (Eq 116 N2)
+                                     (Or (Eq 115 N2)
+                                         (Or (Eq 114 N2)
+                                             (Or (Eq 113 N2)
+                                                 (Or (Eq 112 N2)
+                                                     (Or (Eq 111 N2)
+                                                         (Or (Eq 110 N2)
+                                                             (Or (Eq 109 N2)
+                                                                 (Or (Eq 108 N2)
+                                                                     (Or (Eq 107 N2)
+                                                                         (Or (Eq 106 N2)
+                                                                             (Or (Eq 105 N2)
+                                                                                 (Or (Eq 104 N2)
+                                                                                     (Or (Eq 103 N2)
+                                                                                         (Or (Eq 102 N2)
+                                                                                             (Or (Eq 101 N2)
+                                                                                                 (Or (Eq 100 N2)
+                                                                                                     (Or (Eq 99 N2)
+                                                                                                         (Or (Eq 98 N2)
+                                                                                                             (Or (Eq 97 N2)
+                                                                                                                 (Or (Eq 95 N2)
+                                                                                                                     (Or (Eq 93 N2)
+                                                                                                                         (Or (Eq 90 N2)
+                                                                                                                             (Or (Eq 89 N2)
+                                                                                                                                 (Or (Eq 88 N2)
+                                                                                                                                     (Or (Eq 87 N2)
+                                                                                                                                         (Or (Eq 86 N2)
+                                                                                                                                             (Or (Eq 85 N2)
+                                                                                                                                                 (Or (Eq 84 N2)
+                                                                                                                                                     (Or (Eq 83 N2)
+                                                                                                                                                         (Or (Eq 82 N2)
+                                                                                                                                                             (Or (Eq 81 N2)
+                                                                                                                                                                 (Or (Eq 80 N2)
+                                                                                                                                                                     (Or (Eq 79 N2)
+                                                                                                                                                                         (Or (Eq 78 N2)
+                                                                                                                                                                             (Or (Eq 77 N2)
+                                                                                                                                                                                 (Or (Eq 76 N2)
+                                                                                                                                                                                     (Or (Eq 75 N2)
+                                                                                                                                                                                         (Or (Eq 74 N2)
+                                                                                                                                                                                             (Or (Eq 73 N2)
+                                                                                                                                                                                                 (Or (Eq 72 N2)
+                                                                                                                                                                                                     (Or (Eq 71 N2)
+                                                                                                                                                                                                         (Or (Eq 70 N2)
+                                                                                                                                                                                                             (Or (Eq 69 N2)
+                                                                                                                                                                                                                 (Or (Eq 68 N2)
+                                                                                                                                                                                                                     (Or (Eq 67 N2)
+                                                                                                                                                                                                                         (Or (Eq 66 N2)
+                                                                                                                                                                                                                             (Or (Eq 65 N2)
+                                                                                                                                                                                                                                 (Or (Eq 58 N2)
+                                                                                                                                                                                                                                     (Or (Eq 57 N2)
+                                                                                                                                                                                                                                         (Or (Eq 56 N2)
+                                                                                                                                                                                                                                             (Or (Eq 55 N2)
+                                                                                                                                                                                                                                                 (Or (Eq 54 N2)
+                                                                                                                                                                                                                                                     (Or (Eq 53 N2)
+                                                                                                                                                                                                                                                         (Or (Eq 52 N2)
+                                                                                                                                                                                                                                                             (Or (Eq 51 N2)
+                                                                                                                                                                                                                                                                 (Or (Eq 50 N2)
+                                                                                                                                                                                                                                                                     (Or (Eq 49 N2)
+                                                                                                                                                                                                                                                                         (Or (Eq 48 N2)
+                                                                                                                                                                                                                                                                             (Or (Eq 47 N2)
+                                                                                                                                                                                                                                                                                 (Or (Eq 46 N2)
+                                                                                                                                                                                                                                                                                     (Or (Eq 45 N2)
+                                                                                                                                                                                                                                                                                         (Or (Eq 44 N2)
+                                                                                                                                                                                                                                                                                             (Or (Eq 43 N2) (Eq 37 N2)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))]
+        false []
+        [n_args
+         arg0
+         n_args_1
+         arg1
+         A-data
+         A-data-stat
+         stdin
+         stdin-stat
+         stdout
+         stdout-stat
+         model_version])

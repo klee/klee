@@ -1,3 +1,27 @@
+KLEE 1.2.0, 31 March 2016
+=========================
+
+* Added native support for Z3 (@delcypher)
+* Made it possible to build KLEE without using STP and only MetaSMT (@delcypher)
+* Added support for tcmalloc, which allows KLEE to better track memory consumption (@MartinNowack)
+* Added support for lowering the ``llvm.objectsize`` intrinsic (@delcypher)
+* Added soname for Runtest dynamic library (@MartinNowack)
+* Added support to load libraries from command line (@omeranson)
+* Added command line flag --silent-klee-assume to suppress errors due to infeasible assumptions (Valentin Wüstholz, @wuestholz)
+* Changed code to print out arrays deterministically (@MartinNowack)
+* Improved klee-clang script (@msoos)
+* Added code to dump queries and assignments (@MartinNowack)
+* Code cleanup and refactorings (@delcypher, @MartinNowack)
+* Improvements to code infrastructure (@delcypher, @domainexpert, @MartinNowack, @mdimjasevic, @msoos)
+* Fixed several memory leaks (@delcypher)
+* Fixed a bug with how non-power of 2 values were written to memory (@kren1)
+* Fixed valueIsOnlyCalled() used by MD2U (@yotann)
+* Fixed SELinux signatures (@lszekeres)
+* Fixed incorrect position of Not in Expr::Kind (@delcypher)
+* Fixed wrong std::vector usage after reserve() call (@pollnossa)
+* Improved documentation (@bananaappletw, @ccadar, @delcypher, @mdimjasevic, @Teemperor, @ward, @wuestholz)
+
+
 KLEE 1.1.0, 13 November 2015
 ============================
 

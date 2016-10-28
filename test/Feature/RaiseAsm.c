@@ -36,5 +36,7 @@ int main() {
   assert(ui16 == byteswap_uint16(byteswap_uint16_asm(ui16)));
   assert(ui32 == byteswap_uint32(byteswap_uint32_asm(ui32)));
 
+  __asm__ __volatile__("" : : : "memory");
+
   return 0;
 }

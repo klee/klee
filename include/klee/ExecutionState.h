@@ -166,7 +166,7 @@ public:
 
 // XXX total hack, just used to make a state so solver can
 // use on structure
-#ifdef SUPPORT_Z3
+#ifdef ENABLE_Z3
   ExecutionState(const KInstIterator &srcPrevPC,
                  const std::vector<ref<Expr> > &assumptions);
 #else
@@ -184,7 +184,7 @@ public:
 
   void addSymbolic(const MemoryObject *mo, const Array *array);
   void addConstraint(ref<Expr> e) {
-#ifdef SUPPORT_Z3
+#ifdef ENABLE_Z3
     addITreeConstraint(e, prevPC->inst);
 #endif
     constraints.addConstraint(e);

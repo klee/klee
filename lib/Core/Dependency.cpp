@@ -442,8 +442,8 @@ Dependency::getStoredExpressions(std::set<const Array *> &replacements,
           llvm::Value *base = (*allocIter)->getSite();
           uint64_t uintAddress = (*allocIter)->getUIntAddress();
           ref<Expr> address = (*allocIter)->getAddress();
-#ifdef SUPPORT_Z3
-	  if (!NoExistential) {
+#ifdef ENABLE_Z3
+          if (!NoExistential) {
             concreteStore[base][uintAddress] = AddressValuePair(
                 ShadowArray::getShadowExpression(address, replacements),
                 ShadowArray::getShadowExpression(expr, replacements));
@@ -460,7 +460,7 @@ Dependency::getStoredExpressions(std::set<const Array *> &replacements,
         } else if (v->isCore()) {
           ref<Expr> expr = v->getExpression();
           llvm::Value *base = v->getValue();
-#ifdef SUPPORT_Z3
+#ifdef ENABLE_Z3
           if (!NoExistential) {
             symbolicStore[base].push_back(AddressValuePair(
                 ShadowArray::getShadowExpression(address, replacements),

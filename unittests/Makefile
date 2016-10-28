@@ -1,4 +1,11 @@
 ##===- unittests/Makefile ----------------------------------*- Makefile -*-===##
+# 
+#                      The KLEE Symbolic Virtual Machine
+# 
+#  This file is distributed under the University of Illinois Open Source
+#  License. See LICENSE.TXT for details.
+# 
+# ===----------------------------------------------------------------------===##
 
 LEVEL = ..
 
@@ -10,7 +17,7 @@ CPP.Flags += -I$(LLVM_SRC_ROOT)/utils/unittest/googletest/include/
 CPP.Flags += -Wno-variadic-macros
 
 # FIXME: Parallel dirs is broken?
-DIRS = Expr Solver Ref
+DIRS = Expr Solver Ref Assignment
 
 include $(LEVEL)/Makefile.common
 

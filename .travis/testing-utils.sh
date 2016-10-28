@@ -4,9 +4,9 @@ set -e
 
 if [ "${LLVM_VERSION}" != "2.9" ]; then
     # Using LLVM3.4 all we need is vanilla GoogleTest :)
-    wget https://googletest.googlecode.com/files/gtest-1.7.0.zip
-    unzip gtest-1.7.0.zip
-    cd gtest-1.7.0/
+    wget https://github.com/google/googletest/archive/release-1.7.0.zip
+    unzip release-1.7.0.zip
+    cd googletest-release-1.7.0/
     cmake .
     make
     # Normally I wouldn't do something like this but hey we're running on a temporary virtual machine, so who cares?

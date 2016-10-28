@@ -409,9 +409,7 @@ public:
   SolverRunStatus getOperationStatusCode();
   char *getConstraintLog(const Query&);
   void setCoreSolverTimeout(double timeout);
-  std::vector< ref<Expr> > getUnsatCore() {
-    return solver->getUnsatCore();
-  }
+  std::vector<ref<Expr> > getUnsatCore() { return solver->getUnsatCore(); }
 };
   
 bool IndependentSolver::computeValidity(const Query& query,
@@ -440,23 +438,39 @@ bool IndependentSolver::computeValue(const Query& query, ref<Expr> &result) {
   return solver->impl->computeValue(Query(tmp, query.expr), result);
 }
 
-
 // Helper function used only for assertions to make sure point created
-// during computeInitialValues is in fact correct.
-bool assertCreatedPointEvaluatesToTrue(const Query &query,
-                                       const std::vector<const Array*> &objects,
-                                       std::vector< std::vector<unsigned char> > &values){
-  Assignment assign = Assignment(objects, values);
+// during computeInitialValues is in fact correct. The ``retMap`` is used
+// in the case ``objects`` doesn't contain all the assignments needed.
+bool assertCreatedPointEvaluatesToTrue(
+    const Query &query, const std::vector<const Array *> &objects,
+    std::vector<std::vector<unsigned char> > &values,
+    std::map<const Array *, std::vector<unsigned char> > &retMap) {
+  // _allowFreeValues is set to true so that if there are missing bytes in the
+  // assigment
+  // we will end up with a non ConstantExpr after evaluating the assignment and
+  // fail
+  Assignment assign = Assignment(objects, values, /*_allowFreeValues=*/true);
+
+  // Add any additional bindings.
+  // The semantics of std::map should be to not insert a (key, value)
+  // pair if it already exists so we should continue to use the assignment
+  // from ``objects`` and ``values``.
+  if (retMap.size() > 0)
+    assign.bindings.insert(retMap.begin(), retMap.end());
+
   for(ConstraintManager::constraint_iterator it = query.constraints.begin();
       it != query.constraints.end(); ++it){
     ref<Expr> ret = assign.evaluate(*it);
-    if(! isa<ConstantExpr>(ret) || ! cast<ConstantExpr>(ret)->isTrue()){
+
+    assert(isa<ConstantExpr>(ret) &&
+           "assignment evaluation did not result in constant");
+    ref<ConstantExpr> evaluatedConstraint = dyn_cast<ConstantExpr>(ret);
+    if (evaluatedConstraint->isFalse()) {
       return false;
     }
   }
   ref<Expr> neg = Expr::createIsZero(query.expr);
   ref<Expr> q = assign.evaluate(neg);
-
   assert(isa<ConstantExpr>(q) && "assignment evaluation did not result in constant");
   return cast<ConstantExpr>(q)->isTrue();
 }
@@ -531,7 +545,8 @@ bool IndependentSolver::computeInitialValues(const Query& query,
       values.push_back(retMap[arr]);
     }
   }
-  assert(assertCreatedPointEvaluatesToTrue(query, objects, values) && "should satisfy the equation");
+  assert(assertCreatedPointEvaluatesToTrue(query, objects, values, retMap) &&
+         "should satisfy the equation");
   delete factors;
   return true;
 }

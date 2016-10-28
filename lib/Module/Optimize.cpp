@@ -163,7 +163,7 @@ static void AddStandardCompilePasses(PassManager &PM) {
 /// Optimize - Perform link time optimizations. This will run the scalar
 /// optimizations, any loaded plugin-optimization modules, and then the
 /// inter-procedural optimizations if applicable.
-void Optimize(Module* M) {
+void Optimize(Module *M, const std::string &EntryPoint) {
 
   // Instantiate the pass manager to organize the passes.
   PassManager Passes;
@@ -192,7 +192,8 @@ void Optimize(Module* M) {
     // internal.
     if (!DisableInternalize) {
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 2)
-      ModulePass *pass = createInternalizePass(std::vector<const char *>(1, "main"));
+      ModulePass *pass = createInternalizePass(
+          std::vector<const char *>(1, EntryPoint.c_str()));
 #else
       ModulePass *pass = createInternalizePass(true);
 #endif

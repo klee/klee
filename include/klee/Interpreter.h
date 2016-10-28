@@ -39,6 +39,16 @@ public:
   virtual llvm::raw_fd_ostream *openOutputFile(const std::string &filename) = 0;
 
   virtual void incPathsExplored() = 0;
+  virtual void incBranchingDepthOnExitTermination(unsigned currentDepth) = 0;
+  virtual void incTotalInstructionsOnExit(unsigned currentInstruction) = 0;
+  virtual void incBranchingDepthOnEarlyTermination(unsigned currentDepth) = 0;
+  virtual void incInstructionsDepthOnEarlyTermination(unsigned currentInstruction) = 0;
+  virtual void incBranchingDepthOnErrorTermination(unsigned currentDepth) = 0;
+  virtual void incInstructionsDepthOnErrorTermination(unsigned currentInstruction) = 0;
+  virtual void
+  incInstructionsDepthOnSubsumption(unsigned currentDepth) = 0;
+  virtual void
+  incTotalInstructionsOnSubsumption(unsigned currentInstruction) = 0;
   virtual void incSubsumptionTermination() = 0;
   virtual void incSubsumptionTerminationTest() = 0;
   virtual void incEarlyTermination() = 0;
@@ -47,6 +57,7 @@ public:
   virtual void incErrorTerminationTest() = 0;
   virtual void incExitTermination() = 0;
   virtual void incExitTerminationTest() = 0;
+  virtual void assignSubsumptionStats(std::string currentStats) = 0;
 
   virtual void processTestCase(const ExecutionState &state,
                                const char *err, 
@@ -59,15 +70,16 @@ public:
   /// registering a module with the interpreter.
   struct ModuleOptions {
     std::string LibraryDir;
+    std::string EntryPoint;
     bool Optimize;
     bool CheckDivZero;
     bool CheckOvershift;
 
-    ModuleOptions(const std::string& _LibraryDir, 
-                  bool _Optimize, bool _CheckDivZero,
-                  bool _CheckOvershift)
-      : LibraryDir(_LibraryDir), Optimize(_Optimize), 
-        CheckDivZero(_CheckDivZero), CheckOvershift(_CheckOvershift) {}
+    ModuleOptions(const std::string &_LibraryDir,
+                  const std::string &_EntryPoint, bool _Optimize,
+                  bool _CheckDivZero, bool _CheckOvershift)
+        : LibraryDir(_LibraryDir), EntryPoint(_EntryPoint), Optimize(_Optimize),
+          CheckDivZero(_CheckDivZero), CheckOvershift(_CheckOvershift) {}
   };
 
   enum LogType
@@ -121,7 +133,7 @@ public:
 
   // supply a test case to replay from. this can be used to drive the
   // interpretation down a user specified path. use null to reset.
-  virtual void setReplayOut(const struct KTest *out) = 0;
+  virtual void setReplayKTest(const struct KTest *out) = 0;
 
   // supply a list of branch decisions specifying which direction to
   // take on forks. this can be used to drive the interpretation down
