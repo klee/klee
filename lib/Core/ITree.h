@@ -288,7 +288,7 @@ public:
 
   PathCondition *cdr() const;
 
-  void setAsCore(AllocationGraph *g);
+  void setAsCore(LocationGraph *g);
 
   bool isCore() const;
 
@@ -468,7 +468,7 @@ class ITreeNode {
   static Statistic bindReturnValueTime;
   static Statistic getStoredExpressionsTime;
   static Statistic getStoredCoreExpressionsTime;
-  static Statistic computeCoreAllocationsTime;
+  static Statistic computeCoreLocationsTime;
 
 private:
   /// \brief The path condition
@@ -569,7 +569,7 @@ public:
   void unsatCoreMarking(std::vector<ref<Expr> > unsatCore);
 
   /// \brief Compute the allocations that are relevant for the interpolant.
-  void computeCoreAllocations(AllocationGraph *g);
+  void computeCoreLocations(LocationGraph *g);
 
   /// \brief Print the content of the tree node object to the LLVM error stream.
   void dump() const;
@@ -686,6 +686,16 @@ public:
   /// information.
   void executePHI(llvm::Instruction *instr, unsigned int incomingBlock,
                   ref<Expr> valueExpr);
+
+  /// \brief For executing memory operations, called by
+  /// Executor::executeMemoryOperation
+  void executeMemoryOperation(llvm::Instruction *instr, ref<Expr> value,
+                              ref<Expr> address, bool boundsCheck) {
+    std::vector<ref<Expr> > args;
+    args.push_back(value);
+    args.push_back(address);
+    currentINode->dependency->executeMemoryOperation(instr, args, boundsCheck);
+  }
 
   /// \brief General method for executing an instruction for building dependency
   /// information, given a particular interpolation tree node.

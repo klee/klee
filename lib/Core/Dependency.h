@@ -1,4 +1,4 @@
-//===-- Dependency.h - Memory allocation dependency -------------*- C++ -*-===//
+//===--- Dependency.h - Memory location dependency --------------*- C++ -*-===//
 //
 //               The Tracer-X KLEE Symbolic Virtual Machine
 //
@@ -9,7 +9,8 @@
 ///
 /// \file
 /// This file contains the declarations for the flow-insensitive dependency
-/// analysis to compute the allocations upon which the unsatisfiability core
+/// analysis to compute the memory locations upon which the unsatisfiability
+/// core
 /// depends, which is used in computing the interpolant.
 ///
 //===----------------------------------------------------------------------===//
@@ -62,8 +63,8 @@ public:
   }
 };
 
-/// \brief A class to represent memory allocation objects (cells).
-class Allocation {
+/// \brief A class to represent memory locations.
+class MemoryLocation {
 
   protected:
     bool core;
@@ -72,7 +73,7 @@ class Allocation {
 
     ref<Expr> address;
 
-    Allocation(llvm::Value *_site, ref<Expr> &_address)
+    MemoryLocation(llvm::Value *_site, ref<Expr> &_address)
         : core(false), site(_site), address(_address) {}
 
   public:
@@ -83,10 +84,9 @@ class Allocation {
 
     virtual Kind getKind() const { return Unknown; }
 
-    virtual ~Allocation() {}
+    virtual ~MemoryLocation() {}
 
-    virtual bool hasAllocationSite(llvm::Value *_site,
-                                   ref<Expr> &_address) const {
+    virtual bool hasAddress(llvm::Value *_site, ref<Expr> &_address) const {
       return site == _site && address == _address;
     }
 
@@ -101,7 +101,7 @@ class Allocation {
       return llvm::dyn_cast<ConstantExpr>(address.get())->getZExtValue();
     }
 
-    static bool classof(const Allocation *allocation) { return true; }
+    static bool classof(const MemoryLocation *loc) { return true; }
 
     llvm::Value *getSite() const { return site; }
 
@@ -118,22 +118,22 @@ class Allocation {
     }
 };
 
-/// \brief A class that represents allocations that can be destructively updated
+/// \brief A class that represents locations that can be destructively updated
 /// (versioned)
-  class VersionedAllocation : public Allocation {
+class VersionedLocation : public MemoryLocation {
   public:
-    VersionedAllocation(llvm::Value *_site, ref<Expr> &_address)
-        : Allocation(_site, _address) {}
+    VersionedLocation(llvm::Value *_site, ref<Expr> &_address)
+        : MemoryLocation(_site, _address) {}
 
-    ~VersionedAllocation() {}
+    ~VersionedLocation() {}
 
     Kind getKind() const { return Versioned; }
 
-    static bool classof(const Allocation *allocation) {
-      return allocation->getKind() == Versioned;
+    static bool classof(const MemoryLocation *loc) {
+      return loc->getKind() == Versioned;
     }
 
-    static bool classof(const VersionedAllocation *allocation) { return true; }
+    static bool classof(const VersionedLocation *loc) { return true; }
 
     /// \brief Print the content of the object into a stream.
     ///
@@ -181,80 +181,80 @@ class Allocation {
     }
   };
 
-  /// \brief The allocation graph: A graph to directly represent the dependency
-  /// between allocations, instead of using intermediate values. This graph is
+  /// \brief The location graph: A graph to directly represent the dependency
+  /// between locations, instead of using intermediate values. This graph is
   /// computed from the relations between values in particular the FlowsTo
   /// relation.
-  class AllocationGraph {
+  class LocationGraph {
 
-    /// \brief Implements a node of the allocation graph.
-    class AllocationNode {
-      Allocation *allocation;
-      std::vector<AllocationNode *> ancestors;
+    /// \brief Implements a node of the location graph.
+    class LocationNode {
+      MemoryLocation *loc;
+      std::vector<LocationNode *> ancestors;
       uint64_t level;
 
     public:
-      AllocationNode(Allocation *allocation, uint64_t _level)
-          : allocation(allocation), level(_level) {
-        allocation->setAsCore();
+      LocationNode(MemoryLocation *loc, uint64_t _level)
+          : loc(loc), level(_level) {
+        loc->setAsCore();
       }
 
-      ~AllocationNode() { ancestors.clear(); }
+      ~LocationNode() { ancestors.clear(); }
 
-      Allocation *getAllocation() const { return allocation; }
+      MemoryLocation *getLocation() const { return loc; }
 
-      void addParent(AllocationNode *node) {
+      void addParent(LocationNode *node) {
         // The user should ensure that we don't store a duplicate
         ancestors.push_back(node);
       }
 
-      std::vector<AllocationNode *> getParents() const { return ancestors; }
+      std::vector<LocationNode *> getParents() const { return ancestors; }
 
       uint64_t getLevel() const { return level; }
     };
 
-    std::vector<AllocationNode *> sinks;
-    std::vector<AllocationNode *> allNodes;
+    std::vector<LocationNode *> sinks;
+    std::vector<LocationNode *> allNodes;
 
-    /// \brief Prints the content of the allocation graph
-    void print(llvm::raw_ostream &stream, std::vector<AllocationNode *> nodes,
-               std::vector<AllocationNode *> &printed,
+    /// \brief Prints the content of the location graph
+    void print(llvm::raw_ostream &stream, std::vector<LocationNode *> nodes,
+               std::vector<LocationNode *> &printed,
                const unsigned tabNum) const;
 
-    /// \brief Given an allocation, delete all sinks having such allocation, and
+    /// \brief Given a location, delete all sinks having such location, and
     /// replace them as sinks with their parents.
     ///
-    /// \param The allocation to match a sink node with.
-    void consumeSinkNode(Allocation *allocation);
+    /// \param The memory location to match a sink node with.
+    void consumeSinkNode(MemoryLocation *location);
 
   public:
-    AllocationGraph() {}
+    LocationGraph() {}
 
-    ~AllocationGraph() {
-      for (std::vector<AllocationNode *>::iterator it = allNodes.begin(),
-                                                   itEnd = allNodes.end();
+    ~LocationGraph() {
+      for (std::vector<LocationNode *>::iterator it = allNodes.begin(),
+                                                 itEnd = allNodes.end();
            it != itEnd; ++it) {
         delete *it;
       }
       allNodes.clear();
     }
 
-    bool isVisited(Allocation *alloc);
+    bool isVisited(MemoryLocation *alloc);
 
-    void addNewSink(Allocation *candidateSink);
+    void addNewSink(MemoryLocation *candidateSink);
 
-    void addNewEdge(Allocation *source, Allocation *target);
+    void addNewEdge(MemoryLocation *source, MemoryLocation *target);
 
-    std::set<Allocation *> getSinkAllocations() const;
+    std::set<MemoryLocation *> getSinkLocations() const;
 
-    std::set<Allocation *>
-    getSinksWithAllocations(std::vector<Allocation *> valuesList) const;
+    std::set<MemoryLocation *>
+    getSinksWithLocations(std::vector<MemoryLocation *> valuesList) const;
 
-    /// Given a set of allocations, delete all sinks having an allocation in the
+    /// Given a set of locations, delete all sinks having an location in the
     /// set, and replace them as sinks with their parents.
     ///
-    /// \param The allocation to match the sink nodes with.
-    void consumeSinksWithAllocations(std::vector<Allocation *> allocationsList);
+    /// \param The location to match the sink nodes with.
+    void consumeSinksWithLocations(std::vector<MemoryLocation *> locationsList);
 
     /// \brief Print the content of the object to the LLVM error stream
     void dump() const {
@@ -268,7 +268,7 @@ class Allocation {
     void print(llvm::raw_ostream &stream) const;
   };
 
-  /// \brief Implementation of value dependency for computing allocations the
+  /// \brief Implementation of value dependency for computing locations the
   /// unsatisfiability core depends upon, which is used to compute the
   /// interpolant.
   ///
@@ -296,13 +296,13 @@ class Allocation {
   ///
   /// Domains:
   /// VersionedValue -> LLVM values (i.e., variables) with versioning index
-  /// VersionedAllocation -> Memory allocations with versioning index
+  /// VersionedLocation -> Memory locations with versioning index
   ///
   /// Basic Relations:
-  /// stores(VersionedAlllocation, VersionedValue) - Memory state
+  /// stores(VersionedLocation, VersionedValue) - Memory state
   /// depends(VersionedValue, VersionedValue) - Value dependency: The output
   ///    of the analysis.
-  /// equals(VersionedValue, VersionedAllocation) - Pointer value equality
+  /// equals(VersionedValue, VersionedLocation) - Pointer value equality
   ///
   /// Derived Relations:
   /// Transitive Closure of depends
@@ -321,9 +321,9 @@ class Allocation {
   /// An abstract state is a set having as elements ground substitutions of
   /// the above relations. Below, v and its primed versions represent
   /// VersionedValue elements whereas m and its primed versions represent
-  /// VersionedAllocation elements.
+  /// VersionedLocation elements.
   ///
-  /// Allocation: v = alloca
+  /// Location: v = alloca
   ///
   /// ---------------------------------------------------
   /// R --> R U {equals(succ(v), m) | R |/- equals(_, m)}
@@ -361,7 +361,7 @@ class Allocation {
   /// -----------------------------------------------------
   /// R --> R'
   ///
-  /// Here latest(m) is only the latest version of allocation m.
+  /// Here latest(m) is only the latest version of Location m.
   ///
   /// R |- ind(v', m, i) /\ i > 0 /\ stores(m, v''')
   /// R' |- depends(succ(v), v''')
@@ -437,83 +437,82 @@ class Allocation {
     std::vector<VersionedValue *> argumentValuesList;
 
     /// \brief Equality of value to address
-    std::map<const VersionedValue *, std::vector<Allocation *> > equalityMap;
+    std::map<const VersionedValue *, std::vector<MemoryLocation *> >
+    equalityMap;
 
-    /// \brief The mapping of allocations/addresses to stored value
-    std::map<Allocation *, VersionedValue *> storesMap;
+    /// \brief The mapping of locations to stored value
+    std::map<MemoryLocation *, VersionedValue *> storesMap;
 
     /// \brief Store the inverse map of both storesMap
-    std::map<VersionedValue *, std::vector<Allocation *> > storageOfMap;
+    std::map<VersionedValue *, std::vector<MemoryLocation *> > storageOfMap;
 
-    /// \brief Flow relations of target and its sources with allocation
-    std::map<VersionedValue *, std::map<VersionedValue *, Allocation *> >
+    /// \brief Flow relations of target and its sources with location
+    std::map<VersionedValue *, std::map<VersionedValue *, MemoryLocation *> >
     flowsToMap;
 
     /// \brief The store of the versioned values
     std::map<llvm::Value *, std::vector<VersionedValue *> > valuesMap;
 
-    /// \brief The store of the versioned allocations
-    std::vector<Allocation *> versionedAllocationsList;
+    /// \brief The store of the versioned locations
+    std::vector<MemoryLocation *> versionedLocationsList;
 
-    /// \brief Allocations of this node and its ancestors that are needed for
-    /// the core and dominates other allocations.
-    std::set<Allocation *> coreAllocations;
+    /// \brief Locations of this node and its ancestors that are needed for
+    /// the core and dominates other locations.
+    std::set<MemoryLocation *> coreLocations;
 
     /// \brief Create a new versioned value object, typically when executing a
     /// new instruction, as a value for the instruction.
     VersionedValue *getNewVersionedValue(llvm::Value *value,
                                          ref<Expr> valueExpr);
 
-    /// \brief Create a fresh allocation object.
-    Allocation *getInitialAllocation(llvm::Value *allocation,
-                                     ref<Expr> &address);
+    /// \brief Create a fresh location object.
+    MemoryLocation *getInitialLocation(llvm::Value *site, ref<Expr> &address);
 
-    /// \brief Create a new allocation object to represent a new version of a
-    /// known allocation.
-    Allocation *getNewAllocationVersion(llvm::Value *allocation,
-                                        ref<Expr> &address);
+    /// \brief Create a new location object to represent a new version of a
+    /// known location.
+    MemoryLocation *getNewLocationVersion(llvm::Value *site,
+                                          ref<Expr> &address);
 
-    /// \brief Get all versioned allocations for the current node an all of its
+    /// \brief Get all versioned locations for the current node an all of its
     /// parents
-    std::vector<Allocation *> getAllVersionedAllocations(bool coreOnly =
-                                                             false) const;
+    std::vector<MemoryLocation *> getAllVersionedLocations(bool coreOnly =
+                                                               false) const;
 
-    /// \brief Gets the latest version of the allocation.
-    Allocation *getLatestAllocation(llvm::Value *allocation,
-                                    ref<Expr> address) const;
+    /// \brief Gets the latest version of the location.
+    MemoryLocation *getLatestLocation(llvm::Value *site,
+                                      ref<Expr> address) const;
 
-    /// \brief Gets the latest version of the allocation, but without checking
+    /// \brief Gets the latest version of the location, but without checking
     /// for whether the value is constant or not
     VersionedValue *getLatestValueNoConstantCheck(llvm::Value *value);
 
-    /// \brief Newly relate an LLVM value with destructive update to an
-    /// allocation
-    void addPointerEquality(const VersionedValue *value,
-                            Allocation *allocation);
+    /// \brief Newly relate an LLVM value with destructive update to a
+    /// location
+    void addPointerEquality(const VersionedValue *value, MemoryLocation *loc);
 
-    /// \brief Newly relate an alllocation with its stored value
-    void updateStore(Allocation *allocation, VersionedValue *value);
+    /// \brief Newly relate an location with its stored value
+    void updateStore(MemoryLocation *location, VersionedValue *value);
 
     /// \brief Add flow dependency between source and target value
     void addDependency(VersionedValue *source, VersionedValue *target);
 
     /// \brief Add flow dependency between source and target value, as the
-    /// result of store/load via an allocated memory.
-    void addDependencyViaAllocation(VersionedValue *source,
-                                    VersionedValue *target, Allocation *via);
+    /// result of store/load via a memory location.
+    void addDependencyViaLocation(VersionedValue *source,
+                                  VersionedValue *target, MemoryLocation *via);
 
     /// \brief Given a versioned value, retrieve the equality it is associated
     /// with
-    Allocation *resolveAllocation(VersionedValue *value);
+    MemoryLocation *resolveLocation(VersionedValue *value);
 
     /// \brief Given a versioned value, retrieve the equality it is associated
     /// with, in this object or otherwise in its ancestors.
-    std::vector<Allocation *>
-    resolveAllocationTransitively(VersionedValue *value);
+    std::vector<MemoryLocation *>
+    resolveLocationTransitively(VersionedValue *value);
 
     /// \brief Retrieve the versioned values that are stored in a particular
-    /// allocation.
-    std::vector<VersionedValue *> stores(Allocation *allocation) const;
+    /// location.
+    std::vector<VersionedValue *> stores(MemoryLocation *loc) const;
 
     /// \brief All values that flows to the target in one step, local to the
     /// current dependency / interpolation tree node
@@ -538,22 +537,21 @@ class Allocation {
     bool buildLoadDependency(llvm::Value *address, ref<Expr> addressExpr,
                              llvm::Value *value, ref<Expr> valueExpr);
 
-    /// \brief Direct allocation dependency local to an interpolation tree node
-    std::map<VersionedValue *, Allocation *>
-    directLocalAllocationSources(VersionedValue *target) const;
+    /// \brief Direct location dependency local to an interpolation tree node
+    std::map<VersionedValue *, MemoryLocation *>
+    directLocalLocationSources(VersionedValue *target) const;
 
-    /// \brief Direct allocation dependency
-    std::map<VersionedValue *, Allocation *>
-    directAllocationSources(VersionedValue *target) const;
+    /// \brief Direct location dependency
+    std::map<VersionedValue *, MemoryLocation *>
+    directLocationSources(VersionedValue *target) const;
 
-    /// \brief Builds dependency graph between memory allocations
-    void
-    recursivelyBuildAllocationGraph(AllocationGraph *g, VersionedValue *source,
-                                    Allocation *target,
-                                    std::set<Allocation *> parentTargets) const;
+    /// \brief Builds dependency graph between memory locations
+    void recursivelyBuildLocationGraph(
+        LocationGraph *g, VersionedValue *source, MemoryLocation *target,
+        std::set<MemoryLocation *> parentTargets) const;
 
-    /// \brief Builds dependency graph between memory allocations
-    void buildAllocationGraph(AllocationGraph *g, VersionedValue *value) const;
+    /// \brief Builds dependency graph between memory locations
+    void buildLocationGraph(LocationGraph *g, VersionedValue *value) const;
 
   public:
     Dependency(Dependency *prev);
@@ -571,14 +569,19 @@ class Allocation {
     void executePHI(llvm::Instruction *instr, unsigned int incomingBlock,
                     ref<Expr> valueExpr);
 
-    /// \brief This retrieves the allocations known at this state, and the
-    /// expressions stored in the allocations.
+    /// \brief Execute memory operation (load/store)
+    void executeMemoryOperation(llvm::Instruction *instr,
+                                std::vector<ref<Expr> > &args,
+                                bool boundsCheck);
+
+    /// \brief This retrieves the locations known at this state, and the
+    /// expressions stored in the locations.
     ///
     /// \param The replacement bound variables when retrieving state for
     /// creating subsumption table entry: As the resulting expression will
     /// be used for storing in the subsumption table, the variables need to be
     /// replaced with the bound ones.
-    /// \param Indicate whether we are retrieving only data for allocations
+    /// \param Indicate whether we are retrieving only data for locations
     /// relevant to an unsatisfiability core.
     /// \return A pair of the store part indexed by constants, and the store
     /// part
@@ -597,15 +600,15 @@ class Allocation {
 
     /// \brief Given a versioned value, retrieve all its sources and mark them
     /// as in the core.
-    void markAllValues(AllocationGraph *g, VersionedValue *value);
+    void markAllValues(LocationGraph *g, VersionedValue *value);
 
     /// \brief Given an LLVM value, retrieve all its sources and mark them as in
     /// the core.
-    void markAllValues(AllocationGraph *g, llvm::Value *value);
+    void markAllValues(LocationGraph *g, llvm::Value *value);
 
-    /// \brief Compute the allocations that are relevant for the interpolant
+    /// \brief Compute the locations that are relevant for the interpolant
     /// (core).
-    void computeCoreAllocations(AllocationGraph *g);
+    void computeCoreLocations(LocationGraph *g);
 
     /// \brief Print the content of the object to the LLVM error stream
     void dump() const {
