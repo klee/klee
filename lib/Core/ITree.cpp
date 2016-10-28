@@ -1949,13 +1949,13 @@ void ITree::markPathCondition(ExecutionState &state, TimingSolver *solver) {
     }
   }
 
-  // llvm::errs() << "AllocationGraph\n";
+  // llvm::errs() << "LocationGraph\n";
   // g->dump();
 
   // Compute memory allocations needed by the unsatisfiability core
-  currentINode->computeCoreAllocations(g);
+  currentINode->computeCoreLocations(g);
 
-  delete g; // Delete the AllocationGraph object
+  delete g; // Delete the LocationGraph object
 }
 
 void ITree::execute(llvm::Instruction *instr) {
@@ -2067,8 +2067,8 @@ Statistic ITreeNode::getStoredExpressionsTime("GetStoredExpressionsTime",
 Statistic
 ITreeNode::getStoredCoreExpressionsTime("GetStoredCoreExpressionsTime",
                                         "GetStoredCoreExpressionsTime");
-Statistic ITreeNode::computeCoreAllocationsTime("ComputeCoreAllocationsTime",
-                                                "ComputeCoreAllocationsTime");
+Statistic ITreeNode::computeCoreLocationsTime("ComputeCoreLocationsTime",
+                                                "ComputeCoreLocationsTime");
 
 void ITreeNode::printTimeStat(std::stringstream &stream) {
   stream << "KLEE: done:     getInterpolant = "
@@ -2087,8 +2087,8 @@ void ITreeNode::printTimeStat(std::stringstream &stream) {
          << ((double)getStoredExpressionsTime.getValue()) / 1000 << "\n";
   stream << "KLEE: done:     getStoredCoreExpressions = "
          << ((double)getStoredCoreExpressionsTime.getValue()) / 1000 << "\n";
-  stream << "KLEE: done:     computeCoreAllocations = "
-         << ((double)computeCoreAllocationsTime.getValue()) / 1000 << "\n";
+  stream << "KLEE: done:     computeCoreLocations = "
+         << ((double)computeCoreLocationsTime.getValue()) / 1000 << "\n";
 }
 
 ITreeNode::ITreeNode(ITreeNode *_parent)
@@ -2219,15 +2219,15 @@ void ITreeNode::unsatCoreMarking(std::vector<ref<Expr> > unsatCore) {
     if (cond)
       cond->setAsCore(g);
   }
-  // llvm::errs() << "AllocationGraph\n";
+  // llvm::errs() << "LocationGraph\n";
   // g->dump();
   // We mark memory allocations needed for the unsatisfiabilty core
-  computeCoreAllocations(g);
-  delete g; // Delete the AllocationGraph object
+  computeCoreLocations(g);
+  delete g; // Delete the LocationGraph object
 }
 
-void ITreeNode::computeCoreAllocations(LocationGraph *g) {
-  TimerStatIncrementer t(computeCoreAllocationsTime);
+void ITreeNode::computeCoreLocations(LocationGraph *g) {
+  TimerStatIncrementer t(computeCoreLocationsTime);
   dependency->computeCoreLocations(g);
 }
 
