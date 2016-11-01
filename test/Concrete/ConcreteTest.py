@@ -8,11 +8,16 @@ import sys
 import shutil
 
 def testFile(name, klee_path, lli_path):
+    print("CWD: \"{}\"".format(os.getcwd()))
     baseName,ext = os.path.splitext(name)
     exeFile = 'Output/linked_%s.bc'%baseName
 
     print('-- building test bitcode --')
-    make_cmd = 'make %s 2>&1' % (exeFile,)
+    if os.path.exists("Makefile.cmake.test"):
+        # Prefer CMake generated make file
+        make_cmd = 'make -f Makefile.cmake.test %s 2>&1' % (exeFile,)
+    else:
+        make_cmd = 'make %s 2>&1' % (exeFile,)
     print("EXECUTING: %s" % (make_cmd,))
     sys.stdout.flush()
     if os.system(make_cmd):

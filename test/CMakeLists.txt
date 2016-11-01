@@ -1,0 +1,139 @@
+#===------------------------------------------------------------------------===#
+#
+#                     The KLEE Symbolic Virtual Machine
+#
+# This file is distributed under the University of Illinois Open Source
+# License. See LICENSE.TXT for details.
+#
+#===------------------------------------------------------------------------===#
+
+set(KLEE_TOOLS_DIR "${CMAKE_BINARY_DIR}/bin")
+set(LLVM_TOOLS_DIR "${LLVM_TOOLS_BINARY_DIR}")
+# FIXME: Do this to avoid changing the template file that
+# is shared by both build systems.
+set(LLVMCC "${LLVMCC} -I${CMAKE_SOURCE_DIR}/include")
+set(LLVMCXX "${LLVMCXX} -I${CMAKE_SOURCE_DIR}/include")
+set(TARGET_TRIPLE "${TARGET_TRIPLE}")
+if (ENABLE_KLEE_UCLIBC)
+  set(ENABLE_UCLIBC 1)
+else()
+  set(ENABLE_UCLIBC 0)
+endif()
+
+# FIXME: Do this to avoid changing the template file that
+# is shared by both build systems.
+if (ENABLE_POSIX_RUNTIME)
+  if (ENABLE_KLEE_UCLIBC)
+    set(ENABLE_POSIX_RUNTIME 1)
+  else()
+    message(AUTHOR_WARNING
+      "Disabling POSIX runtime tests because they depend on klee-uclibc"
+      "\nFIXME!")
+  set(ENABLE_POSIX_RUNTIME 0)
+  endif()
+else()
+  set(ENABLE_POSIX_RUNTIME 0)
+endif()
+
+###############################################################################
+# Find LLVM testing tools
+###############################################################################
+option(DOWNLOAD_LLVM_TESTING_TOOLS "Always download LLVM testing tools sources" OFF)
+mark_as_advanced(DOWNLOAD_LLVM_TESTING_TOOLS)
+
+# Check `FileCheck` and the `not` tools are available.  By default we'll try
+# looking in the LLVM binary directory.  If that fails download the sources.
+# This might be necessary if using a shipped version of LLVM because LLVM
+# unfortunately does not ship its testing tools.
+set(DOWNLOAD_FILECHECK_SOURCE FALSE)
+set(DOWNLOAD_NOT_SOURCE FALSE)
+
+if (DOWNLOAD_LLVM_TESTING_TOOLS)
+  set(DOWNLOAD_FILECHECK_SOURCE TRUE)
+  set(DOWNLOAD_NOT_SOURCE TRUE)
+endif()
+
+if (NOT EXISTS "${LLVM_TOOLS_BINARY_DIR}/FileCheck")
+  message(WARNING "\"${LLVM_TOOLS_BINARY_DIR}/FileCheck\" does not exist. Downloading sources.")
+  set(DOWNLOAD_FILECHECK_SOURCE TRUE)
+endif()
+
+if (NOT EXISTS "${LLVM_TOOLS_BINARY_DIR}/not")
+  message(WARNING "\"${LLVM_TOOLS_BINARY_DIR}/not\" does not exist. Downloading sources.")
+  set(DOWNLOAD_NOT_SOURCE TRUE)
+endif()
+
+if (DOWNLOAD_FILECHECK_SOURCE)
+  set(FILECHECK_SRC_URL "https://raw.githubusercontent.com/llvm-mirror/llvm/release_${LLVM_VERSION_MAJOR}${LLVM_VERSION_MINOR}/utils/FileCheck/FileCheck.cpp")
+  set(FILECHECK_SRC_FILE "${CMAKE_CURRENT_BINARY_DIR}/FileCheck.cpp")
+  if (NOT EXISTS "${FILECHECK_SRC_URL}")
+    message(STATUS "Downloading LLVM FileCheck source")
+    file(DOWNLOAD "${FILECHECK_SRC_URL}" "${FILECHECK_SRC_FILE}" SHOW_PROGRESS)
+  endif()
+  add_executable(FileCheck
+    ${FILECHECK_SRC_FILE}
+  )
+  klee_get_llvm_libs(FILECHECK_NEEDED_LIBS Support)
+  target_include_directories(FileCheck PRIVATE ${KLEE_COMPONENT_EXTRA_INCLUDE_DIRS})
+  target_compile_options(FileCheck PRIVATE ${KLEE_COMPONENT_CXX_FLAGS})
+  target_compile_definitions(FileCheck PRIVATE ${KLEE_COMPONENT_CXX_DEFINES})
+  target_link_libraries(FileCheck PRIVATE ${FILECHECK_NEEDED_LIBS})
+endif()
+
+if (DOWNLOAD_NOT_SOURCE)
+  set(NOT_SRC_URL "https://raw.githubusercontent.com/llvm-mirror/llvm/release_${LLVM_VERSION_MAJOR}${LLVM_VERSION_MINOR}/utils/not/not.cpp")
+  set(NOT_SRC_FILE "${CMAKE_CURRENT_BINARY_DIR}/not.cpp")
+  if (NOT EXISTS "${NOT_SRC_FILE}")
+    message(STATUS "Downloading LLVM not source")
+    file(DOWNLOAD "${NOT_SRC_URL}" "${NOT_SRC_FILE}" SHOW_PROGRESS)
+  endif()
+  add_executable("not"
+    ${NOT_SRC_FILE}
+  )
+  klee_get_llvm_libs(NOT_NEEDED_LIBS Support)
+  target_include_directories("not" PRIVATE ${KLEE_COMPONENT_EXTRA_INCLUDE_DIRS})
+  target_compile_options("not" PRIVATE ${KLEE_COMPONENT_CXX_FLAGS})
+  target_compile_definitions("not" PRIVATE ${KLEE_COMPONENT_CXX_DEFINES})
+  target_link_libraries("not" PRIVATE ${FILECHECK_NEEDED_LIBS})
+endif()
+
+###############################################################################
+# Concrete tests build system
+###############################################################################
+add_subdirectory(Concrete)
+
+###############################################################################
+# Configure lit test suite
+###############################################################################
+configure_file(lit.site.cfg.in
+  ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg
+  @ONLY
+)
+
+add_custom_target(integrationtests
+  COMMAND "${LIT_TOOL}" ${LIT_ARGS} "${CMAKE_CURRENT_BINARY_DIR}"
+  DEPENDS klee kleaver
+  COMMENT "Running integration tests"
+  ${ADD_CUSTOM_COMMAND_USES_TERMINAL_ARG}
+)
+
+# Tell CMake to remove lit's output directories when
+# running `make clean`.
+file(GLOB_RECURSE
+  test_contents
+  LIST_DIRECTORIES true
+  RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
+  "*"
+)
+set(dirs_to_clean "")
+foreach (f ${test_contents})
+  if (IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/${f}")
+    list(APPEND dirs_to_clean "${CMAKE_CURRENT_BINARY_DIR}/${f}/Output")
+  endif()
+endforeach()
+set_property(
+  DIRECTORY
+  APPEND
+  PROPERTY ADDITIONAL_MAKE_CLEAN_FILES
+  ${dirs_to_clean}
+)
