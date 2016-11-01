@@ -905,6 +905,10 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       }
     }
 
+    // We don't add a constraint explicitly yet
+    // but the path conditions are provable true
+    // Assume we added a constraint for it.
+    current.constraintsAdded = true;
     return StatePair(&current, 0);
   } else if (res==Solver::False) {
     if (!isInternal) {
@@ -912,7 +916,10 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
         current.pathOS << "0";
       }
     }
-
+    // We don't add a constraint explicitly yet
+    // but the path conditions are provable false
+    // Assume we added a constraint for it.
+    current.constraintsAdded = true;
     return StatePair(0, &current);
   } else {
     TimerStatIncrementer timer(stats::forkTime);
@@ -1144,8 +1151,10 @@ Executor::toConstant(ExecutionState &state,
                      ref<Expr> e,
                      const char *reason) {
   e = state.constraints.simplifyExpr(e);
-  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(e))
+  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(e)) {
+    state.constraintsAdded = true;
     return CE;
+  }
 
   ref<ConstantExpr> value;
   bool success = solver->getValue(state, e, value);

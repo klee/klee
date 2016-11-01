@@ -104,6 +104,22 @@ ExecutionState &BFSSearcher::selectState() {
 void BFSSearcher::update(ExecutionState *current,
                          const std::vector<ExecutionState *> &addedStates,
                          const std::vector<ExecutionState *> &removedStates) {
+  // If constraints were added to the current state, it evolved.
+  // Therefore, add this state to the end if it should not be deleted.
+  if (current && current->constraintsAdded &&
+      std::find(removedStates.begin(), removedStates.end(), current) ==
+          removedStates.end()) {
+    assert(states.front() == current);
+    states.pop_front();
+    states.push_back(current);
+    current->constraintsAdded = false;
+  }
+
+  for (std::vector<ExecutionState *>::const_iterator it = addedStates.begin(),
+                                                     itE = addedStates.end();
+       it != itE; ++it)
+    (*it)->constraintsAdded = false;
+
   states.insert(states.end(),
                 addedStates.begin(),
                 addedStates.end());
