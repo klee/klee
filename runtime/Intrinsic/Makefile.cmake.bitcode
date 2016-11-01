@@ -1,0 +1,22 @@
+#===--------------------------------------------------------*- Makefile -*--===#
+#
+#                     The KLEE Symbolic Virtual Machine
+#
+# This file is distributed under the University of Illinois Open Source
+# License. See LICENSE.TXT for details.
+#
+#===------------------------------------------------------------------------===#
+LEVEL := ../
+
+include $(LEVEL)/Makefile.cmake.bitcode.config
+
+LLVMCC.Flags += -fno-builtin
+
+# FIXME: This is a horrible hack
+ifeq ($(USE_MODULE_INSTEAD_OF_BCA),1)
+	MODULE_NAME=kleeRuntimeIntrinsic
+else
+	ARCHIVE_NAME=kleeRuntimeIntrinsic
+endif
+
+include $(LEVEL)/Makefile.cmake.bitcode.rules
