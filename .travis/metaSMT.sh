@@ -11,10 +11,11 @@ git clone git://github.com/agra-uni-bremen/dependencies.git
 # Bootstrap
 export BOOST_ROOT=/usr
 sudo cp dependencies/Z3-2.19/Z3Config.cmake /usr # this is a hack
-./bootstrap.sh -d deps -m RELEASE build -DmetaSMT_ENABLE_TESTS=off --build stp-git-basic --build boolector-1.5.118 --build minisat-git -DZ3_DIR=/usr
-sudo cp deps/boolector-1.5.118/lib/* /usr/lib/ #
-sudo cp deps/minisat-git/lib/* /usr/lib/       # hack
-sudo cp deps/stp-git-basic/lib/* /usr/lib/     #
+./bootstrap.sh -d deps -m RELEASE build -DmetaSMT_ENABLE_TESTS=off --build stp-git-basic --build boolector-2.2.0 --build minisat-git --build lingeling-ayv-86bf266-140429 -DZ3_DIR=/usr
+sudo cp deps/boolector-2.2.0/lib/* /usr/lib/              #
+sudo cp deps/lingeling-ayv-86bf266-140429/lib/* /usr/lib/ #
+sudo cp deps/minisat-git/lib/* /usr/lib/                  # hack
+sudo cp deps/stp-git-basic/lib/* /usr/lib/                #
 
 # Build
 make -C build install
