@@ -1,3 +1,4 @@
 .git
 autom4te.cache
-.*.swp
+**/.*.swp
+Dockerfile
