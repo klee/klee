@@ -583,8 +583,20 @@ configure_file(${CMAKE_SOURCE_DIR}/include/klee/Config/config.h.cmin
 ################################################################################
 # Generate `CompileTimeInfo.h`
 ################################################################################
-# FIXME: Get information from git and have configure depend on this so we
-# only re-generate the file when necessary.
+if (EXISTS "${CMAKE_SOURCE_DIR}/.git")
+  # Get information from git. We use third-party code to do this. The nice
+  # thing about this code is it will trigger a re-configure if the HEAD changes
+  # which means when we build KLEE, it should always have the correct git
+  # information.
+  include(${CMAKE_SOURCE_DIR}/cmake/GetGitRevisionDescription.cmake)
+  get_git_head_revision(_NOT_USED_KLEE_GIT_REFSPEC KLEE_GIT_SHA1HASH)
+  message(STATUS "KLEE_GIT_SHA1HASH: ${KLEE_GIT_SHA1HASH}")
+  git_describe(KLEE_GIT_TAG "--tags")
+  message(STATUS "KLEE_GIT_TAG: ${KLEE_GIT_TAG}")
+else()
+  set(KLEE_GIT_SHA1HASH "unknown")
+  set(KLEE_GIT_TAG "unknown")
+endif()
 set(AUTO_GEN_MSG "AUTOMATICALLY GENERATED. DO NOT EDIT!")
 configure_file(${CMAKE_SOURCE_DIR}/include/klee/Config/CompileTimeInfo.h.cmin
   ${CMAKE_BINARY_DIR}/include/klee/Config/CompileTimeInfo.h
