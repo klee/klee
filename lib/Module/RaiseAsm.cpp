@@ -67,7 +67,8 @@ bool RaiseAsmPass::runOnInstruction(Module &M, Instruction *I) {
     return true;
 
   if (triple.getArch() == llvm::Triple::x86_64 &&
-      triple.getOS() == llvm::Triple::Linux) {
+      (triple.getOS() == llvm::Triple::Linux ||
+       triple.getOS() == llvm::Triple::Darwin)) {
 
     if (ia->getAsmString() == "" && ia->hasSideEffects()) {
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
