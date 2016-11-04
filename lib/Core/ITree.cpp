@@ -1726,8 +1726,12 @@ Statistic ITree::subsumptionCheckTime("SubsumptionCheckTime",
 Statistic ITree::markPathConditionTime("MarkPathConditionTime", "MarkPCTime");
 Statistic ITree::splitTime("SplitTime", "SplitTime");
 Statistic ITree::executeOnNodeTime("ExecuteOnNodeTime", "ExecuteOnNodeTime");
+
 double ITree::entryNumber;
+
 double ITree::programPointNumber;
+
+bool ITree::symbolicExecutionError = false;
 
 unsigned long ITree::subsumptionCheckCount = 0;
 
@@ -1991,13 +1995,16 @@ void ITree::execute(llvm::Instruction *instr, std::vector<ref<Expr> > &args) {
 
 void ITree::executePHI(llvm::Instruction *instr, unsigned int incomingBlock,
                        ref<Expr> valueExpr) {
-  currentINode->dependency->executePHI(instr, incomingBlock, valueExpr);
+  currentINode->dependency->executePHI(instr, incomingBlock, valueExpr,
+                                       symbolicExecutionError);
+  symbolicExecutionError = false;
 }
 
 void ITree::executeOnNode(ITreeNode *node, llvm::Instruction *instr,
                           std::vector<ref<Expr> > &args) {
   TimerStatIncrementer t(executeOnNodeTime);
-  node->execute(instr, args);
+  node->execute(instr, args, symbolicExecutionError);
+  symbolicExecutionError = false;
 }
 
 void ITree::printNode(llvm::raw_ostream &stream, ITreeNode *n,
@@ -2141,10 +2148,10 @@ void ITreeNode::split(ExecutionState *leftData, ExecutionState *rightData) {
   rightData->itreeNode = right = new ITreeNode(this);
 }
 
-void ITreeNode::execute(llvm::Instruction *instr,
-                        std::vector<ref<Expr> > &args) {
+void ITreeNode::execute(llvm::Instruction *instr, std::vector<ref<Expr> > &args,
+                        bool symbolicExecutionError) {
   TimerStatIncrementer t(executeTime);
-  dependency->execute(instr, args);
+  dependency->execute(instr, args, symbolicExecutionError);
 }
 
 void ITreeNode::bindCallArguments(llvm::Instruction *site,

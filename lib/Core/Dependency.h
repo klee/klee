@@ -563,16 +563,17 @@ class VersionedLocation : public MemoryLocation {
     VersionedValue *getLatestValue(llvm::Value *value, ref<Expr> valueExpr);
 
     /// \brief Abstract dependency state transition with argument(s)
-    void execute(llvm::Instruction *instr, std::vector<ref<Expr> > &args);
+    void execute(llvm::Instruction *instr, std::vector<ref<Expr> > &args,
+                 bool symbolicExecutionError);
 
     /// \brief Build dependencies from PHI node
     void executePHI(llvm::Instruction *instr, unsigned int incomingBlock,
-                    ref<Expr> valueExpr);
+                    ref<Expr> valueExpr, bool symbolicExecutionError);
 
     /// \brief Execute memory operation (load/store)
     void executeMemoryOperation(llvm::Instruction *instr,
-                                std::vector<ref<Expr> > &args,
-                                bool boundsCheck);
+                                std::vector<ref<Expr> > &args, bool boundsCheck,
+                                bool symbolicExecutionError);
 
     /// \brief This retrieves the locations known at this state, and the
     /// expressions stored in the locations.

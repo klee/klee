@@ -3756,6 +3756,11 @@ void Executor::executeMemoryOperation(ExecutionState &state, bool isWrite,
 
   // XXX should we distinguish out of bounds and overlapped cases?
   if (unbound) {
+    if (INTERPOLATION_ENABLED)
+      ITree::symbolicExecutionError =
+          true; // We let interpolation subsystem knows we are recovering from
+                // error, hence the previous expression may not be recorded
+
     if (incomplete) {
       terminateStateEarly(*unbound, "Query timed out (resolve).");
     } else {

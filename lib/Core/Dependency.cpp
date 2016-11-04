@@ -818,7 +818,8 @@ Dependency::~Dependency() {
 Dependency *Dependency::cdr() const { return parentDependency; }
 
 void Dependency::execute(llvm::Instruction *instr,
-                         std::vector<ref<Expr> > &args) {
+                         std::vector<ref<Expr> > &args,
+                         bool symbolicExecutionError) {
   // The basic design principle that we need to be careful here
   // is that we should not store quadratic-sized structures in
   // the database of computed relations, e.g., not storing the
@@ -1022,6 +1023,12 @@ void Dependency::execute(llvm::Instruction *instr,
             addDependency(arg, returnValue);
         } else if (llvm::isa<llvm::CallInst>(instr->getOperand(0))) {
           getNewVersionedValue(instr->getOperand(0), argExpr);
+        } else if (symbolicExecutionError) {
+          VersionedValue *arg =
+              getNewVersionedValue(instr->getOperand(0), argExpr);
+          VersionedValue *returnValue = getNewVersionedValue(instr, argExpr);
+          if (arg)
+            addDependency(arg, returnValue);
         } else {
           assert(!"operand not found");
         }
@@ -1261,14 +1268,16 @@ void Dependency::execute(llvm::Instruction *instr,
 }
 
 void Dependency::executePHI(llvm::Instruction *instr,
-                            unsigned int incomingBlock, ref<Expr> valueExpr) {
+                            unsigned int incomingBlock, ref<Expr> valueExpr,
+                            bool symbolicExecutionError) {
   llvm::PHINode *node = llvm::dyn_cast<llvm::PHINode>(instr);
   llvm::Value *llvmArgValue = node->getIncomingValue(incomingBlock);
   VersionedValue *val = getLatestValue(llvmArgValue, valueExpr);
   if (val) {
     addDependency(val, getNewVersionedValue(instr, valueExpr));
   } else if (llvm::isa<llvm::Constant>(llvmArgValue) ||
-             llvm::isa<llvm::Argument>(llvmArgValue)) {
+             llvm::isa<llvm::Argument>(llvmArgValue) ||
+             symbolicExecutionError) {
     getNewVersionedValue(instr, valueExpr);
   } else {
     assert(!"operand not found");
@@ -1277,8 +1286,9 @@ void Dependency::executePHI(llvm::Instruction *instr,
 
 void Dependency::executeMemoryOperation(llvm::Instruction *instr,
                                         std::vector<ref<Expr> > &args,
-                                        bool boundsCheck) {
-  execute(instr, args);
+                                        bool boundsCheck,
+                                        bool symbolicExecutionError) {
+  execute(instr, args, symbolicExecutionError);
   if (boundsCheck) {
     // The bounds check has been proven valid, we keep the dependency on the
     // address. Calling va_start within a variadic function also triggers memory

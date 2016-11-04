@@ -504,7 +504,8 @@ private:
   /// \brief for printing method running time statistics
   static void printTimeStat(std::stringstream &stream);
 
-  void execute(llvm::Instruction *instr, std::vector<ref<Expr> > &args);
+  void execute(llvm::Instruction *instr, std::vector<ref<Expr> > &args,
+               bool symbolicExecutionError);
 
 public:
   uintptr_t getNodeId();
@@ -628,6 +629,11 @@ class ITree {
 public:
   ITreeNode *root;
 
+  /// \brief This static field is to indicate if we recovered from an error,
+  /// e.g., memory bounds error, such that the value of the previous instruction
+  /// may not have been computed.
+  static bool symbolicExecutionError;
+
   ITree(ExecutionState *_root);
 
   ~ITree();
@@ -694,7 +700,9 @@ public:
     std::vector<ref<Expr> > args;
     args.push_back(value);
     args.push_back(address);
-    currentINode->dependency->executeMemoryOperation(instr, args, boundsCheck);
+    currentINode->dependency->executeMemoryOperation(instr, args, boundsCheck,
+                                                     symbolicExecutionError);
+    symbolicExecutionError = false;
   }
 
   /// \brief General method for executing an instruction for building dependency
