@@ -239,7 +239,7 @@ class VersionedLocation : public MemoryLocation {
       allNodes.clear();
     }
 
-    bool isVisited(MemoryLocation *alloc);
+    bool isVisited(MemoryLocation *loc);
 
     void addNewSink(MemoryLocation *candidateSink);
 
