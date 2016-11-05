@@ -69,12 +69,20 @@ class MemoryLocation {
   protected:
     bool core;
 
+    /// \brief The allocation site
     llvm::Value *site;
 
+    /// \brief The address as provided by KLEE
     ref<Expr> address;
 
+    /// \brief The offset of the allocation
+    ref<Expr> offset;
+
     MemoryLocation(llvm::Value *_site, ref<Expr> &_address)
-        : core(false), site(_site), address(_address) {}
+        : core(false), site(_site), address(_address),
+          offset(ConstantExpr::create(0, Expr::Int64)) {}
+
+    MemoryLocation(MemoryLocation *, ref<Expr> &_offset);
 
   public:
     enum Kind {
@@ -106,6 +114,8 @@ class MemoryLocation {
     llvm::Value *getSite() const { return site; }
 
     ref<Expr> getAddress() const { return address; }
+
+    ref<Expr> getOffset() const { return offset; }
 
     void setAsCore() { core = true; }
 

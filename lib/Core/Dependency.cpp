@@ -152,6 +152,21 @@ ShadowArray::getShadowExpression(ref<Expr> expr,
 
 /**/
 
+MemoryLocation::MemoryLocation(MemoryLocation *loc, ref<Expr> &_offset) :
+    core(loc->core), site(loc->site), address(loc->address) {
+  // We create new memory location with different offset
+  ConstantExpr *offsetConst = llvm::dyn_cast<ConstantExpr>(loc->offset.get());
+  ConstantExpr *extraConst = llvm::dyn_cast<ConstantExpr>(_offset.get());
+
+  if (offsetConst != 0 && extraConst != 0) {
+    uint64_t newConst =
+        offsetConst->getZExtValue() + extraConst->getZExtValue();
+    offset = ConstantExpr::create(newConst, Expr::Int64);
+  } else {
+    offset = AddExpr::create(offset, _offset);
+  }
+}
+
 void MemoryLocation::print(llvm::raw_ostream &stream) const {
   // Do nothing
 }
