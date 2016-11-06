@@ -296,6 +296,12 @@ namespace {
   MaxMemoryInhibit("max-memory-inhibit",
             cl::desc("Inhibit forking at memory cap (vs. random terminate) (default=on)"),
             cl::init(true));
+
+  cl::opt<unsigned> RuntimeMaxStackFrames(
+      "max-stack-frames",
+      cl::desc("Terminates a state after the limit of stack frames is reached "
+               "(default=8192). Disable check with 0."),
+      cl::init(8192));
 }
 
 
@@ -1277,11 +1283,20 @@ void Executor::executeCall(ExecutionState &state,
     if (InvokeInst *ii = dyn_cast<InvokeInst>(i))
       transferToBasicBlock(ii->getNormalDest(), i->getParent(), state);
   } else {
+    // Check if maximum stack size was reached.
+    // We currently only count the number of stack frames
+    if (RuntimeMaxStackFrames && state.stack.size() > RuntimeMaxStackFrames) {
+      terminateStateEarly(state, "Maximum stack size reached.");
+      klee_warning("Maximum stack size reached.");
+      return;
+    }
+
     // FIXME: I'm not really happy about this reliance on prevPC but it is ok, I
     // guess. This just done to avoid having to pass KInstIterator everywhere
     // instead of the actual instruction, since we can't make a KInstIterator
     // from just an instruction (unlike LLVM).
     KFunction *kf = kmodule->functionMap[f];
+
     state.pushFrame(state.prevPC, kf);
     state.pc = kf->instructions;
 
