@@ -357,17 +357,16 @@ void LocationGraph::print(llvm::raw_ostream &stream,
 
 /**/
 
-VersionedValue *Dependency::getNewVersionedValue(llvm::Value *value,
-                                                 ref<Expr> valueExpr) {
-  VersionedValue *ret = new VersionedValue(value, valueExpr);
+VersionedValue *Dependency::registerNewVersionedValue(llvm::Value *value,
+                                                      VersionedValue *vvalue) {
   if (valuesMap.find(value) != valuesMap.end()) {
-    valuesMap[value].push_back(ret);
+    valuesMap[value].push_back(vvalue);
   } else {
     std::vector<VersionedValue *> newValueList;
-    newValueList.push_back(ret);
+    newValueList.push_back(vvalue);
     valuesMap[value] = newValueList;
   }
-  return ret;
+  return vvalue;
 }
 
 MemoryLocation *Dependency::getInitialLocation(llvm::Value *loc,

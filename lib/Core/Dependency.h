@@ -144,7 +144,7 @@ private:
         : value(value), valueExpr(valueExpr), loc(0), core(false) {}
 
     VersionedValue(llvm::Value *value, ref<Expr> valueExpr, llvm::Value *_loc,
-                   ref<Expr> &_address, ref<Expr> &_base, ref<Expr> &_offset)
+                   ref<Expr> _address, ref<Expr> _base, ref<Expr> _offset)
         : value(value), valueExpr(valueExpr),
           loc(new MemoryLocation(_loc, _address, _base, _offset)), core(false) {
     }
@@ -459,10 +459,39 @@ private:
     /// the core and dominates other locations.
     std::set<MemoryLocation *> coreLocations;
 
+    /// \brief Register new versioned value, used by getNewVersionedValue
+    /// methods
+    VersionedValue *registerNewVersionedValue(llvm::Value *value,
+                                              VersionedValue *vvalue);
+
     /// \brief Create a new versioned value object, typically when executing a
     /// new instruction, as a value for the instruction.
     VersionedValue *getNewVersionedValue(llvm::Value *value,
-                                         ref<Expr> valueExpr);
+                                         ref<Expr> valueExpr) {
+      return registerNewVersionedValue(value,
+                                       new VersionedValue(value, valueExpr));
+    }
+
+    /// \brief Create a new versioned value object, which is a pointer with
+    /// absolute address
+    VersionedValue *getNewVersionedValue(llvm::Value *value,
+                                         ref<Expr> valueExpr, llvm::Value *loc,
+                                         ref<Expr> address) {
+      return registerNewVersionedValue(
+          value, new VersionedValue(value, valueExpr, loc, address, address,
+                                    Expr::createPointer(0)));
+    }
+
+    /// \brief Create a new versioned value object, which is a pointer with
+    /// absolute address, base and offset
+    VersionedValue *getNewVersionedValue(llvm::Value *value,
+                                         ref<Expr> valueExpr, llvm::Value *loc,
+                                         ref<Expr> address, ref<Expr> base,
+                                         ref<Expr> offset) {
+      return registerNewVersionedValue(
+          value,
+          new VersionedValue(value, valueExpr, loc, address, base, offset));
+    }
 
     /// \brief Create a fresh location object. Here the base and offset of the
     /// location object respectively equals to the address and zero.
