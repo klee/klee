@@ -69,8 +69,8 @@ class MemoryLocation {
   protected:
     bool core;
 
-    /// \brief The allocation site
-    llvm::Value *site;
+    /// \brief The location's LLVM value
+    llvm::Value *loc;
 
     /// \brief The address as provided by KLEE
     ref<Expr> address;
@@ -78,11 +78,8 @@ class MemoryLocation {
     /// \brief The offset of the allocation
     ref<Expr> offset;
 
-    MemoryLocation(llvm::Value *_site, ref<Expr> &_address)
-        : core(false), site(_site), address(_address),
-          offset(ConstantExpr::create(0, Expr::Int64)) {}
-
-    MemoryLocation(MemoryLocation *, ref<Expr> &_offset);
+    MemoryLocation(llvm::Value *_loc, ref<Expr> &_address, ref<Expr> &_offset)
+        : core(false), loc(_loc), address(_address), offset(_offset) {}
 
   public:
     enum Kind {
@@ -94,8 +91,8 @@ class MemoryLocation {
 
     virtual ~MemoryLocation() {}
 
-    virtual bool hasAddress(llvm::Value *_site, ref<Expr> &_address) const {
-      return site == _site && address == _address;
+    virtual bool hasAddress(llvm::Value *__loc, ref<Expr> &_address) const {
+      return loc == __loc && address == _address;
     }
 
     /// \brief Print the content of the object into a stream.
@@ -111,7 +108,7 @@ class MemoryLocation {
 
     static bool classof(const MemoryLocation *loc) { return true; }
 
-    llvm::Value *getSite() const { return site; }
+    llvm::Value *getValue() const { return loc; }
 
     ref<Expr> getAddress() const { return address; }
 
@@ -132,8 +129,9 @@ class MemoryLocation {
 /// (versioned)
 class VersionedLocation : public MemoryLocation {
   public:
-    VersionedLocation(llvm::Value *_site, ref<Expr> &_address)
-        : MemoryLocation(_site, _address) {}
+    VersionedLocation(llvm::Value *_loc, ref<Expr> &_address,
+                      ref<Expr> &_offset)
+        : MemoryLocation(_loc, _address, _offset) {}
 
     ~VersionedLocation() {}
 
@@ -235,7 +233,7 @@ class VersionedLocation : public MemoryLocation {
     /// replace them as sinks with their parents.
     ///
     /// \param The memory location to match a sink node with.
-    void consumeSinkNode(MemoryLocation *location);
+    void consumeSinkNode(MemoryLocation *loc);
 
   public:
     LocationGraph() {}
@@ -435,8 +433,8 @@ class VersionedLocation : public MemoryLocation {
       static void
       deletePointerMapWithMapValue(std::map<Key *, std::map<Key *, T *> > &map);
 
-      /// \brief Tests if an allocation site is main function's argument
-      static bool isMainArgument(llvm::Value *site);
+      /// \brief Tests if a pointer points to a main function's argument
+      static bool isMainArgument(llvm::Value *loc);
     };
 
   private:
@@ -476,12 +474,13 @@ class VersionedLocation : public MemoryLocation {
                                          ref<Expr> valueExpr);
 
     /// \brief Create a fresh location object.
-    MemoryLocation *getInitialLocation(llvm::Value *site, ref<Expr> &address);
+    MemoryLocation *getInitialLocation(llvm::Value *loc, ref<Expr> base,
+                                       ref<Expr> offset =
+                                           Expr::createPointer(0));
 
     /// \brief Create a new location object to represent a new version of a
     /// known location.
-    MemoryLocation *getNewLocationVersion(llvm::Value *site,
-                                          ref<Expr> &address);
+    MemoryLocation *getNewLocationVersion(llvm::Value *loc, ref<Expr> &address);
 
     /// \brief Get all versioned locations for the current node an all of its
     /// parents
@@ -489,7 +488,7 @@ class VersionedLocation : public MemoryLocation {
                                                                false) const;
 
     /// \brief Gets the latest version of the location.
-    MemoryLocation *getLatestLocation(llvm::Value *site,
+    MemoryLocation *getLatestLocation(llvm::Value *loc,
                                       ref<Expr> address) const;
 
     /// \brief Gets the latest version of the location, but without checking
@@ -501,7 +500,7 @@ class VersionedLocation : public MemoryLocation {
     void addPointerEquality(const VersionedValue *value, MemoryLocation *loc);
 
     /// \brief Newly relate an location with its stored value
-    void updateStore(MemoryLocation *location, VersionedValue *value);
+    void updateStore(MemoryLocation *loc, VersionedValue *value);
 
     /// \brief Add flow dependency between source and target value
     void addDependency(VersionedValue *source, VersionedValue *target);
