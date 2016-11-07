@@ -66,7 +66,7 @@ public:
 /// \brief A class to represent memory locations.
 class MemoryLocation {
 
-  protected:
+private:
     bool core;
 
     /// \brief The location's LLVM value
@@ -131,21 +131,38 @@ class MemoryLocation {
 
     const ref<Expr> valueExpr;
 
+    /// \brief This should be 0 in case this value is not a pointer, otherwise,
+    /// it points to a MemoryLocation object.
+    MemoryLocation *loc;
+
     /// \brief Field to indicate if any unsatisfiability core depends on this
     /// value.
     bool core;
 
   public:
     VersionedValue(llvm::Value *value, ref<Expr> valueExpr)
-        : value(value), valueExpr(valueExpr), core(false) {}
+        : value(value), valueExpr(valueExpr), loc(0), core(false) {}
 
-    ~VersionedValue() {}
+    VersionedValue(llvm::Value *value, ref<Expr> valueExpr, llvm::Value *_loc,
+                   ref<Expr> &_address, ref<Expr> &_base, ref<Expr> &_offset)
+        : value(value), valueExpr(valueExpr),
+          loc(new MemoryLocation(_loc, _address, _base, _offset)), core(false) {
+    }
+
+    ~VersionedValue() {
+      if (loc)
+        delete loc;
+    }
 
     bool hasValue(llvm::Value *value) const { return this->value == value; }
 
     ref<Expr> getExpression() const { return valueExpr; }
 
-    void setAsCore() { core = true; }
+    void setAsCore() {
+      core = true;
+      if (loc)
+        loc->setAsCore();
+    }
 
     bool isCore() const { return core; }
 
