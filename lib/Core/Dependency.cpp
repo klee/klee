@@ -1122,76 +1122,6 @@ void Dependency::execute(llvm::Instruction *instr,
 
       break;
     }
-    case llvm::Instruction::GetElementPtr: {
-      if (llvm::isa<llvm::Constant>(instr->getOperand(0))) {
-        // We look up existing locations with the same site as the argument,
-        // but with the address given as valueExpr (the value of the
-        // getelementptr instruction itself).
-        MemoryLocation *loc =
-            getLatestLocation(instr->getOperand(0), valueExpr);
-        if (!loc)
-          loc = getInitialLocation(instr->getOperand(0), valueExpr);
-
-        // We simply propagate the pointer to the current
-        addPointerEquality(getNewVersionedValue(instr, valueExpr), loc);
-        break;
-      }
-
-      VersionedValue *addressValue =
-          getLatestValue(instr->getOperand(0), address);
-
-      if (!addressValue) {
-        // We define a new base anyway in case the operand was not found and was
-        // an inbound.
-        llvm::GetElementPtrInst *gepInst =
-            llvm::dyn_cast<llvm::GetElementPtrInst>(instr);
-        assert(gepInst->isInBounds() && "operand not found");
-        addressValue = getNewVersionedValue(instr->getOperand(0), address);
-      }
-
-      std::vector<MemoryLocation *> locList =
-          resolveLocationTransitively(addressValue);
-
-      // Locations
-      if (locList.size() > 0) {
-        VersionedValue *newValue = getNewVersionedValue(instr, valueExpr);
-        for (std::vector<MemoryLocation *>::iterator it = locList.begin(),
-                                                     itEnd = locList.end();
-             it != itEnd; ++it) {
-          // We check existing locations with the same site as the allocation,
-          // but with the address given as valueExpr (the value of the
-          // getelementptr instruction itself).
-          MemoryLocation *actualLoc =
-              getLatestLocation((*it)->getSite(), valueExpr);
-          if (!actualLoc)
-            actualLoc = getInitialLocation((*it)->getSite(), valueExpr);
-          addPointerEquality(newValue, actualLoc);
-        }
-      } else {
-        // Here the base is not found as an address,
-        // try to add flow dependency between values
-        std::vector<VersionedValue *> directSources =
-            directFlowSources(addressValue);
-        if (directSources.size() > 0) {
-          VersionedValue *newValue = getNewVersionedValue(instr, valueExpr);
-          for (std::vector<VersionedValue *>::iterator
-                   it = directSources.begin(),
-                   itEnd = directSources.end();
-               it != itEnd; ++it) {
-            if (*it)
-              addDependency((*it), newValue);
-          }
-        } else {
-          // Here getelementptr forcibly uses a value not known to be an
-          // address, e.g., a loaded value, as an address. In this case, we then
-          // assume that the argument is a base location.
-          addPointerEquality(
-              getNewVersionedValue(instr, valueExpr),
-              getInitialLocation(addressValue->getValue(), valueExpr));
-        }
-      }
-      break;
-    }
     default: { assert(!"unhandled binary instruction"); }
     }
     return;
@@ -1265,6 +1195,78 @@ void Dependency::execute(llvm::Instruction *instr,
           addDependency(op2, newValue);
         else
           addDependency(op2, getNewVersionedValue(instr, result));
+      }
+      break;
+    }
+    case llvm::Instruction::GetElementPtr: {
+      ref<Expr> address = args.at(0);
+      ref<Expr> base = args.at(1);
+      ref<Expr> offset = args.at(2);
+
+      if (llvm::isa<llvm::Constant>(instr->getOperand(0))) {
+        // We look up existing locations with the same site as the argument,
+        // but with the address given as valueExpr (the value of the
+        // getelementptr instruction itself).
+        MemoryLocation *loc = getLatestLocation(instr->getOperand(0), address);
+        if (!loc)
+          loc = getInitialLocation(instr->getOperand(0), address);
+
+        // We simply propagate the pointer to the current
+        addPointerEquality(getNewVersionedValue(instr, address), loc);
+        break;
+      }
+
+      VersionedValue *addressValue = getLatestValue(instr->getOperand(0), base);
+
+      if (!addressValue) {
+        // We define a new base anyway in case the operand was not found and was
+        // an inbound.
+        llvm::GetElementPtrInst *gepInst =
+            llvm::dyn_cast<llvm::GetElementPtrInst>(instr);
+        assert(gepInst->isInBounds() && "operand not found");
+        addressValue = getNewVersionedValue(instr->getOperand(0), base);
+      }
+
+      std::vector<MemoryLocation *> locList =
+          resolveLocationTransitively(addressValue);
+
+      // Locations
+      if (locList.size() > 0) {
+        VersionedValue *newValue = getNewVersionedValue(instr, address);
+        for (std::vector<MemoryLocation *>::iterator it = locList.begin(),
+                                                     itEnd = locList.end();
+             it != itEnd; ++it) {
+          // We check existing locations with the same site as the allocation,
+          // but with the address given as valueExpr (the value of the
+          // getelementptr instruction itself).
+          MemoryLocation *actualLoc =
+              getLatestLocation((*it)->getSite(), address);
+          if (!actualLoc)
+            actualLoc = getInitialLocation((*it)->getSite(), address);
+          addPointerEquality(newValue, actualLoc);
+        }
+      } else {
+        // Here the base is not found as an address,
+        // try to add flow dependency between values
+        std::vector<VersionedValue *> directSources =
+            directFlowSources(addressValue);
+        if (directSources.size() > 0) {
+          VersionedValue *newValue = getNewVersionedValue(instr, address);
+          for (std::vector<VersionedValue *>::iterator
+                   it = directSources.begin(),
+                   itEnd = directSources.end();
+               it != itEnd; ++it) {
+            if (*it)
+              addDependency((*it), newValue);
+          }
+        } else {
+          // Here getelementptr forcibly uses a value not known to be an
+          // address, e.g., a loaded value, as an address. In this case, we then
+          // assume that the argument is a base location.
+          addPointerEquality(
+              getNewVersionedValue(instr, address),
+              getInitialLocation(addressValue->getValue(), address));
+        }
       }
       break;
     }

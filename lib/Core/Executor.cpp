@@ -2254,6 +2254,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     KGEPInstruction *kgepi = static_cast<KGEPInstruction*>(ki);
     ref<Expr> base = eval(ki, 0, state).value;
     ref<Expr> address(base);
+    ref<Expr> offset(Expr::createPointer(0));
 
     for (std::vector< std::pair<unsigned, uint64_t> >::iterator 
            it = kgepi->indices.begin(), ie = kgepi->indices.end(); 
@@ -2263,14 +2264,23 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       address = AddExpr::create(
           address, MulExpr::create(Expr::createSExtToPointerWidth(index),
                                    Expr::createPointer(elementSize)));
+      if (INTERPOLATION_ENABLED) {
+        offset = AddExpr::create(
+            offset, MulExpr::create(Expr::createSExtToPointerWidth(index),
+                                    Expr::createPointer(elementSize)));
+      }
     }
-    if (kgepi->offset)
+    if (kgepi->offset) {
       address = AddExpr::create(address, Expr::createPointer(kgepi->offset));
+      if (INTERPOLATION_ENABLED) {
+        offset = AddExpr::create(offset, Expr::createPointer(kgepi->offset));
+      }
+    }
     bindLocal(ki, state, address);
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->execute(i, address, base);
+      interpTree->execute(i, address, base, offset);
     break;
   }
 
