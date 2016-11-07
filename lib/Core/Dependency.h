@@ -87,13 +87,6 @@ class MemoryLocation {
           offset(_offset) {}
 
   public:
-    enum Kind {
-      Unknown,
-      Versioned
-    };
-
-    virtual Kind getKind() const { return Unknown; }
-
     virtual ~MemoryLocation() {}
 
     virtual bool hasAddress(llvm::Value *__loc, ref<Expr> &_address) const {
@@ -139,14 +132,6 @@ class VersionedLocation : public MemoryLocation {
         : MemoryLocation(_loc, _address, _base, _offset) {}
 
     ~VersionedLocation() {}
-
-    Kind getKind() const { return Versioned; }
-
-    static bool classof(const MemoryLocation *loc) {
-      return loc->getKind() == Versioned;
-    }
-
-    static bool classof(const VersionedLocation *loc) { return true; }
 
     /// \brief Print the content of the object into a stream.
     ///
