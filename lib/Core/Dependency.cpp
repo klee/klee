@@ -153,12 +153,6 @@ ShadowArray::getShadowExpression(ref<Expr> expr,
 /**/
 
 void MemoryLocation::print(llvm::raw_ostream &stream) const {
-  // Do nothing
-}
-
-/**/
-
-void VersionedLocation::print(llvm::raw_ostream &stream) const {
   stream << "A";
   if (!llvm::isa<ConstantExpr>(this->address.get()))
     stream << "(symbolic)";
@@ -386,7 +380,7 @@ MemoryLocation *Dependency::getSpecificInitialLocation(llvm::Value *loc,
                                                        ref<Expr> address,
                                                        ref<Expr> base,
                                                        ref<Expr> offset) {
-  MemoryLocation *ret = new VersionedLocation(loc, address, base, offset);
+  MemoryLocation *ret = new MemoryLocation(loc, address, base, offset);
   versionedLocationsList.push_back(ret);
   return ret;
 }

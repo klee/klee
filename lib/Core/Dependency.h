@@ -81,22 +81,17 @@ class MemoryLocation {
     /// \brief The offset of the allocation
     ref<Expr> offset;
 
+  public:
     MemoryLocation(llvm::Value *_loc, ref<Expr> &_address, ref<Expr> &_base,
                    ref<Expr> &_offset)
         : core(false), loc(_loc), address(_address), base(_base),
           offset(_offset) {}
 
-  public:
-    virtual ~MemoryLocation() {}
+    ~MemoryLocation() {}
 
-    virtual bool hasAddress(llvm::Value *__loc, ref<Expr> &_address) const {
+    bool hasAddress(llvm::Value *__loc, ref<Expr> &_address) const {
       return loc == __loc && address == _address;
     }
-
-    /// \brief Print the content of the object into a stream.
-    ///
-    /// \param The stream to print the data to.
-    virtual void print(llvm::raw_ostream& stream) const;
 
     bool hasConstantAddress() { return llvm::isa<ConstantExpr>(address.get()); }
 
@@ -121,17 +116,6 @@ class MemoryLocation {
       print(llvm::errs());
       llvm::errs() << "\n";
     }
-};
-
-/// \brief A class that represents locations that can be destructively updated
-/// (versioned)
-class VersionedLocation : public MemoryLocation {
-  public:
-    VersionedLocation(llvm::Value *_loc, ref<Expr> &_address, ref<Expr> &_base,
-                      ref<Expr> &_offset)
-        : MemoryLocation(_loc, _address, _base, _offset) {}
-
-    ~VersionedLocation() {}
 
     /// \brief Print the content of the object into a stream.
     ///
