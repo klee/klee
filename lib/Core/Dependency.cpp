@@ -1127,14 +1127,13 @@ void Dependency::execute(llvm::Instruction *instr,
         // We look up existing locations with the same site as the argument,
         // but with the address given as valueExpr (the value of the
         // getelementptr instruction itself).
-        MemoryLocation *actualLocation =
+        MemoryLocation *loc =
             getLatestLocation(instr->getOperand(0), valueExpr);
-        if (!actualLocation)
-          actualLocation = getInitialLocation(instr->getOperand(0), valueExpr);
+        if (!loc)
+          loc = getInitialLocation(instr->getOperand(0), valueExpr);
 
         // We simply propagate the pointer to the current
-        addPointerEquality(getNewVersionedValue(instr, valueExpr),
-                           actualLocation);
+        addPointerEquality(getNewVersionedValue(instr, valueExpr), loc);
         break;
       }
 
