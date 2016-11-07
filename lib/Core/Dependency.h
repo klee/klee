@@ -72,14 +72,19 @@ class MemoryLocation {
     /// \brief The location's LLVM value
     llvm::Value *loc;
 
-    /// \brief The address as provided by KLEE
+    /// \brief The absolute address
     ref<Expr> address;
+
+    /// \brief The base address
+    ref<Expr> base;
 
     /// \brief The offset of the allocation
     ref<Expr> offset;
 
-    MemoryLocation(llvm::Value *_loc, ref<Expr> &_address, ref<Expr> &_offset)
-        : core(false), loc(_loc), address(_address), offset(_offset) {}
+    MemoryLocation(llvm::Value *_loc, ref<Expr> &_address, ref<Expr> &_base,
+                   ref<Expr> &_offset)
+        : core(false), loc(_loc), address(_address), base(_base),
+          offset(_offset) {}
 
   public:
     enum Kind {
@@ -129,9 +134,9 @@ class MemoryLocation {
 /// (versioned)
 class VersionedLocation : public MemoryLocation {
   public:
-    VersionedLocation(llvm::Value *_loc, ref<Expr> &_address,
+    VersionedLocation(llvm::Value *_loc, ref<Expr> &_address, ref<Expr> &_base,
                       ref<Expr> &_offset)
-        : MemoryLocation(_loc, _address, _offset) {}
+        : MemoryLocation(_loc, _address, _base, _offset) {}
 
     ~VersionedLocation() {}
 
@@ -473,10 +478,15 @@ class VersionedLocation : public MemoryLocation {
     VersionedValue *getNewVersionedValue(llvm::Value *value,
                                          ref<Expr> valueExpr);
 
-    /// \brief Create a fresh location object.
-    MemoryLocation *getInitialLocation(llvm::Value *loc, ref<Expr> base,
-                                       ref<Expr> offset =
-                                           Expr::createPointer(0));
+    /// \brief Create a fresh location object. Here the base and offset of the
+    /// location object respectively equals to the address and zero.
+    MemoryLocation *getInitialLocation(llvm::Value *loc, ref<Expr> address);
+
+    /// \brief Create a fresh location object, with specified base and offset
+    MemoryLocation *getSpecificInitialLocation(llvm::Value *loc,
+                                               ref<Expr> address,
+                                               ref<Expr> base,
+                                               ref<Expr> offset);
 
     /// \brief Create a new location object to represent a new version of a
     /// known location.

@@ -376,9 +376,17 @@ VersionedValue *Dependency::getNewVersionedValue(llvm::Value *value,
   return ret;
 }
 
-MemoryLocation *Dependency::getInitialLocation(llvm::Value *loc, ref<Expr> base,
-                                               ref<Expr> offset) {
-  MemoryLocation *ret = new VersionedLocation(loc, base, offset);
+MemoryLocation *Dependency::getInitialLocation(llvm::Value *loc,
+                                               ref<Expr> address) {
+  return getSpecificInitialLocation(loc, address, address,
+                                    Expr::createPointer(0));
+}
+
+MemoryLocation *Dependency::getSpecificInitialLocation(llvm::Value *loc,
+                                                       ref<Expr> address,
+                                                       ref<Expr> base,
+                                                       ref<Expr> offset) {
+  MemoryLocation *ret = new VersionedLocation(loc, address, base, offset);
   versionedLocationsList.push_back(ret);
   return ret;
 }
@@ -1184,24 +1192,28 @@ void Dependency::execute(llvm::Instruction *instr,
       break;
     }
     case llvm::Instruction::GetElementPtr: {
-      ref<Expr> address = args.at(0);
-      ref<Expr> base = args.at(1);
-      ref<Expr> offset = args.at(2);
+      ref<Expr> resultAddress = args.at(0);
+      ref<Expr> inputAddress = args.at(1);
+      ref<Expr> inputOffset = args.at(2);
 
       if (llvm::isa<llvm::Constant>(instr->getOperand(0))) {
         // We look up existing locations with the same site as the argument,
         // but with the address given as base.
-        MemoryLocation *loc = getLatestLocation(instr->getOperand(0), base);
+        MemoryLocation *loc =
+            getLatestLocation(instr->getOperand(0), inputAddress);
         if (!loc)
-          loc = getInitialLocation(instr->getOperand(0), base);
+          loc = getInitialLocation(instr->getOperand(0), inputAddress);
 
         // We simply propagate the pointer to the current
-        addPointerEquality(getNewVersionedValue(instr, address),
-                           getInitialLocation(instr, base, offset));
+        addPointerEquality(getNewVersionedValue(instr, resultAddress),
+                           getSpecificInitialLocation(instr, resultAddress,
+                                                      inputAddress,
+                                                      inputOffset));
         break;
       }
 
-      VersionedValue *addressValue = getLatestValue(instr->getOperand(0), base);
+      VersionedValue *addressValue =
+          getLatestValue(instr->getOperand(0), inputAddress);
 
       if (!addressValue) {
         // We define a new base anyway in case the operand was not found and was
@@ -1209,7 +1221,10 @@ void Dependency::execute(llvm::Instruction *instr,
         llvm::GetElementPtrInst *gepInst =
             llvm::dyn_cast<llvm::GetElementPtrInst>(instr);
         assert(gepInst->isInBounds() && "operand not found");
-        addressValue = getNewVersionedValue(instr->getOperand(0), base);
+        MemoryLocation *loc =
+            getLatestLocation(instr->getOperand(0), inputAddress);
+        addressValue = getNewVersionedValue(instr->getOperand(0), inputAddress);
+        addPointerEquality(addressValue, loc);
       }
 
       std::vector<MemoryLocation *> locList =
@@ -1217,7 +1232,7 @@ void Dependency::execute(llvm::Instruction *instr,
 
       // Locations
       if (locList.size() > 0) {
-        VersionedValue *newValue = getNewVersionedValue(instr, address);
+        VersionedValue *newValue = getNewVersionedValue(instr, resultAddress);
         for (std::vector<MemoryLocation *>::iterator it = locList.begin(),
                                                      itEnd = locList.end();
              it != itEnd; ++it) {
@@ -1225,9 +1240,9 @@ void Dependency::execute(llvm::Instruction *instr,
           // but with the address given as valueExpr (the value of the
           // getelementptr instruction itself).
           MemoryLocation *actualLoc =
-              getLatestLocation((*it)->getValue(), address);
+              getLatestLocation((*it)->getValue(), resultAddress);
           if (!actualLoc)
-            actualLoc = getInitialLocation((*it)->getValue(), address);
+            actualLoc = getInitialLocation((*it)->getValue(), resultAddress);
           addPointerEquality(newValue, actualLoc);
         }
       } else {
@@ -1236,7 +1251,7 @@ void Dependency::execute(llvm::Instruction *instr,
         std::vector<VersionedValue *> directSources =
             directFlowSources(addressValue);
         if (directSources.size() > 0) {
-          VersionedValue *newValue = getNewVersionedValue(instr, address);
+          VersionedValue *newValue = getNewVersionedValue(instr, resultAddress);
           for (std::vector<VersionedValue *>::iterator
                    it = directSources.begin(),
                    itEnd = directSources.end();
@@ -1249,8 +1264,8 @@ void Dependency::execute(llvm::Instruction *instr,
           // address, e.g., a loaded value, as an address. In this case, we then
           // assume that the argument is a base location.
           addPointerEquality(
-              getNewVersionedValue(instr, address),
-              getInitialLocation(addressValue->getValue(), address));
+              getNewVersionedValue(instr, resultAddress),
+              getInitialLocation(addressValue->getValue(), resultAddress));
         }
       }
       break;
