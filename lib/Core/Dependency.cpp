@@ -1197,7 +1197,7 @@ void Dependency::execute(llvm::Instruction *instr,
 
         // We simply propagate the pointer to the current
         addPointerEquality(getNewVersionedValue(instr, address),
-                           getInitialLocation(instr, base));
+                           getInitialLocation(instr, base, offset));
         break;
       }
 
