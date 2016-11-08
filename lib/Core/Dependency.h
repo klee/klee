@@ -99,6 +99,15 @@ private:
       return ret;
     }
 
+    static ref<MemoryLocation> createByOffset(ref<MemoryLocation> loc,
+                                              ref<Expr> &address,
+                                              ref<Expr> &offset) {
+      ref<MemoryLocation> ret(
+          new MemoryLocation(loc->getValue(), address, loc->getBase(),
+                             AddExpr::(loc->getOffset(), offset)));
+      return ret;
+    }
+
     bool hasAddress(llvm::Value *__loc, ref<Expr> _address) const {
       return loc == __loc && address == _address;
     }
