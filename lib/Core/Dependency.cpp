@@ -181,7 +181,7 @@ void VersionedValue::print(llvm::raw_ostream &stream) const {
 
 /**/
 
-bool LocationGraph::isVisited(MemoryLocation *loc) {
+bool LocationGraph::isVisited(ref<MemoryLocation> loc) {
   for (std::vector<LocationNode *>::iterator it = allNodes.begin(),
                                              itEnd = allNodes.end();
        it != itEnd; ++it) {
@@ -192,7 +192,7 @@ bool LocationGraph::isVisited(MemoryLocation *loc) {
   return false;
 }
 
-void LocationGraph::addNewSink(MemoryLocation *candidateSink) {
+void LocationGraph::addNewSink(ref<MemoryLocation> candidateSink) {
   if (isVisited(candidateSink))
     return;
 
@@ -201,7 +201,8 @@ void LocationGraph::addNewSink(MemoryLocation *candidateSink) {
   sinks.push_back(newNode);
 }
 
-void LocationGraph::addNewEdge(MemoryLocation *source, MemoryLocation *target) {
+void LocationGraph::addNewEdge(ref<MemoryLocation> source,
+                               ref<MemoryLocation> target) {
   LocationNode *sourceNode = 0;
   LocationNode *targetNode = 0;
 
@@ -254,7 +255,7 @@ void LocationGraph::addNewEdge(MemoryLocation *source, MemoryLocation *target) {
   }
 }
 
-void LocationGraph::consumeSinkNode(MemoryLocation *loc) {
+void LocationGraph::consumeSinkNode(ref<MemoryLocation> loc) {
   std::vector<LocationNode *>::iterator pos = sinks.end();
   for (std::vector<LocationNode *>::iterator it = sinks.begin(),
                                              itEnd = sinks.end();
@@ -279,8 +280,8 @@ void LocationGraph::consumeSinkNode(MemoryLocation *loc) {
   }
 }
 
-std::set<MemoryLocation *> LocationGraph::getSinkLocations() const {
-  std::set<MemoryLocation *> sinkLocations;
+std::set<ref<MemoryLocation> > LocationGraph::getSinkLocations() const {
+  std::set<ref<MemoryLocation> > sinkLocations;
 
   for (std::vector<LocationNode *>::const_iterator it = sinks.begin(),
                                                    itEnd = sinks.end();
@@ -291,9 +292,9 @@ std::set<MemoryLocation *> LocationGraph::getSinkLocations() const {
   return sinkLocations;
 }
 
-std::set<MemoryLocation *> LocationGraph::getSinksWithLocations(
-    std::vector<MemoryLocation *> locationsList) const {
-  std::set<MemoryLocation *> sinkLocations;
+std::set<ref<MemoryLocation> > LocationGraph::getSinksWithLocations(
+    std::vector<ref<MemoryLocation> > locationsList) const {
+  std::set<ref<MemoryLocation> > sinkLocations;
 
   for (std::vector<LocationNode *>::const_iterator it = sinks.begin(),
                                                    itEnd = sinks.end();
@@ -307,14 +308,14 @@ std::set<MemoryLocation *> LocationGraph::getSinksWithLocations(
 }
 
 void LocationGraph::consumeSinksWithLocations(
-    std::vector<MemoryLocation *> locationsList) {
-  std::set<MemoryLocation *> sinkLocs(getSinksWithLocations(locationsList));
+    std::vector<ref<MemoryLocation> > locationsList) {
+  std::set<ref<MemoryLocation> > sinkLocs(getSinksWithLocations(locationsList));
 
   if (sinkLocs.empty())
     return;
 
-  for (std::set<MemoryLocation *>::iterator it = sinkLocs.begin(),
-                                            itEnd = sinkLocs.end();
+  for (std::set<ref<MemoryLocation> >::iterator it = sinkLocs.begin(),
+                                                itEnd = sinkLocs.end();
        it != itEnd; ++it) {
     consumeSinkNode((*it));
   }
@@ -340,7 +341,7 @@ void LocationGraph::print(llvm::raw_ostream &stream,
   for (std::vector<LocationNode *>::iterator it = nodes.begin(),
                                              itEnd = nodes.end();
        it != itEnd; ++it) {
-    MemoryLocation *loc = (*it)->getLocation();
+    ref<MemoryLocation> loc = (*it)->getLocation();
     stream << tabs;
     loc->print(stream);
     if (std::find(printed.begin(), printed.end(), (*it)) != printed.end()) {
@@ -369,33 +370,33 @@ VersionedValue *Dependency::registerNewVersionedValue(llvm::Value *value,
   return vvalue;
 }
 
-MemoryLocation *Dependency::getInitialLocation(llvm::Value *loc,
-                                               ref<Expr> address) {
-  return getSpecificInitialLocation(loc, address, address,
-                                    Expr::createPointer(0));
+ref<MemoryLocation> Dependency::getInitialLocation(llvm::Value *loc,
+                                                   ref<Expr> address) {
+  ref<Expr> zeroPointer = Expr::createPointer(0);
+  return getSpecificInitialLocation(loc, address, address, zeroPointer);
 }
 
-MemoryLocation *Dependency::getSpecificInitialLocation(llvm::Value *loc,
-                                                       ref<Expr> address,
-                                                       ref<Expr> base,
-                                                       ref<Expr> offset) {
-  MemoryLocation *ret = new MemoryLocation(loc, address, base, offset);
+ref<MemoryLocation> Dependency::getSpecificInitialLocation(llvm::Value *loc,
+                                                           ref<Expr> address,
+                                                           ref<Expr> base,
+                                                           ref<Expr> offset) {
+  ref<MemoryLocation> ret(MemoryLocation::create(loc, address, base, offset));
   versionedLocationsList.push_back(ret);
   return ret;
 }
 
-MemoryLocation *Dependency::getNewLocationVersion(llvm::Value *loc,
-                                                  ref<Expr> &address) {
-  MemoryLocation *ret = getLatestLocation(loc, address);
-  if (ret)
+ref<MemoryLocation> Dependency::getNewLocationVersion(llvm::Value *loc,
+                                                      ref<Expr> &address) {
+  ref<MemoryLocation> ret = getLatestLocation(loc, address);
+  if (ret.get())
     return ret;
 
   return getInitialLocation(loc, address);
 }
 
-std::vector<MemoryLocation *>
+std::vector<ref<MemoryLocation> >
 Dependency::getAllVersionedLocations(bool coreOnly) const {
-  std::vector<MemoryLocation *> allLoc;
+  std::vector<ref<MemoryLocation> > allLoc;
 
   if (coreOnly)
     std::copy(coreLocations.begin(), coreLocations.end(),
@@ -404,7 +405,7 @@ Dependency::getAllVersionedLocations(bool coreOnly) const {
     allLoc = versionedLocationsList;
 
   if (parentDependency) {
-    std::vector<MemoryLocation *> parentVersionedLocations =
+    std::vector<ref<MemoryLocation> > parentVersionedLocations =
         parentDependency->getAllVersionedLocations(coreOnly);
     allLoc.insert(allLoc.begin(), parentVersionedLocations.begin(),
                   parentVersionedLocations.end());
@@ -415,12 +416,12 @@ Dependency::getAllVersionedLocations(bool coreOnly) const {
 std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
 Dependency::getStoredExpressions(std::set<const Array *> &replacements,
                                  bool coreOnly) const {
-  std::vector<MemoryLocation *> allLoc = getAllVersionedLocations(coreOnly);
+  std::vector<ref<MemoryLocation> > allLoc = getAllVersionedLocations(coreOnly);
   ConcreteStore concreteStore;
   SymbolicStore symbolicStore;
 
-  for (std::vector<MemoryLocation *>::iterator locIter = allLoc.begin(),
-                                               locIterEnd = allLoc.end();
+  for (std::vector<ref<MemoryLocation> >::iterator locIter = allLoc.begin(),
+                                                   locIterEnd = allLoc.end();
        locIter != locIterEnd; ++locIter) {
     std::vector<VersionedValue *> stored = stores(*locIter);
 
@@ -529,9 +530,9 @@ VersionedValue *Dependency::getLatestValueNoConstantCheck(llvm::Value *value) {
   return 0;
 }
 
-MemoryLocation *Dependency::getLatestLocation(llvm::Value *loc,
-                                              ref<Expr> address) const {
-  for (std::vector<MemoryLocation *>::const_reverse_iterator
+ref<MemoryLocation> Dependency::getLatestLocation(llvm::Value *loc,
+                                                  ref<Expr> address) const {
+  for (std::vector<ref<MemoryLocation> >::const_reverse_iterator
            it = versionedLocationsList.rbegin(),
            itEnd = versionedLocationsList.rend();
        it != itEnd; ++it) {
@@ -545,7 +546,7 @@ MemoryLocation *Dependency::getLatestLocation(llvm::Value *loc,
   return 0;
 }
 
-MemoryLocation *Dependency::resolveLocation(VersionedValue *val) {
+ref<MemoryLocation> Dependency::resolveLocation(VersionedValue *val) {
   if (!val)
     return 0;
 
@@ -562,7 +563,7 @@ MemoryLocation *Dependency::resolveLocation(VersionedValue *val) {
     // We have either argc / argv
     llvm::Argument *vArg = llvm::dyn_cast<llvm::Argument>(val->getValue());
     ref<Expr> addressExpr(val->getExpression());
-    MemoryLocation *loc = getInitialLocation(vArg, addressExpr);
+    ref<MemoryLocation> loc = getInitialLocation(vArg, addressExpr);
     addPointerEquality(getNewVersionedValue(vArg, addressExpr), loc);
     return loc;
   }
@@ -570,16 +571,16 @@ MemoryLocation *Dependency::resolveLocation(VersionedValue *val) {
   return 0;
 }
 
-std::vector<MemoryLocation *>
+std::vector<ref<MemoryLocation> >
 Dependency::resolveLocationTransitively(VersionedValue *value) {
-  std::vector<MemoryLocation *> ret;
+  std::vector<ref<MemoryLocation> > ret;
 
   if (!value)
     return ret;
 
   // Lookup address among pointer equalities first
-  MemoryLocation *singleRet = resolveLocation(value);
-  if (singleRet) {
+  ref<MemoryLocation> singleRet = resolveLocation(value);
+  if (!singleRet.isNull()) {
     ret.push_back(singleRet);
     return ret;
   }
@@ -591,7 +592,7 @@ Dependency::resolveLocationTransitively(VersionedValue *value) {
                                                      itEnd = valueSources.end();
        it != itEnd; ++it) {
     singleRet = resolveLocation(*it);
-    if (singleRet) {
+    if (!singleRet.isNull()) {
       ret.push_back(singleRet);
     }
   }
@@ -600,40 +601,40 @@ Dependency::resolveLocationTransitively(VersionedValue *value) {
 }
 
 void Dependency::addPointerEquality(const VersionedValue *value,
-                                    MemoryLocation *loc) {
+                                    ref<MemoryLocation> loc) {
   if (equalityMap.find(value) != equalityMap.end()) {
     equalityMap[value].push_back(loc);
   } else {
-    std::vector<MemoryLocation *> newList;
+    std::vector<ref<MemoryLocation> > newList;
     newList.push_back(loc);
     equalityMap.insert(
-        std::make_pair<const VersionedValue *, std::vector<MemoryLocation *> >(
-            value, newList));
+        std::make_pair<const VersionedValue *,
+                       std::vector<ref<MemoryLocation> > >(value, newList));
   }
 }
 
-void Dependency::updateStore(MemoryLocation *loc, VersionedValue *value) {
-  std::map<MemoryLocation *, VersionedValue *>::iterator storesIter =
+void Dependency::updateStore(ref<MemoryLocation> loc, VersionedValue *value) {
+  std::map<ref<MemoryLocation>, VersionedValue *>::iterator storesIter =
       storesMap.find(loc);
   if (storesIter != storesMap.end()) {
     storesMap.at(loc) = value;
     } else {
       storesMap.insert(
-          std::pair<MemoryLocation *, VersionedValue *>(loc, value));
+          std::pair<ref<MemoryLocation>, VersionedValue *>(loc, value));
     }
 
-  // update storageOfMap
-    std::map<VersionedValue *, std::vector<MemoryLocation *> >::iterator
+    // update storageOfMap
+    std::map<VersionedValue *, std::vector<ref<MemoryLocation> > >::iterator
     storageOfIter;
     storageOfIter = storageOfMap.find(value);
     if (storageOfIter != storageOfMap.end()) {
       storageOfMap.at(value).push_back(loc);
   } else {
-    std::vector<MemoryLocation *> newList;
+    std::vector<ref<MemoryLocation> > newList;
     newList.push_back(loc);
     storageOfMap.insert(
-        std::pair<VersionedValue *, std::vector<MemoryLocation *> >(value,
-                                                                    newList));
+        std::pair<VersionedValue *, std::vector<ref<MemoryLocation> > >(
+            value, newList));
   }
 }
 
@@ -643,22 +644,23 @@ void Dependency::addDependency(VersionedValue *source, VersionedValue *target) {
 
 void Dependency::addDependencyViaLocation(VersionedValue *source,
                                           VersionedValue *target,
-                                          MemoryLocation *via) {
+                                          ref<MemoryLocation> via) {
   if (flowsToMap.find(target) != flowsToMap.end()) {
     flowsToMap[target].insert(
-        std::make_pair<VersionedValue *, MemoryLocation *>(source, via));
+        std::make_pair<VersionedValue *, ref<MemoryLocation> >(source, via));
   } else {
-    std::map<VersionedValue *, MemoryLocation *> newMap;
+    std::map<VersionedValue *, ref<MemoryLocation> > newMap;
     newMap.insert(
-        std::make_pair<VersionedValue *, MemoryLocation *>(source, via));
+        std::make_pair<VersionedValue *, ref<MemoryLocation> >(source, via));
     flowsToMap[target] = newMap;
   }
 }
 
-std::vector<VersionedValue *> Dependency::stores(MemoryLocation *loc) const {
+std::vector<VersionedValue *>
+Dependency::stores(ref<MemoryLocation> loc) const {
   std::vector<VersionedValue *> ret;
 
-  std::map<MemoryLocation *, VersionedValue *>::const_iterator it;
+  std::map<ref<MemoryLocation>, VersionedValue *>::const_iterator it;
   it = storesMap.find(loc);
   if (it != storesMap.end()) {
     ret.push_back(storesMap.at(loc));
@@ -674,9 +676,9 @@ std::vector<VersionedValue *>
 Dependency::directLocalFlowSources(VersionedValue *target) const {
   std::vector<VersionedValue *> ret;
   if (flowsToMap.find(target) != flowsToMap.end()) {
-    std::map<VersionedValue *, MemoryLocation *> sources =
+    std::map<VersionedValue *, ref<MemoryLocation> > sources =
         flowsToMap.find(target)->second;
-    for (std::map<VersionedValue *, MemoryLocation *>::iterator it =
+    for (std::map<VersionedValue *, ref<MemoryLocation> >::iterator it =
              sources.begin();
          it != sources.end(); ++it) {
       ret.push_back(it->first);
@@ -770,13 +772,13 @@ bool Dependency::buildLoadDependency(llvm::Value *address,
   if (!addressValue)
     return false;
 
-  std::vector<MemoryLocation *> addressLocList =
+  std::vector<ref<MemoryLocation> > addressLocList =
       resolveLocationTransitively(addressValue);
 
   if (addressLocList.empty())
     assert(!"operand is not an location");
 
-  for (std::vector<MemoryLocation *>::iterator
+  for (std::vector<ref<MemoryLocation> >::iterator
            locIter = addressLocList.begin(),
            locIterEnd = addressLocList.end();
        locIter != locIterEnd; ++locIter) {
@@ -805,13 +807,13 @@ Dependency::Dependency(Dependency *prev) : parentDependency(prev) {}
 Dependency::~Dependency() {
   // Delete the locally-constructed relations
   Util::deletePointerMapWithVectorValue(equalityMap);
-  Util::deletePointerMap(storesMap);
+  storesMap.clear();
   Util::deletePointerMapWithVectorValue(storageOfMap);
   Util::deletePointerMapWithMapValue(flowsToMap);
 
   // Delete the locally-constructed objects
   Util::deletePointerMapWithVectorValue(valuesMap);
-  Util::deletePointerVector(versionedLocationsList);
+  versionedLocationsList.clear();
 }
 
 Dependency *Dependency::cdr() const { return parentDependency; }
@@ -1047,10 +1049,10 @@ void Dependency::execute(llvm::Instruction *instr,
       VersionedValue *addressValue =
           getLatestValue(instr->getOperand(0), address);
       if (addressValue) {
-        std::vector<MemoryLocation *> locList =
+        std::vector<ref<MemoryLocation> > locList =
             resolveLocationTransitively(addressValue);
         if (locList.empty()) {
-          MemoryLocation *loc =
+          ref<MemoryLocation> loc =
               getInitialLocation(instr->getOperand(0), address);
           addPointerEquality(addressValue, loc);
           updateStore(loc, getNewVersionedValue(instr, valueExpr));
@@ -1069,7 +1071,7 @@ void Dependency::execute(llvm::Instruction *instr,
         // record it here.
         if (llvm::isa<llvm::GlobalVariable>(instr->getOperand(0))) {
           addressValue = getNewVersionedValue(instr->getOperand(0), address);
-          MemoryLocation *loc =
+          ref<MemoryLocation> loc =
               getInitialLocation(instr->getOperand(0), address);
           addPointerEquality(addressValue, loc);
         }
@@ -1077,27 +1079,30 @@ void Dependency::execute(llvm::Instruction *instr,
 
       if (!buildLoadDependency(instr->getOperand(0), address, instr,
                                valueExpr)) {
-        MemoryLocation *loc = getInitialLocation(instr->getOperand(0), address);
+        ref<MemoryLocation> loc =
+            getInitialLocation(instr->getOperand(0), address);
         updateStore(loc, getNewVersionedValue(instr, valueExpr));
       }
       break;
     }
     case llvm::Instruction::Store: {
       VersionedValue *dataArg = getLatestValue(instr->getOperand(0), valueExpr);
-      std::vector<MemoryLocation *> addressList = resolveLocationTransitively(
-          getLatestValue(instr->getOperand(1), address));
+      std::vector<ref<MemoryLocation> > addressList =
+          resolveLocationTransitively(
+              getLatestValue(instr->getOperand(1), address));
 
       // If there was no dependency found, we should create
       // a new value
       if (!dataArg)
         dataArg = getNewVersionedValue(instr->getOperand(0), valueExpr);
 
-      for (std::vector<MemoryLocation *>::iterator it = addressList.begin(),
-                                                   itEnd = addressList.end();
+      for (std::vector<ref<MemoryLocation> >::iterator
+               it = addressList.begin(),
+               itEnd = addressList.end();
            it != itEnd; ++it) {
-        MemoryLocation *loc =
+        ref<MemoryLocation> loc =
             getLatestLocation((*it)->getValue(), (*it)->getAddress());
-        if (!loc) {
+        if (loc.isNull()) {
           loc = getInitialLocation((*it)->getValue(), address);
           VersionedValue *locValue =
               getNewVersionedValue((*it)->getValue(), valueExpr);
@@ -1192,9 +1197,9 @@ void Dependency::execute(llvm::Instruction *instr,
       if (llvm::isa<llvm::Constant>(instr->getOperand(0))) {
         // We look up existing locations with the same site as the argument,
         // but with the address given as base.
-        MemoryLocation *loc =
+        ref<MemoryLocation> loc =
             getLatestLocation(instr->getOperand(0), inputAddress);
-        if (!loc)
+        if (loc.isNull())
           loc = getInitialLocation(instr->getOperand(0), inputAddress);
 
         // We simply propagate the pointer to the current
@@ -1214,27 +1219,27 @@ void Dependency::execute(llvm::Instruction *instr,
         llvm::GetElementPtrInst *gepInst =
             llvm::dyn_cast<llvm::GetElementPtrInst>(instr);
         assert(gepInst->isInBounds() && "operand not found");
-        MemoryLocation *loc =
+        ref<MemoryLocation> loc =
             getLatestLocation(instr->getOperand(0), inputAddress);
         addressValue = getNewVersionedValue(instr->getOperand(0), inputAddress);
         addPointerEquality(addressValue, loc);
       }
 
-      std::vector<MemoryLocation *> locList =
+      std::vector<ref<MemoryLocation> > locList =
           resolveLocationTransitively(addressValue);
 
       // Locations
       if (locList.size() > 0) {
         VersionedValue *newValue = getNewVersionedValue(instr, resultAddress);
-        for (std::vector<MemoryLocation *>::iterator it = locList.begin(),
-                                                     itEnd = locList.end();
+        for (std::vector<ref<MemoryLocation> >::iterator it = locList.begin(),
+                                                         itEnd = locList.end();
              it != itEnd; ++it) {
           // We check existing locations with the same site as the allocation,
           // but with the address given as valueExpr (the value of the
           // getelementptr instruction itself).
-          MemoryLocation *actualLoc =
+          ref<MemoryLocation> actualLoc =
               getLatestLocation((*it)->getValue(), resultAddress);
-          if (!actualLoc)
+          if (actualLoc.isNull())
             actualLoc = getInitialLocation((*it)->getValue(), resultAddress);
           addPointerEquality(newValue, actualLoc);
         }
@@ -1401,7 +1406,7 @@ void Dependency::markAllValues(LocationGraph *g, llvm::Value *val) {
 }
 
 void Dependency::computeCoreLocations(LocationGraph *g) {
-  std::set<MemoryLocation *> sinkLocations(g->getSinkLocations());
+  std::set<ref<MemoryLocation> > sinkLocations(g->getSinkLocations());
   coreLocations.insert(sinkLocations.begin(), sinkLocations.end());
 
   if (parentDependency) {
@@ -1415,18 +1420,18 @@ void Dependency::computeCoreLocations(LocationGraph *g) {
   }
 }
 
-std::map<VersionedValue *, MemoryLocation *>
+std::map<VersionedValue *, ref<MemoryLocation> >
 Dependency::directLocalLocationSources(VersionedValue *target) const {
-  std::map<VersionedValue *, MemoryLocation *> ret;
+  std::map<VersionedValue *, ref<MemoryLocation> > ret;
 
   if (flowsToMap.find(target) != flowsToMap.end()) {
-    std::map<VersionedValue *, MemoryLocation *> sources =
+    std::map<VersionedValue *, ref<MemoryLocation> > sources =
         flowsToMap.find(target)->second;
-    for (std::map<VersionedValue *, MemoryLocation *>::iterator it =
+    for (std::map<VersionedValue *, ref<MemoryLocation> >::iterator it =
              sources.begin();
          it != sources.end(); ++it) {
-      std::map<VersionedValue *, MemoryLocation *> extra;
-      if (!it->second) {
+      std::map<VersionedValue *, ref<MemoryLocation> > extra;
+      if (it->second.isNull()) {
         // Transitively get the source
         extra = directLocalLocationSources(it->first);
         if (extra.size()) {
@@ -1442,11 +1447,11 @@ Dependency::directLocalLocationSources(VersionedValue *target) const {
 
   if (ret.empty()) {
     // We try to find location in the local store instead
-    std::map<VersionedValue *, std::vector<MemoryLocation *> >::const_iterator
-    it;
+    std::map<VersionedValue *,
+             std::vector<ref<MemoryLocation> > >::const_iterator it;
     it = storageOfMap.find(target);
     if (it != storageOfMap.end()) {
-      std::vector<MemoryLocation *> locList = it->second;
+      std::vector<ref<MemoryLocation> > locList = it->second;
       int size = locList.size();
       ret[0] = locList.at(size - 1);
     }
@@ -1455,29 +1460,32 @@ Dependency::directLocalLocationSources(VersionedValue *target) const {
   return ret;
 }
 
-std::map<VersionedValue *, MemoryLocation *>
+std::map<VersionedValue *, ref<MemoryLocation> >
 Dependency::directLocationSources(VersionedValue *target) const {
-  std::map<VersionedValue *, MemoryLocation *> ret =
+  std::map<VersionedValue *, ref<MemoryLocation> > ret =
       directLocalLocationSources(target);
 
   if (ret.empty() && parentDependency)
     return parentDependency->directLocationSources(target);
 
-  std::map<VersionedValue *, MemoryLocation *> tmp;
-  std::map<VersionedValue *, MemoryLocation *>::iterator nextPos = ret.begin(),
-                                                         itEnd = ret.end();
+  std::map<VersionedValue *, ref<MemoryLocation> > tmp;
+  std::map<VersionedValue *, ref<MemoryLocation> >::iterator nextPos =
+                                                                 ret.begin(),
+                                                             itEnd = ret.end();
 
   bool elementErased = true;
   while (elementErased) {
     elementErased = false;
-    for (std::map<VersionedValue *, MemoryLocation *>::iterator it = nextPos;
+    for (std::map<VersionedValue *, ref<MemoryLocation> >::iterator it =
+             nextPos;
          it != itEnd; ++it) {
-      if (!it->second) {
-        std::map<VersionedValue *, MemoryLocation *>::iterator deletionPos = it;
+      if (it->second.isNull()) {
+        std::map<VersionedValue *, ref<MemoryLocation> >::iterator deletionPos =
+            it;
 
         // Here we check that it->first was non-nil, as it is possibly so.
         if (parentDependency && it->first) {
-          std::map<VersionedValue *, MemoryLocation *> ancestralSources =
+          std::map<VersionedValue *, ref<MemoryLocation> > ancestralSources =
               parentDependency->directLocationSources(it->first);
           tmp.insert(ancestralSources.begin(), ancestralSources.end());
         }
@@ -1495,16 +1503,16 @@ Dependency::directLocationSources(VersionedValue *target) const {
 }
 
 void Dependency::recursivelyBuildLocationGraph(
-    LocationGraph *g, VersionedValue *source, MemoryLocation *target,
-    std::set<MemoryLocation *> parentTargets) const {
+    LocationGraph *g, VersionedValue *source, ref<MemoryLocation> target,
+    std::set<ref<MemoryLocation> > parentTargets) const {
   if (!source)
     return;
 
-  std::vector<MemoryLocation *> ret;
-  std::map<VersionedValue *, MemoryLocation *> sourceEdges =
+  std::vector<ref<MemoryLocation> > ret;
+  std::map<VersionedValue *, ref<MemoryLocation> > sourceEdges =
       directLocationSources(source);
 
-  for (std::map<VersionedValue *, MemoryLocation *>::iterator
+  for (std::map<VersionedValue *, ref<MemoryLocation> >::iterator
            it = sourceEdges.begin(),
            itEnd = sourceEdges.end();
        it != itEnd; ++it) {
@@ -1521,17 +1529,17 @@ void Dependency::recursivelyBuildLocationGraph(
 
 void Dependency::buildLocationGraph(LocationGraph *g,
                                     VersionedValue *target) const {
-  std::vector<MemoryLocation *> ret;
-  std::map<VersionedValue *, MemoryLocation *> sourceEdges =
+  std::vector<ref<MemoryLocation> > ret;
+  std::map<VersionedValue *, ref<MemoryLocation> > sourceEdges =
       directLocationSources(target);
 
-  for (std::map<VersionedValue *, MemoryLocation *>::iterator
+  for (std::map<VersionedValue *, ref<MemoryLocation> >::iterator
            it = sourceEdges.begin(),
            itEnd = sourceEdges.end();
        it != itEnd; ++it) {
     g->addNewSink(it->second);
     recursivelyBuildLocationGraph(g, it->first, it->second,
-                                  std::set<MemoryLocation *>());
+                                  std::set<ref<MemoryLocation> >());
   }
 }
 
@@ -1544,15 +1552,15 @@ void Dependency::print(llvm::raw_ostream &stream,
   std::string tabs = makeTabs(paddingAmount);
   stream << tabs << "EQUALITIES:";
   std::map<const VersionedValue *,
-           std::vector<MemoryLocation *> >::const_iterator equalityMapBegin =
-      equalityMap.begin();
-  std::map<MemoryLocation *, VersionedValue *>::const_iterator storesMapBegin =
-      storesMap.begin();
+           std::vector<ref<MemoryLocation> > >::const_iterator
+  equalityMapBegin = equalityMap.begin();
+  std::map<ref<MemoryLocation>, VersionedValue *>::const_iterator
+  storesMapBegin = storesMap.begin();
   std::map<VersionedValue *,
-           std::map<VersionedValue *, MemoryLocation *> >::const_iterator
+           std::map<VersionedValue *, ref<MemoryLocation> > >::const_iterator
   flowsToMapBegin = flowsToMap.begin();
   for (std::map<const VersionedValue *,
-                std::vector<MemoryLocation *> >::const_iterator
+                std::vector<ref<MemoryLocation> > >::const_iterator
            it = equalityMap.begin(),
            itEnd = equalityMap.end();
        it != itEnd; ++it) {
@@ -1561,10 +1569,10 @@ void Dependency::print(llvm::raw_ostream &stream,
     stream << "[";
     (*it->first).print(stream);
     stream << "=={";
-    std::vector<MemoryLocation *> locList = (*it).second;
-    std::vector<MemoryLocation *>::iterator locListBegin = locList.begin();
-    for (std::vector<MemoryLocation *>::iterator it2 = locList.begin(),
-                                                 itEnd2 = locList.end();
+    std::vector<ref<MemoryLocation> > locList = (*it).second;
+    std::vector<ref<MemoryLocation> >::iterator locListBegin = locList.begin();
+    for (std::vector<ref<MemoryLocation> >::iterator it2 = locList.begin(),
+                                                     itEnd2 = locList.end();
          it2 != itEnd2; ++it2) {
       if (it2 != locListBegin)
         stream << ",";
@@ -1574,7 +1582,7 @@ void Dependency::print(llvm::raw_ostream &stream,
   }
   stream << "\n";
   stream << tabs << "STORAGE:";
-  for (std::map<MemoryLocation *, VersionedValue *>::const_iterator
+  for (std::map<ref<MemoryLocation>, VersionedValue *>::const_iterator
            it = storesMap.begin(),
            itEnd = storesMap.end();
        it != itEnd; ++it) {
@@ -1588,17 +1596,18 @@ void Dependency::print(llvm::raw_ostream &stream,
   }
   stream << "\n";
   stream << tabs << "FLOWDEPENDENCY:";
-  for (std::map<VersionedValue *,
-                std::map<VersionedValue *, MemoryLocation *> >::const_iterator
+  for (std::map<
+           VersionedValue *,
+           std::map<VersionedValue *, ref<MemoryLocation> > >::const_iterator
            it = flowsToMap.begin(),
            itEnd = flowsToMap.end();
        it != itEnd; ++it) {
     if (it != flowsToMapBegin)
       stream << ",";
-    std::map<VersionedValue *, MemoryLocation *> sources = (*it).second;
-    std::map<VersionedValue *, MemoryLocation *>::iterator sourcesMapBegin =
+    std::map<VersionedValue *, ref<MemoryLocation> > sources = (*it).second;
+    std::map<VersionedValue *, ref<MemoryLocation> >::iterator sourcesMapBegin =
         sources.begin();
-    for (std::map<VersionedValue *, MemoryLocation *>::iterator it2 =
+    for (std::map<VersionedValue *, ref<MemoryLocation> >::iterator it2 =
              sources.begin();
          it2 != sources.end(); ++it2) {
       if (it2 != sourcesMapBegin)
@@ -1623,25 +1632,10 @@ void Dependency::print(llvm::raw_ostream &stream,
 
 /**/
 
-template <typename T>
-void Dependency::Util::deletePointerVector(std::vector<T *> &list) {
-  typedef typename std::vector<T *>::iterator IteratorType;
-
-  for (IteratorType it = list.begin(), itEnd = list.end(); it != itEnd; ++it) {
-    delete *it;
-  }
-  list.clear();
-}
-
-template <typename K, typename T>
-void Dependency::Util::deletePointerMap(std::map<K *, T *> &map) {
-  map.clear();
-}
-
 template <typename K, typename T>
 void Dependency::Util::deletePointerMapWithVectorValue(
-    std::map<K *, std::vector<T *> > &map) {
-  typedef typename std::map<K *, std::vector<T *> >::iterator IteratorType;
+    std::map<K *, std::vector<T> > &map) {
+  typedef typename std::map<K *, std::vector<T> >::iterator IteratorType;
 
   for (IteratorType it = map.begin(), itEnd = map.end(); it != itEnd; ++it) {
     it->second.clear();
@@ -1651,8 +1645,8 @@ void Dependency::Util::deletePointerMapWithVectorValue(
 
 template <typename K, typename T>
 void Dependency::Util::deletePointerMapWithMapValue(
-    std::map<K *, std::map<K *, T *> > &map) {
-  typedef typename std::map<K *, std::map<K *, T *> >::iterator IteratorType;
+    std::map<K *, std::map<K *, T> > &map) {
+  typedef typename std::map<K *, std::map<K *, T> >::iterator IteratorType;
 
   for (IteratorType it = map.begin(), itEnd = map.end(); it != itEnd; ++it) {
     it->second.clear();
