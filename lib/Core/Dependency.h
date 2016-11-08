@@ -105,6 +105,8 @@ private:
 
     ref<Expr> getAddress() const { return address; }
 
+    ref<Expr> getBase() const { return base; }
+
     ref<Expr> getOffset() const { return offset; }
 
     void setAsCore() { core = true; }
