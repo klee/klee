@@ -201,9 +201,9 @@ Dependency::getAllVersionedLocations(bool coreOnly) const {
     std::copy(coreLocations.begin(), coreLocations.end(),
               std::back_inserter(allLoc));
 
-  if (parentDependency) {
+  if (parent) {
     std::vector<ref<MemoryLocation> > parentVersionedLocations =
-        parentDependency->getAllVersionedLocations(coreOnly);
+        parent->getAllVersionedLocations(coreOnly);
     allLoc.insert(allLoc.begin(), parentVersionedLocations.begin(),
                   parentVersionedLocations.end());
   }
@@ -212,7 +212,7 @@ Dependency::getAllVersionedLocations(bool coreOnly) const {
 
 std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
 Dependency::getStoredExpressions(std::set<const Array *> &replacements,
-                                 bool coreOnly) const {
+                                 bool coreOnly) {
   std::vector<ref<MemoryLocation> > allLoc = getAllVersionedLocations(coreOnly);
   ConcreteStore concreteStore;
   SymbolicStore symbolicStore;
@@ -220,23 +220,18 @@ Dependency::getStoredExpressions(std::set<const Array *> &replacements,
   for (std::vector<ref<MemoryLocation> >::iterator locIter = allLoc.begin(),
                                                    locIterEnd = allLoc.end();
        locIter != locIterEnd; ++locIter) {
-    std::vector<VersionedValue *> stored = stores(*locIter);
+    VersionedValue *storedValue = storesMap[*locIter];
 
-    // We should only get the latest value and no other
-    assert(stored.size() <= 1);
-
-    if (stored.size()) {
-      VersionedValue *v = stored.at(0);
-
+    if (storedValue) {
       if ((*locIter)->hasConstantAddress()) {
         if (!coreOnly) {
-          ref<Expr> expr = v->getExpression();
+          ref<Expr> expr = storedValue->getExpression();
           llvm::Value *site = (*locIter)->getValue();
           uint64_t uintAddress = (*locIter)->getUIntAddress();
           ref<Expr> address = (*locIter)->getAddress();
           concreteStore[site][uintAddress] = AddressValuePair(address, expr);
-        } else if (v->isCore()) {
-          ref<Expr> expr = v->getExpression();
+        } else if (storedValue->isCore()) {
+          ref<Expr> expr = storedValue->getExpression();
           llvm::Value *base = (*locIter)->getValue();
           uint64_t uintAddress = (*locIter)->getUIntAddress();
           ref<Expr> address = (*locIter)->getAddress();
@@ -252,12 +247,12 @@ Dependency::getStoredExpressions(std::set<const Array *> &replacements,
       } else {
         ref<Expr> address = (*locIter)->getAddress();
         if (!coreOnly) {
-          ref<Expr> expr = v->getExpression();
+          ref<Expr> expr = storedValue->getExpression();
           llvm::Value *base = (*locIter)->getValue();
           symbolicStore[base].push_back(AddressValuePair(address, expr));
-        } else if (v->isCore()) {
-          ref<Expr> expr = v->getExpression();
-          llvm::Value *base = v->getValue();
+        } else if (storedValue->isCore()) {
+          ref<Expr> expr = storedValue->getExpression();
+          llvm::Value *base = storedValue->getValue();
 #ifdef ENABLE_Z3
           if (!NoExistential) {
             symbolicStore[base].push_back(AddressValuePair(
@@ -299,8 +294,8 @@ VersionedValue *Dependency::getLatestValue(llvm::Value *value,
   }
 
   VersionedValue *ret = 0;
-  if (parentDependency)
-    ret = parentDependency->getLatestValue(value, valueExpr);
+  if (parent)
+    ret = parent->getLatestValue(value, valueExpr);
 
   if (!ret && llvm::isa<llvm::GlobalValue>(value)) {
     // We could not find the global value: we register it anew.
@@ -319,8 +314,8 @@ VersionedValue *Dependency::getLatestValueNoConstantCheck(llvm::Value *value) {
     return valuesMap[value].back();
   }
 
-  if (parentDependency)
-    return parentDependency->getLatestValueNoConstantCheck(value);
+  if (parent)
+    return parent->getLatestValueNoConstantCheck(value);
 
   return 0;
 }
@@ -368,22 +363,6 @@ void Dependency::addDependencyViaLocation(VersionedValue *source,
 }
 
 std::vector<VersionedValue *>
-Dependency::stores(ref<MemoryLocation> loc) const {
-  std::vector<VersionedValue *> ret;
-
-  std::map<ref<MemoryLocation>, VersionedValue *>::const_iterator it;
-  it = storesMap.find(loc);
-  if (it != storesMap.end()) {
-    ret.push_back(storesMap.at(loc));
-    return ret;
-  }
-
-  if (parentDependency)
-    return parentDependency->stores(loc);
-  return ret;
-}
-
-std::vector<VersionedValue *>
 Dependency::directFlowSources(VersionedValue *target) const {
   std::vector<VersionedValue *> ret;
   if (flowsToMap.find(target) != flowsToMap.end()) {
@@ -398,9 +377,9 @@ Dependency::directFlowSources(VersionedValue *target) const {
     }
   }
 
-  if (parentDependency) {
+  if (parent) {
     std::vector<VersionedValue *> ancestralSources =
-        parentDependency->directFlowSources(target);
+        parent->directFlowSources(target);
     ret.insert(ret.begin(), ancestralSources.begin(), ancestralSources.end());
   }
   return ret;
@@ -437,7 +416,8 @@ Dependency::populateArgumentValuesList(llvm::CallInst *site,
   return argumentValuesList;
 }
 
-Dependency::Dependency(Dependency *prev) : parentDependency(prev) {}
+Dependency::Dependency(Dependency *parent)
+    : parent(parent), storesMap(parent->storesMap) {}
 
 Dependency::~Dependency() {
   // Delete the locally-constructed relations
@@ -448,7 +428,7 @@ Dependency::~Dependency() {
   Util::deletePointerMapWithVectorValue(valuesMap);
 }
 
-Dependency *Dependency::cdr() const { return parentDependency; }
+Dependency *Dependency::cdr() const { return parent; }
 
 void Dependency::execute(llvm::Instruction *instr,
                          std::vector<ref<Expr> > &args,
@@ -705,19 +685,13 @@ void Dependency::execute(llvm::Instruction *instr,
                locIterEnd = locations.end();
            locIter != locIterEnd; ++locIter) {
 
-        std::vector<VersionedValue *> storedValue = stores(*locIter);
+        VersionedValue *storedValue = storesMap[*locIter];
 
-        if (storedValue.empty())
+        if (!storedValue)
           // We could not find the stored value, create a new one.
           updateStore(*locIter, loadedValue);
-        else {
-          for (std::vector<VersionedValue *>::iterator
-                   storedValueIter = storedValue.begin(),
-                   storedValueIterEnd = storedValue.end();
-               storedValueIter != storedValueIterEnd; ++storedValueIter) {
-            addDependencyViaLocation(*storedValueIter, loadedValue, *locIter);
-          }
-        }
+        else
+          addDependencyViaLocation(storedValue, loadedValue, *locIter);
       }
 
       break;
@@ -1026,9 +1000,9 @@ void Dependency::print(llvm::raw_ostream &stream,
     }
   }
 
-  if (parentDependency) {
+  if (parent) {
     stream << "\n" << tabs << "--------- Parent Dependencies ----------\n";
-    parentDependency->print(stream, paddingAmount);
+    parent->print(stream, paddingAmount);
   }
 }
 

@@ -391,7 +391,7 @@ private:
 
   private:
     /// \brief Previous path condition
-    Dependency *parentDependency;
+    Dependency *parent;
 
     /// \brief Argument values to be passed onto callee
     std::vector<VersionedValue *> argumentValuesList;
@@ -467,10 +467,6 @@ private:
                                   VersionedValue *target,
                                   ref<MemoryLocation> via);
 
-    /// \brief Retrieve the versioned values that are stored in a particular
-    /// location.
-    std::vector<VersionedValue *> stores(ref<MemoryLocation> loc) const;
-
     /// \brief All values that flows to the target in one step
     std::vector<VersionedValue *> directFlowSources(VersionedValue *target) const;
 
@@ -484,7 +480,7 @@ private:
                                std::vector<ref<Expr> > &arguments);
 
   public:
-    Dependency(Dependency *prev);
+    Dependency(Dependency *parent);
 
     ~Dependency();
 
@@ -518,8 +514,7 @@ private:
     /// part
     /// indexed by symbolic expressions.
     std::pair<ConcreteStore, SymbolicStore>
-    getStoredExpressions(std::set<const Array *> &replacements,
-                         bool coreOnly) const;
+    getStoredExpressions(std::set<const Array *> &replacements, bool coreOnly);
 
     /// \brief Record call arguments in a function call
     void bindCallArguments(llvm::Instruction *instr,
