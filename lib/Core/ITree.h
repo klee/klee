@@ -288,7 +288,7 @@ public:
 
   PathCondition *cdr() const;
 
-  void setAsCore(LocationGraph *g);
+  void setAsCore();
 
   bool isCore() const;
 
@@ -468,7 +468,6 @@ class ITreeNode {
   static Statistic bindReturnValueTime;
   static Statistic getStoredExpressionsTime;
   static Statistic getStoredCoreExpressionsTime;
-  static Statistic computeCoreLocationsTime;
 
 private:
   /// \brief The path condition
@@ -568,9 +567,6 @@ public:
   /// \brief Marking the core constraints on the path condition, and all the
   /// relevant values on the dependency graph, given an unsatistiability core.
   void unsatCoreMarking(std::vector<ref<Expr> > unsatCore);
-
-  /// \brief Compute the allocations that are relevant for the interpolant.
-  void computeCoreLocations(LocationGraph *g);
 
   /// \brief Print the content of the tree node object to the LLVM error stream.
   void dump() const;

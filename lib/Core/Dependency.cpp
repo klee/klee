@@ -181,183 +181,6 @@ void VersionedValue::print(llvm::raw_ostream &stream) const {
 
 /**/
 
-bool LocationGraph::isVisited(ref<MemoryLocation> loc) {
-  for (std::vector<LocationNode *>::iterator it = allNodes.begin(),
-                                             ie = allNodes.end();
-       it != ie; ++it) {
-    if ((*it)->getLocation() == loc) {
-      return true;
-    }
-  }
-  return false;
-}
-
-void LocationGraph::addNewSink(ref<MemoryLocation> candidateSink) {
-  if (isVisited(candidateSink))
-    return;
-
-  LocationNode *newNode = new LocationNode(candidateSink, 0);
-  allNodes.push_back(newNode);
-  sinks.push_back(newNode);
-}
-
-void LocationGraph::addNewEdge(ref<MemoryLocation> source,
-                               ref<MemoryLocation> target) {
-  LocationNode *sourceNode = 0;
-  LocationNode *targetNode = 0;
-
-  for (std::vector<LocationNode *>::iterator it = allNodes.begin(),
-                                             ie = allNodes.end();
-       it != ie; ++it) {
-    if (!targetNode && (*it)->getLocation() == target) {
-      targetNode = (*it);
-      if (sourceNode)
-        break;
-    }
-
-    if (!sourceNode && (*it)->getLocation() == source) {
-      sourceNode = (*it);
-      if (targetNode)
-        break;
-    }
-  }
-
-  bool newNode = false; // indicates whether a new node is created
-
-  uint64_t targetNodeLevel = (targetNode ? targetNode->getLevel() : 0);
-
-  if (!sourceNode) {
-    sourceNode = new LocationNode(source, targetNodeLevel + 1);
-    allNodes.push_back(sourceNode);
-    newNode = true; // An edge actually added, return true
-  } else {
-    std::vector<LocationNode *>::iterator pos =
-        std::find(sinks.begin(), sinks.end(), sourceNode);
-    if (pos == sinks.end()) {
-      // Add new node if it's not in the sink
-      sourceNode = new LocationNode(source, targetNodeLevel + 1);
-      allNodes.push_back(sourceNode);
-      newNode = true;
-    }
-  }
-
-  if (!targetNode) {
-    targetNode = new LocationNode(target, targetNodeLevel);
-    allNodes.push_back(targetNode);
-    sinks.push_back(targetNode);
-    newNode = true; // An edge actually added, return true
-  }
-
-  // The purpose of the second condition is to prevent cycles
-  // in the graph.
-  if (newNode || !(targetNode->getLevel() < sourceNode->getLevel())) {
-    targetNode->addParent(sourceNode);
-  }
-}
-
-void LocationGraph::consumeSinkNode(ref<MemoryLocation> loc) {
-  std::vector<LocationNode *>::iterator pos = sinks.end();
-  for (std::vector<LocationNode *>::iterator it = sinks.begin(),
-                                             ie = sinks.end();
-       it != ie; ++it) {
-    if ((*it)->getLocation() == loc) {
-      pos = it;
-      break;
-    }
-  }
-
-  if (pos == sinks.end())
-    return;
-
-  std::vector<LocationNode *> parents = (*pos)->getParents();
-  sinks.erase(pos);
-
-  for (std::vector<LocationNode *>::iterator it = parents.begin(),
-                                             ie = parents.end();
-       it != ie; ++it) {
-    if (std::find(sinks.begin(), sinks.end(), (*it)) == sinks.end())
-      sinks.push_back(*it);
-  }
-}
-
-std::set<ref<MemoryLocation> > LocationGraph::getSinkLocations() const {
-  std::set<ref<MemoryLocation> > sinkLocations;
-
-  for (std::vector<LocationNode *>::const_iterator it = sinks.begin(),
-                                                   ie = sinks.end();
-       it != ie; ++it) {
-    sinkLocations.insert((*it)->getLocation());
-  }
-
-  return sinkLocations;
-}
-
-std::set<ref<MemoryLocation> > LocationGraph::getSinksWithLocations(
-    std::vector<ref<MemoryLocation> > locationsList) const {
-  std::set<ref<MemoryLocation> > sinkLocations;
-
-  for (std::vector<LocationNode *>::const_iterator it = sinks.begin(),
-                                                   ie = sinks.end();
-       it != ie; ++it) {
-    if (std::find(locationsList.begin(), locationsList.end(),
-                  (*it)->getLocation()) != locationsList.end())
-      sinkLocations.insert((*it)->getLocation());
-  }
-
-  return sinkLocations;
-}
-
-void LocationGraph::consumeSinksWithLocations(
-    std::vector<ref<MemoryLocation> > locationsList) {
-  std::set<ref<MemoryLocation> > sinkLocs(getSinksWithLocations(locationsList));
-
-  if (sinkLocs.empty())
-    return;
-
-  for (std::set<ref<MemoryLocation> >::iterator it = sinkLocs.begin(),
-                                                ie = sinkLocs.end();
-       it != ie; ++it) {
-    consumeSinkNode((*it));
-  }
-
-  // Recurse until fixpoint
-  consumeSinksWithLocations(locationsList);
-}
-
-void LocationGraph::print(llvm::raw_ostream &stream) const {
-  std::vector<LocationNode *> printed;
-  print(stream, sinks, printed, 0);
-}
-
-void LocationGraph::print(llvm::raw_ostream &stream,
-                          std::vector<LocationNode *> nodes,
-                          std::vector<LocationNode *> &printed,
-                          const unsigned tabNum) const {
-  if (nodes.size() == 0)
-    return;
-
-  std::string tabs = makeTabs(tabNum);
-
-  for (std::vector<LocationNode *>::iterator it = nodes.begin(),
-                                             ie = nodes.end();
-       it != ie; ++it) {
-    ref<MemoryLocation> loc = (*it)->getLocation();
-    stream << tabs;
-    loc->print(stream);
-    if (std::find(printed.begin(), printed.end(), (*it)) != printed.end()) {
-      stream << " (printed)\n";
-    } else if ((*it)->getParents().size()) {
-      stream << " depends on\n";
-      printed.push_back((*it));
-      print(stream, (*it)->getParents(), printed, tabNum + 1);
-    } else {
-      stream << "\n";
-    }
-  }
-}
-
-/**/
-
 VersionedValue *Dependency::registerNewVersionedValue(llvm::Value *value,
                                                       VersionedValue *vvalue) {
   if (valuesMap.find(value) != valuesMap.end()) {
@@ -503,28 +326,7 @@ VersionedValue *Dependency::getLatestValueNoConstantCheck(llvm::Value *value) {
 }
 
 void Dependency::updateStore(ref<MemoryLocation> loc, VersionedValue *value) {
-  std::map<ref<MemoryLocation>, VersionedValue *>::iterator storesIter =
-      storesMap.find(loc);
-  if (storesIter != storesMap.end()) {
-    storesMap.at(loc) = value;
-    } else {
-      storesMap.insert(
-          std::pair<ref<MemoryLocation>, VersionedValue *>(loc, value));
-    }
-
-    // update storageOfMap
-    std::map<VersionedValue *, std::vector<ref<MemoryLocation> > >::iterator
-    storageOfIter;
-    storageOfIter = storageOfMap.find(value);
-    if (storageOfIter != storageOfMap.end()) {
-      storageOfMap.at(value).push_back(loc);
-  } else {
-    std::vector<ref<MemoryLocation> > newList;
-    newList.push_back(loc);
-    storageOfMap.insert(
-        std::pair<VersionedValue *, std::vector<ref<MemoryLocation> > >(
-            value, newList));
-  }
+  storesMap[loc] = value;
 }
 
 void Dependency::addDependency(VersionedValue *source, VersionedValue *target) {
@@ -640,7 +442,6 @@ Dependency::Dependency(Dependency *prev) : parentDependency(prev) {}
 Dependency::~Dependency() {
   // Delete the locally-constructed relations
   storesMap.clear();
-  Util::deletePointerMapWithVectorValue(storageOfMap);
   Util::deletePointerMapWithMapValue(flowsToMap);
 
   // Delete the locally-constructed objects
@@ -799,10 +600,7 @@ void Dependency::execute(llvm::Instruction *instr,
     case llvm::Instruction::Br: {
       llvm::BranchInst *binst = llvm::dyn_cast<llvm::BranchInst>(instr);
       if (binst && binst->isConditional()) {
-        LocationGraph *g = new LocationGraph();
-        markAllValues(g, binst->getCondition());
-        computeCoreLocations(g);
-        delete g;
+        markAllValues(binst->getCondition());
       }
       break;
     }
@@ -1099,9 +897,7 @@ void Dependency::executeMemoryOperation(llvm::Instruction *instr,
       break;
     }
     }
-    LocationGraph *g = new LocationGraph();
-    markAllValues(g, addressOperand);
-    delete g;
+    markAllValues(addressOperand);
   }
 }
 
@@ -1148,12 +944,9 @@ void Dependency::bindReturnValue(llvm::CallInst *site, llvm::Instruction *i,
   }
 }
 
-void Dependency::markAllValues(LocationGraph *g, VersionedValue *value) {
-  buildLocationGraph(g, value);
-  markFlow(value);
-}
+void Dependency::markAllValues(VersionedValue *value) { markFlow(value); }
 
-void Dependency::markAllValues(LocationGraph *g, llvm::Value *val) {
+void Dependency::markAllValues(llvm::Value *val) {
   VersionedValue *value = getLatestValueNoConstantCheck(val);
 
   // Right now we simply ignore the __dso_handle values. They are due
@@ -1174,145 +967,7 @@ void Dependency::markAllValues(LocationGraph *g, llvm::Value *val) {
     assert(!"unknown value");
   }
 
-  markAllValues(g, value);
-}
-
-void Dependency::computeCoreLocations(LocationGraph *g) {
-  std::set<ref<MemoryLocation> > sinkLocations(g->getSinkLocations());
-  coreLocations.insert(sinkLocations.begin(), sinkLocations.end());
-
-  if (parentDependency) {
-    // Here we remove sink nodes with memory locations that belong to this
-    // dependency node. As a result, the sinks in the graph g should just
-    // contain the allocations that belong to the ancestor dependency nodes, and
-    // we then recursively compute the core locations for the
-    // parent.
-    // g->consumeSinksWithLocations(versionedLocationsList);
-    parentDependency->computeCoreLocations(g);
-  }
-}
-
-std::map<VersionedValue *, ref<MemoryLocation> >
-Dependency::directLocalLocationSources(VersionedValue *target) const {
-  std::map<VersionedValue *, ref<MemoryLocation> > ret;
-
-  if (flowsToMap.find(target) != flowsToMap.end()) {
-    std::map<VersionedValue *, ref<MemoryLocation> > sources =
-        flowsToMap.find(target)->second;
-    for (std::map<VersionedValue *, ref<MemoryLocation> >::iterator it =
-             sources.begin();
-         it != sources.end(); ++it) {
-      std::map<VersionedValue *, ref<MemoryLocation> > extra;
-      if (it->second.isNull()) {
-        // Transitively get the source
-        extra = directLocalLocationSources(it->first);
-        if (extra.size()) {
-          ret.insert(extra.begin(), extra.end());
-        } else {
-          ret[it->first] = 0;
-        }
-      } else {
-        ret[it->first] = it->second;
-      }
-    }
-  }
-
-  if (ret.empty()) {
-    // We try to find location in the local store instead
-    std::map<VersionedValue *,
-             std::vector<ref<MemoryLocation> > >::const_iterator it;
-    it = storageOfMap.find(target);
-    if (it != storageOfMap.end()) {
-      std::vector<ref<MemoryLocation> > locList = it->second;
-      int size = locList.size();
-      ret[0] = locList.at(size - 1);
-    }
-  }
-
-  return ret;
-}
-
-std::map<VersionedValue *, ref<MemoryLocation> >
-Dependency::directLocationSources(VersionedValue *target) const {
-  std::map<VersionedValue *, ref<MemoryLocation> > ret =
-      directLocalLocationSources(target);
-
-  if (ret.empty() && parentDependency)
-    return parentDependency->directLocationSources(target);
-
-  std::map<VersionedValue *, ref<MemoryLocation> > tmp;
-  std::map<VersionedValue *, ref<MemoryLocation> >::iterator nextPos =
-                                                                 ret.begin(),
-                                                             ie = ret.end();
-
-  bool elementErased = true;
-  while (elementErased) {
-    elementErased = false;
-    for (std::map<VersionedValue *, ref<MemoryLocation> >::iterator it =
-             nextPos;
-         it != ie; ++it) {
-      if (it->second.isNull()) {
-        std::map<VersionedValue *, ref<MemoryLocation> >::iterator deletionPos =
-            it;
-
-        // Here we check that it->first was non-nil, as it is possibly so.
-        if (parentDependency && it->first) {
-          std::map<VersionedValue *, ref<MemoryLocation> > ancestralSources =
-              parentDependency->directLocationSources(it->first);
-          tmp.insert(ancestralSources.begin(), ancestralSources.end());
-        }
-
-        nextPos = ++it;
-        ret.erase(deletionPos);
-        elementErased = true;
-        break;
-      }
-    }
-  }
-
-  ret.insert(tmp.begin(), tmp.end());
-  return ret;
-}
-
-void Dependency::recursivelyBuildLocationGraph(
-    LocationGraph *g, VersionedValue *source, ref<MemoryLocation> target,
-    std::set<ref<MemoryLocation> > parentTargets) const {
-  if (!source)
-    return;
-
-  std::vector<ref<MemoryLocation> > ret;
-  std::map<VersionedValue *, ref<MemoryLocation> > sourceEdges =
-      directLocationSources(source);
-
-  for (std::map<VersionedValue *, ref<MemoryLocation> >::iterator
-           it = sourceEdges.begin(),
-           ie = sourceEdges.end();
-       it != ie; ++it) {
-    // Here we prevent construction of cycle in the graph by checking if the
-    // source equals target or included as an ancestor.
-    if (it->second != target &&
-        parentTargets.find(it->second) == parentTargets.end()) {
-      g->addNewEdge(it->second, target);
-      parentTargets.insert(target);
-      recursivelyBuildLocationGraph(g, it->first, it->second, parentTargets);
-    }
-  }
-}
-
-void Dependency::buildLocationGraph(LocationGraph *g,
-                                    VersionedValue *target) const {
-  std::vector<ref<MemoryLocation> > ret;
-  std::map<VersionedValue *, ref<MemoryLocation> > sourceEdges =
-      directLocationSources(target);
-
-  for (std::map<VersionedValue *, ref<MemoryLocation> >::iterator
-           it = sourceEdges.begin(),
-           ie = sourceEdges.end();
-       it != ie; ++it) {
-    g->addNewSink(it->second);
-    recursivelyBuildLocationGraph(g, it->first, it->second,
-                                  std::set<ref<MemoryLocation> >());
-  }
+  markFlow(value);
 }
 
 void Dependency::print(llvm::raw_ostream &stream) const {

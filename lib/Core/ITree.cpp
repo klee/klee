@@ -779,9 +779,9 @@ ref<Expr> PathCondition::car() const { return constraint; }
 
 PathCondition *PathCondition::cdr() const { return tail; }
 
-void PathCondition::setAsCore(LocationGraph *g) {
+void PathCondition::setAsCore() {
   // We mark all values to which this constraint depends
-  dependency->markAllValues(g, condition);
+  dependency->markAllValues(condition);
 
   // We mark this constraint itself as core
   core = true;
@@ -1929,12 +1929,10 @@ void ITree::markPathCondition(ExecutionState &state, TimingSolver *solver) {
   TimerStatIncrementer t(markPathConditionTime);
   std::vector<ref<Expr> > unsatCore = solver->getUnsatCore();
 
-  LocationGraph *g = new LocationGraph();
-
   llvm::BranchInst *binst =
       llvm::dyn_cast<llvm::BranchInst>(state.prevPC->inst);
   if (binst) {
-    currentINode->dependency->markAllValues(g, binst->getCondition());
+    currentINode->dependency->markAllValues(binst->getCondition());
   }
 
   PathCondition *pc = currentINode->pathCondition;
@@ -1945,21 +1943,13 @@ void ITree::markPathCondition(ExecutionState &state, TimingSolver *solver) {
          it != ie; ++it) {
       for (; pc != 0; pc = pc->cdr()) {
         if (pc->car().compare(it->get()) == 0) {
-          pc->setAsCore(g);
+          pc->setAsCore();
           pc = pc->cdr();
           break;
         }
       }
     }
   }
-
-  // llvm::errs() << "LocationGraph\n";
-  // g->dump();
-
-  // Compute memory allocations needed by the unsatisfiability core
-  currentINode->computeCoreLocations(g);
-
-  delete g; // Delete the LocationGraph object
 }
 
 void ITree::execute(llvm::Instruction *instr) {
@@ -2074,8 +2064,6 @@ Statistic ITreeNode::getStoredExpressionsTime("GetStoredExpressionsTime",
 Statistic
 ITreeNode::getStoredCoreExpressionsTime("GetStoredCoreExpressionsTime",
                                         "GetStoredCoreExpressionsTime");
-Statistic ITreeNode::computeCoreLocationsTime("ComputeCoreLocationsTime",
-                                                "ComputeCoreLocationsTime");
 
 void ITreeNode::printTimeStat(std::stringstream &stream) {
   stream << "KLEE: done:     getInterpolant = "
@@ -2094,8 +2082,6 @@ void ITreeNode::printTimeStat(std::stringstream &stream) {
          << ((double)getStoredExpressionsTime.getValue()) / 1000 << "\n";
   stream << "KLEE: done:     getStoredCoreExpressions = "
          << ((double)getStoredCoreExpressionsTime.getValue()) / 1000 << "\n";
-  stream << "KLEE: done:     computeCoreLocations = "
-         << ((double)computeCoreLocationsTime.getValue()) / 1000 << "\n";
 }
 
 ITreeNode::ITreeNode(ITreeNode *_parent)
@@ -2216,7 +2202,6 @@ void ITreeNode::unsatCoreMarking(std::vector<ref<Expr> > unsatCore) {
     markerMap[it->car().get()] = it;
   }
 
-  LocationGraph *g = new LocationGraph();
   for (std::vector<ref<Expr> >::iterator it1 = unsatCore.begin(),
                                          it1End = unsatCore.end();
        it1 != it1End; ++it1) {
@@ -2224,18 +2209,8 @@ void ITreeNode::unsatCoreMarking(std::vector<ref<Expr> > unsatCore) {
     // because constraints are not properly added at state merge.
     PathCondition *cond = markerMap[it1->get()];
     if (cond)
-      cond->setAsCore(g);
+      cond->setAsCore();
   }
-  // llvm::errs() << "LocationGraph\n";
-  // g->dump();
-  // We mark memory allocations needed for the unsatisfiabilty core
-  computeCoreLocations(g);
-  delete g; // Delete the LocationGraph object
-}
-
-void ITreeNode::computeCoreLocations(LocationGraph *g) {
-  TimerStatIncrementer t(computeCoreLocationsTime);
-  dependency->computeCoreLocations(g);
 }
 
 void ITreeNode::dump() const {

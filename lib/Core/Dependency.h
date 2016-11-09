@@ -231,96 +231,6 @@ private:
     }
   };
 
-  /// \brief The location graph: A graph to directly represent the dependency
-  /// between locations, instead of using intermediate values. This graph is
-  /// computed from the relations between values in particular the FlowsTo
-  /// relation.
-  class LocationGraph {
-
-    /// \brief Implements a node of the location graph.
-    class LocationNode {
-      ref<MemoryLocation> loc;
-
-      std::vector<LocationNode *> ancestors;
-
-      uint64_t level;
-
-    public:
-      LocationNode(ref<MemoryLocation> loc, uint64_t _level)
-          : loc(loc), level(_level) {
-        loc->setAsCore();
-      }
-
-      ~LocationNode() { ancestors.clear(); }
-
-      ref<MemoryLocation> getLocation() const { return loc; }
-
-      void addParent(LocationNode *node) {
-        // The user should ensure that we don't store a duplicate
-        ancestors.push_back(node);
-      }
-
-      std::vector<LocationNode *> getParents() const { return ancestors; }
-
-      uint64_t getLevel() const { return level; }
-    };
-
-    std::vector<LocationNode *> sinks;
-    std::vector<LocationNode *> allNodes;
-
-    /// \brief Prints the content of the location graph
-    void print(llvm::raw_ostream &stream, std::vector<LocationNode *> nodes,
-               std::vector<LocationNode *> &printed,
-               const unsigned tabNum) const;
-
-    /// \brief Given a location, delete all sinks having such location, and
-    /// replace them as sinks with their parents.
-    ///
-    /// \param The memory location to match a sink node with.
-    void consumeSinkNode(ref<MemoryLocation> loc);
-
-  public:
-    LocationGraph() {}
-
-    ~LocationGraph() {
-      for (std::vector<LocationNode *>::iterator it = allNodes.begin(),
-                                                 ie = allNodes.end();
-           it != ie; ++it) {
-        delete *it;
-      }
-      allNodes.clear();
-    }
-
-    bool isVisited(ref<MemoryLocation> loc);
-
-    void addNewSink(ref<MemoryLocation> candidateSink);
-
-    void addNewEdge(ref<MemoryLocation> source, ref<MemoryLocation> target);
-
-    std::set<ref<MemoryLocation> > getSinkLocations() const;
-
-    std::set<ref<MemoryLocation> >
-    getSinksWithLocations(std::vector<ref<MemoryLocation> > valuesList) const;
-
-    /// Given a set of locations, delete all sinks having an location in the
-    /// set, and replace them as sinks with their parents.
-    ///
-    /// \param The location to match the sink nodes with.
-    void
-    consumeSinksWithLocations(std::vector<ref<MemoryLocation> > locationsList);
-
-    /// \brief Print the content of the object to the LLVM error stream
-    void dump() const {
-      this->print(llvm::errs());
-      llvm::errs() << "\n";
-    }
-
-    /// \brief Print the content of the object into a stream.
-    ///
-    /// \param The stream to print the data to.
-    void print(llvm::raw_ostream &stream) const;
-  };
-
   /// \brief Implementation of value dependency for computing locations the
   /// unsatisfiability core depends upon, which is used to compute the
   /// interpolant.
@@ -489,9 +399,6 @@ private:
     /// \brief The mapping of locations to stored value
     std::map<ref<MemoryLocation>, VersionedValue *> storesMap;
 
-    /// \brief Store the inverse map of both storesMap
-    std::map<VersionedValue *, std::vector<ref<MemoryLocation> > > storageOfMap;
-
     /// \brief Flow relations of target and its sources with location
     std::map<VersionedValue *,
              std::map<VersionedValue *, ref<MemoryLocation> > > flowsToMap;
@@ -576,22 +483,6 @@ private:
     populateArgumentValuesList(llvm::CallInst *site,
                                std::vector<ref<Expr> > &arguments);
 
-    /// \brief Direct location dependency local to an interpolation tree node
-    std::map<VersionedValue *, ref<MemoryLocation> >
-    directLocalLocationSources(VersionedValue *target) const;
-
-    /// \brief Direct location dependency
-    std::map<VersionedValue *, ref<MemoryLocation> >
-    directLocationSources(VersionedValue *target) const;
-
-    /// \brief Builds dependency graph between memory locations
-    void recursivelyBuildLocationGraph(
-        LocationGraph *g, VersionedValue *source, ref<MemoryLocation> target,
-        std::set<ref<MemoryLocation> > parentTargets) const;
-
-    /// \brief Builds dependency graph between memory locations
-    void buildLocationGraph(LocationGraph *g, VersionedValue *value) const;
-
   public:
     Dependency(Dependency *prev);
 
@@ -640,15 +531,11 @@ private:
 
     /// \brief Given a versioned value, retrieve all its sources and mark them
     /// as in the core.
-    void markAllValues(LocationGraph *g, VersionedValue *value);
+    void markAllValues(VersionedValue *value);
 
     /// \brief Given an LLVM value, retrieve all its sources and mark them as in
     /// the core.
-    void markAllValues(LocationGraph *g, llvm::Value *value);
-
-    /// \brief Compute the locations that are relevant for the interpolant
-    /// (core).
-    void computeCoreLocations(LocationGraph *g);
+    void markAllValues(llvm::Value *value);
 
     /// \brief Print the content of the object to the LLVM error stream
     void dump() const {
