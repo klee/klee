@@ -93,18 +93,28 @@ private:
   public:
     ~MemoryLocation() {}
 
-    static ref<MemoryLocation> create(llvm::Value *loc, ref<Expr> &address,
-                                      ref<Expr> &base, ref<Expr> &offset) {
-      ref<MemoryLocation> ret(new MemoryLocation(loc, address, base, offset));
+    static ref<MemoryLocation> create(llvm::Value *loc, ref<Expr> &address) {
+      ref<Expr> zeroPointer = Expr::createPointer(0);
+      ref<MemoryLocation> ret(
+          new MemoryLocation(loc, address, address, zeroPointer));
       return ret;
     }
 
-    static ref<MemoryLocation> createByOffset(ref<MemoryLocation> loc,
-                                              ref<Expr> &address,
-                                              ref<Expr> &offset) {
+    static ref<MemoryLocation> create(ref<MemoryLocation> loc,
+                                      ref<Expr> &address, ref<Expr> &offset) {
+      ConstantExpr *c = llvm::dyn_cast<ConstantExpr>(offset);
+      if (c->getZExtValue() == 0) {
+        ref<Expr> base = loc->getBase();
+        ref<Expr> offset = loc->getOffset();
+        ref<MemoryLocation> ret(
+            new MemoryLocation(loc->getValue(), address, base, offset));
+        return ret;
+      }
+
+      ref<Expr> base = loc->getBase();
+      ref<Expr> newOffset = AddExpr::create(loc->getOffset(), offset);
       ref<MemoryLocation> ret(
-          new MemoryLocation(loc->getValue(), address, loc->getBase(),
-                             AddExpr::(loc->getOffset(), offset)));
+          new MemoryLocation(loc->getValue(), address, base, newOffset));
       return ret;
     }
 
@@ -118,10 +128,10 @@ private:
       return 1;
     }
 
-    bool hasConstantAddress() { return llvm::isa<ConstantExpr>(address.get()); }
+    bool hasConstantAddress() { return llvm::isa<ConstantExpr>(address); }
 
     uint64_t getUIntAddress() {
-      return llvm::dyn_cast<ConstantExpr>(address.get())->getZExtValue();
+      return llvm::dyn_cast<ConstantExpr>(address)->getZExtValue();
     }
 
     llvm::Value *getValue() const { return loc; }
@@ -169,7 +179,9 @@ private:
 
     ~VersionedValue() { locations.clear(); }
 
-    void addAliasedLocation(ref<MemoryLocation> loc) { locations.insert(loc); }
+    void addLocation(ref<MemoryLocation> loc) { locations.insert(loc); }
+
+    std::set<ref<MemoryLocation> > getLocations() { return locations; }
 
     bool hasValue(llvm::Value *value) const { return this->value == value; }
 
@@ -455,10 +467,6 @@ private:
     /// \brief Argument values to be passed onto callee
     std::vector<VersionedValue *> argumentValuesList;
 
-    /// \brief Equality of value to address
-    std::map<const VersionedValue *, std::vector<ref<MemoryLocation> > >
-    equalityMap;
-
     /// \brief The mapping of locations to stored value
     std::map<ref<MemoryLocation>, VersionedValue *> storesMap;
 
@@ -471,9 +479,6 @@ private:
 
     /// \brief The store of the versioned values
     std::map<llvm::Value *, std::vector<VersionedValue *> > valuesMap;
-
-    /// \brief The store of the versioned locations
-    std::vector<ref<MemoryLocation> > versionedLocationsList;
 
     /// \brief Locations of this node and its ancestors that are needed for
     /// the core and dominates other locations.
@@ -494,60 +499,30 @@ private:
 
     /// \brief Create a new versioned value object, which is a pointer with
     /// absolute address
-    VersionedValue *getNewVersionedValue(llvm::Value *value,
-                                         ref<Expr> valueExpr, llvm::Value *loc,
-                                         ref<Expr> address) {
-      VersionedValue *vvalue = new VersionedValue(value, valueExpr);
-      ref<Expr> zeroPointer = Expr::createPointer(0);
-      vvalue->addAliasedLocation(
-          MemoryLocation::create(loc, address, address, zeroPointer));
-      return registerNewVersionedValue(value, vvalue);
+    VersionedValue *getNewPointerValue(llvm::Value *loc, ref<Expr> address) {
+      VersionedValue *vvalue = new VersionedValue(loc, address);
+      vvalue->addLocation(MemoryLocation::create(loc, address));
+      return registerNewVersionedValue(loc, vvalue);
     }
 
-    /// \brief Create a new versioned value object, which is a pointer with
-    /// absolute address, base and offset
-    VersionedValue *getNewVersionedValue(llvm::Value *value,
-                                         ref<Expr> valueExpr, llvm::Value *loc,
-                                         ref<Expr> address, ref<Expr> base,
-                                         ref<Expr> offset) {
-      VersionedValue *vvalue = new VersionedValue(value, valueExpr);
-      vvalue->addAliasedLocation(
-          MemoryLocation::create(loc, address, base, offset));
+    /// \brief Create a new versioned value object, which is a pointer which
+    /// offsets existing pointer
+    VersionedValue *getNewPointerValue(llvm::Value *value, ref<Expr> address,
+                                       ref<MemoryLocation> loc,
+                                       ref<Expr> offset) {
+      VersionedValue *vvalue = new VersionedValue(value, address);
+      vvalue->addLocation(MemoryLocation::create(loc, address, offset));
       return registerNewVersionedValue(value, vvalue);
     }
-
-    /// \brief Create a fresh location object. Here the base and offset of the
-    /// location object respectively equals to the address and zero.
-    ref<MemoryLocation> getInitialLocation(llvm::Value *loc, ref<Expr> address);
-
-    /// \brief Create a fresh location object, with specified base and offset
-    ref<MemoryLocation> getSpecificInitialLocation(llvm::Value *loc,
-                                                   ref<Expr> address,
-                                                   ref<Expr> base,
-                                                   ref<Expr> offset);
-
-    /// \brief Create a new location object to represent a new version of a
-    /// known location.
-    ref<MemoryLocation> getNewLocationVersion(llvm::Value *loc,
-                                              ref<Expr> &address);
 
     /// \brief Get all versioned locations for the current node an all of its
     /// parents
     std::vector<ref<MemoryLocation> > getAllVersionedLocations(bool coreOnly =
                                                                    false) const;
 
-    /// \brief Gets the latest version of the location.
-    ref<MemoryLocation> getLatestLocation(llvm::Value *loc,
-                                          ref<Expr> address) const;
-
     /// \brief Gets the latest version of the location, but without checking
     /// for whether the value is constant or not
     VersionedValue *getLatestValueNoConstantCheck(llvm::Value *value);
-
-    /// \brief Newly relate an LLVM value with destructive update to a
-    /// location
-    void addPointerEquality(const VersionedValue *value,
-                            ref<MemoryLocation> loc);
 
     /// \brief Newly relate an location with its stored value
     void updateStore(ref<MemoryLocation> loc, VersionedValue *value);
@@ -555,47 +530,32 @@ private:
     /// \brief Add flow dependency between source and target value
     void addDependency(VersionedValue *source, VersionedValue *target);
 
+    /// \brief Add flow dependency between source and target pointers, offset by
+    /// some amount
+    void addDependencyWithOffset(VersionedValue *source, VersionedValue *target,
+                                 ref<Expr> offset);
+
     /// \brief Add flow dependency between source and target value, as the
     /// result of store/load via a memory location.
     void addDependencyViaLocation(VersionedValue *source,
                                   VersionedValue *target,
                                   ref<MemoryLocation> via);
 
-    /// \brief Given a versioned value, retrieve the equality it is associated
-    /// with
-    ref<MemoryLocation> resolveLocation(VersionedValue *value);
-
-    /// \brief Given a versioned value, retrieve the equality it is associated
-    /// with, in this object or otherwise in its ancestors.
-    std::vector<ref<MemoryLocation> >
-    resolveLocationTransitively(VersionedValue *value);
-
     /// \brief Retrieve the versioned values that are stored in a particular
     /// location.
     std::vector<VersionedValue *> stores(ref<MemoryLocation> loc) const;
 
-    /// \brief All values that flows to the target in one step, local to the
-    /// current dependency / interpolation tree node
-    std::vector<VersionedValue *> directLocalFlowSources(VersionedValue *target) const;
-
     /// \brief All values that flows to the target in one step
     std::vector<VersionedValue *> directFlowSources(VersionedValue *target) const;
 
-    /// \brief All values that could flow to the target
-    std::vector<VersionedValue *> allFlowSources(VersionedValue *target) const;
-
-    /// \brief All the end sources that can flow to the target
-    std::vector<VersionedValue *>
-    allFlowSourcesEnds(VersionedValue *target) const;
+    /// \brief Mark as core all the values and locations that flows to the
+    /// target
+    void markFlow(VersionedValue *target) const;
 
     /// \brief Record the expressions of a call's arguments
     std::vector<VersionedValue *>
     populateArgumentValuesList(llvm::CallInst *site,
                                std::vector<ref<Expr> > &arguments);
-
-    /// \brief Construct dependency due to load instruction
-    bool buildLoadDependency(llvm::Value *address, ref<Expr> addressExpr,
-                             llvm::Value *value, ref<Expr> valueExpr);
 
     /// \brief Direct location dependency local to an interpolation tree node
     std::map<VersionedValue *, ref<MemoryLocation> >
