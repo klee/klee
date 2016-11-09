@@ -208,6 +208,7 @@ Dependency::getStoredExpressions(std::set<const Array *> &replacements,
       ref<Expr> address = it->first->getAddress();
       concreteStore[site][uintAddress] = AddressValuePair(address, expr);
     } else if (it->second->isCore()) {
+      // An address is in the core if it stores a value that is in the core
       ref<Expr> expr = it->second->getExpression();
       llvm::Value *base = it->first->getValue();
       uint64_t uintAddress = it->first->getUIntAddress();
@@ -237,6 +238,7 @@ Dependency::getStoredExpressions(std::set<const Array *> &replacements,
       llvm::Value *base = it->first->getValue();
       symbolicStore[base].push_back(AddressValuePair(address, expr));
     } else if (it->second->isCore()) {
+      // An address is in the core if it stores a value that is in the core
       ref<Expr> expr = it->second->getExpression();
       llvm::Value *base = it->first->getValue();
 #ifdef ENABLE_Z3

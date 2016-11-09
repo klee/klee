@@ -70,8 +70,6 @@ public:
   unsigned refCount;
 
 private:
-    bool core;
-
     /// \brief The location's LLVM value
     llvm::Value *loc;
 
@@ -86,7 +84,7 @@ private:
 
     MemoryLocation(llvm::Value *_loc, ref<Expr> &_address, ref<Expr> &_base,
                    ref<Expr> &_offset)
-        : refCount(0), core(false), loc(_loc), address(_address), base(_base),
+        : refCount(0), loc(_loc), address(_address), base(_base),
           offset(_offset) {}
 
   public:
@@ -161,10 +159,6 @@ private:
 
     ref<Expr> getOffset() const { return offset; }
 
-    void setAsCore() { core = true; }
-
-    bool isCore() { return core; }
-
     /// \brief Print the content of the object to the LLVM error stream
     void dump() const {
       print(llvm::errs());
@@ -225,14 +219,7 @@ private:
 
     ref<Expr> getExpression() const { return valueExpr; }
 
-    void setAsCore() {
-      core = true;
-      for (std::set<ref<MemoryLocation> >::iterator it = locations.begin(),
-                                                    ie = locations.end();
-           it != ie; ++it) {
-        (*it)->setAsCore();
-      }
-    }
+    void setAsCore() { core = true; }
 
     bool isCore() const { return core; }
 
