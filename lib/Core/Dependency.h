@@ -117,19 +117,39 @@ private:
       return ret;
     }
 
-    bool hasAddress(llvm::Value *__loc, ref<Expr> _address) const {
-      return loc == __loc && address == _address;
-    }
-
     int compare(const MemoryLocation other) const {
-      if (hasAddress(other.loc, other.address))
-        return 0;
+      uint64_t l = reinterpret_cast<uint64_t>(loc),
+               r = reinterpret_cast<uint64_t>(other.loc);
+
+      if (l == r) {
+        ConstantExpr *lc = llvm::dyn_cast<ConstantExpr>(address);
+        if (lc) {
+          ConstantExpr *rc = llvm::dyn_cast<ConstantExpr>(other.address);
+          if (rc) {
+            l = lc->getZExtValue();
+            r = rc->getZExtValue();
+            if (l == r)
+              return 0;
+            if (l < r)
+              return -1;
+            return 1;
+          }
+        }
+        l = reinterpret_cast<uint64_t>(address.get());
+        r = reinterpret_cast<uint64_t>(address.get());
+        if (l == r)
+          return 0;
+        if (l < r)
+          return -1;
+        return 1;
+      } else if (l < r)
+        return -1;
       return 1;
     }
 
-    bool hasConstantAddress() { return llvm::isa<ConstantExpr>(address); }
+    bool hasConstantAddress() const { return llvm::isa<ConstantExpr>(address); }
 
-    uint64_t getUIntAddress() {
+    uint64_t getUIntAddress() const {
       return llvm::dyn_cast<ConstantExpr>(address)->getZExtValue();
     }
 
