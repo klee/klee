@@ -188,77 +188,67 @@ Dependency::registerNewVersionedValue(llvm::Value *value,
   return vvalue;
 }
 
-std::vector<ref<MemoryLocation> >
-Dependency::getAllVersionedLocations(bool coreOnly) const {
-  std::vector<ref<MemoryLocation> > allLoc;
-
-  if (coreOnly)
-    std::copy(coreLocations.begin(), coreLocations.end(),
-              std::back_inserter(allLoc));
-
-  if (parent) {
-    std::vector<ref<MemoryLocation> > parentVersionedLocations =
-        parent->getAllVersionedLocations(coreOnly);
-    allLoc.insert(allLoc.begin(), parentVersionedLocations.begin(),
-                  parentVersionedLocations.end());
-  }
-  return allLoc;
-}
-
 std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
 Dependency::getStoredExpressions(std::set<const Array *> &replacements,
                                  bool coreOnly) {
-  std::vector<ref<MemoryLocation> > allLoc = getAllVersionedLocations(coreOnly);
   ConcreteStore concreteStore;
   SymbolicStore symbolicStore;
 
-  for (std::vector<ref<MemoryLocation> >::iterator locIter = allLoc.begin(),
-                                                   locIterEnd = allLoc.end();
-       locIter != locIterEnd; ++locIter) {
-    ref<VersionedValue> storedValue = concreteStoresMap[*locIter];
+  for (std::map<ref<MemoryLocation>, ref<VersionedValue> >::iterator
+           it = concreteStoresMap.begin(),
+           ie = concreteStoresMap.end();
+       it != ie; ++it) {
+    if (it->second.isNull())
+      continue;
 
-    if (!storedValue.isNull()) {
-      if ((*locIter)->hasConstantAddress()) {
-        if (!coreOnly) {
-          ref<Expr> expr = storedValue->getExpression();
-          llvm::Value *site = (*locIter)->getValue();
-          uint64_t uintAddress = (*locIter)->getUIntAddress();
-          ref<Expr> address = (*locIter)->getAddress();
-          concreteStore[site][uintAddress] = AddressValuePair(address, expr);
-        } else if (storedValue->isCore()) {
-          ref<Expr> expr = storedValue->getExpression();
-          llvm::Value *base = (*locIter)->getValue();
-          uint64_t uintAddress = (*locIter)->getUIntAddress();
-          ref<Expr> address = (*locIter)->getAddress();
+    if (!coreOnly) {
+      ref<Expr> expr = it->second->getExpression();
+      llvm::Value *site = it->first->getValue();
+      uint64_t uintAddress = it->first->getUIntAddress();
+      ref<Expr> address = it->first->getAddress();
+      concreteStore[site][uintAddress] = AddressValuePair(address, expr);
+    } else if (it->second->isCore()) {
+      ref<Expr> expr = it->second->getExpression();
+      llvm::Value *base = it->first->getValue();
+      uint64_t uintAddress = it->first->getUIntAddress();
+      ref<Expr> address = it->first->getAddress();
 #ifdef ENABLE_Z3
-          if (!NoExistential) {
-            concreteStore[base][uintAddress] = AddressValuePair(
-                ShadowArray::getShadowExpression(address, replacements),
-                ShadowArray::getShadowExpression(expr, replacements));
-	  } else
-#endif
-            concreteStore[base][uintAddress] = AddressValuePair(address, expr);
-        }
+      if (!NoExistential) {
+        concreteStore[base][uintAddress] = AddressValuePair(
+            ShadowArray::getShadowExpression(address, replacements),
+            ShadowArray::getShadowExpression(expr, replacements));
       } else {
-        ref<Expr> address = (*locIter)->getAddress();
-        if (!coreOnly) {
-          ref<Expr> expr = storedValue->getExpression();
-          llvm::Value *base = (*locIter)->getValue();
-          symbolicStore[base].push_back(AddressValuePair(address, expr));
-        } else if (storedValue->isCore()) {
-          ref<Expr> expr = storedValue->getExpression();
-          llvm::Value *base = storedValue->getValue();
-#ifdef ENABLE_Z3
-          if (!NoExistential) {
-            symbolicStore[base].push_back(AddressValuePair(
-                ShadowArray::getShadowExpression(address, replacements),
-                ShadowArray::getShadowExpression(expr, replacements)));
-          } else
 #endif
-            symbolicStore[base].push_back(AddressValuePair(address, expr));
-        }
+        concreteStore[base][uintAddress] = AddressValuePair(address, expr);
       }
     }
+  }
+
+  for (std::map<ref<MemoryLocation>, ref<VersionedValue> >::iterator
+           it = symbolicStoresMap.begin(),
+           ie = symbolicStoresMap.end();
+       it != ie; ++it) {
+    if (it->second.isNull())
+      continue;
+
+    ref<Expr> address = it->first->getAddress();
+    if (!coreOnly) {
+      ref<Expr> expr = it->second->getExpression();
+      llvm::Value *base = it->first->getValue();
+      symbolicStore[base].push_back(AddressValuePair(address, expr));
+    } else if (it->second->isCore()) {
+      ref<Expr> expr = it->second->getExpression();
+      llvm::Value *base = it->first->getValue();
+#ifdef ENABLE_Z3
+      if (!NoExistential) {
+        symbolicStore[base].push_back(AddressValuePair(
+            ShadowArray::getShadowExpression(address, replacements),
+            ShadowArray::getShadowExpression(expr, replacements)));
+      } else {
+#endif
+        symbolicStore[base].push_back(AddressValuePair(address, expr));
+        }
+      }
   }
 
   return std::pair<ConcreteStore, SymbolicStore>(concreteStore, symbolicStore);

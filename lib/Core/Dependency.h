@@ -454,11 +454,6 @@ private:
       return registerNewVersionedValue(value, vvalue);
     }
 
-    /// \brief Get all versioned locations for the current node an all of its
-    /// parents
-    std::vector<ref<MemoryLocation> > getAllVersionedLocations(bool coreOnly =
-                                                                   false) const;
-
     /// \brief Gets the latest version of the location, but without checking
     /// for whether the value is constant or not
     ref<VersionedValue> getLatestValueNoConstantCheck(llvm::Value *value);
