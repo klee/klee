@@ -156,8 +156,6 @@ void MemoryLocation::print(llvm::raw_ostream &stream) const {
   stream << "A";
   if (!llvm::isa<ConstantExpr>(this->address))
     stream << "(symbolic)";
-  if (core)
-    stream << "(I)";
   stream << "[";
   loc->print(stream);
   stream << ":";
@@ -419,9 +417,12 @@ Dependency::populateArgumentValuesList(llvm::CallInst *site,
   return argumentValuesList;
 }
 
-Dependency::Dependency(Dependency *parent)
-    : parent(parent), concreteStoresMap(parent->concreteStoresMap),
-      symbolicStoresMap(parent->symbolicStoresMap) {}
+Dependency::Dependency(Dependency *parent) : parent(parent) {
+  if (parent) {
+    concreteStoresMap = parent->concreteStoresMap;
+    symbolicStoresMap = parent->symbolicStoresMap;
+  }
+}
 
 Dependency::~Dependency() {
   // Delete the locally-constructed relations
@@ -778,8 +779,11 @@ void Dependency::execute(llvm::Instruction *instr,
         op2 = getNewVersionedValue(instr->getOperand(1), op2Expr);
       }
 
-      addDependency(op1, newValue);
-      addDependency(op2, newValue);
+      if (!op1.isNull() || !op2.isNull()) {
+        newValue = getNewVersionedValue(instr, result);
+        addDependency(op1, newValue);
+        addDependency(op2, newValue);
+      }
       break;
     }
     case llvm::Instruction::GetElementPtr: {
