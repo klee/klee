@@ -10,8 +10,7 @@
 /// \file
 /// This file contains the declarations for the flow-insensitive dependency
 /// analysis to compute the memory locations upon which the unsatisfiability
-/// core
-/// depends, which is used in computing the interpolant.
+/// core depends, which is used in computing the interpolant.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -265,8 +264,8 @@ private:
 
     ~LocationGraph() {
       for (std::vector<LocationNode *>::iterator it = allNodes.begin(),
-                                                 itEnd = allNodes.end();
-           it != itEnd; ++it) {
+                                                 ie = allNodes.end();
+           it != ie; ++it) {
         delete *it;
       }
       allNodes.clear();

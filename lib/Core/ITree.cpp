@@ -501,10 +501,10 @@ std::string SearchTree::PrettyExpressionBuilder::constructActual(ref<Expr> e) {
     std::string existentials;
 
     for (std::set<const Array *>::iterator it = xe->variables.begin(),
-                                           itEnd = xe->variables.end();
-         it != itEnd; ++it) {
+                                           ie = xe->variables.end();
+         it != ie; ++it) {
       existentials += (*it)->name;
-      if (it != itEnd)
+      if (it != ie)
         existentials += ",";
     }
 
@@ -586,8 +586,8 @@ std::string SearchTree::recurseRender(const SearchTree::Node *node) {
          << replacementName << "\\l";
   for (std::map<PathCondition *, std::pair<std::string, bool> >::const_iterator
            it = node->pathConditionTable.begin(),
-           itEnd = node->pathConditionTable.end();
-       it != itEnd; ++it) {
+           ie = node->pathConditionTable.end();
+       it != ie; ++it) {
     stream << it->second.first;
     if (it->second.second)
       stream << " ITP";
@@ -627,8 +627,8 @@ std::string SearchTree::render() {
   std::ostringstream stream;
   for (std::vector<SearchTree::NumberedEdge *>::iterator
            it = subsumptionEdges.begin(),
-           itEnd = subsumptionEdges.end();
-       it != itEnd; ++it) {
+           ie = subsumptionEdges.end();
+       it != ie; ++it) {
     stream << (*it)->render() << "\n";
   }
 
@@ -652,8 +652,8 @@ SearchTree::~SearchTree() {
 
   for (std::vector<SearchTree::NumberedEdge *>::iterator
            it = subsumptionEdges.begin(),
-           itEnd = subsumptionEdges.end();
-       it != itEnd; ++it) {
+           ie = subsumptionEdges.end();
+       it != ie; ++it) {
     delete *it;
   }
   subsumptionEdges.clear();
@@ -852,15 +852,15 @@ SubsumptionTableEntry::SubsumptionTableEntry(ITreeNode *node)
 
   concreteAddressStore = storedExpressions.first;
   for (Dependency::ConcreteStore::iterator it = concreteAddressStore.begin(),
-                                           itEnd = concreteAddressStore.end();
-       it != itEnd; ++it) {
+                                           ie = concreteAddressStore.end();
+       it != ie; ++it) {
     concreteAddressStoreKeys.push_back(it->first);
   }
 
   symbolicAddressStore = storedExpressions.second;
   for (Dependency::SymbolicStore::iterator it = symbolicAddressStore.begin(),
-                                           itEnd = symbolicAddressStore.end();
-       it != itEnd; ++it) {
+                                           ie = symbolicAddressStore.end();
+       it != ie; ++it) {
     symbolicAddressStoreKeys.push_back(it->first);
   }
 
@@ -877,8 +877,8 @@ SubsumptionTableEntry::hasVariableInSet(std::set<const Array *> &existentials,
       ReadExpr *readExpr = llvm::dyn_cast<ReadExpr>(expr.get());
       const Array *array = (readExpr->updates).root;
       for (std::set<const Array *>::iterator it = existentials.begin(),
-                                             itEnd = existentials.end();
-           it != itEnd; ++it) {
+                                             ie = existentials.end();
+           it != ie; ++it) {
         if ((*it) == array)
           return true;
       }
@@ -895,8 +895,8 @@ bool SubsumptionTableEntry::hasVariableNotInSet(
       ReadExpr *readExpr = llvm::dyn_cast<ReadExpr>(expr.get());
       const Array *array = (readExpr->updates).root;
       for (std::set<const Array *>::iterator it = existentials.begin(),
-                                             itEnd = existentials.end();
-           it != itEnd; ++it) {
+                                             ie = existentials.end();
+           it != ie; ++it) {
         if ((*it) == array)
           return false;
       }
@@ -981,8 +981,8 @@ SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr,
   ref<Expr> newInterpolant;
 
   for (std::vector<ref<Expr> >::iterator it = interpolantPack.begin(),
-                                         itEnd = interpolantPack.end();
-       it != itEnd; ++it) {
+                                         ie = interpolantPack.end();
+       it != ie; ++it) {
 
     ref<Expr> interpolantAtom = (*it); // For example C cmp D
 
@@ -1695,11 +1695,11 @@ void SubsumptionTableEntry::print(llvm::raw_ostream &stream) const {
 
   if (!existentials.empty()) {
     stream << "existentials = [";
-    for (std::set<const Array *>::const_iterator itBegin = existentials.begin(),
-                                                 itEnd = existentials.end(),
-                                                 it = itBegin;
-         it != itEnd; ++it) {
-      if (it != itBegin)
+    for (std::set<const Array *>::const_iterator is = existentials.begin(),
+                                                 ie = existentials.end(),
+                                                 it = is;
+         it != ie; ++it) {
+      if (it != is)
         stream << ", ";
       stream << (*it)->name;
     }
@@ -1801,8 +1801,8 @@ ITree::ITree(ExecutionState *_root) {
 ITree::~ITree() {
   for (std::map<uintptr_t, std::deque<SubsumptionTableEntry *> >::const_iterator
            it = subsumptionTable.begin(),
-           itEnd = subsumptionTable.end();
-       it != itEnd; ++it) {
+           ie = subsumptionTable.end();
+       it != ie; ++it) {
     if (!it->second.empty()) {
       entryNumber += it->second.size();
       ++programPointNumber;
@@ -1811,8 +1811,8 @@ ITree::~ITree() {
 
   for (std::map<uintptr_t, std::deque<SubsumptionTableEntry *> >::iterator
            it = subsumptionTable.begin(),
-           itEnd = subsumptionTable.end();
-       it != itEnd; ++it) {
+           ie = subsumptionTable.end();
+       it != ie; ++it) {
     for (std::deque<SubsumptionTableEntry *>::iterator
              it1 = it->second.begin(),
              it1End = it->second.end();
@@ -1854,8 +1854,8 @@ bool ITree::subsumptionCheck(TimingSolver *solver, ExecutionState &state,
   // the successful subsumption mostly happen in the newest entry.
   for (std::deque<SubsumptionTableEntry *>::reverse_iterator
            it = entryList.rbegin(),
-           itEnd = entryList.rend();
-       it != itEnd; ++it) {
+           ie = entryList.rend();
+       it != ie; ++it) {
 
     if ((*it)->subsumed(solver, state, timeout, storedExpressions)) {
       // We mark as subsumed such that the node will not be
@@ -1941,8 +1941,8 @@ void ITree::markPathCondition(ExecutionState &state, TimingSolver *solver) {
 
   if (pc != 0) {
     for (std::vector<ref<Expr> >::iterator it = unsatCore.begin(),
-                                           itEnd = unsatCore.end();
-         it != itEnd; ++it) {
+                                           ie = unsatCore.end();
+         it != ie; ++it) {
       for (; pc != 0; pc = pc->cdr()) {
         if (pc->car().compare(it->get()) == 0) {
           pc->setAsCore(g);
@@ -2043,8 +2043,8 @@ void ITree::print(llvm::raw_ostream &stream) const {
             "-------------------------\n";
   for (std::map<uintptr_t, std::deque<SubsumptionTableEntry *> >::const_iterator
            it = subsumptionTable.begin(),
-           itEnd = subsumptionTable.end();
-       it != itEnd; ++it) {
+           ie = subsumptionTable.end();
+       it != ie; ++it) {
     for (std::deque<SubsumptionTableEntry *>::const_iterator
              it1 = it->second.begin(),
              it1End = it->second.end();
@@ -2112,10 +2112,10 @@ ITreeNode::ITreeNode(ITreeNode *_parent)
 ITreeNode::~ITreeNode() {
   // Only delete the path condition if it's not
   // also the parent's path condition
-  PathCondition *itEnd = parent ? parent->pathCondition : 0;
+  PathCondition *ie = parent ? parent->pathCondition : 0;
 
   PathCondition *it = pathCondition;
-  while (it != itEnd) {
+  while (it != ie) {
     PathCondition *tmp = it;
     it = it->cdr();
     delete tmp;

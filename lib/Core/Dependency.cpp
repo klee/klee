@@ -183,8 +183,8 @@ void VersionedValue::print(llvm::raw_ostream &stream) const {
 
 bool LocationGraph::isVisited(ref<MemoryLocation> loc) {
   for (std::vector<LocationNode *>::iterator it = allNodes.begin(),
-                                             itEnd = allNodes.end();
-       it != itEnd; ++it) {
+                                             ie = allNodes.end();
+       it != ie; ++it) {
     if ((*it)->getLocation() == loc) {
       return true;
     }
@@ -207,8 +207,8 @@ void LocationGraph::addNewEdge(ref<MemoryLocation> source,
   LocationNode *targetNode = 0;
 
   for (std::vector<LocationNode *>::iterator it = allNodes.begin(),
-                                             itEnd = allNodes.end();
-       it != itEnd; ++it) {
+                                             ie = allNodes.end();
+       it != ie; ++it) {
     if (!targetNode && (*it)->getLocation() == target) {
       targetNode = (*it);
       if (sourceNode)
@@ -258,8 +258,8 @@ void LocationGraph::addNewEdge(ref<MemoryLocation> source,
 void LocationGraph::consumeSinkNode(ref<MemoryLocation> loc) {
   std::vector<LocationNode *>::iterator pos = sinks.end();
   for (std::vector<LocationNode *>::iterator it = sinks.begin(),
-                                             itEnd = sinks.end();
-       it != itEnd; ++it) {
+                                             ie = sinks.end();
+       it != ie; ++it) {
     if ((*it)->getLocation() == loc) {
       pos = it;
       break;
@@ -273,8 +273,8 @@ void LocationGraph::consumeSinkNode(ref<MemoryLocation> loc) {
   sinks.erase(pos);
 
   for (std::vector<LocationNode *>::iterator it = parents.begin(),
-                                             itEnd = parents.end();
-       it != itEnd; ++it) {
+                                             ie = parents.end();
+       it != ie; ++it) {
     if (std::find(sinks.begin(), sinks.end(), (*it)) == sinks.end())
       sinks.push_back(*it);
   }
@@ -284,8 +284,8 @@ std::set<ref<MemoryLocation> > LocationGraph::getSinkLocations() const {
   std::set<ref<MemoryLocation> > sinkLocations;
 
   for (std::vector<LocationNode *>::const_iterator it = sinks.begin(),
-                                                   itEnd = sinks.end();
-       it != itEnd; ++it) {
+                                                   ie = sinks.end();
+       it != ie; ++it) {
     sinkLocations.insert((*it)->getLocation());
   }
 
@@ -297,8 +297,8 @@ std::set<ref<MemoryLocation> > LocationGraph::getSinksWithLocations(
   std::set<ref<MemoryLocation> > sinkLocations;
 
   for (std::vector<LocationNode *>::const_iterator it = sinks.begin(),
-                                                   itEnd = sinks.end();
-       it != itEnd; ++it) {
+                                                   ie = sinks.end();
+       it != ie; ++it) {
     if (std::find(locationsList.begin(), locationsList.end(),
                   (*it)->getLocation()) != locationsList.end())
       sinkLocations.insert((*it)->getLocation());
@@ -315,8 +315,8 @@ void LocationGraph::consumeSinksWithLocations(
     return;
 
   for (std::set<ref<MemoryLocation> >::iterator it = sinkLocs.begin(),
-                                                itEnd = sinkLocs.end();
-       it != itEnd; ++it) {
+                                                ie = sinkLocs.end();
+       it != ie; ++it) {
     consumeSinkNode((*it));
   }
 
@@ -339,8 +339,8 @@ void LocationGraph::print(llvm::raw_ostream &stream,
   std::string tabs = makeTabs(tabNum);
 
   for (std::vector<LocationNode *>::iterator it = nodes.begin(),
-                                             itEnd = nodes.end();
-       it != itEnd; ++it) {
+                                             ie = nodes.end();
+       it != ie; ++it) {
     ref<MemoryLocation> loc = (*it)->getLocation();
     stream << tabs;
     loc->print(stream);
@@ -608,8 +608,8 @@ void Dependency::markFlow(VersionedValue *target) const {
   target->setAsCore();
   std::vector<VersionedValue *> stepSources = directFlowSources(target);
   for (std::vector<VersionedValue *>::iterator it = stepSources.begin(),
-                                               itEnd = stepSources.end();
-       it != itEnd; ++it) {
+                                               ie = stepSources.end();
+       it != ie; ++it) {
     markFlow(*it);
   }
 }
@@ -945,8 +945,8 @@ void Dependency::execute(llvm::Instruction *instr,
       std::set<ref<MemoryLocation> > locations = addressValue->getLocations();
 
       for (std::set<ref<MemoryLocation> >::iterator it = locations.begin(),
-                                                    itEnd = locations.end();
-           it != itEnd; ++it) {
+                                                    ie = locations.end();
+           it != ie; ++it) {
         updateStore(*it, storedValue);
       }
       break;
@@ -1123,8 +1123,8 @@ void Dependency::bindCallArguments(llvm::Instruction *i,
   unsigned index = 0;
   for (llvm::Function::ArgumentListType::iterator
            it = callee->getArgumentList().begin(),
-           itEnd = callee->getArgumentList().end();
-       it != itEnd; ++it) {
+           ie = callee->getArgumentList().end();
+       it != ie; ++it) {
     if (argumentValuesList.back()) {
       addDependency(
           argumentValuesList.back(),
@@ -1243,14 +1243,14 @@ Dependency::directLocationSources(VersionedValue *target) const {
   std::map<VersionedValue *, ref<MemoryLocation> > tmp;
   std::map<VersionedValue *, ref<MemoryLocation> >::iterator nextPos =
                                                                  ret.begin(),
-                                                             itEnd = ret.end();
+                                                             ie = ret.end();
 
   bool elementErased = true;
   while (elementErased) {
     elementErased = false;
     for (std::map<VersionedValue *, ref<MemoryLocation> >::iterator it =
              nextPos;
-         it != itEnd; ++it) {
+         it != ie; ++it) {
       if (it->second.isNull()) {
         std::map<VersionedValue *, ref<MemoryLocation> >::iterator deletionPos =
             it;
@@ -1286,8 +1286,8 @@ void Dependency::recursivelyBuildLocationGraph(
 
   for (std::map<VersionedValue *, ref<MemoryLocation> >::iterator
            it = sourceEdges.begin(),
-           itEnd = sourceEdges.end();
-       it != itEnd; ++it) {
+           ie = sourceEdges.end();
+       it != ie; ++it) {
     // Here we prevent construction of cycle in the graph by checking if the
     // source equals target or included as an ancestor.
     if (it->second != target &&
@@ -1307,8 +1307,8 @@ void Dependency::buildLocationGraph(LocationGraph *g,
 
   for (std::map<VersionedValue *, ref<MemoryLocation> >::iterator
            it = sourceEdges.begin(),
-           itEnd = sourceEdges.end();
-       it != itEnd; ++it) {
+           ie = sourceEdges.end();
+       it != ie; ++it) {
     g->addNewSink(it->second);
     recursivelyBuildLocationGraph(g, it->first, it->second,
                                   std::set<ref<MemoryLocation> >());
@@ -1331,8 +1331,8 @@ void Dependency::print(llvm::raw_ostream &stream,
   stream << tabs << "STORAGE:";
   for (std::map<ref<MemoryLocation>, VersionedValue *>::const_iterator
            it = storesMap.begin(),
-           itEnd = storesMap.end();
-       it != itEnd; ++it) {
+           ie = storesMap.end();
+       it != ie; ++it) {
     if (it != storesMapBegin)
       stream << ",";
     stream << "[";
@@ -1347,8 +1347,8 @@ void Dependency::print(llvm::raw_ostream &stream,
            VersionedValue *,
            std::map<VersionedValue *, ref<MemoryLocation> > >::const_iterator
            it = flowsToMap.begin(),
-           itEnd = flowsToMap.end();
-       it != itEnd; ++it) {
+           ie = flowsToMap.end();
+       it != ie; ++it) {
     if (it != flowsToMapBegin)
       stream << ",";
     std::map<VersionedValue *, ref<MemoryLocation> > sources = (*it).second;
@@ -1384,7 +1384,7 @@ void Dependency::Util::deletePointerMapWithVectorValue(
     std::map<K *, std::vector<T> > &map) {
   typedef typename std::map<K *, std::vector<T> >::iterator IteratorType;
 
-  for (IteratorType it = map.begin(), itEnd = map.end(); it != itEnd; ++it) {
+  for (IteratorType it = map.begin(), ie = map.end(); it != ie; ++it) {
     it->second.clear();
   }
   map.clear();
@@ -1395,7 +1395,7 @@ void Dependency::Util::deletePointerMapWithMapValue(
     std::map<K *, std::map<K *, T> > &map) {
   typedef typename std::map<K *, std::map<K *, T> >::iterator IteratorType;
 
-  for (IteratorType it = map.begin(), itEnd = map.end(); it != itEnd; ++it) {
+  for (IteratorType it = map.begin(), ie = map.end(); it != ie; ++it) {
     it->second.clear();
   }
   map.clear();
