@@ -813,7 +813,7 @@ PathCondition::packInterpolant(std::set<const Array *> &replacements) {
         replacements.insert(it->boundVariables.begin(),
                             it->boundVariables.end());
       }
-      if (res.get()) {
+      if (!res.isNull()) {
         res = AndExpr::alloc(res, it->shadowConstraint);
       } else {
         res = it->shadowConstraint;
@@ -874,7 +874,7 @@ SubsumptionTableEntry::hasVariableInSet(std::set<const Array *> &existentials,
                                         ref<Expr> expr) {
   for (int i = 0, numKids = expr->getNumKids(); i < numKids; ++i) {
     if (llvm::isa<ReadExpr>(expr)) {
-      ReadExpr *readExpr = llvm::dyn_cast<ReadExpr>(expr.get());
+      ReadExpr *readExpr = llvm::dyn_cast<ReadExpr>(expr);
       const Array *array = (readExpr->updates).root;
       for (std::set<const Array *>::iterator it = existentials.begin(),
                                              ie = existentials.end();
@@ -892,7 +892,7 @@ bool SubsumptionTableEntry::hasVariableNotInSet(
     std::set<const Array *> &existentials, ref<Expr> expr) {
   for (int i = 0, numKids = expr->getNumKids(); i < numKids; ++i) {
     if (llvm::isa<ReadExpr>(expr)) {
-      ReadExpr *readExpr = llvm::dyn_cast<ReadExpr>(expr.get());
+      ReadExpr *readExpr = llvm::dyn_cast<ReadExpr>(expr);
       const Array *array = (readExpr->updates).root;
       for (std::set<const Array *>::iterator it = existentials.begin(),
                                              ie = existentials.end();
@@ -910,9 +910,9 @@ bool SubsumptionTableEntry::hasVariableNotInSet(
 ref<Expr>
 SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr,
                                               bool &hasExistentialsOnly) {
-  assert(llvm::isa<ExistsExpr>(existsExpr.get()));
+  assert(llvm::isa<ExistsExpr>(existsExpr));
 
-  ExistsExpr *expr = static_cast<ExistsExpr *>(existsExpr.get());
+  ExistsExpr *expr = llvm::dyn_cast<ExistsExpr>(existsExpr);
 
   // Assume the we shall return general ExistsExpr that does not contain
   // only existential variables.
@@ -1047,7 +1047,7 @@ SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr,
 
     // We add the modified interpolant conjunct into a conjunction of
     // new interpolants.
-    if (newInterpolant.get()) {
+    if (!newInterpolant.isNull()) {
       newInterpolant = AndExpr::alloc(newInterpolant, interpolantAtom);
     } else {
       newInterpolant = interpolantAtom;
@@ -1056,7 +1056,7 @@ SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr,
 
   ref<Expr> newBody;
 
-  if (newInterpolant.get()) {
+  if (!newInterpolant.isNull()) {
     if (!hasVariableInSet(expr->variables, newInterpolant))
       return newInterpolant;
 
@@ -1230,7 +1230,7 @@ SubsumptionTableEntry::getSubstitution(ref<Expr> equalities,
                                        std::map<ref<Expr>, ref<Expr> > &map) {
   // It is assumed the lhs is an expression on the existentially-quantified
   // variable whereas the rhs is an expression on the free variables.
-  if (llvm::isa<EqExpr>(equalities.get())) {
+  if (llvm::isa<EqExpr>(equalities)) {
     ref<Expr> lhs = equalities->getKid(0);
     if (isVariable(lhs)) {
       map[lhs] = equalities->getKid(1);
@@ -1239,7 +1239,7 @@ SubsumptionTableEntry::getSubstitution(ref<Expr> equalities,
     return equalities;
   }
 
-  if (llvm::isa<AndExpr>(equalities.get())) {
+  if (llvm::isa<AndExpr>(equalities)) {
     ref<Expr> lhs = getSubstitution(equalities->getKid(0), map);
     ref<Expr> rhs = getSubstitution(equalities->getKid(1), map);
     if (lhs->isTrue()) {
@@ -1259,7 +1259,7 @@ SubsumptionTableEntry::getSubstitution(ref<Expr> equalities,
 
 bool SubsumptionTableEntry::detectConflictPrimitives(ExecutionState &state,
                                                      ref<Expr> query) {
-  if (llvm::isa<ExistsExpr>(query.get()))
+  if (llvm::isa<ExistsExpr>(query))
     return true;
 
   std::vector<ref<Expr> > conjunction;
@@ -1301,10 +1301,10 @@ bool SubsumptionTableEntry::detectConflictPrimitives(ExecutionState &state,
 bool SubsumptionTableEntry::fetchQueryEqualityConjuncts(
     std::vector<ref<Expr> > &conjunction, ref<Expr> query) {
 
-  if (!llvm::isa<AndExpr>(query.get())) {
+  if (!llvm::isa<AndExpr>(query)) {
     if (query->getKind() == Expr::Eq) {
 
-      EqExpr *equality = llvm::dyn_cast<EqExpr>(query.get());
+      EqExpr *equality = llvm::dyn_cast<EqExpr>(query);
 
       if (llvm::isa<ConstantExpr>(equality->getKid(0)) &&
           llvm::isa<ConstantExpr>(equality->getKid(1)) &&
@@ -1324,17 +1324,17 @@ bool SubsumptionTableEntry::fetchQueryEqualityConjuncts(
 
 ref<Expr> SubsumptionTableEntry::simplifyExistsExpr(ref<Expr> existsExpr,
                                                     bool &hasExistentialsOnly) {
-  assert(llvm::isa<ExistsExpr>(existsExpr.get()));
+  assert(llvm::isa<ExistsExpr>(existsExpr));
 
-  ref<Expr> body = llvm::dyn_cast<ExistsExpr>(existsExpr.get())->body;
-  assert(llvm::isa<AndExpr>(body.get()));
+  ref<Expr> body = llvm::dyn_cast<ExistsExpr>(existsExpr)->body;
+  assert(llvm::isa<AndExpr>(body));
 
   std::map<ref<Expr>, ref<Expr> > substitution;
   ref<Expr> equalities = getSubstitution(body->getKid(1), substitution);
   ref<Expr> interpolant =
       ApplySubstitutionVisitor(substitution).visit(body->getKid(0));
 
-  ExistsExpr *expr = static_cast<ExistsExpr *>(existsExpr.get());
+  ExistsExpr *expr = llvm::dyn_cast<ExistsExpr>(existsExpr);
   if (hasVariableInSet(expr->variables, equalities)) {
     // we could also replace the occurrence of some variables with its
     // corresponding substitution mapping.
@@ -1405,7 +1405,7 @@ bool SubsumptionTableEntry::subsumed(
       const ref<Expr> lhsValue = it2->second.second;
       ref<Expr> res;
 
-      if (rhsConcrete.second.get()) {
+      if (!rhsConcrete.second.isNull()) {
         // There is a corresponding concrete allocation
         res = EqExpr::alloc(lhsValue, rhsConcrete.second);
       }
@@ -1424,7 +1424,7 @@ bool SubsumptionTableEntry::subsumed(
               EqExpr::alloc(ConstantExpr::alloc(0, Expr::Bool),
                             EqExpr::alloc(lhsConcreteAddress, it3->first)),
               EqExpr::alloc(lhsValue, it3->second));
-          if (conjunction.get()) {
+          if (!conjunction.isNull()) {
             conjunction = AndExpr::alloc(newTerm, conjunction);
           } else {
             conjunction = newTerm;
@@ -1432,12 +1432,12 @@ bool SubsumptionTableEntry::subsumed(
         }
         // If there were corresponding concrete as well as symbolic allocations
         // in the current state, conjunct them
-        res = (res.get() ? AndExpr::alloc(res, conjunction) : conjunction);
+        res = (!res.isNull() ? AndExpr::alloc(res, conjunction) : conjunction);
       }
 
-      if (res.get()) {
+      if (!res.isNull()) {
         stateEqualityConstraints =
-            (!stateEqualityConstraints.get()
+            (stateEqualityConstraints.isNull()
                  ? res
                  : AndExpr::alloc(res, stateEqualityConstraints));
       }
@@ -1478,7 +1478,7 @@ bool SubsumptionTableEntry::subsumed(
                                         EqExpr::alloc(lhsSymbolicAddress,
                                                       rhsConcreteAddress)),
                           EqExpr::alloc(lhsValue, rhsValue));
-        if (conjunction.get()) {
+        if (!conjunction.isNull()) {
           conjunction = AndExpr::alloc(newTerm, conjunction);
         } else {
           conjunction = newTerm;
@@ -1498,7 +1498,7 @@ bool SubsumptionTableEntry::subsumed(
                                         EqExpr::alloc(lhsSymbolicAddress,
                                                       rhsSymbolicAddress)),
                           EqExpr::alloc(lhsValue, rhsValue));
-        if (conjunction.get()) {
+        if (!conjunction.isNull()) {
           conjunction = AndExpr::alloc(newTerm, conjunction);
         } else {
           conjunction = newTerm;
@@ -1506,9 +1506,9 @@ bool SubsumptionTableEntry::subsumed(
       }
     }
 
-    if (conjunction.get()) {
+    if (!conjunction.isNull()) {
       stateEqualityConstraints =
-          (!stateEqualityConstraints.get()
+          (stateEqualityConstraints.isNull()
                ? conjunction
                : AndExpr::alloc(conjunction, stateEqualityConstraints));
     }
@@ -1519,12 +1519,12 @@ bool SubsumptionTableEntry::subsumed(
 
   // Here we build the query, after which it is always a conjunction of
   // the interpolant and the state equality constraints.
-  if (interpolant.get()) {
+  if (!interpolant.isNull()) {
     query =
-        stateEqualityConstraints.get()
+        !stateEqualityConstraints.isNull()
             ? AndExpr::alloc(interpolant, stateEqualityConstraints)
             : AndExpr::alloc(interpolant, ConstantExpr::create(1, Expr::Bool));
-  } else if (stateEqualityConstraints.get()) {
+  } else if (!stateEqualityConstraints.isNull()) {
     query = AndExpr::alloc(ConstantExpr::create(1, Expr::Bool),
                            stateEqualityConstraints);
   } else {
@@ -1665,7 +1665,7 @@ void SubsumptionTableEntry::print(llvm::raw_ostream &stream) const {
   stream << "------------ Subsumption Table Entry ------------\n";
   stream << "Program point = " << nodeId << "\n";
   stream << "interpolant = ";
-  if (interpolant.get())
+  if (!interpolant.isNull())
     interpolant->print(stream);
   else
     stream << "(empty)";
@@ -2191,7 +2191,7 @@ void ITreeNode::unsatCoreMarking(std::vector<ref<Expr> > unsatCore) {
   // path condition marking structure to mark core constraints
   std::map<Expr *, PathCondition *> markerMap;
   for (PathCondition *it = pathCondition; it != 0; it = it->cdr()) {
-    if (llvm::isa<OrExpr>(it->car().get())) {
+    if (llvm::isa<OrExpr>(it->car())) {
       // FIXME: Break up disjunction into its components, because each disjunct
       // is solved separately. The or constraint was due to state merge.
       // Hence, the following is just a makeshift for when state merge is

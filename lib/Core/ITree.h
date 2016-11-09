@@ -410,7 +410,7 @@ class SubsumptionTableEntry {
                                    std::map<ref<Expr>, ref<Expr> > &map);
 
   bool empty() {
-    return !interpolant.get() && concreteAddressStoreKeys.empty();
+    return interpolant.isNull() && concreteAddressStoreKeys.empty();
   }
 
   /// \brief For printing method running time statistics
@@ -436,7 +436,7 @@ public:
   /// \return true if the parameter is either a concatenation or a read,
   ///         otherwise, return false.
   static bool isVariable(ref<Expr> expr) {
-    return llvm::isa<ConcatExpr>(expr.get()) || llvm::isa<ReadExpr>(expr.get());
+    return llvm::isa<ConcatExpr>(expr) || llvm::isa<ReadExpr>(expr);
   }
 
   ref<Expr> getInterpolant() const;

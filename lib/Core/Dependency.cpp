@@ -66,7 +66,7 @@ ShadowArray::getShadowExpression(ref<Expr> expr,
 
   switch (expr->getKind()) {
   case Expr::Read: {
-    ReadExpr *readExpr = static_cast<ReadExpr *>(expr.get());
+    ReadExpr *readExpr = llvm::dyn_cast<ReadExpr>(expr);
     const Array *replacementArray = shadowArray[readExpr->updates.root];
 
     if (std::find(replacements.begin(), replacements.end(), replacementArray) ==
@@ -92,19 +92,19 @@ ShadowArray::getShadowExpression(ref<Expr> expr,
     break;
   }
   case Expr::Extract: {
-    ExtractExpr *extractExpr = static_cast<ExtractExpr *>(expr.get());
+    ExtractExpr *extractExpr = llvm::dyn_cast<ExtractExpr>(expr);
     ret = ExtractExpr::alloc(getShadowExpression(expr->getKid(0), replacements),
                              extractExpr->offset, extractExpr->width);
     break;
   }
   case Expr::ZExt: {
-    CastExpr *castExpr = static_cast<CastExpr *>(expr.get());
+    CastExpr *castExpr = llvm::dyn_cast<CastExpr>(expr);
     ret = ZExtExpr::alloc(getShadowExpression(expr->getKid(0), replacements),
                           castExpr->getWidth());
     break;
   }
   case Expr::SExt: {
-    CastExpr *castExpr = static_cast<CastExpr *>(expr.get());
+    CastExpr *castExpr = llvm::dyn_cast<CastExpr>(expr);
     ret = SExtExpr::alloc(getShadowExpression(expr->getKid(0), replacements),
                           castExpr->getWidth());
     break;
@@ -154,7 +154,7 @@ ShadowArray::getShadowExpression(ref<Expr> expr,
 
 void MemoryLocation::print(llvm::raw_ostream &stream) const {
   stream << "A";
-  if (!llvm::isa<ConstantExpr>(this->address.get()))
+  if (!llvm::isa<ConstantExpr>(this->address))
     stream << "(symbolic)";
   if (core)
     stream << "(I)";
