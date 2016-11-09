@@ -181,15 +181,10 @@ void VersionedValue::print(llvm::raw_ostream &stream) const {
 
 /**/
 
-VersionedValue *Dependency::registerNewVersionedValue(llvm::Value *value,
-                                                      VersionedValue *vvalue) {
-  if (valuesMap.find(value) != valuesMap.end()) {
-    valuesMap[value].push_back(vvalue);
-  } else {
-    std::vector<VersionedValue *> newValueList;
-    newValueList.push_back(vvalue);
-    valuesMap[value] = newValueList;
-  }
+ref<VersionedValue>
+Dependency::registerNewVersionedValue(llvm::Value *value,
+                                      ref<VersionedValue> vvalue) {
+  valuesMap[value].push_back(vvalue);
   return vvalue;
 }
 
@@ -220,9 +215,9 @@ Dependency::getStoredExpressions(std::set<const Array *> &replacements,
   for (std::vector<ref<MemoryLocation> >::iterator locIter = allLoc.begin(),
                                                    locIterEnd = allLoc.end();
        locIter != locIterEnd; ++locIter) {
-    VersionedValue *storedValue = concreteStoresMap[*locIter];
+    ref<VersionedValue> storedValue = concreteStoresMap[*locIter];
 
-    if (storedValue) {
+    if (!storedValue.isNull()) {
       if ((*locIter)->hasConstantAddress()) {
         if (!coreOnly) {
           ref<Expr> expr = storedValue->getExpression();
@@ -269,8 +264,8 @@ Dependency::getStoredExpressions(std::set<const Array *> &replacements,
   return std::pair<ConcreteStore, SymbolicStore>(concreteStore, symbolicStore);
 }
 
-VersionedValue *Dependency::getLatestValue(llvm::Value *value,
-                                           ref<Expr> valueExpr) {
+ref<VersionedValue> Dependency::getLatestValue(llvm::Value *value,
+                                               ref<Expr> valueExpr) {
   assert(value && "value cannot be null");
   if (llvm::isa<llvm::ConstantExpr>(value)) {
     llvm::Instruction *asInstruction =
@@ -293,11 +288,11 @@ VersionedValue *Dependency::getLatestValue(llvm::Value *value,
     return valuesMap[value].back();
   }
 
-  VersionedValue *ret = 0;
+  ref<VersionedValue> ret = 0;
   if (parent)
     ret = parent->getLatestValue(value, valueExpr);
 
-  if (!ret && llvm::isa<llvm::GlobalValue>(value)) {
+  if (ret.isNull() && llvm::isa<llvm::GlobalValue>(value)) {
     // We could not find the global value: we register it anew.
     ret = value->getType()->isPointerTy()
               ? getNewPointerValue(value, valueExpr)
@@ -307,7 +302,8 @@ VersionedValue *Dependency::getLatestValue(llvm::Value *value,
   return ret;
 }
 
-VersionedValue *Dependency::getLatestValueNoConstantCheck(llvm::Value *value) {
+ref<VersionedValue>
+Dependency::getLatestValueNoConstantCheck(llvm::Value *value) {
   assert(value && "value cannot be null");
 
   if (valuesMap.find(value) != valuesMap.end()) {
@@ -320,14 +316,19 @@ VersionedValue *Dependency::getLatestValueNoConstantCheck(llvm::Value *value) {
   return 0;
 }
 
-void Dependency::updateStore(ref<MemoryLocation> loc, VersionedValue *value) {
+void Dependency::updateStore(ref<MemoryLocation> loc,
+                             ref<VersionedValue> value) {
   if (loc->hasConstantAddress())
     concreteStoresMap[loc] = value;
   else
     symbolicStoresMap[loc] = value;
 }
 
-void Dependency::addDependency(VersionedValue *source, VersionedValue *target) {
+void Dependency::addDependency(ref<VersionedValue> source,
+                               ref<VersionedValue> target) {
+  if (source.isNull() || target.isNull())
+    return;
+
   std::set<ref<MemoryLocation> > locations = source->getLocations();
 
   for (std::set<ref<MemoryLocation> >::iterator it = locations.begin(),
@@ -338,9 +339,12 @@ void Dependency::addDependency(VersionedValue *source, VersionedValue *target) {
   addDependencyViaLocation(source, target, 0);
 }
 
-void Dependency::addDependencyWithOffset(VersionedValue *source,
-                                         VersionedValue *target,
+void Dependency::addDependencyWithOffset(ref<VersionedValue> source,
+                                         ref<VersionedValue> target,
                                          ref<Expr> offset) {
+  if (source.isNull() || target.isNull())
+    return;
+
   std::set<ref<MemoryLocation> > locations = source->getLocations();
   for (std::set<ref<MemoryLocation> >::iterator it = locations.begin(),
                                                 ie = locations.end();
@@ -351,27 +355,30 @@ void Dependency::addDependencyWithOffset(VersionedValue *source,
   addDependencyViaLocation(source, target, 0);
 }
 
-void Dependency::addDependencyViaLocation(VersionedValue *source,
-                                          VersionedValue *target,
+void Dependency::addDependencyViaLocation(ref<VersionedValue> source,
+                                          ref<VersionedValue> target,
                                           ref<MemoryLocation> via) {
+  if (source.isNull() || target.isNull())
+    return;
+
   if (flowsToMap.find(target) != flowsToMap.end()) {
     flowsToMap[target].insert(
-        std::make_pair<VersionedValue *, ref<MemoryLocation> >(source, via));
+        std::make_pair<ref<VersionedValue>, ref<MemoryLocation> >(source, via));
   } else {
-    std::map<VersionedValue *, ref<MemoryLocation> > newMap;
+    std::map<ref<VersionedValue>, ref<MemoryLocation> > newMap;
     newMap.insert(
-        std::make_pair<VersionedValue *, ref<MemoryLocation> >(source, via));
+        std::make_pair<ref<VersionedValue>, ref<MemoryLocation> >(source, via));
     flowsToMap[target] = newMap;
   }
 }
 
-std::vector<VersionedValue *>
-Dependency::directFlowSources(VersionedValue *target) const {
-  std::vector<VersionedValue *> ret;
+std::vector<ref<VersionedValue> >
+Dependency::directFlowSources(ref<VersionedValue> target) const {
+  std::vector<ref<VersionedValue> > ret;
   if (flowsToMap.find(target) != flowsToMap.end()) {
-    std::map<VersionedValue *, ref<MemoryLocation> > sources =
+    std::map<ref<VersionedValue>, ref<MemoryLocation> > sources =
         flowsToMap.find(target)->second;
-    for (std::map<VersionedValue *, ref<MemoryLocation> >::iterator it =
+    for (std::map<ref<VersionedValue>, ref<MemoryLocation> >::iterator it =
              sources.begin();
          it != sources.end(); ++it) {
       if (!it->first->isCore()) {
@@ -381,39 +388,40 @@ Dependency::directFlowSources(VersionedValue *target) const {
   }
 
   if (parent) {
-    std::vector<VersionedValue *> ancestralSources =
+    std::vector<ref<VersionedValue> > ancestralSources =
         parent->directFlowSources(target);
     ret.insert(ret.begin(), ancestralSources.begin(), ancestralSources.end());
   }
   return ret;
 }
 
-void Dependency::markFlow(VersionedValue *target) const {
+void Dependency::markFlow(ref<VersionedValue> target) const {
   target->setAsCore();
-  std::vector<VersionedValue *> stepSources = directFlowSources(target);
-  for (std::vector<VersionedValue *>::iterator it = stepSources.begin(),
-                                               ie = stepSources.end();
+  std::vector<ref<VersionedValue> > stepSources = directFlowSources(target);
+  for (std::vector<ref<VersionedValue> >::iterator it = stepSources.begin(),
+                                                   ie = stepSources.end();
        it != ie; ++it) {
     markFlow(*it);
   }
 }
 
-std::vector<VersionedValue *>
+std::vector<ref<VersionedValue> >
 Dependency::populateArgumentValuesList(llvm::CallInst *site,
                                        std::vector<ref<Expr> > &arguments) {
   unsigned numArgs = site->getCalledFunction()->arg_size();
-  std::vector<VersionedValue *> argumentValuesList;
+  std::vector<ref<VersionedValue> > argumentValuesList;
   for (unsigned i = numArgs; i > 0;) {
     llvm::Value *argOperand = site->getArgOperand(--i);
-    VersionedValue *latestValue = getLatestValue(argOperand, arguments.at(i));
+    ref<VersionedValue> latestValue =
+        getLatestValue(argOperand, arguments.at(i));
 
-    if (latestValue)
+    if (!latestValue.isNull())
       argumentValuesList.push_back(latestValue);
     else {
       // This is for the case when latestValue was NULL, which means there is
       // no source dependency information for this node, e.g., a constant.
       argumentValuesList.push_back(
-          new VersionedValue(argOperand, arguments[i]));
+          VersionedValue::create(argOperand, arguments[i]));
     }
   }
   return argumentValuesList;
@@ -429,8 +437,8 @@ Dependency::~Dependency() {
   symbolicStoresMap.clear();
 
   // Delete flowsToMap
-  for (std::map<VersionedValue *,
-                std::map<VersionedValue *, ref<MemoryLocation> > >::iterator
+  for (std::map<ref<VersionedValue>,
+                std::map<ref<VersionedValue>, ref<MemoryLocation> > >::iterator
            it = flowsToMap.begin(),
            ie = flowsToMap.end();
        it != ie; ++it) {
@@ -439,7 +447,7 @@ Dependency::~Dependency() {
   flowsToMap.clear();
 
   // Delete valuesMap
-  for (std::map<llvm::Value *, std::vector<VersionedValue *> >::iterator
+  for (std::map<llvm::Value *, std::vector<ref<VersionedValue> > >::iterator
            it = valuesMap.begin(),
            ie = valuesMap.end();
        it != ie; ++it) {
@@ -489,33 +497,27 @@ void Dependency::execute(llvm::Instruction *instr,
         getNewVersionedValue(instr, args.at(0));
       } else if (calleeName.equals("_ZNSi5seekgElSt12_Ios_Seekdir") &&
                  args.size() == 4) {
-        VersionedValue *returnValue = getNewVersionedValue(instr, args.at(0));
+        ref<VersionedValue> returnValue =
+            getNewVersionedValue(instr, args.at(0));
         for (unsigned i = 0; i < 3; ++i) {
-          VersionedValue *arg =
-              getLatestValue(instr->getOperand(i), args.at(i + 1));
-          if (arg)
-            addDependency(arg, returnValue);
+          addDependency(getLatestValue(instr->getOperand(i), args.at(i + 1)),
+                        returnValue);
         }
       } else if (calleeName.equals(
                      "_ZNSt13basic_fstreamIcSt11char_traitsIcEE7is_openEv") &&
                  args.size() == 2) {
-        VersionedValue *returnValue = getNewVersionedValue(instr, args.at(0));
-        VersionedValue *arg = getLatestValue(instr->getOperand(0), args.at(1));
-        if (arg)
-          addDependency(arg, returnValue);
+        addDependency(getLatestValue(instr->getOperand(0), args.at(1)),
+                      getNewVersionedValue(instr, args.at(0)));
       } else if (calleeName.equals("_ZNSi5tellgEv") && args.size() == 2) {
-        VersionedValue *returnValue = getNewVersionedValue(instr, args.at(0));
-        VersionedValue *arg = getLatestValue(instr->getOperand(0), args.at(1));
-        if (arg)
-          addDependency(arg, returnValue);
+        addDependency(getLatestValue(instr->getOperand(0), args.at(1)),
+                      getNewVersionedValue(instr, args.at(0)));
       } else if ((calleeName.equals("powl") && args.size() == 3) ||
                  (calleeName.equals("gettimeofday") && args.size() == 3)) {
-        VersionedValue *returnValue = getNewVersionedValue(instr, args.at(0));
+        ref<VersionedValue> returnValue =
+            getNewVersionedValue(instr, args.at(0));
         for (unsigned i = 0; i < 2; ++i) {
-          VersionedValue *arg =
-              getLatestValue(instr->getOperand(i), args.at(i + 1));
-          if (arg)
-            addDependency(arg, returnValue);
+          addDependency(getLatestValue(instr->getOperand(i), args.at(i + 1)),
+                        returnValue);
         }
       } else if (calleeName.equals("malloc") && args.size() == 1) {
         // malloc is an location-type instruction: its single argument is the
@@ -524,60 +526,50 @@ void Dependency::execute(llvm::Instruction *instr,
       } else if (calleeName.equals("realloc") && args.size() == 1) {
         // realloc is an location-type instruction: its single argument is the
         // return address.
-        VersionedValue *returnValue = getNewVersionedValue(instr, args.at(0));
-        VersionedValue *arg = getLatestValue(instr->getOperand(0), args.at(0));
-        if (arg)
-          addDependency(arg, returnValue);
+        addDependency(getLatestValue(instr->getOperand(0), args.at(0)),
+                      getNewVersionedValue(instr, args.at(0)));
       } else if (calleeName.equals("calloc") && args.size() == 1) {
         // calloc is a location-type instruction: its single argument is the
         // return address.
         getNewPointerValue(instr, args.at(0));
       } else if (calleeName.equals("syscall") && args.size() >= 2) {
-        VersionedValue *returnValue = getNewVersionedValue(instr, args.at(0));
+        ref<VersionedValue> returnValue =
+            getNewVersionedValue(instr, args.at(0));
         for (unsigned i = 0; i + 1 < args.size(); ++i) {
-          VersionedValue *arg =
-              getLatestValue(instr->getOperand(i), args.at(i + 1));
-          if (arg)
-            addDependency(arg, returnValue);
+          addDependency(getLatestValue(instr->getOperand(i), args.at(i + 1)),
+                        returnValue);
         }
       } else if (std::mismatch(getValuePrefix.begin(), getValuePrefix.end(),
                                calleeName.begin()).first ==
                      getValuePrefix.end() &&
                  args.size() == 2) {
-        VersionedValue *returnValue = getNewVersionedValue(instr, args.at(0));
-        VersionedValue *arg = getLatestValue(instr->getOperand(0), args.at(1));
-        if (arg)
-          addDependency(arg, returnValue);
+        addDependency(getLatestValue(instr->getOperand(0), args.at(1)),
+                      getNewVersionedValue(instr, args.at(0)));
       } else if (calleeName.equals("getenv") && args.size() == 2) {
         getNewPointerValue(instr, args.at(0));
       } else if (calleeName.equals("printf") && args.size() >= 2) {
-        VersionedValue *returnValue = getNewVersionedValue(instr, args.at(0));
-        VersionedValue *formatArg =
-            getLatestValue(instr->getOperand(0), args.at(1));
-        if (formatArg)
-          addDependency(formatArg, returnValue);
+        ref<VersionedValue> returnValue =
+            getNewVersionedValue(instr, args.at(0));
+        addDependency(getLatestValue(instr->getOperand(0), args.at(1)),
+                      returnValue);
         for (unsigned i = 2, argsNum = args.size(); i < argsNum; ++i) {
-          VersionedValue *arg =
-              getLatestValue(instr->getOperand(i - 1), args.at(i));
-          if (arg)
-            addDependency(arg, returnValue);
+          addDependency(getLatestValue(instr->getOperand(i - 1), args.at(i)),
+                        returnValue);
         }
       } else if (calleeName.equals("vprintf") && args.size() == 3) {
-        VersionedValue *returnValue = getNewVersionedValue(instr, args.at(0));
-        VersionedValue *arg0 = getLatestValue(instr->getOperand(0), args.at(1));
-        VersionedValue *arg1 = getLatestValue(instr->getOperand(1), args.at(2));
-        if (arg0)
-          addDependency(arg0, returnValue);
-        if (arg1)
-          addDependency(arg1, returnValue);
+        ref<VersionedValue> returnValue =
+            getNewVersionedValue(instr, args.at(0));
+        addDependency(getLatestValue(instr->getOperand(0), args.at(1)),
+                      returnValue);
+        addDependency(getLatestValue(instr->getOperand(1), args.at(2)),
+                      returnValue);
       } else if (((calleeName.equals("fchmodat") && args.size() == 5)) ||
                  (calleeName.equals("fchownat") && args.size() == 6)) {
-        VersionedValue *returnValue = getNewVersionedValue(instr, args.at(0));
+        ref<VersionedValue> returnValue =
+            getNewVersionedValue(instr, args.at(0));
         for (unsigned i = 0; i < 2; ++i) {
-          VersionedValue *arg =
-              getLatestValue(instr->getOperand(i), args.at(i + 1));
-          if (arg)
-            addDependency(arg, returnValue);
+          addDependency(getLatestValue(instr->getOperand(i), args.at(i + 1)),
+                        returnValue);
         }
       } else {
         // Default external function handler: We ignore functions that return
@@ -630,26 +622,22 @@ void Dependency::execute(llvm::Instruction *instr,
     case llvm::Instruction::UIToFP:
     case llvm::Instruction::SIToFP:
     case llvm::Instruction::ExtractValue: {
-      VersionedValue *val = getLatestValue(instr->getOperand(0), argExpr);
+      ref<VersionedValue> val = getLatestValue(instr->getOperand(0), argExpr);
 
-      if (val) {
+      if (!val.isNull()) {
         addDependency(val, getNewVersionedValue(instr, argExpr));
       } else if (!llvm::isa<llvm::Constant>(instr->getOperand(0)))
           // Constants would kill dependencies, the remaining is for
           // cases that may actually require dependencies.
       {
         if (instr->getOperand(0)->getType()->isPointerTy()) {
-          VersionedValue *addressValue =
-              getNewPointerValue(instr->getOperand(0), argExpr);
-          VersionedValue *returnValue = getNewVersionedValue(instr, argExpr);
-          addDependency(addressValue, returnValue);
+          addDependency(getNewPointerValue(instr->getOperand(0), argExpr),
+                        getNewVersionedValue(instr, argExpr));
         } else if (llvm::isa<llvm::Argument>(instr->getOperand(0)) ||
                    llvm::isa<llvm::CallInst>(instr->getOperand(0)) ||
                    symbolicExecutionError) {
-          VersionedValue *arg =
-              getNewVersionedValue(instr->getOperand(0), argExpr);
-          VersionedValue *returnValue = getNewVersionedValue(instr, argExpr);
-          addDependency(arg, returnValue);
+          addDependency(getNewVersionedValue(instr->getOperand(0), argExpr),
+                        getNewVersionedValue(instr, argExpr));
         } else {
           assert(!"operand not found");
         }
@@ -666,11 +654,11 @@ void Dependency::execute(llvm::Instruction *instr,
 
     switch (instr->getOpcode()) {
     case llvm::Instruction::Load: {
-      VersionedValue *addressValue =
+      ref<VersionedValue> addressValue =
           getLatestValue(instr->getOperand(0), address);
-      VersionedValue *loadedValue = getNewVersionedValue(instr, valueExpr);
+      ref<VersionedValue> loadedValue = getNewVersionedValue(instr, valueExpr);
 
-      if (addressValue) {
+      if (!addressValue.isNull()) {
         std::set<ref<MemoryLocation> > locations = addressValue->getLocations();
         if (locations.empty()) {
           ref<MemoryLocation> loc =
@@ -705,9 +693,9 @@ void Dependency::execute(llvm::Instruction *instr,
                locIterEnd = locations.end();
            locIter != locIterEnd; ++locIter) {
 
-        VersionedValue *storedValue = concreteStoresMap[*locIter];
+        ref<VersionedValue> storedValue = concreteStoresMap[*locIter];
 
-        if (!storedValue)
+        if (storedValue.isNull())
           // We could not find the stored value, create a new one.
           updateStore(*locIter, loadedValue);
         else
@@ -717,17 +705,17 @@ void Dependency::execute(llvm::Instruction *instr,
       break;
     }
     case llvm::Instruction::Store: {
-      VersionedValue *storedValue =
+      ref<VersionedValue> storedValue =
           getLatestValue(instr->getOperand(0), valueExpr);
-      VersionedValue *addressValue =
+      ref<VersionedValue> addressValue =
           getLatestValue(instr->getOperand(1), address);
 
       // If there was no dependency found, we should create
       // a new value
-      if (!storedValue)
+      if (storedValue.isNull())
         storedValue = getNewVersionedValue(instr->getOperand(0), valueExpr);
 
-      if (!addressValue) {
+      if (addressValue.isNull()) {
         addressValue = getNewPointerValue(instr->getOperand(1), address);
       } else if (addressValue->getLocations().size() == 0) {
         addressValue->addLocation(
@@ -754,20 +742,11 @@ void Dependency::execute(llvm::Instruction *instr,
 
     switch (instr->getOpcode()) {
     case llvm::Instruction::Select: {
-
-      VersionedValue *op1 = getLatestValue(instr->getOperand(1), op1Expr);
-      VersionedValue *op2 = getLatestValue(instr->getOperand(2), op2Expr);
-      VersionedValue *newValue = 0;
-      if (op1) {
-        newValue = getNewVersionedValue(instr, result);
-        addDependency(op1, newValue);
-      }
-      if (op2) {
-        if (newValue)
-          addDependency(op2, newValue);
-        else
-          addDependency(op2, getNewVersionedValue(instr, result));
-      }
+      ref<VersionedValue> op1 = getLatestValue(instr->getOperand(1), op1Expr);
+      ref<VersionedValue> op2 = getLatestValue(instr->getOperand(2), op2Expr);
+      ref<VersionedValue> newValue = getNewVersionedValue(instr, result);
+      addDependency(op1, newValue);
+      addDependency(op2, newValue);
       break;
     }
 
@@ -792,31 +771,23 @@ void Dependency::execute(llvm::Instruction *instr,
     case llvm::Instruction::FRem:
     case llvm::Instruction::FCmp:
     case llvm::Instruction::InsertValue: {
-      VersionedValue *op1 = getLatestValue(instr->getOperand(0), op1Expr);
-      VersionedValue *op2 = getLatestValue(instr->getOperand(1), op2Expr);
+      ref<VersionedValue> op1 = getLatestValue(instr->getOperand(0), op1Expr);
+      ref<VersionedValue> op2 = getLatestValue(instr->getOperand(1), op2Expr);
+      ref<VersionedValue> newValue;
 
-      if (!op1 &&
+      if (op1.isNull() &&
           (instr->getParent()->getParent()->getName().equals("klee_range") &&
            instr->getOperand(0)->getName().equals("start"))) {
         op1 = getNewVersionedValue(instr->getOperand(0), op1Expr);
       }
-      if (!op2 &&
+      if (op2.isNull() &&
           (instr->getParent()->getParent()->getName().equals("klee_range") &&
            instr->getOperand(1)->getName().equals("end"))) {
         op2 = getNewVersionedValue(instr->getOperand(1), op2Expr);
       }
 
-      VersionedValue *newValue = 0;
-      if (op1) {
-        newValue = getNewVersionedValue(instr, result);
-        addDependency(op1, newValue);
-      }
-      if (op2) {
-        if (newValue)
-          addDependency(op2, newValue);
-        else
-          addDependency(op2, getNewVersionedValue(instr, result));
-      }
+      addDependency(op1, newValue);
+      addDependency(op2, newValue);
       break;
     }
     case llvm::Instruction::GetElementPtr: {
@@ -824,9 +795,9 @@ void Dependency::execute(llvm::Instruction *instr,
       ref<Expr> inputAddress = args.at(1);
       ref<Expr> inputOffset = args.at(2);
 
-      VersionedValue *addressValue =
+      ref<VersionedValue> addressValue =
           getLatestValue(instr->getOperand(0), inputAddress);
-      if (!addressValue) {
+      if (addressValue.isNull()) {
         addressValue = getNewPointerValue(instr->getOperand(0), inputAddress);
       } else if (addressValue->getLocations().size() == 0) {
         addressValue->addLocation(
@@ -854,8 +825,8 @@ void Dependency::executePHI(llvm::Instruction *instr,
                             bool symbolicExecutionError) {
   llvm::PHINode *node = llvm::dyn_cast<llvm::PHINode>(instr);
   llvm::Value *llvmArgValue = node->getIncomingValue(incomingBlock);
-  VersionedValue *val = getLatestValue(llvmArgValue, valueExpr);
-  if (val) {
+  ref<VersionedValue> val = getLatestValue(llvmArgValue, valueExpr);
+  if (!val.isNull()) {
     addDependency(val, getNewVersionedValue(instr, valueExpr));
   } else if (llvm::isa<llvm::Constant>(llvmArgValue) ||
              llvm::isa<llvm::Argument>(llvmArgValue) ||
@@ -915,7 +886,7 @@ void Dependency::bindCallArguments(llvm::Instruction *i,
            it = callee->getArgumentList().begin(),
            ie = callee->getArgumentList().end();
        it != ie; ++it) {
-    if (argumentValuesList.back()) {
+    if (!argumentValuesList.back().isNull()) {
       addDependency(
           argumentValuesList.back(),
           getNewVersionedValue(it, argumentValuesList.back()->getExpression()));
@@ -931,22 +902,22 @@ void Dependency::bindReturnValue(llvm::CallInst *site, llvm::Instruction *i,
   if (site && retInst &&
       retInst->getReturnValue() // For functions returning void
       ) {
-    VersionedValue *value =
+    ref<VersionedValue> value =
         getLatestValue(retInst->getReturnValue(), returnValue);
-    if (value)
+    if (!value.isNull())
       addDependency(value, getNewVersionedValue(site, returnValue));
   }
 }
 
-void Dependency::markAllValues(VersionedValue *value) { markFlow(value); }
+void Dependency::markAllValues(ref<VersionedValue> value) { markFlow(value); }
 
 void Dependency::markAllValues(llvm::Value *val) {
-  VersionedValue *value = getLatestValueNoConstantCheck(val);
+  ref<VersionedValue> value = getLatestValueNoConstantCheck(val);
 
   // Right now we simply ignore the __dso_handle values. They are due
   // to library / linking errors caused by missing options (-shared) in the
   // compilation involving shared library.
-  if (!value) {
+  if (value.isNull()) {
     if (llvm::ConstantExpr *cVal = llvm::dyn_cast<llvm::ConstantExpr>(val)) {
       for (unsigned i = 0; i < cVal->getNumOperands(); ++i) {
         if (cVal->getOperand(i)->getName().equals("__dso_handle")) {
@@ -971,14 +942,14 @@ void Dependency::print(llvm::raw_ostream &stream) const {
 void Dependency::print(llvm::raw_ostream &stream,
                        const unsigned paddingAmount) const {
   std::string tabs = makeTabs(paddingAmount);
-  std::map<ref<MemoryLocation>, VersionedValue *>::const_iterator
+  std::map<ref<MemoryLocation>, ref<VersionedValue> >::const_iterator
   storesMapBegin = concreteStoresMap.begin();
-  std::map<VersionedValue *,
-           std::map<VersionedValue *, ref<MemoryLocation> > >::const_iterator
+  std::map<ref<VersionedValue>,
+           std::map<ref<VersionedValue>, ref<MemoryLocation> > >::const_iterator
   flowsToMapBegin = flowsToMap.begin();
 
   stream << tabs << "STORAGE:";
-  for (std::map<ref<MemoryLocation>, VersionedValue *>::const_iterator
+  for (std::map<ref<MemoryLocation>, ref<VersionedValue> >::const_iterator
            it = concreteStoresMap.begin(),
            ie = concreteStoresMap.end();
        it != ie; ++it) {
@@ -993,17 +964,17 @@ void Dependency::print(llvm::raw_ostream &stream,
   stream << "\n";
   stream << tabs << "FLOWDEPENDENCY:";
   for (std::map<
-           VersionedValue *,
-           std::map<VersionedValue *, ref<MemoryLocation> > >::const_iterator
+           ref<VersionedValue>,
+           std::map<ref<VersionedValue>, ref<MemoryLocation> > >::const_iterator
            it = flowsToMap.begin(),
            ie = flowsToMap.end();
        it != ie; ++it) {
     if (it != flowsToMapBegin)
       stream << ",";
-    std::map<VersionedValue *, ref<MemoryLocation> > sources = (*it).second;
-    std::map<VersionedValue *, ref<MemoryLocation> >::iterator sourcesMapBegin =
-        sources.begin();
-    for (std::map<VersionedValue *, ref<MemoryLocation> >::iterator it2 =
+    std::map<ref<VersionedValue>, ref<MemoryLocation> > sources = (*it).second;
+    std::map<ref<VersionedValue>, ref<MemoryLocation> >::iterator
+    sourcesMapBegin = sources.begin();
+    for (std::map<ref<VersionedValue>, ref<MemoryLocation> >::iterator it2 =
              sources.begin();
          it2 != sources.end(); ++it2) {
       if (it2 != sourcesMapBegin)
