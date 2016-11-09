@@ -392,10 +392,10 @@ private:
     std::vector<ref<VersionedValue> > argumentValuesList;
 
     /// \brief The mapping of concrete locations to stored value
-    std::map<ref<MemoryLocation>, ref<VersionedValue> > concreteStoresMap;
+    std::map<ref<MemoryLocation>, ref<VersionedValue> > _concreteStore;
 
     /// \brief The mapping of symbolic locations to stored value
-    std::map<ref<MemoryLocation>, ref<VersionedValue> > symbolicStoresMap;
+    std::map<ref<MemoryLocation>, ref<VersionedValue> > _symbolicStore;
 
     /// \brief Flow relations of target and its sources with location
     std::map<ref<VersionedValue>,
