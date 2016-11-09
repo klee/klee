@@ -374,17 +374,6 @@ private:
     class Util {
 
     public:
-      template <typename K, typename T>
-      static void deletePointerMap(std::map<K, T *> &map);
-
-      template <typename K, typename T>
-      static void
-      deletePointerMapWithVectorValue(std::map<K *, std::vector<T> > &map);
-
-      template <typename K, typename T>
-      static void
-      deletePointerMapWithMapValue(std::map<K *, std::map<K *, T> > &map);
-
       /// \brief Tests if a pointer points to a main function's argument
       static bool isMainArgument(llvm::Value *loc);
     };
@@ -396,8 +385,11 @@ private:
     /// \brief Argument values to be passed onto callee
     std::vector<VersionedValue *> argumentValuesList;
 
-    /// \brief The mapping of locations to stored value
-    std::map<ref<MemoryLocation>, VersionedValue *> storesMap;
+    /// \brief The mapping of concrete locations to stored value
+    std::map<ref<MemoryLocation>, VersionedValue *> concreteStoresMap;
+
+    /// \brief The mapping of symbolic locations to stored value
+    std::map<ref<MemoryLocation>, VersionedValue *> symbolicStoresMap;
 
     /// \brief Flow relations of target and its sources with location
     std::map<VersionedValue *,

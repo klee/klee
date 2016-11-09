@@ -220,7 +220,7 @@ Dependency::getStoredExpressions(std::set<const Array *> &replacements,
   for (std::vector<ref<MemoryLocation> >::iterator locIter = allLoc.begin(),
                                                    locIterEnd = allLoc.end();
        locIter != locIterEnd; ++locIter) {
-    VersionedValue *storedValue = storesMap[*locIter];
+    VersionedValue *storedValue = concreteStoresMap[*locIter];
 
     if (storedValue) {
       if ((*locIter)->hasConstantAddress()) {
@@ -321,7 +321,10 @@ VersionedValue *Dependency::getLatestValueNoConstantCheck(llvm::Value *value) {
 }
 
 void Dependency::updateStore(ref<MemoryLocation> loc, VersionedValue *value) {
-  storesMap[loc] = value;
+  if (loc->hasConstantAddress())
+    concreteStoresMap[loc] = value;
+  else
+    symbolicStoresMap[loc] = value;
 }
 
 void Dependency::addDependency(VersionedValue *source, VersionedValue *target) {
@@ -417,15 +420,32 @@ Dependency::populateArgumentValuesList(llvm::CallInst *site,
 }
 
 Dependency::Dependency(Dependency *parent)
-    : parent(parent), storesMap(parent->storesMap) {}
+    : parent(parent), concreteStoresMap(parent->concreteStoresMap),
+      symbolicStoresMap(parent->symbolicStoresMap) {}
 
 Dependency::~Dependency() {
   // Delete the locally-constructed relations
-  storesMap.clear();
-  Util::deletePointerMapWithMapValue(flowsToMap);
+  concreteStoresMap.clear();
+  symbolicStoresMap.clear();
 
-  // Delete the locally-constructed objects
-  Util::deletePointerMapWithVectorValue(valuesMap);
+  // Delete flowsToMap
+  for (std::map<VersionedValue *,
+                std::map<VersionedValue *, ref<MemoryLocation> > >::iterator
+           it = flowsToMap.begin(),
+           ie = flowsToMap.end();
+       it != ie; ++it) {
+    it->second.clear();
+  }
+  flowsToMap.clear();
+
+  // Delete valuesMap
+  for (std::map<llvm::Value *, std::vector<VersionedValue *> >::iterator
+           it = valuesMap.begin(),
+           ie = valuesMap.end();
+       it != ie; ++it) {
+    it->second.clear();
+  }
+  valuesMap.clear();
 }
 
 Dependency *Dependency::cdr() const { return parent; }
@@ -685,7 +705,7 @@ void Dependency::execute(llvm::Instruction *instr,
                locIterEnd = locations.end();
            locIter != locIterEnd; ++locIter) {
 
-        VersionedValue *storedValue = storesMap[*locIter];
+        VersionedValue *storedValue = concreteStoresMap[*locIter];
 
         if (!storedValue)
           // We could not find the stored value, create a new one.
@@ -952,15 +972,15 @@ void Dependency::print(llvm::raw_ostream &stream,
                        const unsigned paddingAmount) const {
   std::string tabs = makeTabs(paddingAmount);
   std::map<ref<MemoryLocation>, VersionedValue *>::const_iterator
-  storesMapBegin = storesMap.begin();
+  storesMapBegin = concreteStoresMap.begin();
   std::map<VersionedValue *,
            std::map<VersionedValue *, ref<MemoryLocation> > >::const_iterator
   flowsToMapBegin = flowsToMap.begin();
 
   stream << tabs << "STORAGE:";
   for (std::map<ref<MemoryLocation>, VersionedValue *>::const_iterator
-           it = storesMap.begin(),
-           ie = storesMap.end();
+           it = concreteStoresMap.begin(),
+           ie = concreteStoresMap.end();
        it != ie; ++it) {
     if (it != storesMapBegin)
       stream << ",";
@@ -1007,28 +1027,6 @@ void Dependency::print(llvm::raw_ostream &stream,
 }
 
 /**/
-
-template <typename K, typename T>
-void Dependency::Util::deletePointerMapWithVectorValue(
-    std::map<K *, std::vector<T> > &map) {
-  typedef typename std::map<K *, std::vector<T> >::iterator IteratorType;
-
-  for (IteratorType it = map.begin(), ie = map.end(); it != ie; ++it) {
-    it->second.clear();
-  }
-  map.clear();
-}
-
-template <typename K, typename T>
-void Dependency::Util::deletePointerMapWithMapValue(
-    std::map<K *, std::map<K *, T> > &map) {
-  typedef typename std::map<K *, std::map<K *, T> >::iterator IteratorType;
-
-  for (IteratorType it = map.begin(), ie = map.end(); it != ie; ++it) {
-    it->second.clear();
-  }
-  map.clear();
-}
 
 bool Dependency::Util::isMainArgument(llvm::Value *loc) {
   llvm::Argument *vArg = llvm::dyn_cast<llvm::Argument>(loc);
