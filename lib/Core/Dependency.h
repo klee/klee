@@ -100,7 +100,7 @@ private:
     static ref<MemoryLocation> create(ref<MemoryLocation> loc,
                                       ref<Expr> &address, ref<Expr> &offset) {
       ConstantExpr *c = llvm::dyn_cast<ConstantExpr>(offset);
-      if (c->getZExtValue() == 0) {
+      if (c && c->getZExtValue() == 0) {
         ref<Expr> base = loc->getBase();
         ref<Expr> offset = loc->getOffset();
         ref<MemoryLocation> ret(
