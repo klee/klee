@@ -316,6 +316,8 @@ void Dependency::updateStore(ref<MemoryLocation> loc,
 
 void Dependency::addDependency(ref<VersionedValue> source,
                                ref<VersionedValue> target) {
+  ref<MemoryLocation> nullLocation;
+
   if (source.isNull() || target.isNull())
     return;
 
@@ -326,12 +328,14 @@ void Dependency::addDependency(ref<VersionedValue> source,
        it != ie; ++it) {
     target->addLocation(*it);
   }
-  addDependencyViaLocation(source, target, 0);
+  addDependencyViaLocation(source, target, nullLocation);
 }
 
 void Dependency::addDependencyWithOffset(ref<VersionedValue> source,
                                          ref<VersionedValue> target,
                                          ref<Expr> offset) {
+  ref<MemoryLocation> nullLocation;
+
   if (source.isNull() || target.isNull())
     return;
 
@@ -342,7 +346,7 @@ void Dependency::addDependencyWithOffset(ref<VersionedValue> source,
     ref<Expr> expr(target->getExpression());
     target->addLocation(MemoryLocation::create(*it, expr, offset));
   }
-  addDependencyViaLocation(source, target, 0);
+  addDependencyViaLocation(source, target, nullLocation);
 }
 
 void Dependency::addDependencyViaLocation(ref<VersionedValue> source,
@@ -356,8 +360,7 @@ void Dependency::addDependencyViaLocation(ref<VersionedValue> source,
         std::make_pair<ref<VersionedValue>, ref<MemoryLocation> >(source, via));
   } else {
     std::map<ref<VersionedValue>, ref<MemoryLocation> > newMap;
-    newMap.insert(
-        std::make_pair<ref<VersionedValue>, ref<MemoryLocation> >(source, via));
+    newMap[source] = via;
     flowsToMap[target] = newMap;
   }
 }
@@ -685,7 +688,6 @@ void Dependency::execute(llvm::Instruction *instr,
                locIter = locations.begin(),
                locIterEnd = locations.end();
            locIter != locIterEnd; ++locIter) {
-
         ref<VersionedValue> storedValue = _concreteStore[*locIter];
 
         if (storedValue.isNull())

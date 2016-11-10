@@ -189,8 +189,12 @@ private:
     /// value.
     bool core;
 
+    /// \brief The id of this object
+    uint64_t id;
+
     VersionedValue(llvm::Value *value, ref<Expr> valueExpr)
-        : refCount(0), value(value), valueExpr(valueExpr), core(false) {}
+        : refCount(0), value(value), valueExpr(valueExpr), core(false),
+          id(reinterpret_cast<uint64_t>(this)) {}
 
   public:
     ~VersionedValue() { locations.clear(); }
@@ -201,12 +205,9 @@ private:
     }
 
     int compare(const VersionedValue other) const {
-      uint64_t l = reinterpret_cast<uint64_t>(this),
-               r = reinterpret_cast<uint64_t>(&other);
-
-      if (l == r)
+      if (id == other.id)
         return 0;
-      if (l < r)
+      if (id < other.id)
         return -1;
       return 1;
     }
