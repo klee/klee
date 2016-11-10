@@ -1672,7 +1672,7 @@ void SubsumptionTableEntry::print(llvm::raw_ostream &stream) const {
   stream << "\n";
 
   if (!concreteAddressStore.empty()) {
-    stream << "allocations = [";
+    stream << "concrete store = [";
     for (Dependency::ConcreteStore::const_iterator
              it1Begin = concreteAddressStore.begin(),
              it1End = concreteAddressStore.end(), it1 = it1Begin;
@@ -1687,6 +1687,28 @@ void SubsumptionTableEntry::print(llvm::raw_ostream &stream) const {
         it2->second.first->print(stream);
         stream << ",";
         it2->second.second->print(stream);
+        stream << ")";
+      }
+    }
+    stream << "]\n";
+  }
+
+  if (!symbolicAddressStore.empty()) {
+    stream << "symbolic store = [";
+    for (Dependency::SymbolicStore::const_iterator
+             it1Begin = symbolicAddressStore.begin(),
+             it1End = symbolicAddressStore.end(), it1 = it1Begin;
+         it1 != it1End; ++it1) {
+      for (Dependency::SymbolicStoreMap::const_iterator
+               it2Begin = it1->second.begin(),
+               it2End = it1->second.end(), it2 = it2Begin;
+           it2 != it2End; ++it2) {
+        if (it1 != it1Begin || it2 != it2Begin)
+          stream << ",";
+        stream << "(";
+        it2->first->print(stream);
+        stream << ",";
+        it2->second->print(stream);
         stream << ")";
       }
     }
