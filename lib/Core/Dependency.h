@@ -71,7 +71,7 @@ public:
 
 private:
     /// \brief The location's LLVM value
-    llvm::Value *loc;
+  llvm::Value *value;
 
     /// \brief The absolute address
     ref<Expr> address;
@@ -82,18 +82,18 @@ private:
     /// \brief The offset of the allocation
     ref<Expr> offset;
 
-    MemoryLocation(llvm::Value *_loc, ref<Expr> &_address, ref<Expr> &_base,
+    MemoryLocation(llvm::Value *_value, ref<Expr> &_address, ref<Expr> &_base,
                    ref<Expr> &_offset)
-        : refCount(0), loc(_loc), address(_address), base(_base),
+        : refCount(0), value(_value), address(_address), base(_base),
           offset(_offset) {}
 
   public:
     ~MemoryLocation() {}
 
-    static ref<MemoryLocation> create(llvm::Value *loc, ref<Expr> &address) {
+    static ref<MemoryLocation> create(llvm::Value *value, ref<Expr> &address) {
       ref<Expr> zeroPointer = Expr::createPointer(0);
       ref<MemoryLocation> ret(
-          new MemoryLocation(loc, address, address, zeroPointer));
+          new MemoryLocation(value, address, address, zeroPointer));
       return ret;
     }
 
@@ -116,8 +116,8 @@ private:
     }
 
     int compare(const MemoryLocation other) const {
-      uint64_t l = reinterpret_cast<uint64_t>(loc),
-               r = reinterpret_cast<uint64_t>(other.loc);
+      uint64_t l = reinterpret_cast<uint64_t>(value),
+               r = reinterpret_cast<uint64_t>(other.value);
 
       if (l == r) {
         ConstantExpr *lc = llvm::dyn_cast<ConstantExpr>(address);
@@ -151,7 +151,7 @@ private:
       return llvm::dyn_cast<ConstantExpr>(address)->getZExtValue();
     }
 
-    llvm::Value *getValue() const { return loc; }
+    llvm::Value *getValue() const { return value; }
 
     ref<Expr> getAddress() const { return address; }
 

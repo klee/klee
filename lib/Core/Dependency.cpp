@@ -157,9 +157,13 @@ void MemoryLocation::print(llvm::raw_ostream &stream) const {
   if (!llvm::isa<ConstantExpr>(this->address))
     stream << "(symbolic)";
   stream << "[";
-  loc->print(stream);
+  value->print(stream);
   stream << ":";
   address->print(stream);
+  stream << ":";
+  base->print(stream);
+  stream << ":";
+  offset->print(stream);
   stream << "]#" << reinterpret_cast<uintptr_t>(this);
 }
 
@@ -322,7 +326,6 @@ void Dependency::addDependency(ref<VersionedValue> source,
     return;
 
   std::set<ref<MemoryLocation> > locations = source->getLocations();
-
   for (std::set<ref<MemoryLocation> >::iterator it = locations.begin(),
                                                 ie = locations.end();
        it != ie; ++it) {
@@ -354,6 +357,13 @@ void Dependency::addDependencyViaLocation(ref<VersionedValue> source,
                                           ref<MemoryLocation> via) {
   if (source.isNull() || target.isNull())
     return;
+
+  std::set<ref<MemoryLocation> > locations = source->getLocations();
+  for (std::set<ref<MemoryLocation> >::iterator it = locations.begin(),
+                                                ie = locations.end();
+       it != ie; ++it) {
+    target->addLocation(*it);
+  }
 
   if (flowsToMap.find(target) != flowsToMap.end()) {
     flowsToMap[target].insert(
