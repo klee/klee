@@ -1849,8 +1849,6 @@ ITree::~ITree() {
 
 bool ITree::subsumptionCheck(TimingSolver *solver, ExecutionState &state,
                              double timeout) {
-  ++subsumptionCheckCount; // For profiling
-
   assert(state.itreeNode == currentINode);
 
   // Immediately return if the state's instruction is not the
@@ -1861,6 +1859,8 @@ bool ITree::subsumptionCheck(TimingSolver *solver, ExecutionState &state,
   if (!state.itreeNode || reinterpret_cast<uintptr_t>(state.pc->inst) !=
                               state.itreeNode->getNodeId())
     return false;
+
+  ++subsumptionCheckCount; // For profiling
 
   TimerStatIncrementer t(subsumptionCheckTime);
   std::deque<SubsumptionTableEntry *> entryList =
