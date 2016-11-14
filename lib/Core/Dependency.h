@@ -10,8 +10,7 @@
 /// \file
 /// This file contains the declarations for the flow-insensitive dependency
 /// analysis to compute the memory locations upon which the unsatisfiability
-/// core
-/// depends, which is used in computing the interpolant.
+/// core depends, which is used in computing the interpolant.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -39,6 +38,7 @@
 #include <stack>
 
 namespace klee {
+
 class Dependency;
 
 /// \brief Implements the replacement mechanism for replacing variables, used in
@@ -66,74 +66,104 @@ public:
 /// \brief A class to represent memory locations.
 class MemoryLocation {
 
-  protected:
-    bool core;
+public:
+  unsigned refCount;
 
-    llvm::Value *site;
+private:
+    /// \brief The location's LLVM value
+  llvm::Value *value;
 
+    /// \brief The absolute address
     ref<Expr> address;
 
-    MemoryLocation(llvm::Value *_site, ref<Expr> &_address)
-        : core(false), site(_site), address(_address) {}
+    /// \brief The base address
+    ref<Expr> base;
+
+    /// \brief The offset of the allocation
+    ref<Expr> offset;
+
+    MemoryLocation(llvm::Value *_value, ref<Expr> &_address, ref<Expr> &_base,
+                   ref<Expr> &_offset)
+        : refCount(0), value(_value), address(_address), base(_base),
+          offset(_offset) {}
 
   public:
-    enum Kind {
-      Unknown,
-      Versioned
-    };
+    ~MemoryLocation() {}
 
-    virtual Kind getKind() const { return Unknown; }
-
-    virtual ~MemoryLocation() {}
-
-    virtual bool hasAddress(llvm::Value *_site, ref<Expr> &_address) const {
-      return site == _site && address == _address;
+    static ref<MemoryLocation> create(llvm::Value *value, ref<Expr> &address) {
+      ref<Expr> zeroPointer = Expr::createPointer(0);
+      ref<MemoryLocation> ret(
+          new MemoryLocation(value, address, address, zeroPointer));
+      return ret;
     }
 
-    /// \brief Print the content of the object into a stream.
-    ///
-    /// \param The stream to print the data to.
-    virtual void print(llvm::raw_ostream& stream) const;
+    static ref<MemoryLocation> create(ref<MemoryLocation> loc,
+                                      ref<Expr> &address, ref<Expr> &offset) {
+      ConstantExpr *c = llvm::dyn_cast<ConstantExpr>(offset);
+      if (c && c->getZExtValue() == 0) {
+        ref<Expr> base = loc->getBase();
+        ref<Expr> offset = loc->getOffset();
+        ref<MemoryLocation> ret(
+            new MemoryLocation(loc->getValue(), address, base, offset));
+        return ret;
+      }
 
-    bool hasConstantAddress() { return llvm::isa<ConstantExpr>(address.get()); }
-
-    uint64_t getUIntAddress() {
-      return llvm::dyn_cast<ConstantExpr>(address.get())->getZExtValue();
+      ref<Expr> base = loc->getBase();
+      ref<Expr> newOffset = AddExpr::create(loc->getOffset(), offset);
+      ref<MemoryLocation> ret(
+          new MemoryLocation(loc->getValue(), address, base, newOffset));
+      return ret;
     }
 
-    static bool classof(const MemoryLocation *loc) { return true; }
+    int compare(const MemoryLocation other) const {
+      uint64_t l = reinterpret_cast<uint64_t>(value),
+               r = reinterpret_cast<uint64_t>(other.value);
 
-    llvm::Value *getSite() const { return site; }
+      if (l == r) {
+        ConstantExpr *lc = llvm::dyn_cast<ConstantExpr>(address);
+        if (lc) {
+          ConstantExpr *rc = llvm::dyn_cast<ConstantExpr>(other.address);
+          if (rc) {
+            l = lc->getZExtValue();
+            r = rc->getZExtValue();
+            if (l == r)
+              return 0;
+            if (l < r)
+              return -1;
+            return 1;
+          }
+        }
+        l = reinterpret_cast<uint64_t>(address.get());
+        r = reinterpret_cast<uint64_t>(address.get());
+        if (l == r)
+          return 0;
+        if (l < r)
+          return -1;
+        return 1;
+      } else if (l < r)
+        return -1;
+      return 1;
+    }
+
+    bool hasConstantAddress() const { return llvm::isa<ConstantExpr>(address); }
+
+    uint64_t getUIntAddress() const {
+      return llvm::dyn_cast<ConstantExpr>(address)->getZExtValue();
+    }
+
+    llvm::Value *getValue() const { return value; }
 
     ref<Expr> getAddress() const { return address; }
 
-    void setAsCore() { core = true; }
+    ref<Expr> getBase() const { return base; }
 
-    bool isCore() { return core; }
+    ref<Expr> getOffset() const { return offset; }
 
     /// \brief Print the content of the object to the LLVM error stream
     void dump() const {
       print(llvm::errs());
       llvm::errs() << "\n";
     }
-};
-
-/// \brief A class that represents locations that can be destructively updated
-/// (versioned)
-class VersionedLocation : public MemoryLocation {
-  public:
-    VersionedLocation(llvm::Value *_site, ref<Expr> &_address)
-        : MemoryLocation(_site, _address) {}
-
-    ~VersionedLocation() {}
-
-    Kind getKind() const { return Versioned; }
-
-    static bool classof(const MemoryLocation *loc) {
-      return loc->getKind() == Versioned;
-    }
-
-    static bool classof(const VersionedLocation *loc) { return true; }
 
     /// \brief Print the content of the object into a stream.
     ///
@@ -144,20 +174,47 @@ class VersionedLocation : public MemoryLocation {
   /// \brief A class that represents LLVM value that can be destructively
   /// updated (versioned).
   class VersionedValue {
+  public:
+    unsigned refCount;
 
+  private:
     llvm::Value *value;
 
     const ref<Expr> valueExpr;
+
+    /// \brief Set of memory locations possibly being pointed to
+    std::set<ref<MemoryLocation> > locations;
 
     /// \brief Field to indicate if any unsatisfiability core depends on this
     /// value.
     bool core;
 
-  public:
-    VersionedValue(llvm::Value *value, ref<Expr> valueExpr)
-        : value(value), valueExpr(valueExpr), core(false) {}
+    /// \brief The id of this object
+    uint64_t id;
 
-    ~VersionedValue() {}
+    VersionedValue(llvm::Value *value, ref<Expr> valueExpr)
+        : refCount(0), value(value), valueExpr(valueExpr), core(false),
+          id(reinterpret_cast<uint64_t>(this)) {}
+
+  public:
+    ~VersionedValue() { locations.clear(); }
+
+    static ref<VersionedValue> create(llvm::Value *value, ref<Expr> valueExpr) {
+      ref<VersionedValue> vvalue(new VersionedValue(value, valueExpr));
+      return vvalue;
+    }
+
+    int compare(const VersionedValue other) const {
+      if (id == other.id)
+        return 0;
+      if (id < other.id)
+        return -1;
+      return 1;
+    }
+
+    void addLocation(ref<MemoryLocation> loc) { locations.insert(loc); }
+
+    std::set<ref<MemoryLocation> > getLocations() { return locations; }
 
     bool hasValue(llvm::Value *value) const { return this->value == value; }
 
@@ -181,101 +238,8 @@ class VersionedLocation : public MemoryLocation {
     }
   };
 
-  /// \brief The location graph: A graph to directly represent the dependency
-  /// between locations, instead of using intermediate values. This graph is
-  /// computed from the relations between values in particular the FlowsTo
-  /// relation.
-  class LocationGraph {
-
-    /// \brief Implements a node of the location graph.
-    class LocationNode {
-      MemoryLocation *loc;
-      std::vector<LocationNode *> ancestors;
-      uint64_t level;
-
-    public:
-      LocationNode(MemoryLocation *loc, uint64_t _level)
-          : loc(loc), level(_level) {
-        loc->setAsCore();
-      }
-
-      ~LocationNode() { ancestors.clear(); }
-
-      MemoryLocation *getLocation() const { return loc; }
-
-      void addParent(LocationNode *node) {
-        // The user should ensure that we don't store a duplicate
-        ancestors.push_back(node);
-      }
-
-      std::vector<LocationNode *> getParents() const { return ancestors; }
-
-      uint64_t getLevel() const { return level; }
-    };
-
-    std::vector<LocationNode *> sinks;
-    std::vector<LocationNode *> allNodes;
-
-    /// \brief Prints the content of the location graph
-    void print(llvm::raw_ostream &stream, std::vector<LocationNode *> nodes,
-               std::vector<LocationNode *> &printed,
-               const unsigned tabNum) const;
-
-    /// \brief Given a location, delete all sinks having such location, and
-    /// replace them as sinks with their parents.
-    ///
-    /// \param The memory location to match a sink node with.
-    void consumeSinkNode(MemoryLocation *location);
-
-  public:
-    LocationGraph() {}
-
-    ~LocationGraph() {
-      for (std::vector<LocationNode *>::iterator it = allNodes.begin(),
-                                                 itEnd = allNodes.end();
-           it != itEnd; ++it) {
-        delete *it;
-      }
-      allNodes.clear();
-    }
-
-    bool isVisited(MemoryLocation *loc);
-
-    void addNewSink(MemoryLocation *candidateSink);
-
-    void addNewEdge(MemoryLocation *source, MemoryLocation *target);
-
-    std::set<MemoryLocation *> getSinkLocations() const;
-
-    std::set<MemoryLocation *>
-    getSinksWithLocations(std::vector<MemoryLocation *> valuesList) const;
-
-    /// Given a set of locations, delete all sinks having an location in the
-    /// set, and replace them as sinks with their parents.
-    ///
-    /// \param The location to match the sink nodes with.
-    void consumeSinksWithLocations(std::vector<MemoryLocation *> locationsList);
-
-    /// \brief Print the content of the object to the LLVM error stream
-    void dump() const {
-      this->print(llvm::errs());
-      llvm::errs() << "\n";
-    }
-
-    /// \brief Print the content of the object into a stream.
-    ///
-    /// \param The stream to print the data to.
-    void print(llvm::raw_ostream &stream) const;
-  };
-
-  /// \brief Implementation of value dependency for computing locations the
-  /// unsatisfiability core depends upon, which is used to compute the
-  /// interpolant.
-  ///
-  /// Following is the analysis rules to compute value dependency relations
-  /// useful for computing the interpolant. Given a finite symbolic execution
-  /// path, the computation of the relations terminates. The analysis rules
-  /// serve as a guide to the implementation.
+  /// \brief Computation of memory regions the unsatisfiability core depends
+  /// upon, which is used to compute the interpolant.
   ///
   /// Problems solved:
   /// 1. Components of program states upon which the unsatisfiability core
@@ -291,114 +255,18 @@ class VersionedLocation : public MemoryLocation {
   ///    is exists x0 . c(x0) /\ x' = f_S(x0)
   ///
   /// Solution:
-  /// The dependency computation is based on shadow data structure
-  /// representing the following:
+  /// The memory dependency computation is based on shadow data structure with
+  /// the following main components:
   ///
   /// Domains:
   /// VersionedValue -> LLVM values (i.e., variables) with versioning index
-  /// VersionedLocation -> Memory locations with versioning index
+  /// MemoryLocation -> A pointer value, which is associated with an
+  ///                   allocation and its displacement (offset)
   ///
-  /// Basic Relations:
-  /// stores(VersionedLocation, VersionedValue) - Memory state
-  /// depends(VersionedValue, VersionedValue) - Value dependency: The output
-  ///    of the analysis.
-  /// equals(VersionedValue, VersionedLocation) - Pointer value equality
-  ///
-  /// Derived Relations:
-  /// Transitive Closure of depends
-  ///
-  /// depends*(v, v)
-  /// depends*(v, v') /\ v != v' iff depends(v, v') /\ depends*(v', v'')
-  ///
-  /// Indirection Relation
-  ///
-  /// ind(v, m, 0) iff depends*(v, v') /\ equals(v', m)
-  /// ind(v, m, i) /\ i>=1 iff
-  ///    depends*(v, v') /\ stores(v'', v') /\ ind(v'', m, i-1)
-  ///
-  /// In the following abstract operational semantics of LLVM instructions,
-  /// R and R' represent the abstract states before and after the execution.
-  /// An abstract state is a set having as elements ground substitutions of
-  /// the above relations. Below, v and its primed versions represent
-  /// VersionedValue elements whereas m and its primed versions represent
-  /// VersionedLocation elements.
-  ///
-  /// Location: v = alloca
-  ///
-  /// ---------------------------------------------------
-  /// R --> R U {equals(succ(v), m) | R |/- equals(_, m)}
-  ///
-  /// Here succ(v) denotes the next (new) version of v.
-  ///
-  /// Store: store v', v
-  ///
-  /// ----------------------------------------------------
-  /// R --> R U { stores(succ(m),v) | R |- ind(v', m, 0) }
-  ///
-  /// Here we use succ(m) to denote the next version of m as this was a
-  /// destructive update.
-  ///
-  /// -------------------------------------------------------------
-  /// R --> R U { stores(succ(ind(m,i)), v) | R |- ind(v', m, i), i > 0 }
-  ///
-  /// Here ind(m,i) is an abstract memory location representing any
-  /// memory location that is i-step-reachable via indirection from m.
-  ///
-  /// R |/- ind(v, _, _)
-  /// --------------------------
-  /// R --> R U {stores(UNK, v)}
-  ///
-  /// Here UNK represents an unknown memory location. We assume that
-  /// UNK cannot be versioned (non-destructive update applies to it).
-  ///
-  /// Load: v = load v'
-  ///
-  /// Here the rules are not mutually exclusive such that we avoid using set
-  /// union to denote abstract states after the execution.
-  ///
-  /// R |- ind(v', latest(m), 0) /\ stores(latest(m), v''')
-  /// R' |- depends(succ(v), v''')
-  /// -----------------------------------------------------
-  /// R --> R'
-  ///
-  /// Here latest(m) is only the latest version of Location m.
-  ///
-  /// R |- ind(v', m, i) /\ i > 0 /\ stores(m, v''')
-  /// R' |- depends(succ(v), v''')
-  /// ----------------------------------------------
-  /// R --> R'
-  ///
-  /// R |/- ind(v', _, _)          R' |- stores(UNK, succ(v))
-  /// -------------------------------------------------------
-  /// R --> R'
-  ///
-  /// R |- stores(UNK, v'')                R' |- depends(v, v'')
-  /// ----------------------------------------------------------
-  /// R --> R'
-  ///
-  /// Here, any stores to an unknown address would be loaded.
-  ///
-  /// Getelementptr: v = getelementptr v', idx
-  ///
-  /// --------------------------------
-  /// R --> R U {depends(succ(v), v')}
-  ///
-  /// Unary Operation: v = UNARY_OP(v') (including binary operation with 1
-  /// constant argument)
-  ///
-  /// --------------------------------
-  /// R --> R U {depends(succ(v), v')}
-  ///
-  /// Binary Operation: v = BINARY_OP(v', v'')
-  ///
-  /// -------------------------------------------------------
-  /// R --> R U {depends(succ(v), v'), depends(succ(v), v'')}
-  ///
-  /// Phi Node: v = PHI(v'1, ..., v'n)
-  ///
-  /// -------------------------------------------------------------
-  /// R --> R U {depends(succ(v), v'1), ..., depends(succ(v), v'n)}
-  ///
+  /// The results of the computation is the set of relations _concreteStore,
+  /// _symbolicStore, and flowsToMap, representing the VersionedValue stored in
+  /// a memory location with concrete and symbolic address, and the flow
+  /// relations between VersionedValue objects in flowsToMap field.
   class Dependency {
 
   public:
@@ -411,156 +279,109 @@ class VersionedLocation : public MemoryLocation {
     class Util {
 
     public:
-      template <typename T>
-      static void deletePointerVector(std::vector<T *> &list);
-
-      template <typename Key, typename T>
-      static void deletePointerMap(std::map<Key *, T *> &map);
-
-      template <typename Key, typename T>
-      static void
-      deletePointerMapWithVectorValue(std::map<Key *, std::vector<T *> > &map);
-
-      template <typename Key, typename T>
-      static void
-      deletePointerMapWithMapValue(std::map<Key *, std::map<Key *, T *> > &map);
-
-      /// \brief Tests if an allocation site is main function's argument
-      static bool isMainArgument(llvm::Value *site);
+      /// \brief Tests if a pointer points to a main function's argument
+      static bool isMainArgument(llvm::Value *loc);
     };
 
   private:
     /// \brief Previous path condition
-    Dependency *parentDependency;
+    Dependency *parent;
 
     /// \brief Argument values to be passed onto callee
-    std::vector<VersionedValue *> argumentValuesList;
+    std::vector<ref<VersionedValue> > argumentValuesList;
 
-    /// \brief Equality of value to address
-    std::map<const VersionedValue *, std::vector<MemoryLocation *> >
-    equalityMap;
+    /// \brief The mapping of concrete locations to stored value
+    std::map<ref<MemoryLocation>, ref<VersionedValue> > _concreteStore;
 
-    /// \brief The mapping of locations to stored value
-    std::map<MemoryLocation *, VersionedValue *> storesMap;
-
-    /// \brief Store the inverse map of both storesMap
-    std::map<VersionedValue *, std::vector<MemoryLocation *> > storageOfMap;
+    /// \brief The mapping of symbolic locations to stored value
+    std::map<ref<MemoryLocation>, ref<VersionedValue> > _symbolicStore;
 
     /// \brief Flow relations of target and its sources with location
-    std::map<VersionedValue *, std::map<VersionedValue *, MemoryLocation *> >
-    flowsToMap;
+    std::map<ref<VersionedValue>,
+             std::map<ref<VersionedValue>, ref<MemoryLocation> > > flowsToMap;
 
     /// \brief The store of the versioned values
-    std::map<llvm::Value *, std::vector<VersionedValue *> > valuesMap;
-
-    /// \brief The store of the versioned locations
-    std::vector<MemoryLocation *> versionedLocationsList;
+    std::map<llvm::Value *, std::vector<ref<VersionedValue> > > valuesMap;
 
     /// \brief Locations of this node and its ancestors that are needed for
     /// the core and dominates other locations.
-    std::set<MemoryLocation *> coreLocations;
+    std::set<ref<MemoryLocation> > coreLocations;
+
+    /// \brief Register new versioned value, used by getNewVersionedValue
+    /// methods
+    ref<VersionedValue> registerNewVersionedValue(llvm::Value *value,
+                                                  ref<VersionedValue> vvalue);
 
     /// \brief Create a new versioned value object, typically when executing a
     /// new instruction, as a value for the instruction.
-    VersionedValue *getNewVersionedValue(llvm::Value *value,
-                                         ref<Expr> valueExpr);
+    ref<VersionedValue> getNewVersionedValue(llvm::Value *value,
+                                             ref<Expr> valueExpr) {
+      return registerNewVersionedValue(
+          value, VersionedValue::create(value, valueExpr));
+    }
 
-    /// \brief Create a fresh location object.
-    MemoryLocation *getInitialLocation(llvm::Value *site, ref<Expr> &address);
+    /// \brief Create a new versioned value object, which is a pointer with
+    /// absolute address
+    ref<VersionedValue> getNewPointerValue(llvm::Value *loc,
+                                           ref<Expr> address) {
+      ref<VersionedValue> vvalue = VersionedValue::create(loc, address);
+      vvalue->addLocation(MemoryLocation::create(loc, address));
+      return registerNewVersionedValue(loc, vvalue);
+    }
 
-    /// \brief Create a new location object to represent a new version of a
-    /// known location.
-    MemoryLocation *getNewLocationVersion(llvm::Value *site,
-                                          ref<Expr> &address);
-
-    /// \brief Get all versioned locations for the current node an all of its
-    /// parents
-    std::vector<MemoryLocation *> getAllVersionedLocations(bool coreOnly =
-                                                               false) const;
-
-    /// \brief Gets the latest version of the location.
-    MemoryLocation *getLatestLocation(llvm::Value *site,
-                                      ref<Expr> address) const;
+    /// \brief Create a new versioned value object, which is a pointer which
+    /// offsets existing pointer
+    ref<VersionedValue> getNewPointerValue(llvm::Value *value,
+                                           ref<Expr> address,
+                                           ref<MemoryLocation> loc,
+                                           ref<Expr> offset) {
+      ref<VersionedValue> vvalue = VersionedValue::create(value, address);
+      vvalue->addLocation(MemoryLocation::create(loc, address, offset));
+      return registerNewVersionedValue(value, vvalue);
+    }
 
     /// \brief Gets the latest version of the location, but without checking
     /// for whether the value is constant or not
-    VersionedValue *getLatestValueNoConstantCheck(llvm::Value *value);
-
-    /// \brief Newly relate an LLVM value with destructive update to a
-    /// location
-    void addPointerEquality(const VersionedValue *value, MemoryLocation *loc);
+    ref<VersionedValue> getLatestValueNoConstantCheck(llvm::Value *value);
 
     /// \brief Newly relate an location with its stored value
-    void updateStore(MemoryLocation *location, VersionedValue *value);
+    void updateStore(ref<MemoryLocation> loc, ref<VersionedValue> value);
 
     /// \brief Add flow dependency between source and target value
-    void addDependency(VersionedValue *source, VersionedValue *target);
+    void addDependency(ref<VersionedValue> source, ref<VersionedValue> target);
+
+    /// \brief Add flow dependency between source and target pointers, offset by
+    /// some amount
+    void addDependencyWithOffset(ref<VersionedValue> source,
+                                 ref<VersionedValue> target, ref<Expr> offset);
 
     /// \brief Add flow dependency between source and target value, as the
     /// result of store/load via a memory location.
-    void addDependencyViaLocation(VersionedValue *source,
-                                  VersionedValue *target, MemoryLocation *via);
-
-    /// \brief Given a versioned value, retrieve the equality it is associated
-    /// with
-    MemoryLocation *resolveLocation(VersionedValue *value);
-
-    /// \brief Given a versioned value, retrieve the equality it is associated
-    /// with, in this object or otherwise in its ancestors.
-    std::vector<MemoryLocation *>
-    resolveLocationTransitively(VersionedValue *value);
-
-    /// \brief Retrieve the versioned values that are stored in a particular
-    /// location.
-    std::vector<VersionedValue *> stores(MemoryLocation *loc) const;
-
-    /// \brief All values that flows to the target in one step, local to the
-    /// current dependency / interpolation tree node
-    std::vector<VersionedValue *> directLocalFlowSources(VersionedValue *target) const;
+    void addDependencyViaLocation(ref<VersionedValue> source,
+                                  ref<VersionedValue> target,
+                                  ref<MemoryLocation> via);
 
     /// \brief All values that flows to the target in one step
-    std::vector<VersionedValue *> directFlowSources(VersionedValue *target) const;
+    std::vector<ref<VersionedValue> >
+    directFlowSources(ref<VersionedValue> target) const;
 
-    /// \brief All values that could flow to the target
-    std::vector<VersionedValue *> allFlowSources(VersionedValue *target) const;
-
-    /// \brief All the end sources that can flow to the target
-    std::vector<VersionedValue *>
-    allFlowSourcesEnds(VersionedValue *target) const;
+    /// \brief Mark as core all the values and locations that flows to the
+    /// target
+    void markFlow(ref<VersionedValue> target) const;
 
     /// \brief Record the expressions of a call's arguments
-    std::vector<VersionedValue *>
+    std::vector<ref<VersionedValue> >
     populateArgumentValuesList(llvm::CallInst *site,
                                std::vector<ref<Expr> > &arguments);
 
-    /// \brief Construct dependency due to load instruction
-    bool buildLoadDependency(llvm::Value *address, ref<Expr> addressExpr,
-                             llvm::Value *value, ref<Expr> valueExpr);
-
-    /// \brief Direct location dependency local to an interpolation tree node
-    std::map<VersionedValue *, MemoryLocation *>
-    directLocalLocationSources(VersionedValue *target) const;
-
-    /// \brief Direct location dependency
-    std::map<VersionedValue *, MemoryLocation *>
-    directLocationSources(VersionedValue *target) const;
-
-    /// \brief Builds dependency graph between memory locations
-    void recursivelyBuildLocationGraph(
-        LocationGraph *g, VersionedValue *source, MemoryLocation *target,
-        std::set<MemoryLocation *> parentTargets) const;
-
-    /// \brief Builds dependency graph between memory locations
-    void buildLocationGraph(LocationGraph *g, VersionedValue *value) const;
-
   public:
-    Dependency(Dependency *prev);
+    Dependency(Dependency *parent);
 
     ~Dependency();
 
     Dependency *cdr() const;
 
-    VersionedValue *getLatestValue(llvm::Value *value, ref<Expr> valueExpr);
+    ref<VersionedValue> getLatestValue(llvm::Value *value, ref<Expr> valueExpr);
 
     /// \brief Abstract dependency state transition with argument(s)
     void execute(llvm::Instruction *instr, std::vector<ref<Expr> > &args,
@@ -588,8 +409,7 @@ class VersionedLocation : public MemoryLocation {
     /// part
     /// indexed by symbolic expressions.
     std::pair<ConcreteStore, SymbolicStore>
-    getStoredExpressions(std::set<const Array *> &replacements,
-                         bool coreOnly) const;
+    getStoredExpressions(std::set<const Array *> &replacements, bool coreOnly);
 
     /// \brief Record call arguments in a function call
     void bindCallArguments(llvm::Instruction *instr,
@@ -601,15 +421,11 @@ class VersionedLocation : public MemoryLocation {
 
     /// \brief Given a versioned value, retrieve all its sources and mark them
     /// as in the core.
-    void markAllValues(LocationGraph *g, VersionedValue *value);
+    void markAllValues(ref<VersionedValue> value);
 
     /// \brief Given an LLVM value, retrieve all its sources and mark them as in
     /// the core.
-    void markAllValues(LocationGraph *g, llvm::Value *value);
-
-    /// \brief Compute the locations that are relevant for the interpolant
-    /// (core).
-    void computeCoreLocations(LocationGraph *g);
+    void markAllValues(llvm::Value *value);
 
     /// \brief Print the content of the object to the LLVM error stream
     void dump() const {

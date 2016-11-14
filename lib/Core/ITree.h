@@ -269,7 +269,7 @@ class PathCondition {
   Dependency *dependency;
 
   /// \brief the condition value from which the constraint was generated
-  VersionedValue *condition;
+  ref<VersionedValue> condition;
 
   /// \brief When true, indicates that the constraint should be included in the
   /// interpolant
@@ -288,7 +288,7 @@ public:
 
   PathCondition *cdr() const;
 
-  void setAsCore(LocationGraph *g);
+  void setAsCore();
 
   bool isCore() const;
 
@@ -410,7 +410,7 @@ class SubsumptionTableEntry {
                                    std::map<ref<Expr>, ref<Expr> > &map);
 
   bool empty() {
-    return !interpolant.get() && concreteAddressStoreKeys.empty();
+    return interpolant.isNull() && concreteAddressStoreKeys.empty();
   }
 
   /// \brief For printing method running time statistics
@@ -436,7 +436,7 @@ public:
   /// \return true if the parameter is either a concatenation or a read,
   ///         otherwise, return false.
   static bool isVariable(ref<Expr> expr) {
-    return llvm::isa<ConcatExpr>(expr.get()) || llvm::isa<ReadExpr>(expr.get());
+    return llvm::isa<ConcatExpr>(expr) || llvm::isa<ReadExpr>(expr);
   }
 
   ref<Expr> getInterpolant() const;
@@ -468,7 +468,6 @@ class ITreeNode {
   static Statistic bindReturnValueTime;
   static Statistic getStoredExpressionsTime;
   static Statistic getStoredCoreExpressionsTime;
-  static Statistic computeCoreLocationsTime;
 
 private:
   /// \brief The path condition
@@ -568,9 +567,6 @@ public:
   /// \brief Marking the core constraints on the path condition, and all the
   /// relevant values on the dependency graph, given an unsatistiability core.
   void unsatCoreMarking(std::vector<ref<Expr> > unsatCore);
-
-  /// \brief Compute the allocations that are relevant for the interpolant.
-  void computeCoreLocations(LocationGraph *g);
 
   /// \brief Print the content of the tree node object to the LLVM error stream.
   void dump() const;

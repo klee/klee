@@ -2253,25 +2253,34 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   case Instruction::GetElementPtr: {
     KGEPInstruction *kgepi = static_cast<KGEPInstruction*>(ki);
     ref<Expr> base = eval(ki, 0, state).value;
-    ref<Expr> oldBase = base;
+    ref<Expr> address(base);
+    ref<Expr> offset(Expr::createPointer(0));
 
     for (std::vector< std::pair<unsigned, uint64_t> >::iterator 
            it = kgepi->indices.begin(), ie = kgepi->indices.end(); 
          it != ie; ++it) {
       uint64_t elementSize = it->second;
       ref<Expr> index = eval(ki, it->first, state).value;
-      base = AddExpr::create(base,
-                             MulExpr::create(Expr::createSExtToPointerWidth(index),
-                                             Expr::createPointer(elementSize)));
+      address = AddExpr::create(
+          address, MulExpr::create(Expr::createSExtToPointerWidth(index),
+                                   Expr::createPointer(elementSize)));
+      if (INTERPOLATION_ENABLED) {
+        offset = AddExpr::create(
+            offset, MulExpr::create(Expr::createSExtToPointerWidth(index),
+                                    Expr::createPointer(elementSize)));
+      }
     }
-    if (kgepi->offset)
-      base = AddExpr::create(base,
-                             Expr::createPointer(kgepi->offset));
-    bindLocal(ki, state, base);
+    if (kgepi->offset) {
+      address = AddExpr::create(address, Expr::createPointer(kgepi->offset));
+      if (INTERPOLATION_ENABLED) {
+        offset = AddExpr::create(offset, Expr::createPointer(kgepi->offset));
+      }
+    }
+    bindLocal(ki, state, address);
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->execute(i, base, oldBase);
+      interpTree->execute(i, address, base, offset);
     break;
   }
 
@@ -3019,14 +3028,13 @@ void Executor::run(ExecutionState &initialState) {
 
       // Uncomment the following statements to show the state
       // of the interpolation tree and the active node.
-
-      //      llvm::errs() << "\nCurrent state:\n";
-      //      processTree->dump();
-      //      interpTree->dump();
-      //      state.itreeNode->dump();
-      //      llvm::errs() << "------------------- Executing New Instruction "
-      //                      "-----------------------\n";
-      //      state.pc->inst->dump();
+      // llvm::errs() << "\nCurrent state:\n";
+      // processTree->dump();
+      // interpTree->dump();
+      // state.itreeNode->dump();
+      // llvm::errs() << "------------------- Executing New Instruction "
+      //                 "-----------------------\n";
+      // state.pc->inst->dump();
     }
 
     if (INTERPOLATION_ENABLED &&
