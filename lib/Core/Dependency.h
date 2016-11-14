@@ -238,14 +238,8 @@ private:
     }
   };
 
-  /// \brief Implementation of value dependency for computing locations the
-  /// unsatisfiability core depends upon, which is used to compute the
-  /// interpolant.
-  ///
-  /// Following is the analysis rules to compute value dependency relations
-  /// useful for computing the interpolant. Given a finite symbolic execution
-  /// path, the computation of the relations terminates. The analysis rules
-  /// serve as a guide to the implementation.
+  /// \brief Computation of memory regions the unsatisfiability core depends
+  /// upon, which is used to compute the interpolant.
   ///
   /// Problems solved:
   /// 1. Components of program states upon which the unsatisfiability core
@@ -261,114 +255,18 @@ private:
   ///    is exists x0 . c(x0) /\ x' = f_S(x0)
   ///
   /// Solution:
-  /// The dependency computation is based on shadow data structure
-  /// representing the following:
+  /// The memory dependency computation is based on shadow data structure with
+  /// the following main components:
   ///
   /// Domains:
   /// VersionedValue -> LLVM values (i.e., variables) with versioning index
-  /// VersionedLocation -> Memory locations with versioning index
+  /// MemoryLocation -> A pointer value, which is associated with an
+  ///                   allocation and its displacement (offset)
   ///
-  /// Basic Relations:
-  /// stores(VersionedLocation, VersionedValue) - Memory state
-  /// depends(VersionedValue, VersionedValue) - Value dependency: The output
-  ///    of the analysis.
-  /// equals(VersionedValue, VersionedLocation) - Pointer value equality
-  ///
-  /// Derived Relations:
-  /// Transitive Closure of depends
-  ///
-  /// depends*(v, v)
-  /// depends*(v, v') /\ v != v' iff depends(v, v') /\ depends*(v', v'')
-  ///
-  /// Indirection Relation
-  ///
-  /// ind(v, m, 0) iff depends*(v, v') /\ equals(v', m)
-  /// ind(v, m, i) /\ i>=1 iff
-  ///    depends*(v, v') /\ stores(v'', v') /\ ind(v'', m, i-1)
-  ///
-  /// In the following abstract operational semantics of LLVM instructions,
-  /// R and R' represent the abstract states before and after the execution.
-  /// An abstract state is a set having as elements ground substitutions of
-  /// the above relations. Below, v and its primed versions represent
-  /// VersionedValue elements whereas m and its primed versions represent
-  /// VersionedLocation elements.
-  ///
-  /// Location: v = alloca
-  ///
-  /// ---------------------------------------------------
-  /// R --> R U {equals(succ(v), m) | R |/- equals(_, m)}
-  ///
-  /// Here succ(v) denotes the next (new) version of v.
-  ///
-  /// Store: store v', v
-  ///
-  /// ----------------------------------------------------
-  /// R --> R U { stores(succ(m),v) | R |- ind(v', m, 0) }
-  ///
-  /// Here we use succ(m) to denote the next version of m as this was a
-  /// destructive update.
-  ///
-  /// -------------------------------------------------------------
-  /// R --> R U { stores(succ(ind(m,i)), v) | R |- ind(v', m, i), i > 0 }
-  ///
-  /// Here ind(m,i) is an abstract memory location representing any
-  /// memory location that is i-step-reachable via indirection from m.
-  ///
-  /// R |/- ind(v, _, _)
-  /// --------------------------
-  /// R --> R U {stores(UNK, v)}
-  ///
-  /// Here UNK represents an unknown memory location. We assume that
-  /// UNK cannot be versioned (non-destructive update applies to it).
-  ///
-  /// Load: v = load v'
-  ///
-  /// Here the rules are not mutually exclusive such that we avoid using set
-  /// union to denote abstract states after the execution.
-  ///
-  /// R |- ind(v', latest(m), 0) /\ stores(latest(m), v''')
-  /// R' |- depends(succ(v), v''')
-  /// -----------------------------------------------------
-  /// R --> R'
-  ///
-  /// Here latest(m) is only the latest version of Location m.
-  ///
-  /// R |- ind(v', m, i) /\ i > 0 /\ stores(m, v''')
-  /// R' |- depends(succ(v), v''')
-  /// ----------------------------------------------
-  /// R --> R'
-  ///
-  /// R |/- ind(v', _, _)          R' |- stores(UNK, succ(v))
-  /// -------------------------------------------------------
-  /// R --> R'
-  ///
-  /// R |- stores(UNK, v'')                R' |- depends(v, v'')
-  /// ----------------------------------------------------------
-  /// R --> R'
-  ///
-  /// Here, any stores to an unknown address would be loaded.
-  ///
-  /// Getelementptr: v = getelementptr v', idx
-  ///
-  /// --------------------------------
-  /// R --> R U {depends(succ(v), v')}
-  ///
-  /// Unary Operation: v = UNARY_OP(v') (including binary operation with 1
-  /// constant argument)
-  ///
-  /// --------------------------------
-  /// R --> R U {depends(succ(v), v')}
-  ///
-  /// Binary Operation: v = BINARY_OP(v', v'')
-  ///
-  /// -------------------------------------------------------
-  /// R --> R U {depends(succ(v), v'), depends(succ(v), v'')}
-  ///
-  /// Phi Node: v = PHI(v'1, ..., v'n)
-  ///
-  /// -------------------------------------------------------------
-  /// R --> R U {depends(succ(v), v'1), ..., depends(succ(v), v'n)}
-  ///
+  /// The results of the computation is the set of relations _concreteStore,
+  /// _symbolicStore, and flowsToMap, representing the VersionedValue stored in
+  /// a memory location with concrete and symbolic address, and the flow
+  /// relations between VersionedValue objects in flowsToMap field.
   class Dependency {
 
   public:
