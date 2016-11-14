@@ -224,7 +224,7 @@ SearchTree::PrettyExpressionBuilder::getInitialArray(const Array *root) {
     for (unsigned i = 0, e = root->size; i != e; ++i) {
       std::string prev = arrayExpr;
       arrayExpr = writeExpr(
-          prev, constructActual(ConstantExpr::alloc(i, root->getDomain())),
+          prev, constructActual(ConstantExpr::create(i, root->getDomain())),
           constructActual(root->constantValues[i]));
     }
   }
@@ -814,7 +814,7 @@ PathCondition::packInterpolant(std::set<const Array *> &replacements) {
                             it->boundVariables.end());
       }
       if (!res.isNull()) {
-        res = AndExpr::alloc(res, it->shadowConstraint);
+        res = AndExpr::create(res, it->shadowConstraint);
       } else {
         res = it->shadowConstraint;
       }
@@ -995,9 +995,9 @@ SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr,
         ref<Expr> equalityConstraint =
             *itEq; // For example, say this constraint is A == B
         if (equalityConstraint->isFalse()) {
-          return ConstantExpr::alloc(0, Expr::Bool);
+          return ConstantExpr::create(0, Expr::Bool);
         } else if (equalityConstraint->isTrue()) {
-          return ConstantExpr::alloc(1, Expr::Bool);
+          return ConstantExpr::create(1, Expr::Bool);
         }
         // Left-hand side of the equality formula (A in our example) that
         // contains
@@ -1048,7 +1048,7 @@ SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr,
     // We add the modified interpolant conjunct into a conjunction of
     // new interpolants.
     if (!newInterpolant.isNull()) {
-      newInterpolant = AndExpr::alloc(newInterpolant, interpolantAtom);
+      newInterpolant = AndExpr::create(newInterpolant, interpolantAtom);
     } else {
       newInterpolant = interpolantAtom;
     }
@@ -1060,9 +1060,9 @@ SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr,
     if (!hasVariableInSet(expr->variables, newInterpolant))
       return newInterpolant;
 
-    newBody = AndExpr::alloc(newInterpolant, fullEqualityConstraint);
+    newBody = AndExpr::create(newInterpolant, fullEqualityConstraint);
   } else {
-    newBody = AndExpr::alloc(simplifiedInterpolant, fullEqualityConstraint);
+    newBody = AndExpr::create(simplifiedInterpolant, fullEqualityConstraint);
   }
 
   return existsExpr->rebuild(&newBody);
@@ -1109,14 +1109,14 @@ ref<Expr> SubsumptionTableEntry::simplifyInterpolantExpr(
   if (llvm::isa<EqExpr>(expr) && llvm::isa<ConstantExpr>(expr->getKid(0)) &&
       llvm::isa<ConstantExpr>(expr->getKid(1))) {
     return (expr->getKid(0) == expr->getKid(1))
-               ? ConstantExpr::alloc(1, Expr::Bool)
-               : ConstantExpr::alloc(0, Expr::Bool);
+               ? ConstantExpr::create(1, Expr::Bool)
+               : ConstantExpr::create(0, Expr::Bool);
   } else if (llvm::isa<NeExpr>(expr) &&
              llvm::isa<ConstantExpr>(expr->getKid(0)) &&
              llvm::isa<ConstantExpr>(expr->getKid(1))) {
     return (expr->getKid(0) != expr->getKid(1))
-               ? ConstantExpr::alloc(1, Expr::Bool)
-               : ConstantExpr::alloc(0, Expr::Bool);
+               ? ConstantExpr::create(1, Expr::Bool)
+               : ConstantExpr::create(0, Expr::Bool);
   }
 
   ref<Expr> lhs = expr->getKid(0);
@@ -1161,7 +1161,7 @@ ref<Expr> SubsumptionTableEntry::simplifyInterpolantExpr(
   if (simplifiedRhs->isTrue())
     return simplifiedLhs;
 
-  return AndExpr::alloc(simplifiedLhs, simplifiedRhs);
+  return AndExpr::create(simplifiedLhs, simplifiedRhs);
 }
 
 ref<Expr> SubsumptionTableEntry::simplifyEqualityExpr(
@@ -1173,8 +1173,8 @@ ref<Expr> SubsumptionTableEntry::simplifyEqualityExpr(
     if (llvm::isa<ConstantExpr>(expr->getKid(0)) &&
         llvm::isa<ConstantExpr>(expr->getKid(1))) {
       return (expr->getKid(0) == expr->getKid(1))
-                 ? ConstantExpr::alloc(1, Expr::Bool)
-                 : ConstantExpr::alloc(0, Expr::Bool);
+                 ? ConstantExpr::create(1, Expr::Bool)
+                 : ConstantExpr::create(0, Expr::Bool);
     }
 
     // Collect unique equality and in-equality expressions in one vector
@@ -1200,7 +1200,7 @@ ref<Expr> SubsumptionTableEntry::simplifyEqualityExpr(
     if (rhs->isTrue())
       return lhs;
 
-    return AndExpr::alloc(lhs, rhs);
+    return AndExpr::create(lhs, rhs);
   } else if (llvm::isa<OrExpr>(expr)) {
     // We provide throw-away dummy equalityPack, as we do not use the atomic
     // equalities within disjunctive clause to simplify the interpolant.
@@ -1219,7 +1219,7 @@ ref<Expr> SubsumptionTableEntry::simplifyEqualityExpr(
     if (rhs->isFalse())
       return lhs;
 
-    return OrExpr::alloc(lhs, rhs);
+    return OrExpr::create(lhs, rhs);
   }
 
   assert(!"Invalid expression type.");
@@ -1234,7 +1234,7 @@ SubsumptionTableEntry::getSubstitution(ref<Expr> equalities,
     ref<Expr> lhs = equalities->getKid(0);
     if (isVariable(lhs)) {
       map[lhs] = equalities->getKid(1);
-      return ConstantExpr::alloc(1, Expr::Bool);
+      return ConstantExpr::create(1, Expr::Bool);
     }
     return equalities;
   }
@@ -1244,14 +1244,14 @@ SubsumptionTableEntry::getSubstitution(ref<Expr> equalities,
     ref<Expr> rhs = getSubstitution(equalities->getKid(1), map);
     if (lhs->isTrue()) {
       if (rhs->isTrue()) {
-        return ConstantExpr::alloc(1, Expr::Bool);
+        return ConstantExpr::create(1, Expr::Bool);
       }
       return rhs;
     } else {
       if (rhs->isTrue()) {
         return lhs;
       }
-      return AndExpr::alloc(lhs, rhs);
+      return AndExpr::create(lhs, rhs);
     }
   }
   return equalities;
@@ -1286,9 +1286,10 @@ bool SubsumptionTableEntry::detectConflictPrimitives(ExecutionState &state,
            llvm::isa<EqExpr>(queryExpr))) {
 
         if (stateConstraintExpr ==
-                EqExpr::alloc(ConstantExpr::alloc(0, Expr::Bool), queryExpr) ||
-            EqExpr::alloc(ConstantExpr::alloc(0, Expr::Bool),
-                          stateConstraintExpr) == queryExpr) {
+                EqExpr::create(ConstantExpr::create(0, Expr::Bool),
+                               queryExpr) ||
+            EqExpr::create(ConstantExpr::create(0, Expr::Bool),
+                           stateConstraintExpr) == queryExpr) {
           return false;
         }
       }
@@ -1341,7 +1342,7 @@ ref<Expr> SubsumptionTableEntry::simplifyExistsExpr(ref<Expr> existsExpr,
     equalities = ApplySubstitutionVisitor(substitution).visit(equalities);
   }
 
-  ref<Expr> newBody = AndExpr::alloc(interpolant, equalities);
+  ref<Expr> newBody = AndExpr::create(interpolant, equalities);
 
   // FIXME: Need to test the performance of the following.
   if (!hasVariableInSet(expr->variables, newBody))
@@ -1406,8 +1407,8 @@ bool SubsumptionTableEntry::subsumed(
       ref<Expr> res;
 
       if (!rhsConcrete.second.isNull()) {
-        // There is a corresponding concrete allocation
-        res = EqExpr::alloc(lhsValue, rhsConcrete.second);
+        // There is the corresponding concrete allocation
+        res = EqExpr::create(lhsValue, rhsConcrete.second);
       }
 
       if (!rhsSymbolicMap.empty()) {
@@ -1420,26 +1421,26 @@ bool SubsumptionTableEntry::subsumed(
              it3 != it3End; ++it3) {
           // Implication: if lhsConcreteAddress == it3->first, then lhsValue ==
           // it3->second
-          ref<Expr> newTerm = OrExpr::alloc(
-              EqExpr::alloc(ConstantExpr::alloc(0, Expr::Bool),
-                            EqExpr::alloc(lhsConcreteAddress, it3->first)),
-              EqExpr::alloc(lhsValue, it3->second));
+          ref<Expr> newTerm = OrExpr::create(
+              EqExpr::create(ConstantExpr::create(0, Expr::Bool),
+                             EqExpr::create(lhsConcreteAddress, it3->first)),
+              EqExpr::create(lhsValue, it3->second));
           if (!conjunction.isNull()) {
-            conjunction = AndExpr::alloc(newTerm, conjunction);
+            conjunction = AndExpr::create(newTerm, conjunction);
           } else {
             conjunction = newTerm;
           }
         }
         // If there were corresponding concrete as well as symbolic allocations
         // in the current state, conjunct them
-        res = (!res.isNull() ? AndExpr::alloc(res, conjunction) : conjunction);
+        res = (!res.isNull() ? AndExpr::create(res, conjunction) : conjunction);
       }
 
       if (!res.isNull()) {
         stateEqualityConstraints =
             (stateEqualityConstraints.isNull()
                  ? res
-                 : AndExpr::alloc(res, stateEqualityConstraints));
+                 : AndExpr::create(res, stateEqualityConstraints));
       }
     }
   }
@@ -1474,12 +1475,12 @@ bool SubsumptionTableEntry::subsumed(
         // Implication: if lhsSymbolicAddress == rhsConcreteAddress, then
         // lhsValue == rhsValue
         ref<Expr> newTerm =
-            OrExpr::alloc(EqExpr::alloc(ConstantExpr::alloc(0, Expr::Bool),
-                                        EqExpr::alloc(lhsSymbolicAddress,
-                                                      rhsConcreteAddress)),
-                          EqExpr::alloc(lhsValue, rhsValue));
+            OrExpr::create(EqExpr::create(ConstantExpr::create(0, Expr::Bool),
+                                          EqExpr::create(lhsSymbolicAddress,
+                                                         rhsConcreteAddress)),
+                           EqExpr::create(lhsValue, rhsValue));
         if (!conjunction.isNull()) {
-          conjunction = AndExpr::alloc(newTerm, conjunction);
+          conjunction = AndExpr::create(newTerm, conjunction);
         } else {
           conjunction = newTerm;
         }
@@ -1494,12 +1495,12 @@ bool SubsumptionTableEntry::subsumed(
         // Implication: if lhsSymbolicAddress == rhsSymbolicAddress then
         // lhsValue == rhsValue
         ref<Expr> newTerm =
-            OrExpr::alloc(EqExpr::alloc(ConstantExpr::alloc(0, Expr::Bool),
-                                        EqExpr::alloc(lhsSymbolicAddress,
-                                                      rhsSymbolicAddress)),
-                          EqExpr::alloc(lhsValue, rhsValue));
+            OrExpr::create(EqExpr::create(ConstantExpr::create(0, Expr::Bool),
+                                          EqExpr::create(lhsSymbolicAddress,
+                                                         rhsSymbolicAddress)),
+                           EqExpr::create(lhsValue, rhsValue));
         if (!conjunction.isNull()) {
-          conjunction = AndExpr::alloc(newTerm, conjunction);
+          conjunction = AndExpr::create(newTerm, conjunction);
         } else {
           conjunction = newTerm;
         }
@@ -1510,7 +1511,7 @@ bool SubsumptionTableEntry::subsumed(
       stateEqualityConstraints =
           (stateEqualityConstraints.isNull()
                ? conjunction
-               : AndExpr::alloc(conjunction, stateEqualityConstraints));
+               : AndExpr::create(conjunction, stateEqualityConstraints));
     }
   }
 
@@ -1518,7 +1519,10 @@ bool SubsumptionTableEntry::subsumed(
   ref<Expr> query;
 
   // Here we build the query, after which it is always a conjunction of
-  // the interpolant and the state equality constraints.
+  // the interpolant and the state equality constraints. Here we call
+  // AndExpr::alloc instead of AndExpr::create as we need to guarantee that the
+  // resulting expression is an AndExpr, otherwise simplifyExistsExpr would not
+  // work.
   if (!interpolant.isNull()) {
     query =
         !stateEqualityConstraints.isNull()
@@ -1582,8 +1586,8 @@ bool SubsumptionTableEntry::subsumed(
         ConstraintManager constraints;
         ref<ConstantExpr> tmpExpr;
 
-        ref<Expr> falseExpr = ConstantExpr::alloc(0, Expr::Bool);
-        constraints.addConstraint(EqExpr::alloc(falseExpr, query->getKid(0)));
+        ref<Expr> falseExpr = ConstantExpr::create(0, Expr::Bool);
+        constraints.addConstraint(EqExpr::create(falseExpr, query->getKid(0)));
 
         // llvm::errs() << "Querying for satisfiability check:\n";
         // ExprPPrinter::printQuery(llvm::errs(), constraints,

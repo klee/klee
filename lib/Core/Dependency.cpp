@@ -77,8 +77,8 @@ ShadowArray::getShadowExpression(ref<Expr> expr,
     UpdateList newUpdates(
         replacementArray,
         getShadowUpdate(readExpr->updates.head, replacements));
-    ret = ReadExpr::alloc(newUpdates,
-                          getShadowExpression(readExpr->index, replacements));
+    ret = ReadExpr::create(newUpdates,
+                           getShadowExpression(readExpr->index, replacements));
     break;
   }
   case Expr::Constant: {
@@ -86,27 +86,29 @@ ShadowArray::getShadowExpression(ref<Expr> expr,
     break;
   }
   case Expr::Select: {
-    ret = SelectExpr::alloc(getShadowExpression(expr->getKid(0), replacements),
-                            getShadowExpression(expr->getKid(1), replacements),
-                            getShadowExpression(expr->getKid(2), replacements));
+    ret =
+        SelectExpr::create(getShadowExpression(expr->getKid(0), replacements),
+                           getShadowExpression(expr->getKid(1), replacements),
+                           getShadowExpression(expr->getKid(2), replacements));
     break;
   }
   case Expr::Extract: {
     ExtractExpr *extractExpr = llvm::dyn_cast<ExtractExpr>(expr);
-    ret = ExtractExpr::alloc(getShadowExpression(expr->getKid(0), replacements),
-                             extractExpr->offset, extractExpr->width);
+    ret =
+        ExtractExpr::create(getShadowExpression(expr->getKid(0), replacements),
+                            extractExpr->offset, extractExpr->width);
     break;
   }
   case Expr::ZExt: {
     CastExpr *castExpr = llvm::dyn_cast<CastExpr>(expr);
-    ret = ZExtExpr::alloc(getShadowExpression(expr->getKid(0), replacements),
-                          castExpr->getWidth());
+    ret = ZExtExpr::create(getShadowExpression(expr->getKid(0), replacements),
+                           castExpr->getWidth());
     break;
   }
   case Expr::SExt: {
     CastExpr *castExpr = llvm::dyn_cast<CastExpr>(expr);
-    ret = SExtExpr::alloc(getShadowExpression(expr->getKid(0), replacements),
-                          castExpr->getWidth());
+    ret = SExtExpr::create(getShadowExpression(expr->getKid(0), replacements),
+                           castExpr->getWidth());
     break;
   }
   case Expr::Concat:
