@@ -320,6 +320,19 @@ void Dependency::updateStore(ref<MemoryLocation> loc,
     _symbolicStore[loc] = value;
 }
 
+void Dependency::addDependencyCore(ref<VersionedValue> source,
+                                   ref<VersionedValue> target,
+                                   ref<MemoryLocation> via) {
+  if (flowsToMap.find(target) != flowsToMap.end()) {
+    flowsToMap[target].insert(
+        std::make_pair<ref<VersionedValue>, ref<MemoryLocation> >(source, via));
+  } else {
+    std::map<ref<VersionedValue>, ref<MemoryLocation> > newMap;
+    newMap[source] = via;
+    flowsToMap[target] = newMap;
+  }
+}
+
 void Dependency::addDependency(ref<VersionedValue> source,
                                ref<VersionedValue> target) {
   ref<MemoryLocation> nullLocation;
@@ -333,7 +346,7 @@ void Dependency::addDependency(ref<VersionedValue> source,
        it != ie; ++it) {
     target->addLocation(*it);
   }
-  addDependencyViaLocation(source, target, nullLocation);
+  addDependencyCore(source, target, nullLocation);
 }
 
 void Dependency::addDependencyWithOffset(ref<VersionedValue> source,
@@ -351,7 +364,7 @@ void Dependency::addDependencyWithOffset(ref<VersionedValue> source,
     ref<Expr> expr(target->getExpression());
     target->addLocation(MemoryLocation::create(*it, expr, offset));
   }
-  addDependencyViaLocation(source, target, nullLocation);
+  addDependencyCore(source, target, nullLocation);
 }
 
 void Dependency::addDependencyViaLocation(ref<VersionedValue> source,
@@ -366,15 +379,7 @@ void Dependency::addDependencyViaLocation(ref<VersionedValue> source,
        it != ie; ++it) {
     target->addLocation(*it);
   }
-
-  if (flowsToMap.find(target) != flowsToMap.end()) {
-    flowsToMap[target].insert(
-        std::make_pair<ref<VersionedValue>, ref<MemoryLocation> >(source, via));
-  } else {
-    std::map<ref<VersionedValue>, ref<MemoryLocation> > newMap;
-    newMap[source] = via;
-    flowsToMap[target] = newMap;
-  }
+  addDependencyCore(source, target, via);
 }
 
 std::vector<ref<VersionedValue> >
