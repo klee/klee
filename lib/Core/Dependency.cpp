@@ -222,10 +222,9 @@ Dependency::getStoredExpressions(std::set<const Array *> &replacements,
         concreteStore[base][uintAddress] = AddressValuePair(
             ShadowArray::getShadowExpression(address, replacements),
             ShadowArray::getShadowExpression(expr, replacements));
-      } else {
+      } else
 #endif
         concreteStore[base][uintAddress] = AddressValuePair(address, expr);
-      }
     }
   }
 
@@ -250,10 +249,9 @@ Dependency::getStoredExpressions(std::set<const Array *> &replacements,
         symbolicStore[base].push_back(AddressValuePair(
             ShadowArray::getShadowExpression(address, replacements),
             ShadowArray::getShadowExpression(expr, replacements)));
-      } else {
+      } else
 #endif
         symbolicStore[base].push_back(AddressValuePair(address, expr));
-        }
       }
   }
 
