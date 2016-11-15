@@ -39,39 +39,39 @@
 
 namespace klee {
 
-class Dependency;
+  class Dependency;
 
-/// \brief Implements the replacement mechanism for replacing variables, used in
-/// replacing free with bound variables.
-class ShadowArray {
-  static std::map<const Array *, const Array *> shadowArray;
+  /// \brief Implements the replacement mechanism for replacing variables, used in
+  /// replacing free with bound variables.
+  class ShadowArray {
+    static std::map<const Array *, const Array *> shadowArray;
 
-  static UpdateNode *getShadowUpdate(const UpdateNode *chain,
-                                     std::set<const Array *> &replacements);
+    static UpdateNode *getShadowUpdate(const UpdateNode *chain,
+				       std::set<const Array *> &replacements);
 
-public:
-  static ref<Expr> createBinaryOfSameKind(ref<Expr> originalExpr,
-                                          ref<Expr> newLhs, ref<Expr> newRhs);
+  public:
+    static ref<Expr> createBinaryOfSameKind(ref<Expr> originalExpr,
+					    ref<Expr> newLhs, ref<Expr> newRhs);
 
-  static void addShadowArrayMap(const Array *source, const Array *target);
+    static void addShadowArrayMap(const Array *source, const Array *target);
 
-  static ref<Expr> getShadowExpression(ref<Expr> expr,
-                                       std::set<const Array *> &replacements);
+    static ref<Expr> getShadowExpression(ref<Expr> expr,
+					 std::set<const Array *> &replacements);
 
-  static std::string getShadowName(std::string name) {
-    return "__shadow__" + name;
-  }
-};
+    static std::string getShadowName(std::string name) {
+      return "__shadow__" + name;
+    }
+  };
 
-/// \brief A class to represent memory locations.
-class MemoryLocation {
+  /// \brief A class to represent memory locations.
+  class MemoryLocation {
 
-public:
-  unsigned refCount;
+  public:
+    unsigned refCount;
 
-private:
+  private:
     /// \brief The location's LLVM value
-  llvm::Value *value;
+    llvm::Value *value;
 
     /// \brief The absolute address
     ref<Expr> address;
