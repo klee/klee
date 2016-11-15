@@ -238,6 +238,68 @@ namespace klee {
     }
   };
 
+  /// \brief A processed form of a value to be stored in the subsumption table
+  class StoredValue {
+  public:
+    unsigned refCount;
+
+  private:
+    ref<Expr> expr;
+
+    std::map<llvm::Value *, std::set<ref<Expr> > > bounds;
+
+    /// \brief The id of this object
+    uint64_t id;
+
+    void init(ref<VersionedValue> vvalue, std::set<const Array *> &replacements,
+              bool shadowing = false);
+
+    StoredValue(ref<VersionedValue> vvalue,
+                std::set<const Array *> &replacements) {
+      init(vvalue, replacements, true);
+    }
+
+    StoredValue(ref<VersionedValue> vvalue) {
+      std::set<const Array *> dummyReplacements;
+      init(vvalue, dummyReplacements);
+    }
+
+  public:
+    static ref<StoredValue> create(ref<VersionedValue> vvalue,
+                                   std::set<const Array *> &replacements) {
+      ref<StoredValue> sv(new StoredValue(vvalue, replacements));
+      return sv;
+    }
+
+    static ref<StoredValue> create(ref<VersionedValue> vvalue) {
+      ref<StoredValue> sv(new StoredValue(vvalue));
+      return sv;
+    }
+
+    ~StoredValue() {}
+
+    int compare(const StoredValue other) const {
+      if (id == other.id)
+        return 0;
+      if (id < other.id)
+        return -1;
+      return 1;
+    }
+
+    bool isPointer() const { return !bounds.empty(); }
+
+    ref<Expr> getExpression() const { return expr; }
+
+    std::set<ref<Expr> > getBounds(llvm::Value *value) { return bounds[value]; }
+
+    void print(llvm::raw_ostream &stream) const;
+
+    void dump() const {
+      print(llvm::errs());
+      llvm::errs() << "\n";
+    }
+  };
+
   /// \brief Computation of memory regions the unsatisfiability core depends
   /// upon, which is used to compute the interpolant.
   ///
@@ -270,7 +332,7 @@ namespace klee {
   class Dependency {
 
   public:
-    typedef std::pair<ref<Expr>, ref<Expr> > AddressValuePair;
+    typedef std::pair<ref<Expr>, ref<StoredValue> > AddressValuePair;
     typedef std::map<uint64_t, AddressValuePair> ConcreteStoreMap;
     typedef std::vector<AddressValuePair> SymbolicStoreMap;
     typedef std::map<llvm::Value *, ConcreteStoreMap> ConcreteStore;

@@ -185,6 +185,84 @@ void VersionedValue::print(llvm::raw_ostream &stream) const {
 
 /**/
 
+void StoredValue::init(ref<VersionedValue> vvalue,
+                       std::set<const Array *> &replacements, bool shadowing) {
+  std::set<ref<MemoryLocation> > locations = vvalue->getLocations();
+
+  refCount = 0;
+  id = reinterpret_cast<uintptr_t>(this);
+  expr = shadowing ? ShadowArray::getShadowExpression(vvalue->getExpression(),
+                                                      replacements)
+                   : vvalue->getExpression();
+
+  if (!locations.empty()) {
+    for (std::set<ref<MemoryLocation> >::iterator it = locations.begin(),
+                                                  ie = locations.end();
+         it != ie; ++it) {
+      llvm::Value *v = (*it)->getValue();
+      ref<Expr> offset = shadowing ? ShadowArray::getShadowExpression(
+                                         (*it)->getOffset(), replacements)
+                                   : (*it)->getOffset();
+      std::set<ref<Expr> > b = bounds[v];
+
+      if (b.empty()) {
+        bounds[v].insert(offset);
+        continue;
+      }
+
+      if (ConstantExpr *ce = llvm::dyn_cast<ConstantExpr>(offset)) {
+        // Concrete offset
+        uint64_t c = ce->getZExtValue();
+        std::set<ref<Expr> > res;
+        for (std::set<ref<Expr> >::iterator it1 = b.begin(), ie1 = b.end();
+             it1 != ie1; ++it1) {
+          if (ConstantExpr *ce1 = llvm::dyn_cast<ConstantExpr>(*it1)) {
+            if (c > ce1->getZExtValue()) {
+              res.insert(offset);
+              continue;
+            }
+          }
+          res.insert(*it1);
+        }
+
+        bounds[v].clear();
+        bounds[v] = res;
+        continue;
+      }
+
+      // Symbolic offset
+      bounds[v].insert(offset);
+    }
+  }
+}
+
+void StoredValue::print(llvm::raw_ostream &stream) const {
+  if (!bounds.empty()) {
+    for (std::map<llvm::Value *, std::set<ref<Expr> > >::const_iterator
+             it = bounds.begin(),
+             ie = bounds.end();
+         it != ie; ++it) {
+      std::set<ref<Expr> > boundsSet = it->second;
+      stream << "[";
+      it->first->print(stream);
+      stream << "<={";
+      for (std::set<ref<Expr> >::const_iterator it1 = it->second.begin(),
+                                                is1 = it1,
+                                                ie1 = it->second.end();
+           it1 != ie1; ++it1) {
+        if (it1 != is1)
+          stream << ",";
+        (*it1)->print(stream);
+      }
+      stream << "}]";
+    }
+    return;
+  }
+  expr->print(stream);
+}
+
+/**/
+
 ref<VersionedValue>
 Dependency::registerNewVersionedValue(llvm::Value *value,
                                       ref<VersionedValue> vvalue) {
@@ -206,14 +284,13 @@ Dependency::getStoredExpressions(std::set<const Array *> &replacements,
       continue;
 
     if (!coreOnly) {
-      ref<Expr> expr = it->second->getExpression();
       llvm::Value *site = it->first->getValue();
       uint64_t uintAddress = it->first->getUIntAddress();
       ref<Expr> address = it->first->getAddress();
-      concreteStore[site][uintAddress] = AddressValuePair(address, expr);
+      concreteStore[site][uintAddress] =
+          AddressValuePair(address, StoredValue::create(it->second));
     } else if (it->second->isCore()) {
       // An address is in the core if it stores a value that is in the core
-      ref<Expr> expr = it->second->getExpression();
       llvm::Value *base = it->first->getValue();
       uint64_t uintAddress = it->first->getUIntAddress();
       ref<Expr> address = it->first->getAddress();
@@ -221,10 +298,11 @@ Dependency::getStoredExpressions(std::set<const Array *> &replacements,
       if (!NoExistential) {
         concreteStore[base][uintAddress] = AddressValuePair(
             ShadowArray::getShadowExpression(address, replacements),
-            ShadowArray::getShadowExpression(expr, replacements));
+            StoredValue::create(it->second, replacements));
       } else
 #endif
-        concreteStore[base][uintAddress] = AddressValuePair(address, expr);
+        concreteStore[base][uintAddress] =
+            AddressValuePair(address, StoredValue::create(it->second));
     }
   }
 
@@ -237,21 +315,21 @@ Dependency::getStoredExpressions(std::set<const Array *> &replacements,
 
     ref<Expr> address = it->first->getAddress();
     if (!coreOnly) {
-      ref<Expr> expr = it->second->getExpression();
       llvm::Value *base = it->first->getValue();
-      symbolicStore[base].push_back(AddressValuePair(address, expr));
+      symbolicStore[base].push_back(
+          AddressValuePair(address, StoredValue::create(it->second)));
     } else if (it->second->isCore()) {
       // An address is in the core if it stores a value that is in the core
-      ref<Expr> expr = it->second->getExpression();
       llvm::Value *base = it->first->getValue();
 #ifdef ENABLE_Z3
       if (!NoExistential) {
         symbolicStore[base].push_back(AddressValuePair(
             ShadowArray::getShadowExpression(address, replacements),
-            ShadowArray::getShadowExpression(expr, replacements)));
+            StoredValue::create(it->second, replacements)));
       } else
 #endif
-        symbolicStore[base].push_back(AddressValuePair(address, expr));
+        symbolicStore[base].push_back(
+            AddressValuePair(address, StoredValue::create(it->second)));
       }
   }
 

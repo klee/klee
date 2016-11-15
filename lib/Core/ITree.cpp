@@ -1358,8 +1358,8 @@ bool SubsumptionTableEntry::subsumed(
     const std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
         storedExpressions) {
 #ifdef ENABLE_Z3
-  // Tell the solver implementation that we are checking for subsumption, for it
-  // to collect statistics of solver calls.
+  // Tell the solver implementation that we are checking for subsumption for
+  // collecting statistics of solver calls.
   SubsumptionCheckMarker subsumptionCheckMarker;
 #endif
 
@@ -1403,12 +1403,13 @@ bool SubsumptionTableEntry::subsumed(
 
       const Dependency::AddressValuePair rhsConcrete =
           rhsConcreteMap.at(it2->first);
-      const ref<Expr> lhsValue = it2->second.second;
+
+      ref<Expr> lhsValue = it2->second.second->getExpression();
       ref<Expr> res;
 
       if (!rhsConcrete.second.isNull()) {
         // There is the corresponding concrete allocation
-        res = EqExpr::create(lhsValue, rhsConcrete.second);
+        res = EqExpr::create(lhsValue, rhsConcrete.second->getExpression());
       }
 
       if (!rhsSymbolicMap.empty()) {
@@ -1424,7 +1425,7 @@ bool SubsumptionTableEntry::subsumed(
           ref<Expr> newTerm = OrExpr::create(
               EqExpr::create(ConstantExpr::create(0, Expr::Bool),
                              EqExpr::create(lhsConcreteAddress, it3->first)),
-              EqExpr::create(lhsValue, it3->second));
+              EqExpr::create(lhsValue, it3->second->getExpression()));
           if (!conjunction.isNull()) {
             conjunction = AndExpr::create(newTerm, conjunction);
           } else {
@@ -1464,14 +1465,14 @@ bool SubsumptionTableEntry::subsumed(
              it2End = lhsSymbolicMap.end();
          it2 != it2End; ++it2) {
       ref<Expr> lhsSymbolicAddress = it2->first;
-      ref<Expr> lhsValue = it2->second;
+      ref<Expr> lhsValue = it2->second->getExpression();
 
       for (Dependency::ConcreteStoreMap::const_iterator
                it3 = rhsConcreteMap.begin(),
                it3End = rhsConcreteMap.end();
            it3 != it3End; ++it3) {
         ref<Expr> rhsConcreteAddress = it3->second.first;
-        ref<Expr> rhsValue = it3->second.second;
+        ref<Expr> rhsValue = it3->second.second->getExpression();
         // Implication: if lhsSymbolicAddress == rhsConcreteAddress, then
         // lhsValue == rhsValue
         ref<Expr> newTerm =
@@ -1491,7 +1492,7 @@ bool SubsumptionTableEntry::subsumed(
                it3End = rhsSymbolicMap.end();
            it3 != it3End; ++it3) {
         ref<Expr> rhsSymbolicAddress = it3->first;
-        ref<Expr> rhsValue = it3->second;
+        ref<Expr> rhsValue = it3->second->getExpression();
         // Implication: if lhsSymbolicAddress == rhsSymbolicAddress then
         // lhsValue == rhsValue
         ref<Expr> newTerm =
@@ -1882,7 +1883,6 @@ bool ITree::subsumptionCheck(TimingSolver *solver, ExecutionState &state,
            it = entryList.rbegin(),
            ie = entryList.rend();
        it != ie; ++it) {
-
     if ((*it)->subsumed(solver, state, timeout, storedExpressions)) {
       // We mark as subsumed such that the node will not be
       // stored into table (the table already contains a more
