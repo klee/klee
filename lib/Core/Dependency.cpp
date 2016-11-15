@@ -777,17 +777,16 @@ void Dependency::execute(llvm::Instruction *instr,
 
       std::set<ref<MemoryLocation> > locations = addressValue->getLocations();
 
-      for (std::set<ref<MemoryLocation> >::iterator
-               locIter = locations.begin(),
-               locIterEnd = locations.end();
-           locIter != locIterEnd; ++locIter) {
-        ref<VersionedValue> storedValue = _concreteStore[*locIter];
+      for (std::set<ref<MemoryLocation> >::iterator li = locations.begin(),
+                                                    le = locations.end();
+           li != le; ++li) {
+        ref<VersionedValue> storedValue = _concreteStore[*li];
 
         if (storedValue.isNull())
           // We could not find the stored value, create a new one.
-          updateStore(*locIter, loadedValue);
+          updateStore(*li, loadedValue);
         else
-          addDependencyViaLocation(storedValue, loadedValue, *locIter);
+          addDependencyViaLocation(storedValue, loadedValue, *li);
       }
 
       break;

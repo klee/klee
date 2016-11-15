@@ -988,12 +988,12 @@ SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr,
 
     // only process the interpolant that still has existential variables in it.
     if (hasVariableInSet(boundVariables, interpolantAtom)) {
-      for (std::vector<ref<Expr> >::iterator itEq = equalityPack.begin(),
-                                             itEqEnd = equalityPack.end();
-           itEq != itEqEnd; ++itEq) {
+      for (std::vector<ref<Expr> >::iterator it1 = equalityPack.begin(),
+                                             ie1 = equalityPack.end();
+           it1 != ie1; ++it1) {
 
         ref<Expr> equalityConstraint =
-            *itEq; // For example, say this constraint is A == B
+            *it1; // For example, say this constraint is A == B
         if (equalityConstraint->isFalse()) {
           return ConstantExpr::create(0, Expr::Bool);
         } else if (equalityConstraint->isTrue()) {
@@ -1377,8 +1377,8 @@ bool SubsumptionTableEntry::subsumed(
   // Build constraints from concrete-address interpolant store
   for (std::vector<llvm::Value *>::iterator
            it1 = concreteAddressStoreKeys.begin(),
-           it1End = concreteAddressStoreKeys.end();
-       it1 != it1End; ++it1) {
+           ie1 = concreteAddressStoreKeys.end();
+       it1 != ie1; ++it1) {
     const Dependency::ConcreteStoreMap lhsConcreteMap =
         concreteAddressStore[*it1];
     const Dependency::ConcreteStoreMap rhsConcreteMap =
@@ -1392,8 +1392,8 @@ bool SubsumptionTableEntry::subsumed(
 
     for (Dependency::ConcreteStoreMap::const_iterator
              it2 = lhsConcreteMap.begin(),
-             it2End = lhsConcreteMap.end();
-         it2 != it2End; ++it2) {
+             ie2 = lhsConcreteMap.end();
+         it2 != ie2; ++it2) {
 
       // The address is not constrained by the current state, therefore
       // the current state is incomparable to the stored interpolant,
@@ -1418,8 +1418,8 @@ bool SubsumptionTableEntry::subsumed(
 
         for (Dependency::SymbolicStoreMap::const_iterator
                  it3 = rhsSymbolicMap.begin(),
-                 it3End = rhsSymbolicMap.end();
-             it3 != it3End; ++it3) {
+                 ie3 = rhsSymbolicMap.end();
+             it3 != ie3; ++it3) {
           // Implication: if lhsConcreteAddress == it3->first, then lhsValue ==
           // it3->second
           ref<Expr> newTerm = OrExpr::create(
@@ -1449,8 +1449,8 @@ bool SubsumptionTableEntry::subsumed(
   // Build constraints from symbolic-address interpolant store
   for (std::vector<llvm::Value *>::iterator
            it1 = symbolicAddressStoreKeys.begin(),
-           it1End = symbolicAddressStoreKeys.end();
-       it1 != it1End; ++it1) {
+           ie1 = symbolicAddressStoreKeys.end();
+       it1 != ie1; ++it1) {
     const Dependency::SymbolicStoreMap lhsSymbolicMap =
         symbolicAddressStore[*it1];
     const Dependency::ConcreteStoreMap rhsConcreteMap =
@@ -1462,15 +1462,15 @@ bool SubsumptionTableEntry::subsumed(
 
     for (Dependency::SymbolicStoreMap::const_iterator
              it2 = lhsSymbolicMap.begin(),
-             it2End = lhsSymbolicMap.end();
-         it2 != it2End; ++it2) {
+             ie2 = lhsSymbolicMap.end();
+         it2 != ie2; ++it2) {
       ref<Expr> lhsSymbolicAddress = it2->first;
       ref<Expr> lhsValue = it2->second->getExpression();
 
       for (Dependency::ConcreteStoreMap::const_iterator
                it3 = rhsConcreteMap.begin(),
-               it3End = rhsConcreteMap.end();
-           it3 != it3End; ++it3) {
+               ie3 = rhsConcreteMap.end();
+           it3 != ie3; ++it3) {
         ref<Expr> rhsConcreteAddress = it3->second.first;
         ref<Expr> rhsValue = it3->second.second->getExpression();
         // Implication: if lhsSymbolicAddress == rhsConcreteAddress, then
@@ -1489,8 +1489,8 @@ bool SubsumptionTableEntry::subsumed(
 
       for (Dependency::SymbolicStoreMap::const_iterator
                it3 = rhsSymbolicMap.begin(),
-               it3End = rhsSymbolicMap.end();
-           it3 != it3End; ++it3) {
+               ie3 = rhsSymbolicMap.end();
+           it3 != ie3; ++it3) {
         ref<Expr> rhsSymbolicAddress = it3->first;
         ref<Expr> rhsValue = it3->second->getExpression();
         // Implication: if lhsSymbolicAddress == rhsSymbolicAddress then
@@ -1679,14 +1679,14 @@ void SubsumptionTableEntry::print(llvm::raw_ostream &stream) const {
   if (!concreteAddressStore.empty()) {
     stream << "concrete store = [";
     for (Dependency::ConcreteStore::const_iterator
-             it1Begin = concreteAddressStore.begin(),
-             it1End = concreteAddressStore.end(), it1 = it1Begin;
-         it1 != it1End; ++it1) {
+             is1 = concreteAddressStore.begin(),
+             ie1 = concreteAddressStore.end(), it1 = is1;
+         it1 != ie1; ++it1) {
       for (Dependency::ConcreteStoreMap::const_iterator
-               it2Begin = it1->second.begin(),
-               it2End = it1->second.end(), it2 = it2Begin;
-           it2 != it2End; ++it2) {
-        if (it1 != it1Begin || it2 != it2Begin)
+               is2 = it1->second.begin(),
+               ie2 = it1->second.end(), it2 = is2;
+           it2 != ie2; ++it2) {
+        if (it1 != is1 || it2 != is2)
           stream << ",";
         stream << "(";
         it2->second.first->print(stream);
@@ -1701,14 +1701,14 @@ void SubsumptionTableEntry::print(llvm::raw_ostream &stream) const {
   if (!symbolicAddressStore.empty()) {
     stream << "symbolic store = [";
     for (Dependency::SymbolicStore::const_iterator
-             it1Begin = symbolicAddressStore.begin(),
-             it1End = symbolicAddressStore.end(), it1 = it1Begin;
-         it1 != it1End; ++it1) {
+             is1 = symbolicAddressStore.begin(),
+             ie1 = symbolicAddressStore.end(), it1 = is1;
+         it1 != ie1; ++it1) {
       for (Dependency::SymbolicStoreMap::const_iterator
-               it2Begin = it1->second.begin(),
-               it2End = it1->second.end(), it2 = it2Begin;
-           it2 != it2End; ++it2) {
-        if (it1 != it1Begin || it2 != it2Begin)
+               is2 = it1->second.begin(),
+               ie2 = it1->second.end(), it2 = is2;
+           it2 != ie2; ++it2) {
+        if (it1 != is1 || it2 != is2)
           stream << ",";
         stream << "(";
         it2->first->print(stream);
@@ -1840,10 +1840,9 @@ ITree::~ITree() {
            it = subsumptionTable.begin(),
            ie = subsumptionTable.end();
        it != ie; ++it) {
-    for (std::deque<SubsumptionTableEntry *>::iterator
-             it1 = it->second.begin(),
-             it1End = it->second.end();
-         it1 != it1End; ++it1) {
+    for (std::deque<SubsumptionTableEntry *>::iterator it1 = it->second.begin(),
+                                                       ie1 = it->second.end();
+         it1 != ie1; ++it1) {
       delete *it1;
     }
     it->second.clear();
@@ -2063,8 +2062,8 @@ void ITree::print(llvm::raw_ostream &stream) const {
        it != ie; ++it) {
     for (std::deque<SubsumptionTableEntry *>::const_iterator
              it1 = it->second.begin(),
-             it1End = it->second.end();
-         it1 != it1End; ++it1) {
+             ie1 = it->second.end();
+         it1 != ie1; ++it1) {
       (*it1)->print(stream);
     }
   }
@@ -2229,8 +2228,8 @@ void ITreeNode::unsatCoreMarking(std::vector<ref<Expr> > unsatCore) {
   }
 
   for (std::vector<ref<Expr> >::iterator it1 = unsatCore.begin(),
-                                         it1End = unsatCore.end();
-       it1 != it1End; ++it1) {
+                                         ie1 = unsatCore.end();
+       it1 != ie1; ++it1) {
     // FIXME: Sometimes some constraints are not in the PC. This is
     // because constraints are not properly added at state merge.
     PathCondition *cond = markerMap[it1->get()];
