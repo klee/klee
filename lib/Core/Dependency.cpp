@@ -21,9 +21,11 @@
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
 #include <llvm/IR/Constants.h>
+#include <llvm/IR/DataLayout.h>
 #include <llvm/IR/Intrinsics.h>
 #else
 #include <llvm/Constants.h>
+#include <llvm/DataLayout.h>
 #include <llvm/Intrinsics.h>
 #endif
 
@@ -342,8 +344,11 @@ ref<VersionedValue> Dependency::getLatestValue(llvm::Value *value,
   if (llvm::isa<llvm::ConstantExpr>(value)) {
     llvm::Instruction *asInstruction =
         llvm::dyn_cast<llvm::ConstantExpr>(value)->getAsInstruction();
-    if (llvm::isa<llvm::GetElementPtrInst>(asInstruction)) {
-      return getNewPointerValue(value, valueExpr);
+    if (llvm::GetElementPtrInst *gi =
+            llvm::dyn_cast<llvm::GetElementPtrInst>(asInstruction)) {
+      uint64_t size =
+          targetData->getTypeStoreSize(gi->getPointerOperand()->getType());
+      return getNewPointerValue(value, valueExpr, size);
     }
   }
 
@@ -364,13 +369,20 @@ ref<VersionedValue> Dependency::getLatestValue(llvm::Value *value,
   if (parent)
     ret = parent->getLatestValue(value, valueExpr);
 
-  if (ret.isNull() && llvm::isa<llvm::GlobalValue>(value)) {
-    // We could not find the global value: we register it anew.
-    ret = value->getType()->isPointerTy()
-              ? getNewPointerValue(value, valueExpr)
-              : getNewVersionedValue(value, valueExpr);
+  if (ret.isNull()) {
+    if (llvm::GlobalValue *gv = llvm::dyn_cast<llvm::GlobalValue>(value)) {
+      // We could not find the global value: we register it anew.
+      if (gv->getType()->isPointerTy()) {
+        uint64_t size = 0;
+        if (gv->getType()->getPointerElementType()->isSized())
+          size = targetData->getTypeStoreSize(
+              gv->getType()->getPointerElementType());
+        ret = getNewPointerValue(value, valueExpr, size);
+      } else {
+        ret = getNewVersionedValue(value, valueExpr);
+      }
+    }
   }
-
   return ret;
 }
 
@@ -513,7 +525,8 @@ Dependency::populateArgumentValuesList(llvm::CallInst *site,
   return argumentValuesList;
 }
 
-Dependency::Dependency(Dependency *parent) : parent(parent) {
+Dependency::Dependency(Dependency *parent, llvm::DataLayout *_targetData)
+    : parent(parent), targetData(_targetData) {
   if (parent) {
     _concreteStore = parent->_concreteStore;
     _symbolicStore = parent->_symbolicStore;
@@ -609,9 +622,18 @@ void Dependency::execute(llvm::Instruction *instr,
                         returnValue);
         }
       } else if (calleeName.equals("malloc") && args.size() == 1) {
-        // malloc is an location-type instruction: its single argument is the
-        // return address.
-        getNewPointerValue(instr, args.at(0));
+        // malloc is an location-type instruction. This is for the case when the
+        // allocation size is unknown (0), so the
+        // single argument here is the return address, for which KLEE provides
+        // 0.
+        getNewPointerValue(instr, args.at(0), 0);
+      } else if (calleeName.equals("malloc") && args.size() == 2) {
+        // malloc is an location-type instruction. This is the case when it has
+        // a determined size
+        uint64_t size = 0;
+        if (ConstantExpr *ce = llvm::dyn_cast<ConstantExpr>(args.at(1)))
+          size = ce->getZExtValue();
+        getNewPointerValue(instr, args.at(0), size);
       } else if (calleeName.equals("realloc") && args.size() == 1) {
         // realloc is an location-type instruction: its single argument is the
         // return address.
@@ -620,7 +642,8 @@ void Dependency::execute(llvm::Instruction *instr,
       } else if (calleeName.equals("calloc") && args.size() == 1) {
         // calloc is a location-type instruction: its single argument is the
         // return address.
-        getNewPointerValue(instr, args.at(0));
+        assert(!"calloc size must not be zero");
+        getNewPointerValue(instr, args.at(0), 0);
       } else if (calleeName.equals("syscall") && args.size() >= 2) {
         ref<VersionedValue> returnValue =
             getNewVersionedValue(instr, args.at(0));
@@ -635,7 +658,8 @@ void Dependency::execute(llvm::Instruction *instr,
         addDependency(getLatestValue(instr->getOperand(0), args.at(1)),
                       getNewVersionedValue(instr, args.at(0)));
       } else if (calleeName.equals("getenv") && args.size() == 2) {
-        getNewPointerValue(instr, args.at(0));
+        assert(!"getenv size must not be zero");
+        getNewPointerValue(instr, args.at(0), 0);
       } else if (calleeName.equals("printf") && args.size() >= 2) {
         ref<VersionedValue> returnValue =
             getNewVersionedValue(instr, args.at(0));
@@ -694,10 +718,6 @@ void Dependency::execute(llvm::Instruction *instr,
     ref<Expr> argExpr = args.at(0);
 
     switch (instr->getOpcode()) {
-    case llvm::Instruction::Alloca: {
-      getNewPointerValue(instr, argExpr);
-      break;
-    }
     case llvm::Instruction::Trunc:
     case llvm::Instruction::ZExt:
     case llvm::Instruction::SExt:
@@ -720,7 +740,9 @@ void Dependency::execute(llvm::Instruction *instr,
           // cases that may actually require dependencies.
       {
         if (instr->getOperand(0)->getType()->isPointerTy()) {
-          addDependency(getNewPointerValue(instr->getOperand(0), argExpr),
+          uint64_t size = targetData->getTypeStoreSize(
+              instr->getOperand(0)->getType()->getPointerElementType());
+          addDependency(getNewPointerValue(instr->getOperand(0), argExpr, size),
                         getNewVersionedValue(instr, argExpr));
         } else if (llvm::isa<llvm::Argument>(instr->getOperand(0)) ||
                    llvm::isa<llvm::CallInst>(instr->getOperand(0)) ||
@@ -742,6 +764,16 @@ void Dependency::execute(llvm::Instruction *instr,
     ref<Expr> address = args.at(1);
 
     switch (instr->getOpcode()) {
+    case llvm::Instruction::Alloca: {
+      // In case of alloca, the valueExpr is the address, and address is the
+      // allocation size.
+      uint64_t size = 0;
+      if (ConstantExpr *ce = llvm::dyn_cast<ConstantExpr>(address)) {
+        size = ce->getZExtValue();
+      }
+      getNewPointerValue(instr, valueExpr, size);
+      break;
+    }
     case llvm::Instruction::Load: {
       ref<VersionedValue> addressValue =
           getLatestValue(instr->getOperand(0), address);
@@ -750,8 +782,10 @@ void Dependency::execute(llvm::Instruction *instr,
       if (!addressValue.isNull()) {
         std::set<ref<MemoryLocation> > locations = addressValue->getLocations();
         if (locations.empty()) {
+          // The size of the allocation is unknown here as the memory region
+          // might have been allocated by the environment
           ref<MemoryLocation> loc =
-              MemoryLocation::create(instr->getOperand(0), address);
+              MemoryLocation::create(instr->getOperand(0), address, 0);
           addressValue->addLocation(loc);
           updateStore(loc, loadedValue);
           break;
@@ -765,7 +799,8 @@ void Dependency::execute(llvm::Instruction *instr,
           }
         }
       } else {
-        addressValue = getNewPointerValue(instr->getOperand(0), address);
+        assert(!"loaded allocation size must not be zero");
+        addressValue = getNewPointerValue(instr->getOperand(0), address, 0);
         if (llvm::isa<llvm::GlobalVariable>(instr->getOperand(0))) {
           // The value not found was a global variable, record it here.
           std::set<ref<MemoryLocation> > locations =
@@ -803,10 +838,12 @@ void Dependency::execute(llvm::Instruction *instr,
         storedValue = getNewVersionedValue(instr->getOperand(0), valueExpr);
 
       if (addressValue.isNull()) {
-        addressValue = getNewPointerValue(instr->getOperand(1), address);
+        assert(!"stored allocation size must not be zero");
+        addressValue = getNewPointerValue(instr->getOperand(1), address, 0);
       } else if (addressValue->getLocations().size() == 0) {
+        assert(!"stored allocation size must not be zero");
         addressValue->addLocation(
-            MemoryLocation::create(instr->getOperand(1), address));
+            MemoryLocation::create(instr->getOperand(1), address, 0));
       }
 
       std::set<ref<MemoryLocation> > locations = addressValue->getLocations();
@@ -888,10 +925,13 @@ void Dependency::execute(llvm::Instruction *instr,
       ref<VersionedValue> addressValue =
           getLatestValue(instr->getOperand(0), inputAddress);
       if (addressValue.isNull()) {
-        addressValue = getNewPointerValue(instr->getOperand(0), inputAddress);
+        assert(!"input allocation size should not be zero");
+        addressValue =
+            getNewPointerValue(instr->getOperand(0), inputAddress, 0);
       } else if (addressValue->getLocations().size() == 0) {
+        // Note that the allocation has unknown size here (0).
         addressValue->addLocation(
-            MemoryLocation::create(instr->getOperand(0), inputAddress));
+            MemoryLocation::create(instr->getOperand(0), inputAddress, 0));
       }
 
       addDependencyWithOffset(addressValue,

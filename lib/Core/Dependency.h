@@ -82,18 +82,22 @@ namespace klee {
     /// \brief The offset of the allocation
     ref<Expr> offset;
 
+    /// \brief The size of this allocation (0 means unknown)
+    uint64_t size;
+
     MemoryLocation(llvm::Value *_value, ref<Expr> &_address, ref<Expr> &_base,
-                   ref<Expr> &_offset)
+                   ref<Expr> &_offset, uint64_t _size)
         : refCount(0), value(_value), address(_address), base(_base),
-          offset(_offset) {}
+          offset(_offset), size(_size) {}
 
   public:
     ~MemoryLocation() {}
 
-    static ref<MemoryLocation> create(llvm::Value *value, ref<Expr> &address) {
+    static ref<MemoryLocation> create(llvm::Value *value, ref<Expr> &address,
+                                      uint64_t size) {
       ref<Expr> zeroPointer = Expr::createPointer(0);
       ref<MemoryLocation> ret(
-          new MemoryLocation(value, address, address, zeroPointer));
+          new MemoryLocation(value, address, address, zeroPointer, size));
       return ret;
     }
 
@@ -103,15 +107,15 @@ namespace klee {
       if (c && c->getZExtValue() == 0) {
         ref<Expr> base = loc->getBase();
         ref<Expr> offset = loc->getOffset();
-        ref<MemoryLocation> ret(
-            new MemoryLocation(loc->getValue(), address, base, offset));
+        ref<MemoryLocation> ret(new MemoryLocation(loc->getValue(), address,
+                                                   base, offset, loc->size));
         return ret;
       }
 
       ref<Expr> base = loc->getBase();
       ref<Expr> newOffset = AddExpr::create(loc->getOffset(), offset);
-      ref<MemoryLocation> ret(
-          new MemoryLocation(loc->getValue(), address, base, newOffset));
+      ref<MemoryLocation> ret(new MemoryLocation(loc->getValue(), address, base,
+                                                 newOffset, loc->size));
       return ret;
     }
 
@@ -369,6 +373,9 @@ namespace klee {
     /// the core and dominates other locations.
     std::set<ref<MemoryLocation> > coreLocations;
 
+    /// \brief The data layout of the analysis target program
+    llvm::DataLayout *targetData;
+
     /// \brief Register new versioned value, used by getNewVersionedValue
     /// methods
     ref<VersionedValue> registerNewVersionedValue(llvm::Value *value,
@@ -384,10 +391,10 @@ namespace klee {
 
     /// \brief Create a new versioned value object, which is a pointer with
     /// absolute address
-    ref<VersionedValue> getNewPointerValue(llvm::Value *loc,
-                                           ref<Expr> address) {
+    ref<VersionedValue> getNewPointerValue(llvm::Value *loc, ref<Expr> address,
+                                           uint64_t size) {
       ref<VersionedValue> vvalue = VersionedValue::create(loc, address);
-      vvalue->addLocation(MemoryLocation::create(loc, address));
+      vvalue->addLocation(MemoryLocation::create(loc, address, size));
       return registerNewVersionedValue(loc, vvalue);
     }
 
@@ -442,7 +449,7 @@ namespace klee {
                                std::vector<ref<Expr> > &arguments);
 
   public:
-    Dependency(Dependency *parent);
+    Dependency(Dependency *parent, llvm::DataLayout *_targetData);
 
     ~Dependency();
 

@@ -3491,7 +3491,7 @@ void Executor::executeAlloc(ExecutionState &state,
 
       // Update dependency
       if (INTERPOLATION_ENABLED)
-        interpTree->execute(target->inst, mo->getBaseExpr());
+        interpTree->execute(target->inst, mo->getBaseExpr(), size);
 
       if (reallocFrom) {
         unsigned count = std::min(reallocFrom->size, os->size);
@@ -3955,7 +3955,7 @@ void Executor::runFunctionAsMain(Function *f,
   state->ptreeNode = processTree->root;
 
   if (INTERPOLATION_ENABLED) {
-    interpTree = new ITree(state);//added by Felicia
+    interpTree = new ITree(state, kmodule->targetData); // Added by Felicia
     state->itreeNode = interpTree->root;
     SearchTree::initialize(interpTree->root);
   }

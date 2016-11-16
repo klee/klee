@@ -492,6 +492,9 @@ private:
   /// \brief For statistics on the number of instructions executed along a path.
   unsigned instructionsDepth;
 
+  /// \brief The data layout of the analysis target
+  llvm::DataLayout *targetData;
+
   void setNodeLocation(llvm::Instruction *instr) {
     if (!nodeId)
       nodeId = reinterpret_cast<uintptr_t>(instr);
@@ -579,7 +582,7 @@ public:
   void print(llvm::raw_ostream &stream) const;
 
 private:
-  ITreeNode(ITreeNode *_parent);
+  ITreeNode(ITreeNode *_parent, llvm::DataLayout *_targetData);
 
   ~ITreeNode();
 
@@ -611,6 +614,8 @@ class ITree {
 
   std::map<uintptr_t, std::deque<SubsumptionTableEntry *> > subsumptionTable;
 
+  llvm::DataLayout *targetData;
+
   void printNode(llvm::raw_ostream &stream, ITreeNode *n,
                  std::string edges) const;
 
@@ -632,7 +637,7 @@ public:
   /// may not have been computed.
   static bool symbolicExecutionError;
 
-  ITree(ExecutionState *_root);
+  ITree(ExecutionState *_root, llvm::DataLayout *_targetData);
 
   ~ITree();
 

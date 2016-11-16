@@ -1817,10 +1817,12 @@ std::string ITree::getInterpolationStat() {
   return stream.str();
 }
 
-ITree::ITree(ExecutionState *_root) {
+ITree::ITree(ExecutionState *_root, llvm::DataLayout *_targetData)
+    : targetData(_targetData) {
   currentINode = 0;
+  assert(_targetData && "target data layout not provided");
   if (!_root->itreeNode) {
-    currentINode = new ITreeNode(0);
+    currentINode = new ITreeNode(0, _targetData);
   }
   root = currentINode;
 }
@@ -2109,15 +2111,16 @@ void ITreeNode::printTimeStat(std::stringstream &stream) {
          << ((double)getStoredCoreExpressionsTime.getValue()) / 1000 << "\n";
 }
 
-ITreeNode::ITreeNode(ITreeNode *_parent)
+ITreeNode::ITreeNode(ITreeNode *_parent, llvm::DataLayout *_targetData)
     : parent(_parent), left(0), right(0), nodeId(0), isSubsumed(false),
       storable(true), graph(_parent ? _parent->graph : 0),
-      instructionsDepth(_parent ? _parent->instructionsDepth : 0) {
+      instructionsDepth(_parent ? _parent->instructionsDepth : 0),
+      targetData(_targetData) {
 
   pathCondition = (_parent != 0) ? _parent->pathCondition : 0;
 
   // Inherit the abstract dependency or NULL
-  dependency = new Dependency(_parent ? _parent->dependency : 0);
+  dependency = new Dependency(_parent ? _parent->dependency : 0, _targetData);
 }
 
 ITreeNode::~ITreeNode() {
@@ -2155,8 +2158,8 @@ void ITreeNode::addConstraint(ref<Expr> &constraint, llvm::Value *condition) {
 void ITreeNode::split(ExecutionState *leftData, ExecutionState *rightData) {
   TimerStatIncrementer t(splitTime);
   assert(left == 0 && right == 0);
-  leftData->itreeNode = left = new ITreeNode(this);
-  rightData->itreeNode = right = new ITreeNode(this);
+  leftData->itreeNode = left = new ITreeNode(this, targetData);
+  rightData->itreeNode = right = new ITreeNode(this, targetData);
 }
 
 void ITreeNode::execute(llvm::Instruction *instr, std::vector<ref<Expr> > &args,
