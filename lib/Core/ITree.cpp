@@ -1404,12 +1404,16 @@ bool SubsumptionTableEntry::subsumed(
       const Dependency::AddressValuePair stateConcrete =
           stateConcreteMap.at(it2->first);
 
-      ref<Expr> tabledValue = it2->second.second->getExpression();
+      ref<Expr> tabledExpr = it2->second.second->getExpression();
       ref<Expr> res;
 
       if (!stateConcrete.second.isNull()) {
-        res =
-            EqExpr::create(tabledValue, stateConcrete.second->getExpression());
+        //	  ref<StoredValue> tabledValue = it2->second.second;
+        //	  ref<StoredValue> stateValue = stateConcrete.second;
+        //	  if (!tabledValue->isWithinBound(stateValue)) {
+        //	      return false;
+        //	  }
+        res = EqExpr::create(tabledExpr, stateConcrete.second->getExpression());
       }
 
       if (!stateSymbolicMap.empty()) {
@@ -1426,7 +1430,7 @@ bool SubsumptionTableEntry::subsumed(
           ref<Expr> newTerm = OrExpr::create(
               EqExpr::create(ConstantExpr::create(0, Expr::Bool),
                              EqExpr::create(tabledConcreteAddress, it3->first)),
-              EqExpr::create(tabledValue, it3->second->getExpression()));
+              EqExpr::create(tabledExpr, it3->second->getExpression()));
           if (!conjunction.isNull()) {
             conjunction = AndExpr::create(newTerm, conjunction);
           } else {
