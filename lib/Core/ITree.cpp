@@ -1404,16 +1404,21 @@ bool SubsumptionTableEntry::subsumed(
       const Dependency::AddressValuePair stateConcrete =
           stateConcreteMap.at(it2->first);
 
-      ref<Expr> tabledExpr = it2->second.second->getExpression();
+      ref<StoredValue> tabledValue = it2->second.second;
+      ref<StoredValue> stateValue = stateConcrete.second;
       ref<Expr> res;
 
-      if (!stateConcrete.second.isNull()) {
-        //	  ref<StoredValue> tabledValue = it2->second.second;
-        //	  ref<StoredValue> stateValue = stateConcrete.second;
-        //	  if (!tabledValue->isWithinBound(stateValue)) {
-        //	      return false;
-        //	  }
-        res = EqExpr::create(tabledExpr, stateConcrete.second->getExpression());
+      if (!stateValue.isNull()) {
+        if (tabledValue->isPointer() && stateValue->isPointer()) {
+          ref<Expr> boundsCheck = tabledValue->getBoundsCheck(stateValue);
+          if (boundsCheck->isFalse())
+            return false;
+          if (!boundsCheck->isTrue())
+            res = boundsCheck;
+        } else {
+          res = EqExpr::create(tabledValue->getExpression(),
+                               stateValue->getExpression());
+        }
       }
 
       if (!stateSymbolicMap.empty()) {
@@ -1424,17 +1429,42 @@ bool SubsumptionTableEntry::subsumed(
                  it3 = stateSymbolicMap.begin(),
                  ie3 = stateSymbolicMap.end();
              it3 != ie3; ++it3) {
-          // Implication: if tabledConcreteAddress == it3->first, then
-          // tabledValue ==
-          // it3->second
-          ref<Expr> newTerm = OrExpr::create(
-              EqExpr::create(ConstantExpr::create(0, Expr::Bool),
-                             EqExpr::create(tabledConcreteAddress, it3->first)),
-              EqExpr::create(tabledExpr, it3->second->getExpression()));
-          if (!conjunction.isNull()) {
-            conjunction = AndExpr::create(newTerm, conjunction);
+          ref<Expr> stateSymbolicAddress = it3->first;
+          ref<StoredValue> stateSymbolicValue = it3->second;
+          ref<Expr> newTerm;
+
+          if (tabledValue->isPointer() && stateSymbolicValue->isPointer()) {
+            ref<Expr> boundsCheck =
+                tabledValue->getBoundsCheck(stateSymbolicValue);
+
+            if (!boundsCheck->isTrue()) {
+              newTerm = EqExpr::create(
+                  ConstantExpr::create(0, Expr::Bool),
+                  EqExpr::create(tabledConcreteAddress, stateSymbolicAddress));
+
+              if (!boundsCheck->isFalse()) {
+                // Implication: if tabledConcreteAddress == stateSymbolicAddress
+                // then bounds check must hold
+                newTerm = OrExpr::create(newTerm, boundsCheck);
+              }
+            }
           } else {
-            conjunction = newTerm;
+            // Implication: if tabledConcreteAddress == stateSymbolicAddress,
+            // then tabledValue == stateSymbolicValue
+            newTerm = OrExpr::create(
+                EqExpr::create(ConstantExpr::create(0, Expr::Bool),
+                               EqExpr::create(tabledConcreteAddress,
+                                              stateSymbolicAddress)),
+                EqExpr::create(tabledValue->getExpression(),
+                               stateSymbolicValue->getExpression()));
+          }
+
+          if (!newTerm.isNull()) {
+            if (!conjunction.isNull()) {
+              conjunction = AndExpr::create(newTerm, conjunction);
+            } else {
+              conjunction = newTerm;
+            }
           }
         }
         // If there were corresponding concrete as well as symbolic allocations

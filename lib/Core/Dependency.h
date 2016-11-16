@@ -294,44 +294,7 @@ namespace klee {
 
     bool isPointer() const { return !bounds.empty(); }
 
-    ref<Expr> isPointerWithinBound(ref<StoredValue> svalue) const {
-      ref<Expr> res;
-      for (std::map<llvm::Value *, std::set<ref<Expr> > >::iterator
-               it = svalue->bounds.begin(),
-               ie = svalue->bounds.end();
-           it != ie; ++it) {
-        std::set<ref<Expr> > tabledBounds = bounds.at(it->first);
-        std::set<ref<Expr> > stateBounds = it->second;
-
-        for (std::set<ref<Expr> >::iterator it1 = stateBounds.begin(),
-                                            ie1 = stateBounds.end();
-             it1 != ie1; ++it1) {
-          for (std::set<ref<Expr> >::iterator it2 = tabledBounds.begin(),
-                                              ie2 = tabledBounds.end();
-               it2 != ie2; ++it2) {
-
-            if (ConstantExpr *stateBound = llvm::dyn_cast<ConstantExpr>(*it1)) {
-              if (ConstantExpr *tabledBound =
-                      llvm::dyn_cast<ConstantExpr>(*it2)) {
-                if (stateBound->getZExtValue() > tabledBound->getZExtValue()) {
-                  // Bounds check failure
-                  return ConstantExpr::create(0, Expr::Bool);
-                } else {
-                  // No need to add constraints
-                  continue;
-                }
-              }
-            }
-            // Create constraints for symbolic bounds
-            if (res.isNull())
-              res = UleExpr::create(*it1, *it2);
-            else
-              res = AndExpr::create(UleExpr::create(*it1, *it2), res);
-          }
-        }
-      }
-      return res;
-    }
+    ref<Expr> getBoundsCheck(ref<StoredValue> svalue) const;
 
     ref<Expr> getExpression() const { return expr; }
 

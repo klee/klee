@@ -248,6 +248,56 @@ void StoredValue::init(ref<VersionedValue> vvalue,
   }
 }
 
+ref<Expr> StoredValue::getBoundsCheck(ref<StoredValue> stateValue) const {
+  ref<Expr> res;
+
+  // For a state to be subsumed, the subsuming state weaker, which in this case
+  // means that it should specify less allocations, so all allocations in the
+  // subsuming (this), should be specified by the subsumed (the stateValue
+  // argument).
+  for (std::map<llvm::Value *, std::set<ref<Expr> > >::const_iterator
+           it = bounds.begin(),
+           ie = bounds.end();
+       it != ie; ++it) {
+    std::set<ref<Expr> > tabledBounds = it->second;
+    std::set<ref<Expr> > stateBounds = stateValue->bounds.at(it->first);
+
+    assert(!tabledBounds.empty() && "tabled bounds empty");
+
+    if (stateBounds.empty())
+      return ConstantExpr::create(0, Expr::Bool);
+
+    for (std::set<ref<Expr> >::const_iterator it1 = stateBounds.begin(),
+                                              ie1 = stateBounds.end();
+         it1 != ie1; ++it1) {
+      for (std::set<ref<Expr> >::const_iterator it2 = tabledBounds.begin(),
+                                                ie2 = tabledBounds.end();
+           it2 != ie2; ++it2) {
+
+        if (ConstantExpr *stateBound = llvm::dyn_cast<ConstantExpr>(*it1)) {
+          if (ConstantExpr *tabledBound = llvm::dyn_cast<ConstantExpr>(*it2)) {
+            if (stateBound->getZExtValue() > tabledBound->getZExtValue()) {
+              // Bounds check failure
+              return ConstantExpr::create(0, Expr::Bool);
+            } else {
+              // No need to add constraints
+              continue;
+            }
+          }
+        }
+        // Create constraints for symbolic bounds
+        if (res.isNull())
+          res = UleExpr::create(*it1, *it2);
+        else
+          res = AndExpr::create(UleExpr::create(*it1, *it2), res);
+      }
+    }
+  }
+  if (res.isNull())
+    return ConstantExpr::create(1, Expr::Bool);
+  return res;
+}
+
 void StoredValue::print(llvm::raw_ostream &stream) const {
   if (!bounds.empty()) {
     for (std::map<llvm::Value *, std::set<ref<Expr> > >::const_iterator
