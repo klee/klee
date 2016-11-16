@@ -1379,53 +1379,54 @@ bool SubsumptionTableEntry::subsumed(
            it1 = concreteAddressStoreKeys.begin(),
            ie1 = concreteAddressStoreKeys.end();
        it1 != ie1; ++it1) {
-    const Dependency::ConcreteStoreMap lhsConcreteMap =
+    const Dependency::ConcreteStoreMap tabledConcreteMap =
         concreteAddressStore[*it1];
-    const Dependency::ConcreteStoreMap rhsConcreteMap =
+    const Dependency::ConcreteStoreMap stateConcreteMap =
         stateConcreteAddressStore[*it1];
-    const Dependency::SymbolicStoreMap rhsSymbolicMap =
+    const Dependency::SymbolicStoreMap stateSymbolicMap =
         stateSymbolicAddressStore[*it1];
 
     // If the current state does not constrain the same base, subsumption fails.
-    if (rhsConcreteMap.empty() && rhsSymbolicMap.empty())
+    if (stateConcreteMap.empty() && stateSymbolicMap.empty())
       return false;
 
     for (Dependency::ConcreteStoreMap::const_iterator
-             it2 = lhsConcreteMap.begin(),
-             ie2 = lhsConcreteMap.end();
+             it2 = tabledConcreteMap.begin(),
+             ie2 = tabledConcreteMap.end();
          it2 != ie2; ++it2) {
 
       // The address is not constrained by the current state, therefore
       // the current state is incomparable to the stored interpolant,
       // and we therefore fail the subsumption.
-      if (!rhsConcreteMap.count(it2->first))
+      if (!stateConcreteMap.count(it2->first))
         return false;
 
-      const Dependency::AddressValuePair rhsConcrete =
-          rhsConcreteMap.at(it2->first);
+      const Dependency::AddressValuePair stateConcrete =
+          stateConcreteMap.at(it2->first);
 
-      ref<Expr> lhsValue = it2->second.second->getExpression();
+      ref<Expr> tabledValue = it2->second.second->getExpression();
       ref<Expr> res;
 
-      if (!rhsConcrete.second.isNull()) {
-        // There is the corresponding concrete allocation
-        res = EqExpr::create(lhsValue, rhsConcrete.second->getExpression());
+      if (!stateConcrete.second.isNull()) {
+        res =
+            EqExpr::create(tabledValue, stateConcrete.second->getExpression());
       }
 
-      if (!rhsSymbolicMap.empty()) {
-        const ref<Expr> lhsConcreteAddress = it2->second.first;
+      if (!stateSymbolicMap.empty()) {
+        const ref<Expr> tabledConcreteAddress = it2->second.first;
         ref<Expr> conjunction;
 
         for (Dependency::SymbolicStoreMap::const_iterator
-                 it3 = rhsSymbolicMap.begin(),
-                 ie3 = rhsSymbolicMap.end();
+                 it3 = stateSymbolicMap.begin(),
+                 ie3 = stateSymbolicMap.end();
              it3 != ie3; ++it3) {
-          // Implication: if lhsConcreteAddress == it3->first, then lhsValue ==
+          // Implication: if tabledConcreteAddress == it3->first, then
+          // tabledValue ==
           // it3->second
           ref<Expr> newTerm = OrExpr::create(
               EqExpr::create(ConstantExpr::create(0, Expr::Bool),
-                             EqExpr::create(lhsConcreteAddress, it3->first)),
-              EqExpr::create(lhsValue, it3->second->getExpression()));
+                             EqExpr::create(tabledConcreteAddress, it3->first)),
+              EqExpr::create(tabledValue, it3->second->getExpression()));
           if (!conjunction.isNull()) {
             conjunction = AndExpr::create(newTerm, conjunction);
           } else {
@@ -1451,35 +1452,35 @@ bool SubsumptionTableEntry::subsumed(
            it1 = symbolicAddressStoreKeys.begin(),
            ie1 = symbolicAddressStoreKeys.end();
        it1 != ie1; ++it1) {
-    const Dependency::SymbolicStoreMap lhsSymbolicMap =
+    const Dependency::SymbolicStoreMap tabledSymbolicMap =
         symbolicAddressStore[*it1];
-    const Dependency::ConcreteStoreMap rhsConcreteMap =
+    const Dependency::ConcreteStoreMap stateConcreteMap =
         stateConcreteAddressStore[*it1];
-    const Dependency::SymbolicStoreMap rhsSymbolicMap =
+    const Dependency::SymbolicStoreMap stateSymbolicMap =
         stateSymbolicAddressStore[*it1];
 
     ref<Expr> conjunction;
 
     for (Dependency::SymbolicStoreMap::const_iterator
-             it2 = lhsSymbolicMap.begin(),
-             ie2 = lhsSymbolicMap.end();
+             it2 = tabledSymbolicMap.begin(),
+             ie2 = tabledSymbolicMap.end();
          it2 != ie2; ++it2) {
-      ref<Expr> lhsSymbolicAddress = it2->first;
-      ref<Expr> lhsValue = it2->second->getExpression();
+      ref<Expr> tabledSymbolicAddress = it2->first;
+      ref<Expr> tabledValue = it2->second->getExpression();
 
       for (Dependency::ConcreteStoreMap::const_iterator
-               it3 = rhsConcreteMap.begin(),
-               ie3 = rhsConcreteMap.end();
+               it3 = stateConcreteMap.begin(),
+               ie3 = stateConcreteMap.end();
            it3 != ie3; ++it3) {
-        ref<Expr> rhsConcreteAddress = it3->second.first;
-        ref<Expr> rhsValue = it3->second.second->getExpression();
-        // Implication: if lhsSymbolicAddress == rhsConcreteAddress, then
-        // lhsValue == rhsValue
+        ref<Expr> stateConcreteAddress = it3->second.first;
+        ref<Expr> stateValue = it3->second.second->getExpression();
+        // Implication: if tabledSymbolicAddress == stateConcreteAddress, then
+        // tabledValue == stateValue
         ref<Expr> newTerm =
             OrExpr::create(EqExpr::create(ConstantExpr::create(0, Expr::Bool),
-                                          EqExpr::create(lhsSymbolicAddress,
-                                                         rhsConcreteAddress)),
-                           EqExpr::create(lhsValue, rhsValue));
+                                          EqExpr::create(tabledSymbolicAddress,
+                                                         stateConcreteAddress)),
+                           EqExpr::create(tabledValue, stateValue));
         if (!conjunction.isNull()) {
           conjunction = AndExpr::create(newTerm, conjunction);
         } else {
@@ -1488,18 +1489,18 @@ bool SubsumptionTableEntry::subsumed(
       }
 
       for (Dependency::SymbolicStoreMap::const_iterator
-               it3 = rhsSymbolicMap.begin(),
-               ie3 = rhsSymbolicMap.end();
+               it3 = stateSymbolicMap.begin(),
+               ie3 = stateSymbolicMap.end();
            it3 != ie3; ++it3) {
-        ref<Expr> rhsSymbolicAddress = it3->first;
-        ref<Expr> rhsValue = it3->second->getExpression();
-        // Implication: if lhsSymbolicAddress == rhsSymbolicAddress then
-        // lhsValue == rhsValue
+        ref<Expr> stateSymbolicAddress = it3->first;
+        ref<Expr> stateValue = it3->second->getExpression();
+        // Implication: if tabledSymbolicAddress == stateSymbolicAddress then
+        // tabledValue == stateValue
         ref<Expr> newTerm =
             OrExpr::create(EqExpr::create(ConstantExpr::create(0, Expr::Bool),
-                                          EqExpr::create(lhsSymbolicAddress,
-                                                         rhsSymbolicAddress)),
-                           EqExpr::create(lhsValue, rhsValue));
+                                          EqExpr::create(tabledSymbolicAddress,
+                                                         stateSymbolicAddress)),
+                           EqExpr::create(tabledValue, stateValue));
         if (!conjunction.isNull()) {
           conjunction = AndExpr::create(newTerm, conjunction);
         } else {
