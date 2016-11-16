@@ -163,6 +163,8 @@ namespace klee {
 
     ref<Expr> getOffset() const { return offset; }
 
+    uint64_t getSize() const { return size; }
+
     /// \brief Print the content of the object to the LLVM error stream
     void dump() const {
       print(llvm::errs());

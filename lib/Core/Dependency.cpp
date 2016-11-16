@@ -198,42 +198,52 @@ void StoredValue::init(ref<VersionedValue> vvalue,
                    : vvalue->getExpression();
 
   if (!locations.empty()) {
+    // Here we compute memory bounds for checking pointer values. The memory
+    // bound is the size of the allocation minus the offset; this is the weakest
+    // precondition (interpolant) of memory bound checks done by KLEE.
     for (std::set<ref<MemoryLocation> >::iterator it = locations.begin(),
                                                   ie = locations.end();
          it != ie; ++it) {
       llvm::Value *v = (*it)->getValue();
+      uint64_t size = (*it)->getSize();
+
       ref<Expr> offset = shadowing ? ShadowArray::getShadowExpression(
                                          (*it)->getOffset(), replacements)
                                    : (*it)->getOffset();
-      std::set<ref<Expr> > b = bounds[v];
 
-      if (b.empty()) {
-        bounds[v].insert(offset);
-        continue;
-      }
+      if (ConstantExpr *coff = llvm::dyn_cast<ConstantExpr>(offset)) {
+        std::set<ref<Expr> > b = bounds[v];
 
-      if (ConstantExpr *ce = llvm::dyn_cast<ConstantExpr>(offset)) {
-        // Concrete offset
-        uint64_t c = ce->getZExtValue();
-        std::set<ref<Expr> > res;
-        for (std::set<ref<Expr> >::iterator it1 = b.begin(), ie1 = b.end();
-             it1 != ie1; ++it1) {
-          if (ConstantExpr *ce1 = llvm::dyn_cast<ConstantExpr>(*it1)) {
-            if (c > ce1->getZExtValue()) {
-              res.insert(offset);
-              continue;
+        // The bound is 0, meaning undefined, in case the size itself is 0
+        // (unknown)
+        uint64_t newBound = size ? size - coff->getZExtValue() : 0;
+
+        if (b.empty()) {
+          bounds[v].insert(Expr::createPointer(newBound));
+        } else {
+          std::set<ref<Expr> > res;
+          for (std::set<ref<Expr> >::iterator it1 = b.begin(), ie1 = b.end();
+               it1 != ie1; ++it1) {
+            if (ConstantExpr *ce = llvm::dyn_cast<ConstantExpr>(*it1)) {
+              if (newBound < ce->getZExtValue()) {
+                res.insert(Expr::createPointer(newBound));
+                continue;
+              }
             }
+            res.insert(*it1);
           }
-          res.insert(*it1);
+          bounds[v].clear();
+          bounds[v] = res;
         }
-
-        bounds[v].clear();
-        bounds[v] = res;
         continue;
       }
 
       // Symbolic offset
-      bounds[v].insert(offset);
+      if (size) {
+        bounds[v].insert(SubExpr::create(Expr::createPointer(size), offset));
+      } else {
+        bounds[v].insert(Expr::createPointer(0));
+      }
     }
   }
 }
