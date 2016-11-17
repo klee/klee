@@ -283,17 +283,24 @@ ref<Expr> StoredValue::getBoundsCheck(ref<StoredValue> stateValue) const {
       for (std::set<ref<Expr> >::const_iterator it2 = tabledBounds.begin(),
                                                 ie2 = tabledBounds.end();
            it2 != ie2; ++it2) {
-
-        if (ConstantExpr *stateOffset = llvm::dyn_cast<ConstantExpr>(*it1)) {
-          if (ConstantExpr *tabledBound = llvm::dyn_cast<ConstantExpr>(*it2)) {
-            if (stateOffset->getZExtValue() >= tabledBound->getZExtValue()) {
-              // Bounds check failure
+        if (ConstantExpr *tabledBound = llvm::dyn_cast<ConstantExpr>(*it2)) {
+          uint64_t tabledBoundInt = tabledBound->getZExtValue();
+          if (ConstantExpr *stateOffset = llvm::dyn_cast<ConstantExpr>(*it1)) {
+            if (tabledBoundInt > 0 &&
+                stateOffset->getZExtValue() >= tabledBoundInt) {
               return ConstantExpr::create(0, Expr::Bool);
-            } else {
-              // No need to add constraints
-              continue;
             }
           }
+
+          if (tabledBoundInt > 0) {
+            // Symbolic state offset, but concrete tabled bound. Here the bound
+            // is known (non-zero), so we create constraints
+            if (res.isNull())
+              res = UleExpr::create(*it1, *it2);
+            else
+              res = AndExpr::create(UleExpr::create(*it1, *it2), res);
+          }
+          continue;
         }
         // Create constraints for symbolic bounds
         if (res.isNull())
