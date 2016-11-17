@@ -252,7 +252,18 @@ namespace klee {
   private:
     ref<Expr> expr;
 
-    std::map<llvm::Value *, std::set<ref<Expr> > > bounds;
+    /// \brief In case the stored value was a pointer, then this should be a
+    /// non-empty map mapping of allocation sites to the set of offset bounds.
+    /// This constitutes the weakest liberal precondition of the memory checks
+    /// against which the offsets of the pointer values of the current state are
+    /// to be checked against.
+    std::map<llvm::Value *, std::set<ref<Expr> > > allocationBounds;
+
+    /// \brief In case the stored value was a pointer, then this should be a
+    /// non-empty map mapping of allocation sites to the set of offsets. This is
+    /// the offset values of the current state to be checked against the offset
+    /// bounds.
+    std::map<llvm::Value *, std::set<ref<Expr> > > allocationOffsets;
 
     /// \brief The id of this object
     uint64_t id;
@@ -292,13 +303,15 @@ namespace klee {
       return 1;
     }
 
-    bool isPointer() const { return !bounds.empty(); }
+    bool isPointer() const { return !allocationBounds.empty(); }
 
     ref<Expr> getBoundsCheck(ref<StoredValue> svalue) const;
 
     ref<Expr> getExpression() const { return expr; }
 
-    std::set<ref<Expr> > getBounds(llvm::Value *value) { return bounds[value]; }
+    std::set<ref<Expr> > getBounds(llvm::Value *value) {
+      return allocationBounds[value];
+    }
 
     void print(llvm::raw_ostream &stream) const;
 

@@ -204,7 +204,7 @@ void StoredValue::init(ref<VersionedValue> vvalue,
     for (std::set<ref<MemoryLocation> >::iterator it = locations.begin(),
                                                   ie = locations.end();
          it != ie; ++it) {
-      llvm::Value *v = (*it)->getValue();
+      llvm::Value *v = (*it)->getValue(); // The allocation site
       uint64_t size = (*it)->getSize();
 
       ref<Expr> offset = shadowing ? ShadowArray::getShadowExpression(
@@ -212,14 +212,16 @@ void StoredValue::init(ref<VersionedValue> vvalue,
                                    : (*it)->getOffset();
 
       if (ConstantExpr *coff = llvm::dyn_cast<ConstantExpr>(offset)) {
-        std::set<ref<Expr> > b = bounds[v];
+
+        // We first build the allocation offset bounds
+        std::set<ref<Expr> > b = allocationBounds[v];
 
         // The bound is 0, meaning undefined, in case the size itself is 0
         // (unknown)
         uint64_t newBound = size ? size - coff->getZExtValue() : 0;
 
         if (b.empty()) {
-          bounds[v].insert(Expr::createPointer(newBound));
+          allocationBounds[v].insert(Expr::createPointer(newBound));
         } else {
           std::set<ref<Expr> > res;
           for (std::set<ref<Expr> >::iterator it1 = b.begin(), ie1 = b.end();
@@ -232,18 +234,25 @@ void StoredValue::init(ref<VersionedValue> vvalue,
             }
             res.insert(*it1);
           }
-          bounds[v].clear();
-          bounds[v] = res;
+          allocationBounds[v].clear();
+          allocationBounds[v] = res;
         }
-        continue;
+
+      } else {
+        // Symbolic offset
+
+        if (size) {
+          // We record a subtraction in case the size is known
+          allocationBounds[v]
+              .insert(SubExpr::create(Expr::createPointer(size), offset));
+        } else {
+          allocationBounds[v].insert(Expr::createPointer(0));
+        }
       }
 
-      // Symbolic offset
-      if (size) {
-        bounds[v].insert(SubExpr::create(Expr::createPointer(size), offset));
-      } else {
-        bounds[v].insert(Expr::createPointer(0));
-      }
+      // We next build the offsets to be compared against stored allocation
+      // offset bounds; simply by inserting it into the set of offsets.
+      allocationOffsets[v].insert(offset);
     }
   }
 }
@@ -256,27 +265,28 @@ ref<Expr> StoredValue::getBoundsCheck(ref<StoredValue> stateValue) const {
   // subsuming (this), should be specified by the subsumed (the stateValue
   // argument).
   for (std::map<llvm::Value *, std::set<ref<Expr> > >::const_iterator
-           it = bounds.begin(),
-           ie = bounds.end();
+           it = allocationBounds.begin(),
+           ie = allocationBounds.end();
        it != ie; ++it) {
     std::set<ref<Expr> > tabledBounds = it->second;
-    std::set<ref<Expr> > stateBounds = stateValue->bounds.at(it->first);
+    std::set<ref<Expr> > stateOffsets =
+        stateValue->allocationOffsets.at(it->first);
 
     assert(!tabledBounds.empty() && "tabled bounds empty");
 
-    if (stateBounds.empty())
+    if (stateOffsets.empty())
       return ConstantExpr::create(0, Expr::Bool);
 
-    for (std::set<ref<Expr> >::const_iterator it1 = stateBounds.begin(),
-                                              ie1 = stateBounds.end();
+    for (std::set<ref<Expr> >::const_iterator it1 = stateOffsets.begin(),
+                                              ie1 = stateOffsets.end();
          it1 != ie1; ++it1) {
       for (std::set<ref<Expr> >::const_iterator it2 = tabledBounds.begin(),
                                                 ie2 = tabledBounds.end();
            it2 != ie2; ++it2) {
 
-        if (ConstantExpr *stateBound = llvm::dyn_cast<ConstantExpr>(*it1)) {
+        if (ConstantExpr *stateOffset = llvm::dyn_cast<ConstantExpr>(*it1)) {
           if (ConstantExpr *tabledBound = llvm::dyn_cast<ConstantExpr>(*it2)) {
-            if (stateBound->getZExtValue() > tabledBound->getZExtValue()) {
+            if (stateOffset->getZExtValue() >= tabledBound->getZExtValue()) {
               // Bounds check failure
               return ConstantExpr::create(0, Expr::Bool);
             } else {
@@ -293,16 +303,18 @@ ref<Expr> StoredValue::getBoundsCheck(ref<StoredValue> stateValue) const {
       }
     }
   }
+
+  // Bounds check successful if no constraints added
   if (res.isNull())
     return ConstantExpr::create(1, Expr::Bool);
   return res;
 }
 
 void StoredValue::print(llvm::raw_ostream &stream) const {
-  if (!bounds.empty()) {
+  if (!allocationBounds.empty()) {
     for (std::map<llvm::Value *, std::set<ref<Expr> > >::const_iterator
-             it = bounds.begin(),
-             ie = bounds.end();
+             it = allocationBounds.begin(),
+             ie = allocationBounds.end();
          it != ie; ++it) {
       std::set<ref<Expr> > boundsSet = it->second;
       stream << "[";
