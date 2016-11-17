@@ -26,6 +26,8 @@
 #include <fstream>
 #include <vector>
 
+#include <llvm/DebugInfo.h>
+
 using namespace klee;
 
 /**/
@@ -688,7 +690,16 @@ void SearchTree::setCurrentNode(ExecutionState &state,
         state.pc->inst->getParent()->getParent()->getName().str());
     node->name = functionName + "\\l";
     llvm::raw_string_ostream out(node->name);
-    state.pc->inst->print(out);
+    if (llvm::MDNode *n = state.pc->inst->getMetadata("dbg")) {
+      // Display the line, char position of this instruction
+      llvm::DILocation loc(n);
+      unsigned line = loc.getLineNumber();
+      unsigned column = loc.getColumnNumber();
+      StringRef file = loc.getFilename();
+      out << file << ":" << line << ":" << column << "\n";
+    } else {
+      state.pc->inst->print(out);
+    }
     node->name = out.str();
 
     node->iTreeNodeId = programPoint;
