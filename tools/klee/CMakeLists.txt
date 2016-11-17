@@ -15,12 +15,17 @@ add_executable(klee
 set(LLVM_COMPONENTS
 	bitreader
 	bitwriter
-	engine
 	ipo
-	jit
 	linker
 	support
 )
+
+if ("${LLVM_PACKAGE_VERSION}" VERSION_EQUAL "3.6" OR
+    "${LLVM_PACKAGE_VERSION}" VERSION_GREATER "3.6")
+  list(APPEND LLVM_COMPONENTS mcjit executionengine native)
+else()
+  list(APPEND LLVM_COMPONENTS jit engine)
+endif()
 
 if ("${LLVM_PACKAGE_VERSION}" VERSION_EQUAL "3.3" OR
     "${LLVM_PACKAGE_VERSION}" VERSION_GREATER "3.3")
