@@ -347,6 +347,11 @@ private:
     /// \brief Newly relate an location with its stored value
     void updateStore(ref<MemoryLocation> loc, ref<VersionedValue> value);
 
+    /// \brief The core routine for adding flow dependency between source and
+    /// target value
+    void addDependencyCore(ref<VersionedValue> source,
+                           ref<VersionedValue> target, ref<MemoryLocation> via);
+
     /// \brief Add flow dependency between source and target value
     void addDependency(ref<VersionedValue> source, ref<VersionedValue> target);
 
