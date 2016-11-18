@@ -7,7 +7,7 @@
 #
 #===------------------------------------------------------------------------===#
 add_executable(gen-random-bout
-	gen-random-bout.cpp
+  gen-random-bout.cpp
 )
 
 set(KLEE_LIBS kleeBasic)
