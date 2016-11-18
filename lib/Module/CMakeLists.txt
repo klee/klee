@@ -7,16 +7,16 @@
 #
 #===------------------------------------------------------------------------===#
 klee_add_component(kleeModule
-	Checks.cpp
-	InstructionInfoTable.cpp
-	IntrinsicCleaner.cpp
-	KInstruction.cpp
-	KModule.cpp
-	LowerSwitch.cpp
-	ModuleUtil.cpp
-	Optimize.cpp
-	PhiCleaner.cpp
-	RaiseAsm.cpp
+  Checks.cpp
+  InstructionInfoTable.cpp
+  IntrinsicCleaner.cpp
+  KInstruction.cpp
+  KModule.cpp
+  LowerSwitch.cpp
+  ModuleUtil.cpp
+  Optimize.cpp
+  PhiCleaner.cpp
+  RaiseAsm.cpp
 )
 
 set(LLVM_COMPONENTS

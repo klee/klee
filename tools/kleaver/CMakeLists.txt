@@ -7,7 +7,7 @@
 #
 #===------------------------------------------------------------------------===#
 add_executable(kleaver
-	main.cpp
+  main.cpp
 )
 
 set(KLEE_LIBS
