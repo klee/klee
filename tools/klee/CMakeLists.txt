@@ -10,33 +10,11 @@ add_executable(klee
 	main.cpp
 )
 
-# FIXME: This shouldn't be done here. Instead the KLEE libraries
-# should declare their LLVM dependencies.
-set(LLVM_COMPONENTS
-	bitreader
-	bitwriter
-	ipo
-	linker
-	support
+set(KLEE_LIBS
+  kleeCore
 )
 
-if ("${LLVM_PACKAGE_VERSION}" VERSION_EQUAL "3.6" OR
-    "${LLVM_PACKAGE_VERSION}" VERSION_GREATER "3.6")
-  list(APPEND LLVM_COMPONENTS mcjit executionengine native)
-else()
-  list(APPEND LLVM_COMPONENTS jit engine)
-endif()
-
-if ("${LLVM_PACKAGE_VERSION}" VERSION_EQUAL "3.3" OR
-    "${LLVM_PACKAGE_VERSION}" VERSION_GREATER "3.3")
-  list(APPEND LLVM_COMPONENTS irreader)
-endif()
-
-klee_get_llvm_libs(LLVM_LIBS ${LLVM_COMPONENTS})
-
-set(KLEE_LIBS kleeCore kleeBasic kleeModule kleaverSolver kleaverExpr kleeSupport)
-
-target_link_libraries(klee ${KLEE_LIBS} ${LLVM_LIBS})
+target_link_libraries(klee ${KLEE_LIBS})
 
 install(TARGETS klee RUNTIME DESTINATION bin)
 

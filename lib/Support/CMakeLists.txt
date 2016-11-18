@@ -18,3 +18,9 @@ klee_add_component(kleeSupport
 )
 
 target_link_libraries(kleeSupport PRIVATE ${ZLIB_LIBRARIES})
+
+set(LLVM_COMPONENTS
+  support
+)
+klee_get_llvm_libs(LLVM_LIBS ${LLVM_COMPONENTS})
+target_link_libraries(kleeSupport PUBLIC ${LLVM_LIBS})
