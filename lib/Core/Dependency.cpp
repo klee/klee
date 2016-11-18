@@ -251,8 +251,28 @@ void StoredValue::init(ref<VersionedValue> vvalue,
       }
 
       // We next build the offsets to be compared against stored allocation
-      // offset bounds; simply by inserting it into the set of offsets.
-      allocationOffsets[v].insert(offset);
+      // offset bounds
+      ConstantExpr *oe = llvm::dyn_cast<ConstantExpr>(offset);
+      if (oe && !allocationOffsets[v].empty()) {
+        // Here we check if smaller offset exists, in which case we replace it
+        // with the new offset
+        std::set<ref<Expr> > res;
+        uint64_t offsetInt = oe->getZExtValue();
+        for (std::set<ref<Expr> >::iterator it1 = res.begin(), ie1 = res.end();
+             it1 != ie1; ++it1) {
+          if (ConstantExpr *ce = llvm::dyn_cast<ConstantExpr>(*it1)) {
+            uint64_t c = ce->getZExtValue();
+            if (offsetInt > c) {
+              res.insert(offset);
+              continue;
+            }
+          }
+          res.insert(*it1);
+        }
+        allocationOffsets[v] = res;
+      } else {
+        allocationOffsets[v].insert(offset);
+      }
     }
   }
 }
@@ -336,6 +356,29 @@ void StoredValue::print(llvm::raw_ostream &stream) const {
         (*it1)->print(stream);
       }
       stream << "}]";
+    }
+    stream << "\n";
+
+    if (!allocationOffsets.empty()) {
+      for (std::map<llvm::Value *, std::set<ref<Expr> > >::const_iterator
+               it = allocationOffsets.begin(),
+               ie = allocationOffsets.end();
+           it != ie; ++it) {
+        std::set<ref<Expr> > boundsSet = it->second;
+        stream << "[";
+        it->first->print(stream);
+        stream << "=={";
+        for (std::set<ref<Expr> >::const_iterator it1 = it->second.begin(),
+                                                  is1 = it1,
+                                                  ie1 = it->second.end();
+             it1 != ie1; ++it1) {
+          if (it1 != is1)
+            stream << ",";
+          (*it1)->print(stream);
+        }
+        stream << "}]";
+      }
+      stream << "\n";
     }
     return;
   }
