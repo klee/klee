@@ -22,9 +22,35 @@
 #include <malloc/malloc.h>
 #endif
 
+// Clang and ASan
+#if defined(__has_feature)
+#if __has_feature(address_sanitizer)
+#include <sanitizer/allocator_interface.h>
+#define KLEE_ASAN_BUILD
+#endif
+#endif
+
+// For GCC and ASan
+#ifndef KLEE_ASAN_BUILD
+#if defined(__SANITIZE_ADDRESS__)
+// HACK: GCC doesn't ship `allocator_interface.h` so just provide the
+// proto-type here.
+extern "C" {
+  size_t __sanitizer_get_current_allocated_bytes();
+}
+#define KLEE_ASAN_BUILD
+#endif
+#endif
+
 using namespace klee;
 
 size_t util::GetTotalMallocUsage() {
+#ifdef KLEE_ASAN_BUILD
+  // When building with ASan on Linux `mallinfo()` just returns 0 so use ASan runtime
+  // function instead to get used memory.
+  return  __sanitizer_get_current_allocated_bytes();
+#endif
+
 #ifdef HAVE_GPERFTOOLS_MALLOC_EXTENSION_H
   size_t value = 0;
   MallocExtension::instance()->GetNumericProperty(
