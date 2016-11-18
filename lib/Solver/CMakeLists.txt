@@ -29,4 +29,15 @@ klee_add_component(kleaverSolver
 	Z3Solver.cpp
 )
 
-target_link_libraries(kleaverSolver PRIVATE ${KLEE_SOLVER_LIBRARIES})
+set(LLVM_COMPONENTS
+  support
+)
+klee_get_llvm_libs(LLVM_LIBS ${LLVM_COMPONENTS})
+target_link_libraries(kleaverSolver PUBLIC ${LLVM_LIBS})
+
+target_link_libraries(kleaverSolver PRIVATE
+  kleeBasic
+  kleaverExpr
+  kleeSupport
+  ${KLEE_SOLVER_LIBRARIES})
+

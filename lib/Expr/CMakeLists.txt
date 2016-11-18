@@ -21,3 +21,9 @@ klee_add_component(kleaverExpr
 	Parser.cpp
 	Updates.cpp
 )
+
+set(LLVM_COMPONENTS
+  support
+)
+klee_get_llvm_libs(LLVM_LIBS ${LLVM_COMPONENTS})
+target_link_libraries(kleaverExpr PUBLIC ${LLVM_LIBS})
