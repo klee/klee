@@ -75,6 +75,16 @@ cmake -DCMAKE_BUILD_TYPE=Release /path/to/klee/src
 
 * `MAKE_BINARY` (STRING) - Path to `make` binary used to build KLEE's runtime.
 
+* `metaSMT_DIR` (STRING) - Provides a hint to CMake, where the metaSMT constraint
+  solver can be found.  This should be an absolute path to a directory
+  containing the file `metaSMTConfig.cmake`.
+
+* `STP_DIR` (STRING) - Provides a hint to CMake, where the STP constraint
+  solver can be found.  This should be an absolute path to a directory
+  containing the file `STPConfig.cmake`. This file is installed by STP
+  but also exists in its build directory. This allows KLEE to link
+  against STP in a build directory or an installed copy.
+
 * `USE_CMAKE_FIND_PACKAGE_LLVM` (BOOLEAN) - Use `find_package(LLVM CONFIG)`
    to find LLVM.
 
