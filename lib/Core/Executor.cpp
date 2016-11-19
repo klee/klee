@@ -28,7 +28,7 @@
 #include "klee/Expr.h"
 #include "klee/Interpreter.h"
 #include "klee/TimerStatIncrementer.h"
-#include "klee/CommandLine.h"
+#include "klee/SolverCmdLineOptions.h"
 #include "klee/Common.h"
 #include "klee/util/Assignment.h"
 #include "klee/util/ExprPPrinter.h"

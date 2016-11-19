@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "klee/CommandLine.h"
 #include "klee/Solver.h"
+#include "klee/SolverCmdLineOptions.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <string>

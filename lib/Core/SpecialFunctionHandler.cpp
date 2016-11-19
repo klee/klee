@@ -21,7 +21,7 @@
 #include "Executor.h"
 #include "MemoryManager.h"
 
-#include "klee/CommandLine.h"
+#include "klee/SolverCmdLineOptions.h"
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
 #include "llvm/IR/Module.h"

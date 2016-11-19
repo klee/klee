@@ -10,6 +10,7 @@ klee_add_component(kleaverSolver
   CachingSolver.cpp
   CexCachingSolver.cpp
   ConstantDivision.cpp
+  ConstructSolverChain.cpp
   CoreSolver.cpp
   DummySolver.cpp
   FastCexSolver.cpp
@@ -20,6 +21,7 @@ klee_add_component(kleaverSolver
   QueryLoggingSolver.cpp
   SMTLIBLoggingSolver.cpp
   Solver.cpp
+  SolverCmdLineOptions.cpp
   SolverImpl.cpp
   SolverStats.cpp
   STPBuilder.cpp

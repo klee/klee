@@ -10,10 +10,10 @@
 #include <iostream>
 #include "gtest/gtest.h"
 
-#include "klee/CommandLine.h"
 #include "klee/Constraints.h"
 #include "klee/Expr.h"
 #include "klee/Solver.h"
+#include "klee/SolverCmdLineOptions.h"
 #include "klee/util/ArrayCache.h"
 #include "llvm/ADT/StringExtras.h"
 

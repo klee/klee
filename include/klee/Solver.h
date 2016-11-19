@@ -10,8 +10,8 @@
 #ifndef KLEE_SOLVER_H
 #define KLEE_SOLVER_H
 
-#include "klee/CommandLine.h" // FIXME: This is just for CoreSolverType
 #include "klee/Expr.h"
+#include "klee/SolverCmdLineOptions.h" // FIXME: This is just for CoreSolverType
 
 #include <vector>
 

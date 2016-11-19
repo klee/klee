@@ -11,8 +11,8 @@
  * This file groups declarations that are common to both KLEE and Kleaver.
  */
 #include "klee/Common.h"
-#include "klee/CommandLine.h"
 #include "klee/Internal/Support/ErrorHandling.h"
+#include "klee/SolverCmdLineOptions.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace klee {
