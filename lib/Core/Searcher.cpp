@@ -402,6 +402,8 @@ Instruction *MergingSearcher::getMergePoint(ExecutionState &es) {
 }
 
 ExecutionState &MergingSearcher::selectState() {
+  // FIXME: this loop is endless if baseSearcher includes RandomPathSearcher.
+  // The reason is that RandomPathSearcher::removeState() does nothing...
   while (!baseSearcher->empty()) {
     ExecutionState &es = baseSearcher->selectState();
     if (getMergePoint(es)) {

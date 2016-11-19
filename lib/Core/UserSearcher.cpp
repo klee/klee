@@ -117,8 +117,12 @@ Searcher *klee::constructUserSearcher(Executor &executor) {
 
   // merge support is experimental
   if (UseMerge) {
-    assert(!UseBumpMerge);
-    assert(std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::RandomPath) == CoreSearch.end()); // XXX: needs further debugging: test/Features/Searchers.c fails with this searcher
+    if (UseBumpMerge)
+      klee_error("use-merge and use-bump-merge cannot be used together");
+    // RandomPathSearcher cannot be used in conjunction with MergingSearcher,
+    // see MergingSearcher::selectState() for explanation.
+    if (std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::RandomPath) != CoreSearch.end())
+      klee_error("use-merge currently does not support random-path, please use another search strategy");
     searcher = new MergingSearcher(executor, searcher);
   } else if (UseBumpMerge) {
     searcher = new BumpMergingSearcher(executor, searcher);
