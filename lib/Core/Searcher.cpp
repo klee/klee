@@ -104,6 +104,16 @@ ExecutionState &BFSSearcher::selectState() {
 void BFSSearcher::update(ExecutionState *current,
                          const std::vector<ExecutionState *> &addedStates,
                          const std::vector<ExecutionState *> &removedStates) {
+  // Assumption: If new states were added KLEE forked, therefore states evolved.
+  // constraints were added to the current state, it evolved.
+  if (!addedStates.empty() && current &&
+      std::find(removedStates.begin(), removedStates.end(), current) ==
+          removedStates.end()) {
+    assert(states.front() == current);
+    states.pop_front();
+    states.push_back(current);
+  }
+
   states.insert(states.end(),
                 addedStates.begin(),
                 addedStates.end());
