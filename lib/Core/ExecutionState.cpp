@@ -66,18 +66,13 @@ StackFrame::~StackFrame() {
 
 /***/
 
-ExecutionState::ExecutionState(KFunction *kf) :
-    pc(kf->instructions),
-    prevPC(pc),
+ExecutionState::ExecutionState(KFunction *kf)
+    : pc(kf->instructions), prevPC(pc),
 
-    queryCost(0.), 
-    weight(1),
-    depth(0),
+      queryCost(0.), weight(1), depth(0),
 
-    instsSinceCovNew(0),
-    coveredNew(false),
-    forkDisabled(false),
-    ptreeNode(0) {
+      instsSinceCovNew(0), coveredNew(false), forkDisabled(false), ptreeNode(0),
+      constraintsAdded(false) {
   pushFrame(0, kf);
 }
 
@@ -97,31 +92,20 @@ ExecutionState::~ExecutionState() {
   while (!stack.empty()) popFrame();
 }
 
-ExecutionState::ExecutionState(const ExecutionState& state):
-    fnAliases(state.fnAliases),
-    pc(state.pc),
-    prevPC(state.prevPC),
-    stack(state.stack),
-    incomingBBIndex(state.incomingBBIndex),
+ExecutionState::ExecutionState(const ExecutionState &state)
+    : fnAliases(state.fnAliases), pc(state.pc), prevPC(state.prevPC),
+      stack(state.stack), incomingBBIndex(state.incomingBBIndex),
 
-    addressSpace(state.addressSpace),
-    constraints(state.constraints),
+      addressSpace(state.addressSpace), constraints(state.constraints),
 
-    queryCost(state.queryCost),
-    weight(state.weight),
-    depth(state.depth),
+      queryCost(state.queryCost), weight(state.weight), depth(state.depth),
 
-    pathOS(state.pathOS),
-    symPathOS(state.symPathOS),
+      pathOS(state.pathOS), symPathOS(state.symPathOS),
 
-    instsSinceCovNew(state.instsSinceCovNew),
-    coveredNew(state.coveredNew),
-    forkDisabled(state.forkDisabled),
-    coveredLines(state.coveredLines),
-    ptreeNode(state.ptreeNode),
-    symbolics(state.symbolics),
-    arrayNames(state.arrayNames)
-{
+      instsSinceCovNew(state.instsSinceCovNew), coveredNew(state.coveredNew),
+      forkDisabled(state.forkDisabled), coveredLines(state.coveredLines),
+      ptreeNode(state.ptreeNode), symbolics(state.symbolics),
+      arrayNames(state.arrayNames), constraintsAdded(state.constraintsAdded) {
   for (unsigned int i=0; i<symbolics.size(); i++)
     symbolics[i].first->refCount++;
 }
