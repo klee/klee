@@ -14,7 +14,9 @@ ENV LLVM_VERSION=3.4 \
     KLEE_SRC=/home/klee/klee_src \
     COVERAGE=0 \
     BUILD_DIR=/home/klee/klee_build \
-    USE_CMAKE=1
+    USE_CMAKE=1 \
+    ASAN_BUILD=0 \
+    UBSAN_BUILD=0
 
 RUN apt-get update && \
     apt-get -y --no-install-recommends install \
