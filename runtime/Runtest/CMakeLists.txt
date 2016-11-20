@@ -20,3 +20,6 @@ set_target_properties(kleeRuntest
     VERSION ${KLEE_RUNTEST_VERSION}
     SOVERSION ${KLEE_RUNTEST_VERSION}
 )
+
+install(TARGETS kleeRuntest
+  DESTINATION "${CMAKE_INSTALL_FULL_LIBDIR}")
