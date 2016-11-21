@@ -199,8 +199,8 @@ Dependency::getStoredExpressions(std::set<const Array *> &replacements,
   SymbolicStore symbolicStore;
 
   for (std::map<ref<MemoryLocation>, ref<VersionedValue> >::iterator
-           it = _concreteStore.begin(),
-           ie = _concreteStore.end();
+           it = concretelyAddressedStore.begin(),
+           ie = concretelyAddressedStore.end();
        it != ie; ++it) {
     if (it->second.isNull())
       continue;
@@ -229,8 +229,8 @@ Dependency::getStoredExpressions(std::set<const Array *> &replacements,
   }
 
   for (std::map<ref<MemoryLocation>, ref<VersionedValue> >::iterator
-           it = _symbolicStore.begin(),
-           ie = _symbolicStore.end();
+           it = symbolicallyAddressedStore.begin(),
+           ie = symbolicallyAddressedStore.end();
        it != ie; ++it) {
     if (it->second.isNull())
       continue;
@@ -313,9 +313,9 @@ Dependency::getLatestValueNoConstantCheck(llvm::Value *value) {
 void Dependency::updateStore(ref<MemoryLocation> loc,
                              ref<VersionedValue> value) {
   if (loc->hasConstantAddress())
-    _concreteStore[loc] = value;
+    concretelyAddressedStore[loc] = value;
   else
-    _symbolicStore[loc] = value;
+    symbolicallyAddressedStore[loc] = value;
 }
 
 void Dependency::addDependencyCore(ref<VersionedValue> source,
@@ -437,15 +437,15 @@ Dependency::populateArgumentValuesList(llvm::CallInst *site,
 
 Dependency::Dependency(Dependency *parent) : parent(parent) {
   if (parent) {
-    _concreteStore = parent->_concreteStore;
-    _symbolicStore = parent->_symbolicStore;
+    concretelyAddressedStore = parent->concretelyAddressedStore;
+    symbolicallyAddressedStore = parent->symbolicallyAddressedStore;
   }
 }
 
 Dependency::~Dependency() {
   // Delete the locally-constructed relations
-  _concreteStore.clear();
-  _symbolicStore.clear();
+  concretelyAddressedStore.clear();
+  symbolicallyAddressedStore.clear();
 
   // Delete flowsToMap
   for (std::map<ref<VersionedValue>,
@@ -703,7 +703,7 @@ void Dependency::execute(llvm::Instruction *instr,
                locIter = locations.begin(),
                locIterEnd = locations.end();
            locIter != locIterEnd; ++locIter) {
-        ref<VersionedValue> storedValue = _concreteStore[*locIter];
+        ref<VersionedValue> storedValue = concretelyAddressedStore[*locIter];
 
         if (storedValue.isNull())
           // We could not find the stored value, create a new one.
@@ -956,16 +956,16 @@ void Dependency::print(llvm::raw_ostream &stream,
                        const unsigned paddingAmount) const {
   std::string tabs = makeTabs(paddingAmount);
   std::map<ref<MemoryLocation>, ref<VersionedValue> >::const_iterator
-  concreteStoreBegin = _concreteStore.begin(),
-  symbolicStoreBegin = _symbolicStore.begin();
+  concreteStoreBegin = concretelyAddressedStore.begin(),
+  symbolicStoreBegin = symbolicallyAddressedStore.begin();
   std::map<ref<VersionedValue>,
            std::map<ref<VersionedValue>, ref<MemoryLocation> > >::const_iterator
   flowsToMapBegin = flowsToMap.begin();
 
   stream << tabs << "CONCRETE STORE:";
   for (std::map<ref<MemoryLocation>, ref<VersionedValue> >::const_iterator
-           it = _concreteStore.begin(),
-           ie = _concreteStore.end();
+           it = concretelyAddressedStore.begin(),
+           ie = concretelyAddressedStore.end();
        it != ie; ++it) {
     if (it != concreteStoreBegin)
       stream << ",";
@@ -978,8 +978,8 @@ void Dependency::print(llvm::raw_ostream &stream,
   stream << "\n";
   stream << tabs << "SYMBOLIC STORE:";
   for (std::map<ref<MemoryLocation>, ref<VersionedValue> >::const_iterator
-           it = _symbolicStore.begin(),
-           ie = _symbolicStore.end();
+           it = symbolicallyAddressedStore.begin(),
+           ie = symbolicallyAddressedStore.end();
        it != ie; ++it) {
     if (it != symbolicStoreBegin)
       stream << ",";
