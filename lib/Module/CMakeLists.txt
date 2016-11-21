@@ -22,6 +22,7 @@ klee_add_component(kleeModule
 set(LLVM_COMPONENTS
   bitreader
   bitwriter
+  codegen
   ipo
   linker
   support
