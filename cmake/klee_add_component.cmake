@@ -8,7 +8,9 @@
 #===------------------------------------------------------------------------===#
 
 function(klee_add_component target_name)
-  add_library(${target_name} ${ARGN})
+  # Components are explicitly STATIC because we don't support building them
+  # as shared libraries.
+  add_library(${target_name} STATIC ${ARGN})
   # Use of `PUBLIC` means these will propagate to targets that use this component.
   if (("${CMAKE_VERSION}" VERSION_EQUAL "3.3") OR ("${CMAKE_VERSION}" VERSION_GREATER "3.3"))
     # In newer CMakes we can make sure that the flags are only used when compiling C++
