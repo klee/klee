@@ -346,8 +346,8 @@ class SubsumptionTableEntry {
 
   /// \brief Test for the existence of a variable in a set in an expression.
   ///
-  /// \param A set of variables (KLEE arrays).
-  /// \param The expression to test for the existence of the variables in the
+  /// \param existentials A set of variables (KLEE arrays).
+  /// \param expr The expression to test for the existence of the variables in the
   /// set.
   /// \return true if a variable in the set is found in the expression, false
   /// otherwise.
@@ -356,8 +356,8 @@ class SubsumptionTableEntry {
 
   /// \brief Test for the non-existence of a variable in a set in an expression.
   ///
-  /// \param A set of variables (KLEE arrays).
-  /// \param The expression to test for the non-existence of the variables in
+  /// \param existentials A set of variables (KLEE arrays).
+  /// \param expr The expression to test for the non-existence of the variables in
   /// the set.
   /// \return true if none of the variable in the set is found in the
   /// expression, false otherwise.
@@ -397,9 +397,9 @@ class SubsumptionTableEntry {
   /// \brief Get a conjunction of equalities that are top-level conjuncts in the
   /// query.
   ///
-  /// \param The output conjunction of top-level conjuncts in the query
+  /// \param conjunction The output conjunction of top-level conjuncts in the query
   /// expression.
-  /// \param The query expression.
+  /// \param query The query expression.
   /// \return false if there is an equality conjunct that is simplifiable to
   /// false, true otherwise.
   static bool fetchQueryEqualityConjuncts(std::vector<ref<Expr> > &conjunction,
@@ -434,7 +434,7 @@ public:
   /// KLEE concatenates reads, and hence can be considered to be a symbolic
   /// read.
   ///
-  /// \param A KLEE expression.
+  /// \param expr A KLEE expression.
   /// \return true if the parameter is either a concatenation or a read,
   ///         otherwise, return false.
   static bool isVariable(ref<Expr> expr) {
@@ -452,9 +452,24 @@ public:
 
 };
 
-/// \brief The interpolation tree node: The implementation of the tree node to
-/// be embedded in KLEE's execution state, which stores the data of
-/// interpolation functionalities.
+/// \brief The interpolation tree node.
+///
+/// This class is a higher-level wrapper to the path condition (referenced
+/// by the field __pathCondition__ of type PathCondition), and the shadow
+/// memory for memory dependency computation (referenced by the field
+/// __dependency__ of type Dependency).
+///
+/// The interpolation tree node has an associated KLEE execution state
+/// (implemented using the type ExecutionState) from which it is referenced
+/// via the field ExecutionState::itreeNode.
+/// It adds information for lazy annotation to the ExecutionState object.
+/// The whole structure of the interpolation tree itself is maintained by
+/// the class ITree, which also refers to objects of type ITreeNode via
+/// its ITree::root and ITree::currentINode fields.
+///
+/// \see ITree
+/// \see Dependency
+/// \see PathCondition
 class ITreeNode {
   friend class ITree;
 
@@ -513,15 +528,15 @@ public:
 
   /// \brief Retrieve the interpolant for this node as KLEE expression object
   ///
-  /// \param The replacement bound variables for replacing the variables in the
+  /// \param replacements The replacement bound variables for replacing the variables in the
   /// path condition.
   /// \return The interpolant expression.
   ref<Expr> getInterpolant(std::set<const Array *> &replacements) const;
 
   /// \brief Extend the path condition with another constraint
   ///
-  /// \param The constraint to extend the current path condition with
-  /// \param The LLVM value that corresponds to the constraint
+  /// \param constraint The constraint to extend the current path condition with
+  /// \param value The LLVM value that corresponds to the constraint
   void addConstraint(ref<Expr> &constraint, llvm::Value *value);
 
   /// \brief Creates fresh interpolation data holder for the two given KLEE
@@ -529,8 +544,8 @@ public:
   /// This method is to be invoked after KLEE splits its own state due to state
   /// forking.
   ///
-  /// \param The first KLEE execution state
-  /// \param The second KLEE execution state
+  /// \param leftData The first KLEE execution state
+  /// \param rightData The second KLEE execution state
   void split(ExecutionState *leftData, ExecutionState *rightData);
 
   /// \brief Record call arguments in a function call
@@ -554,7 +569,7 @@ public:
   /// relevant as an interpolant. This function is typically used when creating
   /// an entry in the subsumption table.
   ///
-  /// \param The replacement bound variables: As the resulting expression will
+  /// \param replacements The replacement bound variables: As the resulting expression will
   /// be used for storing in the subsumption table, the variables need to be
   /// replaced with the bound ones.
   /// \return A pair of the store part indexed by constants, and the store part
@@ -575,7 +590,7 @@ public:
 
   /// \brief Print the content of the tree node object into a stream.
   ///
-  /// \param The stream to print the data to.
+  /// \param stream The stream to print the data to.
   void print(llvm::raw_ostream &stream) const;
 
 private:
@@ -586,8 +601,54 @@ private:
   void print(llvm::raw_ostream &stream, const unsigned tabNum) const;
 };
 
-/// \brief The top-level structure that implements the interpolation
-/// functionality
+/// \brief The top-level structure that implements lazy annotation.
+///
+/// The name ITree is an abbreviation of _interpolation tree_. The interpolation
+/// tree is just the symbolic execution tree, a parallel of what is implemented
+/// by KLEE's existing PTree class, however, it adds shadow information for use
+/// in lazy annotation. Each node of the interpolation tree is implemented in
+/// the ITreeNode class. The ITree class itself contains several important
+/// components:
+///
+/// 1. The subsumption table (as the field __subsumptionTable__). This is the
+///    database of states that have been generalized by the interpolation process
+///    to be used in subsuming other states. This member field is a map indexed
+///    by code fragment id, which is the pointer value of the first instruction
+///    of a basic block. It represents control location in a program. In a
+///    subsumption check, the map is queried for such id of a state. If the
+///    entry of the id is found in the subsumption table, then the corresponding
+///    subsubmption table entries are compared against the state, possibly via a
+///    call to the constraint solver.
+///
+/// 2. The root of the interpolation tree, which is an object of type ITreeNode,
+///    and referenced by the member __root__.
+///
+/// 3. The currently-active interpolation tree node, which is also an object of
+///    type ITreeNode, and referenced by the member __currentINode__.
+///
+/// ITree has several public methods, most importantly, the various versions of
+/// the ITree::execute method. The ITree::execute methods are called mainly from
+/// the Executor class. The Executor class is the core symbolic executor of KLEE.
+/// Hooks are implemented in the Executor class that calls various polymorphic
+/// variants of ITree::execute. The main functionality of the ITree::execute
+/// themselves is to simply delegate the call to Dependency::execute, which
+/// implements the shadow memory dependency computation used in computing the
+/// regions of memory that need to be kept as part of the interpolant stored
+/// in the subsumption table.
+///
+/// The methods ITree::store and ITree::subsumptionCheck implement the
+/// subsumption checking mechanism. ITree::store is called from the ITree::remove
+/// method, which is invoked when the symbolic execution emanating from a certain
+/// state has finished and the state is to be removed. The completion of
+/// the symbolic execution here is assumed to mean that the interpolants have been
+/// completely recorded from all the execution paths emanating from the state.
+/// The ITree::store methods builds an object of SubsumptionTableEntry and stores
+/// it in the subsumption table (field __subsumptionTable__).
+///
+/// \see ITreeNode
+/// \see Dependency
+/// \see Executor
+/// \see SubsumptionTableEntry
 class ITree {
   typedef std::vector<ref<Expr> > ExprList;
   typedef ExprList::iterator iterator;
@@ -628,7 +689,7 @@ public:
   ITreeNode *root;
 
   /// \brief This static field is to indicate if we recovered from an error,
-  /// e.g., memory bounds error, such that the value of the previous instruction
+  /// e.g., memory bounds error, where the value of the previous instruction
   /// may not have been computed.
   static bool symbolicExecutionError;
 
@@ -644,7 +705,7 @@ public:
   /// This also sets the id of the interpolation tree node to be the given
   /// pointer value.
   ///
-  /// \param The KLEE execution state to associate the current node with.
+  /// \param state The KLEE execution state to associate the current node with.
   void setCurrentINode(ExecutionState &state);
 
   /// \brief Deletes the interpolation tree node
@@ -710,7 +771,7 @@ public:
 
   /// \brief Print the content of the tree node object into a stream.
   ///
-  /// \param The stream to print the data to.
+  /// \param stream The stream to print the data to.
   void print(llvm::raw_ostream &stream) const;
 
   /// \brief Print the content of the tree object to the LLVM error stream
