@@ -149,7 +149,14 @@ else()
     string_to_list("${_llvm_libs}" _llvm_libs_list)
 
     # Now find the system libs that are needed.
-    _run_llvm_config(_system_libs "--ldflags")
+    if (${LLVM_PACKAGE_VERSION} VERSION_LESS "3.5")
+      # For LLVM 3.4 and older system libraries
+      # appeared in the output of `--ldflags`.
+      _run_llvm_config(_system_libs "--ldflags")
+      # TODO: Filter out `-L<path>` flag.
+    else()
+      _run_llvm_config(_system_libs "--system-libs")
+    endif()
     string_to_list("${_system_libs}" _system_libs_list)
 
     # Create an imported target for each LLVM library
