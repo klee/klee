@@ -415,7 +415,7 @@ class SubsumptionTableEntry {
     return interpolant.isNull() && concreteAddressStoreKeys.empty();
   }
 
-  /// \brief For printing method running time statistics
+  /// \brief For printing member functions running time statistics
   static void printStat(std::stringstream &stream);
 
 public:
@@ -455,17 +455,17 @@ public:
 /// \brief The interpolation tree node.
 ///
 /// This class is a higher-level wrapper to the path condition (referenced
-/// by the field __pathCondition__ of type PathCondition), and the shadow
-/// memory for memory dependency computation (referenced by the field
-/// __dependency__ of type Dependency).
+/// by the member variable ITreeNode#pathCondition of type PathCondition), and the shadow
+/// memory for memory dependency computation (referenced by the member
+/// variable ITreeNode#dependency of type Dependency).
 ///
 /// The interpolation tree node has an associated KLEE execution state
 /// (implemented using the type ExecutionState) from which it is referenced
-/// via the field ExecutionState::itreeNode.
+/// via the member variable ExecutionState#itreeNode.
 /// It adds information for lazy annotation to the ExecutionState object.
 /// The whole structure of the interpolation tree itself is maintained by
 /// the class ITree, which also refers to objects of type ITreeNode via
-/// its ITree::root and ITree::currentINode fields.
+/// its ITree#root and ITree#currentINode member variables.
 ///
 /// \see ITree
 /// \see Dependency
@@ -475,7 +475,7 @@ class ITreeNode {
 
   friend class ExecutionState;
 
-  // Timers for profiling the execution times of the methods of this class
+  // Timers for profiling the execution times of the member functions of this class
 
   static Statistic getInterpolantTime;
   static Statistic addConstraintTime;
@@ -517,7 +517,7 @@ private:
     storable = !(instr->getParent()->getParent()->getName().substr(0, 5).equals("klee_"));
   }
 
-  /// \brief for printing method running time statistics
+  /// \brief for printing member function running time statistics
   static void printTimeStat(std::stringstream &stream);
 
   void execute(llvm::Instruction *instr, std::vector<ref<Expr> > &args,
@@ -541,7 +541,7 @@ public:
 
   /// \brief Creates fresh interpolation data holder for the two given KLEE
   /// execution states.
-  /// This method is to be invoked after KLEE splits its own state due to state
+  /// This member function is to be invoked after KLEE splits its own state due to state
   /// forking.
   ///
   /// \param leftData The first KLEE execution state
@@ -603,16 +603,16 @@ private:
 
 /// \brief The top-level structure that implements lazy annotation.
 ///
-/// The name ITree is an abbreviation of _interpolation tree_. The interpolation
+/// The name ITree is an abbreviation of <i>interpolation tree</i>. The interpolation
 /// tree is just the symbolic execution tree, a parallel of what is implemented
 /// by KLEE's existing PTree class, however, it adds shadow information for use
 /// in lazy annotation. Each node of the interpolation tree is implemented in
 /// the ITreeNode class. The ITree class itself contains several important
 /// components:
 ///
-/// 1. The subsumption table (as the field __subsumptionTable__). This is the
+/// 1. The subsumption table (as the member variable ITree#subsumptionTable). This is the
 ///    database of states that have been generalized by the interpolation process
-///    to be used in subsuming other states. This member field is a map indexed
+///    to be used in subsuming other states. This member variable is a map indexed
 ///    by code fragment id, which is the pointer value of the first instruction
 ///    of a basic block. It represents control location in a program. In a
 ///    subsumption check, the map is queried for such id of a state. If the
@@ -621,13 +621,13 @@ private:
 ///    call to the constraint solver.
 ///
 /// 2. The root of the interpolation tree, which is an object of type ITreeNode,
-///    and referenced by the member __root__.
+///    and referenced by the member ITree#root.
 ///
 /// 3. The currently-active interpolation tree node, which is also an object of
-///    type ITreeNode, and referenced by the member __currentINode__.
+///    type ITreeNode, and referenced by the member ITree#currentINode.
 ///
-/// ITree has several public methods, most importantly, the various versions of
-/// the ITree::execute method. The ITree::execute methods are called mainly from
+/// ITree has several public member functions, most importantly, the various versions of
+/// the ITree::execute member function. The ITree::execute member functions are called mainly from
 /// the Executor class. The Executor class is the core symbolic executor of KLEE.
 /// Hooks are implemented in the Executor class that calls various polymorphic
 /// variants of ITree::execute. The main functionality of the ITree::execute
@@ -636,14 +636,62 @@ private:
 /// regions of memory that need to be kept as part of the interpolant stored
 /// in the subsumption table.
 ///
-/// The methods ITree::store and ITree::subsumptionCheck implement the
+/// The member functions ITree::store and ITree::subsumptionCheck implement the
 /// subsumption checking mechanism. ITree::store is called from the ITree::remove
-/// method, which is invoked when the symbolic execution emanating from a certain
+/// member function, which is invoked when the symbolic execution emanating from a certain
 /// state has finished and the state is to be removed. The completion of
 /// the symbolic execution here is assumed to mean that the interpolants have been
 /// completely recorded from all the execution paths emanating from the state.
-/// The ITree::store methods builds an object of SubsumptionTableEntry and stores
-/// it in the subsumption table (field __subsumptionTable__).
+/// The ITree::store member functions builds an object of SubsumptionTableEntry and stores
+/// it in the subsumption table (member variable ITree#subsumptionTable).
+///
+/// To see how everything fits together, first we explain the important parts of KLEE's
+/// algorithm, and then we explain the modifications to KLEE's algorithm for lazy annotation.
+///
+/// Following is the pseudocode of KLEE relevant to our discussion:
+///
+/// <hr>
+/// <pre>
+///      Put the initial statement into the worklist (embedded in a tree where the worklist consists of the leaves of the tree).
+///      While the worklist is not empty, do the following:
+///        1. Get a statement to symbolically execute from the worklist according to a chosen strategy.
+///        2. Symbolically execute the statement:
+///             If it generated branching, (control branching, array dereferencing), test if one of the branches was unsatisfiable.
+///               If it was, advance the execution by one instruction without creating more branching in the tree.
+///               Otherwise, generate the two branches and put them into the worklist, thus also expanding the tree.
+///             If the worklist item was a termination point (including error point), register the item (tree node) for deletion.
+///        3. Pick items (tree nodes) registered for deletion and delete them.
+///           Recursively, if a parent tree node is found to no longer have any
+///           children, delete the parent as well, and recursively its parent and so on.
+/// </pre>
+/// <hr>
+///
+/// For comparison, following is the pseudocode of Tracer-X KLEE. Please note that to support interpolation, each worklist item is now embedded with a path condition. We highlight the added procedures using CAPITAL LETTERS, and we note the member functions involved.
+///
+/// <hr>
+/// <pre>
+///      Put the initial statement into the worklist (embedded in a tree where the worklist consists of the leaves of the tree).
+///      While the worklist is not empty, do the following:
+///        1. Get a statement to symbolically execute from the worklist according to a chosen strategy
+///        2. TEST IF THE ITEM WAS SUBSUMED (ITree::subsumptionCheck)
+///             IF IT WAS:
+///               REGISTER IT FOR DELETION
+///               MARK THE CONSTRAINTS ON THE PATH CONDITION THAT WAS USED FOR THE PROOF (THE UNSATISFIABILITY CORE) THUS COMPUTING HALF INTERPOLANT (ITree::markPathCondition)
+///             OTHERWISE, symbolically execute the statement (ITree::execute, ITree::executePHI, ITree::executeMemoryOperation, ITree::executeOnNode):
+///               If it generated branching, (control branching, array dereferencing), test if one of the branches was unsatisfiable
+///                 If it was, advance the execution by one instruction without creating more branching in the tree
+///                   MARK THE CONSTRAINTS IN THE PATH CONDITION OF THIS ITEM CORRESPONDING TO THE UNSATISFIABILITY CORE THUS COMPUTING HALF INTERPOLANT (ITree::markPathCondition)
+///                 Otherwise, generate the two branches and put them into the worklist, thus also expanding the tree
+///                   HERE WE ADD THE BRANCHING CONDITION ONTO THE PATH CONDITION OF ONE OF THE BRANCHES AND ITS NEGATION TO THE PATH CONDITION OF THE OTHER BRANCH (ITreeNode::addConstraint)
+///               If the worklist item was a termination point (including error point), register the item (tree node) for deletion.
+/// </pre>
+/// <pre>
+///        3. Pick items (tree nodes) registered for deletion and delete them.
+///           Recursively, if a parent tree node is found to no longer have any
+///           children, delete the parent as well, and recursively its parent and so on.
+///           WHEN A NODE WAS TO BE DELETED, COLLECT THE MARKED CONSTRAINTS ON ITS PATH CONDITION AND STORE THESE IN THE SUBSUMPTION TABLE AS A FULL INTERPOLANT (ITree::store)
+/// </pre>
+/// <hr>
 ///
 /// \see ITreeNode
 /// \see Dependency
@@ -654,8 +702,8 @@ class ITree {
   typedef ExprList::iterator iterator;
   typedef ExprList::const_iterator const_iterator;
 
-  // Several static fields for profiling the execution time of this class's
-  // methods.
+  // Several static member variables for profiling the execution time of
+  // this class's member functions.
   static Statistic setCurrentINodeTime;
   static Statistic removeTime;
   static Statistic subsumptionCheckTime;
@@ -675,7 +723,7 @@ class ITree {
   void printNode(llvm::raw_ostream &stream, ITreeNode *n,
                  std::string edges) const;
 
-  /// \brief Displays method running time statistics
+  /// \brief Displays member functions running time statistics
   static void printTimeStat(std::stringstream &stream);
 
   /// \brief Displays subsumption table statistics
@@ -688,7 +736,7 @@ class ITree {
 public:
   ITreeNode *root;
 
-  /// \brief This static field is to indicate if we recovered from an error,
+  /// \brief This static member variable is to indicate if we recovered from an error,
   /// e.g., memory bounds error, where the value of the previous instruction
   /// may not have been computed.
   static bool symbolicExecutionError;
@@ -721,7 +769,7 @@ public:
 
   /// \brief Creates fresh interpolation data holder for the two given KLEE
   /// execution states.
-  /// This method is to be invoked after KLEE splits its own state due to state
+  /// This member function is to be invoked after KLEE splits its own state due to state
   /// forking.
   std::pair<ITreeNode *, ITreeNode *>
   split(ITreeNode *parent, ExecutionState *left, ExecutionState *right);
@@ -764,7 +812,7 @@ public:
     symbolicExecutionError = false;
   }
 
-  /// \brief General method for executing an instruction for building dependency
+  /// \brief General member function for executing an instruction for building dependency
   /// information, given a particular interpolation tree node.
   static void executeOnNode(ITreeNode *node, llvm::Instruction *instr,
                             std::vector<ref<Expr> > &args);

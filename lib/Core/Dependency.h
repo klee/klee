@@ -185,7 +185,7 @@ private:
     /// \brief Set of memory locations possibly being pointed to
     std::set<ref<MemoryLocation> > locations;
 
-    /// \brief Field to indicate if any unsatisfiability core depends on this
+    /// \brief Member variable to indicate if any unsatisfiability core depends on this
     /// value.
     bool core;
 
@@ -241,7 +241,7 @@ private:
   /// \brief Computation of memory regions the unsatisfiability core depends
   /// upon, which is used to compute the interpolant stored in the table.
   ///
-  /// __Problem statement__
+  /// <b>Problem statement</b>
   ///
   /// Memory regions of program states upon which the unsatisfiability core
   /// depends need to be computed. These regions are represented neither
@@ -260,7 +260,7 @@ private:
   /// to constrain \f$x_p\f$, which is the state at an arbitrary point \f$p\f$
   /// in the execution.
   ///
-  /// __Solution__
+  /// <b>Solution</b>
   ///
   /// When \f$g\f$ is a function with program state as its domain and codomain
   /// represents all the state updates from the initial state
@@ -279,34 +279,34 @@ private:
   /// Here we note that the function \f$f\f$ can be composed of functions \f$g\f$
   /// and \f$h\f$ such that \f$f = h \cdot g\f$, and therefore \f$c(f(x_0))\f$
   ///    is equivalent to \f$c(h(g(x_0)))\f$. Here, only a subset of \f$g\f$ and
-  ///    \f$h\f$ are actually relevant to \f$c\f$. Call these \f$g^S\f$ and
-  ///    \f$h^S\f$ respectively, where \f$c(h^S(g^S(x_0)))\f$ is equivalent to
+  ///    \f$h\f$ are actually relevant to \f$c\f$. Call these \f$g'\f$ and
+  ///    \f$h'\f$ respectively, where \f$c(h'(g'(x_0)))\f$ is equivalent to
   ///    \f$c(h(g(x_0)))\f$, and therefore is also equivalent to \f$c(f(x_0))\f$
   /// Now, instead of the above equation, the following
-  /// alternative provides a specification that constrains only a subset \f$x_p^S\f$
+  /// alternative provides a specification that constrains only a subset \f$x_p'\f$
   /// of \f$x_p\f$:
   /// \f[
-  /// \exists x_0 ~.~ c(h^S(g^S(x_0))) \wedge x_p^S = g^S(x_0)
+  /// \exists x_0 ~.~ c(h'(g'(x_0))) \wedge x_p' = g'(x_0)
   /// \f]
   /// or simply:
   /// \f[
-  /// \exists x_0 ~.~ c(f(x_0)) \wedge x_p^S = g^S(x_0)
+  /// \exists x_0 ~.~ c(f(x_0)) \wedge x_p' = g'(x_0)
   /// \f]
   /// The essence of the dependency computation implemented by this class is the
-  /// computation of the __domain__ of \f$h^S\f$, which represents all the mappings
-  /// relevant to the constraint \f$c(f(x_0))\f$. For this we build \f$h^S\f$
+  /// computation of the <b>domain</b> of \f$h'\f$, which represents all the mappings
+  /// relevant to the constraint \f$c(f(x_0))\f$. For this we build \f$h'\f$
   /// utilizing the flow dependency relation from stage \f$p\f$ to the point of
   /// introduction of the constraint \f$c(f(x_0))\f$, such that when \f$c(f(x_0))\f$
-  /// is found to be in the core, we know which subset \f$x_p^S\f$ of \f$x_p\f$ that
-  /// are relevant based on the computed domain of \f$h^S\f$.
+  /// is found to be in the core, we know which subset \f$x_p'\f$ of \f$x_p\f$ that
+  /// are relevant based on the computed domain of \f$h'\f$.
   ///
-  /// __Data types__
+  /// <b>Data types</b>
   ///
-  /// In the LLVM language, a _state_ is a mapping of memory locations to the values
-  /// stored in them. _State update_ is the loading of values from the memory
+  /// In the LLVM language, a <i>state</i> is a mapping of memory locations to the values
+  /// stored in them. <i>State update</i> is the loading of values from the memory
   /// locations, their manipulation, and the subsequent storing of their values
   /// into memory locations. The memory dependency computation to compute the domain
-  /// of \f$h^S\f$ is based on shadow data structure with the following main components:
+  /// of \f$h'\f$ is based on shadow data structure with the following main components:
   ///
   /// - VersionedValue: LLVM values (i.e., variables) with versioning index. This
   ///   represents the values loaded from memory into LLVM temporary variables. They
@@ -317,16 +317,30 @@ private:
   ///   to note that each pointer is associated with memory allocation and its
   ///   displacement (offset) wrt. the base address of the allocation.
   ///
-  /// The results of the computation is stored in several fields as follows.
+  /// The results of the computation is stored in several member variables as follows.
   ///
-  /// 1. __concretelyAddressedStore__ and __symbolicallyAddressedStore__ which
-  ///    represents the components of the state associated with the owner ITreeNode
-  ///    object of the Dependency object. __concretelyAddressedStore__ is the part
+  /// 1. Dependency#concretelyAddressedStore and Dependency#symbolicallyAddressedStore which
+  ///    represent the components of the state associated with the owner ITreeNode
+  ///    object of the Dependency object. Dependency#concretelyAddressedStore is the part
   ///    of the state that are concretely addressed, whereas
-  ///    __symbolicallyAddressedStore__ is the part that is symbolically addressed.
+  ///    Dependency#symbolicallyAddressedStore is the part that is symbolically addressed.
   ///
-  /// 2. In addition, __flowsToMap__ represents  the flow relations between
-  ///    VersionedValue objects, which is used to compute \f$h^S\f$.
+  /// 2. In addition, Dependency#flowsToMap represents  the flow relations between
+  ///    VersionedValue objects, which is used to compute \f$h'\f$.
+  ///
+  /// <b>Notes on pointer flow propagation</b>
+  ///
+  /// A VersionedValue object may represent a pointer value, in which case it is linked to
+  /// possibly several MemoryLocation objects via VersionedValue#locations member variable.
+  /// Such VersionedValue object may be used in memory access operations of LLVM (<b>load</b>
+  /// or <b>store</b>). The memory dependency computation propagates such pointer value
+  /// information in MemoryLocation from one VersionedValue to another such that there is
+  /// no need to inefficiently hunt for the pointer value at the point of use of the pointer.
+  /// For example, a symbolic execution of LLVM's <b>getelementptr</b> instruction would
+  /// create a new VersionedValue representing the return value of the instruction. This
+  /// new VersionedValue would inherit all members of the VersionedValue#locations variable
+  /// of the VersionedValue object representing the pointer argument of the instruction, with
+  /// modified offsets according to the offset argument of the instruction.
   ///
   /// \see ITree
   /// \see ITreeNode
@@ -373,7 +387,7 @@ private:
     std::set<ref<MemoryLocation> > coreLocations;
 
     /// \brief Register new versioned value, used by getNewVersionedValue
-    /// methods
+    /// member functions
     ref<VersionedValue> registerNewVersionedValue(llvm::Value *value,
                                                   ref<VersionedValue> vvalue);
 
