@@ -703,7 +703,17 @@ void Dependency::execute(llvm::Instruction *instr,
                locIter = locations.begin(),
                locIterEnd = locations.end();
            locIter != locIterEnd; ++locIter) {
-        ref<VersionedValue> storedValue = concretelyAddressedStore[*locIter];
+        ref<VersionedValue> storedValue;
+        if ((*locIter)->hasConstantAddress()) {
+          if (concretelyAddressedStore.count(*locIter) > 0) {
+            storedValue = concretelyAddressedStore[*locIter];
+          }
+        } else if (symbolicallyAddressedStore.count(*locIter) > 0) {
+          // FIXME: Here we assume that the expressions have to exactly be the
+          // same expression object. More properly, this should instead add an
+          // ite constraint onto the path condition.
+          storedValue = symbolicallyAddressedStore[*locIter];
+        }
 
         if (storedValue.isNull())
           // We could not find the stored value, create a new one.

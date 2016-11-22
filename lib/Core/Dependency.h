@@ -134,7 +134,7 @@ private:
           }
         }
         l = reinterpret_cast<uint64_t>(address.get());
-        r = reinterpret_cast<uint64_t>(address.get());
+        r = reinterpret_cast<uint64_t>(other.address.get());
         if (l == r)
           return 0;
         if (l < r)
