@@ -1419,7 +1419,13 @@ bool SubsumptionTableEntry::subsumed(
 
       if (!rhsConcrete.second.isNull()) {
         // There is the corresponding concrete allocation
-        res = EqExpr::create(lhsValue, rhsConcrete.second);
+        if (lhsValue->getWidth() != rhsConcrete.second->getWidth()) {
+          // We conservatively fail the subsumption in case the sizes do not
+          // match.
+          return false;
+        } else {
+          res = EqExpr::create(lhsValue, rhsConcrete.second);
+        }
       }
 
       if (!rhsSymbolicMap.empty()) {
@@ -1430,12 +1436,22 @@ bool SubsumptionTableEntry::subsumed(
                  it3 = rhsSymbolicMap.begin(),
                  it3End = rhsSymbolicMap.end();
              it3 != it3End; ++it3) {
-          // Implication: if lhsConcreteAddress == it3->first, then lhsValue ==
-          // it3->second
-          ref<Expr> newTerm = OrExpr::create(
-              EqExpr::create(ConstantExpr::create(0, Expr::Bool),
-                             EqExpr::create(lhsConcreteAddress, it3->first)),
-              EqExpr::create(lhsValue, it3->second));
+
+          ref<Expr> newTerm;
+          if (lhsValue->getWidth() != it3->second->getWidth()) {
+            // We conservatively require that the addresses should not be equal
+            // whenever their values are of different width
+            newTerm =
+                EqExpr::create(ConstantExpr::create(0, Expr::Bool),
+                               EqExpr::create(lhsConcreteAddress, it3->first));
+          } else {
+            // Implication: if lhsConcreteAddress == it3->first, then lhsValue
+            // == it3->second
+            newTerm = OrExpr::create(
+                EqExpr::create(ConstantExpr::create(0, Expr::Bool),
+                               EqExpr::create(lhsConcreteAddress, it3->first)),
+                EqExpr::create(lhsValue, it3->second));
+          }
           if (!conjunction.isNull()) {
             conjunction = AndExpr::create(newTerm, conjunction);
           } else {
@@ -1483,13 +1499,23 @@ bool SubsumptionTableEntry::subsumed(
            it3 != it3End; ++it3) {
         ref<Expr> rhsConcreteAddress = it3->second.first;
         ref<Expr> rhsValue = it3->second.second;
-        // Implication: if lhsSymbolicAddress == rhsConcreteAddress, then
-        // lhsValue == rhsValue
-        ref<Expr> newTerm =
-            OrExpr::create(EqExpr::create(ConstantExpr::create(0, Expr::Bool),
-                                          EqExpr::create(lhsSymbolicAddress,
-                                                         rhsConcreteAddress)),
-                           EqExpr::create(lhsValue, rhsValue));
+
+        ref<Expr> newTerm;
+        if (lhsValue->getWidth() != rhsValue->getWidth()) {
+          // We conservatively require that the addresses should not be equal
+          // whenever their values are of different width
+          newTerm = EqExpr::create(
+              ConstantExpr::create(0, Expr::Bool),
+              EqExpr::create(lhsSymbolicAddress, rhsConcreteAddress));
+        } else {
+          // Implication: if lhsSymbolicAddress == rhsConcreteAddress, then
+          // lhsValue == rhsValue
+          newTerm =
+              OrExpr::create(EqExpr::create(ConstantExpr::create(0, Expr::Bool),
+                                            EqExpr::create(lhsSymbolicAddress,
+                                                           rhsConcreteAddress)),
+                             EqExpr::create(lhsValue, rhsValue));
+        }
         if (!conjunction.isNull()) {
           conjunction = AndExpr::create(newTerm, conjunction);
         } else {
@@ -1503,13 +1529,23 @@ bool SubsumptionTableEntry::subsumed(
            it3 != it3End; ++it3) {
         ref<Expr> rhsSymbolicAddress = it3->first;
         ref<Expr> rhsValue = it3->second;
-        // Implication: if lhsSymbolicAddress == rhsSymbolicAddress then
-        // lhsValue == rhsValue
-        ref<Expr> newTerm =
-            OrExpr::create(EqExpr::create(ConstantExpr::create(0, Expr::Bool),
-                                          EqExpr::create(lhsSymbolicAddress,
-                                                         rhsSymbolicAddress)),
-                           EqExpr::create(lhsValue, rhsValue));
+        ref<Expr> newTerm;
+
+        if (lhsValue->getWidth() != rhsValue->getWidth()) {
+          // We conservatively require that the addresses should not be equal
+          // whenever their values are of different width
+          newTerm = EqExpr::create(
+              ConstantExpr::create(0, Expr::Bool),
+              EqExpr::create(lhsSymbolicAddress, rhsSymbolicAddress));
+        } else {
+          // Implication: if lhsSymbolicAddress == rhsSymbolicAddress then
+          // lhsValue == rhsValue
+          newTerm =
+              OrExpr::create(EqExpr::create(ConstantExpr::create(0, Expr::Bool),
+                                            EqExpr::create(lhsSymbolicAddress,
+                                                           rhsSymbolicAddress)),
+                             EqExpr::create(lhsValue, rhsValue));
+        }
         if (!conjunction.isNull()) {
           conjunction = AndExpr::create(newTerm, conjunction);
         } else {
