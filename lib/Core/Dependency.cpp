@@ -156,6 +156,27 @@ ShadowArray::getShadowExpression(ref<Expr> expr,
 
 /**/
 
+void MemoryLocation::adjustOffsetBound(ref<VersionedValue> checkedAddress) {
+  std::set<ref<MemoryLocation> > locations = checkedAddress->getLocations();
+
+  for (std::set<ref<MemoryLocation> >::iterator it = locations.begin(),
+                                                ie = locations.end();
+       it != ie; ++it) {
+    ref<Expr> checkedOffset = (*it)->getOffset();
+    if (ConstantExpr *c = llvm::dyn_cast<ConstantExpr>(checkedOffset)) {
+      if (ConstantExpr *o = llvm::dyn_cast<ConstantExpr>(offset)) {
+        uint64_t newBound = size = (c->getZExtValue() - o->getZExtValue());
+        if (concreteOffsetBound > newBound) {
+          concreteOffsetBound = newBound;
+        }
+      }
+    }
+
+    offsetBounds.insert(SubExpr::create(
+        Expr::createPointer(size), SubExpr::create(checkedOffset, offset)));
+  }
+}
+
 void MemoryLocation::print(llvm::raw_ostream &stream) const {
   stream << "A";
   if (!llvm::isa<ConstantExpr>(this->address))
@@ -205,57 +226,52 @@ void StoredValue::init(ref<VersionedValue> vvalue,
                                                   ie = locations.end();
          it != ie; ++it) {
       llvm::Value *v = (*it)->getValue(); // The allocation site
-      uint64_t size = (*it)->getSize();
+
+      // Concrete bound
+      uint64_t concreteBound = (*it)->getConcreteOffsetBound();
+      std::set<ref<Expr> > newBounds;
+
+      for (std::set<ref<Expr> >::iterator it1 = allocationBounds[v].begin(),
+                                          ie1 = allocationBounds[v].end();
+           it1 != ie1; ++it1) {
+        if (ConstantExpr *oe = llvm::dyn_cast<ConstantExpr>(*it1)) {
+          uint64_t currentBound = oe->getZExtValue();
+          if (currentBound > concreteBound) {
+            newBounds.insert(Expr::createPointer(concreteBound));
+            continue;
+          }
+        }
+        newBounds.insert(*it1);
+      }
+      allocationBounds[v] = newBounds;
+
+      // Symbolic bounds
+      std::set<ref<Expr> > bounds = (*it)->getOffsetBounds();
+
+      if (shadowing) {
+        std::set<ref<Expr> > shadowBounds;
+        for (std::set<ref<Expr> >::iterator it1 = bounds.begin(),
+                                            ie1 = bounds.end();
+             it1 != ie1; ++it1) {
+          shadowBounds.insert(
+              ShadowArray::getShadowExpression(*it1, replacements));
+        }
+        bounds = shadowBounds;
+      }
+
+      allocationBounds[v].insert(bounds.begin(), bounds.end());
 
       ref<Expr> offset = shadowing ? ShadowArray::getShadowExpression(
                                          (*it)->getOffset(), replacements)
                                    : (*it)->getOffset();
-
-      if (ConstantExpr *coff = llvm::dyn_cast<ConstantExpr>(offset)) {
-
-        // We first build the allocation offset bounds
-        std::set<ref<Expr> > b = allocationBounds[v];
-
-        // The bound is 0, meaning undefined, in case the size itself is 0
-        // (unknown)
-        uint64_t newBound = size ? size - coff->getZExtValue() : 0;
-
-        if (b.empty()) {
-          allocationBounds[v].insert(Expr::createPointer(newBound));
-        } else {
-          std::set<ref<Expr> > res;
-          for (std::set<ref<Expr> >::iterator it1 = b.begin(), ie1 = b.end();
-               it1 != ie1; ++it1) {
-            if (ConstantExpr *ce = llvm::dyn_cast<ConstantExpr>(*it1)) {
-              if (newBound < ce->getZExtValue()) {
-                res.insert(Expr::createPointer(newBound));
-                continue;
-              }
-            }
-            res.insert(*it1);
-          }
-          allocationBounds[v].clear();
-          allocationBounds[v] = res;
-        }
-
-      } else {
-        // Symbolic offset
-
-        if (size) {
-          // We record a subtraction in case the size is known
-          allocationBounds[v]
-              .insert(SubExpr::create(Expr::createPointer(size), offset));
-        } else {
-          allocationBounds[v].insert(Expr::createPointer(0));
-        }
-      }
 
       // We next build the offsets to be compared against stored allocation
       // offset bounds
       ConstantExpr *oe = llvm::dyn_cast<ConstantExpr>(offset);
       if (oe && !allocationOffsets[v].empty()) {
         // Here we check if smaller offset exists, in which case we replace it
-        // with the new offset
+        // with the new offset; as we want the greater offset to possibly
+        // violate an offset bound.
         std::set<ref<Expr> > res;
         uint64_t offsetInt = oe->getZExtValue();
         for (std::set<ref<Expr> >::iterator it1 = res.begin(), ie1 = res.end();
@@ -522,6 +538,29 @@ Dependency::getLatestValueNoConstantCheck(llvm::Value *value) {
   return 0;
 }
 
+ref<VersionedValue> Dependency::getLatestValueForMarking(llvm::Value *val) {
+  ref<VersionedValue> value = getLatestValueNoConstantCheck(val);
+
+  // Right now we simply ignore the __dso_handle values. They are due
+  // to library / linking errors caused by missing options (-shared) in the
+  // compilation involving shared library.
+  if (value.isNull()) {
+    if (llvm::ConstantExpr *cVal = llvm::dyn_cast<llvm::ConstantExpr>(val)) {
+      for (unsigned i = 0; i < cVal->getNumOperands(); ++i) {
+        if (cVal->getOperand(i)->getName().equals("__dso_handle")) {
+          return value;
+        }
+      }
+    }
+
+    if (llvm::isa<llvm::Constant>(val))
+      return value;
+
+    assert(!"unknown value");
+  }
+  return value;
+}
+
 void Dependency::updateStore(ref<MemoryLocation> loc,
                              ref<VersionedValue> value) {
   if (loc->hasConstantAddress())
@@ -622,6 +661,23 @@ void Dependency::markFlow(ref<VersionedValue> target) const {
                                                    ie = stepSources.end();
        it != ie; ++it) {
     markFlow(*it);
+  }
+}
+
+void Dependency::markPointerFlow(ref<VersionedValue> target,
+                                 ref<VersionedValue> checkedAddress) const {
+  std::set<ref<MemoryLocation> > locations = target->getLocations();
+  for (std::set<ref<MemoryLocation> >::iterator it = locations.begin(),
+                                                ie = locations.end();
+       it != ie; ++it) {
+    (*it)->adjustOffsetBound(checkedAddress);
+  }
+  target->setAsCore();
+  std::vector<ref<VersionedValue> > stepSources = directFlowSources(target);
+  for (std::vector<ref<VersionedValue> >::iterator it = stepSources.begin(),
+                                                   ie = stepSources.end();
+       it != ie; ++it) {
+    markPointerFlow(*it, checkedAddress);
   }
 }
 
@@ -1124,7 +1180,7 @@ void Dependency::executeMemoryOperation(llvm::Instruction *instr,
       break;
     }
     }
-    markAllValues(addressOperand);
+    markAllPointerValues(addressOperand);
   }
 }
 
@@ -1174,27 +1230,21 @@ void Dependency::bindReturnValue(llvm::CallInst *site, llvm::Instruction *i,
 void Dependency::markAllValues(ref<VersionedValue> value) { markFlow(value); }
 
 void Dependency::markAllValues(llvm::Value *val) {
-  ref<VersionedValue> value = getLatestValueNoConstantCheck(val);
+  ref<VersionedValue> value = getLatestValueForMarking(val);
 
-  // Right now we simply ignore the __dso_handle values. They are due
-  // to library / linking errors caused by missing options (-shared) in the
-  // compilation involving shared library.
-  if (value.isNull()) {
-    if (llvm::ConstantExpr *cVal = llvm::dyn_cast<llvm::ConstantExpr>(val)) {
-      for (unsigned i = 0; i < cVal->getNumOperands(); ++i) {
-        if (cVal->getOperand(i)->getName().equals("__dso_handle")) {
-          return;
-        }
-      }
-    }
-
-    if (llvm::isa<llvm::Constant>(val))
-      return;
-
-    assert(!"unknown value");
-  }
+  if (value.isNull())
+    return;
 
   markFlow(value);
+}
+
+void Dependency::markAllPointerValues(llvm::Value *val) {
+  ref<VersionedValue> value = getLatestValueForMarking(val);
+
+  if (value.isNull())
+    return;
+
+  markPointerFlow(value, value);
 }
 
 void Dependency::print(llvm::raw_ostream &stream) const {

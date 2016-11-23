@@ -41,6 +41,8 @@ namespace klee {
 
   class Dependency;
 
+  class VersionedValue;
+
   /// \brief Implements the replacement mechanism for replacing variables, used in
   /// replacing free with bound variables.
   class ShadowArray {
@@ -79,8 +81,15 @@ namespace klee {
     /// \brief The base address
     ref<Expr> base;
 
-    /// \brief The offset of the allocation
+    /// \brief The offset wrt. the allocation
     ref<Expr> offset;
+
+    /// \brief The expressions representing the bound on the offset, i.e., the
+    /// interpolant, in case it is symbolic.
+    std::set<ref<Expr> > offsetBounds;
+
+    /// \brief This is the concrete offset bound
+    uint64_t concreteOffsetBound;
 
     /// \brief The size of this allocation (0 means unknown)
     uint64_t size;
@@ -88,7 +97,7 @@ namespace klee {
     MemoryLocation(llvm::Value *_value, ref<Expr> &_address, ref<Expr> &_base,
                    ref<Expr> &_offset, uint64_t _size)
         : refCount(0), value(_value), address(_address), base(_base),
-          offset(_offset), size(_size) {}
+          offset(_offset), concreteOffsetBound(_size), size(_size) {}
 
   public:
     ~MemoryLocation() {}
@@ -105,17 +114,17 @@ namespace klee {
                                       ref<Expr> &address, ref<Expr> &offset) {
       ConstantExpr *c = llvm::dyn_cast<ConstantExpr>(offset);
       if (c && c->getZExtValue() == 0) {
-        ref<Expr> base = loc->getBase();
-        ref<Expr> offset = loc->getOffset();
-        ref<MemoryLocation> ret(new MemoryLocation(loc->getValue(), address,
-                                                   base, offset, loc->size));
+        ref<Expr> base = loc->base;
+        ref<Expr> offset = loc->offset;
+        ref<MemoryLocation> ret(
+            new MemoryLocation(loc->value, address, base, offset, loc->size));
         return ret;
       }
 
-      ref<Expr> base = loc->getBase();
-      ref<Expr> newOffset = AddExpr::create(loc->getOffset(), offset);
-      ref<MemoryLocation> ret(new MemoryLocation(loc->getValue(), address, base,
-                                                 newOffset, loc->size));
+      ref<Expr> base = loc->base;
+      ref<Expr> newOffset = AddExpr::create(loc->offset, offset);
+      ref<MemoryLocation> ret(
+          new MemoryLocation(loc->value, address, base, newOffset, loc->size));
       return ret;
     }
 
@@ -149,6 +158,9 @@ namespace klee {
       return 1;
     }
 
+    /// \brief Adjust the offset bound for interpolation (a.k.a. slackening)
+    void adjustOffsetBound(ref<VersionedValue> checkedAddress);
+
     bool hasConstantAddress() const { return llvm::isa<ConstantExpr>(address); }
 
     uint64_t getUIntAddress() const {
@@ -160,6 +172,10 @@ namespace klee {
     ref<Expr> getAddress() const { return address; }
 
     ref<Expr> getBase() const { return base; }
+
+    std::set<ref<Expr> > getOffsetBounds() const { return offsetBounds; }
+
+    uint64_t getConcreteOffsetBound() const { return concreteOffsetBound; }
 
     ref<Expr> getOffset() const { return offset; }
 
@@ -192,8 +208,7 @@ namespace klee {
     std::set<ref<MemoryLocation> > locations;
 
     /// \brief Member variable to indicate if any unsatisfiability core depends
-    /// on this
-    /// value.
+    /// on this value.
     bool core;
 
     /// \brief The id of this object
@@ -544,6 +559,9 @@ namespace klee {
     /// for whether the value is constant or not
     ref<VersionedValue> getLatestValueNoConstantCheck(llvm::Value *value);
 
+    /// \brief Gets the latest pointer value for marking
+    ref<VersionedValue> getLatestValueForMarking(llvm::Value *val);
+
     /// \brief Newly relate an location with its stored value
     void updateStore(ref<MemoryLocation> loc, ref<VersionedValue> value);
 
@@ -573,6 +591,12 @@ namespace klee {
     /// \brief Mark as core all the values and locations that flows to the
     /// target
     void markFlow(ref<VersionedValue> target) const;
+
+    /// \brief Mark as core all the pointer values and that flows to the target;
+    /// and adjust its offset bound for memory bounds interpolation (a.k.a.
+    /// slackening)
+    void markPointerFlow(ref<VersionedValue> target,
+                         ref<VersionedValue> checkedOffset) const;
 
     /// \brief Record the expressions of a call's arguments
     std::vector<ref<VersionedValue> >
@@ -633,6 +657,10 @@ namespace klee {
     /// \brief Given an LLVM value, retrieve all its sources and mark them as in
     /// the core.
     void markAllValues(llvm::Value *value);
+
+    /// \brief Given an LLVM value which is used as an address, retrieve all its
+    /// sources and mark them as in the core.
+    void markAllPointerValues(llvm::Value *value);
 
     /// \brief Print the content of the object to the LLVM error stream
     void dump() const {
