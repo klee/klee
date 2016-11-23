@@ -138,7 +138,7 @@ namespace klee {
           }
         }
         l = reinterpret_cast<uint64_t>(address.get());
-        r = reinterpret_cast<uint64_t>(address.get());
+        r = reinterpret_cast<uint64_t>(other.address.get());
         if (l == r)
           return 0;
         if (l < r)
@@ -173,7 +173,7 @@ namespace klee {
 
     /// \brief Print the content of the object into a stream.
     ///
-    /// \param The stream to print the data to.
+    /// \param stream The stream to print the data to.
     void print(llvm::raw_ostream& stream) const;
   };
 
@@ -191,7 +191,8 @@ namespace klee {
     /// \brief Set of memory locations possibly being pointed to
     std::set<ref<MemoryLocation> > locations;
 
-    /// \brief Field to indicate if any unsatisfiability core depends on this
+    /// \brief Member variable to indicate if any unsatisfiability core depends
+    /// on this
     /// value.
     bool core;
 
@@ -234,7 +235,7 @@ namespace klee {
 
     /// \brief Print the content of the object into a stream.
     ///
-    /// \param The stream to print the data to.
+    /// \param stream The stream to print the data to.
     void print(llvm::raw_ostream& stream) const;
 
     /// \brief Print the content of the object to the LLVM error stream
@@ -322,34 +323,145 @@ namespace klee {
   };
 
   /// \brief Computation of memory regions the unsatisfiability core depends
-  /// upon, which is used to compute the interpolant.
+  /// upon, which is used to compute the interpolant stored in the table.
   ///
-  /// Problems solved:
-  /// 1. Components of program states upon which the unsatisfiability core
-  ///    depends need to be computed. These components may not be represented
-  ///    in the constraints.
-  /// 2. To gain more subsumption, we need to store interpolation at more
-  ///    program points. More specifically, here we would like to compute the
-  ///    instructions that are related to the unsatisfiability core in order
-  ///    to compute the right interpolant. That is, given a constraint c(x0)
-  ///    in the core, we want to compute the set of state update statements S
-  ///    from which we compose the state update function f_S where the next
-  ///    state x' = f_S(x0), such that the interpolant after the state update
-  ///    is exists x0 . c(x0) /\ x' = f_S(x0)
+  /// <b>Problem statement</b>
   ///
-  /// Solution:
-  /// The memory dependency computation is based on shadow data structure with
-  /// the following main components:
+  /// Memory regions of program states upon which the unsatisfiability core
+  /// depends need to be computed. These regions are represented neither
+  /// on the path condition nor the unsatisfiability core, which is just the
+  /// subset of the path condition. More precisely,
+  /// at a particular point \f$p\f$ of the symbolic execution, we have a
+  /// program state that can be represented as \f$x_p\f$, which is a mapping
+  /// of memory regions (e.g., variables) to their values. Within the KLEE
+  /// implementation, constraints on the path condition always constrain
+  /// only the initial symbolic values, for example, the constraint
+  /// \f$c(f(x_0))\f$,
+  /// where \f$x_0\f$ represents the initial state, and \f$f\f$ (a function with
+  /// program state as its domain and codomain) represents the
+  /// state update from the initial state to the point where \f$c\f$ is
+  /// introduced via e.g., branch condition. The problem here is how
+  /// to relate \f$c(f(x_0))\f$ with \f$x_p\f$ such the constraints can be used
+  /// to constrain \f$x_p\f$, which is the state at an arbitrary point \f$p\f$
+  /// in the execution.
   ///
-  /// Domains:
-  /// VersionedValue -> LLVM values (i.e., variables) with versioning index
-  /// MemoryLocation -> A pointer value, which is associated with an
-  ///                   allocation and its displacement (offset)
+  /// <b>Solution</b>
   ///
-  /// The results of the computation is the set of relations _concreteStore,
-  /// _symbolicStore, and flowsToMap, representing the VersionedValue stored in
-  /// a memory location with concrete and symbolic address, and the flow
-  /// relations between VersionedValue objects in flowsToMap field.
+  /// When \f$g\f$ is a function with program state as its domain and codomain
+  /// represents all the state updates from the initial state
+  /// \f$x_0\f$ to the point \f$p\f$, then \f$c(f(x_0))\f$ constrains \f$x_p\f$
+  /// in the following way:
+  /// \f[
+  /// \exists x_0 ~.~ c(f(x_0)) \wedge x_p = g(x_0)
+  /// \f]
+  /// This is indeed the specification of an already-visited intermediate state
+  /// at stage \f$p\f$ of the execution that can be used to subsume other
+  /// states.
+  /// We could store the whole of \f$x_p\f$ as an interpolant, however, we would
+  /// not gain much subsumptions in this way, as only a subset of \f$x_p\f$
+  /// is relevant for \f$c(f(x_0))\f$. Other components of \f$x_p\f$ would
+  /// provide
+  /// extra constraints that fail subsumption.
+  ///
+  /// Here we note that the function \f$f\f$ can be composed of functions
+  /// \f$g\f$
+  /// and \f$h\f$ such that \f$f = h \cdot g\f$, and therefore \f$c(f(x_0))\f$
+  ///    is equivalent to \f$c(h(g(x_0)))\f$. Here, only a subset of \f$g\f$ and
+  ///    \f$h\f$ are actually relevant to \f$c\f$. Call these \f$g'\f$ and
+  ///    \f$h'\f$ respectively, where \f$c(h'(g'(x_0)))\f$ is equivalent to
+  ///    \f$c(h(g(x_0)))\f$, and therefore is also equivalent to \f$c(f(x_0))\f$
+  /// Now, instead of the above equation, the following
+  /// alternative provides a specification that constrains only a subset
+  /// \f$x_p'\f$
+  /// of \f$x_p\f$:
+  /// \f[
+  /// \exists x_0 ~.~ c(h'(g'(x_0))) \wedge x_p' = g'(x_0)
+  /// \f]
+  /// or simply:
+  /// \f[
+  /// \exists x_0 ~.~ c(f(x_0)) \wedge x_p' = g'(x_0)
+  /// \f]
+  /// The essence of the dependency computation implemented by this class is the
+  /// computation of the <b>domain</b> of \f$h'\f$, which represents all the
+  /// mappings
+  /// relevant to the constraint \f$c(f(x_0))\f$. For this we build \f$h'\f$
+  /// utilizing the flow dependency relation from stage \f$p\f$ to the point of
+  /// introduction of the constraint \f$c(f(x_0))\f$, such that when
+  /// \f$c(f(x_0))\f$
+  /// is found to be in the core, we know which subset \f$x_p'\f$ of \f$x_p\f$
+  /// that
+  /// are relevant based on the computed domain of \f$h'\f$.
+  ///
+  /// <b>Data types</b>
+  ///
+  /// In the LLVM language, a <i>state</i> is a mapping of memory locations to
+  /// the values
+  /// stored in them. <i>State update</i> is the loading of values from the
+  /// memory
+  /// locations, their manipulation, and the subsequent storing of their values
+  /// into memory locations. The memory dependency computation to compute the
+  /// domain
+  /// of \f$h'\f$ is based on shadow data structure with the following main
+  /// components:
+  ///
+  /// - VersionedValue: LLVM values (i.e., variables) with versioning index.
+  /// This
+  ///   represents the values loaded from memory into LLVM temporary variables.
+  /// They
+  ///   have versioning index, as, different from LLVM values themselves which
+  /// are
+  ///   static entities, a (symbolic) execution may go through the same
+  /// instruction
+  ///   multiple times. Hence the value of that instruction has to be versioned.
+  /// - MemoryLocation: A representation of pointers. It is important
+  ///   to note that each pointer is associated with memory allocation and its
+  ///   displacement (offset) wrt. the base address of the allocation.
+  ///
+  /// The results of the computation is stored in several member variables as
+  /// follows.
+  ///
+  /// 1. Dependency#concretelyAddressedStore and
+  /// Dependency#symbolicallyAddressedStore which
+  ///    represent the components of the state associated with the owner
+  /// ITreeNode
+  ///    object of the Dependency object. Dependency#concretelyAddressedStore is
+  /// the part
+  ///    of the state that are concretely addressed, whereas
+  ///    Dependency#symbolicallyAddressedStore is the part that is symbolically
+  /// addressed.
+  ///
+  /// 2. In addition, Dependency#flowsToMap represents  the flow relations
+  /// between
+  ///    VersionedValue objects, which is used to compute \f$h'\f$.
+  ///
+  /// <b>Notes on pointer flow propagation</b>
+  ///
+  /// A VersionedValue object may represent a pointer value, in which case it is
+  /// linked to
+  /// possibly several MemoryLocation objects via VersionedValue#locations
+  /// member variable.
+  /// Such VersionedValue object may be used in memory access operations of LLVM
+  /// (<b>load</b>
+  /// or <b>store</b>). The memory dependency computation propagates such
+  /// pointer value
+  /// information in MemoryLocation from one VersionedValue to another such that
+  /// there is
+  /// no need to inefficiently hunt for the pointer value at the point of use of
+  /// the pointer.
+  /// For example, a symbolic execution of LLVM's <b>getelementptr</b>
+  /// instruction would
+  /// create a new VersionedValue representing the return value of the
+  /// instruction. This
+  /// new VersionedValue would inherit all members of the
+  /// VersionedValue#locations variable
+  /// of the VersionedValue object representing the pointer argument of the
+  /// instruction, with
+  /// modified offsets according to the offset argument of the instruction.
+  ///
+  /// \see ITree
+  /// \see ITreeNode
+  /// \see VersionedValue
+  /// \see MemoryLocation
   class Dependency {
 
   public:
@@ -374,10 +486,12 @@ namespace klee {
     std::vector<ref<VersionedValue> > argumentValuesList;
 
     /// \brief The mapping of concrete locations to stored value
-    std::map<ref<MemoryLocation>, ref<VersionedValue> > _concreteStore;
+    std::map<ref<MemoryLocation>, ref<VersionedValue> >
+    concretelyAddressedStore;
 
     /// \brief The mapping of symbolic locations to stored value
-    std::map<ref<MemoryLocation>, ref<VersionedValue> > _symbolicStore;
+    std::map<ref<MemoryLocation>, ref<VersionedValue> >
+    symbolicallyAddressedStore;
 
     /// \brief Flow relations of target and its sources with location
     std::map<ref<VersionedValue>,
@@ -394,7 +508,7 @@ namespace klee {
     llvm::DataLayout *targetData;
 
     /// \brief Register new versioned value, used by getNewVersionedValue
-    /// methods
+    /// member functions
     ref<VersionedValue> registerNewVersionedValue(llvm::Value *value,
                                                   ref<VersionedValue> vvalue);
 
@@ -490,11 +604,13 @@ namespace klee {
     /// \brief This retrieves the locations known at this state, and the
     /// expressions stored in the locations.
     ///
-    /// \param The replacement bound variables when retrieving state for
+    /// \param replacements The replacement bound variables when retrieving
+    /// state for
     /// creating subsumption table entry: As the resulting expression will
     /// be used for storing in the subsumption table, the variables need to be
     /// replaced with the bound ones.
-    /// \param Indicate whether we are retrieving only data for locations
+    /// \param coreOnly Indicate whether we are retrieving only data for
+    /// locations
     /// relevant to an unsatisfiability core.
     /// \return A pair of the store part indexed by constants, and the store
     /// part
@@ -526,13 +642,14 @@ namespace klee {
 
     /// \brief Print the content of the object into a stream.
     ///
-    /// \param The stream to print the data to.
+    /// \param stream The stream to print the data to.
     void print(llvm::raw_ostream& stream) const;
 
     /// \brief Print the content of the object into a stream.
     ///
-    /// \param The stream to print the data to.
-    /// \param The number of whitespaces to be printed before each line.
+    /// \param stream The stream to print the data to.
+    /// \param paddingAmount The number of whitespaces to be printed before each
+    /// line.
     void print(llvm::raw_ostream &stream, const unsigned paddingAmount) const;
   };
 
