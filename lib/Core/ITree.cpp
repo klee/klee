@@ -1590,8 +1590,8 @@ bool SubsumptionTableEntry::subsumed(
         }
       }
 
-      for (Dependency::SymbolicStoreMap::const_iterator << << << <
-               HEAD it3 = stateSymbolicMap.begin(),
+      for (Dependency::SymbolicStoreMap::const_iterator
+		 it3 = stateSymbolicMap.begin(),
                     ie3 = stateSymbolicMap.end();
            it3 != ie3; ++it3) {
         ref<Expr> stateSymbolicAddress = it3->first;
@@ -1599,7 +1599,7 @@ bool SubsumptionTableEntry::subsumed(
         ref<Expr> newTerm;
 
         if (tabledValue->getExpression()->getWidth() !=
-            rhsValue->getExpression()->getWidth()) {
+            stateValue->getExpression()->getWidth()) {
           // We conservatively require that the addresses should not be equal
           // whenever their values are of different width
           newTerm = EqExpr::create(
