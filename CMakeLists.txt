@@ -578,7 +578,7 @@ if (ENABLE_KLEE_UCLIBC)
   # Find the C library bitcode archive
   set(KLEE_UCLIBC_BCA_NAME "klee-uclibc.bca")
   set(KLEE_UCLIBC_C_BCA "${KLEE_UCLIBC_PATH}/lib/libc.a")
-  if (NOT EXISTS "${KLEE_UCLIBC_PATH}")
+  if (NOT EXISTS "${KLEE_UCLIBC_C_BCA}")
     message(FATAL_ERROR
       "klee-uclibc library not found at \"${KLEE_UCLIBC_C_BCA}\"")
   endif()
