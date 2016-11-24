@@ -407,7 +407,7 @@ class SubsumptionTableEntry {
                                    std::map<ref<Expr>, ref<Expr> > &map);
 
   bool empty() {
-    return interpolant.isNull() && concreteAddressStoreKeys.empty();
+    return interpolant.isNull() && concreteAddressStoreKeys.empty() && symbolicAddressStoreKeys.empty();
   }
 
   /// \brief For printing member functions running time statistics
