@@ -413,6 +413,8 @@ class SubsumptionTableEntry {
 public:
   const uintptr_t programPoint;
 
+  const uint64_t nodeSequenceNumber;
+
   SubsumptionTableEntry(ITreeNode *node);
 
   ~SubsumptionTableEntry();

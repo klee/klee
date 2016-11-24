@@ -850,7 +850,8 @@ void PathCondition::print(llvm::raw_ostream &stream) const {
 /**/
 
 SubsumptionTableEntry::SubsumptionTableEntry(ITreeNode *node)
-    : programPoint(node->getProgramPoint()) {
+    : programPoint(node->getProgramPoint()),
+      nodeSequenceNumber(node->getNodeSequenceNumber()) {
   std::set<const Array *> replacements;
 
   interpolant = node->getInterpolant(replacements);
@@ -1374,6 +1375,11 @@ bool SubsumptionTableEntry::subsumed(
   // Quick check for subsumption in case the interpolant is empty
   if (empty())
     return true;
+
+  if (DebugInterpolation == ITP_DEBUG_ALL ||
+      DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
+    klee_message("Checking against Node #%lu", nodeSequenceNumber);
+  }
 
   Dependency::ConcreteStore stateConcreteAddressStore = storedExpressions.first;
 
@@ -1946,6 +1952,12 @@ bool ITree::subsumptionCheck(TimingSolver *solver, ExecutionState &state,
 
   std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
   storedExpressions = state.itreeNode->getStoredExpressions();
+
+  if (DebugInterpolation == ITP_DEBUG_ALL ||
+      DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
+    klee_message("Subsumption check for Node #%lu",
+                 state.itreeNode->getNodeSequenceNumber());
+  }
 
   // Iterate the subsumption table entry with reverse iterator because
   // the successful subsumption mostly happen in the newest entry.
