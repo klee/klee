@@ -3026,15 +3026,25 @@ void Executor::run(ExecutionState &initialState) {
       // in the node.
       interpTree->setCurrentINode(state);
 
-      // Uncomment the following statements to show the state
-      // of the interpolation tree and the active node.
-      // llvm::errs() << "\nCurrent state:\n";
-      // processTree->dump();
-      // interpTree->dump();
-      // state.itreeNode->dump();
-      // llvm::errs() << "------------------- Executing New Instruction "
-      //                 "-----------------------\n";
-      // state.pc->inst->dump();
+      if (DebugInterpolation == ITP_DEBUG_ALL ||
+          DebugInterpolation == ITP_DEBUG_STATE) {
+        std::string debugMessage;
+        llvm::raw_string_ostream stream(debugMessage);
+        stream << "\nCurrent state:\n";
+        processTree->print(stream);
+        stream << "\n";
+        interpTree->print(stream);
+        stream << "\n";
+        state.itreeNode->print(stream);
+        stream << "\n";
+        stream << "------------------- Executing New Instruction "
+                  "-----------------------\n";
+        state.pc->inst->print(stream);
+        stream << "\n";
+        stream.flush();
+
+        klee_message("%s", debugMessage.c_str());
+      }
     }
 
     if (INTERPOLATION_ENABLED &&

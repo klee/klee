@@ -126,6 +126,16 @@ llvm::cl::opt<int> MaxFailSubsumption(
                    "value, the oldest entry will be deleted (default=0 (off))"),
     llvm::cl::init(0));
 
+llvm::cl::opt<InterpolationDebugType> DebugInterpolation(
+    "debug-interpolation",
+    llvm::cl::desc("Dump lazy annotation debug messages"),
+    llvm::cl::values(clEnumValN(ITP_DEBUG_STATE, "state",
+                                "Interpolation tree node dump (default)"),
+                     clEnumValN(ITP_DEBUG_SUBSUMPTION, "subsumption",
+                                "Subsumption check"),
+                     clEnumValN(ITP_DEBUG_ALL, "all", "All debug messages"),
+                     clEnumValEnd),
+    llvm::cl::init(ITP_DEBUG_STATE));
 #endif // ENABLE_Z3
 
 #ifdef ENABLE_METASMT

@@ -22,6 +22,7 @@
 #include <klee/Solver.h>
 #include <klee/SolverStats.h>
 #include <klee/TimerStatIncrementer.h>
+#include <klee/Internal/Support/ErrorHandling.h>
 #include <klee/util/ExprPPrinter.h>
 #include <fstream>
 #include <vector>
@@ -1584,8 +1585,14 @@ bool SubsumptionTableEntry::subsumed(
 
   if (!existentials.empty()) {
     ref<Expr> existsExpr = ExistsExpr::create(existentials, query);
-    // llvm::errs() << "Before simplification:\n";
-    // ExprPPrinter::printQuery(llvm::errs(), state.constraints, existsExpr);
+    if (DebugInterpolation == ITP_DEBUG_ALL ||
+        DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
+      std::string msg;
+      llvm::raw_string_ostream stream(msg);
+      stream << "Before simplification:\n";
+      ExprPPrinter::printQuery(stream, state.constraints, existsExpr);
+      stream.flush();
+    }
     query = simplifyExistsExpr(existsExpr, queryHasNoFreeVariables);
   }
 
@@ -1610,7 +1617,10 @@ bool SubsumptionTableEntry::subsumed(
 
 #ifdef ENABLE_Z3
     if (!existentials.empty() && llvm::isa<ExistsExpr>(query)) {
-      // llvm::errs() << "Existentials not empty\n";
+      if (DebugInterpolation == ITP_DEBUG_ALL ||
+          DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
+        klee_message("existentials not empty");
+      }
 
       // Instantiate a new Z3 solver to make sure we use Z3
       // without pre-solving optimizations. It would be nice
@@ -1632,16 +1642,26 @@ bool SubsumptionTableEntry::subsumed(
         ref<Expr> falseExpr = ConstantExpr::create(0, Expr::Bool);
         constraints.addConstraint(EqExpr::create(falseExpr, query->getKid(0)));
 
-        // llvm::errs() << "Querying for satisfiability check:\n";
-        // ExprPPrinter::printQuery(llvm::errs(), constraints,
-        // falseExpr);
+        if (DebugInterpolation == ITP_DEBUG_ALL ||
+            DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
+          std::string msg;
+          llvm::raw_string_ostream stream(msg);
+          ExprPPrinter::printQuery(stream, constraints, falseExpr);
+          stream.flush();
+          klee_message("Querying for satisfiability check:\n%s", msg.c_str());
+        }
 
         success = z3solver->getValue(Query(constraints, falseExpr), tmpExpr);
         result = success ? Solver::True : Solver::Unknown;
       } else {
-        // llvm::errs() << "Querying for subsumption check:\n";
-        // ExprPPrinter::printQuery(llvm::errs(), state.constraints,
-        // query);
+        if (DebugInterpolation == ITP_DEBUG_ALL ||
+            DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
+          std::string msg;
+          llvm::raw_string_ostream stream(msg);
+          ExprPPrinter::printQuery(stream, state.constraints, query);
+          stream.flush();
+          klee_message("Querying for subsumption check:\n%s", msg.c_str());
+        }
 
         success = z3solver->directComputeValidity(
             Query(state.constraints, query), result);
@@ -1652,14 +1672,17 @@ bool SubsumptionTableEntry::subsumed(
     } else
 #endif /* ENABLE_Z3 */
     {
-      // llvm::errs() << "No existential\n";
-
-      // llvm::errs() << "Querying for subsumption check:\n";
-      // ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
-
+      if (DebugInterpolation == ITP_DEBUG_ALL ||
+          DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
+        std::string msg;
+        llvm::raw_string_ostream stream(msg);
+        klee_message("no existential");
+        ExprPPrinter::printQuery(stream, state.constraints, query);
+        stream.flush();
+        klee_message("Querying for subsumption check:\n%s", msg.c_str());
+      }
       // We call the solver in the standard way if the
       // formula is unquantified.
-
       solver->setTimeout(timeout);
       success = solver->evaluate(state, query, result);
       solver->setTimeout(0);
@@ -1672,7 +1695,10 @@ bool SubsumptionTableEntry::subsumed(
   }
 
   if (success && result == Solver::True) {
-    // llvm::errs() << "Solver decided validity\n";
+    if (DebugInterpolation == ITP_DEBUG_ALL ||
+        DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
+      klee_message("Solver decided validity");
+    }
     std::vector<ref<Expr> > unsatCore;
 #ifdef ENABLE_Z3
     if (z3solver) {
@@ -1696,8 +1722,10 @@ bool SubsumptionTableEntry::subsumed(
   // which was eventually called from solver->evaluate
   // is conservative, where it returns Solver::Unknown even in case when
   // invalidity is established by the solver.
-  // llvm::errs() << "Solver did not decide validity\n";
-
+  if (DebugInterpolation == ITP_DEBUG_ALL ||
+      DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
+    klee_message("Solver did not decide validity");
+  }
 #ifdef ENABLE_Z3
   if (z3solver)
     delete z3solver;
