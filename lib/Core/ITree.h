@@ -384,8 +384,8 @@ class SubsumptionTableEntry {
   /// \brief Detect contradictory equalities in subsumption check beforehand to
   /// reduce the expensive call to the actual solver.
   ///
-  /// \return true if there is contradictory equality constraints between state
-  /// constraints and query expression, otherwise, return false.
+  /// \return false if there is contradictory equality constraints between state
+  /// constraints and query expression, otherwise, return true.
   static bool detectConflictPrimitives(ExecutionState &state, ref<Expr> query);
 
   /// \brief Get a conjunction of equalities that are top-level conjuncts in the
