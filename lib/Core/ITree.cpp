@@ -1423,7 +1423,7 @@ bool SubsumptionTableEntry::subsumed(
       // The address is not constrained by the current state, therefore
       // the current state is incomparable to the stored interpolant,
       // and we therefore fail the subsumption.
-      if (!stateConcreteMap.count(it2->first))
+      if (!stateConcreteMap.count(it2->first)) {
         if (DebugInterpolation == ITP_DEBUG_ALL ||
             DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
           klee_message("Check failure as memory region in the table does not "
@@ -1445,16 +1445,22 @@ bool SubsumptionTableEntry::subsumed(
             stateValue->getExpression()->getWidth()) {
           // We conservatively fail the subsumption in case the sizes do not
           // match.
-          if (DebugInterpolation == ITP_DEBUG_ALL ||
-              DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
-            klee_message(
-                "Check failure as sizes of stored values do not match");
-          }
+            if (DebugInterpolation == ITP_DEBUG_ALL ||
+                DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
+              klee_message(
+                  "Check failure as sizes of stored values do not match");
+            }
           return false;
         } else if (tabledValue->isPointer() && stateValue->isPointer()) {
           ref<Expr> boundsCheck = tabledValue->getBoundsCheck(stateValue);
-          if (boundsCheck->isFalse())
+          if (boundsCheck->isFalse()) {
+              if (DebugInterpolation == ITP_DEBUG_ALL ||
+                  DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
+                klee_message(
+                    "Check failure due to failure in memory bounds check");
+              }
             return false;
+          }
           if (!boundsCheck->isTrue())
             res = boundsCheck;
         } else {
