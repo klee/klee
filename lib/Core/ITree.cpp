@@ -22,6 +22,7 @@
 #include <klee/Solver.h>
 #include <klee/SolverStats.h>
 #include <klee/TimerStatIncrementer.h>
+#include <klee/Internal/Support/ErrorHandling.h>
 #include <klee/util/ExprPPrinter.h>
 #include <fstream>
 #include <vector>
@@ -546,21 +547,20 @@ SearchTree::PrettyExpressionBuilder::~PrettyExpressionBuilder() {}
 
 std::string SearchTree::NumberedEdge::render() const {
   std::ostringstream stream;
-  stream << "Node" << source->nodeId << " -> Node" << destination->nodeId
-         << " [style=dashed,label=\"" << number << "\"];";
+  stream << "Node" << source->nodeSequenceNumber << " -> Node"
+         << destination->nodeSequenceNumber << " [style=dashed,label=\""
+         << number << "\"];";
   return stream.str();
 }
 
 /**/
-
-unsigned long SearchTree::nextNodeId = 1;
 
 SearchTree *SearchTree::instance = 0;
 
 std::string SearchTree::recurseRender(const SearchTree::Node *node) {
   std::ostringstream stream;
 
-  stream << "Node" << node->nodeId;
+  stream << "Node" << node->nodeSequenceNumber;
   std::string sourceNodeName = stream.str();
 
   size_t pos = 0;
@@ -584,7 +584,7 @@ std::string SearchTree::recurseRender(const SearchTree::Node *node) {
   repStream2 << replacementName;
   replacementName = repStream2.str();
 
-  stream << " [shape=record,label=\"{" << node->nodeId << ": "
+  stream << " [shape=record,label=\"{" << node->nodeSequenceNumber << ": "
          << replacementName << "\\l";
   for (std::map<PathCondition *, std::pair<std::string, bool> >::const_iterator
            it = node->pathConditionTable.begin(),
@@ -603,12 +603,12 @@ std::string SearchTree::recurseRender(const SearchTree::Node *node) {
   stream << "}\"];\n";
 
   if (node->falseTarget) {
-    stream << sourceNodeName << ":s0 -> Node" << node->falseTarget->nodeId
-           << ";\n";
+    stream << sourceNodeName << ":s0 -> Node"
+           << node->falseTarget->nodeSequenceNumber << ";\n";
   }
   if (node->trueTarget) {
-    stream << sourceNodeName + ":s1 -> Node" << node->trueTarget->nodeId
-           << ";\n";
+    stream << sourceNodeName + ":s1 -> Node"
+           << node->trueTarget->nodeSequenceNumber << ";\n";
   }
   if (node->falseTarget) {
     stream << recurseRender(node->falseTarget);
@@ -642,7 +642,7 @@ std::string SearchTree::render() {
 }
 
 SearchTree::SearchTree(ITreeNode *_root) : subsumptionEdgeNumber(0) {
-  root = SearchTree::Node::createNode(_root->getNodeId());
+  root = SearchTree::Node::createNode();
   itreeNodeMap[_root] = root;
 }
 
@@ -669,15 +669,14 @@ void SearchTree::addChildren(ITreeNode *parent, ITreeNode *falseChild,
   assert(SearchTree::instance && "Search tree graph not initialized");
 
   SearchTree::Node *parentNode = instance->itreeNodeMap[parent];
-  parentNode->falseTarget =
-      SearchTree::Node::createNode(falseChild->getNodeId());
-  parentNode->trueTarget = SearchTree::Node::createNode(trueChild->getNodeId());
+  parentNode->falseTarget = SearchTree::Node::createNode();
+  parentNode->trueTarget = SearchTree::Node::createNode();
   instance->itreeNodeMap[falseChild] = parentNode->falseTarget;
   instance->itreeNodeMap[trueChild] = parentNode->trueTarget;
 }
 
 void SearchTree::setCurrentNode(ExecutionState &state,
-                                const uintptr_t programPoint) {
+                                const uint64_t _nodeSequenceNumber) {
   if (!OUTPUT_INTERPOLATION_TREE)
     return;
 
@@ -685,7 +684,7 @@ void SearchTree::setCurrentNode(ExecutionState &state,
 
   ITreeNode *iTreeNode = state.itreeNode;
   SearchTree::Node *node = instance->itreeNodeMap[iTreeNode];
-  if (!node->nodeId) {
+  if (!node->nodeSequenceNumber) {
     std::string functionName(
         state.pc->inst->getParent()->getParent()->getName().str());
     node->name = functionName + "\\l";
@@ -701,9 +700,7 @@ void SearchTree::setCurrentNode(ExecutionState &state,
       state.pc->inst->print(out);
     }
     node->name = out.str();
-
-    node->iTreeNodeId = programPoint;
-    node->nodeId = nextNodeId++;
+    node->nodeSequenceNumber = _nodeSequenceNumber;
   }
 }
 
@@ -853,7 +850,8 @@ void PathCondition::print(llvm::raw_ostream &stream) const {
 /**/
 
 SubsumptionTableEntry::SubsumptionTableEntry(ITreeNode *node)
-    : nodeId(node->getNodeId()) {
+    : programPoint(node->getProgramPoint()),
+      nodeSequenceNumber(node->getNodeSequenceNumber()) {
   std::set<const Array *> replacements;
 
   interpolant = node->getInterpolant(replacements);
@@ -1378,6 +1376,11 @@ bool SubsumptionTableEntry::subsumed(
   if (empty())
     return true;
 
+  if (DebugInterpolation == ITP_DEBUG_ALL ||
+      DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
+    klee_message("Checking against Node #%lu", nodeSequenceNumber);
+  }
+
   Dependency::ConcreteStore stateConcreteAddressStore = storedExpressions.first;
 
   Dependency::SymbolicStore stateSymbolicAddressStore =
@@ -1674,8 +1677,14 @@ bool SubsumptionTableEntry::subsumed(
 
   if (!existentials.empty()) {
     ref<Expr> existsExpr = ExistsExpr::create(existentials, query);
-    // llvm::errs() << "Before simplification:\n";
-    // ExprPPrinter::printQuery(llvm::errs(), state.constraints, existsExpr);
+    if (DebugInterpolation == ITP_DEBUG_ALL ||
+        DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
+      std::string msg;
+      llvm::raw_string_ostream stream(msg);
+      stream << "Before simplification:\n";
+      ExprPPrinter::printQuery(stream, state.constraints, existsExpr);
+      stream.flush();
+    }
     query = simplifyExistsExpr(existsExpr, queryHasNoFreeVariables);
   }
 
@@ -1700,7 +1709,10 @@ bool SubsumptionTableEntry::subsumed(
 
 #ifdef ENABLE_Z3
     if (!existentials.empty() && llvm::isa<ExistsExpr>(query)) {
-      // llvm::errs() << "Existentials not empty\n";
+      if (DebugInterpolation == ITP_DEBUG_ALL ||
+          DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
+        klee_message("existentials not empty");
+      }
 
       // Instantiate a new Z3 solver to make sure we use Z3
       // without pre-solving optimizations. It would be nice
@@ -1722,16 +1734,26 @@ bool SubsumptionTableEntry::subsumed(
         ref<Expr> falseExpr = ConstantExpr::create(0, Expr::Bool);
         constraints.addConstraint(EqExpr::create(falseExpr, query->getKid(0)));
 
-        // llvm::errs() << "Querying for satisfiability check:\n";
-        // ExprPPrinter::printQuery(llvm::errs(), constraints,
-        // falseExpr);
+        if (DebugInterpolation == ITP_DEBUG_ALL ||
+            DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
+          std::string msg;
+          llvm::raw_string_ostream stream(msg);
+          ExprPPrinter::printQuery(stream, constraints, falseExpr);
+          stream.flush();
+          klee_message("Querying for satisfiability check:\n%s", msg.c_str());
+        }
 
         success = z3solver->getValue(Query(constraints, falseExpr), tmpExpr);
         result = success ? Solver::True : Solver::Unknown;
       } else {
-        // llvm::errs() << "Querying for subsumption check:\n";
-        // ExprPPrinter::printQuery(llvm::errs(), state.constraints,
-        // query);
+        if (DebugInterpolation == ITP_DEBUG_ALL ||
+            DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
+          std::string msg;
+          llvm::raw_string_ostream stream(msg);
+          ExprPPrinter::printQuery(stream, state.constraints, query);
+          stream.flush();
+          klee_message("Querying for subsumption check:\n%s", msg.c_str());
+        }
 
         success = z3solver->directComputeValidity(
             Query(state.constraints, query), result);
@@ -1742,14 +1764,17 @@ bool SubsumptionTableEntry::subsumed(
     } else
 #endif /* ENABLE_Z3 */
     {
-      // llvm::errs() << "No existential\n";
-
-      // llvm::errs() << "Querying for subsumption check:\n";
-      // ExprPPrinter::printQuery(llvm::errs(), state.constraints, query);
-
+      if (DebugInterpolation == ITP_DEBUG_ALL ||
+          DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
+        std::string msg;
+        llvm::raw_string_ostream stream(msg);
+        klee_message("no existential");
+        ExprPPrinter::printQuery(stream, state.constraints, query);
+        stream.flush();
+        klee_message("Querying for subsumption check:\n%s", msg.c_str());
+      }
       // We call the solver in the standard way if the
       // formula is unquantified.
-
       solver->setTimeout(timeout);
       success = solver->evaluate(state, query, result);
       solver->setTimeout(0);
@@ -1762,7 +1787,10 @@ bool SubsumptionTableEntry::subsumed(
   }
 
   if (success && result == Solver::True) {
-    // llvm::errs() << "Solver decided validity\n";
+    if (DebugInterpolation == ITP_DEBUG_ALL ||
+        DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
+      klee_message("Solver decided validity");
+    }
     std::vector<ref<Expr> > unsatCore;
 #ifdef ENABLE_Z3
     if (z3solver) {
@@ -1786,8 +1814,10 @@ bool SubsumptionTableEntry::subsumed(
   // which was eventually called from solver->evaluate
   // is conservative, where it returns Solver::Unknown even in case when
   // invalidity is established by the solver.
-  // llvm::errs() << "Solver did not decide validity\n";
-
+  if (DebugInterpolation == ITP_DEBUG_ALL ||
+      DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
+    klee_message("Solver did not decide validity");
+  }
 #ifdef ENABLE_Z3
   if (z3solver)
     delete z3solver;
@@ -1800,7 +1830,7 @@ ref<Expr> SubsumptionTableEntry::getInterpolant() const { return interpolant; }
 
 void SubsumptionTableEntry::print(llvm::raw_ostream &stream) const {
   stream << "------------ Subsumption Table Entry ------------\n";
-  stream << "Program point = " << nodeId << "\n";
+  stream << "Program point = " << programPoint << "\n";
   stream << "interpolant = ";
   if (!interpolant.isNull())
     interpolant->print(stream);
@@ -1892,7 +1922,7 @@ double ITree::programPointNumber;
 
 bool ITree::symbolicExecutionError = false;
 
-unsigned long ITree::subsumptionCheckCount = 0;
+uint64_t ITree::subsumptionCheckCount = 0;
 
 void ITree::printTimeStat(std::stringstream &stream) {
   stream << "KLEE: done:     setCurrentINode = "
@@ -1995,20 +2025,26 @@ bool ITree::subsumptionCheck(TimingSolver *solver, ExecutionState &state,
   // node, typically this the first instruction of a basic block.
   // Subsumption check only matches against this first instruction.
   if (!state.itreeNode || reinterpret_cast<uintptr_t>(state.pc->inst) !=
-                              state.itreeNode->getNodeId())
+                              state.itreeNode->getProgramPoint())
     return false;
 
   ++subsumptionCheckCount; // For profiling
 
   TimerStatIncrementer t(subsumptionCheckTime);
   std::deque<SubsumptionTableEntry *> entryList =
-      subsumptionTable[state.itreeNode->getNodeId()];
+      subsumptionTable[state.itreeNode->getProgramPoint()];
 
   if (entryList.empty())
     return false;
 
   std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
   storedExpressions = state.itreeNode->getStoredExpressions();
+
+  if (DebugInterpolation == ITP_DEBUG_ALL ||
+      DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
+    klee_message("Subsumption check for Node #%lu",
+                 state.itreeNode->getNodeSequenceNumber());
+  }
 
   // Iterate the subsumption table entry with reverse iterator because
   // the successful subsumption mostly happen in the newest entry.
@@ -2031,12 +2067,12 @@ bool ITree::subsumptionCheck(TimingSolver *solver, ExecutionState &state,
 }
 
 void ITree::store(SubsumptionTableEntry *subItem) {
-    subsumptionTable[subItem->nodeId].push_back(subItem);
+  subsumptionTable[subItem->programPoint].push_back(subItem);
 #ifdef ENABLE_Z3
-    if (MaxFailSubsumption > 0 &&
-        (unsigned)MaxFailSubsumption <
-            subsumptionTable[subItem->nodeId].size()) {
-      subsumptionTable[subItem->nodeId].pop_front();
+  if (MaxFailSubsumption > 0 &&
+      (unsigned)MaxFailSubsumption <
+          subsumptionTable[subItem->programPoint].size()) {
+    subsumptionTable[subItem->programPoint].pop_front();
     }
 #endif
 }
@@ -2044,8 +2080,8 @@ void ITree::store(SubsumptionTableEntry *subItem) {
 void ITree::setCurrentINode(ExecutionState &state) {
   TimerStatIncrementer t(setCurrentINodeTime);
   currentINode = state.itreeNode;
-  currentINode->setNodeLocation(state.pc->inst);
-  SearchTree::setCurrentNode(state, currentINode->getNodeId());
+  currentINode->setProgramPoint(state.pc->inst);
+  SearchTree::setCurrentNode(state, currentINode->nodeSequenceNumber);
 }
 
 void ITree::remove(ITreeNode *node) {
@@ -2142,7 +2178,7 @@ void ITree::execute(llvm::Instruction *instr, std::vector<ref<Expr> > &args) {
   executeOnNode(currentINode, instr, args);
 }
 
-void ITree::executePHI(llvm::Instruction *instr, unsigned int incomingBlock,
+void ITree::executePHI(llvm::Instruction *instr, unsigned incomingBlock,
                        ref<Expr> valueExpr) {
   currentINode->dependency->executePHI(instr, incomingBlock, valueExpr,
                                        symbolicExecutionError);
@@ -2160,7 +2196,7 @@ void ITree::printNode(llvm::raw_ostream &stream, ITreeNode *n,
                       std::string edges) const {
   if (n->left != 0) {
     stream << "\n";
-    stream << edges << "+-- L:" << n->left->nodeId;
+    stream << edges << "+-- L:" << n->left->programPoint;
     if (this->currentINode == n->left) {
       stream << " (active)";
     }
@@ -2172,7 +2208,7 @@ void ITree::printNode(llvm::raw_ostream &stream, ITreeNode *n,
   }
   if (n->right != 0) {
     stream << "\n";
-    stream << edges << "+-- R:" << n->right->nodeId;
+    stream << edges << "+-- R:" << n->right->programPoint;
     if (this->currentINode == n->right) {
       stream << " (active)";
     }
@@ -2183,7 +2219,7 @@ void ITree::printNode(llvm::raw_ostream &stream, ITreeNode *n,
 void ITree::print(llvm::raw_ostream &stream) const {
   stream << "------------------------- ITree Structure "
             "---------------------------\n";
-  stream << this->root->nodeId;
+  stream << this->root->programPoint;
   if (this->root == this->currentINode) {
     stream << " (active)";
   }
@@ -2224,6 +2260,9 @@ Statistic
 ITreeNode::getStoredCoreExpressionsTime("GetStoredCoreExpressionsTime",
                                         "GetStoredCoreExpressionsTime");
 
+// The interpolation tree node sequence number
+uint64_t ITreeNode::nextNodeSequenceNumber = 1;
+
 void ITreeNode::printTimeStat(std::stringstream &stream) {
   stream << "KLEE: done:     getInterpolant = "
          << ((double)getInterpolantTime.getValue()) / 1000 << "\n";
@@ -2244,7 +2283,8 @@ void ITreeNode::printTimeStat(std::stringstream &stream) {
 }
 
 ITreeNode::ITreeNode(ITreeNode *_parent, llvm::DataLayout *_targetData)
-    : parent(_parent), left(0), right(0), nodeId(0), isSubsumed(false),
+    : parent(_parent), left(0), right(0), programPoint(0),
+      nodeSequenceNumber(nextNodeSequenceNumber++), isSubsumed(false),
       storable(true), graph(_parent ? _parent->graph : 0),
       instructionsDepth(_parent ? _parent->instructionsDepth : 0),
       targetData(_targetData) {
@@ -2270,8 +2310,6 @@ ITreeNode::~ITreeNode() {
   if (dependency)
     delete dependency;
 }
-
-uintptr_t ITreeNode::getNodeId() { return nodeId; }
 
 ref<Expr>
 ITreeNode::getInterpolant(std::set<const Array *> &replacements) const {
@@ -2342,7 +2380,7 @@ ITreeNode::getStoredCoreExpressions(std::set<const Array *> &replacements)
   return ret;
 }
 
-unsigned ITreeNode::getInstructionsDepth() { return instructionsDepth; }
+uint64_t ITreeNode::getInstructionsDepth() { return instructionsDepth; }
 
 void ITreeNode::incInstructionsDepth() { ++instructionsDepth; }
 
@@ -2390,7 +2428,7 @@ void ITreeNode::print(llvm::raw_ostream &stream,
   std::string tabsNext = appendTab(tabs);
 
   stream << tabs << "ITreeNode\n";
-  stream << tabsNext << "node Id = " << nodeId << "\n";
+  stream << tabsNext << "node Id = " << programPoint << "\n";
   stream << tabsNext << "pathCondition = ";
   if (pathCondition == 0) {
     stream << "NULL";
