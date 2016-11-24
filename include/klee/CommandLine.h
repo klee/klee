@@ -72,6 +72,7 @@ extern llvm::cl::opt<CoreSolverType> DebugCrossCheckCoreSolverWith;
 extern llvm::cl::opt<bool> NoInterpolation;
 
 #ifdef ENABLE_Z3
+
 extern llvm::cl::opt<bool> OutputTree;
 
 extern llvm::cl::opt<bool> InterpolationStat;
@@ -79,6 +80,15 @@ extern llvm::cl::opt<bool> InterpolationStat;
 extern llvm::cl::opt<bool> NoExistential;
 
 extern llvm::cl::opt<int> MaxFailSubsumption;
+
+enum InterpolationDebugType {
+  ITP_DEBUG_STATE,
+  ITP_DEBUG_SUBSUMPTION,
+  ITP_DEBUG_ALL,
+  ITP_DEBUG_NONE
+};
+
+extern llvm::cl::opt<InterpolationDebugType> DebugInterpolation;
 
 #endif
 
