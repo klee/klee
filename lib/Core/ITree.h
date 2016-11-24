@@ -40,9 +40,6 @@ class SubsumptionTableEntry;
 /// \brief The implementation of the search tree for outputting to .dot file.
 class SearchTree {
 
-  /// \brief counter for the next visited node id
-  static unsigned long nextNodeId;
-
   /// \brief Global search tree instance
   static SearchTree *instance;
 
@@ -134,11 +131,8 @@ class SearchTree {
   class Node {
     friend class SearchTree;
 
-    /// \brief Interpolation tree node id
-    uintptr_t iTreeNodeId;
-
     /// \brief The node id, also the order in which it is traversed
-    unsigned long nodeId;
+    uint64_t nodeSequenceNumber;
 
     /// \brief False and true children of this node
     SearchTree::Node *falseTarget, *trueTarget;
@@ -152,8 +146,8 @@ class SearchTree {
     /// \brief Human-readable identifier of this node
     std::string name;
 
-    Node(uintptr_t nodeId)
-        : iTreeNodeId(nodeId), nodeId(0), falseTarget(0), trueTarget(0),
+    Node()
+        : nodeSequenceNumber(0), falseTarget(0), trueTarget(0),
           subsumed(false) {}
 
     ~Node() {
@@ -166,19 +160,17 @@ class SearchTree {
       pathConditionTable.clear();
     }
 
-    static SearchTree::Node *createNode(uintptr_t id) {
-      return new SearchTree::Node(id);
-    }
+    static SearchTree::Node *createNode() { return new SearchTree::Node(); }
   };
 
   class NumberedEdge {
     SearchTree::Node *source;
     SearchTree::Node *destination;
-    unsigned long number;
+    uint64_t number;
 
   public:
     NumberedEdge(SearchTree::Node *_source, SearchTree::Node *_destination,
-                 unsigned long _number)
+                 uint64_t _number)
         : source(_source), destination(_destination), number(_number) {}
 
     ~NumberedEdge() {
@@ -195,7 +187,7 @@ class SearchTree {
   std::vector<SearchTree::NumberedEdge *> subsumptionEdges;
   std::map<PathCondition *, SearchTree::Node *> pathConditionMap;
 
-  unsigned long subsumptionEdgeNumber;
+  uint64_t subsumptionEdgeNumber;
 
   static std::string recurseRender(const SearchTree::Node *node);
 
@@ -228,7 +220,7 @@ public:
                           ITreeNode *trueChild);
 
   static void setCurrentNode(ExecutionState &state,
-                             const uintptr_t programPoint);
+                             const uint64_t _nodeSequenceNumber);
 
   static void markAsSubsumed(ITreeNode *iTreeNode,
                              SubsumptionTableEntry *entry);
@@ -419,7 +411,7 @@ class SubsumptionTableEntry {
   static void printStat(std::stringstream &stream);
 
 public:
-  const uintptr_t nodeId;
+  const uintptr_t programPoint;
 
   SubsumptionTableEntry(ITreeNode *node);
 
@@ -486,6 +478,10 @@ class ITreeNode {
   static Statistic getStoredExpressionsTime;
   static Statistic getStoredCoreExpressionsTime;
 
+  /// \brief Counter for the next visited node id for logging and debugging
+  /// purposes
+  static uint64_t nextNodeSequenceNumber;
+
 private:
   /// \brief The path condition
   PathCondition *pathCondition;
@@ -495,7 +491,9 @@ private:
 
   ITreeNode *parent, *left, *right;
 
-  uintptr_t nodeId;
+  uintptr_t programPoint;
+
+  uint64_t nodeSequenceNumber;
 
   bool isSubsumed;
 
@@ -505,11 +503,11 @@ private:
   SearchTree *graph;
 
   /// \brief For statistics on the number of instructions executed along a path.
-  unsigned instructionsDepth;
+  uint64_t instructionsDepth;
 
-  void setNodeLocation(llvm::Instruction *instr) {
-    if (!nodeId)
-      nodeId = reinterpret_cast<uintptr_t>(instr);
+  void setProgramPoint(llvm::Instruction *instr) {
+    if (!programPoint)
+      programPoint = reinterpret_cast<uintptr_t>(instr);
 
     // Disabling the subsumption check within KLEE's own API
     // (callsites of klee_ and at any location within the klee_ function)
@@ -524,7 +522,9 @@ private:
                bool symbolicExecutionError);
 
 public:
-  uintptr_t getNodeId();
+  uintptr_t getProgramPoint() { return programPoint; }
+
+  uint64_t getNodeSequenceNumber() { return nodeSequenceNumber; }
 
   /// \brief Retrieve the interpolant for this node as KLEE expression object
   ///
@@ -579,7 +579,7 @@ public:
 
   void incInstructionsDepth();
 
-  unsigned getInstructionsDepth();
+  uint64_t getInstructionsDepth();
 
   /// \brief Marking the core constraints on the path condition, and all the
   /// relevant values on the dependency graph, given an unsatistiability core.
@@ -598,7 +598,7 @@ private:
 
   ~ITreeNode();
 
-  void print(llvm::raw_ostream &stream, const unsigned tabNum) const;
+  void print(llvm::raw_ostream &stream, const unsigned paddingAmount) const;
 };
 
 /// \brief The top-level structure that implements lazy annotation.
@@ -714,7 +714,7 @@ class ITree {
   static double programPointNumber;
 
   /// \brief Number of subsumption checks for statistical purposes
-  static unsigned long subsumptionCheckCount;
+  static uint64_t subsumptionCheckCount;
 
   ITreeNode *currentINode;
 
@@ -797,7 +797,7 @@ public:
 
   /// \brief Abstractly execute a PHI instruction for building dependency
   /// information.
-  void executePHI(llvm::Instruction *instr, unsigned int incomingBlock,
+  void executePHI(llvm::Instruction *instr, unsigned incomingBlock,
                   ref<Expr> valueExpr);
 
   /// \brief For executing memory operations, called by
