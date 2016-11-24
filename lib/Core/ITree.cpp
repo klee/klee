@@ -1372,13 +1372,18 @@ bool SubsumptionTableEntry::subsumed(
   SubsumptionCheckMarker subsumptionCheckMarker;
 #endif
 
-  // Quick check for subsumption in case the interpolant is empty
-  if (empty())
-    return true;
-
   if (DebugInterpolation == ITP_DEBUG_ALL ||
       DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
     klee_message("Checking against Node #%lu", nodeSequenceNumber);
+  }
+
+  // Quick check for subsumption in case the interpolant is empty
+  if (empty()) {
+    if (DebugInterpolation == ITP_DEBUG_ALL ||
+        DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
+      klee_message("Check success due to empty table entry");
+    }
+    return true;
   }
 
   Dependency::ConcreteStore stateConcreteAddressStore = storedExpressions.first;
@@ -1401,8 +1406,14 @@ bool SubsumptionTableEntry::subsumed(
         stateSymbolicAddressStore[*it1];
 
     // If the current state does not constrain the same base, subsumption fails.
-    if (rhsConcreteMap.empty() && rhsSymbolicMap.empty())
+    if (rhsConcreteMap.empty() && rhsSymbolicMap.empty()) {
+      if (DebugInterpolation == ITP_DEBUG_ALL ||
+          DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
+        klee_message(
+            "Check failure due to empty state concrete and symbolic maps");
+      }
       return false;
+    }
 
     for (Dependency::ConcreteStoreMap::const_iterator
              it2 = lhsConcreteMap.begin(),
@@ -1412,8 +1423,14 @@ bool SubsumptionTableEntry::subsumed(
       // The address is not constrained by the current state, therefore
       // the current state is incomparable to the stored interpolant,
       // and we therefore fail the subsumption.
-      if (!rhsConcreteMap.count(it2->first))
+      if (!rhsConcreteMap.count(it2->first)) {
+        if (DebugInterpolation == ITP_DEBUG_ALL ||
+            DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
+          klee_message("Check failure as memory region in the table does not "
+                       "exist in the state");
+        }
         return false;
+      }
 
       const Dependency::AddressValuePair rhsConcrete =
           rhsConcreteMap.at(it2->first);
@@ -1425,6 +1442,11 @@ bool SubsumptionTableEntry::subsumed(
         if (lhsValue->getWidth() != rhsConcrete.second->getWidth()) {
           // We conservatively fail the subsumption in case the sizes do not
           // match.
+          if (DebugInterpolation == ITP_DEBUG_ALL ||
+              DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
+            klee_message(
+                "Check failure as sizes of stored values do not match");
+          }
           return false;
         } else {
           res = EqExpr::create(lhsValue, rhsConcrete.second);
@@ -1584,6 +1606,10 @@ bool SubsumptionTableEntry::subsumed(
   } else {
     // Here both the interpolant constraints and state equality
     // constraints are empty, therefore everything gets subsumed
+    if (DebugInterpolation == ITP_DEBUG_ALL ||
+        DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
+      klee_message("Check success as interpolant is empty");
+    }
     return true;
   }
 
@@ -1598,19 +1624,30 @@ bool SubsumptionTableEntry::subsumed(
       stream << "Before simplification:\n";
       ExprPPrinter::printQuery(stream, state.constraints, existsExpr);
       stream.flush();
+      klee_message("Before simplification:\n%s", msg.c_str());
     }
     query = simplifyExistsExpr(existsExpr, queryHasNoFreeVariables);
   }
 
   // If query simplification result was false, we quickly fail without calling
   // the solver
-  if (query->isFalse())
+  if (query->isFalse()) {
+    if (DebugInterpolation == ITP_DEBUG_ALL ||
+        DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
+      klee_message("Check failure as consequent is unsatisfiable");
+    }
     return false;
+  }
 
   bool success = false;
 
-  if (!detectConflictPrimitives(state, query))
+  if (!detectConflictPrimitives(state, query)) {
+    if (DebugInterpolation == ITP_DEBUG_ALL ||
+        DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
+      klee_message("Check failure as contradictory equalities detected");
+    }
     return false;
+  }
 
 #ifdef ENABLE_Z3
   Z3Solver *z3solver = 0;
@@ -1625,7 +1662,7 @@ bool SubsumptionTableEntry::subsumed(
     if (!existentials.empty() && llvm::isa<ExistsExpr>(query)) {
       if (DebugInterpolation == ITP_DEBUG_ALL ||
           DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
-        klee_message("existentials not empty");
+        klee_message("Existentials not empty");
       }
 
       // Instantiate a new Z3 solver to make sure we use Z3
@@ -1682,7 +1719,7 @@ bool SubsumptionTableEntry::subsumed(
           DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
         std::string msg;
         llvm::raw_string_ostream stream(msg);
-        klee_message("no existential");
+        klee_message("No existential");
         ExprPPrinter::printQuery(stream, state.constraints, query);
         stream.flush();
         klee_message("Querying for subsumption check:\n%s", msg.c_str());
@@ -1695,16 +1732,21 @@ bool SubsumptionTableEntry::subsumed(
     }
   } else {
     // query is a constant expression
-    if (query->isTrue())
+    if (query->isTrue()) {
+      if (DebugInterpolation == ITP_DEBUG_ALL ||
+          DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
+        klee_message("Check success as query is true");
+      }
       return true;
+    }
+    if (DebugInterpolation == ITP_DEBUG_ALL ||
+        DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
+      klee_message("Check failure as query is non-true");
+    }
     return false;
   }
 
   if (success && result == Solver::True) {
-    if (DebugInterpolation == ITP_DEBUG_ALL ||
-        DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
-      klee_message("Solver decided validity");
-    }
     std::vector<ref<Expr> > unsatCore;
 #ifdef ENABLE_Z3
     if (z3solver) {
@@ -1719,6 +1761,10 @@ bool SubsumptionTableEntry::subsumed(
 
     // We create path condition marking structure to mark core constraints
     state.itreeNode->unsatCoreMarking(unsatCore);
+    if (DebugInterpolation == ITP_DEBUG_ALL ||
+        DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
+      klee_message("Check success as solver decided validity");
+    }
     return true;
   }
 
@@ -1728,15 +1774,15 @@ bool SubsumptionTableEntry::subsumed(
   // which was eventually called from solver->evaluate
   // is conservative, where it returns Solver::Unknown even in case when
   // invalidity is established by the solver.
-  if (DebugInterpolation == ITP_DEBUG_ALL ||
-      DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
-    klee_message("Solver did not decide validity");
-  }
 #ifdef ENABLE_Z3
   if (z3solver)
     delete z3solver;
 #endif /* ENABLE_Z3 */
 
+  if (DebugInterpolation == ITP_DEBUG_ALL ||
+      DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
+    klee_message("Check failure as solver did not decide validity");
+  }
   return false;
 }
 
