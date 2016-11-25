@@ -86,7 +86,7 @@ namespace klee {
 
     /// \brief The expressions representing the bound on the offset, i.e., the
     /// interpolant, in case it is symbolic.
-    std::set<ref<Expr> > offsetBounds;
+    std::set<ref<Expr> > symbolicOffsetBounds;
 
     /// \brief This is the concrete offset bound
     uint64_t concreteOffsetBound;
@@ -173,7 +173,9 @@ namespace klee {
 
     ref<Expr> getBase() const { return base; }
 
-    std::set<ref<Expr> > getOffsetBounds() const { return offsetBounds; }
+    std::set<ref<Expr> > getSymbolicOffsetBounds() const {
+      return symbolicOffsetBounds;
+    }
 
     uint64_t getConcreteOffsetBound() const { return concreteOffsetBound; }
 
@@ -325,8 +327,8 @@ namespace klee {
 
     ref<Expr> getExpression() const { return expr; }
 
-    std::set<ref<Expr> > getBounds(llvm::Value *value) {
-      return allocationBounds[value];
+    std::set<ref<Expr> > getBounds(llvm::Value *value) const {
+      return allocationBounds.at(value);
     }
 
     void print(llvm::raw_ostream &stream) const;

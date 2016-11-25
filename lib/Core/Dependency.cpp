@@ -165,14 +165,15 @@ void MemoryLocation::adjustOffsetBound(ref<VersionedValue> checkedAddress) {
     ref<Expr> checkedOffset = (*it)->getOffset();
     if (ConstantExpr *c = llvm::dyn_cast<ConstantExpr>(checkedOffset)) {
       if (ConstantExpr *o = llvm::dyn_cast<ConstantExpr>(offset)) {
-        uint64_t newBound = size = (c->getZExtValue() - o->getZExtValue());
+        uint64_t newBound = (c->getZExtValue() - o->getZExtValue());
         if (concreteOffsetBound > newBound) {
           concreteOffsetBound = newBound;
         }
+        continue;
       }
     }
 
-    offsetBounds.insert(SubExpr::create(
+    symbolicOffsetBounds.insert(SubExpr::create(
         Expr::createPointer(size), SubExpr::create(checkedOffset, offset)));
   }
 }
@@ -231,22 +232,11 @@ void StoredValue::init(ref<VersionedValue> vvalue,
       uint64_t concreteBound = (*it)->getConcreteOffsetBound();
       std::set<ref<Expr> > newBounds;
 
-      for (std::set<ref<Expr> >::iterator it1 = allocationBounds[v].begin(),
-                                          ie1 = allocationBounds[v].end();
-           it1 != ie1; ++it1) {
-        if (ConstantExpr *oe = llvm::dyn_cast<ConstantExpr>(*it1)) {
-          uint64_t currentBound = oe->getZExtValue();
-          if (currentBound > concreteBound) {
-            newBounds.insert(Expr::createPointer(concreteBound));
-            continue;
-          }
-        }
-        newBounds.insert(*it1);
-      }
-      allocationBounds[v] = newBounds;
+      if (concreteBound > 0)
+        allocationBounds[v].insert(Expr::createPointer(concreteBound));
 
       // Symbolic bounds
-      std::set<ref<Expr> > bounds = (*it)->getOffsetBounds();
+      std::set<ref<Expr> > bounds = (*it)->getSymbolicOffsetBounds();
 
       if (shadowing) {
         std::set<ref<Expr> > shadowBounds;
