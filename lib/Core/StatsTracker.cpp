@@ -167,7 +167,8 @@ static bool instructionIsCoverable(Instruction *i) {
     } else {
       Instruction *prev = --it;
       if (isa<CallInst>(prev) || isa<InvokeInst>(prev)) {
-        Function *target = getDirectCallTarget(prev);
+        Function *target =
+            getDirectCallTarget(prev, /*moduleIsFullyLinked=*/true);
         if (target && target->doesNotReturn())
           return false;
       }
@@ -690,7 +691,8 @@ void StatsTracker::computeReachableUncovered() {
               // (which should be correct anyhow).
               callTargets.insert(std::make_pair(it,
                                                 std::vector<Function*>()));
-            } else if (Function *target = getDirectCallTarget(cs)) {
+            } else if (Function *target = getDirectCallTarget(
+                           cs, /*moduleIsFullyLinked=*/true)) {
               callTargets[it].push_back(target);
             } else {
               callTargets[it] = 

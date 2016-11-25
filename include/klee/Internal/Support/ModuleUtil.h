@@ -29,7 +29,11 @@ namespace klee {
   /// null if it cannot be determined (should be only for indirect
   /// calls, although complicated constant expressions might be
   /// another possibility).
-  llvm::Function *getDirectCallTarget(llvm::CallSite);
+  ///
+  /// If `moduleIsFullyLinked` is set to true it will be assumed that the
+  //  module containing the `llvm::CallSite` is fully linked. This assumption
+  //  allows resolution of functions that are marked as overridable.
+  llvm::Function *getDirectCallTarget(llvm::CallSite, bool moduleIsFullyLinked);
 
   /// Return true iff the given Function value is used in something
   /// other than a direct call (or a constant expression that
