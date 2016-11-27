@@ -765,12 +765,6 @@ public:
   unsigned getNumKids() const { return numKids; }
   ref<Expr> getKid(unsigned i) const { return expr; }
 
-  int compareContents(const Expr &b) const {
-    const NotExpr &eb = static_cast<const NotExpr&>(b);
-    if (expr != eb.expr) return expr < eb.expr ? -1 : 1;
-    return 0;
-  }
-
   virtual ref<Expr> rebuild(ref<Expr> kids[]) const { 
     return create(kids[0]);
   }
