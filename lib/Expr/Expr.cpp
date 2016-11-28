@@ -83,6 +83,13 @@ ref<Expr> Expr::createTempRead(const Array *array, Expr::Width w) {
   }
 }
 
+int Expr::compare(const Expr &b) const {
+  static ExprEquivSet equivs;
+  int r = compare(b, equivs);
+  equivs.clear();
+  return r;
+}
+
 // returns 0 if b is structurally equal to *this
 int Expr::compare(const Expr &b, ExprEquivSet &equivs) const {
   if (this == &b) return 0;

@@ -223,21 +223,24 @@ public:
   /// Returns the hash value. 
   virtual unsigned computeHash();
   
-  /// Returns 0 iff b is structuraly equivalent to *this
-  typedef llvm::DenseSet<std::pair<const Expr *, const Expr *> > ExprEquivSet;
-  int compare(const Expr &b, ExprEquivSet &equivs) const;
-  int compare(const Expr &b) const {
-    static ExprEquivSet equivs;
-    int r = compare(b, equivs);
-    equivs.clear();
-    return r;
-  }
+  /// Compares `b` to `this` Expr for structural equivalence.
+  ///
+  /// This method effectively defines a total order over all Expr.
+  ///
+  /// \param [in] b Expr to compare `this` to.
+  ///
+  /// \return One of the following values:
+  ///
+  /// * -1 iff `this` is `<` `b`
+  /// * 0 iff `this` is structurally equivalent to `b`
+  /// * 1 iff `this` is `>` `b`
+  ///
+  /// `<` and `>` are binary relations that express the total order.
+  int compare(const Expr &b) const;
 
   // Given an array of new kids return a copy of the expression
   // but using those children. 
   virtual ref<Expr> rebuild(ref<Expr> kids[/* getNumKids() */]) const = 0;
-
-  //
 
   /// isZero - Is this a constant zero.
   bool isZero() const;
@@ -279,6 +282,10 @@ public:
   static bool needsResultType() { return false; }
 
   static bool classof(const Expr *) { return true; }
+
+private:
+  typedef llvm::DenseSet<std::pair<const Expr *, const Expr *> > ExprEquivSet;
+  int compare(const Expr &b, ExprEquivSet &equivs) const;
 };
 
 struct Expr::CreateArg {
