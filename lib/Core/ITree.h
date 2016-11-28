@@ -654,44 +654,45 @@ private:
 ///
 /// <hr>
 /// <pre>
-///      Put the initial statement into the worklist (embedded in a tree where the worklist consists of the leaves of the tree).
-///      While the worklist is not empty, do the following:
-///        1. Get a statement to symbolically execute from the worklist according to a chosen strategy.
-///        2. Symbolically execute the statement:
-///             If it generated branching, (control branching, array dereferencing), test if one of the branches was unsatisfiable.
-///               If it was, advance the execution by one instruction without creating more branching in the tree.
-///               Otherwise, generate the two branches and put them into the worklist, thus also expanding the tree.
-///             If the worklist item was a termination point (including error point), register the item (tree node) for deletion.
-///        3. Pick items (tree nodes) registered for deletion and delete them.
-///           Recursively, if a parent tree node is found to no longer have any
-///           children, delete the parent as well, and recursively its parent and so on.
+/// 1. Put the initial LLVM instruction into the tree root
+/// 2. While there are leaves, do the following:
+///    a. Pick a leaf
+///    b. Symbolically execute the instruction:
+///       i. If it is a branch, test if one of branches unsatisfiable
+///          * If it is, execute the instruction without creating tree node
+///          * Otherwise, generate the two tree nodes for the branches
+///       ii. If it is an error/end point, register the leaf for deletion
+///    c. Delete nodes registered for deletion. Recursively, if a
+///       parent tree node is found to no longer have any children,
+///       delete the parent as well, and recursively its parent
 /// </pre>
 /// <hr>
 ///
-/// For comparison, following is the pseudocode of Tracer-X KLEE. Please note that to support interpolation, each worklist item is now embedded with a path condition. We highlight the added procedures using CAPITAL LETTERS, and we note the member functions involved.
+/// For comparison, following is the pseudocode of Tracer-X KLEE. Please note that to
+/// support interpolation, each leaf is now augmented with a path condition.
+/// We highlight the added procedures using CAPITAL LETTERS, and we note the member
+/// functions involved.
 ///
 /// <hr>
 /// <pre>
-///      Put the initial statement into the worklist (embedded in a tree where the worklist consists of the leaves of the tree).
-///      While the worklist is not empty, do the following:
-///        1. Get a statement to symbolically execute from the worklist according to a chosen strategy
-///        2. TEST IF THE ITEM WAS SUBSUMED (ITree::subsumptionCheck)
-///             IF IT WAS:
-///               REGISTER IT FOR DELETION
-///               MARK THE CONSTRAINTS ON THE PATH CONDITION THAT WAS USED FOR THE PROOF (THE UNSATISFIABILITY CORE) THUS COMPUTING HALF INTERPOLANT (ITree::markPathCondition)
-///             OTHERWISE, symbolically execute the statement (ITree::execute, ITree::executePHI, ITree::executeMemoryOperation, ITree::executeOnNode):
-///               If it generated branching, (control branching, array dereferencing), test if one of the branches was unsatisfiable
-///                 If it was, advance the execution by one instruction without creating more branching in the tree
-///                   MARK THE CONSTRAINTS IN THE PATH CONDITION OF THIS ITEM CORRESPONDING TO THE UNSATISFIABILITY CORE THUS COMPUTING HALF INTERPOLANT (ITree::markPathCondition)
-///                 Otherwise, generate the two branches and put them into the worklist, thus also expanding the tree
-///                   HERE WE ADD THE BRANCHING CONDITION ONTO THE PATH CONDITION OF ONE OF THE BRANCHES AND ITS NEGATION TO THE PATH CONDITION OF THE OTHER BRANCH (ITreeNode::addConstraint)
-///               If the worklist item was a termination point (including error point), register the item (tree node) for deletion.
-/// </pre>
-/// <pre>
-///        3. Pick items (tree nodes) registered for deletion and delete them.
-///           Recursively, if a parent tree node is found to no longer have any
-///           children, delete the parent as well, and recursively its parent and so on.
-///           WHEN A NODE WAS TO BE DELETED, COLLECT THE MARKED CONSTRAINTS ON ITS PATH CONDITION AND STORE THESE IN THE SUBSUMPTION TABLE AS A FULL INTERPOLANT (ITree::store)
+/// 1. Put the initial LLVM instruction into the tree root
+/// 2. While there are leaves, do the following:
+///    a. Pick a leaf
+///    b. IF THE LEAF IS SUBSUMED
+///       i. REGISTER IT FOR DELETION
+///       ii. MARK CONSTRAINTS NEEDED FOR SUBSUMPTION
+///       iii. GOTO d
+///    c. Symbolically execute the instruction:
+///       i. If it is a branch, test if one of branches unsatisfiable
+///          * If it is, execute the instruction without creating tree node
+///            MARK CONSTRAINTS NEEDED FOR UNSATISFIABILITY
+///          * Otherwise, generate the two tree nodes for the branches
+///       ii. If it is an error/end point, register the leaf for deletion
+///    d. Delete nodes registered for deletion. Recursively, if a
+///       parent tree node is found to no longer have any children,
+///       delete the parent as well, and recursively its parent
+///       FOR EACH DELETED NODE, STORE MARKED
+///       CONSTRAINTS ON PC AS INTERPOLANT
 /// </pre>
 /// <hr>
 ///
