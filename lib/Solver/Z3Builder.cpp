@@ -529,6 +529,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     if (srcWidth == 1) {
       return iteExpr(src, bvOne(*width_out), bvZero(*width_out));
     } else {
+      assert(*width_out > srcWidth && "Invalid width_out");
       return Z3ASTHandle(Z3_mk_concat(ctx, bvZero(*width_out - srcWidth), src),
                          ctx);
     }
@@ -621,12 +622,15 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
         uint64_t divisor = CE->getZExtValue();
 
         if (bits64::isPowerOfTwo(divisor)) {
-          unsigned bits = bits64::indexOfSingleBit(divisor);
+          // FIXME: This should be unsigned but currently needs to be signed to
+          // avoid signed-unsigned comparison in assert.
+          int bits = bits64::indexOfSingleBit(divisor);
 
           // special case for modding by 1 or else we bvExtract -1:0
           if (bits == 0) {
             return bvZero(*width_out);
           } else {
+            assert(*width_out > bits && "invalid width_out");
             return Z3ASTHandle(Z3_mk_concat(ctx, bvZero(*width_out - bits),
                                             bvExtract(left, bits - 1, 0)),
                                ctx);
