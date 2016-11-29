@@ -321,18 +321,20 @@ ref<Expr> StoredValue::getBoundsCheck(ref<StoredValue> stateValue) const {
           if (tabledBoundInt > 0) {
             // Symbolic state offset, but concrete tabled bound. Here the bound
             // is known (non-zero), so we create constraints
-            if (res.isNull())
-              res = UleExpr::create(*it1, *it2);
-            else
-              res = AndExpr::create(UleExpr::create(*it1, *it2), res);
+            if (res.isNull()) {
+              res = UltExpr::create(*it1, *it2);
+            } else {
+              res = AndExpr::create(UltExpr::create(*it1, *it2), res);
+            }
           }
           continue;
         }
         // Create constraints for symbolic bounds
-        if (res.isNull())
-          res = UleExpr::create(*it1, *it2);
-        else
-          res = AndExpr::create(UleExpr::create(*it1, *it2), res);
+        if (res.isNull()) {
+          res = UltExpr::create(*it1, *it2);
+        } else {
+          res = AndExpr::create(UltExpr::create(*it1, *it2), res);
+        }
       }
     }
   }
@@ -630,13 +632,10 @@ Dependency::directFlowSources(ref<VersionedValue> target) const {
     for (std::map<ref<VersionedValue>, ref<MemoryLocation> >::iterator it =
              sources.begin();
          it != sources.end(); ++it) {
-      if (!it->first->isCore()) {
+      if (!it->first->isCore())
         ret.push_back(it->first);
-      }
     }
-  }
-
-  if (parent) {
+  } else if (parent) {
     std::vector<ref<VersionedValue> > ancestralSources =
         parent->directFlowSources(target);
     ret.insert(ret.begin(), ancestralSources.begin(), ancestralSources.end());
@@ -660,10 +659,32 @@ void Dependency::markPointerFlow(ref<VersionedValue> target,
   for (std::set<ref<MemoryLocation> >::iterator it = locations.begin(),
                                                 ie = locations.end();
        it != ie; ++it) {
+    std::set<ref<MemoryLocation> > l = checkedAddress->getLocations();
     (*it)->adjustOffsetBound(checkedAddress);
   }
   target->setAsCore();
-  std::vector<ref<VersionedValue> > stepSources = directFlowSources(target);
+
+  // Compute the direct pointer flow dependency
+  std::vector<ref<VersionedValue> > stepSources;
+  const Dependency *currentDependency(this);
+
+  while (currentDependency) {
+    if (currentDependency->flowsToMap.find(target) !=
+        currentDependency->flowsToMap.end()) {
+      std::map<ref<VersionedValue>, ref<MemoryLocation> > sources =
+          currentDependency->flowsToMap.find(target)->second;
+      for (std::map<ref<VersionedValue>, ref<MemoryLocation> >::iterator it =
+               sources.begin();
+           it != sources.end(); ++it) {
+        stepSources.push_back(it->first);
+      }
+    } else if (currentDependency->parent) {
+      currentDependency = currentDependency->parent;
+      continue;
+    }
+    break;
+  }
+
   for (std::vector<ref<VersionedValue> >::iterator it = stepSources.begin(),
                                                    ie = stepSources.end();
        it != ie; ++it) {
