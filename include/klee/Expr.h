@@ -176,7 +176,31 @@ public:
 
 protected:  
   unsigned hashValue;
-  
+
+  /// Compares `b` to `this` Expr and determines how they are ordered
+  /// (ignoring their kid expressions - i.e. those returned by `getKid()`).
+  ///
+  /// Typically this requires comparing internal attributes of the Expr.
+  ///
+  /// Implementations can assume that `b` and `this` are of the same kind.
+  ///
+  /// This method effectively defines a partial order over Expr of the same
+  /// kind (partial because kid Expr are not compared).
+  ///
+  /// This method should not be called directly. Instead `compare()` should
+  /// be used.
+  ///
+  /// \param [in] b Expr to compare `this` to.
+  ///
+  /// \return One of the following values:
+  ///
+  /// * -1 if `this` is `<` `b` ignoring kid expressions.
+  /// * 1 if `this` is `>` `b` ignoring kid expressions.
+  /// * 0 if `this` and `b` are not ordered.
+  ///
+  /// `<` and `>` are binary relations that express the partial order.
+  virtual int compareContents(const Expr &b) const = 0;
+
 public:
   Expr() : refCount(0) { Expr::count++; }
   virtual ~Expr() { Expr::count--; } 
@@ -199,22 +223,24 @@ public:
   /// Returns the hash value. 
   virtual unsigned computeHash();
   
-  /// Returns 0 iff b is structuraly equivalent to *this
-  typedef llvm::DenseSet<std::pair<const Expr *, const Expr *> > ExprEquivSet;
-  int compare(const Expr &b, ExprEquivSet &equivs) const;
-  int compare(const Expr &b) const {
-    static ExprEquivSet equivs;
-    int r = compare(b, equivs);
-    equivs.clear();
-    return r;
-  }
-  virtual int compareContents(const Expr &b) const { return 0; }
+  /// Compares `b` to `this` Expr for structural equivalence.
+  ///
+  /// This method effectively defines a total order over all Expr.
+  ///
+  /// \param [in] b Expr to compare `this` to.
+  ///
+  /// \return One of the following values:
+  ///
+  /// * -1 iff `this` is `<` `b`
+  /// * 0 iff `this` is structurally equivalent to `b`
+  /// * 1 iff `this` is `>` `b`
+  ///
+  /// `<` and `>` are binary relations that express the total order.
+  int compare(const Expr &b) const;
 
   // Given an array of new kids return a copy of the expression
   // but using those children. 
   virtual ref<Expr> rebuild(ref<Expr> kids[/* getNumKids() */]) const = 0;
-
-  //
 
   /// isZero - Is this a constant zero.
   bool isZero() const;
@@ -256,6 +282,10 @@ public:
   static bool needsResultType() { return false; }
 
   static bool classof(const Expr *) { return true; }
+
+private:
+  typedef llvm::DenseSet<std::pair<const Expr *, const Expr *> > ExprEquivSet;
+  int compare(const Expr &b, ExprEquivSet &equivs) const;
 };
 
 struct Expr::CreateArg {
@@ -403,6 +433,12 @@ public:
 
 private:
   NotOptimizedExpr(const ref<Expr> &_src) : src(_src) {}
+
+protected:
+  virtual int compareContents(const Expr &b) const {
+    // No attributes to compare.
+    return 0;
+  }
 
 public:
   static bool classof(const Expr *E) {
@@ -625,6 +661,12 @@ public:
     return E->getKind() == Expr::Select;
   }
   static bool classof(const SelectExpr *) { return true; }
+
+protected:
+  virtual int compareContents(const Expr &b) const {
+    // No attributes to compare.
+    return 0;
+  }
 };
 
 
@@ -682,6 +724,14 @@ public:
     return E->getKind() == Expr::Concat;
   }
   static bool classof(const ConcatExpr *) { return true; }
+
+protected:
+  virtual int compareContents(const Expr &b) const {
+    const ConcatExpr &eb = static_cast<const ConcatExpr &>(b);
+    if (width != eb.width)
+      return width < eb.width ? -1 : 1;
+    return 0;
+  }
 };
 
 
@@ -765,12 +815,6 @@ public:
   unsigned getNumKids() const { return numKids; }
   ref<Expr> getKid(unsigned i) const { return expr; }
 
-  int compareContents(const Expr &b) const {
-    const NotExpr &eb = static_cast<const NotExpr&>(b);
-    if (expr != eb.expr) return expr < eb.expr ? -1 : 1;
-    return 0;
-  }
-
   virtual ref<Expr> rebuild(ref<Expr> kids[]) const { 
     return create(kids[0]);
   }
@@ -785,6 +829,12 @@ public:
 
 private:
   NotExpr(const ref<Expr> &e) : expr(e) {}
+
+protected:
+  virtual int compareContents(const Expr &b) const {
+    // No attributes to compare.
+    return 0;
+  }
 };
 
 
@@ -852,33 +902,38 @@ CAST_EXPR_CLASS(ZExt)
 
 // Arithmetic/Bit Exprs
 
-#define ARITHMETIC_EXPR_CLASS(_class_kind)                           \
-class _class_kind ## Expr : public BinaryExpr {                      \
-public:                                                              \
-  static const Kind kind = _class_kind;                              \
-  static const unsigned numKids = 2;                                 \
-public:                                                              \
-    _class_kind ## Expr(const ref<Expr> &l,                          \
-                        const ref<Expr> &r) : BinaryExpr(l,r) {}     \
-    static ref<Expr> alloc(const ref<Expr> &l, const ref<Expr> &r) { \
-      ref<Expr> res(new _class_kind ## Expr (l, r));                 \
-      res->computeHash();                                            \
-      return res;                                                    \
-    }                                                                \
-    static ref<Expr> create(const ref<Expr> &l, const ref<Expr> &r); \
-    Width getWidth() const { return left->getWidth(); }              \
-    Kind getKind() const { return _class_kind; }                     \
-    virtual ref<Expr> rebuild(ref<Expr> kids[]) const {              \
-      return create(kids[0], kids[1]);                               \
-    }                                                                \
-                                                                     \
-    static bool classof(const Expr *E) {                             \
-      return E->getKind() == Expr::_class_kind;                      \
-    }                                                                \
-    static bool classof(const  _class_kind ## Expr *) {              \
-      return true;                                                   \
-    }                                                                \
-};                                                                   \
+#define ARITHMETIC_EXPR_CLASS(_class_kind)                                     \
+  class _class_kind##Expr : public BinaryExpr {                                \
+  public:                                                                      \
+    static const Kind kind = _class_kind;                                      \
+    static const unsigned numKids = 2;                                         \
+                                                                               \
+  public:                                                                      \
+    _class_kind##Expr(const ref<Expr> &l, const ref<Expr> &r)                  \
+        : BinaryExpr(l, r) {}                                                  \
+    static ref<Expr> alloc(const ref<Expr> &l, const ref<Expr> &r) {           \
+      ref<Expr> res(new _class_kind##Expr(l, r));                              \
+      res->computeHash();                                                      \
+      return res;                                                              \
+    }                                                                          \
+    static ref<Expr> create(const ref<Expr> &l, const ref<Expr> &r);           \
+    Width getWidth() const { return left->getWidth(); }                        \
+    Kind getKind() const { return _class_kind; }                               \
+    virtual ref<Expr> rebuild(ref<Expr> kids[]) const {                        \
+      return create(kids[0], kids[1]);                                         \
+    }                                                                          \
+                                                                               \
+    static bool classof(const Expr *E) {                                       \
+      return E->getKind() == Expr::_class_kind;                                \
+    }                                                                          \
+    static bool classof(const _class_kind##Expr *) { return true; }            \
+                                                                               \
+  protected:                                                                   \
+    virtual int compareContents(const Expr &b) const {                         \
+      /* No attributes to compare.*/                                           \
+      return 0;                                                                \
+    }                                                                          \
+  };
 
 ARITHMETIC_EXPR_CLASS(Add)
 ARITHMETIC_EXPR_CLASS(Sub)
@@ -896,32 +951,37 @@ ARITHMETIC_EXPR_CLASS(AShr)
 
 // Comparison Exprs
 
-#define COMPARISON_EXPR_CLASS(_class_kind)                           \
-class _class_kind ## Expr : public CmpExpr {                         \
-public:                                                              \
-  static const Kind kind = _class_kind;                              \
-  static const unsigned numKids = 2;                                 \
-public:                                                              \
-    _class_kind ## Expr(const ref<Expr> &l,                          \
-                        const ref<Expr> &r) : CmpExpr(l,r) {}        \
-    static ref<Expr> alloc(const ref<Expr> &l, const ref<Expr> &r) { \
-      ref<Expr> res(new _class_kind ## Expr (l, r));                 \
-      res->computeHash();                                            \
-      return res;                                                    \
-    }                                                                \
-    static ref<Expr> create(const ref<Expr> &l, const ref<Expr> &r); \
-    Kind getKind() const { return _class_kind; }                     \
-    virtual ref<Expr> rebuild(ref<Expr> kids[]) const {              \
-      return create(kids[0], kids[1]);                               \
-    }                                                                \
-                                                                     \
-    static bool classof(const Expr *E) {                             \
-      return E->getKind() == Expr::_class_kind;                      \
-    }                                                                \
-    static bool classof(const  _class_kind ## Expr *) {              \
-      return true;                                                   \
-    }                                                                \
-};                                                                   \
+#define COMPARISON_EXPR_CLASS(_class_kind)                                     \
+  class _class_kind##Expr : public CmpExpr {                                   \
+  public:                                                                      \
+    static const Kind kind = _class_kind;                                      \
+    static const unsigned numKids = 2;                                         \
+                                                                               \
+  public:                                                                      \
+    _class_kind##Expr(const ref<Expr> &l, const ref<Expr> &r)                  \
+        : CmpExpr(l, r) {}                                                     \
+    static ref<Expr> alloc(const ref<Expr> &l, const ref<Expr> &r) {           \
+      ref<Expr> res(new _class_kind##Expr(l, r));                              \
+      res->computeHash();                                                      \
+      return res;                                                              \
+    }                                                                          \
+    static ref<Expr> create(const ref<Expr> &l, const ref<Expr> &r);           \
+    Kind getKind() const { return _class_kind; }                               \
+    virtual ref<Expr> rebuild(ref<Expr> kids[]) const {                        \
+      return create(kids[0], kids[1]);                                         \
+    }                                                                          \
+                                                                               \
+    static bool classof(const Expr *E) {                                       \
+      return E->getKind() == Expr::_class_kind;                                \
+    }                                                                          \
+    static bool classof(const _class_kind##Expr *) { return true; }            \
+                                                                               \
+  protected:                                                                   \
+    virtual int compareContents(const Expr &b) const {                         \
+      /* No attributes to compare. */                                          \
+      return 0;                                                                \
+    }                                                                          \
+  };
 
 COMPARISON_EXPR_CLASS(Eq)
 COMPARISON_EXPR_CLASS(Ne)
