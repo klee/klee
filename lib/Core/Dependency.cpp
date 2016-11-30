@@ -249,7 +249,8 @@ void StoredValue::init(ref<VersionedValue> vvalue,
         bounds = shadowBounds;
       }
 
-      allocationBounds[v].insert(bounds.begin(), bounds.end());
+      if (!bounds.empty())
+        allocationBounds[v].insert(bounds.begin(), bounds.end());
 
       ref<Expr> offset = shadowing ? ShadowArray::getShadowExpression(
                                          (*it)->getOffset(), replacements)
