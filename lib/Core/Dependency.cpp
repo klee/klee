@@ -348,6 +348,7 @@ ref<Expr> StoredValue::getBoundsCheck(ref<StoredValue> stateValue) const {
 
 void StoredValue::print(llvm::raw_ostream &stream) const {
   if (!allocationBounds.empty()) {
+    stream << "BOUNDS:\n";
     for (std::map<llvm::Value *, std::set<ref<Expr> > >::const_iterator
              it = allocationBounds.begin(),
              ie = allocationBounds.end();
@@ -364,11 +365,11 @@ void StoredValue::print(llvm::raw_ostream &stream) const {
           stream << ",";
         (*it1)->print(stream);
       }
-      stream << "}]";
+      stream << "}]\n";
     }
-    stream << "\n";
 
     if (!allocationOffsets.empty()) {
+      stream << "OFFSETS:\n";
       for (std::map<llvm::Value *, std::set<ref<Expr> > >::const_iterator
                it = allocationOffsets.begin(),
                ie = allocationOffsets.end();
@@ -385,9 +386,8 @@ void StoredValue::print(llvm::raw_ostream &stream) const {
             stream << ",";
           (*it1)->print(stream);
         }
-        stream << "}]";
+        stream << "}]\n";
       }
-      stream << "\n";
     }
     return;
   }
@@ -1206,7 +1206,7 @@ void Dependency::bindCallArguments(llvm::Instruction *i,
   llvm::Function *callee = site->getCalledFunction();
 
   // Sometimes the callee information is missing, in which case
-  // the calle is not to be symbolically tracked.
+  // the callee is not to be symbolically tracked.
   if (!callee)
     return;
 

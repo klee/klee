@@ -693,9 +693,8 @@ void SearchTree::setCurrentNode(ExecutionState &state,
       // Display the line, char position of this instruction
       llvm::DILocation loc(n);
       unsigned line = loc.getLineNumber();
-      unsigned column = loc.getColumnNumber();
       StringRef file = loc.getFilename();
-      out << file << ":" << line << ":" << column << "\n";
+      out << file << ":" << line << "\n";
     } else {
       state.pc->inst->print(out);
     }
@@ -1904,7 +1903,7 @@ void SubsumptionTableEntry::print(llvm::raw_ostream &stream) const {
           stream << ",";
         stream << "(";
         it2->second.first->print(stream);
-        stream << ",";
+        stream << ",\n";
         it2->second.second->print(stream);
         stream << ")";
       }
@@ -2086,17 +2085,23 @@ bool ITree::subsumptionCheck(TimingSolver *solver, ExecutionState &state,
   std::deque<SubsumptionTableEntry *> entryList =
       subsumptionTable[state.itreeNode->getProgramPoint()];
 
-  if (entryList.empty())
+  if (DebugInterpolation == ITP_DEBUG_ALL ||
+      DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
+    klee_message("Subsumption check for Node #%lu, Program Point %lu",
+                 state.itreeNode->getNodeSequenceNumber(),
+                 state.itreeNode->getProgramPoint());
+  }
+
+  if (entryList.empty()) {
+    if (DebugInterpolation == ITP_DEBUG_ALL ||
+        DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
+      klee_message("Check failure due to empty entry list");
+    }
     return false;
+  }
 
   std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
   storedExpressions = state.itreeNode->getStoredExpressions();
-
-  if (DebugInterpolation == ITP_DEBUG_ALL ||
-      DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
-    klee_message("Subsumption check for Node #%lu",
-                 state.itreeNode->getNodeSequenceNumber());
-  }
 
   // Iterate the subsumption table entry with reverse iterator because
   // the successful subsumption mostly happen in the newest entry.
@@ -2145,7 +2150,20 @@ void ITree::remove(ITreeNode *node) {
     // As the node is about to be deleted, it must have been completely
     // traversed, hence the correct time to table the interpolant.
     if (!node->isSubsumed && node->storable) {
+      if (DebugInterpolation == ITP_DEBUG_ALL ||
+          DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
+        klee_message("Storing entry for Node #%lu, Program Point %lu",
+                     node->getNodeSequenceNumber(), node->getProgramPoint());
+      }
       SubsumptionTableEntry *entry = new SubsumptionTableEntry(node);
+      if (DebugInterpolation == ITP_DEBUG_ALL ||
+          DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
+        std::string msg;
+        llvm::raw_string_ostream out(msg);
+        entry->print(out);
+        out.flush();
+        klee_message("%s", msg.c_str());
+      }
       store(entry);
       SearchTree::addTableEntryMapping(node, entry);
     }
