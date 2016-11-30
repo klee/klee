@@ -7,7 +7,7 @@ MAINTAINER Dan Liew <daniel.liew@imperial.ac.uk>
 
 ENV LLVM_VERSION=3.4 \
     SOLVERS=STP:Z3 \
-    STP_VERSION=master \
+    STP_VERSION=2.1.2 \
     DISABLE_ASSERTIONS=0 \
     ENABLE_OPTIMIZED=1 \
     KLEE_UCLIBC=klee_uclibc_v1.0.0 \
