@@ -1,3 +1,32 @@
+KLEE 1.3.0, 30 November 2016
+============================
+(Incorporating changes from 1 April up to and including 3 November 2016)
+
+* Improved determinism of KLEE, an essential feature for experiments involving KLEE (@MartinNowack)
+* KLEE-web has been improved and refactored, and now available at http://klee.doc.ic.ac.uk/ (@giacomoguerci, @helicopter88, @andronat, @ccadar, based on work by @ains, @ben-chin, @ilovepjs, @JamesDavidCarr, Kaho Sato, Conrad Watt, @ccadar)
+* Renamed --replay-out to --replay-ktest and --replay-out-dir to replay-ktest-dir (@delcypher)
+* Split creation of symbolic files and stdin in two distinct options, documented at http://klee.github.io/docs/options/#symbolic-environment (@andreamattavelli)
+* Support for logging queries before invoking the solver via --log-partial-queries-early, useful for debugging solver crashes (@MartinNowack)
+* Added --stats-write-after-instructions and --istats-write-after-instructions to update each statistic after n steps (@MartinNowack)
+* Added --compress-log and --debug-compress-instructions to gzip-compress logs (@MartinNowack)
+* Added --exit-on-error-type option for stopping execution when certain error types are encountered (@jirislaby)
+* Updated and improved metaSMT support and added TravisCI targets (@hoangmle)
+* Added option --debug-crosscheck-core-solver to allow crosschecking of solvers (@delcypher)
+* Explicitly made division total in STP (@ccadar)
+* Extended support for assembler raising (@MartinNowack)
+* Disabled --solver-optimize-divides, as the optimization is currently buggy (@ccadar)
+* Improved --debug-print-instructions options with more logging options (@andreamattavelli)
+* Improved stub for times() not to trigger a NULL dereference (@ccadar)
+* Allow relocation of installed KLEE tree (@ShayDamir)
+* Fixed bug in independent solver (@delcypher)
+* Fixed alignement of varargs (@MartinNowack)
+* Fixed variable shifting behavior with different sizes and generation of STP shift operations with variable amounts (@MartinNowack)
+* Fixed handling of non-sized globals (@jirislaby)
+* Fixed klee_get_obj_size() crash on 64-bit (@hutoTUM)
+* Fixed bug in Kleaver's parser (@andreamattavelli)
+* Refactorings, small fixes and improvements, test cases, maintenance and website: (@andreamattavelli, @ccadar, @delcypher, @domainexpert, @giacomoguerci, @hoangmle, @helicopter88, @jirislaby, @Justme0, @kren1, @MartinNowack, @mchalupa)
+
+
 KLEE 1.2.0, 31 March 2016
 =========================
 
