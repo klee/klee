@@ -678,21 +678,25 @@ private:
 /// 1. Put the initial LLVM instruction into the tree root
 /// 2. While there are leaves, do the following:
 ///    a. Pick a leaf
-///    b. IF THE LEAF IS SUBSUMED
+///    b. IF THE LEAF IS SUBSUMED (ITree::subsumptionCheck)
 ///       i. REGISTER IT FOR DELETION
 ///       ii. MARK CONSTRAINTS NEEDED FOR SUBSUMPTION
 ///       iii. GOTO d
-///    c. Symbolically execute the instruction:
+///    c. Symbolically execute the instruction (ITree::execute, ITree::executePHI,
+///       ITree::executeMemoryOperation, ITree::executeOnNode):
 ///       i. If it is a branch, test if one of branches unsatisfiable
 ///          * If it is, execute the instruction without creating tree node
 ///            MARK CONSTRAINTS NEEDED FOR UNSATISFIABILITY
+///            (ITree::markPathCondition)
 ///          * Otherwise, generate the two tree nodes for the branches
+///            ADDING THE CONDITION AND NEGATION TO PATH CONDITION
+///            (ITreeNode::addConstraint)
 ///       ii. If it is an error/end point, register the leaf for deletion
 ///    d. Delete nodes registered for deletion. Recursively, if a
 ///       parent tree node is found to no longer have any children,
 ///       delete the parent as well, and recursively its parent
 ///       FOR EACH DELETED NODE, STORE MARKED
-///       CONSTRAINTS ON PC AS INTERPOLANT
+///       CONSTRAINTS ON PC AS INTERPOLANT (ITree::store)
 /// </pre>
 /// <hr>
 ///
