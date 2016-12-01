@@ -26,21 +26,11 @@ include $(LEVEL)/Makefile.common
 
 GIT_PRESENT:=$(shell [ -d "$(PROJ_SRC_ROOT)/.git" ] && echo 1 || echo 0)
 
-ifeq ($(GIT_PRESENT),1)
-GIT_TAGS:=$(shell cd $(PROJ_SRC_ROOT); git describe --tags 2> /dev/null 1>&2 && echo 1 || echo 0)
-else
-GIT_TAGS:=0
-endif
-
 .PHONY: $(CompileTimeInfoFile)
 $(CompileTimeInfoFile):
 	$(Verb) echo "Regenerating $(CompileTimeInfoFile)"
 	$(Verb) echo '#define KLEE_BUILD_MODE "$(BuildMode)"' > $(CompileTimeInfoFile)
 ifeq ($(GIT_PRESENT),1)
 	$(Verb) echo '#define KLEE_BUILD_REVISION "'$(shell cd $(PROJ_SRC_ROOT); git rev-parse HEAD)'"' >> \
-	$(CompileTimeInfoFile)
-endif
-ifeq ($(GIT_TAGS),1)
-	$(Verb) echo '#define KLEE_BUILD_TAG "'$(shell cd $(PROJ_SRC_ROOT); git describe --tags)'"' >> \
 	$(CompileTimeInfoFile)
 endif
