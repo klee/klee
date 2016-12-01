@@ -249,7 +249,8 @@ void StoredValue::init(ref<VersionedValue> vvalue,
         bounds = shadowBounds;
       }
 
-      allocationBounds[v].insert(bounds.begin(), bounds.end());
+      if (!bounds.empty())
+        allocationBounds[v].insert(bounds.begin(), bounds.end());
 
       ref<Expr> offset = shadowing ? ShadowArray::getShadowExpression(
                                          (*it)->getOffset(), replacements)
@@ -321,18 +322,20 @@ ref<Expr> StoredValue::getBoundsCheck(ref<StoredValue> stateValue) const {
           if (tabledBoundInt > 0) {
             // Symbolic state offset, but concrete tabled bound. Here the bound
             // is known (non-zero), so we create constraints
-            if (res.isNull())
-              res = UleExpr::create(*it1, *it2);
-            else
-              res = AndExpr::create(UleExpr::create(*it1, *it2), res);
+            if (res.isNull()) {
+              res = UltExpr::create(*it1, *it2);
+            } else {
+              res = AndExpr::create(UltExpr::create(*it1, *it2), res);
+            }
           }
           continue;
         }
         // Create constraints for symbolic bounds
-        if (res.isNull())
-          res = UleExpr::create(*it1, *it2);
-        else
-          res = AndExpr::create(UleExpr::create(*it1, *it2), res);
+        if (res.isNull()) {
+          res = UltExpr::create(*it1, *it2);
+        } else {
+          res = AndExpr::create(UltExpr::create(*it1, *it2), res);
+        }
       }
     }
   }
@@ -630,13 +633,10 @@ Dependency::directFlowSources(ref<VersionedValue> target) const {
     for (std::map<ref<VersionedValue>, ref<MemoryLocation> >::iterator it =
              sources.begin();
          it != sources.end(); ++it) {
-      if (!it->first->isCore()) {
+      if (!it->first->isCore())
         ret.push_back(it->first);
-      }
     }
-  }
-
-  if (parent) {
+  } else if (parent) {
     std::vector<ref<VersionedValue> > ancestralSources =
         parent->directFlowSources(target);
     ret.insert(ret.begin(), ancestralSources.begin(), ancestralSources.end());
@@ -660,10 +660,32 @@ void Dependency::markPointerFlow(ref<VersionedValue> target,
   for (std::set<ref<MemoryLocation> >::iterator it = locations.begin(),
                                                 ie = locations.end();
        it != ie; ++it) {
+    std::set<ref<MemoryLocation> > l = checkedAddress->getLocations();
     (*it)->adjustOffsetBound(checkedAddress);
   }
   target->setAsCore();
-  std::vector<ref<VersionedValue> > stepSources = directFlowSources(target);
+
+  // Compute the direct pointer flow dependency
+  std::vector<ref<VersionedValue> > stepSources;
+  const Dependency *currentDependency(this);
+
+  while (currentDependency) {
+    if (currentDependency->flowsToMap.find(target) !=
+        currentDependency->flowsToMap.end()) {
+      std::map<ref<VersionedValue>, ref<MemoryLocation> > sources =
+          currentDependency->flowsToMap.find(target)->second;
+      for (std::map<ref<VersionedValue>, ref<MemoryLocation> >::iterator it =
+               sources.begin();
+           it != sources.end(); ++it) {
+        stepSources.push_back(it->first);
+      }
+    } else if (currentDependency->parent) {
+      currentDependency = currentDependency->parent;
+      continue;
+    }
+    break;
+  }
+
   for (std::vector<ref<VersionedValue> >::iterator it = stepSources.begin(),
                                                    ie = stepSources.end();
        it != ie; ++it) {
@@ -1244,59 +1266,41 @@ void Dependency::print(llvm::raw_ostream &stream) const {
 void Dependency::print(llvm::raw_ostream &stream,
                        const unsigned paddingAmount) const {
   std::string tabs = makeTabs(paddingAmount);
-  std::map<ref<MemoryLocation>, ref<VersionedValue> >::const_iterator
-  concreteStoreBegin = concretelyAddressedStore.begin(),
-  symbolicStoreBegin = symbolicallyAddressedStore.begin();
-  std::map<ref<VersionedValue>,
-           std::map<ref<VersionedValue>, ref<MemoryLocation> > >::const_iterator
-  flowsToMapBegin = flowsToMap.begin();
 
-  stream << tabs << "CONCRETE STORE:";
+  stream << tabs << "CONCRETE STORE:\n";
   for (std::map<ref<MemoryLocation>, ref<VersionedValue> >::const_iterator
            it = concretelyAddressedStore.begin(),
            ie = concretelyAddressedStore.end();
        it != ie; ++it) {
-    if (it != concreteStoreBegin)
-      stream << ",";
-    stream << "[";
+    stream << tabs << "  [";
     (*it->first).print(stream);
     stream << ",";
     (*it->second).print(stream);
-    stream << "]";
+    stream << "]\n";
   }
-  stream << "\n";
-  stream << tabs << "SYMBOLIC STORE:";
+  stream << tabs << "SYMBOLIC STORE:\n";
   for (std::map<ref<MemoryLocation>, ref<VersionedValue> >::const_iterator
            it = symbolicallyAddressedStore.begin(),
            ie = symbolicallyAddressedStore.end();
        it != ie; ++it) {
-    if (it != symbolicStoreBegin)
-      stream << ",";
-    stream << "[";
+    stream << tabs << "  [";
     (*it->first).print(stream);
     stream << ",";
     (*it->second).print(stream);
-    stream << "]";
+    stream << "]\n";
   }
-  stream << "\n";
-  stream << tabs << "FLOWDEPENDENCY:";
+  stream << tabs << "FLOWDEPENDENCY:\n";
   for (std::map<
            ref<VersionedValue>,
            std::map<ref<VersionedValue>, ref<MemoryLocation> > >::const_iterator
            it = flowsToMap.begin(),
            ie = flowsToMap.end();
        it != ie; ++it) {
-    if (it != flowsToMapBegin)
-      stream << ",";
     std::map<ref<VersionedValue>, ref<MemoryLocation> > sources = (*it).second;
-    std::map<ref<VersionedValue>, ref<MemoryLocation> >::iterator
-    sourcesMapBegin = sources.begin();
     for (std::map<ref<VersionedValue>, ref<MemoryLocation> >::iterator it2 =
              sources.begin();
          it2 != sources.end(); ++it2) {
-      if (it2 != sourcesMapBegin)
-        stream << ",";
-      stream << "[";
+      stream << tabs << "  [";
       (*it->first).print(stream);
       stream << " <- ";
       (*it2->first).print(stream);
@@ -1305,11 +1309,12 @@ void Dependency::print(llvm::raw_ostream &stream,
         stream << " via ";
         (*it2->second).print(stream);
       }
+      stream << "\n";
     }
   }
 
   if (parent) {
-    stream << "\n" << tabs << "--------- Parent Dependencies ----------\n";
+    stream << tabs << "--------- Parent Dependencies ----------\n";
     parent->print(stream, paddingAmount);
   }
 }
