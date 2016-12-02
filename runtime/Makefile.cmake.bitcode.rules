@@ -25,6 +25,7 @@ endif
 # Any changes to the files listed here will trigger a rebuild of the sources
 ADDITIONAL_BUILD_DEPS := $(CURRENT_DIR)/Makefile.cmake.bitcode \
                          $(RUNTIME_CMAKE_BINARY_DIR)/Makefile.cmake.bitcode.config \
+                         $(RUNTIME_CMAKE_BINARY_DIR)/Makefile.cmake.bitcode.rules \
                          $(RUNTIME_CMAKE_BINARY_DIR)/Makefile.cmake.bitcode
 
 # Handle VERBOSE
