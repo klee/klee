@@ -78,6 +78,8 @@ groups = {}
 #Flags for postprocessing record
 global topInstrs
 topInstrs = None
+global topLocs
+topLocs = None
 
 def getLogFile(path):
     """Return the path to run.stats."""
@@ -201,12 +203,17 @@ def getKleeOutDirs(dirs):
 def postLabels(labels):
     #Post process labels
     global topInstrs
+    global topLocs
+    ll = list(labels)
 
     #Post processing for intructions
     if topInstrs is not None and topInstrs[0] is not None:
-        ll = list(labels)
         ll.append("Top Instr")
-        labels = tuple(ll)
+
+    if topLocs is not None and topLocs[0] is not None:
+        ll.append("Top Locations")
+
+    labels = tuple(ll)
 
     return labels
 
@@ -225,16 +232,30 @@ def preRow(string):
     return string.replace('@','_')
 
 def postRow(record, post):
+    lr = list(record)
+
+    if post is not None:
+        topI, topL = post
+    else:
+        topI = None
+        topL = None
+
     #Changes to the row after calculations take place
 
     #Post processing for intructions
     if topInstrs is not None and topInstrs[0] is not None:
-        lr = list(record)
-        if post is not None:
-            lr.append(post)
+        if topI is not None:
+            lr.append(topI)
         else:
             lr.append(" ")
-        record = tuple(lr)
+
+    if topLocs is not None and topLocs[0] is not None:
+        if topL is not None:
+            lr.append(topL)
+        else:
+            lr.append(" ")
+
+    record = tuple(lr)
     return record
 
 def getRow(record, stats, pr, post):
@@ -469,14 +490,14 @@ def preparse_cmdLine():
     global autoVersion
 
     #Custom version input
-    v = sys.argv[1]
-
-    #Check if v is a version, ie if a config file for it exists
-    fullPath = getVersionFilePath(v)
-    if os.path.isfile(fullPath):
-        autoVersion = v
-        #Starting with specific config version
-        ConfigFile = fullPath
+    if len(sys.argv) > 1:
+        v = sys.argv[1]
+        #Check if v is a version, ie if a config file for it exists
+        fullPath = getVersionFilePath(v)
+        if os.path.isfile(fullPath):
+            autoVersion = v
+            #Starting with specific config version
+            ConfigFile = fullPath
     
 
 def handle_version(config):
@@ -490,8 +511,8 @@ def handle_version(config):
 
         script = "klee-stats "
         cmd = script + str(config) + flags
-        os.system(cmd)
-        sys.exit(0)
+        code = int(os.system(cmd) / 256)
+        sys.exit(code)
         return True
     else:
         return False
@@ -567,13 +588,18 @@ def openLLIstats(cdir):
         asdata = parseAssembly(assembly)
         stats = parseStats(istats)
     else:
-        print('assembly.ll or run.istats no found', file=sys.stderr)
+        print('assembly.ll or run.istats not found', file=sys.stderr)
         exit(1)
 
-    return asdata, stats
+    data = asdata, stats
 
-def topInstructions(cdir):
-    asdata, stats = openLLIstats(cdir)
+    return data
+
+
+
+def topInstructions(data):
+
+    asdata, stats = data
 
     itimes = [(inst, map(sum, zip(*[stats[l] for l in lines if l in stats])) ) for inst, lines in asdata]
     # Eliminate bogus instructions picked up by our imperfect LLVM IR parser
@@ -588,6 +614,16 @@ def topInstructions(cdir):
     itimes = itimes[:10]
 
     return maxitimes, itimes
+
+def topLocationsAll(data):
+
+    asdata, stats = data
+
+    linemnemonic = dict([(l, m) for m, lines in asdata for l in lines])
+    data = [(stats[line][0]/1000000, stats[line][2]/1000000, line, linemnemonic[line]) for line in stats]
+    data.sort(key=lambda x : x[0], reverse=True)
+
+    return data
 
 def main():
     # function for sanitizing arguments
@@ -643,6 +679,9 @@ def main():
     parser.add_argument('--top-instructions',
                           action='store_true', dest='TI',
                           help='Show most expensive instruction per run.')
+    parser.add_argument('--top-locations',
+                          action='store_true', dest='TL',
+                          help='Show most expensive instruction location per run.')
 
     # argument group for controlling output verboseness
 
@@ -676,7 +715,12 @@ def main():
                         "value 'last' to compare at the last point which "
                         'makes sense. Use in conjunction with --compare-by.')
 
-    args = parser.parse_args()
+    args, unknown = parser.parse_known_args()
+
+    if not args.config and len(unknown) > 0:
+        parser.print_help()
+        print("ERROR: Unknown arguments %s" % unknown)
+        sys.exit(1)
 
     #Handling config version selection
     if args.config and not handle_version(args.config):
@@ -695,30 +739,37 @@ def main():
     #Version list/configuration
     dataVs = processVersions([eval(list(open(getLogFile(d)))[0]) for d in dirs])
 
+    global topInstrs
+    global topLocs
+
+    if args.TI or args.TL:
+        datas = map(openLLIstats, dirs)
+
+        # Get top inst
+        if args.TI:
+            topInstrs = [itimes[0][0] for (maxitimes, itimes) in map(topInstructions, datas)]
+        if args.TL:
+            topLocs = ["%s: %s" % (ldata[0][2], ldata[0][3]) for ldata in map(topLocationsAll, datas)]
+
 
 
     if len(data) > 1:
         dirs = stripCommonPathPrefix(dirs)
-
-    global topInstrs
-
-    if args.TI:
-       #istatsFile = os.path.join(sys.path[0], "istats")
-       #execfile(istatsFile)
-
-        # Get top inst
-        _, test = topInstructions(dirs[0])
-        idata = map(topInstructions, dirs)
-        topInstrs = [itimes[0][0] for (maxitimes, itimes) in idata]
 
     labels = getLabels(pr)
 
     #To work with the zip
     if topInstrs is None:
         topInstrs = [None] * len(dirs)
+    if topLocs is None:
+        topLocs = [None] * len(dirs)
+
+    #Used for post processing
+    topData = zip(topInstrs, topLocs)
+
 
         # attach the stripped path
-    data = list(zip(dirs, data, topInstrs))
+    data = list(zip(dirs, data, topData))
 
     # compBy now uses names given in the config file for column specification
     if args.compBy:
