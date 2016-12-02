@@ -7,3 +7,7 @@
 #
 #===------------------------------------------------------------------------===#
 install(PROGRAMS klee-stats DESTINATION bin)
+
+# Copy into the build directory's binary directory
+# so integration tests can find it
+configure_file(klee-stats "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/klee-stats" COPYONLY)
