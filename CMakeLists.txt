@@ -432,6 +432,8 @@ if (ENABLE_TCMALLOC)
     message(FATAL_ERROR "Can't find \"${TCMALLOC_HEADER}\"")
   endif()
 else()
+  unset(HAVE_GPERFTOOLS_MALLOC_EXTENSION_H)
+  unset(HAVE_GPERFTOOLS_MALLOC_EXTENSION_H CACHE)
   message(STATUS "TCMalloc support disabled")
 endif()
 
