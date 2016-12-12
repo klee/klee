@@ -2136,6 +2136,7 @@ void ITree::setCurrentINode(ExecutionState &state) {
 }
 
 void ITree::remove(ITreeNode *node) {
+#ifdef ENABLE_Z3
   TimerStatIncrementer t(removeTime);
   assert(!node->left && !node->right);
   do {
@@ -2173,6 +2174,7 @@ void ITree::remove(ITreeNode *node) {
     }
     node = p;
   } while (node && !node->left && !node->right);
+#endif
 }
 
 std::pair<ITreeNode *, ITreeNode *>
