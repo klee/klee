@@ -340,8 +340,7 @@ class SubsumptionTableEntry {
   ///
   /// \param existentials A set of variables (KLEE arrays).
   /// \param expr The expression to test for the existence of the variables in
-  /// the
-  /// set.
+  /// the set.
   /// \return true if a variable in the set is found in the expression, false
   /// otherwise.
   static bool hasVariableInSet(std::set<const Array *> &existentials,
@@ -351,8 +350,7 @@ class SubsumptionTableEntry {
   ///
   /// \param existentials A set of variables (KLEE arrays).
   /// \param expr The expression to test for the non-existence of the variables
-  /// in
-  /// the set.
+  /// in the set.
   /// \return true if none of the variable in the set is found in the
   /// expression, false otherwise.
   static bool hasVariableNotInSet(std::set<const Array *> &existentials,
@@ -392,8 +390,7 @@ class SubsumptionTableEntry {
   /// query.
   ///
   /// \param conjunction The output conjunction of top-level conjuncts in the
-  /// query
-  /// expression.
+  /// query expression.
   /// \param query The query expression.
   /// \return false if there is an equality conjunct that is simplifiable to
   /// false, true otherwise.
@@ -539,8 +536,7 @@ public:
   /// \brief Retrieve the interpolant for this node as KLEE expression object
   ///
   /// \param replacements The replacement bound variables for replacing the
-  /// variables in the
-  /// path condition.
+  /// variables in the path condition.
   /// \return The interpolant expression.
   ref<Expr> getInterpolant(std::set<const Array *> &replacements) const;
 

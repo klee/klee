@@ -1172,7 +1172,8 @@ void Dependency::executeMemoryOperation(llvm::Instruction *instr,
                                         bool boundsCheck,
                                         bool symbolicExecutionError) {
   execute(instr, args, symbolicExecutionError);
-  if (boundsCheck) {
+#ifdef ENABLE_Z3
+  if (!NoBoundInterpolation && boundsCheck) {
     // The bounds check has been proven valid, we keep the dependency on the
     // address. Calling va_start within a variadic function also triggers memory
     // operation, but we ignored it here as this method is only called when load
@@ -1194,6 +1195,7 @@ void Dependency::executeMemoryOperation(llvm::Instruction *instr,
     }
     markAllPointerValues(addressOperand);
   }
+#endif
 }
 
 void Dependency::bindCallArguments(llvm::Instruction *i,
