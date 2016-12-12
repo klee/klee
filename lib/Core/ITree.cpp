@@ -1370,7 +1370,6 @@ bool SubsumptionTableEntry::subsumed(
   // Tell the solver implementation that we are checking for subsumption, for it
   // to collect statistics of solver calls.
   SubsumptionCheckMarker subsumptionCheckMarker;
-#endif
 
   if (DebugInterpolation == ITP_DEBUG_ALL ||
       DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
@@ -1649,16 +1648,13 @@ bool SubsumptionTableEntry::subsumed(
     return false;
   }
 
-#ifdef ENABLE_Z3
   Z3Solver *z3solver = 0;
-#endif /* ENABLE_Z3 */
 
   // We call the solver only when the simplified query is
   // not a constant and no contradictory unary constraints found from
   // solvingUnaryConstraints method.
   if (!llvm::isa<ConstantExpr>(query)) {
 
-#ifdef ENABLE_Z3
     if (!existentials.empty() && llvm::isa<ExistsExpr>(query)) {
       if (DebugInterpolation == ITP_DEBUG_ALL ||
           DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
@@ -1713,7 +1709,6 @@ bool SubsumptionTableEntry::subsumed(
       z3solver->setCoreSolverTimeout(0);
 
     } else
-#endif /* ENABLE_Z3 */
     {
       if (DebugInterpolation == ITP_DEBUG_ALL ||
           DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
@@ -1748,12 +1743,10 @@ bool SubsumptionTableEntry::subsumed(
 
   if (success && result == Solver::True) {
     std::vector<ref<Expr> > unsatCore;
-#ifdef ENABLE_Z3
     if (z3solver) {
       unsatCore = z3solver->getUnsatCore();
       delete z3solver;
     } else
-#endif /* ENABLE_Z3 */
       unsatCore = solver->getUnsatCore();
 
     // State subsumed, we mark needed constraints on the
@@ -1774,15 +1767,14 @@ bool SubsumptionTableEntry::subsumed(
   // which was eventually called from solver->evaluate
   // is conservative, where it returns Solver::Unknown even in case when
   // invalidity is established by the solver.
-#ifdef ENABLE_Z3
   if (z3solver)
     delete z3solver;
-#endif /* ENABLE_Z3 */
 
   if (DebugInterpolation == ITP_DEBUG_ALL ||
       DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
     klee_message("Check failure as solver did not decide validity");
   }
+#endif /* ENABLE_Z3 */
   return false;
 }
 
@@ -1976,6 +1968,7 @@ ITree::~ITree() {
 
 bool ITree::subsumptionCheck(TimingSolver *solver, ExecutionState &state,
                              double timeout) {
+#ifdef ENABLE_Z3
   assert(state.itreeNode == currentINode);
 
   // Immediately return if the state's instruction is not the
@@ -2023,6 +2016,7 @@ bool ITree::subsumptionCheck(TimingSolver *solver, ExecutionState &state,
       return true;
     }
   }
+#endif
   return false;
 }
 
