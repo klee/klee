@@ -21,7 +21,6 @@
 #include <klee/Expr.h>
 #include <klee/Solver.h>
 #include <klee/SolverStats.h>
-#include <klee/TimerStatIncrementer.h>
 #include <klee/Internal/Support/ErrorHandling.h>
 #include <klee/util/ExprPPrinter.h>
 #include <fstream>
@@ -1954,10 +1953,12 @@ Statistic ITree::setCurrentINodeTime("SetCurrentINodeTime",
                                      "SetCurrentINodeTime");
 Statistic ITree::removeTime("RemoveTime", "RemoveTime");
 Statistic ITree::subsumptionCheckTime("SubsumptionCheckTime",
-                                      "SubsubmptionCheckTime");
+                                      "SubsumptionCheckTime");
 Statistic ITree::markPathConditionTime("MarkPathConditionTime", "MarkPCTime");
 Statistic ITree::splitTime("SplitTime", "SplitTime");
 Statistic ITree::executeOnNodeTime("ExecuteOnNodeTime", "ExecuteOnNodeTime");
+Statistic ITree::executeMemoryOperationTime("ExecuteMemoryOperationTime",
+                                            "ExecuteMemoryOperationTime");
 
 double ITree::entryNumber;
 
@@ -1980,6 +1981,8 @@ void ITree::printTimeStat(std::stringstream &stream) {
          << "\n";
   stream << "KLEE: done:     executeOnNode = "
          << ((double)executeOnNodeTime.getValue()) / 1000 << "\n";
+  stream << "KLEE: done:     executeMemoryOperation = "
+         << ((double)executeMemoryOperationTime.getValue()) / 1000 << "\n";
 }
 
 void ITree::printTableStat(std::stringstream &stream) {

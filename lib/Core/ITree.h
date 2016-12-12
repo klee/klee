@@ -22,6 +22,7 @@
 #include "klee/ExecutionState.h"
 #include "klee/Solver.h"
 #include "klee/Statistic.h"
+#include "klee/TimerStatIncrementer.h"
 #include "klee/util/ExprVisitor.h"
 
 #include "Dependency.h"
@@ -737,6 +738,7 @@ class ITree {
   static Statistic markPathConditionTime;
   static Statistic splitTime;
   static Statistic executeOnNodeTime;
+  static Statistic executeMemoryOperationTime;
   static double entryNumber;
   static double programPointNumber;
 
@@ -835,6 +837,7 @@ public:
   /// Executor::executeMemoryOperation
   void executeMemoryOperation(llvm::Instruction *instr, ref<Expr> value,
                               ref<Expr> address, bool boundsCheck) {
+    TimerStatIncrementer t(executeMemoryOperationTime);
     std::vector<ref<Expr> > args;
     args.push_back(value);
     args.push_back(address);
