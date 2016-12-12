@@ -3020,6 +3020,7 @@ void Executor::run(ExecutionState &initialState) {
   while (!states.empty() && !haltExecution) {
     ExecutionState &state = searcher->selectState();
 
+#ifdef ENABLE_Z3
     if (INTERPOLATION_ENABLED) {
       // We synchronize the node id to that of the state. The node id
       // is set only when it was the address of the first instruction
@@ -3046,6 +3047,7 @@ void Executor::run(ExecutionState &initialState) {
         klee_message("%s", debugMessage.c_str());
       }
     }
+#endif
 
     if (INTERPOLATION_ENABLED &&
         interpTree->subsumptionCheck(solver, state, coreSolverTimeout)) {

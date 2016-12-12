@@ -134,6 +134,12 @@ llvm::cl::opt<InterpolationDebugType> DebugInterpolation(
         clEnumValN(ITP_DEBUG_SUBSUMPTION, "subsumption", "Subsumption check"),
         clEnumValN(ITP_DEBUG_ALL, "all", "All debug messages"), clEnumValEnd),
     llvm::cl::init(ITP_DEBUG_NONE));
+
+llvm::cl::opt<bool> NoBoundInterpolation(
+    "no-bound-interpolation",
+    llvm::cl::desc("This option disables the generation of interpolant from "
+                   "each successful out-of-bound check: It may result in loss "
+                   "of error report(s)."));
 #endif // ENABLE_Z3
 
 #ifdef ENABLE_METASMT

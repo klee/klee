@@ -90,6 +90,8 @@ enum InterpolationDebugType {
 
 extern llvm::cl::opt<InterpolationDebugType> DebugInterpolation;
 
+extern llvm::cl::opt<bool> NoBoundInterpolation;
+
 #endif
 
 #ifdef ENABLE_METASMT
