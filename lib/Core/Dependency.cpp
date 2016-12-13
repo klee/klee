@@ -967,59 +967,41 @@ void Dependency::print(llvm::raw_ostream &stream) const {
 void Dependency::print(llvm::raw_ostream &stream,
                        const unsigned paddingAmount) const {
   std::string tabs = makeTabs(paddingAmount);
-  std::map<ref<MemoryLocation>, ref<VersionedValue> >::const_iterator
-  concreteStoreBegin = concretelyAddressedStore.begin(),
-  symbolicStoreBegin = symbolicallyAddressedStore.begin();
-  std::map<ref<VersionedValue>,
-           std::map<ref<VersionedValue>, ref<MemoryLocation> > >::const_iterator
-  flowsToMapBegin = flowsToMap.begin();
 
-  stream << tabs << "CONCRETE STORE:";
+  stream << tabs << "CONCRETE STORE:\n";
   for (std::map<ref<MemoryLocation>, ref<VersionedValue> >::const_iterator
            it = concretelyAddressedStore.begin(),
            ie = concretelyAddressedStore.end();
        it != ie; ++it) {
-    if (it != concreteStoreBegin)
-      stream << ",";
-    stream << "[";
+    stream << tabs << "  [";
     (*it->first).print(stream);
     stream << ",";
     (*it->second).print(stream);
-    stream << "]";
+    stream << "]\n";
   }
-  stream << "\n";
-  stream << tabs << "SYMBOLIC STORE:";
+  stream << tabs << "SYMBOLIC STORE:\n";
   for (std::map<ref<MemoryLocation>, ref<VersionedValue> >::const_iterator
            it = symbolicallyAddressedStore.begin(),
            ie = symbolicallyAddressedStore.end();
        it != ie; ++it) {
-    if (it != symbolicStoreBegin)
-      stream << ",";
-    stream << "[";
+    stream << tabs << "  [";
     (*it->first).print(stream);
     stream << ",";
     (*it->second).print(stream);
-    stream << "]";
+    stream << "]\n";
   }
-  stream << "\n";
-  stream << tabs << "FLOWDEPENDENCY:";
+  stream << tabs << "FLOWDEPENDENCY:\n";
   for (std::map<
            ref<VersionedValue>,
            std::map<ref<VersionedValue>, ref<MemoryLocation> > >::const_iterator
            it = flowsToMap.begin(),
            ie = flowsToMap.end();
        it != ie; ++it) {
-    if (it != flowsToMapBegin)
-      stream << ",";
     std::map<ref<VersionedValue>, ref<MemoryLocation> > sources = (*it).second;
-    std::map<ref<VersionedValue>, ref<MemoryLocation> >::iterator
-    sourcesMapBegin = sources.begin();
     for (std::map<ref<VersionedValue>, ref<MemoryLocation> >::iterator it2 =
              sources.begin();
          it2 != sources.end(); ++it2) {
-      if (it2 != sourcesMapBegin)
-        stream << ",";
-      stream << "[";
+      stream << tabs << "  [";
       (*it->first).print(stream);
       stream << " <- ";
       (*it2->first).print(stream);
@@ -1028,11 +1010,12 @@ void Dependency::print(llvm::raw_ostream &stream,
         stream << " via ";
         (*it2->second).print(stream);
       }
+      stream << "\n";
     }
   }
 
   if (parent) {
-    stream << "\n" << tabs << "--------- Parent Dependencies ----------\n";
+    stream << tabs << "--------- Parent Dependencies ----------\n";
     parent->print(stream, paddingAmount);
   }
 }
