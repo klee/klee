@@ -325,6 +325,10 @@ class SubsumptionTableEntry {
   };
 #endif
 
+  static Statistic concreteStoreExpressionBuildTime;
+  static Statistic symbolicStoreExpressionBuildTime;
+  static Statistic solverAccessTime;
+
   ref<Expr> interpolant;
 
   Dependency::ConcreteStore concreteAddressStore;
