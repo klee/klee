@@ -216,6 +216,9 @@ namespace klee {
     /// \brief The id of this object
     uint64_t id;
 
+    /// \brief Dependency sources of this value
+    std::map<ref<VersionedValue>, ref<MemoryLocation> > sources;
+
     VersionedValue(llvm::Value *value, ref<Expr> valueExpr)
         : refCount(0), value(value), valueExpr(valueExpr), core(false),
           id(reinterpret_cast<uint64_t>(this)) {}
@@ -226,6 +229,16 @@ namespace klee {
     static ref<VersionedValue> create(llvm::Value *value, ref<Expr> valueExpr) {
       ref<VersionedValue> vvalue(new VersionedValue(value, valueExpr));
       return vvalue;
+    }
+
+    /// \brief The core routine for adding flow dependency between source and
+    /// target value
+    void addDependency(ref<VersionedValue> source, ref<MemoryLocation> via) {
+      sources[source] = via;
+    }
+
+    std::map<ref<VersionedValue>, ref<MemoryLocation> > getSources() {
+      return sources;
     }
 
     int compare(const VersionedValue other) const {
@@ -429,20 +442,12 @@ namespace klee {
   ///   allocation.
   ///
   /// The results of the computation is stored in several member
-  /// variables as follows.
-  ///
-  /// 1. Dependency#concretelyAddressedStore and
-  ///    Dependency#symbolicallyAddressedStore which represent the
-  ///    components of the state associated with the owner ITreeNode
-  ///    object of the Dependency
-  ///    object. Dependency#concretelyAddressedStore is the part of
-  ///    the state that are concretely addressed, whereas
-  ///    Dependency#symbolicallyAddressedStore is the part that is
-  ///    symbolically addressed.
-  ///
-  /// 2. In addition, Dependency#flowsToMap represents the flow
-  ///    relations between VersionedValue objects, which is used to
-  ///    compute \f$h'\f$.
+  /// variables as follows, mainly Dependency#concretelyAddressedStore and
+  /// Dependency#symbolicallyAddressedStore which represent the components of
+  /// the state associated with the owner ITreeNode object of the Dependency
+  /// object. Dependency#concretelyAddressedStore is the part of the state that
+  /// are concretely addressed, whereas Dependency#symbolicallyAddressedStore is
+  /// the part that is symbolically addressed.
   ///
   /// <b>Notes on pointer flow propagation</b>
   ///
@@ -498,10 +503,6 @@ namespace klee {
     std::map<ref<MemoryLocation>, ref<VersionedValue> >
     symbolicallyAddressedStore;
 
-    /// \brief Flow relations of target and its sources with location
-    std::map<ref<VersionedValue>,
-             std::map<ref<VersionedValue>, ref<MemoryLocation> > > flowsToMap;
-
     /// \brief The store of the versioned values
     std::map<llvm::Value *, std::vector<ref<VersionedValue> > > valuesMap;
 
@@ -554,11 +555,6 @@ namespace klee {
 
     /// \brief Newly relate an location with its stored value
     void updateStore(ref<MemoryLocation> loc, ref<VersionedValue> value);
-
-    /// \brief The core routine for adding flow dependency between source and
-    /// target value
-    void addDependencyCore(ref<VersionedValue> source,
-                           ref<VersionedValue> target, ref<MemoryLocation> via);
 
     /// \brief Add flow dependency between source and target value
     void addDependency(ref<VersionedValue> source, ref<VersionedValue> target);

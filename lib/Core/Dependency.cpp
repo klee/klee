@@ -203,8 +203,23 @@ void VersionedValue::print(llvm::raw_ostream &stream) const {
   value->print(stream);
   stream << ":";
   valueExpr->print(stream);
-  stream << "]#" << reinterpret_cast<uintptr_t>(this);
-  ;
+  stream << "]#" << reinterpret_cast<uintptr_t>(this) << " <- {";
+
+  for (std::map<ref<VersionedValue>, ref<MemoryLocation> >::const_iterator
+           is2 = sources.begin(),
+           it2 = is2, ie2 = sources.end();
+       it2 != ie2; ++it2) {
+    if (it2 != is2)
+      stream << ", ";
+    stream << "  [";
+    (*it2->first).print(stream);
+    if (!it2->second.isNull()) {
+      stream << " via ";
+      (*it2->second).print(stream);
+    }
+    stream << "]";
+  }
+  stream << "}";
 }
 
 /**/
@@ -558,19 +573,6 @@ void Dependency::updateStore(ref<MemoryLocation> loc,
     symbolicallyAddressedStore[loc] = value;
 }
 
-void Dependency::addDependencyCore(ref<VersionedValue> source,
-                                   ref<VersionedValue> target,
-                                   ref<MemoryLocation> via) {
-  if (flowsToMap.find(target) != flowsToMap.end()) {
-    flowsToMap[target].insert(
-        std::make_pair<ref<VersionedValue>, ref<MemoryLocation> >(source, via));
-  } else {
-    std::map<ref<VersionedValue>, ref<MemoryLocation> > newMap;
-    newMap[source] = via;
-    flowsToMap[target] = newMap;
-  }
-}
-
 void Dependency::addDependency(ref<VersionedValue> source,
                                ref<VersionedValue> target) {
   ref<MemoryLocation> nullLocation;
@@ -584,7 +586,7 @@ void Dependency::addDependency(ref<VersionedValue> source,
        it != ie; ++it) {
     target->addLocation(*it);
   }
-  addDependencyCore(source, target, nullLocation);
+  target->addDependency(source, nullLocation);
 }
 
 void Dependency::addDependencyWithOffset(ref<VersionedValue> source,
@@ -602,7 +604,7 @@ void Dependency::addDependencyWithOffset(ref<VersionedValue> source,
     ref<Expr> expr(target->getExpression());
     target->addLocation(MemoryLocation::create(*it, expr, offset));
   }
-  addDependencyCore(source, target, nullLocation);
+  target->addDependency(source, nullLocation);
 }
 
 void Dependency::addDependencyViaLocation(ref<VersionedValue> source,
@@ -617,26 +619,21 @@ void Dependency::addDependencyViaLocation(ref<VersionedValue> source,
        it != ie; ++it) {
     target->addLocation(*it);
   }
-  addDependencyCore(source, target, via);
+  target->addDependency(source, via);
 }
 
 std::vector<ref<VersionedValue> >
 Dependency::directFlowSources(ref<VersionedValue> target) const {
   std::vector<ref<VersionedValue> > ret;
-  if (flowsToMap.find(target) != flowsToMap.end()) {
-    std::map<ref<VersionedValue>, ref<MemoryLocation> > sources =
-        flowsToMap.find(target)->second;
+  std::map<ref<VersionedValue>, ref<MemoryLocation> > sources =
+      target->getSources();
+
     for (std::map<ref<VersionedValue>, ref<MemoryLocation> >::iterator it =
              sources.begin();
          it != sources.end(); ++it) {
       if (!it->first->isCore())
         ret.push_back(it->first);
     }
-  } else if (parent) {
-    std::vector<ref<VersionedValue> > ancestralSources =
-        parent->directFlowSources(target);
-    ret.insert(ret.begin(), ancestralSources.begin(), ancestralSources.end());
-  }
   return ret;
 }
 
@@ -662,30 +659,14 @@ void Dependency::markPointerFlow(ref<VersionedValue> target,
   target->setAsCore();
 
   // Compute the direct pointer flow dependency
-  std::vector<ref<VersionedValue> > stepSources;
-  const Dependency *currentDependency(this);
+  std::map<ref<VersionedValue>, ref<MemoryLocation> > sources =
+      target->getSources();
 
-  while (currentDependency) {
-    if (currentDependency->flowsToMap.find(target) !=
-        currentDependency->flowsToMap.end()) {
-      std::map<ref<VersionedValue>, ref<MemoryLocation> > sources =
-          currentDependency->flowsToMap.find(target)->second;
-      for (std::map<ref<VersionedValue>, ref<MemoryLocation> >::iterator it =
-               sources.begin();
-           it != sources.end(); ++it) {
-        stepSources.push_back(it->first);
-      }
-    } else if (currentDependency->parent) {
-      currentDependency = currentDependency->parent;
-      continue;
-    }
-    break;
-  }
-
-  for (std::vector<ref<VersionedValue> >::iterator it = stepSources.begin(),
-                                                   ie = stepSources.end();
+  for (std::map<ref<VersionedValue>, ref<MemoryLocation> >::iterator
+           it = sources.begin(),
+           ie = sources.end();
        it != ie; ++it) {
-    markPointerFlow(*it, checkedAddress);
+    markPointerFlow(it->first, checkedAddress);
   }
 }
 
@@ -723,16 +704,6 @@ Dependency::~Dependency() {
   // Delete the locally-constructed relations
   concretelyAddressedStore.clear();
   symbolicallyAddressedStore.clear();
-
-  // Delete flowsToMap
-  for (std::map<ref<VersionedValue>,
-                std::map<ref<VersionedValue>, ref<MemoryLocation> > >::iterator
-           it = flowsToMap.begin(),
-           ie = flowsToMap.end();
-       it != ie; ++it) {
-    it->second.clear();
-  }
-  flowsToMap.clear();
 
   // Delete valuesMap
   for (std::map<llvm::Value *, std::vector<ref<VersionedValue> > >::iterator
@@ -1286,29 +1257,6 @@ void Dependency::print(llvm::raw_ostream &stream,
     stream << ",";
     (*it->second).print(stream);
     stream << "]\n";
-  }
-  stream << tabs << "FLOWDEPENDENCY:\n";
-  for (std::map<
-           ref<VersionedValue>,
-           std::map<ref<VersionedValue>, ref<MemoryLocation> > >::const_iterator
-           it = flowsToMap.begin(),
-           ie = flowsToMap.end();
-       it != ie; ++it) {
-    std::map<ref<VersionedValue>, ref<MemoryLocation> > sources = (*it).second;
-    for (std::map<ref<VersionedValue>, ref<MemoryLocation> >::iterator it2 =
-             sources.begin();
-         it2 != sources.end(); ++it2) {
-      stream << tabs << "  [";
-      (*it->first).print(stream);
-      stream << " <- ";
-      (*it2->first).print(stream);
-      stream << "]";
-      if (!it2->second.isNull()) {
-        stream << " via ";
-        (*it2->second).print(stream);
-      }
-      stream << "\n";
-    }
   }
 
   if (parent) {
