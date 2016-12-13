@@ -143,7 +143,7 @@ std::string SearchTree::PrettyExpressionBuilder::bvAndExpr(std::string lhs,
 }
 std::string SearchTree::PrettyExpressionBuilder::bvOrExpr(std::string lhs,
                                                           std::string rhs) {
-  return "(" + lhs + " | " + rhs + ")";
+  return "(" + lhs + " \\| " + rhs + ")";
 }
 std::string SearchTree::PrettyExpressionBuilder::iffExpr(std::string lhs,
                                                          std::string rhs) {
