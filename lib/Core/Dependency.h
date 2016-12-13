@@ -471,7 +471,7 @@ namespace klee {
 
   public:
     typedef std::pair<ref<Expr>, ref<StoredValue> > AddressValuePair;
-    typedef std::map<uint64_t, AddressValuePair> ConcreteStoreMap;
+    typedef std::map<uint64_t, ref<StoredValue> > ConcreteStoreMap;
     typedef std::vector<AddressValuePair> SymbolicStoreMap;
     typedef std::map<llvm::Value *, ConcreteStoreMap> ConcreteStore;
     typedef std::map<llvm::Value *, SymbolicStoreMap> SymbolicStore;

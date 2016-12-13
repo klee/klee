@@ -420,22 +420,18 @@ Dependency::getStoredExpressions(std::set<const Array *> &replacements,
       llvm::Value *site = it->first->getValue();
       uint64_t uintAddress = it->first->getUIntAddress();
       ref<Expr> address = it->first->getAddress();
-      concreteStore[site][uintAddress] =
-          AddressValuePair(address, StoredValue::create(it->second));
+      concreteStore[site][uintAddress] = StoredValue::create(it->second);
     } else if (it->second->isCore()) {
       // An address is in the core if it stores a value that is in the core
       llvm::Value *base = it->first->getValue();
       uint64_t uintAddress = it->first->getUIntAddress();
-      ref<Expr> address = it->first->getAddress();
 #ifdef ENABLE_Z3
       if (!NoExistential) {
-        concreteStore[base][uintAddress] = AddressValuePair(
-            ShadowArray::getShadowExpression(address, replacements),
-            StoredValue::create(it->second, replacements));
+        concreteStore[base][uintAddress] =
+            StoredValue::create(it->second, replacements);
       } else
 #endif
-        concreteStore[base][uintAddress] =
-            AddressValuePair(address, StoredValue::create(it->second));
+        concreteStore[base][uintAddress] = StoredValue::create(it->second);
     }
   }
 

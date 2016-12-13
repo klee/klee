@@ -1440,11 +1440,8 @@ bool SubsumptionTableEntry::subsumed(
           return false;
         }
 
-        const Dependency::AddressValuePair stateConcrete =
-            stateConcreteMap.at(it2->first);
-
-        ref<StoredValue> tabledValue = it2->second.second;
-        ref<StoredValue> stateValue = stateConcrete.second;
+        const ref<StoredValue> tabledValue = it2->second;
+        const ref<StoredValue> stateValue = stateConcreteMap.at(it2->first);
         ref<Expr> res;
 
         if (!stateValue.isNull()) {
@@ -1478,7 +1475,8 @@ bool SubsumptionTableEntry::subsumed(
         }
 
         if (!stateSymbolicMap.empty()) {
-          const ref<Expr> tabledConcreteAddress = it2->second.first;
+          const ref<Expr> tabledConcreteAddress =
+              Expr::createPointer(it2->first);
           ref<Expr> conjunction;
 
           for (Dependency::SymbolicStoreMap::const_iterator
@@ -1591,8 +1589,8 @@ bool SubsumptionTableEntry::subsumed(
                  it3 = stateConcreteMap.begin(),
                  ie3 = stateConcreteMap.end();
              it3 != ie3; ++it3) {
-          ref<Expr> stateConcreteAddress = it3->second.first;
-          ref<StoredValue> stateValue = it3->second.second;
+          ref<Expr> stateConcreteAddress = Expr::createPointer(it3->first);
+          ref<StoredValue> stateValue = it3->second;
           ref<Expr> newTerm;
 
           if (tabledValue->getExpression()->getWidth() !=
@@ -1915,10 +1913,8 @@ void SubsumptionTableEntry::print(llvm::raw_ostream &stream) const {
            it2 != ie2; ++it2) {
         if (it1 != is1 || it2 != is2)
           stream << ",";
-        stream << "(";
-        it2->second.first->print(stream);
-        stream << ",\n";
-        it2->second.second->print(stream);
+        stream << "(" << it2->first << ",\n";
+        it2->second->print(stream);
         stream << ")";
       }
     }
