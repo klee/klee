@@ -233,6 +233,7 @@ void StoredValue::init(ref<VersionedValue> vvalue,
   expr = shadowing ? ShadowArray::getShadowExpression(vvalue->getExpression(),
                                                       replacements)
                    : vvalue->getExpression();
+  value = vvalue->getValue();
 
   if (!locations.empty()) {
     // Here we compute memory bounds for checking pointer values. The memory

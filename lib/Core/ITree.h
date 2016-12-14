@@ -597,7 +597,12 @@ public:
 
   /// \brief Marking the core constraints on the path condition, and all the
   /// relevant values on the dependency graph, given an unsatistiability core.
-  void unsatCoreMarking(std::vector<ref<Expr> > unsatCore);
+  void unsatCoreInterpolation(std::vector<ref<Expr> > unsatCore);
+
+  /// \brief Memory bounds interpolation from a target address
+  void pointerValuesInterpolation(llvm::Value *address) {
+    dependency->markAllPointerValues(address);
+  }
 
   /// \brief Print the content of the tree node object to the LLVM error stream.
   void dump() const;

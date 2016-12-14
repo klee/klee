@@ -299,6 +299,9 @@ namespace klee {
     /// \brief The id of this object
     uint64_t id;
 
+    /// \brief The LLVM value of this object
+    llvm::Value *value;
+
     void init(ref<VersionedValue> vvalue, std::set<const Array *> &replacements,
               bool shadowing = false);
 
@@ -343,6 +346,8 @@ namespace klee {
     std::set<ref<Expr> > getBounds(llvm::Value *value) const {
       return allocationBounds.at(value);
     }
+
+    llvm::Value *getValue() const { return value; }
 
     void print(llvm::raw_ostream &stream) const;
 
