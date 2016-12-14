@@ -302,6 +302,7 @@ void StoredValue::init(ref<VersionedValue> vvalue,
 
 ref<Expr> StoredValue::getBoundsCheck(ref<StoredValue> stateValue) const {
   ref<Expr> res;
+#ifdef ENABLE_Z3
 
   // For a state to be subsumed, the subsuming state weaker, which in this case
   // means that it should specify less allocations, so all allocations in the
@@ -317,8 +318,17 @@ ref<Expr> StoredValue::getBoundsCheck(ref<StoredValue> stateValue) const {
 
     assert(!tabledBounds.empty() && "tabled bounds empty");
 
-    if (stateOffsets.empty())
+    if (stateOffsets.empty()) {
+      if (DebugInterpolation == ITP_DEBUG_ALL ||
+          DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
+        std::string msg;
+        llvm::raw_string_ostream stream(msg);
+        it->first->print(stream);
+        stream.flush();
+        klee_message("No offset defined in state for %s", msg.c_str());
+      }
       return ConstantExpr::create(0, Expr::Bool);
+    }
 
     for (std::set<ref<Expr> >::const_iterator it1 = stateOffsets.begin(),
                                               ie1 = stateOffsets.end();
@@ -329,9 +339,20 @@ ref<Expr> StoredValue::getBoundsCheck(ref<StoredValue> stateValue) const {
         if (ConstantExpr *tabledBound = llvm::dyn_cast<ConstantExpr>(*it2)) {
           uint64_t tabledBoundInt = tabledBound->getZExtValue();
           if (ConstantExpr *stateOffset = llvm::dyn_cast<ConstantExpr>(*it1)) {
-            if (tabledBoundInt > 0 &&
-                stateOffset->getZExtValue() >= tabledBoundInt) {
-              return ConstantExpr::create(0, Expr::Bool);
+            if (tabledBoundInt > 0) {
+              uint64_t stateOffsetInt = stateOffset->getZExtValue();
+              if (stateOffsetInt >= tabledBoundInt) {
+                if (DebugInterpolation == ITP_DEBUG_ALL ||
+                    DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
+                  std::string msg;
+                  llvm::raw_string_ostream stream(msg);
+                  it->first->print(stream);
+                  stream.flush();
+                  klee_message("Offset %lu out of bound %lu for %s",
+                               stateOffsetInt, tabledBoundInt, msg.c_str());
+                }
+                return ConstantExpr::create(0, Expr::Bool);
+              }
             }
           }
 
@@ -359,6 +380,7 @@ ref<Expr> StoredValue::getBoundsCheck(ref<StoredValue> stateValue) const {
   // Bounds check successful if no constraints added
   if (res.isNull())
     return ConstantExpr::create(1, Expr::Bool);
+#endif // ENABLE_Z3
   return res;
 }
 
