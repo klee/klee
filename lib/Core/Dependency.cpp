@@ -165,8 +165,10 @@ void MemoryLocation::adjustOffsetBound(ref<VersionedValue> checkedAddress) {
     ref<Expr> checkedOffset = (*it)->getOffset();
     if (ConstantExpr *c = llvm::dyn_cast<ConstantExpr>(checkedOffset)) {
       if (ConstantExpr *o = llvm::dyn_cast<ConstantExpr>(offset)) {
-        uint64_t newBound = size - (c->getZExtValue() - o->getZExtValue());
+	uint64_t offsetInt = o->getZExtValue();
+        uint64_t newBound = size - (c->getZExtValue() - offsetInt);
         if (concreteOffsetBound > newBound) {
+          assert(newBound > offsetInt);
           concreteOffsetBound = newBound;
         }
         continue;
