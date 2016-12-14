@@ -61,7 +61,7 @@ int main() {
   assert(sizeof(globalVector) == 4*sizeof(long double));
   assert(sizeof(globalVector) == sizeof(localVector));
   /* FIXME: The load from globalVector that then gets stored is terribly
-            broken.
+            broken. See FIXME in `Executor::executeMemoryOperation()`
   // Check that the store was done correctly
   for (int index = 0; index < sizeof(globalVector); ++index) {
     uint8_t localByte = *(((uint8_t *)&localVector) + index);

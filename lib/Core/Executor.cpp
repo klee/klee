@@ -3303,8 +3303,13 @@ void Executor::executeMemoryOperation(ExecutionState &state,
                                       ref<Expr> address,
                                       ref<Expr> value /* undef if read */,
                                       KInstruction *target /* undef if write */) {
-  Expr::Width type = (isWrite ? value->getWidth() : 
-                     getWidthForLLVMType(target->inst->getType()));
+  // FIXME: includePadding should be set to true, however KLEE has implicit
+  // assumptions that the size of a type with/without pading and the size of an
+  // Expr all coincide. Until those implicit assumptions are fixed we can't
+  // support types with padding properly.
+  Expr::Width type = (isWrite ? value->getWidth()
+                              : getWidthForLLVMType(target->inst->getType(),
+                                                    /*includePadding=*/false));
   unsigned bytes = Expr::getMinBytesForWidth(type);
 
   if (SimplifySymIndices) {
@@ -3741,7 +3746,10 @@ void Executor::doImpliedValueConcretization(ExecutionState &state,
   }
 }
 
-Expr::Width Executor::getWidthForLLVMType(LLVM_TYPE_Q llvm::Type *type) const {
+Expr::Width Executor::getWidthForLLVMType(LLVM_TYPE_Q llvm::Type *type, bool includePadding) const {
+  if (includePadding)
+    return kmodule->targetData->getTypeAllocSizeInBits(type);
+
   return kmodule->targetData->getTypeSizeInBits(type);
 }
 
