@@ -281,7 +281,8 @@ void StoredValue::init(ref<VersionedValue> vvalue,
         // violate an offset bound.
         std::set<ref<Expr> > res;
         uint64_t offsetInt = oe->getZExtValue();
-        for (std::set<ref<Expr> >::iterator it1 = res.begin(), ie1 = res.end();
+        for (std::set<ref<Expr> >::iterator it1 = allocationOffsets[v].begin(),
+                                            ie1 = allocationOffsets[v].end();
              it1 != ie1; ++it1) {
           if (ConstantExpr *ce = llvm::dyn_cast<ConstantExpr>(*it1)) {
             uint64_t c = ce->getZExtValue();
