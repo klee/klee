@@ -376,7 +376,7 @@ Executor::Executor(const InterpreterOptions &opts, InterpreterHandler *ih)
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 5)
     debugInstFile = new llvm::raw_fd_ostream(debug_file_name.c_str(), ErrorInfo,
-                                             llvm::sys::fs::OpenFlags::F_Text),
+                                             llvm::sys::fs::OpenFlags::F_Text);
 #else
     debugInstFile =
         new llvm::raw_fd_ostream(debug_file_name.c_str(), ErrorInfo);
