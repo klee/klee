@@ -1735,6 +1735,24 @@ bool SubsumptionTableEntry::subsumed(
       }
 
       // We build memory bounds interpolants from pointer values
+      if (DebugInterpolation == ITP_DEBUG_ALL ||
+          DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
+        std::string msg;
+        llvm::Instruction *instr = state.pc->inst;
+        llvm::raw_string_ostream stream(msg);
+        instr->print(stream);
+        stream.flush();
+        if (instr->getParent()->getParent()) {
+          std::string functionName(
+              instr->getParent()->getParent()->getName().str());
+          klee_message("Interpolating memory bound for subsumption at "
+                       "\"%s\" in function %s",
+                       msg.c_str(), functionName.c_str());
+        } else {
+          klee_message("Interpolating memory bound for subsumption at \"%s\"",
+                       msg.c_str());
+        }
+      }
       for (std::set<llvm::Value *>::iterator it = corePointerValues.begin(),
                                              ie = corePointerValues.end();
            it != ie; ++it) {

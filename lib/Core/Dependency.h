@@ -223,6 +223,12 @@ namespace klee {
         : refCount(0), value(value), valueExpr(valueExpr), core(false),
           id(reinterpret_cast<uint64_t>(this)) {}
 
+    /// \brief Print the content of the object, but without showing its source
+    /// values.
+    ///
+    /// \param stream The stream to print the data to.
+    void printNoDependency(llvm::raw_ostream &stream) const;
+
   public:
     ~VersionedValue() { locations.clear(); }
 

@@ -214,7 +214,7 @@ void VersionedValue::print(llvm::raw_ostream &stream) const {
     if (it2 != is2)
       stream << ", ";
     stream << "  [";
-    (*it2->first).print(stream);
+    (*it2->first).printNoDependency(stream);
     if (!it2->second.isNull()) {
       stream << " via ";
       (*it2->second).print(stream);
@@ -224,6 +224,16 @@ void VersionedValue::print(llvm::raw_ostream &stream) const {
   stream << "}";
 }
 
+void VersionedValue::printNoDependency(llvm::raw_ostream &stream) const {
+  stream << "V";
+  if (core)
+    stream << "(I)";
+  stream << "[";
+  value->print(stream);
+  stream << ":";
+  valueExpr->print(stream);
+  stream << "]#" << reinterpret_cast<uintptr_t>(this);
+}
 /**/
 
 void StoredValue::init(ref<VersionedValue> vvalue,
@@ -1186,6 +1196,25 @@ void Dependency::executeMemoryOperation(llvm::Instruction *instr,
       break;
     }
     }
+
+    if (DebugInterpolation == ITP_DEBUG_ALL ||
+        DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
+      std::string msg;
+      llvm::raw_string_ostream stream(msg);
+      instr->print(stream);
+      stream.flush();
+      if (instr->getParent()->getParent()) {
+        std::string functionName(
+            instr->getParent()->getParent()->getName().str());
+        klee_message("Interpolating memory bound for memory access "
+                     "\"%s\" in %s",
+                     msg.c_str(), functionName.c_str());
+      } else {
+        klee_message("Interpolating memory bound for memory access \"%s\"",
+                     msg.c_str());
+      }
+    }
+
     markAllPointerValues(addressOperand);
   }
 #endif
