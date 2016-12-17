@@ -126,10 +126,10 @@ configure_file(lit.site.cfg.in
   @ONLY
 )
 
-add_custom_target(integrationtests
+add_custom_target(systemtests
   COMMAND "${LIT_TOOL}" ${LIT_ARGS} "${CMAKE_CURRENT_BINARY_DIR}"
   DEPENDS klee kleaver kleeRuntest
-  COMMENT "Running integration tests"
+  COMMENT "Running system tests"
   ${ADD_CUSTOM_COMMAND_USES_TERMINAL_ARG}
 )
 

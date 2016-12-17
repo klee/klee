@@ -10,7 +10,7 @@ its autoconf/Makefile based build system.
 * `docs` - Build documentation
 * `edit_cache` - Show cmake/ccmake/cmake-gui interface for chaning configure options.
 * `help` - Show list of top level targets
-* `integrationtests` - Run integration tests
+* `systemtests` - Run system tests
 * `unittests` - Build and run unittests
 
 ## Useful CMake variables
@@ -36,7 +36,7 @@ cmake -DCMAKE_BUILD_TYPE=Release /path/to/klee/src
 
 * `ENABLE_DOXYGEN` (BOOLEAN) - Enable building doxygen documentation.
 
-* `ENABLE_INTEGRATION_TESTS` (BOOLEAN) - Enable KLEE integration tests.
+* `ENABLE_SYSTEM_TESTS` (BOOLEAN) - Enable KLEE system tests.
 
 * `ENABLE_KLEE_ASSERTS` (BOOLEAN) - Enable assertions when building KLEE.
 

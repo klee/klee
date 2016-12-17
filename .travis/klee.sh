@@ -191,7 +191,7 @@ fi
 # lit tests
 ###############################################################################
 if [ "X${USE_CMAKE}" == "X1" ]; then
-  make integrationtests
+  make systemtests
 else
   # Note can't use ``make check`` because llvm-lit is not available
   cd test
