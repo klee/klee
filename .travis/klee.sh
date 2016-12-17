@@ -200,8 +200,8 @@ else
       DISABLE_ASSERTIONS=${DISABLE_ASSERTIONS} \
       ENABLE_OPTIMIZED=${ENABLE_OPTIMIZED} \
       ENABLE_SHARED=0
-
-  lit -v .
+  cd ../
+  lit -v test/
 fi
 
 #generate and upload coverage if COVERAGE is set
