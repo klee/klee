@@ -168,17 +168,12 @@ else
     ENABLE_OPTIMIZED=${ENABLE_OPTIMIZED} \
     ENABLE_SHARED=0
 fi
-###############################################################################
-# Testing
-###############################################################################
-set +e # We want to let all the tests run before we exit
 
 ###############################################################################
 # Unit tests
 ###############################################################################
 if [ "X${USE_CMAKE}" == "X1" ]; then
   make unittests
-  RETURN="$?"
 else
   # The unittests makefile doesn't seem to have been packaged so get it from SVN
   sudo mkdir -p /usr/lib/llvm-${LLVM_VERSION}/build/unittests/
@@ -190,7 +185,6 @@ else
       DISABLE_ASSERTIONS=${DISABLE_ASSERTIONS} \
       ENABLE_OPTIMIZED=${ENABLE_OPTIMIZED} \
       ENABLE_SHARED=0
-  RETURN="$?"
 fi
 
 ###############################################################################
@@ -198,7 +192,6 @@ fi
 ###############################################################################
 if [ "X${USE_CMAKE}" == "X1" ]; then
   make integrationtests
-  RETURN="${RETURN}$?"
 else
   # Note can't use ``make check`` because llvm-lit is not available
   cd test
@@ -208,9 +201,7 @@ else
       ENABLE_OPTIMIZED=${ENABLE_OPTIMIZED} \
       ENABLE_SHARED=0
 
-  set +e # We want to let all the tests run before we exit
   lit -v .
-  RETURN="${RETURN}$?"
 fi
 
 #generate and upload coverage if COVERAGE is set
@@ -243,11 +234,4 @@ if [ ${COVERAGE} -eq 1 ]; then
 #upload the coverage data, currently to a random ftp server
     tar -zcvf coverage.tar.gz coverage/
     curl --form "file=@coverage.tar.gz" -u ${USER}:${PASSWORD} ${COVERAGE_SERVER}
-fi
-###############################################################################
-# Result
-###############################################################################
-if [ "${RETURN}" != "00" ]; then
-    echo "Running tests failed"
-    exit 1
 fi
