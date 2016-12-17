@@ -146,7 +146,8 @@ if [ "X${USE_CMAKE}" == "X1" ]; then
     ${KLEE_ASSERTS_OPTION} \
     -DENABLE_TESTS=TRUE \
     -DLIT_ARGS="-v" \
-    ${KLEE_SRC} && make
+    ${KLEE_SRC}
+  make
 else
   # Build KLEE
   # Note: ENABLE_SHARED=0 is required because llvm-2.9 is incorectly packaged
@@ -161,10 +162,11 @@ else
               ${KLEE_METASMT_CONFIGURE_OPTION} \
               ${KLEE_UCLIBC_CONFIGURE_OPTION} \
               ${TCMALLOC_OPTION} \
-              CXXFLAGS="${COVERAGE_FLAGS}" \
-              && make DISABLE_ASSERTIONS=${DISABLE_ASSERTIONS} \
-                      ENABLE_OPTIMIZED=${ENABLE_OPTIMIZED} \
-                      ENABLE_SHARED=0
+              CXXFLAGS="${COVERAGE_FLAGS}"
+  make \
+    DISABLE_ASSERTIONS=${DISABLE_ASSERTIONS} \
+    ENABLE_OPTIMIZED=${ENABLE_OPTIMIZED} \
+    ENABLE_SHARED=0
 fi
 ###############################################################################
 # Testing
