@@ -65,7 +65,7 @@ else()
   # Get LLVM version
   _run_llvm_config(LLVM_PACKAGE_VERSION "--version")
   # Try x.y.z patern
-  set(_llvm_version_regex "^([0-9]+)\\.([0-9]+)\\.([0-9]+)$")
+  set(_llvm_version_regex "^([0-9]+)\\.([0-9]+)\\.([0-9]+)(svn)?$")
   if ("${LLVM_PACKAGE_VERSION}" MATCHES "${_llvm_version_regex}")
     string(REGEX REPLACE
       "${_llvm_version_regex}"
