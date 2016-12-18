@@ -13,7 +13,7 @@ DIRS   =
 #
 # Make llvm-lit the default for testing
 #
-all:: check-local
+all:: systemtests-local
 
 # Include other test rules
 include Makefile.tests
@@ -55,7 +55,7 @@ check-local:: lit.site.cfg
 	  exit 1; \
 	fi
 
-check-local-all:: lit.site.cfg
+systemtests-local:: lit.site.cfg
 	$(Verb) ( $(ULIMIT) \
 	          $(PYTHON) $(LLVM_SRC_ROOT)/utils/lit/lit.py $(LIT_ARGS) $(LIT_ALL_TESTSUITES) )
 
