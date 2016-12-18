@@ -146,7 +146,8 @@ if [ "X${USE_CMAKE}" == "X1" ]; then
     ${KLEE_ASSERTS_OPTION} \
     -DENABLE_TESTS=TRUE \
     -DLIT_ARGS="-v" \
-    ${KLEE_SRC} && make
+    ${KLEE_SRC}
+  make
 else
   # Build KLEE
   # Note: ENABLE_SHARED=0 is required because llvm-2.9 is incorectly packaged
@@ -161,22 +162,18 @@ else
               ${KLEE_METASMT_CONFIGURE_OPTION} \
               ${KLEE_UCLIBC_CONFIGURE_OPTION} \
               ${TCMALLOC_OPTION} \
-              CXXFLAGS="${COVERAGE_FLAGS}" \
-              && make DISABLE_ASSERTIONS=${DISABLE_ASSERTIONS} \
-                      ENABLE_OPTIMIZED=${ENABLE_OPTIMIZED} \
-                      ENABLE_SHARED=0
+              CXXFLAGS="${COVERAGE_FLAGS}"
+  make \
+    DISABLE_ASSERTIONS=${DISABLE_ASSERTIONS} \
+    ENABLE_OPTIMIZED=${ENABLE_OPTIMIZED} \
+    ENABLE_SHARED=0
 fi
-###############################################################################
-# Testing
-###############################################################################
-set +e # We want to let all the tests run before we exit
 
 ###############################################################################
 # Unit tests
 ###############################################################################
 if [ "X${USE_CMAKE}" == "X1" ]; then
   make unittests
-  RETURN="$?"
 else
   # The unittests makefile doesn't seem to have been packaged so get it from SVN
   sudo mkdir -p /usr/lib/llvm-${LLVM_VERSION}/build/unittests/
@@ -188,7 +185,6 @@ else
       DISABLE_ASSERTIONS=${DISABLE_ASSERTIONS} \
       ENABLE_OPTIMIZED=${ENABLE_OPTIMIZED} \
       ENABLE_SHARED=0
-  RETURN="$?"
 fi
 
 ###############################################################################
@@ -196,7 +192,6 @@ fi
 ###############################################################################
 if [ "X${USE_CMAKE}" == "X1" ]; then
   make integrationtests
-  RETURN="${RETURN}$?"
 else
   # Note can't use ``make check`` because llvm-lit is not available
   cd test
@@ -205,10 +200,8 @@ else
       DISABLE_ASSERTIONS=${DISABLE_ASSERTIONS} \
       ENABLE_OPTIMIZED=${ENABLE_OPTIMIZED} \
       ENABLE_SHARED=0
-
-  set +e # We want to let all the tests run before we exit
-  lit -v .
-  RETURN="${RETURN}$?"
+  cd ../
+  lit -v test/
 fi
 
 #generate and upload coverage if COVERAGE is set
@@ -241,11 +234,4 @@ if [ ${COVERAGE} -eq 1 ]; then
 #upload the coverage data, currently to a random ftp server
     tar -zcvf coverage.tar.gz coverage/
     curl --form "file=@coverage.tar.gz" -u ${USER}:${PASSWORD} ${COVERAGE_SERVER}
-fi
-###############################################################################
-# Result
-###############################################################################
-if [ "${RETURN}" != "00" ]; then
-    echo "Running tests failed"
-    exit 1
 fi
