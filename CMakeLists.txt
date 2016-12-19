@@ -699,10 +699,16 @@ if ((NOT LIT_TOOL) OR (NOT EXISTS "${LIT_TOOL}"))
     message(STATUS "Using lit: ${LIT_TOOL}")
   endif()
 
+  # Add global test target
+  add_custom_target(check
+    COMMENT "Running tests"
+  )
+
   option(ENABLE_UNIT_TESTS "Enable unit tests" ON)
   if (ENABLE_UNIT_TESTS)
     message(STATUS "Unit tests enabled")
     add_subdirectory(unittests)
+    add_dependencies(check unittests)
   else()
     message(STATUS "Unit tests disabled")
   endif()
@@ -710,15 +716,11 @@ if ((NOT LIT_TOOL) OR (NOT EXISTS "${LIT_TOOL}"))
   if (ENABLE_SYSTEM_TESTS)
     message(STATUS "System tests enabled")
     add_subdirectory(test)
+    add_dependencies(check systemtests)
   else()
     message(STATUS "System tests disabled")
   endif()
 
-  # Add global test target
-  add_custom_target(check
-    DEPENDS unittests systemtests
-    COMMENT "Running tests"
-  )
 else()
   message(STATUS "Testing disabled")
 endif()
