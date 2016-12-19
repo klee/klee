@@ -811,11 +811,20 @@ public:
   /// Executor::executeMemoryOperation
   void executeMemoryOperation(llvm::Instruction *instr, ref<Expr> value,
                               ref<Expr> address, bool boundsCheck) {
+    executeMemoryOperationOnNode(currentINode, instr, value, address,
+                                 boundsCheck);
+  }
+
+  /// \brief Internal method for executing memory operations
+  static void executeMemoryOperationOnNode(ITreeNode *node,
+                                           llvm::Instruction *instr,
+                                           ref<Expr> value, ref<Expr> address,
+                                           bool boundsCheck) {
     std::vector<ref<Expr> > args;
     args.push_back(value);
     args.push_back(address);
-    currentINode->dependency->executeMemoryOperation(instr, args, boundsCheck,
-                                                     symbolicExecutionError);
+    node->dependency->executeMemoryOperation(instr, args, boundsCheck,
+                                             symbolicExecutionError);
     symbolicExecutionError = false;
   }
 

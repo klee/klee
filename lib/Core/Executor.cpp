@@ -3762,10 +3762,20 @@ void Executor::executeMemoryOperation(ExecutionState &state, bool isWrite,
         } else {
           ObjectState *wos = bound->addressSpace.getWriteable(mo, os);
           wos->write(mo->getOffsetExpr(address), value);
+
+          // Update dependency
+          if (INTERPOLATION_ENABLED && target)
+            ITree::executeMemoryOperationOnNode(bound->itreeNode, target->inst,
+                                                value, address, false);
         }
       } else {
         ref<Expr> result = os->read(mo->getOffsetExpr(address), type);
         bindLocal(target, *bound, result);
+
+        // Update dependency
+        if (INTERPOLATION_ENABLED && target)
+          ITree::executeMemoryOperationOnNode(bound->itreeNode, target->inst,
+                                              result, address, false);
       }
     }
 
