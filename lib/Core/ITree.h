@@ -134,6 +134,10 @@ class SearchTree {
     /// \brief The node id, also the order in which it is traversed
     uint64_t nodeSequenceNumber;
 
+    /// \brief The id in case this was an internal node created in branchings
+    /// due to memory access.
+    uint64_t internalNodeId;
+
     /// \brief False and true children of this node
     SearchTree::Node *falseTarget, *trueTarget;
 
@@ -147,8 +151,8 @@ class SearchTree {
     std::string name;
 
     Node()
-        : nodeSequenceNumber(0), falseTarget(0), trueTarget(0),
-          subsumed(false) {}
+        : nodeSequenceNumber(0), internalNodeId(0), falseTarget(0),
+          trueTarget(0), subsumed(false) {}
 
     ~Node() {
       if (falseTarget)
@@ -189,7 +193,9 @@ class SearchTree {
 
   uint64_t subsumptionEdgeNumber;
 
-  static std::string recurseRender(const SearchTree::Node *node);
+  uint64_t internalNodeId;
+
+  std::string recurseRender(SearchTree::Node *node);
 
   std::string render();
 

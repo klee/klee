@@ -3731,7 +3731,7 @@ void Executor::executeMemoryOperation(ExecutionState &state, bool isWrite,
 
       return;
     }
-  } 
+  }
 
   // we are on an error path (no resolution, multiple resolution, one
   // resolution with out of bounds)

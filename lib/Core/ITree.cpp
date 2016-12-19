@@ -557,10 +557,19 @@ std::string SearchTree::NumberedEdge::render() const {
 
 SearchTree *SearchTree::instance = 0;
 
-std::string SearchTree::recurseRender(const SearchTree::Node *node) {
+std::string SearchTree::recurseRender(SearchTree::Node *node) {
   std::ostringstream stream;
 
-  stream << "Node" << node->nodeSequenceNumber;
+  if (node->nodeSequenceNumber) {
+    stream << "Node" << node->nodeSequenceNumber;
+  } else {
+    // Node sequence number is zero; this must be an internal node created due
+    // to splitting in memory access
+    if (!node->internalNodeId) {
+      node->internalNodeId = (++internalNodeId);
+    }
+    stream << "InternalNode" << node->internalNodeId;
+  }
   std::string sourceNodeName = stream.str();
 
   size_t pos = 0;
@@ -584,8 +593,15 @@ std::string SearchTree::recurseRender(const SearchTree::Node *node) {
   repStream2 << replacementName;
   replacementName = repStream2.str();
 
-  stream << " [shape=record,label=\"{" << node->nodeSequenceNumber << ": "
-         << replacementName << "\\l";
+  stream << " [shape=record,label=\"{";
+  if (node->nodeSequenceNumber) {
+    stream << node->nodeSequenceNumber << ": " << replacementName;
+  } else {
+    // The internal node id must have been set earlier
+    assert(node->internalNodeId && "id for internal node must have been set");
+    stream << "Internal node " << node->internalNodeId << ": ";
+  }
+  stream << "\\l";
   for (std::map<PathCondition *, std::pair<std::string, bool> >::const_iterator
            it = node->pathConditionTable.begin(),
            ie = node->pathConditionTable.end();
@@ -603,12 +619,28 @@ std::string SearchTree::recurseRender(const SearchTree::Node *node) {
   stream << "}\"];\n";
 
   if (node->falseTarget) {
-    stream << sourceNodeName << ":s0 -> Node"
-           << node->falseTarget->nodeSequenceNumber << ";\n";
+    if (node->falseTarget->nodeSequenceNumber) {
+      stream << sourceNodeName << ":s0 -> Node"
+             << node->falseTarget->nodeSequenceNumber << ";\n";
+    } else {
+      if (!node->falseTarget->internalNodeId) {
+        node->falseTarget->internalNodeId = (++internalNodeId);
+      }
+      stream << sourceNodeName << ":s0 -> InternalNode"
+             << node->falseTarget->internalNodeId << ";\n";
+    }
   }
   if (node->trueTarget) {
+    if (node->trueTarget->nodeSequenceNumber) {
     stream << sourceNodeName + ":s1 -> Node"
            << node->trueTarget->nodeSequenceNumber << ";\n";
+    } else {
+      if (!node->trueTarget->internalNodeId) {
+        node->trueTarget->internalNodeId = (++internalNodeId);
+      }
+      stream << sourceNodeName << ":s1 -> InternalNode"
+             << node->trueTarget->internalNodeId << ";\n";
+    }
   }
   if (node->falseTarget) {
     stream << recurseRender(node->falseTarget);
@@ -641,7 +673,8 @@ std::string SearchTree::render() {
   return res;
 }
 
-SearchTree::SearchTree(ITreeNode *_root) : subsumptionEdgeNumber(0) {
+SearchTree::SearchTree(ITreeNode *_root)
+    : subsumptionEdgeNumber(0), internalNodeId(0) {
   root = SearchTree::Node::createNode();
   itreeNodeMap[_root] = root;
 }
@@ -669,6 +702,7 @@ void SearchTree::addChildren(ITreeNode *parent, ITreeNode *falseChild,
   assert(SearchTree::instance && "Search tree graph not initialized");
 
   SearchTree::Node *parentNode = instance->itreeNodeMap[parent];
+
   parentNode->falseTarget = SearchTree::Node::createNode();
   parentNode->trueTarget = SearchTree::Node::createNode();
   instance->itreeNodeMap[falseChild] = parentNode->falseTarget;
