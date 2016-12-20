@@ -204,6 +204,17 @@ else
   lit -v test/
 fi
 
+# If metaSMT is the only solver, then rerun lit tests with non-default metaSMT backends
+if [ "X${SOLVERS}" == "XmetaSMT" ]; then
+  metasmt_default=`echo "${METASMT_DEFAULT,,}"` # klee_opts and kleaver_opts use lowercase
+  available_metasmt_backends="btor stp z3"
+  for backend in $available_metasmt_backends; do
+    if [ "X${metasmt_default}" != "X$backend" ]; then
+      lit -v --param klee_opts=-metasmt-backend=$backend --param kleaver_opts=-metasmt-backend=$backend test/
+    fi
+  done
+fi
+
 #generate and upload coverage if COVERAGE is set
 if [ ${COVERAGE} -eq 1 ]; then
 
