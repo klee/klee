@@ -689,7 +689,6 @@ void Dependency::markPointerFlow(ref<VersionedValue> target,
   for (std::set<ref<MemoryLocation> >::iterator it = locations.begin(),
                                                 ie = locations.end();
        it != ie; ++it) {
-    std::set<ref<MemoryLocation> > l = checkedAddress->getLocations();
     (*it)->adjustOffsetBound(checkedAddress);
   }
   target->setAsCore();
