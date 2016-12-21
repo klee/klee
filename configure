@@ -5481,8 +5481,11 @@ else
 
     old_CPPFLAGS="$CPPFLAGS"
   old_LDFLAGS="$LDFLAGS"
+  old_LIBS="$LIBS"
   CPPFLAGS="$CPPFLAGS -I$metasmt_root/include"
-  LDFLAGS="$LDFLAGS -L$metasmt_root/lib -lmetaSMT"
+  LDFLAGS="$LDFLAGS -L$metasmt_root/lib"
+  LIBS="$LIBS -lmetaSMT"
+
   for ac_header in $metasmt_root/include/metaSMT/DirectSolver_Context.hpp $metasmt_root/include/metaSMT/frontend/QF_BV.hpp
 do :
   as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
@@ -5500,9 +5503,11 @@ fi
 
 done
 
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for new_bitvector() in -lmetaSMT" >&5
+$as_echo_n "checking for new_bitvector() in -lmetaSMT... " >&6; }
   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-#include $metasmt_root/include/metaSMT/frontend/QF_BV.hpp
+#include <metaSMT/frontend/QF_BV.hpp>
 int
 main ()
 {
@@ -5512,15 +5517,18 @@ metaSMT::logic::QF_BV::new_bitvector(3)
 }
 _ACEOF
 if ac_fn_cxx_try_link "$LINENO"; then :
-
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
 else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for new_bitvector() in -lmetaSMT" >&5
-$as_echo_n "checking for new_bitvector() in -lmetaSMT... " >&6; }
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+             as_fn_error $? "Unable to link with libmetaSMT" "$LINENO" 5
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
   CPPFLAGS="$old_CPPFLAGS"
   LDFLAGS="$old_LDFLAGS"
+  LIBS="$old_LIBS"
 
 
 $as_echo "#define ENABLE_METASMT 1" >>confdefs.h

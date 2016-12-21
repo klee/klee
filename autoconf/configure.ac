@@ -803,16 +803,23 @@ else
   dnl AC_LANG(C++)
   old_CPPFLAGS="$CPPFLAGS"
   old_LDFLAGS="$LDFLAGS"
+  old_LIBS="$LIBS"
   CPPFLAGS="$CPPFLAGS -I$metasmt_root/include"
-  LDFLAGS="$LDFLAGS -L$metasmt_root/lib -lmetaSMT"
+  LDFLAGS="$LDFLAGS -L$metasmt_root/lib"
+  LIBS="$LIBS -lmetaSMT"
+
   AC_CHECK_HEADERS([$metasmt_root/include/metaSMT/DirectSolver_Context.hpp $metasmt_root/include/metaSMT/frontend/QF_BV.hpp],, [
          AC_MSG_ERROR([Unable to use $metasmt_root/include/metaSMT/DirectSolver_Context.hpp header])
   ])
+  AC_MSG_CHECKING([for new_bitvector() in -lmetaSMT])
   AC_LINK_IFELSE(
-      [AC_LANG_PROGRAM([#include $metasmt_root/include/metaSMT/frontend/QF_BV.hpp], [metaSMT::logic::QF_BV::new_bitvector(3)])],
-      [],[AC_MSG_CHECKING([for new_bitvector() in -lmetaSMT])],[AC_MSG_ERROR([Unable to link with libmetaSMT])])
+      [AC_LANG_PROGRAM([#include <metaSMT/frontend/QF_BV.hpp>], [metaSMT::logic::QF_BV::new_bitvector(3)])],
+            [AC_MSG_RESULT([yes])],
+            [AC_MSG_RESULT([no])
+             AC_MSG_ERROR([Unable to link with libmetaSMT])])
   CPPFLAGS="$old_CPPFLAGS"
   LDFLAGS="$old_LDFLAGS"
+  LIBS="$old_LIBS"
 
   AC_DEFINE(ENABLE_METASMT, 1, [Enable metaSMT API])
   AC_SUBST(METASMT_ROOT,$metasmt_root)
