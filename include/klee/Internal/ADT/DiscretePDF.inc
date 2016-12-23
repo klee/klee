@@ -162,32 +162,32 @@ void DiscretePDF<T>::update(T item, weight_type weight) {
 
 template <class T>
 T DiscretePDF<T>::choose(double p) {
-  if (p<0.0 || p>=1.0) {
+  if ((p < 0.0) || (p >= 1.0))
     assert(0 && "choose: argument(p) outside valid range");
-  } else if (!m_root) {
+
+  if (!m_root)
     assert(0 && "choose: choose() called on empty tree");
-  } else {
-    weight_type w = (weight_type) (m_root->sumWeights * p);
-    Node *n = m_root;
 
-    while (1) {
-      if (n->left) {
-        if (w<n->left->sumWeights) {
-          n = n->left;
-          continue;
-        } else {
-          w -= n->left->sumWeights;
-        }
+  weight_type w = (weight_type) (m_root->sumWeights * p);
+  Node *n = m_root;
+
+  while (1) {
+    if (n->left) {
+      if (w<n->left->sumWeights) {
+	n = n->left;
+	continue;
+      } else {
+	w -= n->left->sumWeights;
       }
-      if (w<n->weight || !n->right) {
-        break; // !n->right condition shouldn't be necessary, just sanity check
-      }
-      w -= n->weight;
-      n = n->right;
     }
-
-    return n->key;
+    if (w<n->weight || !n->right) {
+      break; // !n->right condition shouldn't be necessary, just sanity check
+    }
+    w -= n->weight;
+    n = n->right;
   }
+
+  return n->key;
 }
 
 template <class T>

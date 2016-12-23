@@ -153,6 +153,11 @@ namespace klee {
     case Instruction::FCmp:
       assert(0 && "floating point ConstantExprs unsupported");
     }
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 1)
+    llvm_unreachable("Unsupported expression in evalConstantExpr");
+#else
+    assert(0 && "Unsupported expression in evalConstantExpr");
+#endif
+    return op1;
   }
-
 }
