@@ -43,6 +43,9 @@ namespace klee {
 
   class VersionedValue;
 
+  /// \brief Output function name to the output stream
+  extern bool outputFunctionName(llvm::Value *value, llvm::raw_ostream &stream);
+
   /// \brief Implements the replacement mechanism for replacing variables, used in
   /// replacing free with bound variables.
   class ShadowArray {
@@ -97,7 +100,21 @@ namespace klee {
     MemoryLocation(llvm::Value *_value, ref<Expr> &_address, ref<Expr> &_base,
                    ref<Expr> &_offset, uint64_t _size)
         : refCount(0), value(_value), address(_address), base(_base),
-          offset(_offset), concreteOffsetBound(_size), size(_size) {}
+          offset(_offset), concreteOffsetBound(_size), size(_size) {
+      ConstantExpr *ca = llvm::dyn_cast<ConstantExpr>(_address);
+      if (ca) {
+        ConstantExpr *cb = llvm::dyn_cast<ConstantExpr>(_base);
+        if (cb) {
+          ConstantExpr *co = llvm::dyn_cast<ConstantExpr>(_offset);
+          if (co) {
+            uint64_t a = ca->getZExtValue();
+            uint64_t b = cb->getZExtValue();
+            uint64_t o = co->getZExtValue();
+            assert(o == (a - b));
+          }
+        }
+      }
+    }
 
   public:
     ~MemoryLocation() {}
@@ -492,13 +509,6 @@ namespace klee {
     typedef std::map<llvm::Value *, ConcreteStoreMap> ConcreteStore;
     typedef std::map<llvm::Value *, SymbolicStoreMap> SymbolicStore;
 
-    class Util {
-
-    public:
-      /// \brief Tests if a pointer points to a main function's argument
-      static bool isMainArgument(llvm::Value *loc);
-    };
-
   private:
     /// \brief Previous path condition
     Dependency *parent;
@@ -523,6 +533,9 @@ namespace klee {
 
     /// \brief The data layout of the analysis target program
     llvm::DataLayout *targetData;
+
+    /// \brief Tests if a pointer points to a main function's argument
+    static bool isMainArgument(llvm::Value *loc);
 
     /// \brief Register new versioned value, used by getNewVersionedValue
     /// member functions

@@ -185,6 +185,8 @@ void MemoryLocation::print(llvm::raw_ostream &stream) const {
   if (!llvm::isa<ConstantExpr>(this->address))
     stream << "(symbolic)";
   stream << "[";
+  if (outputFunctionName(value, stream))
+    stream << ":";
   value->print(stream);
   stream << ":";
   address->print(stream);
@@ -202,6 +204,8 @@ void VersionedValue::print(llvm::raw_ostream &stream) const {
   if (core)
     stream << "(I)";
   stream << "[";
+  if (outputFunctionName(value, stream))
+    stream << ":";
   value->print(stream);
   stream << ":";
   valueExpr->print(stream);
@@ -229,6 +233,8 @@ void VersionedValue::printNoDependency(llvm::raw_ostream &stream) const {
   if (core)
     stream << "(I)";
   stream << "[";
+  if (outputFunctionName(value, stream))
+    stream << ":";
   value->print(stream);
   stream << ":";
   valueExpr->print(stream);
@@ -447,6 +453,18 @@ void StoredValue::print(llvm::raw_ostream &stream) const {
 
 /**/
 
+bool Dependency::isMainArgument(llvm::Value *loc) {
+  llvm::Argument *vArg = llvm::dyn_cast<llvm::Argument>(loc);
+
+  // FIXME: We need a more precise way to detect main argument
+  if (vArg && vArg->getParent() &&
+      (vArg->getParent()->getName().equals("main") ||
+       vArg->getParent()->getName().equals("__user_main"))) {
+    return true;
+  }
+  return false;
+}
+
 ref<VersionedValue>
 Dependency::registerNewVersionedValue(llvm::Value *value,
                                       ref<VersionedValue> vvalue) {
@@ -539,11 +557,24 @@ ref<VersionedValue> Dependency::getLatestValue(llvm::Value *value,
   if (llvm::isa<llvm::Constant>(value) && !llvm::isa<llvm::GlobalValue>(value))
     return getNewVersionedValue(value, valueExpr);
 
+  ref<VersionedValue> ret = 0;
   if (valuesMap.find(value) != valuesMap.end()) {
-    return valuesMap[value].back();
+    // Slight complication here that the latest version of an LLVM
+    // value may not be at the end of the vector; it is possible other
+    // values in a call stack has been appended to the vector, before
+    // the function returned, so the end part of the vector contains
+    // local values in a call already returned. To resolve this issue,
+    // here we naively search for values with equivalent expression.
+    std::vector<ref<VersionedValue> > allValues = valuesMap[value];
+    for (std::vector<ref<VersionedValue> >::iterator it = allValues.begin(),
+                                                     ie = allValues.end();
+         it != ie; ++it) {
+      if ((*it)->getExpression() == valueExpr) {
+        return *it;
+      }
+    }
   }
 
-  ref<VersionedValue> ret = 0;
   if (parent)
     ret = parent->getLatestValue(value, valueExpr);
 
@@ -910,19 +941,7 @@ void Dependency::execute(llvm::Instruction *instr,
     ref<Expr> argExpr = args.at(0);
 
     switch (instr->getOpcode()) {
-    case llvm::Instruction::Trunc:
-    case llvm::Instruction::ZExt:
-    case llvm::Instruction::SExt:
-    case llvm::Instruction::IntToPtr:
-    case llvm::Instruction::PtrToInt:
-    case llvm::Instruction::BitCast:
-    case llvm::Instruction::FPTrunc:
-    case llvm::Instruction::FPExt:
-    case llvm::Instruction::FPToUI:
-    case llvm::Instruction::FPToSI:
-    case llvm::Instruction::UIToFP:
-    case llvm::Instruction::SIToFP:
-    case llvm::Instruction::ExtractValue: {
+    case llvm::Instruction::BitCast: {
       ref<VersionedValue> val = getLatestValue(instr->getOperand(0), argExpr);
 
       if (!val.isNull()) {
@@ -983,7 +1002,7 @@ void Dependency::execute(llvm::Instruction *instr,
           break;
         } else if (locations.size() == 1) {
           ref<MemoryLocation> loc = *(locations.begin());
-          if (Util::isMainArgument(loc->getValue())) {
+          if (isMainArgument(loc->getValue())) {
             // The load corresponding to a load of the main function's argument
             // that was never allocated within this program.
             updateStore(loc, loadedValue);
@@ -1054,6 +1073,45 @@ void Dependency::execute(llvm::Instruction *instr,
                                                     ie = locations.end();
            it != ie; ++it) {
         updateStore(*it, storedValue);
+      }
+      break;
+    }
+    case llvm::Instruction::Trunc:
+    case llvm::Instruction::ZExt:
+    case llvm::Instruction::FPTrunc:
+    case llvm::Instruction::FPExt:
+    case llvm::Instruction::FPToUI:
+    case llvm::Instruction::FPToSI:
+    case llvm::Instruction::UIToFP:
+    case llvm::Instruction::SIToFP:
+    case llvm::Instruction::IntToPtr:
+    case llvm::Instruction::PtrToInt:
+    case llvm::Instruction::SExt:
+    case llvm::Instruction::ExtractValue: {
+      ref<Expr> result = args.at(0);
+      ref<Expr> argExpr = args.at(1);
+
+      ref<VersionedValue> val = getLatestValue(instr->getOperand(0), argExpr);
+
+      if (!val.isNull()) {
+        addDependency(val, getNewVersionedValue(instr, result));
+      } else if (!llvm::isa<llvm::Constant>(instr->getOperand(0)))
+          // Constants would kill dependencies, the remaining is for
+          // cases that may actually require dependencies.
+      {
+        if (instr->getOperand(0)->getType()->isPointerTy()) {
+          uint64_t size = targetData->getTypeStoreSize(
+              instr->getOperand(0)->getType()->getPointerElementType());
+          addDependency(getNewPointerValue(instr->getOperand(0), argExpr, size),
+                        getNewVersionedValue(instr, result));
+        } else if (llvm::isa<llvm::Argument>(instr->getOperand(0)) ||
+                   llvm::isa<llvm::CallInst>(instr->getOperand(0)) ||
+                   symbolicExecutionError) {
+          addDependency(getNewVersionedValue(instr->getOperand(0), argExpr),
+                        getNewVersionedValue(instr, result));
+        } else {
+          assert(!"operand not found");
+        }
       }
       break;
     }
@@ -1321,14 +1379,15 @@ void Dependency::print(llvm::raw_ostream &stream,
 
 /**/
 
-bool Dependency::Util::isMainArgument(llvm::Value *loc) {
-  llvm::Argument *vArg = llvm::dyn_cast<llvm::Argument>(loc);
-
-  // FIXME: We need a more precise way to detect main argument
-  if (vArg && vArg->getParent() &&
-      (vArg->getParent()->getName().equals("main") ||
-       vArg->getParent()->getName().equals("__user_main"))) {
-    return true;
+bool outputFunctionName(llvm::Value *value, llvm::raw_ostream &stream) {
+  llvm::Instruction *inst = llvm::dyn_cast<llvm::Instruction>(value);
+  if (inst) {
+    llvm::BasicBlock *bb = inst->getParent();
+    if (bb) {
+      llvm::Function *f = bb->getParent();
+      stream << f->getName();
+      return true;
+    }
   }
   return false;
 }
