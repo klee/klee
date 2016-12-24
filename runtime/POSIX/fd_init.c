@@ -78,8 +78,8 @@ static void __create_new_dfile(exe_disk_file_t *dfile, unsigned size,
   klee_posix_prefer_cex(s, s->st_dev == defaults->st_dev);
   klee_posix_prefer_cex(s, s->st_rdev == defaults->st_rdev);
   klee_posix_prefer_cex(s, (s->st_mode&0700) == 0600);
-  klee_posix_prefer_cex(s, (s->st_mode&0070) == 0020);
-  klee_posix_prefer_cex(s, (s->st_mode&0007) == 0002);
+  klee_posix_prefer_cex(s, (s->st_mode&0070) == 0040);
+  klee_posix_prefer_cex(s, (s->st_mode&0007) == 0004);
   klee_posix_prefer_cex(s, (s->st_mode&S_IFMT) == S_IFREG);
   klee_posix_prefer_cex(s, s->st_nlink == 1);
   klee_posix_prefer_cex(s, s->st_uid == defaults->st_uid);
