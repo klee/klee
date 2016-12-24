@@ -806,12 +806,17 @@ void SearchTree::save(std::string dotFileName) {
 /**/
 
 PathCondition::PathCondition(ref<Expr> &constraint, Dependency *dependency,
-                             llvm::Value *condition, PathCondition *prev)
+                             llvm::Value *_condition, PathCondition *prev)
     : constraint(constraint), shadowConstraint(constraint), shadowed(false),
-      dependency(dependency),
-      condition(dependency ? dependency->getLatestValue(condition, constraint)
-                           : 0),
-      core(false), tail(prev) {}
+      dependency(dependency), core(false), tail(prev) {
+  ref<VersionedValue> emptyCondition;
+  if (dependency) {
+    condition = dependency->getLatestValue(_condition, constraint);
+    assert(!condition.isNull() && "null constraint on path condition");
+  } else {
+    condition = emptyCondition;
+  }
+}
 
 PathCondition::~PathCondition() {}
 
