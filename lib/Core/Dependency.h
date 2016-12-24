@@ -571,7 +571,7 @@ namespace klee {
     }
 
     /// \brief Gets the latest version of the location, but without checking
-    /// for whether the value is constant or not
+    /// for whether the value is constant or not.
     ref<VersionedValue> getLatestValueNoConstantCheck(llvm::Value *value);
 
     /// \brief Gets the latest pointer value for marking
@@ -620,7 +620,8 @@ namespace klee {
 
     Dependency *cdr() const;
 
-    ref<VersionedValue> getLatestValue(llvm::Value *value, ref<Expr> valueExpr);
+    ref<VersionedValue> getLatestValue(llvm::Value *value, ref<Expr> valueExpr,
+                                       bool constraint = false);
 
     /// \brief Abstract dependency state transition with argument(s)
     void execute(llvm::Instruction *instr, std::vector<ref<Expr> > &args,

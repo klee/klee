@@ -811,7 +811,7 @@ PathCondition::PathCondition(ref<Expr> &constraint, Dependency *dependency,
       dependency(dependency), core(false), tail(prev) {
   ref<VersionedValue> emptyCondition;
   if (dependency) {
-    condition = dependency->getLatestValue(_condition, constraint);
+    condition = dependency->getLatestValue(_condition, constraint, true);
     assert(!condition.isNull() && "null constraint on path condition");
   } else {
     condition = emptyCondition;

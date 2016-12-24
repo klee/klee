@@ -535,7 +535,8 @@ Dependency::getStoredExpressions(std::set<const Array *> &replacements,
 }
 
 ref<VersionedValue> Dependency::getLatestValue(llvm::Value *value,
-                                               ref<Expr> valueExpr) {
+                                               ref<Expr> valueExpr,
+                                               bool constraint) {
   assert(value && "value cannot be null");
   if (llvm::isa<llvm::ConstantExpr>(value)) {
     llvm::Instruction *asInstruction =
@@ -566,17 +567,25 @@ ref<VersionedValue> Dependency::getLatestValue(llvm::Value *value,
     // local values in a call already returned. To resolve this issue,
     // here we naively search for values with equivalent expression.
     std::vector<ref<VersionedValue> > allValues = valuesMap[value];
+
+    // In case this was for adding constraints, simply assume the
+    // latest value is the one. This is due to the difficulty in
+    // that the constraint in valueExpr is already processed into
+    // a different syntax.
+    if (constraint)
+      return allValues.back();
+
     for (std::vector<ref<VersionedValue> >::iterator it = allValues.begin(),
                                                      ie = allValues.end();
          it != ie; ++it) {
-      if ((*it)->getExpression() == valueExpr) {
+      ref<Expr> e = (*it)->getExpression();
+      if (e == valueExpr)
         return *it;
-      }
     }
   }
 
   if (parent)
-    ret = parent->getLatestValue(value, valueExpr);
+    ret = parent->getLatestValue(value, valueExpr, constraint);
 
   if (ret.isNull()) {
     if (llvm::GlobalValue *gv = llvm::dyn_cast<llvm::GlobalValue>(value)) {
@@ -600,6 +609,10 @@ Dependency::getLatestValueNoConstantCheck(llvm::Value *value) {
   assert(value && "value cannot be null");
 
   if (valuesMap.find(value) != valuesMap.end()) {
+    // We assume this method is only used for marking constraints, so here we do
+    // not check for the equivalence of the expressions as in getLatestValue
+    // method. We assume that in condition, we have the latest value
+    // of the condition at the end of the vector.
     return valuesMap[value].back();
   }
 
