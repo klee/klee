@@ -2287,6 +2287,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     // Conversion
   case Instruction::Trunc: {
     CastInst *ci = cast<CastInst>(i);
+    ref<Expr> arg = eval(ki, 0, state).value;
     ref<Expr> result = ExtractExpr::create(eval(ki, 0, state).value,
                                            0,
                                            getWidthForLLVMType(ci->getType()));
@@ -2294,29 +2295,31 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->execute(i, result);
+      interpTree->execute(i, result, arg);
     break;
   }
   case Instruction::ZExt: {
     CastInst *ci = cast<CastInst>(i);
-    ref<Expr> result = ZExtExpr::create(eval(ki, 0, state).value,
-                                        getWidthForLLVMType(ci->getType()));
+    ref<Expr> arg = eval(ki, 0, state).value;
+    ref<Expr> result =
+        ZExtExpr::create(arg, getWidthForLLVMType(ci->getType()));
     bindLocal(ki, state, result);
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->execute(i, result);
+      interpTree->execute(i, result, arg);
     break;
   }
   case Instruction::SExt: {
     CastInst *ci = cast<CastInst>(i);
-    ref<Expr> result = SExtExpr::create(eval(ki, 0, state).value,
-                                        getWidthForLLVMType(ci->getType()));
+    ref<Expr> arg = eval(ki, 0, state).value;
+    ref<Expr> result =
+        SExtExpr::create(arg, getWidthForLLVMType(ci->getType()));
     bindLocal(ki, state, result);
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->execute(i, result);
+      interpTree->execute(i, result, arg);
     break;
   }
 
@@ -2329,7 +2332,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->execute(i, result);
+      interpTree->execute(i, result, arg);
     break;
   } 
   case Instruction::PtrToInt: {
@@ -2341,7 +2344,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->execute(i, result);
+      interpTree->execute(i, result, arg);
     break;
   }
 
@@ -2484,8 +2487,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   case Instruction::FPTrunc: {
     FPTruncInst *fi = cast<FPTruncInst>(i);
     Expr::Width resultType = getWidthForLLVMType(fi->getType());
-    ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
-                                       "floating point");
+    ref<Expr> origArg = eval(ki, 0, state).value;
+    ref<ConstantExpr> arg = toConstant(state, origArg, "floating point");
     if (!fpWidthToSemantics(arg->getWidth()) || resultType > arg->getWidth())
       return terminateStateOnExecError(state, "Unsupported FPTrunc operation");
 
@@ -2503,15 +2506,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->execute(i, result);
+      interpTree->execute(i, result, origArg);
     break;
   }
 
   case Instruction::FPExt: {
     FPExtInst *fi = cast<FPExtInst>(i);
     Expr::Width resultType = getWidthForLLVMType(fi->getType());
-    ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
-                                        "floating point");
+    ref<Expr> origArg = eval(ki, 0, state).value;
+    ref<ConstantExpr> arg = toConstant(state, origArg, "floating point");
     if (!fpWidthToSemantics(arg->getWidth()) || arg->getWidth() > resultType)
       return terminateStateOnExecError(state, "Unsupported FPExt operation");
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
@@ -2528,15 +2531,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->execute(i, result);
+      interpTree->execute(i, result, origArg);
     break;
   }
 
   case Instruction::FPToUI: {
     FPToUIInst *fi = cast<FPToUIInst>(i);
     Expr::Width resultType = getWidthForLLVMType(fi->getType());
-    ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
-                                       "floating point");
+    ref<Expr> origArg = eval(ki, 0, state).value;
+    ref<ConstantExpr> arg = toConstant(state, origArg, "floating point");
     if (!fpWidthToSemantics(arg->getWidth()) || resultType > 64)
       return terminateStateOnExecError(state, "Unsupported FPToUI operation");
 
@@ -2554,15 +2557,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->execute(i, result);
+      interpTree->execute(i, result, origArg);
     break;
   }
 
   case Instruction::FPToSI: {
     FPToSIInst *fi = cast<FPToSIInst>(i);
     Expr::Width resultType = getWidthForLLVMType(fi->getType());
-    ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
-                                       "floating point");
+    ref<Expr> origArg = eval(ki, 0, state).value;
+    ref<ConstantExpr> arg = toConstant(state, origArg, "floating point");
     if (!fpWidthToSemantics(arg->getWidth()) || resultType > 64)
       return terminateStateOnExecError(state, "Unsupported FPToSI operation");
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
@@ -2580,15 +2583,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->execute(i, result);
+      interpTree->execute(i, result, origArg);
     break;
   }
 
   case Instruction::UIToFP: {
     UIToFPInst *fi = cast<UIToFPInst>(i);
     Expr::Width resultType = getWidthForLLVMType(fi->getType());
-    ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
-                                       "floating point");
+    ref<Expr> origArg = eval(ki, 0, state).value;
+    ref<ConstantExpr> arg = toConstant(state, origArg, "floating point");
     const llvm::fltSemantics *semantics = fpWidthToSemantics(resultType);
     if (!semantics)
       return terminateStateOnExecError(state, "Unsupported UIToFP operation");
@@ -2601,15 +2604,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->execute(i, result);
+      interpTree->execute(i, result, origArg);
     break;
   }
 
   case Instruction::SIToFP: {
     SIToFPInst *fi = cast<SIToFPInst>(i);
     Expr::Width resultType = getWidthForLLVMType(fi->getType());
-    ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
-                                       "floating point");
+    ref<Expr> origArg = eval(ki, 0, state).value;
+    ref<ConstantExpr> arg = toConstant(state, origArg, "floating point");
     const llvm::fltSemantics *semantics = fpWidthToSemantics(resultType);
     if (!semantics)
       return terminateStateOnExecError(state, "Unsupported SIToFP operation");
@@ -2622,7 +2625,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->execute(i, result);
+      interpTree->execute(i, result, origArg);
     break;
   }
 
@@ -2770,7 +2773,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->execute(i, result);
+      interpTree->execute(i, result, agg);
     break;
   }
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
@@ -3040,6 +3043,8 @@ void Executor::run(ExecutionState &initialState) {
         stream << "\n";
         stream << "------------------- Executing New Instruction "
                   "-----------------------\n";
+        if (outputFunctionName(state.pc->inst, stream))
+          stream << ":";
         state.pc->inst->print(stream);
         stream << "\n";
         stream.flush();
@@ -3503,7 +3508,7 @@ void Executor::executeAlloc(ExecutionState &state,
 
       // Update dependency
       if (INTERPOLATION_ENABLED)
-        interpTree->execute(target->inst, mo->getBaseExpr());
+        interpTree->execute(target->inst, mo->getBaseExpr(), size);
 
       if (reallocFrom) {
         unsigned count = std::min(reallocFrom->size, os->size);
@@ -3977,7 +3982,7 @@ void Executor::runFunctionAsMain(Function *f,
   state->ptreeNode = processTree->root;
 
   if (INTERPOLATION_ENABLED) {
-    interpTree = new ITree(state);//added by Felicia
+    interpTree = new ITree(state, kmodule->targetData); // Added by Felicia
     state->itreeNode = interpTree->root;
     SearchTree::initialize(interpTree->root);
   }

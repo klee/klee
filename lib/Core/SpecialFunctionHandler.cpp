@@ -396,10 +396,10 @@ void SpecialFunctionHandler::handleAssume(ExecutionState &state,
                             std::vector<ref<Expr> > &arguments) {
   assert(arguments.size()==1 && "invalid number of arguments to klee_assume");
   ref<Expr> e = arguments[0];
-  
+
   if (e->getWidth() != Expr::Bool)
     e = NeExpr::create(e, ConstantExpr::create(0, e->getWidth()));
-  
+
   bool res;
   bool success __attribute__ ((unused)) = executor.solver->mustBeFalse(state, e, res);
   assert(success && "FIXME: Unhandled solver failure");

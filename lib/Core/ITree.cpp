@@ -21,7 +21,6 @@
 #include <klee/Expr.h>
 #include <klee/Solver.h>
 #include <klee/SolverStats.h>
-#include <klee/TimerStatIncrementer.h>
 #include <klee/Internal/Support/ErrorHandling.h>
 #include <klee/util/ExprPPrinter.h>
 #include <fstream>
@@ -727,9 +726,8 @@ void SearchTree::setCurrentNode(ExecutionState &state,
       // Display the line, char position of this instruction
       llvm::DILocation loc(n);
       unsigned line = loc.getLineNumber();
-      unsigned column = loc.getColumnNumber();
       StringRef file = loc.getFilename();
-      out << file << ":" << line << ":" << column << "\n";
+      out << file << ":" << line << "\n";
     } else {
       state.pc->inst->print(out);
     }
@@ -808,12 +806,17 @@ void SearchTree::save(std::string dotFileName) {
 /**/
 
 PathCondition::PathCondition(ref<Expr> &constraint, Dependency *dependency,
-                             llvm::Value *condition, PathCondition *prev)
+                             llvm::Value *_condition, PathCondition *prev)
     : constraint(constraint), shadowConstraint(constraint), shadowed(false),
-      dependency(dependency),
-      condition(dependency ? dependency->getLatestValue(condition, constraint)
-                           : 0),
-      core(false), tail(prev) {}
+      dependency(dependency), core(false), tail(prev) {
+  ref<VersionedValue> emptyCondition;
+  if (dependency) {
+    condition = dependency->getLatestValue(_condition, constraint, true);
+    assert(!condition.isNull() && "null constraint on path condition");
+  } else {
+    condition = emptyCondition;
+  }
+}
 
 PathCondition::~PathCondition() {}
 
@@ -882,6 +885,13 @@ void PathCondition::print(llvm::raw_ostream &stream) const {
 }
 
 /**/
+
+Statistic SubsumptionTableEntry::concreteStoreExpressionBuildTime(
+    "concreteStoreExpressionBuildTime", "concreteStoreTime");
+Statistic SubsumptionTableEntry::symbolicStoreExpressionBuildTime(
+    "symbolicStoreExpressionBuildTime", "symbolicStoreTime");
+Statistic SubsumptionTableEntry::solverAccessTime("solverAccessTime",
+                                                  "solverAccessTime");
 
 SubsumptionTableEntry::SubsumptionTableEntry(ITreeNode *node)
     : programPoint(node->getProgramPoint()),
@@ -1031,12 +1041,12 @@ SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr,
 
     // only process the interpolant that still has existential variables in it.
     if (hasVariableInSet(boundVariables, interpolantAtom)) {
-      for (std::vector<ref<Expr> >::iterator itEq = equalityPack.begin(),
-                                             itEqEnd = equalityPack.end();
-           itEq != itEqEnd; ++itEq) {
+      for (std::vector<ref<Expr> >::iterator it1 = equalityPack.begin(),
+                                             ie1 = equalityPack.end();
+           it1 != ie1; ++it1) {
 
         ref<Expr> equalityConstraint =
-            *itEq; // For example, say this constraint is A == B
+            *it1; // For example, say this constraint is A == B
         if (equalityConstraint->isFalse()) {
           return ConstantExpr::create(0, Expr::Bool);
         } else if (equalityConstraint->isTrue()) {
@@ -1401,8 +1411,8 @@ bool SubsumptionTableEntry::subsumed(
     const std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
         storedExpressions) {
 #ifdef ENABLE_Z3
-  // Tell the solver implementation that we are checking for subsumption, for it
-  // to collect statistics of solver calls.
+  // Tell the solver implementation that we are checking for subsumption for
+  // collecting statistics of solver calls.
   SubsumptionCheckMarker subsumptionCheckMarker;
 
   if (DebugInterpolation == ITP_DEBUG_ALL ||
@@ -1426,387 +1436,548 @@ bool SubsumptionTableEntry::subsumed(
 
   ref<Expr> stateEqualityConstraints;
 
-  // Build constraints from concrete-address interpolant store
-  for (std::vector<llvm::Value *>::iterator
-           it1 = concreteAddressStoreKeys.begin(),
-           it1End = concreteAddressStoreKeys.end();
-       it1 != it1End; ++it1) {
-    const Dependency::ConcreteStoreMap lhsConcreteMap =
-        concreteAddressStore[*it1];
-    const Dependency::ConcreteStoreMap rhsConcreteMap =
-        stateConcreteAddressStore[*it1];
-    const Dependency::SymbolicStoreMap rhsSymbolicMap =
-        stateSymbolicAddressStore[*it1];
+  std::set<llvm::Value *> corePointerValues; // Pointer values in the core for
+                                             // memory bounds interpolation
 
-    // If the current state does not constrain the same base, subsumption fails.
-    if (rhsConcreteMap.empty() && rhsSymbolicMap.empty()) {
-      if (DebugInterpolation == ITP_DEBUG_ALL ||
-          DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
-        klee_message(
-            "Check failure due to empty state concrete and symbolic maps");
-      }
-      return false;
-    }
+  {
+    TimerStatIncrementer t(concreteStoreExpressionBuildTime);
 
-    for (Dependency::ConcreteStoreMap::const_iterator
-             it2 = lhsConcreteMap.begin(),
-             it2End = lhsConcreteMap.end();
-         it2 != it2End; ++it2) {
+    // Build constraints from concrete-address interpolant store
+    for (std::vector<llvm::Value *>::iterator
+             it1 = concreteAddressStoreKeys.begin(),
+             ie1 = concreteAddressStoreKeys.end();
+         it1 != ie1; ++it1) {
+      const Dependency::ConcreteStoreMap tabledConcreteMap =
+          concreteAddressStore[*it1];
+      const Dependency::ConcreteStoreMap stateConcreteMap =
+          stateConcreteAddressStore[*it1];
+      const Dependency::SymbolicStoreMap stateSymbolicMap =
+          stateSymbolicAddressStore[*it1];
 
-      // The address is not constrained by the current state, therefore
-      // the current state is incomparable to the stored interpolant,
-      // and we therefore fail the subsumption.
-      if (!rhsConcreteMap.count(it2->first)) {
+      // If the current state does not constrain the same base, subsumption
+      // fails.
+      if (stateConcreteMap.empty() && stateSymbolicMap.empty()) {
         if (DebugInterpolation == ITP_DEBUG_ALL ||
             DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
-          klee_message("Check failure as memory region in the table does not "
-                       "exist in the state");
+          klee_message(
+              "Check failure due to empty state concrete and symbolic maps");
         }
         return false;
       }
 
-      const Dependency::AddressValuePair rhsConcrete =
-          rhsConcreteMap.at(it2->first);
-      const ref<Expr> lhsValue = it2->second.second;
-      ref<Expr> res;
+      for (Dependency::ConcreteStoreMap::const_iterator
+               it2 = tabledConcreteMap.begin(),
+               ie2 = tabledConcreteMap.end();
+           it2 != ie2; ++it2) {
 
-      if (!rhsConcrete.second.isNull()) {
-        // There is the corresponding concrete allocation
-        if (lhsValue->getWidth() != rhsConcrete.second->getWidth()) {
-          // We conservatively fail the subsumption in case the sizes do not
-          // match.
+        // The address is not constrained by the current state, therefore
+        // the current state is incomparable to the stored interpolant,
+        // and we therefore fail the subsumption.
+        if (!stateConcreteMap.count(it2->first)) {
           if (DebugInterpolation == ITP_DEBUG_ALL ||
               DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
-            klee_message(
-                "Check failure as sizes of stored values do not match");
+            klee_message("Check failure as memory region in the table does not "
+                         "exist in the state");
           }
           return false;
-        } else {
-          res = EqExpr::create(lhsValue, rhsConcrete.second);
         }
-      }
 
-      if (!rhsSymbolicMap.empty()) {
-        const ref<Expr> lhsConcreteAddress = it2->second.first;
-        ref<Expr> conjunction;
+        const ref<StoredValue> tabledValue = it2->second;
+        const ref<StoredValue> stateValue = stateConcreteMap.at(it2->first);
+        ref<Expr> res;
 
-        for (Dependency::SymbolicStoreMap::const_iterator
-                 it3 = rhsSymbolicMap.begin(),
-                 it3End = rhsSymbolicMap.end();
-             it3 != it3End; ++it3) {
+        if (!stateValue.isNull()) {
+          // There is the corresponding concrete allocation
+          if (tabledValue->getExpression()->getWidth() !=
+              stateValue->getExpression()->getWidth()) {
+            // We conservatively fail the subsumption in case the sizes do not
+            // match.
+            if (DebugInterpolation == ITP_DEBUG_ALL ||
+                DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
+              klee_message(
+                  "Check failure as sizes of stored values do not match");
+            }
+            return false;
+          } else if (tabledValue->isPointer() && stateValue->isPointer()) {
+            ref<Expr> boundsCheck = tabledValue->getBoundsCheck(stateValue);
+            if (boundsCheck->isFalse()) {
+              if (DebugInterpolation == ITP_DEBUG_ALL ||
+                  DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
+                klee_message(
+                    "Check failure due to failure in memory bounds check");
+              }
+              return false;
+            }
+            if (!boundsCheck->isTrue())
+              res = boundsCheck;
 
-          ref<Expr> newTerm;
-          if (lhsValue->getWidth() != it3->second->getWidth()) {
-            // We conservatively require that the addresses should not be equal
-            // whenever their values are of different width
-            newTerm =
-                EqExpr::create(ConstantExpr::create(0, Expr::Bool),
-                               EqExpr::create(lhsConcreteAddress, it3->first));
+            // We record the LLVM value of the pointer
+            corePointerValues.insert(stateValue->getValue());
           } else {
-            // Implication: if lhsConcreteAddress == it3->first, then lhsValue
-            // == it3->second
-            newTerm = OrExpr::create(
-                EqExpr::create(ConstantExpr::create(0, Expr::Bool),
-                               EqExpr::create(lhsConcreteAddress, it3->first)),
-                EqExpr::create(lhsValue, it3->second));
-          }
-          if (!conjunction.isNull()) {
-            conjunction = AndExpr::create(newTerm, conjunction);
-          } else {
-            conjunction = newTerm;
+            res = EqExpr::create(tabledValue->getExpression(),
+                                 stateValue->getExpression());
           }
         }
-        // If there were corresponding concrete as well as symbolic allocations
-        // in the current state, conjunct them
-        res = (!res.isNull() ? AndExpr::create(res, conjunction) : conjunction);
-      }
 
-      if (!res.isNull()) {
-        stateEqualityConstraints =
-            (stateEqualityConstraints.isNull()
-                 ? res
-                 : AndExpr::create(res, stateEqualityConstraints));
+        if (!stateSymbolicMap.empty()) {
+          const ref<Expr> tabledConcreteAddress =
+              Expr::createPointer(it2->first);
+          ref<Expr> conjunction;
+
+          for (Dependency::SymbolicStoreMap::const_iterator
+                   it3 = stateSymbolicMap.begin(),
+                   ie3 = stateSymbolicMap.end();
+               it3 != ie3; ++it3) {
+            ref<Expr> stateSymbolicAddress = it3->first;
+            ref<StoredValue> stateSymbolicValue = it3->second;
+            ref<Expr> newTerm;
+
+            if (tabledValue->getExpression()->getWidth() !=
+                stateSymbolicValue->getExpression()->getWidth()) {
+              // We conservatively require that the addresses should not be
+              // equal whenever their values are of different width
+              newTerm = EqExpr::create(
+                  ConstantExpr::create(0, Expr::Bool),
+                  EqExpr::create(tabledConcreteAddress, stateSymbolicAddress));
+
+            } else if (tabledValue->isPointer() &&
+                       stateSymbolicValue->isPointer()) {
+              ref<Expr> boundsCheck =
+                  tabledValue->getBoundsCheck(stateSymbolicValue);
+
+              if (!boundsCheck->isTrue()) {
+                newTerm = EqExpr::create(ConstantExpr::create(0, Expr::Bool),
+                                         EqExpr::create(tabledConcreteAddress,
+                                                        stateSymbolicAddress));
+
+                if (!boundsCheck->isFalse()) {
+                  // Implication: if tabledConcreteAddress ==
+                  // stateSymbolicAddress
+                  // then bounds check must hold
+                  newTerm = OrExpr::create(newTerm, boundsCheck);
+                }
+              }
+
+              // We record the LLVM value of the pointer
+              corePointerValues.insert(stateValue->getValue());
+            } else {
+              // Implication: if tabledConcreteAddress == stateSymbolicAddress,
+              // then tabledValue->getExpression() ==
+              // stateSymbolicValue->getExpression()
+              newTerm = OrExpr::create(
+                  EqExpr::create(ConstantExpr::create(0, Expr::Bool),
+                                 EqExpr::create(tabledConcreteAddress,
+                                                stateSymbolicAddress)),
+                  EqExpr::create(tabledValue->getExpression(),
+                                 stateSymbolicValue->getExpression()));
+            }
+            if (!conjunction.isNull()) {
+              conjunction = AndExpr::create(newTerm, conjunction);
+            } else {
+              // Implication: if tabledConcreteAddress == stateSymbolicAddress,
+              // then tabledValue == stateSymbolicValue
+              newTerm = OrExpr::create(
+                  EqExpr::create(ConstantExpr::create(0, Expr::Bool),
+                                 EqExpr::create(tabledConcreteAddress,
+                                                stateSymbolicAddress)),
+                  EqExpr::create(tabledValue->getExpression(),
+                                 stateSymbolicValue->getExpression()));
+            }
+
+            if (!newTerm.isNull()) {
+              if (!conjunction.isNull()) {
+                conjunction = AndExpr::create(newTerm, conjunction);
+              } else {
+                conjunction = newTerm;
+              }
+            }
+          }
+          // If there were corresponding concrete as well as symbolic
+          // allocations
+          // in the current state, conjunct them
+          res =
+              (!res.isNull() ? AndExpr::create(res, conjunction) : conjunction);
+        }
+
+        if (!res.isNull()) {
+          stateEqualityConstraints =
+              (stateEqualityConstraints.isNull()
+                   ? res
+                   : AndExpr::create(res, stateEqualityConstraints));
+        }
       }
     }
   }
 
-  // Build constraints from symbolic-address interpolant store
-  for (std::vector<llvm::Value *>::iterator
-           it1 = symbolicAddressStoreKeys.begin(),
-           it1End = symbolicAddressStoreKeys.end();
-       it1 != it1End; ++it1) {
-    const Dependency::SymbolicStoreMap lhsSymbolicMap =
-        symbolicAddressStore[*it1];
-    const Dependency::ConcreteStoreMap rhsConcreteMap =
-        stateConcreteAddressStore[*it1];
-    const Dependency::SymbolicStoreMap rhsSymbolicMap =
-        stateSymbolicAddressStore[*it1];
+  {
+    TimerStatIncrementer t(symbolicStoreExpressionBuildTime);
+    // Build constraints from symbolic-address interpolant store
+    for (std::vector<llvm::Value *>::iterator
+             it1 = symbolicAddressStoreKeys.begin(),
+             ie1 = symbolicAddressStoreKeys.end();
+         it1 != ie1; ++it1) {
+      const Dependency::SymbolicStoreMap tabledSymbolicMap =
+          symbolicAddressStore[*it1];
+      const Dependency::ConcreteStoreMap stateConcreteMap =
+          stateConcreteAddressStore[*it1];
+      const Dependency::SymbolicStoreMap stateSymbolicMap =
+          stateSymbolicAddressStore[*it1];
 
-    ref<Expr> conjunction;
-
-    for (Dependency::SymbolicStoreMap::const_iterator
-             it2 = lhsSymbolicMap.begin(),
-             it2End = lhsSymbolicMap.end();
-         it2 != it2End; ++it2) {
-      ref<Expr> lhsSymbolicAddress = it2->first;
-      ref<Expr> lhsValue = it2->second;
-
-      for (Dependency::ConcreteStoreMap::const_iterator
-               it3 = rhsConcreteMap.begin(),
-               it3End = rhsConcreteMap.end();
-           it3 != it3End; ++it3) {
-        ref<Expr> rhsConcreteAddress = it3->second.first;
-        ref<Expr> rhsValue = it3->second.second;
-
-        ref<Expr> newTerm;
-        if (lhsValue->getWidth() != rhsValue->getWidth()) {
-          // We conservatively require that the addresses should not be equal
-          // whenever their values are of different width
-          newTerm = EqExpr::create(
-              ConstantExpr::create(0, Expr::Bool),
-              EqExpr::create(lhsSymbolicAddress, rhsConcreteAddress));
-        } else {
-          // Implication: if lhsSymbolicAddress == rhsConcreteAddress, then
-          // lhsValue == rhsValue
-          newTerm =
-              OrExpr::create(EqExpr::create(ConstantExpr::create(0, Expr::Bool),
-                                            EqExpr::create(lhsSymbolicAddress,
-                                                           rhsConcreteAddress)),
-                             EqExpr::create(lhsValue, rhsValue));
-        }
-        if (!conjunction.isNull()) {
-          conjunction = AndExpr::create(newTerm, conjunction);
-        } else {
-          conjunction = newTerm;
-        }
-      }
+      ref<Expr> conjunction;
 
       for (Dependency::SymbolicStoreMap::const_iterator
-               it3 = rhsSymbolicMap.begin(),
-               it3End = rhsSymbolicMap.end();
-           it3 != it3End; ++it3) {
-        ref<Expr> rhsSymbolicAddress = it3->first;
-        ref<Expr> rhsValue = it3->second;
-        ref<Expr> newTerm;
+               it2 = tabledSymbolicMap.begin(),
+               ie2 = tabledSymbolicMap.end();
+           it2 != ie2; ++it2) {
+        ref<Expr> tabledSymbolicAddress = it2->first;
+        ref<StoredValue> tabledValue = it2->second;
 
-        if (lhsValue->getWidth() != rhsValue->getWidth()) {
-          // We conservatively require that the addresses should not be equal
-          // whenever their values are of different width
-          newTerm = EqExpr::create(
-              ConstantExpr::create(0, Expr::Bool),
-              EqExpr::create(lhsSymbolicAddress, rhsSymbolicAddress));
-        } else {
-          // Implication: if lhsSymbolicAddress == rhsSymbolicAddress then
-          // lhsValue == rhsValue
-          newTerm =
-              OrExpr::create(EqExpr::create(ConstantExpr::create(0, Expr::Bool),
-                                            EqExpr::create(lhsSymbolicAddress,
-                                                           rhsSymbolicAddress)),
-                             EqExpr::create(lhsValue, rhsValue));
+        for (Dependency::ConcreteStoreMap::const_iterator
+                 it3 = stateConcreteMap.begin(),
+                 ie3 = stateConcreteMap.end();
+             it3 != ie3; ++it3) {
+          ref<Expr> stateConcreteAddress = Expr::createPointer(it3->first);
+          ref<StoredValue> stateValue = it3->second;
+          ref<Expr> newTerm;
+
+          if (tabledValue->getExpression()->getWidth() !=
+              stateValue->getExpression()->getWidth()) {
+            // We conservatively require that the addresses should not be equal
+            // whenever their values are of different width
+            newTerm = EqExpr::create(
+                ConstantExpr::create(0, Expr::Bool),
+                EqExpr::create(tabledSymbolicAddress, stateConcreteAddress));
+          } else if (tabledValue->isPointer() && stateValue->isPointer()) {
+            ref<Expr> boundsCheck = tabledValue->getBoundsCheck(stateValue);
+
+            if (!boundsCheck->isTrue()) {
+              newTerm = EqExpr::create(
+                  ConstantExpr::create(0, Expr::Bool),
+                  EqExpr::create(tabledSymbolicAddress, stateConcreteAddress));
+
+              if (!boundsCheck->isFalse()) {
+                // Implication: if tabledConcreteAddress == stateSymbolicAddress
+                // then bounds check must hold
+                newTerm = OrExpr::create(newTerm, boundsCheck);
+              }
+            }
+
+            // We record the LLVM value of the pointer
+            corePointerValues.insert(stateValue->getValue());
+          } else {
+            // Implication: if tabledSymbolicAddress == stateConcreteAddress,
+            // then tabledValue == stateValue
+            newTerm = OrExpr::create(
+                EqExpr::create(ConstantExpr::create(0, Expr::Bool),
+                               EqExpr::create(tabledSymbolicAddress,
+                                              stateConcreteAddress)),
+                EqExpr::create(tabledValue->getExpression(),
+                               stateValue->getExpression()));
+          }
+
+          if (!newTerm.isNull()) {
+            if (!conjunction.isNull()) {
+              conjunction = AndExpr::create(newTerm, conjunction);
+            } else {
+              conjunction = newTerm;
+            }
+          }
         }
-        if (!conjunction.isNull()) {
-          conjunction = AndExpr::create(newTerm, conjunction);
-        } else {
-          conjunction = newTerm;
+
+        for (Dependency::SymbolicStoreMap::const_iterator
+                 it3 = stateSymbolicMap.begin(),
+                 ie3 = stateSymbolicMap.end();
+             it3 != ie3; ++it3) {
+          ref<Expr> stateSymbolicAddress = it3->first;
+          ref<StoredValue> stateValue = it3->second;
+          ref<Expr> newTerm;
+
+          if (tabledValue->getExpression()->getWidth() !=
+              stateValue->getExpression()->getWidth()) {
+            // We conservatively require that the addresses should not be equal
+            // whenever their values are of different width
+            newTerm = EqExpr::create(
+                ConstantExpr::create(0, Expr::Bool),
+                EqExpr::create(tabledSymbolicAddress, stateSymbolicAddress));
+          } else if (tabledValue->isPointer() && stateValue->isPointer()) {
+            ref<Expr> boundsCheck = tabledValue->getBoundsCheck(stateValue);
+
+            if (!boundsCheck->isTrue()) {
+              newTerm = EqExpr::create(
+                  ConstantExpr::create(0, Expr::Bool),
+                  EqExpr::create(tabledSymbolicAddress, stateSymbolicAddress));
+
+              if (!boundsCheck->isFalse()) {
+                // Implication: if tabledConcreteAddress == stateSymbolicAddress
+                // then bounds check must hold
+                newTerm = OrExpr::create(newTerm, boundsCheck);
+              }
+            }
+
+            // We record the LLVM value of the pointer
+            corePointerValues.insert(stateValue->getValue());
+          } else {
+            // Implication: if tabledSymbolicAddress == stateSymbolicAddress
+            // then tabledValue == stateValue
+            newTerm = OrExpr::create(
+                EqExpr::create(ConstantExpr::create(0, Expr::Bool),
+                               EqExpr::create(tabledSymbolicAddress,
+                                              stateSymbolicAddress)),
+                EqExpr::create(tabledValue->getExpression(),
+                               stateValue->getExpression()));
+          }
+
+          if (!newTerm.isNull()) {
+            if (!conjunction.isNull()) {
+              conjunction = AndExpr::create(newTerm, conjunction);
+            } else {
+              conjunction = newTerm;
+            }
+          }
         }
       }
-    }
 
-    if (!conjunction.isNull()) {
-      stateEqualityConstraints =
-          (stateEqualityConstraints.isNull()
-               ? conjunction
-               : AndExpr::create(conjunction, stateEqualityConstraints));
+      if (!conjunction.isNull()) {
+        stateEqualityConstraints =
+            (stateEqualityConstraints.isNull()
+                 ? conjunction
+                 : AndExpr::create(conjunction, stateEqualityConstraints));
+      }
     }
   }
 
   Solver::Validity result;
   ref<Expr> query;
 
-  // Here we build the query, after which it is always a conjunction of
-  // the interpolant and the state equality constraints. Here we call
-  // AndExpr::alloc instead of AndExpr::create as we need to guarantee that the
-  // resulting expression is an AndExpr, otherwise simplifyExistsExpr would not
-  // work.
-  if (!interpolant.isNull()) {
-    query =
-        !stateEqualityConstraints.isNull()
-            ? AndExpr::alloc(interpolant, stateEqualityConstraints)
-            : AndExpr::alloc(interpolant, ConstantExpr::create(1, Expr::Bool));
-  } else if (!stateEqualityConstraints.isNull()) {
-    query = AndExpr::alloc(ConstantExpr::create(1, Expr::Bool),
-                           stateEqualityConstraints);
-  } else {
-    // Here both the interpolant constraints and state equality
-    // constraints are empty, therefore everything gets subsumed
-    if (DebugInterpolation == ITP_DEBUG_ALL ||
-        DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
-      klee_message("Check success as interpolant is empty");
-    }
-    return true;
-  }
+  {
+    TimerStatIncrementer t(solverAccessTime);
 
-  bool queryHasNoFreeVariables = false;
-
-  if (!existentials.empty()) {
-    ref<Expr> existsExpr = ExistsExpr::create(existentials, query);
-    if (DebugInterpolation == ITP_DEBUG_ALL ||
-        DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
-      std::string msg;
-      llvm::raw_string_ostream stream(msg);
-      stream << "Before simplification:\n";
-      ExprPPrinter::printQuery(stream, state.constraints, existsExpr);
-      stream.flush();
-      klee_message("Before simplification:\n%s", msg.c_str());
-    }
-    query = simplifyExistsExpr(existsExpr, queryHasNoFreeVariables);
-  }
-
-  // If query simplification result was false, we quickly fail without calling
-  // the solver
-  if (query->isFalse()) {
-    if (DebugInterpolation == ITP_DEBUG_ALL ||
-        DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
-      klee_message("Check failure as consequent is unsatisfiable");
-    }
-    return false;
-  }
-
-  bool success = false;
-
-  if (!detectConflictPrimitives(state, query)) {
-    if (DebugInterpolation == ITP_DEBUG_ALL ||
-        DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
-      klee_message("Check failure as contradictory equalities detected");
-    }
-    return false;
-  }
-
-  Z3Solver *z3solver = 0;
-
-  // We call the solver only when the simplified query is
-  // not a constant and no contradictory unary constraints found from
-  // solvingUnaryConstraints method.
-  if (!llvm::isa<ConstantExpr>(query)) {
-
-    if (!existentials.empty() && llvm::isa<ExistsExpr>(query)) {
+    // Here we build the query, after which it is always a conjunction of
+    // the interpolant and the state equality constraints. Here we call
+    // AndExpr::alloc instead of AndExpr::create as we need to guarantee that
+    // the resulting expression is an AndExpr, otherwise simplifyExistsExpr
+    // would not work.
+    if (!interpolant.isNull()) {
+      query = !stateEqualityConstraints.isNull()
+                  ? AndExpr::alloc(interpolant, stateEqualityConstraints)
+                  : AndExpr::alloc(interpolant,
+                                   ConstantExpr::create(1, Expr::Bool));
+    } else if (!stateEqualityConstraints.isNull()) {
+      query = AndExpr::alloc(ConstantExpr::create(1, Expr::Bool),
+                             stateEqualityConstraints);
+    } else {
+      // Here both the interpolant constraints and state equality
+      // constraints are empty, therefore everything gets subsumed
       if (DebugInterpolation == ITP_DEBUG_ALL ||
           DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
-        klee_message("Existentials not empty");
+        klee_message("Check success as interpolant is empty");
       }
 
-      // Instantiate a new Z3 solver to make sure we use Z3
-      // without pre-solving optimizations. It would be nice
-      // in the future to just run solver->evaluate so that
-      // the optimizations can be used, but this requires
-      // handling of quantified expressions by KLEE's pre-solving
-      // procedure, which does not exist currently.
-      z3solver = new Z3Solver();
+      // We build memory bounds interpolants from pointer values
+      if (DebugInterpolation == ITP_DEBUG_ALL ||
+          DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
+        std::string msg;
+        llvm::Instruction *instr = state.pc->inst;
+        llvm::raw_string_ostream stream(msg);
+        instr->print(stream);
+        stream.flush();
+        if (instr->getParent()->getParent()) {
+          std::string functionName(
+              instr->getParent()->getParent()->getName().str());
+          klee_message("Interpolating memory bound for subsumption at "
+                       "\"%s\" in function %s",
+                       msg.c_str(), functionName.c_str());
+        } else {
+          klee_message("Interpolating memory bound for subsumption at \"%s\"",
+                       msg.c_str());
+        }
+      }
+      for (std::set<llvm::Value *>::iterator it = corePointerValues.begin(),
+                                             ie = corePointerValues.end();
+           it != ie; ++it) {
+        state.itreeNode->pointerValuesInterpolation(*it);
+      }
+      return true;
+    }
 
-      z3solver->setCoreSolverTimeout(timeout);
+    bool queryHasNoFreeVariables = false;
 
-      if (queryHasNoFreeVariables) {
-        // In case the query has no free variables, we reformulate
-        // the solver call as satisfiability check of the body of
-        // the query.
-        ConstraintManager constraints;
-        ref<ConstantExpr> tmpExpr;
+    if (!existentials.empty()) {
+      ref<Expr> existsExpr = ExistsExpr::create(existentials, query);
+      if (DebugInterpolation == ITP_DEBUG_ALL ||
+          DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
+        std::string msg;
+        llvm::raw_string_ostream stream(msg);
+        stream << "Before simplification:\n";
+        ExprPPrinter::printQuery(stream, state.constraints, existsExpr);
+        stream.flush();
+        klee_message("Before simplification:\n%s", msg.c_str());
+      }
+      query = simplifyExistsExpr(existsExpr, queryHasNoFreeVariables);
+    }
 
-        ref<Expr> falseExpr = ConstantExpr::create(0, Expr::Bool);
-        constraints.addConstraint(EqExpr::create(falseExpr, query->getKid(0)));
+    // If query simplification result was false, we quickly fail without calling
+    // the solver
+    if (query->isFalse()) {
+      if (DebugInterpolation == ITP_DEBUG_ALL ||
+          DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
+        klee_message("Check failure as consequent is unsatisfiable");
+      }
+      return false;
+    }
 
+    bool success = false;
+
+    if (!detectConflictPrimitives(state, query)) {
+      if (DebugInterpolation == ITP_DEBUG_ALL ||
+          DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
+        klee_message("Check failure as contradictory equalities detected");
+      }
+      return false;
+    }
+
+    Z3Solver *z3solver = 0;
+
+    // We call the solver only when the simplified query is not a constant and
+    // no contradictory unary constraints found from solvingUnaryConstraints
+    // method.
+    if (!llvm::isa<ConstantExpr>(query)) {
+
+      if (!existentials.empty() && llvm::isa<ExistsExpr>(query)) {
         if (DebugInterpolation == ITP_DEBUG_ALL ||
             DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
-          std::string msg;
-          llvm::raw_string_ostream stream(msg);
-          ExprPPrinter::printQuery(stream, constraints, falseExpr);
-          stream.flush();
-          klee_message("Querying for satisfiability check:\n%s", msg.c_str());
+          klee_message("Existentials not empty");
         }
 
-        success = z3solver->getValue(Query(constraints, falseExpr), tmpExpr);
-        result = success ? Solver::True : Solver::Unknown;
+        // Instantiate a new Z3 solver to make sure we use Z3
+        // without pre-solving optimizations. It would be nice
+        // in the future to just run solver->evaluate so that
+        // the optimizations can be used, but this requires
+        // handling of quantified expressions by KLEE's pre-solving
+        // procedure, which does not exist currently.
+        z3solver = new Z3Solver();
+
+        z3solver->setCoreSolverTimeout(timeout);
+
+        if (queryHasNoFreeVariables) {
+          // In case the query has no free variables, we reformulate
+          // the solver call as satisfiability check of the body of
+          // the query.
+          ConstraintManager constraints;
+          ref<ConstantExpr> tmpExpr;
+
+          ref<Expr> falseExpr = ConstantExpr::create(0, Expr::Bool);
+          constraints.addConstraint(
+              EqExpr::create(falseExpr, query->getKid(0)));
+
+          if (DebugInterpolation == ITP_DEBUG_ALL ||
+              DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
+            std::string msg;
+            llvm::raw_string_ostream stream(msg);
+            ExprPPrinter::printQuery(stream, constraints, falseExpr);
+            stream.flush();
+            klee_message("Querying for satisfiability check:\n%s", msg.c_str());
+          }
+
+          success = z3solver->getValue(Query(constraints, falseExpr), tmpExpr);
+          result = success ? Solver::True : Solver::Unknown;
+        } else {
+          if (DebugInterpolation == ITP_DEBUG_ALL ||
+              DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
+            std::string msg;
+            llvm::raw_string_ostream stream(msg);
+            ExprPPrinter::printQuery(stream, state.constraints, query);
+            stream.flush();
+            klee_message("Querying for subsumption check:\n%s", msg.c_str());
+          }
+
+          success = z3solver->directComputeValidity(
+              Query(state.constraints, query), result);
+        }
+
+        z3solver->setCoreSolverTimeout(0);
+
       } else {
         if (DebugInterpolation == ITP_DEBUG_ALL ||
             DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
           std::string msg;
           llvm::raw_string_ostream stream(msg);
+          klee_message("No existential");
           ExprPPrinter::printQuery(stream, state.constraints, query);
           stream.flush();
           klee_message("Querying for subsumption check:\n%s", msg.c_str());
         }
-
-        success = z3solver->directComputeValidity(
-            Query(state.constraints, query), result);
+        // We call the solver in the standard way if the
+        // formula is unquantified.
+        solver->setTimeout(timeout);
+        success = solver->evaluate(state, query, result);
+        solver->setTimeout(0);
       }
+    } else {
+      // query is a constant expression
+      if (query->isTrue()) {
+        if (DebugInterpolation == ITP_DEBUG_ALL ||
+            DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
+          klee_message("Check success as query is true");
+        }
 
-      z3solver->setCoreSolverTimeout(0);
+        // We build memory bounds interpolants from pointer values
+        for (std::set<llvm::Value *>::iterator it = corePointerValues.begin(),
+                                               ie = corePointerValues.end();
+             it != ie; ++it) {
+          state.itreeNode->pointerValuesInterpolation(*it);
+        }
 
-    } else
-    {
+        return true;
+      }
       if (DebugInterpolation == ITP_DEBUG_ALL ||
           DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
-        std::string msg;
-        llvm::raw_string_ostream stream(msg);
-        klee_message("No existential");
-        ExprPPrinter::printQuery(stream, state.constraints, query);
-        stream.flush();
-        klee_message("Querying for subsumption check:\n%s", msg.c_str());
+        klee_message("Check failure as query is non-true");
       }
-      // We call the solver in the standard way if the
-      // formula is unquantified.
-      solver->setTimeout(timeout);
-      success = solver->evaluate(state, query, result);
-      solver->setTimeout(0);
+      return false;
     }
-  } else {
-    // query is a constant expression
-    if (query->isTrue()) {
+
+    if (success && result == Solver::True) {
+      std::vector<ref<Expr> > unsatCore;
+      if (z3solver) {
+        unsatCore = z3solver->getUnsatCore();
+        delete z3solver;
+      } else
+        unsatCore = solver->getUnsatCore();
+
+      // State subsumed, we mark needed constraints on the
+      // path condition.
+
       if (DebugInterpolation == ITP_DEBUG_ALL ||
           DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
-        klee_message("Check success as query is true");
+        klee_message("Check success as solver decided validity");
       }
+
+      // We create path condition marking structure and mark core constraints
+      state.itreeNode->unsatCoreInterpolation(unsatCore);
+
+      // We build memory bounds interpolants from pointer values
+      for (std::set<llvm::Value *>::iterator it = corePointerValues.begin(),
+                                             ie = corePointerValues.end();
+           it != ie; ++it) {
+        state.itreeNode->pointerValuesInterpolation(*it);
+      }
+
       return true;
     }
-    if (DebugInterpolation == ITP_DEBUG_ALL ||
-        DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
-      klee_message("Check failure as query is non-true");
-    }
-    return false;
-  }
 
-  if (success && result == Solver::True) {
-    std::vector<ref<Expr> > unsatCore;
-    if (z3solver) {
-      unsatCore = z3solver->getUnsatCore();
+    // Here the solver could not decide that the subsumption is valid. It may
+    // have decided invalidity, however, CexCachingSolver::computeValidity,
+    // which was eventually called from solver->evaluate is conservative, where
+    // it returns Solver::Unknown even in case when invalidity is established by
+    // the solver.
+    if (z3solver)
       delete z3solver;
-    } else
-      unsatCore = solver->getUnsatCore();
 
-    // State subsumed, we mark needed constraints on the
-    // path condition.
-
-    // We create path condition marking structure to mark core constraints
-    state.itreeNode->unsatCoreMarking(unsatCore);
     if (DebugInterpolation == ITP_DEBUG_ALL ||
         DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
-      klee_message("Check success as solver decided validity");
+      klee_message("Check failure as solver did not decide validity");
     }
-    return true;
-  }
-
-  // Here the solver could not decide that the subsumption is valid.
-  // It may have decided invalidity, however,
-  // CexCachingSolver::computeValidity,
-  // which was eventually called from solver->evaluate
-  // is conservative, where it returns Solver::Unknown even in case when
-  // invalidity is established by the solver.
-  if (z3solver)
-    delete z3solver;
-
-  if (DebugInterpolation == ITP_DEBUG_ALL ||
-      DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
-    klee_message("Check failure as solver did not decide validity");
   }
 #endif /* ENABLE_Z3 */
   return false;
@@ -1827,19 +1998,17 @@ void SubsumptionTableEntry::print(llvm::raw_ostream &stream) const {
   if (!concreteAddressStore.empty()) {
     stream << "concrete store = [";
     for (Dependency::ConcreteStore::const_iterator
-             it1Begin = concreteAddressStore.begin(),
-             it1End = concreteAddressStore.end(), it1 = it1Begin;
-         it1 != it1End; ++it1) {
+             is1 = concreteAddressStore.begin(),
+             ie1 = concreteAddressStore.end(), it1 = is1;
+         it1 != ie1; ++it1) {
       for (Dependency::ConcreteStoreMap::const_iterator
-               it2Begin = it1->second.begin(),
-               it2End = it1->second.end(), it2 = it2Begin;
-           it2 != it2End; ++it2) {
-        if (it1 != it1Begin || it2 != it2Begin)
+               is2 = it1->second.begin(),
+               ie2 = it1->second.end(), it2 = is2;
+           it2 != ie2; ++it2) {
+        if (it1 != is1 || it2 != is2)
           stream << ",";
-        stream << "(";
-        it2->second.first->print(stream);
-        stream << ",";
-        it2->second.second->print(stream);
+        stream << "(" << it2->first << ",\n";
+        it2->second->print(stream);
         stream << ")";
       }
     }
@@ -1849,14 +2018,14 @@ void SubsumptionTableEntry::print(llvm::raw_ostream &stream) const {
   if (!symbolicAddressStore.empty()) {
     stream << "symbolic store = [";
     for (Dependency::SymbolicStore::const_iterator
-             it1Begin = symbolicAddressStore.begin(),
-             it1End = symbolicAddressStore.end(), it1 = it1Begin;
-         it1 != it1End; ++it1) {
+             is1 = symbolicAddressStore.begin(),
+             ie1 = symbolicAddressStore.end(), it1 = is1;
+         it1 != ie1; ++it1) {
       for (Dependency::SymbolicStoreMap::const_iterator
-               it2Begin = it1->second.begin(),
-               it2End = it1->second.end(), it2 = it2Begin;
-           it2 != it2End; ++it2) {
-        if (it1 != it1Begin || it2 != it2Begin)
+               is2 = it1->second.begin(),
+               ie2 = it1->second.end(), it2 = is2;
+           it2 != ie2; ++it2) {
+        if (it1 != is1 || it2 != is2)
           stream << ",";
         stream << "(";
         it2->first->print(stream);
@@ -1889,6 +2058,14 @@ void SubsumptionTableEntry::printStat(std::stringstream &stream) {
   stream << "KLEE: done:     Number of solver calls for subsumption check "
             "(failed) = " << stats::subsumptionQueryCount.getValue() << " ("
          << stats::subsumptionQueryFailureCount.getValue() << ")\n";
+  stream << "KLEE: done:     Concrete store expression build time (ms) = "
+         << ((double)concreteStoreExpressionBuildTime.getValue()) / 1000
+         << "\n";
+  stream << "KLEE: done:     Symbolic store expression build time (ms) = "
+         << ((double)symbolicStoreExpressionBuildTime.getValue()) / 1000
+         << "\n";
+  stream << "KLEE: done:     Solver access time (ms) = "
+         << ((double)solverAccessTime.getValue()) / 1000 << "\n";
 }
 
 /**/
@@ -1897,10 +2074,12 @@ Statistic ITree::setCurrentINodeTime("SetCurrentINodeTime",
                                      "SetCurrentINodeTime");
 Statistic ITree::removeTime("RemoveTime", "RemoveTime");
 Statistic ITree::subsumptionCheckTime("SubsumptionCheckTime",
-                                      "SubsubmptionCheckTime");
+                                      "SubsumptionCheckTime");
 Statistic ITree::markPathConditionTime("MarkPathConditionTime", "MarkPCTime");
 Statistic ITree::splitTime("SplitTime", "SplitTime");
 Statistic ITree::executeOnNodeTime("ExecuteOnNodeTime", "ExecuteOnNodeTime");
+Statistic ITree::executeMemoryOperationTime("ExecuteMemoryOperationTime",
+                                            "ExecuteMemoryOperationTime");
 
 double ITree::entryNumber;
 
@@ -1923,6 +2102,8 @@ void ITree::printTimeStat(std::stringstream &stream) {
          << "\n";
   stream << "KLEE: done:     executeOnNode = "
          << ((double)executeOnNodeTime.getValue()) / 1000 << "\n";
+  stream << "KLEE: done:     executeMemoryOperation = "
+         << ((double)executeMemoryOperationTime.getValue()) / 1000 << "\n";
 }
 
 void ITree::printTableStat(std::stringstream &stream) {
@@ -1965,10 +2146,12 @@ std::string ITree::getInterpolationStat() {
   return stream.str();
 }
 
-ITree::ITree(ExecutionState *_root) {
+ITree::ITree(ExecutionState *_root, llvm::DataLayout *_targetData)
+    : targetData(_targetData) {
   currentINode = 0;
+  assert(_targetData && "target data layout not provided");
   if (!_root->itreeNode) {
-    currentINode = new ITreeNode(0);
+    currentINode = new ITreeNode(0, _targetData);
   }
   root = currentINode;
 }
@@ -1988,10 +2171,9 @@ ITree::~ITree() {
            it = subsumptionTable.begin(),
            ie = subsumptionTable.end();
        it != ie; ++it) {
-    for (std::deque<SubsumptionTableEntry *>::iterator
-             it1 = it->second.begin(),
-             it1End = it->second.end();
-         it1 != it1End; ++it1) {
+    for (std::deque<SubsumptionTableEntry *>::iterator it1 = it->second.begin(),
+                                                       ie1 = it->second.end();
+         it1 != ie1; ++it1) {
       delete *it1;
     }
     it->second.clear();
@@ -2020,17 +2202,23 @@ bool ITree::subsumptionCheck(TimingSolver *solver, ExecutionState &state,
   std::deque<SubsumptionTableEntry *> entryList =
       subsumptionTable[state.itreeNode->getProgramPoint()];
 
-  if (entryList.empty())
+  if (DebugInterpolation == ITP_DEBUG_ALL ||
+      DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
+    klee_message("Subsumption check for Node #%lu, Program Point %lu",
+                 state.itreeNode->getNodeSequenceNumber(),
+                 state.itreeNode->getProgramPoint());
+  }
+
+  if (entryList.empty()) {
+    if (DebugInterpolation == ITP_DEBUG_ALL ||
+        DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
+      klee_message("Check failure due to empty entry list");
+    }
     return false;
+  }
 
   std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
   storedExpressions = state.itreeNode->getStoredExpressions();
-
-  if (DebugInterpolation == ITP_DEBUG_ALL ||
-      DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
-    klee_message("Subsumption check for Node #%lu",
-                 state.itreeNode->getNodeSequenceNumber());
-  }
 
   // Iterate the subsumption table entry with reverse iterator because
   // the successful subsumption mostly happen in the newest entry.
@@ -2038,7 +2226,6 @@ bool ITree::subsumptionCheck(TimingSolver *solver, ExecutionState &state,
            it = entryList.rbegin(),
            ie = entryList.rend();
        it != ie; ++it) {
-
     if ((*it)->subsumed(solver, state, timeout, storedExpressions)) {
       // We mark as subsumed such that the node will not be
       // stored into table (the table already contains a more
@@ -2073,6 +2260,7 @@ void ITree::setCurrentINode(ExecutionState &state) {
 }
 
 void ITree::remove(ITreeNode *node) {
+#ifdef ENABLE_Z3
   TimerStatIncrementer t(removeTime);
   assert(!node->left && !node->right);
   do {
@@ -2081,7 +2269,20 @@ void ITree::remove(ITreeNode *node) {
     // As the node is about to be deleted, it must have been completely
     // traversed, hence the correct time to table the interpolant.
     if (!node->isSubsumed && node->storable) {
+      if (DebugInterpolation == ITP_DEBUG_ALL ||
+          DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
+        klee_message("Storing entry for Node #%lu, Program Point %lu",
+                     node->getNodeSequenceNumber(), node->getProgramPoint());
+      }
       SubsumptionTableEntry *entry = new SubsumptionTableEntry(node);
+      if (DebugInterpolation == ITP_DEBUG_ALL ||
+          DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
+        std::string msg;
+        llvm::raw_string_ostream out(msg);
+        entry->print(out);
+        out.flush();
+        klee_message("%s", msg.c_str());
+      }
       store(entry);
       SearchTree::addTableEntryMapping(node, entry);
     }
@@ -2097,6 +2298,7 @@ void ITree::remove(ITreeNode *node) {
     }
     node = p;
   } while (node && !node->left && !node->right);
+#endif
 }
 
 std::pair<ITreeNode *, ITreeNode *>
@@ -2220,8 +2422,8 @@ void ITree::print(llvm::raw_ostream &stream) const {
        it != ie; ++it) {
     for (std::deque<SubsumptionTableEntry *>::const_iterator
              it1 = it->second.begin(),
-             it1End = it->second.end();
-         it1 != it1End; ++it1) {
+             ie1 = it->second.end();
+         it1 != ie1; ++it1) {
       (*it1)->print(stream);
     }
   }
@@ -2270,16 +2472,17 @@ void ITreeNode::printTimeStat(std::stringstream &stream) {
          << ((double)getStoredCoreExpressionsTime.getValue()) / 1000 << "\n";
 }
 
-ITreeNode::ITreeNode(ITreeNode *_parent)
+ITreeNode::ITreeNode(ITreeNode *_parent, llvm::DataLayout *_targetData)
     : parent(_parent), left(0), right(0), programPoint(0),
       nodeSequenceNumber(nextNodeSequenceNumber++), isSubsumed(false),
       storable(true), graph(_parent ? _parent->graph : 0),
-      instructionsDepth(_parent ? _parent->instructionsDepth : 0) {
+      instructionsDepth(_parent ? _parent->instructionsDepth : 0),
+      targetData(_targetData) {
 
   pathCondition = (_parent != 0) ? _parent->pathCondition : 0;
 
   // Inherit the abstract dependency or NULL
-  dependency = new Dependency(_parent ? _parent->dependency : 0);
+  dependency = new Dependency(_parent ? _parent->dependency : 0, _targetData);
 }
 
 ITreeNode::~ITreeNode() {
@@ -2315,8 +2518,8 @@ void ITreeNode::addConstraint(ref<Expr> &constraint, llvm::Value *condition) {
 void ITreeNode::split(ExecutionState *leftData, ExecutionState *rightData) {
   TimerStatIncrementer t(splitTime);
   assert(left == 0 && right == 0);
-  leftData->itreeNode = left = new ITreeNode(this);
-  rightData->itreeNode = right = new ITreeNode(this);
+  leftData->itreeNode = left = new ITreeNode(this, targetData);
+  rightData->itreeNode = right = new ITreeNode(this, targetData);
 }
 
 void ITreeNode::execute(llvm::Instruction *instr, std::vector<ref<Expr> > &args,
@@ -2371,7 +2574,7 @@ uint64_t ITreeNode::getInstructionsDepth() { return instructionsDepth; }
 
 void ITreeNode::incInstructionsDepth() { ++instructionsDepth; }
 
-void ITreeNode::unsatCoreMarking(std::vector<ref<Expr> > unsatCore) {
+void ITreeNode::unsatCoreInterpolation(std::vector<ref<Expr> > unsatCore) {
   // State subsumed, we mark needed constraints on the path condition. We create
   // path condition marking structure to mark core constraints
   std::map<Expr *, PathCondition *> markerMap;
@@ -2388,8 +2591,8 @@ void ITreeNode::unsatCoreMarking(std::vector<ref<Expr> > unsatCore) {
   }
 
   for (std::vector<ref<Expr> >::iterator it1 = unsatCore.begin(),
-                                         it1End = unsatCore.end();
-       it1 != it1End; ++it1) {
+                                         ie1 = unsatCore.end();
+       it1 != ie1; ++it1) {
     // FIXME: Sometimes some constraints are not in the PC. This is
     // because constraints are not properly added at state merge.
     PathCondition *cond = markerMap[it1->get()];
