@@ -168,7 +168,7 @@ void MemoryLocation::adjustOffsetBound(ref<VersionedValue> checkedAddress) {
 	uint64_t offsetInt = o->getZExtValue();
         uint64_t newBound = size - (c->getZExtValue() - offsetInt);
         if (concreteOffsetBound > newBound) {
-          assert(newBound > offsetInt);
+          assert(newBound > offsetInt && "incorrect bound");
           concreteOffsetBound = newBound;
         }
         continue;
@@ -543,8 +543,11 @@ ref<VersionedValue> Dependency::getLatestValue(llvm::Value *value,
         llvm::dyn_cast<llvm::ConstantExpr>(value)->getAsInstruction();
     if (llvm::GetElementPtrInst *gi =
             llvm::dyn_cast<llvm::GetElementPtrInst>(asInstruction)) {
-      uint64_t size =
-          targetData->getTypeStoreSize(gi->getPointerOperand()->getType());
+      llvm::Type *pointerElementType =
+          gi->getPointerOperand()->getType()->getPointerElementType();
+      uint64_t size = pointerElementType->isSized()
+                          ? targetData->getTypeStoreSize(pointerElementType)
+                          : 0;
       return getNewPointerValue(value, valueExpr, size);
     }
   }
