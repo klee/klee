@@ -240,6 +240,7 @@ void VersionedValue::printNoDependency(llvm::raw_ostream &stream) const {
   valueExpr->print(stream);
   stream << "]#" << reinterpret_cast<uintptr_t>(this);
 }
+
 /**/
 
 void StoredValue::init(ref<VersionedValue> vvalue,

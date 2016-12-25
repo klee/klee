@@ -299,6 +299,31 @@ public:
 };
 
 /// \brief The class that implements an entry (record) in the subsumption table.
+///
+/// The subsumption table records the generalization of state such that
+/// starting from this generalization, all symbolic execution will reach
+/// the same conclusion (falsity of branch or successful memory bounds check).
+/// Such generalization is a form of Craig interpolation. It is used to
+/// subsume other symbolic execution paths encountered later, as any
+/// extension of a subsumed path would only reach infeasibility or
+/// the same conclusion that has already been seen.
+///
+/// This class implements an entry in the subsumption table. It is
+/// instantiated when the a traversal of a symbolic execution subtree has
+/// finished in the ITree#remove method. This class basically stores a
+/// subset of the path condition (the SubsumptionTableEntry#interpolant
+/// field), plus the fragment of memory (allocations). They are components
+/// that are needed to ensure the previously-seen conclusions. The memory
+/// fragments are stored in either SubsumptionTableEntry#concreteAddressStore
+/// or SubsumptionTableEntry#symbolicAddressStore, depending on whether
+/// the memory fragment is concretely addressed or symbolically addressed.
+/// Both fields are multi-level maps that are first indexed by the LLVM
+/// value that represents the allocation (e.g., the call to <b>malloc</b>,
+/// the <b>alloca</b> instruction, etc.).
+///
+/// \see ITree
+/// \see ITreeNode
+/// \see Dependency
 class SubsumptionTableEntry {
   friend class ITree;
 
@@ -475,6 +500,7 @@ public:
 ///
 /// \see ITree
 /// \see Dependency
+/// \see SubsumptionTableEntry
 /// \see PathCondition
 class ITreeNode {
   friend class ITree;
