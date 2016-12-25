@@ -323,15 +323,27 @@ ref<Expr> StoredValue::getBoundsCheck(ref<StoredValue> stateValue) const {
   ref<Expr> res;
 #ifdef ENABLE_Z3
 
-  // For a state to be subsumed, the subsuming state weaker, which in this case
-  // means that it should specify less allocations, so all allocations in the
-  // subsuming (this), should be specified by the subsumed (the stateValue
-  // argument).
+  // In principle, for a state to be subsumed, the subsuming state must be
+  // weaker, which in this case means that it should specify less allocations,
+  // so all allocations in the subsuming (this), should be specified by the
+  // subsumed (the stateValue argument), and we iterate over allocation of
+  // the current object and for each such allocation, retrieve the
+  // information from the argument object; in this way resulting in
+  // less iterations compared to doing it the other way around.
   for (std::map<llvm::Value *, std::set<ref<Expr> > >::const_iterator
            it = allocationBounds.begin(),
            ie = allocationBounds.end();
        it != ie; ++it) {
     std::set<ref<Expr> > tabledBounds = it->second;
+    std::map<llvm::Value *, std::set<ref<Expr> > >::iterator iter =
+        stateValue->allocationOffsets.find(it->first);
+    if (iter == stateValue->allocationOffsets.end()) {
+      // This is a deviation of the principle mentioned above; here we
+      // allow the other state to not define an allocation offset, as we
+      // assume it is the case that the stored interpolant has an allocation
+      // of a local state of a function that was called but then exited.
+      continue;
+    }
     std::set<ref<Expr> > stateOffsets =
         stateValue->allocationOffsets.at(it->first);
 
