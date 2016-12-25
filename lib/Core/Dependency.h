@@ -496,6 +496,24 @@ namespace klee {
   /// with modified offsets according to the offset argument of the
   /// instruction.
   ///
+  /// <b>Notes on why stacks are not used</b>
+  ///
+  /// Here we are not using stacks to implement the shadow memory
+  /// for dependency information. The reason is that when a function
+  /// is called and then it returned, its local allocations can not
+  /// normally be removed from consideration as the function may
+  /// contain unexplored branches. So therefore, it is in principle the
+  /// case that subsequently allocated memory regions are disjoint from
+  /// whatever local memories that have ever been allocated throughout
+  /// the execution anyway. This, however, conflicts with the notion
+  /// of the latest value of a variable, where there is a potential
+  /// for confusion where, given a recursive function, the latest
+  /// value of a local variable is considered to be the one allocated
+  /// in its recursive call that has been exited (because the local
+  /// variable in the recursive call is allocated lated). But for this,
+  /// we add another check to ensure that the stored value match
+  /// (in Dependency#getLatestValue).
+  ///
   /// \see ITree
   /// \see ITreeNode
   /// \see VersionedValue
