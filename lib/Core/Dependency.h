@@ -110,7 +110,7 @@ namespace klee {
             uint64_t a = ca->getZExtValue();
             uint64_t b = cb->getZExtValue();
             uint64_t o = co->getZExtValue();
-            assert(o == (a - b));
+            assert(o == (a - b) && "wrong offset");
           }
         }
       }
