@@ -344,8 +344,7 @@ ref<Expr> StoredValue::getBoundsCheck(ref<StoredValue> stateValue) const {
       // of a local state of a function that was called but then exited.
       continue;
     }
-    std::set<ref<Expr> > stateOffsets =
-        stateValue->allocationOffsets.at(it->first);
+    std::set<ref<Expr> > stateOffsets = iter->second;
 
     assert(!tabledBounds.empty() && "tabled bounds empty");
 
