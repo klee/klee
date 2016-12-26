@@ -38,11 +38,11 @@ class PathCondition;
 
 class SubsumptionTableEntry;
 
-/// \brief The implementation of the search tree for outputting to .dot file.
-class SearchTree {
+/// \brief The interpolation tree graph for outputting to .dot file.
+class ITreeGraph {
 
-  /// \brief Global search tree instance
-  static SearchTree *instance;
+  /// \brief Global tree graph instance
+  static ITreeGraph *instance;
 
   /// Encapsulates functionality of expression builder
   class PrettyExpressionBuilder {
@@ -130,7 +130,7 @@ class SearchTree {
 
   /// Node information
   class Node {
-    friend class SearchTree;
+    friend class ITreeGraph;
 
     /// \brief The node id, also the order in which it is traversed
     uint64_t nodeSequenceNumber;
@@ -140,7 +140,7 @@ class SearchTree {
     uint64_t internalNodeId;
 
     /// \brief False and true children of this node
-    SearchTree::Node *falseTarget, *trueTarget;
+    ITreeGraph::Node *falseTarget, *trueTarget;
 
     /// \brief Indicates that node is subsumed
     bool subsumed;
@@ -165,16 +165,16 @@ class SearchTree {
       pathConditionTable.clear();
     }
 
-    static SearchTree::Node *createNode() { return new SearchTree::Node(); }
+    static ITreeGraph::Node *createNode() { return new ITreeGraph::Node(); }
   };
 
   class NumberedEdge {
-    SearchTree::Node *source;
-    SearchTree::Node *destination;
+    ITreeGraph::Node *source;
+    ITreeGraph::Node *destination;
     uint64_t number;
 
   public:
-    NumberedEdge(SearchTree::Node *_source, SearchTree::Node *_destination,
+    NumberedEdge(ITreeGraph::Node *_source, ITreeGraph::Node *_destination,
                  uint64_t _number)
         : source(_source), destination(_destination), number(_number) {}
 
@@ -186,23 +186,23 @@ class SearchTree {
     std::string render() const;
   };
 
-  SearchTree::Node *root;
-  std::map<ITreeNode *, SearchTree::Node *> itreeNodeMap;
-  std::map<SubsumptionTableEntry *, SearchTree::Node *> tableEntryMap;
-  std::vector<SearchTree::NumberedEdge *> subsumptionEdges;
-  std::map<PathCondition *, SearchTree::Node *> pathConditionMap;
+  ITreeGraph::Node *root;
+  std::map<ITreeNode *, ITreeGraph::Node *> itreeNodeMap;
+  std::map<SubsumptionTableEntry *, ITreeGraph::Node *> tableEntryMap;
+  std::vector<ITreeGraph::NumberedEdge *> subsumptionEdges;
+  std::map<PathCondition *, ITreeGraph::Node *> pathConditionMap;
 
   uint64_t subsumptionEdgeNumber;
 
   uint64_t internalNodeId;
 
-  std::string recurseRender(SearchTree::Node *node);
+  std::string recurseRender(ITreeGraph::Node *node);
 
   std::string render();
 
-  SearchTree(ITreeNode *_root);
+  ITreeGraph(ITreeNode *_root);
 
-  ~SearchTree();
+  ~ITreeGraph();
 
 public:
   static void initialize(ITreeNode *root) {
@@ -211,7 +211,7 @@ public:
 
     if (!instance)
       delete instance;
-    instance = new SearchTree(root);
+    instance = new ITreeGraph(root);
   }
 
   static void deallocate() {
@@ -541,7 +541,7 @@ private:
   bool storable;
 
   /// \brief Graph for displaying as .dot file
-  SearchTree *graph;
+  ITreeGraph *graph;
 
   /// \brief For statistics on the number of instructions executed along a path.
   uint64_t instructionsDepth;

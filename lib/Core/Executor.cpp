@@ -3984,7 +3984,7 @@ void Executor::runFunctionAsMain(Function *f,
   if (INTERPOLATION_ENABLED) {
     interpTree = new ITree(state, kmodule->targetData); // Added by Felicia
     state->itreeNode = interpTree->root;
-    SearchTree::initialize(interpTree->root);
+    ITreeGraph::initialize(interpTree->root);
   }
 
   run(*state);
@@ -3992,8 +3992,8 @@ void Executor::runFunctionAsMain(Function *f,
   processTree = 0;
 
   if (INTERPOLATION_ENABLED) {
-    SearchTree::save(interpreterHandler->getOutputFilename("tree.dot"));
-    SearchTree::deallocate();
+    ITreeGraph::save(interpreterHandler->getOutputFilename("tree.dot"));
+    ITreeGraph::deallocate();
 
     delete interpTree;
     interpTree = 0;
