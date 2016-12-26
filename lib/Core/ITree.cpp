@@ -32,36 +32,36 @@ using namespace klee;
 
 /**/
 
-std::string SearchTree::PrettyExpressionBuilder::bvConst32(uint32_t value) {
+std::string ITreeGraph::PrettyExpressionBuilder::bvConst32(uint32_t value) {
   std::ostringstream stream;
   stream << value;
   return stream.str();
 }
-std::string SearchTree::PrettyExpressionBuilder::bvConst64(uint64_t value) {
+std::string ITreeGraph::PrettyExpressionBuilder::bvConst64(uint64_t value) {
   std::ostringstream stream;
   stream << value;
   return stream.str();
 }
-std::string SearchTree::PrettyExpressionBuilder::bvZExtConst(uint64_t value) {
+std::string ITreeGraph::PrettyExpressionBuilder::bvZExtConst(uint64_t value) {
   return bvConst64(value);
 }
-std::string SearchTree::PrettyExpressionBuilder::bvSExtConst(uint64_t value) {
+std::string ITreeGraph::PrettyExpressionBuilder::bvSExtConst(uint64_t value) {
   return bvConst64(value);
 }
-std::string SearchTree::PrettyExpressionBuilder::bvBoolExtract(std::string expr,
+std::string ITreeGraph::PrettyExpressionBuilder::bvBoolExtract(std::string expr,
                                                                int bit) {
   std::ostringstream stream;
   stream << expr << "[" << bit << "]";
   return stream.str();
 }
-std::string SearchTree::PrettyExpressionBuilder::bvExtract(std::string expr,
+std::string ITreeGraph::PrettyExpressionBuilder::bvExtract(std::string expr,
                                                            unsigned top,
                                                            unsigned bottom) {
   std::ostringstream stream;
   stream << expr << "[" << top << "," << bottom << "]";
   return stream.str();
 }
-std::string SearchTree::PrettyExpressionBuilder::eqExpr(std::string a,
+std::string ITreeGraph::PrettyExpressionBuilder::eqExpr(std::string a,
                                                         std::string b) {
   if (a == "false")
     return "!" + b;
@@ -69,148 +69,148 @@ std::string SearchTree::PrettyExpressionBuilder::eqExpr(std::string a,
 }
 
 // logical left and right shift (not arithmetic)
-std::string SearchTree::PrettyExpressionBuilder::bvLeftShift(std::string expr,
+std::string ITreeGraph::PrettyExpressionBuilder::bvLeftShift(std::string expr,
                                                              unsigned shift) {
   std::ostringstream stream;
   stream << "(" << expr << " \\<\\< " << shift << ")";
   return stream.str();
 }
-std::string SearchTree::PrettyExpressionBuilder::bvRightShift(std::string expr,
+std::string ITreeGraph::PrettyExpressionBuilder::bvRightShift(std::string expr,
                                                               unsigned shift) {
   std::ostringstream stream;
   stream << "(" << expr << " \\>\\> " << shift << ")";
   return stream.str();
 }
 std::string
-SearchTree::PrettyExpressionBuilder::bvVarLeftShift(std::string expr,
+ITreeGraph::PrettyExpressionBuilder::bvVarLeftShift(std::string expr,
                                                     std::string shift) {
   return "(" + expr + " \\<\\< " + shift + ")";
 }
 std::string
-SearchTree::PrettyExpressionBuilder::bvVarRightShift(std::string expr,
+ITreeGraph::PrettyExpressionBuilder::bvVarRightShift(std::string expr,
                                                      std::string shift) {
   return "(" + expr + " \\>\\> " + shift + ")";
 }
 std::string
-SearchTree::PrettyExpressionBuilder::bvVarArithRightShift(std::string expr,
+ITreeGraph::PrettyExpressionBuilder::bvVarArithRightShift(std::string expr,
                                                           std::string shift) {
   return bvVarRightShift(expr, shift);
 }
 
 // Some STP-style bitvector arithmetic
 std::string
-SearchTree::PrettyExpressionBuilder::bvMinusExpr(std::string minuend,
+ITreeGraph::PrettyExpressionBuilder::bvMinusExpr(std::string minuend,
                                                  std::string subtrahend) {
   return "(" + minuend + " - " + subtrahend + ")";
 }
 std::string
-SearchTree::PrettyExpressionBuilder::bvPlusExpr(std::string augend,
+ITreeGraph::PrettyExpressionBuilder::bvPlusExpr(std::string augend,
                                                 std::string addend) {
   return "(" + augend + " + " + addend + ")";
 }
 std::string
-SearchTree::PrettyExpressionBuilder::bvMultExpr(std::string multiplacand,
+ITreeGraph::PrettyExpressionBuilder::bvMultExpr(std::string multiplacand,
                                                 std::string multiplier) {
   return "(" + multiplacand + " * " + multiplier + ")";
 }
 std::string
-SearchTree::PrettyExpressionBuilder::bvDivExpr(std::string dividend,
+ITreeGraph::PrettyExpressionBuilder::bvDivExpr(std::string dividend,
                                                std::string divisor) {
   return "(" + dividend + " / " + divisor + ")";
 }
 std::string
-SearchTree::PrettyExpressionBuilder::sbvDivExpr(std::string dividend,
+ITreeGraph::PrettyExpressionBuilder::sbvDivExpr(std::string dividend,
                                                 std::string divisor) {
   return "(" + dividend + " / " + divisor + ")";
 }
 std::string
-SearchTree::PrettyExpressionBuilder::bvModExpr(std::string dividend,
+ITreeGraph::PrettyExpressionBuilder::bvModExpr(std::string dividend,
                                                std::string divisor) {
   return "(" + dividend + " % " + divisor + ")";
 }
 std::string
-SearchTree::PrettyExpressionBuilder::sbvModExpr(std::string dividend,
+ITreeGraph::PrettyExpressionBuilder::sbvModExpr(std::string dividend,
                                                 std::string divisor) {
   return "(" + dividend + " % " + divisor + ")";
 }
-std::string SearchTree::PrettyExpressionBuilder::notExpr(std::string expr) {
+std::string ITreeGraph::PrettyExpressionBuilder::notExpr(std::string expr) {
   return "!(" + expr + ")";
 }
-std::string SearchTree::PrettyExpressionBuilder::bvAndExpr(std::string lhs,
+std::string ITreeGraph::PrettyExpressionBuilder::bvAndExpr(std::string lhs,
                                                            std::string rhs) {
   return "(" + lhs + " & " + rhs + ")";
 }
-std::string SearchTree::PrettyExpressionBuilder::bvOrExpr(std::string lhs,
+std::string ITreeGraph::PrettyExpressionBuilder::bvOrExpr(std::string lhs,
                                                           std::string rhs) {
   return "(" + lhs + " \\| " + rhs + ")";
 }
-std::string SearchTree::PrettyExpressionBuilder::iffExpr(std::string lhs,
+std::string ITreeGraph::PrettyExpressionBuilder::iffExpr(std::string lhs,
                                                          std::string rhs) {
   return "(" + lhs + " \\<=\\> " + rhs + ")";
 }
-std::string SearchTree::PrettyExpressionBuilder::bvXorExpr(std::string lhs,
+std::string ITreeGraph::PrettyExpressionBuilder::bvXorExpr(std::string lhs,
                                                            std::string rhs) {
   return "(" + lhs + " xor " + rhs + ")";
 }
-std::string SearchTree::PrettyExpressionBuilder::bvSignExtend(std::string src) {
+std::string ITreeGraph::PrettyExpressionBuilder::bvSignExtend(std::string src) {
   return src;
 }
 
 // Some STP-style array domain interface
-std::string SearchTree::PrettyExpressionBuilder::writeExpr(std::string array,
+std::string ITreeGraph::PrettyExpressionBuilder::writeExpr(std::string array,
                                                            std::string index,
                                                            std::string value) {
   return "update(" + array + "," + index + "," + value + ")";
 }
-std::string SearchTree::PrettyExpressionBuilder::readExpr(std::string array,
+std::string ITreeGraph::PrettyExpressionBuilder::readExpr(std::string array,
                                                           std::string index) {
   return array + "[" + index + "]";
 }
 
 // ITE-expression constructor
-std::string SearchTree::PrettyExpressionBuilder::iteExpr(
+std::string ITreeGraph::PrettyExpressionBuilder::iteExpr(
     std::string condition, std::string whenTrue, std::string whenFalse) {
   return "ite(" + condition + "," + whenTrue + "," + whenFalse + ")";
 }
 
 // Bitvector comparison
-std::string SearchTree::PrettyExpressionBuilder::bvLtExpr(std::string lhs,
+std::string ITreeGraph::PrettyExpressionBuilder::bvLtExpr(std::string lhs,
                                                           std::string rhs) {
   return "(" + lhs + " \\< " + rhs + ")";
 }
-std::string SearchTree::PrettyExpressionBuilder::bvLeExpr(std::string lhs,
+std::string ITreeGraph::PrettyExpressionBuilder::bvLeExpr(std::string lhs,
                                                           std::string rhs) {
   return "(" + lhs + " \\<= " + rhs + ")";
 }
-std::string SearchTree::PrettyExpressionBuilder::sbvLtExpr(std::string lhs,
+std::string ITreeGraph::PrettyExpressionBuilder::sbvLtExpr(std::string lhs,
                                                            std::string rhs) {
   return "(" + lhs + " \\< " + rhs + ")";
 }
-std::string SearchTree::PrettyExpressionBuilder::sbvLeExpr(std::string lhs,
+std::string ITreeGraph::PrettyExpressionBuilder::sbvLeExpr(std::string lhs,
                                                            std::string rhs) {
   return "(" + lhs + " \\<= " + rhs + ")";
 }
 
-std::string SearchTree::PrettyExpressionBuilder::constructAShrByConstant(
+std::string ITreeGraph::PrettyExpressionBuilder::constructAShrByConstant(
     std::string expr, unsigned shift, std::string isSigned) {
   return bvRightShift(expr, shift);
 }
 std::string
-SearchTree::PrettyExpressionBuilder::constructMulByConstant(std::string expr,
+ITreeGraph::PrettyExpressionBuilder::constructMulByConstant(std::string expr,
                                                             uint64_t x) {
   std::ostringstream stream;
   stream << "(" << expr << " * " << x << ")";
   return stream.str();
 }
 std::string
-SearchTree::PrettyExpressionBuilder::constructUDivByConstant(std::string expr,
+ITreeGraph::PrettyExpressionBuilder::constructUDivByConstant(std::string expr,
                                                              uint64_t d) {
   std::ostringstream stream;
   stream << "(" << expr << " / " << d << ")";
   return stream.str();
 }
 std::string
-SearchTree::PrettyExpressionBuilder::constructSDivByConstant(std::string expr,
+ITreeGraph::PrettyExpressionBuilder::constructSDivByConstant(std::string expr,
                                                              uint64_t d) {
   std::ostringstream stream;
   stream << "(" << expr << " / " << d << ")";
@@ -218,7 +218,7 @@ SearchTree::PrettyExpressionBuilder::constructSDivByConstant(std::string expr,
 }
 
 std::string
-SearchTree::PrettyExpressionBuilder::getInitialArray(const Array *root) {
+ITreeGraph::PrettyExpressionBuilder::getInitialArray(const Array *root) {
   std::string arrayExpr =
       buildArray(root->name.c_str(), root->getDomain(), root->getRange());
 
@@ -233,7 +233,7 @@ SearchTree::PrettyExpressionBuilder::getInitialArray(const Array *root) {
   return arrayExpr;
 }
 std::string
-SearchTree::PrettyExpressionBuilder::getArrayForUpdate(const Array *root,
+ITreeGraph::PrettyExpressionBuilder::getArrayForUpdate(const Array *root,
                                                        const UpdateNode *un) {
   if (!un) {
     return (getInitialArray(root));
@@ -242,7 +242,7 @@ SearchTree::PrettyExpressionBuilder::getArrayForUpdate(const Array *root,
                    constructActual(un->index), constructActual(un->value));
 }
 
-std::string SearchTree::PrettyExpressionBuilder::constructActual(ref<Expr> e) {
+std::string ITreeGraph::PrettyExpressionBuilder::constructActual(ref<Expr> e) {
   switch (e->getKind()) {
   case Expr::Constant: {
     ConstantExpr *CE = cast<ConstantExpr>(e);
@@ -518,33 +518,33 @@ std::string SearchTree::PrettyExpressionBuilder::constructActual(ref<Expr> e) {
     return getTrue();
   }
 }
-std::string SearchTree::PrettyExpressionBuilder::construct(ref<Expr> e) {
+std::string ITreeGraph::PrettyExpressionBuilder::construct(ref<Expr> e) {
   PrettyExpressionBuilder *instance = new PrettyExpressionBuilder();
   std::string ret = instance->constructActual(e);
   delete instance;
   return ret;
 }
 
-std::string SearchTree::PrettyExpressionBuilder::buildArray(
+std::string ITreeGraph::PrettyExpressionBuilder::buildArray(
     const char *name, unsigned indexWidth, unsigned valueWidth) {
   return name;
 }
 
-std::string SearchTree::PrettyExpressionBuilder::getTrue() { return "true"; }
-std::string SearchTree::PrettyExpressionBuilder::getFalse() { return "false"; }
+std::string ITreeGraph::PrettyExpressionBuilder::getTrue() { return "true"; }
+std::string ITreeGraph::PrettyExpressionBuilder::getFalse() { return "false"; }
 std::string
-SearchTree::PrettyExpressionBuilder::getInitialRead(const Array *root,
+ITreeGraph::PrettyExpressionBuilder::getInitialRead(const Array *root,
                                                     unsigned index) {
   return readExpr(getInitialArray(root), bvConst32(index));
 }
 
-SearchTree::PrettyExpressionBuilder::PrettyExpressionBuilder() {}
+ITreeGraph::PrettyExpressionBuilder::PrettyExpressionBuilder() {}
 
-SearchTree::PrettyExpressionBuilder::~PrettyExpressionBuilder() {}
+ITreeGraph::PrettyExpressionBuilder::~PrettyExpressionBuilder() {}
 
 /**/
 
-std::string SearchTree::NumberedEdge::render() const {
+std::string ITreeGraph::NumberedEdge::render() const {
   std::ostringstream stream;
   stream << "Node" << source->nodeSequenceNumber << " -> Node"
          << destination->nodeSequenceNumber << " [style=dashed,label=\""
@@ -554,9 +554,9 @@ std::string SearchTree::NumberedEdge::render() const {
 
 /**/
 
-SearchTree *SearchTree::instance = 0;
+ITreeGraph *ITreeGraph::instance = 0;
 
-std::string SearchTree::recurseRender(SearchTree::Node *node) {
+std::string ITreeGraph::recurseRender(ITreeGraph::Node *node) {
   std::ostringstream stream;
 
   if (node->nodeSequenceNumber) {
@@ -650,7 +650,7 @@ std::string SearchTree::recurseRender(SearchTree::Node *node) {
   return stream.str();
 }
 
-std::string SearchTree::render() {
+std::string ITreeGraph::render() {
   std::string res("");
 
   // Simply return empty string when root is undefined
@@ -658,7 +658,7 @@ std::string SearchTree::render() {
     return res;
 
   std::ostringstream stream;
-  for (std::vector<SearchTree::NumberedEdge *>::iterator
+  for (std::vector<ITreeGraph::NumberedEdge *>::iterator
            it = subsumptionEdges.begin(),
            ie = subsumptionEdges.end();
        it != ie; ++it) {
@@ -672,19 +672,19 @@ std::string SearchTree::render() {
   return res;
 }
 
-SearchTree::SearchTree(ITreeNode *_root)
+ITreeGraph::ITreeGraph(ITreeNode *_root)
     : subsumptionEdgeNumber(0), internalNodeId(0) {
-  root = SearchTree::Node::createNode();
+  root = ITreeGraph::Node::createNode();
   itreeNodeMap[_root] = root;
 }
 
-SearchTree::~SearchTree() {
+ITreeGraph::~ITreeGraph() {
   if (root)
     delete root;
 
   itreeNodeMap.clear();
 
-  for (std::vector<SearchTree::NumberedEdge *>::iterator
+  for (std::vector<ITreeGraph::NumberedEdge *>::iterator
            it = subsumptionEdges.begin(),
            ie = subsumptionEdges.end();
        it != ie; ++it) {
@@ -693,30 +693,30 @@ SearchTree::~SearchTree() {
   subsumptionEdges.clear();
 }
 
-void SearchTree::addChildren(ITreeNode *parent, ITreeNode *falseChild,
+void ITreeGraph::addChildren(ITreeNode *parent, ITreeNode *falseChild,
                              ITreeNode *trueChild) {
   if (!OUTPUT_INTERPOLATION_TREE)
     return;
 
-  assert(SearchTree::instance && "Search tree graph not initialized");
+  assert(ITreeGraph::instance && "Search tree graph not initialized");
 
-  SearchTree::Node *parentNode = instance->itreeNodeMap[parent];
+  ITreeGraph::Node *parentNode = instance->itreeNodeMap[parent];
 
-  parentNode->falseTarget = SearchTree::Node::createNode();
-  parentNode->trueTarget = SearchTree::Node::createNode();
+  parentNode->falseTarget = ITreeGraph::Node::createNode();
+  parentNode->trueTarget = ITreeGraph::Node::createNode();
   instance->itreeNodeMap[falseChild] = parentNode->falseTarget;
   instance->itreeNodeMap[trueChild] = parentNode->trueTarget;
 }
 
-void SearchTree::setCurrentNode(ExecutionState &state,
+void ITreeGraph::setCurrentNode(ExecutionState &state,
                                 const uint64_t _nodeSequenceNumber) {
   if (!OUTPUT_INTERPOLATION_TREE)
     return;
 
-  assert(SearchTree::instance && "Search tree graph not initialized");
+  assert(ITreeGraph::instance && "Search tree graph not initialized");
 
   ITreeNode *iTreeNode = state.itreeNode;
-  SearchTree::Node *node = instance->itreeNodeMap[iTreeNode];
+  ITreeGraph::Node *node = instance->itreeNodeMap[iTreeNode];
   if (!node->nodeSequenceNumber) {
     std::string functionName(
         state.pc->inst->getParent()->getParent()->getName().str());
@@ -736,29 +736,29 @@ void SearchTree::setCurrentNode(ExecutionState &state,
   }
 }
 
-void SearchTree::markAsSubsumed(ITreeNode *iTreeNode,
+void ITreeGraph::markAsSubsumed(ITreeNode *iTreeNode,
                                 SubsumptionTableEntry *entry) {
   if (!OUTPUT_INTERPOLATION_TREE)
     return;
 
-  assert(SearchTree::instance && "Search tree graph not initialized");
+  assert(ITreeGraph::instance && "Search tree graph not initialized");
 
-  SearchTree::Node *node = instance->itreeNodeMap[iTreeNode];
+  ITreeGraph::Node *node = instance->itreeNodeMap[iTreeNode];
   node->subsumed = true;
-  SearchTree::Node *subsuming = instance->tableEntryMap[entry];
-  instance->subsumptionEdges.push_back(new SearchTree::NumberedEdge(
+  ITreeGraph::Node *subsuming = instance->tableEntryMap[entry];
+  instance->subsumptionEdges.push_back(new ITreeGraph::NumberedEdge(
       node, subsuming, ++(instance->subsumptionEdgeNumber)));
 }
 
-void SearchTree::addPathCondition(ITreeNode *iTreeNode,
+void ITreeGraph::addPathCondition(ITreeNode *iTreeNode,
                                   PathCondition *pathCondition,
                                   ref<Expr> condition) {
   if (!OUTPUT_INTERPOLATION_TREE)
     return;
 
-  assert(SearchTree::instance && "Search tree graph not initialized");
+  assert(ITreeGraph::instance && "Search tree graph not initialized");
 
-  SearchTree::Node *node = instance->itreeNodeMap[iTreeNode];
+  ITreeGraph::Node *node = instance->itreeNodeMap[iTreeNode];
 
   std::string s = PrettyExpressionBuilder::construct(condition);
 
@@ -767,33 +767,33 @@ void SearchTree::addPathCondition(ITreeNode *iTreeNode,
   instance->pathConditionMap[pathCondition] = node;
 }
 
-void SearchTree::addTableEntryMapping(ITreeNode *iTreeNode,
+void ITreeGraph::addTableEntryMapping(ITreeNode *iTreeNode,
                                       SubsumptionTableEntry *entry) {
   if (!OUTPUT_INTERPOLATION_TREE)
     return;
 
-  assert(SearchTree::instance && "Search tree graph not initialized");
+  assert(ITreeGraph::instance && "Search tree graph not initialized");
 
-  SearchTree::Node *node = instance->itreeNodeMap[iTreeNode];
+  ITreeGraph::Node *node = instance->itreeNodeMap[iTreeNode];
   instance->tableEntryMap[entry] = node;
 }
 
-void SearchTree::setAsCore(PathCondition *pathCondition) {
+void ITreeGraph::setAsCore(PathCondition *pathCondition) {
   if (!OUTPUT_INTERPOLATION_TREE)
     return;
 
-  assert(SearchTree::instance && "Search tree graph not initialized");
+  assert(ITreeGraph::instance && "Search tree graph not initialized");
 
   instance->pathConditionMap[pathCondition]
       ->pathConditionTable[pathCondition]
       .second = true;
 }
 
-void SearchTree::save(std::string dotFileName) {
+void ITreeGraph::save(std::string dotFileName) {
   if (!OUTPUT_INTERPOLATION_TREE)
     return;
 
-  assert(SearchTree::instance && "Search tree graph not initialized");
+  assert(ITreeGraph::instance && "Search tree graph not initialized");
 
   std::string g(instance->render());
   std::ofstream out(dotFileName.c_str());
@@ -832,7 +832,7 @@ void PathCondition::setAsCore() {
   core = true;
 
   // We mark constraint as core in the search tree graph as well.
-  SearchTree::setAsCore(this);
+  ITreeGraph::setAsCore(this);
 }
 
 bool PathCondition::isCore() const { return core; }
@@ -2233,7 +2233,7 @@ bool ITree::subsumptionCheck(TimingSolver *solver, ExecutionState &state,
       currentINode->isSubsumed = true;
 
       // Mark the node as subsumed, and create a subsumption edge
-      SearchTree::markAsSubsumed(currentINode, (*it));
+      ITreeGraph::markAsSubsumed(currentINode, (*it));
       return true;
     }
   }
@@ -2256,7 +2256,7 @@ void ITree::setCurrentINode(ExecutionState &state) {
   TimerStatIncrementer t(setCurrentINodeTime);
   currentINode = state.itreeNode;
   currentINode->setProgramPoint(state.pc->inst);
-  SearchTree::setCurrentNode(state, currentINode->nodeSequenceNumber);
+  ITreeGraph::setCurrentNode(state, currentINode->nodeSequenceNumber);
 }
 
 void ITree::remove(ITreeNode *node) {
@@ -2284,7 +2284,7 @@ void ITree::remove(ITreeNode *node) {
         klee_message("%s", msg.c_str());
       }
       store(entry);
-      SearchTree::addTableEntryMapping(node, entry);
+      ITreeGraph::addTableEntryMapping(node, entry);
     }
 
     delete node;
@@ -2305,7 +2305,7 @@ std::pair<ITreeNode *, ITreeNode *>
 ITree::split(ITreeNode *parent, ExecutionState *left, ExecutionState *right) {
   TimerStatIncrementer t(splitTime);
   parent->split(left, right);
-  SearchTree::addChildren(parent, parent->left, parent->right);
+  ITreeGraph::addChildren(parent, parent->left, parent->right);
   std::pair<ITreeNode *, ITreeNode *> ret(parent->left, parent->right);
   return ret;
 }
