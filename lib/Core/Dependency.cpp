@@ -614,6 +614,18 @@ ref<VersionedValue> Dependency::getLatestValue(llvm::Value *value,
       } else {
         ret = getNewVersionedValue(value, valueExpr);
       }
+    } else {
+      llvm::StringRef name(value->getName());
+      if (name.str() == "argc") {
+        ret = getNewVersionedValue(value, valueExpr);
+      } else if (name.str() == "this" && value->getType()->isPointerTy()) {
+        // For C++ "this" variable that is not found
+        if (value->getType()->getPointerElementType()->isSized()) {
+          uint64_t size = targetData->getTypeStoreSize(
+              value->getType()->getPointerElementType());
+          ret = getNewPointerValue(value, valueExpr, size);
+        }
+      }
     }
   }
   return ret;
@@ -838,15 +850,17 @@ void Dependency::execute(llvm::Instruction *instr,
       // rather than just using the name.
       std::string getValuePrefix("klee_get_value");
 
-      if ((calleeName.equals("getpagesize") && args.size() == 1) ||
-          (calleeName.equals("ioctl") && args.size() == 4) ||
-          (calleeName.equals("__ctype_b_loc") && args.size() == 1) ||
-          (calleeName.equals("__ctype_b_locargs") && args.size() == 1) ||
-          calleeName.equals("puts") || calleeName.equals("fflush") ||
-          calleeName.equals("_Znwm") || calleeName.equals("_Znam") ||
-          calleeName.equals("strcmp") || calleeName.equals("strncmp") ||
-          (calleeName.equals("__errno_location") && args.size() == 1) ||
-          (calleeName.equals("geteuid") && args.size() == 1)) {
+      if (calleeName.equals("_Znwm") || calleeName.equals("_Znam")) {
+        ConstantExpr *sizeExpr = llvm::dyn_cast<ConstantExpr>(args.at(1));
+        getNewPointerValue(instr, args.at(0), sizeExpr->getZExtValue());
+      } else if ((calleeName.equals("getpagesize") && args.size() == 1) ||
+                 (calleeName.equals("ioctl") && args.size() == 4) ||
+                 (calleeName.equals("__ctype_b_loc") && args.size() == 1) ||
+                 (calleeName.equals("__ctype_b_locargs") && args.size() == 1) ||
+                 calleeName.equals("puts") || calleeName.equals("fflush") ||
+                 calleeName.equals("strcmp") || calleeName.equals("strncmp") ||
+                 (calleeName.equals("__errno_location") && args.size() == 1) ||
+                 (calleeName.equals("geteuid") && args.size() == 1)) {
         getNewVersionedValue(instr, args.at(0));
       } else if (calleeName.equals("_ZNSi5seekgElSt12_Ios_Seekdir") &&
                  args.size() == 4) {
@@ -1087,10 +1101,10 @@ void Dependency::execute(llvm::Instruction *instr,
         storedValue = getNewVersionedValue(instr->getOperand(0), valueExpr);
 
       if (addressValue.isNull()) {
-        assert(!"stored allocation size must not be zero");
+        assert(!"null address");
         addressValue = getNewPointerValue(instr->getOperand(1), address, 0);
       } else if (addressValue->getLocations().size() == 0) {
-        assert(!"stored allocation size must not be zero");
+        assert(!"address is not a pointer");
         addressValue->addLocation(
             MemoryLocation::create(instr->getOperand(1), address, 0));
       }
@@ -1104,6 +1118,36 @@ void Dependency::execute(llvm::Instruction *instr,
       }
       break;
     }
+    case llvm::Instruction::IntToPtr: {
+      ref<Expr> result = args.at(0);
+      ref<Expr> argExpr = args.at(1);
+
+      ref<VersionedValue> val = getLatestValue(instr->getOperand(0), argExpr);
+
+      if (!val.isNull()) {
+        // 0 for the pointer value with unknown size
+        addDependency(val, getNewPointerValue(instr, result, 0));
+      } else if (!llvm::isa<llvm::Constant>(instr->getOperand(0)))
+          // Constants would kill dependencies, the remaining is for
+          // cases that may actually require dependencies.
+      {
+        if (instr->getOperand(0)->getType()->isPointerTy()) {
+          uint64_t size = targetData->getTypeStoreSize(
+              instr->getOperand(0)->getType()->getPointerElementType());
+          addDependency(getNewPointerValue(instr->getOperand(0), argExpr, size),
+                        getNewPointerValue(instr, result, size));
+        } else if (llvm::isa<llvm::Argument>(instr->getOperand(0)) ||
+                   llvm::isa<llvm::CallInst>(instr->getOperand(0)) ||
+                   symbolicExecutionError) {
+          // 0 for the pointer value with unknown size
+          addDependency(getNewVersionedValue(instr->getOperand(0), argExpr),
+                        getNewPointerValue(instr, result, 0));
+        } else {
+          assert(!"operand not found");
+        }
+      }
+      break;
+    }
     case llvm::Instruction::Trunc:
     case llvm::Instruction::ZExt:
     case llvm::Instruction::FPTrunc:
@@ -1112,7 +1156,6 @@ void Dependency::execute(llvm::Instruction *instr,
     case llvm::Instruction::FPToSI:
     case llvm::Instruction::UIToFP:
     case llvm::Instruction::SIToFP:
-    case llvm::Instruction::IntToPtr:
     case llvm::Instruction::PtrToInt:
     case llvm::Instruction::SExt:
     case llvm::Instruction::ExtractValue: {
