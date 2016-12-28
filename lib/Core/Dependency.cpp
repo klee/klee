@@ -561,6 +561,9 @@ ref<VersionedValue> Dependency::getLatestValue(llvm::Value *value,
                           ? targetData->getTypeStoreSize(pointerElementType)
                           : 0;
       return getNewPointerValue(value, valueExpr, size);
+    } else if (llvm::isa<llvm::IntToPtrInst>(asInstruction)) {
+	// 0 signifies unknown size
+	return getNewPointerValue(value, valueExpr, 0);
     }
   }
 
