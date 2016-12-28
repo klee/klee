@@ -1121,36 +1121,6 @@ void Dependency::execute(llvm::Instruction *instr,
       }
       break;
     }
-    case llvm::Instruction::IntToPtr: {
-      ref<Expr> result = args.at(0);
-      ref<Expr> argExpr = args.at(1);
-
-      ref<VersionedValue> val = getLatestValue(instr->getOperand(0), argExpr);
-
-      if (!val.isNull()) {
-        // 0 for the pointer value with unknown size
-        addDependency(val, getNewPointerValue(instr, result, 0));
-      } else if (!llvm::isa<llvm::Constant>(instr->getOperand(0)))
-          // Constants would kill dependencies, the remaining is for
-          // cases that may actually require dependencies.
-      {
-        if (instr->getOperand(0)->getType()->isPointerTy()) {
-          uint64_t size = targetData->getTypeStoreSize(
-              instr->getOperand(0)->getType()->getPointerElementType());
-          addDependency(getNewPointerValue(instr->getOperand(0), argExpr, size),
-                        getNewPointerValue(instr, result, size));
-        } else if (llvm::isa<llvm::Argument>(instr->getOperand(0)) ||
-                   llvm::isa<llvm::CallInst>(instr->getOperand(0)) ||
-                   symbolicExecutionError) {
-          // 0 for the pointer value with unknown size
-          addDependency(getNewVersionedValue(instr->getOperand(0), argExpr),
-                        getNewPointerValue(instr, result, 0));
-        } else {
-          assert(!"operand not found");
-        }
-      }
-      break;
-    }
     case llvm::Instruction::Trunc:
     case llvm::Instruction::ZExt:
     case llvm::Instruction::FPTrunc:
@@ -1159,6 +1129,7 @@ void Dependency::execute(llvm::Instruction *instr,
     case llvm::Instruction::FPToSI:
     case llvm::Instruction::UIToFP:
     case llvm::Instruction::SIToFP:
+    case llvm::Instruction::IntToPtr:
     case llvm::Instruction::PtrToInt:
     case llvm::Instruction::SExt:
     case llvm::Instruction::ExtractValue: {
@@ -1168,7 +1139,12 @@ void Dependency::execute(llvm::Instruction *instr,
       ref<VersionedValue> val = getLatestValue(instr->getOperand(0), argExpr);
 
       if (!val.isNull()) {
-        addDependency(val, getNewVersionedValue(instr, result));
+        if (llvm::isa<llvm::IntToPtrInst>(instr)) {
+          // 0 signifies unknown allocation size
+          addDependency(val, getNewPointerValue(instr, result, 0));
+        } else {
+          addDependency(val, getNewVersionedValue(instr, result));
+        }
       } else if (!llvm::isa<llvm::Constant>(instr->getOperand(0)))
           // Constants would kill dependencies, the remaining is for
           // cases that may actually require dependencies.
@@ -1176,13 +1152,22 @@ void Dependency::execute(llvm::Instruction *instr,
         if (instr->getOperand(0)->getType()->isPointerTy()) {
           uint64_t size = targetData->getTypeStoreSize(
               instr->getOperand(0)->getType()->getPointerElementType());
+          // Here we create normal non-pointer value for the
+          // dependency target as it will be properly made a
+          // pointer value by addDependency.
           addDependency(getNewPointerValue(instr->getOperand(0), argExpr, size),
                         getNewVersionedValue(instr, result));
         } else if (llvm::isa<llvm::Argument>(instr->getOperand(0)) ||
                    llvm::isa<llvm::CallInst>(instr->getOperand(0)) ||
                    symbolicExecutionError) {
-          addDependency(getNewVersionedValue(instr->getOperand(0), argExpr),
-                        getNewVersionedValue(instr, result));
+          if (llvm::isa<llvm::IntToPtrInst>(instr)) {
+            // 0 signifies unknown allocation size
+            addDependency(getNewVersionedValue(instr->getOperand(0), argExpr),
+                          getNewPointerValue(instr, result, 0));
+          } else {
+            addDependency(getNewVersionedValue(instr->getOperand(0), argExpr),
+                          getNewVersionedValue(instr, result));
+          }
         } else {
           assert(!"operand not found");
         }
