@@ -1033,7 +1033,8 @@ void Dependency::execute(llvm::Instruction *instr,
     case llvm::Instruction::Load: {
       ref<VersionedValue> addressValue =
           getLatestValue(instr->getOperand(0), address);
-      ref<VersionedValue> loadedValue = getNewVersionedValue(instr, valueExpr);
+      llvm::Type *loadedType =
+          instr->getOperand(0)->getType()->getPointerElementType();
 
       if (!addressValue.isNull()) {
         std::set<ref<MemoryLocation> > locations = addressValue->getLocations();
@@ -1043,6 +1044,13 @@ void Dependency::execute(llvm::Instruction *instr,
           ref<MemoryLocation> loc =
               MemoryLocation::create(instr->getOperand(0), address, 0);
           addressValue->addLocation(loc);
+
+          // Build the loaded value
+          ref<VersionedValue> loadedValue =
+              loadedType->isPointerTy()
+                  ? getNewPointerValue(instr, valueExpr, 0)
+                  : getNewVersionedValue(instr, valueExpr);
+
           updateStore(loc, loadedValue);
           break;
         } else if (locations.size() == 1) {
@@ -1050,6 +1058,13 @@ void Dependency::execute(llvm::Instruction *instr,
           if (isMainArgument(loc->getValue())) {
             // The load corresponding to a load of the main function's argument
             // that was never allocated within this program.
+
+            // Build the loaded value
+            ref<VersionedValue> loadedValue =
+                loadedType->isPointerTy()
+                    ? getNewPointerValue(instr, valueExpr, 0)
+                    : getNewVersionedValue(instr, valueExpr);
+
             updateStore(loc, loadedValue);
             break;
           }
@@ -1061,6 +1076,13 @@ void Dependency::execute(llvm::Instruction *instr,
           // The value not found was a global variable, record it here.
           std::set<ref<MemoryLocation> > locations =
               addressValue->getLocations();
+
+          // Build the loaded value
+          ref<VersionedValue> loadedValue =
+              loadedType->isPointerTy()
+                  ? getNewPointerValue(instr, valueExpr, 0)
+                  : getNewVersionedValue(instr, valueExpr);
+
           updateStore(*(locations.begin()), loadedValue);
           break;
         }
@@ -1083,13 +1105,26 @@ void Dependency::execute(llvm::Instruction *instr,
           storedValue = symbolicallyAddressedStore[*li];
         }
 
-        if (storedValue.isNull())
+        if (storedValue.isNull()) {
           // We could not find the stored value, create a new one.
-          updateStore(*li, loadedValue);
-        else
-          addDependencyViaLocation(storedValue, loadedValue, *li);
-      }
 
+          // Build the loaded value
+          ref<VersionedValue> loadedValue =
+              loadedType->isPointerTy()
+                  ? getNewPointerValue(instr, valueExpr, 0)
+                  : getNewVersionedValue(instr, valueExpr);
+
+          updateStore(*li, loadedValue);
+        } else {
+          // Build the loaded value
+          ref<VersionedValue> loadedValue =
+              storedValue->getLocations().empty() && loadedType->isPointerTy()
+                  ? getNewPointerValue(instr, valueExpr, 0)
+                  : getNewVersionedValue(instr, valueExpr);
+
+          addDependencyViaLocation(storedValue, loadedValue, *li);
+        }
+      }
       break;
     }
     case llvm::Instruction::Store: {
