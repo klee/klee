@@ -1142,9 +1142,13 @@ void Dependency::execute(llvm::Instruction *instr,
         assert(!"null address");
         addressValue = getNewPointerValue(instr->getOperand(1), address, 0);
       } else if (addressValue->getLocations().size() == 0) {
-        assert(!"address is not a pointer");
-        addressValue->addLocation(
-            MemoryLocation::create(instr->getOperand(1), address, 0));
+        if (instr->getOperand(1)->getType()->isPointerTy() &&
+            llvm::isa<llvm::CallInst>(instr->getOperand(1))) {
+          addressValue->addLocation(
+              MemoryLocation::create(instr->getOperand(1), address, 0));
+        } else {
+          assert(!"address is not a pointer");
+        }
       }
 
       std::set<ref<MemoryLocation> > locations = addressValue->getLocations();
