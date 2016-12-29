@@ -1070,8 +1070,9 @@ void Dependency::execute(llvm::Instruction *instr,
           }
         }
       } else {
-        assert(!"loaded allocation size must not be zero");
+        // FIXME: Some values are just missing somehow
         addressValue = getNewPointerValue(instr->getOperand(0), address, 0);
+
         if (llvm::isa<llvm::GlobalVariable>(instr->getOperand(0))) {
           // The value not found was a global variable, record it here.
           std::set<ref<MemoryLocation> > locations =
