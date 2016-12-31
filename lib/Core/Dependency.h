@@ -99,8 +99,8 @@ namespace klee {
 
     MemoryLocation(llvm::Value *_value, ref<Expr> &_address, ref<Expr> &_base,
                    ref<Expr> &_offset, uint64_t _size)
-        : refCount(0), value(_value), address(_address), base(_base),
-          offset(_offset), concreteOffsetBound(_size), size(_size) {
+        : refCount(0), value(_value), offset(_offset),
+          concreteOffsetBound(_size), size(_size) {
       ConstantExpr *ca = llvm::dyn_cast<ConstantExpr>(_address);
       if (ca) {
         ConstantExpr *cb = llvm::dyn_cast<ConstantExpr>(_base);
@@ -113,6 +113,19 @@ namespace klee {
             assert(o == (a - b) && "wrong offset");
           }
         }
+      }
+
+      Expr::Width pointerWidth = Expr::createPointer(0)->getWidth();
+      if (_address->getWidth() < pointerWidth) {
+        address = ZExtExpr::create(_address, pointerWidth);
+      } else {
+        address = _address;
+      }
+
+      if (_base->getWidth() < pointerWidth) {
+        base = ZExtExpr::create(_base, pointerWidth);
+      } else {
+        base = _base;
       }
     }
 
