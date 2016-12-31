@@ -1275,6 +1275,9 @@ ref<Expr> SubsumptionTableEntry::simplifyEqualityExpr(
     return OrExpr::create(lhs, rhs);
   }
 
+  if (expr->getWidth() == Expr::Bool)
+    return expr;
+
   assert(!"Invalid expression type.");
 }
 
