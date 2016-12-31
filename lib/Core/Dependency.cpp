@@ -699,6 +699,25 @@ void Dependency::addDependency(ref<VersionedValue> source,
   target->addDependency(source, nullLocation);
 }
 
+void Dependency::addDependencyIntToPtr(ref<VersionedValue> source,
+                                       ref<VersionedValue> target) {
+  ref<MemoryLocation> nullLocation;
+
+  if (source.isNull() || target.isNull())
+    return;
+
+  std::set<ref<MemoryLocation> > locations = source->getLocations();
+  for (std::set<ref<MemoryLocation> >::iterator it = locations.begin(),
+                                                ie = locations.end();
+       it != ie; ++it) {
+    ref<Expr> sourceBase((*it)->getBase());
+    ref<Expr> targetExpr(target->getExpression());
+    ref<Expr> offset(SubExpr::create(targetExpr, sourceBase));
+    target->addLocation(MemoryLocation::create(*it, targetExpr, offset));
+  }
+  target->addDependency(source, nullLocation);
+}
+
 void Dependency::addDependencyWithOffset(ref<VersionedValue> source,
                                          ref<VersionedValue> target,
                                          ref<Expr> offset) {
@@ -1178,8 +1197,12 @@ void Dependency::execute(llvm::Instruction *instr,
 
       if (!val.isNull()) {
         if (llvm::isa<llvm::IntToPtrInst>(instr)) {
-          // 0 signifies unknown allocation size
-          addDependency(val, getNewPointerValue(instr, result, 0));
+          if (val->getLocations().size() == 0) {
+            // 0 signifies unknown allocation size
+            addDependency(val, getNewPointerValue(instr, result, 0));
+          } else {
+            addDependencyIntToPtr(val, getNewVersionedValue(instr, result));
+          }
         } else {
           addDependency(val, getNewVersionedValue(instr, result));
         }

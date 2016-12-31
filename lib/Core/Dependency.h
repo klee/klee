@@ -601,6 +601,10 @@ namespace klee {
     /// \brief Add flow dependency between source and target value
     void addDependency(ref<VersionedValue> source, ref<VersionedValue> target);
 
+    /// \brief Add flow dependency between source and target value
+    void addDependencyIntToPtr(ref<VersionedValue> source,
+                               ref<VersionedValue> target);
+
     /// \brief Add flow dependency between source and target pointers, offset by
     /// some amount
     void addDependencyWithOffset(ref<VersionedValue> source,
