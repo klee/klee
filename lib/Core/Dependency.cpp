@@ -568,11 +568,35 @@ ref<VersionedValue> Dependency::getLatestValue(llvm::Value *value,
         llvm::dyn_cast<llvm::ConstantExpr>(value)->getAsInstruction();
     if (llvm::GetElementPtrInst *gi =
             llvm::dyn_cast<llvm::GetElementPtrInst>(asInstruction)) {
-      llvm::Type *pointerElementType =
-          gi->getPointerOperand()->getType()->getPointerElementType();
-      uint64_t size = pointerElementType->isSized()
-                          ? targetData->getTypeStoreSize(pointerElementType)
-                          : 0;
+      uint64_t offset = 0;
+      uint64_t size = 0;
+
+      // getelementptr may be cascading, so we loop
+      while (gi) {
+        if (gi->getNumOperands() >= 2) {
+          if (llvm::ConstantInt *idx =
+                  llvm::dyn_cast<llvm::ConstantInt>(gi->getOperand(1))) {
+            offset += idx->getLimitedValue();
+          }
+        }
+        llvm::Value *ptrOp = gi->getPointerOperand();
+        llvm::Type *pointerElementType =
+            ptrOp->getType()->getPointerElementType();
+
+        size = pointerElementType->isSized()
+                   ? targetData->getTypeStoreSize(pointerElementType)
+                   : 0;
+
+        if (llvm::isa<llvm::ConstantExpr>(ptrOp)) {
+          llvm::Instruction *asInstruction =
+              llvm::dyn_cast<llvm::ConstantExpr>(ptrOp)->getAsInstruction();
+          gi = llvm::dyn_cast<llvm::GetElementPtrInst>(asInstruction);
+          continue;
+        }
+
+        gi = 0;
+      }
+
       return getNewPointerValue(value, valueExpr, size);
     } else if (llvm::isa<llvm::IntToPtrInst>(asInstruction)) {
 	// 0 signifies unknown size
