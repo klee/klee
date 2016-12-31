@@ -725,8 +725,9 @@ void Dependency::addDependencyIntToPtr(ref<VersionedValue> source,
        it != ie; ++it) {
     ref<Expr> sourceBase((*it)->getBase());
     ref<Expr> targetExpr(target->getExpression());
-    ref<Expr> offset(SubExpr::create(targetExpr, sourceBase));
-    target->addLocation(MemoryLocation::create(*it, targetExpr, offset));
+    ref<Expr> offsetDelta(SubExpr::create(
+        SubExpr::create(targetExpr, sourceBase), (*it)->getOffset()));
+    target->addLocation(MemoryLocation::create(*it, targetExpr, offsetDelta));
   }
   target->addDependency(source, nullLocation);
 }
