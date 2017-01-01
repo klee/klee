@@ -101,6 +101,8 @@ namespace klee {
                    ref<Expr> &_offset, uint64_t _size)
         : refCount(0), value(_value), offset(_offset),
           concreteOffsetBound(_size), size(_size) {
+      bool unknownBase = false;
+
       ConstantExpr *ca = llvm::dyn_cast<ConstantExpr>(_address);
       if (ca) {
         ConstantExpr *cb = llvm::dyn_cast<ConstantExpr>(_base);
@@ -110,7 +112,11 @@ namespace klee {
             uint64_t a = ca->getZExtValue();
             uint64_t b = cb->getZExtValue();
             uint64_t o = co->getZExtValue();
-            assert(o == (a - b) && "wrong offset");
+            if (b == 0 && a != 0) {
+              unknownBase = true;
+            } else {
+              assert(o == (a - b) && "wrong offset");
+            }
           }
         }
       }
@@ -126,6 +132,16 @@ namespace klee {
         base = ZExtExpr::create(_base, pointerWidth);
       } else {
         base = _base;
+      }
+
+      if (unknownBase) {
+        ref<Expr> tmpOffset;
+        if (_offset->getWidth() < pointerWidth) {
+          tmpOffset = ZExtExpr::create(_offset, pointerWidth);
+        } else {
+          tmpOffset = _offset;
+        }
+        base = SubExpr::create(address, tmpOffset);
       }
     }
 
