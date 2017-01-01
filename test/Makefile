@@ -24,9 +24,9 @@ include Makefile.tests
 ULIMIT = ulimit -t 600 ; ulimit -d 512000 ;
 
 ifdef VERBOSE
-LIT_ARGS := -v
+LIT_ARGS := -v --param klee_opts="-solver-backend=z3"
 else
-LIT_ARGS := -s -v
+LIT_ARGS := -s -v --param klee_opts="-solver-backend=z3"
 endif
 
 ifdef TESTSUITE

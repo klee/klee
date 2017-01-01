@@ -99,8 +99,10 @@ namespace klee {
 
     MemoryLocation(llvm::Value *_value, ref<Expr> &_address, ref<Expr> &_base,
                    ref<Expr> &_offset, uint64_t _size)
-        : refCount(0), value(_value), address(_address), base(_base),
-          offset(_offset), concreteOffsetBound(_size), size(_size) {
+        : refCount(0), value(_value), offset(_offset),
+          concreteOffsetBound(_size), size(_size) {
+      bool unknownBase = false;
+
       ConstantExpr *ca = llvm::dyn_cast<ConstantExpr>(_address);
       if (ca) {
         ConstantExpr *cb = llvm::dyn_cast<ConstantExpr>(_base);
@@ -110,9 +112,36 @@ namespace klee {
             uint64_t a = ca->getZExtValue();
             uint64_t b = cb->getZExtValue();
             uint64_t o = co->getZExtValue();
-            assert(o == (a - b) && "wrong offset");
+            if (b == 0 && a != 0) {
+              unknownBase = true;
+            } else {
+              assert(o == (a - b) && "wrong offset");
+            }
           }
         }
+      }
+
+      Expr::Width pointerWidth = Expr::createPointer(0)->getWidth();
+      if (_address->getWidth() < pointerWidth) {
+        address = ZExtExpr::create(_address, pointerWidth);
+      } else {
+        address = _address;
+      }
+
+      if (_base->getWidth() < pointerWidth) {
+        base = ZExtExpr::create(_base, pointerWidth);
+      } else {
+        base = _base;
+      }
+
+      if (unknownBase) {
+        ref<Expr> tmpOffset;
+        if (_offset->getWidth() < pointerWidth) {
+          tmpOffset = ZExtExpr::create(_offset, pointerWidth);
+        } else {
+          tmpOffset = _offset;
+        }
+        base = SubExpr::create(address, tmpOffset);
       }
     }
 
@@ -600,6 +629,10 @@ namespace klee {
 
     /// \brief Add flow dependency between source and target value
     void addDependency(ref<VersionedValue> source, ref<VersionedValue> target);
+
+    /// \brief Add flow dependency between source and target value
+    void addDependencyIntToPtr(ref<VersionedValue> source,
+                               ref<VersionedValue> target);
 
     /// \brief Add flow dependency between source and target pointers, offset by
     /// some amount
