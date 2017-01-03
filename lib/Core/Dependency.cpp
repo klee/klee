@@ -765,11 +765,35 @@ void Dependency::addDependencyWithOffset(ref<VersionedValue> source,
     return;
 
   std::set<ref<MemoryLocation> > locations = source->getLocations();
+  ref<Expr> expr(target->getExpression());
+
+  ConstantExpr *ce = llvm::dyn_cast<ConstantExpr>(expr);
+  uint64_t a = ce ? ce->getZExtValue() : 0;
+
+  ConstantExpr *oe = llvm::dyn_cast<ConstantExpr>(offset);
+  uint64_t o = oe ? oe->getZExtValue() : 0;
+
+  uint64_t nLocations = locations.size();
+  uint64_t i = 0;
+  bool locationAdded = false;
+
   for (std::set<ref<MemoryLocation> >::iterator it = locations.begin(),
                                                 ie = locations.end();
        it != ie; ++it) {
-    ref<Expr> expr(target->getExpression());
+    ++i;
+
+    ConstantExpr *be = llvm::dyn_cast<ConstantExpr>((*it)->getBase());
+    uint64_t b = be ? be->getZExtValue() : 0;
+
+    // The following if conditional implements a mechanism to
+    // only add memory locations that make sense; that is, when
+    // the offset is address minus base
+    if (ce && oe && be) {
+      if (o != (a - b) && (locationAdded || i < nLocations))
+        continue;
+    }
     target->addLocation(MemoryLocation::create(*it, expr, offset));
+    locationAdded = true;
   }
   target->addDependency(source, nullLocation);
 }
