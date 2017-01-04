@@ -1384,8 +1384,16 @@ void Dependency::execute(llvm::Instruction *instr,
 
       if (!op1.isNull() || !op2.isNull()) {
         newValue = getNewVersionedValue(instr, result);
-        addDependency(op1, newValue);
-        addDependency(op2, newValue);
+        if (instr->getOpcode() == llvm::Instruction::ICmp ||
+            instr->getOpcode() == llvm::Instruction::FCmp) {
+          // addDependencyViaExternalFunction cuts off
+          // dependency to pointer arguments
+          addDependencyViaExternalFunction(op1, newValue);
+          addDependencyViaExternalFunction(op2, newValue);
+        } else {
+          addDependency(op1, newValue);
+          addDependency(op2, newValue);
+        }
       }
       break;
     }
