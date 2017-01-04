@@ -1311,8 +1311,15 @@ void Dependency::execute(llvm::Instruction *instr,
       ref<VersionedValue> op1 = getLatestValue(instr->getOperand(1), op1Expr);
       ref<VersionedValue> op2 = getLatestValue(instr->getOperand(2), op2Expr);
       ref<VersionedValue> newValue = getNewVersionedValue(instr, result);
-      addDependency(op1, newValue);
-      addDependency(op2, newValue);
+
+      if (result == op1Expr) {
+        addDependency(op1, newValue);
+      } else if (result == op2Expr) {
+        addDependency(op2, newValue);
+      } else {
+        addDependency(op1, newValue);
+        addDependency(op2, newValue);
+      }
       break;
     }
 
