@@ -721,11 +721,15 @@ void Dependency::updateStore(ref<MemoryLocation> loc,
 }
 
 void Dependency::addDependency(ref<VersionedValue> source,
-                               ref<VersionedValue> target) {
+                               ref<VersionedValue> target,
+                               bool multiLocationsCheck) {
   ref<MemoryLocation> nullLocation;
 
   if (source.isNull() || target.isNull())
     return;
+
+  assert((!multiLocationsCheck || target->getLocations().empty()) &&
+         "should not add new location");
 
   std::set<ref<MemoryLocation> > locations = source->getLocations();
   for (std::set<ref<MemoryLocation> >::iterator it = locations.begin(),
@@ -825,6 +829,15 @@ void Dependency::addDependencyViaExternalFunction(ref<VersionedValue> source,
     markPointerFlow(source, source);
   }
 
+  target->addDependency(source, nullLocation);
+}
+
+void Dependency::addDependencyToNonPointer(ref<VersionedValue> source,
+                                           ref<VersionedValue> target) {
+  if (source.isNull() || target.isNull())
+    return;
+
+  ref<MemoryLocation> nullLocation;
   target->addDependency(source, nullLocation);
 }
 
@@ -1284,7 +1297,8 @@ void Dependency::execute(llvm::Instruction *instr,
         if (llvm::isa<llvm::IntToPtrInst>(instr)) {
           if (val->getLocations().size() == 0) {
             // 0 signifies unknown allocation size
-            addDependency(val, getNewPointerValue(instr, result, 0));
+            addDependencyToNonPointer(val,
+                                      getNewPointerValue(instr, result, 0));
           } else {
             addDependencyIntToPtr(val, getNewVersionedValue(instr, result));
           }
@@ -1341,7 +1355,8 @@ void Dependency::execute(llvm::Instruction *instr,
         addDependency(op2, newValue);
       } else {
         addDependency(op1, newValue);
-        addDependency(op2, newValue);
+        // We do not require that the locations set is empty
+        addDependency(op2, newValue, false);
       }
       break;
     }
@@ -1386,13 +1401,12 @@ void Dependency::execute(llvm::Instruction *instr,
         newValue = getNewVersionedValue(instr, result);
         if (instr->getOpcode() == llvm::Instruction::ICmp ||
             instr->getOpcode() == llvm::Instruction::FCmp) {
-          // addDependencyViaExternalFunction cuts off
-          // dependency to pointer arguments
-          addDependencyViaExternalFunction(op1, newValue);
-          addDependencyViaExternalFunction(op2, newValue);
+          addDependencyToNonPointer(op1, newValue);
+          addDependencyToNonPointer(op2, newValue);
         } else {
           addDependency(op1, newValue);
-          addDependency(op2, newValue);
+          // We do not require that the locations set is empty
+          addDependency(op2, newValue, false);
         }
       }
       break;

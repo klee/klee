@@ -302,7 +302,6 @@ namespace klee {
     }
 
     void addLocation(ref<MemoryLocation> loc) {
-      assert(locations.empty());
       locations.insert(loc);
     }
 
@@ -631,7 +630,8 @@ namespace klee {
     void updateStore(ref<MemoryLocation> loc, ref<VersionedValue> value);
 
     /// \brief Add flow dependency between source and target value
-    void addDependency(ref<VersionedValue> source, ref<VersionedValue> target);
+    void addDependency(ref<VersionedValue> source, ref<VersionedValue> target,
+                       bool multiLocationsCheck = true);
 
     /// \brief Add flow dependency between source and target value
     void addDependencyIntToPtr(ref<VersionedValue> source,
@@ -649,14 +649,18 @@ namespace klee {
                                   ref<MemoryLocation> via);
 
     /// \brief Add a flow dependency from a pointer value to a non-pointer
-    /// value,
-    /// typically for an external function call.
+    /// value, for an external function call.
     ///
     /// Here the target is not a pointer, and we assume that the source is
     /// is checked for memory access validity at the current index, meaning that
     /// we assumed all memory access within the external function is valid.
     void addDependencyViaExternalFunction(ref<VersionedValue> source,
                                           ref<VersionedValue> target);
+
+    /// \brief Add a flow dependency from a pointer value to a non-pointer
+    /// value.
+    void addDependencyToNonPointer(ref<VersionedValue> source,
+                                   ref<VersionedValue> target);
 
     /// \brief All values that flows to the target in one step
     std::vector<ref<VersionedValue> >
