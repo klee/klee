@@ -813,6 +813,21 @@ void Dependency::addDependencyViaLocation(ref<VersionedValue> source,
   target->addDependency(source, via);
 }
 
+void Dependency::addDependencyViaExternalFunction(ref<VersionedValue> source,
+                                                  ref<VersionedValue> target) {
+  if (source.isNull() || target.isNull())
+    return;
+
+  ref<MemoryLocation> nullLocation;
+
+  std::set<ref<MemoryLocation> > locations = source->getLocations();
+  if (!locations.empty()) {
+    markPointerFlow(source, source);
+  }
+
+  target->addDependency(source, nullLocation);
+}
+
 std::vector<ref<VersionedValue> >
 Dependency::directFlowSources(ref<VersionedValue> target) const {
   std::vector<ref<VersionedValue> > ret;
@@ -951,24 +966,28 @@ void Dependency::execute(llvm::Instruction *instr,
         ref<VersionedValue> returnValue =
             getNewVersionedValue(instr, args.at(0));
         for (unsigned i = 0; i < 3; ++i) {
-          addDependency(getLatestValue(instr->getOperand(i), args.at(i + 1)),
-                        returnValue);
+          addDependencyViaExternalFunction(
+              getLatestValue(instr->getOperand(i), args.at(i + 1)),
+              returnValue);
         }
       } else if (calleeName.equals(
                      "_ZNSt13basic_fstreamIcSt11char_traitsIcEE7is_openEv") &&
                  args.size() == 2) {
-        addDependency(getLatestValue(instr->getOperand(0), args.at(1)),
-                      getNewVersionedValue(instr, args.at(0)));
+        addDependencyViaExternalFunction(
+            getLatestValue(instr->getOperand(0), args.at(1)),
+            getNewVersionedValue(instr, args.at(0)));
       } else if (calleeName.equals("_ZNSi5tellgEv") && args.size() == 2) {
-        addDependency(getLatestValue(instr->getOperand(0), args.at(1)),
-                      getNewVersionedValue(instr, args.at(0)));
+        addDependencyViaExternalFunction(
+            getLatestValue(instr->getOperand(0), args.at(1)),
+            getNewVersionedValue(instr, args.at(0)));
       } else if ((calleeName.equals("powl") && args.size() == 3) ||
                  (calleeName.equals("gettimeofday") && args.size() == 3)) {
         ref<VersionedValue> returnValue =
             getNewVersionedValue(instr, args.at(0));
         for (unsigned i = 0; i < 2; ++i) {
-          addDependency(getLatestValue(instr->getOperand(i), args.at(i + 1)),
-                        returnValue);
+          addDependencyViaExternalFunction(
+              getLatestValue(instr->getOperand(i), args.at(i + 1)),
+              returnValue);
         }
       } else if (calleeName.equals("malloc") && args.size() == 1) {
         // malloc is an location-type instruction. This is for the case when the
@@ -996,41 +1015,45 @@ void Dependency::execute(llvm::Instruction *instr,
         ref<VersionedValue> returnValue =
             getNewVersionedValue(instr, args.at(0));
         for (unsigned i = 0; i + 1 < args.size(); ++i) {
-          addDependency(getLatestValue(instr->getOperand(i), args.at(i + 1)),
-                        returnValue);
+          addDependencyViaExternalFunction(
+              getLatestValue(instr->getOperand(i), args.at(i + 1)),
+              returnValue);
         }
       } else if (std::mismatch(getValuePrefix.begin(), getValuePrefix.end(),
                                calleeName.begin()).first ==
                      getValuePrefix.end() &&
                  args.size() == 2) {
-        addDependency(getLatestValue(instr->getOperand(0), args.at(1)),
-                      getNewVersionedValue(instr, args.at(0)));
+        addDependencyViaExternalFunction(
+            getLatestValue(instr->getOperand(0), args.at(1)),
+            getNewVersionedValue(instr, args.at(0)));
       } else if (calleeName.equals("getenv") && args.size() == 2) {
         // We assume getenv has unknown allocation size
         getNewPointerValue(instr, args.at(0), 0);
       } else if (calleeName.equals("printf") && args.size() >= 2) {
         ref<VersionedValue> returnValue =
             getNewVersionedValue(instr, args.at(0));
-        addDependency(getLatestValue(instr->getOperand(0), args.at(1)),
-                      returnValue);
+        addDependencyViaExternalFunction(
+            getLatestValue(instr->getOperand(0), args.at(1)), returnValue);
         for (unsigned i = 2, argsNum = args.size(); i < argsNum; ++i) {
-          addDependency(getLatestValue(instr->getOperand(i - 1), args.at(i)),
-                        returnValue);
+          addDependencyViaExternalFunction(
+              getLatestValue(instr->getOperand(i - 1), args.at(i)),
+              returnValue);
         }
       } else if (calleeName.equals("vprintf") && args.size() == 3) {
         ref<VersionedValue> returnValue =
             getNewVersionedValue(instr, args.at(0));
-        addDependency(getLatestValue(instr->getOperand(0), args.at(1)),
-                      returnValue);
-        addDependency(getLatestValue(instr->getOperand(1), args.at(2)),
-                      returnValue);
+        addDependencyViaExternalFunction(
+            getLatestValue(instr->getOperand(0), args.at(1)), returnValue);
+        addDependencyViaExternalFunction(
+            getLatestValue(instr->getOperand(1), args.at(2)), returnValue);
       } else if (((calleeName.equals("fchmodat") && args.size() == 5)) ||
                  (calleeName.equals("fchownat") && args.size() == 6)) {
         ref<VersionedValue> returnValue =
             getNewVersionedValue(instr, args.at(0));
         for (unsigned i = 0; i < 2; ++i) {
-          addDependency(getLatestValue(instr->getOperand(i), args.at(i + 1)),
-                        returnValue);
+          addDependencyViaExternalFunction(
+              getLatestValue(instr->getOperand(i), args.at(i + 1)),
+              returnValue);
         }
       } else {
         // Default external function handler: We ignore functions that return
