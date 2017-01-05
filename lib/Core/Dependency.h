@@ -303,10 +303,11 @@ namespace klee {
     }
 
     void addLocation(ref<MemoryLocation> loc) {
-      locations.insert(loc);
+      if (locations.find(loc) == locations.end())
+        locations.insert(loc);
     }
 
-    std::set<ref<MemoryLocation> > getLocations() { return locations; }
+    std::set<ref<MemoryLocation> > getLocations() const { return locations; }
 
     bool hasValue(llvm::Value *value) const { return this->value == value; }
 
