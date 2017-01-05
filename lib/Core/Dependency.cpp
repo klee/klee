@@ -723,21 +723,13 @@ void Dependency::updateStore(ref<MemoryLocation> loc,
 void Dependency::addDependency(ref<VersionedValue> source,
                                ref<VersionedValue> target,
                                bool multiLocationsCheck) {
-  ref<MemoryLocation> nullLocation;
-
   if (source.isNull() || target.isNull())
     return;
 
   assert((!multiLocationsCheck || target->getLocations().empty()) &&
          "should not add new location");
 
-  std::set<ref<MemoryLocation> > locations = source->getLocations();
-  for (std::set<ref<MemoryLocation> >::iterator it = locations.begin(),
-                                                ie = locations.end();
-       it != ie; ++it) {
-    target->addLocation(*it);
-  }
-  target->addDependency(source, nullLocation);
+  addDependencyIntToPtr(source, target);
 }
 
 void Dependency::addDependencyIntToPtr(ref<VersionedValue> source,
@@ -748,8 +740,8 @@ void Dependency::addDependencyIntToPtr(ref<VersionedValue> source,
     return;
 
   std::set<ref<MemoryLocation> > locations = source->getLocations();
-  ref<Expr> targetExpr(target->getExpression());
-
+  ref<Expr> targetExpr(ZExtExpr::create(target->getExpression(),
+                                        Expr::createPointer(0)->getWidth()));
   for (std::set<ref<MemoryLocation> >::iterator it = locations.begin(),
                                                 ie = locations.end();
        it != ie; ++it) {
@@ -1549,6 +1541,7 @@ void Dependency::bindCallArguments(llvm::Instruction *i,
            ie = callee->getArgumentList().end();
        it != ie; ++it) {
     if (!argumentValuesList.back().isNull()) {
+
       addDependency(
           argumentValuesList.back(),
           getNewVersionedValue(it, argumentValuesList.back()->getExpression()));
