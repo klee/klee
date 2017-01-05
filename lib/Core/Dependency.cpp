@@ -763,7 +763,7 @@ void Dependency::addDependencyIntToPtr(ref<VersionedValue> source,
 
 void Dependency::addDependencyWithOffset(ref<VersionedValue> source,
                                          ref<VersionedValue> target,
-                                         ref<Expr> offset) {
+                                         ref<Expr> offsetDelta) {
   ref<MemoryLocation> nullLocation;
 
   if (source.isNull() || target.isNull())
@@ -775,8 +775,8 @@ void Dependency::addDependencyWithOffset(ref<VersionedValue> source,
   ConstantExpr *ce = llvm::dyn_cast<ConstantExpr>(targetExpr);
   uint64_t a = ce ? ce->getZExtValue() : 0;
 
-  ConstantExpr *oe = llvm::dyn_cast<ConstantExpr>(offset);
-  uint64_t o = oe ? oe->getZExtValue() : 0;
+  ConstantExpr *de = llvm::dyn_cast<ConstantExpr>(offsetDelta);
+  uint64_t d = de ? de->getZExtValue() : 0;
 
   uint64_t nLocations = locations.size();
   uint64_t i = 0;
@@ -790,14 +790,17 @@ void Dependency::addDependencyWithOffset(ref<VersionedValue> source,
     ConstantExpr *be = llvm::dyn_cast<ConstantExpr>((*it)->getBase());
     uint64_t b = be ? be->getZExtValue() : 0;
 
+    ConstantExpr *oe = llvm::dyn_cast<ConstantExpr>((*it)->getOffset());
+    uint64_t o = (oe ? oe->getZExtValue() : 0) + d;
+
     // The following if conditional implements a mechanism to
     // only add memory locations that make sense; that is, when
     // the offset is address minus base
-    if (ce && oe && be) {
-      if (o != (a - b) && (locationAdded || i < nLocations))
+    if (ce && de && be && oe) {
+      if (o != (a - b) && (b != 0) && (locationAdded || i < nLocations))
         continue;
     }
-    target->addLocation(MemoryLocation::create(*it, targetExpr, offset));
+    target->addLocation(MemoryLocation::create(*it, targetExpr, offsetDelta));
     locationAdded = true;
   }
   target->addDependency(source, nullLocation);

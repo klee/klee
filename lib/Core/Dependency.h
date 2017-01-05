@@ -157,8 +157,9 @@ namespace klee {
     }
 
     static ref<MemoryLocation> create(ref<MemoryLocation> loc,
-                                      ref<Expr> &address, ref<Expr> &offset) {
-      ConstantExpr *c = llvm::dyn_cast<ConstantExpr>(offset);
+                                      ref<Expr> &address,
+                                      ref<Expr> &offsetDelta) {
+      ConstantExpr *c = llvm::dyn_cast<ConstantExpr>(offsetDelta);
       if (c && c->getZExtValue() == 0) {
         ref<Expr> base = loc->base;
         ref<Expr> offset = loc->offset;
@@ -168,7 +169,7 @@ namespace klee {
       }
 
       ref<Expr> base = loc->base;
-      ref<Expr> newOffset = AddExpr::create(loc->offset, offset);
+      ref<Expr> newOffset = AddExpr::create(loc->offset, offsetDelta);
       ref<MemoryLocation> ret(
           new MemoryLocation(loc->value, address, base, newOffset, loc->size));
       return ret;
@@ -640,7 +641,8 @@ namespace klee {
     /// \brief Add flow dependency between source and target pointers, offset by
     /// some amount
     void addDependencyWithOffset(ref<VersionedValue> source,
-                                 ref<VersionedValue> target, ref<Expr> offset);
+                                 ref<VersionedValue> target,
+                                 ref<Expr> offsetDelta);
 
     /// \brief Add flow dependency between source and target value, as the
     /// result of store/load via a memory location.
