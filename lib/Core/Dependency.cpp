@@ -770,9 +770,9 @@ void Dependency::addDependencyWithOffset(ref<VersionedValue> source,
     return;
 
   std::set<ref<MemoryLocation> > locations = source->getLocations();
-  ref<Expr> expr(target->getExpression());
+  ref<Expr> targetExpr(target->getExpression());
 
-  ConstantExpr *ce = llvm::dyn_cast<ConstantExpr>(expr);
+  ConstantExpr *ce = llvm::dyn_cast<ConstantExpr>(targetExpr);
   uint64_t a = ce ? ce->getZExtValue() : 0;
 
   ConstantExpr *oe = llvm::dyn_cast<ConstantExpr>(offset);
@@ -797,7 +797,7 @@ void Dependency::addDependencyWithOffset(ref<VersionedValue> source,
       if (o != (a - b) && (locationAdded || i < nLocations))
         continue;
     }
-    target->addLocation(MemoryLocation::create(*it, expr, offset));
+    target->addLocation(MemoryLocation::create(*it, targetExpr, offset));
     locationAdded = true;
   }
   target->addDependency(source, nullLocation);
