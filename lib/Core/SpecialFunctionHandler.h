@@ -10,6 +10,9 @@
 #ifndef KLEE_SPECIALFUNCTIONHANDLER_H
 #define KLEE_SPECIALFUNCTIONHANDLER_H
 
+#include "llvm/IR/Type.h"
+//#include "llvm/Target/TargetData.h"
+#include "AddressSpace.h"
 #include <iterator>
 #include <map>
 #include <vector>
@@ -20,6 +23,7 @@ namespace llvm {
 }
 
 namespace klee {
+
   class Executor;
   class Expr;
   class ExecutionState;
@@ -67,8 +71,29 @@ namespace klee {
     static const_iterator begin();
     static const_iterator end();
     static int size();
-
-
+    uint64_t getValue(ExecutionState &state, ref<Expr> argument);
+    std::vector<std::pair<ExecutionState*, ref<Expr> > > processNumber
+    (ExecutionState *current_state, std::vector<ref<Expr> > numberbuf, Expr::Width numwidth,int ary, bool neg);
+    static ref<Expr> IntCondGen(ref<Expr> bufferchar);
+    static ref<Expr> OctCondGen(ref<Expr> bufferchar);
+    static ref<Expr> HexCondGen(ref<Expr> bufferchar);
+    void processScan(ExecutionState *current_state,Expr::Width w,ref<Expr> bufferchar,
+    			ref<Expr> targetBuf,const int fileid, const ObjectPair& op, std::vector<ExecutionState*> *stateProcessed,
+    			KInstruction *target, int ary,  ref<Expr> (*condFunc) (ref<Expr>));
+    void processScanInt(ExecutionState *current_state,Expr::Width w,
+    		ref<Expr> bufferchar, ref<Expr> targetBuf, const int fileid,
+    		const ObjectPair& op, std::vector<ExecutionState*> *stateProcessed,
+    		KInstruction *target);
+    void processScanChar(ExecutionState *current_state,ref<Expr> bufferchar,
+			ref<Expr> targetBuf);
+    void processScanOct(ExecutionState *current_state,Expr::Width w,
+    		ref<Expr> bufferchar, ref<Expr> targetBuf, const int fileid,
+    		const ObjectPair& op, std::vector<ExecutionState*> *stateProcessed,
+    		KInstruction *target);
+    void processScanHex(ExecutionState *current_state,Expr::Width w,
+    		ref<Expr> bufferchar, ref<Expr> targetBuf, const int fileid,
+    		const ObjectPair& op, std::vector<ExecutionState*> *stateProcessed,
+    		KInstruction *target);
 
   public:
     SpecialFunctionHandler(Executor &_executor);
@@ -137,6 +162,16 @@ namespace klee {
     HANDLER(handleMulOverflow);
     HANDLER(handleSubOverflow);
     HANDLER(handleDivRemOverflow);
+    HANDLER(handleOpen);
+    HANDLER(handleMakeIOBuffer);
+    HANDLER(handleFscanf);
+    HANDLER(handleSscanf);
+    HANDLER(handleFprintf);
+    HANDLER(handleprintf);
+    HANDLER(handleFputc);
+    HANDLER(handleClose);
+    HANDLER(handleFread);
+    HANDLER(handleFwrite);
 #undef HANDLER
   };
 } // End klee namespace
