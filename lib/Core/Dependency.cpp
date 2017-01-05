@@ -823,14 +823,27 @@ void Dependency::addDependencyViaExternalFunction(ref<VersionedValue> source,
   if (source.isNull() || target.isNull())
     return;
 
-  ref<MemoryLocation> nullLocation;
-
   std::set<ref<MemoryLocation> > locations = source->getLocations();
   if (!locations.empty()) {
     markPointerFlow(source, source);
   }
 
-  target->addDependency(source, nullLocation);
+  // Add new location to the target in case of pointer return value
+  llvm::Type *t = target->getValue()->getType();
+  if (t->isPointerTy() && target->getLocations().size() == 0) {
+    uint64_t size = 0;
+    ref<Expr> address(target->getExpression());
+
+    llvm::Type *elementType = t->getPointerElementType();
+    if (elementType->isSized()) {
+      size = targetData->getTypeStoreSize(elementType);
+    }
+
+    target->addLocation(
+        MemoryLocation::create(target->getValue(), address, size));
+  }
+
+  addDependencyToNonPointer(source, target);
 }
 
 void Dependency::addDependencyToNonPointer(ref<VersionedValue> source,
