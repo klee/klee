@@ -748,11 +748,12 @@ void Dependency::addDependencyIntToPtr(ref<VersionedValue> source,
     return;
 
   std::set<ref<MemoryLocation> > locations = source->getLocations();
+  ref<Expr> targetExpr(target->getExpression());
+
   for (std::set<ref<MemoryLocation> >::iterator it = locations.begin(),
                                                 ie = locations.end();
        it != ie; ++it) {
     ref<Expr> sourceBase((*it)->getBase());
-    ref<Expr> targetExpr(target->getExpression());
     ref<Expr> offsetDelta(SubExpr::create(
         SubExpr::create(targetExpr, sourceBase), (*it)->getOffset()));
     target->addLocation(MemoryLocation::create(*it, targetExpr, offsetDelta));
