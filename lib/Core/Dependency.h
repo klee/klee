@@ -157,8 +157,9 @@ namespace klee {
     }
 
     static ref<MemoryLocation> create(ref<MemoryLocation> loc,
-                                      ref<Expr> &address, ref<Expr> &offset) {
-      ConstantExpr *c = llvm::dyn_cast<ConstantExpr>(offset);
+                                      ref<Expr> &address,
+                                      ref<Expr> &offsetDelta) {
+      ConstantExpr *c = llvm::dyn_cast<ConstantExpr>(offsetDelta);
       if (c && c->getZExtValue() == 0) {
         ref<Expr> base = loc->base;
         ref<Expr> offset = loc->offset;
@@ -168,7 +169,7 @@ namespace klee {
       }
 
       ref<Expr> base = loc->base;
-      ref<Expr> newOffset = AddExpr::create(loc->offset, offset);
+      ref<Expr> newOffset = AddExpr::create(loc->offset, offsetDelta);
       ref<MemoryLocation> ret(
           new MemoryLocation(loc->value, address, base, newOffset, loc->size));
       return ret;
@@ -301,7 +302,9 @@ namespace klee {
       return 1;
     }
 
-    void addLocation(ref<MemoryLocation> loc) { locations.insert(loc); }
+    void addLocation(ref<MemoryLocation> loc) {
+      locations.insert(loc);
+    }
 
     std::set<ref<MemoryLocation> > getLocations() { return locations; }
 
@@ -628,7 +631,8 @@ namespace klee {
     void updateStore(ref<MemoryLocation> loc, ref<VersionedValue> value);
 
     /// \brief Add flow dependency between source and target value
-    void addDependency(ref<VersionedValue> source, ref<VersionedValue> target);
+    void addDependency(ref<VersionedValue> source, ref<VersionedValue> target,
+                       bool multiLocationsCheck = true);
 
     /// \brief Add flow dependency between source and target value
     void addDependencyIntToPtr(ref<VersionedValue> source,
@@ -637,13 +641,28 @@ namespace klee {
     /// \brief Add flow dependency between source and target pointers, offset by
     /// some amount
     void addDependencyWithOffset(ref<VersionedValue> source,
-                                 ref<VersionedValue> target, ref<Expr> offset);
+                                 ref<VersionedValue> target,
+                                 ref<Expr> offsetDelta);
 
     /// \brief Add flow dependency between source and target value, as the
     /// result of store/load via a memory location.
     void addDependencyViaLocation(ref<VersionedValue> source,
                                   ref<VersionedValue> target,
                                   ref<MemoryLocation> via);
+
+    /// \brief Add a flow dependency from a pointer value to a non-pointer
+    /// value, for an external function call.
+    ///
+    /// Here the target is not a pointer, and we assume that the source is
+    /// is checked for memory access validity at the current index, meaning that
+    /// we assumed all memory access within the external function is valid.
+    void addDependencyViaExternalFunction(ref<VersionedValue> source,
+                                          ref<VersionedValue> target);
+
+    /// \brief Add a flow dependency from a pointer value to a non-pointer
+    /// value.
+    void addDependencyToNonPointer(ref<VersionedValue> source,
+                                   ref<VersionedValue> target);
 
     /// \brief All values that flows to the target in one step
     std::vector<ref<VersionedValue> >
