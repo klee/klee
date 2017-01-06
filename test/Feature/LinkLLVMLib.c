@@ -1,5 +1,5 @@
 // RUN: %llvmgcc %s -g -emit-llvm -O0 -c -o %t1.bc -DLINK_LLVM_LIB_TEST_LIB
-// RUN: llvm-ar r %t1.a %t1.bc
+// RUN: %llvmar r %t1.a %t1.bc
 //
 // RUN: %llvmgcc %s -g -emit-llvm -O0 -c -o %t2.bc -DLINK_LLVM_LIB_TEST_EXEC
 // RUN: rm -rf %t.klee-out
