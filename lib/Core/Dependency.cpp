@@ -818,10 +818,14 @@ void Dependency::addDependencyViaExternalFunction(ref<VersionedValue> source,
   if (source.isNull() || target.isNull())
     return;
 
-  std::set<ref<MemoryLocation> > locations = source->getLocations();
-  if (!locations.empty()) {
-    markPointerFlow(source, source);
+#ifdef ENABLE_Z3
+  if (!NoBoundInterpolation) {
+    std::set<ref<MemoryLocation> > locations = source->getLocations();
+    if (!locations.empty()) {
+      markPointerFlow(source, source);
+    }
   }
+#endif
 
   // Add new location to the target in case of pointer return value
   llvm::Type *t = target->getValue()->getType();

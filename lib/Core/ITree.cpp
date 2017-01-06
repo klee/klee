@@ -1501,7 +1501,8 @@ bool SubsumptionTableEntry::subsumed(
                   "Check failure as sizes of stored values do not match");
             }
             return false;
-          } else if (tabledValue->isPointer() && stateValue->isPointer()) {
+          } else if (!NoBoundInterpolation && tabledValue->isPointer() &&
+                     stateValue->isPointer()) {
             ref<Expr> boundsCheck = tabledValue->getBoundsCheck(stateValue);
             if (boundsCheck->isFalse()) {
               if (DebugInterpolation == ITP_DEBUG_ALL ||
@@ -1543,7 +1544,7 @@ bool SubsumptionTableEntry::subsumed(
                   ConstantExpr::create(0, Expr::Bool),
                   EqExpr::create(tabledConcreteAddress, stateSymbolicAddress));
 
-            } else if (tabledValue->isPointer() &&
+            } else if (!NoBoundInterpolation && tabledValue->isPointer() &&
                        stateSymbolicValue->isPointer()) {
               ref<Expr> boundsCheck =
                   tabledValue->getBoundsCheck(stateSymbolicValue);
@@ -1650,7 +1651,8 @@ bool SubsumptionTableEntry::subsumed(
             newTerm = EqExpr::create(
                 ConstantExpr::create(0, Expr::Bool),
                 EqExpr::create(tabledSymbolicAddress, stateConcreteAddress));
-          } else if (tabledValue->isPointer() && stateValue->isPointer()) {
+          } else if (!NoBoundInterpolation && tabledValue->isPointer() &&
+                     stateValue->isPointer()) {
             ref<Expr> boundsCheck = tabledValue->getBoundsCheck(stateValue);
 
             if (!boundsCheck->isTrue()) {
@@ -1702,7 +1704,8 @@ bool SubsumptionTableEntry::subsumed(
             newTerm = EqExpr::create(
                 ConstantExpr::create(0, Expr::Bool),
                 EqExpr::create(tabledSymbolicAddress, stateSymbolicAddress));
-          } else if (tabledValue->isPointer() && stateValue->isPointer()) {
+          } else if (!NoBoundInterpolation && tabledValue->isPointer() &&
+                     stateValue->isPointer()) {
             ref<Expr> boundsCheck = tabledValue->getBoundsCheck(stateValue);
 
             if (!boundsCheck->isTrue()) {
