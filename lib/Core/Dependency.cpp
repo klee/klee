@@ -156,40 +156,54 @@ ShadowArray::getShadowExpression(ref<Expr> expr,
 
 /**/
 
-void MemoryLocation::adjustOffsetBound(ref<VersionedValue> checkedAddress) {
+void MemoryLocation::adjustOffsetBound(ref<VersionedValue> checkedAddress,
+                                       std::set<ref<Expr> > &_bounds) {
   std::set<ref<MemoryLocation> > locations = checkedAddress->getLocations();
+  std::set<ref<Expr> > bounds(_bounds);
 
-  for (std::set<ref<MemoryLocation> >::iterator it = locations.begin(),
-                                                ie = locations.end();
-       it != ie; ++it) {
-    ref<Expr> checkedOffset = (*it)->getOffset();
-    if (ConstantExpr *c = llvm::dyn_cast<ConstantExpr>(checkedOffset)) {
-      if (ConstantExpr *o = llvm::dyn_cast<ConstantExpr>(offset)) {
-	uint64_t offsetInt = o->getZExtValue();
-        uint64_t newBound = size - (c->getZExtValue() - offsetInt);
-        if (concreteOffsetBound > newBound) {
+  if (bounds.empty()) {
+    bounds.insert(Expr::createPointer(size));
+  }
 
-          // FIXME: A quick hack to avoid assertion check to make DirSeek.c
-          // regression test pass.
-          llvm::Value *v = (*it)->getValue();
-          if (v->getType()->isPointerTy()) {
-            llvm::Type *elementType = v->getType()->getPointerElementType();
-            if (elementType->isStructTy() &&
-                elementType->getStructName() == "struct.dirent") {
+  for (std::set<ref<Expr> >::iterator it1 = bounds.begin(), ie1 = bounds.end();
+       it1 != ie1; ++it1) {
+
+    for (std::set<ref<MemoryLocation> >::iterator it2 = locations.begin(),
+                                                  ie2 = locations.end();
+         it2 != ie2; ++it2) {
+      ref<Expr> checkedOffset = (*it2)->getOffset();
+      if (ConstantExpr *c = llvm::dyn_cast<ConstantExpr>(checkedOffset)) {
+        if (ConstantExpr *o = llvm::dyn_cast<ConstantExpr>(offset)) {
+          if (ConstantExpr *b = llvm::dyn_cast<ConstantExpr>(*it1)) {
+            uint64_t offsetInt = o->getZExtValue();
+            uint64_t newBound =
+                b->getZExtValue() - (c->getZExtValue() - offsetInt);
+
+            if (concreteOffsetBound > newBound) {
+
+              // FIXME: A quick hack to avoid assertion check to make DirSeek.c
+              // regression test pass.
+              llvm::Value *v = (*it2)->getValue();
+              if (v->getType()->isPointerTy()) {
+                llvm::Type *elementType = v->getType()->getPointerElementType();
+                if (elementType->isStructTy() &&
+                    elementType->getStructName() == "struct.dirent") {
+                  concreteOffsetBound = newBound;
+                  continue;
+                }
+              }
+
+              assert(newBound > offsetInt && "incorrect bound");
               concreteOffsetBound = newBound;
-              continue;
             }
+            continue;
           }
-
-          assert(newBound > offsetInt && "incorrect bound");
-          concreteOffsetBound = newBound;
         }
-        continue;
       }
-    }
 
-    symbolicOffsetBounds.insert(SubExpr::create(
-        Expr::createPointer(size), SubExpr::create(checkedOffset, offset)));
+      symbolicOffsetBounds.insert(
+          SubExpr::create(*it1, SubExpr::create(checkedOffset, offset)));
+    }
   }
 }
 
@@ -333,7 +347,8 @@ void StoredValue::init(ref<VersionedValue> vvalue,
   }
 }
 
-ref<Expr> StoredValue::getBoundsCheck(ref<StoredValue> stateValue) const {
+ref<Expr> StoredValue::getBoundsCheck(ref<StoredValue> stateValue,
+                                      std::set<ref<Expr> > &bounds) const {
   ref<Expr> res;
 #ifdef ENABLE_Z3
 
@@ -408,6 +423,7 @@ ref<Expr> StoredValue::getBoundsCheck(ref<StoredValue> stateValue) const {
             } else {
               res = AndExpr::create(UltExpr::create(*it1, *it2), res);
             }
+            bounds.insert(*it2);
           }
           continue;
         }
@@ -417,6 +433,7 @@ ref<Expr> StoredValue::getBoundsCheck(ref<StoredValue> stateValue) const {
         } else {
           res = AndExpr::create(UltExpr::create(*it1, *it2), res);
         }
+        bounds.insert(*it2);
       }
     }
   }
@@ -880,12 +897,13 @@ void Dependency::markFlow(ref<VersionedValue> target) const {
 }
 
 void Dependency::markPointerFlow(ref<VersionedValue> target,
-                                 ref<VersionedValue> checkedAddress) const {
+                                 ref<VersionedValue> checkedAddress,
+                                 std::set<ref<Expr> > &bounds) const {
   std::set<ref<MemoryLocation> > locations = target->getLocations();
   for (std::set<ref<MemoryLocation> >::iterator it = locations.begin(),
                                                 ie = locations.end();
        it != ie; ++it) {
-    (*it)->adjustOffsetBound(checkedAddress);
+    (*it)->adjustOffsetBound(checkedAddress, bounds);
   }
   target->setAsCore();
 
@@ -897,7 +915,7 @@ void Dependency::markPointerFlow(ref<VersionedValue> target,
            it = sources.begin(),
            ie = sources.end();
        it != ie; ++it) {
-    markPointerFlow(it->first, checkedAddress);
+    markPointerFlow(it->first, checkedAddress, bounds);
   }
 }
 
@@ -1583,13 +1601,14 @@ void Dependency::markAllValues(llvm::Value *val) {
   markFlow(value);
 }
 
-void Dependency::markAllPointerValues(llvm::Value *val) {
+void Dependency::markAllPointerValues(llvm::Value *val,
+                                      std::set<ref<Expr> > &bounds) {
   ref<VersionedValue> value = getLatestValueForMarking(val);
 
   if (value.isNull())
     return;
 
-  markPointerFlow(value, value);
+  markPointerFlow(value, value, bounds);
 }
 
 void Dependency::print(llvm::raw_ostream &stream) const {
