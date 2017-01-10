@@ -1519,7 +1519,11 @@ void Dependency::executeMemoryOperation(llvm::Instruction *instr,
       }
     }
 
-    markAllPointerValues(addressOperand);
+    if (ExactAddressInterpolant) {
+      markAllValues(addressOperand);
+    } else {
+      markAllPointerValues(addressOperand);
+    }
   }
 #endif
 }

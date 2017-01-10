@@ -139,7 +139,15 @@ llvm::cl::opt<bool> NoBoundInterpolation(
     "no-bound-interpolation",
     llvm::cl::desc("This option disables the generation of interpolant from "
                    "each successful out-of-bound check: It may result in loss "
-                   "of error report(s)."));
+                   "of error report(s)"));
+
+llvm::cl::opt<bool> ExactAddressInterpolant(
+    "exact-address-interpolant",
+    llvm::cl::desc("This option uses exact address for interpolating "
+                   "successful out-of-bound memory access instead of the "
+                   "default memory offset bound. It has no effect when "
+                   "-no-bound-interpolation is specified."));
+
 #endif // ENABLE_Z3
 
 #ifdef ENABLE_METASMT

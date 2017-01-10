@@ -1501,8 +1501,8 @@ bool SubsumptionTableEntry::subsumed(
                   "Check failure as sizes of stored values do not match");
             }
             return false;
-          } else if (!NoBoundInterpolation && tabledValue->isPointer() &&
-                     stateValue->isPointer()) {
+          } else if (!NoBoundInterpolation && !ExactAddressInterpolant &&
+                     tabledValue->isPointer() && stateValue->isPointer()) {
             ref<Expr> boundsCheck = tabledValue->getBoundsCheck(stateValue);
             if (boundsCheck->isFalse()) {
               if (DebugInterpolation == ITP_DEBUG_ALL ||
@@ -1544,7 +1544,8 @@ bool SubsumptionTableEntry::subsumed(
                   ConstantExpr::create(0, Expr::Bool),
                   EqExpr::create(tabledConcreteAddress, stateSymbolicAddress));
 
-            } else if (!NoBoundInterpolation && tabledValue->isPointer() &&
+            } else if (!NoBoundInterpolation && !ExactAddressInterpolant &&
+                       tabledValue->isPointer() &&
                        stateSymbolicValue->isPointer()) {
               ref<Expr> boundsCheck =
                   tabledValue->getBoundsCheck(stateSymbolicValue);
@@ -1651,8 +1652,8 @@ bool SubsumptionTableEntry::subsumed(
             newTerm = EqExpr::create(
                 ConstantExpr::create(0, Expr::Bool),
                 EqExpr::create(tabledSymbolicAddress, stateConcreteAddress));
-          } else if (!NoBoundInterpolation && tabledValue->isPointer() &&
-                     stateValue->isPointer()) {
+          } else if (!NoBoundInterpolation && !ExactAddressInterpolant &&
+                     tabledValue->isPointer() && stateValue->isPointer()) {
             ref<Expr> boundsCheck = tabledValue->getBoundsCheck(stateValue);
 
             if (!boundsCheck->isTrue()) {
@@ -1704,8 +1705,8 @@ bool SubsumptionTableEntry::subsumed(
             newTerm = EqExpr::create(
                 ConstantExpr::create(0, Expr::Bool),
                 EqExpr::create(tabledSymbolicAddress, stateSymbolicAddress));
-          } else if (!NoBoundInterpolation && tabledValue->isPointer() &&
-                     stateValue->isPointer()) {
+          } else if (!NoBoundInterpolation && !ExactAddressInterpolant &&
+                     tabledValue->isPointer() && stateValue->isPointer()) {
             ref<Expr> boundsCheck = tabledValue->getBoundsCheck(stateValue);
 
             if (!boundsCheck->isTrue()) {
@@ -1927,11 +1928,13 @@ bool SubsumptionTableEntry::subsumed(
           klee_message("Check success as query is true");
         }
 
-        // We build memory bounds interpolants from pointer values
-        for (std::set<llvm::Value *>::iterator it = corePointerValues.begin(),
-                                               ie = corePointerValues.end();
-             it != ie; ++it) {
-          state.itreeNode->pointerValuesInterpolation(*it);
+        if (!NoBoundInterpolation && !ExactAddressInterpolant) {
+          // We build memory bounds interpolants from pointer values
+          for (std::set<llvm::Value *>::iterator it = corePointerValues.begin(),
+                                                 ie = corePointerValues.end();
+               it != ie; ++it) {
+            state.itreeNode->pointerValuesInterpolation(*it);
+          }
         }
 
         return true;
@@ -1962,11 +1965,13 @@ bool SubsumptionTableEntry::subsumed(
       // We create path condition marking structure and mark core constraints
       state.itreeNode->unsatCoreInterpolation(unsatCore);
 
-      // We build memory bounds interpolants from pointer values
-      for (std::set<llvm::Value *>::iterator it = corePointerValues.begin(),
-                                             ie = corePointerValues.end();
-           it != ie; ++it) {
-        state.itreeNode->pointerValuesInterpolation(*it);
+      if (!NoBoundInterpolation && !ExactAddressInterpolant) {
+        // We build memory bounds interpolants from pointer values
+        for (std::set<llvm::Value *>::iterator it = corePointerValues.begin(),
+                                               ie = corePointerValues.end();
+             it != ie; ++it) {
+          state.itreeNode->pointerValuesInterpolation(*it);
+        }
       }
 
       return true;

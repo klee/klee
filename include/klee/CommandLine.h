@@ -92,6 +92,7 @@ extern llvm::cl::opt<InterpolationDebugType> DebugInterpolation;
 
 extern llvm::cl::opt<bool> NoBoundInterpolation;
 
+extern llvm::cl::opt<bool> ExactAddressInterpolant;
 #endif
 
 #ifdef ENABLE_METASMT
