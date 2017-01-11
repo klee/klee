@@ -206,7 +206,8 @@ namespace klee {
     }
 
     /// \brief Adjust the offset bound for interpolation (a.k.a. slackening)
-    void adjustOffsetBound(ref<VersionedValue> checkedAddress);
+    void adjustOffsetBound(ref<VersionedValue> checkedAddress,
+                           std::set<ref<Expr> > &bounds);
 
     bool hasConstantAddress() const { return llvm::isa<ConstantExpr>(address); }
 
@@ -395,7 +396,8 @@ namespace klee {
 
     bool isPointer() const { return !allocationBounds.empty(); }
 
-    ref<Expr> getBoundsCheck(ref<StoredValue> svalue) const;
+    ref<Expr> getBoundsCheck(ref<StoredValue> svalue,
+                             std::set<ref<Expr> > &bounds) const;
 
     ref<Expr> getExpression() const { return expr; }
 
@@ -623,10 +625,12 @@ namespace klee {
 
     /// \brief Gets the latest version of the location, but without checking
     /// for whether the value is constant or not.
-    ref<VersionedValue> getLatestValueNoConstantCheck(llvm::Value *value);
+    ref<VersionedValue> getLatestValueNoConstantCheck(llvm::Value *value,
+                                                      ref<Expr> expr);
 
     /// \brief Gets the latest pointer value for marking
-    ref<VersionedValue> getLatestValueForMarking(llvm::Value *val);
+    ref<VersionedValue> getLatestValueForMarking(llvm::Value *val,
+                                                 ref<Expr> expr);
 
     /// \brief Newly relate an location with its stored value
     void updateStore(ref<MemoryLocation> loc, ref<VersionedValue> value);
@@ -677,7 +681,17 @@ namespace klee {
     /// and adjust its offset bound for memory bounds interpolation (a.k.a.
     /// slackening)
     void markPointerFlow(ref<VersionedValue> target,
-                         ref<VersionedValue> checkedOffset) const;
+                         ref<VersionedValue> checkedOffset) const {
+      std::set<ref<Expr> > bounds;
+      markPointerFlow(target, checkedOffset, bounds);
+    }
+
+    /// \brief Mark as core all the pointer values and that flows to the target;
+    /// and adjust its offset bound for memory bounds interpolation (a.k.a.
+    /// slackening)
+    void markPointerFlow(ref<VersionedValue> target,
+                         ref<VersionedValue> checkedOffset,
+                         std::set<ref<Expr> > &bounds) const;
 
     /// \brief Record the expressions of a call's arguments
     std::vector<ref<VersionedValue> >
@@ -736,11 +750,19 @@ namespace klee {
 
     /// \brief Given an LLVM value, retrieve all its sources and mark them as in
     /// the core.
-    void markAllValues(llvm::Value *value);
+    void markAllValues(llvm::Value *value, ref<Expr> expr);
 
     /// \brief Given an LLVM value which is used as an address, retrieve all its
     /// sources and mark them as in the core.
-    void markAllPointerValues(llvm::Value *value);
+    void markAllPointerValues(llvm::Value *val, ref<Expr> address) {
+      std::set<ref<Expr> > bounds;
+      markAllPointerValues(val, address, bounds);
+    }
+
+    /// \brief Given an LLVM value which is used as an address, retrieve all its
+    /// sources and mark them as in the core.
+    void markAllPointerValues(llvm::Value *val, ref<Expr> address,
+                              std::set<ref<Expr> > &bounds);
 
     /// \brief Print the content of the object to the LLVM error stream
     void dump() const {

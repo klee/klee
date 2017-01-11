@@ -632,8 +632,9 @@ public:
   void unsatCoreInterpolation(std::vector<ref<Expr> > unsatCore);
 
   /// \brief Memory bounds interpolation from a target address
-  void pointerValuesInterpolation(llvm::Value *address) {
-    dependency->markAllPointerValues(address);
+  void pointerValuesInterpolation(llvm::Value *value, ref<Expr> address,
+                                  std::set<ref<Expr> > &bounds) {
+    dependency->markAllPointerValues(value, address, bounds);
   }
 
   /// \brief Print the content of the tree node object to the LLVM error stream.

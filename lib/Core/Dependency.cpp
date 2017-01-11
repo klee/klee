@@ -156,40 +156,54 @@ ShadowArray::getShadowExpression(ref<Expr> expr,
 
 /**/
 
-void MemoryLocation::adjustOffsetBound(ref<VersionedValue> checkedAddress) {
+void MemoryLocation::adjustOffsetBound(ref<VersionedValue> checkedAddress,
+                                       std::set<ref<Expr> > &_bounds) {
   std::set<ref<MemoryLocation> > locations = checkedAddress->getLocations();
+  std::set<ref<Expr> > bounds(_bounds);
 
-  for (std::set<ref<MemoryLocation> >::iterator it = locations.begin(),
-                                                ie = locations.end();
-       it != ie; ++it) {
-    ref<Expr> checkedOffset = (*it)->getOffset();
-    if (ConstantExpr *c = llvm::dyn_cast<ConstantExpr>(checkedOffset)) {
-      if (ConstantExpr *o = llvm::dyn_cast<ConstantExpr>(offset)) {
-	uint64_t offsetInt = o->getZExtValue();
-        uint64_t newBound = size - (c->getZExtValue() - offsetInt);
-        if (concreteOffsetBound > newBound) {
+  if (bounds.empty()) {
+    bounds.insert(Expr::createPointer(size));
+  }
 
-          // FIXME: A quick hack to avoid assertion check to make DirSeek.c
-          // regression test pass.
-          llvm::Value *v = (*it)->getValue();
-          if (v->getType()->isPointerTy()) {
-            llvm::Type *elementType = v->getType()->getPointerElementType();
-            if (elementType->isStructTy() &&
-                elementType->getStructName() == "struct.dirent") {
+  for (std::set<ref<Expr> >::iterator it1 = bounds.begin(), ie1 = bounds.end();
+       it1 != ie1; ++it1) {
+
+    for (std::set<ref<MemoryLocation> >::iterator it2 = locations.begin(),
+                                                  ie2 = locations.end();
+         it2 != ie2; ++it2) {
+      ref<Expr> checkedOffset = (*it2)->getOffset();
+      if (ConstantExpr *c = llvm::dyn_cast<ConstantExpr>(checkedOffset)) {
+        if (ConstantExpr *o = llvm::dyn_cast<ConstantExpr>(offset)) {
+          if (ConstantExpr *b = llvm::dyn_cast<ConstantExpr>(*it1)) {
+            uint64_t offsetInt = o->getZExtValue();
+            uint64_t newBound =
+                b->getZExtValue() - (c->getZExtValue() - offsetInt);
+
+            if (concreteOffsetBound > newBound) {
+
+              // FIXME: A quick hack to avoid assertion check to make DirSeek.c
+              // regression test pass.
+              llvm::Value *v = (*it2)->getValue();
+              if (v->getType()->isPointerTy()) {
+                llvm::Type *elementType = v->getType()->getPointerElementType();
+                if (elementType->isStructTy() &&
+                    elementType->getStructName() == "struct.dirent") {
+                  concreteOffsetBound = newBound;
+                  continue;
+                }
+              }
+
+              assert(newBound > offsetInt && "incorrect bound");
               concreteOffsetBound = newBound;
-              continue;
             }
+            continue;
           }
-
-          assert(newBound > offsetInt && "incorrect bound");
-          concreteOffsetBound = newBound;
         }
-        continue;
       }
-    }
 
-    symbolicOffsetBounds.insert(SubExpr::create(
-        Expr::createPointer(size), SubExpr::create(checkedOffset, offset)));
+      symbolicOffsetBounds.insert(
+          SubExpr::create(*it1, SubExpr::create(checkedOffset, offset)));
+    }
   }
 }
 
@@ -333,7 +347,8 @@ void StoredValue::init(ref<VersionedValue> vvalue,
   }
 }
 
-ref<Expr> StoredValue::getBoundsCheck(ref<StoredValue> stateValue) const {
+ref<Expr> StoredValue::getBoundsCheck(ref<StoredValue> stateValue,
+                                      std::set<ref<Expr> > &bounds) const {
   ref<Expr> res;
 #ifdef ENABLE_Z3
 
@@ -408,6 +423,7 @@ ref<Expr> StoredValue::getBoundsCheck(ref<StoredValue> stateValue) const {
             } else {
               res = AndExpr::create(UltExpr::create(*it1, *it2), res);
             }
+            bounds.insert(*it2);
           }
           continue;
         }
@@ -417,6 +433,7 @@ ref<Expr> StoredValue::getBoundsCheck(ref<StoredValue> stateValue) const {
         } else {
           res = AndExpr::create(UltExpr::create(*it1, *it2), res);
         }
+        bounds.insert(*it2);
       }
     }
   }
@@ -562,7 +579,7 @@ Dependency::getStoredExpressions(std::set<const Array *> &replacements,
 ref<VersionedValue> Dependency::getLatestValue(llvm::Value *value,
                                                ref<Expr> valueExpr,
                                                bool constraint) {
-  assert(value && "value cannot be null");
+  assert(value && !valueExpr.isNull() && "value cannot be null");
   if (llvm::isa<llvm::ConstantExpr>(value)) {
     llvm::Instruction *asInstruction =
         llvm::dyn_cast<llvm::ConstantExpr>(value)->getAsInstruction();
@@ -613,7 +630,6 @@ ref<VersionedValue> Dependency::getLatestValue(llvm::Value *value,
   if (llvm::isa<llvm::Constant>(value) && !llvm::isa<llvm::GlobalValue>(value))
     return getNewVersionedValue(value, valueExpr);
 
-  ref<VersionedValue> ret = 0;
   if (valuesMap.find(value) != valuesMap.end()) {
     // Slight complication here that the latest version of an LLVM
     // value may not be at the end of the vector; it is possible other
@@ -639,6 +655,7 @@ ref<VersionedValue> Dependency::getLatestValue(llvm::Value *value,
     }
   }
 
+  ref<VersionedValue> ret = 0;
   if (parent)
     ret = parent->getLatestValue(value, valueExpr, constraint);
 
@@ -672,25 +689,41 @@ ref<VersionedValue> Dependency::getLatestValue(llvm::Value *value,
 }
 
 ref<VersionedValue>
-Dependency::getLatestValueNoConstantCheck(llvm::Value *value) {
+Dependency::getLatestValueNoConstantCheck(llvm::Value *value,
+                                          ref<Expr> valueExpr) {
   assert(value && "value cannot be null");
 
   if (valuesMap.find(value) != valuesMap.end()) {
-    // We assume this method is only used for marking constraints, so here we do
-    // not check for the equivalence of the expressions as in getLatestValue
-    // method. We assume that in condition, we have the latest value
-    // of the condition at the end of the vector.
-    return valuesMap[value].back();
+    if (!valueExpr.isNull()) {
+      // Slight complication here that the latest version of an LLVM
+      // value may not be at the end of the vector; it is possible other
+      // values in a call stack has been appended to the vector, before
+      // the function returned, so the end part of the vector contains
+      // local values in a call already returned. To resolve this issue,
+      // here we naively search for values with equivalent expression.
+      std::vector<ref<VersionedValue> > allValues = valuesMap[value];
+
+      for (std::vector<ref<VersionedValue> >::iterator it = allValues.begin(),
+                                                       ie = allValues.end();
+           it != ie; ++it) {
+        ref<Expr> e = (*it)->getExpression();
+        if (e == valueExpr)
+          return *it;
+      }
+    } else {
+      return valuesMap[value].back();
+    }
   }
 
   if (parent)
-    return parent->getLatestValueNoConstantCheck(value);
+    return parent->getLatestValueNoConstantCheck(value, valueExpr);
 
   return 0;
 }
 
-ref<VersionedValue> Dependency::getLatestValueForMarking(llvm::Value *val) {
-  ref<VersionedValue> value = getLatestValueNoConstantCheck(val);
+ref<VersionedValue> Dependency::getLatestValueForMarking(llvm::Value *val,
+                                                         ref<Expr> expr) {
+  ref<VersionedValue> value = getLatestValueNoConstantCheck(val, expr);
 
   // Right now we simply ignore the __dso_handle values. They are due
   // to library / linking errors caused by missing options (-shared) in the
@@ -880,12 +913,14 @@ void Dependency::markFlow(ref<VersionedValue> target) const {
 }
 
 void Dependency::markPointerFlow(ref<VersionedValue> target,
-                                 ref<VersionedValue> checkedAddress) const {
+                                 ref<VersionedValue> checkedAddress,
+                                 std::set<ref<Expr> > &bounds) const {
+  //  checkedAddress->dump();
   std::set<ref<MemoryLocation> > locations = target->getLocations();
   for (std::set<ref<MemoryLocation> >::iterator it = locations.begin(),
                                                 ie = locations.end();
        it != ie; ++it) {
-    (*it)->adjustOffsetBound(checkedAddress);
+    (*it)->adjustOffsetBound(checkedAddress, bounds);
   }
   target->setAsCore();
 
@@ -897,7 +932,7 @@ void Dependency::markPointerFlow(ref<VersionedValue> target,
            it = sources.begin(),
            ie = sources.end();
        it != ie; ++it) {
-    markPointerFlow(it->first, checkedAddress);
+    markPointerFlow(it->first, checkedAddress, bounds);
   }
 }
 
@@ -1102,7 +1137,8 @@ void Dependency::execute(llvm::Instruction *instr,
     case llvm::Instruction::Br: {
       llvm::BranchInst *binst = llvm::dyn_cast<llvm::BranchInst>(instr);
       if (binst && binst->isConditional()) {
-        markAllValues(binst->getCondition());
+        ref<Expr> unknownExpression;
+        markAllValues(binst->getCondition(), unknownExpression);
       }
       break;
     }
@@ -1486,6 +1522,7 @@ void Dependency::executeMemoryOperation(llvm::Instruction *instr,
     // operation, but we ignored it here as this method is only called when load
     // / store instruction is processed.
     llvm::Value *addressOperand;
+    ref<Expr> address(args.at(1));
     switch (instr->getOpcode()) {
     case llvm::Instruction::Load: {
       addressOperand = instr->getOperand(0);
@@ -1520,9 +1557,9 @@ void Dependency::executeMemoryOperation(llvm::Instruction *instr,
     }
 
     if (ExactAddressInterpolant) {
-      markAllValues(addressOperand);
+      markAllValues(addressOperand, address);
     } else {
-      markAllPointerValues(addressOperand);
+      markAllPointerValues(addressOperand, address);
     }
   }
 #endif
@@ -1574,8 +1611,8 @@ void Dependency::bindReturnValue(llvm::CallInst *site, llvm::Instruction *i,
 
 void Dependency::markAllValues(ref<VersionedValue> value) { markFlow(value); }
 
-void Dependency::markAllValues(llvm::Value *val) {
-  ref<VersionedValue> value = getLatestValueForMarking(val);
+void Dependency::markAllValues(llvm::Value *val, ref<Expr> expr) {
+  ref<VersionedValue> value = getLatestValueForMarking(val, expr);
 
   if (value.isNull())
     return;
@@ -1583,13 +1620,14 @@ void Dependency::markAllValues(llvm::Value *val) {
   markFlow(value);
 }
 
-void Dependency::markAllPointerValues(llvm::Value *val) {
-  ref<VersionedValue> value = getLatestValueForMarking(val);
+void Dependency::markAllPointerValues(llvm::Value *val, ref<Expr> address,
+                                      std::set<ref<Expr> > &bounds) {
+  ref<VersionedValue> value = getLatestValueForMarking(val, address);
 
   if (value.isNull())
     return;
 
-  markPointerFlow(value, value);
+  markPointerFlow(value, value, bounds);
 }
 
 void Dependency::print(llvm::raw_ostream &stream) const {
