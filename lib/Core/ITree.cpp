@@ -1439,11 +1439,9 @@ bool SubsumptionTableEntry::subsumed(
 
   ref<Expr> stateEqualityConstraints;
 
-  std::map<llvm::Value *, std::set<ref<Expr> > > corePointerValues; // Pointer
-                                                                    // values in
-                                                                    // the core
-                                                                    // for
-                                             // memory bounds interpolation
+  std::map<ref<StoredValue>, std::set<ref<Expr> > >
+  corePointerValues; // Pointer values in the core for memory bounds
+                     // interpolation
 
   {
     TimerStatIncrementer t(concreteStoreExpressionBuildTime);
@@ -1521,7 +1519,7 @@ bool SubsumptionTableEntry::subsumed(
               res = boundsCheck;
 
             // We record the LLVM value of the pointer
-            corePointerValues[stateValue->getValue()] = bounds;
+            corePointerValues[stateValue] = bounds;
           } else {
             res = EqExpr::create(tabledValue->getExpression(),
                                  stateValue->getExpression());
@@ -1570,7 +1568,7 @@ bool SubsumptionTableEntry::subsumed(
               }
 
               // We record the LLVM value of the pointer
-              corePointerValues[stateValue->getValue()] = bounds;
+              corePointerValues[stateValue] = bounds;
             } else {
               // Implication: if tabledConcreteAddress == stateSymbolicAddress,
               // then tabledValue->getExpression() ==
@@ -1677,7 +1675,7 @@ bool SubsumptionTableEntry::subsumed(
             }
 
             // We record the LLVM value of the pointer
-            corePointerValues[stateValue->getValue()] = bounds;
+            corePointerValues[stateValue] = bounds;
           } else {
             // Implication: if tabledSymbolicAddress == stateConcreteAddress,
             // then tabledValue == stateValue
@@ -1732,7 +1730,7 @@ bool SubsumptionTableEntry::subsumed(
             }
 
             // We record the LLVM value of the pointer
-            corePointerValues[stateValue->getValue()] = bounds;
+            corePointerValues[stateValue] = bounds;
           } else {
             // Implication: if tabledSymbolicAddress == stateSymbolicAddress
             // then tabledValue == stateValue
@@ -1809,11 +1807,12 @@ bool SubsumptionTableEntry::subsumed(
                        msg.c_str());
         }
       }
-      for (std::map<llvm::Value *, std::set<ref<Expr> > >::iterator
+      for (std::map<ref<StoredValue>, std::set<ref<Expr> > >::iterator
                it = corePointerValues.begin(),
                ie = corePointerValues.end();
            it != ie; ++it) {
-        state.itreeNode->pointerValuesInterpolation(it->first, it->second);
+        state.itreeNode->pointerValuesInterpolation(
+            it->first->getValue(), it->first->getExpression(), it->second);
       }
       return true;
     }
@@ -1941,11 +1940,12 @@ bool SubsumptionTableEntry::subsumed(
 
         if (!NoBoundInterpolation && !ExactAddressInterpolant) {
           // We build memory bounds interpolants from pointer values
-          for (std::map<llvm::Value *, std::set<ref<Expr> > >::iterator
+          for (std::map<ref<StoredValue>, std::set<ref<Expr> > >::iterator
                    it = corePointerValues.begin(),
                    ie = corePointerValues.end();
                it != ie; ++it) {
-            state.itreeNode->pointerValuesInterpolation(it->first, it->second);
+            state.itreeNode->pointerValuesInterpolation(
+                it->first->getValue(), it->first->getExpression(), it->second);
           }
         }
 
@@ -1979,11 +1979,12 @@ bool SubsumptionTableEntry::subsumed(
 
       if (!NoBoundInterpolation && !ExactAddressInterpolant) {
         // We build memory bounds interpolants from pointer values
-        for (std::map<llvm::Value *, std::set<ref<Expr> > >::iterator
+        for (std::map<ref<StoredValue>, std::set<ref<Expr> > >::iterator
                  it = corePointerValues.begin(),
                  ie = corePointerValues.end();
              it != ie; ++it) {
-          state.itreeNode->pointerValuesInterpolation(it->first, it->second);
+          state.itreeNode->pointerValuesInterpolation(
+              it->first->getValue(), it->first->getExpression(), it->second);
         }
       }
 
@@ -2341,7 +2342,9 @@ void ITree::markPathCondition(ExecutionState &state, TimingSolver *solver) {
   llvm::BranchInst *binst =
       llvm::dyn_cast<llvm::BranchInst>(state.prevPC->inst);
   if (binst) {
-    currentINode->dependency->markAllValues(binst->getCondition());
+    ref<Expr> unknownExpression;
+    currentINode->dependency->markAllValues(binst->getCondition(),
+                                            unknownExpression);
   }
 
   PathCondition *pc = currentINode->pathCondition;

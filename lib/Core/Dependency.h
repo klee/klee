@@ -625,10 +625,12 @@ namespace klee {
 
     /// \brief Gets the latest version of the location, but without checking
     /// for whether the value is constant or not.
-    ref<VersionedValue> getLatestValueNoConstantCheck(llvm::Value *value);
+    ref<VersionedValue> getLatestValueNoConstantCheck(llvm::Value *value,
+                                                      ref<Expr> expr);
 
     /// \brief Gets the latest pointer value for marking
-    ref<VersionedValue> getLatestValueForMarking(llvm::Value *val);
+    ref<VersionedValue> getLatestValueForMarking(llvm::Value *val,
+                                                 ref<Expr> expr);
 
     /// \brief Newly relate an location with its stored value
     void updateStore(ref<MemoryLocation> loc, ref<VersionedValue> value);
@@ -748,18 +750,19 @@ namespace klee {
 
     /// \brief Given an LLVM value, retrieve all its sources and mark them as in
     /// the core.
-    void markAllValues(llvm::Value *value);
+    void markAllValues(llvm::Value *value, ref<Expr> expr);
 
     /// \brief Given an LLVM value which is used as an address, retrieve all its
     /// sources and mark them as in the core.
-    void markAllPointerValues(llvm::Value *val) {
+    void markAllPointerValues(llvm::Value *val, ref<Expr> address) {
       std::set<ref<Expr> > bounds;
-      markAllPointerValues(val, bounds);
+      markAllPointerValues(val, address, bounds);
     }
 
     /// \brief Given an LLVM value which is used as an address, retrieve all its
     /// sources and mark them as in the core.
-    void markAllPointerValues(llvm::Value *value, std::set<ref<Expr> > &bounds);
+    void markAllPointerValues(llvm::Value *val, ref<Expr> address,
+                              std::set<ref<Expr> > &bounds);
 
     /// \brief Print the content of the object to the LLVM error stream
     void dump() const {
