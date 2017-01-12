@@ -212,6 +212,7 @@ static bool linkBCA(object::Archive* archive, Module* composite, std::string& er
 
   KLEE_DEBUG_WITH_TYPE("klee_linker", dbgs() << "Loading modules\n");
   // Load all bitcode files in to memory so we can examine their symbols
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
   for (object::Archive::child_iterator AI = archive->begin_children(),
        AE = archive->end_children(); AI != AE; ++AI)
   {
@@ -280,6 +281,69 @@ static bool linkBCA(object::Archive* archive, Module* composite, std::string& er
     }
 
   }
+#else 
+  for (object::Archive::child_iterator AI = archive->child_begin(),
+       AE = archive->child_end(); AI != AE; ++AI)
+  {
+    ErrorOr< StringRef > memberName = AI->getName();
+
+    if ( memberName )
+    {
+      KLEE_DEBUG_WITH_TYPE("klee_linker", dbgs() << "Loading archive member " << memberName.get() << "\n");
+    }
+    else
+    {
+      errorMessage="Archive member does not have a name!\n";
+      return false;
+    }
+
+    ErrorOr< std::unique_ptr< object::Binary > > child = AI->getAsBinary();
+    if ( !child )
+    {
+      ErrorOr< std::unique_ptr< MemoryBuffer > > buff = AI->getMemoryBuffer(); // Once this is destroyed will Module still be valid??
+
+      if (!buff)
+      {
+        SS << "Failed to get MemoryBuffer: " <<buff.getError().message();
+        SS.flush();
+        return false;
+      }
+
+      if (buff.get())
+      {
+        // FIXME: Maybe load bitcode file lazily? Then if we need to link, materialise the module
+        ErrorOr< Module * > Result = parseBitcodeFile(buff.get().get(), getGlobalContext());
+
+        if(!Result || !Result.get())
+        {
+          SS << "Loading module failed : " << Result.getError().message() << "\n";
+          SS.flush();
+          return false;
+        }
+        archiveModules.push_back(Result.get());
+      }
+      else
+      {
+        errorMessage="Buffer was NULL!";
+        return false;
+      }
+    }
+    else if (object::ObjectFile *o = dyn_cast<object::ObjectFile>(child.get().get()))
+    {
+      SS << "Object file " << o->getFileName().data() <<
+            " in archive is not supported";
+      SS.flush();
+      return false;
+    }
+    else
+    {
+      SS << "Loading archive child with error "<< child.getError().message();
+      SS.flush();
+      return false;
+    }
+
+  }
+#endif 
 
   KLEE_DEBUG_WITH_TYPE("klee_linker", dbgs() << "Loaded " << archiveModules.size() << " modules\n");
 
@@ -370,6 +434,7 @@ Module *klee::linkWithLibrary(Module *module,
         libraryName.c_str());
   }
 
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
   OwningPtr<MemoryBuffer> Buffer;
   if (error_code ec = MemoryBuffer::getFile(libraryName,Buffer)) {
     klee_error("Link with library %s failed: %s", libraryName.c_str(),
@@ -411,11 +476,58 @@ Module *klee::linkWithLibrary(Module *module,
 
   } else if (magic.is_object()) {
     OwningPtr<object::Binary> obj;
+    //FIXME: obj pointer is always NULL here
     if (object::ObjectFile *o = dyn_cast<object::ObjectFile>(obj.get())) {
       klee_warning("Link with library: Object file %s in archive %s found. "
           "Currently not supported.",
           o->getFileName().data(), libraryName.c_str());
     }
+#else
+  ErrorOr< std::unique_ptr< MemoryBuffer > > Buffer = MemoryBuffer::getFile(libraryName);
+  if (!Buffer) {
+    klee_error("Link with library %s failed: %s", libraryName.c_str(),
+        Buffer.getError().message().c_str());
+  }
+
+  sys::fs::file_magic magic = sys::fs::identify_magic(Buffer.get()->getBuffer());
+  LLVMContext &Context = getGlobalContext();
+  std::string ErrorMessage;
+
+  if (magic == sys::fs::file_magic::bitcode) {
+    ErrorOr< Module* > Result = parseBitcodeFile(Buffer.get().get(), Context);
+
+
+    if (!Result || Linker::LinkModules(module, Result.get(), Linker::DestroySource, &ErrorMessage))
+      klee_error("Link with library %s failed: %s", libraryName.c_str(),
+          ErrorMessage.c_str());
+
+    delete Result.get();
+
+  } else if (magic == sys::fs::file_magic::archive) {
+    ErrorOr< object::Binary* > arch = object::createBinary(std::move(Buffer.get()));
+    if (!arch)
+      klee_error("Link with library %s failed: %s", libraryName.c_str(),
+          arch.getError().message().c_str());
+
+    if (object::Archive *a = dyn_cast<object::Archive>(arch.get())) {
+      // Handle in helper
+      if (!linkBCA(a, module, ErrorMessage))
+        klee_error("Link with library %s failed: %s", libraryName.c_str(),
+            ErrorMessage.c_str());
+    }
+    else {
+      klee_error("Link with library %s failed: Cast to archive failed", libraryName.c_str());
+    }
+
+  } else if (magic.is_object()) {
+    //TODO: Before obj was always set to nullptr, not sure if this assignment makes sense
+    ErrorOr< object::Binary* > obj = object::createBinary(std::move(Buffer.get()));
+    if (object::ObjectFile *o = dyn_cast<object::ObjectFile>(obj.get())) {
+      klee_warning("Link with library: Object file %s in archive %s found. "
+          "Currently not supported.",
+          o->getFileName().data(), libraryName.c_str());
+    }
+#endif
   } else {
     klee_error("Link with library %s failed: Unrecognized file type.",
         libraryName.c_str());
