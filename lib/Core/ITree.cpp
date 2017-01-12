@@ -32,6 +32,20 @@ using namespace klee;
 
 /**/
 
+void SharedStack::print(llvm::raw_ostream &stream) const {
+  Node *p = head;
+
+  stream << "[\n";
+  while (p) {
+    p->print(stream);
+    stream << "\n";
+    p = p->getParent();
+  }
+  stream << "]";
+}
+
+/**/
+
 std::string ITreeGraph::PrettyExpressionBuilder::bvConst32(uint32_t value) {
   std::ostringstream stream;
   stream << value;
@@ -2534,7 +2548,11 @@ ITreeNode::ITreeNode(ITreeNode *_parent, llvm::DataLayout *_targetData)
       instructionsDepth(_parent ? _parent->instructionsDepth : 0),
       targetData(_targetData) {
 
-  pathCondition = (_parent != 0) ? _parent->pathCondition : 0;
+  pathCondition = 0;
+  if (_parent) {
+    pathCondition = _parent->pathCondition;
+    callStack = _parent->callStack;
+  }
 
   // Inherit the abstract dependency or NULL
   dependency = new Dependency(_parent ? _parent->dependency : 0, _targetData);
@@ -2587,6 +2605,7 @@ void ITreeNode::bindCallArguments(llvm::Instruction *site,
                                   std::vector<ref<Expr> > &arguments) {
   TimerStatIncrementer t(bindCallArgumentsTime);
   dependency->bindCallArguments(site, arguments);
+  callStack.push(site);
 }
 
 void ITreeNode::bindReturnValue(llvm::CallInst *site, llvm::Instruction *inst,
@@ -2595,6 +2614,7 @@ void ITreeNode::bindReturnValue(llvm::CallInst *site, llvm::Instruction *inst,
   // the dependency graph by removing callee values.
   TimerStatIncrementer t(bindReturnValueTime);
   dependency->bindReturnValue(site, inst, returnValue);
+  callStack.pop();
 }
 
 std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
@@ -2695,6 +2715,8 @@ void ITreeNode::print(llvm::raw_ostream &stream,
     right->print(stream, paddingAmount + 1);
     stream << "\n";
   }
+  callStack.print(stream);
+  stream << "\n";
   if (dependency) {
     stream << tabsNext << "------- Abstract Dependencies ----------\n";
     dependency->print(stream, paddingAmount + 1);
