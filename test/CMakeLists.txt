@@ -13,6 +13,8 @@ set(LLVM_TOOLS_DIR "${LLVM_TOOLS_BINARY_DIR}")
 # is shared by both build systems.
 set(LLVMCC "${LLVMCC} -I${CMAKE_SOURCE_DIR}/include")
 set(LLVMCXX "${LLVMCXX} -I${CMAKE_SOURCE_DIR}/include")
+set(NATIVE_CC "${CMAKE_C_COMPILER} -I ${CMAKE_SOURCE_DIR}/include")
+set(NATIVE_CXX "${CMAKE_CXX_COMPILER} -I ${CMAKE_SOURCE_DIR}/include")
 set(TARGET_TRIPLE "${TARGET_TRIPLE}")
 if (ENABLE_KLEE_UCLIBC)
   set(ENABLE_UCLIBC 1)
@@ -105,6 +107,20 @@ add_subdirectory(Concrete)
 ###############################################################################
 # Configure lit test suite
 ###############################################################################
+
+# Find path to libkleeRuntest target for `lit.site.cfg`.
+# FIXME: This is not the right way to get the location of the target we have to
+# set CMP0026 to old.
+# This will likely break if using a multi-configuration generator.
+if (POLICY CMP0026)
+  # HACK: Allow reading `LOCATION` property.
+  cmake_policy(SET CMP0026 OLD)
+endif()
+get_property(LIB_KLEE_RUN_TEST_PATH
+  TARGET kleeRuntest
+  PROPERTY LOCATION
+)
+
 configure_file(lit.site.cfg.in
   ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg
   @ONLY
@@ -112,7 +128,7 @@ configure_file(lit.site.cfg.in
 
 add_custom_target(integrationtests
   COMMAND "${LIT_TOOL}" ${LIT_ARGS} "${CMAKE_CURRENT_BINARY_DIR}"
-  DEPENDS klee kleaver
+  DEPENDS klee kleaver kleeRuntest
   COMMENT "Running integration tests"
   ${ADD_CUSTOM_COMMAND_USES_TERMINAL_ARG}
 )
