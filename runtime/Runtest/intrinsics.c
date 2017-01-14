@@ -80,16 +80,33 @@ void klee_make_symbolic(void *array, size_t nbytes, const char *name) {
     }
   }
 
-  if (testPosition >= testData->numObjects) {
-    fprintf(stderr, "ERROR: out of inputs, using zero\n");
-    memset(array, 0, nbytes);
-  } else {
-    KTestObject *o = &testData->objects[testPosition++];
-    memcpy(array, o->bytes, nbytes<o->numBytes ? nbytes : o->numBytes);
-    if (nbytes != o->numBytes) {
-      fprintf(stderr, "ERROR: object sizes differ\n");
-      if (o->numBytes < nbytes) 
-        memset((char*) array + o->numBytes, 0, nbytes - o->numBytes);
+  for (;; ++testPosition) {
+    if (testPosition >= testData->numObjects) {
+      fprintf(stderr, "ERROR: out of inputs, using zero\n");
+      memset(array, 0, nbytes);
+      break;
+    } else {
+      KTestObject *o = &testData->objects[testPosition];
+      if (strcmp("model_version", o->name) == 0 &&
+          strcmp("model_version", name) != 0) {
+        // Skip over this KTestObject because we've hit
+        // `model_version` which is from the POSIX runtime
+        // and the caller didn't ask for it.
+        continue;
+      }
+      if (strcmp(name, o->name) != 0) {
+        fprintf(stderr, "ERROR: object name mismatch. Requesting \"%s\" but "
+                        "returning \"%s\"",
+                name, o->name);
+      }
+      memcpy(array, o->bytes, nbytes < o->numBytes ? nbytes : o->numBytes);
+      if (nbytes != o->numBytes) {
+        fprintf(stderr, "ERROR: object sizes differ\n");
+        if (o->numBytes < nbytes)
+          memset((char *)array + o->numBytes, 0, nbytes - o->numBytes);
+      }
+      ++testPosition;
+      break;
     }
   }
 }

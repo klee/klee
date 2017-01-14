@@ -1,6 +1,5 @@
 // REQUIRES: posix-runtime
 // FIXME: We need to fix a bug in libkleeRuntest
-// XFAIL: *
 // RUN: %llvmgcc %s -emit-llvm -g -O0 -c -o %t.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --posix-runtime --search=dfs %t.bc
