@@ -59,3 +59,14 @@ ifeq ($(HOST_OS), $(filter $(HOST_OS), Linux GNU GNU/kFreeBSD))
     # Don't allow unresolved symbols.
     LLVMLibsOptions += -Wl,--no-undefined
 endif
+
+ifeq ($(HOST_OS), Linux)
+	# HACK: Setup symlinks that `ldconfig` would set up
+	# so that libkleeRuntest can be used from the build directory.
+	# This is needed to run tests.
+	sym_link_name := $(SharedLibDir)/$(SharedPrefix)$(LIBRARYNAME)$(SHLIBEXT).$(SHARED_VERSION)
+
+all:: $(LibName.SO)
+	$(Verb) [ ! -e "$(sym_link_name)" ] && ln -s $(LibName.SO) "$(sym_link_name)" || echo ""
+
+endif

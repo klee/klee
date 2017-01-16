@@ -14,6 +14,9 @@ config.llvm_version_minor = "@LLVM_VERSION_MINOR@"
 config.llvmgcc = "@LLVMCC@"
 config.llvmgxx = "@LLVMCXX@"
 
+config.cc = "@NATIVE_CC@"
+config.cxx = "@NATIVE_CXX@"
+
 # Features
 config.enable_uclibc = True if @ENABLE_UCLIBC@ == 1 else False
 config.enable_posix_runtime = True if @ENABLE_POSIX_RUNTIME@ == 1 else False
@@ -23,6 +26,9 @@ config.enable_z3 = True if @ENABLE_Z3@ == 1 else False
 
 # Current target
 config.target_triple = "@TARGET_TRIPLE@"
+
+# Path to libkleeRuntest
+config.libkleeruntest = "@LIB_KLEE_RUN_TEST_PATH@"
 
 # Let the main config do the real work.
 try:
