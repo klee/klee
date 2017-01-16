@@ -2266,13 +2266,13 @@ bool ITree::subsumptionCheck(TimingSolver *solver, ExecutionState &state,
   return false;
 }
 
-void ITree::store(SubsumptionTableEntry *subItem) {
-  subsumptionTable[subItem->programPoint].push_back(subItem);
+void ITree::store(SubsumptionTableEntry *entry) {
+  subsumptionTable[entry->programPoint].push_back(entry);
 #ifdef ENABLE_Z3
   if (MaxFailSubsumption > 0 &&
       (unsigned)MaxFailSubsumption <
-          subsumptionTable[subItem->programPoint].size()) {
-    subsumptionTable[subItem->programPoint].pop_front();
+          subsumptionTable[entry->programPoint].size()) {
+    subsumptionTable[entry->programPoint].pop_front();
     }
 #endif
 }

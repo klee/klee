@@ -820,7 +820,7 @@ public:
   ~ITree();
 
   /// \brief Store an entry into the subsumption table.
-  void store(SubsumptionTableEntry *subItem);
+  void store(SubsumptionTableEntry *entry);
 
   /// \brief Set the reference to the KLEE state in the current interpolation
   /// data holder (interpolation tree node) that is currently being processed.
