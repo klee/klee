@@ -46,6 +46,236 @@ namespace klee {
   /// \brief Output function name to the output stream
   extern bool outputFunctionName(llvm::Value *value, llvm::raw_ostream &stream);
 
+  class SharedStack {
+
+    class Node {
+
+      Node *parent;
+
+      llvm::Instruction *callsite;
+
+    public:
+      Node(Node *_parent, llvm::Instruction *_callsite)
+          : parent(_parent), callsite(_callsite) {
+        assert(_callsite && "null callsite");
+      }
+
+      Node(llvm::Instruction *_callsite) : parent(0), callsite(_callsite) {
+        assert(_callsite && "null callsite");
+      }
+
+      ~Node() {}
+
+      Node *getParent() { return parent; }
+
+      llvm::Instruction *getContent() { return callsite; }
+
+      int compare(const Node &other) const {
+        uintptr_t l = reinterpret_cast<uintptr_t>(callsite),
+                  r = reinterpret_cast<uintptr_t>(other.callsite);
+
+        if (l < r) {
+          return -1;
+        } else if (l > r) {
+          return 1;
+        }
+        return 0;
+      }
+
+      void dump() const {
+        print(llvm::errs());
+        llvm::errs() << "\n";
+      }
+
+      void print(llvm::raw_ostream &stream) const {
+        assert(callsite && "null callsite");
+        callsite->print(stream);
+      }
+    };
+
+    Node *head;
+
+    uint64_t addition;
+
+  public:
+    SharedStack() : head(0), addition(0) {}
+
+    SharedStack(const SharedStack &_parent) : head(_parent.head), addition(0) {}
+
+    SharedStack(SharedStack &_parent, llvm::Instruction *_callsite)
+        : head(new Node(_parent.head, _callsite)), addition(0) {}
+
+    ~SharedStack() {
+      while (addition)
+        pop();
+    }
+
+    llvm::Instruction *pop() {
+      assert(head && "head cannot be null");
+
+      llvm::Instruction *content = head->getContent();
+
+      Node *oldHead = head;
+
+      head = head->getParent();
+
+      // We only delete the old node for when the old node was an addition.
+      if (addition > 0) {
+        addition--;
+        delete oldHead;
+      }
+
+      return content;
+    }
+
+    void push(llvm::Instruction *callsite) {
+      head = new Node(head, callsite);
+      addition++;
+    }
+
+    SharedStack &operator=(const SharedStack &b) {
+      head = b.head;
+      addition = 0;
+      return *this;
+    }
+
+    int compare(const SharedStack &other) const {
+      Node *l = head, *r = other.head;
+
+      int comparison = 0;
+      while (l && r) {
+        comparison = l->compare(*r);
+        if (comparison == 0) {
+          l = l->getParent();
+          r = r->getParent();
+        } else {
+          break;
+        }
+      }
+      if (!l) {
+        if (r)
+          return 1;
+        else
+          return 0;
+      } else if (!r) {
+        if (l)
+          return -1;
+        return 0;
+      } else if (comparison < 0) {
+        return -1;
+      } else if (comparison > 0) {
+        return 1;
+      }
+      return 0;
+    }
+
+    void dump() const {
+      print(llvm::errs());
+      llvm::errs() << "\n";
+    }
+
+    void print(llvm::raw_ostream &stream) const;
+  };
+
+  inline bool operator==(const SharedStack &lhs, const SharedStack &rhs) {
+    return lhs.compare(rhs) == 0;
+  }
+
+  inline bool operator<(const SharedStack &lhs, const SharedStack &rhs) {
+    return lhs.compare(rhs) < 0;
+  }
+
+  inline bool operator>(const SharedStack &lhs, const SharedStack &rhs) {
+    return lhs.compare(rhs) > 0;
+  }
+
+  inline bool operator<=(const SharedStack &lhs, const SharedStack &rhs) {
+    return !(lhs > rhs);
+  }
+
+  inline bool operator>=(const SharedStack &lhs, const SharedStack &rhs) {
+    return !(lhs < rhs);
+  }
+
+  inline bool operator!=(const SharedStack &lhs, const SharedStack &rhs) {
+    return !(lhs == rhs);
+  }
+
+  class Address {
+    llvm::Value *site;
+
+    SharedStack stack;
+
+    ref<Expr> offset;
+
+    bool isConcrete;
+
+    uint64_t concreteOffset;
+
+  public:
+    Address(llvm::Value *_site, SharedStack &_stack, ref<Expr> &_offset);
+
+    ~Address() {};
+
+    int compare(const Address &other) const {
+      if (site == other.site) {
+        if (stack == other.stack) {
+          if (offset == other.offset) {
+            return 0;
+          } else {
+            if (concreteOffset && other.concreteOffset) {
+              if (concreteOffset < other.concreteOffset)
+                return -1;
+              return 1;
+            }
+            Expr *lhsExprAddress = offset.get();
+            Expr *rhsExprAddress = other.offset.get();
+            if (lhsExprAddress < rhsExprAddress)
+              return -1;
+            return 1;
+          }
+        } else if (stack < other.stack) {
+          return -1;
+        }
+        return 1;
+      } else if (site < other.site) {
+        return -1;
+      }
+      return 1;
+    }
+
+    void dump() const {
+      print(llvm::errs());
+      llvm::errs() << "\n";
+    }
+
+    void print(llvm::raw_ostream &stream) const;
+  };
+
+  inline bool operator==(const Address &lhs, const Address &rhs) {
+    return lhs.compare(rhs) == 0;
+  }
+
+  inline bool operator<(const Address &lhs, const Address &rhs) {
+    return lhs.compare(rhs) < 0;
+  }
+
+  inline bool operator>(const Address &lhs, const Address &rhs) {
+    return lhs.compare(rhs) > 0;
+  }
+
+  inline bool operator<=(const Address &lhs, const Address &rhs) {
+    return !(lhs > rhs);
+  }
+
+  inline bool operator>=(const Address &lhs, const Address &rhs) {
+    return !(lhs < rhs);
+  }
+
+  inline bool operator!=(const Address &lhs, const Address &rhs) {
+    return !(lhs == rhs);
+  }
+
   /// \brief Implements the replacement mechanism for replacing variables, used in
   /// replacing free with bound variables.
   class ShadowArray {

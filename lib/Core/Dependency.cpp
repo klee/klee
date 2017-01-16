@@ -33,6 +33,41 @@ using namespace klee;
 
 namespace klee {
 
+void SharedStack::print(llvm::raw_ostream &stream) const {
+  Node *p = head;
+
+  stream << "[\n";
+  while (p) {
+    p->print(stream);
+    stream << "\n";
+    p = p->getParent();
+  }
+  stream << "]";
+}
+
+/**/
+
+Address::Address(llvm::Value *_site, SharedStack &_stack, ref<Expr> &_offset)
+    : site(_site), stack(_stack), offset(_offset) {
+  isConcrete = false;
+  if (ConstantExpr *ce = llvm::dyn_cast<ConstantExpr>(_offset)) {
+    isConcrete = true;
+    concreteOffset = ce->getZExtValue();
+  }
+}
+
+void Address::print(llvm::raw_ostream &stream) const {
+  stream << "<";
+  site->print(stream);
+  stream << "|";
+  stack.print(stream);
+  stream << "|";
+  offset->print(stream);
+  stream << ">";
+}
+
+/**/
+
 std::map<const Array *, const Array *> ShadowArray::shadowArray;
 
 UpdateNode *

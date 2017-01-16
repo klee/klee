@@ -32,20 +32,6 @@ using namespace klee;
 
 /**/
 
-void SharedStack::print(llvm::raw_ostream &stream) const {
-  Node *p = head;
-
-  stream << "[\n";
-  while (p) {
-    p->print(stream);
-    stream << "\n";
-    p = p->getParent();
-  }
-  stream << "]";
-}
-
-/**/
-
 std::string ITreeGraph::PrettyExpressionBuilder::bvConst32(uint32_t value) {
   std::ostringstream stream;
   stream << value;
