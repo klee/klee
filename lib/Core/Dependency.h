@@ -209,6 +209,17 @@ namespace klee {
 
     ~Address() {};
 
+    ref<Expr> getOffset() const { return offset; }
+
+    int compareContext(const Address &other) const {
+      if (site == other.site) {
+        return stack.compare(other.stack);
+      } else if (site < other.site) {
+        return -1;
+      }
+      return 1;
+    }
+
     int compare(const Address &other) const {
       if (site == other.site) {
         if (stack == other.stack) {
@@ -397,6 +408,19 @@ namespace klee {
       return ret;
     }
 
+    Address makeAddress(SharedStack &stack) {
+      Address address(value, stack, offset);
+      return address;
+    }
+
+    Address makeAddress(SharedStack &stack,
+                        std::set<const Array *> &replacements) {
+      ref<Expr> replacementOffset(
+          ShadowArray::getShadowExpression(offset, replacements));
+      Address address(value, stack, replacementOffset);
+      return address;
+    }
+
     int compare(const MemoryLocation other) const {
       uint64_t l = reinterpret_cast<uint64_t>(value),
                r = reinterpret_cast<uint64_t>(other.value);
@@ -574,6 +598,8 @@ namespace klee {
     bool isCore() const { return core; }
 
     llvm::Value *getValue() const { return value; }
+
+    SharedStack &getStack() { return stack; }
 
     /// \brief Print the content of the object into a stream.
     ///
@@ -816,8 +842,8 @@ namespace klee {
   class Dependency {
 
   public:
-    typedef std::pair<ref<Expr>, ref<StoredValue> > AddressValuePair;
-    typedef std::map<uint64_t, ref<StoredValue> > ConcreteStoreMap;
+    typedef std::pair<Address, ref<StoredValue> > AddressValuePair;
+    typedef std::map<Address, ref<StoredValue> > ConcreteStoreMap;
     typedef std::vector<AddressValuePair> SymbolicStoreMap;
     typedef std::map<llvm::Value *, ConcreteStoreMap> ConcreteStore;
     typedef std::map<llvm::Value *, SymbolicStoreMap> SymbolicStore;

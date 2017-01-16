@@ -577,21 +577,20 @@ Dependency::getStoredExpressions(std::set<const Array *> &replacements,
       continue;
 
     if (!coreOnly) {
-      llvm::Value *site = it->first->getValue();
-      uint64_t uintAddress = it->first->getUIntAddress();
-      concreteStore[site][uintAddress] = StoredValue::create(it->second.second);
+      llvm::Value *base = it->first->getValue();
+      Address address = it->first->makeAddress(it->second.second->getStack());
+      concreteStore[base][address] = StoredValue::create(it->second.second);
     } else if (it->second.second->isCore()) {
       // An address is in the core if it stores a value that is in the core
       llvm::Value *base = it->first->getValue();
-      uint64_t uintAddress = it->first->getUIntAddress();
+      Address address = it->first->makeAddress(it->second.second->getStack());
 #ifdef ENABLE_Z3
       if (!NoExistential) {
-        concreteStore[base][uintAddress] =
+        concreteStore[base][address] =
             StoredValue::create(it->second.second, replacements);
       } else
 #endif
-        concreteStore[base][uintAddress] =
-            StoredValue::create(it->second.second);
+        concreteStore[base][address] = StoredValue::create(it->second.second);
     }
   }
 
@@ -603,7 +602,7 @@ Dependency::getStoredExpressions(std::set<const Array *> &replacements,
     if (it->second.second.isNull())
       continue;
 
-    ref<Expr> address = it->first->getAddress();
+    Address address = it->first->makeAddress(it->second.second->getStack());
     if (!coreOnly) {
       llvm::Value *base = it->first->getValue();
       symbolicStore[base].push_back(
@@ -614,7 +613,7 @@ Dependency::getStoredExpressions(std::set<const Array *> &replacements,
 #ifdef ENABLE_Z3
       if (!NoExistential) {
         symbolicStore[base].push_back(AddressValuePair(
-            ShadowArray::getShadowExpression(address, replacements),
+            it->first->makeAddress(it->second.second->getStack(), replacements),
             StoredValue::create(it->second.second, replacements)));
       } else
 #endif

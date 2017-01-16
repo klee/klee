@@ -1552,15 +1552,20 @@ bool SubsumptionTableEntry::subsumed(
         }
 
         if (!stateSymbolicMap.empty()) {
-          const ref<Expr> tabledConcreteAddress =
-              Expr::createPointer(it2->first);
+          const ref<Expr> tabledConcreteOffset = it2->first.getOffset();
           ref<Expr> conjunction;
 
           for (Dependency::SymbolicStoreMap::const_iterator
                    it3 = stateSymbolicMap.begin(),
                    ie3 = stateSymbolicMap.end();
                it3 != ie3; ++it3) {
-            ref<Expr> stateSymbolicAddress = it3->first;
+
+            // We make sure the context part of the addresses (the allocation
+            // site and the call stack) are equivalent.
+            if (it2->first.compareContext(it3->first))
+              continue;
+
+            ref<Expr> stateSymbolicOffset = it3->first.getOffset();
             ref<StoredValue> stateSymbolicValue = it3->second;
             ref<Expr> newTerm;
 
@@ -1570,7 +1575,7 @@ bool SubsumptionTableEntry::subsumed(
               // equal whenever their values are of different width
               newTerm = EqExpr::create(
                   ConstantExpr::create(0, Expr::Bool),
-                  EqExpr::create(tabledConcreteAddress, stateSymbolicAddress));
+                  EqExpr::create(tabledConcreteOffset, stateSymbolicOffset));
 
             } else if (!NoBoundInterpolation && !ExactAddressInterpolant &&
                        tabledValue->isPointer() &&
@@ -1581,9 +1586,9 @@ bool SubsumptionTableEntry::subsumed(
                   tabledValue->getBoundsCheck(stateSymbolicValue, bounds);
 
               if (!boundsCheck->isTrue()) {
-                newTerm = EqExpr::create(ConstantExpr::create(0, Expr::Bool),
-                                         EqExpr::create(tabledConcreteAddress,
-                                                        stateSymbolicAddress));
+                newTerm = EqExpr::create(
+                    ConstantExpr::create(0, Expr::Bool),
+                    EqExpr::create(tabledConcreteOffset, stateSymbolicOffset));
 
                 if (!boundsCheck->isFalse()) {
                   // Implication: if tabledConcreteAddress ==
@@ -1601,8 +1606,8 @@ bool SubsumptionTableEntry::subsumed(
               // stateSymbolicValue->getExpression()
               newTerm = OrExpr::create(
                   EqExpr::create(ConstantExpr::create(0, Expr::Bool),
-                                 EqExpr::create(tabledConcreteAddress,
-                                                stateSymbolicAddress)),
+                                 EqExpr::create(tabledConcreteOffset,
+                                                stateSymbolicOffset)),
                   EqExpr::create(tabledValue->getExpression(),
                                  stateSymbolicValue->getExpression()));
             }
@@ -1613,8 +1618,8 @@ bool SubsumptionTableEntry::subsumed(
               // then tabledValue == stateSymbolicValue
               newTerm = OrExpr::create(
                   EqExpr::create(ConstantExpr::create(0, Expr::Bool),
-                                 EqExpr::create(tabledConcreteAddress,
-                                                stateSymbolicAddress)),
+                                 EqExpr::create(tabledConcreteOffset,
+                                                stateSymbolicOffset)),
                   EqExpr::create(tabledValue->getExpression(),
                                  stateSymbolicValue->getExpression()));
             }
@@ -1665,14 +1670,20 @@ bool SubsumptionTableEntry::subsumed(
                it2 = tabledSymbolicMap.begin(),
                ie2 = tabledSymbolicMap.end();
            it2 != ie2; ++it2) {
-        ref<Expr> tabledSymbolicAddress = it2->first;
+        ref<Expr> tabledSymbolicOffset = it2->first.getOffset();
         ref<StoredValue> tabledValue = it2->second;
 
         for (Dependency::ConcreteStoreMap::const_iterator
                  it3 = stateConcreteMap.begin(),
                  ie3 = stateConcreteMap.end();
              it3 != ie3; ++it3) {
-          ref<Expr> stateConcreteAddress = Expr::createPointer(it3->first);
+
+          // We make sure the context part of the addresses (the allocation
+          // site and the call stack) are equivalent.
+          if (it2->first.compareContext(it3->first))
+            continue;
+
+          ref<Expr> stateConcreteOffset = it3->first.getOffset();
           ref<StoredValue> stateValue = it3->second;
           ref<Expr> newTerm;
 
@@ -1682,7 +1693,7 @@ bool SubsumptionTableEntry::subsumed(
             // whenever their values are of different width
             newTerm = EqExpr::create(
                 ConstantExpr::create(0, Expr::Bool),
-                EqExpr::create(tabledSymbolicAddress, stateConcreteAddress));
+                EqExpr::create(tabledSymbolicOffset, stateConcreteOffset));
           } else if (!NoBoundInterpolation && !ExactAddressInterpolant &&
                      tabledValue->isPointer() && stateValue->isPointer() &&
                      tabledValue->useBound()) {
@@ -1693,7 +1704,7 @@ bool SubsumptionTableEntry::subsumed(
             if (!boundsCheck->isTrue()) {
               newTerm = EqExpr::create(
                   ConstantExpr::create(0, Expr::Bool),
-                  EqExpr::create(tabledSymbolicAddress, stateConcreteAddress));
+                  EqExpr::create(tabledSymbolicOffset, stateConcreteOffset));
 
               if (!boundsCheck->isFalse()) {
                 // Implication: if tabledConcreteAddress == stateSymbolicAddress
@@ -1708,9 +1719,9 @@ bool SubsumptionTableEntry::subsumed(
             // Implication: if tabledSymbolicAddress == stateConcreteAddress,
             // then tabledValue == stateValue
             newTerm = OrExpr::create(
-                EqExpr::create(ConstantExpr::create(0, Expr::Bool),
-                               EqExpr::create(tabledSymbolicAddress,
-                                              stateConcreteAddress)),
+                EqExpr::create(
+                    ConstantExpr::create(0, Expr::Bool),
+                    EqExpr::create(tabledSymbolicOffset, stateConcreteOffset)),
                 EqExpr::create(tabledValue->getExpression(),
                                stateValue->getExpression()));
           }
@@ -1728,7 +1739,13 @@ bool SubsumptionTableEntry::subsumed(
                  it3 = stateSymbolicMap.begin(),
                  ie3 = stateSymbolicMap.end();
              it3 != ie3; ++it3) {
-          ref<Expr> stateSymbolicAddress = it3->first;
+
+          // We make sure the context part of the addresses (the allocation
+          // site and the call stack) are equivalent.
+          if (it2->first.compareContext(it3->first))
+            continue;
+
+          ref<Expr> stateSymbolicOffset = it3->first.getOffset();
           ref<StoredValue> stateValue = it3->second;
           ref<Expr> newTerm;
 
@@ -1738,7 +1755,7 @@ bool SubsumptionTableEntry::subsumed(
             // whenever their values are of different width
             newTerm = EqExpr::create(
                 ConstantExpr::create(0, Expr::Bool),
-                EqExpr::create(tabledSymbolicAddress, stateSymbolicAddress));
+                EqExpr::create(tabledSymbolicOffset, stateSymbolicOffset));
           } else if (!NoBoundInterpolation && !ExactAddressInterpolant &&
                      tabledValue->isPointer() && stateValue->isPointer() &&
                      tabledValue->useBound()) {
@@ -1749,7 +1766,7 @@ bool SubsumptionTableEntry::subsumed(
             if (!boundsCheck->isTrue()) {
               newTerm = EqExpr::create(
                   ConstantExpr::create(0, Expr::Bool),
-                  EqExpr::create(tabledSymbolicAddress, stateSymbolicAddress));
+                  EqExpr::create(tabledSymbolicOffset, stateSymbolicOffset));
 
               if (!boundsCheck->isFalse()) {
                 // Implication: if tabledConcreteAddress == stateSymbolicAddress
@@ -1764,9 +1781,9 @@ bool SubsumptionTableEntry::subsumed(
             // Implication: if tabledSymbolicAddress == stateSymbolicAddress
             // then tabledValue == stateValue
             newTerm = OrExpr::create(
-                EqExpr::create(ConstantExpr::create(0, Expr::Bool),
-                               EqExpr::create(tabledSymbolicAddress,
-                                              stateSymbolicAddress)),
+                EqExpr::create(
+                    ConstantExpr::create(0, Expr::Bool),
+                    EqExpr::create(tabledSymbolicOffset, stateSymbolicOffset)),
                 EqExpr::create(tabledValue->getExpression(),
                                stateValue->getExpression()));
           }
@@ -2061,7 +2078,9 @@ void SubsumptionTableEntry::print(llvm::raw_ostream &stream) const {
            it2 != ie2; ++it2) {
         if (it1 != is1 || it2 != is2)
           stream << ",";
-        stream << "(" << it2->first << ",\n";
+        stream << "(";
+        it2->first.print(stream);
+        stream << ",\n";
         it2->second->print(stream);
         stream << ")";
       }
@@ -2082,7 +2101,7 @@ void SubsumptionTableEntry::print(llvm::raw_ostream &stream) const {
         if (it1 != is1 || it2 != is2)
           stream << ",";
         stream << "(";
-        it2->first->print(stream);
+        it2->first.print(stream);
         stream << ",";
         it2->second->print(stream);
         stream << ")";
