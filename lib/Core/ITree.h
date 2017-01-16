@@ -287,7 +287,8 @@ class PathCondition {
 
 public:
   PathCondition(ref<Expr> &constraint, Dependency *dependency,
-                llvm::Value *condition, PathCondition *prev);
+                llvm::Value *condition, SharedStack &stack,
+                PathCondition *prev);
 
   ~PathCondition();
 
@@ -591,6 +592,7 @@ public:
   /// \brief Extend the path condition with another constraint
   ///
   /// \param constraint The constraint to extend the current path condition with
+  /// \param stack The current callsite stack for this value
   /// \param value The LLVM value that corresponds to the constraint
   void addConstraint(ref<Expr> &constraint, llvm::Value *value);
 
@@ -903,8 +905,8 @@ public:
     std::vector<ref<Expr> > args;
     args.push_back(value);
     args.push_back(address);
-    node->dependency->executeMemoryOperation(instr, args, boundsCheck,
-                                             symbolicExecutionError);
+    node->dependency->executeMemoryOperation(
+        instr, node->callStack, args, boundsCheck, symbolicExecutionError);
     symbolicExecutionError = false;
   }
 

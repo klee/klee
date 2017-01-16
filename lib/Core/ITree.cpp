@@ -829,12 +829,13 @@ void ITreeGraph::save(std::string dotFileName) {
 /**/
 
 PathCondition::PathCondition(ref<Expr> &constraint, Dependency *dependency,
-                             llvm::Value *_condition, PathCondition *prev)
+                             llvm::Value *_condition, SharedStack &stack,
+                             PathCondition *prev)
     : constraint(constraint), shadowConstraint(constraint), shadowed(false),
       dependency(dependency), core(false), tail(prev) {
   ref<VersionedValue> emptyCondition;
   if (dependency) {
-    condition = dependency->getLatestValue(_condition, constraint, true);
+    condition = dependency->getLatestValue(_condition, stack, constraint, true);
     assert(!condition.isNull() && "null constraint on path condition");
   } else {
     condition = emptyCondition;
@@ -2425,7 +2426,8 @@ void ITree::execute(llvm::Instruction *instr, std::vector<ref<Expr> > &args) {
 
 void ITree::executePHI(llvm::Instruction *instr, unsigned incomingBlock,
                        ref<Expr> valueExpr) {
-  currentINode->dependency->executePHI(instr, incomingBlock, valueExpr,
+  currentINode->dependency->executePHI(instr, incomingBlock,
+                                       currentINode->callStack, valueExpr,
                                        symbolicExecutionError);
   symbolicExecutionError = false;
 }
@@ -2569,8 +2571,8 @@ ITreeNode::getInterpolant(std::set<const Array *> &replacements) const {
 
 void ITreeNode::addConstraint(ref<Expr> &constraint, llvm::Value *condition) {
   TimerStatIncrementer t(addConstraintTime);
-  pathCondition =
-      new PathCondition(constraint, dependency, condition, pathCondition);
+  pathCondition = new PathCondition(constraint, dependency, condition,
+                                    callStack, pathCondition);
   graph->addPathCondition(this, pathCondition, constraint);
 }
 
@@ -2584,14 +2586,13 @@ void ITreeNode::split(ExecutionState *leftData, ExecutionState *rightData) {
 void ITreeNode::execute(llvm::Instruction *instr, std::vector<ref<Expr> > &args,
                         bool symbolicExecutionError) {
   TimerStatIncrementer t(executeTime);
-  dependency->execute(instr, args, symbolicExecutionError);
+  dependency->execute(instr, callStack, args, symbolicExecutionError);
 }
 
 void ITreeNode::bindCallArguments(llvm::Instruction *site,
                                   std::vector<ref<Expr> > &arguments) {
   TimerStatIncrementer t(bindCallArgumentsTime);
-  dependency->bindCallArguments(site, arguments);
-  callStack.push(site);
+  dependency->bindCallArguments(site, callStack, arguments);
 }
 
 void ITreeNode::bindReturnValue(llvm::CallInst *site, llvm::Instruction *inst,
@@ -2599,8 +2600,7 @@ void ITreeNode::bindReturnValue(llvm::CallInst *site, llvm::Instruction *inst,
   // TODO: This is probably where we should simplify
   // the dependency graph by removing callee values.
   TimerStatIncrementer t(bindReturnValueTime);
-  dependency->bindReturnValue(site, inst, returnValue);
-  callStack.pop();
+  dependency->bindReturnValue(site, callStack, inst, returnValue);
 }
 
 std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
