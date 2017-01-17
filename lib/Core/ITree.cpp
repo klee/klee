@@ -1602,10 +1602,11 @@ bool SubsumptionTableEntry::subsumed(
             }
           }
           // If there were corresponding concrete as well as symbolic
-          // allocations
-          // in the current state, conjunct them
-          res =
-              (!res.isNull() ? AndExpr::create(res, conjunction) : conjunction);
+          // allocations in the current state, conjunct them
+          if (!conjunction.isNull()) {
+            res = (!res.isNull() ? AndExpr::create(res, conjunction)
+                                 : conjunction);
+          }
         }
 
         if (!res.isNull()) {
