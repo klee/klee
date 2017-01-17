@@ -34,10 +34,10 @@ using namespace klee;
 namespace klee {
 
 void SharedStack::print(llvm::raw_ostream &stream) const {
-  Node *p = head;
+  ref<Node> p = head;
 
   stream << "[\n";
-  while (p) {
+  while (!p.isNull()) {
     p->print(stream);
     stream << "\n";
     p = p->getParent();

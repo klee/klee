@@ -50,23 +50,27 @@ namespace klee {
 
     class Node {
 
-      Node *parent;
+    public:
+      unsigned refCount;
+
+    private:
+      ref<Node> parent;
 
       llvm::Instruction *callsite;
 
     public:
-      Node(Node *_parent, llvm::Instruction *_callsite)
-          : parent(_parent), callsite(_callsite) {
+      Node(ref<Node> _parent, llvm::Instruction *_callsite)
+          : refCount(0), parent(_parent), callsite(_callsite) {
         assert(_callsite && "null callsite");
       }
 
-      Node(llvm::Instruction *_callsite) : parent(0), callsite(_callsite) {
+      Node(llvm::Instruction *_callsite) : refCount(0), callsite(_callsite) {
         assert(_callsite && "null callsite");
       }
 
       ~Node() {}
 
-      Node *getParent() { return parent; }
+      ref<Node> getParent() { return parent; }
 
       llvm::Instruction *getContent() { return callsite; }
 
@@ -93,60 +97,46 @@ namespace klee {
       }
     };
 
-    Node *head;
-
-    uint64_t addition;
+    ref<Node> head;
 
   public:
-    SharedStack() : head(0), addition(0) {}
+    SharedStack() {}
 
-    SharedStack(const SharedStack &_parent) : head(_parent.head), addition(0) {}
+    SharedStack(const SharedStack &_parent) : head(_parent.head) {}
 
     SharedStack(SharedStack &_parent, llvm::Instruction *_callsite)
-        : head(new Node(_parent.head, _callsite)), addition(0) {}
+        : head(new Node(_parent.head, _callsite)) {}
 
-    ~SharedStack() {
-      while (addition)
-        pop();
-    }
+    ~SharedStack() {}
 
     llvm::Instruction *pop() {
       // Head is null, this is possibly an entry function, e.g., main().
-      if (!head)
+      if (head.isNull())
         return 0;
 
       llvm::Instruction *content = head->getContent();
 
-      Node *oldHead = head;
-
       head = head->getParent();
 
       // We only delete the old node for when the old node was an addition.
-      if (addition > 0) {
-        addition--;
-        delete oldHead;
-      }
-
       return content;
     }
 
     void push(llvm::Instruction *callsite) {
       head = new Node(head, callsite);
-      addition++;
     }
 
     SharedStack &operator=(const SharedStack &b) {
       head = b.head;
-      addition = 0;
       return *this;
     }
 
     int compare(const SharedStack &other) const {
-      Node *l = head, *r = other.head;
+      ref<Node> l = head, r = other.head;
 
       int comparison = 0;
-      while (l && r) {
-        comparison = l->compare(*r);
+      while (!l.isNull() && !r.isNull()) {
+        comparison = l->compare(*(r.get()));
         if (comparison == 0) {
           l = l->getParent();
           r = r->getParent();
@@ -154,13 +144,13 @@ namespace klee {
           break;
         }
       }
-      if (!l) {
-        if (r)
+      if (l.isNull()) {
+        if (!r.isNull())
           return 1;
         else
           return 0;
-      } else if (!r) {
-        if (l)
+      } else if (r.isNull()) {
+        if (!l.isNull())
           return -1;
         return 0;
       } else if (comparison < 0) {
