@@ -610,6 +610,9 @@ std::string ITreeGraph::recurseRender(ITreeGraph::Node *node) {
       stream << " ITP";
     stream << "\\l";
   }
+  if (node->memoryError) {
+    stream << "OUT-OF-BOUND: " << node->memoryErrorLocation << "\\l";
+  }
   if (node->subsumed) {
     stream << "(subsumed)\\l";
   }
@@ -787,6 +790,26 @@ void ITreeGraph::setAsCore(PathCondition *pathCondition) {
   instance->pathConditionMap[pathCondition]
       ->pathConditionTable[pathCondition]
       .second = true;
+}
+
+void ITreeGraph::setMemoryError(ExecutionState &state) {
+  if (!OUTPUT_INTERPOLATION_TREE)
+    return;
+
+  ITreeGraph::Node *node = instance->itreeNodeMap[state.itreeNode];
+  node->memoryError = true;
+
+  node->memoryErrorLocation = "";
+  llvm::raw_string_ostream out(node->memoryErrorLocation);
+  if (llvm::MDNode *n = state.pc->inst->getMetadata("dbg")) {
+    // Display the line, char position of this instruction
+    llvm::DILocation loc(n);
+    unsigned line = loc.getLineNumber();
+    StringRef file = loc.getFilename();
+    out << file << ":" << line << "\n";
+  } else {
+    state.pc->inst->print(out);
+  }
 }
 
 void ITreeGraph::save(std::string dotFileName) {

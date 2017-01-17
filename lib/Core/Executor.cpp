@@ -3801,6 +3801,8 @@ void Executor::executeMemoryOperation(ExecutionState &state, bool isWrite,
     } else {
       terminateStateOnError(*unbound, "memory error: out of bound pointer", Ptr,
                             NULL, getAddressInfo(*unbound, address));
+
+      ITreeGraph::setMemoryError(state);
     }
   }
 }

@@ -151,9 +151,15 @@ class ITreeGraph {
     /// \brief Human-readable identifier of this node
     std::string name;
 
+    /// \brief Flag to indicate memory out-of-bound error within this node
+    bool memoryError;
+
+    /// \brief Location information of the memory out-of-bound error
+    std::string memoryErrorLocation;
+
     Node()
         : nodeSequenceNumber(0), internalNodeId(0), falseTarget(0),
-          trueTarget(0), subsumed(false) {}
+          trueTarget(0), subsumed(false), memoryError(false) {}
 
     ~Node() {
       if (falseTarget)
@@ -240,6 +246,8 @@ public:
                                    SubsumptionTableEntry *entry);
 
   static void setAsCore(PathCondition *pathCondition);
+
+  static void setMemoryError(ExecutionState &state);
 
   /// \brief Save the graph
   static void save(std::string dotFileName);
