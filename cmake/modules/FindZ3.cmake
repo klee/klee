@@ -20,6 +20,9 @@ endif()
 # Try to find headers
 find_path(Z3_INCLUDE_DIRS
   NAMES z3.h
+  # For distributions that keep the header files in a `z3` folder,
+  # for example Fedora's `z3-devel` package at `/usr/include/z3/z3.h`
+  PATH_SUFFIXES z3
   DOC "Z3 C header"
 )
 if (Z3_INCLUDE_DIRS)
