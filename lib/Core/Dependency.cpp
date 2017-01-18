@@ -1287,6 +1287,7 @@ void Dependency::execute(llvm::Instruction *instr,
                   : getNewVersionedValue(instr, valueExpr);
 
           updateStore(*li, addressValue, loadedValue);
+          loadedValue->setLoadAddress(addressValue);
         } else {
           // Build the loaded value
           ref<VersionedValue> loadedValue =
@@ -1296,6 +1297,8 @@ void Dependency::execute(llvm::Instruction *instr,
                   : getNewVersionedValue(instr, valueExpr);
 
           addDependencyViaLocation(addressValuePair.second, loadedValue, *li);
+          loadedValue->setLoadAddress(addressValue);
+          loadedValue->setStoreAddress(addressValuePair.first);
         }
       }
       break;

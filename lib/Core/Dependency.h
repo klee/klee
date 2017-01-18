@@ -267,6 +267,13 @@ namespace klee {
     /// \brief Dependency sources of this value
     std::map<ref<VersionedValue>, ref<MemoryLocation> > sources;
 
+    /// \brief The load address of this value, in case it was a load instruction
+    ref<VersionedValue> loadAddress;
+
+    /// \brief The address by which the loaded value was stored, in case this
+    /// was a load instruction
+    ref<VersionedValue> storeAddress;
+
     VersionedValue(llvm::Value *value, ref<Expr> valueExpr)
         : refCount(0), value(value), valueExpr(valueExpr), core(false),
           id(reinterpret_cast<uint64_t>(this)) {}
@@ -284,6 +291,18 @@ namespace klee {
       ref<VersionedValue> vvalue(new VersionedValue(value, valueExpr));
       return vvalue;
     }
+
+    void setLoadAddress(ref<VersionedValue> _loadAddress) {
+      loadAddress = _loadAddress;
+    }
+
+    ref<VersionedValue> getLoadAddress() { return loadAddress; }
+
+    void setStoreAddress(ref<VersionedValue> _storeAddress) {
+      storeAddress = _storeAddress;
+    }
+
+    ref<VersionedValue> getStoreAddress() { return storeAddress; }
 
     /// \brief The core routine for adding flow dependency between source and
     /// target value
