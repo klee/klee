@@ -52,8 +52,6 @@ cmake -DCMAKE_BUILD_TYPE=Release /path/to/klee/src
 
 * `ENABLE_TCMALLOC` (BOOLEAN) - Enable TCMalloc support.
 
-* `ENABLE_TESTS` (BOOLEAN) - Enable testing.
-
 * `ENABLE_UNIT_TESTS` (BOOLEAN) - Enable KLEE unit tests.
 
 * `GTEST_SRC_DIR` (STRING) - Path to GTest source tree.
