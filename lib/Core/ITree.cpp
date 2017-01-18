@@ -1625,10 +1625,11 @@ bool SubsumptionTableEntry::subsumed(
             }
           }
           // If there were corresponding concrete as well as symbolic
-          // allocations
-          // in the current state, conjunct them
-          res =
-              (!res.isNull() ? AndExpr::create(res, conjunction) : conjunction);
+          // allocations in the current state, conjunct them
+          if (!conjunction.isNull()) {
+            res = (!res.isNull() ? AndExpr::create(res, conjunction)
+                                 : conjunction);
+          }
         }
 
         if (!res.isNull()) {
@@ -2289,13 +2290,13 @@ bool ITree::subsumptionCheck(TimingSolver *solver, ExecutionState &state,
   return false;
 }
 
-void ITree::store(SubsumptionTableEntry *subItem) {
-  subsumptionTable[subItem->programPoint].push_back(subItem);
+void ITree::store(SubsumptionTableEntry *entry) {
+  subsumptionTable[entry->programPoint].push_back(entry);
 #ifdef ENABLE_Z3
   if (MaxFailSubsumption > 0 &&
       (unsigned)MaxFailSubsumption <
-          subsumptionTable[subItem->programPoint].size()) {
-    subsumptionTable[subItem->programPoint].pop_front();
+          subsumptionTable[entry->programPoint].size()) {
+    subsumptionTable[entry->programPoint].pop_front();
     }
 #endif
 }

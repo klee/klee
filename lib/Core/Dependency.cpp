@@ -530,7 +530,6 @@ Dependency::getStoredExpressions(std::set<const Array *> &replacements,
     if (!coreOnly) {
       llvm::Value *site = it->first->getValue();
       uint64_t uintAddress = it->first->getUIntAddress();
-      ref<Expr> address = it->first->getAddress();
       concreteStore[site][uintAddress] = StoredValue::create(it->second);
     } else if (it->second->isCore()) {
       // An address is in the core if it stores a value that is in the core
