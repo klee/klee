@@ -267,6 +267,10 @@ namespace klee {
     /// \brief Dependency sources of this value
     std::map<ref<VersionedValue>, ref<MemoryLocation> > sources;
 
+    /// \brief Do not compute bounds in interpolation of this value if it was a
+    /// pointer; instead, use exact address
+    bool doNotInterpolateBound;
+
     /// \brief The load address of this value, in case it was a load instruction
     ref<VersionedValue> loadAddress;
 
@@ -276,7 +280,7 @@ namespace klee {
 
     VersionedValue(llvm::Value *value, ref<Expr> valueExpr)
         : refCount(0), value(value), valueExpr(valueExpr), core(false),
-          id(reinterpret_cast<uint64_t>(this)) {}
+          id(reinterpret_cast<uint64_t>(this)), doNotInterpolateBound(false) {}
 
     /// \brief Print the content of the object, but without showing its source
     /// values.
@@ -291,6 +295,10 @@ namespace klee {
       ref<VersionedValue> vvalue(new VersionedValue(value, valueExpr));
       return vvalue;
     }
+
+    bool canInterpolateBound() { return !doNotInterpolateBound; }
+
+    void disableBoundInterpolation() { doNotInterpolateBound = true; }
 
     void setLoadAddress(ref<VersionedValue> _loadAddress) {
       loadAddress = _loadAddress;

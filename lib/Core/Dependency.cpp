@@ -917,10 +917,12 @@ Dependency::directFlowSources(ref<VersionedValue> target) const {
 }
 
 void Dependency::markFlow(ref<VersionedValue> target) const {
-  if (target.isNull())
+  if (target.isNull() || target->isCore())
     return;
 
   target->setAsCore();
+  target->disableBoundInterpolation();
+
   std::vector<ref<VersionedValue> > stepSources = directFlowSources(target);
   for (std::vector<ref<VersionedValue> >::iterator it = stepSources.begin(),
                                                    ie = stepSources.end();
