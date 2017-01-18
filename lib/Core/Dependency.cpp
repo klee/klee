@@ -520,55 +520,58 @@ Dependency::getStoredExpressions(std::set<const Array *> &replacements,
   ConcreteStore concreteStore;
   SymbolicStore symbolicStore;
 
-  for (std::map<ref<MemoryLocation>, ref<VersionedValue> >::iterator
+  for (std::map<ref<MemoryLocation>,
+                std::pair<ref<VersionedValue>, ref<VersionedValue> > >::iterator
            it = concretelyAddressedStore.begin(),
            ie = concretelyAddressedStore.end();
        it != ie; ++it) {
-    if (it->second.isNull())
+    if (it->second.second.isNull())
       continue;
 
     if (!coreOnly) {
       llvm::Value *site = it->first->getValue();
       uint64_t uintAddress = it->first->getUIntAddress();
-      concreteStore[site][uintAddress] = StoredValue::create(it->second);
-    } else if (it->second->isCore()) {
+      concreteStore[site][uintAddress] = StoredValue::create(it->second.second);
+    } else if (it->second.second->isCore()) {
       // An address is in the core if it stores a value that is in the core
       llvm::Value *base = it->first->getValue();
       uint64_t uintAddress = it->first->getUIntAddress();
 #ifdef ENABLE_Z3
       if (!NoExistential) {
         concreteStore[base][uintAddress] =
-            StoredValue::create(it->second, replacements);
+            StoredValue::create(it->second.second, replacements);
       } else
 #endif
-        concreteStore[base][uintAddress] = StoredValue::create(it->second);
+        concreteStore[base][uintAddress] =
+            StoredValue::create(it->second.second);
     }
   }
 
-  for (std::map<ref<MemoryLocation>, ref<VersionedValue> >::iterator
+  for (std::map<ref<MemoryLocation>,
+                std::pair<ref<VersionedValue>, ref<VersionedValue> > >::iterator
            it = symbolicallyAddressedStore.begin(),
            ie = symbolicallyAddressedStore.end();
        it != ie; ++it) {
-    if (it->second.isNull())
+    if (it->second.second.isNull())
       continue;
 
     ref<Expr> address = it->first->getAddress();
     if (!coreOnly) {
       llvm::Value *base = it->first->getValue();
       symbolicStore[base].push_back(
-          AddressValuePair(address, StoredValue::create(it->second)));
-    } else if (it->second->isCore()) {
+          AddressValuePair(address, StoredValue::create(it->second.second)));
+    } else if (it->second.second->isCore()) {
       // An address is in the core if it stores a value that is in the core
       llvm::Value *base = it->first->getValue();
 #ifdef ENABLE_Z3
       if (!NoExistential) {
         symbolicStore[base].push_back(AddressValuePair(
             ShadowArray::getShadowExpression(address, replacements),
-            StoredValue::create(it->second, replacements)));
+            StoredValue::create(it->second.second, replacements)));
       } else
 #endif
         symbolicStore[base].push_back(
-            AddressValuePair(address, StoredValue::create(it->second)));
+            AddressValuePair(address, StoredValue::create(it->second.second)));
       }
   }
 
@@ -745,11 +748,14 @@ ref<VersionedValue> Dependency::getLatestValueForMarking(llvm::Value *val,
 }
 
 void Dependency::updateStore(ref<MemoryLocation> loc,
+                             ref<VersionedValue> address,
                              ref<VersionedValue> value) {
   if (loc->hasConstantAddress())
-    concretelyAddressedStore[loc] = value;
+    concretelyAddressedStore[loc] =
+        std::pair<ref<VersionedValue>, ref<VersionedValue> >(address, value);
   else
-    symbolicallyAddressedStore[loc] = value;
+    symbolicallyAddressedStore[loc] =
+        std::pair<ref<VersionedValue>, ref<VersionedValue> >(address, value);
 }
 
 void Dependency::addDependency(ref<VersionedValue> source,
@@ -1215,7 +1221,7 @@ void Dependency::execute(llvm::Instruction *instr,
                   ? getNewPointerValue(instr, valueExpr, 0)
                   : getNewVersionedValue(instr, valueExpr);
 
-          updateStore(loc, loadedValue);
+          updateStore(loc, addressValue, loadedValue);
           break;
         } else if (locations.size() == 1) {
           ref<MemoryLocation> loc = *(locations.begin());
@@ -1229,7 +1235,7 @@ void Dependency::execute(llvm::Instruction *instr,
                     ? getNewPointerValue(instr, valueExpr, 0)
                     : getNewVersionedValue(instr, valueExpr);
 
-            updateStore(loc, loadedValue);
+            updateStore(loc, addressValue, loadedValue);
             break;
           }
         }
@@ -1248,7 +1254,7 @@ void Dependency::execute(llvm::Instruction *instr,
                   ? getNewPointerValue(instr, valueExpr, 0)
                   : getNewVersionedValue(instr, valueExpr);
 
-          updateStore(*(locations.begin()), loadedValue);
+          updateStore(*(locations.begin()), addressValue, loadedValue);
           break;
         }
       }
@@ -1258,19 +1264,20 @@ void Dependency::execute(llvm::Instruction *instr,
       for (std::set<ref<MemoryLocation> >::iterator li = locations.begin(),
                                                     le = locations.end();
            li != le; ++li) {
-        ref<VersionedValue> storedValue;
+        std::pair<ref<VersionedValue>, ref<VersionedValue> > addressValuePair;
+
         if ((*li)->hasConstantAddress()) {
           if (concretelyAddressedStore.count(*li) > 0) {
-            storedValue = concretelyAddressedStore[*li];
+            addressValuePair = concretelyAddressedStore[*li];
           }
         } else if (symbolicallyAddressedStore.count(*li) > 0) {
           // FIXME: Here we assume that the expressions have to exactly be the
           // same expression object. More properly, this should instead add an
           // ite constraint onto the path condition.
-          storedValue = symbolicallyAddressedStore[*li];
+          addressValuePair = concretelyAddressedStore[*li];
         }
 
-        if (storedValue.isNull()) {
+        if (addressValuePair.second.isNull()) {
           // We could not find the stored value, create a new one.
 
           // Build the loaded value
@@ -1279,15 +1286,16 @@ void Dependency::execute(llvm::Instruction *instr,
                   ? getNewPointerValue(instr, valueExpr, 0)
                   : getNewVersionedValue(instr, valueExpr);
 
-          updateStore(*li, loadedValue);
+          updateStore(*li, addressValue, loadedValue);
         } else {
           // Build the loaded value
           ref<VersionedValue> loadedValue =
-              storedValue->getLocations().empty() && loadedType->isPointerTy()
+              (addressValuePair.second)->getLocations().empty() &&
+                      loadedType->isPointerTy()
                   ? getNewPointerValue(instr, valueExpr, 0)
                   : getNewVersionedValue(instr, valueExpr);
 
-          addDependencyViaLocation(storedValue, loadedValue, *li);
+          addDependencyViaLocation(addressValuePair.second, loadedValue, *li);
         }
       }
       break;
@@ -1320,7 +1328,7 @@ void Dependency::execute(llvm::Instruction *instr,
       for (std::set<ref<MemoryLocation> >::iterator it = locations.begin(),
                                                     ie = locations.end();
            it != ie; ++it) {
-        updateStore(*it, storedValue);
+        updateStore(*it, addressValue, storedValue);
       }
       break;
     }
@@ -1638,25 +1646,29 @@ void Dependency::print(llvm::raw_ostream &stream,
   std::string tabs = makeTabs(paddingAmount);
 
   stream << tabs << "CONCRETE STORE:\n";
-  for (std::map<ref<MemoryLocation>, ref<VersionedValue> >::const_iterator
+  for (std::map<ref<MemoryLocation>,
+                std::pair<ref<VersionedValue>,
+                          ref<VersionedValue> > >::const_iterator
            it = concretelyAddressedStore.begin(),
            ie = concretelyAddressedStore.end();
        it != ie; ++it) {
     stream << tabs << "  [";
-    (*it->first).print(stream);
+    it->first->print(stream);
     stream << ",";
-    (*it->second).print(stream);
+    it->second.second->print(stream);
     stream << "]\n";
   }
   stream << tabs << "SYMBOLIC STORE:\n";
-  for (std::map<ref<MemoryLocation>, ref<VersionedValue> >::const_iterator
+  for (std::map<ref<MemoryLocation>,
+                std::pair<ref<VersionedValue>,
+                          ref<VersionedValue> > >::const_iterator
            it = symbolicallyAddressedStore.begin(),
            ie = symbolicallyAddressedStore.end();
        it != ie; ++it) {
     stream << tabs << "  [";
-    (*it->first).print(stream);
+    it->first->print(stream);
     stream << ",";
-    (*it->second).print(stream);
+    it->second.second->print(stream);
     stream << "]\n";
   }
 

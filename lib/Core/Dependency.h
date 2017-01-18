@@ -570,11 +570,13 @@ namespace klee {
     std::vector<ref<VersionedValue> > argumentValuesList;
 
     /// \brief The mapping of concrete locations to stored value
-    std::map<ref<MemoryLocation>, ref<VersionedValue> >
+    std::map<ref<MemoryLocation>,
+             std::pair<ref<VersionedValue>, ref<VersionedValue> > >
     concretelyAddressedStore;
 
     /// \brief The mapping of symbolic locations to stored value
-    std::map<ref<MemoryLocation>, ref<VersionedValue> >
+    std::map<ref<MemoryLocation>,
+             std::pair<ref<VersionedValue>, ref<VersionedValue> > >
     symbolicallyAddressedStore;
 
     /// \brief The store of the versioned values
@@ -633,7 +635,8 @@ namespace klee {
                                                  ref<Expr> expr);
 
     /// \brief Newly relate an location with its stored value
-    void updateStore(ref<MemoryLocation> loc, ref<VersionedValue> value);
+    void updateStore(ref<MemoryLocation> loc, ref<VersionedValue> address,
+                     ref<VersionedValue> value);
 
     /// \brief Add flow dependency between source and target value
     void addDependency(ref<VersionedValue> source, ref<VersionedValue> target,
