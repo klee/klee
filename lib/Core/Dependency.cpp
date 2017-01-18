@@ -897,17 +897,29 @@ Dependency::directFlowSources(ref<VersionedValue> target) const {
   std::vector<ref<VersionedValue> > ret;
   std::map<ref<VersionedValue>, ref<MemoryLocation> > sources =
       target->getSources();
+  ref<VersionedValue> loadAddress = target->getLoadAddress(),
+                      storeAddress = target->getStoreAddress();
 
-    for (std::map<ref<VersionedValue>, ref<MemoryLocation> >::iterator it =
-             sources.begin();
-         it != sources.end(); ++it) {
+  for (std::map<ref<VersionedValue>, ref<MemoryLocation> >::iterator it =
+           sources.begin();
+       it != sources.end(); ++it) {
       if (!it->first->isCore())
         ret.push_back(it->first);
-    }
+  }
+
+  if (!loadAddress.isNull())
+    ret.push_back(loadAddress);
+
+  if (!storeAddress.isNull())
+    ret.push_back(storeAddress);
+
   return ret;
 }
 
 void Dependency::markFlow(ref<VersionedValue> target) const {
+  if (target.isNull())
+    return;
+
   target->setAsCore();
   std::vector<ref<VersionedValue> > stepSources = directFlowSources(target);
   for (std::vector<ref<VersionedValue> >::iterator it = stepSources.begin(),
@@ -920,6 +932,9 @@ void Dependency::markFlow(ref<VersionedValue> target) const {
 void Dependency::markPointerFlow(ref<VersionedValue> target,
                                  ref<VersionedValue> checkedAddress,
                                  std::set<ref<Expr> > &bounds) const {
+  if (target.isNull())
+    return;
+
   //  checkedAddress->dump();
   std::set<ref<MemoryLocation> > locations = target->getLocations();
   for (std::set<ref<MemoryLocation> >::iterator it = locations.begin(),
@@ -939,6 +954,10 @@ void Dependency::markPointerFlow(ref<VersionedValue> target,
        it != ie; ++it) {
     markPointerFlow(it->first, checkedAddress, bounds);
   }
+
+  // We use normal marking with markFlow for load/store addresses
+  markFlow(target->getLoadAddress());
+  markFlow(target->getStoreAddress());
 }
 
 std::vector<ref<VersionedValue> >
