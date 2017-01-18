@@ -30,6 +30,11 @@ if (POLICY CMP0042)
   cmake_policy(SET CMP0042 NEW)
 endif()
 
+if (POLICY CMP0037)
+  # Disallow reserved target names
+  cmake_policy(SET CMP0037 NEW)
+endif()
+
 # This overrides the default flags for the different CMAKE_BUILD_TYPEs
 set(CMAKE_USER_MAKE_RULES_OVERRIDE_C
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake/c_flags_override.cmake")
@@ -699,26 +704,28 @@ if ((NOT LIT_TOOL) OR (NOT EXISTS "${LIT_TOOL}"))
     message(STATUS "Using lit: ${LIT_TOOL}")
   endif()
 
-  option(ENABLE_UNIT_TESTS "Enable unittests" ON)
+  # Add global test target
+  add_custom_target(check
+    COMMENT "Running tests"
+  )
+
+  option(ENABLE_UNIT_TESTS "Enable unit tests" ON)
   if (ENABLE_UNIT_TESTS)
     message(STATUS "Unit tests enabled")
     add_subdirectory(unittests)
+    add_dependencies(check unittests)
   else()
     message(STATUS "Unit tests disabled")
   endif()
-  option(ENABLE_INTEGRATION_TESTS "Enable integration tests" ON)
-  if (ENABLE_INTEGRATION_TESTS)
-    message(STATUS "Integration tests enabled")
+  option(ENABLE_SYSTEM_TESTS "Enable system tests" ON)
+  if (ENABLE_SYSTEM_TESTS)
+    message(STATUS "System tests enabled")
     add_subdirectory(test)
+    add_dependencies(check systemtests)
   else()
-    message(STATUS "Integration tests disabled")
+    message(STATUS "System tests disabled")
   endif()
 
-  # Add global test target
-  add_custom_target(check
-    DEPENDS unittests integrationtests
-    COMMENT "Running tests"
-  )
 else()
   message(STATUS "Testing disabled")
 endif()
