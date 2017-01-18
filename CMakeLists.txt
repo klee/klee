@@ -672,9 +672,22 @@ add_subdirectory(tools)
 ################################################################################
 # Testing
 ################################################################################
-option(ENABLE_TESTS "Enable tests" ON)
+option(ENABLE_UNIT_TESTS "Enable unit tests" ON)
+option(ENABLE_SYSTEM_TESTS "Enable system tests" ON)
 
-if (ENABLE_TESTS)
+# This provides a migration path for older build directories that have this
+# variable set in their cache. Leaving it behind could lead to confusion so
+# removing it is probably a good idea.
+# TODO: Remove this eventually (probably next release or something).
+if (DEFINED ENABLE_TESTS)
+  message(WARNING "You have the \"ENABLE_TESTS\" variable is your CMake cache."
+    "This variable no longer has any meaning so removing it from your cache")
+  unset(ENABLE_TESTS CACHE)
+endif()
+
+if (ENABLE_UNIT_TESTS OR ENABLE_SYSTEM_TESTS)
+  message(STATUS "Testing is enabled")
+
   # Find lit
   set(LIT_TOOL_NAMES "llvm-lit" "lit")
   find_program(
@@ -691,11 +704,12 @@ if (ENABLE_TESTS)
     "Lit arguments"
   )
 
-if ((NOT LIT_TOOL) OR (NOT EXISTS "${LIT_TOOL}"))
+  if ((NOT LIT_TOOL) OR (NOT EXISTS "${LIT_TOOL}"))
     message(FATAL_ERROR "The lit tool is required for testing."
       " CMake tried to find lit with the following names \"${LIT_TOOL_NAMES}\""
       " but it could not be found.\n"
-      "You should either disable testing by passing \"-DENABLE_TESTS=OFF\" to cmake"
+      "You should either disable testing by passing "
+      "\"-DENABLE_UNIT_TESTS=OFF -DENABLE_SYSTEM_TESTS=OFF\" to cmake"
       " or you should install the lit tool from the Python Package Index by running"
       " \"pip install lit\". Note \"pip\" requires root privileges to run. If you"
       " don't have root privileges you can create a virtual python environment using"
@@ -708,26 +722,24 @@ if ((NOT LIT_TOOL) OR (NOT EXISTS "${LIT_TOOL}"))
   add_custom_target(check
     COMMENT "Running tests"
   )
-
-  option(ENABLE_UNIT_TESTS "Enable unit tests" ON)
-  if (ENABLE_UNIT_TESTS)
-    message(STATUS "Unit tests enabled")
-    add_subdirectory(unittests)
-    add_dependencies(check unittests)
-  else()
-    message(STATUS "Unit tests disabled")
-  endif()
-  option(ENABLE_SYSTEM_TESTS "Enable system tests" ON)
-  if (ENABLE_SYSTEM_TESTS)
-    message(STATUS "System tests enabled")
-    add_subdirectory(test)
-    add_dependencies(check systemtests)
-  else()
-    message(STATUS "System tests disabled")
-  endif()
-
 else()
-  message(STATUS "Testing disabled")
+  message(STATUS "Testing is disabled")
+endif()
+
+
+if (ENABLE_UNIT_TESTS)
+  message(STATUS "Unit tests enabled")
+  add_subdirectory(unittests)
+  add_dependencies(check unittests)
+else()
+  message(STATUS "Unit tests disabled")
+endif()
+if (ENABLE_SYSTEM_TESTS)
+  message(STATUS "System tests enabled")
+  add_subdirectory(test)
+  add_dependencies(check systemtests)
+else()
+  message(STATUS "System tests disabled")
 endif()
 
 ################################################################################
