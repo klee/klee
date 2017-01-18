@@ -228,8 +228,12 @@ void MemoryLocation::print(llvm::raw_ostream &stream) const {
 
 void VersionedValue::print(llvm::raw_ostream &stream) const {
   stream << "V";
-  if (core)
-    stream << "(I)";
+  if (core) {
+    stream << "(I";
+    if (!doNotInterpolateBound)
+      stream << "B";
+    stream << ")";
+  }
   stream << "[";
   if (outputFunctionName(value, stream))
     stream << ":";
@@ -257,8 +261,12 @@ void VersionedValue::print(llvm::raw_ostream &stream) const {
 
 void VersionedValue::printNoDependency(llvm::raw_ostream &stream) const {
   stream << "V";
-  if (core)
-    stream << "(I)";
+  if (core) {
+    stream << "(I";
+    if (!doNotInterpolateBound)
+      stream << "B";
+    stream << ")";
+  }
   stream << "[";
   if (outputFunctionName(value, stream))
     stream << ":";
@@ -280,6 +288,11 @@ void StoredValue::init(ref<VersionedValue> vvalue,
                                                       replacements)
                    : vvalue->getExpression();
   value = vvalue->getValue();
+
+  doNotUseBound = !(vvalue->canInterpolateBound());
+
+  if (doNotUseBound)
+    return;
 
   if (!locations.empty()) {
     // Here we compute memory bounds for checking pointer values. The memory
@@ -446,7 +459,7 @@ ref<Expr> StoredValue::getBoundsCheck(ref<StoredValue> stateValue,
 }
 
 void StoredValue::print(llvm::raw_ostream &stream) const {
-  if (!allocationBounds.empty()) {
+  if (!doNotUseBound && !allocationBounds.empty()) {
     stream << "BOUNDS:\n";
     for (std::map<llvm::Value *, std::set<ref<Expr> > >::const_iterator
              it = allocationBounds.begin(),
@@ -903,21 +916,23 @@ Dependency::directFlowSources(ref<VersionedValue> target) const {
   for (std::map<ref<VersionedValue>, ref<MemoryLocation> >::iterator it =
            sources.begin();
        it != sources.end(); ++it) {
-      if (!it->first->isCore())
-        ret.push_back(it->first);
+    ret.push_back(it->first);
   }
 
-  if (!loadAddress.isNull())
+  if (!loadAddress.isNull()) {
     ret.push_back(loadAddress);
-
-  if (!storeAddress.isNull())
+    if (!storeAddress.isNull() && storeAddress != loadAddress) {
+      ret.push_back(storeAddress);
+    }
+  } else if (!storeAddress.isNull()) {
     ret.push_back(storeAddress);
+  }
 
   return ret;
 }
 
 void Dependency::markFlow(ref<VersionedValue> target) const {
-  if (target.isNull() || target->isCore())
+  if (target.isNull() || (target->isCore() && !target->canInterpolateBound()))
     return;
 
   target->setAsCore();
@@ -937,12 +952,14 @@ void Dependency::markPointerFlow(ref<VersionedValue> target,
   if (target.isNull())
     return;
 
-  //  checkedAddress->dump();
-  std::set<ref<MemoryLocation> > locations = target->getLocations();
-  for (std::set<ref<MemoryLocation> >::iterator it = locations.begin(),
-                                                ie = locations.end();
-       it != ie; ++it) {
-    (*it)->adjustOffsetBound(checkedAddress, bounds);
+  if (target->canInterpolateBound()) {
+    //  checkedAddress->dump();
+    std::set<ref<MemoryLocation> > locations = target->getLocations();
+    for (std::set<ref<MemoryLocation> >::iterator it = locations.begin(),
+                                                  ie = locations.end();
+         it != ie; ++it) {
+      (*it)->adjustOffsetBound(checkedAddress, bounds);
+    }
   }
   target->setAsCore();
 

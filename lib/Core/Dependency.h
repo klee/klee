@@ -386,6 +386,9 @@ namespace klee {
     /// \brief The LLVM value of this object
     llvm::Value *value;
 
+    /// \brief Do not use bound in subsumption check
+    bool doNotUseBound;
+
     void init(ref<VersionedValue> vvalue, std::set<const Array *> &replacements,
               bool shadowing = false);
 
@@ -420,6 +423,8 @@ namespace klee {
         return -1;
       return 1;
     }
+
+    bool useBound() { return !doNotUseBound; }
 
     bool isPointer() const { return !allocationBounds.empty(); }
 

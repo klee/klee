@@ -1526,7 +1526,8 @@ bool SubsumptionTableEntry::subsumed(
             }
             return false;
           } else if (!NoBoundInterpolation && !ExactAddressInterpolant &&
-                     tabledValue->isPointer() && stateValue->isPointer()) {
+                     tabledValue->isPointer() && stateValue->isPointer() &&
+                     tabledValue->useBound()) {
             std::set<ref<Expr> > bounds;
             ref<Expr> boundsCheck =
                 tabledValue->getBoundsCheck(stateValue, bounds);
@@ -1572,7 +1573,8 @@ bool SubsumptionTableEntry::subsumed(
 
             } else if (!NoBoundInterpolation && !ExactAddressInterpolant &&
                        tabledValue->isPointer() &&
-                       stateSymbolicValue->isPointer()) {
+                       stateSymbolicValue->isPointer() &&
+                       tabledValue->useBound()) {
               std::set<ref<Expr> > bounds;
               ref<Expr> boundsCheck =
                   tabledValue->getBoundsCheck(stateSymbolicValue, bounds);
@@ -1681,7 +1683,8 @@ bool SubsumptionTableEntry::subsumed(
                 ConstantExpr::create(0, Expr::Bool),
                 EqExpr::create(tabledSymbolicAddress, stateConcreteAddress));
           } else if (!NoBoundInterpolation && !ExactAddressInterpolant &&
-                     tabledValue->isPointer() && stateValue->isPointer()) {
+                     tabledValue->isPointer() && stateValue->isPointer() &&
+                     tabledValue->useBound()) {
             std::set<ref<Expr> > bounds;
             ref<Expr> boundsCheck =
                 tabledValue->getBoundsCheck(stateValue, bounds);
@@ -1736,7 +1739,8 @@ bool SubsumptionTableEntry::subsumed(
                 ConstantExpr::create(0, Expr::Bool),
                 EqExpr::create(tabledSymbolicAddress, stateSymbolicAddress));
           } else if (!NoBoundInterpolation && !ExactAddressInterpolant &&
-                     tabledValue->isPointer() && stateValue->isPointer()) {
+                     tabledValue->isPointer() && stateValue->isPointer() &&
+                     tabledValue->useBound()) {
             std::set<ref<Expr> > bounds;
             ref<Expr> boundsCheck =
                 tabledValue->getBoundsCheck(stateValue, bounds);
