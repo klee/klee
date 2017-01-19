@@ -1315,25 +1315,21 @@ void Dependency::execute(llvm::Instruction *instr,
           addressValuePair = concretelyAddressedStore[*li];
         }
 
-        if (addressValuePair.second.isNull()) {
+        // Build the loaded value
+        ref<VersionedValue> loadedValue =
+            (addressValuePair.second.isNull() ||
+             addressValuePair.second->getLocations().empty()) &&
+                    loadedType->isPointerTy()
+                ? getNewPointerValue(instr, valueExpr, 0)
+                : getNewVersionedValue(instr, valueExpr);
+
+        if (addressValuePair.second.isNull() ||
+            loadedValue->getExpression() !=
+                addressValuePair.second->getExpression()) {
           // We could not find the stored value, create a new one.
-
-          // Build the loaded value
-          ref<VersionedValue> loadedValue =
-              loadedType->isPointerTy()
-                  ? getNewPointerValue(instr, valueExpr, 0)
-                  : getNewVersionedValue(instr, valueExpr);
-
           updateStore(*li, addressValue, loadedValue);
           loadedValue->setLoadAddress(addressValue);
         } else {
-          // Build the loaded value
-          ref<VersionedValue> loadedValue =
-              (addressValuePair.second)->getLocations().empty() &&
-                      loadedType->isPointerTy()
-                  ? getNewPointerValue(instr, valueExpr, 0)
-                  : getNewVersionedValue(instr, valueExpr);
-
           addDependencyViaLocation(addressValuePair.second, loadedValue, *li);
           loadedValue->setLoadAddress(addressValue);
           loadedValue->setStoreAddress(addressValuePair.first);
