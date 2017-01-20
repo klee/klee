@@ -74,16 +74,12 @@ namespace klee {
 
       llvm::Instruction *getContent() { return callsite; }
 
-      int compare(const Node &other) const {
-        uintptr_t l = reinterpret_cast<uintptr_t>(callsite),
-                  r = reinterpret_cast<uintptr_t>(other.callsite);
-
-        if (l < r) {
+      int compare(const ref<Node> &other) const {
+        if (callsite == other->callsite)
+          return 0;
+        if (callsite < other->callsite)
           return -1;
-        } else if (l > r) {
-          return 1;
-        }
-        return 0;
+        return 1;
       }
 
       void dump() const {
@@ -136,7 +132,7 @@ namespace klee {
 
       int comparison = 0;
       while (!l.isNull() && !r.isNull()) {
-        comparison = l->compare(*(r.get()));
+        comparison = l->compare(r);
         if (comparison == 0) {
           l = l->getParent();
           r = r->getParent();
@@ -221,29 +217,21 @@ namespace klee {
     }
 
     int compare(const Address &other) const {
-      if (site == other.site) {
-        if (stack == other.stack) {
-          if (offset == other.offset) {
-            return 0;
-          } else {
-            if (concreteOffset && other.concreteOffset) {
-              if (concreteOffset < other.concreteOffset)
-                return -1;
-              return 1;
-            }
-            Expr *lhsExprAddress = offset.get();
-            Expr *rhsExprAddress = other.offset.get();
-            if (lhsExprAddress < rhsExprAddress)
-              return -1;
-            return 1;
-          }
-        } else if (stack < other.stack) {
+      int res = compareContext(other);
+      if (res)
+        return res;
+
+      if (offset == other.offset)
+        return 0;
+
+      if (concreteOffset && other.concreteOffset) {
+        if (concreteOffset < other.concreteOffset)
           return -1;
-        }
         return 1;
-      } else if (site < other.site) {
-        return -1;
       }
+
+      if (offset->hash() < other.offset->hash())
+        return -1;
       return 1;
     }
 
