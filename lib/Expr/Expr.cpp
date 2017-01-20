@@ -529,6 +529,7 @@ ref<Expr> ReadExpr::create(const UpdateList &ul, ref<Expr> index) {
   // a smart UpdateList so it is not worth rescanning.
 
   const UpdateNode *un = ul.head;
+  bool updateListHasSymbolicWrites = false;
   for (; un; un=un->next) {
     ref<Expr> cond = EqExpr::create(index, un->index);
     
@@ -536,7 +537,19 @@ ref<Expr> ReadExpr::create(const UpdateList &ul, ref<Expr> index) {
       if (CE->isTrue())
         return un->value;
     } else {
+      updateListHasSymbolicWrites = true;
       break;
+    }
+  }
+
+  if (ul.root->isConstantArray() && !updateListHasSymbolicWrites) {
+    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(index)) {
+      assert(CE->getWidth() <= 64 && "Index too large");
+      uint64_t concreteIndex = CE->getZExtValue();
+      uint64_t size = ul.root->size;
+      if (concreteIndex < size) {
+        return ul.root->constantValues[concreteIndex];
+      }
     }
   }
 
