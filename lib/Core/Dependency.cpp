@@ -661,8 +661,9 @@ ref<VersionedValue> Dependency::getLatestValue(llvm::Value *value,
     if (constraint)
       return allValues.back();
 
-    for (std::vector<ref<VersionedValue> >::iterator it = allValues.begin(),
-                                                     ie = allValues.end();
+    for (std::vector<ref<VersionedValue> >::reverse_iterator
+             it = allValues.rbegin(),
+             ie = allValues.rend();
          it != ie; ++it) {
       ref<Expr> e = (*it)->getExpression();
       if (e == valueExpr)
@@ -718,8 +719,9 @@ Dependency::getLatestValueNoConstantCheck(llvm::Value *value,
       // here we naively search for values with equivalent expression.
       std::vector<ref<VersionedValue> > allValues = valuesMap[value];
 
-      for (std::vector<ref<VersionedValue> >::iterator it = allValues.begin(),
-                                                       ie = allValues.end();
+      for (std::vector<ref<VersionedValue> >::reverse_iterator
+               it = allValues.rbegin(),
+               ie = allValues.rend();
            it != ie; ++it) {
         ref<Expr> e = (*it)->getExpression();
         if (e == valueExpr)
