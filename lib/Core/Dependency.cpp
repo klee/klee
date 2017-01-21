@@ -35,7 +35,7 @@ namespace klee {
 
 Address::Address(llvm::Value *_site,
                  const std::vector<llvm::Instruction *> &_stack,
-                 ref<Expr> &_offset)
+                 ref<Expr> _offset)
     : site(_site), stack(_stack), offset(_offset) {
   isConcrete = false;
   if (ConstantExpr *ce = llvm::dyn_cast<ConstantExpr>(_offset)) {
@@ -46,11 +46,13 @@ Address::Address(llvm::Value *_site,
 
 void Address::print(llvm::raw_ostream &stream) const {
   stream << "<";
+  if (outputFunctionName(site, stream))
+    stream << ":";
   site->print(stream);
-  stream << "|";
+  stream << "|\n";
   for (std::vector<llvm::Instruction *>::const_reverse_iterator
-           it = stack.rend(),
-           ie = stack.rbegin();
+           it = stack.rbegin(),
+           ie = stack.rend();
        it != ie; ++it) {
     (*it)->print(stream);
     stream << "\n";
@@ -244,7 +246,16 @@ void MemoryLocation::print(llvm::raw_ostream &stream) const {
   if (outputFunctionName(value, stream))
     stream << ":";
   value->print(stream);
-  stream << ":";
+  stream << ":[";
+  for (std::vector<llvm::Instruction *>::const_reverse_iterator
+           it = stack.rbegin(),
+           ib = it, ie = stack.rend();
+       it != ie; ++it) {
+    if (it != ib)
+      stream << ",";
+    (*it)->print(stream);
+  }
+  stream << "]:";
   address->print(stream);
   stream << ":";
   base->print(stream);
@@ -572,12 +583,12 @@ Dependency::getStoredExpressions(std::set<const Array *> &replacements,
 
     if (!coreOnly) {
       llvm::Value *base = it->first->getValue();
-      Address address = it->first->makeAddress(it->second.second->getStack());
+      Address address = it->first->makeAddress();
       concreteStore[base][address] = StoredValue::create(it->second.second);
     } else if (it->second.second->isCore()) {
       // An address is in the core if it stores a value that is in the core
       llvm::Value *base = it->first->getValue();
-      Address address = it->first->makeAddress(it->second.second->getStack());
+      Address address = it->first->makeAddress();
 #ifdef ENABLE_Z3
       if (!NoExistential) {
         concreteStore[base][address] =
@@ -596,7 +607,7 @@ Dependency::getStoredExpressions(std::set<const Array *> &replacements,
     if (it->second.second.isNull())
       continue;
 
-    Address address = it->first->makeAddress(it->second.second->getStack());
+    Address address = it->first->makeAddress();
     if (!coreOnly) {
       llvm::Value *base = it->first->getValue();
       symbolicStore[base].push_back(
@@ -607,7 +618,7 @@ Dependency::getStoredExpressions(std::set<const Array *> &replacements,
 #ifdef ENABLE_Z3
       if (!NoExistential) {
         symbolicStore[base].push_back(AddressValuePair(
-            it->first->makeAddress(it->second.second->getStack(), replacements),
+            it->first->makeAddress(replacements),
             StoredValue::create(it->second.second, replacements)));
       } else
 #endif
@@ -895,8 +906,9 @@ void Dependency::addDependencyViaLocation(ref<VersionedValue> source,
   target->addDependency(source, via);
 }
 
-void Dependency::addDependencyViaExternalFunction(ref<VersionedValue> source,
-                                                  ref<VersionedValue> target) {
+void Dependency::addDependencyViaExternalFunction(
+    const std::vector<llvm::Instruction *> &stack, ref<VersionedValue> source,
+    ref<VersionedValue> target) {
   if (source.isNull() || target.isNull())
     return;
 
@@ -921,7 +933,7 @@ void Dependency::addDependencyViaExternalFunction(ref<VersionedValue> source,
     }
 
     target->addLocation(
-        MemoryLocation::create(target->getValue(), address, size));
+        MemoryLocation::create(target->getValue(), stack, address, size));
   }
 
   addDependencyToNonPointer(source, target);
@@ -1103,6 +1115,7 @@ void Dependency::execute(llvm::Instruction *instr,
             getNewVersionedValue(instr, stack, args.at(0));
         for (unsigned i = 0; i < 3; ++i) {
           addDependencyViaExternalFunction(
+              stack,
               getLatestValue(instr->getOperand(i), stack, args.at(i + 1)),
               returnValue);
         }
@@ -1110,11 +1123,11 @@ void Dependency::execute(llvm::Instruction *instr,
                      "_ZNSt13basic_fstreamIcSt11char_traitsIcEE7is_openEv") &&
                  args.size() == 2) {
         addDependencyViaExternalFunction(
-            getLatestValue(instr->getOperand(0), stack, args.at(1)),
+            stack, getLatestValue(instr->getOperand(0), stack, args.at(1)),
             getNewVersionedValue(instr, stack, args.at(0)));
       } else if (calleeName.equals("_ZNSi5tellgEv") && args.size() == 2) {
         addDependencyViaExternalFunction(
-            getLatestValue(instr->getOperand(0), stack, args.at(1)),
+            stack, getLatestValue(instr->getOperand(0), stack, args.at(1)),
             getNewVersionedValue(instr, stack, args.at(0)));
       } else if ((calleeName.equals("powl") && args.size() == 3) ||
                  (calleeName.equals("gettimeofday") && args.size() == 3)) {
@@ -1122,6 +1135,7 @@ void Dependency::execute(llvm::Instruction *instr,
             getNewVersionedValue(instr, stack, args.at(0));
         for (unsigned i = 0; i < 2; ++i) {
           addDependencyViaExternalFunction(
+              stack,
               getLatestValue(instr->getOperand(i), stack, args.at(i + 1)),
               returnValue);
         }
@@ -1152,6 +1166,7 @@ void Dependency::execute(llvm::Instruction *instr,
             getNewVersionedValue(instr, stack, args.at(0));
         for (unsigned i = 0; i + 1 < args.size(); ++i) {
           addDependencyViaExternalFunction(
+              stack,
               getLatestValue(instr->getOperand(i), stack, args.at(i + 1)),
               returnValue);
         }
@@ -1160,7 +1175,7 @@ void Dependency::execute(llvm::Instruction *instr,
                      getValuePrefix.end() &&
                  args.size() == 2) {
         addDependencyViaExternalFunction(
-            getLatestValue(instr->getOperand(0), stack, args.at(1)),
+            stack, getLatestValue(instr->getOperand(0), stack, args.at(1)),
             getNewVersionedValue(instr, stack, args.at(0)));
       } else if (calleeName.equals("getenv") && args.size() == 2) {
         // We assume getenv has unknown allocation size
@@ -1169,10 +1184,11 @@ void Dependency::execute(llvm::Instruction *instr,
         ref<VersionedValue> returnValue =
             getNewVersionedValue(instr, stack, args.at(0));
         addDependencyViaExternalFunction(
-            getLatestValue(instr->getOperand(0), stack, args.at(1)),
+            stack, getLatestValue(instr->getOperand(0), stack, args.at(1)),
             returnValue);
         for (unsigned i = 2, argsNum = args.size(); i < argsNum; ++i) {
           addDependencyViaExternalFunction(
+              stack,
               getLatestValue(instr->getOperand(i - 1), stack, args.at(i)),
               returnValue);
         }
@@ -1180,10 +1196,10 @@ void Dependency::execute(llvm::Instruction *instr,
         ref<VersionedValue> returnValue =
             getNewVersionedValue(instr, stack, args.at(0));
         addDependencyViaExternalFunction(
-            getLatestValue(instr->getOperand(0), stack, args.at(1)),
+            stack, getLatestValue(instr->getOperand(0), stack, args.at(1)),
             returnValue);
         addDependencyViaExternalFunction(
-            getLatestValue(instr->getOperand(1), stack, args.at(2)),
+            stack, getLatestValue(instr->getOperand(1), stack, args.at(2)),
             returnValue);
       } else if (((calleeName.equals("fchmodat") && args.size() == 5)) ||
                  (calleeName.equals("fchownat") && args.size() == 6)) {
@@ -1191,6 +1207,7 @@ void Dependency::execute(llvm::Instruction *instr,
             getNewVersionedValue(instr, stack, args.at(0));
         for (unsigned i = 0; i < 2; ++i) {
           addDependencyViaExternalFunction(
+              stack,
               getLatestValue(instr->getOperand(i), stack, args.at(i + 1)),
               returnValue);
         }
@@ -1288,7 +1305,7 @@ void Dependency::execute(llvm::Instruction *instr,
           // The size of the allocation is unknown here as the memory region
           // might have been allocated by the environment
           ref<MemoryLocation> loc =
-              MemoryLocation::create(instr->getOperand(0), address, 0);
+              MemoryLocation::create(instr->getOperand(0), stack, address, 0);
           addressValue->addLocation(loc);
 
           // Build the loaded value
@@ -1395,7 +1412,7 @@ void Dependency::execute(llvm::Instruction *instr,
       } else if (addressValue->getLocations().size() == 0) {
         if (instr->getOperand(1)->getType()->isPointerTy()) {
           addressValue->addLocation(
-              MemoryLocation::create(instr->getOperand(1), address, 0));
+              MemoryLocation::create(instr->getOperand(1), stack, address, 0));
         } else {
           assert(!"address is not a pointer");
         }
@@ -1567,8 +1584,8 @@ void Dependency::execute(llvm::Instruction *instr,
             getNewPointerValue(instr->getOperand(0), stack, inputAddress, 0);
       } else if (addressValue->getLocations().size() == 0) {
         // Note that the allocation has unknown size here (0).
-        addressValue->addLocation(
-            MemoryLocation::create(instr->getOperand(0), inputAddress, 0));
+        addressValue->addLocation(MemoryLocation::create(
+            instr->getOperand(0), stack, inputAddress, 0));
       }
 
       addDependencyWithOffset(addressValue,

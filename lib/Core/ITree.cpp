@@ -1476,6 +1476,7 @@ bool SubsumptionTableEntry::subsumed(
              it1 = concreteAddressStoreKeys.begin(),
              ie1 = concreteAddressStoreKeys.end();
          it1 != ie1; ++it1) {
+
       const Dependency::ConcreteStoreMap tabledConcreteMap =
           concreteAddressStore[*it1];
       const Dependency::ConcreteStoreMap stateConcreteMap =
@@ -1906,7 +1907,6 @@ bool SubsumptionTableEntry::subsumed(
     // no contradictory unary constraints found from solvingUnaryConstraints
     // method.
     if (!llvm::isa<ConstantExpr>(query)) {
-
       if (!existentials.empty() && llvm::isa<ExistsExpr>(query)) {
         if (DebugInterpolation == ITP_DEBUG_ALL ||
             DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
@@ -1995,7 +1995,6 @@ bool SubsumptionTableEntry::subsumed(
                 it->first->getValue(), it->first->getExpression(), it->second);
           }
         }
-
         return true;
       }
       if (DebugInterpolation == ITP_DEBUG_ALL ||

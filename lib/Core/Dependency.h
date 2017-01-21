@@ -59,7 +59,7 @@ namespace klee {
 
   public:
     Address(llvm::Value *_site, const std::vector<llvm::Instruction *> &_stack,
-            ref<Expr> &_offset);
+            ref<Expr> _offset);
 
     ~Address() {};
 
@@ -175,6 +175,9 @@ namespace klee {
     /// \brief The location's LLVM value
     llvm::Value *value;
 
+    /// \brief The allocation's stack
+    std::vector<llvm::Instruction *> stack;
+
     /// \brief The absolute address
     ref<Expr> address;
 
@@ -194,9 +197,11 @@ namespace klee {
     /// \brief The size of this allocation (0 means unknown)
     uint64_t size;
 
-    MemoryLocation(llvm::Value *_value, ref<Expr> &_address, ref<Expr> &_base,
-                   ref<Expr> &_offset, uint64_t _size)
-        : refCount(0), value(_value), offset(_offset),
+    MemoryLocation(llvm::Value *_value,
+                   const std::vector<llvm::Instruction *> &_stack,
+                   ref<Expr> &_address, ref<Expr> &_base, ref<Expr> &_offset,
+                   uint64_t _size)
+        : refCount(0), value(_value), stack(_stack), offset(_offset),
           concreteOffsetBound(_size), size(_size) {
       bool unknownBase = false;
 
@@ -245,11 +250,12 @@ namespace klee {
   public:
     ~MemoryLocation() {}
 
-    static ref<MemoryLocation> create(llvm::Value *value, ref<Expr> &address,
-                                      uint64_t size) {
+    static ref<MemoryLocation>
+    create(llvm::Value *value, const std::vector<llvm::Instruction *> &stack,
+           ref<Expr> &address, uint64_t size) {
       ref<Expr> zeroPointer = Expr::createPointer(0);
-      ref<MemoryLocation> ret(
-          new MemoryLocation(value, address, address, zeroPointer, size));
+      ref<MemoryLocation> ret(new MemoryLocation(value, stack, address, address,
+                                                 zeroPointer, size));
       return ret;
     }
 
@@ -260,25 +266,24 @@ namespace klee {
       if (c && c->getZExtValue() == 0) {
         ref<Expr> base = loc->base;
         ref<Expr> offset = loc->offset;
-        ref<MemoryLocation> ret(
-            new MemoryLocation(loc->value, address, base, offset, loc->size));
+        ref<MemoryLocation> ret(new MemoryLocation(
+            loc->value, loc->stack, address, base, offset, loc->size));
         return ret;
       }
 
       ref<Expr> base = loc->base;
       ref<Expr> newOffset = AddExpr::create(loc->offset, offsetDelta);
-      ref<MemoryLocation> ret(
-          new MemoryLocation(loc->value, address, base, newOffset, loc->size));
+      ref<MemoryLocation> ret(new MemoryLocation(
+          loc->value, loc->stack, address, base, newOffset, loc->size));
       return ret;
     }
 
-    Address makeAddress(const std::vector<llvm::Instruction *> &stack) {
+    Address makeAddress() const {
       Address address(value, stack, offset);
       return address;
     }
 
-    Address makeAddress(const std::vector<llvm::Instruction *> &stack,
-                        std::set<const Array *> &replacements) {
+    Address makeAddress(std::set<const Array *> &replacements) const {
       ref<Expr> replacementOffset(
           ShadowArray::getShadowExpression(offset, replacements));
       Address address(value, stack, replacementOffset);
@@ -766,7 +771,7 @@ namespace klee {
                        const std::vector<llvm::Instruction *> &stack,
                        ref<Expr> address, uint64_t size) {
       ref<VersionedValue> vvalue = VersionedValue::create(loc, stack, address);
-      vvalue->addLocation(MemoryLocation::create(loc, address, size));
+      vvalue->addLocation(MemoryLocation::create(loc, stack, address, size));
       return registerNewVersionedValue(loc, vvalue);
     }
 
@@ -820,8 +825,9 @@ namespace klee {
     /// Here the target is not a pointer, and we assume that the source is
     /// is checked for memory access validity at the current index, meaning that
     /// we assumed all memory access within the external function is valid.
-    void addDependencyViaExternalFunction(ref<VersionedValue> source,
-                                          ref<VersionedValue> target);
+    void addDependencyViaExternalFunction(
+        const std::vector<llvm::Instruction *> &stack,
+        ref<VersionedValue> source, ref<VersionedValue> target);
 
     /// \brief Add a flow dependency from a pointer value to a non-pointer
     /// value.
