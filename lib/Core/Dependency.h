@@ -290,34 +290,8 @@ namespace klee {
       return address;
     }
 
-    int compare(const MemoryLocation other) const {
-      uint64_t l = reinterpret_cast<uint64_t>(value),
-               r = reinterpret_cast<uint64_t>(other.value);
-
-      if (l == r) {
-        ConstantExpr *lc = llvm::dyn_cast<ConstantExpr>(address);
-        if (lc) {
-          ConstantExpr *rc = llvm::dyn_cast<ConstantExpr>(other.address);
-          if (rc) {
-            l = lc->getZExtValue();
-            r = rc->getZExtValue();
-            if (l == r)
-              return 0;
-            if (l < r)
-              return -1;
-            return 1;
-          }
-        }
-        l = reinterpret_cast<uint64_t>(address.get());
-        r = reinterpret_cast<uint64_t>(other.address.get());
-        if (l == r)
-          return 0;
-        if (l < r)
-          return -1;
-        return 1;
-      } else if (l < r)
-        return -1;
-      return 1;
+    int compare(const MemoryLocation &other) const {
+      return makeAddress() == other.makeAddress();
     }
 
     /// \brief Adjust the offset bound for interpolation (a.k.a. slackening)
