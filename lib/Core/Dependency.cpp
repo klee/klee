@@ -33,37 +33,6 @@ using namespace klee;
 
 namespace klee {
 
-Address::Address(llvm::Value *_site,
-                 const std::vector<llvm::Instruction *> &_stack,
-                 ref<Expr> _offset)
-    : site(_site), stack(_stack), offset(_offset) {
-  isConcrete = false;
-  if (ConstantExpr *ce = llvm::dyn_cast<ConstantExpr>(_offset)) {
-    isConcrete = true;
-    concreteOffset = ce->getZExtValue();
-  }
-}
-
-void Address::print(llvm::raw_ostream &stream) const {
-  stream << "<";
-  if (outputFunctionName(site, stream))
-    stream << ":";
-  site->print(stream);
-  stream << "|\n";
-  for (std::vector<llvm::Instruction *>::const_reverse_iterator
-           it = stack.rbegin(),
-           ie = stack.rend();
-       it != ie; ++it) {
-    (*it)->print(stream);
-    stream << "\n";
-  }
-  stream << "|";
-  offset->print(stream);
-  stream << ">";
-}
-
-/**/
-
 std::map<const Array *, const Array *> ShadowArray::shadowArray;
 
 UpdateNode *
@@ -583,19 +552,17 @@ Dependency::getStoredExpressions(std::set<const Array *> &replacements,
 
     if (!coreOnly) {
       llvm::Value *base = it->first->getValue();
-      Address address = it->first->makeAddress();
-      concreteStore[base][address] = StoredValue::create(it->second.second);
+      concreteStore[base][it->first] = StoredValue::create(it->second.second);
     } else if (it->second.second->isCore()) {
       // An address is in the core if it stores a value that is in the core
       llvm::Value *base = it->first->getValue();
-      Address address = it->first->makeAddress();
 #ifdef ENABLE_Z3
       if (!NoExistential) {
-        concreteStore[base][address] =
+        concreteStore[base][it->first] =
             StoredValue::create(it->second.second, replacements);
       } else
 #endif
-        concreteStore[base][address] = StoredValue::create(it->second.second);
+        concreteStore[base][it->first] = StoredValue::create(it->second.second);
     }
   }
 
@@ -607,23 +574,22 @@ Dependency::getStoredExpressions(std::set<const Array *> &replacements,
     if (it->second.second.isNull())
       continue;
 
-    Address address = it->first->makeAddress();
     if (!coreOnly) {
       llvm::Value *base = it->first->getValue();
       symbolicStore[base].push_back(
-          AddressValuePair(address, StoredValue::create(it->second.second)));
+          AddressValuePair(it->first, StoredValue::create(it->second.second)));
     } else if (it->second.second->isCore()) {
       // An address is in the core if it stores a value that is in the core
       llvm::Value *base = it->first->getValue();
 #ifdef ENABLE_Z3
       if (!NoExistential) {
         symbolicStore[base].push_back(AddressValuePair(
-            it->first->makeAddress(replacements),
+            MemoryLocation::create(it->first, replacements),
             StoredValue::create(it->second.second, replacements)));
       } else
 #endif
-        symbolicStore[base].push_back(
-            AddressValuePair(address, StoredValue::create(it->second.second)));
+        symbolicStore[base].push_back(AddressValuePair(
+            it->first, StoredValue::create(it->second.second)));
       }
   }
 

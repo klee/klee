@@ -1554,7 +1554,7 @@ bool SubsumptionTableEntry::subsumed(
         }
 
         if (!stateSymbolicMap.empty()) {
-          const ref<Expr> tabledConcreteOffset = it2->first.getOffset();
+          const ref<Expr> tabledConcreteOffset = it2->first->getOffset();
           ref<Expr> conjunction;
 
           for (Dependency::SymbolicStoreMap::const_iterator
@@ -1564,10 +1564,10 @@ bool SubsumptionTableEntry::subsumed(
 
             // We make sure the context part of the addresses (the allocation
             // site and the call stack) are equivalent.
-            if (it2->first.compareContext(it3->first))
+            if (it2->first->compareContext(*(it3->first)))
               continue;
 
-            ref<Expr> stateSymbolicOffset = it3->first.getOffset();
+            ref<Expr> stateSymbolicOffset = it3->first->getOffset();
             ref<StoredValue> stateSymbolicValue = it3->second;
             ref<Expr> newTerm;
 
@@ -1672,7 +1672,7 @@ bool SubsumptionTableEntry::subsumed(
                it2 = tabledSymbolicMap.begin(),
                ie2 = tabledSymbolicMap.end();
            it2 != ie2; ++it2) {
-        ref<Expr> tabledSymbolicOffset = it2->first.getOffset();
+        ref<Expr> tabledSymbolicOffset = it2->first->getOffset();
         ref<StoredValue> tabledValue = it2->second;
 
         for (Dependency::ConcreteStoreMap::const_iterator
@@ -1682,10 +1682,10 @@ bool SubsumptionTableEntry::subsumed(
 
           // We make sure the context part of the addresses (the allocation
           // site and the call stack) are equivalent.
-          if (it2->first.compareContext(it3->first))
+          if (it2->first->compareContext(*(it3->first)))
             continue;
 
-          ref<Expr> stateConcreteOffset = it3->first.getOffset();
+          ref<Expr> stateConcreteOffset = it3->first->getOffset();
           ref<StoredValue> stateValue = it3->second;
           ref<Expr> newTerm;
 
@@ -1744,10 +1744,10 @@ bool SubsumptionTableEntry::subsumed(
 
           // We make sure the context part of the addresses (the allocation
           // site and the call stack) are equivalent.
-          if (it2->first.compareContext(it3->first))
+          if (it2->first->compareContext(*(it3->first)))
             continue;
 
-          ref<Expr> stateSymbolicOffset = it3->first.getOffset();
+          ref<Expr> stateSymbolicOffset = it3->first->getOffset();
           ref<StoredValue> stateValue = it3->second;
           ref<Expr> newTerm;
 
@@ -2079,7 +2079,7 @@ void SubsumptionTableEntry::print(llvm::raw_ostream &stream) const {
         if (it1 != is1 || it2 != is2)
           stream << ",";
         stream << "(";
-        it2->first.print(stream);
+        it2->first->print(stream);
         stream << ",\n";
         it2->second->print(stream);
         stream << ")";
@@ -2101,7 +2101,7 @@ void SubsumptionTableEntry::print(llvm::raw_ostream &stream) const {
         if (it1 != is1 || it2 != is2)
           stream << ",";
         stream << "(";
-        it2->first.print(stream);
+        it2->first->print(stream);
         stream << ",";
         it2->second->print(stream);
         stream << ")";

@@ -46,103 +46,6 @@ namespace klee {
   /// \brief Output function name to the output stream
   extern bool outputFunctionName(llvm::Value *value, llvm::raw_ostream &stream);
 
-  class Address {
-    llvm::Value *site;
-
-    std::vector<llvm::Instruction *> stack;
-
-    ref<Expr> offset;
-
-    bool isConcrete;
-
-    uint64_t concreteOffset;
-
-  public:
-    Address(llvm::Value *_site, const std::vector<llvm::Instruction *> &_stack,
-            ref<Expr> _offset);
-
-    ~Address() {};
-
-    ref<Expr> getOffset() const { return offset; }
-
-    int compareContext(const Address &other) const {
-      if (site == other.site) {
-        for (std::vector<llvm::Instruction *>::const_reverse_iterator
-                 it1 = stack.rbegin(),
-                 ie1 = stack.rend(), it2 = other.stack.rbegin(),
-                 ie2 = other.stack.rend();
-             ; ++it1, ++it2) {
-          if (it1 == ie1) {
-            if (it2 == ie2) {
-              break;
-            } else
-              return -1;
-          }
-          if (it2 == ie2)
-            return 1;
-          if (it1 == ie1 || (*it1) > (*it2))
-            return 1;
-          if (it2 == ie2 || (*it1) < (*it2))
-            return -1;
-        }
-        return 0;
-      } else if (site < other.site) {
-        return -1;
-      }
-      return 1;
-    }
-
-    int compare(const Address &other) const {
-      int res = compareContext(other);
-      if (res)
-        return res;
-
-      if (offset == other.offset)
-        return 0;
-      if (concreteOffset && other.concreteOffset) {
-        if (concreteOffset < other.concreteOffset)
-          return -1;
-        return 1;
-      }
-
-      if (offset->hash() < other.offset->hash())
-        return -1;
-
-      return 1;
-    }
-
-    void dump() const {
-      print(llvm::errs());
-      llvm::errs() << "\n";
-    }
-
-    void print(llvm::raw_ostream &stream) const;
-  };
-
-  inline bool operator==(const Address &lhs, const Address &rhs) {
-    return lhs.compare(rhs) == 0;
-  }
-
-  inline bool operator<(const Address &lhs, const Address &rhs) {
-    return lhs.compare(rhs) < 0;
-  }
-
-  inline bool operator>(const Address &lhs, const Address &rhs) {
-    return lhs.compare(rhs) > 0;
-  }
-
-  inline bool operator<=(const Address &lhs, const Address &rhs) {
-    return !(lhs > rhs);
-  }
-
-  inline bool operator>=(const Address &lhs, const Address &rhs) {
-    return !(lhs < rhs);
-  }
-
-  inline bool operator!=(const Address &lhs, const Address &rhs) {
-    return !(lhs == rhs);
-  }
-
   /// \brief Implements the replacement mechanism for replacing variables, used in
   /// replacing free with bound variables.
   class ShadowArray {
@@ -187,6 +90,12 @@ namespace klee {
     /// \brief The offset wrt. the allocation
     ref<Expr> offset;
 
+    /// \brief Indicates concrete address / offset
+    bool isConcrete;
+
+    /// \brief The value of the concrete offset
+    uint64_t concreteOffset;
+
     /// \brief The expressions representing the bound on the offset, i.e., the
     /// interpolant, in case it is symbolic.
     std::set<ref<Expr> > symbolicOffsetBounds;
@@ -205,19 +114,20 @@ namespace klee {
           concreteOffsetBound(_size), size(_size) {
       bool unknownBase = false;
 
-      ConstantExpr *ca = llvm::dyn_cast<ConstantExpr>(_address);
-      if (ca) {
-        ConstantExpr *cb = llvm::dyn_cast<ConstantExpr>(_base);
-        if (cb) {
-          ConstantExpr *co = llvm::dyn_cast<ConstantExpr>(_offset);
-          if (co) {
+      isConcrete = false;
+      if (ConstantExpr *co = llvm::dyn_cast<ConstantExpr>(_offset)) {
+        isConcrete = true;
+        concreteOffset = co->getZExtValue();
+
+        if (ConstantExpr *ca = llvm::dyn_cast<ConstantExpr>(_address)) {
+          if (ConstantExpr *cb = llvm::dyn_cast<ConstantExpr>(_base)) {
             uint64_t a = ca->getZExtValue();
             uint64_t b = cb->getZExtValue();
-            uint64_t o = co->getZExtValue();
+
             if (b == 0 && a != 0) {
               unknownBase = true;
             } else {
-              assert(o == (a - b) && "wrong offset");
+              assert(concreteOffset == (a - b) && "wrong offset");
             }
           }
         }
@@ -260,6 +170,17 @@ namespace klee {
     }
 
     static ref<MemoryLocation> create(ref<MemoryLocation> loc,
+                                      std::set<const Array *> &replacements) {
+      ref<Expr> _address(
+          ShadowArray::getShadowExpression(loc->address, replacements)),
+          _base(ShadowArray::getShadowExpression(loc->base, replacements)),
+          _offset(ShadowArray::getShadowExpression(loc->offset, replacements));
+      ref<MemoryLocation> ret(new MemoryLocation(
+          loc->value, loc->stack, _address, _base, _offset, loc->size));
+      return ret;
+    }
+
+    static ref<MemoryLocation> create(ref<MemoryLocation> loc,
                                       ref<Expr> &address,
                                       ref<Expr> &offsetDelta) {
       ConstantExpr *c = llvm::dyn_cast<ConstantExpr>(offsetDelta);
@@ -278,20 +199,50 @@ namespace klee {
       return ret;
     }
 
-    Address makeAddress() const {
-      Address address(value, stack, offset);
-      return address;
-    }
-
-    Address makeAddress(std::set<const Array *> &replacements) const {
-      ref<Expr> replacementOffset(
-          ShadowArray::getShadowExpression(offset, replacements));
-      Address address(value, stack, replacementOffset);
-      return address;
+    int compareContext(const MemoryLocation &other) const {
+      if (value == other.value) {
+        for (std::vector<llvm::Instruction *>::const_reverse_iterator
+                 it1 = stack.rbegin(),
+                 ie1 = stack.rend(), it2 = other.stack.rbegin(),
+                 ie2 = other.stack.rend();
+             ; ++it1, ++it2) {
+          if (it1 == ie1) {
+            if (it2 == ie2) {
+              break;
+            } else
+              return -1;
+          }
+          if (it2 == ie2)
+            return 1;
+          if (it1 == ie1 || (*it1) > (*it2))
+            return 1;
+          if (it2 == ie2 || (*it1) < (*it2))
+            return -1;
+        }
+        return 0;
+      } else if (value < other.value) {
+        return -1;
+      }
+      return 1;
     }
 
     int compare(const MemoryLocation &other) const {
-      return makeAddress() == other.makeAddress();
+      int res = compareContext(other);
+      if (res)
+        return res;
+
+      if (offset == other.offset)
+        return 0;
+      if (concreteOffset && other.concreteOffset) {
+        if (concreteOffset < other.concreteOffset)
+          return -1;
+        return 1;
+      }
+
+      if (offset->hash() < other.offset->hash())
+        return -1;
+
+      return 1;
     }
 
     /// \brief Adjust the offset bound for interpolation (a.k.a. slackening)
@@ -331,6 +282,30 @@ namespace klee {
     /// \param stream The stream to print the data to.
     void print(llvm::raw_ostream& stream) const;
   };
+
+  inline bool operator==(const MemoryLocation &lhs, const MemoryLocation &rhs) {
+    return lhs.compare(rhs) == 0;
+  }
+
+  inline bool operator<(const MemoryLocation &lhs, const MemoryLocation &rhs) {
+    return lhs.compare(rhs) < 0;
+  }
+
+  inline bool operator>(const MemoryLocation &lhs, const MemoryLocation &rhs) {
+    return lhs.compare(rhs) > 0;
+  }
+
+  inline bool operator<=(const MemoryLocation &lhs, const MemoryLocation &rhs) {
+    return !(lhs > rhs);
+  }
+
+  inline bool operator>=(const MemoryLocation &lhs, const MemoryLocation &rhs) {
+    return !(lhs < rhs);
+  }
+
+  inline bool operator!=(const MemoryLocation &lhs, const MemoryLocation &rhs) {
+    return !(lhs == rhs);
+  }
 
   /// \brief A class that represents LLVM value that can be destructively
   /// updated (versioned).
@@ -687,8 +662,8 @@ namespace klee {
   class Dependency {
 
   public:
-    typedef std::pair<Address, ref<StoredValue> > AddressValuePair;
-    typedef std::map<Address, ref<StoredValue> > ConcreteStoreMap;
+    typedef std::pair<ref<MemoryLocation>, ref<StoredValue> > AddressValuePair;
+    typedef std::map<ref<MemoryLocation>, ref<StoredValue> > ConcreteStoreMap;
     typedef std::vector<AddressValuePair> SymbolicStoreMap;
     typedef std::map<llvm::Value *, ConcreteStoreMap> ConcreteStore;
     typedef std::map<llvm::Value *, SymbolicStoreMap> SymbolicStore;
