@@ -33,21 +33,9 @@ using namespace klee;
 
 namespace klee {
 
-void SharedStack::print(llvm::raw_ostream &stream) const {
-  ref<Node> p = head;
-
-  stream << "[\n";
-  while (!p.isNull()) {
-    p->print(stream);
-    stream << "\n";
-    p = p->getParent();
-  }
-  stream << "]";
-}
-
-/**/
-
-Address::Address(llvm::Value *_site, SharedStack &_stack, ref<Expr> &_offset)
+Address::Address(llvm::Value *_site,
+                 const std::vector<llvm::Instruction *> &_stack,
+                 ref<Expr> &_offset)
     : site(_site), stack(_stack), offset(_offset) {
   isConcrete = false;
   if (ConstantExpr *ce = llvm::dyn_cast<ConstantExpr>(_offset)) {
@@ -60,7 +48,13 @@ void Address::print(llvm::raw_ostream &stream) const {
   stream << "<";
   site->print(stream);
   stream << "|";
-  stack.print(stream);
+  for (std::vector<llvm::Instruction *>::const_reverse_iterator
+           it = stack.rend(),
+           ie = stack.rbegin();
+       it != ie; ++it) {
+    (*it)->print(stream);
+    stream << "\n";
+  }
   stream << "|";
   offset->print(stream);
   stream << ">";
@@ -625,10 +619,10 @@ Dependency::getStoredExpressions(std::set<const Array *> &replacements,
   return std::pair<ConcreteStore, SymbolicStore>(concreteStore, symbolicStore);
 }
 
-ref<VersionedValue> Dependency::getLatestValue(llvm::Value *value,
-                                               SharedStack &stack,
-                                               ref<Expr> valueExpr,
-                                               bool constraint) {
+ref<VersionedValue>
+Dependency::getLatestValue(llvm::Value *value,
+                           const std::vector<llvm::Instruction *> &stack,
+                           ref<Expr> valueExpr, bool constraint) {
   assert(value && !valueExpr.isNull() && "value cannot be null");
   if (llvm::isa<llvm::ConstantExpr>(value)) {
     llvm::Instruction *asInstruction =
@@ -1016,9 +1010,9 @@ void Dependency::markPointerFlow(ref<VersionedValue> target,
   markFlow(target->getStoreAddress());
 }
 
-std::vector<ref<VersionedValue> >
-Dependency::populateArgumentValuesList(llvm::CallInst *site, SharedStack &stack,
-                                       std::vector<ref<Expr> > &arguments) {
+std::vector<ref<VersionedValue> > Dependency::populateArgumentValuesList(
+    llvm::CallInst *site, const std::vector<llvm::Instruction *> &stack,
+    std::vector<ref<Expr> > &arguments) {
   unsigned numArgs = site->getCalledFunction()->arg_size();
   std::vector<ref<VersionedValue> > argumentValuesList;
   for (unsigned i = numArgs; i > 0;) {
@@ -1063,7 +1057,8 @@ Dependency::~Dependency() {
 
 Dependency *Dependency::cdr() const { return parent; }
 
-void Dependency::execute(llvm::Instruction *instr, SharedStack &stack,
+void Dependency::execute(llvm::Instruction *instr,
+                         const std::vector<llvm::Instruction *> &stack,
                          std::vector<ref<Expr> > &args,
                          bool symbolicExecutionError) {
   // The basic design principle that we need to be careful here
@@ -1593,7 +1588,8 @@ void Dependency::execute(llvm::Instruction *instr, SharedStack &stack,
 }
 
 void Dependency::executePHI(llvm::Instruction *instr,
-                            unsigned int incomingBlock, SharedStack &stack,
+                            unsigned int incomingBlock,
+                            const std::vector<llvm::Instruction *> &stack,
                             ref<Expr> valueExpr, bool symbolicExecutionError) {
   llvm::PHINode *node = llvm::dyn_cast<llvm::PHINode>(instr);
   llvm::Value *llvmArgValue = node->getIncomingValue(incomingBlock);
@@ -1609,11 +1605,10 @@ void Dependency::executePHI(llvm::Instruction *instr,
   }
 }
 
-void Dependency::executeMemoryOperation(llvm::Instruction *instr,
-                                        SharedStack &stack,
-                                        std::vector<ref<Expr> > &args,
-                                        bool boundsCheck,
-                                        bool symbolicExecutionError) {
+void Dependency::executeMemoryOperation(
+    llvm::Instruction *instr, const std::vector<llvm::Instruction *> &stack,
+    std::vector<ref<Expr> > &args, bool boundsCheck,
+    bool symbolicExecutionError) {
   execute(instr, stack, args, symbolicExecutionError);
 #ifdef ENABLE_Z3
   if (!NoBoundInterpolation && boundsCheck) {
@@ -1665,7 +1660,8 @@ void Dependency::executeMemoryOperation(llvm::Instruction *instr,
 #endif
 }
 
-void Dependency::bindCallArguments(llvm::Instruction *i, SharedStack &stack,
+void Dependency::bindCallArguments(llvm::Instruction *i,
+                                   std::vector<llvm::Instruction *> &stack,
                                    std::vector<ref<Expr> > &arguments) {
   llvm::CallInst *site = llvm::dyn_cast<llvm::CallInst>(i);
 
@@ -1682,7 +1678,7 @@ void Dependency::bindCallArguments(llvm::Instruction *i, SharedStack &stack,
   argumentValuesList = populateArgumentValuesList(site, stack, arguments);
 
   unsigned index = 0;
-  stack.push(i);
+  stack.push_back(i);
   for (llvm::Function::ArgumentListType::iterator
            it = callee->getArgumentList().begin(),
            ie = callee->getArgumentList().end();
@@ -1698,7 +1694,8 @@ void Dependency::bindCallArguments(llvm::Instruction *i, SharedStack &stack,
   }
 }
 
-void Dependency::bindReturnValue(llvm::CallInst *site, SharedStack &stack,
+void Dependency::bindReturnValue(llvm::CallInst *site,
+                                 std::vector<llvm::Instruction *> &stack,
                                  llvm::Instruction *i, ref<Expr> returnValue) {
   llvm::ReturnInst *retInst = llvm::dyn_cast<llvm::ReturnInst>(i);
   if (site && retInst &&
@@ -1706,7 +1703,7 @@ void Dependency::bindReturnValue(llvm::CallInst *site, SharedStack &stack,
       ) {
     ref<VersionedValue> value =
         getLatestValue(retInst->getReturnValue(), stack, returnValue);
-    stack.pop();
+    stack.pop_back();
     if (!value.isNull())
       addDependency(value, getNewVersionedValue(site, stack, returnValue));
   }

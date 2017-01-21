@@ -46,153 +46,10 @@ namespace klee {
   /// \brief Output function name to the output stream
   extern bool outputFunctionName(llvm::Value *value, llvm::raw_ostream &stream);
 
-  class SharedStack {
-
-    class Node {
-
-    public:
-      unsigned refCount;
-
-    private:
-      ref<Node> parent;
-
-      llvm::Instruction *callsite;
-
-    public:
-      Node(ref<Node> _parent, llvm::Instruction *_callsite)
-          : refCount(0), parent(_parent), callsite(_callsite) {
-        assert(_callsite && "null callsite");
-      }
-
-      Node(llvm::Instruction *_callsite) : refCount(0), callsite(_callsite) {
-        assert(_callsite && "null callsite");
-      }
-
-      ~Node() {}
-
-      ref<Node> getParent() { return parent; }
-
-      llvm::Instruction *getContent() { return callsite; }
-
-      int compare(const ref<Node> &other) const {
-        if (callsite == other->callsite)
-          return 0;
-        if (callsite < other->callsite)
-          return -1;
-        return 1;
-      }
-
-      void dump() const {
-        print(llvm::errs());
-        llvm::errs() << "\n";
-      }
-
-      void print(llvm::raw_ostream &stream) const {
-        assert(callsite && "null callsite");
-        callsite->print(stream);
-      }
-    };
-
-    ref<Node> head;
-
-  public:
-    SharedStack() {}
-
-    SharedStack(const SharedStack &_parent) : head(_parent.head) {}
-
-    SharedStack(SharedStack &_parent, llvm::Instruction *_callsite)
-        : head(new Node(_parent.head, _callsite)) {}
-
-    ~SharedStack() {}
-
-    llvm::Instruction *pop() {
-      // Head is null, this is possibly an entry function, e.g., main().
-      if (head.isNull())
-        return 0;
-
-      llvm::Instruction *content = head->getContent();
-
-      head = head->getParent();
-
-      // We only delete the old node for when the old node was an addition.
-      return content;
-    }
-
-    void push(llvm::Instruction *callsite) {
-      head = new Node(head, callsite);
-    }
-
-    SharedStack &operator=(const SharedStack &b) {
-      head = b.head;
-      return *this;
-    }
-
-    int compare(const SharedStack &other) const {
-      ref<Node> l = head, r = other.head;
-
-      int comparison = 0;
-      while (!l.isNull() && !r.isNull()) {
-        comparison = l->compare(r);
-        if (comparison == 0) {
-          l = l->getParent();
-          r = r->getParent();
-        } else {
-          break;
-        }
-      }
-      if (l.isNull()) {
-        if (!r.isNull())
-          return 1;
-        else
-          return 0;
-      } else if (r.isNull()) {
-        if (!l.isNull())
-          return -1;
-        return 0;
-      } else if (comparison < 0) {
-        return -1;
-      } else if (comparison > 0) {
-        return 1;
-      }
-      return 0;
-    }
-
-    void dump() const {
-      print(llvm::errs());
-      llvm::errs() << "\n";
-    }
-
-    void print(llvm::raw_ostream &stream) const;
-  };
-
-  inline bool operator==(const SharedStack &lhs, const SharedStack &rhs) {
-    return lhs.compare(rhs) == 0;
-  }
-
-  inline bool operator<(const SharedStack &lhs, const SharedStack &rhs) {
-    return lhs.compare(rhs) < 0;
-  }
-
-  inline bool operator>(const SharedStack &lhs, const SharedStack &rhs) {
-    return lhs.compare(rhs) > 0;
-  }
-
-  inline bool operator<=(const SharedStack &lhs, const SharedStack &rhs) {
-    return !(lhs > rhs);
-  }
-
-  inline bool operator>=(const SharedStack &lhs, const SharedStack &rhs) {
-    return !(lhs < rhs);
-  }
-
-  inline bool operator!=(const SharedStack &lhs, const SharedStack &rhs) {
-    return !(lhs == rhs);
-  }
-
   class Address {
     llvm::Value *site;
 
-    SharedStack stack;
+    std::vector<llvm::Instruction *> stack;
 
     ref<Expr> offset;
 
@@ -201,7 +58,8 @@ namespace klee {
     uint64_t concreteOffset;
 
   public:
-    Address(llvm::Value *_site, SharedStack &_stack, ref<Expr> &_offset);
+    Address(llvm::Value *_site, const std::vector<llvm::Instruction *> &_stack,
+            ref<Expr> &_offset);
 
     ~Address() {};
 
@@ -209,7 +67,25 @@ namespace klee {
 
     int compareContext(const Address &other) const {
       if (site == other.site) {
-        return stack.compare(other.stack);
+        for (std::vector<llvm::Instruction *>::const_reverse_iterator
+                 it1 = stack.rbegin(),
+                 ie1 = stack.rend(), it2 = other.stack.rbegin(),
+                 ie2 = other.stack.rend();
+             ; ++it1, ++it2) {
+          if (it1 == ie1) {
+            if (it2 == ie2) {
+              break;
+            } else
+              return -1;
+          }
+          if (it2 == ie2)
+            return 1;
+          if (it1 == ie1 || (*it1) > (*it2))
+            return 1;
+          if (it2 == ie2 || (*it1) < (*it2))
+            return -1;
+        }
+        return 0;
       } else if (site < other.site) {
         return -1;
       }
@@ -223,7 +99,6 @@ namespace klee {
 
       if (offset == other.offset)
         return 0;
-
       if (concreteOffset && other.concreteOffset) {
         if (concreteOffset < other.concreteOffset)
           return -1;
@@ -232,6 +107,7 @@ namespace klee {
 
       if (offset->hash() < other.offset->hash())
         return -1;
+
       return 1;
     }
 
@@ -396,12 +272,12 @@ namespace klee {
       return ret;
     }
 
-    Address makeAddress(SharedStack &stack) {
+    Address makeAddress(const std::vector<llvm::Instruction *> &stack) {
       Address address(value, stack, offset);
       return address;
     }
 
-    Address makeAddress(SharedStack &stack,
+    Address makeAddress(const std::vector<llvm::Instruction *> &stack,
                         std::set<const Array *> &replacements) {
       ref<Expr> replacementOffset(
           ShadowArray::getShadowExpression(offset, replacements));
@@ -502,7 +378,7 @@ namespace klee {
     std::map<ref<VersionedValue>, ref<MemoryLocation> > sources;
 
     /// \brief The context of this value
-    SharedStack stack;
+    std::vector<llvm::Instruction *> stack;
 
     /// \brief Do not compute bounds in interpolation of this value if it was a
     /// pointer; instead, use exact address
@@ -515,7 +391,8 @@ namespace klee {
     /// was a load instruction
     ref<VersionedValue> storeAddress;
 
-    VersionedValue(llvm::Value *value, SharedStack &_stack,
+    VersionedValue(llvm::Value *value,
+                   const std::vector<llvm::Instruction *> &_stack,
                    ref<Expr> _valueExpr)
         : refCount(0), value(value), valueExpr(_valueExpr), core(false),
           id(reinterpret_cast<uint64_t>(this)), stack(_stack),
@@ -530,8 +407,9 @@ namespace klee {
   public:
     ~VersionedValue() { locations.clear(); }
 
-    static ref<VersionedValue> create(llvm::Value *value, SharedStack &stack,
-                                      ref<Expr> valueExpr) {
+    static ref<VersionedValue>
+    create(llvm::Value *value, const std::vector<llvm::Instruction *> &stack,
+           ref<Expr> valueExpr) {
       ref<VersionedValue> vvalue(new VersionedValue(value, stack, valueExpr));
       return vvalue;
     }
@@ -587,7 +465,7 @@ namespace klee {
 
     llvm::Value *getValue() const { return value; }
 
-    SharedStack &getStack() { return stack; }
+    std::vector<llvm::Instruction *> &getStack() { return stack; }
 
     /// \brief Print the content of the object into a stream.
     ///
@@ -873,17 +751,20 @@ namespace klee {
 
     /// \brief Create a new versioned value object, typically when executing a
     /// new instruction, as a value for the instruction.
-    ref<VersionedValue> getNewVersionedValue(llvm::Value *value,
-                                             SharedStack &stack,
-                                             ref<Expr> valueExpr) {
+    ref<VersionedValue>
+    getNewVersionedValue(llvm::Value *value,
+                         const std::vector<llvm::Instruction *> &stack,
+                         ref<Expr> valueExpr) {
       return registerNewVersionedValue(
           value, VersionedValue::create(value, stack, valueExpr));
     }
 
     /// \brief Create a new versioned value object, which is a pointer with
     /// absolute address
-    ref<VersionedValue> getNewPointerValue(llvm::Value *loc, SharedStack &stack,
-                                           ref<Expr> address, uint64_t size) {
+    ref<VersionedValue>
+    getNewPointerValue(llvm::Value *loc,
+                       const std::vector<llvm::Instruction *> &stack,
+                       ref<Expr> address, uint64_t size) {
       ref<VersionedValue> vvalue = VersionedValue::create(loc, stack, address);
       vvalue->addLocation(MemoryLocation::create(loc, address, size));
       return registerNewVersionedValue(loc, vvalue);
@@ -891,11 +772,9 @@ namespace klee {
 
     /// \brief Create a new versioned value object, which is a pointer which
     /// offsets existing pointer
-    ref<VersionedValue> getNewPointerValue(llvm::Value *value,
-                                           SharedStack &stack,
-                                           ref<Expr> address,
-                                           ref<MemoryLocation> loc,
-                                           ref<Expr> offset) {
+    ref<VersionedValue> getNewPointerValue(
+        llvm::Value *value, const std::vector<llvm::Instruction *> &stack,
+        ref<Expr> address, ref<MemoryLocation> loc, ref<Expr> offset) {
       ref<VersionedValue> vvalue =
           VersionedValue::create(value, stack, address);
       vvalue->addLocation(MemoryLocation::create(loc, address, offset));
@@ -975,7 +854,8 @@ namespace klee {
 
     /// \brief Record the expressions of a call's arguments
     std::vector<ref<VersionedValue> >
-    populateArgumentValuesList(llvm::CallInst *site, SharedStack &stack,
+    populateArgumentValuesList(llvm::CallInst *site,
+                               const std::vector<llvm::Instruction *> &stack,
                                std::vector<ref<Expr> > &arguments);
 
   public:
@@ -985,21 +865,24 @@ namespace klee {
 
     Dependency *cdr() const;
 
-    ref<VersionedValue> getLatestValue(llvm::Value *value, SharedStack &stack,
-                                       ref<Expr> valueExpr,
-                                       bool constraint = false);
+    ref<VersionedValue>
+    getLatestValue(llvm::Value *value,
+                   const std::vector<llvm::Instruction *> &stack,
+                   ref<Expr> valueExpr, bool constraint = false);
 
     /// \brief Abstract dependency state transition with argument(s)
-    void execute(llvm::Instruction *instr, SharedStack &stack,
+    void execute(llvm::Instruction *instr,
+                 const std::vector<llvm::Instruction *> &stack,
                  std::vector<ref<Expr> > &args, bool symbolicExecutionError);
 
     /// \brief Build dependencies from PHI node
     void executePHI(llvm::Instruction *instr, unsigned int incomingBlock,
-                    SharedStack &stack, ref<Expr> valueExpr,
-                    bool symbolicExecutionError);
+                    const std::vector<llvm::Instruction *> &stack,
+                    ref<Expr> valueExpr, bool symbolicExecutionError);
 
     /// \brief Execute memory operation (load/store)
-    void executeMemoryOperation(llvm::Instruction *instr, SharedStack &stack,
+    void executeMemoryOperation(llvm::Instruction *instr,
+                                const std::vector<llvm::Instruction *> &stack,
                                 std::vector<ref<Expr> > &args, bool boundsCheck,
                                 bool symbolicExecutionError);
 
@@ -1019,11 +902,13 @@ namespace klee {
     getStoredExpressions(std::set<const Array *> &replacements, bool coreOnly);
 
     /// \brief Record call arguments in a function call
-    void bindCallArguments(llvm::Instruction *instr, SharedStack &stack,
+    void bindCallArguments(llvm::Instruction *instr,
+                           std::vector<llvm::Instruction *> &stack,
                            std::vector<ref<Expr> > &arguments);
 
     /// \brief This propagates the dependency due to the return value of a call
-    void bindReturnValue(llvm::CallInst *site, SharedStack &stack,
+    void bindReturnValue(llvm::CallInst *site,
+                         std::vector<llvm::Instruction *> &stack,
                          llvm::Instruction *inst, ref<Expr> returnValue);
 
     /// \brief Given a versioned value, retrieve all its sources and mark them

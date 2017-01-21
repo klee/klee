@@ -829,7 +829,8 @@ void ITreeGraph::save(std::string dotFileName) {
 /**/
 
 PathCondition::PathCondition(ref<Expr> &constraint, Dependency *dependency,
-                             llvm::Value *_condition, SharedStack &stack,
+                             llvm::Value *_condition,
+                             const std::vector<llvm::Instruction *> &stack,
                              PathCondition *prev)
     : constraint(constraint), shadowConstraint(constraint), shadowed(false),
       dependency(dependency), core(false), tail(prev) {
@@ -2720,7 +2721,15 @@ void ITreeNode::print(llvm::raw_ostream &stream,
     right->print(stream, paddingAmount + 1);
     stream << "\n";
   }
-  callStack.print(stream);
+  stream << tabsNext << "Stack:\n";
+  for (std::vector<llvm::Instruction *>::const_reverse_iterator
+           it = callStack.rend(),
+           ie = callStack.rbegin();
+       it != ie; ++it) {
+    stream << tabsNext;
+    (*it)->print(stream);
+    stream << "\n";
+  }
   stream << "\n";
   if (dependency) {
     stream << tabsNext << "------- Abstract Dependencies ----------\n";

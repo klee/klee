@@ -287,7 +287,8 @@ class PathCondition {
 
 public:
   PathCondition(ref<Expr> &constraint, Dependency *dependency,
-                llvm::Value *condition, SharedStack &stack,
+                llvm::Value *condition,
+                const std::vector<llvm::Instruction *> &stack,
                 PathCondition *prev);
 
   ~PathCondition();
@@ -559,7 +560,7 @@ private:
   llvm::DataLayout *targetData;
 
   /// \brief The current call stack
-  SharedStack callStack;
+  std::vector<llvm::Instruction *> callStack;
 
   void setProgramPoint(llvm::Instruction *instr) {
     if (!programPoint)
