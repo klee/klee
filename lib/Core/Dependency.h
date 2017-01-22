@@ -199,12 +199,12 @@ namespace klee {
       return ret;
     }
 
-    int compareContext(const MemoryLocation &other) const {
-      if (value == other.value) {
+    int compareContext(llvm::Value *otherValue,
+                       const std::vector<llvm::Instruction *> &_stack) const {
+      if (value == otherValue) {
         for (std::vector<llvm::Instruction *>::const_reverse_iterator
                  it1 = stack.rbegin(),
-                 ie1 = stack.rend(), it2 = other.stack.rbegin(),
-                 ie2 = other.stack.rend();
+                 ie1 = stack.rend(), it2 = _stack.rbegin(), ie2 = _stack.rend();
              ; ++it1, ++it2) {
           if (it1 == ie1) {
             if (it2 == ie2) {
@@ -214,20 +214,33 @@ namespace klee {
           }
           if (it2 == ie2)
             return 1;
-          if (it1 == ie1 || (*it1) > (*it2))
+          if (it1 == ie1)
             return 1;
-          if (it2 == ie2 || (*it1) < (*it2))
+          if ((*it1) > (*it2))
+            return 2;
+          if (it2 == ie2)
             return -1;
+          if ((*it1) < (*it2))
+            return -2;
         }
         return 0;
-      } else if (value < other.value) {
-        return -1;
+      } else if (value < otherValue) {
+        return -3;
       }
-      return 1;
+      return 3;
+    }
+
+    bool
+    contextIsPrefixOf(llvm::Value *value,
+                      const std::vector<llvm::Instruction *> &stack) const {
+      int res = compareContext(value, stack);
+      if (res == 0 || res == -1)
+        return true;
+      return false;
     }
 
     int compare(const MemoryLocation &other) const {
-      int res = compareContext(other);
+      int res = compareContext(other.value, other.stack);
       if (res)
         return res;
 
@@ -264,6 +277,8 @@ namespace klee {
     std::set<ref<Expr> > getSymbolicOffsetBounds() const {
       return symbolicOffsetBounds;
     }
+
+    const std::vector<llvm::Instruction *> &getStack() const { return stack; }
 
     uint64_t getConcreteOffsetBound() const { return concreteOffsetBound; }
 
