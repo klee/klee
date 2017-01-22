@@ -548,6 +548,8 @@ Dependency::getStoredExpressions(const std::vector<llvm::Instruction *> &stack,
            it = concretelyAddressedStore.begin(),
            ie = concretelyAddressedStore.end();
        it != ie; ++it) {
+    if (!it->first->contextIsPrefixOf(stack))
+      continue;
     if (it->second.second.isNull())
       continue;
 
@@ -572,6 +574,9 @@ Dependency::getStoredExpressions(const std::vector<llvm::Instruction *> &stack,
            it = symbolicallyAddressedStore.begin(),
            ie = symbolicallyAddressedStore.end();
        it != ie; ++it) {
+    if (!it->first->contextIsPrefixOf(stack))
+      continue;
+
     if (it->second.second.isNull())
       continue;
 

@@ -231,8 +231,7 @@ namespace klee {
     }
 
     bool
-    contextIsPrefixOf(llvm::Value *value,
-                      const std::vector<llvm::Instruction *> &stack) const {
+    contextIsPrefixOf(const std::vector<llvm::Instruction *> &stack) const {
       int res = compareContext(value, stack);
       if (res == 0 || res == -1)
         return true;
