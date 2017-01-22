@@ -461,7 +461,8 @@ public:
 
   const uint64_t nodeSequenceNumber;
 
-  SubsumptionTableEntry(ITreeNode *node);
+  SubsumptionTableEntry(ITreeNode *node,
+                        const std::vector<llvm::Instruction *> &stack);
 
   ~SubsumptionTableEntry();
 
@@ -559,6 +560,9 @@ private:
   /// \brief The data layout of the analysis target
   llvm::DataLayout *targetData;
 
+  /// \brief The entry call stack
+  std::vector<llvm::Instruction *> entryCallStack;
+
   /// \brief The current call stack
   std::vector<llvm::Instruction *> callStack;
 
@@ -621,7 +625,7 @@ public:
   /// \return A pair of the store part indexed by constants, and the store part
   /// indexed by symbolic expressions.
   std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
-  getStoredExpressions() const;
+  getStoredExpressions(const std::vector<llvm::Instruction *> &stack) const;
 
   /// \brief This retrieves the allocations known at this state, and the
   /// expressions stored in the allocations, as long as the allocation is
@@ -635,7 +639,8 @@ public:
   /// \return A pair of the store part indexed by constants, and the store part
   /// indexed by symbolic expressions.
   std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
-  getStoredCoreExpressions(std::set<const Array *> &replacements) const;
+  getStoredCoreExpressions(const std::vector<llvm::Instruction *> &stack,
+                           std::set<const Array *> &replacements) const;
 
   void incInstructionsDepth();
 

@@ -918,7 +918,8 @@ Statistic SubsumptionTableEntry::symbolicStoreExpressionBuildTime(
 Statistic SubsumptionTableEntry::solverAccessTime("solverAccessTime",
                                                   "solverAccessTime");
 
-SubsumptionTableEntry::SubsumptionTableEntry(ITreeNode *node)
+SubsumptionTableEntry::SubsumptionTableEntry(
+    ITreeNode *node, const std::vector<llvm::Instruction *> &stack)
     : programPoint(node->getProgramPoint()),
       nodeSequenceNumber(node->getNodeSequenceNumber()) {
   std::set<const Array *> replacements;
@@ -926,7 +927,7 @@ SubsumptionTableEntry::SubsumptionTableEntry(ITreeNode *node)
   interpolant = node->getInterpolant(replacements);
 
   std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
-  storedExpressions = node->getStoredCoreExpressions(replacements);
+  storedExpressions = node->getStoredCoreExpressions(stack, replacements);
 
   concreteAddressStore = storedExpressions.first;
   for (Dependency::ConcreteStore::iterator it = concreteAddressStore.begin(),
@@ -2294,7 +2295,8 @@ bool ITree::subsumptionCheck(TimingSolver *solver, ExecutionState &state,
   }
 
   std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
-  storedExpressions = state.itreeNode->getStoredExpressions();
+  storedExpressions =
+      state.itreeNode->getStoredExpressions(currentINode->entryCallStack);
 
   // Iterate the subsumption table entry with reverse iterator because
   // the successful subsumption mostly happen in the newest entry.
@@ -2350,7 +2352,8 @@ void ITree::remove(ITreeNode *node) {
         klee_message("Storing entry for Node #%lu, Program Point %lu",
                      node->getNodeSequenceNumber(), node->getProgramPoint());
       }
-      SubsumptionTableEntry *entry = new SubsumptionTableEntry(node);
+      SubsumptionTableEntry *entry =
+          new SubsumptionTableEntry(node, node->entryCallStack);
       if (DebugInterpolation == ITP_DEBUG_ALL ||
           DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
         std::string msg;
@@ -2561,6 +2564,7 @@ ITreeNode::ITreeNode(ITreeNode *_parent, llvm::DataLayout *_targetData)
   pathCondition = 0;
   if (_parent) {
     pathCondition = _parent->pathCondition;
+    entryCallStack = _parent->callStack;
     callStack = _parent->callStack;
   }
 
@@ -2626,7 +2630,8 @@ void ITreeNode::bindReturnValue(llvm::CallInst *site, llvm::Instruction *inst,
 }
 
 std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
-ITreeNode::getStoredExpressions() const {
+ITreeNode::getStoredExpressions(const std::vector<llvm::Instruction *> &stack)
+    const {
   TimerStatIncrementer t(getStoredExpressionsTime);
   std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore> ret;
   std::set<const Array *> dummyReplacements;
@@ -2635,13 +2640,15 @@ ITreeNode::getStoredExpressions() const {
   // the allocations to be stored in subsumption table should be obtained
   // from the parent node.
   if (parent)
-    ret = parent->dependency->getStoredExpressions(dummyReplacements, false);
+    ret = parent->dependency->getStoredExpressions(stack, dummyReplacements,
+                                                   false);
   return ret;
 }
 
 std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
-ITreeNode::getStoredCoreExpressions(std::set<const Array *> &replacements)
-    const {
+ITreeNode::getStoredCoreExpressions(
+    const std::vector<llvm::Instruction *> &stack,
+    std::set<const Array *> &replacements) const {
   TimerStatIncrementer t(getStoredCoreExpressionsTime);
   std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore> ret;
 
@@ -2649,7 +2656,7 @@ ITreeNode::getStoredCoreExpressions(std::set<const Array *> &replacements)
   // the allocations to be stored in subsumption table should be obtained
   // from the parent node.
   if (parent)
-    ret = parent->dependency->getStoredExpressions(replacements, true);
+    ret = parent->dependency->getStoredExpressions(stack, replacements, true);
   return ret;
 }
 

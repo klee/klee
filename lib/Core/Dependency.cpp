@@ -537,7 +537,8 @@ Dependency::registerNewVersionedValue(llvm::Value *value,
 }
 
 std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
-Dependency::getStoredExpressions(std::set<const Array *> &replacements,
+Dependency::getStoredExpressions(const std::vector<llvm::Instruction *> &stack,
+                                 std::set<const Array *> &replacements,
                                  bool coreOnly) {
   ConcreteStore concreteStore;
   SymbolicStore symbolicStore;

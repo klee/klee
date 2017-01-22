@@ -869,7 +869,8 @@ namespace klee {
     /// \return A pair of the store part indexed by constants, and the
     /// store part indexed by symbolic expressions.
     std::pair<ConcreteStore, SymbolicStore>
-    getStoredExpressions(std::set<const Array *> &replacements, bool coreOnly);
+    getStoredExpressions(const std::vector<llvm::Instruction *> &stack,
+                         std::set<const Array *> &replacements, bool coreOnly);
 
     /// \brief Record call arguments in a function call
     void bindCallArguments(llvm::Instruction *instr,
