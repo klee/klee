@@ -2147,6 +2147,139 @@ void SubsumptionTableEntry::printStat(std::stringstream &stream) {
 
 /**/
 
+void SubsumptionTable::StackIndexedTable::clearTree(Node *node) {
+  if (node->left)
+    clearTree(node->left);
+  if (node->right)
+    clearTree(node->right);
+  delete node->left;
+  delete node->right;
+
+  for (std::deque<SubsumptionTableEntry *>::iterator
+           it = node->entryList.begin(),
+           ie = node->entryList.end();
+       it != ie; ++it) {
+    delete (*it);
+  }
+}
+
+void SubsumptionTable::StackIndexedTable::insert(
+    const std::vector<llvm::Instruction *> &stack,
+    SubsumptionTableEntry *entry) {
+  Node *current = root;
+
+  for (std::vector<llvm::Instruction *>::const_iterator it = stack.begin(),
+                                                        ie = stack.end();
+       it != ie; ++it) {
+    llvm::Instruction *call = *it;
+    if (call < current->id) {
+      if (!current->left) {
+        current->left = new Node(call);
+      }
+      current = current->left;
+      continue;
+    } else if (call > current->id) {
+      if (!current->right) {
+        current->right = new Node(call);
+      }
+      current = current->right;
+      continue;
+    }
+    break;
+  }
+  current->entryList.push_back(entry);
+}
+
+std::pair<SubsumptionTable::EntryIterator, SubsumptionTable::EntryIterator>
+SubsumptionTable::StackIndexedTable::find(
+    const std::vector<llvm::Instruction *> &stack, bool &found) const {
+  Node *current = root;
+  std::pair<EntryIterator, EntryIterator> ret;
+
+  for (std::vector<llvm::Instruction *>::const_iterator it = stack.begin(),
+                                                        ie = stack.end();
+       it != ie; ++it) {
+    llvm::Instruction *call = *it;
+    if (call < current->id) {
+      if (!current->left) {
+        found = false;
+        return ret;
+      }
+      current = current->left;
+      continue;
+    } else if (call > current->id) {
+      if (!current->right) {
+        found = false;
+        return ret;
+      }
+      current = current->right;
+      continue;
+    }
+    break;
+  }
+  found = true;
+  return std::pair<EntryIterator, EntryIterator>(current->entryList.rbegin(),
+                                                 current->entryList.rend());
+}
+
+/**/
+
+std::map<uintptr_t, SubsumptionTable::StackIndexedTable *>
+SubsumptionTable::instance;
+
+void SubsumptionTable::insert(uintptr_t id,
+                              const std::vector<llvm::Instruction *> stack,
+                              SubsumptionTableEntry *entry) {
+  if (instance.count(id) == 0) {
+    StackIndexedTable *subTable = new StackIndexedTable();
+    subTable->insert(stack, entry);
+    instance[id] = subTable;
+    return;
+  }
+  StackIndexedTable *subTable = instance[id];
+  subTable->insert(stack, entry);
+}
+
+bool SubsumptionTable::check(TimingSolver *solver, ExecutionState &state,
+                             double timeout) const {
+  ITreeNode *iTreeNode = state.itreeNode;
+  StackIndexedTable *subTable = instance[state.itreeNode->getProgramPoint()];
+  if (!subTable)
+    return false;
+
+  bool found;
+  std::pair<EntryIterator, EntryIterator> iterPair =
+      subTable->find(iTreeNode->entryCallStack, found);
+  if (!found)
+    return false;
+
+  if (iterPair.first != iterPair.second) {
+
+    std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
+    storedExpressions =
+        iTreeNode->getStoredExpressions(iTreeNode->entryCallStack);
+
+    // Iterate the subsumption table entry with reverse iterator because
+    // the successful subsumption mostly happen in the newest entry.
+    for (EntryIterator it = iterPair.first, ie = iterPair.second; it != ie;
+         ++it) {
+      if ((*it)->subsumed(solver, state, timeout, storedExpressions)) {
+        // We mark as subsumed such that the node will not be
+        // stored into table (the table already contains a more
+        // general entry).
+        iTreeNode->isSubsumed = true;
+
+        // Mark the node as subsumed, and create a subsumption edge
+        ITreeGraph::markAsSubsumed(iTreeNode, (*it));
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+/**/
+
 Statistic ITree::setCurrentINodeTime("SetCurrentINodeTime",
                                      "SetCurrentINodeTime");
 Statistic ITree::removeTime("RemoveTime", "RemoveTime");
@@ -2556,10 +2689,10 @@ void ITreeNode::printTimeStat(std::stringstream &stream) {
 
 ITreeNode::ITreeNode(ITreeNode *_parent, llvm::DataLayout *_targetData)
     : parent(_parent), left(0), right(0), programPoint(0),
-      nodeSequenceNumber(nextNodeSequenceNumber++), isSubsumed(false),
-      storable(true), graph(_parent ? _parent->graph : 0),
+      nodeSequenceNumber(nextNodeSequenceNumber++), storable(true),
+      graph(_parent ? _parent->graph : 0),
       instructionsDepth(_parent ? _parent->instructionsDepth : 0),
-      targetData(_targetData) {
+      targetData(_targetData), isSubsumed(false) {
 
   pathCondition = 0;
   if (_parent) {

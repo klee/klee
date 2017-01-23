@@ -308,6 +308,47 @@ public:
   void print(llvm::raw_ostream &stream) const;
 };
 
+class SubsumptionTable {
+  typedef std::deque<SubsumptionTableEntry *>::const_reverse_iterator
+  EntryIterator;
+
+  class StackIndexedTable {
+    class Node {
+      friend class StackIndexedTable;
+
+      llvm::Instruction *id;
+
+      std::deque<SubsumptionTableEntry *> entryList;
+
+      Node *left, *right;
+
+      Node(llvm::Instruction *_id) : id(_id) { left = right = 0; }
+    };
+
+    Node *root;
+
+  public:
+    StackIndexedTable() { root = new Node(0); }
+
+    ~StackIndexedTable() { clearTree(root); }
+
+    void clearTree(Node *node);
+
+    void insert(const std::vector<llvm::Instruction *> &stack,
+                SubsumptionTableEntry *entry);
+
+    std::pair<EntryIterator, EntryIterator>
+    find(const std::vector<llvm::Instruction *> &stack, bool &found) const;
+  };
+
+  static std::map<uintptr_t, StackIndexedTable *> instance;
+
+  void insert(uintptr_t id, const std::vector<llvm::Instruction *> stack,
+              SubsumptionTableEntry *entry);
+
+  bool check(TimingSolver *solver, ExecutionState &state, double timeout) const;
+};
+
 /// \brief The class that implements an entry (record) in the subsumption table.
 ///
 /// The subsumption table records the generalization of state such that
@@ -547,8 +588,6 @@ private:
 
   uint64_t nodeSequenceNumber;
 
-  bool isSubsumed;
-
   bool storable;
 
   /// \brief Graph for displaying as .dot file
@@ -560,12 +599,16 @@ private:
   /// \brief The data layout of the analysis target
   llvm::DataLayout *targetData;
 
+public:
+  bool isSubsumed;
+
   /// \brief The entry call stack
   std::vector<llvm::Instruction *> entryCallStack;
 
   /// \brief The current call stack
   std::vector<llvm::Instruction *> callStack;
 
+private:
   void setProgramPoint(llvm::Instruction *instr) {
     if (!programPoint)
       programPoint = reinterpret_cast<uintptr_t>(instr);
