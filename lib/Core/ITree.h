@@ -323,6 +323,15 @@ class SubsumptionTable {
       Node *left, *right;
 
       Node(llvm::Instruction *_id) : id(_id) { left = right = 0; }
+
+      void dump() const {
+        this->print(llvm::errs());
+        llvm::errs() << "\n";
+      }
+
+      void print(llvm::raw_ostream &stream) const;
+
+      void print(llvm::raw_ostream &stream, const unsigned paddingAmount) const;
     };
 
     Node *root;
@@ -339,14 +348,36 @@ class SubsumptionTable {
 
     std::pair<EntryIterator, EntryIterator>
     find(const std::vector<llvm::Instruction *> &stack, bool &found) const;
+
+    void dump() const {
+      this->print(llvm::errs());
+      llvm::errs() << "\n";
+    }
+
+    void print(llvm::raw_ostream &stream) const;
   };
 
   static std::map<uintptr_t, StackIndexedTable *> instance;
 
-  void insert(uintptr_t id, const std::vector<llvm::Instruction *> stack,
-              SubsumptionTableEntry *entry);
+public:
+  static void insert(uintptr_t id, const std::vector<llvm::Instruction *> stack,
+                     SubsumptionTableEntry *entry);
 
-  bool check(TimingSolver *solver, ExecutionState &state, double timeout) const;
+  static bool check(TimingSolver *solver, ExecutionState &state,
+                    double timeout);
+
+  static void clear();
+
+  static void print(llvm::raw_ostream &stream) {
+    for (std::map<uintptr_t, StackIndexedTable *>::const_iterator
+             it = instance.begin(),
+             ie = instance.end();
+         it != ie; ++it) {
+      stream << it->first << ": ";
+      it->second->print(stream);
+      stream << "\n";
+    }
+  }
 };
 
 /// \brief The class that implements an entry (record) in the subsumption table.
@@ -532,6 +563,7 @@ public:
 
   void print(llvm::raw_ostream &stream) const;
 
+  void print(llvm::raw_ostream &stream, const unsigned paddingAmount) const;
 };
 
 /// \brief The interpolation tree node.
@@ -834,24 +866,7 @@ class ITree {
   typedef ExprList::iterator iterator;
   typedef ExprList::const_iterator const_iterator;
 
-  // Several static member variables for profiling the execution time of
-  // this class's member functions.
-  static Statistic setCurrentINodeTime;
-  static Statistic removeTime;
-  static Statistic subsumptionCheckTime;
-  static Statistic markPathConditionTime;
-  static Statistic splitTime;
-  static Statistic executeOnNodeTime;
-  static Statistic executeMemoryOperationTime;
-  static double entryNumber;
-  static double programPointNumber;
-
-  /// \brief Number of subsumption checks for statistical purposes
-  static uint64_t subsumptionCheckCount;
-
   ITreeNode *currentINode;
-
-  std::map<uintptr_t, std::deque<SubsumptionTableEntry *> > subsumptionTable;
 
   llvm::DataLayout *targetData;
 
@@ -869,6 +884,22 @@ class ITree {
   static std::string inTwoDecimalPoints(const double n);
 
 public:
+  // Several static member variables for profiling the execution time of
+  // this class's member functions.
+  static Statistic setCurrentINodeTime;
+  static Statistic removeTime;
+  static Statistic subsumptionCheckTime;
+  static Statistic markPathConditionTime;
+  static Statistic splitTime;
+  static Statistic executeOnNodeTime;
+  static Statistic executeMemoryOperationTime;
+  static double entryNumber;
+  static double programPointNumber;
+
+  /// \brief Number of subsumption checks for statistical purposes
+  static uint64_t subsumptionCheckCount;
+
+  /// \brief The root node of the tree
   ITreeNode *root;
 
   /// \brief This static member variable is to indicate if we recovered from an
@@ -879,10 +910,7 @@ public:
 
   ITree(ExecutionState *_root, llvm::DataLayout *_targetData);
 
-  ~ITree();
-
-  /// \brief Store an entry into the subsumption table.
-  void store(SubsumptionTableEntry *entry);
+  ~ITree() { SubsumptionTable::clear(); }
 
   /// \brief Set the reference to the KLEE state in the current interpolation
   /// data holder (interpolation tree node) that is currently being processed.
