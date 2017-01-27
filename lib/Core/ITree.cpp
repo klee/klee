@@ -2277,13 +2277,13 @@ void SubsumptionTable::insert(uintptr_t id,
                               SubsumptionTableEntry *entry) {
   ITree::entryNumber++; // Count of entries in the table
 
-  if (instance.count(id) == 0) {
-    StackIndexedTable *subTable = new StackIndexedTable();
+  StackIndexedTable *subTable = instance[id];
+  if (!subTable) {
+    subTable = new StackIndexedTable();
     subTable->insert(stack, entry);
     instance[id] = subTable;
     return;
   }
-  StackIndexedTable *subTable = instance[id];
   subTable->insert(stack, entry);
 }
 
