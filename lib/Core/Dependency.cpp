@@ -1692,7 +1692,9 @@ void Dependency::bindReturnValue(llvm::CallInst *site,
       ) {
     ref<VersionedValue> value =
         getLatestValue(retInst->getReturnValue(), stack, returnValue);
-    stack.pop_back();
+    if (!stack.empty()) {
+      stack.pop_back();
+    }
     if (!value.isNull())
       addDependency(value, getNewVersionedValue(site, stack, returnValue));
   }
