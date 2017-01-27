@@ -78,6 +78,9 @@ namespace klee {
     /// \brief The location's LLVM value
     llvm::Value *value;
 
+    /// \brief The allocation's stack
+    std::vector<llvm::Instruction *> stack;
+
     /// \brief The absolute address
     ref<Expr> address;
 
@@ -86,6 +89,12 @@ namespace klee {
 
     /// \brief The offset wrt. the allocation
     ref<Expr> offset;
+
+    /// \brief Indicates concrete address / offset
+    bool isConcrete;
+
+    /// \brief The value of the concrete offset
+    uint64_t concreteOffset;
 
     /// \brief The expressions representing the bound on the offset, i.e., the
     /// interpolant, in case it is symbolic.
@@ -97,25 +106,28 @@ namespace klee {
     /// \brief The size of this allocation (0 means unknown)
     uint64_t size;
 
-    MemoryLocation(llvm::Value *_value, ref<Expr> &_address, ref<Expr> &_base,
-                   ref<Expr> &_offset, uint64_t _size)
-        : refCount(0), value(_value), offset(_offset),
+    MemoryLocation(llvm::Value *_value,
+                   const std::vector<llvm::Instruction *> &_stack,
+                   ref<Expr> &_address, ref<Expr> &_base, ref<Expr> &_offset,
+                   uint64_t _size)
+        : refCount(0), value(_value), stack(_stack), offset(_offset),
           concreteOffsetBound(_size), size(_size) {
       bool unknownBase = false;
 
-      ConstantExpr *ca = llvm::dyn_cast<ConstantExpr>(_address);
-      if (ca) {
-        ConstantExpr *cb = llvm::dyn_cast<ConstantExpr>(_base);
-        if (cb) {
-          ConstantExpr *co = llvm::dyn_cast<ConstantExpr>(_offset);
-          if (co) {
+      isConcrete = false;
+      if (ConstantExpr *co = llvm::dyn_cast<ConstantExpr>(_offset)) {
+        isConcrete = true;
+        concreteOffset = co->getZExtValue();
+
+        if (ConstantExpr *ca = llvm::dyn_cast<ConstantExpr>(_address)) {
+          if (ConstantExpr *cb = llvm::dyn_cast<ConstantExpr>(_base)) {
             uint64_t a = ca->getZExtValue();
             uint64_t b = cb->getZExtValue();
-            uint64_t o = co->getZExtValue();
+
             if (b == 0 && a != 0) {
               unknownBase = true;
             } else {
-              assert(o == (a - b) && "wrong offset");
+              assert(concreteOffset == (a - b) && "wrong offset");
             }
           }
         }
@@ -148,11 +160,23 @@ namespace klee {
   public:
     ~MemoryLocation() {}
 
-    static ref<MemoryLocation> create(llvm::Value *value, ref<Expr> &address,
-                                      uint64_t size) {
+    static ref<MemoryLocation>
+    create(llvm::Value *value, const std::vector<llvm::Instruction *> &stack,
+           ref<Expr> &address, uint64_t size) {
       ref<Expr> zeroPointer = Expr::createPointer(0);
-      ref<MemoryLocation> ret(
-          new MemoryLocation(value, address, address, zeroPointer, size));
+      ref<MemoryLocation> ret(new MemoryLocation(value, stack, address, address,
+                                                 zeroPointer, size));
+      return ret;
+    }
+
+    static ref<MemoryLocation> create(ref<MemoryLocation> loc,
+                                      std::set<const Array *> &replacements) {
+      ref<Expr> _address(
+          ShadowArray::getShadowExpression(loc->address, replacements)),
+          _base(ShadowArray::getShadowExpression(loc->base, replacements)),
+          _offset(ShadowArray::getShadowExpression(loc->offset, replacements));
+      ref<MemoryLocation> ret(new MemoryLocation(
+          loc->value, loc->stack, _address, _base, _offset, loc->size));
       return ret;
     }
 
@@ -163,45 +187,73 @@ namespace klee {
       if (c && c->getZExtValue() == 0) {
         ref<Expr> base = loc->base;
         ref<Expr> offset = loc->offset;
-        ref<MemoryLocation> ret(
-            new MemoryLocation(loc->value, address, base, offset, loc->size));
+        ref<MemoryLocation> ret(new MemoryLocation(
+            loc->value, loc->stack, address, base, offset, loc->size));
         return ret;
       }
 
       ref<Expr> base = loc->base;
       ref<Expr> newOffset = AddExpr::create(loc->offset, offsetDelta);
-      ref<MemoryLocation> ret(
-          new MemoryLocation(loc->value, address, base, newOffset, loc->size));
+      ref<MemoryLocation> ret(new MemoryLocation(
+          loc->value, loc->stack, address, base, newOffset, loc->size));
       return ret;
     }
 
-    int compare(const MemoryLocation other) const {
-      uint64_t l = reinterpret_cast<uint64_t>(value),
-               r = reinterpret_cast<uint64_t>(other.value);
-
-      if (l == r) {
-        ConstantExpr *lc = llvm::dyn_cast<ConstantExpr>(address);
-        if (lc) {
-          ConstantExpr *rc = llvm::dyn_cast<ConstantExpr>(other.address);
-          if (rc) {
-            l = lc->getZExtValue();
-            r = rc->getZExtValue();
-            if (l == r)
-              return 0;
-            if (l < r)
+    int compareContext(llvm::Value *otherValue,
+                       const std::vector<llvm::Instruction *> &_stack) const {
+      if (value == otherValue) {
+        for (std::vector<llvm::Instruction *>::const_reverse_iterator
+                 it1 = stack.rbegin(),
+                 ie1 = stack.rend(), it2 = _stack.rbegin(), ie2 = _stack.rend();
+             ; ++it1, ++it2) {
+          if (it1 == ie1) {
+            if (it2 == ie2) {
+              break;
+            } else
               return -1;
-            return 1;
           }
+          if (it2 == ie2)
+            return 1;
+          if (it1 == ie1)
+            return 1;
+          if ((*it1) > (*it2))
+            return 2;
+          if (it2 == ie2)
+            return -1;
+          if ((*it1) < (*it2))
+            return -2;
         }
-        l = reinterpret_cast<uint64_t>(address.get());
-        r = reinterpret_cast<uint64_t>(other.address.get());
-        if (l == r)
-          return 0;
-        if (l < r)
+        return 0;
+      } else if (value < otherValue) {
+        return -3;
+      }
+      return 3;
+    }
+
+    bool
+    contextIsPrefixOf(const std::vector<llvm::Instruction *> &stack) const {
+      int res = compareContext(value, stack);
+      if (res == 0 || res == -1)
+        return true;
+      return false;
+    }
+
+    int compare(const MemoryLocation &other) const {
+      int res = compareContext(other.value, other.stack);
+      if (res)
+        return res;
+
+      if (offset == other.offset)
+        return 0;
+      if (concreteOffset && other.concreteOffset) {
+        if (concreteOffset < other.concreteOffset)
           return -1;
         return 1;
-      } else if (l < r)
+      }
+
+      if (offset->hash() < other.offset->hash())
         return -1;
+
       return 1;
     }
 
@@ -225,6 +277,8 @@ namespace klee {
       return symbolicOffsetBounds;
     }
 
+    const std::vector<llvm::Instruction *> &getStack() const { return stack; }
+
     uint64_t getConcreteOffsetBound() const { return concreteOffsetBound; }
 
     ref<Expr> getOffset() const { return offset; }
@@ -242,6 +296,30 @@ namespace klee {
     /// \param stream The stream to print the data to.
     void print(llvm::raw_ostream& stream) const;
   };
+
+  inline bool operator==(const MemoryLocation &lhs, const MemoryLocation &rhs) {
+    return lhs.compare(rhs) == 0;
+  }
+
+  inline bool operator<(const MemoryLocation &lhs, const MemoryLocation &rhs) {
+    return lhs.compare(rhs) < 0;
+  }
+
+  inline bool operator>(const MemoryLocation &lhs, const MemoryLocation &rhs) {
+    return lhs.compare(rhs) > 0;
+  }
+
+  inline bool operator<=(const MemoryLocation &lhs, const MemoryLocation &rhs) {
+    return !(lhs > rhs);
+  }
+
+  inline bool operator>=(const MemoryLocation &lhs, const MemoryLocation &rhs) {
+    return !(lhs < rhs);
+  }
+
+  inline bool operator!=(const MemoryLocation &lhs, const MemoryLocation &rhs) {
+    return !(lhs == rhs);
+  }
 
   /// \brief A class that represents LLVM value that can be destructively
   /// updated (versioned).
@@ -267,6 +345,9 @@ namespace klee {
     /// \brief Dependency sources of this value
     std::map<ref<VersionedValue>, ref<MemoryLocation> > sources;
 
+    /// \brief The context of this value
+    std::vector<llvm::Instruction *> stack;
+
     /// \brief Do not compute bounds in interpolation of this value if it was a
     /// pointer; instead, use exact address
     bool doNotInterpolateBound;
@@ -278,9 +359,12 @@ namespace klee {
     /// was a load instruction
     ref<VersionedValue> storeAddress;
 
-    VersionedValue(llvm::Value *value, ref<Expr> valueExpr)
-        : refCount(0), value(value), valueExpr(valueExpr), core(false),
-          id(reinterpret_cast<uint64_t>(this)), doNotInterpolateBound(false) {}
+    VersionedValue(llvm::Value *value,
+                   const std::vector<llvm::Instruction *> &_stack,
+                   ref<Expr> _valueExpr)
+        : refCount(0), value(value), valueExpr(_valueExpr), core(false),
+          id(reinterpret_cast<uint64_t>(this)), stack(_stack),
+          doNotInterpolateBound(false) {}
 
     /// \brief Print the content of the object, but without showing its source
     /// values.
@@ -291,8 +375,10 @@ namespace klee {
   public:
     ~VersionedValue() { locations.clear(); }
 
-    static ref<VersionedValue> create(llvm::Value *value, ref<Expr> valueExpr) {
-      ref<VersionedValue> vvalue(new VersionedValue(value, valueExpr));
+    static ref<VersionedValue>
+    create(llvm::Value *value, const std::vector<llvm::Instruction *> &stack,
+           ref<Expr> valueExpr) {
+      ref<VersionedValue> vvalue(new VersionedValue(value, stack, valueExpr));
       return vvalue;
     }
 
@@ -346,6 +432,8 @@ namespace klee {
     bool isCore() const { return core; }
 
     llvm::Value *getValue() const { return value; }
+
+    std::vector<llvm::Instruction *> &getStack() { return stack; }
 
     /// \brief Print the content of the object into a stream.
     ///
@@ -588,8 +676,8 @@ namespace klee {
   class Dependency {
 
   public:
-    typedef std::pair<ref<Expr>, ref<StoredValue> > AddressValuePair;
-    typedef std::map<uint64_t, ref<StoredValue> > ConcreteStoreMap;
+    typedef std::pair<ref<MemoryLocation>, ref<StoredValue> > AddressValuePair;
+    typedef std::map<ref<MemoryLocation>, ref<StoredValue> > ConcreteStoreMap;
     typedef std::vector<AddressValuePair> SymbolicStoreMap;
     typedef std::map<llvm::Value *, ConcreteStoreMap> ConcreteStore;
     typedef std::map<llvm::Value *, SymbolicStoreMap> SymbolicStore;
@@ -631,28 +719,32 @@ namespace klee {
 
     /// \brief Create a new versioned value object, typically when executing a
     /// new instruction, as a value for the instruction.
-    ref<VersionedValue> getNewVersionedValue(llvm::Value *value,
-                                             ref<Expr> valueExpr) {
+    ref<VersionedValue>
+    getNewVersionedValue(llvm::Value *value,
+                         const std::vector<llvm::Instruction *> &stack,
+                         ref<Expr> valueExpr) {
       return registerNewVersionedValue(
-          value, VersionedValue::create(value, valueExpr));
+          value, VersionedValue::create(value, stack, valueExpr));
     }
 
     /// \brief Create a new versioned value object, which is a pointer with
     /// absolute address
-    ref<VersionedValue> getNewPointerValue(llvm::Value *loc, ref<Expr> address,
-                                           uint64_t size) {
-      ref<VersionedValue> vvalue = VersionedValue::create(loc, address);
-      vvalue->addLocation(MemoryLocation::create(loc, address, size));
+    ref<VersionedValue>
+    getNewPointerValue(llvm::Value *loc,
+                       const std::vector<llvm::Instruction *> &stack,
+                       ref<Expr> address, uint64_t size) {
+      ref<VersionedValue> vvalue = VersionedValue::create(loc, stack, address);
+      vvalue->addLocation(MemoryLocation::create(loc, stack, address, size));
       return registerNewVersionedValue(loc, vvalue);
     }
 
     /// \brief Create a new versioned value object, which is a pointer which
     /// offsets existing pointer
-    ref<VersionedValue> getNewPointerValue(llvm::Value *value,
-                                           ref<Expr> address,
-                                           ref<MemoryLocation> loc,
-                                           ref<Expr> offset) {
-      ref<VersionedValue> vvalue = VersionedValue::create(value, address);
+    ref<VersionedValue> getNewPointerValue(
+        llvm::Value *value, const std::vector<llvm::Instruction *> &stack,
+        ref<Expr> address, ref<MemoryLocation> loc, ref<Expr> offset) {
+      ref<VersionedValue> vvalue =
+          VersionedValue::create(value, stack, address);
       vvalue->addLocation(MemoryLocation::create(loc, address, offset));
       return registerNewVersionedValue(value, vvalue);
     }
@@ -696,8 +788,9 @@ namespace klee {
     /// Here the target is not a pointer, and we assume that the source is
     /// is checked for memory access validity at the current index, meaning that
     /// we assumed all memory access within the external function is valid.
-    void addDependencyViaExternalFunction(ref<VersionedValue> source,
-                                          ref<VersionedValue> target);
+    void addDependencyViaExternalFunction(
+        const std::vector<llvm::Instruction *> &stack,
+        ref<VersionedValue> source, ref<VersionedValue> target);
 
     /// \brief Add a flow dependency from a pointer value to a non-pointer
     /// value.
@@ -731,6 +824,7 @@ namespace klee {
     /// \brief Record the expressions of a call's arguments
     std::vector<ref<VersionedValue> >
     populateArgumentValuesList(llvm::CallInst *site,
+                               const std::vector<llvm::Instruction *> &stack,
                                std::vector<ref<Expr> > &arguments);
 
   public:
@@ -740,19 +834,24 @@ namespace klee {
 
     Dependency *cdr() const;
 
-    ref<VersionedValue> getLatestValue(llvm::Value *value, ref<Expr> valueExpr,
-                                       bool constraint = false);
+    ref<VersionedValue>
+    getLatestValue(llvm::Value *value,
+                   const std::vector<llvm::Instruction *> &stack,
+                   ref<Expr> valueExpr, bool constraint = false);
 
     /// \brief Abstract dependency state transition with argument(s)
-    void execute(llvm::Instruction *instr, std::vector<ref<Expr> > &args,
-                 bool symbolicExecutionError);
+    void execute(llvm::Instruction *instr,
+                 const std::vector<llvm::Instruction *> &stack,
+                 std::vector<ref<Expr> > &args, bool symbolicExecutionError);
 
     /// \brief Build dependencies from PHI node
     void executePHI(llvm::Instruction *instr, unsigned int incomingBlock,
+                    const std::vector<llvm::Instruction *> &stack,
                     ref<Expr> valueExpr, bool symbolicExecutionError);
 
     /// \brief Execute memory operation (load/store)
     void executeMemoryOperation(llvm::Instruction *instr,
+                                const std::vector<llvm::Instruction *> &stack,
                                 std::vector<ref<Expr> > &args, bool boundsCheck,
                                 bool symbolicExecutionError);
 
@@ -769,15 +868,18 @@ namespace klee {
     /// \return A pair of the store part indexed by constants, and the
     /// store part indexed by symbolic expressions.
     std::pair<ConcreteStore, SymbolicStore>
-    getStoredExpressions(std::set<const Array *> &replacements, bool coreOnly);
+    getStoredExpressions(const std::vector<llvm::Instruction *> &stack,
+                         std::set<const Array *> &replacements, bool coreOnly);
 
     /// \brief Record call arguments in a function call
     void bindCallArguments(llvm::Instruction *instr,
+                           std::vector<llvm::Instruction *> &stack,
                            std::vector<ref<Expr> > &arguments);
 
     /// \brief This propagates the dependency due to the return value of a call
-    void bindReturnValue(llvm::CallInst *site, llvm::Instruction *inst,
-                         ref<Expr> returnValue);
+    void bindReturnValue(llvm::CallInst *site,
+                         std::vector<llvm::Instruction *> &stack,
+                         llvm::Instruction *inst, ref<Expr> returnValue);
 
     /// \brief Given a versioned value, retrieve all its sources and mark them
     /// as in the core.

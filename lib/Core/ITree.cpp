@@ -27,7 +27,6 @@
 #include <vector>
 
 #include <llvm/DebugInfo.h>
-
 using namespace klee;
 
 /**/
@@ -829,12 +828,14 @@ void ITreeGraph::save(std::string dotFileName) {
 /**/
 
 PathCondition::PathCondition(ref<Expr> &constraint, Dependency *dependency,
-                             llvm::Value *_condition, PathCondition *prev)
+                             llvm::Value *_condition,
+                             const std::vector<llvm::Instruction *> &stack,
+                             PathCondition *prev)
     : constraint(constraint), shadowConstraint(constraint), shadowed(false),
       dependency(dependency), core(false), tail(prev) {
   ref<VersionedValue> emptyCondition;
   if (dependency) {
-    condition = dependency->getLatestValue(_condition, constraint, true);
+    condition = dependency->getLatestValue(_condition, stack, constraint, true);
     assert(!condition.isNull() && "null constraint on path condition");
   } else {
     condition = emptyCondition;
@@ -916,7 +917,8 @@ Statistic SubsumptionTableEntry::symbolicStoreExpressionBuildTime(
 Statistic SubsumptionTableEntry::solverAccessTime("solverAccessTime",
                                                   "solverAccessTime");
 
-SubsumptionTableEntry::SubsumptionTableEntry(ITreeNode *node)
+SubsumptionTableEntry::SubsumptionTableEntry(
+    ITreeNode *node, const std::vector<llvm::Instruction *> &stack)
     : programPoint(node->getProgramPoint()),
       nodeSequenceNumber(node->getNodeSequenceNumber()) {
   std::set<const Array *> replacements;
@@ -924,7 +926,7 @@ SubsumptionTableEntry::SubsumptionTableEntry(ITreeNode *node)
   interpolant = node->getInterpolant(replacements);
 
   std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
-  storedExpressions = node->getStoredCoreExpressions(replacements);
+  storedExpressions = node->getStoredCoreExpressions(stack, replacements);
 
   concreteAddressStore = storedExpressions.first;
   for (Dependency::ConcreteStore::iterator it = concreteAddressStore.begin(),
@@ -1474,6 +1476,7 @@ bool SubsumptionTableEntry::subsumed(
              it1 = concreteAddressStoreKeys.begin(),
              ie1 = concreteAddressStoreKeys.end();
          it1 != ie1; ++it1) {
+
       const Dependency::ConcreteStoreMap tabledConcreteMap =
           concreteAddressStore[*it1];
       const Dependency::ConcreteStoreMap stateConcreteMap =
@@ -1551,15 +1554,21 @@ bool SubsumptionTableEntry::subsumed(
         }
 
         if (!stateSymbolicMap.empty()) {
-          const ref<Expr> tabledConcreteAddress =
-              Expr::createPointer(it2->first);
+          const ref<Expr> tabledConcreteOffset = it2->first->getOffset();
           ref<Expr> conjunction;
 
           for (Dependency::SymbolicStoreMap::const_iterator
                    it3 = stateSymbolicMap.begin(),
                    ie3 = stateSymbolicMap.end();
                it3 != ie3; ++it3) {
-            ref<Expr> stateSymbolicAddress = it3->first;
+
+            // We make sure the context part of the addresses (the allocation
+            // site and the call stack) are equivalent.
+            if (it2->first->compareContext(it3->first->getValue(),
+                                           it3->first->getStack()))
+              continue;
+
+            ref<Expr> stateSymbolicOffset = it3->first->getOffset();
             ref<StoredValue> stateSymbolicValue = it3->second;
             ref<Expr> newTerm;
 
@@ -1569,7 +1578,7 @@ bool SubsumptionTableEntry::subsumed(
               // equal whenever their values are of different width
               newTerm = EqExpr::create(
                   ConstantExpr::create(0, Expr::Bool),
-                  EqExpr::create(tabledConcreteAddress, stateSymbolicAddress));
+                  EqExpr::create(tabledConcreteOffset, stateSymbolicOffset));
 
             } else if (!NoBoundInterpolation && !ExactAddressInterpolant &&
                        tabledValue->isPointer() &&
@@ -1580,9 +1589,9 @@ bool SubsumptionTableEntry::subsumed(
                   tabledValue->getBoundsCheck(stateSymbolicValue, bounds);
 
               if (!boundsCheck->isTrue()) {
-                newTerm = EqExpr::create(ConstantExpr::create(0, Expr::Bool),
-                                         EqExpr::create(tabledConcreteAddress,
-                                                        stateSymbolicAddress));
+                newTerm = EqExpr::create(
+                    ConstantExpr::create(0, Expr::Bool),
+                    EqExpr::create(tabledConcreteOffset, stateSymbolicOffset));
 
                 if (!boundsCheck->isFalse()) {
                   // Implication: if tabledConcreteAddress ==
@@ -1600,8 +1609,8 @@ bool SubsumptionTableEntry::subsumed(
               // stateSymbolicValue->getExpression()
               newTerm = OrExpr::create(
                   EqExpr::create(ConstantExpr::create(0, Expr::Bool),
-                                 EqExpr::create(tabledConcreteAddress,
-                                                stateSymbolicAddress)),
+                                 EqExpr::create(tabledConcreteOffset,
+                                                stateSymbolicOffset)),
                   EqExpr::create(tabledValue->getExpression(),
                                  stateSymbolicValue->getExpression()));
             }
@@ -1612,8 +1621,8 @@ bool SubsumptionTableEntry::subsumed(
               // then tabledValue == stateSymbolicValue
               newTerm = OrExpr::create(
                   EqExpr::create(ConstantExpr::create(0, Expr::Bool),
-                                 EqExpr::create(tabledConcreteAddress,
-                                                stateSymbolicAddress)),
+                                 EqExpr::create(tabledConcreteOffset,
+                                                stateSymbolicOffset)),
                   EqExpr::create(tabledValue->getExpression(),
                                  stateSymbolicValue->getExpression()));
             }
@@ -1664,14 +1673,21 @@ bool SubsumptionTableEntry::subsumed(
                it2 = tabledSymbolicMap.begin(),
                ie2 = tabledSymbolicMap.end();
            it2 != ie2; ++it2) {
-        ref<Expr> tabledSymbolicAddress = it2->first;
+        ref<Expr> tabledSymbolicOffset = it2->first->getOffset();
         ref<StoredValue> tabledValue = it2->second;
 
         for (Dependency::ConcreteStoreMap::const_iterator
                  it3 = stateConcreteMap.begin(),
                  ie3 = stateConcreteMap.end();
              it3 != ie3; ++it3) {
-          ref<Expr> stateConcreteAddress = Expr::createPointer(it3->first);
+
+          // We make sure the context part of the addresses (the allocation
+          // site and the call stack) are equivalent.
+          if (it2->first->compareContext(it3->first->getValue(),
+                                         it3->first->getStack()))
+            continue;
+
+          ref<Expr> stateConcreteOffset = it3->first->getOffset();
           ref<StoredValue> stateValue = it3->second;
           ref<Expr> newTerm;
 
@@ -1681,7 +1697,7 @@ bool SubsumptionTableEntry::subsumed(
             // whenever their values are of different width
             newTerm = EqExpr::create(
                 ConstantExpr::create(0, Expr::Bool),
-                EqExpr::create(tabledSymbolicAddress, stateConcreteAddress));
+                EqExpr::create(tabledSymbolicOffset, stateConcreteOffset));
           } else if (!NoBoundInterpolation && !ExactAddressInterpolant &&
                      tabledValue->isPointer() && stateValue->isPointer() &&
                      tabledValue->useBound()) {
@@ -1692,7 +1708,7 @@ bool SubsumptionTableEntry::subsumed(
             if (!boundsCheck->isTrue()) {
               newTerm = EqExpr::create(
                   ConstantExpr::create(0, Expr::Bool),
-                  EqExpr::create(tabledSymbolicAddress, stateConcreteAddress));
+                  EqExpr::create(tabledSymbolicOffset, stateConcreteOffset));
 
               if (!boundsCheck->isFalse()) {
                 // Implication: if tabledConcreteAddress == stateSymbolicAddress
@@ -1707,9 +1723,9 @@ bool SubsumptionTableEntry::subsumed(
             // Implication: if tabledSymbolicAddress == stateConcreteAddress,
             // then tabledValue == stateValue
             newTerm = OrExpr::create(
-                EqExpr::create(ConstantExpr::create(0, Expr::Bool),
-                               EqExpr::create(tabledSymbolicAddress,
-                                              stateConcreteAddress)),
+                EqExpr::create(
+                    ConstantExpr::create(0, Expr::Bool),
+                    EqExpr::create(tabledSymbolicOffset, stateConcreteOffset)),
                 EqExpr::create(tabledValue->getExpression(),
                                stateValue->getExpression()));
           }
@@ -1727,7 +1743,14 @@ bool SubsumptionTableEntry::subsumed(
                  it3 = stateSymbolicMap.begin(),
                  ie3 = stateSymbolicMap.end();
              it3 != ie3; ++it3) {
-          ref<Expr> stateSymbolicAddress = it3->first;
+
+          // We make sure the context part of the addresses (the allocation
+          // site and the call stack) are equivalent.
+          if (it2->first->compareContext(it3->first->getValue(),
+                                         it3->first->getStack()))
+            continue;
+
+          ref<Expr> stateSymbolicOffset = it3->first->getOffset();
           ref<StoredValue> stateValue = it3->second;
           ref<Expr> newTerm;
 
@@ -1737,7 +1760,7 @@ bool SubsumptionTableEntry::subsumed(
             // whenever their values are of different width
             newTerm = EqExpr::create(
                 ConstantExpr::create(0, Expr::Bool),
-                EqExpr::create(tabledSymbolicAddress, stateSymbolicAddress));
+                EqExpr::create(tabledSymbolicOffset, stateSymbolicOffset));
           } else if (!NoBoundInterpolation && !ExactAddressInterpolant &&
                      tabledValue->isPointer() && stateValue->isPointer() &&
                      tabledValue->useBound()) {
@@ -1748,7 +1771,7 @@ bool SubsumptionTableEntry::subsumed(
             if (!boundsCheck->isTrue()) {
               newTerm = EqExpr::create(
                   ConstantExpr::create(0, Expr::Bool),
-                  EqExpr::create(tabledSymbolicAddress, stateSymbolicAddress));
+                  EqExpr::create(tabledSymbolicOffset, stateSymbolicOffset));
 
               if (!boundsCheck->isFalse()) {
                 // Implication: if tabledConcreteAddress == stateSymbolicAddress
@@ -1763,9 +1786,9 @@ bool SubsumptionTableEntry::subsumed(
             // Implication: if tabledSymbolicAddress == stateSymbolicAddress
             // then tabledValue == stateValue
             newTerm = OrExpr::create(
-                EqExpr::create(ConstantExpr::create(0, Expr::Bool),
-                               EqExpr::create(tabledSymbolicAddress,
-                                              stateSymbolicAddress)),
+                EqExpr::create(
+                    ConstantExpr::create(0, Expr::Bool),
+                    EqExpr::create(tabledSymbolicOffset, stateSymbolicOffset)),
                 EqExpr::create(tabledValue->getExpression(),
                                stateValue->getExpression()));
           }
@@ -1887,7 +1910,6 @@ bool SubsumptionTableEntry::subsumed(
     // no contradictory unary constraints found from solvingUnaryConstraints
     // method.
     if (!llvm::isa<ConstantExpr>(query)) {
-
       if (!existentials.empty() && llvm::isa<ExistsExpr>(query)) {
         if (DebugInterpolation == ITP_DEBUG_ALL ||
             DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
@@ -1976,7 +1998,6 @@ bool SubsumptionTableEntry::subsumed(
                 it->first->getValue(), it->first->getExpression(), it->second);
           }
         }
-
         return true;
       }
       if (DebugInterpolation == ITP_DEBUG_ALL ||
@@ -2039,9 +2060,16 @@ bool SubsumptionTableEntry::subsumed(
 ref<Expr> SubsumptionTableEntry::getInterpolant() const { return interpolant; }
 
 void SubsumptionTableEntry::print(llvm::raw_ostream &stream) const {
-  stream << "------------ Subsumption Table Entry ------------\n";
-  stream << "Program point = " << programPoint << "\n";
-  stream << "interpolant = ";
+  print(stream, 0);
+}
+
+void SubsumptionTableEntry::print(llvm::raw_ostream &stream,
+                                  const unsigned paddingAmount) const {
+  std::string tabs = makeTabs(paddingAmount);
+
+  stream << tabs << "------------ Subsumption Table Entry ------------\n";
+  stream << tabs << "Program point = " << programPoint << "\n";
+  stream << tabs << "interpolant = ";
   if (!interpolant.isNull())
     interpolant->print(stream);
   else
@@ -2049,7 +2077,7 @@ void SubsumptionTableEntry::print(llvm::raw_ostream &stream) const {
   stream << "\n";
 
   if (!concreteAddressStore.empty()) {
-    stream << "concrete store = [";
+    stream << tabs << "concrete store = [";
     for (Dependency::ConcreteStore::const_iterator
              is1 = concreteAddressStore.begin(),
              ie1 = concreteAddressStore.end(), it1 = is1;
@@ -2060,7 +2088,9 @@ void SubsumptionTableEntry::print(llvm::raw_ostream &stream) const {
            it2 != ie2; ++it2) {
         if (it1 != is1 || it2 != is2)
           stream << ",";
-        stream << "(" << it2->first << ",\n";
+        stream << "(";
+        it2->first->print(stream);
+        stream << ",\n";
         it2->second->print(stream);
         stream << ")";
       }
@@ -2069,7 +2099,7 @@ void SubsumptionTableEntry::print(llvm::raw_ostream &stream) const {
   }
 
   if (!symbolicAddressStore.empty()) {
-    stream << "symbolic store = [";
+    stream << tabs << "symbolic store = [";
     for (Dependency::SymbolicStore::const_iterator
              is1 = symbolicAddressStore.begin(),
              ie1 = symbolicAddressStore.end(), it1 = is1;
@@ -2091,7 +2121,7 @@ void SubsumptionTableEntry::print(llvm::raw_ostream &stream) const {
   }
 
   if (!existentials.empty()) {
-    stream << "existentials = [";
+    stream << tabs << "existentials = [";
     for (std::set<const Array *>::const_iterator is = existentials.begin(),
                                                  ie = existentials.end(),
                                                  it = is;
@@ -2119,6 +2149,200 @@ void SubsumptionTableEntry::printStat(std::stringstream &stream) {
          << "\n";
   stream << "KLEE: done:     Solver access time (ms) = "
          << ((double)solverAccessTime.getValue()) / 1000 << "\n";
+}
+
+/**/
+
+void SubsumptionTable::StackIndexedTable::Node::print(llvm::raw_ostream &stream)
+    const {
+  print(stream, 0);
+}
+
+void SubsumptionTable::StackIndexedTable::Node::print(
+    llvm::raw_ostream &stream, const unsigned paddingAmount) const {
+  std::string tabs = makeTabs(paddingAmount);
+  std::string tabsNext = appendTab(tabs);
+
+  stream << tabs << "Stack-indexed table tree node\n";
+  stream << tabsNext << "node Id = " << reinterpret_cast<uintptr_t>(id) << "\n";
+  stream << tabsNext << "Entries = ";
+  for (EntryIterator it = entryList.rbegin(), ie = entryList.rend(); it != ie;
+       ++it) {
+    (*it)->print(stream);
+    stream << "\n";
+  }
+  stream << tabsNext << "Left:\n";
+  if (!left) {
+    stream << tabsNext << "NULL\n";
+  } else {
+    left->print(stream, paddingAmount + 1);
+    stream << "\n";
+  }
+  stream << tabsNext << "Right:\n";
+  if (!right) {
+    stream << tabsNext << "NULL\n";
+  } else {
+    right->print(stream, paddingAmount + 1);
+    stream << "\n";
+  }
+}
+
+/**/
+
+void SubsumptionTable::StackIndexedTable::clearTree(Node *node) {
+  if (node->left)
+    clearTree(node->left);
+  if (node->right)
+    clearTree(node->right);
+  delete node->left;
+  delete node->right;
+
+  for (std::deque<SubsumptionTableEntry *>::iterator
+           it = node->entryList.begin(),
+           ie = node->entryList.end();
+       it != ie; ++it) {
+    delete (*it);
+  }
+}
+
+void SubsumptionTable::StackIndexedTable::insert(
+    const std::vector<llvm::Instruction *> &stack,
+    SubsumptionTableEntry *entry) {
+  Node *current = root;
+
+  for (std::vector<llvm::Instruction *>::const_iterator it = stack.begin(),
+                                                        ie = stack.end();
+       it != ie; ++it) {
+    llvm::Instruction *call = *it;
+    if (call < current->id) {
+      if (!current->left) {
+        current->left = new Node(call);
+      }
+      current = current->left;
+      continue;
+    } else if (call > current->id) {
+      if (!current->right) {
+        current->right = new Node(call);
+      }
+      current = current->right;
+      continue;
+    }
+    break;
+  }
+  current->entryList.push_back(entry);
+}
+
+std::pair<SubsumptionTable::EntryIterator, SubsumptionTable::EntryIterator>
+SubsumptionTable::StackIndexedTable::find(
+    const std::vector<llvm::Instruction *> &stack, bool &found) const {
+  Node *current = root;
+  std::pair<EntryIterator, EntryIterator> ret;
+
+  for (std::vector<llvm::Instruction *>::const_iterator it = stack.begin(),
+                                                        ie = stack.end();
+       it != ie; ++it) {
+    llvm::Instruction *call = *it;
+    if (call < current->id) {
+      if (!current->left) {
+        found = false;
+        return ret;
+      }
+      current = current->left;
+      continue;
+    } else if (call > current->id) {
+      if (!current->right) {
+        found = false;
+        return ret;
+      }
+      current = current->right;
+      continue;
+    }
+    break;
+  }
+  found = true;
+  return std::pair<EntryIterator, EntryIterator>(current->entryList.rbegin(),
+                                                 current->entryList.rend());
+}
+
+void
+SubsumptionTable::StackIndexedTable::print(llvm::raw_ostream &stream) const {}
+
+/**/
+
+std::map<uintptr_t, SubsumptionTable::StackIndexedTable *>
+SubsumptionTable::instance;
+
+void SubsumptionTable::insert(uintptr_t id,
+                              const std::vector<llvm::Instruction *> stack,
+                              SubsumptionTableEntry *entry) {
+  ITree::entryNumber++; // Count of entries in the table
+
+  StackIndexedTable *subTable = instance[id];
+  if (!subTable) {
+    subTable = new StackIndexedTable();
+    subTable->insert(stack, entry);
+    instance[id] = subTable;
+    return;
+  }
+  subTable->insert(stack, entry);
+}
+
+bool SubsumptionTable::check(TimingSolver *solver, ExecutionState &state,
+                             double timeout) {
+  ITreeNode *iTreeNode = state.itreeNode;
+  StackIndexedTable *subTable = instance[state.itreeNode->getProgramPoint()];
+  if (!subTable)
+    return false;
+
+  bool found;
+  std::pair<EntryIterator, EntryIterator> iterPair =
+      subTable->find(iTreeNode->entryCallStack, found);
+  if (!found) {
+    if (DebugInterpolation == ITP_DEBUG_ALL ||
+        DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
+      klee_message("Check failure due to entry not found");
+    }
+    return false;
+  }
+
+  if (iterPair.first != iterPair.second) {
+
+    std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
+    storedExpressions =
+        iTreeNode->getStoredExpressions(iTreeNode->entryCallStack);
+
+    // Iterate the subsumption table entry with reverse iterator because
+    // the successful subsumption mostly happen in the newest entry.
+    for (EntryIterator it = iterPair.first, ie = iterPair.second; it != ie;
+         ++it) {
+      if ((*it)->subsumed(solver, state, timeout, storedExpressions)) {
+        // We mark as subsumed such that the node will not be
+        // stored into table (the table already contains a more
+        // general entry).
+        iTreeNode->isSubsumed = true;
+
+        // Mark the node as subsumed, and create a subsumption edge
+        ITreeGraph::markAsSubsumed(iTreeNode, (*it));
+        return true;
+      }
+    }
+  }
+  if (DebugInterpolation == ITP_DEBUG_ALL ||
+      DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
+    klee_message("Check failure due to no subsuming entry found");
+  }
+  return false;
+}
+
+void SubsumptionTable::clear() {
+  for (std::map<uintptr_t, StackIndexedTable *>::iterator it = instance.begin(),
+                                                          ie = instance.end();
+       it != ie; ++it) {
+    if (it->second) {
+      ++ITree::programPointNumber;
+      delete it->second;
+    }
+  }
 }
 
 /**/
@@ -2209,32 +2433,6 @@ ITree::ITree(ExecutionState *_root, llvm::DataLayout *_targetData)
   root = currentINode;
 }
 
-ITree::~ITree() {
-  for (std::map<uintptr_t, std::deque<SubsumptionTableEntry *> >::const_iterator
-           it = subsumptionTable.begin(),
-           ie = subsumptionTable.end();
-       it != ie; ++it) {
-    if (!it->second.empty()) {
-      entryNumber += it->second.size();
-      ++programPointNumber;
-    }
-  }
-
-  for (std::map<uintptr_t, std::deque<SubsumptionTableEntry *> >::iterator
-           it = subsumptionTable.begin(),
-           ie = subsumptionTable.end();
-       it != ie; ++it) {
-    for (std::deque<SubsumptionTableEntry *>::iterator it1 = it->second.begin(),
-                                                       ie1 = it->second.end();
-         it1 != ie1; ++it1) {
-      delete *it1;
-    }
-    it->second.clear();
-  }
-
-  subsumptionTable.clear();
-}
-
 bool ITree::subsumptionCheck(TimingSolver *solver, ExecutionState &state,
                              double timeout) {
 #ifdef ENABLE_Z3
@@ -2249,12 +2447,6 @@ bool ITree::subsumptionCheck(TimingSolver *solver, ExecutionState &state,
                               state.itreeNode->getProgramPoint())
     return false;
 
-  ++subsumptionCheckCount; // For profiling
-
-  TimerStatIncrementer t(subsumptionCheckTime);
-  std::deque<SubsumptionTableEntry *> entryList =
-      subsumptionTable[state.itreeNode->getProgramPoint()];
-
   if (DebugInterpolation == ITP_DEBUG_ALL ||
       DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
     klee_message("Subsumption check for Node #%lu, Program Point %lu",
@@ -2262,47 +2454,13 @@ bool ITree::subsumptionCheck(TimingSolver *solver, ExecutionState &state,
                  state.itreeNode->getProgramPoint());
   }
 
-  if (entryList.empty()) {
-    if (DebugInterpolation == ITP_DEBUG_ALL ||
-        DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
-      klee_message("Check failure due to empty entry list");
-    }
-    return false;
-  }
+  ++subsumptionCheckCount; // For profiling
 
-  std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
-  storedExpressions = state.itreeNode->getStoredExpressions();
+  TimerStatIncrementer t(subsumptionCheckTime);
 
-  // Iterate the subsumption table entry with reverse iterator because
-  // the successful subsumption mostly happen in the newest entry.
-  for (std::deque<SubsumptionTableEntry *>::reverse_iterator
-           it = entryList.rbegin(),
-           ie = entryList.rend();
-       it != ie; ++it) {
-    if ((*it)->subsumed(solver, state, timeout, storedExpressions)) {
-      // We mark as subsumed such that the node will not be
-      // stored into table (the table already contains a more
-      // general entry).
-      currentINode->isSubsumed = true;
-
-      // Mark the node as subsumed, and create a subsumption edge
-      ITreeGraph::markAsSubsumed(currentINode, (*it));
-      return true;
-    }
-  }
+  return SubsumptionTable::check(solver, state, timeout);
 #endif
   return false;
-}
-
-void ITree::store(SubsumptionTableEntry *entry) {
-  subsumptionTable[entry->programPoint].push_back(entry);
-#ifdef ENABLE_Z3
-  if (MaxFailSubsumption > 0 &&
-      (unsigned)MaxFailSubsumption <
-          subsumptionTable[entry->programPoint].size()) {
-    subsumptionTable[entry->programPoint].pop_front();
-    }
-#endif
 }
 
 void ITree::setCurrentINode(ExecutionState &state) {
@@ -2327,7 +2485,14 @@ void ITree::remove(ITreeNode *node) {
         klee_message("Storing entry for Node #%lu, Program Point %lu",
                      node->getNodeSequenceNumber(), node->getProgramPoint());
       }
-      SubsumptionTableEntry *entry = new SubsumptionTableEntry(node);
+
+      SubsumptionTableEntry *entry =
+          new SubsumptionTableEntry(node, node->entryCallStack);
+      SubsumptionTable::insert(node->getProgramPoint(), node->entryCallStack,
+                               entry);
+
+      ITreeGraph::addTableEntryMapping(node, entry);
+
       if (DebugInterpolation == ITP_DEBUG_ALL ||
           DebugInterpolation == ITP_DEBUG_SUBSUMPTION) {
         std::string msg;
@@ -2336,8 +2501,6 @@ void ITree::remove(ITreeNode *node) {
         out.flush();
         klee_message("%s", msg.c_str());
       }
-      store(entry);
-      ITreeGraph::addTableEntryMapping(node, entry);
     }
 
     delete node;
@@ -2425,7 +2588,8 @@ void ITree::execute(llvm::Instruction *instr, std::vector<ref<Expr> > &args) {
 
 void ITree::executePHI(llvm::Instruction *instr, unsigned incomingBlock,
                        ref<Expr> valueExpr) {
-  currentINode->dependency->executePHI(instr, incomingBlock, valueExpr,
+  currentINode->dependency->executePHI(instr, incomingBlock,
+                                       currentINode->callStack, valueExpr,
                                        symbolicExecutionError);
   symbolicExecutionError = false;
 }
@@ -2471,17 +2635,7 @@ void ITree::print(llvm::raw_ostream &stream) const {
   this->printNode(stream, this->root, "");
   stream << "\n------------------------- Subsumption Table "
             "-------------------------\n";
-  for (std::map<uintptr_t, std::deque<SubsumptionTableEntry *> >::const_iterator
-           it = subsumptionTable.begin(),
-           ie = subsumptionTable.end();
-       it != ie; ++it) {
-    for (std::deque<SubsumptionTableEntry *>::const_iterator
-             it1 = it->second.begin(),
-             ie1 = it->second.end();
-         it1 != ie1; ++it1) {
-      (*it1)->print(stream);
-    }
-  }
+  SubsumptionTable::print(stream);
 }
 
 void ITree::dump() const { this->print(llvm::errs()); }
@@ -2529,12 +2683,17 @@ void ITreeNode::printTimeStat(std::stringstream &stream) {
 
 ITreeNode::ITreeNode(ITreeNode *_parent, llvm::DataLayout *_targetData)
     : parent(_parent), left(0), right(0), programPoint(0),
-      nodeSequenceNumber(nextNodeSequenceNumber++), isSubsumed(false),
-      storable(true), graph(_parent ? _parent->graph : 0),
+      nodeSequenceNumber(nextNodeSequenceNumber++), storable(true),
+      graph(_parent ? _parent->graph : 0),
       instructionsDepth(_parent ? _parent->instructionsDepth : 0),
-      targetData(_targetData) {
+      targetData(_targetData), isSubsumed(false) {
 
-  pathCondition = (_parent != 0) ? _parent->pathCondition : 0;
+  pathCondition = 0;
+  if (_parent) {
+    pathCondition = _parent->pathCondition;
+    entryCallStack = _parent->callStack;
+    callStack = _parent->callStack;
+  }
 
   // Inherit the abstract dependency or NULL
   dependency = new Dependency(_parent ? _parent->dependency : 0, _targetData);
@@ -2565,8 +2724,8 @@ ITreeNode::getInterpolant(std::set<const Array *> &replacements) const {
 
 void ITreeNode::addConstraint(ref<Expr> &constraint, llvm::Value *condition) {
   TimerStatIncrementer t(addConstraintTime);
-  pathCondition =
-      new PathCondition(constraint, dependency, condition, pathCondition);
+  pathCondition = new PathCondition(constraint, dependency, condition,
+                                    callStack, pathCondition);
   graph->addPathCondition(this, pathCondition, constraint);
 }
 
@@ -2580,13 +2739,13 @@ void ITreeNode::split(ExecutionState *leftData, ExecutionState *rightData) {
 void ITreeNode::execute(llvm::Instruction *instr, std::vector<ref<Expr> > &args,
                         bool symbolicExecutionError) {
   TimerStatIncrementer t(executeTime);
-  dependency->execute(instr, args, symbolicExecutionError);
+  dependency->execute(instr, callStack, args, symbolicExecutionError);
 }
 
 void ITreeNode::bindCallArguments(llvm::Instruction *site,
                                   std::vector<ref<Expr> > &arguments) {
   TimerStatIncrementer t(bindCallArgumentsTime);
-  dependency->bindCallArguments(site, arguments);
+  dependency->bindCallArguments(site, callStack, arguments);
 }
 
 void ITreeNode::bindReturnValue(llvm::CallInst *site, llvm::Instruction *inst,
@@ -2594,11 +2753,12 @@ void ITreeNode::bindReturnValue(llvm::CallInst *site, llvm::Instruction *inst,
   // TODO: This is probably where we should simplify
   // the dependency graph by removing callee values.
   TimerStatIncrementer t(bindReturnValueTime);
-  dependency->bindReturnValue(site, inst, returnValue);
+  dependency->bindReturnValue(site, callStack, inst, returnValue);
 }
 
 std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
-ITreeNode::getStoredExpressions() const {
+ITreeNode::getStoredExpressions(const std::vector<llvm::Instruction *> &stack)
+    const {
   TimerStatIncrementer t(getStoredExpressionsTime);
   std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore> ret;
   std::set<const Array *> dummyReplacements;
@@ -2607,13 +2767,15 @@ ITreeNode::getStoredExpressions() const {
   // the allocations to be stored in subsumption table should be obtained
   // from the parent node.
   if (parent)
-    ret = parent->dependency->getStoredExpressions(dummyReplacements, false);
+    ret = parent->dependency->getStoredExpressions(stack, dummyReplacements,
+                                                   false);
   return ret;
 }
 
 std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
-ITreeNode::getStoredCoreExpressions(std::set<const Array *> &replacements)
-    const {
+ITreeNode::getStoredCoreExpressions(
+    const std::vector<llvm::Instruction *> &stack,
+    std::set<const Array *> &replacements) const {
   TimerStatIncrementer t(getStoredCoreExpressionsTime);
   std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore> ret;
 
@@ -2621,7 +2783,7 @@ ITreeNode::getStoredCoreExpressions(std::set<const Array *> &replacements)
   // the allocations to be stored in subsumption table should be obtained
   // from the parent node.
   if (parent)
-    ret = parent->dependency->getStoredExpressions(replacements, true);
+    ret = parent->dependency->getStoredExpressions(stack, replacements, true);
   return ret;
 }
 
@@ -2695,6 +2857,16 @@ void ITreeNode::print(llvm::raw_ostream &stream,
     right->print(stream, paddingAmount + 1);
     stream << "\n";
   }
+  stream << tabsNext << "Stack:\n";
+  for (std::vector<llvm::Instruction *>::const_reverse_iterator
+           it = callStack.rend(),
+           ie = callStack.rbegin();
+       it != ie; ++it) {
+    stream << tabsNext;
+    (*it)->print(stream);
+    stream << "\n";
+  }
+  stream << "\n";
   if (dependency) {
     stream << tabsNext << "------- Abstract Dependencies ----------\n";
     dependency->print(stream, paddingAmount + 1);

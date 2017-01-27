@@ -287,7 +287,9 @@ class PathCondition {
 
 public:
   PathCondition(ref<Expr> &constraint, Dependency *dependency,
-                llvm::Value *condition, PathCondition *prev);
+                llvm::Value *condition,
+                const std::vector<llvm::Instruction *> &stack,
+                PathCondition *prev);
 
   ~PathCondition();
 
@@ -304,6 +306,78 @@ public:
   void dump() const;
 
   void print(llvm::raw_ostream &stream) const;
+};
+
+class SubsumptionTable {
+  typedef std::deque<SubsumptionTableEntry *>::const_reverse_iterator
+  EntryIterator;
+
+  class StackIndexedTable {
+    class Node {
+      friend class StackIndexedTable;
+
+      llvm::Instruction *id;
+
+      std::deque<SubsumptionTableEntry *> entryList;
+
+      Node *left, *right;
+
+      Node(llvm::Instruction *_id) : id(_id) { left = right = 0; }
+
+      void dump() const {
+        this->print(llvm::errs());
+        llvm::errs() << "\n";
+      }
+
+      void print(llvm::raw_ostream &stream) const;
+
+      void print(llvm::raw_ostream &stream, const unsigned paddingAmount) const;
+    };
+
+    Node *root;
+
+  public:
+    StackIndexedTable() { root = new Node(0); }
+
+    ~StackIndexedTable() { clearTree(root); }
+
+    void clearTree(Node *node);
+
+    void insert(const std::vector<llvm::Instruction *> &stack,
+                SubsumptionTableEntry *entry);
+
+    std::pair<EntryIterator, EntryIterator>
+    find(const std::vector<llvm::Instruction *> &stack, bool &found) const;
+
+    void dump() const {
+      this->print(llvm::errs());
+      llvm::errs() << "\n";
+    }
+
+    void print(llvm::raw_ostream &stream) const;
+  };
+
+  static std::map<uintptr_t, StackIndexedTable *> instance;
+
+public:
+  static void insert(uintptr_t id, const std::vector<llvm::Instruction *> stack,
+                     SubsumptionTableEntry *entry);
+
+  static bool check(TimingSolver *solver, ExecutionState &state,
+                    double timeout);
+
+  static void clear();
+
+  static void print(llvm::raw_ostream &stream) {
+    for (std::map<uintptr_t, StackIndexedTable *>::const_iterator
+             it = instance.begin(),
+             ie = instance.end();
+         it != ie; ++it) {
+      stream << it->first << ": ";
+      it->second->print(stream);
+      stream << "\n";
+    }
+  }
 };
 
 /// \brief The class that implements an entry (record) in the subsumption table.
@@ -459,7 +533,8 @@ public:
 
   const uint64_t nodeSequenceNumber;
 
-  SubsumptionTableEntry(ITreeNode *node);
+  SubsumptionTableEntry(ITreeNode *node,
+                        const std::vector<llvm::Instruction *> &stack);
 
   ~SubsumptionTableEntry();
 
@@ -488,6 +563,7 @@ public:
 
   void print(llvm::raw_ostream &stream) const;
 
+  void print(llvm::raw_ostream &stream, const unsigned paddingAmount) const;
 };
 
 /// \brief The interpolation tree node.
@@ -544,8 +620,6 @@ private:
 
   uint64_t nodeSequenceNumber;
 
-  bool isSubsumed;
-
   bool storable;
 
   /// \brief Graph for displaying as .dot file
@@ -557,6 +631,16 @@ private:
   /// \brief The data layout of the analysis target
   llvm::DataLayout *targetData;
 
+public:
+  bool isSubsumed;
+
+  /// \brief The entry call stack
+  std::vector<llvm::Instruction *> entryCallStack;
+
+  /// \brief The current call stack
+  std::vector<llvm::Instruction *> callStack;
+
+private:
   void setProgramPoint(llvm::Instruction *instr) {
     if (!programPoint)
       programPoint = reinterpret_cast<uintptr_t>(instr);
@@ -588,6 +672,7 @@ public:
   /// \brief Extend the path condition with another constraint
   ///
   /// \param constraint The constraint to extend the current path condition with
+  /// \param stack The current callsite stack for this value
   /// \param value The LLVM value that corresponds to the constraint
   void addConstraint(ref<Expr> &constraint, llvm::Value *value);
 
@@ -615,7 +700,7 @@ public:
   /// \return A pair of the store part indexed by constants, and the store part
   /// indexed by symbolic expressions.
   std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
-  getStoredExpressions() const;
+  getStoredExpressions(const std::vector<llvm::Instruction *> &stack) const;
 
   /// \brief This retrieves the allocations known at this state, and the
   /// expressions stored in the allocations, as long as the allocation is
@@ -629,7 +714,8 @@ public:
   /// \return A pair of the store part indexed by constants, and the store part
   /// indexed by symbolic expressions.
   std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
-  getStoredCoreExpressions(std::set<const Array *> &replacements) const;
+  getStoredCoreExpressions(const std::vector<llvm::Instruction *> &stack,
+                           std::set<const Array *> &replacements) const;
 
   void incInstructionsDepth();
 
@@ -780,24 +866,7 @@ class ITree {
   typedef ExprList::iterator iterator;
   typedef ExprList::const_iterator const_iterator;
 
-  // Several static member variables for profiling the execution time of
-  // this class's member functions.
-  static Statistic setCurrentINodeTime;
-  static Statistic removeTime;
-  static Statistic subsumptionCheckTime;
-  static Statistic markPathConditionTime;
-  static Statistic splitTime;
-  static Statistic executeOnNodeTime;
-  static Statistic executeMemoryOperationTime;
-  static double entryNumber;
-  static double programPointNumber;
-
-  /// \brief Number of subsumption checks for statistical purposes
-  static uint64_t subsumptionCheckCount;
-
   ITreeNode *currentINode;
-
-  std::map<uintptr_t, std::deque<SubsumptionTableEntry *> > subsumptionTable;
 
   llvm::DataLayout *targetData;
 
@@ -815,6 +884,22 @@ class ITree {
   static std::string inTwoDecimalPoints(const double n);
 
 public:
+  // Several static member variables for profiling the execution time of
+  // this class's member functions.
+  static Statistic setCurrentINodeTime;
+  static Statistic removeTime;
+  static Statistic subsumptionCheckTime;
+  static Statistic markPathConditionTime;
+  static Statistic splitTime;
+  static Statistic executeOnNodeTime;
+  static Statistic executeMemoryOperationTime;
+  static double entryNumber;
+  static double programPointNumber;
+
+  /// \brief Number of subsumption checks for statistical purposes
+  static uint64_t subsumptionCheckCount;
+
+  /// \brief The root node of the tree
   ITreeNode *root;
 
   /// \brief This static member variable is to indicate if we recovered from an
@@ -825,10 +910,7 @@ public:
 
   ITree(ExecutionState *_root, llvm::DataLayout *_targetData);
 
-  ~ITree();
-
-  /// \brief Store an entry into the subsumption table.
-  void store(SubsumptionTableEntry *entry);
+  ~ITree() { SubsumptionTable::clear(); }
 
   /// \brief Set the reference to the KLEE state in the current interpolation
   /// data holder (interpolation tree node) that is currently being processed.
@@ -900,8 +982,8 @@ public:
     std::vector<ref<Expr> > args;
     args.push_back(value);
     args.push_back(address);
-    node->dependency->executeMemoryOperation(instr, args, boundsCheck,
-                                             symbolicExecutionError);
+    node->dependency->executeMemoryOperation(
+        instr, node->callStack, args, boundsCheck, symbolicExecutionError);
     symbolicExecutionError = false;
   }
 
