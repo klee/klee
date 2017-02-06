@@ -1443,13 +1443,15 @@ bool SubsumptionTableEntry::subsumed(
   // collecting statistics of solver calls.
   SubsumptionCheckMarker subsumptionCheckMarker;
 
-  if (DebugSubsumption) {
+  if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL ||
+      DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
     klee_message("Checking against Node #%lu", nodeSequenceNumber);
   }
 
   // Quick check for subsumption in case the interpolant is empty
   if (empty()) {
-    if (DebugSubsumption) {
+    if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL ||
+        DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
       klee_message("Check success due to empty table entry");
     }
     return true;
@@ -1485,7 +1487,8 @@ bool SubsumptionTableEntry::subsumed(
       // If the current state does not constrain the same base, subsumption
       // fails.
       if (stateConcreteMap.empty() && stateSymbolicMap.empty()) {
-        if (DebugSubsumption) {
+        if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL ||
+            DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
           klee_message(
               "Check failure due to empty state concrete and symbolic maps");
         }
@@ -1501,7 +1504,8 @@ bool SubsumptionTableEntry::subsumed(
         // the current state is incomparable to the stored interpolant,
         // and we therefore fail the subsumption.
         if (!stateConcreteMap.count(it2->first)) {
-          if (DebugSubsumption) {
+          if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL ||
+              DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
             klee_message("Check failure as memory region in the table does not "
                          "exist in the state");
           }
@@ -1518,7 +1522,8 @@ bool SubsumptionTableEntry::subsumed(
               stateValue->getExpression()->getWidth()) {
             // We conservatively fail the subsumption in case the sizes do not
             // match.
-            if (DebugSubsumption) {
+            if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL ||
+                DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
               klee_message(
                   "Check failure as sizes of stored values do not match");
             }
@@ -1530,7 +1535,8 @@ bool SubsumptionTableEntry::subsumed(
             ref<Expr> boundsCheck =
                 tabledValue->getBoundsCheck(stateValue, bounds);
             if (boundsCheck->isFalse()) {
-              if (DebugSubsumption) {
+              if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL ||
+                  DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
                 klee_message(
                     "Check failure due to failure in memory bounds check");
               }
@@ -1828,12 +1834,13 @@ bool SubsumptionTableEntry::subsumed(
     } else {
       // Here both the interpolant constraints and state equality
       // constraints are empty, therefore everything gets subsumed
-      if (DebugSubsumption) {
+      if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL ||
+          DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
         klee_message("Check success as interpolant is empty");
       }
 
       // We build memory bounds interpolants from pointer values
-      if (DebugSubsumption) {
+      if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL) {
         std::string msg;
         llvm::Instruction *instr = state.pc->inst;
         llvm::raw_string_ostream stream(msg);
@@ -1864,7 +1871,7 @@ bool SubsumptionTableEntry::subsumed(
 
     if (!existentials.empty()) {
       ref<Expr> existsExpr = ExistsExpr::create(existentials, query);
-      if (DebugSubsumption) {
+      if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL) {
         std::string msg;
         llvm::raw_string_ostream stream(msg);
         stream << "Before simplification:\n";
@@ -1878,7 +1885,8 @@ bool SubsumptionTableEntry::subsumed(
     // If query simplification result was false, we quickly fail without calling
     // the solver
     if (query->isFalse()) {
-      if (DebugSubsumption) {
+      if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL ||
+          DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
         klee_message("Check failure as consequent is unsatisfiable");
       }
       return false;
@@ -1887,7 +1895,8 @@ bool SubsumptionTableEntry::subsumed(
     bool success = false;
 
     if (!detectConflictPrimitives(state, query)) {
-      if (DebugSubsumption) {
+      if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL ||
+          DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
         klee_message("Check failure as contradictory equalities detected");
       }
       return false;
@@ -1900,7 +1909,7 @@ bool SubsumptionTableEntry::subsumed(
     // method.
     if (!llvm::isa<ConstantExpr>(query)) {
       if (!existentials.empty() && llvm::isa<ExistsExpr>(query)) {
-        if (DebugSubsumption) {
+        if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL) {
           klee_message("Existentials not empty");
         }
 
@@ -1925,7 +1934,7 @@ bool SubsumptionTableEntry::subsumed(
           constraints.addConstraint(
               EqExpr::create(falseExpr, query->getKid(0)));
 
-          if (DebugSubsumption) {
+          if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL) {
             std::string msg;
             llvm::raw_string_ostream stream(msg);
             ExprPPrinter::printQuery(stream, constraints, falseExpr);
@@ -1936,7 +1945,7 @@ bool SubsumptionTableEntry::subsumed(
           success = z3solver->getValue(Query(constraints, falseExpr), tmpExpr);
           result = success ? Solver::True : Solver::Unknown;
         } else {
-          if (DebugSubsumption) {
+          if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL) {
             std::string msg;
             llvm::raw_string_ostream stream(msg);
             ExprPPrinter::printQuery(stream, state.constraints, query);
@@ -1951,7 +1960,7 @@ bool SubsumptionTableEntry::subsumed(
         z3solver->setCoreSolverTimeout(0);
 
       } else {
-        if (DebugSubsumption) {
+        if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL) {
           std::string msg;
           llvm::raw_string_ostream stream(msg);
           klee_message("No existential");
@@ -1968,7 +1977,8 @@ bool SubsumptionTableEntry::subsumed(
     } else {
       // query is a constant expression
       if (query->isTrue()) {
-        if (DebugSubsumption) {
+        if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL ||
+            DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
           klee_message("Check success as query is true");
         }
 
@@ -1984,7 +1994,8 @@ bool SubsumptionTableEntry::subsumed(
         }
         return true;
       }
-      if (DebugSubsumption) {
+      if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL ||
+          DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
         klee_message("Check failure as query is non-true");
       }
       return false;
@@ -2000,7 +2011,8 @@ bool SubsumptionTableEntry::subsumed(
 
       // State subsumed, we mark needed constraints on the
       // path condition.
-      if (DebugSubsumption) {
+      if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL ||
+          DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
         klee_message("Check success as solver decided validity");
       }
 
@@ -2029,7 +2041,8 @@ bool SubsumptionTableEntry::subsumed(
     if (z3solver)
       delete z3solver;
 
-    if (DebugSubsumption) {
+    if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL ||
+        DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
       klee_message("Check failure as solver did not decide validity");
     }
   }
@@ -2272,7 +2285,8 @@ bool SubsumptionTable::check(TimingSolver *solver, ExecutionState &state,
   ITreeNode *iTreeNode = state.itreeNode;
   StackIndexedTable *subTable = instance[state.itreeNode->getProgramPoint()];
   if (!subTable) {
-    if (DebugSubsumption) {
+    if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL ||
+        DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
       klee_message("Check failure due to control point not found in table");
     }
     return false;
@@ -2282,7 +2296,8 @@ bool SubsumptionTable::check(TimingSolver *solver, ExecutionState &state,
   std::pair<EntryIterator, EntryIterator> iterPair =
       subTable->find(iTreeNode->entryCallStack, found);
   if (!found) {
-    if (DebugSubsumption) {
+    if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL ||
+        DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
       klee_message("Check failure due to entry not found");
     }
     return false;
@@ -2426,7 +2441,10 @@ bool ITree::subsumptionCheck(TimingSolver *solver, ExecutionState &state,
                               state.itreeNode->getProgramPoint())
     return false;
 
-  if (DebugSubsumption) {
+  if (DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
+    klee_message("Subsumption check for Node #%lu",
+                 state.itreeNode->getNodeSequenceNumber());
+  } else if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL) {
     klee_message("Subsumption check for Node #%lu, Program Point %lu",
                  state.itreeNode->getNodeSequenceNumber(),
                  state.itreeNode->getProgramPoint());
@@ -2458,9 +2476,12 @@ void ITree::remove(ITreeNode *node) {
     // As the node is about to be deleted, it must have been completely
     // traversed, hence the correct time to table the interpolant.
     if (!node->isSubsumed && node->storable) {
-      if (DebugSubsumption) {
+      if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL) {
         klee_message("Storing entry for Node #%lu, Program Point %lu",
                      node->getNodeSequenceNumber(), node->getProgramPoint());
+      } else if (DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
+        klee_message("Storing entry for Node #%lu",
+                     node->getNodeSequenceNumber());
       }
 
       SubsumptionTableEntry *entry =
@@ -2470,7 +2491,7 @@ void ITree::remove(ITreeNode *node) {
 
       ITreeGraph::addTableEntryMapping(node, entry);
 
-      if (DebugSubsumption) {
+      if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL) {
         std::string msg;
         llvm::raw_string_ostream out(msg);
         entry->print(out);
