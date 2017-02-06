@@ -2271,8 +2271,12 @@ bool SubsumptionTable::check(TimingSolver *solver, ExecutionState &state,
                              double timeout) {
   ITreeNode *iTreeNode = state.itreeNode;
   StackIndexedTable *subTable = instance[state.itreeNode->getProgramPoint()];
-  if (!subTable)
+  if (!subTable) {
+    if (DebugSubsumption) {
+      klee_message("Check failure due to control point not found in table");
+    }
     return false;
+  }
 
   bool found;
   std::pair<EntryIterator, EntryIterator> iterPair =
