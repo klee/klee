@@ -1443,16 +1443,13 @@ bool SubsumptionTableEntry::subsumed(
   // collecting statistics of solver calls.
   SubsumptionCheckMarker subsumptionCheckMarker;
 
-  if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL ||
-      DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
-    klee_message("Checking against Node #%lu", nodeSequenceNumber);
-  }
-
   // Quick check for subsumption in case the interpolant is empty
   if (empty()) {
     if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL ||
         DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
-      klee_message("Check success due to empty table entry");
+      klee_message("#%lu=>#%lu: Check success due to empty table entry",
+                   state.itreeNode->getNodeSequenceNumber(),
+                   nodeSequenceNumber);
     }
     return true;
   }
@@ -1489,8 +1486,10 @@ bool SubsumptionTableEntry::subsumed(
       if (stateConcreteMap.empty() && stateSymbolicMap.empty()) {
         if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL ||
             DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
-          klee_message(
-              "Check failure due to empty state concrete and symbolic maps");
+          klee_message("#%lu=>#%lu: Check failure due to empty state concrete "
+                       "and symbolic maps",
+                       state.itreeNode->getNodeSequenceNumber(),
+                       nodeSequenceNumber);
         }
         return false;
       }
@@ -1506,8 +1505,11 @@ bool SubsumptionTableEntry::subsumed(
         if (!stateConcreteMap.count(it2->first)) {
           if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL ||
               DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
-            klee_message("Check failure as memory region in the table does not "
-                         "exist in the state");
+            klee_message("#%lu=>#%lu: Check failure as memory region in the "
+                         "table does not "
+                         "exist in the state",
+                         state.itreeNode->getNodeSequenceNumber(),
+                         nodeSequenceNumber);
           }
           return false;
         }
@@ -1524,8 +1526,10 @@ bool SubsumptionTableEntry::subsumed(
             // match.
             if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL ||
                 DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
-              klee_message(
-                  "Check failure as sizes of stored values do not match");
+              klee_message("#%lu=>#%lu: Check failure as sizes of stored "
+                           "values do not match",
+                           state.itreeNode->getNodeSequenceNumber(),
+                           nodeSequenceNumber);
             }
             return false;
           } else if (!NoBoundInterpolation && !ExactAddressInterpolant &&
@@ -1537,8 +1541,10 @@ bool SubsumptionTableEntry::subsumed(
             if (boundsCheck->isFalse()) {
               if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL ||
                   DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
-                klee_message(
-                    "Check failure due to failure in memory bounds check");
+                klee_message("#%lu=>#%lu: Check failure due to failure in "
+                             "memory bounds check",
+                             state.itreeNode->getNodeSequenceNumber(),
+                             nodeSequenceNumber);
               }
               return false;
             }
@@ -1836,7 +1842,9 @@ bool SubsumptionTableEntry::subsumed(
       // constraints are empty, therefore everything gets subsumed
       if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL ||
           DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
-        klee_message("Check success as interpolant is empty");
+        klee_message("#%lu=>#%lu: Check success as interpolant is empty",
+                     state.itreeNode->getNodeSequenceNumber(),
+                     nodeSequenceNumber);
       }
 
       // We build memory bounds interpolants from pointer values
@@ -1887,7 +1895,9 @@ bool SubsumptionTableEntry::subsumed(
     if (query->isFalse()) {
       if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL ||
           DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
-        klee_message("Check failure as consequent is unsatisfiable");
+        klee_message("#%lu=>#%lu: Check failure as consequent is unsatisfiable",
+                     state.itreeNode->getNodeSequenceNumber(),
+                     nodeSequenceNumber);
       }
       return false;
     }
@@ -1897,7 +1907,9 @@ bool SubsumptionTableEntry::subsumed(
     if (!detectConflictPrimitives(state, query)) {
       if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL ||
           DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
-        klee_message("Check failure as contradictory equalities detected");
+        klee_message(
+            "#%lu=>#%lu: Check failure as contradictory equalities detected",
+            state.itreeNode->getNodeSequenceNumber(), nodeSequenceNumber);
       }
       return false;
     }
@@ -1979,7 +1991,9 @@ bool SubsumptionTableEntry::subsumed(
       if (query->isTrue()) {
         if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL ||
             DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
-          klee_message("Check success as query is true");
+          klee_message("#%lu=>#%lu: Check success as query is true",
+                       state.itreeNode->getNodeSequenceNumber(),
+                       nodeSequenceNumber);
         }
 
         if (!NoBoundInterpolation && !ExactAddressInterpolant) {
@@ -1996,7 +2010,9 @@ bool SubsumptionTableEntry::subsumed(
       }
       if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL ||
           DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
-        klee_message("Check failure as query is non-true");
+        klee_message("#%lu=>#%lu: Check failure as query is non-true",
+                     state.itreeNode->getNodeSequenceNumber(),
+                     nodeSequenceNumber);
       }
       return false;
     }
@@ -2013,7 +2029,9 @@ bool SubsumptionTableEntry::subsumed(
       // path condition.
       if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL ||
           DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
-        klee_message("Check success as solver decided validity");
+        klee_message("#%lu=>#%lu: Check success as solver decided validity",
+                     state.itreeNode->getNodeSequenceNumber(),
+                     nodeSequenceNumber);
       }
 
       // We create path condition marking structure and mark core constraints
@@ -2043,7 +2061,9 @@ bool SubsumptionTableEntry::subsumed(
 
     if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL ||
         DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
-      klee_message("Check failure as solver did not decide validity");
+      klee_message(
+          "#%lu=>#%lu: Check failure as solver did not decide validity",
+          state.itreeNode->getNodeSequenceNumber(), nodeSequenceNumber);
     }
   }
 #endif /* ENABLE_Z3 */
@@ -2287,7 +2307,9 @@ bool SubsumptionTable::check(TimingSolver *solver, ExecutionState &state,
   if (!subTable) {
     if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL ||
         DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
-      klee_message("Check failure due to control point not found in table");
+      klee_message(
+          "#%lu: Check failure due to control point not found in table",
+          state.itreeNode->getNodeSequenceNumber());
     }
     return false;
   }
@@ -2298,7 +2320,8 @@ bool SubsumptionTable::check(TimingSolver *solver, ExecutionState &state,
   if (!found) {
     if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL ||
         DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
-      klee_message("Check failure due to entry not found");
+      klee_message("#%lu: Check failure due to entry not found",
+                   state.itreeNode->getNodeSequenceNumber());
     }
     return false;
   }
