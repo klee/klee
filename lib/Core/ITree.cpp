@@ -2310,9 +2310,6 @@ bool SubsumptionTable::check(TimingSolver *solver, ExecutionState &state,
       }
     }
   }
-  if (DebugSubsumption) {
-    klee_message("Check failure due to no subsuming entry found");
-  }
   return false;
 }
 
