@@ -3030,8 +3030,7 @@ void Executor::run(ExecutionState &initialState) {
       // in the node.
       interpTree->setCurrentINode(state);
 
-      if (DebugInterpolation == ITP_DEBUG_ALL ||
-          DebugInterpolation == ITP_DEBUG_STATE) {
+      if (DebugState) {
         std::string debugMessage;
         llvm::raw_string_ostream stream(debugMessage);
         stream << "\nCurrent state:\n";

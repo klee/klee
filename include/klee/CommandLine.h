@@ -81,14 +81,11 @@ extern llvm::cl::opt<bool> NoExistential;
 
 extern llvm::cl::opt<int> MaxFailSubsumption;
 
-enum InterpolationDebugType {
-  ITP_DEBUG_STATE,
-  ITP_DEBUG_SUBSUMPTION,
-  ITP_DEBUG_ALL,
-  ITP_DEBUG_NONE
-};
+extern llvm::cl::opt<bool> DebugInterpolation;
 
-extern llvm::cl::opt<InterpolationDebugType> DebugInterpolation;
+extern llvm::cl::opt<bool> DebugState;
+
+extern llvm::cl::opt<bool> DebugSubsumption;
 
 extern llvm::cl::opt<bool> NoBoundInterpolation;
 
