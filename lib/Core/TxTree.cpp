@@ -13,7 +13,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "ITree.h"
+#include "TxTree.h"
+
 #include "Dependency.h"
 #include "TimingSolver.h"
 
@@ -31,36 +32,36 @@ using namespace klee;
 
 /**/
 
-std::string ITreeGraph::PrettyExpressionBuilder::bvConst32(uint32_t value) {
+std::string TxTreeGraph::PrettyExpressionBuilder::bvConst32(uint32_t value) {
   std::ostringstream stream;
   stream << value;
   return stream.str();
 }
-std::string ITreeGraph::PrettyExpressionBuilder::bvConst64(uint64_t value) {
+std::string TxTreeGraph::PrettyExpressionBuilder::bvConst64(uint64_t value) {
   std::ostringstream stream;
   stream << value;
   return stream.str();
 }
-std::string ITreeGraph::PrettyExpressionBuilder::bvZExtConst(uint64_t value) {
+std::string TxTreeGraph::PrettyExpressionBuilder::bvZExtConst(uint64_t value) {
   return bvConst64(value);
 }
-std::string ITreeGraph::PrettyExpressionBuilder::bvSExtConst(uint64_t value) {
+std::string TxTreeGraph::PrettyExpressionBuilder::bvSExtConst(uint64_t value) {
   return bvConst64(value);
 }
-std::string ITreeGraph::PrettyExpressionBuilder::bvBoolExtract(std::string expr,
+std::string TxTreeGraph::PrettyExpressionBuilder::bvBoolExtract(std::string expr,
                                                                int bit) {
   std::ostringstream stream;
   stream << expr << "[" << bit << "]";
   return stream.str();
 }
-std::string ITreeGraph::PrettyExpressionBuilder::bvExtract(std::string expr,
+std::string TxTreeGraph::PrettyExpressionBuilder::bvExtract(std::string expr,
                                                            unsigned top,
                                                            unsigned bottom) {
   std::ostringstream stream;
   stream << expr << "[" << top << "," << bottom << "]";
   return stream.str();
 }
-std::string ITreeGraph::PrettyExpressionBuilder::eqExpr(std::string a,
+std::string TxTreeGraph::PrettyExpressionBuilder::eqExpr(std::string a,
                                                         std::string b) {
   if (a == "false")
     return "!" + b;
@@ -68,148 +69,148 @@ std::string ITreeGraph::PrettyExpressionBuilder::eqExpr(std::string a,
 }
 
 // logical left and right shift (not arithmetic)
-std::string ITreeGraph::PrettyExpressionBuilder::bvLeftShift(std::string expr,
+std::string TxTreeGraph::PrettyExpressionBuilder::bvLeftShift(std::string expr,
                                                              unsigned shift) {
   std::ostringstream stream;
   stream << "(" << expr << " \\<\\< " << shift << ")";
   return stream.str();
 }
-std::string ITreeGraph::PrettyExpressionBuilder::bvRightShift(std::string expr,
+std::string TxTreeGraph::PrettyExpressionBuilder::bvRightShift(std::string expr,
                                                               unsigned shift) {
   std::ostringstream stream;
   stream << "(" << expr << " \\>\\> " << shift << ")";
   return stream.str();
 }
 std::string
-ITreeGraph::PrettyExpressionBuilder::bvVarLeftShift(std::string expr,
+TxTreeGraph::PrettyExpressionBuilder::bvVarLeftShift(std::string expr,
                                                     std::string shift) {
   return "(" + expr + " \\<\\< " + shift + ")";
 }
 std::string
-ITreeGraph::PrettyExpressionBuilder::bvVarRightShift(std::string expr,
+TxTreeGraph::PrettyExpressionBuilder::bvVarRightShift(std::string expr,
                                                      std::string shift) {
   return "(" + expr + " \\>\\> " + shift + ")";
 }
 std::string
-ITreeGraph::PrettyExpressionBuilder::bvVarArithRightShift(std::string expr,
+TxTreeGraph::PrettyExpressionBuilder::bvVarArithRightShift(std::string expr,
                                                           std::string shift) {
   return bvVarRightShift(expr, shift);
 }
 
 // Some STP-style bitvector arithmetic
 std::string
-ITreeGraph::PrettyExpressionBuilder::bvMinusExpr(std::string minuend,
+TxTreeGraph::PrettyExpressionBuilder::bvMinusExpr(std::string minuend,
                                                  std::string subtrahend) {
   return "(" + minuend + " - " + subtrahend + ")";
 }
 std::string
-ITreeGraph::PrettyExpressionBuilder::bvPlusExpr(std::string augend,
+TxTreeGraph::PrettyExpressionBuilder::bvPlusExpr(std::string augend,
                                                 std::string addend) {
   return "(" + augend + " + " + addend + ")";
 }
 std::string
-ITreeGraph::PrettyExpressionBuilder::bvMultExpr(std::string multiplacand,
+TxTreeGraph::PrettyExpressionBuilder::bvMultExpr(std::string multiplacand,
                                                 std::string multiplier) {
   return "(" + multiplacand + " * " + multiplier + ")";
 }
 std::string
-ITreeGraph::PrettyExpressionBuilder::bvDivExpr(std::string dividend,
+TxTreeGraph::PrettyExpressionBuilder::bvDivExpr(std::string dividend,
                                                std::string divisor) {
   return "(" + dividend + " / " + divisor + ")";
 }
 std::string
-ITreeGraph::PrettyExpressionBuilder::sbvDivExpr(std::string dividend,
+TxTreeGraph::PrettyExpressionBuilder::sbvDivExpr(std::string dividend,
                                                 std::string divisor) {
   return "(" + dividend + " / " + divisor + ")";
 }
 std::string
-ITreeGraph::PrettyExpressionBuilder::bvModExpr(std::string dividend,
+TxTreeGraph::PrettyExpressionBuilder::bvModExpr(std::string dividend,
                                                std::string divisor) {
   return "(" + dividend + " % " + divisor + ")";
 }
 std::string
-ITreeGraph::PrettyExpressionBuilder::sbvModExpr(std::string dividend,
+TxTreeGraph::PrettyExpressionBuilder::sbvModExpr(std::string dividend,
                                                 std::string divisor) {
   return "(" + dividend + " % " + divisor + ")";
 }
-std::string ITreeGraph::PrettyExpressionBuilder::notExpr(std::string expr) {
+std::string TxTreeGraph::PrettyExpressionBuilder::notExpr(std::string expr) {
   return "!(" + expr + ")";
 }
-std::string ITreeGraph::PrettyExpressionBuilder::bvAndExpr(std::string lhs,
+std::string TxTreeGraph::PrettyExpressionBuilder::bvAndExpr(std::string lhs,
                                                            std::string rhs) {
   return "(" + lhs + " & " + rhs + ")";
 }
-std::string ITreeGraph::PrettyExpressionBuilder::bvOrExpr(std::string lhs,
+std::string TxTreeGraph::PrettyExpressionBuilder::bvOrExpr(std::string lhs,
                                                           std::string rhs) {
   return "(" + lhs + " \\| " + rhs + ")";
 }
-std::string ITreeGraph::PrettyExpressionBuilder::iffExpr(std::string lhs,
+std::string TxTreeGraph::PrettyExpressionBuilder::iffExpr(std::string lhs,
                                                          std::string rhs) {
   return "(" + lhs + " \\<=\\> " + rhs + ")";
 }
-std::string ITreeGraph::PrettyExpressionBuilder::bvXorExpr(std::string lhs,
+std::string TxTreeGraph::PrettyExpressionBuilder::bvXorExpr(std::string lhs,
                                                            std::string rhs) {
   return "(" + lhs + " xor " + rhs + ")";
 }
-std::string ITreeGraph::PrettyExpressionBuilder::bvSignExtend(std::string src) {
+std::string TxTreeGraph::PrettyExpressionBuilder::bvSignExtend(std::string src) {
   return src;
 }
 
 // Some STP-style array domain interface
-std::string ITreeGraph::PrettyExpressionBuilder::writeExpr(std::string array,
+std::string TxTreeGraph::PrettyExpressionBuilder::writeExpr(std::string array,
                                                            std::string index,
                                                            std::string value) {
   return "update(" + array + "," + index + "," + value + ")";
 }
-std::string ITreeGraph::PrettyExpressionBuilder::readExpr(std::string array,
+std::string TxTreeGraph::PrettyExpressionBuilder::readExpr(std::string array,
                                                           std::string index) {
   return array + "[" + index + "]";
 }
 
 // ITE-expression constructor
-std::string ITreeGraph::PrettyExpressionBuilder::iteExpr(
+std::string TxTreeGraph::PrettyExpressionBuilder::iteExpr(
     std::string condition, std::string whenTrue, std::string whenFalse) {
   return "ite(" + condition + "," + whenTrue + "," + whenFalse + ")";
 }
 
 // Bitvector comparison
-std::string ITreeGraph::PrettyExpressionBuilder::bvLtExpr(std::string lhs,
+std::string TxTreeGraph::PrettyExpressionBuilder::bvLtExpr(std::string lhs,
                                                           std::string rhs) {
   return "(" + lhs + " \\< " + rhs + ")";
 }
-std::string ITreeGraph::PrettyExpressionBuilder::bvLeExpr(std::string lhs,
+std::string TxTreeGraph::PrettyExpressionBuilder::bvLeExpr(std::string lhs,
                                                           std::string rhs) {
   return "(" + lhs + " \\<= " + rhs + ")";
 }
-std::string ITreeGraph::PrettyExpressionBuilder::sbvLtExpr(std::string lhs,
+std::string TxTreeGraph::PrettyExpressionBuilder::sbvLtExpr(std::string lhs,
                                                            std::string rhs) {
   return "(" + lhs + " \\< " + rhs + ")";
 }
-std::string ITreeGraph::PrettyExpressionBuilder::sbvLeExpr(std::string lhs,
+std::string TxTreeGraph::PrettyExpressionBuilder::sbvLeExpr(std::string lhs,
                                                            std::string rhs) {
   return "(" + lhs + " \\<= " + rhs + ")";
 }
 
-std::string ITreeGraph::PrettyExpressionBuilder::constructAShrByConstant(
+std::string TxTreeGraph::PrettyExpressionBuilder::constructAShrByConstant(
     std::string expr, unsigned shift, std::string isSigned) {
   return bvRightShift(expr, shift);
 }
 std::string
-ITreeGraph::PrettyExpressionBuilder::constructMulByConstant(std::string expr,
+TxTreeGraph::PrettyExpressionBuilder::constructMulByConstant(std::string expr,
                                                             uint64_t x) {
   std::ostringstream stream;
   stream << "(" << expr << " * " << x << ")";
   return stream.str();
 }
 std::string
-ITreeGraph::PrettyExpressionBuilder::constructUDivByConstant(std::string expr,
+TxTreeGraph::PrettyExpressionBuilder::constructUDivByConstant(std::string expr,
                                                              uint64_t d) {
   std::ostringstream stream;
   stream << "(" << expr << " / " << d << ")";
   return stream.str();
 }
 std::string
-ITreeGraph::PrettyExpressionBuilder::constructSDivByConstant(std::string expr,
+TxTreeGraph::PrettyExpressionBuilder::constructSDivByConstant(std::string expr,
                                                              uint64_t d) {
   std::ostringstream stream;
   stream << "(" << expr << " / " << d << ")";
@@ -217,7 +218,7 @@ ITreeGraph::PrettyExpressionBuilder::constructSDivByConstant(std::string expr,
 }
 
 std::string
-ITreeGraph::PrettyExpressionBuilder::getInitialArray(const Array *root) {
+TxTreeGraph::PrettyExpressionBuilder::getInitialArray(const Array *root) {
   std::string arrayExpr =
       buildArray(root->name.c_str(), root->getDomain(), root->getRange());
 
@@ -232,7 +233,7 @@ ITreeGraph::PrettyExpressionBuilder::getInitialArray(const Array *root) {
   return arrayExpr;
 }
 std::string
-ITreeGraph::PrettyExpressionBuilder::getArrayForUpdate(const Array *root,
+TxTreeGraph::PrettyExpressionBuilder::getArrayForUpdate(const Array *root,
                                                        const UpdateNode *un) {
   if (!un) {
     return (getInitialArray(root));
@@ -241,7 +242,7 @@ ITreeGraph::PrettyExpressionBuilder::getArrayForUpdate(const Array *root,
                    constructActual(un->index), constructActual(un->value));
 }
 
-std::string ITreeGraph::PrettyExpressionBuilder::constructActual(ref<Expr> e) {
+std::string TxTreeGraph::PrettyExpressionBuilder::constructActual(ref<Expr> e) {
   switch (e->getKind()) {
   case Expr::Constant: {
     ConstantExpr *CE = cast<ConstantExpr>(e);
@@ -517,33 +518,33 @@ std::string ITreeGraph::PrettyExpressionBuilder::constructActual(ref<Expr> e) {
     return getTrue();
   }
 }
-std::string ITreeGraph::PrettyExpressionBuilder::construct(ref<Expr> e) {
+std::string TxTreeGraph::PrettyExpressionBuilder::construct(ref<Expr> e) {
   PrettyExpressionBuilder *instance = new PrettyExpressionBuilder();
   std::string ret = instance->constructActual(e);
   delete instance;
   return ret;
 }
 
-std::string ITreeGraph::PrettyExpressionBuilder::buildArray(
+std::string TxTreeGraph::PrettyExpressionBuilder::buildArray(
     const char *name, unsigned indexWidth, unsigned valueWidth) {
   return name;
 }
 
-std::string ITreeGraph::PrettyExpressionBuilder::getTrue() { return "true"; }
-std::string ITreeGraph::PrettyExpressionBuilder::getFalse() { return "false"; }
+std::string TxTreeGraph::PrettyExpressionBuilder::getTrue() { return "true"; }
+std::string TxTreeGraph::PrettyExpressionBuilder::getFalse() { return "false"; }
 std::string
-ITreeGraph::PrettyExpressionBuilder::getInitialRead(const Array *root,
+TxTreeGraph::PrettyExpressionBuilder::getInitialRead(const Array *root,
                                                     unsigned index) {
   return readExpr(getInitialArray(root), bvConst32(index));
 }
 
-ITreeGraph::PrettyExpressionBuilder::PrettyExpressionBuilder() {}
+TxTreeGraph::PrettyExpressionBuilder::PrettyExpressionBuilder() {}
 
-ITreeGraph::PrettyExpressionBuilder::~PrettyExpressionBuilder() {}
+TxTreeGraph::PrettyExpressionBuilder::~PrettyExpressionBuilder() {}
 
 /**/
 
-std::string ITreeGraph::NumberedEdge::render() const {
+std::string TxTreeGraph::NumberedEdge::render() const {
   std::ostringstream stream;
   stream << "Node" << source->nodeSequenceNumber << " -> Node"
          << destination->nodeSequenceNumber << " [style=dashed,label=\""
@@ -553,9 +554,9 @@ std::string ITreeGraph::NumberedEdge::render() const {
 
 /**/
 
-ITreeGraph *ITreeGraph::instance = 0;
+TxTreeGraph *TxTreeGraph::instance = 0;
 
-std::string ITreeGraph::recurseRender(ITreeGraph::Node *node) {
+std::string TxTreeGraph::recurseRender(TxTreeGraph::Node *node) {
   std::ostringstream stream;
 
   if (node->nodeSequenceNumber) {
@@ -652,7 +653,7 @@ std::string ITreeGraph::recurseRender(ITreeGraph::Node *node) {
   return stream.str();
 }
 
-std::string ITreeGraph::render() {
+std::string TxTreeGraph::render() {
   std::string res("");
 
   // Simply return empty string when root is undefined
@@ -660,7 +661,7 @@ std::string ITreeGraph::render() {
     return res;
 
   std::ostringstream stream;
-  for (std::vector<ITreeGraph::NumberedEdge *>::iterator
+  for (std::vector<TxTreeGraph::NumberedEdge *>::iterator
            it = subsumptionEdges.begin(),
            ie = subsumptionEdges.end();
        it != ie; ++it) {
@@ -674,19 +675,19 @@ std::string ITreeGraph::render() {
   return res;
 }
 
-ITreeGraph::ITreeGraph(ITreeNode *_root)
+TxTreeGraph::TxTreeGraph(TxTreeNode *_root)
     : subsumptionEdgeNumber(0), internalNodeId(0) {
-  root = ITreeGraph::Node::createNode();
+  root = TxTreeGraph::Node::createNode();
   itreeNodeMap[_root] = root;
 }
 
-ITreeGraph::~ITreeGraph() {
+TxTreeGraph::~TxTreeGraph() {
   if (root)
     delete root;
 
   itreeNodeMap.clear();
 
-  for (std::vector<ITreeGraph::NumberedEdge *>::iterator
+  for (std::vector<TxTreeGraph::NumberedEdge *>::iterator
            it = subsumptionEdges.begin(),
            ie = subsumptionEdges.end();
        it != ie; ++it) {
@@ -695,30 +696,30 @@ ITreeGraph::~ITreeGraph() {
   subsumptionEdges.clear();
 }
 
-void ITreeGraph::addChildren(ITreeNode *parent, ITreeNode *falseChild,
-                             ITreeNode *trueChild) {
+void TxTreeGraph::addChildren(TxTreeNode *parent, TxTreeNode *falseChild,
+                             TxTreeNode *trueChild) {
   if (!OUTPUT_INTERPOLATION_TREE)
     return;
 
-  assert(ITreeGraph::instance && "Search tree graph not initialized");
+  assert(TxTreeGraph::instance && "Search tree graph not initialized");
 
-  ITreeGraph::Node *parentNode = instance->itreeNodeMap[parent];
+  TxTreeGraph::Node *parentNode = instance->itreeNodeMap[parent];
 
-  parentNode->falseTarget = ITreeGraph::Node::createNode();
-  parentNode->trueTarget = ITreeGraph::Node::createNode();
+  parentNode->falseTarget = TxTreeGraph::Node::createNode();
+  parentNode->trueTarget = TxTreeGraph::Node::createNode();
   instance->itreeNodeMap[falseChild] = parentNode->falseTarget;
   instance->itreeNodeMap[trueChild] = parentNode->trueTarget;
 }
 
-void ITreeGraph::setCurrentNode(ExecutionState &state,
+void TxTreeGraph::setCurrentNode(ExecutionState &state,
                                 const uint64_t _nodeSequenceNumber) {
   if (!OUTPUT_INTERPOLATION_TREE)
     return;
 
-  assert(ITreeGraph::instance && "Search tree graph not initialized");
+  assert(TxTreeGraph::instance && "Search tree graph not initialized");
 
-  ITreeNode *iTreeNode = state.itreeNode;
-  ITreeGraph::Node *node = instance->itreeNodeMap[iTreeNode];
+  TxTreeNode *iTreeNode = state.itreeNode;
+  TxTreeGraph::Node *node = instance->itreeNodeMap[iTreeNode];
   if (!node->nodeSequenceNumber) {
     std::string functionName(
         state.pc->inst->getParent()->getParent()->getName().str());
@@ -738,29 +739,29 @@ void ITreeGraph::setCurrentNode(ExecutionState &state,
   }
 }
 
-void ITreeGraph::markAsSubsumed(ITreeNode *iTreeNode,
+void TxTreeGraph::markAsSubsumed(TxTreeNode *iTreeNode,
                                 SubsumptionTableEntry *entry) {
   if (!OUTPUT_INTERPOLATION_TREE)
     return;
 
-  assert(ITreeGraph::instance && "Search tree graph not initialized");
+  assert(TxTreeGraph::instance && "Search tree graph not initialized");
 
-  ITreeGraph::Node *node = instance->itreeNodeMap[iTreeNode];
+  TxTreeGraph::Node *node = instance->itreeNodeMap[iTreeNode];
   node->subsumed = true;
-  ITreeGraph::Node *subsuming = instance->tableEntryMap[entry];
-  instance->subsumptionEdges.push_back(new ITreeGraph::NumberedEdge(
+  TxTreeGraph::Node *subsuming = instance->tableEntryMap[entry];
+  instance->subsumptionEdges.push_back(new TxTreeGraph::NumberedEdge(
       node, subsuming, ++(instance->subsumptionEdgeNumber)));
 }
 
-void ITreeGraph::addPathCondition(ITreeNode *iTreeNode,
+void TxTreeGraph::addPathCondition(TxTreeNode *iTreeNode,
                                   PathCondition *pathCondition,
                                   ref<Expr> condition) {
   if (!OUTPUT_INTERPOLATION_TREE)
     return;
 
-  assert(ITreeGraph::instance && "Search tree graph not initialized");
+  assert(TxTreeGraph::instance && "Search tree graph not initialized");
 
-  ITreeGraph::Node *node = instance->itreeNodeMap[iTreeNode];
+  TxTreeGraph::Node *node = instance->itreeNodeMap[iTreeNode];
 
   std::string s = PrettyExpressionBuilder::construct(condition);
 
@@ -769,33 +770,33 @@ void ITreeGraph::addPathCondition(ITreeNode *iTreeNode,
   instance->pathConditionMap[pathCondition] = node;
 }
 
-void ITreeGraph::addTableEntryMapping(ITreeNode *iTreeNode,
+void TxTreeGraph::addTableEntryMapping(TxTreeNode *iTreeNode,
                                       SubsumptionTableEntry *entry) {
   if (!OUTPUT_INTERPOLATION_TREE)
     return;
 
-  assert(ITreeGraph::instance && "Search tree graph not initialized");
+  assert(TxTreeGraph::instance && "Search tree graph not initialized");
 
-  ITreeGraph::Node *node = instance->itreeNodeMap[iTreeNode];
+  TxTreeGraph::Node *node = instance->itreeNodeMap[iTreeNode];
   instance->tableEntryMap[entry] = node;
 }
 
-void ITreeGraph::setAsCore(PathCondition *pathCondition) {
+void TxTreeGraph::setAsCore(PathCondition *pathCondition) {
   if (!OUTPUT_INTERPOLATION_TREE)
     return;
 
-  assert(ITreeGraph::instance && "Search tree graph not initialized");
+  assert(TxTreeGraph::instance && "Search tree graph not initialized");
 
   instance->pathConditionMap[pathCondition]
       ->pathConditionTable[pathCondition]
       .second = true;
 }
 
-void ITreeGraph::setMemoryError(ExecutionState &state) {
+void TxTreeGraph::setMemoryError(ExecutionState &state) {
   if (!OUTPUT_INTERPOLATION_TREE)
     return;
 
-  ITreeGraph::Node *node = instance->itreeNodeMap[state.itreeNode];
+  TxTreeGraph::Node *node = instance->itreeNodeMap[state.itreeNode];
   node->memoryError = true;
 
   node->memoryErrorLocation = "";
@@ -811,11 +812,11 @@ void ITreeGraph::setMemoryError(ExecutionState &state) {
   }
 }
 
-void ITreeGraph::save(std::string dotFileName) {
+void TxTreeGraph::save(std::string dotFileName) {
   if (!OUTPUT_INTERPOLATION_TREE)
     return;
 
-  assert(ITreeGraph::instance && "Search tree graph not initialized");
+  assert(TxTreeGraph::instance && "Search tree graph not initialized");
 
   std::string g(instance->render());
   std::ofstream out(dotFileName.c_str());
@@ -856,7 +857,7 @@ void PathCondition::setAsCore() {
   core = true;
 
   // We mark constraint as core in the search tree graph as well.
-  ITreeGraph::setAsCore(this);
+  TxTreeGraph::setAsCore(this);
 }
 
 bool PathCondition::isCore() const { return core; }
@@ -918,7 +919,7 @@ Statistic SubsumptionTableEntry::solverAccessTime("solverAccessTime",
                                                   "solverAccessTime");
 
 SubsumptionTableEntry::SubsumptionTableEntry(
-    ITreeNode *node, const std::vector<llvm::Instruction *> &stack)
+    TxTreeNode *node, const std::vector<llvm::Instruction *> &stack)
     : programPoint(node->getProgramPoint()),
       nodeSequenceNumber(node->getNodeSequenceNumber()) {
   std::set<const Array *> replacements;
@@ -2288,7 +2289,7 @@ SubsumptionTable::instance;
 void SubsumptionTable::insert(uintptr_t id,
                               const std::vector<llvm::Instruction *> stack,
                               SubsumptionTableEntry *entry) {
-  ITree::entryNumber++; // Count of entries in the table
+  TxTree::entryNumber++; // Count of entries in the table
 
   StackIndexedTable *subTable = instance[id];
   if (!subTable) {
@@ -2302,7 +2303,7 @@ void SubsumptionTable::insert(uintptr_t id,
 
 bool SubsumptionTable::check(TimingSolver *solver, ExecutionState &state,
                              double timeout) {
-  ITreeNode *iTreeNode = state.itreeNode;
+  TxTreeNode *iTreeNode = state.itreeNode;
   StackIndexedTable *subTable = instance[state.itreeNode->getProgramPoint()];
   if (!subTable) {
     if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL ||
@@ -2343,7 +2344,7 @@ bool SubsumptionTable::check(TimingSolver *solver, ExecutionState &state,
         iTreeNode->isSubsumed = true;
 
         // Mark the node as subsumed, and create a subsumption edge
-        ITreeGraph::markAsSubsumed(iTreeNode, (*it));
+        TxTreeGraph::markAsSubsumed(iTreeNode, (*it));
         return true;
       }
     }
@@ -2356,7 +2357,7 @@ void SubsumptionTable::clear() {
                                                           ie = instance.end();
        it != ie; ++it) {
     if (it->second) {
-      ++ITree::programPointNumber;
+      ++TxTree::programPointNumber;
       delete it->second;
     }
   }
@@ -2364,26 +2365,26 @@ void SubsumptionTable::clear() {
 
 /**/
 
-Statistic ITree::setCurrentINodeTime("SetCurrentINodeTime",
+Statistic TxTree::setCurrentINodeTime("SetCurrentINodeTime",
                                      "SetCurrentINodeTime");
-Statistic ITree::removeTime("RemoveTime", "RemoveTime");
-Statistic ITree::subsumptionCheckTime("SubsumptionCheckTime",
+Statistic TxTree::removeTime("RemoveTime", "RemoveTime");
+Statistic TxTree::subsumptionCheckTime("SubsumptionCheckTime",
                                       "SubsumptionCheckTime");
-Statistic ITree::markPathConditionTime("MarkPathConditionTime", "MarkPCTime");
-Statistic ITree::splitTime("SplitTime", "SplitTime");
-Statistic ITree::executeOnNodeTime("ExecuteOnNodeTime", "ExecuteOnNodeTime");
-Statistic ITree::executeMemoryOperationTime("ExecuteMemoryOperationTime",
+Statistic TxTree::markPathConditionTime("MarkPathConditionTime", "MarkPCTime");
+Statistic TxTree::splitTime("SplitTime", "SplitTime");
+Statistic TxTree::executeOnNodeTime("ExecuteOnNodeTime", "ExecuteOnNodeTime");
+Statistic TxTree::executeMemoryOperationTime("ExecuteMemoryOperationTime",
                                             "ExecuteMemoryOperationTime");
 
-double ITree::entryNumber;
+double TxTree::entryNumber;
 
-double ITree::programPointNumber;
+double TxTree::programPointNumber;
 
-bool ITree::symbolicExecutionError = false;
+bool TxTree::symbolicExecutionError = false;
 
-uint64_t ITree::subsumptionCheckCount = 0;
+uint64_t TxTree::subsumptionCheckCount = 0;
 
-void ITree::printTimeStat(std::stringstream &stream) {
+void TxTree::printTimeStat(std::stringstream &stream) {
   stream << "KLEE: done:     setCurrentINode = "
          << ((double)setCurrentINodeTime.getValue()) / 1000 << "\n";
   stream << "KLEE: done:     remove = " << ((double)removeTime.getValue()) /
@@ -2400,7 +2401,7 @@ void ITree::printTimeStat(std::stringstream &stream) {
          << ((double)executeMemoryOperationTime.getValue()) / 1000 << "\n";
 }
 
-void ITree::printTableStat(std::stringstream &stream) {
+void TxTree::printTableStat(std::stringstream &stream) {
   SubsumptionTableEntry::printStat(stream);
 
   stream
@@ -2415,7 +2416,7 @@ void ITree::printTableStat(std::stringstream &stream) {
                                (double)subsumptionCheckCount) << "\n";
 }
 
-std::string ITree::inTwoDecimalPoints(const double n) {
+std::string TxTree::inTwoDecimalPoints(const double n) {
   std::ostringstream stream;
   unsigned long x = (unsigned)((n - ((unsigned)n)) * 100);
   unsigned y = (unsigned)n;
@@ -2429,28 +2430,28 @@ std::string ITree::inTwoDecimalPoints(const double n) {
   return stream.str();
 }
 
-std::string ITree::getInterpolationStat() {
+std::string TxTree::getInterpolationStat() {
   std::stringstream stream;
   stream << "\nKLEE: done: Subsumption statistics\n";
   printTableStat(stream);
   stream << "KLEE: done: ITree method execution times (ms):\n";
   printTimeStat(stream);
   stream << "KLEE: done: ITreeNode method execution times (ms):\n";
-  ITreeNode::printTimeStat(stream);
+  TxTreeNode::printTimeStat(stream);
   return stream.str();
 }
 
-ITree::ITree(ExecutionState *_root, llvm::DataLayout *_targetData)
+TxTree::TxTree(ExecutionState *_root, llvm::DataLayout *_targetData)
     : targetData(_targetData) {
   currentINode = 0;
   assert(_targetData && "target data layout not provided");
   if (!_root->itreeNode) {
-    currentINode = new ITreeNode(0, _targetData);
+    currentINode = new TxTreeNode(0, _targetData);
   }
   root = currentINode;
 }
 
-bool ITree::subsumptionCheck(TimingSolver *solver, ExecutionState &state,
+bool TxTree::subsumptionCheck(TimingSolver *solver, ExecutionState &state,
                              double timeout) {
 #ifdef ENABLE_Z3
   assert(state.itreeNode == currentINode);
@@ -2482,19 +2483,19 @@ bool ITree::subsumptionCheck(TimingSolver *solver, ExecutionState &state,
   return false;
 }
 
-void ITree::setCurrentINode(ExecutionState &state) {
+void TxTree::setCurrentINode(ExecutionState &state) {
   TimerStatIncrementer t(setCurrentINodeTime);
   currentINode = state.itreeNode;
   currentINode->setProgramPoint(state.pc->inst);
-  ITreeGraph::setCurrentNode(state, currentINode->nodeSequenceNumber);
+  TxTreeGraph::setCurrentNode(state, currentINode->nodeSequenceNumber);
 }
 
-void ITree::remove(ITreeNode *node) {
+void TxTree::remove(TxTreeNode *node) {
 #ifdef ENABLE_Z3
   TimerStatIncrementer t(removeTime);
   assert(!node->left && !node->right);
   do {
-    ITreeNode *p = node->parent;
+    TxTreeNode *p = node->parent;
 
     // As the node is about to be deleted, it must have been completely
     // traversed, hence the correct time to table the interpolant.
@@ -2512,7 +2513,7 @@ void ITree::remove(ITreeNode *node) {
       SubsumptionTable::insert(node->getProgramPoint(), node->entryCallStack,
                                entry);
 
-      ITreeGraph::addTableEntryMapping(node, entry);
+      TxTreeGraph::addTableEntryMapping(node, entry);
 
       if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL) {
         std::string msg;
@@ -2537,16 +2538,16 @@ void ITree::remove(ITreeNode *node) {
 #endif
 }
 
-std::pair<ITreeNode *, ITreeNode *>
-ITree::split(ITreeNode *parent, ExecutionState *left, ExecutionState *right) {
+std::pair<TxTreeNode *, TxTreeNode *>
+TxTree::split(TxTreeNode *parent, ExecutionState *left, ExecutionState *right) {
   TimerStatIncrementer t(splitTime);
   parent->split(left, right);
-  ITreeGraph::addChildren(parent, parent->left, parent->right);
-  std::pair<ITreeNode *, ITreeNode *> ret(parent->left, parent->right);
+  TxTreeGraph::addChildren(parent, parent->left, parent->right);
+  std::pair<TxTreeNode *, TxTreeNode *> ret(parent->left, parent->right);
   return ret;
 }
 
-void ITree::markPathCondition(ExecutionState &state, TimingSolver *solver) {
+void TxTree::markPathCondition(ExecutionState &state, TimingSolver *solver) {
   TimerStatIncrementer t(markPathConditionTime);
   std::vector<ref<Expr> > unsatCore = solver->getUnsatCore();
 
@@ -2575,25 +2576,25 @@ void ITree::markPathCondition(ExecutionState &state, TimingSolver *solver) {
   }
 }
 
-void ITree::execute(llvm::Instruction *instr) {
+void TxTree::execute(llvm::Instruction *instr) {
   std::vector<ref<Expr> > dummyArgs;
   executeOnNode(currentINode, instr, dummyArgs);
 }
 
-void ITree::execute(llvm::Instruction *instr, ref<Expr> arg1) {
+void TxTree::execute(llvm::Instruction *instr, ref<Expr> arg1) {
   std::vector<ref<Expr> > args;
   args.push_back(arg1);
   executeOnNode(currentINode, instr, args);
 }
 
-void ITree::execute(llvm::Instruction *instr, ref<Expr> arg1, ref<Expr> arg2) {
+void TxTree::execute(llvm::Instruction *instr, ref<Expr> arg1, ref<Expr> arg2) {
   std::vector<ref<Expr> > args;
   args.push_back(arg1);
   args.push_back(arg2);
   executeOnNode(currentINode, instr, args);
 }
 
-void ITree::execute(llvm::Instruction *instr, ref<Expr> arg1, ref<Expr> arg2,
+void TxTree::execute(llvm::Instruction *instr, ref<Expr> arg1, ref<Expr> arg2,
                     ref<Expr> arg3) {
   std::vector<ref<Expr> > args;
   args.push_back(arg1);
@@ -2602,11 +2603,11 @@ void ITree::execute(llvm::Instruction *instr, ref<Expr> arg1, ref<Expr> arg2,
   executeOnNode(currentINode, instr, args);
 }
 
-void ITree::execute(llvm::Instruction *instr, std::vector<ref<Expr> > &args) {
+void TxTree::execute(llvm::Instruction *instr, std::vector<ref<Expr> > &args) {
   executeOnNode(currentINode, instr, args);
 }
 
-void ITree::executePHI(llvm::Instruction *instr, unsigned incomingBlock,
+void TxTree::executePHI(llvm::Instruction *instr, unsigned incomingBlock,
                        ref<Expr> valueExpr) {
   currentINode->dependency->executePHI(instr, incomingBlock,
                                        currentINode->callStack, valueExpr,
@@ -2614,14 +2615,14 @@ void ITree::executePHI(llvm::Instruction *instr, unsigned incomingBlock,
   symbolicExecutionError = false;
 }
 
-void ITree::executeOnNode(ITreeNode *node, llvm::Instruction *instr,
+void TxTree::executeOnNode(TxTreeNode *node, llvm::Instruction *instr,
                           std::vector<ref<Expr> > &args) {
   TimerStatIncrementer t(executeOnNodeTime);
   node->execute(instr, args, symbolicExecutionError);
   symbolicExecutionError = false;
 }
 
-void ITree::printNode(llvm::raw_ostream &stream, ITreeNode *n,
+void TxTree::printNode(llvm::raw_ostream &stream, TxTreeNode *n,
                       std::string edges) const {
   if (n->left != 0) {
     stream << "\n";
@@ -2645,7 +2646,7 @@ void ITree::printNode(llvm::raw_ostream &stream, ITreeNode *n,
   }
 }
 
-void ITree::print(llvm::raw_ostream &stream) const {
+void TxTree::print(llvm::raw_ostream &stream) const {
   stream << "------------------------- ITree Structure "
             "---------------------------\n";
   stream << this->root->programPoint;
@@ -2658,31 +2659,31 @@ void ITree::print(llvm::raw_ostream &stream) const {
   SubsumptionTable::print(stream);
 }
 
-void ITree::dump() const { this->print(llvm::errs()); }
+void TxTree::dump() const { this->print(llvm::errs()); }
 
 /**/
 
 // Statistics
-Statistic ITreeNode::getInterpolantTime("GetInterpolantTime",
+Statistic TxTreeNode::getInterpolantTime("GetInterpolantTime",
                                         "GetInterpolantTime");
-Statistic ITreeNode::addConstraintTime("AddConstraintTime",
+Statistic TxTreeNode::addConstraintTime("AddConstraintTime",
                                        "AddConstraintTime");
-Statistic ITreeNode::splitTime("SplitTime", "SplitTime");
-Statistic ITreeNode::executeTime("ExecuteTime", "ExecuteTime");
-Statistic ITreeNode::bindCallArgumentsTime("BindCallArgumentsTime",
+Statistic TxTreeNode::splitTime("SplitTime", "SplitTime");
+Statistic TxTreeNode::executeTime("ExecuteTime", "ExecuteTime");
+Statistic TxTreeNode::bindCallArgumentsTime("BindCallArgumentsTime",
                                            "BindCallArgumentsTime");
-Statistic ITreeNode::bindReturnValueTime("BindReturnValueTime",
+Statistic TxTreeNode::bindReturnValueTime("BindReturnValueTime",
                                          "BindReturnValueTime");
-Statistic ITreeNode::getStoredExpressionsTime("GetStoredExpressionsTime",
+Statistic TxTreeNode::getStoredExpressionsTime("GetStoredExpressionsTime",
                                               "GetStoredExpressionsTime");
 Statistic
-ITreeNode::getStoredCoreExpressionsTime("GetStoredCoreExpressionsTime",
+TxTreeNode::getStoredCoreExpressionsTime("GetStoredCoreExpressionsTime",
                                         "GetStoredCoreExpressionsTime");
 
 // The interpolation tree node sequence number
-uint64_t ITreeNode::nextNodeSequenceNumber = 1;
+uint64_t TxTreeNode::nextNodeSequenceNumber = 1;
 
-void ITreeNode::printTimeStat(std::stringstream &stream) {
+void TxTreeNode::printTimeStat(std::stringstream &stream) {
   stream << "KLEE: done:     getInterpolant = "
          << ((double)getInterpolantTime.getValue()) / 1000 << "\n";
   stream << "KLEE: done:     addConstraintTime = "
@@ -2701,7 +2702,7 @@ void ITreeNode::printTimeStat(std::stringstream &stream) {
          << ((double)getStoredCoreExpressionsTime.getValue()) / 1000 << "\n";
 }
 
-ITreeNode::ITreeNode(ITreeNode *_parent, llvm::DataLayout *_targetData)
+TxTreeNode::TxTreeNode(TxTreeNode *_parent, llvm::DataLayout *_targetData)
     : parent(_parent), left(0), right(0), programPoint(0),
       nodeSequenceNumber(nextNodeSequenceNumber++), storable(true),
       graph(_parent ? _parent->graph : 0),
@@ -2719,7 +2720,7 @@ ITreeNode::ITreeNode(ITreeNode *_parent, llvm::DataLayout *_targetData)
   dependency = new Dependency(_parent ? _parent->dependency : 0, _targetData);
 }
 
-ITreeNode::~ITreeNode() {
+TxTreeNode::~TxTreeNode() {
   // Only delete the path condition if it's not
   // also the parent's path condition
   PathCondition *ie = parent ? parent->pathCondition : 0;
@@ -2736,39 +2737,39 @@ ITreeNode::~ITreeNode() {
 }
 
 ref<Expr>
-ITreeNode::getInterpolant(std::set<const Array *> &replacements) const {
+TxTreeNode::getInterpolant(std::set<const Array *> &replacements) const {
   TimerStatIncrementer t(getInterpolantTime);
   ref<Expr> expr = this->pathCondition->packInterpolant(replacements);
   return expr;
 }
 
-void ITreeNode::addConstraint(ref<Expr> &constraint, llvm::Value *condition) {
+void TxTreeNode::addConstraint(ref<Expr> &constraint, llvm::Value *condition) {
   TimerStatIncrementer t(addConstraintTime);
   pathCondition = new PathCondition(constraint, dependency, condition,
                                     callStack, pathCondition);
   graph->addPathCondition(this, pathCondition, constraint);
 }
 
-void ITreeNode::split(ExecutionState *leftData, ExecutionState *rightData) {
+void TxTreeNode::split(ExecutionState *leftData, ExecutionState *rightData) {
   TimerStatIncrementer t(splitTime);
   assert(left == 0 && right == 0);
-  leftData->itreeNode = left = new ITreeNode(this, targetData);
-  rightData->itreeNode = right = new ITreeNode(this, targetData);
+  leftData->itreeNode = left = new TxTreeNode(this, targetData);
+  rightData->itreeNode = right = new TxTreeNode(this, targetData);
 }
 
-void ITreeNode::execute(llvm::Instruction *instr, std::vector<ref<Expr> > &args,
+void TxTreeNode::execute(llvm::Instruction *instr, std::vector<ref<Expr> > &args,
                         bool symbolicExecutionError) {
   TimerStatIncrementer t(executeTime);
   dependency->execute(instr, callStack, args, symbolicExecutionError);
 }
 
-void ITreeNode::bindCallArguments(llvm::Instruction *site,
+void TxTreeNode::bindCallArguments(llvm::Instruction *site,
                                   std::vector<ref<Expr> > &arguments) {
   TimerStatIncrementer t(bindCallArgumentsTime);
   dependency->bindCallArguments(site, callStack, arguments);
 }
 
-void ITreeNode::bindReturnValue(llvm::CallInst *site, llvm::Instruction *inst,
+void TxTreeNode::bindReturnValue(llvm::CallInst *site, llvm::Instruction *inst,
                                 ref<Expr> returnValue) {
   // TODO: This is probably where we should simplify
   // the dependency graph by removing callee values.
@@ -2777,7 +2778,7 @@ void ITreeNode::bindReturnValue(llvm::CallInst *site, llvm::Instruction *inst,
 }
 
 std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
-ITreeNode::getStoredExpressions(const std::vector<llvm::Instruction *> &stack)
+TxTreeNode::getStoredExpressions(const std::vector<llvm::Instruction *> &stack)
     const {
   TimerStatIncrementer t(getStoredExpressionsTime);
   std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore> ret;
@@ -2793,7 +2794,7 @@ ITreeNode::getStoredExpressions(const std::vector<llvm::Instruction *> &stack)
 }
 
 std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
-ITreeNode::getStoredCoreExpressions(
+TxTreeNode::getStoredCoreExpressions(
     const std::vector<llvm::Instruction *> &stack,
     std::set<const Array *> &replacements) const {
   TimerStatIncrementer t(getStoredCoreExpressionsTime);
@@ -2807,11 +2808,11 @@ ITreeNode::getStoredCoreExpressions(
   return ret;
 }
 
-uint64_t ITreeNode::getInstructionsDepth() { return instructionsDepth; }
+uint64_t TxTreeNode::getInstructionsDepth() { return instructionsDepth; }
 
-void ITreeNode::incInstructionsDepth() { ++instructionsDepth; }
+void TxTreeNode::incInstructionsDepth() { ++instructionsDepth; }
 
-void ITreeNode::unsatCoreInterpolation(std::vector<ref<Expr> > unsatCore) {
+void TxTreeNode::unsatCoreInterpolation(std::vector<ref<Expr> > unsatCore) {
   // State subsumed, we mark needed constraints on the path condition. We create
   // path condition marking structure to mark core constraints
   std::map<Expr *, PathCondition *> markerMap;
@@ -2838,18 +2839,18 @@ void ITreeNode::unsatCoreInterpolation(std::vector<ref<Expr> > unsatCore) {
   }
 }
 
-void ITreeNode::dump() const {
+void TxTreeNode::dump() const {
   llvm::errs() << "------------------------- ITree Node "
                   "--------------------------------\n";
   this->print(llvm::errs());
   llvm::errs() << "\n";
 }
 
-void ITreeNode::print(llvm::raw_ostream &stream) const {
+void TxTreeNode::print(llvm::raw_ostream &stream) const {
   this->print(stream, 0);
 }
 
-void ITreeNode::print(llvm::raw_ostream &stream,
+void TxTreeNode::print(llvm::raw_ostream &stream,
                       const unsigned paddingAmount) const {
   std::string tabs = makeTabs(paddingAmount);
   std::string tabsNext = appendTab(tabs);

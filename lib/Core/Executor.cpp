@@ -15,7 +15,6 @@
 #include "Memory.h"
 #include "MemoryManager.h"
 #include "PTree.h"
-#include "ITree.h"
 #include "Searcher.h"
 #include "SeedInfo.h"
 #include "SpecialFunctionHandler.h"
@@ -48,6 +47,7 @@
 #include "klee/Internal/System/Time.h"
 #include "klee/Internal/System/MemoryUsage.h"
 #include "klee/SolverStats.h"
+#include "TxTree.h"
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
 #include "llvm/IR/Function.h"
@@ -696,7 +696,7 @@ void Executor::branch(ExecutionState &state,
       es->ptreeNode = res.second;
 
       if (INTERPOLATION_ENABLED) {
-        std::pair<ITreeNode *, ITreeNode *> ires =
+        std::pair<TxTreeNode *, TxTreeNode *> ires =
 	  interpTree->split(es->itreeNode, ns, es);
         ns->itreeNode = ires.first;
         es->itreeNode = ires.second;
@@ -991,7 +991,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     }
 
     if (INTERPOLATION_ENABLED) {
-      std::pair<ITreeNode *, ITreeNode *> ires =
+      std::pair<TxTreeNode *, TxTreeNode *> ires =
 	  interpTree->split(current.itreeNode, falseState, trueState);
       falseState->itreeNode = ires.first;
       trueState->itreeNode = ires.second;
@@ -1232,7 +1232,7 @@ void Executor::executeGetValue(ExecutionState &state,
         std::vector<ref<Expr> > args;
         args.push_back(e);
         args.push_back(*vit);
-        ITree::executeOnNode(es->itreeNode, target->inst, args);
+        TxTree::executeOnNode(es->itreeNode, target->inst, args);
       }
       ++bit;
     }
@@ -3769,7 +3769,7 @@ void Executor::executeMemoryOperation(ExecutionState &state, bool isWrite,
 
           // Update dependency
           if (INTERPOLATION_ENABLED && target)
-            ITree::executeMemoryOperationOnNode(bound->itreeNode, target->inst,
+            TxTree::executeMemoryOperationOnNode(bound->itreeNode, target->inst,
                                                 value, address, false);
         }
       } else {
@@ -3778,7 +3778,7 @@ void Executor::executeMemoryOperation(ExecutionState &state, bool isWrite,
 
         // Update dependency
         if (INTERPOLATION_ENABLED && target)
-          ITree::executeMemoryOperationOnNode(bound->itreeNode, target->inst,
+          TxTree::executeMemoryOperationOnNode(bound->itreeNode, target->inst,
                                               result, address, false);
       }
     }
@@ -3791,7 +3791,7 @@ void Executor::executeMemoryOperation(ExecutionState &state, bool isWrite,
   // XXX should we distinguish out of bounds and overlapped cases?
   if (unbound) {
     if (INTERPOLATION_ENABLED)
-      ITree::symbolicExecutionError =
+      TxTree::symbolicExecutionError =
           true; // We let interpolation subsystem knows we are recovering from
                 // error, hence the previous expression may not be recorded
 
@@ -3801,7 +3801,7 @@ void Executor::executeMemoryOperation(ExecutionState &state, bool isWrite,
       terminateStateOnError(*unbound, "memory error: out of bound pointer", Ptr,
                             NULL, getAddressInfo(*unbound, address));
 
-      ITreeGraph::setMemoryError(state);
+      TxTreeGraph::setMemoryError(state);
     }
   }
 }
@@ -3983,9 +3983,9 @@ void Executor::runFunctionAsMain(Function *f,
   state->ptreeNode = processTree->root;
 
   if (INTERPOLATION_ENABLED) {
-    interpTree = new ITree(state, kmodule->targetData); // Added by Felicia
+    interpTree = new TxTree(state, kmodule->targetData); // Added by Felicia
     state->itreeNode = interpTree->root;
-    ITreeGraph::initialize(interpTree->root);
+    TxTreeGraph::initialize(interpTree->root);
   }
 
   run(*state);
@@ -3993,8 +3993,8 @@ void Executor::runFunctionAsMain(Function *f,
   processTree = 0;
 
   if (INTERPOLATION_ENABLED) {
-    ITreeGraph::save(interpreterHandler->getOutputFilename("tree.dot"));
-    ITreeGraph::deallocate();
+    TxTreeGraph::save(interpreterHandler->getOutputFilename("tree.dot"));
+    TxTreeGraph::deallocate();
 
     delete interpTree;
     interpTree = 0;
@@ -4002,7 +4002,7 @@ void Executor::runFunctionAsMain(Function *f,
 #ifdef ENABLE_Z3
     // Print interpolation time statistics
     if (InterpolationStat)
-      interpreterHandler->assignSubsumptionStats(ITree::getInterpolationStat());
+      interpreterHandler->assignSubsumptionStats(TxTree::getInterpolationStat());
 #endif
   }
 

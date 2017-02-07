@@ -65,8 +65,8 @@ namespace klee {
   class MemoryObject;
   class ObjectState;
   class PTree;
-  class ITree; 
-  class ITreeNode;
+  class TxTree; 
+  class TxTreeNode;
   class Searcher;
   class SeedInfo;
   class SpecialFunctionHandler;
@@ -136,7 +136,7 @@ private:
   SpecialFunctionHandler *specialFunctionHandler;
   std::vector<TimerInfo*> timers;
   PTree *processTree;
-  ITree *interpTree; 
+  TxTree *interpTree; 
   ref<Expr> latestBaseLeft;
   ref<Expr> latestBaseRight;
   /// Used to track states that have been added during the current

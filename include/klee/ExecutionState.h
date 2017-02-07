@@ -37,7 +37,7 @@ struct KFunction;
 struct KInstruction;
 class MemoryObject;
 class PTreeNode;
-class ITreeNode;
+class TxTreeNode;
 struct InstructionInfo;
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const MemoryMap &mm);
@@ -144,7 +144,7 @@ public:
   PTreeNode *ptreeNode;
 
   /// @brief Pointer to the interpolation tree of the current state
-  ITreeNode *itreeNode;
+  TxTreeNode *itreeNode;
 
   /// @brief Ordered list of symbolics: used to generate test cases.
   //

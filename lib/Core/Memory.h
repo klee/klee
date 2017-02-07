@@ -11,13 +11,13 @@
 #define KLEE_MEMORY_H
 
 #include "Context.h"
-#include "ITree.h"
 #include "klee/Expr.h"
 
 #include "llvm/ADT/StringExtras.h"
 
 #include <vector>
 #include <string>
+#include "TxTree.h"
 
 namespace llvm {
   class Value;
