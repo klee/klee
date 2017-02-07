@@ -77,7 +77,7 @@ void TreeStreamWriter::write(TreeOStream &os, const char *s, unsigned size) {
   } else {
     output->write(reinterpret_cast<const char*>(&os.id), 4);
     output->write(reinterpret_cast<const char*>(&size), 4);
-    output->write(buffer, size);
+    output->write(s, size);//need to write s directly
   }
 #else
   output->write(reinterpret_cast<const char*>(&os.id), 4);

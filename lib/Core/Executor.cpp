@@ -971,6 +971,16 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
         falseState->symPathOS << "0";
       }
     }
+    else{
+    	// Need to update the pathOS.id field of falseState, otherwise the same id is used
+    	// for both falseState and trueState.
+    	if (pathWriter) {
+		falseState->pathOS = pathWriter->open(current.pathOS);
+	  }
+	  if (symPathWriter) {
+		falseState->symPathOS = symPathWriter->open(current.symPathOS);
+	  }
+    }
 
     addConstraint(*trueState, condition);
     addConstraint(*falseState, Expr::createIsZero(condition));
