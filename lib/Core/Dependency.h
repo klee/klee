@@ -297,30 +297,6 @@ namespace klee {
     void print(llvm::raw_ostream& stream) const;
   };
 
-  inline bool operator==(const MemoryLocation &lhs, const MemoryLocation &rhs) {
-    return lhs.compare(rhs) == 0;
-  }
-
-  inline bool operator<(const MemoryLocation &lhs, const MemoryLocation &rhs) {
-    return lhs.compare(rhs) < 0;
-  }
-
-  inline bool operator>(const MemoryLocation &lhs, const MemoryLocation &rhs) {
-    return lhs.compare(rhs) > 0;
-  }
-
-  inline bool operator<=(const MemoryLocation &lhs, const MemoryLocation &rhs) {
-    return !(lhs > rhs);
-  }
-
-  inline bool operator>=(const MemoryLocation &lhs, const MemoryLocation &rhs) {
-    return !(lhs < rhs);
-  }
-
-  inline bool operator!=(const MemoryLocation &lhs, const MemoryLocation &rhs) {
-    return !(lhs == rhs);
-  }
-
   /// \brief A class that represents LLVM value that can be destructively
   /// updated (versioned).
   class VersionedValue {
