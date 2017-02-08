@@ -245,7 +245,7 @@ namespace klee {
 
       if (offset == other.offset)
         return 0;
-      if (concreteOffset && other.concreteOffset) {
+      if (isConcrete && other.isConcrete) {
         if (concreteOffset < other.concreteOffset)
           return -1;
         return 1;
