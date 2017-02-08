@@ -82,19 +82,11 @@ if (NOT ENV_BINARY)
   message(FATAL_ERROR "Failed to find env binary")
 endif()
 
-# Unfortunately `BUILD_ALWAYS` only seems to be supported with the version of ExternalProject
-# that shipped with CMake >= 3.1. Should we just avoid using this option? We don't really
-# need it unless we are patching gsl itself and need to rebuild.
-if (("${CMAKE_VERSION}" VERSION_EQUAL "3.1") OR ("${CMAKE_VERSION}" VERSION_GREATER "3.1"))
-  option(KLEE_RUNTIME_ALWAYS_REBUILD "Always try to rebuild KLEE runtime" ON)
-  if (KLEE_RUNTIME_ALWAYS_REBUILD)
-    set(EXTERNAL_PROJECT_BUILD_ALWAYS_ARG BUILD_ALWAYS 1)
-  else()
-    set(EXTERNAL_PROJECT_BUILD_ALWAYS_ARG BUILD_ALWAYS 0)
-  endif()
+option(KLEE_RUNTIME_ALWAYS_REBUILD "Always try to rebuild KLEE runtime" ON)
+if (KLEE_RUNTIME_ALWAYS_REBUILD)
+  set(EXTERNAL_PROJECT_BUILD_ALWAYS_ARG 1)
 else()
-  set(EXTERNAL_PROJECT_BUILD_ALWAYS_ARG "")
-  message(WARNING "KLEE's runtime will not be automatically rebuilt.")
+  set(EXTERNAL_PROJECT_BUILD_ALWAYS_ARG 0)
 endif()
 
 # Build the runtime as an external project.
@@ -106,11 +98,19 @@ ExternalProject_Add(BuildKLEERuntimes
   SOURCE_DIR "${CMAKE_CURRENT_BINARY_DIR}"
   BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}"
   CONFIGURE_COMMAND "${CMAKE_COMMAND}" -E echo "" # Dummy command
+  BUILD_COMMAND "${CMAKE_COMMAND}" -E echo "" # Dummy command
+  INSTALL_COMMAND "${CMAKE_COMMAND}" -E echo "" # Dummy command
+)
+
+# Use `ExternalProject_Add_Step` with `ALWAYS` argument instead of directly
+# building in `ExternalProject_Add` with `BUILD_ALWAYS` argument due to lack of
+# support for the `BUILD_ALWAYS` argument in CMake < 3.1.
+ExternalProject_Add_Step(BuildKLEERuntimes RuntimeBuild
   # `env` is used here to make sure `MAKEFLAGS` of KLEE's build
   # is not propagated into the bitcode build system.
-  BUILD_COMMAND ${ENV_BINARY} MAKEFLAGS="" ${MAKE_BINARY} -f Makefile.cmake.bitcode all
-  ${EXTERNAL_PROJECT_BUILD_ALWAYS_ARG}
-  INSTALL_COMMAND "${CMAKE_COMMAND}" -E echo "" # Dummy command
+  COMMAND ${ENV_BINARY} MAKEFLAGS="" ${MAKE_BINARY} -f Makefile.cmake.bitcode all
+  ALWAYS ${EXTERNAL_PROJECT_BUILD_ALWAYS_ARG}
+  WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
 )
 
 # FIXME: Invoke `make clean` in the bitcode build system
