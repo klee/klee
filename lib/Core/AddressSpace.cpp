@@ -285,6 +285,20 @@ bool AddressSpace::resolve(ExecutionState &state,
   return false;
 }
 
+const MemoryObject* AddressSpace::getAnyDynamicObject() {
+  for (MemoryMap::iterator it = objects.begin(), ie = objects.end(); 
+       it != ie; ++it) {
+    const MemoryObject *mo = it->first;
+
+    if (mo->isLocal || mo->isGlobal) {
+      continue;
+    } else {
+      return mo;
+    }
+  }
+  return NULL;
+}
+
 // These two are pretty big hack so we can sort of pass memory back
 // and forth to externals. They work by abusing the concrete cache
 // store inside of the object states, which allows them to

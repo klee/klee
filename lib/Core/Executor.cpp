@@ -1528,6 +1528,16 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     }
     
     if (state.stack.size() <= 1) {
+      const MemoryObject* mo = state.addressSpace.getAnyDynamicObject();
+      if (mo) {
+          std::string alloc_info;
+
+          mo->getAllocInfo(alloc_info);
+          terminateStateOnError(state,
+                        "memory error: memory leak ",
+                        Ptr, NULL, alloc_info);
+          return;
+      }
       assert(!caller && "caller set on initial stack frame");
       terminateStateOnExit(state);
     } else {
