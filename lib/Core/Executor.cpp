@@ -290,7 +290,7 @@ namespace {
 		    clEnumValEnd),
 		  cl::ZeroOrMore);
 
-  cl::opt<unsigned long long>
+  cl::opt<unsigned int>
   StopAfterNInstructions("stop-after-n-instructions",
                          cl::desc("Stop execution after specified number of instructions (default=0 (off))"),
                          cl::init(0));
