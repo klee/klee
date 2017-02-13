@@ -22,13 +22,13 @@ namespace klee {
       assert(N <= 32);
       if (N==0)
         return 0;
-      return ((unsigned) -1) >> (32 - N);
+      return (UINT32_C(-1)) >> (32 - N);
     }
 
     // @pre(0 < N <= 32)
     inline unsigned truncateToNBits(unsigned x, unsigned N) {
       assert(N > 0 && N <= 32);
-      return x&(((unsigned) -1) >> (32 - N));
+      return x&((UINT32_C(-1)) >> (32 - N));
     }
 
     inline unsigned withoutRightmostBit(unsigned x) {
@@ -71,13 +71,13 @@ namespace klee {
       assert(N <= 64);
       if (N==0)
         return 0;
-      return ((uint64_t) (int64_t) -1) >> (64 - N);
+      return ((UINT64_C(-1)) >> (64 - N));
     }
     
     // @pre(0 < N <= 64)
     inline uint64_t truncateToNBits(uint64_t x, unsigned N) {
       assert(N > 0 && N <= 64);
-      return x&(((uint64_t) (int64_t) -1) >> (64 - N));
+      return x&((UINT64_C(-1)) >> (64 - N));
     }
 
     inline uint64_t withoutRightmostBit(uint64_t x) {
@@ -98,7 +98,7 @@ namespace klee {
     inline unsigned indexOfSingleBit(uint64_t x) {
       assert((x & (x - 1)) == 0);
       unsigned res = bits32::indexOfSingleBit((unsigned) (x | (x>>32)));
-      if (x & ((uint64_t)0xFFFFFFFF << 32))
+      if (x & (UINT64_C(0xFFFFFFFF) << 32))
         res += 32;
       assert(res < 64);
       assert((UINT64_C(1) << res) == x);
