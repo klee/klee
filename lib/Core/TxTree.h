@@ -577,7 +577,7 @@ public:
 /// The interpolation tree node has an associated KLEE execution state
 /// (implemented using the type ExecutionState) from which it is referenced
 /// via the member variable ExecutionState#itreeNode.
-/// It adds information for lazy annotation to the ExecutionState object.
+/// It adds information for abstraction learning to the ExecutionState object.
 /// The whole structure of the interpolation tree itself is maintained by
 /// the class TxTree, which also refers to objects of type TxTreeNode via
 /// its TxTree#root and TxTree#currentINode member variables.
@@ -747,13 +747,13 @@ private:
   void print(llvm::raw_ostream &stream, const unsigned paddingAmount) const;
 };
 
-/// \brief The top-level structure that implements lazy annotation.
+/// \brief The top-level structure that implements abstraction learning.
 ///
 /// The name TxTree is an abbreviation of <i>interpolation tree</i>. The
 /// interpolation
 /// tree is just the symbolic execution tree, a parallel of what is implemented
 /// by KLEE's existing PTree class, however, it adds shadow information for use
-/// in lazy annotation. Each node of the interpolation tree is implemented in
+/// in abstraction learning. Each node of the interpolation tree is implemented in
 /// the TxTreeNode class. The TxTree class itself contains several important
 /// components:
 ///
@@ -805,7 +805,7 @@ private:
 /// To see how everything fits together, first we explain the important parts of
 /// KLEE's
 /// algorithm, and then we explain the modifications to KLEE's algorithm for
-/// lazy annotation.
+/// abstraction learning.
 ///
 /// Following is the pseudocode of KLEE relevant to our discussion:
 ///
