@@ -112,6 +112,11 @@ else
 fi
 
 ###############################################################################
+# Handle Sanitizer flags
+###############################################################################
+source ${KLEE_SRC}/.travis/sanitizer_flags.sh
+
+###############################################################################
 # KLEE
 ###############################################################################
 mkdir klee
@@ -131,7 +136,8 @@ if [ "X${USE_CMAKE}" == "X1" ]; then
     CMAKE_BUILD_TYPE="Debug"
   fi
   # Compute CMake build type
-  CXXFLAGS="${COVERAGE_FLAGS}" \
+  CXXFLAGS="${COVERAGE_FLAGS} ${SANITIZER_CXX_FLAGS}" \
+  CFLAGS="${COVERAGE_FLAGS} ${SANITIZER_C_FLAGS}" \
   cmake \
     -DLLVM_CONFIG_BINARY="/usr/lib/llvm-${LLVM_VERSION}/bin/llvm-config" \
     -DLLVMCC="${KLEE_CC}" \
@@ -163,11 +169,12 @@ else
               ${KLEE_METASMT_CONFIGURE_OPTION} \
               ${KLEE_UCLIBC_CONFIGURE_OPTION} \
               ${TCMALLOC_OPTION} \
-              CXXFLAGS="${COVERAGE_FLAGS}"
-  make \
-    DISABLE_ASSERTIONS=${DISABLE_ASSERTIONS} \
-    ENABLE_OPTIMIZED=${ENABLE_OPTIMIZED} \
-    ENABLE_SHARED=0
+              CXXFLAGS="${COVERAGE_FLAGS} ${SANITIZER_CXX_FLAGS}" \
+              CFLAGS="${COVERAGE_FLAGS} ${SANITIZER_C_FLAGS}" \
+              LDFLAGS="${SANITIZER_LD_FLAGS}"
+  make  DISABLE_ASSERTIONS=${DISABLE_ASSERTIONS} \
+        ENABLE_OPTIMIZED=${ENABLE_OPTIMIZED} \
+        ENABLE_SHARED=0
 fi
 
 ###############################################################################

@@ -56,8 +56,14 @@ ifeq ($(HOST_OS), $(filter $(HOST_OS), DragonFly Linux FreeBSD GNU/kFreeBSD GNU)
 endif
 
 ifeq ($(HOST_OS), $(filter $(HOST_OS), Linux GNU GNU/kFreeBSD))
+  ifeq (-fsanitize=address,$(filter -fsanitize=address,$(CXXFLAGS)))
+    # When building with ASan the library will have undefined symbols into
+    # ASan's runtime. We want to allow this and not fail the build.
+    $(warning Allowing undefined symbols in $(LIBRARYNAME) due to ASan build)
+  else
     # Don't allow unresolved symbols.
     LLVMLibsOptions += -Wl,--no-undefined
+  endif
 endif
 
 ifeq ($(HOST_OS), Linux)

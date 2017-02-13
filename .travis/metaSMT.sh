@@ -8,6 +8,12 @@ git clone git://github.com/hoangmle/metaSMT.git
 cd metaSMT
 git clone git://github.com/agra-uni-bremen/dependencies.git
 
+source ${KLEE_SRC}/.travis/sanitizer_flags.sh
+if [ "X${IS_SANITIZED_BUILD}" != "X0" ]; then
+  echo "Error: Requested Sanitized build but sanitized build of metaSMT is not implemented"
+  exit 1
+fi
+
 # Bootstrap
 export BOOST_ROOT=/usr
 sudo cp dependencies/Z3-2.19/Z3Config.cmake /usr # this is a hack

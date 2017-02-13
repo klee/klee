@@ -74,7 +74,7 @@ lit.site.cfg: lit.site.cfg.in
 	     -e "s#@HAVE_SELINUX@#$(HAVE_SELINUX)#g" \
 	     -e "s#@ENABLE_STP@#$(ENABLE_STP)#g" \
 	     -e "s#@ENABLE_Z3@#$(ENABLE_Z3)#g" \
-	     -e "s#@NATIVE_CC@#$(CC) -I$(PROJ_SRC_ROOT)/include#g" \
-	     -e "s#@NATIVE_CXX@#$(CXX) -I$(PROJ_SRC_ROOT)/include#g" \
+	     -e "s#@NATIVE_CC@#$(CC) $(CFLAGS) -I$(PROJ_SRC_ROOT)/include#g" \
+	     -e "s#@NATIVE_CXX@#$(CXX) $(CXXFLAGS) -I$(PROJ_SRC_ROOT)/include#g" \
 	     -e "s#@LIB_KLEE_RUN_TEST_PATH@#$(SharedLibDir)/$(SharedPrefix)kleeRuntest$(SHLIBEXT)#g" \
 	     $(PROJ_SRC_DIR)/lit.site.cfg.in > $@

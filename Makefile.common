@@ -80,8 +80,14 @@ endif
 # For metaSMT
 include $(PROJ_SRC_ROOT)/MetaSMT.mk
 
-# If building KLEE with the Sanitizers don't build the runtime with it
-# because KLEE doesn't know how to handle it.
+# When building the runtime filter out unwanted flags.
+# that add instrumentatation because KLEE can't handle this.
 ifneq ("X$(MODULE_NAME)$(BYTECODE_LIBRARY)X","XX")
+  # Sanitizer flags.
   CFLAGS := $(filter-out -fsanitize=%,$(CFLAGS))
+  # Coverag flags.
+  CFLAGS := $(filter-out -fprofile-arcs,$(CFLAGS))
+  CFLAGS := $(filter-out -ftest-coverage,$(CFLAGS))
+  CFLAGS := $(filter-out -coverage,$(CFLAGS))
+  CFLAGS := $(filter-out --coverage,$(CFLAGS))
 endif
