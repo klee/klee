@@ -1,4 +1,4 @@
-//===-- TxTree.h - Interpolation tree ---------------------------*- C++ -*-===//
+//===-- TxTree.h - Tracer-X symbolic execution tree -------------*- C++ -*-===//
 //
 //               The Tracer-X KLEE Symbolic Virtual Machine
 //
@@ -566,7 +566,7 @@ public:
   void print(llvm::raw_ostream &stream, const unsigned paddingAmount) const;
 };
 
-/// \brief The interpolation tree node.
+/// \brief The Tracer-X symbolic execution tree node.
 ///
 /// This class is a higher-level wrapper to the path condition (referenced
 /// by the member variable TxTreeNode#pathCondition of type PathCondition), and
@@ -574,11 +574,11 @@ public:
 /// memory for memory dependency computation (referenced by the member
 /// variable TxTreeNode#dependency of type Dependency).
 ///
-/// The interpolation tree node has an associated KLEE execution state
+/// Each Tracer-X tree node has an associated KLEE execution state
 /// (implemented using the type ExecutionState) from which it is referenced
 /// via the member variable ExecutionState#itreeNode.
 /// It adds information for abstraction learning to the ExecutionState object.
-/// The whole structure of the interpolation tree itself is maintained by
+/// The whole structure of the Tracer-X tree itself is maintained by
 /// the class TxTree, which also refers to objects of type TxTreeNode via
 /// its TxTree#root and TxTree#currentINode member variables.
 ///
@@ -749,11 +749,9 @@ private:
 
 /// \brief The top-level structure that implements abstraction learning.
 ///
-/// The name TxTree is an abbreviation of <i>interpolation tree</i>. The
-/// interpolation
-/// tree is just the symbolic execution tree, a parallel of what is implemented
-/// by KLEE's existing PTree class, however, it adds shadow information for use
-/// in abstraction learning. Each node of the interpolation tree is implemented in
+/// The TxTree is just the symbolic execution tree, a parallel of what is implemented
+/// by KLEE's existing PTree class, however, it implements shadow information for use
+/// in abstraction learning. Each node of the tree is implemented by
 /// the TxTreeNode class. The TxTree class itself contains several important
 /// components:
 ///
@@ -770,10 +768,10 @@ private:
 ///    subsubmption table entries are compared against the state, possibly via a
 ///    call to the constraint solver.
 ///
-/// 2. The root of the interpolation tree, which is an object of type TxTreeNode,
+/// 2. The root of the Tracer-X tree, which is an object of type TxTreeNode,
 ///    and referenced by the member TxTree#root.
 ///
-/// 3. The currently-active interpolation tree node, which is also an object of
+/// 3. The currently-active tree node, which is also an object of
 ///    type TxTreeNode, and referenced by the member TxTree#currentINode.
 ///
 /// TxTree has several public member functions, most importantly, the various
@@ -913,21 +911,21 @@ public:
   ~TxTree() { SubsumptionTable::clear(); }
 
   /// \brief Set the reference to the KLEE state in the current interpolation
-  /// data holder (interpolation tree node) that is currently being processed.
-  /// This also sets the id of the interpolation tree node to be the given
+  /// data holder (Tracer-X tree node) that is currently being processed.
+  /// This also sets the id of the Tracer-X tree node to be the given
   /// pointer value.
   ///
   /// \param state The KLEE execution state to associate the current node with.
   void setCurrentINode(ExecutionState &state);
 
-  /// \brief Deletes the interpolation tree node
+  /// \brief Deletes the Tracer-X tree node
   void remove(TxTreeNode *node);
 
   /// \brief Invokes the subsumption check
   bool subsumptionCheck(TimingSolver *solver, ExecutionState &state,
                         double timeout);
 
-  /// \brief Mark the path condition in the interpolation tree node associated
+  /// \brief Mark the path condition in the Tracer-X tree node associated
   /// with the given KLEE execution state.
   void markPathCondition(ExecutionState &state, TimingSolver *solver);
 
@@ -989,7 +987,7 @@ public:
 
   /// \brief General member function for executing an instruction for building
   /// dependency
-  /// information, given a particular interpolation tree node.
+  /// information, given a particular Tracer-X tree node.
   static void executeOnNode(TxTreeNode *node, llvm::Instruction *instr,
                             std::vector<ref<Expr> > &args);
 
