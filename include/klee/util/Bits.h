@@ -12,12 +12,14 @@
 
 #include "klee/Config/Version.h"
 #include "llvm/Support/DataTypes.h"
+#include <assert.h>
 
 namespace klee {
   namespace bits32 {
     // @pre(0 <= N <= 32)
     // @post(retval = max([truncateToNBits(i,N) for i in naturals()]))
     inline unsigned maxValueOfNBits(unsigned N) {
+      assert(N <= 32);
       if (N==0)
         return 0;
       return ((unsigned) -1) >> (32 - N);
@@ -25,6 +27,7 @@ namespace klee {
 
     // @pre(0 < N <= 32)
     inline unsigned truncateToNBits(unsigned x, unsigned N) {
+      assert(N > 0 && N <= 32);
       return x&(((unsigned) -1) >> (32 - N));
     }
 
@@ -44,12 +47,15 @@ namespace klee {
     // @pre(withoutRightmostBit(x) == 0)
     // @post((1 << retval) == x)
     inline unsigned indexOfSingleBit(unsigned x) {
+      assert(withoutRightmostBit(x) == 0);
       unsigned res = 0;
       if (x&0xFFFF0000) res += 16;
       if (x&0xFF00FF00) res += 8;
       if (x&0xF0F0F0F0) res += 4;
       if (x&0xCCCCCCCC) res += 2;
       if (x&0xAAAAAAAA) res += 1;
+      assert(res < 32);
+      assert((UINT32_C(1) << res) == x);
       return res;
     } 
 
@@ -59,9 +65,10 @@ namespace klee {
   }
 
   namespace bits64 {
-    // @pre(0 <= N <= 32)
+    // @pre(0 <= N <= 64)
     // @post(retval = max([truncateToNBits(i,N) for i in naturals()]))
     inline uint64_t maxValueOfNBits(unsigned N) {
+      assert(N <= 64);
       if (N==0)
         return 0;
       return ((uint64_t) (int64_t) -1) >> (64 - N);
@@ -69,6 +76,7 @@ namespace klee {
     
     // @pre(0 < N <= 64)
     inline uint64_t truncateToNBits(uint64_t x, unsigned N) {
+      assert(N > 0 && N <= 64);
       return x&(((uint64_t) (int64_t) -1) >> (64 - N));
     }
 
@@ -88,9 +96,12 @@ namespace klee {
     // @pre((x&(x-1)) == 0)
     // @post((1 << retval) == x)
     inline unsigned indexOfSingleBit(uint64_t x) {
+      assert((x & (x - 1)) == 0);
       unsigned res = bits32::indexOfSingleBit((unsigned) (x | (x>>32)));
-      if (x&((uint64_t) 0xFFFFFFFF << 32))
-	  res += 32;
+      if (x & ((uint64_t)0xFFFFFFFF << 32))
+        res += 32;
+      assert(res < 64);
+      assert((UINT64_C(1) << res) == x);
       return res;
     } 
 
