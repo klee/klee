@@ -80,7 +80,7 @@ private:
 
   std::map<std::string, std::string> fnAliases;
 
-  void addITreeConstraint(ref<Expr> e, llvm::Instruction *instr);
+  void addTxTreeConstraint(ref<Expr> e, llvm::Instruction *instr);
 
 public:
   // Execution - Control Flow specific
@@ -144,7 +144,7 @@ public:
   PTreeNode *ptreeNode;
 
   /// @brief Pointer to the interpolation tree of the current state
-  TxTreeNode *itreeNode;
+  TxTreeNode *txTreeNode;
 
   /// @brief Ordered list of symbolics: used to generate test cases.
   //
@@ -159,7 +159,7 @@ public:
   void removeFnAlias(std::string fn);
 
 private:
-  ExecutionState() : ptreeNode(0), itreeNode(0){}
+  ExecutionState() : ptreeNode(0), txTreeNode(0) {}
 
 public:
   ExecutionState(KFunction *kf);
@@ -185,7 +185,7 @@ public:
   void addSymbolic(const MemoryObject *mo, const Array *array);
   void addConstraint(ref<Expr> e) {
 #ifdef ENABLE_Z3
-    addITreeConstraint(e, prevPC->inst);
+    addTxTreeConstraint(e, prevPC->inst);
 #endif
     constraints.addConstraint(e);
   }

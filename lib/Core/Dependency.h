@@ -603,7 +603,7 @@ namespace klee {
   /// The results of the computation is stored in several member
   /// variables as follows, mainly Dependency#concretelyAddressedStore and
   /// Dependency#symbolicallyAddressedStore which represent the components of
-  /// the state associated with the owner ITreeNode object of the Dependency
+  /// the state associated with the owner TxTreeNode object of the Dependency
   /// object. Dependency#concretelyAddressedStore is the part of the state that
   /// are concretely addressed, whereas Dependency#symbolicallyAddressedStore is
   /// the part that is symbolically addressed.
@@ -627,8 +627,8 @@ namespace klee {
   /// with modified offsets according to the offset argument of the
   /// instruction.
   ///
-  /// \see ITree
-  /// \see ITreeNode
+  /// \see TxTree
+  /// \see TxTreeNode
   /// \see VersionedValue
   /// \see MemoryLocation
   class Dependency {

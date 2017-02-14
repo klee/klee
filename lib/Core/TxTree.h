@@ -13,8 +13,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef ITREE_H_
-#define ITREE_H_
+#ifndef TXTREE_H_
+#define TXTREE_H_
 
 #include <klee/Expr.h>
 #include "klee/CommandLine.h"
@@ -193,7 +193,7 @@ class TxTreeGraph {
   };
 
   TxTreeGraph::Node *root;
-  std::map<TxTreeNode *, TxTreeGraph::Node *> itreeNodeMap;
+  std::map<TxTreeNode *, TxTreeGraph::Node *> txTreeNodeMap;
   std::map<SubsumptionTableEntry *, TxTreeGraph::Node *> tableEntryMap;
   std::vector<TxTreeGraph::NumberedEdge *> subsumptionEdges;
   std::map<PathCondition *, TxTreeGraph::Node *> pathConditionMap;
@@ -235,14 +235,14 @@ public:
   static void setCurrentNode(ExecutionState &state,
                              const uint64_t _nodeSequenceNumber);
 
-  static void markAsSubsumed(TxTreeNode *iTreeNode,
+  static void markAsSubsumed(TxTreeNode *txTreeNode,
                              SubsumptionTableEntry *entry);
 
-  static void addPathCondition(TxTreeNode *iTreeNode,
+  static void addPathCondition(TxTreeNode *txTreeNode,
                                PathCondition *pathCondition,
                                ref<Expr> condition);
 
-  static void addTableEntryMapping(TxTreeNode *iTreeNode,
+  static void addTableEntryMapping(TxTreeNode *txTreeNode,
                                    SubsumptionTableEntry *entry);
 
   static void setAsCore(PathCondition *pathCondition);
@@ -576,7 +576,7 @@ public:
 ///
 /// Each Tracer-X tree node has an associated KLEE execution state
 /// (implemented using the type ExecutionState) from which it is referenced
-/// via the member variable ExecutionState#itreeNode.
+/// via the member variable ExecutionState#txTreeNode.
 /// It adds information for abstraction learning to the ExecutionState object.
 /// The whole structure of the Tracer-X tree itself is maintained by
 /// the class TxTree, which also refers to objects of type TxTreeNode via
@@ -1003,4 +1003,4 @@ public:
   static std::string getInterpolationStat();
 };
 }
-#endif /* ITREE_H_ */
+#endif /* TXTREE_H_ */

@@ -71,7 +71,7 @@ StackFrame::~StackFrame() {
 ExecutionState::ExecutionState(KFunction *kf)
     : pc(kf->instructions), prevPC(pc), queryCost(0.), weight(1), depth(0),
       instsSinceCovNew(0), coveredNew(false), forkDisabled(false), ptreeNode(0),
-      itreeNode(0) {
+      txTreeNode(0) {
   pushFrame(0, kf);
 }
 
@@ -79,10 +79,10 @@ ExecutionState::ExecutionState(KFunction *kf)
 ExecutionState::ExecutionState(const KInstIterator &srcPrevPC,
                                const std::vector<ref<Expr> > &assumptions)
     : prevPC(srcPrevPC), constraints(assumptions), queryCost(0.), ptreeNode(0),
-      itreeNode(0) {}
+      txTreeNode(0) {}
 #else
 ExecutionState::ExecutionState(const std::vector<ref<Expr> > &assumptions)
-    : constraints(assumptions), queryCost(0.), ptreeNode(0), itreeNode(0) {}
+    : constraints(assumptions), queryCost(0.), ptreeNode(0), txTreeNode(0) {}
 #endif
 
 ExecutionState::~ExecutionState() {
@@ -99,47 +99,31 @@ ExecutionState::~ExecutionState() {
     popFrame(0, ConstantExpr::alloc(0, Expr::Bool));
 }
 
-ExecutionState::ExecutionState(const ExecutionState& state):
-    fnAliases(state.fnAliases),
-    pc(state.pc),
-    prevPC(state.prevPC),
-    stack(state.stack),
-    incomingBBIndex(state.incomingBBIndex),
-
-    addressSpace(state.addressSpace),
-    constraints(state.constraints),
-
-    queryCost(state.queryCost),
-    weight(state.weight),
-    depth(state.depth),
-
-    pathOS(state.pathOS),
-    symPathOS(state.symPathOS),
-
-    instsSinceCovNew(state.instsSinceCovNew),
-    coveredNew(state.coveredNew),
-    forkDisabled(state.forkDisabled),
-    coveredLines(state.coveredLines),
-    ptreeNode(state.ptreeNode),
-    itreeNode(state.itreeNode),
-    symbolics(state.symbolics),
-    arrayNames(state.arrayNames)
-{
+ExecutionState::ExecutionState(const ExecutionState &state)
+    : fnAliases(state.fnAliases), pc(state.pc), prevPC(state.prevPC),
+      stack(state.stack), incomingBBIndex(state.incomingBBIndex),
+      addressSpace(state.addressSpace), constraints(state.constraints),
+      queryCost(state.queryCost), weight(state.weight), depth(state.depth),
+      pathOS(state.pathOS), symPathOS(state.symPathOS),
+      instsSinceCovNew(state.instsSinceCovNew), coveredNew(state.coveredNew),
+      forkDisabled(state.forkDisabled), coveredLines(state.coveredLines),
+      ptreeNode(state.ptreeNode), txTreeNode(state.txTreeNode),
+      symbolics(state.symbolics), arrayNames(state.arrayNames) {
   for (unsigned int i=0; i<symbolics.size(); i++)
     symbolics[i].first->refCount++;
 }
 
-void ExecutionState::addITreeConstraint(ref<Expr> e, llvm::Instruction *instr) {
+void ExecutionState::addTxTreeConstraint(ref<Expr> e,
+                                         llvm::Instruction *instr) {
   if (!INTERPOLATION_ENABLED)
     return;
 
   llvm::BranchInst *binstr = llvm::dyn_cast<llvm::BranchInst>(instr);
 
-  if (itreeNode && binstr && binstr->isConditional()) {
-    itreeNode->addConstraint(e, binstr->getCondition());
-  }
-  else if(itreeNode && !binstr){
-	itreeNode->addConstraint(e, instr->getOperand(0));
+  if (txTreeNode && binstr && binstr->isConditional()) {
+    txTreeNode->addConstraint(e, binstr->getCondition());
+  } else if (txTreeNode && !binstr) {
+    txTreeNode->addConstraint(e, instr->getOperand(0));
   }
 
 }
@@ -171,7 +155,7 @@ void ExecutionState::popFrame(KInstruction *ki, ref<Expr> returnValue) {
   stack.pop_back();
 
   if (INTERPOLATION_ENABLED && site && ki)
-    itreeNode->bindReturnValue(site, ki->inst, returnValue);
+    txTreeNode->bindReturnValue(site, ki->inst, returnValue);
 }
 
 void ExecutionState::addSymbolic(const MemoryObject *mo, const Array *array) { 

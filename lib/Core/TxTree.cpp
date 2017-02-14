@@ -1,4 +1,4 @@
-//===-- ITree.cpp - Interpolation tree --------------------------*- C++ -*-===//
+//===-- TxTree.cpp - Interpolation tree -------------------------*- C++ -*-===//
 //
 //               The Tracer-X KLEE Symbolic Virtual Machine
 //
@@ -678,14 +678,14 @@ std::string TxTreeGraph::render() {
 TxTreeGraph::TxTreeGraph(TxTreeNode *_root)
     : subsumptionEdgeNumber(0), internalNodeId(0) {
   root = TxTreeGraph::Node::createNode();
-  itreeNodeMap[_root] = root;
+  txTreeNodeMap[_root] = root;
 }
 
 TxTreeGraph::~TxTreeGraph() {
   if (root)
     delete root;
 
-  itreeNodeMap.clear();
+  txTreeNodeMap.clear();
 
   for (std::vector<TxTreeGraph::NumberedEdge *>::iterator
            it = subsumptionEdges.begin(),
@@ -703,12 +703,12 @@ void TxTreeGraph::addChildren(TxTreeNode *parent, TxTreeNode *falseChild,
 
   assert(TxTreeGraph::instance && "Search tree graph not initialized");
 
-  TxTreeGraph::Node *parentNode = instance->itreeNodeMap[parent];
+  TxTreeGraph::Node *parentNode = instance->txTreeNodeMap[parent];
 
   parentNode->falseTarget = TxTreeGraph::Node::createNode();
   parentNode->trueTarget = TxTreeGraph::Node::createNode();
-  instance->itreeNodeMap[falseChild] = parentNode->falseTarget;
-  instance->itreeNodeMap[trueChild] = parentNode->trueTarget;
+  instance->txTreeNodeMap[falseChild] = parentNode->falseTarget;
+  instance->txTreeNodeMap[trueChild] = parentNode->trueTarget;
 }
 
 void TxTreeGraph::setCurrentNode(ExecutionState &state,
@@ -718,8 +718,8 @@ void TxTreeGraph::setCurrentNode(ExecutionState &state,
 
   assert(TxTreeGraph::instance && "Search tree graph not initialized");
 
-  TxTreeNode *iTreeNode = state.itreeNode;
-  TxTreeGraph::Node *node = instance->itreeNodeMap[iTreeNode];
+  TxTreeNode *txTreeNode = state.txTreeNode;
+  TxTreeGraph::Node *node = instance->txTreeNodeMap[txTreeNode];
   if (!node->nodeSequenceNumber) {
     std::string functionName(
         state.pc->inst->getParent()->getParent()->getName().str());
@@ -739,29 +739,29 @@ void TxTreeGraph::setCurrentNode(ExecutionState &state,
   }
 }
 
-void TxTreeGraph::markAsSubsumed(TxTreeNode *iTreeNode,
-                                SubsumptionTableEntry *entry) {
+void TxTreeGraph::markAsSubsumed(TxTreeNode *txTreeNode,
+                                 SubsumptionTableEntry *entry) {
   if (!OUTPUT_INTERPOLATION_TREE)
     return;
 
   assert(TxTreeGraph::instance && "Search tree graph not initialized");
 
-  TxTreeGraph::Node *node = instance->itreeNodeMap[iTreeNode];
+  TxTreeGraph::Node *node = instance->txTreeNodeMap[txTreeNode];
   node->subsumed = true;
   TxTreeGraph::Node *subsuming = instance->tableEntryMap[entry];
   instance->subsumptionEdges.push_back(new TxTreeGraph::NumberedEdge(
       node, subsuming, ++(instance->subsumptionEdgeNumber)));
 }
 
-void TxTreeGraph::addPathCondition(TxTreeNode *iTreeNode,
-                                  PathCondition *pathCondition,
-                                  ref<Expr> condition) {
+void TxTreeGraph::addPathCondition(TxTreeNode *txTreeNode,
+                                   PathCondition *pathCondition,
+                                   ref<Expr> condition) {
   if (!OUTPUT_INTERPOLATION_TREE)
     return;
 
   assert(TxTreeGraph::instance && "Search tree graph not initialized");
 
-  TxTreeGraph::Node *node = instance->itreeNodeMap[iTreeNode];
+  TxTreeGraph::Node *node = instance->txTreeNodeMap[txTreeNode];
 
   std::string s = PrettyExpressionBuilder::construct(condition);
 
@@ -770,14 +770,14 @@ void TxTreeGraph::addPathCondition(TxTreeNode *iTreeNode,
   instance->pathConditionMap[pathCondition] = node;
 }
 
-void TxTreeGraph::addTableEntryMapping(TxTreeNode *iTreeNode,
-                                      SubsumptionTableEntry *entry) {
+void TxTreeGraph::addTableEntryMapping(TxTreeNode *txTreeNode,
+                                       SubsumptionTableEntry *entry) {
   if (!OUTPUT_INTERPOLATION_TREE)
     return;
 
   assert(TxTreeGraph::instance && "Search tree graph not initialized");
 
-  TxTreeGraph::Node *node = instance->itreeNodeMap[iTreeNode];
+  TxTreeGraph::Node *node = instance->txTreeNodeMap[txTreeNode];
   instance->tableEntryMap[entry] = node;
 }
 
@@ -796,7 +796,7 @@ void TxTreeGraph::setMemoryError(ExecutionState &state) {
   if (!OUTPUT_INTERPOLATION_TREE)
     return;
 
-  TxTreeGraph::Node *node = instance->itreeNodeMap[state.itreeNode];
+  TxTreeGraph::Node *node = instance->txTreeNodeMap[state.txTreeNode];
   node->memoryError = true;
 
   node->memoryErrorLocation = "";
@@ -1449,7 +1449,7 @@ bool SubsumptionTableEntry::subsumed(
     if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL ||
         DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
       klee_message("#%lu=>#%lu: Check success due to empty table entry",
-                   state.itreeNode->getNodeSequenceNumber(),
+                   state.txTreeNode->getNodeSequenceNumber(),
                    nodeSequenceNumber);
     }
     return true;
@@ -1489,7 +1489,7 @@ bool SubsumptionTableEntry::subsumed(
             DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
           klee_message("#%lu=>#%lu: Check failure due to empty state concrete "
                        "and symbolic maps",
-                       state.itreeNode->getNodeSequenceNumber(),
+                       state.txTreeNode->getNodeSequenceNumber(),
                        nodeSequenceNumber);
         }
         return false;
@@ -1509,7 +1509,7 @@ bool SubsumptionTableEntry::subsumed(
             klee_message("#%lu=>#%lu: Check failure as memory region in the "
                          "table does not "
                          "exist in the state",
-                         state.itreeNode->getNodeSequenceNumber(),
+                         state.txTreeNode->getNodeSequenceNumber(),
                          nodeSequenceNumber);
           }
           return false;
@@ -1529,7 +1529,7 @@ bool SubsumptionTableEntry::subsumed(
                 DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
               klee_message("#%lu=>#%lu: Check failure as sizes of stored "
                            "values do not match",
-                           state.itreeNode->getNodeSequenceNumber(),
+                           state.txTreeNode->getNodeSequenceNumber(),
                            nodeSequenceNumber);
             }
             return false;
@@ -1544,7 +1544,7 @@ bool SubsumptionTableEntry::subsumed(
                   DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
                 klee_message("#%lu=>#%lu: Check failure due to failure in "
                              "memory bounds check",
-                             state.itreeNode->getNodeSequenceNumber(),
+                             state.txTreeNode->getNodeSequenceNumber(),
                              nodeSequenceNumber);
               }
               return false;
@@ -1844,7 +1844,7 @@ bool SubsumptionTableEntry::subsumed(
       if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL ||
           DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
         klee_message("#%lu=>#%lu: Check success as interpolant is empty",
-                     state.itreeNode->getNodeSequenceNumber(),
+                     state.txTreeNode->getNodeSequenceNumber(),
                      nodeSequenceNumber);
       }
 
@@ -1870,7 +1870,7 @@ bool SubsumptionTableEntry::subsumed(
                it = corePointerValues.begin(),
                ie = corePointerValues.end();
            it != ie; ++it) {
-        state.itreeNode->pointerValuesInterpolation(
+        state.txTreeNode->pointerValuesInterpolation(
             it->first->getValue(), it->first->getExpression(), it->second);
       }
       return true;
@@ -1897,7 +1897,7 @@ bool SubsumptionTableEntry::subsumed(
       if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL ||
           DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
         klee_message("#%lu=>#%lu: Check failure as consequent is unsatisfiable",
-                     state.itreeNode->getNodeSequenceNumber(),
+                     state.txTreeNode->getNodeSequenceNumber(),
                      nodeSequenceNumber);
       }
       return false;
@@ -1910,7 +1910,7 @@ bool SubsumptionTableEntry::subsumed(
           DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
         klee_message(
             "#%lu=>#%lu: Check failure as contradictory equalities detected",
-            state.itreeNode->getNodeSequenceNumber(), nodeSequenceNumber);
+            state.txTreeNode->getNodeSequenceNumber(), nodeSequenceNumber);
       }
       return false;
     }
@@ -1993,7 +1993,7 @@ bool SubsumptionTableEntry::subsumed(
         if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL ||
             DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
           klee_message("#%lu=>#%lu: Check success as query is true",
-                       state.itreeNode->getNodeSequenceNumber(),
+                       state.txTreeNode->getNodeSequenceNumber(),
                        nodeSequenceNumber);
         }
 
@@ -2003,7 +2003,7 @@ bool SubsumptionTableEntry::subsumed(
                    it = corePointerValues.begin(),
                    ie = corePointerValues.end();
                it != ie; ++it) {
-            state.itreeNode->pointerValuesInterpolation(
+            state.txTreeNode->pointerValuesInterpolation(
                 it->first->getValue(), it->first->getExpression(), it->second);
           }
         }
@@ -2012,7 +2012,7 @@ bool SubsumptionTableEntry::subsumed(
       if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL ||
           DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
         klee_message("#%lu=>#%lu: Check failure as query is non-true",
-                     state.itreeNode->getNodeSequenceNumber(),
+                     state.txTreeNode->getNodeSequenceNumber(),
                      nodeSequenceNumber);
       }
       return false;
@@ -2031,12 +2031,12 @@ bool SubsumptionTableEntry::subsumed(
       if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL ||
           DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
         klee_message("#%lu=>#%lu: Check success as solver decided validity",
-                     state.itreeNode->getNodeSequenceNumber(),
+                     state.txTreeNode->getNodeSequenceNumber(),
                      nodeSequenceNumber);
       }
 
       // We create path condition marking structure and mark core constraints
-      state.itreeNode->unsatCoreInterpolation(unsatCore);
+      state.txTreeNode->unsatCoreInterpolation(unsatCore);
 
       if (!NoBoundInterpolation && !ExactAddressInterpolant) {
         // We build memory bounds interpolants from pointer values
@@ -2044,7 +2044,7 @@ bool SubsumptionTableEntry::subsumed(
                  it = corePointerValues.begin(),
                  ie = corePointerValues.end();
              it != ie; ++it) {
-          state.itreeNode->pointerValuesInterpolation(
+          state.txTreeNode->pointerValuesInterpolation(
               it->first->getValue(), it->first->getExpression(), it->second);
         }
       }
@@ -2064,7 +2064,7 @@ bool SubsumptionTableEntry::subsumed(
         DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
       klee_message(
           "#%lu=>#%lu: Check failure as solver did not decide validity",
-          state.itreeNode->getNodeSequenceNumber(), nodeSequenceNumber);
+          state.txTreeNode->getNodeSequenceNumber(), nodeSequenceNumber);
     }
   }
 #endif /* ENABLE_Z3 */
@@ -2303,26 +2303,26 @@ void SubsumptionTable::insert(uintptr_t id,
 
 bool SubsumptionTable::check(TimingSolver *solver, ExecutionState &state,
                              double timeout) {
-  TxTreeNode *iTreeNode = state.itreeNode;
-  StackIndexedTable *subTable = instance[state.itreeNode->getProgramPoint()];
+  TxTreeNode *txTreeNode = state.txTreeNode;
+  StackIndexedTable *subTable = instance[state.txTreeNode->getProgramPoint()];
   if (!subTable) {
     if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL ||
         DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
       klee_message(
           "#%lu: Check failure due to control point not found in table",
-          state.itreeNode->getNodeSequenceNumber());
+          state.txTreeNode->getNodeSequenceNumber());
     }
     return false;
   }
 
   bool found;
   std::pair<EntryIterator, EntryIterator> iterPair =
-      subTable->find(iTreeNode->entryCallStack, found);
+      subTable->find(txTreeNode->entryCallStack, found);
   if (!found) {
     if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL ||
         DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
       klee_message("#%lu: Check failure due to entry not found",
-                   state.itreeNode->getNodeSequenceNumber());
+                   state.txTreeNode->getNodeSequenceNumber());
     }
     return false;
   }
@@ -2331,7 +2331,7 @@ bool SubsumptionTable::check(TimingSolver *solver, ExecutionState &state,
 
     std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
     storedExpressions =
-        iTreeNode->getStoredExpressions(iTreeNode->entryCallStack);
+        txTreeNode->getStoredExpressions(txTreeNode->entryCallStack);
 
     // Iterate the subsumption table entry with reverse iterator because
     // the successful subsumption mostly happen in the newest entry.
@@ -2341,10 +2341,10 @@ bool SubsumptionTable::check(TimingSolver *solver, ExecutionState &state,
         // We mark as subsumed such that the node will not be
         // stored into table (the table already contains a more
         // general entry).
-        iTreeNode->isSubsumed = true;
+        txTreeNode->isSubsumed = true;
 
         // Mark the node as subsumed, and create a subsumption edge
-        TxTreeGraph::markAsSubsumed(iTreeNode, (*it));
+        TxTreeGraph::markAsSubsumed(txTreeNode, (*it));
         return true;
       }
     }
@@ -2434,9 +2434,9 @@ std::string TxTree::getInterpolationStat() {
   std::stringstream stream;
   stream << "\nKLEE: done: Subsumption statistics\n";
   printTableStat(stream);
-  stream << "KLEE: done: ITree method execution times (ms):\n";
+  stream << "KLEE: done: TxTree method execution times (ms):\n";
   printTimeStat(stream);
-  stream << "KLEE: done: ITreeNode method execution times (ms):\n";
+  stream << "KLEE: done: TxTreeNode method execution times (ms):\n";
   TxTreeNode::printTimeStat(stream);
   return stream.str();
 }
@@ -2445,7 +2445,7 @@ TxTree::TxTree(ExecutionState *_root, llvm::DataLayout *_targetData)
     : targetData(_targetData) {
   currentINode = 0;
   assert(_targetData && "target data layout not provided");
-  if (!_root->itreeNode) {
+  if (!_root->txTreeNode) {
     currentINode = new TxTreeNode(0, _targetData);
   }
   root = currentINode;
@@ -2454,24 +2454,24 @@ TxTree::TxTree(ExecutionState *_root, llvm::DataLayout *_targetData)
 bool TxTree::subsumptionCheck(TimingSolver *solver, ExecutionState &state,
                              double timeout) {
 #ifdef ENABLE_Z3
-  assert(state.itreeNode == currentINode);
+  assert(state.txTreeNode == currentINode);
 
   // Immediately return if the state's instruction is not the
   // the interpolation node id. The interpolation node id is the
   // first instruction executed of the sequence executed for a state
   // node, typically this the first instruction of a basic block.
   // Subsumption check only matches against this first instruction.
-  if (!state.itreeNode || reinterpret_cast<uintptr_t>(state.pc->inst) !=
-                              state.itreeNode->getProgramPoint())
+  if (!state.txTreeNode || reinterpret_cast<uintptr_t>(state.pc->inst) !=
+                               state.txTreeNode->getProgramPoint())
     return false;
 
   if (DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
     klee_message("Subsumption check for Node #%lu",
-                 state.itreeNode->getNodeSequenceNumber());
+                 state.txTreeNode->getNodeSequenceNumber());
   } else if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL) {
     klee_message("Subsumption check for Node #%lu, Program Point %lu",
-                 state.itreeNode->getNodeSequenceNumber(),
-                 state.itreeNode->getProgramPoint());
+                 state.txTreeNode->getNodeSequenceNumber(),
+                 state.txTreeNode->getProgramPoint());
   }
 
   ++subsumptionCheckCount; // For profiling
@@ -2485,7 +2485,7 @@ bool TxTree::subsumptionCheck(TimingSolver *solver, ExecutionState &state,
 
 void TxTree::setCurrentINode(ExecutionState &state) {
   TimerStatIncrementer t(setCurrentINodeTime);
-  currentINode = state.itreeNode;
+  currentINode = state.txTreeNode;
   currentINode->setProgramPoint(state.pc->inst);
   TxTreeGraph::setCurrentNode(state, currentINode->nodeSequenceNumber);
 }
@@ -2647,8 +2647,8 @@ void TxTree::printNode(llvm::raw_ostream &stream, TxTreeNode *n,
 }
 
 void TxTree::print(llvm::raw_ostream &stream) const {
-  stream << "------------------------- ITree Structure "
-            "---------------------------\n";
+  stream << "------------------------- TxTree Structure "
+            "--------------------------\n";
   stream << this->root->programPoint;
   if (this->root == this->currentINode) {
     stream << " (active)";
@@ -2753,8 +2753,8 @@ void TxTreeNode::addConstraint(ref<Expr> &constraint, llvm::Value *condition) {
 void TxTreeNode::split(ExecutionState *leftData, ExecutionState *rightData) {
   TimerStatIncrementer t(splitTime);
   assert(left == 0 && right == 0);
-  leftData->itreeNode = left = new TxTreeNode(this, targetData);
-  rightData->itreeNode = right = new TxTreeNode(this, targetData);
+  leftData->txTreeNode = left = new TxTreeNode(this, targetData);
+  rightData->txTreeNode = right = new TxTreeNode(this, targetData);
 }
 
 void TxTreeNode::execute(llvm::Instruction *instr, std::vector<ref<Expr> > &args,
@@ -2840,8 +2840,8 @@ void TxTreeNode::unsatCoreInterpolation(std::vector<ref<Expr> > unsatCore) {
 }
 
 void TxTreeNode::dump() const {
-  llvm::errs() << "------------------------- ITree Node "
-                  "--------------------------------\n";
+  llvm::errs() << "------------------------- TxTree Node "
+                  "-------------------------------\n";
   this->print(llvm::errs());
   llvm::errs() << "\n";
 }
@@ -2855,7 +2855,7 @@ void TxTreeNode::print(llvm::raw_ostream &stream,
   std::string tabs = makeTabs(paddingAmount);
   std::string tabsNext = appendTab(tabs);
 
-  stream << tabs << "ITreeNode\n";
+  stream << tabs << "TxTreeNode\n";
   stream << tabsNext << "node Id = " << programPoint << "\n";
   stream << tabsNext << "pathCondition = ";
   if (pathCondition == 0) {

@@ -697,9 +697,9 @@ void Executor::branch(ExecutionState &state,
 
       if (INTERPOLATION_ENABLED) {
         std::pair<TxTreeNode *, TxTreeNode *> ires =
-	  interpTree->split(es->itreeNode, ns, es);
-        ns->itreeNode = ires.first;
-        es->itreeNode = ires.second;
+            interpTree->split(es->txTreeNode, ns, es);
+        ns->txTreeNode = ires.first;
+        es->txTreeNode = ires.second;
       }
     }
   }
@@ -992,9 +992,9 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
 
     if (INTERPOLATION_ENABLED) {
       std::pair<TxTreeNode *, TxTreeNode *> ires =
-	  interpTree->split(current.itreeNode, falseState, trueState);
-      falseState->itreeNode = ires.first;
-      trueState->itreeNode = ires.second;
+          interpTree->split(current.txTreeNode, falseState, trueState);
+      falseState->txTreeNode = ires.first;
+      trueState->txTreeNode = ires.second;
     }
 
     addConstraint(*trueState, condition);
@@ -1232,7 +1232,7 @@ void Executor::executeGetValue(ExecutionState &state,
         std::vector<ref<Expr> > args;
         args.push_back(e);
         args.push_back(*vit);
-        TxTree::executeOnNode(es->itreeNode, target->inst, args);
+        TxTree::executeOnNode(es->txTreeNode, target->inst, args);
       }
       ++bit;
     }
@@ -1455,7 +1455,7 @@ void Executor::executeCall(ExecutionState &state,
 
     if (INTERPOLATION_ENABLED)
       // We bind the abstract dependency call arguments
-      state.itreeNode->bindCallArguments(state.prevPC->inst, arguments);
+      state.txTreeNode->bindCallArguments(state.prevPC->inst, arguments);
   }
 }
 
@@ -2819,7 +2819,7 @@ void Executor::updateStates(ExecutionState *current) {
       seedMap.erase(it3);
     processTree->remove(es->ptreeNode);
     if (INTERPOLATION_ENABLED)
-      interpTree->remove(es->itreeNode);
+      interpTree->remove(es->txTreeNode);
     delete es;
   }
   removedStates.clear();
@@ -3038,7 +3038,7 @@ void Executor::run(ExecutionState &initialState) {
         stream << "\n";
         interpTree->print(stream);
         stream << "\n";
-        state.itreeNode->print(stream);
+        state.txTreeNode->print(stream);
         stream << "\n";
         stream << "------------------- Executing New Instruction "
                   "-----------------------\n";
@@ -3063,7 +3063,7 @@ void Executor::run(ExecutionState &initialState) {
 
 	executeInstruction(state, ki);
         if (INTERPOLATION_ENABLED) {
-          state.itreeNode->incInstructionsDepth();
+          state.txTreeNode->incInstructionsDepth();
         }
         processTimers(&state, MaxInstructionTime);
 
@@ -3152,7 +3152,7 @@ void Executor::terminateState(ExecutionState &state) {
     processTree->remove(state.ptreeNode);
 
     if (INTERPOLATION_ENABLED)
-      interpTree->remove(state.itreeNode);
+      interpTree->remove(state.txTreeNode);
     delete &state;
   }
 }
@@ -3166,7 +3166,7 @@ void Executor::terminateStateOnSubsumption(ExecutionState &state) {
   interpreterHandler->incSubsumptionTermination();
   interpreterHandler->incInstructionsDepthOnSubsumption(state.depth);
   interpreterHandler->incTotalInstructionsOnSubsumption(
-      state.itreeNode->getInstructionsDepth());
+      state.txTreeNode->getInstructionsDepth());
 
   if (!OnlyOutputStatesCoveringNew || state.coveredNew ||
       (AlwaysOutputSeeds && seedMap.count(&state))) {
@@ -3182,7 +3182,7 @@ void Executor::terminateStateEarly(ExecutionState &state,
   if (INTERPOLATION_ENABLED) {
     interpreterHandler->incBranchingDepthOnEarlyTermination(state.depth);
     interpreterHandler->incInstructionsDepthOnEarlyTermination(
-        state.itreeNode->getInstructionsDepth());
+        state.txTreeNode->getInstructionsDepth());
   }
 
   if (!OnlyOutputStatesCoveringNew || state.coveredNew ||
@@ -3199,7 +3199,7 @@ void Executor::terminateStateOnExit(ExecutionState &state) {
   if (INTERPOLATION_ENABLED) {
     interpreterHandler->incBranchingDepthOnExitTermination(state.depth);
     interpreterHandler->incTotalInstructionsOnExit(
-        state.itreeNode->getInstructionsDepth());
+        state.txTreeNode->getInstructionsDepth());
   }
 
   if (!OnlyOutputStatesCoveringNew || state.coveredNew || 
@@ -3273,7 +3273,7 @@ void Executor::terminateStateOnError(ExecutionState &state,
   if (INTERPOLATION_ENABLED) {
     interpreterHandler->incBranchingDepthOnErrorTermination(state.depth);
     interpreterHandler->incInstructionsDepthOnErrorTermination(
-        state.itreeNode->getInstructionsDepth());
+        state.txTreeNode->getInstructionsDepth());
   }
 
   std::string message = messaget.str();
@@ -3769,8 +3769,8 @@ void Executor::executeMemoryOperation(ExecutionState &state, bool isWrite,
 
           // Update dependency
           if (INTERPOLATION_ENABLED && target)
-            TxTree::executeMemoryOperationOnNode(bound->itreeNode, target->inst,
-                                                value, address, false);
+            TxTree::executeMemoryOperationOnNode(
+                bound->txTreeNode, target->inst, value, address, false);
         }
       } else {
         ref<Expr> result = os->read(mo->getOffsetExpr(address), type);
@@ -3778,8 +3778,8 @@ void Executor::executeMemoryOperation(ExecutionState &state, bool isWrite,
 
         // Update dependency
         if (INTERPOLATION_ENABLED && target)
-          TxTree::executeMemoryOperationOnNode(bound->itreeNode, target->inst,
-                                              result, address, false);
+          TxTree::executeMemoryOperationOnNode(bound->txTreeNode, target->inst,
+                                               result, address, false);
       }
     }
 
@@ -3984,7 +3984,7 @@ void Executor::runFunctionAsMain(Function *f,
 
   if (INTERPOLATION_ENABLED) {
     interpTree = new TxTree(state, kmodule->targetData); // Added by Felicia
-    state->itreeNode = interpTree->root;
+    state->txTreeNode = interpTree->root;
     TxTreeGraph::initialize(interpTree->root);
   }
 
