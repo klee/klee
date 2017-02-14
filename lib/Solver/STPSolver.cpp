@@ -17,6 +17,7 @@
 #include "klee/util/ExprUtil.h"
 
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Errno.h"
 #include "llvm/Support/ErrorHandling.h"
 
 #include <errno.h>
@@ -231,7 +232,7 @@ runAndGetCexForked(::VC vc, STPBuilder *builder, ::VCExpr q,
   fflush(stderr);
   int pid = fork();
   if (pid == -1) {
-    klee_warning("fork failed (for STP)");
+    klee_warning("fork failed (for STP) - %s", llvm::sys::StrError(errno).c_str());
     if (!IgnoreSolverFailures)
       exit(1);
     return SolverImpl::SOLVER_RUN_STATUS_FORK_FAILED;
