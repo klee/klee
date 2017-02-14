@@ -290,10 +290,17 @@ namespace {
 		    clEnumValEnd),
 		  cl::ZeroOrMore);
 
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 0)
   cl::opt<unsigned int>
   StopAfterNInstructions("stop-after-n-instructions",
                          cl::desc("Stop execution after specified number of instructions (default=0 (off))"),
                          cl::init(0));
+#else
+  cl::opt<unsigned long long>
+  StopAfterNInstructions("stop-after-n-instructions",
+                         cl::desc("Stop execution after specified number of instructions (default=0 (off))"),
+                         cl::init(0));
+#endif
   
   cl::opt<unsigned>
   MaxForks("max-forks",
