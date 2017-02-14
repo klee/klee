@@ -6,7 +6,7 @@
 
 // Now try to replay with libkleeRuntest but build the binary to use a different
 // value for the `klee_assume()` call.
-// RUN: %cc -DASSUME_VALUE=32 -DPRINT_VALUE %s %libkleeruntest -Wl,-rpath=%libkleeruntestdir -o %t_runner
+// RUN: %cc -DASSUME_VALUE=32 -DPRINT_VALUE %s %libkleeruntest -Wl,-rpath %libkleeruntestdir -o %t_runner
 
 // Check that the default is to exit with an error
 // RUN: not env KTEST_FILE=%t.klee-out/test000001.ktest %t_runner 2>&1 | FileCheck -check-prefix=CHECK_FATAL %s
