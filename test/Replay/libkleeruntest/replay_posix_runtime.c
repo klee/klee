@@ -7,7 +7,7 @@
 // RUN: test -f %t.klee-out/test000002.ktest
 
 // Now try to replay with libkleeRuntest
-// RUN: %cc %s %libkleeruntest -Wl,-rpath=%libkleeruntestdir -o %t_runner
+// RUN: %cc %s %libkleeruntest -Wl,-rpath %libkleeruntestdir -o %t_runner
 // RUN: %ktest-tool %t.klee-out/test000001.ktest | FileCheck -check-prefix=CHECKMODEL %s
 // RUN: env KTEST_FILE=%t.klee-out/test000001.ktest %t_runner | FileCheck -check-prefix=TESTONE %s
 // RUN: env KTEST_FILE=%t.klee-out/test000002.ktest %t_runner | FileCheck -check-prefix=TESTTWO %s
