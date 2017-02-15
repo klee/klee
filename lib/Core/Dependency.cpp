@@ -1637,7 +1637,7 @@ void Dependency::executeMemoryOperation(
       }
     }
 
-    if (SpecialFunctionBoundCheck) {
+    if (SpecialFunctionBoundInterpolation) {
       // Limit interpolation to only within function tracerx_check
       ref<VersionedValue> val(
           getLatestValueForMarking(addressOperand, address));

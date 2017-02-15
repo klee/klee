@@ -97,7 +97,7 @@ extern llvm::cl::opt<bool> NoBoundInterpolation;
 
 extern llvm::cl::opt<bool> ExactAddressInterpolant;
 
-extern llvm::cl::opt<bool> SpecialFunctionBoundCheck;
+extern llvm::cl::opt<bool> SpecialFunctionBoundInterpolation;
 #endif
 
 #ifdef ENABLE_METASMT
