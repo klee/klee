@@ -96,6 +96,8 @@ extern llvm::cl::opt<SubsumptionDebugType> DebugSubsumption;
 extern llvm::cl::opt<bool> NoBoundInterpolation;
 
 extern llvm::cl::opt<bool> ExactAddressInterpolant;
+
+extern llvm::cl::opt<bool> SpecialFunctionBoundCheck;
 #endif
 
 #ifdef ENABLE_METASMT

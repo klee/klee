@@ -1637,10 +1637,38 @@ void Dependency::executeMemoryOperation(
       }
     }
 
-    if (ExactAddressInterpolant) {
-      markAllValues(addressOperand, address);
+    if (SpecialFunctionBoundCheck) {
+      // Limit interpolation to only within function tracerx_check
+      ref<VersionedValue> val(
+          getLatestValueForMarking(addressOperand, address));
+      if (llvm::isa<llvm::LoadInst>(instr) && !val->getLocations().empty()) {
+        if (instr->getParent()->getParent()->getName().str() ==
+            "tracerx_check") {
+          std::set<ref<MemoryLocation> > locations(val->getLocations());
+          for (std::set<ref<MemoryLocation> >::iterator it = locations.begin(),
+                                                        ie = locations.end();
+               it != ie; ++it) {
+            if (llvm::ConstantExpr *ce =
+                    llvm::dyn_cast<llvm::ConstantExpr>((*it)->getValue())) {
+              if (llvm::isa<llvm::GetElementPtrInst>(ce->getAsInstruction())) {
+                (*it)->dump();
+                if (ExactAddressInterpolant) {
+                  markAllValues(addressOperand, address);
+                } else {
+                  markAllPointerValues(addressOperand, address);
+                }
+                break;
+              }
+            }
+          }
+        }
+      }
     } else {
-      markAllPointerValues(addressOperand, address);
+      if (ExactAddressInterpolant) {
+        markAllValues(addressOperand, address);
+      } else {
+        markAllPointerValues(addressOperand, address);
+      }
     }
   }
 #endif
