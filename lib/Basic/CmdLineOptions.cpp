@@ -162,6 +162,12 @@ llvm::cl::opt<bool> ExactAddressInterpolant(
                    "default memory offset bound. It has no effect when "
                    "-no-bound-interpolation is specified."));
 
+llvm::cl::opt<bool> SpecialFunctionBoundCheck(
+    "special-function-bound-check",
+    llvm::cl::desc("Perform memory bound interpolation only within function "
+                   "named tracerx_check."),
+    llvm::cl::init(false));
+
 #endif // ENABLE_Z3
 
 #ifdef ENABLE_METASMT
