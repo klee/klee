@@ -2079,11 +2079,16 @@ void SubsumptionTableEntry::print(llvm::raw_ostream &stream) const {
 
 void SubsumptionTableEntry::print(llvm::raw_ostream &stream,
                                   const unsigned paddingAmount) const {
-  std::string tabs = makeTabs(paddingAmount);
+  print(stream, makeTabs(paddingAmount));
+}
 
-  stream << tabs << "------------ Subsumption Table Entry ------------\n";
-  stream << tabs << "Program point = " << programPoint << "\n";
-  stream << tabs << "interpolant = ";
+void SubsumptionTableEntry::print(llvm::raw_ostream &stream,
+                                  const std::string prefix) const {
+  std::string tabsNext = appendTab(prefix);
+
+  stream << prefix << "------------ Subsumption Table Entry ------------\n";
+  stream << prefix << "Program point = " << programPoint << "\n";
+  stream << prefix << "interpolant = ";
   if (!interpolant.isNull())
     interpolant->print(stream);
   else
@@ -2091,7 +2096,7 @@ void SubsumptionTableEntry::print(llvm::raw_ostream &stream,
   stream << "\n";
 
   if (!concreteAddressStore.empty()) {
-    stream << tabs << "concrete store = [";
+    stream << prefix << "concrete store = [";
     for (Dependency::ConcreteStore::const_iterator
              is1 = concreteAddressStore.begin(),
              ie1 = concreteAddressStore.end(), it1 = is1;
@@ -2105,7 +2110,7 @@ void SubsumptionTableEntry::print(llvm::raw_ostream &stream,
         stream << "(";
         it2->first->print(stream);
         stream << ",\n";
-        it2->second->print(stream);
+        it2->second->print(stream, tabsNext);
         stream << ")";
       }
     }
@@ -2113,7 +2118,7 @@ void SubsumptionTableEntry::print(llvm::raw_ostream &stream,
   }
 
   if (!symbolicAddressStore.empty()) {
-    stream << tabs << "symbolic store = [";
+    stream << prefix << "symbolic store = [";
     for (Dependency::SymbolicStore::const_iterator
              is1 = symbolicAddressStore.begin(),
              ie1 = symbolicAddressStore.end(), it1 = is1;
@@ -2127,7 +2132,7 @@ void SubsumptionTableEntry::print(llvm::raw_ostream &stream,
         stream << "(";
         it2->first->print(stream);
         stream << ",";
-        it2->second->print(stream);
+        it2->second->print(stream, tabsNext);
         stream << ")";
       }
     }
@@ -2135,7 +2140,7 @@ void SubsumptionTableEntry::print(llvm::raw_ostream &stream,
   }
 
   if (!existentials.empty()) {
-    stream << tabs << "existentials = [";
+    stream << prefix << "existentials = [";
     for (std::set<const Array *>::const_iterator is = existentials.begin(),
                                                  ie = existentials.end(),
                                                  it = is;
@@ -2174,29 +2179,39 @@ void SubsumptionTable::StackIndexedTable::Node::print(llvm::raw_ostream &stream)
 
 void SubsumptionTable::StackIndexedTable::Node::print(
     llvm::raw_ostream &stream, const unsigned paddingAmount) const {
-  std::string tabs = makeTabs(paddingAmount);
-  std::string tabsNext = appendTab(tabs);
+  print(stream, makeTabs(paddingAmount));
+}
 
-  stream << tabs << "Stack-indexed table tree node\n";
-  stream << tabsNext << "node Id = " << reinterpret_cast<uintptr_t>(id) << "\n";
-  stream << tabsNext << "Entries = ";
+void SubsumptionTable::StackIndexedTable::Node::print(
+    llvm::raw_ostream &stream, const std::string prefix) const {
+  std::string tabsNext = appendTab(prefix);
+
+  stream << "\n";
+  stream << tabsNext << "Stack-indexed table tree node\n";
+  if (id) {
+    stream << tabsNext << "node Id = " << reinterpret_cast<uintptr_t>(id)
+           << "\n";
+  } else {
+    stream << tabsNext << "node Id = (root)\n";
+  }
+  stream << tabsNext << "Entries:\n";
   for (EntryIterator it = entryList.rbegin(), ie = entryList.rend(); it != ie;
        ++it) {
-    (*it)->print(stream);
+    (*it)->print(stream, tabsNext);
     stream << "\n";
   }
   stream << tabsNext << "Left:\n";
   if (!left) {
     stream << tabsNext << "NULL\n";
   } else {
-    left->print(stream, paddingAmount + 1);
+    left->print(stream, appendTab(prefix));
     stream << "\n";
   }
   stream << tabsNext << "Right:\n";
   if (!right) {
     stream << tabsNext << "NULL\n";
   } else {
-    right->print(stream, paddingAmount + 1);
+    right->print(stream, appendTab(prefix));
     stream << "\n";
   }
 }
@@ -2284,7 +2299,8 @@ void SubsumptionTable::StackIndexedTable::printNode(llvm::raw_ostream &stream,
   if (n->left != 0) {
     stream << "\n";
     stream << edges << "+-- L:";
-    n->left->id->print(stream);
+    n->left->print(stream, edges + "    ");
+    stream << "\n";
     if (n->right != 0) {
       printNode(stream, n->left, edges + "|   ");
     } else {
@@ -2294,14 +2310,15 @@ void SubsumptionTable::StackIndexedTable::printNode(llvm::raw_ostream &stream,
   if (n->right != 0) {
     stream << "\n";
     stream << edges << "+-- R:";
-    n->right->id->print(stream);
+    n->right->print(stream, edges + "    ");
+    stream << "\n";
     printNode(stream, n->right, edges + "    ");
   }
 }
 
 void
 SubsumptionTable::StackIndexedTable::print(llvm::raw_ostream &stream) const {
-  stream << "root";
+  root->print(stream);
   printNode(stream, root, "");
 }
 

@@ -465,15 +465,18 @@ ref<Expr> StoredValue::getBoundsCheck(ref<StoredValue> stateValue,
   return res;
 }
 
-void StoredValue::print(llvm::raw_ostream &stream) const {
+void StoredValue::print(llvm::raw_ostream &stream) const { print(stream, ""); }
+
+void StoredValue::print(llvm::raw_ostream &stream, std::string prefix) const {
   if (!doNotUseBound && !allocationBounds.empty()) {
-    stream << "BOUNDS:\n";
+    stream << prefix << "BOUNDS:";
     for (std::map<llvm::Value *, std::set<ref<Expr> > >::const_iterator
              it = allocationBounds.begin(),
              ie = allocationBounds.end();
          it != ie; ++it) {
       std::set<ref<Expr> > boundsSet = it->second;
-      stream << "[";
+      stream << "\n";
+      stream << prefix << "[";
       it->first->print(stream);
       stream << "<={";
       for (std::set<ref<Expr> >::const_iterator it1 = it->second.begin(),
@@ -484,17 +487,19 @@ void StoredValue::print(llvm::raw_ostream &stream) const {
           stream << ",";
         (*it1)->print(stream);
       }
-      stream << "}]\n";
+      stream << "}]";
     }
 
     if (!allocationOffsets.empty()) {
-      stream << "OFFSETS:\n";
+      stream << "\n";
+      stream << prefix << "OFFSETS:";
       for (std::map<llvm::Value *, std::set<ref<Expr> > >::const_iterator
                it = allocationOffsets.begin(),
                ie = allocationOffsets.end();
            it != ie; ++it) {
         std::set<ref<Expr> > boundsSet = it->second;
-        stream << "[";
+        stream << "\n";
+        stream << prefix << "[";
         it->first->print(stream);
         stream << "=={";
         for (std::set<ref<Expr> >::const_iterator it1 = it->second.begin(),
@@ -505,11 +510,13 @@ void StoredValue::print(llvm::raw_ostream &stream) const {
             stream << ",";
           (*it1)->print(stream);
         }
-        stream << "}]\n";
+        stream << "}]";
       }
     }
     return;
   }
+  stream << "\n";
+  stream << prefix;
   expr->print(stream);
 }
 
