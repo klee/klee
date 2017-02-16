@@ -505,6 +505,8 @@ namespace klee {
 
     void print(llvm::raw_ostream &stream) const;
 
+    void print(llvm::raw_ostream &stream, std::string prefix) const;
+
     void dump() const {
       print(llvm::errs());
       llvm::errs() << "\n";
