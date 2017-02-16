@@ -336,6 +336,8 @@ class SubsumptionTable {
 
     Node *root;
 
+    void printNode(llvm::raw_ostream &stream, Node *n, std::string edges) const;
+
   public:
     StackIndexedTable() { root = new Node(0); }
 

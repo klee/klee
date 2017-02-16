@@ -2278,8 +2278,32 @@ SubsumptionTable::StackIndexedTable::find(
                                                  current->entryList.rend());
 }
 
+void SubsumptionTable::StackIndexedTable::printNode(llvm::raw_ostream &stream,
+                                                    Node *n,
+                                                    std::string edges) const {
+  if (n->left != 0) {
+    stream << "\n";
+    stream << edges << "+-- L:";
+    n->left->id->print(stream);
+    if (n->right != 0) {
+      printNode(stream, n->left, edges + "|   ");
+    } else {
+      printNode(stream, n->left, edges + "    ");
+    }
+  }
+  if (n->right != 0) {
+    stream << "\n";
+    stream << edges << "+-- R:";
+    n->right->id->print(stream);
+    printNode(stream, n->right, edges + "    ");
+  }
+}
+
 void
-SubsumptionTable::StackIndexedTable::print(llvm::raw_ostream &stream) const {}
+SubsumptionTable::StackIndexedTable::print(llvm::raw_ostream &stream) const {
+  stream << "root";
+  printNode(stream, root, "");
+}
 
 /**/
 
@@ -2289,23 +2313,30 @@ SubsumptionTable::instance;
 void SubsumptionTable::insert(uintptr_t id,
                               const std::vector<llvm::Instruction *> stack,
                               SubsumptionTableEntry *entry) {
+  StackIndexedTable *subTable = 0;
+
   TxTree::entryNumber++; // Count of entries in the table
 
-  StackIndexedTable *subTable = instance[id];
-  if (!subTable) {
+  std::map<uintptr_t, StackIndexedTable *>::iterator it = instance.find(id);
+
+  if (it == instance.end()) {
     subTable = new StackIndexedTable();
     subTable->insert(stack, entry);
     instance[id] = subTable;
     return;
   }
+  subTable = it->second;
   subTable->insert(stack, entry);
 }
 
 bool SubsumptionTable::check(TimingSolver *solver, ExecutionState &state,
                              double timeout) {
+  StackIndexedTable *subTable = 0;
   TxTreeNode *txTreeNode = state.txTreeNode;
-  StackIndexedTable *subTable = instance[state.txTreeNode->getProgramPoint()];
-  if (!subTable) {
+
+  std::map<uintptr_t, StackIndexedTable *>::iterator it =
+      instance.find(state.txTreeNode->getProgramPoint());
+  if (it == instance.end()) {
     if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL ||
         DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
       klee_message(
@@ -2314,6 +2345,7 @@ bool SubsumptionTable::check(TimingSolver *solver, ExecutionState &state,
     }
     return false;
   }
+  subTable = it->second;
 
   bool found;
   std::pair<EntryIterator, EntryIterator> iterPair =
