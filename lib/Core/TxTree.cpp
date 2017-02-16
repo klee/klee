@@ -2929,8 +2929,8 @@ void TxTreeNode::print(llvm::raw_ostream &stream,
   }
   stream << tabsNext << "Stack:\n";
   for (std::vector<llvm::Instruction *>::const_reverse_iterator
-           it = callStack.rend(),
-           ie = callStack.rbegin();
+           it = callStack.rbegin(),
+           ie = callStack.rend();
        it != ie; ++it) {
     stream << tabsNext;
     (*it)->print(stream);
