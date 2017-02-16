@@ -381,6 +381,7 @@ ref<Expr> StoredValue::getBoundsCheck(ref<StoredValue> stateValue,
   // the current object and for each such allocation, retrieve the
   // information from the argument object; in this way resulting in
   // less iterations compared to doing it the other way around.
+  bool matchFound = false;
   for (std::map<llvm::Value *, std::set<ref<Expr> > >::const_iterator
            it = allocationBounds.begin(),
            ie = allocationBounds.end();
@@ -389,12 +390,10 @@ ref<Expr> StoredValue::getBoundsCheck(ref<StoredValue> stateValue,
     std::map<llvm::Value *, std::set<ref<Expr> > >::iterator iter =
         stateValue->allocationOffsets.find(it->first);
     if (iter == stateValue->allocationOffsets.end()) {
-      // This is a deviation of the principle mentioned above; here we
-      // allow the other state to not define an allocation offset, as we
-      // assume it is the case that the stored interpolant has an allocation
-      // of a local state of a function that was called but then exited.
       continue;
     }
+    matchFound = true;
+
     std::set<ref<Expr> > stateOffsets = iter->second;
 
     assert(!tabledBounds.empty() && "tabled bounds empty");
@@ -459,8 +458,12 @@ ref<Expr> StoredValue::getBoundsCheck(ref<StoredValue> stateValue,
   }
 
   // Bounds check successful if no constraints added
-  if (res.isNull())
-    return ConstantExpr::create(1, Expr::Bool);
+  if (res.isNull()) {
+    if (matchFound)
+      return ConstantExpr::create(1, Expr::Bool);
+    else
+      return ConstantExpr::create(0, Expr::Bool);
+  }
 #endif // ENABLE_Z3
   return res;
 }
