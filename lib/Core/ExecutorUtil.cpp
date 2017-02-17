@@ -106,8 +106,8 @@ namespace klee {
           const SequentialType *set = cast<SequentialType>(*ii);
           ref<ConstantExpr> index = 
             evalConstant(cast<Constant>(ii.getOperand()));
-          unsigned elementSize = 
-            kmodule->targetData->getTypeStoreSize(set->getElementType());
+          unsigned elementSize =
+              kmodule->targetData->getTypeAllocSize(set->getElementType());
 
           index = index->ZExt(Context::get().getPointerWidth());
           addend = index->Mul(ConstantExpr::alloc(elementSize, 

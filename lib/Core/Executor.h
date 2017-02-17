@@ -504,7 +504,8 @@ public:
   virtual void getCoveredLines(const ExecutionState &state,
                                std::map<const std::string*, std::set<unsigned> > &res);
 
-  Expr::Width getWidthForLLVMType(LLVM_TYPE_Q llvm::Type *type) const;
+  Expr::Width getWidthForLLVMType(LLVM_TYPE_Q llvm::Type *type, bool includePadding=false) const;
+  size_t getAllocationAlignment(const llvm::Value *allocSite) const;
 };
   
 } // End klee namespace
