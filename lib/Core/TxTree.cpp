@@ -1557,6 +1557,22 @@ bool SubsumptionTableEntry::subsumed(
           } else {
             res = EqExpr::create(tabledValue->getExpression(),
                                  stateValue->getExpression());
+            if (res->isFalse()) {
+              if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL ||
+                  DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
+                std::string msg;
+                llvm::raw_string_ostream stream(msg);
+                tabledValue->getExpression()->print(stream);
+                stream << " vs. ";
+                stateValue->getExpression()->print(stream);
+                stream.flush();
+                klee_message(
+                    "#%lu=>#%lu: Check failure due to unequal content: %s",
+                    state.txTreeNode->getNodeSequenceNumber(),
+                    nodeSequenceNumber, msg.c_str());
+              }
+              return false;
+            }
           }
         }
 
