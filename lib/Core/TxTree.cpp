@@ -994,7 +994,6 @@ SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr,
   // only existential variables.
   hasExistentialsOnly = false;
 
-  std::set<const Array *> boundVariables = expr->variables;
   // We assume that the body is always a conjunction of interpolant in terms of
   // shadow (existentially-quantified) variables and state equality constraints,
   // which may contain both normal and shadow variables.
@@ -1063,7 +1062,7 @@ SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr,
     ref<Expr> interpolantAtom = (*it); // For example C cmp D
 
     // only process the interpolant that still has existential variables in it.
-    if (hasVariableInSet(boundVariables, interpolantAtom)) {
+    if (hasVariableInSet(expr->variables, interpolantAtom)) {
       for (std::vector<ref<Expr> >::iterator it1 = equalityPack.begin(),
                                              ie1 = equalityPack.end();
            it1 != ie1; ++it1) {
