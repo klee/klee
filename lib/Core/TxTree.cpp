@@ -986,9 +986,9 @@ bool SubsumptionTableEntry::hasVariableNotInSet(
 ref<Expr>
 SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr,
                                               bool &hasExistentialsOnly) {
-  assert(llvm::isa<ExistsExpr>(existsExpr));
-
   ExistsExpr *expr = llvm::dyn_cast<ExistsExpr>(existsExpr);
+
+  assert(expr && "expression is not existentially quantified");
 
   // Assume the we shall return general ExistsExpr that does not contain
   // only existential variables.
