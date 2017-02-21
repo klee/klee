@@ -502,8 +502,8 @@ std::string TxTreeGraph::PrettyExpressionBuilder::constructActual(ref<Expr> e) {
     ExistsExpr *xe = cast<ExistsExpr>(e);
     std::string existentials;
 
-    for (std::set<const Array *>::iterator it = xe->variables.begin(),
-                                           ie = xe->variables.end();
+    for (std::set<const Array *>::const_iterator it = xe->variables.begin(),
+                                                 ie = xe->variables.end();
          it != ie; ++it) {
       existentials += (*it)->name;
       if (it != ie)
@@ -955,8 +955,8 @@ SubsumptionTableEntry::hasVariableInSet(std::set<const Array *> &existentials,
     if (llvm::isa<ReadExpr>(expr)) {
       ReadExpr *readExpr = llvm::dyn_cast<ReadExpr>(expr);
       const Array *array = (readExpr->updates).root;
-      for (std::set<const Array *>::iterator it = existentials.begin(),
-                                             ie = existentials.end();
+      for (std::set<const Array *>::const_iterator it = existentials.begin(),
+                                                   ie = existentials.end();
            it != ie; ++it) {
         if ((*it) == array)
           return true;
@@ -973,8 +973,8 @@ bool SubsumptionTableEntry::hasVariableNotInSet(
     if (llvm::isa<ReadExpr>(expr)) {
       ReadExpr *readExpr = llvm::dyn_cast<ReadExpr>(expr);
       const Array *array = (readExpr->updates).root;
-      for (std::set<const Array *>::iterator it = existentials.begin(),
-                                             ie = existentials.end();
+      for (std::set<const Array *>::const_iterator it = existentials.begin(),
+                                                   ie = existentials.end();
            it != ie; ++it) {
         if ((*it) == array)
           return false;
@@ -2893,8 +2893,8 @@ void TxTreeNode::unsatCoreInterpolation(std::vector<ref<Expr> > unsatCore) {
     markerMap[it->car().get()] = it;
   }
 
-  for (std::vector<ref<Expr> >::iterator it1 = unsatCore.begin(),
-                                         ie1 = unsatCore.end();
+  for (std::vector<ref<Expr> >::const_iterator it1 = unsatCore.begin(),
+                                               ie1 = unsatCore.end();
        it1 != ie1; ++it1) {
     // FIXME: Sometimes some constraints are not in the PC. This is
     // because constraints are not properly added at state merge.
