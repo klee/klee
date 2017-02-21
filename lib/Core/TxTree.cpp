@@ -2340,7 +2340,7 @@ std::map<uintptr_t, SubsumptionTable::StackIndexedTable *>
 SubsumptionTable::instance;
 
 void SubsumptionTable::insert(uintptr_t id,
-                              const std::vector<llvm::Instruction *> stack,
+                              const std::vector<llvm::Instruction *> &stack,
                               SubsumptionTableEntry *entry) {
   StackIndexedTable *subTable = 0;
 
@@ -2873,7 +2873,7 @@ uint64_t TxTreeNode::getInstructionsDepth() { return instructionsDepth; }
 
 void TxTreeNode::incInstructionsDepth() { ++instructionsDepth; }
 
-void TxTreeNode::unsatCoreInterpolation(std::vector<ref<Expr> > unsatCore) {
+void TxTreeNode::unsatCoreInterpolation(std::vector<ref<Expr> > &unsatCore) {
   // State subsumed, we mark needed constraints on the path condition. We create
   // path condition marking structure to mark core constraints
   std::map<Expr *, PathCondition *> markerMap;

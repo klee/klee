@@ -364,7 +364,8 @@ class SubsumptionTable {
   static std::map<uintptr_t, StackIndexedTable *> instance;
 
 public:
-  static void insert(uintptr_t id, const std::vector<llvm::Instruction *> stack,
+  static void insert(uintptr_t id,
+                     const std::vector<llvm::Instruction *> &stack,
                      SubsumptionTableEntry *entry);
 
   static bool check(TimingSolver *solver, ExecutionState &state,
@@ -729,7 +730,7 @@ public:
 
   /// \brief Marking the core constraints on the path condition, and all the
   /// relevant values on the dependency graph, given an unsatistiability core.
-  void unsatCoreInterpolation(std::vector<ref<Expr> > unsatCore);
+  void unsatCoreInterpolation(std::vector<ref<Expr> > &unsatCore);
 
   /// \brief Memory bounds interpolation from a target address
   void pointerValuesInterpolation(llvm::Value *value, ref<Expr> address,
