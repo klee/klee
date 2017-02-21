@@ -922,12 +922,11 @@ SubsumptionTableEntry::SubsumptionTableEntry(
     TxTreeNode *node, const std::vector<llvm::Instruction *> &stack)
     : programPoint(node->getProgramPoint()),
       nodeSequenceNumber(node->getNodeSequenceNumber()) {
-  std::set<const Array *> replacements;
-
-  interpolant = node->getInterpolant(replacements);
+  existentials.clear();
+  interpolant = node->getInterpolant(existentials);
 
   std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
-  storedExpressions = node->getStoredCoreExpressions(stack, replacements);
+  storedExpressions = node->getStoredCoreExpressions(stack, existentials);
 
   concreteAddressStore = storedExpressions.first;
   for (Dependency::ConcreteStore::iterator it = concreteAddressStore.begin(),
@@ -942,8 +941,6 @@ SubsumptionTableEntry::SubsumptionTableEntry(
        it != ie; ++it) {
     symbolicAddressStoreKeys.push_back(it->first);
   }
-
-  existentials = replacements;
 }
 
 SubsumptionTableEntry::~SubsumptionTableEntry() {}
