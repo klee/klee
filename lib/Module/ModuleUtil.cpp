@@ -436,23 +436,33 @@ Module *klee::linkWithLibrary(Module *module,
 #endif
 }
 
-
-
-Function *klee::getDirectCallTarget(CallSite cs) {
+Function *klee::getDirectCallTarget(CallSite cs, bool moduleIsFullyLinked) {
   Value *v = cs.getCalledValue();
-  if (Function *f = dyn_cast<Function>(v)) {
-    return f;
-  } else if (llvm::ConstantExpr *ce = dyn_cast<llvm::ConstantExpr>(v)) {
-    if (ce->getOpcode()==Instruction::BitCast)
-      if (Function *f = dyn_cast<Function>(ce->getOperand(0)->stripPointerCasts()))
-        return f;
+  bool viaConstantExpr = false;
+  // Walk through aliases and bitcasts to try to find
+  // the function being called.
+  do {
+    if (Function *f = dyn_cast<Function>(v)) {
+      return f;
+    } else if (llvm::GlobalAlias *ga = dyn_cast<GlobalAlias>(v)) {
+      if (moduleIsFullyLinked || !(ga->mayBeOverridden())) {
+        v = ga->getAliasee();
+      } else {
+        v = NULL;
+      }
+    } else if (llvm::ConstantExpr *ce = dyn_cast<llvm::ConstantExpr>(v)) {
+      viaConstantExpr = true;
+      v = ce->getOperand(0)->stripPointerCasts();
+    } else {
+      v = NULL;
+    }
+  } while (v != NULL);
 
-    // NOTE: This assert may fire, it isn't necessarily a problem and
-    // can be disabled, I just wanted to know when and if it happened.
-    assert(0 && "FIXME: Unresolved direct target for a constant expression.");
-  }
-  
-  return 0;
+  // NOTE: This assert may fire, it isn't necessarily a problem and
+  // can be disabled, I just wanted to know when and if it happened.
+  assert((!viaConstantExpr) &&
+         "FIXME: Unresolved direct target for a constant expression");
+  return NULL;
 }
 
 static bool valueIsOnlyCalled(const Value *v) {
