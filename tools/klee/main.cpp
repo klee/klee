@@ -1071,7 +1071,11 @@ int main(int argc, char **argv, char **envp) {
   llvm::InitializeNativeTarget();
 
   parseArguments(argc, argv);
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 9)
+  sys::PrintStackTraceOnErrorSignal(argv[0]);
+#else
   sys::PrintStackTraceOnErrorSignal();
+#endif
 
   if (Watchdog) {
     if (MaxTime==0) {

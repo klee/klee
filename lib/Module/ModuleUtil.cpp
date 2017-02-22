@@ -285,7 +285,11 @@ Function *klee::getDirectCallTarget(CallSite cs, bool moduleIsFullyLinked) {
     if (Function *f = dyn_cast<Function>(v)) {
       return f;
     } else if (llvm::GlobalAlias *ga = dyn_cast<GlobalAlias>(v)) {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 9)
+      if (moduleIsFullyLinked || !(ga->isInterposable())) {
+#else
       if (moduleIsFullyLinked || !(ga->mayBeOverridden())) {
+#endif
         v = ga->getAliasee();
       } else {
         v = NULL;
@@ -394,7 +398,13 @@ bool klee::loadFile(const std::string &fileName, LLVMContext &context,
   }
 
   if (magic == sys::fs::file_magic::archive) {
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 9)
+    Expected<std::unique_ptr<object::Binary> > archOwner =
+      object::createBinary(Buffer, &context);
+    if (!archOwner)
+      ec = errorToErrorCode(archOwner.takeError());
+    llvm::object::Binary *arch = archOwner.get().get();
+#elif LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
     ErrorOr<std::unique_ptr<object::Binary>> archOwner =
         object::createBinary(Buffer, &context);
     ec = archOwner.getError();
@@ -415,7 +425,12 @@ bool klee::loadFile(const std::string &fileName, LLVMContext &context,
 
     if (auto archive = dyn_cast<object::Archive>(arch)) {
 // Load all bitcode files into memory
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 5)
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 9)
+      Error Err;
+      for (object::Archive::child_iterator AI = archive->child_begin(Err),
+                                           AE = archive->child_end();
+           AI != AE; ++AI)
+#elif LLVM_VERSION_CODE >= LLVM_VERSION(3, 5)
       for (object::Archive::child_iterator AI = archive->child_begin(),
                                            AE = archive->child_end();
            AI != AE; ++AI)
@@ -456,7 +471,12 @@ bool klee::loadFile(const std::string &fileName, LLVMContext &context,
           return false;
         }
 
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 5)
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 9)
+        Expected<std::unique_ptr<llvm::object::Binary> > child =
+            childOrErr->getAsBinary();
+        if (!child)
+          ec = errorToErrorCode(child.takeError());
+#elif LLVM_VERSION_CODE >= LLVM_VERSION(3, 5)
         ErrorOr<std::unique_ptr<llvm::object::Binary>> child =
             childOrErr->getAsBinary();
         ec = child.getError();
@@ -520,7 +540,14 @@ bool klee::loadFile(const std::string &fileName, LLVMContext &context,
           return false;
         }
       }
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 9)
+      if (Err) {
+        errorMsg = "Cannot iterate over archive";
+        return false;
+      }
+#endif
     }
+
     return true;
   }
   if (magic.is_object()) {
