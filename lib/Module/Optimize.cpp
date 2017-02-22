@@ -39,6 +39,11 @@
 #include "llvm/Analysis/GlobalsModRef.h"
 #endif
 
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 9)
+#include "llvm/Transforms/IPO/FunctionAttrs.h"
+#include "llvm/Transforms/Scalar/GVN.h"
+#endif
+
 using namespace llvm;
 
 // Don't verify at the end
@@ -107,7 +112,11 @@ static void AddStandardCompilePasses(klee::LegacyLLVMPassManagerTy &PM) {
 
   addPass(PM, createPruneEHPass());              // Remove dead EH info
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 9)
+  addPass(PM, createPostOrderFunctionAttrsLegacyPass());
+#else
   addPass(PM, createPostOrderFunctionAttrsPass());
+#endif
   addPass(PM, createReversePostOrderFunctionAttrsPass()); // Deduce function attrs
 #else
   addPass(PM, createFunctionAttrsPass());        // Deduce function attrs
@@ -120,7 +129,11 @@ static void AddStandardCompilePasses(klee::LegacyLLVMPassManagerTy &PM) {
   addPass(PM, createInstructionCombiningPass()); // Cleanup for scalarrepl.
   addPass(PM, createJumpThreadingPass());        // Thread jumps.
   addPass(PM, createCFGSimplificationPass());    // Merge & remove BBs
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 9)
+  addPass(PM, createSROAPass());                 // Break up aggregate allocas
+#else
   addPass(PM, createScalarReplAggregatesPass()); // Break up aggregate allocas
+#endif
   addPass(PM, createInstructionCombiningPass()); // Combine silly seq's
 
   addPass(PM, createTailCallEliminationPass());  // Eliminate tail calls
@@ -183,7 +196,20 @@ void Optimize(Module *M, llvm::ArrayRef<const char *> preservedFunctions) {
     // for a main function.  If main is defined, mark all other functions
     // internal.
     if (!DisableInternalize) {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 9)
+      auto PreserveFunctions = [=](const GlobalValue &GV) {
+        StringRef GVName = GV.getName();
+
+        for (const char *fun: preservedFunctions)
+          if (GVName.equals(fun))
+            return true;
+
+        return false;
+      };
+      ModulePass *pass = createInternalizePass(PreserveFunctions);
+#else
       ModulePass *pass = createInternalizePass(preservedFunctions);
+#endif
       addPass(Passes, pass);
     }
 
@@ -222,11 +248,19 @@ void Optimize(Module *M, llvm::ArrayRef<const char *> preservedFunctions) {
     // The IPO passes may leave cruft around.  Clean up after them.
     addPass(Passes, createInstructionCombiningPass());
     addPass(Passes, createJumpThreadingPass());        // Thread jumps.
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 9)
+    addPass(Passes, createSROAPass());                 // Break up allocas
+#else
     addPass(Passes, createScalarReplAggregatesPass()); // Break up allocas
+#endif
 
     // Run a few AA driven optimizations here and now, to cleanup the code.
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 9)
+    addPass(Passes, createPostOrderFunctionAttrsLegacyPass());
+#else
     addPass(Passes, createPostOrderFunctionAttrsPass());
+#endif
     addPass(Passes, createReversePostOrderFunctionAttrsPass()); // Add nocapture
     addPass(Passes, createGlobalsAAWrapperPass());   // IP alias analysis
 #else

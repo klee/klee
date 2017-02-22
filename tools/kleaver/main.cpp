@@ -400,7 +400,11 @@ static bool printInputAsSMTLIBv2(const char *Filename,
 int main(int argc, char **argv) {
   bool success = true;
 
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 9)
+  llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
+#else
   llvm::sys::PrintStackTraceOnErrorSignal();
+#endif
   llvm::cl::SetVersionPrinter(klee::printVersion);
   llvm::cl::ParseCommandLineOptions(argc, argv);
 
