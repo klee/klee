@@ -689,11 +689,12 @@ static int initEnv(Module *mainModule) {
 
   /* Insert void klee_init_env(int* argc, char*** argv) */
   std::vector<const Type*> params;
-  params.push_back(Type::getInt32Ty(getGlobalContext()));
-  params.push_back(Type::getInt32Ty(getGlobalContext()));
+  LLVMContext &ctx = mainModule->getContext();
+  params.push_back(Type::getInt32Ty(ctx));
+  params.push_back(Type::getInt32Ty(ctx));
   Function* initEnvFn =
     cast<Function>(mainModule->getOrInsertFunction("klee_init_env",
-                                                   Type::getVoidTy(getGlobalContext()),
+                                                   Type::getVoidTy(ctx),
                                                    argcPtr->getType(),
                                                    argvPtr->getType(),
                                                    NULL));
@@ -1032,6 +1033,7 @@ static void replaceOrRenameFunction(llvm::Module *module,
   }
 }
 static llvm::Module *linkWithUclibc(llvm::Module *mainModule, StringRef libDir) {
+  LLVMContext &ctx = mainModule->getContext();
   // Ensure that klee-uclibc exists
   SmallString<128> uclibcBCA(libDir);
   llvm::sys::path::append(uclibcBCA, KLEE_UCLIBC_BCA_NAME);
@@ -1044,13 +1046,13 @@ static llvm::Module *linkWithUclibc(llvm::Module *mainModule, StringRef libDir) 
   Function *f;
   // force import of __uClibc_main
   mainModule->getOrInsertFunction("__uClibc_main",
-                                  FunctionType::get(Type::getVoidTy(getGlobalContext()),
+                                  FunctionType::get(Type::getVoidTy(ctx),
                                                std::vector<LLVM_TYPE_Q Type*>(),
                                                     true));
 
   // force various imports
   if (WithPOSIXRuntime) {
-    LLVM_TYPE_Q llvm::Type *i8Ty = Type::getInt8Ty(getGlobalContext());
+    LLVM_TYPE_Q llvm::Type *i8Ty = Type::getInt8Ty(ctx);
     mainModule->getOrInsertFunction("realpath",
                                     PointerType::getUnqual(i8Ty),
                                     PointerType::getUnqual(i8Ty),
@@ -1060,12 +1062,12 @@ static llvm::Module *linkWithUclibc(llvm::Module *mainModule, StringRef libDir) 
                                     PointerType::getUnqual(i8Ty),
                                     NULL);
     mainModule->getOrInsertFunction("__fgetc_unlocked",
-                                    Type::getInt32Ty(getGlobalContext()),
+                                    Type::getInt32Ty(ctx),
                                     PointerType::getUnqual(i8Ty),
                                     NULL);
     mainModule->getOrInsertFunction("__fputc_unlocked",
-                                    Type::getInt32Ty(getGlobalContext()),
-                                    Type::getInt32Ty(getGlobalContext()),
+                                    Type::getInt32Ty(ctx),
+                                    Type::getInt32Ty(ctx),
                                     PointerType::getUnqual(i8Ty),
                                     NULL);
   }
@@ -1130,11 +1132,11 @@ static llvm::Module *linkWithUclibc(llvm::Module *mainModule, StringRef libDir) 
   std::vector<LLVM_TYPE_Q Type*> fArgs;
   fArgs.push_back(ft->getParamType(1)); // argc
   fArgs.push_back(ft->getParamType(2)); // argv
-  Function *stub = Function::Create(FunctionType::get(Type::getInt32Ty(getGlobalContext()), fArgs, false),
+  Function *stub = Function::Create(FunctionType::get(Type::getInt32Ty(ctx), fArgs, false),
                                     GlobalVariable::ExternalLinkage,
                                     EntryPoint,
                                     mainModule);
-  BasicBlock *bb = BasicBlock::Create(getGlobalContext(), "entry", stub);
+  BasicBlock *bb = BasicBlock::Create(ctx, "entry", stub);
 
   std::vector<llvm::Value*> args;
   args.push_back(llvm::ConstantExpr::getBitCast(userMainFn,
@@ -1151,7 +1153,7 @@ static llvm::Module *linkWithUclibc(llvm::Module *mainModule, StringRef libDir) 
   CallInst::Create(uclibcMainFn, args.begin(), args.end(), "", bb);
 #endif
 
-  new UnreachableInst(getGlobalContext(), bb);
+  new UnreachableInst(ctx, bb);
 
   klee_message("NOTE: Using klee-uclibc : %s", uclibcBCA.c_str());
   return mainModule;
@@ -1236,6 +1238,7 @@ int main(int argc, char **argv, char **envp) {
 
   // Load the bytecode...
   std::string ErrorMsg;
+  LLVMContext ctx;
   Module *mainModule = 0;
 #if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
   OwningPtr<MemoryBuffer> BufferPtr;
@@ -1245,7 +1248,7 @@ int main(int argc, char **argv, char **envp) {
                ec.message().c_str());
   }
 
-  mainModule = getLazyBitcodeModule(BufferPtr.get(), getGlobalContext(), &ErrorMsg);
+  mainModule = getLazyBitcodeModule(BufferPtr.get(), ctx, &ErrorMsg);
 
   if (mainModule) {
     if (mainModule->MaterializeAllPermanently(&ErrorMsg)) {
@@ -1262,7 +1265,7 @@ int main(int argc, char **argv, char **envp) {
     klee_error("error loading program '%s': %s", InputFile.c_str(),
                Buffer.getError().message().c_str());
 
-  auto mainModuleOrError = getLazyBitcodeModule(Buffer->get(), getGlobalContext());
+  auto mainModuleOrError = getLazyBitcodeModule(Buffer->get(), ctx);
 
   if (!mainModuleOrError) {
     klee_error("error loading program '%s': %s", InputFile.c_str(),
@@ -1387,7 +1390,7 @@ int main(int argc, char **argv, char **envp) {
   IOpts.MakeConcreteSymbolic = MakeConcreteSymbolic;
   KleeHandler *handler = new KleeHandler(pArgc, pArgv);
   Interpreter *interpreter =
-    theInterpreter = Interpreter::create(IOpts, handler);
+    theInterpreter = Interpreter::create(ctx, IOpts, handler);
   handler->setInterpreter(interpreter);
 
   for (int i=0; i<argc; i++) {

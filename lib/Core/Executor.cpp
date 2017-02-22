@@ -343,9 +343,10 @@ const char *Executor::TerminateReasonNames[] = {
   [ Unhandled ] = "xxx",
 };
 
-Executor::Executor(const InterpreterOptions &opts, InterpreterHandler *ih)
+Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
+    InterpreterHandler *ih)
     : Interpreter(opts), kmodule(0), interpreterHandler(ih), searcher(0),
-      externalDispatcher(new ExternalDispatcher()), statsTracker(0),
+      externalDispatcher(new ExternalDispatcher(ctx)), statsTracker(0),
       pathWriter(0), symPathWriter(0), specialFunctionHandler(0),
       processTree(0), replayKTest(0), replayPath(0), usingSeeds(0),
       atMemoryLimit(false), inhibitForking(false), haltExecution(false),
@@ -1552,7 +1553,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
       if (!isVoidReturn) {
         LLVM_TYPE_Q Type *t = caller->getType();
-        if (t != Type::getVoidTy(getGlobalContext())) {
+        if (t != Type::getVoidTy(i->getContext())) {
           // may need to do coercion due to bitcasts
           Expr::Width from = result->getWidth();
           Expr::Width to = getWidthForLLVMType(t);
@@ -3087,7 +3088,7 @@ void Executor::callExternalFunction(ExecutionState &state,
   }
 
   LLVM_TYPE_Q Type *resultType = target->inst->getType();
-  if (resultType != Type::getVoidTy(getGlobalContext())) {
+  if (resultType != Type::getVoidTy(function->getContext())) {
     ref<Expr> e = ConstantExpr::fromMemory((void*) args, 
                                            getWidthForLLVMType(resultType));
     bindLocal(target, state, e);
@@ -3756,7 +3757,7 @@ Expr::Width Executor::getWidthForLLVMType(LLVM_TYPE_Q llvm::Type *type) const {
 
 ///
 
-Interpreter *Interpreter::create(const InterpreterOptions &opts,
+Interpreter *Interpreter::create(LLVMContext &ctx, const InterpreterOptions &opts,
                                  InterpreterHandler *ih) {
-  return new Executor(opts, ih);
+  return new Executor(ctx, opts, ih);
 }

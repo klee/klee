@@ -70,6 +70,7 @@ bool IntrinsicCleanerPass::runOnModule(Module &M) {
 bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
   bool dirty = false;
   bool block_split=false;
+  LLVMContext &ctx = M.getContext();
   
 #if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
   unsigned WordSize = TargetData.getPointerSizeInBits() / 8;
@@ -97,18 +98,18 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
         Value *src = ii->getArgOperand(1);
 
         if (WordSize == 4) {
-          Type *i8pp = PointerType::getUnqual(PointerType::getUnqual(Type::getInt8Ty(getGlobalContext())));
+          Type *i8pp = PointerType::getUnqual(PointerType::getUnqual(Type::getInt8Ty(ctx)));
           Value *castedDst = CastInst::CreatePointerCast(dst, i8pp, "vacopy.cast.dst", ii);
           Value *castedSrc = CastInst::CreatePointerCast(src, i8pp, "vacopy.cast.src", ii);
           Value *load = new LoadInst(castedSrc, "vacopy.read", ii);
           new StoreInst(load, castedDst, false, ii);
         } else {
           assert(WordSize == 8 && "Invalid word size!");
-          Type *i64p = PointerType::getUnqual(Type::getInt64Ty(getGlobalContext()));
+          Type *i64p = PointerType::getUnqual(Type::getInt64Ty(ctx));
           Value *pDst = CastInst::CreatePointerCast(dst, i64p, "vacopy.cast.dst", ii);
           Value *pSrc = CastInst::CreatePointerCast(src, i64p, "vacopy.cast.src", ii);
           Value *val = new LoadInst(pSrc, std::string(), ii); new StoreInst(val, pDst, ii);
-          Value *off = ConstantInt::get(Type::getInt64Ty(getGlobalContext()), 1);
+          Value *off = ConstantInt::get(Type::getInt64Ty(ctx), 1);
           pDst = GetElementPtrInst::Create(pDst, off, std::string(), ii);
           pSrc = GetElementPtrInst::Create(pSrc, off, std::string(), ii);
           val = new LoadInst(pSrc, std::string(), ii); new StoreInst(val, pDst, ii);
@@ -223,12 +224,12 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
         // a call of the abort() function.
         Function *F = cast<Function>(
           M.getOrInsertFunction(
-            "abort", Type::getVoidTy(getGlobalContext()), NULL));
+            "abort", Type::getVoidTy(ctx), NULL));
         F->setDoesNotReturn();
         F->setDoesNotThrow();
 
         CallInst::Create(F, Twine(), ii);
-        new UnreachableInst(getGlobalContext(), ii);
+        new UnreachableInst(ctx, ii);
 
         ii->eraseFromParent();
 
