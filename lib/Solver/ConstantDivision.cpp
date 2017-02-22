@@ -40,7 +40,7 @@ namespace klee {
 #define LOG2_CEIL(x) ( 32 - ldz(x - 1) )
 
 /* ones(x) -- counts the number of bits in x with the value 1 */
-static uint32_t ones( register uint32_t x ) {
+static uint32_t ones(uint32_t x) {
   x -= ((x >> 1) & 0x55555555);
   x = (((x >> 2) & 0x33333333) + (x & 0x33333333));
   x = (((x >> 4) + x) & 0x0f0f0f0f);
@@ -51,7 +51,7 @@ static uint32_t ones( register uint32_t x ) {
 }
 
 /* ldz(x) -- counts the number of leading zeroes in a 32-bit word */
-static uint32_t ldz( register uint32_t x ) {
+static uint32_t ldz(uint32_t x) {
   x |= (x >> 1);
   x |= (x >> 2);
   x |= (x >> 4);
@@ -62,8 +62,8 @@ static uint32_t ldz( register uint32_t x ) {
 }
 
 /* exp_base_2(n) -- 2^n computed as an integer */
-static uint32_t exp_base_2( register int32_t n ) {
-  register uint32_t x = ~n & (n - 32);
+static uint32_t exp_base_2(int32_t n) {
+  uint32_t x = ~n & (n - 32);
   x = x >> 31;
   return( x << n );
 }
