@@ -730,7 +730,7 @@ public:
 
   /// \brief Marking the core constraints on the path condition, and all the
   /// relevant values on the dependency graph, given an unsatistiability core.
-  void unsatCoreInterpolation(std::vector<ref<Expr> > &unsatCore);
+  void unsatCoreInterpolation(const std::vector<ref<Expr> > &unsatCore);
 
   /// \brief Memory bounds interpolation from a target address
   void pointerValuesInterpolation(llvm::Value *value, ref<Expr> address,

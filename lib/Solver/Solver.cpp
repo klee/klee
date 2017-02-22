@@ -220,9 +220,7 @@ std::pair< ref<Expr>, ref<Expr> > Solver::getRange(const Query& query) {
                         ConstantExpr::create(max, width));
 }
 
-std::vector< ref<Expr> > Solver::getUnsatCore() {
-  return impl->getUnsatCore();
-}
+std::vector<ref<Expr> > &Solver::getUnsatCore() { return impl->getUnsatCore(); }
 
 void Query::dump() const {
   llvm::errs() << "Constraints [\n";

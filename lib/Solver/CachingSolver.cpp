@@ -108,7 +108,7 @@ public:
   SolverRunStatus getOperationStatusCode();
   char *getConstraintLog(const Query&);
   void setCoreSolverTimeout(double timeout);
-  std::vector<ref<Expr> > getUnsatCore() { return unsatCoreToReturn; }
+  std::vector<ref<Expr> > &getUnsatCore() { return unsatCoreToReturn; }
 };
 
 /** @returns the canonical version of the given query.  The reference

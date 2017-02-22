@@ -69,7 +69,7 @@ public:
                        std::vector<std::vector<unsigned char> > *values,
                        bool &hasSolution);
   SolverRunStatus getOperationStatusCode();
-  std::vector<ref<Expr> > getUnsatCore();
+  std::vector<ref<Expr> > &getUnsatCore() { return unsatCore; }
 };
 
 Z3SolverImpl::Z3SolverImpl()
@@ -369,6 +369,5 @@ void Z3SolverImpl::getUnsatCoreVector(const Query &query,
   }
 }
 
-std::vector<ref<Expr> > Z3SolverImpl::getUnsatCore() { return unsatCore; }
 }
 #endif // ENABLE_Z3

@@ -71,8 +71,8 @@ namespace klee {
   public:
     AssignmentCacheWrapper(Assignment *_a) : a(_a) {}
 
-    AssignmentCacheWrapper(std::vector< ref<Expr> > _unsatCore) :
-      a(0), unsatCore(_unsatCore) {}
+    AssignmentCacheWrapper(std::vector<ref<Expr> > &_unsatCore)
+        : a(0), unsatCore(_unsatCore) {}
 
     ~AssignmentCacheWrapper() {
       delete a;

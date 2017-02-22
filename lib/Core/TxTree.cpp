@@ -2031,12 +2031,8 @@ bool SubsumptionTableEntry::subsumed(
     }
 
     if (success && result == Solver::True) {
-      std::vector<ref<Expr> > unsatCore;
-      if (z3solver) {
-        unsatCore = z3solver->getUnsatCore();
-        delete z3solver;
-      } else
-        unsatCore = solver->getUnsatCore();
+      const std::vector<ref<Expr> > &unsatCore =
+          (z3solver ? z3solver->getUnsatCore() : solver->getUnsatCore());
 
       // State subsumed, we mark needed constraints on the
       // path condition.
@@ -2610,7 +2606,7 @@ TxTree::split(TxTreeNode *parent, ExecutionState *left, ExecutionState *right) {
 
 void TxTree::markPathCondition(ExecutionState &state, TimingSolver *solver) {
   TimerStatIncrementer t(markPathConditionTime);
-  std::vector<ref<Expr> > unsatCore = solver->getUnsatCore();
+  const std::vector<ref<Expr> > &unsatCore = solver->getUnsatCore();
 
   llvm::BranchInst *binst =
       llvm::dyn_cast<llvm::BranchInst>(state.prevPC->inst);
@@ -2623,8 +2619,8 @@ void TxTree::markPathCondition(ExecutionState &state, TimingSolver *solver) {
   PathCondition *pc = currentINode->pathCondition;
 
   if (pc != 0) {
-    for (std::vector<ref<Expr> >::iterator it = unsatCore.begin(),
-                                           ie = unsatCore.end();
+    for (std::vector<ref<Expr> >::const_iterator it = unsatCore.begin(),
+                                                 ie = unsatCore.end();
          it != ie; ++it) {
       for (; pc != 0; pc = pc->cdr()) {
         if (pc->car().compare(it->get()) == 0) {
@@ -2873,7 +2869,8 @@ uint64_t TxTreeNode::getInstructionsDepth() { return instructionsDepth; }
 
 void TxTreeNode::incInstructionsDepth() { ++instructionsDepth; }
 
-void TxTreeNode::unsatCoreInterpolation(std::vector<ref<Expr> > &unsatCore) {
+void
+TxTreeNode::unsatCoreInterpolation(const std::vector<ref<Expr> > &unsatCore) {
   // State subsumed, we mark needed constraints on the path condition. We create
   // path condition marking structure to mark core constraints
   std::map<Expr *, PathCondition *> markerMap;
