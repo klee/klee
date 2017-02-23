@@ -539,7 +539,7 @@ void Executor::initializeGlobals(ExecutionState &state) {
   // ensures that we won't conflict. we don't need to allocate a memory object
   // since reading/writing via a function pointer is unsupported anyway.
   for (Module::iterator i = m->begin(), ie = m->end(); i != ie; ++i) {
-    Function *f = i;
+    Function *f = static_cast<Function *>(i);
     ref<ConstantExpr> addr(0);
 
     // If the symbol has external weak linkage then it is implicitly
@@ -593,7 +593,8 @@ void Executor::initializeGlobals(ExecutionState &state) {
   for (Module::const_global_iterator i = m->global_begin(),
          e = m->global_end();
        i != e; ++i) {
-    size_t globalObjectAlignment = getAllocationAlignment(i);
+    const GlobalVariable *v = static_cast<const GlobalVariable *>(i);
+    size_t globalObjectAlignment = getAllocationAlignment(v);
     if (i->isDeclaration()) {
       // FIXME: We have no general way of handling unknown external
       // symbols. If we really cared about making external stuff work
@@ -626,11 +627,11 @@ void Executor::initializeGlobals(ExecutionState &state) {
       }
 
       MemoryObject *mo = memory->allocate(size, /*isLocal=*/false,
-                                          /*isGlobal=*/true, /*allocSite=*/i,
+                                          /*isGlobal=*/true, /*allocSite=*/v,
                                           /*alignment=*/globalObjectAlignment);
       ObjectState *os = bindObjectInState(state, mo, false);
-      globalObjects.insert(std::make_pair(i, mo));
-      globalAddresses.insert(std::make_pair(i, mo->getBaseExpr()));
+      globalObjects.insert(std::make_pair(v, mo));
+      globalAddresses.insert(std::make_pair(v, mo->getBaseExpr()));
 
       // Program already running = object already initialized.  Read
       // concrete value and write it to our copy.
@@ -652,13 +653,13 @@ void Executor::initializeGlobals(ExecutionState &state) {
       LLVM_TYPE_Q Type *ty = i->getType()->getElementType();
       uint64_t size = kmodule->targetData->getTypeStoreSize(ty);
       MemoryObject *mo = memory->allocate(size, /*isLocal=*/false,
-                                          /*isGlobal=*/true, /*allocSite=*/&*i,
+                                          /*isGlobal=*/true, /*allocSite=*/v,
                                           /*alignment=*/globalObjectAlignment);
       if (!mo)
         llvm::report_fatal_error("out of memory");
       ObjectState *os = bindObjectInState(state, mo, false);
-      globalObjects.insert(std::make_pair(i, mo));
-      globalAddresses.insert(std::make_pair(i, mo->getBaseExpr()));
+      globalObjects.insert(std::make_pair(v, mo));
+      globalAddresses.insert(std::make_pair(v, mo->getBaseExpr()));
 
       if (!i->hasInitializer())
           os->initializeToRandom();
@@ -670,7 +671,8 @@ void Executor::initializeGlobals(ExecutionState &state) {
        i != ie; ++i) {
     // Map the alias to its aliasee's address. This works because we have
     // addresses for everything, even undefined functions. 
-    globalAddresses.insert(std::make_pair(i, evalConstant(i->getAliasee())));
+    globalAddresses.insert(std::make_pair(static_cast<GlobalAlias *>(i),
+	  evalConstant(i->getAliasee())));
   }
 
   // once all objects are allocated, do the actual initialization
@@ -678,7 +680,8 @@ void Executor::initializeGlobals(ExecutionState &state) {
          e = m->global_end();
        i != e; ++i) {
     if (i->hasInitializer()) {
-      MemoryObject *mo = globalObjects.find(i)->second;
+      const GlobalVariable *v = static_cast<const GlobalVariable *>(i);
+      MemoryObject *mo = globalObjects.find(v)->second;
       const ObjectState *os = state.addressSpace.findObject(mo);
       assert(os);
       ObjectState *wos = state.addressSpace.getWriteable(mo, os);
@@ -3543,10 +3546,11 @@ void Executor::runFunctionAsMain(Function *f,
   if (ai!=ae) {
     arguments.push_back(ConstantExpr::alloc(argc, Expr::Int32));
     if (++ai!=ae) {
+      Instruction *first = static_cast<Instruction *>(f->begin()->begin());
       argvMO =
           memory->allocate((argc + 1 + envc + 1 + 1) * NumPtrBytes,
                            /*isLocal=*/false, /*isGlobal=*/true,
-                           /*allocSite=*/f->begin()->begin(), /*alignment=*/8);
+                           /*allocSite=*/first, /*alignment=*/8);
 
       if (!argvMO)
         klee_error("Could not allocate memory for function arguments");
