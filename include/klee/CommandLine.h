@@ -70,8 +70,7 @@ extern llvm::cl::opt<klee::MetaSMTBackendType> MetaSMTBackend;
 
 //A bit of ugliness so we can use cl::list<> like cl::bits<>, see queryLoggingOptions
 template <typename T>
-static bool optionIsSet(llvm::cl::list<T> list, T option)
-{
+static bool optionIsSet(llvm::cl::list<T> &list, T option) {
     return std::find(list.begin(), list.end(), option) != list.end();
 }
 
