@@ -20,7 +20,7 @@ env:
     ###########################################################################
 
     # Check a subset of the matrix of:
-    #   LLVM  : {2.9, 3.4}
+    #   LLVM  : {2.9, 3.4, 3.5, 3.6}
     #   SOLVERS : {Z3, STP, STP:Z3, metaSMT}
     #   STP_VERSION   : {2.1.2, master}
     #   METASMT_VERSION : {v4.rc1}
@@ -36,14 +36,14 @@ env:
     # COVERAGE set indicated that coverage data should be uploaded to the server, only ONE job should have COVERAGE set
 
     matrix:
-    # FIXME: Enable when we want to test LLVM3.5
-    #- LLVM_VERSION=3.5 SOLVERS=STP:Z3 STP_VERSION=2.1.2 KLEE_UCLIBC=klee_uclibc_v1.0.0 DISABLE_ASSERTIONS=0 ENABLE_OPTIMIZED=1
-    #- LLVM_VERSION=3.5 SOLVERS=STP:Z3 STP_VERSION=2.1.2 KLEE_UCLIBC=klee_uclibc_v1.0.0 DISABLE_ASSERTIONS=0 ENABLE_OPTIMIZED=1 USE_CMAKE=1
 
     # TODO: Add coverage build
     # TODO: Add Doxygen build
 
     # Check KLEE CMake build in a few configurations
+    - LLVM_VERSION=3.6 SOLVERS=STP:Z3 STP_VERSION=2.1.2 KLEE_UCLIBC=klee_uclibc_v1.0.0 DISABLE_ASSERTIONS=0 ENABLE_OPTIMIZED=1 COVERAGE=0 USE_TCMALLOC=1 USE_CMAKE=1
+    - LLVM_VERSION=3.5 SOLVERS=STP:Z3 STP_VERSION=2.1.2 KLEE_UCLIBC=klee_uclibc_v1.0.0 DISABLE_ASSERTIONS=0 ENABLE_OPTIMIZED=1 COVERAGE=0 USE_TCMALLOC=1 USE_CMAKE=1
+
     - LLVM_VERSION=3.4 SOLVERS=STP:Z3 STP_VERSION=2.1.2 KLEE_UCLIBC=klee_uclibc_v1.0.0 DISABLE_ASSERTIONS=0 ENABLE_OPTIMIZED=1 COVERAGE=0 USE_TCMALLOC=1 USE_CMAKE=1
     - LLVM_VERSION=3.4 SOLVERS=metaSMT METASMT_VERSION=v4.rc1 METASMT_DEFAULT=STP KLEE_UCLIBC=klee_uclibc_v1.0.0 DISABLE_ASSERTIONS=0 ENABLE_OPTIMIZED=1 COVERAGE=0 USE_TCMALLOC=1 USE_CMAKE=1
     - LLVM_VERSION=2.9 SOLVERS=STP:Z3 STP_VERSION=2.1.2 KLEE_UCLIBC=klee_uclibc_v1.0.0 DISABLE_ASSERTIONS=0 ENABLE_OPTIMIZED=1 COVERAGE=0 USE_TCMALLOC=1 USE_CMAKE=1
@@ -51,6 +51,9 @@ env:
     # ASan build. Do unoptimized build otherwise the optimizer might remove problematic code
     - LLVM_VERSION=3.4 SOLVERS=STP STP_VERSION=2.1.2 KLEE_UCLIBC=klee_uclibc_v1.0.0 DISABLE_ASSERTIONS=0 ENABLE_OPTIMIZED=0 COVERAGE=0 USE_CMAKE=1 USE_TCMALLOC=0 ASAN_BUILD=1
     - LLVM_VERSION=3.4 SOLVERS=STP STP_VERSION=2.1.2 KLEE_UCLIBC=klee_uclibc_v1.0.0 DISABLE_ASSERTIONS=0 ENABLE_OPTIMIZED=0 COVERAGE=0 USE_CMAKE=0 USE_TCMALLOC=0 ASAN_BUILD=1
+
+    # legacy build system
+    - LLVM_VERSION=3.6 SOLVERS=STP:Z3 STP_VERSION=2.1.2 KLEE_UCLIBC=klee_uclibc_v1.0.0 DISABLE_ASSERTIONS=0 ENABLE_OPTIMIZED=1
 
     # TODO: Port all configurations below to CMake build system
 
@@ -100,6 +103,7 @@ addons:
     - gcc-4.8
     - g++-4.8
     - libcap-dev
+    - libedit-dev
     - libselinux1-dev
     - cmake
 
