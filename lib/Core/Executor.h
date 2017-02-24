@@ -136,7 +136,7 @@ private:
   SpecialFunctionHandler *specialFunctionHandler;
   std::vector<TimerInfo*> timers;
   PTree *processTree;
-  TxTree *interpTree; 
+  TxTree *txTree;
   ref<Expr> latestBaseLeft;
   ref<Expr> latestBaseRight;
   /// Used to track states that have been added during the current

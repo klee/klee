@@ -328,9 +328,9 @@ Executor::Executor(const InterpreterOptions &opts, InterpreterHandler *ih)
     : Interpreter(opts), kmodule(0), interpreterHandler(ih), searcher(0),
       externalDispatcher(new ExternalDispatcher()), statsTracker(0),
       pathWriter(0), symPathWriter(0), specialFunctionHandler(0),
-      processTree(0), interpTree(0), replayKTest(0), replayPath(0),
-      usingSeeds(0), atMemoryLimit(false), inhibitForking(false),
-      haltExecution(false), ivcEnabled(false),
+      processTree(0), txTree(0), replayKTest(0), replayPath(0), usingSeeds(0),
+      atMemoryLimit(false), inhibitForking(false), haltExecution(false),
+      ivcEnabled(false),
       coreSolverTimeout(MaxCoreSolverTime != 0 && MaxInstructionTime != 0
                             ? std::min(MaxCoreSolverTime, MaxInstructionTime)
                             : std::max(MaxCoreSolverTime, MaxInstructionTime)),
@@ -697,7 +697,7 @@ void Executor::branch(ExecutionState &state,
 
       if (INTERPOLATION_ENABLED) {
         std::pair<TxTreeNode *, TxTreeNode *> ires =
-            interpTree->split(es->txTreeNode, ns, es);
+            txTree->split(es->txTreeNode, ns, es);
         ns->txTreeNode = ires.first;
         es->txTreeNode = ires.second;
       }
@@ -906,7 +906,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       // Validity proof succeeded of a query: antecedent -> consequent.
       // We then extract the unsatisfiability core of antecedent and not
       // consequent as the Craig interpolant.
-      interpTree->markPathCondition(current, solver);
+      txTree->markPathCondition(current, solver);
     }
 
     return StatePair(&current, 0);
@@ -921,7 +921,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       // Falsity proof succeeded of a query: antecedent -> consequent,
       // which means that antecedent -> not(consequent) is valid. In this
       // case also we extract the unsat core of the proof
-      interpTree->markPathCondition(current, solver);
+      txTree->markPathCondition(current, solver);
     }
 
     return StatePair(0, &current);
@@ -992,7 +992,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
 
     if (INTERPOLATION_ENABLED) {
       std::pair<TxTreeNode *, TxTreeNode *> ires =
-          interpTree->split(current.txTreeNode, falseState, trueState);
+          txTree->split(current.txTreeNode, falseState, trueState);
       falseState->txTreeNode = ires.first;
       trueState->txTreeNode = ires.second;
     }
@@ -1200,7 +1200,7 @@ void Executor::executeGetValue(ExecutionState &state,
     bindLocal(target, state, value);
 
     if (INTERPOLATION_ENABLED) {
-      interpTree->execute(target->inst, e, value);
+      txTree->execute(target->inst, e, value);
     }
   } else {
     std::set< ref<Expr> > values;
@@ -1643,7 +1643,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       }
     }
     if (INTERPOLATION_ENABLED)
-      interpTree->execute(i);
+      txTree->execute(i);
     break;
   }
 #endif
@@ -1652,7 +1652,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     if (bi->isUnconditional()) {
       transferToBasicBlock(bi->getSuccessor(0), bi->getParent(), state);
       if (INTERPOLATION_ENABLED)
-        interpTree->execute(i);
+        txTree->execute(i);
     } else {
       // FIXME: Find a way that we don't have this hidden dependency.
       assert(bi->getCondition() == bi->getOperand(0) &&
@@ -1683,7 +1683,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       // of the unsatisfiability core.
       if (INTERPOLATION_ENABLED && ((!branches.first && branches.second) ||
                                     (branches.first && !branches.second)))
-        interpTree->execute(i);
+        txTree->execute(i);
     }
     break;
   }
@@ -1812,7 +1812,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       }
     }
     if (INTERPOLATION_ENABLED)
-      interpTree->execute(i);
+      txTree->execute(i);
     break;
  }
   case Instruction::Unreachable:
@@ -1940,9 +1940,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     // Update dependency
     if (INTERPOLATION_ENABLED) {
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 0)
-      interpTree->executePHI(i, state.incomingBBIndex, result);
+      txTree->executePHI(i, state.incomingBBIndex, result);
 #else
-      interpTree->executePHI(i, state.incomingBBIndex * 2, result);
+      txTree->executePHI(i, state.incomingBBIndex * 2, result);
 #endif
     }
 
@@ -1959,7 +1959,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->execute(i, result, tExpr, fExpr);
+      txTree->execute(i, result, tExpr, fExpr);
     break;
   }
 
@@ -1977,7 +1977,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->execute(i, result, left, right);
+      txTree->execute(i, result, left, right);
     break;
   }
 
@@ -1989,7 +1989,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->execute(i, result, left, right);
+      txTree->execute(i, result, left, right);
     break;
   }
  
@@ -2001,7 +2001,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->execute(i, result, left, right);
+      txTree->execute(i, result, left, right);
     break;
   }
 
@@ -2013,7 +2013,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->execute(i, result, left, right);
+      txTree->execute(i, result, left, right);
     break;
   }
 
@@ -2025,7 +2025,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->execute(i, result, left, right);
+      txTree->execute(i, result, left, right);
     break;
   }
 
@@ -2037,7 +2037,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->execute(i, result, left, right);
+      txTree->execute(i, result, left, right);
     break;
   }
  
@@ -2049,7 +2049,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->execute(i, result, left, right);
+      txTree->execute(i, result, left, right);
     break;
   }
 
@@ -2061,7 +2061,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->execute(i, result, left, right);
+      txTree->execute(i, result, left, right);
     break;
   }
 
@@ -2073,7 +2073,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->execute(i, result, left, right);
+      txTree->execute(i, result, left, right);
     break;
   }
 
@@ -2085,7 +2085,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->execute(i, result, left, right);
+      txTree->execute(i, result, left, right);
     break;
   }
 
@@ -2097,7 +2097,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->execute(i, result, left, right);
+      txTree->execute(i, result, left, right);
     break;
   }
 
@@ -2109,7 +2109,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->execute(i, result, left, right);
+      txTree->execute(i, result, left, right);
     break;
   }
 
@@ -2121,7 +2121,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->execute(i, result, left, right);
+      txTree->execute(i, result, left, right);
     break;
   }
 
@@ -2219,7 +2219,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->execute(i, result, left, right);
+      txTree->execute(i, result, left, right);
     break;
   }
  
@@ -2280,7 +2280,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->execute(i, address, base, offset);
+      txTree->execute(i, address, base, offset);
     break;
   }
 
@@ -2295,7 +2295,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->execute(i, result, arg);
+      txTree->execute(i, result, arg);
     break;
   }
   case Instruction::ZExt: {
@@ -2307,7 +2307,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->execute(i, result, arg);
+      txTree->execute(i, result, arg);
     break;
   }
   case Instruction::SExt: {
@@ -2319,7 +2319,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->execute(i, result, arg);
+      txTree->execute(i, result, arg);
     break;
   }
 
@@ -2332,7 +2332,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->execute(i, result, arg);
+      txTree->execute(i, result, arg);
     break;
   } 
   case Instruction::PtrToInt: {
@@ -2344,7 +2344,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->execute(i, result, arg);
+      txTree->execute(i, result, arg);
     break;
   }
 
@@ -2354,7 +2354,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->execute(i, result);
+      txTree->execute(i, result);
     break;
   }
 
@@ -2381,7 +2381,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->execute(i, result, left, right);
+      txTree->execute(i, result, left, right);
     break;
   }
 
@@ -2405,7 +2405,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->execute(i, result, left, right);
+      txTree->execute(i, result, left, right);
     break;
   }
  
@@ -2430,7 +2430,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->execute(i, result, left, right);
+      txTree->execute(i, result, left, right);
     break;
   }
 
@@ -2455,7 +2455,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->execute(i, result, left, right);
+      txTree->execute(i, result, left, right);
     break;
   }
 
@@ -2480,7 +2480,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->execute(i, result, left, right);
+      txTree->execute(i, result, left, right);
     break;
   }
 
@@ -2506,7 +2506,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->execute(i, result, origArg);
+      txTree->execute(i, result, origArg);
     break;
   }
 
@@ -2531,7 +2531,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->execute(i, result, origArg);
+      txTree->execute(i, result, origArg);
     break;
   }
 
@@ -2557,7 +2557,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->execute(i, result, origArg);
+      txTree->execute(i, result, origArg);
     break;
   }
 
@@ -2583,7 +2583,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->execute(i, result, origArg);
+      txTree->execute(i, result, origArg);
     break;
   }
 
@@ -2604,7 +2604,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->execute(i, result, origArg);
+      txTree->execute(i, result, origArg);
     break;
   }
 
@@ -2625,7 +2625,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->execute(i, result, origArg);
+      txTree->execute(i, result, origArg);
     break;
   }
 
@@ -2728,7 +2728,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->execute(i, result, left, right);
+      txTree->execute(i, result, left, right);
     break;
   }
   case Instruction::InsertValue: {
@@ -2759,7 +2759,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->execute(i, result, agg, val);
+      txTree->execute(i, result, agg, val);
     break;
   }
   case Instruction::ExtractValue: {
@@ -2773,7 +2773,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Update dependency
     if (INTERPOLATION_ENABLED)
-      interpTree->execute(i, result, agg);
+      txTree->execute(i, result, agg);
     break;
   }
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
@@ -2819,7 +2819,7 @@ void Executor::updateStates(ExecutionState *current) {
       seedMap.erase(it3);
     processTree->remove(es->ptreeNode);
     if (INTERPOLATION_ENABLED)
-      interpTree->remove(es->txTreeNode);
+      txTree->remove(es->txTreeNode);
     delete es;
   }
   removedStates.clear();
@@ -3028,7 +3028,7 @@ void Executor::run(ExecutionState &initialState) {
       // We synchronize the node id to that of the state. The node id
       // is set only when it was the address of the first instruction
       // in the node.
-      interpTree->setCurrentINode(state);
+      txTree->setCurrentINode(state);
 
       if (DebugState) {
         std::string debugMessage;
@@ -3036,7 +3036,7 @@ void Executor::run(ExecutionState &initialState) {
         stream << "\nCurrent state:\n";
         processTree->print(stream);
         stream << "\n";
-        interpTree->print(stream);
+        txTree->print(stream);
         stream << "\n";
         state.txTreeNode->print(stream);
         stream << "\n";
@@ -3054,7 +3054,7 @@ void Executor::run(ExecutionState &initialState) {
 #endif
 
     if (INTERPOLATION_ENABLED &&
-        interpTree->subsumptionCheck(solver, state, coreSolverTimeout)) {
+        txTree->subsumptionCheck(solver, state, coreSolverTimeout)) {
       terminateStateOnSubsumption(state);
     } else
       {
@@ -3152,7 +3152,7 @@ void Executor::terminateState(ExecutionState &state) {
     processTree->remove(state.ptreeNode);
 
     if (INTERPOLATION_ENABLED)
-      interpTree->remove(state.txTreeNode);
+      txTree->remove(state.txTreeNode);
     delete &state;
   }
 }
@@ -3423,7 +3423,7 @@ void Executor::callExternalFunction(ExecutionState &state,
       for (unsigned i = 0; i < arguments.size(); ++i) {
         tmpArgs.push_back(arguments.at(i));
       }
-      interpTree->execute(target->inst, tmpArgs);
+      txTree->execute(target->inst, tmpArgs);
     }
   }
 }
@@ -3507,7 +3507,7 @@ void Executor::executeAlloc(ExecutionState &state,
 
       // Update dependency
       if (INTERPOLATION_ENABLED)
-        interpTree->execute(target->inst, mo->getBaseExpr(), size);
+        txTree->execute(target->inst, mo->getBaseExpr(), size);
 
       if (reallocFrom) {
         unsigned count = std::min(reallocFrom->size, os->size);
@@ -3578,7 +3578,7 @@ void Executor::executeAlloc(ExecutionState &state,
 
           // Update dependency
           if (INTERPOLATION_ENABLED)
-            interpTree->execute(target->inst, result);
+            txTree->execute(target->inst, result);
         }
         
         if (hugeSize.second) {
@@ -3716,8 +3716,8 @@ void Executor::executeMemoryOperation(ExecutionState &state, bool isWrite,
 
           // Update dependency
           if (INTERPOLATION_ENABLED && target)
-            interpTree->executeMemoryOperation(target->inst, value, address,
-                                               boundsCheck->isTrue());
+            txTree->executeMemoryOperation(target->inst, value, address,
+                                           boundsCheck->isTrue());
         }          
       } else {
         ref<Expr> result = os->read(offset, type);
@@ -3729,8 +3729,8 @@ void Executor::executeMemoryOperation(ExecutionState &state, bool isWrite,
 
         // Update dependency
         if (INTERPOLATION_ENABLED && target)
-          interpTree->executeMemoryOperation(target->inst, result, address,
-                                             boundsCheck->isTrue());
+          txTree->executeMemoryOperation(target->inst, result, address,
+                                         boundsCheck->isTrue());
       }
 
       return;
@@ -3983,9 +3983,9 @@ void Executor::runFunctionAsMain(Function *f,
   state->ptreeNode = processTree->root;
 
   if (INTERPOLATION_ENABLED) {
-    interpTree = new TxTree(state, kmodule->targetData); // Added by Felicia
-    state->txTreeNode = interpTree->root;
-    TxTreeGraph::initialize(interpTree->root);
+    txTree = new TxTree(state, kmodule->targetData); // Added by Felicia
+    state->txTreeNode = txTree->root;
+    TxTreeGraph::initialize(txTree->root);
   }
 
   run(*state);
@@ -3996,8 +3996,8 @@ void Executor::runFunctionAsMain(Function *f,
     TxTreeGraph::save(interpreterHandler->getOutputFilename("tree.dot"));
     TxTreeGraph::deallocate();
 
-    delete interpTree;
-    interpTree = 0;
+    delete txTree;
+    txTree = 0;
 
 #ifdef ENABLE_Z3
     // Print interpolation time statistics
