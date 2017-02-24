@@ -168,7 +168,7 @@ static bool instructionIsCoverable(Instruction *i) {
       Instruction *prev = static_cast<Instruction *>(--it);
       if (isa<CallInst>(prev) || isa<InvokeInst>(prev)) {
         Function *target =
-            getDirectCallTarget(prev, /*moduleIsFullyLinked=*/true);
+            getDirectCallTarget(CallSite(prev), /*moduleIsFullyLinked=*/true);
         if (target && target->doesNotReturn())
           return false;
       }
