@@ -17,7 +17,7 @@
 #ifndef KLEE_DEPENDENCY_H
 #define KLEE_DEPENDENCY_H
 
-#include "AddressSpace.h"
+#include "ShadowArray.h"
 #include "klee/Config/Version.h"
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
@@ -45,28 +45,6 @@ namespace klee {
 
   /// \brief Output function name to the output stream
   extern bool outputFunctionName(llvm::Value *value, llvm::raw_ostream &stream);
-
-  /// \brief Implements the replacement mechanism for replacing variables, used in
-  /// replacing free with bound variables.
-  class ShadowArray {
-    static std::map<const Array *, const Array *> shadowArray;
-
-    static UpdateNode *getShadowUpdate(const UpdateNode *chain,
-				       std::set<const Array *> &replacements);
-
-  public:
-    static ref<Expr> createBinaryOfSameKind(ref<Expr> originalExpr,
-					    ref<Expr> newLhs, ref<Expr> newRhs);
-
-    static void addShadowArrayMap(const Array *source, const Array *target);
-
-    static ref<Expr> getShadowExpression(ref<Expr> expr,
-					 std::set<const Array *> &replacements);
-
-    static std::string getShadowName(std::string name) {
-      return "__shadow__" + name;
-    }
-  };
 
   /// \brief A class to represent memory locations.
   class MemoryLocation {
