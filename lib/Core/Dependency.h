@@ -39,10 +39,6 @@
 
 namespace klee {
 
-  class Dependency;
-
-  class VersionedValue;
-
   /// \brief A processed form of a value to be stored in the subsumption table
   class StoredValue {
   public:
