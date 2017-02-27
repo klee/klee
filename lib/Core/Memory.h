@@ -17,7 +17,6 @@
 
 #include <vector>
 #include <string>
-#include "TxTree.h"
 
 namespace llvm {
   class Value;

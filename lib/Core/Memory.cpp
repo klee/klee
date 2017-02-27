@@ -10,6 +10,7 @@
 #include "Memory.h"
 
 #include "Context.h"
+#include "ShadowArray.h"
 #include "klee/CommandLine.h"
 #include "klee/Expr.h"
 #include "klee/Solver.h"

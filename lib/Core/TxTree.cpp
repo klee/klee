@@ -16,7 +16,9 @@
 #include "TxTree.h"
 
 #include "Dependency.h"
+#include "ShadowArray.h"
 #include "TimingSolver.h"
+#include "TxPrintUtil.h"
 
 #include <klee/CommandLine.h>
 #include <klee/Expr.h>

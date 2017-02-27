@@ -17,12 +17,13 @@
 #include "PTree.h"
 #include "Searcher.h"
 #include "SeedInfo.h"
+#include "ShadowArray.h"
 #include "SpecialFunctionHandler.h"
 #include "StatsTracker.h"
 #include "TimingSolver.h"
 #include "UserSearcher.h"
 #include "ExecutorTimerInfo.h"
-
+#include "TxPrintUtil.h"
 
 #include "klee/ExecutionState.h"
 #include "klee/Expr.h"
