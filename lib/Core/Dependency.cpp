@@ -1,4 +1,4 @@
-//===-- Dependency.cpp - Field-insensitive dependency -----------*- C++ -*-===//
+//===-- Dependency.cpp - Memory location dependency ------------*- C++ -*-===//
 //
 //               The Tracer-X KLEE Symbolic Virtual Machine
 //
