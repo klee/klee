@@ -16,7 +16,8 @@
 
 #include "ShadowArray.h"
 #include "TxPrintUtil.h"
-#include "VersionedValue.h"
+
+#include <klee/Internal/Module/VersionedValue.h>
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
 #include <llvm/IR/Type.h>

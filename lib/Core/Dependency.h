@@ -17,8 +17,8 @@
 #ifndef KLEE_DEPENDENCY_H
 #define KLEE_DEPENDENCY_H
 
-#include "VersionedValue.h"
 #include "klee/Config/Version.h"
+#include "klee/Internal/Module/VersionedValue.h"
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
 #include <llvm/IR/Function.h>
