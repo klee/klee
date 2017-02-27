@@ -8,9 +8,9 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains the declarations for the flow-insensitive dependency
-/// analysis to compute the memory locations upon which the unsatisfiability
-/// core depends, which is used in computing the interpolant.
+/// This file contains the declarations for the dependency analysis to compute
+/// the memory locations upon which the unsatisfiability core depends, which is
+/// used in computing the interpolant.
 ///
 //===----------------------------------------------------------------------===//
 
