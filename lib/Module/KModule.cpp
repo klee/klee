@@ -144,12 +144,12 @@ static Function *getStubFunctionForCtorList(Module *m,
   
   std::vector<LLVM_TYPE_Q Type*> nullary;
 
-  Function *fn = Function::Create(FunctionType::get(Type::getVoidTy(getGlobalContext()), 
+  Function *fn = Function::Create(FunctionType::get(Type::getVoidTy(m->getContext()),
 						    nullary, false),
 				  GlobalVariable::InternalLinkage, 
 				  name,
                               m);
-  BasicBlock *bb = BasicBlock::Create(getGlobalContext(), "entry", fn);
+  BasicBlock *bb = BasicBlock::Create(m->getContext(), "entry", fn);
   
   // From lli:
   // Should be an array of '{ int, void ()* }' structs.  The first value is
@@ -174,7 +174,7 @@ static Function *getStubFunctionForCtorList(Module *m,
     }
   }
   
-  ReturnInst::Create(getGlobalContext(), bb);
+  ReturnInst::Create(m->getContext(), bb);
 
   return fn;
 }
@@ -241,11 +241,13 @@ void KModule::addInternalFunction(const char* functionName){
 
 void KModule::prepare(const Interpreter::ModuleOptions &opts,
                       InterpreterHandler *ih) {
+  LLVMContext &ctx = module->getContext();
+
   if (!MergeAtExit.empty()) {
     Function *mergeFn = module->getFunction("klee_merge");
     if (!mergeFn) {
       LLVM_TYPE_Q llvm::FunctionType *Ty = 
-        FunctionType::get(Type::getVoidTy(getGlobalContext()), 
+        FunctionType::get(Type::getVoidTy(ctx),
                           std::vector<LLVM_TYPE_Q Type*>(), false);
       mergeFn = Function::Create(Ty, GlobalVariable::ExternalLinkage,
 				 "klee_merge",
@@ -264,16 +266,16 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
                    name.c_str());
       }
 
-      BasicBlock *exit = BasicBlock::Create(getGlobalContext(), "exit", f);
+      BasicBlock *exit = BasicBlock::Create(ctx, "exit", f);
       PHINode *result = 0;
-      if (f->getReturnType() != Type::getVoidTy(getGlobalContext()))
+      if (f->getReturnType() != Type::getVoidTy(ctx))
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 0)
         result = PHINode::Create(f->getReturnType(), 0, "retval", exit);
 #else
 		result = PHINode::Create(f->getReturnType(), "retval", exit);
 #endif
       CallInst::Create(mergeFn, "", exit);
-      ReturnInst::Create(getGlobalContext(), result, exit);
+      ReturnInst::Create(ctx, result, exit);
 
       llvm::errs() << "KLEE: adding klee_merge at exit of: " << name << "\n";
       for (llvm::Function::iterator bbit = f->begin(), bbie = f->end(); 
@@ -317,19 +319,19 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   // by name. We only add them if such a function doesn't exist to
   // avoid creating stale uses.
 
-  LLVM_TYPE_Q llvm::Type *i8Ty = Type::getInt8Ty(getGlobalContext());
+  LLVM_TYPE_Q llvm::Type *i8Ty = Type::getInt8Ty(ctx);
   forceImport(module, "memcpy", PointerType::getUnqual(i8Ty),
               PointerType::getUnqual(i8Ty),
               PointerType::getUnqual(i8Ty),
-              targetData->getIntPtrType(getGlobalContext()), (Type*) 0);
+              targetData->getIntPtrType(ctx), (Type*) 0);
   forceImport(module, "memmove", PointerType::getUnqual(i8Ty),
               PointerType::getUnqual(i8Ty),
               PointerType::getUnqual(i8Ty),
-              targetData->getIntPtrType(getGlobalContext()), (Type*) 0);
+              targetData->getIntPtrType(ctx), (Type*) 0);
   forceImport(module, "memset", PointerType::getUnqual(i8Ty),
               PointerType::getUnqual(i8Ty),
-              Type::getInt32Ty(getGlobalContext()),
-              targetData->getIntPtrType(getGlobalContext()), (Type*) 0);
+              Type::getInt32Ty(ctx),
+              targetData->getIntPtrType(ctx), (Type*) 0);
 #endif
   // FIXME: Missing force import for various math functions.
 

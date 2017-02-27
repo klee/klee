@@ -17,6 +17,7 @@
 namespace llvm {
   class ExecutionEngine;
   class Instruction;
+  class LLVMContext;
   class Function;
   class FunctionType;
   class Module;
@@ -35,7 +36,7 @@ namespace klee {
     bool runProtectedCall(llvm::Function *f, uint64_t *args);
     
   public:
-    ExternalDispatcher();
+    ExternalDispatcher(llvm::LLVMContext &ctx);
     ~ExternalDispatcher();
 
     /* Call the given function using the parameter passing convention of

@@ -248,7 +248,8 @@ static bool linkBCA(object::Archive* archive, Module* composite, std::string& er
       if (buff)
       {
         // FIXME: Maybe load bitcode file lazily? Then if we need to link, materialise the module
-        Result = ParseBitcodeFile(buff.get(), getGlobalContext(), &errorMessage);
+        Result = ParseBitcodeFile(buff.get(), composite->getContext(),
+	    &errorMessage);
 
         if(!Result)
         {
@@ -378,7 +379,7 @@ Module *klee::linkWithLibrary(Module *module,
 
   sys::fs::file_magic magic = sys::fs::identify_magic(Buffer->getBuffer());
 
-  LLVMContext &Context = getGlobalContext();
+  LLVMContext &Context = module->getContext();
   std::string ErrorMessage;
 
   if (magic == sys::fs::file_magic::bitcode) {
