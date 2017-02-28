@@ -45,13 +45,14 @@ define void @"test_logical_ops"() {
   call void @print_i32(i32 %t1)
   call void @print_i32(i32 %t2)
   call void @print_i32(i32 %t3)
+
+  ; or the address with 1 to ensure the addresses will differ in 'ne' below
+  %t4 = shl i64 lshr(i64 or(i64 ptrtoint(i32* @gInt to i64), i64 1), i64 8), 8
+  %t5 = shl i64 ashr(i64 or(i64 ptrtoint(i32* @gInt to i64), i64 1), i64 8), 8
+  %t6 = lshr i64 shl(i64 or(i64 ptrtoint(i32* @gInt to i64), i64 1), i64 8), 8
   
-  %t4 = shl i32 lshr(i32 ptrtoint(i32* @gInt to i32), i32 8), 8
-  %t5 = shl i32 ashr(i32 ptrtoint(i32* @gInt to i32), i32 8), 8
-  %t6 = lshr i32 shl(i32 ptrtoint(i32* @gInt to i32), i32 8), 8
-  
-  %t7 = icmp eq i32 %t4, %t5     
-  %t8 = icmp ne i32 %t4, %t6     
+  %t7 = icmp eq i64 %t4, %t5
+  %t8 = icmp ne i64 %t4, %t6
   
   %t9 = zext i1 %t7 to i8
   %t10 = zext i1 %t8 to i8
