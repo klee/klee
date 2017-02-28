@@ -1897,7 +1897,6 @@ bool SubsumptionTableEntry::subsumed(
       if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL) {
         std::string msg;
         llvm::raw_string_ostream stream(msg);
-        stream << "Before simplification:\n";
         ExprPPrinter::printQuery(stream, state.constraints, existsExpr);
         stream.flush();
         klee_message("Before simplification:\n%s", msg.c_str());
