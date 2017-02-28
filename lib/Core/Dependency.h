@@ -69,28 +69,34 @@ namespace klee {
     /// \brief Do not use bound in subsumption check
     bool doNotUseBound;
 
+    /// \brief Reason this was stored as needed value
+    std::vector<std::string> coreReasons;
+
     void init(ref<VersionedValue> vvalue, std::set<const Array *> &replacements,
-              bool shadowing = false);
+              std::vector<std::string> &coreReasons, bool shadowing = false);
 
     StoredValue(ref<VersionedValue> vvalue,
-                std::set<const Array *> &replacements) {
-      init(vvalue, replacements, true);
+                std::set<const Array *> &replacements,
+                std::vector<std::string> &coreReasons) {
+      init(vvalue, replacements, coreReasons, true);
     }
 
-    StoredValue(ref<VersionedValue> vvalue) {
+    StoredValue(ref<VersionedValue> vvalue,
+                std::vector<std::string> &coreReasons) {
       std::set<const Array *> dummyReplacements;
-      init(vvalue, dummyReplacements);
+      init(vvalue, dummyReplacements, coreReasons);
     }
 
   public:
     static ref<StoredValue> create(ref<VersionedValue> vvalue,
                                    std::set<const Array *> &replacements) {
-      ref<StoredValue> sv(new StoredValue(vvalue, replacements));
+      ref<StoredValue> sv(
+          new StoredValue(vvalue, replacements, vvalue->getReasons()));
       return sv;
     }
 
     static ref<StoredValue> create(ref<VersionedValue> vvalue) {
-      ref<StoredValue> sv(new StoredValue(vvalue));
+      ref<StoredValue> sv(new StoredValue(vvalue, vvalue->getReasons()));
       return sv;
     }
 
@@ -379,15 +385,16 @@ namespace klee {
 
     /// \brief Mark as core all the values and locations that flows to the
     /// target
-    void markFlow(ref<VersionedValue> target) const;
+    void markFlow(ref<VersionedValue> target, const std::string &reason) const;
 
     /// \brief Mark as core all the pointer values and that flows to the target;
     /// and adjust its offset bound for memory bounds interpolation (a.k.a.
     /// slackening)
     void markPointerFlow(ref<VersionedValue> target,
-                         ref<VersionedValue> checkedOffset) const {
+                         ref<VersionedValue> checkedOffset,
+                         const std::string &reason) const {
       std::set<ref<Expr> > bounds;
-      markPointerFlow(target, checkedOffset, bounds);
+      markPointerFlow(target, checkedOffset, bounds, reason);
     }
 
     /// \brief Mark as core all the pointer values and that flows to the target;
@@ -395,7 +402,8 @@ namespace klee {
     /// slackening)
     void markPointerFlow(ref<VersionedValue> target,
                          ref<VersionedValue> checkedOffset,
-                         std::set<ref<Expr> > &bounds) const;
+                         std::set<ref<Expr> > &bounds,
+                         const std::string &reason) const;
 
     /// \brief Record the expressions of a call's arguments
     std::vector<ref<VersionedValue> >
@@ -459,23 +467,26 @@ namespace klee {
 
     /// \brief Given a versioned value, retrieve all its sources and mark them
     /// as in the core.
-    void markAllValues(ref<VersionedValue> value);
+    void markAllValues(ref<VersionedValue> value, const std::string &reason);
 
     /// \brief Given an LLVM value, retrieve all its sources and mark them as in
     /// the core.
-    void markAllValues(llvm::Value *value, ref<Expr> expr);
+    void markAllValues(llvm::Value *value, ref<Expr> expr,
+                       const std::string &reason);
 
     /// \brief Given an LLVM value which is used as an address, retrieve all its
     /// sources and mark them as in the core.
-    void markAllPointerValues(llvm::Value *val, ref<Expr> address) {
+    void markAllPointerValues(llvm::Value *val, ref<Expr> address,
+                              const std::string &reason) {
       std::set<ref<Expr> > bounds;
-      markAllPointerValues(val, address, bounds);
+      markAllPointerValues(val, address, bounds, reason);
     }
 
     /// \brief Given an LLVM value which is used as an address, retrieve all its
     /// sources and mark them as in the core.
     void markAllPointerValues(llvm::Value *val, ref<Expr> address,
-                              std::set<ref<Expr> > &bounds);
+                              std::set<ref<Expr> > &bounds,
+                              const std::string &reason);
 
     /// \brief Print the content of the object to the LLVM error stream
     void dump() const {

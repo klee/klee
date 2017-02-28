@@ -341,7 +341,17 @@ PathCondition *PathCondition::cdr() const { return tail; }
 
 void PathCondition::setAsCore() {
   // We mark all values to which this constraint depends
-  dependency->markAllValues(condition);
+  std::string reason = "";
+  if (DebugSubsumption >= 1) {
+    llvm::raw_string_ostream stream(reason);
+    stream << "path condition [";
+    constraint->print(stream);
+    stream << "] of value [";
+    condition->getValue()->print(stream);
+    stream << "]";
+    stream.flush();
+  }
+  dependency->markAllValues(condition, reason);
 
   // We mark this constraint itself as core
   core = true;
@@ -1365,8 +1375,17 @@ bool SubsumptionTableEntry::subsumed(
                it = corePointerValues.begin(),
                ie = corePointerValues.end();
            it != ie; ++it) {
-        state.txTreeNode->pointerValuesInterpolation(
-            it->first->getValue(), it->first->getExpression(), it->second);
+        std::string reason = "";
+        if (DebugSubsumption >= 1) {
+          llvm::raw_string_ostream stream(reason);
+          stream << "pointer interpolation at subsumption [";
+          it->first->getValue()->print(stream);
+          stream << "]";
+          stream.flush();
+        }
+        state.txTreeNode->pointerValuesInterpolation(it->first->getValue(),
+                                                     it->first->getExpression(),
+                                                     it->second, reason);
       }
       return true;
     }
@@ -1485,8 +1504,17 @@ bool SubsumptionTableEntry::subsumed(
                    it = corePointerValues.begin(),
                    ie = corePointerValues.end();
                it != ie; ++it) {
+            std::string reason = "";
+            if (DebugSubsumption >= 1) {
+              llvm::raw_string_ostream stream(reason);
+              stream << "pointer interpolation at subsumption [";
+              it->first->getValue()->print(stream);
+              stream << "]";
+              stream.flush();
+            }
             state.txTreeNode->pointerValuesInterpolation(
-                it->first->getValue(), it->first->getExpression(), it->second);
+                it->first->getValue(), it->first->getExpression(), it->second,
+                reason);
           }
         }
         return true;
@@ -1520,8 +1548,17 @@ bool SubsumptionTableEntry::subsumed(
                  it = corePointerValues.begin(),
                  ie = corePointerValues.end();
              it != ie; ++it) {
+          std::string reason = "";
+          if (DebugSubsumption >= 1) {
+            llvm::raw_string_ostream stream(reason);
+            stream << "pointer interpolation at subsumption [";
+            it->first->getValue()->print(stream);
+            stream << "]";
+            stream.flush();
+          }
           state.txTreeNode->pointerValuesInterpolation(
-              it->first->getValue(), it->first->getExpression(), it->second);
+              it->first->getValue(), it->first->getExpression(), it->second,
+              reason);
         }
       }
 
@@ -2080,8 +2117,18 @@ void TxTree::markPathCondition(ExecutionState &state, TimingSolver *solver) {
       llvm::dyn_cast<llvm::BranchInst>(state.prevPC->inst);
   if (binst) {
     ref<Expr> unknownExpression;
+    std::string reason = "";
+    if (DebugSubsumption >= 1) {
+      llvm::raw_string_ostream stream(reason);
+      stream << "branch infeasibility [";
+      binst->print(stream);
+      stream << "] with condition [";
+      binst->getCondition()->print(stream);
+      stream << "]";
+      stream.flush();
+    }
     currentINode->dependency->markAllValues(binst->getCondition(),
-                                            unknownExpression);
+                                            unknownExpression, reason);
   }
 
   PathCondition *pc = currentINode->pathCondition;
