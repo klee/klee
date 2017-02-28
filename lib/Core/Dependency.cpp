@@ -1409,7 +1409,6 @@ void Dependency::executeMemoryOperation(
             if (llvm::ConstantExpr *ce =
                     llvm::dyn_cast<llvm::ConstantExpr>((*it)->getValue())) {
               if (llvm::isa<llvm::GetElementPtrInst>(ce->getAsInstruction())) {
-                (*it)->dump();
                 if (ExactAddressInterpolant) {
                   markAllValues(addressOperand, address);
                 } else {
