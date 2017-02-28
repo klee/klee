@@ -1558,7 +1558,7 @@ void SubsumptionTableEntry::print(llvm::raw_ostream &stream,
 }
 
 void SubsumptionTableEntry::print(llvm::raw_ostream &stream,
-                                  const std::string prefix) const {
+                                  const std::string &prefix) const {
   std::string tabsNext = appendTab(prefix);
   std::string tabsNextNext = appendTab(tabsNext);
 
@@ -1661,7 +1661,7 @@ void SubsumptionTable::StackIndexedTable::Node::print(
 }
 
 void SubsumptionTable::StackIndexedTable::Node::print(
-    llvm::raw_ostream &stream, const std::string prefix) const {
+    llvm::raw_ostream &stream, const std::string &prefix) const {
   std::string tabsNext = appendTab(prefix);
 
   stream << "\n";

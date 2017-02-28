@@ -218,7 +218,8 @@ ref<Expr> StoredValue::getBoundsCheck(ref<StoredValue> stateValue,
 
 void StoredValue::print(llvm::raw_ostream &stream) const { print(stream, ""); }
 
-void StoredValue::print(llvm::raw_ostream &stream, std::string prefix) const {
+void StoredValue::print(llvm::raw_ostream &stream,
+                        const std::string &prefix) const {
   if (!doNotUseBound && !allocationBounds.empty()) {
     stream << prefix << "BOUNDS:";
     for (std::map<llvm::Value *, std::set<ref<Expr> > >::const_iterator

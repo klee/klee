@@ -249,7 +249,7 @@ class SubsumptionTable {
 
       void print(llvm::raw_ostream &stream, const unsigned paddingAmount) const;
 
-      void print(llvm::raw_ostream &stream, const std::string prefix) const;
+      void print(llvm::raw_ostream &stream, const std::string &prefix) const;
     };
 
     Node *root;
@@ -486,7 +486,7 @@ public:
 
   void print(llvm::raw_ostream &stream, const unsigned paddingAmount) const;
 
-  void print(llvm::raw_ostream &stream, const std::string prefix) const;
+  void print(llvm::raw_ostream &stream, const std::string &prefix) const;
 };
 
 /// \brief The Tracer-X symbolic execution tree node.
