@@ -250,7 +250,16 @@ public:
   /// \brief Print the content of the object into a stream.
   ///
   /// \param stream The stream to print the data to.
-  void print(llvm::raw_ostream &stream) const;
+  void print(llvm::raw_ostream &stream) const {
+    std::string emptyString;
+    print(stream, emptyString);
+  }
+
+  /// \brief Print the content of the object into a stream.
+  ///
+  /// \param stream The stream to print the data to.
+  /// \param prefix Padding spaces to print before the actual data.
+  void print(llvm::raw_ostream &stream, const std::string &prefix) const;
 };
 
 /// \brief A class that represents LLVM value that can be destructively
@@ -302,7 +311,18 @@ private:
   /// values.
   ///
   /// \param stream The stream to print the data to.
-  void printNoDependency(llvm::raw_ostream &stream) const;
+  void printNoDependency(llvm::raw_ostream &stream) const {
+    std::string emptyString;
+    printNoDependency(stream, emptyString);
+  }
+
+  /// \brief Print the content of the object, but without showing its source
+  /// values.
+  ///
+  /// \param stream The stream to print the data to.
+  /// \param prefix Padding spaces to print before the actual data.
+  void printNoDependency(llvm::raw_ostream &stream,
+                         const std::string &prefix) const;
 
 public:
   ~VersionedValue() { locations.clear(); }
@@ -370,7 +390,15 @@ public:
   /// \brief Print the content of the object into a stream.
   ///
   /// \param stream The stream to print the data to.
-  void print(llvm::raw_ostream &stream) const;
+  void print(llvm::raw_ostream &stream) const {
+    std::string emptyString;
+    print(stream, emptyString);
+  }
+
+  /// \brief Print the content of the object into a stream.
+  ///
+  /// \param stream The stream to print the data to.
+  void print(llvm::raw_ostream &stream, const std::string &prefix) const;
 
   /// \brief Print the content of the object to the LLVM error stream
   void dump() const {

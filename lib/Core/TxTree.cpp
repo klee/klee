@@ -2095,6 +2095,7 @@ void SubsumptionTableEntry::print(llvm::raw_ostream &stream,
 void SubsumptionTableEntry::print(llvm::raw_ostream &stream,
                                   const std::string prefix) const {
   std::string tabsNext = appendTab(prefix);
+  std::string tabsNextNext = appendTab(tabsNext);
 
   stream << prefix << "------------ Subsumption Table Entry ------------\n";
   stream << prefix << "Program point = " << programPoint << "\n";
@@ -2106,7 +2107,7 @@ void SubsumptionTableEntry::print(llvm::raw_ostream &stream,
   stream << "\n";
 
   if (!concreteAddressStore.empty()) {
-    stream << prefix << "concrete store = [";
+    stream << prefix << "concrete store = [\n";
     for (Dependency::ConcreteStore::const_iterator
              is1 = concreteAddressStore.begin(),
              ie1 = concreteAddressStore.end(), it1 = is1;
@@ -2116,19 +2117,20 @@ void SubsumptionTableEntry::print(llvm::raw_ostream &stream,
                ie2 = it1->second.end(), it2 = is2;
            it2 != ie2; ++it2) {
         if (it1 != is1 || it2 != is2)
-          stream << ",";
-        stream << "(";
-        it2->first->print(stream);
-        stream << ",\n";
-        it2->second->print(stream, tabsNext);
-        stream << ")";
+          stream << tabsNext << "------------------------------------------\n";
+        stream << tabsNext << "address:\n";
+        it2->first->print(stream, tabsNextNext);
+        stream << "\n";
+        stream << tabsNext << "content:\n";
+        it2->second->print(stream, tabsNextNext);
+        stream << "\n";
       }
     }
-    stream << "]\n";
+    stream << prefix << "]\n";
   }
 
   if (!symbolicAddressStore.empty()) {
-    stream << prefix << "symbolic store = [";
+    stream << prefix << "symbolic store = [\n";
     for (Dependency::SymbolicStore::const_iterator
              is1 = symbolicAddressStore.begin(),
              ie1 = symbolicAddressStore.end(), it1 = is1;
@@ -2138,12 +2140,13 @@ void SubsumptionTableEntry::print(llvm::raw_ostream &stream,
                ie2 = it1->second.end(), it2 = is2;
            it2 != ie2; ++it2) {
         if (it1 != is1 || it2 != is2)
-          stream << ",";
-        stream << "(";
-        it2->first->print(stream);
-        stream << ",";
-        it2->second->print(stream, tabsNext);
-        stream << ")";
+          stream << tabsNext << "------------------------------------------\n";
+        stream << tabsNext << "address:\n";
+        it2->first->print(stream, tabsNextNext);
+        stream << "\n";
+        stream << tabsNext << "content:\n";
+        it2->second->print(stream, tabsNextNext);
+        stream << "\n";
       }
     }
     stream << "]\n";
@@ -2947,7 +2950,6 @@ void TxTreeNode::print(llvm::raw_ostream &stream,
     (*it)->print(stream);
     stream << "\n";
   }
-  stream << "\n";
   if (dependency) {
     stream << tabsNext << "------- Abstract Dependencies ----------\n";
     dependency->print(stream, paddingAmount + 1);
