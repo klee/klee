@@ -507,6 +507,7 @@ public:
                                std::map<const std::string*, std::set<unsigned> > &res);
 
   Expr::Width getWidthForLLVMType(LLVM_TYPE_Q llvm::Type *type) const;
+  size_t getAllocationAlignment(const llvm::Value *allocSite) const;
 };
   
 } // End klee namespace
