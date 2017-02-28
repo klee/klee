@@ -266,9 +266,9 @@ static bool linkBCA(object::Archive* archive, Module* composite, std::string& er
       }
 
     }
-    else if (object::ObjectFile *o = dyn_cast<object::ObjectFile>(child.get()))
+    else if (child.get()->isObject())
     {
-      SS << "Object file " << o->getFileName().data() <<
+      SS << "Object file " << child.get()->getFileName().data() <<
             " in archive is not supported";
       SS.flush();
       return false;
@@ -412,10 +412,10 @@ Module *klee::linkWithLibrary(Module *module,
 
   } else if (magic.is_object()) {
     OwningPtr<object::Binary> obj;
-    if (object::ObjectFile *o = dyn_cast<object::ObjectFile>(obj.get())) {
+    if (obj.get()->isObject()) {
       klee_warning("Link with library: Object file %s in archive %s found. "
           "Currently not supported.",
-          o->getFileName().data(), libraryName.c_str());
+          obj.get()->getFileName().data(), libraryName.c_str());
     }
   } else {
     klee_error("Link with library %s failed: Unrecognized file type.",
