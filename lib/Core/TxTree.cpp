@@ -1383,11 +1383,9 @@ bool SubsumptionTableEntry::subsumed(
     if (!existentials.empty()) {
       ref<Expr> existsExpr = ExistsExpr::create(existentials, query);
       if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL) {
-        std::string msg;
-        llvm::raw_string_ostream stream(msg);
-        ExprPPrinter::printQuery(stream, state.constraints, existsExpr);
-        stream.flush();
-        klee_message("Before simplification:\n%s", msg.c_str());
+        klee_message("Before simplification:\n%s",
+                     PrettyExpressionBuilder::constructQuery(
+                         state.constraints, existsExpr).c_str());
       }
       query = simplifyExistsExpr(existsExpr, queryHasNoFreeVariables);
     }
@@ -1449,22 +1447,18 @@ bool SubsumptionTableEntry::subsumed(
               EqExpr::create(falseExpr, query->getKid(0)));
 
           if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL) {
-            std::string msg;
-            llvm::raw_string_ostream stream(msg);
-            ExprPPrinter::printQuery(stream, constraints, falseExpr);
-            stream.flush();
-            klee_message("Querying for satisfiability check:\n%s", msg.c_str());
+            klee_message("Querying for satisfiability check:\n%s",
+                         PrettyExpressionBuilder::constructQuery(
+                             constraints, falseExpr).c_str());
           }
 
           success = z3solver->getValue(Query(constraints, falseExpr), tmpExpr);
           result = success ? Solver::True : Solver::Unknown;
         } else {
           if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL) {
-            std::string msg;
-            llvm::raw_string_ostream stream(msg);
-            ExprPPrinter::printQuery(stream, state.constraints, query);
-            stream.flush();
-            klee_message("Querying for subsumption check:\n%s", msg.c_str());
+            klee_message("Querying for subsumption check:\n%s",
+                         PrettyExpressionBuilder::constructQuery(
+                             state.constraints, query).c_str());
           }
 
           success = z3solver->directComputeValidity(
@@ -1475,12 +1469,9 @@ bool SubsumptionTableEntry::subsumed(
 
       } else {
         if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL) {
-          std::string msg;
-          llvm::raw_string_ostream stream(msg);
-          klee_message("No existential");
-          ExprPPrinter::printQuery(stream, state.constraints, query);
-          stream.flush();
-          klee_message("Querying for subsumption check:\n%s", msg.c_str());
+          klee_message("Querying for subsumption check:\n%s",
+                       PrettyExpressionBuilder::constructQuery(
+                           state.constraints, query).c_str());
         }
         // We call the solver in the standard way if the
         // formula is unquantified.

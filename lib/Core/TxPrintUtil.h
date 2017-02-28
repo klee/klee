@@ -16,6 +16,7 @@
 #define KLEE_TXPRINTUTIL_H
 
 #include "klee/Config/Version.h"
+#include "klee/Constraints.h"
 #include "klee/Expr.h"
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
@@ -110,6 +111,9 @@ class PrettyExpressionBuilder {
 
 public:
   static std::string construct(ref<Expr> e);
+
+  static std::string constructQuery(ConstraintManager &constraints,
+                                    ref<Expr> e);
 };
 
 /// \brief Output function name to the output stream

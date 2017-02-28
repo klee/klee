@@ -529,6 +529,24 @@ std::string PrettyExpressionBuilder::construct(ref<Expr> e) {
   return ret;
 }
 
+std::string
+PrettyExpressionBuilder::constructQuery(ConstraintManager &constraints,
+                                        ref<Expr> query) {
+  std::string msg;
+  std::string tabs = makeTabs(1);
+  llvm::raw_string_ostream stream(msg);
+  stream << "antecedent:\n";
+  for (ConstraintManager::const_iterator it = constraints.begin(),
+                                         ie = constraints.end();
+       it != ie; ++it) {
+    stream << tabs << construct(*it) << "\n";
+  }
+  stream << "consequent:\n";
+  stream << tabs << construct(query) << "\n";
+  stream.flush();
+  return msg;
+}
+
 std::string PrettyExpressionBuilder::buildArray(const char *name,
                                                 unsigned indexWidth,
                                                 unsigned valueWidth) {
