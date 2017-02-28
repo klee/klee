@@ -137,17 +137,11 @@ DebugState("debug-state",
                "Dump information on symbolic execution state when visited."),
            llvm::cl::init(false));
 
-llvm::cl::opt<SubsumptionDebugType> DebugSubsumption(
+llvm::cl::opt<int> DebugSubsumption(
     "debug-subsumption",
-    llvm::cl::desc(
-        "Dump debug information on subsumption checks (default=off)."),
-    llvm::cl::values(
-        clEnumValN(DEBUG_SUBSUMPTION_ALL, "all",
-                   "All subsumption debug message"),
-        clEnumValN(DEBUG_SUBSUMPTION_RESULT, "result",
-                   "Debug message for subsumption check results only"),
-        clEnumValEnd),
-    llvm::cl::init(DEBUG_SUBSUMPTION_NONE));
+    llvm::cl::desc("Set level of debug information on subsumption checks: the "
+                   "higher the more (default=0 (off))."),
+    llvm::cl::init(0));
 
 llvm::cl::opt<bool> NoBoundInterpolation(
     "no-bound-interpolation",

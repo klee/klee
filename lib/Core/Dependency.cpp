@@ -147,7 +147,7 @@ ref<Expr> StoredValue::getBoundsCheck(ref<StoredValue> stateValue,
     assert(!tabledBounds.empty() && "tabled bounds empty");
 
     if (stateOffsets.empty()) {
-      if (DebugInterpolation) {
+      if (DebugSubsumption >= 2) {
         std::string msg;
         llvm::raw_string_ostream stream(msg);
         it->first->print(stream);
@@ -169,7 +169,7 @@ ref<Expr> StoredValue::getBoundsCheck(ref<StoredValue> stateValue,
             if (tabledBoundInt > 0) {
               uint64_t stateOffsetInt = stateOffset->getZExtValue();
               if (stateOffsetInt >= tabledBoundInt) {
-                if (DebugInterpolation) {
+                if (DebugSubsumption >= 2) {
                   std::string msg;
                   llvm::raw_string_ostream stream(msg);
                   it->first->print(stream);
@@ -1377,7 +1377,7 @@ void Dependency::executeMemoryOperation(
     }
     }
 
-    if (DebugInterpolation) {
+    if (DebugSubsumption >= 2) {
       std::string msg;
       llvm::raw_string_ostream stream(msg);
       instr->print(stream);
