@@ -506,12 +506,13 @@ std::string PrettyExpressionBuilder::constructActual(ref<Expr> e) {
     ExistsExpr *xe = cast<ExistsExpr>(e);
     std::string existentials;
 
-    for (std::set<const Array *>::const_iterator it = xe->variables.begin(),
-                                                 ie = xe->variables.end();
+    for (std::set<const Array *>::const_iterator is = xe->variables.begin(),
+                                                 ie = xe->variables.end(),
+                                                 it = is;
          it != ie; ++it) {
-      existentials += (*it)->name;
-      if (it != ie)
+      if (it != is)
         existentials += ",";
+      existentials += (*it)->name;
     }
 
     return "(exists (" + existentials + ") " + constructActual(xe->body) + ")";
