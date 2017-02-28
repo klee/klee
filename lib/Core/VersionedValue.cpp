@@ -92,81 +92,95 @@ MemoryLocation::create(ref<MemoryLocation> loc,
   return ret;
 }
 
-void MemoryLocation::print(llvm::raw_ostream &stream) const {
-  stream << "A";
-  if (!llvm::isa<ConstantExpr>(this->address))
-    stream << "(symbolic)";
-  stream << "[";
+void MemoryLocation::print(llvm::raw_ostream &stream,
+                           const std::string &prefix) const {
+  std::string tabsNext = appendTab(prefix);
+
+  stream << prefix << "function/value: ";
   if (outputFunctionName(value, stream))
-    stream << ":";
+    stream << "/";
   value->print(stream);
-  stream << ":[";
+  stream << "\n";
+
+  stream << prefix << "stack:\n";
   for (std::vector<llvm::Instruction *>::const_reverse_iterator
            it = stack.rbegin(),
            ib = it, ie = stack.rend();
        it != ie; ++it) {
-    if (it != ib)
-      stream << ",";
+    stream << tabsNext;
     (*it)->print(stream);
+    stream << "\n";
   }
-  stream << "]:";
-  address->print(stream);
-  stream << ":";
-  base->print(stream);
-  stream << ":";
+  stream << prefix << "offset";
+  if (!llvm::isa<ConstantExpr>(this->offset))
+    stream << " (symbolic)";
+  stream << ": ";
   offset->print(stream);
-  stream << "]#" << reinterpret_cast<uintptr_t>(this);
+  stream << "\n";
+  stream << prefix << "address";
+  if (!llvm::isa<ConstantExpr>(this->address))
+    stream << " (symbolic)";
+  stream << ": ";
+  address->print(stream);
+  stream << "\n";
+  stream << prefix << "base: ";
+  if (!llvm::isa<ConstantExpr>(this->base))
+    stream << " (symbolic)";
+  stream << ": ";
+  base->print(stream);
+  stream << "\n";
+  stream << prefix
+         << "pointer to location object: " << reinterpret_cast<uintptr_t>(this);
 }
 
 /**/
 
-void VersionedValue::print(llvm::raw_ostream &stream) const {
-  stream << "V";
-  if (core) {
-    stream << "(I";
-    if (!doNotInterpolateBound)
-      stream << "B";
-    stream << ")";
-  }
-  stream << "[";
-  if (outputFunctionName(value, stream))
-    stream << ":";
-  value->print(stream);
-  stream << ":";
-  valueExpr->print(stream);
-  stream << "]#" << reinterpret_cast<uintptr_t>(this) << " <- {";
+void VersionedValue::print(llvm::raw_ostream &stream,
+                           const std::string &prefix) const {
+  std::string tabsNext = appendTab(prefix);
 
-  for (std::map<ref<VersionedValue>, ref<MemoryLocation> >::const_iterator
-           is2 = sources.begin(),
-           it2 = is2, ie2 = sources.end();
-       it2 != ie2; ++it2) {
-    if (it2 != is2)
-      stream << ", ";
-    stream << "  [";
-    (*it2->first).printNoDependency(stream);
-    if (!it2->second.isNull()) {
-      stream << " via ";
-      (*it2->second).print(stream);
+  printNoDependency(stream, prefix);
+
+  stream << "\n";
+  if (sources.empty()) {
+    stream << prefix << "no dependencies\n";
+  } else {
+    stream << prefix << "direct dependencies:\n";
+    for (std::map<ref<VersionedValue>, ref<MemoryLocation> >::const_iterator
+             is = sources.begin(),
+             it = is, ie = sources.end();
+         it != ie; ++it) {
+      if (it != is)
+        stream << tabsNext << "------------------------------------------\n";
+      (*it->first).printNoDependency(stream, tabsNext);
+      if (!it->second.isNull()) {
+        stream << " via\n";
+        (*it->second).print(stream, tabsNext);
     }
-    stream << "]";
   }
-  stream << "}";
+  }
 }
 
-void VersionedValue::printNoDependency(llvm::raw_ostream &stream) const {
-  stream << "V";
+void VersionedValue::printNoDependency(llvm::raw_ostream &stream,
+                                       const std::string &prefix) const {
   if (core) {
-    stream << "(I";
-    if (!doNotInterpolateBound)
-      stream << "B";
-    stream << ")";
+    if (!doNotInterpolateBound) {
+      stream << prefix << "a bounded interpolant value\n";
+    } else {
+      stream << prefix << "an interpolant value\n";
+    }
+  } else {
+    stream << prefix << "a non-interpolant value\n";
   }
-  stream << "[";
+  stream << prefix << "function/value: ";
   if (outputFunctionName(value, stream))
-    stream << ":";
+    stream << "/";
   value->print(stream);
-  stream << ":";
+  stream << "\n";
+  stream << prefix << "expression: ";
   valueExpr->print(stream);
-  stream << "]#" << reinterpret_cast<uintptr_t>(this);
+  stream << "\n";
+  stream << prefix
+         << "pointer to location object: " << reinterpret_cast<uintptr_t>(this);
 }
 }

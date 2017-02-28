@@ -3039,6 +3039,8 @@ void Executor::run(ExecutionState &initialState) {
         stream << "\n";
         txTree->print(stream);
         stream << "\n";
+        stream << "--------------------------- Current Node "
+                  "----------------------------\n";
         state.txTreeNode->print(stream);
         stream << "\n";
         stream << "------------------- Executing New Instruction "

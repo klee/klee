@@ -34,518 +34,6 @@ using namespace klee;
 
 /**/
 
-std::string TxTreeGraph::PrettyExpressionBuilder::bvConst32(uint32_t value) {
-  std::ostringstream stream;
-  stream << value;
-  return stream.str();
-}
-std::string TxTreeGraph::PrettyExpressionBuilder::bvConst64(uint64_t value) {
-  std::ostringstream stream;
-  stream << value;
-  return stream.str();
-}
-std::string TxTreeGraph::PrettyExpressionBuilder::bvZExtConst(uint64_t value) {
-  return bvConst64(value);
-}
-std::string TxTreeGraph::PrettyExpressionBuilder::bvSExtConst(uint64_t value) {
-  return bvConst64(value);
-}
-std::string TxTreeGraph::PrettyExpressionBuilder::bvBoolExtract(std::string expr,
-                                                               int bit) {
-  std::ostringstream stream;
-  stream << expr << "[" << bit << "]";
-  return stream.str();
-}
-std::string TxTreeGraph::PrettyExpressionBuilder::bvExtract(std::string expr,
-                                                           unsigned top,
-                                                           unsigned bottom) {
-  std::ostringstream stream;
-  stream << expr << "[" << top << "," << bottom << "]";
-  return stream.str();
-}
-std::string TxTreeGraph::PrettyExpressionBuilder::eqExpr(std::string a,
-                                                        std::string b) {
-  if (a == "false")
-    return "!" + b;
-  return "(" + a + " = " + b + ")";
-}
-
-// logical left and right shift (not arithmetic)
-std::string TxTreeGraph::PrettyExpressionBuilder::bvLeftShift(std::string expr,
-                                                             unsigned shift) {
-  std::ostringstream stream;
-  stream << "(" << expr << " \\<\\< " << shift << ")";
-  return stream.str();
-}
-std::string TxTreeGraph::PrettyExpressionBuilder::bvRightShift(std::string expr,
-                                                              unsigned shift) {
-  std::ostringstream stream;
-  stream << "(" << expr << " \\>\\> " << shift << ")";
-  return stream.str();
-}
-std::string
-TxTreeGraph::PrettyExpressionBuilder::bvVarLeftShift(std::string expr,
-                                                    std::string shift) {
-  return "(" + expr + " \\<\\< " + shift + ")";
-}
-std::string
-TxTreeGraph::PrettyExpressionBuilder::bvVarRightShift(std::string expr,
-                                                     std::string shift) {
-  return "(" + expr + " \\>\\> " + shift + ")";
-}
-std::string
-TxTreeGraph::PrettyExpressionBuilder::bvVarArithRightShift(std::string expr,
-                                                          std::string shift) {
-  return bvVarRightShift(expr, shift);
-}
-
-// Some STP-style bitvector arithmetic
-std::string
-TxTreeGraph::PrettyExpressionBuilder::bvMinusExpr(std::string minuend,
-                                                 std::string subtrahend) {
-  return "(" + minuend + " - " + subtrahend + ")";
-}
-std::string
-TxTreeGraph::PrettyExpressionBuilder::bvPlusExpr(std::string augend,
-                                                std::string addend) {
-  return "(" + augend + " + " + addend + ")";
-}
-std::string
-TxTreeGraph::PrettyExpressionBuilder::bvMultExpr(std::string multiplacand,
-                                                std::string multiplier) {
-  return "(" + multiplacand + " * " + multiplier + ")";
-}
-std::string
-TxTreeGraph::PrettyExpressionBuilder::bvDivExpr(std::string dividend,
-                                               std::string divisor) {
-  return "(" + dividend + " / " + divisor + ")";
-}
-std::string
-TxTreeGraph::PrettyExpressionBuilder::sbvDivExpr(std::string dividend,
-                                                std::string divisor) {
-  return "(" + dividend + " / " + divisor + ")";
-}
-std::string
-TxTreeGraph::PrettyExpressionBuilder::bvModExpr(std::string dividend,
-                                               std::string divisor) {
-  return "(" + dividend + " % " + divisor + ")";
-}
-std::string
-TxTreeGraph::PrettyExpressionBuilder::sbvModExpr(std::string dividend,
-                                                std::string divisor) {
-  return "(" + dividend + " % " + divisor + ")";
-}
-std::string TxTreeGraph::PrettyExpressionBuilder::notExpr(std::string expr) {
-  return "!(" + expr + ")";
-}
-std::string TxTreeGraph::PrettyExpressionBuilder::bvAndExpr(std::string lhs,
-                                                           std::string rhs) {
-  return "(" + lhs + " & " + rhs + ")";
-}
-std::string TxTreeGraph::PrettyExpressionBuilder::bvOrExpr(std::string lhs,
-                                                          std::string rhs) {
-  return "(" + lhs + " \\| " + rhs + ")";
-}
-std::string TxTreeGraph::PrettyExpressionBuilder::iffExpr(std::string lhs,
-                                                         std::string rhs) {
-  return "(" + lhs + " \\<=\\> " + rhs + ")";
-}
-std::string TxTreeGraph::PrettyExpressionBuilder::bvXorExpr(std::string lhs,
-                                                           std::string rhs) {
-  return "(" + lhs + " xor " + rhs + ")";
-}
-std::string TxTreeGraph::PrettyExpressionBuilder::bvSignExtend(std::string src) {
-  return src;
-}
-
-// Some STP-style array domain interface
-std::string TxTreeGraph::PrettyExpressionBuilder::writeExpr(std::string array,
-                                                           std::string index,
-                                                           std::string value) {
-  return "update(" + array + "," + index + "," + value + ")";
-}
-std::string TxTreeGraph::PrettyExpressionBuilder::readExpr(std::string array,
-                                                          std::string index) {
-  return array + "[" + index + "]";
-}
-
-// ITE-expression constructor
-std::string TxTreeGraph::PrettyExpressionBuilder::iteExpr(
-    std::string condition, std::string whenTrue, std::string whenFalse) {
-  return "ite(" + condition + "," + whenTrue + "," + whenFalse + ")";
-}
-
-// Bitvector comparison
-std::string TxTreeGraph::PrettyExpressionBuilder::bvLtExpr(std::string lhs,
-                                                          std::string rhs) {
-  return "(" + lhs + " \\< " + rhs + ")";
-}
-std::string TxTreeGraph::PrettyExpressionBuilder::bvLeExpr(std::string lhs,
-                                                          std::string rhs) {
-  return "(" + lhs + " \\<= " + rhs + ")";
-}
-std::string TxTreeGraph::PrettyExpressionBuilder::sbvLtExpr(std::string lhs,
-                                                           std::string rhs) {
-  return "(" + lhs + " \\< " + rhs + ")";
-}
-std::string TxTreeGraph::PrettyExpressionBuilder::sbvLeExpr(std::string lhs,
-                                                           std::string rhs) {
-  return "(" + lhs + " \\<= " + rhs + ")";
-}
-
-std::string TxTreeGraph::PrettyExpressionBuilder::constructAShrByConstant(
-    std::string expr, unsigned shift, std::string isSigned) {
-  return bvRightShift(expr, shift);
-}
-std::string
-TxTreeGraph::PrettyExpressionBuilder::constructMulByConstant(std::string expr,
-                                                            uint64_t x) {
-  std::ostringstream stream;
-  stream << "(" << expr << " * " << x << ")";
-  return stream.str();
-}
-std::string
-TxTreeGraph::PrettyExpressionBuilder::constructUDivByConstant(std::string expr,
-                                                             uint64_t d) {
-  std::ostringstream stream;
-  stream << "(" << expr << " / " << d << ")";
-  return stream.str();
-}
-std::string
-TxTreeGraph::PrettyExpressionBuilder::constructSDivByConstant(std::string expr,
-                                                             uint64_t d) {
-  std::ostringstream stream;
-  stream << "(" << expr << " / " << d << ")";
-  return stream.str();
-}
-
-std::string
-TxTreeGraph::PrettyExpressionBuilder::getInitialArray(const Array *root) {
-  std::string arrayExpr =
-      buildArray(root->name.c_str(), root->getDomain(), root->getRange());
-
-  if (root->isConstantArray()) {
-    for (unsigned i = 0, e = root->size; i != e; ++i) {
-      std::string prev = arrayExpr;
-      arrayExpr = writeExpr(
-          prev, constructActual(ConstantExpr::create(i, root->getDomain())),
-          constructActual(root->constantValues[i]));
-    }
-  }
-  return arrayExpr;
-}
-std::string
-TxTreeGraph::PrettyExpressionBuilder::getArrayForUpdate(const Array *root,
-                                                       const UpdateNode *un) {
-  if (!un) {
-    return (getInitialArray(root));
-  }
-  return writeExpr(getArrayForUpdate(root, un->next),
-                   constructActual(un->index), constructActual(un->value));
-}
-
-std::string TxTreeGraph::PrettyExpressionBuilder::constructActual(ref<Expr> e) {
-  switch (e->getKind()) {
-  case Expr::Constant: {
-    ConstantExpr *CE = cast<ConstantExpr>(e);
-    int width = CE->getWidth();
-
-    // Coerce to bool if necessary.
-    if (width == 1)
-      return CE->isTrue() ? getTrue() : getFalse();
-
-    // Fast path.
-    if (width <= 32)
-      return bvConst32(CE->getZExtValue(32));
-    if (width <= 64)
-      return bvConst64(CE->getZExtValue());
-
-    ref<ConstantExpr> Tmp = CE;
-    return bvConst64(Tmp->Extract(0, 64)->getZExtValue());
-  }
-
-  // Special
-  case Expr::NotOptimized: {
-    NotOptimizedExpr *noe = cast<NotOptimizedExpr>(e);
-    return constructActual(noe->src);
-  }
-
-  case Expr::Read: {
-    ReadExpr *re = cast<ReadExpr>(e);
-    assert(re && re->updates.root);
-    return readExpr(getArrayForUpdate(re->updates.root, re->updates.head),
-                    constructActual(re->index));
-  }
-
-  case Expr::Select: {
-    SelectExpr *se = cast<SelectExpr>(e);
-    std::string cond = constructActual(se->cond);
-    std::string tExpr = constructActual(se->trueExpr);
-    std::string fExpr = constructActual(se->falseExpr);
-    return iteExpr(cond, tExpr, fExpr);
-  }
-
-  case Expr::Concat: {
-    ConcatExpr *ce = cast<ConcatExpr>(e);
-    unsigned numKids = ce->getNumKids();
-    std::string res = constructActual(ce->getKid(numKids - 1));
-    for (int i = numKids - 2; i >= 0; i--) {
-      res = constructActual(ce->getKid(i)) + "." + res;
-    }
-    return res;
-  }
-
-  case Expr::Extract: {
-    ExtractExpr *ee = cast<ExtractExpr>(e);
-    std::string src = constructActual(ee->expr);
-    int width = ee->getWidth();
-    if (width == 1) {
-      return bvBoolExtract(src, ee->offset);
-    } else {
-      return bvExtract(src, ee->offset + width - 1, ee->offset);
-    }
-  }
-
-  // Casting
-  case Expr::ZExt: {
-    CastExpr *ce = cast<CastExpr>(e);
-    std::string src = constructActual(ce->src);
-    int width = ce->getWidth();
-    if (width == 1) {
-      return iteExpr(src, bvOne(), bvZero());
-    } else {
-      return src;
-    }
-  }
-
-  case Expr::SExt: {
-    CastExpr *ce = cast<CastExpr>(e);
-    std::string src = constructActual(ce->src);
-    return bvSignExtend(src);
-  }
-
-  // Arithmetic
-  case Expr::Add: {
-    AddExpr *ae = cast<AddExpr>(e);
-    std::string left = constructActual(ae->left);
-    std::string right = constructActual(ae->right);
-    return bvPlusExpr(left, right);
-  }
-
-  case Expr::Sub: {
-    SubExpr *se = cast<SubExpr>(e);
-    std::string left = constructActual(se->left);
-    std::string right = constructActual(se->right);
-    return bvMinusExpr(left, right);
-  }
-
-  case Expr::Mul: {
-    MulExpr *me = cast<MulExpr>(e);
-    std::string right = constructActual(me->right);
-    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(me->left))
-      if (CE->getWidth() <= 64)
-        return constructMulByConstant(right, CE->getZExtValue());
-
-    std::string left = constructActual(me->left);
-    return bvMultExpr(left, right);
-  }
-
-  case Expr::UDiv: {
-    UDivExpr *de = cast<UDivExpr>(e);
-    std::string left = constructActual(de->left);
-
-    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(de->right)) {
-      if (CE->getWidth() <= 64) {
-        uint64_t divisor = CE->getZExtValue();
-
-        if (bits64::isPowerOfTwo(divisor)) {
-          return bvRightShift(left, bits64::indexOfSingleBit(divisor));
-        }
-      }
-    }
-
-    std::string right = constructActual(de->right);
-    return bvDivExpr(left, right);
-  }
-
-  case Expr::SDiv: {
-    SDivExpr *de = cast<SDivExpr>(e);
-    std::string left = constructActual(de->left);
-    std::string right = constructActual(de->right);
-    return sbvDivExpr(left, right);
-  }
-
-  case Expr::URem: {
-    URemExpr *de = cast<URemExpr>(e);
-    std::string left = constructActual(de->left);
-
-    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(de->right)) {
-      if (CE->getWidth() <= 64) {
-        uint64_t divisor = CE->getZExtValue();
-
-        if (bits64::isPowerOfTwo(divisor)) {
-          unsigned bits = bits64::indexOfSingleBit(divisor);
-
-          // special case for modding by 1 or else we bvExtract -1:0
-          if (bits == 0) {
-            return bvZero();
-          } else {
-            return bvExtract(left, bits - 1, 0);
-          }
-        }
-      }
-    }
-
-    std::string right = constructActual(de->right);
-    return bvModExpr(left, right);
-  }
-
-  case Expr::SRem: {
-    SRemExpr *de = cast<SRemExpr>(e);
-    std::string left = constructActual(de->left);
-    std::string right = constructActual(de->right);
-    return sbvModExpr(left, right);
-  }
-
-  // Bitwise
-  case Expr::Not: {
-    NotExpr *ne = cast<NotExpr>(e);
-    std::string expr = constructActual(ne->expr);
-    return notExpr(expr);
-  }
-
-  case Expr::And: {
-    AndExpr *ae = cast<AndExpr>(e);
-    std::string left = constructActual(ae->left);
-    std::string right = constructActual(ae->right);
-    return bvAndExpr(left, right);
-  }
-
-  case Expr::Or: {
-    OrExpr *oe = cast<OrExpr>(e);
-    std::string left = constructActual(oe->left);
-    std::string right = constructActual(oe->right);
-    return bvOrExpr(left, right);
-  }
-
-  case Expr::Xor: {
-    XorExpr *xe = cast<XorExpr>(e);
-    std::string left = constructActual(xe->left);
-    std::string right = constructActual(xe->right);
-    return bvXorExpr(left, right);
-  }
-
-  case Expr::Shl: {
-    ShlExpr *se = cast<ShlExpr>(e);
-    std::string left = constructActual(se->left);
-    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(se->right)) {
-      return bvLeftShift(left, (unsigned)CE->getLimitedValue());
-    } else {
-      std::string amount = constructActual(se->right);
-      return bvVarLeftShift(left, amount);
-    }
-  }
-
-  case Expr::LShr: {
-    LShrExpr *lse = cast<LShrExpr>(e);
-    std::string left = constructActual(lse->left);
-    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(lse->right)) {
-      return bvRightShift(left, (unsigned)CE->getLimitedValue());
-    } else {
-      std::string amount = constructActual(lse->right);
-      return bvVarRightShift(left, amount);
-    }
-  }
-
-  case Expr::AShr: {
-    AShrExpr *ase = cast<AShrExpr>(e);
-    std::string left = constructActual(ase->left);
-    std::string amount = constructActual(ase->right);
-    return bvVarArithRightShift(left, amount);
-  }
-
-  // Comparison
-  case Expr::Eq: {
-    EqExpr *ee = cast<EqExpr>(e);
-    std::string left = constructActual(ee->left);
-    std::string right = constructActual(ee->right);
-    return eqExpr(left, right);
-  }
-
-  case Expr::Ult: {
-    UltExpr *ue = cast<UltExpr>(e);
-    std::string left = constructActual(ue->left);
-    std::string right = constructActual(ue->right);
-    return bvLtExpr(left, right);
-  }
-
-  case Expr::Ule: {
-    UleExpr *ue = cast<UleExpr>(e);
-    std::string left = constructActual(ue->left);
-    std::string right = constructActual(ue->right);
-    return bvLeExpr(left, right);
-  }
-
-  case Expr::Slt: {
-    SltExpr *se = cast<SltExpr>(e);
-    std::string left = constructActual(se->left);
-    std::string right = constructActual(se->right);
-    return sbvLtExpr(left, right);
-  }
-
-  case Expr::Sle: {
-    SleExpr *se = cast<SleExpr>(e);
-    std::string left = constructActual(se->left);
-    std::string right = constructActual(se->right);
-    return sbvLeExpr(left, right);
-  }
-
-  case Expr::Exists: {
-    ExistsExpr *xe = cast<ExistsExpr>(e);
-    std::string existentials;
-
-    for (std::set<const Array *>::const_iterator it = xe->variables.begin(),
-                                                 ie = xe->variables.end();
-         it != ie; ++it) {
-      existentials += (*it)->name;
-      if (it != ie)
-        existentials += ",";
-    }
-
-    return "(exists (" + existentials + ") " + constructActual(xe->body) + ")";
-  }
-
-  default:
-    assert(0 && "unhandled Expr type");
-    return getTrue();
-  }
-}
-std::string TxTreeGraph::PrettyExpressionBuilder::construct(ref<Expr> e) {
-  PrettyExpressionBuilder *instance = new PrettyExpressionBuilder();
-  std::string ret = instance->constructActual(e);
-  delete instance;
-  return ret;
-}
-
-std::string TxTreeGraph::PrettyExpressionBuilder::buildArray(
-    const char *name, unsigned indexWidth, unsigned valueWidth) {
-  return name;
-}
-
-std::string TxTreeGraph::PrettyExpressionBuilder::getTrue() { return "true"; }
-std::string TxTreeGraph::PrettyExpressionBuilder::getFalse() { return "false"; }
-std::string
-TxTreeGraph::PrettyExpressionBuilder::getInitialRead(const Array *root,
-                                                    unsigned index) {
-  return readExpr(getInitialArray(root), bvConst32(index));
-}
-
-TxTreeGraph::PrettyExpressionBuilder::PrettyExpressionBuilder() {}
-
-TxTreeGraph::PrettyExpressionBuilder::~PrettyExpressionBuilder() {}
-
-/**/
-
 std::string TxTreeGraph::NumberedEdge::render() const {
   std::ostringstream stream;
   stream << "Node" << source->nodeSequenceNumber << " -> Node"
@@ -1444,8 +932,7 @@ bool SubsumptionTableEntry::subsumed(
 
   // Quick check for subsumption in case the interpolant is empty
   if (empty()) {
-    if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL ||
-        DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
+    if (DebugSubsumption >= 1) {
       klee_message("#%lu=>#%lu: Check success due to empty table entry",
                    state.txTreeNode->getNodeSequenceNumber(),
                    nodeSequenceNumber);
@@ -1483,8 +970,7 @@ bool SubsumptionTableEntry::subsumed(
       // If the current state does not constrain the same base, subsumption
       // fails.
       if (stateConcreteMap.empty() && stateSymbolicMap.empty()) {
-        if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL ||
-            DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
+        if (DebugSubsumption >= 1) {
           klee_message("#%lu=>#%lu: Check failure due to empty state concrete "
                        "and symbolic maps",
                        state.txTreeNode->getNodeSequenceNumber(),
@@ -1502,8 +988,7 @@ bool SubsumptionTableEntry::subsumed(
         // the current state is incomparable to the stored interpolant,
         // and we therefore fail the subsumption.
         if (!stateConcreteMap.count(it2->first)) {
-          if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL ||
-              DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
+          if (DebugSubsumption >= 1) {
             klee_message("#%lu=>#%lu: Check failure as memory region in the "
                          "table does not "
                          "exist in the state",
@@ -1523,8 +1008,7 @@ bool SubsumptionTableEntry::subsumed(
               stateValue->getExpression()->getWidth()) {
             // We conservatively fail the subsumption in case the sizes do not
             // match.
-            if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL ||
-                DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
+            if (DebugSubsumption >= 1) {
               klee_message("#%lu=>#%lu: Check failure as sizes of stored "
                            "values do not match",
                            state.txTreeNode->getNodeSequenceNumber(),
@@ -1538,8 +1022,7 @@ bool SubsumptionTableEntry::subsumed(
             ref<Expr> boundsCheck =
                 tabledValue->getBoundsCheck(stateValue, bounds);
             if (boundsCheck->isFalse()) {
-              if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL ||
-                  DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
+              if (DebugSubsumption >= 1) {
                 klee_message("#%lu=>#%lu: Check failure due to failure in "
                              "memory bounds check",
                              state.txTreeNode->getNodeSequenceNumber(),
@@ -1556,8 +1039,7 @@ bool SubsumptionTableEntry::subsumed(
             res = EqExpr::create(tabledValue->getExpression(),
                                  stateValue->getExpression());
             if (res->isFalse()) {
-              if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL ||
-                  DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
+              if (DebugSubsumption >= 1) {
                 std::string msg;
                 llvm::raw_string_ostream stream(msg);
                 tabledValue->getExpression()->print(stream);
@@ -1855,15 +1337,14 @@ bool SubsumptionTableEntry::subsumed(
     } else {
       // Here both the interpolant constraints and state equality
       // constraints are empty, therefore everything gets subsumed
-      if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL ||
-          DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
+      if (DebugSubsumption >= 1) {
         klee_message("#%lu=>#%lu: Check success as interpolant is empty",
                      state.txTreeNode->getNodeSequenceNumber(),
                      nodeSequenceNumber);
       }
 
       // We build memory bounds interpolants from pointer values
-      if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL) {
+      if (DebugSubsumption >= 3) {
         std::string msg;
         llvm::Instruction *instr = state.pc->inst;
         llvm::raw_string_ostream stream(msg);
@@ -1894,13 +1375,10 @@ bool SubsumptionTableEntry::subsumed(
 
     if (!existentials.empty()) {
       ref<Expr> existsExpr = ExistsExpr::create(existentials, query);
-      if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL) {
-        std::string msg;
-        llvm::raw_string_ostream stream(msg);
-        stream << "Before simplification:\n";
-        ExprPPrinter::printQuery(stream, state.constraints, existsExpr);
-        stream.flush();
-        klee_message("Before simplification:\n%s", msg.c_str());
+      if (DebugSubsumption >= 3) {
+        klee_message("Before simplification:\n%s",
+                     PrettyExpressionBuilder::constructQuery(
+                         state.constraints, existsExpr).c_str());
       }
       query = simplifyExistsExpr(existsExpr, queryHasNoFreeVariables);
     }
@@ -1908,8 +1386,7 @@ bool SubsumptionTableEntry::subsumed(
     // If query simplification result was false, we quickly fail without calling
     // the solver
     if (query->isFalse()) {
-      if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL ||
-          DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
+      if (DebugSubsumption >= 1) {
         klee_message("#%lu=>#%lu: Check failure as consequent is unsatisfiable",
                      state.txTreeNode->getNodeSequenceNumber(),
                      nodeSequenceNumber);
@@ -1920,8 +1397,7 @@ bool SubsumptionTableEntry::subsumed(
     bool success = false;
 
     if (!detectConflictPrimitives(state, query)) {
-      if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL ||
-          DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
+      if (DebugSubsumption >= 1) {
         klee_message(
             "#%lu=>#%lu: Check failure as contradictory equalities detected",
             state.txTreeNode->getNodeSequenceNumber(), nodeSequenceNumber);
@@ -1936,7 +1412,7 @@ bool SubsumptionTableEntry::subsumed(
     // method.
     if (!llvm::isa<ConstantExpr>(query)) {
       if (!existentials.empty() && llvm::isa<ExistsExpr>(query)) {
-        if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL) {
+        if (DebugSubsumption >= 3) {
           klee_message("Existentials not empty");
         }
 
@@ -1961,23 +1437,19 @@ bool SubsumptionTableEntry::subsumed(
           constraints.addConstraint(
               EqExpr::create(falseExpr, query->getKid(0)));
 
-          if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL) {
-            std::string msg;
-            llvm::raw_string_ostream stream(msg);
-            ExprPPrinter::printQuery(stream, constraints, falseExpr);
-            stream.flush();
-            klee_message("Querying for satisfiability check:\n%s", msg.c_str());
+          if (DebugSubsumption >= 3) {
+            klee_message("Querying for satisfiability check:\n%s",
+                         PrettyExpressionBuilder::constructQuery(
+                             constraints, falseExpr).c_str());
           }
 
           success = z3solver->getValue(Query(constraints, falseExpr), tmpExpr);
           result = success ? Solver::True : Solver::Unknown;
         } else {
-          if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL) {
-            std::string msg;
-            llvm::raw_string_ostream stream(msg);
-            ExprPPrinter::printQuery(stream, state.constraints, query);
-            stream.flush();
-            klee_message("Querying for subsumption check:\n%s", msg.c_str());
+          if (DebugSubsumption >= 3) {
+            klee_message("Querying for subsumption check:\n%s",
+                         PrettyExpressionBuilder::constructQuery(
+                             state.constraints, query).c_str());
           }
 
           success = z3solver->directComputeValidity(
@@ -1987,13 +1459,10 @@ bool SubsumptionTableEntry::subsumed(
         z3solver->setCoreSolverTimeout(0);
 
       } else {
-        if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL) {
-          std::string msg;
-          llvm::raw_string_ostream stream(msg);
-          klee_message("No existential");
-          ExprPPrinter::printQuery(stream, state.constraints, query);
-          stream.flush();
-          klee_message("Querying for subsumption check:\n%s", msg.c_str());
+        if (DebugSubsumption >= 3) {
+          klee_message("Querying for subsumption check:\n%s",
+                       PrettyExpressionBuilder::constructQuery(
+                           state.constraints, query).c_str());
         }
         // We call the solver in the standard way if the
         // formula is unquantified.
@@ -2004,8 +1473,7 @@ bool SubsumptionTableEntry::subsumed(
     } else {
       // query is a constant expression
       if (query->isTrue()) {
-        if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL ||
-            DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
+        if (DebugSubsumption >= 1) {
           klee_message("#%lu=>#%lu: Check success as query is true",
                        state.txTreeNode->getNodeSequenceNumber(),
                        nodeSequenceNumber);
@@ -2023,8 +1491,7 @@ bool SubsumptionTableEntry::subsumed(
         }
         return true;
       }
-      if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL ||
-          DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
+      if (DebugSubsumption >= 1) {
         klee_message("#%lu=>#%lu: Check failure as query is non-true",
                      state.txTreeNode->getNodeSequenceNumber(),
                      nodeSequenceNumber);
@@ -2038,8 +1505,7 @@ bool SubsumptionTableEntry::subsumed(
 
       // State subsumed, we mark needed constraints on the
       // path condition.
-      if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL ||
-          DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
+      if (DebugSubsumption >= 1) {
         klee_message("#%lu=>#%lu: Check success as solver decided validity",
                      state.txTreeNode->getNodeSequenceNumber(),
                      nodeSequenceNumber);
@@ -2070,8 +1536,7 @@ bool SubsumptionTableEntry::subsumed(
     if (z3solver)
       delete z3solver;
 
-    if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL ||
-        DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
+    if (DebugSubsumption >= 1) {
       klee_message(
           "#%lu=>#%lu: Check failure as solver did not decide validity",
           state.txTreeNode->getNodeSequenceNumber(), nodeSequenceNumber);
@@ -2093,8 +1558,9 @@ void SubsumptionTableEntry::print(llvm::raw_ostream &stream,
 }
 
 void SubsumptionTableEntry::print(llvm::raw_ostream &stream,
-                                  const std::string prefix) const {
+                                  const std::string &prefix) const {
   std::string tabsNext = appendTab(prefix);
+  std::string tabsNextNext = appendTab(tabsNext);
 
   stream << prefix << "------------ Subsumption Table Entry ------------\n";
   stream << prefix << "Program point = " << programPoint << "\n";
@@ -2106,7 +1572,7 @@ void SubsumptionTableEntry::print(llvm::raw_ostream &stream,
   stream << "\n";
 
   if (!concreteAddressStore.empty()) {
-    stream << prefix << "concrete store = [";
+    stream << prefix << "concrete store = [\n";
     for (Dependency::ConcreteStore::const_iterator
              is1 = concreteAddressStore.begin(),
              ie1 = concreteAddressStore.end(), it1 = is1;
@@ -2116,19 +1582,20 @@ void SubsumptionTableEntry::print(llvm::raw_ostream &stream,
                ie2 = it1->second.end(), it2 = is2;
            it2 != ie2; ++it2) {
         if (it1 != is1 || it2 != is2)
-          stream << ",";
-        stream << "(";
-        it2->first->print(stream);
-        stream << ",\n";
-        it2->second->print(stream, tabsNext);
-        stream << ")";
+          stream << tabsNext << "------------------------------------------\n";
+        stream << tabsNext << "address:\n";
+        it2->first->print(stream, tabsNextNext);
+        stream << "\n";
+        stream << tabsNext << "content:\n";
+        it2->second->print(stream, tabsNextNext);
+        stream << "\n";
       }
     }
-    stream << "]\n";
+    stream << prefix << "]\n";
   }
 
   if (!symbolicAddressStore.empty()) {
-    stream << prefix << "symbolic store = [";
+    stream << prefix << "symbolic store = [\n";
     for (Dependency::SymbolicStore::const_iterator
              is1 = symbolicAddressStore.begin(),
              ie1 = symbolicAddressStore.end(), it1 = is1;
@@ -2138,12 +1605,13 @@ void SubsumptionTableEntry::print(llvm::raw_ostream &stream,
                ie2 = it1->second.end(), it2 = is2;
            it2 != ie2; ++it2) {
         if (it1 != is1 || it2 != is2)
-          stream << ",";
-        stream << "(";
-        it2->first->print(stream);
-        stream << ",";
-        it2->second->print(stream, tabsNext);
-        stream << ")";
+          stream << tabsNext << "------------------------------------------\n";
+        stream << tabsNext << "address:\n";
+        it2->first->print(stream, tabsNextNext);
+        stream << "\n";
+        stream << tabsNext << "content:\n";
+        it2->second->print(stream, tabsNextNext);
+        stream << "\n";
       }
     }
     stream << "]\n";
@@ -2193,7 +1661,7 @@ void SubsumptionTable::StackIndexedTable::Node::print(
 }
 
 void SubsumptionTable::StackIndexedTable::Node::print(
-    llvm::raw_ostream &stream, const std::string prefix) const {
+    llvm::raw_ostream &stream, const std::string &prefix) const {
   std::string tabsNext = appendTab(prefix);
 
   stream << "\n";
@@ -2364,8 +1832,7 @@ bool SubsumptionTable::check(TimingSolver *solver, ExecutionState &state,
   std::map<uintptr_t, StackIndexedTable *>::iterator it =
       instance.find(state.txTreeNode->getProgramPoint());
   if (it == instance.end()) {
-    if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL ||
-        DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
+    if (DebugSubsumption >= 1) {
       klee_message(
           "#%lu: Check failure due to control point not found in table",
           state.txTreeNode->getNodeSequenceNumber());
@@ -2378,8 +1845,7 @@ bool SubsumptionTable::check(TimingSolver *solver, ExecutionState &state,
   std::pair<EntryIterator, EntryIterator> iterPair =
       subTable->find(txTreeNode->entryCallStack, found);
   if (!found) {
-    if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL ||
-        DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
+    if (DebugSubsumption >= 1) {
       klee_message("#%lu: Check failure due to entry not found",
                    state.txTreeNode->getNodeSequenceNumber());
     }
@@ -2524,13 +1990,13 @@ bool TxTree::subsumptionCheck(TimingSolver *solver, ExecutionState &state,
                                state.txTreeNode->getProgramPoint())
     return false;
 
-  if (DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
-    klee_message("Subsumption check for Node #%lu",
-                 state.txTreeNode->getNodeSequenceNumber());
-  } else if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL) {
+  if (DebugSubsumption >= 3) {
     klee_message("Subsumption check for Node #%lu, Program Point %lu",
                  state.txTreeNode->getNodeSequenceNumber(),
                  state.txTreeNode->getProgramPoint());
+  } else if (DebugSubsumption >= 1) {
+    klee_message("Subsumption check for Node #%lu",
+                 state.txTreeNode->getNodeSequenceNumber());
   }
 
   ++subsumptionCheckCount; // For profiling
@@ -2559,10 +2025,10 @@ void TxTree::remove(TxTreeNode *node) {
     // As the node is about to be deleted, it must have been completely
     // traversed, hence the correct time to table the interpolant.
     if (!node->isSubsumed && node->storable) {
-      if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL) {
+      if (DebugSubsumption >= 3) {
         klee_message("Storing entry for Node #%lu, Program Point %lu",
                      node->getNodeSequenceNumber(), node->getProgramPoint());
-      } else if (DebugSubsumption == DEBUG_SUBSUMPTION_RESULT) {
+      } else if (DebugSubsumption >= 1) {
         klee_message("Storing entry for Node #%lu",
                      node->getNodeSequenceNumber());
       }
@@ -2574,7 +2040,7 @@ void TxTree::remove(TxTreeNode *node) {
 
       TxTreeGraph::addTableEntryMapping(node, entry);
 
-      if (DebugSubsumption == DEBUG_SUBSUMPTION_ALL) {
+      if (DebugSubsumption >= 3) {
         std::string msg;
         llvm::raw_string_ostream out(msg);
         entry->print(out);
@@ -2947,7 +2413,6 @@ void TxTreeNode::print(llvm::raw_ostream &stream,
     (*it)->print(stream);
     stream << "\n";
   }
-  stream << "\n";
   if (dependency) {
     stream << tabsNext << "------- Abstract Dependencies ----------\n";
     dependency->print(stream, paddingAmount + 1);

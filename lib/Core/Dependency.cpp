@@ -147,7 +147,7 @@ ref<Expr> StoredValue::getBoundsCheck(ref<StoredValue> stateValue,
     assert(!tabledBounds.empty() && "tabled bounds empty");
 
     if (stateOffsets.empty()) {
-      if (DebugInterpolation) {
+      if (DebugSubsumption >= 2) {
         std::string msg;
         llvm::raw_string_ostream stream(msg);
         it->first->print(stream);
@@ -169,7 +169,7 @@ ref<Expr> StoredValue::getBoundsCheck(ref<StoredValue> stateValue,
             if (tabledBoundInt > 0) {
               uint64_t stateOffsetInt = stateOffset->getZExtValue();
               if (stateOffsetInt >= tabledBoundInt) {
-                if (DebugInterpolation) {
+                if (DebugSubsumption >= 2) {
                   std::string msg;
                   llvm::raw_string_ostream stream(msg);
                   it->first->print(stream);
@@ -218,7 +218,8 @@ ref<Expr> StoredValue::getBoundsCheck(ref<StoredValue> stateValue,
 
 void StoredValue::print(llvm::raw_ostream &stream) const { print(stream, ""); }
 
-void StoredValue::print(llvm::raw_ostream &stream, std::string prefix) const {
+void StoredValue::print(llvm::raw_ostream &stream,
+                        const std::string &prefix) const {
   if (!doNotUseBound && !allocationBounds.empty()) {
     stream << prefix << "BOUNDS:";
     for (std::map<llvm::Value *, std::set<ref<Expr> > >::const_iterator
@@ -266,7 +267,6 @@ void StoredValue::print(llvm::raw_ostream &stream, std::string prefix) const {
     }
     return;
   }
-  stream << "\n";
   stream << prefix;
   expr->print(stream);
 }
@@ -1378,7 +1378,7 @@ void Dependency::executeMemoryOperation(
     }
     }
 
-    if (DebugInterpolation) {
+    if (DebugSubsumption >= 2) {
       std::string msg;
       llvm::raw_string_ostream stream(msg);
       instr->print(stream);
@@ -1511,31 +1511,50 @@ void Dependency::print(llvm::raw_ostream &stream) const {
 void Dependency::print(llvm::raw_ostream &stream,
                        const unsigned paddingAmount) const {
   std::string tabs = makeTabs(paddingAmount);
+  std::string tabsNext = appendTab(tabs);
+  std::string tabsNextNext = appendTab(tabsNext);
 
-  stream << tabs << "CONCRETE STORE:\n";
-  for (std::map<ref<MemoryLocation>,
-                std::pair<ref<VersionedValue>,
-                          ref<VersionedValue> > >::const_iterator
-           it = concretelyAddressedStore.begin(),
-           ie = concretelyAddressedStore.end();
-       it != ie; ++it) {
-    stream << tabs << "  [";
-    it->first->print(stream);
-    stream << ",";
-    it->second.second->print(stream);
-    stream << "]\n";
+  if (concretelyAddressedStore.empty()) {
+    stream << tabs << "concrete store = []\n";
+  } else {
+    stream << tabs << "concrete store = [\n";
+    for (std::map<ref<MemoryLocation>,
+                  std::pair<ref<VersionedValue>,
+                            ref<VersionedValue> > >::const_iterator
+             is = concretelyAddressedStore.begin(),
+             ie = concretelyAddressedStore.end(), it = is;
+         it != ie; ++it) {
+      if (it != is)
+        stream << tabsNext << "------------------------------------------\n";
+      stream << tabsNext << "address:\n";
+      it->first->print(stream, tabsNextNext);
+      stream << "\n";
+      stream << tabsNext << "content:\n";
+      it->second.second->print(stream, tabsNextNext);
+      stream << "\n";
+    }
+    stream << tabs << "]\n";
   }
-  stream << tabs << "SYMBOLIC STORE:\n";
-  for (std::map<ref<MemoryLocation>,
-                std::pair<ref<VersionedValue>,
-                          ref<VersionedValue> > >::const_iterator
-           it = symbolicallyAddressedStore.begin(),
-           ie = symbolicallyAddressedStore.end();
-       it != ie; ++it) {
-    stream << tabs << "  [";
-    it->first->print(stream);
-    stream << ",";
-    it->second.second->print(stream);
+
+  if (symbolicallyAddressedStore.empty()) {
+    stream << tabs << "symbolic store = []\n";
+  } else {
+    stream << tabs << "symbolic store = [\n";
+    for (std::map<ref<MemoryLocation>,
+                  std::pair<ref<VersionedValue>,
+                            ref<VersionedValue> > >::const_iterator
+             is = symbolicallyAddressedStore.begin(),
+             ie = symbolicallyAddressedStore.end(), it = is;
+         it != ie; ++it) {
+      if (it != is)
+        stream << tabsNext << "------------------------------------------\n";
+      stream << tabsNext << "address:\n";
+      it->first->print(stream, tabsNextNext);
+      stream << "\n";
+      stream << tabsNext << "content:\n";
+      it->second.second->print(stream, tabsNextNext);
+      stream << "\n";
+    }
     stream << "]\n";
   }
 

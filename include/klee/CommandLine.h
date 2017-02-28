@@ -81,17 +81,9 @@ extern llvm::cl::opt<bool> NoExistential;
 
 extern llvm::cl::opt<int> MaxFailSubsumption;
 
-extern llvm::cl::opt<bool> DebugInterpolation;
-
 extern llvm::cl::opt<bool> DebugState;
 
-enum SubsumptionDebugType {
-  DEBUG_SUBSUMPTION_ALL,
-  DEBUG_SUBSUMPTION_RESULT,
-  DEBUG_SUBSUMPTION_NONE
-};
-
-extern llvm::cl::opt<SubsumptionDebugType> DebugSubsumption;
+extern llvm::cl::opt<int> DebugSubsumption;
 
 extern llvm::cl::opt<bool> NoBoundInterpolation;
 
