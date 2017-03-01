@@ -150,7 +150,7 @@ ref<Expr> StoredValue::getBoundsCheck(ref<StoredValue> stateValue,
     assert(!tabledBounds.empty() && "tabled bounds empty");
 
     if (stateOffsets.empty()) {
-      if (DebugSubsumption >= 2) {
+      if (DebugSubsumption >= 3) {
         std::string msg;
         llvm::raw_string_ostream stream(msg);
         it->first->print(stream);
@@ -172,7 +172,7 @@ ref<Expr> StoredValue::getBoundsCheck(ref<StoredValue> stateValue,
             if (tabledBoundInt > 0) {
               uint64_t stateOffsetInt = stateOffset->getZExtValue();
               if (stateOffsetInt >= tabledBoundInt) {
-                if (DebugSubsumption >= 2) {
+                if (DebugSubsumption >= 3) {
                   std::string msg;
                   llvm::raw_string_ostream stream(msg);
                   it->first->print(stream);
@@ -1415,23 +1415,6 @@ void Dependency::executeMemoryOperation(
     }
     }
 
-    if (DebugSubsumption >= 2) {
-      std::string msg;
-      llvm::raw_string_ostream stream(msg);
-      instr->print(stream);
-      stream.flush();
-      if (instr->getParent()->getParent()) {
-        std::string functionName(
-            instr->getParent()->getParent()->getName().str());
-        klee_message("Interpolating memory bound for memory access "
-                     "\"%s\" in %s",
-                     msg.c_str(), functionName.c_str());
-      } else {
-        klee_message("Interpolating memory bound for memory access \"%s\"",
-                     msg.c_str());
-      }
-    }
-
     if (SpecialFunctionBoundInterpolation) {
       // Limit interpolation to only within function tracerx_check
       ref<VersionedValue> val(
@@ -1449,9 +1432,10 @@ void Dependency::executeMemoryOperation(
                 std::string reason = "";
                 if (DebugSubsumption >= 1) {
                   llvm::raw_string_ostream stream(reason);
-                  stream << "pointer use in tracerx_check [";
+                  stream << "pointer use [";
                   (*it)->getValue()->print(stream);
-                  stream << "]";
+                  stream << "] in tracerx_check: ";
+                  instr->print(stream);
                   stream.flush();
                 }
                 if (ExactAddressInterpolant) {
@@ -1471,7 +1455,13 @@ void Dependency::executeMemoryOperation(
         llvm::raw_string_ostream stream(reason);
         stream << "pointer use [";
         addressOperand->print(stream);
-        stream << "]";
+        stream << "] at ";
+        if (instr->getParent()->getParent()) {
+          std::string functionName(
+              instr->getParent()->getParent()->getName().str());
+          stream << functionName << ": ";
+        }
+        instr->print(stream);
         stream.flush();
       }
       if (ExactAddressInterpolant) {

@@ -1354,7 +1354,7 @@ bool SubsumptionTableEntry::subsumed(
       }
 
       // We build memory bounds interpolants from pointer values
-      if (DebugSubsumption >= 3) {
+      if (DebugSubsumption >= 2) {
         std::string msg;
         llvm::Instruction *instr = state.pc->inst;
         llvm::raw_string_ostream stream(msg);
@@ -1394,7 +1394,7 @@ bool SubsumptionTableEntry::subsumed(
 
     if (!existentials.empty()) {
       ref<Expr> existsExpr = ExistsExpr::create(existentials, query);
-      if (DebugSubsumption >= 3) {
+      if (DebugSubsumption >= 2) {
         klee_message("Before simplification:\n%s",
                      PrettyExpressionBuilder::constructQuery(
                          state.constraints, existsExpr).c_str());
@@ -1431,7 +1431,7 @@ bool SubsumptionTableEntry::subsumed(
     // method.
     if (!llvm::isa<ConstantExpr>(query)) {
       if (!existentials.empty() && llvm::isa<ExistsExpr>(query)) {
-        if (DebugSubsumption >= 3) {
+        if (DebugSubsumption >= 2) {
           klee_message("Existentials not empty");
         }
 
@@ -1456,7 +1456,7 @@ bool SubsumptionTableEntry::subsumed(
           constraints.addConstraint(
               EqExpr::create(falseExpr, query->getKid(0)));
 
-          if (DebugSubsumption >= 3) {
+          if (DebugSubsumption >= 2) {
             klee_message("Querying for satisfiability check:\n%s",
                          PrettyExpressionBuilder::constructQuery(
                              constraints, falseExpr).c_str());
@@ -1465,7 +1465,7 @@ bool SubsumptionTableEntry::subsumed(
           success = z3solver->getValue(Query(constraints, falseExpr), tmpExpr);
           result = success ? Solver::True : Solver::Unknown;
         } else {
-          if (DebugSubsumption >= 3) {
+          if (DebugSubsumption >= 2) {
             klee_message("Querying for subsumption check:\n%s",
                          PrettyExpressionBuilder::constructQuery(
                              state.constraints, query).c_str());
@@ -1478,7 +1478,7 @@ bool SubsumptionTableEntry::subsumed(
         z3solver->setCoreSolverTimeout(0);
 
       } else {
-        if (DebugSubsumption >= 3) {
+        if (DebugSubsumption >= 2) {
           klee_message("Querying for subsumption check:\n%s",
                        PrettyExpressionBuilder::constructQuery(
                            state.constraints, query).c_str());
@@ -2027,7 +2027,7 @@ bool TxTree::subsumptionCheck(TimingSolver *solver, ExecutionState &state,
                                state.txTreeNode->getProgramPoint())
     return false;
 
-  if (DebugSubsumption >= 3) {
+  if (DebugSubsumption >= 2) {
     klee_message("Subsumption check for Node #%lu, Program Point %lu",
                  state.txTreeNode->getNodeSequenceNumber(),
                  state.txTreeNode->getProgramPoint());
@@ -2062,7 +2062,7 @@ void TxTree::remove(TxTreeNode *node) {
     // As the node is about to be deleted, it must have been completely
     // traversed, hence the correct time to table the interpolant.
     if (!node->isSubsumed && node->storable) {
-      if (DebugSubsumption >= 3) {
+      if (DebugSubsumption >= 2) {
         klee_message("Storing entry for Node #%lu, Program Point %lu",
                      node->getNodeSequenceNumber(), node->getProgramPoint());
       } else if (DebugSubsumption >= 1) {
@@ -2077,7 +2077,7 @@ void TxTree::remove(TxTreeNode *node) {
 
       TxTreeGraph::addTableEntryMapping(node, entry);
 
-      if (DebugSubsumption >= 3) {
+      if (DebugSubsumption >= 2) {
         std::string msg;
         llvm::raw_string_ostream out(msg);
         entry->print(out);
