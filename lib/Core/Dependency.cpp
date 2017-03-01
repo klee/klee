@@ -278,10 +278,11 @@ void StoredValue::print(llvm::raw_ostream &stream,
         stream << "}]";
       }
     }
-    return;
+  } else {
+    stream << prefix;
+    expr->print(stream);
   }
-  stream << prefix;
-  expr->print(stream);
+
   if (!coreReasons.empty()) {
     stream << "\n";
     stream << prefix << "reason(s) for storage:\n";
