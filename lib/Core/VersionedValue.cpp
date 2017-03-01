@@ -163,11 +163,20 @@ void VersionedValue::print(llvm::raw_ostream &stream,
 
 void VersionedValue::printNoDependency(llvm::raw_ostream &stream,
                                        const std::string &prefix) const {
+  std::string tabsNext = appendTab(prefix);
+
   if (core) {
     if (!doNotInterpolateBound) {
       stream << prefix << "a bounded interpolant value\n";
     } else {
       stream << prefix << "an interpolant value\n";
+    }
+    if (!coreReasons.empty()) {
+      for (std::vector<std::string>::const_iterator it = coreReasons.begin(),
+                                                    ie = coreReasons.end();
+           it != ie; ++it) {
+        stream << tabsNext << *it << "\n";
+      }
     }
   } else {
     stream << prefix << "a non-interpolant value\n";

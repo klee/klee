@@ -300,6 +300,9 @@ private:
   /// was a load instruction
   ref<VersionedValue> storeAddress;
 
+  /// \brief Reasons for this value to be in the core
+  std::vector<std::string> coreReasons;
+
   VersionedValue(llvm::Value *value,
                  const std::vector<llvm::Instruction *> &_stack,
                  ref<Expr> _valueExpr)
@@ -379,13 +382,19 @@ public:
 
   ref<Expr> getExpression() const { return valueExpr; }
 
-  void setAsCore() { core = true; }
+  void setAsCore(std::string reason) {
+    core = true;
+    if (!reason.empty())
+      coreReasons.push_back(reason);
+  }
 
   bool isCore() const { return core; }
 
   llvm::Value *getValue() const { return value; }
 
   std::vector<llvm::Instruction *> &getStack() { return stack; }
+
+  std::vector<std::string> &getReasons() { return coreReasons; }
 
   /// \brief Print the content of the object into a stream.
   ///

@@ -21,6 +21,14 @@
 #include "klee/CommandLine.h"
 #include "klee/Internal/Support/ErrorHandling.h"
 
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 5)
+#include <llvm/IR/DebugInfo.h>
+#elif LLVM_VERSION_CODE >= LLVM_VERSION(3, 2)
+#include <llvm/DebugInfo.h>
+#else
+#include <llvm/Analysis/DebugInfo.h>
+#endif
+
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/DataLayout.h>
@@ -36,7 +44,8 @@ using namespace klee;
 namespace klee {
 
 void StoredValue::init(ref<VersionedValue> vvalue,
-                       std::set<const Array *> &replacements, bool shadowing) {
+                       std::set<const Array *> &replacements,
+                       std::vector<std::string> &_coreReasons, bool shadowing) {
   std::set<ref<MemoryLocation> > locations = vvalue->getLocations();
 
   refCount = 0;
@@ -47,6 +56,8 @@ void StoredValue::init(ref<VersionedValue> vvalue,
   value = vvalue->getValue();
 
   doNotUseBound = !(vvalue->canInterpolateBound());
+
+  coreReasons = _coreReasons;
 
   if (doNotUseBound)
     return;
@@ -147,7 +158,7 @@ ref<Expr> StoredValue::getBoundsCheck(ref<StoredValue> stateValue,
     assert(!tabledBounds.empty() && "tabled bounds empty");
 
     if (stateOffsets.empty()) {
-      if (DebugSubsumption >= 2) {
+      if (DebugSubsumption >= 3) {
         std::string msg;
         llvm::raw_string_ostream stream(msg);
         it->first->print(stream);
@@ -169,7 +180,7 @@ ref<Expr> StoredValue::getBoundsCheck(ref<StoredValue> stateValue,
             if (tabledBoundInt > 0) {
               uint64_t stateOffsetInt = stateOffset->getZExtValue();
               if (stateOffsetInt >= tabledBoundInt) {
-                if (DebugSubsumption >= 2) {
+                if (DebugSubsumption >= 3) {
                   std::string msg;
                   llvm::raw_string_ostream stream(msg);
                   it->first->print(stream);
@@ -220,6 +231,8 @@ void StoredValue::print(llvm::raw_ostream &stream) const { print(stream, ""); }
 
 void StoredValue::print(llvm::raw_ostream &stream,
                         const std::string &prefix) const {
+  std::string nextTabs = appendTab(prefix);
+
   if (!doNotUseBound && !allocationBounds.empty()) {
     stream << prefix << "BOUNDS:";
     for (std::map<llvm::Value *, std::set<ref<Expr> > >::const_iterator
@@ -265,10 +278,23 @@ void StoredValue::print(llvm::raw_ostream &stream,
         stream << "}]";
       }
     }
-    return;
+  } else {
+    stream << prefix;
+    expr->print(stream);
   }
-  stream << prefix;
-  expr->print(stream);
+
+  if (!coreReasons.empty()) {
+    stream << "\n";
+    stream << prefix << "reason(s) for storage:\n";
+    for (std::vector<std::string>::const_iterator is = coreReasons.begin(),
+                                                  ie = coreReasons.end(),
+                                                  it = is;
+         it != ie; ++it) {
+      if (it != is)
+        stream << "\n";
+      stream << nextTabs << *it;
+    }
+  }
 }
 
 /**/
@@ -644,7 +670,17 @@ void Dependency::addDependencyViaExternalFunction(
   if (!NoBoundInterpolation) {
     std::set<ref<MemoryLocation> > locations = source->getLocations();
     if (!locations.empty()) {
-      markPointerFlow(source, source);
+      std::string reason = "";
+      if (DebugSubsumption >= 1) {
+        llvm::raw_string_ostream stream(reason);
+        stream << "parameter [";
+        source->getValue()->print(stream);
+        stream << "] of external call [";
+        target->getValue()->print(stream);
+        stream << "]";
+        stream.flush();
+      }
+      markPointerFlow(source, source, reason);
     }
   }
 #endif
@@ -702,24 +738,26 @@ Dependency::directFlowSources(ref<VersionedValue> target) const {
   return ret;
 }
 
-void Dependency::markFlow(ref<VersionedValue> target) const {
+void Dependency::markFlow(ref<VersionedValue> target,
+                          const std::string &reason) const {
   if (target.isNull() || (target->isCore() && !target->canInterpolateBound()))
     return;
 
-  target->setAsCore();
+  target->setAsCore(reason);
   target->disableBoundInterpolation();
 
   std::vector<ref<VersionedValue> > stepSources = directFlowSources(target);
   for (std::vector<ref<VersionedValue> >::iterator it = stepSources.begin(),
                                                    ie = stepSources.end();
        it != ie; ++it) {
-    markFlow(*it);
+    markFlow(*it, reason);
   }
 }
 
 void Dependency::markPointerFlow(ref<VersionedValue> target,
                                  ref<VersionedValue> checkedAddress,
-                                 std::set<ref<Expr> > &bounds) const {
+                                 std::set<ref<Expr> > &bounds,
+                                 const std::string &reason) const {
   if (target.isNull())
     return;
 
@@ -732,7 +770,7 @@ void Dependency::markPointerFlow(ref<VersionedValue> target,
       (*it)->adjustOffsetBound(checkedAddress, bounds);
     }
   }
-  target->setAsCore();
+  target->setAsCore(reason);
 
   // Compute the direct pointer flow dependency
   std::map<ref<VersionedValue>, ref<MemoryLocation> > sources =
@@ -742,12 +780,12 @@ void Dependency::markPointerFlow(ref<VersionedValue> target,
            it = sources.begin(),
            ie = sources.end();
        it != ie; ++it) {
-    markPointerFlow(it->first, checkedAddress, bounds);
+    markPointerFlow(it->first, checkedAddress, bounds, reason);
   }
 
   // We use normal marking with markFlow for load/store addresses
-  markFlow(target->getLoadAddress());
-  markFlow(target->getStoreAddress());
+  markFlow(target->getLoadAddress(), reason);
+  markFlow(target->getStoreAddress(), reason);
 }
 
 std::vector<ref<VersionedValue> > Dependency::populateArgumentValuesList(
@@ -961,7 +999,23 @@ void Dependency::execute(llvm::Instruction *instr,
       llvm::BranchInst *binst = llvm::dyn_cast<llvm::BranchInst>(instr);
       if (binst && binst->isConditional()) {
         ref<Expr> unknownExpression;
-        markAllValues(binst->getCondition(), unknownExpression);
+        std::string reason = "";
+        if (DebugSubsumption >= 1) {
+          llvm::raw_string_ostream stream(reason);
+          stream << "branch instruction [";
+          if (binst->getParent()->getParent()) {
+            stream << binst->getParent()->getParent()->getName().str() << ": ";
+          }
+          if (llvm::MDNode *n = binst->getMetadata("dbg")) {
+            llvm::DILocation loc(n);
+            stream << "Line " << loc.getLineNumber();
+          } else {
+            binst->print(stream);
+          }
+          stream << "]";
+          stream.flush();
+        }
+        markAllValues(binst->getCondition(), unknownExpression, reason);
       }
       break;
     }
@@ -1378,23 +1432,6 @@ void Dependency::executeMemoryOperation(
     }
     }
 
-    if (DebugSubsumption >= 2) {
-      std::string msg;
-      llvm::raw_string_ostream stream(msg);
-      instr->print(stream);
-      stream.flush();
-      if (instr->getParent()->getParent()) {
-        std::string functionName(
-            instr->getParent()->getParent()->getName().str());
-        klee_message("Interpolating memory bound for memory access "
-                     "\"%s\" in %s",
-                     msg.c_str(), functionName.c_str());
-      } else {
-        klee_message("Interpolating memory bound for memory access \"%s\"",
-                     msg.c_str());
-      }
-    }
-
     if (SpecialFunctionBoundInterpolation) {
       // Limit interpolation to only within function tracerx_check
       ref<VersionedValue> val(
@@ -1409,10 +1446,25 @@ void Dependency::executeMemoryOperation(
             if (llvm::ConstantExpr *ce =
                     llvm::dyn_cast<llvm::ConstantExpr>((*it)->getValue())) {
               if (llvm::isa<llvm::GetElementPtrInst>(ce->getAsInstruction())) {
+                std::string reason = "";
+                if (DebugSubsumption >= 1) {
+                  llvm::raw_string_ostream stream(reason);
+                  stream << "pointer use [";
+                  if (instr->getParent()->getParent()) {
+                    stream << instr->getParent()->getParent()->getName().str()
+                           << ": ";
+                  }
+                  if (llvm::MDNode *n = instr->getMetadata("dbg")) {
+                    llvm::DILocation loc(n);
+                    stream << "Line " << loc.getLineNumber();
+                  }
+                  stream << "]";
+                  stream.flush();
+                }
                 if (ExactAddressInterpolant) {
-                  markAllValues(addressOperand, address);
+                  markAllValues(addressOperand, address, reason);
                 } else {
-                  markAllPointerValues(addressOperand, address);
+                  markAllPointerValues(addressOperand, address, reason);
                 }
                 break;
               }
@@ -1421,10 +1473,24 @@ void Dependency::executeMemoryOperation(
         }
       }
     } else {
+      std::string reason = "";
+      if (DebugSubsumption >= 1) {
+        llvm::raw_string_ostream stream(reason);
+        stream << "pointer use [";
+        if (instr->getParent()->getParent()) {
+          stream << instr->getParent()->getParent()->getName().str() << ": ";
+        }
+        if (llvm::MDNode *n = instr->getMetadata("dbg")) {
+          llvm::DILocation loc(n);
+          stream << "Line " << loc.getLineNumber();
+        }
+        stream << "]";
+        stream.flush();
+      }
       if (ExactAddressInterpolant) {
-        markAllValues(addressOperand, address);
+        markAllValues(addressOperand, address, reason);
       } else {
-        markAllPointerValues(addressOperand, address);
+        markAllPointerValues(addressOperand, address, reason);
       }
     }
   }
@@ -1482,25 +1548,30 @@ void Dependency::bindReturnValue(llvm::CallInst *site,
   }
 }
 
-void Dependency::markAllValues(ref<VersionedValue> value) { markFlow(value); }
+void Dependency::markAllValues(ref<VersionedValue> value,
+                               const std::string &reason) {
+  markFlow(value, reason);
+}
 
-void Dependency::markAllValues(llvm::Value *val, ref<Expr> expr) {
+void Dependency::markAllValues(llvm::Value *val, ref<Expr> expr,
+                               const std::string &reason) {
   ref<VersionedValue> value = getLatestValueForMarking(val, expr);
 
   if (value.isNull())
     return;
 
-  markFlow(value);
+  markFlow(value, reason);
 }
 
 void Dependency::markAllPointerValues(llvm::Value *val, ref<Expr> address,
-                                      std::set<ref<Expr> > &bounds) {
+                                      std::set<ref<Expr> > &bounds,
+                                      const std::string &reason) {
   ref<VersionedValue> value = getLatestValueForMarking(val, address);
 
   if (value.isNull())
     return;
 
-  markPointerFlow(value, value, bounds);
+  markPointerFlow(value, value, bounds, reason);
 }
 
 void Dependency::print(llvm::raw_ostream &stream) const {

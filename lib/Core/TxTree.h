@@ -650,8 +650,9 @@ public:
 
   /// \brief Memory bounds interpolation from a target address
   void pointerValuesInterpolation(llvm::Value *value, ref<Expr> address,
-                                  std::set<ref<Expr> > &bounds) {
-    dependency->markAllPointerValues(value, address, bounds);
+                                  std::set<ref<Expr> > &bounds,
+                                  const std::string &reason) {
+    dependency->markAllPointerValues(value, address, bounds, reason);
   }
 
   /// \brief Print the content of the tree node object to the LLVM error stream.
