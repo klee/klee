@@ -21,6 +21,14 @@
 #include "klee/CommandLine.h"
 #include "klee/Internal/Support/ErrorHandling.h"
 
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 5)
+#include <llvm/IR/DebugInfo.h>
+#elif LLVM_VERSION_CODE >= LLVM_VERSION(3, 2)
+#include <llvm/DebugInfo.h>
+#else
+#include <llvm/Analysis/DebugInfo.h>
+#endif
+
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/DataLayout.h>
@@ -994,7 +1002,15 @@ void Dependency::execute(llvm::Instruction *instr,
         if (DebugSubsumption >= 1) {
           llvm::raw_string_ostream stream(reason);
           stream << "branch instruction [";
-          binst->print(stream);
+          if (binst->getParent()->getParent()) {
+            stream << binst->getParent()->getParent()->getName().str() << ": ";
+          }
+          if (llvm::MDNode *n = binst->getMetadata("dbg")) {
+            llvm::DILocation loc(n);
+            stream << "Line " << loc.getLineNumber();
+          } else {
+            binst->print(stream);
+          }
           stream << "]";
           stream.flush();
         }
@@ -1433,9 +1449,15 @@ void Dependency::executeMemoryOperation(
                 if (DebugSubsumption >= 1) {
                   llvm::raw_string_ostream stream(reason);
                   stream << "pointer use [";
-                  (*it)->getValue()->print(stream);
-                  stream << "] in tracerx_check: ";
-                  instr->print(stream);
+                  if (instr->getParent()->getParent()) {
+                    stream << instr->getParent()->getParent()->getName().str()
+                           << ": ";
+                  }
+                  if (llvm::MDNode *n = instr->getMetadata("dbg")) {
+                    llvm::DILocation loc(n);
+                    stream << "Line " << loc.getLineNumber();
+                  }
+                  stream << "]";
                   stream.flush();
                 }
                 if (ExactAddressInterpolant) {
@@ -1454,14 +1476,14 @@ void Dependency::executeMemoryOperation(
       if (DebugSubsumption >= 1) {
         llvm::raw_string_ostream stream(reason);
         stream << "pointer use [";
-        addressOperand->print(stream);
-        stream << "] at ";
         if (instr->getParent()->getParent()) {
-          std::string functionName(
-              instr->getParent()->getParent()->getName().str());
-          stream << functionName << ": ";
+          stream << instr->getParent()->getParent()->getName().str() << ": ";
         }
-        instr->print(stream);
+        if (llvm::MDNode *n = instr->getMetadata("dbg")) {
+          llvm::DILocation loc(n);
+          stream << "Line " << loc.getLineNumber();
+        }
+        stream << "]";
         stream.flush();
       }
       if (ExactAddressInterpolant) {

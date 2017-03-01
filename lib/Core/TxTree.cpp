@@ -29,7 +29,14 @@
 #include <fstream>
 #include <vector>
 
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 5)
+#include <llvm/IR/DebugInfo.h>
+#elif LLVM_VERSION_CODE >= LLVM_VERSION(3, 2)
 #include <llvm/DebugInfo.h>
+#else
+#include <llvm/Analysis/DebugInfo.h>
+#endif
+
 using namespace klee;
 
 /**/
@@ -124,8 +131,8 @@ std::string TxTreeGraph::recurseRender(TxTreeGraph::Node *node) {
   }
   if (node->trueTarget) {
     if (node->trueTarget->nodeSequenceNumber) {
-    stream << sourceNodeName + ":s1 -> Node"
-           << node->trueTarget->nodeSequenceNumber << ";\n";
+      stream << sourceNodeName + ":s1 -> Node"
+             << node->trueTarget->nodeSequenceNumber << ";\n";
     } else {
       if (!node->trueTarget->internalNodeId) {
         node->trueTarget->internalNodeId = (++internalNodeId);
@@ -187,7 +194,7 @@ TxTreeGraph::~TxTreeGraph() {
 }
 
 void TxTreeGraph::addChildren(TxTreeNode *parent, TxTreeNode *falseChild,
-                             TxTreeNode *trueChild) {
+                              TxTreeNode *trueChild) {
   if (!OUTPUT_INTERPOLATION_TREE)
     return;
 
@@ -202,7 +209,7 @@ void TxTreeGraph::addChildren(TxTreeNode *parent, TxTreeNode *falseChild,
 }
 
 void TxTreeGraph::setCurrentNode(ExecutionState &state,
-                                const uint64_t _nodeSequenceNumber) {
+                                 const uint64_t _nodeSequenceNumber) {
   if (!OUTPUT_INTERPOLATION_TREE)
     return;
 
@@ -346,8 +353,21 @@ void PathCondition::setAsCore() {
     llvm::raw_string_ostream stream(reason);
     stream << "path condition [";
     constraint->print(stream);
-    stream << "] of value [";
-    condition->getValue()->print(stream);
+    stream << "] of [";
+    if (llvm::Instruction *inst =
+            llvm::dyn_cast<llvm::Instruction>(condition->getValue())) {
+      if (inst->getParent()->getParent()) {
+        stream << inst->getParent()->getParent()->getName().str() << ": ";
+      }
+      if (llvm::MDNode *n = inst->getMetadata("dbg")) {
+        llvm::DILocation loc(n);
+        stream << loc.getLineNumber();
+      } else {
+        condition->getValue()->print(stream);
+      }
+    } else {
+      condition->getValue()->print(stream);
+    }
     stream << "]";
     stream.flush();
   }
@@ -374,7 +394,7 @@ PathCondition::packInterpolant(std::set<const Array *> &replacements) {
                            : ShadowArray::getShadowExpression(it->constraint,
                                                               replacements));
 #else
-	it->shadowConstraint = it->constraint;
+        it->shadowConstraint = it->constraint;
 #endif
         it->shadowed = true;
         it->boundVariables.insert(replacements.begin(), replacements.end());
@@ -561,7 +581,8 @@ SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr,
 
     ref<Expr> interpolantAtom = (*it); // For example C cmp D
 
-    // only process the interpolant that still has existential variables in it.
+    // only process the interpolant that still has existential variables in
+    // it.
     if (hasVariableInSet(expr->variables, interpolantAtom)) {
       for (std::vector<ref<Expr> >::iterator it1 = equalityPack.begin(),
                                              ie1 = equalityPack.end();
@@ -576,11 +597,13 @@ SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr,
         }
         // Left-hand side of the equality formula (A in our example) that
         // contains
-        // the shadow expression (we assume that the existentially-quantified
+        // the shadow expression (we assume that the
+        // existentially-quantified
         // shadow variable is always on the left side).
         ref<Expr> equalityConstraintLeft = equalityConstraint->getKid(0);
 
-        // Right-hand side of the equality formula (B in our example) that does
+        // Right-hand side of the equality formula (B in our example) that
+        // does
         // not contain existentially-quantified shadow variables.
         ref<Expr> equalityConstraintRight = equalityConstraint->getKid(1);
 
@@ -601,13 +624,15 @@ SubsumptionTableEntry::simplifyArithmeticBody(ref<Expr> existsExpr,
           // newIntpLeft == B
           newIntpLeft = equalityConstraintRight;
 
-          // If equalityConstraintLeft does not have any arithmetic operation
+          // If equalityConstraintLeft does not have any arithmetic
+          // operation
           // we could directly assign newIntpRight = D, otherwise,
           // newIntpRight == A[D/C]
           if (!llvm::isa<BinaryExpr>(equalityConstraintLeft))
             newIntpRight = interpolantAtom->getKid(1);
           else {
-            // newIntpRight is A, but with every occurrence of C replaced with D
+            // newIntpRight is A, but with every occurrence of C replaced
+            // with D
             // i.e., newIntpRight == A[D/C]
             newIntpRight =
                 replaceExpr(equalityConstraintLeft, interpolantAtom->getKid(0),
@@ -892,7 +917,6 @@ bool SubsumptionTableEntry::fetchQueryEqualityConjuncts(
       } else {
         conjunction.push_back(query);
       }
-
     }
     return true;
   }
@@ -959,7 +983,7 @@ bool SubsumptionTableEntry::subsumed(
 
   std::map<ref<StoredValue>, std::set<ref<Expr> > >
   corePointerValues; // Pointer values in the core for memory bounds
-                     // interpolation
+  // interpolation
 
   {
     TimerStatIncrementer t(concreteStoreExpressionBuildTime);
@@ -1354,35 +1378,29 @@ bool SubsumptionTableEntry::subsumed(
       }
 
       // We build memory bounds interpolants from pointer values
-      if (DebugSubsumption >= 2) {
-        std::string msg;
+      std::string reason = "";
+      if (DebugSubsumption >= 1) {
+        llvm::raw_string_ostream stream(reason);
         llvm::Instruction *instr = state.pc->inst;
-        llvm::raw_string_ostream stream(msg);
-        instr->print(stream);
-        stream.flush();
+        stream << "interpolating memory bound for subsumption at ";
         if (instr->getParent()->getParent()) {
           std::string functionName(
               instr->getParent()->getParent()->getName().str());
-          klee_message("Interpolating memory bound for subsumption at "
-                       "\"%s\" in function %s",
-                       msg.c_str(), functionName.c_str());
+          stream << functionName << ": ";
+          if (llvm::MDNode *n = instr->getMetadata("dbg")) {
+            llvm::DILocation loc(n);
+            stream << "Line " << loc.getLineNumber();
+          } else {
+            instr->print(stream);
+          }
         } else {
-          klee_message("Interpolating memory bound for subsumption at \"%s\"",
-                       msg.c_str());
+          instr->print(stream);
         }
       }
       for (std::map<ref<StoredValue>, std::set<ref<Expr> > >::iterator
                it = corePointerValues.begin(),
                ie = corePointerValues.end();
            it != ie; ++it) {
-        std::string reason = "";
-        if (DebugSubsumption >= 1) {
-          llvm::raw_string_ostream stream(reason);
-          stream << "pointer interpolation at subsumption [";
-          it->first->getValue()->print(stream);
-          stream << "]";
-          stream.flush();
-        }
         state.txTreeNode->pointerValuesInterpolation(it->first->getValue(),
                                                      it->first->getExpression(),
                                                      it->second, reason);
@@ -1500,18 +1518,29 @@ bool SubsumptionTableEntry::subsumed(
 
         if (!NoBoundInterpolation && !ExactAddressInterpolant) {
           // We build memory bounds interpolants from pointer values
+          std::string reason = "";
+          if (DebugSubsumption >= 1) {
+            llvm::raw_string_ostream stream(reason);
+            llvm::Instruction *instr = state.pc->inst;
+            stream << "interpolating memory bound for subsumption at ";
+            if (instr->getParent()->getParent()) {
+              std::string functionName(
+                  instr->getParent()->getParent()->getName().str());
+              stream << functionName << ": ";
+              if (llvm::MDNode *n = instr->getMetadata("dbg")) {
+                llvm::DILocation loc(n);
+                stream << "Line " << loc.getLineNumber();
+              } else {
+                instr->print(stream);
+              }
+            } else {
+              instr->print(stream);
+            }
+          }
           for (std::map<ref<StoredValue>, std::set<ref<Expr> > >::iterator
                    it = corePointerValues.begin(),
                    ie = corePointerValues.end();
                it != ie; ++it) {
-            std::string reason = "";
-            if (DebugSubsumption >= 1) {
-              llvm::raw_string_ostream stream(reason);
-              stream << "pointer interpolation at subsumption [";
-              it->first->getValue()->print(stream);
-              stream << "]";
-              stream.flush();
-            }
             state.txTreeNode->pointerValuesInterpolation(
                 it->first->getValue(), it->first->getExpression(), it->second,
                 reason);
@@ -1544,18 +1573,29 @@ bool SubsumptionTableEntry::subsumed(
 
       if (!NoBoundInterpolation && !ExactAddressInterpolant) {
         // We build memory bounds interpolants from pointer values
+        std::string reason = "";
+        if (DebugSubsumption >= 1) {
+          llvm::raw_string_ostream stream(reason);
+          llvm::Instruction *instr = state.pc->inst;
+          stream << "interpolating memory bound for subsumption at ";
+          if (instr->getParent()->getParent()) {
+            std::string functionName(
+                instr->getParent()->getParent()->getName().str());
+            stream << functionName << ": ";
+            if (llvm::MDNode *n = instr->getMetadata("dbg")) {
+              llvm::DILocation loc(n);
+              stream << "Line " << loc.getLineNumber();
+            } else {
+              instr->print(stream);
+            }
+          } else {
+            instr->print(stream);
+          }
+        }
         for (std::map<ref<StoredValue>, std::set<ref<Expr> > >::iterator
                  it = corePointerValues.begin(),
                  ie = corePointerValues.end();
              it != ie; ++it) {
-          std::string reason = "";
-          if (DebugSubsumption >= 1) {
-            llvm::raw_string_ostream stream(reason);
-            stream << "pointer interpolation at subsumption [";
-            it->first->getValue()->print(stream);
-            stream << "]";
-            stream.flush();
-          }
           state.txTreeNode->pointerValuesInterpolation(
               it->first->getValue(), it->first->getExpression(), it->second,
               reason);
@@ -1928,15 +1968,15 @@ void SubsumptionTable::clear() {
 /**/
 
 Statistic TxTree::setCurrentINodeTime("SetCurrentINodeTime",
-                                     "SetCurrentINodeTime");
+                                      "SetCurrentINodeTime");
 Statistic TxTree::removeTime("RemoveTime", "RemoveTime");
 Statistic TxTree::subsumptionCheckTime("SubsumptionCheckTime",
-                                      "SubsumptionCheckTime");
+                                       "SubsumptionCheckTime");
 Statistic TxTree::markPathConditionTime("MarkPathConditionTime", "MarkPCTime");
 Statistic TxTree::splitTime("SplitTime", "SplitTime");
 Statistic TxTree::executeOnNodeTime("ExecuteOnNodeTime", "ExecuteOnNodeTime");
 Statistic TxTree::executeMemoryOperationTime("ExecuteMemoryOperationTime",
-                                            "ExecuteMemoryOperationTime");
+                                             "ExecuteMemoryOperationTime");
 
 double TxTree::entryNumber;
 
@@ -2014,7 +2054,7 @@ TxTree::TxTree(ExecutionState *_root, llvm::DataLayout *_targetData)
 }
 
 bool TxTree::subsumptionCheck(TimingSolver *solver, ExecutionState &state,
-                             double timeout) {
+                              double timeout) {
 #ifdef ENABLE_Z3
   assert(state.txTreeNode == currentINode);
 
@@ -2121,9 +2161,15 @@ void TxTree::markPathCondition(ExecutionState &state, TimingSolver *solver) {
     if (DebugSubsumption >= 1) {
       llvm::raw_string_ostream stream(reason);
       stream << "branch infeasibility [";
-      binst->print(stream);
-      stream << "] with condition [";
-      binst->getCondition()->print(stream);
+      if (binst->getParent()->getParent()) {
+        stream << binst->getParent()->getParent()->getName().str() << ": ";
+      }
+      if (llvm::MDNode *n = binst->getMetadata("dbg")) {
+        llvm::DILocation loc(n);
+        stream << "Line " << loc.getLineNumber();
+      } else {
+        binst->print(stream);
+      }
       stream << "]";
       stream.flush();
     }
@@ -2167,7 +2213,7 @@ void TxTree::execute(llvm::Instruction *instr, ref<Expr> arg1, ref<Expr> arg2) {
 }
 
 void TxTree::execute(llvm::Instruction *instr, ref<Expr> arg1, ref<Expr> arg2,
-                    ref<Expr> arg3) {
+                     ref<Expr> arg3) {
   std::vector<ref<Expr> > args;
   args.push_back(arg1);
   args.push_back(arg2);
@@ -2180,7 +2226,7 @@ void TxTree::execute(llvm::Instruction *instr, std::vector<ref<Expr> > &args) {
 }
 
 void TxTree::executePHI(llvm::Instruction *instr, unsigned incomingBlock,
-                       ref<Expr> valueExpr) {
+                        ref<Expr> valueExpr) {
   currentINode->dependency->executePHI(instr, incomingBlock,
                                        currentINode->callStack, valueExpr,
                                        symbolicExecutionError);
@@ -2188,14 +2234,14 @@ void TxTree::executePHI(llvm::Instruction *instr, unsigned incomingBlock,
 }
 
 void TxTree::executeOnNode(TxTreeNode *node, llvm::Instruction *instr,
-                          std::vector<ref<Expr> > &args) {
+                           std::vector<ref<Expr> > &args) {
   TimerStatIncrementer t(executeOnNodeTime);
   node->execute(instr, args, symbolicExecutionError);
   symbolicExecutionError = false;
 }
 
 void TxTree::printNode(llvm::raw_ostream &stream, TxTreeNode *n,
-                      std::string edges) const {
+                       std::string edges) const {
   if (n->left != 0) {
     stream << "\n";
     stream << edges << "+-- L:" << n->left->programPoint;
@@ -2237,20 +2283,20 @@ void TxTree::dump() const { this->print(llvm::errs()); }
 
 // Statistics
 Statistic TxTreeNode::getInterpolantTime("GetInterpolantTime",
-                                        "GetInterpolantTime");
+                                         "GetInterpolantTime");
 Statistic TxTreeNode::addConstraintTime("AddConstraintTime",
-                                       "AddConstraintTime");
+                                        "AddConstraintTime");
 Statistic TxTreeNode::splitTime("SplitTime", "SplitTime");
 Statistic TxTreeNode::executeTime("ExecuteTime", "ExecuteTime");
 Statistic TxTreeNode::bindCallArgumentsTime("BindCallArgumentsTime",
-                                           "BindCallArgumentsTime");
+                                            "BindCallArgumentsTime");
 Statistic TxTreeNode::bindReturnValueTime("BindReturnValueTime",
-                                         "BindReturnValueTime");
+                                          "BindReturnValueTime");
 Statistic TxTreeNode::getStoredExpressionsTime("GetStoredExpressionsTime",
-                                              "GetStoredExpressionsTime");
+                                               "GetStoredExpressionsTime");
 Statistic
 TxTreeNode::getStoredCoreExpressionsTime("GetStoredCoreExpressionsTime",
-                                        "GetStoredCoreExpressionsTime");
+                                         "GetStoredCoreExpressionsTime");
 
 // The interpolation tree node sequence number
 uint64_t TxTreeNode::nextNodeSequenceNumber = 1;
@@ -2329,20 +2375,21 @@ void TxTreeNode::split(ExecutionState *leftData, ExecutionState *rightData) {
   rightData->txTreeNode = right = new TxTreeNode(this, targetData);
 }
 
-void TxTreeNode::execute(llvm::Instruction *instr, std::vector<ref<Expr> > &args,
-                        bool symbolicExecutionError) {
+void TxTreeNode::execute(llvm::Instruction *instr,
+                         std::vector<ref<Expr> > &args,
+                         bool symbolicExecutionError) {
   TimerStatIncrementer t(executeTime);
   dependency->execute(instr, callStack, args, symbolicExecutionError);
 }
 
 void TxTreeNode::bindCallArguments(llvm::Instruction *site,
-                                  std::vector<ref<Expr> > &arguments) {
+                                   std::vector<ref<Expr> > &arguments) {
   TimerStatIncrementer t(bindCallArgumentsTime);
   dependency->bindCallArguments(site, callStack, arguments);
 }
 
 void TxTreeNode::bindReturnValue(llvm::CallInst *site, llvm::Instruction *inst,
-                                ref<Expr> returnValue) {
+                                 ref<Expr> returnValue) {
   // TODO: This is probably where we should simplify
   // the dependency graph by removing callee values.
   TimerStatIncrementer t(bindReturnValueTime);
@@ -2424,7 +2471,7 @@ void TxTreeNode::print(llvm::raw_ostream &stream) const {
 }
 
 void TxTreeNode::print(llvm::raw_ostream &stream,
-                      const unsigned paddingAmount) const {
+                       const unsigned paddingAmount) const {
   std::string tabs = makeTabs(paddingAmount);
   std::string tabsNext = appendTab(tabs);
 
