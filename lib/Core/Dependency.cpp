@@ -45,7 +45,8 @@ namespace klee {
 
 void StoredValue::init(ref<VersionedValue> vvalue,
                        std::set<const Array *> &replacements,
-                       std::vector<std::string> &_coreReasons, bool shadowing) {
+                       std::vector<std::string> &_coreReasons,
+                       int _debugSubsumptionLevel, bool shadowing) {
   std::set<ref<MemoryLocation> > locations = vvalue->getLocations();
 
   refCount = 0;
@@ -126,6 +127,8 @@ void StoredValue::init(ref<VersionedValue> vvalue,
       }
     }
   }
+
+  debugSubsumptionLevel = _debugSubsumptionLevel;
 }
 
 ref<Expr> StoredValue::getBoundsCheck(ref<StoredValue> stateValue,
@@ -158,7 +161,7 @@ ref<Expr> StoredValue::getBoundsCheck(ref<StoredValue> stateValue,
     assert(!tabledBounds.empty() && "tabled bounds empty");
 
     if (stateOffsets.empty()) {
-      if (DebugSubsumption >= 3) {
+      if (debugSubsumptionLevel >= 3) {
         std::string msg;
         llvm::raw_string_ostream stream(msg);
         it->first->print(stream);
@@ -180,7 +183,9 @@ ref<Expr> StoredValue::getBoundsCheck(ref<StoredValue> stateValue,
             if (tabledBoundInt > 0) {
               uint64_t stateOffsetInt = stateOffset->getZExtValue();
               if (stateOffsetInt >= tabledBoundInt) {
-                if (DebugSubsumption >= 3) {
+                if ((DebugSubsumption > debugSubsumptionLevel
+                         ? DebugSubsumption
+                         : debugSubsumptionLevel) >= 3) {
                   std::string msg;
                   llvm::raw_string_ostream stream(msg);
                   it->first->print(stream);
@@ -337,17 +342,19 @@ Dependency::getStoredExpressions(const std::vector<llvm::Instruction *> &stack,
 
     if (!coreOnly) {
       llvm::Value *base = it->first->getValue();
-      concreteStore[base][it->first] = StoredValue::create(it->second.second);
+      concreteStore[base][it->first] =
+          StoredValue::create(it->second.second, debugSubsumptionLevel);
     } else if (it->second.second->isCore()) {
       // An address is in the core if it stores a value that is in the core
       llvm::Value *base = it->first->getValue();
 #ifdef ENABLE_Z3
       if (!NoExistential) {
-        concreteStore[base][it->first] =
-            StoredValue::create(it->second.second, replacements);
+        concreteStore[base][it->first] = StoredValue::create(
+            it->second.second, replacements, debugSubsumptionLevel);
       } else
 #endif
-        concreteStore[base][it->first] = StoredValue::create(it->second.second);
+        concreteStore[base][it->first] =
+            StoredValue::create(it->second.second, debugSubsumptionLevel);
     }
   }
 
@@ -364,8 +371,9 @@ Dependency::getStoredExpressions(const std::vector<llvm::Instruction *> &stack,
 
     if (!coreOnly) {
       llvm::Value *base = it->first->getValue();
-      symbolicStore[base].push_back(
-          AddressValuePair(it->first, StoredValue::create(it->second.second)));
+      symbolicStore[base].push_back(AddressValuePair(
+          it->first,
+          StoredValue::create(it->second.second, debugSubsumptionLevel)));
     } else if (it->second.second->isCore()) {
       // An address is in the core if it stores a value that is in the core
       llvm::Value *base = it->first->getValue();
@@ -373,11 +381,13 @@ Dependency::getStoredExpressions(const std::vector<llvm::Instruction *> &stack,
       if (!NoExistential) {
         symbolicStore[base].push_back(AddressValuePair(
             MemoryLocation::create(it->first, replacements),
-            StoredValue::create(it->second.second, replacements)));
+            StoredValue::create(it->second.second, replacements,
+                                debugSubsumptionLevel)));
       } else
 #endif
         symbolicStore[base].push_back(AddressValuePair(
-            it->first, StoredValue::create(it->second.second)));
+            it->first,
+            StoredValue::create(it->second.second, debugSubsumptionLevel)));
       }
   }
 
@@ -666,12 +676,16 @@ void Dependency::addDependencyViaExternalFunction(
   if (source.isNull() || target.isNull())
     return;
 
+  int debugLevel = debugSubsumptionLevel;
+  if (DebugSubsumption > debugLevel)
+    debugLevel = DebugSubsumption;
+
 #ifdef ENABLE_Z3
   if (!NoBoundInterpolation) {
     std::set<ref<MemoryLocation> > locations = source->getLocations();
     if (!locations.empty()) {
       std::string reason = "";
-      if (DebugSubsumption >= 1) {
+      if (debugLevel >= 1) {
         llvm::raw_string_ostream stream(reason);
         stream << "parameter [";
         source->getValue()->print(stream);
@@ -810,11 +824,21 @@ std::vector<ref<VersionedValue> > Dependency::populateArgumentValuesList(
   return argumentValuesList;
 }
 
-Dependency::Dependency(Dependency *parent, llvm::DataLayout *_targetData)
+Dependency::Dependency(Dependency *parent, llvm::DataLayout *_targetData,
+                       int _debugSubsumptionLevel)
     : parent(parent), targetData(_targetData) {
+  int debugLevel = DebugSubsumption;
+  if (_debugSubsumptionLevel > DebugSubsumption)
+    debugLevel = _debugSubsumptionLevel;
+
   if (parent) {
     concretelyAddressedStore = parent->concretelyAddressedStore;
     symbolicallyAddressedStore = parent->symbolicallyAddressedStore;
+    debugSubsumptionLevel = (parent->debugSubsumptionLevel > debugLevel
+                                 ? parent->debugSubsumptionLevel
+                                 : debugLevel);
+  } else {
+    debugSubsumptionLevel = debugLevel;
   }
 }
 
@@ -1000,7 +1024,9 @@ void Dependency::execute(llvm::Instruction *instr,
       if (binst && binst->isConditional()) {
         ref<Expr> unknownExpression;
         std::string reason = "";
-        if (DebugSubsumption >= 1) {
+        if ((DebugSubsumption > debugSubsumptionLevel
+                 ? DebugSubsumption
+                 : debugSubsumptionLevel) >= 1) {
           llvm::raw_string_ostream stream(reason);
           stream << "branch instruction [";
           if (binst->getParent()->getParent()) {
@@ -1447,7 +1473,9 @@ void Dependency::executeMemoryOperation(
                     llvm::dyn_cast<llvm::ConstantExpr>((*it)->getValue())) {
               if (llvm::isa<llvm::GetElementPtrInst>(ce->getAsInstruction())) {
                 std::string reason = "";
-                if (DebugSubsumption >= 1) {
+                if ((DebugSubsumption > debugSubsumptionLevel
+                         ? DebugSubsumption
+                         : debugSubsumptionLevel) >= 1) {
                   llvm::raw_string_ostream stream(reason);
                   stream << "pointer use [";
                   if (instr->getParent()->getParent()) {
@@ -1474,7 +1502,9 @@ void Dependency::executeMemoryOperation(
       }
     } else {
       std::string reason = "";
-      if (DebugSubsumption >= 1) {
+      if ((DebugSubsumption > debugSubsumptionLevel
+               ? DebugSubsumption
+               : debugSubsumptionLevel) >= 1) {
         llvm::raw_string_ostream stream(reason);
         stream << "pointer use [";
         if (instr->getParent()->getParent()) {

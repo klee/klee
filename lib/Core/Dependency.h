@@ -72,31 +72,41 @@ namespace klee {
     /// \brief Reason this was stored as needed value
     std::vector<std::string> coreReasons;
 
+    /// \brief This is for dynamic setting up of subsumption-related debug
+    /// messages.
+    int debugSubsumptionLevel;
+
     void init(ref<VersionedValue> vvalue, std::set<const Array *> &replacements,
-              std::vector<std::string> &coreReasons, bool shadowing = false);
+              std::vector<std::string> &coreReasons, int debugSubsumptionLevel,
+              bool shadowing = false);
 
     StoredValue(ref<VersionedValue> vvalue,
                 std::set<const Array *> &replacements,
-                std::vector<std::string> &coreReasons) {
-      init(vvalue, replacements, coreReasons, true);
+                std::vector<std::string> &coreReasons,
+                int _debugSubsumptionLevel) {
+      init(vvalue, replacements, coreReasons, _debugSubsumptionLevel, true);
     }
 
     StoredValue(ref<VersionedValue> vvalue,
-                std::vector<std::string> &coreReasons) {
+                std::vector<std::string> &coreReasons,
+                int _debugSubsumptionLevel) {
       std::set<const Array *> dummyReplacements;
-      init(vvalue, dummyReplacements, coreReasons);
+      init(vvalue, dummyReplacements, coreReasons, _debugSubsumptionLevel);
     }
 
   public:
     static ref<StoredValue> create(ref<VersionedValue> vvalue,
-                                   std::set<const Array *> &replacements) {
-      ref<StoredValue> sv(
-          new StoredValue(vvalue, replacements, vvalue->getReasons()));
+                                   std::set<const Array *> &replacements,
+                                   int _debugSubsumptionLevel) {
+      ref<StoredValue> sv(new StoredValue(
+          vvalue, replacements, vvalue->getReasons(), _debugSubsumptionLevel));
       return sv;
     }
 
-    static ref<StoredValue> create(ref<VersionedValue> vvalue) {
-      ref<StoredValue> sv(new StoredValue(vvalue, vvalue->getReasons()));
+    static ref<StoredValue> create(ref<VersionedValue> vvalue,
+                                   int _debugSubsumptionLevel) {
+      ref<StoredValue> sv(new StoredValue(vvalue, vvalue->getReasons(),
+                                          _debugSubsumptionLevel));
       return sv;
     }
 
@@ -291,6 +301,10 @@ namespace klee {
     /// \brief The data layout of the analysis target program
     llvm::DataLayout *targetData;
 
+    /// \brief This is for dynamic setting up of subsumption-related debug
+    /// messages.
+    int debugSubsumptionLevel;
+
     /// \brief Tests if a pointer points to a main function's argument
     static bool isMainArgument(llvm::Value *loc);
 
@@ -412,7 +426,8 @@ namespace klee {
                                std::vector<ref<Expr> > &arguments);
 
   public:
-    Dependency(Dependency *parent, llvm::DataLayout *_targetData);
+    Dependency(Dependency *parent, llvm::DataLayout *_targetData,
+               int debugSubsumptionLevel);
 
     ~Dependency();
 

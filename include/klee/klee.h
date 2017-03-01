@@ -135,6 +135,9 @@ extern "C" {
      constants and that the range lie within a single object. */
   void klee_check_memory_access(const void *address, size_t size);
 
+  /* Set dynamic level of subsumption-related debugging information. */
+  void klee_debug_subsumption(uint64_t level);
+
   /* Enable/disable forking. */
   void klee_set_forking(unsigned enable);
 

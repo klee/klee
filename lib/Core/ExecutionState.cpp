@@ -388,3 +388,7 @@ void ExecutionState::dumpStack(llvm::raw_ostream &out) const {
     target = sf.caller;
   }
 }
+
+void ExecutionState::setDebugSubsumptionLevel(uint64_t level) {
+  txTreeNode->debugSubsumptionLevel = level;
+}

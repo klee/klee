@@ -484,6 +484,8 @@ void klee_mark_global(void *object) {
   ;
 }
 
+void klee_debug_subsumption(uint64_t level) { ; }
+
 /*** HELPER FUNCTIONS ***/
 
 static void __emit_error(const char *msg) {

@@ -85,13 +85,13 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
   addDNR("_exit", handleExit),
   { "exit", &SpecialFunctionHandler::handleExit, true, false, true },
   addDNR("klee_abort", handleAbort),
-  addDNR("klee_silent_exit", handleSilentExit),  
+  addDNR("klee_silent_exit", handleSilentExit),
   addDNR("klee_report_error", handleReportError),
-
   add("calloc", handleCalloc, true),
   add("free", handleFree, false),
   add("klee_assume", handleAssume, false),
   add("klee_check_memory_access", handleCheckMemoryAccess, false),
+  add("klee_debug_subsumption", handleDebugSubsumption, false),
   add("klee_get_valuef", handleGetValue, true),
   add("klee_get_valued", handleGetValue, true),
   add("klee_get_valuel", handleGetValue, true),
@@ -141,7 +141,7 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
   add("__ubsan_handle_divrem_overflow", handleDivRemOverflow, false),
 
 #undef addDNR
-#undef add  
+#undef add
 };
 
 SpecialFunctionHandler::const_iterator SpecialFunctionHandler::begin() {
@@ -649,6 +649,22 @@ void SpecialFunctionHandler::handleCheckMemoryAccess(ExecutionState &state,
       }
     }
   }
+}
+
+void SpecialFunctionHandler::handleDebugSubsumption(
+    ExecutionState &state, KInstruction *target,
+    std::vector<ref<Expr> > &arguments) {
+  assert(arguments.size() == 1 &&
+         "invalid number of arguments to klee_debug_subsumption");
+
+  ref<Expr> level = executor.toUnique(state, arguments[0]);
+  if (ConstantExpr *ce = llvm::dyn_cast<ConstantExpr>(level)) {
+    state.setDebugSubsumptionLevel(ce->getZExtValue());
+    return;
+  }
+
+  executor.terminateStateOnError(
+      state, "debug_subsumption requires constant argument", Executor::User);
 }
 
 void SpecialFunctionHandler::handleGetValue(ExecutionState &state,

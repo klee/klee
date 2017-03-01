@@ -143,3 +143,5 @@ int klee_range(int begin, int end, const char* name) {
 void klee_print_expr(const char *msg, ...) { }
 
 void klee_set_forking(unsigned enable) { }
+
+void klee_debug_subsumption(uint64_t level) {}
