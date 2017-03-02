@@ -659,13 +659,10 @@ void SpecialFunctionHandler::handlePushDebugLevel(
   assert(arguments.size() == 1 &&
          "invalid number of arguments to tracerx_push_debug_level");
 
-  ref<Expr> id = executor.toUnique(state, arguments[0]);
-  ref<Expr> level = executor.toUnique(state, arguments[1]);
-  if (ConstantExpr *cid = llvm::dyn_cast<ConstantExpr>(id)) {
-    if (ConstantExpr *cLevel = llvm::dyn_cast<ConstantExpr>(level)) {
-      state.setDebugLevel(cid->getZExtValue(), cLevel->getZExtValue());
+  ref<Expr> level = executor.toUnique(state, arguments[0]);
+  if (ConstantExpr *cLevel = llvm::dyn_cast<ConstantExpr>(level)) {
+    state.pushDebugLevel(cLevel->getZExtValue());
       return;
-    }
   }
 
   executor.terminateStateOnError(

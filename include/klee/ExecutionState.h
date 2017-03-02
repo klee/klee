@@ -192,7 +192,7 @@ public:
 
   bool merge(const ExecutionState &b);
   void dumpStack(llvm::raw_ostream &out) const;
-  void setDebugLevel(uint64_t id, uint64_t level);
+  void pushDebugLevel(uint64_t level);
 };
 }
 

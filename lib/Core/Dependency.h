@@ -417,7 +417,7 @@ namespace klee {
 
   public:
     /// \brief This is for dynamic setting up of debug messages.
-    int debugLevel;
+    std::stack<int> debugLevel;
 
     Dependency(Dependency *parent, llvm::DataLayout *_targetData);
 

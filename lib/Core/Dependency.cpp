@@ -339,18 +339,18 @@ Dependency::getStoredExpressions(const std::vector<llvm::Instruction *> &stack,
     if (!coreOnly) {
       llvm::Value *base = it->first->getValue();
       concreteStore[base][it->first] =
-          StoredValue::create(it->second.second, debugLevel);
+          StoredValue::create(it->second.second, debugLevel.top());
     } else if (it->second.second->isCore()) {
       // An address is in the core if it stores a value that is in the core
       llvm::Value *base = it->first->getValue();
 #ifdef ENABLE_Z3
       if (!NoExistential) {
-        concreteStore[base][it->first] =
-            StoredValue::create(it->second.second, replacements, debugLevel);
+        concreteStore[base][it->first] = StoredValue::create(
+            it->second.second, replacements, debugLevel.top());
       } else
 #endif
         concreteStore[base][it->first] =
-            StoredValue::create(it->second.second, debugLevel);
+            StoredValue::create(it->second.second, debugLevel.top());
     }
   }
 
@@ -368,7 +368,7 @@ Dependency::getStoredExpressions(const std::vector<llvm::Instruction *> &stack,
     if (!coreOnly) {
       llvm::Value *base = it->first->getValue();
       symbolicStore[base].push_back(AddressValuePair(
-          it->first, StoredValue::create(it->second.second, debugLevel)));
+          it->first, StoredValue::create(it->second.second, debugLevel.top())));
     } else if (it->second.second->isCore()) {
       // An address is in the core if it stores a value that is in the core
       llvm::Value *base = it->first->getValue();
@@ -376,11 +376,13 @@ Dependency::getStoredExpressions(const std::vector<llvm::Instruction *> &stack,
       if (!NoExistential) {
         symbolicStore[base].push_back(AddressValuePair(
             MemoryLocation::create(it->first, replacements),
-            StoredValue::create(it->second.second, replacements, debugLevel)));
+            StoredValue::create(it->second.second, replacements,
+                                debugLevel.top())));
       } else
 #endif
-        symbolicStore[base].push_back(AddressValuePair(
-            it->first, StoredValue::create(it->second.second, debugLevel)));
+        symbolicStore[base].push_back(
+            AddressValuePair(it->first, StoredValue::create(it->second.second,
+                                                            debugLevel.top())));
       }
   }
 
@@ -674,7 +676,7 @@ void Dependency::addDependencyViaExternalFunction(
     std::set<ref<MemoryLocation> > locations = source->getLocations();
     if (!locations.empty()) {
       std::string reason = "";
-      if (debugLevel >= 1) {
+      if (debugLevel.top() >= 1) {
         llvm::raw_string_ostream stream(reason);
         stream << "parameter [";
         source->getValue()->print(stream);
@@ -815,12 +817,12 @@ std::vector<ref<VersionedValue> > Dependency::populateArgumentValuesList(
 
 Dependency::Dependency(Dependency *parent, llvm::DataLayout *_targetData)
     : parent(parent), targetData(_targetData) {
-  debugLevel = DebugSubsumption;
-
   if (parent) {
     concretelyAddressedStore = parent->concretelyAddressedStore;
     symbolicallyAddressedStore = parent->symbolicallyAddressedStore;
     debugLevel = parent->debugLevel;
+  } else {
+    debugLevel.push(DebugSubsumption);
   }
 }
 
@@ -1006,7 +1008,7 @@ void Dependency::execute(llvm::Instruction *instr,
       if (binst && binst->isConditional()) {
         ref<Expr> unknownExpression;
         std::string reason = "";
-        if (debugLevel >= 1) {
+        if (debugLevel.top() >= 1) {
           llvm::raw_string_ostream stream(reason);
           stream << "branch instruction [";
           if (binst->getParent()->getParent()) {
@@ -1453,7 +1455,7 @@ void Dependency::executeMemoryOperation(
                     llvm::dyn_cast<llvm::ConstantExpr>((*it)->getValue())) {
               if (llvm::isa<llvm::GetElementPtrInst>(ce->getAsInstruction())) {
                 std::string reason = "";
-                if (debugLevel >= 1) {
+                if (debugLevel.top() >= 1) {
                   llvm::raw_string_ostream stream(reason);
                   stream << "pointer use [";
                   if (instr->getParent()->getParent()) {
@@ -1480,7 +1482,7 @@ void Dependency::executeMemoryOperation(
       }
     } else {
       std::string reason = "";
-      if (debugLevel >= 1) {
+      if (debugLevel.top() >= 1) {
         llvm::raw_string_ostream stream(reason);
         stream << "pointer use [";
         if (instr->getParent()->getParent()) {
