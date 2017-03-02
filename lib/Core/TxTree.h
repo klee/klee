@@ -201,14 +201,11 @@ class PathCondition {
   /// \brief Previous path condition
   PathCondition *tail;
 
-  /// \brief This is for dynamic setting up of debug messages.
-  int debugLevel;
-
 public:
   PathCondition(ref<Expr> &constraint, Dependency *dependency,
                 llvm::Value *condition,
                 const std::vector<llvm::Instruction *> &stack,
-                PathCondition *prev, int _debugLevel);
+                PathCondition *prev);
 
   ~PathCondition();
 
@@ -216,7 +213,7 @@ public:
 
   PathCondition *cdr() const;
 
-  void setAsCore();
+  void setAsCore(int debugLevel);
 
   bool isCore() const;
 
@@ -566,9 +563,6 @@ public:
 
   /// \brief The current call stack
   std::vector<llvm::Instruction *> callStack;
-
-  /// \brief This is for dynamic setting up of debug messages.
-  int debugLevel;
 
 private:
   void setProgramPoint(llvm::Instruction *instr) {

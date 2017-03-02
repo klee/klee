@@ -45,8 +45,7 @@ namespace klee {
 
 void StoredValue::init(ref<VersionedValue> vvalue,
                        std::set<const Array *> &replacements,
-                       std::vector<std::string> &_coreReasons, int _debugLevel,
-                       bool shadowing) {
+                       std::vector<std::string> &_coreReasons, bool shadowing) {
   std::set<ref<MemoryLocation> > locations = vvalue->getLocations();
 
   refCount = 0;
@@ -127,12 +126,11 @@ void StoredValue::init(ref<VersionedValue> vvalue,
       }
     }
   }
-
-  debugLevel = _debugLevel;
 }
 
 ref<Expr> StoredValue::getBoundsCheck(ref<StoredValue> stateValue,
-                                      std::set<ref<Expr> > &bounds) const {
+                                      std::set<ref<Expr> > &bounds,
+                                      int debugLevel) const {
   ref<Expr> res;
 #ifdef ENABLE_Z3
 

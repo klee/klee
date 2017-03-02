@@ -72,17 +72,13 @@ namespace klee {
     /// \brief Reason this was stored as needed value
     std::vector<std::string> coreReasons;
 
-    /// \brief This is for dynamic setting up of debug messages.
-    int debugLevel;
-
     void init(ref<VersionedValue> vvalue, std::set<const Array *> &replacements,
-              std::vector<std::string> &coreReasons, int debugLevel,
-              bool shadowing = false);
+              std::vector<std::string> &coreReasons, bool shadowing = false);
 
     StoredValue(ref<VersionedValue> vvalue,
                 std::set<const Array *> &replacements,
-                std::vector<std::string> &coreReasons, int _debugLevel) {
-      init(vvalue, replacements, coreReasons, _debugLevel, true);
+                std::vector<std::string> &coreReasons) {
+      init(vvalue, replacements, coreReasons, true);
     }
 
     StoredValue(ref<VersionedValue> vvalue,
@@ -95,8 +91,8 @@ namespace klee {
     static ref<StoredValue> create(ref<VersionedValue> vvalue,
                                    std::set<const Array *> &replacements,
                                    int _debugLevel) {
-      ref<StoredValue> sv(new StoredValue(vvalue, replacements,
-                                          vvalue->getReasons(), _debugLevel));
+      ref<StoredValue> sv(
+          new StoredValue(vvalue, replacements, vvalue->getReasons()));
       return sv;
     }
 
@@ -122,7 +118,8 @@ namespace klee {
     bool isPointer() const { return !allocationBounds.empty(); }
 
     ref<Expr> getBoundsCheck(ref<StoredValue> svalue,
-                             std::set<ref<Expr> > &bounds) const;
+                             std::set<ref<Expr> > &bounds,
+                             int debugLevel) const;
 
     ref<Expr> getExpression() const { return expr; }
 
@@ -298,10 +295,6 @@ namespace klee {
     /// \brief The data layout of the analysis target program
     llvm::DataLayout *targetData;
 
-    /// \brief This is for dynamic setting up of subsumption-related debug
-    /// messages.
-    int debugLevel;
-
     /// \brief Tests if a pointer points to a main function's argument
     static bool isMainArgument(llvm::Value *loc);
 
@@ -423,6 +416,9 @@ namespace klee {
                                std::vector<ref<Expr> > &arguments);
 
   public:
+    /// \brief This is for dynamic setting up of debug messages.
+    int debugLevel;
+
     Dependency(Dependency *parent, llvm::DataLayout *_targetData);
 
     ~Dependency();

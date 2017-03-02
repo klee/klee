@@ -328,9 +328,9 @@ void TxTreeGraph::save(std::string dotFileName) {
 PathCondition::PathCondition(ref<Expr> &constraint, Dependency *dependency,
                              llvm::Value *_condition,
                              const std::vector<llvm::Instruction *> &stack,
-                             PathCondition *prev, int _debugLevel)
+                             PathCondition *prev)
     : constraint(constraint), shadowConstraint(constraint), shadowed(false),
-      dependency(dependency), core(false), tail(prev), debugLevel(_debugLevel) {
+      dependency(dependency), core(false), tail(prev) {
   ref<VersionedValue> emptyCondition;
   if (dependency) {
     condition = dependency->getLatestValue(_condition, stack, constraint, true);
@@ -346,7 +346,7 @@ ref<Expr> PathCondition::car() const { return constraint; }
 
 PathCondition *PathCondition::cdr() const { return tail; }
 
-void PathCondition::setAsCore() {
+void PathCondition::setAsCore(int debugLevel) {
   // We mark all values to which this constraint depends
   std::string reason = "";
   if (debugLevel >= 1) {
@@ -1054,7 +1054,7 @@ bool SubsumptionTableEntry::subsumed(
                      tabledValue->useBound()) {
             std::set<ref<Expr> > bounds;
             ref<Expr> boundsCheck =
-                tabledValue->getBoundsCheck(stateValue, bounds);
+                tabledValue->getBoundsCheck(stateValue, bounds, debugLevel);
             if (boundsCheck->isFalse()) {
               if (debugLevel >= 1) {
                 klee_message("#%lu=>#%lu: Check failure due to failure in "
@@ -1122,8 +1122,8 @@ bool SubsumptionTableEntry::subsumed(
                        stateSymbolicValue->isPointer() &&
                        tabledValue->useBound()) {
               std::set<ref<Expr> > bounds;
-              ref<Expr> boundsCheck =
-                  tabledValue->getBoundsCheck(stateSymbolicValue, bounds);
+              ref<Expr> boundsCheck = tabledValue->getBoundsCheck(
+                  stateSymbolicValue, bounds, debugLevel);
 
               if (!boundsCheck->isTrue()) {
                 newTerm = EqExpr::create(
@@ -1240,7 +1240,7 @@ bool SubsumptionTableEntry::subsumed(
                      tabledValue->useBound()) {
             std::set<ref<Expr> > bounds;
             ref<Expr> boundsCheck =
-                tabledValue->getBoundsCheck(stateValue, bounds);
+                tabledValue->getBoundsCheck(stateValue, bounds, debugLevel);
 
             if (!boundsCheck->isTrue()) {
               newTerm = EqExpr::create(
@@ -1303,7 +1303,7 @@ bool SubsumptionTableEntry::subsumed(
                      tabledValue->useBound()) {
             std::set<ref<Expr> > bounds;
             ref<Expr> boundsCheck =
-                tabledValue->getBoundsCheck(stateValue, bounds);
+                tabledValue->getBoundsCheck(stateValue, bounds, debugLevel);
 
             if (!boundsCheck->isTrue()) {
               newTerm = EqExpr::create(
@@ -2068,7 +2068,7 @@ bool TxTree::subsumptionCheck(TimingSolver *solver, ExecutionState &state,
                                state.txTreeNode->getProgramPoint())
     return false;
 
-  int debugLevel = currentINode->debugLevel;
+  int debugLevel = currentINode->dependency->debugLevel;
 
   if (debugLevel >= 2) {
     klee_message("Subsumption check for Node #%lu, Program Point %lu",
@@ -2096,7 +2096,7 @@ void TxTree::setCurrentINode(ExecutionState &state) {
 }
 
 void TxTree::remove(TxTreeNode *node) {
-  int debugLevel = node->debugLevel;
+  int debugLevel = currentINode->dependency->debugLevel;
 
 #ifdef ENABLE_Z3
   TimerStatIncrementer t(removeTime);
@@ -2158,7 +2158,7 @@ void TxTree::markPathCondition(ExecutionState &state, TimingSolver *solver) {
   TimerStatIncrementer t(markPathConditionTime);
   const std::vector<ref<Expr> > &unsatCore = solver->getUnsatCore();
 
-  int debugLevel = state.txTreeNode->debugLevel;
+  int debugLevel = currentINode->dependency->debugLevel;
 
   llvm::BranchInst *binst =
       llvm::dyn_cast<llvm::BranchInst>(state.prevPC->inst);
@@ -2192,7 +2192,7 @@ void TxTree::markPathCondition(ExecutionState &state, TimingSolver *solver) {
          it != ie; ++it) {
       for (; pc != 0; pc = pc->cdr()) {
         if (pc->car().compare(it->get()) == 0) {
-          pc->setAsCore();
+          pc->setAsCore(debugLevel);
           pc = pc->cdr();
           break;
         }
@@ -2335,12 +2335,10 @@ TxTreeNode::TxTreeNode(TxTreeNode *_parent, llvm::DataLayout *_targetData)
       targetData(_targetData), isSubsumed(false) {
 
   pathCondition = 0;
-  debugLevel = DebugSubsumption;
   if (_parent) {
     pathCondition = _parent->pathCondition;
     entryCallStack = _parent->callStack;
     callStack = _parent->callStack;
-    debugLevel = _parent->debugLevel;
   }
 
   // Inherit the abstract dependency or NULL
@@ -2373,7 +2371,7 @@ TxTreeNode::getInterpolant(std::set<const Array *> &replacements) const {
 void TxTreeNode::addConstraint(ref<Expr> &constraint, llvm::Value *condition) {
   TimerStatIncrementer t(addConstraintTime);
   pathCondition = new PathCondition(constraint, dependency, condition,
-                                    callStack, pathCondition, debugLevel);
+                                    callStack, pathCondition);
   graph->addPathCondition(this, pathCondition, constraint);
 }
 
@@ -2464,7 +2462,7 @@ TxTreeNode::unsatCoreInterpolation(const std::vector<ref<Expr> > &unsatCore) {
     // because constraints are not properly added at state merge.
     PathCondition *cond = markerMap[it1->get()];
     if (cond)
-      cond->setAsCore();
+      cond->setAsCore(dependency->debugLevel);
   }
 }
 
