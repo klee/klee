@@ -669,6 +669,14 @@ void SpecialFunctionHandler::handlePushDebugLevel(
       state, "push_debug_level requires constant arguments", Executor::User);
 }
 
+void SpecialFunctionHandler::handlePopDebugLevel(
+    ExecutionState &state, KInstruction *target,
+    std::vector<ref<Expr> > &arguments) {
+  assert(arguments.size() == 0 &&
+         "invalid number of arguments to tracerx_pop_debug_level");
+  state.popDebugLevel();
+}
+
 void SpecialFunctionHandler::handleGetValue(ExecutionState &state,
                                             KInstruction *target,
                                             std::vector<ref<Expr> > &arguments) {

@@ -392,3 +392,8 @@ void ExecutionState::dumpStack(llvm::raw_ostream &out) const {
 void ExecutionState::pushDebugLevel(uint64_t level) {
   txTreeNode->dependency->debugLevel.push(level);
 }
+
+void ExecutionState::popDebugLevel() {
+  if (txTreeNode->dependency->debugLevel.size() > 1)
+    txTreeNode->dependency->debugLevel.pop();
+}

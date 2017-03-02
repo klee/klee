@@ -486,6 +486,8 @@ void klee_mark_global(void *object) {
 
 void tracerx_push_debug_level(uint64_t level) { ; }
 
+void tracerx_pop_debug_level() {}
+
 /*** HELPER FUNCTIONS ***/
 
 static void __emit_error(const char *msg) {

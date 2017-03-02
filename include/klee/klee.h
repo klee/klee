@@ -158,6 +158,8 @@ extern "C" {
   /* Set dynamic level of debugging information. */
   void tracerx_push_debug_level(uint64_t level);
 
+  /* Unset dynamic level of debugging information to previous value */
+  void tracerx_pop_debug_level();
 #ifdef __cplusplus
 }
 #endif
