@@ -144,4 +144,5 @@ void klee_print_expr(const char *msg, ...) { }
 
 void klee_set_forking(unsigned enable) { }
 
-void klee_debug_subsumption(uint64_t level) {}
+/* Change debug level */
+void tracerx_debug_level(uint64_t id, uint64_t level) {}

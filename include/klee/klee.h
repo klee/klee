@@ -135,9 +135,6 @@ extern "C" {
      constants and that the range lie within a single object. */
   void klee_check_memory_access(const void *address, size_t size);
 
-  /* Set dynamic level of subsumption-related debugging information. */
-  void klee_debug_subsumption(uint64_t level);
-
   /* Enable/disable forking. */
   void klee_set_forking(unsigned enable);
 
@@ -157,6 +154,10 @@ extern "C" {
 
   /* Merge current states together if possible */
   void klee_merge();
+
+  /* Set dynamic level of debugging information. */
+  void tracerx_debug_level(uint64_t id, uint64_t level);
+
 #ifdef __cplusplus
 }
 #endif
