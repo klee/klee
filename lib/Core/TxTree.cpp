@@ -328,10 +328,9 @@ void TxTreeGraph::save(std::string dotFileName) {
 PathCondition::PathCondition(ref<Expr> &constraint, Dependency *dependency,
                              llvm::Value *_condition,
                              const std::vector<llvm::Instruction *> &stack,
-                             PathCondition *prev, int _debugSubsumptionLevel)
+                             PathCondition *prev, int _debugLevel)
     : constraint(constraint), shadowConstraint(constraint), shadowed(false),
-      dependency(dependency), core(false), tail(prev),
-      debugSubsumptionLevel(_debugSubsumptionLevel) {
+      dependency(dependency), core(false), tail(prev), debugLevel(_debugLevel) {
   ref<VersionedValue> emptyCondition;
   if (dependency) {
     condition = dependency->getLatestValue(_condition, stack, constraint, true);
@@ -350,8 +349,7 @@ PathCondition *PathCondition::cdr() const { return tail; }
 void PathCondition::setAsCore() {
   // We mark all values to which this constraint depends
   std::string reason = "";
-  if ((debugSubsumptionLevel > DebugSubsumption ? debugSubsumptionLevel
-                                                : DebugSubsumption) >= 1) {
+  if (debugLevel >= 1) {
     llvm::raw_string_ostream stream(reason);
     stream << "path condition [";
     constraint->print(stream);
@@ -960,11 +958,7 @@ ref<Expr> SubsumptionTableEntry::simplifyExistsExpr(ref<Expr> existsExpr,
 bool SubsumptionTableEntry::subsumed(
     TimingSolver *solver, ExecutionState &state, double timeout,
     const std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
-        storedExpressions, int debugSubsumptionLevel) {
-
-  if (DebugSubsumption > debugSubsumptionLevel)
-    debugSubsumptionLevel = DebugSubsumption;
-
+        storedExpressions, int debugLevel) {
 #ifdef ENABLE_Z3
   // Tell the solver implementation that we are checking for subsumption for
   // collecting statistics of solver calls.
@@ -972,7 +966,7 @@ bool SubsumptionTableEntry::subsumed(
 
   // Quick check for subsumption in case the interpolant is empty
   if (empty()) {
-    if (debugSubsumptionLevel >= 1) {
+    if (debugLevel >= 1) {
       klee_message("#%lu=>#%lu: Check success due to empty table entry",
                    state.txTreeNode->getNodeSequenceNumber(),
                    nodeSequenceNumber);
@@ -1010,7 +1004,7 @@ bool SubsumptionTableEntry::subsumed(
       // If the current state does not constrain the same base, subsumption
       // fails.
       if (stateConcreteMap.empty() && stateSymbolicMap.empty()) {
-        if (debugSubsumptionLevel >= 1) {
+        if (debugLevel >= 1) {
           klee_message("#%lu=>#%lu: Check failure due to empty state concrete "
                        "and symbolic maps",
                        state.txTreeNode->getNodeSequenceNumber(),
@@ -1028,7 +1022,7 @@ bool SubsumptionTableEntry::subsumed(
         // the current state is incomparable to the stored interpolant,
         // and we therefore fail the subsumption.
         if (!stateConcreteMap.count(it2->first)) {
-          if (debugSubsumptionLevel >= 1) {
+          if (debugLevel >= 1) {
             klee_message("#%lu=>#%lu: Check failure as memory region in the "
                          "table does not "
                          "exist in the state",
@@ -1048,7 +1042,7 @@ bool SubsumptionTableEntry::subsumed(
               stateValue->getExpression()->getWidth()) {
             // We conservatively fail the subsumption in case the sizes do not
             // match.
-            if (debugSubsumptionLevel >= 1) {
+            if (debugLevel >= 1) {
               klee_message("#%lu=>#%lu: Check failure as sizes of stored "
                            "values do not match",
                            state.txTreeNode->getNodeSequenceNumber(),
@@ -1062,7 +1056,7 @@ bool SubsumptionTableEntry::subsumed(
             ref<Expr> boundsCheck =
                 tabledValue->getBoundsCheck(stateValue, bounds);
             if (boundsCheck->isFalse()) {
-              if (debugSubsumptionLevel >= 1) {
+              if (debugLevel >= 1) {
                 klee_message("#%lu=>#%lu: Check failure due to failure in "
                              "memory bounds check",
                              state.txTreeNode->getNodeSequenceNumber(),
@@ -1079,7 +1073,7 @@ bool SubsumptionTableEntry::subsumed(
             res = EqExpr::create(tabledValue->getExpression(),
                                  stateValue->getExpression());
             if (res->isFalse()) {
-              if (debugSubsumptionLevel >= 1) {
+              if (debugLevel >= 1) {
                 std::string msg;
                 llvm::raw_string_ostream stream(msg);
                 tabledValue->getExpression()->print(stream);
@@ -1377,7 +1371,7 @@ bool SubsumptionTableEntry::subsumed(
     } else {
       // Here both the interpolant constraints and state equality
       // constraints are empty, therefore everything gets subsumed
-      if (debugSubsumptionLevel >= 1) {
+      if (debugLevel >= 1) {
         klee_message("#%lu=>#%lu: Check success as interpolant is empty",
                      state.txTreeNode->getNodeSequenceNumber(),
                      nodeSequenceNumber);
@@ -1385,7 +1379,7 @@ bool SubsumptionTableEntry::subsumed(
 
       // We build memory bounds interpolants from pointer values
       std::string reason = "";
-      if (debugSubsumptionLevel >= 1) {
+      if (debugLevel >= 1) {
         llvm::raw_string_ostream stream(reason);
         llvm::Instruction *instr = state.pc->inst;
         stream << "interpolating memory bound for subsumption at ";
@@ -1418,7 +1412,7 @@ bool SubsumptionTableEntry::subsumed(
 
     if (!existentials.empty()) {
       ref<Expr> existsExpr = ExistsExpr::create(existentials, query);
-      if (debugSubsumptionLevel >= 2) {
+      if (debugLevel >= 2) {
         klee_message("Before simplification:\n%s",
                      PrettyExpressionBuilder::constructQuery(
                          state.constraints, existsExpr).c_str());
@@ -1429,7 +1423,7 @@ bool SubsumptionTableEntry::subsumed(
     // If query simplification result was false, we quickly fail without calling
     // the solver
     if (query->isFalse()) {
-      if (debugSubsumptionLevel >= 1) {
+      if (debugLevel >= 1) {
         klee_message("#%lu=>#%lu: Check failure as consequent is unsatisfiable",
                      state.txTreeNode->getNodeSequenceNumber(),
                      nodeSequenceNumber);
@@ -1440,7 +1434,7 @@ bool SubsumptionTableEntry::subsumed(
     bool success = false;
 
     if (!detectConflictPrimitives(state, query)) {
-      if (debugSubsumptionLevel >= 1) {
+      if (debugLevel >= 1) {
         klee_message(
             "#%lu=>#%lu: Check failure as contradictory equalities detected",
             state.txTreeNode->getNodeSequenceNumber(), nodeSequenceNumber);
@@ -1455,7 +1449,7 @@ bool SubsumptionTableEntry::subsumed(
     // method.
     if (!llvm::isa<ConstantExpr>(query)) {
       if (!existentials.empty() && llvm::isa<ExistsExpr>(query)) {
-        if (debugSubsumptionLevel >= 2) {
+        if (debugLevel >= 2) {
           klee_message("Existentials not empty");
         }
 
@@ -1480,7 +1474,7 @@ bool SubsumptionTableEntry::subsumed(
           constraints.addConstraint(
               EqExpr::create(falseExpr, query->getKid(0)));
 
-          if (debugSubsumptionLevel >= 2) {
+          if (debugLevel >= 2) {
             klee_message("Querying for satisfiability check:\n%s",
                          PrettyExpressionBuilder::constructQuery(
                              constraints, falseExpr).c_str());
@@ -1489,7 +1483,7 @@ bool SubsumptionTableEntry::subsumed(
           success = z3solver->getValue(Query(constraints, falseExpr), tmpExpr);
           result = success ? Solver::True : Solver::Unknown;
         } else {
-          if (debugSubsumptionLevel >= 2) {
+          if (debugLevel >= 2) {
             klee_message("Querying for subsumption check:\n%s",
                          PrettyExpressionBuilder::constructQuery(
                              state.constraints, query).c_str());
@@ -1502,7 +1496,7 @@ bool SubsumptionTableEntry::subsumed(
         z3solver->setCoreSolverTimeout(0);
 
       } else {
-        if (debugSubsumptionLevel >= 2) {
+        if (debugLevel >= 2) {
           klee_message("Querying for subsumption check:\n%s",
                        PrettyExpressionBuilder::constructQuery(
                            state.constraints, query).c_str());
@@ -1516,7 +1510,7 @@ bool SubsumptionTableEntry::subsumed(
     } else {
       // query is a constant expression
       if (query->isTrue()) {
-        if (debugSubsumptionLevel >= 1) {
+        if (debugLevel >= 1) {
           klee_message("#%lu=>#%lu: Check success as query is true",
                        state.txTreeNode->getNodeSequenceNumber(),
                        nodeSequenceNumber);
@@ -1525,7 +1519,7 @@ bool SubsumptionTableEntry::subsumed(
         if (!NoBoundInterpolation && !ExactAddressInterpolant) {
           // We build memory bounds interpolants from pointer values
           std::string reason = "";
-          if (debugSubsumptionLevel >= 1) {
+          if (debugLevel >= 1) {
             llvm::raw_string_ostream stream(reason);
             llvm::Instruction *instr = state.pc->inst;
             stream << "interpolating memory bound for subsumption at ";
@@ -1554,7 +1548,7 @@ bool SubsumptionTableEntry::subsumed(
         }
         return true;
       }
-      if (debugSubsumptionLevel >= 1) {
+      if (debugLevel >= 1) {
         klee_message("#%lu=>#%lu: Check failure as query is non-true",
                      state.txTreeNode->getNodeSequenceNumber(),
                      nodeSequenceNumber);
@@ -1568,7 +1562,7 @@ bool SubsumptionTableEntry::subsumed(
 
       // State subsumed, we mark needed constraints on the
       // path condition.
-      if (debugSubsumptionLevel >= 1) {
+      if (debugLevel >= 1) {
         klee_message("#%lu=>#%lu: Check success as solver decided validity",
                      state.txTreeNode->getNodeSequenceNumber(),
                      nodeSequenceNumber);
@@ -1580,7 +1574,7 @@ bool SubsumptionTableEntry::subsumed(
       if (!NoBoundInterpolation && !ExactAddressInterpolant) {
         // We build memory bounds interpolants from pointer values
         std::string reason = "";
-        if (debugSubsumptionLevel >= 1) {
+        if (debugLevel >= 1) {
           llvm::raw_string_ostream stream(reason);
           llvm::Instruction *instr = state.pc->inst;
           stream << "interpolating memory bound for subsumption at ";
@@ -1619,7 +1613,7 @@ bool SubsumptionTableEntry::subsumed(
     if (z3solver)
       delete z3solver;
 
-    if (debugSubsumptionLevel >= 1) {
+    if (debugLevel >= 1) {
       klee_message(
           "#%lu=>#%lu: Check failure as solver did not decide validity",
           state.txTreeNode->getNodeSequenceNumber(), nodeSequenceNumber);
@@ -1908,17 +1902,14 @@ void SubsumptionTable::insert(uintptr_t id,
 }
 
 bool SubsumptionTable::check(TimingSolver *solver, ExecutionState &state,
-                             double timeout, int debugSubsumptionLevel) {
+                             double timeout, int debugLevel) {
   StackIndexedTable *subTable = 0;
   TxTreeNode *txTreeNode = state.txTreeNode;
-
-  if (DebugSubsumption > debugSubsumptionLevel)
-    debugSubsumptionLevel = DebugSubsumption;
 
   std::map<uintptr_t, StackIndexedTable *>::iterator it =
       instance.find(state.txTreeNode->getProgramPoint());
   if (it == instance.end()) {
-    if (debugSubsumptionLevel >= 1) {
+    if (debugLevel >= 1) {
       klee_message(
           "#%lu: Check failure due to control point not found in table",
           state.txTreeNode->getNodeSequenceNumber());
@@ -1931,7 +1922,7 @@ bool SubsumptionTable::check(TimingSolver *solver, ExecutionState &state,
   std::pair<EntryIterator, EntryIterator> iterPair =
       subTable->find(txTreeNode->entryCallStack, found);
   if (!found) {
-    if (debugSubsumptionLevel >= 1) {
+    if (debugLevel >= 1) {
       klee_message("#%lu: Check failure due to entry not found",
                    state.txTreeNode->getNodeSequenceNumber());
     }
@@ -1949,7 +1940,7 @@ bool SubsumptionTable::check(TimingSolver *solver, ExecutionState &state,
     for (EntryIterator it = iterPair.first, ie = iterPair.second; it != ie;
          ++it) {
       if ((*it)->subsumed(solver, state, timeout, storedExpressions,
-                          debugSubsumptionLevel)) {
+                          debugLevel)) {
         // We mark as subsumed such that the node will not be
         // stored into table (the table already contains a more
         // general entry).
@@ -2077,9 +2068,7 @@ bool TxTree::subsumptionCheck(TimingSolver *solver, ExecutionState &state,
                                state.txTreeNode->getProgramPoint())
     return false;
 
-  int debugLevel = currentINode->debugSubsumptionLevel;
-  if (DebugSubsumption > debugLevel)
-    debugLevel = DebugSubsumption;
+  int debugLevel = currentINode->debugLevel;
 
   if (debugLevel >= 2) {
     klee_message("Subsumption check for Node #%lu, Program Point %lu",
@@ -2107,10 +2096,7 @@ void TxTree::setCurrentINode(ExecutionState &state) {
 }
 
 void TxTree::remove(TxTreeNode *node) {
-  int debugLevel = node->debugSubsumptionLevel;
-
-  if (DebugSubsumption > debugLevel)
-    debugLevel = DebugSubsumption;
+  int debugLevel = node->debugLevel;
 
 #ifdef ENABLE_Z3
   TimerStatIncrementer t(removeTime);
@@ -2172,9 +2158,7 @@ void TxTree::markPathCondition(ExecutionState &state, TimingSolver *solver) {
   TimerStatIncrementer t(markPathConditionTime);
   const std::vector<ref<Expr> > &unsatCore = solver->getUnsatCore();
 
-  int debugLevel = state.txTreeNode->debugSubsumptionLevel;
-  if (DebugSubsumption > debugLevel)
-    debugLevel = DebugSubsumption;
+  int debugLevel = state.txTreeNode->debugLevel;
 
   llvm::BranchInst *binst =
       llvm::dyn_cast<llvm::BranchInst>(state.prevPC->inst);
@@ -2348,19 +2332,19 @@ TxTreeNode::TxTreeNode(TxTreeNode *_parent, llvm::DataLayout *_targetData)
       nodeSequenceNumber(nextNodeSequenceNumber++), storable(true),
       graph(_parent ? _parent->graph : 0),
       instructionsDepth(_parent ? _parent->instructionsDepth : 0),
-      targetData(_targetData), isSubsumed(false),
-      debugSubsumptionLevel(_parent ? _parent->debugSubsumptionLevel : 0) {
+      targetData(_targetData), isSubsumed(false) {
 
   pathCondition = 0;
+  debugLevel = DebugSubsumption;
   if (_parent) {
     pathCondition = _parent->pathCondition;
     entryCallStack = _parent->callStack;
     callStack = _parent->callStack;
+    debugLevel = _parent->debugLevel;
   }
 
   // Inherit the abstract dependency or NULL
-  dependency = new Dependency(_parent ? _parent->dependency : 0, _targetData,
-                              _parent ? _parent->debugSubsumptionLevel : 0);
+  dependency = new Dependency(_parent ? _parent->dependency : 0, _targetData);
 }
 
 TxTreeNode::~TxTreeNode() {
@@ -2388,9 +2372,8 @@ TxTreeNode::getInterpolant(std::set<const Array *> &replacements) const {
 
 void TxTreeNode::addConstraint(ref<Expr> &constraint, llvm::Value *condition) {
   TimerStatIncrementer t(addConstraintTime);
-  pathCondition =
-      new PathCondition(constraint, dependency, condition, callStack,
-                        pathCondition, debugSubsumptionLevel);
+  pathCondition = new PathCondition(constraint, dependency, condition,
+                                    callStack, pathCondition, debugLevel);
   graph->addPathCondition(this, pathCondition, constraint);
 }
 

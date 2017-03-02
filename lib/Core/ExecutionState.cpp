@@ -390,5 +390,5 @@ void ExecutionState::dumpStack(llvm::raw_ostream &out) const {
 }
 
 void ExecutionState::setDebugLevel(uint64_t id, uint64_t level) {
-  txTreeNode->debugSubsumptionLevel = level;
+  txTreeNode->debugLevel = level;
 }

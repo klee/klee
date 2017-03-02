@@ -201,15 +201,14 @@ class PathCondition {
   /// \brief Previous path condition
   PathCondition *tail;
 
-  /// \brief This is for dynamic setting up of subsumption-related debug
-  /// messages.
-  int debugSubsumptionLevel;
+  /// \brief This is for dynamic setting up of debug messages.
+  int debugLevel;
 
 public:
   PathCondition(ref<Expr> &constraint, Dependency *dependency,
                 llvm::Value *condition,
                 const std::vector<llvm::Instruction *> &stack,
-                PathCondition *prev, int _debugSubsumptionLevel);
+                PathCondition *prev, int _debugLevel);
 
   ~PathCondition();
 
@@ -289,7 +288,7 @@ public:
                      SubsumptionTableEntry *entry);
 
   static bool check(TimingSolver *solver, ExecutionState &state, double timeout,
-                    int debugSubsumptionLevel);
+                    int debugLevel);
 
   static void clear();
 
@@ -466,7 +465,7 @@ public:
   bool subsumed(TimingSolver *solver, ExecutionState &state, double timeout,
                 const std::pair<Dependency::ConcreteStore,
                                 Dependency::SymbolicStore> storedExpressions,
-                int debugSubsumptionLevel);
+                int debugLevel);
 
   /// Tests if the argument is a variable. A variable here is defined to be
   /// either a symbolic concatenation or a symbolic read. A concatenation in
@@ -568,9 +567,8 @@ public:
   /// \brief The current call stack
   std::vector<llvm::Instruction *> callStack;
 
-  /// \brief This is for dynamic setting up of subsumption-related debug
-  /// messages.
-  int debugSubsumptionLevel;
+  /// \brief This is for dynamic setting up of debug messages.
+  int debugLevel;
 
 private:
   void setProgramPoint(llvm::Instruction *instr) {
