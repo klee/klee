@@ -140,7 +140,7 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
   add("__ubsan_handle_divrem_overflow", handleDivRemOverflow, false),
 
   // change debug information
-  add("tracerx_debug_level", handleDebugLevel, false),
+  add("tracerx_push_debug_level", handlePushDebugLevel, false),
 
 #undef addDNR
 #undef add
@@ -653,12 +653,11 @@ void SpecialFunctionHandler::handleCheckMemoryAccess(ExecutionState &state,
   }
 }
 
-void
-SpecialFunctionHandler::handleDebugLevel(ExecutionState &state,
-                                         KInstruction *target,
-                                         std::vector<ref<Expr> > &arguments) {
-  assert(arguments.size() == 2 &&
-         "invalid number of arguments to tracerx_debug_level");
+void SpecialFunctionHandler::handlePushDebugLevel(
+    ExecutionState &state, KInstruction *target,
+    std::vector<ref<Expr> > &arguments) {
+  assert(arguments.size() == 1 &&
+         "invalid number of arguments to tracerx_push_debug_level");
 
   ref<Expr> id = executor.toUnique(state, arguments[0]);
   ref<Expr> level = executor.toUnique(state, arguments[1]);
@@ -670,7 +669,7 @@ SpecialFunctionHandler::handleDebugLevel(ExecutionState &state,
   }
 
   executor.terminateStateOnError(
-      state, "debug_level requires constant arguments", Executor::User);
+      state, "push_debug_level requires constant arguments", Executor::User);
 }
 
 void SpecialFunctionHandler::handleGetValue(ExecutionState &state,

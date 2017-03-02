@@ -484,7 +484,7 @@ void klee_mark_global(void *object) {
   ;
 }
 
-void tracerx_debug(uint64_t id, uint64_t level) { ; }
+void tracerx_push_debug_level(uint64_t level) { ; }
 
 /*** HELPER FUNCTIONS ***/
 
