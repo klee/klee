@@ -1239,8 +1239,11 @@ void Executor::printDebugInstructions(ExecutionState &state) {
     stream = &debugLogBuffer;
 
   if (!optionIsSet(DebugPrintInstructions, STDERR_COMPACT) &&
-      !optionIsSet(DebugPrintInstructions, FILE_COMPACT))
-    printFileLine(state, state.pc, *stream);
+      !optionIsSet(DebugPrintInstructions, FILE_COMPACT)) {
+    (*stream) << "     ";
+    state.pc->printFileLine(*stream);
+    (*stream) << ":";
+  }
 
   (*stream) << state.pc->info->id;
 
@@ -1463,15 +1466,6 @@ void Executor::transferToBasicBlock(BasicBlock *dst, BasicBlock *src,
     PHINode *first = static_cast<PHINode*>(state.pc->inst);
     state.incomingBBIndex = first->getBasicBlockIndex(src);
   }
-}
-
-void Executor::printFileLine(ExecutionState &state, KInstruction *ki,
-                             llvm::raw_ostream &debugFile) {
-  const InstructionInfo &ii = *ki->info;
-  if (ii.file != "")
-    debugFile << "     " << ii.file << ":" << ii.line << ":";
-  else
-    debugFile << "     [no debug info]:";
 }
 
 /// Compute the true target of a function call, resolving LLVM and KLEE aliases
