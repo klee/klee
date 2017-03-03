@@ -140,7 +140,8 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
   add("__ubsan_handle_divrem_overflow", handleDivRemOverflow, false),
 
   // change debug information
-  add("tracerx_push_debug_level", handlePushDebugLevel, false),
+  add("tracerx_debug_subsumption", handlePushDebugLevel, false),
+  add("tracerx_debug_subsumption_off", handlePushDebugLevel, false),
 
 #undef addDNR
 #undef add
@@ -657,7 +658,7 @@ void SpecialFunctionHandler::handlePushDebugLevel(
     ExecutionState &state, KInstruction *target,
     std::vector<ref<Expr> > &arguments) {
   assert(arguments.size() == 1 &&
-         "invalid number of arguments to tracerx_push_debug_level");
+         "invalid number of arguments to tracerx_debug_subsumption");
 
   ref<Expr> level = executor.toUnique(state, arguments[0]);
   if (ConstantExpr *cLevel = llvm::dyn_cast<ConstantExpr>(level)) {
@@ -673,7 +674,7 @@ void SpecialFunctionHandler::handlePopDebugLevel(
     ExecutionState &state, KInstruction *target,
     std::vector<ref<Expr> > &arguments) {
   assert(arguments.size() == 0 &&
-         "invalid number of arguments to tracerx_pop_debug_level");
+         "invalid number of arguments to tracerx_debug_subsumption_off");
   state.popDebugLevel();
 }
 

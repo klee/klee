@@ -156,10 +156,10 @@ extern "C" {
   void klee_merge();
 
   /* Set dynamic level of debugging information. */
-  void tracerx_push_debug_level(uint64_t level);
+  void tracerx_debug_subsumption(uint64_t level);
 
   /* Unset dynamic level of debugging information to previous value */
-  void tracerx_pop_debug_level();
+  void tracerx_debug_subsumption_off();
 #ifdef __cplusplus
 }
 #endif
