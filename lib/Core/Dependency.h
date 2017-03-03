@@ -115,7 +115,8 @@ namespace klee {
     bool isPointer() const { return !allocationBounds.empty(); }
 
     ref<Expr> getBoundsCheck(ref<StoredValue> svalue,
-                             std::set<ref<Expr> > &bounds) const;
+                             std::set<ref<Expr> > &bounds,
+                             int debugSubsumptionLevel) const;
 
     ref<Expr> getExpression() const { return expr; }
 
@@ -412,6 +413,12 @@ namespace klee {
                                std::vector<ref<Expr> > &arguments);
 
   public:
+    /// \brief This is for dynamic setting up of debug messages.
+    int debugSubsumptionLevel;
+
+    /// \brief Flag to display debug information on the state.
+    bool debugState;
+
     Dependency(Dependency *parent, llvm::DataLayout *_targetData);
 
     ~Dependency();

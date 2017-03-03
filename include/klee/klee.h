@@ -154,6 +154,26 @@ extern "C" {
 
   /* Merge current states together if possible */
   void klee_merge();
+
+  /* Set dynamic level of subsumption-related debugging information. This
+   * corresponds to -debug-subsumption command-line option, but this API allows
+   * users to specify where in the code to start to output debug information. */
+  void tracerx_debug_subsumption(uint64_t level);
+
+  /* Reset dynamic level of subsumption-related debugging information to
+   * previous value. This resets the debug level to the value specified via
+   * -debug-subsumption command-line option if exists, otherwise this switches
+   * off subsumption-related debugging. */
+  void tracerx_debug_subsumption_off();
+
+  /* Set dynamic level of state-related debugging information. This corresponds
+   * to -debug-state command-line option. */
+  void tracerx_debug_state();
+
+  /* Reset dynamic level of state-related debugging information. This resets the
+   * state debug flag to the value specified via -debug-state command-line
+   * option, otherwise, it switches off state debugging. */
+  void tracerx_debug_state_off();
 #ifdef __cplusplus
 }
 #endif

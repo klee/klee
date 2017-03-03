@@ -213,7 +213,7 @@ public:
 
   PathCondition *cdr() const;
 
-  void setAsCore();
+  void setAsCore(int debugSubsumptionLevel);
 
   bool isCore() const;
 
@@ -284,8 +284,8 @@ public:
                      const std::vector<llvm::Instruction *> &stack,
                      SubsumptionTableEntry *entry);
 
-  static bool check(TimingSolver *solver, ExecutionState &state,
-                    double timeout);
+  static bool check(TimingSolver *solver, ExecutionState &state, double timeout,
+                    int debugSubsumptionLevel);
 
   static void clear();
 
@@ -459,9 +459,10 @@ public:
 
   ~SubsumptionTableEntry();
 
-  bool subsumed(
-      TimingSolver *solver, ExecutionState &state, double timeout,
-      std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore> const);
+  bool subsumed(TimingSolver *solver, ExecutionState &state, double timeout,
+                const std::pair<Dependency::ConcreteStore,
+                                Dependency::SymbolicStore> storedExpressions,
+                int debugSubsumptionLevel);
 
   /// Tests if the argument is a variable. A variable here is defined to be
   /// either a symbolic concatenation or a symbolic read. A concatenation in
@@ -925,6 +926,9 @@ public:
 
   /// \brief Retrieve subsumption statistics result in std::string format
   static std::string getInterpolationStat();
+
+  /// \brief Get the current debug state flag
+  bool getDebugState() { return currentINode->dependency->debugState; }
 };
 }
 #endif /* TXTREE_H_ */

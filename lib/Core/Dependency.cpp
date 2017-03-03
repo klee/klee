@@ -129,7 +129,8 @@ void StoredValue::init(ref<VersionedValue> vvalue,
 }
 
 ref<Expr> StoredValue::getBoundsCheck(ref<StoredValue> stateValue,
-                                      std::set<ref<Expr> > &bounds) const {
+                                      std::set<ref<Expr> > &bounds,
+                                      int debugSubsumptionLevel) const {
   ref<Expr> res;
 #ifdef ENABLE_Z3
 
@@ -158,7 +159,7 @@ ref<Expr> StoredValue::getBoundsCheck(ref<StoredValue> stateValue,
     assert(!tabledBounds.empty() && "tabled bounds empty");
 
     if (stateOffsets.empty()) {
-      if (DebugSubsumption >= 3) {
+      if (debugSubsumptionLevel >= 3) {
         std::string msg;
         llvm::raw_string_ostream stream(msg);
         it->first->print(stream);
@@ -180,7 +181,7 @@ ref<Expr> StoredValue::getBoundsCheck(ref<StoredValue> stateValue,
             if (tabledBoundInt > 0) {
               uint64_t stateOffsetInt = stateOffset->getZExtValue();
               if (stateOffsetInt >= tabledBoundInt) {
-                if (DebugSubsumption >= 3) {
+                if (debugSubsumptionLevel >= 3) {
                   std::string msg;
                   llvm::raw_string_ostream stream(msg);
                   it->first->print(stream);
@@ -671,7 +672,7 @@ void Dependency::addDependencyViaExternalFunction(
     std::set<ref<MemoryLocation> > locations = source->getLocations();
     if (!locations.empty()) {
       std::string reason = "";
-      if (DebugSubsumption >= 1) {
+      if (debugSubsumptionLevel >= 1) {
         llvm::raw_string_ostream stream(reason);
         stream << "parameter [";
         source->getValue()->print(stream);
@@ -815,6 +816,11 @@ Dependency::Dependency(Dependency *parent, llvm::DataLayout *_targetData)
   if (parent) {
     concretelyAddressedStore = parent->concretelyAddressedStore;
     symbolicallyAddressedStore = parent->symbolicallyAddressedStore;
+    debugSubsumptionLevel = parent->debugSubsumptionLevel;
+    debugState = parent->debugState;
+  } else {
+    debugSubsumptionLevel = DebugSubsumption;
+    debugState = DebugState;
   }
 }
 
@@ -1000,7 +1006,7 @@ void Dependency::execute(llvm::Instruction *instr,
       if (binst && binst->isConditional()) {
         ref<Expr> unknownExpression;
         std::string reason = "";
-        if (DebugSubsumption >= 1) {
+        if (debugSubsumptionLevel >= 1) {
           llvm::raw_string_ostream stream(reason);
           stream << "branch instruction [";
           if (binst->getParent()->getParent()) {
@@ -1447,7 +1453,7 @@ void Dependency::executeMemoryOperation(
                     llvm::dyn_cast<llvm::ConstantExpr>((*it)->getValue())) {
               if (llvm::isa<llvm::GetElementPtrInst>(ce->getAsInstruction())) {
                 std::string reason = "";
-                if (DebugSubsumption >= 1) {
+                if (debugSubsumptionLevel >= 1) {
                   llvm::raw_string_ostream stream(reason);
                   stream << "pointer use [";
                   if (instr->getParent()->getParent()) {
@@ -1474,7 +1480,7 @@ void Dependency::executeMemoryOperation(
       }
     } else {
       std::string reason = "";
-      if (DebugSubsumption >= 1) {
+      if (debugSubsumptionLevel >= 1) {
         llvm::raw_string_ostream stream(reason);
         stream << "pointer use [";
         if (instr->getParent()->getParent()) {

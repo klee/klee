@@ -85,9 +85,8 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
   addDNR("_exit", handleExit),
   { "exit", &SpecialFunctionHandler::handleExit, true, false, true },
   addDNR("klee_abort", handleAbort),
-  addDNR("klee_silent_exit", handleSilentExit),  
+  addDNR("klee_silent_exit", handleSilentExit),
   addDNR("klee_report_error", handleReportError),
-
   add("calloc", handleCalloc, true),
   add("free", handleFree, false),
   add("klee_assume", handleAssume, false),
@@ -140,8 +139,14 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
   add("__ubsan_handle_mul_overflow", handleMulOverflow, false),
   add("__ubsan_handle_divrem_overflow", handleDivRemOverflow, false),
 
+  // change debug information
+  add("tracerx_debug_subsumption", handleDebugSubsumption, false),
+  add("tracerx_debug_subsumption_off", handleDebugSubsumption, false),
+  add("tracerx_debug_state", handleDebugState, false),
+  add("tracerx_debug_state_off", handleDebugStateOff, false),
+
 #undef addDNR
-#undef add  
+#undef add
 };
 
 SpecialFunctionHandler::const_iterator SpecialFunctionHandler::begin() {
@@ -649,6 +654,47 @@ void SpecialFunctionHandler::handleCheckMemoryAccess(ExecutionState &state,
       }
     }
   }
+}
+
+void SpecialFunctionHandler::handleDebugSubsumption(
+    ExecutionState &state, KInstruction *target,
+    std::vector<ref<Expr> > &arguments) {
+  assert(arguments.size() == 1 &&
+         "invalid number of arguments to tracerx_debug_subsumption");
+
+  ref<Expr> level = executor.toUnique(state, arguments[0]);
+  if (ConstantExpr *cLevel = llvm::dyn_cast<ConstantExpr>(level)) {
+    state.debugSubsumption(cLevel->getZExtValue());
+    return;
+  }
+
+  executor.terminateStateOnError(
+      state, "push_debug_level requires constant arguments", Executor::User);
+}
+
+void SpecialFunctionHandler::handleDebugSubsumptionOff(
+    ExecutionState &state, KInstruction *target,
+    std::vector<ref<Expr> > &arguments) {
+  assert(arguments.size() == 0 &&
+         "invalid number of arguments to tracerx_debug_subsumption_off");
+  state.debugSubsumptionOff();
+}
+
+void
+SpecialFunctionHandler::handleDebugState(ExecutionState &state,
+                                         KInstruction *target,
+                                         std::vector<ref<Expr> > &arguments) {
+  assert(arguments.size() == 0 &&
+         "invalid number of arguments to tracerx_debug_state");
+  state.debugState();
+}
+
+void SpecialFunctionHandler::handleDebugStateOff(
+    ExecutionState &state, KInstruction *target,
+    std::vector<ref<Expr> > &arguments) {
+  assert(arguments.size() == 0 &&
+         "invalid number of arguments to tracerx_debug_state_off");
+  state.debugStateOff();
 }
 
 void SpecialFunctionHandler::handleGetValue(ExecutionState &state,

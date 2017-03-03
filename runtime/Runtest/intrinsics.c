@@ -143,3 +143,15 @@ int klee_range(int begin, int end, const char* name) {
 void klee_print_expr(const char *msg, ...) { }
 
 void klee_set_forking(unsigned enable) { }
+
+/* Change subsumption-related debug level */
+void tracerx_debug_subsumption(uint64_t level) {}
+
+/* Reset subsumption-related debug level to its original value */
+void tracerx_debug_subsumption_off() {}
+
+/* Switch on state debug */
+void tracerx_debug_state() {}
+
+/* Reset state debug to its original value */
+void tracerx_debug_state_off() {}
