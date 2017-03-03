@@ -338,19 +338,17 @@ Dependency::getStoredExpressions(const std::vector<llvm::Instruction *> &stack,
 
     if (!coreOnly) {
       llvm::Value *base = it->first->getValue();
-      concreteStore[base][it->first] =
-          StoredValue::create(it->second.second, debugSubsumptionLevel.top());
+      concreteStore[base][it->first] = StoredValue::create(it->second.second);
     } else if (it->second.second->isCore()) {
       // An address is in the core if it stores a value that is in the core
       llvm::Value *base = it->first->getValue();
 #ifdef ENABLE_Z3
       if (!NoExistential) {
-        concreteStore[base][it->first] = StoredValue::create(
-            it->second.second, replacements, debugSubsumptionLevel.top());
+        concreteStore[base][it->first] =
+            StoredValue::create(it->second.second, replacements);
       } else
 #endif
-        concreteStore[base][it->first] =
-            StoredValue::create(it->second.second, debugSubsumptionLevel.top());
+        concreteStore[base][it->first] = StoredValue::create(it->second.second);
     }
   }
 
@@ -367,8 +365,8 @@ Dependency::getStoredExpressions(const std::vector<llvm::Instruction *> &stack,
 
     if (!coreOnly) {
       llvm::Value *base = it->first->getValue();
-      symbolicStore[base].push_back(AddressValuePair(
-          it->first, StoredValue::create(it->second.second, debugSubsumptionLevel.top())));
+      symbolicStore[base].push_back(
+          AddressValuePair(it->first, StoredValue::create(it->second.second)));
     } else if (it->second.second->isCore()) {
       // An address is in the core if it stores a value that is in the core
       llvm::Value *base = it->first->getValue();
@@ -376,13 +374,11 @@ Dependency::getStoredExpressions(const std::vector<llvm::Instruction *> &stack,
       if (!NoExistential) {
         symbolicStore[base].push_back(AddressValuePair(
             MemoryLocation::create(it->first, replacements),
-            StoredValue::create(it->second.second, replacements,
-                                debugSubsumptionLevel.top())));
+            StoredValue::create(it->second.second, replacements)));
       } else
 #endif
-        symbolicStore[base].push_back(
-            AddressValuePair(it->first, StoredValue::create(it->second.second,
-                                                            debugSubsumptionLevel.top())));
+        symbolicStore[base].push_back(AddressValuePair(
+            it->first, StoredValue::create(it->second.second)));
       }
   }
 
