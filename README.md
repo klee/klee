@@ -5,9 +5,9 @@ KLEE Symbolic Virtual Machine
 
 `KLEE` is a symbolic virtual machine built on top of the LLVM compiler
 infrastructure. This version contains parts that implement the
-[Tracer-X](http://paella.ddns.comp.nus.edu.sg/tracerx/) approach to
+[Tracer-X](http://www.comp.nus.edu.sg/~tracerx/) approach to
 symbolic execution. This approach builds upon the experience with
-[TRACER](http://paella.ddns.comp.nus.edu.sg/tracer) symbolic execution
+[TRACER](http://www.comp.nus.edu.sg/~tracerx) symbolic execution
 tool where it combines the core technology of TRACER with advanced
 symbolic execution approaches. The Tracer-X extension is still being
 actively developed by its team and not yet ready for release. There
@@ -40,4 +40,4 @@ Coverage information for KLEE can be found [here](http://vm-klee.doc.ic.ac.uk:55
 
 For further information on KLEE, see its [webpage](http://klee.github.io/).
 
-For further information on Tracer-X see its [webpage](http://paella.ddns.comp.nus.edu.sg/tracerx).
+For further information on Tracer-X see its [webpage](http://www.comp.nus.edu.sg/~tracerx).
