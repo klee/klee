@@ -82,24 +82,24 @@ namespace klee {
     }
 
     StoredValue(ref<VersionedValue> vvalue,
-                std::vector<std::string> &coreReasons, int _debugLevel) {
+                std::vector<std::string> &coreReasons, int _debugSubsumptionLevel) {
       std::set<const Array *> dummyReplacements;
-      init(vvalue, dummyReplacements, coreReasons, _debugLevel);
+      init(vvalue, dummyReplacements, coreReasons, _debugSubsumptionLevel);
     }
 
   public:
     static ref<StoredValue> create(ref<VersionedValue> vvalue,
                                    std::set<const Array *> &replacements,
-                                   int _debugLevel) {
+                                   int _debugSubsumptionLevel) {
       ref<StoredValue> sv(
           new StoredValue(vvalue, replacements, vvalue->getReasons()));
       return sv;
     }
 
     static ref<StoredValue> create(ref<VersionedValue> vvalue,
-                                   int _debugLevel) {
+                                   int _debugSubsumptionLevel) {
       ref<StoredValue> sv(
-          new StoredValue(vvalue, vvalue->getReasons(), _debugLevel));
+          new StoredValue(vvalue, vvalue->getReasons(), _debugSubsumptionLevel));
       return sv;
     }
 
@@ -119,7 +119,7 @@ namespace klee {
 
     ref<Expr> getBoundsCheck(ref<StoredValue> svalue,
                              std::set<ref<Expr> > &bounds,
-                             int debugLevel) const;
+                             int debugSubsumptionLevel) const;
 
     ref<Expr> getExpression() const { return expr; }
 
@@ -417,7 +417,7 @@ namespace klee {
 
   public:
     /// \brief This is for dynamic setting up of debug messages.
-    std::stack<int> debugLevel;
+    std::stack<int> debugSubsumptionLevel;
 
     Dependency(Dependency *parent, llvm::DataLayout *_targetData);
 

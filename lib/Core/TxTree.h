@@ -213,7 +213,7 @@ public:
 
   PathCondition *cdr() const;
 
-  void setAsCore(int debugLevel);
+  void setAsCore(int debugSubsumptionLevel);
 
   bool isCore() const;
 
@@ -285,7 +285,7 @@ public:
                      SubsumptionTableEntry *entry);
 
   static bool check(TimingSolver *solver, ExecutionState &state, double timeout,
-                    int debugLevel);
+                    int debugSubsumptionLevel);
 
   static void clear();
 
@@ -462,7 +462,7 @@ public:
   bool subsumed(TimingSolver *solver, ExecutionState &state, double timeout,
                 const std::pair<Dependency::ConcreteStore,
                                 Dependency::SymbolicStore> storedExpressions,
-                int debugLevel);
+                int debugSubsumptionLevel);
 
   /// Tests if the argument is a variable. A variable here is defined to be
   /// either a symbolic concatenation or a symbolic read. A concatenation in
