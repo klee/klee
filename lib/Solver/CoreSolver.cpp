@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "klee/CommandLine.h"
+#include "klee/Internal/Support/ErrorHandling.h"
 #include "klee/Solver.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -51,10 +52,10 @@ static klee::Solver *handleMetaSMT() {
         UseForkedCoreSolver, CoreSolverOptimizeDivides);
     break;
   default:
-    llvm_unreachable("Unrecognised metasmt backend");
+    llvm_unreachable("Unrecognised MetaSMT backend");
     break;
   };
-  llvm::errs() << "Starting MetaSMTSolver(" << backend << ") ...\n";
+  klee_message("Starting MetaSMTSolver(%s)", backend.c_str());
   return coreSolver;
 }
 #endif /* ENABLE_METASMT */
@@ -65,32 +66,32 @@ Solver *createCoreSolver(CoreSolverType cst) {
   switch (cst) {
   case STP_SOLVER:
 #ifdef ENABLE_STP
-    llvm::errs() << "Using STP solver backend\n";
+    klee_message("Using STP solver backend");
     return new STPSolver(UseForkedCoreSolver, CoreSolverOptimizeDivides);
 #else
-    llvm::errs() << "Not compiled with STP support\n";
+    klee_message("Not compiled with STP support");
     return NULL;
 #endif
   case METASMT_SOLVER:
 #ifdef ENABLE_METASMT
-    llvm::errs() << "Using MetaSMT solver backend\n";
+    klee_message("Using MetaSMT solver backend");
     return handleMetaSMT();
 #else
-    llvm::errs() << "Not compiled with MetaSMT support\n";
+    klee_message("Not compiled with MetaSMT support");
     return NULL;
 #endif
   case DUMMY_SOLVER:
     return createDummySolver();
   case Z3_SOLVER:
 #ifdef ENABLE_Z3
-    llvm::errs() << "Using Z3 solver backend\n";
+    klee_message("Using Z3 solver backend");
     return new Z3Solver();
 #else
-    llvm::errs() << "Not compiled with Z3 support\n";
+    klee_message("Not compiled with Z3 support");
     return NULL;
 #endif
   case NO_SOLVER:
-    llvm::errs() << "Invalid solver\n";
+    klee_message("Invalid solver");
     return NULL;
   default:
     llvm_unreachable("Unsupported CoreSolverType");
