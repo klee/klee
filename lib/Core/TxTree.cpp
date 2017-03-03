@@ -2068,7 +2068,7 @@ bool TxTree::subsumptionCheck(TimingSolver *solver, ExecutionState &state,
                                state.txTreeNode->getProgramPoint())
     return false;
 
-  int debugSubsumptionLevel = currentINode->dependency->debugSubsumptionLevel.top();
+  int debugSubsumptionLevel = currentINode->dependency->debugSubsumptionLevel;
 
   if (debugSubsumptionLevel >= 2) {
     klee_message("Subsumption check for Node #%lu, Program Point %lu",
@@ -2096,7 +2096,7 @@ void TxTree::setCurrentINode(ExecutionState &state) {
 }
 
 void TxTree::remove(TxTreeNode *node) {
-  int debugSubsumptionLevel = currentINode->dependency->debugSubsumptionLevel.top();
+  int debugSubsumptionLevel = currentINode->dependency->debugSubsumptionLevel;
 
 #ifdef ENABLE_Z3
   TimerStatIncrementer t(removeTime);
@@ -2158,7 +2158,7 @@ void TxTree::markPathCondition(ExecutionState &state, TimingSolver *solver) {
   TimerStatIncrementer t(markPathConditionTime);
   const std::vector<ref<Expr> > &unsatCore = solver->getUnsatCore();
 
-  int debugSubsumptionLevel = currentINode->dependency->debugSubsumptionLevel.top();
+  int debugSubsumptionLevel = currentINode->dependency->debugSubsumptionLevel;
 
   llvm::BranchInst *binst =
       llvm::dyn_cast<llvm::BranchInst>(state.prevPC->inst);
@@ -2462,7 +2462,7 @@ TxTreeNode::unsatCoreInterpolation(const std::vector<ref<Expr> > &unsatCore) {
     // because constraints are not properly added at state merge.
     PathCondition *cond = markerMap[it1->get()];
     if (cond)
-      cond->setAsCore(dependency->debugSubsumptionLevel.top());
+      cond->setAsCore(dependency->debugSubsumptionLevel);
   }
 }
 
