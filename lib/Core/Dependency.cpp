@@ -817,8 +817,10 @@ Dependency::Dependency(Dependency *parent, llvm::DataLayout *_targetData)
     concretelyAddressedStore = parent->concretelyAddressedStore;
     symbolicallyAddressedStore = parent->symbolicallyAddressedStore;
     debugSubsumptionLevel = parent->debugSubsumptionLevel;
+    debugState = parent->debugState;
   } else {
     debugSubsumptionLevel = DebugSubsumption;
+    debugState = DebugState;
   }
 }
 

@@ -389,10 +389,16 @@ void ExecutionState::dumpStack(llvm::raw_ostream &out) const {
   }
 }
 
-void ExecutionState::pushDebugLevel(uint64_t level) {
+void ExecutionState::debugSubsumption(uint64_t level) {
   txTreeNode->dependency->debugSubsumptionLevel = level;
 }
 
-void ExecutionState::popDebugLevel() {
+void ExecutionState::debugSubsumptionOff() {
   txTreeNode->dependency->debugSubsumptionLevel = DebugSubsumption;
+}
+
+void ExecutionState::debugState() { txTreeNode->dependency->debugState = true; }
+
+void ExecutionState::debugStateOff() {
+  txTreeNode->dependency->debugState = DebugState;
 }

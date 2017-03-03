@@ -913,6 +913,8 @@ static const char *modelledExternals[] = {
   "__ubsan_handle_divrem_overflow",
   "tracerx_debug_subsumption",
   "tracerx_debug_subsumption_off"
+  "tracerx_debug_state",
+  "tracerx_debug_state_off"
 };
 // Symbols we aren't going to warn about
 static const char *dontCareExternals[] = {

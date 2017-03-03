@@ -3031,7 +3031,7 @@ void Executor::run(ExecutionState &initialState) {
       // in the node.
       txTree->setCurrentINode(state);
 
-      if (DebugState) {
+      if (txTree->getDebugState()) {
         std::string debugMessage;
         llvm::raw_string_ostream stream(debugMessage);
         stream << "\nCurrent state:\n";

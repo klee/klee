@@ -416,6 +416,9 @@ namespace klee {
     /// \brief This is for dynamic setting up of debug messages.
     int debugSubsumptionLevel;
 
+    /// \brief Flag to display debug information on the state.
+    bool debugState;
+
     Dependency(Dependency *parent, llvm::DataLayout *_targetData);
 
     ~Dependency();

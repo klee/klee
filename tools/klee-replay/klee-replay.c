@@ -486,7 +486,11 @@ void klee_mark_global(void *object) {
 
 void tracerx_debug_subsumption(uint64_t level) { ; }
 
-void tracerx_debug_subsumption_off() {}
+void tracerx_debug_subsumption_off() { ; }
+
+void tracerx_debug_state() { ; }
+
+void tracerx_debug_state_off() { ; }
 
 /*** HELPER FUNCTIONS ***/
 

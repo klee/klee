@@ -926,6 +926,9 @@ public:
 
   /// \brief Retrieve subsumption statistics result in std::string format
   static std::string getInterpolationStat();
+
+  /// \brief Get the current debug state flag
+  bool getDebugState() { return currentINode->dependency->debugState; }
 };
 }
 #endif /* TXTREE_H_ */
