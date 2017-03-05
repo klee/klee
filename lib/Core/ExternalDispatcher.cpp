@@ -207,10 +207,11 @@ Function *ExternalDispatcher::createDispatcher(Function *target, Instruction *in
 
   std::vector<LLVM_TYPE_Q Type*> nullary;
   
+  // MCJIT functions need unique names, or wrong function can be called
   Function *dispatcher = Function::Create(FunctionType::get(Type::getVoidTy(ctx),
 							    nullary, false),
 					  GlobalVariable::ExternalLinkage, 
-					  "",
+					  "dispatcher_" + target->getName().str(),
 					  dispatchModule);
 
 
