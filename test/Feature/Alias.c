@@ -1,9 +1,8 @@
+// Darwin does not have strong aliases.
+// REQUIRES: not-darwin
 // RUN: %llvmgcc %s -emit-llvm -g -c -o %t1.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --exit-on-error %t1.bc
-
-// Darwin does not have strong aliases.
-// XFAIL: darwin
 
 #include <assert.h>
 
@@ -17,10 +16,10 @@ extern int foo() __attribute__((alias("__foo")));
 
 int *c = &a;
 
-int main() { 
+int main() {
   assert(a == 52);
   assert(foo() == 52);
   assert(*c == 52);
-  
+
   return 0;
 }
