@@ -23,15 +23,13 @@
 #include <string.h>
 
 int main(int argc, char **argv) {
-  struct stat s;
-
   char first[256], second[256];
   DIR *d = opendir(".");
   struct dirent *de = readdir(d);
   assert(de);
   strcpy(first, de->d_name);
   off_t pos = telldir(d);
-  printf("pos: %d\n", telldir(d));
+  printf("pos: %ld\n", telldir(d));
   de = readdir(d);
   assert(de);
   strcpy(second, de->d_name);
