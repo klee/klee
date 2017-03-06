@@ -1,13 +1,14 @@
 #!/bin/bash -x
 set -ev
 
-sudo apt-get install -y llvm-${LLVM_VERSION} llvm-${LLVM_VERSION}-dev
+if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
+  sudo apt-get install -y llvm-${LLVM_VERSION} llvm-${LLVM_VERSION}-dev
 
-if [ "${LLVM_VERSION}" != "2.9" ]; then
+  if [ "${LLVM_VERSION}" != "2.9" ]; then
     sudo apt-get install -y llvm-${LLVM_VERSION}-tools clang-${LLVM_VERSION}
     sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-${LLVM_VERSION} 20
     sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-${LLVM_VERSION} 20
-else
+  else
     # Get llvm-gcc. We don't bother installing it
     wget http://llvm.org/releases/2.9/llvm-gcc4.2-2.9-x86_64-linux.tar.bz2
     tar -xjf llvm-gcc4.2-2.9-x86_64-linux.tar.bz2
@@ -27,4 +28,13 @@ else
     export CPLUS_INCLUDE_PATH=/usr/include/x86_64-linux-gnu
     llvm-gcc/bin/llvm-gcc test.c -o hello_world
     ./hello_world
+  fi
+else # OSX
+  # NOTE: We should not easily generalize, since we need the corresponding support of bottled formulas
+  if [ "${LLVM_VERSION}" == "3.4" ]; then
+    brew install llvm34
+  else
+    echo "Error: Requested to install LLVM ${LLVM_VERSION} on macOS, which is not supported"
+    exit 1
+  fi
 fi
