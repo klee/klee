@@ -10,6 +10,7 @@
 #include "klee/Internal/Support/ErrorHandling.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/CommandLine.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -20,6 +21,7 @@
 #include <set>
 
 using namespace klee;
+using namespace llvm;
 
 FILE *klee::klee_warning_file = NULL;
 FILE *klee::klee_message_file = NULL;
@@ -28,6 +30,13 @@ static const char *warningPrefix = "WARNING";
 static const char *warningOncePrefix = "WARNING ONCE";
 static const char *errorPrefix = "ERROR";
 static const char *notePrefix = "NOTE";
+
+namespace {
+cl::opt<bool> WarningsOnlyToFile(
+    "warnings-only-to-file", cl::init(false),
+    cl::desc("All warnings will be written to warnings.txt only.  If disabled, "
+             "they are also written on screen."));
+}
 
 static bool shouldSetColor(const char *pfx, const char *msg,
                            const char *prefixToSearchFor) {
@@ -139,7 +148,7 @@ void klee::klee_error(const char *msg, ...) {
 void klee::klee_warning(const char *msg, ...) {
   va_list ap;
   va_start(ap, msg);
-  klee_vmessage(warningPrefix, false, msg, ap);
+  klee_vmessage(warningPrefix, WarningsOnlyToFile, msg, ap);
   va_end(ap);
 }
 
@@ -160,7 +169,7 @@ void klee::klee_warning_once(const void *id, const char *msg, ...) {
     keys.insert(key);
     va_list ap;
     va_start(ap, msg);
-    klee_vmessage(warningOncePrefix, false, msg, ap);
+    klee_vmessage(warningOncePrefix, WarningsOnlyToFile, msg, ap);
     va_end(ap);
   }
 }
