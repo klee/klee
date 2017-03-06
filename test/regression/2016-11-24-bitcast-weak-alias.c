@@ -1,3 +1,4 @@
+// REQUIRES: not-darwin
 // RUN: %llvmgcc %s -Wall -emit-llvm -g -O0 -c -o %t.bc
 // RUN: rm -rf %t.klee-out
 // RUN: klee --output-dir=%t.klee-out -exit-on-error -search=nurs:covnew %t.bc DUMMY_ARG >%t1.log 2>&1

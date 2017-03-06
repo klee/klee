@@ -1,3 +1,4 @@
+// REQUIRES: not-darwin
 // RUN: %llvmgxx -g -fno-exceptions -emit-llvm -O0 -c -o %t.bc %s
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --libc=klee --no-output --exit-on-error %t.bc > %t.log
@@ -9,8 +10,6 @@
 // This test currently doesn't work on darwin because this isn't how things work
 // in libc++. This test should be rewritten to not depend on an external
 // dependency.
-//
-// XFAIL: darwin
 
 #include <fstream>
 
