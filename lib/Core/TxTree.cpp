@@ -2046,18 +2046,18 @@ std::string TxTree::getInterpolationStat() {
 
 TxTree::TxTree(ExecutionState *_root, llvm::DataLayout *_targetData)
     : targetData(_targetData) {
-  currentINode = 0;
+  currentTxTreeNode = 0;
   assert(_targetData && "target data layout not provided");
   if (!_root->txTreeNode) {
-    currentINode = new TxTreeNode(0, _targetData);
+    currentTxTreeNode = new TxTreeNode(0, _targetData);
   }
-  root = currentINode;
+  root = currentTxTreeNode;
 }
 
 bool TxTree::subsumptionCheck(TimingSolver *solver, ExecutionState &state,
                               double timeout) {
 #ifdef ENABLE_Z3
-  assert(state.txTreeNode == currentINode);
+  assert(state.txTreeNode == currentTxTreeNode);
 
   // Immediately return if the state's instruction is not the
   // the interpolation node id. The interpolation node id is the
@@ -2068,7 +2068,8 @@ bool TxTree::subsumptionCheck(TimingSolver *solver, ExecutionState &state,
                                state.txTreeNode->getProgramPoint())
     return false;
 
-  int debugSubsumptionLevel = currentINode->dependency->debugSubsumptionLevel;
+  int debugSubsumptionLevel =
+      currentTxTreeNode->dependency->debugSubsumptionLevel;
 
   if (debugSubsumptionLevel >= 2) {
     klee_message("Subsumption check for Node #%lu, Program Point %lu",
@@ -2090,13 +2091,14 @@ bool TxTree::subsumptionCheck(TimingSolver *solver, ExecutionState &state,
 
 void TxTree::setCurrentINode(ExecutionState &state) {
   TimerStatIncrementer t(setCurrentINodeTime);
-  currentINode = state.txTreeNode;
-  currentINode->setProgramPoint(state.pc->inst);
-  TxTreeGraph::setCurrentNode(state, currentINode->nodeSequenceNumber);
+  currentTxTreeNode = state.txTreeNode;
+  currentTxTreeNode->setProgramPoint(state.pc->inst);
+  TxTreeGraph::setCurrentNode(state, currentTxTreeNode->nodeSequenceNumber);
 }
 
 void TxTree::remove(TxTreeNode *node) {
-  int debugSubsumptionLevel = currentINode->dependency->debugSubsumptionLevel;
+  int debugSubsumptionLevel =
+      currentTxTreeNode->dependency->debugSubsumptionLevel;
 
 #ifdef ENABLE_Z3
   TimerStatIncrementer t(removeTime);
@@ -2158,7 +2160,8 @@ void TxTree::markPathCondition(ExecutionState &state, TimingSolver *solver) {
   TimerStatIncrementer t(markPathConditionTime);
   const std::vector<ref<Expr> > &unsatCore = solver->getUnsatCore();
 
-  int debugSubsumptionLevel = currentINode->dependency->debugSubsumptionLevel;
+  int debugSubsumptionLevel =
+      currentTxTreeNode->dependency->debugSubsumptionLevel;
 
   llvm::BranchInst *binst =
       llvm::dyn_cast<llvm::BranchInst>(state.prevPC->inst);
@@ -2180,11 +2183,11 @@ void TxTree::markPathCondition(ExecutionState &state, TimingSolver *solver) {
       stream << "]";
       stream.flush();
     }
-    currentINode->dependency->markAllValues(binst->getCondition(),
-                                            unknownExpression, reason);
+    currentTxTreeNode->dependency->markAllValues(binst->getCondition(),
+                                                 unknownExpression, reason);
   }
 
-  PathCondition *pc = currentINode->pathCondition;
+  PathCondition *pc = currentTxTreeNode->pathCondition;
 
   if (pc != 0) {
     for (std::vector<ref<Expr> >::const_iterator it = unsatCore.begin(),
@@ -2203,20 +2206,20 @@ void TxTree::markPathCondition(ExecutionState &state, TimingSolver *solver) {
 
 void TxTree::execute(llvm::Instruction *instr) {
   std::vector<ref<Expr> > dummyArgs;
-  executeOnNode(currentINode, instr, dummyArgs);
+  executeOnNode(currentTxTreeNode, instr, dummyArgs);
 }
 
 void TxTree::execute(llvm::Instruction *instr, ref<Expr> arg1) {
   std::vector<ref<Expr> > args;
   args.push_back(arg1);
-  executeOnNode(currentINode, instr, args);
+  executeOnNode(currentTxTreeNode, instr, args);
 }
 
 void TxTree::execute(llvm::Instruction *instr, ref<Expr> arg1, ref<Expr> arg2) {
   std::vector<ref<Expr> > args;
   args.push_back(arg1);
   args.push_back(arg2);
-  executeOnNode(currentINode, instr, args);
+  executeOnNode(currentTxTreeNode, instr, args);
 }
 
 void TxTree::execute(llvm::Instruction *instr, ref<Expr> arg1, ref<Expr> arg2,
@@ -2225,18 +2228,18 @@ void TxTree::execute(llvm::Instruction *instr, ref<Expr> arg1, ref<Expr> arg2,
   args.push_back(arg1);
   args.push_back(arg2);
   args.push_back(arg3);
-  executeOnNode(currentINode, instr, args);
+  executeOnNode(currentTxTreeNode, instr, args);
 }
 
 void TxTree::execute(llvm::Instruction *instr, std::vector<ref<Expr> > &args) {
-  executeOnNode(currentINode, instr, args);
+  executeOnNode(currentTxTreeNode, instr, args);
 }
 
 void TxTree::executePHI(llvm::Instruction *instr, unsigned incomingBlock,
                         ref<Expr> valueExpr) {
-  currentINode->dependency->executePHI(instr, incomingBlock,
-                                       currentINode->callStack, valueExpr,
-                                       symbolicExecutionError);
+  currentTxTreeNode->dependency->executePHI(instr, incomingBlock,
+                                            currentTxTreeNode->callStack,
+                                            valueExpr, symbolicExecutionError);
   symbolicExecutionError = false;
 }
 
@@ -2252,7 +2255,7 @@ void TxTree::printNode(llvm::raw_ostream &stream, TxTreeNode *n,
   if (n->left != 0) {
     stream << "\n";
     stream << edges << "+-- L:" << n->left->programPoint;
-    if (this->currentINode == n->left) {
+    if (this->currentTxTreeNode == n->left) {
       stream << " (active)";
     }
     if (n->right != 0) {
@@ -2264,7 +2267,7 @@ void TxTree::printNode(llvm::raw_ostream &stream, TxTreeNode *n,
   if (n->right != 0) {
     stream << "\n";
     stream << edges << "+-- R:" << n->right->programPoint;
-    if (this->currentINode == n->right) {
+    if (this->currentTxTreeNode == n->right) {
       stream << " (active)";
     }
     printNode(stream, n->right, edges + "    ");
@@ -2275,7 +2278,7 @@ void TxTree::print(llvm::raw_ostream &stream) const {
   stream << "------------------------- TxTree Structure "
             "--------------------------\n";
   stream << this->root->programPoint;
-  if (this->root == this->currentINode) {
+  if (this->root == this->currentTxTreeNode) {
     stream << " (active)";
   }
   this->printNode(stream, this->root, "");
