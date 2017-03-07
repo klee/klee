@@ -504,7 +504,7 @@ public:
 /// It adds information for abstraction learning to the ExecutionState object.
 /// The whole structure of the Tracer-X tree itself is maintained by
 /// the class TxTree, which also refers to objects of type TxTreeNode via
-/// its TxTree#root and TxTree#currentINode member variables.
+/// its TxTree#root and TxTree#currentTxTreeNode member variables.
 ///
 /// \see TxTree
 /// \see Dependency
@@ -697,7 +697,7 @@ private:
 ///    and referenced by the member TxTree#root.
 ///
 /// 3. The currently-active tree node, which is also an object of
-///    type TxTreeNode, and referenced by the member TxTree#currentINode.
+///    type TxTreeNode, and referenced by the member TxTree#currentTxTreeNode.
 ///
 /// TxTree has several public member functions, most importantly, the various
 /// versions of
@@ -789,7 +789,7 @@ class TxTree {
   typedef ExprList::iterator iterator;
   typedef ExprList::const_iterator const_iterator;
 
-  TxTreeNode *currentINode;
+  TxTreeNode *currentTxTreeNode;
 
   llvm::DataLayout *targetData;
 
@@ -892,7 +892,7 @@ public:
   /// Executor::executeMemoryOperation
   void executeMemoryOperation(llvm::Instruction *instr, ref<Expr> value,
                               ref<Expr> address, bool boundsCheck) {
-    executeMemoryOperationOnNode(currentINode, instr, value, address,
+    executeMemoryOperationOnNode(currentTxTreeNode, instr, value, address,
                                  boundsCheck);
   }
 
@@ -928,7 +928,7 @@ public:
   static std::string getInterpolationStat();
 
   /// \brief Get the current debug state flag
-  bool getDebugState() { return currentINode->dependency->debugState; }
+  bool getDebugState() { return currentTxTreeNode->dependency->debugState; }
 };
 }
 #endif /* TXTREE_H_ */
