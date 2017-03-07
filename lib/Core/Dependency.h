@@ -70,19 +70,19 @@ namespace klee {
     bool doNotUseBound;
 
     /// \brief Reason this was stored as needed value
-    std::vector<std::string> coreReasons;
+    std::set<std::string> coreReasons;
 
     void init(ref<VersionedValue> vvalue, std::set<const Array *> &replacements,
-              std::vector<std::string> &coreReasons, bool shadowing = false);
+              std::set<std::string> &coreReasons, bool shadowing = false);
 
     StoredValue(ref<VersionedValue> vvalue,
                 std::set<const Array *> &replacements,
-                std::vector<std::string> &coreReasons) {
+                std::set<std::string> &coreReasons) {
       init(vvalue, replacements, coreReasons, true);
     }
 
     StoredValue(ref<VersionedValue> vvalue,
-                std::vector<std::string> &coreReasons) {
+                std::set<std::string> &coreReasons) {
       std::set<const Array *> dummyReplacements;
       init(vvalue, dummyReplacements, coreReasons);
     }

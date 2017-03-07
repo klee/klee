@@ -172,8 +172,8 @@ void VersionedValue::printNoDependency(llvm::raw_ostream &stream,
       stream << prefix << "an interpolant value\n";
     }
     if (!coreReasons.empty()) {
-      for (std::vector<std::string>::const_iterator it = coreReasons.begin(),
-                                                    ie = coreReasons.end();
+      for (std::set<std::string>::const_iterator it = coreReasons.begin(),
+                                                 ie = coreReasons.end();
            it != ie; ++it) {
         stream << tabsNext << *it << "\n";
       }

@@ -45,7 +45,7 @@ namespace klee {
 
 void StoredValue::init(ref<VersionedValue> vvalue,
                        std::set<const Array *> &replacements,
-                       std::vector<std::string> &_coreReasons, bool shadowing) {
+                       std::set<std::string> &_coreReasons, bool shadowing) {
   std::set<ref<MemoryLocation> > locations = vvalue->getLocations();
 
   refCount = 0;
@@ -287,9 +287,8 @@ void StoredValue::print(llvm::raw_ostream &stream,
   if (!coreReasons.empty()) {
     stream << "\n";
     stream << prefix << "reason(s) for storage:\n";
-    for (std::vector<std::string>::const_iterator is = coreReasons.begin(),
-                                                  ie = coreReasons.end(),
-                                                  it = is;
+    for (std::set<std::string>::const_iterator is = coreReasons.begin(),
+                                               ie = coreReasons.end(), it = is;
          it != ie; ++it) {
       if (it != is)
         stream << "\n";
