@@ -1024,8 +1024,7 @@ bool SubsumptionTableEntry::subsumed(
         if (!stateConcreteMap.count(it2->first)) {
           if (debugSubsumptionLevel >= 1) {
             klee_message("#%lu=>#%lu: Check failure as memory region in the "
-                         "table does not "
-                         "exist in the state",
+                         "table does not exist in the state",
                          state.txTreeNode->getNodeSequenceNumber(),
                          nodeSequenceNumber);
           }
