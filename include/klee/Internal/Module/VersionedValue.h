@@ -159,6 +159,8 @@ public:
   int compareContext(llvm::Value *otherValue,
                      const std::vector<llvm::Instruction *> &_stack) const {
     if (value == otherValue) {
+      // Please note the use of reverse iterator here, which improves
+      // performance.
       for (std::vector<llvm::Instruction *>::const_reverse_iterator
                it1 = stack.rbegin(),
                ie1 = stack.rend(), it2 = _stack.rbegin(), ie2 = _stack.rend();
@@ -187,11 +189,16 @@ public:
     return 3;
   }
 
-  bool contextIsPrefixOf(const std::vector<llvm::Instruction *> &stack) const {
-    int res = compareContext(value, stack);
-    if (res == 0 || res == -1)
-      return true;
-    return false;
+  bool contextIsPrefixOf(const std::vector<llvm::Instruction *> &_stack) const {
+    for (std::vector<llvm::Instruction *>::const_iterator
+             it1 = stack.begin(),
+             ie1 = stack.end(), it2 = _stack.begin(), ie2 = _stack.end();
+         it1 != ie1; ++it1, ++it2) {
+      if (it2 == ie2 || (*it1) != (*it2)) {
+        return false;
+      }
+    }
+    return true;
   }
 
   int compare(const MemoryLocation &other) const {

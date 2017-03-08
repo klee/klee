@@ -236,9 +236,9 @@ class SubsumptionTable {
 
       std::deque<SubsumptionTableEntry *> entryList;
 
-      Node *left, *right;
+      std::map<llvm::Instruction *, Node *> next;
 
-      Node(llvm::Instruction *_id) : id(_id) { left = right = 0; }
+      Node(llvm::Instruction *_id) : id(_id) {}
 
       void dump() const {
         this->print(llvm::errs());

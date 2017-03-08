@@ -1024,8 +1024,7 @@ bool SubsumptionTableEntry::subsumed(
         if (!stateConcreteMap.count(it2->first)) {
           if (debugSubsumptionLevel >= 1) {
             klee_message("#%lu=>#%lu: Check failure as memory region in the "
-                         "table does not "
-                         "exist in the state",
+                         "table does not exist in the state",
                          state.txTreeNode->getNodeSequenceNumber(),
                          nodeSequenceNumber);
           }
@@ -1755,18 +1754,11 @@ void SubsumptionTable::StackIndexedTable::Node::print(
     (*it)->print(stream, tabsNext);
     stream << "\n";
   }
-  stream << tabsNext << "Left:\n";
-  if (!left) {
-    stream << tabsNext << "NULL\n";
-  } else {
-    left->print(stream, appendTab(prefix));
-    stream << "\n";
-  }
-  stream << tabsNext << "Right:\n";
-  if (!right) {
-    stream << tabsNext << "NULL\n";
-  } else {
-    right->print(stream, appendTab(prefix));
+  for (std::map<llvm::Instruction *, Node *>::const_iterator it = next.begin(),
+                                                             ie = next.end();
+       it != ie; ++it) {
+    stream << tabsNext << "Next call:\n";
+    it->second->print(stream, appendTab(prefix));
     stream << "\n";
   }
 }
@@ -1774,12 +1766,12 @@ void SubsumptionTable::StackIndexedTable::Node::print(
 /**/
 
 void SubsumptionTable::StackIndexedTable::clearTree(Node *node) {
-  if (node->left)
-    clearTree(node->left);
-  if (node->right)
-    clearTree(node->right);
-  delete node->left;
-  delete node->right;
+  for (std::map<llvm::Instruction *, Node *>::iterator it = node->next.begin(),
+                                                       ie = node->next.end();
+       it != ie; ++it) {
+    clearTree(it->second);
+    delete it->second;
+  }
 
   for (std::deque<SubsumptionTableEntry *>::iterator
            it = node->entryList.begin(),
@@ -1798,20 +1790,15 @@ void SubsumptionTable::StackIndexedTable::insert(
                                                         ie = stack.end();
        it != ie; ++it) {
     llvm::Instruction *call = *it;
-    if (call < current->id) {
-      if (!current->left) {
-        current->left = new Node(call);
-      }
-      current = current->left;
-      continue;
-    } else if (call > current->id) {
-      if (!current->right) {
-        current->right = new Node(call);
-      }
-      current = current->right;
-      continue;
+    std::map<llvm::Instruction *, Node *>::const_iterator it1 =
+        current->next.find(call);
+    if (it1 == current->next.end()) {
+      Node *newNode = new Node(call);
+      current->next[*it] = newNode;
+      current = newNode;
+    } else {
+      current = it1->second;
     }
-    break;
   }
   current->entryList.push_back(entry);
 }
@@ -1826,22 +1813,13 @@ SubsumptionTable::StackIndexedTable::find(
                                                         ie = stack.end();
        it != ie; ++it) {
     llvm::Instruction *call = *it;
-    if (call < current->id) {
-      if (!current->left) {
-        found = false;
-        return ret;
-      }
-      current = current->left;
-      continue;
-    } else if (call > current->id) {
-      if (!current->right) {
-        found = false;
-        return ret;
-      }
-      current = current->right;
-      continue;
+    std::map<llvm::Instruction *, Node *>::const_iterator it1 =
+        current->next.find(call);
+    if (it1 == current->next.end()) {
+      found = false;
+      return ret;
     }
-    break;
+    current = it1->second;
   }
   found = true;
   return std::pair<EntryIterator, EntryIterator>(current->entryList.rbegin(),
@@ -1851,23 +1829,14 @@ SubsumptionTable::StackIndexedTable::find(
 void SubsumptionTable::StackIndexedTable::printNode(llvm::raw_ostream &stream,
                                                     Node *n,
                                                     std::string edges) const {
-  if (n->left != 0) {
+  for (std::map<llvm::Instruction *, Node *>::const_iterator
+           it = n->next.begin(),
+           ie = n->next.end();
+       it != ie; ++it) {
     stream << "\n";
-    stream << edges << "+-- L:";
-    n->left->print(stream, edges + "    ");
+    it->second->print(stream, edges + "    ");
     stream << "\n";
-    if (n->right != 0) {
-      printNode(stream, n->left, edges + "|   ");
-    } else {
-      printNode(stream, n->left, edges + "    ");
-    }
-  }
-  if (n->right != 0) {
-    stream << "\n";
-    stream << edges << "+-- R:";
-    n->right->print(stream, edges + "    ");
-    stream << "\n";
-    printNode(stream, n->right, edges + "    ");
+    printNode(stream, it->second, edges + "    ");
   }
 }
 
