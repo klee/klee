@@ -1023,10 +1023,15 @@ bool SubsumptionTableEntry::subsumed(
         // and we therefore fail the subsumption.
         if (!stateConcreteMap.count(it2->first)) {
           if (debugSubsumptionLevel >= 1) {
+            std::string msg;
+            std::string padding(makeTabs(1));
+            llvm::raw_string_ostream stream(msg);
+            it2->first->print(stream, padding);
+            stream.flush();
             klee_message("#%lu=>#%lu: Check failure as memory region in the "
-                         "table does not exist in the state",
+                         "table does not exist in the state:\n%s",
                          state.txTreeNode->getNodeSequenceNumber(),
-                         nodeSequenceNumber);
+                         nodeSequenceNumber, msg.c_str());
           }
           return false;
         }
