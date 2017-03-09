@@ -39,16 +39,16 @@ bool klee::PhiCleanerPass::runOnFunction(Function &f) {
           if (pi->getIncomingBlock(i) != reference->getIncomingBlock(i))
             break;
 
-        if (i!=numBlocks) {
-          std::vector<Value*> values;
-          values.reserve(numBlocks);
-          for (unsigned i=0; i<numBlocks; i++)
-            values[i] = pi->getIncomingValueForBlock(reference->getIncomingBlock(i));
-          for (unsigned i=0; i<numBlocks; i++) {
-            pi->setIncomingBlock(i, reference->getIncomingBlock(i));
-            pi->setIncomingValue(i, values[i]);
-          }
-          changed = true;
+        if (i != numBlocks) {
+            std::vector<Value*> values;
+            values.reserve(numBlocks);
+            for (unsigned i = 0; i<numBlocks; i++)
+                values.push_back(pi->getIncomingValueForBlock(reference->getIncomingBlock(i)));
+            for (unsigned i = 0; i<numBlocks; i++) {
+                pi->setIncomingBlock(i, reference->getIncomingBlock(i));
+                pi->setIncomingValue(i, values[i]);
+            }
+            changed = true;
         }
 
         // see if it uses any previously defined phi nodes

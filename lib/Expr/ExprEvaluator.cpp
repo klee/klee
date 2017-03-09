@@ -97,3 +97,12 @@ ExprVisitor::Action ExprEvaluator::visitURem(const URemExpr &e) {
 ExprVisitor::Action ExprEvaluator::visitSRem(const SRemExpr &e) { 
   return protectedDivOperation(e); 
 }
+
+ExprVisitor::Action ExprEvaluator::visitExprPost(const Expr& e) {
+  // When evaluating an assignment we should fold NotOptimizedExpr
+  // nodes so we can fully evaluate.
+  if (e.getKind() == Expr::NotOptimized) {
+    return Action::changeTo(static_cast<const NotOptimizedExpr&>(e).src);
+  }
+  return Action::skipChildren();
+}

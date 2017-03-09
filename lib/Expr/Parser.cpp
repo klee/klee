@@ -16,6 +16,7 @@
 #include "klee/ExprBuilder.h"
 #include "klee/Solver.h"
 #include "klee/util/ExprPPrinter.h"
+#include "klee/util/ArrayCache.h"
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -109,6 +110,8 @@ namespace {
     const std::string Filename;
     const MemoryBuffer *TheMemoryBuffer;
     ExprBuilder *Builder;
+    ArrayCache TheArrayCache;
+    bool ClearArrayAfterQuery;
 
     Lexer TheLexer;
     unsigned MaxErrors;
@@ -320,14 +323,13 @@ namespace {
     void Error(const char *Message) { Error(Message, Tok); }
 
   public:
-    ParserImpl(const std::string _Filename,
-               const MemoryBuffer *MB,
-               ExprBuilder *_Builder) : Filename(_Filename),
-                                        TheMemoryBuffer(MB),
-                                        Builder(_Builder),
-                                        TheLexer(MB),
-                                        MaxErrors(~0u),
-                                        NumErrors(0) {}
+    ParserImpl(const std::string _Filename, const MemoryBuffer *MB,
+               ExprBuilder *_Builder, bool _ClearArrayAfterQuery)
+        : Filename(_Filename), TheMemoryBuffer(MB), Builder(_Builder),
+          ClearArrayAfterQuery(_ClearArrayAfterQuery), TheLexer(MB),
+          MaxErrors(~0u), NumErrors(0) {}
+
+    virtual ~ParserImpl();
 
     /// Initialize - Initialize the parsing state. This must be called
     /// prior to the start of parsing.
@@ -488,9 +490,9 @@ DeclResult ParserImpl::ParseArrayDecl() {
       Values.clear();
     }
 
-    for (unsigned i = 0; i != Size.get(); ++i) {
-      // FIXME: Must be constant expression.
-    }
+    // for (unsigned i = 0; i != Size.get(); ++i) {
+    // TODO: Check: Must be constant expression.
+    //}
   }
 
   // FIXME: Validate that size makes sense for domain type.
@@ -521,14 +523,14 @@ DeclResult ParserImpl::ParseArrayDecl() {
   const Identifier *Label = GetOrCreateIdentifier(Name);
   const Array *Root;
   if (!Values.empty())
-    Root = Array::CreateArray(Label->Name, Size.get(),
-			      &Values[0], &Values[0] + Values.size());
+    Root = TheArrayCache.CreateArray(Label->Name, Size.get(), &Values[0],
+                                     &Values[0] + Values.size());
   else
-    Root = Array::CreateArray(Label->Name, Size.get());
+    Root = TheArrayCache.CreateArray(Label->Name, Size.get());
   ArrayDecl *AD = new ArrayDecl(Label, Size.get(), 
                                 DomainType.get(), RangeType.get(), Root);
 
-  ArraySymTab.insert(std::make_pair(Label, AD));
+  ArraySymTab[Label] = AD;
 
   // Create the initial version reference.
   VersionSymTab.insert(std::make_pair(Label,
@@ -677,7 +679,13 @@ DeclResult ParserImpl::ParseQueryCommand() {
 
  exit:
   if (Tok.kind != Token::EndOfFile)
-    ExpectRParen("unexpected argument to 'query'.");  
+    ExpectRParen("unexpected argument to 'query'.");
+
+  // If we assume that the queries are independent, we clear the array
+  // table from the previous declarations
+  if (ClearArrayAfterQuery)
+    ArraySymTab.clear();
+
   return new QueryCommand(Constraints, Res.get(), Values, Objects);
 }
 
@@ -1306,7 +1314,9 @@ VersionResult ParserImpl::ParseVersionSpecifier() {
   VersionResult Res = ParseVersion();
   // Define update list to avoid use-of-undef errors.
   if (!Res.isValid()) {
-    Res = VersionResult(true, UpdateList(Array::CreateArray("", 0), NULL));
+    // FIXME: I'm not sure if this is right. Do we need a unique array here?
+    Res =
+        VersionResult(true, UpdateList(TheArrayCache.CreateArray("", 0), NULL));
   }
   
   if (Label)
@@ -1557,6 +1567,36 @@ void ParserImpl::Error(const char *Message, const Token &At) {
   llvm::errs() << '\n';
 }
 
+ParserImpl::~ParserImpl() {
+  // Free identifiers
+  //
+  // Note the Identifiers are not disjoint across the symbol
+  // tables so we need to keep track of what has freed to
+  // avoid doing a double free.
+  std::set<const Identifier*> freedNodes;
+  for (IdentifierTabTy::iterator pi = IdentifierTab.begin(),
+                                 pe = IdentifierTab.end();
+       pi != pe; ++pi) {
+    const Identifier* id = pi->second;
+    if (freedNodes.insert(id).second)
+      delete id;
+  }
+  for (ExprSymTabTy::iterator pi = ExprSymTab.begin(),
+                              pe = ExprSymTab.end();
+       pi != pe; ++pi) {
+    const Identifier* id = pi->first;
+    if (freedNodes.insert(id).second)
+      delete id;
+  }
+  for (VersionSymTabTy::iterator pi = VersionSymTab.begin(),
+                                 pe = VersionSymTab.end();
+       pi != pe; ++pi) {
+    const Identifier* id = pi->first;
+    if (freedNodes.insert(id).second)
+      delete id;
+  }
+}
+
 // AST API
 // FIXME: Move out of parser.
 
@@ -1605,10 +1645,9 @@ Parser::Parser() {
 Parser::~Parser() {
 }
 
-Parser *Parser::Create(const std::string Filename,
-                       const MemoryBuffer *MB,
-                       ExprBuilder *Builder) {
-  ParserImpl *P = new ParserImpl(Filename, MB, Builder);
+Parser *Parser::Create(const std::string Filename, const MemoryBuffer *MB,
+                       ExprBuilder *Builder, bool ClearArrayAfterQuery) {
+  ParserImpl *P = new ParserImpl(Filename, MB, Builder, ClearArrayAfterQuery);
   P->Initialize();
   return P;
 }

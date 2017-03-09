@@ -18,10 +18,6 @@
 
 #define Expr VCExpr
 #include <stp/c_interface.h>
-
-#if ENABLE_STPLOG == 1
-#include "stp/stplog.h"
-#endif
 #undef Expr
 
 namespace klee {
@@ -68,7 +64,6 @@ namespace klee {
 
 class STPBuilder {
   ::VC vc;
-  ExprHandle tempVars[4];
   ExprHashMap< std::pair<ExprHandle, unsigned> > constructed;
 
   /// optimizeDivides - Rewrite division and reminders by constants
@@ -98,6 +93,8 @@ private:
   ExprHandle bvVarLeftShift(ExprHandle expr, ExprHandle shift);
   ExprHandle bvVarRightShift(ExprHandle expr, ExprHandle shift);
   ExprHandle bvVarArithRightShift(ExprHandle expr, ExprHandle shift);
+  ExprHandle extractPartialShiftValue(ExprHandle shift, unsigned width,
+                                      unsigned &shiftBits);
 
   ExprHandle constructAShrByConstant(ExprHandle expr, unsigned shift, 
                                      ExprHandle isSigned);
@@ -120,7 +117,6 @@ public:
 
   ExprHandle getTrue();
   ExprHandle getFalse();
-  ExprHandle getTempVar(Expr::Width w);
   ExprHandle getInitialRead(const Array *os, unsigned index);
 
   ExprHandle construct(ref<Expr> e) { 

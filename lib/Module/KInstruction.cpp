@@ -17,3 +17,10 @@ using namespace klee;
 KInstruction::~KInstruction() {
   delete[] operands;
 }
+
+void KInstruction::printFileLine(llvm::raw_ostream &debugFile) {
+  if (info->file != "")
+    debugFile << info->file << ":" << info->line;
+  else
+    debugFile << "[no debug info]";
+}

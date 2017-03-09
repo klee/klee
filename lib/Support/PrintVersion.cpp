@@ -17,16 +17,15 @@
 void klee::printVersion()
 {
   llvm::outs() << PACKAGE_STRING " (" PACKAGE_URL ")\n";
+#ifdef KLEE_ENABLE_TIMESTAMP
   llvm::outs() << "  Built " __DATE__ " (" __TIME__ ")\n";
+#endif
   llvm::outs() << "  Build mode: " << KLEE_BUILD_MODE "\n";
   llvm::outs() << "  Build revision: ";
 #ifdef KLEE_BUILD_REVISION
   llvm::outs() << KLEE_BUILD_REVISION "\n";
 #else
   llvm::outs() << "unknown\n";
-#endif
-#ifdef KLEE_BUILD_TAG
-  llvm::outs() << "  Build tag: " << KLEE_BUILD_TAG "\n";
 #endif
   // Show LLVM version information
   llvm::outs() << "\n";

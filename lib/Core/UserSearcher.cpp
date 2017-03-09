@@ -7,13 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Common.h"
-
 #include "UserSearcher.h"
 
 #include "Searcher.h"
 #include "Executor.h"
 
+#include "klee/Internal/Support/ErrorHandling.h"
 #include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
@@ -23,7 +22,7 @@ namespace {
   cl::list<Searcher::CoreSearchType>
   CoreSearch("search", cl::desc("Specify the search heuristic (default=random-path interleaved with nurs:covnew)"),
 	     cl::values(clEnumValN(Searcher::DFS, "dfs", "use Depth First Search (DFS)"),
-			clEnumValN(Searcher::BFS, "bfs", "use Breadth First Search (BFS)"),
+			clEnumValN(Searcher::BFS, "bfs", "use Breadth First Search (BFS), where scheduling decisions are taken at the level of (2-way) forks"),
 			clEnumValN(Searcher::RandomState, "random-state", "randomly select a state to explore"),
 			clEnumValN(Searcher::RandomPath, "random-path", "use Random Path Selection (see OSDI'08 paper)"),
 			clEnumValN(Searcher::NURS_CovNew, "nurs:covnew", "use Non Uniform Random Search (NURS) with Coverage-New"),
@@ -118,8 +117,12 @@ Searcher *klee::constructUserSearcher(Executor &executor) {
 
   // merge support is experimental
   if (UseMerge) {
-    assert(!UseBumpMerge);
-    assert(std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::RandomPath) == CoreSearch.end()); // XXX: needs further debugging: test/Features/Searchers.c fails with this searcher
+    if (UseBumpMerge)
+      klee_error("use-merge and use-bump-merge cannot be used together");
+    // RandomPathSearcher cannot be used in conjunction with MergingSearcher,
+    // see MergingSearcher::selectState() for explanation.
+    if (std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::RandomPath) != CoreSearch.end())
+      klee_error("use-merge currently does not support random-path, please use another search strategy");
     searcher = new MergingSearcher(executor, searcher);
   } else if (UseBumpMerge) {
     searcher = new BumpMergingSearcher(executor, searcher);

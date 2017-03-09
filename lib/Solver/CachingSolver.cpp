@@ -15,7 +15,7 @@
 #include "klee/IncompleteSolver.h"
 #include "klee/SolverImpl.h"
 
-#include "SolverStats.h"
+#include "klee/SolverStats.h"
 
 #include <ciso646>
 #ifdef _LIBCPP_VERSION

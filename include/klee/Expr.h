@@ -32,6 +32,7 @@ namespace llvm {
 namespace klee {
 
 class Array;
+class ArrayCache;
 class ConstantExpr;
 class ObjectState;
 
@@ -127,6 +128,9 @@ public:
     ZExt,
     SExt,
 
+    // Bit
+    Not,
+
     // All subsequent kinds are binary.
 
     // Arithmetic
@@ -139,7 +143,6 @@ public:
     SRem,
 
     // Bit
-    Not,
     And,
     Or,
     Xor,
@@ -173,7 +176,31 @@ public:
 
 protected:  
   unsigned hashValue;
-  
+
+  /// Compares `b` to `this` Expr and determines how they are ordered
+  /// (ignoring their kid expressions - i.e. those returned by `getKid()`).
+  ///
+  /// Typically this requires comparing internal attributes of the Expr.
+  ///
+  /// Implementations can assume that `b` and `this` are of the same kind.
+  ///
+  /// This method effectively defines a partial order over Expr of the same
+  /// kind (partial because kid Expr are not compared).
+  ///
+  /// This method should not be called directly. Instead `compare()` should
+  /// be used.
+  ///
+  /// \param [in] b Expr to compare `this` to.
+  ///
+  /// \return One of the following values:
+  ///
+  /// * -1 if `this` is `<` `b` ignoring kid expressions.
+  /// * 1 if `this` is `>` `b` ignoring kid expressions.
+  /// * 0 if `this` and `b` are not ordered.
+  ///
+  /// `<` and `>` are binary relations that express the partial order.
+  virtual int compareContents(const Expr &b) const = 0;
+
 public:
   Expr() : refCount(0) { Expr::count++; }
   virtual ~Expr() { Expr::count--; } 
@@ -196,22 +223,24 @@ public:
   /// Returns the hash value. 
   virtual unsigned computeHash();
   
-  /// Returns 0 iff b is structuraly equivalent to *this
-  typedef llvm::DenseSet<std::pair<const Expr *, const Expr *> > ExprEquivSet;
-  int compare(const Expr &b, ExprEquivSet &equivs) const;
-  int compare(const Expr &b) const {
-    static ExprEquivSet equivs;
-    int r = compare(b, equivs);
-    equivs.clear();
-    return r;
-  }
-  virtual int compareContents(const Expr &b) const { return 0; }
+  /// Compares `b` to `this` Expr for structural equivalence.
+  ///
+  /// This method effectively defines a total order over all Expr.
+  ///
+  /// \param [in] b Expr to compare `this` to.
+  ///
+  /// \return One of the following values:
+  ///
+  /// * -1 iff `this` is `<` `b`
+  /// * 0 iff `this` is structurally equivalent to `b`
+  /// * 1 iff `this` is `>` `b`
+  ///
+  /// `<` and `>` are binary relations that express the total order.
+  int compare(const Expr &b) const;
 
   // Given an array of new kids return a copy of the expression
   // but using those children. 
   virtual ref<Expr> rebuild(ref<Expr> kids[/* getNumKids() */]) const = 0;
-
-  //
 
   /// isZero - Is this a constant zero.
   bool isZero() const;
@@ -253,6 +282,10 @@ public:
   static bool needsResultType() { return false; }
 
   static bool classof(const Expr *) { return true; }
+
+private:
+  typedef llvm::DenseSet<std::pair<const Expr *, const Expr *> > ExprEquivSet;
+  int compare(const Expr &b, ExprEquivSet &equivs) const;
 };
 
 struct Expr::CreateArg {
@@ -323,163 +356,6 @@ inline std::stringstream &operator<<(std::stringstream &os, const Expr::Kind kin
   return os;
 }
 
-// Terminal Exprs
-
-class ConstantExpr : public Expr {
-public:
-  static const Kind kind = Constant;
-  static const unsigned numKids = 0;
-
-private:
-  llvm::APInt value;
-
-  ConstantExpr(const llvm::APInt &v) : value(v) {}
-
-public:
-  ~ConstantExpr() {}
-  
-  Width getWidth() const { return value.getBitWidth(); }
-  Kind getKind() const { return Constant; }
-
-  unsigned getNumKids() const { return 0; }
-  ref<Expr> getKid(unsigned i) const { return 0; }
-
-  /// getAPValue - Return the arbitrary precision value directly.
-  ///
-  /// Clients should generally not use the APInt value directly and instead use
-  /// native ConstantExpr APIs.
-  const llvm::APInt &getAPValue() const { return value; }
-
-  /// getZExtValue - Returns the constant value zero extended to the
-  /// return type of this method.
-  ///
-  ///\param bits - optional parameter that can be used to check that the
-  ///number of bits used by this constant is <= to the parameter
-  ///value. This is useful for checking that type casts won't truncate
-  ///useful bits.
-  ///
-  /// Example: unit8_t byte= (unit8_t) constant->getZExtValue(8);
-  uint64_t getZExtValue(unsigned bits = 64) const {
-    assert(getWidth() <= bits && "Value may be out of range!");
-    return value.getZExtValue();
-  }
-
-  /// getLimitedValue - If this value is smaller than the specified limit,
-  /// return it, otherwise return the limit value.
-  uint64_t getLimitedValue(uint64_t Limit = ~0ULL) const {
-    return value.getLimitedValue(Limit);
-  }
-
-  /// toString - Return the constant value as a string
-  /// \param Res specifies the string for the result to be placed in
-  /// \param radix specifies the base (e.g. 2,10,16). The default is base 10
-  void toString(std::string &Res, unsigned radix=10) const;
-
-
- 
-  int compareContents(const Expr &b) const { 
-    const ConstantExpr &cb = static_cast<const ConstantExpr&>(b);
-    if (getWidth() != cb.getWidth()) 
-      return getWidth() < cb.getWidth() ? -1 : 1;
-    if (value == cb.value)
-      return 0;
-    return value.ult(cb.value) ? -1 : 1;
-  }
-
-  virtual ref<Expr> rebuild(ref<Expr> kids[]) const { 
-    assert(0 && "rebuild() on ConstantExpr"); 
-    return const_cast<ConstantExpr*>(this);
-  }
-
-  virtual unsigned computeHash();
-  
-  static ref<Expr> fromMemory(void *address, Width w);
-  void toMemory(void *address);
-
-  static ref<ConstantExpr> alloc(const llvm::APInt &v) {
-    ref<ConstantExpr> r(new ConstantExpr(v));
-    r->computeHash();
-    return r;
-  }
-
-  static ref<ConstantExpr> alloc(const llvm::APFloat &f) {
-    return alloc(f.bitcastToAPInt());
-  }
-
-  static ref<ConstantExpr> alloc(uint64_t v, Width w) {
-    return alloc(llvm::APInt(w, v));
-  }
-  
-  static ref<ConstantExpr> create(uint64_t v, Width w) {
-    assert(v == bits64::truncateToNBits(v, w) &&
-           "invalid constant");
-    return alloc(v, w);
-  }
-
-  static bool classof(const Expr *E) {
-    return E->getKind() == Expr::Constant;
-  }
-  static bool classof(const ConstantExpr *) { return true; }
-
-  /* Utility Functions */
-
-  /// isZero - Is this a constant zero.
-  bool isZero() const { return getAPValue().isMinValue(); }
-
-  /// isOne - Is this a constant one.
-  bool isOne() const { return getLimitedValue() == 1; }
-  
-  /// isTrue - Is this the true expression.
-  bool isTrue() const { 
-    return (getWidth() == Expr::Bool && value.getBoolValue()==true);
-  }
-
-  /// isFalse - Is this the false expression.
-  bool isFalse() const {
-    return (getWidth() == Expr::Bool && value.getBoolValue()==false);
-  }
-
-  /// isAllOnes - Is this constant all ones.
-  bool isAllOnes() const { return getAPValue().isAllOnesValue(); }
-
-  /* Constant Operations */
-
-  ref<ConstantExpr> Concat(const ref<ConstantExpr> &RHS);
-  ref<ConstantExpr> Extract(unsigned offset, Width W);
-  ref<ConstantExpr> ZExt(Width W);
-  ref<ConstantExpr> SExt(Width W);
-  ref<ConstantExpr> Add(const ref<ConstantExpr> &RHS);
-  ref<ConstantExpr> Sub(const ref<ConstantExpr> &RHS);
-  ref<ConstantExpr> Mul(const ref<ConstantExpr> &RHS);
-  ref<ConstantExpr> UDiv(const ref<ConstantExpr> &RHS);
-  ref<ConstantExpr> SDiv(const ref<ConstantExpr> &RHS);
-  ref<ConstantExpr> URem(const ref<ConstantExpr> &RHS);
-  ref<ConstantExpr> SRem(const ref<ConstantExpr> &RHS);
-  ref<ConstantExpr> And(const ref<ConstantExpr> &RHS);
-  ref<ConstantExpr> Or(const ref<ConstantExpr> &RHS);
-  ref<ConstantExpr> Xor(const ref<ConstantExpr> &RHS);
-  ref<ConstantExpr> Shl(const ref<ConstantExpr> &RHS);
-  ref<ConstantExpr> LShr(const ref<ConstantExpr> &RHS);
-  ref<ConstantExpr> AShr(const ref<ConstantExpr> &RHS);
-
-  // Comparisons return a constant expression of width 1.
-
-  ref<ConstantExpr> Eq(const ref<ConstantExpr> &RHS);
-  ref<ConstantExpr> Ne(const ref<ConstantExpr> &RHS);
-  ref<ConstantExpr> Ult(const ref<ConstantExpr> &RHS);
-  ref<ConstantExpr> Ule(const ref<ConstantExpr> &RHS);
-  ref<ConstantExpr> Ugt(const ref<ConstantExpr> &RHS);
-  ref<ConstantExpr> Uge(const ref<ConstantExpr> &RHS);
-  ref<ConstantExpr> Slt(const ref<ConstantExpr> &RHS);
-  ref<ConstantExpr> Sle(const ref<ConstantExpr> &RHS);
-  ref<ConstantExpr> Sgt(const ref<ConstantExpr> &RHS);
-  ref<ConstantExpr> Sge(const ref<ConstantExpr> &RHS);
-
-  ref<ConstantExpr> Neg();
-  ref<ConstantExpr> Not();
-};
-
-  
 // Utility classes
 
 class NonConstantExpr : public Expr {
@@ -558,6 +434,12 @@ public:
 private:
   NotOptimizedExpr(const ref<Expr> &_src) : src(_src) {}
 
+protected:
+  virtual int compareContents(const Expr &b) const {
+    // No attributes to compare.
+    return 0;
+  }
+
 public:
   static bool classof(const Expr *E) {
     return E->getKind() == Expr::NotOptimized;
@@ -619,21 +501,10 @@ public:
 private:
   unsigned hashValue;
 
-
-  /// The symbolic array singleton map is necessary to allow sharing
-  /// of Arrays across states, essentially performing a (limited) form
-  /// of alpha renaming.  Some Solvers use maps such as < const *Array,
-  /// std::vector<unsigned> >.  This causes problems because stored
-  /// answers can't be easily recovered.  Even worse, in read
-  /// expressions, such as (read array 32), array is a pointer, and
-  /// cached solutions are missed because the two Array instances
-  /// aren't recognized as the same.
-  static std::map < unsigned, std::vector < const Array * > * > symbolicArraySingletonMap;
-
-  // This shouldn't be allowed since it is a singleton class
+  // FIXME: Make =delete when we switch to C++11
   Array(const Array& array);
 
-  // This shouldn't be allowed since it is a singleton class
+  // FIXME: Make =delete when we switch to C++11
   Array& operator =(const Array& array);
 
   ~Array();
@@ -646,22 +517,9 @@ private:
   /// not parse correctly since two arrays with the same name cannot be
   /// distinguished once printed.
   Array(const std::string &_name, uint64_t _size,
-	const ref<ConstantExpr> *constantValuesBegin = 0,
-	const ref<ConstantExpr> *constantValuesEnd = 0,
-	Expr::Width _domain = Expr::Int32, Expr::Width _range = Expr::Int8)
-    : name(_name), size(_size), domain(_domain), range(_range),
-      constantValues(constantValuesBegin, constantValuesEnd) {
-    
-    assert((isSymbolicArray() || constantValues.size() == size) &&
-           "Invalid size for constant array!");
-    computeHash();
-#ifndef NDEBUG
-    for (const ref<ConstantExpr> *it = constantValuesBegin;
-         it != constantValuesEnd; ++it)
-      assert((*it)->getWidth() == getRange() &&
-             "Invalid initial constant value!");
-#endif //NDEBUG
-  }
+        const ref<ConstantExpr> *constantValuesBegin = 0,
+        const ref<ConstantExpr> *constantValuesEnd = 0,
+        Expr::Width _domain = Expr::Int32, Expr::Width _range = Expr::Int8);
 
 public:
   bool isSymbolicArray() const { return constantValues.empty(); }
@@ -675,20 +533,7 @@ public:
   /// ComputeHash must take into account the name, the size, the domain, and the range
   unsigned computeHash();
   unsigned hash() const { return hashValue; }
-
-  /*
-   * Fairly simple idea.  Symbolic arrays have constant values of size
-   * 0, while concrete arrays have constant values of size > 0.
-   * Therefore, on each call, an array is created and, if it is
-   * concrete, it is simply returned.  If instead it is symbolic, then
-   * a map is checked to see if it was created before, so there is
-   * only a single instance floating out there.
-   */
-  static const Array * CreateArray(const std::string &_name, uint64_t _size,
-				   const ref<ConstantExpr> *constantValuesBegin = 0,
-				   const ref<ConstantExpr> *constantValuesEnd = 0,
-				   Expr::Width _domain = Expr::Int32,
-				   Expr::Width _range = Expr::Int8);
+  friend class ArrayCache;
 };
 
 /// Class representing a complete list of updates into an array.
@@ -715,6 +560,8 @@ public:
 
   int compare(const UpdateList &b) const;
   unsigned hash() const;
+private:
+  void tryFreeNodes();
 };
 
 /// Class representing a one byte read from an array. 
@@ -814,6 +661,12 @@ public:
     return E->getKind() == Expr::Select;
   }
   static bool classof(const SelectExpr *) { return true; }
+
+protected:
+  virtual int compareContents(const Expr &b) const {
+    // No attributes to compare.
+    return 0;
+  }
 };
 
 
@@ -871,6 +724,14 @@ public:
     return E->getKind() == Expr::Concat;
   }
   static bool classof(const ConcatExpr *) { return true; }
+
+protected:
+  virtual int compareContents(const Expr &b) const {
+    const ConcatExpr &eb = static_cast<const ConcatExpr &>(b);
+    if (width != eb.width)
+      return width < eb.width ? -1 : 1;
+    return 0;
+  }
 };
 
 
@@ -954,12 +815,6 @@ public:
   unsigned getNumKids() const { return numKids; }
   ref<Expr> getKid(unsigned i) const { return expr; }
 
-  int compareContents(const Expr &b) const {
-    const NotExpr &eb = static_cast<const NotExpr&>(b);
-    if (expr != eb.expr) return expr < eb.expr ? -1 : 1;
-    return 0;
-  }
-
   virtual ref<Expr> rebuild(ref<Expr> kids[]) const { 
     return create(kids[0]);
   }
@@ -974,6 +829,12 @@ public:
 
 private:
   NotExpr(const ref<Expr> &e) : expr(e) {}
+
+protected:
+  virtual int compareContents(const Expr &b) const {
+    // No attributes to compare.
+    return 0;
+  }
 };
 
 
@@ -1041,33 +902,38 @@ CAST_EXPR_CLASS(ZExt)
 
 // Arithmetic/Bit Exprs
 
-#define ARITHMETIC_EXPR_CLASS(_class_kind)                           \
-class _class_kind ## Expr : public BinaryExpr {                      \
-public:                                                              \
-  static const Kind kind = _class_kind;                              \
-  static const unsigned numKids = 2;                                 \
-public:                                                              \
-    _class_kind ## Expr(const ref<Expr> &l,                          \
-                        const ref<Expr> &r) : BinaryExpr(l,r) {}     \
-    static ref<Expr> alloc(const ref<Expr> &l, const ref<Expr> &r) { \
-      ref<Expr> res(new _class_kind ## Expr (l, r));                 \
-      res->computeHash();                                            \
-      return res;                                                    \
-    }                                                                \
-    static ref<Expr> create(const ref<Expr> &l, const ref<Expr> &r); \
-    Width getWidth() const { return left->getWidth(); }              \
-    Kind getKind() const { return _class_kind; }                     \
-    virtual ref<Expr> rebuild(ref<Expr> kids[]) const {              \
-      return create(kids[0], kids[1]);                               \
-    }                                                                \
-                                                                     \
-    static bool classof(const Expr *E) {                             \
-      return E->getKind() == Expr::_class_kind;                      \
-    }                                                                \
-    static bool classof(const  _class_kind ## Expr *) {              \
-      return true;                                                   \
-    }                                                                \
-};                                                                   \
+#define ARITHMETIC_EXPR_CLASS(_class_kind)                                     \
+  class _class_kind##Expr : public BinaryExpr {                                \
+  public:                                                                      \
+    static const Kind kind = _class_kind;                                      \
+    static const unsigned numKids = 2;                                         \
+                                                                               \
+  public:                                                                      \
+    _class_kind##Expr(const ref<Expr> &l, const ref<Expr> &r)                  \
+        : BinaryExpr(l, r) {}                                                  \
+    static ref<Expr> alloc(const ref<Expr> &l, const ref<Expr> &r) {           \
+      ref<Expr> res(new _class_kind##Expr(l, r));                              \
+      res->computeHash();                                                      \
+      return res;                                                              \
+    }                                                                          \
+    static ref<Expr> create(const ref<Expr> &l, const ref<Expr> &r);           \
+    Width getWidth() const { return left->getWidth(); }                        \
+    Kind getKind() const { return _class_kind; }                               \
+    virtual ref<Expr> rebuild(ref<Expr> kids[]) const {                        \
+      return create(kids[0], kids[1]);                                         \
+    }                                                                          \
+                                                                               \
+    static bool classof(const Expr *E) {                                       \
+      return E->getKind() == Expr::_class_kind;                                \
+    }                                                                          \
+    static bool classof(const _class_kind##Expr *) { return true; }            \
+                                                                               \
+  protected:                                                                   \
+    virtual int compareContents(const Expr &b) const {                         \
+      /* No attributes to compare.*/                                           \
+      return 0;                                                                \
+    }                                                                          \
+  };
 
 ARITHMETIC_EXPR_CLASS(Add)
 ARITHMETIC_EXPR_CLASS(Sub)
@@ -1085,32 +951,37 @@ ARITHMETIC_EXPR_CLASS(AShr)
 
 // Comparison Exprs
 
-#define COMPARISON_EXPR_CLASS(_class_kind)                           \
-class _class_kind ## Expr : public CmpExpr {                         \
-public:                                                              \
-  static const Kind kind = _class_kind;                              \
-  static const unsigned numKids = 2;                                 \
-public:                                                              \
-    _class_kind ## Expr(const ref<Expr> &l,                          \
-                        const ref<Expr> &r) : CmpExpr(l,r) {}        \
-    static ref<Expr> alloc(const ref<Expr> &l, const ref<Expr> &r) { \
-      ref<Expr> res(new _class_kind ## Expr (l, r));                 \
-      res->computeHash();                                            \
-      return res;                                                    \
-    }                                                                \
-    static ref<Expr> create(const ref<Expr> &l, const ref<Expr> &r); \
-    Kind getKind() const { return _class_kind; }                     \
-    virtual ref<Expr> rebuild(ref<Expr> kids[]) const {              \
-      return create(kids[0], kids[1]);                               \
-    }                                                                \
-                                                                     \
-    static bool classof(const Expr *E) {                             \
-      return E->getKind() == Expr::_class_kind;                      \
-    }                                                                \
-    static bool classof(const  _class_kind ## Expr *) {              \
-      return true;                                                   \
-    }                                                                \
-};                                                                   \
+#define COMPARISON_EXPR_CLASS(_class_kind)                                     \
+  class _class_kind##Expr : public CmpExpr {                                   \
+  public:                                                                      \
+    static const Kind kind = _class_kind;                                      \
+    static const unsigned numKids = 2;                                         \
+                                                                               \
+  public:                                                                      \
+    _class_kind##Expr(const ref<Expr> &l, const ref<Expr> &r)                  \
+        : CmpExpr(l, r) {}                                                     \
+    static ref<Expr> alloc(const ref<Expr> &l, const ref<Expr> &r) {           \
+      ref<Expr> res(new _class_kind##Expr(l, r));                              \
+      res->computeHash();                                                      \
+      return res;                                                              \
+    }                                                                          \
+    static ref<Expr> create(const ref<Expr> &l, const ref<Expr> &r);           \
+    Kind getKind() const { return _class_kind; }                               \
+    virtual ref<Expr> rebuild(ref<Expr> kids[]) const {                        \
+      return create(kids[0], kids[1]);                                         \
+    }                                                                          \
+                                                                               \
+    static bool classof(const Expr *E) {                                       \
+      return E->getKind() == Expr::_class_kind;                                \
+    }                                                                          \
+    static bool classof(const _class_kind##Expr *) { return true; }            \
+                                                                               \
+  protected:                                                                   \
+    virtual int compareContents(const Expr &b) const {                         \
+      /* No attributes to compare. */                                          \
+      return 0;                                                                \
+    }                                                                          \
+  };
 
 COMPARISON_EXPR_CLASS(Eq)
 COMPARISON_EXPR_CLASS(Ne)
@@ -1122,6 +993,160 @@ COMPARISON_EXPR_CLASS(Slt)
 COMPARISON_EXPR_CLASS(Sle)
 COMPARISON_EXPR_CLASS(Sgt)
 COMPARISON_EXPR_CLASS(Sge)
+
+// Terminal Exprs
+
+class ConstantExpr : public Expr {
+public:
+  static const Kind kind = Constant;
+  static const unsigned numKids = 0;
+
+private:
+  llvm::APInt value;
+
+  ConstantExpr(const llvm::APInt &v) : value(v) {}
+
+public:
+  ~ConstantExpr() {}
+
+  Width getWidth() const { return value.getBitWidth(); }
+  Kind getKind() const { return Constant; }
+
+  unsigned getNumKids() const { return 0; }
+  ref<Expr> getKid(unsigned i) const { return 0; }
+
+  /// getAPValue - Return the arbitrary precision value directly.
+  ///
+  /// Clients should generally not use the APInt value directly and instead use
+  /// native ConstantExpr APIs.
+  const llvm::APInt &getAPValue() const { return value; }
+
+  /// getZExtValue - Returns the constant value zero extended to the
+  /// return type of this method.
+  ///
+  ///\param bits - optional parameter that can be used to check that the
+  /// number of bits used by this constant is <= to the parameter
+  /// value. This is useful for checking that type casts won't truncate
+  /// useful bits.
+  ///
+  /// Example: unit8_t byte= (unit8_t) constant->getZExtValue(8);
+  uint64_t getZExtValue(unsigned bits = 64) const {
+    assert(getWidth() <= bits && "Value may be out of range!");
+    return value.getZExtValue();
+  }
+
+  /// getLimitedValue - If this value is smaller than the specified limit,
+  /// return it, otherwise return the limit value.
+  uint64_t getLimitedValue(uint64_t Limit = ~0ULL) const {
+    return value.getLimitedValue(Limit);
+  }
+
+  /// toString - Return the constant value as a string
+  /// \param Res specifies the string for the result to be placed in
+  /// \param radix specifies the base (e.g. 2,10,16). The default is base 10
+  void toString(std::string &Res, unsigned radix = 10) const;
+
+  int compareContents(const Expr &b) const {
+    const ConstantExpr &cb = static_cast<const ConstantExpr &>(b);
+    if (getWidth() != cb.getWidth())
+      return getWidth() < cb.getWidth() ? -1 : 1;
+    if (value == cb.value)
+      return 0;
+    return value.ult(cb.value) ? -1 : 1;
+  }
+
+  virtual ref<Expr> rebuild(ref<Expr> kids[]) const {
+    assert(0 && "rebuild() on ConstantExpr");
+    return const_cast<ConstantExpr *>(this);
+  }
+
+  virtual unsigned computeHash();
+
+  static ref<Expr> fromMemory(void *address, Width w);
+  void toMemory(void *address);
+
+  static ref<ConstantExpr> alloc(const llvm::APInt &v) {
+    ref<ConstantExpr> r(new ConstantExpr(v));
+    r->computeHash();
+    return r;
+  }
+
+  static ref<ConstantExpr> alloc(const llvm::APFloat &f) {
+    return alloc(f.bitcastToAPInt());
+  }
+
+  static ref<ConstantExpr> alloc(uint64_t v, Width w) {
+    return alloc(llvm::APInt(w, v));
+  }
+
+  static ref<ConstantExpr> create(uint64_t v, Width w) {
+#ifndef NDEBUG
+    if (w <= 64)
+      assert(v == bits64::truncateToNBits(v, w) && "invalid constant");
+#endif
+    return alloc(v, w);
+  }
+
+  static bool classof(const Expr *E) { return E->getKind() == Expr::Constant; }
+  static bool classof(const ConstantExpr *) { return true; }
+
+  /* Utility Functions */
+
+  /// isZero - Is this a constant zero.
+  bool isZero() const { return getAPValue().isMinValue(); }
+
+  /// isOne - Is this a constant one.
+  bool isOne() const { return getLimitedValue() == 1; }
+
+  /// isTrue - Is this the true expression.
+  bool isTrue() const {
+    return (getWidth() == Expr::Bool && value.getBoolValue() == true);
+  }
+
+  /// isFalse - Is this the false expression.
+  bool isFalse() const {
+    return (getWidth() == Expr::Bool && value.getBoolValue() == false);
+  }
+
+  /// isAllOnes - Is this constant all ones.
+  bool isAllOnes() const { return getAPValue().isAllOnesValue(); }
+
+  /* Constant Operations */
+
+  ref<ConstantExpr> Concat(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> Extract(unsigned offset, Width W);
+  ref<ConstantExpr> ZExt(Width W);
+  ref<ConstantExpr> SExt(Width W);
+  ref<ConstantExpr> Add(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> Sub(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> Mul(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> UDiv(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> SDiv(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> URem(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> SRem(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> And(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> Or(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> Xor(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> Shl(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> LShr(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> AShr(const ref<ConstantExpr> &RHS);
+
+  // Comparisons return a constant expression of width 1.
+
+  ref<ConstantExpr> Eq(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> Ne(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> Ult(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> Ule(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> Ugt(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> Uge(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> Slt(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> Sle(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> Sgt(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> Sge(const ref<ConstantExpr> &RHS);
+
+  ref<ConstantExpr> Neg();
+  ref<ConstantExpr> Not();
+};
 
 // Implementations
 

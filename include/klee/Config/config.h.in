@@ -6,14 +6,23 @@
 /* Enable KLEE DEBUG checks */
 #undef ENABLE_KLEE_DEBUG
 
+/* Enable metaSMT API */
+#undef ENABLE_METASMT
+
+/* Using STP Solver backend */
+#undef ENABLE_STP
+
+/* Using Z3 Solver backend */
+#undef ENABLE_Z3
+
 /* Does the platform use __ctype_b_loc, etc. */
 #undef HAVE_CTYPE_EXTERNALS
 
+/* Define to 1 if you have the <gperftools/malloc_extension.h> header file. */
+#undef HAVE_GPERFTOOLS_MALLOC_EXTENSION_H
+
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
-
-/* Define to 1 if you have the `stp' library (-lstp). */
-#undef HAVE_LIBSTP
 
 /* Define if mallinfo() is available on this platform. */
 #undef HAVE_MALLINFO
@@ -57,6 +66,19 @@
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
 
+/* Z3 needs a Z3_context passed to Z3_get_error_msg() */
+#undef HAVE_Z3_GET_ERROR_MSG_NEEDS_CONTEXT
+
+/* Define to 1 if you have the <zlib.h> header file. */
+#undef HAVE_ZLIB_H
+
+/* Enable time stamping the sources */
+#undef KLEE_ENABLE_TIMESTAMP
+
+/* Define to empty or 'const' depending on how SELinux qualifies its security
+   context parameters. */
+#undef KLEE_SELINUX_CTX_CONST
+
 /* LLVM version is release (instead of development) */
 #undef LLVM_IS_RELEASE
 
@@ -92,8 +114,5 @@
 
 /* klee-uclibc is supported */
 #undef SUPPORT_KLEE_UCLIBC
-
-/* Supporting metaSMT API */
-#undef SUPPORT_METASMT
 
 #endif

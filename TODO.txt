@@ -3,8 +3,6 @@ TODO
 
 Build System / Configure / Release Cleanups
 --
- o Rename .pc to .kquery (kleaver query)
-
  o Configure doesn't check for bison / flex, we don't really use these
    for anything important (just the command line STP tool), it would
    be nice if they weren't required.

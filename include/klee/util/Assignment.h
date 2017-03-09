@@ -49,6 +49,7 @@ namespace klee {
 
     template<typename InputIterator>
     bool satisfies(InputIterator begin, InputIterator end);
+    void dump();
   };
   
   class AssignmentEvaluator : public ExprEvaluator {

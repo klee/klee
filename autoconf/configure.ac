@@ -1,7 +1,7 @@
 dnl **************************************************************************
 dnl * Initialize
 dnl **************************************************************************
-AC_INIT([[KLEE]],[[1.1.0]],[[klee-dev@imperial.ac.uk]],[[klee-]],[[https://klee.github.io]])
+AC_INIT([[KLEE]],[[1.3.0]],[[klee-dev@imperial.ac.uk]],[[klee-]],[[https://klee.github.io]])
 
 dnl Identify where LLVM source tree is (this is patched by
 dnl AutoRegen.sh)
@@ -382,6 +382,19 @@ AC_SUBST(KLEE_BITCODE_C_COMPILER,$klee_llvm_bc_c_compiler)
 AC_SUBST(KLEE_BITCODE_CXX_COMPILER,$klee_llvm_bc_cxx_compiler)
 
 dnl **************************************************************************
+dnl User option to disable timestamping.
+
+AC_ARG_ENABLE([timestamp],AS_HELP_STRING([--enable-timestamp],
+	[Enable timestamping the source code while building. (default=disabled)]))
+
+if test "x${enable_timestamp}" = "xyes" ; then
+  AC_DEFINE(KLEE_ENABLE_TIMESTAMP,[1],[Enable time stamping the sources])
+  AC_MSG_NOTICE([Source timestamping enabled.])
+else
+  AC_MSG_NOTICE([Source timestamping disabled.])
+fi
+
+dnl **************************************************************************
 dnl User option to enable uClibc support.
 
 AC_ARG_WITH(uclibc,
@@ -534,11 +547,30 @@ if test "x${have_cap}" = xno; then
 capability checking support for klee-replay.])
 fi
 
-AC_LANG_POP([C])
-
 AC_CHECK_HEADERS([selinux/selinux.h],
         AC_SUBST(HAVE_SELINUX, 1),
         AC_SUBST(HAVE_SELINUX, 0))
+
+if test "$HAVE_SELINUX" = "1"; then
+   # Test what function signature we need to use for SELinux. The signatures
+   # have changed between 2.2 and 2.3. In particular, the type of the "security
+   # context" parameter was changed from char * to const char *, with this
+   # patch: [PATCH] Get rid of security_context_t and fix const declarations.
+   # [http://www.spinics.net/lists/selinux/msg14827.html]
+   AC_CACHE_CHECK([for selinux security context type constness],
+                  [klee_cv_sel_ctx_const],
+   [AC_COMPILE_IFELSE(
+     [AC_LANG_PROGRAM([[
+#include <selinux/selinux.h>
+int setcon(char *context);]])],
+     [klee_cv_sel_ctx_const=''],
+     [klee_cv_sel_ctx_const='const'])])
+   AC_DEFINE_UNQUOTED([KLEE_SELINUX_CTX_CONST], [$klee_cv_sel_ctx_const],
+     [Define to empty or 'const' depending on how SELinux qualifies its
+      security context parameters.])
+fi
+
+AC_LANG_POP([C])
 
 dnl **************************************************************************
 dnl Test for features
@@ -550,91 +582,298 @@ AC_SEARCH_LIBS(mallinfo,malloc,
                AC_DEFINE([HAVE_MALLINFO],[1],[Define if mallinfo() is available on this platform.]))
 
 dnl **************************************************************************
+dnl Test for tcmalloc
+dnl **************************************************************************
+
+AC_ARG_WITH([tcmalloc],
+	    AS_HELP_STRING([--without-tcmalloc], [Ignore presence of tcmalloc and disable it (default=detect)]))
+
+AS_IF([test "x$with_tcmalloc" != "xno"],
+      AC_CHECK_HEADERS([gperftools/malloc_extension.h],
+		       [have_tcmalloc=yes], [have_tcmalloc=no]),
+      [have_tcmalloc=no])
+
+AS_IF([test "x$have_tcmalloc" = "xyes"],
+      [
+	AC_SEARCH_LIBS(tc_malloc,tcmalloc_minimal,
+		     [
+		      AC_SUBST(HAVE_TCMALLOC, 1)
+		      if test "${ac_cv_search_tc_malloc}" != "none required"; then
+			 TCMALLOC_LIB=${ac_cv_search_tc_malloc}
+			 AC_SUBST(TCMALLOC_LIB)
+		      fi
+		     ],
+		     [
+		      AC_MSG_WARN([Could not link with tcmalloc])
+		      AC_SUBST(HAVE_TCMALLOC, 0)
+		     ],)
+
+       ],
+      [AS_IF([test "x$with_tcmalloc" = "xyes"],
+	     [AC_MSG_ERROR([tcmalloc requested but not found])],
+	     [
+	      AC_SUBST(HAVE_TCMALLOC, 0)
+	      ])
+])
+
+dnl **************************************************************************
+dnl Test for zlib
+dnl **************************************************************************
+
+AC_ARG_WITH([zlib],
+        AS_HELP_STRING([--without-zlib], [Ignore presence of zlib and disable it (default=detect)]))
+
+AS_IF([test "x$with_zlib" != "xno"],
+      AC_CHECK_HEADERS([zlib.h],
+               [have_zlib=yes], [have_zlib=no]),
+      [have_zlib=no])
+
+AS_IF([test "x$have_zlib" = "xyes"],
+      [
+    AC_SEARCH_LIBS(deflateEnd, z,
+             [
+              AC_SUBST(HAVE_ZLIB, 1)
+              if test "${ac_cv_search_zlib}" != "none required"; then
+             ZLIB_LIB=${ac_cv_search_zlib}
+             AC_SUBST(ZLIB_LIB)
+              fi
+             ],
+             [
+              AC_MSG_WARN([Could not link with zlib])
+              AC_SUBST(HAVE_ZLIB, 0)
+             ],)
+
+       ],
+      [AS_IF([test "x$with_zlib" = "xyes"],
+         [AC_MSG_ERROR([zlib requested but not found])],
+         [
+          AC_SUBST(HAVE_ZLIB, 0)
+          ])
+])
+
+dnl **************************************************************************
 dnl Find an install of STP
 dnl **************************************************************************
 
+ENABLE_STP=0
 AC_ARG_WITH(stp,
   AS_HELP_STRING([--with-stp],
     [Location of STP installation directory]),[
       #Check for empty argument
       if test "X$withval" = X ; then
-	      AC_MSG_ERROR([<path> cannot be empty in --with-stp=<path>])
+        AC_MSG_ERROR([<path> cannot be empty in --with-stp=<path>])
       fi
       stp_root=`(cd $withval && pwd) 2> /dev/null`
 
       #Check for bad path
       if test "X$stp_root" = X ; then
-	    AC_MSG_ERROR([Cannot access path $with_stp passed to --with-stp])
+        AC_MSG_ERROR([Cannot access path $with_stp passed to --with-stp])
       fi
 
       STP_CFLAGS="-I$stp_root/include"
       STP_LDFLAGS="-L$stp_root/lib"
+      ENABLE_STP=1
     ])
 
-old_CPPFLAGS="$CPPFLAGS"
-CPPFLAGS="$CPPFLAGS $STP_CFLAGS"
-AC_CHECK_HEADER(stp/c_interface.h,,
-    [
-        AC_MSG_ERROR([Unable to use stp/c_interface.h header])
-    ])
-CPPFLAGS="$old_CPPFLAGS"
+if test "X$ENABLE_STP" != X0; then
+    old_CPPFLAGS="$CPPFLAGS"
+    CPPFLAGS="$CPPFLAGS $STP_CFLAGS"
+    AC_CHECK_HEADER(stp/c_interface.h,,
+        [
+            AC_MSG_ERROR([Unable to use stp/c_interface.h header])
+        ])
 
-STP_NEEDS_MINISAT=0
-AC_CHECK_LIB(stp, vc_setInterfaceFlags,, [
-       STP_NEEDS_MINISAT=1; AC_MSG_RESULT([Could not link with libstp])
-], "$STP_LDFLAGS")
+    dnl we use [:] as a no-op so that AC_CHECK_LIB doesn't append -lstp
+    dnl automatically which would break subsequent uses of AC_CHECK_LIB()
+    STP_NEEDS_MINISAT=0
+    AC_CHECK_LIB(stp, vc_setInterfaceFlags, [:], [
+           STP_NEEDS_MINISAT=1; AC_MSG_RESULT([Could not link with libstp])
+    ], "$STP_LDFLAGS")
+    CPPFLAGS="$old_CPPFLAGS"
 
-dnl Try linking again with minisat if necessary
-if test "X$STP_NEEDS_MINISAT" != X0 ; then
-  # Need to clear cached result
-  unset ac_cv_lib_stp_vc_setInterfaceFlags
+    dnl Try linking again with minisat if necessary
+    if test "X$STP_NEEDS_MINISAT" != X0 ; then
+      # Need to clear cached result
+      unset ac_cv_lib_stp_vc_setInterfaceFlags
 
-  AC_CHECK_LIB(stp,
-	       vc_setInterfaceFlags,, [
-	       AC_MSG_ERROR([Unable to link with libstp. Check config.log to see what went wrong])
-  ], "$STP_LDFLAGS" "-lminisat" )
+      AC_CHECK_LIB(stp,
+               vc_setInterfaceFlags,[:], [
+               AC_MSG_ERROR([Unable to link with libstp. Check config.log to see what went wrong])
+      ], "$STP_LDFLAGS" "-lminisat" )
 
-  STP_LDFLAGS="${STP_LDFLAGS} -lstp -lminisat"
+      STP_LDFLAGS="${STP_LDFLAGS} -lstp -lminisat"
+    else
+      STP_LDFLAGS="${STP_LDFLAGS} -lstp"
+    fi
+    AC_MSG_NOTICE([Using STP solver backend])
+    CPPFLAGS="$old_CPPFLAGS"
+    AC_DEFINE(ENABLE_STP, [1], [Using STP Solver backend])
 else
-  STP_LDFLAGS="${STP_LDFLAGS} -lstp"
+    AC_MSG_NOTICE([Not using STP solver backend])
 fi
 
-
+AC_SUBST(ENABLE_STP)
 AC_SUBST(STP_CFLAGS)
 AC_SUBST(STP_LDFLAGS)
 
 dnl **************************************************************************
-dnl User option to enable metaSMT constraint solvers and to specify the 
+dnl Find an install of Z3
+dnl **************************************************************************
+
+ENABLE_Z3=0
+AC_ARG_WITH(z3,
+  AS_HELP_STRING([--with-z3], [Location of Z3 installation directory]), [
+    # Check for empty argument
+    if test "X$withval" = X ; then
+      AC_MSG_ERROR([<path> cannot be empty in --with-z3=<path>])
+    fi
+    z3_root=`(cd $withval && pwd) 2> /dev/null`
+
+    #Check for bad path
+    if test "X$z3_root" = X ; then
+      AC_MSG_ERROR([Cannot access path $with_z3 passed to --with-z3])
+    fi
+
+    Z3_CFLAGS="-I$z3_root/include"
+    Z3_LDFLAGS="-L$z3_root/lib"
+    ENABLE_Z3=1
+  ])
+
+if test "X$ENABLE_Z3" != X0 ; then
+    old_CPPFLAGS="$CPPFLAGS"
+    CPPFLAGS="$CPPFLAGS $Z3_CFLAGS"
+    old_CPPFLAGS="$CPPFLAGS"
+    AC_CHECK_HEADER(z3.h,,
+        [
+            AC_MSG_ERROR([Unable to use z3.h header])
+        ])
+    CPPFLAGS="$old_CPPFLAGS"
+
+    AC_CHECK_LIB(z3, Z3_mk_context,[:], [
+           AC_MSG_ERROR([Unable to link against z3])
+    ], "$Z3_LDFLAGS")
+
+    # Test which function signature of ``Z3_get_error_msg()`` we need to use.
+    # There's an API break between Z3 4.4.1 and the master branch
+    AC_MSG_CHECKING([if Z3_get_error_msg() requires Z3_context])
+    AC_COMPILE_IFELSE(
+      [AC_LANG_PROGRAM([[#include "z3.h"]],
+                       [[Z3_context c = Z3_mk_context(0); Z3_get_error_msg(c, Z3_OK);]])],
+      [Z3_HAS_ERROR_MSG_CONTEXT=1],
+      [Z3_HAS_ERROR_MSG_CONTEXT=0])
+
+    if test "X$Z3_HAS_ERROR_MSG_CONTEXT" == X1; then
+      AC_DEFINE(HAVE_Z3_GET_ERROR_MSG_NEEDS_CONTEXT, [1], [Z3 needs a Z3_context passed to Z3_get_error_msg()])
+      AC_MSG_RESULT([yes])
+    else
+      AC_MSG_RESULT([no])
+    fi
+
+    Z3_LDFLAGS="${Z3_LDFLAGS} -lz3"
+    AC_MSG_NOTICE([Using Z3 solver backend])
+    CPPFLAGS="$old_CPPFLAGS"
+    AC_DEFINE(ENABLE_Z3, [1], [Using Z3 Solver backend])
+else
+    AC_MSG_NOTICE([Not using Z3 solver backend])
+fi
+
+AC_SUBST(ENABLE_Z3)
+AC_SUBST(Z3_CFLAGS)
+AC_SUBST(Z3_LDFLAGS)
+
+
+dnl **************************************************************************
+dnl User option to enable metaSMT constraint solvers and to specify the
 dnl the location of the metaSMT root directory
 dnl **************************************************************************
 
 AC_ARG_WITH(metasmt,
   AS_HELP_STRING([--with-metasmt],
     [Location of metaSMT installation directory]),,)
-
 if test X$with_metasmt = X ; then
-  AC_SUBST(ENABLE_METASMT,[[0]])
+  ENABLE_METASMT=0
+  AC_MSG_NOTICE([Not using MetaSMT solver backend])
 else
-  metasmt_root=`cd $with_metasmt 2> /dev/null; pwd`
+  metasmt_root=`(cd $with_metasmt && pwd) 2> /dev/null`
+  #Check for bad path
+  if test "X$metasmt_root" = X ; then
+    AC_MSG_ERROR([Cannot access path $with_metasmt passed to --with-metasmt])
+  fi
 
   dnl AC_LANG(C++)
   old_CPPFLAGS="$CPPFLAGS"
-  old_LDFLAGS="$LDFLAGS"  
+  old_LDFLAGS="$LDFLAGS"
+  old_LIBS="$LIBS"
   CPPFLAGS="$CPPFLAGS -I$metasmt_root/include"
-  LDFLAGS="$LDFLAGS -L$metasmt_root/lib -lmetaSMT"
+  LDFLAGS="$LDFLAGS -L$metasmt_root/lib"
+  LIBS="$LIBS -lmetaSMT"
+
   AC_CHECK_HEADERS([$metasmt_root/include/metaSMT/DirectSolver_Context.hpp $metasmt_root/include/metaSMT/frontend/QF_BV.hpp],, [
          AC_MSG_ERROR([Unable to use $metasmt_root/include/metaSMT/DirectSolver_Context.hpp header])
   ])
+  AC_MSG_CHECKING([for new_bitvector() in -lmetaSMT])
   AC_LINK_IFELSE(
-      [AC_LANG_PROGRAM([#include $metasmt_root/include/metaSMT/frontend/QF_BV.hpp], [metaSMT::logic::QF_BV::new_bitvector(3)])],
-      [],[AC_MSG_CHECKING([for new_bitvector() in -lmetaSMT])],[AC_MSG_ERROR([Unable to link with libmetaSMT])])  
+      [AC_LANG_PROGRAM([#include <metaSMT/frontend/QF_BV.hpp>], [metaSMT::logic::QF_BV::new_bitvector(3)])],
+            [AC_MSG_RESULT([yes])],
+            [AC_MSG_RESULT([no])
+             AC_MSG_ERROR([Unable to link with libmetaSMT])])
   CPPFLAGS="$old_CPPFLAGS"
   LDFLAGS="$old_LDFLAGS"
+  LIBS="$old_LIBS"
 
-  AC_DEFINE(SUPPORT_METASMT, 1, [Supporting metaSMT API])
-  AC_SUBST(ENABLE_METASMT,[[1]])
+  AC_DEFINE(ENABLE_METASMT, 1, [Enable metaSMT API])
   AC_SUBST(METASMT_ROOT,$metasmt_root)
-  AC_SUBST(REQUIRES_RTTI,[[1]])
+  ENABLE_METASMT=1
+  AC_MSG_NOTICE([Using MetaSMT solver backend])
+fi
+
+AC_SUBST(ENABLE_METASMT)
+
+
+dnl **************************************************************************
+dnl User option to specify the default backend of metaSMT
+dnl **************************************************************************
+
+AC_ARG_WITH(metasmt-default-backend,
+  AS_HELP_STRING([--with-metasmt-default-backend],
+    [Default backend of metaSMT (btor|stp|z3, stp if unspecified)]),,)
+
+if test "X$with_metasmt_default_backend" != X ; then
+  if test "X$ENABLE_METASMT" != X1 ; then
+    AC_MSG_ERROR([--with-metasmt-default-backend requires metaSMT to be enabled])
+  fi
+  if test "$with_metasmt_default_backend" == "btor" ; then
+    METASMT_DEFAULT_BACKEND=BTOR
+    AC_MSG_NOTICE([metaSMT uses Boolector as default backend])
+  fi
+  if test "$with_metasmt_default_backend" == "z3" ; then
+    METASMT_DEFAULT_BACKEND=Z3
+    AC_MSG_NOTICE([metaSMT uses Z3 as default backend])
+  fi
+  if test "$with_metasmt_default_backend" == "stp" ; then
+    METASMT_DEFAULT_BACKEND=STP
+    AC_MSG_NOTICE([metaSMT uses STP as default backend])
+  fi
+  if test "X$METASMT_DEFAULT_BACKEND" == X ; then
+    METASMT_DEFAULT_BACKEND=STP
+    AC_MSG_NOTICE([$with_metasmt_default_backend unsupported, metaSMT uses STP as default backend])
+  fi
+else
+  if test "X$ENABLE_METASMT" == X1 ; then
+    METASMT_DEFAULT_BACKEND=STP
+    AC_MSG_NOTICE([No solver specified, metaSMT uses STP as default backend])
+  fi  
+fi
+
+AC_SUBST(METASMT_DEFAULT_BACKEND)
+
+
+dnl **************************************************************************
+dnl Check at least one solver backend is enabled
+dnl **************************************************************************
+
+if test "X$ENABLE_STP$ENABLE_Z3$ENABLE_METASMT" == X000 ; then
+    AC_MSG_ERROR([At least one solver backend must be enabled, try using --with-stp, --with-z3 or --with-metasmt])
 fi
 
 

@@ -5,6 +5,13 @@ include $(LEVEL)/Makefile.config
 # Include LLVM's Master Makefile config and rules.
 include $(LLVM_OBJ_ROOT)/Makefile.config
 
+# Filters out -fstack-protector-strong which is not understood by clang 3.4 or below
+# yet is present in Makefile.config of some distros such as Debian Jessie
+ifeq ($(shell test $(LLVM_VERSION_MAJOR) -le 3 -a $(LLVM_VERSION_MINOR) -le 4; echo $$?),0)
+  CFLAGS := $(filter-out -fstack-protector-strong,$(CFLAGS))
+  CXXFLAGS := $(filter-out -fstack-protector-strong,$(CXXFLAGS))
+endif
+
 # Assertions should be enabled by default for KLEE (but they can still
 # be disabled by running make with DISABLE_ASSERTIONS=1
 DISABLE_ASSERTIONS := 0
@@ -54,7 +61,15 @@ endif
 # This is filename that KLEE will look for when trying to load klee-uclibc
 KLEE_UCLIBC_BCA_NAME="klee-uclibc.bca"
 
-CXX.Flags += $(STP_CFLAGS)
+ifneq ($(ENABLE_STP),0)
+  CXX.Flags += $(STP_CFLAGS)
+  CXX.Flags += -DEXT_HASH_MAP
+endif
+
+ifneq ($(ENABLE_Z3),0)
+  CXX.Flags += $(Z3_CFLAGS)
+endif
+
 CXX.Flags += -DKLEE_DIR=\"$(PROJ_OBJ_ROOT)\" -DKLEE_INSTALL_BIN_DIR=\"$(PROJ_bindir)\"
 CXX.Flags += -DKLEE_INSTALL_RUNTIME_DIR=\"$(BYTECODE_DESTINATION)\"
 
@@ -62,15 +77,17 @@ ifeq ($(ENABLE_UCLIBC),1)
 	CXX.Flags += -DKLEE_UCLIBC_BCA_NAME=\"$(KLEE_UCLIBC_BCA_NAME)\"
 endif
 
-# For STP.
-CXX.Flags += -DEXT_HASH_MAP
-
 # For metaSMT
-ifeq ($(ENABLE_METASMT),1)
-  include $(METASMT_ROOT)/share/metaSMT/metaSMT.makefile
-  LD.Flags += -L$(METASMT_ROOT)/lib
-  CXX.Flags += -DBOOST_HAS_GCC_TR1 -D __STDC_LIMIT_MACROS -D __STDC_FORMAT_MACROS
-  CXX.Flags := $(filter-out -fno-exceptions,$(CXX.Flags))
-  CXX.Flags += $(metaSMT_INCLUDES)
-endif
+include $(PROJ_SRC_ROOT)/MetaSMT.mk
 
+# When building the runtime filter out unwanted flags.
+# that add instrumentatation because KLEE can't handle this.
+ifneq ("X$(MODULE_NAME)$(BYTECODE_LIBRARY)X","XX")
+  # Sanitizer flags.
+  CFLAGS := $(filter-out -fsanitize=%,$(CFLAGS))
+  # Coverag flags.
+  CFLAGS := $(filter-out -fprofile-arcs,$(CFLAGS))
+  CFLAGS := $(filter-out -ftest-coverage,$(CFLAGS))
+  CFLAGS := $(filter-out -coverage,$(CFLAGS))
+  CFLAGS := $(filter-out --coverage,$(CFLAGS))
+endif

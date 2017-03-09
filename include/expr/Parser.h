@@ -202,7 +202,7 @@ namespace expr {
     static bool classof(const QueryCommand *) { return true; }
   };
   
-  /// Parser - Public interface for parsing a .pc language file.
+  /// Parser - Public interface for parsing a .kquery language file.
   class Parser {
   protected:
     Parser();
@@ -228,9 +228,8 @@ namespace expr {
     /// \arg MB - The input data.
     /// \arg Builder - The expression builder to use for constructing
     /// expressions.
-    static Parser *Create(const std::string Name,
-                          const llvm::MemoryBuffer *MB,
-                          ExprBuilder *Builder);
+    static Parser *Create(const std::string Name, const llvm::MemoryBuffer *MB,
+                          ExprBuilder *Builder, bool ClearArrayAfterQuery);
   };
 }
 }

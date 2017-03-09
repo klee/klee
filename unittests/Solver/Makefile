@@ -9,4 +9,12 @@ LINK_COMPONENTS := support
 
 include $(LLVM_SRC_ROOT)/unittests/Makefile.unittest
 
-LIBS += $(STP_LDFLAGS)
+ifneq ($(ENABLE_STP),0)
+  LIBS += $(STP_LDFLAGS)
+endif
+
+ifneq ($(ENABLE_Z3),0)
+  LIBS += $(Z3_LDFLAGS)
+endif
+
+include $(PROJ_SRC_ROOT)/MetaSMT.mk

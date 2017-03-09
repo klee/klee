@@ -18,7 +18,9 @@
 #include "klee/util/ExprVisitor.h"
 #include "klee/Internal/ADT/MapOfSets.h"
 
-#include "SolverStats.h"
+#include "klee/SolverStats.h"
+
+#include "klee/Internal/Support/ErrorHandling.h"
 
 #include "llvm/Support/CommandLine.h"
 
@@ -238,7 +240,11 @@ bool CexCachingSolver::getAssignment(const Query& query, Assignment *&result) {
     }
     
     if (DebugCexCacheCheckBinding)
-      assert(binding->satisfies(key.begin(), key.end()));
+      if (!binding->satisfies(key.begin(), key.end())) {
+        query.dump();
+        binding->dump();
+        klee_error("Generated assignment doesn't match query");
+      }
   } else {
     binding = (Assignment*) 0;
   }

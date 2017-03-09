@@ -13,7 +13,7 @@ DIRS   =
 #
 # Make llvm-lit the default for testing
 #
-all:: check-local
+all:: systemtests-local
 
 # Include other test rules
 include Makefile.tests
@@ -45,17 +45,7 @@ endif
 # Potential support in the future for multiple test suites
 LIT_ALL_TESTSUITES := $(LIT_TESTSUITE)
 
-check-local:: lit.site.cfg
-	$(Verb) $(MAKE) -s clean
-	$(Verb) ( $(ULIMIT) \
-	          $(PYTHON) $(LLVM_SRC_ROOT)/utils/lit/lit.py $(LIT_ARGS) $(LIT_TESTSUITE) )
-	$(Verb) klee_last_path=$$(find . -name klee-last | head -1); \
-	 if [ ! -z "$$klee_last_path" ]; then \
-	  echo "error: one of the tests failed to use --output-dir, found: $$klee_last_path"; \
-	  exit 1; \
-	fi
-
-check-local-all:: lit.site.cfg
+systemtests-local:: lit.site.cfg
 	$(Verb) ( $(ULIMIT) \
 	          $(PYTHON) $(LLVM_SRC_ROOT)/utils/lit/lit.py $(LIT_ARGS) $(LIT_ALL_TESTSUITES) )
 
@@ -82,4 +72,9 @@ lit.site.cfg: lit.site.cfg.in
 	     -e "s#@ENABLE_POSIX_RUNTIME@#$(ENABLE_POSIX_RUNTIME)#g" \
 	     -e "s#@TARGET_TRIPLE@#$(TARGET_TRIPLE)#g" \
 	     -e "s#@HAVE_SELINUX@#$(HAVE_SELINUX)#g" \
+	     -e "s#@ENABLE_STP@#$(ENABLE_STP)#g" \
+	     -e "s#@ENABLE_Z3@#$(ENABLE_Z3)#g" \
+	     -e "s#@NATIVE_CC@#$(CC) $(CFLAGS) -I$(PROJ_SRC_ROOT)/include#g" \
+	     -e "s#@NATIVE_CXX@#$(CXX) $(CXXFLAGS) -I$(PROJ_SRC_ROOT)/include#g" \
+	     -e "s#@LIB_KLEE_RUN_TEST_PATH@#$(SharedLibDir)/$(SharedPrefix)kleeRuntest$(SHLIBEXT)#g" \
 	     $(PROJ_SRC_DIR)/lit.site.cfg.in > $@

@@ -6,12 +6,17 @@ set -e
 STP_LOG="$(pwd)/stp-build.log"
 
 if [ "x${STP_VERSION}" != "x" ]; then
+    # Get Sanitizer flags
+    source ${KLEE_SRC}/.travis/sanitizer_flags.sh
+
     # Build minisat
     git clone https://github.com/stp/minisat
     cd minisat
     mkdir build
     cd build
     MINISAT_DIR=`pwd`
+    CFLAGS="${SANITIZER_C_FLAGS}" \
+    CXXFLAGS="${SANITIZER_CXX_FLAGS}" \
     cmake -DCMAKE_INSTALL_PREFIX=/usr ..
     make
     sudo make install
@@ -23,6 +28,8 @@ if [ "x${STP_VERSION}" != "x" ]; then
     cd build
     # Disabling building of shared libs is a workaround.
     # Don't build against boost because that is broken when mixing packaged boost libraries and gcc 4.8
+    CFLAGS="${SANITIZER_C_FLAGS}" \
+    CXXFLAGS="${SANITIZER_CXX_FLAGS}" \
     cmake -DBUILD_SHARED_LIBS:BOOL=OFF -DENABLE_PYTHON_INTERFACE:BOOL=OFF -DNO_BOOST:BOOL=ON ../src
 
     set +e # Do not exit if build fails because we need to display the log

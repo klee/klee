@@ -37,7 +37,6 @@ void PTree::remove(Node *n) {
   assert(!n->left && !n->right);
   do {
     Node *p = n->parent;
-    delete n;
     if (p) {
       if (n == p->left) {
         p->left = 0;
@@ -46,6 +45,7 @@ void PTree::remove(Node *n) {
         p->right = 0;
       }
     }
+    delete n;
     n = p;
   } while (n && !n->left && !n->right);
 }

@@ -1,0 +1,95 @@
+#ifndef KLEE_CONFIG_CONFIG_H
+#define KLEE_CONFIG_CONFIG_H
+
+/* Enable KLEE DEBUG checks */
+#cmakedefine ENABLE_KLEE_DEBUG @ENABLE_KLEE_DEBUG@
+
+/* Enable metaSMT API */
+#cmakedefine ENABLE_METASMT @ENABLE_METASMT@
+
+/* Using STP Solver backend */
+#cmakedefine ENABLE_STP @ENABLE_STP@
+
+/* Using Z3 Solver backend */
+#cmakedefine ENABLE_Z3 @ENABLE_Z3@
+
+/* Does the platform use __ctype_b_loc, etc. */
+#cmakedefine HAVE_CTYPE_EXTERNALS @HAVE_CTYPE_EXTERNALS@
+
+/* Define to 1 if you have the <gperftools/malloc_extension.h> header file. */
+#cmakedefine HAVE_GPERFTOOLS_MALLOC_EXTENSION_H @HAVE_GPERFTOOLS_MALLOC_EXTENSION_H@
+
+/* Define if mallinfo() is available on this platform. */
+#cmakedefine HAVE_MALLINFO @HAVE_MALLINFO@
+
+/* Define to 1 if you have the <malloc/malloc.h> header file. */
+#cmakedefine HAVE_MALLOC_MALLOC_H @HAVE_MALLOC_MALLOC_H@
+
+/* Define to 1 if you have the `malloc_zone_statistics' function. */
+#cmakedefine HAVE_MALLOC_ZONE_STATISTICS @HAVE_MALLOC_ZONE_STATISTICS@
+
+/* Define to 1 if you have the <selinux/selinux.h> header file. */
+#cmakedefine HAVE_SELINUX_SELINUX_H @HAVE_SELINUX_SELINUX_H@
+
+/* Define to 1 if you have the <sys/acl.h> header file. */
+#cmakedefine HAVE_SYS_ACL_H @HAVE_SYS_ACL_H@
+
+/* Define to 1 if you have the <sys/capability.h> header file. */
+#cmakedefine HAVE_SYS_CAPABILITY_H @HAVE_SYS_CAPABILITY_H@
+
+/* Z3 needs a Z3_context passed to Z3_get_error_msg() */
+#cmakedefine HAVE_Z3_GET_ERROR_MSG_NEEDS_CONTEXT @HAVE_Z3_GET_ERROR_MSG_NEEDS_CONTEXT@
+
+/* Define to 1 if you have the <zlib.h> header file. */
+#cmakedefine HAVE_ZLIB_H @HAVE_ZLIB_H@
+
+/* Enable time stamping the sources */
+#cmakedefine KLEE_ENABLE_TIMESTAMP @KLEE_ENABLE_TIMESTAMP@
+
+/* Define to empty or 'const' depending on how SELinux qualifies its security
+   context parameters. */
+#cmakedefine KLEE_SELINUX_CTX_CONST @KLEE_SELINUX_CTX_CONST@
+
+/* LLVM major version number */
+#cmakedefine LLVM_VERSION_MAJOR @LLVM_VERSION_MAJOR@
+
+/* LLVM minor version number */
+#cmakedefine LLVM_VERSION_MINOR @LLVM_VERSION_MINOR@
+
+/* Define to the address where bug reports for this package should be sent. */
+#cmakedefine PACKAGE_BUGREPORT @PACKAGE_BUGREPORT@
+
+/* Define to the full name of this package. */
+#cmakedefine PACKAGE_NAME @PACKAGE_NAME@
+
+/* Define to the full name and version of this package. */
+#cmakedefine PACKAGE_STRING @PACKAGE_STRING@
+
+/* Define to the one symbol short name of this package. */
+#cmakedefine PACKAGE_TARNAME @PACKAGE_TARNAME@
+
+/* Define to the home page for this package. */
+#cmakedefine PACKAGE_URL @PACKAGE_URL@
+
+/* Define to the version of this package. */
+#cmakedefine PACKAGE_VERSION @PACKAGE_VERSION@
+
+/* klee-uclibc is supported */
+#cmakedefine SUPPORT_KLEE_UCLIBC @SUPPORT_KLEE_UCLIBC@
+
+/* Configuration type of KLEE's runtime libraries */
+#define RUNTIME_CONFIGURATION "@KLEE_RUNTIME_BUILD_TYPE@"
+
+/* FIXME: This is a stupid name. Also this is only used for figuring out where
+the runtime directory is in the build tree. Instead we should just define a
+macro for that. That would simplify the C++ code.  */
+/* Root of the KLEE binary build directory */
+#define KLEE_DIR "@CMAKE_BINARY_DIR@"
+
+/* Install directory for KLEE binaries */
+#define KLEE_INSTALL_BIN_DIR "@CMAKE_INSTALL_FULL_BINDIR@"
+
+/* Install directory for KLEE runtime */
+#define KLEE_INSTALL_RUNTIME_DIR "@KLEE_INSTALL_RUNTIME_DIR@"
+
+#endif

@@ -83,6 +83,13 @@ ref<Expr> Expr::createTempRead(const Array *array, Expr::Width w) {
   }
 }
 
+int Expr::compare(const Expr &b) const {
+  static ExprEquivSet equivs;
+  int r = compare(b, equivs);
+  equivs.clear();
+  return r;
+}
+
 // returns 0 if b is structurally equal to *this
 int Expr::compare(const Expr &b, ExprEquivSet &equivs) const {
   if (this == &b) return 0;
@@ -481,7 +488,23 @@ ref<Expr>  NotOptimizedExpr::create(ref<Expr> src) {
 
 /***/
 
-extern "C" void vc_DeleteExpr(void*);
+Array::Array(const std::string &_name, uint64_t _size,
+             const ref<ConstantExpr> *constantValuesBegin,
+             const ref<ConstantExpr> *constantValuesEnd, Expr::Width _domain,
+             Expr::Width _range)
+    : name(_name), size(_size), domain(_domain), range(_range),
+      constantValues(constantValuesBegin, constantValuesEnd) {
+
+  assert((isSymbolicArray() || constantValues.size() == size) &&
+         "Invalid size for constant array!");
+  computeHash();
+#ifndef NDEBUG
+  for (const ref<ConstantExpr> *it = constantValuesBegin;
+       it != constantValuesEnd; ++it)
+    assert((*it)->getWidth() == getRange() &&
+           "Invalid initial constant value!");
+#endif // NDEBUG
+}
 
 Array::~Array() {
 }
@@ -494,41 +517,6 @@ unsigned Array::computeHash() {
   hashValue = res;
   return hashValue; 
 }
-
-std::map<unsigned, std::vector<const Array *> *> Array::symbolicArraySingletonMap;
-
-const Array * Array::CreateArray(const std::string &_name, uint64_t _size,
-                                 const ref<ConstantExpr> *constantValuesBegin,
-                                 const ref<ConstantExpr> *constantValuesEnd,
-                                 Expr::Width _domain,
-				 Expr::Width _range) {
-
-  const Array * array = new Array(_name, _size, constantValuesBegin, constantValuesEnd, _domain,_range);
-  if (array->constantValues.size() == 0) { // symbolic array
-    unsigned hash = array->hash();
-    std::vector<const Array *> * bucket = Array::symbolicArraySingletonMap[hash];
-    if (bucket){
-      for (std::vector<const Array*>::const_iterator it = bucket->begin();
-	   it != bucket->end(); it ++){
-        const Array* prospect = *it;
-	if (prospect->size == array->size && prospect->name == array->name){
-    	  delete array;
-    	  return prospect;
-    	}
-      }
-      bucket->push_back(array);
-      return array;
-    } else {
-      bucket = new std::vector<const Array *>();
-      bucket->push_back(array);
-      Array::symbolicArraySingletonMap[hash] = bucket;
-      return array;
-    }
-  } else { // concrete array
-    return array;
-  }
-}
-
 /***/
 
 ref<Expr> ReadExpr::create(const UpdateList &ul, ref<Expr> index) {
@@ -541,6 +529,7 @@ ref<Expr> ReadExpr::create(const UpdateList &ul, ref<Expr> index) {
   // a smart UpdateList so it is not worth rescanning.
 
   const UpdateNode *un = ul.head;
+  bool updateListHasSymbolicWrites = false;
   for (; un; un=un->next) {
     ref<Expr> cond = EqExpr::create(index, un->index);
     
@@ -548,7 +537,19 @@ ref<Expr> ReadExpr::create(const UpdateList &ul, ref<Expr> index) {
       if (CE->isTrue())
         return un->value;
     } else {
+      updateListHasSymbolicWrites = true;
       break;
+    }
+  }
+
+  if (ul.root->isConstantArray() && !updateListHasSymbolicWrites) {
+    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(index)) {
+      assert(CE->getWidth() <= 64 && "Index too large");
+      uint64_t concreteIndex = CE->getZExtValue();
+      uint64_t size = ul.root->size;
+      if (concreteIndex < size) {
+        return ul.root->constantValues[concreteIndex];
+      }
     }
   }
 

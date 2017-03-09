@@ -1,3 +1,12 @@
+//===-- main.cpp ------------------------------------------------*- C++ -*-===//
+//
+//                     The KLEE Symbolic Virtual Machine
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
 #include "expr/Lexer.h"
 #include "expr/Parser.h"
 
@@ -35,28 +44,6 @@
 using namespace llvm;
 using namespace klee;
 using namespace klee::expr;
-
-#ifdef SUPPORT_METASMT
-
-#include <metaSMT/DirectSolver_Context.hpp>
-#include <metaSMT/backend/Z3_Backend.hpp>
-#include <metaSMT/backend/Boolector.hpp>
-
-#define Expr VCExpr
-#define Type VCType
-#define STP STP_Backend
-#include <metaSMT/backend/STP.hpp>
-#undef Expr
-#undef Type
-#undef STP
-
-using namespace metaSMT;
-using namespace metaSMT::solver;
-
-#endif /* SUPPORT_METASMT */
-
-
-
 
 namespace {
   llvm::cl::opt<std::string>
@@ -104,13 +91,15 @@ namespace {
                          "Fold constants and simplify expressions."),
               clEnumValEnd));
 
-  cl::opt<bool>
-  UseDummySolver("use-dummy-solver",
-		   cl::init(false));
 
   llvm::cl::opt<std::string> directoryToWriteQueryLogs("query-log-dir",llvm::cl::desc("The folder to write query logs to. Defaults is current working directory."),
 		                                               llvm::cl::init("."));
 
+  llvm::cl::opt<bool> ClearArrayAfterQuery(
+      "clear-array-decls-after-query",
+      llvm::cl::desc("We discard the previous array declarations after a query "
+                     "is performed. Default: false"),
+      llvm::cl::init(false));
 }
 
 static std::string getQueryLogPath(const char filename[])
@@ -176,7 +165,7 @@ static bool PrintInputAST(const char *Filename,
                           const MemoryBuffer *MB,
                           ExprBuilder *Builder) {
   std::vector<Decl*> Decls;
-  Parser *P = Parser::Create(Filename, MB, Builder);
+  Parser *P = Parser::Create(Filename, MB, Builder, ClearArrayAfterQuery);
   P->SetMaxErrors(20);
 
   unsigned NumQueries = 0;
@@ -209,7 +198,7 @@ static bool EvaluateInputAST(const char *Filename,
                              const MemoryBuffer *MB,
                              ExprBuilder *Builder) {
   std::vector<Decl*> Decls;
-  Parser *P = Parser::Create(Filename, MB, Builder);
+  Parser *P = Parser::Create(Filename, MB, Builder, ClearArrayAfterQuery);
   P->SetMaxErrors(20);
   while (Decl *D = P->ParseTopLevelDecl()) {
     Decls.push_back(D);
@@ -224,42 +213,9 @@ static bool EvaluateInputAST(const char *Filename,
   if (!success)
     return false;
 
-  // FIXME: Support choice of solver.
-  Solver *coreSolver = NULL; // 
-  
-#ifdef SUPPORT_METASMT
-  if (UseMetaSMT != METASMT_BACKEND_NONE) {
-    
-    std::string backend;
-    
-    switch (UseMetaSMT) {
-          case METASMT_BACKEND_STP:
-              backend = "STP"; 
-              coreSolver = new MetaSMTSolver< DirectSolver_Context < STP_Backend > >(UseForkedCoreSolver, CoreSolverOptimizeDivides);
-              break;
-          case METASMT_BACKEND_Z3:
-              backend = "Z3";
-              coreSolver = new MetaSMTSolver< DirectSolver_Context < Z3_Backend > >(UseForkedCoreSolver, CoreSolverOptimizeDivides);
-              break;
-          case METASMT_BACKEND_BOOLECTOR:
-              backend = "Boolector";
-              coreSolver = new MetaSMTSolver< DirectSolver_Context < Boolector > >(UseForkedCoreSolver, CoreSolverOptimizeDivides);
-              break;
-          default:
-              assert(false);
-              break;
-    };
-    llvm::errs() << "Starting MetaSMTSolver(" << backend << ") ...\n";
-  }
-  else {
-    coreSolver = UseDummySolver ? createDummySolver() : new STPSolver(UseForkedCoreSolver);
-  }
-#else
-  coreSolver = UseDummySolver ? createDummySolver() : new STPSolver(UseForkedCoreSolver);
-#endif /* SUPPORT_METASMT */
-  
-  
-  if (!UseDummySolver) {
+  Solver *coreSolver = klee::createCoreSolver(CoreSolverToUse);
+
+  if (CoreSolverToUse != DUMMY_SOLVER) {
     if (0 != MaxCoreSolverTime) {
       coreSolver->setCoreSolverTimeout(MaxCoreSolverTime);
     }
@@ -268,8 +224,8 @@ static bool EvaluateInputAST(const char *Filename,
   Solver *S = constructSolverChain(coreSolver,
                                    getQueryLogPath(ALL_QUERIES_SMT2_FILE_NAME),
                                    getQueryLogPath(SOLVER_QUERIES_SMT2_FILE_NAME),
-                                   getQueryLogPath(ALL_QUERIES_PC_FILE_NAME),
-                                   getQueryLogPath(SOLVER_QUERIES_PC_FILE_NAME));
+                                   getQueryLogPath(ALL_QUERIES_KQUERY_FILE_NAME),
+                                   getQueryLogPath(SOLVER_QUERIES_KQUERY_FILE_NAME));
 
   unsigned Index = 0;
   for (std::vector<Decl*>::iterator it = Decls.begin(),
@@ -376,8 +332,8 @@ static bool printInputAsSMTLIBv2(const char *Filename,
 {
 	//Parse the input file
 	std::vector<Decl*> Decls;
-	Parser *P = Parser::Create(Filename, MB, Builder);
-	P->SetMaxErrors(20);
+        Parser *P = Parser::Create(Filename, MB, Builder, ClearArrayAfterQuery);
+        P->SetMaxErrors(20);
 	while (Decl *D = P->ParseTopLevelDecl())
 	{
 		Decls.push_back(D);

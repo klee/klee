@@ -10,6 +10,7 @@
 #ifndef KLEE_SOLVER_H
 #define KLEE_SOLVER_H
 
+#include "klee/CommandLine.h" // FIXME: This is just for CoreSolverType
 #include "klee/Expr.h"
 
 #include <vector>
@@ -42,6 +43,9 @@ namespace klee {
     Query negateExpr() const {
       return withExpr(Expr::createIsZero(expr));
     }
+
+    /// Dump query
+    void dump() const ;
   };
 
   class Solver {
@@ -199,6 +203,7 @@ namespace klee {
     virtual void setCoreSolverTimeout(double timeout);
   };
 
+#ifdef ENABLE_STP
   /// STPSolver - A complete solver based on STP.
   class STPSolver : public Solver {
   public:
@@ -218,9 +223,27 @@ namespace klee {
     /// is off.
     virtual void setCoreSolverTimeout(double timeout);
   };
+#endif // ENABLE_STP
 
-  
-#ifdef SUPPORT_METASMT
+#ifdef ENABLE_Z3
+  /// Z3Solver - A solver complete solver based on Z3
+  class Z3Solver : public Solver {
+  public:
+    /// Z3Solver - Construct a new Z3Solver.
+    Z3Solver();
+
+    /// Get the query in SMT-LIBv2 format.
+    /// \return A C-style string. The caller is responsible for freeing this.
+    virtual char *getConstraintLog(const Query &);
+
+    /// setCoreSolverTimeout - Set constraint solver timeout delay to the given
+    /// value; 0
+    /// is off.
+    virtual void setCoreSolverTimeout(double timeout);
+  };
+#endif // ENABLE_Z3
+
+#ifdef ENABLE_METASMT
   
   template<typename SolverContext>
   class MetaSMTSolver : public Solver {
@@ -232,7 +255,7 @@ namespace klee {
     virtual void setCoreSolverTimeout(double timeout);
 };
 
-#endif /* SUPPORT_METASMT */
+#endif /* ENABLE_METASMT */
 
   /* *** */
 
@@ -273,9 +296,9 @@ namespace klee {
   /// \param s - The underlying solver to use.
   Solver *createIndependentSolver(Solver *s);
   
-  /// createPCLoggingSolver - Create a solver which will forward all queries
-  /// after writing them to the given path in .pc format.
-  Solver *createPCLoggingSolver(Solver *s, std::string path,
+  /// createKQueryLoggingSolver - Create a solver which will forward all queries
+  /// after writing them to the given path in .kquery format.
+  Solver *createKQueryLoggingSolver(Solver *s, std::string path,
                                 int minQueryTimeToLog);
 
   /// createSMTLIBLoggingSolver - Create a solver which will forward all queries
@@ -287,7 +310,9 @@ namespace klee {
   /// createDummySolver - Create a dummy solver implementation which always
   /// fails.
   Solver *createDummySolver();
-  
+
+  // Create a solver based on the supplied ``CoreSolverType``.
+  Solver *createCoreSolver(CoreSolverType cst);
 }
 
 #endif

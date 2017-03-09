@@ -406,8 +406,8 @@ void ExecutionState::dumpStack(llvm::raw_ostream &out) const {
 
       out << ai->getName().str();
       // XXX should go through function
-      ref<Expr> value = sf.locals[sf.kf->getArgRegister(index++)].value; 
-      if (isa<ConstantExpr>(value))
+      ref<Expr> value = sf.locals[sf.kf->getArgRegister(index++)].value;
+      if (value.get() && isa<ConstantExpr>(value))
         out << "=" << value;
     }
     out << ")";

@@ -1,0 +1,17 @@
+//===-- CompileTimeInfo.h ---------------------------------------*- C++ -*-===//
+//
+//                     The KLEE Symbolic Virtual Machine
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
+// @AUTO_GEN_MSG@
+#ifndef KLEE_COMPILE_TIME_INFO_H
+#define KLEE_COMPILE_TIME_INFO_H
+
+#define KLEE_BUILD_MODE "@CMAKE_BUILD_TYPE@ (Asserts: @ENABLE_KLEE_ASSERTS@)"
+#define KLEE_BUILD_REVISION "@KLEE_GIT_SHA1HASH@"
+
+#endif

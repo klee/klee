@@ -1,0 +1,52 @@
+#===--------------------------------------------------------*- Makefile -*--===#
+#
+#                     The KLEE Symbolic Virtual Machine
+#
+# This file is distributed under the University of Illinois Open Source
+# License. See LICENSE.TXT for details.
+#
+#===------------------------------------------------------------------------===#
+#
+# @AUTO_GEN_MSG@
+#
+#===------------------------------------------------------------------------===#
+LLVMCC := @LLVMCC@
+LLVM_LINK := @LLVM_LINK@
+LLVM_AR := @LLVM_AR@
+LLVM_VERSION_MAJOR := @LLVM_VERSION_MAJOR@
+LLVM_VERSION_MINOR := @LLVM_VERSION_MINOR@
+
+ROOT_SRC := @CMAKE_CURRENT_SOURCE_DIR@
+RUNTIME_CMAKE_BINARY_DIR := @CMAKE_CURRENT_BINARY_DIR@
+ROOT_OBJ := @CMAKE_CURRENT_BINARY_DIR@/runtime_build_@KLEE_RUNTIME_BUILD_TYPE@/
+
+# FIXME: For legacy reasons this is where the libraries need to end up
+ARCHIVE_DEST := @KLEE_RUNTIME_DIRECTORY@
+MODULE_DEST := $(ARCHIVE_DEST)
+
+# Build type
+IS_RELEASE := @RUNTIME_IS_RELEASE@
+ASSERTIONS_ENABLED := @RUNTIME_HAS_ASSERTIONS@
+DEBUG_SYMBOLS_ENABLED := @RUNTIME_HAS_DEBUG_SYMBOLS@
+RUNTIME_CONFIG_STRING := @KLEE_RUNTIME_BUILD_TYPE@
+
+# Optional features
+ENABLE_POSIX_RUNTIME := @BUILD_POSIX_RUNTIME@
+
+# FIXME: Get rid of this!
+USE_MODULE_INSTEAD_OF_BCA := @USE_RUNTIME_BINARY_TYPE_HACK@
+
+# Commands
+MKDIR := mkdir
+RM := rm
+CMP := cmp
+
+# Compiler flags
+LLVMCC.Flags += $(LLVMCC.ExtraFlags) \
+	-I@CMAKE_SOURCE_DIR@/include \
+	-I@CMAKE_BINARY_DIR@/include \
+	-emit-llvm \
+	-std=gnu89 \
+	-D_DEBUG -D_GNU_SOURCE -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS
+
+LLVMCC.Warnings += -Wall -Wwrite-strings

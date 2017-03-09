@@ -12,6 +12,9 @@ cscope.*
 *.out
 *.status
 
+# In source build files
+docs/doxygen.cfg
+include/klee/Config/CompileTimeInfo.h
 *.config
 
 config.h
@@ -19,3 +22,8 @@ site.exp
 
 # Site file for llvm-lit
 lit.site.cfg
+
+# Autoconf files
+autoconf/aclocal.m4
+autoconf/autom4te.cache/
+autom4te.cache/

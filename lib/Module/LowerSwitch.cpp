@@ -44,7 +44,8 @@ bool LowerSwitchPass::runOnFunction(Function &F) {
   bool changed = false;
 
   for (Function::iterator I = F.begin(), E = F.end(); I != E; ) {
-    BasicBlock *cur = I++; // Advance over block so we don't traverse new blocks
+    BasicBlock *cur = static_cast<BasicBlock *>(I);
+    I++; // Advance over block so we don't traverse new blocks
 
     if (SwitchInst *SI = dyn_cast<SwitchInst>(cur->getTerminator())) {
       changed = true;
@@ -66,7 +67,7 @@ void LowerSwitchPass::switchConvert(CaseItr begin, CaseItr end,
   
   // iterate through all the cases, creating a new BasicBlock for each
   for (CaseItr it = begin; it < end; ++it) {
-    BasicBlock *newBlock = BasicBlock::Create(getGlobalContext(), "NodeBlock");
+    BasicBlock *newBlock = BasicBlock::Create(F->getContext(), "NodeBlock");
     Function::iterator FI = origBlock;
     F->getBasicBlockList().insert(++FI, newBlock);
     
@@ -102,7 +103,7 @@ void LowerSwitchPass::processSwitchInst(SwitchInst *SI) {
 
   // Create a new, empty default block so that the new hierarchy of
   // if-then statements go to this and the PHI nodes are happy.
-  BasicBlock* newDefault = BasicBlock::Create(getGlobalContext(), "newDefault");
+  BasicBlock* newDefault = BasicBlock::Create(F->getContext(), "newDefault");
 
   F->getBasicBlockList().insert(defaultBlock, newDefault);
   BranchInst::Create(defaultBlock, newDefault);

@@ -85,8 +85,8 @@ void *ExternalDispatcher::resolveSymbol(const std::string &name) {
   return addr;
 }
 
-ExternalDispatcher::ExternalDispatcher() {
-  dispatchModule = new Module("ExternalDispatcher", getGlobalContext());
+ExternalDispatcher::ExternalDispatcher(LLVMContext &ctx) {
+  dispatchModule = new Module("ExternalDispatcher", ctx);
 
   std::string error;
   executionEngine = ExecutionEngine::createJIT(dispatchModule, &error);
@@ -195,6 +195,7 @@ Function *ExternalDispatcher::createDispatcher(Function *target, Instruction *in
   if (!resolveSymbol(target->getName()))
     return 0;
 
+  LLVMContext &ctx = target->getContext();
   CallSite cs;
   if (inst->getOpcode()==Instruction::Call) {
     cs = CallSite(cast<CallInst>(inst));
@@ -206,20 +207,21 @@ Function *ExternalDispatcher::createDispatcher(Function *target, Instruction *in
 
   std::vector<LLVM_TYPE_Q Type*> nullary;
   
-  Function *dispatcher = Function::Create(FunctionType::get(Type::getVoidTy(getGlobalContext()), 
+  // MCJIT functions need unique names, or wrong function can be called
+  Function *dispatcher = Function::Create(FunctionType::get(Type::getVoidTy(ctx),
 							    nullary, false),
 					  GlobalVariable::ExternalLinkage, 
-					  "",
+					  "dispatcher_" + target->getName().str(),
 					  dispatchModule);
 
 
-  BasicBlock *dBB = BasicBlock::Create(getGlobalContext(), "entry", dispatcher);
+  BasicBlock *dBB = BasicBlock::Create(ctx, "entry", dispatcher);
 
   // Get a Value* for &gTheArgsP, as an i64**.
   Instruction *argI64sp = 
-    new IntToPtrInst(ConstantInt::get(Type::getInt64Ty(getGlobalContext()), 
+    new IntToPtrInst(ConstantInt::get(Type::getInt64Ty(ctx),
                                       (uintptr_t) (void*) &gTheArgsP),
-                     PointerType::getUnqual(PointerType::getUnqual(Type::getInt64Ty(getGlobalContext()))),
+                     PointerType::getUnqual(PointerType::getUnqual(Type::getInt64Ty(ctx))),
                      "argsp", dBB);
   Instruction *argI64s = new LoadInst(argI64sp, "args", dBB); 
   
@@ -238,8 +240,7 @@ Function *ExternalDispatcher::createDispatcher(Function *target, Instruction *in
                                (*ai)->getType());
     Instruction *argI64p = 
       GetElementPtrInst::Create(argI64s, 
-                                ConstantInt::get(Type::getInt32Ty(getGlobalContext()), 
-                                                 idx), 
+                                ConstantInt::get(Type::getInt32Ty(ctx), idx),
                                 "", dBB);
 
     Instruction *argp = new BitCastInst(argI64p, PointerType::getUnqual(argTy),
@@ -260,14 +261,14 @@ Function *ExternalDispatcher::createDispatcher(Function *target, Instruction *in
 #else
   Instruction *result = CallInst::Create(dispatchTarget, args, args+i, "", dBB);
 #endif
-  if (result->getType() != Type::getVoidTy(getGlobalContext())) {
+  if (result->getType() != Type::getVoidTy(ctx)) {
     Instruction *resp = 
       new BitCastInst(argI64s, PointerType::getUnqual(result->getType()), 
                       "", dBB);
     new StoreInst(result, resp, dBB);
   }
 
-  ReturnInst::Create(getGlobalContext(), dBB);
+  ReturnInst::Create(ctx, dBB);
 
   delete[] args;
 

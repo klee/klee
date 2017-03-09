@@ -21,10 +21,10 @@
 #--------------------------------------------------------------------
 RecursiveTargets := all clean clean-all install uninstall install-bytecode \
                     unitcheck
-LocalTargets     := all-local clean-local clean-all-local check-local \
+LocalTargets     := all-local clean-local clean-all-local systemtests-local \
                     install-local printvars uninstall-local \
 		    install-bytecode-local
-TopLevelTargets  := check dist dist-check dist-clean dist-gzip dist-bzip2 \
+TopLevelTargets  := check systemtests dist dist-check dist-clean dist-gzip dist-bzip2 \
                     dist-zip unittests
 UserTargets      := $(RecursiveTargets) $(LocalTargets) $(TopLevelTargets)
 InternalTargets  := preconditions distdir dist-hook
@@ -1622,12 +1622,12 @@ $(ObjDir)/%.s: %.m $(ObjDir)/.dir $(BUILT_SOURCES)
 ifdef DEBUG_RUNTIME
 $(ObjectsBC): $(ObjDir)/%.bc: $(ObjDir)/%.ll $(LLVMAS) $(LOPT)
 	$(Echo) "Compiling $*.ll to $*.bc for $(BuildMode) build (bytecode)"
-	$(Verb) $(LLVMAS) $< -o - | $(LOPT) -std-compile-opts -o $@
+	$(Verb) $(LLVMAS) $< -o - | $(LOPT) -O3 -o $@
 else
 $(ObjectsBC): $(ObjDir)/%.bc: $(ObjDir)/%.ll $(LLVMAS) $(LOPT)
 	$(Echo) "Compiling $*.ll to $*.bc for $(BuildMode) build (bytecode)"
 	$(Verb) $(LLVMAS) $< -o - | \
-	   $(LOPT) -std-compile-opts -strip-debug -o $@
+	   $(LOPT) -O3 -strip-debug -o $@
 endif
 
 
@@ -1856,41 +1856,20 @@ endif
 endif
 
 ###############################################################################
+# Global target to run all tests
+###############################################################################
+check:: systemtests unittests
+
+###############################################################################
 # CHECK: Running the test suite
 ###############################################################################
 
-check::
+systemtests::
 	$(Verb) if test -d "$(PROJ_OBJ_ROOT)/test" ; then \
 	  if test -f "$(PROJ_OBJ_ROOT)/test/Makefile" ; then \
 	    $(EchoCmd) Running test suite ; \
-	    $(MAKE) -C $(PROJ_OBJ_ROOT)/test check-local \
+	    $(MAKE) -C $(PROJ_OBJ_ROOT)/test systemtests-local \
 	      TESTSUITE=$(TESTSUITE) ; \
-	  else \
-	    $(EchoCmd) No Makefile in test directory ; \
-	  fi ; \
-	else \
-	  $(EchoCmd) No test directory ; \
-	fi
-
-check-lit:: check
-
-check-dg::
-	$(Verb) if test -d "$(PROJ_OBJ_ROOT)/test" ; then \
-	  if test -f "$(PROJ_OBJ_ROOT)/test/Makefile" ; then \
-	    $(EchoCmd) Running test suite ; \
-	    $(MAKE) -C $(PROJ_OBJ_ROOT)/test check-local-dg ; \
-	  else \
-	    $(EchoCmd) No Makefile in test directory ; \
-	  fi ; \
-	else \
-	  $(EchoCmd) No test directory ; \
-	fi
-
-check-all::
-	$(Verb) if test -d "$(PROJ_OBJ_ROOT)/test" ; then \
-	  if test -f "$(PROJ_OBJ_ROOT)/test/Makefile" ; then \
-	    $(EchoCmd) Running test suite ; \
-	    $(MAKE) -C $(PROJ_OBJ_ROOT)/test check-local-all ; \
 	  else \
 	    $(EchoCmd) No Makefile in test directory ; \
 	  fi ; \
@@ -2001,7 +1980,7 @@ dist-check:: $(DistTarGZip)
 	  ../$(DistName)/configure --prefix="$(DistCheckDir)/install" \
 	    --srcdir=../$(DistName) $(DIST_CHECK_CONFIG_OPTIONS) && \
 	  $(MAKE) all && \
-	  $(MAKE) check && \
+	  $(MAKE) systemtests && \
 	  $(MAKE) unittests && \
 	  $(MAKE) install && \
 	  $(MAKE) uninstall && \

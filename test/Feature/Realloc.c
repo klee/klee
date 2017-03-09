@@ -1,6 +1,6 @@
 // RUN: %llvmgcc %s -emit-llvm -O0 -c -o %t1.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --exit-on-error %t1.bc 2>&1 | FileCheck %s
+// RUN: %klee --output-dir=%t.klee-out --exit-on-error --warnings-only-to-file=false %t1.bc 2>&1 | FileCheck %s
 
 #include <assert.h>
 #include <stdlib.h>

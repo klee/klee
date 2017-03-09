@@ -78,8 +78,8 @@ static void __create_new_dfile(exe_disk_file_t *dfile, unsigned size,
   klee_posix_prefer_cex(s, s->st_dev == defaults->st_dev);
   klee_posix_prefer_cex(s, s->st_rdev == defaults->st_rdev);
   klee_posix_prefer_cex(s, (s->st_mode&0700) == 0600);
-  klee_posix_prefer_cex(s, (s->st_mode&0070) == 0020);
-  klee_posix_prefer_cex(s, (s->st_mode&0007) == 0002);
+  klee_posix_prefer_cex(s, (s->st_mode&0070) == 0040);
+  klee_posix_prefer_cex(s, (s->st_mode&0007) == 0004);
   klee_posix_prefer_cex(s, (s->st_mode&S_IFMT) == S_IFREG);
   klee_posix_prefer_cex(s, s->st_nlink == 1);
   klee_posix_prefer_cex(s, s->st_uid == defaults->st_uid);
@@ -107,9 +107,9 @@ static unsigned __sym_uint32(const char *name) {
                          writes past the initial file size are discarded 
 			 (file offset is always incremented)
    max_failures: maximum number of system call failures */
-void klee_init_fds(unsigned n_files, unsigned file_length, 
-		   int sym_stdout_flag, int save_all_writes_flag,
-		   unsigned max_failures) {
+void klee_init_fds(unsigned n_files, unsigned file_length,
+                   unsigned stdin_length, int sym_stdout_flag,
+                   int save_all_writes_flag, unsigned max_failures) {
   unsigned k;
   char name[7] = "?-data";
   struct stat64 s;
@@ -124,9 +124,9 @@ void klee_init_fds(unsigned n_files, unsigned file_length,
   }
   
   /* setting symbolic stdin */
-  if (file_length) {
+  if (stdin_length) {
     __exe_fs.sym_stdin = malloc(sizeof(*__exe_fs.sym_stdin));
-    __create_new_dfile(__exe_fs.sym_stdin, file_length, "stdin", &s);
+    __create_new_dfile(__exe_fs.sym_stdin, stdin_length, "stdin", &s);
     __exe_env.fds[0].dfile = __exe_fs.sym_stdin;
   }
   else __exe_fs.sym_stdin = NULL;

@@ -11,7 +11,11 @@
 #define KLEE_KINSTRUCTION_H
 
 #include "klee/Config/Version.h"
+#include "klee/Internal/Module/InstructionInfoTable.h"
+
 #include "llvm/Support/DataTypes.h"
+#include "llvm/Support/raw_ostream.h"
+
 #include <vector>
 
 namespace llvm {
@@ -39,7 +43,9 @@ namespace klee {
     unsigned dest;
 
   public:
-    virtual ~KInstruction(); 
+    virtual ~KInstruction();
+    void printFileLine(llvm::raw_ostream &);
+
   };
 
   struct KGEPInstruction : KInstruction {

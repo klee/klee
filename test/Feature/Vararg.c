@@ -12,7 +12,7 @@ struct triple {
   int first, second, third;
 };
 
-int test1(int x, ...) {
+void test1(int x, ...) {
   va_list ap;
   va_start(ap, x);
   int i32 = va_arg(ap, int);
