@@ -4,14 +4,9 @@
 sudo apt-get -y install libboost1.55-dev libz3 libz3-dev libgmp-dev
 
 # Clone
-git clone git://github.com/hoangmle/metaSMT.git
+git clone -b ${METASMT_VERSION} --single-branch --depth 1 https://github.com/hoangmle/metaSMT.git
 cd metaSMT
-## FIXME: define and use an environment variable METASMT_VERSION instead, when a proper version of metaSMT is available
-git checkout 1f9e399
-git clone git://github.com/agra-uni-bremen/dependencies.git
-cd dependencies
-git checkout 45bc658
-cd ..
+git submodule update --init --depth 1
 
 source ${KLEE_SRC}/.travis/sanitizer_flags.sh
 if [ "X${IS_SANITIZED_BUILD}" != "X0" ]; then
