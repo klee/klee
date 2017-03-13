@@ -3171,8 +3171,8 @@ void Executor::terminateStateOnSubsumption(ExecutionState &state) {
   interpreterHandler->incTotalInstructionsOnSubsumption(
       state.txTreeNode->getInstructionsDepth());
 
-  if (!OnlyOutputStatesCoveringNew || state.coveredNew ||
-      (AlwaysOutputSeeds && seedMap.count(&state))) {
+  if (SubsumedTest && (!OnlyOutputStatesCoveringNew || state.coveredNew ||
+                       (AlwaysOutputSeeds && seedMap.count(&state)))) {
     interpreterHandler->incSubsumptionTerminationTest();
     interpreterHandler->processTestCase(state, 0, "early");
   }

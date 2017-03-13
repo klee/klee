@@ -105,6 +105,11 @@ llvm::cl::opt<bool> InterpolationStat(
     llvm::cl::desc(
         "Displays an execution profile of the interpolation routines."));
 
+llvm::cl::opt<bool>
+SubsumedTest("subsumed-test",
+             llvm::cl::desc("Generates test case of subsumed path."),
+             llvm::cl::init(false));
+
 llvm::cl::opt<bool> NoExistential(
     "no-existential",
     llvm::cl::desc(

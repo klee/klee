@@ -77,6 +77,8 @@ extern llvm::cl::opt<bool> OutputTree;
 
 extern llvm::cl::opt<bool> InterpolationStat;
 
+extern llvm::cl::opt<bool> SubsumedTest;
+
 extern llvm::cl::opt<bool> NoExistential;
 
 extern llvm::cl::opt<int> MaxFailSubsumption;
