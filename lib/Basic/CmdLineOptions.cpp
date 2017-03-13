@@ -132,11 +132,6 @@ llvm::cl::opt<int> MaxFailSubsumption(
     llvm::cl::init(0));
 
 llvm::cl::opt<bool>
-DebugInterpolation("debug-interpolation",
-                   llvm::cl::desc("Dump interpolation debug messages."),
-                   llvm::cl::init(false));
-
-llvm::cl::opt<bool>
 DebugState("debug-state",
            llvm::cl::desc(
                "Dump information on symbolic execution state when visited."),
