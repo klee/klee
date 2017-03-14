@@ -394,11 +394,19 @@ void ExecutionState::debugSubsumption(uint64_t level) {
 }
 
 void ExecutionState::debugSubsumptionOff() {
+#if ENABLE_Z3
   txTreeNode->dependency->debugSubsumptionLevel = DebugSubsumption;
+#else
+  txTreeNode->dependency->debugSubsumptionLevel = 0;
+#endif
 }
 
 void ExecutionState::debugState() { txTreeNode->dependency->debugState = true; }
 
 void ExecutionState::debugStateOff() {
+#if ENABLE_Z3
   txTreeNode->dependency->debugState = DebugState;
+#else
+  txTreeNode->dependency->debugState = false;
+#endif
 }

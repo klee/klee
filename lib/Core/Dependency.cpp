@@ -818,8 +818,13 @@ Dependency::Dependency(Dependency *parent, llvm::DataLayout *_targetData)
     debugSubsumptionLevel = parent->debugSubsumptionLevel;
     debugState = parent->debugState;
   } else {
+#ifdef ENABLE_Z3
     debugSubsumptionLevel = DebugSubsumption;
     debugState = DebugState;
+#else
+    debugSubsumptionLevel = 0;
+    debugState = false;
+#endif
   }
 }
 
