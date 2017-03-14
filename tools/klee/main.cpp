@@ -1743,7 +1743,7 @@ int main(int argc, char **argv, char **envp) {
   stats << "KLEE: done:     early-terminating tests (instruction time limit, solver timeout, max-depth reached) = "
         << handler->getEarlyTerminationTest() << "\n";
 #ifdef ENABLE_Z3
-  if (SubsumedTest && INTERPOLATION_ENABLED)
+  if (!NoSubsumedTest && INTERPOLATION_ENABLED)
     stats << "KLEE: done:     subsumed tests = "
           << handler->getSubsumptionTerminationTest() << "\n";
 #endif
