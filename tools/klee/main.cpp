@@ -1742,9 +1742,11 @@ int main(int argc, char **argv, char **envp) {
         << handler->getNumTestCases() << ", among which\n";
   stats << "KLEE: done:     early-terminating tests (instruction time limit, solver timeout, max-depth reached) = "
         << handler->getEarlyTerminationTest() << "\n";
-  if (INTERPOLATION_ENABLED)
+#ifdef ENABLE_Z3
+  if (SubsumedTest && INTERPOLATION_ENABLED)
     stats << "KLEE: done:     subsumed tests = "
           << handler->getSubsumptionTerminationTest() << "\n";
+#endif
   stats << "KLEE: done:     error tests = "
         << handler->getErrorTerminationTest() << "\n";
   stats << "KLEE: done:     program exit tests = "
