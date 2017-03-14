@@ -2071,10 +2071,10 @@ void TxTree::setCurrentINode(ExecutionState &state) {
 }
 
 void TxTree::remove(TxTreeNode *node) {
+#ifdef ENABLE_Z3
   int debugSubsumptionLevel =
       currentTxTreeNode->dependency->debugSubsumptionLevel;
 
-#ifdef ENABLE_Z3
   TimerStatIncrementer t(removeTime);
   assert(!node->left && !node->right);
   do {
