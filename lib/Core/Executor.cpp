@@ -3172,8 +3172,8 @@ void Executor::terminateStateOnSubsumption(ExecutionState &state) {
       state.txTreeNode->getInstructionsDepth());
 
 #ifdef ENABLE_Z3
-  if (SubsumedTest && (!OnlyOutputStatesCoveringNew || state.coveredNew ||
-                       (AlwaysOutputSeeds && seedMap.count(&state)))) {
+  if (!NoSubsumedTest && (!OnlyOutputStatesCoveringNew || state.coveredNew ||
+                          (AlwaysOutputSeeds && seedMap.count(&state)))) {
     interpreterHandler->incSubsumptionTerminationTest();
     interpreterHandler->processTestCase(state, 0, "early");
   }
