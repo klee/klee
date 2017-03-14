@@ -44,8 +44,8 @@ private:
   /// \brief The location's LLVM value
   llvm::Value *value;
 
-  /// \brief The allocation's stack
-  std::vector<llvm::Instruction *> stack;
+  /// \brief The call history by which the allocation is reached
+  std::vector<llvm::Instruction *> callHistory;
 
   /// \brief The absolute address
   ref<Expr> address;
@@ -73,10 +73,10 @@ private:
   uint64_t size;
 
   MemoryLocation(llvm::Value *_value,
-                 const std::vector<llvm::Instruction *> &_stack,
+                 const std::vector<llvm::Instruction *> &_callHistory,
                  ref<Expr> &_address, ref<Expr> &_base, ref<Expr> &_offset,
                  uint64_t _size)
-      : refCount(0), value(_value), stack(_stack), offset(_offset),
+      : refCount(0), value(_value), callHistory(_callHistory), offset(_offset),
         concreteOffsetBound(_size), size(_size) {
     bool unknownBase = false;
 
@@ -127,11 +127,12 @@ public:
   ~MemoryLocation() {}
 
   static ref<MemoryLocation>
-  create(llvm::Value *value, const std::vector<llvm::Instruction *> &stack,
+  create(llvm::Value *value,
+         const std::vector<llvm::Instruction *> &_callHistory,
          ref<Expr> &address, uint64_t size) {
     ref<Expr> zeroPointer = Expr::createPointer(0);
-    ref<MemoryLocation> ret(
-        new MemoryLocation(value, stack, address, address, zeroPointer, size));
+    ref<MemoryLocation> ret(new MemoryLocation(value, _callHistory, address,
+                                               address, zeroPointer, size));
     return ret;
   }
 
@@ -145,25 +146,27 @@ public:
       ref<Expr> base = loc->base;
       ref<Expr> offset = loc->offset;
       ref<MemoryLocation> ret(new MemoryLocation(
-          loc->value, loc->stack, address, base, offset, loc->size));
+          loc->value, loc->callHistory, address, base, offset, loc->size));
       return ret;
     }
 
     ref<Expr> base = loc->base;
     ref<Expr> newOffset = AddExpr::create(loc->offset, offsetDelta);
-    ref<MemoryLocation> ret(new MemoryLocation(loc->value, loc->stack, address,
-                                               base, newOffset, loc->size));
+    ref<MemoryLocation> ret(new MemoryLocation(
+        loc->value, loc->callHistory, address, base, newOffset, loc->size));
     return ret;
   }
 
-  int compareContext(llvm::Value *otherValue,
-                     const std::vector<llvm::Instruction *> &_stack) const {
+  int
+  compareContext(llvm::Value *otherValue,
+                 const std::vector<llvm::Instruction *> &_callHistory) const {
     if (value == otherValue) {
       // Please note the use of reverse iterator here, which improves
       // performance.
       for (std::vector<llvm::Instruction *>::const_reverse_iterator
-               it1 = stack.rbegin(),
-               ie1 = stack.rend(), it2 = _stack.rbegin(), ie2 = _stack.rend();
+               it1 = callHistory.rbegin(),
+               ie1 = callHistory.rend(), it2 = _callHistory.rbegin(),
+               ie2 = _callHistory.rend();
            ; ++it1, ++it2) {
         if (it1 == ie1) {
           if (it2 == ie2) {
@@ -189,10 +192,12 @@ public:
     return 3;
   }
 
-  bool contextIsPrefixOf(const std::vector<llvm::Instruction *> &_stack) const {
+  bool contextIsPrefixOf(const std::vector<llvm::Instruction *> &_callHistory)
+      const {
     for (std::vector<llvm::Instruction *>::const_iterator
-             it1 = stack.begin(),
-             ie1 = stack.end(), it2 = _stack.begin(), ie2 = _stack.end();
+             it1 = callHistory.begin(),
+             ie1 = callHistory.end(), it2 = _callHistory.begin(),
+             ie2 = _callHistory.end();
          it1 != ie1; ++it1, ++it2) {
       if (it2 == ie2 || (*it1) != (*it2)) {
         return false;
@@ -202,7 +207,7 @@ public:
   }
 
   int compare(const MemoryLocation &other) const {
-    int res = compareContext(other.value, other.stack);
+    int res = compareContext(other.value, other.callHistory);
     if (res)
       return res;
 
@@ -240,7 +245,9 @@ public:
     return symbolicOffsetBounds;
   }
 
-  const std::vector<llvm::Instruction *> &getStack() const { return stack; }
+  const std::vector<llvm::Instruction *> &getCallHistory() const {
+    return callHistory;
+  }
 
   uint64_t getConcreteOffsetBound() const { return concreteOffsetBound; }
 
@@ -294,7 +301,7 @@ private:
   std::map<ref<VersionedValue>, ref<MemoryLocation> > sources;
 
   /// \brief The context of this value
-  std::vector<llvm::Instruction *> stack;
+  std::vector<llvm::Instruction *> callHistory;
 
   /// \brief Do not compute bounds in interpolation of this value if it was a
   /// pointer; instead, use exact address
@@ -311,10 +318,10 @@ private:
   std::set<std::string> coreReasons;
 
   VersionedValue(llvm::Value *value,
-                 const std::vector<llvm::Instruction *> &_stack,
+                 const std::vector<llvm::Instruction *> &_callHistory,
                  ref<Expr> _valueExpr)
       : refCount(0), value(value), valueExpr(_valueExpr), core(false),
-        id(reinterpret_cast<uint64_t>(this)), stack(_stack),
+        id(reinterpret_cast<uint64_t>(this)), callHistory(_callHistory),
         doNotInterpolateBound(false) {}
 
   /// \brief Print the content of the object, but without showing its source
@@ -338,9 +345,11 @@ public:
   ~VersionedValue() { locations.clear(); }
 
   static ref<VersionedValue>
-  create(llvm::Value *value, const std::vector<llvm::Instruction *> &stack,
+  create(llvm::Value *value,
+         const std::vector<llvm::Instruction *> &_callHistory,
          ref<Expr> valueExpr) {
-    ref<VersionedValue> vvalue(new VersionedValue(value, stack, valueExpr));
+    ref<VersionedValue> vvalue(
+        new VersionedValue(value, _callHistory, valueExpr));
     return vvalue;
   }
 
@@ -399,7 +408,7 @@ public:
 
   llvm::Value *getValue() const { return value; }
 
-  std::vector<llvm::Instruction *> &getStack() { return stack; }
+  std::vector<llvm::Instruction *> &getCallHistory() { return callHistory; }
 
   std::set<std::string> &getReasons() { return coreReasons; }
 

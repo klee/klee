@@ -87,8 +87,8 @@ MemoryLocation::create(ref<MemoryLocation> loc,
       ShadowArray::getShadowExpression(loc->address, replacements)),
       _base(ShadowArray::getShadowExpression(loc->base, replacements)),
       _offset(ShadowArray::getShadowExpression(loc->offset, replacements));
-  ref<MemoryLocation> ret(new MemoryLocation(loc->value, loc->stack, _address,
-                                             _base, _offset, loc->size));
+  ref<MemoryLocation> ret(new MemoryLocation(
+      loc->value, loc->callHistory, _address, _base, _offset, loc->size));
   return ret;
 }
 
@@ -104,8 +104,8 @@ void MemoryLocation::print(llvm::raw_ostream &stream,
 
   stream << prefix << "stack:\n";
   for (std::vector<llvm::Instruction *>::const_reverse_iterator
-           it = stack.rbegin(),
-           ib = it, ie = stack.rend();
+           it = callHistory.rbegin(),
+           ib = it, ie = callHistory.rend();
        it != ie; ++it) {
     stream << tabsNext;
     (*it)->print(stream);

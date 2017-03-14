@@ -204,7 +204,7 @@ class PathCondition {
 public:
   PathCondition(ref<Expr> &constraint, Dependency *dependency,
                 llvm::Value *condition,
-                const std::vector<llvm::Instruction *> &stack,
+                const std::vector<llvm::Instruction *> &callHistory,
                 PathCondition *prev);
 
   ~PathCondition();
@@ -228,9 +228,9 @@ class SubsumptionTable {
   typedef std::deque<SubsumptionTableEntry *>::const_reverse_iterator
   EntryIterator;
 
-  class StackIndexedTable {
+  class CallHistoryIndexedTable {
     class Node {
-      friend class StackIndexedTable;
+      friend class CallHistoryIndexedTable;
 
       llvm::Instruction *id;
 
@@ -257,17 +257,18 @@ class SubsumptionTable {
     void printNode(llvm::raw_ostream &stream, Node *n, std::string edges) const;
 
   public:
-    StackIndexedTable() { root = new Node(0); }
+    CallHistoryIndexedTable() { root = new Node(0); }
 
-    ~StackIndexedTable() { clearTree(root); }
+    ~CallHistoryIndexedTable() { clearTree(root); }
 
     void clearTree(Node *node);
 
-    void insert(const std::vector<llvm::Instruction *> &stack,
+    void insert(const std::vector<llvm::Instruction *> &callHistory,
                 SubsumptionTableEntry *entry);
 
     std::pair<EntryIterator, EntryIterator>
-    find(const std::vector<llvm::Instruction *> &stack, bool &found) const;
+    find(const std::vector<llvm::Instruction *> &callHistory,
+         bool &found) const;
 
     void dump() const {
       this->print(llvm::errs());
@@ -277,11 +278,11 @@ class SubsumptionTable {
     void print(llvm::raw_ostream &stream) const;
   };
 
-  static std::map<uintptr_t, StackIndexedTable *> instance;
+  static std::map<uintptr_t, CallHistoryIndexedTable *> instance;
 
 public:
   static void insert(uintptr_t id,
-                     const std::vector<llvm::Instruction *> &stack,
+                     const std::vector<llvm::Instruction *> &callHistory,
                      SubsumptionTableEntry *entry);
 
   static bool check(TimingSolver *solver, ExecutionState &state, double timeout,
@@ -290,7 +291,7 @@ public:
   static void clear();
 
   static void print(llvm::raw_ostream &stream) {
-    for (std::map<uintptr_t, StackIndexedTable *>::const_iterator
+    for (std::map<uintptr_t, CallHistoryIndexedTable *>::const_iterator
              it = instance.begin(),
              ie = instance.end();
          it != ie; ++it) {
@@ -455,7 +456,7 @@ public:
   const uint64_t nodeSequenceNumber;
 
   SubsumptionTableEntry(TxTreeNode *node,
-                        const std::vector<llvm::Instruction *> &stack);
+                        const std::vector<llvm::Instruction *> &callHistory);
 
   ~SubsumptionTableEntry();
 
@@ -535,7 +536,7 @@ private:
   /// \brief The path condition
   PathCondition *pathCondition;
 
-  /// \brief Abstract stack for value dependencies
+  /// \brief Value dependencies
   Dependency *dependency;
 
   TxTreeNode *parent, *left, *right;
@@ -558,11 +559,11 @@ private:
 public:
   bool isSubsumed;
 
-  /// \brief The entry call stack
-  std::vector<llvm::Instruction *> entryCallStack;
+  /// \brief The entry call history
+  std::vector<llvm::Instruction *> entryCallHistory;
 
-  /// \brief The current call stack
-  std::vector<llvm::Instruction *> callStack;
+  /// \brief The current call history
+  std::vector<llvm::Instruction *> callHistory;
 
 private:
   void setProgramPoint(llvm::Instruction *instr) {
@@ -570,7 +571,7 @@ private:
       programPoint = reinterpret_cast<uintptr_t>(instr);
 
     // Disabling the subsumption check within KLEE's own API
-    // (callsites of klee_ and at any location within the klee_ function)
+    // (call sites of klee_ and at any location within the klee_ function)
     // by never store a table entry for KLEE's own API, marked with flag storable.
     storable = !(instr->getParent()->getParent()->getName().substr(0, 5).equals("klee_"));
   }
@@ -596,7 +597,6 @@ public:
   /// \brief Extend the path condition with another constraint
   ///
   /// \param constraint The constraint to extend the current path condition with
-  /// \param stack The current callsite stack for this value
   /// \param value The LLVM value that corresponds to the constraint
   void addConstraint(ref<Expr> &constraint, llvm::Value *value);
 
@@ -624,7 +624,8 @@ public:
   /// \return A pair of the store part indexed by constants, and the store part
   /// indexed by symbolic expressions.
   std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
-  getStoredExpressions(const std::vector<llvm::Instruction *> &stack) const;
+  getStoredExpressions(const std::vector<llvm::Instruction *> &callHistory)
+      const;
 
   /// \brief This retrieves the allocations known at this state, and the
   /// expressions stored in the allocations, as long as the allocation is
@@ -638,7 +639,7 @@ public:
   /// \return A pair of the store part indexed by constants, and the store part
   /// indexed by symbolic expressions.
   std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
-  getStoredCoreExpressions(const std::vector<llvm::Instruction *> &stack,
+  getStoredCoreExpressions(const std::vector<llvm::Instruction *> &callHistory,
                            std::set<const Array *> &replacements) const;
 
   void incInstructionsDepth();
@@ -906,7 +907,7 @@ public:
     args.push_back(value);
     args.push_back(address);
     node->dependency->executeMemoryOperation(
-        instr, node->callStack, args, boundsCheck, symbolicExecutionError);
+        instr, node->callHistory, args, boundsCheck, symbolicExecutionError);
     symbolicExecutionError = false;
   }
 
