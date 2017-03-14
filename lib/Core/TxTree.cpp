@@ -325,15 +325,15 @@ void TxTreeGraph::save(std::string dotFileName) {
 
 /**/
 
-PathCondition::PathCondition(ref<Expr> &constraint, Dependency *dependency,
-                             llvm::Value *_condition,
-                             const std::vector<llvm::Instruction *> &stack,
-                             PathCondition *prev)
+PathCondition::PathCondition(
+    ref<Expr> &constraint, Dependency *dependency, llvm::Value *_condition,
+    const std::vector<llvm::Instruction *> &callHistory, PathCondition *prev)
     : constraint(constraint), shadowConstraint(constraint), shadowed(false),
       dependency(dependency), core(false), tail(prev) {
   ref<VersionedValue> emptyCondition;
   if (dependency) {
-    condition = dependency->getLatestValue(_condition, stack, constraint, true);
+    condition =
+        dependency->getLatestValue(_condition, callHistory, constraint, true);
     assert(!condition.isNull() && "null constraint on path condition");
   } else {
     condition = emptyCondition;
@@ -439,14 +439,14 @@ Statistic SubsumptionTableEntry::solverAccessTime("solverAccessTime",
                                                   "solverAccessTime");
 
 SubsumptionTableEntry::SubsumptionTableEntry(
-    TxTreeNode *node, const std::vector<llvm::Instruction *> &stack)
+    TxTreeNode *node, const std::vector<llvm::Instruction *> &callHistory)
     : programPoint(node->getProgramPoint()),
       nodeSequenceNumber(node->getNodeSequenceNumber()) {
   existentials.clear();
   interpolant = node->getInterpolant(existentials);
 
   std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
-  storedExpressions = node->getStoredCoreExpressions(stack, existentials);
+  storedExpressions = node->getStoredCoreExpressions(callHistory, existentials);
 
   concreteAddressStore = storedExpressions.first;
   for (Dependency::ConcreteStore::iterator it = concreteAddressStore.begin(),
@@ -1104,9 +1104,9 @@ bool SubsumptionTableEntry::subsumed(
                it3 != ie3; ++it3) {
 
             // We make sure the context part of the addresses (the allocation
-            // site and the call stack) are equivalent.
+            // site and the call history) are equivalent.
             if (it2->first->compareContext(it3->first->getValue(),
-                                           it3->first->getStack()))
+                                           it3->first->getCallHistory()))
               continue;
 
             ref<Expr> stateSymbolicOffset = it3->first->getOffset();
@@ -1223,9 +1223,9 @@ bool SubsumptionTableEntry::subsumed(
              it3 != ie3; ++it3) {
 
           // We make sure the context part of the addresses (the allocation
-          // site and the call stack) are equivalent.
+          // site and the call history) are equivalent.
           if (it2->first->compareContext(it3->first->getValue(),
-                                         it3->first->getStack()))
+                                         it3->first->getCallHistory()))
             continue;
 
           ref<Expr> stateConcreteOffset = it3->first->getOffset();
@@ -1286,9 +1286,9 @@ bool SubsumptionTableEntry::subsumed(
              it3 != ie3; ++it3) {
 
           // We make sure the context part of the addresses (the allocation
-          // site and the call stack) are equivalent.
+          // site and the call history) are equivalent.
           if (it2->first->compareContext(it3->first->getValue(),
-                                         it3->first->getStack()))
+                                         it3->first->getCallHistory()))
             continue;
 
           ref<Expr> stateSymbolicOffset = it3->first->getOffset();
@@ -1731,22 +1731,22 @@ void SubsumptionTableEntry::printStat(std::stringstream &stream) {
 
 /**/
 
-void SubsumptionTable::StackIndexedTable::Node::print(llvm::raw_ostream &stream)
-    const {
+void SubsumptionTable::CallHistoryIndexedTable::Node::print(
+    llvm::raw_ostream &stream) const {
   print(stream, 0);
 }
 
-void SubsumptionTable::StackIndexedTable::Node::print(
+void SubsumptionTable::CallHistoryIndexedTable::Node::print(
     llvm::raw_ostream &stream, const unsigned paddingAmount) const {
   print(stream, makeTabs(paddingAmount));
 }
 
-void SubsumptionTable::StackIndexedTable::Node::print(
+void SubsumptionTable::CallHistoryIndexedTable::Node::print(
     llvm::raw_ostream &stream, const std::string &prefix) const {
   std::string tabsNext = appendTab(prefix);
 
   stream << "\n";
-  stream << tabsNext << "Stack-indexed table tree node\n";
+  stream << tabsNext << "Call history-indexed table tree node\n";
   if (id) {
     stream << tabsNext << "node Id = " << reinterpret_cast<uintptr_t>(id)
            << "\n";
@@ -1770,7 +1770,7 @@ void SubsumptionTable::StackIndexedTable::Node::print(
 
 /**/
 
-void SubsumptionTable::StackIndexedTable::clearTree(Node *node) {
+void SubsumptionTable::CallHistoryIndexedTable::clearTree(Node *node) {
   for (std::map<llvm::Instruction *, Node *>::iterator it = node->next.begin(),
                                                        ie = node->next.end();
        it != ie; ++it) {
@@ -1786,13 +1786,14 @@ void SubsumptionTable::StackIndexedTable::clearTree(Node *node) {
   }
 }
 
-void SubsumptionTable::StackIndexedTable::insert(
-    const std::vector<llvm::Instruction *> &stack,
+void SubsumptionTable::CallHistoryIndexedTable::insert(
+    const std::vector<llvm::Instruction *> &callHistory,
     SubsumptionTableEntry *entry) {
   Node *current = root;
 
-  for (std::vector<llvm::Instruction *>::const_iterator it = stack.begin(),
-                                                        ie = stack.end();
+  for (std::vector<llvm::Instruction *>::const_iterator
+           it = callHistory.begin(),
+           ie = callHistory.end();
        it != ie; ++it) {
     llvm::Instruction *call = *it;
     std::map<llvm::Instruction *, Node *>::const_iterator it1 =
@@ -1809,13 +1810,14 @@ void SubsumptionTable::StackIndexedTable::insert(
 }
 
 std::pair<SubsumptionTable::EntryIterator, SubsumptionTable::EntryIterator>
-SubsumptionTable::StackIndexedTable::find(
-    const std::vector<llvm::Instruction *> &stack, bool &found) const {
+SubsumptionTable::CallHistoryIndexedTable::find(
+    const std::vector<llvm::Instruction *> &callHistory, bool &found) const {
   Node *current = root;
   std::pair<EntryIterator, EntryIterator> ret;
 
-  for (std::vector<llvm::Instruction *>::const_iterator it = stack.begin(),
-                                                        ie = stack.end();
+  for (std::vector<llvm::Instruction *>::const_iterator
+           it = callHistory.begin(),
+           ie = callHistory.end();
        it != ie; ++it) {
     llvm::Instruction *call = *it;
     std::map<llvm::Instruction *, Node *>::const_iterator it1 =
@@ -1831,9 +1833,8 @@ SubsumptionTable::StackIndexedTable::find(
                                                  current->entryList.rend());
 }
 
-void SubsumptionTable::StackIndexedTable::printNode(llvm::raw_ostream &stream,
-                                                    Node *n,
-                                                    std::string edges) const {
+void SubsumptionTable::CallHistoryIndexedTable::printNode(
+    llvm::raw_ostream &stream, Node *n, std::string edges) const {
   for (std::map<llvm::Instruction *, Node *>::const_iterator
            it = n->next.begin(),
            ie = n->next.end();
@@ -1845,42 +1846,44 @@ void SubsumptionTable::StackIndexedTable::printNode(llvm::raw_ostream &stream,
   }
 }
 
-void
-SubsumptionTable::StackIndexedTable::print(llvm::raw_ostream &stream) const {
+void SubsumptionTable::CallHistoryIndexedTable::print(llvm::raw_ostream &stream)
+    const {
   root->print(stream);
   printNode(stream, root, "");
 }
 
 /**/
 
-std::map<uintptr_t, SubsumptionTable::StackIndexedTable *>
+std::map<uintptr_t, SubsumptionTable::CallHistoryIndexedTable *>
 SubsumptionTable::instance;
 
-void SubsumptionTable::insert(uintptr_t id,
-                              const std::vector<llvm::Instruction *> &stack,
-                              SubsumptionTableEntry *entry) {
-  StackIndexedTable *subTable = 0;
+void
+SubsumptionTable::insert(uintptr_t id,
+                         const std::vector<llvm::Instruction *> &callHistory,
+                         SubsumptionTableEntry *entry) {
+  CallHistoryIndexedTable *subTable = 0;
 
   TxTree::entryNumber++; // Count of entries in the table
 
-  std::map<uintptr_t, StackIndexedTable *>::iterator it = instance.find(id);
+  std::map<uintptr_t, CallHistoryIndexedTable *>::iterator it =
+      instance.find(id);
 
   if (it == instance.end()) {
-    subTable = new StackIndexedTable();
-    subTable->insert(stack, entry);
+    subTable = new CallHistoryIndexedTable();
+    subTable->insert(callHistory, entry);
     instance[id] = subTable;
     return;
   }
   subTable = it->second;
-  subTable->insert(stack, entry);
+  subTable->insert(callHistory, entry);
 }
 
 bool SubsumptionTable::check(TimingSolver *solver, ExecutionState &state,
                              double timeout, int debugSubsumptionLevel) {
-  StackIndexedTable *subTable = 0;
+  CallHistoryIndexedTable *subTable = 0;
   TxTreeNode *txTreeNode = state.txTreeNode;
 
-  std::map<uintptr_t, StackIndexedTable *>::iterator it =
+  std::map<uintptr_t, CallHistoryIndexedTable *>::iterator it =
       instance.find(state.txTreeNode->getProgramPoint());
   if (it == instance.end()) {
     if (debugSubsumptionLevel >= 1) {
@@ -1894,7 +1897,7 @@ bool SubsumptionTable::check(TimingSolver *solver, ExecutionState &state,
 
   bool found;
   std::pair<EntryIterator, EntryIterator> iterPair =
-      subTable->find(txTreeNode->entryCallStack, found);
+      subTable->find(txTreeNode->entryCallHistory, found);
   if (!found) {
     if (debugSubsumptionLevel >= 1) {
       klee_message("#%lu: Check failure due to entry not found",
@@ -1907,7 +1910,7 @@ bool SubsumptionTable::check(TimingSolver *solver, ExecutionState &state,
 
     std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
     storedExpressions =
-        txTreeNode->getStoredExpressions(txTreeNode->entryCallStack);
+        txTreeNode->getStoredExpressions(txTreeNode->entryCallHistory);
 
     // Iterate the subsumption table entry with reverse iterator because
     // the successful subsumption mostly happen in the newest entry.
@@ -1930,8 +1933,9 @@ bool SubsumptionTable::check(TimingSolver *solver, ExecutionState &state,
 }
 
 void SubsumptionTable::clear() {
-  for (std::map<uintptr_t, StackIndexedTable *>::iterator it = instance.begin(),
-                                                          ie = instance.end();
+  for (std::map<uintptr_t, CallHistoryIndexedTable *>::iterator
+           it = instance.begin(),
+           ie = instance.end();
        it != ie; ++it) {
     if (it->second) {
       ++TxTree::programPointNumber;
@@ -2092,8 +2096,8 @@ void TxTree::remove(TxTreeNode *node) {
       }
 
       SubsumptionTableEntry *entry =
-          new SubsumptionTableEntry(node, node->entryCallStack);
-      SubsumptionTable::insert(node->getProgramPoint(), node->entryCallStack,
+          new SubsumptionTableEntry(node, node->entryCallHistory);
+      SubsumptionTable::insert(node->getProgramPoint(), node->entryCallHistory,
                                entry);
 
       TxTreeGraph::addTableEntryMapping(node, entry);
@@ -2212,7 +2216,7 @@ void TxTree::execute(llvm::Instruction *instr, std::vector<ref<Expr> > &args) {
 void TxTree::executePHI(llvm::Instruction *instr, unsigned incomingBlock,
                         ref<Expr> valueExpr) {
   currentTxTreeNode->dependency->executePHI(instr, incomingBlock,
-                                            currentTxTreeNode->callStack,
+                                            currentTxTreeNode->callHistory,
                                             valueExpr, symbolicExecutionError);
   symbolicExecutionError = false;
 }
@@ -2314,8 +2318,8 @@ TxTreeNode::TxTreeNode(TxTreeNode *_parent, llvm::DataLayout *_targetData)
   pathCondition = 0;
   if (_parent) {
     pathCondition = _parent->pathCondition;
-    entryCallStack = _parent->callStack;
-    callStack = _parent->callStack;
+    entryCallHistory = _parent->callHistory;
+    callHistory = _parent->callHistory;
   }
 
   // Inherit the abstract dependency or NULL
@@ -2348,7 +2352,7 @@ TxTreeNode::getInterpolant(std::set<const Array *> &replacements) const {
 void TxTreeNode::addConstraint(ref<Expr> &constraint, llvm::Value *condition) {
   TimerStatIncrementer t(addConstraintTime);
   pathCondition = new PathCondition(constraint, dependency, condition,
-                                    callStack, pathCondition);
+                                    callHistory, pathCondition);
   graph->addPathCondition(this, pathCondition, constraint);
 }
 
@@ -2363,13 +2367,13 @@ void TxTreeNode::execute(llvm::Instruction *instr,
                          std::vector<ref<Expr> > &args,
                          bool symbolicExecutionError) {
   TimerStatIncrementer t(executeTime);
-  dependency->execute(instr, callStack, args, symbolicExecutionError);
+  dependency->execute(instr, callHistory, args, symbolicExecutionError);
 }
 
 void TxTreeNode::bindCallArguments(llvm::Instruction *site,
                                    std::vector<ref<Expr> > &arguments) {
   TimerStatIncrementer t(bindCallArgumentsTime);
-  dependency->bindCallArguments(site, callStack, arguments);
+  dependency->bindCallArguments(site, callHistory, arguments);
 }
 
 void TxTreeNode::bindReturnValue(llvm::CallInst *site, llvm::Instruction *inst,
@@ -2377,12 +2381,12 @@ void TxTreeNode::bindReturnValue(llvm::CallInst *site, llvm::Instruction *inst,
   // TODO: This is probably where we should simplify
   // the dependency graph by removing callee values.
   TimerStatIncrementer t(bindReturnValueTime);
-  dependency->bindReturnValue(site, callStack, inst, returnValue);
+  dependency->bindReturnValue(site, callHistory, inst, returnValue);
 }
 
 std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
-TxTreeNode::getStoredExpressions(const std::vector<llvm::Instruction *> &stack)
-    const {
+TxTreeNode::getStoredExpressions(
+    const std::vector<llvm::Instruction *> &_callHistory) const {
   TimerStatIncrementer t(getStoredExpressionsTime);
   std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore> ret;
   std::set<const Array *> dummyReplacements;
@@ -2391,14 +2395,14 @@ TxTreeNode::getStoredExpressions(const std::vector<llvm::Instruction *> &stack)
   // the allocations to be stored in subsumption table should be obtained
   // from the parent node.
   if (parent)
-    ret = parent->dependency->getStoredExpressions(stack, dummyReplacements,
-                                                   false);
+    ret = parent->dependency->getStoredExpressions(_callHistory,
+                                                   dummyReplacements, false);
   return ret;
 }
 
 std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
 TxTreeNode::getStoredCoreExpressions(
-    const std::vector<llvm::Instruction *> &stack,
+    const std::vector<llvm::Instruction *> &_callHistory,
     std::set<const Array *> &replacements) const {
   TimerStatIncrementer t(getStoredCoreExpressionsTime);
   std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore> ret;
@@ -2407,7 +2411,8 @@ TxTreeNode::getStoredCoreExpressions(
   // the allocations to be stored in subsumption table should be obtained
   // from the parent node.
   if (parent)
-    ret = parent->dependency->getStoredExpressions(stack, replacements, true);
+    ret = parent->dependency->getStoredExpressions(_callHistory, replacements,
+                                                   true);
   return ret;
 }
 
@@ -2482,10 +2487,10 @@ void TxTreeNode::print(llvm::raw_ostream &stream,
     right->print(stream, paddingAmount + 1);
     stream << "\n";
   }
-  stream << tabsNext << "Stack:\n";
+  stream << tabsNext << "Call history:\n";
   for (std::vector<llvm::Instruction *>::const_reverse_iterator
-           it = callStack.rbegin(),
-           ie = callStack.rend();
+           it = callHistory.rbegin(),
+           ie = callHistory.rend();
        it != ie; ++it) {
     stream << tabsNext;
     (*it)->print(stream);
