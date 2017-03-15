@@ -37,6 +37,9 @@ int klee_get_errno(void);
 
 /* Returns pointer to the symbolic file structure fs the pathname is symbolic */
 static exe_disk_file_t *__get_sym_file(const char *pathname) {
+  if (!pathname)
+    return NULL;
+
   char c = pathname[0];
   unsigned i;
 
