@@ -73,16 +73,16 @@ namespace klee {
     std::set<std::string> coreReasons;
 
     void init(ref<VersionedValue> vvalue, std::set<const Array *> &replacements,
-              std::set<std::string> &coreReasons, bool shadowing = false);
+              const std::set<std::string> &coreReasons, bool shadowing = false);
 
     StoredValue(ref<VersionedValue> vvalue,
                 std::set<const Array *> &replacements,
-                std::set<std::string> &coreReasons) {
+                const std::set<std::string> &coreReasons) {
       init(vvalue, replacements, coreReasons, true);
     }
 
     StoredValue(ref<VersionedValue> vvalue,
-                std::set<std::string> &coreReasons) {
+                const std::set<std::string> &coreReasons) {
       std::set<const Array *> dummyReplacements;
       init(vvalue, dummyReplacements, coreReasons);
     }

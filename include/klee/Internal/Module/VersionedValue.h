@@ -241,7 +241,7 @@ public:
 
   ref<Expr> getBase() const { return base; }
 
-  std::set<ref<Expr> > getSymbolicOffsetBounds() const {
+  const std::set<ref<Expr> > &getSymbolicOffsetBounds() const {
     return symbolicOffsetBounds;
   }
 
@@ -375,7 +375,7 @@ public:
     sources[source] = via;
   }
 
-  std::map<ref<VersionedValue>, ref<MemoryLocation> > getSources() {
+  const std::map<ref<VersionedValue>, ref<MemoryLocation> > &getSources() {
     return sources;
   }
 
@@ -392,7 +392,9 @@ public:
       locations.insert(loc);
   }
 
-  std::set<ref<MemoryLocation> > getLocations() const { return locations; }
+  const std::set<ref<MemoryLocation> > &getLocations() const {
+    return locations;
+  }
 
   bool hasValue(llvm::Value *value) const { return this->value == value; }
 
@@ -408,9 +410,11 @@ public:
 
   llvm::Value *getValue() const { return value; }
 
-  std::vector<llvm::Instruction *> &getCallHistory() { return callHistory; }
+  const std::vector<llvm::Instruction *> &getCallHistory() const {
+    return callHistory;
+  }
 
-  std::set<std::string> &getReasons() { return coreReasons; }
+  const std::set<std::string> &getReasons() const { return coreReasons; }
 
   /// \brief Print the content of the object into a stream.
   ///

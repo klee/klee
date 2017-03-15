@@ -45,8 +45,8 @@ namespace klee {
 
 void StoredValue::init(ref<VersionedValue> vvalue,
                        std::set<const Array *> &replacements,
-                       std::set<std::string> &_coreReasons, bool shadowing) {
-  std::set<ref<MemoryLocation> > locations = vvalue->getLocations();
+                       const std::set<std::string> &_coreReasons,
+                       bool shadowing) {
 
   refCount = 0;
   id = reinterpret_cast<uintptr_t>(this);
@@ -62,12 +62,14 @@ void StoredValue::init(ref<VersionedValue> vvalue,
   if (doNotUseBound)
     return;
 
+  const std::set<ref<MemoryLocation> > locations = vvalue->getLocations();
+
   if (!locations.empty()) {
     // Here we compute memory bounds for checking pointer values. The memory
     // bound is the size of the allocation minus the offset; this is the weakest
     // precondition (interpolant) of memory bound checks done by KLEE.
-    for (std::set<ref<MemoryLocation> >::iterator it = locations.begin(),
-                                                  ie = locations.end();
+    for (std::set<ref<MemoryLocation> >::const_iterator it = locations.begin(),
+                                                        ie = locations.end();
          it != ie; ++it) {
       llvm::Value *v = (*it)->getValue(); // The allocation site
 
