@@ -790,11 +790,11 @@ void Dependency::markPointerFlow(ref<VersionedValue> target,
   markFlow(target->getStoreAddress(), reason);
 }
 
-std::vector<ref<VersionedValue> > Dependency::populateArgumentValuesList(
+void Dependency::populateArgumentValuesList(
     llvm::CallInst *site, const std::vector<llvm::Instruction *> &stack,
-    std::vector<ref<Expr> > &arguments) {
+    std::vector<ref<Expr> > &arguments,
+    std::vector<ref<VersionedValue> > &argumentValuesList) {
   unsigned numArgs = site->getCalledFunction()->arg_size();
-  std::vector<ref<VersionedValue> > argumentValuesList;
   for (unsigned i = numArgs; i > 0;) {
     llvm::Value *argOperand = site->getArgOperand(--i);
     ref<VersionedValue> latestValue =
@@ -809,7 +809,6 @@ std::vector<ref<VersionedValue> > Dependency::populateArgumentValuesList(
           VersionedValue::create(argOperand, stack, arguments[i]));
     }
   }
-  return argumentValuesList;
 }
 
 Dependency::Dependency(Dependency *parent, llvm::DataLayout *_targetData)
@@ -1524,7 +1523,8 @@ void Dependency::bindCallArguments(llvm::Instruction *i,
   if (!callee)
     return;
 
-  argumentValuesList = populateArgumentValuesList(site, stack, arguments);
+  argumentValuesList.clear();
+  populateArgumentValuesList(site, stack, arguments, argumentValuesList);
 
   unsigned index = 0;
   stack.push_back(i);
