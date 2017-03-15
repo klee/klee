@@ -17,6 +17,8 @@
 #include "klee/util/Assignment.h"
 #include "klee/util/ExprUtil.h"
 
+#include "llvm/Support/ErrorHandling.h"
+
 #include <metaSMT/DirectSolver_Context.hpp>
 #include <metaSMT/backend/Z3_Backend.hpp>
 #include <metaSMT/backend/Boolector.hpp>
@@ -405,5 +407,36 @@ void MetaSMTSolver<SolverContext>::setCoreSolverTimeout(double timeout) {
 template class MetaSMTSolver<DirectSolver_Context<metaSMT::solver::Boolector> >;
 template class MetaSMTSolver<DirectSolver_Context<metaSMT::solver::Z3_Backend> >;
 template class MetaSMTSolver<DirectSolver_Context<metaSMT::solver::STP_Backend> >;
+
+Solver *createMetaSMTSolver() {
+  using metaSMT::DirectSolver_Context;
+  using namespace metaSMT::solver;
+
+  Solver *coreSolver = NULL;
+  std::string backend;
+  switch (MetaSMTBackend) {
+  case METASMT_BACKEND_STP:
+    backend = "STP";
+    coreSolver = new MetaSMTSolver<DirectSolver_Context<STP_Backend> >(
+        UseForkedCoreSolver, CoreSolverOptimizeDivides);
+    break;
+  case METASMT_BACKEND_Z3:
+    backend = "Z3";
+    coreSolver = new MetaSMTSolver<DirectSolver_Context<Z3_Backend> >(
+        UseForkedCoreSolver, CoreSolverOptimizeDivides);
+    break;
+  case METASMT_BACKEND_BOOLECTOR:
+    backend = "Boolector";
+    coreSolver = new MetaSMTSolver<DirectSolver_Context<Boolector> >(
+        UseForkedCoreSolver, CoreSolverOptimizeDivides);
+    break;
+  default:
+    llvm_unreachable("Unrecognised MetaSMT backend");
+    break;
+  };
+  klee_message("Starting MetaSMTSolver(%s)", backend.c_str());
+  return coreSolver;
+}
+
 }
 #endif // ENABLE_METASMT

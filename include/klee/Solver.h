@@ -253,7 +253,11 @@ namespace klee {
   
     virtual char *getConstraintLog(const Query&);
     virtual void setCoreSolverTimeout(double timeout);
-};
+  };
+
+  /// createMetaSMTSolver - Create a solver using the metaSMT backend set by 
+  /// the option MetaSMTBackend.
+  Solver *createMetaSMTSolver();
 
 #endif /* ENABLE_METASMT */
 
