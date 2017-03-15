@@ -979,11 +979,11 @@ bool SubsumptionTableEntry::subsumed(
              ie1 = concreteAddressStore.end();
          it1 != ie1; ++it1) {
 
-      const Dependency::ConcreteStoreMap tabledConcreteMap =
+      const Dependency::ConcreteStoreMap &tabledConcreteMap =
           concreteAddressStore[it1->first];
-      const Dependency::ConcreteStoreMap stateConcreteMap =
+      const Dependency::ConcreteStoreMap &stateConcreteMap =
           concretelyAddressedStore[it1->first];
-      const Dependency::SymbolicStoreMap stateSymbolicMap =
+      const Dependency::SymbolicStoreMap &stateSymbolicMap =
           symbolicallyAddressedStore[it1->first];
 
       // If the current state does not constrain the same base, subsumption
@@ -1186,11 +1186,11 @@ bool SubsumptionTableEntry::subsumed(
              it1 = symbolicAddressStore.begin(),
              ie1 = symbolicAddressStore.end();
          it1 != ie1; ++it1) {
-      const Dependency::SymbolicStoreMap tabledSymbolicMap =
+      const Dependency::SymbolicStoreMap &tabledSymbolicMap =
           symbolicAddressStore[it1->first];
-      const Dependency::ConcreteStoreMap stateConcreteMap =
+      const Dependency::ConcreteStoreMap &stateConcreteMap =
           concretelyAddressedStore[it1->first];
-      const Dependency::SymbolicStoreMap stateSymbolicMap =
+      const Dependency::SymbolicStoreMap &stateSymbolicMap =
           symbolicallyAddressedStore[it1->first];
 
       ref<Expr> conjunction;
