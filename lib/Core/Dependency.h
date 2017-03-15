@@ -303,30 +303,32 @@ namespace klee {
     /// new instruction, as a value for the instruction.
     ref<VersionedValue>
     getNewVersionedValue(llvm::Value *value,
-                         const std::vector<llvm::Instruction *> &stack,
+                         const std::vector<llvm::Instruction *> &callHistory,
                          ref<Expr> valueExpr) {
       return registerNewVersionedValue(
-          value, VersionedValue::create(value, stack, valueExpr));
+          value, VersionedValue::create(value, callHistory, valueExpr));
     }
 
     /// \brief Create a new versioned value object, which is a pointer with
     /// absolute address
     ref<VersionedValue>
     getNewPointerValue(llvm::Value *loc,
-                       const std::vector<llvm::Instruction *> &stack,
+                       const std::vector<llvm::Instruction *> &callHistory,
                        ref<Expr> address, uint64_t size) {
-      ref<VersionedValue> vvalue = VersionedValue::create(loc, stack, address);
-      vvalue->addLocation(MemoryLocation::create(loc, stack, address, size));
+      ref<VersionedValue> vvalue =
+          VersionedValue::create(loc, callHistory, address);
+      vvalue->addLocation(
+          MemoryLocation::create(loc, callHistory, address, size));
       return registerNewVersionedValue(loc, vvalue);
     }
 
     /// \brief Create a new versioned value object, which is a pointer which
     /// offsets existing pointer
     ref<VersionedValue> getNewPointerValue(
-        llvm::Value *value, const std::vector<llvm::Instruction *> &stack,
+        llvm::Value *value, const std::vector<llvm::Instruction *> &callHistory,
         ref<Expr> address, ref<MemoryLocation> loc, ref<Expr> offset) {
       ref<VersionedValue> vvalue =
-          VersionedValue::create(value, stack, address);
+          VersionedValue::create(value, callHistory, address);
       vvalue->addLocation(MemoryLocation::create(loc, address, offset));
       return registerNewVersionedValue(value, vvalue);
     }
@@ -371,7 +373,7 @@ namespace klee {
     /// is checked for memory access validity at the current index, meaning that
     /// we assumed all memory access within the external function is valid.
     void addDependencyViaExternalFunction(
-        const std::vector<llvm::Instruction *> &stack,
+        const std::vector<llvm::Instruction *> &callHistory,
         ref<VersionedValue> source, ref<VersionedValue> target);
 
     /// \brief Add a flow dependency from a pointer value to a non-pointer
@@ -407,7 +409,8 @@ namespace klee {
 
     /// \brief Record the expressions of a call's arguments
     void populateArgumentValuesList(
-        llvm::CallInst *site, const std::vector<llvm::Instruction *> &stack,
+        llvm::CallInst *site,
+        const std::vector<llvm::Instruction *> &callHistory,
         std::vector<ref<Expr> > &arguments,
         std::vector<ref<VersionedValue> > &argumentValuesList);
 
@@ -426,24 +429,25 @@ namespace klee {
 
     ref<VersionedValue>
     getLatestValue(llvm::Value *value,
-                   const std::vector<llvm::Instruction *> &stack,
+                   const std::vector<llvm::Instruction *> &callHistory,
                    ref<Expr> valueExpr, bool constraint = false);
 
     /// \brief Abstract dependency state transition with argument(s)
     void execute(llvm::Instruction *instr,
-                 const std::vector<llvm::Instruction *> &stack,
+                 const std::vector<llvm::Instruction *> &callHistory,
                  std::vector<ref<Expr> > &args, bool symbolicExecutionError);
 
     /// \brief Build dependencies from PHI node
     void executePHI(llvm::Instruction *instr, unsigned int incomingBlock,
-                    const std::vector<llvm::Instruction *> &stack,
+                    const std::vector<llvm::Instruction *> &callHistory,
                     ref<Expr> valueExpr, bool symbolicExecutionError);
 
     /// \brief Execute memory operation (load/store)
-    void executeMemoryOperation(llvm::Instruction *instr,
-                                const std::vector<llvm::Instruction *> &stack,
-                                std::vector<ref<Expr> > &args, bool boundsCheck,
-                                bool symbolicExecutionError);
+    void
+    executeMemoryOperation(llvm::Instruction *instr,
+                           const std::vector<llvm::Instruction *> &callHistory,
+                           std::vector<ref<Expr> > &args, bool boundsCheck,
+                           bool symbolicExecutionError);
 
     /// \brief This retrieves the locations known at this state, and the
     /// expressions stored in the locations. Returns as the last argument a pair
@@ -458,18 +462,18 @@ namespace klee {
     /// \param coreOnly Indicate whether we are retrieving only data
     /// for locations relevant to an unsatisfiability core.
     void getStoredExpressions(
-        const std::vector<llvm::Instruction *> &stack,
+        const std::vector<llvm::Instruction *> &callHistory,
         std::set<const Array *> &replacements, bool coreOnly,
         std::pair<ConcreteStore, SymbolicStore> &storedExpressions);
 
     /// \brief Record call arguments in a function call
     void bindCallArguments(llvm::Instruction *instr,
-                           std::vector<llvm::Instruction *> &stack,
+                           std::vector<llvm::Instruction *> &callHistory,
                            std::vector<ref<Expr> > &arguments);
 
     /// \brief This propagates the dependency due to the return value of a call
     void bindReturnValue(llvm::CallInst *site,
-                         std::vector<llvm::Instruction *> &stack,
+                         std::vector<llvm::Instruction *> &callHistory,
                          llvm::Instruction *inst, ref<Expr> returnValue);
 
     /// \brief Given a versioned value, retrieve all its sources and mark them
