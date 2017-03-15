@@ -73,16 +73,16 @@ namespace klee {
     std::set<std::string> coreReasons;
 
     void init(ref<VersionedValue> vvalue, std::set<const Array *> &replacements,
-              std::set<std::string> &coreReasons, bool shadowing = false);
+              const std::set<std::string> &coreReasons, bool shadowing = false);
 
     StoredValue(ref<VersionedValue> vvalue,
                 std::set<const Array *> &replacements,
-                std::set<std::string> &coreReasons) {
+                const std::set<std::string> &coreReasons) {
       init(vvalue, replacements, coreReasons, true);
     }
 
     StoredValue(ref<VersionedValue> vvalue,
-                std::set<std::string> &coreReasons) {
+                const std::set<std::string> &coreReasons) {
       std::set<const Array *> dummyReplacements;
       init(vvalue, dummyReplacements, coreReasons);
     }
@@ -120,7 +120,7 @@ namespace klee {
 
     ref<Expr> getExpression() const { return expr; }
 
-    std::set<ref<Expr> > getBounds(llvm::Value *value) const {
+    const std::set<ref<Expr> > &getBounds(llvm::Value *value) const {
       return allocationBounds.at(value);
     }
 
@@ -407,10 +407,10 @@ namespace klee {
                          const std::string &reason) const;
 
     /// \brief Record the expressions of a call's arguments
-    std::vector<ref<VersionedValue> >
-    populateArgumentValuesList(llvm::CallInst *site,
-                               const std::vector<llvm::Instruction *> &stack,
-                               std::vector<ref<Expr> > &arguments);
+    void populateArgumentValuesList(
+        llvm::CallInst *site, const std::vector<llvm::Instruction *> &stack,
+        std::vector<ref<Expr> > &arguments,
+        std::vector<ref<VersionedValue> > &argumentValuesList);
 
   public:
     /// \brief This is for dynamic setting up of debug messages.
@@ -447,7 +447,9 @@ namespace klee {
                                 bool symbolicExecutionError);
 
     /// \brief This retrieves the locations known at this state, and the
-    /// expressions stored in the locations.
+    /// expressions stored in the locations. Returns as the last argument a pair
+    /// of the store part indexed by constants, and the store part indexed by
+    /// symbolic expressions.
     ///
     /// \param replacements The replacement bound variables when
     /// retrieving state for creating subsumption table entry: As the
@@ -456,11 +458,10 @@ namespace klee {
     /// bound ones.
     /// \param coreOnly Indicate whether we are retrieving only data
     /// for locations relevant to an unsatisfiability core.
-    /// \return A pair of the store part indexed by constants, and the
-    /// store part indexed by symbolic expressions.
-    std::pair<ConcreteStore, SymbolicStore>
-    getStoredExpressions(const std::vector<llvm::Instruction *> &stack,
-                         std::set<const Array *> &replacements, bool coreOnly);
+    void getStoredExpressions(
+        const std::vector<llvm::Instruction *> &stack,
+        std::set<const Array *> &replacements, bool coreOnly,
+        std::pair<ConcreteStore, SymbolicStore> &storedExpressions);
 
     /// \brief Record call arguments in a function call
     void bindCallArguments(llvm::Instruction *instr,

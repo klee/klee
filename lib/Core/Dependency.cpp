@@ -45,9 +45,8 @@ namespace klee {
 
 void StoredValue::init(ref<VersionedValue> vvalue,
                        std::set<const Array *> &replacements,
-                       std::set<std::string> &_coreReasons, bool shadowing) {
-  std::set<ref<MemoryLocation> > locations = vvalue->getLocations();
-
+                       const std::set<std::string> &_coreReasons,
+                       bool shadowing) {
   refCount = 0;
   id = reinterpret_cast<uintptr_t>(this);
   expr = shadowing ? ShadowArray::getShadowExpression(vvalue->getExpression(),
@@ -62,12 +61,14 @@ void StoredValue::init(ref<VersionedValue> vvalue,
   if (doNotUseBound)
     return;
 
+  const std::set<ref<MemoryLocation> > locations(vvalue->getLocations());
+
   if (!locations.empty()) {
     // Here we compute memory bounds for checking pointer values. The memory
     // bound is the size of the allocation minus the offset; this is the weakest
     // precondition (interpolant) of memory bound checks done by KLEE.
-    for (std::set<ref<MemoryLocation> >::iterator it = locations.begin(),
-                                                  ie = locations.end();
+    for (std::set<ref<MemoryLocation> >::const_iterator it = locations.begin(),
+                                                        ie = locations.end();
          it != ie; ++it) {
       llvm::Value *v = (*it)->getValue(); // The allocation site
 
@@ -79,21 +80,22 @@ void StoredValue::init(ref<VersionedValue> vvalue,
         allocationBounds[v].insert(Expr::createPointer(concreteBound));
 
       // Symbolic bounds
-      std::set<ref<Expr> > bounds = (*it)->getSymbolicOffsetBounds();
+      const std::set<ref<Expr> > &bounds = (*it)->getSymbolicOffsetBounds();
 
       if (shadowing) {
         std::set<ref<Expr> > shadowBounds;
-        for (std::set<ref<Expr> >::iterator it1 = bounds.begin(),
-                                            ie1 = bounds.end();
+        for (std::set<ref<Expr> >::const_iterator it1 = bounds.begin(),
+                                                  ie1 = bounds.end();
              it1 != ie1; ++it1) {
           shadowBounds.insert(
               ShadowArray::getShadowExpression(*it1, replacements));
         }
-        bounds = shadowBounds;
-      }
-
-      if (!bounds.empty())
+        if (!shadowBounds.empty()) {
+          allocationBounds[v].insert(shadowBounds.begin(), shadowBounds.end());
+        }
+      } else if (!bounds.empty()) {
         allocationBounds[v].insert(bounds.begin(), bounds.end());
+      }
 
       ref<Expr> offset = shadowing ? ShadowArray::getShadowExpression(
                                          (*it)->getOffset(), replacements)
@@ -318,12 +320,13 @@ Dependency::registerNewVersionedValue(llvm::Value *value,
   return vvalue;
 }
 
-std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
-Dependency::getStoredExpressions(const std::vector<llvm::Instruction *> &stack,
-                                 std::set<const Array *> &replacements,
-                                 bool coreOnly) {
-  ConcreteStore concreteStore;
-  SymbolicStore symbolicStore;
+void Dependency::getStoredExpressions(
+    const std::vector<llvm::Instruction *> &stack,
+    std::set<const Array *> &replacements, bool coreOnly,
+    std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore> &
+        storedExpressions) {
+  ConcreteStore &concreteStore = storedExpressions.first;
+  SymbolicStore &symbolicStore = storedExpressions.second;
 
   for (std::map<ref<MemoryLocation>,
                 std::pair<ref<VersionedValue>, ref<VersionedValue> > >::iterator
@@ -380,8 +383,6 @@ Dependency::getStoredExpressions(const std::vector<llvm::Instruction *> &stack,
             it->first, StoredValue::create(it->second.second)));
       }
   }
-
-  return std::pair<ConcreteStore, SymbolicStore>(concreteStore, symbolicStore);
 }
 
 ref<VersionedValue>
@@ -788,11 +789,11 @@ void Dependency::markPointerFlow(ref<VersionedValue> target,
   markFlow(target->getStoreAddress(), reason);
 }
 
-std::vector<ref<VersionedValue> > Dependency::populateArgumentValuesList(
+void Dependency::populateArgumentValuesList(
     llvm::CallInst *site, const std::vector<llvm::Instruction *> &stack,
-    std::vector<ref<Expr> > &arguments) {
+    std::vector<ref<Expr> > &arguments,
+    std::vector<ref<VersionedValue> > &argumentValuesList) {
   unsigned numArgs = site->getCalledFunction()->arg_size();
-  std::vector<ref<VersionedValue> > argumentValuesList;
   for (unsigned i = numArgs; i > 0;) {
     llvm::Value *argOperand = site->getArgOperand(--i);
     ref<VersionedValue> latestValue =
@@ -807,7 +808,6 @@ std::vector<ref<VersionedValue> > Dependency::populateArgumentValuesList(
           VersionedValue::create(argOperand, stack, arguments[i]));
     }
   }
-  return argumentValuesList;
 }
 
 Dependency::Dependency(Dependency *parent, llvm::DataLayout *_targetData)
@@ -1522,7 +1522,8 @@ void Dependency::bindCallArguments(llvm::Instruction *i,
   if (!callee)
     return;
 
-  argumentValuesList = populateArgumentValuesList(site, stack, arguments);
+  argumentValuesList.clear();
+  populateArgumentValuesList(site, stack, arguments, argumentValuesList);
 
   unsigned index = 0;
   stack.push_back(i);

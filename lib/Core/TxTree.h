@@ -619,28 +619,30 @@ public:
                        ref<Expr> returnValue);
 
   /// \brief This retrieves the allocations known at this state, and the
-  /// expressions stored in the allocations.
-  ///
-  /// \return A pair of the store part indexed by constants, and the store part
-  /// indexed by symbolic expressions.
-  std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
-  getStoredExpressions(const std::vector<llvm::Instruction *> &callHistory)
-      const;
+  /// expressions stored in the allocations. This returns as the last argument a
+  /// pair of the store part indexed by constants, and the store part indexed by
+  /// symbolic expressions.
+  void getStoredExpressions(
+      const std::vector<llvm::Instruction *> &callHistory,
+      std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore> &
+          storedExpressions) const;
 
   /// \brief This retrieves the allocations known at this state, and the
   /// expressions stored in the allocations, as long as the allocation is
   /// relevant as an interpolant. This function is typically used when creating
-  /// an entry in the subsumption table.
+  /// an entry in the subsumption table. This returns as the last argument a
+  /// pair of the store part indexed by constants, and the store part indexed by
+  /// symbolic expressions.
   ///
   /// \param replacements The replacement bound variables: As the resulting
   /// expression will
   /// be used for storing in the subsumption table, the variables need to be
   /// replaced with the bound ones.
-  /// \return A pair of the store part indexed by constants, and the store part
-  /// indexed by symbolic expressions.
-  std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
-  getStoredCoreExpressions(const std::vector<llvm::Instruction *> &callHistory,
-                           std::set<const Array *> &replacements) const;
+  void getStoredCoreExpressions(
+      const std::vector<llvm::Instruction *> &callHistory,
+      std::set<const Array *> &replacements,
+      std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore> &
+          storedExpressions) const;
 
   void incInstructionsDepth();
 
