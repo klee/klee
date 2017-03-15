@@ -70,7 +70,7 @@ void StoredValue::init(ref<VersionedValue> vvalue,
     for (std::set<ref<MemoryLocation> >::const_iterator it = locations.begin(),
                                                         ie = locations.end();
          it != ie; ++it) {
-      llvm::Value *v = (*it)->getValue(); // The allocation site
+      const llvm::Value *v = (*it)->getValue(); // The allocation site
 
       // Concrete bound
       uint64_t concreteBound = (*it)->getConcreteOffsetBound();
@@ -144,12 +144,12 @@ ref<Expr> StoredValue::getBoundsCheck(ref<StoredValue> stateValue,
   // information from the argument object; in this way resulting in
   // less iterations compared to doing it the other way around.
   bool matchFound = false;
-  for (std::map<llvm::Value *, std::set<ref<Expr> > >::const_iterator
+  for (std::map<const llvm::Value *, std::set<ref<Expr> > >::const_iterator
            it = allocationBounds.begin(),
            ie = allocationBounds.end();
        it != ie; ++it) {
     std::set<ref<Expr> > tabledBounds = it->second;
-    std::map<llvm::Value *, std::set<ref<Expr> > >::iterator iter =
+    std::map<const llvm::Value *, std::set<ref<Expr> > >::iterator iter =
         stateValue->allocationOffsets.find(it->first);
     if (iter == stateValue->allocationOffsets.end()) {
       continue;
@@ -238,7 +238,7 @@ void StoredValue::print(llvm::raw_ostream &stream,
 
   if (!doNotUseBound && !allocationBounds.empty()) {
     stream << prefix << "BOUNDS:";
-    for (std::map<llvm::Value *, std::set<ref<Expr> > >::const_iterator
+    for (std::map<const llvm::Value *, std::set<ref<Expr> > >::const_iterator
              it = allocationBounds.begin(),
              ie = allocationBounds.end();
          it != ie; ++it) {
@@ -261,7 +261,7 @@ void StoredValue::print(llvm::raw_ostream &stream,
     if (!allocationOffsets.empty()) {
       stream << "\n";
       stream << prefix << "OFFSETS:";
-      for (std::map<llvm::Value *, std::set<ref<Expr> > >::const_iterator
+      for (std::map<const llvm::Value *, std::set<ref<Expr> > >::const_iterator
                it = allocationOffsets.begin(),
                ie = allocationOffsets.end();
            it != ie; ++it) {
@@ -376,8 +376,8 @@ void Dependency::getSymbolicStore(
   }
 }
 
-bool Dependency::isMainArgument(llvm::Value *loc) {
-  llvm::Argument *vArg = llvm::dyn_cast<llvm::Argument>(loc);
+bool Dependency::isMainArgument(const llvm::Value *loc) {
+  const llvm::Argument *vArg = llvm::dyn_cast<llvm::Argument>(loc);
 
   // FIXME: We need a more precise way to detect main argument
   if (vArg && vArg->getParent() &&

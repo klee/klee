@@ -51,13 +51,13 @@ namespace klee {
     /// This constitutes the weakest liberal precondition of the memory checks
     /// against which the offsets of the pointer values of the current state are
     /// to be checked against.
-    std::map<llvm::Value *, std::set<ref<Expr> > > allocationBounds;
+    std::map<const llvm::Value *, std::set<ref<Expr> > > allocationBounds;
 
     /// \brief In case the stored value was a pointer, then this should be a
     /// non-empty map mapping of allocation sites to the set of offsets. This is
     /// the offset values of the current state to be checked against the offset
     /// bounds.
-    std::map<llvm::Value *, std::set<ref<Expr> > > allocationOffsets;
+    std::map<const llvm::Value *, std::set<ref<Expr> > > allocationOffsets;
 
     /// \brief The id of this object
     uint64_t id;
@@ -292,7 +292,7 @@ namespace klee {
     llvm::DataLayout *targetData;
 
     /// \brief Tests if a pointer points to a main function's argument
-    static bool isMainArgument(llvm::Value *loc);
+    static bool isMainArgument(const llvm::Value *loc);
 
     /// \brief Register new versioned value, used by getNewVersionedValue
     /// member functions
