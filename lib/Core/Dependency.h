@@ -35,7 +35,6 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <vector>
-#include <stack>
 
 namespace klee {
 
