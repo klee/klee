@@ -446,7 +446,8 @@ SubsumptionTableEntry::SubsumptionTableEntry(
   interpolant = node->getInterpolant(existentials);
 
   std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
-  storedExpressions = node->getStoredCoreExpressions(callHistory, existentials);
+  storedExpressions;
+  node->getStoredCoreExpressions(callHistory, existentials, storedExpressions);
 
   concreteAddressStore = storedExpressions.first;
   for (Dependency::ConcreteStore::iterator it = concreteAddressStore.begin(),
@@ -1909,8 +1910,9 @@ bool SubsumptionTable::check(TimingSolver *solver, ExecutionState &state,
   if (iterPair.first != iterPair.second) {
 
     std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
-    storedExpressions =
-        txTreeNode->getStoredExpressions(txTreeNode->entryCallHistory);
+    storedExpressions;
+    txTreeNode->getStoredExpressions(txTreeNode->entryCallHistory,
+                                     storedExpressions);
 
     // Iterate the subsumption table entry with reverse iterator because
     // the successful subsumption mostly happen in the newest entry.
@@ -2384,36 +2386,34 @@ void TxTreeNode::bindReturnValue(llvm::CallInst *site, llvm::Instruction *inst,
   dependency->bindReturnValue(site, callHistory, inst, returnValue);
 }
 
-std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
-TxTreeNode::getStoredExpressions(
-    const std::vector<llvm::Instruction *> &_callHistory) const {
+void TxTreeNode::getStoredExpressions(
+    const std::vector<llvm::Instruction *> &_callHistory,
+    std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore> &
+        coreExpressions) const {
   TimerStatIncrementer t(getStoredExpressionsTime);
-  std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore> ret;
   std::set<const Array *> dummyReplacements;
 
   // Since a program point index is a first statement in a basic block,
   // the allocations to be stored in subsumption table should be obtained
   // from the parent node.
   if (parent)
-    ret = parent->dependency->getStoredExpressions(_callHistory,
-                                                   dummyReplacements, false);
-  return ret;
+    parent->dependency->getStoredExpressions(_callHistory, dummyReplacements,
+                                             false, coreExpressions);
 }
 
-std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
-TxTreeNode::getStoredCoreExpressions(
+void TxTreeNode::getStoredCoreExpressions(
     const std::vector<llvm::Instruction *> &_callHistory,
-    std::set<const Array *> &replacements) const {
+    std::set<const Array *> &replacements,
+    std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore> &
+        storedExpressions) const {
   TimerStatIncrementer t(getStoredCoreExpressionsTime);
-  std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore> ret;
 
   // Since a program point index is a first statement in a basic block,
   // the allocations to be stored in subsumption table should be obtained
   // from the parent node.
   if (parent)
-    ret = parent->dependency->getStoredExpressions(_callHistory, replacements,
-                                                   true);
-  return ret;
+    parent->dependency->getStoredExpressions(_callHistory, replacements, true,
+                                             storedExpressions);
 }
 
 uint64_t TxTreeNode::getInstructionsDepth() { return instructionsDepth; }
