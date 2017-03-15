@@ -368,11 +368,7 @@ class SubsumptionTableEntry {
 
   Dependency::ConcreteStore concreteAddressStore;
 
-  std::vector<const llvm::Value *> concreteAddressStoreKeys;
-
   Dependency::SymbolicStore symbolicAddressStore;
-
-  std::vector<const llvm::Value *> symbolicAddressStoreKeys;
 
   std::set<const Array *> existentials;
 
@@ -444,7 +440,8 @@ class SubsumptionTableEntry {
                                    std::map<ref<Expr>, ref<Expr> > &map);
 
   bool empty() {
-    return interpolant.isNull() && concreteAddressStoreKeys.empty() && symbolicAddressStoreKeys.empty();
+    return interpolant.isNull() && concreteAddressStore.empty() &&
+           symbolicAddressStore.empty();
   }
 
   /// \brief For printing member functions running time statistics
@@ -461,8 +458,8 @@ public:
   ~SubsumptionTableEntry();
 
   bool subsumed(TimingSolver *solver, ExecutionState &state, double timeout,
-                const std::pair<Dependency::ConcreteStore,
-                                Dependency::SymbolicStore> storedExpressions,
+                Dependency::ConcreteStore &concretelyAddressedStore,
+                Dependency::SymbolicStore &symbolicallyAddressedStore,
                 int debugSubsumptionLevel);
 
   /// Tests if the argument is a variable. A variable here is defined to be
@@ -619,20 +616,20 @@ public:
                        ref<Expr> returnValue);
 
   /// \brief This retrieves the allocations known at this state, and the
-  /// expressions stored in the allocations. This returns as the last argument a
-  /// pair of the store part indexed by constants, and the store part indexed by
-  /// symbolic expressions.
+  /// expressions stored in the allocations. This returns as the two last
+  /// arguments a pair of the store part indexed by constants, and the store
+  /// part indexed by symbolic expressions.
   void getStoredExpressions(
       const std::vector<llvm::Instruction *> &callHistory,
-      std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore> &
-          storedExpressions) const;
+      Dependency::ConcreteStore &concretelyAddressedStore,
+      Dependency::SymbolicStore &symbolicallyAddressedStore) const;
 
   /// \brief This retrieves the allocations known at this state, and the
   /// expressions stored in the allocations, as long as the allocation is
   /// relevant as an interpolant. This function is typically used when creating
-  /// an entry in the subsumption table. This returns as the last argument a
-  /// pair of the store part indexed by constants, and the store part indexed by
-  /// symbolic expressions.
+  /// an entry in the subsumption table. This returns as the two last arguments
+  /// a pair of the store part indexed by constants, and the store part indexed
+  /// by symbolic expressions.
   ///
   /// \param replacements The replacement bound variables: As the resulting
   /// expression will
@@ -641,8 +638,8 @@ public:
   void getStoredCoreExpressions(
       const std::vector<llvm::Instruction *> &callHistory,
       std::set<const Array *> &replacements,
-      std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore> &
-          storedExpressions) const;
+      Dependency::ConcreteStore &concretelyAddressedStore,
+      Dependency::SymbolicStore &symbolicallyAddressedStore) const;
 
   void incInstructionsDepth();
 

@@ -477,10 +477,11 @@ namespace klee {
     /// bound ones.
     /// \param coreOnly Indicate whether we are retrieving only data
     /// for locations relevant to an unsatisfiability core.
-    void getStoredExpressions(
-        const std::vector<llvm::Instruction *> &callHistory,
-        std::set<const Array *> &replacements, bool coreOnly,
-        std::pair<ConcreteStore, SymbolicStore> &storedExpressions);
+    void
+    getStoredExpressions(const std::vector<llvm::Instruction *> &callHistory,
+                         std::set<const Array *> &replacements, bool coreOnly,
+                         ConcreteStore &_concretelyAddressedStore,
+                         SymbolicStore &_symbolicallyAddressedStore);
 
     /// \brief Record call arguments in a function call
     void bindCallArguments(llvm::Instruction *instr,

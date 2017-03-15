@@ -445,26 +445,14 @@ SubsumptionTableEntry::SubsumptionTableEntry(
   existentials.clear();
   interpolant = node->getInterpolant(existentials);
 
-  std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
-  storedExpressions;
-  node->getStoredCoreExpressions(callHistory, existentials, storedExpressions);
-
-  concreteAddressStore = storedExpressions.first;
-  for (Dependency::ConcreteStore::iterator it = concreteAddressStore.begin(),
-                                           ie = concreteAddressStore.end();
-       it != ie; ++it) {
-    concreteAddressStoreKeys.push_back(it->first);
-  }
-
-  symbolicAddressStore = storedExpressions.second;
-  for (Dependency::SymbolicStore::iterator it = symbolicAddressStore.begin(),
-                                           ie = symbolicAddressStore.end();
-       it != ie; ++it) {
-    symbolicAddressStoreKeys.push_back(it->first);
-  }
+  node->getStoredCoreExpressions(callHistory, existentials,
+                                 concreteAddressStore, symbolicAddressStore);
 }
 
-SubsumptionTableEntry::~SubsumptionTableEntry() {}
+SubsumptionTableEntry::~SubsumptionTableEntry() {
+  concreteAddressStore.clear();
+  symbolicAddressStore.clear();
+}
 
 bool
 SubsumptionTableEntry::hasVariableInSet(std::set<const Array *> &existentials,
@@ -958,8 +946,9 @@ ref<Expr> SubsumptionTableEntry::simplifyExistsExpr(ref<Expr> existsExpr,
 
 bool SubsumptionTableEntry::subsumed(
     TimingSolver *solver, ExecutionState &state, double timeout,
-    const std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
-        storedExpressions, int debugSubsumptionLevel) {
+    Dependency::ConcreteStore &concretelyAddressedStore,
+    Dependency::SymbolicStore &symbolicallyAddressedStore,
+    int debugSubsumptionLevel) {
 #ifdef ENABLE_Z3
   // Tell the solver implementation that we are checking for subsumption for
   // collecting statistics of solver calls.
@@ -975,11 +964,6 @@ bool SubsumptionTableEntry::subsumed(
     return true;
   }
 
-  Dependency::ConcreteStore stateConcreteAddressStore = storedExpressions.first;
-
-  Dependency::SymbolicStore stateSymbolicAddressStore =
-      storedExpressions.second;
-
   ref<Expr> stateEqualityConstraints;
 
   std::map<ref<StoredValue>, std::set<ref<Expr> > >
@@ -990,17 +974,17 @@ bool SubsumptionTableEntry::subsumed(
     TimerStatIncrementer t(concreteStoreExpressionBuildTime);
 
     // Build constraints from concrete-address interpolant store
-    for (std::vector<const llvm::Value *>::iterator
-             it1 = concreteAddressStoreKeys.begin(),
-             ie1 = concreteAddressStoreKeys.end();
+    for (Dependency::ConcreteStore::const_iterator
+             it1 = concreteAddressStore.begin(),
+             ie1 = concreteAddressStore.end();
          it1 != ie1; ++it1) {
 
       const Dependency::ConcreteStoreMap tabledConcreteMap =
-          concreteAddressStore[*it1];
+          concreteAddressStore[it1->first];
       const Dependency::ConcreteStoreMap stateConcreteMap =
-          stateConcreteAddressStore[*it1];
+          concretelyAddressedStore[it1->first];
       const Dependency::SymbolicStoreMap stateSymbolicMap =
-          stateSymbolicAddressStore[*it1];
+          symbolicallyAddressedStore[it1->first];
 
       // If the current state does not constrain the same base, subsumption
       // fails.
@@ -1198,16 +1182,16 @@ bool SubsumptionTableEntry::subsumed(
   {
     TimerStatIncrementer t(symbolicStoreExpressionBuildTime);
     // Build constraints from symbolic-address interpolant store
-    for (std::vector<const llvm::Value *>::iterator
-             it1 = symbolicAddressStoreKeys.begin(),
-             ie1 = symbolicAddressStoreKeys.end();
+    for (Dependency::SymbolicStore::const_iterator
+             it1 = symbolicAddressStore.begin(),
+             ie1 = symbolicAddressStore.end();
          it1 != ie1; ++it1) {
       const Dependency::SymbolicStoreMap tabledSymbolicMap =
-          symbolicAddressStore[*it1];
+          symbolicAddressStore[it1->first];
       const Dependency::ConcreteStoreMap stateConcreteMap =
-          stateConcreteAddressStore[*it1];
+          concretelyAddressedStore[it1->first];
       const Dependency::SymbolicStoreMap stateSymbolicMap =
-          stateSymbolicAddressStore[*it1];
+          symbolicallyAddressedStore[it1->first];
 
       ref<Expr> conjunction;
 
@@ -1909,17 +1893,19 @@ bool SubsumptionTable::check(TimingSolver *solver, ExecutionState &state,
 
   if (iterPair.first != iterPair.second) {
 
-    std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
-    storedExpressions;
+    Dependency::ConcreteStore concretelyAddressedStore;
+    Dependency::SymbolicStore symbolicallyAddressedStore;
+
     txTreeNode->getStoredExpressions(txTreeNode->entryCallHistory,
-                                     storedExpressions);
+                                     concretelyAddressedStore,
+                                     symbolicallyAddressedStore);
 
     // Iterate the subsumption table entry with reverse iterator because
     // the successful subsumption mostly happen in the newest entry.
     for (EntryIterator it = iterPair.first, ie = iterPair.second; it != ie;
          ++it) {
-      if ((*it)->subsumed(solver, state, timeout, storedExpressions,
-                          debugSubsumptionLevel)) {
+      if ((*it)->subsumed(solver, state, timeout, concretelyAddressedStore,
+                          symbolicallyAddressedStore, debugSubsumptionLevel)) {
         // We mark as subsumed such that the node will not be
         // stored into table (the table already contains a more
         // general entry).
@@ -2388,8 +2374,8 @@ void TxTreeNode::bindReturnValue(llvm::CallInst *site, llvm::Instruction *inst,
 
 void TxTreeNode::getStoredExpressions(
     const std::vector<llvm::Instruction *> &_callHistory,
-    std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore> &
-        coreExpressions) const {
+    Dependency::ConcreteStore &concretelyAddressedStore,
+    Dependency::SymbolicStore &symbolicallyAddressedStore) const {
   TimerStatIncrementer t(getStoredExpressionsTime);
   std::set<const Array *> dummyReplacements;
 
@@ -2398,14 +2384,15 @@ void TxTreeNode::getStoredExpressions(
   // from the parent node.
   if (parent)
     parent->dependency->getStoredExpressions(_callHistory, dummyReplacements,
-                                             false, coreExpressions);
+                                             false, concretelyAddressedStore,
+                                             symbolicallyAddressedStore);
 }
 
 void TxTreeNode::getStoredCoreExpressions(
     const std::vector<llvm::Instruction *> &_callHistory,
     std::set<const Array *> &replacements,
-    std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore> &
-        storedExpressions) const {
+    Dependency::ConcreteStore &concretelyAddressedStore,
+    Dependency::SymbolicStore &symbolicallyAddressedStore) const {
   TimerStatIncrementer t(getStoredCoreExpressionsTime);
 
   // Since a program point index is a first statement in a basic block,
@@ -2413,7 +2400,8 @@ void TxTreeNode::getStoredCoreExpressions(
   // from the parent node.
   if (parent)
     parent->dependency->getStoredExpressions(_callHistory, replacements, true,
-                                             storedExpressions);
+                                             concretelyAddressedStore,
+                                             symbolicallyAddressedStore);
 }
 
 uint64_t TxTreeNode::getInstructionsDepth() { return instructionsDepth; }
