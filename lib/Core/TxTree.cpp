@@ -990,7 +990,7 @@ bool SubsumptionTableEntry::subsumed(
     TimerStatIncrementer t(concreteStoreExpressionBuildTime);
 
     // Build constraints from concrete-address interpolant store
-    for (std::vector<llvm::Value *>::iterator
+    for (std::vector<const llvm::Value *>::iterator
              it1 = concreteAddressStoreKeys.begin(),
              ie1 = concreteAddressStoreKeys.end();
          it1 != ie1; ++it1) {
@@ -1198,7 +1198,7 @@ bool SubsumptionTableEntry::subsumed(
   {
     TimerStatIncrementer t(symbolicStoreExpressionBuildTime);
     // Build constraints from symbolic-address interpolant store
-    for (std::vector<llvm::Value *>::iterator
+    for (std::vector<const llvm::Value *>::iterator
              it1 = symbolicAddressStoreKeys.begin(),
              ie1 = symbolicAddressStoreKeys.end();
          it1 != ie1; ++it1) {

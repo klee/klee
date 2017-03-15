@@ -261,8 +261,8 @@ namespace klee {
     typedef std::pair<ref<MemoryLocation>, ref<StoredValue> > AddressValuePair;
     typedef std::map<ref<MemoryLocation>, ref<StoredValue> > ConcreteStoreMap;
     typedef std::vector<AddressValuePair> SymbolicStoreMap;
-    typedef std::map<llvm::Value *, ConcreteStoreMap> ConcreteStore;
-    typedef std::map<llvm::Value *, SymbolicStoreMap> SymbolicStore;
+    typedef std::map<const llvm::Value *, ConcreteStoreMap> ConcreteStore;
+    typedef std::map<const llvm::Value *, SymbolicStoreMap> SymbolicStore;
 
   private:
     /// \brief Previous path condition
@@ -413,6 +413,22 @@ namespace klee {
         const std::vector<llvm::Instruction *> &callHistory,
         std::vector<ref<Expr> > &arguments,
         std::vector<ref<VersionedValue> > &argumentValuesList);
+
+    void getConcreteStore(
+        const std::vector<llvm::Instruction *> &callHistory,
+        const std::map<ref<MemoryLocation>,
+                       std::pair<ref<VersionedValue>, ref<VersionedValue> > > &
+            store,
+        std::set<const Array *> &replacements, bool coreOnly,
+        Dependency::ConcreteStore &concreteStore) const;
+
+    void getSymbolicStore(
+        const std::vector<llvm::Instruction *> &callHistory,
+        const std::map<ref<MemoryLocation>,
+                       std::pair<ref<VersionedValue>, ref<VersionedValue> > > &
+            store,
+        std::set<const Array *> &replacements, bool coreOnly,
+        Dependency::SymbolicStore &symbolicStore) const;
 
   public:
     /// \brief This is for dynamic setting up of debug messages.

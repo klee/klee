@@ -301,6 +301,81 @@ void StoredValue::print(llvm::raw_ostream &stream,
 
 /**/
 
+void Dependency::getConcreteStore(
+    const std::vector<llvm::Instruction *> &callHistory,
+    const std::map<ref<MemoryLocation>,
+                   std::pair<ref<VersionedValue>, ref<VersionedValue> > > &
+        store,
+    std::set<const Array *> &replacements, bool coreOnly,
+    Dependency::ConcreteStore &concreteStore) const {
+
+  for (std::map<ref<MemoryLocation>,
+                std::pair<ref<VersionedValue>,
+                          ref<VersionedValue> > >::const_iterator
+           it = store.begin(),
+           ie = store.end();
+       it != ie; ++it) {
+    if (!it->first->contextIsPrefixOf(callHistory))
+      continue;
+    if (it->second.second.isNull())
+      continue;
+
+    if (!coreOnly) {
+      const llvm::Value *base = it->first->getValue();
+      concreteStore[base][it->first] = StoredValue::create(it->second.second);
+    } else if (it->second.second->isCore()) {
+      // An address is in the core if it stores a value that is in the core
+      const llvm::Value *base = it->first->getValue();
+#ifdef ENABLE_Z3
+      if (!NoExistential) {
+        concreteStore[base][it->first] =
+            StoredValue::create(it->second.second, replacements);
+      } else
+#endif
+        concreteStore[base][it->first] = StoredValue::create(it->second.second);
+    }
+  }
+}
+
+void Dependency::getSymbolicStore(
+    const std::vector<llvm::Instruction *> &callHistory,
+    const std::map<ref<MemoryLocation>,
+                   std::pair<ref<VersionedValue>, ref<VersionedValue> > > &
+        store,
+    std::set<const Array *> &replacements, bool coreOnly,
+    Dependency::SymbolicStore &symbolicStore) const {
+  for (std::map<ref<MemoryLocation>,
+                std::pair<ref<VersionedValue>,
+                          ref<VersionedValue> > >::const_iterator
+           it = store.begin(),
+           ie = store.end();
+       it != ie; ++it) {
+    if (!it->first->contextIsPrefixOf(callHistory))
+      continue;
+
+    if (it->second.second.isNull())
+      continue;
+
+    if (!coreOnly) {
+      llvm::Value *base = it->first->getValue();
+      symbolicStore[base].push_back(Dependency::AddressValuePair(
+          it->first, StoredValue::create(it->second.second)));
+    } else if (it->second.second->isCore()) {
+      // An address is in the core if it stores a value that is in the core
+      llvm::Value *base = it->first->getValue();
+#ifdef ENABLE_Z3
+      if (!NoExistential) {
+        symbolicStore[base].push_back(Dependency::AddressValuePair(
+            MemoryLocation::create(it->first, replacements),
+            StoredValue::create(it->second.second, replacements)));
+      } else
+#endif
+        symbolicStore[base].push_back(Dependency::AddressValuePair(
+            it->first, StoredValue::create(it->second.second)));
+    }
+  }
+}
+
 bool Dependency::isMainArgument(llvm::Value *loc) {
   llvm::Argument *vArg = llvm::dyn_cast<llvm::Argument>(loc);
 
@@ -321,68 +396,17 @@ Dependency::registerNewVersionedValue(llvm::Value *value,
 }
 
 void Dependency::getStoredExpressions(
-    const std::vector<llvm::Instruction *> &callHistory,
+    const std::vector<llvm::Instruction *> &callStack,
     std::set<const Array *> &replacements, bool coreOnly,
     std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore> &
         storedExpressions) {
   ConcreteStore &concreteStore = storedExpressions.first;
   SymbolicStore &symbolicStore = storedExpressions.second;
 
-  for (std::map<ref<MemoryLocation>,
-                std::pair<ref<VersionedValue>, ref<VersionedValue> > >::iterator
-           it = concretelyAddressedStore.begin(),
-           ie = concretelyAddressedStore.end();
-       it != ie; ++it) {
-    if (!it->first->contextIsPrefixOf(callHistory))
-      continue;
-    if (it->second.second.isNull())
-      continue;
-
-    if (!coreOnly) {
-      llvm::Value *base = it->first->getValue();
-      concreteStore[base][it->first] = StoredValue::create(it->second.second);
-    } else if (it->second.second->isCore()) {
-      // An address is in the core if it stores a value that is in the core
-      llvm::Value *base = it->first->getValue();
-#ifdef ENABLE_Z3
-      if (!NoExistential) {
-        concreteStore[base][it->first] =
-            StoredValue::create(it->second.second, replacements);
-      } else
-#endif
-        concreteStore[base][it->first] = StoredValue::create(it->second.second);
-    }
-  }
-
-  for (std::map<ref<MemoryLocation>,
-                std::pair<ref<VersionedValue>, ref<VersionedValue> > >::iterator
-           it = symbolicallyAddressedStore.begin(),
-           ie = symbolicallyAddressedStore.end();
-       it != ie; ++it) {
-    if (!it->first->contextIsPrefixOf(callHistory))
-      continue;
-
-    if (it->second.second.isNull())
-      continue;
-
-    if (!coreOnly) {
-      llvm::Value *base = it->first->getValue();
-      symbolicStore[base].push_back(
-          AddressValuePair(it->first, StoredValue::create(it->second.second)));
-    } else if (it->second.second->isCore()) {
-      // An address is in the core if it stores a value that is in the core
-      llvm::Value *base = it->first->getValue();
-#ifdef ENABLE_Z3
-      if (!NoExistential) {
-        symbolicStore[base].push_back(AddressValuePair(
-            MemoryLocation::create(it->first, replacements),
-            StoredValue::create(it->second.second, replacements)));
-      } else
-#endif
-        symbolicStore[base].push_back(AddressValuePair(
-            it->first, StoredValue::create(it->second.second)));
-      }
-  }
+  getConcreteStore(callStack, concretelyAddressedStore, replacements, coreOnly,
+                   concreteStore);
+  getSymbolicStore(callStack, symbolicallyAddressedStore, replacements,
+                   coreOnly, symbolicStore);
 }
 
 ref<VersionedValue>

@@ -368,11 +368,11 @@ class SubsumptionTableEntry {
 
   Dependency::ConcreteStore concreteAddressStore;
 
-  std::vector<llvm::Value *> concreteAddressStoreKeys;
+  std::vector<const llvm::Value *> concreteAddressStoreKeys;
 
   Dependency::SymbolicStore symbolicAddressStore;
 
-  std::vector<llvm::Value *> symbolicAddressStoreKeys;
+  std::vector<const llvm::Value *> symbolicAddressStoreKeys;
 
   std::set<const Array *> existentials;
 
