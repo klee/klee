@@ -47,7 +47,6 @@ void StoredValue::init(ref<VersionedValue> vvalue,
                        std::set<const Array *> &replacements,
                        const std::set<std::string> &_coreReasons,
                        bool shadowing) {
-
   refCount = 0;
   id = reinterpret_cast<uintptr_t>(this);
   expr = shadowing ? ShadowArray::getShadowExpression(vvalue->getExpression(),
@@ -62,7 +61,7 @@ void StoredValue::init(ref<VersionedValue> vvalue,
   if (doNotUseBound)
     return;
 
-  const std::set<ref<MemoryLocation> > locations = vvalue->getLocations();
+  const std::set<ref<MemoryLocation> > locations(vvalue->getLocations());
 
   if (!locations.empty()) {
     // Here we compute memory bounds for checking pointer values. The memory
@@ -81,21 +80,22 @@ void StoredValue::init(ref<VersionedValue> vvalue,
         allocationBounds[v].insert(Expr::createPointer(concreteBound));
 
       // Symbolic bounds
-      std::set<ref<Expr> > bounds = (*it)->getSymbolicOffsetBounds();
+      const std::set<ref<Expr> > &bounds = (*it)->getSymbolicOffsetBounds();
 
       if (shadowing) {
         std::set<ref<Expr> > shadowBounds;
-        for (std::set<ref<Expr> >::iterator it1 = bounds.begin(),
-                                            ie1 = bounds.end();
+        for (std::set<ref<Expr> >::const_iterator it1 = bounds.begin(),
+                                                  ie1 = bounds.end();
              it1 != ie1; ++it1) {
           shadowBounds.insert(
               ShadowArray::getShadowExpression(*it1, replacements));
         }
-        bounds = shadowBounds;
-      }
-
-      if (!bounds.empty())
+        if (!shadowBounds.empty()) {
+          allocationBounds[v].insert(shadowBounds.begin(), shadowBounds.end());
+        }
+      } else if (!bounds.empty()) {
         allocationBounds[v].insert(bounds.begin(), bounds.end());
+      }
 
       ref<Expr> offset = shadowing ? ShadowArray::getShadowExpression(
                                          (*it)->getOffset(), replacements)
