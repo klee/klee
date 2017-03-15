@@ -396,17 +396,14 @@ Dependency::registerNewVersionedValue(llvm::Value *value,
 }
 
 void Dependency::getStoredExpressions(
-    const std::vector<llvm::Instruction *> &callStack,
+    const std::vector<llvm::Instruction *> &callHistory,
     std::set<const Array *> &replacements, bool coreOnly,
     std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore> &
         storedExpressions) {
-  ConcreteStore &concreteStore = storedExpressions.first;
-  SymbolicStore &symbolicStore = storedExpressions.second;
-
-  getConcreteStore(callStack, concretelyAddressedStore, replacements, coreOnly,
-                   concreteStore);
-  getSymbolicStore(callStack, symbolicallyAddressedStore, replacements,
-                   coreOnly, symbolicStore);
+  getConcreteStore(callHistory, concretelyAddressedStore, replacements,
+                   coreOnly, storedExpressions.first);
+  getSymbolicStore(callHistory, symbolicallyAddressedStore, replacements,
+                   coreOnly, storedExpressions.second);
 }
 
 ref<VersionedValue>
