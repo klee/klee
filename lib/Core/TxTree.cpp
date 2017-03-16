@@ -1021,7 +1021,7 @@ bool SubsumptionTableEntry::subsumed(
         }
 
         const ref<StoredValue> tabledValue = it2->second;
-        const ref<StoredValue> stateValue = stateConcreteMap.at(it2->first);
+        ref<StoredValue> stateValue = stateConcreteMap.at(it2->first);
         ref<Expr> res;
 
         if (!stateValue.isNull()) {
@@ -1094,11 +1094,12 @@ bool SubsumptionTableEntry::subsumed(
               continue;
 
             ref<Expr> stateSymbolicOffset = it3->first->getOffset();
-            ref<StoredValue> stateSymbolicValue = it3->second;
             ref<Expr> newTerm;
 
+            stateValue = it3->second;
+
             if (tabledValue->getExpression()->getWidth() !=
-                stateSymbolicValue->getExpression()->getWidth()) {
+                stateValue->getExpression()->getWidth()) {
               // We conservatively require that the addresses should not be
               // equal whenever their values are of different width
               newTerm = EqExpr::create(
@@ -1106,12 +1107,11 @@ bool SubsumptionTableEntry::subsumed(
                   EqExpr::create(tabledConcreteOffset, stateSymbolicOffset));
 
             } else if (!NoBoundInterpolation && !ExactAddressInterpolant &&
-                       tabledValue->isPointer() &&
-                       stateSymbolicValue->isPointer() &&
+                       tabledValue->isPointer() && stateValue->isPointer() &&
                        tabledValue->useBound()) {
               std::set<ref<Expr> > bounds;
               ref<Expr> boundsCheck = tabledValue->getBoundsCheck(
-                  stateSymbolicValue, bounds, debugSubsumptionLevel);
+                  stateValue, bounds, debugSubsumptionLevel);
 
               if (!boundsCheck->isTrue()) {
                 newTerm = EqExpr::create(
@@ -1120,8 +1120,7 @@ bool SubsumptionTableEntry::subsumed(
 
                 if (!boundsCheck->isFalse()) {
                   // Implication: if tabledConcreteAddress ==
-                  // stateSymbolicAddress
-                  // then bounds check must hold
+                  // stateSymbolicAddress then bounds check must hold
                   newTerm = OrExpr::create(newTerm, boundsCheck);
                 }
               }
@@ -1131,25 +1130,25 @@ bool SubsumptionTableEntry::subsumed(
             } else {
               // Implication: if tabledConcreteAddress == stateSymbolicAddress,
               // then tabledValue->getExpression() ==
-              // stateSymbolicValue->getExpression()
+              // stateValue->getExpression()
               newTerm = OrExpr::create(
                   EqExpr::create(ConstantExpr::create(0, Expr::Bool),
                                  EqExpr::create(tabledConcreteOffset,
                                                 stateSymbolicOffset)),
                   EqExpr::create(tabledValue->getExpression(),
-                                 stateSymbolicValue->getExpression()));
+                                 stateValue->getExpression()));
             }
             if (!conjunction.isNull()) {
               conjunction = AndExpr::create(newTerm, conjunction);
             } else {
               // Implication: if tabledConcreteAddress == stateSymbolicAddress,
-              // then tabledValue == stateSymbolicValue
+              // then tabledValue == stateValue
               newTerm = OrExpr::create(
                   EqExpr::create(ConstantExpr::create(0, Expr::Bool),
                                  EqExpr::create(tabledConcreteOffset,
                                                 stateSymbolicOffset)),
                   EqExpr::create(tabledValue->getExpression(),
-                                 stateSymbolicValue->getExpression()));
+                                 stateValue->getExpression()));
             }
 
             if (!newTerm.isNull()) {
