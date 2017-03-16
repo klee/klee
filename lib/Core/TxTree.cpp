@@ -979,8 +979,7 @@ bool SubsumptionTableEntry::subsumed(
              ie1 = concreteAddressStore.end();
          it1 != ie1; ++it1) {
 
-      const Dependency::ConcreteStoreMap &tabledConcreteMap =
-          concreteAddressStore[it1->first];
+      const Dependency::ConcreteStoreMap &tabledConcreteMap = it1->second;
       const Dependency::ConcreteStoreMap &stateConcreteMap =
           concretelyAddressedStore[it1->first];
       const Dependency::SymbolicStoreMap &stateSymbolicMap =
@@ -1186,8 +1185,7 @@ bool SubsumptionTableEntry::subsumed(
              it1 = symbolicAddressStore.begin(),
              ie1 = symbolicAddressStore.end();
          it1 != ie1; ++it1) {
-      const Dependency::SymbolicStoreMap &tabledSymbolicMap =
-          symbolicAddressStore[it1->first];
+      const Dependency::SymbolicStoreMap &tabledSymbolicMap = it1->second;
       const Dependency::ConcreteStoreMap &stateConcreteMap =
           concretelyAddressedStore[it1->first];
       const Dependency::SymbolicStoreMap &stateSymbolicMap =
