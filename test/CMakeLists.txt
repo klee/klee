@@ -96,7 +96,7 @@ if (DOWNLOAD_NOT_SOURCE)
   target_include_directories("not" PRIVATE ${KLEE_COMPONENT_EXTRA_INCLUDE_DIRS})
   target_compile_options("not" PRIVATE ${KLEE_COMPONENT_CXX_FLAGS})
   target_compile_definitions("not" PRIVATE ${KLEE_COMPONENT_CXX_DEFINES})
-  target_link_libraries("not" PRIVATE ${FILECHECK_NEEDED_LIBS})
+  target_link_libraries("not" PRIVATE ${NOT_NEEDED_LIBS})
 endif()
 
 ###############################################################################
