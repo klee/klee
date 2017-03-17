@@ -1007,15 +1007,20 @@ bool SubsumptionTableEntry::subsumed(
         // and we therefore fail the subsumption.
         if (!stateConcreteMap.count(it2->first)) {
           if (debugSubsumptionLevel >= 1) {
-            std::string msg;
+            std::string msg1, msg2;
             std::string padding(makeTabs(1));
-            llvm::raw_string_ostream stream(msg);
+            llvm::raw_string_ostream stream(msg2);
+
+            if (!corePointerValues.empty()) {
+              msg1 += " (with successful memory bound checks)";
+            }
+
             it2->first->print(stream, padding);
             stream.flush();
             klee_message("#%lu=>#%lu: Check failure as memory region in the "
-                         "table does not exist in the state:\n%s",
+                         "table does not exist in the state%s:\n%s",
                          state.txTreeNode->getNodeSequenceNumber(),
-                         nodeSequenceNumber, msg.c_str());
+                         nodeSequenceNumber, msg1.c_str(), msg2.c_str());
           }
           return false;
         }
@@ -1031,10 +1036,14 @@ bool SubsumptionTableEntry::subsumed(
             // We conservatively fail the subsumption in case the sizes do not
             // match.
             if (debugSubsumptionLevel >= 1) {
+              std::string msg;
+              if (!corePointerValues.empty()) {
+                msg += " (with successful memory bound checks)";
+              }
               klee_message("#%lu=>#%lu: Check failure as sizes of stored "
-                           "values do not match",
+                           "values do not match%s",
                            state.txTreeNode->getNodeSequenceNumber(),
-                           nodeSequenceNumber);
+                           nodeSequenceNumber, msg.c_str());
             }
             return false;
           } else if (!NoBoundInterpolation && !ExactAddressInterpolant &&
@@ -1045,10 +1054,14 @@ bool SubsumptionTableEntry::subsumed(
                 tabledValue->getBoundsCheck(stateValue, bounds, debugSubsumptionLevel);
             if (boundsCheck->isFalse()) {
               if (debugSubsumptionLevel >= 1) {
+                std::string msg;
+                if (!corePointerValues.empty()) {
+                  msg += " (with successful memory bound checks)";
+                }
                 klee_message("#%lu=>#%lu: Check failure due to failure in "
-                             "memory bounds check",
+                             "memory bounds check%s",
                              state.txTreeNode->getNodeSequenceNumber(),
-                             nodeSequenceNumber);
+                             nodeSequenceNumber, msg.c_str());
               }
               return false;
             }
@@ -1062,16 +1075,21 @@ bool SubsumptionTableEntry::subsumed(
                                  stateValue->getExpression());
             if (res->isFalse()) {
               if (debugSubsumptionLevel >= 1) {
-                std::string msg;
-                llvm::raw_string_ostream stream(msg);
+                std::string msg1, msg2;
+                llvm::raw_string_ostream stream(msg2);
+
+                if (!corePointerValues.empty()) {
+                  msg1 += " (with successful memory bound checks)";
+                }
+
                 tabledValue->getExpression()->print(stream);
                 stream << " vs. ";
                 stateValue->getExpression()->print(stream);
                 stream.flush();
                 klee_message(
-                    "#%lu=>#%lu: Check failure due to unequal content: %s",
+                    "#%lu=>#%lu: Check failure due to unequal content%s: %s",
                     state.txTreeNode->getNodeSequenceNumber(),
-                    nodeSequenceNumber, msg.c_str());
+                    nodeSequenceNumber, msg1.c_str(), msg2.c_str());
               }
               return false;
             }
@@ -1358,9 +1376,13 @@ bool SubsumptionTableEntry::subsumed(
       // Here both the interpolant constraints and state equality
       // constraints are empty, therefore everything gets subsumed
       if (debugSubsumptionLevel >= 1) {
-        klee_message("#%lu=>#%lu: Check success as interpolant is empty",
+        std::string msg = "";
+        if (!corePointerValues.empty()) {
+          msg += " (with successful memory bound checks)";
+        }
+        klee_message("#%lu=>#%lu: Check success as interpolant is empty%s",
                      state.txTreeNode->getNodeSequenceNumber(),
-                     nodeSequenceNumber);
+                     nodeSequenceNumber, msg.c_str());
       }
 
       // We build memory bounds interpolants from pointer values
@@ -1410,9 +1432,14 @@ bool SubsumptionTableEntry::subsumed(
     // the solver
     if (query->isFalse()) {
       if (debugSubsumptionLevel >= 1) {
-        klee_message("#%lu=>#%lu: Check failure as consequent is unsatisfiable",
-                     state.txTreeNode->getNodeSequenceNumber(),
-                     nodeSequenceNumber);
+        std::string msg = "";
+        if (!corePointerValues.empty()) {
+          msg += " (with successful memory bound checks)";
+        }
+        klee_message(
+            "#%lu=>#%lu: Check failure as consequent is unsatisfiable%s",
+            state.txTreeNode->getNodeSequenceNumber(), nodeSequenceNumber,
+            msg.c_str());
       }
       return false;
     }
@@ -1421,9 +1448,14 @@ bool SubsumptionTableEntry::subsumed(
 
     if (!detectConflictPrimitives(state, query)) {
       if (debugSubsumptionLevel >= 1) {
+        std::string msg = "";
+        if (!corePointerValues.empty()) {
+          msg += " (with successful memory bound checks)";
+        }
         klee_message(
-            "#%lu=>#%lu: Check failure as contradictory equalities detected",
-            state.txTreeNode->getNodeSequenceNumber(), nodeSequenceNumber);
+            "#%lu=>#%lu: Check failure as contradictory equalities detected%s",
+            state.txTreeNode->getNodeSequenceNumber(), nodeSequenceNumber,
+            msg.c_str());
       }
       return false;
     }
@@ -1497,9 +1529,13 @@ bool SubsumptionTableEntry::subsumed(
       // query is a constant expression
       if (query->isTrue()) {
         if (debugSubsumptionLevel >= 1) {
-          klee_message("#%lu=>#%lu: Check success as query is true",
+          std::string msg = "";
+          if (!corePointerValues.empty()) {
+            msg += " (with successful memory bound checks)";
+          }
+          klee_message("#%lu=>#%lu: Check success as query is true%s",
                        state.txTreeNode->getNodeSequenceNumber(),
-                       nodeSequenceNumber);
+                       nodeSequenceNumber, msg.c_str());
         }
 
         if (!NoBoundInterpolation && !ExactAddressInterpolant) {
@@ -1535,9 +1571,13 @@ bool SubsumptionTableEntry::subsumed(
         return true;
       }
       if (debugSubsumptionLevel >= 1) {
-        klee_message("#%lu=>#%lu: Check failure as query is non-true",
+        std::string msg = "";
+        if (!corePointerValues.empty()) {
+          msg += " (with successful memory bound checks)";
+        }
+        klee_message("#%lu=>#%lu: Check failure as query is non-true%s",
                      state.txTreeNode->getNodeSequenceNumber(),
-                     nodeSequenceNumber);
+                     nodeSequenceNumber, msg.c_str());
       }
       return false;
     }
@@ -1549,9 +1589,13 @@ bool SubsumptionTableEntry::subsumed(
       // State subsumed, we mark needed constraints on the
       // path condition.
       if (debugSubsumptionLevel >= 1) {
-        klee_message("#%lu=>#%lu: Check success as solver decided validity",
+        std::string msg = "";
+        if (!corePointerValues.empty()) {
+          msg += " (with successful memory bound checks)";
+        }
+        klee_message("#%lu=>#%lu: Check success as solver decided validity%s",
                      state.txTreeNode->getNodeSequenceNumber(),
-                     nodeSequenceNumber);
+                     nodeSequenceNumber, msg.c_str());
       }
 
       // We create path condition marking structure and mark core constraints
@@ -1600,9 +1644,14 @@ bool SubsumptionTableEntry::subsumed(
       delete z3solver;
 
     if (debugSubsumptionLevel >= 1) {
+      std::string msg = "";
+      if (!corePointerValues.empty()) {
+        msg += " (with successful memory bound checks)";
+      }
       klee_message(
-          "#%lu=>#%lu: Check failure as solver did not decide validity",
-          state.txTreeNode->getNodeSequenceNumber(), nodeSequenceNumber);
+          "#%lu=>#%lu: Check failure as solver did not decide validity%s",
+          state.txTreeNode->getNodeSequenceNumber(), nodeSequenceNumber,
+          msg.c_str());
     }
   }
 #endif /* ENABLE_Z3 */
