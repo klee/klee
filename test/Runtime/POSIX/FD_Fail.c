@@ -11,7 +11,7 @@
 
 int main(int argc, char** argv) {
   char buf[1024];  
-  FILE* f = fopen("/etc/fstab", "r");
+  FILE* f = fopen("/etc/mtab", "r");
   assert(f);
     
   int r = fread(buf, 1, 100, f);
