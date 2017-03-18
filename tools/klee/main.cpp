@@ -422,6 +422,7 @@ void KleeHandler::processTestCase(const ExecutionState &state,
                                   const char *errorSuffix) {
   if (errorMessage && ExitOnError) {
     llvm::errs() << "EXITING ON ERROR:\n" << errorMessage << "\n";
+    m_interpreter->prepareForEarlyExit();
     exit(1);
   }
 

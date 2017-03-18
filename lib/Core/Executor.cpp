@@ -3835,6 +3835,13 @@ size_t Executor::getAllocationAlignment(const llvm::Value *allocSite) const {
          "Returned alignment must be a power of two");
   return alignment;
 }
+
+void Executor::prepareForEarlyExit() {
+  if (statsTracker) {
+    // Make sure stats get flushed out
+    statsTracker->done();
+  }
+}
 ///
 
 Interpreter *Interpreter::create(LLVMContext &ctx, const InterpreterOptions &opts,
