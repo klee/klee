@@ -138,6 +138,8 @@ public:
 
   virtual void setInhibitForking(bool value) = 0;
 
+  virtual void prepareForEarlyExit() = 0;
+
   /*** State accessor methods ***/
 
   virtual unsigned getPathStreamID(const ExecutionState &state) = 0;

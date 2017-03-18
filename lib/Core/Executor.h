@@ -487,6 +487,8 @@ public:
     inhibitForking = value;
   }
 
+  void prepareForEarlyExit();
+
   /*** State accessor methods ***/
 
   virtual unsigned getPathStreamID(const ExecutionState &state);
