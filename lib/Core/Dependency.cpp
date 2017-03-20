@@ -1139,6 +1139,41 @@ void Dependency::execute(llvm::Instruction *instr,
           break;
         } else if (locations.size() == 1) {
           ref<MemoryLocation> loc = *(locations.begin());
+
+          if (LoadedValueCheck) {
+            std::map<ref<MemoryLocation>,
+                     std::pair<ref<VersionedValue>,
+                               ref<VersionedValue> > >::iterator storeIt =
+                concretelyAddressedStore.find(loc);
+            std::pair<ref<VersionedValue>, ref<VersionedValue> > target;
+
+            if (storeIt == concretelyAddressedStore.end()) {
+              storeIt = symbolicallyAddressedStore.find(loc);
+              if (storeIt != symbolicallyAddressedStore.end()) {
+                target = storeIt->second;
+              }
+            } else {
+              target = storeIt->second;
+            }
+
+            if (!target.second.isNull()) {
+              if (debugSubsumptionLevel >= 1) {
+                if (valueExpr != target.second->getExpression()) {
+                  std::string msg;
+                  llvm::raw_string_ostream stream(msg);
+                  stream << "loaded value ";
+                  target.second->getExpression()->print(stream);
+                  stream << " should be ";
+                  valueExpr->print(stream);
+                  stream.flush();
+                  klee_message("%s", msg.c_str());
+                }
+              }
+              assert(valueExpr == target.second->getExpression() &&
+                     "Mismatched loaded value");
+            }
+          }
+
           if (isMainArgument(loc->getValue())) {
             // The load corresponding to a load of the main function's argument
             // that was never allocated within this program.
