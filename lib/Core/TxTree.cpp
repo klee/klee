@@ -1090,6 +1090,17 @@ bool SubsumptionTableEntry::subsumed(
                     "#%lu=>#%lu: Check failure due to unequal content%s: %s",
                     state.txTreeNode->getNodeSequenceNumber(),
                     nodeSequenceNumber, msg1.c_str(), msg2.c_str());
+
+                if (debugSubsumptionLevel >= 3) {
+                  std::string msg3;
+                  llvm::raw_string_ostream stream1(msg3);
+
+                  it2->first->print(stream1, makeTabs(1));
+                  stream1.flush();
+
+                  klee_message("with value stored in address:\n%s",
+                               msg3.c_str());
+                }
               }
               return false;
             }
