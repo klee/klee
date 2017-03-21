@@ -18,46 +18,17 @@ list(APPEND KLEE_COMPONENT_EXTRA_INCLUDE_DIRS
 # FIXME: We should test linking
 list(APPEND KLEE_SOLVER_LIBRARIES ${metaSMT_LIBRARIES})
 
-# THIS IS HORRIBLE. The ${metaSMT_CXXFLAGS} variable
-# is badly formed. It is a string but we can't just split
-# on spaces because its contents looks like this
-# "  -DmetaSMT_BOOLECTOR_1_API -D __STDC_LIMIT_MACROS -D __STDC_FORMAT_MACROS".
-# So handle defines specially
-string_to_list("${metaSMT_CXXFLAGS}" _metaSMT_CXXFLAGS_broken_list)
-list(LENGTH _metaSMT_CXXFLAGS_broken_list _metaSMT_CXXFLAGS_broken_list_length)
-math(EXPR _metaSMT_CXXFLAGS_broken_list_last_index "${_metaSMT_CXXFLAGS_broken_list_length} -1")
+# Separate flags and defines from ${metaSMT_CXXFLAGS}
+string_to_list("${metaSMT_CXXFLAGS}" _metaSMT_CXXFLAGS_list)
 set(_metasmt_flags "")
 set(_metasmt_defines "")
-set(_index_to_skip "")
-foreach (index RANGE 0 ${_metaSMT_CXXFLAGS_broken_list_last_index})
-  list(FIND _index_to_skip "${index}" _should_skip)
-  if ("${_should_skip}" EQUAL "-1")
-    list(GET _metaSMT_CXXFLAGS_broken_list ${index} _current_flag)
-    if ("${_current_flag}" MATCHES "^-D")
-      # This is a define
-      if ("${_current_flag}" MATCHES "^-D$")
-        # This is a bad define. We have just `-D` and the next item
-        # is the actually definition.
-        if ("${index}" EQUAL "${_metaSMT_CXXFLAGS_broken_list_last_index}")
-          message(FATAL_ERROR "Stray -D flag!")
-        else()
-          # Get next value
-          math(EXPR _next_index "${index} + 1")
-          list(GET _metaSMT_CXXFLAGS_broken_list ${_next_index} _next_flag)
-          if ("${_next_flag}" STREQUAL "")
-            message(FATAL_ERROR "Next flag shouldn't be empty!")
-          endif()
-          list(APPEND _metasmt_defines "-D${_next_flag}")
-          list(APPEND _index_to_skip "${_next_index}")
-        endif()
-      else()
-        # This is well formed defined (e.g. `-DHELLO`)
-        list(APPEND _metasmt_defines "${_current_flag}")
-      endif()
-    else()
-      # Regular flag
-      list(APPEND _metasmt_flags "${_current_flag}")
-    endif()
+foreach (flag ${_metaSMT_CXXFLAGS_list})
+  if ("${flag}" MATCHES "^-D")
+    # This is a define
+    list(APPEND _metasmt_defines "${flag}")
+  else()
+    # Regular flag
+    list(APPEND _metasmt_flags "${flag}")
   endif()
 endforeach()
 
