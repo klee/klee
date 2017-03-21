@@ -149,8 +149,12 @@ private:
   /// \brief The size of this allocation (0 means unknown)
   uint64_t size;
 
+  /// \brief The allocation id
+  uintptr_t allocationId;
+
   MemoryLocation(ref<AllocationContext> _context, ref<Expr> &_address,
-                 ref<Expr> &_base, ref<Expr> &_offset, uint64_t _size)
+                 ref<Expr> &_base, ref<Expr> &_offset, uint64_t _size,
+                 uintptr_t _allocationId = 0)
       : refCount(0), context(_context), offset(_offset),
         concreteOffsetBound(_size), size(_size) {
     bool unknownBase = false;
@@ -196,6 +200,12 @@ private:
       }
       base = SubExpr::create(address, tmpOffset);
     }
+
+    if (_allocationId != 0) {
+      allocationId = _allocationId;
+    } else {
+      allocationId = reinterpret_cast<uintptr_t>(_base.get());
+    }
   }
 
 public:
@@ -221,15 +231,15 @@ public:
     if (c && c->getZExtValue() == 0) {
       ref<Expr> base = loc->base;
       ref<Expr> offset = loc->offset;
-      ref<MemoryLocation> ret(
-          new MemoryLocation(loc->context, address, base, offset, loc->size));
+      ref<MemoryLocation> ret(new MemoryLocation(
+          loc->context, address, base, offset, loc->size, loc->allocationId));
       return ret;
     }
 
     ref<Expr> base = loc->base;
     ref<Expr> newOffset = AddExpr::create(loc->offset, offsetDelta);
-    ref<MemoryLocation> ret(
-        new MemoryLocation(loc->context, address, base, newOffset, loc->size));
+    ref<MemoryLocation> ret(new MemoryLocation(
+        loc->context, address, base, newOffset, loc->size, loc->allocationId));
     return ret;
   }
 
@@ -242,6 +252,12 @@ public:
     int res = context->compare(*(other.context.get()));
     if (res)
       return res;
+
+    if (allocationId < other.allocationId)
+      return -3;
+
+    if (allocationId > other.allocationId)
+      return 3;
 
     if (offset == other.offset)
       return 0;

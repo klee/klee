@@ -87,8 +87,8 @@ MemoryLocation::create(ref<MemoryLocation> loc,
       ShadowArray::getShadowExpression(loc->address, replacements)),
       _base(ShadowArray::getShadowExpression(loc->base, replacements)),
       _offset(ShadowArray::getShadowExpression(loc->offset, replacements));
-  ref<MemoryLocation> ret(
-      new MemoryLocation(loc->context, _address, _base, _offset, loc->size));
+  ref<MemoryLocation> ret(new MemoryLocation(
+      loc->context, _address, _base, _offset, loc->size, loc->allocationId));
   return ret;
 }
 
