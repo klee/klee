@@ -70,7 +70,8 @@ void StoredValue::init(ref<VersionedValue> vvalue,
     for (std::set<ref<MemoryLocation> >::const_iterator it = locations.begin(),
                                                         ie = locations.end();
          it != ie; ++it) {
-      const llvm::Value *v = (*it)->getValue(); // The allocation site
+      const llvm::Value *v =
+          (*it)->getContext()->getValue(); // The allocation site
 
       // Concrete bound
       uint64_t concreteBound = (*it)->getConcreteOffsetBound();
@@ -321,11 +322,11 @@ void Dependency::getConcreteStore(
       continue;
 
     if (!coreOnly) {
-      const llvm::Value *base = it->first->getValue();
+      const llvm::Value *base = it->first->getContext()->getValue();
       concreteStore[base][it->first] = StoredValue::create(it->second.second);
     } else if (it->second.second->isCore()) {
       // An address is in the core if it stores a value that is in the core
-      const llvm::Value *base = it->first->getValue();
+      const llvm::Value *base = it->first->getContext()->getValue();
 #ifdef ENABLE_Z3
       if (!NoExistential) {
         concreteStore[base][it->first] =
@@ -357,12 +358,12 @@ void Dependency::getSymbolicStore(
       continue;
 
     if (!coreOnly) {
-      llvm::Value *base = it->first->getValue();
+      llvm::Value *base = it->first->getContext()->getValue();
       symbolicStore[base].push_back(Dependency::AddressValuePair(
           it->first, StoredValue::create(it->second.second)));
     } else if (it->second.second->isCore()) {
       // An address is in the core if it stores a value that is in the core
-      llvm::Value *base = it->first->getValue();
+      llvm::Value *base = it->first->getContext()->getValue();
 #ifdef ENABLE_Z3
       if (!NoExistential) {
         symbolicStore[base].push_back(Dependency::AddressValuePair(
@@ -1168,7 +1169,7 @@ void Dependency::execute(llvm::Instruction *instr,
             klee_warning("%s", msg.c_str());
           }
 
-          if (isMainArgument(loc->getValue())) {
+          if (isMainArgument(loc->getContext()->getValue())) {
             // The load corresponding to a load of the main function's argument
             // that was never allocated within this program.
 
@@ -1514,8 +1515,8 @@ void Dependency::executeMemoryOperation(
           for (std::set<ref<MemoryLocation> >::iterator it = locations.begin(),
                                                         ie = locations.end();
                it != ie; ++it) {
-            if (llvm::ConstantExpr *ce =
-                    llvm::dyn_cast<llvm::ConstantExpr>((*it)->getValue())) {
+            if (llvm::ConstantExpr *ce = llvm::dyn_cast<llvm::ConstantExpr>(
+                    (*it)->getContext()->getValue())) {
               if (llvm::isa<llvm::GetElementPtrInst>(ce->getAsInstruction())) {
                 std::string reason = "";
                 if (debugSubsumptionLevel >= 1) {

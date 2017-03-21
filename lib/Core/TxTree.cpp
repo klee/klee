@@ -1118,8 +1118,7 @@ bool SubsumptionTableEntry::subsumed(
 
             // We make sure the context part of the addresses (the allocation
             // site and the call history) are equivalent.
-            if (it2->first->compareContext(it3->first->getValue(),
-                                           it3->first->getCallHistory()))
+            if (it2->first->getContext() != it3->first->getContext())
               continue;
 
             ref<Expr> stateSymbolicOffset = it3->first->getOffset();
@@ -1235,8 +1234,7 @@ bool SubsumptionTableEntry::subsumed(
 
           // We make sure the context part of the addresses (the allocation
           // site and the call history) are equivalent.
-          if (it2->first->compareContext(it3->first->getValue(),
-                                         it3->first->getCallHistory()))
+          if (it2->first->getContext() != it3->first->getContext())
             continue;
 
           ref<Expr> stateConcreteOffset = it3->first->getOffset();
@@ -1298,8 +1296,7 @@ bool SubsumptionTableEntry::subsumed(
 
           // We make sure the context part of the addresses (the allocation
           // site and the call history) are equivalent.
-          if (it2->first->compareContext(it3->first->getValue(),
-                                         it3->first->getCallHistory()))
+          if (it2->first->getContext() != it3->first->getContext())
             continue;
 
           ref<Expr> stateSymbolicOffset = it3->first->getOffset();
