@@ -45,9 +45,9 @@ class StoredAddress {
 public:
   unsigned refCount;
 
-private:
   ref<MemoryLocation> loc;
 
+private:
   StoredAddress(ref<MemoryLocation> _loc) : refCount(0), loc(_loc) {}
 
 public:
@@ -56,6 +56,14 @@ public:
     return ret;
   }
 
+  /// \brief The comparator of this class' objects. This member function is
+  /// weaker than standard comparator for MemoryLocation in that it does not
+  /// check for the equality of allocation id. Allocation id is used in
+  /// MemoryLocation (member variable MemoryLocation#allocationId) for the
+  /// purpose of distinguishing memory allocations of the same callsite and call
+  /// history, but of different loop iterations. This does not make sense when
+  /// comparing states for subsumption as in subsumption, related allocations in
+  /// different paths may have different allocation ids.
   int compare(const StoredAddress &other) const {
     return loc->weakCompare(*(other.loc.get()));
   }
@@ -281,8 +289,8 @@ public:
   class Dependency {
 
   public:
-    typedef std::pair<ref<MemoryLocation>, ref<StoredValue> > AddressValuePair;
-    typedef std::map<ref<MemoryLocation>, ref<StoredValue> > ConcreteStoreMap;
+    typedef std::pair<ref<StoredAddress>, ref<StoredValue> > AddressValuePair;
+    typedef std::map<ref<StoredAddress>, ref<StoredValue> > ConcreteStoreMap;
     typedef std::vector<AddressValuePair> SymbolicStoreMap;
     typedef std::map<const llvm::Value *, ConcreteStoreMap> ConcreteStore;
     typedef std::map<const llvm::Value *, SymbolicStoreMap> SymbolicStore;

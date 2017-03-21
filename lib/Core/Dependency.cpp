@@ -323,17 +323,19 @@ void Dependency::getConcreteStore(
 
     if (!coreOnly) {
       const llvm::Value *base = it->first->getContext()->getValue();
-      concreteStore[base][it->first] = StoredValue::create(it->second.second);
+      concreteStore[base][StoredAddress::create(it->first)] =
+          StoredValue::create(it->second.second);
     } else if (it->second.second->isCore()) {
       // An address is in the core if it stores a value that is in the core
       const llvm::Value *base = it->first->getContext()->getValue();
 #ifdef ENABLE_Z3
       if (!NoExistential) {
-        concreteStore[base][it->first] =
+        concreteStore[base][StoredAddress::create(it->first)] =
             StoredValue::create(it->second.second, replacements);
       } else
 #endif
-        concreteStore[base][it->first] = StoredValue::create(it->second.second);
+        concreteStore[base][StoredAddress::create(it->first)] =
+            StoredValue::create(it->second.second);
     }
   }
 }
@@ -359,20 +361,23 @@ void Dependency::getSymbolicStore(
 
     if (!coreOnly) {
       llvm::Value *base = it->first->getContext()->getValue();
-      symbolicStore[base].push_back(Dependency::AddressValuePair(
-          it->first, StoredValue::create(it->second.second)));
+      symbolicStore[base].push_back(
+          Dependency::AddressValuePair(StoredAddress::create(it->first),
+                                       StoredValue::create(it->second.second)));
     } else if (it->second.second->isCore()) {
       // An address is in the core if it stores a value that is in the core
       llvm::Value *base = it->first->getContext()->getValue();
 #ifdef ENABLE_Z3
       if (!NoExistential) {
         symbolicStore[base].push_back(Dependency::AddressValuePair(
-            MemoryLocation::create(it->first, replacements),
+            StoredAddress::create(
+                MemoryLocation::create(it->first, replacements)),
             StoredValue::create(it->second.second, replacements)));
       } else
 #endif
         symbolicStore[base].push_back(Dependency::AddressValuePair(
-            it->first, StoredValue::create(it->second.second)));
+            StoredAddress::create(it->first),
+            StoredValue::create(it->second.second)));
     }
   }
 }

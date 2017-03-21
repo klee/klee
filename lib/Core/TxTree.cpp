@@ -1015,7 +1015,7 @@ bool SubsumptionTableEntry::subsumed(
               msg1 += " (with successful memory bound checks)";
             }
 
-            it2->first->print(stream, padding);
+            it2->first->loc->print(stream, padding);
             stream.flush();
             klee_message("#%lu=>#%lu: Check failure as memory region in the "
                          "table does not exist in the state%s:\n%s",
@@ -1095,7 +1095,7 @@ bool SubsumptionTableEntry::subsumed(
                   std::string msg3;
                   llvm::raw_string_ostream stream1(msg3);
 
-                  it2->first->print(stream1, makeTabs(1));
+                  it2->first->loc->print(stream1, makeTabs(1));
                   stream1.flush();
 
                   klee_message("with value stored in address:\n%s",
@@ -1108,7 +1108,7 @@ bool SubsumptionTableEntry::subsumed(
         }
 
         if (!stateSymbolicMap.empty()) {
-          const ref<Expr> tabledConcreteOffset = it2->first->getOffset();
+          const ref<Expr> tabledConcreteOffset = it2->first->loc->getOffset();
           ref<Expr> conjunction;
 
           for (Dependency::SymbolicStoreMap::const_iterator
@@ -1118,10 +1118,10 @@ bool SubsumptionTableEntry::subsumed(
 
             // We make sure the context part of the addresses (the allocation
             // site and the call history) are equivalent.
-            if (it2->first->getContext() != it3->first->getContext())
+            if (it2->first->loc->getContext() != it3->first->loc->getContext())
               continue;
 
-            ref<Expr> stateSymbolicOffset = it3->first->getOffset();
+            ref<Expr> stateSymbolicOffset = it3->first->loc->getOffset();
             ref<Expr> newTerm;
 
             stateValue = it3->second;
@@ -1224,7 +1224,7 @@ bool SubsumptionTableEntry::subsumed(
                it2 = tabledSymbolicMap.begin(),
                ie2 = tabledSymbolicMap.end();
            it2 != ie2; ++it2) {
-        ref<Expr> tabledSymbolicOffset = it2->first->getOffset();
+        ref<Expr> tabledSymbolicOffset = it2->first->loc->getOffset();
         ref<StoredValue> tabledValue = it2->second;
 
         for (Dependency::ConcreteStoreMap::const_iterator
@@ -1234,10 +1234,10 @@ bool SubsumptionTableEntry::subsumed(
 
           // We make sure the context part of the addresses (the allocation
           // site and the call history) are equivalent.
-          if (it2->first->getContext() != it3->first->getContext())
+          if (it2->first->loc->getContext() != it3->first->loc->getContext())
             continue;
 
-          ref<Expr> stateConcreteOffset = it3->first->getOffset();
+          ref<Expr> stateConcreteOffset = it3->first->loc->getOffset();
           ref<StoredValue> stateValue = it3->second;
           ref<Expr> newTerm;
 
@@ -1296,10 +1296,10 @@ bool SubsumptionTableEntry::subsumed(
 
           // We make sure the context part of the addresses (the allocation
           // site and the call history) are equivalent.
-          if (it2->first->getContext() != it3->first->getContext())
+          if (it2->first->loc->getContext() != it3->first->loc->getContext())
             continue;
 
-          ref<Expr> stateSymbolicOffset = it3->first->getOffset();
+          ref<Expr> stateSymbolicOffset = it3->first->loc->getOffset();
           ref<StoredValue> stateValue = it3->second;
           ref<Expr> newTerm;
 
@@ -1704,7 +1704,7 @@ void SubsumptionTableEntry::print(llvm::raw_ostream &stream,
         if (it1 != is1 || it2 != is2)
           stream << tabsNext << "------------------------------------------\n";
         stream << tabsNext << "address:\n";
-        it2->first->print(stream, tabsNextNext);
+        it2->first->loc->print(stream, tabsNextNext);
         stream << "\n";
         stream << tabsNext << "content:\n";
         it2->second->print(stream, tabsNextNext);
@@ -1727,7 +1727,7 @@ void SubsumptionTableEntry::print(llvm::raw_ostream &stream,
         if (it1 != is1 || it2 != is2)
           stream << tabsNext << "------------------------------------------\n";
         stream << tabsNext << "address:\n";
-        it2->first->print(stream, tabsNextNext);
+        it2->first->loc->print(stream, tabsNextNext);
         stream << "\n";
         stream << tabsNext << "content:\n";
         it2->second->print(stream, tabsNextNext);
