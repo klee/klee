@@ -248,16 +248,10 @@ public:
     return context->isPrefixOf(callHistory);
   }
 
-  int compare(const MemoryLocation &other) const {
+  int weakCompare(const MemoryLocation &other) const {
     int res = context->compare(*(other.context.get()));
     if (res)
       return res;
-
-    if (allocationId < other.allocationId)
-      return -3;
-
-    if (allocationId > other.allocationId)
-      return 3;
 
     if (offset == other.offset)
       return 0;
@@ -271,6 +265,20 @@ public:
       return -1;
 
     return 1;
+  }
+
+  int compare(const MemoryLocation &other) const {
+    int res = weakCompare(other);
+    if (res)
+      return res;
+
+    if (allocationId < other.allocationId)
+      return -3;
+
+    if (allocationId > other.allocationId)
+      return 3;
+
+    return 0;
   }
 
   /// \brief Adjust the offset bound for interpolation (a.k.a. slackening)

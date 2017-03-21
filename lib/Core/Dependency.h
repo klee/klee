@@ -38,6 +38,29 @@
 
 namespace klee {
 
+/// \brief The address to be stored as an index in the subsumption table. This
+/// class wraps a memory location, supplying weaker address equality comparison
+/// for the purpose of subsumption checking
+class StoredAddress {
+public:
+  unsigned refCount;
+
+private:
+  ref<MemoryLocation> loc;
+
+  StoredAddress(ref<MemoryLocation> _loc) : refCount(0), loc(_loc) {}
+
+public:
+  static ref<StoredAddress> create(ref<MemoryLocation> loc) {
+    ref<StoredAddress> ret(new StoredAddress(loc));
+    return ret;
+  }
+
+  int compare(const StoredAddress &other) const {
+    return loc->weakCompare(*(other.loc.get()));
+  }
+};
+
   /// \brief A processed form of a value to be stored in the subsumption table
   class StoredValue {
   public:
