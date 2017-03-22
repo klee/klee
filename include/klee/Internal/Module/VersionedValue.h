@@ -34,8 +34,7 @@ namespace klee {
 
 class VersionedValue;
 
-/// \brief A class to represent memory locations.
-class MemoryLocation {
+class AllocationContext {
 
 public:
   unsigned refCount;
@@ -46,6 +45,84 @@ private:
 
   /// \brief The call history by which the allocation is reached
   std::vector<llvm::Instruction *> callHistory;
+
+  AllocationContext(llvm::Value *_value,
+                    const std::vector<llvm::Instruction *> &_callHistory)
+      : refCount(0), value(_value), callHistory(_callHistory) {}
+
+public:
+  ~AllocationContext() { callHistory.clear(); }
+
+  static ref<AllocationContext>
+  create(llvm::Value *_value,
+         const std::vector<llvm::Instruction *> &_callHistory) {
+    ref<AllocationContext> ret(new AllocationContext(_value, _callHistory));
+    return ret;
+  }
+
+  llvm::Value *getValue() const { return value; }
+
+  const std::vector<llvm::Instruction *> &getCallHistory() const {
+    return callHistory;
+  }
+
+  bool isPrefixOf(const std::vector<llvm::Instruction *> &_callHistory) const {
+    for (std::vector<llvm::Instruction *>::const_iterator
+             it1 = callHistory.begin(),
+             ie1 = callHistory.end(), it2 = _callHistory.begin(),
+             ie2 = _callHistory.end();
+         it1 != ie1; ++it1, ++it2) {
+      if (it2 == ie2 || (*it1) != (*it2)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  int compare(const AllocationContext &other) const {
+    if (value == other.value) {
+      // Please note the use of reverse iterator here, which improves
+      // performance.
+      for (std::vector<llvm::Instruction *>::const_reverse_iterator
+               it1 = callHistory.rbegin(),
+               ie1 = callHistory.rend(), it2 = other.callHistory.rbegin(),
+               ie2 = other.callHistory.rend();
+           ; ++it1, ++it2) {
+        if (it1 == ie1) {
+          if (it2 == ie2) {
+            break;
+          } else
+            return -1;
+        }
+        if (it2 == ie2)
+          return 1;
+        if (it1 == ie1)
+          return 1;
+        if ((*it1) > (*it2))
+          return 2;
+        if (it2 == ie2)
+          return -1;
+        if ((*it1) < (*it2))
+          return -2;
+      }
+      return 0;
+    } else if (value < other.value) {
+      return -3;
+    }
+    return 3;
+  }
+};
+
+/// \brief A class to represent memory locations.
+class MemoryLocation {
+
+public:
+  unsigned refCount;
+
+private:
+  /// \brief the context (allocation site and call history) of the allocation of
+  /// this address
+  ref<AllocationContext> context;
 
   /// \brief The absolute address
   ref<Expr> address;
@@ -72,11 +149,13 @@ private:
   /// \brief The size of this allocation (0 means unknown)
   uint64_t size;
 
-  MemoryLocation(llvm::Value *_value,
-                 const std::vector<llvm::Instruction *> &_callHistory,
-                 ref<Expr> &_address, ref<Expr> &_base, ref<Expr> &_offset,
-                 uint64_t _size)
-      : refCount(0), value(_value), callHistory(_callHistory), offset(_offset),
+  /// \brief The allocation id
+  uintptr_t allocationId;
+
+  MemoryLocation(ref<AllocationContext> _context, ref<Expr> &_address,
+                 ref<Expr> &_base, ref<Expr> &_offset, uint64_t _size,
+                 uintptr_t _allocationId = 0)
+      : refCount(0), context(_context), offset(_offset),
         concreteOffsetBound(_size), size(_size) {
     bool unknownBase = false;
 
@@ -121,6 +200,12 @@ private:
       }
       base = SubExpr::create(address, tmpOffset);
     }
+
+    if (_allocationId != 0) {
+      allocationId = _allocationId;
+    } else {
+      allocationId = reinterpret_cast<uintptr_t>(_base.get());
+    }
   }
 
 public:
@@ -131,8 +216,9 @@ public:
          const std::vector<llvm::Instruction *> &_callHistory,
          ref<Expr> &address, uint64_t size) {
     ref<Expr> zeroPointer = Expr::createPointer(0);
-    ref<MemoryLocation> ret(new MemoryLocation(value, _callHistory, address,
-                                               address, zeroPointer, size));
+    ref<MemoryLocation> ret(
+        new MemoryLocation(AllocationContext::create(value, _callHistory),
+                           address, address, zeroPointer, size));
     return ret;
   }
 
@@ -146,68 +232,24 @@ public:
       ref<Expr> base = loc->base;
       ref<Expr> offset = loc->offset;
       ref<MemoryLocation> ret(new MemoryLocation(
-          loc->value, loc->callHistory, address, base, offset, loc->size));
+          loc->context, address, base, offset, loc->size, loc->allocationId));
       return ret;
     }
 
     ref<Expr> base = loc->base;
     ref<Expr> newOffset = AddExpr::create(loc->offset, offsetDelta);
     ref<MemoryLocation> ret(new MemoryLocation(
-        loc->value, loc->callHistory, address, base, newOffset, loc->size));
+        loc->context, address, base, newOffset, loc->size, loc->allocationId));
     return ret;
   }
 
-  int
-  compareContext(llvm::Value *otherValue,
-                 const std::vector<llvm::Instruction *> &_callHistory) const {
-    if (value == otherValue) {
-      // Please note the use of reverse iterator here, which improves
-      // performance.
-      for (std::vector<llvm::Instruction *>::const_reverse_iterator
-               it1 = callHistory.rbegin(),
-               ie1 = callHistory.rend(), it2 = _callHistory.rbegin(),
-               ie2 = _callHistory.rend();
-           ; ++it1, ++it2) {
-        if (it1 == ie1) {
-          if (it2 == ie2) {
-            break;
-          } else
-            return -1;
-        }
-        if (it2 == ie2)
-          return 1;
-        if (it1 == ie1)
-          return 1;
-        if ((*it1) > (*it2))
-          return 2;
-        if (it2 == ie2)
-          return -1;
-        if ((*it1) < (*it2))
-          return -2;
-      }
-      return 0;
-    } else if (value < otherValue) {
-      return -3;
-    }
-    return 3;
+  bool
+  contextIsPrefixOf(const std::vector<llvm::Instruction *> &callHistory) const {
+    return context->isPrefixOf(callHistory);
   }
 
-  bool contextIsPrefixOf(const std::vector<llvm::Instruction *> &_callHistory)
-      const {
-    for (std::vector<llvm::Instruction *>::const_iterator
-             it1 = callHistory.begin(),
-             ie1 = callHistory.end(), it2 = _callHistory.begin(),
-             ie2 = _callHistory.end();
-         it1 != ie1; ++it1, ++it2) {
-      if (it2 == ie2 || (*it1) != (*it2)) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  int compare(const MemoryLocation &other) const {
-    int res = compareContext(other.value, other.callHistory);
+  int weakCompare(const MemoryLocation &other) const {
+    int res = context->compare(*(other.context.get()));
     if (res)
       return res;
 
@@ -225,6 +267,20 @@ public:
     return 1;
   }
 
+  int compare(const MemoryLocation &other) const {
+    int res = weakCompare(other);
+    if (res)
+      return res;
+
+    if (allocationId < other.allocationId)
+      return -3;
+
+    if (allocationId > other.allocationId)
+      return 3;
+
+    return 0;
+  }
+
   /// \brief Adjust the offset bound for interpolation (a.k.a. slackening)
   void adjustOffsetBound(ref<VersionedValue> checkedAddress,
                          std::set<ref<Expr> > &bounds);
@@ -235,8 +291,6 @@ public:
     return llvm::dyn_cast<ConstantExpr>(address)->getZExtValue();
   }
 
-  llvm::Value *getValue() const { return value; }
-
   ref<Expr> getAddress() const { return address; }
 
   ref<Expr> getBase() const { return base; }
@@ -245,9 +299,7 @@ public:
     return symbolicOffsetBounds;
   }
 
-  const std::vector<llvm::Instruction *> &getCallHistory() const {
-    return callHistory;
-  }
+  ref<AllocationContext> getContext() const { return context; }
 
   uint64_t getConcreteOffsetBound() const { return concreteOffsetBound; }
 

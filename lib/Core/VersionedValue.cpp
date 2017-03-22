@@ -56,7 +56,7 @@ void MemoryLocation::adjustOffsetBound(ref<VersionedValue> checkedAddress,
 
               // FIXME: A quick hack to avoid assertion check to make DirSeek.c
               // regression test pass.
-              llvm::Value *v = (*it2)->getValue();
+              llvm::Value *v = (*it2)->getContext()->getValue();
               if (v->getType()->isPointerTy()) {
                 llvm::Type *elementType = v->getType()->getPointerElementType();
                 if (elementType->isStructTy() &&
@@ -88,7 +88,7 @@ MemoryLocation::create(ref<MemoryLocation> loc,
       _base(ShadowArray::getShadowExpression(loc->base, replacements)),
       _offset(ShadowArray::getShadowExpression(loc->offset, replacements));
   ref<MemoryLocation> ret(new MemoryLocation(
-      loc->value, loc->callHistory, _address, _base, _offset, loc->size));
+      loc->context, _address, _base, _offset, loc->size, loc->allocationId));
   return ret;
 }
 
@@ -97,15 +97,15 @@ void MemoryLocation::print(llvm::raw_ostream &stream,
   std::string tabsNext = appendTab(prefix);
 
   stream << prefix << "function/value: ";
-  if (outputFunctionName(value, stream))
+  if (outputFunctionName(context->getValue(), stream))
     stream << "/";
-  value->print(stream);
+  context->getValue()->print(stream);
   stream << "\n";
 
   stream << prefix << "stack:\n";
   for (std::vector<llvm::Instruction *>::const_reverse_iterator
-           it = callHistory.rbegin(),
-           ib = it, ie = callHistory.rend();
+           it = context->getCallHistory().rbegin(),
+           ib = it, ie = context->getCallHistory().rend();
        it != ie; ++it) {
     stream << tabsNext;
     (*it)->print(stream);
