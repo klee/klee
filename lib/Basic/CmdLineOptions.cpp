@@ -161,13 +161,6 @@ llvm::cl::opt<bool> SpecialFunctionBoundInterpolation(
     llvm::cl::desc("Perform memory bound interpolation only within function "
                    "named tracerx_check."),
     llvm::cl::init(false));
-
-llvm::cl::opt<bool> LoadedValueCheck(
-    "loaded-value-check",
-    llvm::cl::desc("Adds an assertion check that the value of loaded "
-                   "expression is the same as the actual expression loaded "
-                   "from the store of Tracer-X."),
-    llvm::cl::init(false));
 #endif // ENABLE_Z3
 
 #ifdef ENABLE_METASMT
