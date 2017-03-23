@@ -1,5 +1,9 @@
 #!/bin/bash -x
 
+set -e
+
+: ${METASMT_VERSION?"METASMT_VERSION not specified"}
+
 # Get Boost, Z3, libgmp
 sudo apt-get -y install libboost1.55-dev libz3 libz3-dev libgmp-dev
 
