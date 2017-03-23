@@ -3636,16 +3636,27 @@ unsigned Executor::getSymbolicPathStreamID(const ExecutionState &state) {
 }
 
 void Executor::getConstraintLog(const ExecutionState &state, std::string &res,
-                                Interpreter::LogType logFormat) {
+                                Interpreter::LogType logFormat,
+                                std::string &fileExtension) {
 
   std::ostringstream info;
 
   switch (logFormat) {
-  case STP: {
+  case CORE_SOLVER_LANG: {
     Query query(state.constraints, ConstantExpr::alloc(0, Expr::Bool));
-    char *log = solver->getConstraintLog(query);
+    const char *solverFileExtension = NULL;
+    char *log = solver->getConstraintLog(query, &solverFileExtension);
     res = std::string(log);
     free(log);
+
+    // This prefix is to avoid conflict with the other log formats because the
+    // core solver might use the same file extension.
+    fileExtension = "core_solver.";
+    if (solverFileExtension) {
+      fileExtension += solverFileExtension;
+    } else {
+      fileExtension += "unknown";
+    }
   } break;
 
   case KQUERY: {
@@ -3653,6 +3664,7 @@ void Executor::getConstraintLog(const ExecutionState &state, std::string &res,
     llvm::raw_string_ostream info(Str);
     ExprPPrinter::printConstraints(info, state.constraints);
     res = info.str();
+    fileExtension = "kquery";
   } break;
 
   case SMTLIB2: {
@@ -3664,6 +3676,7 @@ void Executor::getConstraintLog(const ExecutionState &state, std::string &res,
     printer.setQuery(query);
     printer.generateOutput();
     res = info.str();
+    fileExtension = "smt2";
   } break;
 
   default:

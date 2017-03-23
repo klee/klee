@@ -64,11 +64,10 @@ public:
           CheckDivZero(_CheckDivZero), CheckOvershift(_CheckOvershift) {}
   };
 
-  enum LogType
-  {
-	  STP, //.CVC (STP's native language)
-	  KQUERY, //.KQUERY files (kQuery native language)
-	  SMTLIB2 //.SMT2 files (SMTLIB version 2 files)
+  enum LogType {
+    CORE_SOLVER_LANG, // Core solver's native query language
+    KQUERY,           //.KQUERY files (kQuery native language)
+    SMTLIB2           //.SMT2 files (SMTLIB version 2 files)
   };
 
   /// InterpreterOptions - Options varying the runtime behavior during
@@ -145,10 +144,10 @@ public:
   virtual unsigned getPathStreamID(const ExecutionState &state) = 0;
 
   virtual unsigned getSymbolicPathStreamID(const ExecutionState &state) = 0;
-  
-  virtual void getConstraintLog(const ExecutionState &state,
-                                std::string &res,
-                                LogType logFormat = STP) = 0;
+
+  virtual void getConstraintLog(const ExecutionState &state, std::string &res,
+                                LogType logFormat,
+                                std::string &fileExtension) = 0;
 
   virtual bool getSymbolicSolution(const ExecutionState &state, 
                                    std::vector< 

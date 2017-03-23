@@ -198,8 +198,19 @@ namespace klee {
     //
     // FIXME: This should go into a helper class, and should handle failure.
     virtual std::pair< ref<Expr>, ref<Expr> > getRange(const Query&);
-    
-    virtual char *getConstraintLog(const Query& query);
+
+    /// getConstraintLog - Get constraints in the solver's native query
+    /// language.
+    ///
+    /// \param query - The Query to output
+    /// \param fileExtension - If not set to NULL the passed in pointer is
+    ///                        modified to point to a C string containing the
+    ///                        file extension appropriate for the constraints.
+    ///
+    /// \return Constraints in the solver's native query language.
+    ///         Clients must free this.
+    virtual char *getConstraintLog(const Query &query,
+                                   const char **fileExtension = NULL);
     virtual void setCoreSolverTimeout(double timeout);
   };
 
@@ -217,7 +228,7 @@ namespace klee {
 
     /// getConstraintLog - Return the constraint log for the given state in CVC
     /// format.
-    virtual char *getConstraintLog(const Query&);
+    virtual char *getConstraintLog(const Query &, const char **fileExtension);
 
     /// setCoreSolverTimeout - Set constraint solver timeout delay to the given value; 0
     /// is off.
@@ -234,7 +245,7 @@ namespace klee {
 
     /// Get the query in SMT-LIBv2 format.
     /// \return A C-style string. The caller is responsible for freeing this.
-    virtual char *getConstraintLog(const Query &);
+    virtual char *getConstraintLog(const Query &, const char **fileExtension);
 
     /// setCoreSolverTimeout - Set constraint solver timeout delay to the given
     /// value; 0
@@ -250,8 +261,8 @@ namespace klee {
   public:
     MetaSMTSolver(bool useForked, bool optimizeDivides);
     virtual ~MetaSMTSolver();
-  
-    virtual char *getConstraintLog(const Query&);
+
+    virtual char *getConstraintLog(const Query &, const char **fileExtension);
     virtual void setCoreSolverTimeout(double timeout);
 };
 

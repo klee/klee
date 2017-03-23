@@ -495,9 +495,9 @@ public:
 
   virtual unsigned getSymbolicPathStreamID(const ExecutionState &state);
 
-  virtual void getConstraintLog(const ExecutionState &state,
-                                std::string &res,
-                                Interpreter::LogType logFormat = Interpreter::STP);
+  virtual void getConstraintLog(const ExecutionState &state, std::string &res,
+                                Interpreter::LogType logFormat,
+                                std::string &fileExtension);
 
   virtual bool getSymbolicSolution(const ExecutionState &state, 
                                    std::vector< 

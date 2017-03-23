@@ -102,7 +102,7 @@ public:
                             std::vector< std::vector<unsigned char> > &values,
                             bool &hasSolution);
   SolverRunStatus getOperationStatusCode();
-  char *getConstraintLog(const Query&);
+  char *getConstraintLog(const Query &, const char **fileExtension);
   void setCoreSolverTimeout(double timeout);
 };
 

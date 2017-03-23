@@ -98,9 +98,10 @@ namespace klee {
     /// status code
     static const char* getOperationStatusString(SolverRunStatus statusCode);
 
-    virtual char *getConstraintLog(const Query& query)  {
-        // dummy
-        return(NULL);
+    virtual char *getConstraintLog(const Query &query,
+                                   const char **fileExtension) {
+      // dummy
+      return (NULL);
     }
 
     virtual void setCoreSolverTimeout(double timeout) {};

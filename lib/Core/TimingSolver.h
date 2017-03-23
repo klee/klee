@@ -41,9 +41,9 @@ namespace klee {
     void setTimeout(double t) {
       solver->setCoreSolverTimeout(t);
     }
-    
-    char *getConstraintLog(const Query& query) {
-      return solver->getConstraintLog(query);
+
+    char *getConstraintLog(const Query &query, const char **fileExtension) {
+      return solver->getConstraintLog(query, fileExtension);
     }
 
     bool evaluate(const ExecutionState&, ref<Expr>, Solver::Validity &result);

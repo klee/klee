@@ -90,7 +90,7 @@ public:
                             std::vector< std::vector<unsigned char> > &values,
                             bool &hasSolution);
   SolverRunStatus getOperationStatusCode();
-  char *getConstraintLog(const Query& query);
+  char *getConstraintLog(const Query &query, const char **fileExtension);
   void setCoreSolverTimeout(double timeout);
 };
 
@@ -367,8 +367,9 @@ SolverImpl::SolverRunStatus CexCachingSolver::getOperationStatusCode() {
   return solver->impl->getOperationStatusCode();
 }
 
-char *CexCachingSolver::getConstraintLog(const Query& query) {
-  return solver->impl->getConstraintLog(query);
+char *CexCachingSolver::getConstraintLog(const Query &query,
+                                         const char **fileExtension) {
+  return solver->impl->getConstraintLog(query, fileExtension);
 }
 
 void CexCachingSolver::setCoreSolverTimeout(double timeout) {

@@ -38,7 +38,7 @@ public:
   Z3SolverImpl();
   ~Z3SolverImpl();
 
-  char *getConstraintLog(const Query &);
+  char *getConstraintLog(const Query &, const char **fileExtension);
   void setCoreSolverTimeout(double _timeout) {
     assert(_timeout >= 0.0 && "timeout must be >= 0");
     timeout = _timeout;
@@ -81,15 +81,17 @@ Z3SolverImpl::~Z3SolverImpl() {
 
 Z3Solver::Z3Solver() : Solver(new Z3SolverImpl()) {}
 
-char *Z3Solver::getConstraintLog(const Query &query) {
-  return impl->getConstraintLog(query);
+char *Z3Solver::getConstraintLog(const Query &query,
+                                 const char **fileExtension) {
+  return impl->getConstraintLog(query, fileExtension);
 }
 
 void Z3Solver::setCoreSolverTimeout(double timeout) {
   impl->setCoreSolverTimeout(timeout);
 }
 
-char *Z3SolverImpl::getConstraintLog(const Query &query) {
+char *Z3SolverImpl::getConstraintLog(const Query &query,
+                                     const char **fileExtension) {
   std::vector<Z3ASTHandle> assumptions;
   for (std::vector<ref<Expr> >::const_iterator it = query.constraints.begin(),
                                                ie = query.constraints.end();
@@ -125,6 +127,11 @@ char *Z3SolverImpl::getConstraintLog(const Query &query) {
 
   if (numAssumptions)
     free(assumptionsArray);
+
+  if (fileExtension) {
+    *fileExtension = "smt2";
+  }
+
   // Client is responsible for freeing the returned C-string
   return strdup(result);
 }

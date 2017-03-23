@@ -102,9 +102,10 @@ namespace {
   WarnAllExternals("warn-all-externals",
                    cl::desc("Give initial warning for all externals."));
 
-  cl::opt<bool>
-  WriteCVCs("write-cvcs",
-            cl::desc("Write .cvc files for each test case"));
+  cl::opt<bool> WriteCoreSolverQueries(
+      "write-core-solver-queries",
+      cl::desc("Write the constraints for each test case in "
+               "the core solver's native query language"));
 
   cl::opt<bool>
   WriteKQueries("write-kqueries",
@@ -484,28 +485,32 @@ void KleeHandler::processTestCase(const ExecutionState &state,
 
     if (errorMessage || WriteKQueries) {
       std::string constraints;
-      m_interpreter->getConstraintLog(state, constraints,Interpreter::KQUERY);
-      llvm::raw_ostream *f = openTestFile("kquery", id);
+      std::string fileExtension;
+      m_interpreter->getConstraintLog(state, constraints, Interpreter::KQUERY,
+                                      fileExtension);
+      llvm::raw_ostream *f = openTestFile(fileExtension.c_str(), id);
       *f << constraints;
       delete f;
     }
 
-    if (WriteCVCs) {
-      // FIXME: If using Z3 as the core solver the emitted file is actually
-      // SMT-LIBv2 not CVC which is a bit confusing
+    if (WriteCoreSolverQueries) {
       std::string constraints;
-      m_interpreter->getConstraintLog(state, constraints, Interpreter::STP);
-      llvm::raw_ostream *f = openTestFile("cvc", id);
+      std::string fileExtension;
+      m_interpreter->getConstraintLog(
+          state, constraints, Interpreter::CORE_SOLVER_LANG, fileExtension);
+      llvm::raw_ostream *f = openTestFile(fileExtension.c_str(), id);
       *f << constraints;
       delete f;
     }
 
-    if(WriteSMT2s) {
+    if (WriteSMT2s) {
       std::string constraints;
-        m_interpreter->getConstraintLog(state, constraints, Interpreter::SMTLIB2);
-        llvm::raw_ostream *f = openTestFile("smt2", id);
-        *f << constraints;
-        delete f;
+      std::string fileExtension;
+      m_interpreter->getConstraintLog(state, constraints, Interpreter::SMTLIB2,
+                                      fileExtension);
+      llvm::raw_ostream *f = openTestFile(fileExtension.c_str(), id);
+      *f << constraints;
+      delete f;
     }
 
     if (m_symPathWriter) {

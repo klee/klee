@@ -224,8 +224,9 @@ SolverImpl::SolverRunStatus QueryLoggingSolver::getOperationStatusCode() {
   return solver->impl->getOperationStatusCode();
 }
 
-char *QueryLoggingSolver::getConstraintLog(const Query &query) {
-  return solver->impl->getConstraintLog(query);
+char *QueryLoggingSolver::getConstraintLog(const Query &query,
+                                           const char **fileExtension) {
+  return solver->impl->getConstraintLog(query, fileExtension);
 }
 
 void QueryLoggingSolver::setCoreSolverTimeout(double timeout) {
