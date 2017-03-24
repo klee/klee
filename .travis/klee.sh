@@ -10,8 +10,13 @@ SVN_BRANCH="release_$( echo ${LLVM_VERSION} | sed 's/\.//g')"
 # Select the compiler to use to generate LLVM bitcode
 ###############################################################################
 if [ "${LLVM_VERSION}" != "2.9" ]; then
+  if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
     KLEE_CC=/usr/bin/clang-${LLVM_VERSION}
     KLEE_CXX=/usr/bin/clang++-${LLVM_VERSION}
+  else # OSX
+    KLEE_CC=/usr/local/bin/clang-${LLVM_VERSION}
+    KLEE_CXX=/usr/local/bin/clang++-${LLVM_VERSION}
+  fi
 else
     # Just use pre-built llvm-gcc downloaded earlier
     KLEE_CC=${BUILD_DIR}/llvm-gcc/bin/llvm-gcc
@@ -117,6 +122,17 @@ fi
 source ${KLEE_SRC}/.travis/sanitizer_flags.sh
 
 ###############################################################################
+# Handling LLVM configuration
+###############################################################################
+if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
+  LLVM_CONFIG="/usr/lib/llvm-${LLVM_VERSION}/bin/llvm-config"
+  LLVM_BUILD_DIR="/usr/lib/llvm-${LLVM_VERSION}/build"
+else # OSX
+  LLVM_CONFIG="/usr/local/bin/llvm-config-${LLVM_VERSION}"
+  LLVM_BUILD_DIR="$(${LLVM_CONFIG} --src-root)"
+fi
+
+###############################################################################
 # KLEE
 ###############################################################################
 mkdir klee
@@ -139,7 +155,7 @@ if [ "X${USE_CMAKE}" == "X1" ]; then
   CXXFLAGS="${COVERAGE_FLAGS} ${SANITIZER_CXX_FLAGS}" \
   CFLAGS="${COVERAGE_FLAGS} ${SANITIZER_C_FLAGS}" \
   cmake \
-    -DLLVM_CONFIG_BINARY="/usr/lib/llvm-${LLVM_VERSION}/bin/llvm-config" \
+    -DLLVM_CONFIG_BINARY="${LLVM_CONFIG}" \
     -DLLVMCC="${KLEE_CC}" \
     -DLLVMCXX="${KLEE_CXX}" \
     ${KLEE_STP_CONFIGURE_OPTION} \
@@ -160,8 +176,8 @@ else
   # Note: ENABLE_SHARED=0 is required because llvm-2.9 is incorectly packaged
   # and is missing the shared library that was supposed to be built that the build
   # system will try to use by default.
-  ${KLEE_SRC}/configure --with-llvmsrc=/usr/lib/llvm-${LLVM_VERSION}/build \
-              --with-llvmobj=/usr/lib/llvm-${LLVM_VERSION}/build \
+  ${KLEE_SRC}/configure --with-llvmsrc=${LLVM_BUILD_DIR} \
+              --with-llvmobj=${LLVM_BUILD_DIR} \
               --with-llvmcc=${KLEE_CC} \
               --with-llvmcxx=${KLEE_CXX} \
               ${KLEE_STP_CONFIGURE_OPTION} \
@@ -234,14 +250,14 @@ if [ ${COVERAGE} -eq 1 ]; then
     cd zcov
 
 #these files are not where zcov expects them to be after install so we move them
-    sudo cp js/sorttable.js /usr/local/lib/python2.7/dist-packages/zcov-0.3.0.dev0-py2.7.egg/zcov/js/sorttable.js 
-    sudo cp js/sourceview.js /usr/local/lib/python2.7/dist-packages/zcov-0.3.0.dev0-py2.7.egg/zcov/js/sourceview.js 
+    sudo cp js/sorttable.js /usr/local/lib/python2.7/dist-packages/zcov-0.3.0.dev0-py2.7.egg/zcov/js/sorttable.js
+    sudo cp js/sourceview.js /usr/local/lib/python2.7/dist-packages/zcov-0.3.0.dev0-py2.7.egg/zcov/js/sourceview.js
     sudo cp style.css /usr/local/lib/python2.7/dist-packages/zcov-0.3.0.dev0-py2.7.egg/zcov/style.css
 
 #install zcov dependency
     sudo apt-get install -y enscript
 
-#update gcov from v4.6 to v4.8. This is becauase gcda files are made for v4.8 and cause 
+#update gcov from v4.6 to v4.8. This is becauase gcda files are made for v4.8 and cause
 #a segmentation fault in v4.6
     sudo apt-get install -y ggcov
     sudo rm /usr/bin/gcov

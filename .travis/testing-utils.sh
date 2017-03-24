@@ -18,11 +18,16 @@ if [ "${LLVM_VERSION}" != "2.9" ]; then
     cmake .
     make
     # Normally I wouldn't do something like this but hey we're running on a temporary virtual machine, so who cares?
-    sudo cp lib* /usr/lib/
-    sudo cp -r include/gtest /usr/include
+    if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
+      sudo cp lib* /usr/lib/
+      sudo cp -r include/gtest /usr/include
+    else # OSX
+      sudo cp lib* /usr/local/lib/
+      sudo cp -r include/gtest /usr/local/include
+    fi
 else
     # LLVM2.9 on the other hand is a pain
-    
+
     # We need the version of GoogleTest used in LLVM2.9
     # This is a hack
     old_dir=`pwd`
@@ -45,4 +50,3 @@ else
 
     cd "${old_dir}"
 fi
-

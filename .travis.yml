@@ -82,6 +82,12 @@ env:
     - secure: Hrp1MRSxDUH2GTQg3QR/yUttY/3KmgbFb5e+zyy551dKpHjxJdsNe8bquY9oFoT7KmPQYl0HNNjEv4qWW8RK+HWHOCB55nL1KlGpOG7vAJcUEZg7ScbliGgiovMB6jIQVfeP9FhYngfc13vNZQ5PGlqzfSsHSAbvkwEogBToHVw=
     - secure: DQAEQWJblXvIztN/sgH63OtFncI+Qju6wRy1zIV/iLf5KbAmLs1h3itU7EsE/+3+LgV1MVQ5QNJDBUj17A6VHRKNaQ5qnIllTAcC3o0nPDohQkQoCgDG8HZ+M4wtVfr7q2K6byEPB2UbSH+mEjSMTihJufgBBVfKyyozAfYycjg=
 
+matrix:
+  include:
+    - os: osx
+      osx_image: xcode8.2
+      env: LLVM_VERSION=3.4 SOLVERS=STP:Z3 STP_VERSION=2.1.2 KLEE_UCLIBC=0 DISABLE_ASSERTIONS=0 ENABLE_OPTIMIZED=1 COVERAGE=0 USE_TCMALLOC=0 USE_CMAKE=1
+
 addons:
   apt:
     sources:
@@ -103,7 +109,8 @@ before_install:
     # We assume the Travis image uses Ubuntu 14.04 LTS
     ###########################################################################
     # Update package information
-    - sudo apt-get update
+    - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get update; fi
+    - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update && brew tap andreamattavelli/klee; fi
     ###########################################################################
     # Set up out of source build directory
     ###########################################################################
