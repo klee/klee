@@ -86,7 +86,7 @@ else()
       "${LLVM_PACKAGE_VERSION}")
   else()
     # try x.y pattern
-    set(_llvm_version_regex "^([0-9]+)\\.([0-9]+)$")
+    set(_llvm_version_regex "^([0-9]+)\\.([0-9]+)(svn)?$")
     if ("${LLVM_PACKAGE_VERSION}" MATCHES "${_llvm_version_regex}")
       string(REGEX REPLACE
         "${_llvm_version_regex}"
