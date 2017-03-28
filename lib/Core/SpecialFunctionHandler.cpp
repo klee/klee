@@ -684,9 +684,17 @@ void
 SpecialFunctionHandler::handleDebugState(ExecutionState &state,
                                          KInstruction *target,
                                          std::vector<ref<Expr> > &arguments) {
-  assert(arguments.size() == 0 &&
+  assert(arguments.size() == 1 &&
          "invalid number of arguments to tracerx_debug_state");
-  state.debugState();
+
+  ref<Expr> level = executor.toUnique(state, arguments[0]);
+  if (ConstantExpr *cLevel = llvm::dyn_cast<ConstantExpr>(level)) {
+    state.debugState(cLevel->getZExtValue());
+    return;
+  }
+
+  executor.terminateStateOnError(
+      state, "push_debug_level requires constant arguments", Executor::User);
 }
 
 void SpecialFunctionHandler::handleDebugStateOff(

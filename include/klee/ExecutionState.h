@@ -194,7 +194,7 @@ public:
   void dumpStack(llvm::raw_ostream &out) const;
   void debugSubsumption(uint64_t level);
   void debugSubsumptionOff();
-  void debugState();
+  void debugState(uint64_t level);
   void debugStateOff();
 };
 }

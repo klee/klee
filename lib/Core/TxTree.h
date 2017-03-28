@@ -928,7 +928,9 @@ public:
   static std::string getInterpolationStat();
 
   /// \brief Get the current debug state flag
-  bool getDebugState() { return currentTxTreeNode->dependency->debugState; }
+  uint64_t getDebugState() {
+    return currentTxTreeNode->dependency->debugStateLevel;
+  }
 };
 }
 #endif /* TXTREE_H_ */

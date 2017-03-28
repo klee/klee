@@ -401,12 +401,14 @@ void ExecutionState::debugSubsumptionOff() {
 #endif
 }
 
-void ExecutionState::debugState() { txTreeNode->dependency->debugState = true; }
+void ExecutionState::debugState(uint64_t level) {
+  txTreeNode->dependency->debugStateLevel = level;
+}
 
 void ExecutionState::debugStateOff() {
 #if ENABLE_Z3
-  txTreeNode->dependency->debugState = DebugState;
+  txTreeNode->dependency->debugStateLevel = DebugState;
 #else
-  txTreeNode->dependency->debugState = false;
+  txTreeNode->dependency->debugStateLevel = 0;
 #endif
 }

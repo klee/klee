@@ -131,11 +131,11 @@ llvm::cl::opt<int> MaxFailSubsumption(
                    "value, the oldest entry will be deleted (default=0 (off))"),
     llvm::cl::init(0));
 
-llvm::cl::opt<bool>
+llvm::cl::opt<int>
 DebugState("debug-state",
-           llvm::cl::desc(
-               "Dump information on symbolic execution state when visited."),
-           llvm::cl::init(false));
+           llvm::cl::desc("Dump information on symbolic execution state when "
+                          "visited (default=0 (off))."),
+           llvm::cl::init(0));
 
 llvm::cl::opt<int> DebugSubsumption(
     "debug-subsumption",

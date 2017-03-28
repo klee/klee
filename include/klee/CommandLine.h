@@ -83,7 +83,7 @@ extern llvm::cl::opt<bool> NoExistential;
 
 extern llvm::cl::opt<int> MaxFailSubsumption;
 
-extern llvm::cl::opt<bool> DebugState;
+extern llvm::cl::opt<int> DebugState;
 
 extern llvm::cl::opt<int> DebugSubsumption;
 

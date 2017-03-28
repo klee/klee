@@ -3031,18 +3031,22 @@ void Executor::run(ExecutionState &initialState) {
       // in the node.
       txTree->setCurrentINode(state);
 
-      if (txTree->getDebugState()) {
+      uint64_t debugLevel = txTree->getDebugState();
+
+      if (debugLevel > 0) {
         std::string debugMessage;
         llvm::raw_string_ostream stream(debugMessage);
-        stream << "\nCurrent state:\n";
-        processTree->print(stream);
-        stream << "\n";
-        txTree->print(stream);
-        stream << "\n";
-        stream << "--------------------------- Current Node "
-                  "----------------------------\n";
-        state.txTreeNode->print(stream);
-        stream << "\n";
+        if (debugLevel > 1) {
+          stream << "\nCurrent state:\n";
+          processTree->print(stream);
+          stream << "\n";
+          txTree->print(stream);
+          stream << "\n";
+          stream << "--------------------------- Current Node "
+                    "----------------------------\n";
+          state.txTreeNode->print(stream);
+          stream << "\n";
+        }
         stream << "------------------- Executing New Instruction "
                   "-----------------------\n";
         if (outputFunctionName(state.pc->inst, stream))

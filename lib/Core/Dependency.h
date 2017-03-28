@@ -466,7 +466,7 @@ public:
     int debugSubsumptionLevel;
 
     /// \brief Flag to display debug information on the state.
-    bool debugState;
+    uint64_t debugStateLevel;
 
     Dependency(Dependency *parent, llvm::DataLayout *_targetData);
 

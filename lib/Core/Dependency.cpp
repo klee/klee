@@ -843,14 +843,14 @@ Dependency::Dependency(Dependency *parent, llvm::DataLayout *_targetData)
     concretelyAddressedStore = parent->concretelyAddressedStore;
     symbolicallyAddressedStore = parent->symbolicallyAddressedStore;
     debugSubsumptionLevel = parent->debugSubsumptionLevel;
-    debugState = parent->debugState;
+    debugStateLevel = parent->debugStateLevel;
   } else {
 #ifdef ENABLE_Z3
     debugSubsumptionLevel = DebugSubsumption;
-    debugState = DebugState;
+    debugStateLevel = DebugState;
 #else
     debugSubsumptionLevel = 0;
-    debugState = false;
+    debugStateLevel = false;
 #endif
   }
 }
