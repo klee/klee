@@ -240,21 +240,27 @@ int strverscmp (__const char *__s1, __const char *__s2) {
   return strcmp(__s1, __s2); /* XXX no doubt this is bad */
 }
 
-unsigned int gnu_dev_major(unsigned long long int __dev) __attribute__((weak));
-unsigned int gnu_dev_major(unsigned long long int __dev) {
+#if __GLIBC_PREREQ(2, 25)
+#define gnu_dev_type	dev_t
+#else
+#define gnu_dev_type	unsigned long long int
+#endif
+
+unsigned int gnu_dev_major(gnu_dev_type __dev) __attribute__((weak));
+unsigned int gnu_dev_major(gnu_dev_type __dev) {
   return ((__dev >> 8) & 0xfff) | ((unsigned int) (__dev >> 32) & ~0xfff);
 }
 
-unsigned int gnu_dev_minor(unsigned long long int __dev) __attribute__((weak));
-unsigned int gnu_dev_minor(unsigned long long int __dev) {
+unsigned int gnu_dev_minor(gnu_dev_type __dev) __attribute__((weak));
+unsigned int gnu_dev_minor(gnu_dev_type __dev) {
   return (__dev & 0xff) | ((unsigned int) (__dev >> 12) & ~0xff);
 }
 
-unsigned long long int gnu_dev_makedev(unsigned int __major, unsigned int __minor) __attribute__((weak));
-unsigned long long int gnu_dev_makedev(unsigned int __major, unsigned int __minor) {
+gnu_dev_type gnu_dev_makedev(unsigned int __major, unsigned int __minor) __attribute__((weak));
+gnu_dev_type gnu_dev_makedev(unsigned int __major, unsigned int __minor) {
   return ((__minor & 0xff) | ((__major & 0xfff) << 8)
-          | (((unsigned long long int) (__minor & ~0xff)) << 12)
-          | (((unsigned long long int) (__major & ~0xfff)) << 32));
+          | (((gnu_dev_type) (__minor & ~0xff)) << 12)
+          | (((gnu_dev_type) (__major & ~0xfff)) << 32));
 }
 
 char *canonicalize_file_name (const char *name) __attribute__((weak));
