@@ -1224,7 +1224,7 @@ void Dependency::execute(llvm::Instruction *instr,
           // FIXME: Here we assume that the expressions have to exactly be the
           // same expression object. More properly, this should instead add an
           // ite constraint onto the path condition.
-          addressValuePair = concretelyAddressedStore[*li];
+          addressValuePair = symbolicallyAddressedStore[*li];
         }
 
         // Build the loaded value
