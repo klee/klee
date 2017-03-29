@@ -1216,15 +1216,22 @@ void Dependency::execute(llvm::Instruction *instr,
            li != le; ++li) {
         std::pair<ref<VersionedValue>, ref<VersionedValue> > addressValuePair;
 
+        std::map<ref<MemoryLocation>,
+                 std::pair<ref<VersionedValue>,
+                           ref<VersionedValue> > >::iterator storeIter;
         if ((*li)->hasConstantAddress()) {
-          if (concretelyAddressedStore.count(*li) > 0) {
-            addressValuePair = concretelyAddressedStore[*li];
+          storeIter = concretelyAddressedStore.find(*li);
+          if (storeIter != concretelyAddressedStore.end()) {
+            addressValuePair = storeIter->second;
           }
-        } else if (symbolicallyAddressedStore.count(*li) > 0) {
-          // FIXME: Here we assume that the expressions have to exactly be the
-          // same expression object. More properly, this should instead add an
-          // ite constraint onto the path condition.
-          addressValuePair = symbolicallyAddressedStore[*li];
+        } else {
+          storeIter = symbolicallyAddressedStore.find(*li);
+          if (storeIter != symbolicallyAddressedStore.end()) {
+            // FIXME: Here we assume that the expressions have to exactly be the
+            // same expression object. More properly, this should instead add an
+            // ite constraint onto the path condition.
+            addressValuePair = storeIter->second;
+          }
         }
 
         // Build the loaded value
