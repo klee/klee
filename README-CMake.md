@@ -7,6 +7,7 @@ its autoconf/Makefile based build system.
 
 * `check` - Build and run all tests.
 * `clean` - Clean the build tree. Note this won't clean the runtime build.
+* `clean_runtime` - Clean the runtime build tree.
 * `docs` - Build documentation
 * `edit_cache` - Show cmake/ccmake/cmake-gui interface for chaning configure options.
 * `help` - Show list of top level targets
