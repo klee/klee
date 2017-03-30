@@ -111,6 +111,7 @@ ExternalProject_Add_Step(BuildKLEERuntimes RuntimeBuild
   COMMAND ${ENV_BINARY} MAKEFLAGS="" ${MAKE_BINARY} -f Makefile.cmake.bitcode all
   ALWAYS ${EXTERNAL_PROJECT_BUILD_ALWAYS_ARG}
   WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
+  ${EXTERNAL_PROJECT_ADD_STEP_USES_TERMINAL_ARG}
 )
 
 # FIXME: Invoke `make clean` in the bitcode build system

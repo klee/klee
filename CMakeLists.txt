@@ -64,6 +64,13 @@ else()
   set(ADD_CUSTOM_COMMAND_USES_TERMINAL_ARG "")
 endif()
 
+if (("${CMAKE_VERSION}" VERSION_EQUAL "3.4") OR ("${CMAKE_VERSION}" VERSION_GREATER "3.4"))
+  # In CMake >= 3.4 ExternalProject_Add_Step() supports a `USES_TERMINAL` argument
+  set(EXTERNAL_PROJECT_ADD_STEP_USES_TERMINAL_ARG "USES_TERMINAL" "1")
+else()
+  set(EXTERNAL_PROJECT_ADD_STEP_USES_TERMINAL_ARG "")
+endif()
+
 ################################################################################
 # Sanity check - Disallow building in source.
 # Otherwise we would overwrite the Makefiles of the old build system.
