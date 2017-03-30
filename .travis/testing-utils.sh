@@ -21,9 +21,12 @@ if [ "${LLVM_VERSION}" != "2.9" ]; then
     if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
       sudo cp lib* /usr/lib/
       sudo cp -r include/gtest /usr/include
-    else # OSX
+    elif [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
       sudo cp lib* /usr/local/lib/
       sudo cp -r include/gtest /usr/local/include
+    else
+      echo "Unhandled TRAVIS_OS_NAME \"${TRAVIS_OS_NAME}\""
+      exit 1
     fi
 else
     # LLVM2.9 on the other hand is a pain
