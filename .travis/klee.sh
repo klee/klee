@@ -13,9 +13,12 @@ if [ "${LLVM_VERSION}" != "2.9" ]; then
   if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
     KLEE_CC=/usr/bin/clang-${LLVM_VERSION}
     KLEE_CXX=/usr/bin/clang++-${LLVM_VERSION}
-  else # OSX
+  elif [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
     KLEE_CC=/usr/local/bin/clang-${LLVM_VERSION}
     KLEE_CXX=/usr/local/bin/clang++-${LLVM_VERSION}
+  else
+    echo "Unhandled TRAVIS_OS_NAME \"${TRAVIS_OS_NAME}\""
+    exit 1
   fi
 else
     # Just use pre-built llvm-gcc downloaded earlier
@@ -127,9 +130,12 @@ source ${KLEE_SRC}/.travis/sanitizer_flags.sh
 if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
   LLVM_CONFIG="/usr/lib/llvm-${LLVM_VERSION}/bin/llvm-config"
   LLVM_BUILD_DIR="/usr/lib/llvm-${LLVM_VERSION}/build"
-else # OSX
+elif [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
   LLVM_CONFIG="/usr/local/bin/llvm-config-${LLVM_VERSION}"
   LLVM_BUILD_DIR="$(${LLVM_CONFIG} --src-root)"
+else
+  echo "Unhandled TRAVIS_OS_NAME \"${TRAVIS_OS_NAME}\""
+  exit 1
 fi
 
 ###############################################################################

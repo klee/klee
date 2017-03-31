@@ -12,6 +12,9 @@ fi
 if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
   # Should we install libz3-dbg too?
   sudo apt-get -y install libz3 libz3-dev
-else # OSX
+elif [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
   brew install z3
+else
+  echo "Unhandled TRAVIS_OS_NAME \"${TRAVIS_OS_NAME}\""
+  exit 1
 fi

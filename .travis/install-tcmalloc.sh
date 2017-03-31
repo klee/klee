@@ -11,9 +11,12 @@ if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
     make
     sudo make install
   fi
-else # OSX
+elif [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
   if [ ${USE_TCMALLOC:-0} -eq 1 ] ; then
     echo "Error: Requested to install TCMalloc on macOS, which is not supported"
     exit 1
   fi
+else
+  echo "Unhandled TRAVIS_OS_NAME \"${TRAVIS_OS_NAME}\""
+  exit 1
 fi

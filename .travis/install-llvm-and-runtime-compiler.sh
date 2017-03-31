@@ -29,7 +29,7 @@ if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
     llvm-gcc/bin/llvm-gcc test.c -o hello_world
     ./hello_world
   fi
-else # OSX
+elif [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
   # NOTE: We should not easily generalize, since we need the corresponding support of bottled formulas
   if [ "${LLVM_VERSION}" == "3.4" ]; then
     brew install llvm34
@@ -37,4 +37,7 @@ else # OSX
     echo "Error: Requested to install LLVM ${LLVM_VERSION} on macOS, which is not supported"
     exit 1
   fi
+else
+  echo "Unhandled TRAVIS_OS_NAME \"${TRAVIS_OS_NAME}\""
+  exit 1
 fi

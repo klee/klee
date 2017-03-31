@@ -16,7 +16,8 @@ ENV LLVM_VERSION=3.4 \
     BUILD_DIR=/home/klee/klee_build \
     USE_CMAKE=1 \
     ASAN_BUILD=0 \
-    UBSAN_BUILD=0
+    UBSAN_BUILD=0 \
+    TRAVIS_OS_NAME=linux
 
 RUN apt-get update && \
     apt-get -y --no-install-recommends install \

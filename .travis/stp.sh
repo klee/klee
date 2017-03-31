@@ -21,10 +21,13 @@ if [ "x${STP_VERSION}" != "x" ]; then
     CFLAGS="${SANITIZER_C_FLAGS}" \
     CXXFLAGS="${SANITIZER_CXX_FLAGS}" \
     cmake -DCMAKE_INSTALL_PREFIX=/usr ..
-  else # OSX
+  elif [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
     CFLAGS="${SANITIZER_C_FLAGS}" \
     CXXFLAGS="${SANITIZER_CXX_FLAGS}" \
     cmake -DCMAKE_INSTALL_PREFIX=/usr/local ..
+  else
+    echo "Unhandled TRAVIS_OS_NAME \"${TRAVIS_OS_NAME}\""
+    exit 1
   fi
   make
   sudo make install
