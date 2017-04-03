@@ -70,8 +70,15 @@ else
 all:: build_at_level
 
 # Compute the directory to find sources
-DIR_SUFFIX := $(subst $(RUNTIME_CMAKE_BINARY_DIR),,$(CURRENT_DIR))
+# Note: Use of $(realpath) is to resolve any symlinks
+DIR_SUFFIX := $(subst $(realpath $(RUNTIME_CMAKE_BINARY_DIR)),,$(realpath $(CURRENT_DIR)))
 SRC_DIR := $(abspath $(ROOT_SRC)/$(DIR_SUFFIX))
+# Sanity check
+ifeq ($(realpath $(SRC_DIR)),)
+$(error SRC_DIR "$(SRC_DIR)" does not exist)
+endif
+
+# Compute the directory to put build files
 LOCAL_BUILD_DIR := $(abspath $(ROOT_OBJ)/$(DIR_SUFFIX))
 
 C_SRCS := $(shell echo $(SRC_DIR)/*.c)
