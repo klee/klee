@@ -484,6 +484,12 @@ public:
                  const std::vector<llvm::Instruction *> &callHistory,
                  std::vector<ref<Expr> > &args, bool symbolicExecutionError);
 
+    /// \brief Execution of klee_make_symbolic
+    void
+    executeMakeSymbolic(llvm::Instruction *instr,
+                        const std::vector<llvm::Instruction *> &callHistory,
+                        ref<Expr> address, const Array *array);
+
     /// \brief Build dependencies from PHI node
     void executePHI(llvm::Instruction *instr, unsigned int incomingBlock,
                     const std::vector<llvm::Instruction *> &callHistory,

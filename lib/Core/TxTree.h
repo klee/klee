@@ -883,6 +883,13 @@ public:
   /// building dependency information.
   void execute(llvm::Instruction *instr, std::vector<ref<Expr> > &args);
 
+  /// \brief Execution of klee_make_symbolic
+  void executeMakeSymbolic(llvm::Instruction *instr, ref<Expr> address,
+                           const Array *array) {
+    currentTxTreeNode->dependency->executeMakeSymbolic(
+        instr, currentTxTreeNode->callHistory, address, array);
+  }
+
   /// \brief Abstractly execute a PHI instruction for building dependency
   /// information.
   void executePHI(llvm::Instruction *instr, unsigned incomingBlock,

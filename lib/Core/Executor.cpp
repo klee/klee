@@ -3834,6 +3834,7 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
       const Array *shadow =
           arrayCache.CreateArray(ShadowArray::getShadowName(uniqueName), mo->size);
       ShadowArray::addShadowArrayMap(array, shadow);
+      txTree->executeMakeSymbolic(state.prevPC->inst, mo->getBaseExpr(), array);
     }
 
     bindObjectInState(state, mo, false, array);
