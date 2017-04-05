@@ -455,6 +455,10 @@ Dependency::getLatestValue(llvm::Value *value,
     } else if (llvm::isa<llvm::IntToPtrInst>(asInstruction)) {
 	// 0 signifies unknown size
       return getNewPointerValue(value, callHistory, valueExpr, 0);
+    } else if (llvm::BitCastInst *bci =
+                   llvm::dyn_cast<llvm::BitCastInst>(asInstruction)) {
+      return getLatestValue(bci->getOperand(0), callHistory, valueExpr,
+                            constraint);
     }
   }
 
@@ -1478,13 +1482,6 @@ void Dependency::executeMakeSymbolic(
     const std::vector<llvm::Instruction *> &callHistory, ref<Expr> address,
     const Array *array) {
   llvm::Value *pointer = instr->getOperand(0);
-
-  if (llvm::ConstantExpr *ce = llvm::dyn_cast<llvm::ConstantExpr>(pointer)) {
-    if (llvm::BitCastInst *bci =
-            llvm::dyn_cast<llvm::BitCastInst>(ce->getAsInstruction())) {
-      pointer = bci->getOperand(0);
-    }
-  }
 
   ref<VersionedValue> storedValue = getNewVersionedValue(
       instr, callHistory, ConstantExpr::create(0, Expr::Bool));
