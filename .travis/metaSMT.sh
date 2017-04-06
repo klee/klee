@@ -1,5 +1,9 @@
 #!/bin/bash -x
 
+set -e
+
+: ${METASMT_VERSION?"METASMT_VERSION not specified"}
+
 # Get Boost, Z3, libgmp
 sudo apt-get -y install libboost1.55-dev libz3 libz3-dev libgmp-dev
 
@@ -21,7 +25,7 @@ sudo cp dependencies/Z3-2.19/Z3Config.cmake /usr # this is a hack
 sudo cp deps/boolector-2.2.0/lib/* /usr/lib/              #
 sudo cp deps/lingeling-ayv-86bf266-140429/lib/* /usr/lib/ #
 sudo cp deps/minisat-git/lib/* /usr/lib/                  # hack
-sudo cp deps/stp-git-basic/lib/* /usr/lib/                #
+sudo cp -r deps/stp-git-basic/lib/lib* /usr/lib/          #
 
 # Build
 make -C build install
