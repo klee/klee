@@ -50,8 +50,6 @@ public:
   mutable bool isGlobal;
   bool isFixed;
 
-  /// true if created by us.
-  bool fake_object;
   bool isUserSpecified;
 
   MemoryManager *parent;
@@ -96,7 +94,6 @@ public:
       isLocal(_isLocal),
       isGlobal(_isGlobal),
       isFixed(_isFixed),
-      fake_object(false),
       isUserSpecified(false),
       parent(_parent), 
       allocSite(_allocSite) {
