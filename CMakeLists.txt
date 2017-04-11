@@ -395,9 +395,8 @@ endif()
 ###############################################################################
 if (NOT LLVM_ENABLE_RTTI)
   if (ENABLE_SOLVER_METASMT AND metaSMT_REQUIRE_RTTI)
-    message(WARNING "Not disabling RTTI because metaSMT uses them")
-    # FIXME: Should this be FATAL_ERROR rather than ERROR?
-    message(WARNING
+    message(FATAL_ERROR
+      "RTTI cannot be disabled because metaSMT uses them."
       "This build configuration is not supported and will likely not work."
       "You should recompile LLVM with RTTI enabled.")
   else()
