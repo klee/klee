@@ -25,6 +25,7 @@ env:
     #   STP_VERSION   : {2.1.2, master}
     #   METASMT_VERSION : {v4.rc1}
     #   METASMT_DEFAULT : {btor, stp, z3}
+    #   METASMT_BOOST_VERSION : {x.y.z} // e.g. 1.60.0, libboost-dev will be used if unspecified
     #   UCLIBC: {0, klee_uclibc_v1.0.0, klee_0_9_29} // Note ``0`` means disabled
     #   DISABLE_ASSERTIONS: {0, 1}
     #   ENABLE_OPTIMIZED: {0, 1}
@@ -66,8 +67,8 @@ env:
 
     # Test metaSMT support
     - LLVM_VERSION=3.4 SOLVERS=metaSMT METASMT_VERSION=v4.rc1 METASMT_DEFAULT=btor KLEE_UCLIBC=klee_uclibc_v1.0.0 DISABLE_ASSERTIONS=0 ENABLE_OPTIMIZED=1 COVERAGE=0
-    - LLVM_VERSION=2.9 SOLVERS=metaSMT METASMT_VERSION=v4.rc1 METASMT_DEFAULT=btor KLEE_UCLIBC=klee_uclibc_v1.0.0 DISABLE_ASSERTIONS=0 ENABLE_OPTIMIZED=1 COVERAGE=0
-    
+    - LLVM_VERSION=2.9 SOLVERS=metaSMT METASMT_VERSION=v4.rc1 METASMT_DEFAULT=btor KLEE_UCLIBC=klee_uclibc_v1.0.0 DISABLE_ASSERTIONS=0 ENABLE_OPTIMIZED=1 COVERAGE=0 METASMT_BOOST_VERSION=1.60.0
+
     # Check at least one build with Asserts disabled.
     - LLVM_VERSION=3.4 SOLVERS=STP STP_VERSION=2.1.2 KLEE_UCLIBC=klee_uclibc_v1.0.0 DISABLE_ASSERTIONS=1 ENABLE_OPTIMIZED=1 COVERAGE=0
 

@@ -4,8 +4,20 @@ set -e
 
 : ${METASMT_VERSION?"METASMT_VERSION not specified"}
 
-# Get Boost, Z3, libgmp
-sudo apt-get -y install libboost1.55-dev libz3 libz3-dev libgmp-dev
+# Get Z3, libgmp
+sudo apt-get -y install libz3 libz3-dev libgmp-dev
+
+# Get Boost
+if [ "X${METASMT_BOOST_VERSION}" != "X" ]; then
+  # Taken from boost/hana/.travis.yml
+  BOOST_URL="http://sourceforge.net/projects/boost/files/boost/${METASMT_BOOST_VERSION}/boost_${METASMT_BOOST_VERSION//\./_}.tar.gz"
+  BOOST_DIR=`pwd`/boost-${METASMT_BOOST_VERSION}
+  mkdir -p ${BOOST_DIR}
+  wget --quiet -O - ${BOOST_URL} | tar --strip-components=1 -xz -C ${BOOST_DIR}
+  sudo ln -s ${BOOST_DIR}/boost /usr/include/boost
+else
+  sudo apt-get -y install libboost1.55-dev
+fi
 
 # Clone
 git clone -b ${METASMT_VERSION} --single-branch --depth 1 https://github.com/hoangmle/metaSMT.git
