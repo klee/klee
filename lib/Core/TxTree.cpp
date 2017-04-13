@@ -1075,21 +1075,29 @@ bool SubsumptionTableEntry::subsumed(
                                  stateValue->getExpression());
             if (res->isFalse()) {
               if (debugSubsumptionLevel >= 1) {
-                std::string msg1, msg2;
-                llvm::raw_string_ostream stream(msg2);
+                std::string msg1;
 
                 if (!corePointerValues.empty()) {
                   msg1 += " (with successful memory bound checks)";
                 }
 
-                tabledValue->getExpression()->print(stream);
-                stream << " vs. ";
-                stateValue->getExpression()->print(stream);
-                stream.flush();
-                klee_message(
-                    "#%lu=>#%lu: Check failure due to unequal content%s: %s",
-                    state.txTreeNode->getNodeSequenceNumber(),
-                    nodeSequenceNumber, msg1.c_str(), msg2.c_str());
+                if (debugSubsumptionLevel >= 2) {
+                  std::string msg2;
+                  llvm::raw_string_ostream stream(msg2);
+                  tabledValue->getExpression()->print(stream);
+                  stream << " vs. ";
+                  stateValue->getExpression()->print(stream);
+                  stream.flush();
+                  klee_message(
+                      "#%lu=>#%lu: Check failure due to unequal content%s: %s",
+                      state.txTreeNode->getNodeSequenceNumber(),
+                      nodeSequenceNumber, msg1.c_str(), msg2.c_str());
+                } else {
+                  klee_message(
+                      "#%lu=>#%lu: Check failure due to unequal content%s",
+                      state.txTreeNode->getNodeSequenceNumber(),
+                      nodeSequenceNumber, msg1.c_str());
+                }
 
                 if (debugSubsumptionLevel >= 3) {
                   std::string msg3;
