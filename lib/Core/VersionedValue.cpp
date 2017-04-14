@@ -29,6 +29,27 @@ using namespace klee;
 
 namespace klee {
 
+void AllocationContext::print(llvm::raw_ostream &stream,
+                              const std::string &prefix) const {
+  std::string tabs = makeTabs(1);
+  if (value) {
+    stream << prefix << "Location: ";
+    value->print(stream);
+  }
+  if (callHistory.size() > 0) {
+    stream << "\n" << prefix << "Call history:";
+    for (std::vector<llvm::Instruction *>::const_iterator
+             it = callHistory.begin(),
+             ie = callHistory.end();
+         it != ie; ++it) {
+      stream << "\n" << tabs << prefix;
+      (*it)->print(stream);
+    }
+  }
+}
+
+/**/
+
 void MemoryLocation::adjustOffsetBound(ref<VersionedValue> checkedAddress,
                                        std::set<ref<Expr> > &_bounds) {
   std::set<ref<MemoryLocation> > locations = checkedAddress->getLocations();
