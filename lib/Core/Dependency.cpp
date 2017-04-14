@@ -850,7 +850,7 @@ Dependency::Dependency(Dependency *parent, llvm::DataLayout *_targetData)
     debugStateLevel = DebugState;
 #else
     debugSubsumptionLevel = 0;
-    debugStateLevel = false;
+    debugStateLevel = 0;
 #endif
   }
 }
