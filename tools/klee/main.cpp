@@ -1752,6 +1752,20 @@ int main(int argc, char **argv, char **envp) {
   stats << "KLEE: done:     program exit tests = "
         << handler->getExitTerminationTest() << "\n";
 
+  if (INTERPOLATION_ENABLED) {
+    stats << "\n";
+    stats << "KLEE: done: WARNING:\n";
+    stats << "KLEE: done:     Subsumed paths / tests counts are "
+             "nondeterministic for\n";
+    stats << "KLEE: done:     programs with dynamically-allocated memory such "
+             "as those\n";
+    stats << "KLEE: done:     using malloc, since KLEE may reuse the address "
+             "of the\n";
+    stats << "KLEE: done:     same malloc calls in different paths. This "
+             "nondeterminism\n";
+    stats << "KLEE: done:     does not cause loss of error reports.\n";
+  }
+
   bool useColors = llvm::errs().is_displayed();
   if (useColors)
     llvm::errs().changeColor(llvm::raw_ostream::GREEN,
