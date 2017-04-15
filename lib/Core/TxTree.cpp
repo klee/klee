@@ -1111,6 +1111,14 @@ bool SubsumptionTableEntry::subsumed(
                 }
               }
               return false;
+            } else if (debugSubsumptionLevel >= 2 && res->isTrue()) {
+              std::string msg;
+              llvm::raw_string_ostream stream(msg);
+              tabledValue->getExpression()->print(stream);
+              stream.flush();
+              klee_message("#%lu=>#%lu: Equal concrete contents: %s",
+                           state.txTreeNode->getNodeSequenceNumber(),
+                           nodeSequenceNumber, msg.c_str());
             }
           }
         }
