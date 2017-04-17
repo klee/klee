@@ -1168,18 +1168,32 @@ void Dependency::execute(llvm::Instruction *instr,
 
           if (!target.second.isNull() &&
               valueExpr != target.second->getExpression()) {
+            // Print a warning when the expressions mismatch, unless when the
+            // expression comes from klee_make_symbolic in a loop, as the
+            // expected expression recorded in Tracer-X shadow memory may be
+            // outdated, and the expression that comes from KLEE is the updated
+            // one from klee_make_symbolic.
             llvm::CallInst *ci =
                 llvm::dyn_cast<llvm::CallInst>(target.second->getValue());
-            if (!ci || ci->getCalledFunction()->getName().str() !=
-                           "klee_make_symbolic") {
-              std::string msg;
-              llvm::raw_string_ostream stream(msg);
-              stream << "Loaded value ";
-              target.second->getExpression()->print(stream);
-              stream << " should be ";
-              valueExpr->print(stream);
-              stream.flush();
-              klee_warning("%s", msg.c_str());
+            if (ci) {
+              // Here we determine if this was a call to klee_make_symbolic from
+              // the LLVM source of the call instruction instead of
+              // Function::getName(). This is to circumvent segmentation fault
+              // issue when the KLEE runtime library is not linked.
+              std::string instrSrc;
+              llvm::raw_string_ostream s1(instrSrc);
+              ci->print(s1);
+              s1.flush();
+              if (instrSrc.find("klee_make_symbolic") == std::string::npos) {
+                std::string msg;
+                llvm::raw_string_ostream s2(msg);
+                s2 << "Loaded value ";
+                target.second->getExpression()->print(s2);
+                s2 << " should be ";
+                valueExpr->print(s2);
+                s2.flush();
+                klee_warning("%s", msg.c_str());
+              }
             }
           }
 
