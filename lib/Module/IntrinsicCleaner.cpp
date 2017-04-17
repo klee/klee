@@ -210,6 +210,14 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
         break;
       }
 
+      case Intrinsic::objectsize: {
+        Value *unknownSize = ConstantInt::get(ii->getType(), -1);
+        ii->replaceAllUsesWith(unknownSize);
+        ii->eraseFromParent();
+        dirty = true;
+        break;
+      }
+
       case Intrinsic::dbg_value:
       case Intrinsic::dbg_declare:
         // Remove these regardless of lower intrinsics flag. This can
