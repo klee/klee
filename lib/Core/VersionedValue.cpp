@@ -150,6 +150,7 @@ void MemoryLocation::print(llvm::raw_ostream &stream,
   stream << ": ";
   base->print(stream);
   stream << "\n";
+  stream << prefix << "allocation id: " << allocationId << "\n";
   stream << prefix
          << "pointer to location object: " << reinterpret_cast<uintptr_t>(this);
 }
