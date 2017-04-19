@@ -90,7 +90,7 @@ std::string TxTreeGraph::recurseRender(TxTreeGraph::Node *node) {
   replacementName = repStream2.str();
 
   stream << " [shape=record,";
-  if (node->memoryErrorPath) {
+  if (node->errorPath) {
     stream << "style=bold,";
   }
   stream << "label=\"{";
@@ -113,6 +113,8 @@ std::string TxTreeGraph::recurseRender(TxTreeGraph::Node *node) {
   }
   if (node->memoryError) {
     stream << "OUT-OF-BOUND: " << node->memoryErrorLocation << "\\l";
+  } else if (node->assertionError) {
+    stream << "ASSERTION FAIL: " << node->assertionErrorLocation << "\\l";
   }
   if (node->subsumed) {
     stream << "(subsumed)\\l";
@@ -132,7 +134,7 @@ std::string TxTreeGraph::recurseRender(TxTreeGraph::Node *node) {
       stream << sourceNodeName << ":s0 -> InternalNode"
              << node->falseTarget->internalNodeId;
     }
-    if (node->falseTarget->memoryErrorPath) {
+    if (node->falseTarget->errorPath) {
       stream << " [style=bold,label=\"ERR\"];\n";
     } else {
       stream << ";\n";
@@ -149,7 +151,7 @@ std::string TxTreeGraph::recurseRender(TxTreeGraph::Node *node) {
       stream << sourceNodeName << ":s1 -> InternalNode"
              << node->trueTarget->internalNodeId;
     }
-    if (node->trueTarget->memoryErrorPath) {
+    if (node->trueTarget->errorPath) {
       stream << " [style=bold,label=\"ERR\"];\n";
     } else {
       stream << ";\n";
@@ -326,7 +328,33 @@ void TxTreeGraph::setMemoryError(ExecutionState &state) {
 
   // Mark the path as leading to memory error
   while (node) {
-    node->memoryErrorPath = true;
+    node->errorPath = true;
+    node = node->parent;
+  }
+}
+
+void TxTreeGraph::setAssertionError(ExecutionState &state) {
+  if (!OUTPUT_INTERPOLATION_TREE)
+    return;
+
+  TxTreeGraph::Node *node = instance->txTreeNodeMap[state.txTreeNode];
+  node->assertionError = true;
+
+  node->assertionErrorLocation = "";
+  llvm::raw_string_ostream out(node->assertionErrorLocation);
+  if (llvm::MDNode *n = state.pc->inst->getMetadata("dbg")) {
+    // Display the line, char position of this instruction
+    llvm::DILocation loc(n);
+    unsigned line = loc.getLineNumber();
+    StringRef file = loc.getFilename();
+    out << file << ":" << line << "\n";
+  } else {
+    state.pc->inst->print(out);
+  }
+
+  // Mark the path as leading to memory error
+  while (node) {
+    node->errorPath = true;
     node = node->parent;
   }
 }

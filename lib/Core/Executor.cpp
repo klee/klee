@@ -3283,6 +3283,9 @@ void Executor::terminateStateOnError(ExecutionState &state,
     interpreterHandler->incBranchingDepthOnErrorTermination(state.depth);
     interpreterHandler->incInstructionsDepthOnErrorTermination(
         state.txTreeNode->getInstructionsDepth());
+    if (termReason == Executor::Assert) {
+      TxTreeGraph::setAssertionError(state);
+    }
   }
 
   std::string message = messaget.str();
