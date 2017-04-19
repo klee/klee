@@ -89,7 +89,11 @@ std::string TxTreeGraph::recurseRender(TxTreeGraph::Node *node) {
   repStream2 << replacementName;
   replacementName = repStream2.str();
 
-  stream << " [shape=record,label=\"{";
+  stream << " [shape=record,";
+  if (node->memoryErrorPath) {
+    stream << "style=bold,";
+  }
+  stream << "label=\"{";
   if (node->nodeSequenceNumber) {
     stream << node->nodeSequenceNumber << ": " << replacementName;
   } else {
@@ -120,25 +124,35 @@ std::string TxTreeGraph::recurseRender(TxTreeGraph::Node *node) {
   if (node->falseTarget) {
     if (node->falseTarget->nodeSequenceNumber) {
       stream << sourceNodeName << ":s0 -> Node"
-             << node->falseTarget->nodeSequenceNumber << ";\n";
+             << node->falseTarget->nodeSequenceNumber;
     } else {
       if (!node->falseTarget->internalNodeId) {
         node->falseTarget->internalNodeId = (++internalNodeId);
       }
       stream << sourceNodeName << ":s0 -> InternalNode"
-             << node->falseTarget->internalNodeId << ";\n";
+             << node->falseTarget->internalNodeId;
+    }
+    if (node->falseTarget->memoryErrorPath) {
+      stream << " [style=bold,label=\"ERR\"];\n";
+    } else {
+      stream << ";\n";
     }
   }
   if (node->trueTarget) {
     if (node->trueTarget->nodeSequenceNumber) {
       stream << sourceNodeName + ":s1 -> Node"
-             << node->trueTarget->nodeSequenceNumber << ";\n";
+             << node->trueTarget->nodeSequenceNumber;
     } else {
       if (!node->trueTarget->internalNodeId) {
         node->trueTarget->internalNodeId = (++internalNodeId);
       }
       stream << sourceNodeName << ":s1 -> InternalNode"
-             << node->trueTarget->internalNodeId << ";\n";
+             << node->trueTarget->internalNodeId;
+    }
+    if (node->trueTarget->memoryErrorPath) {
+      stream << " [style=bold,label=\"ERR\"];\n";
+    } else {
+      stream << ";\n";
     }
   }
   if (node->falseTarget) {
@@ -203,7 +217,9 @@ void TxTreeGraph::addChildren(TxTreeNode *parent, TxTreeNode *falseChild,
   TxTreeGraph::Node *parentNode = instance->txTreeNodeMap[parent];
 
   parentNode->falseTarget = TxTreeGraph::Node::createNode();
+  parentNode->falseTarget->parent = parentNode;
   parentNode->trueTarget = TxTreeGraph::Node::createNode();
+  parentNode->trueTarget->parent = parentNode;
   instance->txTreeNodeMap[falseChild] = parentNode->falseTarget;
   instance->txTreeNodeMap[trueChild] = parentNode->trueTarget;
 }
@@ -306,6 +322,12 @@ void TxTreeGraph::setMemoryError(ExecutionState &state) {
     out << file << ":" << line << "\n";
   } else {
     state.pc->inst->print(out);
+  }
+
+  // Mark the path as leading to memory error
+  while (node) {
+    node->memoryErrorPath = true;
+    node = node->parent;
   }
 }
 
