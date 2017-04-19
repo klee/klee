@@ -56,7 +56,7 @@ class TxTreeGraph {
     uint64_t internalNodeId;
 
     /// \brief False and true children of this node
-    TxTreeGraph::Node *falseTarget, *trueTarget;
+    TxTreeGraph::Node *parent, *falseTarget, *trueTarget;
 
     /// \brief Indicates that node is subsumed
     bool subsumed;
@@ -73,9 +73,20 @@ class TxTreeGraph {
     /// \brief Location information of the memory out-of-bound error
     std::string memoryErrorLocation;
 
+    /// \brief Flag to indicate assertion error within this node
+    bool assertionError;
+
+    /// \brief Location information of the assertion error
+    std::string assertionErrorLocation;
+
+    /// \brief Flag to indicate if this node belongs to a path to memory error.
+    /// Note that memoryError or assertionError implies errorPath.
+    bool errorPath;
+
     Node()
-        : nodeSequenceNumber(0), internalNodeId(0), falseTarget(0),
-          trueTarget(0), subsumed(false), memoryError(false) {}
+        : nodeSequenceNumber(0), internalNodeId(0), parent(0), falseTarget(0),
+          trueTarget(0), subsumed(false), memoryError(false),
+          assertionError(false), errorPath(false) {}
 
     ~Node() {
       if (falseTarget)
@@ -164,6 +175,8 @@ public:
   static void setAsCore(PathCondition *pathCondition);
 
   static void setMemoryError(ExecutionState &state);
+
+  static void setAssertionError(ExecutionState &state);
 
   /// \brief Save the graph
   static void save(std::string dotFileName);
