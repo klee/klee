@@ -1161,14 +1161,30 @@ bool SubsumptionTableEntry::subsumed(
                 }
               }
               return false;
-            } else if (debugSubsumptionLevel >= 2 && res->isTrue()) {
-              std::string msg;
-              llvm::raw_string_ostream stream(msg);
-              tabledValue->getExpression()->print(stream);
-              stream.flush();
-              klee_message("#%lu=>#%lu: Equal concrete contents: %s",
-                           state.txTreeNode->getNodeSequenceNumber(),
-                           nodeSequenceNumber, msg.c_str());
+            } else if (res->isTrue()) {
+              if (debugSubsumptionLevel >= 2) {
+                std::string msg;
+                llvm::raw_string_ostream stream(msg);
+                tabledValue->getExpression()->print(stream);
+                stream.flush();
+                klee_message("#%lu=>#%lu: Equal concrete contents: %s",
+                             state.txTreeNode->getNodeSequenceNumber(),
+                             nodeSequenceNumber, msg.c_str());
+              } else {
+                klee_message("#%lu=>#%lu: Equal concrete contents",
+                             state.txTreeNode->getNodeSequenceNumber(),
+                             nodeSequenceNumber);
+              }
+
+              if (debugSubsumptionLevel >= 3) {
+                std::string msg3;
+                llvm::raw_string_ostream stream1(msg3);
+
+                it2->first->loc->print(stream1, makeTabs(1));
+                stream1.flush();
+
+                klee_message("with value stored in address:\n%s", msg3.c_str());
+              }
             }
           }
         }
