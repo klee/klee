@@ -1161,7 +1161,7 @@ bool SubsumptionTableEntry::subsumed(
                 }
               }
               return false;
-            } else if (res->isTrue()) {
+            } else if (debugSubsumptionLevel >= 1 && res->isTrue()) {
               if (debugSubsumptionLevel >= 2) {
                 std::string msg;
                 llvm::raw_string_ostream stream(msg);
