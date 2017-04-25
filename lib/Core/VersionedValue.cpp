@@ -167,19 +167,20 @@ void VersionedValue::print(llvm::raw_ostream &stream,
   if (sources.empty()) {
     stream << prefix << "no dependencies\n";
   } else {
-    stream << prefix << "direct dependencies:\n";
+    stream << prefix << "direct dependencies:";
     for (std::map<ref<VersionedValue>, ref<MemoryLocation> >::const_iterator
              is = sources.begin(),
              it = is, ie = sources.end();
          it != ie; ++it) {
+      stream << "\n";
       if (it != is)
         stream << tabsNext << "------------------------------------------\n";
       (*it->first).printNoDependency(stream, tabsNext);
       if (!it->second.isNull()) {
         stream << " via\n";
         (*it->second).print(stream, tabsNext);
+      }
     }
-  }
   }
 }
 
