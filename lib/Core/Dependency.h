@@ -209,9 +209,9 @@ namespace klee {
     std::map<ref<TxStateAddress>, std::set<ref<TxStateAddress> > >
     directlyInfluencedBy;
 
-    /// \brief This counts the number of uses of a memory location by another
-    /// memory location, of the locations that belong to the interpolant
-    std::map<ref<TxStateAddress>, uint64_t> directUseCount;
+    /// \brief This counts the number of direct uses of a value by another
+    /// value, of the values that belong to the interpolant
+    std::map<ref<TxStateValue>, uint64_t> directUseCount;
 
     /// \brief Set the address a value was loaded from
     void setLoadedFrom(ref<TxStateValue> value, ref<TxStateAddress> loc) {
