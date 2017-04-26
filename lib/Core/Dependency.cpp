@@ -50,6 +50,61 @@ void Dependency::getConcreteStore(
     std::set<const Array *> &replacements, bool coreOnly,
     Dependency::ConcreteStore &concreteStore) const {
 
+  std::map<ref<TxStateValue>, uint64_t> directUseCount;
+
+  if (coreOnly) {
+    for (std::map<
+             ref<TxStateAddress>,
+             std::pair<ref<TxStateValue>, ref<TxStateValue> > >::const_iterator
+             it = store.begin(),
+             ie = store.end();
+         it != ie; ++it) {
+      if (!it->first->contextIsPrefixOf(callHistory))
+        continue;
+      if (it->second.second.isNull())
+        continue;
+
+      directUseCount[it->second.second] =
+          it->second.second->getDirectUseCount();
+    }
+
+    for (std::map<ref<TxStateValue>, uint64_t>::iterator
+             it = directUseCount.begin(),
+             ie = directUseCount.end();
+         it != ie; ++it) {
+      std::map<ref<TxStateValue>, ref<TxStateAddress> > sources =
+          it->first->getSources();
+      for (std::map<ref<TxStateValue>, ref<TxStateAddress> >::iterator
+               it1 = sources.begin(),
+               ie1 = sources.end();
+           it1 != ie1; ++it1) {
+        std::map<ref<TxStateValue>, uint64_t>::iterator it2 =
+            directUseCount.find(it1->first);
+        if (it2 != directUseCount.end() && it2->second > 0) {
+          (it2->second)--;
+        }
+      }
+
+      std::map<ref<TxStateValue>, uint64_t>::iterator it1;
+      ref<TxStateValue> loadAddress = it->first->getLoadAddress();
+      ref<TxStateValue> storeAddress = it->first->getStoreAddress();
+
+      if (!loadAddress.isNull()) {
+        it1 = directUseCount.find(it->first->getLoadAddress());
+        if (it1 != directUseCount.end() && it1->second > 0) {
+          (it1->second)--;
+        }
+      }
+
+      if (!storeAddress.isNull()) {
+        it1 = directUseCount.find(it->first->getStoreAddress());
+        if (it1 != directUseCount.end() && it1->second > 0) {
+          (it1->second)--;
+        }
+      }
+    }
+  }
+
   for (std::map<
            ref<TxStateAddress>,
            std::pair<ref<TxStateValue>, ref<TxStateValue> > >::const_iterator
@@ -66,16 +121,20 @@ void Dependency::getConcreteStore(
       concreteStore[base][it->first->getInterpolantStyleAddress()] =
           it->second.second->getInterpolantStyleValue();
     } else if (it->second.second->isCore()) {
-      // An address is in the core if it stores a value that is in the core
-      const llvm::Value *base = it->first->getContext()->getValue();
+      std::map<ref<TxStateValue>, uint64_t>::iterator it1 =
+          directUseCount.find(it->second.second);
+      if (it1 != directUseCount.end() && it1->second > 0) {
+        // An address is in the core if it stores a value that is in the core
+        const llvm::Value *base = it->first->getContext()->getValue();
 #ifdef ENABLE_Z3
-      if (!NoExistential) {
-        concreteStore[base][it->first->getInterpolantStyleAddress()] =
-            it->second.second->getInterpolantStyleValue(replacements);
-      } else
+        if (!NoExistential) {
+          concreteStore[base][it->first->getInterpolantStyleAddress()] =
+              it->second.second->getInterpolantStyleValue(replacements);
+        } else
 #endif
-        concreteStore[base][it->first->getInterpolantStyleAddress()] =
-            it->second.second->getInterpolantStyleValue();
+          concreteStore[base][it->first->getInterpolantStyleAddress()] =
+              it->second.second->getInterpolantStyleValue();
+      }
     }
   }
 }
