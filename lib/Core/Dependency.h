@@ -200,6 +200,12 @@ namespace klee {
     std::map<ref<TxStateValue>, std::set<ref<TxStateAddress> > >
     loadedFromLocations;
 
+    /// \brief Set the address a value was loaded from
+    void setLoadedFrom(ref<TxStateValue> value, ref<TxStateAddress> loc) {
+      loadedFromLocations[value].clear();
+      loadedFromLocations[value].insert(loc);
+    }
+
     /// \brief Tests if a pointer points to a main function's argument
     static bool isMainArgument(const llvm::Value *loc);
 
@@ -260,6 +266,14 @@ namespace klee {
     /// \brief Newly relate an location with its stored value
     void updateStore(ref<TxStateAddress> loc, ref<TxStateValue> address,
                      ref<TxStateValue> value);
+
+    /// \brief The core procedure for connecting the dependency graph
+    void addDependencyCore(ref<TxStateValue> source, ref<TxStateValue> target,
+                           ref<TxStateAddress> via) {
+      target->addDependency(source, via);
+      std::set<ref<TxStateAddress> > &locations = loadedFromLocations[source];
+      loadedFromLocations[target].insert(locations.begin(), locations.end());
+    }
 
     /// \brief Add flow dependency between source and target value
     void addDependency(ref<TxStateValue> source, ref<TxStateValue> target,

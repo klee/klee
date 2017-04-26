@@ -374,7 +374,7 @@ void Dependency::addDependencyIntToPtr(ref<TxStateValue> source,
         SubExpr::create(targetExpr, sourceBase), (*it)->getOffset()));
     target->addLocation(TxStateAddress::create(*it, targetExpr, offsetDelta));
   }
-  target->addDependency(source, nullLocation);
+  addDependencyCore(source, target, nullLocation);
 }
 
 void Dependency::addDependencyWithOffset(ref<TxStateValue> source,
@@ -419,7 +419,7 @@ void Dependency::addDependencyWithOffset(ref<TxStateValue> source,
     target->addLocation(TxStateAddress::create(*it, targetExpr, offsetDelta));
     locationAdded = true;
   }
-  target->addDependency(source, nullLocation);
+  addDependencyCore(source, target, nullLocation);
 }
 
 void Dependency::addDependencyViaLocation(ref<TxStateValue> source,
@@ -434,7 +434,7 @@ void Dependency::addDependencyViaLocation(ref<TxStateValue> source,
        it != ie; ++it) {
     target->addLocation(*it);
   }
-  target->addDependency(source, via);
+  addDependencyCore(source, target, via);
 }
 
 void Dependency::addDependencyViaExternalFunction(
@@ -486,7 +486,7 @@ void Dependency::addDependencyToNonPointer(ref<TxStateValue> source,
     return;
 
   ref<TxStateAddress> nullLocation;
-  target->addDependency(source, nullLocation);
+  addDependencyCore(source, target, nullLocation);
 }
 
 std::vector<ref<TxStateValue> >
@@ -891,6 +891,7 @@ void Dependency::execute(llvm::Instruction *instr,
                   : getNewTxStateValue(instr, callHistory, valueExpr);
 
           updateStoreWithLoadedValue(loc, addressValue, loadedValue);
+          setLoadedFrom(loadedValue, loc);
           break;
         } else if (locations.size() == 1) {
           ref<TxStateAddress> loc = *(locations.begin());
@@ -952,6 +953,7 @@ void Dependency::execute(llvm::Instruction *instr,
                     : getNewTxStateValue(instr, callHistory, valueExpr);
 
             updateStoreWithLoadedValue(loc, addressValue, loadedValue);
+            setLoadedFrom(loadedValue, loc);
             break;
           }
         }
@@ -973,6 +975,7 @@ void Dependency::execute(llvm::Instruction *instr,
 
           updateStoreWithLoadedValue(*(locations.begin()), addressValue,
                                      loadedValue);
+          setLoadedFrom(loadedValue, *(locations.begin()));
           break;
         }
       }
@@ -1020,6 +1023,7 @@ void Dependency::execute(llvm::Instruction *instr,
           loadedValue->setLoadAddress(addressValue);
           loadedValue->setStoreAddress(addressValuePair.first);
         }
+        setLoadedFrom(loadedValue, *li);
       }
       break;
     }
