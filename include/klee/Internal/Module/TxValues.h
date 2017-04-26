@@ -549,12 +549,15 @@ private:
   /// \brief Reasons for this value to be in the core
   std::set<std::string> coreReasons;
 
+  /// \brief Direct use count of this value by another value in all interpolants
+  uint64_t directUseCount;
+
   TxStateValue(llvm::Value *value,
                const std::vector<llvm::Instruction *> &_callHistory,
                ref<Expr> _valueExpr)
       : refCount(0), value(value), valueExpr(_valueExpr), core(false),
         id(reinterpret_cast<uint64_t>(this)), callHistory(_callHistory),
-        doNotInterpolateBound(false) {}
+        doNotInterpolateBound(false), directUseCount(0) {}
 
   /// \brief Print the content of the object, but without showing its source
   /// values.
@@ -636,6 +639,10 @@ public:
     if (!reason.empty())
       coreReasons.insert(reason);
   }
+
+  void incrementDirectUseCount() { ++directUseCount; }
+
+  uint64_t getDirectUseCount() { return directUseCount; }
 
   bool isCore() const { return core; }
 

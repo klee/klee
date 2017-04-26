@@ -515,10 +515,20 @@ Dependency::directFlowSources(ref<TxStateValue> target) const {
   return ret;
 }
 
-void Dependency::markFlow(ref<TxStateValue> target,
-                          const std::string &reason) const {
-  if (target.isNull() || (target->isCore() && !target->canInterpolateBound()))
+void Dependency::markFlow(ref<TxStateValue> target, const std::string &reason,
+                          bool incrementDirectUseCount) const {
+  if (target.isNull())
     return;
+
+  if (incrementDirectUseCount)
+    target->incrementDirectUseCount();
+
+  if (target->isCore()) {
+    if (!target->canInterpolateBound())
+      return;
+
+    incrementDirectUseCount = false;
+  }
 
   target->setAsCore(reason);
   target->disableBoundInterpolation();
@@ -527,16 +537,23 @@ void Dependency::markFlow(ref<TxStateValue> target,
   for (std::vector<ref<TxStateValue> >::iterator it = stepSources.begin(),
                                                  ie = stepSources.end();
        it != ie; ++it) {
-    markFlow(*it, reason);
+    markFlow(*it, reason, incrementDirectUseCount);
   }
 }
 
 void Dependency::markPointerFlow(ref<TxStateValue> target,
                                  ref<TxStateValue> checkedAddress,
                                  std::set<ref<Expr> > &bounds,
-                                 const std::string &reason) const {
+                                 const std::string &reason,
+                                 bool incrementDirectUseCount) const {
   if (target.isNull())
     return;
+
+  if (incrementDirectUseCount)
+    target->incrementDirectUseCount();
+
+  if (target->isCore())
+    incrementDirectUseCount = false;
 
   if (target->canInterpolateBound()) {
     //  checkedAddress->dump();
@@ -557,12 +574,13 @@ void Dependency::markPointerFlow(ref<TxStateValue> target,
            it = sources.begin(),
            ie = sources.end();
        it != ie; ++it) {
-    markPointerFlow(it->first, checkedAddress, bounds, reason);
+    markPointerFlow(it->first, checkedAddress, bounds, reason,
+                    incrementDirectUseCount);
   }
 
   // We use normal marking with markFlow for load/store addresses
-  markFlow(target->getLoadAddress(), reason);
-  markFlow(target->getStoreAddress(), reason);
+  markFlow(target->getLoadAddress(), reason, incrementDirectUseCount);
+  markFlow(target->getStoreAddress(), reason, incrementDirectUseCount);
 }
 
 void Dependency::populateArgumentValuesList(

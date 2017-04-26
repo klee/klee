@@ -209,10 +209,6 @@ namespace klee {
     std::map<ref<TxStateAddress>, std::set<ref<TxStateAddress> > >
     directlyInfluencedBy;
 
-    /// \brief This counts the number of direct uses of a value by another
-    /// value, of the values that belong to the interpolant
-    std::map<ref<TxStateValue>, uint64_t> directUseCount;
-
     /// \brief Set the address a value was loaded from
     void setLoadedFrom(ref<TxStateValue> value, ref<TxStateAddress> loc) {
       std::map<ref<TxStateValue>, std::set<ref<TxStateAddress> > >::iterator
@@ -335,7 +331,8 @@ namespace klee {
 
     /// \brief Mark as core all the values and locations that flows to the
     /// target
-    void markFlow(ref<TxStateValue> target, const std::string &reason) const;
+    void markFlow(ref<TxStateValue> target, const std::string &reason,
+                  bool incrementDirectUseCount = true) const;
 
     /// \brief Mark as core all the pointer values and that flows to the target;
     /// and adjust its offset bound for memory bounds interpolation (a.k.a.
@@ -353,7 +350,8 @@ namespace klee {
     void markPointerFlow(ref<TxStateValue> target,
                          ref<TxStateValue> checkedOffset,
                          std::set<ref<Expr> > &bounds,
-                         const std::string &reason) const;
+                         const std::string &reason,
+                         bool incrementUseCount = true) const;
 
     /// \brief Record the expressions of a call's arguments
     void populateArgumentValuesList(
