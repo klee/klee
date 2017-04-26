@@ -202,17 +202,27 @@ namespace klee {
 
     /// \brief A relation encoding direct influencing of a memory location to
     /// another
-    std::map<ref<MemoryLocation>, std::set<ref<MemoryLocation> > >
+    std::map<ref<TxStateAddress>, std::set<ref<TxStateAddress> > >
     directlyInfluencing;
 
     /// \brief A relation encoding memory locations influencing another
-    std::map<ref<MemoryLocation>, std::set<ref<MemoryLocation> > >
+    std::map<ref<TxStateAddress>, std::set<ref<TxStateAddress> > >
     directlyInfluencedBy;
+
+    /// \brief This counts the number of uses of a memory location by another
+    /// memory location, of the locations that belong to the interpolant
+    std::map<ref<TxStateAddress>, uint64_t> directUseCount;
 
     /// \brief Set the address a value was loaded from
     void setLoadedFrom(ref<TxStateValue> value, ref<TxStateAddress> loc) {
-      loadedFromLocations[value].clear();
-      loadedFromLocations[value].insert(loc);
+      std::map<ref<TxStateValue>, std::set<ref<TxStateAddress> > >::iterator
+      it = loadedFromLocations.find(value);
+      if (it != loadedFromLocations.end()) {
+        it->second.clear();
+        it->second.insert(loc);
+      } else {
+        loadedFromLocations[value].insert(loc);
+      }
     }
 
     /// \brief Tests if a pointer points to a main function's argument
