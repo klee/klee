@@ -247,6 +247,12 @@ namespace klee {
     ref<TxStateValue> getLatestValueForMarking(llvm::Value *val,
                                                ref<Expr> expr);
 
+    /// \brief Newly relate a location with its stored value, when the value is
+    /// loaded from the location
+    void updateStoreWithLoadedValue(ref<TxStateAddress> loc,
+                                    ref<TxStateValue> address,
+                                    ref<TxStateValue> value);
+
     /// \brief Newly relate an location with its stored value
     void updateStore(ref<TxStateAddress> loc, ref<TxStateValue> address,
                      ref<TxStateValue> value);

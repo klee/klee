@@ -549,6 +549,10 @@ private:
   /// \brief Reasons for this value to be in the core
   std::set<std::string> coreReasons;
 
+  /// \brief The memory locations this value depend upon. The values stored in
+  /// these memory locations have been used to compute the current value.
+  std::set<ref<TxStateAddress> > memoryDependency;
+
   TxStateValue(llvm::Value *value,
                const std::vector<llvm::Instruction *> &_callHistory,
                ref<Expr> _valueExpr)
@@ -658,7 +662,11 @@ public:
                                       coreReasons, locations, replacements);
   }
 
-  /// \brief Print the content of the object into a stream.
+  void addMemoryDependency(ref<TxStateAddress> loc) {
+    memoryDependency.insert(loc);
+  }
+
+  /// \brief Print the content of the object into a stream
   ///
   /// \param stream The stream to print the data to.
   void print(llvm::raw_ostream &stream) const {

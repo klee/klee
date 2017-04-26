@@ -327,6 +327,14 @@ ref<TxStateValue> Dependency::getLatestValueForMarking(llvm::Value *val,
   return value;
 }
 
+void Dependency::updateStoreWithLoadedValue(ref<TxStateAddress> loc,
+                                            ref<TxStateValue> address,
+                                            ref<TxStateValue> value) {
+  updateStore(loc, address, value);
+  value->setLoadAddress(address);
+  value->addMemoryDependency(loc);
+}
+
 void Dependency::updateStore(ref<TxStateAddress> loc, ref<TxStateValue> address,
                              ref<TxStateValue> value) {
   if (loc->hasConstantAddress())
@@ -883,7 +891,7 @@ void Dependency::execute(llvm::Instruction *instr,
                   ? getNewPointerValue(instr, callHistory, valueExpr, 0)
                   : getNewTxStateValue(instr, callHistory, valueExpr);
 
-          updateStore(loc, addressValue, loadedValue);
+          updateStoreWithLoadedValue(loc, addressValue, loadedValue);
           break;
         } else if (locations.size() == 1) {
           ref<TxStateAddress> loc = *(locations.begin());
@@ -944,7 +952,7 @@ void Dependency::execute(llvm::Instruction *instr,
                     ? getNewPointerValue(instr, callHistory, valueExpr, 0)
                     : getNewTxStateValue(instr, callHistory, valueExpr);
 
-            updateStore(loc, addressValue, loadedValue);
+            updateStoreWithLoadedValue(loc, addressValue, loadedValue);
             break;
           }
         }
@@ -964,7 +972,8 @@ void Dependency::execute(llvm::Instruction *instr,
                   ? getNewPointerValue(instr, callHistory, valueExpr, 0)
                   : getNewTxStateValue(instr, callHistory, valueExpr);
 
-          updateStore(*(locations.begin()), addressValue, loadedValue);
+          updateStoreWithLoadedValue(*(locations.begin()), addressValue,
+                                     loadedValue);
           break;
         }
       }
@@ -1006,8 +1015,7 @@ void Dependency::execute(llvm::Instruction *instr,
             loadedValue->getExpression() !=
                 addressValuePair.second->getExpression()) {
           // We could not find the stored value, create a new one.
-          updateStore(*li, addressValue, loadedValue);
-          loadedValue->setLoadAddress(addressValue);
+          updateStoreWithLoadedValue(*li, addressValue, loadedValue);
         } else {
           addDependencyViaLocation(addressValuePair.second, loadedValue, *li);
           loadedValue->setLoadAddress(addressValue);
