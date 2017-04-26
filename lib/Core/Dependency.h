@@ -196,6 +196,10 @@ namespace klee {
     /// \brief The data layout of the analysis target program
     llvm::DataLayout *targetData;
 
+    /// \brief A mapping to record where each value was loaded from
+    std::map<ref<TxStateValue>, std::set<ref<TxStateAddress> > >
+    loadedFromLocations;
+
     /// \brief Tests if a pointer points to a main function's argument
     static bool isMainArgument(const llvm::Value *loc);
 

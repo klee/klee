@@ -332,7 +332,6 @@ void Dependency::updateStoreWithLoadedValue(ref<TxStateAddress> loc,
                                             ref<TxStateValue> value) {
   updateStore(loc, address, value);
   value->setLoadAddress(address);
-  value->addMemoryDependency(loc);
 }
 
 void Dependency::updateStore(ref<TxStateAddress> loc, ref<TxStateValue> address,

@@ -549,10 +549,6 @@ private:
   /// \brief Reasons for this value to be in the core
   std::set<std::string> coreReasons;
 
-  /// \brief The memory locations this value depend upon. The values stored in
-  /// these memory locations have been used to compute the current value.
-  std::set<ref<TxStateAddress> > memoryDependency;
-
   TxStateValue(llvm::Value *value,
                const std::vector<llvm::Instruction *> &_callHistory,
                ref<Expr> _valueExpr)
@@ -660,10 +656,6 @@ public:
   getInterpolantStyleValue(std::set<const Array *> &replacements) {
     return TxInterpolantValue::create(value, valueExpr, canInterpolateBound(),
                                       coreReasons, locations, replacements);
-  }
-
-  void addMemoryDependency(ref<TxStateAddress> loc) {
-    memoryDependency.insert(loc);
   }
 
   /// \brief Print the content of the object into a stream
