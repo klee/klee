@@ -1065,6 +1065,7 @@ void Dependency::execute(llvm::Instruction *instr,
                  ie1 = sourceLocations.end();
              it1 != ie1; ++it1) {
           directlyInfluencing[*it1].insert(*it);
+          directlyInfluencedBy[*it].insert(*it1);
         }
       }
       break;

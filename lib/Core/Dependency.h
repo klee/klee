@@ -205,6 +205,10 @@ namespace klee {
     std::map<ref<MemoryLocation>, std::set<ref<MemoryLocation> > >
     directlyInfluencing;
 
+    /// \brief A relation encoding memory locations influencing another
+    std::map<ref<MemoryLocation>, std::set<ref<MemoryLocation> > >
+    directlyInfluencedBy;
+
     /// \brief Set the address a value was loaded from
     void setLoadedFrom(ref<TxStateValue> value, ref<TxStateAddress> loc) {
       loadedFromLocations[value].clear();
