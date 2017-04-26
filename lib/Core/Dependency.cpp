@@ -593,6 +593,10 @@ Dependency::Dependency(Dependency *parent, llvm::DataLayout *_targetData)
     symbolicallyAddressedStore = parent->symbolicallyAddressedStore;
     debugSubsumptionLevel = parent->debugSubsumptionLevel;
     debugStateLevel = parent->debugStateLevel;
+
+    loadedFromLocations = parent->loadedFromLocations;
+    directlyInfluencing = parent->directlyInfluencing;
+    directlyInfluencedBy = parent->directlyInfluencedBy;
   } else {
 #ifdef ENABLE_Z3
     debugSubsumptionLevel = DebugSubsumption;
