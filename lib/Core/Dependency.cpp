@@ -1058,6 +1058,14 @@ void Dependency::execute(llvm::Instruction *instr,
                                                     ie = locations.end();
            it != ie; ++it) {
         updateStore(*it, addressValue, storedValue);
+        std::set<ref<MemoryLocation> > &sourceLocations =
+            loadedFromLocations[storedValue];
+        for (std::set<ref<MemoryLocation> >::iterator
+                 it1 = sourceLocations.begin(),
+                 ie1 = sourceLocations.end();
+             it1 != ie1; ++it1) {
+          directlyInfluencing[*it1].insert(*it);
+        }
       }
       break;
     }
