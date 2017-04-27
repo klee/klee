@@ -49,61 +49,11 @@ void Dependency::getConcreteStore(
                    std::pair<ref<TxStateValue>, ref<TxStateValue> > > &store,
     std::set<const Array *> &replacements, bool coreOnly,
     Dependency::ConcreteStore &concreteStore) const {
+  Dependency::ConcreteStore _concreteStore;
 
-  std::map<ref<TxStateValue>, uint64_t> directUseCount;
-
-  if (coreOnly) {
-    for (std::map<
-             ref<TxStateAddress>,
-             std::pair<ref<TxStateValue>, ref<TxStateValue> > >::const_iterator
-             it = store.begin(),
-             ie = store.end();
-         it != ie; ++it) {
-      if (!it->first->contextIsPrefixOf(callHistory))
-        continue;
-      if (it->second.second.isNull())
-        continue;
-
-      directUseCount[it->second.second] =
-          it->second.second->getDirectUseCount();
-    }
-
-    for (std::map<ref<TxStateValue>, uint64_t>::iterator
-             it = directUseCount.begin(),
-             ie = directUseCount.end();
-         it != ie; ++it) {
-      std::map<ref<TxStateValue>, ref<TxStateAddress> > sources =
-          it->first->getSources();
-      for (std::map<ref<TxStateValue>, ref<TxStateAddress> >::iterator
-               it1 = sources.begin(),
-               ie1 = sources.end();
-           it1 != ie1; ++it1) {
-        std::map<ref<TxStateValue>, uint64_t>::iterator it2 =
-            directUseCount.find(it1->first);
-        if (it2 != directUseCount.end() && it2->second > 0) {
-          (it2->second)--;
-        }
-      }
-
-      std::map<ref<TxStateValue>, uint64_t>::iterator it1;
-      ref<TxStateValue> loadAddress = it->first->getLoadAddress();
-      ref<TxStateValue> storeAddress = it->first->getStoreAddress();
-
-      if (!loadAddress.isNull()) {
-        it1 = directUseCount.find(it->first->getLoadAddress());
-        if (it1 != directUseCount.end() && it1->second > 0) {
-          (it1->second)--;
-        }
-      }
-
-      if (!storeAddress.isNull()) {
-        it1 = directUseCount.find(it->first->getStoreAddress());
-        if (it1 != directUseCount.end() && it1->second > 0) {
-          (it1->second)--;
-        }
-      }
-    }
-  }
+  std::map<ref<TxStateValue>,
+           std::pair<std::pair<const llvm::Value *, ref<TxInterpolantAddress> >,
+                     uint64_t> > valueAddressMap;
 
   for (std::map<
            ref<TxStateAddress>,
@@ -116,26 +66,92 @@ void Dependency::getConcreteStore(
     if (it->second.second.isNull())
       continue;
 
+    ref<TxInterpolantAddress> address = it->first->getInterpolantStyleAddress();
     if (!coreOnly) {
       const llvm::Value *base = it->first->getContext()->getValue();
-      concreteStore[base][it->first->getInterpolantStyleAddress()] =
+      _concreteStore[base][address] =
           it->second.second->getInterpolantStyleValue();
     } else if (it->second.second->isCore()) {
-      std::map<ref<TxStateValue>, uint64_t>::iterator it1 =
-          directUseCount.find(it->second.second);
-      if (it1 != directUseCount.end() && it1->second > 0) {
         // An address is in the core if it stores a value that is in the core
         const llvm::Value *base = it->first->getContext()->getValue();
 #ifdef ENABLE_Z3
         if (!NoExistential) {
-          concreteStore[base][it->first->getInterpolantStyleAddress()] =
+          _concreteStore[base][address] =
               it->second.second->getInterpolantStyleValue(replacements);
+          valueAddressMap[it->second.second] = std::pair<
+              std::pair<const llvm::Value *, ref<TxInterpolantAddress> >,
+              uint64_t>(
+              std::pair<const llvm::Value *, ref<TxInterpolantAddress> >(
+                  base, address),
+              it->second.second->getDirectUseCount());
         } else
 #endif
-          concreteStore[base][it->first->getInterpolantStyleAddress()] =
-              it->second.second->getInterpolantStyleValue();
+        {
+        _concreteStore[base][address] =
+            it->second.second->getInterpolantStyleValue();
+        valueAddressMap[it->second.second] = std::pair<
+            std::pair<const llvm::Value *, ref<TxInterpolantAddress> >,
+            uint64_t>(
+            std::pair<const llvm::Value *, ref<TxInterpolantAddress> >(base,
+                                                                       address),
+            it->second.second->getDirectUseCount());
       }
     }
+  }
+
+  if (coreOnly) {
+    for (std::map<ref<TxStateValue>,
+                  std::pair<std::pair<const llvm::Value *,
+                                      ref<TxInterpolantAddress> >,
+                            uint64_t> >::iterator it = valueAddressMap.begin(),
+                                                  ie = valueAddressMap.end();
+         it != ie; ++it) {
+      std::map<
+          ref<TxStateValue>,
+          std::pair<std::pair<const llvm::Value *, ref<TxInterpolantAddress> >,
+                    uint64_t> >::iterator mapIter;
+      const std::map<ref<TxStateValue>, ref<TxStateAddress> > &sources =
+          it->first->getSources();
+      for (std::map<ref<TxStateValue>, ref<TxStateAddress> >::const_iterator
+               it1 = sources.begin(),
+               ie1 = sources.end();
+           it1 != ie1; ++it1) {
+        mapIter = valueAddressMap.find(it1->first);
+        if (mapIter != valueAddressMap.end() && mapIter->second.second > 0)
+          --(mapIter->second.second);
+      }
+      ref<TxStateValue> loadAddress = it->first->getLoadAddress();
+      if (!loadAddress.isNull()) {
+        mapIter = valueAddressMap.find(loadAddress);
+        if (mapIter != valueAddressMap.end() && mapIter->second.second > 0)
+          --(mapIter->second.second);
+      }
+      ref<TxStateValue> storeAddress = it->first->getStoreAddress();
+      if (!storeAddress.isNull()) {
+        mapIter = valueAddressMap.find(storeAddress);
+        if (mapIter != valueAddressMap.end() && mapIter->second.second > 0)
+          --(mapIter->second.second);
+      }
+    }
+
+    for (std::map<ref<TxStateValue>,
+                  std::pair<std::pair<const llvm::Value *,
+                                      ref<TxInterpolantAddress> >,
+                            uint64_t> >::iterator it = valueAddressMap.begin(),
+                                                  ie = valueAddressMap.end();
+         it != ie; ++it) {
+      if (it->second.second > 0) {
+        const llvm::Value *base = it->second.first.first;
+        Dependency::ConcreteStore::iterator storeIter =
+            _concreteStore.find(base);
+        if (storeIter != _concreteStore.end()) {
+          ref<TxInterpolantAddress> address = it->second.first.second;
+          concreteStore[base][address] = _concreteStore[base][address];
+        }
+      }
+    }
+  } else {
+    concreteStore.insert(_concreteStore.begin(), _concreteStore.end());
   }
 }
 
