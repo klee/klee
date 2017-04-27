@@ -438,7 +438,7 @@ void Dependency::addDependencyIntToPtr(ref<TxStateValue> source,
         SubExpr::create(targetExpr, sourceBase), (*it)->getOffset()));
     target->addLocation(TxStateAddress::create(*it, targetExpr, offsetDelta));
   }
-  addDependencyCore(source, target, nullLocation);
+  target->addDependency(source, nullLocation);
 }
 
 void Dependency::addDependencyWithOffset(ref<TxStateValue> source,
@@ -483,7 +483,7 @@ void Dependency::addDependencyWithOffset(ref<TxStateValue> source,
     target->addLocation(TxStateAddress::create(*it, targetExpr, offsetDelta));
     locationAdded = true;
   }
-  addDependencyCore(source, target, nullLocation);
+  target->addDependency(source, nullLocation);
 }
 
 void Dependency::addDependencyViaLocation(ref<TxStateValue> source,
@@ -498,7 +498,7 @@ void Dependency::addDependencyViaLocation(ref<TxStateValue> source,
        it != ie; ++it) {
     target->addLocation(*it);
   }
-  addDependencyCore(source, target, via);
+  target->addDependency(source, via);
 }
 
 void Dependency::addDependencyViaExternalFunction(
@@ -550,7 +550,7 @@ void Dependency::addDependencyToNonPointer(ref<TxStateValue> source,
     return;
 
   ref<TxStateAddress> nullLocation;
-  addDependencyCore(source, target, nullLocation);
+  target->addDependency(source, nullLocation);
 }
 
 std::vector<ref<TxStateValue> >

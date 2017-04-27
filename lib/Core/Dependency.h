@@ -257,12 +257,6 @@ namespace klee {
     void updateStore(ref<TxStateAddress> loc, ref<TxStateValue> address,
                      ref<TxStateValue> value);
 
-    /// \brief The core procedure for connecting the dependency graph
-    void addDependencyCore(ref<TxStateValue> source, ref<TxStateValue> target,
-                           ref<TxStateAddress> via) {
-      target->addDependency(source, via);
-    }
-
     /// \brief Add flow dependency between source and target value
     void addDependency(ref<TxStateValue> source, ref<TxStateValue> target,
                        bool multiLocationsCheck = true);
