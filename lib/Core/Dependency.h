@@ -196,31 +196,6 @@ namespace klee {
     /// \brief The data layout of the analysis target program
     llvm::DataLayout *targetData;
 
-    /// \brief A mapping to record where each value was loaded from
-    std::map<ref<TxStateValue>, std::set<ref<TxStateAddress> > >
-    loadedFromLocations;
-
-    /// \brief A relation encoding direct influencing of a memory location to
-    /// another
-    std::map<ref<TxStateAddress>, std::set<ref<TxStateAddress> > >
-    directlyInfluencing;
-
-    /// \brief A relation encoding memory locations influencing another
-    std::map<ref<TxStateAddress>, std::set<ref<TxStateAddress> > >
-    directlyInfluencedBy;
-
-    /// \brief Set the address a value was loaded from
-    void setLoadedFrom(ref<TxStateValue> value, ref<TxStateAddress> loc) {
-      std::map<ref<TxStateValue>, std::set<ref<TxStateAddress> > >::iterator
-      it = loadedFromLocations.find(value);
-      if (it != loadedFromLocations.end()) {
-        it->second.clear();
-        it->second.insert(loc);
-      } else {
-        loadedFromLocations[value].insert(loc);
-      }
-    }
-
     /// \brief Tests if a pointer points to a main function's argument
     static bool isMainArgument(const llvm::Value *loc);
 
@@ -286,8 +261,6 @@ namespace klee {
     void addDependencyCore(ref<TxStateValue> source, ref<TxStateValue> target,
                            ref<TxStateAddress> via) {
       target->addDependency(source, via);
-      std::set<ref<TxStateAddress> > &locations = loadedFromLocations[source];
-      loadedFromLocations[target].insert(locations.begin(), locations.end());
     }
 
     /// \brief Add flow dependency between source and target value

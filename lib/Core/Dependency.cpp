@@ -51,9 +51,8 @@ void Dependency::getConcreteStore(
     Dependency::ConcreteStore &concreteStore) const {
   Dependency::ConcreteStore _concreteStore;
 
-  std::map<ref<TxStateValue>,
-           std::pair<std::pair<const llvm::Value *, ref<TxInterpolantAddress> >,
-                     uint64_t> > valueAddressMap;
+  std::map<ref<TxStateValue>, std::pair<ref<TxInterpolantAddress>, uint64_t> >
+  valueAddressMap;
 
   for (std::map<
            ref<TxStateAddress>,
@@ -78,38 +77,29 @@ void Dependency::getConcreteStore(
         if (!NoExistential) {
           _concreteStore[base][address] =
               it->second.second->getInterpolantStyleValue(replacements);
-          valueAddressMap[it->second.second] = std::pair<
-              std::pair<const llvm::Value *, ref<TxInterpolantAddress> >,
-              uint64_t>(
-              std::pair<const llvm::Value *, ref<TxInterpolantAddress> >(
-                  base, address),
-              it->second.second->getDirectUseCount());
+          valueAddressMap[it->second.second] =
+              std::pair<ref<TxInterpolantAddress>, uint64_t>(
+                  address, it->second.second->getDirectUseCount());
         } else
 #endif
         {
         _concreteStore[base][address] =
             it->second.second->getInterpolantStyleValue();
-        valueAddressMap[it->second.second] = std::pair<
-            std::pair<const llvm::Value *, ref<TxInterpolantAddress> >,
-            uint64_t>(
-            std::pair<const llvm::Value *, ref<TxInterpolantAddress> >(base,
-                                                                       address),
-            it->second.second->getDirectUseCount());
+        valueAddressMap[it->second.second] =
+            std::pair<ref<TxInterpolantAddress>, uint64_t>(
+                address, it->second.second->getDirectUseCount());
       }
     }
   }
 
   if (coreOnly) {
     for (std::map<ref<TxStateValue>,
-                  std::pair<std::pair<const llvm::Value *,
-                                      ref<TxInterpolantAddress> >,
-                            uint64_t> >::iterator it = valueAddressMap.begin(),
-                                                  ie = valueAddressMap.end();
+                  std::pair<ref<TxInterpolantAddress>, uint64_t> >::iterator
+             it = valueAddressMap.begin(),
+             ie = valueAddressMap.end();
          it != ie; ++it) {
-      std::map<
-          ref<TxStateValue>,
-          std::pair<std::pair<const llvm::Value *, ref<TxInterpolantAddress> >,
-                    uint64_t> >::iterator mapIter;
+      std::map<ref<TxStateValue>, std::pair<ref<TxInterpolantAddress>,
+                                            uint64_t> >::iterator mapIter;
       const std::map<ref<TxStateValue>, ref<TxStateAddress> > &sources =
           it->first->getSources();
       for (std::map<ref<TxStateValue>, ref<TxStateAddress> >::const_iterator
@@ -135,17 +125,16 @@ void Dependency::getConcreteStore(
     }
 
     for (std::map<ref<TxStateValue>,
-                  std::pair<std::pair<const llvm::Value *,
-                                      ref<TxInterpolantAddress> >,
-                            uint64_t> >::iterator it = valueAddressMap.begin(),
-                                                  ie = valueAddressMap.end();
+                  std::pair<ref<TxInterpolantAddress>, uint64_t> >::iterator
+             it = valueAddressMap.begin(),
+             ie = valueAddressMap.end();
          it != ie; ++it) {
       if (it->second.second > 0) {
-        const llvm::Value *base = it->second.first.first;
+        const llvm::Value *base = it->second.first->getContext()->getValue();
         Dependency::ConcreteStore::iterator storeIter =
             _concreteStore.find(base);
         if (storeIter != _concreteStore.end()) {
-          ref<TxInterpolantAddress> address = it->second.first.second;
+          ref<TxInterpolantAddress> address = it->second.first;
           concreteStore[base][address] = _concreteStore[base][address];
         }
       }
@@ -686,10 +675,6 @@ Dependency::Dependency(Dependency *parent, llvm::DataLayout *_targetData)
     symbolicallyAddressedStore = parent->symbolicallyAddressedStore;
     debugSubsumptionLevel = parent->debugSubsumptionLevel;
     debugStateLevel = parent->debugStateLevel;
-
-    loadedFromLocations = parent->loadedFromLocations;
-    directlyInfluencing = parent->directlyInfluencing;
-    directlyInfluencedBy = parent->directlyInfluencedBy;
   } else {
 #ifdef ENABLE_Z3
     debugSubsumptionLevel = DebugSubsumption;
@@ -988,7 +973,6 @@ void Dependency::execute(llvm::Instruction *instr,
                   : getNewTxStateValue(instr, callHistory, valueExpr);
 
           updateStoreWithLoadedValue(loc, addressValue, loadedValue);
-          setLoadedFrom(loadedValue, loc);
           break;
         } else if (locations.size() == 1) {
           ref<TxStateAddress> loc = *(locations.begin());
@@ -1050,7 +1034,6 @@ void Dependency::execute(llvm::Instruction *instr,
                     : getNewTxStateValue(instr, callHistory, valueExpr);
 
             updateStoreWithLoadedValue(loc, addressValue, loadedValue);
-            setLoadedFrom(loadedValue, loc);
             break;
           }
         }
@@ -1072,7 +1055,6 @@ void Dependency::execute(llvm::Instruction *instr,
 
           updateStoreWithLoadedValue(*(locations.begin()), addressValue,
                                      loadedValue);
-          setLoadedFrom(loadedValue, *(locations.begin()));
           break;
         }
       }
@@ -1120,7 +1102,6 @@ void Dependency::execute(llvm::Instruction *instr,
           loadedValue->setLoadAddress(addressValue);
           loadedValue->setStoreAddress(addressValuePair.first);
         }
-        setLoadedFrom(loadedValue, *li);
       }
       break;
     }
@@ -1155,15 +1136,6 @@ void Dependency::execute(llvm::Instruction *instr,
                                                     ie = locations.end();
            it != ie; ++it) {
         updateStore(*it, addressValue, storedValue);
-        std::set<ref<TxStateAddress> > &sourceLocations =
-            loadedFromLocations[storedValue];
-        for (std::set<ref<TxStateAddress> >::iterator
-                 it1 = sourceLocations.begin(),
-                 ie1 = sourceLocations.end();
-             it1 != ie1; ++it1) {
-          directlyInfluencing[*it1].insert(*it);
-          directlyInfluencedBy[*it].insert(*it1);
-        }
       }
       break;
     }
