@@ -67,6 +67,17 @@ public:
   int compare(const StoredAddress &other) const {
     return loc->weakCompare(*(other.loc.get()));
   }
+
+  void print(llvm::raw_ostream &stream) const { print(stream, ""); }
+
+  void print(llvm::raw_ostream &stream, const std::string &prefix) const {
+    loc->print(stream, prefix);
+  }
+
+  void dump() const {
+    print(llvm::errs());
+    llvm::errs() << "\n";
+  }
 };
 
   /// \brief A processed form of a value to be stored in the subsumption table
