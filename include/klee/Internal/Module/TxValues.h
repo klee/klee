@@ -552,6 +552,9 @@ private:
   /// \brief Direct use count of this value by another value in all interpolants
   uint64_t directUseCount;
 
+  /// \brief All load addresses, transitively
+  std::set<ref<TxStateValue> > allLoadAddresses;
+
   TxStateValue(llvm::Value *value,
                const std::vector<llvm::Instruction *> &_callHistory,
                ref<Expr> _valueExpr)
@@ -593,6 +596,8 @@ public:
 
   void setLoadAddress(ref<TxStateValue> _loadAddress) {
     loadAddress = _loadAddress;
+    allLoadAddresses.clear();
+    allLoadAddresses.insert(_loadAddress);
   }
 
   ref<TxStateValue> getLoadAddress() { return loadAddress; }
@@ -607,6 +612,10 @@ public:
   /// target value
   void addDependency(ref<TxStateValue> source, ref<TxStateAddress> via) {
     sources[source] = via;
+    if (via.isNull()) {
+      allLoadAddresses.insert(source->allLoadAddresses.begin(),
+                              source->allLoadAddresses.end());
+    }
   }
 
   const std::map<ref<TxStateValue>, ref<TxStateAddress> > &getSources() {
