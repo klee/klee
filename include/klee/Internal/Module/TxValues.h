@@ -553,7 +553,7 @@ private:
   uint64_t directUseCount;
 
   /// \brief All load addresses, transitively
-  std::set<ref<TxStateValue> > allLoadAddresses;
+  std::set<ref<TxStateAddress> > allLoadAddresses;
 
   TxStateValue(llvm::Value *value,
                const std::vector<llvm::Instruction *> &_callHistory,
@@ -596,14 +596,16 @@ public:
 
   void setLoadAddress(ref<TxStateValue> _loadAddress) {
     loadAddress = _loadAddress;
-    allLoadAddresses.clear();
-    allLoadAddresses.insert(_loadAddress);
+    allLoadAddresses.insert(_loadAddress->getLocations().begin(),
+                            _loadAddress->getLocations().end());
   }
 
   ref<TxStateValue> getLoadAddress() { return loadAddress; }
 
   void setStoreAddress(ref<TxStateValue> _storeAddress) {
     storeAddress = _storeAddress;
+    allLoadAddresses.insert(_storeAddress->getLocations().begin(),
+                            _storeAddress->getLocations().end());
   }
 
   ref<TxStateValue> getStoreAddress() { return storeAddress; }
@@ -621,6 +623,8 @@ public:
   const std::map<ref<TxStateValue>, ref<TxStateAddress> > &getSources() {
     return sources;
   }
+
+  std::set<ref<TxStateAddress> > getLoadLocations() { return allLoadAddresses; }
 
   int compare(const TxStateValue other) const {
     if (id == other.id)
