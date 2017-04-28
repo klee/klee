@@ -165,8 +165,14 @@ private:
   /// \brief The value of the concrete offset
   uint64_t concreteOffset;
 
+  /// \brief This is an indirection count, e.g., given %x the address of a local
+  /// variable x, indirection count 1 of %x refers to the address stored in x;
+  /// indirection count 2 of %x refers to the address stored in the address
+  /// stored in x.
+  uint64_t indirectionCount;
+
   TxInterpolantAddress(ref<AllocationContext> _context, ref<Expr> _offset)
-      : refCount(0), context(_context), offset(_offset) {
+      : refCount(0), context(_context), offset(_offset), indirectionCount(0) {
     isConcrete = false;
     concreteOffset = 0;
 
@@ -187,7 +193,11 @@ public:
 
   ref<Expr> getOffset() const { return offset; }
 
-  /// \brief The comparator of this class' objects. This member function is
+  /// \brief The comparator of this class' objects. This member function checks
+  /// for the equality of TxInterpolantAddress#indirectionCount member variables
+  /// to
+  /// match the number of indirections of an address. If the indirection counts
+  /// were equal, it performs further comparison. The further comparison is
   /// weaker than standard comparator for TxStateAddress in that it does not
   /// check for the equality of base addresses. Allocation base address is used
   /// in TxStateAddress (member variable TxStateAddress#base) for the purpose of
@@ -196,6 +206,10 @@ public:
   /// states for subsumption as in subsumption, related allocations in different
   /// paths may have different base addresses.
   int compare(const TxInterpolantAddress &other) const {
+    int indirectionDiff = indirectionCount - other.indirectionCount;
+    if (indirectionDiff != 0)
+      return indirectionDiff;
+
     int res = context->compare(*(other.context.get()));
     if (res)
       return res;
@@ -212,6 +226,13 @@ public:
       return -1;
 
     return 1;
+  }
+
+  /// \brief Copy this address, but increment the indirection count
+  ref<TxInterpolantAddress> copyWithIndirectionCountIncrement() {
+    ref<TxInterpolantAddress> ret = create(context, offset);
+    (ret->indirectionCount)++;
+    return ret;
   }
 
   void print(llvm::raw_ostream &stream) const { print(stream, ""); }
