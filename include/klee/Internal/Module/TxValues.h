@@ -23,10 +23,14 @@
 #include "klee/Expr.h"
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+#include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/Instruction.h>
+#include <llvm/IR/Instructions.h>
 #include <llvm/IR/Value.h>
 #else
+#include <llvm/BasicBlock.h>
 #include <llvm/Instruction.h>
+#include <llvm/Instructions.h>
 #include <llvm/Value.h>
 #endif
 
@@ -43,6 +47,12 @@ class AllocationContext {
 public:
   unsigned refCount;
 
+  enum Type {
+    LOCAL,
+    GLOBAL,
+    HEAP
+  } ty;
+
 private:
   /// \brief The location's LLVM value
   llvm::Value *value;
@@ -50,19 +60,16 @@ private:
   /// \brief The call history by which the allocation is reached
   std::vector<llvm::Instruction *> callHistory;
 
-  AllocationContext(llvm::Value *_value,
+  AllocationContext(Type _ty, llvm::Value *_value,
                     const std::vector<llvm::Instruction *> &_callHistory)
-      : refCount(0), value(_value), callHistory(_callHistory) {}
+      : refCount(0), ty(_ty), value(_value), callHistory(_callHistory) {}
 
 public:
   ~AllocationContext() { callHistory.clear(); }
 
   static ref<AllocationContext>
   create(llvm::Value *_value,
-         const std::vector<llvm::Instruction *> &_callHistory) {
-    ref<AllocationContext> ret(new AllocationContext(_value, _callHistory));
-    return ret;
-  }
+         const std::vector<llvm::Instruction *> &_callHistory);
 
   llvm::Value *getValue() const { return value; }
 
