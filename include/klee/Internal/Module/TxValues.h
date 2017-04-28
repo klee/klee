@@ -235,6 +235,8 @@ public:
     return ret;
   }
 
+  bool isHeapAddress() { return context->ty == AllocationContext::HEAP; }
+
   void print(llvm::raw_ostream &stream) const { print(stream, ""); }
 
   void print(llvm::raw_ostream &stream, const std::string &prefix) const;
