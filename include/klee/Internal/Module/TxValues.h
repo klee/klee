@@ -277,6 +277,9 @@ private:
   /// \brief Do not use bound in subsumption check
   bool doNotUseBound;
 
+  /// \brief Set of memory locations possibly being pointed to
+  std::set<ref<TxStateAddress> > locations;
+
   /// \brief Reason this was stored as needed value
   std::set<std::string> coreReasons;
 
@@ -345,6 +348,8 @@ public:
   ref<Expr> getExpression() const { return expr; }
 
   llvm::Value *getValue() const { return value; }
+
+  std::set<ref<TxStateAddress> > &getLocations() { return locations; }
 
   void print(llvm::raw_ostream &stream) const;
 
