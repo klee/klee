@@ -63,7 +63,7 @@ void Dependency::removeAddressValue(
         it1 = simpleStore.find((*it2)->getInterpolantStyleAddress());
         if (it1 != simpleStore.end()) {
           // Found the address in the map;
-          const llvm::Value *base = keyAddress->getContext()->getValue();
+          const llvm::Value *base = keyAddress->getBase();
           concreteStore[base][keyAddress->copyWithIndirectionCountIncrement()] =
               it1->second;
           break;
@@ -71,7 +71,7 @@ void Dependency::removeAddressValue(
       }
     } else if (!it->first->isHeapAddress()) {
       // Not a heap pointer value, copy as is
-      llvm::Value *base = keyAddress->getContext()->getValue();
+      llvm::Value *base = keyAddress->getBase();
       concreteStore[base][keyAddress] = simpleStore[keyAddress];
     }
   }

@@ -189,6 +189,8 @@ public:
     return ret;
   }
 
+  llvm::Value *getBase() const { return context->getValue(); }
+
   ref<AllocationContext> getContext() const { return context; }
 
   ref<Expr> getOffset() const { return offset; }

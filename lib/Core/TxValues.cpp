@@ -105,7 +105,15 @@ void TxInterpolantAddress::print(llvm::raw_ostream &stream,
                                  const std::string &prefix) const {
   std::string tabsNext = appendTab(prefix);
 
-  stream << prefix << "function/value: ";
+  stream << prefix << "indirection: ";
+  if (indirectionCount == 0)
+    stream << "(none)";
+  else {
+    for (uint64_t i = 0; i < indirectionCount; ++i) {
+      stream << "*";
+    }
+  }
+  stream << prefix << "\nfunction/value: ";
   if (outputFunctionName(context->getValue(), stream))
     stream << "/";
   context->getValue()->print(stream);
