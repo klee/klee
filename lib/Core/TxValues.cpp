@@ -338,6 +338,92 @@ ref<Expr> TxInterpolantValue::getBoundsCheck(ref<TxInterpolantValue> stateValue,
   return res;
 }
 
+ref<Expr>
+TxInterpolantValue::getOffsetsCheck(ref<TxInterpolantValue> stateValue,
+                                    int debugSubsumptionLevel) const {
+  ref<Expr> res;
+#ifdef ENABLE_Z3
+
+  // In principle, for a state to be subsumed, the subsuming state must be
+  // weaker, which in this case means that it should specify less allocations,
+  // so all allocations in the subsuming (this), should be specified by the
+  // subsumed (the stateValue argument), and we iterate over allocation of
+  // the current object and for each such allocation, retrieve the
+  // information from the argument object; in this way resulting in
+  // less iterations compared to doing it the other way around.
+  bool matchFound = false;
+  for (std::map<ref<AllocationContext>, std::set<ref<Expr> > >::const_iterator
+           it = allocationOffsets.begin(),
+           ie = allocationOffsets.end();
+       it != ie; ++it) {
+    std::set<ref<Expr> > tabledOffsets = it->second;
+    std::map<ref<AllocationContext>, std::set<ref<Expr> > >::iterator iter =
+        stateValue->allocationOffsets.find(it->first);
+    if (iter == stateValue->allocationOffsets.end()) {
+      continue;
+    }
+    matchFound = true;
+
+    std::set<ref<Expr> > stateOffsets = iter->second;
+
+    assert(!tabledOffsets.empty() && "tabled offsets empty");
+
+    if (stateOffsets.empty()) {
+      if (debugSubsumptionLevel >= 3) {
+        std::string msg;
+        llvm::raw_string_ostream stream(msg);
+        it->first->print(stream);
+        stream.flush();
+        klee_message("No offset defined in state for %s", msg.c_str());
+      }
+      return ConstantExpr::create(0, Expr::Bool);
+    }
+
+    for (std::set<ref<Expr> >::const_iterator it1 = stateOffsets.begin(),
+                                              ie1 = stateOffsets.end();
+         it1 != ie1; ++it1) {
+      for (std::set<ref<Expr> >::const_iterator it2 = tabledOffsets.begin(),
+                                                ie2 = tabledOffsets.end();
+           it2 != ie2; ++it2) {
+        if (ConstantExpr *tabledOffset = llvm::dyn_cast<ConstantExpr>(*it2)) {
+          uint64_t tabledOffsetInt = tabledOffset->getZExtValue();
+          if (ConstantExpr *stateOffset = llvm::dyn_cast<ConstantExpr>(*it1)) {
+            uint64_t stateOffsetInt = stateOffset->getZExtValue();
+            if (stateOffsetInt != tabledOffsetInt) {
+              if (debugSubsumptionLevel >= 3) {
+                std::string msg;
+                llvm::raw_string_ostream stream(msg);
+                it->first->print(stream);
+                stream.flush();
+                klee_message("Offset %lu does not equal %lu for %s",
+                             stateOffsetInt, tabledOffsetInt, msg.c_str());
+              }
+              return ConstantExpr::create(0, Expr::Bool);
+            }
+          }
+        }
+
+        // Create constraints for offset equalities
+        if (res.isNull()) {
+          res = EqExpr::create(*it1, *it2);
+        } else {
+          res = AndExpr::create(EqExpr::create(*it1, *it2), res);
+        }
+      }
+    }
+  }
+
+  // Bounds check successful if no constraints added
+  if (res.isNull()) {
+    if (matchFound)
+      return ConstantExpr::create(1, Expr::Bool);
+    else
+      return ConstantExpr::create(0, Expr::Bool);
+  }
+#endif // ENABLE_Z3
+  return res;
+}
+
 void TxInterpolantValue::print(llvm::raw_ostream &stream) const {
   print(stream, "");
 }

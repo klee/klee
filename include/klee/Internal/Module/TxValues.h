@@ -347,6 +347,9 @@ public:
                            std::set<ref<Expr> > &bounds,
                            int debugSubsumptionLevel) const;
 
+  ref<Expr> getOffsetsCheck(ref<TxInterpolantValue> svalue,
+                            int debugSubsumptionLevel) const;
+
   ref<Expr> getExpression() const { return expr; }
 
   llvm::Value *getValue() const { return value; }
