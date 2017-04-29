@@ -161,10 +161,6 @@ public:
 
     ref<Expr> getExpression() const { return expr; }
 
-    const std::set<ref<Expr> > &getBounds(llvm::Value *value) const {
-      return allocationBounds.at(value);
-    }
-
     llvm::Value *getValue() const { return value; }
 
     void print(llvm::raw_ostream &stream) const;
