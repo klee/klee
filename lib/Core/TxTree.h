@@ -669,6 +669,12 @@ public:
     dependency->markAllPointerValues(value, address, bounds, reason);
   }
 
+  /// \brief Exact pointer value interpolation from a target address
+  void exactPointerValuesInterpolation(llvm::Value *value, ref<Expr> address,
+                                       const std::string &reason) {
+    dependency->markAllValues(value, address, reason);
+  }
+
   /// \brief Print the content of the tree node object to the LLVM error stream.
   void dump() const;
 
