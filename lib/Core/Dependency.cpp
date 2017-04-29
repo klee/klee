@@ -193,11 +193,12 @@ ref<Expr> StoredValue::getBoundsCheck(ref<StoredValue> stateValue,
                                stateOffsetInt, tabledBoundInt, msg.c_str());
                 }
                 return ConstantExpr::create(0, Expr::Bool);
+              } else {
+                bounds.insert(*it2);
+                continue;
               }
             }
-          }
-
-          if (tabledBoundInt > 0) {
+          } else if (tabledBoundInt > 0) {
             // Symbolic state offset, but concrete tabled bound. Here the bound
             // is known (non-zero), so we create constraints
             if (res.isNull()) {
