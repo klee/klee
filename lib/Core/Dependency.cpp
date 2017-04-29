@@ -63,8 +63,8 @@ void StoredValue::init(ref<VersionedValue> vvalue,
   for (std::set<ref<MemoryLocation> >::const_iterator it = locations.begin(),
                                                       ie = locations.end();
        it != ie; ++it) {
-    const llvm::Value *v =
-        (*it)->getContext()->getValue(); // The allocation site
+    ref<AllocationContext> context =
+        (*it)->getContext(); // The allocation context
 
     ref<Expr> offset =
         shadowing
@@ -74,14 +74,15 @@ void StoredValue::init(ref<VersionedValue> vvalue,
     // We next build the offsets to be compared against stored allocation
     // offset bounds
     ConstantExpr *oe = llvm::dyn_cast<ConstantExpr>(offset);
-    if (oe && !allocationOffsets[v].empty()) {
+    if (oe && !allocationOffsets[context].empty()) {
       // Here we check if smaller offset exists, in which case we replace it
       // with the new offset; as we want the greater offset to possibly
       // violate an offset bound.
       std::set<ref<Expr> > res;
       uint64_t offsetInt = oe->getZExtValue();
-      for (std::set<ref<Expr> >::iterator it1 = allocationOffsets[v].begin(),
-                                          ie1 = allocationOffsets[v].end();
+      for (std::set<ref<Expr> >::iterator
+               it1 = allocationOffsets[context].begin(),
+               ie1 = allocationOffsets[context].end();
            it1 != ie1; ++it1) {
         if (ConstantExpr *ce = llvm::dyn_cast<ConstantExpr>(*it1)) {
           uint64_t c = ce->getZExtValue();
@@ -92,9 +93,9 @@ void StoredValue::init(ref<VersionedValue> vvalue,
         }
         res.insert(*it1);
       }
-      allocationOffsets[v] = res;
+      allocationOffsets[context] = res;
     } else {
-      allocationOffsets[v].insert(offset);
+      allocationOffsets[context].insert(offset);
     }
   }
 
@@ -108,15 +109,15 @@ void StoredValue::init(ref<VersionedValue> vvalue,
     for (std::set<ref<MemoryLocation> >::const_iterator it = locations.begin(),
                                                         ie = locations.end();
          it != ie; ++it) {
-      const llvm::Value *v =
-          (*it)->getContext()->getValue(); // The allocation site
+      ref<AllocationContext> context =
+          (*it)->getContext(); // The allocation site
 
       // Concrete bound
       uint64_t concreteBound = (*it)->getConcreteOffsetBound();
       std::set<ref<Expr> > newBounds;
 
       if (concreteBound > 0)
-        allocationBounds[v].insert(Expr::createPointer(concreteBound));
+        allocationBounds[context].insert(Expr::createPointer(concreteBound));
 
       // Symbolic bounds
       const std::set<ref<Expr> > &bounds = (*it)->getSymbolicOffsetBounds();
@@ -130,10 +131,11 @@ void StoredValue::init(ref<VersionedValue> vvalue,
               ShadowArray::getShadowExpression(*it1, replacements));
         }
         if (!shadowBounds.empty()) {
-          allocationBounds[v].insert(shadowBounds.begin(), shadowBounds.end());
+          allocationBounds[context]
+              .insert(shadowBounds.begin(), shadowBounds.end());
         }
       } else if (!bounds.empty()) {
-        allocationBounds[v].insert(bounds.begin(), bounds.end());
+        allocationBounds[context].insert(bounds.begin(), bounds.end());
       }
     }
   }
@@ -153,12 +155,12 @@ ref<Expr> StoredValue::getBoundsCheck(ref<StoredValue> stateValue,
   // information from the argument object; in this way resulting in
   // less iterations compared to doing it the other way around.
   bool matchFound = false;
-  for (std::map<const llvm::Value *, std::set<ref<Expr> > >::const_iterator
+  for (std::map<ref<AllocationContext>, std::set<ref<Expr> > >::const_iterator
            it = allocationBounds.begin(),
            ie = allocationBounds.end();
        it != ie; ++it) {
     std::set<ref<Expr> > tabledBounds = it->second;
-    std::map<const llvm::Value *, std::set<ref<Expr> > >::iterator iter =
+    std::map<ref<AllocationContext>, std::set<ref<Expr> > >::iterator iter =
         stateValue->allocationOffsets.find(it->first);
     if (iter == stateValue->allocationOffsets.end()) {
       continue;
@@ -248,7 +250,7 @@ void StoredValue::print(llvm::raw_ostream &stream,
 
   if (!doNotUseBound && !allocationBounds.empty()) {
     stream << prefix << "BOUNDS:";
-    for (std::map<const llvm::Value *, std::set<ref<Expr> > >::const_iterator
+    for (std::map<ref<AllocationContext>, std::set<ref<Expr> > >::const_iterator
              it = allocationBounds.begin(),
              ie = allocationBounds.end();
          it != ie; ++it) {
@@ -271,7 +273,8 @@ void StoredValue::print(llvm::raw_ostream &stream,
     if (!allocationOffsets.empty()) {
       stream << "\n";
       stream << prefix << "OFFSETS:";
-      for (std::map<const llvm::Value *, std::set<ref<Expr> > >::const_iterator
+      for (std::map<ref<AllocationContext>,
+                    std::set<ref<Expr> > >::const_iterator
                it = allocationOffsets.begin(),
                ie = allocationOffsets.end();
            it != ie; ++it) {
