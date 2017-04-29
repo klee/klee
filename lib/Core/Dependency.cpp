@@ -46,13 +46,15 @@ namespace klee {
 void Dependency::removeAddressValue(
     std::map<ref<TxInterpolantAddress>, ref<TxInterpolantValue> > &simpleStore,
     Dependency::ConcreteStore &concreteStore) {
+  std::map<ref<TxInterpolantAddress>, ref<TxInterpolantValue> > _concreteStore;
+  std::set<ref<TxInterpolantAddress> > addressesToRemove;
+
   for (std::map<ref<TxInterpolantAddress>, ref<TxInterpolantValue> >::iterator
            it = simpleStore.begin(),
            ie = simpleStore.end();
        it != ie; ++it) {
     ref<TxInterpolantAddress> keyAddress = it->first;
     std::set<ref<TxStateAddress> > &locations = it->second->getLocations();
-
     if (locations.size() > 0) {
       std::map<ref<TxInterpolantAddress>, ref<TxInterpolantValue> >::iterator
       it1;
@@ -60,20 +62,37 @@ void Dependency::removeAddressValue(
       for (std::set<ref<TxStateAddress> >::iterator it2 = locations.begin(),
                                                     ie2 = locations.end();
            it2 != ie2; ++it2) {
-        it1 = simpleStore.find((*it2)->getInterpolantStyleAddress());
+        ref<TxInterpolantAddress> searchAddress =
+            (*it2)->getInterpolantStyleAddress();
+        it1 = simpleStore.find(searchAddress);
         if (it1 != simpleStore.end()) {
+          addressesToRemove.insert(searchAddress);
           // Found the address in the map;
-          const llvm::Value *base = keyAddress->getBase();
-          concreteStore[base][keyAddress->copyWithIndirectionCountIncrement()] =
+          _concreteStore[keyAddress->copyWithIndirectionCountIncrement()] =
               it1->second;
           break;
         }
       }
-    } else if (!it->first->isHeapAddress()) {
-      // Not a heap pointer value, copy as is
-      llvm::Value *base = keyAddress->getBase();
-      concreteStore[base][keyAddress] = simpleStore[keyAddress];
     }
+  }
+
+  std::set<ref<TxInterpolantAddress> >::iterator addressesToRemoveEnd =
+      addressesToRemove.end();
+
+  for (std::map<ref<TxInterpolantAddress>, ref<TxInterpolantValue> >::iterator
+           it = simpleStore.begin(),
+           ie = simpleStore.end();
+       it != ie; ++it) {
+    if (addressesToRemove.find(it->first) == addressesToRemoveEnd) {
+      concreteStore[it->first->getBase()][it->first] = it->second;
+    }
+  }
+
+  for (std::map<ref<TxInterpolantAddress>, ref<TxInterpolantValue> >::iterator
+           it = _concreteStore.begin(),
+           ie = _concreteStore.end();
+       it != ie; ++it) {
+    concreteStore[it->first->getBase()][it->first] = it->second;
   }
 }
 
