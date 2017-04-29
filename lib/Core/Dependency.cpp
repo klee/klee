@@ -54,19 +54,18 @@ void Dependency::removeAddressValue(
            ie = simpleStore.end();
        it != ie; ++it) {
     ref<TxInterpolantAddress> keyAddress = it->first;
-    std::set<ref<TxStateAddress> > &locations = it->second->getLocations();
-    if (locations.size() > 0) {
+    std::set<ref<TxInterpolantAddress> > &addresses =
+        it->second->getInterpolantAddresses();
+    if (addresses.size() > 0) {
       std::map<ref<TxInterpolantAddress>, ref<TxInterpolantValue> >::iterator
       it1;
-
-      for (std::set<ref<TxStateAddress> >::iterator it2 = locations.begin(),
-                                                    ie2 = locations.end();
+      for (std::set<ref<TxInterpolantAddress> >::iterator
+               it2 = addresses.begin(),
+               ie2 = addresses.end();
            it2 != ie2; ++it2) {
-        ref<TxInterpolantAddress> searchAddress =
-            (*it2)->getInterpolantStyleAddress();
-        it1 = simpleStore.find(searchAddress);
+        it1 = simpleStore.find(*it2);
         if (it1 != simpleStore.end()) {
-          addressesToRemove.insert(searchAddress);
+          addressesToRemove.insert(*it2);
           // Found the address in the map;
           _concreteStore[keyAddress->copyWithIndirectionCountIncrement()] =
               it1->second;

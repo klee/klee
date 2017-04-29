@@ -151,13 +151,14 @@ void TxInterpolantValue::init(llvm::Value *_value, ref<Expr> _expr,
 
   doNotUseBound = !canInterpolateBound;
 
-  locations = _locations;
-
   coreReasons = _coreReasons;
 
   for (std::set<ref<TxStateAddress> >::const_iterator it = _locations.begin(),
                                                       ie = _locations.end();
        it != ie; ++it) {
+    // We initialize the locations member variable
+    locations.insert((*it)->getInterpolantStyleAddress());
+
     ref<AllocationContext> context =
         (*it)->getContext(); // The allocation context
 
