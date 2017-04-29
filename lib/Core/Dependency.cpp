@@ -58,10 +58,48 @@ void StoredValue::init(ref<VersionedValue> vvalue,
 
   coreReasons = _coreReasons;
 
+  const std::set<ref<MemoryLocation> > locations(vvalue->getLocations());
+
+  for (std::set<ref<MemoryLocation> >::const_iterator it = locations.begin(),
+                                                      ie = locations.end();
+       it != ie; ++it) {
+    const llvm::Value *v =
+        (*it)->getContext()->getValue(); // The allocation site
+
+    ref<Expr> offset =
+        shadowing
+            ? ShadowArray::getShadowExpression((*it)->getOffset(), replacements)
+            : (*it)->getOffset();
+
+    // We next build the offsets to be compared against stored allocation
+    // offset bounds
+    ConstantExpr *oe = llvm::dyn_cast<ConstantExpr>(offset);
+    if (oe && !allocationOffsets[v].empty()) {
+      // Here we check if smaller offset exists, in which case we replace it
+      // with the new offset; as we want the greater offset to possibly
+      // violate an offset bound.
+      std::set<ref<Expr> > res;
+      uint64_t offsetInt = oe->getZExtValue();
+      for (std::set<ref<Expr> >::iterator it1 = allocationOffsets[v].begin(),
+                                          ie1 = allocationOffsets[v].end();
+           it1 != ie1; ++it1) {
+        if (ConstantExpr *ce = llvm::dyn_cast<ConstantExpr>(*it1)) {
+          uint64_t c = ce->getZExtValue();
+          if (offsetInt > c) {
+            res.insert(offset);
+            continue;
+          }
+        }
+        res.insert(*it1);
+      }
+      allocationOffsets[v] = res;
+    } else {
+      allocationOffsets[v].insert(offset);
+    }
+  }
+
   if (doNotUseBound)
     return;
-
-  const std::set<ref<MemoryLocation> > locations(vvalue->getLocations());
 
   if (!locations.empty()) {
     // Here we compute memory bounds for checking pointer values. The memory
@@ -96,36 +134,6 @@ void StoredValue::init(ref<VersionedValue> vvalue,
         }
       } else if (!bounds.empty()) {
         allocationBounds[v].insert(bounds.begin(), bounds.end());
-      }
-
-      ref<Expr> offset = shadowing ? ShadowArray::getShadowExpression(
-                                         (*it)->getOffset(), replacements)
-                                   : (*it)->getOffset();
-
-      // We next build the offsets to be compared against stored allocation
-      // offset bounds
-      ConstantExpr *oe = llvm::dyn_cast<ConstantExpr>(offset);
-      if (oe && !allocationOffsets[v].empty()) {
-        // Here we check if smaller offset exists, in which case we replace it
-        // with the new offset; as we want the greater offset to possibly
-        // violate an offset bound.
-        std::set<ref<Expr> > res;
-        uint64_t offsetInt = oe->getZExtValue();
-        for (std::set<ref<Expr> >::iterator it1 = allocationOffsets[v].begin(),
-                                            ie1 = allocationOffsets[v].end();
-             it1 != ie1; ++it1) {
-          if (ConstantExpr *ce = llvm::dyn_cast<ConstantExpr>(*it1)) {
-            uint64_t c = ce->getZExtValue();
-            if (offsetInt > c) {
-              res.insert(offset);
-              continue;
-            }
-          }
-          res.insert(*it1);
-        }
-        allocationOffsets[v] = res;
-      } else {
-        allocationOffsets[v].insert(offset);
       }
     }
   }

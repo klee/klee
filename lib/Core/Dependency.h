@@ -153,7 +153,7 @@ public:
 
     bool useBound() { return !doNotUseBound; }
 
-    bool isPointer() const { return !allocationBounds.empty(); }
+    bool isPointer() const { return !allocationOffsets.empty(); }
 
     ref<Expr> getBoundsCheck(ref<StoredValue> svalue,
                              std::set<ref<Expr> > &bounds,
