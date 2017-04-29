@@ -92,7 +92,7 @@ public:
     /// non-empty map mapping of allocation sites to the set of offset bounds.
     /// This constitutes the weakest liberal precondition of the memory checks
     /// against which the offsets of the pointer values of the current state are
-    /// to be checked against.
+    /// to be checked.
     std::map<const llvm::Value *, std::set<ref<Expr> > > allocationBounds;
 
     /// \brief In case the stored value was a pointer, then this should be a
