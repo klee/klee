@@ -430,8 +430,7 @@ public:
     if (base == other.base)
       return 0;
 
-    if (reinterpret_cast<uintptr_t>(base.get()) <
-        reinterpret_cast<uintptr_t>(other.base.get()))
+    if (base->hash() < other.base->hash())
       return -3;
 
     return 3;
