@@ -216,7 +216,7 @@ public:
 };
 
 /// \brief A processed form of a value to be stored in the subsumption table
-class StoredValue {
+class TxInterpolantValue {
 public:
   unsigned refCount;
 
@@ -251,31 +251,31 @@ private:
   void init(ref<VersionedValue> vvalue, std::set<const Array *> &replacements,
             bool shadowing = false);
 
-  StoredValue(ref<VersionedValue> vvalue,
-              std::set<const Array *> &replacements) {
+  TxInterpolantValue(ref<VersionedValue> vvalue,
+                     std::set<const Array *> &replacements) {
     init(vvalue, replacements, true);
   }
 
-  StoredValue(ref<VersionedValue> vvalue) {
+  TxInterpolantValue(ref<VersionedValue> vvalue) {
     std::set<const Array *> dummyReplacements;
     init(vvalue, dummyReplacements);
   }
 
 public:
-  static ref<StoredValue> create(ref<VersionedValue> vvalue,
-                                 std::set<const Array *> &replacements) {
-    ref<StoredValue> sv(new StoredValue(vvalue, replacements));
+  static ref<TxInterpolantValue> create(ref<VersionedValue> vvalue,
+                                        std::set<const Array *> &replacements) {
+    ref<TxInterpolantValue> sv(new TxInterpolantValue(vvalue, replacements));
     return sv;
   }
 
-  static ref<StoredValue> create(ref<VersionedValue> vvalue) {
-    ref<StoredValue> sv(new StoredValue(vvalue));
+  static ref<TxInterpolantValue> create(ref<VersionedValue> vvalue) {
+    ref<TxInterpolantValue> sv(new TxInterpolantValue(vvalue));
     return sv;
   }
 
-  ~StoredValue() {}
+  ~TxInterpolantValue() {}
 
-  int compare(const StoredValue other) const {
+  int compare(const TxInterpolantValue other) const {
     if (id == other.id)
       return 0;
     if (id < other.id)
@@ -287,7 +287,7 @@ public:
 
   bool isPointer() const { return !allocationOffsets.empty(); }
 
-  ref<Expr> getBoundsCheck(ref<StoredValue> svalue,
+  ref<Expr> getBoundsCheck(ref<TxInterpolantValue> svalue,
                            std::set<ref<Expr> > &bounds,
                            int debugSubsumptionLevel) const;
 

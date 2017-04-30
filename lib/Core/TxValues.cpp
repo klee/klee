@@ -81,9 +81,9 @@ void TxInterpolantAddress::print(llvm::raw_ostream &stream,
 
 /**/
 
-void StoredValue::init(ref<VersionedValue> vvalue,
-                       std::set<const Array *> &replacements,
-                       bool shadowing) {
+void TxInterpolantValue::init(ref<VersionedValue> vvalue,
+                              std::set<const Array *> &replacements,
+                              bool shadowing) {
   refCount = 0;
   id = reinterpret_cast<uintptr_t>(this);
   expr = shadowing ? ShadowArray::getShadowExpression(vvalue->getExpression(),
@@ -178,9 +178,9 @@ void StoredValue::init(ref<VersionedValue> vvalue,
   }
 }
 
-ref<Expr> StoredValue::getBoundsCheck(ref<StoredValue> stateValue,
-                                      std::set<ref<Expr> > &bounds,
-                                      int debugSubsumptionLevel) const {
+ref<Expr> TxInterpolantValue::getBoundsCheck(ref<TxInterpolantValue> stateValue,
+                                             std::set<ref<Expr> > &bounds,
+                                             int debugSubsumptionLevel) const {
   ref<Expr> res;
 #ifdef ENABLE_Z3
 
@@ -279,10 +279,12 @@ ref<Expr> StoredValue::getBoundsCheck(ref<StoredValue> stateValue,
   return res;
 }
 
-void StoredValue::print(llvm::raw_ostream &stream) const { print(stream, ""); }
+void TxInterpolantValue::print(llvm::raw_ostream &stream) const {
+  print(stream, "");
+}
 
-void StoredValue::print(llvm::raw_ostream &stream,
-                        const std::string &prefix) const {
+void TxInterpolantValue::print(llvm::raw_ostream &stream,
+                               const std::string &prefix) const {
   std::string nextTabs = appendTab(prefix);
 
   if (!doNotUseBound && !allocationBounds.empty()) {

@@ -161,9 +161,9 @@ namespace klee {
   class Dependency {
 
   public:
-    typedef std::pair<ref<TxInterpolantAddress>, ref<StoredValue> >
+    typedef std::pair<ref<TxInterpolantAddress>, ref<TxInterpolantValue> >
     AddressValuePair;
-    typedef std::map<ref<TxInterpolantAddress>, ref<StoredValue> >
+    typedef std::map<ref<TxInterpolantAddress>, ref<TxInterpolantValue> >
     ConcreteStoreMap;
     typedef std::vector<AddressValuePair> SymbolicStoreMap;
     typedef std::map<const llvm::Value *, ConcreteStoreMap> ConcreteStore;

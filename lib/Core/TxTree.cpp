@@ -1016,7 +1016,7 @@ bool SubsumptionTableEntry::subsumed(
 
   ref<Expr> stateEqualityConstraints;
 
-  std::map<ref<StoredValue>, std::set<ref<Expr> > >
+  std::map<ref<TxInterpolantValue>, std::set<ref<Expr> > >
   corePointerValues; // Pointer values in the core for memory bounds
   // interpolation
 
@@ -1075,8 +1075,8 @@ bool SubsumptionTableEntry::subsumed(
           return false;
         }
 
-        const ref<StoredValue> tabledValue = it2->second;
-        ref<StoredValue> stateValue = stateConcreteMap.at(it2->first);
+        const ref<TxInterpolantValue> tabledValue = it2->second;
+        ref<TxInterpolantValue> stateValue = stateConcreteMap.at(it2->first);
         ref<Expr> res;
 
         if (!stateValue.isNull()) {
@@ -1307,7 +1307,7 @@ bool SubsumptionTableEntry::subsumed(
                ie2 = tabledSymbolicMap.end();
            it2 != ie2; ++it2) {
         ref<Expr> tabledSymbolicOffset = it2->first->getOffset();
-        ref<StoredValue> tabledValue = it2->second;
+        ref<TxInterpolantValue> tabledValue = it2->second;
 
         for (Dependency::ConcreteStoreMap::const_iterator
                  it3 = stateConcreteMap.begin(),
@@ -1320,7 +1320,7 @@ bool SubsumptionTableEntry::subsumed(
             continue;
 
           ref<Expr> stateConcreteOffset = it3->first->getOffset();
-          ref<StoredValue> stateValue = it3->second;
+          ref<TxInterpolantValue> stateValue = it3->second;
           ref<Expr> newTerm;
 
           if (tabledValue->getExpression()->getWidth() !=
@@ -1382,7 +1382,7 @@ bool SubsumptionTableEntry::subsumed(
             continue;
 
           ref<Expr> stateSymbolicOffset = it3->first->getOffset();
-          ref<StoredValue> stateValue = it3->second;
+          ref<TxInterpolantValue> stateValue = it3->second;
           ref<Expr> newTerm;
 
           if (tabledValue->getExpression()->getWidth() !=
@@ -1495,7 +1495,7 @@ bool SubsumptionTableEntry::subsumed(
           instr->print(stream);
         }
       }
-      for (std::map<ref<StoredValue>, std::set<ref<Expr> > >::iterator
+      for (std::map<ref<TxInterpolantValue>, std::set<ref<Expr> > >::iterator
                it = corePointerValues.begin(),
                ie = corePointerValues.end();
            it != ie; ++it) {
@@ -1649,7 +1649,8 @@ bool SubsumptionTableEntry::subsumed(
               instr->print(stream);
             }
           }
-          for (std::map<ref<StoredValue>, std::set<ref<Expr> > >::iterator
+          for (std::map<ref<TxInterpolantValue>,
+                        std::set<ref<Expr> > >::iterator
                    it = corePointerValues.begin(),
                    ie = corePointerValues.end();
                it != ie; ++it) {
@@ -1712,7 +1713,7 @@ bool SubsumptionTableEntry::subsumed(
             instr->print(stream);
           }
         }
-        for (std::map<ref<StoredValue>, std::set<ref<Expr> > >::iterator
+        for (std::map<ref<TxInterpolantValue>, std::set<ref<Expr> > >::iterator
                  it = corePointerValues.begin(),
                  ie = corePointerValues.end();
              it != ie; ++it) {
