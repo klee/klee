@@ -414,7 +414,7 @@ public:
     return ret;
   }
 
-  ref<TxInterpolantAddress> &getStoredAddress() {
+  ref<TxInterpolantAddress> &getInterpolantStyleAddress() {
     return interpolantStyleAddress;
   }
 
