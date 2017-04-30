@@ -1,4 +1,4 @@
-//===--- VersionedValue.h ---------------------------------------*- C++ -*-===//
+//===--- TxValues.h ---------------------------------------------*- C++ -*-===//
 //
 //               The Tracer-X KLEE Symbolic Virtual Machine
 //
@@ -8,9 +8,11 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains the declarations of the classes related to versioned
-/// value. Versioned values are data tokens that can constitute the nodes in
-/// building up the dependency graph, for the purpose of computing interpolants.
+/// This file contains the declarations of the classes related to values in the
+/// symbolic execution state and interpolant table. Values that belong to the
+/// interpolant are versioned such as MemoryLocation, which is distinguished by
+/// its base address, and VersionedValue, which is distinguished by its version,
+/// and VersionedValue, which is distinguished by its own object id.
 ///
 //===----------------------------------------------------------------------===//
 

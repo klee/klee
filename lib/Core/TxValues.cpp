@@ -1,4 +1,4 @@
-//===-- VersionedValue.cpp --------------------------------------*- C++ -*-===//
+//===-- TxValues.cpp --------------------------------------------*- C++ -*-===//
 //
 //               The Tracer-X KLEE Symbolic Virtual Machine
 //
@@ -8,16 +8,18 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains the implementations of the classes related to versioned
-/// value. Versioned values are data tokens that can constitute the nodes in
-/// building up the dependency graph, for the purpose of computing interpolants.
+/// This file contains the implementations of the classes related to values in
+/// the symbolic execution state and interpolant table. Values that belong to
+/// the interpolant are versioned such as MemoryLocation, which is distinguished
+/// by its base address, and VersionedValue, which is distinguished by its
+/// version, and VersionedValue, which is distinguished by its own object id.
 ///
 //===----------------------------------------------------------------------===//
 
 #include "ShadowArray.h"
 #include "TxPrintUtil.h"
 
-#include <klee/Internal/Module/VersionedValue.h>
+#include <klee/Internal/Module/TxValues.h>
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
 #include <llvm/IR/Type.h>
