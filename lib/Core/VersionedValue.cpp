@@ -108,8 +108,8 @@ MemoryLocation::create(ref<MemoryLocation> loc,
       ShadowArray::getShadowExpression(loc->address, replacements)),
       _base(ShadowArray::getShadowExpression(loc->base, replacements)),
       _offset(ShadowArray::getShadowExpression(loc->offset, replacements));
-  ref<MemoryLocation> ret(new MemoryLocation(
-      loc->context, _address, _base, _offset, loc->size, loc->allocationId));
+  ref<MemoryLocation> ret(
+      new MemoryLocation(loc->context, _address, _base, _offset, loc->size));
   return ret;
 }
 
@@ -150,7 +150,6 @@ void MemoryLocation::print(llvm::raw_ostream &stream,
   stream << ": ";
   base->print(stream);
   stream << "\n";
-  stream << prefix << "allocation id: " << allocationId << "\n";
   stream << prefix
          << "pointer to location object: " << reinterpret_cast<uintptr_t>(this);
 }
