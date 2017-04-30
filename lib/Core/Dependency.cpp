@@ -45,13 +45,13 @@ namespace klee {
 
 void Dependency::getConcreteStore(
     const std::vector<llvm::Instruction *> &callHistory,
-    const std::map<ref<MemoryLocation>,
+    const std::map<ref<TxStateAddress>,
                    std::pair<ref<VersionedValue>, ref<VersionedValue> > > &
         store,
     std::set<const Array *> &replacements, bool coreOnly,
     Dependency::ConcreteStore &concreteStore) const {
 
-  for (std::map<ref<MemoryLocation>,
+  for (std::map<ref<TxStateAddress>,
                 std::pair<ref<VersionedValue>,
                           ref<VersionedValue> > >::const_iterator
            it = store.begin(),
@@ -83,12 +83,12 @@ void Dependency::getConcreteStore(
 
 void Dependency::getSymbolicStore(
     const std::vector<llvm::Instruction *> &callHistory,
-    const std::map<ref<MemoryLocation>,
+    const std::map<ref<TxStateAddress>,
                    std::pair<ref<VersionedValue>, ref<VersionedValue> > > &
         store,
     std::set<const Array *> &replacements, bool coreOnly,
     Dependency::SymbolicStore &symbolicStore) const {
-  for (std::map<ref<MemoryLocation>,
+  for (std::map<ref<TxStateAddress>,
                 std::pair<ref<VersionedValue>,
                           ref<VersionedValue> > >::const_iterator
            it = store.begin(),
@@ -111,7 +111,7 @@ void Dependency::getSymbolicStore(
 #ifdef ENABLE_Z3
       if (!NoExistential) {
         symbolicStore[base].push_back(Dependency::AddressValuePair(
-            MemoryLocation::create(it->first, replacements)
+            TxStateAddress::create(it->first, replacements)
                 ->getInterpolantStyleAddress(),
             TxInterpolantValue::create(it->second.second, replacements)));
       } else
@@ -329,7 +329,7 @@ ref<VersionedValue> Dependency::getLatestValueForMarking(llvm::Value *val,
   return value;
 }
 
-void Dependency::updateStore(ref<MemoryLocation> loc,
+void Dependency::updateStore(ref<TxStateAddress> loc,
                              ref<VersionedValue> address,
                              ref<VersionedValue> value) {
   if (loc->hasConstantAddress())
@@ -354,21 +354,21 @@ void Dependency::addDependency(ref<VersionedValue> source,
 
 void Dependency::addDependencyIntToPtr(ref<VersionedValue> source,
                                        ref<VersionedValue> target) {
-  ref<MemoryLocation> nullLocation;
+  ref<TxStateAddress> nullLocation;
 
   if (source.isNull() || target.isNull())
     return;
 
-  std::set<ref<MemoryLocation> > locations = source->getLocations();
+  std::set<ref<TxStateAddress> > locations = source->getLocations();
   ref<Expr> targetExpr(ZExtExpr::create(target->getExpression(),
                                         Expr::createPointer(0)->getWidth()));
-  for (std::set<ref<MemoryLocation> >::iterator it = locations.begin(),
+  for (std::set<ref<TxStateAddress> >::iterator it = locations.begin(),
                                                 ie = locations.end();
        it != ie; ++it) {
     ref<Expr> sourceBase((*it)->getBase());
     ref<Expr> offsetDelta(SubExpr::create(
         SubExpr::create(targetExpr, sourceBase), (*it)->getOffset()));
-    target->addLocation(MemoryLocation::create(*it, targetExpr, offsetDelta));
+    target->addLocation(TxStateAddress::create(*it, targetExpr, offsetDelta));
   }
   target->addDependency(source, nullLocation);
 }
@@ -376,12 +376,12 @@ void Dependency::addDependencyIntToPtr(ref<VersionedValue> source,
 void Dependency::addDependencyWithOffset(ref<VersionedValue> source,
                                          ref<VersionedValue> target,
                                          ref<Expr> offsetDelta) {
-  ref<MemoryLocation> nullLocation;
+  ref<TxStateAddress> nullLocation;
 
   if (source.isNull() || target.isNull())
     return;
 
-  std::set<ref<MemoryLocation> > locations = source->getLocations();
+  std::set<ref<TxStateAddress> > locations = source->getLocations();
   ref<Expr> targetExpr(target->getExpression());
 
   ConstantExpr *ce = llvm::dyn_cast<ConstantExpr>(targetExpr);
@@ -394,7 +394,7 @@ void Dependency::addDependencyWithOffset(ref<VersionedValue> source,
   uint64_t i = 0;
   bool locationAdded = false;
 
-  for (std::set<ref<MemoryLocation> >::iterator it = locations.begin(),
+  for (std::set<ref<TxStateAddress> >::iterator it = locations.begin(),
                                                 ie = locations.end();
        it != ie; ++it) {
     ++i;
@@ -412,7 +412,7 @@ void Dependency::addDependencyWithOffset(ref<VersionedValue> source,
       if (o != (a - b) && (b != 0) && (locationAdded || i < nLocations))
         continue;
     }
-    target->addLocation(MemoryLocation::create(*it, targetExpr, offsetDelta));
+    target->addLocation(TxStateAddress::create(*it, targetExpr, offsetDelta));
     locationAdded = true;
   }
   target->addDependency(source, nullLocation);
@@ -420,12 +420,12 @@ void Dependency::addDependencyWithOffset(ref<VersionedValue> source,
 
 void Dependency::addDependencyViaLocation(ref<VersionedValue> source,
                                           ref<VersionedValue> target,
-                                          ref<MemoryLocation> via) {
+                                          ref<TxStateAddress> via) {
   if (source.isNull() || target.isNull())
     return;
 
-  std::set<ref<MemoryLocation> > locations = source->getLocations();
-  for (std::set<ref<MemoryLocation> >::iterator it = locations.begin(),
+  std::set<ref<TxStateAddress> > locations = source->getLocations();
+  for (std::set<ref<TxStateAddress> >::iterator it = locations.begin(),
                                                 ie = locations.end();
        it != ie; ++it) {
     target->addLocation(*it);
@@ -441,7 +441,7 @@ void Dependency::addDependencyViaExternalFunction(
 
 #ifdef ENABLE_Z3
   if (!NoBoundInterpolation) {
-    std::set<ref<MemoryLocation> > locations = source->getLocations();
+    std::set<ref<TxStateAddress> > locations = source->getLocations();
     if (!locations.empty()) {
       std::string reason = "";
       if (debugSubsumptionLevel >= 1) {
@@ -470,7 +470,7 @@ void Dependency::addDependencyViaExternalFunction(
     }
 
     target->addLocation(
-        MemoryLocation::create(target->getValue(), callHistory, address, size));
+        TxStateAddress::create(target->getValue(), callHistory, address, size));
   }
 
   addDependencyToNonPointer(source, target);
@@ -481,19 +481,19 @@ void Dependency::addDependencyToNonPointer(ref<VersionedValue> source,
   if (source.isNull() || target.isNull())
     return;
 
-  ref<MemoryLocation> nullLocation;
+  ref<TxStateAddress> nullLocation;
   target->addDependency(source, nullLocation);
 }
 
 std::vector<ref<VersionedValue> >
 Dependency::directFlowSources(ref<VersionedValue> target) const {
   std::vector<ref<VersionedValue> > ret;
-  std::map<ref<VersionedValue>, ref<MemoryLocation> > sources =
+  std::map<ref<VersionedValue>, ref<TxStateAddress> > sources =
       target->getSources();
   ref<VersionedValue> loadAddress = target->getLoadAddress(),
                       storeAddress = target->getStoreAddress();
 
-  for (std::map<ref<VersionedValue>, ref<MemoryLocation> >::iterator it =
+  for (std::map<ref<VersionedValue>, ref<TxStateAddress> >::iterator it =
            sources.begin();
        it != sources.end(); ++it) {
     ret.push_back(it->first);
@@ -536,8 +536,8 @@ void Dependency::markPointerFlow(ref<VersionedValue> target,
 
   if (target->canInterpolateBound()) {
     //  checkedAddress->dump();
-    std::set<ref<MemoryLocation> > locations = target->getLocations();
-    for (std::set<ref<MemoryLocation> >::iterator it = locations.begin(),
+    std::set<ref<TxStateAddress> > locations = target->getLocations();
+    for (std::set<ref<TxStateAddress> >::iterator it = locations.begin(),
                                                   ie = locations.end();
          it != ie; ++it) {
       (*it)->adjustOffsetBound(checkedAddress, bounds);
@@ -546,10 +546,10 @@ void Dependency::markPointerFlow(ref<VersionedValue> target,
   target->setAsCore(reason);
 
   // Compute the direct pointer flow dependency
-  std::map<ref<VersionedValue>, ref<MemoryLocation> > sources =
+  std::map<ref<VersionedValue>, ref<TxStateAddress> > sources =
       target->getSources();
 
-  for (std::map<ref<VersionedValue>, ref<MemoryLocation> >::iterator
+  for (std::map<ref<VersionedValue>, ref<TxStateAddress> >::iterator
            it = sources.begin(),
            ie = sources.end();
        it != ie; ++it) {
@@ -872,11 +872,11 @@ void Dependency::execute(llvm::Instruction *instr,
           instr->getOperand(0)->getType()->getPointerElementType();
 
       if (!addressValue.isNull()) {
-        std::set<ref<MemoryLocation> > locations = addressValue->getLocations();
+        std::set<ref<TxStateAddress> > locations = addressValue->getLocations();
         if (locations.empty()) {
           // The size of the allocation is unknown here as the memory region
           // might have been allocated by the environment
-          ref<MemoryLocation> loc = MemoryLocation::create(
+          ref<TxStateAddress> loc = TxStateAddress::create(
               instr->getOperand(0), callHistory, address, 0);
           addressValue->addLocation(loc);
 
@@ -889,10 +889,10 @@ void Dependency::execute(llvm::Instruction *instr,
           updateStore(loc, addressValue, loadedValue);
           break;
         } else if (locations.size() == 1) {
-          ref<MemoryLocation> loc = *(locations.begin());
+          ref<TxStateAddress> loc = *(locations.begin());
 
           // Check the possible mismatch between Tracer-X and KLEE loaded value
-          std::map<ref<MemoryLocation>,
+          std::map<ref<TxStateAddress>,
                    std::pair<ref<VersionedValue>,
                              ref<VersionedValue> > >::iterator storeIt =
               concretelyAddressedStore.find(loc);
@@ -959,7 +959,7 @@ void Dependency::execute(llvm::Instruction *instr,
 
         if (llvm::isa<llvm::GlobalVariable>(instr->getOperand(0))) {
           // The value not found was a global variable, record it here.
-          std::set<ref<MemoryLocation> > locations =
+          std::set<ref<TxStateAddress> > locations =
               addressValue->getLocations();
 
           // Build the loaded value
@@ -973,14 +973,14 @@ void Dependency::execute(llvm::Instruction *instr,
         }
       }
 
-      std::set<ref<MemoryLocation> > locations = addressValue->getLocations();
+      std::set<ref<TxStateAddress> > locations = addressValue->getLocations();
 
-      for (std::set<ref<MemoryLocation> >::iterator li = locations.begin(),
+      for (std::set<ref<TxStateAddress> >::iterator li = locations.begin(),
                                                     le = locations.end();
            li != le; ++li) {
         std::pair<ref<VersionedValue>, ref<VersionedValue> > addressValuePair;
 
-        std::map<ref<MemoryLocation>,
+        std::map<ref<TxStateAddress>,
                  std::pair<ref<VersionedValue>,
                            ref<VersionedValue> > >::iterator storeIter;
         if ((*li)->hasConstantAddress()) {
@@ -1038,16 +1038,16 @@ void Dependency::execute(llvm::Instruction *instr,
             getNewPointerValue(instr->getOperand(1), callHistory, address, 0);
       } else if (addressValue->getLocations().size() == 0) {
         if (instr->getOperand(1)->getType()->isPointerTy()) {
-          addressValue->addLocation(MemoryLocation::create(
+          addressValue->addLocation(TxStateAddress::create(
               instr->getOperand(1), callHistory, address, 0));
         } else {
           assert(!"address is not a pointer");
         }
       }
 
-      std::set<ref<MemoryLocation> > locations = addressValue->getLocations();
+      std::set<ref<TxStateAddress> > locations = addressValue->getLocations();
 
-      for (std::set<ref<MemoryLocation> >::iterator it = locations.begin(),
+      for (std::set<ref<TxStateAddress> >::iterator it = locations.begin(),
                                                     ie = locations.end();
            it != ie; ++it) {
         updateStore(*it, addressValue, storedValue);
@@ -1212,7 +1212,7 @@ void Dependency::execute(llvm::Instruction *instr,
                                           inputAddress, 0);
       } else if (addressValue->getLocations().size() == 0) {
         // Note that the allocation has unknown size here (0).
-        addressValue->addLocation(MemoryLocation::create(
+        addressValue->addLocation(TxStateAddress::create(
             instr->getOperand(0), callHistory, inputAddress, 0));
       }
 
@@ -1249,15 +1249,15 @@ void Dependency::executeMakeSymbolic(
   } else if (addressValue->getLocations().size() == 0) {
     if (pointer->getType()->isPointerTy()) {
       addressValue->addLocation(
-          MemoryLocation::create(pointer, callHistory, address, 0));
+          TxStateAddress::create(pointer, callHistory, address, 0));
     } else {
       assert(!"address is not a pointer");
     }
   }
 
-  std::set<ref<MemoryLocation> > locations = addressValue->getLocations();
+  std::set<ref<TxStateAddress> > locations = addressValue->getLocations();
 
-  for (std::set<ref<MemoryLocation> >::iterator it = locations.begin(),
+  for (std::set<ref<TxStateAddress> >::iterator it = locations.begin(),
                                                 ie = locations.end();
        it != ie; ++it) {
     updateStore(*it, addressValue, storedValue);
@@ -1319,8 +1319,8 @@ void Dependency::executeMemoryOperation(
       if (llvm::isa<llvm::LoadInst>(instr) && !val->getLocations().empty()) {
         if (instr->getParent()->getParent()->getName().str() ==
             "tracerx_check") {
-          std::set<ref<MemoryLocation> > locations(val->getLocations());
-          for (std::set<ref<MemoryLocation> >::iterator it = locations.begin(),
+          std::set<ref<TxStateAddress> > locations(val->getLocations());
+          for (std::set<ref<TxStateAddress> >::iterator it = locations.begin(),
                                                         ie = locations.end();
                it != ie; ++it) {
             if (llvm::ConstantExpr *ce = llvm::dyn_cast<llvm::ConstantExpr>(
@@ -1472,7 +1472,7 @@ void Dependency::print(llvm::raw_ostream &stream,
     stream << tabs << "concrete store = []\n";
   } else {
     stream << tabs << "concrete store = [\n";
-    for (std::map<ref<MemoryLocation>,
+    for (std::map<ref<TxStateAddress>,
                   std::pair<ref<VersionedValue>,
                             ref<VersionedValue> > >::const_iterator
              is = concretelyAddressedStore.begin(),
@@ -1494,7 +1494,7 @@ void Dependency::print(llvm::raw_ostream &stream,
     stream << tabs << "symbolic store = []\n";
   } else {
     stream << tabs << "symbolic store = [\n";
-    for (std::map<ref<MemoryLocation>,
+    for (std::map<ref<TxStateAddress>,
                   std::pair<ref<VersionedValue>,
                             ref<VersionedValue> > >::const_iterator
              is = symbolicallyAddressedStore.begin(),

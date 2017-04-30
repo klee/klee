@@ -10,7 +10,7 @@
 /// \file
 /// This file contains the declarations of the classes related to values in the
 /// symbolic execution state and interpolant table. Values that belong to the
-/// interpolant are versioned such as MemoryLocation, which is distinguished by
+/// interpolant are versioned such as TxStateAddress, which is distinguished by
 /// its base address, and VersionedValue, which is distinguished by its version,
 /// and VersionedValue, which is distinguished by its own object id.
 ///
@@ -179,13 +179,13 @@ public:
   ref<Expr> getOffset() const { return offset; }
 
   /// \brief The comparator of this class' objects. This member function is
-  /// weaker than standard comparator for MemoryLocation in that it does not
-  /// check for the equality of allocation id. Allocation id is used in
-  /// MemoryLocation (member variable MemoryLocation#allocationId) for the
-  /// purpose of distinguishing memory allocations of the same callsite and call
-  /// history, but of different loop iterations. This does not make sense when
-  /// comparing states for subsumption as in subsumption, related allocations in
-  /// different paths may have different allocation ids.
+  /// weaker than standard comparator for TxStateAddress in that it does not
+  /// check for the equality of base addresses. Allocation base address is used
+  /// in TxStateAddress (member variable TxStateAddress#base) for the purpose of
+  /// distinguishing memory allocations of the same callsite and call history,
+  /// but of different loop iterations. This does not make sense when comparing
+  /// states for subsumption as in subsumption, related allocations in different
+  /// paths may have different base addresses.
   int compare(const TxInterpolantAddress &other) const {
     int res = context->compare(*(other.context.get()));
     if (res)
@@ -306,7 +306,7 @@ public:
 };
 
 /// \brief A class to represent memory locations.
-class MemoryLocation {
+class TxStateAddress {
 
 public:
   unsigned refCount;
@@ -331,7 +331,7 @@ private:
   /// \brief The size of this allocation (0 means unknown)
   uint64_t size;
 
-  MemoryLocation(ref<AllocationContext> _context, ref<Expr> &_address,
+  TxStateAddress(ref<AllocationContext> _context, ref<Expr> &_address,
                  ref<Expr> &_base, ref<Expr> &_offset, uint64_t _size)
       : refCount(0), interpolantStyleAddress(
                          TxInterpolantAddress::create(_context, _offset)),
@@ -380,36 +380,36 @@ private:
   }
 
 public:
-  ~MemoryLocation() {}
+  ~TxStateAddress() {}
 
-  static ref<MemoryLocation>
+  static ref<TxStateAddress>
   create(llvm::Value *value,
          const std::vector<llvm::Instruction *> &_callHistory,
          ref<Expr> &address, uint64_t size) {
     ref<Expr> zeroPointer = Expr::createPointer(0);
-    ref<MemoryLocation> ret(
-        new MemoryLocation(AllocationContext::create(value, _callHistory),
+    ref<TxStateAddress> ret(
+        new TxStateAddress(AllocationContext::create(value, _callHistory),
                            address, address, zeroPointer, size));
     return ret;
   }
 
-  static ref<MemoryLocation> create(ref<MemoryLocation> loc,
+  static ref<TxStateAddress> create(ref<TxStateAddress> loc,
                                     std::set<const Array *> &replacements);
 
-  static ref<MemoryLocation> create(ref<MemoryLocation> loc, ref<Expr> &address,
+  static ref<TxStateAddress> create(ref<TxStateAddress> loc, ref<Expr> &address,
                                     ref<Expr> &offsetDelta) {
     ConstantExpr *c = llvm::dyn_cast<ConstantExpr>(offsetDelta);
     if (c && c->getZExtValue() == 0) {
       ref<Expr> base = loc->base;
       ref<Expr> offset = loc->getOffset();
-      ref<MemoryLocation> ret(new MemoryLocation(loc->getContext(), address,
+      ref<TxStateAddress> ret(new TxStateAddress(loc->getContext(), address,
                                                  base, offset, loc->size));
       return ret;
     }
 
     ref<Expr> base = loc->base;
     ref<Expr> newOffset = AddExpr::create(loc->getOffset(), offsetDelta);
-    ref<MemoryLocation> ret(new MemoryLocation(loc->getContext(), address, base,
+    ref<TxStateAddress> ret(new TxStateAddress(loc->getContext(), address, base,
                                                newOffset, loc->size));
     return ret;
   }
@@ -423,7 +423,7 @@ public:
     return getContext()->isPrefixOf(callHistory);
   }
 
-  int compare(const MemoryLocation &other) const {
+  int compare(const TxStateAddress &other) const {
     int res = interpolantStyleAddress->compare(
         *(other.interpolantStyleAddress.get()));
     if (res)
@@ -499,7 +499,7 @@ private:
   const ref<Expr> valueExpr;
 
   /// \brief Set of memory locations possibly being pointed to
-  std::set<ref<MemoryLocation> > locations;
+  std::set<ref<TxStateAddress> > locations;
 
   /// \brief Member variable to indicate if any unsatisfiability core depends
   /// on this value.
@@ -509,7 +509,7 @@ private:
   uint64_t id;
 
   /// \brief Dependency sources of this value
-  std::map<ref<VersionedValue>, ref<MemoryLocation> > sources;
+  std::map<ref<VersionedValue>, ref<TxStateAddress> > sources;
 
   /// \brief The context of this value
   std::vector<llvm::Instruction *> callHistory;
@@ -582,11 +582,11 @@ public:
 
   /// \brief The core routine for adding flow dependency between source and
   /// target value
-  void addDependency(ref<VersionedValue> source, ref<MemoryLocation> via) {
+  void addDependency(ref<VersionedValue> source, ref<TxStateAddress> via) {
     sources[source] = via;
   }
 
-  const std::map<ref<VersionedValue>, ref<MemoryLocation> > &getSources() {
+  const std::map<ref<VersionedValue>, ref<TxStateAddress> > &getSources() {
     return sources;
   }
 
@@ -598,12 +598,12 @@ public:
     return 1;
   }
 
-  void addLocation(ref<MemoryLocation> loc) {
+  void addLocation(ref<TxStateAddress> loc) {
     if (locations.find(loc) == locations.end())
       locations.insert(loc);
   }
 
-  const std::set<ref<MemoryLocation> > &getLocations() const {
+  const std::set<ref<TxStateAddress> > &getLocations() const {
     return locations;
   }
 

@@ -10,7 +10,7 @@
 /// \file
 /// This file contains the implementations of the classes related to values in
 /// the symbolic execution state and interpolant table. Values that belong to
-/// the interpolant are versioned such as MemoryLocation, which is distinguished
+/// the interpolant are versioned such as TxStateAddress, which is distinguished
 /// by its base address, and VersionedValue, which is distinguished by its
 /// version, and VersionedValue, which is distinguished by its own object id.
 ///
@@ -95,9 +95,9 @@ void TxInterpolantValue::init(ref<VersionedValue> vvalue,
 
   coreReasons = vvalue->getReasons();
 
-  const std::set<ref<MemoryLocation> > locations(vvalue->getLocations());
+  const std::set<ref<TxStateAddress> > locations(vvalue->getLocations());
 
-  for (std::set<ref<MemoryLocation> >::const_iterator it = locations.begin(),
+  for (std::set<ref<TxStateAddress> >::const_iterator it = locations.begin(),
                                                       ie = locations.end();
        it != ie; ++it) {
     ref<AllocationContext> context =
@@ -143,7 +143,7 @@ void TxInterpolantValue::init(ref<VersionedValue> vvalue,
     // Here we compute memory bounds for checking pointer values. The memory
     // bound is the size of the allocation minus the offset; this is the weakest
     // precondition (interpolant) of memory bound checks done by KLEE.
-    for (std::set<ref<MemoryLocation> >::const_iterator it = locations.begin(),
+    for (std::set<ref<TxStateAddress> >::const_iterator it = locations.begin(),
                                                         ie = locations.end();
          it != ie; ++it) {
       ref<AllocationContext> context =
@@ -353,9 +353,9 @@ void TxInterpolantValue::print(llvm::raw_ostream &stream,
 
 /**/
 
-void MemoryLocation::adjustOffsetBound(ref<VersionedValue> checkedAddress,
+void TxStateAddress::adjustOffsetBound(ref<VersionedValue> checkedAddress,
                                        std::set<ref<Expr> > &_bounds) {
-  std::set<ref<MemoryLocation> > locations = checkedAddress->getLocations();
+  std::set<ref<TxStateAddress> > locations = checkedAddress->getLocations();
   std::set<ref<Expr> > bounds(_bounds);
 
   if (bounds.empty()) {
@@ -365,7 +365,7 @@ void MemoryLocation::adjustOffsetBound(ref<VersionedValue> checkedAddress,
   for (std::set<ref<Expr> >::iterator it1 = bounds.begin(), ie1 = bounds.end();
        it1 != ie1; ++it1) {
 
-    for (std::set<ref<MemoryLocation> >::iterator it2 = locations.begin(),
+    for (std::set<ref<TxStateAddress> >::iterator it2 = locations.begin(),
                                                   ie2 = locations.end();
          it2 != ie2; ++it2) {
       ref<Expr> checkedOffset = (*it2)->getOffset();
@@ -404,19 +404,19 @@ void MemoryLocation::adjustOffsetBound(ref<VersionedValue> checkedAddress,
   }
 }
 
-ref<MemoryLocation>
-MemoryLocation::create(ref<MemoryLocation> loc,
+ref<TxStateAddress>
+TxStateAddress::create(ref<TxStateAddress> loc,
                        std::set<const Array *> &replacements) {
   ref<Expr> _address(
       ShadowArray::getShadowExpression(loc->address, replacements)),
       _base(ShadowArray::getShadowExpression(loc->base, replacements)),
       _offset(ShadowArray::getShadowExpression(loc->getOffset(), replacements));
-  ref<MemoryLocation> ret(new MemoryLocation(loc->getContext(), _address, _base,
+  ref<TxStateAddress> ret(new TxStateAddress(loc->getContext(), _address, _base,
                                              _offset, loc->size));
   return ret;
 }
 
-void MemoryLocation::print(llvm::raw_ostream &stream,
+void TxStateAddress::print(llvm::raw_ostream &stream,
                            const std::string &prefix) const {
   std::string tabsNext = appendTab(prefix);
 
@@ -451,7 +451,7 @@ void VersionedValue::print(llvm::raw_ostream &stream,
     stream << prefix << "no dependencies\n";
   } else {
     stream << prefix << "direct dependencies:";
-    for (std::map<ref<VersionedValue>, ref<MemoryLocation> >::const_iterator
+    for (std::map<ref<VersionedValue>, ref<TxStateAddress> >::const_iterator
              is = sources.begin(),
              it = is, ie = sources.end();
          it != ie; ++it) {

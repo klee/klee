@@ -122,7 +122,7 @@ namespace klee {
   ///   (symbolic) execution may go through the same instruction
   ///   multiple times. Hence the value of that instruction has to be
   ///   versioned.
-  /// - MemoryLocation: A representation of pointers. It is important
+/// - TxStateAddress: A representation of pointers. It is important
   ///   to note that each pointer is associated with memory allocation
   ///   and its displacement (offset) wrt. the base address of the
   ///   allocation.
@@ -138,11 +138,11 @@ namespace klee {
   /// <b>Notes on pointer flow propagation</b>
   ///
   /// A VersionedValue object may represent a pointer value, in which
-  /// case it is linked to possibly several MemoryLocation objects via
+/// case it is linked to possibly several TxStateAddress objects via
   /// VersionedValue#locations member variable. Such VersionedValue
   /// object may be used in memory access operations of LLVM
   /// (<b>load</b> or <b>store</b>). The memory dependency computation
-  /// propagates such pointer value information in MemoryLocation from
+/// propagates such pointer value information in TxStateAddress from
   /// one VersionedValue to another such that there is no need to
   /// inefficiently hunt for the pointer value at the point of use of
   /// the pointer. For example, a symbolic execution of LLVM's
@@ -157,7 +157,7 @@ namespace klee {
   /// \see TxTree
   /// \see TxTreeNode
   /// \see VersionedValue
-  /// \see MemoryLocation
+/// \see TxStateAddress
   class Dependency {
 
   public:
@@ -177,12 +177,12 @@ namespace klee {
     std::vector<ref<VersionedValue> > argumentValuesList;
 
     /// \brief The mapping of concrete locations to stored value
-    std::map<ref<MemoryLocation>,
+    std::map<ref<TxStateAddress>,
              std::pair<ref<VersionedValue>, ref<VersionedValue> > >
     concretelyAddressedStore;
 
     /// \brief The mapping of symbolic locations to stored value
-    std::map<ref<MemoryLocation>,
+    std::map<ref<TxStateAddress>,
              std::pair<ref<VersionedValue>, ref<VersionedValue> > >
     symbolicallyAddressedStore;
 
@@ -191,7 +191,7 @@ namespace klee {
 
     /// \brief Locations of this node and its ancestors that are needed for
     /// the core and dominates other locations.
-    std::set<ref<MemoryLocation> > coreLocations;
+    std::set<ref<TxStateAddress> > coreLocations;
 
     /// \brief The data layout of the analysis target program
     llvm::DataLayout *targetData;
@@ -223,7 +223,7 @@ namespace klee {
       ref<VersionedValue> vvalue =
           VersionedValue::create(loc, callHistory, address);
       vvalue->addLocation(
-          MemoryLocation::create(loc, callHistory, address, size));
+          TxStateAddress::create(loc, callHistory, address, size));
       return registerNewVersionedValue(loc, vvalue);
     }
 
@@ -231,10 +231,10 @@ namespace klee {
     /// offsets existing pointer
     ref<VersionedValue> getNewPointerValue(
         llvm::Value *value, const std::vector<llvm::Instruction *> &callHistory,
-        ref<Expr> address, ref<MemoryLocation> loc, ref<Expr> offset) {
+        ref<Expr> address, ref<TxStateAddress> loc, ref<Expr> offset) {
       ref<VersionedValue> vvalue =
           VersionedValue::create(value, callHistory, address);
-      vvalue->addLocation(MemoryLocation::create(loc, address, offset));
+      vvalue->addLocation(TxStateAddress::create(loc, address, offset));
       return registerNewVersionedValue(value, vvalue);
     }
 
@@ -248,7 +248,7 @@ namespace klee {
                                                  ref<Expr> expr);
 
     /// \brief Newly relate an location with its stored value
-    void updateStore(ref<MemoryLocation> loc, ref<VersionedValue> address,
+    void updateStore(ref<TxStateAddress> loc, ref<VersionedValue> address,
                      ref<VersionedValue> value);
 
     /// \brief Add flow dependency between source and target value
@@ -269,7 +269,7 @@ namespace klee {
     /// result of store/load via a memory location.
     void addDependencyViaLocation(ref<VersionedValue> source,
                                   ref<VersionedValue> target,
-                                  ref<MemoryLocation> via);
+                                  ref<TxStateAddress> via);
 
     /// \brief Add a flow dependency from a pointer value to a non-pointer
     /// value, for an external function call.
@@ -321,7 +321,7 @@ namespace klee {
 
     void getConcreteStore(
         const std::vector<llvm::Instruction *> &callHistory,
-        const std::map<ref<MemoryLocation>,
+        const std::map<ref<TxStateAddress>,
                        std::pair<ref<VersionedValue>, ref<VersionedValue> > > &
             store,
         std::set<const Array *> &replacements, bool coreOnly,
@@ -329,7 +329,7 @@ namespace klee {
 
     void getSymbolicStore(
         const std::vector<llvm::Instruction *> &callHistory,
-        const std::map<ref<MemoryLocation>,
+        const std::map<ref<TxStateAddress>,
                        std::pair<ref<VersionedValue>, ref<VersionedValue> > > &
             store,
         std::set<const Array *> &replacements, bool coreOnly,
