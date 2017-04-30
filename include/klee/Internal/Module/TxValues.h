@@ -34,6 +34,8 @@
 
 namespace klee {
 
+class TxStateAddress;
+
 class TxStateValue;
 
 class AllocationContext {
@@ -248,18 +250,15 @@ private:
   /// \brief Reason this was stored as needed value
   std::set<std::string> coreReasons;
 
-  void init(ref<TxStateValue> vvalue, std::set<const Array *> &replacements,
-            bool shadowing = false);
+  void init(llvm::Value *_value, ref<Expr> _expr, bool canInterpolateBound,
+            const std::set<std::string> &_coreReasons,
+            const std::set<ref<TxStateAddress> > _locations,
+            std::set<const Array *> &replacements, bool shadowing = false);
 
   TxInterpolantValue(ref<TxStateValue> vvalue,
-                     std::set<const Array *> &replacements) {
-    init(vvalue, replacements, true);
-  }
+                     std::set<const Array *> &replacements);
 
-  TxInterpolantValue(ref<TxStateValue> vvalue) {
-    std::set<const Array *> dummyReplacements;
-    init(vvalue, dummyReplacements);
-  }
+  TxInterpolantValue(ref<TxStateValue> vvalue);
 
 public:
   static ref<TxInterpolantValue> create(ref<TxStateValue> vvalue,

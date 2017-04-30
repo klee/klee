@@ -81,24 +81,38 @@ void TxInterpolantAddress::print(llvm::raw_ostream &stream,
 
 /**/
 
-void TxInterpolantValue::init(ref<TxStateValue> vvalue,
+TxInterpolantValue::TxInterpolantValue(ref<TxStateValue> vvalue,
+                                       std::set<const Array *> &replacements) {
+  init(vvalue->getValue(), vvalue->getExpression(),
+       vvalue->canInterpolateBound(), vvalue->getReasons(),
+       vvalue->getLocations(), replacements, true);
+}
+
+TxInterpolantValue::TxInterpolantValue(ref<TxStateValue> vvalue) {
+  std::set<const Array *> dummyReplacements;
+  init(vvalue->getValue(), vvalue->getExpression(),
+       vvalue->canInterpolateBound(), vvalue->getReasons(),
+       vvalue->getLocations(), dummyReplacements);
+}
+
+void TxInterpolantValue::init(llvm::Value *_value, ref<Expr> _expr,
+                              bool canInterpolateBound,
+                              const std::set<std::string> &_coreReasons,
+                              const std::set<ref<TxStateAddress> > _locations,
                               std::set<const Array *> &replacements,
                               bool shadowing) {
   refCount = 0;
   id = reinterpret_cast<uintptr_t>(this);
-  expr = shadowing ? ShadowArray::getShadowExpression(vvalue->getExpression(),
-                                                      replacements)
-                   : vvalue->getExpression();
-  value = vvalue->getValue();
+  expr =
+      shadowing ? ShadowArray::getShadowExpression(_expr, replacements) : _expr;
+  value = _value;
 
-  doNotUseBound = !(vvalue->canInterpolateBound());
+  doNotUseBound = !canInterpolateBound;
 
-  coreReasons = vvalue->getReasons();
+  coreReasons = _coreReasons;
 
-  const std::set<ref<TxStateAddress> > locations(vvalue->getLocations());
-
-  for (std::set<ref<TxStateAddress> >::const_iterator it = locations.begin(),
-                                                      ie = locations.end();
+  for (std::set<ref<TxStateAddress> >::const_iterator it = _locations.begin(),
+                                                      ie = _locations.end();
        it != ie; ++it) {
     ref<AllocationContext> context =
         (*it)->getContext(); // The allocation context
@@ -139,12 +153,12 @@ void TxInterpolantValue::init(ref<TxStateValue> vvalue,
   if (doNotUseBound)
     return;
 
-  if (!locations.empty()) {
+  if (!_locations.empty()) {
     // Here we compute memory bounds for checking pointer values. The memory
     // bound is the size of the allocation minus the offset; this is the weakest
     // precondition (interpolant) of memory bound checks done by KLEE.
-    for (std::set<ref<TxStateAddress> >::const_iterator it = locations.begin(),
-                                                        ie = locations.end();
+    for (std::set<ref<TxStateAddress> >::const_iterator it = _locations.begin(),
+                                                        ie = _locations.end();
          it != ie; ++it) {
       ref<AllocationContext> context =
           (*it)->getContext(); // The allocation site
