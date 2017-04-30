@@ -312,24 +312,14 @@ public:
   unsigned refCount;
 
 private:
-  /// \brief the context (allocation site and call history) of the allocation of
-  /// this address
-  ref<AllocationContext> context;
+  /// \brief Address for use in interpolants, with less information
+  ref<StoredAddress> interpolantStyleAddress;
 
   /// \brief The absolute address
   ref<Expr> address;
 
   /// \brief The base address
   ref<Expr> base;
-
-  /// \brief The offset wrt. the allocation
-  ref<Expr> offset;
-
-  /// \brief Indicates concrete address / offset
-  bool isConcrete;
-
-  /// \brief The value of the concrete offset
-  uint64_t concreteOffset;
 
   /// \brief The expressions representing the bound on the offset, i.e., the
   /// interpolant, in case it is symbolic.
@@ -343,14 +333,13 @@ private:
 
   MemoryLocation(ref<AllocationContext> _context, ref<Expr> &_address,
                  ref<Expr> &_base, ref<Expr> &_offset, uint64_t _size)
-      : refCount(0), context(_context), offset(_offset),
+      : refCount(0),
+        interpolantStyleAddress(StoredAddress::create(_context, _offset)),
         concreteOffsetBound(_size), size(_size) {
     bool unknownBase = false;
 
-    isConcrete = false;
     if (ConstantExpr *co = llvm::dyn_cast<ConstantExpr>(_offset)) {
-      isConcrete = true;
-      concreteOffset = co->getZExtValue();
+      uint64_t concreteOffset = co->getZExtValue();
 
       if (ConstantExpr *ca = llvm::dyn_cast<ConstantExpr>(_address)) {
         if (ConstantExpr *cb = llvm::dyn_cast<ConstantExpr>(_base)) {
@@ -412,49 +401,29 @@ public:
     ConstantExpr *c = llvm::dyn_cast<ConstantExpr>(offsetDelta);
     if (c && c->getZExtValue() == 0) {
       ref<Expr> base = loc->base;
-      ref<Expr> offset = loc->offset;
-      ref<MemoryLocation> ret(
-          new MemoryLocation(loc->context, address, base, offset, loc->size));
+      ref<Expr> offset = loc->getOffset();
+      ref<MemoryLocation> ret(new MemoryLocation(loc->getContext(), address,
+                                                 base, offset, loc->size));
       return ret;
     }
 
     ref<Expr> base = loc->base;
-    ref<Expr> newOffset = AddExpr::create(loc->offset, offsetDelta);
-    ref<MemoryLocation> ret(
-        new MemoryLocation(loc->context, address, base, newOffset, loc->size));
+    ref<Expr> newOffset = AddExpr::create(loc->getOffset(), offsetDelta);
+    ref<MemoryLocation> ret(new MemoryLocation(loc->getContext(), address, base,
+                                               newOffset, loc->size));
     return ret;
   }
 
-  ref<StoredAddress> getStoredAddress() {
-    return StoredAddress::create(context, offset);
-  }
+  ref<StoredAddress> &getStoredAddress() { return interpolantStyleAddress; }
 
   bool
   contextIsPrefixOf(const std::vector<llvm::Instruction *> &callHistory) const {
-    return context->isPrefixOf(callHistory);
-  }
-
-  int weakCompare(const MemoryLocation &other) const {
-    int res = context->compare(*(other.context.get()));
-    if (res)
-      return res;
-
-    if (offset == other.offset)
-      return 0;
-    if (isConcrete && other.isConcrete) {
-      if (concreteOffset < other.concreteOffset)
-        return -1;
-      return 1;
-    }
-
-    if (offset->hash() < other.offset->hash())
-      return -1;
-
-    return 1;
+    return getContext()->isPrefixOf(callHistory);
   }
 
   int compare(const MemoryLocation &other) const {
-    int res = weakCompare(other);
+    int res = interpolantStyleAddress->compare(
+        *(other.interpolantStyleAddress.get()));
     if (res)
       return res;
 
@@ -486,11 +455,13 @@ public:
     return symbolicOffsetBounds;
   }
 
-  ref<AllocationContext> getContext() const { return context; }
+  ref<AllocationContext> getContext() const {
+    return interpolantStyleAddress->getContext();
+  }
 
   uint64_t getConcreteOffsetBound() const { return concreteOffsetBound; }
 
-  ref<Expr> getOffset() const { return offset; }
+  ref<Expr> getOffset() const { return interpolantStyleAddress->getOffset(); }
 
   uint64_t getSize() const { return size; }
 
