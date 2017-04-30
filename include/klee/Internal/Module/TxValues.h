@@ -135,6 +135,176 @@ public:
   void print(llvm::raw_ostream &stream, const std::string &prefix) const;
 };
 
+/// \brief The address to be stored as an index in the subsumption table. This
+/// class wraps a memory location, supplying weaker address equality comparison
+/// for the purpose of subsumption checking
+class StoredAddress {
+public:
+  unsigned refCount;
+
+private:
+  /// \brief the context (allocation site and call history) of the allocation of
+  /// this address
+  ref<AllocationContext> context;
+
+  /// \brief The offset wrt. the allocation
+  ref<Expr> offset;
+
+  /// \brief Indicates concrete address / offset
+  bool isConcrete;
+
+  /// \brief The value of the concrete offset
+  uint64_t concreteOffset;
+
+  StoredAddress(ref<AllocationContext> _context, ref<Expr> _offset)
+      : refCount(0), context(_context), offset(_offset) {
+    isConcrete = false;
+    concreteOffset = 0;
+
+    if (ConstantExpr *ce = llvm::dyn_cast<ConstantExpr>(offset)) {
+      isConcrete = true;
+      concreteOffset = ce->getZExtValue();
+    }
+  }
+
+public:
+  static ref<StoredAddress> create(ref<AllocationContext> context,
+                                   ref<Expr> offset) {
+    ref<StoredAddress> ret(new StoredAddress(context, offset));
+    return ret;
+  }
+
+  ref<AllocationContext> getContext() const { return context; }
+
+  ref<Expr> getOffset() const { return offset; }
+
+  /// \brief The comparator of this class' objects. This member function is
+  /// weaker than standard comparator for MemoryLocation in that it does not
+  /// check for the equality of allocation id. Allocation id is used in
+  /// MemoryLocation (member variable MemoryLocation#allocationId) for the
+  /// purpose of distinguishing memory allocations of the same callsite and call
+  /// history, but of different loop iterations. This does not make sense when
+  /// comparing states for subsumption as in subsumption, related allocations in
+  /// different paths may have different allocation ids.
+  int compare(const StoredAddress &other) const {
+    int res = context->compare(*(other.context.get()));
+    if (res)
+      return res;
+
+    if (offset == other.offset)
+      return 0;
+    if (isConcrete && other.isConcrete) {
+      if (concreteOffset < other.concreteOffset)
+        return -1;
+      return 1;
+    }
+
+    if (offset->hash() < other.offset->hash())
+      return -1;
+
+    return 1;
+  }
+
+  void print(llvm::raw_ostream &stream) const { print(stream, ""); }
+
+  void print(llvm::raw_ostream &stream, const std::string &prefix) const;
+
+  void dump() const {
+    print(llvm::errs());
+    llvm::errs() << "\n";
+  }
+};
+
+/// \brief A processed form of a value to be stored in the subsumption table
+class StoredValue {
+public:
+  unsigned refCount;
+
+private:
+  ref<Expr> expr;
+
+  /// \brief In case the stored value was a pointer, then this should be a
+  /// non-empty map mapping of allocation sites to the set of offset bounds.
+  /// This constitutes the weakest liberal precondition of the memory checks
+  /// against which the offsets of the pointer values of the current state are
+  /// to be checked.
+  std::map<ref<AllocationContext>, std::set<ref<Expr> > > allocationBounds;
+
+  /// \brief In case the stored value was a pointer, then this should be a
+  /// non-empty map mapping of allocation sites to the set of offsets. This is
+  /// the offset values of the current state to be checked against the offset
+  /// bounds.
+  std::map<ref<AllocationContext>, std::set<ref<Expr> > > allocationOffsets;
+
+  /// \brief The id of this object
+  uint64_t id;
+
+  /// \brief The LLVM value of this object
+  llvm::Value *value;
+
+  /// \brief Do not use bound in subsumption check
+  bool doNotUseBound;
+
+  /// \brief Reason this was stored as needed value
+  std::set<std::string> coreReasons;
+
+  void init(ref<VersionedValue> vvalue, std::set<const Array *> &replacements,
+            bool shadowing = false);
+
+  StoredValue(ref<VersionedValue> vvalue,
+              std::set<const Array *> &replacements) {
+    init(vvalue, replacements, true);
+  }
+
+  StoredValue(ref<VersionedValue> vvalue) {
+    std::set<const Array *> dummyReplacements;
+    init(vvalue, dummyReplacements);
+  }
+
+public:
+  static ref<StoredValue> create(ref<VersionedValue> vvalue,
+                                 std::set<const Array *> &replacements) {
+    ref<StoredValue> sv(new StoredValue(vvalue, replacements));
+    return sv;
+  }
+
+  static ref<StoredValue> create(ref<VersionedValue> vvalue) {
+    ref<StoredValue> sv(new StoredValue(vvalue));
+    return sv;
+  }
+
+  ~StoredValue() {}
+
+  int compare(const StoredValue other) const {
+    if (id == other.id)
+      return 0;
+    if (id < other.id)
+      return -1;
+    return 1;
+  }
+
+  bool useBound() { return !doNotUseBound; }
+
+  bool isPointer() const { return !allocationOffsets.empty(); }
+
+  ref<Expr> getBoundsCheck(ref<StoredValue> svalue,
+                           std::set<ref<Expr> > &bounds,
+                           int debugSubsumptionLevel) const;
+
+  ref<Expr> getExpression() const { return expr; }
+
+  llvm::Value *getValue() const { return value; }
+
+  void print(llvm::raw_ostream &stream) const;
+
+  void print(llvm::raw_ostream &stream, const std::string &prefix) const;
+
+  void dump() const {
+    print(llvm::errs());
+    llvm::errs() << "\n";
+  }
+};
+
 /// \brief A class to represent memory locations.
 class MemoryLocation {
 
@@ -253,6 +423,10 @@ public:
     ref<MemoryLocation> ret(
         new MemoryLocation(loc->context, address, base, newOffset, loc->size));
     return ret;
+  }
+
+  ref<StoredAddress> getStoredAddress() {
+    return StoredAddress::create(context, offset);
   }
 
   bool
