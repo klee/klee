@@ -53,8 +53,8 @@ void AllocationContext::print(llvm::raw_ostream &stream,
 
 /**/
 
-void StoredAddress::print(llvm::raw_ostream &stream,
-                          const std::string &prefix) const {
+void TxInterpolantAddress::print(llvm::raw_ostream &stream,
+                                 const std::string &prefix) const {
   std::string tabsNext = appendTab(prefix);
 
   stream << prefix << "function/value: ";

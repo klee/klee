@@ -138,7 +138,7 @@ public:
 /// \brief The address to be stored as an index in the subsumption table. This
 /// class wraps a memory location, supplying weaker address equality comparison
 /// for the purpose of subsumption checking
-class StoredAddress {
+class TxInterpolantAddress {
 public:
   unsigned refCount;
 
@@ -156,7 +156,7 @@ private:
   /// \brief The value of the concrete offset
   uint64_t concreteOffset;
 
-  StoredAddress(ref<AllocationContext> _context, ref<Expr> _offset)
+  TxInterpolantAddress(ref<AllocationContext> _context, ref<Expr> _offset)
       : refCount(0), context(_context), offset(_offset) {
     isConcrete = false;
     concreteOffset = 0;
@@ -168,9 +168,9 @@ private:
   }
 
 public:
-  static ref<StoredAddress> create(ref<AllocationContext> context,
-                                   ref<Expr> offset) {
-    ref<StoredAddress> ret(new StoredAddress(context, offset));
+  static ref<TxInterpolantAddress> create(ref<AllocationContext> context,
+                                          ref<Expr> offset) {
+    ref<TxInterpolantAddress> ret(new TxInterpolantAddress(context, offset));
     return ret;
   }
 
@@ -186,7 +186,7 @@ public:
   /// history, but of different loop iterations. This does not make sense when
   /// comparing states for subsumption as in subsumption, related allocations in
   /// different paths may have different allocation ids.
-  int compare(const StoredAddress &other) const {
+  int compare(const TxInterpolantAddress &other) const {
     int res = context->compare(*(other.context.get()));
     if (res)
       return res;
@@ -313,7 +313,7 @@ public:
 
 private:
   /// \brief Address for use in interpolants, with less information
-  ref<StoredAddress> interpolantStyleAddress;
+  ref<TxInterpolantAddress> interpolantStyleAddress;
 
   /// \brief The absolute address
   ref<Expr> address;
@@ -333,8 +333,8 @@ private:
 
   MemoryLocation(ref<AllocationContext> _context, ref<Expr> &_address,
                  ref<Expr> &_base, ref<Expr> &_offset, uint64_t _size)
-      : refCount(0),
-        interpolantStyleAddress(StoredAddress::create(_context, _offset)),
+      : refCount(0), interpolantStyleAddress(
+                         TxInterpolantAddress::create(_context, _offset)),
         concreteOffsetBound(_size), size(_size) {
     bool unknownBase = false;
 
@@ -414,7 +414,9 @@ public:
     return ret;
   }
 
-  ref<StoredAddress> &getStoredAddress() { return interpolantStyleAddress; }
+  ref<TxInterpolantAddress> &getStoredAddress() {
+    return interpolantStyleAddress;
+  }
 
   bool
   contextIsPrefixOf(const std::vector<llvm::Instruction *> &callHistory) const {
