@@ -115,7 +115,7 @@ namespace klee {
   /// the domain of \f$h'\f$ is based on shadow data structure with
   /// the following main components:
   ///
-  /// - VersionedValue: LLVM values (i.e., variables) with versioning
+/// - TxStateValue: LLVM values (i.e., variables) with versioning
   ///   index. This represents the values loaded from memory into LLVM
   ///   temporary variables. They have versioning index, as, different
   ///   from LLVM values themselves which are static entities, a
@@ -137,26 +137,26 @@ namespace klee {
   ///
   /// <b>Notes on pointer flow propagation</b>
   ///
-  /// A VersionedValue object may represent a pointer value, in which
+/// A TxStateValue object may represent a pointer value, in which
 /// case it is linked to possibly several TxStateAddress objects via
-  /// VersionedValue#locations member variable. Such VersionedValue
+/// TxStateValue#locations member variable. Such TxStateValue
   /// object may be used in memory access operations of LLVM
   /// (<b>load</b> or <b>store</b>). The memory dependency computation
 /// propagates such pointer value information in TxStateAddress from
-  /// one VersionedValue to another such that there is no need to
+/// one TxStateValue to another such that there is no need to
   /// inefficiently hunt for the pointer value at the point of use of
   /// the pointer. For example, a symbolic execution of LLVM's
   /// <b>getelementptr</b> instruction would create a new
-  /// VersionedValue representing the return value of the
-  /// instruction. This new VersionedValue would inherit all members
-  /// of the VersionedValue#locations variable of the VersionedValue
+/// TxStateValue representing the return value of the
+/// instruction. This new TxStateValue would inherit all members
+/// of the TxStateValue#locations variable of the TxStateValue
   /// object representing the pointer argument of the instruction,
   /// with modified offsets according to the offset argument of the
   /// instruction.
   ///
   /// \see TxTree
   /// \see TxTreeNode
-  /// \see VersionedValue
+/// \see TxStateValue
 /// \see TxStateAddress
   class Dependency {
 
@@ -174,20 +174,20 @@ namespace klee {
     Dependency *parent;
 
     /// \brief Argument values to be passed onto callee
-    std::vector<ref<VersionedValue> > argumentValuesList;
+    std::vector<ref<TxStateValue> > argumentValuesList;
 
     /// \brief The mapping of concrete locations to stored value
     std::map<ref<TxStateAddress>,
-             std::pair<ref<VersionedValue>, ref<VersionedValue> > >
+             std::pair<ref<TxStateValue>, ref<TxStateValue> > >
     concretelyAddressedStore;
 
     /// \brief The mapping of symbolic locations to stored value
     std::map<ref<TxStateAddress>,
-             std::pair<ref<VersionedValue>, ref<VersionedValue> > >
+             std::pair<ref<TxStateValue>, ref<TxStateValue> > >
     symbolicallyAddressedStore;
 
     /// \brief The store of the versioned values
-    std::map<llvm::Value *, std::vector<ref<VersionedValue> > > valuesMap;
+    std::map<llvm::Value *, std::vector<ref<TxStateValue> > > valuesMap;
 
     /// \brief Locations of this node and its ancestors that are needed for
     /// the core and dominates other locations.
@@ -199,76 +199,76 @@ namespace klee {
     /// \brief Tests if a pointer points to a main function's argument
     static bool isMainArgument(const llvm::Value *loc);
 
-    /// \brief Register new versioned value, used by getNewVersionedValue
+    /// \brief Register new versioned value, used by getNewTxStateValue
     /// member functions
-    ref<VersionedValue> registerNewVersionedValue(llvm::Value *value,
-                                                  ref<VersionedValue> vvalue);
+    ref<TxStateValue> registerNewTxStateValue(llvm::Value *value,
+                                              ref<TxStateValue> vvalue);
 
     /// \brief Create a new versioned value object, typically when executing a
     /// new instruction, as a value for the instruction.
-    ref<VersionedValue>
-    getNewVersionedValue(llvm::Value *value,
-                         const std::vector<llvm::Instruction *> &callHistory,
-                         ref<Expr> valueExpr) {
-      return registerNewVersionedValue(
-          value, VersionedValue::create(value, callHistory, valueExpr));
+    ref<TxStateValue>
+    getNewTxStateValue(llvm::Value *value,
+                       const std::vector<llvm::Instruction *> &callHistory,
+                       ref<Expr> valueExpr) {
+      return registerNewTxStateValue(
+          value, TxStateValue::create(value, callHistory, valueExpr));
     }
 
     /// \brief Create a new versioned value object, which is a pointer with
     /// absolute address
-    ref<VersionedValue>
+    ref<TxStateValue>
     getNewPointerValue(llvm::Value *loc,
                        const std::vector<llvm::Instruction *> &callHistory,
                        ref<Expr> address, uint64_t size) {
-      ref<VersionedValue> vvalue =
-          VersionedValue::create(loc, callHistory, address);
+      ref<TxStateValue> vvalue =
+          TxStateValue::create(loc, callHistory, address);
       vvalue->addLocation(
           TxStateAddress::create(loc, callHistory, address, size));
-      return registerNewVersionedValue(loc, vvalue);
+      return registerNewTxStateValue(loc, vvalue);
     }
 
     /// \brief Create a new versioned value object, which is a pointer which
     /// offsets existing pointer
-    ref<VersionedValue> getNewPointerValue(
+    ref<TxStateValue> getNewPointerValue(
         llvm::Value *value, const std::vector<llvm::Instruction *> &callHistory,
         ref<Expr> address, ref<TxStateAddress> loc, ref<Expr> offset) {
-      ref<VersionedValue> vvalue =
-          VersionedValue::create(value, callHistory, address);
+      ref<TxStateValue> vvalue =
+          TxStateValue::create(value, callHistory, address);
       vvalue->addLocation(TxStateAddress::create(loc, address, offset));
-      return registerNewVersionedValue(value, vvalue);
+      return registerNewTxStateValue(value, vvalue);
     }
 
     /// \brief Gets the latest version of the location, but without checking
     /// for whether the value is constant or not.
-    ref<VersionedValue> getLatestValueNoConstantCheck(llvm::Value *value,
-                                                      ref<Expr> expr);
+    ref<TxStateValue> getLatestValueNoConstantCheck(llvm::Value *value,
+                                                    ref<Expr> expr);
 
     /// \brief Gets the latest pointer value for marking
-    ref<VersionedValue> getLatestValueForMarking(llvm::Value *val,
-                                                 ref<Expr> expr);
+    ref<TxStateValue> getLatestValueForMarking(llvm::Value *val,
+                                               ref<Expr> expr);
 
     /// \brief Newly relate an location with its stored value
-    void updateStore(ref<TxStateAddress> loc, ref<VersionedValue> address,
-                     ref<VersionedValue> value);
+    void updateStore(ref<TxStateAddress> loc, ref<TxStateValue> address,
+                     ref<TxStateValue> value);
 
     /// \brief Add flow dependency between source and target value
-    void addDependency(ref<VersionedValue> source, ref<VersionedValue> target,
+    void addDependency(ref<TxStateValue> source, ref<TxStateValue> target,
                        bool multiLocationsCheck = true);
 
     /// \brief Add flow dependency between source and target value
-    void addDependencyIntToPtr(ref<VersionedValue> source,
-                               ref<VersionedValue> target);
+    void addDependencyIntToPtr(ref<TxStateValue> source,
+                               ref<TxStateValue> target);
 
     /// \brief Add flow dependency between source and target pointers, offset by
     /// some amount
-    void addDependencyWithOffset(ref<VersionedValue> source,
-                                 ref<VersionedValue> target,
+    void addDependencyWithOffset(ref<TxStateValue> source,
+                                 ref<TxStateValue> target,
                                  ref<Expr> offsetDelta);
 
     /// \brief Add flow dependency between source and target value, as the
     /// result of store/load via a memory location.
-    void addDependencyViaLocation(ref<VersionedValue> source,
-                                  ref<VersionedValue> target,
+    void addDependencyViaLocation(ref<TxStateValue> source,
+                                  ref<TxStateValue> target,
                                   ref<TxStateAddress> via);
 
     /// \brief Add a flow dependency from a pointer value to a non-pointer
@@ -279,26 +279,26 @@ namespace klee {
     /// we assumed all memory access within the external function is valid.
     void addDependencyViaExternalFunction(
         const std::vector<llvm::Instruction *> &callHistory,
-        ref<VersionedValue> source, ref<VersionedValue> target);
+        ref<TxStateValue> source, ref<TxStateValue> target);
 
     /// \brief Add a flow dependency from a pointer value to a non-pointer
     /// value.
-    void addDependencyToNonPointer(ref<VersionedValue> source,
-                                   ref<VersionedValue> target);
+    void addDependencyToNonPointer(ref<TxStateValue> source,
+                                   ref<TxStateValue> target);
 
     /// \brief All values that flows to the target in one step
-    std::vector<ref<VersionedValue> >
-    directFlowSources(ref<VersionedValue> target) const;
+    std::vector<ref<TxStateValue> >
+    directFlowSources(ref<TxStateValue> target) const;
 
     /// \brief Mark as core all the values and locations that flows to the
     /// target
-    void markFlow(ref<VersionedValue> target, const std::string &reason) const;
+    void markFlow(ref<TxStateValue> target, const std::string &reason) const;
 
     /// \brief Mark as core all the pointer values and that flows to the target;
     /// and adjust its offset bound for memory bounds interpolation (a.k.a.
     /// slackening)
-    void markPointerFlow(ref<VersionedValue> target,
-                         ref<VersionedValue> checkedOffset,
+    void markPointerFlow(ref<TxStateValue> target,
+                         ref<TxStateValue> checkedOffset,
                          const std::string &reason) const {
       std::set<ref<Expr> > bounds;
       markPointerFlow(target, checkedOffset, bounds, reason);
@@ -307,8 +307,8 @@ namespace klee {
     /// \brief Mark as core all the pointer values and that flows to the target;
     /// and adjust its offset bound for memory bounds interpolation (a.k.a.
     /// slackening)
-    void markPointerFlow(ref<VersionedValue> target,
-                         ref<VersionedValue> checkedOffset,
+    void markPointerFlow(ref<TxStateValue> target,
+                         ref<TxStateValue> checkedOffset,
                          std::set<ref<Expr> > &bounds,
                          const std::string &reason) const;
 
@@ -317,12 +317,12 @@ namespace klee {
         llvm::CallInst *site,
         const std::vector<llvm::Instruction *> &callHistory,
         std::vector<ref<Expr> > &arguments,
-        std::vector<ref<VersionedValue> > &argumentValuesList);
+        std::vector<ref<TxStateValue> > &argumentValuesList);
 
     void getConcreteStore(
         const std::vector<llvm::Instruction *> &callHistory,
         const std::map<ref<TxStateAddress>,
-                       std::pair<ref<VersionedValue>, ref<VersionedValue> > > &
+                       std::pair<ref<TxStateValue>, ref<TxStateValue> > > &
             store,
         std::set<const Array *> &replacements, bool coreOnly,
         Dependency::ConcreteStore &concreteStore) const;
@@ -330,7 +330,7 @@ namespace klee {
     void getSymbolicStore(
         const std::vector<llvm::Instruction *> &callHistory,
         const std::map<ref<TxStateAddress>,
-                       std::pair<ref<VersionedValue>, ref<VersionedValue> > > &
+                       std::pair<ref<TxStateValue>, ref<TxStateValue> > > &
             store,
         std::set<const Array *> &replacements, bool coreOnly,
         Dependency::SymbolicStore &symbolicStore) const;
@@ -348,7 +348,7 @@ namespace klee {
 
     Dependency *cdr() const;
 
-    ref<VersionedValue>
+    ref<TxStateValue>
     getLatestValue(llvm::Value *value,
                    const std::vector<llvm::Instruction *> &callHistory,
                    ref<Expr> valueExpr, bool constraint = false);
@@ -406,7 +406,7 @@ namespace klee {
 
     /// \brief Given a versioned value, retrieve all its sources and mark them
     /// as in the core.
-    void markAllValues(ref<VersionedValue> value, const std::string &reason);
+    void markAllValues(ref<TxStateValue> value, const std::string &reason);
 
     /// \brief Given an LLVM value, retrieve all its sources and mark them as in
     /// the core.

@@ -205,7 +205,7 @@ class PathCondition {
   Dependency *dependency;
 
   /// \brief the condition value from which the constraint was generated
-  ref<VersionedValue> condition;
+  ref<TxStateValue> condition;
 
   /// \brief When true, indicates that the constraint should be included in the
   /// interpolant

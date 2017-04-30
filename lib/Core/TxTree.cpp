@@ -380,7 +380,7 @@ PathCondition::PathCondition(
     const std::vector<llvm::Instruction *> &callHistory, PathCondition *prev)
     : constraint(constraint), shadowConstraint(constraint), shadowed(false),
       dependency(dependency), core(false), tail(prev) {
-  ref<VersionedValue> emptyCondition;
+  ref<TxStateValue> emptyCondition;
   if (dependency) {
     condition =
         dependency->getLatestValue(_condition, callHistory, constraint, true);

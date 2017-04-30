@@ -11,8 +11,8 @@
 /// This file contains the implementations of the classes related to values in
 /// the symbolic execution state and interpolant table. Values that belong to
 /// the interpolant are versioned such as TxStateAddress, which is distinguished
-/// by its base address, and VersionedValue, which is distinguished by its
-/// version, and VersionedValue, which is distinguished by its own object id.
+/// by its base address, and TxStateValue, which is distinguished by its
+/// version, and TxStateValue, which is distinguished by its own object id.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -81,7 +81,7 @@ void TxInterpolantAddress::print(llvm::raw_ostream &stream,
 
 /**/
 
-void TxInterpolantValue::init(ref<VersionedValue> vvalue,
+void TxInterpolantValue::init(ref<TxStateValue> vvalue,
                               std::set<const Array *> &replacements,
                               bool shadowing) {
   refCount = 0;
@@ -353,7 +353,7 @@ void TxInterpolantValue::print(llvm::raw_ostream &stream,
 
 /**/
 
-void TxStateAddress::adjustOffsetBound(ref<VersionedValue> checkedAddress,
+void TxStateAddress::adjustOffsetBound(ref<TxStateValue> checkedAddress,
                                        std::set<ref<Expr> > &_bounds) {
   std::set<ref<TxStateAddress> > locations = checkedAddress->getLocations();
   std::set<ref<Expr> > bounds(_bounds);
@@ -440,8 +440,8 @@ void TxStateAddress::print(llvm::raw_ostream &stream,
 
 /**/
 
-void VersionedValue::print(llvm::raw_ostream &stream,
-                           const std::string &prefix) const {
+void TxStateValue::print(llvm::raw_ostream &stream,
+                         const std::string &prefix) const {
   std::string tabsNext = appendTab(prefix);
 
   printNoDependency(stream, prefix);
@@ -451,7 +451,7 @@ void VersionedValue::print(llvm::raw_ostream &stream,
     stream << prefix << "no dependencies\n";
   } else {
     stream << prefix << "direct dependencies:";
-    for (std::map<ref<VersionedValue>, ref<TxStateAddress> >::const_iterator
+    for (std::map<ref<TxStateValue>, ref<TxStateAddress> >::const_iterator
              is = sources.begin(),
              it = is, ie = sources.end();
          it != ie; ++it) {
@@ -467,8 +467,8 @@ void VersionedValue::print(llvm::raw_ostream &stream,
   }
 }
 
-void VersionedValue::printNoDependency(llvm::raw_ostream &stream,
-                                       const std::string &prefix) const {
+void TxStateValue::printNoDependency(llvm::raw_ostream &stream,
+                                     const std::string &prefix) const {
   std::string tabsNext = appendTab(prefix);
 
   if (core) {

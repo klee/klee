@@ -11,8 +11,8 @@
 /// This file contains the declarations of the classes related to values in the
 /// symbolic execution state and interpolant table. Values that belong to the
 /// interpolant are versioned such as TxStateAddress, which is distinguished by
-/// its base address, and VersionedValue, which is distinguished by its version,
-/// and VersionedValue, which is distinguished by its own object id.
+/// its base address, and TxStateValue, which is distinguished by its version,
+/// and TxStateValue, which is distinguished by its own object id.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -34,7 +34,7 @@
 
 namespace klee {
 
-class VersionedValue;
+class TxStateValue;
 
 class AllocationContext {
 
@@ -248,27 +248,27 @@ private:
   /// \brief Reason this was stored as needed value
   std::set<std::string> coreReasons;
 
-  void init(ref<VersionedValue> vvalue, std::set<const Array *> &replacements,
+  void init(ref<TxStateValue> vvalue, std::set<const Array *> &replacements,
             bool shadowing = false);
 
-  TxInterpolantValue(ref<VersionedValue> vvalue,
+  TxInterpolantValue(ref<TxStateValue> vvalue,
                      std::set<const Array *> &replacements) {
     init(vvalue, replacements, true);
   }
 
-  TxInterpolantValue(ref<VersionedValue> vvalue) {
+  TxInterpolantValue(ref<TxStateValue> vvalue) {
     std::set<const Array *> dummyReplacements;
     init(vvalue, dummyReplacements);
   }
 
 public:
-  static ref<TxInterpolantValue> create(ref<VersionedValue> vvalue,
+  static ref<TxInterpolantValue> create(ref<TxStateValue> vvalue,
                                         std::set<const Array *> &replacements) {
     ref<TxInterpolantValue> sv(new TxInterpolantValue(vvalue, replacements));
     return sv;
   }
 
-  static ref<TxInterpolantValue> create(ref<VersionedValue> vvalue) {
+  static ref<TxInterpolantValue> create(ref<TxStateValue> vvalue) {
     ref<TxInterpolantValue> sv(new TxInterpolantValue(vvalue));
     return sv;
   }
@@ -439,7 +439,7 @@ public:
   }
 
   /// \brief Adjust the offset bound for interpolation (a.k.a. slackening)
-  void adjustOffsetBound(ref<VersionedValue> checkedAddress,
+  void adjustOffsetBound(ref<TxStateValue> checkedAddress,
                          std::set<ref<Expr> > &bounds);
 
   bool hasConstantAddress() const { return llvm::isa<ConstantExpr>(address); }
@@ -489,7 +489,7 @@ public:
 
 /// \brief A class that represents LLVM value that can be destructively
 /// updated (versioned).
-class VersionedValue {
+class TxStateValue {
 public:
   unsigned refCount;
 
@@ -509,7 +509,7 @@ private:
   uint64_t id;
 
   /// \brief Dependency sources of this value
-  std::map<ref<VersionedValue>, ref<TxStateAddress> > sources;
+  std::map<ref<TxStateValue>, ref<TxStateAddress> > sources;
 
   /// \brief The context of this value
   std::vector<llvm::Instruction *> callHistory;
@@ -519,18 +519,18 @@ private:
   bool doNotInterpolateBound;
 
   /// \brief The load address of this value, in case it was a load instruction
-  ref<VersionedValue> loadAddress;
+  ref<TxStateValue> loadAddress;
 
   /// \brief The address by which the loaded value was stored, in case this
   /// was a load instruction
-  ref<VersionedValue> storeAddress;
+  ref<TxStateValue> storeAddress;
 
   /// \brief Reasons for this value to be in the core
   std::set<std::string> coreReasons;
 
-  VersionedValue(llvm::Value *value,
-                 const std::vector<llvm::Instruction *> &_callHistory,
-                 ref<Expr> _valueExpr)
+  TxStateValue(llvm::Value *value,
+               const std::vector<llvm::Instruction *> &_callHistory,
+               ref<Expr> _valueExpr)
       : refCount(0), value(value), valueExpr(_valueExpr), core(false),
         id(reinterpret_cast<uint64_t>(this)), callHistory(_callHistory),
         doNotInterpolateBound(false) {}
@@ -553,14 +553,13 @@ private:
                          const std::string &prefix) const;
 
 public:
-  ~VersionedValue() { locations.clear(); }
+  ~TxStateValue() { locations.clear(); }
 
-  static ref<VersionedValue>
+  static ref<TxStateValue>
   create(llvm::Value *value,
          const std::vector<llvm::Instruction *> &_callHistory,
          ref<Expr> valueExpr) {
-    ref<VersionedValue> vvalue(
-        new VersionedValue(value, _callHistory, valueExpr));
+    ref<TxStateValue> vvalue(new TxStateValue(value, _callHistory, valueExpr));
     return vvalue;
   }
 
@@ -568,29 +567,29 @@ public:
 
   void disableBoundInterpolation() { doNotInterpolateBound = true; }
 
-  void setLoadAddress(ref<VersionedValue> _loadAddress) {
+  void setLoadAddress(ref<TxStateValue> _loadAddress) {
     loadAddress = _loadAddress;
   }
 
-  ref<VersionedValue> getLoadAddress() { return loadAddress; }
+  ref<TxStateValue> getLoadAddress() { return loadAddress; }
 
-  void setStoreAddress(ref<VersionedValue> _storeAddress) {
+  void setStoreAddress(ref<TxStateValue> _storeAddress) {
     storeAddress = _storeAddress;
   }
 
-  ref<VersionedValue> getStoreAddress() { return storeAddress; }
+  ref<TxStateValue> getStoreAddress() { return storeAddress; }
 
   /// \brief The core routine for adding flow dependency between source and
   /// target value
-  void addDependency(ref<VersionedValue> source, ref<TxStateAddress> via) {
+  void addDependency(ref<TxStateValue> source, ref<TxStateAddress> via) {
     sources[source] = via;
   }
 
-  const std::map<ref<VersionedValue>, ref<TxStateAddress> > &getSources() {
+  const std::map<ref<TxStateValue>, ref<TxStateAddress> > &getSources() {
     return sources;
   }
 
-  int compare(const VersionedValue other) const {
+  int compare(const TxStateValue other) const {
     if (id == other.id)
       return 0;
     if (id < other.id)
