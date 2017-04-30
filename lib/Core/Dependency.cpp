@@ -64,18 +64,18 @@ void Dependency::getConcreteStore(
     if (!coreOnly) {
       const llvm::Value *base = it->first->getContext()->getValue();
       concreteStore[base][it->first->getInterpolantStyleAddress()] =
-          TxInterpolantValue::create(it->second.second);
+          it->second.second->getInterpolantStyleValue();
     } else if (it->second.second->isCore()) {
       // An address is in the core if it stores a value that is in the core
       const llvm::Value *base = it->first->getContext()->getValue();
 #ifdef ENABLE_Z3
       if (!NoExistential) {
         concreteStore[base][it->first->getInterpolantStyleAddress()] =
-            TxInterpolantValue::create(it->second.second, replacements);
+            it->second.second->getInterpolantStyleValue(replacements);
       } else
 #endif
         concreteStore[base][it->first->getInterpolantStyleAddress()] =
-            TxInterpolantValue::create(it->second.second);
+            it->second.second->getInterpolantStyleValue();
     }
   }
 }
@@ -102,7 +102,7 @@ void Dependency::getSymbolicStore(
       llvm::Value *base = it->first->getContext()->getValue();
       symbolicStore[base].push_back(Dependency::AddressValuePair(
           it->first->getInterpolantStyleAddress(),
-          TxInterpolantValue::create(it->second.second)));
+          it->second.second->getInterpolantStyleValue()));
     } else if (it->second.second->isCore()) {
       // An address is in the core if it stores a value that is in the core
       llvm::Value *base = it->first->getContext()->getValue();
@@ -111,12 +111,12 @@ void Dependency::getSymbolicStore(
         symbolicStore[base].push_back(Dependency::AddressValuePair(
             TxStateAddress::create(it->first, replacements)
                 ->getInterpolantStyleAddress(),
-            TxInterpolantValue::create(it->second.second, replacements)));
+            it->second.second->getInterpolantStyleValue()));
       } else
 #endif
         symbolicStore[base].push_back(Dependency::AddressValuePair(
             it->first->getInterpolantStyleAddress(),
-            TxInterpolantValue::create(it->second.second)));
+            it->second.second->getInterpolantStyleValue()));
     }
   }
 }

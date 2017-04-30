@@ -255,20 +255,42 @@ private:
             const std::set<ref<TxStateAddress> > _locations,
             std::set<const Array *> &replacements, bool shadowing = false);
 
-  TxInterpolantValue(ref<TxStateValue> vvalue,
-                     std::set<const Array *> &replacements);
+  TxInterpolantValue(llvm::Value *value, ref<Expr> expr,
+                     bool canInterpolateBound,
+                     const std::set<std::string> &coreReasons,
+                     const std::set<ref<TxStateAddress> > locations,
+                     std::set<const Array *> &replacements) {
+    init(value, expr, canInterpolateBound, coreReasons, locations, replacements,
+         true);
+  }
 
-  TxInterpolantValue(ref<TxStateValue> vvalue);
+  TxInterpolantValue(llvm::Value *value, ref<Expr> expr,
+                     bool canInterpolateBound,
+                     const std::set<std::string> &coreReasons,
+                     const std::set<ref<TxStateAddress> > locations) {
+    std::set<const Array *> dummyReplacements;
+    init(value, expr, canInterpolateBound, coreReasons, locations,
+         dummyReplacements);
+  }
 
 public:
-  static ref<TxInterpolantValue> create(ref<TxStateValue> vvalue,
-                                        std::set<const Array *> &replacements) {
-    ref<TxInterpolantValue> sv(new TxInterpolantValue(vvalue, replacements));
+  static ref<TxInterpolantValue>
+  create(llvm::Value *value, ref<Expr> expr, bool canInterpolateBound,
+         const std::set<std::string> &coreReasons,
+         const std::set<ref<TxStateAddress> > locations,
+         std::set<const Array *> &replacements) {
+    ref<TxInterpolantValue> sv(
+        new TxInterpolantValue(value, expr, canInterpolateBound, coreReasons,
+                               locations, replacements));
     return sv;
   }
 
-  static ref<TxInterpolantValue> create(ref<TxStateValue> vvalue) {
-    ref<TxInterpolantValue> sv(new TxInterpolantValue(vvalue));
+  static ref<TxInterpolantValue>
+  create(llvm::Value *value, ref<Expr> expr, bool canInterpolateBound,
+         const std::set<std::string> &coreReasons,
+         const std::set<ref<TxStateAddress> > locations) {
+    ref<TxInterpolantValue> sv(new TxInterpolantValue(
+        value, expr, canInterpolateBound, coreReasons, locations));
     return sv;
   }
 
@@ -624,6 +646,17 @@ public:
   }
 
   const std::set<std::string> &getReasons() const { return coreReasons; }
+
+  ref<TxInterpolantValue> getInterpolantStyleValue() {
+    return TxInterpolantValue::create(value, valueExpr, canInterpolateBound(),
+                                      coreReasons, locations);
+  }
+
+  ref<TxInterpolantValue>
+  getInterpolantStyleValue(std::set<const Array *> &replacements) {
+    return TxInterpolantValue::create(value, valueExpr, canInterpolateBound(),
+                                      coreReasons, locations, replacements);
+  }
 
   /// \brief Print the content of the object into a stream.
   ///

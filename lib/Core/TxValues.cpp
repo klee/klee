@@ -81,20 +81,6 @@ void TxInterpolantAddress::print(llvm::raw_ostream &stream,
 
 /**/
 
-TxInterpolantValue::TxInterpolantValue(ref<TxStateValue> vvalue,
-                                       std::set<const Array *> &replacements) {
-  init(vvalue->getValue(), vvalue->getExpression(),
-       vvalue->canInterpolateBound(), vvalue->getReasons(),
-       vvalue->getLocations(), replacements, true);
-}
-
-TxInterpolantValue::TxInterpolantValue(ref<TxStateValue> vvalue) {
-  std::set<const Array *> dummyReplacements;
-  init(vvalue->getValue(), vvalue->getExpression(),
-       vvalue->canInterpolateBound(), vvalue->getReasons(),
-       vvalue->getLocations(), dummyReplacements);
-}
-
 void TxInterpolantValue::init(llvm::Value *_value, ref<Expr> _expr,
                               bool canInterpolateBound,
                               const std::set<std::string> &_coreReasons,
