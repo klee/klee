@@ -230,13 +230,6 @@ public:
     return 1;
   }
 
-  /// \brief Copy this address, but increment the indirection count
-  ref<TxInterpolantAddress> copyWithIndirectionCountIncrement() {
-    ref<TxInterpolantAddress> ret = create(context, offset);
-    (ret->indirectionCount)++;
-    return ret;
-  }
-
   void incrementIndirectionCount() { indirectionCount++; }
 
   bool isHeapAddress() { return context->ty == AllocationContext::HEAP; }
