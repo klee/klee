@@ -146,13 +146,13 @@ void Dependency::getConcreteStore(
     if (!coreOnly) {
       _concreteStore[it->first] = it->second.second;
     } else if (it->second.second->isCore()) {
-        // An address is in the core if it stores a value that is in the core
+      // An address is in the core if it stores a value that is in the core
       _concreteStore[it->first] = it->second.second;
-        std::set<ref<TxStateAddress> > loadLocations =
-            it->second.second->getLoadLocations();
-        valueAddressMap[it->first] =
-            std::pair<std::set<ref<TxStateAddress> >, uint64_t>(
-                loadLocations, it->second.second->getDirectUseCount());
+      std::set<ref<TxStateAddress> > loadLocations =
+          it->second.second->getLoadLocations();
+      valueAddressMap[it->first] =
+          std::pair<std::set<ref<TxStateAddress> >, uint64_t>(
+              loadLocations, it->second.second->getDirectUseCount());
     }
   }
 
