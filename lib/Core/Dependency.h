@@ -18,7 +18,7 @@
 #define KLEE_DEPENDENCY_H
 
 #include "klee/Config/Version.h"
-#include "klee/Internal/Module/VersionedValue.h"
+#include "klee/Internal/Module/TxValues.h"
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
 #include <llvm/IR/Function.h>
@@ -37,141 +37,6 @@
 #include <vector>
 
 namespace klee {
-
-/// \brief The address to be stored as an index in the subsumption table. This
-/// class wraps a memory location, supplying weaker address equality comparison
-/// for the purpose of subsumption checking
-class StoredAddress {
-public:
-  unsigned refCount;
-
-  ref<MemoryLocation> loc;
-
-private:
-  StoredAddress(ref<MemoryLocation> _loc) : refCount(0), loc(_loc) {}
-
-public:
-  static ref<StoredAddress> create(ref<MemoryLocation> loc) {
-    ref<StoredAddress> ret(new StoredAddress(loc));
-    return ret;
-  }
-
-  /// \brief The comparator of this class' objects. This member function is
-  /// weaker than standard comparator for MemoryLocation in that it does not
-  /// check for the equality of allocation id. Allocation id is used in
-  /// MemoryLocation (member variable MemoryLocation#allocationId) for the
-  /// purpose of distinguishing memory allocations of the same callsite and call
-  /// history, but of different loop iterations. This does not make sense when
-  /// comparing states for subsumption as in subsumption, related allocations in
-  /// different paths may have different allocation ids.
-  int compare(const StoredAddress &other) const {
-    return loc->weakCompare(*(other.loc.get()));
-  }
-
-  void print(llvm::raw_ostream &stream) const { print(stream, ""); }
-
-  void print(llvm::raw_ostream &stream, const std::string &prefix) const {
-    loc->print(stream, prefix);
-  }
-
-  void dump() const {
-    print(llvm::errs());
-    llvm::errs() << "\n";
-  }
-};
-
-  /// \brief A processed form of a value to be stored in the subsumption table
-  class StoredValue {
-  public:
-    unsigned refCount;
-
-  private:
-    ref<Expr> expr;
-
-    /// \brief In case the stored value was a pointer, then this should be a
-    /// non-empty map mapping of allocation sites to the set of offset bounds.
-    /// This constitutes the weakest liberal precondition of the memory checks
-    /// against which the offsets of the pointer values of the current state are
-    /// to be checked.
-    std::map<ref<AllocationContext>, std::set<ref<Expr> > > allocationBounds;
-
-    /// \brief In case the stored value was a pointer, then this should be a
-    /// non-empty map mapping of allocation sites to the set of offsets. This is
-    /// the offset values of the current state to be checked against the offset
-    /// bounds.
-    std::map<ref<AllocationContext>, std::set<ref<Expr> > > allocationOffsets;
-
-    /// \brief The id of this object
-    uint64_t id;
-
-    /// \brief The LLVM value of this object
-    llvm::Value *value;
-
-    /// \brief Do not use bound in subsumption check
-    bool doNotUseBound;
-
-    /// \brief Reason this was stored as needed value
-    std::set<std::string> coreReasons;
-
-    void init(ref<VersionedValue> vvalue, std::set<const Array *> &replacements,
-              const std::set<std::string> &coreReasons, bool shadowing = false);
-
-    StoredValue(ref<VersionedValue> vvalue,
-                std::set<const Array *> &replacements,
-                const std::set<std::string> &coreReasons) {
-      init(vvalue, replacements, coreReasons, true);
-    }
-
-    StoredValue(ref<VersionedValue> vvalue,
-                const std::set<std::string> &coreReasons) {
-      std::set<const Array *> dummyReplacements;
-      init(vvalue, dummyReplacements, coreReasons);
-    }
-
-  public:
-    static ref<StoredValue> create(ref<VersionedValue> vvalue,
-                                   std::set<const Array *> &replacements) {
-      ref<StoredValue> sv(
-          new StoredValue(vvalue, replacements, vvalue->getReasons()));
-      return sv;
-    }
-
-    static ref<StoredValue> create(ref<VersionedValue> vvalue) {
-      ref<StoredValue> sv(new StoredValue(vvalue, vvalue->getReasons()));
-      return sv;
-    }
-
-    ~StoredValue() {}
-
-    int compare(const StoredValue other) const {
-      if (id == other.id)
-        return 0;
-      if (id < other.id)
-        return -1;
-      return 1;
-    }
-
-    bool useBound() { return !doNotUseBound; }
-
-    bool isPointer() const { return !allocationOffsets.empty(); }
-
-    ref<Expr> getBoundsCheck(ref<StoredValue> svalue,
-                             std::set<ref<Expr> > &bounds,
-                             int debugSubsumptionLevel) const;
-
-    ref<Expr> getExpression() const { return expr; }
-
-    llvm::Value *getValue() const { return value; }
-
-    void print(llvm::raw_ostream &stream) const;
-
-    void print(llvm::raw_ostream &stream, const std::string &prefix) const;
-
-    void dump() const {
-      print(llvm::errs());
-      llvm::errs() << "\n";
-    }
-  };
 
   /// \brief Computation of memory regions the unsatisfiability core depends
   /// upon, which is used to compute the interpolant stored in the table.
@@ -250,14 +115,14 @@ public:
   /// the domain of \f$h'\f$ is based on shadow data structure with
   /// the following main components:
   ///
-  /// - VersionedValue: LLVM values (i.e., variables) with versioning
+/// - TxStateValue: LLVM values (i.e., variables) with versioning
   ///   index. This represents the values loaded from memory into LLVM
   ///   temporary variables. They have versioning index, as, different
   ///   from LLVM values themselves which are static entities, a
   ///   (symbolic) execution may go through the same instruction
   ///   multiple times. Hence the value of that instruction has to be
   ///   versioned.
-  /// - MemoryLocation: A representation of pointers. It is important
+/// - TxStateAddress: A representation of pointers. It is important
   ///   to note that each pointer is associated with memory allocation
   ///   and its displacement (offset) wrt. the base address of the
   ///   allocation.
@@ -272,32 +137,34 @@ public:
   ///
   /// <b>Notes on pointer flow propagation</b>
   ///
-  /// A VersionedValue object may represent a pointer value, in which
-  /// case it is linked to possibly several MemoryLocation objects via
-  /// VersionedValue#locations member variable. Such VersionedValue
+/// A TxStateValue object may represent a pointer value, in which
+/// case it is linked to possibly several TxStateAddress objects via
+/// TxStateValue#locations member variable. Such TxStateValue
   /// object may be used in memory access operations of LLVM
   /// (<b>load</b> or <b>store</b>). The memory dependency computation
-  /// propagates such pointer value information in MemoryLocation from
-  /// one VersionedValue to another such that there is no need to
+/// propagates such pointer value information in TxStateAddress from
+/// one TxStateValue to another such that there is no need to
   /// inefficiently hunt for the pointer value at the point of use of
   /// the pointer. For example, a symbolic execution of LLVM's
   /// <b>getelementptr</b> instruction would create a new
-  /// VersionedValue representing the return value of the
-  /// instruction. This new VersionedValue would inherit all members
-  /// of the VersionedValue#locations variable of the VersionedValue
+/// TxStateValue representing the return value of the
+/// instruction. This new TxStateValue would inherit all members
+/// of the TxStateValue#locations variable of the TxStateValue
   /// object representing the pointer argument of the instruction,
   /// with modified offsets according to the offset argument of the
   /// instruction.
   ///
   /// \see TxTree
   /// \see TxTreeNode
-  /// \see VersionedValue
-  /// \see MemoryLocation
+/// \see TxStateValue
+/// \see TxStateAddress
   class Dependency {
 
   public:
-    typedef std::pair<ref<StoredAddress>, ref<StoredValue> > AddressValuePair;
-    typedef std::map<ref<StoredAddress>, ref<StoredValue> > ConcreteStoreMap;
+    typedef std::pair<ref<TxInterpolantAddress>, ref<TxInterpolantValue> >
+    AddressValuePair;
+    typedef std::map<ref<TxInterpolantAddress>, ref<TxInterpolantValue> >
+    ConcreteStoreMap;
     typedef std::vector<AddressValuePair> SymbolicStoreMap;
     typedef std::map<const llvm::Value *, ConcreteStoreMap> ConcreteStore;
     typedef std::map<const llvm::Value *, SymbolicStoreMap> SymbolicStore;
@@ -307,24 +174,24 @@ public:
     Dependency *parent;
 
     /// \brief Argument values to be passed onto callee
-    std::vector<ref<VersionedValue> > argumentValuesList;
+    std::vector<ref<TxStateValue> > argumentValuesList;
 
     /// \brief The mapping of concrete locations to stored value
-    std::map<ref<MemoryLocation>,
-             std::pair<ref<VersionedValue>, ref<VersionedValue> > >
+    std::map<ref<TxStateAddress>,
+             std::pair<ref<TxStateValue>, ref<TxStateValue> > >
     concretelyAddressedStore;
 
     /// \brief The mapping of symbolic locations to stored value
-    std::map<ref<MemoryLocation>,
-             std::pair<ref<VersionedValue>, ref<VersionedValue> > >
+    std::map<ref<TxStateAddress>,
+             std::pair<ref<TxStateValue>, ref<TxStateValue> > >
     symbolicallyAddressedStore;
 
     /// \brief The store of the versioned values
-    std::map<llvm::Value *, std::vector<ref<VersionedValue> > > valuesMap;
+    std::map<llvm::Value *, std::vector<ref<TxStateValue> > > valuesMap;
 
     /// \brief Locations of this node and its ancestors that are needed for
     /// the core and dominates other locations.
-    std::set<ref<MemoryLocation> > coreLocations;
+    std::set<ref<TxStateAddress> > coreLocations;
 
     /// \brief The data layout of the analysis target program
     llvm::DataLayout *targetData;
@@ -332,77 +199,77 @@ public:
     /// \brief Tests if a pointer points to a main function's argument
     static bool isMainArgument(const llvm::Value *loc);
 
-    /// \brief Register new versioned value, used by getNewVersionedValue
+    /// \brief Register new versioned value, used by getNewTxStateValue
     /// member functions
-    ref<VersionedValue> registerNewVersionedValue(llvm::Value *value,
-                                                  ref<VersionedValue> vvalue);
+    ref<TxStateValue> registerNewTxStateValue(llvm::Value *value,
+                                              ref<TxStateValue> vvalue);
 
     /// \brief Create a new versioned value object, typically when executing a
     /// new instruction, as a value for the instruction.
-    ref<VersionedValue>
-    getNewVersionedValue(llvm::Value *value,
-                         const std::vector<llvm::Instruction *> &callHistory,
-                         ref<Expr> valueExpr) {
-      return registerNewVersionedValue(
-          value, VersionedValue::create(value, callHistory, valueExpr));
+    ref<TxStateValue>
+    getNewTxStateValue(llvm::Value *value,
+                       const std::vector<llvm::Instruction *> &callHistory,
+                       ref<Expr> valueExpr) {
+      return registerNewTxStateValue(
+          value, TxStateValue::create(value, callHistory, valueExpr));
     }
 
     /// \brief Create a new versioned value object, which is a pointer with
     /// absolute address
-    ref<VersionedValue>
+    ref<TxStateValue>
     getNewPointerValue(llvm::Value *loc,
                        const std::vector<llvm::Instruction *> &callHistory,
                        ref<Expr> address, uint64_t size) {
-      ref<VersionedValue> vvalue =
-          VersionedValue::create(loc, callHistory, address);
+      ref<TxStateValue> vvalue =
+          TxStateValue::create(loc, callHistory, address);
       vvalue->addLocation(
-          MemoryLocation::create(loc, callHistory, address, size));
-      return registerNewVersionedValue(loc, vvalue);
+          TxStateAddress::create(loc, callHistory, address, size));
+      return registerNewTxStateValue(loc, vvalue);
     }
 
     /// \brief Create a new versioned value object, which is a pointer which
     /// offsets existing pointer
-    ref<VersionedValue> getNewPointerValue(
+    ref<TxStateValue> getNewPointerValue(
         llvm::Value *value, const std::vector<llvm::Instruction *> &callHistory,
-        ref<Expr> address, ref<MemoryLocation> loc, ref<Expr> offset) {
-      ref<VersionedValue> vvalue =
-          VersionedValue::create(value, callHistory, address);
-      vvalue->addLocation(MemoryLocation::create(loc, address, offset));
-      return registerNewVersionedValue(value, vvalue);
+        ref<Expr> address, ref<TxStateAddress> loc, ref<Expr> offset) {
+      ref<TxStateValue> vvalue =
+          TxStateValue::create(value, callHistory, address);
+      vvalue->addLocation(TxStateAddress::create(loc, address, offset));
+      return registerNewTxStateValue(value, vvalue);
     }
 
     /// \brief Gets the latest version of the location, but without checking
     /// for whether the value is constant or not.
-    ref<VersionedValue> getLatestValueNoConstantCheck(llvm::Value *value,
-                                                      ref<Expr> expr);
+    ref<TxStateValue> getLatestValueNoConstantCheck(llvm::Value *value,
+                                                    ref<Expr> expr);
 
     /// \brief Gets the latest pointer value for marking
-    ref<VersionedValue> getLatestValueForMarking(llvm::Value *val,
-                                                 ref<Expr> expr);
+    ref<TxStateValue> getLatestValueForMarking(llvm::Value *val,
+                                               ref<Expr> expr);
 
     /// \brief Newly relate an location with its stored value
-    void updateStore(ref<MemoryLocation> loc, ref<VersionedValue> address,
-                     ref<VersionedValue> value);
+    void updateStore(ref<TxStateAddress> loc, ref<TxStateValue> address,
+                     ref<TxStateValue> value);
 
     /// \brief Add flow dependency between source and target value
-    void addDependency(ref<VersionedValue> source, ref<VersionedValue> target,
+    void addDependency(ref<TxStateValue> source, ref<TxStateValue> target,
                        bool multiLocationsCheck = true);
 
     /// \brief Add flow dependency between source and target value
-    void addDependencyIntToPtr(ref<VersionedValue> source,
-                               ref<VersionedValue> target);
+    void addDependencyIntToPtr(ref<TxStateValue> source,
+                               ref<TxStateValue> target);
 
     /// \brief Add flow dependency between source and target pointers, offset by
     /// some amount
-    void addDependencyWithOffset(ref<VersionedValue> source,
-                                 ref<VersionedValue> target,
+    void addDependencyWithOffset(ref<TxStateValue> source,
+                                 ref<TxStateValue> target,
                                  ref<Expr> offsetDelta);
 
     /// \brief Add flow dependency between source and target value, as the
     /// result of store/load via a memory location.
-    void addDependencyViaLocation(ref<VersionedValue> source,
-                                  ref<VersionedValue> target,
-                                  ref<MemoryLocation> via);
+    void addDependencyViaLocation(ref<TxStateValue> source,
+                                  ref<TxStateValue> target,
+                                  ref<TxStateAddress> via);
 
     /// \brief Add a flow dependency from a pointer value to a non-pointer
     /// value, for an external function call.
@@ -412,26 +279,26 @@ public:
     /// we assumed all memory access within the external function is valid.
     void addDependencyViaExternalFunction(
         const std::vector<llvm::Instruction *> &callHistory,
-        ref<VersionedValue> source, ref<VersionedValue> target);
+        ref<TxStateValue> source, ref<TxStateValue> target);
 
     /// \brief Add a flow dependency from a pointer value to a non-pointer
     /// value.
-    void addDependencyToNonPointer(ref<VersionedValue> source,
-                                   ref<VersionedValue> target);
+    void addDependencyToNonPointer(ref<TxStateValue> source,
+                                   ref<TxStateValue> target);
 
     /// \brief All values that flows to the target in one step
-    std::vector<ref<VersionedValue> >
-    directFlowSources(ref<VersionedValue> target) const;
+    std::vector<ref<TxStateValue> >
+    directFlowSources(ref<TxStateValue> target) const;
 
     /// \brief Mark as core all the values and locations that flows to the
     /// target
-    void markFlow(ref<VersionedValue> target, const std::string &reason) const;
+    void markFlow(ref<TxStateValue> target, const std::string &reason) const;
 
     /// \brief Mark as core all the pointer values and that flows to the target;
     /// and adjust its offset bound for memory bounds interpolation (a.k.a.
     /// slackening)
-    void markPointerFlow(ref<VersionedValue> target,
-                         ref<VersionedValue> checkedOffset,
+    void markPointerFlow(ref<TxStateValue> target,
+                         ref<TxStateValue> checkedOffset,
                          const std::string &reason) const {
       std::set<ref<Expr> > bounds;
       markPointerFlow(target, checkedOffset, bounds, reason);
@@ -440,8 +307,8 @@ public:
     /// \brief Mark as core all the pointer values and that flows to the target;
     /// and adjust its offset bound for memory bounds interpolation (a.k.a.
     /// slackening)
-    void markPointerFlow(ref<VersionedValue> target,
-                         ref<VersionedValue> checkedOffset,
+    void markPointerFlow(ref<TxStateValue> target,
+                         ref<TxStateValue> checkedOffset,
                          std::set<ref<Expr> > &bounds,
                          const std::string &reason) const;
 
@@ -450,20 +317,20 @@ public:
         llvm::CallInst *site,
         const std::vector<llvm::Instruction *> &callHistory,
         std::vector<ref<Expr> > &arguments,
-        std::vector<ref<VersionedValue> > &argumentValuesList);
+        std::vector<ref<TxStateValue> > &argumentValuesList);
 
     void getConcreteStore(
         const std::vector<llvm::Instruction *> &callHistory,
-        const std::map<ref<MemoryLocation>,
-                       std::pair<ref<VersionedValue>, ref<VersionedValue> > > &
+        const std::map<ref<TxStateAddress>,
+                       std::pair<ref<TxStateValue>, ref<TxStateValue> > > &
             store,
         std::set<const Array *> &replacements, bool coreOnly,
         Dependency::ConcreteStore &concreteStore) const;
 
     void getSymbolicStore(
         const std::vector<llvm::Instruction *> &callHistory,
-        const std::map<ref<MemoryLocation>,
-                       std::pair<ref<VersionedValue>, ref<VersionedValue> > > &
+        const std::map<ref<TxStateAddress>,
+                       std::pair<ref<TxStateValue>, ref<TxStateValue> > > &
             store,
         std::set<const Array *> &replacements, bool coreOnly,
         Dependency::SymbolicStore &symbolicStore) const;
@@ -481,7 +348,7 @@ public:
 
     Dependency *cdr() const;
 
-    ref<VersionedValue>
+    ref<TxStateValue>
     getLatestValue(llvm::Value *value,
                    const std::vector<llvm::Instruction *> &callHistory,
                    ref<Expr> valueExpr, bool constraint = false);
@@ -539,7 +406,7 @@ public:
 
     /// \brief Given a versioned value, retrieve all its sources and mark them
     /// as in the core.
-    void markAllValues(ref<VersionedValue> value, const std::string &reason);
+    void markAllValues(ref<TxStateValue> value, const std::string &reason);
 
     /// \brief Given an LLVM value, retrieve all its sources and mark them as in
     /// the core.

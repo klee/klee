@@ -1,4 +1,4 @@
-//===--- VersionedValue.h ---------------------------------------*- C++ -*-===//
+//===--- TxValues.h ---------------------------------------------*- C++ -*-===//
 //
 //               The Tracer-X KLEE Symbolic Virtual Machine
 //
@@ -8,9 +8,11 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains the declarations of the classes related to versioned
-/// value. Versioned values are data tokens that can constitute the nodes in
-/// building up the dependency graph, for the purpose of computing interpolants.
+/// This file contains the declarations of the classes related to values in the
+/// symbolic execution state and interpolant table. Values that belong to the
+/// interpolant are versioned such as TxStateAddress, which is distinguished by
+/// its base address, and TxStateValue, which is distinguished by its version,
+/// and TxStateValue, which is distinguished by its own object id.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -32,7 +34,9 @@
 
 namespace klee {
 
-class VersionedValue;
+class TxStateAddress;
+
+class TxStateValue;
 
 class AllocationContext {
 
@@ -133,9 +137,10 @@ public:
   void print(llvm::raw_ostream &stream, const std::string &prefix) const;
 };
 
-/// \brief A class to represent memory locations.
-class MemoryLocation {
-
+/// \brief The address to be stored as an index in the subsumption table. This
+/// class wraps a memory location, supplying weaker address equality comparison
+/// for the purpose of subsumption checking
+class TxInterpolantAddress {
 public:
   unsigned refCount;
 
@@ -143,12 +148,6 @@ private:
   /// \brief the context (allocation site and call history) of the allocation of
   /// this address
   ref<AllocationContext> context;
-
-  /// \brief The absolute address
-  ref<Expr> address;
-
-  /// \brief The base address
-  ref<Expr> base;
 
   /// \brief The offset wrt. the allocation
   ref<Expr> offset;
@@ -158,6 +157,190 @@ private:
 
   /// \brief The value of the concrete offset
   uint64_t concreteOffset;
+
+  TxInterpolantAddress(ref<AllocationContext> _context, ref<Expr> _offset)
+      : refCount(0), context(_context), offset(_offset) {
+    isConcrete = false;
+    concreteOffset = 0;
+
+    if (ConstantExpr *ce = llvm::dyn_cast<ConstantExpr>(offset)) {
+      isConcrete = true;
+      concreteOffset = ce->getZExtValue();
+    }
+  }
+
+public:
+  static ref<TxInterpolantAddress> create(ref<AllocationContext> context,
+                                          ref<Expr> offset) {
+    ref<TxInterpolantAddress> ret(new TxInterpolantAddress(context, offset));
+    return ret;
+  }
+
+  ref<AllocationContext> getContext() const { return context; }
+
+  ref<Expr> getOffset() const { return offset; }
+
+  /// \brief The comparator of this class' objects. This member function is
+  /// weaker than standard comparator for TxStateAddress in that it does not
+  /// check for the equality of base addresses. Allocation base address is used
+  /// in TxStateAddress (member variable TxStateAddress#base) for the purpose of
+  /// distinguishing memory allocations of the same callsite and call history,
+  /// but of different loop iterations. This does not make sense when comparing
+  /// states for subsumption as in subsumption, related allocations in different
+  /// paths may have different base addresses.
+  int compare(const TxInterpolantAddress &other) const {
+    int res = context->compare(*(other.context.get()));
+    if (res)
+      return res;
+
+    if (offset == other.offset)
+      return 0;
+    if (isConcrete && other.isConcrete) {
+      if (concreteOffset < other.concreteOffset)
+        return -1;
+      return 1;
+    }
+
+    if (offset->hash() < other.offset->hash())
+      return -1;
+
+    return 1;
+  }
+
+  void print(llvm::raw_ostream &stream) const { print(stream, ""); }
+
+  void print(llvm::raw_ostream &stream, const std::string &prefix) const;
+
+  void dump() const {
+    print(llvm::errs());
+    llvm::errs() << "\n";
+  }
+};
+
+/// \brief A processed form of a value to be stored in the subsumption table
+class TxInterpolantValue {
+public:
+  unsigned refCount;
+
+private:
+  ref<Expr> expr;
+
+  /// \brief In case the stored value was a pointer, then this should be a
+  /// non-empty map mapping of allocation sites to the set of offset bounds.
+  /// This constitutes the weakest liberal precondition of the memory checks
+  /// against which the offsets of the pointer values of the current state are
+  /// to be checked.
+  std::map<ref<AllocationContext>, std::set<ref<Expr> > > allocationBounds;
+
+  /// \brief In case the stored value was a pointer, then this should be a
+  /// non-empty map mapping of allocation sites to the set of offsets. This is
+  /// the offset values of the current state to be checked against the offset
+  /// bounds.
+  std::map<ref<AllocationContext>, std::set<ref<Expr> > > allocationOffsets;
+
+  /// \brief The id of this object
+  uint64_t id;
+
+  /// \brief The LLVM value of this object
+  llvm::Value *value;
+
+  /// \brief Do not use bound in subsumption check
+  bool doNotUseBound;
+
+  /// \brief Reason this was stored as needed value
+  std::set<std::string> coreReasons;
+
+  void init(llvm::Value *_value, ref<Expr> _expr, bool canInterpolateBound,
+            const std::set<std::string> &_coreReasons,
+            const std::set<ref<TxStateAddress> > _locations,
+            std::set<const Array *> &replacements, bool shadowing = false);
+
+  TxInterpolantValue(llvm::Value *value, ref<Expr> expr,
+                     bool canInterpolateBound,
+                     const std::set<std::string> &coreReasons,
+                     const std::set<ref<TxStateAddress> > locations,
+                     std::set<const Array *> &replacements) {
+    init(value, expr, canInterpolateBound, coreReasons, locations, replacements,
+         true);
+  }
+
+  TxInterpolantValue(llvm::Value *value, ref<Expr> expr,
+                     bool canInterpolateBound,
+                     const std::set<std::string> &coreReasons,
+                     const std::set<ref<TxStateAddress> > locations) {
+    std::set<const Array *> dummyReplacements;
+    init(value, expr, canInterpolateBound, coreReasons, locations,
+         dummyReplacements);
+  }
+
+public:
+  static ref<TxInterpolantValue>
+  create(llvm::Value *value, ref<Expr> expr, bool canInterpolateBound,
+         const std::set<std::string> &coreReasons,
+         const std::set<ref<TxStateAddress> > locations,
+         std::set<const Array *> &replacements) {
+    ref<TxInterpolantValue> sv(
+        new TxInterpolantValue(value, expr, canInterpolateBound, coreReasons,
+                               locations, replacements));
+    return sv;
+  }
+
+  static ref<TxInterpolantValue>
+  create(llvm::Value *value, ref<Expr> expr, bool canInterpolateBound,
+         const std::set<std::string> &coreReasons,
+         const std::set<ref<TxStateAddress> > locations) {
+    ref<TxInterpolantValue> sv(new TxInterpolantValue(
+        value, expr, canInterpolateBound, coreReasons, locations));
+    return sv;
+  }
+
+  ~TxInterpolantValue() {}
+
+  int compare(const TxInterpolantValue other) const {
+    if (id == other.id)
+      return 0;
+    if (id < other.id)
+      return -1;
+    return 1;
+  }
+
+  bool useBound() { return !doNotUseBound; }
+
+  bool isPointer() const { return !allocationOffsets.empty(); }
+
+  ref<Expr> getBoundsCheck(ref<TxInterpolantValue> svalue,
+                           std::set<ref<Expr> > &bounds,
+                           int debugSubsumptionLevel) const;
+
+  ref<Expr> getExpression() const { return expr; }
+
+  llvm::Value *getValue() const { return value; }
+
+  void print(llvm::raw_ostream &stream) const;
+
+  void print(llvm::raw_ostream &stream, const std::string &prefix) const;
+
+  void dump() const {
+    print(llvm::errs());
+    llvm::errs() << "\n";
+  }
+};
+
+/// \brief A class to represent memory locations.
+class TxStateAddress {
+
+public:
+  unsigned refCount;
+
+private:
+  /// \brief Address for use in interpolants, with less information
+  ref<TxInterpolantAddress> interpolantStyleAddress;
+
+  /// \brief The absolute address
+  ref<Expr> address;
+
+  /// \brief The base address
+  ref<Expr> base;
 
   /// \brief The expressions representing the bound on the offset, i.e., the
   /// interpolant, in case it is symbolic.
@@ -169,16 +352,15 @@ private:
   /// \brief The size of this allocation (0 means unknown)
   uint64_t size;
 
-  MemoryLocation(ref<AllocationContext> _context, ref<Expr> &_address,
+  TxStateAddress(ref<AllocationContext> _context, ref<Expr> &_address,
                  ref<Expr> &_base, ref<Expr> &_offset, uint64_t _size)
-      : refCount(0), context(_context), offset(_offset),
+      : refCount(0), interpolantStyleAddress(
+                         TxInterpolantAddress::create(_context, _offset)),
         concreteOffsetBound(_size), size(_size) {
     bool unknownBase = false;
 
-    isConcrete = false;
     if (ConstantExpr *co = llvm::dyn_cast<ConstantExpr>(_offset)) {
-      isConcrete = true;
-      concreteOffset = co->getZExtValue();
+      uint64_t concreteOffset = co->getZExtValue();
 
       if (ConstantExpr *ca = llvm::dyn_cast<ConstantExpr>(_address)) {
         if (ConstantExpr *cb = llvm::dyn_cast<ConstantExpr>(_base)) {
@@ -219,81 +401,66 @@ private:
   }
 
 public:
-  ~MemoryLocation() {}
+  ~TxStateAddress() {}
 
-  static ref<MemoryLocation>
+  static ref<TxStateAddress>
   create(llvm::Value *value,
          const std::vector<llvm::Instruction *> &_callHistory,
          ref<Expr> &address, uint64_t size) {
     ref<Expr> zeroPointer = Expr::createPointer(0);
-    ref<MemoryLocation> ret(
-        new MemoryLocation(AllocationContext::create(value, _callHistory),
+    ref<TxStateAddress> ret(
+        new TxStateAddress(AllocationContext::create(value, _callHistory),
                            address, address, zeroPointer, size));
     return ret;
   }
 
-  static ref<MemoryLocation> create(ref<MemoryLocation> loc,
+  static ref<TxStateAddress> create(ref<TxStateAddress> loc,
                                     std::set<const Array *> &replacements);
 
-  static ref<MemoryLocation> create(ref<MemoryLocation> loc, ref<Expr> &address,
+  static ref<TxStateAddress> create(ref<TxStateAddress> loc, ref<Expr> &address,
                                     ref<Expr> &offsetDelta) {
     ConstantExpr *c = llvm::dyn_cast<ConstantExpr>(offsetDelta);
     if (c && c->getZExtValue() == 0) {
       ref<Expr> base = loc->base;
-      ref<Expr> offset = loc->offset;
-      ref<MemoryLocation> ret(
-          new MemoryLocation(loc->context, address, base, offset, loc->size));
+      ref<Expr> offset = loc->getOffset();
+      ref<TxStateAddress> ret(new TxStateAddress(loc->getContext(), address,
+                                                 base, offset, loc->size));
       return ret;
     }
 
     ref<Expr> base = loc->base;
-    ref<Expr> newOffset = AddExpr::create(loc->offset, offsetDelta);
-    ref<MemoryLocation> ret(
-        new MemoryLocation(loc->context, address, base, newOffset, loc->size));
+    ref<Expr> newOffset = AddExpr::create(loc->getOffset(), offsetDelta);
+    ref<TxStateAddress> ret(new TxStateAddress(loc->getContext(), address, base,
+                                               newOffset, loc->size));
     return ret;
+  }
+
+  ref<TxInterpolantAddress> &getInterpolantStyleAddress() {
+    return interpolantStyleAddress;
   }
 
   bool
   contextIsPrefixOf(const std::vector<llvm::Instruction *> &callHistory) const {
-    return context->isPrefixOf(callHistory);
+    return getContext()->isPrefixOf(callHistory);
   }
 
-  int weakCompare(const MemoryLocation &other) const {
-    int res = context->compare(*(other.context.get()));
-    if (res)
-      return res;
-
-    if (offset == other.offset)
-      return 0;
-    if (isConcrete && other.isConcrete) {
-      if (concreteOffset < other.concreteOffset)
-        return -1;
-      return 1;
-    }
-
-    if (offset->hash() < other.offset->hash())
-      return -1;
-
-    return 1;
-  }
-
-  int compare(const MemoryLocation &other) const {
-    int res = weakCompare(other);
+  int compare(const TxStateAddress &other) const {
+    int res = interpolantStyleAddress->compare(
+        *(other.interpolantStyleAddress.get()));
     if (res)
       return res;
 
     if (base == other.base)
       return 0;
 
-    if (reinterpret_cast<uintptr_t>(base.get()) <
-        reinterpret_cast<uintptr_t>(other.base.get()))
+    if (base->hash() < other.base->hash())
       return -3;
 
     return 3;
   }
 
   /// \brief Adjust the offset bound for interpolation (a.k.a. slackening)
-  void adjustOffsetBound(ref<VersionedValue> checkedAddress,
+  void adjustOffsetBound(ref<TxStateValue> checkedAddress,
                          std::set<ref<Expr> > &bounds);
 
   bool hasConstantAddress() const { return llvm::isa<ConstantExpr>(address); }
@@ -310,11 +477,13 @@ public:
     return symbolicOffsetBounds;
   }
 
-  ref<AllocationContext> getContext() const { return context; }
+  ref<AllocationContext> getContext() const {
+    return interpolantStyleAddress->getContext();
+  }
 
   uint64_t getConcreteOffsetBound() const { return concreteOffsetBound; }
 
-  ref<Expr> getOffset() const { return offset; }
+  ref<Expr> getOffset() const { return interpolantStyleAddress->getOffset(); }
 
   uint64_t getSize() const { return size; }
 
@@ -341,7 +510,7 @@ public:
 
 /// \brief A class that represents LLVM value that can be destructively
 /// updated (versioned).
-class VersionedValue {
+class TxStateValue {
 public:
   unsigned refCount;
 
@@ -351,7 +520,7 @@ private:
   const ref<Expr> valueExpr;
 
   /// \brief Set of memory locations possibly being pointed to
-  std::set<ref<MemoryLocation> > locations;
+  std::set<ref<TxStateAddress> > locations;
 
   /// \brief Member variable to indicate if any unsatisfiability core depends
   /// on this value.
@@ -361,7 +530,7 @@ private:
   uint64_t id;
 
   /// \brief Dependency sources of this value
-  std::map<ref<VersionedValue>, ref<MemoryLocation> > sources;
+  std::map<ref<TxStateValue>, ref<TxStateAddress> > sources;
 
   /// \brief The context of this value
   std::vector<llvm::Instruction *> callHistory;
@@ -371,18 +540,18 @@ private:
   bool doNotInterpolateBound;
 
   /// \brief The load address of this value, in case it was a load instruction
-  ref<VersionedValue> loadAddress;
+  ref<TxStateValue> loadAddress;
 
   /// \brief The address by which the loaded value was stored, in case this
   /// was a load instruction
-  ref<VersionedValue> storeAddress;
+  ref<TxStateValue> storeAddress;
 
   /// \brief Reasons for this value to be in the core
   std::set<std::string> coreReasons;
 
-  VersionedValue(llvm::Value *value,
-                 const std::vector<llvm::Instruction *> &_callHistory,
-                 ref<Expr> _valueExpr)
+  TxStateValue(llvm::Value *value,
+               const std::vector<llvm::Instruction *> &_callHistory,
+               ref<Expr> _valueExpr)
       : refCount(0), value(value), valueExpr(_valueExpr), core(false),
         id(reinterpret_cast<uint64_t>(this)), callHistory(_callHistory),
         doNotInterpolateBound(false) {}
@@ -405,14 +574,13 @@ private:
                          const std::string &prefix) const;
 
 public:
-  ~VersionedValue() { locations.clear(); }
+  ~TxStateValue() { locations.clear(); }
 
-  static ref<VersionedValue>
+  static ref<TxStateValue>
   create(llvm::Value *value,
          const std::vector<llvm::Instruction *> &_callHistory,
          ref<Expr> valueExpr) {
-    ref<VersionedValue> vvalue(
-        new VersionedValue(value, _callHistory, valueExpr));
+    ref<TxStateValue> vvalue(new TxStateValue(value, _callHistory, valueExpr));
     return vvalue;
   }
 
@@ -420,29 +588,29 @@ public:
 
   void disableBoundInterpolation() { doNotInterpolateBound = true; }
 
-  void setLoadAddress(ref<VersionedValue> _loadAddress) {
+  void setLoadAddress(ref<TxStateValue> _loadAddress) {
     loadAddress = _loadAddress;
   }
 
-  ref<VersionedValue> getLoadAddress() { return loadAddress; }
+  ref<TxStateValue> getLoadAddress() { return loadAddress; }
 
-  void setStoreAddress(ref<VersionedValue> _storeAddress) {
+  void setStoreAddress(ref<TxStateValue> _storeAddress) {
     storeAddress = _storeAddress;
   }
 
-  ref<VersionedValue> getStoreAddress() { return storeAddress; }
+  ref<TxStateValue> getStoreAddress() { return storeAddress; }
 
   /// \brief The core routine for adding flow dependency between source and
   /// target value
-  void addDependency(ref<VersionedValue> source, ref<MemoryLocation> via) {
+  void addDependency(ref<TxStateValue> source, ref<TxStateAddress> via) {
     sources[source] = via;
   }
 
-  const std::map<ref<VersionedValue>, ref<MemoryLocation> > &getSources() {
+  const std::map<ref<TxStateValue>, ref<TxStateAddress> > &getSources() {
     return sources;
   }
 
-  int compare(const VersionedValue other) const {
+  int compare(const TxStateValue other) const {
     if (id == other.id)
       return 0;
     if (id < other.id)
@@ -450,12 +618,12 @@ public:
     return 1;
   }
 
-  void addLocation(ref<MemoryLocation> loc) {
+  void addLocation(ref<TxStateAddress> loc) {
     if (locations.find(loc) == locations.end())
       locations.insert(loc);
   }
 
-  const std::set<ref<MemoryLocation> > &getLocations() const {
+  const std::set<ref<TxStateAddress> > &getLocations() const {
     return locations;
   }
 
@@ -478,6 +646,17 @@ public:
   }
 
   const std::set<std::string> &getReasons() const { return coreReasons; }
+
+  ref<TxInterpolantValue> getInterpolantStyleValue() {
+    return TxInterpolantValue::create(value, valueExpr, canInterpolateBound(),
+                                      coreReasons, locations);
+  }
+
+  ref<TxInterpolantValue>
+  getInterpolantStyleValue(std::set<const Array *> &replacements) {
+    return TxInterpolantValue::create(value, valueExpr, canInterpolateBound(),
+                                      coreReasons, locations, replacements);
+  }
 
   /// \brief Print the content of the object into a stream.
   ///
