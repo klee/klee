@@ -18,6 +18,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #endif
+#include <unistd.h>
 
 namespace klee {
 
