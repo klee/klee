@@ -237,6 +237,8 @@ public:
     return ret;
   }
 
+  void incrementIndirectionCount() { indirectionCount++; }
+
   bool isHeapAddress() { return context->ty == AllocationContext::HEAP; }
 
   void print(llvm::raw_ostream &stream) const { print(stream, ""); }
@@ -479,6 +481,15 @@ public:
 
   ref<TxInterpolantAddress> &getInterpolantStyleAddress() {
     return interpolantStyleAddress;
+  }
+
+  /// \brief Copy this address, but increment the indirection count
+  ref<TxStateAddress> copyWithIndirectionCountIncrement() {
+    ref<Expr> offset = interpolantStyleAddress->getOffset();
+    ref<TxStateAddress> ret(new TxStateAddress(
+        interpolantStyleAddress->getContext(), address, base, offset, size));
+    ret->interpolantStyleAddress->incrementIndirectionCount();
+    return ret;
   }
 
   bool
