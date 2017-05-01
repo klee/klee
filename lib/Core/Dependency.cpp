@@ -159,6 +159,16 @@ void Dependency::getConcreteStore(
   if (coreOnly) {
     std::map<ref<TxStateAddress>, ref<TxStateValue> > __concreteStore;
 
+//    llvm::errs() << "STEP0:\n";
+//    for (std::map<ref<TxStateAddress>, ref<TxStateValue> >::iterator
+//             it = _concreteStore.begin(),
+//             ie = _concreteStore.end();
+//         it != ie; ++it) {
+//      llvm::errs() << "-----------------------------\n";
+//      it->first->dump();
+//      it->second->dump();
+//    }
+
     for (std::map<ref<TxStateAddress>, std::pair<std::set<ref<TxStateAddress> >,
                                                  uint64_t> >::iterator
              it = valueAddressMap.begin(),
@@ -185,36 +195,35 @@ void Dependency::getConcreteStore(
         __concreteStore[it->first] = _concreteStore[it->first];
     }
 
-    //    llvm::errs() << "BEFORE:\n";
-    //    for (std::map<ref<TxStateAddress>, ref<TxStateValue>
-    // >::iterator
-    //             it = __concreteStore.begin(),
-    //             ie = __concreteStore.end();
-    //         it != ie; ++it) {
-    //      llvm::errs() << "-----------------------------\n";
-    //      it->first->dump();
-    //      it->second->dump();
-    //    }
+//    llvm::errs() << "STEP1:\n";
+//    for (std::map<ref<TxStateAddress>, ref<TxStateValue> >::iterator
+//             it = __concreteStore.begin(),
+//             ie = __concreteStore.end();
+//         it != ie; ++it) {
+//      llvm::errs() << "-----------------------------\n";
+//      it->first->dump();
+//      it->second->dump();
+//    }
 
     removeAddressValue(__concreteStore, concreteStore, replacements, true);
 
-    //    llvm::errs() << "AFTER:\n";
-    //    for (Dependency::ConcreteStore::iterator it = concreteStore.begin(),
-    //                                             ie = concreteStore.end();
-    //         it != ie; ++it) {
-    //      std::map<ref<TxInterpolantAddress>, ref<TxInterpolantValue> >
-    // addressValueMap =
-    //          it->second;
-    //      for (std::map<ref<TxInterpolantAddress>, ref<TxInterpolantValue>
-    // >::iterator
-    //               it1 = addressValueMap.begin(),
-    //               ie1 = addressValueMap.end();
-    //           it1 != ie1; ++it1) {
-    //        llvm::errs() << "-----------------------------\n";
-    //        it1->first->dump();
-    //        it1->second->dump();
-    //      }
-    //    }
+//    llvm::errs() << "AFTER:\n";
+//    for (Dependency::ConcreteStore::iterator it = concreteStore.begin(),
+//	ie = concreteStore.end();
+//	it != ie; ++it) {
+//	std::map<ref<TxInterpolantAddress>, ref<TxInterpolantValue> >
+//	addressValueMap =
+//	    it->second;
+//	for (std::map<ref<TxInterpolantAddress>, ref<TxInterpolantValue>
+//	    >::iterator
+//	    it1 = addressValueMap.begin(),
+//	    ie1 = addressValueMap.end();
+//	    it1 != ie1; ++it1) {
+//	    llvm::errs() << "-----------------------------\n";
+//	    it1->first->dump();
+//	    it1->second->dump();
+//	}
+//    }
   } else {
     removeAddressValue(_concreteStore, concreteStore, replacements, false);
   }
