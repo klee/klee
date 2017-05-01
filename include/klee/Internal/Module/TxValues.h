@@ -483,6 +483,8 @@ public:
     return interpolantStyleAddress;
   }
 
+  llvm::Value *getValue() const { return interpolantStyleAddress->getBase(); }
+
   /// \brief Copy this address, but increment the indirection count
   ref<TxStateAddress> copyWithIndirectionCountIncrement() {
     ref<Expr> offset = interpolantStyleAddress->getOffset();

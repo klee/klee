@@ -327,10 +327,10 @@ namespace klee {
         std::vector<ref<Expr> > &arguments,
         std::vector<ref<TxStateValue> > &argumentValuesList);
 
-    static void
-    removeAddressValue(std::map<ref<TxInterpolantAddress>,
-                                ref<TxInterpolantValue> > &simpleStore,
-                       Dependency::ConcreteStore &concreteStore);
+    static void removeAddressValue(
+        std::map<ref<TxStateAddress>, ref<TxStateValue> > &simpleStore,
+        Dependency::ConcreteStore &concreteStore,
+        std::set<const Array *> &replacements);
 
     void getConcreteStore(
         const std::vector<llvm::Instruction *> &callHistory,

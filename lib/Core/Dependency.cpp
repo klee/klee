@@ -44,22 +44,22 @@ using namespace klee;
 namespace klee {
 
 void Dependency::removeAddressValue(
-    std::map<ref<TxInterpolantAddress>, ref<TxInterpolantValue> > &simpleStore,
-    Dependency::ConcreteStore &concreteStore) {
-  std::map<ref<TxInterpolantAddress>, ref<TxInterpolantValue> > _concreteStore;
-  std::set<ref<TxInterpolantAddress> > addressesToRemove;
+    std::map<ref<TxStateAddress>, ref<TxStateValue> > &simpleStore,
+    Dependency::ConcreteStore &concreteStore,
+    std::set<const Array *> &replacements) {
+  std::map<ref<TxStateAddress>, ref<TxStateValue> > _concreteStore;
+  std::set<ref<TxStateAddress> > addressesToRemove;
 
-  for (std::map<ref<TxInterpolantAddress>, ref<TxInterpolantValue> >::iterator
+  for (std::map<ref<TxStateAddress>, ref<TxStateValue> >::iterator
            it = simpleStore.begin(),
            ie = simpleStore.end();
        it != ie; ++it) {
-    ref<TxInterpolantAddress> keyAddress = it->first;
-    std::set<ref<TxInterpolantAddress> > &addresses =
-        it->second->getInterpolantAddresses();
+    ref<TxStateAddress> keyAddress = it->first;
+    const std::set<ref<TxStateAddress> > &addresses =
+        it->second->getLocations();
     if (addresses.size() > 0) {
-      std::map<ref<TxInterpolantAddress>, ref<TxInterpolantValue> >::iterator
-      it1;
-      for (std::set<ref<TxInterpolantAddress> >::iterator
+      std::map<ref<TxStateAddress>, ref<TxStateValue> >::iterator it1;
+      for (std::set<ref<TxStateAddress> >::const_iterator
                it2 = addresses.begin(),
                ie2 = addresses.end();
            it2 != ie2; ++it2) {
@@ -75,23 +75,49 @@ void Dependency::removeAddressValue(
     }
   }
 
-  std::set<ref<TxInterpolantAddress> >::iterator addressesToRemoveEnd =
+  std::set<ref<TxStateAddress> >::iterator addressesToRemoveEnd =
       addressesToRemove.end();
 
-  for (std::map<ref<TxInterpolantAddress>, ref<TxInterpolantValue> >::iterator
+  for (std::map<ref<TxStateAddress>, ref<TxStateValue> >::iterator
            it = simpleStore.begin(),
            ie = simpleStore.end();
        it != ie; ++it) {
     if (addressesToRemove.find(it->first) == addressesToRemoveEnd) {
-      concreteStore[it->first->getBase()][it->first] = it->second;
+#ifdef ENABLE_Z3
+      ref<TxInterpolantValue> storedValue;
+      if (!NoExistential) {
+        storedValue = it->second->getInterpolantStyleValue(replacements);
+      } else {
+        storedValue = it->second->getInterpolantStyleValue();
+      }
+      concreteStore[it->first->getValue()]
+                   [it->first->getInterpolantStyleAddress()] = storedValue;
+#else
+      concreteStore[it->first->getValue()]
+                   [it->first->getInterpolantStyleAddress()] =
+                       it->second->getInterpolantStyleValue();
+#endif
     }
   }
 
-  for (std::map<ref<TxInterpolantAddress>, ref<TxInterpolantValue> >::iterator
+  for (std::map<ref<TxStateAddress>, ref<TxStateValue> >::iterator
            it = _concreteStore.begin(),
            ie = _concreteStore.end();
        it != ie; ++it) {
-    concreteStore[it->first->getBase()][it->first] = it->second;
+#ifdef ENABLE_Z3
+    ref<TxInterpolantValue> storedValue;
+    if (!NoExistential) {
+      storedValue = it->second->getInterpolantStyleValue(replacements);
+    } else {
+      storedValue = it->second->getInterpolantStyleValue();
+    }
+    concreteStore[it->first->getValue()]
+                 [it->first->getInterpolantStyleAddress()] = storedValue;
+#else
+    concreteStore[it->first->getValue()]
+                 [it->first->getInterpolantStyleAddress()] =
+                     it->second->getInterpolantStyleValue();
+#endif
   }
 }
 
@@ -101,10 +127,10 @@ void Dependency::getConcreteStore(
                    std::pair<ref<TxStateValue>, ref<TxStateValue> > > &store,
     std::set<const Array *> &replacements, bool coreOnly,
     Dependency::ConcreteStore &concreteStore) const {
-  std::map<ref<TxInterpolantAddress>, ref<TxInterpolantValue> > _concreteStore;
+  std::map<ref<TxStateAddress>, ref<TxStateValue> > _concreteStore;
 
-  std::map<ref<TxInterpolantAddress>, std::pair<std::set<ref<TxStateAddress> >,
-                                                uint64_t> > valueAddressMap;
+  std::map<ref<TxStateAddress>, std::pair<std::set<ref<TxStateAddress> >,
+                                          uint64_t> > valueAddressMap;
 
   for (std::map<
            ref<TxStateAddress>,
@@ -117,59 +143,41 @@ void Dependency::getConcreteStore(
     if (it->second.second.isNull())
       continue;
 
-    ref<TxInterpolantAddress> address = it->first->getInterpolantStyleAddress();
     if (!coreOnly) {
-      _concreteStore[address] = it->second.second->getInterpolantStyleValue();
+      _concreteStore[it->first] = it->second.second;
     } else if (it->second.second->isCore()) {
         // An address is in the core if it stores a value that is in the core
-#ifdef ENABLE_Z3
-        if (!NoExistential) {
-          _concreteStore[address] =
-              it->second.second->getInterpolantStyleValue(replacements);
-          std::set<ref<TxStateAddress> > loadLocations =
-              it->second.second->getLoadLocations();
-          valueAddressMap[address] =
-              std::pair<std::set<ref<TxStateAddress> >, uint64_t>(
-                  loadLocations, it->second.second->getDirectUseCount());
-        } else
-#endif
-        {
-        _concreteStore[address] = it->second.second->getInterpolantStyleValue();
+      _concreteStore[it->first] = it->second.second;
         std::set<ref<TxStateAddress> > loadLocations =
             it->second.second->getLoadLocations();
-        valueAddressMap[address] =
+        valueAddressMap[it->first] =
             std::pair<std::set<ref<TxStateAddress> >, uint64_t>(
                 loadLocations, it->second.second->getDirectUseCount());
-      }
     }
   }
 
   if (coreOnly) {
-    std::map<ref<TxInterpolantAddress>, ref<TxInterpolantValue> >
-    __concreteStore;
+    std::map<ref<TxStateAddress>, ref<TxStateValue> > __concreteStore;
 
-    for (std::map<
-             ref<TxInterpolantAddress>,
-             std::pair<std::set<ref<TxStateAddress> >, uint64_t> >::iterator
+    for (std::map<ref<TxStateAddress>, std::pair<std::set<ref<TxStateAddress> >,
+                                                 uint64_t> >::iterator
              it = valueAddressMap.begin(),
              ie = valueAddressMap.end();
          it != ie; ++it) {
-      std::map<ref<TxInterpolantAddress>,
-               std::pair<std::set<ref<TxStateAddress> >, uint64_t> >::iterator
-      mapIter;
+      std::map<ref<TxStateAddress>, std::pair<std::set<ref<TxStateAddress> >,
+                                              uint64_t> >::iterator mapIter;
       std::set<ref<TxStateAddress> > &sources = it->second.first;
       for (std::set<ref<TxStateAddress> >::const_iterator it1 = sources.begin(),
                                                           ie1 = sources.end();
            it1 != ie1; ++it1) {
-        mapIter = valueAddressMap.find((*it1)->getInterpolantStyleAddress());
+        mapIter = valueAddressMap.find(*it1);
         if (mapIter != valueAddressMap.end() && mapIter->second.second > 0)
           --(mapIter->second.second);
       }
     }
 
-    for (std::map<
-             ref<TxInterpolantAddress>,
-             std::pair<std::set<ref<TxStateAddress> >, uint64_t> >::iterator
+    for (std::map<ref<TxStateAddress>, std::pair<std::set<ref<TxStateAddress> >,
+                                                 uint64_t> >::iterator
              it = valueAddressMap.begin(),
              ie = valueAddressMap.end();
          it != ie; ++it) {
@@ -178,7 +186,7 @@ void Dependency::getConcreteStore(
     }
 
     //    llvm::errs() << "BEFORE:\n";
-    //    for (std::map<ref<TxInterpolantAddress>, ref<TxInterpolantValue>
+    //    for (std::map<ref<TxStateAddress>, ref<TxStateValue>
     // >::iterator
     //             it = __concreteStore.begin(),
     //             ie = __concreteStore.end();
@@ -188,7 +196,7 @@ void Dependency::getConcreteStore(
     //      it->second->dump();
     //    }
 
-    removeAddressValue(__concreteStore, concreteStore);
+    removeAddressValue(__concreteStore, concreteStore, replacements);
 
     //    llvm::errs() << "AFTER:\n";
     //    for (Dependency::ConcreteStore::iterator it = concreteStore.begin(),
@@ -208,7 +216,7 @@ void Dependency::getConcreteStore(
     //      }
     //    }
   } else {
-    removeAddressValue(_concreteStore, concreteStore);
+    removeAddressValue(_concreteStore, concreteStore, replacements);
   }
 }
 
