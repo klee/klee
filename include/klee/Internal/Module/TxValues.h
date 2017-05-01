@@ -281,9 +281,6 @@ private:
   /// \brief Do not use bound in subsumption check
   bool doNotUseBound;
 
-  /// \brief Set of memory locations possibly being pointed to
-  std::set<ref<TxInterpolantAddress> > locations;
-
   /// \brief Reason this was stored as needed value
   std::set<std::string> coreReasons;
 
@@ -355,10 +352,6 @@ public:
   ref<Expr> getExpression() const { return expr; }
 
   llvm::Value *getValue() const { return value; }
-
-  std::set<ref<TxInterpolantAddress> > &getInterpolantAddresses() {
-    return locations;
-  }
 
   void print(llvm::raw_ostream &stream) const;
 
