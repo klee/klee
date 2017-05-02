@@ -46,7 +46,7 @@ namespace klee {
 void Dependency::removeAddressValue(
     std::map<ref<TxStateAddress>, ref<TxStateValue> > &simpleStore,
     Dependency::ConcreteStore &concreteStore,
-    std::set<const Array *> &replacements) {
+    std::set<const Array *> &replacements, bool coreOnly) {
   std::map<ref<TxStateAddress>, ref<TxStateValue> > _concreteStore;
   std::set<ref<TxStateAddress> > addressesToRemove;
 
@@ -85,7 +85,7 @@ void Dependency::removeAddressValue(
     if (addressesToRemove.find(it->first) == addressesToRemoveEnd) {
 #ifdef ENABLE_Z3
       ref<TxInterpolantValue> storedValue;
-      if (!NoExistential) {
+      if (coreOnly && !NoExistential) {
         storedValue = it->second->getInterpolantStyleValue(replacements);
       } else {
         storedValue = it->second->getInterpolantStyleValue();
@@ -106,7 +106,7 @@ void Dependency::removeAddressValue(
        it != ie; ++it) {
 #ifdef ENABLE_Z3
     ref<TxInterpolantValue> storedValue;
-    if (!NoExistential) {
+    if (coreOnly && !NoExistential) {
       storedValue = it->second->getInterpolantStyleValue(replacements);
     } else {
       storedValue = it->second->getInterpolantStyleValue();
@@ -196,7 +196,7 @@ void Dependency::getConcreteStore(
     //      it->second->dump();
     //    }
 
-    removeAddressValue(__concreteStore, concreteStore, replacements);
+    removeAddressValue(__concreteStore, concreteStore, replacements, true);
 
     //    llvm::errs() << "AFTER:\n";
     //    for (Dependency::ConcreteStore::iterator it = concreteStore.begin(),
@@ -216,7 +216,7 @@ void Dependency::getConcreteStore(
     //      }
     //    }
   } else {
-    removeAddressValue(_concreteStore, concreteStore, replacements);
+    removeAddressValue(_concreteStore, concreteStore, replacements, false);
   }
 }
 

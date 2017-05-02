@@ -330,7 +330,7 @@ namespace klee {
     static void removeAddressValue(
         std::map<ref<TxStateAddress>, ref<TxStateValue> > &simpleStore,
         Dependency::ConcreteStore &concreteStore,
-        std::set<const Array *> &replacements);
+        std::set<const Array *> &replacements, bool coreOnly);
 
     void getConcreteStore(
         const std::vector<llvm::Instruction *> &callHistory,
