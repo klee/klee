@@ -113,7 +113,7 @@ void TxInterpolantAddress::print(llvm::raw_ostream &stream,
       stream << "*";
     }
   }
-  stream << prefix << "\nfunction/value: ";
+  stream << "\n" << prefix << "function/value: ";
   if (outputFunctionName(context->getValue(), stream))
     stream << "/";
   context->getValue()->print(stream);
