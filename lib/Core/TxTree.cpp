@@ -1167,11 +1167,11 @@ bool SubsumptionTableEntry::subsumed(
                 llvm::raw_string_ostream stream(msg);
                 tabledValue->getExpression()->print(stream);
                 stream.flush();
-                klee_message("#%lu=>#%lu: Equal concrete contents: %s",
+                klee_message("#%lu=>#%lu: Equal contents: %s",
                              state.txTreeNode->getNodeSequenceNumber(),
                              nodeSequenceNumber, msg.c_str());
               } else {
-                klee_message("#%lu=>#%lu: Equal concrete contents",
+                klee_message("#%lu=>#%lu: Equal contents",
                              state.txTreeNode->getNodeSequenceNumber(),
                              nodeSequenceNumber);
               }
