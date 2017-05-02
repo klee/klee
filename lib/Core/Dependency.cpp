@@ -180,6 +180,9 @@ void Dependency::getConcreteStore(
       for (std::set<ref<TxStateAddress> >::const_iterator it1 = sources.begin(),
                                                           ie1 = sources.end();
            it1 != ie1; ++it1) {
+        // To prevent cycle
+        if ((*it1) == it->first)
+          continue;
         mapIter = valueAddressMap.find(*it1);
         if (mapIter != valueAddressMap.end() && mapIter->second.second > 0)
           --(mapIter->second.second);
