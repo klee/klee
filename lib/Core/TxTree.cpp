@@ -1135,8 +1135,9 @@ bool SubsumptionTableEntry::subsumed(
                   std::string msg2;
                   llvm::raw_string_ostream stream(msg2);
                   tabledValue->getExpression()->print(stream);
-                  stream << " vs. ";
+                  stream << " (interpolant) vs. ";
                   stateValue->getExpression()->print(stream);
+                  stream << " (state)";
                   stream.flush();
                   klee_message(
                       "#%lu=>#%lu: Check failure due to unequal content%s: %s",
