@@ -13,6 +13,9 @@
 #include "Executor.h"
 #include "PTree.h"
 #include "StatsTracker.h"
+#include "klee/BoundedMergeHandler.h"
+
+#include "klee/CommandLine.h"
 
 #include "klee/ExecutionState.h"
 #include "klee/Statistics.h"
@@ -51,6 +54,8 @@ using namespace llvm;
 namespace {
   cl::opt<bool>
   DebugLogMerge("debug-log-merge");
+  cl::opt<bool>
+  IncompleteBoundedMerge("incomplete-bounded-merge");
 }
 
 namespace klee {
@@ -265,6 +270,54 @@ bool WeightedRandomSearcher::empty() {
 }
 
 ///
+RandomPathSearcher::BacktrackHelper::direction RandomPathSearcher::BacktrackHelper::avail_dir(){
+  switch(visited.back()){
+    case LEFT:
+      return RIGHT;
+    case RIGHT:
+      return LEFT;
+    case BOTH:
+      return NONE;
+    case NONE:
+      return BOTH;
+    default:
+      assert(0);
+  }
+}
+
+void RandomPathSearcher::BacktrackHelper::back(){
+  assert(!visited.empty());
+  visited.pop_back();   
+}
+
+void RandomPathSearcher::BacktrackHelper::go(RandomPathSearcher::BacktrackHelper::direction dir){
+  switch (visited.back()){
+    case LEFT:
+      assert(dir == RIGHT);
+      visited.back() = BOTH;
+      break;
+    case RIGHT:
+      assert(dir == LEFT);
+      visited.back() = BOTH;
+      break;
+    case NONE:
+      switch(dir){
+        case LEFT:
+          visited.back() = LEFT;
+          break;
+        case RIGHT:
+          visited.back() = RIGHT;
+          break;
+        default:
+          assert(0 && "Not a correct go direction");
+      }
+      break;
+    case BOTH:
+      assert(0 && "No direction to go to");
+      break;
+  }
+  visited.push_back(NONE);
+}
 
 RandomPathSearcher::RandomPathSearcher(Executor &_executor)
   : executor(_executor) {
@@ -273,14 +326,75 @@ RandomPathSearcher::RandomPathSearcher(Executor &_executor)
 RandomPathSearcher::~RandomPathSearcher() {
 }
 
-ExecutionState &RandomPathSearcher::selectState() {
+ExecutionState &RandomPathSearcher::selectStateIgnore() {
   unsigned flips=0, bits=0;
-  PTree::Node *n = executor.processTree->root;
-  
+  PTree::Node* n = executor.processTree->root;
+  BacktrackHelper btHelper;
+
+  while (!n->data) {
+    BacktrackHelper::direction avail_dir = btHelper.avail_dir();
+    switch(avail_dir){
+      case BacktrackHelper::RIGHT:
+        if (n->right) {
+          btHelper.go(BacktrackHelper::RIGHT);
+          n = n->right;
+        } else {
+          btHelper.back();
+          n = n->parent;
+        }
+        break;
+      case BacktrackHelper::LEFT:
+        if (n->left){
+          btHelper.go(BacktrackHelper::LEFT);
+          n = n->left;
+        } else {
+          btHelper.back();
+          n = n->parent;
+        }
+        break;
+      case BacktrackHelper::BOTH:
+        if (!n->left){
+          btHelper.go(BacktrackHelper::RIGHT);
+          n = n->right;
+        } else if (!n->right){
+          btHelper.go(BacktrackHelper::LEFT);
+          n = n->left;
+        } else {
+          if (bits==0) {
+            flips = theRNG.getInt32();
+            bits = 32;
+          }
+          --bits;
+          if (flips&(1<<bits)){
+            btHelper.go(BacktrackHelper::LEFT);
+            n = n->left;
+          } else {  
+            btHelper.go(BacktrackHelper::RIGHT);
+            n = n->right;
+          }
+        }
+        break;
+      case BacktrackHelper::NONE:
+        btHelper.back();
+        n = n->parent;
+    }
+    if (n->data){
+      if (ignoreStates.find(n->data) != ignoreStates.end()){
+        btHelper.back();
+        n = n->parent;
+      }
+    }
+  }
+  return *n->data;
+}
+ExecutionState &RandomPathSearcher::selectStateStandard() {
+  unsigned flips=0, bits=0;
+  PTree::Node* n = executor.processTree->root;
+  BacktrackHelper btHelper;
   while (!n->data) {
     if (!n->left) {
       n = n->right;
-    } else if (!n->right) {
+    } else if (!n->right){
       n = n->left;
     } else {
       if (bits==0) {
@@ -288,17 +402,51 @@ ExecutionState &RandomPathSearcher::selectState() {
         bits = 32;
       }
       --bits;
-      n = (flips&(1<<bits)) ? n->left : n->right;
+      if (flips&(1<<bits)){
+        n = n->left;
+      } else {  
+        n = n->right;
+      }
     }
   }
 
-  return *n->data;
+  return *(n->data);
+}
+
+ExecutionState& RandomPathSearcher::selectState() {
+  if (ignoreStates.empty()){
+    return selectStateStandard();
+  } else {
+    return selectStateIgnore();
+  }
 }
 
 void
 RandomPathSearcher::update(ExecutionState *current,
                            const std::vector<ExecutionState *> &addedStates,
                            const std::vector<ExecutionState *> &removedStates) {
+  if ((&addedStates == &executor.addedStates) && (&removedStates == &executor.removedStates))
+    for (std::vector<ExecutionState *>::const_iterator it = removedStates.begin(),
+                                              ie = removedStates.end();
+         it != ie; ++it) {
+      std::set<ExecutionState *>::iterator ignore_it = ignoreStates.find(*it);
+      if (ignore_it != ignoreStates.end()){
+        ignoreStates.erase(ignore_it);
+      }
+    }
+
+  ignoreStates.insert(removedStates.begin(), removedStates.end());
+  if (!addedStates.empty()){
+    std::set<ExecutionState*> new_is;
+    for (std::set<ExecutionState *>::iterator it = ignoreStates.begin(),
+                                              ie = ignoreStates.end();
+         it != ie; ++it) {
+      if (std::find(addedStates.begin(), addedStates.end(), *it) == addedStates.end()){
+        new_is.insert(*it);
+      }
+    }
+    ignoreStates = new_is; // cannot use std::move(new_is) because c++11 feature
+  }
 }
 
 bool RandomPathSearcher::empty() { 
@@ -307,213 +455,53 @@ bool RandomPathSearcher::empty() {
 
 ///
 
-BumpMergingSearcher::BumpMergingSearcher(Executor &_executor, Searcher *_baseSearcher) 
+BoundedMergingSearcher::BoundedMergingSearcher(Executor &_executor, Searcher *_baseSearcher)
   : executor(_executor),
-    baseSearcher(_baseSearcher),
-    mergeFunction(executor.kmodule->kleeMergeFn) {
-}
+  baseSearcher(_baseSearcher),
+  openMergeFunction(_executor.kmodule->kleeOpenMergeFn),
+  closeMergeFunction(_executor.kmodule->kleeCloseMergeFn){}
 
-BumpMergingSearcher::~BumpMergingSearcher() {
+BoundedMergingSearcher::~BoundedMergingSearcher() {
   delete baseSearcher;
 }
 
-///
+ExecutionState& BoundedMergingSearcher::selectState() {
+  assert(!baseSearcher->empty() && "base searcher is empty");
 
-Instruction *BumpMergingSearcher::getMergePoint(ExecutionState &es) {  
-  if (mergeFunction) {
-    Instruction *i = es.pc->inst;
-
-    if (i->getOpcode()==Instruction::Call) {
-      CallSite cs(cast<CallInst>(i));
-      if (mergeFunction==cs.getCalledFunction())
-        return i;
+  if (!IncompleteBoundedMerge) {
+    return baseSearcher->selectState();
+  }
+  // Iterate through all BoundedMergeHandlers
+  for (std::vector<BoundedMergeHandler *>::iterator
+           bmh_it = executor.mergeGroups.begin(),
+           bmh_ie = executor.mergeGroups.end();
+       bmh_it != bmh_ie; ++bmh_it) {
+    // Find one that has states that could be released
+    if (!(*bmh_it)->hasMergedStates()) {
+      continue;
     }
-  }
-
-  return 0;
-}
-
-ExecutionState &BumpMergingSearcher::selectState() {
-entry:
-  // out of base states, pick one to pop
-  if (baseSearcher->empty()) {
-    std::map<llvm::Instruction*, ExecutionState*>::iterator it = 
-      statesAtMerge.begin();
-    ExecutionState *es = it->second;
-    statesAtMerge.erase(it);
-    ++es->pc;
-
-    baseSearcher->addState(es);
-  }
-
-  ExecutionState &es = baseSearcher->selectState();
-
-  if (Instruction *mp = getMergePoint(es)) {
-    std::map<llvm::Instruction*, ExecutionState*>::iterator it = 
-      statesAtMerge.find(mp);
-
-    baseSearcher->removeState(&es);
-
-    if (it==statesAtMerge.end()) {
-      statesAtMerge.insert(std::make_pair(mp, &es));
+    // Find a state that can be prioritized
+    ExecutionState *es = (*bmh_it)->getPrioritizeState();
+    if (es) {
+      return *es;
     } else {
-      ExecutionState *mergeWith = it->second;
-      if (mergeWith->merge(es)) {
-        // hack, because we are terminating the state we need to let
-        // the baseSearcher know about it again
-        baseSearcher->addState(&es);
-        executor.terminateState(es);
-      } else {
-        it->second = &es; // the bump
-        ++mergeWith->pc;
-
-        baseSearcher->addState(mergeWith);
+      if (DebugLogIncompleteMerge){
+        llvm::errs() << "Preemptively releasing states\n";
       }
-    }
-
-    goto entry;
-  } else {
-    return es;
-  }
-}
-
-void BumpMergingSearcher::update(
-    ExecutionState *current, const std::vector<ExecutionState *> &addedStates,
-    const std::vector<ExecutionState *> &removedStates) {
-  baseSearcher->update(current, addedStates, removedStates);
-}
-
-///
-
-MergingSearcher::MergingSearcher(Executor &_executor, Searcher *_baseSearcher) 
-  : executor(_executor),
-    baseSearcher(_baseSearcher),
-    mergeFunction(executor.kmodule->kleeMergeFn) {
-}
-
-MergingSearcher::~MergingSearcher() {
-  delete baseSearcher;
-}
-
-///
-
-Instruction *MergingSearcher::getMergePoint(ExecutionState &es) {
-  if (mergeFunction) {
-    Instruction *i = es.pc->inst;
-
-    if (i->getOpcode()==Instruction::Call) {
-      CallSite cs(cast<CallInst>(i));
-      if (mergeFunction==cs.getCalledFunction())
-        return i;
+      // If no state can be prioritized, they all exceeded the amount of time we
+      // are willing to wait for them. Release the states that already made it.
+      (*bmh_it)->releaseStates();
     }
   }
-
-  return 0;
-}
-
-ExecutionState &MergingSearcher::selectState() {
-  // FIXME: this loop is endless if baseSearcher includes RandomPathSearcher.
-  // The reason is that RandomPathSearcher::removeState() does nothing...
-  while (!baseSearcher->empty()) {
-    ExecutionState &es = baseSearcher->selectState();
-    if (getMergePoint(es)) {
-      baseSearcher->removeState(&es, &es);
-      statesAtMerge.insert(&es);
-    } else {
-      return es;
-    }
-  }
-  
-  // build map of merge point -> state list
-  std::map<Instruction*, std::vector<ExecutionState*> > merges;
-  for (std::set<ExecutionState*>::const_iterator it = statesAtMerge.begin(),
-         ie = statesAtMerge.end(); it != ie; ++it) {
-    ExecutionState &state = **it;
-    Instruction *mp = getMergePoint(state);
-    
-    merges[mp].push_back(&state);
-  }
-  
-  if (DebugLogMerge)
-    llvm::errs() << "-- all at merge --\n";
-  for (std::map<Instruction*, std::vector<ExecutionState*> >::iterator
-         it = merges.begin(), ie = merges.end(); it != ie; ++it) {
-    if (DebugLogMerge) {
-      llvm::errs() << "\tmerge: " << it->first << " [";
-      for (std::vector<ExecutionState*>::iterator it2 = it->second.begin(),
-             ie2 = it->second.end(); it2 != ie2; ++it2) {
-        ExecutionState *state = *it2;
-        llvm::errs() << state << ", ";
-      }
-      llvm::errs() << "]\n";
-    }
-
-    // merge states
-    std::set<ExecutionState*> toMerge(it->second.begin(), it->second.end());
-    while (!toMerge.empty()) {
-      ExecutionState *base = *toMerge.begin();
-      toMerge.erase(toMerge.begin());
-      
-      std::set<ExecutionState*> toErase;
-      for (std::set<ExecutionState*>::iterator it = toMerge.begin(),
-             ie = toMerge.end(); it != ie; ++it) {
-        ExecutionState *mergeWith = *it;
-        
-        if (base->merge(*mergeWith)) {
-          toErase.insert(mergeWith);
-        }
-      }
-      if (DebugLogMerge && !toErase.empty()) {
-        llvm::errs() << "\t\tmerged: " << base << " with [";
-        for (std::set<ExecutionState*>::iterator it = toErase.begin(),
-               ie = toErase.end(); it != ie; ++it) {
-          if (it!=toErase.begin()) llvm::errs() << ", ";
-          llvm::errs() << *it;
-        }
-        llvm::errs() << "]\n";
-      }
-      for (std::set<ExecutionState*>::iterator it = toErase.begin(),
-             ie = toErase.end(); it != ie; ++it) {
-        std::set<ExecutionState*>::iterator it2 = toMerge.find(*it);
-        assert(it2!=toMerge.end());
-        executor.terminateState(**it);
-        toMerge.erase(it2);
-      }
-
-      // step past merge and toss base back in pool
-      statesAtMerge.erase(statesAtMerge.find(base));
-      ++base->pc;
-      baseSearcher->addState(base);
-    }  
-  }
-  
-  if (DebugLogMerge)
-    llvm::errs() << "-- merge complete, continuing --\n";
-  
-  return selectState();
+  // If we were not able to prioritize a merging state, just return some state
+  return baseSearcher->selectState();
 }
 
 void
-MergingSearcher::update(ExecutionState *current,
-                        const std::vector<ExecutionState *> &addedStates,
-                        const std::vector<ExecutionState *> &removedStates) {
-  if (!removedStates.empty()) {
-    std::vector<ExecutionState *> alt = removedStates;
-    for (std::vector<ExecutionState *>::const_iterator
-             it = removedStates.begin(),
-             ie = removedStates.end();
-         it != ie; ++it) {
-      ExecutionState *es = *it;
-      std::set<ExecutionState*>::const_iterator it2 = statesAtMerge.find(es);
-      if (it2 != statesAtMerge.end()) {
-        statesAtMerge.erase(it2);
-        alt.erase(std::remove(alt.begin(), alt.end(), es), alt.end());
-      }
-    }    
-    baseSearcher->update(current, addedStates, alt);
-  } else {
-    baseSearcher->update(current, addedStates, removedStates);
-  }
+BoundedMergingSearcher::update(ExecutionState *current,
+    const std::vector<ExecutionState *> &addedStates,
+    const std::vector<ExecutionState *> &removedStates) {
+  baseSearcher->update(current, addedStates, removedStates);
 }
 
 ///

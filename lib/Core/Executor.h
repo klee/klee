@@ -73,6 +73,7 @@ namespace klee {
   class StatsTracker;
   class TimingSolver;
   class TreeStreamWriter;
+  class BoundedMergeHandler;
   template<class T> class ref;
 
 
@@ -82,6 +83,7 @@ namespace klee {
   /// removedStates, and haltExecution, among others.
 
 class Executor : public Interpreter {
+  friend class BoundedMergingSearcher;
   friend class BumpMergingSearcher;
   friend class MergingSearcher;
   friend class RandomPathSearcher;
@@ -89,6 +91,7 @@ class Executor : public Interpreter {
   friend class WeightedRandomSearcher;
   friend class SpecialFunctionHandler;
   friend class StatsTracker;
+  friend class BoundedMergeHandler;
 
 public:
   class Timer {
@@ -136,6 +139,12 @@ private:
   std::vector<TimerInfo*> timers;
   PTree *processTree;
 
+  std::vector<BoundedMergeHandler *> mergeGroups;
+
+  // Set of vectors that are currently paused from scheduling because they are
+  // waiting to be merged in a klee_close_merge instruction
+  std::set<ExecutionState *> inCloseMerge;
+
   /// Used to track states that have been added during the current
   /// instructions step. 
   /// \invariant \ref addedStates is a subset of \ref states. 
@@ -146,6 +155,11 @@ private:
   /// \invariant \ref removedStates is a subset of \ref states. 
   /// \invariant \ref addedStates and \ref removedStates are disjoint.
   std::vector<ExecutionState *> removedStates;
+
+  /// Used to track states that are only removed from the searcher
+  std::vector<ExecutionState *> pausedStates;
+  /// Used to track states that are only added to the searcher
+  std::vector<ExecutionState *> continuedStates;
 
   /// When non-empty the Executor is running in "seed" mode. The
   /// states in this map will be executed in an arbitrary order
@@ -382,6 +396,10 @@ private:
 
   bool shouldExitOn(enum TerminateReason termReason);
 
+  // remove state from searcher only
+  void pauseState(ExecutionState& state);
+  // add state to searcher only
+  void continueState(ExecutionState& state);
   // remove state from queue and delete
   void terminateState(ExecutionState &state);
   // call exit handler and terminate state

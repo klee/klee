@@ -31,6 +31,12 @@ extern llvm::cl::opt<bool> CoreSolverOptimizeDivides;
 
 extern llvm::cl::opt<bool> UseAssignmentValidatingSolver;
 
+extern llvm::cl::opt<bool> UseBoundedMerge;
+
+extern llvm::cl::opt<bool> DebugLogBoundedMerge;
+
+extern llvm::cl::opt<bool> DebugLogIncompleteMerge;
+
 ///The different query logging solvers that can switched on/off
 enum QueryLoggingSolverType
 {

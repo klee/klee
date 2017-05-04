@@ -65,6 +65,21 @@ CoreSolverOptimizeDivides("solver-optimize-divides",
                  llvm::cl::desc("Optimize constant divides into add/shift/multiplies before passing to core SMT solver (default=off)"),
                  llvm::cl::init(false));
 
+llvm::cl::opt<bool>
+    UseBoundedMerge("use-bounded-merge",
+        llvm::cl::init(false),
+        llvm::cl::desc("Enable support for klee_open_merge() and klee_close_merge() (experimental)"));
+
+llvm::cl::opt<bool>
+    DebugLogBoundedMerge("debug-log-bounded-merge",
+        llvm::cl::init(false),
+        llvm::cl::desc("Enhanced verbosity for bounded merge operations"));
+
+llvm::cl::opt<bool>
+    DebugLogIncompleteMerge("debug-log-incomplete-merge",
+        llvm::cl::init(false),
+        llvm::cl::desc("Enhanced verbosity for incomplete bounded merge operations"));
+
 
 /* Using cl::list<> instead of cl::bits<> results in quite a bit of ugliness when it comes to checking
  * if an option is set. Unfortunately with gcc4.7 cl::bits<> is broken with LLVM2.9 and I doubt everyone

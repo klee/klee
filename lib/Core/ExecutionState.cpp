@@ -17,6 +17,12 @@
 #include "klee/Expr.h"
 
 #include "Memory.h"
+
+#include "Executor.h"
+#include "Searcher.h"
+#include "CoreStats.h"
+#include "klee/BoundedMergeHandler.h"
+
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
 #include "llvm/IR/Function.h"
 #else
@@ -77,7 +83,8 @@ ExecutionState::ExecutionState(KFunction *kf) :
     instsSinceCovNew(0),
     coveredNew(false),
     forkDisabled(false),
-    ptreeNode(0) {
+    ptreeNode(0),
+    steppedInstructions(0){
   pushFrame(0, kf);
 }
 
@@ -93,6 +100,12 @@ ExecutionState::~ExecutionState() {
     if (mo->refCount == 0)
       delete mo;
   }
+
+  for (std::vector<ref<BoundedMergeHandler> >::iterator it = openMergeStack.begin(), 
+      ie = openMergeStack.end(); it != ie; ++it){
+    (*it)->removeOpenState(this);
+  }
+
 
   while (!stack.empty()) popFrame();
 }
@@ -120,10 +133,16 @@ ExecutionState::ExecutionState(const ExecutionState& state):
     coveredLines(state.coveredLines),
     ptreeNode(state.ptreeNode),
     symbolics(state.symbolics),
-    arrayNames(state.arrayNames)
+    arrayNames(state.arrayNames),
+    openMergeStack(state.openMergeStack),
+    steppedInstructions(state.steppedInstructions)
 {
   for (unsigned int i=0; i<symbolics.size(); i++)
     symbolics[i].first->refCount++;
+
+  for (std::vector<ref<BoundedMergeHandler> >::iterator it = openMergeStack.begin(), 
+      ie = openMergeStack.end(); it != ie; ++it)
+    (*it)->addOpenState(this);
 }
 
 ExecutionState *ExecutionState::branch() {

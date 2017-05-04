@@ -8,6 +8,7 @@
 #===------------------------------------------------------------------------===#
 klee_add_component(kleeCore
   AddressSpace.cpp
+  BoundedMergeHandler.cpp
   CallPathManager.cpp
   Context.cpp
   CoreStats.cpp

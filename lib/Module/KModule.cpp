@@ -67,9 +67,6 @@ namespace {
     eSwitchTypeLLVM,
     eSwitchTypeInternal
   };
-
-  cl::list<std::string>
-  MergeAtExit("merge-at-exit");
     
   cl::opt<bool>
   NoTruncateSourceLines("no-truncate-source-lines",
@@ -108,7 +105,6 @@ KModule::KModule(Module *_module)
 #else
     targetData(new DataLayout(module)),
 #endif
-    kleeMergeFn(0),
     infos(0),
     constantTable(0) {
 }
@@ -247,59 +243,7 @@ void KModule::addInternalFunction(const char* functionName){
 
 void KModule::prepare(const Interpreter::ModuleOptions &opts,
                       InterpreterHandler *ih) {
-  LLVMContext &ctx = module->getContext();
 
-  if (!MergeAtExit.empty()) {
-    Function *mergeFn = module->getFunction("klee_merge");
-    if (!mergeFn) {
-      LLVM_TYPE_Q llvm::FunctionType *Ty = 
-        FunctionType::get(Type::getVoidTy(ctx),
-                          std::vector<LLVM_TYPE_Q Type*>(), false);
-      mergeFn = Function::Create(Ty, GlobalVariable::ExternalLinkage,
-				 "klee_merge",
-				 module);
-    }
-
-    for (cl::list<std::string>::iterator it = MergeAtExit.begin(), 
-           ie = MergeAtExit.end(); it != ie; ++it) {
-      std::string &name = *it;
-      Function *f = module->getFunction(name);
-      if (!f) {
-        klee_error("cannot insert merge-at-exit for: %s (cannot find)",
-                   name.c_str());
-      } else if (f->isDeclaration()) {
-        klee_error("cannot insert merge-at-exit for: %s (external)",
-                   name.c_str());
-      }
-
-      BasicBlock *exit = BasicBlock::Create(ctx, "exit", f);
-      PHINode *result = 0;
-      if (f->getReturnType() != Type::getVoidTy(ctx))
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 0)
-        result = PHINode::Create(f->getReturnType(), 0, "retval", exit);
-#else
-		result = PHINode::Create(f->getReturnType(), "retval", exit);
-#endif
-      CallInst::Create(mergeFn, "", exit);
-      ReturnInst::Create(ctx, result, exit);
-
-      llvm::errs() << "KLEE: adding klee_merge at exit of: " << name << "\n";
-      for (llvm::Function::iterator bbit = f->begin(), bbie = f->end(); 
-           bbit != bbie; ++bbit) {
-	BasicBlock *bb = static_cast<BasicBlock *>(bbit);
-        if (bb != exit) {
-          Instruction *i = bbit->getTerminator();
-          if (i->getOpcode()==Instruction::Ret) {
-            if (result) {
-              result->addIncoming(i->getOperand(0), bb);
-            }
-            i->eraseFromParent();
-	    BranchInst::Create(exit, bb);
-          }
-        }
-      }
-    }
-  }
 
   // Inject checks prior to optimization... we also perform the
   // invariant transformations that we will end up doing later so that
@@ -440,7 +384,8 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
     delete f;
   }
 
-  kleeMergeFn = module->getFunction("klee_merge");
+  kleeOpenMergeFn = module->getFunction("klee_open_merge");
+  kleeCloseMergeFn = module->getFunction("klee_close_merge");
 
   /* Build shadow structures */
 
