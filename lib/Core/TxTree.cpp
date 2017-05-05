@@ -877,6 +877,28 @@ SubsumptionTableEntry::getSubstitution(ref<Expr> equalities,
     if (isVariable(lhs)) {
       map[lhs] = equalities->getKid(1);
       return ConstantExpr::create(1, Expr::Bool);
+    } else if (SExtExpr *lhsSExt = llvm::dyn_cast<SExtExpr>(lhs)) {
+      // Here we skin a sign-extend expression to retrieve the variable within
+      if (SExtExpr *rhsSExt = llvm::dyn_cast<SExtExpr>(equalities->getKid(1))) {
+        if (lhsSExt->getWidth() == rhsSExt->getWidth()) {
+          lhs = lhsSExt->getKid(0);
+          if (isVariable(lhs)) {
+            map[lhs] = rhsSExt->getKid(0);
+            return ConstantExpr::create(1, Expr::Bool);
+          }
+        }
+      }
+    } else if (ZExtExpr *lhsZExt = llvm::dyn_cast<ZExtExpr>(lhs)) {
+      // Here we skin a zero-extend expression to retrieve the variable within
+      if (ZExtExpr *rhsZExt = llvm::dyn_cast<ZExtExpr>(equalities->getKid(1))) {
+        if (lhsZExt->getWidth() == rhsZExt->getWidth()) {
+          lhs = lhsZExt->getKid(0);
+          if (isVariable(lhs)) {
+            map[lhs] = rhsZExt->getKid(0);
+            return ConstantExpr::create(1, Expr::Bool);
+          }
+        }
+      }
     }
     return equalities;
   }
