@@ -181,10 +181,16 @@ namespace klee {
              std::pair<ref<TxStateValue>, ref<TxStateValue> > >
     concretelyAddressedStore;
 
+    /// \brief Ordered keys of the concretely-addressed store.
+    std::vector<ref<TxStateAddress> > concretelyAddressedStoreKeys;
+
     /// \brief The mapping of symbolic locations to stored value
     std::map<ref<TxStateAddress>,
              std::pair<ref<TxStateValue>, ref<TxStateValue> > >
     symbolicallyAddressedStore;
+
+    /// \brief Ordered keys of the symbolically-addressed store.
+    std::vector<ref<TxStateAddress> > symbolicallyAddressedStoreKeys;
 
     /// \brief The store of the versioned values
     std::map<llvm::Value *, std::vector<ref<TxStateValue> > > valuesMap;
@@ -324,6 +330,7 @@ namespace klee {
         const std::map<ref<TxStateAddress>,
                        std::pair<ref<TxStateValue>, ref<TxStateValue> > > &
             store,
+        const std::vector<ref<TxStateAddress> > &orderedStoreKeys,
         std::set<const Array *> &replacements, bool coreOnly,
         Dependency::ConcreteStore &concreteStore) const;
 
@@ -332,6 +339,7 @@ namespace klee {
         const std::map<ref<TxStateAddress>,
                        std::pair<ref<TxStateValue>, ref<TxStateValue> > > &
             store,
+        const std::vector<ref<TxStateAddress> > &orderedStoreKeys,
         std::set<const Array *> &replacements, bool coreOnly,
         Dependency::SymbolicStore &symbolicStore) const;
 

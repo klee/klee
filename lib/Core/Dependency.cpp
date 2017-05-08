@@ -47,35 +47,41 @@ void Dependency::getConcreteStore(
     const std::vector<llvm::Instruction *> &callHistory,
     const std::map<ref<TxStateAddress>,
                    std::pair<ref<TxStateValue>, ref<TxStateValue> > > &store,
+    const std::vector<ref<TxStateAddress> > &orderedStoreKeys,
     std::set<const Array *> &replacements, bool coreOnly,
     Dependency::ConcreteStore &concreteStore) const {
 
-  for (std::map<
-           ref<TxStateAddress>,
-           std::pair<ref<TxStateValue>, ref<TxStateValue> > >::const_iterator
-           it = store.begin(),
-           ie = store.end();
+  for (std::vector<ref<TxStateAddress> >::const_reverse_iterator
+           it = orderedStoreKeys.rbegin(),
+           ie = orderedStoreKeys.rend();
        it != ie; ++it) {
-    if (!it->first->contextIsPrefixOf(callHistory))
+    std::map<ref<TxStateAddress>,
+             std::pair<ref<TxStateValue>, ref<TxStateValue> > >::const_iterator
+    it1 = store.find(*it);
+    if (it1 == store.end())
       continue;
-    if (it->second.second.isNull())
+
+    if (!it1->first->contextIsPrefixOf(callHistory))
+      continue;
+
+    if (it1->second.second.isNull())
       continue;
 
     if (!coreOnly) {
-      const llvm::Value *base = it->first->getContext()->getValue();
-      concreteStore[base][it->first->getInterpolantStyleAddress()] =
-          it->second.second->getInterpolantStyleValue();
-    } else if (it->second.second->isCore()) {
+      const llvm::Value *base = it1->first->getContext()->getValue();
+      concreteStore[base][it1->first->getInterpolantStyleAddress()] =
+          it1->second.second->getInterpolantStyleValue();
+    } else if (it1->second.second->isCore()) {
       // An address is in the core if it stores a value that is in the core
-      const llvm::Value *base = it->first->getContext()->getValue();
+      const llvm::Value *base = it1->first->getContext()->getValue();
 #ifdef ENABLE_Z3
       if (!NoExistential) {
-        concreteStore[base][it->first->getInterpolantStyleAddress()] =
-            it->second.second->getInterpolantStyleValue(replacements);
+        concreteStore[base][it1->first->getInterpolantStyleAddress()] =
+            it1->second.second->getInterpolantStyleValue(replacements);
       } else
 #endif
-        concreteStore[base][it->first->getInterpolantStyleAddress()] =
-            it->second.second->getInterpolantStyleValue();
+        concreteStore[base][it1->first->getInterpolantStyleAddress()] =
+            it1->second.second->getInterpolantStyleValue();
     }
   }
 }
@@ -84,40 +90,53 @@ void Dependency::getSymbolicStore(
     const std::vector<llvm::Instruction *> &callHistory,
     const std::map<ref<TxStateAddress>,
                    std::pair<ref<TxStateValue>, ref<TxStateValue> > > &store,
+    const std::vector<ref<TxStateAddress> > &orderedStoreKeys,
     std::set<const Array *> &replacements, bool coreOnly,
     Dependency::SymbolicStore &symbolicStore) const {
+  for (std::vector<ref<TxStateAddress> >::const_reverse_iterator
+           it = orderedStoreKeys.rbegin(),
+           ie = orderedStoreKeys.rend();
+       it != ie; ++it) {
+    std::map<ref<TxStateAddress>,
+             std::pair<ref<TxStateValue>, ref<TxStateValue> > >::const_iterator
+    it1 = store.find(*it);
+    if (it1 == store.end())
+      continue;
+
+    if (!it1->first->contextIsPrefixOf(callHistory))
+      continue;
+
+    if (it1->second.second.isNull())
+      continue;
+
+    if (!coreOnly) {
+      llvm::Value *base = it1->first->getContext()->getValue();
+      symbolicStore[base].push_back(Dependency::AddressValuePair(
+          it1->first->getInterpolantStyleAddress(),
+          it1->second.second->getInterpolantStyleValue()));
+    } else if (it1->second.second->isCore()) {
+      // An address is in the core if it stores a value that is in the core
+      llvm::Value *base = it1->first->getContext()->getValue();
+#ifdef ENABLE_Z3
+      if (!NoExistential) {
+        symbolicStore[base].push_back(Dependency::AddressValuePair(
+            TxStateAddress::create(it1->first, replacements)
+                ->getInterpolantStyleAddress(),
+            it1->second.second->getInterpolantStyleValue()));
+      } else
+#endif
+        symbolicStore[base].push_back(Dependency::AddressValuePair(
+            it1->first->getInterpolantStyleAddress(),
+            it1->second.second->getInterpolantStyleValue()));
+    }
+  }
+
   for (std::map<
            ref<TxStateAddress>,
            std::pair<ref<TxStateValue>, ref<TxStateValue> > >::const_iterator
            it = store.begin(),
            ie = store.end();
        it != ie; ++it) {
-    if (!it->first->contextIsPrefixOf(callHistory))
-      continue;
-
-    if (it->second.second.isNull())
-      continue;
-
-    if (!coreOnly) {
-      llvm::Value *base = it->first->getContext()->getValue();
-      symbolicStore[base].push_back(Dependency::AddressValuePair(
-          it->first->getInterpolantStyleAddress(),
-          it->second.second->getInterpolantStyleValue()));
-    } else if (it->second.second->isCore()) {
-      // An address is in the core if it stores a value that is in the core
-      llvm::Value *base = it->first->getContext()->getValue();
-#ifdef ENABLE_Z3
-      if (!NoExistential) {
-        symbolicStore[base].push_back(Dependency::AddressValuePair(
-            TxStateAddress::create(it->first, replacements)
-                ->getInterpolantStyleAddress(),
-            it->second.second->getInterpolantStyleValue()));
-      } else
-#endif
-        symbolicStore[base].push_back(Dependency::AddressValuePair(
-            it->first->getInterpolantStyleAddress(),
-            it->second.second->getInterpolantStyleValue()));
-    }
   }
 }
 
@@ -145,10 +164,12 @@ void Dependency::getStoredExpressions(
     std::set<const Array *> &replacements, bool coreOnly,
     Dependency::ConcreteStore &_concretelyAddressedStore,
     Dependency::SymbolicStore &_symbolicallyAddressedStore) {
-  getConcreteStore(callHistory, concretelyAddressedStore, replacements,
-                   coreOnly, _concretelyAddressedStore);
-  getSymbolicStore(callHistory, symbolicallyAddressedStore, replacements,
-                   coreOnly, _symbolicallyAddressedStore);
+  getConcreteStore(callHistory, concretelyAddressedStore,
+                   concretelyAddressedStoreKeys, replacements, coreOnly,
+                   _concretelyAddressedStore);
+  getSymbolicStore(callHistory, symbolicallyAddressedStore,
+                   symbolicallyAddressedStoreKeys, replacements, coreOnly,
+                   _symbolicallyAddressedStore);
 }
 
 ref<TxStateValue>
@@ -329,12 +350,15 @@ ref<TxStateValue> Dependency::getLatestValueForMarking(llvm::Value *val,
 
 void Dependency::updateStore(ref<TxStateAddress> loc, ref<TxStateValue> address,
                              ref<TxStateValue> value) {
-  if (loc->hasConstantAddress())
+  if (loc->hasConstantAddress()) {
     concretelyAddressedStore[loc] =
         std::pair<ref<TxStateValue>, ref<TxStateValue> >(address, value);
-  else
+    concretelyAddressedStoreKeys.push_back(loc);
+  } else {
     symbolicallyAddressedStore[loc] =
         std::pair<ref<TxStateValue>, ref<TxStateValue> >(address, value);
+    symbolicallyAddressedStoreKeys.push_back(loc);
+  }
 }
 
 void Dependency::addDependency(ref<TxStateValue> source,
@@ -583,7 +607,9 @@ Dependency::Dependency(Dependency *parent, llvm::DataLayout *_targetData)
     : parent(parent), targetData(_targetData) {
   if (parent) {
     concretelyAddressedStore = parent->concretelyAddressedStore;
+    concretelyAddressedStoreKeys = parent->concretelyAddressedStoreKeys;
     symbolicallyAddressedStore = parent->symbolicallyAddressedStore;
+    symbolicallyAddressedStoreKeys = parent->symbolicallyAddressedStoreKeys;
     debugSubsumptionLevel = parent->debugSubsumptionLevel;
     debugStateLevel = parent->debugStateLevel;
   } else {
@@ -600,7 +626,9 @@ Dependency::Dependency(Dependency *parent, llvm::DataLayout *_targetData)
 Dependency::~Dependency() {
   // Delete the locally-constructed relations
   concretelyAddressedStore.clear();
+  concretelyAddressedStoreKeys.clear();
   symbolicallyAddressedStore.clear();
+  symbolicallyAddressedStoreKeys.clear();
 
   // Delete valuesMap
   for (std::map<llvm::Value *, std::vector<ref<TxStateValue> > >::iterator
