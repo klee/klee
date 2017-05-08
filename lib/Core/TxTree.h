@@ -381,7 +381,7 @@ class SubsumptionTableEntry {
 
   Dependency::ConcreteStore concreteAddressStore;
 
-  Dependency::SymbolicStore symbolicAddressStore;
+  Dependency::ConcreteStore symbolicAddressStore;
 
   std::set<const Array *> existentials;
 
@@ -472,7 +472,7 @@ public:
 
   bool subsumed(TimingSolver *solver, ExecutionState &state, double timeout,
                 Dependency::ConcreteStore &concretelyAddressedStore,
-                Dependency::SymbolicStore &symbolicallyAddressedStore,
+                Dependency::ConcreteStore &symbolicallyAddressedStore,
                 int debugSubsumptionLevel);
 
   /// Tests if the argument is a variable. A variable here is defined to be
@@ -635,7 +635,7 @@ public:
   void getStoredExpressions(
       const std::vector<llvm::Instruction *> &callHistory,
       Dependency::ConcreteStore &concretelyAddressedStore,
-      Dependency::SymbolicStore &symbolicallyAddressedStore) const;
+      Dependency::ConcreteStore &symbolicallyAddressedStore) const;
 
   /// \brief This retrieves the allocations known at this state, and the
   /// expressions stored in the allocations, as long as the allocation is
@@ -652,7 +652,7 @@ public:
       const std::vector<llvm::Instruction *> &callHistory,
       std::set<const Array *> &replacements,
       Dependency::ConcreteStore &concretelyAddressedStore,
-      Dependency::SymbolicStore &symbolicallyAddressedStore) const;
+      Dependency::ConcreteStore &symbolicallyAddressedStore) const;
 
   void incInstructionsDepth();
 

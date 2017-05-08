@@ -161,13 +161,9 @@ namespace klee {
   class Dependency {
 
   public:
-    typedef std::pair<ref<TxInterpolantAddress>, ref<TxInterpolantValue> >
-    AddressValuePair;
     typedef std::map<ref<TxInterpolantAddress>, ref<TxInterpolantValue> >
     ConcreteStoreMap;
-    typedef std::vector<AddressValuePair> SymbolicStoreMap;
     typedef std::map<const llvm::Value *, ConcreteStoreMap> ConcreteStore;
-    typedef std::map<const llvm::Value *, SymbolicStoreMap> SymbolicStore;
 
   private:
     /// \brief Previous path condition
@@ -341,7 +337,7 @@ namespace klee {
             store,
         const std::vector<ref<TxStateAddress> > &orderedStoreKeys,
         std::set<const Array *> &replacements, bool coreOnly,
-        Dependency::SymbolicStore &symbolicStore) const;
+        Dependency::ConcreteStore &symbolicStore) const;
 
   public:
     /// \brief This is for dynamic setting up of debug messages.
@@ -400,7 +396,7 @@ namespace klee {
     getStoredExpressions(const std::vector<llvm::Instruction *> &callHistory,
                          std::set<const Array *> &replacements, bool coreOnly,
                          ConcreteStore &_concretelyAddressedStore,
-                         SymbolicStore &_symbolicallyAddressedStore);
+                         ConcreteStore &_symbolicallyAddressedStore);
 
     /// \brief Record call arguments in a function call
     void bindCallArguments(llvm::Instruction *instr,

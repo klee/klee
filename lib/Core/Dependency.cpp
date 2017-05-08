@@ -104,7 +104,7 @@ void Dependency::getSymbolicStore(
                    std::pair<ref<TxStateValue>, ref<TxStateValue> > > &store,
     const std::vector<ref<TxStateAddress> > &orderedStoreKeys,
     std::set<const Array *> &replacements, bool coreOnly,
-    Dependency::SymbolicStore &symbolicStore) const {
+    Dependency::ConcreteStore &symbolicStore) const {
   for (std::vector<ref<TxStateAddress> >::const_reverse_iterator
            it = orderedStoreKeys.rbegin(),
            ie = orderedStoreKeys.rend();
@@ -122,24 +122,34 @@ void Dependency::getSymbolicStore(
       continue;
 
     if (!coreOnly) {
-      llvm::Value *base = it1->first->getContext()->getValue();
-      symbolicStore[base].push_back(Dependency::AddressValuePair(
-          it1->first->getInterpolantStyleAddress(),
-          it1->second.second->getInterpolantStyleValue()));
+      const llvm::Value *base = it1->first->getContext()->getValue();
+      ref<TxInterpolantAddress> address =
+          it1->first->getInterpolantStyleAddress();
+      std::map<ref<TxInterpolantAddress>, ref<TxInterpolantValue> > &
+      addressValueMap = symbolicStore[base];
+      if (addressValueMap.find(address) == addressValueMap.end()) {
+        addressValueMap[address] =
+            it1->second.second->getInterpolantStyleValue();
+      }
     } else if (it1->second.second->isCore()) {
       // An address is in the core if it stores a value that is in the core
-      llvm::Value *base = it1->first->getContext()->getValue();
+      const llvm::Value *base = it1->first->getContext()->getValue();
+      ref<TxInterpolantAddress> address =
+          it1->first->getInterpolantStyleAddress();
+      std::map<ref<TxInterpolantAddress>, ref<TxInterpolantValue> > &
+      addressValueMap = symbolicStore[base];
+      if (addressValueMap.find(address) == addressValueMap.end()) {
 #ifdef ENABLE_Z3
-      if (!NoExistential) {
-        symbolicStore[base].push_back(Dependency::AddressValuePair(
-            TxStateAddress::create(it1->first, replacements)
-                ->getInterpolantStyleAddress(),
-            it1->second.second->getInterpolantStyleValue(replacements)));
-      } else
+        if (!NoExistential) {
+          address = TxStateAddress::create(it1->first, replacements)
+                        ->getInterpolantStyleAddress();
+          addressValueMap[address] =
+              it1->second.second->getInterpolantStyleValue(replacements);
+        } else
 #endif
-        symbolicStore[base].push_back(Dependency::AddressValuePair(
-            it1->first->getInterpolantStyleAddress(),
-            it1->second.second->getInterpolantStyleValue()));
+          addressValueMap[address] =
+              it1->second.second->getInterpolantStyleValue();
+      }
     }
   }
 }
@@ -167,7 +177,7 @@ void Dependency::getStoredExpressions(
     const std::vector<llvm::Instruction *> &callHistory,
     std::set<const Array *> &replacements, bool coreOnly,
     Dependency::ConcreteStore &_concretelyAddressedStore,
-    Dependency::SymbolicStore &_symbolicallyAddressedStore) {
+    Dependency::ConcreteStore &_symbolicallyAddressedStore) {
   getConcreteStore(callHistory, concretelyAddressedStore,
                    concretelyAddressedStoreKeys, replacements, coreOnly,
                    _concretelyAddressedStore);
