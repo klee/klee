@@ -69,19 +69,31 @@ void Dependency::getConcreteStore(
 
     if (!coreOnly) {
       const llvm::Value *base = it1->first->getContext()->getValue();
-      concreteStore[base][it1->first->getInterpolantStyleAddress()] =
-          it1->second.second->getInterpolantStyleValue();
+      ref<TxInterpolantAddress> address =
+          it1->first->getInterpolantStyleAddress();
+      std::map<ref<TxInterpolantAddress>, ref<TxInterpolantValue> > &
+      addressValueMap = concreteStore[base];
+      if (addressValueMap.find(address) == addressValueMap.end()) {
+        addressValueMap[address] =
+            it1->second.second->getInterpolantStyleValue();
+      }
     } else if (it1->second.second->isCore()) {
       // An address is in the core if it stores a value that is in the core
       const llvm::Value *base = it1->first->getContext()->getValue();
+      ref<TxInterpolantAddress> address =
+          it1->first->getInterpolantStyleAddress();
+      std::map<ref<TxInterpolantAddress>, ref<TxInterpolantValue> > &
+      addressValueMap = concreteStore[base];
+      if (addressValueMap.find(address) == addressValueMap.end()) {
 #ifdef ENABLE_Z3
-      if (!NoExistential) {
-        concreteStore[base][it1->first->getInterpolantStyleAddress()] =
-            it1->second.second->getInterpolantStyleValue(replacements);
-      } else
+        if (!NoExistential) {
+          addressValueMap[address] =
+              it1->second.second->getInterpolantStyleValue(replacements);
+        } else
 #endif
-        concreteStore[base][it1->first->getInterpolantStyleAddress()] =
-            it1->second.second->getInterpolantStyleValue();
+          addressValueMap[address] =
+              it1->second.second->getInterpolantStyleValue();
+      }
     }
   }
 }
