@@ -162,8 +162,8 @@ namespace klee {
 
   public:
     typedef std::map<ref<TxInterpolantAddress>, ref<TxInterpolantValue> >
-    ConcreteStoreMap;
-    typedef std::map<const llvm::Value *, ConcreteStoreMap> ConcreteStore;
+    InterpolantStoreMap;
+    typedef std::map<const llvm::Value *, InterpolantStoreMap> InterpolantStore;
 
   private:
     /// \brief Previous path condition
@@ -328,7 +328,7 @@ namespace klee {
             store,
         const std::vector<ref<TxStateAddress> > &orderedStoreKeys,
         std::set<const Array *> &replacements, bool coreOnly,
-        Dependency::ConcreteStore &concreteStore) const;
+        Dependency::InterpolantStore &concreteStore) const;
 
     void getSymbolicStore(
         const std::vector<llvm::Instruction *> &callHistory,
@@ -337,7 +337,7 @@ namespace klee {
             store,
         const std::vector<ref<TxStateAddress> > &orderedStoreKeys,
         std::set<const Array *> &replacements, bool coreOnly,
-        Dependency::ConcreteStore &symbolicStore) const;
+        Dependency::InterpolantStore &symbolicStore) const;
 
   public:
     /// \brief This is for dynamic setting up of debug messages.
@@ -395,8 +395,8 @@ namespace klee {
     void
     getStoredExpressions(const std::vector<llvm::Instruction *> &callHistory,
                          std::set<const Array *> &replacements, bool coreOnly,
-                         ConcreteStore &_concretelyAddressedStore,
-                         ConcreteStore &_symbolicallyAddressedStore);
+                         InterpolantStore &_concretelyAddressedStore,
+                         InterpolantStore &_symbolicallyAddressedStore);
 
     /// \brief Record call arguments in a function call
     void bindCallArguments(llvm::Instruction *instr,

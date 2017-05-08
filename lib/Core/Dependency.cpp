@@ -49,7 +49,7 @@ void Dependency::getConcreteStore(
                    std::pair<ref<TxStateValue>, ref<TxStateValue> > > &store,
     const std::vector<ref<TxStateAddress> > &orderedStoreKeys,
     std::set<const Array *> &replacements, bool coreOnly,
-    Dependency::ConcreteStore &concreteStore) const {
+    Dependency::InterpolantStore &concreteStore) const {
 
   for (std::vector<ref<TxStateAddress> >::const_reverse_iterator
            it = orderedStoreKeys.rbegin(),
@@ -104,7 +104,7 @@ void Dependency::getSymbolicStore(
                    std::pair<ref<TxStateValue>, ref<TxStateValue> > > &store,
     const std::vector<ref<TxStateAddress> > &orderedStoreKeys,
     std::set<const Array *> &replacements, bool coreOnly,
-    Dependency::ConcreteStore &symbolicStore) const {
+    Dependency::InterpolantStore &symbolicStore) const {
   for (std::vector<ref<TxStateAddress> >::const_reverse_iterator
            it = orderedStoreKeys.rbegin(),
            ie = orderedStoreKeys.rend();
@@ -176,8 +176,8 @@ Dependency::registerNewTxStateValue(llvm::Value *value,
 void Dependency::getStoredExpressions(
     const std::vector<llvm::Instruction *> &callHistory,
     std::set<const Array *> &replacements, bool coreOnly,
-    Dependency::ConcreteStore &_concretelyAddressedStore,
-    Dependency::ConcreteStore &_symbolicallyAddressedStore) {
+    Dependency::InterpolantStore &_concretelyAddressedStore,
+    Dependency::InterpolantStore &_symbolicallyAddressedStore) {
   getConcreteStore(callHistory, concretelyAddressedStore,
                    concretelyAddressedStoreKeys, replacements, coreOnly,
                    _concretelyAddressedStore);
