@@ -134,7 +134,7 @@ void Dependency::getSymbolicStore(
         symbolicStore[base].push_back(Dependency::AddressValuePair(
             TxStateAddress::create(it1->first, replacements)
                 ->getInterpolantStyleAddress(),
-            it1->second.second->getInterpolantStyleValue()));
+            it1->second.second->getInterpolantStyleValue(replacements)));
       } else
 #endif
         symbolicStore[base].push_back(Dependency::AddressValuePair(
