@@ -161,13 +161,9 @@ namespace klee {
   class Dependency {
 
   public:
-    typedef std::pair<ref<TxInterpolantAddress>, ref<TxInterpolantValue> >
-    AddressValuePair;
     typedef std::map<ref<TxInterpolantAddress>, ref<TxInterpolantValue> >
-    ConcreteStoreMap;
-    typedef std::vector<AddressValuePair> SymbolicStoreMap;
-    typedef std::map<const llvm::Value *, ConcreteStoreMap> ConcreteStore;
-    typedef std::map<const llvm::Value *, SymbolicStoreMap> SymbolicStore;
+    InterpolantStoreMap;
+    typedef std::map<const llvm::Value *, InterpolantStoreMap> InterpolantStore;
 
   private:
     /// \brief Previous path condition
@@ -181,10 +177,16 @@ namespace klee {
              std::pair<ref<TxStateValue>, ref<TxStateValue> > >
     concretelyAddressedStore;
 
+    /// \brief Ordered keys of the concretely-addressed store.
+    std::vector<ref<TxStateAddress> > concretelyAddressedStoreKeys;
+
     /// \brief The mapping of symbolic locations to stored value
     std::map<ref<TxStateAddress>,
              std::pair<ref<TxStateValue>, ref<TxStateValue> > >
     symbolicallyAddressedStore;
+
+    /// \brief Ordered keys of the symbolically-addressed store.
+    std::vector<ref<TxStateAddress> > symbolicallyAddressedStoreKeys;
 
     /// \brief The store of the versioned values
     std::map<llvm::Value *, std::vector<ref<TxStateValue> > > valuesMap;
@@ -327,26 +329,28 @@ namespace klee {
         std::vector<ref<Expr> > &arguments,
         std::vector<ref<TxStateValue> > &argumentValuesList);
 
-    static void removeAddressValue(
+    void removeAddressValue(
         std::map<ref<TxStateAddress>, ref<TxStateValue> > &simpleStore,
-        Dependency::ConcreteStore &concreteStore,
-        std::set<const Array *> &replacements, bool coreOnly);
+        Dependency::InterpolantStore &concreteStore,
+        std::set<const Array *> &replacements, bool coreOnly) const;
 
     void getConcreteStore(
         const std::vector<llvm::Instruction *> &callHistory,
         const std::map<ref<TxStateAddress>,
                        std::pair<ref<TxStateValue>, ref<TxStateValue> > > &
             store,
+        const std::vector<ref<TxStateAddress> > &orderedStoreKeys,
         std::set<const Array *> &replacements, bool coreOnly,
-        Dependency::ConcreteStore &concreteStore) const;
+        Dependency::InterpolantStore &concreteStore) const;
 
     void getSymbolicStore(
         const std::vector<llvm::Instruction *> &callHistory,
         const std::map<ref<TxStateAddress>,
                        std::pair<ref<TxStateValue>, ref<TxStateValue> > > &
             store,
+        const std::vector<ref<TxStateAddress> > &orderedStoreKeys,
         std::set<const Array *> &replacements, bool coreOnly,
-        Dependency::SymbolicStore &symbolicStore) const;
+        Dependency::InterpolantStore &symbolicStore) const;
 
   public:
     /// \brief This is for dynamic setting up of debug messages.
@@ -404,8 +408,8 @@ namespace klee {
     void
     getStoredExpressions(const std::vector<llvm::Instruction *> &callHistory,
                          std::set<const Array *> &replacements, bool coreOnly,
-                         ConcreteStore &_concretelyAddressedStore,
-                         SymbolicStore &_symbolicallyAddressedStore);
+                         InterpolantStore &_concretelyAddressedStore,
+                         InterpolantStore &_symbolicallyAddressedStore);
 
     /// \brief Record call arguments in a function call
     void bindCallArguments(llvm::Instruction *instr,
