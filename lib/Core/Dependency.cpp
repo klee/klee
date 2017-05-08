@@ -142,14 +142,6 @@ void Dependency::getSymbolicStore(
             it1->second.second->getInterpolantStyleValue()));
     }
   }
-
-  for (std::map<
-           ref<TxStateAddress>,
-           std::pair<ref<TxStateValue>, ref<TxStateValue> > >::const_iterator
-           it = store.begin(),
-           ie = store.end();
-       it != ie; ++it) {
-  }
 }
 
 bool Dependency::isMainArgument(const llvm::Value *loc) {
