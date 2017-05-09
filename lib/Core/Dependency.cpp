@@ -179,6 +179,8 @@ void Dependency::getConcreteStore(
 //      it->second->dump();
 //    }
 
+    // The following performs computation of values that are dominated by other
+    // values, wrt. flow to the interpolant / unsat core.
     for (std::map<ref<TxStateValue>, uint64_t>::iterator it = useCount.begin(),
                                                          ie = useCount.end();
          it != ie; ++it) {
@@ -195,6 +197,7 @@ void Dependency::getConcreteStore(
       }
     }
 
+    // Copy only values whose use count not reduced to zero
     for (std::map<ref<TxStateAddress>, ref<TxStateValue> >::iterator
              it = _concreteStore.begin(),
              ie = _concreteStore.end();
@@ -218,21 +221,20 @@ void Dependency::getConcreteStore(
     removeAddressValue(__concreteStore, concreteStore, replacements, true);
 
 //    llvm::errs() << "AFTER:\n";
-//    for (Dependency::ConcreteStore::iterator it = concreteStore.begin(),
-//	ie = concreteStore.end();
-//	it != ie; ++it) {
-//	std::map<ref<TxInterpolantAddress>, ref<TxInterpolantValue> >
-//	addressValueMap =
-//	    it->second;
-//	for (std::map<ref<TxInterpolantAddress>, ref<TxInterpolantValue>
-//	    >::iterator
-//	    it1 = addressValueMap.begin(),
-//	    ie1 = addressValueMap.end();
-//	    it1 != ie1; ++it1) {
-//	    llvm::errs() << "-----------------------------\n";
-//	    it1->first->dump();
-//	    it1->second->dump();
-//	}
+//    for (Dependency::InterpolantStore::iterator it = concreteStore.begin(),
+//                                                ie = concreteStore.end();
+//         it != ie; ++it) {
+//      std::map<ref<TxInterpolantAddress>, ref<TxInterpolantValue> >
+//      addressValueMap = it->second;
+//      for (std::map<ref<TxInterpolantAddress>,
+//                    ref<TxInterpolantValue> >::iterator
+//               it1 = addressValueMap.begin(),
+//               ie1 = addressValueMap.end();
+//           it1 != ie1; ++it1) {
+//        llvm::errs() << "-----------------------------\n";
+//        it1->first->dump();
+//        it1->second->dump();
+//      }
 //    }
   } else {
     removeAddressValue(_concreteStore, concreteStore, replacements, false);
