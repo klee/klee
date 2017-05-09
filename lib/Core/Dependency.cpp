@@ -141,8 +141,7 @@ void Dependency::getConcreteStore(
     Dependency::InterpolantStore &concreteStore) const {
   std::map<ref<TxStateAddress>, ref<TxStateValue> > _concreteStore;
 
-  std::map<ref<TxStateAddress>, std::pair<std::set<ref<TxStateAddress> >,
-                                          uint64_t> > valueAddressMap;
+  std::map<ref<TxStateValue>, uint64_t> useCount;
 
   for (std::map<
            ref<TxStateAddress>,
@@ -163,9 +162,7 @@ void Dependency::getConcreteStore(
       _concreteStore[it->first] = it->second.second;
       std::set<ref<TxStateAddress> > loadLocations =
           it->second.second->getLoadLocations();
-      valueAddressMap[it->first] =
-          std::pair<std::set<ref<TxStateAddress> >, uint64_t>(
-              loadLocations, it->second.second->getDirectUseCount());
+      useCount[it->second.second] = it->second.second->getDirectUseCount();
     }
   }
 
@@ -182,33 +179,30 @@ void Dependency::getConcreteStore(
 //      it->second->dump();
 //    }
 
-    for (std::map<ref<TxStateAddress>, std::pair<std::set<ref<TxStateAddress> >,
-                                                 uint64_t> >::iterator
-             it = valueAddressMap.begin(),
-             ie = valueAddressMap.end();
+    for (std::map<ref<TxStateValue>, uint64_t>::iterator it = useCount.begin(),
+                                                         ie = useCount.end();
          it != ie; ++it) {
-      std::map<ref<TxStateAddress>, std::pair<std::set<ref<TxStateAddress> >,
-                                              uint64_t> >::iterator mapIter;
-      std::set<ref<TxStateAddress> > &sources = it->second.first;
-      for (std::set<ref<TxStateAddress> >::const_iterator it1 = sources.begin(),
-                                                          ie1 = sources.end();
+      std::map<ref<TxStateValue>, uint64_t>::iterator mapIter;
+      const std::map<ref<TxStateValue>, ref<TxStateAddress> > &sources =
+          it->first->getSources();
+      for (std::map<ref<TxStateValue>, ref<TxStateAddress> >::const_iterator
+               it1 = sources.begin(),
+               ie1 = sources.end();
            it1 != ie1; ++it1) {
-        // To prevent cycle
-        if ((*it1) == it->first)
-          continue;
-        mapIter = valueAddressMap.find(*it1);
-        if (mapIter != valueAddressMap.end() && mapIter->second.second > 0)
-          --(mapIter->second.second);
+        mapIter = useCount.find(it1->first);
+        if (mapIter != useCount.end() && mapIter->second > 0)
+          --(mapIter->second);
       }
     }
 
-    for (std::map<ref<TxStateAddress>, std::pair<std::set<ref<TxStateAddress> >,
-                                                 uint64_t> >::iterator
-             it = valueAddressMap.begin(),
-             ie = valueAddressMap.end();
+    for (std::map<ref<TxStateAddress>, ref<TxStateValue> >::iterator
+             it = _concreteStore.begin(),
+             ie = _concreteStore.end();
          it != ie; ++it) {
-      if (it->second.second > 0)
-        __concreteStore[it->first] = _concreteStore[it->first];
+      std::map<ref<TxStateValue>, uint64_t>::iterator it1 =
+          useCount.find(it->second);
+      if (it1 != useCount.end() && it1->second > 0)
+        __concreteStore[it->first] = it->second;
     }
 
 //    llvm::errs() << "STEP1:\n";
