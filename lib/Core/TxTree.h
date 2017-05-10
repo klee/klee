@@ -453,6 +453,11 @@ class SubsumptionTableEntry {
   static void getSubstitution1(ref<Expr> equalities,
                                std::map<ref<Expr>, ref<Expr> > &map);
 
+  /// \brief Function to collect substitution from a conjunction of formulas.
+  static void getSubstitution2(std::set<const Array *> &replaced,
+                               ref<Expr> conjunction,
+                               std::map<ref<Expr>, ref<Expr> > &map);
+
   /// \brief Function to remove equalities whose lhs is a variable in the set.
   static ref<Expr> removeUnsubstituted(std::set<const Array *> &variables,
                                        ref<Expr> equalities);
