@@ -449,15 +449,20 @@ class SubsumptionTableEntry {
   static ref<Expr> simplifyArithmeticBody(ref<Expr> existsExpr,
                                           bool &hasExistentialsOnly);
 
-  static ref<Expr> getSubstitution(ref<Expr> equalities,
-                                   std::map<ref<Expr>, ref<Expr> > &map);
+  /// \brief Function to collect substitution from a conjunction of equalities.
+  static void getSubstitution(ref<Expr> equalities,
+                              std::map<ref<Expr>, ref<Expr> > &map);
+
+  /// \brief Function to remove equalities whose lhs is a variable in the set.
+  static ref<Expr> removeUnsubstituted(std::set<const Array *> &variables,
+                                       ref<Expr> equalities);
 
   bool empty() {
     return interpolant.isNull() && concreteAddressStore.empty() &&
            symbolicAddressStore.empty();
   }
 
-  /// \brief For printing member functions running time statistics
+  /// \brief For printing member functions running time statistics,
   static void printStat(std::stringstream &stream);
 
 public:

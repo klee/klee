@@ -867,7 +867,7 @@ ref<Expr> SubsumptionTableEntry::simplifyEqualityExpr(
   assert(!"Invalid expression type.");
 }
 
-ref<Expr>
+void
 SubsumptionTableEntry::getSubstitution(ref<Expr> equalities,
                                        std::map<ref<Expr>, ref<Expr> > &map) {
   // It is assumed the lhs is an expression on the existentially-quantified
@@ -876,7 +876,6 @@ SubsumptionTableEntry::getSubstitution(ref<Expr> equalities,
     ref<Expr> lhs = equalities->getKid(0);
     if (isVariable(lhs)) {
       map[lhs] = equalities->getKid(1);
-      return ConstantExpr::create(1, Expr::Bool);
     } else if (SExtExpr *lhsSExt = llvm::dyn_cast<SExtExpr>(lhs)) {
       // Here we skin a sign-extend expression to retrieve the variable within
       if (SExtExpr *rhsSExt = llvm::dyn_cast<SExtExpr>(equalities->getKid(1))) {
@@ -884,7 +883,6 @@ SubsumptionTableEntry::getSubstitution(ref<Expr> equalities,
           lhs = lhsSExt->getKid(0);
           if (isVariable(lhs)) {
             map[lhs] = rhsSExt->getKid(0);
-            return ConstantExpr::create(1, Expr::Bool);
           }
         }
       }
@@ -895,6 +893,41 @@ SubsumptionTableEntry::getSubstitution(ref<Expr> equalities,
           lhs = lhsZExt->getKid(0);
           if (isVariable(lhs)) {
             map[lhs] = rhsZExt->getKid(0);
+          }
+        }
+      }
+    }
+  } else if (llvm::isa<AndExpr>(equalities)) {
+    getSubstitution(equalities->getKid(0), map);
+    getSubstitution(equalities->getKid(1), map);
+  }
+}
+
+ref<Expr>
+SubsumptionTableEntry::removeUnsubstituted(std::set<const Array *> &variables,
+                                           ref<Expr> equalities) {
+  // It is assumed the lhs is an expression on the existentially-quantified
+  // variable whereas the rhs is an expression on the free variables.
+  if (llvm::isa<EqExpr>(equalities)) {
+    ref<Expr> lhs = equalities->getKid(0);
+    if (isVariable(lhs) && hasVariableInSet(variables, lhs)) {
+      return ConstantExpr::create(1, Expr::Bool);
+    } else if (SExtExpr *lhsSExt = llvm::dyn_cast<SExtExpr>(lhs)) {
+      // Here we skin a sign-extend expression to retrieve the variable within
+      if (SExtExpr *rhsSExt = llvm::dyn_cast<SExtExpr>(equalities->getKid(1))) {
+        if (lhsSExt->getWidth() == rhsSExt->getWidth()) {
+          lhs = lhsSExt->getKid(0);
+          if (isVariable(lhs) && hasVariableInSet(variables, lhs)) {
+            return ConstantExpr::create(1, Expr::Bool);
+          }
+        }
+      }
+    } else if (ZExtExpr *lhsZExt = llvm::dyn_cast<ZExtExpr>(lhs)) {
+      // Here we skin a zero-extend expression to retrieve the variable within
+      if (ZExtExpr *rhsZExt = llvm::dyn_cast<ZExtExpr>(equalities->getKid(1))) {
+        if (lhsZExt->getWidth() == rhsZExt->getWidth()) {
+          lhs = lhsZExt->getKid(0);
+          if (isVariable(lhs) && hasVariableInSet(variables, lhs)) {
             return ConstantExpr::create(1, Expr::Bool);
           }
         }
@@ -904,8 +937,8 @@ SubsumptionTableEntry::getSubstitution(ref<Expr> equalities,
   }
 
   if (llvm::isa<AndExpr>(equalities)) {
-    ref<Expr> lhs = getSubstitution(equalities->getKid(0), map);
-    ref<Expr> rhs = getSubstitution(equalities->getKid(1), map);
+    ref<Expr> lhs = removeUnsubstituted(variables, equalities->getKid(0));
+    ref<Expr> rhs = removeUnsubstituted(variables, equalities->getKid(1));
     if (lhs->isTrue()) {
       if (rhs->isTrue()) {
         return ConstantExpr::create(1, Expr::Bool);
@@ -993,8 +1026,10 @@ ref<Expr> SubsumptionTableEntry::simplifyExistsExpr(ref<Expr> existsExpr,
   ref<Expr> body = llvm::dyn_cast<ExistsExpr>(existsExpr)->body;
   assert(llvm::isa<AndExpr>(body));
 
+  ref<Expr> equalities = body->getKid(1);
   std::map<ref<Expr>, ref<Expr> > substitution;
-  ref<Expr> equalities = getSubstitution(body->getKid(1), substitution);
+  getSubstitution(equalities, substitution);
+
   ref<Expr> interpolant =
       ApplySubstitutionVisitor(substitution).visit(body->getKid(0));
 
@@ -1003,6 +1038,7 @@ ref<Expr> SubsumptionTableEntry::simplifyExistsExpr(ref<Expr> existsExpr,
     // we could also replace the occurrence of some variables with its
     // corresponding substitution mapping.
     equalities = ApplySubstitutionVisitor(substitution).visit(equalities);
+    equalities = removeUnsubstituted(expr->variables, equalities);
   }
 
   ref<Expr> newBody = AndExpr::create(interpolant, equalities);
