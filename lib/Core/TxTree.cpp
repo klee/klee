@@ -868,8 +868,8 @@ ref<Expr> SubsumptionTableEntry::simplifyEqualityExpr(
 }
 
 void
-SubsumptionTableEntry::getSubstitution(ref<Expr> equalities,
-                                       std::map<ref<Expr>, ref<Expr> > &map) {
+SubsumptionTableEntry::getSubstitution1(ref<Expr> equalities,
+                                        std::map<ref<Expr>, ref<Expr> > &map) {
   // It is assumed the lhs is an expression on the existentially-quantified
   // variable whereas the rhs is an expression on the free variables.
   if (llvm::isa<EqExpr>(equalities)) {
@@ -898,8 +898,30 @@ SubsumptionTableEntry::getSubstitution(ref<Expr> equalities,
       }
     }
   } else if (llvm::isa<AndExpr>(equalities)) {
-    getSubstitution(equalities->getKid(0), map);
-    getSubstitution(equalities->getKid(1), map);
+    getSubstitution1(equalities->getKid(0), map);
+    getSubstitution1(equalities->getKid(1), map);
+  }
+}
+
+void
+SubsumptionTableEntry::getSubstitution2(std::set<const Array *> &replaced,
+                                        ref<Expr> equalities,
+                                        std::map<ref<Expr>, ref<Expr> > &map) {
+  // It is assumed the lhs is an expression on the existentially-quantified
+  // variable whereas the rhs is an expression on the free variables.
+  if (llvm::isa<EqExpr>(equalities)) {
+    ref<Expr> lhs = equalities->getKid(0);
+    ref<Expr> rhs = equalities->getKid(1);
+    if (isVariable(lhs) && hasVariableInSet(replaced, lhs) &&
+        !hasVariableInSet(replaced, rhs)) {
+      map[lhs] = rhs;
+    } else if (!hasVariableInSet(replaced, lhs) && isVariable(rhs) &&
+               hasVariableInSet(replaced, rhs)) {
+      map[rhs] = lhs;
+    }
+  } else if (llvm::isa<AndExpr>(equalities)) {
+    getSubstitution2(replaced, equalities->getKid(0), map);
+    getSubstitution2(replaced, equalities->getKid(1), map);
   }
 }
 
@@ -1023,23 +1045,30 @@ ref<Expr> SubsumptionTableEntry::simplifyExistsExpr(ref<Expr> existsExpr,
                                                     bool &hasExistentialsOnly) {
   assert(llvm::isa<ExistsExpr>(existsExpr));
 
-  ref<Expr> body = llvm::dyn_cast<ExistsExpr>(existsExpr)->body;
+  ExistsExpr *expr = llvm::dyn_cast<ExistsExpr>(existsExpr);
+  ref<Expr> body = expr->body;
+
   assert(llvm::isa<AndExpr>(body));
 
+  std::map<ref<Expr>, ref<Expr> > substitution1;
   ref<Expr> equalities = body->getKid(1);
-  std::map<ref<Expr>, ref<Expr> > substitution;
-  getSubstitution(equalities, substitution);
+  getSubstitution1(equalities, substitution1);
 
   ref<Expr> interpolant =
-      ApplySubstitutionVisitor(substitution).visit(body->getKid(0));
+      ApplySubstitutionVisitor(substitution1).visit(body->getKid(0));
 
-  ExistsExpr *expr = llvm::dyn_cast<ExistsExpr>(existsExpr);
   if (hasVariableInSet(expr->variables, equalities)) {
     // we could also replace the occurrence of some variables with its
     // corresponding substitution mapping.
-    equalities = ApplySubstitutionVisitor(substitution).visit(equalities);
+    equalities = ApplySubstitutionVisitor(substitution1).visit(equalities);
     equalities = removeUnsubstituted(expr->variables, equalities);
   }
+
+  // We look for substitutions in the interpolant part and apply them to the
+  // interpolant itself.
+  std::map<ref<Expr>, ref<Expr> > substitution2;
+  getSubstitution2(expr->variables, interpolant, substitution2);
+  interpolant = ApplySubstitutionVisitor(substitution2).visit(interpolant);
 
   ref<Expr> newBody = AndExpr::create(interpolant, equalities);
 
