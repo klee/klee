@@ -249,6 +249,12 @@ namespace klee {
     ref<TxStateValue> getLatestValueForMarking(llvm::Value *val,
                                                ref<Expr> expr);
 
+    /// \brief Newly relate a location with its stored value, when the value is
+    /// loaded from the location
+    void updateStoreWithLoadedValue(ref<TxStateAddress> loc,
+                                    ref<TxStateValue> address,
+                                    ref<TxStateValue> value);
+
     /// \brief Newly relate an location with its stored value
     void updateStore(ref<TxStateAddress> loc, ref<TxStateValue> address,
                      ref<TxStateValue> value);
@@ -294,7 +300,8 @@ namespace klee {
 
     /// \brief Mark as core all the values and locations that flows to the
     /// target
-    void markFlow(ref<TxStateValue> target, const std::string &reason) const;
+    void markFlow(ref<TxStateValue> target, const std::string &reason,
+                  bool incrementDirectUseCount = true) const;
 
     /// \brief Mark as core all the pointer values and that flows to the target;
     /// and adjust its offset bound for memory bounds interpolation (a.k.a.
@@ -312,7 +319,8 @@ namespace klee {
     void markPointerFlow(ref<TxStateValue> target,
                          ref<TxStateValue> checkedOffset,
                          std::set<ref<Expr> > &bounds,
-                         const std::string &reason) const;
+                         const std::string &reason,
+                         bool incrementUseCount = true) const;
 
     /// \brief Record the expressions of a call's arguments
     void populateArgumentValuesList(
@@ -320,6 +328,11 @@ namespace klee {
         const std::vector<llvm::Instruction *> &callHistory,
         std::vector<ref<Expr> > &arguments,
         std::vector<ref<TxStateValue> > &argumentValuesList);
+
+    void removeAddressValue(
+        std::map<ref<TxStateAddress>, ref<TxStateValue> > &simpleStore,
+        Dependency::InterpolantStore &concreteStore,
+        std::set<const Array *> &replacements, bool coreOnly) const;
 
     void getConcreteStore(
         const std::vector<llvm::Instruction *> &callHistory,

@@ -23,10 +23,14 @@
 #include "klee/Expr.h"
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+#include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/Instruction.h>
+#include <llvm/IR/Instructions.h>
 #include <llvm/IR/Value.h>
 #else
+#include <llvm/BasicBlock.h>
 #include <llvm/Instruction.h>
+#include <llvm/Instructions.h>
 #include <llvm/Value.h>
 #endif
 
@@ -43,6 +47,12 @@ class AllocationContext {
 public:
   unsigned refCount;
 
+  enum Type {
+    LOCAL,
+    GLOBAL,
+    HEAP
+  } ty;
+
 private:
   /// \brief The location's LLVM value
   llvm::Value *value;
@@ -50,19 +60,16 @@ private:
   /// \brief The call history by which the allocation is reached
   std::vector<llvm::Instruction *> callHistory;
 
-  AllocationContext(llvm::Value *_value,
+  AllocationContext(Type _ty, llvm::Value *_value,
                     const std::vector<llvm::Instruction *> &_callHistory)
-      : refCount(0), value(_value), callHistory(_callHistory) {}
+      : refCount(0), ty(_ty), value(_value), callHistory(_callHistory) {}
 
 public:
   ~AllocationContext() { callHistory.clear(); }
 
   static ref<AllocationContext>
   create(llvm::Value *_value,
-         const std::vector<llvm::Instruction *> &_callHistory) {
-    ref<AllocationContext> ret(new AllocationContext(_value, _callHistory));
-    return ret;
-  }
+         const std::vector<llvm::Instruction *> &_callHistory);
 
   llvm::Value *getValue() const { return value; }
 
@@ -158,8 +165,14 @@ private:
   /// \brief The value of the concrete offset
   uint64_t concreteOffset;
 
+  /// \brief This is an indirection count, e.g., given %x the address of a local
+  /// variable x, indirection count 1 of %x refers to the address stored in x;
+  /// indirection count 2 of %x refers to the address stored in the address
+  /// stored in x.
+  uint64_t indirectionCount;
+
   TxInterpolantAddress(ref<AllocationContext> _context, ref<Expr> _offset)
-      : refCount(0), context(_context), offset(_offset) {
+      : refCount(0), context(_context), offset(_offset), indirectionCount(0) {
     isConcrete = false;
     concreteOffset = 0;
 
@@ -176,11 +189,17 @@ public:
     return ret;
   }
 
+  llvm::Value *getBase() const { return context->getValue(); }
+
   ref<AllocationContext> getContext() const { return context; }
 
   ref<Expr> getOffset() const { return offset; }
 
-  /// \brief The comparator of this class' objects. This member function is
+  /// \brief The comparator of this class' objects. This member function checks
+  /// for the equality of TxInterpolantAddress#indirectionCount member variables
+  /// to
+  /// match the number of indirections of an address. If the indirection counts
+  /// were equal, it performs further comparison. The further comparison is
   /// weaker than standard comparator for TxStateAddress in that it does not
   /// check for the equality of base addresses. Allocation base address is used
   /// in TxStateAddress (member variable TxStateAddress#base) for the purpose of
@@ -189,6 +208,10 @@ public:
   /// states for subsumption as in subsumption, related allocations in different
   /// paths may have different base addresses.
   int compare(const TxInterpolantAddress &other) const {
+    int indirectionDiff = indirectionCount - other.indirectionCount;
+    if (indirectionDiff != 0)
+      return indirectionDiff;
+
     int res = context->compare(*(other.context.get()));
     if (res)
       return res;
@@ -206,6 +229,8 @@ public:
 
     return 1;
   }
+
+  void incrementIndirectionCount() { indirectionCount++; }
 
   void print(llvm::raw_ostream &stream) const { print(stream, ""); }
 
@@ -311,6 +336,9 @@ public:
   ref<Expr> getBoundsCheck(ref<TxInterpolantValue> svalue,
                            std::set<ref<Expr> > &bounds,
                            int debugSubsumptionLevel) const;
+
+  ref<Expr> getOffsetsCheck(ref<TxInterpolantValue> svalue,
+                            int debugSubsumptionLevel) const;
 
   ref<Expr> getExpression() const { return expr; }
 
@@ -439,6 +467,17 @@ public:
     return interpolantStyleAddress;
   }
 
+  llvm::Value *getValue() const { return interpolantStyleAddress->getBase(); }
+
+  /// \brief Copy this address, but increment the indirection count
+  ref<TxStateAddress> copyWithIndirectionCountIncrement() {
+    ref<Expr> offset = interpolantStyleAddress->getOffset();
+    ref<TxStateAddress> ret(new TxStateAddress(
+        interpolantStyleAddress->getContext(), address, base, offset, size));
+    ret->interpolantStyleAddress->incrementIndirectionCount();
+    return ret;
+  }
+
   bool
   contextIsPrefixOf(const std::vector<llvm::Instruction *> &callHistory) const {
     return getContext()->isPrefixOf(callHistory);
@@ -549,12 +588,18 @@ private:
   /// \brief Reasons for this value to be in the core
   std::set<std::string> coreReasons;
 
+  /// \brief Direct use count of this value by another value in all interpolants
+  uint64_t directUseCount;
+
+  /// \brief All load addresses, transitively
+  std::set<ref<TxStateAddress> > allLoadAddresses;
+
   TxStateValue(llvm::Value *value,
                const std::vector<llvm::Instruction *> &_callHistory,
                ref<Expr> _valueExpr)
       : refCount(0), value(value), valueExpr(_valueExpr), core(false),
         id(reinterpret_cast<uint64_t>(this)), callHistory(_callHistory),
-        doNotInterpolateBound(false) {}
+        doNotInterpolateBound(false), directUseCount(0) {}
 
   /// \brief Print the content of the object, but without showing its source
   /// values.
@@ -590,12 +635,16 @@ public:
 
   void setLoadAddress(ref<TxStateValue> _loadAddress) {
     loadAddress = _loadAddress;
+    allLoadAddresses.insert(_loadAddress->getLocations().begin(),
+                            _loadAddress->getLocations().end());
   }
 
   ref<TxStateValue> getLoadAddress() { return loadAddress; }
 
   void setStoreAddress(ref<TxStateValue> _storeAddress) {
     storeAddress = _storeAddress;
+    allLoadAddresses.insert(_storeAddress->getLocations().begin(),
+                            _storeAddress->getLocations().end());
   }
 
   ref<TxStateValue> getStoreAddress() { return storeAddress; }
@@ -604,11 +653,17 @@ public:
   /// target value
   void addDependency(ref<TxStateValue> source, ref<TxStateAddress> via) {
     sources[source] = via;
+    if (via.isNull()) {
+      allLoadAddresses.insert(source->allLoadAddresses.begin(),
+                              source->allLoadAddresses.end());
+    }
   }
 
   const std::map<ref<TxStateValue>, ref<TxStateAddress> > &getSources() {
     return sources;
   }
+
+  std::set<ref<TxStateAddress> > getLoadLocations() { return allLoadAddresses; }
 
   int compare(const TxStateValue other) const {
     if (id == other.id)
@@ -637,6 +692,10 @@ public:
       coreReasons.insert(reason);
   }
 
+  void incrementDirectUseCount() { ++directUseCount; }
+
+  uint64_t getDirectUseCount() { return directUseCount; }
+
   bool isCore() const { return core; }
 
   llvm::Value *getValue() const { return value; }
@@ -658,7 +717,7 @@ public:
                                       coreReasons, locations, replacements);
   }
 
-  /// \brief Print the content of the object into a stream.
+  /// \brief Print the content of the object into a stream
   ///
   /// \param stream The stream to print the data to.
   void print(llvm::raw_ostream &stream) const {

@@ -32,12 +32,60 @@ using namespace klee;
 
 namespace klee {
 
+ref<AllocationContext> AllocationContext::create(
+    llvm::Value *_value, const std::vector<llvm::Instruction *> &_callHistory) {
+  Type ty = GLOBAL;
+
+  if (llvm::Instruction *inst = llvm::dyn_cast<llvm::Instruction>(_value)) {
+    if (inst->getParent() && inst->getParent()->getParent()) {
+      // Heap-allocated memory is considered global, and to be recorded in
+      // global frame. Here we test if the allocation was a call to *alloc and
+      // getenv functions.
+      if (llvm::CallInst *ci = llvm::dyn_cast<llvm::CallInst>(inst)) {
+        // Here we determine if this was a call to *alloc or getenv functions
+        // from the LLVM source of the call instruction instead of
+        // llvm::Function::getName(). This is to circumvent segmentation fault
+        // issue when libc is not linked.
+        std::string buf;
+        llvm::raw_string_ostream stream(buf);
+        ci->print(stream);
+        stream.flush();
+        if (buf.find("@malloc(") != std::string::npos ||
+            buf.find("@realloc(") != std::string::npos ||
+            buf.find("@calloc(") != std::string::npos) {
+          ty = HEAP;
+        } else if (buf.find("@getenv(") != std::string::npos) {
+          ty = GLOBAL;
+        }
+      } else {
+        ty = LOCAL;
+      }
+    }
+  }
+
+  ref<AllocationContext> ret(new AllocationContext(ty, _value, _callHistory));
+  return ret;
+}
+
 void AllocationContext::print(llvm::raw_ostream &stream,
                               const std::string &prefix) const {
   std::string tabs = makeTabs(1);
   if (value) {
     stream << prefix << "Location: ";
     value->print(stream);
+    switch (ty) {
+    case LOCAL:
+      stream << " (local)";
+      break;
+    case GLOBAL:
+      stream << " (global)";
+      break;
+    case HEAP:
+      stream << " (heap)";
+      break;
+    default:
+      break;
+    }
   }
   if (callHistory.size() > 0) {
     stream << "\n" << prefix << "Call history:";
@@ -57,7 +105,15 @@ void TxInterpolantAddress::print(llvm::raw_ostream &stream,
                                  const std::string &prefix) const {
   std::string tabsNext = appendTab(prefix);
 
-  stream << prefix << "function/value: ";
+  stream << prefix << "indirection: ";
+  if (indirectionCount == 0)
+    stream << "(none)";
+  else {
+    for (uint64_t i = 0; i < indirectionCount; ++i) {
+      stream << "*";
+    }
+  }
+  stream << "\n" << prefix << "function/value: ";
   if (outputFunctionName(context->getValue(), stream))
     stream << "/";
   context->getValue()->print(stream);
@@ -264,6 +320,92 @@ ref<Expr> TxInterpolantValue::getBoundsCheck(ref<TxInterpolantValue> stateValue,
           res = AndExpr::create(UltExpr::create(*it1, *it2), res);
         }
         bounds.insert(*it2);
+      }
+    }
+  }
+
+  // Bounds check successful if no constraints added
+  if (res.isNull()) {
+    if (matchFound)
+      return ConstantExpr::create(1, Expr::Bool);
+    else
+      return ConstantExpr::create(0, Expr::Bool);
+  }
+#endif // ENABLE_Z3
+  return res;
+}
+
+ref<Expr>
+TxInterpolantValue::getOffsetsCheck(ref<TxInterpolantValue> stateValue,
+                                    int debugSubsumptionLevel) const {
+  ref<Expr> res;
+#ifdef ENABLE_Z3
+
+  // In principle, for a state to be subsumed, the subsuming state must be
+  // weaker, which in this case means that it should specify less allocations,
+  // so all allocations in the subsuming (this), should be specified by the
+  // subsumed (the stateValue argument), and we iterate over allocation of
+  // the current object and for each such allocation, retrieve the
+  // information from the argument object; in this way resulting in
+  // less iterations compared to doing it the other way around.
+  bool matchFound = false;
+  for (std::map<ref<AllocationContext>, std::set<ref<Expr> > >::const_iterator
+           it = allocationOffsets.begin(),
+           ie = allocationOffsets.end();
+       it != ie; ++it) {
+    std::set<ref<Expr> > tabledOffsets = it->second;
+    std::map<ref<AllocationContext>, std::set<ref<Expr> > >::iterator iter =
+        stateValue->allocationOffsets.find(it->first);
+    if (iter == stateValue->allocationOffsets.end()) {
+      continue;
+    }
+    matchFound = true;
+
+    std::set<ref<Expr> > stateOffsets = iter->second;
+
+    assert(!tabledOffsets.empty() && "tabled offsets empty");
+
+    if (stateOffsets.empty()) {
+      if (debugSubsumptionLevel >= 3) {
+        std::string msg;
+        llvm::raw_string_ostream stream(msg);
+        it->first->print(stream);
+        stream.flush();
+        klee_message("No offset defined in state for %s", msg.c_str());
+      }
+      return ConstantExpr::create(0, Expr::Bool);
+    }
+
+    for (std::set<ref<Expr> >::const_iterator it1 = stateOffsets.begin(),
+                                              ie1 = stateOffsets.end();
+         it1 != ie1; ++it1) {
+      for (std::set<ref<Expr> >::const_iterator it2 = tabledOffsets.begin(),
+                                                ie2 = tabledOffsets.end();
+           it2 != ie2; ++it2) {
+        if (ConstantExpr *tabledOffset = llvm::dyn_cast<ConstantExpr>(*it2)) {
+          uint64_t tabledOffsetInt = tabledOffset->getZExtValue();
+          if (ConstantExpr *stateOffset = llvm::dyn_cast<ConstantExpr>(*it1)) {
+            uint64_t stateOffsetInt = stateOffset->getZExtValue();
+            if (stateOffsetInt != tabledOffsetInt) {
+              if (debugSubsumptionLevel >= 3) {
+                std::string msg;
+                llvm::raw_string_ostream stream(msg);
+                it->first->print(stream);
+                stream.flush();
+                klee_message("Offset %lu does not equal %lu for %s",
+                             stateOffsetInt, tabledOffsetInt, msg.c_str());
+              }
+              return ConstantExpr::create(0, Expr::Bool);
+            }
+          }
+        }
+
+        // Create constraints for offset equalities
+        if (res.isNull()) {
+          res = EqExpr::create(*it1, *it2);
+        } else {
+          res = AndExpr::create(EqExpr::create(*it1, *it2), res);
+        }
       }
     }
   }

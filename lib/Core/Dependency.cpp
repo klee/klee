@@ -43,6 +43,95 @@ using namespace klee;
 
 namespace klee {
 
+void Dependency::removeAddressValue(
+    std::map<ref<TxStateAddress>, ref<TxStateValue> > &simpleStore,
+    Dependency::InterpolantStore &concreteStore,
+    std::set<const Array *> &replacements, bool coreOnly) const {
+  std::map<ref<TxStateAddress>, ref<TxStateValue> > _concreteStore;
+  std::set<ref<TxStateAddress> > addressesToRemove;
+
+  for (std::map<ref<TxStateAddress>, ref<TxStateValue> >::iterator
+           it = simpleStore.begin(),
+           ie = simpleStore.end();
+       it != ie; ++it) {
+    ref<TxStateAddress> keyAddress = it->first;
+    const std::set<ref<TxStateAddress> > &addresses =
+        it->second->getLocations();
+    if (addresses.size() > 0) {
+      std::map<ref<TxStateAddress>, ref<TxStateValue> >::iterator it1;
+      for (std::set<ref<TxStateAddress> >::const_iterator
+               it2 = addresses.begin(),
+               ie2 = addresses.end();
+           it2 != ie2; ++it2) {
+        it1 = simpleStore.find(*it2);
+        if (it1 != simpleStore.end()) {
+          addressesToRemove.insert(*it2);
+          // Found the address in the map;
+          _concreteStore[keyAddress->copyWithIndirectionCountIncrement()] =
+              it1->second;
+          break;
+        }
+      }
+    }
+  }
+
+  std::set<ref<TxStateAddress> >::iterator addressesToRemoveEnd =
+      addressesToRemove.end();
+
+  // FIXME: Perhaps it is more efficient to iterate on
+  // Dependency::concretelyAddressedStoreKeys earlier.
+  for (std::vector<ref<TxStateAddress> >::const_reverse_iterator
+           it = concretelyAddressedStoreKeys.rbegin(),
+           ie = concretelyAddressedStoreKeys.rend();
+       it != ie; ++it) {
+    std::map<ref<TxStateAddress>, ref<TxStateValue> >::iterator it1 =
+        simpleStore.find(*it);
+    if (it1 != simpleStore.end() &&
+        addressesToRemove.find(it1->first) == addressesToRemoveEnd) {
+      const llvm::Value *base = it1->first->getValue();
+      ref<TxInterpolantAddress> address =
+          it1->first->getInterpolantStyleAddress();
+      std::map<ref<TxInterpolantAddress>, ref<TxInterpolantValue> > &
+      addressValueMap = concreteStore[base];
+      if (addressValueMap.find(address) == addressValueMap.end()) {
+        ref<TxInterpolantValue> storedValue;
+#ifdef ENABLE_Z3
+        if (coreOnly && !NoExistential) {
+          storedValue = it1->second->getInterpolantStyleValue(replacements);
+        } else {
+          storedValue = it1->second->getInterpolantStyleValue();
+        }
+#else
+        storedValue = it1->second->getInterpolantStyleValue();
+#endif
+        addressValueMap[address] = storedValue;
+      }
+    }
+
+    it1 = _concreteStore.find(*it);
+    if (it1 != _concreteStore.end()) {
+      const llvm::Value *base = it1->first->getValue();
+      ref<TxInterpolantAddress> address =
+          it1->first->getInterpolantStyleAddress();
+      std::map<ref<TxInterpolantAddress>, ref<TxInterpolantValue> > &
+      addressValueMap = concreteStore[base];
+      if (addressValueMap.find(address) == addressValueMap.end()) {
+        ref<TxInterpolantValue> storedValue;
+#ifdef ENABLE_Z3
+        if (coreOnly && !NoExistential) {
+          storedValue = it1->second->getInterpolantStyleValue(replacements);
+        } else {
+          storedValue = it1->second->getInterpolantStyleValue();
+        }
+#else
+        storedValue = it1->second->getInterpolantStyleValue();
+#endif
+        addressValueMap[address] = storedValue;
+      }
+    }
+  }
+}
+
 void Dependency::getConcreteStore(
     const std::vector<llvm::Instruction *> &callHistory,
     const std::map<ref<TxStateAddress>,
@@ -50,51 +139,105 @@ void Dependency::getConcreteStore(
     const std::vector<ref<TxStateAddress> > &orderedStoreKeys,
     std::set<const Array *> &replacements, bool coreOnly,
     Dependency::InterpolantStore &concreteStore) const {
+  std::map<ref<TxStateAddress>, ref<TxStateValue> > _concreteStore;
 
-  for (std::vector<ref<TxStateAddress> >::const_reverse_iterator
-           it = orderedStoreKeys.rbegin(),
-           ie = orderedStoreKeys.rend();
+  std::map<ref<TxStateValue>, uint64_t> useCount;
+
+  for (std::map<
+           ref<TxStateAddress>,
+           std::pair<ref<TxStateValue>, ref<TxStateValue> > >::const_iterator
+           it = store.begin(),
+           ie = store.end();
        it != ie; ++it) {
-    std::map<ref<TxStateAddress>,
-             std::pair<ref<TxStateValue>, ref<TxStateValue> > >::const_iterator
-    it1 = store.find(*it);
-    if (it1 == store.end())
+    if (!it->first->contextIsPrefixOf(callHistory))
       continue;
 
-    if (!it1->first->contextIsPrefixOf(callHistory))
-      continue;
-
-    if (it1->second.second.isNull())
+    if (it->second.second.isNull())
       continue;
 
     if (!coreOnly) {
-      const llvm::Value *base = it1->first->getContext()->getValue();
-      ref<TxInterpolantAddress> address =
-          it1->first->getInterpolantStyleAddress();
-      std::map<ref<TxInterpolantAddress>, ref<TxInterpolantValue> > &
-      addressValueMap = concreteStore[base];
-      if (addressValueMap.find(address) == addressValueMap.end()) {
-        addressValueMap[address] =
-            it1->second.second->getInterpolantStyleValue();
-      }
-    } else if (it1->second.second->isCore()) {
+      _concreteStore[it->first] = it->second.second;
+    } else if (it->second.second->isCore()) {
       // An address is in the core if it stores a value that is in the core
-      const llvm::Value *base = it1->first->getContext()->getValue();
-      ref<TxInterpolantAddress> address =
-          it1->first->getInterpolantStyleAddress();
-      std::map<ref<TxInterpolantAddress>, ref<TxInterpolantValue> > &
-      addressValueMap = concreteStore[base];
-      if (addressValueMap.find(address) == addressValueMap.end()) {
-#ifdef ENABLE_Z3
-        if (!NoExistential) {
-          addressValueMap[address] =
-              it1->second.second->getInterpolantStyleValue(replacements);
-        } else
-#endif
-          addressValueMap[address] =
-              it1->second.second->getInterpolantStyleValue();
+      _concreteStore[it->first] = it->second.second;
+      std::set<ref<TxStateAddress> > loadLocations =
+          it->second.second->getLoadLocations();
+      useCount[it->second.second] = it->second.second->getDirectUseCount();
+    }
+  }
+
+  if (coreOnly) {
+    std::map<ref<TxStateAddress>, ref<TxStateValue> > __concreteStore;
+
+//    llvm::errs() << "STEP0:\n";
+//    for (std::map<ref<TxStateAddress>, ref<TxStateValue> >::iterator
+//             it = _concreteStore.begin(),
+//             ie = _concreteStore.end();
+//         it != ie; ++it) {
+//      llvm::errs() << "-----------------------------\n";
+//      it->first->dump();
+//      it->second->dump();
+//    }
+
+    // The following performs computation of values that are dominated by other
+    // values, wrt. flow to the interpolant / unsat core.
+    for (std::map<ref<TxStateValue>, uint64_t>::iterator it = useCount.begin(),
+                                                         ie = useCount.end();
+         it != ie; ++it) {
+      std::map<ref<TxStateValue>, uint64_t>::iterator mapIter;
+      const std::map<ref<TxStateValue>, ref<TxStateAddress> > &sources =
+          it->first->getSources();
+      for (std::map<ref<TxStateValue>, ref<TxStateAddress> >::const_iterator
+               it1 = sources.begin(),
+               ie1 = sources.end();
+           it1 != ie1; ++it1) {
+        mapIter = useCount.find(it1->first);
+        if (mapIter != useCount.end() && mapIter->second > 0)
+          --(mapIter->second);
       }
     }
+
+    // Copy only values whose use count not reduced to zero
+    for (std::map<ref<TxStateAddress>, ref<TxStateValue> >::iterator
+             it = _concreteStore.begin(),
+             ie = _concreteStore.end();
+         it != ie; ++it) {
+      std::map<ref<TxStateValue>, uint64_t>::iterator it1 =
+          useCount.find(it->second);
+      if (it1 != useCount.end() && it1->second > 0)
+        __concreteStore[it->first] = it->second;
+    }
+
+//    llvm::errs() << "STEP1:\n";
+//    for (std::map<ref<TxStateAddress>, ref<TxStateValue> >::iterator
+//             it = __concreteStore.begin(),
+//             ie = __concreteStore.end();
+//         it != ie; ++it) {
+//      llvm::errs() << "-----------------------------\n";
+//      it->first->dump();
+//      it->second->dump();
+//    }
+
+    removeAddressValue(__concreteStore, concreteStore, replacements, true);
+
+//    llvm::errs() << "AFTER:\n";
+//    for (Dependency::InterpolantStore::iterator it = concreteStore.begin(),
+//                                                ie = concreteStore.end();
+//         it != ie; ++it) {
+//      std::map<ref<TxInterpolantAddress>, ref<TxInterpolantValue> >
+//      addressValueMap = it->second;
+//      for (std::map<ref<TxInterpolantAddress>,
+//                    ref<TxInterpolantValue> >::iterator
+//               it1 = addressValueMap.begin(),
+//               ie1 = addressValueMap.end();
+//           it1 != ie1; ++it1) {
+//        llvm::errs() << "-----------------------------\n";
+//        it1->first->dump();
+//        it1->second->dump();
+//      }
+//    }
+  } else {
+    removeAddressValue(_concreteStore, concreteStore, replacements, false);
   }
 }
 
@@ -362,6 +505,13 @@ ref<TxStateValue> Dependency::getLatestValueForMarking(llvm::Value *val,
   return value;
 }
 
+void Dependency::updateStoreWithLoadedValue(ref<TxStateAddress> loc,
+                                            ref<TxStateValue> address,
+                                            ref<TxStateValue> value) {
+  updateStore(loc, address, value);
+  value->setLoadAddress(address);
+}
+
 void Dependency::updateStore(ref<TxStateAddress> loc, ref<TxStateValue> address,
                              ref<TxStateValue> value) {
   if (loc->hasConstantAddress()) {
@@ -546,10 +696,20 @@ Dependency::directFlowSources(ref<TxStateValue> target) const {
   return ret;
 }
 
-void Dependency::markFlow(ref<TxStateValue> target,
-                          const std::string &reason) const {
-  if (target.isNull() || (target->isCore() && !target->canInterpolateBound()))
+void Dependency::markFlow(ref<TxStateValue> target, const std::string &reason,
+                          bool incrementDirectUseCount) const {
+  if (target.isNull())
     return;
+
+  if (incrementDirectUseCount)
+    target->incrementDirectUseCount();
+
+  if (target->isCore()) {
+    if (!target->canInterpolateBound())
+      return;
+
+    incrementDirectUseCount = false;
+  }
 
   target->setAsCore(reason);
   target->disableBoundInterpolation();
@@ -558,16 +718,23 @@ void Dependency::markFlow(ref<TxStateValue> target,
   for (std::vector<ref<TxStateValue> >::iterator it = stepSources.begin(),
                                                  ie = stepSources.end();
        it != ie; ++it) {
-    markFlow(*it, reason);
+    markFlow(*it, reason, incrementDirectUseCount);
   }
 }
 
 void Dependency::markPointerFlow(ref<TxStateValue> target,
                                  ref<TxStateValue> checkedAddress,
                                  std::set<ref<Expr> > &bounds,
-                                 const std::string &reason) const {
+                                 const std::string &reason,
+                                 bool incrementDirectUseCount) const {
   if (target.isNull())
     return;
+
+  if (incrementDirectUseCount)
+    target->incrementDirectUseCount();
+
+  if (target->isCore())
+    incrementDirectUseCount = false;
 
   if (target->canInterpolateBound()) {
     //  checkedAddress->dump();
@@ -588,12 +755,13 @@ void Dependency::markPointerFlow(ref<TxStateValue> target,
            it = sources.begin(),
            ie = sources.end();
        it != ie; ++it) {
-    markPointerFlow(it->first, checkedAddress, bounds, reason);
+    markPointerFlow(it->first, checkedAddress, bounds, reason,
+                    incrementDirectUseCount);
   }
 
   // We use normal marking with markFlow for load/store addresses
-  markFlow(target->getLoadAddress(), reason);
-  markFlow(target->getStoreAddress(), reason);
+  markFlow(target->getLoadAddress(), reason, incrementDirectUseCount);
+  markFlow(target->getStoreAddress(), reason, incrementDirectUseCount);
 }
 
 void Dependency::populateArgumentValuesList(
@@ -925,7 +1093,7 @@ void Dependency::execute(llvm::Instruction *instr,
                   ? getNewPointerValue(instr, callHistory, valueExpr, 0)
                   : getNewTxStateValue(instr, callHistory, valueExpr);
 
-          updateStore(loc, addressValue, loadedValue);
+          updateStoreWithLoadedValue(loc, addressValue, loadedValue);
           break;
         } else if (locations.size() == 1) {
           ref<TxStateAddress> loc = *(locations.begin());
@@ -986,7 +1154,7 @@ void Dependency::execute(llvm::Instruction *instr,
                     ? getNewPointerValue(instr, callHistory, valueExpr, 0)
                     : getNewTxStateValue(instr, callHistory, valueExpr);
 
-            updateStore(loc, addressValue, loadedValue);
+            updateStoreWithLoadedValue(loc, addressValue, loadedValue);
             break;
           }
         }
@@ -1006,7 +1174,8 @@ void Dependency::execute(llvm::Instruction *instr,
                   ? getNewPointerValue(instr, callHistory, valueExpr, 0)
                   : getNewTxStateValue(instr, callHistory, valueExpr);
 
-          updateStore(*(locations.begin()), addressValue, loadedValue);
+          updateStoreWithLoadedValue(*(locations.begin()), addressValue,
+                                     loadedValue);
           break;
         }
       }
@@ -1048,8 +1217,7 @@ void Dependency::execute(llvm::Instruction *instr,
             loadedValue->getExpression() !=
                 addressValuePair.second->getExpression()) {
           // We could not find the stored value, create a new one.
-          updateStore(*li, addressValue, loadedValue);
-          loadedValue->setLoadAddress(addressValue);
+          updateStoreWithLoadedValue(*li, addressValue, loadedValue);
         } else {
           addDependencyViaLocation(addressValuePair.second, loadedValue, *li);
           loadedValue->setLoadAddress(addressValue);

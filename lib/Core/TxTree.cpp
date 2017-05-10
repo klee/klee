@@ -1074,9 +1074,11 @@ bool SubsumptionTableEntry::subsumed(
 
   ref<Expr> stateEqualityConstraints;
 
-  std::map<ref<TxInterpolantValue>, std::set<ref<Expr> > >
-  corePointerValues; // Pointer values in the core for memory bounds
-  // interpolation
+  // Pointer values in the core for memory bounds interpolation
+  std::map<ref<TxInterpolantValue>, std::set<ref<Expr> > > corePointerValues;
+
+  // Pointer values in the core for exact equality
+  std::set<ref<TxInterpolantValue> > coreExactPointerValues;
 
   {
     TimerStatIncrementer t(concreteStoreExpressionBuildTime);
@@ -1154,30 +1156,53 @@ bool SubsumptionTableEntry::subsumed(
                            nodeSequenceNumber, msg.c_str());
             }
             return false;
-          } else if (!NoBoundInterpolation && !ExactAddressInterpolant &&
-                     tabledValue->isPointer() && stateValue->isPointer() &&
-                     tabledValue->useBound()) {
-            std::set<ref<Expr> > bounds;
-            ref<Expr> boundsCheck =
-                tabledValue->getBoundsCheck(stateValue, bounds, debugSubsumptionLevel);
-            if (boundsCheck->isFalse()) {
-              if (debugSubsumptionLevel >= 1) {
-                std::string msg;
-                if (!corePointerValues.empty()) {
-                  msg += " (with successful memory bound checks)";
+          } else if (!NoBoundInterpolation && tabledValue->isPointer() &&
+                     stateValue->isPointer()) {
+            if (!ExactAddressInterpolant && tabledValue->useBound()) {
+              std::set<ref<Expr> > bounds;
+              ref<Expr> boundsCheck = tabledValue->getBoundsCheck(
+                  stateValue, bounds, debugSubsumptionLevel);
+              if (boundsCheck->isFalse()) {
+                if (debugSubsumptionLevel >= 1) {
+                  std::string msg;
+                  if (!corePointerValues.empty()) {
+                    msg += " (with successful memory bound checks)";
+                  }
+                  klee_message("#%lu=>#%lu: Check failure due to failure in "
+                               "memory bounds check%s",
+                               state.txTreeNode->getNodeSequenceNumber(),
+                               nodeSequenceNumber, msg.c_str());
                 }
-                klee_message("#%lu=>#%lu: Check failure due to failure in "
-                             "memory bounds check%s",
-                             state.txTreeNode->getNodeSequenceNumber(),
-                             nodeSequenceNumber, msg.c_str());
+                return false;
               }
-              return false;
-            }
-            if (!boundsCheck->isTrue())
-              res = boundsCheck;
+              if (!boundsCheck->isTrue())
+                res = boundsCheck;
 
-            // We record the LLVM value of the pointer
-            corePointerValues[stateValue] = bounds;
+              // We record the LLVM value of the pointer
+              corePointerValues[stateValue] = bounds;
+            } else {
+              ref<Expr> offsetsCheck = tabledValue->getOffsetsCheck(
+                  stateValue, debugSubsumptionLevel);
+
+              if (offsetsCheck->isFalse()) {
+                if (debugSubsumptionLevel >= 1) {
+                  std::string msg;
+                  if (!corePointerValues.empty()) {
+                    msg += " (with successful offset equality checks)";
+                  }
+                  klee_message("#%lu=>#%lu: Check failure due to failure in "
+                               "offset equality check%s",
+                               state.txTreeNode->getNodeSequenceNumber(),
+                               nodeSequenceNumber, msg.c_str());
+                }
+                return false;
+              }
+              if (!offsetsCheck->isTrue())
+                res = offsetsCheck;
+
+              // We record the value of the pointer for interpolation marking
+              coreExactPointerValues.insert(stateValue);
+            }
           } else {
             res = EqExpr::create(tabledValue->getExpression(),
                                  stateValue->getExpression());
@@ -1275,27 +1300,50 @@ bool SubsumptionTableEntry::subsumed(
                   ConstantExpr::create(0, Expr::Bool),
                   EqExpr::create(tabledConcreteOffset, stateSymbolicOffset));
 
-            } else if (!NoBoundInterpolation && !ExactAddressInterpolant &&
-                       tabledValue->isPointer() && stateValue->isPointer() &&
-                       tabledValue->useBound()) {
-              std::set<ref<Expr> > bounds;
-              ref<Expr> boundsCheck = tabledValue->getBoundsCheck(
-                  stateValue, bounds, debugSubsumptionLevel);
+            } else if (!NoBoundInterpolation && tabledValue->isPointer() &&
+                       stateValue->isPointer()) {
+              if (!ExactAddressInterpolant && tabledValue->useBound()) {
+                std::set<ref<Expr> > bounds;
+                ref<Expr> boundsCheck = tabledValue->getBoundsCheck(
+                    stateValue, bounds, debugSubsumptionLevel);
 
-              if (!boundsCheck->isTrue()) {
-                newTerm = EqExpr::create(
-                    ConstantExpr::create(0, Expr::Bool),
-                    EqExpr::create(tabledConcreteOffset, stateSymbolicOffset));
+                if (!boundsCheck->isTrue()) {
+                  newTerm = EqExpr::create(ConstantExpr::create(0, Expr::Bool),
+                                           EqExpr::create(tabledConcreteOffset,
+                                                          stateSymbolicOffset));
 
-                if (!boundsCheck->isFalse()) {
-                  // Implication: if tabledConcreteAddress ==
-                  // stateSymbolicAddress then bounds check must hold
-                  newTerm = OrExpr::create(newTerm, boundsCheck);
+                  if (!boundsCheck->isFalse()) {
+                    // Implication: if tabledConcreteAddress ==
+                    // stateSymbolicAddress then bounds check must hold
+                    newTerm = OrExpr::create(newTerm, boundsCheck);
+                  }
                 }
-              }
 
-              // We record the LLVM value of the pointer
-              corePointerValues[stateValue] = bounds;
+                // We record the LLVM value of the pointer
+                corePointerValues[stateValue] = bounds;
+              } else {
+                ref<Expr> offsetsCheck = tabledValue->getOffsetsCheck(
+                    stateValue, debugSubsumptionLevel);
+
+                if (offsetsCheck->isFalse()) {
+                  if (debugSubsumptionLevel >= 1) {
+                    std::string msg;
+                    if (!corePointerValues.empty()) {
+                      msg += " (with successful offset equality checks)";
+                    }
+                    klee_message("#%lu=>#%lu: Check failure due to failure in "
+                                 "offset equality check%s",
+                                 state.txTreeNode->getNodeSequenceNumber(),
+                                 nodeSequenceNumber, msg.c_str());
+                  }
+                  return false;
+                }
+                if (!offsetsCheck->isTrue())
+                  res = offsetsCheck;
+
+                // We record the value of the pointer for interpolation marking
+                coreExactPointerValues.insert(stateValue);
+              }
             } else {
               // Implication: if tabledConcreteAddress == stateSymbolicAddress,
               // then tabledValue->getExpression() ==
@@ -1389,27 +1437,47 @@ bool SubsumptionTableEntry::subsumed(
             newTerm = EqExpr::create(
                 ConstantExpr::create(0, Expr::Bool),
                 EqExpr::create(tabledSymbolicOffset, stateConcreteOffset));
-          } else if (!NoBoundInterpolation && !ExactAddressInterpolant &&
-                     tabledValue->isPointer() && stateValue->isPointer() &&
-                     tabledValue->useBound()) {
-            std::set<ref<Expr> > bounds;
-            ref<Expr> boundsCheck =
-                tabledValue->getBoundsCheck(stateValue, bounds, debugSubsumptionLevel);
+          } else if (!NoBoundInterpolation && tabledValue->isPointer() &&
+                     stateValue->isPointer()) {
+            if (!ExactAddressInterpolant && tabledValue->useBound()) {
+              std::set<ref<Expr> > bounds;
+              ref<Expr> boundsCheck = tabledValue->getBoundsCheck(
+                  stateValue, bounds, debugSubsumptionLevel);
 
-            if (!boundsCheck->isTrue()) {
-              newTerm = EqExpr::create(
-                  ConstantExpr::create(0, Expr::Bool),
-                  EqExpr::create(tabledSymbolicOffset, stateConcreteOffset));
+              if (!boundsCheck->isTrue()) {
+                newTerm = EqExpr::create(
+                    ConstantExpr::create(0, Expr::Bool),
+                    EqExpr::create(tabledSymbolicOffset, stateConcreteOffset));
 
-              if (!boundsCheck->isFalse()) {
-                // Implication: if tabledConcreteAddress == stateSymbolicAddress
-                // then bounds check must hold
-                newTerm = OrExpr::create(newTerm, boundsCheck);
+                if (!boundsCheck->isFalse()) {
+                  // Implication: if tabledConcreteAddress ==
+                  // stateSymbolicAddress
+                  // then bounds check must hold
+                  newTerm = OrExpr::create(newTerm, boundsCheck);
+                }
               }
-            }
 
-            // We record the LLVM value of the pointer
-            corePointerValues[stateValue] = bounds;
+              // We record the LLVM value of the pointer
+              corePointerValues[stateValue] = bounds;
+            } else {
+              ref<Expr> offsetsCheck = tabledValue->getOffsetsCheck(
+                  stateValue, debugSubsumptionLevel);
+
+              if (!offsetsCheck->isTrue()) {
+                newTerm = EqExpr::create(
+                    ConstantExpr::create(0, Expr::Bool),
+                    EqExpr::create(tabledSymbolicOffset, stateConcreteOffset));
+
+                if (!offsetsCheck->isFalse()) {
+                  // Implication: if tabledConcreteAddress ==
+                  // stateSymbolicAddress then offsets must be equal
+                  newTerm = OrExpr::create(newTerm, offsetsCheck);
+                }
+              }
+
+              // We record the value of the pointer for interpolation marking
+              coreExactPointerValues.insert(stateValue);
+            }
           } else {
             // Implication: if tabledSymbolicAddress == stateConcreteAddress,
             // then tabledValue == stateValue
@@ -1451,27 +1519,48 @@ bool SubsumptionTableEntry::subsumed(
             newTerm = EqExpr::create(
                 ConstantExpr::create(0, Expr::Bool),
                 EqExpr::create(tabledSymbolicOffset, stateSymbolicOffset));
-          } else if (!NoBoundInterpolation && !ExactAddressInterpolant &&
-                     tabledValue->isPointer() && stateValue->isPointer() &&
-                     tabledValue->useBound()) {
-            std::set<ref<Expr> > bounds;
-            ref<Expr> boundsCheck =
-                tabledValue->getBoundsCheck(stateValue, bounds, debugSubsumptionLevel);
+          } else if (!NoBoundInterpolation && tabledValue->isPointer() &&
+                     stateValue->isPointer()) {
+            if (!ExactAddressInterpolant && tabledValue->useBound()) {
+              std::set<ref<Expr> > bounds;
+              ref<Expr> boundsCheck = tabledValue->getBoundsCheck(
+                  stateValue, bounds, debugSubsumptionLevel);
 
-            if (!boundsCheck->isTrue()) {
-              newTerm = EqExpr::create(
-                  ConstantExpr::create(0, Expr::Bool),
-                  EqExpr::create(tabledSymbolicOffset, stateSymbolicOffset));
+              if (!boundsCheck->isTrue()) {
+                newTerm = EqExpr::create(
+                    ConstantExpr::create(0, Expr::Bool),
+                    EqExpr::create(tabledSymbolicOffset, stateSymbolicOffset));
 
-              if (!boundsCheck->isFalse()) {
-                // Implication: if tabledConcreteAddress == stateSymbolicAddress
-                // then bounds check must hold
-                newTerm = OrExpr::create(newTerm, boundsCheck);
+                if (!boundsCheck->isFalse()) {
+                  // Implication: if tabledConcreteAddress ==
+                  // stateSymbolicAddress
+                  // then bounds check must hold
+                  newTerm = OrExpr::create(newTerm, boundsCheck);
+                }
               }
-            }
 
-            // We record the LLVM value of the pointer
-            corePointerValues[stateValue] = bounds;
+              // We record the LLVM value of the pointer
+              corePointerValues[stateValue] = bounds;
+            } else {
+              std::set<ref<Expr> > bounds;
+              ref<Expr> offsetsCheck = tabledValue->getOffsetsCheck(
+                  stateValue, debugSubsumptionLevel);
+
+              if (!offsetsCheck->isTrue()) {
+                newTerm = EqExpr::create(
+                    ConstantExpr::create(0, Expr::Bool),
+                    EqExpr::create(tabledSymbolicOffset, stateSymbolicOffset));
+
+                if (!offsetsCheck->isFalse()) {
+                  // Implication: if tabledConcreteAddress ==
+                  // stateSymbolicAddress then offsets must be equal
+                  newTerm = OrExpr::create(newTerm, offsetsCheck);
+                }
+              }
+
+              // We record the value of the pointer
+              coreExactPointerValues.insert(stateValue);
+            }
           } else {
             // Implication: if tabledSymbolicAddress == stateSymbolicAddress
             // then tabledValue == stateValue
@@ -1561,6 +1650,14 @@ bool SubsumptionTableEntry::subsumed(
         state.txTreeNode->pointerValuesInterpolation(it->first->getValue(),
                                                      it->first->getExpression(),
                                                      it->second, reason);
+      }
+
+      for (std::set<ref<TxInterpolantValue> >::iterator
+               it = coreExactPointerValues.begin(),
+               ie = coreExactPointerValues.end();
+           it != ie; ++it) {
+        state.txTreeNode->exactPointerValuesInterpolation(
+            (*it)->getValue(), (*it)->getExpression(), reason);
       }
       return true;
     }
