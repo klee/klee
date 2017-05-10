@@ -450,8 +450,8 @@ class SubsumptionTableEntry {
                                           bool &hasExistentialsOnly);
 
   /// \brief Function to collect substitution from a conjunction of equalities.
-  static void getSubstitution(ref<Expr> equalities,
-                              std::map<ref<Expr>, ref<Expr> > &map);
+  static void getSubstitution1(ref<Expr> equalities,
+                               std::map<ref<Expr>, ref<Expr> > &map);
 
   /// \brief Function to remove equalities whose lhs is a variable in the set.
   static ref<Expr> removeUnsubstituted(std::set<const Array *> &variables,

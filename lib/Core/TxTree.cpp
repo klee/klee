@@ -868,8 +868,8 @@ ref<Expr> SubsumptionTableEntry::simplifyEqualityExpr(
 }
 
 void
-SubsumptionTableEntry::getSubstitution(ref<Expr> equalities,
-                                       std::map<ref<Expr>, ref<Expr> > &map) {
+SubsumptionTableEntry::getSubstitution1(ref<Expr> equalities,
+                                        std::map<ref<Expr>, ref<Expr> > &map) {
   // It is assumed the lhs is an expression on the existentially-quantified
   // variable whereas the rhs is an expression on the free variables.
   if (llvm::isa<EqExpr>(equalities)) {
@@ -898,8 +898,8 @@ SubsumptionTableEntry::getSubstitution(ref<Expr> equalities,
       }
     }
   } else if (llvm::isa<AndExpr>(equalities)) {
-    getSubstitution(equalities->getKid(0), map);
-    getSubstitution(equalities->getKid(1), map);
+    getSubstitution1(equalities->getKid(0), map);
+    getSubstitution1(equalities->getKid(1), map);
   }
 }
 
@@ -1028,7 +1028,7 @@ ref<Expr> SubsumptionTableEntry::simplifyExistsExpr(ref<Expr> existsExpr,
 
   ref<Expr> equalities = body->getKid(1);
   std::map<ref<Expr>, ref<Expr> > substitution;
-  getSubstitution(equalities, substitution);
+  getSubstitution1(equalities, substitution);
 
   ref<Expr> interpolant =
       ApplySubstitutionVisitor(substitution).visit(body->getKid(0));
