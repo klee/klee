@@ -1754,7 +1754,7 @@ int main(int argc, char **argv, char **envp) {
 
   if (INTERPOLATION_ENABLED) {
     stats << "\n";
-    stats << "KLEE: done: WARNING:\n";
+    stats << "KLEE: done: NOTE:\n";
     stats << "KLEE: done:     Subsumed paths / tests counts are "
              "nondeterministic for\n";
     stats << "KLEE: done:     programs with dynamically-allocated memory such "
