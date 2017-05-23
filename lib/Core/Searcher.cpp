@@ -539,7 +539,7 @@ ExecutionState &BatchingSearcher::selectState() {
     if (lastState) {
       double delta = util::getWallTime()-lastStartTime;
       if (delta>timeBudget*1.1) {
-        klee_message("KLEE: increased time budget from %f to %f\n", timeBudget,
+        klee_message("increased time budget from %f to %f\n", timeBudget,
                      delta);
         timeBudget = delta;
       }
@@ -613,7 +613,7 @@ void IterativeDeepeningTimeSearcher::update(
 
   if (baseSearcher->empty()) {
     time *= 2;
-    klee_message("KLEE: increased time budget to %f\n", time);
+    klee_message("increased time budget to %f\n", time);
     std::vector<ExecutionState *> ps(pausedStates.begin(), pausedStates.end());
     baseSearcher->update(0, ps, std::vector<ExecutionState *>());
     pausedStates.clear();
