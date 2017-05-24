@@ -180,6 +180,15 @@ private:
                      llvm::BasicBlock *defaultBlock);
 };
 
+// This is the interface to a back-ported LLVM pass.
+// Newer versions of LLVM already have this in-tree
+// and we are not supporting vector instructions for
+// LLVM 2.9. Therefore this interface is only needed for
+// LLVM 3.4.
+#if LLVM_VERSION_CODE == LLVM_VERSION(3,4)
+llvm::FunctionPass *createScalarizerPass();
+#endif
+
 }
 
 #endif

@@ -307,6 +307,15 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   // module.
   LegacyLLVMPassManagerTy pm;
   pm.add(new RaiseAsmPass());
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3,4)
+  // This pass will scalarize as much code as possible so that the Executor
+  // does not need to handle operands of vector type for most instructions
+  // other than InsertElementInst and ExtractElementInst.
+  //
+  // NOTE: Must come before division/overshift checks because those passes
+  // don't know how to handle vector instructions.
+  pm.add(createScalarizerPass());
+#endif
   if (opts.CheckDivZero) pm.add(new DivCheckPass());
   if (opts.CheckOvershift) pm.add(new OvershiftCheckPass());
   // FIXME: This false here is to work around a bug in
