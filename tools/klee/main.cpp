@@ -9,18 +9,19 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "klee/Config/Version.h"
 #include "klee/ExecutionState.h"
 #include "klee/Expr.h"
-#include "klee/Interpreter.h"
-#include "klee/Statistics.h"
-#include "klee/Config/Version.h"
 #include "klee/Internal/ADT/KTest.h"
 #include "klee/Internal/ADT/TreeStream.h"
 #include "klee/Internal/Support/Debug.h"
-#include "klee/Internal/Support/ModuleUtil.h"
-#include "klee/Internal/System/Time.h"
-#include "klee/Internal/Support/PrintVersion.h"
 #include "klee/Internal/Support/ErrorHandling.h"
+#include "klee/Internal/Support/FileHandling.h"
+#include "klee/Internal/Support/ModuleUtil.h"
+#include "klee/Internal/Support/PrintVersion.h"
+#include "klee/Internal/System/Time.h"
+#include "klee/Interpreter.h"
+#include "klee/Statistics.h"
 
 #if LLVM_VERSION_CODE > LLVM_VERSION(3, 2)
 #include "llvm/IR/Constants.h"
@@ -385,27 +386,14 @@ llvm::raw_fd_ostream *KleeHandler::openOutputFile(const std::string &filename) {
   llvm::raw_fd_ostream *f;
   std::string Error;
   std::string path = getOutputFilename(filename);
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
-  std::error_code ec;
-  f = new llvm::raw_fd_ostream(path.c_str(), ec, llvm::sys::fs::F_None);
-  if (ec)
-    Error = ec.message();
-#elif LLVM_VERSION_CODE >= LLVM_VERSION(3, 5)
-  f = new llvm::raw_fd_ostream(path.c_str(), Error, llvm::sys::fs::F_None);
-#elif LLVM_VERSION_CODE >= LLVM_VERSION(3,4)
-  f = new llvm::raw_fd_ostream(path.c_str(), Error, llvm::sys::fs::F_Binary);
-#else
-  f = new llvm::raw_fd_ostream(path.c_str(), Error, llvm::raw_fd_ostream::F_Binary);
-#endif
+  f = klee_open_output_file(path, Error);
   if (!Error.empty()) {
     klee_warning("error opening file \"%s\".  KLEE may have run out of file "
-               "descriptors: try to increase the maximum number of open file "
-               "descriptors by using ulimit (%s).",
-               filename.c_str(), Error.c_str());
-    delete f;
-    f = NULL;
+                 "descriptors: try to increase the maximum number of open file "
+                 "descriptors by using ulimit (%s).",
+                 path.c_str(), Error.c_str());
+    return NULL;
   }
-
   return f;
 }
 
