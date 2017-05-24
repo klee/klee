@@ -3091,16 +3091,7 @@ void Executor::callExternalFunction(ExecutionState &state,
     else
       klee_warning_once(function, "%s", os.str().c_str());
   }
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
-  // MCJIT needs unique module, so we create quick external dispatcher for call.
-  // reference:
-  // http://blog.llvm.org/2013/07/using-mcjit-with-kaleidoscope-tutorial.html
-  ExternalDispatcher *e = new ExternalDispatcher(function->getContext());
-  bool success = e->executeCall(function, target->inst, args);
-  delete e;
-#else
   bool success = externalDispatcher->executeCall(function, target->inst, args);
-#endif
   if (!success) {
     terminateStateOnError(state, "failed external call: " + function->getName(),
                           External);

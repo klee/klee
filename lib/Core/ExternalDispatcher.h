@@ -14,44 +14,33 @@
 
 #include <map>
 #include <memory>
-#include <string>
 #include <stdint.h>
+#include <string>
 
 namespace llvm {
-  class ExecutionEngine;
-  class Instruction;
-  class LLVMContext;
-  class Function;
-  class FunctionType;
-  class Module;
+class Instruction;
+class LLVMContext;
+class Function;
 }
 
 namespace klee {
-  class ExternalDispatcher {
-  private:
-    typedef std::map<const llvm::Instruction*,llvm::Function*> dispatchers_ty;
-    dispatchers_ty dispatchers;
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
-    std::unique_ptr<llvm::Module> dispatchModule_uniptr;
-#endif
-    llvm::Module *dispatchModule;
-    llvm::ExecutionEngine *executionEngine;
-    std::map<std::string, void*> preboundFunctions;
-    
-    llvm::Function *createDispatcher(llvm::Function *f, llvm::Instruction *i);
-    bool runProtectedCall(llvm::Function *f, uint64_t *args);
-    
-  public:
-    ExternalDispatcher(llvm::LLVMContext &ctx);
-    ~ExternalDispatcher();
+class ExternalDispatcherImpl;
+class ExternalDispatcher {
+private:
+  ExternalDispatcherImpl *impl;
 
-    /* Call the given function using the parameter passing convention of
-     * ci with arguments in args[1], args[2], ... and writing the result
-     * into args[0].
-     */
-    bool executeCall(llvm::Function *function, llvm::Instruction *i, uint64_t *args);
-    void *resolveSymbol(const std::string &name);
-  };  
+public:
+  ExternalDispatcher(llvm::LLVMContext &ctx);
+  ~ExternalDispatcher();
+
+  /* Call the given function using the parameter passing convention of
+   * ci with arguments in args[1], args[2], ... and writing the result
+   * into args[0].
+   */
+  bool executeCall(llvm::Function *function, llvm::Instruction *i,
+                   uint64_t *args);
+  void *resolveSymbol(const std::string &name);
+};
 }
 
 #endif
