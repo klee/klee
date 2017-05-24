@@ -33,6 +33,10 @@ llvm::cl::opt<std::string> Z3QueryDumpFile(
 llvm::cl::opt<bool> Z3ValidateModels(
     "debug-z3-validate-models", llvm::cl::init(false),
     llvm::cl::desc("When generating Z3 models validate these against the query"));
+
+llvm::cl::opt<unsigned>
+    Z3VerbosityLevel("debug-z3-verbosity", llvm::cl::init(0),
+                     llvm::cl::desc("Z3 verbosity level (default=0)"));
 }
 
 #include "llvm/Support/ErrorHandling.h"
@@ -107,6 +111,15 @@ Z3SolverImpl::Z3SolverImpl()
                  error.c_str());
     }
     klee_message("Dumping Z3 queries to \"%s\"", Z3QueryDumpFile.c_str());
+  }
+
+  // Set verbosity
+  if (Z3VerbosityLevel > 0) {
+    std::string underlyingString;
+    llvm::raw_string_ostream ss(underlyingString);
+    ss << Z3VerbosityLevel;
+    ss.flush();
+    Z3_global_param_set("verbose", underlyingString.c_str());
   }
 }
 
