@@ -223,11 +223,13 @@ bool Z3SolverImpl::internalRunSolver(
     std::vector<std::vector<unsigned char> > *values, bool &hasSolution) {
 
   TimerStatIncrementer t(stats::queryTime);
-  // TODO: Does making a new solver for each query have a performance
-  // impact vs making one global solver and using push and pop?
-  // TODO: is the "simple_solver" the right solver to use for
-  // best performance?
-  Z3_solver theSolver = Z3_mk_simple_solver(builder->ctx);
+  // NOTE: Z3 will switch to using a slower solver internally if push/pop are
+  // used so for now it is likely that creating a new solver each time is the
+  // right way to go until Z3 changes its behaviour.
+  //
+  // TODO: Investigate using a custom tactic as described in
+  // https://github.com/klee/klee/issues/653
+  Z3_solver theSolver = Z3_mk_solver(builder->ctx);
   Z3_solver_inc_ref(builder->ctx, theSolver);
   Z3_solver_set_params(builder->ctx, theSolver, solverParameters);
 
