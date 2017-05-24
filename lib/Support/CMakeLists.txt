@@ -9,6 +9,7 @@
 klee_add_component(kleeSupport
   CompressionStream.cpp
   ErrorHandling.cpp
+  FileHandling.cpp
   MemoryUsage.cpp
   PrintVersion.cpp
   RNG.cpp
