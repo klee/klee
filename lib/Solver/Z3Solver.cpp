@@ -20,6 +20,12 @@
 #include "llvm/Support/raw_ostream.h"
 
 namespace {
+// NOTE: Very useful for debugging Z3 behaviour. These files can be given to
+// the z3 binary to replay all Z3 API calls using its `-log` option.
+llvm::cl::opt<std::string> Z3LogInteractionFile(
+    "debug-z3-log-api-interaction", llvm::cl::init(""),
+    llvm::cl::desc("Log API interaction with Z3 to the specified path"));
+
 llvm::cl::opt<std::string> Z3QueryDumpFile(
     "debug-z3-dump-queries", llvm::cl::init(""),
     llvm::cl::desc("Dump Z3's representation of the query to the specified path"));
@@ -80,8 +86,13 @@ public:
 };
 
 Z3SolverImpl::Z3SolverImpl()
-    : builder(new Z3Builder(/*autoClearConstructCache=*/false)), timeout(0.0),
-      runStatusCode(SOLVER_RUN_STATUS_FAILURE), dumpedQueriesFile(0) {
+    : builder(new Z3Builder(
+          /*autoClearConstructCache=*/false,
+          /*z3LogInteractionFileArg=*/Z3LogInteractionFile.size() > 0
+              ? Z3LogInteractionFile.c_str()
+              : NULL)),
+      timeout(0.0), runStatusCode(SOLVER_RUN_STATUS_FAILURE),
+      dumpedQueriesFile(0) {
   assert(builder && "unable to create Z3Builder");
   solverParameters = Z3_mk_params(builder->ctx);
   Z3_params_inc_ref(builder->ctx, solverParameters);

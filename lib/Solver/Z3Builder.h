@@ -165,11 +165,11 @@ private:
   Z3SortHandle getBvSort(unsigned width);
   Z3SortHandle getArraySort(Z3SortHandle domainSort, Z3SortHandle rangeSort);
   bool autoClearConstructCache;
+  std::string z3LogInteractionFile;
 
 public:
   Z3_context ctx;
-
-  Z3Builder(bool autoClearConstructCache = true);
+  Z3Builder(bool autoClearConstructCache, const char *z3LogInteractionFile);
   ~Z3Builder();
 
   Z3ASTHandle getTrue();
