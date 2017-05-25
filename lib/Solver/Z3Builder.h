@@ -28,24 +28,25 @@ protected:
 
 private:
   // To be specialised
-  inline ::Z3_ast as_ast();
+  inline void inc_ref(T node);
+  inline void dec_ref(T node);
 
 public:
   Z3NodeHandle() : node(NULL), context(NULL) {}
   Z3NodeHandle(const T _node, const ::Z3_context _context)
       : node(_node), context(_context) {
     if (node && context) {
-      ::Z3_inc_ref(context, as_ast());
+      inc_ref(node);
     }
   };
   ~Z3NodeHandle() {
     if (node && context) {
-      ::Z3_dec_ref(context, as_ast());
+      dec_ref(node);
     }
   }
   Z3NodeHandle(const Z3NodeHandle &b) : node(b.node), context(b.context) {
     if (node && context) {
-      ::Z3_inc_ref(context, as_ast());
+      inc_ref(node);
     }
   }
   Z3NodeHandle &operator=(const Z3NodeHandle &b) {
@@ -61,11 +62,11 @@ public:
            "Can't have non nullptr node with nullptr context");
 
     if (node && context) {
-      ::Z3_dec_ref(context, as_ast());
+      dec_ref(node);
     }
     node = b.node;
     if (node && context) {
-      ::Z3_inc_ref(context, as_ast());
+      inc_ref(node);
     }
     return *this;
   }
@@ -76,16 +77,26 @@ public:
 };
 
 // Specialise for Z3_sort
-template <> inline ::Z3_ast Z3NodeHandle<Z3_sort>::as_ast() {
+template <> inline void Z3NodeHandle<Z3_sort>::inc_ref(Z3_sort node) {
   // In Z3 internally this call is just a cast. We could just do that
   // instead to simplify our implementation but this seems cleaner.
-  return ::Z3_sort_to_ast(context, node);
+  ::Z3_inc_ref(context, ::Z3_sort_to_ast(context, node));
+}
+template <> inline void Z3NodeHandle<Z3_sort>::dec_ref(Z3_sort node) {
+  // In Z3 internally this call is just a cast. We could just do that
+  // instead to simplify our implementation but this seems cleaner.
+  ::Z3_dec_ref(context, ::Z3_sort_to_ast(context, node));
 }
 typedef Z3NodeHandle<Z3_sort> Z3SortHandle;
 template <> void Z3NodeHandle<Z3_sort>::dump() __attribute__((used));
 
 // Specialise for Z3_ast
-template <> inline ::Z3_ast Z3NodeHandle<Z3_ast>::as_ast() { return node; }
+template <> inline void Z3NodeHandle<Z3_ast>::inc_ref(Z3_ast node) {
+  ::Z3_inc_ref(context, node);
+}
+template <> inline void Z3NodeHandle<Z3_ast>::dec_ref(Z3_ast node) {
+  ::Z3_dec_ref(context, node);
+}
 typedef Z3NodeHandle<Z3_ast> Z3ASTHandle;
 template <> void Z3NodeHandle<Z3_ast>::dump() __attribute__((used));
 

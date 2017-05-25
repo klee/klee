@@ -39,8 +39,7 @@ template <> void Z3NodeHandle<Z3_sort>::dump() {
                << "\n";
 }
 template <> void Z3NodeHandle<Z3_ast>::dump() {
-  llvm::errs() << "Z3ASTHandle:\n" << ::Z3_ast_to_string(context, as_ast())
-               << "\n";
+  llvm::errs() << "Z3ASTHandle:\n" << ::Z3_ast_to_string(context, node) << "\n";
 }
 
 void custom_z3_error_handler(Z3_context ctx, Z3_error_code ec) {
