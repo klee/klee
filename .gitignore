@@ -4,6 +4,9 @@ Debug/
 Debug+Asserts/
 Output/
 
+# commonly used as cmake build directory
+/build
+
 cscope.*
 *~
 
