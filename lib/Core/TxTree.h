@@ -927,22 +927,22 @@ public:
   /// \brief For executing memory operations, called by
   /// Executor::executeMemoryOperation
   void executeMemoryOperation(llvm::Instruction *instr, ref<Expr> value,
-                              ref<Expr> address, bool boundsCheck) {
+                              ref<Expr> address, bool inBounds) {
     executeMemoryOperationOnNode(currentTxTreeNode, instr, value, address,
-                                 boundsCheck);
+                                 inBounds);
   }
 
   /// \brief Internal method for executing memory operations
   static void executeMemoryOperationOnNode(TxTreeNode *node,
                                            llvm::Instruction *instr,
                                            ref<Expr> value, ref<Expr> address,
-                                           bool boundsCheck) {
+                                           bool inBounds) {
     TimerStatIncrementer t(executeMemoryOperationTime);
     std::vector<ref<Expr> > args;
     args.push_back(value);
     args.push_back(address);
-    node->dependency->executeMemoryOperation(
-        instr, node->callHistory, args, boundsCheck, symbolicExecutionError);
+    node->dependency->executeMemoryOperation(instr, node->callHistory, args,
+                                             inBounds, symbolicExecutionError);
     symbolicExecutionError = false;
   }
 

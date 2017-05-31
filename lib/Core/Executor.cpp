@@ -3729,7 +3729,7 @@ void Executor::executeMemoryOperation(ExecutionState &state, bool isWrite,
           // Update dependency
           if (INTERPOLATION_ENABLED && target)
             txTree->executeMemoryOperation(target->inst, value, address,
-                                           boundsCheck->isTrue());
+                                           inBounds);
         }          
       } else {
         ref<Expr> result = os->read(offset, type);
@@ -3742,7 +3742,7 @@ void Executor::executeMemoryOperation(ExecutionState &state, bool isWrite,
         // Update dependency
         if (INTERPOLATION_ENABLED && target)
           txTree->executeMemoryOperation(target->inst, result, address,
-                                         boundsCheck->isTrue());
+                                         inBounds);
       }
 
       return;

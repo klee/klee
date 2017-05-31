@@ -390,7 +390,7 @@ namespace klee {
     void
     executeMemoryOperation(llvm::Instruction *instr,
                            const std::vector<llvm::Instruction *> &callHistory,
-                           std::vector<ref<Expr> > &args, bool boundsCheck,
+                           std::vector<ref<Expr> > &args, bool inBounds,
                            bool symbolicExecutionError);
 
     /// \brief This retrieves the locations known at this state, and the
