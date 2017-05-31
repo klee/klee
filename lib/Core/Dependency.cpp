@@ -1491,11 +1491,10 @@ void Dependency::executePHI(llvm::Instruction *instr,
 void Dependency::executeMemoryOperation(
     llvm::Instruction *instr,
     const std::vector<llvm::Instruction *> &callHistory,
-    std::vector<ref<Expr> > &args, bool boundsCheck,
-    bool symbolicExecutionError) {
+    std::vector<ref<Expr> > &args, bool inBounds, bool symbolicExecutionError) {
   execute(instr, callHistory, args, symbolicExecutionError);
 #ifdef ENABLE_Z3
-  if (!NoBoundInterpolation && boundsCheck) {
+  if (!NoBoundInterpolation && inBounds) {
     // The bounds check has been proven valid, we keep the dependency on the
     // address. Calling va_start within a variadic function also triggers memory
     // operation, but we ignored it here as this method is only called when load
