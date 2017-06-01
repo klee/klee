@@ -203,64 +203,6 @@ namespace klee {
     virtual void setCoreSolverTimeout(double timeout);
   };
 
-#ifdef ENABLE_STP
-  /// STPSolver - A complete solver based on STP.
-  class STPSolver : public Solver {
-  public:
-    /// STPSolver - Construct a new STPSolver.
-    ///
-    /// \param useForkedSTP - Whether STP should be run in a separate process
-    /// (required for using timeouts).
-    /// \param optimizeDivides - Whether constant division operations should
-    /// be optimized into add/shift/multiply operations.
-    STPSolver(bool useForkedSTP, bool optimizeDivides = true);
-
-    /// getConstraintLog - Return the constraint log for the given state in CVC
-    /// format.
-    virtual char *getConstraintLog(const Query&);
-
-    /// setCoreSolverTimeout - Set constraint solver timeout delay to the given value; 0
-    /// is off.
-    virtual void setCoreSolverTimeout(double timeout);
-  };
-#endif // ENABLE_STP
-
-#ifdef ENABLE_Z3
-  /// Z3Solver - A solver complete solver based on Z3
-  class Z3Solver : public Solver {
-  public:
-    /// Z3Solver - Construct a new Z3Solver.
-    Z3Solver();
-
-    /// Get the query in SMT-LIBv2 format.
-    /// \return A C-style string. The caller is responsible for freeing this.
-    virtual char *getConstraintLog(const Query &);
-
-    /// setCoreSolverTimeout - Set constraint solver timeout delay to the given
-    /// value; 0
-    /// is off.
-    virtual void setCoreSolverTimeout(double timeout);
-  };
-#endif // ENABLE_Z3
-
-#ifdef ENABLE_METASMT
-  
-  template<typename SolverContext>
-  class MetaSMTSolver : public Solver {
-  public:
-    MetaSMTSolver(bool useForked, bool optimizeDivides);
-    virtual ~MetaSMTSolver();
-  
-    virtual char *getConstraintLog(const Query&);
-    virtual void setCoreSolverTimeout(double timeout);
-  };
-
-  /// createMetaSMTSolver - Create a solver using the metaSMT backend set by 
-  /// the option MetaSMTBackend.
-  Solver *createMetaSMTSolver();
-
-#endif /* ENABLE_METASMT */
-
   /* *** */
 
   /// createValidatingSolver - Create a solver which will validate all query
