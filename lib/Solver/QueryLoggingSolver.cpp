@@ -39,6 +39,7 @@ QueryLoggingSolver::QueryLoggingSolver(Solver *_solver, std::string path,
     : solver(_solver), os(0), BufferString(""), logBuffer(BufferString),
       queryCount(0), minQueryTimeToLog(queryTimeToLog), startTime(0.0f),
       lastQueryTime(0.0f), queryCommentSign(commentSign) {
+  std::string ErrorInfo;
 #ifdef HAVE_ZLIB_H
   if (!CreateCompressedQueryLog) {
 #endif
