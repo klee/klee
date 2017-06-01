@@ -334,23 +334,20 @@ Dependency::getLatestValue(llvm::Value *value,
                            const std::vector<llvm::Instruction *> &callHistory,
                            ref<Expr> valueExpr, bool constraint) {
   assert(value && !valueExpr.isNull() && "value cannot be null");
-  if (llvm::isa<llvm::ConstantExpr>(value)) {
-    llvm::Instruction *asInstruction =
-        llvm::dyn_cast<llvm::ConstantExpr>(value)->getAsInstruction();
-    if (llvm::GetElementPtrInst *gi =
-            llvm::dyn_cast<llvm::GetElementPtrInst>(asInstruction)) {
-      uint64_t offset = 0;
-      uint64_t size = 0;
+  if (llvm::ConstantExpr *cvalue = llvm::dyn_cast<llvm::ConstantExpr>(value)) {
+    switch (cvalue->getOpcode()) {
+    case llvm::Instruction::GetElementPtr: {
+      uint64_t offset = 0, size = 0;
 
       // getelementptr may be cascading, so we loop
-      while (gi) {
-        if (gi->getNumOperands() >= 2) {
+      do {
+        if (cvalue->getNumOperands() >= 2) {
           if (llvm::ConstantInt *idx =
-                  llvm::dyn_cast<llvm::ConstantInt>(gi->getOperand(1))) {
+                  llvm::dyn_cast<llvm::ConstantInt>(cvalue->getOperand(1))) {
             offset += idx->getLimitedValue();
           }
         }
-        llvm::Value *ptrOp = gi->getPointerOperand();
+        llvm::Value *ptrOp = cvalue->getOperand(0);
         llvm::Type *pointerElementType =
             ptrOp->getType()->getPointerElementType();
 
@@ -358,24 +355,21 @@ Dependency::getLatestValue(llvm::Value *value,
                    ? targetData->getTypeStoreSize(pointerElementType)
                    : 0;
 
-        if (llvm::isa<llvm::ConstantExpr>(ptrOp)) {
-          llvm::Instruction *asInstruction =
-              llvm::dyn_cast<llvm::ConstantExpr>(ptrOp)->getAsInstruction();
-          gi = llvm::dyn_cast<llvm::GetElementPtrInst>(asInstruction);
-          continue;
-        }
-
-        gi = 0;
-      }
-
+        cvalue = llvm::dyn_cast<llvm::ConstantExpr>(ptrOp);
+      } while (cvalue &&
+               cvalue->getOpcode() == llvm::Instruction::GetElementPtr);
       return getNewPointerValue(value, callHistory, valueExpr, size);
-    } else if (llvm::isa<llvm::IntToPtrInst>(asInstruction)) {
-	// 0 signifies unknown size
+    }
+    case llvm::Instruction::IntToPtr: {
+      // 0 signifies unknown size
       return getNewPointerValue(value, callHistory, valueExpr, 0);
-    } else if (llvm::BitCastInst *bci =
-                   llvm::dyn_cast<llvm::BitCastInst>(asInstruction)) {
-      return getLatestValue(bci->getOperand(0), callHistory, valueExpr,
+    }
+    case llvm::Instruction::BitCast: {
+      return getLatestValue(cvalue->getOperand(0), callHistory, valueExpr,
                             constraint);
+    }
+    default:
+      break;
     }
   }
 
@@ -1528,7 +1522,7 @@ void Dependency::executeMemoryOperation(
                it != ie; ++it) {
             if (llvm::ConstantExpr *ce = llvm::dyn_cast<llvm::ConstantExpr>(
                     (*it)->getContext()->getValue())) {
-              if (llvm::isa<llvm::GetElementPtrInst>(ce->getAsInstruction())) {
+              if (ce->getOpcode() == llvm::Instruction::GetElementPtr) {
                 std::string reason = "";
                 if (debugSubsumptionLevel >= 1) {
                   llvm::raw_string_ostream stream(reason);
