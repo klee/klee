@@ -9,6 +9,7 @@
 #include "klee/Config/config.h"
 #ifdef ENABLE_METASMT
 
+#include "MetaSMTSolver.h"
 #include "MetaSMTBuilder.h"
 #include "klee/Constraints.h"
 #include "klee/Internal/Support/ErrorHandling.h"

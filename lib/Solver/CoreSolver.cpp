@@ -7,6 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "STPSolver.h"
+#include "Z3Solver.h"
+#include "MetaSMTSolver.h"
 #include "klee/CommandLine.h"
 #include "klee/Internal/Support/ErrorHandling.h"
 #include "klee/Solver.h"

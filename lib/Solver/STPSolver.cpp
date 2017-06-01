@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 #include "klee/Config/config.h"
 #ifdef ENABLE_STP
+#include "STPSolver.h"
 #include "STPBuilder.h"
 #include "klee/Solver.h"
 #include "klee/SolverImpl.h"

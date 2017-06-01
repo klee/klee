@@ -10,6 +10,7 @@
 #include "klee/Internal/Support/ErrorHandling.h"
 #include "klee/Internal/Support/FileHandling.h"
 #ifdef ENABLE_Z3
+#include "Z3Solver.h"
 #include "Z3Builder.h"
 #include "klee/Constraints.h"
 #include "klee/Solver.h"
