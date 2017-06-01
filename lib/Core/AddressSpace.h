@@ -112,6 +112,8 @@ namespace klee {
     /// \return A writeable ObjectState (\a os or a copy).
     ObjectState *getWriteable(const MemoryObject *mo, const ObjectState *os);
 
+    const MemoryObject* getAnyDynamicObject();
+
     /// Copy the concrete values of all managed ObjectStates into the
     /// actual system memory location they were allocated at.
     void copyOutConcretes();
