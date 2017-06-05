@@ -525,10 +525,13 @@ void TxStateAddress::adjustOffsetBound(ref<TxStateValue> checkedAddress,
               llvm::Value *v = (*it2)->getContext()->getValue();
               if (v->getType()->isPointerTy()) {
                 llvm::Type *elementType = v->getType()->getPointerElementType();
-                if (elementType->isStructTy() &&
-                    elementType->getStructName() == "struct.dirent") {
-                  concreteOffsetBound = newBound;
-                  continue;
+                if (llvm::StructType *elementStructType =
+                        llvm::dyn_cast<llvm::StructType>(elementType)) {
+                  if (!elementStructType->isLiteral() &&
+                      elementType->getStructName() == "struct.dirent") {
+                    concreteOffsetBound = newBound;
+                    continue;
+                  }
                 }
               }
 
