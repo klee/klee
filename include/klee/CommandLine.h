@@ -87,6 +87,8 @@ extern llvm::cl::opt<int> DebugState;
 
 extern llvm::cl::opt<int> DebugSubsumption;
 
+extern llvm::cl::opt<bool> NoBoundCheck;
+
 extern llvm::cl::opt<bool> NoBoundInterpolation;
 
 extern llvm::cl::opt<bool> ExactAddressInterpolant;

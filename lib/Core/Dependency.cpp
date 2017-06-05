@@ -1488,6 +1488,11 @@ void Dependency::executeMemoryOperation(
     std::vector<ref<Expr> > &args, bool inBounds, bool symbolicExecutionError) {
   execute(instr, callHistory, args, symbolicExecutionError);
 #ifdef ENABLE_Z3
+  if (NoBoundCheck)
+	// No Bounds check is needed to be performed. So, we just return. This is
+	// important when the user wants to get the skeleton tree.
+	return;
+
   if (!NoBoundInterpolation && inBounds) {
     // The bounds check has been proven valid, we keep the dependency on the
     // address. Calling va_start within a variadic function also triggers memory

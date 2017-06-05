@@ -143,6 +143,11 @@ llvm::cl::opt<int> DebugSubsumption(
                    "higher the more (default=0 (off))."),
     llvm::cl::init(0));
 
+llvm::cl::opt<bool> NoBoundCheck(
+    "no-bound-check",
+    llvm::cl::desc("This option disables memory access out-of-bound check."),
+    llvm::cl::init(false));
+
 llvm::cl::opt<bool> NoBoundInterpolation(
     "no-bound-interpolation",
     llvm::cl::desc("This option disables the generation of interpolant from "
