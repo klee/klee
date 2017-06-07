@@ -132,7 +132,7 @@ namespace {
                 cl::desc("Write .sym.path files for each test case"));
 
   cl::opt<bool>
-  ExitOnError("exit-on-error",
+  OptExitOnError("exit-on-error",
               cl::desc("Exit if errors occur"));
 
 
@@ -413,7 +413,7 @@ llvm::raw_fd_ostream *KleeHandler::openTestFile(const std::string &suffix,
 void KleeHandler::processTestCase(const ExecutionState &state,
                                   const char *errorMessage,
                                   const char *errorSuffix) {
-  if (errorMessage && ExitOnError) {
+  if (errorMessage && OptExitOnError) {
     m_interpreter->prepareForEarlyExit();
     klee_error("EXITING ON ERROR:\n%s\n", errorMessage);
   }
