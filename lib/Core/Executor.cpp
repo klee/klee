@@ -156,8 +156,8 @@ namespace {
                                            "inst_id]"),
           clEnumValN(FILE_COMPACT, "compact:file",
                      "Log all instructions to file instructions.txt in format "
-                     "[inst_id]"),
-          clEnumValEnd),
+                     "[inst_id]")
+          KLEE_LLVM_CL_VAL_END),
       llvm::cl::CommaSeparated);
 #ifdef HAVE_ZLIB_H
   cl::opt<bool> DebugCompressInstructions(
@@ -288,8 +288,8 @@ namespace {
 		    clEnumValN(Executor::ReadOnly, "ReadOnly", "Write to read-only memory"),
 		    clEnumValN(Executor::ReportError, "ReportError", "klee_report_error called"),
 		    clEnumValN(Executor::User, "User", "Wrong klee_* functions invocation"),
-		    clEnumValN(Executor::Unhandled, "Unhandled", "Unhandled instruction hit"),
-		    clEnumValEnd),
+		    clEnumValN(Executor::Unhandled, "Unhandled", "Unhandled instruction hit")
+		    KLEE_LLVM_CL_VAL_END),
 		  cl::ZeroOrMore);
 
 #if LLVM_VERSION_CODE < LLVM_VERSION(3, 0)

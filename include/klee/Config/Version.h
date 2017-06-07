@@ -21,4 +21,10 @@
 #  define LLVM_TYPE_Q const
 #endif
 
+#if LLVM_VERSION_CODE >= LLVM_VERSION(4, 0)
+#  define KLEE_LLVM_CL_VAL_END
+#else
+#  define KLEE_LLVM_CL_VAL_END , clEnumValEnd
+#endif
+
 #endif

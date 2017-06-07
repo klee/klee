@@ -30,8 +30,8 @@ namespace {
 			clEnumValN(Searcher::NURS_Depth, "nurs:depth", "use NURS with 2^depth"),
 			clEnumValN(Searcher::NURS_ICnt, "nurs:icnt", "use NURS with Instr-Count"),
 			clEnumValN(Searcher::NURS_CPICnt, "nurs:cpicnt", "use NURS with CallPath-Instr-Count"),
-			clEnumValN(Searcher::NURS_QC, "nurs:qc", "use NURS with Query-Cost"),
-			clEnumValEnd));
+			clEnumValN(Searcher::NURS_QC, "nurs:qc", "use NURS with Query-Cost")
+			KLEE_LLVM_CL_VAL_END));
 
   cl::opt<bool>
   UseIterativeDeepeningTimeSearch("use-iterative-deepening-time-search", 
