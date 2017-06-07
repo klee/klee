@@ -68,8 +68,8 @@ namespace {
              clEnumValN(PrintAST, "print-ast",
                         "Print parsed AST nodes from the input file."),
              clEnumValN(Evaluate, "evaluate",
-                        "Print parsed AST nodes from the input file."),
-             clEnumValEnd));
+                        "Print parsed AST nodes from the input file.")
+             KLEE_LLVM_CL_VAL_END));
 
 
   enum BuilderKinds {
@@ -88,8 +88,8 @@ namespace {
               clEnumValN(ConstantFoldingBuilder, "constant-folding",
                          "Fold constant expressions."),
               clEnumValN(SimplifyingBuilder, "simplify",
-                         "Fold constants and simplify expressions."),
-              clEnumValEnd));
+                         "Fold constants and simplify expressions.")
+              KLEE_LLVM_CL_VAL_END));
 
 
   llvm::cl::opt<std::string> directoryToWriteQueryLogs("query-log-dir",llvm::cl::desc("The folder to write query logs to. Defaults is current working directory."),

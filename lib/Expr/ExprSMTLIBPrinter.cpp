@@ -25,8 +25,8 @@ argConstantDisplayMode(
                      clEnumValN(klee::ExprSMTLIBPrinter::HEX, "hex",
                                 "Use Hexadecimal form (e.g. #x2D)"),
                      clEnumValN(klee::ExprSMTLIBPrinter::DECIMAL, "dec",
-                                "Use decimal form (e.g. (_ bv45 8) )"),
-                     clEnumValEnd),
+                                "Use decimal form (e.g. (_ bv45 8) )")
+                     KLEE_LLVM_CL_VAL_END),
     llvm::cl::init(klee::ExprSMTLIBPrinter::DECIMAL));
 
 llvm::cl::opt<bool> humanReadableSMTLIB(
@@ -44,8 +44,8 @@ llvm::cl::opt<klee::ExprSMTLIBPrinter::AbbreviationMode> abbreviationMode(
                      clEnumValN(klee::ExprSMTLIBPrinter::ABBR_LET, "let",
                                 "Abbreviate with let"),
                      clEnumValN(klee::ExprSMTLIBPrinter::ABBR_NAMED, "named",
-                                "Abbreviate with :named annotations"),
-                     clEnumValEnd),
+                                "Abbreviate with :named annotations")
+                     KLEE_LLVM_CL_VAL_END),
     llvm::cl::init(klee::ExprSMTLIBPrinter::ABBR_LET));
 }
 

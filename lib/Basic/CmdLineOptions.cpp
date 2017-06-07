@@ -13,6 +13,7 @@
  */
 
 #include "klee/CommandLine.h"
+#include "klee/Config/Version.h"
 
 namespace klee {
 
@@ -76,9 +77,8 @@ llvm::cl::list<QueryLoggingSolverType> queryLoggingOptions(
         clEnumValN(ALL_KQUERY,"all:kquery","All queries in .kquery (KQuery) format"),
         clEnumValN(ALL_SMTLIB,"all:smt2","All queries in .smt2 (SMT-LIBv2) format"),
         clEnumValN(SOLVER_KQUERY,"solver:kquery","All queries reaching the solver in .kquery (KQuery) format"),
-        clEnumValN(SOLVER_SMTLIB,"solver:smt2","All queries reaching the solver in .smt2 (SMT-LIBv2) format"),
-        clEnumValEnd
-	),
+        clEnumValN(SOLVER_SMTLIB,"solver:smt2","All queries reaching the solver in .smt2 (SMT-LIBv2) format")
+        KLEE_LLVM_CL_VAL_END),
     llvm::cl::CommaSeparated
 );
 
@@ -106,8 +106,8 @@ llvm::cl::opt<klee::MetaSMTBackendType> MetaSMTBackend(
         clEnumValN(METASMT_BACKEND_STP, "stp", "Use metaSMT with STP"),
         clEnumValN(METASMT_BACKEND_Z3, "z3", "Use metaSMT with Z3"),
         clEnumValN(METASMT_BACKEND_BOOLECTOR, "btor",
-                   "Use metaSMT with Boolector"),
-        clEnumValEnd),
+                   "Use metaSMT with Boolector")
+        KLEE_LLVM_CL_VAL_END),
     llvm::cl::init(METASMT_DEFAULT_BACKEND));
 
 #undef METASMT_DEFAULT_BACKEND
@@ -140,8 +140,8 @@ llvm::cl::opt<CoreSolverType> CoreSolverToUse(
     llvm::cl::values(clEnumValN(STP_SOLVER, "stp", "stp" STP_IS_DEFAULT_STR),
                      clEnumValN(METASMT_SOLVER, "metasmt", "metaSMT" METASMT_IS_DEFAULT_STR),
                      clEnumValN(DUMMY_SOLVER, "dummy", "Dummy solver"),
-                     clEnumValN(Z3_SOLVER, "z3", "Z3" Z3_IS_DEFAULT_STR),
-                     clEnumValEnd),
+                     clEnumValN(Z3_SOLVER, "z3", "Z3" Z3_IS_DEFAULT_STR)
+                     KLEE_LLVM_CL_VAL_END),
     llvm::cl::init(DEFAULT_CORE_SOLVER));
 
 llvm::cl::opt<CoreSolverType> DebugCrossCheckCoreSolverWith(
@@ -153,8 +153,8 @@ llvm::cl::opt<CoreSolverType> DebugCrossCheckCoreSolverWith(
                      clEnumValN(DUMMY_SOLVER, "dummy", "Dummy solver"),
                      clEnumValN(Z3_SOLVER, "z3", "Z3"),
                      clEnumValN(NO_SOLVER, "none",
-                                "Do not cross check (default)"),
-                     clEnumValEnd),
+                                "Do not cross check (default)")
+                     KLEE_LLVM_CL_VAL_END),
     llvm::cl::init(NO_SOLVER));
 }
 #undef STP_IS_DEFAULT_STR
