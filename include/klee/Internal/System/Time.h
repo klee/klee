@@ -10,7 +10,13 @@
 #ifndef KLEE_UTIL_TIME_H
 #define KLEE_UTIL_TIME_H
 
+#if LLVM_VERSION_CODE >= LLVM_VERSION(4, 0)
+#include <chrono>
+
+#include "llvm/Support/Chrono.h"
+#else
 #include "llvm/Support/TimeValue.h"
+#endif
 
 namespace klee {
   namespace util {
@@ -22,7 +28,12 @@ namespace klee {
     double getWallTime();
 
     /// Wall time as TimeValue object.
+#if LLVM_VERSION_CODE >= LLVM_VERSION(4, 0)
+    double durationToDouble(std::chrono::nanoseconds dur);
+    llvm::sys::TimePoint<> getWallTimeVal();
+#else
     llvm::sys::TimeValue getWallTimeVal();
+#endif
   }
 }
 

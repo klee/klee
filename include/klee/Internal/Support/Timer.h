@@ -12,9 +12,17 @@
 
 #include <stdint.h>
 
+#if LLVM_VERSION_CODE >= LLVM_VERSION(4, 0)
+#include <llvm/Support/Chrono.h>
+#endif
+
 namespace klee {
   class WallTimer {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(4, 0)
+    llvm::sys::TimePoint<> start;
+#else
     uint64_t startMicroseconds;
+#endif
     
   public:
     WallTimer();

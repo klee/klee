@@ -15,6 +15,20 @@
 using namespace klee;
 using namespace llvm;
 
+#if LLVM_VERSION_CODE >= LLVM_VERSION(4, 0)
+
+WallTimer::WallTimer() {
+  start = util::getWallTimeVal();
+}
+
+uint64_t WallTimer::check() {
+  auto now = util::getWallTimeVal();
+  return std::chrono::duration_cast<std::chrono::microseconds>(now -
+    start).count();
+}
+
+#else
+
 WallTimer::WallTimer() {
   startMicroseconds = util::getWallTimeVal().usec();
 }
@@ -22,3 +36,5 @@ WallTimer::WallTimer() {
 uint64_t WallTimer::check() {
   return util::getWallTimeVal().usec() - startMicroseconds;
 }
+
+#endif
