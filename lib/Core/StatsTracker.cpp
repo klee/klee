@@ -285,6 +285,29 @@ void StatsTracker::done() {
 void StatsTracker::stepInstruction(ExecutionState &es) {
   if (OutputIStats) {
     if (TrackInstructionTime) {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(4, 0)
+      static sys::TimePoint<> lastNowTime;
+      static std::chrono::nanoseconds lastUserTime(0);
+
+      if (lastUserTime.count() == 0) {
+        std::chrono::nanoseconds sys;
+        sys::Process::GetTimeUsage(lastNowTime, lastUserTime, sys);
+      } else {
+        sys::TimePoint<> now;
+        std::chrono::nanoseconds user, sys;
+
+        sys::Process::GetTimeUsage(now, user, sys);
+
+        auto delta =
+          std::chrono::duration_cast<std::chrono::microseconds>(user - lastUserTime);
+        auto deltaNow =
+          std::chrono::duration_cast<std::chrono::microseconds>(now - lastNowTime);
+        stats::instructionTime += delta.count();
+        stats::instructionRealTime += deltaNow.count();
+        lastUserTime = user;
+        lastNowTime = now;
+      }
+#else
       static sys::TimeValue lastNowTime(0,0),lastUserTime(0,0);
     
       if (lastUserTime.seconds()==0 && lastUserTime.nanoseconds()==0) {
@@ -300,6 +323,7 @@ void StatsTracker::stepInstruction(ExecutionState &es) {
         lastUserTime = user;
         lastNowTime = now;
       }
+#endif
     }
 
     Instruction *inst = es.pc->inst;
