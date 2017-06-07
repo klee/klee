@@ -23,7 +23,6 @@
 #include "klee/Interpreter.h"
 #include "klee/Statistics.h"
 
-#include "llvm/Bitcode/ReaderWriter.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
@@ -44,6 +43,12 @@
 
 #if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
 #include "llvm/Support/system_error.h"
+#endif
+
+#if LLVM_VERSION_CODE >= LLVM_VERSION(4, 0)
+#include <llvm/Bitcode/BitcodeReader.h>
+#else
+#include <llvm/Bitcode/ReaderWriter.h>
 #endif
 
 #include <dirent.h>
