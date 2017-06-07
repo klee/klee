@@ -120,7 +120,7 @@ InstructionInfoTable::InstructionInfoTable(Module *m)
 
   for (Module::iterator fnIt = m->begin(), fn_ie = m->end(); 
        fnIt != fn_ie; ++fnIt) {
-    Function *fn = static_cast<Function *>(fnIt);
+    Function *fn = &*fnIt;
 
     // We want to ensure that as all instructions have source information, if
     // available. Clang sometimes will not write out debug information on the
@@ -193,6 +193,6 @@ InstructionInfoTable::getFunctionInfo(const Function *f) const {
     // and construct a test case for it if it does, though.
     return dummyInfo;
   } else {
-    return getInfo(static_cast<const Instruction *>(f->begin()->begin()));
+    return getInfo(&*(f->begin()->begin()));
   }
 }

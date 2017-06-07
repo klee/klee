@@ -670,10 +670,10 @@ static int initEnv(Module *mainModule) {
     klee_error("Cannot handle ""--posix-runtime"" when main() has less than two arguments.\n");
   }
 
-  Instruction *firstInst = static_cast<Instruction *>(mainFn->begin()->begin());
+  Instruction *firstInst = &*(mainFn->begin()->begin());
 
-  Value *oldArgc = static_cast<Argument *>(mainFn->arg_begin());
-  Value *oldArgv = static_cast<Argument *>(++mainFn->arg_begin());
+  Value *oldArgc = &*(mainFn->arg_begin());
+  Value *oldArgv = &*(++mainFn->arg_begin());
 
   AllocaInst* argcPtr =
     new AllocaInst(oldArgc->getType(), "argcPtr", firstInst);
@@ -1080,7 +1080,7 @@ static llvm::Module *linkWithUclibc(llvm::Module *mainModule, StringRef libDir) 
   // naming conflict.
   for (Module::iterator fi = mainModule->begin(), fe = mainModule->end();
        fi != fe; ++fi) {
-    Function *f = static_cast<Function *>(fi);
+    Function *f = &*fi;
     const std::string &name = f->getName();
     if (name[0]=='\01') {
       unsigned size = name.size();
@@ -1139,8 +1139,8 @@ static llvm::Module *linkWithUclibc(llvm::Module *mainModule, StringRef libDir) 
   std::vector<llvm::Value*> args;
   args.push_back(llvm::ConstantExpr::getBitCast(userMainFn,
                                                 ft->getParamType(0)));
-  args.push_back(static_cast<Argument *>(stub->arg_begin())); // argc
-  args.push_back(static_cast<Argument *>(++stub->arg_begin())); // argv
+  args.push_back(&*(stub->arg_begin())); // argc
+  args.push_back(&*(++stub->arg_begin())); // argv
   args.push_back(Constant::getNullValue(ft->getParamType(3))); // app_init
   args.push_back(Constant::getNullValue(ft->getParamType(4))); // app_fini
   args.push_back(Constant::getNullValue(ft->getParamType(5))); // rtld_fini

@@ -71,7 +71,7 @@ bool DivCheckPass::runOnModule(Module &M) {
                                           Type::getInt64Ty(ctx),
                                           false,  /* sign doesn't matter */
                                           "int_cast_to_i64",
-                                          static_cast<Instruction *>(i));
+                                          &*i);
             
             // Lazily bind the function to avoid always importing it.
             if (!divZeroCheckFunction) {
@@ -129,7 +129,7 @@ bool OvershiftCheckPass::runOnModule(Module &M) {
                                           Type::getInt64Ty(ctx),
                                           false,  /* sign doesn't matter */
                                           "int_cast_to_i64",
-                                          static_cast<Instruction *>(i));
+                                          &*i);
             args.push_back(shift);
 
 

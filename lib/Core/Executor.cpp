@@ -546,7 +546,7 @@ void Executor::initializeGlobals(ExecutionState &state) {
   // ensures that we won't conflict. we don't need to allocate a memory object
   // since reading/writing via a function pointer is unsupported anyway.
   for (Module::iterator i = m->begin(), ie = m->end(); i != ie; ++i) {
-    Function *f = static_cast<Function *>(i);
+    Function *f = &*i;
     ref<ConstantExpr> addr(0);
 
     // If the symbol has external weak linkage then it is implicitly
@@ -600,7 +600,7 @@ void Executor::initializeGlobals(ExecutionState &state) {
   for (Module::const_global_iterator i = m->global_begin(),
          e = m->global_end();
        i != e; ++i) {
-    const GlobalVariable *v = static_cast<const GlobalVariable *>(i);
+    const GlobalVariable *v = &*i;
     size_t globalObjectAlignment = getAllocationAlignment(v);
     if (i->isDeclaration()) {
       // FIXME: We have no general way of handling unknown external
@@ -678,8 +678,7 @@ void Executor::initializeGlobals(ExecutionState &state) {
        i != ie; ++i) {
     // Map the alias to its aliasee's address. This works because we have
     // addresses for everything, even undefined functions. 
-    globalAddresses.insert(std::make_pair(static_cast<GlobalAlias *>(i),
-	  evalConstant(i->getAliasee())));
+    globalAddresses.insert(std::make_pair(&*i, evalConstant(i->getAliasee())));
   }
 
   // once all objects are allocated, do the actual initialization
@@ -687,7 +686,7 @@ void Executor::initializeGlobals(ExecutionState &state) {
          e = m->global_end();
        i != e; ++i) {
     if (i->hasInitializer()) {
-      const GlobalVariable *v = static_cast<const GlobalVariable *>(i);
+      const GlobalVariable *v = &*i;
       MemoryObject *mo = globalObjects.find(v)->second;
       const ObjectState *os = state.addressSpace.findObject(mo);
       assert(os);
@@ -3554,7 +3553,7 @@ void Executor::runFunctionAsMain(Function *f,
   if (ai!=ae) {
     arguments.push_back(ConstantExpr::alloc(argc, Expr::Int32));
     if (++ai!=ae) {
-      Instruction *first = static_cast<Instruction *>(f->begin()->begin());
+      Instruction *first = &*(f->begin()->begin());
       argvMO =
           memory->allocate((argc + 1 + envc + 1 + 1) * NumPtrBytes,
                            /*isLocal=*/false, /*isGlobal=*/true,

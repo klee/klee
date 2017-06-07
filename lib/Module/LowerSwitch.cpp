@@ -44,7 +44,7 @@ bool LowerSwitchPass::runOnFunction(Function &F) {
   bool changed = false;
 
   for (Function::iterator I = F.begin(), E = F.end(); I != E; ) {
-    BasicBlock *cur = static_cast<BasicBlock *>(I);
+    BasicBlock *cur = &*I;
     I++; // Advance over block so we don't traverse new blocks
 
     if (SwitchInst *SI = dyn_cast<SwitchInst>(cur->getTerminator())) {
