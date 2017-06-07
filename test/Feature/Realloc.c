@@ -13,7 +13,7 @@ int main() {
 
   // CHECK: KLEE: WARNING ONCE: Large alloc
   int *p2 = realloc(p, 1<<30);
-  assert(p2[1] == 52);
+  assert(!p2 || p2[1] == 52);
 
   return 0;
 }
