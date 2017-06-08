@@ -3813,7 +3813,7 @@ size_t Executor::getAllocationAlignment(const llvm::Value *allocSite) const {
 
     klee_warning_once(fn != NULL ? fn : allocSite,
                       "Alignment of memory from call \"%s\" is not "
-                      "modelled. Using alignment of %zu.",
+                      "modelled. Using alignment of %lu.",
                       allocationSiteName.c_str(), forcedAlignment);
     alignment = forcedAlignment;
   } else {
@@ -3827,7 +3827,7 @@ size_t Executor::getAllocationAlignment(const llvm::Value *allocSite) const {
       alignment = kmodule->targetData->getPrefTypeAlignment(type);
     } else {
       klee_warning_once(allocSite, "Cannot determine memory alignment for "
-                                   "\"%s\". Using alignment of %zu.",
+                                   "\"%s\". Using alignment of %lu.",
                         allocationSiteName.c_str(), forcedAlignment);
       alignment = forcedAlignment;
     }
@@ -3835,8 +3835,8 @@ size_t Executor::getAllocationAlignment(const llvm::Value *allocSite) const {
 
   // Currently we require alignment be a power of 2
   if (!bits64::isPowerOfTwo(alignment)) {
-    klee_warning_once(allocSite, "Alignment of %zu requested for %s but this "
-                                 "not supported. Using alignment of %zu",
+    klee_warning_once(allocSite, "Alignment of %lu requested for %s but this "
+                                 "not supported. Using alignment of %lu",
                       alignment, allocSite->getName().str().c_str(),
                       forcedAlignment);
     alignment = forcedAlignment;
