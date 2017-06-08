@@ -51,7 +51,7 @@ struct StackFrame {
 
   // For vararg functions: arguments not passed via parameter are
   // stored (packed tightly) in a local (alloca) memory object. This
-  // is setup to match the way the front-end generates vaarg code (it
+  // is set up to match the way the front-end generates vaarg code (it
   // does not pass vaarg through as expected). VACopy is lowered inside
   // of intrinsic lowering.
   MemoryObject *varargs;

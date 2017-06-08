@@ -1303,7 +1303,7 @@ void Executor::executeCall(ExecutionState &state,
         return;
 
       // FIXME: This is really specific to the architecture, not the pointer
-      // size. This happens to work fir x86-32 and x86-64, however.
+      // size. This happens to work for x86-32 and x86-64, however.
       Expr::Width WordSize = Context::get().getPointerWidth();
       if (WordSize == Expr::Int32) {
         executeMemoryOperation(state, true, arguments[0], 
@@ -1311,7 +1311,7 @@ void Executor::executeCall(ExecutionState &state,
       } else {
         assert(WordSize == Expr::Int64 && "Unknown word size!");
 
-        // X86-64 has quite complicated calling convention. However,
+        // x86-64 has quite complicated calling convention. However,
         // instead of implementing it, we can do a simple hack: just
         // make a function believe that all varargs are on stack.
         executeMemoryOperation(state, true, arguments[0],
@@ -1335,7 +1335,7 @@ void Executor::executeCall(ExecutionState &state,
       // va_end is a noop for the interpreter.
       //
       // FIXME: We should validate that the target didn't do something bad
-      // with vaeend, however (like call it twice).
+      // with va_end, however (like call it twice).
       break;
         
     case Intrinsic::vacopy:
