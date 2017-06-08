@@ -406,6 +406,14 @@ void StatsTracker::markBranchVisited(ExecutionState *visitedTrue,
 }
 
 void StatsTracker::writeStatsHeader() {
+  //Adding Stats versioning
+  //When changing output formats, remember to change the number and
+  //to create a corresponding config for klee-stats to interpret it
+
+  int version = 1;
+
+  *statsFile << version << "\n";
+
   *statsFile << "('Instructions',"
              << "'FullBranches',"
              << "'PartialBranches',"
