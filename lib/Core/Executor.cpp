@@ -3035,7 +3035,7 @@ void Executor::callExternalFunction(ExecutionState &state,
     return;
   
   if (NoExternals && !okExternals.count(function->getName())) {
-    klee_warning("Calling not-OK external function : %s\n",
+    klee_warning("Disallowed call to external function: %s\n",
                function->getName().str().c_str());
     terminateStateOnError(state, "externals disallowed", User);
     return;
@@ -3084,7 +3084,8 @@ void Executor::callExternalFunction(ExecutionState &state,
       if (i != arguments.size()-1)
 	os << ", ";
     }
-    os << ")";
+    os << ") at ";
+    state.pc->printFileLine(os);
     
     if (AllExternalWarnings)
       klee_warning("%s", os.str().c_str());
