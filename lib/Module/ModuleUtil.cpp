@@ -19,7 +19,6 @@
 #endif
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
-#include "llvm/Bitcode/ReaderWriter.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -47,15 +46,16 @@
 #include "llvm/IR/AssemblyAnnotationWriter.h"
 #endif
 
-#include "llvm/Support/raw_ostream.h"
-#include "llvm/Analysis/ValueTracking.h"
-#include "llvm/Support/Path.h"
-
-#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
-#include "llvm/Support/CallSite.h"
-#else
-#include "llvm/IR/CallSite.h"
+#if LLVM_VERSION_CODE <= LLVM_VERSION(2, 9)
+// for llvm::error_code
+#include "llvm/Support/system_error.h"
 #endif
+
+#include "llvm/Analysis/ValueTracking.h"
+#include "llvm/Bitcode/ReaderWriter.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/Path.h"
 
 #include <map>
 #include <set>
@@ -399,7 +399,7 @@ static bool linkBCA(object::Archive* archive, Module* composite, std::string& er
 #endif
 
 
-Module *klee::linkWithLibrary(Module *module, 
+Module *klee::linkWithLibrary(Module *module,
                               const std::string &libraryName) {
   KLEE_DEBUG_WITH_TYPE("klee_linker", dbgs() << "Linking file " << libraryName << "\n");
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
@@ -519,11 +519,11 @@ Module *klee::linkWithLibrary(Module *module,
 
   llvm::sys::Path libraryPath(libraryName);
   bool native = false;
-    
+
   if (linker.LinkInFile(libraryPath, native)) {
     klee_error("Linking library %s failed", libraryName.c_str());
   }
-    
+
   return linker.releaseModule();
 #endif
 }
@@ -566,12 +566,12 @@ static bool valueIsOnlyCalled(const Value *v) {
       // Make sure the instruction is a call or invoke.
       CallSite cs(const_cast<Instruction *>(instr));
       if (!cs) return false;
-      
+
       // Make sure that the value is only the target of this call and
       // not an argument.
       if (cs.hasArgument(v))
         return false;
-    } else if (const llvm::ConstantExpr *ce = 
+    } else if (const llvm::ConstantExpr *ce =
                dyn_cast<llvm::ConstantExpr>(*it)) {
       if (ce->getOpcode()==Instruction::BitCast)
         if (valueIsOnlyCalled(ce))
@@ -592,3 +592,66 @@ static bool valueIsOnlyCalled(const Value *v) {
 bool klee::functionEscapes(const Function *f) {
   return !valueIsOnlyCalled(f);
 }
+
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
+
+Module *klee::loadModule(LLVMContext &ctx, const std::string &path, std::string &errorMsg) {
+    OwningPtr<MemoryBuffer> bufferPtr;
+    error_code ec = MemoryBuffer::getFileOrSTDIN(path.c_str(), bufferPtr);
+    if (ec) {
+        errorMsg = ec.message();
+        return 0;
+    }
+
+    Module *module = getLazyBitcodeModule(bufferPtr.get(), ctx, &errorMsg);
+
+    if (!module) {
+        return 0;
+    }
+    if (module->MaterializeAllPermanently(&errorMsg)) {
+        delete module;
+        return 0;
+    }
+
+    // In the case of success LLVM will take ownership of the module.
+    // Therefore we need to take ownership away from the `bufferPtr` otherwise the
+    // allocated memory will be deleted twice.
+    bufferPtr.take();
+
+    errorMsg = "";
+    return module;
+}
+
+#else
+
+Module *klee::loadModule(LLVMContext &ctx, const std::string &path, std::string &errorMsg) {
+  auto buffer = MemoryBuffer::getFileOrSTDIN(path.c_str());
+  if (!buffer) {
+    errorMsg = buffer.getError().message().c_str();
+    return nullptr;
+  }
+
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
+  auto errorOrModule = getLazyBitcodeModule(std::move(buffer.get()), ctx);
+#else
+  auto errorOrModule = getLazyBitcodeModule(buffer->get(), ctx);
+#endif
+
+  if (!errorOrModule) {
+    errorMsg = errorOrModule.getError().message().c_str();
+    return nullptr;
+  }
+  // The module has taken ownership of the MemoryBuffer so release it
+  // from the std::unique_ptr
+  buffer->release();
+  auto module = *errorOrModule;
+
+  if (auto ec = module->materializeAllPermanently()) {
+    errorMsg = ec.message();
+    return nullptr;
+  }
+
+  errorMsg = "";
+  return module;
+}
+#endif
