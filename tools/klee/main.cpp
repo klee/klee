@@ -25,7 +25,6 @@
 
 #if LLVM_VERSION_CODE > LLVM_VERSION(3, 2)
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
@@ -33,7 +32,6 @@
 #include "llvm/IR/LLVMContext.h"
 #else
 #include "llvm/Constants.h"
-#include "llvm/Module.h"
 #include "llvm/Type.h"
 #include "llvm/InstrTypes.h"
 #include "llvm/Instruction.h"
@@ -606,7 +604,7 @@ std::string KleeHandler::getRunTimeLibraryPath(const char *argv0) {
   {
     KLEE_DEBUG_WITH_TYPE("klee_runtime", llvm::dbgs() <<
                          "Using installed KLEE library runtime: ");
-    libDir = toolRoot.str().substr(0, 
+    libDir = toolRoot.str().substr(0,
                toolRoot.str().size() - strlen( KLEE_INSTALL_BIN_DIR ));
     llvm::sys::path::append(libDir, KLEE_INSTALL_RUNTIME_DIR);
   }
@@ -1235,56 +1233,13 @@ int main(int argc, char **argv, char **envp) {
   sys::SetInterruptFunction(interrupt_handle);
 
   // Load the bytecode...
-  std::string ErrorMsg;
+  std::string errorMsg;
   LLVMContext ctx;
-  Module *mainModule = 0;
-#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
-  OwningPtr<MemoryBuffer> BufferPtr;
-  error_code ec=MemoryBuffer::getFileOrSTDIN(InputFile.c_str(), BufferPtr);
-  if (ec) {
+  Module *mainModule = klee::loadModule(ctx, InputFile, errorMsg);
+  if (!mainModule) {
     klee_error("error loading program '%s': %s", InputFile.c_str(),
-               ec.message().c_str());
+               errorMsg.c_str());
   }
-
-  mainModule = getLazyBitcodeModule(BufferPtr.get(), ctx, &ErrorMsg);
-
-  if (mainModule) {
-    if (mainModule->MaterializeAllPermanently(&ErrorMsg)) {
-      delete mainModule;
-      mainModule = 0;
-    }
-  }
-  if (!mainModule)
-    klee_error("error loading program '%s': %s", InputFile.c_str(),
-               ErrorMsg.c_str());
-#else
-  auto Buffer = MemoryBuffer::getFileOrSTDIN(InputFile.c_str());
-  if (!Buffer)
-    klee_error("error loading program '%s': %s", InputFile.c_str(),
-               Buffer.getError().message().c_str());
-
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
-  auto mainModuleOrError = getLazyBitcodeModule(std::move(Buffer.get()), ctx);
-#else
-  auto mainModuleOrError = getLazyBitcodeModule(Buffer->get(), ctx);
-#endif
-
-  if (!mainModuleOrError) {
-    klee_error("error loading program '%s': %s", InputFile.c_str(),
-               mainModuleOrError.getError().message().c_str());
-  }
-  else {
-    // The module has taken ownership of the MemoryBuffer so release it
-    // from the std::unique_ptr
-    Buffer->release();
-  }
-
-  mainModule = *mainModuleOrError;
-  if (auto ec = mainModule->materializeAllPermanently()) {
-    klee_error("error loading program '%s': %s", InputFile.c_str(),
-               ec.message().c_str());
-  }
-#endif
 
   if (WithPOSIXRuntime) {
     int r = initEnv(mainModule);
@@ -1578,12 +1533,6 @@ int main(int argc, char **argv, char **envp) {
 
   handler->getInfoStream() << stats.str();
 
-#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
-  // FIXME: This really doesn't look right
-  // This is preventing the module from being
-  // deleted automatically
-  BufferPtr.take();
-#endif
   delete handler;
 
   return 0;

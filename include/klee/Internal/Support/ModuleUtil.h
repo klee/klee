@@ -7,22 +7,37 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef KLEE_TRANSFORM_UTIL_H
-#define KLEE_TRANSFORM_UTIL_H
+#ifndef KLEE_MODULE_UTIL_H
+#define KLEE_MODULE_UTIL_H
+
+#include "klee/Config/Version.h"
+
+#if LLVM_VERSION_CODE > LLVM_VERSION(3, 2)
+#include "llvm/IR/Module.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/LLVMContext.h"
+#else
+#include "llvm/Module.h"
+#include "llvm/Function.h"
+#include "llvm/LLVMContext.h"
+#endif
+
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 5)
+#include "llvm/IR/CallSite.h"
+#else
+#include "llvm/Support/CallSite.h"
+#endif
 
 #include <string>
 
-namespace llvm {
-  class Function;
-  class Instruction;
-  class Module; 
-  class CallSite; 
-}
-
 namespace klee {
- 
+  /// Load llvm module from a bitcode archive file.
+  llvm::Module *loadModule(llvm::LLVMContext &ctx,
+                           const std::string &path,
+                           std::string &errorMsg);
+
   /// Link a module with a specified bitcode archive.
-  llvm::Module *linkWithLibrary(llvm::Module *module, 
+  llvm::Module *linkWithLibrary(llvm::Module *module,
                                 const std::string &libraryName);
 
   /// Return the Function* target of a Call or Invoke instruction, or
