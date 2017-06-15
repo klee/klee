@@ -425,12 +425,14 @@ void
 RandomPathSearcher::update(ExecutionState *current,
                            const std::vector<ExecutionState *> &addedStates,
                            const std::vector<ExecutionState *> &removedStates) {
-  if ((&addedStates == &executor.addedStates) && (&removedStates == &executor.removedStates))
-    for (std::vector<ExecutionState *>::const_iterator it = removedStates.begin(),
-                                              ie = removedStates.end();
+  if ((&addedStates == &executor.addedStates) &&
+      (&removedStates == &executor.removedStates))
+    for (std::vector<ExecutionState *>::const_iterator
+             it = removedStates.begin(),
+             ie = removedStates.end();
          it != ie; ++it) {
       std::set<ExecutionState *>::iterator ignore_it = ignoreStates.find(*it);
-      if (ignore_it != ignoreStates.end()){
+      if (ignore_it != ignoreStates.end()) {
         ignoreStates.erase(ignore_it);
       }
     }
@@ -445,7 +447,7 @@ RandomPathSearcher::update(ExecutionState *current,
         new_is.insert(*it);
       }
     }
-    ignoreStates = new_is; // cannot use std::move(new_is) because c++11 feature
+    ignoreStates = new_is; // cannot use std::move(new_is) because that is a c++11 feature
   }
 }
 

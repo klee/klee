@@ -18,12 +18,13 @@
 int main(int argc, char** args){
 
   int x;
+  int i;
 
   klee_make_symbolic(&x, sizeof(x), "x");
   x = x % 20;
 
   klee_open_merge();
-  for (int i = 0; i < x; ++i){
+  for (i = 0; i < x; ++i){
     if (x % 3 == 0){
       klee_close_merge();
       return 1;

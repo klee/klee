@@ -18,7 +18,7 @@
 #include <vector>
 #include <set>
 #include <map>
-#include <memory>
+#include <queue>
 
 namespace llvm {
   class BasicBlock;
