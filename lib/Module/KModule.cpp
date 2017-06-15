@@ -243,7 +243,7 @@ void KModule::addInternalFunction(const char* functionName){
 
 void KModule::prepare(const Interpreter::ModuleOptions &opts,
                       InterpreterHandler *ih) {
-
+  LLVMContext &ctx = module->getContext();
 
   // Inject checks prior to optimization... we also perform the
   // invariant transformations that we will end up doing later so that
