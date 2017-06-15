@@ -2,7 +2,7 @@
 
 // CHECK: open merge:
 // CHECK: close merge:
-// CHECK: generated tests = 3
+// CHECK: KLEE: done: generated tests = 3{{$}}
 
 #include <klee/klee.h>
 

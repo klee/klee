@@ -5,8 +5,8 @@
 // CHECK: Preemptively releasing states
 
 // This might fail, the generated test count fluctuates between 8 and 10
-// CHECK-NOT: KLEE: done: generated tests = 73
-// CHECK-NOT: KLEE: done: generated tests = 1 
+// CHECK-NOT: KLEE: done: generated tests = 73{{$}}
+// CHECK-NOT: KLEE: done: generated tests = 1{{$}}
 
 #include "klee/klee.h"
 
