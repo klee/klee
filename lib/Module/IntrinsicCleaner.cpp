@@ -82,11 +82,15 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
           Value *pSrc = CastInst::CreatePointerCast(src, i64p, "vacopy.cast.src", ii);
           Value *val = new LoadInst(pSrc, std::string(), ii); new StoreInst(val, pDst, ii);
           Value *off = ConstantInt::get(Type::getInt64Ty(ctx), 1);
-          pDst = GetElementPtrInst::Create(pDst, off, std::string(), ii);
-          pSrc = GetElementPtrInst::Create(pSrc, off, std::string(), ii);
+          pDst = GetElementPtrInst::Create(KLEE_LLVM_GEP_TYPE(nullptr)
+              pDst, off, std::string(), ii);
+          pSrc = GetElementPtrInst::Create(KLEE_LLVM_GEP_TYPE(nullptr)
+              pSrc, off, std::string(), ii);
           val = new LoadInst(pSrc, std::string(), ii); new StoreInst(val, pDst, ii);
-          pDst = GetElementPtrInst::Create(pDst, off, std::string(), ii);
-          pSrc = GetElementPtrInst::Create(pSrc, off, std::string(), ii);
+          pDst = GetElementPtrInst::Create(KLEE_LLVM_GEP_TYPE(nullptr)
+              pDst, off, std::string(), ii);
+          pSrc = GetElementPtrInst::Create(KLEE_LLVM_GEP_TYPE(nullptr)
+              pSrc, off, std::string(), ii);
           val = new LoadInst(pSrc, std::string(), ii); new StoreInst(val, pDst, ii);
         }
         ii->removeFromParent();
