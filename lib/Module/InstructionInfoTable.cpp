@@ -87,7 +87,7 @@ static void buildInstructionToLineMap(Module *m,
   }
 }
 
-static std::string getDSPIPath(DILocation Loc) {
+static std::string getDSPIPath(const DILocation &Loc) {
   std::string dir = Loc.getDirectory();
   std::string file = Loc.getFilename();
   if (dir.empty() || file[0] == '/') {
