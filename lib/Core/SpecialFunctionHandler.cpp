@@ -10,6 +10,7 @@
 #include "Memory.h"
 #include "SpecialFunctionHandler.h"
 #include "TimingSolver.h"
+#include "klee/BoundedMergeHandler.h"
 
 #include "klee/ExecutionState.h"
 
@@ -104,7 +105,8 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
   add("klee_is_symbolic", handleIsSymbolic, true),
   add("klee_make_symbolic", handleMakeSymbolic, false),
   add("klee_mark_global", handleMarkGlobal, false),
-  add("klee_merge", handleMerge, false),
+  add("klee_open_merge", handleOpenMerge, false),
+  add("klee_close_merge", handleCloseMerge, false),
   add("klee_prefer_cex", handlePreferCex, false),
   add("klee_posix_prefer_cex", handlePosixPreferCex, false),
   add("klee_print_expr", handlePrintExpr, false),
@@ -342,10 +344,39 @@ void SpecialFunctionHandler::handleReportError(ExecutionState &state,
 				 readStringAtAddress(state, arguments[3]).c_str());
 }
 
-void SpecialFunctionHandler::handleMerge(ExecutionState &state,
-                           KInstruction *target,
-                           std::vector<ref<Expr> > &arguments) {
-  // nop
+void SpecialFunctionHandler::handleOpenMerge(ExecutionState &state,
+    KInstruction *target,
+    std::vector<ref<Expr> > &arguments) {
+  if (!UseBoundedMerge) {
+    return;
+  }
+
+  state.openMergeStack.push_back(
+      ref<BoundedMergeHandler>(new BoundedMergeHandler(&executor, &state)));
+
+  if (DebugLogBoundedMerge)
+    llvm::errs() << "open merge: " << &state << "\n";
+}
+
+void SpecialFunctionHandler::handleCloseMerge(ExecutionState &state,
+    KInstruction *target,
+    std::vector<ref<Expr> > &arguments) {
+  if (!UseBoundedMerge) {
+    return;
+  }
+  Instruction *i = target->inst;
+
+  if (DebugLogBoundedMerge)
+    llvm::errs() << "close merge: " << &state << " at " << i << '\n';
+
+  if (state.openMergeStack.empty()) {
+    llvm::errs() << &state << " ran into a close at " << i
+                 << " without a preceding open\n";
+  } else {
+    executor.inCloseMerge.insert(&state);
+    state.openMergeStack.back()->addClosedState(&state, i);
+    state.openMergeStack.pop_back();
+  }
 }
 
 void SpecialFunctionHandler::handleNew(ExecutionState &state,

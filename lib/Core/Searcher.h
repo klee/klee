@@ -11,6 +11,10 @@
 #define KLEE_SEARCHER_H
 
 #include "llvm/Support/raw_ostream.h"
+#include "klee/ExecutionState.h"
+
+#include "PTree.h"
+
 #include <vector>
 #include <set>
 #include <map>
@@ -165,6 +169,26 @@ namespace klee {
 
   class RandomPathSearcher : public Searcher {
     Executor &executor;
+    class BacktrackHelper {
+      public:
+        enum direction {LEFT, RIGHT, BOTH, NONE};
+
+      private:
+        std::vector<direction> visited;
+
+      public:
+        BacktrackHelper(){
+          visited.push_back(NONE);
+        }
+        direction avail_dir();
+        void back();
+        void go(direction dir);
+    };
+
+    std::set<ExecutionState *> ignoreStates;
+
+    ExecutionState &selectStateIgnore();
+    ExecutionState &selectStateStandard();
 
   public:
     RandomPathSearcher(Executor &_executor);
@@ -180,49 +204,29 @@ namespace klee {
     }
   };
 
-  class MergingSearcher : public Searcher {
+  class BoundedMergeHandler;
+  class BoundedMergingSearcher : public Searcher {
+    friend class BoundedMergeHandler;
+
+    private:
+
     Executor &executor;
-    std::set<ExecutionState*> statesAtMerge;
     Searcher *baseSearcher;
-    llvm::Function *mergeFunction;
 
-  private:
-    llvm::Instruction *getMergePoint(ExecutionState &es);
+    llvm::Function *openMergeFunction;
+    llvm::Function *closeMergeFunction;
 
-  public:
-    MergingSearcher(Executor &executor, Searcher *baseSearcher);
-    ~MergingSearcher();
+    public:
+    BoundedMergingSearcher(Executor &executor, Searcher *baseSearcher);
+    ~BoundedMergingSearcher();
 
     ExecutionState &selectState();
     void update(ExecutionState *current,
-                const std::vector<ExecutionState *> &addedStates,
-                const std::vector<ExecutionState *> &removedStates);
-    bool empty() { return baseSearcher->empty() && statesAtMerge.empty(); }
+        const std::vector<ExecutionState *> &addedStates,
+        const std::vector<ExecutionState *> &removedStates);
+    bool empty() { return baseSearcher->empty(); }
     void printName(llvm::raw_ostream &os) {
-      os << "MergingSearcher\n";
-    }
-  };
-
-  class BumpMergingSearcher : public Searcher {
-    Executor &executor;
-    std::map<llvm::Instruction*, ExecutionState*> statesAtMerge;
-    Searcher *baseSearcher;
-    llvm::Function *mergeFunction;
-
-  private:
-    llvm::Instruction *getMergePoint(ExecutionState &es);
-
-  public:
-    BumpMergingSearcher(Executor &executor, Searcher *baseSearcher);
-    ~BumpMergingSearcher();
-
-    ExecutionState &selectState();
-    void update(ExecutionState *current,
-                const std::vector<ExecutionState *> &addedStates,
-                const std::vector<ExecutionState *> &removedStates);
-    bool empty() { return baseSearcher->empty() && statesAtMerge.empty(); }
-    void printName(llvm::raw_ostream &os) {
-      os << "BumpMergingSearcher\n";
+      os << "BoundedMergingSearcher\n";
     }
   };
 
