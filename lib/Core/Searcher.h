@@ -180,6 +180,32 @@ namespace klee {
     }
   };
 
+  class MergeHandler;
+  class MergingSearcher : public Searcher {
+    friend class MergeHandler;
+
+    private:
+
+    Executor &executor;
+    Searcher *baseSearcher;
+
+    public:
+    MergingSearcher(Executor &executor, Searcher *baseSearcher);
+    ~MergingSearcher();
+
+    ExecutionState &selectState();
+
+    void update(ExecutionState *current,
+                const std::vector<ExecutionState *> &addedStates,
+                const std::vector<ExecutionState *> &removedStates) {
+      baseSearcher->update(current, addedStates, removedStates);
+    }
+    bool empty() { return baseSearcher->empty(); }
+    void printName(llvm::raw_ostream &os) {
+      os << "MergingSearcher\n";
+    }
+  };
+
   class BatchingSearcher : public Searcher {
     Searcher *baseSearcher;
     double timeBudget;

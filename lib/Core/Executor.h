@@ -85,6 +85,7 @@ class Executor : public Interpreter {
   friend class SpecialFunctionHandler;
   friend class StatsTracker;
   friend class MergeHandler;
+  friend class MergingSearcher;
 
 public:
   class Timer {
@@ -132,6 +133,12 @@ private:
   SpecialFunctionHandler *specialFunctionHandler;
   std::vector<TimerInfo*> timers;
   PTree *processTree;
+
+  std::vector<MergeHandler *> mergeGroups;
+
+  // Set of vectors that are currently paused from scheduling because they are
+  // waiting to be merged in a klee_close_merge instruction
+  std::set<ExecutionState *> inCloseMerge;
 
   /// Used to track states that have been added during the current
   /// instructions step. 

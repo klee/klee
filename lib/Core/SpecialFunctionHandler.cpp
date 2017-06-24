@@ -337,7 +337,7 @@ void SpecialFunctionHandler::handleOpenMerge(ExecutionState &state,
   }
 
   state.openMergeStack.push_back(
-      ref<MergeHandler>(new MergeHandler(&executor)));
+      ref<MergeHandler>(new MergeHandler(&executor, &state)));
 
   if (DebugLogMerge)
     llvm::errs() << "open merge: " << &state << "\n";
@@ -360,6 +360,7 @@ void SpecialFunctionHandler::handleCloseMerge(ExecutionState &state,
     warning << &state << " ran into a close at " << i << " without a preceding open\n";
     klee_warning(warning.str().c_str());
   } else {
+    executor.inCloseMerge.insert(&state);
     state.openMergeStack.back()->addClosedState(&state, i);
     state.openMergeStack.pop_back();
   }

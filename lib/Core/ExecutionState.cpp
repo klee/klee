@@ -73,7 +73,8 @@ ExecutionState::ExecutionState(KFunction *kf) :
     instsSinceCovNew(0),
     coveredNew(false),
     forkDisabled(false),
-    ptreeNode(0) {
+    ptreeNode(0),
+    steppedInstructions(0){
   pushFrame(0, kf);
 }
 
@@ -89,6 +90,11 @@ ExecutionState::~ExecutionState() {
     if (mo->refCount == 0)
       delete mo;
   }
+
+  for (auto cur_mergehandler: openMergeStack){
+    cur_mergehandler->removeOpenState(this);
+  }
+
 
   while (!stack.empty()) popFrame();
 }
@@ -117,10 +123,14 @@ ExecutionState::ExecutionState(const ExecutionState& state):
     ptreeNode(state.ptreeNode),
     symbolics(state.symbolics),
     arrayNames(state.arrayNames),
-    openMergeStack(state.openMergeStack)
+    openMergeStack(state.openMergeStack),
+    steppedInstructions(state.steppedInstructions)
 {
   for (unsigned int i=0; i<symbolics.size(); i++)
     symbolics[i].first->refCount++;
+
+  for (auto cur_mergehandler: openMergeStack)
+    cur_mergehandler->addOpenState(this);
 }
 
 ExecutionState *ExecutionState::branch() {

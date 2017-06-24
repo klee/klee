@@ -149,6 +149,9 @@ public:
   // The objects handling the klee_open_merge calls this state ran through
   std::vector<ref<MergeHandler> > openMergeStack;
 
+  // The numbers of times this state has run through Executor::stepInstruction
+  std::uint64_t steppedInstructions;
+
 private:
   ExecutionState() : ptreeNode(0) {}
 
