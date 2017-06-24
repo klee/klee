@@ -152,6 +152,11 @@ extern "C" {
   /* Print range for given argument and tagged with name */
   void klee_print_range(const char * name, int arg );
 
+  /* Open a merge */
+  void klee_open_merge();
+
+  /* Merge all paths of the state that went through klee_open_merge */
+  void klee_close_merge();
 #ifdef __cplusplus
 }
 #endif

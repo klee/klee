@@ -13,6 +13,7 @@
 #include "klee/Constraints.h"
 #include "klee/Expr.h"
 #include "klee/Internal/ADT/TreeStream.h"
+#include "klee/MergeHandler.h"
 
 // FIXME: We do not want to be exposing these? :(
 #include "../../lib/Core/AddressSpace.h"
@@ -144,6 +145,9 @@ public:
   std::string getFnAlias(std::string fn);
   void addFnAlias(std::string old_fn, std::string new_fn);
   void removeFnAlias(std::string fn);
+
+  // The objects handling the klee_open_merge calls this state ran through
+  std::vector<ref<MergeHandler> > openMergeStack;
 
 private:
   ExecutionState() : ptreeNode(0) {}
