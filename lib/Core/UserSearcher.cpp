@@ -52,15 +52,6 @@ namespace {
             cl::desc("Amount of time to batch when using --use-batching-search"),
             cl::init(5.0));
 
-
-  cl::opt<bool>
-  UseMerge("use-merge", 
-           cl::desc("Enable support for klee_merge() (experimental)"));
- 
-  cl::opt<bool>
-  UseBumpMerge("use-bump-merge", 
-           cl::desc("Enable support for klee_merge() (extra experimental)"));
-
 }
 
 
@@ -115,19 +106,6 @@ Searcher *klee::constructUserSearcher(Executor &executor) {
     searcher = new BatchingSearcher(searcher, BatchTime, BatchInstructions);
   }
 
-  // merge support is experimental
-  if (UseMerge) {
-    if (UseBumpMerge)
-      klee_error("use-merge and use-bump-merge cannot be used together");
-    // RandomPathSearcher cannot be used in conjunction with MergingSearcher,
-    // see MergingSearcher::selectState() for explanation.
-    if (std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::RandomPath) != CoreSearch.end())
-      klee_error("use-merge currently does not support random-path, please use another search strategy");
-    searcher = new MergingSearcher(executor, searcher);
-  } else if (UseBumpMerge) {
-    searcher = new BumpMergingSearcher(executor, searcher);
-  }
-  
   if (UseIterativeDeepeningTimeSearch) {
     searcher = new IterativeDeepeningTimeSearcher(searcher);
   }

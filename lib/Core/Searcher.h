@@ -180,52 +180,6 @@ namespace klee {
     }
   };
 
-  class MergingSearcher : public Searcher {
-    Executor &executor;
-    std::set<ExecutionState*> statesAtMerge;
-    Searcher *baseSearcher;
-    llvm::Function *mergeFunction;
-
-  private:
-    llvm::Instruction *getMergePoint(ExecutionState &es);
-
-  public:
-    MergingSearcher(Executor &executor, Searcher *baseSearcher);
-    ~MergingSearcher();
-
-    ExecutionState &selectState();
-    void update(ExecutionState *current,
-                const std::vector<ExecutionState *> &addedStates,
-                const std::vector<ExecutionState *> &removedStates);
-    bool empty() { return baseSearcher->empty() && statesAtMerge.empty(); }
-    void printName(llvm::raw_ostream &os) {
-      os << "MergingSearcher\n";
-    }
-  };
-
-  class BumpMergingSearcher : public Searcher {
-    Executor &executor;
-    std::map<llvm::Instruction*, ExecutionState*> statesAtMerge;
-    Searcher *baseSearcher;
-    llvm::Function *mergeFunction;
-
-  private:
-    llvm::Instruction *getMergePoint(ExecutionState &es);
-
-  public:
-    BumpMergingSearcher(Executor &executor, Searcher *baseSearcher);
-    ~BumpMergingSearcher();
-
-    ExecutionState &selectState();
-    void update(ExecutionState *current,
-                const std::vector<ExecutionState *> &addedStates,
-                const std::vector<ExecutionState *> &removedStates);
-    bool empty() { return baseSearcher->empty() && statesAtMerge.empty(); }
-    void printName(llvm::raw_ostream &os) {
-      os << "BumpMergingSearcher\n";
-    }
-  };
-
   class BatchingSearcher : public Searcher {
     Searcher *baseSearcher;
     double timeBudget;

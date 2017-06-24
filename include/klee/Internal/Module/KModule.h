@@ -82,9 +82,6 @@ namespace klee {
   public:
     llvm::Module *module;
     llvm::DataLayout *targetData;
-    
-    // Some useful functions to know the address of
-    llvm::Function *kleeMergeFn;
 
     // Our shadow versions of LLVM structures.
     std::vector<KFunction*> functions;
