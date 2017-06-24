@@ -13,6 +13,8 @@
 #include "Executor.h"
 
 #include "klee/Internal/Support/ErrorHandling.h"
+#include "klee/CommandLine.h"
+
 #include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
@@ -58,8 +60,13 @@ namespace {
 void klee::initializeSearchOptions() {
   // default values
   if (CoreSearch.empty()) {
-    CoreSearch.push_back(Searcher::RandomPath);
-    CoreSearch.push_back(Searcher::NURS_CovNew);
+    if (UseMerge){
+      CoreSearch.push_back(Searcher::NURS_CovNew);
+      klee_warning("--use-merge enabled. Using NURS_CovNew as default searcher.");
+    } else {
+      CoreSearch.push_back(Searcher::RandomPath);
+      CoreSearch.push_back(Searcher::NURS_CovNew);
+    }
   }
 }
 
@@ -102,6 +109,12 @@ Searcher *klee::constructUserSearcher(Executor &executor) {
       s.push_back(getNewSearcher(CoreSearch[i], executor));
     
     searcher = new InterleavedSearcher(s);
+  }
+
+  if (UseMerge) {
+    if (std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::RandomPath) != CoreSearch.end()){
+      klee_error("use-merge currently does not support random-path, please use another search strategy");
+    }
   }
 
   if (UseBatchingSearch) {

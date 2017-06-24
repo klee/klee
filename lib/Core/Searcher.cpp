@@ -42,11 +42,6 @@
 using namespace klee;
 using namespace llvm;
 
-namespace {
-  cl::opt<bool>
-  DebugLogMerge("debug-log-merge");
-}
-
 namespace klee {
   extern RNG theRNG;
 }

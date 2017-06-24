@@ -69,6 +69,7 @@ namespace klee {
   class StatsTracker;
   class TimingSolver;
   class TreeStreamWriter;
+  class MergeHandler;
   template<class T> class ref;
 
 
@@ -78,13 +79,12 @@ namespace klee {
   /// removedStates, and haltExecution, among others.
 
 class Executor : public Interpreter {
-  friend class BumpMergingSearcher;
-  friend class MergingSearcher;
   friend class RandomPathSearcher;
   friend class OwningSearcher;
   friend class WeightedRandomSearcher;
   friend class SpecialFunctionHandler;
   friend class StatsTracker;
+  friend class MergeHandler;
 
 public:
   class Timer {
