@@ -144,6 +144,13 @@ private:
   /// \invariant \ref addedStates and \ref removedStates are disjoint.
   std::vector<ExecutionState *> removedStates;
 
+  /// Used to track states that are not terminated, but should not
+  /// be scheduled by the searcher.
+  std::vector<ExecutionState *> pausedStates;
+  /// States that were 'paused' from scheduling, that now may be
+  /// scheduled again
+  std::vector<ExecutionState *> continuedStates;
+
   /// When non-empty the Executor is running in "seed" mode. The
   /// states in this map will be executed in an arbitrary order
   /// (outside the normal search interface) until they terminate. When
@@ -389,6 +396,10 @@ private:
 
   bool shouldExitOn(enum TerminateReason termReason);
 
+  // remove state from searcher only
+  void pauseState(ExecutionState& state);
+  // add state to searcher only
+  void continueState(ExecutionState& state);
   // remove state from queue and delete
   void terminateState(ExecutionState &state);
   // call exit handler and terminate state
