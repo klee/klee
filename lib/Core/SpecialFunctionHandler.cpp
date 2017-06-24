@@ -93,7 +93,6 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
   add("klee_is_symbolic", handleIsSymbolic, true),
   add("klee_make_symbolic", handleMakeSymbolic, false),
   add("klee_mark_global", handleMarkGlobal, false),
-  add("klee_merge", handleMerge, false),
   add("klee_prefer_cex", handlePreferCex, false),
   add("klee_posix_prefer_cex", handlePosixPreferCex, false),
   add("klee_print_expr", handlePrintExpr, false),
@@ -323,12 +322,6 @@ void SpecialFunctionHandler::handleReportError(ExecutionState &state,
 				 readStringAtAddress(state, arguments[2]),
 				 Executor::ReportError,
 				 readStringAtAddress(state, arguments[3]).c_str());
-}
-
-void SpecialFunctionHandler::handleMerge(ExecutionState &state,
-                           KInstruction *target,
-                           std::vector<ref<Expr> > &arguments) {
-  // nop
 }
 
 void SpecialFunctionHandler::handleNew(ExecutionState &state,

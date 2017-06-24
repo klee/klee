@@ -54,9 +54,6 @@ namespace {
     eSwitchTypeLLVM,
     eSwitchTypeInternal
   };
-
-  cl::list<std::string>
-  MergeAtExit("merge-at-exit");
     
   cl::opt<bool>
   NoTruncateSourceLines("no-truncate-source-lines",
@@ -91,7 +88,6 @@ namespace {
 KModule::KModule(Module *_module) 
   : module(_module),
     targetData(new DataLayout(module)),
-    kleeMergeFn(0),
     infos(0),
     constantTable(0) {
 }
@@ -205,53 +201,6 @@ void KModule::addInternalFunction(const char* functionName){
 void KModule::prepare(const Interpreter::ModuleOptions &opts,
                       InterpreterHandler *ih) {
   LLVMContext &ctx = module->getContext();
-
-  if (!MergeAtExit.empty()) {
-    Function *mergeFn = module->getFunction("klee_merge");
-    if (!mergeFn) {
-      llvm::FunctionType *Ty =
-          FunctionType::get(Type::getVoidTy(ctx), std::vector<Type *>(), false);
-      mergeFn = Function::Create(Ty, GlobalVariable::ExternalLinkage,
-				 "klee_merge",
-				 module);
-    }
-
-    for (cl::list<std::string>::iterator it = MergeAtExit.begin(), 
-           ie = MergeAtExit.end(); it != ie; ++it) {
-      std::string &name = *it;
-      Function *f = module->getFunction(name);
-      if (!f) {
-        klee_error("cannot insert merge-at-exit for: %s (cannot find)",
-                   name.c_str());
-      } else if (f->isDeclaration()) {
-        klee_error("cannot insert merge-at-exit for: %s (external)",
-                   name.c_str());
-      }
-
-      BasicBlock *exit = BasicBlock::Create(ctx, "exit", f);
-      PHINode *result = 0;
-      if (f->getReturnType() != Type::getVoidTy(ctx))
-        result = PHINode::Create(f->getReturnType(), 0, "retval", exit);
-      CallInst::Create(mergeFn, "", exit);
-      ReturnInst::Create(ctx, result, exit);
-
-      llvm::errs() << "KLEE: adding klee_merge at exit of: " << name << "\n";
-      for (llvm::Function::iterator bbit = f->begin(), bbie = f->end(); 
-           bbit != bbie; ++bbit) {
-	BasicBlock *bb = &*bbit;
-        if (bb != exit) {
-          Instruction *i = bbit->getTerminator();
-          if (i->getOpcode()==Instruction::Ret) {
-            if (result) {
-              result->addIncoming(i->getOperand(0), bb);
-            }
-            i->eraseFromParent();
-	    BranchInst::Create(exit, bb);
-          }
-        }
-      }
-    }
-  }
 
   // Inject checks prior to optimization... we also perform the
   // invariant transformations that we will end up doing later so that
@@ -372,8 +321,6 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
     WriteBitcodeToFile(module, *f);
     delete f;
   }
-
-  kleeMergeFn = module->getFunction("klee_merge");
 
   /* Build shadow structures */
 
