@@ -63,7 +63,8 @@ public:
   /// this if a more efficient implementation is available.
   virtual IncompleteSolver::PartialValidity computeValidity(const Query&);
 
-  /// computeValidity - Compute a partial validity for the given query.
+  /// computeTruth - Determine whether the given query expression is provably
+  /// true or not provably true (may be false) given the constraints.
   ///
   /// The passed expression is non-constant with bool type.
   virtual IncompleteSolver::PartialValidity computeTruth(const Query&) = 0;
