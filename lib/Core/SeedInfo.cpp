@@ -115,7 +115,8 @@ void SeedInfo::patchSeed(const ExecutionState &state,
   }
 
   bool res;
-  bool success = solver->mayBeTrue(state, assignment.evaluate(condition), res);
+  bool success =
+      solver->mayBeTrue(state, assignment.evaluate(condition, false), res);
   assert(success && "FIXME: Unhandled solver failure");
   (void) success;
   if (res)
@@ -154,8 +155,8 @@ void SeedInfo::patchSeed(const ExecutionState &state,
 #ifndef NDEBUG
   {
     bool res;
-    bool success = 
-      solver->mayBeTrue(state, assignment.evaluate(condition), res);
+    bool success =
+        solver->mayBeTrue(state, assignment.evaluate(condition, false), res);
     assert(success && "FIXME: Unhandled solver failure");            
     (void) success;
     assert(res && "seed patching failed");

@@ -751,9 +751,8 @@ void Executor::branch(ExecutionState &state,
       unsigned i;
       for (i=0; i<N; ++i) {
         ref<ConstantExpr> res;
-        bool success = 
-          solver->getValue(state, siit->assignment.evaluate(conditions[i]), 
-                           res);
+        bool success = solver->getValue(
+            state, siit->assignment.evaluate(conditions[i], true), res);
         assert(success && "FIXME: Unhandled solver failure");
         (void) success;
         if (res->isTrue())
@@ -890,8 +889,8 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     for (std::vector<SeedInfo>::iterator siit = it->second.begin(), 
            siie = it->second.end(); siit != siie; ++siit) {
       ref<ConstantExpr> res;
-      bool success = 
-        solver->getValue(current, siit->assignment.evaluate(condition), res);
+      bool success = solver->getValue(
+          current, siit->assignment.evaluate(condition, true), res);
       assert(success && "FIXME: Unhandled solver failure");
       (void) success;
       if (res->isTrue()) {
@@ -951,10 +950,11 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       for (std::vector<SeedInfo>::iterator siit = seeds.begin(), 
              siie = seeds.end(); siit != siie; ++siit) {
         ref<ConstantExpr> res;
-        bool success = 
-          solver->getValue(current, siit->assignment.evaluate(condition), res);
+        bool success = solver->getValue(
+            current, siit->assignment.evaluate(condition, false), res);
         assert(success && "FIXME: Unhandled solver failure");
         (void) success;
+        assert(isa<ConstantExpr>(res));
         if (res->isTrue()) {
           trueSeeds.push_back(*siit);
         } else {
@@ -1029,8 +1029,8 @@ void Executor::addConstraint(ExecutionState &state, ref<Expr> condition) {
     for (std::vector<SeedInfo>::iterator siit = it->second.begin(), 
            siie = it->second.end(); siit != siie; ++siit) {
       bool res;
-      bool success = 
-        solver->mustBeFalse(state, siit->assignment.evaluate(condition), res);
+      bool success = solver->mustBeFalse(
+          state, siit->assignment.evaluate(condition, false), res);
       assert(success && "FIXME: Unhandled solver failure");
       (void) success;
       if (res) {
@@ -1206,8 +1206,11 @@ void Executor::executeGetValue(ExecutionState &state,
     for (std::vector<SeedInfo>::iterator siit = it->second.begin(), 
            siie = it->second.end(); siit != siie; ++siit) {
       ref<ConstantExpr> value;
-      bool success = 
-        solver->getValue(state, siit->assignment.evaluate(e), value);
+      bool success =
+          solver->getValue(state, siit->assignment.evaluate(e, false), value);
+      assert(isa<ConstantExpr>(value) &&
+             "Should result in a constant expression");
+
       assert(success && "FIXME: Unhandled solver failure");
       (void) success;
       values.insert(value);

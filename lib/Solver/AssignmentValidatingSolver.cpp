@@ -57,15 +57,16 @@ bool AssignmentValidatingSolver::computeInitialValues(
   if (!hasSolution)
     return success;
 
-  // Use `_allowFreeValues` so that if we are missing an assignment
-  // we can't compute a constant and flag this as a problem.
-  Assignment assignment(objects, values, /*_allowFreeValues=*/true);
+  Assignment assignment(objects, values);
   // Check computed assignment satisfies query
   for (ConstraintManager::const_iterator it = query.constraints.begin(),
                                          ie = query.constraints.end();
        it != ie; ++it) {
     ref<Expr> constraint = *it;
-    ref<Expr> constraintEvaluated = assignment.evaluate(constraint);
+    // Use `_allowFreeValues` so that if we are missing an assignment
+    // we can't compute a constant and flag this as a problem.
+    ref<Expr> constraintEvaluated =
+        assignment.evaluate(constraint, true /* allow free values */);
     ConstantExpr *CE = dyn_cast<ConstantExpr>(constraintEvaluated);
     if (CE == NULL) {
       llvm::errs() << "Constraint did not evalaute to a constant:\n";
@@ -86,7 +87,10 @@ bool AssignmentValidatingSolver::computeInitialValues(
     }
   }
 
-  ref<Expr> queryExprEvaluated = assignment.evaluate(query.expr);
+  // Use `_allowFreeValues` so that if we are missing an assignment
+  // we can't compute a constant and flag this as a problem.
+  ref<Expr> queryExprEvaluated =
+      assignment.evaluate(query.expr, true /* allow free value */);
   ConstantExpr *CE = dyn_cast<ConstantExpr>(queryExprEvaluated);
   if (CE == NULL) {
     llvm::errs() << "Query expression did not evalaute to a constant:\n";
