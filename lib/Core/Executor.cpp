@@ -1251,7 +1251,7 @@ void Executor::printDebugInstructions(ExecutionState &state) {
     (*stream) << ":";
   }
 
-  (*stream) << state.pc->info->id;
+  (*stream) << state.pc->info->assemblyLine;
 
   if (optionIsSet(DebugPrintInstructions, STDERR_ALL) ||
       optionIsSet(DebugPrintInstructions, FILE_ALL))
