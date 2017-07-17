@@ -107,7 +107,10 @@ addons:
     - libselinux1-dev
     - cmake
 
-cache: apt
+cache: 
+  apt: true
+  directories:
+    - $HOME/Library/Caches/Homebrew
 before_install:
     ###########################################################################
     # Set up the locations to get various packages from
