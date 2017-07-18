@@ -189,6 +189,23 @@ private:
 llvm::FunctionPass *createScalarizerPass();
 #endif
 
+/// InstructionOperandTypeCheckPass - Type checks the types of instruction
+/// operands to check that they conform to invariants expected by the Executor.
+///
+/// This is a ModulePass because other pass types are not meant to maintain
+/// state between calls.
+class InstructionOperandTypeCheckPass : public llvm::ModulePass {
+private:
+  bool instructionOperandsConform;
+
+public:
+  static char ID;
+  InstructionOperandTypeCheckPass()
+      : llvm::ModulePass(ID), instructionOperandsConform(true) {}
+  // TODO: Add `override` when we switch to C++11
+  bool runOnModule(llvm::Module &M);
+  bool checkPassed() const { return instructionOperandsConform; }
+};
 }
 
 #endif

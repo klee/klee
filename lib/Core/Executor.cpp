@@ -1922,12 +1922,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Special instructions
   case Instruction::Select: {
-    assert(i->getOperand(0)->getType()->isIntegerTy() &&
-           "Invalid operand type");
-    assert((i->getOperand(1)->getType() == i->getOperand(2)->getType()) &&
-           "true and false operands to Select have mismatching types");
-    // NOTE: We are do not check that operands 1 and 2 are not of vector type
-    // because the scalarizer pass might not remove these.
+    // NOTE: It is not required that operands 1 and 2 be of scalar type.
     ref<Expr> cond = eval(ki, 0, state).value;
     ref<Expr> tExpr = eval(ki, 1, state).value;
     ref<Expr> fExpr = eval(ki, 2, state).value;
@@ -1943,10 +1938,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     // Arithmetic / logical
 
   case Instruction::Add: {
-    assert(i->getOperand(0)->getType()->isIntegerTy() &&
-           "Invalid operand type");
-    assert(i->getOperand(1)->getType()->isIntegerTy() &&
-           "Invalid operand type");
     ref<Expr> left = eval(ki, 0, state).value;
     ref<Expr> right = eval(ki, 1, state).value;
     bindLocal(ki, state, AddExpr::create(left, right));
@@ -1954,10 +1945,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::Sub: {
-    assert(i->getOperand(0)->getType()->isIntegerTy() &&
-           "Invalid operand type");
-    assert(i->getOperand(1)->getType()->isIntegerTy() &&
-           "Invalid operand type");
     ref<Expr> left = eval(ki, 0, state).value;
     ref<Expr> right = eval(ki, 1, state).value;
     bindLocal(ki, state, SubExpr::create(left, right));
@@ -1965,10 +1952,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
  
   case Instruction::Mul: {
-    assert(i->getOperand(0)->getType()->isIntegerTy() &&
-           "Invalid operand type");
-    assert(i->getOperand(1)->getType()->isIntegerTy() &&
-           "Invalid operand type");
     ref<Expr> left = eval(ki, 0, state).value;
     ref<Expr> right = eval(ki, 1, state).value;
     bindLocal(ki, state, MulExpr::create(left, right));
@@ -1976,10 +1959,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::UDiv: {
-    assert(i->getOperand(0)->getType()->isIntegerTy() &&
-           "Invalid operand type");
-    assert(i->getOperand(1)->getType()->isIntegerTy() &&
-           "Invalid operand type");
     ref<Expr> left = eval(ki, 0, state).value;
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = UDivExpr::create(left, right);
@@ -1988,10 +1967,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::SDiv: {
-    assert(i->getOperand(0)->getType()->isIntegerTy() &&
-           "Invalid operand type");
-    assert(i->getOperand(1)->getType()->isIntegerTy() &&
-           "Invalid operand type");
     ref<Expr> left = eval(ki, 0, state).value;
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = SDivExpr::create(left, right);
@@ -2000,10 +1975,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::URem: {
-    assert(i->getOperand(0)->getType()->isIntegerTy() &&
-           "Invalid operand type");
-    assert(i->getOperand(1)->getType()->isIntegerTy() &&
-           "Invalid operand type");
     ref<Expr> left = eval(ki, 0, state).value;
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = URemExpr::create(left, right);
@@ -2012,10 +1983,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::SRem: {
-    assert(i->getOperand(0)->getType()->isIntegerTy() &&
-           "Invalid operand type");
-    assert(i->getOperand(1)->getType()->isIntegerTy() &&
-           "Invalid operand type");
     ref<Expr> left = eval(ki, 0, state).value;
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = SRemExpr::create(left, right);
@@ -2024,10 +1991,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::And: {
-    assert(i->getOperand(0)->getType()->isIntegerTy() &&
-           "Invalid operand type");
-    assert(i->getOperand(1)->getType()->isIntegerTy() &&
-           "Invalid operand type");
     ref<Expr> left = eval(ki, 0, state).value;
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = AndExpr::create(left, right);
@@ -2036,10 +1999,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::Or: {
-    assert(i->getOperand(0)->getType()->isIntegerTy() &&
-           "Invalid operand type");
-    assert(i->getOperand(1)->getType()->isIntegerTy() &&
-           "Invalid operand type");
     ref<Expr> left = eval(ki, 0, state).value;
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = OrExpr::create(left, right);
@@ -2048,10 +2007,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::Xor: {
-    assert(i->getOperand(0)->getType()->isIntegerTy() &&
-           "Invalid operand type");
-    assert(i->getOperand(1)->getType()->isIntegerTy() &&
-           "Invalid operand type");
     ref<Expr> left = eval(ki, 0, state).value;
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = XorExpr::create(left, right);
@@ -2060,10 +2015,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::Shl: {
-    assert(i->getOperand(0)->getType()->isIntegerTy() &&
-           "Invalid operand type");
-    assert(i->getOperand(1)->getType()->isIntegerTy() &&
-           "Invalid operand type");
     ref<Expr> left = eval(ki, 0, state).value;
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = ShlExpr::create(left, right);
@@ -2072,10 +2023,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::LShr: {
-    assert(i->getOperand(0)->getType()->isIntegerTy() &&
-           "Invalid operand type");
-    assert(i->getOperand(1)->getType()->isIntegerTy() &&
-           "Invalid operand type");
     ref<Expr> left = eval(ki, 0, state).value;
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = LShrExpr::create(left, right);
@@ -2084,10 +2031,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::AShr: {
-    assert(i->getOperand(0)->getType()->isIntegerTy() &&
-           "Invalid operand type");
-    assert(i->getOperand(1)->getType()->isIntegerTy() &&
-           "Invalid operand type");
     ref<Expr> left = eval(ki, 0, state).value;
     ref<Expr> right = eval(ki, 1, state).value;
     ref<Expr> result = AShrExpr::create(left, right);
@@ -2098,12 +2041,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     // Compare
 
   case Instruction::ICmp: {
-    assert((i->getOperand(0)->getType()->isIntegerTy() ||
-            i->getOperand(0)->getType()->isPointerTy()) &&
-           "Invalid operand type");
-    assert((i->getOperand(1)->getType()->isIntegerTy() ||
-            i->getOperand(1)->getType()->isPointerTy()) &&
-           "Invalid operand type");
     CmpInst *ci = cast<CmpInst>(i);
     ICmpInst *ii = cast<ICmpInst>(ci);
 
@@ -2243,8 +2180,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Conversion
   case Instruction::Trunc: {
-    assert(i->getOperand(0)->getType()->isIntegerTy() &&
-           "Invalid operand type");
     CastInst *ci = cast<CastInst>(i);
     ref<Expr> result = ExtractExpr::create(eval(ki, 0, state).value,
                                            0,
@@ -2253,8 +2188,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     break;
   }
   case Instruction::ZExt: {
-    assert(i->getOperand(0)->getType()->isIntegerTy() &&
-           "Invalid operand type");
     CastInst *ci = cast<CastInst>(i);
     ref<Expr> result = ZExtExpr::create(eval(ki, 0, state).value,
                                         getWidthForLLVMType(ci->getType()));
@@ -2262,8 +2195,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     break;
   }
   case Instruction::SExt: {
-    assert(i->getOperand(0)->getType()->isIntegerTy() &&
-           "Invalid operand type");
     CastInst *ci = cast<CastInst>(i);
     ref<Expr> result = SExtExpr::create(eval(ki, 0, state).value,
                                         getWidthForLLVMType(ci->getType()));
@@ -2272,8 +2203,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::IntToPtr: {
-    assert(i->getOperand(0)->getType()->isIntegerTy() &&
-           "Invalid operand type");
     CastInst *ci = cast<CastInst>(i);
     Expr::Width pType = getWidthForLLVMType(ci->getType());
     ref<Expr> arg = eval(ki, 0, state).value;
@@ -2281,8 +2210,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     break;
   }
   case Instruction::PtrToInt: {
-    assert(i->getOperand(0)->getType()->isPointerTy() &&
-           "Invalid operand type");
     CastInst *ci = cast<CastInst>(i);
     Expr::Width iType = getWidthForLLVMType(ci->getType());
     ref<Expr> arg = eval(ki, 0, state).value;
@@ -2299,10 +2226,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     // Floating point instructions
 
   case Instruction::FAdd: {
-    assert(i->getOperand(0)->getType()->isFloatingPointTy() &&
-           "Invalid operand type");
-    assert(i->getOperand(1)->getType()->isFloatingPointTy() &&
-           "Invalid operand type");
     ref<ConstantExpr> left = toConstant(state, eval(ki, 0, state).value,
                                         "floating point");
     ref<ConstantExpr> right = toConstant(state, eval(ki, 1, state).value,
@@ -2323,10 +2246,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::FSub: {
-    assert(i->getOperand(0)->getType()->isFloatingPointTy() &&
-           "Invalid operand type");
-    assert(i->getOperand(1)->getType()->isFloatingPointTy() &&
-           "Invalid operand type");
     ref<ConstantExpr> left = toConstant(state, eval(ki, 0, state).value,
                                         "floating point");
     ref<ConstantExpr> right = toConstant(state, eval(ki, 1, state).value,
@@ -2346,10 +2265,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::FMul: {
-    assert(i->getOperand(0)->getType()->isFloatingPointTy() &&
-           "Invalid operand type");
-    assert(i->getOperand(1)->getType()->isFloatingPointTy() &&
-           "Invalid operand type");
     ref<ConstantExpr> left = toConstant(state, eval(ki, 0, state).value,
                                         "floating point");
     ref<ConstantExpr> right = toConstant(state, eval(ki, 1, state).value,
@@ -2370,10 +2285,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::FDiv: {
-    assert(i->getOperand(0)->getType()->isFloatingPointTy() &&
-           "Invalid operand type");
-    assert(i->getOperand(1)->getType()->isFloatingPointTy() &&
-           "Invalid operand type");
     ref<ConstantExpr> left = toConstant(state, eval(ki, 0, state).value,
                                         "floating point");
     ref<ConstantExpr> right = toConstant(state, eval(ki, 1, state).value,
@@ -2394,10 +2305,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::FRem: {
-    assert(i->getOperand(0)->getType()->isFloatingPointTy() &&
-           "Invalid operand type");
-    assert(i->getOperand(1)->getType()->isFloatingPointTy() &&
-           "Invalid operand type");
     ref<ConstantExpr> left = toConstant(state, eval(ki, 0, state).value,
                                         "floating point");
     ref<ConstantExpr> right = toConstant(state, eval(ki, 1, state).value,
@@ -2418,8 +2325,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::FPTrunc: {
-    assert(i->getOperand(0)->getType()->isFloatingPointTy() &&
-           "Invalid operand type");
     FPTruncInst *fi = cast<FPTruncInst>(i);
     Expr::Width resultType = getWidthForLLVMType(fi->getType());
     ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
@@ -2441,8 +2346,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::FPExt: {
-    assert(i->getOperand(0)->getType()->isFloatingPointTy() &&
-           "Invalid operand type");
     FPExtInst *fi = cast<FPExtInst>(i);
     Expr::Width resultType = getWidthForLLVMType(fi->getType());
     ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
@@ -2463,8 +2366,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::FPToUI: {
-    assert(i->getOperand(0)->getType()->isFloatingPointTy() &&
-           "Invalid operand type");
     FPToUIInst *fi = cast<FPToUIInst>(i);
     Expr::Width resultType = getWidthForLLVMType(fi->getType());
     ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
@@ -2486,8 +2387,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::FPToSI: {
-    assert(i->getOperand(0)->getType()->isFloatingPointTy() &&
-           "Invalid operand type");
     FPToSIInst *fi = cast<FPToSIInst>(i);
     Expr::Width resultType = getWidthForLLVMType(fi->getType());
     ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
@@ -2509,8 +2408,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::UIToFP: {
-    assert(i->getOperand(0)->getType()->isIntegerTy() &&
-           "Invalid operand type");
     UIToFPInst *fi = cast<UIToFPInst>(i);
     Expr::Width resultType = getWidthForLLVMType(fi->getType());
     ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
@@ -2527,8 +2424,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::SIToFP: {
-    assert(i->getOperand(0)->getType()->isIntegerTy() &&
-           "Invalid operand type");
     SIToFPInst *fi = cast<SIToFPInst>(i);
     Expr::Width resultType = getWidthForLLVMType(fi->getType());
     ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
@@ -2545,10 +2440,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::FCmp: {
-    assert(i->getOperand(0)->getType()->isFloatingPointTy() &&
-           "Invalid operand type");
-    assert(i->getOperand(1)->getType()->isFloatingPointTy() &&
-           "Invalid operand type");
     FCmpInst *fi = cast<FCmpInst>(i);
     ref<ConstantExpr> left = toConstant(state, eval(ki, 0, state).value,
                                         "floating point");

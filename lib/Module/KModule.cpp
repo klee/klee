@@ -390,9 +390,19 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   case eSwitchTypeLLVM:  pm3.add(createLowerSwitchPass()); break;
   default: klee_error("invalid --switch-type");
   }
+  InstructionOperandTypeCheckPass *operandTypeCheckPass =
+      new InstructionOperandTypeCheckPass();
   pm3.add(new IntrinsicCleanerPass(*targetData));
   pm3.add(new PhiCleanerPass());
+  pm3.add(operandTypeCheckPass);
   pm3.run(*module);
+
+  // Enforce the operand type invariants that the Executor expects.  This
+  // implicitly depends on the "Scalarizer" pass to be run in order to succeed
+  // in the presence of vector instructions.
+  if (!operandTypeCheckPass->checkPassed()) {
+    klee_error("Unexpected instruction operand types detected");
+  }
 #if LLVM_VERSION_CODE < LLVM_VERSION(3, 3)
   // For cleanliness see if we can discard any of the functions we
   // forced to import.
