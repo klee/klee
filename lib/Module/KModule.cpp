@@ -196,7 +196,7 @@ static void injectStaticConstructorsAndDestructors(Module *m) {
 
     if (ctors)
     CallInst::Create(getStubFunctionForCtorList(m, ctors, "klee.ctor_stub"),
-		     "", static_cast<Instruction *>(mainFn->begin()->begin()));
+		     "", &*(mainFn->begin()->begin()));
     if (dtors) {
       Function *dtorStub = getStubFunctionForCtorList(m, dtors, "klee.dtor_stub");
       for (Function::iterator it = mainFn->begin(), ie = mainFn->end();
@@ -286,7 +286,7 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
       llvm::errs() << "KLEE: adding klee_merge at exit of: " << name << "\n";
       for (llvm::Function::iterator bbit = f->begin(), bbie = f->end(); 
            bbit != bbie; ++bbit) {
-	BasicBlock *bb = static_cast<BasicBlock *>(bbit);
+	BasicBlock *bb = &*bbit;
         if (bb != exit) {
           Instruction *i = bbit->getTerminator();
           if (i->getOpcode()==Instruction::Ret) {
@@ -451,7 +451,7 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
     if (it->isDeclaration())
       continue;
 
-    Function *fn = static_cast<Function *>(it);
+    Function *fn = &*it;
     KFunction *kf = new KFunction(fn, this);
     
     for (unsigned i=0; i<kf->numInstructions; ++i) {
@@ -542,7 +542,7 @@ KFunction::KFunction(llvm::Function *_function,
     trackCoverage(true) {
   for (llvm::Function::iterator bbit = function->begin(), 
          bbie = function->end(); bbit != bbie; ++bbit) {
-    BasicBlock *bb = static_cast<BasicBlock *>(bbit);
+    BasicBlock *bb = &*bbit;
     basicBlockEntry[bb] = numInstructions;
     numInstructions += bb->size();
   }
@@ -557,7 +557,7 @@ KFunction::KFunction(llvm::Function *_function,
          bbie = function->end(); bbit != bbie; ++bbit) {
     for (llvm::BasicBlock::iterator it = bbit->begin(), ie = bbit->end();
          it != ie; ++it)
-      registerMap[static_cast<Instruction *>(it)] = rnum++;
+      registerMap[&*it] = rnum++;
   }
   numRegisters = rnum;
   
@@ -577,7 +577,7 @@ KFunction::KFunction(llvm::Function *_function,
         ki = new KInstruction(); break;
       }
 
-      Instruction *inst = static_cast<Instruction *>(it);
+      Instruction *inst = &*it;
       ki->inst = inst;
       ki->dest = registerMap[inst];
 
