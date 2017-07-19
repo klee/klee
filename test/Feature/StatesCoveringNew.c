@@ -24,7 +24,11 @@ void f2(void) {}
 void f3(void) {}
 
 int main() {
-  int x = klee_range(0, 256, "x");
+  // WORKAROUND broken cex implementation:
+  // https://github.com/klee/klee/issues/706
+  // int x = klee_range(0, 256, "x");
+  int x = 0;
+  klee_make_symbolic(&x, sizeof(x), "x");
 
   if (x == 17) {
     f0();
