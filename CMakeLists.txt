@@ -282,23 +282,12 @@ endif()
 ################################################################################
 # C++ version
 ################################################################################
-option(USE_CXX11 "Use C++11" OFF)
-if ("${LLVM_PACKAGE_VERSION}" VERSION_GREATER "3.5.0")
-  message(STATUS "Using LLVM >= 3.5.0. Forcing using C++11")
-  set(USE_CXX11 ON CACHE BOOL "Use C++11" FORCE)
-endif()
-
-if (USE_CXX11)
-  message(STATUS "Enabling C++11")
-  # FIXME: Use CMake's own mechanism for managing C++ version.
-  # Set globally because it is unlikely we would want to compile
-  # using mixed C++ versions.
+if ("${CMAKE_VERSION}" VERSION_LESS "3.1")
   add_global_cxx_flag("-std=c++11" REQUIRED)
-else()
-  # This is needed because with GCC 6 the default changed from gnu++98 to
-  # gnu++14.
-  add_global_cxx_flag("-std=gnu++98" REQUIRED)
-endif()
+else ()
+  set(CMAKE_CXX_STANDARD 11)
+  set(CMAKE_CXX_STANDARD_REQUIRED ON)
+endif ()
 
 ################################################################################
 # Warnings

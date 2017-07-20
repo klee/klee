@@ -93,6 +93,4 @@ cmake -DCMAKE_BUILD_TYPE=Release /path/to/klee/src
 * `USE_CMAKE_FIND_PACKAGE_LLVM` (BOOLEAN) - Use `find_package(LLVM CONFIG)`
    to find LLVM.
 
-* `USE_CXX11` (BOOLEAN) - Use C++11.
-
 * `WARNINGS_AS_ERRORS` (BOOLEAN) - Treat warnings as errors when building KLEE.
