@@ -63,7 +63,6 @@ TreeOStream TreeStreamWriter::open(const TreeOStream &os) {
 }
 
 void TreeStreamWriter::write(TreeOStream &os, const char *s, unsigned size) {
-#if 1
   if (bufferCount && 
       (os.id!=lastID || size+bufferCount>bufferSize))
     flushBuffer();
@@ -77,13 +76,8 @@ void TreeStreamWriter::write(TreeOStream &os, const char *s, unsigned size) {
   } else {
     output->write(reinterpret_cast<const char*>(&os.id), 4);
     output->write(reinterpret_cast<const char*>(&size), 4);
-    output->write(buffer, size);
+    output->write(s, size);
   }
-#else
-  output->write(reinterpret_cast<const char*>(&os.id), 4);
-  output->write(reinterpret_cast<const char*>(&size), 4);
-  output->write(s, size);
-#endif
 }
 
 void TreeStreamWriter::flushBuffer() {
