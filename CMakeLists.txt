@@ -46,7 +46,7 @@ project(KLEE CXX C)
 # Project version
 ###############################################################################
 set(KLEE_VERSION_MAJOR 1)
-set(KLEE_VERSION_MINOR 3)
+set(KLEE_VERSION_MINOR 4)
 set(KLEE_VERSION_PATCH 0)
 set(KLEE_VERSION_TWEAK 0)
 set(KLEE_VERSION "${KLEE_VERSION_MAJOR}.${KLEE_VERSION_MINOR}.${KLEE_VERSION_PATCH}.${KLEE_VERSION_TWEAK}")
