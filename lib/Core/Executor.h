@@ -105,6 +105,7 @@ public:
   enum TerminateReason {
     Abort,
     Assert,
+    BadVectorAccess,
     Exec,
     External,
     Free,

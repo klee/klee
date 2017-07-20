@@ -9,6 +9,7 @@
 klee_add_component(kleeModule
   Checks.cpp
   InstructionInfoTable.cpp
+  InstructionOperandTypeCheckPass.cpp
   IntrinsicCleaner.cpp
   KInstruction.cpp
   KModule.cpp
@@ -17,6 +18,7 @@ klee_add_component(kleeModule
   Optimize.cpp
   PhiCleaner.cpp
   RaiseAsm.cpp
+  Scalarizer.cpp
 )
 
 set(LLVM_COMPONENTS

@@ -279,6 +279,7 @@ namespace {
 		  cl::values(
 		    clEnumValN(Executor::Abort, "Abort", "The program crashed"),
 		    clEnumValN(Executor::Assert, "Assert", "An assertion was hit"),
+		    clEnumValN(Executor::BadVectorAccess, "BadVectorAccess", "Vector accessed out of bounds"),
 		    clEnumValN(Executor::Exec, "Exec", "Trying to execute an unexpected instruction"),
 		    clEnumValN(Executor::External, "External", "External objects referenced"),
 		    clEnumValN(Executor::Free, "Free", "Freeing invalid memory"),
@@ -333,6 +334,7 @@ namespace klee {
 const char *Executor::TerminateReasonNames[] = {
   [ Abort ] = "abort",
   [ Assert ] = "assert",
+  [ BadVectorAccess ] = "bad_vector_access",
   [ Exec ] = "exec",
   [ External ] = "external",
   [ Free ] = "free",
@@ -1101,8 +1103,18 @@ ref<klee::ConstantExpr> Executor::evalConstant(const Constant *c) {
       }
       ref<Expr> res = ConcatExpr::createN(kids.size(), kids.data());
       return cast<ConstantExpr>(res);
+    } else if (const ConstantVector *cv = dyn_cast<ConstantVector>(c)) {
+      llvm::SmallVector<ref<Expr>, 8> kids;
+      const size_t numOperands = cv->getNumOperands();
+      kids.reserve(numOperands);
+      for (unsigned i = 0; i < numOperands; ++i) {
+        kids.push_back(evalConstant(cv->getOperand(i)));
+      }
+      ref<Expr> res = ConcatExpr::createN(numOperands, kids.data());
+      assert(isa<ConstantExpr>(res) &&
+             "result of constant vector built is not a constant");
+      return cast<ConstantExpr>(res);
     } else {
-      // Constant{Vector}
       llvm::report_fatal_error("invalid argument to evalConstant()");
     }
   }
@@ -1909,6 +1921,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Special instructions
   case Instruction::Select: {
+    // NOTE: It is not required that operands 1 and 2 be of scalar type.
     ref<Expr> cond = eval(ki, 0, state).value;
     ref<Expr> tExpr = eval(ki, 1, state).value;
     ref<Expr> fExpr = eval(ki, 2, state).value;
@@ -1967,7 +1980,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, result);
     break;
   }
- 
+
   case Instruction::SRem: {
     ref<Expr> left = eval(ki, 0, state).value;
     ref<Expr> right = eval(ki, 1, state).value;
@@ -2029,7 +2042,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   case Instruction::ICmp: {
     CmpInst *ci = cast<CmpInst>(i);
     ICmpInst *ii = cast<ICmpInst>(ci);
- 
+
     switch(ii->getPredicate()) {
     case ICmpInst::ICMP_EQ: {
       ref<Expr> left = eval(ki, 0, state).value;
@@ -2194,7 +2207,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> arg = eval(ki, 0, state).value;
     bindLocal(ki, state, ZExtExpr::create(arg, pType));
     break;
-  } 
+  }
   case Instruction::PtrToInt: {
     CastInst *ci = cast<CastInst>(i);
     Expr::Width iType = getWidthForLLVMType(ci->getType());
@@ -2249,7 +2262,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
     break;
   }
- 
+
   case Instruction::FMul: {
     ref<ConstantExpr> left = toConstant(state, eval(ki, 0, state).value,
                                         "floating point");
@@ -2565,16 +2578,88 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     break;
   }
 #endif
+  case Instruction::InsertElement: {
+    InsertElementInst *iei = cast<InsertElementInst>(i);
+    ref<Expr> vec = eval(ki, 0, state).value;
+    ref<Expr> newElt = eval(ki, 1, state).value;
+    ref<Expr> idx = eval(ki, 2, state).value;
 
+    ConstantExpr *cIdx = dyn_cast<ConstantExpr>(idx);
+    if (cIdx == NULL) {
+      terminateStateOnError(
+          state, "InsertElement, support for symbolic index not implemented",
+          Unhandled);
+      return;
+    }
+    uint64_t iIdx = cIdx->getZExtValue();
+    const llvm::VectorType *vt = iei->getType();
+    unsigned EltBits = getWidthForLLVMType(vt->getElementType());
+
+    if (iIdx >= vt->getNumElements()) {
+      // Out of bounds write
+      terminateStateOnError(state, "Out of bounds write when inserting element",
+                            BadVectorAccess);
+      return;
+    }
+
+    const unsigned elementCount = vt->getNumElements();
+    llvm::SmallVector<ref<Expr>, 8> elems;
+    elems.reserve(elementCount);
+    for (unsigned i = 0; i < elementCount; ++i) {
+      // evalConstant() will use ConcatExpr to build vectors with the
+      // zero-th element leftmost (most significant bits), followed
+      // by the next element (second leftmost) and so on. This means
+      // that we have to adjust the index so we read left to right
+      // rather than right to left.
+      unsigned bitOffset = EltBits * (elementCount - i - 1);
+      elems.push_back(i == iIdx ? newElt
+                                : ExtractExpr::create(vec, bitOffset, EltBits));
+    }
+
+    ref<Expr> Result = ConcatExpr::createN(elementCount, elems.data());
+    bindLocal(ki, state, Result);
+    break;
+  }
+  case Instruction::ExtractElement: {
+    ExtractElementInst *eei = cast<ExtractElementInst>(i);
+    ref<Expr> vec = eval(ki, 0, state).value;
+    ref<Expr> idx = eval(ki, 1, state).value;
+
+    ConstantExpr *cIdx = dyn_cast<ConstantExpr>(idx);
+    if (cIdx == NULL) {
+      terminateStateOnError(
+          state, "ExtractElement, support for symbolic index not implemented",
+          Unhandled);
+      return;
+    }
+    uint64_t iIdx = cIdx->getZExtValue();
+    const llvm::VectorType *vt = eei->getVectorOperandType();
+    unsigned EltBits = getWidthForLLVMType(vt->getElementType());
+
+    if (iIdx >= vt->getNumElements()) {
+      // Out of bounds read
+      terminateStateOnError(state, "Out of bounds read when extracting element",
+                            BadVectorAccess);
+      return;
+    }
+
+    // evalConstant() will use ConcatExpr to build vectors with the
+    // zero-th element left most (most significant bits), followed
+    // by the next element (second left most) and so on. This means
+    // that we have to adjust the index so we read left to right
+    // rather than right to left.
+    unsigned bitOffset = EltBits*(vt->getNumElements() - iIdx -1);
+    ref<Expr> Result = ExtractExpr::create(vec, bitOffset, EltBits);
+    bindLocal(ki, state, Result);
+    break;
+  }
+  case Instruction::ShuffleVector:
+    // Should never happen due to Scalarizer pass removing ShuffleVector
+    // instructions.
+    terminateStateOnExecError(state, "Unexpected ShuffleVector instruction");
+    break;
   // Other instructions...
   // Unhandled
-  case Instruction::ExtractElement:
-  case Instruction::InsertElement:
-  case Instruction::ShuffleVector:
-    terminateStateOnError(state, "XXX vector instructions unhandled",
-                          Unhandled);
-    break;
- 
   default:
     terminateStateOnExecError(state, "illegal instruction");
     break;

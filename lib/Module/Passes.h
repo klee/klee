@@ -180,6 +180,32 @@ private:
                      llvm::BasicBlock *defaultBlock);
 };
 
+// This is the interface to a back-ported LLVM pass.
+// Newer versions of LLVM already have this in-tree
+// and we are not supporting vector instructions for
+// LLVM 2.9. Therefore this interface is only needed for
+// LLVM 3.4.
+#if LLVM_VERSION_CODE == LLVM_VERSION(3,4)
+llvm::FunctionPass *createScalarizerPass();
+#endif
+
+/// InstructionOperandTypeCheckPass - Type checks the types of instruction
+/// operands to check that they conform to invariants expected by the Executor.
+///
+/// This is a ModulePass because other pass types are not meant to maintain
+/// state between calls.
+class InstructionOperandTypeCheckPass : public llvm::ModulePass {
+private:
+  bool instructionOperandsConform;
+
+public:
+  static char ID;
+  InstructionOperandTypeCheckPass()
+      : llvm::ModulePass(ID), instructionOperandsConform(true) {}
+  // TODO: Add `override` when we switch to C++11
+  bool runOnModule(llvm::Module &M);
+  bool checkPassed() const { return instructionOperandsConform; }
+};
 }
 
 #endif

@@ -307,6 +307,15 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   // module.
   LegacyLLVMPassManagerTy pm;
   pm.add(new RaiseAsmPass());
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3,4)
+  // This pass will scalarize as much code as possible so that the Executor
+  // does not need to handle operands of vector type for most instructions
+  // other than InsertElementInst and ExtractElementInst.
+  //
+  // NOTE: Must come before division/overshift checks because those passes
+  // don't know how to handle vector instructions.
+  pm.add(createScalarizerPass());
+#endif
   if (opts.CheckDivZero) pm.add(new DivCheckPass());
   if (opts.CheckOvershift) pm.add(new OvershiftCheckPass());
   // FIXME: This false here is to work around a bug in
@@ -381,9 +390,19 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   case eSwitchTypeLLVM:  pm3.add(createLowerSwitchPass()); break;
   default: klee_error("invalid --switch-type");
   }
+  InstructionOperandTypeCheckPass *operandTypeCheckPass =
+      new InstructionOperandTypeCheckPass();
   pm3.add(new IntrinsicCleanerPass(*targetData));
   pm3.add(new PhiCleanerPass());
+  pm3.add(operandTypeCheckPass);
   pm3.run(*module);
+
+  // Enforce the operand type invariants that the Executor expects.  This
+  // implicitly depends on the "Scalarizer" pass to be run in order to succeed
+  // in the presence of vector instructions.
+  if (!operandTypeCheckPass->checkPassed()) {
+    klee_error("Unexpected instruction operand types detected");
+  }
 #if LLVM_VERSION_CODE < LLVM_VERSION(3, 3)
   // For cleanliness see if we can discard any of the functions we
   // forced to import.
