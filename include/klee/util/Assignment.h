@@ -22,17 +22,12 @@ namespace klee {
   class Assignment {
   public:
     typedef std::map<const Array*, std::vector<unsigned char> > bindings_ty;
-
-    bool allowFreeValues;
     bindings_ty bindings;
     
   public:
-    Assignment(bool _allowFreeValues=false) 
-      : allowFreeValues(_allowFreeValues) {}
-    Assignment(const std::vector<const Array*> &objects,
-               std::vector< std::vector<unsigned char> > &values,
-               bool _allowFreeValues=false) 
-      : allowFreeValues(_allowFreeValues){
+    Assignment() {}
+    Assignment(const std::vector<const Array *> &objects,
+               std::vector<std::vector<unsigned char> > &values) {
       std::vector< std::vector<unsigned char> >::iterator valIt = 
         values.begin();
       for (std::vector<const Array*>::const_iterator it = objects.begin(),
@@ -43,54 +38,59 @@ namespace klee {
         ++valIt;
       }
     }
-    
-    ref<Expr> evaluate(const Array *mo, unsigned index) const;
-    ref<Expr> evaluate(ref<Expr> e);
+
+    ref<Expr> evaluate(const Array *mo, unsigned index,
+                       bool concretizeSymbolic) const;
+    ref<Expr> evaluate(ref<Expr> e, bool concretizeSymbolic);
     void createConstraintsFromAssignment(std::vector<ref<Expr> > &out) const;
 
-    template<typename InputIterator>
-    bool satisfies(InputIterator begin, InputIterator end);
+    template <typename InputIterator>
+    bool satisfies(InputIterator begin, InputIterator end,
+                   bool concretizeSymbolic);
     void dump();
   };
   
   class AssignmentEvaluator : public ExprEvaluator {
     const Assignment &a;
+    bool concretizeSymbolic;
 
   protected:
     ref<Expr> getInitialValue(const Array &mo, unsigned index) {
-      return a.evaluate(&mo, index);
+      return a.evaluate(&mo, index, concretizeSymbolic);
     }
     
   public:
-    AssignmentEvaluator(const Assignment &_a) : a(_a) {}    
+    AssignmentEvaluator(const Assignment &_a, bool _concretizeSymbolic)
+        : a(_a), concretizeSymbolic(_concretizeSymbolic) {}
   };
 
   /***/
 
-  inline ref<Expr> Assignment::evaluate(const Array *array, 
-                                        unsigned index) const {
+  inline ref<Expr> Assignment::evaluate(const Array *array, unsigned index,
+                                        bool concretizeSymbolic) const {
     assert(array);
     bindings_ty::const_iterator it = bindings.find(array);
     if (it!=bindings.end() && index<it->second.size()) {
       return ConstantExpr::alloc(it->second[index], array->getRange());
     } else {
-      if (allowFreeValues) {
+      if (!concretizeSymbolic) {
         return ReadExpr::create(UpdateList(array, 0), 
                                 ConstantExpr::alloc(index, array->getDomain()));
       } else {
-        return ConstantExpr::alloc(0, array->getRange());
+        return ConstantExpr::alloc(255, array->getRange());
       }
     }
   }
 
-  inline ref<Expr> Assignment::evaluate(ref<Expr> e) { 
-    AssignmentEvaluator v(*this);
+  inline ref<Expr> Assignment::evaluate(ref<Expr> e, bool concretizeSymbolic) {
+    AssignmentEvaluator v(*this, concretizeSymbolic);
     return v.visit(e); 
   }
 
-  template<typename InputIterator>
-  inline bool Assignment::satisfies(InputIterator begin, InputIterator end) {
-    AssignmentEvaluator v(*this);
+  template <typename InputIterator>
+  inline bool Assignment::satisfies(InputIterator begin, InputIterator end,
+                                    bool concretizeSymbolic) {
+    AssignmentEvaluator v(*this, concretizeSymbolic);
     for (; begin!=end; ++begin)
       if (!v.visit(*begin)->isTrue())
         return false;

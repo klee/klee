@@ -29,11 +29,9 @@ namespace klee {
     std::set<struct KTestObject*> used;
     
   public:
-    explicit
-    SeedInfo(KTest *_input) : assignment(true),
-                             input(_input),
-                             inputPosition(0) {}
-    
+    explicit SeedInfo(KTest *_input)
+        : assignment(), input(_input), inputPosition(0) {}
+
     KTestObject *getNextInput(const MemoryObject *mo,
                              bool byName);
     

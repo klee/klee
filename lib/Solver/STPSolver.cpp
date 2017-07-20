@@ -173,7 +173,11 @@ bool STPSolverImpl::computeValue(const Query &query, ref<Expr> &result) {
 
   // Evaluate the expression with the computed assignment.
   Assignment a(objects, values);
-  result = a.evaluate(query.expr);
+  // We just compute any value, therefore the expression can be either true or
+  // false
+  // force concretization to acquire one possible outcome
+  // Currently we assume that computeValue generates a constant
+  result = a.evaluate(query.expr, true /* concretize symbolics */);
 
   return true;
 }

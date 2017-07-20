@@ -445,9 +445,7 @@ bool assertCreatedPointEvaluatesToTrue(const Query &query,
                                        const std::vector<const Array*> &objects,
                                        std::vector< std::vector<unsigned char> > &values,
                                        std::map<const Array*, std::vector<unsigned char> > &retMap){
-  // _allowFreeValues is set to true so that if there are missing bytes in the assigment
-  // we will end up with a non ConstantExpr after evaluating the assignment and fail
-  Assignment assign = Assignment(objects, values, /*_allowFreeValues=*/true);
+  Assignment assign = Assignment(objects, values);
 
   // Add any additional bindings.
   // The semantics of std::map should be to not insert a (key, value)
@@ -458,7 +456,9 @@ bool assertCreatedPointEvaluatesToTrue(const Query &query,
 
   for(ConstraintManager::constraint_iterator it = query.constraints.begin();
       it != query.constraints.end(); ++it){
-    ref<Expr> ret = assign.evaluate(*it);
+    // Do not force concretization of symbolic values, in that case we will end
+    // up with a non ConstantExpr after evaluating the assignment and fail
+    ref<Expr> ret = assign.evaluate(*it, false);
 
     assert(isa<ConstantExpr>(ret) && "assignment evaluation did not result in constant");
     ref<ConstantExpr> evaluatedConstraint = dyn_cast<ConstantExpr>(ret);
@@ -467,7 +467,7 @@ bool assertCreatedPointEvaluatesToTrue(const Query &query,
     }
   }
   ref<Expr> neg = Expr::createIsZero(query.expr);
-  ref<Expr> q = assign.evaluate(neg);
+  ref<Expr> q = assign.evaluate(neg, false);
   assert(isa<ConstantExpr>(q) && "assignment evaluation did not result in constant");
   return cast<ConstantExpr>(q)->isTrue();
 }

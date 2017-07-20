@@ -158,7 +158,7 @@ bool MetaSMTSolverImpl<SolverContext>::computeValue(const Query &query,
     assert(hasSolution && "state has invalid constraint set");
     // Evaluate the expression with the computed assignment.
     Assignment a(objects, values);
-    result = a.evaluate(query.expr);
+    result = a.evaluate(query.expr, true);
     success = true;
   }
 
