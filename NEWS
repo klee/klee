@@ -1,3 +1,54 @@
+KLEE 1.4.0, 21 July 2017
+========================
+(Incorporating changes from 4 November 2016 up to and including 21 July 2017)
+Documentation at http://klee.github.io/releases/docs/v1.4.0/
+
+This will be the last version supporting LLVM 2.9 and the autoconf build system.
+
+- New CMake build system (@delcypher, @jirislaby)
+- Added support for vectorized instructions (@delcypher)
+- Fixed and documents BFS searcher behaviour (@MartinNowack, @ccadar)
+- Renames .pc files to .kquery files (@holycrap872)
+- Removed option --randomize-fork (@ccadar)
+- Changed preferred permissions from 0622 to the more standard 0644 in the
+POSIX model (@ccadar)
+- New target name, "make systemtests", for running the system tests.  This replaces "make test".  Running the unit tests is still accomplished via "make unittests".
+- Better support for MacOS (@andreamattavelli, @delcypher)
+- Enabled support for ASan builds of KLEE (@delcypher)
+- Support long long values in --stop-after-n-instructions for LLVM > 2.9
+(@andreamattavelli)
+- Teach KLEE to respect the requested memory alignment of globals and stack
+variables when possible (@delcypher)
+- Added new option --warnings-only-to-file which causes warnings to be written
+to warnings.txt only (@ccadar)
+- metaSMT improvements (@hoangmle)
+- KLEE-web improvements (@andronat, @helicopter88)
+- Fixed bug in the implementation of NotExpr (@delcypher)
+- Fixed a bug leading to data loss when writing into files (@ccadar, @gladtbx)
+- Some improvements and refactoring to the Expr library (@delcypher)
+- Added missing constant folding opportunity when handling constant arrays
+(@andreamattavelli, @delcypher)
+- Teach klee::getDirectCallTarget() to resolve weak aliases (@delcypher)
+- Fixed handling of internal forks (@gladtbx)
+- Improved replay using libkleeRuntest (@delcypher)
+- Added -debug-assignment-validating-solver feature to check the correctness
+of generated assignments (@delcypher)
+- Added -debug-z3-dump-queries, -debug-z3-validate-models and
+-debug-z3-verbosity options useful for debugging the interaction with Z3
+(@delcypher)
+- Added geq/lt-llvm- configs in lit (@jirislaby)
+- Work on supporting newer LLVM versions (@jirislaby)
+- Fixed bug where stats would not be updated on early exit (@delcypher)
+- Reworked the external dispatching mechanism (@delcypher)
+- Added support for creating release documentation (@delcypher)
+- Smaller refactorings, fixes and improvements, test cases, maintenance,
+comments, website, etc. (@adrianherrera, @akshaynagpal, @AlexxNica,
+@andreamattavelli, @bananaappletw, @bigelephant29, @bunseokbot, @ccadar,
+@delcypher, @emlai, @hoangmle, @jirislaby, @kren1, @levex,
+@Manouchehri, @MartinNowack, @mechtaev, @Mic92, @omeranson, @rtrembecky,
+@thestr4ng3r, @tomek-kuchta)
+
+
 KLEE 1.3.0, 30 November 2016
 ============================
 (Incorporating changes from 1 April up to and including 3 November 2016)
