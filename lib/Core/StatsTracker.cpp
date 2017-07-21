@@ -27,7 +27,6 @@
 #include "MemoryManager.h"
 #include "UserSearcher.h"
 
-#if LLVM_VERSION_CODE > LLVM_VERSION(3, 2)
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
@@ -35,15 +34,6 @@
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
-#else
-#include "llvm/BasicBlock.h"
-#include "llvm/Function.h"
-#include "llvm/Instructions.h"
-#include "llvm/IntrinsicInst.h"
-#include "llvm/InlineAsm.h"
-#include "llvm/Module.h"
-#include "llvm/Type.h"
-#endif
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Path.h"
@@ -743,9 +733,6 @@ void StatsTracker::computeReachableUncovered() {
           sm.setIndexedValue(stats::minDistToReturn, 
                              id, 
                              isa<ReturnInst>(inst)
-#if LLVM_VERSION_CODE < LLVM_VERSION(3, 1)
-                             || isa<UnwindInst>(inst)
-#endif
                              );
         }
       }

@@ -18,32 +18,22 @@
 #ifndef KLEE_UTIL_GETELEMENTPTRTYPE_H
 #define KLEE_UTIL_GETELEMENTPTRTYPE_H
 
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
 #include "llvm/IR/User.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Constants.h"
-#else
-#include "llvm/User.h"
-#include "llvm/DerivedTypes.h"
-#include "llvm/Instructions.h"
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 0)
-#include "llvm/Constants.h"
-#endif
-#endif
 
 #include "klee/Config/Version.h"
 
 namespace klee {
-  template<typename ItTy = llvm::User::const_op_iterator>
-  class generic_gep_type_iterator
-    : public std::iterator<std::forward_iterator_tag,
-                           LLVM_TYPE_Q llvm::Type *, ptrdiff_t> {
-    typedef std::iterator<std::forward_iterator_tag,
-                          LLVM_TYPE_Q llvm::Type *, ptrdiff_t> super;
+template <typename ItTy = llvm::User::const_op_iterator>
+class generic_gep_type_iterator
+    : public std::iterator<std::forward_iterator_tag, llvm::Type *, ptrdiff_t> {
+  typedef std::iterator<std::forward_iterator_tag, llvm::Type *, ptrdiff_t>
+      super;
 
     ItTy OpIt;
-    LLVM_TYPE_Q llvm::Type *CurTy;
+    llvm::Type *CurTy;
     generic_gep_type_iterator() {}
 
     llvm::Value *asValue(llvm::Value *V) const { return V; }
@@ -52,9 +42,7 @@ namespace klee {
     }
 
   public:
-
-    static generic_gep_type_iterator begin(LLVM_TYPE_Q llvm::Type *Ty,
-                                           ItTy It) {
+    static generic_gep_type_iterator begin(llvm::Type *Ty, ItTy It) {
       generic_gep_type_iterator I;
       I.CurTy = Ty;
       I.OpIt = It;
@@ -74,24 +62,21 @@ namespace klee {
       return !operator==(x);
     }
 
-    LLVM_TYPE_Q llvm::Type *operator*() const {
-      return CurTy;
-    }
+    llvm::Type *operator*() const { return CurTy; }
 
-    LLVM_TYPE_Q llvm::Type *getIndexedType() const {
-      LLVM_TYPE_Q llvm::CompositeType *CT = cast<llvm::CompositeType>(CurTy);
+    llvm::Type *getIndexedType() const {
+      llvm::CompositeType *CT = cast<llvm::CompositeType>(CurTy);
       return CT->getTypeAtIndex(getOperand());
     }
 
     // This is a non-standard operator->.  It allows you to call methods on the
     // current type directly.
-    LLVM_TYPE_Q llvm::Type *operator->() const { return operator*(); }
+    llvm::Type *operator->() const { return operator*(); }
 
     llvm::Value *getOperand() const { return asValue(*OpIt); }
 
     generic_gep_type_iterator& operator++() {   // Preincrement
-      if (LLVM_TYPE_Q llvm::CompositeType *CT =
-            dyn_cast<llvm::CompositeType>(CurTy)) {
+      if (llvm::CompositeType *CT = dyn_cast<llvm::CompositeType>(CurTy)) {
         CurTy = CT->getTypeAtIndex(getOperand());
       } else {
         CurTy = 0;
@@ -149,15 +134,15 @@ namespace klee {
     return vce_type_iterator::end(CE->getIndices().end());
   }
 
-  template<typename ItTy>
-  inline generic_gep_type_iterator<ItTy>
-  gep_type_begin(LLVM_TYPE_Q llvm::Type *Op0, ItTy I, ItTy E) {
+  template <typename ItTy>
+  inline generic_gep_type_iterator<ItTy> gep_type_begin(llvm::Type *Op0, ItTy I,
+                                                        ItTy E) {
     return generic_gep_type_iterator<ItTy>::begin(Op0, I);
   }
 
-  template<typename ItTy>
-  inline generic_gep_type_iterator<ItTy>
-  gep_type_end(LLVM_TYPE_Q llvm::Type *Op0, ItTy I, ItTy E) {
+  template <typename ItTy>
+  inline generic_gep_type_iterator<ItTy> gep_type_end(llvm::Type *Op0, ItTy I,
+                                                      ItTy E) {
     return generic_gep_type_iterator<ItTy>::end(E);
   }
 } // end namespace klee

@@ -16,11 +16,7 @@
 
 #include "Passes.h"
 #include "klee/Config/Version.h"
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
 #include "llvm/IR/LLVMContext.h"
-#else
-#include "llvm/LLVMContext.h"
-#endif
 #include <algorithm>
 
 using namespace llvm;
@@ -119,15 +115,9 @@ void LowerSwitchPass::processSwitchInst(SwitchInst *SI) {
   
   CaseVector cases;
   
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 1)
   for (SwitchInst::CaseIt i = SI->case_begin(), e = SI->case_end(); i != e; ++i)
     cases.push_back(SwitchCase(i.getCaseValue(),
                                i.getCaseSuccessor()));
-#else
-  for (unsigned i = 1; i < SI->getNumSuccessors(); ++i)  
-    cases.push_back(SwitchCase(SI->getSuccessorValue(i),
-                               SI->getSuccessor(i)));
-#endif
   
   // reverse cases, as switchConvert constructs a chain of
   //   basic blocks by appending to the front. if we reverse,

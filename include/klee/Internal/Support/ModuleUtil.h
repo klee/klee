@@ -12,15 +12,9 @@
 
 #include "klee/Config/Version.h"
 
-#if LLVM_VERSION_CODE > LLVM_VERSION(3, 2)
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
-#else
-#include "llvm/Module.h"
-#include "llvm/Function.h"
-#include "llvm/LLVMContext.h"
-#endif
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 5)
 #include "llvm/IR/CallSite.h"

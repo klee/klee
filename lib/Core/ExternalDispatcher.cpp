@@ -10,19 +10,11 @@
 #include "ExternalDispatcher.h"
 #include "klee/Config/Version.h"
 
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
-#else
-#include "llvm/Constants.h"
-#include "llvm/DerivedTypes.h"
-#include "llvm/Instructions.h"
-#include "llvm/LLVMContext.h"
-#include "llvm/Module.h"
-#endif
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
 #include "llvm/ExecutionEngine/MCJIT.h"
 #else
@@ -33,11 +25,7 @@
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/raw_ostream.h"
 
-#if LLVM_VERSION_CODE < LLVM_VERSION(3, 0)
-#include "llvm/Target/TargetSelect.h"
-#else
 #include "llvm/Support/TargetSelect.h"
-#endif
 
 #if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
 #include "llvm/Support/CallSite.h"
@@ -297,7 +285,7 @@ Function *ExternalDispatcherImpl::createDispatcher(Function *target,
 
   Value **args = new Value *[cs.arg_size()];
 
-  std::vector<LLVM_TYPE_Q Type *> nullary;
+  std::vector<Type *> nullary;
 
   // MCJIT functions need unique names, or wrong function can be called.
   // The module identifier is included because for the MCJIT we need
@@ -318,7 +306,7 @@ Function *ExternalDispatcherImpl::createDispatcher(Function *target,
   Instruction *argI64s = new LoadInst(argI64sp, "args", dBB);
 
   // Get the target function type.
-  LLVM_TYPE_Q FunctionType *FTy = cast<FunctionType>(
+  FunctionType *FTy = cast<FunctionType>(
       cast<PointerType>(target->getType())->getElementType());
 
   // Each argument will be passed by writing it into gTheArgsP[i].
@@ -328,7 +316,7 @@ Function *ExternalDispatcherImpl::createDispatcher(Function *target,
     // Determine the type the argument will be passed as. This accomodates for
     // the corresponding code in Executor.cpp for handling calls to bitcasted
     // functions.
-    LLVM_TYPE_Q Type *argTy =
+    Type *argTy =
         (i < FTy->getNumParams() ? FTy->getParamType(i) : (*ai)->getType());
     Instruction *argI64p = GetElementPtrInst::Create(
         argI64s, ConstantInt::get(Type::getInt32Ty(ctx), idx), "", dBB);
@@ -343,13 +331,8 @@ Function *ExternalDispatcherImpl::createDispatcher(Function *target,
 
   Constant *dispatchTarget = module->getOrInsertFunction(
       target->getName(), FTy, target->getAttributes());
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 0)
   Instruction *result = CallInst::Create(
       dispatchTarget, llvm::ArrayRef<Value *>(args, args + i), "", dBB);
-#else
-  Instruction *result =
-      CallInst::Create(dispatchTarget, args, args + i, "", dBB);
-#endif
   if (result->getType() != Type::getVoidTy(ctx)) {
     Instruction *resp = new BitCastInst(
         argI64s, PointerType::getUnqual(result->getType()), "", dBB);
