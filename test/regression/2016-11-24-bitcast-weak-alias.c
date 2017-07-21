@@ -26,18 +26,11 @@ int alias_function(struct v1 *, struct v1 *, int)
 
 int main(int argc, char** argv) {
   struct v2 local = { .e= 0, .f=0 };
-  int choice = (argc == 1);
   int number = 0;
 
-  // FIXME: Drop the guard when llvm 2.9 is dropped.
-  // Prevent actually making the call at runtime due to llvm-gcc
-  // injecting an abort if the call is made. The call is guarded
-  // in such a way that the compiler cannot remove the call.
-  if (choice) {
-    // Call via a bitcasted alias.
-    number = ((int (*)(struct v2 *, struct v2 *, int))alias_function)(
-        &local, &local, 0);
-  }
+  // Call via a bitcasted alias.
+  number = ((int (*)(struct v2 *, struct v2 *, int))alias_function)(&local,
+                                                                    &local, 0);
   return number % 255;
 }
 
