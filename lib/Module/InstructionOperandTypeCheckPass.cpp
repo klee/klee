@@ -173,7 +173,7 @@ bool InstructionOperandTypeCheckPass::runOnModule(Module &M) {
     for (Function::iterator bi = fi->begin(), be = fi->end(); bi != be; ++bi) {
       for (BasicBlock::iterator ii = bi->begin(), ie = bi->end(); ii != ie;
            ++ii) {
-        Instruction *i = static_cast<Instruction *>(ii);
+        Instruction *i = &*ii;
         instructionOperandsConform &= checkInstruction(i);
       }
     }
