@@ -409,8 +409,7 @@ void SpecialFunctionHandler::handleAssume(ExecutionState &state,
     if (SilentKleeAssume) {
       executor.terminateState(state);
     } else {
-      executor.terminateStateOnError(state,
-                                     "invalid klee_assume call (provably false)",
+      executor.terminateStateOnError(state, "invalid klee_assume call (false)",
                                      Executor::User);
     }
   } else {

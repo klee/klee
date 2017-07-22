@@ -27,18 +27,16 @@ public:
   /// PartialValidityMode - Represent a possibility incomplete query validity
   /// mode.
   enum PartialValidityMode {
-    /// The query is provably true.
+    /// The query is true.
     MustBeTrue = 1,
 
-    /// The query is provably false.
+    /// The query is false.
     MustBeFalse = -1,
 
-    /// The query is not provably false (a true assignment is known to
-    /// exist).
+    /// The query is not false (a true assignment is known to exist).
     MayBeTrue = 2,
 
-    /// The query is not provably true (a false assignment is known to
-    /// exist).
+    /// The query is not true (a false assignment is known to exist).
     MayBeFalse = -2,
 
     /// The query is known to have both true and false assignments.
@@ -64,8 +62,8 @@ public:
   virtual IncompleteSolver::PartialValidityMode
   computeValidityMode(const Query &);
 
-  /// computeTruth - Determine whether the given query expression is provably
-  /// true or not provably true (may be false) given the constraints.
+  /// computeTruth - Determine whether the given query expression is true or not
+  /// (may be false) given the constraints.
   ///
   /// The passed expression is non-constant with bool type.
   virtual IncompleteSolver::PartialValidityMode computeTruth(const Query &) = 0;

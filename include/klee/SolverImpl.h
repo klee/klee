@@ -46,10 +46,10 @@ namespace klee {
     /// computeTruth. Clients should override this if a more efficient
     /// implementation is available.
     ///
-    /// \param [out] result - if
+    /// \param [out] result - if provably
     /// \f[ \forall X constraints(X) \to query(X) \f]
     /// then Solver::True,
-    /// else if
+    /// else if provably
     /// \f[ \forall X constraints(X) \to \lnot query(X) \f]
     /// then Solver::False,
     /// else
@@ -59,7 +59,7 @@ namespace klee {
     virtual bool computeValidityMode(const Query &query,
                                      Solver::ValidityMode &result);
 
-    /// computeTruth - Determine whether the given query expression is provably true
+    /// computeTruth - Determine whether the given query expression is true
     /// given the constraints.
     ///
     /// The query expression is guaranteed to be non-constant and have
@@ -72,7 +72,8 @@ namespace klee {
     /// Where \f$X\f$ is some assignment, \f$constraints(X)\f$ are the constraints
     /// in the query and \f$query(X)\f$ is the query expression.
     ///
-    /// \param [out] isValid - On success, true iff the logical formula is true.
+    /// \param [out] isValid - On success, true if the logical formula is
+    /// provably true.
     /// \return True on success
     virtual bool computeTruth(const Query& query, bool &isValid) = 0;
 

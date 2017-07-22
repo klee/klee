@@ -71,8 +71,8 @@ namespace klee {
     Solver(SolverImpl *_impl) : impl(_impl) {}
     virtual ~Solver();
 
-    /// evaluate - Determine for a particular state if the query
-    /// expression is provably true, provably false or neither.
+    /// evaluate - Determine for a particular state if the query expression is
+    /// true, false or could not be proved to be either.
     ///
     /// \param [out] result - if
     /// \f[ \forall X constraints(X) \to query(X) \f]
@@ -86,7 +86,7 @@ namespace klee {
     /// \return True on success.
     bool evaluate(const Query &, ValidityMode &result);
 
-    /// mustBeTrue - Determine if the expression is provably true.
+    /// mustBeTrue - Determine if the expression is true.
     /// 
     /// This evaluates the following logical formula:
     ///
@@ -104,7 +104,7 @@ namespace klee {
     /// \return True on success.
     bool mustBeTrue(const Query&, bool &result);
 
-    /// mustBeFalse - Determine if the expression is provably false.
+    /// mustBeFalse - Determine if the expression is false.
     ///
     /// This evaluates the following logical formula:
     ///
