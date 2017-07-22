@@ -1,6 +1,6 @@
 // RUN: %llvmgcc -DBOUND_VALUE=32 -DFORCE_VALUE=20 %s -emit-llvm -g -O0 -c -o %t.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --libc=klee --search=dfs %t.bc
+// RUN: %klee --output-dir=%t.klee-out --search=dfs %t.bc
 // RUN: test -f %t.klee-out/test000001.ktest
 // RUN: test ! -f %t.klee-out/test000002.ktest
 
