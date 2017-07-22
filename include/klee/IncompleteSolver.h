@@ -54,18 +54,43 @@ public:
 
   /// computeValidityMode - Compute a partial validity mode for the given query.
   ///
-  /// The passed expression is non-constant with bool type.
+  /// The passed query expression should be non-constant and have bool type.
   ///
   /// The IncompleteSolver class provides an implementation of
   /// computeValidityMode using computeTruth. Sub-classes may override this if a
   /// more efficient implementation is available.
+  ///
+  /// \return IncompleteSolver::MustBeTrue if provably
+  /// \f[ \forall X constraints(X) \to query(X) \f]
+  /// else IncompleteSolver::MustBeFalse if provably
+  /// \f[ \forall X constraints(X) \to \lnot query(X) \f]
+  /// else IncompleteSolver::MayBeTrue if provably
+  /// \f[ \exists X constraints(X) \wedge query(X) \f]
+  /// else IncompleteSolver::MayBeFalse if provably
+  /// \f[ \exists X constraints(X) \wedge \lnot query(X) \f]
+  /// else IncompleteSolver::TrueOrFalse if provably both
+  /// \f[ \exists X constraints(X) \wedge query(X) \f]
+  /// and
+  /// \f[ \exists X constraints(X) \wedge \lnot query(X) \f]
+  /// else IncompleteSolver::None
   virtual IncompleteSolver::PartialValidityMode
   computeValidityMode(const Query &);
 
   /// computeTruth - Determine whether the given query expression is true or not
   /// (may be false) given the constraints.
   ///
-  /// The passed expression is non-constant with bool type.
+  /// The passed query expression should be non-constant and have bool type.
+  ///
+  /// This method should evaluate the logical formula:
+  ///
+  /// \f[ \forall X constraints(X) \to query(X) \f]
+  ///
+  /// Where \f$X\f$ is some assignment, \f$constraints(X)\f$ are the constraints
+  /// in the query and \f$query(X)\f$ is the query expression.
+  ///
+  /// \return IncompleteSolver::MustBeTrue if the above formula is provably
+  /// true, otherwise IncompleteSolver::MayBeFalse if provably
+  /// \f[ \exists X constraints(X) \wedge \lnot query(X) \f]
   virtual IncompleteSolver::PartialValidityMode computeTruth(const Query &) = 0;
 
   /// computeValue - Attempt to compute a value for the given expression.
