@@ -22,8 +22,8 @@ using namespace llvm;
 
 /***/
 
-bool TimingSolver::evaluate(const ExecutionState& state, ref<Expr> expr,
-                            Solver::Validity &result) {
+bool TimingSolver::evaluate(const ExecutionState &state, ref<Expr> expr,
+                            Solver::ValidityMode &result) {
   // Fast path, to avoid timer and OS overhead.
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(expr)) {
     result = CE->isTrue() ? Solver::True : Solver::False;

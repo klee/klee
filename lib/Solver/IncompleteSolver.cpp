@@ -16,8 +16,8 @@ using namespace llvm;
 
 /***/
 
-IncompleteSolver::PartialValidity 
-IncompleteSolver::negatePartialValidity(PartialValidity pv) {
+IncompleteSolver::PartialValidityMode
+IncompleteSolver::negatePartialValidityMode(PartialValidityMode pv) {
   switch(pv) {
   default: assert(0 && "invalid partial validity");  
   case MustBeTrue:  return MustBeFalse;
@@ -28,14 +28,14 @@ IncompleteSolver::negatePartialValidity(PartialValidity pv) {
   }
 }
 
-IncompleteSolver::PartialValidity 
-IncompleteSolver::computeValidity(const Query& query) {
-  PartialValidity trueResult = computeTruth(query);
+IncompleteSolver::PartialValidityMode
+IncompleteSolver::computeValidityMode(const Query &query) {
+  PartialValidityMode trueResult = computeTruth(query);
 
   if (trueResult == MustBeTrue) {
     return MustBeTrue;
   } else {
-    PartialValidity falseResult = computeTruth(query.negateExpr());
+    PartialValidityMode falseResult = computeTruth(query.negateExpr());
 
     if (falseResult == MustBeTrue) {
       return MustBeFalse;
@@ -70,8 +70,9 @@ StagedSolverImpl::~StagedSolverImpl() {
 }
 
 bool StagedSolverImpl::computeTruth(const Query& query, bool &isValid) {
-  IncompleteSolver::PartialValidity trueResult = primary->computeTruth(query); 
-  
+  IncompleteSolver::PartialValidityMode trueResult =
+      primary->computeTruth(query);
+
   if (trueResult != IncompleteSolver::None) {
     isValid = (trueResult == IncompleteSolver::MustBeTrue);
     return true;
@@ -80,11 +81,11 @@ bool StagedSolverImpl::computeTruth(const Query& query, bool &isValid) {
   return secondary->impl->computeTruth(query, isValid);
 }
 
-bool StagedSolverImpl::computeValidity(const Query& query,
-                                       Solver::Validity &result) {
+bool StagedSolverImpl::computeValidityMode(const Query &query,
+                                           Solver::ValidityMode &result) {
   bool tmp;
 
-  switch(primary->computeValidity(query)) {
+  switch (primary->computeValidityMode(query)) {
   case IncompleteSolver::MustBeTrue: 
     result = Solver::True;
     break;
@@ -105,7 +106,7 @@ bool StagedSolverImpl::computeValidity(const Query& query,
     result = tmp ? Solver::False : Solver::Unknown;
     break;
   default:
-    if (!secondary->impl->computeValidity(query, result))
+    if (!secondary->impl->computeValidityMode(query, result))
       return false;
     break;
   }

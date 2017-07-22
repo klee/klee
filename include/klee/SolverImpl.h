@@ -37,8 +37,7 @@ namespace klee {
                            SOLVER_RUN_STATUS_UNEXPECTED_EXIT_CODE,
                            SOLVER_RUN_STATUS_WAITPID_FAILED };
 
-    /// computeValidity - Compute a full validity result for the
-    /// query.
+    /// computeValidityMode - Compute a full validity mode for the query.
     ///
     /// The query expression is guaranteed to be non-constant and have
     /// bool type.
@@ -57,8 +56,9 @@ namespace klee {
     /// Solver::Unknown
     ///
     /// \return True on success
-    virtual bool computeValidity(const Query& query, Solver::Validity &result);
-    
+    virtual bool computeValidityMode(const Query &query,
+                                     Solver::ValidityMode &result);
+
     /// computeTruth - Determine whether the given query expression is provably true
     /// given the constraints.
     ///

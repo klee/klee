@@ -13,7 +13,7 @@
 
 using namespace klee;
 
-const char *Solver::validity_to_str(Validity v) {
+const char *Solver::validity_to_str(ValidityMode v) {
   switch (v) {
   default:    return "Unknown";
   case True:  return "True";
@@ -33,7 +33,7 @@ void Solver::setCoreSolverTimeout(double timeout) {
     impl->setCoreSolverTimeout(timeout);
 }
 
-bool Solver::evaluate(const Query& query, Validity &result) {
+bool Solver::evaluate(const Query &query, ValidityMode &result) {
   assert(query.expr->getWidth() == Expr::Bool && "Invalid expression type!");
 
   // Maintain invariants implementations expect.
@@ -42,7 +42,7 @@ bool Solver::evaluate(const Query& query, Validity &result) {
     return true;
   }
 
-  return impl->computeValidity(query, result);
+  return impl->computeValidityMode(query, result);
 }
 
 bool Solver::mustBeTrue(const Query& query, bool &result) {
@@ -113,7 +113,7 @@ std::pair< ref<Expr>, ref<Expr> > Solver::getRange(const Query& query) {
   uint64_t min, max;
 
   if (width==1) {
-    Solver::Validity result;
+    Solver::ValidityMode result;
     if (!evaluate(query, result))
       assert(0 && "computeValidity failed");
     switch (result) {

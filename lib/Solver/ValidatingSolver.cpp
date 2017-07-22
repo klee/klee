@@ -22,7 +22,7 @@ public:
       : solver(_solver), oracle(_oracle) {}
   ~ValidatingSolver() { delete solver; }
 
-  bool computeValidity(const Query &, Solver::Validity &result);
+  bool computeValidityMode(const Query &, Solver::ValidityMode &result);
   bool computeTruth(const Query &, bool &isValid);
   bool computeValue(const Query &, ref<Expr> &result);
   bool computeInitialValues(const Query &,
@@ -48,13 +48,13 @@ bool ValidatingSolver::computeTruth(const Query &query, bool &isValid) {
   return true;
 }
 
-bool ValidatingSolver::computeValidity(const Query &query,
-                                       Solver::Validity &result) {
-  Solver::Validity answer;
+bool ValidatingSolver::computeValidityMode(const Query &query,
+                                           Solver::ValidityMode &result) {
+  Solver::ValidityMode answer;
 
-  if (!solver->impl->computeValidity(query, result))
+  if (!solver->impl->computeValidityMode(query, result))
     return false;
-  if (!oracle->impl->computeValidity(query, answer))
+  if (!oracle->impl->computeValidityMode(query, answer))
     return false;
 
   if (result != answer)

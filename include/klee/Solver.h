@@ -54,15 +54,15 @@ namespace klee {
     void operator=(const Solver&);
 
   public:
-    enum Validity {
+    enum ValidityMode {
       True = 1,
       False = -1,
       Unknown = 0
     };
-  
+
   public:
     /// validity_to_str - Return the name of given Validity enum value.
-    static const char *validity_to_str(Validity v);
+    static const char *validity_to_str(ValidityMode v);
 
   public:
     SolverImpl *impl;
@@ -84,8 +84,8 @@ namespace klee {
     /// Solver::Unknown
     ///
     /// \return True on success.
-    bool evaluate(const Query&, Validity &result);
-  
+    bool evaluate(const Query &, ValidityMode &result);
+
     /// mustBeTrue - Determine if the expression is provably true.
     /// 
     /// This evaluates the following logical formula:

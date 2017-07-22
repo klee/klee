@@ -14,7 +14,8 @@ using namespace klee;
 
 SolverImpl::~SolverImpl() {}
 
-bool SolverImpl::computeValidity(const Query &query, Solver::Validity &result) {
+bool SolverImpl::computeValidityMode(const Query &query,
+                                     Solver::ValidityMode &result) {
   bool isTrue, isFalse;
   if (!computeTruth(query, isTrue))
     return false;

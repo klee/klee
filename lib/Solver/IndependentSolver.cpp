@@ -400,7 +400,7 @@ public:
   ~IndependentSolver() { delete solver; }
 
   bool computeTruth(const Query&, bool &isValid);
-  bool computeValidity(const Query&, Solver::Validity &result);
+  bool computeValidityMode(const Query &, Solver::ValidityMode &result);
   bool computeValue(const Query&, ref<Expr> &result);
   bool computeInitialValues(const Query& query,
                             const std::vector<const Array*> &objects,
@@ -410,15 +410,14 @@ public:
   char *getConstraintLog(const Query&);
   void setCoreSolverTimeout(double timeout);
 };
-  
-bool IndependentSolver::computeValidity(const Query& query,
-                                        Solver::Validity &result) {
+
+bool IndependentSolver::computeValidityMode(const Query &query,
+                                            Solver::ValidityMode &result) {
   std::vector< ref<Expr> > required;
   IndependentElementSet eltsClosure =
     getIndependentConstraints(query, required);
   ConstraintManager tmp(required);
-  return solver->impl->computeValidity(Query(tmp, query.expr), 
-                                       result);
+  return solver->impl->computeValidityMode(Query(tmp, query.expr), result);
 }
 
 bool IndependentSolver::computeTruth(const Query& query, bool &isValid) {

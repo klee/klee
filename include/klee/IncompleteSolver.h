@@ -24,9 +24,9 @@ namespace klee {
 /// a complete Solver implementation.
 class IncompleteSolver {
 public:
-  /// PartialValidity - Represent a possibility incomplete query
-  /// validity.
-  enum PartialValidity {
+  /// PartialValidityMode - Represent a possibility incomplete query validity
+  /// mode.
+  enum PartialValidityMode {
     /// The query is provably true.
     MustBeTrue = 1,
 
@@ -48,27 +48,28 @@ public:
     None = 3
   };
 
-  static PartialValidity negatePartialValidity(PartialValidity pv);
+  static PartialValidityMode negatePartialValidityMode(PartialValidityMode pv);
 
 public:
   IncompleteSolver() {}
   virtual ~IncompleteSolver() {}
 
-  /// computeValidity - Compute a partial validity for the given query.
+  /// computeValidityMode - Compute a partial validity mode for the given query.
   ///
   /// The passed expression is non-constant with bool type.
   ///
   /// The IncompleteSolver class provides an implementation of
-  /// computeValidity using computeTruth. Sub-classes may override
-  /// this if a more efficient implementation is available.
-  virtual IncompleteSolver::PartialValidity computeValidity(const Query&);
+  /// computeValidityMode using computeTruth. Sub-classes may override this if a
+  /// more efficient implementation is available.
+  virtual IncompleteSolver::PartialValidityMode
+  computeValidityMode(const Query &);
 
   /// computeTruth - Determine whether the given query expression is provably
   /// true or not provably true (may be false) given the constraints.
   ///
   /// The passed expression is non-constant with bool type.
-  virtual IncompleteSolver::PartialValidity computeTruth(const Query&) = 0;
-  
+  virtual IncompleteSolver::PartialValidityMode computeTruth(const Query &) = 0;
+
   /// computeValue - Attempt to compute a value for the given expression.
   virtual bool computeValue(const Query&, ref<Expr> &result) = 0;
 
@@ -96,7 +97,7 @@ public:
   ~StagedSolverImpl();
     
   bool computeTruth(const Query&, bool &isValid);
-  bool computeValidity(const Query&, Solver::Validity &result);
+  bool computeValidityMode(const Query &, Solver::ValidityMode &result);
   bool computeValue(const Query&, ref<Expr> &result);
   bool computeInitialValues(const Query&,
                             const std::vector<const Array*> &objects,

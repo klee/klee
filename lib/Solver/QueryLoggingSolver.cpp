@@ -148,11 +148,11 @@ bool QueryLoggingSolver::computeTruth(const Query &query, bool &isValid) {
   return success;
 }
 
-bool QueryLoggingSolver::computeValidity(const Query &query,
-                                         Solver::Validity &result) {
+bool QueryLoggingSolver::computeValidityMode(const Query &query,
+                                             Solver::ValidityMode &result) {
   startQuery(query, "Validity");
 
-  bool success = solver->impl->computeValidity(query, result);
+  bool success = solver->impl->computeValidityMode(query, result);
 
   finishQuery(success);
 

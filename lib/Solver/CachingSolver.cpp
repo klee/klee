@@ -33,12 +33,12 @@ private:
   ref<Expr> canonicalizeQuery(ref<Expr> originalQuery,
                               bool &negationUsed);
 
-  void cacheInsert(const Query& query,
-                   IncompleteSolver::PartialValidity result);
+  void cacheInsert(const Query &query,
+                   IncompleteSolver::PartialValidityMode result);
 
-  bool cacheLookup(const Query& query,
-                   IncompleteSolver::PartialValidity &result);
-  
+  bool cacheLookup(const Query &query,
+                   IncompleteSolver::PartialValidityMode &result);
+
   struct CacheEntry {
     CacheEntry(const ConstraintManager &c, ref<Expr> q)
       : constraints(c), query(q) {}
@@ -66,10 +66,9 @@ private:
     }
   };
 
-  typedef unordered_map<CacheEntry, 
-                        IncompleteSolver::PartialValidity, 
+  typedef unordered_map<CacheEntry, IncompleteSolver::PartialValidityMode,
                         CacheEntryHash> cache_map;
-  
+
   Solver *solver;
   cache_map cache;
 
@@ -77,7 +76,7 @@ public:
   CachingSolver(Solver *s) : solver(s) {}
   ~CachingSolver() { cache.clear(); delete solver; }
 
-  bool computeValidity(const Query&, Solver::Validity &result);
+  bool computeValidityMode(const Query &, Solver::ValidityMode &result);
   bool computeTruth(const Query&, bool &isValid);
   bool computeValue(const Query& query, ref<Expr> &result) {
     ++stats::queryCacheMisses;
@@ -115,8 +114,8 @@ ref<Expr> CachingSolver::canonicalizeQuery(ref<Expr> originalQuery,
 
 /** @returns true on a cache hit, false of a cache miss.  Reference
     value result only valid on a cache hit. */
-bool CachingSolver::cacheLookup(const Query& query,
-                                IncompleteSolver::PartialValidity &result) {
+bool CachingSolver::cacheLookup(const Query &query,
+                                IncompleteSolver::PartialValidityMode &result) {
   bool negationUsed;
   ref<Expr> canonicalQuery = canonicalizeQuery(query.expr, negationUsed);
 
@@ -124,9 +123,9 @@ bool CachingSolver::cacheLookup(const Query& query,
   cache_map::iterator it = cache.find(ce);
   
   if (it != cache.end()) {
-    result = (negationUsed ?
-              IncompleteSolver::negatePartialValidity(it->second) :
-              it->second);
+    result =
+        (negationUsed ? IncompleteSolver::negatePartialValidityMode(it->second)
+                      : it->second);
     return true;
   }
   
@@ -134,21 +133,22 @@ bool CachingSolver::cacheLookup(const Query& query,
 }
 
 /// Inserts the given query, result pair into the cache.
-void CachingSolver::cacheInsert(const Query& query,
-                                IncompleteSolver::PartialValidity result) {
+void CachingSolver::cacheInsert(const Query &query,
+                                IncompleteSolver::PartialValidityMode result) {
   bool negationUsed;
   ref<Expr> canonicalQuery = canonicalizeQuery(query.expr, negationUsed);
 
   CacheEntry ce(query.constraints, canonicalQuery);
-  IncompleteSolver::PartialValidity cachedResult = 
-    (negationUsed ? IncompleteSolver::negatePartialValidity(result) : result);
-  
+  IncompleteSolver::PartialValidityMode cachedResult =
+      (negationUsed ? IncompleteSolver::negatePartialValidityMode(result)
+                    : result);
+
   cache.insert(std::make_pair(ce, cachedResult));
 }
 
-bool CachingSolver::computeValidity(const Query& query,
-                                    Solver::Validity &result) {
-  IncompleteSolver::PartialValidity cachedResult;
+bool CachingSolver::computeValidityMode(const Query &query,
+                                        Solver::ValidityMode &result) {
+  IncompleteSolver::PartialValidityMode cachedResult;
   bool tmp, cacheHit = cacheLookup(query, cachedResult);
   
   if (cacheHit) {
@@ -198,8 +198,8 @@ bool CachingSolver::computeValidity(const Query& query,
   }
 
   ++stats::queryCacheMisses;
-  
-  if (!solver->impl->computeValidity(query, result))
+
+  if (!solver->impl->computeValidityMode(query, result))
     return false;
 
   switch (result) {
@@ -217,7 +217,7 @@ bool CachingSolver::computeValidity(const Query& query,
 
 bool CachingSolver::computeTruth(const Query& query,
                                  bool &isValid) {
-  IncompleteSolver::PartialValidity cachedResult;
+  IncompleteSolver::PartialValidityMode cachedResult;
   bool cacheHit = cacheLookup(query, cachedResult);
 
   // a cached result of MayBeTrue forces us to check whether

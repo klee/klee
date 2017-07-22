@@ -23,7 +23,7 @@ public:
   AssignmentValidatingSolver(Solver *_solver) : solver(_solver) {}
   ~AssignmentValidatingSolver() { delete solver; }
 
-  bool computeValidity(const Query &, Solver::Validity &result);
+  bool computeValidityMode(const Query &, Solver::ValidityMode &result);
   bool computeTruth(const Query &, bool &isValid);
   bool computeValue(const Query &, ref<Expr> &result);
   bool computeInitialValues(const Query &,
@@ -36,9 +36,10 @@ public:
 };
 
 // TODO: use computeInitialValues for all queries for more stress testing
-bool AssignmentValidatingSolver::computeValidity(const Query &query,
-                                                 Solver::Validity &result) {
-  return solver->impl->computeValidity(query, result);
+bool
+AssignmentValidatingSolver::computeValidityMode(const Query &query,
+                                                Solver::ValidityMode &result) {
+  return solver->impl->computeValidityMode(query, result);
 }
 bool AssignmentValidatingSolver::computeTruth(const Query &query,
                                               bool &isValid) {

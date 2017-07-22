@@ -46,7 +46,8 @@ namespace klee {
       return solver->getConstraintLog(query);
     }
 
-    bool evaluate(const ExecutionState&, ref<Expr>, Solver::Validity &result);
+    bool evaluate(const ExecutionState &, ref<Expr>,
+                  Solver::ValidityMode &result);
 
     bool mustBeTrue(const ExecutionState&, ref<Expr>, bool &result);
 
