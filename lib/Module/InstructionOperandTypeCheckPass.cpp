@@ -15,8 +15,8 @@ using namespace llvm;
 
 namespace {
 
-void printOperandWarning(const char *expected, const Instruction *i,
-                         LLVM_TYPE_Q Type *ty, unsigned opNum) {
+void printOperandWarning(const char *expected, const Instruction *i, Type *ty,
+                         unsigned opNum) {
   std::string msg;
   llvm::raw_string_ostream ss(msg);
   ss << "Found unexpected type (" << *ty << ") at operand " << opNum
@@ -28,7 +28,7 @@ void printOperandWarning(const char *expected, const Instruction *i,
 
 bool checkOperandTypeIsScalarInt(const Instruction *i, unsigned opNum) {
   assert(opNum < i->getNumOperands());
-  LLVM_TYPE_Q llvm::Type *ty = i->getOperand(opNum)->getType();
+  llvm::Type *ty = i->getOperand(opNum)->getType();
   if (!(ty->isIntegerTy())) {
     printOperandWarning("scalar integer", i, ty, opNum);
     return false;
@@ -39,7 +39,7 @@ bool checkOperandTypeIsScalarInt(const Instruction *i, unsigned opNum) {
 bool checkOperandTypeIsScalarIntOrPointer(const Instruction *i,
                                           unsigned opNum) {
   assert(opNum < i->getNumOperands());
-  LLVM_TYPE_Q llvm::Type *ty = i->getOperand(opNum)->getType();
+  llvm::Type *ty = i->getOperand(opNum)->getType();
   if (!(ty->isIntegerTy() || ty->isPointerTy())) {
     printOperandWarning("scalar integer or pointer", i, ty, opNum);
     return false;
@@ -49,7 +49,7 @@ bool checkOperandTypeIsScalarIntOrPointer(const Instruction *i,
 
 bool checkOperandTypeIsScalarPointer(const Instruction *i, unsigned opNum) {
   assert(opNum < i->getNumOperands());
-  LLVM_TYPE_Q llvm::Type *ty = i->getOperand(opNum)->getType();
+  llvm::Type *ty = i->getOperand(opNum)->getType();
   if (!(ty->isPointerTy())) {
     printOperandWarning("scalar pointer", i, ty, opNum);
     return false;
@@ -59,7 +59,7 @@ bool checkOperandTypeIsScalarPointer(const Instruction *i, unsigned opNum) {
 
 bool checkOperandTypeIsScalarFloat(const Instruction *i, unsigned opNum) {
   assert(opNum < i->getNumOperands());
-  LLVM_TYPE_Q llvm::Type *ty = i->getOperand(opNum)->getType();
+  llvm::Type *ty = i->getOperand(opNum)->getType();
   if (!(ty->isFloatingPointTy())) {
     printOperandWarning("scalar float", i, ty, opNum);
     return false;
@@ -71,8 +71,8 @@ bool checkOperandsHaveSameType(const Instruction *i, unsigned opNum0,
                                unsigned opNum1) {
   assert(opNum0 < i->getNumOperands());
   assert(opNum1 < i->getNumOperands());
-  LLVM_TYPE_Q llvm::Type *ty0 = i->getOperand(opNum0)->getType();
-  LLVM_TYPE_Q llvm::Type *ty1 = i->getOperand(opNum1)->getType();
+  llvm::Type *ty0 = i->getOperand(opNum0)->getType();
+  llvm::Type *ty1 = i->getOperand(opNum1)->getType();
   if (!(ty0 == ty1)) {
     std::string msg;
     llvm::raw_string_ostream ss(msg);

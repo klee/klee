@@ -10,7 +10,6 @@
 #include "Passes.h"
 
 #include "klee/Config/Version.h"
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
@@ -21,29 +20,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/IRBuilder.h"
-
-#else
-#include "llvm/Constants.h"
-#include "llvm/DerivedTypes.h"
-#include "llvm/Function.h"
-#include "llvm/InstrTypes.h"
-#include "llvm/Instruction.h"
-#include "llvm/Instructions.h"
-#include "llvm/IntrinsicInst.h"
-#include "llvm/LLVMContext.h"
-#include "llvm/Module.h"
-#include "llvm/Type.h"
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 2)
-#include "llvm/IRBuilder.h"
-#else
-#include "llvm/Support/IRBuilder.h"
-#endif
-#if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
-#include "llvm/Target/TargetData.h"
-#else
-#include "llvm/DataLayout.h"
-#endif
-#endif
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -72,11 +48,7 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
   bool block_split=false;
   LLVMContext &ctx = M.getContext();
   
-#if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
-  unsigned WordSize = TargetData.getPointerSizeInBits() / 8;
-#else
   unsigned WordSize = DataLayout.getPointerSizeInBits() / 8;
-#endif
   for (BasicBlock::iterator i = b.begin(), ie = b.end();
        (i != ie) && (block_split == false);) {
     IntrinsicInst *ii = dyn_cast<IntrinsicInst>(&*i);
@@ -246,7 +218,7 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
         assert(minArgAsInt && "Second arg is not a ConstantInt");
         assert(minArgAsInt->getBitWidth() == 1 && "Second argument is not an i1");
         Value *replacement = NULL;
-        LLVM_TYPE_Q IntegerType *intType = dyn_cast<IntegerType>(ii->getType());
+        IntegerType *intType = dyn_cast<IntegerType>(ii->getType());
         assert(intType && "intrinsic does not have integer return type");
         if (minArgAsInt->isZero()) {
           // min=false

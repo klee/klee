@@ -17,22 +17,17 @@
 
 #include "klee/Config/Version.h"
 #include "klee/Internal/Module/LLVMPassManager.h"
+
 #include "llvm/Analysis/Passes.h"
 #include "llvm/Analysis/LoopPass.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/DynamicLibrary.h"
-
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
 #include "llvm/IR/Module.h"
 #include "llvm/IR/DataLayout.h"
-#else
-#include "llvm/Module.h"
-#if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
-#include "llvm/Target/TargetData.h"
-#else
-#include "llvm/DataLayout.h"
-#endif
-#endif
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/DynamicLibrary.h"
+#include "llvm/Support/PluginLoader.h"
+#include "llvm/Target/TargetMachine.h"
+#include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/Scalar.h"
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 5)
 #include "llvm/IR/Verifier.h"
@@ -40,10 +35,6 @@
 #include "llvm/Analysis/Verifier.h"
 #endif
 
-#include "llvm/Target/TargetMachine.h"
-#include "llvm/Transforms/IPO.h"
-#include "llvm/Transforms/Scalar.h"
-#include "llvm/Support/PluginLoader.h"
 using namespace llvm;
 
 // Don't verify at the end
@@ -95,10 +86,6 @@ namespace llvm {
 static void AddStandardCompilePasses(klee::LegacyLLVMPassManagerTy &PM) {
   PM.add(createVerifierPass());                  // Verify that input is correct
 
-#if LLVM_VERSION_CODE < LLVM_VERSION(3, 0)
-  addPass(PM, createLowerSetJmpPass());          // Lower llvm.setjmp/.longjmp
-#endif
-
   // If the -strip-debug command line option was specified, do it.
   if (StripDebug)
     addPass(PM, createStripSymbolsPass(true));
@@ -121,9 +108,6 @@ static void AddStandardCompilePasses(klee::LegacyLLVMPassManagerTy &PM) {
     addPass(PM, createFunctionInliningPass());   // Inline small functions
   addPass(PM, createArgumentPromotionPass());    // Scalarize uninlined fn args
 
-#if LLVM_VERSION_CODE < LLVM_VERSION(3, 4)
-  addPass(PM, createSimplifyLibCallsPass());     // Library Call Optimizations
-#endif
   addPass(PM, createInstructionCombiningPass()); // Cleanup for scalarrepl.
   addPass(PM, createJumpThreadingPass());        // Thread jumps.
   addPass(PM, createCFGSimplificationPass());    // Merge & remove BBs
@@ -154,9 +138,6 @@ static void AddStandardCompilePasses(klee::LegacyLLVMPassManagerTy &PM) {
   addPass(PM, createAggressiveDCEPass());        // Delete dead instructions
   addPass(PM, createCFGSimplificationPass());    // Merge & remove BBs
   addPass(PM, createStripDeadPrototypesPass());  // Get rid of dead prototypes
-#if LLVM_VERSION_CODE < LLVM_VERSION(3, 0)
-  addPass(PM, createDeadTypeEliminationPass());  // Eliminate dead types
-#endif
   addPass(PM, createConstantMergePass());        // Merge dup global constants
 }
 
@@ -179,10 +160,8 @@ void Optimize(Module *M, const std::string &EntryPoint) {
   addPass(Passes, dlpass);
 #elif LLVM_VERSION_CODE >= LLVM_VERSION(3, 5)
   addPass(Passes, new DataLayoutPass(M));
-#elif LLVM_VERSION_CODE >= LLVM_VERSION(3, 2)
-  addPass(Passes, new DataLayout(M));
 #else
-  addPass(Passes, new TargetData(M));
+  addPass(Passes, new DataLayout(M));
 #endif
 
   // DWD - Run the opt standard pass list as well.
@@ -193,12 +172,8 @@ void Optimize(Module *M, const std::string &EntryPoint) {
     // for a main function.  If main is defined, mark all other functions
     // internal.
     if (!DisableInternalize) {
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 2)
       ModulePass *pass = createInternalizePass(
           std::vector<const char *>(1, EntryPoint.c_str()));
-#else
-      ModulePass *pass = createInternalizePass(true);
-#endif
       addPass(Passes, pass);
     }
 

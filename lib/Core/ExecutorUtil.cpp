@@ -20,23 +20,11 @@
 
 #include "klee/util/GetElementPtrTypeIterator.h"
 
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/DataLayout.h"
-#else
-#include "llvm/Constants.h"
-#include "llvm/Function.h"
-#include "llvm/Instructions.h"
-#include "llvm/Module.h"
-#if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
-#include "llvm/Target/TargetData.h"
-#else
-#include "llvm/DataLayout.h"
-#endif
-#endif
 
 #include <cassert>
 
@@ -46,7 +34,7 @@ using namespace llvm;
 namespace klee {
 
   ref<ConstantExpr> Executor::evalConstantExpr(const llvm::ConstantExpr *ce) {
-    LLVM_TYPE_Q llvm::Type *type = ce->getType();
+    llvm::Type *type = ce->getType();
 
     ref<ConstantExpr> op1(0), op2(0), op3(0);
     int numOperands = ce->getNumOperands();
@@ -95,7 +83,7 @@ namespace klee {
         ref<ConstantExpr> addend = 
           ConstantExpr::alloc(0, Context::get().getPointerWidth());
 
-        if (LLVM_TYPE_Q StructType *st = dyn_cast<StructType>(*ii)) {
+        if (StructType *st = dyn_cast<StructType>(*ii)) {
           const StructLayout *sl = kmodule->targetData->getStructLayout(st);
           const ConstantInt *ci = cast<ConstantInt>(ii.getOperand());
 
@@ -153,11 +141,7 @@ namespace klee {
     case Instruction::FCmp:
       assert(0 && "floating point ConstantExprs unsupported");
     }
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 1)
     llvm_unreachable("Unsupported expression in evalConstantExpr");
-#else
-    assert(0 && "Unsupported expression in evalConstantExpr");
-#endif
     return op1;
   }
 }

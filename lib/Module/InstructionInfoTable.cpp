@@ -10,17 +10,10 @@
 #include "klee/Internal/Module/InstructionInfoTable.h"
 #include "klee/Config/Version.h"
 
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
-#else
-#include "llvm/Function.h"
-#include "llvm/Instructions.h"
-#include "llvm/IntrinsicInst.h"
-#include "llvm/Module.h"
-#endif
 
 # if LLVM_VERSION_CODE < LLVM_VERSION(3,5)
 #include "llvm/Assembly/AssemblyAnnotationWriter.h"
@@ -37,10 +30,8 @@
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3,5)
 #include "llvm/IR/DebugInfo.h"
-#elif LLVM_VERSION_CODE >= LLVM_VERSION(3, 2)
-#include "llvm/DebugInfo.h"
 #else
-#include "llvm/Analysis/DebugInfo.h"
+#include "llvm/DebugInfo.h"
 #endif
 
 #include "llvm/Analysis/ValueTracking.h"

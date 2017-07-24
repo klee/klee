@@ -23,20 +23,9 @@
 
 #include "klee/CommandLine.h"
 
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
 #include "llvm/IR/Module.h"
-#else
-#include "llvm/Module.h"
-#endif
 #include "llvm/ADT/Twine.h"
-
-#if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
-#include "llvm/Target/TargetData.h"
-#elif LLVM_VERSION_CODE <= LLVM_VERSION(3, 2)
-#include "llvm/DataLayout.h"
-#else
 #include "llvm/IR/DataLayout.h"
-#endif
 
 #include <errno.h>
 
@@ -187,13 +176,7 @@ void SpecialFunctionHandler::prepare() {
       // Make sure NoReturn attribute is set, for optimization and
       // coverage counting.
       if (hi.doesNotReturn)
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
         f->addFnAttr(Attribute::NoReturn);
-#elif LLVM_VERSION_CODE >= LLVM_VERSION(3, 2)
-        f->addFnAttr(Attributes::NoReturn);
-#else
-        f->addFnAttr(Attribute::NoReturn);
-#endif
 
       // Change to a declaration since we handle internally (simplifies
       // module and allows deleting dead code).

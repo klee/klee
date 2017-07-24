@@ -42,11 +42,7 @@ namespace llvm {
   class GlobalValue;
   class Instruction;
   class LLVMContext;
-#if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
-  class TargetData;
-#else
   class DataLayout;
-#endif
   class Twine;
   class Value;
 }
@@ -509,7 +505,7 @@ public:
   virtual void getCoveredLines(const ExecutionState &state,
                                std::map<const std::string*, std::set<unsigned> > &res);
 
-  Expr::Width getWidthForLLVMType(LLVM_TYPE_Q llvm::Type *type) const;
+  Expr::Width getWidthForLLVMType(llvm::Type *type) const;
   size_t getAllocationAlignment(const llvm::Value *allocSite) const;
 };
   

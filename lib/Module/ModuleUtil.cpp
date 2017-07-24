@@ -14,29 +14,19 @@
 #include "klee/Internal/Support/ErrorHandling.h"
 #include "../Core/SpecialFunctionHandler.h"
 
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 4)
-#include "llvm/IR/LLVMContext.h"
-#endif
-
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+#include "llvm/IRReader/IRReader.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IRReader/IRReader.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ValueSymbolTable.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/IR/ValueSymbolTable.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/DataStream.h"
-#else
-#include "llvm/Function.h"
-#include "llvm/Instructions.h"
-#include "llvm/IntrinsicInst.h"
-#include "llvm/Module.h"
-#endif
 
 #if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
 #include "llvm/Linker.h"
@@ -44,11 +34,6 @@
 #else
 #include "llvm/Linker/Linker.h"
 #include "llvm/IR/AssemblyAnnotationWriter.h"
-#endif
-
-#if LLVM_VERSION_CODE <= LLVM_VERSION(2, 9)
-// for llvm::error_code
-#include "llvm/Support/system_error.h"
 #endif
 
 #include "llvm/Analysis/ValueTracking.h"
@@ -66,7 +51,6 @@
 using namespace llvm;
 using namespace klee;
 
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
 /// Based on GetAllUndefinedSymbols() from LLVM3.2
 ///
 /// GetAllUndefinedSymbols - calculates the set of undefined symbols that still
@@ -396,13 +380,11 @@ static bool linkBCA(object::Archive* archive, Module* composite, std::string& er
   return true;
 
 }
-#endif
 
 
 Module *klee::linkWithLibrary(Module *module,
                               const std::string &libraryName) {
   KLEE_DEBUG_WITH_TYPE("klee_linker", dbgs() << "Linking file " << libraryName << "\n");
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
   if (!sys::fs::exists(libraryName)) {
     klee_error("Link with library %s failed. No such file.",
         libraryName.c_str());
@@ -514,18 +496,6 @@ Module *klee::linkWithLibrary(Module *module,
   }
 
   return module;
-#else
-  Linker linker("klee", module, false);
-
-  llvm::sys::Path libraryPath(libraryName);
-  bool native = false;
-
-  if (linker.LinkInFile(libraryPath, native)) {
-    klee_error("Linking library %s failed", libraryName.c_str());
-  }
-
-  return linker.releaseModule();
-#endif
 }
 
 Function *klee::getDirectCallTarget(CallSite cs, bool moduleIsFullyLinked) {

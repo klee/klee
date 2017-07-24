@@ -22,24 +22,11 @@
 #include "klee/Internal/Support/ModuleUtil.h"
 
 #include "llvm/Bitcode/ReaderWriter.h"
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ValueSymbolTable.h"
 #include "llvm/IR/DataLayout.h"
-#else
-#include "llvm/Instructions.h"
-#include "llvm/LLVMContext.h"
-#include "llvm/Module.h"
-#include "llvm/ValueSymbolTable.h"
-#if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
-#include "llvm/Target/TargetData.h"
-#else
-#include "llvm/DataLayout.h"
-#endif
-
-#endif
 
 #if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
 #include "llvm/Support/CallSite.h"
@@ -103,11 +90,7 @@ namespace {
 
 KModule::KModule(Module *_module) 
   : module(_module),
-#if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
-    targetData(new TargetData(module)),
-#else
     targetData(new DataLayout(module)),
-#endif
     kleeMergeFn(0),
     infos(0),
     constantTable(0) {
@@ -141,8 +124,8 @@ static Function *getStubFunctionForCtorList(Module *m,
                                             std::string name) {
   assert(!gv->isDeclaration() && !gv->hasInternalLinkage() &&
          "do not support old LLVM style constructor/destructor lists");
-  
-  std::vector<LLVM_TYPE_Q Type*> nullary;
+
+  std::vector<Type *> nullary;
 
   Function *fn = Function::Create(FunctionType::get(Type::getVoidTy(m->getContext()),
 						    nullary, false),
@@ -208,32 +191,6 @@ static void injectStaticConstructorsAndDestructors(Module *m) {
   }
 }
 
-#if LLVM_VERSION_CODE < LLVM_VERSION(3, 3)
-static void forceImport(Module *m, const char *name, LLVM_TYPE_Q Type *retType,
-                        ...) {
-  // If module lacks an externally visible symbol for the name then we
-  // need to create one. We have to look in the symbol table because
-  // we want to check everything (global variables, functions, and
-  // aliases).
-
-  Value *v = m->getValueSymbolTable().lookup(name);
-  GlobalValue *gv = dyn_cast_or_null<GlobalValue>(v);
-
-  if (!gv || gv->hasInternalLinkage()) {
-    va_list ap;
-
-    va_start(ap, retType);
-    std::vector<LLVM_TYPE_Q Type *> argTypes;
-    while (LLVM_TYPE_Q Type *t = va_arg(ap, LLVM_TYPE_Q Type*))
-      argTypes.push_back(t);
-    va_end(ap);
-
-    m->getOrInsertFunction(name, FunctionType::get(retType, argTypes, false));
-  }
-}
-#endif
-
-
 void KModule::addInternalFunction(const char* functionName){
   Function* internalFunction = module->getFunction(functionName);
   if (!internalFunction) {
@@ -252,9 +209,8 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   if (!MergeAtExit.empty()) {
     Function *mergeFn = module->getFunction("klee_merge");
     if (!mergeFn) {
-      LLVM_TYPE_Q llvm::FunctionType *Ty = 
-        FunctionType::get(Type::getVoidTy(ctx),
-                          std::vector<LLVM_TYPE_Q Type*>(), false);
+      llvm::FunctionType *Ty =
+          FunctionType::get(Type::getVoidTy(ctx), std::vector<Type *>(), false);
       mergeFn = Function::Create(Ty, GlobalVariable::ExternalLinkage,
 				 "klee_merge",
 				 module);
@@ -275,11 +231,7 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
       BasicBlock *exit = BasicBlock::Create(ctx, "exit", f);
       PHINode *result = 0;
       if (f->getReturnType() != Type::getVoidTy(ctx))
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 0)
         result = PHINode::Create(f->getReturnType(), 0, "retval", exit);
-#else
-		result = PHINode::Create(f->getReturnType(), "retval", exit);
-#endif
       CallInst::Create(mergeFn, "", exit);
       ReturnInst::Create(ctx, result, exit);
 
@@ -307,7 +259,6 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   // module.
   LegacyLLVMPassManagerTy pm;
   pm.add(new RaiseAsmPass());
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3,4)
   // This pass will scalarize as much code as possible so that the Executor
   // does not need to handle operands of vector type for most instructions
   // other than InsertElementInst and ExtractElementInst.
@@ -315,7 +266,6 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   // NOTE: Must come before division/overshift checks because those passes
   // don't know how to handle vector instructions.
   pm.add(createScalarizerPass());
-#endif
   if (opts.CheckDivZero) pm.add(new DivCheckPass());
   if (opts.CheckOvershift) pm.add(new OvershiftCheckPass());
   // FIXME: This false here is to work around a bug in
@@ -327,28 +277,7 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
 
   if (opts.Optimize)
     Optimize(module, opts.EntryPoint);
-#if LLVM_VERSION_CODE < LLVM_VERSION(3, 3)
-  // Force importing functions required by intrinsic lowering. Kind of
-  // unfortunate clutter when we don't need them but we won't know
-  // that until after all linking and intrinsic lowering is
-  // done. After linking and passes we just try to manually trim these
-  // by name. We only add them if such a function doesn't exist to
-  // avoid creating stale uses.
 
-  LLVM_TYPE_Q llvm::Type *i8Ty = Type::getInt8Ty(ctx);
-  forceImport(module, "memcpy", PointerType::getUnqual(i8Ty),
-              PointerType::getUnqual(i8Ty),
-              PointerType::getUnqual(i8Ty),
-              targetData->getIntPtrType(ctx), (Type*) 0);
-  forceImport(module, "memmove", PointerType::getUnqual(i8Ty),
-              PointerType::getUnqual(i8Ty),
-              PointerType::getUnqual(i8Ty),
-              targetData->getIntPtrType(ctx), (Type*) 0);
-  forceImport(module, "memset", PointerType::getUnqual(i8Ty),
-              PointerType::getUnqual(i8Ty),
-              Type::getInt32Ty(ctx),
-              targetData->getIntPtrType(ctx), (Type*) 0);
-#endif
   // FIXME: Missing force import for various math functions.
 
   // FIXME: Find a way that we can test programs without requiring
@@ -357,11 +286,7 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
 
   SmallString<128> LibPath(opts.LibraryDir);
   llvm::sys::path::append(LibPath,
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3,3)
       "kleeRuntimeIntrinsic.bc"
-#else
-      "libkleeRuntimeIntrinsic.bca"
-#endif
     );
   module = linkWithLibrary(module, LibPath.str());
 
@@ -403,17 +328,6 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   if (!operandTypeCheckPass->checkPassed()) {
     klee_error("Unexpected instruction operand types detected");
   }
-#if LLVM_VERSION_CODE < LLVM_VERSION(3, 3)
-  // For cleanliness see if we can discard any of the functions we
-  // forced to import.
-  Function *f;
-  f = module->getFunction("memcpy");
-  if (f && f->use_empty()) f->eraseFromParent();
-  f = module->getFunction("memmove");
-  if (f && f->use_empty()) f->eraseFromParent();
-  f = module->getFunction("memset");
-  if (f && f->use_empty()) f->eraseFromParent();
-#endif
 
   // Write out the .ll assembly file. We truncate long lines to work
   // around a kcachegrind parsing bug (it puts them on new lines), so

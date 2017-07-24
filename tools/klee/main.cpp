@@ -23,22 +23,12 @@
 #include "klee/Interpreter.h"
 #include "klee/Statistics.h"
 
-#if LLVM_VERSION_CODE > LLVM_VERSION(3, 2)
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
-#else
-#include "llvm/Constants.h"
-#include "llvm/Type.h"
-#include "llvm/InstrTypes.h"
-#include "llvm/Instruction.h"
-#include "llvm/Instructions.h"
-#include "llvm/LLVMContext.h"
-#include "llvm/Support/FileSystem.h"
-#endif
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Bitcode/ReaderWriter.h"
@@ -47,11 +37,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 
-#if LLVM_VERSION_CODE < LLVM_VERSION(3, 0)
-#include "llvm/Target/TargetSelect.h"
-#else
 #include "llvm/Support/TargetSelect.h"
-#endif
 #include "llvm/Support/Signals.h"
 
 #if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
@@ -586,11 +572,7 @@ std::string KleeHandler::getRunTimeLibraryPath(const char *argv0) {
   // C++ standard)
   void *MainExecAddr = (void *)(intptr_t)getRunTimeLibraryPath;
   SmallString<128> toolRoot(
-      #if LLVM_VERSION_CODE >= LLVM_VERSION(3,4)
       llvm::sys::fs::getMainExecutable(argv0, MainExecAddr)
-      #else
-      llvm::sys::Path::GetMainExecutable(argv0, MainExecAddr).str()
-      #endif
       );
 
   // Strip off executable so we have a directory path
@@ -637,12 +619,8 @@ static std::string strip(std::string &in) {
 
 static void parseArguments(int argc, char **argv) {
   cl::SetVersionPrinter(klee::printVersion);
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 2)
   // This version always reads response files
   cl::ParseCommandLineOptions(argc, argv, " klee\n");
-#else
-  cl::ParseCommandLineOptions(argc, argv, " klee\n", /*ReadResponseFiles=*/ true);
-#endif
 }
 
 static int initEnv(Module *mainModule) {
@@ -693,13 +671,8 @@ static int initEnv(Module *mainModule) {
   std::vector<Value*> args;
   args.push_back(argcPtr);
   args.push_back(argvPtr);
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 0)
   Instruction* initEnvCall = CallInst::Create(initEnvFn, args,
 					      "", firstInst);
-#else
-  Instruction* initEnvCall = CallInst::Create(initEnvFn, args.begin(), args.end(),
-					      "", firstInst);
-#endif
   Value *argc = new LoadInst(argcPtr, "newArgc", firstInst);
   Value *argv = new LoadInst(argvPtr, "newArgv", firstInst);
 
@@ -759,10 +732,8 @@ static const char *modelledExternals[] = {
   "klee_warning_once",
   "klee_alias_function",
   "klee_stack_trace",
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 1)
   "llvm.dbg.declare",
   "llvm.dbg.value",
-#endif
   "llvm.va_start",
   "llvm.va_end",
   "malloc",
@@ -1041,14 +1012,13 @@ static llvm::Module *linkWithUclibc(llvm::Module *mainModule, StringRef libDir) 
 
   Function *f;
   // force import of __uClibc_main
-  mainModule->getOrInsertFunction("__uClibc_main",
-                                  FunctionType::get(Type::getVoidTy(ctx),
-                                               std::vector<LLVM_TYPE_Q Type*>(),
-                                                    true));
+  mainModule->getOrInsertFunction(
+      "__uClibc_main",
+      FunctionType::get(Type::getVoidTy(ctx), std::vector<Type *>(), true));
 
   // force various imports
   if (WithPOSIXRuntime) {
-    LLVM_TYPE_Q llvm::Type *i8Ty = Type::getInt8Ty(ctx);
+    llvm::Type *i8Ty = Type::getInt8Ty(ctx);
     mainModule->getOrInsertFunction("realpath",
                                     PointerType::getUnqual(i8Ty),
                                     PointerType::getUnqual(i8Ty),
@@ -1125,7 +1095,7 @@ static llvm::Module *linkWithUclibc(llvm::Module *mainModule, StringRef libDir) 
   const FunctionType *ft = uclibcMainFn->getFunctionType();
   assert(ft->getNumParams() == 7);
 
-  std::vector<LLVM_TYPE_Q Type*> fArgs;
+  std::vector<Type *> fArgs;
   fArgs.push_back(ft->getParamType(1)); // argc
   fArgs.push_back(ft->getParamType(2)); // argv
   Function *stub = Function::Create(FunctionType::get(Type::getInt32Ty(ctx), fArgs, false),
@@ -1143,11 +1113,7 @@ static llvm::Module *linkWithUclibc(llvm::Module *mainModule, StringRef libDir) 
   args.push_back(Constant::getNullValue(ft->getParamType(4))); // app_fini
   args.push_back(Constant::getNullValue(ft->getParamType(5))); // rtld_fini
   args.push_back(Constant::getNullValue(ft->getParamType(6))); // stack_end
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 0)
   CallInst::Create(uclibcMainFn, args, "", bb);
-#else
-  CallInst::Create(uclibcMainFn, args.begin(), args.end(), "", bb);
-#endif
 
   new UnreachableInst(ctx, bb);
 
@@ -1260,11 +1226,7 @@ int main(int argc, char **argv, char **envp) {
   case KleeLibc: {
     // FIXME: Find a reasonable solution for this.
     SmallString<128> Path(Opts.LibraryDir);
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3,3)
     llvm::sys::path::append(Path, "klee-libc.bc");
-#else
-    llvm::sys::path::append(Path, "libklee-libc.bca");
-#endif
     mainModule = klee::linkWithLibrary(mainModule, Path.c_str());
     assert(mainModule && "unable to link with klee-libc");
     break;

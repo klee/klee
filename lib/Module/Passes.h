@@ -12,28 +12,18 @@
 
 #include "klee/Config/Version.h"
 
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+#include "llvm/ADT/Triple.h"
+#include "llvm/CodeGen/IntrinsicLowering.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
-#else
-#include "llvm/Constants.h"
-#include "llvm/Instructions.h"
-#include "llvm/Module.h"
-#endif
-#include "llvm/ADT/Triple.h"
-#include "llvm/CodeGen/IntrinsicLowering.h"
 #include "llvm/Pass.h"
 
 namespace llvm {
   class Function;
   class Instruction;
   class Module;
-#if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
-  class TargetData;
-#else
   class DataLayout;
-#endif
   class TargetLowering;
   class Type;
 }
@@ -49,13 +39,9 @@ class RaiseAsmPass : public llvm::ModulePass {
 
   llvm::Triple triple;
 
-  llvm::Function *getIntrinsic(llvm::Module &M,
-                               unsigned IID,
-                               LLVM_TYPE_Q llvm::Type **Tys,
+  llvm::Function *getIntrinsic(llvm::Module &M, unsigned IID, llvm::Type **Tys,
                                unsigned NumTys);
-  llvm::Function *getIntrinsic(llvm::Module &M,
-                               unsigned IID, 
-                               LLVM_TYPE_Q llvm::Type *Ty0) {
+  llvm::Function *getIntrinsic(llvm::Module &M, unsigned IID, llvm::Type *Ty0) {
     return getIntrinsic(M, IID, &Ty0, 1);
   }
 
@@ -71,28 +57,16 @@ public:
   // variables (via intrinsic lowering).
 class IntrinsicCleanerPass : public llvm::ModulePass {
   static char ID;
-#if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
-  const llvm::TargetData &TargetData;
-#else
   const llvm::DataLayout &DataLayout;
-#endif
   llvm::IntrinsicLowering *IL;
   bool LowerIntrinsics;
 
   bool runOnBasicBlock(llvm::BasicBlock &b, llvm::Module &M);
 public:
-#if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
-  IntrinsicCleanerPass(const llvm::TargetData &TD,
-#else
   IntrinsicCleanerPass(const llvm::DataLayout &TD,
-#endif
                        bool LI=true)
     : llvm::ModulePass(ID),
-#if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
-      TargetData(TD),
-#else
       DataLayout(TD),
-#endif
       IL(new llvm::IntrinsicLowering(TD)),
       LowerIntrinsics(LI) {}
   ~IntrinsicCleanerPass() { delete IL; } 
@@ -181,9 +155,7 @@ private:
 };
 
 // This is the interface to a back-ported LLVM pass.
-// Newer versions of LLVM already have this in-tree
-// and we are not supporting vector instructions for
-// LLVM 2.9. Therefore this interface is only needed for
+// Therefore this interface is only needed for
 // LLVM 3.4.
 #if LLVM_VERSION_CODE == LLVM_VERSION(3,4)
 llvm::FunctionPass *createScalarizerPass();
