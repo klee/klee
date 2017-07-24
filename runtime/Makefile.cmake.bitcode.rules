@@ -81,7 +81,7 @@ endif
 # Compute the directory to put build files
 LOCAL_BUILD_DIR := $(abspath $(ROOT_OBJ)/$(DIR_SUFFIX))
 
-C_SRCS := $(shell echo $(SRC_DIR)/*.c)
+C_SRCS := $(sort $(shell echo $(SRC_DIR)/*.c))
 C_SRCS_NO_DIR := $(notdir $(C_SRCS))
 BC_FILES_NO_DIR := $(C_SRCS_NO_DIR:.c=.bc)
 BC_FILES := $(addprefix $(LOCAL_BUILD_DIR)/,$(BC_FILES_NO_DIR))
@@ -91,6 +91,12 @@ BC_FILES := $(addprefix $(LOCAL_BUILD_DIR)/,$(BC_FILES_NO_DIR))
 # a change to the this file which will force a recompile
 # of all sources
 LLVMCC_FLAGS_FILE := $(LOCAL_BUILD_DIR)/LLVMCC_FLAGS
+
+# Path to file that stores list of bc files that constitute
+# bitcode archive or bitcode module. If the list of bitcode
+# files changes this should trigger a rebuild of the bitcode
+# archive or module
+BC_FILE_LIST_FILE := $(LOCAL_BUILD_DIR)/BC_FILE_LIST
 
 # All bitcode files have these additional dependencies
 $(BC_FILES) : $(ADDITIONAL_BUILD_DEPS) $(LLVMCC_FLAGS_FILE)
@@ -114,6 +120,14 @@ $(LLVMCC_FLAGS_FILE): force
 	$(Verb) $(MKDIR) -p "$(dir $(LLVMCC_FLAGS_FILE))"
 	$(Verb)echo "$(LLVMCC_FLAGS_FOR_FILE)" | $(CMP) -s - $@ || echo "$(LLVMCC_FLAGS_FOR_FILE)" > $@
 
+# $(BC_FILE_LIST_FILE) depends on `force` which will force rule to
+# rerun every build. However the rule will only update the file when
+# the list of bc files changes which means we should only trigger a rebuild
+# or the bitcode archive/module when the list of bc files changes
+$(BC_FILE_LIST_FILE): force
+	$(Verb) $(MKDIR) -p "$(dir $(BC_FILE_LIST_FILE))"
+	$(Verb)echo "$(BC_FILES_NO_DIR)" | $(CMP) -s - $@ || echo "$(BC_FILES_NO_DIR)" > $@
+
 clean::
 	@echo "Removing bitcode files"
 	$(Verb) $(RM) -f $(BC_FILES)
@@ -132,10 +146,12 @@ MODULE_FILE := $(MODULE_DEST)/$(MODULE_NAME).bc
 build_at_level:: $(MODULE_FILE)
 
 # Rule for building LLVM bitcode module
-$(MODULE_FILE): $(BC_FILES)
+# NOTE: Dependency on $(BC_FILE_LIST_FILE) is to force
+# rebuild when list of BC_FILES changes.
+$(MODULE_FILE): $(BC_FILES) $(BC_FILE_LIST_FILE)
 	$(Verb) $(MKDIR) -p $(MODULE_DEST)
 	@echo "Creating LLVM module $@"
-	$(Verb)$(LLVM_LINK) -o $@ $^
+	$(Verb)$(LLVM_LINK) -o $@ $(BC_FILES)
 
 clean::
 	@echo "Removing LLVM module $(MODULE_FILE)"
@@ -148,11 +164,13 @@ ARCHIVE_FILE := $(ARCHIVE_DEST)/lib$(ARCHIVE_NAME).bca
 build_at_level:: $(ARCHIVE_FILE)
 
 # Rule for building LLVM bitcode archive
-$(ARCHIVE_FILE): $(BC_FILES)
+# NOTE: Dependency on $(BC_FILE_LIST_FILE) is to force
+# rebuild when list of BC_FILES changes.
+$(ARCHIVE_FILE): $(BC_FILES) $(BC_FILE_LIST_FILE)
 	$(Verb) $(MKDIR) -p $(ARCHIVE_DEST)
 	@echo "Creating LLVM archive $@"
 	$(Verb) $(RM) -f $@
-	$(Verb)$(LLVM_AR) rcs $@ $^
+	$(Verb)$(LLVM_AR) rcs $@ $(BC_FILES)
 
 clean::
 	@echo "Removing LLVM bitcode archive $(ARCHIVE_FILE)"
@@ -170,6 +188,8 @@ debug_vars:
 	@echo "ARCHIVE_FILE := $(ARCHIVE_FILE)"
 	@echo "ASSERTIONS_ENABLED := $(ASSERTIONS_ENABLED)"
 	@echo "BC_FILES := $(BC_FILES)"
+	@echo "BC_FILES_NO_DIR := $(BC_FILES_NO_DIR)"
+	@echo "BC_FILE_LIST_FILE := $(BC_FILE_LIST_FILE)"
 	@echo "BUILD_ROOT := $(BUILD_ROOT)"
 	@echo "C_SRCS := $(C_SRCS)"
 	@echo "CURRENT_DIR := $(CURRENT_DIR)"
