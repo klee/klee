@@ -82,6 +82,12 @@ endif
 LOCAL_BUILD_DIR := $(abspath $(ROOT_OBJ)/$(DIR_SUFFIX))
 
 C_SRCS := $(sort $(shell echo $(SRC_DIR)/*.c))
+
+# Sanity check: Make sure at least one source file was found
+ifneq ($(strip $(filter %*.c,$(C_SRCS))),)
+$(error Failed to find C source files in $(SRC_DIR))
+endif
+
 C_SRCS_NO_DIR := $(notdir $(C_SRCS))
 BC_FILES_NO_DIR := $(C_SRCS_NO_DIR:.c=.bc)
 BC_FILES := $(addprefix $(LOCAL_BUILD_DIR)/,$(BC_FILES_NO_DIR))
