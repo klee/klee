@@ -51,13 +51,13 @@ fi
 ###############################################################################
 # Handle setting up solver configure flags for KLEE
 ###############################################################################
-KLEE_Z3_CONFIGURE_OPTION=""
-KLEE_STP_CONFIGURE_OPTION=""
-KLEE_METASMT_CONFIGURE_OPTION=""
 SOLVER_LIST=$(echo "${SOLVERS}" | sed 's/:/ /')
 
 if [ "X${USE_CMAKE}" == "X1" ]; then
   # Set CMake configure options
+  KLEE_Z3_CONFIGURE_OPTION="-DENABLE_SOLVER_Z3=OFF"
+  KLEE_STP_CONFIGURE_OPTION="-DENABLE_SOLVER_STP=OFF"
+  KLEE_METASMT_CONFIGURE_OPTION="-DENABLE_SOLVER_METASMT=OFF"
   for solver in ${SOLVER_LIST}; do
     echo "Setting CMake configuration option for ${solver}"
     case ${solver} in
@@ -82,6 +82,9 @@ if [ "X${USE_CMAKE}" == "X1" ]; then
   done
   TCMALLOC_OPTION=$([ "${USE_TCMALLOC:-0}" == 1 ] && echo "-DENABLE_TCMALLOC=TRUE" || echo "-DENABLE_TCMALLOC=FALSE")
 else
+  KLEE_Z3_CONFIGURE_OPTION=""
+  KLEE_STP_CONFIGURE_OPTION=""
+  KLEE_METASMT_CONFIGURE_OPTION=""
   for solver in ${SOLVER_LIST}; do
     echo "Setting configuration option for ${solver}"
     case ${solver} in
