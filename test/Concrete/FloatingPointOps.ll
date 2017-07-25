@@ -642,18 +642,16 @@ entry:
   %nan1 = load double* %nan
   %nan2 = load double* %nan
 
-  ; Warning: NaN comparisons with normal operators is BROKEN in LLVM JIT v2.0.  Fixed in v2.1.
-  ; FIXME: Just check against 2.9 and the Unordered checks work, but the ordered ones do not. Should be investigated.
   ; NaNs do different things depending on ordered vs unordered
-;  call void @testFCmpBothOrdered( double %nan1, double 0.000000e+00, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0 )
-;  call void @testFCmpBothOrdered( double %nan1, double %nan2, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0 )
-;  call void @testFCmpBothUnordered( double %nan1, double 0.000000e+00, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1 )
-;  call void @testFCmpBothUnordered( double %nan1, double %nan2, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1 )
+  call void @testFCmpBothOrdered( double %nan1, double 0.000000e+00, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0 )
+  call void @testFCmpBothOrdered( double %nan1, double %nan2, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0 )
+  call void @testFCmpBothUnordered( double %nan1, double 0.000000e+00, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1 )
+  call void @testFCmpBothUnordered( double %nan1, double %nan2, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1 )
 
   ret void
 }
 
-; tes all floating point instructions
+; test all floating point instructions
 define i32 @main() {
 entry:
   call void @testFPTrunc( )
