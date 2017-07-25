@@ -1,13 +1,7 @@
 // RUN: %llvmgcc  -g -emit-llvm -O0 -c -o %t.bc %s
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --libc=klee --no-output --exit-on-error %t.bc > %t.log
-// FIXME: When we remove LLVM 2.9 support just use FileCheck and remove these `grep`s.
-// RUN: grep -q powl\(-11\\.0,0\)=1\\.0\\+ %t.log
-// RUN: grep -q powl\(-11\\.0,1\)=-11\\.0\\+ %t.log
-// RUN: grep -q powl\(-11\\.0,2\)=121\\.0\\+ %t.log
-// RUN: grep -q 1/0=inf %t.log
-// RUN: grep -q 1/-1=-1\\.0\\+ %t.log
-// RUN: grep -q 1/-2=-0\\.50\\+ %t.log
+// RUN: FileCheck %s --input-file=%t.log
 
 #include "klee/klee.h"
 #include <assert.h>
@@ -44,7 +38,6 @@ int main(int argc, char **argv) {
 
   // test 80-bit external dispatch
   long double d = powl((long double)-11.0, (long double)a);
-  // FIXME: Use CHECK-DAG: with FileCheck tool
   // CHECK-DAG: powl(-11.0,0)=1.0
   // CHECK-DAG: powl(-11.0,1)=-11.0
   // CHECK-DAG: powl(-11.0,2)=121.0
@@ -53,7 +46,7 @@ int main(int argc, char **argv) {
   // test 80-bit fdiv
   long double e = (long double)1 / (long double)b;
   // CHECK-DAG: 1/0=inf
-  // CHECK-DAG: 1/1-1=-1.0
+  // CHECK-DAG: 1/-1=-1.0
   // CHECK-DAG: 1/-2=-0.50
   printf("1/%d=%Lf\n", b, e);
 
