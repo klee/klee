@@ -309,20 +309,10 @@ include(${CMAKE_SOURCE_DIR}/cmake/compiler_warnings.cmake)
 ################################################################################
 # STP
 include(${CMAKE_SOURCE_DIR}/cmake/find_stp.cmake)
-
 # Z3
 include(${CMAKE_SOURCE_DIR}/cmake/find_z3.cmake)
-
 # metaSMT
-option(ENABLE_SOLVER_METASMT "Enable metaSMT solver support" OFF)
-if (ENABLE_SOLVER_METASMT)
-  message(STATUS "metaSMT solver support enabled")
-  set(ENABLE_METASMT 1)
-  include(${CMAKE_SOURCE_DIR}/cmake/find_metasmt.cmake)
-else()
-  message(STATUS "metaSMT solver support disabled")
-  set(ENABLE_METASMT 0) # For config.h
-endif()
+include(${CMAKE_SOURCE_DIR}/cmake/find_metasmt.cmake)
 
 if ((NOT ${ENABLE_Z3}) AND (NOT ${ENABLE_STP}) AND (NOT ${ENABLE_METASMT}))
   message(FATAL_ERROR "No solver was specified. At least one solver is required."
