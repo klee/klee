@@ -97,8 +97,8 @@ namespace klee {
     InstructionInfoTable *infos;
 
     std::vector<llvm::Constant*> constants;
-    std::map<llvm::Constant*, KConstant*> constantMap;
-    KConstant* getKConstant(llvm::Constant *c);
+    std::map<const llvm::Constant*, KConstant*> constantMap;
+    KConstant* getKConstant(const llvm::Constant *c);
 
     Cell *constantTable;
 
