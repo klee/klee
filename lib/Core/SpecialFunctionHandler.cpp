@@ -693,8 +693,8 @@ void SpecialFunctionHandler::handleMakeSymbolic(ExecutionState &state,
     
     const ObjectState *old = it->first.second;
     ExecutionState *s = it->second;
-    
-    if (old->readOnly) {
+
+    if (old->readOnly || isConstant(mo->allocSite)) {
       executor.terminateStateOnError(*s, "cannot make readonly object symbolic",
                                      Executor::User);
       return;

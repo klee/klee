@@ -10,6 +10,8 @@
 #ifndef KLEE_SPECIALFUNCTIONHANDLER_H
 #define KLEE_SPECIALFUNCTIONHANDLER_H
 
+#include "llvm/IR/GlobalVariable.h"
+
 #include <iterator>
 #include <map>
 #include <vector>
@@ -67,9 +69,6 @@ namespace klee {
     static const_iterator begin();
     static const_iterator end();
     static int size();
-
-
-
   public:
     SpecialFunctionHandler(Executor &_executor);
 
@@ -91,7 +90,17 @@ namespace klee {
     /* Convenience routines */
 
     std::string readStringAtAddress(ExecutionState &state, ref<Expr> address);
-    
+
+    bool isConstant(const llvm::Value *allocSite) {
+      if (!allocSite)
+        return false;
+      if (const llvm::GlobalVariable *gv =
+              llvm::dyn_cast<llvm::GlobalVariable>(allocSite))
+        return gv->isConstant();
+      else
+        return false;
+    }
+
     /* Handlers */
 
 #define HANDLER(name) void name(ExecutionState &state, \
