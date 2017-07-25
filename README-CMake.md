@@ -55,6 +55,8 @@ cmake -DCMAKE_BUILD_TYPE=Release /path/to/klee/src
 
 * `ENABLE_UNIT_TESTS` (BOOLEAN) - Enable KLEE unit tests.
 
+* `ENABLE_ZLIB` (BOOLEAN) - Enable zlib support.
+
 * `GTEST_SRC_DIR` (STRING) - Path to GTest source tree.
 
 * `KLEE_ENABLE_TIMESTAMP` (BOOLEAN) - Enable timestamps in KLEE sources.

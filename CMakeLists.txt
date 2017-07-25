@@ -362,12 +362,24 @@ endif()
 # Support for compressed logs
 ################################################################################
 find_package(ZLIB)
-if (${ZLIB_FOUND})
-  set(HAVE_ZLIB_H 1) # For config.h
-	set(TARGET_LIBS ${TARGET_LIBS} z)
-  list(APPEND KLEE_COMPONENT_EXTRA_LIBRARIES ${ZLIB_LIBRARIES})
-  list(APPEND KLEE_COMPONENT_EXTRA_INCLUDE_DIRS ${ZLIB_INCLUDE_DIRS})
+if (ZLIB_FOUND)
+  set(ENABLE_ZLIB_DEFAULT ON)
 else()
+  set(ENABLE_ZLIB_DEFAULT OFF)
+endif()
+option(ENABLE_ZLIB "Enable use of zlib" ${ENABLE_ZLIB_DEFAULT})
+if (ENABLE_ZLIB)
+  message(STATUS "Zlib support enabled")
+  if (ZLIB_FOUND)
+    set(HAVE_ZLIB_H 1) # For config.h
+    set(TARGET_LIBS ${TARGET_LIBS} z)
+    list(APPEND KLEE_COMPONENT_EXTRA_LIBRARIES ${ZLIB_LIBRARIES})
+    list(APPEND KLEE_COMPONENT_EXTRA_INCLUDE_DIRS ${ZLIB_INCLUDE_DIRS})
+  else()
+    message(FATAL_ERROR "ENABLE_ZLIB is true but zlib could not be found")
+  endif()
+else()
+  message(STATUS "Zlib support disabled")
   unset(HAVE_ZLIB_H) # For config.h
 endif()
 
