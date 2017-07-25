@@ -224,6 +224,21 @@ else()
   unset(ENABLE_KLEE_DEBUG) # for config.h
 endif()
 
+# Warn about mixing build types.
+# This is likely a bad idea because some of LLVM's header files use the NDEBUG
+# macro which can change things like data layout.
+if (LLVM_ENABLE_ASSERTIONS AND (NOT ENABLE_KLEE_ASSERTS))
+  message(WARNING
+    "LLVM was built with assertions but KLEE will be built without them.\n"
+    "This might lead to unexpected behaviour."
+  )
+elseif ((NOT LLVM_ENABLE_ASSERTIONS) AND ENABLE_KLEE_ASSERTS)
+  message(WARNING
+    "LLVM was built without assertions but KLEE will be built with them.\n"
+    "This might lead to unexpected behaviour."
+  )
+endif()
+
 if (LLVM_ENABLE_VISIBILITY_INLINES_HIDDEN)
   list(APPEND KLEE_COMPONENT_CXX_FLAGS "-fvisibility-inlines-hidden")
 endif()
