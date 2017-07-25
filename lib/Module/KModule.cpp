@@ -104,7 +104,7 @@ KModule::~KModule() {
          ie = functions.end(); it != ie; ++it)
     delete *it;
 
-  for (std::map<llvm::Constant*, KConstant*>::iterator it=constantMap.begin(),
+  for (std::map<const llvm::Constant*, KConstant*>::iterator it=constantMap.begin(),
       itE=constantMap.end(); it!=itE;++it)
     delete it->second;
 
@@ -415,8 +415,8 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   }
 }
 
-KConstant* KModule::getKConstant(Constant *c) {
-  std::map<llvm::Constant*, KConstant*>::iterator it = constantMap.find(c);
+KConstant* KModule::getKConstant(const Constant *c) {
+  std::map<const llvm::Constant*, KConstant*>::iterator it = constantMap.find(c);
   if (it != constantMap.end())
     return it->second;
   return NULL;

@@ -351,6 +351,8 @@ private:
 
   ref<klee::ConstantExpr> evalConstantExpr(const llvm::ConstantExpr *ce);
 
+  ref<klee::ConstantExpr> evalConstant(const llvm::Constant *c);
+
   /// Return a unique constant value for the given expression in the
   /// given state, if it has one (i.e. it provably only has a single
   /// value). Otherwise return the original expression.
@@ -439,9 +441,6 @@ public:
   const InterpreterHandler& getHandler() {
     return *interpreterHandler;
   }
-
-  // XXX should just be moved out to utility module
-  ref<klee::ConstantExpr> evalConstant(const llvm::Constant *c);
 
   virtual void setPathWriter(TreeStreamWriter *tsw) {
     pathWriter = tsw;
