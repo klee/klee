@@ -227,3 +227,16 @@ else()
     set(${OUTPUT_VAR} ${targets_to_return} PARENT_SCOPE)
   endfunction()
 endif()
+
+# Filter out `-DNEBUG` from LLVM_DEFINITIONS.  The caller can use
+# `LLVM_ENABLE_ASSERTIONS` to decide how to set their defines.
+set(_new_llvm_definitions "")
+foreach (llvm_define ${LLVM_DEFINITIONS})
+  if ("${llvm_define}" STREQUAL "-DNDEBUG")
+    # Skip
+  else()
+    list(APPEND _new_llvm_definitions "${llvm_define}")
+  endif()
+endforeach()
+set(LLVM_DEFINITIONS "${_new_llvm_definitions}")
+unset(_new_llvm_definitions)
