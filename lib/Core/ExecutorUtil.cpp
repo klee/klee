@@ -18,6 +18,7 @@
 #include "klee/Config/Version.h"
 #include "klee/Internal/Module/KModule.h"
 
+#include "klee/Internal/Support/ErrorHandling.h"
 #include "klee/util/GetElementPtrTypeIterator.h"
 
 #include "llvm/IR/Function.h"
@@ -25,6 +26,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include <cassert>
 
@@ -33,9 +35,16 @@ using namespace llvm;
 
 namespace klee {
 
-  ref<klee::ConstantExpr> Executor::evalConstant(const Constant *c) {
+  ref<klee::ConstantExpr> Executor::evalConstant(const Constant *c,
+						 const KInstruction *ki) {
+    if (!ki) {
+      KConstant* kc = kmodule->getKConstant(c);
+      if (kc)
+	ki = kc->ki;
+    }
+
     if (const llvm::ConstantExpr *ce = dyn_cast<llvm::ConstantExpr>(c)) {
-      return evalConstantExpr(ce);
+      return evalConstantExpr(ce, ki);
     } else {
       if (const ConstantInt *ci = dyn_cast<ConstantInt>(c)) {
 	return ConstantExpr::alloc(ci->getValue());
@@ -51,7 +60,7 @@ namespace klee {
                  dyn_cast<ConstantDataSequential>(c)) {
 	std::vector<ref<Expr> > kids;
 	for (unsigned i = 0, e = cds->getNumElements(); i != e; ++i) {
-	  ref<Expr> kid = evalConstant(cds->getElementAsConstant(i));
+	  ref<Expr> kid = evalConstant(cds->getElementAsConstant(i), ki);
 	  kids.push_back(kid);
 	}
 	ref<Expr> res = ConcatExpr::createN(kids.size(), kids.data());
@@ -61,7 +70,7 @@ namespace klee {
 	llvm::SmallVector<ref<Expr>, 4> kids;
 	for (unsigned i = cs->getNumOperands(); i != 0; --i) {
 	  unsigned op = i-1;
-	  ref<Expr> kid = evalConstant(cs->getOperand(op));
+	  ref<Expr> kid = evalConstant(cs->getOperand(op), ki);
 
 	  uint64_t thisOffset = sl->getElementOffsetInBits(op),
 	    nextOffset = (op == cs->getNumOperands() - 1)
@@ -80,7 +89,7 @@ namespace klee {
 	llvm::SmallVector<ref<Expr>, 4> kids;
 	for (unsigned i = ca->getNumOperands(); i != 0; --i) {
 	  unsigned op = i-1;
-	  ref<Expr> kid = evalConstant(ca->getOperand(op));
+	  ref<Expr> kid = evalConstant(ca->getOperand(op), ki);
 	  kids.push_back(kid);
 	}
 	ref<Expr> res = ConcatExpr::createN(kids.size(), kids.data());
@@ -90,34 +99,41 @@ namespace klee {
 	const size_t numOperands = cv->getNumOperands();
 	kids.reserve(numOperands);
 	for (unsigned i = 0; i < numOperands; ++i) {
-	  kids.push_back(evalConstant(cv->getOperand(i)));
+	  kids.push_back(evalConstant(cv->getOperand(i), ki));
 	}
 	ref<Expr> res = ConcatExpr::createN(numOperands, kids.data());
 	assert(isa<ConstantExpr>(res) &&
 	       "result of constant vector built is not a constant");
 	return cast<ConstantExpr>(res);
       } else {
-	llvm::report_fatal_error("invalid argument to evalConstant()");
+	std::string msg("Cannot handle constant ");
+	llvm::raw_string_ostream os(msg);
+	os << "'" << *c << "' at location "
+	   << (ki ? ki->printFileLine().c_str() : "[unknown]");
+	klee_error("%s", os.str().c_str());
       }
     }
   }
 
-  ref<ConstantExpr> Executor::evalConstantExpr(const llvm::ConstantExpr *ce) {
+  ref<ConstantExpr> Executor::evalConstantExpr(const llvm::ConstantExpr *ce,
+					       const KInstruction *ki) {
     llvm::Type *type = ce->getType();
 
     ref<ConstantExpr> op1(0), op2(0), op3(0);
     int numOperands = ce->getNumOperands();
 
-    if (numOperands > 0) op1 = evalConstant(ce->getOperand(0));
-    if (numOperands > 1) op2 = evalConstant(ce->getOperand(1));
-    if (numOperands > 2) op3 = evalConstant(ce->getOperand(2));
+    if (numOperands > 0) op1 = evalConstant(ce->getOperand(0), ki);
+    if (numOperands > 1) op2 = evalConstant(ce->getOperand(1), ki);
+    if (numOperands > 2) op3 = evalConstant(ce->getOperand(2), ki);
+
+    std::string msg("Unknown ConstantExpr type");
+    llvm::raw_string_ostream os(msg);
 
     switch (ce->getOpcode()) {
     default :
-      ce->dump();
-      llvm::errs() << "error: unknown ConstantExpr type\n"
-                << "opcode: " << ce->getOpcode() << "\n";
-      abort();
+      os << "'" << *ce << "' at location "
+	 << (ki ? ki->printFileLine().c_str() : "[unknown]");
+      klee_error("%s", os.str().c_str());
 
     case Instruction::Trunc: 
       return op1->Extract(0, getWidthForLLVMType(type));
@@ -162,7 +178,7 @@ namespace klee {
         } else {
           const SequentialType *set = cast<SequentialType>(*ii);
           ref<ConstantExpr> index = 
-            evalConstant(cast<Constant>(ii.getOperand()));
+            evalConstant(cast<Constant>(ii.getOperand()), ki);
           unsigned elementSize = 
             kmodule->targetData->getTypeStoreSize(set->getElementType());
 
