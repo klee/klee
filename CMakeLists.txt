@@ -311,35 +311,7 @@ include(${CMAKE_SOURCE_DIR}/cmake/compiler_warnings.cmake)
 include(${CMAKE_SOURCE_DIR}/cmake/find_stp.cmake)
 
 # Z3
-option(ENABLE_SOLVER_Z3 "Enable Z3 solver support" OFF)
-if (ENABLE_SOLVER_Z3)
-  message(STATUS "Z3 solver support enabled")
-  find_package(Z3)
-  if (Z3_FOUND)
-    message(STATUS "Found Z3")
-    set(ENABLE_Z3 1) # For config.h
-    list(APPEND KLEE_COMPONENT_EXTRA_INCLUDE_DIRS ${Z3_INCLUDE_DIRS})
-    list(APPEND KLEE_SOLVER_LIBRARIES ${Z3_LIBRARIES})
-
-    # Check the signature of `Z3_get_error_msg()`
-    set (_old_CMAKE_REQUIRED_LIBRARIES "${CMAKE_REQUIRED_LIBRARIES}")
-    set(CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES} ${Z3_LIBRARIES})
-    check_prototype_definition(Z3_get_error_msg
-      "Z3_string Z3_get_error_msg(Z3_context c, Z3_error_code err)"
-      "NULL" "${Z3_INCLUDE_DIRS}/z3.h" HAVE_Z3_GET_ERROR_MSG_NEEDS_CONTEXT)
-    set(CMAKE_REQUIRED_LIBRARIES ${_old_CMAKE_REQUIRED_LIBRARIES})
-    if (HAVE_Z3_GET_ERROR_MSG_NEEDS_CONTEXT)
-      message(STATUS "Z3_get_error_msg requires context")
-    else()
-      message(STATUS "Z3_get_error_msg does not require context")
-    endif()
-  else()
-    message(FATAL_ERROR "Z3 not found.")
-  endif()
-else()
-  message(STATUS "Z3 solver support disabled")
-  set(ENABLE_Z3 0) # For config.h
-endif()
+include(${CMAKE_SOURCE_DIR}/cmake/find_z3.cmake)
 
 # metaSMT
 option(ENABLE_SOLVER_METASMT "Enable metaSMT solver support" OFF)
