@@ -23,14 +23,14 @@ Solver *constructSolverChain(Solver *coreSolver,
                              std::string baseSolverQueryKQueryLogPath) {
   Solver *solver = coreSolver;
 
-  if (optionIsSet(queryLoggingOptions, SOLVER_KQUERY)) {
+  if (queryLoggingOptions.isSet(SOLVER_KQUERY)) {
     solver = createKQueryLoggingSolver(solver, baseSolverQueryKQueryLogPath,
                                    MinQueryTimeToLog);
     klee_message("Logging queries that reach solver in .kquery format to %s\n",
                  baseSolverQueryKQueryLogPath.c_str());
   }
 
-  if (optionIsSet(queryLoggingOptions, SOLVER_SMTLIB)) {
+  if (queryLoggingOptions.isSet(SOLVER_SMTLIB)) {
     solver = createSMTLIBLoggingSolver(solver, baseSolverQuerySMT2LogPath,
                                        MinQueryTimeToLog);
     klee_message("Logging queries that reach solver in .smt2 format to %s\n",
@@ -55,14 +55,14 @@ Solver *constructSolverChain(Solver *coreSolver,
   if (DebugValidateSolver)
     solver = createValidatingSolver(solver, coreSolver);
 
-  if (optionIsSet(queryLoggingOptions, ALL_KQUERY)) {
+  if (queryLoggingOptions.isSet(ALL_KQUERY)) {
     solver = createKQueryLoggingSolver(solver, queryKQueryLogPath,
                                        MinQueryTimeToLog);
     klee_message("Logging all queries in .kquery format to %s\n",
                  queryKQueryLogPath.c_str());
   }
 
-  if (optionIsSet(queryLoggingOptions, ALL_SMTLIB)) {
+  if (queryLoggingOptions.isSet(ALL_SMTLIB)) {
     solver =
         createSMTLIBLoggingSolver(solver, querySMT2LogPath, MinQueryTimeToLog);
     klee_message("Logging all queries in .smt2 format to %s\n",

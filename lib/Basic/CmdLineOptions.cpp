@@ -65,12 +65,7 @@ CoreSolverOptimizeDivides("solver-optimize-divides",
                  llvm::cl::desc("Optimize constant divides into add/shift/multiplies before passing to core SMT solver (default=off)"),
                  llvm::cl::init(false));
 
-
-/* Using cl::list<> instead of cl::bits<> results in quite a bit of ugliness when it comes to checking
- * if an option is set. Unfortunately with gcc4.7 cl::bits<> is broken with LLVM2.9 and I doubt everyone
- * wants to patch their copy of LLVM just for these options.
- */
-llvm::cl::list<QueryLoggingSolverType> queryLoggingOptions(
+llvm::cl::bits<QueryLoggingSolverType> queryLoggingOptions(
     "use-query-log",
     llvm::cl::desc("Log queries to a file. Multiple options can be specified separated by a comma. By default nothing is logged."),
     llvm::cl::values(
