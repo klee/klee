@@ -40,11 +40,7 @@ enum QueryLoggingSolverType
     SOLVER_SMTLIB ///< Log queries passed to solver (optimised) in .smt2 (SMT-LIBv2) format
 };
 
-/* Using cl::list<> instead of cl::bits<> results in quite a bit of ugliness when it comes to checking
- * if an option is set. Unfortunately with gcc4.7 cl::bits<> is broken with LLVM2.9 and I doubt everyone
- * wants to patch their copy of LLVM just for these options.
- */
-extern llvm::cl::list<QueryLoggingSolverType> queryLoggingOptions;
+extern llvm::cl::bits<QueryLoggingSolverType> queryLoggingOptions;
 
 enum CoreSolverType {
   STP_SOLVER,
@@ -69,12 +65,6 @@ enum MetaSMTBackendType
 extern llvm::cl::opt<klee::MetaSMTBackendType> MetaSMTBackend;
 
 #endif /* ENABLE_METASMT */
-
-//A bit of ugliness so we can use cl::list<> like cl::bits<>, see queryLoggingOptions
-template <typename T>
-static bool optionIsSet(llvm::cl::list<T> &list, T option) {
-    return std::find(list.begin(), list.end(), option) != list.end();
-}
 
 }
 

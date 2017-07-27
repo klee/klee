@@ -120,7 +120,7 @@ namespace {
     FILE_COMPACT ///
   };
 
-  llvm::cl::list<PrintDebugInstructionsType> DebugPrintInstructions(
+  llvm::cl::bits<PrintDebugInstructionsType> DebugPrintInstructions(
       "debug-print-instructions",
       llvm::cl::desc("Log instructions during execution."),
       llvm::cl::values(
@@ -352,9 +352,9 @@ Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
   this->solver = new TimingSolver(solver, EqualitySubstitution);
   memory = new MemoryManager(&arrayCache);
 
-  if (optionIsSet(DebugPrintInstructions, FILE_ALL) ||
-      optionIsSet(DebugPrintInstructions, FILE_COMPACT) ||
-      optionIsSet(DebugPrintInstructions, FILE_SRC)) {
+  if (DebugPrintInstructions.isSet(FILE_ALL) ||
+      DebugPrintInstructions.isSet(FILE_COMPACT) ||
+      DebugPrintInstructions.isSet(FILE_SRC)) {
     std::string debug_file_name =
         interpreterHandler->getOutputFilename("instructions.txt");
     std::string ErrorInfo;
@@ -1136,19 +1136,19 @@ void Executor::executeGetValue(ExecutionState &state,
 
 void Executor::printDebugInstructions(ExecutionState &state) {
   // check do not print
-  if (DebugPrintInstructions.size() == 0)
+  if (DebugPrintInstructions.getBits() == 0)
 	  return;
 
   llvm::raw_ostream *stream = 0;
-  if (optionIsSet(DebugPrintInstructions, STDERR_ALL) ||
-      optionIsSet(DebugPrintInstructions, STDERR_SRC) ||
-      optionIsSet(DebugPrintInstructions, STDERR_COMPACT))
+  if (DebugPrintInstructions.isSet(STDERR_ALL) ||
+      DebugPrintInstructions.isSet(STDERR_SRC) ||
+      DebugPrintInstructions.isSet(STDERR_COMPACT))
     stream = &llvm::errs();
   else
     stream = &debugLogBuffer;
 
-  if (!optionIsSet(DebugPrintInstructions, STDERR_COMPACT) &&
-      !optionIsSet(DebugPrintInstructions, FILE_COMPACT)) {
+  if (!DebugPrintInstructions.isSet(STDERR_COMPACT) &&
+      !DebugPrintInstructions.isSet(FILE_COMPACT)) {
     (*stream) << "     ";
     state.pc->printFileLine(*stream);
     (*stream) << ":";
@@ -1156,14 +1156,14 @@ void Executor::printDebugInstructions(ExecutionState &state) {
 
   (*stream) << state.pc->info->assemblyLine;
 
-  if (optionIsSet(DebugPrintInstructions, STDERR_ALL) ||
-      optionIsSet(DebugPrintInstructions, FILE_ALL))
+  if (DebugPrintInstructions.isSet(STDERR_ALL) ||
+      DebugPrintInstructions.isSet(FILE_ALL))
     (*stream) << ":" << *(state.pc->inst);
   (*stream) << "\n";
 
-  if (optionIsSet(DebugPrintInstructions, FILE_ALL) ||
-      optionIsSet(DebugPrintInstructions, FILE_COMPACT) ||
-      optionIsSet(DebugPrintInstructions, FILE_SRC)) {
+  if (DebugPrintInstructions.isSet(FILE_ALL) ||
+      DebugPrintInstructions.isSet(FILE_COMPACT) ||
+      DebugPrintInstructions.isSet(FILE_SRC)) {
     debugLogBuffer.flush();
     (*debugInstFile) << debugLogBuffer.str();
     debugBufferString = "";
