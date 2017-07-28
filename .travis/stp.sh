@@ -68,4 +68,5 @@ fi
 if [ $? -ne 0 ]; then
   echo "Build error"
   cat "${STP_LOG}"
+  exit 1
 fi
