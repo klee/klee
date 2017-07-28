@@ -35,17 +35,14 @@ if [ "x${STP_VERSION}" != "x" ]; then
 
   # Determine STP build flags
   if [ "X${STP_VERSION}" = "Xmaster" ]; then
-    # 7e0b096ee79d59bb5c344b7dd4d51b5b8d226221 s/NO_BOOST/ONLY_SIMPLE/
     # 5e9ca6339a2b3b000aa7a90c18601fdcf1212fe1 Silently BUILD_SHARED_LIBS removed. STATICCOMPILE does something similar
     STP_CMAKE_FLAGS=( \
       "-DENABLE_PYTHON_INTERFACE:BOOL=OFF" \
-      "-DONLY_SIMPLE:BOOL=ON" \
       "-DSTATICCOMPILE:BOOL=ON" \
     )
   else
     STP_CMAKE_FLAGS=( \
       "-DENABLE_PYTHON_INTERFACE:BOOL=OFF" \
-      "-DNO_BOOST:BOOL=ON" \
       "-DBUILD_SHARED_LIBS:BOOL=OFF" \
     )
   fi
