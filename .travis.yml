@@ -97,12 +97,13 @@ addons:
     packages:
     - gcc-4.8
     - g++-4.8
+    - libboost-program-options-dev
     - libcap-dev
     - libedit-dev
     - libselinux1-dev
     - cmake
 
-cache: 
+cache:
   apt: true
   directories:
     - $HOME/Library/Caches/Homebrew
