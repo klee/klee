@@ -220,7 +220,8 @@ private:
 
   SmallString<128> m_outputDirectory;
 
-  unsigned m_testIndex;  // number of tests written so far
+  unsigned m_numTotalTests;     // Number of tests received from the interpreter
+  unsigned m_numGeneratedTests; // Number of tests successfully generated
   unsigned m_pathsExplored; // number of paths explored so far
 
   // used for writing .ktest files
@@ -232,7 +233,8 @@ public:
   ~KleeHandler();
 
   llvm::raw_ostream &getInfoStream() const { return *m_infoFile; }
-  unsigned getNumTestCases() { return m_testIndex; }
+  /// Returns the number of test cases successfully generated so far
+  unsigned getNumTestCases() { return m_numGeneratedTests; }
   unsigned getNumPathsExplored() { return m_pathsExplored; }
   void incPathsExplored() { m_pathsExplored++; }
 
@@ -258,15 +260,9 @@ public:
 };
 
 KleeHandler::KleeHandler(int argc, char **argv)
-  : m_interpreter(0),
-    m_pathWriter(0),
-    m_symPathWriter(0),
-    m_infoFile(0),
-    m_outputDirectory(),
-    m_testIndex(0),
-    m_pathsExplored(0),
-    m_argc(argc),
-    m_argv(argv) {
+    : m_interpreter(0), m_pathWriter(0), m_symPathWriter(0), m_infoFile(0),
+      m_outputDirectory(), m_numTotalTests(0), m_numGeneratedTests(0),
+      m_pathsExplored(0), m_argc(argc), m_argv(argv) {
 
   // create output directory (OutputDir or "klee-out-<i>")
   bool dir_given = OutputDir != "";
@@ -411,7 +407,7 @@ void KleeHandler::processTestCase(const ExecutionState &state,
 
     double start_time = util::getWallTime();
 
-    unsigned id = ++m_testIndex;
+    unsigned id = ++m_numTotalTests;
 
     if (success) {
       KTest b;
@@ -433,6 +429,8 @@ void KleeHandler::processTestCase(const ExecutionState &state,
 
       if (!kTest_toFile(&b, getOutputFilename(getTestFilename("ktest", id)).c_str())) {
         klee_warning("unable to write output test case, losing it");
+      } else {
+        ++m_numGeneratedTests;
       }
 
       for (unsigned i=0; i<b.numObjects; i++)
@@ -511,7 +509,7 @@ void KleeHandler::processTestCase(const ExecutionState &state,
       delete f;
     }
 
-    if (m_testIndex == StopAfterNTests)
+    if (m_numGeneratedTests == StopAfterNTests)
       m_interpreter->setHaltExecution(true);
 
     if (WriteTestInfo) {
