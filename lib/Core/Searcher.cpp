@@ -104,8 +104,9 @@ void BFSSearcher::update(ExecutionState *current,
   if (!addedStates.empty() && current &&
       std::find(removedStates.begin(), removedStates.end(), current) ==
           removedStates.end()) {
-    assert(states.front() == current);
-    states.pop_front();
+    auto pos = std::find(states.begin(), states.end(), current);
+    assert(pos != states.end());
+    states.erase(pos);
     states.push_back(current);
   }
 
