@@ -34,6 +34,9 @@ using namespace klee;
 namespace { 
   cl::opt<bool>
   DebugLogStateMerge("debug-log-state-merge");
+
+  // HACK: This is really not good for library design
+  uint64_t globalExecutionStateCounter = 0;
 }
 
 /***/
@@ -65,7 +68,7 @@ StackFrame::~StackFrame() {
 ExecutionState::ExecutionState(KFunction *kf) :
     pc(kf->instructions),
     prevPC(pc),
-
+    uniqueID(globalExecutionStateCounter++), // FIXME: Not thread safe
     queryCost(0.), 
     weight(1),
     depth(0),
@@ -78,7 +81,7 @@ ExecutionState::ExecutionState(KFunction *kf) :
 }
 
 ExecutionState::ExecutionState(const std::vector<ref<Expr> > &assumptions)
-    : constraints(assumptions), queryCost(0.), ptreeNode(0) {}
+    : constraints(assumptions), queryCost(0.), uniqueID(0), ptreeNode(0) {}
 
 ExecutionState::~ExecutionState() {
   for (unsigned int i=0; i<symbolics.size(); i++)
@@ -102,7 +105,7 @@ ExecutionState::ExecutionState(const ExecutionState& state):
 
     addressSpace(state.addressSpace),
     constraints(state.constraints),
-
+    uniqueID(globalExecutionStateCounter++), // FIXME: Not thread safe
     queryCost(state.queryCost),
     weight(state.weight),
     depth(state.depth),

@@ -99,6 +99,10 @@ public:
 
   /// Statistics and information
 
+  /// @brief ID unique identifier among all ExecutionStates created via copy
+  ///  constructor or the root ExecutionState.
+  const uint64_t uniqueID;
+
   /// @brief Costs for all queries issued for this state, in seconds
   mutable double queryCost;
 
@@ -146,7 +150,7 @@ public:
   void removeFnAlias(std::string fn);
 
 private:
-  ExecutionState() : ptreeNode(0) {}
+  ExecutionState() : uniqueID(0), ptreeNode(0) {}
 
 public:
   ExecutionState(KFunction *kf);
