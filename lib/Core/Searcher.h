@@ -10,11 +10,12 @@
 #ifndef KLEE_SEARCHER_H
 #define KLEE_SEARCHER_H
 
+#include "klee/ExecutionState.h"
 #include "llvm/Support/raw_ostream.h"
-#include <vector>
-#include <set>
 #include <map>
 #include <queue>
+#include <set>
+#include <vector>
 
 namespace llvm {
   class BasicBlock;
@@ -24,7 +25,7 @@ namespace llvm {
 }
 
 namespace klee {
-  template<class T> class DiscretePDF;
+  template<class T, class Compare> class DiscretePDF;
   class ExecutionState;
   class Executor;
 
@@ -134,7 +135,27 @@ namespace klee {
     };
 
   private:
-    DiscretePDF<ExecutionState*> *states;
+    // This provides a custom comparison function to `DiscretePDF<>` so that it
+    // doesn't rely on pointer addresses for ordering. Instead we use the
+    // `ExecutionState`'s uniqueID.
+    struct ExecutionStateLessThanCmp {
+      bool operator()(const ExecutionState *lhs,
+                      const ExecutionState *rhs) const {
+        if (lhs == rhs) {
+          assert(lhs->uniqueID == rhs->uniqueID);
+          return false;
+        }
+        assert(lhs != NULL);
+        assert(rhs != NULL);
+#ifndef NDEBUG
+        if (lhs != rhs) {
+          assert(lhs->uniqueID != rhs->uniqueID);
+        }
+#endif
+        return lhs->uniqueID < rhs->uniqueID;
+      }
+    };
+    DiscretePDF<ExecutionState *, ExecutionStateLessThanCmp> *states;
     WeightType type;
     bool updateWeights;
     

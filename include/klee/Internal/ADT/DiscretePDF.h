@@ -6,9 +6,10 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+#include <functional>
 
 namespace klee {
-  template <class T>
+  template <class T, class Compare = std::less<T> >
   class DiscretePDF {
     // not perfectly parameterized, but float/double/int should work ok,
     // although it would be better to have choose argument range from 0
@@ -40,6 +41,7 @@ namespace klee {
     void rotate(Node *node);
     void lengthen(Node *node);
     void propogateSumsUp(Node *n);
+    bool nodesAreEqual(const T node0, const T node1) const;
   };
 
 }

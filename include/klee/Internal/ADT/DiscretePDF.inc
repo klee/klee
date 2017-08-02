@@ -9,9 +9,7 @@
 
 namespace klee {
 
-template <class T>
-class DiscretePDF<T>::Node
-{
+template <class T, class Compare> class DiscretePDF<T, Compare>::Node {
 private:
   bool m_mark;
 
@@ -40,8 +38,9 @@ public:
 
   ///
 
-template <class T>
-DiscretePDF<T>::Node::Node(T key_, weight_type weight_, Node *parent_) {
+template <class T, class Compare>
+DiscretePDF<T, Compare>::Node::Node(T key_, weight_type weight_,
+                                    Node *parent_) {
   m_mark = false;
 
   key = key_;
@@ -51,42 +50,39 @@ DiscretePDF<T>::Node::Node(T key_, weight_type weight_, Node *parent_) {
   parent = parent_;
 }
 
-template <class T>
-DiscretePDF<T>::Node::~Node() {
+template <class T, class Compare> DiscretePDF<T, Compare>::Node::~Node() {
   if (left) delete left;
   if (right) delete right;
 }
 
 //
 
-template <class T>
-DiscretePDF<T>::DiscretePDF() {
+template <class T, class Compare> DiscretePDF<T, Compare>::DiscretePDF() {
   m_root = 0;
 }
 
-template <class T>
-DiscretePDF<T>::~DiscretePDF() {
+template <class T, class Compare> DiscretePDF<T, Compare>::~DiscretePDF() {
   if (m_root) delete m_root;
 }
 
-template <class T>
-bool DiscretePDF<T>::empty() const {
+template <class T, class Compare> bool DiscretePDF<T, Compare>::empty() const {
   return m_root == 0;
 }
 
-template <class T>
-void DiscretePDF<T>::insert(T item, weight_type weight) {
+template <class T, class Compare>
+void DiscretePDF<T, Compare>::insert(T item, weight_type weight) {
   Node *p=0, *n=m_root;
+  Compare lessThanCmpFn;
 
   while (n) {
     if (!n->leftIsBlack() && !n->rightIsBlack())
       split(n);
 
     p = n;
-    if (n->key==item) {
+    if (nodesAreEqual(n->key, item)) {
       assert(0 && "insert: argument(item) already in tree");
     } else {
-      n = (item<n->key)?n->left:n->right;
+      n = lessThanCmpFn(item, n->key) ? n->left : n->right;
     }
   }
 
@@ -95,7 +91,7 @@ void DiscretePDF<T>::insert(T item, weight_type weight) {
   if (!p) {
     m_root = n;
   } else {
-    if (item<p->key) {
+    if (lessThanCmpFn(item, p->key)) {
       p->left = n;
     } else {
       p->right = n;
@@ -107,8 +103,7 @@ void DiscretePDF<T>::insert(T item, weight_type weight) {
   propogateSumsUp(n);
 }
 
-template <class T>
-void DiscretePDF<T>::remove(T item) {
+template <class T, class Compare> void DiscretePDF<T, Compare>::remove(T item) {
   Node **np = lookup(item, 0);
   Node *child, *n = *np;
 
@@ -148,8 +143,8 @@ void DiscretePDF<T>::remove(T item) {
   }
 }
 
-template <class T>
-void DiscretePDF<T>::update(T item, weight_type weight) {
+template <class T, class Compare>
+void DiscretePDF<T, Compare>::update(T item, weight_type weight) {
   Node *n = *lookup(item, 0);
 
   if (!n) {
@@ -160,8 +155,7 @@ void DiscretePDF<T>::update(T item, weight_type weight) {
   }
 }
 
-template <class T>
-T DiscretePDF<T>::choose(double p) {
+template <class T, class Compare> T DiscretePDF<T, Compare>::choose(double p) {
   if ((p < 0.0) || (p >= 1.0))
     assert(0 && "choose: argument(p) outside valid range");
 
@@ -190,15 +184,15 @@ T DiscretePDF<T>::choose(double p) {
   return n->key;
 }
 
-template <class T>
-bool DiscretePDF<T>::inTree(T item) {
+template <class T, class Compare> bool DiscretePDF<T, Compare>::inTree(T item) {
   Node *n = *lookup(item, 0);
 
   return !!n;
 }
 
-template <class T>
-typename DiscretePDF<T>::weight_type DiscretePDF<T>::getWeight(T item) {
+template <class T, class Compare>
+typename DiscretePDF<T, Compare>::weight_type
+DiscretePDF<T, Compare>::getWeight(T item) {
   Node *n = *lookup(item, 0);
   assert(n);
   return n->weight;
@@ -206,17 +200,18 @@ typename DiscretePDF<T>::weight_type DiscretePDF<T>::getWeight(T item) {
 
 //
 
-template <class T>
-typename DiscretePDF<T>::Node **
-DiscretePDF<T>::lookup(T item, Node **parent_out) {
-  Node *n, *p=0, **np=&m_root;
+template <class T, class Compare>
+typename DiscretePDF<T, Compare>::Node **
+DiscretePDF<T, Compare>::lookup(T item, Node **parent_out) {
+  Node *n, *p = 0, **np = &m_root;
+  Compare lessThanCmpFn;
 
   while ((n = *np)) {
-    if (n->key==item) {
+    if (nodesAreEqual(item, n->key)) {
       break;
     } else {
       p = n;
-      if (item<n->key) {
+      if (lessThanCmpFn(item, n->key)) {
         np = &n->left;
       } else {
         np = &n->right;
@@ -229,8 +224,7 @@ DiscretePDF<T>::lookup(T item, Node **parent_out) {
   return np;
 }
 
-template <class T>
-void DiscretePDF<T>::split(Node *n) {
+template <class T, class Compare> void DiscretePDF<T, Compare>::split(Node *n) {
   if (n->left) n->left->markBlack();
   if (n->right) n->right->markBlack();
 
@@ -255,8 +249,8 @@ void DiscretePDF<T>::split(Node *n) {
   }
 }
 
-template <class T>
-void DiscretePDF<T>::rotate(Node *n) {
+template <class T, class Compare>
+void DiscretePDF<T, Compare>::rotate(Node *n) {
   Node *p=n->parent, *pp=p->parent;
 
   n->parent = pp;
@@ -286,8 +280,8 @@ void DiscretePDF<T>::rotate(Node *n) {
   }
 }
 
-template <class T>
-void DiscretePDF<T>::lengthen(Node *n) {
+template <class T, class Compare>
+void DiscretePDF<T, Compare>::lengthen(Node *n) {
   if (!n->isBlack()) {
     n->markBlack();
   } else if (n->parent) {
@@ -337,10 +331,17 @@ void DiscretePDF<T>::lengthen(Node *n) {
   }
 }
 
-template <class T>
-void DiscretePDF<T>::propogateSumsUp(Node *n) {
+template <class T, class Compare>
+void DiscretePDF<T, Compare>::propogateSumsUp(Node *n) {
   for (; n; n=n->parent)
     n->setSum();
+}
+
+
+template <class T, class Compare>
+bool DiscretePDF<T, Compare>::nodesAreEqual(const T node0, const T node1) const {
+  Compare lessThanCmpFn;
+  return (!lessThanCmpFn(node0, node1)) && (!lessThanCmpFn(node1, node0));
 }
 
 }
