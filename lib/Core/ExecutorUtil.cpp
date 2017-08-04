@@ -126,6 +126,30 @@ namespace klee {
     if (numOperands > 1) op2 = evalConstant(ce->getOperand(1), ki);
     if (numOperands > 2) op3 = evalConstant(ce->getOperand(2), ki);
 
+    /* Checking for possible errors during constant folding */
+    switch (ce->getOpcode()) {
+    case Instruction::SDiv:
+    case Instruction::UDiv:
+    case Instruction::SRem:
+    case Instruction::URem:
+      if (op2->getLimitedValue() == 0) {
+	std::string msg("Division/modulo by zero during constant folding at location ");
+	llvm::raw_string_ostream os(msg);
+	os << (ki ? ki->printFileLine().c_str() : "[unknown]");
+	klee_error("%s", os.str().c_str());
+      }
+      break;
+    case Instruction::Shl:
+    case Instruction::LShr:
+    case Instruction::AShr:
+      if (op2->getLimitedValue() >= op1->getWidth()) {
+	std::string msg("Overshift during constant folding at location ");
+	llvm::raw_string_ostream os(msg);
+	os << (ki ? ki->printFileLine().c_str() : "[unknown]");
+	klee_error("%s", os.str().c_str());
+      }
+    }
+
     std::string msg("Unknown ConstantExpr type");
     llvm::raw_string_ostream os(msg);
 
