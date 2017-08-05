@@ -36,87 +36,87 @@ using namespace llvm;
 namespace klee {
 
   ref<klee::ConstantExpr> Executor::evalConstant(const Constant *c,
-						 const KInstruction *ki) {
+                                                 const KInstruction *ki) {
     if (!ki) {
       KConstant* kc = kmodule->getKConstant(c);
       if (kc)
-	ki = kc->ki;
+        ki = kc->ki;
     }
 
     if (const llvm::ConstantExpr *ce = dyn_cast<llvm::ConstantExpr>(c)) {
       return evalConstantExpr(ce, ki);
     } else {
       if (const ConstantInt *ci = dyn_cast<ConstantInt>(c)) {
-	return ConstantExpr::alloc(ci->getValue());
+        return ConstantExpr::alloc(ci->getValue());
       } else if (const ConstantFP *cf = dyn_cast<ConstantFP>(c)) {
-	return ConstantExpr::alloc(cf->getValueAPF().bitcastToAPInt());
+        return ConstantExpr::alloc(cf->getValueAPF().bitcastToAPInt());
       } else if (const GlobalValue *gv = dyn_cast<GlobalValue>(c)) {
-	return globalAddresses.find(gv)->second;
+        return globalAddresses.find(gv)->second;
       } else if (isa<ConstantPointerNull>(c)) {
-	return Expr::createPointer(0);
+        return Expr::createPointer(0);
       } else if (isa<UndefValue>(c) || isa<ConstantAggregateZero>(c)) {
-	return ConstantExpr::create(0, getWidthForLLVMType(c->getType()));
+        return ConstantExpr::create(0, getWidthForLLVMType(c->getType()));
       } else if (const ConstantDataSequential *cds =
                  dyn_cast<ConstantDataSequential>(c)) {
-	std::vector<ref<Expr> > kids;
-	for (unsigned i = 0, e = cds->getNumElements(); i != e; ++i) {
-	  ref<Expr> kid = evalConstant(cds->getElementAsConstant(i), ki);
-	  kids.push_back(kid);
-	}
-	ref<Expr> res = ConcatExpr::createN(kids.size(), kids.data());
-	return cast<ConstantExpr>(res);
+        std::vector<ref<Expr> > kids;
+        for (unsigned i = 0, e = cds->getNumElements(); i != e; ++i) {
+          ref<Expr> kid = evalConstant(cds->getElementAsConstant(i), ki);
+          kids.push_back(kid);
+        }
+        ref<Expr> res = ConcatExpr::createN(kids.size(), kids.data());
+        return cast<ConstantExpr>(res);
       } else if (const ConstantStruct *cs = dyn_cast<ConstantStruct>(c)) {
-	const StructLayout *sl = kmodule->targetData->getStructLayout(cs->getType());
-	llvm::SmallVector<ref<Expr>, 4> kids;
-	for (unsigned i = cs->getNumOperands(); i != 0; --i) {
-	  unsigned op = i-1;
-	  ref<Expr> kid = evalConstant(cs->getOperand(op), ki);
+        const StructLayout *sl = kmodule->targetData->getStructLayout(cs->getType());
+        llvm::SmallVector<ref<Expr>, 4> kids;
+        for (unsigned i = cs->getNumOperands(); i != 0; --i) {
+          unsigned op = i-1;
+          ref<Expr> kid = evalConstant(cs->getOperand(op), ki);
 
-	  uint64_t thisOffset = sl->getElementOffsetInBits(op),
-	    nextOffset = (op == cs->getNumOperands() - 1)
-	    ? sl->getSizeInBits()
-	    : sl->getElementOffsetInBits(op+1);
-	  if (nextOffset-thisOffset > kid->getWidth()) {
-	    uint64_t paddingWidth = nextOffset-thisOffset-kid->getWidth();
-	    kids.push_back(ConstantExpr::create(0, paddingWidth));
-	  }
+          uint64_t thisOffset = sl->getElementOffsetInBits(op),
+            nextOffset = (op == cs->getNumOperands() - 1)
+            ? sl->getSizeInBits()
+            : sl->getElementOffsetInBits(op+1);
+          if (nextOffset-thisOffset > kid->getWidth()) {
+            uint64_t paddingWidth = nextOffset-thisOffset-kid->getWidth();
+            kids.push_back(ConstantExpr::create(0, paddingWidth));
+          }
 
-	  kids.push_back(kid);
-	}
-	ref<Expr> res = ConcatExpr::createN(kids.size(), kids.data());
-	return cast<ConstantExpr>(res);
+          kids.push_back(kid);
+        }
+        ref<Expr> res = ConcatExpr::createN(kids.size(), kids.data());
+        return cast<ConstantExpr>(res);
       } else if (const ConstantArray *ca = dyn_cast<ConstantArray>(c)){
-	llvm::SmallVector<ref<Expr>, 4> kids;
-	for (unsigned i = ca->getNumOperands(); i != 0; --i) {
-	  unsigned op = i-1;
-	  ref<Expr> kid = evalConstant(ca->getOperand(op), ki);
-	  kids.push_back(kid);
-	}
-	ref<Expr> res = ConcatExpr::createN(kids.size(), kids.data());
-	return cast<ConstantExpr>(res);
+        llvm::SmallVector<ref<Expr>, 4> kids;
+        for (unsigned i = ca->getNumOperands(); i != 0; --i) {
+          unsigned op = i-1;
+          ref<Expr> kid = evalConstant(ca->getOperand(op), ki);
+          kids.push_back(kid);
+        }
+        ref<Expr> res = ConcatExpr::createN(kids.size(), kids.data());
+        return cast<ConstantExpr>(res);
       } else if (const ConstantVector *cv = dyn_cast<ConstantVector>(c)) {
-	llvm::SmallVector<ref<Expr>, 8> kids;
-	const size_t numOperands = cv->getNumOperands();
-	kids.reserve(numOperands);
-	for (unsigned i = 0; i < numOperands; ++i) {
-	  kids.push_back(evalConstant(cv->getOperand(i), ki));
-	}
-	ref<Expr> res = ConcatExpr::createN(numOperands, kids.data());
-	assert(isa<ConstantExpr>(res) &&
-	       "result of constant vector built is not a constant");
-	return cast<ConstantExpr>(res);
+        llvm::SmallVector<ref<Expr>, 8> kids;
+        const size_t numOperands = cv->getNumOperands();
+        kids.reserve(numOperands);
+        for (unsigned i = 0; i < numOperands; ++i) {
+          kids.push_back(evalConstant(cv->getOperand(i), ki));
+        }
+        ref<Expr> res = ConcatExpr::createN(numOperands, kids.data());
+        assert(isa<ConstantExpr>(res) &&
+               "result of constant vector built is not a constant");
+        return cast<ConstantExpr>(res);
       } else {
-	std::string msg("Cannot handle constant ");
-	llvm::raw_string_ostream os(msg);
-	os << "'" << *c << "' at location "
-	   << (ki ? ki->printFileLine().c_str() : "[unknown]");
-	klee_error("%s", os.str().c_str());
+        std::string msg("Cannot handle constant ");
+        llvm::raw_string_ostream os(msg);
+        os << "'" << *c << "' at location "
+           << (ki ? ki->printFileLine().c_str() : "[unknown]");
+        klee_error("%s", os.str().c_str());
       }
     }
   }
 
   ref<ConstantExpr> Executor::evalConstantExpr(const llvm::ConstantExpr *ce,
-					       const KInstruction *ki) {
+                                               const KInstruction *ki) {
     llvm::Type *type = ce->getType();
 
     ref<ConstantExpr> op1(0), op2(0), op3(0);
@@ -133,20 +133,20 @@ namespace klee {
     case Instruction::SRem:
     case Instruction::URem:
       if (op2->getLimitedValue() == 0) {
-	std::string msg("Division/modulo by zero during constant folding at location ");
-	llvm::raw_string_ostream os(msg);
-	os << (ki ? ki->printFileLine().c_str() : "[unknown]");
-	klee_error("%s", os.str().c_str());
+        std::string msg("Division/modulo by zero during constant folding at location ");
+        llvm::raw_string_ostream os(msg);
+        os << (ki ? ki->printFileLine().c_str() : "[unknown]");
+        klee_error("%s", os.str().c_str());
       }
       break;
     case Instruction::Shl:
     case Instruction::LShr:
     case Instruction::AShr:
       if (op2->getLimitedValue() >= op1->getWidth()) {
-	std::string msg("Overshift during constant folding at location ");
-	llvm::raw_string_ostream os(msg);
-	os << (ki ? ki->printFileLine().c_str() : "[unknown]");
-	klee_error("%s", os.str().c_str());
+        std::string msg("Overshift during constant folding at location ");
+        llvm::raw_string_ostream os(msg);
+        os << (ki ? ki->printFileLine().c_str() : "[unknown]");
+        klee_error("%s", os.str().c_str());
       }
     }
 
@@ -156,7 +156,7 @@ namespace klee {
     switch (ce->getOpcode()) {
     default :
       os << "'" << *ce << "' at location "
-	 << (ki ? ki->printFileLine().c_str() : "[unknown]");
+         << (ki ? ki->printFileLine().c_str() : "[unknown]");
       klee_error("%s", os.str().c_str());
 
     case Instruction::Trunc: 
