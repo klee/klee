@@ -23,69 +23,67 @@ using namespace llvm;
 
 namespace klee {
 
-llvm::cl::opt<bool>
+cl::opt<bool>
 UseFastCexSolver("use-fast-cex-solver",
-		 llvm::cl::init(false),
-		 llvm::cl::desc("(default=off)"));
+		 cl::init(false),
+		 cl::desc("(default=off)"));
 
-llvm::cl::opt<bool>
+cl::opt<bool>
 UseCexCache("use-cex-cache",
-            llvm::cl::init(true),
-            llvm::cl::desc("Use counterexample caching (default=on)"));
+            cl::init(true),
+            cl::desc("Use counterexample caching (default=on)"));
 
-llvm::cl::opt<bool>
+cl::opt<bool>
 UseCache("use-cache",
-         llvm::cl::init(true),
-         llvm::cl::desc("Use validity caching (default=on)"));
+         cl::init(true),
+         cl::desc("Use validity caching (default=on)"));
 
-llvm::cl::opt<bool>
+cl::opt<bool>
 UseIndependentSolver("use-independent-solver",
-                     llvm::cl::init(true),
-                     llvm::cl::desc("Use constraint independence (default=on)"));
+                     cl::init(true),
+                     cl::desc("Use constraint independence (default=on)"));
 
-llvm::cl::opt<bool>
+cl::opt<bool>
 DebugValidateSolver("debug-validate-solver",
-		             llvm::cl::init(false));
+                    cl::init(false));
   
-llvm::cl::opt<int>
+cl::opt<int>
 MinQueryTimeToLog("min-query-time-to-log",
-                  llvm::cl::init(0),
-                  llvm::cl::value_desc("milliseconds"),
-                  llvm::cl::desc("Set time threshold (in ms) for queries logged in files. "
-                                 "Only queries longer than threshold will be logged. (default=0). "
-                                 "Set this param to a negative value to log timeouts only."));
+                  cl::init(0),
+                  cl::value_desc("milliseconds"),
+                  cl::desc("Set time threshold (in ms) for queries logged in files. "
+                           "Only queries longer than threshold will be logged. (default=0). "
+                           "Set this param to a negative value to log timeouts only."));
 
-llvm::cl::opt<double>
+cl::opt<double>
 MaxCoreSolverTime("max-solver-time",
-           llvm::cl::desc("Maximum amount of time for a single SMT query (default=0s (off)). Enables --use-forked-solver"),
-           llvm::cl::init(0.0),
-           llvm::cl::value_desc("seconds"));
+                  cl::desc("Maximum amount of time for a single SMT query (default=0s (off)). Enables --use-forked-solver"),
+                  cl::init(0.0),
+                  cl::value_desc("seconds"));
 
-llvm::cl::opt<bool>
+cl::opt<bool>
 UseForkedCoreSolver("use-forked-solver",
-             llvm::cl::desc("Run the core SMT solver in a forked process (default=on)"),
-             llvm::cl::init(true));
+                    cl::desc("Run the core SMT solver in a forked process (default=on)"),
+                    cl::init(true));
 
-llvm::cl::opt<bool>
+cl::opt<bool>
 CoreSolverOptimizeDivides("solver-optimize-divides", 
-                 llvm::cl::desc("Optimize constant divides into add/shift/multiplies before passing to core SMT solver (default=off)"),
-                 llvm::cl::init(false));
+                          cl::desc("Optimize constant divides into add/shift/multiplies before passing to core SMT solver (default=off)"),
+                          cl::init(false));
 
-llvm::cl::bits<QueryLoggingSolverType> queryLoggingOptions(
-    "use-query-log",
-    llvm::cl::desc("Log queries to a file. Multiple options can be specified separated by a comma. By default nothing is logged."),
-    llvm::cl::values(
-        clEnumValN(ALL_KQUERY,"all:kquery","All queries in .kquery (KQuery) format"),
-        clEnumValN(ALL_SMTLIB,"all:smt2","All queries in .smt2 (SMT-LIBv2) format"),
-        clEnumValN(SOLVER_KQUERY,"solver:kquery","All queries reaching the solver in .kquery (KQuery) format"),
-        clEnumValN(SOLVER_SMTLIB,"solver:smt2","All queries reaching the solver in .smt2 (SMT-LIBv2) format")
-        KLEE_LLVM_CL_VAL_END),
-    llvm::cl::CommaSeparated
-);
+cl::bits<QueryLoggingSolverType>
+queryLoggingOptions("use-query-log",
+                    cl::desc("Log queries to a file. Multiple options can be specified separated by a comma. By default nothing is logged."),
+                    cl::values(clEnumValN(ALL_KQUERY,"all:kquery","All queries in .kquery (KQuery) format"),
+                               clEnumValN(ALL_SMTLIB,"all:smt2","All queries in .smt2 (SMT-LIBv2) format"),
+                               clEnumValN(SOLVER_KQUERY,"solver:kquery","All queries reaching the solver in .kquery (KQuery) format"),
+                               clEnumValN(SOLVER_SMTLIB,"solver:smt2","All queries reaching the solver in .smt2 (SMT-LIBv2) format")
+                               KLEE_LLVM_CL_VAL_END),
+                    cl::CommaSeparated);
 
-llvm::cl::opt<bool>
-    UseAssignmentValidatingSolver("debug-assignment-validating-solver",
-                                  llvm::cl::init(false));
+cl::opt<bool>
+UseAssignmentValidatingSolver("debug-assignment-validating-solver",
+                              cl::init(false));
 
 void KCommandLine::HideUnrelatedOptions(cl::OptionCategory &Category) {
   StringMap<cl::Option *> map;
@@ -99,7 +97,7 @@ void KCommandLine::HideUnrelatedOptions(cl::OptionCategory &Category) {
 }
 
 void KCommandLine::HideUnrelatedOptions(
-    llvm::ArrayRef<const llvm::cl::OptionCategory *> Categories) {
+    ArrayRef<const cl::OptionCategory *> Categories) {
   for (ArrayRef<const cl::OptionCategory *>::iterator i = Categories.begin(),
                                                       e = Categories.end();
        i != e; i++)
@@ -119,16 +117,15 @@ void KCommandLine::HideUnrelatedOptions(
 #define METASMT_DEFAULT_BACKEND METASMT_BACKEND_STP
 #endif
 
-llvm::cl::opt<klee::MetaSMTBackendType> MetaSMTBackend(
-    "metasmt-backend",
-    llvm::cl::desc("Specify the MetaSMT solver backend type " METASMT_DEFAULT_BACKEND_STR),
-    llvm::cl::values(
-        clEnumValN(METASMT_BACKEND_STP, "stp", "Use metaSMT with STP"),
-        clEnumValN(METASMT_BACKEND_Z3, "z3", "Use metaSMT with Z3"),
-        clEnumValN(METASMT_BACKEND_BOOLECTOR, "btor",
-                   "Use metaSMT with Boolector")
-        KLEE_LLVM_CL_VAL_END),
-    llvm::cl::init(METASMT_DEFAULT_BACKEND));
+cl::opt<klee::MetaSMTBackendType>
+MetaSMTBackend("metasmt-backend",
+               cl::desc("Specify the MetaSMT solver backend type " METASMT_DEFAULT_BACKEND_STR),
+               cl::values(clEnumValN(METASMT_BACKEND_STP, "stp", "Use metaSMT with STP"),
+                          clEnumValN(METASMT_BACKEND_Z3, "z3", "Use metaSMT with Z3"),
+                          clEnumValN(METASMT_BACKEND_BOOLECTOR, "btor",
+                                     "Use metaSMT with Boolector")
+                          KLEE_LLVM_CL_VAL_END),
+               cl::init(METASMT_DEFAULT_BACKEND));
 
 #undef METASMT_DEFAULT_BACKEND
 #undef METASMT_DEFAULT_BACKEND_STR
@@ -155,28 +152,29 @@ llvm::cl::opt<klee::MetaSMTBackendType> MetaSMTBackend(
 #else
 #error "Unsupported solver configuration"
 #endif
-llvm::cl::opt<CoreSolverType> CoreSolverToUse(
-    "solver-backend", llvm::cl::desc("Specifiy the core solver backend to use"),
-    llvm::cl::values(clEnumValN(STP_SOLVER, "stp", "stp" STP_IS_DEFAULT_STR),
-                     clEnumValN(METASMT_SOLVER, "metasmt", "metaSMT" METASMT_IS_DEFAULT_STR),
-                     clEnumValN(DUMMY_SOLVER, "dummy", "Dummy solver"),
-                     clEnumValN(Z3_SOLVER, "z3", "Z3" Z3_IS_DEFAULT_STR)
-                     KLEE_LLVM_CL_VAL_END),
-    llvm::cl::init(DEFAULT_CORE_SOLVER));
 
-llvm::cl::opt<CoreSolverType> DebugCrossCheckCoreSolverWith(
-    "debug-crosscheck-core-solver",
-    llvm::cl::desc(
-        "Specifiy a solver to use for cross checking with the core solver"),
-    llvm::cl::values(clEnumValN(STP_SOLVER, "stp", "stp"),
-                     clEnumValN(METASMT_SOLVER, "metasmt", "metaSMT"),
-                     clEnumValN(DUMMY_SOLVER, "dummy", "Dummy solver"),
-                     clEnumValN(Z3_SOLVER, "z3", "Z3"),
-                     clEnumValN(NO_SOLVER, "none",
-                                "Do not cross check (default)")
-                     KLEE_LLVM_CL_VAL_END),
-    llvm::cl::init(NO_SOLVER));
+cl::opt<CoreSolverType>
+CoreSolverToUse("solver-backend", cl::desc("Specifiy the core solver backend to use"),
+                cl::values(clEnumValN(STP_SOLVER, "stp", "stp" STP_IS_DEFAULT_STR),
+                           clEnumValN(METASMT_SOLVER, "metasmt", "metaSMT" METASMT_IS_DEFAULT_STR),
+                           clEnumValN(DUMMY_SOLVER, "dummy", "Dummy solver"),
+                           clEnumValN(Z3_SOLVER, "z3", "Z3" Z3_IS_DEFAULT_STR)
+                           KLEE_LLVM_CL_VAL_END),
+                cl::init(DEFAULT_CORE_SOLVER));
+
+cl::opt<CoreSolverType>
+DebugCrossCheckCoreSolverWith("debug-crosscheck-core-solver",
+                              cl::desc("Specifiy a solver to use for cross checking with the core solver"),
+                              cl::values(clEnumValN(STP_SOLVER, "stp", "stp"),
+                                         clEnumValN(METASMT_SOLVER, "metasmt", "metaSMT"),
+                                         clEnumValN(DUMMY_SOLVER, "dummy", "Dummy solver"),
+                                         clEnumValN(Z3_SOLVER, "z3", "Z3"),
+                                         clEnumValN(NO_SOLVER, "none",
+                                                    "Do not cross check (default)")
+                                         KLEE_LLVM_CL_VAL_END),
+                              cl::init(NO_SOLVER));
 }
+
 #undef STP_IS_DEFAULT_STR
 #undef METASMT_IS_DEFAULT_STR
 #undef Z3_IS_DEFAULT_STR
