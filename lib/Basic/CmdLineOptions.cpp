@@ -15,6 +15,12 @@
 #include "klee/CommandLine.h"
 #include "klee/Config/Version.h"
 
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/Support/CommandLine.h"
+
+using namespace llvm;
+
 namespace klee {
 
 llvm::cl::opt<bool>
@@ -80,6 +86,25 @@ llvm::cl::bits<QueryLoggingSolverType> queryLoggingOptions(
 llvm::cl::opt<bool>
     UseAssignmentValidatingSolver("debug-assignment-validating-solver",
                                   llvm::cl::init(false));
+
+void KCommandLine::HideUnrelatedOptions(cl::OptionCategory &Category) {
+  StringMap<cl::Option *> map;
+  cl::getRegisteredOptions(map);
+  for (StringMap<cl::Option *>::iterator i = map.begin(), e = map.end(); i != e;
+       i++) {
+    if (i->second->Category != &Category) {
+      i->second->setHiddenFlag(cl::Hidden);
+    }
+  }
+}
+
+void KCommandLine::HideUnrelatedOptions(
+    llvm::ArrayRef<const llvm::cl::OptionCategory *> Categories) {
+  for (ArrayRef<const cl::OptionCategory *>::iterator i = Categories.begin(),
+                                                      e = Categories.end();
+       i != e; i++)
+    HideUnrelatedOptions(*i);
+}
 
 #ifdef ENABLE_METASMT
 
@@ -156,7 +181,3 @@ llvm::cl::opt<CoreSolverType> DebugCrossCheckCoreSolverWith(
 #undef METASMT_IS_DEFAULT_STR
 #undef Z3_IS_DEFAULT_STR
 #undef DEFAULT_CORE_SOLVER
-
-
-
-
