@@ -53,8 +53,8 @@ DiscretePDF<T>::Node::Node(T key_, weight_type weight_, Node *parent_) {
 
 template <class T>
 DiscretePDF<T>::Node::~Node() {
-  if (left) delete left;
-  if (right) delete right;
+  delete left;
+  delete right;
 }
 
 //
@@ -66,7 +66,7 @@ DiscretePDF<T>::DiscretePDF() {
 
 template <class T>
 DiscretePDF<T>::~DiscretePDF() {
-  if (m_root) delete m_root;
+  delete m_root;
 }
 
 template <class T>

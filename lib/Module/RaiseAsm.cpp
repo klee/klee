@@ -103,8 +103,7 @@ bool RaiseAsmPass::runOnModule(Module &M) {
     }
   }
 
-  if (TM)
-    delete TM;
+  delete TM;
 
   return changed;
 }

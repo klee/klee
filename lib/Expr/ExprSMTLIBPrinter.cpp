@@ -61,14 +61,12 @@ ExprSMTLIBPrinter::ExprSMTLIBPrinter()
 }
 
 ExprSMTLIBPrinter::~ExprSMTLIBPrinter() {
-  if (p != NULL)
-    delete p;
+  delete p;
 }
 
 void ExprSMTLIBPrinter::setOutput(llvm::raw_ostream &output) {
   o = &output;
-  if (p != NULL)
-    delete p;
+  delete p;
 
   p = new PrintContext(output);
 }
