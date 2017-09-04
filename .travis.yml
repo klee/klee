@@ -113,7 +113,7 @@ before_install:
     # We assume the Travis image uses Ubuntu 14.04 LTS
     ###########################################################################
     # Update package information
-    - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get update; fi
+    - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-key update; sudo apt-get update; fi
     - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update && brew tap andreamattavelli/klee; fi
     ###########################################################################
     # Set up out of source build directory
