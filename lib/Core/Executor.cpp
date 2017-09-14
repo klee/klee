@@ -419,21 +419,16 @@ const Module *Executor::setModule(llvm::Module *module,
 Executor::~Executor() {
   delete memory;
   delete externalDispatcher;
-  if (processTree)
-    delete processTree;
-  if (specialFunctionHandler)
-    delete specialFunctionHandler;
-  if (statsTracker)
-    delete statsTracker;
+  delete processTree;
+  delete specialFunctionHandler;
+  delete statsTracker;
   delete solver;
   delete kmodule;
   while(!timers.empty()) {
     delete timers.back();
     timers.pop_back();
   }
-  if (debugInstFile) {
-    delete debugInstFile;
-  }
+  delete debugInstFile;
 }
 
 /***/

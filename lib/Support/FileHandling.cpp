@@ -31,8 +31,7 @@ llvm::raw_fd_ostream *klee_open_output_file(std::string &path,
   f = new llvm::raw_fd_ostream(path.c_str(), error, llvm::sys::fs::F_Binary);
 #endif
   if (!error.empty()) {
-    if (f)
-      delete f;
+    delete f;
     f = NULL;
   }
   return f;

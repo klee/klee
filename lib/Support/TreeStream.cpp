@@ -40,8 +40,7 @@ TreeStreamWriter::TreeStreamWriter(const std::string &_path)
 
 TreeStreamWriter::~TreeStreamWriter() {
   flush();
-  if (output)
-    delete output;
+  delete output;
 }
 
 bool TreeStreamWriter::good() {

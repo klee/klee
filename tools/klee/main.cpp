@@ -333,8 +333,8 @@ KleeHandler::KleeHandler(int argc, char **argv)
 }
 
 KleeHandler::~KleeHandler() {
-  if (m_pathWriter) delete m_pathWriter;
-  if (m_symPathWriter) delete m_symPathWriter;
+  delete m_pathWriter;
+  delete m_symPathWriter;
   fclose(klee_warning_file);
   fclose(klee_message_file);
   delete m_infoFile;

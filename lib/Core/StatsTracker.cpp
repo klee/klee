@@ -264,10 +264,8 @@ StatsTracker::StatsTracker(Executor &_executor, std::string _objectFilename,
 }
 
 StatsTracker::~StatsTracker() {  
-  if (statsFile)
-    delete statsFile;
-  if (istatsFile)
-    delete istatsFile;
+  delete statsFile;
+  delete istatsFile;
 }
 
 void StatsTracker::done() {
