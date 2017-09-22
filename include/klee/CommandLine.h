@@ -6,8 +6,10 @@
 #ifndef KLEE_COMMANDLINE_H
 #define KLEE_COMMANDLINE_H
 
-#include "llvm/Support/CommandLine.h"
 #include "klee/Config/config.h"
+
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/CommandLine.h"
 
 namespace klee {
 
@@ -66,7 +68,15 @@ extern llvm::cl::opt<klee::MetaSMTBackendType> MetaSMTBackend;
 
 #endif /* ENABLE_METASMT */
 
+class KCommandLine {
+public:
+  /// Hide all options except the ones in the specified category
+  static void HideUnrelatedOptions(llvm::cl::OptionCategory &Category);
+
+  /// Hide all options except the ones in the specified categories
+  static void HideUnrelatedOptions(
+      llvm::ArrayRef<const llvm::cl::OptionCategory *> Categories);
+};
 }
 
 #endif	/* KLEE_COMMANDLINE_H */
-
