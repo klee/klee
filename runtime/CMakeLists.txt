@@ -115,13 +115,15 @@ ExternalProject_Add_Step(BuildKLEERuntimes RuntimeBuild
 )
 
 # Target for cleaning the bitcode build system
-# FIXME: Invoke `make clean` does not invoke this target. It's also weird
-# that `ExternalProject` provides no way to do a clean.
+# NOTE: Invoking `make clean` does not invoke this target.
+# Instead the user needs to invoke the `clean_all` target.
+# It's also weird that `ExternalProject` provides no way to do a clean.
 add_custom_target(clean_runtime
   COMMAND ${ENV_BINARY} MAKEFLAGS="" ${MAKE_BINARY} -f Makefile.cmake.bitcode clean
   WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
   ${ADD_CUSTOM_COMMAND_USES_TERMINAL_ARG}
 )
+add_dependencies(clean_all clean_runtime)
 
 ###############################################################################
 # Runtime install

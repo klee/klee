@@ -490,6 +490,23 @@ else()
 endif()
 
 ################################################################################
+# Global clean target
+################################################################################
+# CMake already uses the "clean" target name but it doesn't clean everything
+# unfortunately. We can't modify the target so we provide our own "clean_all"
+# target that runs clean. Other rules for performing clean up should declare
+# that "clean_all" depends on those rules.
+add_custom_target(clean_all
+  # Invoke CMake's own clean target
+  COMMAND
+    "${CMAKE_COMMAND}"
+    "--build"
+    "${CMAKE_BINARY_DIR}"
+    "--target"
+    "clean"
+)
+
+################################################################################
 # KLEE runtime support
 ################################################################################
 # This is set here and not in `runtime` because `config.h` needs to be generated.
