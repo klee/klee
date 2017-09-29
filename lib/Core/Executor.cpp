@@ -2744,7 +2744,7 @@ void Executor::updateStates(ExecutionState *current) {
   removedStates.clear();
 
   if (searcher) {
-    searcher->update(nullptr, continuedStates, pausedStates);
+    searcher->updatePaused(continuedStates, pausedStates);
     pausedStates.clear();
     continuedStates.clear();
   }

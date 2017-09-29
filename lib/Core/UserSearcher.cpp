@@ -137,12 +137,6 @@ Searcher *klee::constructUserSearcher(Executor &executor) {
     searcher = new InterleavedSearcher(s);
   }
 
-  if (UseMerge) {
-    if (std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::RandomPath) != CoreSearch.end()){
-      klee_error("use-merge currently does not support random-path, please use another search strategy");
-    }
-  }
-
   if (UseBatchingSearch) {
     searcher = new BatchingSearcher(searcher, time::Span(BatchTime), BatchInstructions);
   }

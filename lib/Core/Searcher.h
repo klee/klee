@@ -17,6 +17,7 @@
 #include <map>
 #include <queue>
 #include <set>
+#include <stack>
 #include <vector>
 
 namespace llvm {
@@ -40,6 +41,12 @@ namespace klee {
     virtual void update(ExecutionState *current,
                         const std::vector<ExecutionState *> &addedStates,
                         const std::vector<ExecutionState *> &removedStates) = 0;
+
+    virtual void
+    updatePaused(const std::vector<ExecutionState *> &unpausedStates,
+                 const std::vector<ExecutionState *> &pausedStates) {
+      update(nullptr, unpausedStates, pausedStates);
+    }
 
     virtual bool empty() = 0;
 
@@ -169,11 +176,20 @@ namespace klee {
   class RandomPathSearcher : public Searcher {
     Executor &executor;
 
+    /// The set of states that are not removed from the processTree, but the
+    /// searcher should ignore
+    std::set<ExecutionState *> ignoreStates;
+
+    ExecutionState &selectStateIgnore();
+    ExecutionState &selectStateStandard();
+
   public:
     RandomPathSearcher(Executor &_executor);
     ~RandomPathSearcher();
 
     ExecutionState &selectState();
+    void updatePaused(const std::vector<ExecutionState *> &unpausedStates,
+                      const std::vector<ExecutionState *> &pausedStates);
     void update(ExecutionState *current,
                 const std::vector<ExecutionState *> &addedStates,
                 const std::vector<ExecutionState *> &removedStates);

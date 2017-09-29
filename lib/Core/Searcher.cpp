@@ -255,6 +255,90 @@ bool WeightedRandomSearcher::empty() {
 }
 
 ///
+namespace {
+/// Backtracks a treesearch.
+/** To be able to ignore certain states from the process tree,
+ * we select a random state from the processTree, and if we are to ignore
+ * this state, we backtrack until we find a suitable state.
+ */
+class BacktrackHelper {
+public:
+  /// Possible directions the backtrack could try.
+  /*  As the processTree is a binary tree,
+   * there are only two possible directions,
+   * and either one, two, or none of them can be moved to.
+   */
+  enum class direction { LEFT, RIGHT, BOTH, NONE };
+
+private:
+  /// @brief The stack of directions that were already visited.
+  std::stack<direction> visited;
+
+public:
+  BacktrackHelper() { visited.push(direction::NONE); }
+  /// Returns the directions that were not already visited.
+  /** This is inverse of the direction on top of the 'visited' stack
+   */
+  direction avail_dir();
+
+  /// @brief Move to parent node
+  void back();
+
+  /// @brief Move to child node. Checks that this node was not already been
+  /// visited
+  void go(direction dir);
+};
+
+BacktrackHelper::direction BacktrackHelper::avail_dir() {
+  switch (visited.top()) {
+  case direction::LEFT:
+    return direction::RIGHT;
+  case direction::RIGHT:
+    return direction::LEFT;
+  case direction::BOTH:
+    return direction::NONE;
+  case direction::NONE:
+    return direction::BOTH;
+  default:
+    assert(0);
+  }
+}
+
+void BacktrackHelper::back() {
+  assert(!visited.empty());
+  visited.pop();
+}
+
+void BacktrackHelper::go(BacktrackHelper::direction dir) {
+  switch (visited.top()) {
+  case direction::LEFT:
+    assert(dir == direction::RIGHT);
+    visited.top() = direction::BOTH;
+    break;
+  case direction::RIGHT:
+    assert(dir == direction::LEFT);
+    visited.top() = direction::BOTH;
+    break;
+  case direction::NONE:
+    switch (dir) {
+    case direction::LEFT:
+      visited.top() = direction::LEFT;
+      break;
+    case direction::RIGHT:
+      visited.top() = direction::RIGHT;
+      break;
+    default:
+      assert(0 && "Not a correct go direction");
+    }
+    break;
+  case direction::BOTH:
+    assert(0 && "No direction to go to");
+    break;
+  }
+  visited.push(direction::NONE);
+}
+} // namespace
+
 RandomPathSearcher::RandomPathSearcher(Executor &_executor)
   : executor(_executor) {
 }
@@ -262,7 +346,69 @@ RandomPathSearcher::RandomPathSearcher(Executor &_executor)
 RandomPathSearcher::~RandomPathSearcher() {
 }
 
-ExecutionState &RandomPathSearcher::selectState() {
+ExecutionState &RandomPathSearcher::selectStateIgnore() {
+  unsigned flips = 0, bits = 0;
+  PTree::Node *n = executor.processTree->root;
+  BacktrackHelper btHelper;
+
+  while (!n->data) {
+    BacktrackHelper::direction avail_dir = btHelper.avail_dir();
+    switch (avail_dir) {
+    case BacktrackHelper::direction::RIGHT:
+      if (n->right) {
+        btHelper.go(BacktrackHelper::direction::RIGHT);
+        n = n->right;
+      } else {
+        btHelper.back();
+        n = n->parent;
+      }
+      break;
+    case BacktrackHelper::direction::LEFT:
+      if (n->left) {
+        btHelper.go(BacktrackHelper::direction::LEFT);
+        n = n->left;
+      } else {
+        btHelper.back();
+        n = n->parent;
+      }
+      break;
+    case BacktrackHelper::direction::BOTH:
+      if (!n->left) {
+        btHelper.go(BacktrackHelper::direction::RIGHT);
+        n = n->right;
+      } else if (!n->right) {
+        btHelper.go(BacktrackHelper::direction::LEFT);
+        n = n->left;
+      } else {
+        if (bits == 0) {
+          flips = theRNG.getInt32();
+          bits = 32;
+        }
+        --bits;
+        if (flips & (1 << bits)) {
+          btHelper.go(BacktrackHelper::direction::LEFT);
+          n = n->left;
+        } else {
+          btHelper.go(BacktrackHelper::direction::RIGHT);
+          n = n->right;
+        }
+      }
+      break;
+    case BacktrackHelper::direction::NONE:
+      btHelper.back();
+      n = n->parent;
+    }
+    if (n->data) {
+      if (ignoreStates.find(n->data) != ignoreStates.end()) {
+        btHelper.back();
+        n = n->parent;
+      }
+    }
+  }
+  return *n->data;
+}
+
+ExecutionState &RandomPathSearcher::selectStateStandard() {
   unsigned flips=0, bits=0;
   PTree::Node *n = executor.processTree->root;
   while (!n->data) {
@@ -283,10 +429,31 @@ ExecutionState &RandomPathSearcher::selectState() {
   return *n->data;
 }
 
-void
-RandomPathSearcher::update(ExecutionState *current,
-                           const std::vector<ExecutionState *> &addedStates,
-                           const std::vector<ExecutionState *> &removedStates) {
+ExecutionState &RandomPathSearcher::selectState() {
+  if (ignoreStates.empty()) {
+    return selectStateStandard();
+  } else {
+    return selectStateIgnore();
+  }
+}
+void RandomPathSearcher::update(
+    ExecutionState *current, const std::vector<ExecutionState *> &addedStates,
+    const std::vector<ExecutionState *> &removedStates) {
+  /// If the executor removed a state that was paused, we can stop ignoring
+  /// this state
+  for (ExecutionState *es : removedStates) {
+    ignoreStates.erase(es);
+  }
+  return;
+}
+
+void RandomPathSearcher::updatePaused(
+    const std::vector<ExecutionState *> &unpausedStates,
+    const std::vector<ExecutionState *> &pausedStates) {
+  ignoreStates.insert(std::begin(pausedStates), std::end(pausedStates));
+  for (ExecutionState *es : unpausedStates) {
+    ignoreStates.erase(es);
+  }
 }
 
 bool RandomPathSearcher::empty() { 
