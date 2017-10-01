@@ -13,13 +13,13 @@ int main()
   klee_make_symbolic(&x, sizeof(x), "x");
   klee_make_symbolic(&y, sizeof(y), "y");
 
-  // CHECK: ubsan_signed_overflow.c:17: overflow on unsigned addition
+  // CHECK: ubsan_signed_overflow.c:17: overflow on addition
   result = x + y;
 
-  // CHECK: ubsan_signed_overflow.c:20: overflow on unsigned subtraction
+  // CHECK: ubsan_signed_overflow.c:20: overflow on subtraction
   result = x - y;
 
-  // CHECK: ubsan_signed_overflow.c:23: overflow on unsigned multiplication
+  // CHECK: ubsan_signed_overflow.c:23: overflow on multiplication
   result = x * y;
 
   return 0;
