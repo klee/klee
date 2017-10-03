@@ -150,6 +150,18 @@ endif()
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules")
 
 ################################################################################
+# Compiler flags for KLEE components
+# Subsequent commands will append to these. These are used instead of
+# directly modifying CMAKE_CXX_FLAGS so that other code can be easily built with
+# different flags.
+################################################################################
+set(KLEE_COMPONENT_EXTRA_INCLUDE_DIRS "")
+set(KLEE_COMPONENT_CXX_DEFINES "")
+set(KLEE_COMPONENT_CXX_FLAGS "")
+set(KLEE_SOLVER_LIBRARIES "")
+set(KLEE_COMPONENT_EXTRA_LIBRARIES "")
+
+################################################################################
 # Assertions
 ################################################################################
 option(ENABLE_KLEE_ASSERTS "Enable KLEE assertions" ON)
@@ -178,17 +190,6 @@ include("${CMAKE_SOURCE_DIR}/cmake/string_to_list.cmake")
 include("${CMAKE_SOURCE_DIR}/cmake/klee_component_add_cxx_flag.cmake")
 include("${CMAKE_SOURCE_DIR}/cmake/add_global_flag.cmake")
 
-################################################################################
-# Compiler flags for KLEE components
-# Subsequent commands will append to these. These are used instead of
-# directly modifying CMAKE_CXX_FLAGS so that other code can be easily built with
-# different flags.
-################################################################################
-set(KLEE_COMPONENT_EXTRA_INCLUDE_DIRS "")
-set(KLEE_COMPONENT_CXX_DEFINES "")
-set(KLEE_COMPONENT_CXX_FLAGS "")
-set(KLEE_SOLVER_LIBRARIES "")
-set(KLEE_COMPONENT_EXTRA_LIBRARIES "")
 
 ################################################################################
 # Find LLVM
