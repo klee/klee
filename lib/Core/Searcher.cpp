@@ -84,6 +84,7 @@ void DFSSearcher::update(ExecutionState *current,
         }
       }
 
+      (void) ok;
       assert(ok && "invalid state removed");
     }
   }
@@ -129,6 +130,7 @@ void BFSSearcher::update(ExecutionState *current,
         }
       }
 
+      (void) ok;
       assert(ok && "invalid state removed");
     }
   }
