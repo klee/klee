@@ -5262,13 +5262,14 @@ fi
       # Need to clear cached result
       unset ac_cv_lib_stp_vc_setInterfaceFlags
 
+      STP_NEEDS_CM5=0
       { $as_echo "$as_me:${as_lineno-$LINENO}: checking for vc_setInterfaceFlags in -lstp" >&5
 $as_echo_n "checking for vc_setInterfaceFlags in -lstp... " >&6; }
 if ${ac_cv_lib_stp_vc_setInterfaceFlags+:} false; then :
   $as_echo_n "(cached) " >&6
 else
   ac_check_lib_save_LIBS=$LIBS
-LIBS="-lstp "$STP_LDFLAGS" "-lminisat"  $LIBS"
+LIBS="-lstp $STP_LDFLAGS -lminisat  $LIBS"
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -5302,12 +5303,64 @@ if test "x$ac_cv_lib_stp_vc_setInterfaceFlags" = xyes; then :
   :
 else
 
-               as_fn_error $? "Unable to link with libstp. Check config.log to see what went wrong" "$LINENO" 5
+               STP_NEEDS_CM5=1; { $as_echo "$as_me:${as_lineno-$LINENO}: result: Could not link with libstp and libminisat only" >&5
+$as_echo "Could not link with libstp and libminisat only" >&6; }
 
 fi
 
 
-      STP_LDFLAGS="${STP_LDFLAGS} -lstp -lminisat"
+      if test "X$STP_NEEDS_CM5" != X0 ; then
+	      # Need to clear cached result
+	      unset ac_cv_lib_stp_vc_setInterfaceFlags
+
+	      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for vc_setInterfaceFlags in -lstp" >&5
+$as_echo_n "checking for vc_setInterfaceFlags in -lstp... " >&6; }
+if ${ac_cv_lib_stp_vc_setInterfaceFlags+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lstp $STP_LDFLAGS -lminisat -lcryptominisat5 -lpthread -lm4ri  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char vc_setInterfaceFlags ();
+int
+main ()
+{
+return vc_setInterfaceFlags ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  ac_cv_lib_stp_vc_setInterfaceFlags=yes
+else
+  ac_cv_lib_stp_vc_setInterfaceFlags=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_stp_vc_setInterfaceFlags" >&5
+$as_echo "$ac_cv_lib_stp_vc_setInterfaceFlags" >&6; }
+if test "x$ac_cv_lib_stp_vc_setInterfaceFlags" = xyes; then :
+  :
+else
+
+		       as_fn_error $? "Unable to link with libstp and cryptominisat. Check config.log to see what went wrong" "$LINENO" 5
+
+fi
+
+        STP_LDFLAGS="${STP_LDFLAGS} -lstp -lminisat -lcryptominisat5 -lpthread -lm4ri"
+      else
+        STP_LDFLAGS="${STP_LDFLAGS} -lstp -lminisat"
+      fi
     else
       STP_LDFLAGS="${STP_LDFLAGS} -lstp"
     fi

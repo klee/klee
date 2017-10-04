@@ -696,12 +696,24 @@ if test "X$ENABLE_STP" != X0; then
       # Need to clear cached result
       unset ac_cv_lib_stp_vc_setInterfaceFlags
 
+      STP_NEEDS_CM5=0
       AC_CHECK_LIB(stp,
                vc_setInterfaceFlags,[:], [
-               AC_MSG_ERROR([Unable to link with libstp. Check config.log to see what went wrong])
-      ], "$STP_LDFLAGS" "-lminisat" )
+               STP_NEEDS_CM5=1; AC_MSG_RESULT([Could not link with libstp and libminisat only])
+      ], [$STP_LDFLAGS -lminisat] )
+      
+      if test "X$STP_NEEDS_CM5" != X0 ; then
+	      # Need to clear cached result
+	      unset ac_cv_lib_stp_vc_setInterfaceFlags
 
-      STP_LDFLAGS="${STP_LDFLAGS} -lstp -lminisat"
+	      AC_CHECK_LIB(stp,
+		       vc_setInterfaceFlags,[:], [
+		       AC_MSG_ERROR([Unable to link with libstp and cryptominisat. Check config.log to see what went wrong])
+	      ], [$STP_LDFLAGS -lminisat -lcryptominisat5 -lpthread -lm4ri] )
+        STP_LDFLAGS="${STP_LDFLAGS} -lstp -lminisat -lcryptominisat5 -lpthread -lm4ri"
+      else
+        STP_LDFLAGS="${STP_LDFLAGS} -lstp -lminisat"
+      fi
     else
       STP_LDFLAGS="${STP_LDFLAGS} -lstp"
     fi
