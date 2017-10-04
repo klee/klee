@@ -91,7 +91,7 @@ void compressed_fd_ostream::write_impl(const char *Ptr, size_t Size) {
   // Check if there is still data to compress
   while (strm.avail_in != 0) {
     // compress data
-    int res = deflate(&strm, Z_NO_FLUSH);
+    int res = deflate(&strm, Z_NO_FLUSH); (void) res;
     assert(res == Z_OK);
     writeFullCompressedData();
   }

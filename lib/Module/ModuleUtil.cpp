@@ -522,6 +522,7 @@ Function *klee::getDirectCallTarget(CallSite cs, bool moduleIsFullyLinked) {
 
   // NOTE: This assert may fire, it isn't necessarily a problem and
   // can be disabled, I just wanted to know when and if it happened.
+  (void) viaConstantExpr;
   assert((!viaConstantExpr) &&
          "FIXME: Unresolved direct target for a constant expression");
   return NULL;
