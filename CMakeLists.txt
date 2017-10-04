@@ -170,7 +170,7 @@ if (ENABLE_KLEE_ASSERTS)
   # Assume that -DNDEBUG isn't set.
 else()
   message(STATUS "KLEE assertions disabled")
-  list(APPEND KLEE_COMPONENT_CXX_DEFINES "NDEBUG")
+  list(APPEND KLEE_COMPONENT_CXX_DEFINES "-DNDEBUG")
 endif()
 
 ################################################################################
