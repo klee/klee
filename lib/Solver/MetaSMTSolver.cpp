@@ -21,11 +21,24 @@
 #include "llvm/Support/ErrorHandling.h"
 
 #include <metaSMT/DirectSolver_Context.hpp>
-#include <metaSMT/backend/Z3_Backend.hpp>
-#include <metaSMT/backend/Boolector.hpp>
-#include <metaSMT/backend/CVC4.hpp>
-#include <metaSMT/backend/Yices2.hpp>
 
+#ifdef METASMT_HAVE_Z3
+#include <metaSMT/backend/Z3_Backend.hpp>
+#endif
+
+#ifdef METASMT_HAVE_BTOR
+#include <metaSMT/backend/Boolector.hpp>
+#endif
+
+#ifdef METASMT_HAVE_CVC4
+#include <metaSMT/backend/CVC4.hpp>
+#endif
+
+#ifdef METASMT_HAVE_YICES2
+#include <metaSMT/backend/Yices2.hpp>
+#endif
+
+#ifdef METASMT_HAVE_STP
 #define Expr VCExpr
 #define Type VCType
 #define STP STP_Backend
@@ -35,6 +48,7 @@
 #undef Type
 #undef STP
 #undef type_t
+#endif
 
 #include <errno.h>
 #include <unistd.h>
@@ -415,31 +429,41 @@ Solver *createMetaSMTSolver() {
   Solver *coreSolver = NULL;
   std::string backend;
   switch (MetaSMTBackend) {
+#ifdef METASMT_HAVE_STP
   case METASMT_BACKEND_STP:
     backend = "STP";
     coreSolver = new MetaSMTSolver<DirectSolver_Context<solver::STP_Backend> >(
         UseForkedCoreSolver, CoreSolverOptimizeDivides);
     break;
+#endif
+#ifdef METASMT_HAVE_Z3
   case METASMT_BACKEND_Z3:
     backend = "Z3";
     coreSolver = new MetaSMTSolver<DirectSolver_Context<solver::Z3_Backend> >(
         UseForkedCoreSolver, CoreSolverOptimizeDivides);
     break;
+#endif
+#ifdef METASMT_HAVE_BTOR
   case METASMT_BACKEND_BOOLECTOR:
     backend = "Boolector";
     coreSolver = new MetaSMTSolver<DirectSolver_Context<solver::Boolector> >(
         UseForkedCoreSolver, CoreSolverOptimizeDivides);
     break;
+#endif
+#ifdef METASMT_HAVE_CVC4
   case METASMT_BACKEND_CVC4:
     backend = "CVC4";
     coreSolver = new MetaSMTSolver<DirectSolver_Context<solver::CVC4> >(
         UseForkedCoreSolver, CoreSolverOptimizeDivides);
     break;
+#endif
+#ifdef METASMT_HAVE_YICES2
   case METASMT_BACKEND_YICES2:
     backend = "Yices2";
     coreSolver = new MetaSMTSolver<DirectSolver_Context<solver::Yices2> >(
         UseForkedCoreSolver, CoreSolverOptimizeDivides);
     break;
+#endif
   default:
     llvm_unreachable("Unrecognised MetaSMT backend");
     break;
