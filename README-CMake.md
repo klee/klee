@@ -6,7 +6,11 @@ its autoconf/Makefile based build system.
 ## Useful top level targets
 
 * `check` - Build and run all tests.
-* `clean` - Clean the build tree. Note this won't clean the runtime build.
+* `clean` - Invoke CMake's built-in target to clean the build tree.  Note this
+  won't invoke the `clean_*` targets. It is advised that the `clean_all` target
+  is used instead.
+* `clean_all` - Run all clean targets.
+* `clean_doxygen` - Clean doxygen build tree.
 * `clean_runtime` - Clean the runtime build tree.
 * `docs` - Build documentation
 * `edit_cache` - Show cmake/ccmake/cmake-gui interface for chaning configure options.
