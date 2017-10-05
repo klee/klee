@@ -147,7 +147,7 @@ make systemtests
 # If metaSMT is the only solver, then rerun lit tests with non-default metaSMT backends
 if [ "X${SOLVERS}" == "XmetaSMT" ]; then
   metasmt_default=`echo "${METASMT_DEFAULT,,}"` # klee_opts and kleaver_opts use lowercase
-  available_metasmt_backends="btor stp z3"
+  available_metasmt_backends="btor stp z3 yices2 cvc4"
   for backend in $available_metasmt_backends; do
     if [ "X${metasmt_default}" != "X$backend" ]; then
       lit -v --param klee_opts=-metasmt-backend=$backend --param kleaver_opts=-metasmt-backend=$backend test/
