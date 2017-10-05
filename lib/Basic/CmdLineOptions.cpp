@@ -112,6 +112,12 @@ void KCommandLine::HideUnrelatedOptions(
 #elif METASMT_DEFAULT_BACKEND_IS_Z3
 #define METASMT_DEFAULT_BACKEND_STR "(default = z3)."
 #define METASMT_DEFAULT_BACKEND METASMT_BACKEND_Z3
+#elif METASMT_DEFAULT_BACKEND_IS_CVC4
+#define METASMT_DEFAULT_BACKEND_STR "(default = cvc4)."
+#define METASMT_DEFAULT_BACKEND METASMT_BACKEND_CVC4
+#elif METASMT_DEFAULT_BACKEND_IS_YICES2
+#define METASMT_DEFAULT_BACKEND_STR "(default = yices2)."
+#define METASMT_DEFAULT_BACKEND METASMT_BACKEND_YICES2
 #else
 #define METASMT_DEFAULT_BACKEND_STR "(default = stp)."
 #define METASMT_DEFAULT_BACKEND METASMT_BACKEND_STP
@@ -123,7 +129,9 @@ MetaSMTBackend("metasmt-backend",
                cl::values(clEnumValN(METASMT_BACKEND_STP, "stp", "Use metaSMT with STP"),
                           clEnumValN(METASMT_BACKEND_Z3, "z3", "Use metaSMT with Z3"),
                           clEnumValN(METASMT_BACKEND_BOOLECTOR, "btor",
-                                     "Use metaSMT with Boolector")
+                                     "Use metaSMT with Boolector"),
+                          clEnumValN(METASMT_BACKEND_CVC4, "cvc4", "Use metaSMT with CVC4"),
+                          clEnumValN(METASMT_BACKEND_YICES2, "yices2", "Use metaSMT with Yices2")
                           KLEE_LLVM_CL_VAL_END),
                cl::init(METASMT_DEFAULT_BACKEND));
 

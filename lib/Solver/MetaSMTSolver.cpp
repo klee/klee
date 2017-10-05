@@ -23,14 +23,18 @@
 #include <metaSMT/DirectSolver_Context.hpp>
 #include <metaSMT/backend/Z3_Backend.hpp>
 #include <metaSMT/backend/Boolector.hpp>
+#include <metaSMT/backend/CVC4.hpp>
+#include <metaSMT/backend/Yices2.hpp>
 
 #define Expr VCExpr
 #define Type VCType
 #define STP STP_Backend
+#define type_t STP_type_t
 #include <metaSMT/backend/STP.hpp>
 #undef Expr
 #undef Type
 #undef STP
+#undef type_t
 
 #include <errno.h>
 #include <unistd.h>
@@ -405,30 +409,35 @@ void MetaSMTSolver<SolverContext>::setCoreSolverTimeout(double timeout) {
   impl->setCoreSolverTimeout(timeout);
 }
 
-template class MetaSMTSolver<DirectSolver_Context<metaSMT::solver::Boolector> >;
-template class MetaSMTSolver<DirectSolver_Context<metaSMT::solver::Z3_Backend> >;
-template class MetaSMTSolver<DirectSolver_Context<metaSMT::solver::STP_Backend> >;
-
 Solver *createMetaSMTSolver() {
-  using metaSMT::DirectSolver_Context;
-  using namespace metaSMT::solver;
+  using namespace metaSMT;
 
   Solver *coreSolver = NULL;
   std::string backend;
   switch (MetaSMTBackend) {
   case METASMT_BACKEND_STP:
     backend = "STP";
-    coreSolver = new MetaSMTSolver<DirectSolver_Context<STP_Backend> >(
+    coreSolver = new MetaSMTSolver<DirectSolver_Context<solver::STP_Backend> >(
         UseForkedCoreSolver, CoreSolverOptimizeDivides);
     break;
   case METASMT_BACKEND_Z3:
     backend = "Z3";
-    coreSolver = new MetaSMTSolver<DirectSolver_Context<Z3_Backend> >(
+    coreSolver = new MetaSMTSolver<DirectSolver_Context<solver::Z3_Backend> >(
         UseForkedCoreSolver, CoreSolverOptimizeDivides);
     break;
   case METASMT_BACKEND_BOOLECTOR:
     backend = "Boolector";
-    coreSolver = new MetaSMTSolver<DirectSolver_Context<Boolector> >(
+    coreSolver = new MetaSMTSolver<DirectSolver_Context<solver::Boolector> >(
+        UseForkedCoreSolver, CoreSolverOptimizeDivides);
+    break;
+  case METASMT_BACKEND_CVC4:
+    backend = "CVC4";
+    coreSolver = new MetaSMTSolver<DirectSolver_Context<solver::CVC4> >(
+        UseForkedCoreSolver, CoreSolverOptimizeDivides);
+    break;
+  case METASMT_BACKEND_YICES2:
+    backend = "Yices2";
+    coreSolver = new MetaSMTSolver<DirectSolver_Context<solver::Yices2> >(
         UseForkedCoreSolver, CoreSolverOptimizeDivides);
     break;
   default:

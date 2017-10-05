@@ -61,7 +61,9 @@ enum MetaSMTBackendType
 {
     METASMT_BACKEND_STP,
     METASMT_BACKEND_Z3,
-    METASMT_BACKEND_BOOLECTOR
+    METASMT_BACKEND_BOOLECTOR,
+    METASMT_BACKEND_CVC4,
+    METASMT_BACKEND_YICES2
 };
 
 extern llvm::cl::opt<klee::MetaSMTBackendType> MetaSMTBackend;
