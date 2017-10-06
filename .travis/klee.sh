@@ -3,6 +3,22 @@
 set -e
 : ${SOLVERS?"Solvers must be specified"}
 
+coverageup()
+{
+  # Create report
+  # (NOTE: "--rc lcov_branch_coverage=1" needs to be added in all calls, otherwise branch coverage gets dropped)
+  lcov --rc lcov_branch_coverage=1 --directory . --capture --output-file coverage.info
+  # Exclude uninteresting coverage goals (LLVM, googletest, and KLEE system and unit tests)
+  lcov --rc lcov_branch_coverage=1 --remove coverage.info '/usr/*' --output-file coverage.info
+  lcov --rc lcov_branch_coverage=1 --remove coverage.info 'test-utils/*' --output-file coverage.info
+  lcov --rc lcov_branch_coverage=1 --remove coverage.info 'klee/test/*' --output-file coverage.info
+  lcov --rc lcov_branch_coverage=1 --remove coverage.info 'klee/unittests/*' --output-file coverage.info
+  # Debug info
+  lcov --rc lcov_branch_coverage=1 --list coverage.info
+  # Uploading report to CodeCov
+  bash <(curl -s https://codecov.io/bash) -X gcov -y ${KLEE_SRC}/codecov.yml -f coverage.info -F $1
+}
+
 ###############################################################################
 # Select the compiler to use to generate LLVM bitcode
 ###############################################################################
@@ -139,6 +155,11 @@ make
 ###############################################################################
 make unittests
 
+# Generate and upload coverage if COVERAGE is set
+if [ ${COVERAGE} -eq 1 ]; then
+  coverageup "unittests"
+fi
+
 ###############################################################################
 # lit tests
 ###############################################################################
@@ -158,34 +179,7 @@ if [ "X${SOLVERS}" == "XmetaSMT" ]; then
   done
 fi
 
-#generate and upload coverage if COVERAGE is set
+# Generate and upload coverage if COVERAGE is set
 if [ ${COVERAGE} -eq 1 ]; then
-
-#get zcov that works with gcov v4.8
-    git clone https://github.com/ddunbar/zcov.git
-    cd zcov
-    sudo python setup.py install
-    sudo mkdir /usr/local/lib/python2.7/dist-packages/zcov-0.3.0.dev0-py2.7.egg/zcov/js
-    cd zcov
-
-#these files are not where zcov expects them to be after install so we move them
-    sudo cp js/sorttable.js /usr/local/lib/python2.7/dist-packages/zcov-0.3.0.dev0-py2.7.egg/zcov/js/sorttable.js
-    sudo cp js/sourceview.js /usr/local/lib/python2.7/dist-packages/zcov-0.3.0.dev0-py2.7.egg/zcov/js/sourceview.js
-    sudo cp style.css /usr/local/lib/python2.7/dist-packages/zcov-0.3.0.dev0-py2.7.egg/zcov/style.css
-
-#install zcov dependency
-    sudo apt-get install -y enscript
-
-#update gcov from v4.6 to v4.8. This is becauase gcda files are made for v4.8 and cause
-#a segmentation fault in v4.6
-    sudo apt-get install -y ggcov
-    sudo rm /usr/bin/gcov
-    sudo ln -s /usr/bin/gcov-4.8 /usr/bin/gcov
-
-#scan and generate coverage
-    zcov scan output.zcov ${BUILD_DIR}
-    zcov genhtml output.zcov coverage/
-#upload the coverage data, currently to a random ftp server
-    tar -zcvf coverage.tar.gz coverage/
-    curl --form "file=@coverage.tar.gz" -u ${USER}:${PASSWORD} ${COVERAGE_SERVER}
+  coverageup "systemtests"
 fi
