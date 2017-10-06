@@ -1,0 +1,16 @@
+codecov:
+  disable_default_path_fixes: true
+
+coverage:
+  status:
+    project: no
+    patch: yes
+    changes: no
+
+fixes:
+  - "home/travis/build/klee/klee::"
+ignore:
+  - "usr/"
+  - "test/"
+  - "unittests"
+  - "**/test-utils"
