@@ -55,6 +55,14 @@ namespace {
 }
 
 
+void klee::initializeSearchOptions() {
+  // default values
+  if (CoreSearch.empty()) {
+    CoreSearch.push_back(Searcher::RandomPath);
+    CoreSearch.push_back(Searcher::NURS_CovNew);
+  }
+}
+
 bool klee::userSearcherRequiresMD2U() {
   return (std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::NURS_MD2U) != CoreSearch.end() ||
 	  std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::NURS_CovNew) != CoreSearch.end() ||
@@ -83,12 +91,6 @@ Searcher *getNewSearcher(Searcher::CoreSearchType type, Executor &executor) {
 }
 
 Searcher *klee::constructUserSearcher(Executor &executor) {
-
-  // default values
-  if (CoreSearch.size() == 0) {
-    CoreSearch.push_back(Searcher::RandomPath);
-    CoreSearch.push_back(Searcher::NURS_CovNew);
-  }
 
   Searcher *searcher = getNewSearcher(CoreSearch[0], executor);
   
