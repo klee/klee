@@ -661,7 +661,7 @@ add_subdirectory(tools)
 ################################################################################
 # Testing
 ################################################################################
-option(ENABLE_UNIT_TESTS "Enable unit tests" ON)
+option(ENABLE_UNIT_TESTS "Enable unit tests" OFF)
 option(ENABLE_SYSTEM_TESTS "Enable system tests" ON)
 
 # This provides a migration path for older build directories that have this
