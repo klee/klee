@@ -86,8 +86,12 @@ UseAssignmentValidatingSolver("debug-assignment-validating-solver",
                               cl::init(false));
 
 void KCommandLine::HideUnrelatedOptions(cl::OptionCategory &Category) {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 7)
+  StringMap<cl::Option *> &map = cl::getRegisteredOptions();
+#else
   StringMap<cl::Option *> map;
   cl::getRegisteredOptions(map);
+#endif
   for (StringMap<cl::Option *>::iterator i = map.begin(), e = map.end(); i != e;
        i++) {
     if (i->second->Category != &Category) {
