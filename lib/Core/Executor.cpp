@@ -3520,8 +3520,6 @@ unsigned Executor::getSymbolicPathStreamID(const ExecutionState &state) {
 void Executor::getConstraintLog(const ExecutionState &state, std::string &res,
                                 Interpreter::LogType logFormat) {
 
-  std::ostringstream info;
-
   switch (logFormat) {
   case STP: {
     Query query(state.constraints, ConstantExpr::alloc(0, Expr::Bool));
