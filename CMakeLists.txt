@@ -370,6 +370,8 @@ OPTION(ENABLE_TCMALLOC "Enable TCMalloc support" OFF)
 if (ENABLE_TCMALLOC)
   message(STATUS "TCMalloc support enabled")
   set(TCMALLOC_HEADER "gperftools/malloc_extension.h")
+  find_path(TCMALLOC_INCLUDE_DIR "${TCMALLOC_HEADER}")
+  set(CMAKE_REQUIRED_INCLUDES "${TCMALLOC_INCLUDE_DIR}")
   check_include_file_cxx("${TCMALLOC_HEADER}" HAVE_GPERFTOOLS_MALLOC_EXTENSION_H)
   if (${HAVE_GPERFTOOLS_MALLOC_EXTENSION_H})
     find_library(TCMALLOC_LIBRARIES
