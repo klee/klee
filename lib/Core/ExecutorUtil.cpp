@@ -119,6 +119,11 @@ namespace klee {
         assert(isa<ConstantExpr>(res) &&
                "result of constant vector built is not a constant");
         return cast<ConstantExpr>(res);
+      } else if (const BlockAddress * ba = dyn_cast<BlockAddress>(c)) {
+        // return the address of the specified basic block in the specified function
+        const auto arg_bb = (BasicBlock *) ba->getOperand(1);
+        const auto res = Expr::createPointer((uint64_t) (unsigned long) (void *) arg_bb);
+        return cast<ConstantExpr>(res);
       } else {
         std::string msg("Cannot handle constant ");
         llvm::raw_string_ostream os(msg);

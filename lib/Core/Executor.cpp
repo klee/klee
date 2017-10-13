@@ -1526,6 +1526,79 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     }
     break;
   }
+  case Instruction::IndirectBr: {
+    // implements indirect branch to a label within the current function
+    const auto bi = cast<IndirectBrInst>(i);
+    auto address = eval(ki, 0, state).value;
+    address = toUnique(state, address);
+
+    // concrete address
+    if (const auto CE = dyn_cast<ConstantExpr>(address.get())) {
+      const auto bb_address = (BasicBlock *) CE->getZExtValue(Context::get().getPointerWidth());
+      transferToBasicBlock(bb_address, bi->getParent(), state);
+      break;
+    }
+
+    // symbolic address
+    const auto numDestinations = bi->getNumDestinations();
+    std::vector<BasicBlock *> targets;
+    targets.reserve(numDestinations);
+    std::vector<ref<Expr>> expressions;
+    expressions.reserve(numDestinations);
+
+    ref<Expr> errorCase = ConstantExpr::alloc(1, Expr::Bool);
+    SmallPtrSet<BasicBlock *, 5> destinations;
+    // collect and check destinations from label list
+    for (unsigned k = 0; k < numDestinations; ++k) {
+      // filter duplicates
+      const auto d = bi->getDestination(k);
+      if (destinations.count(d)) continue;
+      destinations.insert(d);
+
+      // create address expression
+      const auto PE = Expr::createPointer((uint64_t) (unsigned long) (void *) d);
+      ref<Expr> e = EqExpr::create(address, PE);
+
+      // exclude address from errorCase
+      errorCase = AndExpr::create(errorCase, Expr::createIsZero(e));
+
+      // check feasibility
+      bool result;
+      bool success __attribute__ ((unused)) = solver->mayBeTrue(state, e, result);
+      assert(success && "FIXME: Unhandled solver failure");
+      if (result) {
+        targets.push_back(d);
+        expressions.push_back(e);
+      }
+    }
+    // check errorCase feasibility
+    bool result;
+    bool success __attribute__ ((unused)) = solver->mayBeTrue(state, errorCase, result);
+    assert(success && "FIXME: Unhandled solver failure");
+    if (result) {
+      expressions.push_back(errorCase);
+    }
+
+    // fork states
+    std::vector<ExecutionState *> branches;
+    branch(state, expressions, branches);
+
+    // terminate error state
+    if (result) {
+      terminateStateOnExecError(*branches.back(), "indirectbr: illegal label address");
+      branches.pop_back();
+    }
+
+    // branch states to resp. target blocks
+    assert(targets.size() == branches.size());
+    for (std::vector<ExecutionState *>::size_type k = 0; k < branches.size(); ++k) {
+      if (branches[k]) {
+        transferToBasicBlock(targets[k], bi->getParent(), *branches[k]);
+      }
+    }
+
+    break;
+  }
   case Instruction::Switch: {
     SwitchInst *si = cast<SwitchInst>(i);
     ref<Expr> cond = eval(ki, 0, state).value;
@@ -1641,7 +1714,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       }
     }
     break;
- }
+  }
   case Instruction::Unreachable:
     // Note that this is not necessarily an internal bug, llvm will
     // generate unreachable instructions in cases where it knows the

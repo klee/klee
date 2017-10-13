@@ -1,36 +1,38 @@
 // RUN: %llvmgcc -emit-llvm -g -c %s -o %t.bc
 // RUN: rm -rf %t.klee-out
-// RUN: not %klee --output-dir=%t.klee-out %t.bc 2> %t.log
-// RUN: FileCheck --input-file %t.log %s
-
-/* 
-   This currently tests that KLEE clearly reports that it doesn't
-   support taking the address of the labels, in particular
-   blockaddress constants.
-
-   The test would need to be changes once support for this feature is
-   added. 
-*/
+// RUN: %klee --output-dir=%t.klee-out %t.bc > %t.log
+// RUN: FileCheck --input-file=%t.log %s
 
 #include <stdio.h>
 
-int main (int argc, char** argv)
-{
-  int i = 1;
-  // CHECK: Cannot handle constant 'i8* blockaddress 
-  // CHECK: AddressOfLabels.c:[[@LINE+1]]
-  void * lptr = &&one;
+int main(int argc, char * argv[]) {
+	// prevent CFGSimplificationPass optimisation
+	void * dummy = &&one;
+	switch(argc) {
+		case 1: break;
+		case 2:
+			dummy = &&three;
+			goto *dummy;
+		default:
+			goto *dummy;
+	}
 
-  if (argc > 1)
-    lptr = &&two;
-  
-  goto *lptr;
+	// the real test
+	void * lptr = &&two;
+	goto *lptr;
 
- one:
-  printf("argc is 1\n");
-  return 0;
-  
- two:
-  printf("argc is >1\n");
-  return 0;
+one:
+	puts("Label one");
+// CHECK-NOT: Label one
+	return 1;
+
+two:
+	puts("Label two");
+// CHECK: Label two
+	return 0;
+
+three:
+	puts("Label three");
+// CHECK-NOT: Label three
+	return 1;
 }
