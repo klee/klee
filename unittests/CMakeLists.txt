@@ -52,7 +52,12 @@ define_property(GLOBAL
   FULL_DOCS "KLEE unit tests"
 )
 
-set(GTEST_INCLUDE_DIR "${GTEST_SRC_DIR}/include")
+set(GTEST_INCLUDE_DIR
+  "${GTEST_SRC_DIR}/include"
+  CACHE
+  PATH
+  "Path to GTest include directory"
+)
 
 if (NOT IS_DIRECTORY "${GTEST_INCLUDE_DIR}")
   message(FATAL_ERROR
