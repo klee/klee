@@ -63,6 +63,9 @@ cmake -DCMAKE_BUILD_TYPE=Release /path/to/klee/src
 
 * `GTEST_SRC_DIR` (STRING) - Path to GTest source tree.
 
+* `GTEST_INCLUDE_DIR` (STRING) - Path to GTest include directory,
+   if it is not under `GTEST_SRC_DIR`.
+
 * `KLEE_ENABLE_TIMESTAMP` (BOOLEAN) - Enable timestamps in KLEE sources.
 
 * `KLEE_UCLIBC_PATH` (STRING) - Path to klee-uclibc root directory.
