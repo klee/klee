@@ -58,9 +58,11 @@ namespace klee {
         return ConstantExpr::create(0, getWidthForLLVMType(c->getType()));
       } else if (const ConstantDataSequential *cds =
                  dyn_cast<ConstantDataSequential>(c)) {
+        // Handle a vector or array: first element has the smallest address,
+        // the last element the highest
         std::vector<ref<Expr> > kids;
-        for (unsigned i = 0, e = cds->getNumElements(); i != e; ++i) {
-          ref<Expr> kid = evalConstant(cds->getElementAsConstant(i), ki);
+        for (unsigned i = cds->getNumElements(); i != 0; --i) {
+          ref<Expr> kid = evalConstant(cds->getElementAsConstant(i - 1), ki);
           kids.push_back(kid);
         }
         ref<Expr> res = ConcatExpr::createN(kids.size(), kids.data());
