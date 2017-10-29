@@ -37,6 +37,7 @@ namespace klee {
 
     bool isLittleEndian() const { return IsLittleEndian; }
 
+    /// Returns width of the pointer in bits
     Expr::Width getPointerWidth() const { return PointerWidth; }
   };
   
