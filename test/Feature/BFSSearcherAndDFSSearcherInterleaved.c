@@ -38,12 +38,6 @@ int main() {
     }
   }
 
-  // exactly 4 characters
-  // CHECK: {{^[A-D]{4}$}}
-
-  // for each of A, B, C and D: occurs exactly once
-  // CHECK-SAME: {{^[B-D]*A[B-D]*$}}
-  // CHECK-SAME: {{^[A,C-D]*B[A,C-D]*$}}
-  // CHECK-SAME: {{^[A-B,D]*C[A-B,D]*$}}
-  // CHECK-SAME: {{^[A-C]*D[A-C]*$}}
+  // exactly 4 characters, each of A, B, C and D occur exactly once
+  // CHECK: {{^(ABCD|ABDC|ACBD|ACDB|ADBC|ADCB|BACD|BADC|BCAD|BCDA|BDAC|BDCA|CABD|CADB|CBAD|CBDA|CDAB|CDBA|DABC|DACB|DBAC|DBCA|DCAB|DCBA)$}}
 }
