@@ -665,15 +665,22 @@ void SpecialFunctionHandler::handleMakeSymbolic(ExecutionState &state,
                                                 std::vector<ref<Expr> > &arguments) {
   std::string name;
 
-  // FIXME: For backwards compatibility, we should eventually enforce the
-  // correct arguments.
-  if (arguments.size() == 2) {
+  // FIXME: For backwards compatibility. We should eventually enforce the
+  // correct arguments and types.
+  switch (arguments.size()) {
+    case 2:
+      klee_warning("klee_make_symbolic: deprecated number of arguments (2 instead of 3)");
+      break;
+    case 3:
+      name = readStringAtAddress(state, arguments[2]);
+      break;
+    default:
+      executor.terminateStateOnError(state, "illegal number of arguments to klee_make_symbolic(void*, size_t, char*)", Executor::User);
+      return;
+  }
+  if (name.length() == 0) {
     name = "unnamed";
-  } else {
-    // FIXME: Should be a user.err, not an assert.
-    assert(arguments.size()==3 &&
-           "invalid number of arguments to klee_make_symbolic");  
-    name = readStringAtAddress(state, arguments[2]);
+    klee_warning("klee_make_symbolic: renamed empty name to \"unnamed\"");
   }
 
   Executor::ExactResolutionList rl;
