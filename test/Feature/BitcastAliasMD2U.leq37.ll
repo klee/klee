@@ -1,16 +1,16 @@
-; LLVM 3.8 requires a type as the first argument to 'alias'
 ; LLVM 3.7 requires a type as the first argument to 'getelementptr'
 ; LLVM 3.7 no longer accepts '*' with a 'call'
-; REQUIRES: geq-llvm-3.8
+; REQUIRES: geq-llvm-3.7
+; REQUIRES: lt-llvm-3.8
 ; RUN: llvm-as %s -f -o %t1.bc
 ; RUN: rm -rf %t.klee-out
-; RUN: %klee --output-dir=%t.klee-out -disable-opt %t1.bc > %t2
+; RUN: %klee --output-dir=%t.klee-out -disable-opt -search=nurs:md2u %t1.bc > %t2
 ; RUN: grep PASS %t2
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
 target triple = "x86_64-unknown-linux-gnu"
 
-@foo = alias i32 (i32), i32 (i32)* @__foo
+@foo = alias i32 (i32)* @__foo
 
 define i32 @__foo(i32 %i) nounwind {
 entry:
