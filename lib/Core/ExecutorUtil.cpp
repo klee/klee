@@ -69,6 +69,8 @@ namespace klee {
           ref<Expr> kid = evalConstant(cds->getElementAsConstant(i - 1), ki);
           kids.push_back(kid);
         }
+        assert(Context::get().isLittleEndian() &&
+               "FIXME:Broken for big endian");
         ref<Expr> res = ConcatExpr::createN(kids.size(), kids.data());
         return cast<ConstantExpr>(res);
       } else if (const ConstantStruct *cs = dyn_cast<ConstantStruct>(c)) {
@@ -89,6 +91,8 @@ namespace klee {
 
           kids.push_back(kid);
         }
+        assert(Context::get().isLittleEndian() &&
+               "FIXME:Broken for big endian");
         ref<Expr> res = ConcatExpr::createN(kids.size(), kids.data());
         return cast<ConstantExpr>(res);
       } else if (const ConstantArray *ca = dyn_cast<ConstantArray>(c)){
@@ -98,6 +102,8 @@ namespace klee {
           ref<Expr> kid = evalConstant(ca->getOperand(op), ki);
           kids.push_back(kid);
         }
+        assert(Context::get().isLittleEndian() &&
+               "FIXME:Broken for big endian");
         ref<Expr> res = ConcatExpr::createN(kids.size(), kids.data());
         return cast<ConstantExpr>(res);
       } else if (const ConstantVector *cv = dyn_cast<ConstantVector>(c)) {
@@ -107,6 +113,8 @@ namespace klee {
         for (unsigned i = numOperands; i != 0; --i) {
           kids.push_back(evalConstant(cv->getOperand(i - 1), ki));
         }
+        assert(Context::get().isLittleEndian() &&
+               "FIXME:Broken for big endian");
         ref<Expr> res = ConcatExpr::createN(numOperands, kids.data());
         assert(isa<ConstantExpr>(res) &&
                "result of constant vector built is not a constant");
