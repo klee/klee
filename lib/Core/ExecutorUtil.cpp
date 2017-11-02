@@ -104,8 +104,8 @@ namespace klee {
         llvm::SmallVector<ref<Expr>, 8> kids;
         const size_t numOperands = cv->getNumOperands();
         kids.reserve(numOperands);
-        for (unsigned i = 0; i < numOperands; ++i) {
-          kids.push_back(evalConstant(cv->getOperand(i), ki));
+        for (unsigned i = numOperands; i != 0; --i) {
+          kids.push_back(evalConstant(cv->getOperand(i - 1), ki));
         }
         ref<Expr> res = ConcatExpr::createN(numOperands, kids.data());
         assert(isa<ConstantExpr>(res) &&
