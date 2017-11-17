@@ -213,7 +213,11 @@ namespace klee {
           continue;
 
         // Handle a struct index, which adds its field offset to the pointer.
+#if LLVM_VERSION_CODE >= LLVM_VERSION(4, 0)
+        if (auto STy = ii.getStructTypeOrNull()) {
+#else
         if (StructType *STy = dyn_cast<StructType>(*ii)) {
+#endif
           unsigned ElementIdx = indexOp->getZExtValue();
           const StructLayout *SL = kmodule->targetData->getStructLayout(STy);
           base = base->Add(
