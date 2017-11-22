@@ -86,6 +86,59 @@ public:
   }
   inline ref<Expr> getMul() { return mul; }
 };
+
+//------------------------- VALUE-BASED OPTIMIZATION-------------------------//
+class ArrayReadExprVisitor : public ExprVisitor {
+private:
+  std::vector<const ReadExpr *> &reads;
+  std::map<const ReadExpr *, std::pair<unsigned, Expr::Width> > &readInfo;
+  bool symbolic;
+  bool incompatible;
+
+  Action inspectRead(unsigned hash, Expr::Width width, const ReadExpr &);
+
+protected:
+  Action visitConcat(const ConcatExpr &);
+  Action visitRead(const ReadExpr &);
+
+public:
+  ArrayReadExprVisitor(
+      std::vector<const ReadExpr *> &_reads,
+      std::map<const ReadExpr *, std::pair<unsigned, Expr::Width> > &_readInfo)
+      : ExprVisitor(true), reads(_reads), readInfo(_readInfo), symbolic(false),
+        incompatible(false) {}
+  inline bool isIncompatible() { return incompatible; }
+  inline bool containsSymbolic() { return symbolic; }
+};
+
+class ArrayValueOptReplaceVisitor : public ExprVisitor {
+private:
+  unordered_set<unsigned> visited;
+  std::map<unsigned, ref<Expr> > optimized;
+
+protected:
+  Action visitConcat(const ConcatExpr &);
+  Action visitRead(const ReadExpr &re);
+
+public:
+  ArrayValueOptReplaceVisitor(std::map<unsigned, ref<Expr> > &_optimized,
+                              bool recursive = true)
+      : ExprVisitor(recursive), optimized(_optimized) {}
+};
+
+class IndexCleanerVisitor : public ExprVisitor {
+private:
+  bool mul;
+  ref<Expr> index;
+
+protected:
+  Action visitMul(const MulExpr &);
+  Action visitRead(const ReadExpr &);
+
+public:
+  IndexCleanerVisitor() : ExprVisitor(true), mul(true) {}
+  inline ref<Expr> getIndex() { return index; }
+};
 }
 
 #endif
