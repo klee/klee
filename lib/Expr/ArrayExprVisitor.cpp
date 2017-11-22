@@ -169,3 +169,96 @@ ExprVisitor::Action IndexTransformationExprVisitor::visitMul(const MulExpr &e) {
     mul = e.getKid(1);
   return Action::doChildren();
 }
+
+//-------------------------- VALUE-BASED OPTIMIZATION------------------------//
+ExprVisitor::Action ArrayReadExprVisitor::visitConcat(const ConcatExpr &ce) {
+  ReadExpr *base = ArrayExprHelper::hasOrderedReads(ce);
+  if (base) {
+    return inspectRead(ce.hash(), ce.getWidth(), *base);
+  }
+  return Action::doChildren();
+}
+ExprVisitor::Action ArrayReadExprVisitor::visitRead(const ReadExpr &re) {
+  return inspectRead(re.hash(), re.getWidth(), re);
+}
+// This method is a mess because I want to avoid looping over the UpdateList
+// values twice
+ExprVisitor::Action ArrayReadExprVisitor::inspectRead(unsigned hash,
+                                                      Expr::Width width,
+                                                      const ReadExpr &re) {
+  // pre(*): index is symbolic
+  if (!isa<ConstantExpr>(re.index)) {
+    if (readInfo.find(&re) == readInfo.end()) {
+      if (re.updates.root->isSymbolicArray() && !re.updates.head) {
+        return Action::doChildren();
+      }
+      if (re.updates.head) {
+        // Check preconditions on UpdateList nodes
+        bool hasConcreteValues = false;
+        for (const UpdateNode *un = re.updates.head; un; un = un->next) {
+          // Symbolic case - \inv(update): index is concrete
+          if (!isa<ConstantExpr>(un->index)) {
+            incompatible = true;
+            break;
+          } else if (!isa<ConstantExpr>(un->value)) {
+            // We tell the optimization that there is a symbolic value,
+            // otherwise we rely on the concrete optimization procedure
+            symbolic = true;
+          } else if (re.updates.root->isSymbolicArray() &&
+                     isa<ConstantExpr>(un->value)) {
+            // We can optimize symbolic array, but only if they have
+            // at least one concrete value
+            hasConcreteValues = true;
+          }
+        }
+        // Symbolic case - if array is symbolic, then we need at least one
+        // concrete value
+        if (re.updates.root->isSymbolicArray()) {
+          if (hasConcreteValues)
+            symbolic = true;
+          else
+            incompatible = true;
+        }
+
+        if (incompatible)
+          return Action::skipChildren();
+      }
+      symbolic |= re.updates.root->isSymbolicArray();
+      reads.push_back(&re);
+      readInfo.emplace(&re, std::make_pair(hash, width));
+    }
+    return Action::skipChildren();
+  }
+  return Action::doChildren();
+}
+
+ExprVisitor::Action
+ArrayValueOptReplaceVisitor::visitConcat(const ConcatExpr &ce) {
+  auto found = optimized.find(ce.hash());
+  if (found != optimized.end()) {
+    return Action::changeTo((*found).second.get());
+  }
+  return Action::doChildren();
+}
+ExprVisitor::Action ArrayValueOptReplaceVisitor::visitRead(const ReadExpr &re) {
+  auto found = optimized.find(re.hash());
+  if (found != optimized.end()) {
+    return Action::changeTo((*found).second.get());
+  }
+  return Action::doChildren();
+}
+
+ExprVisitor::Action IndexCleanerVisitor::visitMul(const MulExpr &e) {
+  if (mul) {
+    if (!isa<ConstantExpr>(e.getKid(0)))
+      index = e.getKid(0);
+    else if (!isa<ConstantExpr>(e.getKid(1)))
+      index = e.getKid(1);
+    mul = false;
+  }
+  return Action::doChildren();
+}
+ExprVisitor::Action IndexCleanerVisitor::visitRead(const ReadExpr &re) {
+  mul = false;
+  return Action::doChildren();
+}
