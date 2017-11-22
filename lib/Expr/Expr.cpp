@@ -81,6 +81,47 @@ ref<Expr> Expr::createTempRead(const Array *array, Expr::Width w) {
   }
 }
 
+ref<Expr> ReadExpr::extendRead(const UpdateList &ul, const ref<Expr> index,
+                               Expr::Width w) {
+  switch (w) {
+  default:
+    assert(0 && "invalid width");
+  case Expr::Int8:
+    return ReadExpr::alloc(ul, index);
+  case Expr::Int16:
+    return ConcatExpr::create(
+        ReadExpr::alloc(
+            ul, AddExpr::create(ConstantExpr::create(1, Expr::Int32), index)),
+        ReadExpr::alloc(ul, index));
+  case Expr::Int32:
+    return ConcatExpr::create4(
+        ReadExpr::alloc(
+            ul, AddExpr::create(ConstantExpr::create(3, Expr::Int32), index)),
+        ReadExpr::alloc(
+            ul, AddExpr::create(ConstantExpr::create(2, Expr::Int32), index)),
+        ReadExpr::alloc(
+            ul, AddExpr::create(ConstantExpr::create(1, Expr::Int32), index)),
+        ReadExpr::alloc(ul, index));
+  case Expr::Int64:
+    return ConcatExpr::create8(
+        ReadExpr::alloc(
+            ul, AddExpr::create(ConstantExpr::create(7, Expr::Int32), index)),
+        ReadExpr::alloc(
+            ul, AddExpr::create(ConstantExpr::create(6, Expr::Int32), index)),
+        ReadExpr::alloc(
+            ul, AddExpr::create(ConstantExpr::create(5, Expr::Int32), index)),
+        ReadExpr::alloc(
+            ul, AddExpr::create(ConstantExpr::create(4, Expr::Int32), index)),
+        ReadExpr::alloc(
+            ul, AddExpr::create(ConstantExpr::create(3, Expr::Int32), index)),
+        ReadExpr::alloc(
+            ul, AddExpr::create(ConstantExpr::create(2, Expr::Int32), index)),
+        ReadExpr::alloc(
+            ul, AddExpr::create(ConstantExpr::create(1, Expr::Int32), index)),
+        ReadExpr::alloc(ul, index));
+  }
+}
+
 int Expr::compare(const Expr &b) const {
   static ExprEquivSet equivs;
   int r = compare(b, equivs);
