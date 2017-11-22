@@ -16,6 +16,7 @@
 #define KLEE_EXECUTOR_H
 
 #include "klee/ExecutionState.h"
+#include "klee/ArrayExprOptimizer.h"
 #include "klee/Interpreter.h"
 #include "klee/Internal/Module/Cell.h"
 #include "klee/Internal/Module/KInstruction.h"
@@ -207,6 +208,9 @@ private:
 
   // @brief buffer to store logs before flushing to file
   llvm::raw_string_ostream debugLogBuffer;
+
+  /// Optimizes expressions
+  ExprOptimizer optimizer;
 
   llvm::Function* getTargetFunction(llvm::Value *calledVal,
                                     ExecutionState &state);

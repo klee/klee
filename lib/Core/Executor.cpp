@@ -24,6 +24,7 @@
 #include "ExecutorTimerInfo.h"
 
 
+#include "klee/ArrayExprOptimizer.h"
 #include "klee/ExecutionState.h"
 #include "klee/Expr.h"
 #include "klee/Interpreter.h"
@@ -1045,11 +1046,20 @@ ref<Expr> Executor::toUnique(const ExecutionState &state,
     ref<ConstantExpr> value;
     bool isTrue = false;
 
-    solver->setTimeout(coreSolverTimeout);      
-    if (solver->getValue(state, e, value) &&
-        solver->mustBeTrue(state, EqExpr::create(e, value), isTrue) &&
-        isTrue)
-      result = value;
+    solver->setTimeout(coreSolverTimeout);
+    if (solver->getValue(state, e, value)) {
+      ref<Expr> cond = EqExpr::create(e, value);
+      if (OptimizeArray == INDEX &&
+          !isa<ConstantExpr>(cond)) {
+        ref<Expr> res;
+        optimizer.optimizeExpr(cond, res);
+        if (res.get()) {
+          cond = res;
+        }
+      }
+      if (solver->mustBeTrue(state, cond, isTrue) && isTrue)
+        result = value;
+    }
     solver->setTimeout(0);
   }
   
@@ -1510,6 +1520,16 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       assert(bi->getCondition() == bi->getOperand(0) &&
              "Wrong operand index!");
       ref<Expr> cond = eval(ki, 0, state).value;
+
+      if (OptimizeArray == INDEX &&
+          !isa<ConstantExpr>(cond)) {
+        ref<Expr> result;
+        optimizer.optimizeExpr(cond, result);
+        if (result.get()) {
+          cond = result;
+        }
+      }
+
       Executor::StatePair branches = fork(state, cond, false);
 
       // NOTE: There is a hidden dependency here, markBranchVisited
@@ -1576,6 +1596,14 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
         // Check if control flow could take this case
         bool result;
+        if (OptimizeArray == INDEX &&
+            !isa<ConstantExpr>(match)) {
+          ref<Expr> result;
+          optimizer.optimizeExpr(match, result);
+          if (result.get()) {
+            match = result;
+          }
+        }
         bool success = solver->mayBeTrue(state, match, result);
         assert(success && "FIXME: Unhandled solver failure");
         (void) success;
@@ -1602,6 +1630,14 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       }
 
       // Check if control could take the default case
+      if (OptimizeArray == INDEX &&
+          !isa<ConstantExpr>(defaultValue)) {
+        ref<Expr> result;
+        optimizer.optimizeExpr(defaultValue, result);
+        if (result.get()) {
+          defaultValue = result;
+        }
+      }
       bool res;
       bool success = solver->mayBeTrue(state, defaultValue, res);
       assert(success && "FIXME: Unhandled solver failure");
