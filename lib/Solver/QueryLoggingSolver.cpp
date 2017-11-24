@@ -13,8 +13,6 @@
 #include "klee/Internal/Support/FileHandling.h"
 #include "klee/Internal/System/Time.h"
 
-using namespace klee::util;
-
 namespace {
 llvm::cl::opt<bool> DumpPartialQueryiesEarly(
     "log-partial-queries-early", llvm::cl::init(false),
@@ -29,9 +27,10 @@ llvm::cl::opt<bool> CreateCompressedQueryLog(
 
 QueryLoggingSolver::QueryLoggingSolver(Solver *_solver, std::string path,
                                        const std::string &commentSign,
-                                       int queryTimeToLog)
+                                       time::Span queryTimeToLog,
+                                       bool logTimedOut)
     : solver(_solver), BufferString(""), logBuffer(BufferString), queryCount(0),
-      minQueryTimeToLog(queryTimeToLog), startTime(0.0f), lastQueryTime(0.0f),
+      minQueryTimeToLog(queryTimeToLog), logTimedOutQueries(logTimedOut),
       queryCommentSign(commentSign) {
   std::string error;
 #ifdef HAVE_ZLIB_H
@@ -79,13 +78,13 @@ void QueryLoggingSolver::startQuery(const Query &query, const char *typeName,
   if (DumpPartialQueryiesEarly) {
     flushBufferConditionally(true);
   }
-  startTime = getWallTime();
+  startTime = time::getWallTime();
 }
 
 void QueryLoggingSolver::finishQuery(bool success) {
-  lastQueryTime = getWallTime() - startTime;
+  lastQueryDuration = time::getWallTime() - startTime;
   logBuffer << queryCommentSign << "   " << (success ? "OK" : "FAIL") << " -- "
-            << "Elapsed: " << lastQueryTime << "\n";
+            << "Elapsed: " << lastQueryDuration << "\n";
 
   if (false == success) {
     logBuffer << queryCommentSign << "   Failure reason: "
@@ -95,21 +94,13 @@ void QueryLoggingSolver::finishQuery(bool success) {
 }
 
 void QueryLoggingSolver::flushBuffer() {
-  bool writeToFile = false;
-
-  if ((0 == minQueryTimeToLog) ||
-      (static_cast<int>(lastQueryTime * 1000) > minQueryTimeToLog)) {
-    // we either do not limit logging queries or the query time
-    // is larger than threshold (in ms)
-
-    if ((minQueryTimeToLog >= 0) ||
-        (SOLVER_RUN_STATUS_TIMEOUT ==
-         (solver->impl->getOperationStatusCode()))) {
-      // we do additional check here to log only timeouts in case
-      // user specified negative value for minQueryTimeToLog param
-      writeToFile = true;
-    }
-  }
+  // we either do not limit logging queries
+  // or the query time is larger than threshold
+  // or we log a timed out query
+  bool writeToFile = (!minQueryTimeToLog)
+      || (lastQueryDuration > minQueryTimeToLog)
+      || (logTimedOutQueries &&
+         (SOLVER_RUN_STATUS_TIMEOUT == solver->impl->getOperationStatusCode()));
 
   flushBufferConditionally(writeToFile);
 }
@@ -218,6 +209,6 @@ char *QueryLoggingSolver::getConstraintLog(const Query &query) {
   return solver->impl->getConstraintLog(query);
 }
 
-void QueryLoggingSolver::setCoreSolverTimeout(double timeout) {
+void QueryLoggingSolver::setCoreSolverTimeout(time::Span timeout) {
   solver->impl->setCoreSolverTimeout(timeout);
 }

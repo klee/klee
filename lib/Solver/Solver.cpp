@@ -29,7 +29,7 @@ char *Solver::getConstraintLog(const Query& query) {
     return impl->getConstraintLog(query);
 }
 
-void Solver::setCoreSolverTimeout(double timeout) {
+void Solver::setCoreSolverTimeout(time::Span timeout) {
     impl->setCoreSolverTimeout(timeout);
 }
 

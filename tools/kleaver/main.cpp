@@ -216,8 +216,9 @@ static bool EvaluateInputAST(const char *Filename,
   Solver *coreSolver = klee::createCoreSolver(CoreSolverToUse);
 
   if (CoreSolverToUse != DUMMY_SOLVER) {
-    if (0 != MaxCoreSolverTime) {
-      coreSolver->setCoreSolverTimeout(MaxCoreSolverTime);
+    const time::Span maxCoreSolverTime(MaxCoreSolverTime);
+    if (maxCoreSolverTime) {
+      coreSolver->setCoreSolverTimeout(maxCoreSolverTime);
     }
   }
 

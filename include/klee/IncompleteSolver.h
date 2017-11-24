@@ -103,7 +103,7 @@ public:
                             bool &hasSolution);
   SolverRunStatus getOperationStatusCode();
   char *getConstraintLog(const Query&);
-  void setCoreSolverTimeout(double timeout);
+  void setCoreSolverTimeout(time::Span timeout);
 };
 
 }

@@ -12,6 +12,7 @@
 
 #include "klee/Expr.h"
 #include "klee/SolverCmdLine.h"
+#include "klee/Internal/System/Time.h"
 
 #include <vector>
 
@@ -200,7 +201,7 @@ namespace klee {
     virtual std::pair< ref<Expr>, ref<Expr> > getRange(const Query&);
     
     virtual char *getConstraintLog(const Query& query);
-    virtual void setCoreSolverTimeout(double timeout);
+    virtual void setCoreSolverTimeout(time::Span timeout);
   };
 
   /* *** */
@@ -251,12 +252,14 @@ namespace klee {
   /// createKQueryLoggingSolver - Create a solver which will forward all queries
   /// after writing them to the given path in .kquery format.
   Solver *createKQueryLoggingSolver(Solver *s, std::string path,
-                                int minQueryTimeToLog);
+                                    time::Span minQueryTimeToLog,
+                                    bool logTimedOut);
 
   /// createSMTLIBLoggingSolver - Create a solver which will forward all queries
   /// after writing them to the given path in .smt2 format.
   Solver *createSMTLIBLoggingSolver(Solver *s, std::string path,
-                                    int minQueryTimeToLog);
+                                    time::Span minQueryTimeToLog,
+                                    bool logTimedOut);
 
 
   /// createDummySolver - Create a dummy solver implementation which always

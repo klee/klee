@@ -23,6 +23,15 @@ using namespace llvm;
 
 namespace klee {
 
+cl::extrahelp TimeFormatInfo(
+  "\nTime format used by KLEE's options\n"
+  "\n"
+  "  Time spans can be specified in two ways:\n"
+  "    1. As positive real numbers representing seconds, e.g. '10', '3.5' but not 'INF', 'NaN', '1e3', '-4.5s'\n"
+  "    2. As a sequence of natural numbers with specified units, e.g. '1h10min' (= '70min'), '5min10s' but not '3.5min', '8S'\n"
+  "       The following units are supported: h, min, s, ms, us, ns.\n"
+);
+
 cl::opt<bool>
 UseFastCexSolver("use-fast-cex-solver",
 		 cl::init(false),
@@ -47,19 +56,19 @@ cl::opt<bool>
 DebugValidateSolver("debug-validate-solver",
                     cl::init(false));
   
-cl::opt<int>
+cl::opt<std::string>
 MinQueryTimeToLog("min-query-time-to-log",
-                  cl::init(0),
-                  cl::value_desc("milliseconds"),
-                  cl::desc("Set time threshold (in ms) for queries logged in files. "
-                           "Only queries longer than threshold will be logged. (default=0). "
-                           "Set this param to a negative value to log timeouts only."));
+                  cl::desc("Set time threshold for queries logged in files. "
+                           "Only queries longer than threshold will be logged. (default=0s)"));
 
-cl::opt<double>
+cl::opt<bool>
+LogTimedOutQueries("log-timed-out-queries",
+                   cl::init(true),
+                   cl::desc("Log queries that timed out. (default=true)."));
+
+cl::opt<std::string>
 MaxCoreSolverTime("max-solver-time",
-                  cl::desc("Maximum amount of time for a single SMT query (default=0s (off)). Enables --use-forked-solver"),
-                  cl::init(0.0),
-                  cl::value_desc("seconds"));
+                  cl::desc("Maximum amount of time for a single SMT query (default=0s (off)). Enables --use-forked-solver"));
 
 cl::opt<bool>
 UseForkedCoreSolver("use-forked-solver",

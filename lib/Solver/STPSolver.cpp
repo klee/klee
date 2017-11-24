@@ -65,7 +65,7 @@ class STPSolverImpl : public SolverImpl {
 private:
   VC vc;
   STPBuilder *builder;
-  double timeout;
+  time::Span timeout;
   bool useForkedSTP;
   SolverRunStatus runStatusCode;
 
@@ -74,7 +74,7 @@ public:
   ~STPSolverImpl();
 
   char *getConstraintLog(const Query &);
-  void setCoreSolverTimeout(double _timeout) { timeout = _timeout; }
+  void setCoreSolverTimeout(time::Span timeout) { this->timeout = timeout; }
 
   bool computeTruth(const Query &, bool &isValid);
   bool computeValue(const Query &, ref<Expr> &result);
@@ -87,7 +87,7 @@ public:
 
 STPSolverImpl::STPSolverImpl(bool _useForkedSTP, bool _optimizeDivides)
     : vc(vc_createValidityChecker()),
-      builder(new STPBuilder(vc, _optimizeDivides)), timeout(0.0),
+      builder(new STPBuilder(vc, _optimizeDivides)),
       useForkedSTP(_useForkedSTP), runStatusCode(SOLVER_RUN_STATUS_FAILURE) {
   assert(vc && "unable to create validity checker");
   assert(builder && "unable to create STPBuilder");
@@ -219,7 +219,7 @@ static SolverImpl::SolverRunStatus
 runAndGetCexForked(::VC vc, STPBuilder *builder, ::VCExpr q,
                    const std::vector<const Array *> &objects,
                    std::vector<std::vector<unsigned char> > &values,
-                   bool &hasSolution, double timeout) {
+                   bool &hasSolution, time::Span timeout) {
   unsigned char *pos = shared_memory_ptr;
   unsigned sum = 0;
   for (std::vector<const Array *>::const_iterator it = objects.begin(),
@@ -243,7 +243,7 @@ runAndGetCexForked(::VC vc, STPBuilder *builder, ::VCExpr q,
     if (timeout) {
       ::alarm(0); /* Turn off alarm so we can safely set signal handler */
       ::signal(SIGALRM, stpTimeoutHandler);
-      ::alarm(std::max(1, (int)timeout));
+      ::alarm(std::max(1u, static_cast<unsigned>(timeout.toSeconds())));
     }
     unsigned res = vc_query(vc, q);
     if (!res) {
@@ -326,7 +326,6 @@ bool STPSolverImpl::computeInitialValues(
     const Query &query, const std::vector<const Array *> &objects,
     std::vector<std::vector<unsigned char> > &values, bool &hasSolution) {
   runStatusCode = SOLVER_RUN_STATUS_FAILURE;
-
   TimerStatIncrementer t(stats::queryTime);
 
   vc_push(vc);
@@ -383,7 +382,7 @@ char *STPSolver::getConstraintLog(const Query &query) {
   return impl->getConstraintLog(query);
 }
 
-void STPSolver::setCoreSolverTimeout(double timeout) {
+void STPSolver::setCoreSolverTimeout(time::Span timeout) {
   impl->setCoreSolverTimeout(timeout);
 }
 }

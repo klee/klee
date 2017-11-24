@@ -10,25 +10,17 @@
 #ifndef KLEE_TIMER_H
 #define KLEE_TIMER_H
 
-#include <stdint.h>
-
-#if LLVM_VERSION_CODE >= LLVM_VERSION(4, 0)
-#include <llvm/Support/Chrono.h>
-#endif
+#include "klee/Internal/System/Time.h"
 
 namespace klee {
   class WallTimer {
-#if LLVM_VERSION_CODE >= LLVM_VERSION(4, 0)
-    llvm::sys::TimePoint<> start;
-#else
-    uint64_t startMicroseconds;
-#endif
+    time::Point start;
     
   public:
     WallTimer();
 
-    /// check - Return the delta since the timer was created, in microseconds.
-    uint64_t check();
+    /// check - Return the delta since the timer was created
+    time::Span check();
   };
 }
 

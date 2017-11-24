@@ -91,7 +91,7 @@ public:
                             bool &hasSolution);
   SolverRunStatus getOperationStatusCode();
   char *getConstraintLog(const Query& query);
-  void setCoreSolverTimeout(double timeout);
+  void setCoreSolverTimeout(time::Span timeout);
 };
 
 ///
@@ -371,7 +371,7 @@ char *CexCachingSolver::getConstraintLog(const Query& query) {
   return solver->impl->getConstraintLog(query);
 }
 
-void CexCachingSolver::setCoreSolverTimeout(double timeout) {
+void CexCachingSolver::setCoreSolverTimeout(time::Span timeout) {
   solver->impl->setCoreSolverTimeout(timeout);
 }
 

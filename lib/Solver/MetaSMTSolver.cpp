@@ -77,7 +77,7 @@ private:
   SolverContext _meta_solver;
   MetaSMTSolver<SolverContext> *_solver;
   MetaSMTBuilder<SolverContext> *_builder;
-  double _timeout;
+  time::Span _timeout;
   bool _useForked;
   SolverRunStatus _runStatusCode;
 
@@ -87,7 +87,7 @@ public:
   virtual ~MetaSMTSolverImpl();
 
   char *getConstraintLog(const Query &);
-  void setCoreSolverTimeout(double timeout) { _timeout = timeout; }
+  void setCoreSolverTimeout(time::Span timeout) { _timeout = timeout; }
 
   bool computeTruth(const Query &, bool &isValid);
   bool computeValue(const Query &, ref<Expr> &result);
@@ -106,7 +106,7 @@ public:
   runAndGetCexForked(const Query &query,
                      const std::vector<const Array *> &objects,
                      std::vector<std::vector<unsigned char> > &values,
-                     bool &hasSolution, double timeout);
+                     bool &hasSolution, time::Span timeout);
 
   SolverRunStatus getOperationStatusCode();
 
@@ -118,7 +118,7 @@ MetaSMTSolverImpl<SolverContext>::MetaSMTSolverImpl(
     MetaSMTSolver<SolverContext> *solver, bool useForked, bool optimizeDivides)
     : _solver(solver), _builder(new MetaSMTBuilder<SolverContext>(
                            _meta_solver, optimizeDivides)),
-      _timeout(0.0), _useForked(useForked) {
+      _useForked(useForked) {
   assert(_solver && "unable to create MetaSMTSolver");
   assert(_builder && "unable to create MetaSMTBuilder");
 
@@ -273,7 +273,7 @@ SolverImpl::SolverRunStatus
 MetaSMTSolverImpl<SolverContext>::runAndGetCexForked(
     const Query &query, const std::vector<const Array *> &objects,
     std::vector<std::vector<unsigned char> > &values, bool &hasSolution,
-    double timeout) {
+    time::Span timeout) {
   unsigned char *pos = shared_memory_ptr;
   unsigned sum = 0;
   for (std::vector<const Array *>::const_iterator it = objects.begin(),
@@ -298,7 +298,7 @@ MetaSMTSolverImpl<SolverContext>::runAndGetCexForked(
     if (timeout) {
       ::alarm(0); /* Turn off alarm so we can safely set signal handler */
       ::signal(SIGALRM, metaSMTTimeoutHandler);
-      ::alarm(std::max(1, (int)timeout));
+      ::alarm(std::max(1u, static_cast<unsigned>(timeout.toSeconds())));
     }
 
     // assert constraints as we are in a child process
@@ -419,7 +419,7 @@ char *MetaSMTSolver<SolverContext>::getConstraintLog(const Query &query) {
 }
 
 template <typename SolverContext>
-void MetaSMTSolver<SolverContext>::setCoreSolverTimeout(double timeout) {
+void MetaSMTSolver<SolverContext>::setCoreSolverTimeout(time::Span timeout) {
   impl->setCoreSolverTimeout(timeout);
 }
 

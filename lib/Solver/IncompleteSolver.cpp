@@ -143,7 +143,7 @@ char *StagedSolverImpl::getConstraintLog(const Query& query) {
   return secondary->impl->getConstraintLog(query);
 }
 
-void StagedSolverImpl::setCoreSolverTimeout(double timeout) {
+void StagedSolverImpl::setCoreSolverTimeout(time::Span timeout) {
   secondary->impl->setCoreSolverTimeout(timeout);
 }
 

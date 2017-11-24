@@ -66,7 +66,6 @@ ExecutionState::ExecutionState(KFunction *kf) :
     pc(kf->instructions),
     prevPC(pc),
 
-    queryCost(0.), 
     weight(1),
     depth(0),
 
@@ -79,7 +78,7 @@ ExecutionState::ExecutionState(KFunction *kf) :
 }
 
 ExecutionState::ExecutionState(const std::vector<ref<Expr> > &assumptions)
-    : constraints(assumptions), queryCost(0.), ptreeNode(0) {}
+    : constraints(assumptions), ptreeNode(0) {}
 
 ExecutionState::~ExecutionState() {
   for (unsigned int i=0; i<symbolics.size(); i++)

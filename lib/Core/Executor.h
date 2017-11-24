@@ -20,6 +20,7 @@
 #include "klee/Internal/Module/Cell.h"
 #include "klee/Internal/Module/KInstruction.h"
 #include "klee/Internal/Module/KModule.h"
+#include "klee/Internal/System/Time.h"
 #include "klee/util/ArrayCache.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -216,7 +217,10 @@ private:
 
   /// The maximum time to allow for a single core solver query.
   /// (e.g. for a single STP query)
-  double coreSolverTimeout;
+  time::Span coreSolverTimeout;
+
+  /// Maximum time to allow for a single instruction.
+  time::Span maxInstructionTime;
 
   /// Assumes ownership of the created array objects
   ArrayCache arrayCache;
@@ -461,11 +465,10 @@ private:
   ///
   /// \param timer The timer object to run on firings.
   /// \param rate The approximate delay (in seconds) between firings.
-  void addTimer(Timer *timer, double rate);
+  void addTimer(Timer *timer, time::Span rate);
 
   void initTimers();
-  void processTimers(ExecutionState *current,
-                     double maxInstTime);
+  void processTimers(ExecutionState *current, time::Span maxInstTime);
   void checkMemoryUsage();
   void printDebugInstructions(ExecutionState &state);
   void doDumpStates();

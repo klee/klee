@@ -11,6 +11,7 @@
 
 #include "klee/Expr.h"
 #include "klee/util/ExprPPrinter.h"
+#include "klee/Internal/System/Time.h"
 
 using namespace klee;
 
@@ -49,8 +50,8 @@ private :
     }
 
 public:
-    KQueryLoggingSolver(Solver *_solver, std::string path, int queryTimeToLog)
-    : QueryLoggingSolver(_solver, path, "#", queryTimeToLog),
+    KQueryLoggingSolver(Solver *_solver, std::string path, time::Span queryTimeToLog, bool logTimedOut)
+    : QueryLoggingSolver(_solver, path, "#", queryTimeToLog, logTimedOut),
     printer(ExprPPrinter::create(logBuffer)) {
     }
 
@@ -62,7 +63,7 @@ public:
 ///
 
 Solver *klee::createKQueryLoggingSolver(Solver *_solver, std::string path,
-                                    int minQueryTimeToLog) {
-  return new Solver(new KQueryLoggingSolver(_solver, path, minQueryTimeToLog));
+                                    time::Span minQueryTimeToLog, bool logTimedOut) {
+  return new Solver(new KQueryLoggingSolver(_solver, path, minQueryTimeToLog, logTimedOut));
 }
 

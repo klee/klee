@@ -22,10 +22,11 @@ namespace klee {
   public:
     TimerStatIncrementer(Statistic &_statistic) : statistic(_statistic) {}
     ~TimerStatIncrementer() {
-      statistic += timer.check(); 
+      // record microseconds
+      statistic += timer.check().toMicroseconds();
     }
 
-    uint64_t check() { return timer.check(); }
+    time::Span check() { return timer.check(); }
   };
 }
 

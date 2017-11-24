@@ -47,7 +47,7 @@ namespace klee {
 class Z3SolverImpl : public SolverImpl {
 private:
   Z3Builder *builder;
-  double timeout;
+  time::Span timeout;
   SolverRunStatus runStatusCode;
   std::unique_ptr<llvm::raw_fd_ostream> dumpedQueriesFile;
   ::Z3_params solverParameters;
@@ -65,12 +65,11 @@ public:
   ~Z3SolverImpl();
 
   char *getConstraintLog(const Query &);
-  void setCoreSolverTimeout(double _timeout) {
-    assert(_timeout >= 0.0 && "timeout must be >= 0");
+  void setCoreSolverTimeout(time::Span _timeout) {
     timeout = _timeout;
 
-    unsigned int timeoutInMilliSeconds = (unsigned int)((timeout * 1000) + 0.5);
-    if (timeoutInMilliSeconds == 0)
+    auto timeoutInMilliSeconds = static_cast<unsigned>((timeout.toMicroseconds() / 1000));
+    if (!timeoutInMilliSeconds)
       timeoutInMilliSeconds = UINT_MAX;
     Z3_params_set_uint(builder->ctx, solverParameters, timeoutParamStrSymbol,
                        timeoutInMilliSeconds);
@@ -96,7 +95,7 @@ Z3SolverImpl::Z3SolverImpl()
           /*z3LogInteractionFileArg=*/Z3LogInteractionFile.size() > 0
               ? Z3LogInteractionFile.c_str()
               : NULL)),
-      timeout(0.0), runStatusCode(SOLVER_RUN_STATUS_FAILURE) {
+      runStatusCode(SOLVER_RUN_STATUS_FAILURE) {
   assert(builder && "unable to create Z3Builder");
   solverParameters = Z3_mk_params(builder->ctx);
   Z3_params_inc_ref(builder->ctx, solverParameters);
@@ -134,7 +133,7 @@ char *Z3Solver::getConstraintLog(const Query &query) {
   return impl->getConstraintLog(query);
 }
 
-void Z3Solver::setCoreSolverTimeout(double timeout) {
+void Z3Solver::setCoreSolverTimeout(time::Span timeout) {
   impl->setCoreSolverTimeout(timeout);
 }
 

@@ -408,7 +408,7 @@ public:
                             bool &hasSolution);
   SolverRunStatus getOperationStatusCode();
   char *getConstraintLog(const Query&);
-  void setCoreSolverTimeout(double timeout);
+  void setCoreSolverTimeout(time::Span timeout);
 };
   
 bool IndependentSolver::computeValidity(const Query& query,
@@ -555,7 +555,7 @@ char *IndependentSolver::getConstraintLog(const Query& query) {
   return solver->impl->getConstraintLog(query);
 }
 
-void IndependentSolver::setCoreSolverTimeout(double timeout) {
+void IndependentSolver::setCoreSolverTimeout(time::Span timeout) {
   solver->impl->setCoreSolverTimeout(timeout);
 }
 
