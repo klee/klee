@@ -12,6 +12,7 @@
 
 #include "klee/Expr.h"
 #include "klee/Solver.h"
+#include "klee/Internal/System/Time.h"
 
 #include <vector>
 
@@ -38,7 +39,7 @@ namespace klee {
       delete solver;
     }
 
-    void setTimeout(double t) {
+    void setTimeout(time::Span t) {
       solver->setCoreSolverTimeout(t);
     }
     

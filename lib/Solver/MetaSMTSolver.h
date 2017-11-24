@@ -21,7 +21,7 @@ public:
   virtual ~MetaSMTSolver();
 
   virtual char *getConstraintLog(const Query &);
-  virtual void setCoreSolverTimeout(double timeout);
+  virtual void setCoreSolverTimeout(time::Span timeout);
 };
 
 /// createMetaSMTSolver - Create a solver using the metaSMT backend set by

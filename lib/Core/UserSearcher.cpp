@@ -51,10 +51,10 @@ namespace {
                     cl::desc("Number of instructions to batch when using --use-batching-search"),
                     cl::init(10000));
   
-  cl::opt<double>
+  cl::opt<std::string>
   BatchTime("batch-time",
-            cl::desc("Amount of time to batch when using --use-batching-search"),
-            cl::init(5.0));
+            cl::desc("Amount of time to batch when using --use-batching-search (default=5s)"),
+            cl::init("5s"));
 
 }
 
@@ -120,7 +120,7 @@ Searcher *klee::constructUserSearcher(Executor &executor) {
   }
 
   if (UseBatchingSearch) {
-    searcher = new BatchingSearcher(searcher, BatchTime, BatchInstructions);
+    searcher = new BatchingSearcher(searcher, time::Span(BatchTime), BatchInstructions);
   }
 
   if (UseMerge && UseIncompleteMerge) {

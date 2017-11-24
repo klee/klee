@@ -13,6 +13,8 @@
 
 #include "klee/Solver.h"
 #include "klee/SolverImpl.h"
+#include "klee/Internal/System/Time.h"
+
 #include "llvm/Support/raw_ostream.h"
 
 using namespace klee;
@@ -31,13 +33,10 @@ protected:
   // @brief buffer to store logs before flushing to file
   llvm::raw_string_ostream logBuffer;
   unsigned queryCount;
-  int minQueryTimeToLog; // we log to file only those queries
-                         // which take longer than the specified time (ms);
-                         // if this param is negative, log only those queries
-                         // on which the solver has timed out
-
-  double startTime;
-  double lastQueryTime;
+  time::Span minQueryTimeToLog; // we log to file only those queries which take longer than the specified time
+  bool logTimedOutQueries = false;
+  time::Point startTime;
+  time::Span lastQueryDuration;
   const std::string queryCommentSign; // sign representing commented lines
                                       // in given a query format
 
@@ -57,8 +56,8 @@ protected:
   void flushBufferConditionally(bool writeToFile);
 
 public:
-  QueryLoggingSolver(Solver *_solver, std::string path,
-                     const std::string &commentSign, int queryTimeToLog);
+  QueryLoggingSolver(Solver *_solver, std::string path, const std::string &commentSign,
+                     time::Span queryTimeToLog, bool logTimedOut);
 
   virtual ~QueryLoggingSolver();
 
@@ -72,7 +71,7 @@ public:
                             bool &hasSolution);
   SolverRunStatus getOperationStatusCode();
   char *getConstraintLog(const Query &);
-  void setCoreSolverTimeout(double timeout);
+  void setCoreSolverTimeout(time::Span timeout);
 };
 
 #endif /* KLEE_QUERYLOGGINGSOLVER_H */

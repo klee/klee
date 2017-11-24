@@ -23,6 +23,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/Support/CommandLine.h"
 
+#include <string>
 #include <unistd.h>
 #include <signal.h>
 #include <sys/time.h>
@@ -32,10 +33,9 @@
 using namespace llvm;
 using namespace klee;
 
-cl::opt<double>
+cl::opt<std::string>
 MaxTime("max-time",
-        cl::desc("Halt execution after the specified number of seconds (default=0 (off))"),
-        cl::init(0));
+        cl::desc("Halt execution after the specified number of seconds (default=0s (off))"));
 
 ///
 
@@ -54,7 +54,7 @@ public:
 
 ///
 
-static const double kSecondsPerTick = .1;
+static const time::Span kMilliSecondsPerTick(time::milliseconds(100));
 static volatile unsigned timerTicks = 0;
 
 // XXX hack
@@ -67,15 +67,11 @@ static void onAlarm(int) {
 
 // oooogalay
 static void setupHandler() {
-  struct itimerval t;
-  struct timeval tv;
-  
-  tv.tv_sec = (long) kSecondsPerTick;
-  tv.tv_usec = (long) (fmod(kSecondsPerTick, 1.)*1000000);
-  
+  itimerval t{};
+  timeval tv = static_cast<timeval>(kMilliSecondsPerTick);
   t.it_interval = t.it_value = tv;
-  
-  ::setitimer(ITIMER_REAL, &t, 0);
+
+  ::setitimer(ITIMER_REAL, &t, nullptr);
   ::signal(SIGALRM, onAlarm);
 }
 
@@ -87,8 +83,9 @@ void Executor::initTimers() {
     setupHandler();
   }
 
-  if (MaxTime) {
-    addTimer(new HaltTimer(this), MaxTime.getValue());
+  const time::Span maxTime(MaxTime);
+  if (maxTime) {
+    addTimer(new HaltTimer(this), maxTime);
   }
 }
 
@@ -98,12 +95,12 @@ Executor::Timer::Timer() {}
 
 Executor::Timer::~Timer() {}
 
-void Executor::addTimer(Timer *timer, double rate) {
+void Executor::addTimer(Timer *timer, time::Span rate) {
   timers.push_back(new TimerInfo(timer, rate));
 }
 
 void Executor::processTimers(ExecutionState *current,
-                             double maxInstTime) {
+                             time::Span maxInstTime) {
   static unsigned callsWithoutCheck = 0;
   unsigned ticks = timerTicks;
 
@@ -169,18 +166,17 @@ void Executor::processTimers(ExecutionState *current,
       dumpStates = 0;
     }
 
-    if (maxInstTime > 0 && current &&
+    if (maxInstTime && current &&
         std::find(removedStates.begin(), removedStates.end(), current) ==
             removedStates.end()) {
-      if (timerTicks*kSecondsPerTick > maxInstTime) {
-        klee_warning("max-instruction-time exceeded: %.2fs",
-                     timerTicks*kSecondsPerTick);
+      if (timerTicks*kMilliSecondsPerTick > maxInstTime) {
+        klee_warning("max-instruction-time exceeded: %.2fs", (timerTicks * kMilliSecondsPerTick).toSeconds());
         terminateStateEarly(*current, "max-instruction-time exceeded");
       }
     }
 
     if (!timers.empty()) {
-      double time = util::getWallTime();
+      auto time = time::getWallTime();
 
       for (std::vector<TimerInfo*>::iterator it = timers.begin(), 
              ie = timers.end(); it != ie; ++it) {

@@ -214,7 +214,7 @@ double WeightedRandomSearcher::getWeight(ExecutionState *es) {
     return inv;
   }
   case QueryCost:
-    return (es->queryCost < .1) ? 1. : 1./es->queryCost;
+    return (es->queryCost.toSeconds() < .1) ? 1. : 1./ es->queryCost.toSeconds();
   case CoveringNew:
   case MinDistToUncovered: {
     uint64_t md2u = computeMinDistToUncovered(es->pc,
@@ -337,7 +337,7 @@ ExecutionState& MergingSearcher::selectState() {
 ///
 
 BatchingSearcher::BatchingSearcher(Searcher *_baseSearcher,
-                                   double _timeBudget,
+                                   time::Span _timeBudget,
                                    unsigned _instructionBudget) 
   : baseSearcher(_baseSearcher),
     timeBudget(_timeBudget),
@@ -352,18 +352,19 @@ BatchingSearcher::~BatchingSearcher() {
 
 ExecutionState &BatchingSearcher::selectState() {
   if (!lastState || 
-      (util::getWallTime()-lastStartTime)>timeBudget ||
-      (stats::instructions-lastStartInstructions)>instructionBudget) {
+      (time::getWallTime() - lastStartTime) > timeBudget ||
+      (stats::instructions - lastStartInstructions) > instructionBudget) {
     if (lastState) {
-      double delta = util::getWallTime()-lastStartTime;
-      if (delta>timeBudget*1.1) {
-        klee_message("increased time budget from %f to %f\n", timeBudget,
-                     delta);
+      time::Span delta = time::getWallTime() - lastStartTime;
+      auto t = timeBudget;
+      t *= 1.1;
+      if (delta > t) {
+        klee_message("increased time budget from %f to %f\n", timeBudget.toSeconds(), delta.toSeconds());
         timeBudget = delta;
       }
     }
     lastState = &baseSearcher->selectState();
-    lastStartTime = util::getWallTime();
+    lastStartTime = time::getWallTime();
     lastStartInstructions = stats::instructions;
     return *lastState;
   } else {
@@ -385,7 +386,7 @@ BatchingSearcher::update(ExecutionState *current,
 
 IterativeDeepeningTimeSearcher::IterativeDeepeningTimeSearcher(Searcher *_baseSearcher)
   : baseSearcher(_baseSearcher),
-    time(1.) {
+    time(time::seconds(1)) {
 }
 
 IterativeDeepeningTimeSearcher::~IterativeDeepeningTimeSearcher() {
@@ -394,14 +395,15 @@ IterativeDeepeningTimeSearcher::~IterativeDeepeningTimeSearcher() {
 
 ExecutionState &IterativeDeepeningTimeSearcher::selectState() {
   ExecutionState &res = baseSearcher->selectState();
-  startTime = util::getWallTime();
+  startTime = time::getWallTime();
   return res;
 }
 
 void IterativeDeepeningTimeSearcher::update(
     ExecutionState *current, const std::vector<ExecutionState *> &addedStates,
     const std::vector<ExecutionState *> &removedStates) {
-  double elapsed = util::getWallTime() - startTime;
+
+  const auto elapsed = time::getWallTime() - startTime;
 
   if (!removedStates.empty()) {
     std::vector<ExecutionState *> alt = removedStates;
@@ -431,7 +433,7 @@ void IterativeDeepeningTimeSearcher::update(
 
   if (baseSearcher->empty()) {
     time *= 2;
-    klee_message("increased time budget to %f\n", time);
+    klee_message("increased time budget to %f\n", time.toSeconds());
     std::vector<ExecutionState *> ps(pausedStates.begin(), pausedStates.end());
     baseSearcher->update(0, ps, std::vector<ExecutionState *>());
     pausedStates.clear();

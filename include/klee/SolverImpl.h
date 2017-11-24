@@ -10,6 +10,7 @@
 #ifndef KLEE_SOLVERIMPL_H
 #define KLEE_SOLVERIMPL_H
 
+#include "klee/Internal/System/Time.h"
 #include "Solver.h"
 
 #include <vector>
@@ -105,7 +106,7 @@ namespace klee {
         return(NULL);
     }
 
-    virtual void setCoreSolverTimeout(double timeout) {};
+    virtual void setCoreSolverTimeout(time::Span timeout) {};
 };
 
 }

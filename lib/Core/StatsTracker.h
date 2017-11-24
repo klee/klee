@@ -11,6 +11,7 @@
 #define KLEE_STATSTRACKER_H
 
 #include "CallPathManager.h"
+#include "klee/Internal/System/Time.h"
 
 #include <memory>
 #include <set>
@@ -38,7 +39,7 @@ namespace klee {
     std::string objectFilename;
 
     std::unique_ptr<llvm::raw_fd_ostream> statsFile, istatsFile;
-    double startWallTime;
+    time::Point startWallTime;
 
     unsigned numBranches;
     unsigned fullBranches, partialBranches;
@@ -81,8 +82,8 @@ namespace klee {
     // about to be stepped
     void stepInstruction(ExecutionState &es);
 
-    /// Return time in seconds since execution start.
-    double elapsed();
+    /// Return duration since execution start.
+    time::Span elapsed();
 
     void computeReachableUncovered();
   };

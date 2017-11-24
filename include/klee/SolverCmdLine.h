@@ -32,9 +32,11 @@ extern llvm::cl::opt<bool> UseIndependentSolver;
 
 extern llvm::cl::opt<bool> DebugValidateSolver;
 
-extern llvm::cl::opt<int> MinQueryTimeToLog;
+extern llvm::cl::opt<std::string> MinQueryTimeToLog;
 
-extern llvm::cl::opt<double> MaxCoreSolverTime;
+extern llvm::cl::opt<bool> LogTimedOutQueries;
+
+extern llvm::cl::opt<std::string> MaxCoreSolverTime;
 
 extern llvm::cl::opt<bool> UseForkedCoreSolver;
 

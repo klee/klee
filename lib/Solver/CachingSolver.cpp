@@ -93,7 +93,7 @@ public:
   }
   SolverRunStatus getOperationStatusCode();
   char *getConstraintLog(const Query&);
-  void setCoreSolverTimeout(double timeout);
+  void setCoreSolverTimeout(time::Span timeout);
 };
 
 /** @returns the canonical version of the given query.  The reference
@@ -257,7 +257,7 @@ char *CachingSolver::getConstraintLog(const Query& query) {
   return solver->impl->getConstraintLog(query);
 }
 
-void CachingSolver::setCoreSolverTimeout(double timeout) {
+void CachingSolver::setCoreSolverTimeout(time::Span timeout) {
   solver->impl->setCoreSolverTimeout(timeout);
 }
 

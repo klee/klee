@@ -17,7 +17,6 @@
 #include "klee/Internal/Module/KInstruction.h"
 #include "klee/Internal/Support/ModuleUtil.h"
 #include "klee/Internal/System/MemoryUsage.h"
-#include "klee/Internal/System/Time.h"
 #include "klee/Internal/Support/ErrorHandling.h"
 #include "klee/SolverStats.h"
 
@@ -71,20 +70,20 @@ namespace {
 	       cl::init(true),
                cl::desc("Write instruction level statistics in callgrind format (default=on)"));
 
-  cl::opt<double>
+  cl::opt<std::string>
   StatsWriteInterval("stats-write-interval",
-                     cl::init(1.),
-		     cl::desc("Approximate number of seconds between stats writes (default=1.0s)"));
+                     cl::init("1s"),
+                     cl::desc("Approximate time between stats writes (default=1s)"));
 
   cl::opt<unsigned> StatsWriteAfterInstructions(
       "stats-write-after-instructions", cl::init(0),
       cl::desc("Write statistics after each n instructions, 0 to disable "
                "(default=0)"));
 
-  cl::opt<double>
+  cl::opt<std::string>
   IStatsWriteInterval("istats-write-interval",
-		      cl::init(10.),
-                      cl::desc("Approximate number of seconds between istats writes (default: 10.0s)"));
+                      cl::init("10s"),
+                      cl::desc("Approximate number of seconds between istats writes (default=10s)"));
 
   cl::opt<unsigned> IStatsWriteAfterInstructions(
       "istats-write-after-instructions", cl::init(0),
@@ -92,10 +91,10 @@ namespace {
                "(default=0)"));
 
   // XXX I really would like to have dynamic rate control for something like this.
-  cl::opt<double>
+  cl::opt<std::string>
   UncoveredUpdateInterval("uncovered-update-interval",
-                          cl::init(30.),
-			  cl::desc("(default=30.0s)"));
+                          cl::init("30s"),
+                          cl::desc("(default=30s)"));
   
   cl::opt<bool>
   UseCallPaths("use-call-paths",
@@ -176,18 +175,20 @@ StatsTracker::StatsTracker(Executor &_executor, std::string _objectFilename,
                            bool _updateMinDistToUncovered)
   : executor(_executor),
     objectFilename(_objectFilename),
-    startWallTime(util::getWallTime()),
+    startWallTime(time::getWallTime()),
     numBranches(0),
     fullBranches(0),
     partialBranches(0),
     updateMinDistToUncovered(_updateMinDistToUncovered) {
 
-  if (StatsWriteAfterInstructions > 0 && StatsWriteInterval > 0)
+  const time::Span statsWriteInterval(StatsWriteInterval);
+  if (StatsWriteAfterInstructions > 0 && statsWriteInterval)
     klee_error("Both options --stats-write-interval and "
                "--stats-write-after-instructions cannot be enabled at the same "
                "time.");
 
-  if (IStatsWriteAfterInstructions > 0 && IStatsWriteInterval > 0)
+  const time::Span iStatsWriteInterval(IStatsWriteInterval);
+  if (IStatsWriteAfterInstructions > 0 && iStatsWriteInterval)
     klee_error(
         "Both options --istats-write-interval and "
         "--istats-write-after-instructions cannot be enabled at the same "
@@ -245,8 +246,8 @@ StatsTracker::StatsTracker(Executor &_executor, std::string _objectFilename,
       writeStatsHeader();
       writeStatsLine();
 
-      if (StatsWriteInterval > 0)
-        executor.addTimer(new WriteStatsTimer(this), StatsWriteInterval);
+      if (statsWriteInterval)
+        executor.addTimer(new WriteStatsTimer(this), statsWriteInterval);
     } else {
       klee_error("Unable to open statistics trace file (run.stats).");
     }
@@ -255,14 +256,14 @@ StatsTracker::StatsTracker(Executor &_executor, std::string _objectFilename,
   // Add timer to calculate uncovered instructions if needed by the solver
   if (updateMinDistToUncovered) {
     computeReachableUncovered();
-    executor.addTimer(new UpdateReachableTimer(this), UncoveredUpdateInterval);
+    executor.addTimer(new UpdateReachableTimer(this), time::Span(UncoveredUpdateInterval));
   }
 
   if (OutputIStats) {
     istatsFile = executor.interpreterHandler->openOutputFile("run.istats");
     if (istatsFile) {
-      if (IStatsWriteInterval > 0)
-        executor.addTimer(new WriteIStatsTimer(this), IStatsWriteInterval);
+      if (iStatsWriteInterval)
+        executor.addTimer(new WriteIStatsTimer(this), iStatsWriteInterval);
     } else {
       klee_error("Unable to open instruction level stats file (run.istats).");
     }
@@ -284,45 +285,21 @@ void StatsTracker::done() {
 void StatsTracker::stepInstruction(ExecutionState &es) {
   if (OutputIStats) {
     if (TrackInstructionTime) {
-#if LLVM_VERSION_CODE >= LLVM_VERSION(4, 0)
-      static sys::TimePoint<> lastNowTime;
-      static std::chrono::nanoseconds lastUserTime(0);
+      static time::Point lastNowTime(time::getWallTime());
+      static time::Span lastUserTime;
 
-      if (lastUserTime.count() == 0) {
-        std::chrono::nanoseconds sys;
-        sys::Process::GetTimeUsage(lastNowTime, lastUserTime, sys);
+      if (!lastUserTime) {
+        lastUserTime = time::getUserTime();
       } else {
-        sys::TimePoint<> now;
-        std::chrono::nanoseconds user, sys;
-
-        sys::Process::GetTimeUsage(now, user, sys);
-
-        auto delta =
-          std::chrono::duration_cast<std::chrono::microseconds>(user - lastUserTime);
-        auto deltaNow =
-          std::chrono::duration_cast<std::chrono::microseconds>(now - lastNowTime);
-        stats::instructionTime += delta.count();
-        stats::instructionRealTime += deltaNow.count();
+        const auto now = time::getWallTime();
+        const auto user = time::getUserTime();
+        const auto delta = user - lastUserTime;
+        const auto deltaNow = now - lastNowTime;
+        stats::instructionTime += delta.toMicroseconds();
+        stats::instructionRealTime += deltaNow.toMicroseconds();
         lastUserTime = user;
         lastNowTime = now;
       }
-#else
-      static sys::TimeValue lastNowTime(0,0),lastUserTime(0,0);
-    
-      if (lastUserTime.seconds()==0 && lastUserTime.nanoseconds()==0) {
-        sys::TimeValue sys(0,0);
-        sys::Process::GetTimeUsage(lastNowTime,lastUserTime,sys);
-      } else {
-        sys::TimeValue now(0,0),user(0,0),sys(0,0);
-        sys::Process::GetTimeUsage(now,user,sys);
-        sys::TimeValue delta = user - lastUserTime;
-        sys::TimeValue deltaNow = now - lastNowTime;
-        stats::instructionTime += delta.usec();
-        stats::instructionRealTime += deltaNow.usec();
-        lastUserTime = user;
-        lastNowTime = now;
-      }
-#endif
     }
 
     Instruction *inst = es.pc->inst;
@@ -447,8 +424,8 @@ void StatsTracker::writeStatsHeader() {
   statsFile->flush();
 }
 
-double StatsTracker::elapsed() {
-  return util::getWallTime() - startWallTime;
+time::Span StatsTracker::elapsed() {
+  return time::getWallTime() - startWallTime;
 }
 
 void StatsTracker::writeStatsLine() {
@@ -456,24 +433,24 @@ void StatsTracker::writeStatsLine() {
              << "," << fullBranches
              << "," << partialBranches
              << "," << numBranches
-             << "," << util::getUserTime()
+             << "," << time::getUserTime().toSeconds()
              << "," << executor.states.size()
              << "," << util::GetTotalMallocUsage() + executor.memory->getUsedDeterministicSize()
              << "," << stats::queries
              << "," << stats::queryConstructs
              << "," << 0 // was numObjects
-             << "," << elapsed()
+             << "," << elapsed().toSeconds()
              << "," << stats::coveredInstructions
              << "," << stats::uncoveredInstructions
-             << "," << stats::queryTime / 1000000.
-             << "," << stats::solverTime / 1000000.
-             << "," << stats::cexCacheTime / 1000000.
-             << "," << stats::forkTime / 1000000.
-             << "," << stats::resolveTime / 1000000.
+             << "," << time::microseconds(stats::queryTime).toSeconds()
+             << "," << time::microseconds(stats::solverTime).toSeconds()
+             << "," << time::microseconds(stats::cexCacheTime).toSeconds()
+             << "," << time::microseconds(stats::forkTime).toSeconds()
+             << "," << time::microseconds(stats::resolveTime).toSeconds()
              << "," << stats::queryCexCacheMisses
              << "," << stats::queryCexCacheHits
 #ifdef KLEE_ARRAY_DEBUG
-             << "," << stats::arrayHashTime / 1000000.
+             << "," << time::microseconds(stats::arrayHashTime).toSeconds()
 #endif
              << ")\n";
   statsFile->flush();

@@ -196,7 +196,7 @@ int AddressSpace::checkPointerInObject(ExecutionState &state,
 
 bool AddressSpace::resolve(ExecutionState &state, TimingSolver *solver,
                            ref<Expr> p, ResolutionList &rl,
-                           unsigned maxResolutions, double timeout) const {
+                           unsigned maxResolutions, time::Span timeout) const {
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(p)) {
     ObjectPair res;
     if (resolveOne(CE, res))
@@ -204,7 +204,6 @@ bool AddressSpace::resolve(ExecutionState &state, TimingSolver *solver,
     return false;
   } else {
     TimerStatIncrementer timer(stats::resolveTime);
-    uint64_t timeout_us = (uint64_t) (timeout * 1000000.);
 
     // XXX in general this isn't exactly what we want... for
     // a multiple resolution case (or for example, a \in {b,c,0})
@@ -238,7 +237,7 @@ bool AddressSpace::resolve(ExecutionState &state, TimingSolver *solver,
     while (oi != begin) {
       --oi;
       const MemoryObject *mo = oi->first;
-      if (timeout_us && timeout_us < timer.check())
+      if (timeout && timeout < timer.check())
         return true;
 
       int incomplete =
@@ -257,7 +256,7 @@ bool AddressSpace::resolve(ExecutionState &state, TimingSolver *solver,
     // search forwards
     for (oi = start; oi != end; ++oi) {
       const MemoryObject *mo = oi->first;
-      if (timeout_us && timeout_us < timer.check())
+      if (timeout && timeout < timer.check())
         return true;
 
       bool mustBeTrue;

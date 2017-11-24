@@ -32,7 +32,7 @@ public:
   /// setCoreSolverTimeout - Set constraint solver timeout delay to the given
   /// value; 0
   /// is off.
-  virtual void setCoreSolverTimeout(double timeout);
+  virtual void setCoreSolverTimeout(time::Span timeout);
 };
 }
 

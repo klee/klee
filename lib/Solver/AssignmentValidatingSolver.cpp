@@ -32,7 +32,7 @@ public:
                             bool &hasSolution);
   SolverRunStatus getOperationStatusCode();
   char *getConstraintLog(const Query &);
-  void setCoreSolverTimeout(double timeout);
+  void setCoreSolverTimeout(time::Span timeout);
 };
 
 // TODO: use computeInitialValues for all queries for more stress testing
@@ -148,7 +148,7 @@ char *AssignmentValidatingSolver::getConstraintLog(const Query &query) {
   return solver->impl->getConstraintLog(query);
 }
 
-void AssignmentValidatingSolver::setCoreSolverTimeout(double timeout) {
+void AssignmentValidatingSolver::setCoreSolverTimeout(time::Span timeout) {
   return solver->impl->setCoreSolverTimeout(timeout);
 }
 

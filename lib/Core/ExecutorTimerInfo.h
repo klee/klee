@@ -23,15 +23,15 @@ public:
   Timer *timer;
 
   /// Approximate delay per timer firing.
-  double rate;
+  time::Span rate;
   /// Wall time for next firing.
-  double nextFireTime;
+  time::Point nextFireTime;
 
 public:
-  TimerInfo(Timer *_timer, double _rate)
+  TimerInfo(Timer *_timer, time::Span _rate)
     : timer(_timer),
       rate(_rate),
-      nextFireTime(util::getWallTime() + rate) {}
+      nextFireTime(time::getWallTime() + rate) {}
   ~TimerInfo() { delete timer; }
 };
 

@@ -14,6 +14,7 @@
 
 #include "klee/Expr.h"
 #include "klee/Internal/ADT/ImmutableMap.h"
+#include "klee/Internal/System/Time.h"
 
 namespace klee {
   class ExecutionState;
@@ -61,7 +62,7 @@ namespace klee {
     ///
     /// \invariant forall o in objects, o->copyOnWriteOwner <= cowKey
     MemoryMap objects;
-    
+
     AddressSpace() : cowKey(1) {}
     AddressSpace(const AddressSpace &b) : cowKey(++b.cowKey), objects(b.objects) { }
     ~AddressSpace() {}
@@ -97,7 +98,7 @@ namespace klee {
                  ref<Expr> p,
                  ResolutionList &rl, 
                  unsigned maxResolutions=0,
-                 double timeout=0.) const;
+                 time::Span timeout=time::Span()) const;
 
     /***/
 

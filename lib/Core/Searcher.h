@@ -10,11 +10,14 @@
 #ifndef KLEE_SEARCHER_H
 #define KLEE_SEARCHER_H
 
+#include "klee/Internal/System/Time.h"
+
 #include "llvm/Support/raw_ostream.h"
-#include <vector>
-#include <set>
+
 #include <map>
 #include <queue>
+#include <set>
+#include <vector>
 
 namespace llvm {
   class BasicBlock;
@@ -208,16 +211,16 @@ namespace klee {
 
   class BatchingSearcher : public Searcher {
     Searcher *baseSearcher;
-    double timeBudget;
+    time::Span timeBudget;
     unsigned instructionBudget;
 
     ExecutionState *lastState;
-    double lastStartTime;
+    time::Point lastStartTime;
     unsigned lastStartInstructions;
 
   public:
     BatchingSearcher(Searcher *baseSearcher, 
-                     double _timeBudget,
+                     time::Span _timeBudget,
                      unsigned _instructionBudget);
     ~BatchingSearcher();
 
@@ -237,7 +240,8 @@ namespace klee {
 
   class IterativeDeepeningTimeSearcher : public Searcher {
     Searcher *baseSearcher;
-    double time, startTime;
+    time::Point startTime;
+    time::Span time;
     std::set<ExecutionState*> pausedStates;
 
   public:

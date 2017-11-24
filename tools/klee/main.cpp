@@ -58,6 +58,7 @@
 #include <sys/wait.h>
 
 #include <cerrno>
+#include <ctime>
 #include <fstream>
 #include <iomanip>
 #include <iterator>
@@ -213,7 +214,7 @@ namespace {
            cl::init(0));
 }
 
-extern cl::opt<double> MaxTime;
+extern cl::opt<std::string> MaxTime;
 
 /***/
 
@@ -409,7 +410,7 @@ void KleeHandler::processTestCase(const ExecutionState &state,
     if (!success)
       klee_warning("unable to get symbolic solution, losing test case");
 
-    double start_time = util::getWallTime();
+    const auto start_time = time::getWallTime();
 
     unsigned id = ++m_numTotalTests;
 
@@ -515,10 +516,10 @@ void KleeHandler::processTestCase(const ExecutionState &state,
       m_interpreter->setHaltExecution(true);
 
     if (WriteTestInfo) {
-      double elapsed_time = util::getWallTime() - start_time;
+      time::Span elapsed_time(time::getWallTime() - start_time);
       auto f = openTestFile("info", id);
       if (f)
-        *f << "Time to generate test case: " << elapsed_time << "s\n";
+        *f << "Time to generate test case: " << elapsed_time << '\n';
     }
   }
 
@@ -940,21 +941,6 @@ static void halt_via_gdb(int pid) {
     perror("system");
 }
 
-// returns the end of the string put in buf
-static char *format_tdiff(char *buf, long seconds)
-{
-  assert(seconds >= 0);
-
-  long minutes = seconds / 60;  seconds %= 60;
-  long hours   = minutes / 60;  minutes %= 60;
-  long days    = hours   / 24;  hours   %= 24;
-
-  buf = strrchr(buf, '\0');
-  if (days > 0) buf += sprintf(buf, "%ld days, ", days);
-  buf += sprintf(buf, "%02ld:%02ld:%02ld", hours, minutes, seconds);
-  return buf;
-}
-
 #ifndef SUPPORT_KLEE_UCLIBC
 static void
 linkWithUclibc(StringRef libDir,
@@ -1080,7 +1066,7 @@ int main(int argc, char **argv, char **envp) {
 #endif
 
   if (Watchdog) {
-    if (MaxTime==0) {
+    if (MaxTime.empty()) {
       klee_error("--watchdog used without --max-time");
     }
 
@@ -1092,7 +1078,8 @@ int main(int argc, char **argv, char **envp) {
       fflush(stderr);
       sys::SetInterruptFunction(interrupt_handle_watchdog);
 
-      double nextStep = util::getWallTime() + MaxTime*1.1;
+      const time::Span maxTime(MaxTime);
+      auto nextStep = time::getWallTime() + maxTime + (maxTime / 10);
       int level = 0;
 
       // Simple stupid code...
@@ -1114,7 +1101,7 @@ int main(int argc, char **argv, char **envp) {
         } else if (res==pid && WIFEXITED(status)) {
           return WEXITSTATUS(status);
         } else {
-          double time = util::getWallTime();
+          auto time = time::getWallTime();
 
           if (time > nextStep) {
             ++level;
@@ -1136,7 +1123,8 @@ int main(int argc, char **argv, char **envp) {
 
             // Ideally this triggers a dump, which may take a while,
             // so try and give the process extra time to clean up.
-            nextStep = util::getWallTime() + std::max(15., MaxTime*.1);
+            auto max = std::max(time::seconds(15), maxTime / 10);
+            nextStep = time::getWallTime() + max;
           }
         }
       }
@@ -1293,12 +1281,16 @@ int main(int argc, char **argv, char **envp) {
     interpreter->setReplayPath(&replayPath);
   }
 
-  char buf[256];
-  time_t t[2];
-  t[0] = time(NULL);
-  strftime(buf, sizeof(buf), "Started: %Y-%m-%d %H:%M:%S\n", localtime(&t[0]));
-  handler->getInfoStream() << buf;
-  handler->getInfoStream().flush();
+
+  auto startTime = std::time(nullptr);
+  { // output clock info and start time
+    std::stringstream startInfo;
+    startInfo << time::getClockInfo()
+              << "Started: "
+              << std::put_time(std::localtime(&startTime), "%Y-%m-%d %H:%M:%S") << '\n';
+    handler->getInfoStream() << startInfo.str();
+    handler->getInfoStream().flush();
+  }
 
   if (!ReplayKTestDir.empty() || !ReplayKTestFile.empty()) {
     assert(SeedOutFile.empty());
@@ -1396,13 +1388,24 @@ int main(int argc, char **argv, char **envp) {
     }
   }
 
-  t[1] = time(NULL);
-  strftime(buf, sizeof(buf), "Finished: %Y-%m-%d %H:%M:%S\n", localtime(&t[1]));
-  handler->getInfoStream() << buf;
-
-  strcpy(buf, "Elapsed: ");
-  strcpy(format_tdiff(buf, t[1] - t[0]), "\n");
-  handler->getInfoStream() << buf;
+  auto endTime = std::time(nullptr);
+  { // output end and elapsed time
+    std::uint32_t h;
+    std::uint8_t m, s;
+    std::tie(h,m,s) = time::seconds(endTime - startTime).toHMS();
+    std::stringstream endInfo;
+    endInfo << "Finished: "
+            << std::put_time(std::localtime(&endTime), "%Y-%m-%d %H:%M:%S") << '\n'
+            << "Elapsed: "
+            << std::setfill('0') << std::setw(2) << h
+            << ':'
+            << std::setfill('0') << std::setw(2) << +m
+            << ':'
+            << std::setfill('0') << std::setw(2) << +s
+            << '\n';
+            handler->getInfoStream() << endInfo.str();
+    handler->getInfoStream().flush();
+  }
 
   // Free all the args.
   for (unsigned i=0; i<InputArgv.size()+1; i++)
