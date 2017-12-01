@@ -107,7 +107,7 @@ before_install:
     ###########################################################################
     # Update package information
     - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get update; fi
-    - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update && brew tap andreamattavelli/klee; fi
+    - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update && brew tap klee/klee; fi
     ###########################################################################
     # Set up out of source build directory
     ###########################################################################
