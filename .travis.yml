@@ -123,7 +123,7 @@ before_install:
     - ${KLEE_SRC}/.travis/install-llvm-and-runtime-compiler.sh
     - ${KLEE_SRC}/.travis/install-tcmalloc.sh
     # Install lit (llvm-lit is not available)
-    - sudo pip install lit
+    - sudo pip2 install lit
     # Get SMT solvers
     - ${KLEE_SRC}/.travis/solvers.sh
     # Get needed utlities/libraries for testing KLEE
