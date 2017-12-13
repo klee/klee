@@ -11,6 +11,7 @@
 #define KLEE_MEMORY_H
 
 #include "Context.h"
+#include "TimingSolver.h"
 #include "klee/Expr.h"
 
 #include "llvm/ADT/StringExtras.h"
@@ -205,8 +206,14 @@ public:
   void write16(unsigned offset, uint16_t value);
   void write32(unsigned offset, uint32_t value);
   void write64(unsigned offset, uint64_t value);
-
   void print() const;
+
+  /*
+    Looks at all the symbolic bytes of this object, gets a value for them
+    from the solver and puts them in the concreteStore.
+  */
+  void flushToConcreteStore(TimingSolver *solver,
+                            const ExecutionState &state) const;
 
 private:
   const UpdateList &getUpdates() const;
