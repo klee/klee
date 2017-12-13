@@ -3024,6 +3024,12 @@ void Executor::callExternalFunction(ExecutionState &state,
       assert(success && "FIXME: Unhandled solver failure");
       (void) success;
       ce->toMemory(&args[wordIndex]);
+      ObjectPair op;
+      // Checking to see if the argument is a pointer to something
+      if (ce->getWidth() == Context::get().getPointerWidth() &&
+          state.addressSpace.resolveOne(ce, op)) {
+        op.second->flushToConcreteStore(solver, state);
+      }
       wordIndex += (ce->getWidth()+63)/64;
     } else {
       ref<Expr> arg = toUnique(state, *ai);

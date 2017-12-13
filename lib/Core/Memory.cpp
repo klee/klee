@@ -229,6 +229,22 @@ const UpdateList &ObjectState::getUpdates() const {
   return updates;
 }
 
+void ObjectState::flushToConcreteStore(TimingSolver *solver,
+                                       const ExecutionState &state) const {
+  for (unsigned i = 0; i < size; i++) {
+    if (isByteKnownSymbolic(i)) {
+      ref<ConstantExpr> ce;
+      bool success = solver->getValue(state, read8(i), ce);
+      if (!success)
+        klee_warning("Solver timed out when getting a value for external call, "
+                     "byte %p+%u will have random value",
+                     (void *)object->address, i);
+      else
+        ce->toMemory(concreteStore + i);
+    }
+  }
+}
+
 void ObjectState::makeConcrete() {
   delete concreteMask;
   delete flushMask;
