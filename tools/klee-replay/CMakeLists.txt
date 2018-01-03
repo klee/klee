@@ -6,7 +6,7 @@
 # License. See LICENSE.TXT for details.
 #
 #===------------------------------------------------------------------------===#
-if (HAVE_PTY_H)
+if (HAVE_PTY_H OR HAVE_UTIL_H)
   add_executable(klee-replay
     fd_init.c
     file-creator.c
@@ -26,5 +26,8 @@ if (HAVE_PTY_H)
   endif()
 install(TARGETS klee-replay RUNTIME DESTINATION bin)
 else()
-  message(WARNING "Not building klee-replay due to missing \"pty.h\" header file")
+  if (NOT LIBUTIL_LIBRARIES)
+    message(FATAL_ERROR "klee-replay needs util.h")
+  endif()
+  target_link_libraries(klee-replay PRIVATE ${LIBUTIL_LIBRARIES})
 endif()

@@ -18,7 +18,14 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <termios.h>
-#include <pty.h>
+#ifdef __linux
+  // linux
+  #include<pty.h>
+#else
+  // all unices not caught above
+  #include <util.h>
+#endif
+
 #include <time.h>
 #include <sys/wait.h>
 #include <sys/time.h>
