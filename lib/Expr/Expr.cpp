@@ -328,7 +328,7 @@ ref<Expr> ConstantExpr::fromMemory(void *address, Width width) {
   // FIXME: what about machines without x87 support?
   default:
     return ConstantExpr::alloc(llvm::APInt(width,
-      (width+llvm::integerPartWidth-1)/llvm::integerPartWidth,
+      (width+llvm::APFloatBase::integerPartWidth-1)/llvm::APFloatBase::integerPartWidth,
       (const uint64_t*)address));
   }
 }
