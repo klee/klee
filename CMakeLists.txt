@@ -422,12 +422,13 @@ endif()
 # Detect libutil
 ################################################################################
 check_include_file("pty.h" HAVE_PTY_H)
-if (HAVE_PTY_H)
+check_include_file("util.h" HAVE_UTIL_H)
+if (HAVE_PTY_H OR HAVE_UTIL_H)
   find_library(LIBUTIL_LIBRARIES
     NAMES util
-    DOC "libutil library. Typically part of glibc")
+    DOC "libutil library. Typically part of libc")
   if (NOT LIBUTIL_LIBRARIES)
-    message(FATAL_ERROR "Found \"pty.h\" but could not find libutil")
+    message(FATAL_ERROR "Could not find libutil")
   endif()
 endif()
 
