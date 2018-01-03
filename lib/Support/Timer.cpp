@@ -16,9 +16,9 @@ using namespace klee;
 using namespace llvm;
 
 WallTimer::WallTimer() {
-  startMicroseconds = util::getWallTimeVal().usec();
+  startMicroseconds = util::getWallTimeMicros();
 }
 
 uint64_t WallTimer::check() {
-  return util::getWallTimeVal().usec() - startMicroseconds;
+  return util::getWallTimeMicros() - startMicroseconds;
 }
