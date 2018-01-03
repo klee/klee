@@ -10,23 +10,24 @@
 #include "klee/Config/Version.h"
 #include "klee/Internal/System/Time.h"
 
-#include "llvm/Support/TimeValue.h"
+#include "llvm/Support/Timer.h"
 #include "llvm/Support/Process.h"
 
 using namespace llvm;
 using namespace klee;
 
 double util::getUserTime() {
-  sys::TimeValue now(0,0),user(0,0),sys(0,0);
-  sys::Process::GetTimeUsage(now,user,sys);
-  return (user.seconds() + (double) user.nanoseconds() * 1e-9);
+  auto time_rec = TimeRecord::getCurrentTime();
+  return time_rec.getUserTime();
 }
 
 double util::getWallTime() {
-  sys::TimeValue now = getWallTimeVal();
-  return (now.seconds() + ((double) now.nanoseconds() * 1e-9));
+  auto time_rec = TimeRecord::getCurrentTime();
+  return time_rec.getWallTime();
 }
 
-sys::TimeValue util::getWallTimeVal() {
-  return sys::TimeValue::now();
+uint64_t util::getWallTimeMicros() {
+  std::time_t st = std::time(NULL);
+  auto millies = static_cast<std::chrono::milliseconds>(st).count();
+  return static_cast<uint64_t>(millies);
 }
