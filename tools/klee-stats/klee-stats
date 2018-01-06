@@ -45,6 +45,8 @@ Legend = [
     ('Tcex', 'time spent in the counterexample caching code'),
     ('Tfork', 'time spent forking'),
     ('TResolve', 'time spent in object resolution'),
+    ('QCexCMisses', 'Counterexample cache misses'),
+    ('QCexCHits', 'Counterexample cache hits'),
 ]
 
 KleeTable = TableFormat(lineabove=Line("-", "-", "-", "-"),
@@ -150,7 +152,7 @@ def getLabels(pr):
         labels = ('Path', 'Instrs', 'Time(s)', 'ICov(%)', 'BCov(%)', 'ICount',
                   'TSolver(%)', 'States', 'maxStates', 'avgStates', 'Mem(MB)',
                   'maxMem(MB)', 'avgMem(MB)', 'Queries', 'AvgQC', 'Tcex(%)',
-                  'Tfork(%)')
+                  'Tfork(%)', 'QCexCMisses', 'QCexCHits')
     elif pr == 'reltime':
         labels = ('Path', 'Time(s)', 'TUser(%)', 'TSolver(%)',
                   'Tcex(%)', 'Tfork(%)', 'TResolve(%)')
@@ -169,7 +171,7 @@ def getLabels(pr):
 def getRow(record, stats, pr):
     """Compose data for the current run into a row."""
     I, BFull, BPart, BTot, T, St, Mem, QTot, QCon,\
-        _, Treal, SCov, SUnc, _, Ts, Tcex, Tf, Tr = record
+        _, Treal, SCov, SUnc, _, Ts, Tcex, Tf, Tr, QCexMiss, QCexHits = record
     maxMem, avgMem, maxStates, avgStates = stats
 
     # special case for straight-line code: report 100% branch coverage
@@ -184,7 +186,7 @@ def getRow(record, stats, pr):
                100 * (2 * BFull + BPart) / (2 * BTot), SCov + SUnc,
                100 * Ts / Treal, St, maxStates, avgStates,
                Mem, maxMem, avgMem, QTot, AvgQC,
-               100 * Tcex / Treal, 100 * Tf / Treal)
+               100 * Tcex / Treal, 100 * Tf / Treal, QCexMiss, QCexHits)
     elif pr == 'reltime':
         row = (Treal, 100 * T / Treal, 100 * Ts / Treal,
                100 * Tcex / Treal, 100 * Tf / Treal,
@@ -229,7 +231,7 @@ def drawLineChart(vectors, titles):
 
     fig = plt.figure()
     for i in range(nFigs):
-        ax = fig.add_subplot(nRow, nCol, i)
+        ax = fig.add_subplot(nRow, nCol, i+1)
         ax.plot(vectors[i])
         ax.set_title(titles[i])
         #ax.set_xlabel()
