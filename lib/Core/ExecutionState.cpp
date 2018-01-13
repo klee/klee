@@ -21,10 +21,12 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <algorithm>
 #include <iomanip>
 #include <sstream>
 #include <cassert>
 #include <map>
+#include <regex>
 #include <set>
 #include <stdarg.h>
 
@@ -165,18 +167,49 @@ void ExecutionState::addSymbolic(const MemoryObject *mo, const Array *array) {
 ///
 
 std::string ExecutionState::getFnAlias(std::string fn) {
-  std::map < std::string, std::string >::iterator it = fnAliases.find(fn);
-  if (it != fnAliases.end())
-    return it->second;
-  else return "";
+  for (auto& candidate : fnAliases) {
+    if (candidate.isRegex) {
+      if (std::regex_match(fn, candidate.nameRegex)) {
+        return candidate.alias;
+      }
+    } else if (fn == candidate.name) {
+      return candidate.alias;
+    }
+  }
+
+  return "";
 }
 
 void ExecutionState::addFnAlias(std::string old_fn, std::string new_fn) {
-  fnAliases[old_fn] = new_fn;
+  removeFnAlias(old_fn);
+
+  FunctionAlias alias {
+    .isRegex = false,
+    .nameRegex = std::regex(""),
+    .name = old_fn,
+    .alias = new_fn
+  };
+  fnAliases.push_back(alias);
+}
+
+void ExecutionState::addFnRegexAlias(std::string fn_regex, std::string new_fn) {
+  removeFnAlias(fn_regex);
+
+  FunctionAlias alias = {
+    .isRegex = true,
+    .nameRegex = std::regex(fn_regex),
+    .name = fn_regex,
+    .alias = new_fn
+  };
+  fnAliases.push_back(alias);
 }
 
 void ExecutionState::removeFnAlias(std::string fn) {
-  fnAliases.erase(fn);
+  fnAliases.erase(std::remove_if(fnAliases.begin(), fnAliases.end(),
+                                 [fn](FunctionAlias candidate) {
+                                   return candidate.name == fn;
+                                 }),
+                  fnAliases.end());
 }
 
 /**/

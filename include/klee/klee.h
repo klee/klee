@@ -146,6 +146,16 @@ extern "C" {
      may not always work. */
   void klee_alias_function(const char* fn_name, const char* new_fn_name);
 
+  /* Similar to klee_alias_function, but uses a regex to match
+     the function's name; e.g. klee_alias_function_regex("foo.*", "bar")
+     will replace "foo", "foox", "foo123" with "bar".
+     Particularly useful to replace a static function, which
+     may be replicated many times with a suffixed name. */
+  void klee_alias_function_regex(const char* fn_regex, const char* new_fn_name);
+
+  /* Undoes an alias (either a name or a regex). */
+  void klee_alias_undo(const char* alias);
+
   /* Print stack trace. */
   void klee_stack_trace(void);
 

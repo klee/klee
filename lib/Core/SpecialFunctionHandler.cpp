@@ -110,6 +110,8 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
   add("klee_warning", handleWarning, false),
   add("klee_warning_once", handleWarningOnce, false),
   add("klee_alias_function", handleAliasFunction, false),
+  add("klee_alias_function_regex", handleAliasFunctionRegex, false),
+  add("klee_alias_undo", handleAliasUndo, false),
   add("malloc", handleMalloc, true),
   add("realloc", handleRealloc, true),
 
@@ -311,6 +313,34 @@ void SpecialFunctionHandler::handleAliasFunction(ExecutionState &state,
   if (old_fn == new_fn)
     state.removeFnAlias(old_fn);
   else state.addFnAlias(old_fn, new_fn);
+}
+
+void SpecialFunctionHandler::handleAliasFunctionRegex(ExecutionState &state,
+						      KInstruction *target,
+						      std::vector<ref<Expr> > &arguments) {
+  assert(arguments.size()==2 && 
+         "invalid number of arguments to klee_alias_function_regex");
+  assert(isa<klee::ConstantExpr>(arguments[0]) &&
+         "first arg to klee_alias_function_regex cannot be a symbol");
+  assert(isa<klee::ConstantExpr>(arguments[1]) &&
+         "second arg to klee_alias_function_regex cannot be a symbol");
+  std::string fn_regex = readStringAtAddress(state, arguments[0]);
+  std::string new_fn = readStringAtAddress(state, arguments[1]);
+  KLEE_DEBUG_WITH_TYPE("alias_handling", llvm::errs() << "Replacing by regex " << fn_regex
+                                           << " with " << new_fn << "()\n");
+  state.addFnRegexAlias(fn_regex, new_fn);
+}
+
+void SpecialFunctionHandler::handleAliasUndo(ExecutionState &state,
+					     KInstruction *target,
+					     std::vector<ref<Expr> > &arguments) {
+  assert(arguments.size()==1 && 
+         "invalid number of arguments to klee_alias_undo");
+  assert(isa<klee::ConstantExpr>(arguments[0]) &&
+         "single arg to klee_alias_undo cannot be a symbol");
+  std::string alias = readStringAtAddress(state, arguments[0]);
+  KLEE_DEBUG_WITH_TYPE("alias_handling", llvm::errs() << "Undoing alias " << alias << "\n");
+  state.removeFnAlias(alias);
 }
 
 void SpecialFunctionHandler::handleAssert(ExecutionState &state,
