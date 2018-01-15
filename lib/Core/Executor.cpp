@@ -1663,7 +1663,11 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       // switch to an internal rep.
       llvm::IntegerType *Ty = cast<IntegerType>(si->getCondition()->getType());
       ConstantInt *ci = ConstantInt::get(Ty, CE->getZExtValue());
+#if LLVM_VERSION_CODE >= LLVM_VERSION(5, 0)
+      unsigned index = si->findCaseValue(ci)->getSuccessorIndex();
+#else
       unsigned index = si->findCaseValue(ci).getSuccessorIndex();
+#endif
       transferToBasicBlock(si->getSuccessor(index), si->getParent(), state);
     } else {
       // Handle possible different branch targets
