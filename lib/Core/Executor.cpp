@@ -1553,8 +1553,12 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       std::map<ref<Expr>, BasicBlock *> expressionOrder;
 
       // Iterate through all non-default cases and order them by expressions
+#if LLVM_VERSION_CODE > LLVM_VERSION(3, 4)
+      for (auto i : si->cases()) {
+#else
       for (SwitchInst::CaseIt i = si->case_begin(), e = si->case_end(); i != e;
            ++i) {
+#endif
         ref<Expr> value = evalConstant(i.getCaseValue());
 
         BasicBlock *caseSuccessor = i.getCaseSuccessor();
