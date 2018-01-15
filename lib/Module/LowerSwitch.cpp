@@ -114,8 +114,12 @@ void LowerSwitchPass::processSwitchInst(SwitchInst *SI) {
   }
   
   CaseVector cases;
-  
+
+#if LLVM_VERSION_CODE > LLVM_VERSION(3, 4)
+  for (auto i : SI->cases())
+#else
   for (SwitchInst::CaseIt i = SI->case_begin(), e = SI->case_end(); i != e; ++i)
+#endif
     cases.push_back(SwitchCase(i.getCaseValue(),
                                i.getCaseSuccessor()));
   
