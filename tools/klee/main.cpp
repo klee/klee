@@ -1032,7 +1032,8 @@ createLibCWrapper(std::vector<std::unique_ptr<llvm::Module>> &modules,
   args.push_back(
       llvm::ConstantExpr::getBitCast(inModuleRefernce, ft->getParamType(0)));
   args.push_back(&*(stub->arg_begin())); // argc
-  args.push_back(&*(++stub->arg_begin())); // argv
+  auto arg_it = stub->arg_begin();
+  args.push_back(&*(++arg_it)); // argv
   args.push_back(Constant::getNullValue(ft->getParamType(3))); // app_init
   args.push_back(Constant::getNullValue(ft->getParamType(4))); // app_fini
   args.push_back(Constant::getNullValue(ft->getParamType(5))); // rtld_fini
