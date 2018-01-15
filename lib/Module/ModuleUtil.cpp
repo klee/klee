@@ -13,6 +13,9 @@
 #include "klee/Internal/Support/Debug.h"
 #include "klee/Internal/Support/ErrorHandling.h"
 
+#if LLVM_VERSION_CODE >= LLVM_VERSION(5, 0)
+#include "llvm/BinaryFormat/Magic.h"
+#endif
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -380,13 +383,19 @@ bool klee::loadFile(const std::string &fileName, LLVMContext &context,
   MemoryBuffer *Buffer = bufferErr->get();
 #endif
 
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
+#if LLVM_VERSION_CODE >= LLVM_VERSION(5, 0)
+  file_magic magic = identify_magic(Buffer.getBuffer());
+#elif LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
   sys::fs::file_magic magic = sys::fs::identify_magic(Buffer.getBuffer());
 #else
   sys::fs::file_magic magic = sys::fs::identify_magic(Buffer->getBuffer());
 #endif
 
+#if LLVM_VERSION_CODE >= LLVM_VERSION(5, 0)
+  if (magic == file_magic::bitcode) {
+#else
   if (magic == sys::fs::file_magic::bitcode) {
+#endif
     SMDiagnostic Err;
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
     std::unique_ptr<llvm::Module> module(parseIR(Buffer, Err, context));
@@ -403,7 +412,11 @@ bool klee::loadFile(const std::string &fileName, LLVMContext &context,
     return true;
   }
 
+#if LLVM_VERSION_CODE >= LLVM_VERSION(5, 0)
+  if (magic == file_magic::archive) {
+#else
   if (magic == sys::fs::file_magic::archive) {
+#endif
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 9)
     Expected<std::unique_ptr<object::Binary> > archOwner =
       object::createBinary(Buffer, &context);
