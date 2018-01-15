@@ -57,8 +57,8 @@ bool DivCheckPass::runOnModule(Module &M) {
             if (!divZeroCheckFunction) {
               Constant *fc = M.getOrInsertFunction("klee_div_zero_check", 
                                                    Type::getVoidTy(ctx),
-                                                   Type::getInt64Ty(ctx),
-                                                   NULL);
+                                                   Type::getInt64Ty(ctx)
+                                                   KLEE_LLVM_GOIF_TERMINATOR);
               divZeroCheckFunction = cast<Function>(fc);
             }
 
@@ -118,8 +118,8 @@ bool OvershiftCheckPass::runOnModule(Module &M) {
               Constant *fc = M.getOrInsertFunction("klee_overshift_check",
                                                    Type::getVoidTy(ctx),
                                                    Type::getInt64Ty(ctx),
-                                                   Type::getInt64Ty(ctx),
-                                                   NULL);
+                                                   Type::getInt64Ty(ctx)
+                                                   KLEE_LLVM_GOIF_TERMINATOR);
               overshiftCheckFunction = cast<Function>(fc);
             }
 
