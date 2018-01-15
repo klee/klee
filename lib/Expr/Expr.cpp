@@ -333,7 +333,11 @@ ref<Expr> ConstantExpr::fromMemory(void *address, Width width) {
   // FIXME: what about machines without x87 support?
   default:
     return ConstantExpr::alloc(llvm::APInt(width,
+#if LLVM_VERSION_CODE >= LLVM_VERSION(5, 0)
+      (width+llvm::APFloatBase::integerPartWidth-1)/llvm::APFloatBase::integerPartWidth,
+#else
       (width+llvm::integerPartWidth-1)/llvm::integerPartWidth,
+#endif
       (const uint64_t*)address));
   }
 }
