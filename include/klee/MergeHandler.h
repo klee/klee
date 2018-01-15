@@ -76,10 +76,6 @@ class MergeHandler {
 private:
   Executor *executor;
 
-  /// @brief Number of states that are tracked by this MergeHandler, that ran
-  /// into a relevant klee_close_merge
-  unsigned closedStateCount;
-
   /// @brief Mapping the different 'klee_close_merge' calls to the states that ran into
   /// them
   std::map<llvm::Instruction *, std::vector<ExecutionState *> >
