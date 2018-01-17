@@ -163,6 +163,6 @@ void ConstraintManager::addConstraintInternal(ref<Expr> e) {
 }
 
 void ConstraintManager::addConstraint(ref<Expr> e) {
-  e = simplifyExpr(e);
+  // e = simplifyExpr(e);
   addConstraintInternal(e);
 }

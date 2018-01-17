@@ -40,7 +40,19 @@ struct StackFrame {
   KFunction *kf;
   CallPathNode *callPathNode;
 
+  /*****************************************/
+  /* OISH: this is pretty clear:           */
+  /* save all the original C variabels     */
+  /* these are the same variables that are */
+  /* allocated with the alloca             */
+  /*****************************************/  
   std::vector<const MemoryObject *> allocas;
+
+  /*****************************************/
+  /* OISH: this is *so* unclear:           */
+  /* I have absolutely no idea what these  */
+  /* locals are ...                        */
+  /*****************************************/  
   Cell *locals;
 
   /// Minimum distance to an uncovered instruction once the function
@@ -52,7 +64,7 @@ struct StackFrame {
 
   // For vararg functions: arguments not passed via parameter are
   // stored (packed tightly) in a local (alloca) memory object. This
-  // is set up to match the way the front-end generates vaarg code (it
+  // is setup to match the way the front-end generates vaarg code (it
   // does not pass vaarg through as expected). VACopy is lowered inside
   // of intrinsic lowering.
   MemoryObject *varargs;
@@ -137,6 +149,12 @@ public:
   /// @brief Ordered list of symbolics: used to generate test cases.
   //
   // FIXME: Move to a shared list structure (not critical).
+  /****************************************************************************/
+  /* OISH: This is what I was looking for ... a connection between the actual */
+  /* allocation (MemoryObject *) and the symbolic buffer (Klee::Array *)      */
+  /* I need to be able to ask: "what is the (MemoryObject *) corresponding to */
+  /* this (Klee::Array *) symbolic buffer ?                                   */
+  /****************************************************************************/
   std::vector<std::pair<const MemoryObject *, const Array *> > symbolics;
 
   /// @brief Set of used array names for this state.  Used to avoid collisions.
@@ -148,6 +166,76 @@ public:
 
   // The objects handling the klee_open_merge calls this state ran through
   std::vector<ref<MergeHandler> > openMergeStack;
+
+	int numABSerials=0;
+
+	/****************************************/
+	/* dummy integer just for debugging ... */
+	/****************************************/
+	int OrenIshShalom;
+
+	/***********************/
+	/* Local variables ... */
+	/***********************/
+	std::set<std::string> localVariables;
+
+	/*****************************************************************************************/
+	/* varNames is to enable easy name identification of variables                           */
+	/* We basically allow ourselves to call local variables with the OISH_ prefix            */
+	/* then, for every temporary called tmp, arrayidx7 etc. we simply locate it all          */
+	/* the way up to the original local variable ... this bypasses a lot of klee's hardships */
+	/*****************************************************************************************/
+	std::map<std::string,std::string> varNames;
+
+	/****************************/
+	/* svars = string variables */
+	/* ------------------------ */
+	/* ------------------------ */
+	/* ------------------------ */
+	/* That is, their names ... */
+	/****************************/
+	std::set<std::string> svars;
+
+	/***************************************************/
+	/* serial : svars ------> N                        */
+	/* serial = the way to identify abstract buffers   */
+	/* ----------------------------------------------  */
+	/* ----------------------------------------------  */
+	/* ----------------------------------------------  */
+	/* That is, each abstract buffer is represented by */
+	/* a unique integer ...                            */
+	/***************************************************/
+	std::map<std::string,int> ab_serial;
+
+	/*************************************************************/
+	/* offset : svars ------> N                                  */
+	/* offset = the offset of an svar inside its abstract buffer */
+	/* --------------------------------------------------------  */
+	/* --------------------------------------------------------  */
+	/* --------------------------------------------------------  */
+	/* This is over simplified for now -- the offset should      */
+	/* later be a ref<Expr> ...                                  */
+	/*************************************************************/
+	std::map<std::string,ref<Expr> > ab_offset;
+
+	/*********************************************************/
+	/* size : AbstractBuffers ------> N+                     */
+	/* ----------------------------------------------------- */
+	/* ----------------------------------------------------- */
+	/* ----------------------------------------------------- */
+	/* That is, the size of each abstract buffer, referenced */
+	/* by its serial number                                  */
+	/*********************************************************/
+	std::map<int,ref<Expr> > ab_size;
+
+	/*********************************************************/
+	/* last : AbstractBuffers ------> N                      */
+	/* ----------------------------------------------------- */
+	/* ----------------------------------------------------- */
+	/* ----------------------------------------------------- */
+	/* That is, the last version of an abstract buffer       */
+	/*********************************************************/
+	std::map<int,int> ab_last;
 
 private:
   ExecutionState() : ptreeNode(0) {}

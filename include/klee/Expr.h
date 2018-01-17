@@ -131,6 +131,19 @@ public:
     // Bit
     Not,
 
+	// String
+	Str_Eq,
+	Str_Var,
+	Str_Atoi,
+	Str_Itoa,
+	Str_Const,
+	Str_CharAt,
+	Str_Substr,
+	Str_Length,
+	Str_Compare,
+	Str_FirstIdxOf,
+	Str_FromBitVec8,
+
     // All subsequent kinds are binary.
 
     // Arithmetic
@@ -241,6 +254,8 @@ public:
   // Given an array of new kids return a copy of the expression
   // but using those children. 
   virtual ref<Expr> rebuild(ref<Expr> kids[/* getNumKids() */]) const = 0;
+
+  //
 
   /// isZero - Is this a constant zero.
   bool isZero() const;
@@ -834,7 +849,444 @@ protected:
   }
 };
 
+// strings by OISH
+/*************************/
+/* StrFromBitVector8Expr */
+/*************************/
+class StrCharAtExpr : public Expr {
+public:
+	ref<Expr> s;
+	ref<Expr> i;
 
+public:
+	static ref<Expr> create(ref<Expr> s,ref<Expr> i)
+	{
+		StrCharAtExpr *e = new StrCharAtExpr;
+		e->s = s;
+		e->i = i;
+		return e;
+	}
+
+	virtual unsigned computeHash();
+
+public:
+	/*************************************************************************/
+	/* There are 5 pure virtual functions in Expr, which must be implemented */
+	/* Out of those 5 functions, only 1 is truly relevant for us: getKind    */
+	/* The rest of the functions are just dummy functions to keep the        */
+	/* original klee design                                                  */
+	/*************************************************************************/
+	virtual int compareContents(const Expr &b)  const {return   0;}	
+	virtual Kind      getKind()                 const {return   Expr::Str_CharAt;}	
+	virtual Width     getWidth()                const {return   32;}	
+	virtual unsigned  getNumKids()              const {return    2;}
+	virtual ref<Expr> getKid(unsigned int i)    const	{
+															if(i==0){return s;}
+															if(i==1){return this->i;}
+															return 0;
+														}
+	virtual ref<Expr> rebuild(ref<Expr> kids[]) const { return create(kids[0],kids[1]); }
+	static bool classof(const Expr *E) { return E->getKind() == Expr::Str_CharAt; }
+	static bool classof(const ConstantExpr *) { return false; }	
+};
+
+/*************************/
+/* StrFromBitVector8Expr */
+/*************************/
+class StrFromBitVector8Expr : public Expr {
+public:
+	ref<Expr> someBitVec8;
+
+public:
+	static ref<Expr> create(ref<Expr> someBitVec8)
+	{
+		StrFromBitVector8Expr *e = new StrFromBitVector8Expr;
+		e->someBitVec8 = someBitVec8;
+		return e;
+	}
+
+	virtual unsigned computeHash();
+
+public:
+	/*************************************************************************/
+	/* There are 5 pure virtual functions in Expr, which must be implemented */
+	/* Out of those 5 functions, only 1 is truly relevant for us: getKind    */
+	/* The rest of the functions are just dummy functions to keep the        */
+	/* original klee design                                                  */
+	/*************************************************************************/	
+	virtual int       compareContents(const Expr &b)  const {return   0;}	
+	virtual Kind      getKind()                 const {return   Expr::Str_FromBitVec8;}	
+	virtual Width     getWidth()                const {return   32;}	
+	virtual unsigned  getNumKids()              const {return   1;}	
+	virtual ref<Expr> getKid(unsigned int i)    const	{
+															if(i==0){return someBitVec8;}
+															return 0;
+														}
+	virtual ref<Expr> rebuild(ref<Expr> kids[]) const {return create(kids[0]);}
+	static bool classof(const Expr *E) { return E->getKind() == Expr::Str_FromBitVec8; }
+	static bool classof(const ConstantExpr *) { return false; }	
+};
+
+/*********************/
+/* StrFirstIdxOfExpr */
+/*********************/
+class StrFirstIdxOfExpr : public Expr {
+public:
+	ref<Expr> haystack;
+	ref<Expr> needle;
+
+	StrFirstIdxOfExpr(
+		const ref<Expr> &in_haystack,
+		const ref<Expr> &in_needle)
+		:
+		haystack(in_haystack),
+		needle(in_needle)
+	{}
+
+	virtual unsigned computeHash();
+
+public:
+	static ref<Expr> create(const ref<Expr> &in_haystack,const ref<Expr> &in_needle)
+	{
+		return StrFirstIdxOfExpr::alloc(in_haystack,in_needle);
+	}
+	
+	static ref<Expr> alloc(const ref<Expr> &in_haystack,const ref<Expr> &in_needle)
+	{
+		ref<Expr> res(new StrFirstIdxOfExpr(in_haystack,in_needle));
+		res->computeHash();
+		return res;
+	}
+
+public:
+	/*************************************************************************/
+	/* There are 5 pure virtual functions in Expr, which must be implemented */
+	/* Out of those 5 functions, only 1 is truly relevant for us: getKind    */
+	/* The rest of the functions are just dummy functions to keep the        */
+	/* original klee design                                                  */
+	/*************************************************************************/
+	virtual int compareContents(const Expr &b)  const {return   0;}		
+	virtual Kind      getKind()                 const {return   Expr::Str_FirstIdxOf;}	
+	virtual Width     getWidth()                const {return   32;}	
+	virtual unsigned  getNumKids()              const {return    2;}	
+	virtual ref<Expr> getKid(unsigned int i)    const	{
+															if(i==0){return haystack;}
+															if(i==1){return needle;}
+															return 0;
+														}
+	virtual ref<Expr> rebuild(ref<Expr> kids[]) const { return create(kids[0],kids[1]); }
+	static bool classof(const Expr *E) { return E->getKind() == Expr::Str_FirstIdxOf; }
+	static bool classof(const ConstantExpr *) { return false; }	
+};
+
+/*************/
+/* StrEqExpr */
+/*************/
+class StrEqExpr : public Expr {
+public:
+	ref<Expr> s1;
+	ref<Expr> s2;
+
+	StrEqExpr(const ref<Expr> &in_s1,const ref<Expr> &in_s2) : s1(in_s1),s2(in_s2) {}
+
+	virtual unsigned computeHash();
+
+public:
+	static ref<Expr> create(const ref<Expr> &in_s1,const ref<Expr> &in_s2)
+	{
+		return StrEqExpr::alloc(in_s1,in_s2);
+	}
+	
+	static ref<Expr> alloc(const ref<Expr> &in_s1,const ref<Expr> &in_s2)
+	{
+		ref<Expr> res(new StrEqExpr(in_s1,in_s2));
+		res->computeHash();
+		return res;
+	}
+
+public:
+	/*************************************************************************/
+	/* There are 5 pure virtual functions in Expr, which must be implemented */
+	/* Out of those 5 functions, only 1 is truly relevant for us: getKind    */
+	/* The rest of the functions are just dummy functions to keep the        */
+	/* original klee design                                                  */
+	/*************************************************************************/
+	virtual int compareContents(const Expr &b)  const {return   0;}		
+	virtual Kind      getKind()                 const {return   Expr::Str_Eq;}	
+	virtual Width     getWidth()                const {return   1;}	
+	virtual unsigned  getNumKids()              const {return   2;}	
+	virtual ref<Expr> getKid(unsigned int i)    const	{
+															if(i==0){return s1;}
+															if(i==1){return s2;}
+															return 0;
+														}
+	virtual ref<Expr> rebuild(ref<Expr> kids[]) const { return create(kids[0],kids[1]); }
+	static bool classof(const Expr *E) { return E->getKind() == Expr::Str_Eq; }
+	static bool classof(const ConstantExpr *) { return false; }	
+};
+
+/*****************/
+/* StrSubstrExpr */
+/*****************/
+class StrSubstrExpr : public Expr {
+public:
+	ref<Expr> s;
+	ref<Expr> offset;
+	ref<Expr> length;
+
+	StrSubstrExpr(
+		const ref<Expr> &in_s,
+		const ref<Expr> &in_offset,
+		const ref<Expr> &in_length)
+		:
+		s(in_s),
+		offset(in_offset),
+		length(in_length)
+	{}
+
+	virtual unsigned computeHash();
+
+public:
+	static ref<Expr> create(
+		const ref<Expr> &in_s,
+		const ref<Expr> &in_offset,
+		const ref<Expr> &in_length)
+	{
+		return StrSubstrExpr::alloc(
+			in_s,
+			in_offset,
+			in_length);
+	}
+	
+	static ref<Expr> alloc(
+		const ref<Expr> &in_s,
+		const ref<Expr> &in_offset,
+		const ref<Expr> &in_length)
+	{
+		ref<Expr> res(new StrSubstrExpr(in_s,in_offset,in_length));
+		res->computeHash();
+		return res;
+	}
+
+public:
+	/*************************************************************************/
+	/* There are 5 pure virtual functions in Expr, which must be implemented */
+	/* Out of those 5 functions, only 1 is truly relevant for us: getKind    */
+	/* The rest of the functions are just dummy functions to keep the        */
+	/* original klee design                                                  */
+	/*************************************************************************/
+	virtual int compareContents(const Expr &b)  const {return   0;}		
+	virtual Kind      getKind()                 const {return   Expr::Str_Substr;}	
+	virtual Width     getWidth()                const {return   32;}	
+	virtual unsigned  getNumKids()              const {return   3;}	
+	virtual ref<Expr> getKid(unsigned int i)    const	{
+															if(i==0){return s;}
+															if(i==1){return offset;}
+															if(i==2){return length;}
+															return 0;
+														}
+	virtual ref<Expr> rebuild(ref<Expr> kids[]) const {return create(kids[0],kids[1],kids[2]);}
+	static bool classof(const Expr *E) { return E->getKind() == Expr::Str_Substr; }
+	static bool classof(const ConstantExpr *) { return false; }	
+};
+
+class StrFromBitVec8Expr : public Expr {
+public:
+	ref<Expr> c;
+
+	StrFromBitVec8Expr(const ref<Expr> &in_c) : c(in_c) {}
+
+	virtual unsigned computeHash();
+
+	static ref<Expr> create(const ref<Expr> &in_c)
+	{
+		return StrFromBitVec8Expr::alloc(in_c);
+	}
+	
+	static ref<Expr> alloc(const ref<Expr> &in_c)
+	{
+		ref<Expr> res(new StrFromBitVec8Expr(in_c));
+		res->computeHash();
+		return res;
+	}
+	
+public:
+	/*************************************************************************/
+	/* There are 5 pure virtual functions in Expr, which must be implemented */
+	/* Out of those 5 functions, only 1 is truly relevant for us: getKind    */
+	/* The rest of the functions are just dummy functions to keep the        */
+	/* original klee design                                                  */
+	/*************************************************************************/
+	virtual int compareContents(const Expr &b)  const {return   0;}		
+	virtual Kind      getKind()                 const {return   Expr::Str_FromBitVec8;}	
+	virtual Width     getWidth()                const {return   8;}	
+	virtual unsigned  getNumKids()              const {return   0;}	
+	virtual ref<Expr> getKid(unsigned int i)    const { if(i==0){return c;} return 0;}
+	virtual ref<Expr> rebuild(ref<Expr> kids[]) const { return create(kids[0]); }
+	static bool classof(const Expr *E) { return E->getKind() == Expr::Str_FromBitVec8; }
+	static bool classof(const ConstantExpr *) { return false; }	
+};
+
+#define MAX_CONST_STRING_LENGTH 512
+#define MAX_STRING_VAR_NAME_LENGTH 512
+
+class StrConstExpr : public Expr {
+public:
+	char value[MAX_CONST_STRING_LENGTH];
+
+	StrConstExpr(const char *in_value)
+	{
+		memset(value,0,MAX_CONST_STRING_LENGTH);
+		strncpy(value,in_value,MAX_CONST_STRING_LENGTH-1);		
+		value[MAX_CONST_STRING_LENGTH-1]=0;
+	}
+
+	virtual unsigned computeHash();
+
+public:
+	static ref<Expr> create(const char *value)
+	{
+		return StrConstExpr::alloc(value);
+	}
+
+	static ref<Expr> alloc(const char *value)
+	{
+		ref<Expr> res(new StrConstExpr(value));
+		res->computeHash();
+		return res;
+	}
+	
+public:
+	/*************************************************************************/
+	/* There are 5 pure virtual functions in Expr, which must be implemented */
+	/* Out of those 5 functions, only 1 is truly relevant for us: getKind    */
+	/* The rest of the functions are just dummy functions to keep the        */
+	/* original klee design                                                  */
+	/*************************************************************************/
+	virtual int compareContents(const Expr &b)  const {return   0;}		
+	virtual Kind      getKind()                 const {return   Expr::Str_Const;}	
+	virtual Width     getWidth()                const {return   32;}	
+	virtual unsigned  getNumKids()              const {return   0;}	
+	virtual ref<Expr> getKid(unsigned int)      const {assert(0); ref<Expr> moish; return moish;}
+	virtual ref<Expr> rebuild(ref<Expr> kids[]) const {assert(0); ref<Expr> moish; return moish;}
+	static bool classof(const Expr *E) { return E->getKind() == Expr::Str_Const; }
+	static bool classof(const ConstantExpr *) { return false; }	
+};
+
+
+class StrVarExpr : public Expr {
+public:
+	char name[MAX_STRING_VAR_NAME_LENGTH];
+
+	StrVarExpr(const char *in_name)
+	{
+		memset(name,0,MAX_STRING_VAR_NAME_LENGTH);
+		strncpy(name,in_name,MAX_STRING_VAR_NAME_LENGTH);		
+	}
+
+	virtual unsigned computeHash();
+
+public:
+	static ref<Expr> create(const char *in_name)
+	{
+		return StrVarExpr::alloc(in_name);
+	}
+
+	static ref<Expr> alloc(const char *in_name)
+	{
+		ref<Expr> res(new StrVarExpr(in_name));
+		res->computeHash();
+		return res;
+	}
+
+public:
+	/*************************************************************************/
+	/* There are 5 pure virtual functions in Expr, which must be implemented */
+	/* Out of those 5 functions, only 1 is truly relevant for us: getKind    */
+	/* The rest of the functions are just dummy functions to keep the        */
+	/* original klee design                                                  */
+	/*************************************************************************/
+	virtual int compareContents(const Expr &b)  const {return   0;}		
+	virtual Kind      getKind()                 const {return   Expr::Str_Var;}	
+	virtual Width     getWidth()                const {return   32;}	
+	virtual unsigned  getNumKids()              const {return   0;}	
+	virtual ref<Expr> getKid(unsigned int)      const {ref<Expr> moish; assert(0); return moish;}
+	virtual ref<Expr> rebuild(ref<Expr> kids[]) const {ref<Expr> moish; assert(0); return moish;}
+	static bool classof(const Expr *E) { return E->getKind() == Expr::Str_Var; }
+	static bool classof(const ConstantExpr *) { return false; }	
+};
+
+class StrLengthExpr : public Expr {
+public:
+	ref<Expr> s;
+	
+	StrLengthExpr(const ref<Expr> &in_s) : s(in_s) {}
+
+	virtual unsigned computeHash();
+
+public:
+	static ref<Expr> create(const ref<Expr> &in_s)
+	{
+		return StrLengthExpr::alloc(in_s);
+	}
+	
+	static ref<Expr> alloc(const ref<Expr> &in_s)
+	{
+		ref<Expr> res(new StrLengthExpr(in_s));
+		res->computeHash();
+		return res;
+	}
+
+public:
+	/*************************************************************************/
+	/* There are 5 pure virtual functions in Expr, which must be implemented */
+	/* Out of those 5 functions, only 1 is truly relevant for us: getKind    */
+	/* The rest of the functions are just dummy functions to keep the        */
+	/* original klee design                                                  */
+	/*************************************************************************/
+	virtual int compareContents(const Expr &b)  const {return   0;}		
+	virtual Kind      getKind()                 const {return   Expr::Str_Length;}	
+	virtual Width     getWidth()                const {return   32;}	
+	virtual unsigned  getNumKids()              const {return   1;}	
+	virtual ref<Expr> getKid(unsigned int i)    const	{
+															if(i==0){return s;}
+															return 0;
+														}
+	virtual ref<Expr> rebuild(ref<Expr> kids[]) const {return create(kids[0]);}
+	static bool classof(const Expr *E) { return E->getKind() == Expr::Str_Length; }
+	static bool classof(const ConstantExpr *) { return false; }	
+};
+
+class StrCmpExpr : public Expr {
+public:
+	ref<Expr> s1;
+	ref<Expr> s2;
+
+public:
+	static ref<Expr> create(const ref<Expr> &s1,const ref<Expr> &s2)
+	{
+		StrCmpExpr *e = new StrCmpExpr;
+		e->s1 = s1;
+		e->s2 = s2;
+		return e;
+	}
+
+public:
+	/*************************************************************************/
+	/* There are 5 pure virtual functions in Expr, which must be implemented */
+	/* Out of those 5 functions, only 1 is truly relevant for us: getKind    */
+	/* The rest of the functions are just dummy functions to keep the        */
+	/* original klee design                                                  */
+	/*************************************************************************/
+	virtual int compareContents(const Expr &b)  const {return   0;}		
+	virtual Kind      getKind()                 const {return   Expr::Str_Compare;}	
+	virtual Width     getWidth()                const {return   32;}	
+	virtual unsigned  getNumKids()              const {return   2;}	
+	virtual ref<Expr> getKid(unsigned int i)    const {if (i==0) return s1;if (i==1) return s2;return 0;}
+	virtual ref<Expr> rebuild(ref<Expr> kids[]) const {return create(kids[0],kids[1]);}
+	static bool classof(const Expr *E) { return E->getKind() == Expr::Str_Compare; }
+	static bool classof(const ConstantExpr *) { return false; }	
+};
 
 // Casting
 

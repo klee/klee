@@ -421,8 +421,22 @@ bool IndependentSolver::computeValidity(const Query& query,
                                        result);
 }
 
-bool IndependentSolver::computeTruth(const Query& query, bool &isValid) {
+bool IndependentSolver::computeTruth(const Query& query, bool &isValid)
+{
   std::vector< ref<Expr> > required;
+  
+  ConstraintManager::constraint_iterator it;
+  for (it = query.constraints.begin(); it != query.constraints.end(); it++)
+  {
+  	if ((((Expr *) (*it).get())->getKind()) == Expr::Str_Eq)         { required.push_back(*it); }
+  	if ((((Expr *) (*it).get())->getKind()) == Expr::Str_Var)        { required.push_back(*it); }
+  	if ((((Expr *) (*it).get())->getKind()) == Expr::Str_Const)      { required.push_back(*it); }
+  	if ((((Expr *) (*it).get())->getKind()) == Expr::Str_CharAt)     { required.push_back(*it); }
+  	if ((((Expr *) (*it).get())->getKind()) == Expr::Str_Substr)     { required.push_back(*it); }
+  	if ((((Expr *) (*it).get())->getKind()) == Expr::Str_Length)     { required.push_back(*it); }
+  	if ((((Expr *) (*it).get())->getKind()) == Expr::Str_FirstIdxOf) { required.push_back(*it); }
+  	if ((((Expr *) (*it).get())->getKind()) == Expr::Str_FromBitVec8){ required.push_back(*it); }
+  }
   IndependentElementSet eltsClosure = 
     getIndependentConstraints(query, required);
   ConstraintManager tmp(required);

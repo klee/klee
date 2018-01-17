@@ -1982,6 +1982,32 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
   case Instruction::Load: {
     ref<Expr> base = eval(ki, 0, state).value;
+    /***************************************/
+    /* [1] Cast instruction i into a loadi */
+  	/***************************************/
+    llvm::LoadInst *loadi = (llvm::LoadInst *) i;
+
+    /******************************************/
+    /* [2] Extract dst and src var names ...  */
+  	/******************************************/
+	char srcVarName[256];
+	char dstVarName[256];
+	
+	memset(srcVarName,0,sizeof(srcVarName));
+	memset(dstVarName,0,sizeof(dstVarName));
+	
+	strcpy(srcVarName,loadi->getPointerOperand()->getName().str().c_str());
+	strcpy(dstVarName,loadi->getName().str().c_str());
+
+    /****************************************/
+    /* [3] Print dst and src var names ...  */
+  	/****************************************/
+  	if (strncmp(srcVarName,"OISH_",strlen("OISH_")) == 0)
+  	{
+		llvm::errs() << "OISH LOAD DST(" << dstVarName << ") = SRC(" << srcVarName << ")\n";
+		state.varNames[dstVarName] = srcVarName;
+	}
+
     executeMemoryOperation(state, false, base, 0, ki);
     break;
   }

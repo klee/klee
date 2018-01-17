@@ -181,6 +181,17 @@ unsigned Expr::computeHash() {
   return hashValue;
 }
 
+unsigned StrEqExpr::computeHash()            {static unsigned value = 0x6d425ff0;hashValue = value++;return hashValue;}
+unsigned StrVarExpr::computeHash()           {static unsigned value = 0x7ea25ff1;hashValue = value++;return hashValue;}
+unsigned StrConstExpr::computeHash()         {static unsigned value = 0x8d425ff2;hashValue = value++;return hashValue;}
+unsigned StrLengthExpr::computeHash()        {static unsigned value = 0x9d425ff0;hashValue = value++;return hashValue;}
+unsigned StrSubstrExpr::computeHash()        {static unsigned value = 0xad425ff0;hashValue = value++;return hashValue;}
+unsigned StrCharAtExpr::computeHash()        {static unsigned value = 0xbd425ff0;hashValue = value++;return hashValue;}
+unsigned StrFirstIdxOfExpr::computeHash()    {static unsigned value = 0xcd333ff0;hashValue = value++;return hashValue;}
+unsigned StrFromBitVec8Expr::computeHash()   {static unsigned value = 0xdd0000f0;hashValue = value++;return hashValue;}
+unsigned StrFromBitVector8Expr::computeHash(){static unsigned value = 0xe0000490;hashValue = value++;return hashValue;}
+
+
 unsigned ConstantExpr::computeHash() {
   hashValue = hash_value(value) ^ (getWidth() * MAGIC_HASH_CONSTANT);
   return hashValue;

@@ -25,8 +25,8 @@ argConstantDisplayMode(
                      clEnumValN(klee::ExprSMTLIBPrinter::HEX, "hex",
                                 "Use Hexadecimal form (e.g. #x2D)"),
                      clEnumValN(klee::ExprSMTLIBPrinter::DECIMAL, "dec",
-                                "Use decimal form (e.g. (_ bv45 8) )")
-                     KLEE_LLVM_CL_VAL_END),
+                                "Use decimal form (e.g. (_ bv45 8) )"),
+                     clEnumValEnd),
     llvm::cl::init(klee::ExprSMTLIBPrinter::DECIMAL));
 
 llvm::cl::opt<bool> humanReadableSMTLIB(
@@ -44,8 +44,8 @@ llvm::cl::opt<klee::ExprSMTLIBPrinter::AbbreviationMode> abbreviationMode(
                      clEnumValN(klee::ExprSMTLIBPrinter::ABBR_LET, "let",
                                 "Abbreviate with let"),
                      clEnumValN(klee::ExprSMTLIBPrinter::ABBR_NAMED, "named",
-                                "Abbreviate with :named annotations")
-                     KLEE_LLVM_CL_VAL_END),
+                                "Abbreviate with :named annotations"),
+                     clEnumValEnd),
     llvm::cl::init(klee::ExprSMTLIBPrinter::ABBR_LET));
 }
 
@@ -53,7 +53,8 @@ namespace klee {
 
 ExprSMTLIBPrinter::ExprSMTLIBPrinter()
     : usedArrays(), o(NULL), query(NULL), p(NULL), haveConstantArray(false),
-      logicToUse(QF_AUFBV),
+	logicToUse(QF_S),
+	// logicToUse(QF_AUFBV),
       humanReadable(ExprSMTLIBOptions::humanReadableSMTLIB),
       smtlibBoolOptions(), arraysToCallGetValueOn(NULL) {
   setConstantDisplayMode(ExprSMTLIBOptions::argConstantDisplayMode);
@@ -61,12 +62,14 @@ ExprSMTLIBPrinter::ExprSMTLIBPrinter()
 }
 
 ExprSMTLIBPrinter::~ExprSMTLIBPrinter() {
-  delete p;
+  if (p != NULL)
+    delete p;
 }
 
 void ExprSMTLIBPrinter::setOutput(llvm::raw_ostream &output) {
   o = &output;
-  delete p;
+  if (p != NULL)
+    delete p;
 
   p = new PrintContext(output);
 }
@@ -402,8 +405,8 @@ void ExprSMTLIBPrinter::printAShrExpr(const ref<AShrExpr> &e) {
   *p << ")";
 }
 
-const char *ExprSMTLIBPrinter::getSMTLIBKeyword(const ref<Expr> &e) {
-
+const char *ExprSMTLIBPrinter::getSMTLIBKeyword(const ref<Expr> &e)
+{
   switch (e->getKind()) {
   case Expr::Read:
     return "select";
@@ -466,6 +469,36 @@ const char *ExprSMTLIBPrinter::getSMTLIBKeyword(const ref<Expr> &e) {
   case Expr::Sge:
     return "bvsge";
 
+  // Strings ...
+  case Expr::Str_Eq:
+    return "str.eq";
+  case Expr::Str_CharAt:
+    return "str.at";
+  case Expr::Str_FirstIdxOf:
+    return "str.indexof";
+  case Expr::Str_Substr:
+    return "str.substr";
+  case Expr::Str_FromBitVec8:
+    return "seq.unit";
+  case Expr::Str_Var:
+  {
+  	char *name = (char *) malloc(512);
+  	memset(name,0,512);
+  	sprintf(name,"%s", ((StrVarExpr *) e.get())->name);
+    return name;
+  }
+  case Expr::Str_Const:
+  {
+  	char *value = (char *) malloc(512);
+  	memset(value,0,512);
+	value[0] = '\"';
+  	strncpy(value+1,((StrConstExpr *) e.get())->value,256);
+	value[strlen(value)]='\"';
+    return value;
+  }
+  case Expr::Str_Length:
+    return "str.len";
+
   default:
     llvm_unreachable("Conversion from Expr to SMTLIB keyword failed");
   }
@@ -524,6 +557,7 @@ void ExprSMTLIBPrinter::generateOutput() {
     printNotice();
   printOptions();
   printSetLogic();
+  
   printArrayDeclarations();
 
   if (humanReadable)
@@ -544,8 +578,30 @@ void ExprSMTLIBPrinter::printSetLogic() {
   case QF_AUFBV:
     *o << "QF_AUFBV";
     break;
+  case QF_S:
+	{
+		char msg[512];
+		memset(msg,0,512);
+
+    	*o << "QF_S)\n";
+		sprintf(msg,"(declare-const %s String)\n","AB_serial_0_version_0"); *o << msg;
+		sprintf(msg,"(declare-const %s String)\n","AB_serial_0_version_1"); *o << msg;
+		sprintf(msg,"(declare-const %s String)\n","AB_serial_0_version_2"); *o << msg;
+		sprintf(msg,"(declare-const %s String)\n","AB_serial_0_version_3"); *o << msg;
+		sprintf(msg,"(declare-const %s String)\n","AB_serial_1_version_0"); *o << msg;
+		sprintf(msg,"(declare-const %s String)\n","AB_serial_1_version_1"); *o << msg;
+		sprintf(msg,"(declare-const %s String)\n","AB_serial_1_version_2"); *o << msg;
+		sprintf(msg,"(declare-const %s String)\n","AB_serial_1_version_3"); *o << msg;
+		sprintf(msg,"(declare-const %s String)\n","AB_serial_2_version_0"); *o << msg;
+		sprintf(msg,"(declare-const %s String)\n","AB_serial_2_version_1"); *o << msg;
+		sprintf(msg,"(declare-const %s String)\n","AB_serial_2_version_2"); *o << msg;
+		sprintf(msg,"(declare-const %s String)\n","AB_serial_2_version_3"); *o << msg;
+		return;
+	}
   }
   *o << " )\n";
+
+
 }
 
 namespace {

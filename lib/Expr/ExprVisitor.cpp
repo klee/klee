@@ -37,7 +37,20 @@ ref<Expr> ExprVisitor::visit(const ref<Expr> &e) {
   }
 }
 
-ref<Expr> ExprVisitor::visitActual(const ref<Expr> &e) {
+ref<Expr> ExprVisitor::visitActual(const ref<Expr> &e) 
+{
+  if (e.get()->getKind() == Expr::Str_Eq)          return e;
+  if (e.get()->getKind() == Expr::Str_Var)         return e;
+  if (e.get()->getKind() == Expr::Str_Atoi)        return e;
+  if (e.get()->getKind() == Expr::Str_Itoa)        return e;
+  if (e.get()->getKind() == Expr::Str_Const)       return e;
+  if (e.get()->getKind() == Expr::Str_CharAt)      return e;
+  if (e.get()->getKind() == Expr::Str_Substr)      return e;
+  if (e.get()->getKind() == Expr::Str_Length)      return e;
+  if (e.get()->getKind() == Expr::Str_Compare)     return e;
+  if (e.get()->getKind() == Expr::Str_FirstIdxOf)  return e;
+  if (e.get()->getKind() == Expr::Str_FromBitVec8) return e;
+
   if (isa<ConstantExpr>(e)) {    
     return e;
   } else {
