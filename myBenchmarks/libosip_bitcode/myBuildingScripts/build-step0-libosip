@@ -1,0 +1,17 @@
+rm -rf build
+rm -rf libosip2-4.1.0
+rm -rf libosip2-4.1.0.tar.gz
+
+wget https://ftp.gnu.org/gnu/osip/libosip2-4.1.0.tar.gz
+tar xf libosip2-4.1.0.tar.gz
+
+cp ./mySourceFiles/torture.c ./libosip2-4.1.0/src/test/
+
+mkdir build
+cd build
+CC=wllvm LLVM_COMPILER=clang ../libosip2-4.1.0/configure --enable-test --disable-shared
+LLVM_COMPILER=clang LDFLAGS="-L/home/oren/GIT/LatestKlee/klee/build/lib/" make -j
+
+cd ./src/test
+extract-bc ./torture_test
+file ./torture_test.bc

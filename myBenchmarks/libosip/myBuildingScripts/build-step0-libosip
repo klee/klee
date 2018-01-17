@@ -1,0 +1,12 @@
+rm -rf build
+rm -rf libosip2-4.1.0
+rm -rf libosip2-4.1.0.tar.gz
+
+wget https://ftp.gnu.org/gnu/osip/libosip2-4.1.0.tar.gz
+tar xf libosip2-4.1.0.tar.gz
+
+mkdir build
+cd build
+../libosip2-4.1.0/configure --enable-test --disable-shared
+
+make -j

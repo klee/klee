@@ -1,0 +1,15 @@
+####################
+# Pagination = off #
+####################
+set pagination off
+
+#######################
+# Initial breakpoints #
+####################### 
+start
+break osip_body.c:368
+break osip_body.c:421
+break osip_body.c:427
+break torture.c:170
+run
+
