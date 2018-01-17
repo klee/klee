@@ -1,0 +1,42 @@
+#!/bin/bash
+###############
+# DIRECTORIES #
+###############
+KLEE_DIR=/home/oren/GIT/klee
+LLVM_DIR=/home/oren/GIT/llvm
+UCLIBC=/home/oren/GIT/klee-uclibc
+LLVM_BIN_DIR=${LLVM_DIR}/Release/bin
+
+#########
+# FILES #
+#########
+CLANG=${LLVM_BIN_DIR}/clang
+CLANGXX=${LLVM_BIN_DIR}/clang++
+LLVM_CONFIG=${LLVM_BIN_DIR}/llvm-config
+
+###########################################################
+# Too many clang versions on my machine ... use clang3.42 #
+###########################################################
+PATH=${LLVM_BIN_DIR}:$PATH
+
+#########
+# cmake #
+#########
+cmake                               \
+-DENABLE_SOLVER_Z3=ON               \
+-DENABLE_SOLVER_STP=ON              \
+-DENABLE_UNIT_TESTS=OFF             \
+-DENABLE_KLEE_UCLIBC=ON             \
+-DCMAKE_BUILD_TYPE=Debug            \
+-DENABLE_POSIX_RUNTIME=ON           \
+-DUSE_CMAKE_FIND_PACKAGE_LLVM=OFF   \
+-DKLEE_UCLIBC_PATH=${UCLIBC}        \
+-DLLVMCC=${CLANG}                   \
+-DLLVMCXX=${CLANGXX}                \
+-DLLVM_CONFIG_BINARY=${LLVM_CONFIG} \
+${KLEE_DIR}
+
+################
+# [8] make ... #
+################
+make -j `nproc`

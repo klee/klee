@@ -1,0 +1,55 @@
+#!/bin/bash
+###############
+# DEFINITIONS #
+###############
+LLVM_SVN=https://llvm.org/svn/llvm-project
+TAG=tags/RELEASE_342/final
+
+###############
+# DIRECTORIES #
+###############
+BASEDIR=/home/oren/GIT
+#BASEDIR=/where/you/want/llvm/to/live
+
+###############
+# DIRECTORIES #
+###############
+LLVM_SRC_DIR=${BASEDIR}/llvm
+CLANG_SRC_DIR=${LLVM_SRC_DIR}/tools/clang
+COMPILER_RT_SRC_DIR=${LLVM_SRC_DIR}/projects/compiler-rt
+LIBCXX_SRC_DIR=${LLVM_SRC_DIR}/projects/libcxx
+
+##################
+# Get llvm 3.4.2 #
+##################
+svn co ${LLVM_SVN}/llvm/${TAG}        ${LLVM_SRC_DIR}
+svn co ${LLVM_SVN}/cfe/${TAG}         ${CLANG_SRC_DIR}
+svn co ${LLVM_SVN}/compiler-rt/${TAG} ${COMPILER_RT_SRC_DIR}
+svn co ${LLVM_SVN}/libcxx/${TAG}      ${LIBCXX_SRC_DIR}
+
+#################################
+# No changes will be needed ... #
+#################################
+rm -rf ${LLVM_DIR}/.svn
+rm -rf ${CLANG_DIR}/.svn
+rm -rf ${COMPILER_RT_DIR}/.svn
+rm -rf ${LIBCXX_DIR}/.svn
+
+#################################
+# Get inside the llvm directory #
+#################################
+cd ${LLVM_SRC_DIR}
+
+################################
+# configure inside source tree #
+################################
+./configure                    \
+--enable-optimized             \
+--disable-assertions           \
+--enable-targets=host          \
+--with-python="/usr/bin/python2"
+
+###############
+# make it !!! #
+###############
+make -j

@@ -1,0 +1,37 @@
+#!/bin/bash
+###############
+# DIRECTORIES #
+###############
+LLVM_DIR=/home/oren/GIT/llvm
+LLVM_BIN_DIR=${LLVM_DIR}/Release/bin
+LLVM_CONFIG=${LLVM_BIN_DIR}/llvm-config
+CLANG=${LLVM_BIN_DIR}/clang
+
+####################
+# git clone it !!! #
+####################
+git clone --depth 1 --branch klee_uclibc_v1.0.0 https://github.com/klee/klee-uclibc.git
+
+#################################
+# No changes will be needed ... #
+#################################
+rm -rf klee-uclibc/.git
+
+################################
+# Get inside the stp directory #
+################################
+cd klee-uclibc
+
+#############
+# configure #
+#############
+./configure                       \
+--make-llvm-lib                   \
+--with-llvm-config=${LLVM_CONFIG} \
+--with-cc=${CLANG}
+
+###############
+# make it !!! #
+###############
+make -j `nproc`
+

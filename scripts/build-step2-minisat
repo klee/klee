@@ -1,0 +1,21 @@
+#!/bin/bash
+####################
+# git clone it !!! #
+####################
+git clone --depth 1 https://github.com/stp/minisat.git
+
+#################################
+# No changes will be needed ... #
+#################################
+rm -rf minisat/.git
+
+####################################
+# Get inside the minisat directory #
+####################################
+cd minisat
+
+###############
+# make it !!! #
+###############
+make
+

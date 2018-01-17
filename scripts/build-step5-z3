@@ -1,0 +1,56 @@
+#!/bin/bash
+####################
+# git clone it !!! #
+####################
+git clone https://github.com/Z3Prover/z3.git
+
+#################################
+# No changes will be needed ... #
+#################################
+rm -rf z3/.git
+
+###############################
+# Get inside the z3 directory #
+###############################
+cd z3
+
+###########################
+# configure a debug build #
+###########################
+python scripts/mk_make.py -d
+
+###############################
+# Get inside the z3 directory #
+###############################
+cd build
+
+###############
+# make it !!! #
+###############
+make -j `nproc`
+
+######################
+# make install stuff #
+######################
+mkdir -p ./include
+mkdir -p ./lib
+
+######################
+# make install stuff #
+######################
+cp ../src/api/z3.h            ./include/z3.h
+cp ../src/api/z3_v1.h         ./include/z3_v1.h
+cp ../src/api/z3_macros.h     ./include/z3_macros.h
+cp ../src/api/z3_api.h        ./include/z3_api.h
+cp ../src/api/z3_algebraic.h  ./include/z3_algebraic.h
+cp ../src/api/z3_polynomial.h ./include/z3_polynomial.h
+cp ../src/api/z3_rcf.h        ./include/z3_rcf.h
+cp ../src/api/z3_interp.h     ./include/z3_interp.h
+cp ../src/api/z3_fpa.h        ./include/z3_fpa.h
+cp libz3.so                   ./lib/libz3.so
+cp ../src/api/c++/z3++.h      ./include/z3++.h
+
+######################
+# make install stuff #
+######################
+sudo make install
