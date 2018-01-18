@@ -88,18 +88,4 @@ all:
 	@echo "********************"
 	@echo "\n"	
 	$(CC) $(PARSER_FLAGS) $(PARSER_SOURCE_FILES) -o $(PARSER_PROGRAM)
-	@echo "\n"
-	@echo "**********************"
-	@echo "* Execute PARSER ... *"
-	@echo "**********************"
-	@echo "\n"	
-	$(PARSER_PROGRAM) $(INPUT) $(OUTPUT)
-	@echo "\n"
-	@echo "***************************************"
-	@echo "* Extract Value from Abstract Buffers *"
-	@echo "***************************************"
-	@echo "\n"
-	@echo "))" >> ${INPUT_DIR}/AB_All_Versions.txt
-	@sed -i 's/(reset)/ /g' ${OUTPUT}
-	@cat ${INPUT_DIR}/AB_All_Versions.txt >> ${OUTPUT}
 
