@@ -31,7 +31,7 @@
 #include <stdio.h>
 #include <ctype.h>
 
-#include "config.h"
+//#include "config.h"
 
 #ifdef __TURBOC__
 #define HAVE_STRING_H 1

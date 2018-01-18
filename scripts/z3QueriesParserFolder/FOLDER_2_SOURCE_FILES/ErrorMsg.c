@@ -89,6 +89,7 @@ void ErrorMsg_OpenLog()
 void ErrorMsg_CloseLog()
 {
 	fclose(ErrorMsg_Log_fl);
+  ErrorMsg_Log_fl = NULL;
 }
 
 /*************************/
@@ -99,6 +100,7 @@ void ErrorMsg_Log(char *message)
 	/*****************/
 	/* Write Message */
 	/*****************/
+  if(ErrorMsg_Log_fl != NULL)
 	fprintf(ErrorMsg_Log_fl,"%s",message);
 }
 
