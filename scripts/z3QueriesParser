@@ -1,0 +1,6 @@
+#!/bin/bash
+PARSER /tmp/Z3queries.txt /tmp/lastQuery.txt
+echo "))" >> /tmp/AB_All_Versions.txt
+sed -i 's/(reset)/ /g' /tmp/lastQuery.txt
+cat /tmp/AB_All_Versions.txt >> /tmp/lastQuery.txt
+z3 -smt2 /tmp/lastQuery.txt > /tmp/output.txt
