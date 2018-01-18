@@ -1374,7 +1374,7 @@ void SpecialFunctionHandler::handleMyStrcpy(
 	/***************************************************/
 	/* [12] To be able to show abstract buffers easily */
 	/***************************************************/
-	AB_All_Versions_fl = fopen("./myParseOutput/FOLDER_5_INPUT/AB_All_Versions.txt","at");
+	AB_All_Versions_fl = fopen("AB_All_Versions.txt","at");
 	fprintf(AB_All_Versions_fl,"%s ",AB_p_new_name);
 	fclose(AB_All_Versions_fl);
 }
@@ -2335,7 +2335,7 @@ void SpecialFunctionHandler::handleMyWriteConstCharToStringAtConstOffset(
 	/***************************************************/
 	/* [15] To be able to show abstract buffers easily */
 	/***************************************************/
-	AB_All_Versions_fl = fopen("./myParseOutput/FOLDER_5_INPUT/AB_All_Versions.txt","at");
+	AB_All_Versions_fl = fopen("AB_All_Versions.txt","at");
 	fprintf(AB_All_Versions_fl,"%s ",AB_p_new_name);
 	fclose(AB_All_Versions_fl);
 
@@ -2556,7 +2556,7 @@ void SpecialFunctionHandler::handleMyWriteConstCharToStringAtOffset(
 	/***************************************************/
 	/* [15] To be able to show abstract buffers easily */
 	/***************************************************/
-	AB_All_Versions_fl = fopen("./myParseOutput/FOLDER_5_INPUT/AB_All_Versions.txt","at");
+	AB_All_Versions_fl = fopen("AB_All_Versions.txt","at");
 	fprintf(AB_All_Versions_fl,"%s ",AB_p_new_name);
 	fclose(AB_All_Versions_fl);
 
@@ -2775,7 +2775,7 @@ void SpecialFunctionHandler::handleMyWriteCharToStringAtOffset(
 	/***************************************************/
 	/* [15] To be able to show abstract buffers easily */
 	/***************************************************/
-	AB_All_Versions_fl = fopen("./myParseOutput/FOLDER_5_INPUT/AB_All_Versions.txt","at");
+	AB_All_Versions_fl = fopen("AB_All_Versions.txt","at");
 	fprintf(AB_All_Versions_fl,"%s ",AB_p_new_name);
 	fclose(AB_All_Versions_fl);
 
@@ -2900,25 +2900,25 @@ void SpecialFunctionHandler::handleMyMalloc(
 	if (firstTime == 1)
 	{
 		firstTime = 0;
-		AB_Legend_fl = fopen("./myParseOutput/FOLDER_5_INPUT/AB_Legend.txt","w+t");
+		AB_Legend_fl = fopen("AB_Legend.txt","w+t");
 		if (AB_Legend_fl == NULL)
 		{
-			assert(0 && "could not open ./myParseOutput/FOLDER_5_INPUT/AB_names.txt for writinn");
+			assert( 0 && "PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP");
 			exit(0);
 		}
 		fprintf(AB_Legend_fl,"LEGEND:\n======\n\n");
 		fprintf(AB_Legend_fl,"%s ---> AB(serial=%d)\n", p.c_str()+strlen("OISH_"),state.ab_serial[p]);
 		fclose(AB_Legend_fl);
-		AB_All_Versions_fl = fopen("./myParseOutput/FOLDER_5_INPUT/AB_All_Versions.txt","w+t");
+		AB_All_Versions_fl = fopen("AB_All_Versions.txt","w+t");
 		fprintf(AB_All_Versions_fl,"(get-value (%s ",AB_p_name);
 		fclose(AB_All_Versions_fl);
 	}
 	else
 	{
-		AB_Legend_fl = fopen("./myParseOutput/FOLDER_5_INPUT/AB_Legend.txt","at");
+		AB_Legend_fl = fopen("AB_Legend.txt","at");
 		fprintf(AB_Legend_fl,"%s ---> AB(serial=%d)\n", p.c_str()+strlen("OISH_"),state.ab_serial[p]);
 		fclose(AB_Legend_fl);
-		AB_All_Versions_fl = fopen("./myParseOutput/FOLDER_5_INPUT/AB_All_Versions.txt","at");
+		AB_All_Versions_fl = fopen("AB_All_Versions.txt","at");
 		fprintf(AB_All_Versions_fl,"%s ",AB_p_name);
 		fclose(AB_All_Versions_fl);
 	}

@@ -2,13 +2,10 @@
 ###############
 # DIRECTORIES #
 ###############
-BASEDIR=/home/oren/GIT/LatestKlee
-PARSER_DIR=${BASEDIR}/myParseOutput
-Z3_DIR=${BASEDIR}/myZ3IndependentScripts
+BASEDIR=$(shell pwd)
 
 ############
 # COMMANDS #
 ############
-cd ${PARSER_DIR} && make 1>/dev/null
-cp ${PARSER_DIR}/FOLDER_6_OUTPUT/Output.txt ${Z3_DIR}/example.txt
-cd ${Z3_DIR} && ./go_with_z3_solver > ${Z3_DIR}/output.txt
+cd ${BASEDIR} && make 1>/dev/null
+z3 -smt2 ${BASEDIR}/FOLDER_6_OUTPUT/Output.txt > /home/oren/output.txt
