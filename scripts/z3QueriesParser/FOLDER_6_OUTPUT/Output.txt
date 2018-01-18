@@ -1,0 +1,1668 @@
+
+(declare-fun model_version0 () (Array (_ BitVec 32) (_ BitVec 8)))
+(declare-fun OISH_i11 () (Array (_ BitVec 32) (_ BitVec 8)))
+(declare-fun AB_serial_1_version_0 () String)
+(declare-fun AB_serial_2_version_0 () String)
+(declare-fun AB_serial_1_version_1 () String)
+(declare-fun AB_serial_1_version_2 () String)
+(declare-fun AB_serial_1_version_3 () String)
+(declare-fun AB_serial_1_version_4 () String)
+(declare-fun AB_serial_1_version_5 () String)
+(declare-fun AB_serial_2_version_1 () String)
+(declare-fun AB_serial_2_version_2 () String)
+(declare-fun AB_serial_2_version_3 () String)
+(declare-fun AB_serial_2_version_4 () String)
+(declare-fun AB_serial_2_version_5 () String)
+(declare-fun OISH_i22 () (Array (_ BitVec 32) (_ BitVec 8)))
+(declare-fun AB_serial_1_version_6 () String)
+(declare-fun AB_serial_3_version_0 () String)
+(declare-fun OISH_i33 () (Array (_ BitVec 32) (_ BitVec 8)))
+(declare-fun AB_serial_2_version_6 () String)
+(assert (let ((a!1 (concat (select model_version0 #x00000003)
+                   (concat (select model_version0 #x00000002)
+                           (concat (select model_version0 #x00000001)
+                                   (select model_version0 #x00000000))))))
+  (= #x00000001 a!1)))
+(assert (let ((a!1 (concat (select OISH_i11 #x00000003)
+                   (concat (select OISH_i11 #x00000002)
+                           (concat (select OISH_i11 #x00000001)
+                                   (select OISH_i11 #x00000000))))))
+  (bvsle #x00000005 a!1)))
+(assert (let ((a!1 (concat (select OISH_i11 #x00000003)
+                   (concat (select OISH_i11 #x00000002)
+                           (concat (select OISH_i11 #x00000001)
+                                   (select OISH_i11 #x00000000))))))
+  (bvsle a!1 #x00000006)))
+(assert (let ((a!1 (ite (= (str.len AB_serial_1_version_0) 30)
+                #x0000001e
+                (ite (= (str.len AB_serial_1_version_0) (- 1))
+                     #xffffffff
+                     #x000000c8)))
+      (a!5 (concat (select OISH_i11 #x00000003)
+                   (concat (select OISH_i11 #x00000002)
+                           (concat (select OISH_i11 #x00000001)
+                                   (select OISH_i11 #x00000000))))))
+(let ((a!2 (ite (= (str.len AB_serial_1_version_0) 5)
+                #x00000005
+                (ite (= (str.len AB_serial_1_version_0) 6) #x00000006 a!1))))
+(let ((a!3 (ite (= (str.len AB_serial_1_version_0) 3)
+                #x00000003
+                (ite (= (str.len AB_serial_1_version_0) 4) #x00000004 a!2))))
+(let ((a!4 (ite (= (str.len AB_serial_1_version_0) 1)
+                #x00000001
+                (ite (= (str.len AB_serial_1_version_0) 2) #x00000002 a!3))))
+  (= (ite (= (str.len AB_serial_1_version_0) 0) #x00000000 a!4) a!5))))))
+(assert (let ((a!1 (ite (= (str.len AB_serial_2_version_0) 30)
+                #x0000001e
+                (ite (= (str.len AB_serial_2_version_0) (- 1))
+                     #xffffffff
+                     #x000000c8)))
+      (a!5 (concat (select OISH_i11 #x00000003)
+                   (concat (select OISH_i11 #x00000002)
+                           (concat (select OISH_i11 #x00000001)
+                                   (select OISH_i11 #x00000000))))))
+(let ((a!2 (ite (= (str.len AB_serial_2_version_0) 5)
+                #x00000005
+                (ite (= (str.len AB_serial_2_version_0) 6) #x00000006 a!1))))
+(let ((a!3 (ite (= (str.len AB_serial_2_version_0) 3)
+                #x00000003
+                (ite (= (str.len AB_serial_2_version_0) 4) #x00000004 a!2))))
+(let ((a!4 (ite (= (str.len AB_serial_2_version_0) 1)
+                #x00000001
+                (ite (= (str.len AB_serial_2_version_0) 2) #x00000002 a!3))))
+  (= (ite (= (str.len AB_serial_2_version_0) 0) #x00000000 a!4) a!5))))))
+(assert (let ((a!1 (ite (= #x00000000 #x00000006)
+                6
+                (ite (= #x00000000 #x0000001e)
+                     30
+                     (ite (= #x00000000 #xffffffff) (- 1) 750))))
+      (a!4 (ite (= #x00000004 #x00000006)
+                6
+                (ite (= #x00000004 #x0000001e)
+                     30
+                     (ite (= #x00000004 #xffffffff) (- 1) 750)))))
+(let ((a!2 (ite (= #x00000000 #x00000003)
+                3
+                (ite (= #x00000000 #x00000004)
+                     4
+                     (ite (= #x00000000 #x00000005) 5 a!1))))
+      (a!5 (ite (= #x00000004 #x00000003)
+                3
+                (ite (= #x00000004 #x00000004)
+                     4
+                     (ite (= #x00000004 #x00000005) 5 a!4)))))
+(let ((a!3 (ite (= #x00000000 #x00000000)
+                0
+                (ite (= #x00000000 #x00000001)
+                     1
+                     (ite (= #x00000000 #x00000002) 2 a!2))))
+      (a!6 (ite (= #x00000004 #x00000000)
+                0
+                (ite (= #x00000004 #x00000001)
+                     1
+                     (ite (= #x00000004 #x00000002) 2 a!5)))))
+  (= (str.substr AB_serial_1_version_0 a!3 a!6)
+     (str.substr AB_serial_1_version_1 a!3 a!6))))))
+(assert (let ((a!1 (ite (= #x00000005 #x00000006)
+                6
+                (ite (= #x00000005 #x0000001e)
+                     30
+                     (ite (= #x00000005 #xffffffff) (- 1) 750))))
+      (a!4 (concat (select OISH_i11 #x00000003)
+                   (concat (select OISH_i11 #x00000002)
+                           (concat (select OISH_i11 #x00000001)
+                                   (select OISH_i11 #x00000000))))))
+(let ((a!2 (ite (= #x00000005 #x00000003)
+                3
+                (ite (= #x00000005 #x00000004)
+                     4
+                     (ite (= #x00000005 #x00000005) 5 a!1))))
+      (a!5 (ite (= (bvadd #xfffffffb a!4) #x0000001e)
+                30
+                (ite (= (bvadd #xfffffffb a!4) #xffffffff) (- 1) 750))))
+(let ((a!3 (ite (= #x00000005 #x00000000)
+                0
+                (ite (= #x00000005 #x00000001)
+                     1
+                     (ite (= #x00000005 #x00000002) 2 a!2))))
+      (a!6 (ite (= (bvadd #xfffffffb a!4) #x00000005)
+                5
+                (ite (= (bvadd #xfffffffb a!4) #x00000006) 6 a!5))))
+(let ((a!7 (ite (= (bvadd #xfffffffb a!4) #x00000003)
+                3
+                (ite (= (bvadd #xfffffffb a!4) #x00000004) 4 a!6))))
+(let ((a!8 (ite (= (bvadd #xfffffffb a!4) #x00000001)
+                1
+                (ite (= (bvadd #xfffffffb a!4) #x00000002) 2 a!7))))
+(let ((a!9 (str.substr AB_serial_1_version_0
+                       a!3
+                       (ite (= (bvadd #xfffffffb a!4) #x00000000) 0 a!8)))
+      (a!10 (str.substr AB_serial_1_version_1
+                        a!3
+                        (ite (= (bvadd #xfffffffb a!4) #x00000000) 0 a!8))))
+  (= a!9 a!10))))))))
+(assert (let ((a!1 (ite (= #x00000004 #x00000006)
+                6
+                (ite (= #x00000004 #x0000001e)
+                     30
+                     (ite (= #x00000004 #xffffffff) (- 1) 750)))))
+(let ((a!2 (ite (= #x00000004 #x00000003)
+                3
+                (ite (= #x00000004 #x00000004)
+                     4
+                     (ite (= #x00000004 #x00000005) 5 a!1)))))
+(let ((a!3 (ite (= #x00000004 #x00000000)
+                0
+                (ite (= #x00000004 #x00000001)
+                     1
+                     (ite (= #x00000004 #x00000002) 2 a!2)))))
+  (= (str.at AB_serial_1_version_1 a!3) (seq.unit #x00))))))
+(assert (let ((a!1 (ite (= (str.len AB_serial_1_version_1) 30)
+                #x0000001e
+                (ite (= (str.len AB_serial_1_version_1) (- 1))
+                     #xffffffff
+                     #x000000c8)))
+      (a!5 (concat (select OISH_i11 #x00000003)
+                   (concat (select OISH_i11 #x00000002)
+                           (concat (select OISH_i11 #x00000001)
+                                   (select OISH_i11 #x00000000))))))
+(let ((a!2 (ite (= (str.len AB_serial_1_version_1) 5)
+                #x00000005
+                (ite (= (str.len AB_serial_1_version_1) 6) #x00000006 a!1))))
+(let ((a!3 (ite (= (str.len AB_serial_1_version_1) 3)
+                #x00000003
+                (ite (= (str.len AB_serial_1_version_1) 4) #x00000004 a!2))))
+(let ((a!4 (ite (= (str.len AB_serial_1_version_1) 1)
+                #x00000001
+                (ite (= (str.len AB_serial_1_version_1) 2) #x00000002 a!3))))
+  (= (ite (= (str.len AB_serial_1_version_1) 0) #x00000000 a!4) a!5))))))
+(assert (let ((a!1 (ite (= #x00000000 #x00000006)
+                6
+                (ite (= #x00000000 #x0000001e)
+                     30
+                     (ite (= #x00000000 #xffffffff) (- 1) 750)))))
+(let ((a!2 (ite (= #x00000000 #x00000003)
+                3
+                (ite (= #x00000000 #x00000004)
+                     4
+                     (ite (= #x00000000 #x00000005) 5 a!1)))))
+(let ((a!3 (ite (= #x00000000 #x00000000)
+                0
+                (ite (= #x00000000 #x00000001)
+                     1
+                     (ite (= #x00000000 #x00000002) 2 a!2)))))
+  (= (str.substr AB_serial_1_version_1 a!3 a!3)
+     (str.substr AB_serial_1_version_2 a!3 a!3))))))
+(assert (let ((a!1 (ite (= #x00000001 #x00000006)
+                6
+                (ite (= #x00000001 #x0000001e)
+                     30
+                     (ite (= #x00000001 #xffffffff) (- 1) 750))))
+      (a!4 (concat (select OISH_i11 #x00000003)
+                   (concat (select OISH_i11 #x00000002)
+                           (concat (select OISH_i11 #x00000001)
+                                   (select OISH_i11 #x00000000))))))
+(let ((a!2 (ite (= #x00000001 #x00000003)
+                3
+                (ite (= #x00000001 #x00000004)
+                     4
+                     (ite (= #x00000001 #x00000005) 5 a!1))))
+      (a!5 (ite (= (bvadd #xffffffff a!4) #x0000001e)
+                30
+                (ite (= (bvadd #xffffffff a!4) #xffffffff) (- 1) 750))))
+(let ((a!3 (ite (= #x00000001 #x00000000)
+                0
+                (ite (= #x00000001 #x00000001)
+                     1
+                     (ite (= #x00000001 #x00000002) 2 a!2))))
+      (a!6 (ite (= (bvadd #xffffffff a!4) #x00000005)
+                5
+                (ite (= (bvadd #xffffffff a!4) #x00000006) 6 a!5))))
+(let ((a!7 (ite (= (bvadd #xffffffff a!4) #x00000003)
+                3
+                (ite (= (bvadd #xffffffff a!4) #x00000004) 4 a!6))))
+(let ((a!8 (ite (= (bvadd #xffffffff a!4) #x00000001)
+                1
+                (ite (= (bvadd #xffffffff a!4) #x00000002) 2 a!7))))
+(let ((a!9 (str.substr AB_serial_1_version_1
+                       a!3
+                       (ite (= (bvadd #xffffffff a!4) #x00000000) 0 a!8)))
+      (a!10 (str.substr AB_serial_1_version_2
+                        a!3
+                        (ite (= (bvadd #xffffffff a!4) #x00000000) 0 a!8))))
+  (= a!9 a!10))))))))
+(assert (let ((a!1 (ite (= #x00000000 #x00000006)
+                6
+                (ite (= #x00000000 #x0000001e)
+                     30
+                     (ite (= #x00000000 #xffffffff) (- 1) 750)))))
+(let ((a!2 (ite (= #x00000000 #x00000003)
+                3
+                (ite (= #x00000000 #x00000004)
+                     4
+                     (ite (= #x00000000 #x00000005) 5 a!1)))))
+(let ((a!3 (ite (= #x00000000 #x00000000)
+                0
+                (ite (= #x00000000 #x00000001)
+                     1
+                     (ite (= #x00000000 #x00000002) 2 a!2)))))
+  (= (str.at AB_serial_1_version_2 a!3) (seq.unit #x50))))))
+(assert (let ((a!1 (ite (= (str.len AB_serial_1_version_2) 30)
+                #x0000001e
+                (ite (= (str.len AB_serial_1_version_2) (- 1))
+                     #xffffffff
+                     #x000000c8)))
+      (a!5 (concat (select OISH_i11 #x00000003)
+                   (concat (select OISH_i11 #x00000002)
+                           (concat (select OISH_i11 #x00000001)
+                                   (select OISH_i11 #x00000000))))))
+(let ((a!2 (ite (= (str.len AB_serial_1_version_2) 5)
+                #x00000005
+                (ite (= (str.len AB_serial_1_version_2) 6) #x00000006 a!1))))
+(let ((a!3 (ite (= (str.len AB_serial_1_version_2) 3)
+                #x00000003
+                (ite (= (str.len AB_serial_1_version_2) 4) #x00000004 a!2))))
+(let ((a!4 (ite (= (str.len AB_serial_1_version_2) 1)
+                #x00000001
+                (ite (= (str.len AB_serial_1_version_2) 2) #x00000002 a!3))))
+  (= (ite (= (str.len AB_serial_1_version_2) 0) #x00000000 a!4) a!5))))))
+(assert (let ((a!1 (ite (= #x00000000 #x00000006)
+                6
+                (ite (= #x00000000 #x0000001e)
+                     30
+                     (ite (= #x00000000 #xffffffff) (- 1) 750))))
+      (a!4 (ite (= #x00000001 #x00000006)
+                6
+                (ite (= #x00000001 #x0000001e)
+                     30
+                     (ite (= #x00000001 #xffffffff) (- 1) 750)))))
+(let ((a!2 (ite (= #x00000000 #x00000003)
+                3
+                (ite (= #x00000000 #x00000004)
+                     4
+                     (ite (= #x00000000 #x00000005) 5 a!1))))
+      (a!5 (ite (= #x00000001 #x00000003)
+                3
+                (ite (= #x00000001 #x00000004)
+                     4
+                     (ite (= #x00000001 #x00000005) 5 a!4)))))
+(let ((a!3 (ite (= #x00000000 #x00000000)
+                0
+                (ite (= #x00000000 #x00000001)
+                     1
+                     (ite (= #x00000000 #x00000002) 2 a!2))))
+      (a!6 (ite (= #x00000001 #x00000000)
+                0
+                (ite (= #x00000001 #x00000001)
+                     1
+                     (ite (= #x00000001 #x00000002) 2 a!5)))))
+  (= (str.substr AB_serial_1_version_2 a!3 a!6)
+     (str.substr AB_serial_1_version_3 a!3 a!6))))))
+(assert (let ((a!1 (ite (= #x00000002 #x00000006)
+                6
+                (ite (= #x00000002 #x0000001e)
+                     30
+                     (ite (= #x00000002 #xffffffff) (- 1) 750))))
+      (a!4 (concat (select OISH_i11 #x00000003)
+                   (concat (select OISH_i11 #x00000002)
+                           (concat (select OISH_i11 #x00000001)
+                                   (select OISH_i11 #x00000000))))))
+(let ((a!2 (ite (= #x00000002 #x00000003)
+                3
+                (ite (= #x00000002 #x00000004)
+                     4
+                     (ite (= #x00000002 #x00000005) 5 a!1))))
+      (a!5 (ite (= (bvadd #xfffffffe a!4) #x0000001e)
+                30
+                (ite (= (bvadd #xfffffffe a!4) #xffffffff) (- 1) 750))))
+(let ((a!3 (ite (= #x00000002 #x00000000)
+                0
+                (ite (= #x00000002 #x00000001)
+                     1
+                     (ite (= #x00000002 #x00000002) 2 a!2))))
+      (a!6 (ite (= (bvadd #xfffffffe a!4) #x00000005)
+                5
+                (ite (= (bvadd #xfffffffe a!4) #x00000006) 6 a!5))))
+(let ((a!7 (ite (= (bvadd #xfffffffe a!4) #x00000003)
+                3
+                (ite (= (bvadd #xfffffffe a!4) #x00000004) 4 a!6))))
+(let ((a!8 (ite (= (bvadd #xfffffffe a!4) #x00000001)
+                1
+                (ite (= (bvadd #xfffffffe a!4) #x00000002) 2 a!7))))
+(let ((a!9 (str.substr AB_serial_1_version_2
+                       a!3
+                       (ite (= (bvadd #xfffffffe a!4) #x00000000) 0 a!8)))
+      (a!10 (str.substr AB_serial_1_version_3
+                        a!3
+                        (ite (= (bvadd #xfffffffe a!4) #x00000000) 0 a!8))))
+  (= a!9 a!10))))))))
+(assert (let ((a!1 (ite (= #x00000001 #x00000006)
+                6
+                (ite (= #x00000001 #x0000001e)
+                     30
+                     (ite (= #x00000001 #xffffffff) (- 1) 750)))))
+(let ((a!2 (ite (= #x00000001 #x00000003)
+                3
+                (ite (= #x00000001 #x00000004)
+                     4
+                     (ite (= #x00000001 #x00000005) 5 a!1)))))
+(let ((a!3 (ite (= #x00000001 #x00000000)
+                0
+                (ite (= #x00000001 #x00000001)
+                     1
+                     (ite (= #x00000001 #x00000002) 2 a!2)))))
+  (= (str.at AB_serial_1_version_3 a!3) (seq.unit #x54))))))
+(assert (let ((a!1 (ite (= (str.len AB_serial_1_version_3) 30)
+                #x0000001e
+                (ite (= (str.len AB_serial_1_version_3) (- 1))
+                     #xffffffff
+                     #x000000c8)))
+      (a!5 (concat (select OISH_i11 #x00000003)
+                   (concat (select OISH_i11 #x00000002)
+                           (concat (select OISH_i11 #x00000001)
+                                   (select OISH_i11 #x00000000))))))
+(let ((a!2 (ite (= (str.len AB_serial_1_version_3) 5)
+                #x00000005
+                (ite (= (str.len AB_serial_1_version_3) 6) #x00000006 a!1))))
+(let ((a!3 (ite (= (str.len AB_serial_1_version_3) 3)
+                #x00000003
+                (ite (= (str.len AB_serial_1_version_3) 4) #x00000004 a!2))))
+(let ((a!4 (ite (= (str.len AB_serial_1_version_3) 1)
+                #x00000001
+                (ite (= (str.len AB_serial_1_version_3) 2) #x00000002 a!3))))
+  (= (ite (= (str.len AB_serial_1_version_3) 0) #x00000000 a!4) a!5))))))
+(assert (let ((a!1 (ite (= #x00000000 #x00000006)
+                6
+                (ite (= #x00000000 #x0000001e)
+                     30
+                     (ite (= #x00000000 #xffffffff) (- 1) 750))))
+      (a!4 (ite (= #x00000002 #x00000006)
+                6
+                (ite (= #x00000002 #x0000001e)
+                     30
+                     (ite (= #x00000002 #xffffffff) (- 1) 750)))))
+(let ((a!2 (ite (= #x00000000 #x00000003)
+                3
+                (ite (= #x00000000 #x00000004)
+                     4
+                     (ite (= #x00000000 #x00000005) 5 a!1))))
+      (a!5 (ite (= #x00000002 #x00000003)
+                3
+                (ite (= #x00000002 #x00000004)
+                     4
+                     (ite (= #x00000002 #x00000005) 5 a!4)))))
+(let ((a!3 (ite (= #x00000000 #x00000000)
+                0
+                (ite (= #x00000000 #x00000001)
+                     1
+                     (ite (= #x00000000 #x00000002) 2 a!2))))
+      (a!6 (ite (= #x00000002 #x00000000)
+                0
+                (ite (= #x00000002 #x00000001)
+                     1
+                     (ite (= #x00000002 #x00000002) 2 a!5)))))
+  (= (str.substr AB_serial_1_version_3 a!3 a!6)
+     (str.substr AB_serial_1_version_4 a!3 a!6))))))
+(assert (let ((a!1 (ite (= #x00000003 #x00000006)
+                6
+                (ite (= #x00000003 #x0000001e)
+                     30
+                     (ite (= #x00000003 #xffffffff) (- 1) 750))))
+      (a!4 (concat (select OISH_i11 #x00000003)
+                   (concat (select OISH_i11 #x00000002)
+                           (concat (select OISH_i11 #x00000001)
+                                   (select OISH_i11 #x00000000))))))
+(let ((a!2 (ite (= #x00000003 #x00000003)
+                3
+                (ite (= #x00000003 #x00000004)
+                     4
+                     (ite (= #x00000003 #x00000005) 5 a!1))))
+      (a!5 (ite (= (bvadd #xfffffffd a!4) #x0000001e)
+                30
+                (ite (= (bvadd #xfffffffd a!4) #xffffffff) (- 1) 750))))
+(let ((a!3 (ite (= #x00000003 #x00000000)
+                0
+                (ite (= #x00000003 #x00000001)
+                     1
+                     (ite (= #x00000003 #x00000002) 2 a!2))))
+      (a!6 (ite (= (bvadd #xfffffffd a!4) #x00000005)
+                5
+                (ite (= (bvadd #xfffffffd a!4) #x00000006) 6 a!5))))
+(let ((a!7 (ite (= (bvadd #xfffffffd a!4) #x00000003)
+                3
+                (ite (= (bvadd #xfffffffd a!4) #x00000004) 4 a!6))))
+(let ((a!8 (ite (= (bvadd #xfffffffd a!4) #x00000001)
+                1
+                (ite (= (bvadd #xfffffffd a!4) #x00000002) 2 a!7))))
+(let ((a!9 (str.substr AB_serial_1_version_3
+                       a!3
+                       (ite (= (bvadd #xfffffffd a!4) #x00000000) 0 a!8)))
+      (a!10 (str.substr AB_serial_1_version_4
+                        a!3
+                        (ite (= (bvadd #xfffffffd a!4) #x00000000) 0 a!8))))
+  (= a!9 a!10))))))))
+(assert (let ((a!1 (ite (= #x00000002 #x00000006)
+                6
+                (ite (= #x00000002 #x0000001e)
+                     30
+                     (ite (= #x00000002 #xffffffff) (- 1) 750)))))
+(let ((a!2 (ite (= #x00000002 #x00000003)
+                3
+                (ite (= #x00000002 #x00000004)
+                     4
+                     (ite (= #x00000002 #x00000005) 5 a!1)))))
+(let ((a!3 (ite (= #x00000002 #x00000000)
+                0
+                (ite (= #x00000002 #x00000001)
+                     1
+                     (ite (= #x00000002 #x00000002) 2 a!2)))))
+  (= (str.at AB_serial_1_version_4 a!3) (seq.unit #x51))))))
+(assert (let ((a!1 (ite (= (str.len AB_serial_1_version_4) 30)
+                #x0000001e
+                (ite (= (str.len AB_serial_1_version_4) (- 1))
+                     #xffffffff
+                     #x000000c8)))
+      (a!5 (concat (select OISH_i11 #x00000003)
+                   (concat (select OISH_i11 #x00000002)
+                           (concat (select OISH_i11 #x00000001)
+                                   (select OISH_i11 #x00000000))))))
+(let ((a!2 (ite (= (str.len AB_serial_1_version_4) 5)
+                #x00000005
+                (ite (= (str.len AB_serial_1_version_4) 6) #x00000006 a!1))))
+(let ((a!3 (ite (= (str.len AB_serial_1_version_4) 3)
+                #x00000003
+                (ite (= (str.len AB_serial_1_version_4) 4) #x00000004 a!2))))
+(let ((a!4 (ite (= (str.len AB_serial_1_version_4) 1)
+                #x00000001
+                (ite (= (str.len AB_serial_1_version_4) 2) #x00000002 a!3))))
+  (= (ite (= (str.len AB_serial_1_version_4) 0) #x00000000 a!4) a!5))))))
+(assert (let ((a!1 (ite (= #x00000000 #x00000006)
+                6
+                (ite (= #x00000000 #x0000001e)
+                     30
+                     (ite (= #x00000000 #xffffffff) (- 1) 750))))
+      (a!4 (ite (= #x00000003 #x00000006)
+                6
+                (ite (= #x00000003 #x0000001e)
+                     30
+                     (ite (= #x00000003 #xffffffff) (- 1) 750)))))
+(let ((a!2 (ite (= #x00000000 #x00000003)
+                3
+                (ite (= #x00000000 #x00000004)
+                     4
+                     (ite (= #x00000000 #x00000005) 5 a!1))))
+      (a!5 (ite (= #x00000003 #x00000003)
+                3
+                (ite (= #x00000003 #x00000004)
+                     4
+                     (ite (= #x00000003 #x00000005) 5 a!4)))))
+(let ((a!3 (ite (= #x00000000 #x00000000)
+                0
+                (ite (= #x00000000 #x00000001)
+                     1
+                     (ite (= #x00000000 #x00000002) 2 a!2))))
+      (a!6 (ite (= #x00000003 #x00000000)
+                0
+                (ite (= #x00000003 #x00000001)
+                     1
+                     (ite (= #x00000003 #x00000002) 2 a!5)))))
+  (= (str.substr AB_serial_1_version_4 a!3 a!6)
+     (str.substr AB_serial_1_version_5 a!3 a!6))))))
+(assert (let ((a!1 (ite (= #x00000004 #x00000006)
+                6
+                (ite (= #x00000004 #x0000001e)
+                     30
+                     (ite (= #x00000004 #xffffffff) (- 1) 750))))
+      (a!4 (concat (select OISH_i11 #x00000003)
+                   (concat (select OISH_i11 #x00000002)
+                           (concat (select OISH_i11 #x00000001)
+                                   (select OISH_i11 #x00000000))))))
+(let ((a!2 (ite (= #x00000004 #x00000003)
+                3
+                (ite (= #x00000004 #x00000004)
+                     4
+                     (ite (= #x00000004 #x00000005) 5 a!1))))
+      (a!5 (ite (= (bvadd #xfffffffc a!4) #x0000001e)
+                30
+                (ite (= (bvadd #xfffffffc a!4) #xffffffff) (- 1) 750))))
+(let ((a!3 (ite (= #x00000004 #x00000000)
+                0
+                (ite (= #x00000004 #x00000001)
+                     1
+                     (ite (= #x00000004 #x00000002) 2 a!2))))
+      (a!6 (ite (= (bvadd #xfffffffc a!4) #x00000005)
+                5
+                (ite (= (bvadd #xfffffffc a!4) #x00000006) 6 a!5))))
+(let ((a!7 (ite (= (bvadd #xfffffffc a!4) #x00000003)
+                3
+                (ite (= (bvadd #xfffffffc a!4) #x00000004) 4 a!6))))
+(let ((a!8 (ite (= (bvadd #xfffffffc a!4) #x00000001)
+                1
+                (ite (= (bvadd #xfffffffc a!4) #x00000002) 2 a!7))))
+(let ((a!9 (str.substr AB_serial_1_version_4
+                       a!3
+                       (ite (= (bvadd #xfffffffc a!4) #x00000000) 0 a!8)))
+      (a!10 (str.substr AB_serial_1_version_5
+                        a!3
+                        (ite (= (bvadd #xfffffffc a!4) #x00000000) 0 a!8))))
+  (= a!9 a!10))))))))
+(assert (let ((a!1 (ite (= #x00000003 #x00000006)
+                6
+                (ite (= #x00000003 #x0000001e)
+                     30
+                     (ite (= #x00000003 #xffffffff) (- 1) 750)))))
+(let ((a!2 (ite (= #x00000003 #x00000003)
+                3
+                (ite (= #x00000003 #x00000004)
+                     4
+                     (ite (= #x00000003 #x00000005) 5 a!1)))))
+(let ((a!3 (ite (= #x00000003 #x00000000)
+                0
+                (ite (= #x00000003 #x00000001)
+                     1
+                     (ite (= #x00000003 #x00000002) 2 a!2)))))
+  (= (str.at AB_serial_1_version_5 a!3) (seq.unit #x44))))))
+(assert (let ((a!1 (ite (= (str.len AB_serial_1_version_5) 30)
+                #x0000001e
+                (ite (= (str.len AB_serial_1_version_5) (- 1))
+                     #xffffffff
+                     #x000000c8)))
+      (a!5 (concat (select OISH_i11 #x00000003)
+                   (concat (select OISH_i11 #x00000002)
+                           (concat (select OISH_i11 #x00000001)
+                                   (select OISH_i11 #x00000000))))))
+(let ((a!2 (ite (= (str.len AB_serial_1_version_5) 5)
+                #x00000005
+                (ite (= (str.len AB_serial_1_version_5) 6) #x00000006 a!1))))
+(let ((a!3 (ite (= (str.len AB_serial_1_version_5) 3)
+                #x00000003
+                (ite (= (str.len AB_serial_1_version_5) 4) #x00000004 a!2))))
+(let ((a!4 (ite (= (str.len AB_serial_1_version_5) 1)
+                #x00000001
+                (ite (= (str.len AB_serial_1_version_5) 2) #x00000002 a!3))))
+  (= (ite (= (str.len AB_serial_1_version_5) 0) #x00000000 a!4) a!5))))))
+(assert (let ((a!1 (ite (= #x00000000 #x00000006)
+                6
+                (ite (= #x00000000 #x0000001e)
+                     30
+                     (ite (= #x00000000 #xffffffff) (- 1) 750))))
+      (a!4 (ite (= #x00000004 #x00000006)
+                6
+                (ite (= #x00000004 #x0000001e)
+                     30
+                     (ite (= #x00000004 #xffffffff) (- 1) 750)))))
+(let ((a!2 (ite (= #x00000000 #x00000003)
+                3
+                (ite (= #x00000000 #x00000004)
+                     4
+                     (ite (= #x00000000 #x00000005) 5 a!1))))
+      (a!5 (ite (= #x00000004 #x00000003)
+                3
+                (ite (= #x00000004 #x00000004)
+                     4
+                     (ite (= #x00000004 #x00000005) 5 a!4)))))
+(let ((a!3 (ite (= #x00000000 #x00000000)
+                0
+                (ite (= #x00000000 #x00000001)
+                     1
+                     (ite (= #x00000000 #x00000002) 2 a!2))))
+      (a!6 (ite (= #x00000004 #x00000000)
+                0
+                (ite (= #x00000004 #x00000001)
+                     1
+                     (ite (= #x00000004 #x00000002) 2 a!5)))))
+  (= (str.substr AB_serial_2_version_0 a!3 a!6)
+     (str.substr AB_serial_2_version_1 a!3 a!6))))))
+(assert (let ((a!1 (ite (= #x00000005 #x00000006)
+                6
+                (ite (= #x00000005 #x0000001e)
+                     30
+                     (ite (= #x00000005 #xffffffff) (- 1) 750))))
+      (a!4 (concat (select OISH_i11 #x00000003)
+                   (concat (select OISH_i11 #x00000002)
+                           (concat (select OISH_i11 #x00000001)
+                                   (select OISH_i11 #x00000000))))))
+(let ((a!2 (ite (= #x00000005 #x00000003)
+                3
+                (ite (= #x00000005 #x00000004)
+                     4
+                     (ite (= #x00000005 #x00000005) 5 a!1))))
+      (a!5 (ite (= (bvadd #xfffffffb a!4) #x0000001e)
+                30
+                (ite (= (bvadd #xfffffffb a!4) #xffffffff) (- 1) 750))))
+(let ((a!3 (ite (= #x00000005 #x00000000)
+                0
+                (ite (= #x00000005 #x00000001)
+                     1
+                     (ite (= #x00000005 #x00000002) 2 a!2))))
+      (a!6 (ite (= (bvadd #xfffffffb a!4) #x00000005)
+                5
+                (ite (= (bvadd #xfffffffb a!4) #x00000006) 6 a!5))))
+(let ((a!7 (ite (= (bvadd #xfffffffb a!4) #x00000003)
+                3
+                (ite (= (bvadd #xfffffffb a!4) #x00000004) 4 a!6))))
+(let ((a!8 (ite (= (bvadd #xfffffffb a!4) #x00000001)
+                1
+                (ite (= (bvadd #xfffffffb a!4) #x00000002) 2 a!7))))
+(let ((a!9 (str.substr AB_serial_2_version_0
+                       a!3
+                       (ite (= (bvadd #xfffffffb a!4) #x00000000) 0 a!8)))
+      (a!10 (str.substr AB_serial_2_version_1
+                        a!3
+                        (ite (= (bvadd #xfffffffb a!4) #x00000000) 0 a!8))))
+  (= a!9 a!10))))))))
+(assert (let ((a!1 (ite (= #x00000004 #x00000006)
+                6
+                (ite (= #x00000004 #x0000001e)
+                     30
+                     (ite (= #x00000004 #xffffffff) (- 1) 750)))))
+(let ((a!2 (ite (= #x00000004 #x00000003)
+                3
+                (ite (= #x00000004 #x00000004)
+                     4
+                     (ite (= #x00000004 #x00000005) 5 a!1)))))
+(let ((a!3 (ite (= #x00000004 #x00000000)
+                0
+                (ite (= #x00000004 #x00000001)
+                     1
+                     (ite (= #x00000004 #x00000002) 2 a!2)))))
+  (= (str.at AB_serial_2_version_1 a!3) (seq.unit #x00))))))
+(assert (let ((a!1 (ite (= (str.len AB_serial_2_version_1) 30)
+                #x0000001e
+                (ite (= (str.len AB_serial_2_version_1) (- 1))
+                     #xffffffff
+                     #x000000c8)))
+      (a!5 (concat (select OISH_i11 #x00000003)
+                   (concat (select OISH_i11 #x00000002)
+                           (concat (select OISH_i11 #x00000001)
+                                   (select OISH_i11 #x00000000))))))
+(let ((a!2 (ite (= (str.len AB_serial_2_version_1) 5)
+                #x00000005
+                (ite (= (str.len AB_serial_2_version_1) 6) #x00000006 a!1))))
+(let ((a!3 (ite (= (str.len AB_serial_2_version_1) 3)
+                #x00000003
+                (ite (= (str.len AB_serial_2_version_1) 4) #x00000004 a!2))))
+(let ((a!4 (ite (= (str.len AB_serial_2_version_1) 1)
+                #x00000001
+                (ite (= (str.len AB_serial_2_version_1) 2) #x00000002 a!3))))
+  (= (ite (= (str.len AB_serial_2_version_1) 0) #x00000000 a!4) a!5))))))
+(assert (let ((a!1 (ite (= #x00000000 #x00000006)
+                6
+                (ite (= #x00000000 #x0000001e)
+                     30
+                     (ite (= #x00000000 #xffffffff) (- 1) 750)))))
+(let ((a!2 (ite (= #x00000000 #x00000003)
+                3
+                (ite (= #x00000000 #x00000004)
+                     4
+                     (ite (= #x00000000 #x00000005) 5 a!1)))))
+(let ((a!3 (ite (= #x00000000 #x00000000)
+                0
+                (ite (= #x00000000 #x00000001)
+                     1
+                     (ite (= #x00000000 #x00000002) 2 a!2)))))
+  (= (str.substr AB_serial_2_version_1 a!3 a!3)
+     (str.substr AB_serial_2_version_2 a!3 a!3))))))
+(assert (let ((a!1 (ite (= #x00000001 #x00000006)
+                6
+                (ite (= #x00000001 #x0000001e)
+                     30
+                     (ite (= #x00000001 #xffffffff) (- 1) 750))))
+      (a!4 (concat (select OISH_i11 #x00000003)
+                   (concat (select OISH_i11 #x00000002)
+                           (concat (select OISH_i11 #x00000001)
+                                   (select OISH_i11 #x00000000))))))
+(let ((a!2 (ite (= #x00000001 #x00000003)
+                3
+                (ite (= #x00000001 #x00000004)
+                     4
+                     (ite (= #x00000001 #x00000005) 5 a!1))))
+      (a!5 (ite (= (bvadd #xffffffff a!4) #x0000001e)
+                30
+                (ite (= (bvadd #xffffffff a!4) #xffffffff) (- 1) 750))))
+(let ((a!3 (ite (= #x00000001 #x00000000)
+                0
+                (ite (= #x00000001 #x00000001)
+                     1
+                     (ite (= #x00000001 #x00000002) 2 a!2))))
+      (a!6 (ite (= (bvadd #xffffffff a!4) #x00000005)
+                5
+                (ite (= (bvadd #xffffffff a!4) #x00000006) 6 a!5))))
+(let ((a!7 (ite (= (bvadd #xffffffff a!4) #x00000003)
+                3
+                (ite (= (bvadd #xffffffff a!4) #x00000004) 4 a!6))))
+(let ((a!8 (ite (= (bvadd #xffffffff a!4) #x00000001)
+                1
+                (ite (= (bvadd #xffffffff a!4) #x00000002) 2 a!7))))
+(let ((a!9 (str.substr AB_serial_2_version_1
+                       a!3
+                       (ite (= (bvadd #xffffffff a!4) #x00000000) 0 a!8)))
+      (a!10 (str.substr AB_serial_2_version_2
+                        a!3
+                        (ite (= (bvadd #xffffffff a!4) #x00000000) 0 a!8))))
+  (= a!9 a!10))))))))
+(assert (let ((a!1 (ite (= #x00000000 #x00000006)
+                6
+                (ite (= #x00000000 #x0000001e)
+                     30
+                     (ite (= #x00000000 #xffffffff) (- 1) 750)))))
+(let ((a!2 (ite (= #x00000000 #x00000003)
+                3
+                (ite (= #x00000000 #x00000004)
+                     4
+                     (ite (= #x00000000 #x00000005) 5 a!1)))))
+(let ((a!3 (ite (= #x00000000 #x00000000)
+                0
+                (ite (= #x00000000 #x00000001)
+                     1
+                     (ite (= #x00000000 #x00000002) 2 a!2)))))
+  (= (str.at AB_serial_2_version_2 a!3) (seq.unit #x50))))))
+(assert (let ((a!1 (ite (= (str.len AB_serial_2_version_2) 30)
+                #x0000001e
+                (ite (= (str.len AB_serial_2_version_2) (- 1))
+                     #xffffffff
+                     #x000000c8)))
+      (a!5 (concat (select OISH_i11 #x00000003)
+                   (concat (select OISH_i11 #x00000002)
+                           (concat (select OISH_i11 #x00000001)
+                                   (select OISH_i11 #x00000000))))))
+(let ((a!2 (ite (= (str.len AB_serial_2_version_2) 5)
+                #x00000005
+                (ite (= (str.len AB_serial_2_version_2) 6) #x00000006 a!1))))
+(let ((a!3 (ite (= (str.len AB_serial_2_version_2) 3)
+                #x00000003
+                (ite (= (str.len AB_serial_2_version_2) 4) #x00000004 a!2))))
+(let ((a!4 (ite (= (str.len AB_serial_2_version_2) 1)
+                #x00000001
+                (ite (= (str.len AB_serial_2_version_2) 2) #x00000002 a!3))))
+  (= (ite (= (str.len AB_serial_2_version_2) 0) #x00000000 a!4) a!5))))))
+(assert (let ((a!1 (ite (= #x00000000 #x00000006)
+                6
+                (ite (= #x00000000 #x0000001e)
+                     30
+                     (ite (= #x00000000 #xffffffff) (- 1) 750))))
+      (a!4 (ite (= #x00000001 #x00000006)
+                6
+                (ite (= #x00000001 #x0000001e)
+                     30
+                     (ite (= #x00000001 #xffffffff) (- 1) 750)))))
+(let ((a!2 (ite (= #x00000000 #x00000003)
+                3
+                (ite (= #x00000000 #x00000004)
+                     4
+                     (ite (= #x00000000 #x00000005) 5 a!1))))
+      (a!5 (ite (= #x00000001 #x00000003)
+                3
+                (ite (= #x00000001 #x00000004)
+                     4
+                     (ite (= #x00000001 #x00000005) 5 a!4)))))
+(let ((a!3 (ite (= #x00000000 #x00000000)
+                0
+                (ite (= #x00000000 #x00000001)
+                     1
+                     (ite (= #x00000000 #x00000002) 2 a!2))))
+      (a!6 (ite (= #x00000001 #x00000000)
+                0
+                (ite (= #x00000001 #x00000001)
+                     1
+                     (ite (= #x00000001 #x00000002) 2 a!5)))))
+  (= (str.substr AB_serial_2_version_2 a!3 a!6)
+     (str.substr AB_serial_2_version_3 a!3 a!6))))))
+(assert (let ((a!1 (ite (= #x00000002 #x00000006)
+                6
+                (ite (= #x00000002 #x0000001e)
+                     30
+                     (ite (= #x00000002 #xffffffff) (- 1) 750))))
+      (a!4 (concat (select OISH_i11 #x00000003)
+                   (concat (select OISH_i11 #x00000002)
+                           (concat (select OISH_i11 #x00000001)
+                                   (select OISH_i11 #x00000000))))))
+(let ((a!2 (ite (= #x00000002 #x00000003)
+                3
+                (ite (= #x00000002 #x00000004)
+                     4
+                     (ite (= #x00000002 #x00000005) 5 a!1))))
+      (a!5 (ite (= (bvadd #xfffffffe a!4) #x0000001e)
+                30
+                (ite (= (bvadd #xfffffffe a!4) #xffffffff) (- 1) 750))))
+(let ((a!3 (ite (= #x00000002 #x00000000)
+                0
+                (ite (= #x00000002 #x00000001)
+                     1
+                     (ite (= #x00000002 #x00000002) 2 a!2))))
+      (a!6 (ite (= (bvadd #xfffffffe a!4) #x00000005)
+                5
+                (ite (= (bvadd #xfffffffe a!4) #x00000006) 6 a!5))))
+(let ((a!7 (ite (= (bvadd #xfffffffe a!4) #x00000003)
+                3
+                (ite (= (bvadd #xfffffffe a!4) #x00000004) 4 a!6))))
+(let ((a!8 (ite (= (bvadd #xfffffffe a!4) #x00000001)
+                1
+                (ite (= (bvadd #xfffffffe a!4) #x00000002) 2 a!7))))
+(let ((a!9 (str.substr AB_serial_2_version_2
+                       a!3
+                       (ite (= (bvadd #xfffffffe a!4) #x00000000) 0 a!8)))
+      (a!10 (str.substr AB_serial_2_version_3
+                        a!3
+                        (ite (= (bvadd #xfffffffe a!4) #x00000000) 0 a!8))))
+  (= a!9 a!10))))))))
+(assert (let ((a!1 (ite (= #x00000001 #x00000006)
+                6
+                (ite (= #x00000001 #x0000001e)
+                     30
+                     (ite (= #x00000001 #xffffffff) (- 1) 750)))))
+(let ((a!2 (ite (= #x00000001 #x00000003)
+                3
+                (ite (= #x00000001 #x00000004)
+                     4
+                     (ite (= #x00000001 #x00000005) 5 a!1)))))
+(let ((a!3 (ite (= #x00000001 #x00000000)
+                0
+                (ite (= #x00000001 #x00000001)
+                     1
+                     (ite (= #x00000001 #x00000002) 2 a!2)))))
+  (= (str.at AB_serial_2_version_3 a!3) (seq.unit #x46))))))
+(assert (let ((a!1 (ite (= (str.len AB_serial_2_version_3) 30)
+                #x0000001e
+                (ite (= (str.len AB_serial_2_version_3) (- 1))
+                     #xffffffff
+                     #x000000c8)))
+      (a!5 (concat (select OISH_i11 #x00000003)
+                   (concat (select OISH_i11 #x00000002)
+                           (concat (select OISH_i11 #x00000001)
+                                   (select OISH_i11 #x00000000))))))
+(let ((a!2 (ite (= (str.len AB_serial_2_version_3) 5)
+                #x00000005
+                (ite (= (str.len AB_serial_2_version_3) 6) #x00000006 a!1))))
+(let ((a!3 (ite (= (str.len AB_serial_2_version_3) 3)
+                #x00000003
+                (ite (= (str.len AB_serial_2_version_3) 4) #x00000004 a!2))))
+(let ((a!4 (ite (= (str.len AB_serial_2_version_3) 1)
+                #x00000001
+                (ite (= (str.len AB_serial_2_version_3) 2) #x00000002 a!3))))
+  (= (ite (= (str.len AB_serial_2_version_3) 0) #x00000000 a!4) a!5))))))
+(assert (let ((a!1 (ite (= #x00000000 #x00000006)
+                6
+                (ite (= #x00000000 #x0000001e)
+                     30
+                     (ite (= #x00000000 #xffffffff) (- 1) 750))))
+      (a!4 (ite (= #x00000002 #x00000006)
+                6
+                (ite (= #x00000002 #x0000001e)
+                     30
+                     (ite (= #x00000002 #xffffffff) (- 1) 750)))))
+(let ((a!2 (ite (= #x00000000 #x00000003)
+                3
+                (ite (= #x00000000 #x00000004)
+                     4
+                     (ite (= #x00000000 #x00000005) 5 a!1))))
+      (a!5 (ite (= #x00000002 #x00000003)
+                3
+                (ite (= #x00000002 #x00000004)
+                     4
+                     (ite (= #x00000002 #x00000005) 5 a!4)))))
+(let ((a!3 (ite (= #x00000000 #x00000000)
+                0
+                (ite (= #x00000000 #x00000001)
+                     1
+                     (ite (= #x00000000 #x00000002) 2 a!2))))
+      (a!6 (ite (= #x00000002 #x00000000)
+                0
+                (ite (= #x00000002 #x00000001)
+                     1
+                     (ite (= #x00000002 #x00000002) 2 a!5)))))
+  (= (str.substr AB_serial_2_version_3 a!3 a!6)
+     (str.substr AB_serial_2_version_4 a!3 a!6))))))
+(assert (let ((a!1 (ite (= #x00000003 #x00000006)
+                6
+                (ite (= #x00000003 #x0000001e)
+                     30
+                     (ite (= #x00000003 #xffffffff) (- 1) 750))))
+      (a!4 (concat (select OISH_i11 #x00000003)
+                   (concat (select OISH_i11 #x00000002)
+                           (concat (select OISH_i11 #x00000001)
+                                   (select OISH_i11 #x00000000))))))
+(let ((a!2 (ite (= #x00000003 #x00000003)
+                3
+                (ite (= #x00000003 #x00000004)
+                     4
+                     (ite (= #x00000003 #x00000005) 5 a!1))))
+      (a!5 (ite (= (bvadd #xfffffffd a!4) #x0000001e)
+                30
+                (ite (= (bvadd #xfffffffd a!4) #xffffffff) (- 1) 750))))
+(let ((a!3 (ite (= #x00000003 #x00000000)
+                0
+                (ite (= #x00000003 #x00000001)
+                     1
+                     (ite (= #x00000003 #x00000002) 2 a!2))))
+      (a!6 (ite (= (bvadd #xfffffffd a!4) #x00000005)
+                5
+                (ite (= (bvadd #xfffffffd a!4) #x00000006) 6 a!5))))
+(let ((a!7 (ite (= (bvadd #xfffffffd a!4) #x00000003)
+                3
+                (ite (= (bvadd #xfffffffd a!4) #x00000004) 4 a!6))))
+(let ((a!8 (ite (= (bvadd #xfffffffd a!4) #x00000001)
+                1
+                (ite (= (bvadd #xfffffffd a!4) #x00000002) 2 a!7))))
+(let ((a!9 (str.substr AB_serial_2_version_3
+                       a!3
+                       (ite (= (bvadd #xfffffffd a!4) #x00000000) 0 a!8)))
+      (a!10 (str.substr AB_serial_2_version_4
+                        a!3
+                        (ite (= (bvadd #xfffffffd a!4) #x00000000) 0 a!8))))
+  (= a!9 a!10))))))))
+(assert (let ((a!1 (ite (= #x00000002 #x00000006)
+                6
+                (ite (= #x00000002 #x0000001e)
+                     30
+                     (ite (= #x00000002 #xffffffff) (- 1) 750)))))
+(let ((a!2 (ite (= #x00000002 #x00000003)
+                3
+                (ite (= #x00000002 #x00000004)
+                     4
+                     (ite (= #x00000002 #x00000005) 5 a!1)))))
+(let ((a!3 (ite (= #x00000002 #x00000000)
+                0
+                (ite (= #x00000002 #x00000001)
+                     1
+                     (ite (= #x00000002 #x00000002) 2 a!2)))))
+  (= (str.at AB_serial_2_version_4 a!3) (seq.unit #x4d))))))
+(assert (let ((a!1 (ite (= (str.len AB_serial_2_version_4) 30)
+                #x0000001e
+                (ite (= (str.len AB_serial_2_version_4) (- 1))
+                     #xffffffff
+                     #x000000c8)))
+      (a!5 (concat (select OISH_i11 #x00000003)
+                   (concat (select OISH_i11 #x00000002)
+                           (concat (select OISH_i11 #x00000001)
+                                   (select OISH_i11 #x00000000))))))
+(let ((a!2 (ite (= (str.len AB_serial_2_version_4) 5)
+                #x00000005
+                (ite (= (str.len AB_serial_2_version_4) 6) #x00000006 a!1))))
+(let ((a!3 (ite (= (str.len AB_serial_2_version_4) 3)
+                #x00000003
+                (ite (= (str.len AB_serial_2_version_4) 4) #x00000004 a!2))))
+(let ((a!4 (ite (= (str.len AB_serial_2_version_4) 1)
+                #x00000001
+                (ite (= (str.len AB_serial_2_version_4) 2) #x00000002 a!3))))
+  (= (ite (= (str.len AB_serial_2_version_4) 0) #x00000000 a!4) a!5))))))
+(assert (let ((a!1 (ite (= #x00000000 #x00000006)
+                6
+                (ite (= #x00000000 #x0000001e)
+                     30
+                     (ite (= #x00000000 #xffffffff) (- 1) 750))))
+      (a!4 (ite (= #x00000003 #x00000006)
+                6
+                (ite (= #x00000003 #x0000001e)
+                     30
+                     (ite (= #x00000003 #xffffffff) (- 1) 750)))))
+(let ((a!2 (ite (= #x00000000 #x00000003)
+                3
+                (ite (= #x00000000 #x00000004)
+                     4
+                     (ite (= #x00000000 #x00000005) 5 a!1))))
+      (a!5 (ite (= #x00000003 #x00000003)
+                3
+                (ite (= #x00000003 #x00000004)
+                     4
+                     (ite (= #x00000003 #x00000005) 5 a!4)))))
+(let ((a!3 (ite (= #x00000000 #x00000000)
+                0
+                (ite (= #x00000000 #x00000001)
+                     1
+                     (ite (= #x00000000 #x00000002) 2 a!2))))
+      (a!6 (ite (= #x00000003 #x00000000)
+                0
+                (ite (= #x00000003 #x00000001)
+                     1
+                     (ite (= #x00000003 #x00000002) 2 a!5)))))
+  (= (str.substr AB_serial_2_version_4 a!3 a!6)
+     (str.substr AB_serial_2_version_5 a!3 a!6))))))
+(assert (let ((a!1 (ite (= #x00000004 #x00000006)
+                6
+                (ite (= #x00000004 #x0000001e)
+                     30
+                     (ite (= #x00000004 #xffffffff) (- 1) 750))))
+      (a!4 (concat (select OISH_i11 #x00000003)
+                   (concat (select OISH_i11 #x00000002)
+                           (concat (select OISH_i11 #x00000001)
+                                   (select OISH_i11 #x00000000))))))
+(let ((a!2 (ite (= #x00000004 #x00000003)
+                3
+                (ite (= #x00000004 #x00000004)
+                     4
+                     (ite (= #x00000004 #x00000005) 5 a!1))))
+      (a!5 (ite (= (bvadd #xfffffffc a!4) #x0000001e)
+                30
+                (ite (= (bvadd #xfffffffc a!4) #xffffffff) (- 1) 750))))
+(let ((a!3 (ite (= #x00000004 #x00000000)
+                0
+                (ite (= #x00000004 #x00000001)
+                     1
+                     (ite (= #x00000004 #x00000002) 2 a!2))))
+      (a!6 (ite (= (bvadd #xfffffffc a!4) #x00000005)
+                5
+                (ite (= (bvadd #xfffffffc a!4) #x00000006) 6 a!5))))
+(let ((a!7 (ite (= (bvadd #xfffffffc a!4) #x00000003)
+                3
+                (ite (= (bvadd #xfffffffc a!4) #x00000004) 4 a!6))))
+(let ((a!8 (ite (= (bvadd #xfffffffc a!4) #x00000001)
+                1
+                (ite (= (bvadd #xfffffffc a!4) #x00000002) 2 a!7))))
+(let ((a!9 (str.substr AB_serial_2_version_4
+                       a!3
+                       (ite (= (bvadd #xfffffffc a!4) #x00000000) 0 a!8)))
+      (a!10 (str.substr AB_serial_2_version_5
+                        a!3
+                        (ite (= (bvadd #xfffffffc a!4) #x00000000) 0 a!8))))
+  (= a!9 a!10))))))))
+(assert (let ((a!1 (ite (= #x00000003 #x00000006)
+                6
+                (ite (= #x00000003 #x0000001e)
+                     30
+                     (ite (= #x00000003 #xffffffff) (- 1) 750)))))
+(let ((a!2 (ite (= #x00000003 #x00000003)
+                3
+                (ite (= #x00000003 #x00000004)
+                     4
+                     (ite (= #x00000003 #x00000005) 5 a!1)))))
+(let ((a!3 (ite (= #x00000003 #x00000000)
+                0
+                (ite (= #x00000003 #x00000001)
+                     1
+                     (ite (= #x00000003 #x00000002) 2 a!2)))))
+  (= (str.at AB_serial_2_version_5 a!3) (seq.unit #x44))))))
+(assert (let ((a!1 (ite (= (str.len AB_serial_2_version_5) 30)
+                #x0000001e
+                (ite (= (str.len AB_serial_2_version_5) (- 1))
+                     #xffffffff
+                     #x000000c8)))
+      (a!5 (concat (select OISH_i11 #x00000003)
+                   (concat (select OISH_i11 #x00000002)
+                           (concat (select OISH_i11 #x00000001)
+                                   (select OISH_i11 #x00000000))))))
+(let ((a!2 (ite (= (str.len AB_serial_2_version_5) 5)
+                #x00000005
+                (ite (= (str.len AB_serial_2_version_5) 6) #x00000006 a!1))))
+(let ((a!3 (ite (= (str.len AB_serial_2_version_5) 3)
+                #x00000003
+                (ite (= (str.len AB_serial_2_version_5) 4) #x00000004 a!2))))
+(let ((a!4 (ite (= (str.len AB_serial_2_version_5) 1)
+                #x00000001
+                (ite (= (str.len AB_serial_2_version_5) 2) #x00000002 a!3))))
+  (= (ite (= (str.len AB_serial_2_version_5) 0) #x00000000 a!4) a!5))))))
+(assert (let ((a!1 (ite (= #x00000000 #x00000006)
+                6
+                (ite (= #x00000000 #x0000001e)
+                     30
+                     (ite (= #x00000000 #xffffffff) (- 1) 750))))
+      (a!4 (concat (select OISH_i22 #x00000003)
+                   (concat (select OISH_i22 #x00000002)
+                           (concat (select OISH_i22 #x00000001)
+                                   (select OISH_i22 #x00000000))))))
+(let ((a!2 (ite (= #x00000000 #x00000003)
+                3
+                (ite (= #x00000000 #x00000004)
+                     4
+                     (ite (= #x00000000 #x00000005) 5 a!1))))
+      (a!5 (ite (= a!4 #x00000006)
+                6
+                (ite (= a!4 #x0000001e) 30 (ite (= a!4 #xffffffff) (- 1) 750)))))
+(let ((a!3 (ite (= #x00000000 #x00000000)
+                0
+                (ite (= #x00000000 #x00000001)
+                     1
+                     (ite (= #x00000000 #x00000002) 2 a!2))))
+      (a!6 (ite (= a!4 #x00000003)
+                3
+                (ite (= a!4 #x00000004) 4 (ite (= a!4 #x00000005) 5 a!5)))))
+(let ((a!7 (ite (= a!4 #x00000000)
+                0
+                (ite (= a!4 #x00000001) 1 (ite (= a!4 #x00000002) 2 a!6)))))
+  (= (str.substr AB_serial_1_version_5 a!3 a!7)
+     (str.substr AB_serial_1_version_6 a!3 a!7)))))))
+(assert (let ((a!1 (concat (select OISH_i22 #x00000003)
+                   (concat (select OISH_i22 #x00000002)
+                           (concat (select OISH_i22 #x00000001)
+                                   (select OISH_i22 #x00000000)))))
+      (a!6 (concat (select OISH_i11 #x00000003)
+                   (concat (select OISH_i11 #x00000002)
+                           (concat (select OISH_i11 #x00000001)
+                                   (select OISH_i11 #x00000000))))))
+(let ((a!2 (ite (= (bvadd #x00000001 a!1) #x0000001e)
+                30
+                (ite (= (bvadd #x00000001 a!1) #xffffffff) (- 1) 750)))
+      (a!7 (ite (= (bvadd #xffffffff (bvsub a!6 a!1)) #xffffffff) (- 1) 750)))
+(let ((a!3 (ite (= (bvadd #x00000001 a!1) #x00000005)
+                5
+                (ite (= (bvadd #x00000001 a!1) #x00000006) 6 a!2)))
+      (a!8 (ite (= (bvadd #xffffffff (bvsub a!6 a!1)) #x0000001e) 30 a!7)))
+(let ((a!4 (ite (= (bvadd #x00000001 a!1) #x00000003)
+                3
+                (ite (= (bvadd #x00000001 a!1) #x00000004) 4 a!3)))
+      (a!9 (ite (= (bvadd #xffffffff (bvsub a!6 a!1)) #x00000006) 6 a!8)))
+(let ((a!5 (ite (= (bvadd #x00000001 a!1) #x00000001)
+                1
+                (ite (= (bvadd #x00000001 a!1) #x00000002) 2 a!4)))
+      (a!10 (ite (= (bvadd #xffffffff (bvsub a!6 a!1)) #x00000005) 5 a!9)))
+(let ((a!11 (ite (= (bvadd #xffffffff (bvsub a!6 a!1)) #x00000004) 4 a!10)))
+(let ((a!12 (ite (= (bvadd #xffffffff (bvsub a!6 a!1)) #x00000003) 3 a!11)))
+(let ((a!13 (ite (= (bvadd #xffffffff (bvsub a!6 a!1)) #x00000002) 2 a!12)))
+(let ((a!14 (ite (= (bvadd #xffffffff (bvsub a!6 a!1)) #x00000001) 1 a!13)))
+(let ((a!15 (ite (= (bvadd #xffffffff (bvsub a!6 a!1)) #x00000000) 0 a!14)))
+(let ((a!16 (str.substr AB_serial_1_version_5
+                        (ite (= (bvadd #x00000001 a!1) #x00000000) 0 a!5)
+                        a!15))
+      (a!17 (str.substr AB_serial_1_version_6
+                        (ite (= (bvadd #x00000001 a!1) #x00000000) 0 a!5)
+                        a!15)))
+  (= a!16 a!17)))))))))))))
+(assert (let ((a!1 (concat (select OISH_i22 #x00000003)
+                   (concat (select OISH_i22 #x00000002)
+                           (concat (select OISH_i22 #x00000001)
+                                   (select OISH_i22 #x00000000))))))
+(let ((a!2 (ite (= a!1 #x00000006)
+                6
+                (ite (= a!1 #x0000001e) 30 (ite (= a!1 #xffffffff) (- 1) 750)))))
+(let ((a!3 (ite (= a!1 #x00000003)
+                3
+                (ite (= a!1 #x00000004) 4 (ite (= a!1 #x00000005) 5 a!2)))))
+(let ((a!4 (ite (= a!1 #x00000000)
+                0
+                (ite (= a!1 #x00000001) 1 (ite (= a!1 #x00000002) 2 a!3)))))
+  (= (str.at AB_serial_1_version_6 a!4) (seq.unit #x00)))))))
+(assert (let ((a!1 (ite (= (str.len AB_serial_1_version_6) 30)
+                #x0000001e
+                (ite (= (str.len AB_serial_1_version_6) (- 1))
+                     #xffffffff
+                     #x000000c8)))
+      (a!5 (concat (select OISH_i11 #x00000003)
+                   (concat (select OISH_i11 #x00000002)
+                           (concat (select OISH_i11 #x00000001)
+                                   (select OISH_i11 #x00000000))))))
+(let ((a!2 (ite (= (str.len AB_serial_1_version_6) 5)
+                #x00000005
+                (ite (= (str.len AB_serial_1_version_6) 6) #x00000006 a!1))))
+(let ((a!3 (ite (= (str.len AB_serial_1_version_6) 3)
+                #x00000003
+                (ite (= (str.len AB_serial_1_version_6) 4) #x00000004 a!2))))
+(let ((a!4 (ite (= (str.len AB_serial_1_version_6) 1)
+                #x00000001
+                (ite (= (str.len AB_serial_1_version_6) 2) #x00000002 a!3))))
+  (= (ite (= (str.len AB_serial_1_version_6) 0) #x00000000 a!4) a!5))))))
+(assert (= AB_serial_3_version_0 "TQ\x00"))
+(assert (let ((a!1 (concat (select OISH_i33 #x00000003)
+                   (concat (select OISH_i33 #x00000002)
+                           (concat (select OISH_i33 #x00000001)
+                                   (select OISH_i33 #x00000000))))))
+  (bvsle a!1 #x00000001)))
+(assert (let ((a!1 (concat (select OISH_i11 #x00000003)
+                   (concat (select OISH_i11 #x00000002)
+                           (concat (select OISH_i11 #x00000001)
+                                   (select OISH_i11 #x00000000)))))
+      (a!2 (concat (select OISH_i33 #x00000003)
+                   (concat (select OISH_i33 #x00000002)
+                           (concat (select OISH_i33 #x00000001)
+                                   (select OISH_i33 #x00000000))))))
+  (not (bvsle a!1 a!2))))
+(assert (let ((a!1 (ite (= #x00000000 #x00000006)
+                6
+                (ite (= #x00000000 #x0000001e)
+                     30
+                     (ite (= #x00000000 #xffffffff) (- 1) 750))))
+      (a!4 (concat (select OISH_i33 #x00000003)
+                   (concat (select OISH_i33 #x00000002)
+                           (concat (select OISH_i33 #x00000001)
+                                   (select OISH_i33 #x00000000))))))
+(let ((a!2 (ite (= #x00000000 #x00000003)
+                3
+                (ite (= #x00000000 #x00000004)
+                     4
+                     (ite (= #x00000000 #x00000005) 5 a!1))))
+      (a!5 (ite (= a!4 #x00000006)
+                6
+                (ite (= a!4 #x0000001e) 30 (ite (= a!4 #xffffffff) (- 1) 750)))))
+(let ((a!3 (ite (= #x00000000 #x00000000)
+                0
+                (ite (= #x00000000 #x00000001)
+                     1
+                     (ite (= #x00000000 #x00000002) 2 a!2))))
+      (a!6 (ite (= a!4 #x00000003)
+                3
+                (ite (= a!4 #x00000004) 4 (ite (= a!4 #x00000005) 5 a!5)))))
+(let ((a!7 (ite (= a!4 #x00000000)
+                0
+                (ite (= a!4 #x00000001) 1 (ite (= a!4 #x00000002) 2 a!6)))))
+  (= (str.substr AB_serial_2_version_5 a!3 a!7)
+     (str.substr AB_serial_2_version_6 a!3 a!7)))))))
+(assert (let ((a!1 (concat (select OISH_i33 #x00000003)
+                   (concat (select OISH_i33 #x00000002)
+                           (concat (select OISH_i33 #x00000001)
+                                   (select OISH_i33 #x00000000)))))
+      (a!2 (ite (= #x00000000 #x00000006)
+                6
+                (ite (= #x00000000 #x0000001e)
+                     30
+                     (ite (= #x00000000 #xffffffff) (- 1) 750))))
+      (a!5 (ite (= #x00000003 #x00000006)
+                6
+                (ite (= #x00000003 #x0000001e)
+                     30
+                     (ite (= #x00000003 #xffffffff) (- 1) 750))))
+      (a!26 (concat (select OISH_i11 #x00000003)
+                    (concat (select OISH_i11 #x00000002)
+                            (concat (select OISH_i11 #x00000001)
+                                    (select OISH_i11 #x00000000))))))
+(let ((a!3 (ite (= #x00000000 #x00000003)
+                3
+                (ite (= #x00000000 #x00000004)
+                     4
+                     (ite (= #x00000000 #x00000005) 5 a!2))))
+      (a!6 (ite (= #x00000003 #x00000003)
+                3
+                (ite (= #x00000003 #x00000004)
+                     4
+                     (ite (= #x00000003 #x00000005) 5 a!5)))))
+(let ((a!4 (ite (= #x00000000 #x00000000)
+                0
+                (ite (= #x00000000 #x00000001)
+                     1
+                     (ite (= #x00000000 #x00000002) 2 a!3))))
+      (a!7 (ite (= #x00000003 #x00000000)
+                0
+                (ite (= #x00000003 #x00000001)
+                     1
+                     (ite (= #x00000003 #x00000002) 2 a!6)))))
+(let ((a!8 (ite (= (str.indexof (str.substr AB_serial_3_version_0 a!4 a!7)
+                                "\x00"
+                                0)
+                   (- 1))
+                #xffffffff
+                #x000000c8)))
+(let ((a!9 (ite (= (str.indexof (str.substr AB_serial_3_version_0 a!4 a!7)
+                                "\x00"
+                                0)
+                   30)
+                #x0000001e
+                a!8)))
+(let ((a!10 (ite (= (str.indexof (str.substr AB_serial_3_version_0 a!4 a!7)
+                                 "\x00"
+                                 0)
+                    6)
+                 #x00000006
+                 a!9)))
+(let ((a!11 (ite (= (str.indexof (str.substr AB_serial_3_version_0 a!4 a!7)
+                                 "\x00"
+                                 0)
+                    5)
+                 #x00000005
+                 a!10)))
+(let ((a!12 (ite (= (str.indexof (str.substr AB_serial_3_version_0 a!4 a!7)
+                                 "\x00"
+                                 0)
+                    4)
+                 #x00000004
+                 a!11)))
+(let ((a!13 (ite (= (str.indexof (str.substr AB_serial_3_version_0 a!4 a!7)
+                                 "\x00"
+                                 0)
+                    3)
+                 #x00000003
+                 a!12)))
+(let ((a!14 (ite (= (str.indexof (str.substr AB_serial_3_version_0 a!4 a!7)
+                                 "\x00"
+                                 0)
+                    2)
+                 #x00000002
+                 a!13)))
+(let ((a!15 (ite (= (str.indexof (str.substr AB_serial_3_version_0 a!4 a!7)
+                                 "\x00"
+                                 0)
+                    1)
+                 #x00000001
+                 a!14)))
+(let ((a!16 (ite (= (str.indexof (str.substr AB_serial_3_version_0 a!4 a!7)
+                                 "\x00"
+                                 0)
+                    0)
+                 #x00000000
+                 a!15)))
+(let ((a!17 (ite (= (bvadd #x00000001 (bvadd a!1 a!16)) #xffffffff) (- 1) 750))
+      (a!27 (= (bvadd #xffffffff (bvsub a!26 (bvadd a!1 a!16))) #x00000000))
+      (a!28 (= (bvadd #xffffffff (bvsub a!26 (bvadd a!1 a!16))) #x00000001))
+      (a!29 (= (bvadd #xffffffff (bvsub a!26 (bvadd a!1 a!16))) #x00000002))
+      (a!30 (= (bvadd #xffffffff (bvsub a!26 (bvadd a!1 a!16))) #x00000003))
+      (a!31 (= (bvadd #xffffffff (bvsub a!26 (bvadd a!1 a!16))) #x00000004))
+      (a!32 (= (bvadd #xffffffff (bvsub a!26 (bvadd a!1 a!16))) #x00000005))
+      (a!33 (= (bvadd #xffffffff (bvsub a!26 (bvadd a!1 a!16))) #x00000006))
+      (a!34 (= (bvadd #xffffffff (bvsub a!26 (bvadd a!1 a!16))) #x0000001e))
+      (a!35 (= (bvadd #xffffffff (bvsub a!26 (bvadd a!1 a!16))) #xffffffff)))
+(let ((a!18 (ite (= (bvadd #x00000001 (bvadd a!1 a!16)) #x0000001e) 30 a!17))
+      (a!36 (ite a!32 5 (ite a!33 6 (ite a!34 30 (ite a!35 (- 1) 750))))))
+(let ((a!19 (ite (= (bvadd #x00000001 (bvadd a!1 a!16)) #x00000006) 6 a!18))
+      (a!37 (ite a!28 1 (ite a!29 2 (ite a!30 3 (ite a!31 4 a!36))))))
+(let ((a!20 (ite (= (bvadd #x00000001 (bvadd a!1 a!16)) #x00000005) 5 a!19)))
+(let ((a!21 (ite (= (bvadd #x00000001 (bvadd a!1 a!16)) #x00000004) 4 a!20)))
+(let ((a!22 (ite (= (bvadd #x00000001 (bvadd a!1 a!16)) #x00000003) 3 a!21)))
+(let ((a!23 (ite (= (bvadd #x00000001 (bvadd a!1 a!16)) #x00000002) 2 a!22)))
+(let ((a!24 (ite (= (bvadd #x00000001 (bvadd a!1 a!16)) #x00000001) 1 a!23)))
+(let ((a!25 (ite (= (bvadd #x00000001 (bvadd a!1 a!16)) #x00000000) 0 a!24)))
+  (= (str.substr AB_serial_2_version_5 a!25 (ite a!27 0 a!37))
+     (str.substr AB_serial_2_version_6 a!25 (ite a!27 0 a!37)))))))))))))))))))))))))
+(assert (let ((a!1 (ite (= #x00000000 #x00000006)
+                6
+                (ite (= #x00000000 #x0000001e)
+                     30
+                     (ite (= #x00000000 #xffffffff) (- 1) 750))))
+      (a!4 (ite (= #x00000003 #x00000006)
+                6
+                (ite (= #x00000003 #x0000001e)
+                     30
+                     (ite (= #x00000003 #xffffffff) (- 1) 750))))
+      (a!21 (concat (select OISH_i33 #x00000003)
+                    (concat (select OISH_i33 #x00000002)
+                            (concat (select OISH_i33 #x00000001)
+                                    (select OISH_i33 #x00000000))))))
+(let ((a!2 (ite (= #x00000000 #x00000003)
+                3
+                (ite (= #x00000000 #x00000004)
+                     4
+                     (ite (= #x00000000 #x00000005) 5 a!1))))
+      (a!5 (ite (= #x00000003 #x00000003)
+                3
+                (ite (= #x00000003 #x00000004)
+                     4
+                     (ite (= #x00000003 #x00000005) 5 a!4))))
+      (a!22 (ite (= a!21 #x00000006)
+                 6
+                 (ite (= a!21 #x0000001e)
+                      30
+                      (ite (= a!21 #xffffffff) (- 1) 750)))))
+(let ((a!3 (ite (= #x00000000 #x00000000)
+                0
+                (ite (= #x00000000 #x00000001)
+                     1
+                     (ite (= #x00000000 #x00000002) 2 a!2))))
+      (a!6 (ite (= #x00000003 #x00000000)
+                0
+                (ite (= #x00000003 #x00000001)
+                     1
+                     (ite (= #x00000003 #x00000002) 2 a!5))))
+      (a!23 (ite (= a!21 #x00000003)
+                 3
+                 (ite (= a!21 #x00000004) 4 (ite (= a!21 #x00000005) 5 a!22)))))
+(let ((a!7 (ite (= (str.indexof (str.substr AB_serial_3_version_0 a!3 a!6)
+                                "\x00"
+                                0)
+                   (- 1))
+                #xffffffff
+                #x000000c8))
+      (a!24 (ite (= a!21 #x00000000)
+                 0
+                 (ite (= a!21 #x00000001) 1 (ite (= a!21 #x00000002) 2 a!23)))))
+(let ((a!8 (ite (= (str.indexof (str.substr AB_serial_3_version_0 a!3 a!6)
+                                "\x00"
+                                0)
+                   30)
+                #x0000001e
+                a!7)))
+(let ((a!9 (ite (= (str.indexof (str.substr AB_serial_3_version_0 a!3 a!6)
+                                "\x00"
+                                0)
+                   6)
+                #x00000006
+                a!8)))
+(let ((a!10 (ite (= (str.indexof (str.substr AB_serial_3_version_0 a!3 a!6)
+                                 "\x00"
+                                 0)
+                    5)
+                 #x00000005
+                 a!9)))
+(let ((a!11 (ite (= (str.indexof (str.substr AB_serial_3_version_0 a!3 a!6)
+                                 "\x00"
+                                 0)
+                    4)
+                 #x00000004
+                 a!10)))
+(let ((a!12 (ite (= (str.indexof (str.substr AB_serial_3_version_0 a!3 a!6)
+                                 "\x00"
+                                 0)
+                    3)
+                 #x00000003
+                 a!11)))
+(let ((a!13 (ite (= (str.indexof (str.substr AB_serial_3_version_0 a!3 a!6)
+                                 "\x00"
+                                 0)
+                    2)
+                 #x00000002
+                 a!12)))
+(let ((a!14 (ite (= (str.indexof (str.substr AB_serial_3_version_0 a!3 a!6)
+                                 "\x00"
+                                 0)
+                    1)
+                 #x00000001
+                 a!13)))
+(let ((a!15 (ite (= (str.indexof (str.substr AB_serial_3_version_0 a!3 a!6)
+                                 "\x00"
+                                 0)
+                    0)
+                 #x00000000
+                 a!14)))
+(let ((a!16 (ite (= (bvadd #x00000001 a!15) #x0000001e)
+                 30
+                 (ite (= (bvadd #x00000001 a!15) #xffffffff) (- 1) 750))))
+(let ((a!17 (ite (= (bvadd #x00000001 a!15) #x00000005)
+                 5
+                 (ite (= (bvadd #x00000001 a!15) #x00000006) 6 a!16))))
+(let ((a!18 (ite (= (bvadd #x00000001 a!15) #x00000003)
+                 3
+                 (ite (= (bvadd #x00000001 a!15) #x00000004) 4 a!17))))
+(let ((a!19 (ite (= (bvadd #x00000001 a!15) #x00000001)
+                 1
+                 (ite (= (bvadd #x00000001 a!15) #x00000002) 2 a!18))))
+(let ((a!20 (str.substr AB_serial_3_version_0
+                        a!3
+                        (ite (= (bvadd #x00000001 a!15) #x00000000) 0 a!19)))
+      (a!25 (str.substr AB_serial_2_version_6
+                        a!24
+                        (ite (= (bvadd #x00000001 a!15) #x00000000) 0 a!19))))
+  (= a!20 a!25)))))))))))))))))))
+(assert (let ((a!1 (ite (= (str.len AB_serial_2_version_5) 30)
+                #x0000001e
+                (ite (= (str.len AB_serial_2_version_5) (- 1))
+                     #xffffffff
+                     #x000000c8)))
+      (a!5 (ite (= (str.len AB_serial_2_version_6) 30)
+                #x0000001e
+                (ite (= (str.len AB_serial_2_version_6) (- 1))
+                     #xffffffff
+                     #x000000c8))))
+(let ((a!2 (ite (= (str.len AB_serial_2_version_5) 5)
+                #x00000005
+                (ite (= (str.len AB_serial_2_version_5) 6) #x00000006 a!1)))
+      (a!6 (ite (= (str.len AB_serial_2_version_6) 5)
+                #x00000005
+                (ite (= (str.len AB_serial_2_version_6) 6) #x00000006 a!5))))
+(let ((a!3 (ite (= (str.len AB_serial_2_version_5) 3)
+                #x00000003
+                (ite (= (str.len AB_serial_2_version_5) 4) #x00000004 a!2)))
+      (a!7 (ite (= (str.len AB_serial_2_version_6) 3)
+                #x00000003
+                (ite (= (str.len AB_serial_2_version_6) 4) #x00000004 a!6))))
+(let ((a!4 (ite (= (str.len AB_serial_2_version_5) 1)
+                #x00000001
+                (ite (= (str.len AB_serial_2_version_5) 2) #x00000002 a!3)))
+      (a!8 (ite (= (str.len AB_serial_2_version_6) 1)
+                #x00000001
+                (ite (= (str.len AB_serial_2_version_6) 2) #x00000002 a!7))))
+  (= (ite (= (str.len AB_serial_2_version_5) 0) #x00000000 a!4)
+     (ite (= (str.len AB_serial_2_version_6) 0) #x00000000 a!8)))))))
+(assert (let ((a!1 (ite (= #x00000000 #x00000006)
+                6
+                (ite (= #x00000000 #x0000001e)
+                     30
+                     (ite (= #x00000000 #xffffffff) (- 1) 750))))
+      (a!4 (concat (select OISH_i11 #x00000003)
+                   (concat (select OISH_i11 #x00000002)
+                           (concat (select OISH_i11 #x00000001)
+                                   (select OISH_i11 #x00000000))))))
+(let ((a!2 (ite (= #x00000000 #x00000003)
+                3
+                (ite (= #x00000000 #x00000004)
+                     4
+                     (ite (= #x00000000 #x00000005) 5 a!1))))
+      (a!5 (ite (= a!4 #x00000006)
+                6
+                (ite (= a!4 #x0000001e) 30 (ite (= a!4 #xffffffff) (- 1) 750)))))
+(let ((a!3 (ite (= #x00000000 #x00000000)
+                0
+                (ite (= #x00000000 #x00000001)
+                     1
+                     (ite (= #x00000000 #x00000002) 2 a!2))))
+      (a!6 (ite (= a!4 #x00000003)
+                3
+                (ite (= a!4 #x00000004) 4 (ite (= a!4 #x00000005) 5 a!5)))))
+(let ((a!7 (ite (= a!4 #x00000000)
+                0
+                (ite (= a!4 #x00000001) 1 (ite (= a!4 #x00000002) 2 a!6)))))
+(let ((a!8 (ite (= (str.indexof (str.substr AB_serial_2_version_6 a!3 a!7)
+                                "\x00"
+                                0)
+                   (- 1))
+                #xffffffff
+                #x000000c8))
+      (a!17 (ite (= (str.indexof (str.substr AB_serial_1_version_6 a!3 a!7)
+                                 "\x00"
+                                 0)
+                    (- 1))
+                 #xffffffff
+                 #x000000c8)))
+(let ((a!9 (ite (= (str.indexof (str.substr AB_serial_2_version_6 a!3 a!7)
+                                "\x00"
+                                0)
+                   30)
+                #x0000001e
+                a!8))
+      (a!18 (ite (= (str.indexof (str.substr AB_serial_1_version_6 a!3 a!7)
+                                 "\x00"
+                                 0)
+                    30)
+                 #x0000001e
+                 a!17)))
+(let ((a!10 (ite (= (str.indexof (str.substr AB_serial_2_version_6 a!3 a!7)
+                                 "\x00"
+                                 0)
+                    6)
+                 #x00000006
+                 a!9))
+      (a!19 (ite (= (str.indexof (str.substr AB_serial_1_version_6 a!3 a!7)
+                                 "\x00"
+                                 0)
+                    6)
+                 #x00000006
+                 a!18)))
+(let ((a!11 (ite (= (str.indexof (str.substr AB_serial_2_version_6 a!3 a!7)
+                                 "\x00"
+                                 0)
+                    5)
+                 #x00000005
+                 a!10))
+      (a!20 (ite (= (str.indexof (str.substr AB_serial_1_version_6 a!3 a!7)
+                                 "\x00"
+                                 0)
+                    5)
+                 #x00000005
+                 a!19)))
+(let ((a!12 (ite (= (str.indexof (str.substr AB_serial_2_version_6 a!3 a!7)
+                                 "\x00"
+                                 0)
+                    4)
+                 #x00000004
+                 a!11))
+      (a!21 (ite (= (str.indexof (str.substr AB_serial_1_version_6 a!3 a!7)
+                                 "\x00"
+                                 0)
+                    4)
+                 #x00000004
+                 a!20)))
+(let ((a!13 (ite (= (str.indexof (str.substr AB_serial_2_version_6 a!3 a!7)
+                                 "\x00"
+                                 0)
+                    3)
+                 #x00000003
+                 a!12))
+      (a!22 (ite (= (str.indexof (str.substr AB_serial_1_version_6 a!3 a!7)
+                                 "\x00"
+                                 0)
+                    3)
+                 #x00000003
+                 a!21)))
+(let ((a!14 (ite (= (str.indexof (str.substr AB_serial_2_version_6 a!3 a!7)
+                                 "\x00"
+                                 0)
+                    2)
+                 #x00000002
+                 a!13))
+      (a!23 (ite (= (str.indexof (str.substr AB_serial_1_version_6 a!3 a!7)
+                                 "\x00"
+                                 0)
+                    2)
+                 #x00000002
+                 a!22)))
+(let ((a!15 (ite (= (str.indexof (str.substr AB_serial_2_version_6 a!3 a!7)
+                                 "\x00"
+                                 0)
+                    1)
+                 #x00000001
+                 a!14))
+      (a!24 (ite (= (str.indexof (str.substr AB_serial_1_version_6 a!3 a!7)
+                                 "\x00"
+                                 0)
+                    1)
+                 #x00000001
+                 a!23)))
+(let ((a!16 (ite (= (str.indexof (str.substr AB_serial_2_version_6 a!3 a!7)
+                                 "\x00"
+                                 0)
+                    0)
+                 #x00000000
+                 a!15))
+      (a!25 (ite (= (str.indexof (str.substr AB_serial_1_version_6 a!3 a!7)
+                                 "\x00"
+                                 0)
+                    0)
+                 #x00000000
+                 a!24)))
+(let ((a!26 (ite (= a!16 #x00000006)
+                 6
+                 (ite (= a!16 #x0000001e)
+                      30
+                      (ite (= a!16 #xffffffff) (- 1) 750))))
+      (a!29 (ite (= a!25 #x00000006)
+                 6
+                 (ite (= a!25 #x0000001e)
+                      30
+                      (ite (= a!25 #xffffffff) (- 1) 750)))))
+(let ((a!27 (ite (= a!16 #x00000003)
+                 3
+                 (ite (= a!16 #x00000004) 4 (ite (= a!16 #x00000005) 5 a!26))))
+      (a!30 (ite (= a!25 #x00000003)
+                 3
+                 (ite (= a!25 #x00000004) 4 (ite (= a!25 #x00000005) 5 a!29)))))
+(let ((a!28 (ite (= a!16 #x00000000)
+                 0
+                 (ite (= a!16 #x00000001) 1 (ite (= a!16 #x00000002) 2 a!27))))
+      (a!31 (ite (= a!25 #x00000000)
+                 0
+                 (ite (= a!25 #x00000001) 1 (ite (= a!25 #x00000002) 2 a!30)))))
+(let ((a!32 (and (not (and (= #xffffffff a!16) (= #xffffffff a!25)))
+                 (= (str.substr (str.substr AB_serial_2_version_6 a!3 a!7)
+                                a!3
+                                a!28)
+                    (str.substr (str.substr AB_serial_1_version_6 a!3 a!7)
+                                a!3
+                                a!31)))))
+  (not (not (= #x00000000 (ite a!32 #x00000000 #x00000001))))))))))))))))))))))
+(check-sat)
+ 
+(get-value (AB_serial_1_version_0 AB_serial_2_version_0 AB_serial_1_version_1 AB_serial_1_version_2 AB_serial_1_version_3 AB_serial_1_version_4 AB_serial_1_version_5 AB_serial_2_version_1 AB_serial_2_version_2 AB_serial_2_version_3 AB_serial_2_version_4 AB_serial_2_version_5 AB_serial_1_version_6 AB_serial_2_version_6 ))
