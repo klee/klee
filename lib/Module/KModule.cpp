@@ -200,6 +200,19 @@ void KModule::addInternalFunction(const char* functionName){
 
 void KModule::prepare(const Interpreter::ModuleOptions &opts,
                       InterpreterHandler *ih) {
+  // FIXME: Missing force import for various math functions.
+
+  // FIXME: Find a way that we can test programs without requiring
+  // this to be linked in, it makes low level debugging much more
+  // annoying.
+
+  // Link with system library before running any optimizations
+  SmallString<128> LibPath(opts.LibraryDir);
+  llvm::sys::path::append(LibPath,
+      "kleeRuntimeIntrinsic.bc"
+    );
+  module = linkWithLibrary(module, LibPath.str());
+
   // Inject checks prior to optimization... we also perform the
   // invariant transformations that we will end up doing later so that
   // optimize is seeing what is as close as possible to the final
@@ -224,18 +237,6 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
 
   if (opts.Optimize)
     Optimize(module, opts.EntryPoint);
-
-  // FIXME: Missing force import for various math functions.
-
-  // FIXME: Find a way that we can test programs without requiring
-  // this to be linked in, it makes low level debugging much more
-  // annoying.
-
-  SmallString<128> LibPath(opts.LibraryDir);
-  llvm::sys::path::append(LibPath,
-      "kleeRuntimeIntrinsic.bc"
-    );
-  module = linkWithLibrary(module, LibPath.str());
 
   // Add internal functions which are not used to check if instructions
   // have been already visited
