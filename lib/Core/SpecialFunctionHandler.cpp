@@ -2125,6 +2125,7 @@ void SpecialFunctionHandler::handleMyPrintOutput(
 	fprintf(stdout, "\n\n>> KLEE ERROR: %s\n\n",actualCStringContent.c_str());
 	system("setterm -term linux -fore white");
 	system("z3QueriesParser");
+	system("cat /tmp/output.txt");
 	// system("./myParseOutput/parseMe");
 	exit(0);
 }
