@@ -703,295 +703,6 @@ const ObjectState  *os;
 /*******************************************************/
 ref<Expr> offset_of_p_within_MISHMISH;
 
-/***************************************************************/
-/* constant: everything is sign extended to 32 bits by default */
-/***************************************************************/
-ref<Expr> constant(int d)
-{
-	return klee::ConstantExpr::create(d,Expr::Int32);
-}
-
-/*************************************************************************/
-/* char_c_at_location: everything is sign extended to 32 bits by default */
-/*************************************************************************/
-ref<Expr> char_c_at_location(int n)
-{
-	return
-		SExtExpr::create
-		(
-			os->read
-			(
-				AddExpr::create
-				(
-					offset_of_p_within_MISHMISH,
-					klee::ConstantExpr::create
-					(
-						n,
-						offset_of_p_within_MISHMISH->getWidth()
-					)
-				),
-				Expr::Int8
-			),
-			Expr::Int32
-		);
-}
-
-/**********************************************************************/
-/* char_c_is_not_0_at_location: for my atoi string length assumptions */
-/**********************************************************************/
-ref<Expr> char_c_is_0_at_location(int n)
-{
-	return
-		SExtExpr::create
-		(
-			EqExpr::create
-			(
-				char_c_at_location(n),
-				constant(0)
-			),
-			Expr::Int32
-		);
-}
-
-/**********************************************************************/
-/* char_c_is_not_0_at_location: for my atoi string length assumptions */
-/**********************************************************************/
-ref<Expr> char_c_is_not_0_at_location(int n)
-{
-	return
-		SExtExpr::create
-		(
-			NeExpr::create
-			(
-				char_c_at_location(n),
-				constant(0)
-			),
-			Expr::Int32
-		);
-}
-
-/**************************************************************************/
-/* char_c_is_not_0_at_location_leq: for my atoi string length assumptions */
-/**************************************************************************/
-ref<Expr> char_c_is_not_0_at_location_leq(int n)
-{
-	if (n == 0)
-	{
-		return char_c_is_not_0_at_location(0);
-	}
-	else
-	{
-		return
-			MulExpr::create
-			(
-				char_c_is_not_0_at_location(n),
-				char_c_is_not_0_at_location_leq(n-1)
-			);
-	}
-}
-
-/************************************************************************/
-/* char_c_is_a_digit_at_location: for my atoi string length assumptions */
-/************************************************************************/
-ref<Expr> char_c_is_ge_than_0_at_location(int n)
-{
-	return
-		SExtExpr::create
-		(
-			SgeExpr::create
-			(
-				char_c_at_location(n),
-				constant('0')
-			),
-			Expr::Int32
-		);
-}
-
-/************************************************************************/
-/* char_c_is_a_digit_at_location: for my atoi string length assumptions */
-/************************************************************************/
-ref<Expr> char_c_is_le_than_9_at_location(int n)
-{
-	return
-		SExtExpr::create
-		(
-			SleExpr::create
-			(
-				char_c_at_location(n),
-				constant('9')
-			),
-			Expr::Int32
-		);
-}
-
-/************************************************************************/
-/* char_c_is_a_digit_at_location: for my atoi string length assumptions */
-/************************************************************************/
-ref<Expr> char_c_is_a_digit_at_location(int n)
-{
-	return
-		MulExpr::create
-		(
-			char_c_is_ge_than_0_at_location(n),
-			char_c_is_le_than_9_at_location(n)
-		);
-}
-
-/************************************************************************/
-/* char_c_is_a_digit_at_location: for my atoi string length assumptions */
-/************************************************************************/
-ref<Expr> char_c_is_a_digit_at_location_leq(int n)
-{
-	if (n == 0)
-	{
-		return char_c_is_a_digit_at_location(0);
-	}
-	else
-	{
-		return
-			MulExpr::create
-			(
-				char_c_is_a_digit_at_location(n),
-				char_c_is_a_digit_at_location_leq(n-1)
-			);
-	}
-}
-
-ref<Expr> all_digits_base_10_atoi_for_non_empty_strings_with_length_eq(int n)
-{
-	/**********/
-	/* n >= 1 */
-	/**********/
-	if (n == 1)
-	{
-		return
-			SubExpr::create
-			(
-				char_c_at_location(0),
-				constant('0')
-			);
-	}
-	else
-	{
-		/**********/
-		/* n >= 2 */
-		/**********/
-		return
-			AddExpr::create
-			(
-				SubExpr::create
-				(
-					char_c_at_location(n-1),
-					constant('0')
-				),
-				MulExpr::create
-				(
-					constant(10),
-					all_digits_base_10_atoi_for_non_empty_strings_with_length_eq(n-1)
-				)
-			);		
-	}
-}
-
-ref<Expr> MyAtoiFormula_for_non_empty_strings_with_length_eq(int n)
-{
-	/**********/
-	/* n >= 1 */
-	/**********/
-	if (n == 1)
-	{
-		return
-			MulExpr::create
-			(
-				MulExpr::create
-				(
-					char_c_is_a_digit_at_location(0),
-					char_c_is_0_at_location(1)
-				),
-				SubExpr::create
-				(
-					char_c_at_location(0),
-					constant('0')
-				)
-			);
-	}
-	else
-	{
-		/**********/
-		/* n >= 2 */
-		/**********/
-		return
-			MulExpr::create
-			(
-				char_c_is_0_at_location(n),
-				MulExpr::create
-				(
-					char_c_is_a_digit_at_location_leq(n-1),
-					all_digits_base_10_atoi_for_non_empty_strings_with_length_eq(n)
-				)
-			);
-	}
-}
-
-ref<Expr> MyAtoiFormula_for_non_empty_strings_with_length_leq(int n)
-{
-	/**********/
-	/* n >= 1 */
-	/**********/
-	if (n == 1)
-	{
-		return MyAtoiFormula_for_non_empty_strings_with_length_eq(1);
-	}
-	else
-	{
-		/**********/
-		/* n >= 2 */
-		/**********/
-		return
-			AddExpr::create
-			(
-				MyAtoiFormula_for_non_empty_strings_with_length_eq(n),
-				MyAtoiFormula_for_non_empty_strings_with_length_leq(n-1)
-			);	
-	}		
-}
-
-ref<Expr> MyAtoiFormula_for_strings_with_length_leq(int maxStringLength)
-{
-	return
-		MulExpr::create
-		(
-			char_c_is_not_0_at_location(0),
-			MyAtoiFormula_for_non_empty_strings_with_length_leq(maxStringLength)
-		);
-}
-
-ref<Expr> MyStrlenFormula_for_null_terminated_strings(void)
-{
-	return constant(-1);
-	//	IteExpr::create
-	//	(
-	//		SgeExpr::create
-	//		(
-	//			first_backslash_x00(),
-	//			StrlenExpr::create(offset_of_p_within_MISHMISH)
-	//		),
-	//		StrlenExpr::create(offset_of_p_within_MISHMISH),
-	//		first_backslash_x00()
-	//	);
-}
-
-ref<Expr> MyStrlenFormula(void)
-{
-	return constant(-1);
-	//	IteExpr::create
-	//	(
-	//		no_0_inside_string,
-	//		constant(-1),
-	//		MyStrlenFormula_for_null_terminated_strings()
-	//	);
-}
-
 #define AB_MAX_NAME_LENGTH 256
 
 void Assemble_Abstract_Buffer_Name(int serial, int version, char name[AB_MAX_NAME_LENGTH])
@@ -1031,18 +742,14 @@ void SpecialFunctionHandler::handleMyStrlen(
 	KInstruction *target,
 	std::vector<ref<Expr> > &arguments)
 {
-	bool success=true;
-
 	char AB_p_name[AB_MAX_NAME_LENGTH]={0};
 
+	/*********************************************/
+	/* [0] zero, one and minusOne as ref<Expr>'s */
+	/*********************************************/
 	ref<Expr> one  = ConstantExpr::create(1,Expr::Int32);
 	ref<Expr> zero = ConstantExpr::create(0,Expr::Int32);
 	ref<Expr> minusOne = SubExpr::create(zero,one);
-
-	/****************************************************/
-	/* [0] Inside handleMyWriteCharToStringAtOffset ... */
-	/****************************************************/
-	llvm::errs() << "Inside handleMyStrlen" << "\n";
 
 	/*****************************************/
 	/* [1] Extract the llvm call instruction */
@@ -1063,6 +770,15 @@ void SpecialFunctionHandler::handleMyStrlen(
 	/* [4] Go back to the original local variables names */
 	/*****************************************************/
 	std::string p = state.varNames[varName0];
+	if (p.size() == 0)
+	{
+		system("setterm -term linux -fore red");
+		fprintf(
+			stdout,
+			"KLEE ERROR: variable %s is not recgnized as a string variable\n\n",
+			varName0.c_str());
+		system("setterm -term linux -fore white");
+	}
 
 	/****************************/
 	/* [5] Extract serial for p */
@@ -2123,10 +1839,8 @@ void SpecialFunctionHandler::handleMyPrintOutput(
 	/*******************************/
 	system("setterm -term linux -fore red");
 	fprintf(stdout, "\n\n>> KLEE ERROR: %s\n\n",actualCStringContent.c_str());
-	system("setterm -term linux -fore white");
 	system("z3QueriesParser");
 	system("cat /tmp/output.txt");
-	// system("./myParseOutput/parseMe");
 	exit(0);
 }
 
@@ -3011,75 +2725,6 @@ void SpecialFunctionHandler::handleMyAtoi(
 	KInstruction *target,
 	std::vector<ref<Expr> > &arguments)
 {
-	bool success=true;
-	const int maxStringLength = 10;
-
-	/************************************************************/
-	/* [1] Make sure MyAtoi uses the SMT-formula implementation */
-	/************************************************************/
-	llvm::errs() << "*************************************" << "\n";
-	llvm::errs() << "* [0] MyAtoi formula implementation *" << "\n";
-	llvm::errs() << "*************************************" << "\n";
-
-	/******************************************************************/
-	/* [2] resolveExact is commented out -- wrong guy for the job ... */
-	/******************************************************************/
-	//Executor::ExactResolutionList resolutionList;
-	//executor.resolveExact(
-	//	state,
-	//	arguments[0],
-	//	resolutionList,
-	//	"MyAtoi");
-	//const MemoryObject *mo = resolutionList[0].first.first;
-	//const ObjectState  *os = resolutionList[0].first.second;
-	
-	/*********************************************************/
-	/* [3] This is the right guy for the job: resolveOne ... */
-	/*********************************************************/
-	state.addressSpace.resolveOne(
-		state,
-		executor.solver,
-		arguments[0],
-		op,
-		success);
-
-	llvm::errs() << "********************************" << "\n";
-	llvm::errs() << "* [1] resolveOne succeeded ... *" << "\n";
-	llvm::errs() << "********************************" << "\n";
-	
-	/************************************************************************/
-	/* [4] Use MemoryObject & ObjectState that returned from resolveOne ... */
-	/************************************************************************/
-	mo = op.first;
-	os = op.second;
-
-	llvm::errs() << "*****************************************" << "\n";
-	llvm::errs() << "* [2] mo + os assignments succeeded ... *" << "\n";
-	llvm::errs() << "*****************************************" << "\n";
-
-	/**********************************************************/
-	/* [5] where does arg0 points inside the symbolic array ? */
-	/**********************************************************/
-	offset_of_p_within_MISHMISH = mo->getOffsetExpr(arguments[0]);
-
-	llvm::errs() << "*************************************************" << "\n";
-	llvm::errs() << "* [3] offset of p within MISHMISH succeeded ... *" << "\n";
-	llvm::errs() << "*************************************************" << "\n";
-
-	/*****************************************************************/
-	/* [6] Use many helper functions to assemble the overall formula */
-	/*     for MyAtoi. Use maxStringLength as a parameter ...        */
-	/*****************************************************************/
-	ref<Expr> MyAtoiFormula =
-	MyAtoiFormula_for_strings_with_length_leq(maxStringLength);
-	
-	/****************************************************************/
-	/* [7] use bindLocal to bind the returned value of the function */
-	/****************************************************************/
-	executor.bindLocal(
-		target, 
-		state,
-		MyAtoiFormula);
 }
 
 void SpecialFunctionHandler::handleGetValue(ExecutionState &state,
