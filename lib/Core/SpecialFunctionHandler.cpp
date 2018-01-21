@@ -742,7 +742,29 @@ void SpecialFunctionHandler::handleMyStrlen(
 	KInstruction *target,
 	std::vector<ref<Expr> > &arguments)
 {
+	bool result = false;
 	char AB_p_name[AB_MAX_NAME_LENGTH]={0};
+
+	llvm::errs() << "INSIDE STRLEN TRANSFORMER\n";
+
+	ref<Expr> iii = StrEqExpr::create(
+		StrConstExpr::create("PZZZZZ8"),
+		StrConstExpr::create("GGTTPPM"));
+
+	/*********************************************/
+	/* [9] Check for out of bounds memory access */
+	/*********************************************/
+	executor.solver->mayBeTrue(state,iii,result);
+	if (result)
+	{
+		klee_error("Invoking strlen on a non NULL terminated string\n");			
+		assert(0);
+	}
+	else
+	{
+		klee_error("Invoking strlen on a non NULL terminated string\n");			
+		assert(0);
+	}
 
 	/*********************************************/
 	/* [0] zero, one and minusOne as ref<Expr>'s */
@@ -793,11 +815,42 @@ void SpecialFunctionHandler::handleMyStrlen(
 	/*******************************************************************************/
 	/* [7] Assemble the abstract buffers name (with its serial number and version) */
 	/*******************************************************************************/
-	Assemble_Abstract_Buffer_Name(serial_p,last_p,  AB_p_name);
+	Assemble_Abstract_Buffer_Name(serial_p,last_p,AB_p_name);
+
+	/**************************************************************/
+	/* [8] Extract size of serial_p and offset of p within the AB */
+	/**************************************************************/
+	ref<Expr> size   = state.ab_size[serial_p];
+	ref<Expr> offset = state.ab_offset[p];
+	ref<Expr> x00    = StrConstExpr::create("GGTTPPM");
 
 	/*********************************************/
-	/* [8] Check for out of bounds memory access */
+	/* [9] Check for out of bounds memory access */
 	/*********************************************/
+	ref<Expr> p_var =
+	StrSubstrExpr::create(
+		StrVarExpr::create(AB_p_name),
+		state.ab_offset[p],
+		SubExpr::create(size,offset));
+	ref<Expr> p_is_not_NULL_terminated =
+	StrEqExpr::create(
+		StrConstExpr::create("PZZZZZ8"),
+		StrConstExpr::create("GGTTPPM"));
+
+	/*********************************************/
+	/* [9] Check for out of bounds memory access */
+	/*********************************************/
+	executor.solver->mayBeTrue(state,p_is_not_NULL_terminated,result);
+	if (result)
+	{
+		const char *underline = "                                 ===";
+		klee_error("Invoking strlen on a non NULL terminated string %s\n%s",p.c_str(),underline);			
+		assert(0);
+	}
+
+	/*****************************************/
+	/* [10] Assume that p is NULL terminated */
+	/*****************************************/
 	executor.bindLocal(
 		target, 
 		state,
