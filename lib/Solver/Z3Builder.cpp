@@ -895,9 +895,9 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
   }
   case Expr::Str_Length:
   {
- 	llvm::errs() << "********************\n";
-  	llvm::errs() << "* Expr::Str_Length *\n";
-  	llvm::errs() << "********************\n";
+ 	//llvm::errs() << "********************\n";
+  	//llvm::errs() << "* Expr::Str_Length *\n";
+  	//llvm::errs() << "********************\n";
  
    	int irrelevant_width=0;
   	

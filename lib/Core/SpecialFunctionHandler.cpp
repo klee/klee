@@ -747,25 +747,6 @@ void SpecialFunctionHandler::handleMyStrlen(
 
 	llvm::errs() << "INSIDE STRLEN TRANSFORMER\n";
 
-	ref<Expr> iii = StrEqExpr::create(
-		StrConstExpr::create("PZZZZZ8"),
-		StrConstExpr::create("GGTTPPM"));
-
-	/*********************************************/
-	/* [9] Check for out of bounds memory access */
-	/*********************************************/
-	executor.solver->mayBeTrue(state,iii,result);
-	if (result)
-	{
-		klee_error("Invoking strlen on a non NULL terminated string\n");			
-		assert(0);
-	}
-	else
-	{
-		klee_error("Invoking strlen on a non NULL terminated string\n");			
-		assert(0);
-	}
-
 	/*********************************************/
 	/* [0] zero, one and minusOne as ref<Expr>'s */
 	/*********************************************/
@@ -822,7 +803,7 @@ void SpecialFunctionHandler::handleMyStrlen(
 	/**************************************************************/
 	ref<Expr> size   = state.ab_size[serial_p];
 	ref<Expr> offset = state.ab_offset[p];
-	ref<Expr> x00    = StrConstExpr::create("GGTTPPM");
+	ref<Expr> x00    = StrConstExpr::create("\\x00");
 
 	/*********************************************/
 	/* [9] Check for out of bounds memory access */
@@ -832,10 +813,14 @@ void SpecialFunctionHandler::handleMyStrlen(
 		StrVarExpr::create(AB_p_name),
 		state.ab_offset[p],
 		SubExpr::create(size,offset));
+
+	/*********************************************/
+	/* [9] Check for out of bounds memory access */
+	/*********************************************/
 	ref<Expr> p_is_not_NULL_terminated =
-	StrEqExpr::create(
-		StrConstExpr::create("PZZZZZ8"),
-		StrConstExpr::create("GGTTPPM"));
+	EqExpr::create(
+		StrFirstIdxOfExpr::create(p_var,x00),
+		minusOne);
 
 	/*********************************************/
 	/* [9] Check for out of bounds memory access */
@@ -843,21 +828,25 @@ void SpecialFunctionHandler::handleMyStrlen(
 	executor.solver->mayBeTrue(state,p_is_not_NULL_terminated,result);
 	if (result)
 	{
-		const char *underline = "                                 ===";
+		const char *underline = "                                  ===";
 		klee_error("Invoking strlen on a non NULL terminated string %s\n%s",p.c_str(),underline);			
 		assert(0);
 	}
 
 	/*****************************************/
 	/* [10] Assume that p is NULL terminated */
+	/*                    ==                 */
 	/*****************************************/
+	state.addConstraint(NotExpr::create(p_is_not_NULL_terminated));
+
+	/**************************************/
+	/* [11] bind the result of strlen ... */
+	/**************************************/
 	executor.bindLocal(
 		target, 
 		state,
 		SExtExpr::create(
-			StrFirstIdxOfExpr::create(
-				StrVarExpr::create(AB_p_name),
-				StrConstExpr::create("\\x00")),
+			StrFirstIdxOfExpr::create(p_var,x00),
 			Expr::Int64));
 }
 
@@ -1892,6 +1881,7 @@ void SpecialFunctionHandler::handleMyPrintOutput(
 	/*******************************/
 	system("setterm -term linux -fore red");
 	fprintf(stdout, "\n\n>> KLEE ERROR: %s\n\n",actualCStringContent.c_str());
+	system("setterm -term linux -fore white");
 	system("z3QueriesParser");
 	system("cat /tmp/output.txt");
 	exit(0);
