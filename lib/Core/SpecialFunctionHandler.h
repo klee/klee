@@ -135,6 +135,7 @@ namespace klee {
     HANDLER(handleMyWriteConstCharToStringAtOffset);
     HANDLER(handleMyWriteConstCharToStringAtConstOffset);
     HANDLER(handleMyReadCharFromStringAtOffset);    
+    HANDLER(handleMyReadCharFromStringAtConstOffset);    
     HANDLER(handlePreferCex);
     HANDLER(handlePosixPreferCex);
     HANDLER(handlePrintExpr);

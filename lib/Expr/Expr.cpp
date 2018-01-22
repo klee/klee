@@ -955,6 +955,10 @@ static ref<Expr> AShrExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
 
 #define BCREATE_R(_e_op, _op, partialL, partialR) \
 ref<Expr>  _e_op ::create(const ref<Expr> &l, const ref<Expr> &r) { \
+  if (l->getWidth()!=r->getWidth()) {                                   \
+    llvm::errs() << "left  width = " << l->getWidth() << "\n";          \
+    llvm::errs() << "right width = " << r->getWidth() << "\n";          \
+  }                                                                     \
   assert(l->getWidth()==r->getWidth() && "type mismatch");              \
   if (ConstantExpr *cl = dyn_cast<ConstantExpr>(l)) {                   \
     if (ConstantExpr *cr = dyn_cast<ConstantExpr>(r))                   \

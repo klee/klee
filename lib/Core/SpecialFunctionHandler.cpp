@@ -97,7 +97,8 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
   add("MyWriteCharToStringAtOffset", handleMyWriteCharToStringAtOffset, false),
   add("MyWriteConstCharToStringAtOffset",handleMyWriteConstCharToStringAtOffset,false),
   add("MyWriteConstCharToStringAtConstOffset",handleMyWriteConstCharToStringAtConstOffset,false),
-  add("MyReadCharFromStringAtOffset",handleMyReadCharFromStringAtOffset,false),
+  add("MyReadCharFromStringAtOffset",handleMyReadCharFromStringAtOffset,true),
+  add("MyReadCharFromStringAtConstOffset",handleMyReadCharFromStringAtConstOffset,true),
   add("MyStringAssignWithOffset",    handleMyStringAssignWithOffset,    false),
   add("MyMalloc",                    handleMyMalloc,                    false),
   add("strcpy",                      handleMyStrcpy,                    true),
@@ -1759,21 +1760,21 @@ void SpecialFunctionHandler::handleMyReadCharFromStringAtOffset(
 	/*********************************************/
 	llvm::Value *value0 = callInst->getArgOperand(0);
 	llvm::Value *value1 = callInst->getArgOperand(1);
-	llvm::Value *value2 = callInst->getArgOperand(2);
+	// llvm::Value *value2 = callInst->getArgOperand(2);
 		
 	/********************************************/
 	/* [3] Take the name of the input arguments */
 	/********************************************/
 	std::string varName0 = value0->getName().str();
 	std::string varName1 = value1->getName().str();
-	std::string varName2 = value2->getName().str();
+	// std::string varName2 = value2->getName().str();
 
 	/*****************************************************/
 	/* [4] Go back to the original local variables names */
 	/*****************************************************/
-	std::string c = state.varNames[varName0];
-	std::string p = state.varNames[varName1];
-	std::string i = state.varNames[varName2];
+	// std::string c = state.varNames[varName0];
+	std::string p = state.varNames[varName0];
+	std::string i = state.varNames[varName1];
 
 	/****************************/
 	/* [5] Extract serial for p */
@@ -1793,47 +1794,155 @@ void SpecialFunctionHandler::handleMyReadCharFromStringAtOffset(
 	/******************************************************************************/
 	/* [8] Add ANSI C constraint that p+i does NOT point beyond buffer boundaries */
 	/******************************************************************************/
-	ref<Expr> e1 = SgeExpr::create(
+	ref<Expr> p_plus_i_points_outside_AB = SgeExpr::create(
 		AddExpr::create(
 			state.ab_offset[p],
-			arguments[2]),
+			arguments[1]),
 		state.ab_size[serial_p]);
 
 	/****************************************************************************/
 	/* [9] Check with the solver whether p+i can point beyond buffer boundaries */
 	/****************************************************************************/
-	executor.solver->mayBeTrue(state,e1,result);
+	executor.solver->mayBeTrue(state,p_plus_i_points_outside_AB,result);
 	if (result)
 	{
 		klee_error(
-			"Illegal Assignment: %s := %s + %s",
-			c.c_str(),
-			p.c_str(),
-			i.c_str());
-			
+			"%s[%s] points outside allocated memory",
+			p.c_str()+strlen("OISH_"),
+			i.c_str()+strlen("OISH_"));
 		assert(0);
 	}
 
-	/************************/
-	/* [10] Read constraint */
-	/************************/
-	ref<Expr> e2 = StrEqExpr::create(
-		StrFromBitVector8Expr::create(arguments[2]),
-		StrCharAtExpr::create(
-			StrVarExpr::create(AB_p_name),
-			AddExpr::create(
-				arguments[1],
-				state.ab_offset[p])));
+	/**********************************************************************/
+	/* [10] Add the constraint that p+i points inside the abstract buffer */
+	/**********************************************************************/
+	state.addConstraint(NotExpr::create(p_plus_i_points_outside_AB));
 
-	/********************************/
-	/* [11] Add the read constraint */
-	/********************************/
-	state.addConstraint(e2);
+	/***********************/
+	/* [11] bind local ... */
+	/***********************/
+	executor.bindLocal(
+		target, 
+		state,
+		SelectExpr::create(StrEqExpr::create(StrConstExpr::create("T"),StrCharAtExpr::create(StrVarExpr::create(AB_p_name),AddExpr::create(arguments[1],state.ab_offset[p]))),ConstantExpr::create('T',Expr::Int8),
+		SelectExpr::create(StrEqExpr::create(StrConstExpr::create("M"),StrCharAtExpr::create(StrVarExpr::create(AB_p_name),AddExpr::create(arguments[1],state.ab_offset[p]))),ConstantExpr::create('M',Expr::Int8),
+		SelectExpr::create(StrEqExpr::create(StrConstExpr::create("P"),StrCharAtExpr::create(StrVarExpr::create(AB_p_name),AddExpr::create(arguments[1],state.ab_offset[p]))),ConstantExpr::create('P',Expr::Int8),
+		SelectExpr::create(StrEqExpr::create(StrConstExpr::create("G"),StrCharAtExpr::create(StrVarExpr::create(AB_p_name),AddExpr::create(arguments[1],state.ab_offset[p]))),ConstantExpr::create('G',Expr::Int8),
+		SelectExpr::create(StrEqExpr::create(StrConstExpr::create("#"),StrCharAtExpr::create(StrVarExpr::create(AB_p_name),AddExpr::create(arguments[1],state.ab_offset[p]))),ConstantExpr::create('#',Expr::Int8),
+		SelectExpr::create(StrEqExpr::create(StrConstExpr::create("A"),StrCharAtExpr::create(StrVarExpr::create(AB_p_name),AddExpr::create(arguments[1],state.ab_offset[p]))),ConstantExpr::create('A',Expr::Int8),
+		SelectExpr::create(StrEqExpr::create(StrConstExpr::create("B"),StrCharAtExpr::create(StrVarExpr::create(AB_p_name),AddExpr::create(arguments[1],state.ab_offset[p]))),ConstantExpr::create('B',Expr::Int8),
+		ConstantExpr::create('F',Expr::Int8)))))))));
+}
+
+/**************************************************************/
+/*                                                            */
+/*                                                            */
+/*                                                            */
+/*                                                            */
+/*                                                            */
+/*      cccccc           PPPPPPPPPP    [[[[           ]]]]    */
+/*     cc    cc          pp      PP    [[    ii         ]]    */
+/*    cc                 pp      PP    [[               ]]    */
+/*    cc          . __   pp      PP    [[    ii         ]]    */
+/*    cc          . __   ppPPPPPPPP    [[    ii         ]]    */
+/*    cc                 pp            [[    ii         ]]    */
+/*    cc                 pp            [[    ii   ii    ]]    */
+/*     cc    cc          pp            [[    iii iii    ]]    */
+/*      cccccc           pp            [[[[   iiiii   ]]]]    */
+/*                                                            */
+/*                                                            */
+/*                                                            */
+/**************************************************************/
+void SpecialFunctionHandler::handleMyReadCharFromStringAtConstOffset(
+	ExecutionState &state,
+	KInstruction *target,
+	std::vector<ref<Expr> > &arguments)
+{
+	bool result;
+
+	char AB_p_name[AB_MAX_NAME_LENGTH]={0};
+	
+	/*****************************************/
+	/* [1] Extract the llvm call instruction */
+	/*****************************************/
+	llvm::CallInst *callInst = (llvm::CallInst *) target->inst;
+
+	/*********************************************/
+	/* [2] Extract the all three input arguments */
+	/*********************************************/
+	llvm::Value *value0 = callInst->getArgOperand(0);
+	llvm::Value *value1 = callInst->getArgOperand(1);
+	// llvm::Value *value2 = callInst->getArgOperand(2);
+		
+	/********************************************/
+	/* [3] Take the name of the input arguments */
+	/********************************************/
+	std::string varName0 = value0->getName().str();
+	//std::string varName1 = value1->getName().str();
+	// std::string varName2 = value2->getName().str();
+
+	/*****************************************************/
+	/* [4] Go back to the original local variables names */
+	/*****************************************************/
+	// std::string c = state.varNames[varName0];
+	std::string p = state.varNames[varName0];
+	//std::string i = state.varNames[varName1];
+	int i = (((llvm::Constant *) value1)->getUniqueInteger()).getLimitedValue();
+
+	/****************************/
+	/* [5] Extract serial for p */
+	/****************************/
+	int serial_p = state.ab_serial[p];
+
+	/**********************************/
+	/* [6] Extract last version for p */
+	/**********************************/
+	int last_p = state.ab_last[serial_p];
+
+	/*******************************************************************************/
+	/* [7] Assemble the abstract buffers name (with its serial number and version) */
+	/*******************************************************************************/
+	Assemble_Abstract_Buffer_Name(serial_p,last_p,AB_p_name);
+	
+	/******************************************************************************/
+	/* [8] Add ANSI C constraint that p+i does NOT point beyond buffer boundaries */
+	/******************************************************************************/
+	ref<Expr> i_expr = ConstantExpr::create(i,Expr::Int32);
+	ref<Expr> p_plus_i_points_outside_AB = SgeExpr::create(
+		AddExpr::create(state.ab_offset[p],i_expr),
+		state.ab_size[serial_p]);
+
+	/****************************************************************************/
+	/* [9] Check with the solver whether p+i can point beyond buffer boundaries */
+	/****************************************************************************/
+	executor.solver->mayBeTrue(state,p_plus_i_points_outside_AB,result);
+	if (result)
+	{
+		klee_error(
+			"%s[%d] points outside allocated memory",
+			p.c_str()+strlen("OISH_"),i);
+		assert(0);
+	}
 
 	/**********************************************************************/
-	/* [12] Add the constraint that p+i points inside the abstract buffer */
+	/* [10] Add the constraint that p+i points inside the abstract buffer */
 	/**********************************************************************/
-	state.addConstraint(NotExpr::create(e1));
+	state.addConstraint(NotExpr::create(p_plus_i_points_outside_AB));
+
+	/***********************/
+	/* [11] bind local ... */
+	/***********************/
+	executor.bindLocal(
+		target, 
+		state,
+		SelectExpr::create(StrEqExpr::create(StrConstExpr::create("T"),StrCharAtExpr::create(StrVarExpr::create(AB_p_name),AddExpr::create(i_expr,state.ab_offset[p]))),ConstantExpr::create('T',Expr::Int8),
+		SelectExpr::create(StrEqExpr::create(StrConstExpr::create("M"),StrCharAtExpr::create(StrVarExpr::create(AB_p_name),AddExpr::create(i_expr,state.ab_offset[p]))),ConstantExpr::create('M',Expr::Int8),
+		SelectExpr::create(StrEqExpr::create(StrConstExpr::create("P"),StrCharAtExpr::create(StrVarExpr::create(AB_p_name),AddExpr::create(i_expr,state.ab_offset[p]))),ConstantExpr::create('P',Expr::Int8),
+		SelectExpr::create(StrEqExpr::create(StrConstExpr::create("G"),StrCharAtExpr::create(StrVarExpr::create(AB_p_name),AddExpr::create(i_expr,state.ab_offset[p]))),ConstantExpr::create('G',Expr::Int8),
+		SelectExpr::create(StrEqExpr::create(StrConstExpr::create("#"),StrCharAtExpr::create(StrVarExpr::create(AB_p_name),AddExpr::create(i_expr,state.ab_offset[p]))),ConstantExpr::create('#',Expr::Int8),
+		SelectExpr::create(StrEqExpr::create(StrConstExpr::create("A"),StrCharAtExpr::create(StrVarExpr::create(AB_p_name),AddExpr::create(i_expr,state.ab_offset[p]))),ConstantExpr::create('A',Expr::Int8),
+		SelectExpr::create(StrEqExpr::create(StrConstExpr::create("B"),StrCharAtExpr::create(StrVarExpr::create(AB_p_name),AddExpr::create(i_expr,state.ab_offset[p]))),ConstantExpr::create('B',Expr::Int8),
+		ConstantExpr::create('F',Expr::Int8)))))))));
 }
 
 void SpecialFunctionHandler::handleMyPrintOutput(
@@ -2593,19 +2702,6 @@ void SpecialFunctionHandler::handleMyMalloc(
 		StrLengthExpr::create(StrVarExpr::create(AB_p_name)),
 		arguments[1]));
 
-	bool result;
-	executor.solver->mayBeTrue(state,
-		SgtExpr::create(
-			StrLengthExpr::create(StrVarExpr::create(AB_p_name)),
-			ConstantExpr::create(9,Expr::Int32)),
-		result);
-		
-	//if (result)
-	//{
-	//	klee_error(" THIS IS IMPOSSIBLE !!!\n");
-	//	assert(0);
-	//}
-
 	/************************************************************************/
 	/* [7] Write variable name together with its AB's serial for later logs */
 	/*     This is just a temporary quick-and-dirty work-around to enable   */
@@ -2618,7 +2714,7 @@ void SpecialFunctionHandler::handleMyMalloc(
 		AB_Legend_fl = fopen("/tmp/AB_Legend.txt","w+t");
 		if (AB_Legend_fl == NULL)
 		{
-			assert( 0 && "PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP");
+			assert(0 && "can not open /tmp/log file");
 			exit(0);
 		}
 		fprintf(AB_Legend_fl,"LEGEND:\n======\n\n");
@@ -2694,31 +2790,46 @@ void SpecialFunctionHandler::handleMyStrchr(
 	/*******************************************************************************/
 	Assemble_Abstract_Buffer_Name(serial_p,last_p,  AB_p_name);
 
-	/*********************************************/
-	/* [8] Check for out of bounds memory access */
-	/*********************************************/
-	ref<Expr> temp = StrFirstIdxOfExpr::create(
+	/*******************************/
+	/* [8] Check if c appears in p */
+	/*******************************/
+	ref<Expr> x00 = StrConstExpr::create("\\x00");
+	ref<Expr> size   = state.ab_size[serial_p];
+	ref<Expr> offset = state.ab_offset[p];	
+	ref<Expr> p_var  = StrSubstrExpr::create(
 		StrVarExpr::create(AB_p_name),
-		StrFromBitVector8Expr::create(ConstantExpr::create(c,Expr::Int8)));
-		
+		state.ab_offset[p],
+		SubExpr::create(size,offset));
+
+	/*******************************/
+	/* [8] Check if c appears in p */
+	/*******************************/
+	ref<Expr> c_as_length_1_string =
+	StrFromBitVector8Expr::create(ConstantExpr::create(c,Expr::Int8));
+
+	/*******************************/
+	/* [8] Check if c appears in p */
+	/*******************************/
+	ref<Expr> firstIndexOfc   = StrFirstIdxOfExpr::create(p_var,c_as_length_1_string);
+	ref<Expr> firstIndexOfx00 = StrFirstIdxOfExpr::create(p_var,x00);
+
+	/*******************************/
+	/* [8] Check if c appears in p */
+	/*******************************/
+	ref<Expr> c_appears_in_p = NotExpr::create(EqExpr::create(firstIndexOfc,minusOne));	
+	ref<Expr> c_appears_in_p_before_x00 = SltExpr::create(firstIndexOfc,firstIndexOfx00);
+
 	executor.bindLocal(
 		target, 
 		state,
-		SExtExpr::create(
-			SelectExpr::create(
-				AndExpr::create(
-					NotExpr::create(
-						EqExpr::create(
-							temp,
-							minusOne)),
-					SltExpr::create(
-						temp,
-						StrFirstIdxOfExpr::create(
-							StrVarExpr::create(AB_p_name),
-							StrConstExpr::create("\\x00")))),
-				one,
-				zero),
-		Expr::Int64));
+		SelectExpr::create(
+			AndExpr::create(
+				c_appears_in_p,
+				c_appears_in_p_before_x00),
+			AddExpr::create(
+				ZExtExpr::create(firstIndexOfc,Expr::Int64),
+				arguments[0]),
+			ZExtExpr::create(zero,Expr::Int64)));
 }
 
 void SpecialFunctionHandler::handleMyAtoi(

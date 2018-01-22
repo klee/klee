@@ -26,8 +26,6 @@ void MyWriteCharToStringAtOffset(char *p,int offset2,char c);
 /************/
 int main(int argc, char **argv)
 {
-	char  c1;
-	char  c2;
 	int   i1;
 	int   i2 = 3;
 	char *p1;
@@ -58,10 +56,10 @@ int main(int argc, char **argv)
 		/*       +---+---+---+---+---+  */
 		/*                              */
 		/********************************/
-		p1[0] = 'T';
+		p1[0] = 'P';
 		p1[1] = 'M';
-		p1[2] = 'P';
-		p1[3] = 'G';
+		p1[2] = 'Q';
+		p1[3] = 'D';
 		p1[4] =  0 ;
 		 
 		/********************************/
@@ -71,11 +69,10 @@ int main(int argc, char **argv)
 		/*       +---+---+---+---+---+  */
 		/*                              */
 		/********************************/
-		p2[0] = 'T';
-		p2[1] = 'M';
-		// p2[2] = 'P';
-		p2[3] = 'G';
-		p2[4] =  0 ;
+		p2[4] = 'M';
+		p2[0] = 'P';
+		p2[2] = 'Q';
+		p2[3] = 'D';
 
 		/********************************/
 		/*                              */
@@ -84,12 +81,13 @@ int main(int argc, char **argv)
 		/*                              */
 		/*                              */
 		/********************************/
-		c1 = p1[2];
-
-		if (c1 > 'Q')
+		if (strchr(p1,'M'))
 		{
-			MyPrintOutput("INSIDE if (...)");
-			assert(0);
+			if (strchr(p1,'M') > p1)
+			{
+				MyPrintOutput("INSIDE if (...)");
+				assert(0);
+			}
 		}
 	}
 }
