@@ -27,6 +27,7 @@ void MyWriteCharToStringAtOffset(char *p,int offset2,char c);
 int main(int argc, char **argv)
 {
 	int   i1;
+	int   i2 = 3;
 	char *p1;
 	char *p2;
 
@@ -55,10 +56,11 @@ int main(int argc, char **argv)
 		/*       +---+---+---+---+---+  */
 		/*                              */
 		/********************************/
-		p1[4] =  0 ;
+		p1[i2] =  0 ;
 		p1[0] = 'P';
 		p1[2] = 'Q';
 		p1[3] = 'D';
+		p1[4] =  0 ;
 		 
 		/********************************/
 		/*                              */

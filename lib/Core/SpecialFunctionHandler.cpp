@@ -2175,25 +2175,22 @@ void SpecialFunctionHandler::handleMyWriteConstCharToStringAtOffset(
 	/*********************************************/
 	/* [8] Check for out of bounds memory access */
 	/*********************************************/
-	//ref<Expr> out_of_bounds_memory_access = SgeExpr::create(
-	//	AddExpr::create(
-	//		state.ab_offset[p],
-	//		arguments[1]),
-	//	state.ab_size[serial_p]);
+	ref<Expr> out_of_bounds_memory_access = SgeExpr::create(
+		AddExpr::create(state.ab_offset[p],arguments[1]),
+		state.ab_size[serial_p]);
 
 	/********************************************************************************/
 	/* [9] Check with the solver whether an out of bounds memory access is possible */
 	/********************************************************************************/
-	//executor.solver->mayBeTrue(state,out_of_bounds_memory_access,result);
-	//if (result)
-	//{
-	//	klee_error(
-	//		"%s + %s points outside the allocated memory associated with %s",
-	//		p.c_str(),
-	//		i.c_str(),
-	//		p.c_str());
-	//	assert(0);
-	//}
+	executor.solver->mayBeTrue(state,out_of_bounds_memory_access,result);
+	if (result)
+	{
+		klee_error(
+			"%s[%s] points outside allocated memory",
+			p.c_str() + strlen("OISH_"),
+			i.c_str() + strlen("OISH_"));
+		assert(0);
+	}
 
 	/*************************************************************************/
 	/*                                                                       */
@@ -2242,7 +2239,7 @@ void SpecialFunctionHandler::handleMyWriteConstCharToStringAtOffset(
 	/**********************************/
 	/* [10] Add the actual constraint */
 	/**********************************/
-	//state.addConstraint(NotExpr::create(out_of_bounds_memory_access));
+	state.addConstraint(NotExpr::create(out_of_bounds_memory_access));
 
 	/***********************/
 	/* Helper ref expr ... */
@@ -2302,17 +2299,6 @@ void SpecialFunctionHandler::handleMyWriteConstCharToStringAtOffset(
 	AB_All_Versions_fl = fopen("/tmp/AB_All_Versions.txt","at");
 	fprintf(AB_All_Versions_fl,"%s ",AB_p_new_name);
 	fclose(AB_All_Versions_fl);
-
-	executor.solver->mayBeTrue(
-		state,
-		SgtExpr::create(
-			StrLengthExpr::create(AB_p_new_var),
-			ConstantExpr::create(9,Expr::Int32)),
-		result);
-	if (result)
-	{
-		assert(0 && "THIS IS IMPOSSIBLE !!!\n");
-	}
 }
 
 /**************************************************************/
@@ -2394,25 +2380,22 @@ void SpecialFunctionHandler::handleMyWriteCharToStringAtOffset(
 	/*********************************************/
 	/* [8] Check for out of bounds memory access */
 	/*********************************************/
-	//ref<Expr> out_of_bounds_memory_access = SgeExpr::create(
-	//	AddExpr::create(
-	//		state.ab_offset[p],
-	//		arguments[1]),
-	//	state.ab_size[serial_p]);
+	ref<Expr> out_of_bounds_memory_access = SgeExpr::create(
+		AddExpr::create(state.ab_offset[p],arguments[1]),
+		state.ab_size[serial_p]);
 
 	/********************************************************************************/
 	/* [9] Check with the solver whether an out of bounds memory access is possible */
 	/********************************************************************************/
-	//executor.solver->mayBeTrue(state,out_of_bounds_memory_access,result);
-	//if (result)
-	//{
-	//	klee_error(
-	//		"%s + %s points outside the allocated memory associated with %s",
-	//		p.c_str(),
-	//		i.c_str(),
-	//		p.c_str());
-	//	assert(0);
-	//}
+	executor.solver->mayBeTrue(state,out_of_bounds_memory_access,result);
+	if (result)
+	{
+		klee_error(
+			"%s[%s] points outside allocated memory",
+			p.c_str() + strlen("OISH_"),
+			i.c_str() + strlen("OISH_"));
+		assert(0);
+	}
 
 	/*************************************************************************/
 	/*                                                                       */
@@ -2461,7 +2444,7 @@ void SpecialFunctionHandler::handleMyWriteCharToStringAtOffset(
 	/**********************************/
 	/* [10] Add the actual constraint */
 	/**********************************/
-	//state.addConstraint(NotExpr::create(out_of_bounds_memory_access));
+	state.addConstraint(NotExpr::create(out_of_bounds_memory_access));
 
 	/***********************/
 	/* Helper ref expr ... */
@@ -2521,17 +2504,6 @@ void SpecialFunctionHandler::handleMyWriteCharToStringAtOffset(
 	AB_All_Versions_fl = fopen("/tmp/AB_All_Versions.txt","at");
 	fprintf(AB_All_Versions_fl,"%s ",AB_p_new_name);
 	fclose(AB_All_Versions_fl);
-
-	executor.solver->mayBeTrue(
-		state,
-		SgtExpr::create(
-			StrLengthExpr::create(AB_p_new_var),
-			ConstantExpr::create(9,Expr::Int32)),
-		result);
-	if (result)
-	{
-		assert(0 && "THIS IS IMPOSSIBLE !!!\n");
-	}
 }
 
 void SpecialFunctionHandler::handleMy_p_assign_NULL(
