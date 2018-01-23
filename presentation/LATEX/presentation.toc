@@ -1,0 +1,9 @@
+\beamer@endinputifotherversion {3.24pt}
+\beamer@sectionintoc {1}{Section Introduction}{2}{0}{1}
+\beamer@sectionintoc {2}{Running Example}{3}{0}{2}
+\beamer@sectionintoc {3}{Our Approach}{5}{0}{3}
+\beamer@sectionintoc {4}{Our Approach :: In Greater Detail :: Malloc}{6}{0}{4}
+\beamer@sectionintoc {5}{Our Approach :: In Greater Detail :: String Modifications}{7}{0}{5}
+\beamer@sectionintoc {6}{Our Approach :: In Greater Detail :: Access Violations}{9}{0}{6}
+\beamer@sectionintoc {7}{Our Approach :: Context Aware Z3 Sorts}{10}{0}{7}
+\beamer@sectionintoc {8}{Real Life Challenges}{14}{0}{8}

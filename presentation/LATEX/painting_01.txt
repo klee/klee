@@ -1,0 +1,15 @@
+digraph structs {
+rankdir = UD
+node [shape=record];
+node_6_0 [label="p (offset 2 at AB(83,65))", color = white];
+node_6_0 -> node_6_2:f2;
+node_6_1 [label="Before p[3] := \'M\'", color=white];
+node_6_1 -> node_6_2 [style=invis,weight=10];
+node_6_2 [label="<f0>T|<f1>T|<f2>G|<f3>R|<f4>x00|<f5>P|<f6>$|<f7>@|<f8>B"];
+node_6_2 -> node_6_3 [style=invis,weight=10];
+node_6_5 [label="p (offset 2 at AB(83,66))", color = white];
+node_6_5 -> node_6_4:f2;
+node_6_3 [label="After p[3] := \'M\'", color=white];
+node_6_3 -> node_6_4 [style=invis,weight=10];
+node_6_4 [label="<f0>T|<f1>T|<f2>G|<f3>R|<f4>x00|<f5>M|<f6>$|<f7>@|<f8>B"];
+}
