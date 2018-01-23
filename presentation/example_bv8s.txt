@@ -1,0 +1,51 @@
+(declare-const s String)
+(declare-const someInt                 Int)
+(declare-const anotherInt              Int)
+(declare-const someBitVec8    (_ BitVec 8))
+(declare-const anotherBitVec8 (_ BitVec 8))
+
+;(assert (= (str.len s) (+ someInt anotherInt)))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;                                                 ;
+;                                                 ;
+;          | s | =  someInt + anotherInt          ;
+;                                                 ;
+;                                                 ;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(assert (= (str.len s) (+ (bv2int someBitVec8) (bv2int anotherBitVec8))))
+
+;(assert (< 16 someInt))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;                                                 ;
+;                                                 ;
+;                  __ < someInt                   ;
+;                                                 ;
+;                                                 ;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(assert (< 16 (bv2int someBitVec8)))
+
+;(assert (< someInt anotherInt))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;                                                 ;
+;                                                 ;
+;              someInt < anotherInt               ;
+;                                                 ;
+;                                                 ;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(assert (< (bv2int someBitVec8) (bv2int anotherBitVec8)))
+
+;(assert (str.in.re (str.at s someInt)    (re.range "1" "3")))
+;(assert (str.in.re (str.at s anotherInt) (re.range "a" "c")))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;                                                 ;
+;                                                 ;
+;           '1' <= s[someInt]    <= '3'           ;
+;           'a' <= s[anotherInt] <= 'c'           ;
+;                                                 ;
+;                                                 ;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(assert (str.in.re (str.at s (bv2int someBitVec8))    (re.range "1" "3")))
+(assert (str.in.re (str.at s (bv2int anotherBitVec8)) (re.range "a" "c")))
+
+(check-sat)
+(get-value (s someInt anotherInt someBitVec8 anotherBitVec8))
