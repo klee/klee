@@ -14,7 +14,7 @@
 /**********************/
 /* KLEE INCLUDE FILES */
 /**********************/
-#include "/home/oren/GIT/LatestKlee/myStrKlee/include/klee/klee.h"
+#include "klee/klee.h"
 
 void MyMalloc(char *p, int size);
 void MyConstStringAssign(char *p,const char *q);

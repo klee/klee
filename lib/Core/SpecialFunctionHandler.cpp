@@ -1984,6 +1984,7 @@ void SpecialFunctionHandler::handleMyPrintOutput(
 	llvm::GlobalVariable    *actualCStringVar     = (llvm::GlobalVariable    *) (value0Gep->getOperand(0));
 	llvm::ConstantDataArray *actualCStringVarTag  = (llvm::ConstantDataArray *) (actualCStringVar->getInitializer());
 	std::string actualCStringContent              = actualCStringVarTag->getAsCString();
+  errs() << "HELLO!\n";
 	
 	/*******************************/
 	/* [6] Print Message to stdout */
@@ -1993,7 +1994,8 @@ void SpecialFunctionHandler::handleMyPrintOutput(
 	system("setterm -term linux -fore white");
 	system("z3QueriesParser");
 	system("cat /tmp/output.txt");
-	exit(0);
+	// system("./myParseOutput/parseMe");
+//	exit(0);
 }
 
 /**************************************************************/
