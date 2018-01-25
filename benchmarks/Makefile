@@ -28,7 +28,7 @@ phony_explicit:
 
 #run target, for example to run strcmp_example.bc use: make strcmp_example.run
 %.run: %.bc phony_explicit
-	klee -solver-backend=z3 -use-cex-cache=0 -use-independent-solver=0 -use-query-log=solver:smt2 \
+	klee -solver-backend=z3 -search=dfs -use-cex-cache=0 -use-independent-solver=0 -use-query-log=solver:smt2 \
 	-debug-z3-dump-queries=/tmp/Z3queries.txt $<
 
 .PHONY: clean
